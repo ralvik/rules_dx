@@ -1,0 +1,16 @@
+# Bazel outputs and local configuration
+/bazel-*
+user.bazelrc
+**/user.bazelrc
+
+# Local agent instructions
+AGENTS.local.md
+
+# Operating systems
+.DS_Store
+**/.DS_Store
+
+# Temporary files and caches
+.cache/
+.direnv/
+.tmp/
