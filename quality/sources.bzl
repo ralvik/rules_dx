@@ -1,4 +1,4 @@
-"""Quality source-ownership boundary (M02 provisional pick for O15, ADR 0013).
+"""Quality source-ownership boundary (M03 freeze for O15, ADR 0013).
 
 `QualitySourcesInfo` tells quality aspects which directly owned repository
 source artifacts may be linted, typechecked, formatted, or audited. It
@@ -6,13 +6,17 @@ carries no capabilities, tools, configs, dependencies, generated context,
 transitive sources, or execution metadata.
 
 Contract: `docs/quality/quality-sources.md`. The provider concept and the
-`direct_sources` shape are accepted there; the constructor, load label,
-field representation, and registry below are the M02 provisional pick and
-stay pending the O15 freeze. Do not publish this label as stable API.
+`direct_sources` shape are accepted there; the constructor, load label
+(`//quality:sources.bzl`), field representation, and registry below are
+frozen here. Class IDs are public compatibility surface: renaming,
+removing, merging, or semantically narrowing an ID is breaking; adding a
+class or broadening one requires adapter and policy compatibility tests.
 
 Validation split (per O15 direction): construction validates field shape
 and known IDs only. Direct ownership, admissibility, and single-class
-membership are the consuming aspect's job (M04+), not this file's.
+membership are the consuming aspect's job (M04+), not this file's. The
+class-to-policy-family assignment and admissibility mappings stay pending
+the registry review; they are not frozen here.
 """
 
 QualitySourcesInfo = provider(

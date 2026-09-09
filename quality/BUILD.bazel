@@ -1,5 +1,58 @@
 """Quality contracts shared by language wrappers and (from M03) quality core."""
 
+load(":policy.bzl", "quality_family", "workspace_policy")
+load(":policy_subject.bzl", "policy_subject")
+load(":policy_tests.bzl", "policy_analysis_tests", "policy_unit_tests")
+load(":sources_tests.bzl", "sources_registry_tests")
+
 package(default_visibility = ["//visibility:public"])
 
-exports_files(["sources.bzl"])
+exports_files([
+    "applicability.bzl",
+    "policy.bzl",
+    "sources.bzl",
+])
+
+# Synthetic fixture policy (M03 WP1): proves multi-family aggregation and
+# one adapter selected by two families. Tool IDs are synthetic; the real
+# family taxonomy and curated defaults belong to the tool baseline (M04+).
+quality_family(
+    name = "rust_family",
+    family_id = "rust",
+    format = ["fmt-a"],
+    lint = ["lint-a", "lint-b"],
+)
+
+quality_family(
+    name = "python_family",
+    family_id = "python",
+    lint = ["lint-a"],
+)
+
+workspace_policy(
+    name = "fixture_policy",
+    families = [
+        ":python_family",
+        ":rust_family",
+    ],
+)
+
+policy_subject(
+    name = "policy_under_test",
+    policy = ":fixture_policy",
+)
+
+policy_unit_tests(name = "policy_unit")
+
+policy_analysis_tests(name = "policy_analysis")
+
+sources_registry_tests(name = "sources_registry")
+
+test_suite(
+    name = "all",
+    tests = [
+        ":policy_analysis",
+        ":policy_unit",
+        ":sources_registry",
+    ],
+)

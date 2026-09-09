@@ -17,11 +17,13 @@ This document distinguishes four concepts that must not be conflated:
 
 Semantic file classes are neither raw filename extensions nor action boundaries.
 
-## Candidate Provider API
+## Provider API
 
-The provider concept and source/classification boundary are accepted. The exact constructor, load
-label, field name and representation, registry exports, and validation placement remain provisional
-under [O15](../open-decisions.md). The current candidate API has one field. The attribute
+The provider concept and source/classification boundary are accepted. The constructor
+(`QualitySourcesInfo(direct_sources = {class ID: depset[File]})`), load label
+(`//quality:sources.bzl`), field name and representation, registry exports, and validation
+placement are frozen in M03 under [O15](../open-decisions.md) and pinned by
+`//quality:sources_registry`. The attribute
 names in the example below are illustrative placeholders, not frozen upstream attribute
 symbols; do not implement rule attributes against them:
 
@@ -36,7 +38,7 @@ QualitySourcesInfo(
 )
 ```
 
-In that candidate, `direct_sources` maps stable semantic file-class IDs to depsets of directly owned repository
+In that API, `direct_sources` maps stable semantic file-class IDs to depsets of directly owned repository
 source artifacts. A target may expose any number of classes. The map itself supplies source
 classification; no positive capability or language tag is required or interpreted.
 
@@ -76,7 +78,7 @@ Once approved and exported, class IDs are public compatibility surface:
 - Adding a class or broadening an existing class requires adapter and policy compatibility tests.
 - Human-facing coverage families in the tool baseline are not automatically registry IDs.
 
-The candidate first-release registry contains these IDs:
+The frozen first-release registry contains these IDs:
 
 | Ecosystem or family | Canonical semantic file-class IDs |
 | --- | --- |
@@ -101,9 +103,10 @@ fallback assigned by generic aspects. A broad adapter such as keep-sorted may ex
 `text` and other registered text classes. More specific classes remain preferred because one
 path belongs to one class.
 
-The classification principles are accepted. The exact provider API, initial IDs, and admissibility
-mappings above remain provisional pending [open decision O15](../open-decisions.md); they must not be
-published as stable API before that decision.
+The classification principles are accepted. The provider API and initial IDs above are
+frozen in M03 under [O15](../open-decisions.md); the class-to-policy-family assignment and
+admissibility mappings remain pending the registry review and must not be published as stable
+API before that decision.
 
 Every semantic class has exactly one quality policy family. Families keep unrelated source
 kinds independently configurable even when one adapter supports both. In particular,
