@@ -1,0 +1,34 @@
+"""M00 seed Rust binary, library, and tests."""
+
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_library(
+    name = "hello_lib",
+    srcs = ["src/lib.rs"],
+    crate_name = "hello",
+    edition = "2021",
+    deps = ["@crates//:anyhow"],
+)
+
+rust_binary(
+    name = "hello",
+    srcs = ["src/main.rs"],
+    edition = "2021",
+    deps = [
+        ":hello_lib",
+        "@crates//:anyhow",
+    ],
+)
+
+rust_test(
+    name = "hello_test",
+    crate = ":hello_lib",
+    edition = "2021",
+)
+
+exports_files([
+    "Cargo.toml",
+    "Cargo.lock",
+])

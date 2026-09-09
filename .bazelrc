@@ -1,0 +1,16 @@
+# M00 seed Bazel configuration. Linux-first, local-only bring-up.
+common --enable_bzlmod
+
+# Carry over per-person local flags when present (never committed).
+try-import %workspace%/user.bazelrc
+
+build --verbose_failures
+test --test_output=errors
+
+# Rust llvm-cov integration. Bazel 9 only invokes the rules_rust
+# collect_coverage step when GENERATE_LLVM_LCOV is set (see
+# https://github.com/bazelbuild/rules_rust/issues/3948); without it
+# `bazel coverage` silently emits empty coverage.dat files on GCC hosts.
+coverage --test_env=GENERATE_LLVM_LCOV=1
+coverage --combined_report=lcov
+coverage --instrumentation_filter=^//rust/,^//tools/coverage/

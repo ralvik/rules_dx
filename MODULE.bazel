@@ -1,0 +1,33 @@
+"""rules_dx: Bazel-first developer platform (M00 seed)."""
+
+module(
+    name = "rules_dx",
+    version = "0.0.0",
+)
+
+# M00 seed pins, frozen from executed runs on the seed host per O14.
+# Bazel itself is pinned via .bazelversion (Bazelisk v1.29.0 -> Bazel 9.2.0).
+bazel_dep(name = "rules_rust", version = "0.74.0")
+bazel_dep(name = "rules_cc", version = "0.2.22")
+
+rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
+rust.toolchain(
+    edition = "2021",
+    # Pinned default of rules_rust 0.74.0 (rust/private/common.bzl),
+    # verified from the executed 0.74.0 module tree.
+    versions = ["1.98.0"],
+)
+use_repo(rust, "rust_toolchains")
+
+register_toolchains("@rust_toolchains//:all")
+
+# External-dependency fixture source of truth (WP2). The lockfile is
+# generated via crate_universe repin on the seed host:
+#   CARGO_BAZEL_REPIN=1 bazel sync --only=crates
+crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+crate.from_cargo(
+    name = "crates",
+    cargo_lockfile = "//rust/hello:Cargo.lock",
+    manifests = ["//rust/hello:Cargo.toml"],
+)
+use_repo(crate, "crates")

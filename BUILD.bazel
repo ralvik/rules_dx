@@ -1,0 +1,3 @@
+"""Root package for the rules_dx M00 seed."""
+
+package(default_visibility = ["//visibility:public"])
