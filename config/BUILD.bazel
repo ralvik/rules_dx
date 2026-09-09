@@ -1,0 +1,43 @@
+"""M03 WP1: canonical quality configuration settings (O17).
+
+External aspects select the workspace policy through `@rules_dx//config:workspace`
+instead of hardcoding a consumer-repository label, per ADR 0011. Quality commands
+pass `validate=false` so per-result Bazel evaluators do not stop collection;
+check modes use `validate=true` with a `fail_on` threshold. Contract:
+`docs/cli/cli-contract.md`.
+"""
+
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
+load(":settings_tests.bzl", "settings_tests")
+load(":subject.bzl", "settings_subject")
+
+package(default_visibility = ["//visibility:public"])
+
+label_flag(
+    name = "workspace",
+    build_setting_default = "//dx:config",
+)
+
+bool_flag(
+    name = "validate",
+    build_setting_default = False,
+)
+
+string_flag(
+    name = "fail_on",
+    build_setting_default = "warning",
+    values = [
+        "error",
+        "info",
+        "warning",
+    ],
+)
+
+settings_subject(name = "settings_under_test")
+
+settings_tests(name = "settings")
+
+test_suite(
+    name = "all",
+    tests = [":settings"],
+)

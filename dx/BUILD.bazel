@@ -1,0 +1,15 @@
+"""Consumer canonical workspace policy package (ADR 0011).
+
+PROVISIONAL (open decision O17, flagged for review): `config` is an empty
+placeholder so the `@rules_dx//config:workspace` label flag has a resolvable
+default. It is not a policy: aspects require the aggregate policy provider,
+so selecting this placeholder fails fast at analysis until the typed
+per-family sections and thin canonical aggregate land.
+"""
+
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "config",
+    srcs = [],
+)
