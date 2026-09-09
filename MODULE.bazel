@@ -39,6 +39,7 @@ crate.from_cargo(
     manifests = [
         "//rust/hello:Cargo.toml",
         "//rust/quality_result:Cargo.toml",
+        "//rust/quality_runner:Cargo.toml",
     ],
 )
 use_repo(crate, "crates")

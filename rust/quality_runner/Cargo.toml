@@ -1,0 +1,12 @@
+[package]
+name = "quality_runner"
+version = "0.0.0"
+edition = "2021"
+
+[lib]
+name = "quality_runner"
+path = "src/lib.rs"
+
+[[bin]]
+name = "quality_runner"
+path = "src/main.rs"

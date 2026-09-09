@@ -1,0 +1,60 @@
+"""M03 WP2b deterministic shared pipeline runner over synthetic adapters."""
+
+load("//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_rust_library(
+    name = "quality_runner_lib",
+    srcs = ["src/lib.rs"],
+    crate_name = "quality_runner",
+    edition = "2021",
+    deps = [
+        "//quality:result_proto_rs",
+        "//rust/quality_result",
+        # The `prost` types must come from the same crate that the
+        # generated code implements them against: the toolchain-vendored
+        # prost, not a second copy from crate_universe.
+        "@rules_rust_prost//private/3rdparty/crates:prost",
+    ],
+)
+
+dx_rust_binary(
+    name = "quality_runner",
+    srcs = ["src/main.rs"],
+    edition = "2021",
+    deps = [
+        ":quality_runner_lib",
+        "//rust/quality_result",
+    ],
+)
+
+dx_rust_test(
+    name = "quality_runner_test",
+    crate = ":quality_runner_lib",
+    edition = "2021",
+    size = "small",
+)
+
+# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# resolve from the pinned toolchain, never from ambient host tools.
+rustfmt_test(
+    name = "quality_runner_fmt_test",
+    size = "small",
+    targets = [
+        ":quality_runner_lib",
+        ":quality_runner",
+    ],
+)
+
+rust_clippy_test(
+    name = "quality_runner_clippy_test",
+    size = "small",
+    targets = [
+        ":quality_runner_lib",
+        ":quality_runner",
+    ],
+)
+
+exports_files(["Cargo.toml"])

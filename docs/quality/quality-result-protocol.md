@@ -15,8 +15,9 @@ field/enum numbers and reserved ranges are frozen under [O18](../open-decisions.
 this initial implementation. Bazel generates the Rust crate `result_proto` via
 `//quality:result_proto_rs`, and `//rust/quality_result` implements the result-side
 validation, BLAKE3 digest, and deterministic codec (`validate`, `encode_validated`,
-`decode_validated`). Pipeline producers, evaluators, and collectors land in M03 WP2/WP3;
-do not build them against the semantic prose below until then. The sole
+`decode_validated`). The pipeline producer is `//rust/quality_runner` (M03 WP2b);
+evaluators and collectors land in M03 WP3, so do not build them against the
+semantic prose below until then. The sole
 stable public capability output group is `dx_results`; it contains each result and an enabled
 per-result validation marker. No invocation-level aggregation action exists.
 
