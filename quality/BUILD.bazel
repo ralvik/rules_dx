@@ -13,6 +13,9 @@ package(default_visibility = ["//visibility:public"])
 exports_files([
     "adapters.bzl",
     "applicability.bzl",
+    "aspects.bzl",
+    "aspect_subject.bzl",
+    "fixtures.bzl",
     "pipeline.bzl",
     "policy.bzl",
     "result.proto",

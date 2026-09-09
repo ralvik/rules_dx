@@ -1,0 +1,83 @@
+"""WP2c aspect fixtures and evidence (M03)."""
+
+load("//quality:fixtures.bzl", "quality_source_target")
+load("//quality:aspect_subject.bzl", "aspect_subject")
+load(":aspect_tests.bzl", "aspect_fixture_tests")
+
+package(default_visibility = ["//visibility:public"])
+
+quality_source_target(
+    name = "fixture_rust",
+    rust_srcs = ["clean.rs"],
+)
+
+quality_source_target(
+    name = "fixture_python",
+    python_srcs = ["clean.py"],
+)
+
+quality_source_target(
+    name = "fixture_mixed",
+    python_srcs = ["dirty.py"],
+    rust_srcs = ["dirty.rs"],
+)
+
+quality_source_target(
+    name = "fixture_mixed_clean",
+    python_srcs = ["clean.py"],
+    rust_srcs = ["clean.rs"],
+)
+
+quality_source_target(
+    name = "fixture_no_lint",
+    python_srcs = ["clean.py"],
+    rust_srcs = ["clean.rs"],
+    tags = ["no-lint"],
+)
+
+filegroup(
+    name = "plain",
+    srcs = ["clean.rs"],
+)
+
+aspect_subject(
+    name = "fixture_rust_subject",
+    target = ":fixture_rust",
+)
+
+aspect_subject(
+    name = "fixture_python_subject",
+    target = ":fixture_python",
+)
+
+aspect_subject(
+    name = "fixture_mixed_subject",
+    target = ":fixture_mixed",
+)
+
+aspect_subject(
+    name = "fixture_mixed_clean_subject",
+    target = ":fixture_mixed_clean",
+)
+
+aspect_subject(
+    name = "fixture_no_lint_subject",
+    target = ":fixture_no_lint",
+)
+
+aspect_subject(
+    name = "plain_subject",
+    target = ":plain",
+)
+
+aspect_fixture_tests(
+    name = "aspect_presence",
+    subjects = [
+        ":fixture_mixed_subject",
+        ":fixture_mixed_clean_subject",
+        ":fixture_no_lint_subject",
+        ":fixture_python_subject",
+        ":fixture_rust_subject",
+        ":plain_subject",
+    ],
+)

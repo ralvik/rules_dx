@@ -12,6 +12,9 @@
 # workspace-owned `*.rs` files; test-only sources would be classified
 # `support`, but M00 has none (both `rust_test` targets reuse their
 # library crate via `crate =`).
+# M03 WP2c: synthetic quality fixtures are fixture-only, never implementation.
+support quality/testdata/clean.rs
+support quality/testdata/dirty.rs
 eligible rust/hello/src/lib.rs
 eligible rust/hello/src/main.rs
 eligible rust/quality_result/src/lib.rs
