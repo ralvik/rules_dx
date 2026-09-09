@@ -14,5 +14,6 @@
 # library crate via `crate =`).
 eligible rust/hello/src/lib.rs
 eligible rust/hello/src/main.rs
+eligible rust/quality_result/src/lib.rs
 eligible tools/coverage/src/lib.rs
 eligible tools/coverage/src/main.rs

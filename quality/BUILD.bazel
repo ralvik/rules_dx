@@ -1,5 +1,7 @@
 """Quality contracts shared by language wrappers and (from M03) quality core."""
 
+load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 load(":policy.bzl", "quality_family", "workspace_policy")
 load(":policy_subject.bzl", "policy_subject")
 load(":policy_tests.bzl", "policy_analysis_tests", "policy_unit_tests")
@@ -10,8 +12,21 @@ package(default_visibility = ["//visibility:public"])
 exports_files([
     "applicability.bzl",
     "policy.bzl",
+    "result.proto",
     "sources.bzl",
 ])
+
+# Frozen result schema (M03 WP1, O18): field and enum numbers are the
+# compatibility surface; see `result.proto` and the protocol doc.
+proto_library(
+    name = "result_proto",
+    srcs = ["result.proto"],
+)
+
+rust_prost_library(
+    name = "result_proto_rs",
+    proto = ":result_proto",
+)
 
 # Synthetic fixture policy (M03 WP1): proves multi-family aggregation and
 # one adapter selected by two families. Tool IDs are synthetic; the real

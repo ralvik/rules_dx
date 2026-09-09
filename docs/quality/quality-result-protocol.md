@@ -9,11 +9,14 @@ public NDJSON and standard-report API in [Output Protocol](../cli/output-protoco
 ## Transport
 
 Every lint, typecheck, or format target/capability pipeline action emits one bounded binary
-Protobuf result message. Non-mutating audit may emit one message per target/tool action. A
-checked-in `.proto` file is the source of truth, and Bazel generates Rust bindings. The `.proto`
-file does not exist yet; field numbers, reserved ranges, and generated API names are frozen
-under [O18](../open-decisions.md) with the initial implementation. Do not implement producers,
-evaluators, or collectors against the semantic prose below until that schema lands. The sole
+Protobuf result message. Non-mutating audit may emit one message per target/tool action. The
+checked-in [`quality/result.proto`](../../quality/result.proto) is the source of truth:
+field/enum numbers and reserved ranges are frozen under [O18](../open-decisions.md) with
+this initial implementation. Bazel generates the Rust crate `result_proto` via
+`//quality:result_proto_rs`, and `//rust/quality_result` implements the result-side
+validation, BLAKE3 digest, and deterministic codec (`validate`, `encode_validated`,
+`decode_validated`). Pipeline producers, evaluators, and collectors land in M03 WP2/WP3;
+do not build them against the semantic prose below until then. The sole
 stable public capability output group is `dx_results`; it contains each result and an enabled
 per-result validation marker. No invocation-level aggregation action exists.
 
@@ -43,9 +46,10 @@ action produces one result. Producer identity remains
 internal; public output deduplicates diagnostics with identical exposed fields and sorts
 them without exposing producer identity.
 
-Exact field numbers, reserved ranges, and generated API names are frozen with the initial
-`.proto` implementation. The semantic fields below are required before that schema is
-approved.
+Exact field numbers, reserved ranges, and generated API names are frozen in
+[`quality/result.proto`](../../quality/result.proto); that file is normative for the
+allocation and this prose states the semantics. The semantic fields below are required
+before that schema is approved.
 
 ## File Identity
 
@@ -202,3 +206,8 @@ Fixtures cover:
 - Remote output materialization without output-tree scanning.
 - Parity between `dx` threshold evaluation and Bazel-owned per-result evaluators.
 - Exact public check-mode changes reconstructed from validated internal replacements.
+
+Result-side fixtures for the schema, versioning, path, digest-length, diagnostic-shape,
+edit-ordering, and stability-gate items above live in `//rust/quality_result` and pass
+under `bazel test //rust/quality_result/...`. CLI, BEP-ordering, remote-materialization,
+and evaluator-parity items land with their WP2/WP3 owners.

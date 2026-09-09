@@ -1,0 +1,11 @@
+[package]
+name = "quality_result"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+blake3 = "1"
+
+[lib]
+name = "quality_result"
+path = "src/lib.rs"

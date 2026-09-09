@@ -1,0 +1,133 @@
+// Quality Result Protocol schema (M03 freeze for O18).
+//
+// Internal binary contract between quality pipeline actions, Bazel
+// evaluators, and the `dx` CLI. Distinct from the public NDJSON output
+// protocol. Contract: `docs/quality/quality-result-protocol.md`.
+//
+// Field and enum numbers below are frozen compatibility surface. Unknown
+// major versions are rejected; newer minors are accepted when decoding
+// succeeds and all semantics required by the operation are understood.
+// Reserved ranges hold room for compatible minor additions; only the
+// schema-major bump may reuse them incompatibly.
+
+syntax = "proto3";
+
+package dx.quality.v1;
+
+// Severity of one diagnostic. Zero is invalid: every recorded diagnostic
+// carries an explicit severity.
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  INFO = 1;
+  WARNING = 2;
+  ERROR = 3;
+  reserved 4 to 15;
+}
+
+// Pipeline capability that produced the result. Zero is invalid.
+enum Capability {
+  CAPABILITY_UNSPECIFIED = 0;
+  LINT = 1;
+  TYPECHECK = 2;
+  FORMAT = 3;
+  AUDIT = 4;
+  reserved 5 to 15;
+}
+
+// Terminal state of a completed pipeline. Tool launch, configuration,
+// native-output, or protocol failure fails the Bazel action instead of
+// producing a result, so every stored result completed analysis. Zero is
+// invalid: every result states its outcome.
+enum Convergence {
+  CONVERGENCE_UNSPECIFIED = 0;
+  // Every nonempty stage left its subset unchanged on the final round.
+  STABLE = 1;
+  // Repeated-state detection ended the pipeline early.
+  OSCILLATION = 2;
+  // Round ten changed a virtual file; no eleventh round runs.
+  ITERATION_LIMIT = 3;
+  reserved 4 to 15;
+}
+
+// One normalized diagnostic. Ranges are half-open UTF-8 byte offsets:
+// `start_byte` inclusive, `end_byte` exclusive. `fixable` is a guarantee,
+// not a hint: true only for an initial diagnostic with a workspace path
+// when the same converged result carries an exact replacement for that
+// path and the finding is absent from the terminal set because of it.
+message Diagnostic {
+  Severity severity = 1;
+  string message = 2;
+  string tool_id = 3;
+  // Native or normalized rule identity; empty means absent.
+  string rule_id = 4;
+  // Workspace source path; empty means retained without a path (for
+  // example a finding attributed only to generated context).
+  string path = 5;
+  // Range presence is required exactly when `path` is set.
+  optional uint64 start_byte = 6;
+  optional uint64 end_byte = 7;
+  bool fixable = 8;
+  reserved 9 to 15;
+}
+
+// One source snapshot: workspace path plus BLAKE3-256 over exact file
+// bytes, stored as exactly 32 raw bytes. There is no digest algorithm
+// enum; changing the algorithm is a schema-major bump.
+message FileSnapshot {
+  string path = 1;
+  bytes digest = 2;
+  reserved 3 to 7;
+}
+
+// One normalized byte-range edit against original file bytes. Empty
+// `start_byte == end_byte` inserts; empty `replacement` deletes. An edit
+// with an empty range and empty replacement is an invalid no-op.
+message Edit {
+  uint64 start_byte = 1;
+  uint64 end_byte = 2;
+  bytes replacement = 3;
+  reserved 4 to 7;
+}
+
+// Replacement set for one workspace path: original digest plus strictly
+// start-byte-sorted, non-overlapping edits with distinct start offsets.
+// Adjacent edits are valid; same-offset edits and insertions strictly
+// inside a replaced range are invalid.
+message FileEdits {
+  string path = 1;
+  bytes original_digest = 2;
+  repeated Edit edits = 3;
+  reserved 4 to 7;
+}
+
+// One executed stage: tool identity plus its fixed source subset.
+message Stage {
+  string tool_id = 1;
+  repeated string class_ids = 2;
+  repeated string source_paths = 3;
+  reserved 4 to 7;
+}
+
+// One pipeline result. `original_snapshot` is the analyzed snapshot;
+// `terminal_snapshot` is the stable snapshot after convergence.
+// `initial_diagnostics` are never removed by fix-capable stages;
+// `terminal_diagnostics` use ranges relative to the terminal snapshot.
+// Only `STABLE` results may carry `replacements`.
+message QualityResult {
+  uint32 schema_major = 1;
+  uint32 schema_minor = 2;
+  // Configured producer target label (internal identity).
+  string producer = 3;
+  Capability capability = 4;
+  // Stages in versioned ruleset order.
+  repeated Stage stages = 5;
+  // Complete cross-tool rounds executed; at most ten.
+  uint32 completed_rounds = 6;
+  Convergence convergence = 7;
+  repeated FileSnapshot original_snapshot = 8;
+  repeated FileSnapshot terminal_snapshot = 9;
+  repeated Diagnostic initial_diagnostics = 10;
+  repeated Diagnostic terminal_diagnostics = 11;
+  repeated FileEdits replacements = 12;
+  reserved 13 to 24;
+}
