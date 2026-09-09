@@ -1,12 +1,13 @@
+# Repository Instructions
+
 This repository uses Bazel.
 
 Code rules:
 
-- Run the repository's formatter and linter after code changes.
-- Before adding a helper or abstraction, search for and reuse an existing repository library or shared module. Extend the narrowest suitable API instead of creating a parallel implementation.
-- Keep domain-specific shared code near its domain. Move code into a general-purpose library only when there is a concrete cross-package use case.
+- Run the formatter and linter after changes.
+- Reuse existing libs; extend the narrowest API.
+- Keep shared code near its domain.
 - Treat warnings as errors.
-- Update focused tests and documentation when behavior or user-facing workflows change.
-- Do not edit files marked as generated; use the documented generator command instead.
-- Keep README files short and concise; put substantial examples in the `examples/` folder.
-
+- Update tests and docs on behavior changes.
+- Use the generator for generated files.
+- Keep READMEs short; put details in `docs/` or `examples/`.

@@ -1,0 +1,186 @@
+# Open Decisions
+
+This register contains unresolved choices only. Accepted constraints live in the
+[ADR index](decisions/README.md); detailed contracts live under [quality](quality/),
+[tools](tools/), [generation](generation/), [environments](environments/), and
+[CLI](cli/). Milestone order and gates are defined by the [milestone index](milestones/README.md).
+
+Resolution moves the decision to its owning ADR or domain contract and removes its row from this
+register; IDs are never reassigned.
+
+Retired IDs (`O1–O4`, `O7–O10`, `O23`) were never assigned. `O47` (coverage
+measurement and ignore-validation mechanics) is resolved; the surviving contract is the
+[coverage gate](testing/README.md#coverage), referenced from the
+[M00 entry checklist](milestones/README.md#m00-entry-checklist). Parenthetical
+`(O47 resolved)` mentions elsewhere are historical pointers to that gate, not live rows.
+
+Apply the [automatic-workflow preference](product/scope.md#automatic-workflows) when resolving
+integration choices. O46 includes qualification of the approved
+[Go editor package driver](environments/environment.md#ownership-and-refresh): exact-target and
+configuration isolation, failure handling, cgo completion, and platform evidence remain open.
+Whether to permit automatic Bazel-backed Go editor analysis is resolved, not another policy question.
+
+Resolve remaining O11 details through technical qualification under the established
+[audit contract](cli/commands/audit-update-bazel.md#dx-audit), not another round of audit preference
+questions. Qualify complete assessment evidence, local advisory matching, native exception configuration,
+version/range and advisory-alias matching, truthful severity and accepted-result reporting,
+expiration time inputs/cache invalidation, and obsolete-exception validation. Text, structured-output,
+and SARIF mappings must be reviewed together. Report concrete contract conflicts or required new
+public APIs before affected implementation; the accepted policy is not evidence of upstream support.
+
+O46 also covers the accepted cross-language [dependency checks](product/scope.md#unused-dependencies):
+separate non-mutating tests for lockfile consistency and declared-dependency usage, generated as
+normal test targets included in `bazel test //...` and bare `dx test` by default. Generated Bazel
+edges remain Gazelle's responsibility, without a duplicate unused-edge test. Resolve ecosystem
+lock/usage scopes, offline lock-validation routes and declared metadata inputs, required category
+validation, and authoritative mappings across declared supported configurations, non-import
+recognition, native mappings, reason validation, and required obsolete-exception detection for narrow
+usage exceptions, generated target naming/mappings, public
+test/capability APIs, upstream mappings, and per-language failing/passing fixtures before implementation.
+
+Codecov is selected for this repository's [GitHub coverage reporting](testing/README.md#github-coverage-reporting).
+O14 owns service activation, upload tooling/authentication, and safe fork-PR integration;
+coverage mappings are resolved in the [coverage gate](testing/README.md#coverage). The service choice is resolved,
+not proof of a working integration or a coverage-service requirement for consumers.
+
+## Consumer CI Qualification
+
+Accepted consumer CI policies are settled in the [GitHub CI contract](github-ci.md).
+Exact workflow APIs and pins, runner/platform mappings, event/ref bindings, thread mechanics,
+and permissions require [technical qualification](github-ci.md#qualification), not new preference
+decisions. The [evidence matrix](testing/github-ci.md) defines the required proofs; accepted policy
+does not establish working integration or support. [M27](milestones/M27-consumer-ci.md)
+owns qualification and delivery, with release requalification in M28 and publication verification
+in M29. Freeze affected mappings before implementation; the planning assignment starts no milestone.
+
+## Decision Register
+
+Rows may summarize settled direction to identify the remaining qualification, but do not supersede
+the linked owning contracts. Conflicts identified below remain blocking even when a row describes
+the surrounding policy as accepted.
+
+| ID | Decision | Needed by Mxx | Current status |
+| --- | --- | --- | --- |
+| O46 | Freeze the reviewed v1 inventory, candidate-specific integration effort and maintenance ownership, upstream/patch/artifact identities, rules/provider/generator mappings, approved dispositions, and delivery work packages. Resolve generation/platform/API conflicts before affected implementation. | M00 (inventory and delivery plan); M22/M23 (remaining mappings) | Minimal required core/framework inventory frozen and accepted as the [pre-M00 freeze](product/support-matrix.md#minimal-required-core-freeze-o46-pre-m00): provisional upstreams, owning decisions, delivery milestones M00–M30, sole-maintainer ownership, effort estimated from evidence as each O-item lands. Admit/defer/exclude dispositions decided by [ADR 0019](decisions/0019-first-release-additional-foundations.md) and summarized in the [support matrix](product/support-matrix.md#candidate-disposition-status). Swift and Bandit excluded from v1. Light freeze at M00 entry (inventory plus dispositions) with detailed effort evidence only for interfaces affecting M00–M03; remaining per-candidate mappings, effort, and ownership stay pending O30/O31 qualification in M22/M23. See [first-release admission](product/scope.md#first-release-admission) and the [native plan](native-toolchains.md). |
+| O14 | Freeze exact seed Bazel/Bazelisk, Rust, and ruleset pins/checksums; name the initial CI OS/CPU hosts and qualify Codecov activation/upload permissions. | M00 | Direction: Linux-first incremental hosts, local-only, no remote; unavailable hosts recorded as gaps. Seed only what M00 needs; exact pins and hosts freeze in implementing milestones from hosts actually run. Research observations (Bazel LTS `9.2.0`, Bazelisk `v1.29.0`, `rules_cc 0.2.22`, `rules_rust 0.74.0`) are not pins; recheck at implementation. Use provisional seed candidates now; pin from executed runs at implementation. Quality-tool acquisition and checker mappings belong to O20/M04, with dogfood in M05, not temporary M00 checks. See [dependency currency](decisions/0008-dependency-currency.md) and [infrastructure budget](testing/README.md#infrastructure-budget). |
+| O15 | Freeze the exact `QualitySourcesInfo` API and semantic-class registry: constructor/load label, field name and representation, IDs, class-to-policy-family and admissibility mappings, exported constants, and validation placement. | M02 | Direction: keep the `direct_sources` dict; shape and known IDs at construction, ownership/admissibility/single-class at the consuming aspect. Exact API pending. See [Quality Sources](quality/quality-sources.md). |
+| O16 | Select the exact public `rules_rs`/patched `rules_rust` source-provider and selected-toolchain mappings for direct Rust sources, rustfmt, and Clippy across host/target/execution configurations. | M02 | Direction: fixture-proven public symbols first; reviewed pinned patches allowed. Exact mappings pending. |
+| O17 | Freeze the aggregate workspace quality-policy provider constructor, fields, validation, export location, and binding from `@rules_dx//config:workspace`. | M03 | Direction: typed per-family sections plus a thin canonical aggregate; fail fast. Exact constructor pending. See [ADR 0011](decisions/0011-configuration-composition.md) and [tool integrations](quality/tool-integrations.md). |
+| O18 | Allocate exact Quality Result Protobuf field and enum numbers, reserved ranges, generated API names, and compatibility fixtures. | M03 | Confirmed. Numbers and fixtures pending implementation. See [Quality Result Protocol](quality/quality-result-protocol.md). |
+| O19 | Approve the initial action-granularity and stage-order benchmark corpus, repetitions, noise threshold, tie-breaks, and threshold for batching small owners. | M03 | Confirmed. Corpus and thresholds pending. See [ADR 0003](decisions/0003-action-granularity.md). |
+| O20 | Freeze product acquisition and adapter mappings for Buildifier, Taplo, and Vale, the generated standalone-artifact metadata schema/regeneration command, and the implementation boundary for the repository Markdown link and structure checker. | M04 | Vale's config-required failure and permission for Taplo's version-qualified fail-closed text parser are settled in [native configuration](quality/native-configuration.md#authority) and [adapter qualification](quality/tool-integrations.md#initial-adapter-qualification). Research notes there record observed CLI/output/config precedence without proving mappings. Exact parser conformance, config bindings, Vale runtime closure, pins, metadata/generator, and execution evidence remain pending. [Artifact research](tools/tool-acquisition.md#initial-artifact-research) does not prove support; no temporary direct-tool CI and Markdown checks remain distinct from Vale. |
+| O21 | Define how each quality adapter is introduced directly without a preceding temporary check. | M05 | Direction: no seed checks, no parity gate; adapters land directly with fixtures; cleanup in M13. Pending. |
+| O44 | Select the exact Bazel query and analysis strategy for M08 file ownership and reverse-dependent test/coverage resolution, including rule-kind filtering, query universe, aliases/filegroups, generated sources, and configured ownership. | M08 | Direction: most correct first, then fastest; prototype rdeps vs cquery vs aspect; fast/slow split allowed. Benchmarks pending. See [Target Resolution](cli/target-resolution.md). |
+| O22 | Freeze initial Rust Gazelle syntax/root/module recognizers, standard-library and local/Cargo label mappings, wrapper attributes/providers, and source-path naming mappings. | M09 | Approved: narrow source-only plus ordinary Cargo first; remainder via M12/O24. Recognizers and mappings pending. See [Generation](generation/) and [ADR 0015](decisions/0015-first-party-gazelle-extensions.md). |
+| O13 | Choose the exact Bazel/Gazelle transport, schema allocation, generator dispatch, and canonical-target wiring for the versioned edit, completion, ignored-import, and write-outcome manifest emitted by the same generation run; define evidence that could justify semantic transaction groups. | M10 | Approved: declared versioned manifest artifact as normative transport; outputs render from it; sequential writes. Schema, dispatch, and wiring pending. See [Generation](generation/). |
+| O24 | Freeze the remaining Rust upstream mappings: unit/integration test wrappers, Cargo target kinds and build scripts, native-dependency backend/provider integration, version selection, coverage, environment plan, and rust-analyzer exact-target adaptation. | M12 | Confirmed: public-provider conformance first; pinned patches allowed. Remaining mappings pending. See the [native questions](native-toolchains.md#qualification-questions-and-delivery) and [ADR 0013](decisions/0013-rust-javascript-typescript-foundations.md). |
+| O25 | Freeze Python wrapper/provider, import/search-path, uv group/closure, Gazelle, pytest/coverage, interpreter-version, and `.venv` projection mappings, including the typed `ide_groups` configuration shape. | M14 | Confirmed: public `aspect_rules_py` 2.x first; patches allowed. Mappings pending. See [ADR 0010](decisions/0010-python-foundation.md) and [Python environment](environments/python-environment.md). |
+| O5 | Select Ty artifact provenance for every required execution platform. | M15 | Confirmed: official assets; build and publish missing platforms after review. Provenance pending. See [Tool Acquisition](tools/tool-acquisition.md). |
+| O26 | Freeze Ruff/Ty source and compiler-context provider mappings and prove the private wheel-only Python tool graph, shared runtime, and per-tool lock membership. | M15 | Approved: Ruff/Ty standalone; shared private runtime for cohorts subject to proofs. Proofs pending. |
+| O27 | Freeze JavaScript/TypeScript wrapper, Gazelle recognizer, pnpm importer/store, public `JsInfo`/`DefaultInfo`, Jest/coverage, version-selection, and managed `node_modules` mappings. | M16 | Aspect stack remains best; no maintained alternative. Mappings pending. See [ADR 0013](decisions/0013-rust-javascript-typescript-foundations.md). |
+| O28 | Freeze Biome and authoritative `tsc` mappings and prove the private Node ESLint/Prettier graph, curated plugins, shared runtime, and formatter-order evidence. | M17 | Target-coupled `tsc` acquisition is established in [Tool Acquisition](tools/tool-acquisition.md); exact mappings, private graph/runtime proofs, and measured convergence order remain pending. |
+| O29 | Select the exact upstream parser/compiler, Bazel provider, generated-region, dependency, test, environment/IDE, and quality-region mappings for Vue. | M18 | Approach fixed: end-to-end fixtures; no generic parser or plain-JS fallback. Mappings pending. See the [framework contract](generation/framework-adapters.md). |
+| O40 | Select the exact upstream parser/compiler, Bazel provider, generated-region, dependency, test, environment/IDE, and quality-region mappings for Svelte. | M19 | Approach fixed: end-to-end fixtures; no generic parser or plain-JS fallback. Mappings pending. See the [framework contract](generation/framework-adapters.md). |
+| O41 | Select the exact upstream parser/compiler, Bazel provider, generated-region, dependency, test, environment/IDE, and quality-region mappings for Astro. | M20 | Approach fixed: end-to-end fixtures; preserve Astro-specific region semantics. Mappings pending. See the [framework contract](generation/framework-adapters.md). |
+| O42 | Select the exact upstream parser/compiler, Bazel provider, generated-region, dependency, test, environment/IDE, and quality-region mappings for MDX. | M21 | Approach fixed: end-to-end fixtures; prose must not become executable dependency input. Mappings pending. See the [framework contract](generation/framework-adapters.md). |
+| O43 | Qualify mixed-framework composition for the closed v1 framework set, with named adapter mappings owned by O29/O40/O41/O42. | M21 | The set is settled at Vue, Svelte, Astro, and MDX; no additional framework selection remains. Composition evidence is pending. See the [framework contract](generation/framework-adapters.md) and [support matrix](product/support-matrix.md). |
+| O30 | Own the M22 native/toolchain cohort: qualify admitted Go, C/C++, and Scala-route foundations (contracts, provider/generation mappings, effort, work packages) plus the remaining native/standalone/toolchain tools, especially Qt, clang-format/clang-tidy, Buf, and Scalafix; identify any adapter that cannot use the common runner. | M22 | Order locked: clang-format/clang-tidy, Buf, Scalafix, Qt last. Foundation mappings and tool qualification pending. |
+| O31 | Own the M23 managed-runtime cohort: qualify admitted Java, Kotlin, C#, F#, and Scala-route foundations plus exact artifacts, locks, plugins, runtime compatibility bounds, and sharing for the managed Python, Node, JVM, .NET, PowerShell, and Ruby tool cohorts. | M23 | Order locked: Python, Node, JVM, .NET, PowerShell, Ruby. Foundation mappings and cohort proofs pending. See [Tool Acquisition](tools/tool-acquisition.md). |
+| O32 | Close every first-release tool-baseline route, version pin, semantic-class/capability mapping, config mapping, and common-runner exception. | M24 | Reconciliation pending. See [Tool Baseline](tools/tool-baseline.md) and the [support matrix](product/support-matrix.md). |
+| O11 | Select initial security-audit tools, vulnerability sources, ecosystems, exact target-to-dependency-owner mappings, advisory acquisition/snapshot/cache semantics, and risk-exception configuration/report/lifecycle mappings. | M26 | Contract accepted; technical qualification pending. Gitleaks first under `dx audit` (standalone checksummed artifact, explicit `secrets` policy family as its own semantic class, SARIF, secret-value redaction); trufflehog stays a future depth option, not v1. Observed Gitleaks mechanics (`v8.30.1`, SARIF `--report-format`, log/stdout `--redact`, TOML discovery, conflated exit `1`) are recorded in the [audit contract](cli/commands/audit-update-bazel.md#dx-audit); registry amendment, report redaction, findings-versus-error distinction, and silent-`0` cases need fixtures. See also [tool integrations](quality/tool-integrations.md). |
+| O12 | Select initial dependency-update ecosystem mappings, exact dependency-set/package selector syntax and identity mappings, remaining non-registry handling, backend operation boundaries, aggregate failure exit codes, and per-set operation/manifest/lockfile reporting. | M26 | Independent-set continuation, blocked dependents, preserved successes, and overall failure are accepted in the [update contract](cli/commands/audit-update-bazel.md#dx-update). Exact mappings and evidence remain pending; the continuation policy is not an open preference. |
+| O33 | Freeze first-release codegen generator/language pairs, bare-schema and reverse-dependent projection queries, private plan-provider/output-group/shard names, and any checked-in-source replacement contracts. | M25 | Direction: native overlapping-output behavior, fail by default. Generator pairs and queries pending. See [Generated Code](environments/codegen.md). |
+| O34 | Select among the already accepted candidate repository-root strategies for generation, env, and codegen after equivalent-semantics and cold/warm analysis benchmarks. | M25 | Direction: fastest on cold and warm, warm weighted above cold. Benchmarks pending. See [Developer Environments](environments/environment.md#repository-and-target-roots). |
+| O35 | Qualify the PATH-tools-only public extension boundary without exposing a persistent-environment contribution API. | M25 | No public persistent-environment plugin API in v1, per [Developer Environments](environments/environment.md). Direnv support stays inside this boundary with `PATH_add` for `.dx/bin` only; extra exports are out of v1. See [Direnv Integration](environments/environment.md#direnv-integration). Boundary evidence remains pending; the API-scope choice is settled. |
+| O36 | Qualify the selected standard-library lock route for setup commits: Rust pin, platform semantics, deadline, handle lifetime, and crash-release fixtures. | M25 | Selection settled: `std::fs::File::try_lock` with a fixed ten-second deadline, no additional locking crate. Observed upstream mapping (stable since Rust 1.89, `WouldBlock` versus `Error`, Unix `flock` versus Windows `LockFileEx`, advisory handle-close release) is recorded in [managed-state locking](environments/managed-state.md#commit-lock-and-concurrency). Rust pin, contention/crash/NFS/append-only platform evidence pending. |
+| O6 | Decide whether Ty remains per compatible Python target or moves to a coarser Bazel-owned root. | M28 | Confirmed: per-target until measurements justify coarser roots. Pending. See [ADR 0003](decisions/0003-action-granularity.md). |
+| O37 | Freeze release-default ruleset/toolchain versions, Windows compiler/SDK/STL/CRT acquisition identities, execution-platform ABI/runtime floors, host-library allowlists, and explicitly covered non-default combinations and cross-build routes. | M28 | Profiles stand; final floors, linkage, identities, and routes need platform evidence. See the [profiles](native-toolchains.md#profiles-and-cross-builds) and [platform evidence](testing/tools.md#pins-and-platform-tests). |
+| O38 | Freeze the standalone `dx` candidate packaging, install invocation, checksum/signature format, and verification inputs required by release qualification. | M28 | Approved: Bazel-first bootstrap; Cosign keyless with pinned identity/issuer. Qualification pending. See [distribution](environments/environment.md#distribution). |
+| O39 | Freeze artifact-qualification inputs: trusted builder identity, SBOM/provenance formats, reproducibility threshold, and required license/provenance metadata for mirrored, source-built, and assembled tool artifacts. | M28 | Approved: SPDX plus SLSA; CycloneDX is out of v1; [embedded constituent provenance and detached final-archive attestations](tools/tool-acquisition.md#artifact-identity-and-metadata). [Profile research](tools/tool-acquisition.md#provenance-profile-research) proposes SPDX 2.3 JSON, SLSA provenance v1, Statement v1, and Sigstore evidence with observed exact URIs, bundle versions, and Rekor v1/v2 timestamp paths. Single correct packaging and install-verification path: payload-only embedded manifest plus detached final-archive attestation over exact published bytes; no alternative self-entry with null or deferred digests. Exact profiles/interoperability, manifest completeness rules, assurance and reproducibility thresholds, and trust identities remain unqualified. |
+| O45 | Select M29 publication credentials and permissions, registry submission procedure, and release-host operational sequence. | Before M29 entry | Destinations approved; credentials and procedures pending. See [distribution](environments/environment.md#distribution). |
+| O48 | Freeze v1 scoped `dx generate` selection syntax and semantics: accepted path/label/pattern forms, empty-scope handling, scoped `--check` freshness boundaries, manifest scoping, and Gazelle merge interaction for scoped refreshes. | M10 | Direction: repository-wide default retained; explicit v1 scope selects the Gazelle subtree to refresh without exposing Gazelle application arguments. Syntax and freshness boundaries pending. See [ADR 0006](decisions/0006-cli-command-surface.md) and [generate](cli/commands/generate.md). |
+| O49 | Freeze hook runner installation/identity, hermetic Git acquisition mappings, staged-path mechanics, bootstrap destination selection, any managed-file force behavior, and two-layer configuration schema. | M30 | Accepted policy lives in the [hooks contract](cli/commands/hooks.md): init may bootstrap without a module; hook Git operations use hermetically acquired Git only, never ambient Git; unmanaged hooks cannot be overwritten by force. The committed direnv `.envrc` is scaffolded absent-only by `dx init` with unmanaged refusal and never auto-runs Bazel, per [Direnv Integration](environments/environment.md#direnv-integration). Trigger/check split, timeout blocking, and local-overlay policy remain as documented there. Exact identities, schema, offline setup, ownership validation, and platform evidence are pending. |
+| O50 | Freeze the consolidated environment/diagnostics surface that fills the rejected-`doctor` role: owning command, status vocabulary, and machine-readable shape. | M30 | Direction: no `dx doctor` ([ADR 0006](decisions/0006-cli-command-surface.md) stands); command machine output is intended to expose structured environment diagnostics (toolchain resolution, platform/host coverage, missing tools); M30 adds one consolidated status surface over the same data. No command implementation exists yet. Exact surface pending. |
+| O51 | Freeze per-repository `dx` version pinning, launcher selection semantics, self-update mechanics, and rollback procedure. | M30 | Direction: single tested version like Bazel — module and CLI share SemVer per [distribution](environments/environment.md#distribution); Bazelisk-style launcher resolves a checked-in pin; the `dx` version equals the pinned `rules_dx` module version; self-update bumps that pin from verified GitHub Release artifacts; rollback is re-pinning the previous release; breaking `dx` CLI changes ride major releases. Pin format and update mechanics pending. |
+| O52 | Freeze `dx run` scope semantics: exact label/pattern passthrough plus file/dir resolution to executable owners with strict single-target execution, `ambiguous_runnable`/`no_runnable` errors, `--` app-arg forwarding, TTY/signal behavior, and local-only (no CI) policy. Multirun stays a separate future feature. | M08 | Target shape is exact label/pattern passthrough with strict single-target execution; file resolves to owning library plus thin binary wrapper, no arbitrary reverse-dependency execution. Disambiguation policy, exit codes, output-protocol events, and CI exclusion pending. Deferred, not in scope: full release packaging/publishing policy beyond the M29 minimal assembly (published module, host CLI artifacts, checksums, provenance, notices), and consumer CI on a second platform beyond the GitHub CI contract. The v1 install path (pinned platform binaries plus the O51 version pin/launcher) and the M30 clean-machine-to-green-CI story are unaffected. |
+| O53 | Freeze the native first-party `dx update` bot: scheduled reusable workflow running real `dx update` per dependency set, reviewable PRs without auto-merge, least-privilege permissions, fork-security reuse, and the narrow bot-commit exception to the consumer CI contract. | M26/M27 | Native bot over Renovate-docs-only; schedule, grouping, permissions, PR shape, and O12 selector mappings pending. |
+| O54 | Freeze unified documentation v1: IR schema allocation/compatibility, machine-input pins and coverage-to-adapter mappings, drift-upgrade machinery, site layout/URL/search, exact docs invocation/protocol mappings, and cache/determinism evidence. | M30 | Generated Bazel-cached IR, mdBook, maintainer-owned drift handling, the narrow nightly rustdoc exception, and shared validation with rendering omitted by check are settled in [Documentation](documentation/README.md) and ADR 0006/0008. [Extractor research](documentation/doc-ir.md#extractor-research) narrows Python, TypeScript/JavaScript, Java, Kotlin, Go, C#, F#, Vue plus C/C++, Svelte, and Scala candidates but does not reconcile the thirteen-adapter claim or prove completeness. Reconcile with an explicit adapter-to-input table; M30 splits into a release-blocking docs subset (M30a, deps M27, consumed by M28) plus post-release adoption scope (M30b, deps M29) per the [milestone DAG](milestones/README.md#order-status-and-dependencies). Schema, pins, pre-render validation, machinery, and execution evidence remain pending. SCIP is out of v1, not needed for docs; [M30](milestones/M30-adoption-bootstrap-first-hour.md) owns delivery. |
+| O55 | Freeze `dx watch` mechanics under [ADR 0017](decisions/0017-dx-watch.md): debounce interval, workspace ignore set (`bazel-*`, `.dx`, local overlays), per-iteration re-resolution, `--clear` behavior, TTY/signal forwarding, `run` restart policy, iteration NDJSON framing, and local-only enforcement. | M30 (after M08) | Direction: thin loop reusing the wrapped command verbatim for `build/test/run/lint/typecheck/format`, plus `check/fix` under [ADR 0018](decisions/0018-umbrella-check-fix-cleanup-clean.md); no daemon, cache, graph, or remote; O44 resolver is a prerequisite. Exact values and restart semantics pending. See [watch](cli/commands/watch.md). |
+| O56 | Freeze thin inspect wrappers reusing target resolution: `dx owners <file>`, `dx deps <label>`, `dx why <file> <label>` as canonicalized `bazel query/cquery` forwarding with deterministic sorting; no custom graph engine or visualization. | M30 (after M08) | Direction: pretty-printed forwarding over the O44 resolver; labels/patterns pass through; external scopes rejected like workflow commands. Syntax and `cquery` vs `query` selection pending. See [Target Resolution](cli/target-resolution.md). |
+| O57 | Freeze post-v1 `dx migrate` codemod scope: major-release-only breaking-change rewrites over the versioned edit manifest pattern; no API rewrites in v1. | Post-v1 | Direction: `init` + `generate` + `migrate` only; `dx new` app/service templates are out of v1; `generate --check` plus guides cover v1 non-breaking freshness; migrator remains major-only over the generation edit-manifest pattern. No syntax or manifest selection yet; promotion into a milestone requires an explicit scope decision. |
+| O58 | Resolve shared-lock tier attribution and freeze per-ecosystem license identities, approval/report mappings, and proof evidence for `dx audit [security\|license]`. | M26 | Accepted policy lives in the [license contract](cli/commands/audit-update-bazel.md#license-family-dx-audit-license): distributed unlisted/review outcomes fail without explicit approval, WITH approval covers the expression verbatim, and bounded-version exceptions survive upgrades while applicable and otherwise valid. Existing two-family/two-tier scope, root policy, SPDX reporting, and NOTICE-text collection stand. Per-root (per-dependency) attribution over conservative whole-lock strictness; per-ecosystem identity mappings and proofs remain pending. |
+| O59 | Freeze `dx check` / `dx fix` umbrella mechanics: parent NDJSON `operation` framing over verbatim per-phase streams, concatenated `diff` rendering, merged `--report` outputs, and `--fail-on` threshold composition across phases. | M10 | Direction: sequential `format` → `lint` → `typecheck` → `generate`, stop on first required failure with that phase's exit code, no parallel execution, per [ADR 0018](decisions/0018-umbrella-check-fix-cleanup-clean.md). Exact framing and merge semantics pending. See the [check/fix/clean contract](cli/commands/check-fix-clean.md). |
+| O60 | Freeze `dx clean` mechanics: `--bazel` flag shape, in-use generation detection, reclaimable-bytes reporting, and commit-lock interaction with concurrent `env` / `codegen` / `setup` preparation. | M25 | Direction: prune validated unselected generations only, preserve `.dx/setups/current` and selections, refuse unmanaged paths, `--dry-run` deletes nothing, per [ADR 0018](decisions/0018-umbrella-check-fix-cleanup-clean.md). Exact flag and detection mechanics pending. See the [check/fix/clean contract](cli/commands/check-fix-clean.md). |
+| O61 | Freeze `dx completion` scope: `dx completion <shell>` printing static scripts generated from the single CLI command-definition source; shell coverage, install guidance, and drift fixtures. | M30 (delivery in M30b; generation source with the M08 command planner) | Direction: scripts ship with the CLI as generated output, no separate artifact; one-time shell-rc setup, never per-directory `.envrc` evaluation; handwritten per-shell scripts rejected so new commands and flags cannot drift from the command reference; dynamic candidate completion (labels and similar) stays a future option. Exact shell list, script mechanics, and fixture shape pending. See [completion](cli/commands/completion.md). |
+
+## Cross-Document Blockers
+
+These conflicts were identified during documentation review of the design-only checkout. They are
+not implementation failures or new scope decisions. Stop the affected work until the owning
+contracts, milestone gates, and focused test expectations agree; unrelated editorial work may proceed.
+
+- **O46, entry prerequisites:** the [native qualification plan](native-toolchains.md#qualification-questions-and-delivery)
+  requires bounded, owned work packages before M00, while the
+  [pre-M00 inventory freeze](product/support-matrix.md#minimal-required-core-freeze-o46-pre-m00)
+  and [entry checklist](milestones/README.md#m00-entry-checklist) leave candidate effort and
+  mappings to M22/M23. Light freeze at entry with M00–M03 guard, remainder
+  deferred to affected integration. The native plan
+  records that light freeze; do not infer that
+  dependency-ready M00 has passed these gates.
+- **O54 and release sequencing:** [M28](milestones/M28-stabilization-release-qualification.md)
+  requires complete required-v1 scope before [M29 publication](milestones/M29-release-publication.md),
+  but [M30](milestones/M30-adoption-bootstrap-first-hour.md) depends on M29 and delivers required-v1
+  documentation and additional commands. M30 splits into a release-blocking
+  docs subset (M30a, consumed by M28) plus post-release adoption scope (M30b). M30/M28 specs
+  and the implementation plan record M30a plus M30b, and the milestone DAG wires
+  M28 to M27 plus M30a with M30b after M29;
+  release qualification/publication remains blocked until the O54 adapter and
+  evidence qualifications land.
+- **O52, runnable ownership and forwarding:** [run](cli/commands/build-test-coverage.md#dx-run)
+  requires a runnable source owner and forwards application arguments, while
+  [generation ownership](generation/common.md) assigns executable/importable sources to a library
+  with a thin binary wrapper, and the [common invocation](cli/cli-contract.md#invocation-shape)
+  only forwards Bazel options. File scope resolves by strict single-target mapping to the
+  owning library plus thin wrapper. Run, generation, and CLI contracts
+  record that mapping plus the `dx run --` app-forwarding
+  exception. Qualify owner-to-runnable mapping and the forwarding
+  exception before implementing file-scoped execution; arbitrary reverse-dependent execution is not approved.
+- **O54, documentation extraction:** the [site contract](documentation/site.md) now specifies
+  generated, Bazel-cached IR only, not committed or source-adjacent snapshots. Storage and render
+  inputs are settled; no snapshot refresh/apply workflow is needed. The
+  [docs command](cli/commands/docs.md) now selects shared extraction/validation for check and adds
+  rendering for normal build. Prove complete pre-render validation and freeze remaining CI,
+  invocation, and output mappings without reintroducing snapshot comparisons.
+  Reconcile the claimed thirteen adapters with an explicit
+  adapter-to-input table against the grouped [machine-input inventory](documentation/doc-ir.md#machine-inputs),
+  and qualify the accepted [nightly rustdoc exception](decisions/0008-dependency-currency.md#rustdoc-extraction-exception).
+  [IR](documentation/doc-ir.md#machine-inputs)
+  records that reconciliation direction.
+- **O58, license outcomes:** [license policy](cli/commands/audit-update-bazel.md#license-family-dx-audit-license)
+  combines whole-lock coverage with distribution-root tiers without defining shared-lock attribution.
+  Attribution is per-root (per-dependency), without silently narrowing
+  complete-lock audit coverage. Unlisted/review, verbatim WITH approval, and bounded-exception behavior
+  are settled in the owning contract; attribution mappings and technical qualification still block
+  implementation. The audit contract records the
+  per-root direction.
+- **O11, secrets applicability:** the selected Gitleaks route in the [audit contract](cli/commands/audit-update-bazel.md#dx-audit)
+  uses an explicit `secrets` policy family as its own semantic class.
+  Audit and [quality-sources](quality/quality-sources.md)
+  contracts record that class direction. Qualify that registry amendment against the
+  [single-family semantic-class registry](quality/quality-sources.md), including redaction and SARIF
+  evidence; selection alone does not establish a conforming source adapter.
+- **O39, archive self-reference:** [artifact metadata](tools/tool-acquisition.md#artifact-identity-and-metadata)
+  now separates embedded constituent provenance from detached final-archive attestations; that
+  boundary is approved. Single correct path: payload-only embedded
+  manifest plus detached final-archive attestation over exact published bytes, with a completeness
+  check proving no payload file is silently omitted. The
+  acquisition contract records that single path. Freeze those rules before packaging
+  implementation; wire profiles and trust evidence remain O39
+  qualification, not consequences already established by the packaging decision.
+- **O30/O31/O32, native configurations:** the [support matrix](product/support-matrix.md) retains
+  staticcheck rule-set and Checkstyle/Scalafix configuration candidates. Qualify these against [native configuration](quality/native-configuration.md)
+  before freezing them; curated membership does not authorize hidden presets. The
+  support matrix records that qualify-now direction. Curated
+  defaults, explicit opt-ins, and major-only removals/formatter-set changes are settled in the
+  [tool baseline](tools/tool-baseline.md). Minor lint/audit additions still require its compatibility
+  qualification, not a new preference vote.
