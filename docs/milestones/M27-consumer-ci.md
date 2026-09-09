@@ -15,8 +15,9 @@ mechanics/limit mappings must be qualified and frozen before affected implementa
 
 ## Contract References
 
-- [Consumer GitHub CI contract](../github-ci.md), [CI evidence matrix](../testing/github-ci.md), and
-  [consumer CI qualification](../open-decisions.md#consumer-ci-qualification).
+- [Consumer GitHub CI contract](../github-ci.md), [CI evidence matrix](../testing/github-ci.md),
+  [consumer CI qualification](../open-decisions.md#consumer-ci-qualification), and open decisions
+  [O53](../open-decisions.md) and [O62](../open-decisions.md).
 
 ## Deliverables
 
@@ -35,6 +36,7 @@ mechanics/limit mappings must be qualified and frozen before affected implementa
    optional Code Scanning publication with truthful command, collection, and reporting failures.
 5. Exercise the CI matrix through clean external consumers and document setup, reviewed pin updates,
    native reruns, and required repository settings; hand qualified mappings and fixtures to M28.
+6. Deliver consumer `.bazelrc` preset onboarding: a public `extra_presets` load label with a stability discipline (preset-affecting changes only in minor/major releases, called out in release notes), a setup runbook (dependency snippet, generation target, import block, update loop, bot configuration sample), and a clean-external-consumer fixture proving generation, import, and regen-and-review update; `dx init` template emission stays M30 scope.
 
 ## Milestone-Specific Evidence
 
@@ -45,6 +47,7 @@ mechanics/limit mappings must be qualified and frozen before affected implementa
   merge queues, and fork approval/credential isolation without false aggregate success.
 - Reporting fixtures cover deduplication, human-reply preservation, thread cleanup and limit races,
   security-audit rendering, optional Code Scanning, and injected collection/publication failures.
+- A clean external consumer generates, imports, and updates the presets with a reviewed flag diff; repository dogfood alone is insufficient.
 
 ## Out Of Scope
 
@@ -53,5 +56,5 @@ mechanics/limit mappings must be qualified and frozen before affected implementa
 ## Completion Report Additions
 
 - Record frozen CI mappings and identities, external-consumer matrix evidence, reporting/security
-  race results, onboarding/settings documentation, and the M28 release-requalification handoff.
+  race results, onboarding/settings documentation, consumer preset delivery, and the M28 release-requalification handoff.
   Distinguish integration evidence from release-qualified support.
