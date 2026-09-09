@@ -14,3 +14,4 @@ AGENTS.local.md
 .cache/
 .direnv/
 .tmp/
+opencode.json
