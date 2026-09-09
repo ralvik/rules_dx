@@ -5,12 +5,15 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 load(":policy.bzl", "quality_family", "workspace_policy")
 load(":policy_subject.bzl", "policy_subject")
 load(":policy_tests.bzl", "policy_analysis_tests", "policy_unit_tests")
+load(":pipeline_tests.bzl", "pipeline_unit_tests")
 load(":sources_tests.bzl", "sources_registry_tests")
 
 package(default_visibility = ["//visibility:public"])
 
 exports_files([
+    "adapters.bzl",
     "applicability.bzl",
+    "pipeline.bzl",
     "policy.bzl",
     "result.proto",
     "sources.bzl",
@@ -59,6 +62,8 @@ policy_subject(
 
 policy_unit_tests(name = "policy_unit")
 
+pipeline_unit_tests(name = "pipeline_unit")
+
 policy_analysis_tests(name = "policy_analysis")
 
 sources_registry_tests(name = "sources_registry")
@@ -66,6 +71,7 @@ sources_registry_tests(name = "sources_registry")
 test_suite(
     name = "all",
     tests = [
+        ":pipeline_unit",
         ":policy_analysis",
         ":policy_unit",
         ":sources_registry",
