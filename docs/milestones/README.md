@@ -59,7 +59,7 @@ adoption scope (depends on M29).
 | --- | --- | --- | --- |
 | M00 | [Bazel, Rust, And CI](M00-bazel-rust-ci-seed-quality.md) ([report](M00-completion-report.md)) | None | Ready |
 | M01 | [Starlark Testing And Tested-Stack Metadata](M01-starlark-testing-tested-stack-metadata.md) ([report](M01-completion-report.md)) | M00 | Ready |
-| M02 | [Minimum Rust Wrappers And Providers](M02-minimum-rust-wrappers-providers.md) | M01 | Pending |
+| M02 | [Minimum Rust Wrappers And Providers](M02-minimum-rust-wrappers-providers.md) ([report](M02-completion-report.md)) | M01 | Ready |
 | M03 | [Quality Source, Policy, Result, Runner, And Evaluator Core](M03-quality-core.md) | M01, M02 | Pending |
 | M04 | [Rust, Starlark, TOML, And Markdown Acquisition And Adapters](M04-initial-quality-adapters.md) | M03 | Pending |
 | M05 | [Direct Bazel Dogfood](M05-direct-bazel-dogfood.md) | M04 | Pending |

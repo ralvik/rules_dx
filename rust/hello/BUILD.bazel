@@ -1,10 +1,13 @@
-"""M00 seed Rust binary, library, and tests."""
+"""M00 seed Rust binary, library, and tests; M02 consumer of dx_rust_* wrappers."""
 
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+load("//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
+load("//rust/rules:probe.bzl", "dx_wrapper_subject")
+load("//rust/rules:wrapper_tests.bzl", "dx_wrapper_conformance_tests", "dx_wrapper_registry_tests")
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 
 package(default_visibility = ["//visibility:public"])
 
-rust_library(
+dx_rust_library(
     name = "hello_lib",
     srcs = ["src/lib.rs"],
     crate_name = "hello",
@@ -12,7 +15,7 @@ rust_library(
     deps = ["@crates//:anyhow"],
 )
 
-rust_binary(
+dx_rust_binary(
     name = "hello",
     srcs = ["src/main.rs"],
     edition = "2021",
@@ -22,14 +25,70 @@ rust_binary(
     ],
 )
 
-rust_test(
+dx_rust_test(
     name = "hello_test",
     crate = ":hello_lib",
     edition = "2021",
     size = "small",
 )
 
+# Authoritative quality identities (M02): rustfmt and Clippy resolve from
+# the pinned toolchain, never from ambient host tools. Each wrapper is
+# listed explicitly: lint aspects apply to the wrapper's own CrateInfo and
+# do not traverse the private `_dx_upstream` edge.
+rustfmt_test(
+    name = "hello_fmt_test",
+    size = "small",
+    targets = [":hello_lib", ":hello"],
+)
+
+rust_clippy_test(
+    name = "hello_clippy_test",
+    size = "small",
+    targets = [":hello_lib", ":hello"],
+)
+
 exports_files([
     "Cargo.toml",
     "Cargo.lock",
 ])
+
+# Conformance subjects (M02): same package as the private `_dx_upstream`
+# targets so the probe can observe both sides of the forwarding boundary.
+dx_wrapper_subject(
+    name = "hello_lib_subject",
+    clippy_test = ":hello_clippy_test",
+    fmt_test = ":hello_fmt_test",
+    upstream = ":hello_lib_dx_upstream",
+    wrapper = ":hello_lib",
+    testonly = True,
+)
+
+dx_wrapper_subject(
+    name = "hello_subject",
+    clippy_test = ":hello_clippy_test",
+    fmt_test = ":hello_fmt_test",
+    upstream = ":hello_dx_upstream",
+    wrapper = ":hello",
+    testonly = True,
+)
+
+dx_wrapper_subject(
+    name = "hello_test_subject",
+    clippy_test = ":hello_clippy_test",
+    fmt_test = ":hello_fmt_test",
+    upstream = ":hello_test_dx_upstream",
+    wrapper = ":hello_test",
+    testonly = True,
+)
+
+dx_wrapper_registry_tests(name = "wrapper_registry_tests")
+
+dx_wrapper_conformance_tests(
+    name = "wrapper_conformance_tests",
+    subjects = [
+        ":hello_lib_subject",
+        ":hello_subject",
+        ":hello_test_subject",
+    ],
+)

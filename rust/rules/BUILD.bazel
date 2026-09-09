@@ -1,0 +1,5 @@
+"""Experimental minimal Rust wrappers (M02, ADR 0013)."""
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["defs.bzl", "probe.bzl", "wrapper_tests.bzl"])
