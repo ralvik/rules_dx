@@ -1,0 +1,39 @@
+# M00 minimal CI skeleton: build, test, and implementation-coverage gate on
+# the seed host only.
+#
+# Seed host: Linux x86_64 glibc (ubuntu-latest), local execution, no remote.
+# Full host coverage and CI qualification stay in M27; unavailable required
+# hosts from ADR 0014 are recorded as gaps, not claimed here.
+
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    name: build-test (Linux x86_64 glibc, local-only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install pinned Bazelisk
+        run: |
+          curl -sL -o /tmp/bazelisk \
+            https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
+          echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
+          sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
+          bazel version
+      - run: bazel build //...
+      - run: bazel test //...
+      - run: bazel run //rust/hello:hello
+      - run: bazel coverage //...
+      - name: Enforce implementation-coverage gate
+        run: |
+          bazel query 'kind("source file", deps(//...))' 2>/dev/null \
+            | grep '^//' | sed 's|^//||; s|:|/|' | grep '\.rs$' | sort > /tmp/m00_sources.txt
+          bazel run //tools/coverage:check -- \
+            --report "$GITHUB_WORKSPACE/bazel-out/_coverage/_coverage_report.dat" \
+            --inventory "$GITHUB_WORKSPACE/tools/coverage/inventory.txt" \
+            --sources /tmp/m00_sources.txt \
+            --root "$GITHUB_WORKSPACE"
