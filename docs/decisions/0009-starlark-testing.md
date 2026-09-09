@@ -21,37 +21,54 @@ version. The capability provides:
 
 - Load tests for public `.bzl` entry points and symbols.
 - Unit-test-style assertions for pure Starlark functions and values.
-- Analysis tests for rules, aspects, providers, registered actions, toolchains,
-  configurations, output groups, and expected failures.
+- Analysis tests for rules, providers, and declared outputs, with
+  deterministic observation rendering. Aspect, toolchain, configuration,
+  output-group, registered-action, and transition subjects remain
+  provisional pending concrete use cases; M01 does not claim them.
 - Ordinary Bazel test protocol behavior, logs, and standard test outputs suitable
   for Bazel, BEP, and CI collection.
 - Small fixture helpers without mocking or reimplementing Bazel semantics.
 
 The initial public authoring API is one `starlark_test` macro facade with an
-explicit test mode. It dispatches to internal load, unit, or analysis test
-implementations because those modes execute in different Bazel phases. The unified
-facade does not pretend that one rule implementation can directly invoke arbitrary
-loaded functions or rule implementation functions.
+explicit test mode (`load`, `unit`, `analysis`, `execution`; named in M01).
+It dispatches to internal per-mode rule implementations because those modes
+execute in different Bazel phases. The unified facade does not pretend that
+one rule implementation can directly invoke arbitrary loaded functions or
+rule implementation functions: load/unit values arrive as evaluated records
+from test `.bzl` files, analysis observes providers and outputs, and a
+generated script evaluates every check in the execution phase.
 
 Test cases and assertions are authored as functions in test `.bzl` files using a
 small project-owned `expect` API. The public `starlark_test` factory binds a test
 function and mode to a callable test rule or macro during loading. The test `.bzl`
 file exports that callable, and BUILD instantiates it with an ordinary target name,
 tags, visibility, and other common test attributes. BUILD files do not encode
-assertion data.
+assertion data: attribute payloads are serialized records produced by the
+test `.bzl` file, not hand-written assertion manifests.
 
-The initial `expect` API includes subjects for primitive values, strings,
-collections, dictionaries, errors, targets, providers, actions, files, depsets,
-and runfiles. It supports custom subjects for project-specific providers. Broad
-matcher, transformation, and snapshot APIs require concrete use cases rather than
-being included speculatively. The exact `expect` subject and matcher surface is provisional
-pending M01 qualification; do not treat the list above as frozen API through this record.
+The M01-qualified `expect` surface is one constructor, `expect_equal`, plus the
+`DxSubjectInfo` provider for analysis observations. Broader subjects
+(targets, actions, files, depsets, runfiles) and matchers remain provisional
+pending concrete use cases; do not treat them as available API through this
+record.
 
-Expected-failure tests identify the required failure phase (`load`, `unit`, or
-`analysis`) and one or more diagnostic substrings. The framework may retain the
+Expected-failure tests identify the required failure phase (`load`, `unit`,
+`analysis`, or `execution`) and one or more diagnostic substrings. The M01
+mechanism evaluates every check in a generated execution-phase script, so
+mismatches fail targets through the standard protocol (`FAILED` with
+expected/actual rendering in declaration order); mode violations fail
+analysis as authoring errors instead. The framework may retain the
 complete normalized diagnostic for reporting, but exact full-message snapshots are
 not the default contract because Bazel wording can change when the pinned version
 is updated.
+
+M01 toolchain and pinning findings (Bazel 9.2.0, Bzlmod, local Linux): native
+`sh_*` rules do not exist, so generated POSIX scripts are the test
+executables and the framework takes no shell dependency; `TEST_SRCDIR` roots
+runfiles with the workspace directory (`$TEST_SRCDIR/$TEST_WORKSPACE/...`);
+`BUILD_WORKSPACE_DIRECTORY` is unset under `bazel test`; canonical label
+rendering carries a leading `@@` that the framework normalizes for
+observations. Requalify each finding on pin bumps per O14.
 
 Expectation mismatches accumulate within one test function and are reported
 together in deterministic declaration order. An infrastructure error that makes
@@ -70,7 +87,9 @@ a second interpreter.
 
 Rust may orchestrate real Bazel fixture workspaces and consume Bazel test/BEP
 results across platforms. It does not interpret Starlark or emulate loading,
-analysis, providers, aspects, toolchains, transitions, or actions.
+analysis, providers, aspects, toolchains, transitions, or actions. M01 ships
+no Rust orchestration: all tests run inside the single Bazel invocation with
+no nested Bazel.
 
 Tests use Bazel's standard test contract: process exit status, test logs, and
 Bazel-provided output paths such as `XML_OUTPUT_FILE` when applicable. The
@@ -81,9 +100,15 @@ The custom tooling must first investigate genuine Starlark executable-line
 instrumentation under the pinned real Bazel. The central
 [coverage policy](../testing/README.md#coverage) permits a checked behavioral matrix
 only when documented evidence demonstrates that reliable line measurement is
-infeasible. The fallback covers entry points, functions, rules, aspects, providers,
-attributes, configurations, actions, and failure paths with meaningful assertions;
-it is never reported as source-line or branch coverage. Loaded files, test counts,
+infeasible. M01 ran that investigation and met the fallback condition:
+a provably executed `.bzl` probe yielded a 0-byte `coverage.dat` with zero
+`SF` records, no Starlark coverage flags exist, and the upstream proposal
+(`bazelbuild/bazel#15594`) was never accepted. The fallback therefore covers
+public entry points, functions, rules, providers, attributes, and failure
+paths with meaningful assertions in
+[`tools/starlark/behavioral_matrix.md`](../../tools/starlark/behavioral_matrix.md),
+machine-checked by `matrix_validation`; it is never reported as source-line
+or branch coverage. Loaded files, test counts,
 and mappings alone do not establish coverage. Instrumentation, reasoned ignore
 support, feasibility evidence, and measurement mechanics follow the resolved
 [coverage policy](../testing/README.md#coverage) (O47 resolved 2026-09-09).

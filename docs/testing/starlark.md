@@ -1,55 +1,98 @@
 # Starlark Testing
 
-This contract details the project-owned `starlark_test` facade used under the
-pinned Bazel version. The [testing strategy](README.md) indexes it alongside
-the CLI, CI, generation, environment, tool, and quality matrices.
+Accepted contract for the project-owned `starlark_test` facade under the
+pinned Bazel version, implemented in M01 per
+[ADR 0009](../decisions/0009-starlark-testing.md). The
+[testing strategy](README.md) indexes it alongside the CLI, CI, generation,
+environment, tool, and quality matrices.
+
+Public API: `starlark_test` macro, `expect_equal` assertion constructor,
+and `DxSubjectInfo` provider, all loadable from
+`//tools/starlark:defs.bzl`. One macro call is one addressable Bazel test
+target with one Bazel result.
 
 ## Modes
 
-Authors use the unified `starlark_test` macro with an explicit load, unit, or
-analysis mode. Load tests cover public `.bzl` entry points. Unit tests exercise
-pure Starlark functions and values. Analysis tests inspect rules, aspects,
-providers, actions, inputs, arguments, environment, execution requirements,
-toolchain resolution, target tags, output groups, configurations, and expected
-failures. Conformance tests verify that each mode delegates to the appropriate
-Bazel loading or analysis mechanism rather than emulating phase behavior.
+`starlark_test` takes an explicit `mode` (`load`, `unit`, `analysis`, or
+`execution`) and dispatches to the internal per-mode rule implementation:
 
-Quality result, diagnostic, evaluator, cache, deterministic-output, apply-safety,
-and tool-parity suites are defined in
-[Quality Workflow Testing](../quality/quality-testing.md).
+- `load` asserts values computed while test files load (module top-level
+  bindings, public entry calls). Requires non-empty `checks`, rejects
+  `subjects`.
+- `unit` asserts pure Starlark function results with no I/O. Requires
+  non-empty `checks`, rejects `subjects`.
+- `analysis` observes subject targets (provider fields, output basenames),
+  renders deterministic observations, and compares them against
+  `expected_observations`. Requires non-empty `subjects`.
+- `execution` greps runfiles fixtures (`file_checks`, AND semantics over
+  newline-separated substrings, one result line per substring). Requires
+  non-empty `file_checks`, rejects `subjects`.
+
+Any mode accepts `file_checks` additionally. Wrong evidence for the
+declared mode (missing required evidence, or `subjects` in a non-analysis
+mode) fails analysis with an authoring error: such targets can never pass
+silently. Evidence-free tests are rejected the same way.
 
 ## Authoring
 
-Test functions live in test `.bzl` files and use the project-owned `expect` API.
-The test module exports callable test definitions generated while it loads; BUILD
-files instantiate them as ordinary named test targets. Tests cover binding
-failures, duplicate names, common test attributes, assertion diagnostics, and
-attempts to use a function in the wrong test mode.
+Test `.bzl` files call `expect_equal(name, actual, expected)` while they
+load and export a macro that instantiates `starlark_test` with those
+records. BUILD files only instantiate the exported macro with a target
+name; they never encode assertion data. Values must be JSON-encodable;
+records serialize deterministically via `json.encode`.
 
-Assertion conformance covers primitive values, strings, collections,
-dictionaries, errors, targets, providers, actions, files, depsets, runfiles,
-and custom provider subjects. Diagnostic tests require deterministic
-expected/actual rendering.
+Mismatches accumulate within one target and report together in declaration
+order through the standard Bazel test protocol: non-zero exit status and
+`test.log` diagnostics. An assertion failure is always execution-phase, so
+Bazel reports `FAILED`, never a build breakage. Negative demonstrations
+live in `tools/starlark/tests/negative` with `tags = ["manual"]` and are
+excluded from wildcard suites; run them explicitly:
 
-Negative tests match the expected load, unit, or analysis phase and required
-diagnostic substrings. They also prove that the wrong phase, a successful
-target, or a failure missing any required fragment does not pass.
+```sh
+bazel test //tools/starlark/tests/negative:failing_check_demo \
+  //tools/starlark/tests/negative:missing_observation_demo \
+  //tools/starlark/tests/negative:missing_fragment_demo \
+  --nocache_test_results
+bazel build //tools/starlark/tests/negative:wrong_phase_demo
+```
 
-Assertion tests verify that multiple mismatches are retained and rendered in
-declaration order. Separate cases verify that unrecoverable framework errors
-fail immediately and are labeled as infrastructure errors rather than
-mismatches.
+The last command shows the analysis authoring error for a mode violation.
 
-Each function is one Bazel test target. Conformance tests verify independent
-filtering, tags, cache status, retries, failure reporting, and optional grouping
-through native `test_suite`.
+## Selection, Retries, Logs, Suites
 
-## Orchestration And Protocol
+Test selection is by target label; the generated runner does not interpret
+`--test_filter` per check. Retries use the standard `flaky` attribute
+(passthrough, off by default); caching, timeouts, and sharding follow
+ordinary Bazel test semantics. Logs and `test.xml` are Bazel-provided;
+analysis-mode runners also print their observations to `test.log`. Tests
+may be grouped with ordinary `test_suite` targets
+(`//tools/starlark/tests:all`, `//tools/testing:all`).
 
-Rust orchestration runs Bazel fixtures and consumes ordinary Bazel test and BEP
-results across the required platform matrix. Rust does not interpret Starlark or
-emulate Bazel analysis.
+## Environment
 
-`starlark_test` follows Bazel's standard test protocol, including exit status,
-test logs, and `XML_OUTPUT_FILE` when Bazel supplies it. Bazel and BEP own test
-result collection. No custom per-test JSON transport is introduced.
+The generated runner is a POSIX shell script and requires the standard
+Bazel test environment (`TEST_SRCDIR`, `TEST_WORKSPACE`); runfiles resolve
+as `$TEST_SRCDIR/$TEST_WORKSPACE/<short_path>`. `BUILD_WORKSPACE_DIRECTORY`
+is unset under `bazel test` and must not be used. Native `sh_*` rules do
+not exist under the pinned Bazel with Bzlmod, so the framework depends on
+none: executables are generated scripts. No nested Bazel invocation is used
+anywhere; everything runs inside the single Bazel command.
+
+## Coverage
+
+Starlark has no executable-line instrumentation under the pinned Bazel, so
+there is no Starlark line-coverage percentage. The evidence-backed fallback
+is the checked [behavioral matrix](../../tools/starlark/behavioral_matrix.md):
+every public entry point and behavior maps to passing tests, the mapping is
+machine-checked by `matrix_validation`, and every mapped target carries
+evidence by construction. The matrix is repository metadata, not a result
+stream, and must never be presented as source-line or branch coverage.
+
+## Future (Not Implemented)
+
+Per-check filtering, richer matchers beyond `expect_equal`, aspect /
+toolchain / configuration / output-group / action subjects, per-function
+test targets, and Rust orchestration of fixture workspaces with BEP
+consumption are explicitly future work. They require concrete use cases and
+their own milestones; consult [ADR 0009](../decisions/0009-starlark-testing.md)
+and [open decisions](../open-decisions.md) before assuming any of them.
