@@ -1,3 +1,8 @@
-"""Root package for the rules_dx M00 seed."""
+"""Root package for the rules_dx seed."""
 
 package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    ".bazelversion",
+    "MODULE.bazel",
+])

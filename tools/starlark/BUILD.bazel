@@ -1,0 +1,6 @@
+"""M01 Starlark testing facade (ADR 0009)."""
+
+exports_files([
+    "behavioral_matrix.md",
+    "defs.bzl",
+])

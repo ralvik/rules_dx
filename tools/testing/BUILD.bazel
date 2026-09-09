@@ -1,0 +1,18 @@
+"""M01 tested-stack manifest and contract (ADR 0014)."""
+
+load(":tested_stack.bzl", "tested_stack")
+load(":tested_stack_tests.bzl", "tested_stack_contract_tests")
+
+tested_stack(
+    name = "stack",
+    platforms = ["x86_64-unknown-linux-gnu"],
+)
+
+tested_stack_contract_tests(name = "stack_contract")
+
+exports_files(["tested_stack.bzl"])
+
+test_suite(
+    name = "all",
+    tests = [":stack_contract"],
+)

@@ -1,0 +1,34 @@
+"""M01 Starlark framework conformance tests (ADR 0009)."""
+
+load(":analysis_tests.bzl", "subject_analysis_tests")
+load(":arithmetic_tests.bzl", "arithmetic_load_tests", "arithmetic_unit_tests")
+load(":execution_tests.bzl", "fixture_execution_tests")
+load(":matrix_tests.bzl", "matrix_validation_tests")
+load(":subject.bzl", "example_subject")
+
+example_subject(
+    name = "subject_under_test",
+    left = 40,
+    right = 2,
+)
+
+arithmetic_unit_tests(name = "arithmetic_unit")
+
+arithmetic_load_tests(name = "arithmetic_load")
+
+subject_analysis_tests(name = "subject_analysis")
+
+fixture_execution_tests(name = "fixture_execution")
+
+matrix_validation_tests(name = "matrix_validation")
+
+test_suite(
+    name = "all",
+    tests = [
+        ":arithmetic_load",
+        ":arithmetic_unit",
+        ":fixture_execution",
+        ":matrix_validation",
+        ":subject_analysis",
+    ],
+)
