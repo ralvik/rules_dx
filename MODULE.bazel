@@ -10,6 +10,14 @@ module(
 bazel_dep(name = "rules_rust", version = "0.74.0")
 bazel_dep(name = "rules_cc", version = "0.2.22")
 
+# M03 WP1: explicit direct deps (versions match the transitive pins above
+# where they overlap, so MVS keeps the executed tree). `protobuf`/`protoc`
+# itself stays transitive via rules_proto/rules_rust_prost (it resolves above
+# their declared minimums, so a root pin would only add a direct-dep warning).
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "rules_proto", version = "7.1.0")
+bazel_dep(name = "rules_rust_prost", version = "0.74.0")
+
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
     edition = "2021",
