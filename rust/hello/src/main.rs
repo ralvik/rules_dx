@@ -7,4 +7,4 @@ fn main() -> anyhow::Result<()> {
     println!("{greeting}");
     Ok(())
 }
-// LCOV_EXCL_STOP
+// LCOV_EXCL_STOP - reason: end of thin binary shim exclusion.

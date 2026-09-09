@@ -26,6 +26,7 @@ rust_test(
     name = "hello_test",
     crate = ":hello_lib",
     edition = "2021",
+    size = "small",
 )
 
 exports_files([

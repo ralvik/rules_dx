@@ -13,4 +13,10 @@ test --test_output=errors
 # `bazel coverage` silently emits empty coverage.dat files on GCC hosts.
 coverage --test_env=GENERATE_LLVM_LCOV=1
 coverage --combined_report=lcov
-coverage --instrumentation_filter=^//rust/,^//tools/coverage/
+# Instrument every workspace-owned target (`@` external repos never match
+# `^//`); the gate scopes enforcement via the source inventory, so new
+# first-party packages are covered without filter maintenance. The filter
+# matches target labels, where package and target name are joined by `:`,
+# so a prefix ending in `/` would silently skip targets declared directly
+# in that package (this dropped //tools/coverage:coverage_gate_test).
+coverage --instrumentation_filter=^//

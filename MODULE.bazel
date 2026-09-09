@@ -22,8 +22,8 @@ use_repo(rust, "rust_toolchains")
 register_toolchains("@rust_toolchains//:all")
 
 # External-dependency fixture source of truth (WP2). The lockfile is
-# generated via crate_universe repin on the seed host:
-#   CARGO_BAZEL_REPIN=1 bazel sync --only=crates
+# regenerated via crate_universe repin on the seed host:
+#   CARGO_BAZEL_REPIN=1 bazel build //rust/hello:hello
 crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
 crate.from_cargo(
     name = "crates",

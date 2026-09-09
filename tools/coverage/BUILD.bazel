@@ -1,0 +1,26 @@
+"""M00 implementation-coverage gate (WP4)."""
+
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_library(
+    name = "coverage_gate",
+    srcs = ["src/lib.rs"],
+    crate_name = "coverage_gate",
+    edition = "2021",
+)
+
+rust_binary(
+    name = "check",
+    srcs = ["src/main.rs"],
+    edition = "2021",
+    deps = [":coverage_gate"],
+)
+
+rust_test(
+    name = "coverage_gate_test",
+    crate = ":coverage_gate",
+    edition = "2021",
+    size = "small",
+)

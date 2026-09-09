@@ -1,0 +1,18 @@
+# M00 implementation-coverage source inventory (WP4).
+#
+# Format: `<disposition> <repo-relative path>` per line (`#` comments and
+# blank lines skipped). Dispositions: `eligible` (authored first-party
+# implementation, in the denominator unless removed by a validated
+# source-level ignore) or `support` (never in the denominator).
+#
+# M00 scope: Rust only. No `.bzl` files are authored in M00 (only loads of
+# the pinned rulesets), so there is no Starlark inventory yet; see the M00
+# completion report for the Starlark feasibility evidence. Reconciled in CI
+# against `bazel query 'kind("source file", deps(//...))'` filtered to
+# workspace-owned `*.rs` files; test-only sources would be classified
+# `support`, but M00 has none (both `rust_test` targets reuse their
+# library crate via `crate =`).
+eligible rust/hello/src/lib.rs
+eligible rust/hello/src/main.rs
+eligible tools/coverage/src/lib.rs
+eligible tools/coverage/src/main.rs
