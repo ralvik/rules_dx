@@ -1,0 +1,17 @@
+"""M04 authoritative Rust toolchain bindings (WP1)."""
+
+load(":identity_subject.bzl", "toolchain_identity_subject")
+load(":identity_tests.bzl", "toolchain_identity_tests")
+
+package(default_visibility = ["//visibility:public"])
+
+toolchain_identity_subject(
+    name = "identity_under_test",
+)
+
+toolchain_identity_tests(name = "identity")
+
+test_suite(
+    name = "all",
+    tests = [":identity"],
+)

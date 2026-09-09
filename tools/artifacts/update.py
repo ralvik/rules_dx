@@ -1,0 +1,330 @@
+#!/usr/bin/env python3
+"""Regenerate checked-in standalone quality-tool artifact metadata.
+
+M04 WP1 acquisition proof (O20): one generated file per tool/platform under
+this directory records the exact immutable URL, digest, size, archive member,
+upstream version, execution platform, ABI floor, runtime files, and licenses.
+
+Usage (maintainer only; requires network plus file/readelf/objdump/tar):
+    bazel run //tools/artifacts:update
+    bazel run //tools/artifacts:update -- --verify-only   # reject changed bytes
+
+Byte-identity policy: a versioned release URL does not guarantee immutable
+bytes. Vale publishes a checksums file, which this generator verifies. Neither
+Buildifier nor Taplo publishes asset digests, so their checked-in digests are
+the maintainer-established byte identity: regeneration fails when upstream
+bytes change instead of silently recording new content.
+"""
+
+import gzip
+import hashlib
+import os
+import re
+import subprocess
+import sys
+import tarfile
+import tempfile
+import urllib.request
+
+SCHEMA_VERSION = 1
+
+TOOLS = {
+    "buildifier": {
+        "upstream_version": "8.5.1",
+        "release_page": "https://github.com/bazel-contrib/buildtools/releases/tag/v8.5.1",
+        "licenses": [{
+            "name": "Apache-2.0",
+            "source": "https://github.com/bazel-contrib/buildtools/blob/v8.5.1/LICENSE",
+        }],
+        "platforms": {
+            "linux_x86_64": {
+                "os": "linux",
+                "cpu": "x86_64",
+                "asset": "buildifier-linux-amd64",
+                "url": "https://github.com/bazel-contrib/buildtools/releases/download/v8.5.1/buildifier-linux-amd64",
+                "kind": "raw",
+                "executable": "buildifier-linux-amd64",
+            },
+        },
+    },
+    "taplo": {
+        "upstream_version": "0.10.0",
+        "release_page": "https://github.com/tamasfe/taplo/releases/tag/0.10.0",
+        "licenses": [{
+            "name": "MIT",
+            "source": "https://github.com/tamasfe/taplo/blob/0.10.0/LICENSE",
+        }],
+        "platforms": {
+            "linux_x86_64": {
+                "os": "linux",
+                "cpu": "x86_64",
+                "asset": "taplo-linux-x86_64.gz",
+                "url": "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-linux-x86_64.gz",
+                "kind": "gzip",
+                "executable": "taplo-x86_64",
+            },
+        },
+    },
+    "vale": {
+        "upstream_version": "3.20.0",
+        "release_page": "https://github.com/vale-cli/vale/releases/tag/v3.20.0",
+        "licenses": [{
+            "name": "MIT",
+            "source": "https://github.com/vale-cli/vale/blob/v3.20.0/LICENSE",
+        }],
+        "platforms": {
+            "linux_x86_64": {
+                "os": "linux",
+                "cpu": "x86_64",
+                "asset": "vale_3.20.0_Linux_64-bit.tar.gz",
+                "url": "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_Linux_64-bit.tar.gz",
+                "kind": "tar.gz",
+                "executable": "vale",
+                "checksums_url": "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_checksums.txt",
+            },
+        },
+    },
+}
+
+
+def _require_tool(name):
+    for directory in os.environ.get("PATH", "").split(os.pathsep):
+        candidate = os.path.join(directory, name)
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    sys.exit("update: required maintainer tool %r not found on PATH" % name)
+
+
+def _run(argv):
+    process = subprocess.run(argv, capture_output=True, text=True)
+    if process.returncode != 0:
+        sys.exit("update: %s failed:\n%s" % (" ".join(argv), process.stderr))
+    return process.stdout
+
+
+def _download(url, path):
+    request = urllib.request.Request(url, headers={"User-Agent": "rules_dx-artifact-update"})
+    with urllib.request.urlopen(request, timeout=300) as response, open(path, "wb") as out:
+        for chunk in iter(lambda: response.read(65536), b""):
+            out.write(chunk)
+
+
+def _sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _elf_linkage(path):
+    """Return (linkage, interpreter, needed) from actual binary bytes."""
+    readelf = _require_tool("readelf")
+    headers = _run([readelf, "-h", "-l", "-d", path])
+    linkage = "static"
+    if re.search(r"Type:.*DYN", headers):
+        linkage = "pie" if "INTERP" not in headers else "dynamic"
+    elif "INTERP" in headers:
+        linkage = "dynamic"
+    interpreter = None
+    match = re.search(r"\[Requesting program interpreter: ([^\]]+)\]", headers)
+    if match:
+        interpreter = match.group(1)
+    needed = sorted(set(re.findall(r"\(NEEDED\)[^[]*\[([^\]]+)\]", headers)))
+    return linkage, interpreter, needed
+
+
+def _abi_floor(path):
+    """Return observed GNU symbol floors via objdump, or Nones for static."""
+    floor = {"kernel": None, "libc": None, "libstdcxx": None}
+    linkage, _, _ = _elf_linkage(path)
+    if linkage == "static":
+        return floor
+    objdump = _require_tool("objdump")
+    dynamic = _run([objdump, "-T", path])
+    glibc = re.findall(r"GLIBC_([0-9.]+)", dynamic)
+    cxx = re.findall(r"GLIBCXX_([0-9.]+)", dynamic)
+
+    def _highest(versions):
+        best = None
+        for version in versions:
+            key = tuple(int(part) for part in version.split("."))
+            if best is None or key > best[0]:
+                best = (key, version)
+        return best[1] if best else None
+
+    floor["libc"] = _highest(glibc)
+    floor["libstdcxx"] = _highest(cxx)
+    readelf = _require_tool("readelf")
+    note = _run([readelf, "-n", path])
+    match = re.search(r"OS:\s+Linux,\s+ABI:\s+([0-9.]+)", note)
+    if match:
+        floor["kernel"] = match.group(1)
+    return floor
+
+
+def _starlark(value, indent=4):
+    pad = " " * indent
+    if value is None:
+        return "None"
+    if isinstance(value, bool):
+        return "True" if value else "False"
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, str):
+        return '"%s"' % value.replace("\\", "\\\\").replace('"', '\\"')
+    if isinstance(value, list):
+        if not value:
+            return "[]"
+        items = [pad + _starlark(item, indent + 4) for item in value]
+        return "[\n%s,\n%s]" % (",\n".join(items), " " * (indent - 4))
+    if isinstance(value, dict):
+        if not value:
+            return "{}"
+        items = ["%s%s: %s" % (pad, _starlark(key), _starlark(item, indent + 4))
+                 for key, item in value.items()]
+        return "{\n%s,\n%s}" % (",\n".join(items), " " * (indent - 4))
+    raise TypeError("unsupported metadata value: %r" % (value,))
+
+
+def _source_dir():
+    """Directory holding the checked-in metadata files.
+
+    Under `bazel run` the script lives in runfiles, so the workspace root
+    comes from BUILD_WORKSPACE_DIRECTORY; a direct `python3` invocation
+    uses the script's own directory.
+    """
+    workspace = os.environ.get("BUILD_WORKSPACE_DIRECTORY")
+    if workspace:
+        return os.path.join(workspace, "tools", "artifacts")
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def _collect(tool, platform_key, spec, workdir):
+    asset_path = os.path.join(workdir, spec["asset"])
+    _download(spec["url"], asset_path)
+    size = os.path.getsize(asset_path)
+    digest = _sha256(asset_path)
+    checksum_source = "maintainer-established byte identity (upstream publishes no asset digests)"
+    if "checksums_url" in spec:
+        checksums_path = os.path.join(workdir, "checksums.txt")
+        _download(spec["checksums_url"], checksums_path)
+        published = {}
+        with open(checksums_path, encoding="utf-8") as handle:
+            for line in handle.read().splitlines():
+                parts = line.split()
+                if len(parts) == 2:
+                    published[parts[1]] = parts[0]
+        expected = published.get(spec["asset"])
+        if expected != digest:
+            sys.exit("update: %s digest %s does not match published %s"
+                     % (spec["asset"], digest, expected))
+        checksum_source = "upstream published checksums file"
+
+    kind = spec["kind"]
+    if kind == "raw":
+        archive = {"format": "none"}
+        exe_path, exe_digest = asset_path, digest
+    elif kind == "gzip":
+        with gzip.open(asset_path, "rb") as handle:
+            inner = handle.read()
+        member_path = os.path.join(workdir, spec["executable"])
+        with open(member_path, "wb") as handle:
+            handle.write(inner)
+        exe_path, exe_digest = member_path, hashlib.sha256(inner).hexdigest()
+        archive = {
+            "format": "gzip",
+            "member": spec["executable"],
+            "member_sha256": exe_digest,
+            "member_size": len(inner),
+        }
+    elif kind == "tar.gz":
+        members = []
+        with tarfile.open(asset_path, "r:gz") as archive_file:
+            archive_file.extractall(workdir)
+            for member in archive_file.getmembers():
+                members.append({
+                    "name": member.name,
+                    "size": member.size,
+                    "mode": oct(member.mode),
+                    "is_executable": bool(member.mode & 0o111) and member.isfile(),
+                })
+        exe_path = os.path.join(workdir, spec["executable"])
+        exe_digest = _sha256(exe_path)
+        archive = {"format": "tar.gz", "members": members}
+    else:
+        sys.exit("update: unknown asset kind %r" % kind)
+
+    linkage, interpreter, needed = _elf_linkage(exe_path)
+    if linkage == "pie":
+        linkage = "static-pie"
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "tool": tool,
+        "upstream_version": TOOLS[tool]["upstream_version"],
+        "delivery_class": "standalone",
+        "os": spec["os"],
+        "cpu": spec["cpu"],
+        "url": spec["url"],
+        "sha256": digest,
+        "size": size,
+        "checksum_source": checksum_source,
+        "archive": archive,
+        "executable": spec["executable"],
+        "executable_sha256": exe_digest,
+        "linkage": linkage,
+        "interpreter": interpreter,
+        "needed_shared_libraries": needed,
+        "abi_floor": _abi_floor(exe_path),
+        "runtime_files": [],
+        "licenses": TOOLS[tool]["licenses"],
+    }
+
+
+def _emit(artifact, tool, platform_key):
+    filename = "%s.%s.bzl" % (tool, platform_key)
+    path = os.path.join(_source_dir(), filename)
+    content = (
+        '"""%s standalone artifact metadata (%s) -- GENERATED, do not edit.\n'
+        "\n"
+        "Regenerate with: bazel run //tools/artifacts:update\n"
+        "Release: %s\n"
+        '"""\n'
+        "\n"
+        "ARTIFACT = %s\n"
+        % (tool, platform_key, TOOLS[tool]["release_page"],
+           _starlark(artifact)))
+    return path, content
+
+
+def main(argv):
+    verify_only = argv == ["--verify-only"]
+    if argv and not verify_only:
+        sys.exit("usage: update [--verify-only]")
+    _require_tool("file")
+    if not os.path.isdir(_source_dir()):
+        sys.exit("update: source directory %r not found" % _source_dir())
+    failed = False
+    for tool, config in TOOLS.items():
+        for platform_key, spec in config["platforms"].items():
+            with tempfile.TemporaryDirectory(prefix="dx-artifacts-") as workdir:
+                artifact = _collect(tool, platform_key, spec, workdir)
+            path, content = _emit(artifact, tool, platform_key)
+            if verify_only:
+                with open(path, encoding="utf-8") as handle:
+                    if handle.read() != content:
+                        print("update: %s is stale or upstream bytes changed" % path)
+                        failed = True
+                    else:
+                        print("update: %s verified" % os.path.basename(path))
+            else:
+                with open(path, "w", encoding="utf-8") as handle:
+                    handle.write(content)
+                print("update: wrote %s (%d bytes, sha256 %s...)"
+                      % (path, artifact["size"], artifact["sha256"][:16]))
+    if failed:
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

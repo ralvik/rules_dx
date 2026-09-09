@@ -1,0 +1,25 @@
+"""M04 standalone quality-tool artifact metadata (WP1, O20)."""
+
+load("@rules_python//python:defs.bzl", "py_binary")
+load(":metadata_tests.bzl", "metadata_tests")
+
+package(default_visibility = ["//visibility:public"])
+
+py_binary(
+    name = "update",
+    srcs = ["update.py"],
+    main = "update.py",
+)
+
+exports_files([
+    "buildifier.linux_x86_64.bzl",
+    "taplo.linux_x86_64.bzl",
+    "vale.linux_x86_64.bzl",
+])
+
+metadata_tests(name = "metadata")
+
+test_suite(
+    name = "all",
+    tests = [":metadata"],
+)

@@ -224,6 +224,65 @@
   },
   "selectedYankedVersions": {},
   "moduleExtensions": {
+    "//tools/artifacts:extension.bzl%dx_tools": {
+      "general": {
+        "bzlTransitiveDigest": "oFaOrH/2hDwG9P1x9pvC0fRzNxN1xIX59d5EQs6pThY=",
+        "usagesDigest": "LCqTDrnXd+r2uu2yLGI4Sm/5v21CON+V/D/PFpC9DoY=",
+        "recordedInputs": [
+          "REPO_MAPPING:,platforms platforms"
+        ],
+        "generatedRepoSpecs": {
+          "dx_buildifier_linux_x86_64": {
+            "repoRuleId": "@@//tools/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/bazel-contrib/buildtools/releases/download/v8.5.1/buildifier-linux-amd64",
+              "sha256": "887377fc64d23a850f4d18a077b5db05b19913f4b99b270d193f3c7334b5a9a7",
+              "asset": "buildifier-linux-amd64",
+              "archive_format": "none",
+              "executable": "buildifier-linux-amd64"
+            }
+          },
+          "dx_taplo_linux_x86_64": {
+            "repoRuleId": "@@//tools/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-linux-x86_64.gz",
+              "sha256": "8fe196b894ccf9072f98d4e1013a180306e17d244830b03986ee5e8eabeb6156",
+              "asset": "taplo-linux-x86_64.gz",
+              "archive_format": "gzip",
+              "executable": "taplo-x86_64"
+            }
+          },
+          "dx_vale_linux_x86_64": {
+            "repoRuleId": "@@//tools/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_Linux_64-bit.tar.gz",
+              "sha256": "f59e7030c5d4ace6cf915497d0d076a1699d61e876142765963237e6867c9712",
+              "asset": "vale_3.20.0_Linux_64-bit.tar.gz",
+              "archive_format": "tar.gz",
+              "executable": "vale"
+            }
+          },
+          "dx_tools": {
+            "repoRuleId": "@@//tools/artifacts:extension.bzl%_hub_repo",
+            "attributes": {
+              "artifacts": {
+                "buildifier": [
+                  "dx_buildifier_linux_x86_64"
+                ],
+                "taplo": [
+                  "dx_taplo_linux_x86_64"
+                ],
+                "vale": [
+                  "dx_vale_linux_x86_64"
+                ]
+              },
+              "os_linux": "'@@platforms//os:linux'",
+              "cpu_x86_64": "'@@platforms//cpu:x86_64'"
+            }
+          }
+        }
+      }
+    },
     "@@pybind11_bazel+//:internal_configure.bzl%internal_configure_extension": {
       "general": {
         "bzlTransitiveDigest": "NRXra7941UfmNUyIxnLt82V5hULluVGL2nBsijTl4j4=",

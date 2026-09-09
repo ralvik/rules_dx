@@ -10,6 +10,15 @@ module(
 bazel_dep(name = "rules_rust", version = "0.74.0")
 bazel_dep(name = "rules_cc", version = "0.2.22")
 
+# M04 WP1: direct dep for the artifact-metadata generator. 1.7.0 is the
+# MVS-selected version already in the executed graph (via rules_cc).
+bazel_dep(name = "rules_python", version = "1.7.0")
+
+# M04 WP1: direct dep so MODULE tags can name execution-platform
+# constraints. 1.1.0 is the MVS-selected version already in the executed
+# graph (see the root-module warning that proposed it).
+bazel_dep(name = "platforms", version = "1.1.0")
+
 # M03 WP1: explicit direct deps (versions match the transitive pins above
 # where they overlap, so MVS keeps the executed tree). `protobuf`/`protoc`
 # itself stays transitive via rules_proto/rules_rust_prost (it resolves above
@@ -21,6 +30,10 @@ bazel_dep(name = "rules_rust_prost", version = "0.74.0")
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
     edition = "2021",
+    # M04 WP1: couple rustfmt to the selected stable toolchain instead of
+    # the rules_rust nightly default, so rustfmt follows toolchain updates
+    # exactly like Clippy with no second nightly pin.
+    rustfmt_version = "1.98.0",
     # Pinned default of rules_rust 0.74.0 (rust/private/common.bzl),
     # verified from the executed 0.74.0 module tree.
     versions = ["1.98.0"],
@@ -44,3 +57,20 @@ crate.from_cargo(
     ],
 )
 use_repo(crate, "crates")
+
+# M04 WP1: standalone quality-tool acquisition (O20). One lazy repository
+# per tool/platform from generated checked-in metadata, plus an
+# execution-platform hub. Registration fetches nothing; each repository
+# downloads only when an action needs its artifact.
+dx_tools = use_extension("//tools/artifacts:extension.bzl", "dx_tools")
+dx_tools.platform(
+    cpu_x86_64 = "@platforms//cpu:x86_64",
+    os_linux = "@platforms//os:linux",
+)
+use_repo(
+    dx_tools,
+    "dx_buildifier_linux_x86_64",
+    "dx_taplo_linux_x86_64",
+    "dx_tools",
+    "dx_vale_linux_x86_64",
+)
