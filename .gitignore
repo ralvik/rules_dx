@@ -6,6 +6,9 @@ user.bazelrc
 # Local agent instructions
 AGENTS.local.md
 
+# Ralph Loop local state (machine-managed)
+.opencode/ralph-loop.local.md
+
 # Operating systems
 .DS_Store
 **/.DS_Store

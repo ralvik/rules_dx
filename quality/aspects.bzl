@@ -1,4 +1,4 @@
-"""Target-scoped capability aspects over synthetic adapters (M03 WP2c).
+"""Target-scoped capability aspects over synthetic adapters (M03 WP2c+WP3).
 
 Each aspect visits targets carrying `QualitySourcesInfo` and registers one
 exact-input pipeline action for its capability when the workspace policy
@@ -7,9 +7,20 @@ selects a nonempty synthetic stage with effective sources. The action runs
 and emits one versioned `QualityResult` protobuf in the stable `dx_results`
 output group. No invocation-wide aggregation exists.
 
+WP3 evaluators: with `@rules_dx//config:validate=true`, each aspect
+registers one evaluator action per pipeline result running
+`//rust/quality_evaluator:quality_evaluator` with
+`@rules_dx//config:fail_on`. The evaluator emits a per-result validation
+marker into `dx_results` or fails without rerunning or aggregating
+analyzers. A threshold-only change alters evaluator arguments alone, so
+analyzers stay cache-hit. With `validate=false` (the default, used by
+quality commands) no evaluator action exists and collection never stops.
+
 Contract: `docs/quality/action-model.md`, `docs/quality/tool-integrations.md`,
 `docs/quality/quality-sources.md#adapter-applicability`,
-`docs/quality/quality-result-protocol.md#transport`.
+`docs/quality/quality-result-protocol.md#transport`,
+`docs/quality/quality-result-protocol.md#execution-and-policy`,
+`docs/cli/cli-contract.md`.
 
 Explicit policy attribute: aspects take `//quality:fixture_policy` by
 default. Workspace-flag (`@rules_dx//config:workspace`) resolution to a
@@ -23,6 +34,7 @@ and tags other than `no-<capability>` never affect applicability. Empty
 stages create no action.
 """
 
+load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 load("//quality:policy.bzl", "QualityPolicyInfo")
 load(
@@ -106,7 +118,26 @@ def _quality_pipeline_action(target, ctx, capability):
         mnemonic = "DxQuality" + capability.capitalize(),
         progress_message = "Dx quality " + capability + " %{label}",
     )
-    return [OutputGroupInfo(dx_results = depset([out]))]
+
+    # One consumer per result, no aggregation: the evaluator reads only the
+    # pipeline result plus the threshold spelling, so analyzer inputs and
+    # keys never mention policy.
+    if not ctx.attr._validate[BuildSettingInfo].value:
+        return [OutputGroupInfo(dx_results = depset([out]))]
+    marker = ctx.actions.declare_file(target.label.name + "-" + capability + ".validated")
+    eval_args = ctx.actions.args()
+    eval_args.add("--result", out.path)
+    eval_args.add("--fail_on", ctx.attr._fail_on[BuildSettingInfo].value)
+    eval_args.add("--output", marker.path)
+    ctx.actions.run(
+        executable = ctx.executable._evaluator,
+        inputs = depset([out]),
+        outputs = [marker],
+        arguments = [eval_args],
+        mnemonic = "DxQualityEval",
+        progress_message = "Dx quality evaluate " + capability + " %{label}",
+    )
+    return [OutputGroupInfo(dx_results = depset([out, marker]))]
 
 def _lint_impl(target, ctx):
     return _quality_pipeline_action(target, ctx, "lint")
@@ -132,6 +163,23 @@ _COMMON_ATTRS = {
         cfg = "exec",
         allow_files = True,
         doc = "Deterministic pipeline runner producing QualityResult protobufs.",
+    ),
+    "_evaluator": attr.label(
+        default = "//rust/quality_evaluator:quality_evaluator",
+        executable = True,
+        cfg = "exec",
+        allow_files = True,
+        doc = "Per-result threshold evaluator emitting validation markers.",
+    ),
+    "_validate": attr.label(
+        default = "//config:validate",
+        providers = [BuildSettingInfo],
+        doc = "When true, register one evaluator action per pipeline result.",
+    ),
+    "_fail_on": attr.label(
+        default = "//config:fail_on",
+        providers = [BuildSettingInfo],
+        doc = "Lowest failing severity for evaluator actions.",
     ),
 }
 

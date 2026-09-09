@@ -60,8 +60,8 @@ adoption scope (depends on M29).
 | M00 | [Bazel, Rust, And CI](M00-bazel-rust-ci-seed-quality.md) ([report](M00-completion-report.md)) | None | Ready |
 | M01 | [Starlark Testing And Tested-Stack Metadata](M01-starlark-testing-tested-stack-metadata.md) ([report](M01-completion-report.md)) | M00 | Ready |
 | M02 | [Minimum Rust Wrappers And Providers](M02-minimum-rust-wrappers-providers.md) ([report](M02-completion-report.md)) | M01 | Ready |
-| M03 | [Quality Source, Policy, Result, Runner, And Evaluator Core](M03-quality-core.md) | M01, M02 | Pending |
-| M04 | [Rust, Starlark, TOML, And Markdown Acquisition And Adapters](M04-initial-quality-adapters.md) | M03 | Pending |
+| M03 | [Quality Source, Policy, Result, Runner, And Evaluator Core](M03-quality-core.md) ([report](M03-completion-report.md)) | M01, M02 | Ready |
+| M04 | [Rust, Starlark, TOML, And Markdown Acquisition And Adapters](M04-initial-quality-adapters.md) | M03 | Ready |
 | M05 | [Direct Bazel Dogfood](M05-direct-bazel-dogfood.md) | M04 | Pending |
 | M06 | [CLI Process, Output, BEP, And Apply](M06-cli-process-output-bep-apply.md) | M03, M05 | Pending |
 | M07 | [Initial Quality CLI And Full Initial Dogfood](M07-initial-quality-cli-dogfood.md) | M06 | Pending |
