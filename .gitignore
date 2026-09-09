@@ -17,4 +17,6 @@ AGENTS.local.md
 .cache/
 .direnv/
 .tmp/
+__pycache__/
+*.pyc
 opencode.json
