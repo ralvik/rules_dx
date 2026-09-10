@@ -8,7 +8,10 @@ package(default_visibility = ["//visibility:public"])
 dx_rust_library(
     name = "quality_adapter",
     srcs = [
+        "src/commands.rs",
+        "src/exec.rs",
         "src/lib.rs",
+        "src/parsers.rs",
         "src/suggest.rs",
     ],
     crate_name = "quality_adapter",

@@ -10,6 +10,9 @@
 
 use quality_result::proto::{Diagnostic, Severity};
 
+pub mod commands;
+pub mod exec;
+pub mod parsers;
 pub mod suggest;
 
 /// Tool-native severity. Maps onto the frozen [`Severity`] one to one;

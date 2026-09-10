@@ -17,7 +17,10 @@ support quality/testdata/clean.rs
 support quality/testdata/dirty.rs
 eligible rust/hello/src/lib.rs
 eligible rust/hello/src/main.rs
+eligible rust/quality_adapter/src/commands.rs
+eligible rust/quality_adapter/src/exec.rs
 eligible rust/quality_adapter/src/lib.rs
+eligible rust/quality_adapter/src/parsers.rs
 eligible rust/quality_adapter/src/suggest.rs
 eligible rust/quality_evaluator/src/lib.rs
 eligible rust/quality_evaluator/src/main.rs
