@@ -65,11 +65,11 @@ def _standalone_tool_repo_impl(ctx):
 _standalone_tool_repo = repository_rule(
     implementation = _standalone_tool_repo_impl,
     attrs = {
-        "url": attr.string(mandatory = True),
-        "sha256": attr.string(mandatory = True),
-        "asset": attr.string(mandatory = True),
         "archive_format": attr.string(mandatory = True),
+        "asset": attr.string(mandatory = True),
         "executable": attr.string(mandatory = True),
+        "sha256": attr.string(mandatory = True),
+        "url": attr.string(mandatory = True),
     },
 )
 
@@ -111,10 +111,10 @@ _hub_repo = repository_rule(
     implementation = _hub_repo_impl,
     attrs = {
         "artifacts": attr.string_list_dict(mandatory = True),
+        "cpu_x86_64": attr.string(mandatory = True),
         # Canonical platform labels supplied by the MODULE.bazel tag, so the
         # generated BUILD references repositories visible from the hub.
         "os_linux": attr.string(mandatory = True),
-        "cpu_x86_64": attr.string(mandatory = True),
     },
 )
 
@@ -147,8 +147,8 @@ def _dx_tools_impl(ctx):
     )
 
 _platform = tag_class(attrs = {
-    "os_linux": attr.label(mandatory = True),
     "cpu_x86_64": attr.label(mandatory = True),
+    "os_linux": attr.label(mandatory = True),
 })
 
 dx_tools = module_extension(

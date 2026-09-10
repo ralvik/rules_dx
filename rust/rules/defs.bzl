@@ -46,7 +46,7 @@ advertised so M04 quality aspects can gate on it.
 """
 
 load("@rules_rust//rust:defs.bzl", _rust_binary = "rust_binary", _rust_common = "rust_common", _rust_library = "rust_library", _rust_test = "rust_test")
-load("//quality:sources.bzl", "RUST", "QualitySourcesInfo", "check_direct_sources")
+load("//quality:sources.bzl", "QualitySourcesInfo", "RUST", "check_direct_sources")
 
 _DEFAULT_EDITION = "2021"
 
@@ -136,6 +136,10 @@ _dx_rust_forward = rule(
     implementation = _dx_rust_forward_impl,
     provides = _DX_FORWARD_PROVIDES,
     attrs = {
+        "srcs": attr.label_list(
+            allow_files = [".rs"],
+            doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
+        ),
         "upstream": attr.label(
             mandatory = True,
             providers = [
@@ -143,10 +147,6 @@ _dx_rust_forward = rule(
                 [_rust_common.test_crate_info],
             ],
             doc = "The private upstream rust_* target whose providers are preserved.",
-        ),
-        "srcs": attr.label_list(
-            allow_files = [".rs"],
-            doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
         ),
     },
     doc = "Forwards upstream Rust providers unchanged and adds QualitySourcesInfo.",
@@ -187,6 +187,10 @@ _dx_rust_forward_binary = rule(
     executable = True,
     provides = _DX_FORWARD_PROVIDES,
     attrs = {
+        "srcs": attr.label_list(
+            allow_files = [".rs"],
+            doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
+        ),
         "upstream": attr.label(
             mandatory = True,
             providers = [
@@ -194,10 +198,6 @@ _dx_rust_forward_binary = rule(
                 [_rust_common.test_crate_info],
             ],
             doc = "The private upstream rust_binary target whose providers are preserved.",
-        ),
-        "srcs": attr.label_list(
-            allow_files = [".rs"],
-            doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
         ),
     },
     doc = "Executable forwarder for dx_rust_binary: symlinks the upstream binary.",
@@ -211,6 +211,10 @@ _dx_rust_forward_test = rule(
     test = True,
     provides = _DX_FORWARD_PROVIDES,
     attrs = {
+        "srcs": attr.label_list(
+            allow_files = [".rs"],
+            doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
+        ),
         "upstream": attr.label(
             mandatory = True,
             providers = [
@@ -218,10 +222,6 @@ _dx_rust_forward_test = rule(
                 [_rust_common.test_crate_info],
             ],
             doc = "The private upstream rust_test target whose providers are preserved.",
-        ),
-        "srcs": attr.label_list(
-            allow_files = [".rs"],
-            doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
         ),
         "_lcov_merger": attr.label(
             default = configuration_field(fragment = "coverage", name = "output_generator"),
@@ -308,12 +308,21 @@ def dx_rust_test(
     With `crate`, the referenced wrapper stays the single source owner and
     this target reports no direct sources. With `srcs`, those sources are
     this test's direct sources.
+
+    Args:
+      name: public test target name (upstream target is name_dx_upstream).
+      srcs: direct test sources; none when testing via `crate`.
+      crate: wrapper library target owning the sources under test.
+      edition: Rust edition forwarded upstream.
+      visibility: visibility of the public forwarding test target.
+      **kwargs: extra attributes forwarded to the upstream rust_test.
     """
     test_srcs = srcs if srcs != None else []
     upstream_kwargs = dict(kwargs)
     upstream_kwargs["crate"] = crate
     upstream_kwargs["edition"] = edition
     upstream_kwargs.setdefault("crate_name", name)
+
     # The private test is an implementation detail: tag it manual so
     # `bazel test //...` exercises the public wrapper target only.
     upstream_kwargs.setdefault("tags", ["manual"])

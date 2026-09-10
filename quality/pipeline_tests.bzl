@@ -70,8 +70,8 @@ def pipeline_unit_tests(name):
                     SYNTHETIC_ADAPTERS,
                 ),
                 [
-                    {"tool": "lint-a", "classes": ["python", "rust"]},
-                    {"tool": "lint-b", "classes": ["rust"]},
+                    {"classes": ["python", "rust"], "tool": "lint-a"},
+                    {"classes": ["rust"], "tool": "lint-b"},
                 ],
             ),
             expect_equal(
@@ -100,7 +100,7 @@ def pipeline_unit_tests(name):
                     SYNTHETIC_CLASS_TO_FAMILY,
                     SYNTHETIC_ADAPTERS,
                 ),
-                [{"tool": "fmt-a", "classes": ["rust"]}],
+                [{"classes": ["rust"], "tool": "fmt-a"}],
             ),
             expect_equal(
                 "pipeline_stages omits adapters without effective sources",
@@ -146,14 +146,14 @@ def pipeline_unit_tests(name):
                 ),
                 [
                     {
-                        "tool": "lint-a",
                         "classes": ["python", "rust"],
                         "sources": ["src/lib.rs", "src/main.py", "src/main.rs"],
+                        "tool": "lint-a",
                     },
                     {
-                        "tool": "lint-b",
                         "classes": ["rust"],
                         "sources": ["src/lib.rs", "src/main.rs"],
+                        "tool": "lint-b",
                     },
                 ],
             ),
@@ -169,9 +169,9 @@ def pipeline_unit_tests(name):
                 ),
                 [
                     {
-                        "tool": "fmt-a",
                         "classes": ["rust"],
                         "sources": ["src/lib.rs"],
+                        "tool": "fmt-a",
                     },
                 ],
             ),

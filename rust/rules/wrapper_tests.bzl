@@ -7,8 +7,8 @@ rendering: provider preservation, single source owner, lint markers from the
 pinned toolchain, and pinned tool identities.
 """
 
-load("//quality:sources.bzl", "KNOWN_SEMANTIC_FILE_CLASSES", "RUST")
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
+load("//quality:sources.bzl", "KNOWN_SEMANTIC_FILE_CLASSES", "RUST")
 
 def dx_wrapper_registry_tests(name):
     starlark_test(

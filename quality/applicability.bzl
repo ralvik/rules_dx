@@ -37,6 +37,13 @@ def selected_adapters(selection, adapters):
 
     `adapters` maps known tool ID to its support record. Returns the
     selection in policy order, deduplicated. Fails on an unknown tool ID.
+
+    Args:
+      selection: tool-ID list in workspace policy order.
+      adapters: maps known tool ID to its support record.
+
+    Returns:
+      The selection in policy order, deduplicated.
     """
     ordered = []
     seen = {}
@@ -50,7 +57,16 @@ def selected_adapters(selection, adapters):
     return ordered
 
 def effective_classes(target_classes, adapter_classes, policy_classes):
-    """Returns the sorted three-way class intersection for one tool stage."""
+    """Returns the sorted three-way class intersection for one tool stage.
+
+    Args:
+      target_classes: provider classes of the target under audit.
+      adapter_classes: classes the adapter supports for the capability.
+      policy_classes: classes allowed by workspace policy.
+
+    Returns:
+      Sorted intersection of the three class lists.
+    """
     adapter_set = {c: True for c in adapter_classes}
     policy_set = {c: True for c in policy_classes}
     effective = {}

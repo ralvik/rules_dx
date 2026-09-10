@@ -7,13 +7,13 @@ rendering, proving exact capability presence/absence: no generic fallback,
 no empty actions, capability tags honored, Vale config-required.
 """
 
-load("//quality:sources.bzl", "QualitySourcesInfo")
-load("//quality:real_aspects.bzl", "real_format_aspect", "real_lint_aspect")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")
+load("//quality:real_aspects.bzl", "real_format_aspect", "real_lint_aspect")
+load("//quality:sources.bzl", "QualitySourcesInfo")
 
 def _label_text(label):
     text = str(label)
-    if text.startswith("@@"):
+    if text.startswith("@@"):  # buildifier: disable=canonical-repository
         return text[2:]
     return text
 
@@ -32,10 +32,10 @@ def _real_aspect_subject_impl(ctx):
         DefaultInfo(files = depset([])),
         OutputGroupInfo(dx_results = depset(dx_files)),
         DxSubjectInfo(fields = {
-            "label": _label_text(ctx.attr.target.label),
-            "has_quality_sources": str(QualitySourcesInfo in target),
-            "dx_results": ",".join(basenames) if len(basenames) > 0 else "(none)",
             "dx_count": str(len(basenames)),
+            "dx_results": ",".join(basenames) if len(basenames) > 0 else "(none)",
+            "has_quality_sources": str(QualitySourcesInfo in target),
+            "label": _label_text(ctx.attr.target.label),
         }),
     ]
 

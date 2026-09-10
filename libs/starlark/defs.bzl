@@ -40,20 +40,20 @@ def expect_equal(name, actual, expected):
     expressions computing `actual`.
     """
     return json.encode({
-        "name": name,
-        "expected": expected,
         "actual": actual,
+        "expected": expected,
+        "name": name,
     })
 
 def _display_label(label):
     """Renders a label for observations and diagnostics.
 
-    Strips one leading `@@` from canonical Bazel 9 rendering so observations
-    stay readable; the stripped form is pinned to the supported Bazel and
-    requalified on version bumps per O14.
+    Strips one leading canonical-repository marker (two at-signs) from
+    Bazel 9 rendering so observations stay readable; the stripped form is
+    pinned to the supported Bazel and requalified on version bumps per O14.
     """
     text = str(label)
-    if text.startswith("@@"):
+    if text.startswith("@@"):  # buildifier: disable=canonical-repository
         return text[2:]
     return text
 
@@ -246,9 +246,6 @@ _common_attrs = {
     "checks": attr.string_list(
         doc = "Equality records from expect_equal, evaluated at execution.",
     ),
-    "subjects": attr.label_list(
-        doc = "Analysis-mode subject targets observed for providers and outputs.",
-    ),
     "expected_observations": attr.string(
         default = "",
         doc = "Analysis-mode expected observation rendering, one line per entry.",
@@ -257,6 +254,9 @@ _common_attrs = {
         allow_files = True,
         doc = "Maps file targets to required substrings, one per line; " +
               "every line must be present in the file at execution time.",
+    ),
+    "subjects": attr.label_list(
+        doc = "Analysis-mode subject targets observed for providers and outputs.",
     ),
 }
 
@@ -285,10 +285,10 @@ _starlark_execution_test = rule(
 )
 
 _MODES = {
-    "load": _starlark_load_test,
-    "unit": _starlark_unit_test,
     "analysis": _starlark_analysis_test,
     "execution": _starlark_execution_test,
+    "load": _starlark_load_test,
+    "unit": _starlark_unit_test,
 }
 
 def starlark_test(name, mode, checks = [], subjects = [], expected_observations = "", file_checks = {}, **kwargs):
@@ -298,6 +298,15 @@ def starlark_test(name, mode, checks = [], subjects = [], expected_observations 
     result; mismatches accumulate and report together in declaration order.
     `size` defaults to `small`; pass `tags = ["manual"]` for negative
     demonstrations that must fail without breaking `//...` suites.
+
+    Args:
+      name: test target name.
+      mode: one of "analysis", "execution", "load", "unit".
+      checks: equality records from expect_equal, evaluated at execution.
+      subjects: analysis-mode subject targets observed for providers.
+      expected_observations: analysis-mode expected observation rendering.
+      file_checks: maps file targets to required substrings at execution.
+      **kwargs: extra rule attributes (size, tags) forwarded to the rule.
     """
     if mode not in _MODES:
         fail("starlark_test: unknown mode '" + mode + "': want one of " +

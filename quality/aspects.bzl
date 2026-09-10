@@ -35,14 +35,14 @@ stages create no action.
 """
 
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
-load("//quality:sources.bzl", "QualitySourcesInfo")
-load("//quality:policy.bzl", "QualityPolicyInfo")
 load(
     "//quality:adapters.bzl",
     "SYNTHETIC_ADAPTERS",
     "SYNTHETIC_CLASS_TO_FAMILY",
 )
 load("//quality:pipeline.bzl", "resolve_pipeline")
+load("//quality:policy.bzl", "QualityPolicyInfo")
+load("//quality:sources.bzl", "QualitySourcesInfo")
 
 def _capability_tags(rule_attr, capability):
     tags = getattr(rule_attr, "tags", [])
@@ -152,6 +152,18 @@ def _audit_impl(target, ctx):
     return _quality_pipeline_action(target, ctx, "audit")
 
 _COMMON_ATTRS = {
+    "_evaluator": attr.label(
+        default = "//quality/evaluator:quality_evaluator",
+        executable = True,
+        cfg = "exec",
+        allow_files = True,
+        doc = "Per-result threshold evaluator emitting validation markers.",
+    ),
+    "_fail_on": attr.label(
+        default = "//config:fail_on",
+        providers = [BuildSettingInfo],
+        doc = "Lowest failing severity for evaluator actions.",
+    ),
     "_policy": attr.label(
         default = "//quality:fixture_policy",
         providers = [QualityPolicyInfo],
@@ -164,22 +176,10 @@ _COMMON_ATTRS = {
         allow_files = True,
         doc = "Deterministic pipeline runner producing QualityResult protobufs.",
     ),
-    "_evaluator": attr.label(
-        default = "//quality/evaluator:quality_evaluator",
-        executable = True,
-        cfg = "exec",
-        allow_files = True,
-        doc = "Per-result threshold evaluator emitting validation markers.",
-    ),
     "_validate": attr.label(
         default = "//config:validate",
         providers = [BuildSettingInfo],
         doc = "When true, register one evaluator action per pipeline result.",
-    ),
-    "_fail_on": attr.label(
-        default = "//config:fail_on",
-        providers = [BuildSettingInfo],
-        doc = "Lowest failing severity for evaluator actions.",
     ),
 }
 

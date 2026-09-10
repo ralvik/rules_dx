@@ -15,9 +15,9 @@ _FIXTURE_ADAPTERS = {
 }
 
 _FIXTURE_SECTION = {
+    "format": ["fmt-a"],
     "lint": ["lint-a", "lint-b"],
     "typecheck": [],
-    "format": ["fmt-a"],
 }
 
 def policy_unit_tests(name):

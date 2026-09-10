@@ -182,7 +182,7 @@ def _starlark(value, indent=4):
         if not value:
             return "{}"
         items = ["%s%s: %s" % (pad, _starlark(key), _starlark(item, indent + 4))
-                 for key, item in value.items()]
+                 for key, item in sorted(value.items())]
         return "{\n%s,\n%s}" % (",\n".join(items), " " * (indent - 4))
     raise TypeError("unsupported metadata value: %r" % (value,))
 
@@ -196,7 +196,7 @@ def _source_dir():
     """
     workspace = os.environ.get("BUILD_WORKSPACE_DIRECTORY")
     if workspace:
-        return os.path.join(workspace, "tools", "artifacts")
+        return os.path.join(workspace, "quality", "artifacts")
     return os.path.dirname(os.path.abspath(__file__))
 
 
@@ -291,6 +291,7 @@ def _emit(artifact, tool, platform_key):
         "Release: %s\n"
         '"""\n'
         "\n"
+        "# buildifier: disable=attr-licenses  # ARTIFACT licenses key is SPDX data, not a rule attr\n"
         "ARTIFACT = %s\n"
         % (tool, platform_key, TOOLS[tool]["release_page"],
            _starlark(artifact)))

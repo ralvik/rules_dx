@@ -91,6 +91,10 @@ def check_direct_sources(direct_sources, what):
     Fails analysis on: non-dict map, unknown class ID, non-depset value,
     or non-File member. Ownership, admissibility, and single-class
     membership are validated by the consuming aspect, not here.
+
+    Args:
+      direct_sources: maps class ID to depset of Files under validation.
+      what: subject label rendered in failure messages.
     """
     if type(direct_sources) != "dict":
         fail("QualitySourcesInfo (" + what + "): direct_sources must be a " +

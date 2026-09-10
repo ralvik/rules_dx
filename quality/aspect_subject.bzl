@@ -7,13 +7,13 @@ proving exact capability presence/absence: no generic fallback, no empty
 actions, capability tags honored.
 """
 
-load("//quality:sources.bzl", "QualitySourcesInfo")
-load("//quality:aspects.bzl", "audit_aspect", "format_aspect", "lint_aspect", "typecheck_aspect")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")
+load("//quality:aspects.bzl", "audit_aspect", "format_aspect", "lint_aspect", "typecheck_aspect")
+load("//quality:sources.bzl", "QualitySourcesInfo")
 
 def _label_text(label):
     text = str(label)
-    if text.startswith("@@"):
+    if text.startswith("@@"):  # buildifier: disable=canonical-repository
         return text[2:]
     return text
 
@@ -32,10 +32,10 @@ def _aspect_subject_impl(ctx):
         DefaultInfo(files = depset([])),
         OutputGroupInfo(dx_results = depset(dx_files)),
         DxSubjectInfo(fields = {
-            "label": _label_text(ctx.attr.target.label),
-            "has_quality_sources": str(QualitySourcesInfo in target),
-            "dx_results": ",".join(basenames) if len(basenames) > 0 else "(none)",
             "dx_count": str(len(basenames)),
+            "dx_results": ",".join(basenames) if len(basenames) > 0 else "(none)",
+            "has_quality_sources": str(QualitySourcesInfo in target),
+            "label": _label_text(ctx.attr.target.label),
         }),
     ]
 

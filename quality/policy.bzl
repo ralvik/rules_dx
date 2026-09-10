@@ -22,11 +22,11 @@ CAPABILITIES = ["lint", "typecheck", "format", "audit"]
 FamilyPolicyInfo = provider(
     doc = "Tool-ID selection per capability for one quality policy family.",
     fields = {
+        "audit": "List[str]: selected audit tool IDs, in policy order; [] disables.",
         "family_id": "Str: policy-family ID owning this selection.",
+        "format": "List[str]: selected formatter IDs, in policy order; [] disables.",
         "lint": "List[str]: selected lint tool IDs, in policy order; [] disables.",
         "typecheck": "List[str]: selected typecheck tool IDs, in policy order; [] disables.",
-        "format": "List[str]: selected formatter IDs, in policy order; [] disables.",
-        "audit": "List[str]: selected audit tool IDs, in policy order; [] disables.",
     },
 )
 
@@ -65,8 +65,16 @@ def _quality_family_impl(ctx):
 quality_family = rule(
     implementation = _quality_family_impl,
     attrs = {
+        "audit": attr.string_list(
+            default = [],
+            doc = "Selected audit tool IDs; [] explicitly disables audit.",
+        ),
         "family_id": attr.string(
             doc = "Policy-family ID owning this selection.",
+        ),
+        "format": attr.string_list(
+            default = [],
+            doc = "Selected formatter IDs; [] explicitly disables format.",
         ),
         "lint": attr.string_list(
             default = [],
@@ -75,14 +83,6 @@ quality_family = rule(
         "typecheck": attr.string_list(
             default = [],
             doc = "Selected typecheck tool IDs; [] explicitly disables typecheck.",
-        ),
-        "format": attr.string_list(
-            default = [],
-            doc = "Selected formatter IDs; [] explicitly disables format.",
-        ),
-        "audit": attr.string_list(
-            default = [],
-            doc = "Selected audit tool IDs; [] explicitly disables audit.",
         ),
     },
 )

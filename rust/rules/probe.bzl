@@ -16,12 +16,12 @@ M02 milestone evidence requires:
 """
 
 load("@rules_rust//rust:defs.bzl", _rust_common = "rust_common")
-load("//quality:sources.bzl", "QualitySourcesInfo")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")
+load("//quality:sources.bzl", "QualitySourcesInfo")
 
 def _label_text(label):
     text = str(label)
-    if text.startswith("@@"):
+    if text.startswith("@@"):  # buildifier: disable=canonical-repository
         return text[2:]
     return text
 
@@ -69,33 +69,33 @@ def _dx_wrapper_subject_impl(ctx):
     pinned = [t != None and "rules_rust" in t.path for t in tool_paths]
 
     fields = {
-        "wrapper": _label_text(ctx.attr.wrapper.label),
-        "upstream": _label_text(ctx.attr.upstream.label),
-        "crate_name": crate.name,
+        "cargo_tool": _toolchain_file(toolchain, "cargo"),
+        "clippy_markers": _marker_basenames(ctx.attr.clippy_test, "clippy_checks"),
+        "clippy_tool": _toolchain_file(toolchain, "clippy_driver"),
         "crate_edition": crate.edition,
-        "crate_type": crate.type,
         "crate_is_test": str(crate.is_test),
+        "crate_name": crate.name,
+        "crate_owner": _label_text(crate.owner),
         "crate_root": crate.root.basename,
         "crate_srcs": ",".join(_sorted_basenames(crate.srcs.to_list())),
-        "crate_owner": _label_text(crate.owner),
-        "preserved_name": str(crate.name == ucrate.name),
+        "crate_type": crate.type,
+        "direct_sources": _render_direct_sources(wrapper[QualitySourcesInfo]),
+        "fmt_markers": _marker_basenames(ctx.attr.fmt_test, "rustfmt_checks"),
+        "preserved_deps": str(len(crate.deps.to_list()) == len(ucrate.deps.to_list())),
         "preserved_edition": str(crate.edition == ucrate.edition),
-        "preserved_type": str(crate.type == ucrate.type),
+        "preserved_name": str(crate.name == ucrate.name),
         "preserved_root": str(crate.root.path == ucrate.root.path),
         "preserved_srcs": str(crate_srcs == ucrate_srcs),
-        "preserved_deps": str(len(crate.deps.to_list()) == len(ucrate.deps.to_list())),
-        "wrapper_has_quality_sources": str(QualitySourcesInfo in wrapper),
-        "upstream_has_quality_sources": str(QualitySourcesInfo in upstream),
-        "direct_sources": _render_direct_sources(wrapper[QualitySourcesInfo]),
-        "wrapper_has_instrumented_files": str(InstrumentedFilesInfo in wrapper),
-        "upstream_has_instrumented_files": str(InstrumentedFilesInfo in upstream),
-        "fmt_markers": _marker_basenames(ctx.attr.fmt_test, "rustfmt_checks"),
-        "clippy_markers": _marker_basenames(ctx.attr.clippy_test, "clippy_checks"),
+        "preserved_type": str(crate.type == ucrate.type),
         "rustc_tool": _toolchain_file(toolchain, "rustc"),
-        "cargo_tool": _toolchain_file(toolchain, "cargo"),
         "rustfmt_tool": _toolchain_file(toolchain, "rustfmt"),
-        "clippy_tool": _toolchain_file(toolchain, "clippy_driver"),
         "tools_pinned": str(len(pinned) == 4 and all(pinned)),
+        "upstream": _label_text(ctx.attr.upstream.label),
+        "upstream_has_instrumented_files": str(InstrumentedFilesInfo in upstream),
+        "upstream_has_quality_sources": str(QualitySourcesInfo in upstream),
+        "wrapper": _label_text(ctx.attr.wrapper.label),
+        "wrapper_has_instrumented_files": str(InstrumentedFilesInfo in wrapper),
+        "wrapper_has_quality_sources": str(QualitySourcesInfo in wrapper),
     }
     out = ctx.actions.declare_file(ctx.label.name + ".txt")
     ctx.actions.write(out, "\n".join([k + "=" + fields[k] for k in sorted(fields.keys())]) + "\n")
@@ -107,19 +107,19 @@ def _dx_wrapper_subject_impl(ctx):
 dx_wrapper_subject = rule(
     implementation = _dx_wrapper_subject_impl,
     attrs = {
-        "wrapper": attr.label(
-            mandatory = True,
-            doc = "The public dx_rust_* forwarding target under test.",
+        "clippy_test": attr.label(
+            doc = "The rust_clippy_test target over the wrappers, for marker evidence.",
+        ),
+        "fmt_test": attr.label(
+            doc = "The rustfmt_test target over the wrappers, for marker evidence.",
         ),
         "upstream": attr.label(
             mandatory = True,
             doc = "The private <name>_dx_upstream target the wrapper forwards.",
         ),
-        "fmt_test": attr.label(
-            doc = "The rustfmt_test target over the wrappers, for marker evidence.",
-        ),
-        "clippy_test": attr.label(
-            doc = "The rust_clippy_test target over the wrappers, for marker evidence.",
+        "wrapper": attr.label(
+            mandatory = True,
+            doc = "The public dx_rust_* forwarding target under test.",
         ),
     },
     toolchains = ["@rules_rust//rust:toolchain_type"],
