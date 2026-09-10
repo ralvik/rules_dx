@@ -1,6 +1,7 @@
 """M00 implementation-coverage gate (WP4)."""
 
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -20,7 +21,15 @@ rust_binary(
 
 rust_test(
     name = "coverage_gate_test",
+    size = "small",
     crate = ":coverage_gate",
     edition = "2021",
-    size = "small",
+)
+
+# Repository corpus (M05 WP1): build file owned for direct-Bazel dogfood
+# under the canonical real_fixture_policy. Rust sources stay dx-owned
+# (M02 wrappers), never corpus sources; inventory.txt has no class.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
 )

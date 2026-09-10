@@ -1,5 +1,19 @@
 """Experimental minimal Rust wrappers (M02, ADR 0013)."""
 
+load("//quality:fixtures.bzl", "real_source_target")
+
 package(default_visibility = ["//visibility:public"])
 
-exports_files(["defs.bzl", "probe.bzl", "wrapper_tests.bzl"])
+exports_files([
+    "defs.bzl",
+    "probe.bzl",
+    "wrapper_tests.bzl",
+])
+
+# Repository corpus (M05 WP1): wrapper Starlark owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. Rust sources stay
+# dx-owned (M02 wrappers), never corpus sources.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
+)

@@ -1,5 +1,6 @@
 """M01 Starlark framework conformance tests (ADR 0009)."""
 
+load("//quality:fixtures.bzl", "real_source_target")
 load(":analysis_tests.bzl", "subject_analysis_tests")
 load(":arithmetic_tests.bzl", "arithmetic_load_tests", "arithmetic_unit_tests")
 load(":execution_tests.bzl", "fixture_execution_tests")
@@ -31,4 +32,12 @@ test_suite(
         ":matrix_validation",
         ":subject_analysis",
     ],
+)
+
+# Repository corpus (M05 WP1): framework Starlark owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. .txt fixtures have
+# no quality class and stay outside the corpus.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
 )

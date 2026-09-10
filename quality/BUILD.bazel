@@ -2,6 +2,8 @@
 
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
+load(":fixtures.bzl", "real_source_target")
+load(":native_config.bzl", "vale_config")
 load(":native_config_tests.bzl", "native_config_unit_tests")
 load(":pipeline_tests.bzl", "pipeline_unit_tests")
 load(":policy.bzl", "quality_family", "workspace_policy")
@@ -68,7 +70,9 @@ workspace_policy(
 # Real fixture policy (M04 WP2): selects the initial-adapter tool IDs for
 # the M04 source classes. Like the synthetic fixture policy, this is a
 # fixture, not curated defaults: the real family taxonomy and defaults
-# stay pending the O17 review.
+# stay pending the O17 review. M05 WP1: this policy is also the canonical
+# workspace policy — every repository corpus target is checked under it
+# (fixtures keep it too), so dogfood findings reproduce under one policy.
 quality_family(
     name = "real_rust_family",
     family_id = "rust",
@@ -136,4 +140,20 @@ test_suite(
         ":real_pipeline_unit",
         ":sources_registry",
     ],
+)
+
+# Corpus Vale configuration (M05 WP1): every Markdown corpus target binds
+# this hint. The style starts narrow (`Dx.Markers` only); prose rules stay
+# future work, recorded in the M05 completion report.
+vale_config(
+    name = "corpus_vale_config",
+    src = "corpus_vale.ini",
+    data = ["corpus_styles/Dx/Markers.yml"],
+)
+
+# Repository corpus (M05 WP1): all Starlark sources in this package owned
+# for direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
 )

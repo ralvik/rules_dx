@@ -7,9 +7,18 @@ so selecting this placeholder fails fast at analysis until the typed
 per-family sections and thin canonical aggregate land.
 """
 
+load("//quality:fixtures.bzl", "real_source_target")
+
 package(default_visibility = ["//visibility:public"])
 
 filegroup(
     name = "config",
     srcs = [],
+)
+
+# Repository corpus (M05 WP1): build file owned for direct-Bazel dogfood
+# under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
 )

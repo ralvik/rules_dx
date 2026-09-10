@@ -8,6 +8,7 @@ check modes use `validate=true` with a `fail_on` threshold. Contract:
 """
 
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
+load("//quality:fixtures.bzl", "real_source_target")
 load(":settings_tests.bzl", "settings_tests")
 load(":subject.bzl", "settings_subject")
 
@@ -40,4 +41,11 @@ settings_tests(name = "settings")
 test_suite(
     name = "all",
     tests = [":settings"],
+)
+
+# Repository corpus (M05 WP1): settings Starlark owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
 )

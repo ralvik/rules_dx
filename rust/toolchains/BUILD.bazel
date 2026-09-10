@@ -1,5 +1,6 @@
 """M04 authoritative Rust toolchain bindings (WP1)."""
 
+load("//quality:fixtures.bzl", "real_source_target")
 load(":identity_subject.bzl", "toolchain_identity_subject")
 load(":identity_tests.bzl", "toolchain_identity_tests")
 
@@ -14,4 +15,11 @@ toolchain_identity_tests(name = "identity")
 test_suite(
     name = "all",
     tests = [":identity"],
+)
+
+# Repository corpus (M05 WP1): toolchain Starlark owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
 )

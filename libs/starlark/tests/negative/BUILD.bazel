@@ -1,7 +1,8 @@
 """Manual negative demonstrations for M01 (must fail; see .bzl doc)."""
 
-load(":negative_tests.bzl", "failing_check_demo", "missing_fragment_demo", "missing_observation_demo", "wrong_phase_demo")
 load("//libs/starlark/tests:subject.bzl", "example_subject")
+load("//quality:fixtures.bzl", "real_source_target")
+load(":negative_tests.bzl", "failing_check_demo", "missing_fragment_demo", "missing_observation_demo", "wrong_phase_demo")
 
 exports_files(["negative_tests.bzl"])
 
@@ -16,3 +17,11 @@ missing_observation_demo(name = "missing_observation_demo")
 missing_fragment_demo(name = "missing_fragment_demo")
 
 wrong_phase_demo(name = "wrong_phase_demo")
+
+# Repository corpus (M05 WP1): demo Starlark owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. .txt fixtures have
+# no quality class and stay outside the corpus.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
+)

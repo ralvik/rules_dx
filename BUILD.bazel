@@ -1,8 +1,29 @@
 """Root package for the rules_dx seed."""
 
+load("//quality:fixtures.bzl", "real_source_target")
+
 package(default_visibility = ["//visibility:public"])
 
 exports_files([
     ".bazelversion",
     "MODULE.bazel",
 ])
+
+# Repository corpus (M05 WP1): root Starlark and Markdown sources owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy. LICENSE is
+# an unclassified link-resolution sibling, never a checked source.
+real_source_target(
+    name = "corpus",
+    aspect_hints = ["//quality:corpus_vale_config"],
+    markdown_siblings = ["LICENSE"],
+    markdown_srcs = [
+        "AGENTS.md",
+        "CONTRIBUTING.md",
+        "README.md",
+        "SECURITY.md",
+    ],
+    starlark_srcs = [
+        "BUILD.bazel",
+        "MODULE.bazel",
+    ],
+)

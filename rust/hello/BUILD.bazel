@@ -1,9 +1,10 @@
 """M00 seed Rust binary, library, and tests; M02 consumer of dx_rust_* wrappers."""
 
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
 load("//rust/rules:probe.bzl", "dx_wrapper_subject")
 load("//rust/rules:wrapper_tests.bzl", "dx_wrapper_conformance_tests", "dx_wrapper_registry_tests")
-load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -27,9 +28,9 @@ dx_rust_binary(
 
 dx_rust_test(
     name = "hello_test",
+    size = "small",
     crate = ":hello_lib",
     edition = "2021",
-    size = "small",
 )
 
 # Authoritative quality identities (M02): rustfmt and Clippy resolve from
@@ -39,13 +40,19 @@ dx_rust_test(
 rustfmt_test(
     name = "hello_fmt_test",
     size = "small",
-    targets = [":hello_lib", ":hello"],
+    targets = [
+        ":hello_lib",
+        ":hello",
+    ],
 )
 
 rust_clippy_test(
     name = "hello_clippy_test",
     size = "small",
-    targets = [":hello_lib", ":hello"],
+    targets = [
+        ":hello_lib",
+        ":hello",
+    ],
 )
 
 exports_files([
@@ -57,29 +64,29 @@ exports_files([
 # targets so the probe can observe both sides of the forwarding boundary.
 dx_wrapper_subject(
     name = "hello_lib_subject",
+    testonly = True,
     clippy_test = ":hello_clippy_test",
     fmt_test = ":hello_fmt_test",
     upstream = ":hello_lib_dx_upstream",
     wrapper = ":hello_lib",
-    testonly = True,
 )
 
 dx_wrapper_subject(
     name = "hello_subject",
+    testonly = True,
     clippy_test = ":hello_clippy_test",
     fmt_test = ":hello_fmt_test",
     upstream = ":hello_dx_upstream",
     wrapper = ":hello",
-    testonly = True,
 )
 
 dx_wrapper_subject(
     name = "hello_test_subject",
+    testonly = True,
     clippy_test = ":hello_clippy_test",
     fmt_test = ":hello_fmt_test",
     upstream = ":hello_test_dx_upstream",
     wrapper = ":hello_test",
-    testonly = True,
 )
 
 dx_wrapper_registry_tests(name = "wrapper_registry_tests")
@@ -91,4 +98,13 @@ dx_wrapper_conformance_tests(
         ":hello_subject",
         ":hello_test_subject",
     ],
+)
+
+# Repository corpus (M05 WP1): build file and manifest owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy. Rust
+# sources stay dx-owned (M02 wrappers), never corpus sources.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
 )

@@ -1,0 +1,17 @@
+"""Repository documentation corpus (M05 WP1)."""
+
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+# Repository corpus (M05 WP1): all Markdown under docs/ owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy.
+# quality/result.proto is an unclassified link-resolution sibling, never
+# a checked source.
+real_source_target(
+    name = "corpus",
+    aspect_hints = ["//quality:corpus_vale_config"],
+    markdown_siblings = ["//quality:result.proto"],
+    markdown_srcs = glob(["**/*.md"]),
+    starlark_srcs = ["BUILD.bazel"],
+)

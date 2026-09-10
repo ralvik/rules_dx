@@ -1,6 +1,7 @@
 """M04 WP3 repository-owned Markdown link/structure checker crate."""
 
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
 
 package(default_visibility = ["//visibility:public"])
@@ -47,3 +48,11 @@ rust_clippy_test(
 )
 
 exports_files(["Cargo.toml"])
+
+# Repository corpus (M05 WP1): crate manifest and build file owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
+)

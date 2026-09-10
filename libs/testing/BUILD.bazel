@@ -1,5 +1,6 @@
 """M01 tested-stack manifest and contract (ADR 0014)."""
 
+load("//quality:fixtures.bzl", "real_source_target")
 load(":tested_stack.bzl", "tested_stack")
 load(":tested_stack_tests.bzl", "tested_stack_contract_tests")
 
@@ -15,4 +16,11 @@ exports_files(["tested_stack.bzl"])
 test_suite(
     name = "all",
     tests = [":stack_contract"],
+)
+
+# Repository corpus (M05 WP1): helper Starlark owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
 )

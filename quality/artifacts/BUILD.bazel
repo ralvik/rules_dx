@@ -1,6 +1,7 @@
 """M04 standalone quality-tool artifact metadata (WP1, O20)."""
 
 load("@rules_python//python:defs.bzl", "py_binary")
+load("//quality:fixtures.bzl", "real_source_target")
 load(":metadata_tests.bzl", "metadata_tests")
 
 package(default_visibility = ["//visibility:public"])
@@ -22,4 +23,12 @@ metadata_tests(name = "metadata")
 test_suite(
     name = "all",
     tests = [":metadata"],
+)
+
+# Repository corpus (M05 WP1): artifact Starlark owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. update.py has no
+# quality class and stays outside the corpus.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
 )

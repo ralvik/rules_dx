@@ -1,7 +1,8 @@
 """M03 result-side validation crate over the frozen result schema."""
 
-load("//rust/rules:defs.bzl", "dx_rust_library", "dx_rust_test")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "dx_rust_library", "dx_rust_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -22,9 +23,9 @@ dx_rust_library(
 
 dx_rust_test(
     name = "quality_result_test",
+    size = "small",
     crate = ":quality_result",
     edition = "2021",
-    size = "small",
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy
@@ -42,3 +43,11 @@ rust_clippy_test(
 )
 
 exports_files(["Cargo.toml"])
+
+# Repository corpus (M05 WP1): crate manifest and build file owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
+)
