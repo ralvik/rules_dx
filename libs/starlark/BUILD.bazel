@@ -8,10 +8,17 @@ exports_files([
 ])
 
 # Repository corpus (M05 WP1): facade Starlark and matrix Markdown owned
-# for direct-Bazel dogfood under the canonical real_fixture_policy.
+# for direct-Bazel dogfood under the canonical real_fixture_policy. The
+# linked docs pages are unclassified link-resolution siblings, never
+# checked sources.
 real_source_target(
     name = "corpus",
     aspect_hints = ["//quality:corpus_vale_config"],
+    markdown_siblings = [
+        "//docs:decisions/0009-starlark-testing.md",
+        "//docs:milestones/M01-completion-report.md",
+        "//docs:testing/starlark.md",
+    ],
     markdown_srcs = ["behavioral_matrix.md"],
     starlark_srcs = [
         "BUILD.bazel",

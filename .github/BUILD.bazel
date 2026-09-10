@@ -6,10 +6,15 @@ package(default_visibility = ["//visibility:public"])
 
 # Repository corpus (M05 WP1): Markdown templates owned for direct-Bazel
 # dogfood under the canonical real_fixture_policy. ci.yml has no quality
-# class and stays outside the corpus.
+# class and stays outside the corpus. The linked docs pages are
+# unclassified link-resolution siblings, never checked sources.
 real_source_target(
     name = "corpus",
     aspect_hints = ["//quality:corpus_vale_config"],
+    markdown_siblings = [
+        "//docs:contributing/local-workflows.md",
+        "//docs:testing/README.md",
+    ],
     markdown_srcs = glob(["**/*.md"]),
     starlark_srcs = ["BUILD.bazel"],
 )

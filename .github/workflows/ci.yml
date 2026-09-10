@@ -4,6 +4,17 @@
 # Seed host: Linux x86_64 glibc (ubuntu-latest), local execution, no remote.
 # Full host coverage and CI qualification stay in M27; unavailable required
 # hosts from ADR 0014 are recorded as gaps, not claimed here.
+#
+# M05 WP3 adds the direct-Bazel dogfood gate (`corpus-dogfood`): the
+# repository corpus (`real_source_target(name = "corpus")` per package) is
+# checked with the real lint/format aspects and every produced result must
+# pass the per-result evaluator at `--fail_on warning`. CI installs no
+# quality tools: Buildifier, Taplo, Vale, rustfmt, and Clippy execute only
+# as Bazel-resolved pinned actions (exact-input evidence in the M04
+# completion report; actions run with an empty PATH, unit-pinned in
+# `quality_adapter::exec`). Corpus-local configs stay authoritative: aspect
+# runs resolve Vale/Clippy policy solely from the `aspect_hints` bound by
+# each corpus target, never from CI-local copies.
 
 name: ci
 
@@ -37,3 +48,74 @@ jobs:
             --inventory "$GITHUB_WORKSPACE/tools/coverage/inventory.txt" \
             --sources /tmp/m00_sources.txt \
             --root "$GITHUB_WORKSPACE"
+  corpus-dogfood:
+    name: corpus-dogfood (direct checks, Linux x86_64 glibc, local-only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install pinned Bazelisk
+        run: |
+          curl -sL -o /tmp/bazelisk \
+            https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
+          echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
+          sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
+          bazel version
+      - name: Prove Bazel-resolved quality tool execution
+        run: |
+          bazel build @dx_tools//:buildifier @dx_tools//:taplo @dx_tools//:vale \
+            //quality/evaluator:quality_evaluator
+      - name: Audit corpus ownership
+        run: |
+          git ls-files \
+            | grep -E '(^|/)(BUILD\.bazel|MODULE\.bazel)$|\.(bzl|toml|md)$' \
+            | grep -v -E '\.lock$' \
+            | LC_ALL=C sort -u > /tmp/corpus_applicable.txt
+          bazel query "kind('source file', deps(kind(real_source_target, //...)))" 2>/dev/null \
+            | grep -E '^(@@)?//' \
+            | sed 's/^@@//; s|^//||; s|:|/|; s|^/||' \
+            | LC_ALL=C sort -u > /tmp/corpus_closure.txt
+          uncovered="$(comm -23 /tmp/corpus_applicable.txt /tmp/corpus_closure.txt | wc -l | tr -d ' ')"
+          if [ "$uncovered" -ne 0 ]; then
+            echo "corpus ownership audit failed: $uncovered applicable files have no corpus owner:"
+            comm -23 /tmp/corpus_applicable.txt /tmp/corpus_closure.txt
+            exit 1
+          fi
+      - name: Run direct checks over the corpus
+        run: |
+          bazel query "attr(name, '^corpus\$', kind(real_source_target, //...))" 2>/dev/null \
+            | LC_ALL=C sort -u > /tmp/corpus_targets.txt
+          bazel build $(tr '\n' ' ' < /tmp/corpus_targets.txt) \
+            --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+            --output_groups=dx_results
+      - name: Enforce evaluator thresholds on corpus results
+        run: |
+          union="$(paste -sd+ /tmp/corpus_targets.txt)"
+          bazel aquery "$union" \
+            --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+            --output_groups=dx_results --output=text 2>/dev/null \
+            | grep -o 'bazel-out/[^]]*\.pb' | sort -u \
+            | sed 's|bazel-out/[^/]*/bin/|bazel-bin/|' > /tmp/corpus_results.txt
+          while read -r target; do
+            pkg="$(echo "$target" | sed 's|^//||; s|:corpus$||')"
+            if [ -z "$pkg" ]; then
+              pattern='^bazel-bin/corpus-real-.*\.pb$'
+            else
+              pattern="^bazel-bin/${pkg}/corpus-real-.*\.pb$"
+            fi
+            if ! grep -q "$pattern" /tmp/corpus_results.txt; then
+              echo "corpus target $target produced no results"
+              exit 1
+            fi
+          done < /tmp/corpus_targets.txt
+          failed=0
+          while read -r result; do
+            marker="/tmp/corpus_eval_$(echo "$result" | tr '/' '_').marker"
+            if ! bazel run //quality/evaluator:quality_evaluator -- \
+              --result "$GITHUB_WORKSPACE/$result" --fail_on warning \
+              --output "$marker" > /tmp/corpus_eval.log 2>&1; then
+              echo "evaluator rejected $result:"
+              cat /tmp/corpus_eval.log
+              failed=1
+            fi
+          done < /tmp/corpus_results.txt
+          exit "$failed"

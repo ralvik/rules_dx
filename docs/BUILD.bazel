@@ -5,13 +5,20 @@ load("//quality:fixtures.bzl", "real_source_target")
 package(default_visibility = ["//visibility:public"])
 
 # Repository corpus (M05 WP1): all Markdown under docs/ owned for
-# direct-Bazel dogfood under the canonical real_fixture_policy.
-# quality/result.proto is an unclassified link-resolution sibling, never
-# a checked source.
+# direct-Bazel dogfood under the canonical real_fixture_policy. The root
+# pages, the linked behavioral matrix, and quality/result.proto are
+# unclassified link-resolution siblings, never checked sources.
 real_source_target(
     name = "corpus",
     aspect_hints = ["//quality:corpus_vale_config"],
-    markdown_siblings = ["//quality:result.proto"],
+    markdown_siblings = [
+        "//:AGENTS.md",
+        "//:CONTRIBUTING.md",
+        "//:README.md",
+        "//:SECURITY.md",
+        "//libs/starlark:behavioral_matrix.md",
+        "//quality:result.proto",
+    ],
     markdown_srcs = glob(["**/*.md"]),
     starlark_srcs = ["BUILD.bazel"],
 )

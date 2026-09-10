@@ -10,12 +10,27 @@ exports_files([
 ])
 
 # Repository corpus (M05 WP1): root Starlark and Markdown sources owned for
-# direct-Bazel dogfood under the canonical real_fixture_policy. LICENSE is
-# an unclassified link-resolution sibling, never a checked source.
+# direct-Bazel dogfood under the canonical real_fixture_policy. LICENSE and
+# the linked docs pages are unclassified link-resolution siblings, never
+# checked sources.
 real_source_target(
     name = "corpus",
     aspect_hints = ["//quality:corpus_vale_config"],
-    markdown_siblings = ["LICENSE"],
+    markdown_siblings = [
+        "//docs:architecture/README.md",
+        "//docs:contributing/local-workflows.md",
+        "//docs:decisions/README.md",
+        "//docs:environments/environment.md",
+        "//docs:implementation-plan.md",
+        "//docs:milestones/README.md",
+        "//docs:open-decisions.md",
+        "//docs:product/README.md",
+        "//docs:product/scope.md",
+        "//docs:product/support-matrix.md",
+        "//docs:README.md",
+        "//docs:testing/README.md",
+        "LICENSE",
+    ],
     markdown_srcs = [
         "AGENTS.md",
         "CONTRIBUTING.md",
