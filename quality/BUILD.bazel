@@ -2,6 +2,7 @@
 
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
+load(":native_config_tests.bzl", "native_config_unit_tests")
 load(":pipeline_tests.bzl", "pipeline_unit_tests")
 load(":policy.bzl", "quality_family", "workspace_policy")
 load(":policy_subject.bzl", "policy_subject")
@@ -17,6 +18,7 @@ exports_files([
     "aspects.bzl",
     "aspect_subject.bzl",
     "fixtures.bzl",
+    "native_config.bzl",
     "pipeline.bzl",
     "policy.bzl",
     "result.proto",
@@ -114,6 +116,8 @@ pipeline_unit_tests(name = "pipeline_unit")
 
 real_pipeline_unit_tests(name = "real_pipeline_unit")
 
+native_config_unit_tests(name = "native_config_unit")
+
 policy_analysis_tests(name = "policy_analysis")
 
 sources_registry_tests(name = "sources_registry")
@@ -121,6 +125,7 @@ sources_registry_tests(name = "sources_registry")
 test_suite(
     name = "all",
     tests = [
+        ":native_config_unit",
         ":pipeline_unit",
         ":policy_analysis",
         ":policy_unit",
