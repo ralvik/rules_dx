@@ -7,11 +7,15 @@ package(default_visibility = ["//visibility:public"])
 
 dx_rust_library(
     name = "quality_runner_lib",
-    srcs = ["src/lib.rs"],
+    srcs = [
+        "src/lib.rs",
+        "src/real.rs",
+    ],
     crate_name = "quality_runner",
     edition = "2021",
     deps = [
         "//quality:result_proto_rs",
+        "//rust/quality_adapter",
         "//rust/quality_result",
         # The `prost` types must come from the same crate that the
         # generated code implements them against: the toolchain-vendored

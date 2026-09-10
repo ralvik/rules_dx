@@ -27,5 +27,6 @@ eligible rust/quality_evaluator/src/main.rs
 eligible rust/quality_result/src/lib.rs
 eligible rust/quality_runner/src/lib.rs
 eligible rust/quality_runner/src/main.rs
+eligible rust/quality_runner/src/real.rs
 eligible tools/coverage/src/lib.rs
 eligible tools/coverage/src/main.rs

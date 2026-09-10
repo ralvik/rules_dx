@@ -21,6 +21,8 @@ use quality_result::{
     MAX_COMPLETED_ROUNDS, SCHEMA_MAJOR, SCHEMA_MINOR,
 };
 
+pub mod real;
+
 /// Synthetic tool IDs executed by this runner (WP2 adapters).
 pub const SYNTHETIC_TOOLS: &[&str] = &["fmt-a", "lint-a", "lint-b"];
 
@@ -46,15 +48,47 @@ pub struct FileInput {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RunnerError {
     EmptyProducer,
-    UnknownCapability { capability: String },
+    UnknownCapability {
+        capability: String,
+    },
     EmptyStages,
-    EmptyToolId { stage: usize },
-    UnknownTool { tool_id: String },
-    EmptyClassIds { stage: usize },
-    EmptyStageSources { stage: usize },
-    DuplicateFile { path: String },
-    InvalidUtf8 { path: String },
-    MissingFile { path: String },
+    EmptyToolId {
+        stage: usize,
+    },
+    UnknownTool {
+        tool_id: String,
+    },
+    EmptyClassIds {
+        stage: usize,
+    },
+    EmptyStageSources {
+        stage: usize,
+    },
+    DuplicateFile {
+        path: String,
+    },
+    InvalidUtf8 {
+        path: String,
+    },
+    MissingFile {
+        path: String,
+    },
+    /// Tool launch, scratch, or I/O failure in a real backend.
+    ToolExecution {
+        tool_id: String,
+        detail: String,
+    },
+    /// Real tool output outside the pinned grammar, or non-UTF-8 bytes
+    /// where the protocol needs text.
+    ToolOutput {
+        tool_id: String,
+        detail: String,
+    },
+    /// A parsed finding positions outside the bytes just checked.
+    UnplaceableFinding {
+        tool_id: String,
+        detail: String,
+    },
 }
 
 impl std::fmt::Display for RunnerError {
@@ -126,8 +160,8 @@ fn run_convergence(
     initial: &BTreeMap<String, String>,
     stages: &[StageSpec],
     max_rounds: u32,
-    apply: impl Fn(&str, &str) -> String,
-) -> (BTreeMap<String, String>, u32, Convergence) {
+    apply: impl Fn(&str, &str, &str) -> Result<String, RunnerError>,
+) -> Result<(BTreeMap<String, String>, u32, Convergence), RunnerError> {
     let mut current = initial.clone();
     let mut seen = vec![initial.clone()];
     let mut completed_rounds = 0;
@@ -137,19 +171,19 @@ fn run_convergence(
         for stage in stages {
             for path in &stage.source_paths {
                 let body = current.get(path).expect("staged path validated present");
-                let next = apply(&stage.tool_id, body);
+                let next = apply(&stage.tool_id, path, body)?;
                 current.insert(path.clone(), next);
             }
         }
         if current == before {
-            return (current, completed_rounds, Convergence::Stable);
+            return Ok((current, completed_rounds, Convergence::Stable));
         }
         if seen.contains(&current) {
-            return (current, completed_rounds, Convergence::Oscillation);
+            return Ok((current, completed_rounds, Convergence::Oscillation));
         }
         seen.push(current.clone());
     }
-    (current, completed_rounds, Convergence::IterationLimit)
+    Ok((current, completed_rounds, Convergence::IterationLimit))
 }
 
 fn snapshot(files: &BTreeMap<String, String>) -> Vec<FileSnapshot> {
@@ -174,15 +208,17 @@ fn sort_diagnostics(diagnostics: &mut [Diagnostic]) {
     });
 }
 
-/// Executes one ordered pipeline over exact input bytes and returns the
-/// normalized result. The result passes `quality_result::validate` for
-/// well-formed workspace paths; path shape itself is validated there.
-pub fn run_pipeline(
+/// Validates one pipeline request and decodes the exact input bytes.
+/// `tool_known` decides the stage tool set: the synthetic registry for
+/// [`run_pipeline`], backend resolution for real pipelines. Path shape
+/// itself is validated by `quality_result::validate` at encode time.
+fn validate_request(
     producer: &str,
     capability: &str,
     stages: &[StageSpec],
     files: &[FileInput],
-) -> Result<QualityResult, RunnerError> {
+    tool_known: impl Fn(&str) -> bool,
+) -> Result<(i32, BTreeMap<String, String>), RunnerError> {
     if producer.is_empty() {
         return Err(RunnerError::EmptyProducer);
     }
@@ -194,7 +230,7 @@ pub fn run_pipeline(
         if stage.tool_id.is_empty() {
             return Err(RunnerError::EmptyToolId { stage: index });
         }
-        if !SYNTHETIC_TOOLS.contains(&stage.tool_id.as_str()) {
+        if !tool_known(&stage.tool_id) {
             return Err(RunnerError::UnknownTool {
                 tool_id: stage.tool_id.clone(),
             });
@@ -225,27 +261,31 @@ pub fn run_pipeline(
             }
         }
     }
-    let mut initial_diagnostics = Vec::new();
-    for stage in stages {
-        for path in &stage.source_paths {
-            let body = initial.get(path).expect("staged path validated present");
-            initial_diagnostics.extend(collect_diagnostics(&stage.tool_id, path, body));
-        }
-    }
-    let (terminal, completed_rounds, convergence) =
-        run_convergence(&initial, stages, MAX_COMPLETED_ROUNDS, apply_synthetic);
-    let mut terminal_diagnostics = Vec::new();
-    for stage in stages {
-        for path in &stage.source_paths {
-            let body = terminal.get(path).expect("staged path validated present");
-            terminal_diagnostics.extend(collect_diagnostics(&stage.tool_id, path, body));
-        }
-    }
+    Ok((capability_value, initial))
+}
+
+/// Assembles the normalized result from a converged run: sorted
+/// diagnostics, whole-file replacements for stable changed files, and
+/// fixability for initial findings that the terminal state resolves.
+/// Shared by synthetic and real pipelines so the semantics cannot drift.
+/// Diagnostics and outcome travel as pairs so the shared helper stays
+/// under the complexity budget without splitting its single purpose.
+fn assemble(
+    producer: &str,
+    capability_value: i32,
+    stages: &[StageSpec],
+    initial: &BTreeMap<String, String>,
+    terminal: &BTreeMap<String, String>,
+    diagnostics: (Vec<Diagnostic>, Vec<Diagnostic>),
+    outcome: (u32, Convergence),
+) -> QualityResult {
+    let (mut initial_diagnostics, mut terminal_diagnostics) = diagnostics;
+    let (completed_rounds, convergence) = outcome;
     sort_diagnostics(&mut initial_diagnostics);
     sort_diagnostics(&mut terminal_diagnostics);
     let stable = convergence == Convergence::Stable;
     let mut replacements = Vec::new();
-    for (path, original) in &initial {
+    for (path, original) in initial {
         let terminal_body = terminal.get(path).expect("staged path validated present");
         if stable && terminal_body != original {
             replacements.push(FileEdits {
@@ -278,7 +318,7 @@ pub fn run_pipeline(
             source_paths: stage.source_paths.clone(),
         })
         .collect();
-    Ok(QualityResult {
+    QualityResult {
         schema_major: SCHEMA_MAJOR,
         schema_minor: SCHEMA_MINOR,
         producer: producer.to_owned(),
@@ -286,12 +326,76 @@ pub fn run_pipeline(
         stages: stages_proto,
         completed_rounds,
         convergence: convergence as i32,
-        original_snapshot: snapshot(&initial),
-        terminal_snapshot: snapshot(&terminal),
+        original_snapshot: snapshot(initial),
+        terminal_snapshot: snapshot(terminal),
         initial_diagnostics,
         terminal_diagnostics,
         replacements,
-    })
+    }
+}
+
+/// One exact input file's text within a converged run.
+fn stage_subset(stage: &StageSpec, files: &BTreeMap<String, String>) -> BTreeMap<String, String> {
+    stage
+        .source_paths
+        .iter()
+        .map(|path| {
+            (
+                path.clone(),
+                files
+                    .get(path)
+                    .expect("staged path validated present")
+                    .clone(),
+            )
+        })
+        .collect()
+}
+
+/// Executes one ordered pipeline over exact input bytes and returns the
+/// normalized result. The result passes `quality_result::validate` for
+/// well-formed workspace paths; path shape itself is validated there.
+pub fn run_pipeline(
+    producer: &str,
+    capability: &str,
+    stages: &[StageSpec],
+    files: &[FileInput],
+) -> Result<QualityResult, RunnerError> {
+    let (capability_value, initial) =
+        validate_request(producer, capability, stages, files, |tool| {
+            SYNTHETIC_TOOLS.contains(&tool)
+        })?;
+    let mut initial_diagnostics = Vec::new();
+    for stage in stages {
+        for path in &stage.source_paths {
+            let body = initial.get(path).expect("staged path validated present");
+            initial_diagnostics.extend(collect_diagnostics(&stage.tool_id, path, body));
+        }
+    }
+    // Synthetic apply never fails, so a failure here is a runner bug,
+    // not a pipeline error to propagate.
+    let (terminal, completed_rounds, convergence) = run_convergence(
+        &initial,
+        stages,
+        MAX_COMPLETED_ROUNDS,
+        |tool, _path, text| Ok(apply_synthetic(tool, text)),
+    )
+    .expect("synthetic apply never fails");
+    let mut terminal_diagnostics = Vec::new();
+    for stage in stages {
+        for path in &stage.source_paths {
+            let body = terminal.get(path).expect("staged path validated present");
+            terminal_diagnostics.extend(collect_diagnostics(&stage.tool_id, path, body));
+        }
+    }
+    Ok(assemble(
+        producer,
+        capability_value,
+        stages,
+        &initial,
+        &terminal,
+        (initial_diagnostics, terminal_diagnostics),
+        (completed_rounds, convergence),
+    ))
 }
 
 #[cfg(test)]
@@ -572,14 +676,15 @@ mod tests {
         let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
         let mut initial = BTreeMap::new();
         initial.insert("src/lib.rs".to_owned(), "a".to_owned());
-        let flip = |_: &str, text: &str| {
+        let flip = |_: &str, _: &str, text: &str| {
             if text == "a" {
-                "b".to_owned()
+                Ok("b".to_owned())
             } else {
-                "a".to_owned()
+                Ok("a".to_owned())
             }
         };
-        let (terminal, completed, convergence) = run_convergence(&initial, &stages, 10, flip);
+        let (terminal, completed, convergence) =
+            run_convergence(&initial, &stages, 10, flip).expect("converged");
         assert_eq!(convergence, Convergence::Oscillation);
         assert_eq!(completed, 2);
         assert_eq!(terminal["src/lib.rs"], "a");
@@ -590,8 +695,9 @@ mod tests {
         let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
         let mut initial = BTreeMap::new();
         initial.insert("src/lib.rs".to_owned(), "a".to_owned());
-        let grow = |_: &str, text: &str| format!("{text}x");
-        let (_, completed, convergence) = run_convergence(&initial, &stages, 3, grow);
+        let grow = |_: &str, _: &str, text: &str| Ok(format!("{text}x"));
+        let (_, completed, convergence) =
+            run_convergence(&initial, &stages, 3, grow).expect("converged");
         assert_eq!(convergence, Convergence::IterationLimit);
         assert_eq!(completed, 3);
     }
@@ -601,10 +707,23 @@ mod tests {
         let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
         let mut initial = BTreeMap::new();
         initial.insert("src/lib.rs".to_owned(), "a".to_owned());
-        let same = |_: &str, text: &str| text.to_owned();
-        let (_, completed, convergence) = run_convergence(&initial, &stages, 10, same);
+        let same = |_: &str, _: &str, text: &str| Ok(text.to_owned());
+        let (_, completed, convergence) =
+            run_convergence(&initial, &stages, 10, same).expect("converged");
         assert_eq!(convergence, Convergence::Stable);
         assert_eq!(completed, 1);
+    }
+
+    #[test]
+    fn apply_failure_aborts_convergence() {
+        let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let mut initial = BTreeMap::new();
+        initial.insert("src/lib.rs".to_owned(), "a".to_owned());
+        let fail = |_: &str, _: &str, _: &str| Err(RunnerError::EmptyProducer);
+        assert_eq!(
+            run_convergence(&initial, &stages, 10, fail),
+            Err(RunnerError::EmptyProducer)
+        );
     }
 
     #[test]
