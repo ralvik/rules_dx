@@ -61,6 +61,11 @@ def _real_source_target_impl(ctx):
 real_source_target = rule(
     implementation = _real_source_target_impl,
     attrs = {
+        "markdown_siblings": attr.label_list(
+            allow_files = True,
+            default = [],
+            doc = "Unclassified Markdown link-resolution siblings (for example a LICENSE file): mirrored into the check for target resolution, never linted, never in findings or snapshots.",
+        ),
         "markdown_srcs": attr.label_list(
             allow_files = True,
             default = [],

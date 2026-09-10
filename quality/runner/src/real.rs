@@ -81,6 +81,9 @@ pub struct RealTool {
 /// and hermetic environment. Production uses [`real_spawn`].
 pub type SpawnFn = fn(&[OsString], &Path, &[(String, String)]) -> io::Result<ChildOutput>;
 
+/// One staged file: workspace path plus its scratch-absolute path.
+type StagedPair = (String, PathBuf);
+
 /// Executable backend over resolved real tools. `spawn` is injected so
 /// unit tests prove the materialize/parse/place chain against canned
 /// tool outputs; production uses [`real_spawn`].
@@ -205,15 +208,20 @@ impl RealBackend {
 
     /// Materializes one scratch tree with the exact source bytes plus
     /// the tool files, returning the scratch and the absolute path per
-    /// workspace path in sorted order.
+    /// workspace path in sorted order. Siblings mirror alongside the
+    /// sources so link-resolution siblings exist on disk, but they stay
+    /// out of `pairs`: they are never linted and findings can never
+    /// address them.
     fn stage_scratch(
         &self,
         tool_id: &str,
         tool: &RealTool,
         files: &BTreeMap<String, String>,
-    ) -> Result<(Scratch, Vec<(String, PathBuf)>), RunnerError> {
+        siblings: &BTreeMap<String, String>,
+    ) -> Result<(Scratch, Vec<StagedPair>, Vec<StagedPair>), RunnerError> {
         let scratch = fresh_scratch(&self.scratch_parent, tool_id)?;
-        let mut mirrors = Vec::with_capacity(files.len() + tool.tool_files.len() + 1);
+        let mut mirrors =
+            Vec::with_capacity(files.len() + siblings.len() + tool.tool_files.len() + 1);
         let mut pairs = Vec::with_capacity(files.len());
         for (path, text) in files {
             let absolute = scratch
@@ -225,9 +233,20 @@ impl RealBackend {
             });
             pairs.push((path.clone(), absolute));
         }
+        let mut sibling_pairs = Vec::with_capacity(siblings.len());
+        for (path, text) in siblings {
+            let absolute = scratch
+                .resolve(Path::new(path))
+                .map_err(|err| execution(tool_id, format!("scratch sibling: {err}")))?;
+            mirrors.push(MirrorFile {
+                mirror_rel: PathBuf::from(path),
+                contents: MirrorContents::Bytes(text.as_bytes().to_vec()),
+            });
+            sibling_pairs.push((path.clone(), absolute));
+        }
         mirrors.extend(Self::mirror_tool_files(tool_id, tool));
         write_all(&scratch, tool_id, &mirrors)?;
-        Ok((scratch, pairs))
+        Ok((scratch, pairs, sibling_pairs))
     }
 
     /// Resolves the tool config to an absolute scratch path. rustfmt
@@ -268,13 +287,16 @@ impl RealBackend {
     }
 
     /// Runs one check over the staged files and returns the parsed
-    /// findings still addressed by absolute scratch path.
+    /// findings still addressed by absolute scratch path. Sibling pairs
+    /// reach only the Markdown checker as `--sibling` mappings; every
+    /// other tool ignores them.
     fn run_check(
         &self,
         tool_id: &str,
         tool: &RealTool,
         capability: &str,
         pairs: &[(String, PathBuf)],
+        sibling_pairs: &[(String, PathBuf)],
         scratch: &Scratch,
     ) -> Result<Vec<FileFinding>, RunnerError> {
         let refs: Vec<&Path> = pairs
@@ -339,7 +361,11 @@ impl RealBackend {
                     .iter()
                     .map(|(workspace, absolute)| (workspace.as_str(), absolute.as_path()))
                     .collect();
-                let invocation = commands::markdown_check(&tool.binary, &specs);
+                let sibling_specs: Vec<(&str, &Path)> = sibling_pairs
+                    .iter()
+                    .map(|(workspace, absolute)| (workspace.as_str(), absolute.as_path()))
+                    .collect();
+                let invocation = commands::markdown_check(&tool.binary, &specs, &sibling_specs);
                 let out = self.run(tool_id, tool, &invocation, scratch)?;
                 let workspaces: Vec<&str> = pairs
                     .iter()
@@ -423,9 +449,23 @@ impl RealBackend {
         capability: &str,
         files: &BTreeMap<String, String>,
     ) -> Result<Vec<Diagnostic>, RunnerError> {
+        self.diagnose_with_siblings(tool_id, capability, files, &BTreeMap::new())
+    }
+
+    /// Sibling-aware [`Self::diagnose`]: siblings mirror into the scratch
+    /// tree for Markdown link resolution but stay out of findings,
+    /// snapshots, and fixes.
+    pub fn diagnose_with_siblings(
+        &self,
+        tool_id: &str,
+        capability: &str,
+        files: &BTreeMap<String, String>,
+        siblings: &BTreeMap<String, String>,
+    ) -> Result<Vec<Diagnostic>, RunnerError> {
         let tool = self.tool(tool_id)?;
-        let (scratch, pairs) = self.stage_scratch(tool_id, tool, files)?;
-        let collected = self.run_check(tool_id, tool, capability, &pairs, &scratch)?;
+        let (scratch, pairs, sibling_pairs) = self.stage_scratch(tool_id, tool, files, siblings)?;
+        let collected =
+            self.run_check(tool_id, tool, capability, &pairs, &sibling_pairs, &scratch)?;
         let mut diagnostics = Vec::with_capacity(collected.len());
         for found in &collected {
             let workspace = pairs
@@ -512,8 +552,8 @@ impl RealBackend {
         let tool = self.tool(tool_id)?;
         let mut single = BTreeMap::new();
         single.insert(path.to_owned(), text.to_owned());
-        let (scratch, pairs) = self.stage_scratch(tool_id, tool, &single)?;
-        let collected = self.run_check(tool_id, tool, "lint", &pairs, &scratch)?;
+        let (scratch, pairs, _) = self.stage_scratch(tool_id, tool, &single, &BTreeMap::new())?;
+        let collected = self.run_check(tool_id, tool, "lint", &pairs, &[], &scratch)?;
         let mut patched = text.as_bytes().to_vec();
         for found in &collected {
             if let Some(next) = suggest::apply_suggestions(&patched, &found.finding.suggestions) {
@@ -537,14 +577,47 @@ pub fn run_real_pipeline(
     files: &[FileInput],
     backend: &RealBackend,
 ) -> Result<QualityResult, RunnerError> {
+    run_real_pipeline_with_siblings(producer, capability, stages, files, &[], backend)
+}
+
+/// Sibling-aware [`run_real_pipeline`]: siblings are unclassified
+/// link-resolution bytes for the Markdown checker. They must be UTF-8,
+/// must not collide with a checked path or each other, and never enter
+/// snapshots, stages, or fixes, so a stage naming a sibling still fails
+/// `MissingFile`.
+pub fn run_real_pipeline_with_siblings(
+    producer: &str,
+    capability: &str,
+    stages: &[StageSpec],
+    files: &[FileInput],
+    siblings: &[FileInput],
+    backend: &RealBackend,
+) -> Result<QualityResult, RunnerError> {
     let (capability_value, initial) =
         validate_request(producer, capability, stages, files, |tool| {
             backend.supports(tool)
         })?;
+    let mut sibling_texts = BTreeMap::new();
+    for sibling in siblings {
+        if initial.contains_key(&sibling.path) || sibling_texts.contains_key(&sibling.path) {
+            return Err(RunnerError::DuplicateFile {
+                path: sibling.path.clone(),
+            });
+        }
+        let text = std::str::from_utf8(&sibling.bytes).map_err(|_| RunnerError::InvalidUtf8 {
+            path: sibling.path.clone(),
+        })?;
+        sibling_texts.insert(sibling.path.clone(), text.to_owned());
+    }
     let mut initial_diagnostics = Vec::new();
     for stage in stages {
         let subset = stage_subset(stage, &initial);
-        initial_diagnostics.extend(backend.diagnose(&stage.tool_id, capability, &subset)?);
+        initial_diagnostics.extend(backend.diagnose_with_siblings(
+            &stage.tool_id,
+            capability,
+            &subset,
+            &sibling_texts,
+        )?);
     }
     let (terminal, completed_rounds, convergence) = run_convergence(
         &initial,
@@ -555,7 +628,12 @@ pub fn run_real_pipeline(
     let mut terminal_diagnostics = Vec::new();
     for stage in stages {
         let subset = stage_subset(stage, &terminal);
-        terminal_diagnostics.extend(backend.diagnose(&stage.tool_id, capability, &subset)?);
+        terminal_diagnostics.extend(backend.diagnose_with_siblings(
+            &stage.tool_id,
+            capability,
+            &subset,
+            &sibling_texts,
+        )?);
     }
     Ok(assemble(
         producer,
@@ -1147,6 +1225,161 @@ mod tests {
         assert_eq!(result.terminal_diagnostics.len(), 1);
         assert!(result.replacements.is_empty());
         assert!(encode_validated(&result).is_ok());
+    }
+
+    /// Sibling-aware markdown double: a BROKEN link resolves exactly when
+    /// at least one `--sibling` mapping reaches the invocation, proving
+    /// the backend threads siblings through to the checker.
+    fn markdown_sibling_links(
+        argv: &[OsString],
+        _cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_hermetic(env);
+        let mut out = String::new();
+        // Sibling mappings trail the source mappings in argv, so
+        // pre-scan for their presence before judging any source.
+        let seen_sibling = argv.iter().any(|arg| arg == "--sibling");
+        let mut index = 0;
+        while index < argv.len() {
+            if argv[index] == "--source" {
+                let mapping = argv[index + 1].to_string_lossy().into_owned();
+                let (workspace, absolute) = mapping.split_once('=').expect("--source maps WS=ABS");
+                let bytes = std::fs::read(absolute).expect("checked file is materialized");
+                let text = String::from_utf8(bytes).expect("checked bytes are UTF-8");
+                if text.contains("BROKEN") && !seen_sibling {
+                    out.push_str(&format!(
+                        "{{\"path\":\"{workspace}\",\"line\":2,\"kind\":\"missing-file-target\",\"message\":\"link target nope.md does not match a checked source\"}}\n"
+                    ));
+                }
+                index += 1;
+            }
+            index += 1;
+        }
+        Ok(ChildOutput {
+            code: Some(0),
+            stdout: out.into_bytes(),
+            stderr: Vec::new(),
+        })
+    }
+
+    #[test]
+    fn markdown_siblings_reach_the_checker_invocation() {
+        let backend = backend_for("markdown_check", plain_tool(), markdown_sibling_links);
+        let mut siblings = BTreeMap::new();
+        siblings.insert("LICENSE".to_owned(), "license text\n".to_owned());
+        let without = backend
+            .diagnose_with_siblings(
+                "markdown_check",
+                "lint",
+                &single("doc/guide.md", "# Guide\n\nBROKEN\n"),
+                &BTreeMap::new(),
+            )
+            .expect("diagnosed");
+        assert_eq!(without.len(), 1);
+        let with = backend
+            .diagnose_with_siblings(
+                "markdown_check",
+                "lint",
+                &single("doc/guide.md", "# Guide\n\nBROKEN\n"),
+                &siblings,
+            )
+            .expect("diagnosed");
+        assert!(with.is_empty());
+    }
+
+    #[test]
+    fn markdown_siblings_stay_out_of_snapshots_and_stages() {
+        let backend = backend_for("markdown_check", plain_tool(), markdown_links);
+        let stages = vec![stage("markdown_check", &["markdown"], &["doc/guide.md"])];
+        let files = vec![file("doc/guide.md", "# Guide\n")];
+        let siblings = vec![file("LICENSE", "license text\n")];
+        let result = run_real_pipeline_with_siblings(
+            "//quality:test",
+            "lint",
+            &stages,
+            &files,
+            &siblings,
+            &backend,
+        )
+        .expect("real pipeline");
+        assert!(result.initial_diagnostics.is_empty());
+        assert!(result.terminal_diagnostics.is_empty());
+        assert_eq!(result.original_snapshot.len(), 1);
+        assert_eq!(result.original_snapshot[0].path, "doc/guide.md");
+        assert_eq!(result.terminal_snapshot.len(), 1);
+        assert!(result.replacements.is_empty());
+        assert!(encode_validated(&result).is_ok());
+    }
+
+    #[test]
+    fn sibling_colliding_with_a_source_fails() {
+        let backend = backend_for("markdown_check", plain_tool(), markdown_links);
+        let stages = vec![stage("markdown_check", &["markdown"], &["doc/guide.md"])];
+        let files = vec![file("doc/guide.md", "# Guide\n")];
+        let siblings = vec![file("doc/guide.md", "other\n")];
+        assert_eq!(
+            run_real_pipeline_with_siblings(
+                "//quality:test",
+                "lint",
+                &stages,
+                &files,
+                &siblings,
+                &backend
+            ),
+            Err(RunnerError::DuplicateFile {
+                path: "doc/guide.md".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn sibling_non_utf8_fails() {
+        let backend = backend_for("markdown_check", plain_tool(), markdown_links);
+        let stages = vec![stage("markdown_check", &["markdown"], &["doc/guide.md"])];
+        let files = vec![file("doc/guide.md", "# Guide\n")];
+        let siblings = vec![FileInput {
+            path: "LICENSE".to_owned(),
+            bytes: vec![0xff],
+        }];
+        assert_eq!(
+            run_real_pipeline_with_siblings(
+                "//quality:test",
+                "lint",
+                &stages,
+                &files,
+                &siblings,
+                &backend
+            ),
+            Err(RunnerError::InvalidUtf8 {
+                path: "LICENSE".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn stage_naming_a_sibling_fails_missing_file() {
+        let backend = backend_for("markdown_check", plain_tool(), markdown_links);
+        let stages = vec![stage(
+            "markdown_check",
+            &["markdown"],
+            &["doc/guide.md", "LICENSE"],
+        )];
+        let files = vec![file("doc/guide.md", "# Guide\n")];
+        let siblings = vec![file("LICENSE", "license text\n")];
+        assert_eq!(
+            run_real_pipeline_with_siblings(
+                "//quality:test",
+                "lint",
+                &stages,
+                &files,
+                &siblings,
+                &backend
+            ),
+            Err(RunnerError::MissingFile {
+                path: "LICENSE".to_owned(),
+            })
+        );
     }
 
     #[test]

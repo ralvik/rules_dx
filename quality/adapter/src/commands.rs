@@ -230,16 +230,29 @@ pub fn vale_check(binary: &Path, ini: &Path, files: &[&Path], ini_dir_rel: &str)
 }
 
 /// Repo-owned Markdown link/structure check invocation. One `--source`
-/// `workspace=absolute` mapping per stage file, in stage order; the
+/// `workspace=absolute` mapping per stage file, in stage order, then one
+/// `--sibling` mapping per unclassified link-resolution sibling; the
 /// checker reads the absolute bytes but keys sibling resolution and its
 /// finding paths off the workspace paths, so the caller re-roots reported
-/// paths onto scratch-absolute paths before placement. No config exists
-/// and the checker performs no discovery, so `cwd_rel` is always empty.
-pub fn markdown_check(binary: &Path, sources: &[(&str, &Path)]) -> Invocation {
-    let mut argv = Vec::with_capacity(1 + 2 * sources.len());
+/// paths onto scratch-absolute paths before placement. Siblings are never
+/// linted and never appear in findings. No config exists and the checker
+/// performs no discovery, so `cwd_rel` is always empty.
+pub fn markdown_check(
+    binary: &Path,
+    sources: &[(&str, &Path)],
+    siblings: &[(&str, &Path)],
+) -> Invocation {
+    let mut argv = Vec::with_capacity(1 + 2 * (sources.len() + siblings.len()));
     argv.push(binary.as_os_str().to_owned());
     for (workspace, absolute) in sources {
         argv.push(OsString::from("--source"));
+        let mut mapping = OsString::from(workspace);
+        mapping.push(OsString::from("="));
+        mapping.push(absolute.as_os_str());
+        argv.push(mapping);
+    }
+    for (workspace, absolute) in siblings {
+        argv.push(OsString::from("--sibling"));
         let mut mapping = OsString::from(workspace);
         mapping.push(OsString::from("="));
         mapping.push(absolute.as_os_str());
@@ -425,6 +438,7 @@ mod tests {
                 ("doc/guide.md", Path::new("/scratch/doc/guide.md")),
                 ("README.md", Path::new("/scratch/README.md")),
             ],
+            &[("LICENSE", Path::new("/scratch/LICENSE"))],
         );
         assert_eq!(
             argv_strings(&invocation),
@@ -433,7 +447,9 @@ mod tests {
                 "--source",
                 "doc/guide.md=/scratch/doc/guide.md",
                 "--source",
-                "README.md=/scratch/README.md"
+                "README.md=/scratch/README.md",
+                "--sibling",
+                "LICENSE=/scratch/LICENSE",
             ]
         );
         assert_eq!(invocation.cwd_rel, "");

@@ -14,9 +14,12 @@ upstream defaults, except Vale, which has no usable default and fails
 analysis with guidance to supply and bind native policy.
 
 Hermeticity: actions declare exactly the direct sources, the hinted config
-closures, and the stage tool binaries as inputs. The runner materializes
+closures, the Markdown link-resolution siblings, and the stage tool
+binaries as inputs. The runner materializes
 exact bytes into a fresh scratch tree, never observes VCS state, and
 launches tools with an empty `PATH` (see `quality_adapter::exec`).
+Siblings (`markdown_siblings` on the visited rule) resolve Markdown link
+targets only: they are never linted and never enter findings or snapshots.
 
 Contract: `docs/quality/tool-integrations.md`,
 `docs/quality/native-configuration.md`,
@@ -111,6 +114,25 @@ def _real_pipeline_action(target, ctx, capability):
     ordered_paths = sorted(union.keys())
     inputs = [path_to_file[path] for path in ordered_paths if path in path_to_file]
 
+    # Markdown link-resolution siblings: unclassified files declared via
+    # `markdown_siblings` on the visited rule. Only collected when a
+    # markdown_check stage runs, so non-Markdown actions stay
+    # byte-identical. A sibling shadowing a checked source is dropped
+    # (the checked source wins); siblings shadowing each other keep the
+    # first in attribute order.
+    sibling_pairs = {}
+    if "markdown_check" in stage_tools and hasattr(ctx.rule.attr, "markdown_siblings"):
+        for sibling in ctx.rule.attr.markdown_siblings:
+            # Label entries may be rule targets (with a files depset) or
+            # source files directly.
+            if hasattr(sibling, "files"):
+                sibling_files = sibling.files.to_list()
+            else:
+                sibling_files = [sibling]
+            for f in sibling_files:
+                if f.short_path not in path_to_file and f.short_path not in sibling_pairs:
+                    sibling_pairs[f.short_path] = f
+
     args = ctx.actions.args()
     args.add("--producer", str(target.label))
     args.add("--capability", capability)
@@ -124,6 +146,10 @@ def _real_pipeline_action(target, ctx, capability):
         f = path_to_file.get(ws_path)
         if f != None:
             args.add("--source", ws_path + "=" + f.path)
+    for ws_path in sorted(sibling_pairs.keys()):
+        f = sibling_pairs[ws_path]
+        args.add("--sibling", ws_path + "=" + f.path)
+        inputs.append(f)
     args.add("--real")
     for tool in stage_tools:
         binary = tool_binaries[tool]
@@ -155,18 +181,6 @@ def _real_format_impl(target, ctx):
     return _real_pipeline_action(target, ctx, "format")
 
 _REAL_ATTRS = {
-    "_policy": attr.label(
-        default = "//quality:real_fixture_policy",
-        providers = [QualityPolicyInfo],
-        doc = "Aggregate workspace policy expanding tool IDs to classes.",
-    ),
-    "_runner": attr.label(
-        default = "//quality/runner:quality_runner",
-        executable = True,
-        cfg = "exec",
-        allow_files = True,
-        doc = "Deterministic pipeline runner with --real backend.",
-    ),
     "_buildifier": attr.label(
         default = "@dx_tools//:buildifier",
         allow_single_file = True,
@@ -178,6 +192,18 @@ _REAL_ATTRS = {
         allow_single_file = True,
         cfg = "exec",
         doc = "Repo-owned Markdown link/structure checker for Markdown pipelines.",
+    ),
+    "_policy": attr.label(
+        default = "//quality:real_fixture_policy",
+        providers = [QualityPolicyInfo],
+        doc = "Aggregate workspace policy expanding tool IDs to classes.",
+    ),
+    "_runner": attr.label(
+        default = "//quality/runner:quality_runner",
+        executable = True,
+        cfg = "exec",
+        allow_files = True,
+        doc = "Deterministic pipeline runner with --real backend.",
     ),
     "_taplo": attr.label(
         default = "@dx_tools//:taplo",

@@ -6,12 +6,15 @@
 //! quality_runner --producer LABEL --capability CAP --output OUT.pb \
 //!   --stage TOOL;class,class;path,path [--stage ...] \
 //!   --source WORKSPACE_PATH=EXEC_PATH [--source ...] \
+//!   [--sibling WORKSPACE_PATH=EXEC_PATH [--sibling ...]] \
 //!   [--real --tool-binary TOOL=ABS_PATH [--tool-binary ...] \
 //!    [--tool-config TOOL=MIRROR_REL] [--tool-file TOOL=MIRROR_REL=EXEC_PATH] \
 //!    [--tool-env TOOL=KEY=VALUE] [--scratch-parent PATH]]
 //! ```
 //! Stages run in argument order. Each `--source` maps one workspace path
-//! to the action-local file holding its bytes. Without `--real` the
+//! to the action-local file holding its bytes. Each `--sibling` maps one
+//! unclassified link-resolution file (Markdown `--sibling` inputs): sibling
+//! bytes are never linted and never enter snapshots. Without `--real` the
 //! synthetic M03 pipeline runs. With `--real` the M04 real backend runs
 //! `run_real_pipeline` over the resolved tools: each stage tool needs one
 //! `--tool-binary`, configs are mirror-relative `--tool-config` paths whose
@@ -118,6 +121,7 @@ fn run() -> Result<(), String> {
     let mut output: Option<String> = None;
     let mut stages: Vec<StageSpec> = Vec::new();
     let mut sources: Vec<(String, String)> = Vec::new();
+    let mut siblings: Vec<(String, String)> = Vec::new();
     let mut real = false;
     let mut scratch_parent: Option<String> = None;
     let mut binaries: Vec<(String, PathBuf)> = Vec::new();
@@ -137,6 +141,13 @@ fn run() -> Result<(), String> {
                     .split_once('=')
                     .ok_or_else(|| format!("malformed --source {mapping:?}, want WS_PATH=EXEC"))?;
                 sources.push((workspace.to_owned(), exec.to_owned()));
+            }
+            "--sibling" => {
+                let mapping = flag_value(&args, &mut index, "--sibling")?;
+                let (workspace, exec) = mapping
+                    .split_once('=')
+                    .ok_or_else(|| format!("malformed --sibling {mapping:?}, want WS_PATH=EXEC"))?;
+                siblings.push((workspace.to_owned(), exec.to_owned()));
             }
             "--real" => real = true,
             "--scratch-parent" => {
@@ -181,6 +192,15 @@ fn run() -> Result<(), String> {
     for (workspace, exec) in &sources {
         let bytes = std::fs::read(exec).map_err(|e| format!("cannot read {workspace:?}: {e}"))?;
         files.push(FileInput {
+            path: workspace.clone(),
+            bytes,
+        });
+    }
+    let mut sibling_files = Vec::with_capacity(siblings.len());
+    for (workspace, exec) in &siblings {
+        let bytes =
+            std::fs::read(exec).map_err(|e| format!("cannot read sibling {workspace:?}: {e}"))?;
+        sibling_files.push(FileInput {
             path: workspace.clone(),
             bytes,
         });
@@ -245,9 +265,15 @@ fn run() -> Result<(), String> {
         .map(PathBuf::from)
         .unwrap_or_else(std::env::temp_dir);
     let backend = RealBackend::new(tools, scratch_parent);
-    let result =
-        quality_runner::real::run_real_pipeline(&producer, &capability, &stages, &files, &backend)
-            .map_err(|e| format!("pipeline failed: {e}"))?;
+    let result = quality_runner::real::run_real_pipeline_with_siblings(
+        &producer,
+        &capability,
+        &stages,
+        &files,
+        &sibling_files,
+        &backend,
+    )
+    .map_err(|e| format!("pipeline failed: {e}"))?;
     let bytes = encode_validated(&result).map_err(|e| format!("invalid result: {e}"))?;
     std::fs::write(&output, bytes).map_err(|e| format!("cannot write {output:?}: {e}"))?;
     Ok(())

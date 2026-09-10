@@ -11,9 +11,14 @@
 //! Scope notes: inline links (`[text](target)`), images, autolinks, and
 //! reference links (`[text][label]` with a `[label]: target` definition,
 //! including collapsed `[text][]` and shortcut `[text]` forms when the text
-//! matches a definition) are resolved. Email autolinks (`<a@b.c>`) are out of
-//! scope and ignored. Inline code spans suppress link detection with an
-//! approximate same-length backtick toggle. Heading slugs follow the
+//! matches a definition) are resolved. A target that names a directory
+//! resolves to its declared `README.md` index (`docs/cli/` reads
+//! `docs/cli/README.md`); an undeclared index fails closed like any
+//! undeclared target. Email autolinks (`<a@b.c>`) are out of
+//! scope and ignored. Inline code spans suppress link detection with a
+//! same-length backtick toggle that carries across lines until a blank line
+//! or fence (CommonMark multi-line spans); block structure (headings,
+//! definitions, fences) stays line-scoped. Heading slugs follow the
 //! checker's own rule ([`slug`]): lowercase alphanumerics, `-`/`_` kept,
 //! each whitespace character becomes `-`, GitHub-style `-1`/`-2`
 //! deduplication for repeat headings.
@@ -92,9 +97,19 @@ pub fn check_markdown(
     let mut slug_counts: BTreeMap<String, usize> = BTreeMap::new();
 
     let mut open_fence: Option<(char, usize, u32)> = None;
+    let mut open_span: Option<usize> = None;
     for (index, line) in text.lines().enumerate() {
         let line_no = (index as u32) + 1;
+        if line.trim().is_empty() {
+            // Code spans never cross a blank line (paragraph boundary), so
+            // an unclosed opener stops hiding links here.
+            open_span = None;
+            continue;
+        }
         if let Some(marker) = fence_marker(line) {
+            // Fence lines are block boundaries: a span cannot continue past
+            // them.
+            open_span = None;
             match open_fence {
                 None => {
                     if marker.2.trim().is_empty() {
@@ -119,13 +134,19 @@ pub fn check_markdown(
             continue;
         }
         if open_fence.is_some() {
+            open_span = None;
             continue;
         }
         if let Some((label, target)) = link_definition(line) {
+            // Definitions interrupt a paragraph, ending any open span.
+            open_span = None;
             definitions.insert(label, target);
             continue;
         }
         if let Some((level, text)) = heading(line) {
+            // Headings interrupt a paragraph, ending any open span; the
+            // heading line itself still scans for links.
+            open_span = None;
             let base = slug(&text);
             let slug = if base.is_empty() {
                 base
@@ -145,7 +166,9 @@ pub fn check_markdown(
                 slug,
             });
         }
-        pending.extend(scan_links(line).into_iter().map(|target| PendingLink {
+        let (found, next_span) = scan_links(line, open_span);
+        open_span = next_span;
+        pending.extend(found.into_iter().map(|target| PendingLink {
             line: line_no,
             target,
         }));
@@ -293,7 +316,16 @@ fn check_target(
         own_slugs
     } else {
         let resolved = resolve_target(source_path, &file_part);
-        let Some(content) = siblings.get(&resolved) else {
+        // A directory target resolves to its declared `README.md` index; a
+        // directly declared file still wins. The index must be declared: an
+        // undeclared directory fails closed with the directory path named.
+        let index = if resolved.is_empty() {
+            "README.md".to_owned()
+        } else {
+            resolved.clone() + "/README.md"
+        };
+        let content = siblings.get(&resolved).or_else(|| siblings.get(&index));
+        let Some(content) = content else {
             push_finding(
                 outcome,
                 line,
@@ -604,14 +636,37 @@ fn link_definition(line: &str) -> Option<(String, String)> {
 /// reference usages (`[text][label]`, collapsed `[text][]`, shortcut
 /// `[text]`). Images share the same syntax. `<autolinks>` resolve as
 /// targets except email forms, which are out of scope. Code spans between
-/// matching backtick runs are skipped.
-fn scan_links(line: &str) -> Vec<RawTarget> {
+/// matching backtick runs are skipped, including spans opened on a previous
+/// line: `open_span` carries the still-open run length (or `None`), and the
+/// return carries the run left open at end of line (or `None`). A line that
+/// opens a span it never closes hides the rest of the line; callers reset
+/// the carry on blank lines and fences so one stray backtick cannot hide
+/// links past its paragraph.
+fn scan_links(line: &str, open_span: Option<usize>) -> (Vec<RawTarget>, Option<usize>) {
     let chars: Vec<char> = line.chars().collect();
     let mut targets = Vec::new();
     let mut i = 0;
+    if let Some(run) = open_span {
+        match close_span_run(&chars, 0, run) {
+            Some(next) => {
+                i = next;
+            }
+            None => {
+                return (targets, open_span);
+            }
+        }
+    }
     while i < chars.len() {
         if chars[i] == '`' {
-            i = skip_code_span(&chars, i);
+            let run = chars[i..].iter().take_while(|c| **c == '`').count();
+            match close_span_run(&chars, i + run, run) {
+                Some(next) => {
+                    i = next;
+                }
+                None => {
+                    return (targets, Some(run));
+                }
+            }
             continue;
         }
         if chars[i] == '<' {
@@ -649,24 +704,27 @@ fn scan_links(line: &str) -> Vec<RawTarget> {
         }
         i += 1;
     }
-    targets
+    (targets, None)
 }
 
-fn skip_code_span(chars: &[char], start: usize) -> usize {
-    let run = chars[start..].iter().take_while(|c| **c == '`').count();
-    let mut j = start + run;
+/// Index just past the closing run matching a code-span opener: scans for a
+/// backtick run of exactly `run` starting at `from`, skipping shorter or
+/// longer runs as span content. Returns `None` when no closer follows, in
+/// which case the span continues on the next line.
+fn close_span_run(chars: &[char], from: usize, run: usize) -> Option<usize> {
+    let mut j = from;
     while j < chars.len() {
         if chars[j] == '`' {
             let run2 = chars[j..].iter().take_while(|c| **c == '`').count();
             if run2 == run {
-                return j + run2;
+                return Some(j + run2);
             }
             j += run2;
         } else {
             j += 1;
         }
     }
-    start + run
+    None
 }
 
 /// Parse a `[...]` link starting at the `[` at `open`. Returns the index
@@ -946,6 +1004,94 @@ mod tests {
         let text = "# T\n\nSee <./other.md>.\n";
         let outcome = check_markdown("a.md", text, &siblings(&[("other.md", "# O\n")]));
         assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
+    }
+
+    #[test]
+    fn directory_link_resolves_to_declared_readme_index() {
+        let text = "# T\n\nSee the [CLI](../cli/) guide.\n";
+        let outcome = check_markdown(
+            "docs/architecture/notes.md",
+            text,
+            &siblings(&[("docs/cli/README.md", "# CLI\n")]),
+        );
+        assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
+    }
+
+    #[test]
+    fn directory_link_anchor_checks_index_slugs() {
+        let good = "# T\n\nSee [setup](../cli/#setup).\n";
+        let outcome = check_markdown(
+            "docs/architecture/notes.md",
+            good,
+            &siblings(&[("docs/cli/README.md", "# CLI\n\n## Setup\n")]),
+        );
+        assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
+        let bad = "# T\n\nSee [setup](../cli/#missing).\n";
+        let outcome = check_markdown(
+            "docs/architecture/notes.md",
+            bad,
+            &siblings(&[("docs/cli/README.md", "# CLI\n\n## Setup\n")]),
+        );
+        assert_eq!(
+            kinds(&outcome),
+            vec![(3, FindingKind::MissingAnchor)],
+            "{:?}",
+            outcome.findings
+        );
+    }
+
+    #[test]
+    fn directory_link_without_declared_index_fails_closed() {
+        let text = "# T\n\nSee the [CLI](../cli/) guide.\n";
+        let outcome = check_markdown("docs/architecture/notes.md", text, &siblings(&[]));
+        assert_eq!(
+            kinds(&outcome),
+            vec![(3, FindingKind::MissingFileTarget)],
+            "{:?}",
+            outcome.findings
+        );
+    }
+
+    #[test]
+    fn declared_file_wins_over_directory_index() {
+        let text = "# T\n\nSee [cli](cli).\n";
+        let outcome = check_markdown(
+            "notes.md",
+            text,
+            &siblings(&[("cli", "# Not a dir\n"), ("cli/README.md", "# Index\n")]),
+        );
+        assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
+    }
+
+    #[test]
+    fn multiline_code_span_hides_autolink() {
+        // A code span opened on one line closes on the next; the `<pkg>`
+        // inside is span content, not an autolink (doc-ir shape).
+        let text = "# T\n\nRun (`dump <pkg> [-o out]\n[-f]`, more).\n";
+        let outcome = check_markdown("a.md", text, &siblings(&[]));
+        assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
+    }
+
+    #[test]
+    fn span_closer_misread_as_opener_is_fixed_across_lines() {
+        // The closing backtick of a multi-line span must not reopen one
+        // (M01 report shape): `<short_path>` stays span content.
+        let text = "# T\n\nUnset under `bazel\ntest`. Resolve `$WS/<short_path>` here.\n";
+        let outcome = check_markdown("a.md", text, &siblings(&[]));
+        assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
+    }
+
+    #[test]
+    fn span_carry_resets_on_blank_line() {
+        // A stray opener hides links only until its paragraph ends.
+        let text = "# T\n\nStray ` opener hides [gone](gone.md).\n\nSee <also-gone.md>.\n";
+        let outcome = check_markdown("a.md", text, &siblings(&[]));
+        assert_eq!(
+            kinds(&outcome),
+            vec![(5, FindingKind::MissingFileTarget)],
+            "{:?}",
+            outcome.findings
+        );
     }
 
     #[test]

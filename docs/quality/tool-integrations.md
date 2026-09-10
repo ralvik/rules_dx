@@ -211,7 +211,14 @@ result carries `clippy::too_many_arguments` where the unhinted fixture stays sil
   with re-rooting onto scratch-absolute paths before placement (`parsers::parse_markdown_findings`;
   findings exist only on exit 0, any other exit is an action failure), check-only `apply_fix`
   returning its input, and diagnostics carrying the kebab-case kind as `rule_id` at `Error`
-  severity. Direct-Bazel dogfood (executing the wired stage on fixtures) follows in M05; this
+  severity. Sibling plumbing (M05 WP1): source targets declare unclassified link-resolution files
+  via `markdown_siblings` on `real_source_target` (for example a `LICENSE` file); the aspect passes
+  one `--sibling WS=ABS` mapping per sibling alongside the action inputs, only when a
+  `markdown_check` stage runs, and the runner mirrors siblings into the scratch tree through
+  `run_real_pipeline_with_siblings` without linting them or entering snapshots. A sibling
+  shadowing a checked source is dropped at the aspect (the source wins); a `--sibling` colliding
+  with a `--source` at the runner CLI is a `DuplicateFile` action failure. Direct-Bazel dogfood
+  (executing the wired stage on fixtures) follows in M05; this
   boundary freezes the checker shape and its pipeline integration, not its execution evidence.
 
 ## First-Release Tool Baseline

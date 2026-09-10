@@ -162,6 +162,18 @@ real_source_target(
     markdown_srcs = ["real_clean.md"],
 )
 
+real_source_target(
+    name = "fixture_real_markdown_sibling",
+    aspect_hints = [":vale_cfg"],
+    markdown_siblings = ["sibling_license.txt"],
+    markdown_srcs = ["sibling_clean.md"],
+)
+
+real_aspect_subject(
+    name = "fixture_real_markdown_sibling_subject",
+    target = ":fixture_real_markdown_sibling",
+)
+
 real_aspect_subject(
     name = "fixture_real_markdown_subject",
     target = ":fixture_real_markdown",
@@ -194,6 +206,7 @@ real_aspect_subject(
 real_aspect_fixture_tests(
     name = "real_aspect_presence",
     subjects = [
+        ":fixture_real_markdown_sibling_subject",
         ":fixture_real_markdown_subject",
         ":fixture_real_mixed_subject",
         ":fixture_real_no_lint_subject",
@@ -203,4 +216,16 @@ real_aspect_fixture_tests(
         ":fixture_real_toml_subject",
         ":real_plain_subject",
     ],
+)
+
+# Repository corpus (M05 WP1): non-fixture Starlark sources in this package
+# owned for direct-Bazel dogfood under the canonical real_fixture_policy.
+# Fixture-owned evidence files stay excluded (evidence frozen); Markdown
+# and TOML here are fixture-owned or bound configs, so no md/toml corpus.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"] + glob(
+        ["*.bzl"],
+        exclude = ["real_clean.bzl"],
+    ),
 )
