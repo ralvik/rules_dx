@@ -1,0 +1,11 @@
+[package]
+name = "dx_process"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+libc = "0.2"
+
+[lib]
+name = "dx_process"
+path = "src/lib.rs"

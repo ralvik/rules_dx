@@ -56,6 +56,11 @@ crate.from_cargo(
         "//quality/markdown:Cargo.toml",
         "//quality/result:Cargo.toml",
         "//quality/runner:Cargo.toml",
+        "//dx/process:Cargo.toml",
+        "//dx/apply:Cargo.toml",
+        "//dx/output:Cargo.toml",
+        "//dx/bep:Cargo.toml",
+        "//dx/diff:Cargo.toml",
     ],
 )
 use_repo(crate, "crates")

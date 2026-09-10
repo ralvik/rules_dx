@@ -18,6 +18,15 @@ support quality/testdata/dirty.rs
 support quality/testdata/hinted.rs
 eligible rust/hello/src/lib.rs
 eligible rust/hello/src/main.rs
+eligible dx/apply/src/applier.rs
+eligible dx/apply/src/consensus.rs
+eligible dx/apply/src/envelope.rs
+eligible dx/apply/src/lib.rs
+eligible dx/apply/src/validators.rs
+eligible dx/process/src/lib.rs
+eligible dx/output/src/lib.rs
+eligible dx/bep/src/lib.rs
+eligible dx/diff/src/lib.rs
 eligible quality/adapter/src/commands.rs
 eligible quality/adapter/src/exec.rs
 eligible quality/adapter/src/lib.rs

@@ -1,0 +1,11 @@
+[package]
+name = "dx_bep"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+serde_json = "1"
+
+[lib]
+name = "dx_bep"
+path = "src/lib.rs"

@@ -1,0 +1,46 @@
+"""M06 WP2 public output modes for the `dx` CLI."""
+
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "dx_rust_library", "dx_rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_rust_library(
+    name = "dx_output",
+    srcs = ["src/lib.rs"],
+    crate_name = "dx_output",
+    edition = "2021",
+    deps = ["@crates//:serde_json"],
+)
+
+dx_rust_test(
+    name = "dx_output_test",
+    size = "small",
+    crate = ":dx_output",
+    edition = "2021",
+)
+
+# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# resolve from the pinned toolchain, never from ambient host tools.
+rustfmt_test(
+    name = "dx_output_fmt_test",
+    size = "small",
+    targets = [":dx_output"],
+)
+
+rust_clippy_test(
+    name = "dx_output_clippy_test",
+    size = "small",
+    targets = [":dx_output"],
+)
+
+exports_files(["Cargo.toml"])
+
+# Repository corpus (M05 WP1): crate manifest and build file owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
+)

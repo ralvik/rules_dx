@@ -1,0 +1,11 @@
+[package]
+name = "dx_output"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+serde_json = "1"
+
+[lib]
+name = "dx_output"
+path = "src/lib.rs"
