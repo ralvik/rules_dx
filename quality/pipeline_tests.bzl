@@ -6,7 +6,7 @@ subsets, no generic fallback, no empty actions) lands in WP2c; these unit
 checks prove the pure shapes that evidence rests on.
 """
 
-load("//tools/starlark:defs.bzl", "expect_equal", "starlark_test")
+load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":adapters.bzl", "SYNTHETIC_ADAPTERS", "SYNTHETIC_CLASS_TO_FAMILY", "adapter_supported_classes")
 load(":pipeline.bzl", "authorize_classes", "pipeline_stages", "resolve_pipeline", "stage_sources")
 

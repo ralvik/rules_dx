@@ -7,7 +7,7 @@ it names the consumer's aggregate policy target and is not resolved here.
 """
 
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
-load("//tools/starlark:defs.bzl", "DxSubjectInfo")
+load("//libs/starlark:defs.bzl", "DxSubjectInfo")
 
 def _settings_subject_impl(ctx):
     return [

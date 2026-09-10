@@ -8,7 +8,7 @@ pinned toolchain, and pinned tool identities.
 """
 
 load("//quality:sources.bzl", "KNOWN_SEMANTIC_FILE_CLASSES", "RUST")
-load("//tools/starlark:defs.bzl", "expect_equal", "starlark_test")
+load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 
 def dx_wrapper_registry_tests(name):
     starlark_test(

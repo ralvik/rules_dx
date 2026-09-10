@@ -8,7 +8,7 @@ environment, tool, and quality matrices.
 
 Public API: `starlark_test` macro, `expect_equal` assertion constructor,
 and `DxSubjectInfo` provider, all loadable from
-`//tools/starlark:defs.bzl`. One macro call is one addressable Bazel test
+`//libs/starlark:defs.bzl`. One macro call is one addressable Bazel test
 target with one Bazel result.
 
 ## Modes
@@ -45,15 +45,15 @@ Mismatches accumulate within one target and report together in declaration
 order through the standard Bazel test protocol: non-zero exit status and
 `test.log` diagnostics. An assertion failure is always execution-phase, so
 Bazel reports `FAILED`, never a build breakage. Negative demonstrations
-live in `tools/starlark/tests/negative` with `tags = ["manual"]` and are
+live in `libs/starlark/tests/negative` with `tags = ["manual"]` and are
 excluded from wildcard suites; run them explicitly:
 
 ```sh
-bazel test //tools/starlark/tests/negative:failing_check_demo \
-  //tools/starlark/tests/negative:missing_observation_demo \
-  //tools/starlark/tests/negative:missing_fragment_demo \
+bazel test //libs/starlark/tests/negative:failing_check_demo \
+  //libs/starlark/tests/negative:missing_observation_demo \
+  //libs/starlark/tests/negative:missing_fragment_demo \
   --nocache_test_results
-bazel build //tools/starlark/tests/negative:wrong_phase_demo
+bazel build //libs/starlark/tests/negative:wrong_phase_demo
 ```
 
 The last command shows the analysis authoring error for a mode violation.
@@ -66,7 +66,7 @@ Test selection is by target label; the generated runner does not interpret
 ordinary Bazel test semantics. Logs and `test.xml` are Bazel-provided;
 analysis-mode runners also print their observations to `test.log`. Tests
 may be grouped with ordinary `test_suite` targets
-(`//tools/starlark/tests:all`, `//tools/testing:all`).
+(`//libs/starlark/tests:all`, `//libs/testing:all`).
 
 ## Environment
 
@@ -82,7 +82,7 @@ anywhere; everything runs inside the single Bazel command.
 
 Starlark has no executable-line instrumentation under the pinned Bazel, so
 there is no Starlark line-coverage percentage. The evidence-backed fallback
-is the checked [behavioral matrix](../../tools/starlark/behavioral_matrix.md):
+is the checked [behavioral matrix](../../libs/starlark/behavioral_matrix.md):
 every public entry point and behavior maps to passing tests, the mapping is
 machine-checked by `matrix_validation`, and every mapped target carries
 evidence by construction. The matrix is repository metadata, not a result

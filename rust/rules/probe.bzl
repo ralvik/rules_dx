@@ -17,7 +17,7 @@ M02 milestone evidence requires:
 
 load("@rules_rust//rust:defs.bzl", _rust_common = "rust_common")
 load("//quality:sources.bzl", "QualitySourcesInfo")
-load("//tools/starlark:defs.bzl", "DxSubjectInfo")
+load("//libs/starlark:defs.bzl", "DxSubjectInfo")
 
 def _label_text(label):
     text = str(label)

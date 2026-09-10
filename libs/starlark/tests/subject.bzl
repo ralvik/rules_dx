@@ -1,6 +1,6 @@
 """Analysis subject rule exposing DxSubjectInfo and one output file."""
 
-load("//tools/starlark:defs.bzl", "DxSubjectInfo")
+load("//libs/starlark:defs.bzl", "DxSubjectInfo")
 
 def _example_subject_impl(ctx):
     total = ctx.attr.left + ctx.attr.right

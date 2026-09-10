@@ -2,15 +2,15 @@
 
 Run explicitly; never part of `//...` suites or CI:
 
-  bazel test //tools/starlark/tests/negative/... --nocache_test_results
-  bazel build //tools/starlark/tests/negative:wrong_phase_demo \
+  bazel test //libs/starlark/tests/negative/... --nocache_test_results
+  bazel build //libs/starlark/tests/negative:wrong_phase_demo \
     --nobuild 2>&1 | tail -5
 
 Each failure mode below maps to a `failure-rendering` or `mode-validation`
 matrix item, with captured output in the M01 completion report.
 """
 
-load("//tools/starlark:defs.bzl", "expect_equal", "starlark_test")
+load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 
 def failing_check_demo(name):
     starlark_test(
@@ -29,7 +29,7 @@ def missing_observation_demo(name):
         name = name,
         mode = "analysis",
         subjects = [":negative_subject"],
-        expected_observations = "subject //tools/starlark/tests/negative:negative_subject\nfile negative_subject.txt\nfield left=0\nfield right=0\nfield sum=43",
+        expected_observations = "subject //libs/starlark/tests/negative:negative_subject\nfile negative_subject.txt\nfield left=0\nfield right=0\nfield sum=43",
         tags = ["manual"],
     )
 

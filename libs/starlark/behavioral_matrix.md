@@ -15,7 +15,7 @@ the [M01 completion report](../../milestones/M01-completion-report.md).
 This matrix is repository metadata, not a result stream. Every inventory
 item maps to passing tests with meaningful behavior assertions. Presence of
 each mapping is machine-checked by `matrix_validation` in
-`tools/starlark/tests`; every mapped test target carries evidence by
+`libs/starlark/tests`; every mapped test target carries evidence by
 construction (the framework rejects evidence-free tests at analysis), and CI
 runs both the validation and the mapped tests. Assertion quality beyond that
 is review-based, which is stated here rather than implied.
@@ -26,7 +26,7 @@ machine-checked mapping points. A removed or renamed anchor fails
 
 ### item: expect_equal
 
-Public assertion constructor in `tools/starlark/defs.bzl`. Converts one
+Public assertion constructor in `libs/starlark/defs.bzl`. Converts one
 named equality assertion into a deterministic JSON record at loading time.
 Proven by `arithmetic_unit` (five behavior assertions over three subject
 functions) and by the record-encoding pin in `fixture_execution`.
@@ -34,7 +34,7 @@ matrix-item: expect_equal
 
 ### item: starlark_test-facade
 
-Public `starlark_test` macro in `tools/starlark/defs.bzl`: one call is one
+Public `starlark_test` macro in `libs/starlark/defs.bzl`: one call is one
 addressable test target with `size` defaulting to `small`, dispatching to
 the internal per-mode rule implementation. Every M01 test target is built
 through this facade.
@@ -84,7 +84,7 @@ matrix-item: dx-subject-info
 Mismatch diagnostics render `FAIL` with expected and actual values in
 declaration order, accumulate across checks, and exit non-zero so Bazel
 reports `FAILED`. Proven by the manual negative demonstrations in
-`tools/starlark/tests/negative` (captured output in the M01 completion
+`libs/starlark/tests/negative` (captured output in the M01 completion
 report) and structurally by every generated runner.
 matrix-item: failure-rendering
 
@@ -98,7 +98,7 @@ matrix-item: mode-validation
 
 ### item: tested-stack
 
-`tested_stack` rule in `tools/testing/tested_stack.bzl` emitting the pinned
+`tested_stack` rule in `libs/testing/tested_stack.bzl` emitting the pinned
 stack manifest. Proven by `stack_contract`, which asserts manifest content
 and cross-checks every version against `.bazelversion` and `MODULE.bazel`
 ground truth.

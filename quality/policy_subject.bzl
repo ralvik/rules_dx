@@ -6,7 +6,7 @@ pins the frozen aggregate shape. Empty selections render as empty fields,
 which is the explicit-disable encoding.
 """
 
-load("//tools/starlark:defs.bzl", "DxSubjectInfo")
+load("//libs/starlark:defs.bzl", "DxSubjectInfo")
 load(":policy.bzl", "CAPABILITIES", "QualityPolicyInfo")
 
 def _policy_subject_impl(ctx):

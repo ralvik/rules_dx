@@ -1,6 +1,6 @@
 """Execution tests over runfiles fixtures (M01 WP1)."""
 
-load("//tools/starlark:defs.bzl", "expect_equal", "starlark_test")
+load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 
 def fixture_execution_tests(name):
     starlark_test(

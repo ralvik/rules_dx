@@ -1,8 +1,8 @@
 """Analysis tests for the example subject rule (M01 WP1)."""
 
-load("//tools/starlark:defs.bzl", "starlark_test")
+load("//libs/starlark:defs.bzl", "starlark_test")
 
-EXPECTED_OBSERVATIONS = """subject //tools/starlark/tests:subject_under_test
+EXPECTED_OBSERVATIONS = """subject //libs/starlark/tests:subject_under_test
 file subject_under_test.txt
 field left=40
 field right=2

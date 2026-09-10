@@ -7,7 +7,7 @@ these analysis pins prove the capability-level shape that rests on the
 WP2a pure pipeline unit tests.
 """
 
-load("//tools/starlark:defs.bzl", "starlark_test")
+load("//libs/starlark:defs.bzl", "starlark_test")
 
 EXPECTED_OBSERVATIONS = """subject //quality/testdata:fixture_mixed_clean_subject
 field dx_count=2

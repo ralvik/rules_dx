@@ -9,7 +9,7 @@ actions, capability tags honored.
 
 load("//quality:sources.bzl", "QualitySourcesInfo")
 load("//quality:aspects.bzl", "audit_aspect", "format_aspect", "lint_aspect", "typecheck_aspect")
-load("//tools/starlark:defs.bzl", "DxSubjectInfo")
+load("//libs/starlark:defs.bzl", "DxSubjectInfo")
 
 def _label_text(label):
     text = str(label)

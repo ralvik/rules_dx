@@ -9,7 +9,7 @@ between the manifest and the real pins fails the test.
 def _tested_stack_impl(ctx):
     manifest = {
         "schema_version": 1,
-        "generator": "tools/testing/tested_stack.bzl",
+        "generator": "libs/testing/tested_stack.bzl",
         "bazel_version": ctx.attr.bazel_version,
         "rules_rust_version": ctx.attr.rules_rust_version,
         "rules_cc_version": ctx.attr.rules_cc_version,

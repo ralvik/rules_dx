@@ -8,7 +8,7 @@ analysis with the returned message; analysis-mode subjects proving the
 positive provider shape land with the aspect-wiring commit.
 """
 
-load("//tools/starlark:defs.bzl", "expect_equal", "starlark_test")
+load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(
     ":native_config.bzl",
     "collect_native_configs",

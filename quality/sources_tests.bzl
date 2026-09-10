@@ -5,7 +5,7 @@ removal, merge, narrowing, reorder, or unreviewed addition. Adding a class
 or broadening one requires adapter and policy compatibility tests first.
 """
 
-load("//tools/starlark:defs.bzl", "expect_equal", "starlark_test")
+load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":sources.bzl", "KNOWN_SEMANTIC_FILE_CLASSES", "RUST")
 
 # Frozen registry pin: mirrors KNOWN_SEMANTIC_FILE_CLASSES element for

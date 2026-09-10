@@ -5,7 +5,7 @@ there. The analysis test pins the frozen aggregate observation rendering
 for the fixture workspace policy.
 """
 
-load("//tools/starlark:defs.bzl", "expect_equal", "starlark_test")
+load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":applicability.bzl", "capability_selection", "effective_classes", "selected_adapters")
 
 _FIXTURE_ADAPTERS = {

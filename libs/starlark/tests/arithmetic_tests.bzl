@@ -5,7 +5,7 @@ the exported macros, which is the loading phase. The recorded values prove
 the subject code executed there.
 """
 
-load("//tools/starlark:defs.bzl", "expect_equal", "starlark_test")
+load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":arithmetic.bzl", "add", "greet", "mul")
 
 # Module top-level binding: evaluated when this file loads.

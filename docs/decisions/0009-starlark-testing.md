@@ -106,7 +106,7 @@ a provably executed `.bzl` probe yielded a 0-byte `coverage.dat` with zero
 (`bazelbuild/bazel#15594`) was never accepted. The fallback therefore covers
 public entry points, functions, rules, providers, attributes, and failure
 paths with meaningful assertions in
-[`tools/starlark/behavioral_matrix.md`](../../tools/starlark/behavioral_matrix.md),
+[`libs/starlark/behavioral_matrix.md`](../../libs/starlark/behavioral_matrix.md),
 machine-checked by `matrix_validation`; it is never reported as source-line
 or branch coverage. Loaded files, test counts,
 and mappings alone do not establish coverage. Instrumentation, reasoned ignore

@@ -1,7 +1,7 @@
 """Manual negative demonstrations for M01 (must fail; see .bzl doc)."""
 
 load(":negative_tests.bzl", "failing_check_demo", "missing_fragment_demo", "missing_observation_demo", "wrong_phase_demo")
-load("//tools/starlark/tests:subject.bzl", "example_subject")
+load("//libs/starlark/tests:subject.bzl", "example_subject")
 
 exports_files(["negative_tests.bzl"])
 
