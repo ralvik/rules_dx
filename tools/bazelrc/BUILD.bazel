@@ -1,0 +1,39 @@
+"""M05 WP4: vendored Bazel execution preset (O62).
+
+`bazel run //tools/bazelrc:preset.update` regenerates the checked-in preset
+from the reviewed inventory in `preset.py`; `preset.update_test` pins the
+version-matched pin and the flag inventory hermetically.
+"""
+
+load("@rules_python//python:defs.bzl", "py_binary")
+load("//quality:fixtures.bzl", "real_source_target")
+load(":preset_tests.bzl", "preset_update_tests")
+
+package(default_visibility = ["//visibility:public"])
+
+py_binary(
+    name = "preset.update",
+    srcs = ["preset.py"],
+    main = "preset.py",
+)
+
+exports_files([
+    "bazelrc-preset.bzl",
+    "preset.bazelrc",
+])
+
+preset_update_tests(name = "preset.update_test")
+
+test_suite(
+    name = "all",
+    tests = [":preset.update_test"],
+)
+
+# Repository corpus (M05 WP4): preset Starlark owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. preset.py has no quality
+# class and stays outside the corpus; preset.bazelrc is an unclassified
+# generated fragment, never a checked source.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
+)

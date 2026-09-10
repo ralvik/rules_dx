@@ -1,0 +1,10 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["bazel"],
+  "automerge": false,
+  "labels": ["dependencies"],
+  "prBodyNotes": [
+    "Version-bump only: run `bazel run //tools/bazelrc:preset.update`, review the flag diff, update `preset.update_test` pins, and run full verification (`bazel build //...`, `bazel test //...`, corpus dogfood) before merging. Regen and review stay manual per O53; never auto-merge."
+  ]
+}

@@ -50,6 +50,14 @@ its qualification boundary. `rules_dx` does not add a second behavioral preset, 
 or ambient config search. Native config inputs and
 their closures must be declared source artifacts, not generated policy.
 
+Bazel execution flags (the vendored `.bazelrc` preset adopted in the
+[M05 completion report](../milestones/M05-completion-report.md#wp4-vendored-bazelrc-preset))
+are execution policy, not behavioral policy: they select how Bazel runs
+(resolution, verbosity, coverage transport), never how a quality tool judges
+sources. Upstream flag recommendations arrive as reviewed diffs to the
+preset inventory only; project overrides stay explicit and `user.bazelrc`
+stays last.
+
 Explicit generation is the native-config discovery boundary. It creates package-local typed config
 targets and binds the locally relevant targets directly to source owners through ordinary Bazel graph
 edges. Native config labels are not stored in aggregate workspace policy, and there is no global or
