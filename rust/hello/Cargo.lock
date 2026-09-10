@@ -113,6 +113,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "dx_cli"
+version = "0.0.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "dx_diff"
 version = "0.0.0"
 

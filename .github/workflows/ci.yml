@@ -5,10 +5,13 @@
 # Full host coverage and CI qualification stay in M27; unavailable required
 # hosts from ADR 0014 are recorded as gaps, not claimed here.
 #
-# M05 WP3 adds the direct-Bazel dogfood gate (`corpus-dogfood`): the
-# repository corpus (`real_source_target(name = "corpus")` per package) is
-# checked with the real lint/format aspects and every produced result must
-# pass the per-result evaluator at `--fail_on warning`. CI installs no
+# M07 WP3 runs the repository dogfood through the `dx` quality commands
+# (full default path) instead of invoking the aspects directly. Default
+# runs converge the corpus, check runs prove the deterministic no-op;
+# parity with the direct aspects (findings, changes, thresholds, status)
+# is recorded in `docs/milestones/M07-completion-report.md`. The repository
+# corpus (`real_source_target(name = "corpus")` per package) is the dogfood
+# scope. CI installs no
 # quality tools: Buildifier, Taplo, Vale, rustfmt, and Clippy execute only
 # as Bazel-resolved pinned actions (exact-input evidence in the M04
 # completion report; actions run with an empty PATH, unit-pinned in
@@ -49,7 +52,7 @@ jobs:
             --sources /tmp/m00_sources.txt \
             --root "$GITHUB_WORKSPACE"
   corpus-dogfood:
-    name: corpus-dogfood (direct checks, Linux x86_64 glibc, local-only)
+    name: corpus-dogfood (dx quality commands, Linux x86_64 glibc, local-only)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -80,42 +83,17 @@ jobs:
             comm -23 /tmp/corpus_applicable.txt /tmp/corpus_closure.txt
             exit 1
           fi
-      - name: Run direct checks over the corpus
+      - name: Run dx quality commands over the corpus (default mode)
         run: |
           bazel query "attr(name, '^corpus\$', kind(real_source_target, //...))" 2>/dev/null \
             | LC_ALL=C sort -u > /tmp/corpus_targets.txt
-          bazel build $(tr '\n' ' ' < /tmp/corpus_targets.txt) \
-            --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
-            --output_groups=dx_results
-      - name: Enforce evaluator thresholds on corpus results
+          scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
+          bazel run //dx/cli:dx -- lint $scope
+          bazel run //dx/cli:dx -- format $scope
+          bazel run //dx/cli:dx -- typecheck $scope
+      - name: Verify converged no-op in check mode
         run: |
-          union="$(paste -sd+ /tmp/corpus_targets.txt)"
-          bazel aquery "$union" \
-            --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
-            --output_groups=dx_results --output=text 2>/dev/null \
-            | grep -o 'bazel-out/[^]]*\.pb' | sort -u \
-            | sed 's|bazel-out/[^/]*/bin/|bazel-bin/|' > /tmp/corpus_results.txt
-          while read -r target; do
-            pkg="$(echo "$target" | sed 's|^//||; s|:corpus$||')"
-            if [ -z "$pkg" ]; then
-              pattern='^bazel-bin/corpus-real-.*\.pb$'
-            else
-              pattern="^bazel-bin/${pkg}/corpus-real-.*\.pb$"
-            fi
-            if ! grep -q "$pattern" /tmp/corpus_results.txt; then
-              echo "corpus target $target produced no results"
-              exit 1
-            fi
-          done < /tmp/corpus_targets.txt
-          failed=0
-          while read -r result; do
-            marker="/tmp/corpus_eval_$(echo "$result" | tr '/' '_').marker"
-            if ! bazel run //quality/evaluator:quality_evaluator -- \
-              --result "$GITHUB_WORKSPACE/$result" --fail_on warning \
-              --output "$marker" > /tmp/corpus_eval.log 2>&1; then
-              echo "evaluator rejected $result:"
-              cat /tmp/corpus_eval.log
-              failed=1
-            fi
-          done < /tmp/corpus_results.txt
-          exit "$failed"
+          scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
+          bazel run //dx/cli:dx -- lint --check $scope
+          bazel run //dx/cli:dx -- format --check $scope
+          bazel run //dx/cli:dx -- typecheck --check $scope

@@ -119,6 +119,15 @@ struct RawFile {
     uri: Option<String>,
 }
 
+/// One named file set definition: direct file entries plus child set
+/// references. Bazel splits large sets into nested children, so
+/// collection resolves the transitive closure.
+struct RawSet {
+    line: u64,
+    files: Vec<RawFile>,
+    children: Vec<String>,
+}
+
 struct PendingTarget {
     line: u64,
     label: String,
@@ -126,19 +135,37 @@ struct PendingTarget {
     set_ids: Vec<String>,
 }
 
+/// Reads the named-set id from a build-event id object. The pinned Bazel
+/// emits `namedSet`; older servers emit `namedSetOfFiles`. Both name the
+/// same immutable file-set definition.
+fn named_set_id(id: &serde_json::Map<String, Value>) -> Option<&str> {
+    for key in ["namedSet", "namedSetOfFiles"] {
+        if let Some(set_id) = id
+            .get(key)
+            .and_then(Value::as_object)
+            .and_then(|named| named.get("id"))
+            .and_then(Value::as_str)
+        {
+            return Some(set_id);
+        }
+    }
+    None
+}
+
 /// Collects the requested output group from one BEP JSON stream.
 ///
 /// `reader` yields one JSON build event per line. Returns one record per
 /// completed label that requested the output group, sorted by label bytes
 /// with artifacts sorted by path bytes and deduplicated. Labels that never
-/// requested the group are skipped; failed labels report `success=false`
-/// with no artifacts.
+/// requested the group are skipped; failed or aborted labels (including
+/// completions without a `success` field) report `success=false` with no
+/// artifacts.
 pub fn collect(
     reader: impl BufRead,
     config: &CollectorConfig,
     artifacts: &dyn ArtifactReader,
 ) -> Result<Vec<TargetOutput>, BepError> {
-    let mut sets: BTreeMap<String, Vec<RawFile>> = BTreeMap::new();
+    let mut sets: BTreeMap<String, RawSet> = BTreeMap::new();
     let mut pending: Vec<PendingTarget> = Vec::new();
     for (index, line) in reader.lines().enumerate() {
         let line_no = (index + 1) as u64;
@@ -160,18 +187,10 @@ pub fn collect(
                 reason: "event without id".to_owned(),
             }
         })?;
-        if let Some(set_id) = id
-            .get("namedSetOfFiles")
-            .and_then(Value::as_object)
-            .and_then(|named| named.get("id"))
-            .and_then(Value::as_str)
-        {
-            let files = object
-                .get("namedSetOfFiles")
-                .and_then(Value::as_object)
-                .and_then(|named| named.get("files"));
+        if let Some(set_id) = named_set_id(id) {
+            let named = object.get("namedSetOfFiles").and_then(Value::as_object);
             let mut raw = Vec::new();
-            if let Some(files) = files {
+            if let Some(files) = named.and_then(|named| named.get("files")) {
                 let files = files.as_array().ok_or_else(|| BepError::MalformedEvent {
                     line: line_no,
                     reason: "named set files must be an array".to_owned(),
@@ -185,9 +204,31 @@ pub fn collect(
                     raw.push(RawFile { line: line_no, uri });
                 }
             }
+            let mut children = Vec::new();
+            if let Some(sets) = named.and_then(|named| named.get("fileSets")) {
+                let sets = sets.as_array().ok_or_else(|| BepError::MalformedEvent {
+                    line: line_no,
+                    reason: "named set fileSets must be an array".to_owned(),
+                })?;
+                for child in sets {
+                    let child_id = child
+                        .as_object()
+                        .and_then(|set| set.get("id"))
+                        .and_then(Value::as_str)
+                        .ok_or_else(|| BepError::MalformedEvent {
+                            line: line_no,
+                            reason: "named set child without id".to_owned(),
+                        })?;
+                    children.push(child_id.to_owned());
+                }
+            }
             // Named sets are immutable: the first definition wins and a
             // repeated id keeps stream order irrelevant.
-            sets.entry(set_id.to_owned()).or_insert(raw);
+            sets.entry(set_id.to_owned()).or_insert(RawSet {
+                line: line_no,
+                files: raw,
+                children,
+            });
         }
         if let Some(completed) = object.get("completed") {
             if completed.is_null() {
@@ -208,13 +249,13 @@ pub fn collect(
                     line: line_no,
                     reason: "completed event without target label".to_owned(),
                 })?;
+            // A completion without `success` is an aborted action (for
+            // example skipped dependents after a `--keep_going` failure):
+            // unsuccessful, contributing no artifacts.
             let success = completed
                 .get("success")
                 .and_then(Value::as_bool)
-                .ok_or_else(|| BepError::MalformedEvent {
-                    line: line_no,
-                    reason: "completed event without success".to_owned(),
-                })?;
+                .unwrap_or(false);
             let mut set_ids = Vec::new();
             if success {
                 if let Some(groups) = completed.get("outputGroup") {
@@ -269,17 +310,32 @@ pub fn collect(
     let mut outputs = Vec::with_capacity(pending.len());
     for target in &pending {
         let mut uris: BTreeSet<String> = BTreeSet::new();
-        for set_id in &target.set_ids {
-            let files = sets.get(set_id).ok_or_else(|| BepError::MissingNamedSet {
+        // Resolve the transitive file closure: a set contributes its
+        // direct files plus every nested child set. Revisits are
+        // skipped so a repeated reference stays idempotent.
+        let mut visited: BTreeSet<String> = BTreeSet::new();
+        let mut stack: Vec<(String, u64)> = target
+            .set_ids
+            .iter()
+            .map(|set_id| (set_id.clone(), target.line))
+            .collect();
+        while let Some((set_id, line)) = stack.pop() {
+            if !visited.insert(set_id.clone()) {
+                continue;
+            }
+            let set = sets.get(&set_id).ok_or_else(|| BepError::MissingNamedSet {
                 id: set_id.clone(),
-                line: target.line,
+                line,
             })?;
-            for file in files {
+            for file in &set.files {
                 let uri = file.uri.clone().ok_or_else(|| BepError::MalformedEvent {
                     line: file.line,
                     reason: "named set file without uri".to_owned(),
                 })?;
                 uris.insert(uri);
+            }
+            for child in &set.children {
+                stack.push((child.clone(), set.line));
             }
         }
         let mut collected = Vec::with_capacity(uris.len());
@@ -448,6 +504,118 @@ mod tests {
         assert!(got[0].artifacts.is_empty());
     }
 
+    /// Set definition in the pinned Bazel's `namedSet` id shape (Bazel 9),
+    /// as opposed to the legacy `namedSetOfFiles` id built by
+    /// [`named_set`].
+    fn modern_set(id: &str, body: &str) -> String {
+        format!(r#"{{"id": {{"namedSet": {{"id": "{id}"}}}}, "namedSetOfFiles": {body}}}"#)
+    }
+
+    #[test]
+    fn modern_named_set_id_collects() {
+        let body = r#"{"files": [{"name": "result.pb", "uri": "file:///out/a.pb"}]}"#;
+        let stream = [
+            modern_set("1", body),
+            completed("//q:a", true, &group_ref("dx_results", &["1"])),
+        ]
+        .join("\n");
+        let artifacts = FakeArtifacts {
+            files: HashMap::from([(PathBuf::from("/out/a.pb"), vec![9])]),
+        };
+        let got = collect(Cursor::new(stream), &config(), &artifacts).expect("collect");
+        assert_eq!(got.len(), 1);
+        assert_eq!(got[0].artifacts.len(), 1);
+        assert_eq!(got[0].artifacts[0].bytes, vec![9]);
+    }
+
+    #[test]
+    fn nested_child_sets_resolve_transitively() {
+        let child = r#"{"files": [{"name": "b.pb", "uri": "file:///out/b.pb"}]}"#;
+        let parent = r#"{"files": [{"name": "a.pb", "uri": "file:///out/a.pb"}], "fileSets": [{"id": "2"}]}"#;
+        let stream = [
+            modern_set("2", child),
+            modern_set("1", parent),
+            completed("//q:a", true, &group_ref("dx_results", &["1"])),
+        ]
+        .join("\n");
+        let artifacts = FakeArtifacts {
+            files: HashMap::from([
+                (PathBuf::from("/out/a.pb"), vec![1]),
+                (PathBuf::from("/out/b.pb"), vec![2]),
+            ]),
+        };
+        let got = collect(Cursor::new(stream), &config(), &artifacts).expect("collect");
+        assert_eq!(got.len(), 1);
+        assert_eq!(got[0].artifacts.len(), 2);
+        assert_eq!(got[0].artifacts[0].exec_path, PathBuf::from("/out/a.pb"));
+        assert_eq!(got[0].artifacts[1].exec_path, PathBuf::from("/out/b.pb"));
+    }
+
+    #[test]
+    fn missing_child_set_fails() {
+        let parent = r#"{"files": [], "fileSets": [{"id": "9"}]}"#;
+        let stream = [
+            modern_set("1", parent),
+            completed("//q:a", true, &group_ref("dx_results", &["1"])),
+        ]
+        .join("\n");
+        let artifacts = FakeArtifacts {
+            files: HashMap::new(),
+        };
+        let err = collect(Cursor::new(stream), &config(), &artifacts).expect_err("missing child");
+        assert_eq!(
+            err,
+            BepError::MissingNamedSet {
+                id: "9".to_owned(),
+                line: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn child_set_without_id_fails() {
+        let parent = r#"{"files": [], "fileSets": [{}]}"#;
+        let stream = modern_set("1", parent);
+        let artifacts = FakeArtifacts {
+            files: HashMap::new(),
+        };
+        let err = collect(Cursor::new(stream), &config(), &artifacts).expect_err("child id");
+        assert!(matches!(err, BepError::MalformedEvent { .. }));
+    }
+
+    #[test]
+    fn non_array_file_sets_fails() {
+        let parent = r#"{"files": [], "fileSets": {}}"#;
+        let stream = modern_set("1", parent);
+        let artifacts = FakeArtifacts {
+            files: HashMap::new(),
+        };
+        let err = collect(Cursor::new(stream), &config(), &artifacts).expect_err("fileSets");
+        assert!(matches!(
+            err,
+            BepError::MalformedEvent {
+                reason,
+                ..
+            } if reason.contains("fileSets must be an array")
+        ));
+    }
+
+    #[test]
+    fn repeated_set_reference_resolves_once() {
+        let body = r#"{"files": [{"name": "a.pb", "uri": "file:///out/a.pb"}], "fileSets": [{"id": "1"}]}"#;
+        let stream = [
+            modern_set("1", body),
+            completed("//q:a", true, &group_ref("dx_results", &["1"])),
+        ]
+        .join("\n");
+        let artifacts = FakeArtifacts {
+            files: HashMap::from([(PathBuf::from("/out/a.pb"), vec![1])]),
+        };
+        let got = collect(Cursor::new(stream), &config(), &artifacts).expect("collect");
+        assert_eq!(got.len(), 1);
+        assert_eq!(got[0].artifacts.len(), 1);
+    }
+
     #[test]
     fn null_completed_events_are_ignored() {
         let stream = [
@@ -478,11 +646,29 @@ mod tests {
             collect(Cursor::new(stream), &config(), &artifacts),
             Err(BepError::MalformedEvent { .. })
         ));
-        let stream = r#"{"id": {"targetCompleted": {"label": "//q:a"}}, "completed": {}}"#;
-        assert!(matches!(
-            collect(Cursor::new(stream), &config(), &artifacts),
-            Err(BepError::MalformedEvent { .. })
-        ));
+    }
+
+    #[test]
+    fn aborted_completed_events_collect_as_failed() {
+        // Aborted actions (for example skipped dependents after a
+        // `--keep_going` failure) carry no `success` field: they collect
+        // as unsuccessful labels with no artifacts instead of failing
+        // collection. The caller observes the nonzero Bazel exit status.
+        let stream = [
+            r#"{"id": {"targetCompleted": {"label": "//q:a"}}, "completed": {}}"#.to_owned(),
+            r#"{"id": {"targetCompleted": {"label": "//q:b"}}, "completed": {"success": false}}"#
+                .to_owned(),
+        ]
+        .join("\n");
+        let artifacts = FakeArtifacts {
+            files: HashMap::new(),
+        };
+        let got = collect(Cursor::new(stream), &config(), &artifacts).expect("collect");
+        assert_eq!(got.len(), 2);
+        for output in &got {
+            assert!(!output.success);
+            assert!(output.artifacts.is_empty());
+        }
     }
 
     #[test]

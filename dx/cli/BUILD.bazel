@@ -1,0 +1,78 @@
+"""M07 WP1: quality command planning for the `dx` CLI."""
+
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_rust_library(
+    name = "dx_cli",
+    srcs = [
+        "src/args.rs",
+        "src/exec.rs",
+        "src/lib.rs",
+        "src/plan.rs",
+        "src/reports.rs",
+    ],
+    crate_name = "dx_cli",
+    edition = "2021",
+    deps = [
+        "//dx/apply:dx_apply",
+        "//dx/bep:dx_bep",
+        "//dx/diff:dx_diff",
+        "//dx/output:dx_output",
+        "//dx/process:dx_process",
+        "//quality/result:quality_result",
+        "@crates//:serde_json",
+    ],
+)
+
+dx_rust_binary(
+    name = "dx",
+    srcs = ["src/main.rs"],
+    edition = "2021",
+    deps = [
+        ":dx_cli",
+        "//dx/output:dx_output",
+        "//dx/process:dx_process",
+        "@crates//:libc",
+    ],
+)
+
+dx_rust_test(
+    name = "dx_cli_test",
+    size = "small",
+    crate = ":dx_cli",
+    edition = "2021",
+)
+
+# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# resolve from the pinned toolchain, never from ambient host tools.
+rustfmt_test(
+    name = "dx_cli_fmt_test",
+    size = "small",
+    targets = [
+        ":dx_cli",
+        ":dx",
+    ],
+)
+
+rust_clippy_test(
+    name = "dx_cli_clippy_test",
+    size = "small",
+    targets = [
+        ":dx_cli",
+        ":dx",
+    ],
+)
+
+exports_files(["Cargo.toml"])
+
+# Repository corpus (M05 WP1): crate manifest and build file owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
+)

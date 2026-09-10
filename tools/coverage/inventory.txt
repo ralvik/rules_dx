@@ -26,6 +26,12 @@ eligible dx/apply/src/validators.rs
 eligible dx/process/src/lib.rs
 eligible dx/output/src/lib.rs
 eligible dx/bep/src/lib.rs
+eligible dx/cli/src/args.rs
+eligible dx/cli/src/exec.rs
+eligible dx/cli/src/lib.rs
+eligible dx/cli/src/main.rs
+eligible dx/cli/src/plan.rs
+eligible dx/cli/src/reports.rs
 eligible dx/diff/src/lib.rs
 eligible quality/adapter/src/commands.rs
 eligible quality/adapter/src/exec.rs

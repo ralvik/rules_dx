@@ -1,5 +1,9 @@
 # Quality Commands
 
+Explicit scope positionals accept Bazel labels and patterns (`//pkg:target`,
+`//pkg/...`); they resolve through Bazel unchanged. File paths stay
+unsupported: path resolution belongs to a later milestone.
+
 ## `dx lint`
 
 `dx lint` is explicitly mutating by default. It resolves scope through Bazel,

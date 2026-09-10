@@ -60,6 +60,7 @@ crate.from_cargo(
         "//dx/apply:Cargo.toml",
         "//dx/output:Cargo.toml",
         "//dx/bep:Cargo.toml",
+        "//dx/cli:Cargo.toml",
         "//dx/diff:Cargo.toml",
     ],
 )

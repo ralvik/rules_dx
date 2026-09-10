@@ -64,7 +64,7 @@ adoption scope (depends on M29).
 | M04 | [Rust, Starlark, TOML, And Markdown Acquisition And Adapters](M04-initial-quality-adapters.md) ([report](M04-completion-report.md)) | M03 | Ready |
 | M05 | [Direct Bazel Dogfood](M05-direct-bazel-dogfood.md) ([report](M05-completion-report.md)) | M04 | Ready |
 | M06 | [CLI Process, Output, BEP, And Apply](M06-cli-process-output-bep-apply.md) ([report](M06-completion-report.md)) | M03, M05 | Ready |
-| M07 | [Initial Quality CLI And Full Initial Dogfood](M07-initial-quality-cli-dogfood.md) | M06 | Pending |
+| M07 | [Initial Quality CLI And Full Initial Dogfood](M07-initial-quality-cli-dogfood.md) ([report](M07-completion-report.md)) | M06 | Ready |
 | M08 | [Target Resolution And Basic Commands](M08-target-resolution-basic-commands.md) | M06 | Pending |
 | M09 | [Rust-First Gazelle](M09-rust-first-gazelle.md) | M07, M08 | Pending |
 | M10 | [Public Generate, Config Binding, And Result Transport](M10-public-generate-config-binding-result-transport.md) | M09 | Pending |
