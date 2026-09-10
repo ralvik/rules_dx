@@ -10,9 +10,9 @@ Metadata schema version 1 is frozen by `metadata_tests.bzl`; only
 linux_x86_64 is recorded (Linux-first scope, other platforms are gaps).
 """
 
-load("//tools/artifacts:buildifier.linux_x86_64.bzl", _buildifier_linux_x86_64 = "ARTIFACT")
-load("//tools/artifacts:taplo.linux_x86_64.bzl", _taplo_linux_x86_64 = "ARTIFACT")
-load("//tools/artifacts:vale.linux_x86_64.bzl", _vale_linux_x86_64 = "ARTIFACT")
+load("//quality/artifacts:buildifier.linux_x86_64.bzl", _buildifier_linux_x86_64 = "ARTIFACT")
+load("//quality/artifacts:taplo.linux_x86_64.bzl", _taplo_linux_x86_64 = "ARTIFACT")
+load("//quality/artifacts:vale.linux_x86_64.bzl", _vale_linux_x86_64 = "ARTIFACT")
 
 _ARTIFACTS = [
     _buildifier_linux_x86_64,
@@ -90,10 +90,11 @@ _HUB_ALIAS = """alias(
         }},
         no_match_error = (
             "rules_dx: no {tool} artifact for this execution platform; " +
-            "only linux_x86_64 is recorded (see //tools/artifacts). " +
+            "only linux_x86_64 is recorded (see //quality/artifacts). " +
             "Other platforms are unimplemented gaps, not silent fallbacks."
         ),
     ),
+    visibility = ["//visibility:public"],
 )
 """
 

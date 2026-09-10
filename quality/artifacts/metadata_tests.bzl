@@ -3,11 +3,11 @@
 The schema key set is frozen: adding, removing, or renaming a field fails
 until reviewed. Upstream versions, URLs, digests, and sizes are pinned per
 tool so a re-pin (update or changed upstream bytes) is an explicit reviewed
-edit. `bazel run //tools/artifacts:update -- --verify-only` reproduces these
+edit. `bazel run //quality/artifacts:update -- --verify-only` reproduces these
 files from the network; this test guards the checked-in content hermetically.
 """
 
-load("//tools/starlark:defs.bzl", "expect_equal", "starlark_test")
+load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":buildifier.linux_x86_64.bzl", _buildifier = "ARTIFACT")
 load(":taplo.linux_x86_64.bzl", _taplo = "ARTIFACT")
 load(":vale.linux_x86_64.bzl", _vale = "ARTIFACT")

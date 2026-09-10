@@ -3,13 +3,13 @@
 Each aspect visits targets carrying `QualitySourcesInfo` and registers one
 exact-input pipeline action for its capability when the workspace policy
 selects a nonempty synthetic stage with effective sources. The action runs
-`//rust/quality_runner:quality_runner` over the exact direct-source subset
+`//quality/runner:quality_runner` over the exact direct-source subset
 and emits one versioned `QualityResult` protobuf in the stable `dx_results`
 output group. No invocation-wide aggregation exists.
 
 WP3 evaluators: with `@rules_dx//config:validate=true`, each aspect
 registers one evaluator action per pipeline result running
-`//rust/quality_evaluator:quality_evaluator` with
+`//quality/evaluator:quality_evaluator` with
 `@rules_dx//config:fail_on`. The evaluator emits a per-result validation
 marker into `dx_results` or fails without rerunning or aggregating
 analyzers. A threshold-only change alters evaluator arguments alone, so
@@ -158,14 +158,14 @@ _COMMON_ATTRS = {
         doc = "Aggregate workspace policy expanding tool IDs to classes.",
     ),
     "_runner": attr.label(
-        default = "//rust/quality_runner:quality_runner",
+        default = "//quality/runner:quality_runner",
         executable = True,
         cfg = "exec",
         allow_files = True,
         doc = "Deterministic pipeline runner producing QualityResult protobufs.",
     ),
     "_evaluator": attr.label(
-        default = "//rust/quality_evaluator:quality_evaluator",
+        default = "//quality/evaluator:quality_evaluator",
         executable = True,
         cfg = "exec",
         allow_files = True,

@@ -6,8 +6,8 @@ this directory records the exact immutable URL, digest, size, archive member,
 upstream version, execution platform, ABI floor, runtime files, and licenses.
 
 Usage (maintainer only; requires network plus file/readelf/objdump/tar):
-    bazel run //tools/artifacts:update
-    bazel run //tools/artifacts:update -- --verify-only   # reject changed bytes
+    bazel run //quality/artifacts:update
+    bazel run //quality/artifacts:update -- --verify-only   # reject changed bytes
 
 Byte-identity policy: a versioned release URL does not guarantee immutable
 bytes. Vale publishes a checksums file, which this generator verifies. Neither
@@ -287,7 +287,7 @@ def _emit(artifact, tool, platform_key):
     content = (
         '"""%s standalone artifact metadata (%s) -- GENERATED, do not edit.\n'
         "\n"
-        "Regenerate with: bazel run //tools/artifacts:update\n"
+        "Regenerate with: bazel run //quality/artifacts:update\n"
         "Release: %s\n"
         '"""\n'
         "\n"

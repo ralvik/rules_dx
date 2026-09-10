@@ -1,6 +1,6 @@
 """vale standalone artifact metadata (linux_x86_64) -- GENERATED, do not edit.
 
-Regenerate with: bazel run //tools/artifacts:update
+Regenerate with: bazel run //quality/artifacts:update
 Release: https://github.com/vale-cli/vale/releases/tag/v3.20.0
 """
 

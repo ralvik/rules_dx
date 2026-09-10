@@ -1,4 +1,4 @@
-"""M03 WP2b deterministic shared pipeline runner over synthetic adapters."""
+"""M03 WP3 direct-Bazel per-result threshold evaluator."""
 
 load("//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
@@ -6,17 +6,13 @@ load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 package(default_visibility = ["//visibility:public"])
 
 dx_rust_library(
-    name = "quality_runner_lib",
-    srcs = [
-        "src/lib.rs",
-        "src/real.rs",
-    ],
-    crate_name = "quality_runner",
+    name = "quality_evaluator_lib",
+    srcs = ["src/lib.rs"],
+    crate_name = "quality_evaluator",
     edition = "2021",
     deps = [
         "//quality:result_proto_rs",
-        "//rust/quality_adapter",
-        "//rust/quality_result",
+        "//quality/result:quality_result",
         # The `prost` types must come from the same crate that the
         # generated code implements them against: the toolchain-vendored
         # prost, not a second copy from crate_universe.
@@ -25,18 +21,18 @@ dx_rust_library(
 )
 
 dx_rust_binary(
-    name = "quality_runner",
+    name = "quality_evaluator",
     srcs = ["src/main.rs"],
     edition = "2021",
     deps = [
-        ":quality_runner_lib",
-        "//rust/quality_result",
+        ":quality_evaluator_lib",
+        "//quality/result:quality_result",
     ],
 )
 
 dx_rust_test(
-    name = "quality_runner_test",
-    crate = ":quality_runner_lib",
+    name = "quality_evaluator_test",
+    crate = ":quality_evaluator_lib",
     edition = "2021",
     size = "small",
 )
@@ -44,20 +40,20 @@ dx_rust_test(
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy
 # resolve from the pinned toolchain, never from ambient host tools.
 rustfmt_test(
-    name = "quality_runner_fmt_test",
+    name = "quality_evaluator_fmt_test",
     size = "small",
     targets = [
-        ":quality_runner_lib",
-        ":quality_runner",
+        ":quality_evaluator_lib",
+        ":quality_evaluator",
     ],
 )
 
 rust_clippy_test(
-    name = "quality_runner_clippy_test",
+    name = "quality_evaluator_clippy_test",
     size = "small",
     targets = [
-        ":quality_runner_lib",
-        ":quality_runner",
+        ":quality_evaluator_lib",
+        ":quality_evaluator",
     ],
 )
 

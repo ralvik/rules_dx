@@ -51,10 +51,10 @@ crate.from_cargo(
     cargo_lockfile = "//rust/hello:Cargo.lock",
     manifests = [
         "//rust/hello:Cargo.toml",
-        "//rust/quality_adapter:Cargo.toml",
-        "//rust/quality_evaluator:Cargo.toml",
-        "//rust/quality_result:Cargo.toml",
-        "//rust/quality_runner:Cargo.toml",
+        "//quality/adapter:Cargo.toml",
+        "//quality/evaluator:Cargo.toml",
+        "//quality/result:Cargo.toml",
+        "//quality/runner:Cargo.toml",
     ],
 )
 use_repo(crate, "crates")
@@ -63,7 +63,7 @@ use_repo(crate, "crates")
 # per tool/platform from generated checked-in metadata, plus an
 # execution-platform hub. Registration fetches nothing; each repository
 # downloads only when an action needs its artifact.
-dx_tools = use_extension("//tools/artifacts:extension.bzl", "dx_tools")
+dx_tools = use_extension("//quality/artifacts:extension.bzl", "dx_tools")
 dx_tools.platform(
     cpu_x86_64 = "@platforms//cpu:x86_64",
     os_linux = "@platforms//os:linux",
