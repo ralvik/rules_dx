@@ -32,6 +32,7 @@ eligible dx/cli/src/lib.rs
 eligible dx/cli/src/main.rs
 eligible dx/cli/src/plan.rs
 eligible dx/cli/src/reports.rs
+eligible dx/cli/src/resolve.rs
 eligible dx/diff/src/lib.rs
 eligible quality/adapter/src/commands.rs
 eligible quality/adapter/src/exec.rs

@@ -27,25 +27,27 @@ filesystem source discovery; aspects and providers determine applicable work.
 
 ## File Ownership
 
-Provisional status: no normative ownership query exists yet. The baseline below is a
-starting sketch only; do not implement a normative resolver against it until
-[O44](../open-decisions.md) selects the exact query and analysis strategy.
+Selected strategy ([O44](../open-decisions.md), qualified by M08 WP0 prototypes
+against fixture targets): unconfigured `bazel query` only — no `cquery`, no
+purpose-built aspect. Ownership of one file is
+`kind('rule', rdeps(//..., <file-label>, 1))` at depth exactly 1 over the
+main-workspace `//...` universe, one invocation per input file. The file
+label uses the nearest enclosing package: `dx` walks from the file's
+directory up to the workspace root for the first `BUILD.bazel`/`BUILD`
+marker (existence only; contents are never read), so
+`pkg/src/deep/a.py` queries as `//pkg:src/deep/a.py`. Every depth-1
+rule referrer (including filegroups) is a direct owner; results are
+canonicalized, deduplicated, and bytewise sorted, never lexically
+disambiguated. Non-package directories fail as not-a-package, workspace-missing
+paths as not-found, and query-visible non-source paths as generated-excluded.
+Test and coverage mapping is
+`kind('.*_test rule', rdeps(//..., set(<owners>)))` with empty mappings as
+explicit errors. `select()` over-selection stays conservative.
 
-The provisional baseline algorithm uses Bazel query ownership over declared source edges:
-
-```text
-rdeps(//..., set(//path/to:file.py), 1)
-```
-
-The exact query must be constrained to relevant source-owning rule kinds and the
-requested universe. Generated files require analysis-aware handling and may need
-`cquery` or a purpose-built aspect because ordinary query cannot represent every
-configured/generated ownership relationship.
-
-The implementation milestone must prototype ownership against fixture targets before this
-expression becomes normative. [Open decision O44](../open-decisions.md) selects the exact query and
-analysis strategy for M08. In particular, tests must cover source files named directly in `srcs`,
-files reached through `filegroup`, generated sources, aliases, and files with multiple owners.
+The implementation milestone prototyped ownership against fixture targets
+before this expression became normative. In particular, tests cover source
+files named directly in `srcs`, files reached through `filegroup`, generated
+sources, aliases, and files with multiple owners.
 
 ## Ambiguity Policy
 
@@ -118,10 +120,8 @@ defines that behavior.
 
 The CLI constructs query expressions as argument vectors and escapes label values
 according to Bazel query syntax. It does not interpolate raw user text into a
-shell. Large scope sets may require query files or multiple bounded queries; any
-such strategy must preserve deterministic output and remain inspectable. The exact M08 choice is
-part of [O44](../open-decisions.md), not an accepted implementation detail in this provisional
-section.
+shell. Large scope sets use one bounded query per input file; any batching
+strategy must preserve deterministic output and remain inspectable.
 
 ## Acceptance Cases
 

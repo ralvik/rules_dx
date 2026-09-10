@@ -15,7 +15,7 @@ use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use dx_cli::args::parse;
-use dx_cli::{execute, Env};
+use dx_cli::{execute, Env, ProcessQueryRunner};
 use dx_output::OutputMode;
 use dx_process::{discover_real, pre_exec_code, ChildStatus, Runner};
 
@@ -111,7 +111,7 @@ impl Runner for BinaryRunner {
 fn usage_error(message: &str) -> i32 {
     let _ = writeln!(
         io::stderr(),
-        "dx: {message}\nusage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <lint|typecheck|format> [--check] [scope ...] [-- command-options...]"
+        "dx: {message}\nusage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <lint|typecheck|format|build|test|coverage|run> [--check] [scope ...] [-- command-options...]"
     );
     pre_exec_code()
 }
@@ -169,6 +169,7 @@ fn run() -> i32 {
             .iter()
             .any(|report| report.destination == "-");
     let runner = BinaryRunner { inherit_stdout };
+    let query_runner = ProcessQueryRunner;
     let stdout = io::stdout();
     let mut out = stdout.lock();
     let mut err = io::stderr();
@@ -177,6 +178,7 @@ fn run() -> i32 {
         Env {
             workspace: &workspace,
             runner: &runner,
+            query_runner: &query_runner,
             temp_dir: &temp_dir,
             pid,
             nonce: 0,

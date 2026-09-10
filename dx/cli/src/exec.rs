@@ -12,11 +12,15 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::io::{self, BufReader, Write};
 use std::path::Path;
 
-use crate::args::Invocation;
-use crate::plan::{bep_path, plan_build, OUTPUT_GROUP};
-use crate::reports::{plan_reports, render_sarif, Destination, ReportError};
+use crate::args::{Command, Invocation};
+use crate::plan::{bep_path, plan_build, plan_run, plan_workflow, WorkflowVerb, OUTPUT_GROUP};
+use crate::reports::{
+    junit_infrastructure_case, parse_test_xml, plan_reports, render_junit, render_sarif,
+    validate_lcov, Destination, JunitCase, PlannedReport, ReportError,
+};
+use crate::resolve::{resolve, resolve_for_test, resolve_run, QueryRunner, ResolveError};
 use dx_apply::{FileSystem, RealFileSystem};
-use dx_bep::{collect, ArtifactReader, CollectorConfig};
+use dx_bep::{collect, collect_test_outputs, ArtifactReader, CollectorConfig};
 use dx_diff::{render_patch, FilePatch, PatchKind};
 use dx_output::{
     change_event, command_finished, command_started, diagnostic_event, meets_threshold,
@@ -45,11 +49,13 @@ const CODE_INVALID_BEP: &str = "invalid_bep";
 const CODE_DIFF_FAILED: &str = "diff_failed";
 const CODE_REPORT_FAILED: &str = "report_failed";
 
-/// Execution environment: resolved workspace, process seam, temporary
-/// directory for the BEP stream, and owned output streams.
+/// Execution environment: resolved workspace, process seams for the
+/// workflow and for ownership queries, temporary directory for the BEP
+/// stream, and owned output streams.
 pub struct Env<'a> {
     pub workspace: &'a Path,
     pub runner: &'a dyn Runner,
+    pub query_runner: &'a dyn QueryRunner,
     pub temp_dir: &'a Path,
     pub pid: u32,
     pub nonce: u64,
@@ -349,7 +355,7 @@ fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
     let _ = writeln!(err, "dx: {message}");
     let _ = writeln!(
         err,
-        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <lint|typecheck|format> [--check] [scope ...] [-- command-options...]"
+        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <lint|typecheck|format|build|test|coverage|run> [--check] [scope ...] [-- command-options...]"
     );
     pre_exec_code()
 }
@@ -405,9 +411,13 @@ fn change_event_for(change: &FileChange) -> Result<ChangeEvent, String> {
 /// on stdout, and a stdout report owns stdout while human text moves
 /// to stderr.
 pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
+    if invocation.command.is_workflow() {
+        return execute_workflow(invocation, env);
+    }
     let Env {
         workspace,
         runner,
+        query_runner,
         temp_dir,
         pid,
         nonce,
@@ -436,14 +446,19 @@ pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
             "temporary event path is not UTF-8",
         );
     };
-    let build = match plan_build(
-        invocation.command,
-        &invocation.targets,
-        &invocation.bazel_options,
-        bep_text,
-    ) {
+    let build = match resolve(&invocation.targets, workspace, query_runner)
+        .map_err(|error| error.to_string())
+        .and_then(|resolved| {
+            plan_build(
+                invocation.command,
+                &resolved,
+                &invocation.bazel_options,
+                bep_text,
+            )
+            .map_err(|error| format!("{error:?}"))
+        }) {
         Ok(build) => build,
-        Err(error) => return pre_exec(err, &format!("{error:?}")),
+        Err(message) => return pre_exec(err, &message),
     };
     let mode = if invocation.check { "check" } else { "default" };
     if invocation.dry_run {
@@ -958,13 +973,506 @@ pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
     }
 }
 
+/// Stable operational codes for workflow failures.
+const CODE_NO_RUNNABLE: &str = "no_runnable";
+const CODE_AMBIGUOUS_RUNNABLE: &str = "ambiguous_runnable";
+const CODE_NO_TESTS: &str = "no_tests";
+
+fn resolve_code(error: &ResolveError) -> &'static str {
+    match error {
+        ResolveError::NoRunnable { .. } => CODE_NO_RUNNABLE,
+        ResolveError::AmbiguousRunnable { .. } => CODE_AMBIGUOUS_RUNNABLE,
+        ResolveError::NoTests { .. } => CODE_NO_TESTS,
+        _ => "scope_error",
+    }
+}
+
+/// Workflow dispatch: `build`/`test`/`coverage` preserve Bazel status
+/// with JUnit/LCOV collection; `run` preserves the application status
+/// verbatim. Pre-execution usage failures exit 2; operational failures
+/// exit 1.
+fn execute_workflow(invocation: &Invocation, env: Env<'_>) -> i32 {
+    if invocation.command == Command::Run {
+        return execute_run(invocation, env);
+    }
+    let Env {
+        workspace,
+        runner,
+        query_runner,
+        temp_dir,
+        pid,
+        nonce,
+        out,
+        err,
+    } = env;
+    let planned_reports = match plan_reports(
+        invocation.command,
+        &invocation.reports,
+        &invocation.output,
+        invocation.dry_run,
+    ) {
+        Ok(planned) => planned,
+        Err(error) => return pre_exec(err, &error.to_string()),
+    };
+    let stdout_report = planned_reports
+        .iter()
+        .any(|report| report.destination == Destination::Stdout);
+    let resolved = match invocation.command {
+        Command::Build => resolve(&invocation.targets, workspace, query_runner),
+        Command::Test | Command::Coverage => {
+            resolve_for_test(&invocation.targets, workspace, query_runner)
+        }
+        _ => unreachable!("workflow dispatch guards commands"), // LCOV_EXCL_LINE - reason: defense-in-depth; execute routes only Build/Test/Coverage/Run here and Run returns early, so this arm is unreachable
+    };
+    let resolved = match resolved {
+        Ok(resolved) => resolved,
+        Err(error) => return pre_exec(err, &error.to_string()),
+    };
+    let verb = WorkflowVerb::of(invocation.command).expect("workflow verb");
+    let bep = bep_path(temp_dir, pid, nonce);
+    let bep_text = bep.to_str().map(ToString::to_string);
+    let Some(bep_text) = bep_text else {
+        return operational(
+            invocation,
+            out,
+            err,
+            CODE_UNREADABLE_BEP,
+            "temporary event path is not UTF-8",
+        );
+    };
+    let bep_arg = if verb.collects_reports() {
+        Some(bep_text.as_str())
+    } else {
+        None
+    };
+    let plan = match plan_workflow(verb, &resolved, &invocation.bazel_options, bep_arg) {
+        Ok(plan) => plan,
+        Err(error) => return pre_exec(err, &format!("{error:?}")),
+    };
+    if invocation.dry_run {
+        if invocation.output == OutputMode::Json {
+            if let Ok(event) = command_started(invocation.command.name(), true, "default") {
+                let _ = write_event(out, &event);
+            }
+            let _ = write_event(out, &command_finished(0, &FinishedCounts::default()));
+        } else if !matches!(invocation.output, OutputMode::Diff)
+            && !matches!(invocation.output, OutputMode::Text { quiet: true })
+            && !stdout_report
+            && !invocation.quiet
+        {
+            let _ = writeln!(out, "{}", plan.summary);
+        }
+        return 0;
+    }
+    if invocation.output == OutputMode::Json {
+        if let Ok(event) = command_started(invocation.command.name(), false, "default") {
+            let _ = write_event(out, &event);
+        }
+    } else if matches!(invocation.output, OutputMode::Text { quiet: false })
+        && !stdout_report
+        && !invocation.quiet
+    {
+        let _ = writeln!(out, "{}", plan.summary);
+    }
+    let status = match runner.run(&plan.argv, workspace) {
+        Ok(status) => status,
+        Err(error) => {
+            return operational(
+                invocation,
+                out,
+                err,
+                CODE_LAUNCH_FAILED,
+                &format!("failed to launch Bazel: {error}"),
+            );
+        }
+    };
+    let Some(bazel_code) = status.code else {
+        return operational(
+            invocation,
+            out,
+            err,
+            CODE_BAZEL_SIGNALLED,
+            "Bazel terminated by signal",
+        );
+    };
+    if verb == WorkflowVerb::Build {
+        if invocation.output == OutputMode::Json {
+            let _ = write_event(
+                out,
+                &command_finished(bazel_code, &FinishedCounts::default()),
+            );
+        }
+        return bazel_code;
+    }
+    execute_test_reports(
+        invocation,
+        workspace,
+        out,
+        err,
+        verb,
+        &bep,
+        &planned_reports,
+        stdout_report,
+        bazel_code,
+    )
+}
+
+/// Collects BEP test outputs into JUnit suites or validated LCOV
+/// bytes, renders requested reports, and selects the workflow exit
+/// code: Bazel's exact nonzero code is preserved; success with
+/// incomplete collection or failed reports exits 1.
+#[allow(clippy::too_many_arguments)]
+fn execute_test_reports(
+    invocation: &Invocation,
+    workspace: &Path,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+    verb: WorkflowVerb,
+    bep: &Path,
+    planned_reports: &[PlannedReport],
+    stdout_report: bool,
+    bazel_code: i32,
+) -> i32 {
+    let outputs = match std::fs::File::open(bep).map_err(|err| {
+        (
+            CODE_UNREADABLE_BEP.to_owned(),
+            format!("failed to read build events: {err}"),
+        )
+    }) {
+        Ok(file) => match collect_test_outputs(BufReader::new(file)) {
+            Ok(outputs) => outputs,
+            Err(error) => {
+                let _ = std::fs::remove_file(bep);
+                return operational(
+                    invocation,
+                    out,
+                    err,
+                    CODE_INVALID_BEP,
+                    &format!("invalid build events: {error:?}"),
+                );
+            }
+        },
+        Err((code, message)) => {
+            let _ = std::fs::remove_file(bep);
+            return operational(invocation, out, err, &code, &message);
+        }
+    };
+    let _ = std::fs::remove_file(bep);
+    let reader = FsArtifacts;
+    let mut complete = bazel_code == 0;
+    let mut detail = String::new();
+    let mut suites: Vec<(String, Vec<JunitCase>)> = Vec::new();
+    let mut lcov_documents: Vec<String> = Vec::new();
+    if verb == WorkflowVerb::Test {
+        let mut grouped: BTreeMap<String, Vec<JunitCase>> = BTreeMap::new();
+        for output in &outputs {
+            if output.name != "test.xml" {
+                continue;
+            }
+            let bytes = match reader.read_artifact(&output.exec_path) {
+                Ok(bytes) => bytes,
+                Err(error) => {
+                    complete = false;
+                    if detail.is_empty() {
+                        detail = format!("unreadable {}: {error}", output.exec_path.display());
+                    }
+                    continue;
+                }
+            };
+            let shard = output.shard.saturating_sub(1);
+            let attempt = output.attempt.saturating_sub(1);
+            match parse_test_xml(&bytes, shard, attempt) {
+                Ok(cases) => grouped
+                    .entry(output.label.clone())
+                    .or_default()
+                    .extend(cases),
+                Err(error) => {
+                    complete = false;
+                    if detail.is_empty() {
+                        detail = format!("invalid {}: {error}", output.exec_path.display());
+                    }
+                }
+            }
+        }
+        if grouped.is_empty() {
+            complete = false;
+            if detail.is_empty() {
+                detail = "no test.xml artifacts were reported".to_owned();
+            }
+        }
+        suites = grouped.into_iter().collect();
+        if !complete {
+            suites.push(junit_infrastructure_case(&detail));
+        }
+    } else {
+        for output in &outputs {
+            if output.name != "coverage.dat" && output.name != "test.lcov" {
+                continue;
+            }
+            let bytes = match reader.read_artifact(&output.exec_path) {
+                Ok(bytes) => bytes,
+                Err(error) => {
+                    complete = false;
+                    if detail.is_empty() {
+                        detail = format!("unreadable {}: {error}", output.exec_path.display());
+                    }
+                    continue;
+                }
+            };
+            match validate_lcov(&bytes) {
+                Ok(()) => lcov_documents.push(String::from_utf8_lossy(&bytes).into_owned()),
+                Err(error) => {
+                    complete = false;
+                    if detail.is_empty() {
+                        detail = format!("invalid {}: {error}", output.exec_path.display());
+                    }
+                }
+            }
+        }
+        if lcov_documents.is_empty() {
+            complete = false;
+            if detail.is_empty() {
+                detail = "no coverage.dat artifacts were reported".to_owned();
+            }
+        }
+    }
+    let fs = RealFileSystem;
+    let mut reports_ok = true;
+    for planned in planned_reports {
+        let document = match verb {
+            WorkflowVerb::Test => Some(render_junit(&suites)),
+            WorkflowVerb::Coverage => {
+                if lcov_documents.is_empty() {
+                    None
+                } else {
+                    let mut combined = lcov_documents.join("\n");
+                    if !combined.ends_with('\n') {
+                        combined.push('\n');
+                    }
+                    Some(combined)
+                }
+            }
+            _ => None, // LCOV_EXCL_LINE - reason: defense-in-depth; execute_test_reports is only reached for Test/Coverage (Build returns early, Run returns earlier), so Build/Run arms are unreachable
+        };
+        let Some(document) = document else {
+            reports_ok = false;
+            let detail = format!(
+                "failed to render {} report: {detail}",
+                planned.format.name()
+            );
+            let _ = writeln!(err, "dx: report_failed: {detail}");
+            if invocation.output == OutputMode::Json {
+                if let Ok(event) =
+                    dx_output::error_event(CODE_REPORT_FAILED, &detail, None, None, None)
+                {
+                    let _ = write_event(out, &event);
+                }
+            }
+            continue;
+        };
+        let written = match &planned.destination {
+            Destination::Stdout => out
+                .write_all(document.as_bytes())
+                .and_then(|()| out.write_all(b"\n"))
+                .is_ok(),
+            Destination::File(destination) => {
+                let target = workspace.join(destination);
+                let parent_ok = target
+                    .parent()
+                    .is_none_or(|parent| parent.as_os_str().is_empty() || parent.is_dir());
+                parent_ok && fs.write_atomic(&target, document.as_bytes()).is_ok()
+            }
+        };
+        if !written {
+            reports_ok = false;
+            let detail = format!(
+                "failed to write {} report to {}",
+                planned.format.name(),
+                planned.destination.display()
+            );
+            let _ = writeln!(err, "dx: report_failed: {detail}");
+            if invocation.output == OutputMode::Json {
+                if let Ok(event) =
+                    dx_output::error_event(CODE_REPORT_FAILED, &detail, None, None, None)
+                {
+                    let _ = write_event(out, &event);
+                }
+            }
+            continue;
+        }
+        if invocation.output == OutputMode::Json {
+            if let Ok(event) = report_event(
+                planned.format.name(),
+                planned.destination.display(),
+                complete && reports_ok,
+            ) {
+                let _ = write_event(out, &event);
+            }
+        } else if matches!(invocation.output, OutputMode::Text { .. }) && !stdout_report {
+            let _ = writeln!(
+                out,
+                "Wrote {} report to {}.",
+                planned.format.name(),
+                planned.destination.display()
+            );
+        } else if invocation.output == OutputMode::Diff {
+            let _ = writeln!(
+                err,
+                "Wrote {} report to {}.",
+                planned.format.name(),
+                planned.destination.display()
+            );
+        }
+    }
+    if !complete && !detail.is_empty() && planned_reports.is_empty() {
+        if invocation.output == OutputMode::Json {
+            if let Ok(event) =
+                dx_output::error_event("incomplete_results", &detail, None, None, None)
+            {
+                let _ = write_event(out, &event);
+            }
+        } else {
+            let _ = writeln!(err, "dx: incomplete_results: {detail}");
+        }
+    }
+    let code = if bazel_code != 0 {
+        bazel_code
+    } else if complete && reports_ok {
+        0
+    } else {
+        1
+    };
+    if invocation.output == OutputMode::Json {
+        let _ = write_event(
+            out,
+            &command_finished(
+                code,
+                &FinishedCounts {
+                    results_complete: Some(complete && reports_ok),
+                    ..FinishedCounts::default()
+                },
+            ),
+        );
+    }
+    code
+}
+
+/// Executes `dx run`: local-only single-runnable launcher with
+/// verbatim application exit codes. Lifecycle prose goes to stderr;
+/// the application keeps stdout through the process runner.
+fn execute_run(invocation: &Invocation, env: Env<'_>) -> i32 {
+    let Env {
+        workspace,
+        runner,
+        query_runner,
+        temp_dir: _,
+        pid: _,
+        nonce: _,
+        out,
+        err,
+    } = env;
+    if std::env::var("CI").is_ok_and(|value| value == "true") {
+        return pre_exec(err, "dx run refuses when CI=true: local-only command");
+    }
+    let planned_reports = match plan_reports(
+        invocation.command,
+        &invocation.reports,
+        &invocation.output,
+        invocation.dry_run,
+    ) {
+        Ok(planned) => planned,
+        Err(error) => return pre_exec(err, &error.to_string()),
+    };
+    debug_assert!(planned_reports.is_empty(), "dx run takes no --report");
+    let targets = match resolve_run(&invocation.targets, workspace, query_runner) {
+        Ok(targets) => targets,
+        Err(error) => {
+            let code = resolve_code(&error);
+            let message = error.to_string();
+            if matches!(
+                error,
+                ResolveError::NoRunnable { .. } | ResolveError::AmbiguousRunnable { .. }
+            ) {
+                return operational(invocation, out, err, code, &message);
+            }
+            return pre_exec(err, &message);
+        }
+    };
+    let plan = if targets.len() == 1 {
+        plan_run(&targets[0], &invocation.bazel_options)
+    } else {
+        plan_run_multi(&targets, &invocation.bazel_options)
+    };
+    if invocation.dry_run {
+        if invocation.output == OutputMode::Json {
+            if let Ok(event) = command_started(invocation.command.name(), true, "default") {
+                let _ = write_event(out, &event);
+            }
+            let _ = write_event(out, &command_finished(0, &FinishedCounts::default()));
+        } else if !invocation.quiet {
+            let _ = writeln!(err, "{}", plan.summary);
+        }
+        return 0;
+    }
+    if !invocation.quiet {
+        let _ = writeln!(err, "{}", plan.summary);
+    }
+    let status = match runner.run(&plan.argv, workspace) {
+        Ok(status) => status,
+        Err(error) => {
+            return operational(
+                invocation,
+                out,
+                err,
+                CODE_LAUNCH_FAILED,
+                &format!("failed to launch Bazel: {error}"),
+            );
+        }
+    };
+    let Some(code) = status.code else {
+        return operational(
+            invocation,
+            out,
+            err,
+            CODE_BAZEL_SIGNALLED,
+            "Bazel terminated by signal",
+        );
+    };
+    code
+}
+
+/// Plans a label-only multi-target `dx run` argv Bazel owns.
+///
+/// File/directory scopes enforce single-runnable selection in
+/// [`resolve_run`]; label scopes pass through unchanged, including
+/// multiple labels. `bazel run` rejects multi-target requests itself,
+/// so this preserves Bazel's exact diagnostic and status.
+fn plan_run_multi(targets: &[String], app_args: &[String]) -> crate::plan::BuildPlan {
+    use crate::plan::workspace_flag;
+    use dx_process::{launcher_argv0, WORKFLOW_STARTUP_OPTS};
+    let mut argv = Vec::new();
+    argv.push(launcher_argv0().to_owned());
+    argv.extend(WORKFLOW_STARTUP_OPTS.iter().map(ToString::to_string));
+    argv.push("run".to_owned());
+    argv.push(workspace_flag());
+    argv.extend(targets.iter().cloned());
+    if !app_args.is_empty() {
+        argv.push("--".to_owned());
+        argv.extend(app_args.iter().cloned());
+    }
+    let summary = format!("Running run for {}", targets.join(" "));
+    crate::plan::BuildPlan { argv, summary }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::args::parse;
+    use crate::resolve::{QueryResult, QueryRunner};
     use dx_process::{ChildStatus, Runner};
     use quality_result::proto::{Capability, Convergence, FileSnapshot, QualityResult, Stage};
     use quality_result::{encode_validated, SCHEMA_MAJOR, SCHEMA_MINOR};
+    use std::cell::RefCell;
     use std::collections::HashMap;
     use std::path::PathBuf;
 
@@ -989,6 +1497,32 @@ mod tests {
         signalled: bool,
         skip_bep: bool,
         raw_bep: Option<Vec<String>>,
+        query: ScriptQuery,
+    }
+
+    /// Scripted ownership-query runner: replays canned outputs in call
+    /// order and records argv. Empty outputs panic, so tests that never
+    /// resolve file scopes prove they issue no queries.
+    struct ScriptQuery {
+        calls: RefCell<Vec<Vec<String>>>,
+        outputs: RefCell<Vec<QueryResult>>,
+    }
+
+    impl ScriptQuery {
+        fn script_owners(&self, owners: &str) {
+            self.outputs.borrow_mut().push(QueryResult {
+                code: Some(0),
+                stdout: owners.as_bytes().to_vec(),
+                stderr: Vec::new(),
+            });
+        }
+    }
+
+    impl QueryRunner for ScriptQuery {
+        fn run_query(&self, argv: &[String], _cwd: &Path) -> io::Result<QueryResult> {
+            self.calls.borrow_mut().push(argv.to_vec());
+            Ok(self.outputs.borrow_mut().remove(0))
+        }
     }
 
     impl Harness {
@@ -1003,6 +1537,10 @@ mod tests {
                 signalled: false,
                 skip_bep: false,
                 raw_bep: None,
+                query: ScriptQuery {
+                    calls: RefCell::new(Vec::new()),
+                    outputs: RefCell::new(Vec::new()),
+                },
             }
         }
 
@@ -1162,6 +1700,7 @@ mod tests {
                 Env {
                     workspace: &self.workspace,
                     runner: &runner,
+                    query_runner: &self.query,
                     temp_dir: &self.temp,
                     pid: std::process::id(),
                     nonce: 0,
@@ -1190,11 +1729,12 @@ mod tests {
                 return Err(io::Error::other("fake launch failure"));
             }
             if !self.skip_bep {
-                let bep = argv
+                if let Some(bep) = argv
                     .iter()
                     .find_map(|arg| arg.strip_prefix("--build_event_json_file="))
-                    .expect("BEP flag in argv");
-                std::fs::write(bep, self.bep_lines.join("\n")).expect("BEP file");
+                {
+                    std::fs::write(bep, self.bep_lines.join("\n")).expect("BEP file");
+                }
             }
             Ok(ChildStatus { code: self.code })
         }
@@ -1378,6 +1918,50 @@ mod tests {
         let (code, _, err) = harness.run(&["lint", "--", "--nokeep_going"]);
         assert_eq!(code, 2);
         assert!(err.contains("usage"));
+    }
+
+    #[test]
+    fn file_scope_resolves_to_owners_before_planning() {
+        let harness = Harness::new("file-scope");
+        harness.write_source("pkg/BUILD.bazel", "");
+        harness.write_source("pkg/a.py", "x = 1\n");
+        harness.query.script_owners("//pkg:lib\n//pkg:extra\n");
+        let (code, out, _) = harness.run(&["lint", "--dry-run", "pkg/a.py"]);
+        assert_eq!(code, 0);
+        assert!(
+            out.contains("Running lint analysis for //pkg:extra //pkg:lib"),
+            "{out}"
+        );
+        let calls = harness.query.calls.borrow();
+        assert_eq!(calls.len(), 1, "one query per file");
+        assert!(calls[0].iter().any(|arg| arg == "query"));
+    }
+
+    #[test]
+    fn directory_scope_plans_pattern_without_query() {
+        let harness = Harness::new("dir-scope");
+        harness.write_source("src/a.py", "x = 1\n");
+        let (code, out, _) = harness.run(&["lint", "--dry-run", "src"]);
+        assert_eq!(code, 0);
+        assert!(out.contains("Running lint analysis for //src/..."), "{out}");
+        assert!(harness.query.calls.borrow().is_empty());
+    }
+
+    #[test]
+    fn missing_path_scope_fails_pre_execution() {
+        let harness = Harness::new("missing-scope");
+        let (code, _, err) = harness.run(&["lint", "nope.py"]);
+        assert_eq!(code, 2);
+        assert!(err.contains("nope.py"), "{err}");
+        assert!(harness.query.calls.borrow().is_empty());
+    }
+
+    #[test]
+    fn external_scope_fails_pre_execution() {
+        let harness = Harness::new("external-scope");
+        let (code, _, err) = harness.run(&["lint", "@repo//pkg/..."]);
+        assert_eq!(code, 2);
+        assert!(err.contains("@repo//pkg/..."), "{err}");
     }
 
     #[test]
@@ -1574,6 +2158,7 @@ mod tests {
             Env {
                 workspace: &harness.workspace,
                 runner: &runner,
+                query_runner: &harness.query,
                 temp_dir: &temp,
                 pid: std::process::id(),
                 nonce: 0,
@@ -2218,5 +2803,673 @@ mod tests {
             event(&events, "error")["code"],
             serde_json::json!("report_failed")
         );
+    }
+
+    fn write_bep_artifact(harness: &Harness, name: &str, bytes: &[u8]) -> String {
+        let path = harness.temp.join(name);
+        std::fs::write(&path, bytes).expect("artifact");
+        format!("file://{}", path.display())
+    }
+
+    fn test_result_line(label: &str, entries: &[(String, String)]) -> String {
+        let outputs = entries
+            .iter()
+            .map(|(name, uri)| format!("{{\"name\": \"{name}\", \"uri\": \"{uri}\"}}"))
+            .collect::<Vec<_>>()
+            .join(",");
+        format!(
+            "{{\"id\": {{\"testResult\": {{\"label\": \"{label}\"}} }}, \"testResult\": {{\"status\": \"PASSED\", \"testActionOutput\": [{outputs}]}}}}"
+        )
+    }
+
+    const MINIMAL_TEST_XML: &str = r#"<?xml version="1.0" encoding="UTF-8"?><testsuites><testsuite name="s"><testcase name="passes" classname="c" time="0.1"/></testsuite></testsuites>"#;
+    const MINIMAL_LCOV: &str = "SF:src/a.py\nDA:1,1\nend_of_record\n";
+
+    #[test]
+    fn build_preserves_bazel_status_verbatim() {
+        let harness = Harness::new("build-ok");
+        let (code, out, _) = harness.run(&["build", "--output=text"]);
+        assert_eq!(code, 0);
+        assert!(out.contains("Running build for //..."), "{out}");
+        let harness = Harness {
+            bazel_code: 3,
+            ..Harness::new("build-fails")
+        };
+        let (code, _, _) = harness.run(&["build", "--output=text"]);
+        assert_eq!(code, 3);
+    }
+
+    #[test]
+    fn test_junit_file_report_succeeds() {
+        let harness = Harness::new("test-junit");
+        let uri = write_bep_artifact(&harness, "test.xml", MINIMAL_TEST_XML.as_bytes());
+        let harness = Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(String::from("test.xml"), uri)],
+            )]),
+            ..harness
+        };
+        let (code, out, _) = harness.run(&["test", "--output=text", "--report=junit=out.xml"]);
+        assert_eq!(code, 0, "{out}");
+        assert!(out.contains("Wrote junit report to out.xml."));
+        let document = std::fs::read(harness.workspace.join("out.xml")).expect("junit");
+        let text = String::from_utf8(document).expect("utf8");
+        assert!(text.contains("<testsuites name=\"dx\""), "{text}");
+        assert!(text.contains("<testsuite name=\"//a:t\""), "{text}");
+    }
+
+    #[test]
+    fn test_stdout_report_owns_stdout() {
+        let harness = Harness::new("test-stdout");
+        let uri = write_bep_artifact(&harness, "test-stdout.xml", MINIMAL_TEST_XML.as_bytes());
+        let harness = Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(String::from("test.xml"), uri)],
+            )]),
+            ..harness
+        };
+        let (code, out, _) = harness.run(&["test", "--output=text", "--report=junit=-"]);
+        assert_eq!(code, 0);
+        assert!(out.contains("<testsuites name=\"dx\""), "{out}");
+        assert!(!out.contains("Running test"), "{out}");
+    }
+
+    #[test]
+    fn test_missing_artifacts_are_incomplete() {
+        let harness = Harness {
+            raw_bep: Some(vec![String::from(
+                "{\"id\": {\"testResult\": {\"label\": \"//a:t\"}}, \"testResult\": {\"status\": \"PASSED\"}}",
+            )]),
+            ..Harness::new("test-empty")
+        };
+        let (code, _, err) = harness.run(&["test", "--output=text"]);
+        assert_eq!(code, 1);
+        assert!(err.contains("incomplete_results"), "{err}");
+    }
+
+    #[test]
+    fn test_preserves_bazel_failure_code() {
+        let harness = Harness::new("test-bazel-fails");
+        let uri = write_bep_artifact(&harness, "fail.xml", MINIMAL_TEST_XML.as_bytes());
+        let harness = Harness {
+            bazel_code: 4,
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(String::from("test.xml"), uri)],
+            )]),
+            ..harness
+        };
+        let (code, _, _) = harness.run(&["test", "--output=text"]);
+        assert_eq!(code, 4);
+    }
+
+    #[test]
+    fn coverage_lcov_file_report_succeeds() {
+        let harness = Harness::new("cov-ok");
+        let uri = write_bep_artifact(&harness, "coverage.dat", MINIMAL_LCOV.as_bytes());
+        let harness = Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(String::from("test.lcov"), uri)],
+            )]),
+            ..harness
+        };
+        let (code, out, _) = harness.run(&["coverage", "--output=text", "--report=lcov=out.lcov"]);
+        assert_eq!(code, 0, "{out}");
+        let document = std::fs::read(harness.workspace.join("out.lcov")).expect("lcov");
+        assert_eq!(document, MINIMAL_LCOV.as_bytes());
+    }
+
+    #[test]
+    fn coverage_invalid_tracefile_fails() {
+        let harness = Harness::new("cov-bad");
+        let uri = write_bep_artifact(&harness, "bad.dat", b"not lcov");
+        let harness = Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(String::from("test.lcov"), uri)],
+            )]),
+            ..harness
+        };
+        let (code, _, err) = harness.run(&["coverage", "--output=text"]);
+        assert_eq!(code, 1);
+        assert!(err.contains("incomplete_results"), "{err}");
+    }
+
+    #[test]
+    fn run_label_passthrough_preserves_status_on_stderr() {
+        let harness = Harness::new("run-ok");
+        let (code, out, err) = harness.run(&["run", "//app:bin", "--", "--port=8080"]);
+        assert_eq!(code, 0);
+        assert_eq!(out, "");
+        assert!(err.contains("Running run for //app:bin"), "{err}");
+        let harness = Harness {
+            bazel_code: 7,
+            ..Harness::new("run-fails")
+        };
+        let (code, _, _) = harness.run(&["run", "//app:bin"]);
+        assert_eq!(code, 7);
+    }
+
+    #[test]
+    fn run_empty_scope_is_pre_exec() {
+        let harness = Harness::new("run-empty");
+        let (code, _, err) = harness.run(&["run"]);
+        assert_eq!(code, 2);
+        assert!(err.contains("empty scope"), "{err}");
+    }
+
+    #[test]
+    fn run_file_without_runnable_is_operational() {
+        let harness = Harness::new("run-norunnable");
+        harness.write_source("pkg/BUILD.bazel", "");
+        harness.write_source("pkg/a.py", "x = 1\n");
+        harness.query.script_owners("");
+        harness.query.script_owners("//pkg:lib\n");
+        let (code, _, err) = harness.run(&["run", "pkg/a.py"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("no_runnable"), "{err}");
+    }
+
+    #[test]
+    fn resolve_code_maps_all_variants() {
+        assert_eq!(
+            resolve_code(&ResolveError::NoRunnable {
+                scopes: vec!["a".to_owned()],
+            }),
+            "no_runnable"
+        );
+        assert_eq!(
+            resolve_code(&ResolveError::AmbiguousRunnable {
+                candidates: vec!["//a:one".to_owned(), "//a:two".to_owned()],
+            }),
+            "ambiguous_runnable"
+        );
+        assert_eq!(
+            resolve_code(&ResolveError::NoTests {
+                owners: vec!["//a:lib".to_owned()],
+            }),
+            "no_tests"
+        );
+        assert_eq!(resolve_code(&ResolveError::EmptyScope), "scope_error");
+    }
+
+    #[test]
+    fn workflow_bad_report_is_pre_exec() {
+        let harness = Harness::new("wf-bad-report");
+        let (code, _, err) = harness.run(&["build", "--report=junit=a.xml"]);
+        assert_eq!(code, 2, "{err}");
+    }
+
+    #[test]
+    fn workflow_bad_scope_is_pre_exec() {
+        let harness = Harness::new("wf-bad-scope");
+        let (code, _, err) = harness.run(&["build", "nope.py"]);
+        assert_eq!(code, 2, "{err}");
+    }
+
+    #[test]
+    fn workflow_conflicting_option_is_pre_exec() {
+        let harness = Harness::new("wf-conflict");
+        let (code, _, err) = harness.run(&[
+            "build",
+            "--",
+            "--@rules_dx//config:workspace=//other:config",
+        ]);
+        assert_eq!(code, 2, "{err}");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn workflow_non_utf8_bep_is_operational() {
+        use std::ffi::OsString;
+        use std::os::unix::ffi::OsStringExt;
+        let mut harness = Harness::new("wf-nonutf8");
+        harness.temp = PathBuf::from(OsString::from_vec(vec![0xff]));
+        let (code, _, err) = harness.run(&["build", "--output=text"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("unreadable_bep"), "{err}");
+    }
+
+    #[test]
+    fn workflow_dry_run_text_and_json() {
+        let harness = Harness::new("wf-dry-text");
+        let (code, out, _) = harness.run(&["build", "--dry-run", "--output=text"]);
+        assert_eq!(code, 0, "{out}");
+        assert!(out.contains("Running build"), "{out}");
+        let harness = Harness::new("wf-dry-json");
+        let (code, out, _) = harness.run(&["build", "--dry-run", "--output=json"]);
+        assert_eq!(code, 0, "{out}");
+        assert!(out.contains("command_started"), "{out}");
+    }
+
+    #[test]
+    fn workflow_json_lifecycle_and_build_status() {
+        let harness = Harness::new("wf-json");
+        let (code, out, _) = harness.run(&["build", "--output=json"]);
+        assert_eq!(code, 0, "{out}");
+        assert!(out.contains("command_started"), "{out}");
+        assert!(out.contains("command_finished"), "{out}");
+    }
+
+    #[test]
+    fn workflow_launch_failure_is_operational() {
+        let mut harness = Harness::new("wf-launch");
+        harness.io_error = true;
+        let (code, _, err) = harness.run(&["build", "--output=text"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("launch_failed"), "{err}");
+    }
+
+    #[test]
+    fn workflow_signalled_is_operational() {
+        let mut harness = Harness::new("wf-signal");
+        harness.signalled = true;
+        let (code, _, err) = harness.run(&["build", "--output=text"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("bazel_signalled"), "{err}");
+    }
+
+    #[test]
+    fn test_unreadable_bep_is_operational() {
+        let mut harness = Harness::new("test-nobep");
+        harness.skip_bep = true;
+        let (code, _, err) = harness.run(&["test", "--output=text"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("unreadable_bep"), "{err}");
+    }
+
+    #[test]
+    fn test_invalid_bep_is_operational() {
+        let harness = Harness {
+            raw_bep: Some(vec![String::from("not json")]),
+            ..Harness::new("test-badbep")
+        };
+        let (code, _, err) = harness.run(&["test", "--output=text"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("invalid_bep"), "{err}");
+    }
+
+    #[test]
+    fn test_ignores_non_xml_entries() {
+        let harness = Harness::new("test-ignore-log");
+        let xml = write_bep_artifact(&harness, "ok.xml", MINIMAL_TEST_XML.as_bytes());
+        std::fs::write(harness.temp.join("ok.log"), b"log").expect("log");
+        let log_uri = format!("file://{}", harness.temp.join("ok.log").display());
+        let harness = Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[
+                    (String::from("test.log"), log_uri),
+                    (String::from("test.xml"), xml),
+                ],
+            )]),
+            ..harness
+        };
+        let (code, _, _) = harness.run(&["test", "--output=text"]);
+        assert_eq!(code, 0);
+    }
+
+    #[test]
+    fn test_unreadable_artifact_is_incomplete() {
+        let harness = Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(
+                    String::from("test.xml"),
+                    String::from("file:///nonexistent/a.xml"),
+                )],
+            )]),
+            ..Harness::new("test-unreadable")
+        };
+        let (code, _, err) = harness.run(&["test", "--output=text"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("incomplete_results"), "{err}");
+    }
+
+    #[test]
+    fn test_invalid_xml_is_incomplete() {
+        let harness = Harness::new("test-badxml");
+        let uri = write_bep_artifact(&harness, "bad.xml", b"not xml");
+        let harness = Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(String::from("test.xml"), uri)],
+            )]),
+            ..harness
+        };
+        let (code, _, err) = harness.run(&["test", "--output=text"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("incomplete_results"), "{err}");
+    }
+
+    #[test]
+    fn coverage_ignores_non_lcov_and_reports_missing() {
+        let harness = Harness::new("cov-ignore");
+        let xml = write_bep_artifact(&harness, "x.xml", MINIMAL_TEST_XML.as_bytes());
+        let harness = Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(String::from("test.xml"), xml)],
+            )]),
+            ..harness
+        };
+        let (code, _, err) = harness.run(&["coverage", "--output=text"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("no coverage.dat"), "{err}");
+    }
+
+    #[test]
+    fn coverage_unreadable_is_incomplete() {
+        let harness = Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(
+                    String::from("coverage.dat"),
+                    String::from("file:///nonexistent/c.dat"),
+                )],
+            )]),
+            ..Harness::new("cov-unreadable")
+        };
+        let (code, _, err) = harness.run(&["coverage", "--output=text"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("incomplete_results"), "{err}");
+    }
+
+    #[test]
+    fn coverage_report_failed_when_incomplete() {
+        let harness = Harness::new("cov-repfail");
+        let uri = write_bep_artifact(&harness, "bad2.dat", b"not lcov");
+        let harness = Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(String::from("test.lcov"), uri)],
+            )]),
+            ..harness
+        };
+        let (code, _, err) = harness.run(&["coverage", "--output=text", "--report=lcov=out.lcov"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("report_failed"), "{err}");
+    }
+
+    #[test]
+    fn test_report_write_failure_is_operational() {
+        let harness = Harness::new("test-writefail");
+        let uri = write_bep_artifact(&harness, "w.xml", MINIMAL_TEST_XML.as_bytes());
+        let harness = Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(String::from("test.xml"), uri)],
+            )]),
+            ..harness
+        };
+        let (code, _, err) = harness.run(&[
+            "test",
+            "--output=text",
+            "--report=junit=missing-dir/out.xml",
+        ]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("report_failed"), "{err}");
+    }
+
+    #[test]
+    fn test_report_json_emits_report_event() {
+        let harness = Harness::new("test-jsonrep");
+        let uri = write_bep_artifact(&harness, "j.xml", MINIMAL_TEST_XML.as_bytes());
+        let harness = Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(String::from("test.xml"), uri)],
+            )]),
+            ..harness
+        };
+        let (code, out, _) = harness.run(&["test", "--output=json", "--report=junit=out.xml"]);
+        assert_eq!(code, 0, "{out}");
+        assert!(out.contains("report"), "{out}");
+        assert!(out.contains("command_finished"), "{out}");
+    }
+
+    #[test]
+    fn test_report_diff_goes_to_stderr() {
+        let harness = Harness::new("test-diffrep");
+        let uri = write_bep_artifact(&harness, "d.xml", MINIMAL_TEST_XML.as_bytes());
+        let harness = Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(String::from("test.xml"), uri)],
+            )]),
+            ..harness
+        };
+        let (code, _, err) = harness.run(&["test", "--output=diff", "--report=junit=out.xml"]);
+        assert_eq!(code, 0, "{err}");
+        assert!(err.contains("Wrote junit report"), "{err}");
+    }
+
+    #[test]
+    fn test_incomplete_json_reports_incomplete_event() {
+        let harness = Harness {
+            raw_bep: Some(vec![String::from(
+                "{\"id\": {\"testResult\": {\"label\": \"//a:t\"}}, \"testResult\": {\"status\": \"PASSED\"}}",
+            )]),
+            ..Harness::new("test-incjson")
+        };
+        let (code, out, _) = harness.run(&["test", "--output=json"]);
+        assert_eq!(code, 1, "{out}");
+        assert!(out.contains("incomplete_results"), "{out}");
+        assert!(out.contains("command_finished"), "{out}");
+    }
+
+    #[test]
+    fn run_ambiguous_is_operational() {
+        let harness = Harness::new("run-amb");
+        std::fs::create_dir_all(harness.workspace.join("app")).expect("dir");
+        harness.query.script_owners("//app:two\n//app:one\n");
+        let (code, _, err) = harness.run(&["run", "app"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("ambiguous_runnable"), "{err}");
+    }
+
+    #[test]
+    fn run_bad_report_is_pre_exec() {
+        // `parse` rejects `--report` for `run` before execution; assert the
+        // usage error directly since `Harness::run` requires parse success.
+        let args: Vec<String> = ["run", "//app:bin", "--report=sarif=a.sarif"]
+            .iter()
+            .map(ToString::to_string)
+            .collect();
+        let err = parse(&args).expect_err("run report must fail parse");
+        assert!(err.to_string().contains("--report"), "{err:?}");
+    }
+
+    #[test]
+    fn run_dry_run_json_and_text() {
+        // `parse` owns `--output=json` rejection for `run`; the text dry-run
+        // exercises `execute_run` planning.
+        let args: Vec<String> = ["run", "//app:bin", "--dry-run", "--output=json"]
+            .iter()
+            .map(ToString::to_string)
+            .collect();
+        let err = parse(&args).expect_err("run json must fail parse");
+        assert!(err.to_string().contains("--output"), "{err:?}");
+        let harness = Harness::new("run-dry-text");
+        let (code, _, err) = harness.run(&["run", "//app:bin", "--dry-run"]);
+        assert_eq!(code, 0, "{err}");
+        assert!(err.contains("Running run"), "{err}");
+    }
+
+    #[test]
+    fn run_launch_and_signal_failures() {
+        let mut harness = Harness::new("run-launch");
+        harness.io_error = true;
+        let (code, _, err) = harness.run(&["run", "//app:bin"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("launch_failed"), "{err}");
+        let mut harness = Harness::new("run-signal");
+        harness.signalled = true;
+        let (code, _, err) = harness.run(&["run", "//app:bin"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("bazel_signalled"), "{err}");
+    }
+
+    #[test]
+    fn run_multi_target_uses_multi_plan() {
+        let harness = Harness::new("run-multi");
+        let (code, _, err) = harness.run(&["run", "//a:bin", "//b:bin"]);
+        assert_eq!(code, 0, "{err}");
+        assert!(err.contains("//a:bin //b:bin"), "{err}");
+        // Multi-target with app args covers the `--` forwarding arm.
+        let harness = Harness::new("run-multi-args");
+        let (code, _, err) = harness.run(&["run", "//a:bin", "//b:bin", "--", "--port=8080"]);
+        assert_eq!(code, 0, "{err}");
+        assert!(err.contains("//a:bin //b:bin"), "{err}");
+    }
+
+    fn run_invocation(
+        command: Command,
+        output: OutputMode,
+        reports: Vec<crate::args::ReportRequest>,
+        dry_run: bool,
+    ) -> Invocation {
+        Invocation {
+            command,
+            check: false,
+            workspace: None,
+            dry_run,
+            quiet: false,
+            output,
+            reports,
+            fail_on: dx_output::Threshold::Warning,
+            targets: vec!["//app:bin".to_owned()],
+            bazel_options: Vec::new(),
+        }
+    }
+
+    fn execute_with(invocation: &Invocation, harness: &Harness) -> (i32, String, String) {
+        let runner = harness.runner();
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute(
+            invocation,
+            Env {
+                workspace: &harness.workspace,
+                runner: &runner,
+                query_runner: &harness.query,
+                temp_dir: &harness.temp,
+                pid: std::process::id(),
+                nonce: 0,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        (
+            code,
+            String::from_utf8(out).expect("stdout"),
+            String::from_utf8(err).expect("stderr"),
+        )
+    }
+
+    #[test]
+    fn run_manual_invocations_cover_defense_branches() {
+        // `parse` rejects `--report` and JSON output for `run`; construct the
+        // invocation directly to cover `execute_run` defense branches.
+        let harness = Harness::new("run-manual-report");
+        let inv = run_invocation(
+            Command::Run,
+            OutputMode::Text { quiet: false },
+            vec![crate::args::ReportRequest {
+                format: "junit".to_owned(),
+                destination: "out.xml".to_owned(),
+            }],
+            false,
+        );
+        let (code, _, err) = execute_with(&inv, &harness);
+        assert_eq!(code, 2, "{err}");
+
+        let harness = Harness::new("run-manual-json");
+        let inv = run_invocation(Command::Run, OutputMode::Json, Vec::new(), true);
+        let (code, out, _) = execute_with(&inv, &harness);
+        assert_eq!(code, 0, "{out}");
+        assert!(out.contains("command_started"), "{out}");
+        assert!(out.contains("command_finished"), "{out}");
+    }
+
+    #[test]
+    fn coverage_lcov_without_trailing_newline_gets_newline() {
+        let harness = Harness::new("cov-nonl");
+        let raw = b"SF:src/a.py\nDA:1,1\nend_of_record";
+        let uri = write_bep_artifact(&harness, "nonl.dat", raw);
+        let harness = Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(String::from("test.lcov"), uri)],
+            )]),
+            ..harness
+        };
+        let (code, out, _) = harness.run(&["coverage", "--output=text", "--report=lcov=out.lcov"]);
+        assert_eq!(code, 0, "{out}");
+        let document = std::fs::read(harness.workspace.join("out.lcov")).expect("lcov");
+        assert!(document.ends_with(b"\n"), "{document:?}");
+    }
+
+    #[test]
+    fn coverage_render_failure_json_reports_error_event() {
+        // No lcov documents with a requested report triggers render failure;
+        // JSON output must emit the `report_failed` error event.
+        let harness = Harness::new("cov-render-json");
+        let xml = write_bep_artifact(&harness, "x.xml", MINIMAL_TEST_XML.as_bytes());
+        let harness = Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(String::from("test.xml"), xml)],
+            )]),
+            ..harness
+        };
+        let (code, out, _) = harness.run(&["coverage", "--output=json", "--report=lcov=out.lcov"]);
+        assert_eq!(code, 1, "{out}");
+        assert!(out.contains("report_failed"), "{out}");
+    }
+
+    #[test]
+    fn test_report_write_failure_json_reports_error_event() {
+        let harness = Harness::new("test-writefail-json");
+        let uri = write_bep_artifact(&harness, "w2.xml", MINIMAL_TEST_XML.as_bytes());
+        let harness = Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(String::from("test.xml"), uri)],
+            )]),
+            ..harness
+        };
+        let (code, out, _) = harness.run(&[
+            "test",
+            "--output=json",
+            "--report=junit=missing-dir/out.xml",
+        ]);
+        assert_eq!(code, 1, "{out}");
+        assert!(out.contains("report_failed"), "{out}");
+    }
+
+    #[test]
+    fn run_ci_refusal_is_pre_exec() {
+        // Cover both restore arms: first with no prior CI, then with a prior.
+        for preset in [None, Some("0")] {
+            match preset {
+                Some(value) => std::env::set_var("CI", value),
+                None => std::env::remove_var("CI"),
+            }
+            let harness = Harness::new("run-ci");
+            let prior = std::env::var("CI").ok();
+            std::env::set_var("CI", "true");
+            let (code, _, err) = harness.run(&["run", "//app:bin"]);
+            match prior {
+                Some(value) => std::env::set_var("CI", value),
+                None => std::env::remove_var("CI"),
+            }
+            assert_eq!(code, 2, "{err}");
+            assert!(err.contains("CI=true"), "{err}");
+        }
+        std::env::remove_var("CI");
     }
 }

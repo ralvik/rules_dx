@@ -18,20 +18,24 @@ additional standard report format.
 
 ## `dx run`
 
-Status: target shape accepted under
-[O52](../../open-decisions.md); disambiguation, exit codes, output-protocol
-events, and CI exclusion are pending. Strict single-target execution — a file scope resolves to its owning
-library plus thin binary wrapper per [generation ownership](../../generation/common.md#executable-entries),
-never arbitrary reverse-dependency execution. Do not implement against this prose until
-that qualification lands.
-
-`dx run` accepts labels, target patterns, files, or directories. Labels and
-target patterns pass through to Bazel unchanged. File and directory scopes
-resolve through the same ownership query as `dx build`, then require exactly
-one runnable owner: zero runnables fail with `no_runnable`, multiple runnables
-fail with `ambiguous_runnable`. Arguments after `--` forward to the application
-binary. Execution is local-only with TTY and signal forwarding; CI use is not
-supported. Multirun remains a separate future feature.
+Status: scope and forwarding qualified under
+[O52](../../open-decisions.md); implementation may proceed against this
+section. Strict single-target execution applies to file/directory
+resolution scopes only — labels and target patterns pass through to
+`bazel run` unchanged (Bazel owns alias and executability). A file or
+directory scope resolves through the same ownership query as `dx build`,
+then requires exactly one runnable owner, where runnable means a
+depth-1 owner whose rule kind ends in `_binary` (aliases are not
+followed for file scopes): zero runnables fail pre-resolution with
+`no_runnable`, multiple with `ambiguous_runnable` listing sorted
+candidates; both are operational failures (exit 1). The application
+exit code is preserved verbatim (success included); scope/usage
+failures stay pre-exec (exit 2). The application inherits stdio with
+SIGINT/SIGTERM forwarding; arguments after `--` forward verbatim.
+`dx run` accepts only `--output=text` (json/diff rejected pre-exec),
+emits prose lifecycle on stderr, takes no `--report`, and refuses when
+env `CI=true` (local-only). Multirun remains a separate future
+feature.
 
 ## `dx coverage`
 

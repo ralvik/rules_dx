@@ -1,15 +1,17 @@
-//! Quality command planning (M07 WP1+WP3).
+//! Quality command planning (M07 WP1+WP3, M08 WP1+WP4).
 //!
 //! Contract: `docs/cli/cli-contract.md` (protected flags, canonical
 //! workspace policy, operation display) and
 //! `docs/cli/commands/quality.md` (command behavior). Every quality
-//! command runs the repository scope (`//...`) unless explicit Bazel
-//! labels select a narrower scope; file-path resolution belongs to a
-//! later milestone.
+//! command runs the repository scope (`//...`) unless explicit scope
+//! positionals resolve to a narrower scope; labels pass through in
+//! order while file and directory scopes resolve to owning targets
+//! through [`crate::resolve`].
 
 use std::path::{Path, PathBuf};
 
 use crate::args::Command;
+use crate::resolve::ResolvedScope;
 use dx_process::{
     build_workflow_argv, describe_scope, operation_summary, ForwardError, ProtectedFlag, Scope,
 };
@@ -30,7 +32,12 @@ pub struct CommandSpec {
     pub reports: &'static [&'static str],
 }
 
-/// Returns the registry entry for `command`.
+/// Returns the registry entry for `command`. Quality commands select
+/// capability aspects and SARIF reports; workflow commands run Bazel
+/// verbs directly with Bazel-owned status, so they select no aspects.
+/// `test` normalizes `test.xml` artifacts into one JUnit document and
+/// `coverage` normalizes `coverage.dat` artifacts into one LCOV document;
+/// `build` and `run` have no standard report.
 pub fn spec(command: Command) -> CommandSpec {
     match command {
         Command::Lint => CommandSpec {
@@ -49,6 +56,30 @@ pub fn spec(command: Command) -> CommandSpec {
             command,
             capability: "format",
             aspects: &["//quality:real_aspects.bzl%real_format_aspect"],
+            reports: &[],
+        },
+        Command::Build => CommandSpec {
+            command,
+            capability: "build",
+            aspects: &[],
+            reports: &[],
+        },
+        Command::Test => CommandSpec {
+            command,
+            capability: "test",
+            aspects: &[],
+            reports: &["junit"],
+        },
+        Command::Coverage => CommandSpec {
+            command,
+            capability: "coverage",
+            aspects: &[],
+            reports: &["lcov"],
+        },
+        Command::Run => CommandSpec {
+            command,
+            capability: "run",
+            aspects: &[],
             reports: &[],
         },
     }
@@ -142,32 +173,174 @@ pub struct BuildPlan {
     pub summary: String,
 }
 
-/// Builds the exact workflow argv for `command` over `targets` (empty
-/// selects the repository scope `//...`). `bep_path` receives the
-/// build-event JSON stream the CLI collects with `dx_bep`. Fails before
-/// execution when user options conflict with required workflow policy.
+/// Builds the exact workflow argv for `command` over a resolved scope.
+/// `resolved.targets` supplies the exact Bazel targets (empty selects
+/// the repository scope `//...`) and `resolved.scope` renders the
+/// operation summary. `bep_path` receives the build-event JSON stream
+/// the CLI collects with `dx_bep`. Fails before execution when user
+/// options conflict with required workflow policy.
 pub fn plan_build(
     command: Command,
-    targets: &[String],
+    resolved: &ResolvedScope,
     bazel_options: &[String],
     bep_path: &str,
 ) -> Result<BuildPlan, ForwardError> {
     let entry = spec(command);
     let required = required_options(entry.aspects, bep_path);
     let protected = protected_flags(&required);
-    let scope = if targets.is_empty() {
+    let scope = if resolved.targets.is_empty() {
         Scope::Repository
     } else {
-        Scope::Labels(targets.to_vec())
+        resolved.scope.clone()
     };
-    let labels = if targets.is_empty() {
+    let labels = if resolved.targets.is_empty() {
         vec![describe_scope(&Scope::Repository)]
     } else {
-        targets.to_vec()
+        resolved.targets.clone()
     };
     let argv = build_workflow_argv("build", bazel_options, &required, &protected, &labels)?;
     let summary = operation_summary(command.name(), "analysis", &scope);
     Ok(BuildPlan { argv, summary })
+}
+
+/// Bazel verb behind a workflow command (`build`, `test`, `coverage`, `run`).
+/// The verb selects the Bazel command line; required workflow policy is
+/// identical across verbs except for the BEP stream, which only
+/// `test` and `coverage` collect report artifacts from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WorkflowVerb {
+    Build,
+    Test,
+    Coverage,
+    Run,
+}
+
+impl WorkflowVerb {
+    /// Maps a workflow command to its verb. Returns `None` for quality
+    /// commands, which plan through [`plan_build`] instead.
+    pub fn of(command: Command) -> Option<Self> {
+        match command {
+            Command::Build => Some(WorkflowVerb::Build),
+            Command::Test => Some(WorkflowVerb::Test),
+            Command::Coverage => Some(WorkflowVerb::Coverage),
+            Command::Run => Some(WorkflowVerb::Run),
+            Command::Lint | Command::Typecheck | Command::Format => None,
+        }
+    }
+
+    /// Stable Bazel command name.
+    pub fn name(self) -> &'static str {
+        match self {
+            WorkflowVerb::Build => "build",
+            WorkflowVerb::Test => "test",
+            WorkflowVerb::Coverage => "coverage",
+            WorkflowVerb::Run => "run",
+        }
+    }
+
+    /// True when the verb collects report artifacts from a BEP stream.
+    /// `build` and `run` have no standard report, so they plan no BEP flag.
+    pub fn collects_reports(self) -> bool {
+        matches!(self, WorkflowVerb::Test | WorkflowVerb::Coverage)
+    }
+}
+
+/// Required workflow options in argv order: canonical workspace policy,
+/// full-target collection, and — for report-collecting verbs — the BEP
+/// stream path. Coverage additionally requires `--combined_report=lcov`
+/// so Bazel emits LCOV tracefiles. Aspects, output groups, and validation
+/// stay off this path: Bazel owns the workflow status. Fail-fast is the
+/// default: no `--keep_going` is forced; an explicit user `--keep_going`
+/// (or `--nocancel` equivalents) forwards via `bazel_options`.
+pub const COVERAGE_COMBINED_REPORT_FLAG: &str = "--combined_report=lcov";
+
+pub fn workflow_options(verb: WorkflowVerb, bep_path: Option<&str>) -> Vec<String> {
+    let mut required = vec![workspace_flag()];
+    if verb == WorkflowVerb::Coverage {
+        required.push(COVERAGE_COMBINED_REPORT_FLAG.to_owned());
+    }
+    if let Some(path) = bep_path {
+        required.push(format!("--{BEP_FLAG_NAME}={path}"));
+    }
+    required
+}
+
+/// Protected workflow flags: workspace and BEP reject every user
+/// override; coverage `combined_report` accepts repetition of the
+/// required value only.
+pub fn workflow_protected(verb: WorkflowVerb) -> Vec<ProtectedFlag> {
+    let mut protected = vec![ProtectedFlag {
+        name: "@rules_dx//config:workspace".to_owned(),
+        required: None,
+    }];
+    if verb == WorkflowVerb::Coverage {
+        protected.push(ProtectedFlag {
+            name: "combined_report".to_owned(),
+            required: Some(COVERAGE_COMBINED_REPORT_FLAG.to_owned()),
+        });
+    }
+    protected.push(ProtectedFlag {
+        name: BEP_FLAG_NAME.to_owned(),
+        required: None,
+    });
+    protected
+}
+
+/// Builds the exact workflow argv for a `build`, `test`, `coverage`, or
+/// `run` command over a resolved scope. `resolved.targets` supplies the exact
+/// Bazel targets (empty selects the repository scope `//...`) and
+/// `resolved.scope` renders the operation summary. `bep_path` carries
+/// the build-event JSON stream for report-collecting verbs and must be
+/// `None` for `build` and `run`. Fails before execution when user options
+/// conflict with required workflow policy.
+pub fn plan_workflow(
+    verb: WorkflowVerb,
+    resolved: &ResolvedScope,
+    bazel_options: &[String],
+    bep_path: Option<&str>,
+) -> Result<BuildPlan, ForwardError> {
+    let required = workflow_options(verb, bep_path);
+    let protected = workflow_protected(verb);
+    let scope = if resolved.targets.is_empty() {
+        Scope::Repository
+    } else {
+        resolved.scope.clone()
+    };
+    let labels = if resolved.targets.is_empty() {
+        vec![describe_scope(&Scope::Repository)]
+    } else {
+        resolved.targets.clone()
+    };
+    let argv = build_workflow_argv(verb.name(), bazel_options, &required, &protected, &labels)?;
+    // Workflow verbs are self-describing (`Running build for ...`):
+    // no phase noun applies.
+    let summary = format!("Running {} for {}", verb.name(), describe_scope(&scope));
+    Ok(BuildPlan { argv, summary })
+}
+
+/// Builds the exact `bazel run` argv for one resolved runnable target.
+///
+/// `target` is the single runnable label from [`crate::resolve`] (file/dir
+/// scopes) or label/pattern passthrough. `app_args` are the verbatim
+/// application arguments after `--`: they are never validated as Bazel
+/// options and forward after a `--` separator. Only the canonical
+/// workspace policy is required; there is no BEP stream, no `keep_going`,
+/// and no user Bazel options on this path.
+pub fn plan_run(target: &str, app_args: &[String]) -> BuildPlan {
+    use dx_process::{launcher_argv0, WORKFLOW_STARTUP_OPTS};
+
+    let mut argv = Vec::with_capacity(WORKFLOW_STARTUP_OPTS.len() + 4 + app_args.len());
+    argv.push(launcher_argv0().to_owned());
+    argv.extend(WORKFLOW_STARTUP_OPTS.iter().map(ToString::to_string));
+    argv.push("run".to_owned());
+    argv.push(workspace_flag());
+    argv.push(target.to_owned());
+    if !app_args.is_empty() {
+        argv.push("--".to_owned());
+        argv.extend(app_args.iter().cloned());
+    }
+    let summary = format!("Running run for {target}");
+    BuildPlan { argv, summary }
 }
 
 /// BEP stream destination under `temp_dir`, unique per process
@@ -184,6 +357,17 @@ mod tests {
 
     fn options(words: &[&str]) -> Vec<String> {
         words.iter().map(ToString::to_string).collect()
+    }
+
+    fn resolved(targets: &[&str]) -> ResolvedScope {
+        ResolvedScope {
+            scope: if targets.is_empty() {
+                Scope::Repository
+            } else {
+                Scope::Labels(options(targets))
+            },
+            targets: options(targets),
+        }
     }
 
     #[test]
@@ -206,6 +390,44 @@ mod tests {
             &["//quality:real_aspects.bzl%real_format_aspect"]
         );
         assert!(format.reports.is_empty());
+        let build = spec(Command::Build);
+        assert!(build.aspects.is_empty());
+        assert!(build.reports.is_empty());
+        let test = spec(Command::Test);
+        assert_eq!(test.reports, &["junit"]);
+        let coverage = spec(Command::Coverage);
+        assert_eq!(coverage.reports, &["lcov"]);
+        let run = spec(Command::Run);
+        assert_eq!(run.capability, "run");
+        assert!(run.aspects.is_empty());
+        assert!(run.reports.is_empty());
+        assert_eq!(WorkflowVerb::of(Command::Run), Some(WorkflowVerb::Run));
+        assert_eq!(WorkflowVerb::of(Command::Lint), None);
+        assert_eq!(WorkflowVerb::of(Command::Typecheck), None);
+        assert_eq!(WorkflowVerb::of(Command::Format), None);
+        assert_eq!(WorkflowVerb::Run.name(), "run");
+        assert!(!WorkflowVerb::Run.collects_reports());
+    }
+
+    #[test]
+    fn run_plan_forwards_app_args_verbatim() {
+        let plan = plan_run("//app:bin", &options(&["--port=8080"]));
+        assert_eq!(
+            plan.argv,
+            options(&[
+                "bazel",
+                "--nohome_rc",
+                "--nosystem_rc",
+                "run",
+                "--@rules_dx//config:workspace=//dx:config",
+                "//app:bin",
+                "--",
+                "--port=8080",
+            ])
+        );
+        assert!(plan.summary.contains("//app:bin"));
+        let bare = plan_run("//app:bin", &[]);
+        assert!(!bare.argv.contains(&"--".to_owned()));
     }
 
     #[test]
@@ -219,8 +441,13 @@ mod tests {
 
     #[test]
     fn lint_plan_argv_places_required_before_user_options() {
-        let plan =
-            plan_build(Command::Lint, &[], &options(&["--jobs=4"]), "/tmp/bep.json").expect("plan");
+        let plan = plan_build(
+            Command::Lint,
+            &resolved(&[]),
+            &options(&["--jobs=4"]),
+            "/tmp/bep.json",
+        )
+        .expect("plan");
         let argv: Vec<&str> = plan.argv.iter().map(String::as_str).collect();
         assert_eq!(
             argv[..7],
@@ -251,7 +478,7 @@ mod tests {
     fn explicit_targets_replace_repository_scope() {
         let plan = plan_build(
             Command::Lint,
-            &options(&["//a:one", "//b/..."]),
+            &resolved(&["//a:one", "//b/..."]),
             &[],
             "/tmp/bep.json",
         )
@@ -262,14 +489,27 @@ mod tests {
     }
 
     #[test]
+    fn resolved_owners_render_sorted_owners_in_summary() {
+        let scope = ResolvedScope {
+            scope: Scope::ResolvedOwners(options(&["//a:a", "//b:b"])),
+            targets: options(&["//a:a", "//b:b"]),
+        };
+        let plan = plan_build(Command::Lint, &scope, &[], "/tmp/bep.json").expect("plan");
+        let argv: Vec<&str> = plan.argv.iter().map(String::as_str).collect();
+        assert_eq!(argv[argv.len() - 2..], ["//a:a", "//b:b"]);
+        assert_eq!(plan.summary, "Running lint analysis for //a:a //b:b");
+    }
+
+    #[test]
     fn typecheck_plan_carries_empty_aspects_and_format_summary() {
-        let plan = plan_build(Command::Typecheck, &[], &[], "/tmp/bep.json").expect("plan");
+        let plan =
+            plan_build(Command::Typecheck, &resolved(&[]), &[], "/tmp/bep.json").expect("plan");
         assert!(
             plan.argv.iter().any(|arg| arg == "--aspects="),
             "empty aspect list still declares the flag: {plan:?}"
         );
         assert_eq!(plan.summary, "Running typecheck analysis for //...");
-        let plan = plan_build(Command::Format, &[], &[], "/tmp/bep.json").expect("plan");
+        let plan = plan_build(Command::Format, &resolved(&[]), &[], "/tmp/bep.json").expect("plan");
         assert_eq!(plan.summary, "Running format analysis for //...");
     }
 
@@ -277,7 +517,7 @@ mod tests {
     fn keep_going_repetition_is_accepted() {
         let plan = plan_build(
             Command::Lint,
-            &[],
+            &resolved(&[]),
             &options(&["--keep_going"]),
             "/tmp/bep.json",
         )
@@ -297,7 +537,7 @@ mod tests {
         ] {
             let err = plan_build(
                 Command::Lint,
-                &[],
+                &resolved(&[]),
                 &options(&[conflicting]),
                 "/tmp/bep.json",
             )
@@ -313,7 +553,7 @@ mod tests {
     fn startup_options_are_rejected_as_command_options() {
         let err = plan_build(
             Command::Lint,
-            &[],
+            &resolved(&[]),
             &options(&["--home_rc"]),
             "/tmp/bep.json",
         )
@@ -344,6 +584,88 @@ mod tests {
             Err(ArgsError::BadReport {
                 value: "sarif".to_owned(),
             })
+        );
+    }
+
+    #[test]
+    fn workflow_plan_defaults_to_fail_fast_without_forced_keep_going() {
+        for verb in [
+            WorkflowVerb::Build,
+            WorkflowVerb::Test,
+            WorkflowVerb::Coverage,
+        ] {
+            let plan = plan_workflow(verb, &resolved(&[]), &[], None).expect("plan");
+            assert!(
+                !plan.argv.iter().any(|arg| arg == "--keep_going"),
+                "{verb:?} must not force keep_going: {plan:?}"
+            );
+        }
+        let plan = plan_workflow(WorkflowVerb::Test, &resolved(&[]), &[], None).expect("plan");
+        let argv: Vec<&str> = plan.argv.iter().map(String::as_str).collect();
+        assert_eq!(
+            argv[..5],
+            [
+                "bazel",
+                "--nohome_rc",
+                "--nosystem_rc",
+                "test",
+                "--@rules_dx//config:workspace=//dx:config",
+            ]
+        );
+        assert_eq!(argv[5..], ["//..."]);
+    }
+
+    #[test]
+    fn workflow_plan_forwards_explicit_keep_going() {
+        let plan = plan_workflow(
+            WorkflowVerb::Test,
+            &resolved(&[]),
+            &options(&["--keep_going"]),
+            None,
+        )
+        .expect("plan");
+        assert!(plan.argv.iter().any(|arg| arg == "--keep_going"));
+    }
+
+    #[test]
+    fn coverage_plan_requires_combined_lcov_report() {
+        let plan = plan_workflow(WorkflowVerb::Coverage, &resolved(&[]), &[], None).expect("plan");
+        assert!(plan
+            .argv
+            .iter()
+            .any(|arg| arg == COVERAGE_COMBINED_REPORT_FLAG));
+        let repeated = plan_workflow(
+            WorkflowVerb::Coverage,
+            &resolved(&[]),
+            &options(&[COVERAGE_COMBINED_REPORT_FLAG]),
+            None,
+        )
+        .expect("repeated required flag is accepted");
+        assert!(repeated
+            .argv
+            .iter()
+            .any(|arg| arg == COVERAGE_COMBINED_REPORT_FLAG));
+        let err = plan_workflow(
+            WorkflowVerb::Coverage,
+            &resolved(&[]),
+            &options(&["--combined_report=json"]),
+            None,
+        )
+        .expect_err("conflicting combined_report must fail");
+        assert!(
+            matches!(err, ForwardError::ConflictingOption { .. }),
+            "got {err:?}"
+        );
+        let err = plan_workflow(
+            WorkflowVerb::Test,
+            &resolved(&[]),
+            &options(&["--build_event_json_file=/tmp/other.json"]),
+            Some("/tmp/bep.json"),
+        )
+        .expect_err("BEP override must fail");
+        assert!(
+            matches!(err, ForwardError::ConflictingOption { .. }),
+            "got {err:?}"
         );
     }
 

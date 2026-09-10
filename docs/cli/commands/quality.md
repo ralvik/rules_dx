@@ -1,8 +1,10 @@
 # Quality Commands
 
 Explicit scope positionals accept Bazel labels and patterns (`//pkg:target`,
-`//pkg/...`); they resolve through Bazel unchanged. File paths stay
-unsupported: path resolution belongs to a later milestone.
+`//pkg/...`); they resolve through Bazel unchanged. Workspace-relative file
+paths resolve to every direct source owner through Bazel query, and
+directories become recursive patterns, per
+[Target Resolution](../target-resolution.md).
 
 ## `dx lint`
 

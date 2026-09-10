@@ -1,19 +1,26 @@
-//! Invocation parsing for the `dx` quality commands (M07 WP1+WP3).
+//! Invocation parsing for the `dx` quality, workflow, and run commands (M07 WP1+WP3, M08 WP1+WP4).
 //!
 //! Contract: `docs/cli/cli-contract.md#invocation-shape`. Scope positionals
 //! accept explicit Bazel labels and patterns (`//...`, `//pkg:target`,
-//! `@repo//pkg/...`); anything else fails with
-//! [`ArgsError::ScopeNotSupported`] because path resolution belongs to a
-//! later milestone. With no scope the repository operation (`//...`) runs.
+//! `@repo//pkg/...`) as well as workspace-relative file and directory
+//! paths. Package-relative labels (`:target`) and empty scopes fail with
+//! [`ArgsError::ScopeNotSupported`]; external-repository scopes parse but
+//! fail during resolution, and file ownership resolves through Bazel
+//! query per `docs/cli/target-resolution.md`. With no scope the
+//! repository operation (`//...`) runs.
 
 use dx_output::{OutputMode, Threshold};
 
-/// Quality command selected by the first positional argument.
+/// Quality, workflow, and run command selected by the first positional argument.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
     Lint,
     Typecheck,
     Format,
+    Build,
+    Test,
+    Coverage,
+    Run,
 }
 
 impl Command {
@@ -23,6 +30,10 @@ impl Command {
             Command::Lint => "lint",
             Command::Typecheck => "typecheck",
             Command::Format => "format",
+            Command::Build => "build",
+            Command::Test => "test",
+            Command::Coverage => "coverage",
+            Command::Run => "run",
         }
     }
 
@@ -31,8 +42,22 @@ impl Command {
             "lint" => Some(Command::Lint),
             "typecheck" => Some(Command::Typecheck),
             "format" => Some(Command::Format),
+            "build" => Some(Command::Build),
+            "test" => Some(Command::Test),
+            "coverage" => Some(Command::Coverage),
+            "run" => Some(Command::Run),
             _ => None,
         }
+    }
+
+    /// True for the Bazel-passthrough workflow commands (`build`, `test`,
+    /// `coverage`, `run`): they run Bazel verbs directly instead of the quality
+    /// aspect pipeline, so quality-only options do not apply to them.
+    pub fn is_workflow(self) -> bool {
+        matches!(
+            self,
+            Command::Build | Command::Test | Command::Coverage | Command::Run
+        )
     }
 }
 
@@ -78,23 +103,51 @@ impl Invocation {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgsError {
     MissingCommand,
-    UnknownCommand { command: String },
-    UnknownOption { option: String },
-    MissingValue { option: String },
-    BadOutput { value: String },
-    BadFailOn { value: String },
-    BadReport { value: String },
-    ScopeNotSupported { scope: String },
+    UnknownCommand {
+        command: String,
+    },
+    UnknownOption {
+        option: String,
+    },
+    UnsupportedOption {
+        command: &'static str,
+        option: String,
+    },
+    MissingValue {
+        option: String,
+    },
+    BadOutput {
+        value: String,
+    },
+    BadFailOn {
+        value: String,
+    },
+    BadReport {
+        value: String,
+    },
+    ScopeNotSupported {
+        scope: String,
+    },
 }
 
 impl std::fmt::Display for ArgsError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ArgsError::MissingCommand => write!(f, "missing command: want lint|typecheck|format"),
+            ArgsError::MissingCommand => write!(
+                f,
+                "missing command: want lint|typecheck|format|build|test|coverage|run"
+            ),
             ArgsError::UnknownCommand { command } => {
-                write!(f, "unknown command {command:?}: want lint|typecheck|format")
+                write!(
+                    f,
+                    "unknown command {command:?}: want lint|typecheck|format|build|test|coverage|run"
+                )
             }
             ArgsError::UnknownOption { option } => write!(f, "unknown option {option:?}"),
+            ArgsError::UnsupportedOption { command, option } => write!(
+                f,
+                "option {option:?} is not supported by dx {command}: Bazel owns the workflow status"
+            ),
             ArgsError::MissingValue { option } => write!(f, "missing value for {option:?}"),
             ArgsError::BadOutput { value } => {
                 write!(f, "unknown --output {value:?}: want text|diff|json")
@@ -111,7 +164,7 @@ impl std::fmt::Display for ArgsError {
             ArgsError::ScopeNotSupported { scope } => {
                 write!(
                     f,
-                    "unsupported scope {scope:?}: want Bazel labels starting with // or @; file paths need later-milestone resolution"
+                    "unsupported scope {scope:?}: want // or @ labels, or workspace-relative file and directory paths"
                 )
             }
         }
@@ -170,9 +223,10 @@ fn parse_report(value: &str) -> Result<ReportRequest, ArgsError> {
 ///
 /// Global options may appear before or after the command; the first
 /// positional argument selects the command. Later positionals are
-/// explicit Bazel labels or patterns resolved through Bazel; file paths
-/// stay unsupported. Arguments after the first bare `--` forward to
-/// Bazel as command options verbatim.
+/// explicit Bazel labels, patterns, or workspace-relative file and
+/// directory paths resolved through Bazel during execution; only
+/// package-relative labels and empty scopes fail here. Arguments after
+/// the first bare `--` forward to Bazel as command options verbatim.
 pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     let mut command: Option<Command> = None;
     let mut check = false;
@@ -262,22 +316,56 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                 );
             }
             Some(_) => {
-                if arg.starts_with("//") || arg.starts_with('@') {
-                    targets.push(arg.clone());
-                } else {
+                if arg.is_empty() || arg.starts_with(':') {
                     return Err(ArgsError::ScopeNotSupported { scope: arg.clone() });
                 }
+                targets.push(arg.clone());
             }
         }
         index += 1;
     }
     let command = command.ok_or(ArgsError::MissingCommand)?;
+    if command.is_workflow() {
+        // Workflow commands run Bazel verbs directly with Bazel-owned
+        // status: finding thresholds and check-mode mutation previews do
+        // not apply, so explicit uses fail fast instead of silently
+        // doing nothing.
+        if check {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--check".to_owned(),
+            });
+        }
+        if fail_on_name != "warning" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--fail-on".to_owned(),
+            });
+        }
+    }
     let output = OutputMode::parse(&output_name, quiet).map_err(|_| ArgsError::BadOutput {
         value: output_name.clone(),
     })?;
     let fail_on = Threshold::parse(&fail_on_name).map_err(|_| ArgsError::BadFailOn {
         value: fail_on_name.clone(),
     })?;
+    if command == Command::Run {
+        // O52: `dx run` is a local-only single-target launcher with prose
+        // lifecycle on stderr. Machine-owned stdout modes are rejected
+        // pre-exec so the application keeps the terminal.
+        if !matches!(output, OutputMode::Text { .. }) {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: format!("--output={output_name}"),
+            });
+        }
+        if let Some(request) = reports.first() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: format!("--report={}={}", request.format, request.destination),
+            });
+        }
+    }
     Ok(Invocation {
         command,
         check,
@@ -305,6 +393,17 @@ mod tests {
         assert_eq!(Command::Lint.name(), "lint");
         assert_eq!(Command::Typecheck.name(), "typecheck");
         assert_eq!(Command::Format.name(), "format");
+        assert_eq!(Command::Build.name(), "build");
+        assert_eq!(Command::Test.name(), "test");
+        assert_eq!(Command::Coverage.name(), "coverage");
+        assert_eq!(Command::Run.name(), "run");
+        assert!(!Command::Lint.is_workflow());
+        assert!(!Command::Typecheck.is_workflow());
+        assert!(!Command::Format.is_workflow());
+        assert!(Command::Build.is_workflow());
+        assert!(Command::Test.is_workflow());
+        assert!(Command::Coverage.is_workflow());
+        assert!(Command::Run.is_workflow());
     }
 
     #[test]
@@ -396,9 +495,9 @@ mod tests {
     #[test]
     fn unknown_command_fails() {
         assert_eq!(
-            parse(&args(&["build"])),
+            parse(&args(&["bogus"])),
             Err(ArgsError::UnknownCommand {
-                command: "build".to_owned(),
+                command: "bogus".to_owned(),
             })
         );
     }
@@ -410,19 +509,77 @@ mod tests {
     }
 
     #[test]
-    fn positional_scope_fails() {
+    fn path_scopes_parse_for_resolution() {
+        let got = parse(&args(&[
+            "lint",
+            "src/main.rs",
+            "quality/testdata/",
+            "./x.py",
+        ]))
+        .expect("parse");
         assert_eq!(
-            parse(&args(&["lint", "src/main.rs"])),
-            Err(ArgsError::ScopeNotSupported {
-                scope: "src/main.rs".to_owned(),
-            })
+            got.targets,
+            args(&["src/main.rs", "quality/testdata/", "./x.py"])
         );
+    }
+
+    #[test]
+    fn relative_and_empty_scope_fail() {
         assert_eq!(
             parse(&args(&["lint", ":corpus"])),
             Err(ArgsError::ScopeNotSupported {
                 scope: ":corpus".to_owned(),
             })
         );
+        assert_eq!(
+            parse(&args(&["lint", ""])),
+            Err(ArgsError::ScopeNotSupported {
+                scope: String::new(),
+            })
+        );
+    }
+
+    #[test]
+    fn workflow_commands_parse_scopes_and_options() {
+        for command in ["build", "test", "coverage"] {
+            let got =
+                parse(&args(&[command, "//a:one", "pkg/a.py", "--", "--jobs=4"])).expect("parse");
+            assert_eq!(got.command.name(), command);
+            assert_eq!(
+                got.targets,
+                args(&["//a:one", "pkg/a.py"]),
+                "scopes parse for resolution"
+            );
+            assert_eq!(got.bazel_options, args(&["--jobs=4"]));
+        }
+    }
+
+    #[test]
+    fn workflow_commands_reject_quality_only_options() {
+        assert_eq!(
+            parse(&args(&["build", "--check"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "build",
+                option: "--check".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["test", "--fail-on=error"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "test",
+                option: "--fail-on".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["coverage", "--check", "--fail-on=info"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "coverage",
+                option: "--check".to_owned(),
+            }),
+            "check is reported before fail-on"
+        );
+        // Quality commands keep both options.
+        assert!(parse(&args(&["lint", "--check", "--fail-on=error"])).is_ok());
     }
 
     #[test]
@@ -519,6 +676,14 @@ mod tests {
         .contains("--bogus"));
         assert!(format!(
             "{}",
+            ArgsError::UnsupportedOption {
+                command: "build",
+                option: "--check".to_owned(),
+            }
+        )
+        .contains("--check"));
+        assert!(format!(
+            "{}",
             ArgsError::MissingValue {
                 option: "--output".to_owned(),
             }
@@ -567,5 +732,34 @@ mod tests {
                 option: "--check=x".to_owned(),
             })
         );
+    }
+
+    #[test]
+    fn run_rejects_machine_output_and_reports() {
+        assert_eq!(
+            parse(&args(&["run", "//app:bin", "--output=json"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "run",
+                option: "--output=json".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["run", "//app:bin", "--output=diff"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "run",
+                option: "--output=diff".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["run", "--report=junit=out.xml"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "run",
+                option: "--report=junit=out.xml".to_owned(),
+            })
+        );
+        let got = parse(&args(&["run", "//app:bin", "--", "--port=8080"])).expect("parse run");
+        assert_eq!(got.command, Command::Run);
+        assert_eq!(got.targets, vec!["//app:bin".to_owned()]);
+        assert_eq!(got.bazel_options, vec!["--port=8080".to_owned()]);
     }
 }

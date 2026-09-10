@@ -1,4 +1,4 @@
-"""M07 WP1: quality command planning for the `dx` CLI."""
+"""M07 WP1 + M08 WP1: quality command planning and scope resolution for the `dx` CLI."""
 
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
@@ -14,6 +14,7 @@ dx_rust_library(
         "src/lib.rs",
         "src/plan.rs",
         "src/reports.rs",
+        "src/resolve.rs",
     ],
     crate_name = "dx_cli",
     edition = "2021",
@@ -24,6 +25,7 @@ dx_rust_library(
         "//dx/output:dx_output",
         "//dx/process:dx_process",
         "//quality/result:quality_result",
+        "@crates//:quick-xml",
         "@crates//:serde_json",
     ],
 )
