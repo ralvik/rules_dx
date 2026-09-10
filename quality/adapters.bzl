@@ -43,3 +43,42 @@ def adapter_supported_classes(tool_id, capability):
         fail("adapters: unknown tool '" + tool_id +
              "': not in the synthetic adapter registry")
     return sorted(SYNTHETIC_ADAPTERS[tool_id].get(capability, []))
+
+# Real initial-adapter capability manifests (M04 WP2, O20).
+#
+# Tool IDs are the stable built-in identifiers users select in policy
+# families. Each class has exactly one tool per capability in M04, so every
+# real target/capability pipeline holds a single stage and no virtual
+# convergence across tools runs yet; the pipeline formula still orders
+# stages by sorted tool ID (the provisional O19 rule) when several apply
+# to one mixed-class target.
+REAL_ADAPTERS = {
+    "buildifier": {"format": ["starlark"], "lint": ["starlark"]},
+    "clippy": {"lint": ["rust"]},
+    "rustfmt": {"format": ["rust"]},
+    "taplo": {"format": ["toml"], "lint": ["toml"]},
+    "vale": {"lint": ["markdown"]},
+}
+
+# WP2 fixture class-to-family assignment for the M04 source classes. Like
+# the synthetic map, this is a fixture, not the frozen taxonomy: the full
+# registry assignment and curated defaults stay pending the O15/O17
+# reviews.
+REAL_CLASS_TO_FAMILY = {
+    "markdown": "markdown",
+    "rust": "rust",
+    "starlark": "starlark",
+    "toml": "toml",
+}
+
+def real_supported_classes(tool_id, capability):
+    """Returns the sorted supported classes for one real tool/capability.
+
+    Fails on an unknown tool ID during configuration or analysis, matching
+    the tool-integrations contract. An unsupported capability returns [],
+    so the stage is omitted and no empty action is created.
+    """
+    if tool_id not in REAL_ADAPTERS:
+        fail("adapters: unknown tool '" + tool_id +
+             "': not in the real adapter registry")
+    return sorted(REAL_ADAPTERS[tool_id].get(capability, []))
