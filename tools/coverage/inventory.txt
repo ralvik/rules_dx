@@ -15,6 +15,7 @@
 # M03 WP2c: synthetic quality fixtures are fixture-only, never implementation.
 support quality/testdata/clean.rs
 support quality/testdata/dirty.rs
+support quality/testdata/hinted.rs
 eligible rust/hello/src/lib.rs
 eligible rust/hello/src/main.rs
 eligible quality/adapter/src/commands.rs

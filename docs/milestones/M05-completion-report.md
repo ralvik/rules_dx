@@ -85,6 +85,17 @@ generated files moved 9.2.0 to 9.2.1 (3 lines), flag lines untouched.
   `--fail_on warning`, ownership audit reports zero uncovered.
 - The branch was merged by hand; `renovate.json` sets no auto-merge.
 
+The drill PR also closed a pre-existing red `main`: the
+implementation-coverage gate had failed since the M04 completion-report
+push (`quality/testdata/hinted.rs` declared by Bazel but missing from
+`tools/coverage/inventory.txt`), and the WP3 sibling feature had left
+three executable lines uncovered (`quality/markdown/src/lib.rs:323`,
+the empty-resolution index branch; `quality/runner/src/real.rs:620,636`,
+the initial/terminal diagnose error arms). The fix adds the `support`
+inventory line for the fixture and three unit tests (self-directory
+index resolution, initial-diagnose abort, poisoned-terminal abort);
+the gate now reports `PASS 6453/6453 executable lines` with no errors.
+
 ## WP1 Corpus Ownership
 
 22 `real_source_target(name = "corpus")` targets (one per package) own every

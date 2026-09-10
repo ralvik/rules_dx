@@ -1799,6 +1799,35 @@ mod tests {
         Err(io::Error::new(io::ErrorKind::NotFound, "fix binary gone"))
     }
 
+    /// Check double that poisons the file on fix: the initial check
+    /// succeeds, convergence applies the poison, and the terminal check
+    /// fails on the poisoned bytes.
+    fn check_ok_fix_poisons(
+        argv: &[OsString],
+        _cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_hermetic(env);
+        let file = last_file(argv);
+        if argv.iter().any(|arg| arg == "--check") {
+            let bytes = std::fs::read(&file).expect("checked file is materialized");
+            if bytes == b"POISON\n" {
+                return Err(io::Error::new(io::ErrorKind::Other, "poisoned terminal"));
+            }
+            return Ok(ChildOutput {
+                code: Some(0),
+                stdout: Vec::new(),
+                stderr: Vec::new(),
+            });
+        }
+        std::fs::write(&file, b"POISON\n").expect("fix writes back");
+        Ok(ChildOutput {
+            code: Some(0),
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+        })
+    }
+
     #[test]
     fn production_constructor_resolves_tools() {
         let tools = BTreeMap::from([("rustfmt".to_owned(), plain_tool())]);
@@ -1832,6 +1861,28 @@ mod tests {
         let files = vec![file("src/main.rs", "x  \n")];
         let err = run_real_pipeline("//quality:test", "format", &stages, &files, &backend)
             .expect_err("fix fails");
+        assert!(matches!(err, RunnerError::ToolExecution { .. }));
+        assert!(err.to_string().contains("spawn"));
+    }
+
+    #[test]
+    fn check_spawn_failure_aborts_initial_diagnose() {
+        let backend = backend_for("rustfmt", plain_tool(), missing_spawn);
+        let stages = vec![stage("rustfmt", &["rust"], &["src/main.rs"])];
+        let files = vec![file("src/main.rs", "x\n")];
+        let err = run_real_pipeline("//quality:test", "format", &stages, &files, &backend)
+            .expect_err("check spawn fails");
+        assert!(matches!(err, RunnerError::ToolExecution { .. }));
+        assert!(err.to_string().contains("spawn"));
+    }
+
+    #[test]
+    fn terminal_check_failure_aborts_the_pipeline() {
+        let backend = backend_for("rustfmt", plain_tool(), check_ok_fix_poisons);
+        let stages = vec![stage("rustfmt", &["rust"], &["src/main.rs"])];
+        let files = vec![file("src/main.rs", "x\n")];
+        let err = run_real_pipeline("//quality:test", "format", &stages, &files, &backend)
+            .expect_err("terminal check fails");
         assert!(matches!(err, RunnerError::ToolExecution { .. }));
         assert!(err.to_string().contains("spawn"));
     }

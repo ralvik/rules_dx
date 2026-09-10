@@ -1064,6 +1064,15 @@ mod tests {
     }
 
     #[test]
+    fn self_directory_link_resolves_to_root_readme_index() {
+        // A target normalizing to the source's own directory resolves to
+        // its declared `README.md` index (empty resolution branch).
+        let text = "# T\n\nSee the [index](./) page.\n";
+        let outcome = check_markdown("notes.md", text, &siblings(&[("README.md", "# Root\n")]));
+        assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
+    }
+
+    #[test]
     fn multiline_code_span_hides_autolink() {
         // A code span opened on one line closes on the next; the `<pkg>`
         // inside is span content, not an autolink (doc-ir shape).
