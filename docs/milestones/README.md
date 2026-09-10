@@ -62,7 +62,7 @@ adoption scope (depends on M29).
 | M02 | [Minimum Rust Wrappers And Providers](M02-minimum-rust-wrappers-providers.md) ([report](M02-completion-report.md)) | M01 | Ready |
 | M03 | [Quality Source, Policy, Result, Runner, And Evaluator Core](M03-quality-core.md) ([report](M03-completion-report.md)) | M01, M02 | Ready |
 | M04 | [Rust, Starlark, TOML, And Markdown Acquisition And Adapters](M04-initial-quality-adapters.md) ([report](M04-completion-report.md)) | M03 | Ready |
-| M05 | [Direct Bazel Dogfood](M05-direct-bazel-dogfood.md) | M04 | Pending |
+| M05 | [Direct Bazel Dogfood](M05-direct-bazel-dogfood.md) ([report](M05-completion-report.md)) | M04 | Ready |
 | M06 | [CLI Process, Output, BEP, And Apply](M06-cli-process-output-bep-apply.md) | M03, M05 | Pending |
 | M07 | [Initial Quality CLI And Full Initial Dogfood](M07-initial-quality-cli-dogfood.md) | M06 | Pending |
 | M08 | [Target Resolution And Basic Commands](M08-target-resolution-basic-commands.md) | M06 | Pending |

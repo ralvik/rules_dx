@@ -23,7 +23,7 @@ evaluator at `--fail_on warning`. The same invocations run in CI
 (`.github/workflows/ci.yml`, job `corpus-dogfood`), which installs no
 quality tools: all tools execute as Bazel-resolved pinned actions.
 
-Select the corpus targets (currently 22), then build their `dx_results`:
+Select the corpus targets (currently 23), then build their `dx_results`:
 
 ```sh
 bazel query "attr(name, '^corpus$', kind(real_source_target, //...))" \
@@ -73,6 +73,28 @@ comm -23 /tmp/corpus_applicable.txt /tmp/corpus_closure.txt
 
 The last command prints nothing when every applicable file has a corpus
 owner.
+
+## Preset Update Loop
+
+Shared Bazel execution flags live in the vendored preset (`tools/bazelrc`),
+version-matched to `.bazelversion`. Review and change flags only through
+the inventory in `tools/bazelrc/preset.py`:
+
+```sh
+bazel run //tools/bazelrc:preset.update -- --verify-only
+bazel run //tools/bazelrc:preset.update
+```
+
+The verify command rejects stale generated files, prints the flag diff
+under review, and rejects root `.bazelrc` lines that duplicate preset
+flags (reconcile by removing the owned duplicates; project overrides stay
+explicit and `user.bazelrc` stays last). `preset.update_test` pins the pin
+and the inventory in `bazel test //...`.
+
+Version bumps arrive as Renovate PRs (`renovate.json`, `bazel` manager, no
+auto-merge). The loop stays manual: run the regen, review the flag diff,
+update the test pins, run full verification (`bazel build //...`,
+`bazel test //...`, plus the corpus dogfood above), then merge by hand.
 
 ## Planned Linux-First Bring-Up
 

@@ -1,22 +1,10 @@
 # M00 seed Bazel configuration. Linux-first, local-only bring-up.
-common --enable_bzlmod
+# M05 WP4: shared execution flags live in the vendored preset fragment (O62);
+# review and change them only through `tools/bazelrc/preset.py`.
+import %workspace%/tools/bazelrc/preset.bazelrc
+
+# Project overrides stay explicit here, never in the generated fragment.
+# (No project-only flags today; the preset covers the shared baseline.)
 
 # Carry over per-person local flags when present (never committed).
 try-import %workspace%/user.bazelrc
-
-build --verbose_failures
-test --test_output=errors
-
-# Rust llvm-cov integration. Bazel 9 only invokes the rules_rust
-# collect_coverage step when GENERATE_LLVM_LCOV is set (see
-# https://github.com/bazelbuild/rules_rust/issues/3948); without it
-# `bazel coverage` silently emits empty coverage.dat files on GCC hosts.
-coverage --test_env=GENERATE_LLVM_LCOV=1
-coverage --combined_report=lcov
-# Instrument every workspace-owned target (`@` external repos never match
-# `^//`); the gate scopes enforcement via the source inventory, so new
-# first-party packages are covered without filter maintenance. The filter
-# matches target labels, where package and target name are joined by `:`,
-# so a prefix ending in `/` would silently skip targets declared directly
-# in that package (this dropped //tools/coverage:coverage_gate_test).
-coverage --instrumentation_filter=^//

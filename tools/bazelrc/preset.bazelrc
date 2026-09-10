@@ -1,0 +1,11 @@
+# Vendored Bazel execution preset -- GENERATED, do not edit.
+# Version-matched to Bazel 9.2.0 (`.bazelversion`); reviewed inventory in `tools/bazelrc/preset.py`.
+# Regenerate: `bazel run //tools/bazelrc:preset.update`.
+# Upstream-derived flags (reviewed):
+common --enable_bzlmod
+build --verbose_failures
+test --test_output=errors
+# Owned extra_presets group: coverage.
+coverage --test_env=GENERATE_LLVM_LCOV=1
+coverage --combined_report=lcov
+coverage --instrumentation_filter=^//
