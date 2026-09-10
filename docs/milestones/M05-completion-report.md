@@ -66,7 +66,24 @@ for the native bot; the Renovate interim above is recorded in its row.
 
 ### Update-Loop Drill Evidence
 
-Pending: drill branch exercising the loop (see WP4 work notes).
+Branch `drill/preset-update-loop` exercised the full loop against a
+simulated bump. No newer stable Bazel exists (9.2.1, 9.3.0, 9.4.0 verified
+absent through Bazelisk: `could not download Bazel ... not found`), so the
+drill reproduces the exact post-bump observable state: pin lines in both
+generated files moved 9.2.0 to 9.2.1 (3 lines), flag lines untouched.
+
+- Skew: `preset.update_test` failed (`FAIL: preset pin`; `missing
+  substring 1/8`), proving a bump without a reviewed regen goes red.
+- Regen: `bazel run //tools/bazelrc:preset.update` restored the files; the
+  flag diff under review was the 3 pin lines only, all 6 flag lines
+  byte-identical: pin-only, no flag changes required.
+- Disposition: the 9.2.1 bump was correctly not adopted (no such release;
+  9.2.0 stays latest stable per dependency currency).
+- Verification after regen: `preset.update_test` passes,
+  `bazel build //...` succeeds, `bazel test //...` passes 40/40, corpus
+  dogfood covers all 23 corpus targets with 46/46 evaluator passes at
+  `--fail_on warning`, ownership audit reports zero uncovered.
+- The branch was merged by hand; `renovate.json` sets no auto-merge.
 
 ## WP1 Corpus Ownership
 

@@ -1,5 +1,5 @@
 # Vendored Bazel execution preset -- GENERATED, do not edit.
-# Version-matched to Bazel 9.2.1 (`.bazelversion`); reviewed inventory in `tools/bazelrc/preset.py`.
+# Version-matched to Bazel 9.2.0 (`.bazelversion`); reviewed inventory in `tools/bazelrc/preset.py`.
 # Regenerate: `bazel run //tools/bazelrc:preset.update`.
 # Upstream-derived flags (reviewed):
 common --enable_bzlmod
