@@ -29,7 +29,8 @@
 //! Clippy has no fix command: the backend applies `MachineApplicable`
 //! suggestions in memory and re-checks the patched bytes on the next
 //! round, so only suggestions that truly resolve their finding mark it
-//! fixable. Vale is check-only and never rewrites.
+//! fixable. Vale and the Markdown checker are check-only and never
+//! rewrite.
 
 use std::collections::BTreeMap;
 use std::ffi::{OsStr, OsString};
@@ -51,7 +52,14 @@ use quality_result::proto::Diagnostic;
 /// in `//quality:adapters.bzl`; the Starlark registry stays authoritative
 /// for pipeline construction, this list pins the dispatch the backend
 /// implements.
-pub const REAL_TOOLS: &[&str] = &["buildifier", "clippy", "rustfmt", "taplo", "vale"];
+pub const REAL_TOOLS: &[&str] = &[
+    "buildifier",
+    "clippy",
+    "markdown_check",
+    "rustfmt",
+    "taplo",
+    "vale",
+];
 
 /// Scratch-relative home for the materialized rustfmt defaults: without
 /// a hinted config the tool still gets an explicit `--config-path`, so
@@ -116,9 +124,11 @@ fn write_all(scratch: &Scratch, tool_id: &str, mirrors: &[MirrorFile]) -> Result
         .map_err(|err| execution(tool_id, format!("materialize: {err}")))
 }
 
-/// Selects the Buildifier config directory: the mirrored config's
-/// parent when hinted, so upward discovery finds exactly the hint.
-fn buildifier_dir<'a>(config_rel: Option<&'a str>, cwd_rel: &'a str) -> Option<&'a str> {
+/// Selects the working directory for tools with no config flag that
+/// discover native config upward from the working directory (Buildifier,
+/// Clippy): the mirrored config's parent when hinted, so discovery finds
+/// exactly the hint.
+fn hint_dir<'a>(config_rel: Option<&'a str>, cwd_rel: &'a str) -> Option<&'a str> {
     config_rel.map(|_| cwd_rel)
 }
 
@@ -246,13 +256,13 @@ impl RealBackend {
             .transpose()
     }
 
-    /// Scratch working directory for check commands: Buildifier and
-    /// Vale discover native config upward from the working directory,
+    /// Scratch working directory for check commands: Buildifier, Clippy,
+    /// and Vale discover native config upward from the working directory,
     /// so with a hint the command runs from the mirrored config
     /// directory; every other tool runs from the scratch root.
     fn cwd_rel(tool_id: &str, config_rel: Option<&str>) -> String {
         match tool_id {
-            "buildifier" | "vale" => config_rel.map(parent_rel).unwrap_or_default(),
+            "buildifier" | "clippy" | "vale" => config_rel.map(parent_rel).unwrap_or_default(),
             _ => String::new(),
         }
     }
@@ -283,7 +293,7 @@ impl RealBackend {
                 let invocation = commands::buildifier_check(
                     &tool.binary,
                     &refs,
-                    buildifier_dir(tool.config_rel.as_deref(), &cwd_rel),
+                    hint_dir(tool.config_rel.as_deref(), &cwd_rel),
                 );
                 let out = self.run(tool_id, tool, &invocation, scratch)?;
                 let reported = parsed(
@@ -313,6 +323,7 @@ impl RealBackend {
                         absolute,
                         &commands::crate_name_for(&stem),
                         &out_dir,
+                        hint_dir(tool.config_rel.as_deref(), &cwd_rel),
                     );
                     let out = self.run(tool_id, tool, &invocation, scratch)?;
                     let name = absolute.to_string_lossy().into_owned();
@@ -322,6 +333,39 @@ impl RealBackend {
                     )?);
                 }
                 Ok(findings)
+            }
+            "markdown_check" => {
+                let specs: Vec<(&str, &Path)> = pairs
+                    .iter()
+                    .map(|(workspace, absolute)| (workspace.as_str(), absolute.as_path()))
+                    .collect();
+                let invocation = commands::markdown_check(&tool.binary, &specs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                let workspaces: Vec<&str> = pairs
+                    .iter()
+                    .map(|(workspace, _)| workspace.as_str())
+                    .collect();
+                let reported = parsed(
+                    tool_id,
+                    parsers::parse_markdown_findings(&out.stdout, out.code, &workspaces),
+                )?;
+                // The checker keys findings off the `--source` workspace
+                // paths; re-root each validated path onto its
+                // scratch-absolute path for placement. The lookup is
+                // infallible: the parser already rejected unknown paths.
+                let mut rerooted = Vec::with_capacity(reported.len());
+                for found in reported {
+                    let absolute = pairs
+                        .iter()
+                        .find(|(workspace, _)| *workspace == found.file)
+                        .map(|(_, absolute)| absolute.to_string_lossy().into_owned())
+                        .expect("parsed path was checked");
+                    rerooted.push(FileFinding {
+                        file: absolute,
+                        finding: found.finding,
+                    });
+                }
+                Ok(rerooted)
             }
             "rustfmt" => {
                 let invocation = commands::rustfmt(
@@ -405,13 +449,14 @@ impl RealBackend {
     /// Applies one fix round to a single file's bytes and returns the
     /// result. Format tools run their in-place fix and the bytes are
     /// re-read; Clippy applies `MachineApplicable` suggestions from a
-    /// fresh check in memory; Vale returns its input.
+    /// fresh check in memory; Vale and the Markdown checker return their
+    /// input.
     pub fn apply_fix(&self, tool_id: &str, path: &str, text: &str) -> Result<String, RunnerError> {
         let tool = self.tool(tool_id)?;
         match tool_id {
             "rustfmt" | "buildifier" | "taplo" => self.run_fix(tool_id, tool, path, text),
             "clippy" => self.apply_clippy(tool_id, path, text),
-            "vale" => Ok(text.to_owned()),
+            "vale" | "markdown_check" => Ok(text.to_owned()),
             _ => Err(execution(
                 tool_id,
                 format!("unsupported real tool: {tool_id}"),
@@ -447,7 +492,7 @@ impl RealBackend {
             "buildifier" => commands::buildifier_fix(
                 &tool.binary,
                 &refs,
-                buildifier_dir(tool.config_rel.as_deref(), &cwd_rel),
+                hint_dir(tool.config_rel.as_deref(), &cwd_rel),
             ),
             _ => commands::taplo_format(&tool.binary, &refs, config.as_deref(), false),
         };
@@ -774,6 +819,56 @@ mod tests {
         })
     }
 
+    /// Repo-owned Markdown checker double: reports one
+    /// `missing-file-target` finding per `--source` workspace path whose
+    /// materialized bytes contain the `BROKEN` marker, keyed by workspace
+    /// path exactly like the real binary.
+    fn markdown_links(
+        argv: &[OsString],
+        _cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_hermetic(env);
+        let mut out = String::new();
+        // From argv[0]: the binary path takes the non-`--source` branch,
+        // like any non-mapping argument would.
+        let mut index = 0;
+        while index < argv.len() {
+            if argv[index] == "--source" {
+                let mapping = argv[index + 1].to_string_lossy().into_owned();
+                let (workspace, absolute) = mapping.split_once('=').expect("--source maps WS=ABS");
+                let bytes = std::fs::read(absolute).expect("checked file is materialized");
+                let text = String::from_utf8(bytes).expect("checked bytes are UTF-8");
+                if text.contains("BROKEN") {
+                    out.push_str(&format!(
+                        "{{\"path\":\"{workspace}\",\"line\":2,\"kind\":\"missing-file-target\",\"message\":\"link target nope.md does not match a checked source\"}}\n"
+                    ));
+                }
+                index += 1;
+            }
+            index += 1;
+        }
+        Ok(ChildOutput {
+            code: Some(0),
+            stdout: out.into_bytes(),
+            stderr: Vec::new(),
+        })
+    }
+
+    fn markdown_broken(
+        argv: &[OsString],
+        _cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_hermetic(env);
+        let _ = last_file(argv);
+        Ok(ChildOutput {
+            code: Some(2),
+            stdout: Vec::new(),
+            stderr: b"markdown_check: bad usage".to_vec(),
+        })
+    }
+
     fn clippy_len_zero(
         argv: &[OsString],
         _cwd: &Path,
@@ -810,6 +905,19 @@ mod tests {
             stdout: Vec::new(),
             stderr: stderr.into_bytes(),
         })
+    }
+
+    fn clippy_hinted(
+        argv: &[OsString],
+        cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_hermetic(env);
+        assert!(
+            cwd.ends_with("cfg"),
+            "hinted clippy runs from the config dir"
+        );
+        clippy_len_zero(argv, cwd, env)
     }
 
     fn clippy_garbage(
@@ -924,7 +1032,14 @@ mod tests {
     fn real_tools_pin_the_m04_set() {
         assert_eq!(
             REAL_TOOLS,
-            &["buildifier", "clippy", "rustfmt", "taplo", "vale"]
+            &[
+                "buildifier",
+                "clippy",
+                "markdown_check",
+                "rustfmt",
+                "taplo",
+                "vale"
+            ]
         );
     }
 
@@ -997,6 +1112,55 @@ mod tests {
         assert_eq!(result.terminal_diagnostics.len(), 1);
         assert!(result.replacements.is_empty());
         assert!(encode_validated(&result).is_ok());
+    }
+
+    #[test]
+    fn markdown_check_reports_workspace_keyed_findings() {
+        let backend = backend_for("markdown_check", plain_tool(), markdown_links);
+        let mut inputs = BTreeMap::new();
+        inputs.insert("doc/guide.md".to_owned(), "# Guide\n\nBROKEN\n".to_owned());
+        inputs.insert("README.md".to_owned(), "# Readme\n".to_owned());
+        let findings = backend
+            .diagnose("markdown_check", "lint", &inputs)
+            .expect("diagnosed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].tool_id, "markdown_check");
+        assert_eq!(findings[0].rule_id, "missing-file-target");
+        assert_eq!(findings[0].path, "doc/guide.md");
+        // Line 2, column 1 places at the second line's first byte.
+        assert_eq!(findings[0].start_byte, Some(8));
+        assert_eq!(findings[0].end_byte, Some(8));
+        assert!(!findings[0].fixable);
+    }
+
+    #[test]
+    fn markdown_check_pipeline_is_stable_without_rewriting() {
+        let backend = backend_for("markdown_check", plain_tool(), markdown_links);
+        let stages = vec![stage("markdown_check", &["markdown"], &["doc/guide.md"])];
+        let files = vec![file("doc/guide.md", "# Guide\n\nBROKEN\n")];
+        let result = run_real_pipeline("//quality:test", "lint", &stages, &files, &backend)
+            .expect("real pipeline");
+        assert_eq!(result.convergence, Convergence::Stable as i32);
+        assert_eq!(result.completed_rounds, 1);
+        assert_eq!(result.initial_diagnostics.len(), 1);
+        assert_eq!(result.initial_diagnostics[0].tool_id, "markdown_check");
+        assert_eq!(result.terminal_diagnostics.len(), 1);
+        assert!(result.replacements.is_empty());
+        assert!(encode_validated(&result).is_ok());
+    }
+
+    #[test]
+    fn markdown_check_failure_fails_the_action() {
+        let backend = backend_for("markdown_check", plain_tool(), markdown_broken);
+        let err = backend
+            .diagnose(
+                "markdown_check",
+                "lint",
+                &single("doc/guide.md", "# Guide\n"),
+            )
+            .expect_err("exit 2 fails");
+        assert!(matches!(err, RunnerError::ToolOutput { .. }));
+        assert!(err.to_string().contains("findings exist only on exit 0"));
     }
 
     #[test]
@@ -1120,6 +1284,25 @@ mod tests {
             (findings[0].start_byte, findings[0].end_byte),
             (Some(8), Some(20))
         );
+    }
+
+    #[test]
+    fn clippy_hint_runs_from_the_config_dir() {
+        let tool = RealTool {
+            config_rel: Some("cfg/clippy.toml".to_owned()),
+            tool_files: vec![("cfg/clippy.toml".to_owned(), b"".to_vec())],
+            ..plain_tool()
+        };
+        let backend = backend_for("clippy", tool, clippy_hinted);
+        let findings = backend
+            .diagnose(
+                "clippy",
+                "lint",
+                &single("src/main.rs", "let y = v.len() == 0;\n"),
+            )
+            .expect("diagnosed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].rule_id, "clippy::len_zero");
     }
 
     #[test]

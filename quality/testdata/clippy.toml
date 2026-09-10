@@ -1,0 +1,4 @@
+# M04 WP3: hinted Clippy config. Lowers the too-many-arguments threshold so
+# the hinted fixture trips `clippy::too_many_arguments` where upstream
+# defaults stay silent, proving the hint is discovered and applied.
+too-many-arguments-threshold = 2

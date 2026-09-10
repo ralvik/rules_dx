@@ -1,8 +1,11 @@
-"""WP2c aspect fixtures and evidence (M03)."""
+"""WP2c aspect fixtures and evidence (M03 synthetic, M04 real)."""
 
-load("//quality:fixtures.bzl", "quality_source_target")
 load("//quality:aspect_subject.bzl", "aspect_subject")
+load("//quality:fixtures.bzl", "quality_source_target", "real_source_target")
+load("//quality:native_config.bzl", "clippy_config", "vale_config")
 load(":aspect_tests.bzl", "aspect_fixture_tests")
+load(":real_aspect_subject.bzl", "real_aspect_subject")
+load(":real_aspect_tests.bzl", "real_aspect_fixture_tests")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -79,5 +82,125 @@ aspect_fixture_tests(
         ":fixture_python_subject",
         ":fixture_rust_subject",
         ":plain_subject",
+    ],
+)
+
+vale_config(
+    name = "vale_cfg",
+    src = "vale_test.ini",
+    data = ["styles/.keep"],
+)
+
+clippy_config(
+    name = "clippy_cfg",
+    src = "clippy.toml",
+)
+
+real_source_target(
+    name = "fixture_real_rust",
+    rust_srcs = ["clean.rs"],
+)
+
+real_source_target(
+    name = "fixture_real_starlark",
+    starlark_srcs = ["real_clean.bzl"],
+)
+
+real_source_target(
+    name = "fixture_real_toml",
+    toml_srcs = ["real_clean.toml"],
+)
+
+real_source_target(
+    name = "fixture_real_markdown",
+    aspect_hints = [":vale_cfg"],
+    markdown_srcs = ["real_clean.md"],
+)
+
+real_source_target(
+    name = "fixture_real_mixed",
+    rust_srcs = ["clean.rs"],
+    starlark_srcs = ["real_clean.bzl"],
+    toml_srcs = ["real_clean.toml"],
+)
+
+real_source_target(
+    name = "fixture_real_no_lint",
+    rust_srcs = ["clean.rs"],
+    starlark_srcs = ["real_clean.bzl"],
+    tags = ["no-lint"],
+)
+
+real_aspect_subject(
+    name = "fixture_real_rust_subject",
+    target = ":fixture_real_rust",
+)
+
+real_source_target(
+    name = "fixture_real_rust_hinted",
+    aspect_hints = [":clippy_cfg"],
+    rust_srcs = ["hinted.rs"],
+)
+
+real_aspect_subject(
+    name = "fixture_real_rust_hinted_subject",
+    target = ":fixture_real_rust_hinted",
+)
+
+real_aspect_subject(
+    name = "fixture_real_starlark_subject",
+    target = ":fixture_real_starlark",
+)
+
+real_aspect_subject(
+    name = "fixture_real_toml_subject",
+    target = ":fixture_real_toml",
+)
+
+real_source_target(
+    name = "fixture_real_markdown_no_config",
+    markdown_srcs = ["real_clean.md"],
+)
+
+real_aspect_subject(
+    name = "fixture_real_markdown_subject",
+    target = ":fixture_real_markdown",
+)
+
+real_aspect_subject(
+    name = "fixture_real_mixed_subject",
+    target = ":fixture_real_mixed",
+)
+
+real_aspect_subject(
+    name = "fixture_real_no_lint_subject",
+    target = ":fixture_real_no_lint",
+)
+
+real_aspect_subject(
+    name = "real_plain_subject",
+    target = ":plain",
+)
+
+# Manual negative demo (M04 WP2): markdown without a vale_config hint must
+# fail analysis with the actionable config-required error. Never part of
+# `//...` suites: build explicitly with --nobuild to observe the failure.
+real_aspect_subject(
+    name = "fixture_real_markdown_no_config_subject",
+    tags = ["manual"],
+    target = ":fixture_real_markdown_no_config",
+)
+
+real_aspect_fixture_tests(
+    name = "real_aspect_presence",
+    subjects = [
+        ":fixture_real_markdown_subject",
+        ":fixture_real_mixed_subject",
+        ":fixture_real_no_lint_subject",
+        ":fixture_real_rust_subject",
+        ":fixture_real_rust_hinted_subject",
+        ":fixture_real_starlark_subject",
+        ":fixture_real_toml_subject",
+        ":real_plain_subject",
     ],
 )

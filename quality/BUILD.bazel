@@ -21,6 +21,7 @@ exports_files([
     "native_config.bzl",
     "pipeline.bzl",
     "policy.bzl",
+    "real_aspects.bzl",
     "result.proto",
     "sources.bzl",
 ])
@@ -92,7 +93,10 @@ quality_family(
 quality_family(
     name = "real_markdown_family",
     family_id = "markdown",
-    lint = ["vale"],
+    lint = [
+        "markdown_check",
+        "vale",
+    ],
 )
 
 workspace_policy(

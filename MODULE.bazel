@@ -53,6 +53,7 @@ crate.from_cargo(
         "//rust/hello:Cargo.toml",
         "//quality/adapter:Cargo.toml",
         "//quality/evaluator:Cargo.toml",
+        "//quality/markdown:Cargo.toml",
         "//quality/result:Cargo.toml",
         "//quality/runner:Cargo.toml",
     ],

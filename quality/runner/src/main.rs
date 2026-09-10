@@ -197,10 +197,21 @@ fn run() -> Result<(), String> {
         if tools.contains_key(&tool_id) {
             return Err(format!("duplicate --tool-binary for {tool_id:?}"));
         }
+        // Bazel actions pass exec-root-relative tool paths while the backend
+        // spawns from scratch trees under TMPDIR, so resolve relatives against
+        // the startup working directory (the action exec root) now. Absolute
+        // paths pass through unchanged.
+        let absolute = if binary.is_absolute() {
+            binary
+        } else {
+            std::env::current_dir()
+                .map(|cwd| cwd.join(&binary))
+                .unwrap_or(binary)
+        };
         tools.insert(
             tool_id,
             RealTool {
-                binary,
+                binary: absolute,
                 extra_env: Vec::new(),
                 config_rel: None,
                 tool_files: Vec::new(),

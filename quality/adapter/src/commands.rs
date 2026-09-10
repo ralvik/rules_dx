@@ -7,13 +7,19 @@
 //! * One invocations shape per (tool, mode); config is always explicit:
 //!   `--config=off` for unhinted Buildifier (blocks upward discovery),
 //!   `--config-path` (real or empty-defaults) for rustfmt, `-c` or
-//!   `--no-auto-config` for Taplo, `--config` for Vale, and a mirrored
-//!   root `clippy.toml` (real or empty-defaults) with cwd pinning for
-//!   Clippy, which offers no config flag.
+//!   `--no-auto-config` for Taplo, `--config` for Vale, and the hinted
+//!   config's directory as `cwd_rel` for Clippy, which offers no config
+//!   flag (its upward discovery then finds exactly the hinted
+//!   `clippy.toml`; an unhinted Clippy run uses the empty scratch root,
+//!   where nothing is discoverable).
 //! * Clippy compiles one file per invocation (`rustc` accepts a single
 //!   input root); every other tool takes the whole stage file list.
 //! * rustfmt always passes `--edition 2021`: the CLI flag silently wins
 //!   over any config `edition` key, matching the pinned toolchain scope.
+//! * The repo-owned Markdown checker takes one `--source WS_PATH=EXEC_PATH`
+//!   mapping per stage file (its union-closure sibling rule keys off the
+//!   workspace paths) and needs no config: it performs no discovery, so
+//!   `cwd_rel` is always the scratch root.
 
 use std::ffi::OsString;
 use std::path::Path;
@@ -102,8 +108,18 @@ pub fn buildifier_fix(binary: &Path, files: &[&Path], config_dir_rel: Option<&st
 }
 
 /// Clippy single-file check invocation. The crate name derives from the
-/// file stem; `--out-dir` keeps metadata inside scratch.
-pub fn clippy_check(binary: &Path, file: &Path, crate_name: &str, out_dir: &Path) -> Invocation {
+/// file stem; `--out-dir` keeps metadata inside scratch. Clippy offers no
+/// config flag: it discovers `clippy.toml` upward from the working
+/// directory, so a hint pins `cwd_rel` to the mirrored config's directory
+/// while a bare run uses the scratch root (upstream defaults, nothing
+/// discoverable).
+pub fn clippy_check(
+    binary: &Path,
+    file: &Path,
+    crate_name: &str,
+    out_dir: &Path,
+    config_dir_rel: Option<&str>,
+) -> Invocation {
     invocation(
         binary,
         &[
@@ -117,7 +133,7 @@ pub fn clippy_check(binary: &Path, file: &Path, crate_name: &str, out_dir: &Path
             crate_name,
         ],
         &[file],
-        "",
+        config_dir_rel.unwrap_or(""),
     )
 }
 
@@ -213,6 +229,28 @@ pub fn vale_check(binary: &Path, ini: &Path, files: &[&Path], ini_dir_rel: &str)
     )
 }
 
+/// Repo-owned Markdown link/structure check invocation. One `--source`
+/// `workspace=absolute` mapping per stage file, in stage order; the
+/// checker reads the absolute bytes but keys sibling resolution and its
+/// finding paths off the workspace paths, so the caller re-roots reported
+/// paths onto scratch-absolute paths before placement. No config exists
+/// and the checker performs no discovery, so `cwd_rel` is always empty.
+pub fn markdown_check(binary: &Path, sources: &[(&str, &Path)]) -> Invocation {
+    let mut argv = Vec::with_capacity(1 + 2 * sources.len());
+    argv.push(binary.as_os_str().to_owned());
+    for (workspace, absolute) in sources {
+        argv.push(OsString::from("--source"));
+        let mut mapping = OsString::from(workspace);
+        mapping.push(OsString::from("="));
+        mapping.push(absolute.as_os_str());
+        argv.push(mapping);
+    }
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -265,12 +303,13 @@ mod tests {
     }
 
     #[test]
-    fn clippy_check_is_single_file_with_scratch_out_dir() {
+    fn clippy_check_encodes_config_discovery() {
         let invocation = clippy_check(
             Path::new(BIN),
             Path::new(FILE),
             "main",
             Path::new("/scratch/out"),
+            None,
         );
         assert_eq!(
             argv_strings(&invocation),
@@ -287,6 +326,16 @@ mod tests {
                 FILE
             ]
         );
+        assert_eq!(invocation.cwd_rel, "");
+        let hinted = clippy_check(
+            Path::new(BIN),
+            Path::new(FILE),
+            "main",
+            Path::new("/scratch/out"),
+            Some("tools/clippy"),
+        );
+        assert_eq!(argv_strings(&hinted), argv_strings(&invocation));
+        assert_eq!(hinted.cwd_rel, "tools/clippy");
     }
 
     #[test]
@@ -366,6 +415,28 @@ mod tests {
                 FILE
             ]
         );
+    }
+
+    #[test]
+    fn markdown_check_maps_workspace_to_absolute() {
+        let invocation = markdown_check(
+            Path::new(BIN),
+            &[
+                ("doc/guide.md", Path::new("/scratch/doc/guide.md")),
+                ("README.md", Path::new("/scratch/README.md")),
+            ],
+        );
+        assert_eq!(
+            argv_strings(&invocation),
+            vec![
+                BIN,
+                "--source",
+                "doc/guide.md=/scratch/doc/guide.md",
+                "--source",
+                "README.md=/scratch/README.md"
+            ]
+        );
+        assert_eq!(invocation.cwd_rel, "");
     }
 
     #[test]

@@ -1,0 +1,49 @@
+"""M04 WP3 repository-owned Markdown link/structure checker crate."""
+
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_rust_library(
+    name = "quality_markdown_lib",
+    srcs = ["src/lib.rs"],
+    crate_name = "quality_markdown",
+    edition = "2021",
+)
+
+dx_rust_binary(
+    name = "quality_markdown",
+    srcs = ["src/main.rs"],
+    edition = "2021",
+    deps = [":quality_markdown_lib"],
+)
+
+dx_rust_test(
+    name = "quality_markdown_test",
+    size = "small",
+    crate = ":quality_markdown_lib",
+    edition = "2021",
+)
+
+# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# resolve from the pinned toolchain, never from ambient host tools.
+rustfmt_test(
+    name = "quality_markdown_fmt_test",
+    size = "small",
+    targets = [
+        ":quality_markdown",
+        ":quality_markdown_lib",
+    ],
+)
+
+rust_clippy_test(
+    name = "quality_markdown_clippy_test",
+    size = "small",
+    targets = [
+        ":quality_markdown",
+        ":quality_markdown_lib",
+    ],
+)
+
+exports_files(["Cargo.toml"])

@@ -9,12 +9,12 @@ cache, empty-PATH) lands in later WP2 commits; these checks prove the
 pure shapes that evidence rests on.
 """
 
-load("//tools/starlark:defs.bzl", "expect_equal", "starlark_test")
+load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":adapters.bzl", "REAL_ADAPTERS", "REAL_CLASS_TO_FAMILY", "real_supported_classes")
 load(":pipeline.bzl", "authorize_classes", "pipeline_stages", "resolve_pipeline")
 
 _LINT_SELECTIONS = {
-    "markdown": ["vale"],
+    "markdown": ["markdown_check", "vale"],
     "rust": ["clippy"],
     "starlark": ["buildifier"],
     "toml": ["taplo"],
@@ -78,6 +78,14 @@ def real_pipeline_unit_tests(name):
                 [["toml"], ["toml"]],
             ),
             expect_equal(
+                "real_supported_classes returns markdown_check lint support only",
+                [
+                    real_supported_classes("markdown_check", "lint"),
+                    real_supported_classes("markdown_check", "format"),
+                ],
+                [["markdown"], []],
+            ),
+            expect_equal(
                 "real_supported_classes returns vale lint support only",
                 [
                     real_supported_classes("vale", "lint"),
@@ -91,6 +99,7 @@ def real_pipeline_unit_tests(name):
                 {
                     "buildifier": ["starlark"],
                     "clippy": ["rust"],
+                    "markdown_check": ["markdown"],
                     "taplo": ["toml"],
                     "vale": ["markdown"],
                 },
@@ -107,6 +116,7 @@ def real_pipeline_unit_tests(name):
                 [
                     {"classes": ["starlark"], "tool": "buildifier"},
                     {"classes": ["rust"], "tool": "clippy"},
+                    {"classes": ["markdown"], "tool": "markdown_check"},
                     {"classes": ["toml"], "tool": "taplo"},
                     {"classes": ["markdown"], "tool": "vale"},
                 ],
@@ -138,7 +148,7 @@ def real_pipeline_unit_tests(name):
                 [],
             ),
             expect_equal(
-                "pipeline_stages omits markdown format (vale is lint-only)",
+                "pipeline_stages omits markdown format (markdown lint tools are lint-only)",
                 pipeline_stages(
                     ["markdown"],
                     "format",
@@ -168,6 +178,11 @@ def real_pipeline_unit_tests(name):
                         "classes": ["rust"],
                         "sources": ["src/lib.rs", "src/main.rs"],
                         "tool": "clippy",
+                    },
+                    {
+                        "classes": ["markdown"],
+                        "sources": ["doc/guide.md"],
+                        "tool": "markdown_check",
                     },
                     {
                         "classes": ["toml"],

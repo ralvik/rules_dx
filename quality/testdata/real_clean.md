@@ -1,0 +1,3 @@
+# Real fixture
+
+Clean prose.

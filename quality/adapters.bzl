@@ -44,17 +44,19 @@ def adapter_supported_classes(tool_id, capability):
              "': not in the synthetic adapter registry")
     return sorted(SYNTHETIC_ADAPTERS[tool_id].get(capability, []))
 
-# Real initial-adapter capability manifests (M04 WP2, O20).
+# Real initial-adapter capability manifests (M04 WP2-WP3, O20).
 #
 # Tool IDs are the stable built-in identifiers users select in policy
-# families. Each class has exactly one tool per capability in M04, so every
-# real target/capability pipeline holds a single stage and no virtual
-# convergence across tools runs yet; the pipeline formula still orders
-# stages by sorted tool ID (the provisional O19 rule) when several apply
-# to one mixed-class target.
+# families. Every class has exactly one tool per capability except
+# Markdown lint, where the repo-owned `markdown_check` (link/structure)
+# and Vale (prose style) run as two ordered stages over the same files;
+# no virtual convergence across tools runs yet. The pipeline formula
+# orders stages by sorted tool ID (the provisional O19 rule) when several
+# apply to one target.
 REAL_ADAPTERS = {
     "buildifier": {"format": ["starlark"], "lint": ["starlark"]},
     "clippy": {"lint": ["rust"]},
+    "markdown_check": {"lint": ["markdown"]},
     "rustfmt": {"format": ["rust"]},
     "taplo": {"format": ["toml"], "lint": ["toml"]},
     "vale": {"lint": ["markdown"]},
