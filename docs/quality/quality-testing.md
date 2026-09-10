@@ -101,6 +101,16 @@ The O20 [adapter qualification contract](tool-integrations.md#initial-adapter-qu
   `StylesPath` plus `Packages` plus styles/rules/dictionaries/scripts with `.vale-config` pipeline
   files, mocked `vale sync` network behavior, and hidden `fix --apply` round trips.
 
+- Repo-owned Markdown checker (`//quality/markdown:quality_markdown`) exit matrix and closure rule:
+  exit `0` with NDJSON findings and exit `0` with empty stdout when clean; exit `2` on bad
+  arguments, unreadable files, or non-UTF-8 input with no partial findings. Finding `path` keys
+  are the `--source` workspace paths over the union `--source`/`--sibling` closure; remote URLs
+  are recorded-never-fetched. The checker performs no config discovery and takes no config, so
+  the backend runs it from the scratch root; it is check-only (`apply_fix` returns its input).
+  Prove the matrix and the workspace-keyed grammar through the crate unit tests, the backend
+  `markdown_check` tests, and direct-Bazel execution of the wired stage on
+  `//quality/testdata:fixture_real_markdown` with the evaluator passing `--fail_on info`.
+
 ## Configured Policy
 
 The normative ownership and binding behavior exercised by the native-config fixtures is defined in

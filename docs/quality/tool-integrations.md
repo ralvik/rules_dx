@@ -187,6 +187,33 @@ Freeze them in [Native Configuration](native-configuration.md#discovery) only wi
 co-location, and complete config-closure tests. Explicit config flags do not themselves prove absence
 of parent/home discovery; qualify source inspection with sandbox and hostile-home fixtures.
 
+Clippy's native filename is frozen as `clippy.toml`. The pinned binary discovers only that basename
+upward from the working directory: a direct probe shows a `clippy_test.toml` in the working
+directory is silently ignored while `clippy.toml` applies. Runner wiring pins a hinted run's working
+directory to the mirrored config's parent directory and leaves unhinted runs at the empty scratch
+root. `clippy_cfg` bound to `fixture_real_rust_hinted` proves the binding end to end: its lint
+result carries `clippy::too_many_arguments` where the unhinted fixture stays silent.
+
+- **Repository-owned Markdown checks:** link and structure validation is repository-owned and
+  distinct from Vale (M04 WP3, O20). The checker is the Rust crate `//quality/markdown`: it parses
+  one Markdown source plus its declared sibling-file closure and reports structured findings for
+  dangling relative file targets, missing same-file or resolved-file anchors, heading-hierarchy
+  violations (exactly one H1, no skipped levels), and fenced code blocks without a language tag.
+  Remote URLs are recorded but never fetched. Undeclared link targets fail closed as findings, never
+  as silent passes. The `//quality/markdown:quality_markdown` binary checks `--source WS_PATH=EXEC_PATH` files
+  against the union `--source`/`--sibling WS_PATH=EXEC_PATH` closure and prints one JSON
+  `{"path","line","kind","message"}` object per finding; exit `0` when checked, `2` on bad
+  arguments, unreadable files, or non-UTF-8 input.
+  Runner-backend wiring (M04 WP3) follows the M04 real-adapter pattern: tool ID `markdown_check`
+  (`REAL_ADAPTERS` lint `markdown`, `real_markdown_family` lint alongside `vale`, aspect binary
+  `//quality/markdown:quality_markdown`), one `--source WS=ABS` mapping per stage file with no
+  config and scratch-root cwd (`commands::markdown_check`), NDJSON parsing keyed by workspace path
+  with re-rooting onto scratch-absolute paths before placement (`parsers::parse_markdown_findings`;
+  findings exist only on exit 0, any other exit is an action failure), check-only `apply_fix`
+  returning its input, and diagnostics carrying the kebab-case kind as `rule_id` at `Error`
+  severity. Direct-Bazel dogfood (executing the wired stage on fixtures) follows in M05; this
+  boundary freezes the checker shape and its pipeline integration, not its execution evidence.
+
 ## First-Release Tool Baseline
 
 The frozen parity matrix, curated tool selections, additions, and feasibility assessments are maintained

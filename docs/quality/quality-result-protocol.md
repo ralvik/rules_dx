@@ -13,10 +13,10 @@ Protobuf result message. Non-mutating audit may emit one message per target/tool
 checked-in [`quality/result.proto`](../../quality/result.proto) is the source of truth:
 field/enum numbers and reserved ranges are frozen under [O18](../open-decisions.md) with
 this initial implementation. Bazel generates the Rust crate `result_proto` via
-`//quality:result_proto_rs`, and `//rust/quality_result` implements the result-side
+`//quality:result_proto_rs`, and `//quality/result:quality_result` implements the result-side
 validation, BLAKE3 digest, and deterministic codec (`validate`, `encode_validated`,
-`decode_validated`). The pipeline producer is `//rust/quality_runner` (M03 WP2b);
-the direct-Bazel per-result evaluator is `//rust/quality_evaluator` (M03 WP3).
+`decode_validated`). The pipeline producer is `//quality/runner:quality_runner` (M03 WP2b);
+the direct-Bazel per-result evaluator is `//quality/evaluator:quality_evaluator` (M03 WP3).
 Collectors land with the `dx` CLI, so do not build them against the
 semantic prose below until then. The sole
 stable public capability output group is `dx_results`; it contains each result and an enabled
@@ -210,9 +210,9 @@ Fixtures cover:
 - Exact public check-mode changes reconstructed from validated internal replacements.
 
 Result-side fixtures for the schema, versioning, path, digest-length, diagnostic-shape,
-edit-ordering, and stability-gate items above live in `//rust/quality_result` and pass
-under `bazel test //rust/quality_result/...`. Evaluator threshold, replacement-presence,
-and per-result wiring fixtures live in `//rust/quality_evaluator`
-(`bazel test //rust/quality_evaluator/...`) with synthetic end-to-end evidence in
+edit-ordering, and stability-gate items above live in `//quality/result:quality_result` and pass
+under `bazel test //quality/result/...`. Evaluator threshold, replacement-presence,
+and per-result wiring fixtures live in `//quality/evaluator:quality_evaluator`
+(`bazel test //quality/evaluator/...`) with synthetic end-to-end evidence in
 `//quality/testdata`. CLI, BEP-ordering, and remote-materialization
 items land with their owners.
