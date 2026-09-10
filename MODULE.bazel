@@ -51,6 +51,7 @@ crate.from_cargo(
     cargo_lockfile = "//rust/hello:Cargo.lock",
     manifests = [
         "//rust/hello:Cargo.toml",
+        "//rust/quality_adapter:Cargo.toml",
         "//rust/quality_evaluator:Cargo.toml",
         "//rust/quality_result:Cargo.toml",
         "//rust/quality_runner:Cargo.toml",
