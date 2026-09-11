@@ -15,9 +15,20 @@ labels and patterns pass through after syntax and workspace validation with
 external-repository scopes rejected; files resolve to depth-1 owners via unconfigured
 `bazel query` with no-owner, generated-excluded, not-found, and not-a-package errors;
 directories map to recursive `//path/...` patterns. Scoped `--check` runs the same
-non-mutating workflow over the selected subtree: a stale or missing Gazelle-maintained
-file in scope fails. Manifest scoping and Gazelle merge interaction for scoped refreshes
-remain open under O48; do not implement them against this prose.
+non-mutating workflow over the selected subtree with the freshness boundary at the
+scope edge: a stale or missing Gazelle-maintained file in scope fails; staleness
+outside the selected scope never fails the check. Proposed manifest scoping (pending
+O48 freeze, flagged for review): the versioned run manifest records the resolved run
+scope, and each edit/write-outcome/completion/ignored-import record carries its owning
+scope element, so scoped refreshes produce scope-attributed records consumable without
+rereading the workspace. Gazelle merge interaction for scoped refreshes (which trees
+Gazelle rewrites vs preserves under a narrowed scope) remains open under O48 as
+extension-side work; do not implement it against this prose. Scoped-selection fixtures
+(executable against the resolver mapping): empty scope resolves `//...`; label and
+pattern scopes pass through after validation with external-repository rejection; file
+scopes resolve to depth-1 owners with the no-owner/generated-excluded/not-found/
+not-a-package errors; directory scopes map to `//path/...`; freshness fixtures prove
+in-scope staleness fails and out-of-scope staleness passes.
 
 The command exposes no Gazelle application arguments. Arguments after `--` are Bazel command
 options placed before `//dx:generate`, not arguments passed to Gazelle. Advanced users may invoke
