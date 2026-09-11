@@ -211,12 +211,21 @@ def dx_py_library(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `py_library` (M14)."""
     _dx_py_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
-def dx_py_binary(name, srcs, main = None, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `py_binary` (M14)."""
+def dx_py_binary(name, srcs = None, main = None, visibility = None, **kwargs):
+    """Experimental minimal wrapper over `py_binary` (M14).
+
+    Two shapes: an ordinary binary owns its `srcs` (like the handwritten
+    seed), while a thin entry binary generated for a recognized
+    `main.py` carries only `main` plus `deps = [":<library>"]` with no
+    `srcs`. The library alone owns the source and its source-derived
+    dependencies; the thin binary reports no direct sources. Both shapes
+    preserve the upstream providers and execution semantics.
+    """
+    effective_srcs = srcs if srcs != None else []
     if main != None:
-        _dx_py_wrap_binary(name, srcs, visibility = visibility, main = main, **kwargs)
+        _dx_py_wrap_binary(name, effective_srcs, visibility = visibility, main = main, **kwargs)
     else:
-        _dx_py_wrap_binary(name, srcs, visibility = visibility, **kwargs)
+        _dx_py_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
 
 def dx_py_test(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `py_pytest_test` (M14).

@@ -1,0 +1,38 @@
+"""M14 thin entry fixture: library owns main.py, binary carries main only."""
+
+load("//python/rules:defs.bzl", "dx_py_binary", "dx_py_library", "dx_py_test")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_py_library(
+    name = "helper",
+    srcs = ["helper.py"],
+    imports = ["."],
+)
+
+dx_py_library(
+    name = "main",
+    srcs = ["main.py"],
+    imports = ["."],
+    deps = [":helper"],
+)
+
+dx_py_binary(
+    name = "main_bin",
+    imports = ["."],
+    main = "main.py",
+    deps = [":main"],
+)
+
+dx_py_test(
+    name = "helper_test",
+    srcs = ["helper_test.py"],
+    # Reuses the hello uv graph (single pypi hub); no separate lock.
+    dep_group = "hello",
+    imports = ["."],
+    deps = [
+        ":helper",
+        "@pypi//coverage",
+        "@pypi//pytest",
+    ],
+)

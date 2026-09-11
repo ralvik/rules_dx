@@ -21,6 +21,7 @@ const (
 	languageName = "python"
 	libraryKind  = "dx_py_library"
 	testKind     = "dx_py_test"
+	binaryKind   = "dx_py_binary"
 	// importsAttr is the conventional source-only import root. Every
 	// generated rule sets imports = ["."] so the owning package directory
 	// resolves first-party siblings exactly like the handwritten seed
@@ -31,6 +32,7 @@ const (
 var pythonKinds = map[string]rule.KindInfo{
 	libraryKind: kindInfo(),
 	testKind:    kindInfo(),
+	binaryKind:  binaryKindInfo(),
 }
 
 func kindInfo() rule.KindInfo {
@@ -39,6 +41,20 @@ func kindInfo() rule.KindInfo {
 		NonEmptyAttrs: map[string]bool{"srcs": true},
 		MergeableAttrs: map[string]bool{
 			"srcs":    true,
+			"imports": true,
+			"deps":    true,
+		},
+		ResolveAttrs: map[string]bool{"deps": true},
+	}
+}
+
+// binaryKindInfo matches thin binaries by main: a binary owns no srcs, so
+// srcs must stay out of MatchAttrs/NonEmptyAttrs or Gazelle would delete
+// generated binaries as empty on every merge.
+func binaryKindInfo() rule.KindInfo {
+	return rule.KindInfo{
+		MatchAttrs: []string{"main"},
+		MergeableAttrs: map[string]bool{
 			"imports": true,
 			"deps":    true,
 		},
@@ -103,7 +119,7 @@ func (l *pythonLang) ApparentLoads(moduleToApparentName func(string) string) []r
 
 func pythonLoads(rulesRepo string) []rule.LoadInfo {
 	return []rule.LoadInfo{
-		{Name: "@" + rulesRepo + "//python/rules:defs.bzl", Symbols: []string{libraryKind, testKind}},
+		{Name: "@" + rulesRepo + "//python/rules:defs.bzl", Symbols: []string{libraryKind, testKind, binaryKind}},
 	}
 }
 
@@ -151,6 +167,7 @@ func (l *pythonLang) generateRules(args language.GenerateArgs) language.Generate
 		src     string
 		stub    string
 		test    bool
+		entry   bool
 		imports []string
 	}
 	var plans []plan
@@ -166,6 +183,7 @@ func (l *pythonLang) generateRules(args language.GenerateArgs) language.Generate
 			continue
 		}
 		p := plan{name: name, src: src, test: IsTestFile(src)}
+		p.entry = !p.test && IsEntryFile(src)
 		if stub := strings.TrimSuffix(src, ".py") + ".pyi"; stubs[stub] {
 			p.stub = stub
 		}
@@ -184,9 +202,16 @@ func (l *pythonLang) generateRules(args language.GenerateArgs) language.Generate
 		return language.GenerateResult{}
 	}
 
-	claimants := make([]Claimant, 0, len(plans))
+	claimants := make([]Claimant, 0, len(plans)*2)
 	for _, p := range plans {
-		claimants = append(claimants, Claimant{Name: p.name, Source: p.src})
+		kind := libraryKind
+		if p.test {
+			kind = testKind
+		}
+		claimants = append(claimants, Claimant{Name: p.name, Source: p.src, Kind: kind})
+		if p.entry {
+			claimants = append(claimants, Claimant{Name: EntryBinaryName(p.name), Source: p.src, Kind: binaryKind})
+		}
 	}
 	if err := checkClaims(args.File, args.OtherGen, claimants); err != nil {
 		l.fail("python: %s: %v", args.Rel, err)
@@ -208,8 +233,29 @@ func (l *pythonLang) generateRules(args language.GenerateArgs) language.Generate
 		r.SetAttr("imports", []string{importsAttr})
 		result.Gen = append(result.Gen, r)
 		result.Imports = append(result.Imports, targetImports{imports: append([]string(nil), p.imports...)})
+		if p.entry {
+			bin := rule.NewRule(binaryKind, EntryBinaryName(p.name))
+			bin.SetAttr("main", p.src)
+			bin.SetAttr("imports", []string{importsAttr})
+			bin.SetAttr("deps", []string{":" + p.name})
+			result.Gen = append(result.Gen, bin)
+			result.Imports = append(result.Imports, targetImports{})
+		}
 	}
 	return mergeStale(args.File, result)
+}
+
+// claimKind returns the generated rule kind for one claimant: the explicit
+// Kind when set (thin-binary claims), otherwise inferred from the source
+// (test when IsTestFile, else library).
+func claimKind(c Claimant) string {
+	if c.Kind != "" {
+		return c.Kind
+	}
+	if IsTestFile(c.Source) {
+		return testKind
+	}
+	return libraryKind
 }
 
 // checkClaims fails closed on same-package normalized-name collisions:
@@ -240,11 +286,7 @@ func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) erro
 		kind := ""
 		for _, p := range claimants {
 			if p.Name == name {
-				if IsTestFile(p.Source) {
-					kind = testKind
-				} else {
-					kind = libraryKind
-				}
+				kind = claimKind(p)
 				break
 			}
 		}

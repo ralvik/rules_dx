@@ -245,7 +245,7 @@ func TestAfterResolvingDepsClean(t *testing.T) {
 
 func TestLanguageMetadata(t *testing.T) {
 	l := &pythonLang{}
-	if l.Name() != "python" || len(l.Kinds()) != 2 || l.CheckFlags(flag.NewFlagSet("test", flag.ContinueOnError), config.New()) != nil {
+	if l.Name() != "python" || len(l.Kinds()) != 3 || l.CheckFlags(flag.NewFlagSet("test", flag.ContinueOnError), config.New()) != nil {
 		t.Fatal("invalid language metadata")
 	}
 	l.RegisterFlags(flag.NewFlagSet("test", flag.ContinueOnError), "update", config.New())
@@ -260,7 +260,7 @@ func TestLanguageMetadata(t *testing.T) {
 		}
 		return ""
 	})
-	if len(loads) != 1 || loads[0].Name != "@renamed_dx//python/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "dx_py_library,dx_py_test" {
+	if len(loads) != 1 || loads[0].Name != "@renamed_dx//python/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "dx_py_library,dx_py_test,dx_py_binary" {
 		t.Errorf("apparent loads = %+v", loads)
 	}
 	if defaults := l.Loads(); len(defaults) != 1 || defaults[0].Name != "@rules_dx//python/rules:defs.bzl" {
@@ -372,5 +372,175 @@ func TestUnionStrings(t *testing.T) {
 	}
 	if got := unionStrings(nil, nil); len(got) != 0 {
 		t.Errorf("empty union = %q", got)
+	}
+}
+
+func TestGenerateEntryThinBinary(t *testing.T) {
+	result := generateFixture(t, map[string]string{
+		"pkg/demo/main.py":        "import helper\n",
+		"pkg/demo/helper.py":      "def suffix(tag):\n    return tag\n",
+		"pkg/demo/helper_test.py": "import helper\n",
+	}, []string{"main.py", "helper.py", "helper_test.py"})
+	if len(result.Gen) != 4 || len(result.Imports) != 4 {
+		t.Fatalf("generated %d rules and %d import sets, want 4 each", len(result.Gen), len(result.Imports))
+	}
+	byRule := make(map[string]int, len(result.Gen))
+	for i, r := range result.Gen {
+		byRule[r.Kind()+"\x00"+r.Name()] = i
+	}
+	libIdx, ok := byRule[libraryKind+"\x00main"]
+	if !ok {
+		t.Fatalf("missing dx_py_library(main) in %v", result.Gen)
+	}
+	binIdx, ok := byRule[binaryKind+"\x00main_bin"]
+	if !ok {
+		t.Fatalf("missing dx_py_binary(main_bin) in %v", result.Gen)
+	}
+	lib := result.Gen[libIdx]
+	if got := strings.Join(lib.AttrStrings("srcs"), ","); got != "main.py" {
+		t.Errorf("library srcs = %q, want main.py", got)
+	}
+	bin := result.Gen[binIdx]
+	if got := bin.AttrString("main"); got != "main.py" {
+		t.Errorf("binary main = %q, want main.py", got)
+	}
+	if got := strings.Join(bin.AttrStrings("deps"), ","); got != ":main" {
+		t.Errorf("binary deps = %q, want :main", got)
+	}
+	if got := strings.Join(bin.AttrStrings("imports"), ","); got != "." {
+		t.Errorf("binary imports = %q, want .", got)
+	}
+	if bin.Attr("srcs") != nil {
+		t.Errorf("thin binary must own no srcs, got %v", bin.AttrStrings("srcs"))
+	}
+	if raw := result.Imports[libIdx].(targetImports); strings.Join(raw.imports, ",") != "helper" {
+		t.Errorf("library imports = %+v, want [helper]", raw)
+	}
+	if raw := result.Imports[binIdx].(targetImports); len(raw.imports) != 0 {
+		t.Errorf("binary imports = %+v, want empty", raw)
+	}
+	if _, ok := byRule[libraryKind+"\x00helper"]; !ok {
+		t.Errorf("missing dx_py_library(helper)")
+	}
+	if _, ok := byRule[testKind+"\x00helper_test"]; !ok {
+		t.Errorf("missing dx_py_test(helper_test)")
+	}
+}
+
+func TestGenerateEntryCollision(t *testing.T) {
+	root := t.TempDir()
+	for name, content := range map[string]string{
+		"pkg/demo/main.py":     "x = 1\n",
+		"pkg/demo/main_bin.py": "y = 2\n",
+	} {
+		writeFixture(t, root, name, content)
+	}
+	l := &pythonLang{}
+	result := l.GenerateRules(language.GenerateArgs{
+		Config:       &config.Config{RepoRoot: root},
+		Dir:          filepath.Join(root, "pkg", "demo"),
+		Rel:          "pkg/demo",
+		RegularFiles: []string{"main.py", "main_bin.py"},
+	})
+	if len(result.Gen) != 0 {
+		t.Fatalf("generated %d rules, want none", len(result.Gen))
+	}
+	if len(l.errors) != 1 || !strings.Contains(l.errors[0], "main_bin") {
+		t.Errorf("errors = %v, want main_bin collision", l.errors)
+	}
+}
+
+func TestGenerateEntryHandwrittenMismatch(t *testing.T) {
+	root := t.TempDir()
+	writeFixture(t, root, "pkg/demo/main.py", "x = 1\n")
+	f := rule.EmptyFile("BUILD.bazel", "pkg/demo")
+	f.Rules = append(f.Rules, rule.NewRule("filegroup", "main_bin"))
+	l := &pythonLang{}
+	result := l.GenerateRules(language.GenerateArgs{
+		Config:       &config.Config{RepoRoot: root},
+		Dir:          filepath.Join(root, "pkg", "demo"),
+		Rel:          "pkg/demo",
+		RegularFiles: []string{"main.py"},
+		File:         f,
+	})
+	if len(result.Gen) != 0 {
+		t.Fatalf("generated %d rules, want none", len(result.Gen))
+	}
+	if len(l.errors) != 1 || !strings.Contains(l.errors[0], "main_bin") {
+		t.Errorf("errors = %v, want main_bin kind mismatch", l.errors)
+	}
+}
+
+func TestClaimKind(t *testing.T) {
+	if got := claimKind(Claimant{Name: "main_bin", Source: "main.py", Kind: binaryKind}); got != binaryKind {
+		t.Errorf("explicit kind = %q, want %q", got, binaryKind)
+	}
+	if got := claimKind(Claimant{Name: "a_test", Source: "a_test.py"}); got != testKind {
+		t.Errorf("inferred test kind = %q", got)
+	}
+	if got := claimKind(Claimant{Name: "demo", Source: "demo.py"}); got != libraryKind {
+		t.Errorf("inferred library kind = %q", got)
+	}
+}
+
+func TestCheckClaimsBinary(t *testing.T) {
+	bin := rule.NewRule(binaryKind, "main_bin")
+	same := rule.EmptyFile("BUILD.bazel", "pkg")
+	same.Rules = append(same.Rules, bin)
+	claim := []Claimant{{Name: "main", Source: "main.py", Kind: libraryKind}, {Name: "main_bin", Source: "main.py", Kind: binaryKind}}
+	if err := checkClaims(same, nil, claim); err != nil {
+		t.Errorf("same-kind binary claims = %v", err)
+	}
+	wrong := rule.EmptyFile("BUILD.bazel", "pkg")
+	wrong.Rules = append(wrong.Rules, rule.NewRule(libraryKind, "main_bin"))
+	if err := checkClaims(wrong, nil, claim); err == nil || !strings.Contains(err.Error(), "main_bin") {
+		t.Errorf("binary kind mismatch = %v", err)
+	}
+}
+
+func TestBinaryKindInfo(t *testing.T) {
+	info := binaryKindInfo()
+	for _, attr := range info.MatchAttrs {
+		if attr == "srcs" {
+			t.Errorf("binary MatchAttrs must not contain srcs: %v", info.MatchAttrs)
+		}
+	}
+	if len(info.MatchAttrs) != 1 || info.MatchAttrs[0] != "main" {
+		t.Errorf("binary MatchAttrs = %v, want [main]", info.MatchAttrs)
+	}
+	if info.NonEmptyAttrs["srcs"] {
+		t.Errorf("binary NonEmptyAttrs must not require srcs: %v", info.NonEmptyAttrs)
+	}
+	if !info.MergeableAttrs["deps"] || !info.MergeableAttrs["imports"] {
+		t.Errorf("binary MergeableAttrs = %v, want deps+imports", info.MergeableAttrs)
+	}
+	if !info.ResolveAttrs["deps"] {
+		t.Errorf("binary ResolveAttrs = %v, want deps", info.ResolveAttrs)
+	}
+}
+
+func TestResolvePreservesBinaryDeps(t *testing.T) {
+	l := &pythonLang{}
+	cfg := resolverConfig(t, nil)
+	bin := rule.NewRule(binaryKind, "main_bin")
+	bin.SetAttr("main", "main.py")
+	bin.SetAttr("deps", []string{":main"})
+	l.Resolve(cfg, resolverIndex(l), nil, bin, targetImports{}, label.New("", "app", "main_bin"))
+	if got := strings.Join(bin.AttrStrings("deps"), ","); got != ":main" {
+		t.Errorf("binary deps = %q, want preserved :main", got)
+	}
+	if len(l.errors) != 0 {
+		t.Errorf("binary resolve errors = %v", l.errors)
+	}
+}
+
+func TestMergeStaleCleansBinary(t *testing.T) {
+	f := rule.EmptyFile("BUILD.bazel", "pkg")
+	f.Rules = append(f.Rules, rule.NewRule(binaryKind, "old_bin"))
+	keptLib := rule.NewRule(libraryKind, "main")
+	keptBin := rule.NewRule(binaryKind, "main_bin")
+	result := mergeStale(f, language.GenerateResult{Gen: []*rule.Rule{keptLib, keptBin}})
+	if len(result.Empty) != 1 || result.Empty[0].Name() != "old_bin" {
+		t.Fatalf("stale = %v, want [old_bin]", result.Empty)
 	}
 }

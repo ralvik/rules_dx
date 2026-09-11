@@ -88,6 +88,26 @@ func ModuleName(name string) string {
 	return base
 }
 
+// IsEntryFile reports whether a directory-relative source path is a
+// recognized executable entry in the narrow M14 slice: exactly
+// `main.py` (non-test). `__main__.py`, `if __name__ == "__main__"`
+// guards, and manifest console scripts remain O25 qualification, not
+// automatic recognition.
+func IsEntryFile(name string) bool {
+	if IsTestFile(name) {
+		return false
+	}
+	return path.Base(name) == "main.py"
+}
+
+// EntryBinaryName derives the thin-binary target name for one library
+// owner: `<library>_bin`. Collisions with another library, test, or
+// binary claim fail closed with every claimant; no further affix is
+// invented.
+func EntryBinaryName(lib string) string {
+	return lib + "_bin"
+}
+
 // Claimant records one generated or handwritten target competing for a
 // normalized name in a single Bazel package.
 type Claimant struct {
@@ -96,6 +116,10 @@ type Claimant struct {
 	// Source identifies the claimant for diagnostics: a source path for
 	// generated targets, "handwritten:<label>" for existing BUILD rules.
 	Source string
+	// Kind is the generated rule kind claiming the name. Empty means
+	// infer from the source (test when IsTestFile, else library); set it
+	// explicitly for thin-binary claims whose source would infer library.
+	Kind string
 }
 
 // CollisionError reports a same-package normalized-name collision with

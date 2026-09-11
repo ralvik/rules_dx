@@ -116,3 +116,32 @@ func TestCheckCollisions(t *testing.T) {
 		t.Errorf("collision message omits a claimant: %s", message)
 	}
 }
+
+func TestIsEntryFile(t *testing.T) {
+	cases := []struct {
+		name string
+		want bool
+	}{
+		{"main.py", true},
+		{"pkg/main.py", true},
+		{"main_test.py", false},
+		{"helper.py", false},
+		{"__main__.py", false},
+		{"main.pyi", false},
+		{"main", false},
+	}
+	for _, tc := range cases {
+		if got := IsEntryFile(tc.name); got != tc.want {
+			t.Errorf("IsEntryFile(%q) = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
+func TestEntryBinaryName(t *testing.T) {
+	if got := EntryBinaryName("main"); got != "main_bin" {
+		t.Errorf("EntryBinaryName(main) = %q, want main_bin", got)
+	}
+	if got := EntryBinaryName("a_b"); got != "a_b_bin" {
+		t.Errorf("EntryBinaryName(a_b) = %q, want a_b_bin", got)
+	}
+}

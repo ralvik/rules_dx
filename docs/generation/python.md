@@ -18,7 +18,11 @@ stable upstream shape. It creates no target, runtime dependency owner, test, bin
 name collision. Stub imports participate only in the supported type-analysis path. An orphan `.pyi`
 is inert until a separately accepted stub-only ownership model exists.
 
-Executable modules use the common single-library-owner and thin-binary shape. Resources remain
+Executable modules use the common single-library-owner and thin-binary shape. The recognized
+executable entry is exactly `main.py` (non-test): the library owns the source and its
+source-derived dependencies, and the thin `dx_py_binary` `<library>_bin` carries only `main`,
+`imports = ["."]`, and `deps = [":<library>"]` with no `srcs`. `__main__.py`, `__main__` guards,
+and manifest console scripts are not automatic recognition. Resources remain
 user-owned under the [common resource boundary](common.md#resources).
 
 ## Tests

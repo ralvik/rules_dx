@@ -1,0 +1,34 @@
+load("@rules_dx//python/rules:defs.bzl", "dx_py_binary", "dx_py_library", "dx_py_test")
+
+# A user-owned rule must survive generation unchanged.
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+dx_py_library(
+    name = "helper",
+    srcs = ["helper.py"],
+    imports = ["."],
+)
+
+dx_py_test(
+    name = "helper_test",
+    srcs = ["helper_test.py"],
+    imports = ["."],
+    deps = [":helper"],
+)
+
+dx_py_library(
+    name = "main",
+    srcs = ["main.py"],
+    imports = ["."],
+    deps = [":helper"],
+)
+
+dx_py_binary(
+    name = "main_bin",
+    imports = ["."],
+    main = "main.py",
+    deps = [":main"],
+)

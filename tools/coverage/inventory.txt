@@ -66,6 +66,9 @@ support gazelle/python/testdata/source_only/pkg/demo/demo.pyi
 support gazelle/python/testdata/source_only/pkg/demo/helper.py
 support gazelle/python/testdata/source_only/pkg/demo/helper_test.py
 support gazelle/python/testdata/source_only/pkg/demo/orphan.pyi
+support gazelle/python/testdata/entries/pkg/demo/helper.py
+support gazelle/python/testdata/entries/pkg/demo/helper_test.py
+support gazelle/python/testdata/entries/pkg/demo/main.py
 eligible generation/result/src/lib.rs
 support gazelle/rust/cargo_test.go
 support gazelle/rust/lang_test.go
