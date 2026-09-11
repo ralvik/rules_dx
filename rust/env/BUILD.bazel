@@ -1,0 +1,55 @@
+"""Focused Rust environment plans (M12 WP3).
+
+Each `rust_env_plan` reads the analyzed authoritative providers of one
+`dx_rust_*` wrapper: library/binary/test through CrateInfo, Cc-linking
+shapes through TestCrateInfo. Focused-target only; repository/root/exact-target
+orchestration remains M25.
+"""
+
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/env:plan.bzl", "rust_env_plan")
+load("//rust/env:plan_tests.bzl", "env_plan_tests")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_env_plan(
+    name = "hello_lib_plan",
+    target = "//rust/hello:hello_lib",
+)
+
+rust_env_plan(
+    name = "hello_plan",
+    target = "//rust/hello",
+)
+
+rust_env_plan(
+    name = "hello_test_plan",
+    testonly = True,
+    target = "//rust/hello:hello_test",
+)
+
+rust_env_plan(
+    name = "hello_cdylib_plan",
+    target = "//rust/hello:hello_cdylib",
+)
+
+env_plan_tests(
+    name = "env_plan_tests",
+    subjects = [
+        ":hello_cdylib_plan",
+        ":hello_lib_plan",
+        ":hello_plan",
+        ":hello_test_plan",
+    ],
+)
+
+# Repository corpus (M05 WP1): plan Starlark owned for direct-Bazel dogfood
+# under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "plan.bzl",
+        "plan_tests.bzl",
+    ],
+)

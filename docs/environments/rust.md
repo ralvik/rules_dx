@@ -28,5 +28,9 @@ environment or generated-code generation, or writes a project-owned crate graph.
 
 The focused Rust foundation proves provider completeness, proc macros, build-script outputs,
 generated-source visibility, version selection, required platforms, and exact-target isolation. The
-public `dx env` repository/root/exact-target orchestration and atomic selection are delivered by the
+focused environment plan is the provider-derived `rust_env_plan` rule over one `dx_rust_*` wrapper
+(`rust/env/plan.bzl`, pinned by `//rust/env:env_plan_tests`); IDE reuse is pinned by upstream
+`gen_rust_project` + `flycheck` acquisition (`//rust/ide:ide_acquisition_test`) with focused
+exact-target projection recorded in the [M12 completion report](../milestones/M12-completion-report.md#wp3-compiler-diagnostics-ide-coverage-and-environment-projection).
+The public `dx env` repository/root/exact-target orchestration and atomic selection are delivered by the
 repository-workflow milestone.
