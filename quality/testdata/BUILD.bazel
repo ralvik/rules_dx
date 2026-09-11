@@ -6,6 +6,8 @@ load("//quality:native_config.bzl", "clippy_config", "rustfmt_config", "vale_con
 load(":aspect_tests.bzl", "aspect_fixture_tests")
 load(":real_aspect_subject.bzl", "real_aspect_subject")
 load(":real_aspect_tests.bzl", "real_aspect_fixture_tests")
+load(":real_typecheck_subject.bzl", "real_typecheck_subject")
+load(":real_typecheck_tests.bzl", "real_typecheck_fixture_tests")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -243,6 +245,55 @@ real_aspect_fixture_tests(
         ":fixture_real_starlark_subject",
         ":fixture_real_toml_subject",
         ":real_plain_subject",
+    ],
+)
+
+# Typecheck fixtures (M12 WP3): a clean lib root, a root with a
+# deterministic E0308 mismatch, a `no-typecheck` opt-out, and a
+# non-rust target proving rustc stays rust-only.
+real_source_target(
+    name = "fixture_real_rust_typecheck_clean",
+    rust_srcs = ["typecheck_clean.rs"],
+)
+
+real_source_target(
+    name = "fixture_real_rust_typecheck_dirty",
+    rust_srcs = ["typecheck_dirty.rs"],
+)
+
+real_source_target(
+    name = "fixture_real_rust_typecheck_no_typecheck",
+    rust_srcs = ["typecheck_clean.rs"],
+    tags = ["no-typecheck"],
+)
+
+real_typecheck_subject(
+    name = "fixture_real_rust_typecheck_clean_subject",
+    target = ":fixture_real_rust_typecheck_clean",
+)
+
+real_typecheck_subject(
+    name = "fixture_real_rust_typecheck_dirty_subject",
+    target = ":fixture_real_rust_typecheck_dirty",
+)
+
+real_typecheck_subject(
+    name = "fixture_real_rust_typecheck_no_typecheck_subject",
+    target = ":fixture_real_rust_typecheck_no_typecheck",
+)
+
+real_typecheck_subject(
+    name = "fixture_real_starlark_typecheck_subject",
+    target = ":fixture_real_starlark",
+)
+
+real_typecheck_fixture_tests(
+    name = "real_typecheck_presence",
+    subjects = [
+        ":fixture_real_rust_typecheck_clean_subject",
+        ":fixture_real_rust_typecheck_dirty_subject",
+        ":fixture_real_rust_typecheck_no_typecheck_subject",
+        ":fixture_real_starlark_typecheck_subject",
     ],
 )
 

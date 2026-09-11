@@ -1,4 +1,4 @@
-"""Unit tests for real-adapter pipeline construction (M04 WP2).
+"""Unit tests for real-adapter pipeline construction (M04 WP2, M12 WP3).
 
 Pins the initial-adapter capability manifests (O20) through the same pure
 pipeline formula the synthetic fixtures use: exact class-to-tool mapping,
@@ -6,7 +6,8 @@ sorted tool order across mixed-class targets, exact per-stage source
 subsets, and omission of unsupported classes/capabilities (no empty
 actions). Cross-toolchain quality evidence (exact-input, no-config, edit,
 cache, empty-PATH) lands in later WP2 commits; these checks prove the
-pure shapes that evidence rests on.
+pure shapes that evidence rests on. M12 WP3 adds the rustc typecheck
+stage over the rust class.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
@@ -25,6 +26,13 @@ _FORMAT_SELECTIONS = {
     "rust": ["rustfmt"],
     "starlark": ["buildifier"],
     "toml": ["taplo"],
+}
+
+_TYPECHECK_SELECTIONS = {
+    "markdown": [],
+    "rust": ["rustc"],
+    "starlark": [],
+    "toml": [],
 }
 
 _DIRECT_SOURCES = {
@@ -94,6 +102,15 @@ def real_pipeline_unit_tests(name):
                 [["markdown"], []],
             ),
             expect_equal(
+                "real_supported_classes returns rustc typecheck support only",
+                [
+                    real_supported_classes("rustc", "typecheck"),
+                    real_supported_classes("rustc", "lint"),
+                    real_supported_classes("rustc", "format"),
+                ],
+                [["rust"], [], []],
+            ),
+            expect_equal(
                 "authorize_classes maps each real tool to its own class",
                 authorize_classes(_LINT_SELECTIONS, REAL_CLASS_TO_FAMILY),
                 {
@@ -135,6 +152,30 @@ def real_pipeline_unit_tests(name):
                     {"classes": ["rust"], "tool": "rustfmt"},
                     {"classes": ["toml"], "tool": "taplo"},
                 ],
+            ),
+            expect_equal(
+                "pipeline_stages builds one rustc typecheck stage",
+                pipeline_stages(
+                    ["toml", "starlark", "rust"],
+                    "typecheck",
+                    _TYPECHECK_SELECTIONS,
+                    REAL_CLASS_TO_FAMILY,
+                    REAL_ADAPTERS,
+                ),
+                [
+                    {"classes": ["rust"], "tool": "rustc"},
+                ],
+            ),
+            expect_equal(
+                "pipeline_stages omits typecheck with no rust sources",
+                pipeline_stages(
+                    ["toml", "starlark"],
+                    "typecheck",
+                    _TYPECHECK_SELECTIONS,
+                    REAL_CLASS_TO_FAMILY,
+                    REAL_ADAPTERS,
+                ),
+                [],
             ),
             expect_equal(
                 "pipeline_stages omits classes no real adapter supports",
@@ -211,6 +252,24 @@ def real_pipeline_unit_tests(name):
                         "classes": ["rust"],
                         "sources": ["src/lib.rs"],
                         "tool": "rustfmt",
+                    },
+                ],
+            ),
+            expect_equal(
+                "resolve_pipeline carries the exact typecheck source subset",
+                resolve_pipeline(
+                    ["toml", "starlark", "rust"],
+                    _DIRECT_SOURCES,
+                    "typecheck",
+                    _TYPECHECK_SELECTIONS,
+                    REAL_CLASS_TO_FAMILY,
+                    REAL_ADAPTERS,
+                ),
+                [
+                    {
+                        "classes": ["rust"],
+                        "sources": ["src/lib.rs", "src/main.rs"],
+                        "tool": "rustc",
                     },
                 ],
             ),

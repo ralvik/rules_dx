@@ -44,7 +44,8 @@ def adapter_supported_classes(tool_id, capability):
              "': not in the synthetic adapter registry")
     return sorted(SYNTHETIC_ADAPTERS[tool_id].get(capability, []))
 
-# Real initial-adapter capability manifests (M04 WP2-WP3, O20).
+# Real initial-adapter capability manifests (M04 WP2-WP3, O20; M12 WP3 adds
+# the rustc typecheck stage).
 #
 # Tool IDs are the stable built-in identifiers users select in policy
 # families. Every class has exactly one tool per capability except
@@ -52,11 +53,14 @@ def adapter_supported_classes(tool_id, capability):
 # and Vale (prose style) run as two ordered stages over the same files;
 # no virtual convergence across tools runs yet. The pipeline formula
 # orders stages by sorted tool ID (the provisional O19 rule) when several
-# apply to one target.
+# apply to one target. Rust typechecking is the toolchain `rustc` itself
+# (`rust_toolchain_rustc`), invoked as a lib-root metadata check with no
+# config discovery; it is check-only and never applies suggestions.
 REAL_ADAPTERS = {
     "buildifier": {"format": ["starlark"], "lint": ["starlark"]},
     "clippy": {"lint": ["rust"]},
     "markdown_check": {"lint": ["markdown"]},
+    "rustc": {"typecheck": ["rust"]},
     "rustfmt": {"format": ["rust"]},
     "taplo": {"format": ["toml"], "lint": ["toml"]},
     "vale": {"lint": ["markdown"]},

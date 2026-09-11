@@ -59,7 +59,7 @@ or support. There is no seed path and no parity step: each adapter lands directl
 
 | Repository check | Product route | Disposition |
 | --- | --- | --- |
-| rustfmt and Clippy | Authoritative selected Rust toolchain | Land directly through the selected Rust toolchain identity. |
+| rustfmt, Clippy, and rustc typecheck | Authoritative selected Rust toolchain | Land directly through the selected Rust toolchain identity. |
 | Buildifier, Taplo, and Vale | Checksummed standalone upstream artifacts | Land directly through each exact platform artifact and digest. |
 | Markdown link and structure validation | None; repository maintenance only | Retain as a narrow repository check, separate from Vale and outside the product adapter baseline. |
 

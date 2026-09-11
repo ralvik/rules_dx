@@ -36,7 +36,7 @@ load("//quality:native_config.bzl", "DxNativeConfigInfo", "collect_native_config
 load("//quality:pipeline.bzl", "resolve_pipeline")
 load("//quality:policy.bzl", "QualityPolicyInfo")
 load("//quality:sources.bzl", "QualitySourcesInfo")
-load("//rust/toolchains:bindings.bzl", "rust_toolchain_toolchains", "rust_toolchain_tools")
+load("//rust/toolchains:bindings.bzl", "rust_toolchain_rustc", "rust_toolchain_toolchains", "rust_toolchain_tools")
 
 def _capability_tags(rule_attr, capability):
     tags = getattr(rule_attr, "tags", [])
@@ -100,6 +100,7 @@ def _real_pipeline_action(target, ctx, capability):
         "buildifier": ctx.file._buildifier,
         "clippy": clippy_driver,
         "markdown_check": ctx.file._markdown_check,
+        "rustc": rust_toolchain_rustc(ctx),
         "rustfmt": rustfmt,
         "taplo": ctx.file._taplo,
         "vale": ctx.file._vale,
@@ -180,6 +181,9 @@ def _real_lint_impl(target, ctx):
 def _real_format_impl(target, ctx):
     return _real_pipeline_action(target, ctx, "format")
 
+def _real_typecheck_impl(target, ctx):
+    return _real_pipeline_action(target, ctx, "typecheck")
+
 _REAL_ATTRS = {
     "_buildifier": attr.label(
         default = "@dx_tools//:buildifier",
@@ -233,4 +237,12 @@ real_format_aspect = aspect(
     attrs = _REAL_ATTRS,
     toolchains = rust_toolchain_toolchains(),
     doc = "Registers the exact-input real format pipeline action in dx_results.",
+)
+
+real_typecheck_aspect = aspect(
+    implementation = _real_typecheck_impl,
+    attr_aspects = ["aspect_hints"],
+    attrs = _REAL_ATTRS,
+    toolchains = rust_toolchain_toolchains(),
+    doc = "Registers the exact-input real typecheck pipeline action in dx_results.",
 )

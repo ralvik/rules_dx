@@ -19,11 +19,12 @@ use dx_process::{
 /// Static command registry entry: capability, Bazel aspects, and supported
 /// standard-report formats.
 ///
-/// `typecheck` selects no aspects in M07 because no typecheck adapter
-/// applies yet; it resolves scope and policy, then succeeds as a silent
-/// no-op per `docs/cli/commands/quality.md`. Lint and typecheck export
-/// normalized findings as SARIF 2.1.0; format has no initial standard
-/// report per `docs/cli/standard-reports.md`.
+/// `typecheck` selects the real typecheck aspect (M12 WP3 wires the rustc
+/// stage over the rust class); families without a typecheck selection
+/// resolve to no stages, so the command stays a silent no-op there per
+/// `docs/cli/commands/quality.md`. Lint and typecheck export normalized
+/// findings as SARIF 2.1.0; format has no initial standard report per
+/// `docs/cli/standard-reports.md`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CommandSpec {
     pub command: Command,
@@ -52,7 +53,7 @@ pub fn spec(command: Command) -> CommandSpec {
         Command::Typecheck => CommandSpec {
             command,
             capability: "typecheck",
-            aspects: &[],
+            aspects: &["//quality:real_aspects.bzl%real_typecheck_aspect"],
             reports: &["sarif"],
         },
         Command::Format => CommandSpec {
@@ -573,7 +574,10 @@ mod tests {
         assert_eq!(lint.reports, &["sarif"]);
         let typecheck = spec(Command::Typecheck);
         assert_eq!(typecheck.capability, "typecheck");
-        assert!(typecheck.aspects.is_empty());
+        assert_eq!(
+            typecheck.aspects,
+            &["//quality:real_aspects.bzl%real_typecheck_aspect"]
+        );
         assert_eq!(typecheck.reports, &["sarif"]);
         let format = spec(Command::Format);
         assert_eq!(format.capability, "format");
@@ -843,12 +847,14 @@ mod tests {
     }
 
     #[test]
-    fn typecheck_plan_carries_empty_aspects_and_format_summary() {
+    fn typecheck_plan_carries_typecheck_aspect_and_format_summary() {
         let plan =
             plan_build(Command::Typecheck, &resolved(&[]), &[], "/tmp/bep.json").expect("plan");
         assert!(
-            plan.argv.iter().any(|arg| arg == "--aspects="),
-            "empty aspect list still declares the flag: {plan:?}"
+            plan.argv
+                .iter()
+                .any(|arg| arg == "--aspects=//quality:real_aspects.bzl%real_typecheck_aspect"),
+            "typecheck selects the real typecheck aspect: {plan:?}"
         );
         assert_eq!(plan.summary, "Running typecheck analysis for //...");
         let plan = plan_build(Command::Format, &resolved(&[]), &[], "/tmp/bep.json").expect("plan");

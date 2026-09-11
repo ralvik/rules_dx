@@ -1,20 +1,23 @@
-"""Analysis subject proving rustfmt/Clippy bind to the toolchain (M04 WP1).
+"""Analysis subject proving rustfmt/Clippy/rustc bind to the toolchain (M04 WP1, M12 WP3).
 
 Renders the owning repository and exec path of each bound executable, so the
-identity test pins that both resolve inside the authoritative toolchain
+identity test pins that all three resolve inside the authoritative toolchain
 repositories selected for Rust 1.98.0 rather than a `rules_dx`-owned copy.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")
-load(":bindings.bzl", "rust_toolchain_toolchains", "rust_toolchain_tools")
+load(":bindings.bzl", "rust_toolchain_rustc", "rust_toolchain_toolchains", "rust_toolchain_tools")
 
 def _toolchain_identity_subject_impl(ctx):
     clippy_driver, rustfmt = rust_toolchain_tools(ctx)
+    rustc = rust_toolchain_rustc(ctx)
     return [
         DefaultInfo(files = depset([])),
         DxSubjectInfo(fields = {
             "clippy.owner": str(clippy_driver.owner),
             "clippy.path": clippy_driver.path,
+            "rustc.owner": str(rustc.owner),
+            "rustc.path": rustc.path,
             "rustfmt.owner": str(rustfmt.owner),
             "rustfmt.path": rustfmt.path,
         }),

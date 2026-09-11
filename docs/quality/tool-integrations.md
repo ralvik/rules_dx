@@ -194,6 +194,17 @@ directory to the mirrored config's parent directory and leaves unhinted runs at 
 root. `clippy_cfg` bound to `fixture_real_rust_hinted` proves the binding end to end: its lint
 result carries `clippy::too_many_arguments` where the unhinted fixture stays silent.
 
+Rust typechecking invokes the selected toolchain's `rustc` directly (M12 WP3, tool ID `rustc`,
+`real_rust_family` typecheck selection, `dx typecheck` via `real_typecheck_aspect`): one
+`--edition 2021 --error-format=json --emit=metadata --crate-type=lib` invocation per file, with
+`--crate-name` derived from the file stem and a fresh `--out-dir` under the scratch root. The
+`lib` crate type keeps a `bin`-style root (such as `fn main` with no entry point) from masking
+real type errors as spurious missing-`main` failures. There is no config discovery, so the
+working directory stays at the scratch root. Diagnostics share Clippy's JSON grammar (parsed by
+`parsers::parse_rustc` with `rustc` as the tool ID); the runner is check-only and never applies
+suggestions. Like Clippy and rustfmt, the compiler follows the toolchain version through
+`rust_toolchain_rustc` with no adapter edit and no `rules_dx`-owned copy.
+
 - **Repository-owned Markdown checks:** link and structure validation is repository-owned and
   distinct from Vale (M04 WP3, O20). The checker is the Rust crate `//quality/markdown`: it parses
   one Markdown source plus its declared sibling-file closure and reports structured findings for

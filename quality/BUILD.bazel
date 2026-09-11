@@ -78,6 +78,7 @@ quality_family(
     family_id = "rust",
     format = ["rustfmt"],
     lint = ["clippy"],
+    typecheck = ["rustc"],
 )
 
 quality_family(
