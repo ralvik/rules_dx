@@ -62,8 +62,9 @@ func kindInfo() rule.KindInfo {
 
 type rustLang struct {
 	language.BaseLang
-	errors  []string
-	ignores []*ignoreEntry
+	errors   []string
+	ignores  []*ignoreEntry
+	manifest *manifestRecorder
 }
 
 type rustConfig struct {
@@ -96,6 +97,10 @@ func NewLanguage() language.Language { return &rustLang{} }
 func (l *rustLang) Before(context.Context) {
 	l.errors = nil
 	l.ignores = nil
+	l.manifest = loadManifestRecorder()
+	if l.manifest != nil {
+		l.manifest.apparentLoads = l.ApparentLoads
+	}
 }
 
 func (*rustLang) DoneGeneratingRules() {}
@@ -158,6 +163,9 @@ func (l *rustLang) AfterResolvingDeps(context.Context) {
 		}
 	}
 	if len(l.errors) == 0 {
+		if l.manifest != nil {
+			l.manifest.emit(l.ignores)
+		}
 		return
 	}
 	sort.Strings(l.errors)
@@ -206,6 +214,14 @@ func (*rustLang) Imports(_ *config.Config, r *rule.Rule, _ *rule.File) []resolve
 func (*rustLang) Embeds(*rule.Rule, label.Label) []label.Label { return nil }
 
 func (l *rustLang) GenerateRules(args language.GenerateArgs) language.GenerateResult {
+	res := l.generateRules(args)
+	if l.manifest != nil {
+		l.manifest.record(args, res)
+	}
+	return res
+}
+
+func (l *rustLang) generateRules(args language.GenerateArgs) language.GenerateResult {
 	plan, err := planNativeConfig(args.Config, args)
 	if err != nil {
 		l.fail("%v", err)
