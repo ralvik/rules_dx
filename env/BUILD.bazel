@@ -1,0 +1,61 @@
+"""Bootstrap environment registry (M11 WP1): tool records plus fixtures and tests."""
+
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("//quality:fixtures.bzl", "real_source_target")
+load(":defs.bzl", "environment_config", "environment_tool")
+load(":defs_tests.bzl", "env_config_analysis_tests", "env_defs_unit_tests")
+
+package(default_visibility = ["//visibility:public"])
+
+# Fixture host executable backing the environment_tool subjects below.
+sh_binary(
+    name = "tool_sh",
+    srcs = ["tool.sh"],
+)
+
+environment_tool(
+    name = "tool_alpha",
+    aliases = ["a"],
+    bin_name = "alpha",
+    executable = ":tool_sh",
+)
+
+environment_tool(
+    name = "tool_beta",
+    bin_name = "beta",
+    executable = ":tool_sh",
+)
+
+# Nested config proving transitive composition: the outer config under
+# test reaches tool_beta only through config_inner.
+environment_config(
+    name = "config_inner",
+    tools = [":tool_beta"],
+)
+
+environment_config(
+    name = "config_under_test",
+    tools = [
+        ":config_inner",
+        ":tool_alpha",
+    ],
+)
+
+env_defs_unit_tests(name = "env_defs_unit")
+
+env_config_analysis_tests(name = "env_config_analysis")
+
+test_suite(
+    name = "all",
+    tests = [
+        ":env_config_analysis",
+        ":env_defs_unit",
+    ],
+)
+
+# Repository corpus (M05 WP1 pattern): all Starlark sources in this package
+# owned for direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
+)
