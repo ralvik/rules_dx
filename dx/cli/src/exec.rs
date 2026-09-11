@@ -1126,17 +1126,20 @@ fn execute_workflow(invocation: &Invocation, env: Env<'_>) -> i32 {
     )
 }
 
-/// Runs `dx generate` repo-wide through the canonical `//dx:generate`
-/// Gazelle runner (M10 WP1). Contract: `docs/cli/commands/generate.md`
-/// for the target surface; scope selection stays repo-wide pending O48
-/// and per-command result transport stays absent pending O13.
+/// Runs `dx generate` through the canonical `//dx:generate` Gazelle
+/// runner (M10 WP1). Contract: `docs/cli/commands/generate.md` for the
+/// target surface. Scope positionals resolve through the canonical
+/// target resolution and narrow the runner traversal to the resolved
+/// directories; empty scope stays repo-wide (`//...`). Per-command
+/// result transport stays absent pending O13.
 ///
 /// Gazelle owns its output and exit status: Bazel's exact nonzero code
 /// is preserved, and JSON mode emits the `command_started` /
 /// `command_finished` envelope with `results_complete: false` because
 /// no changes or mutations can be reported without the manifest.
-/// `--check` and explicit scope fail pre-execution; `--output=diff`
-/// fails operationally because no patch can be rendered.
+/// `--check` and `--output=diff` fail because freshness and patch
+/// rendering need the manifest; scope resolution failures (unknown
+/// paths, external scopes) fail pre-execution like every other command.
 fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
     match plan_reports(
         invocation.command,
@@ -1153,12 +1156,6 @@ fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
             "dx generate --check requires the versioned result manifest (O13); rerun without --check",
         );
     }
-    if !invocation.targets.is_empty() {
-        return pre_exec(
-            env.err,
-            "scoped dx generate is pending O48 qualification; rerun with no scope",
-        );
-    }
     if invocation.output == OutputMode::Diff {
         return operational(
             invocation,
@@ -1168,7 +1165,11 @@ fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
             "diff output for dx generate requires the versioned result manifest (O13)",
         );
     }
-    let plan = match plan_generate(&invocation.bazel_options) {
+    let resolved = match resolve(&invocation.targets, env.workspace, env.query_runner) {
+        Ok(resolved) => resolved,
+        Err(error) => return pre_exec(env.err, &error.to_string()),
+    };
+    let plan = match plan_generate(&resolved, &invocation.bazel_options) {
         Ok(plan) => plan,
         Err(error) => return pre_exec(env.err, &format!("{error:?}")),
     };
@@ -3642,20 +3643,30 @@ mod tests {
     }
 
     #[test]
-    fn generate_check_and_scope_fail_pre_exec_pending_manifest() {
+    fn generate_check_fails_pre_exec_pending_manifest() {
         let harness = Harness::new("generate-check");
         let (code, _, err) = harness.run(&["generate", "--check"]);
         assert_eq!(code, 2, "{err}");
         assert!(err.contains("O13"), "{err}");
+    }
 
+    #[test]
+    fn generate_scoped_run_resolves_labels_without_queries() {
         let harness = Harness::new("generate-scoped");
-        let (code, _, err) = harness.run(&["generate", "//a:one"]);
-        assert_eq!(code, 2, "{err}");
-        assert!(err.contains("O48"), "{err}");
+        let (code, out, err) = harness.run(&["generate", "//a:one", "--output=text"]);
+        assert_eq!(code, 0, "{err}");
+        assert!(out.contains("Running generate for //a:one"), "{out}");
         assert!(
             harness.query.calls.borrow().is_empty(),
-            "rejected scope issues no ownership queries"
+            "label scope issues no ownership queries"
         );
+    }
+
+    #[test]
+    fn generate_unresolvable_scope_fails_pre_exec() {
+        let harness = Harness::new("generate-bad-scope");
+        let (code, _, err) = harness.run(&["generate", "no/such/dir"]);
+        assert_eq!(code, 2, "{err}");
     }
 
     #[test]

@@ -12,8 +12,9 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
-# Canonical public generation workflow (M10 WP1): repository-wide default.
-# Scoped refresh (O48), versioned manifest (O13), and umbrellas (O59) land next.
+# Canonical public generation workflow (M10 WP1): repository-wide
+# default with scoped traversal from resolved scope (O48). Versioned
+# manifest dispatch (O13) and umbrellas (O59) land next.
 gazelle(
     name = "generate",
     gazelle = "//gazelle/rust:gazelle",
