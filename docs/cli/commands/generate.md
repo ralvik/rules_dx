@@ -9,6 +9,16 @@ it refreshes the repository. It may create or modify Gazelle-maintained `BUILD` 
 within the selected scope. Exact scope syntax and scoped freshness semantics are qualified
 under [O48](../../open-decisions.md).
 
+Provisional v1 scope (pending O48 freeze, flagged for review): resolution reuses
+[target resolution](../target-resolution.md) verbatim. Empty scope refreshes `//...`;
+labels and patterns pass through after syntax and workspace validation with
+external-repository scopes rejected; files resolve to depth-1 owners via unconfigured
+`bazel query` with no-owner, generated-excluded, not-found, and not-a-package errors;
+directories map to recursive `//path/...` patterns. Scoped `--check` runs the same
+non-mutating workflow over the selected subtree: a stale or missing Gazelle-maintained
+file in scope fails. Manifest scoping and Gazelle merge interaction for scoped refreshes
+remain open under O48; do not implement them against this prose.
+
 The command exposes no Gazelle application arguments. Arguments after `--` are Bazel command
 options placed before `//dx:generate`, not arguments passed to Gazelle. Advanced users may invoke
 the target or Gazelle directly, but that is outside the `dx generate` contract.
