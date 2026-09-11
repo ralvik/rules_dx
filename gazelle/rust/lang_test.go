@@ -1193,6 +1193,18 @@ func TestGenerateCargoBuildScript(t *testing.T) {
 	if script.Name() != "scripted_build_script" || script.AttrString("crate_root") != "build/script.rs" || script.AttrString("version") != "0.5.0" || script.AttrString("pkg_name") != "scripted" {
 		t.Errorf("script rule = %+v", script)
 	}
+	if cc, ok := script.Attr("use_cc_toolchain").(*bzl.LiteralExpr); !ok || cc.Token != "1" {
+		t.Errorf("script use_cc_toolchain = %v, want 1", script.Attr("use_cc_toolchain"))
+	}
+	if shell, ok := script.Attr("use_default_shell_env").(*bzl.LiteralExpr); !ok || shell.Token != "0" {
+		t.Errorf("script use_default_shell_env = %v, want 0", script.Attr("use_default_shell_env"))
+	}
+	if script.Attr("allow_build_script_to_detect_nonhermetic_paths") == nil || script.AttrBool("allow_build_script_to_detect_nonhermetic_paths") {
+		t.Errorf("script nonhermetic paths attr = %v, want False", script.Attr("allow_build_script_to_detect_nonhermetic_paths"))
+	}
+	if !script.AttrBool("emit_warnings") {
+		t.Errorf("script emit_warnings = %v, want True", script.Attr("emit_warnings"))
+	}
 	// Consumers carry the script edge for Resolve to merge.
 	for _, imports := range result.Imports {
 		if raw, ok := imports.(targetImports); ok && len(raw.production) > 0 {

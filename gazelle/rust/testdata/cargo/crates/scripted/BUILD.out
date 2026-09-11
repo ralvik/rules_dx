@@ -61,6 +61,7 @@ cargo_build_script(
         package_name = "crates/scripted",
         build = True,
     ),
+    allow_build_script_to_detect_nonhermetic_paths = False,
     crate_features = [],
     crate_name = "scripted_build_script",
     crate_root = "build/script.rs",

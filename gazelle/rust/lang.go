@@ -508,8 +508,9 @@ func wantsUnitTest(target cargoTarget, tree map[string]*FileFacts) bool {
 // BuildScriptInfo outputs (cfgs, env, generated files) into each crate's
 // compilation. The script rule itself stays unlinked. Generated script
 // attributes mirror crate_universe's script shape (srcs, crate_root,
-// edition, version, pkg_name, crate_features) with hermetic tristates
-// forced (use_cc_toolchain on, default shell env off) and diagnostics
+// edition, version, pkg_name, crate_features) with hermetic defaults
+// forced (use_cc_toolchain on, default shell env off,
+// allow_build_script_to_detect_nonhermetic_paths off) and diagnostics
 // forwarded (emit_warnings on, overridable by the global build setting).
 // tools, data, env, and links stay user-owned via keep: a script needing
 // them fails in the sandbox rather than building silently wrong.
@@ -548,6 +549,7 @@ func (l *rustLang) emitBuildScript(args language.GenerateArgs, manifestPath stri
 	r.SetAttr("emit_warnings", true)
 	r.SetAttr("use_cc_toolchain", 1)
 	r.SetAttr("use_default_shell_env", 0)
+	r.SetAttr("allow_build_script_to_detect_nonhermetic_paths", false)
 	setScriptAttrs(r, args.Rel, manifest)
 	for i, raw := range result.Imports {
 		if current, ok := raw.(targetImports); ok {
