@@ -1,4 +1,4 @@
-"""Unit and analysis tests for the bootstrap environment registry (M11 WP1).
+"""Unit and analysis tests for the bootstrap environment registry (M11 WP1-WP3).
 
 Unit checks run while this file loads, pinning every `env_name_error`
 branch (empty, dot segments, separators, executable suffixes, reserved
@@ -216,4 +216,33 @@ def env_tree_analysis_tests(name):
         mode = "analysis",
         subjects = [":tree_under_test"],
         expected_observations = EXPECTED_TREE_OBSERVATIONS,
+    )
+
+EXPECTED_DEFAULT_CONFIG_OBSERVATIONS = """subject //env:default_config
+field count=3
+field names=doctor,dx,quality_markdown"""
+
+def env_default_config_analysis_tests(name):
+    starlark_test(
+        name = name,
+        mode = "analysis",
+        subjects = [":default_config"],
+        expected_observations = EXPECTED_DEFAULT_CONFIG_OBSERVATIONS,
+    )
+
+EXPECTED_DEFAULT_TREE_OBSERVATIONS = """subject //env:default_tree
+file default_tree.metadata.json
+file doctor
+file dx
+file quality_markdown
+field count=3
+field host_names=doctor,dx,quality_markdown
+field platform=posix"""
+
+def env_default_tree_analysis_tests(name):
+    starlark_test(
+        name = name,
+        mode = "analysis",
+        subjects = [":default_tree"],
+        expected_observations = EXPECTED_DEFAULT_TREE_OBSERVATIONS,
     )

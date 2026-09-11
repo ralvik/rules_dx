@@ -5,7 +5,7 @@ load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//quality:fixtures.bzl", "real_source_target")
 load(":defs.bzl", "environment_config", "environment_tool", "environment_tree")
-load(":defs_tests.bzl", "env_config_analysis_tests", "env_defs_unit_tests", "env_tree_analysis_tests")
+load(":defs_tests.bzl", "env_config_analysis_tests", "env_default_config_analysis_tests", "env_default_tree_analysis_tests", "env_defs_unit_tests", "env_tree_analysis_tests")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -56,6 +56,10 @@ environment_tree(
 
 env_tree_analysis_tests(name = "env_tree_analysis")
 
+env_default_config_analysis_tests(name = "env_default_config_analysis")
+
+env_default_tree_analysis_tests(name = "env_default_tree_analysis")
+
 # Frozen marker schema (M11 WP2): field numbers are the compatibility
 # surface; see `marker.proto` and the managed-state doc.
 proto_library(
@@ -68,9 +72,12 @@ rust_prost_library(
     proto = ":marker_proto",
 )
 
-# Default runnable environment (M11 WP2-WP3): the curated doctor probe plus
-# the module-matched `dx` CLI and the user-facing quality binaries, all
-# contributed through the same public `environment_tool` path.
+# Default runnable environment (M11 WP2-WP3, O62): the curated doctor probe
+# plus the module-matched `dx` CLI and the user-facing `markdown_check`
+# quality binary, all contributed through the same public
+# `environment_tool` path. Internal pipeline binaries (`quality_runner`,
+# `quality_evaluator`) are intentionally not exposed, per the managed
+# environment tool-exposure contract.
 sh_binary(
     name = "doctor",
     srcs = ["doctor.sh"],
@@ -89,18 +96,6 @@ environment_tool(
 )
 
 environment_tool(
-    name = "quality_runner_tool",
-    bin_name = "quality_runner",
-    executable = "//quality/runner:quality_runner",
-)
-
-environment_tool(
-    name = "quality_evaluator_tool",
-    bin_name = "quality_evaluator",
-    executable = "//quality/evaluator:quality_evaluator",
-)
-
-environment_tool(
     name = "quality_markdown_tool",
     bin_name = "quality_markdown",
     executable = "//quality/markdown:quality_markdown",
@@ -111,9 +106,7 @@ environment_config(
     tools = [
         ":doctor_tool",
         ":dx_tool",
-        ":quality_evaluator_tool",
         ":quality_markdown_tool",
-        ":quality_runner_tool",
     ],
 )
 
@@ -126,6 +119,8 @@ test_suite(
     name = "all",
     tests = [
         ":env_config_analysis",
+        ":env_default_config_analysis",
+        ":env_default_tree_analysis",
         ":env_defs_unit",
         ":env_tree_analysis",
     ],

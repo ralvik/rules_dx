@@ -14,12 +14,12 @@ root="${TEST_TMPDIR}/work space"
 mkdir -p "$root"
 
 output="$("${env_bin}" --workspace "${root}")"
-[[ "${output}" == *'installed 5 tool(s)'* ]] || {
+[[ "${output}" == *'installed 3 tool(s)'* ]] || {
   echo "unexpected fresh-install output: ${output}" >&2
   exit 1
 }
 
-for tool in doctor dx quality_runner quality_evaluator quality_markdown; do
+for tool in doctor dx quality_markdown; do
   [[ -L "${root}/.dx/bin/${tool}" ]] || {
     echo "missing managed symlink: ${tool}" >&2
     exit 1
@@ -72,7 +72,7 @@ with open(dest, "w") as handle:
 EOF
 rm "${alt}/bin/quality_markdown"
 replace="$("${env_bin}" --workspace "${root}" --staged-bin "${alt}/bin" --metadata "${alt}/metadata.json")"
-[[ "${replace}" == *'replaced managed tree with 4 tool(s)'* ]] || {
+[[ "${replace}" == *'replaced managed tree with 2 tool(s)'* ]] || {
   echo "unexpected replacement output: ${replace}" >&2
   exit 1
 }
@@ -87,7 +87,7 @@ replace="$("${env_bin}" --workspace "${root}" --staged-bin "${alt}/bin" --metada
 
 # Restoring the default tree replaces back to the full set.
 restore="$("${env_bin}" --workspace "${root}")"
-[[ "${restore}" == *'replaced managed tree with 5 tool(s)'* ]] || {
+[[ "${restore}" == *'replaced managed tree with 3 tool(s)'* ]] || {
   echo "unexpected restore output: ${restore}" >&2
   exit 1
 }
