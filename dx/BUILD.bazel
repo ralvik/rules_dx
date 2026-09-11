@@ -7,9 +7,17 @@ so selecting this placeholder fails fast at analysis until the typed
 per-family sections and thin canonical aggregate land.
 """
 
+load("@gazelle//:def.bzl", "gazelle")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
+
+# Canonical public generation workflow (M10 WP1): repository-wide default.
+# Scoped refresh (O48), versioned manifest (O13), and umbrellas (O59) land next.
+gazelle(
+    name = "generate",
+    gazelle = "//gazelle/rust:gazelle",
+)
 
 filegroup(
     name = "config",

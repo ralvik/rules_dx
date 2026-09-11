@@ -35,6 +35,7 @@ gazelle_binary(
     languages = [":rust"],
     tags = ["no-coverage"],
     version = 1,
+    visibility = ["//dx:__pkg__"],
 )
 
 filegroup(
