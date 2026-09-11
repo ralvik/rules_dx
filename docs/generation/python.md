@@ -50,6 +50,11 @@ uv groups resolve only when authoritative target configuration already selects t
 `ide_groups` are environment-only and never make an import build-admissible. Wrong-scope imports fail;
 generation never enables or moves a dependency.
 
+The extension honors the common exact `# gazelle:dx_ignore_import` exception
+(`python [python] <import>`): an ignored literal contributes no edge, a mapping
+plus an ignore for the same import fails, and an ignore matching no literal
+reference fails as stale. The extension never generates mappings or ignores.
+
 Ordinary imports and recognized literal runtime loads, including
 `importlib.import_module("name")`, use strict common resolution. Computed module names remain the
 manual kept-dependency boundary. Python files using only standard-library and local imports generate

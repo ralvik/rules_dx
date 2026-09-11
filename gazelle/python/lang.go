@@ -64,7 +64,18 @@ func binaryKindInfo() rule.KindInfo {
 
 type pythonLang struct {
 	language.BaseLang
-	errors []string
+	errors  []string
+	ignores []*ignoreEntry
+}
+
+type pythonConfig struct {
+	ignores []*ignoreEntry
+}
+
+type ignoreEntry struct {
+	value string
+	path  string
+	used  bool
 }
 
 // targetImports is the deduplicated union of literal import roots for one
@@ -77,7 +88,7 @@ type targetImports struct {
 // NewLanguage returns the private first-party Python Gazelle extension.
 func NewLanguage() language.Language { return &pythonLang{} }
 
-func (l *pythonLang) Before(context.Context) { l.errors = nil }
+func (l *pythonLang) Before(context.Context) { l.errors = nil; l.ignores = nil }
 
 func (l *pythonLang) DoneGeneratingRules() {}
 
@@ -85,15 +96,45 @@ func (l *pythonLang) RegisterFlags(*flag.FlagSet, string, *config.Config) {}
 
 func (l *pythonLang) CheckFlags(*flag.FlagSet, *config.Config) error { return nil }
 
-func (*pythonLang) KnownDirectives() []string { return nil }
+func (*pythonLang) KnownDirectives() []string { return []string{"dx_ignore_import"} }
 
-func (l *pythonLang) Configure(*config.Config, string, *rule.File) {}
+func (l *pythonLang) Configure(c *config.Config, rel string, f *rule.File) {
+	var inherited []*ignoreEntry
+	if raw, ok := c.Exts[languageName]; ok {
+		inherited = append(inherited, raw.(*pythonConfig).ignores...)
+	}
+	if f != nil {
+		for _, directive := range f.Directives {
+			if directive.Key != "dx_ignore_import" {
+				continue
+			}
+			fields := strings.Fields(directive.Value)
+			if len(fields) == 2 && fields[0] == languageName {
+				entry := &ignoreEntry{value: fields[1], path: rel}
+				inherited = append(inherited, entry)
+				l.ignores = append(l.ignores, entry)
+			} else if len(fields) == 3 && fields[0] == languageName && fields[1] == languageName {
+				entry := &ignoreEntry{value: fields[2], path: rel}
+				inherited = append(inherited, entry)
+				l.ignores = append(l.ignores, entry)
+			} else if len(fields) > 0 && fields[0] == languageName {
+				l.fail("python: //%s: malformed # gazelle:dx_ignore_import %s", rel, directive.Value)
+			}
+		}
+	}
+	c.Exts[languageName] = &pythonConfig{ignores: inherited}
+}
 
 func (l *pythonLang) fail(format string, args ...interface{}) {
 	l.errors = append(l.errors, fmt.Sprintf(format, args...))
 }
 
 func (l *pythonLang) AfterResolvingDeps(context.Context) {
+	for _, ignore := range l.ignores {
+		if !ignore.used {
+			l.fail("python: //%s: stale # gazelle:dx_ignore_import python %s matches no literal reference", ignore.path, ignore.value)
+		}
+	}
 	if len(l.errors) == 0 {
 		return
 	}
@@ -333,6 +374,11 @@ func (l *pythonLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *repo.Re
 		}
 		spec := resolve.ImportSpec{Lang: languageName, Imp: name}
 		if override, found := resolve.FindRuleWithOverride(c, spec, languageName); found {
+			if ignore := matchingIgnore(c, name); ignore != nil {
+				ignore.used = true
+				l.fail("python: %s: import %q has both an exact resolve mapping and ignore", from, name)
+				continue
+			}
 			deps[override.Rel(from.Repo, from.Pkg).String()] = true
 			continue
 		}
@@ -343,6 +389,10 @@ func (l *pythonLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *repo.Re
 				deps[matches[0].Label.Rel(from.Repo, from.Pkg).String()] = true
 			}
 		case 0:
+			if ignore := matchingIgnore(c, name); ignore != nil {
+				ignore.used = true
+				continue
+			}
 			l.fail("python: %s: unresolved import %q; add a local one-source library or an exact # gazelle:resolve mapping", from, name)
 		default:
 			l.fail("python: %s: ambiguous import %q resolves to %s", from, name, formatMatches(matches))
@@ -374,6 +424,19 @@ func unionStrings(a, b []string) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+func matchingIgnore(c *config.Config, name string) *ignoreEntry {
+	raw, ok := c.Exts[languageName]
+	if !ok {
+		return nil
+	}
+	for i := len(raw.(*pythonConfig).ignores) - 1; i >= 0; i-- {
+		if entry := raw.(*pythonConfig).ignores[i]; entry.value == name {
+			return entry
+		}
+	}
+	return nil
 }
 
 func formatMatches(matches []resolve.FindResult) string {

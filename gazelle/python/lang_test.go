@@ -251,7 +251,10 @@ func TestLanguageMetadata(t *testing.T) {
 	l.RegisterFlags(flag.NewFlagSet("test", flag.ContinueOnError), "update", config.New())
 	l.Configure(config.New(), "pkg", nil)
 	l.DoneGeneratingRules()
-	if len(l.KnownDirectives()) != 0 || l.Embeds(nil, label.NoLabel) != nil {
+	if got := l.KnownDirectives(); len(got) != 1 || got[0] != "dx_ignore_import" {
+		t.Fatalf("directives = %v, want [dx_ignore_import]", got)
+	}
+	if l.Embeds(nil, label.NoLabel) != nil {
 		t.Fatal("invalid directives or embeds")
 	}
 	loads := l.ApparentLoads(func(name string) string {
@@ -542,5 +545,113 @@ func TestMergeStaleCleansBinary(t *testing.T) {
 	result := mergeStale(f, language.GenerateResult{Gen: []*rule.Rule{keptLib, keptBin}})
 	if len(result.Empty) != 1 || result.Empty[0].Name() != "old_bin" {
 		t.Fatalf("stale = %v, want [old_bin]", result.Empty)
+	}
+}
+
+func TestIgnoreDirectiveInheritanceAndStaleCheck(t *testing.T) {
+	l := &pythonLang{}
+	l.Before(context.Background())
+	root := config.New()
+	file, err := rule.LoadData("BUILD.bazel", "", []byte("# gazelle:dx_ignore_import python missing_dep\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.Configure(root, "", file)
+	child := root.Clone()
+	l.Configure(child, "child", nil)
+	ignore := matchingIgnore(child, "missing_dep")
+	if ignore == nil || ignore.path != "" {
+		t.Fatalf("inherited ignore = %+v", ignore)
+	}
+	ignore.used = true
+	l.AfterResolvingDeps(context.Background())
+}
+
+func TestStaleIgnoreFails(t *testing.T) {
+	l := &pythonLang{}
+	l.Before(context.Background())
+	cfg := config.New()
+	file, err := rule.LoadData("BUILD.bazel", "pkg", []byte("# gazelle:dx_ignore_import python stale\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.Configure(cfg, "pkg", file)
+	defer func() {
+		if got := recover(); got == nil || !strings.Contains(got.(string), "stale") {
+			t.Errorf("stale ignore result = %v", got)
+		}
+	}()
+	l.AfterResolvingDeps(context.Background())
+}
+
+func TestMalformedIgnoreFails(t *testing.T) {
+	l := &pythonLang{}
+	l.Before(context.Background())
+	cfg := config.New()
+	file, err := rule.LoadData("BUILD.bazel", "pkg", []byte("# gazelle:dx_ignore_import python\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.Configure(cfg, "pkg", file)
+	defer func() {
+		if got := recover(); got == nil || !strings.Contains(got.(string), "malformed") {
+			t.Errorf("malformed ignore result = %v", got)
+		}
+	}()
+	l.AfterResolvingDeps(context.Background())
+}
+
+func TestConfigureDirectiveForms(t *testing.T) {
+	l := &pythonLang{}
+	l.Before(context.Background())
+	cfg := config.New()
+	file, err := rule.LoadData("BUILD.bazel", "pkg", []byte("# gazelle:other ignored\n# gazelle:dx_ignore_import python python external\n# gazelle:dx_ignore_import rust foreign\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.Configure(cfg, "pkg", file)
+	if len(l.ignores) != 1 || l.ignores[0].value != "external" {
+		t.Errorf("ignores = %+v", l.ignores)
+	}
+	l.ignores[0].used = true
+	l.AfterResolvingDeps(context.Background())
+	if matchingIgnore(config.New(), "none") != nil || matchingIgnore(cfg, "none") != nil {
+		t.Error("nonmatching ignore found")
+	}
+}
+
+func TestResolveIgnore(t *testing.T) {
+	l := &pythonLang{}
+	l.Before(context.Background())
+	cfg := resolverConfig(t, nil)
+	file, err := rule.LoadData("BUILD.bazel", "app", []byte("# gazelle:dx_ignore_import python external\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.Configure(cfg, "app", file)
+	r := rule.NewRule(libraryKind, "app")
+	l.Resolve(cfg, resolverIndex(l), nil, r, targetImports{imports: []string{"external"}}, label.New("", "app", "app"))
+	if r.Attr("deps") != nil {
+		t.Errorf("ignored import produced deps = %v", r.AttrStrings("deps"))
+	}
+	if len(l.errors) != 0 {
+		t.Errorf("ignored import errors = %v", l.errors)
+	}
+	l.AfterResolvingDeps(context.Background())
+}
+
+func TestResolveMappingIgnoreConflict(t *testing.T) {
+	l := &pythonLang{}
+	l.Before(context.Background())
+	cfg := resolverConfig(t, []rule.Directive{{Key: "resolve", Value: "python python mapped //mapped:dep"}})
+	file, err := rule.LoadData("BUILD.bazel", "app", []byte("# gazelle:dx_ignore_import python mapped\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.Configure(cfg, "app", file)
+	r := rule.NewRule(libraryKind, "app")
+	l.Resolve(cfg, resolverIndex(l), nil, r, targetImports{imports: []string{"mapped"}}, label.New("", "app", "app"))
+	if len(l.errors) != 1 || !strings.Contains(l.errors[0], "both an exact resolve mapping and ignore") {
+		t.Errorf("conflict errors = %v", l.errors)
 	}
 }
