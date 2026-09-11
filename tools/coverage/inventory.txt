@@ -30,6 +30,9 @@ support gazelle/rust/testdata/native_config/crates/full/src/lib.rs
 support gazelle/rust/testdata/native_config/crates/merge/src/lib.rs
 support gazelle/rust/testdata/native_config/crates/removal/src/lib.rs
 support gazelle/rust/testdata/native_config/crates/skip/src/lib.rs
+support rust/hello/src/cdylib.rs
+support rust/hello/src/derive.rs
+support rust/hello/src/staticlib.rs
 eligible gazelle/rust/cargo.go
 support gazelle/rust/doc.go
 eligible gazelle/rust/lang.go

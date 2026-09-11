@@ -18,7 +18,8 @@ Used upstream symbols (`@rules_rust//rust:defs.bzl`): `rust_library`,
 `rust_clippy_aspect`. Used toolchain types:
 `@rules_rust//rust:toolchain_type` (`rustc`, `cargo`, `rustfmt`,
 `clippy_driver`), `@rules_rust//rust/rustfmt:toolchain_type`
-(`rustfmt`). No other upstream surface is used; consumers needing more
+(`rustfmt`). `CcInfo` loads from `@rules_cc//cc/common:cc_info.bzl` for
+the shared/static linking surface. No other upstream surface is used; consumers needing more
 load the upstream module directly.
 
 Normalization (WP3) is deliberately narrow: the only new fact is
@@ -32,13 +33,18 @@ source owner, never the test.
 override per target. Unknown or unregistered toolchain versions fail in
 the upstream toolchain resolution, never here.
 
-Each forwarder advertises `provides = [CrateInfo, DepInfo, DefaultInfo,
+Each crate forwarder advertises `provides = [CrateInfo, DepInfo, DefaultInfo,
 InstrumentedFilesInfo, QualitySourcesInfo]`: Bazel matches an aspect's
 `required_providers`
 against advertised providers, so without `provides` the upstream lint
-aspects skip the wrappers and the lint tests pass vacuously. `provides`
+aspects skip the wrappers and the lint tests pass vacuously. The
+Cc-linking forwarders (`dx_rust_shared_library`, `dx_rust_static_library`)
+advertise the same set with `TestCrateInfo` in place of `CrateInfo` plus
+`CcInfo`: upstream provides no `CrateInfo` for those shapes, and the
+advertised `TestCrateInfo` is what keeps the lint aspects matching.
+`provides`
 is strictly validated (advertised implies returned), so the forwarder
-fails loudly when the private upstream lacks `CrateInfo`/`DepInfo`
+fails loudly when the private upstream lacks the advertised shape
 instead of silently changing shape. `OutputGroupInfo` and
 `RunEnvironmentInfo` are forwarded at runtime when present but stay
 unadvertised, mirroring upstream: unadvertised providers remain visible
@@ -46,6 +52,7 @@ to Starlark reads and `--output_groups`. `QualitySourcesInfo` is
 advertised so M04 quality aspects can gate on it.
 """
 
+load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_rust//rust:defs.bzl", _rust_binary = "rust_binary", _rust_common = "rust_common", _rust_library = "rust_library", _rust_proc_macro = "rust_proc_macro", _rust_shared_library = "rust_shared_library", _rust_static_library = "rust_static_library", _rust_test = "rust_test")
 load("//quality:sources.bzl", "QualitySourcesInfo", "RUST", "check_direct_sources")
 
@@ -90,8 +97,8 @@ def _dx_quality_sources(ctx):
 def _dx_preserved_crate_providers(ctx):
     """`CrateInfo` + `DepInfo` from the private upstream; both are mandatory.
 
-    Every upstream rule the macros create (`rust_library`, `rust_binary`,
-    `rust_test`) yields both. Anything else is a wrapper bug, so fail loudly
+    Every upstream rule the library/binary/test/proc-macro macros create
+    yields both. Anything else is a wrapper bug, so fail loudly
     instead of silently changing shape (which would also break the
     advertised `provides` contract above).
     """
@@ -103,6 +110,31 @@ def _dx_preserved_crate_providers(ctx):
         fail("dx_rust_*: upstream target has no DepInfo: " +
              str(ctx.attr.upstream.label))
     return [upstream[_rust_common.crate_info], upstream[_rust_common.dep_info]]
+
+def _dx_preserved_cc_providers(ctx):
+    """`TestCrateInfo` + `DepInfo` + `CcInfo` from the private upstream.
+
+    `rust_shared_library`/`rust_static_library` deliberately provide no
+    `CrateInfo` (upstream: "not supposed to be depended on by other rust
+    targets"); their observable surfaces are the `CcInfo` linking context
+    and the `TestCrateInfo`-wrapped crate for `rust_test`. All three are
+    mandatory here so a shape change fails loudly.
+    """
+    upstream = ctx.attr.upstream
+    if _rust_common.test_crate_info not in upstream:
+        fail("dx_rust_*: upstream target has no TestCrateInfo: " +
+             str(ctx.attr.upstream.label))
+    if _rust_common.dep_info not in upstream:
+        fail("dx_rust_*: upstream target has no DepInfo: " +
+             str(ctx.attr.upstream.label))
+    if CcInfo not in upstream:
+        fail("dx_rust_*: upstream target has no CcInfo: " +
+             str(ctx.attr.upstream.label))
+    return [
+        upstream[_rust_common.test_crate_info],
+        upstream[_rust_common.dep_info],
+        upstream[CcInfo],
+    ]
 
 def _dx_forwarded_runtime_providers(ctx):
     """Runtime fidelity: coverage metadata, output groups, and test/run env.
@@ -151,6 +183,48 @@ _dx_rust_forward = rule(
         ),
     },
     doc = "Forwards upstream Rust providers unchanged and adds QualitySourcesInfo.",
+)
+
+# Advertised providers for the Cc-linking shapes (`rust_shared_library`,
+# `rust_static_library`). Mirrors `_DX_FORWARD_PROVIDES` with
+# `TestCrateInfo` in place of `CrateInfo` (upstream provides no `CrateInfo`
+# for these shapes) plus the advertised `CcInfo` linking surface. The
+# advertised `TestCrateInfo` is load-bearing beyond preservation: the
+# upstream lint aspects match `required_providers` against advertised
+# providers, so without it `rustfmt_test`/`rust_clippy_test` over the
+# wrappers would pass vacuously.
+_DX_CC_FORWARD_PROVIDES = [
+    _rust_common.test_crate_info,
+    _rust_common.dep_info,
+    CcInfo,
+    DefaultInfo,
+    InstrumentedFilesInfo,
+    QualitySourcesInfo,
+]
+
+def _dx_rust_forward_cc_impl(ctx):
+    return (
+        _dx_preserved_cc_providers(ctx) +
+        [ctx.attr.upstream[DefaultInfo]] +
+        _dx_forwarded_runtime_providers(ctx) +
+        [_dx_quality_sources(ctx)]
+    )
+
+_dx_rust_forward_cc = rule(
+    implementation = _dx_rust_forward_cc_impl,
+    provides = _DX_CC_FORWARD_PROVIDES,
+    attrs = {
+        "srcs": attr.label_list(
+            allow_files = [".rs"],
+            doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
+        ),
+        "upstream": attr.label(
+            mandatory = True,
+            providers = [[_rust_common.test_crate_info]],
+            doc = "The private upstream rust_shared_library/rust_static_library target whose providers are preserved.",
+        ),
+    },
+    doc = "Forwards the upstream Cc-linking providers unchanged and adds QualitySourcesInfo.",
 )
 
 def _dx_rust_forwarded_non_default_providers(ctx):
@@ -374,12 +448,16 @@ def dx_rust_shared_library(
         **kwargs):
     """Experimental minimal wrapper over `rust_shared_library` (M12).
 
-    Same forwarding shape as `dx_rust_library`.
+    Cc-linking forwarding shape: the private upstream keeps the `CcInfo`
+    linking context (plus the `TestCrateInfo`-wrapped crate for `rust_test`)
+    and the public target adds QualitySourcesInfo. Upstream provides no
+    `CrateInfo` for this shape, so unlike `dx_rust_library` there is none
+    to preserve.
     """
     _dx_wrap(
         name,
         _rust_shared_library,
-        _dx_rust_forward,
+        _dx_rust_forward_cc,
         srcs,
         crate_name = crate_name,
         edition = edition,
@@ -396,12 +474,12 @@ def dx_rust_static_library(
         **kwargs):
     """Experimental minimal wrapper over `rust_static_library` (M12).
 
-    Same forwarding shape as `dx_rust_library`.
+    Cc-linking forwarding shape, mirroring `dx_rust_shared_library`.
     """
     _dx_wrap(
         name,
         _rust_static_library,
-        _dx_rust_forward,
+        _dx_rust_forward_cc,
         srcs,
         crate_name = crate_name,
         edition = edition,
