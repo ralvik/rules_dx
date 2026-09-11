@@ -33,6 +33,15 @@ pass through to each phase. `build`, `test`, `coverage`, `audit`, `update`,
 umbrella phases. CI keeps invoking each explicit `--check`; the umbrella is
 inner-loop convenience with no scheduling, caching, or daemon behavior.
 
+Provisional umbrella composition (pending O59 freeze, flagged for review): NDJSON framing
+reuses existing events with no new kinds — one `command_started`/`command_finished` pair
+for `check`/`fix` brackets the verbatim per-phase streams in phase order, and line order
+stays authoritative per the [output protocol](../output-protocol.md#ndjson-envelope).
+`--output diff` concatenates each completed phase's validated diff in phase order; phases
+with no changes contribute nothing. `--fail-on` applies per phase verbatim; the umbrella
+succeeds only when every phase succeeds. Merged `--report` file semantics across phases
+remain open under O59; do not implement them against this prose.
+
 ## `dx clean`
 
 ```text
