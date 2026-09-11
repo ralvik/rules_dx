@@ -15,6 +15,7 @@ go_library(
         "lang.go",
         "layout.go",
         "naming.go",
+        "native_config.go",
         "parser.go",
     ],
     importpath = "github.com/ralvik/rules_dx/gazelle/rust",
@@ -67,6 +68,14 @@ sh_test(
     tags = ["no-coverage"],
 )
 
+sh_test(
+    name = "native_config_test",
+    srcs = ["native_config_test.sh"],
+    args = ["$(rootpath :gazelle)"],
+    data = [":gazelle"],
+    tags = ["no-coverage"],
+)
+
 go_test(
     name = "rust_test",
     srcs = [
@@ -74,6 +83,7 @@ go_test(
         "lang_test.go",
         "layout_test.go",
         "naming_test.go",
+        "native_config_test.go",
         "parser_test.go",
     ],
     embed = [":rust"],

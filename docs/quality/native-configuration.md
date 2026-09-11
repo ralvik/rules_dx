@@ -58,9 +58,10 @@ semantics without deleting BUILD files.
 
 Within a selected tool, only exact documented built-in filenames are recognized. Unknown, custom,
 case-variant, or heuristically similar filenames are silently inert and create no package, target,
-hint, or validation. No v1 directive promotes an arbitrary filename to config status. Each tool's
-exact filename list is frozen in this document with its adapter; only Ruff's list
-(`ruff.toml`, `.ruff.toml`) is frozen now.
+hint, or validation. No v1 directive promotes an arbitrary filename to config status. The first-party
+Rust Gazelle extension freezes five tool filenames: Buildifier `.buildifier.json`, Taplo `taplo.toml`,
+Vale `.vale.ini`, rustfmt `rustfmt.toml`, and Clippy `clippy.toml`. Only Ruff's list
+(`ruff.toml`, `.ruff.toml`) is additionally frozen now.
 
 ## Targets And Ownership
 

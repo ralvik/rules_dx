@@ -1,0 +1,34 @@
+load("@rules_dx//quality:native_config.bzl", "clippy_config", "rustfmt_config", "vale_config")
+load("@rules_dx//rust/rules:defs.bzl", "dx_rust_library")
+
+# Fresh package: sources plus tool configs generate together.
+
+dx_rust_library(
+    name = "full",
+    srcs = ["src/lib.rs"],
+    aspect_hints = [
+        ":clippy_config",
+        ":rustfmt_config",
+    ],
+    crate_name = "full",
+    crate_root = "src/lib.rs",
+)
+
+vale_config(
+    name = "vale_config",
+    src = ".vale.ini",
+    data = ["crates/full/styles/org/Example.yml"],
+    visibility = ["//crates/full:__subpackages__"],
+)
+
+rustfmt_config(
+    name = "rustfmt_config",
+    src = "rustfmt.toml",
+    visibility = ["//crates/full:__subpackages__"],
+)
+
+clippy_config(
+    name = "clippy_config",
+    src = "clippy.toml",
+    visibility = ["//crates/full:__subpackages__"],
+)

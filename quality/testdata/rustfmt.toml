@@ -1,0 +1,4 @@
+# M10 WP3: default rustfmt config backing the generated-shape binding
+# fixture. Content is inert policy; presence plus the aspect_hints edge is
+# the evidence.
+edition = "2021"

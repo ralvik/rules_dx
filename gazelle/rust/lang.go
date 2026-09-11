@@ -32,6 +32,14 @@ var rustKinds = map[string]rule.KindInfo{
 	testKind:    kindInfo(),
 }
 
+func init() {
+	// Managed native-config targets merge through the same file the
+	// Rust rules live in, so their kinds register alongside.
+	for kind, info := range nativeConfigKinds() {
+		rustKinds[kind] = info
+	}
+}
+
 func kindInfo() rule.KindInfo {
 	return rule.KindInfo{
 		MatchAttrs: []string{"crate_root"},
@@ -41,11 +49,12 @@ func kindInfo() rule.KindInfo {
 		},
 		SubstituteAttrs: map[string]bool{"crate": true},
 		MergeableAttrs: map[string]bool{
-			"aliases":    true,
-			"crate":      true,
-			"crate_name": true,
-			"crate_root": true,
-			"srcs":       true,
+			"aliases":      true,
+			"aspect_hints": true,
+			"crate":        true,
+			"crate_name":   true,
+			"crate_root":   true,
+			"srcs":         true,
 		},
 		ResolveAttrs: map[string]bool{"deps": true},
 	}
@@ -59,6 +68,10 @@ type rustLang struct {
 
 type rustConfig struct {
 	ignores []*ignoreEntry
+	// tools is the managed native-config tool set for the directory,
+	// from the nearest dx_native_tools directive or inherited. Nil
+	// means unconstrained: every managed tool.
+	tools []string
 }
 
 type ignoreEntry struct {
@@ -91,33 +104,47 @@ func (l *rustLang) RegisterFlags(*flag.FlagSet, string, *config.Config) {}
 
 func (l *rustLang) CheckFlags(*flag.FlagSet, *config.Config) error { return nil }
 
-func (*rustLang) KnownDirectives() []string { return []string{"dx_ignore_import"} }
+func (*rustLang) KnownDirectives() []string { return []string{"dx_ignore_import", nativeToolsDirective} }
 
 func (l *rustLang) Configure(c *config.Config, rel string, file *rule.File) {
 	var inherited []*ignoreEntry
+	tools := defaultNativeTools()
 	if raw, ok := c.Exts[languageName]; ok {
-		inherited = append(inherited, raw.(*rustConfig).ignores...)
+		parent := raw.(*rustConfig)
+		inherited = append(inherited, parent.ignores...)
+		if parent.tools != nil {
+			tools = parent.tools
+		}
 	}
 	if file != nil {
 		for _, directive := range file.Directives {
-			if directive.Key != "dx_ignore_import" {
-				continue
-			}
-			fields := strings.Fields(directive.Value)
-			if len(fields) == 2 && fields[0] == languageName {
-				entry := &ignoreEntry{value: fields[1], path: rel}
-				inherited = append(inherited, entry)
-				l.ignores = append(l.ignores, entry)
-			} else if len(fields) == 3 && fields[0] == languageName && fields[1] == languageName {
-				entry := &ignoreEntry{value: fields[2], path: rel}
-				inherited = append(inherited, entry)
-				l.ignores = append(l.ignores, entry)
-			} else if len(fields) > 0 && fields[0] == languageName {
-				l.fail("rust: //%s: malformed # gazelle:dx_ignore_import %s", rel, directive.Value)
+			switch directive.Key {
+			case nativeToolsDirective:
+				selected, err := parseNativeToolsDirective(directive.Value)
+				if err != nil {
+					l.fail("%v", err)
+					continue
+				}
+				// The nearest directive wins: a deeper BUILD file
+				// replaces the inherited set instead of unioning it.
+				tools = selected
+			case "dx_ignore_import":
+				fields := strings.Fields(directive.Value)
+				if len(fields) == 2 && fields[0] == languageName {
+					entry := &ignoreEntry{value: fields[1], path: rel}
+					inherited = append(inherited, entry)
+					l.ignores = append(l.ignores, entry)
+				} else if len(fields) == 3 && fields[0] == languageName && fields[1] == languageName {
+					entry := &ignoreEntry{value: fields[2], path: rel}
+					inherited = append(inherited, entry)
+					l.ignores = append(l.ignores, entry)
+				} else if len(fields) > 0 && fields[0] == languageName {
+					l.fail("rust: //%s: malformed # gazelle:dx_ignore_import %s", rel, directive.Value)
+				}
 			}
 		}
 	}
-	c.Exts[languageName] = &rustConfig{ignores: inherited}
+	c.Exts[languageName] = &rustConfig{ignores: inherited, tools: tools}
 }
 
 func (l *rustLang) fail(format string, args ...interface{}) {
@@ -161,6 +188,7 @@ func rustLoads(rulesRepo, cratesRepo string) []rule.LoadInfo {
 	return []rule.LoadInfo{
 		{Name: "@" + rulesRepo + "//rust/rules:defs.bzl", Symbols: []string{binaryKind, libraryKind, testKind}},
 		{Name: "@" + cratesRepo + "//:crates.bzl", Symbols: []string{"aliases", "crate_deps"}},
+		nativeConfigLoads(rulesRepo),
 	}
 }
 
@@ -178,6 +206,11 @@ func (*rustLang) Imports(_ *config.Config, r *rule.Rule, _ *rule.File) []resolve
 func (*rustLang) Embeds(*rule.Rule, label.Label) []label.Label { return nil }
 
 func (l *rustLang) GenerateRules(args language.GenerateArgs) language.GenerateResult {
+	plan, err := planNativeConfig(args.Config, args)
+	if err != nil {
+		l.fail("%v", err)
+		return language.GenerateResult{}
+	}
 	files, err := sourceFiles(args.Dir, args.Rel)
 	if err != nil {
 		l.fail("rust: %s: %v", args.Rel, err)
@@ -185,16 +218,16 @@ func (l *rustLang) GenerateRules(args language.GenerateArgs) language.GenerateRe
 	}
 	for _, name := range args.RegularFiles {
 		if name == "Cargo.toml" {
-			return l.generateCargo(args, files)
+			return l.generateCargo(args, files, plan)
 		}
 	}
 	if len(files) == 0 {
-		return staleRules(args.File, nil)
+		return l.attachNative(args, language.GenerateResult{}, plan)
 	}
 
 	roots := DiscoverCrateRoots(args.Rel, files)
 	if !roots.HasRoots() {
-		return staleRules(args.File, nil)
+		return l.attachNative(args, language.GenerateResult{}, plan)
 	}
 	read := func(name string) ([]byte, error) {
 		return os.ReadFile(filepath.Join(args.Config.RepoRoot, filepath.FromSlash(name)))
@@ -256,14 +289,30 @@ func (l *rustLang) GenerateRules(args language.GenerateArgs) language.GenerateRe
 		result.Gen = append(result.Gen, r)
 		result.Imports = append(result.Imports, importsFor(trees[test.Root]))
 	}
+	return l.attachNative(args, result, plan)
+}
+
+// attachNative folds the native-config plan into a generation result:
+// planned config rules join the generated set before claim validation,
+// Rust rules bind their aspect_hints, and planned removals join the
+// generic stale sweep. Claim collisions stay fail-closed with no partial
+// result.
+func (l *rustLang) attachNative(args language.GenerateArgs, result language.GenerateResult, plan *nativePlan) language.GenerateResult {
+	for _, r := range result.Gen {
+		applyNativeHints(args.Rel, r, plan)
+	}
+	result.Gen = append(result.Gen, plan.gen...)
+	result.Imports = append(result.Imports, plan.imports...)
 	if err := checkExistingClaims(args.File, args.OtherGen, result.Gen); err != nil {
 		l.fail("%v", err)
 		return language.GenerateResult{}
 	}
-	return mergeStale(args.File, result)
+	merged := mergeStale(args.File, result)
+	merged.Empty = append(merged.Empty, plan.empty...)
+	return merged
 }
 
-func (l *rustLang) generateCargo(args language.GenerateArgs, files []string) language.GenerateResult {
+func (l *rustLang) generateCargo(args language.GenerateArgs, files []string, plan *nativePlan) language.GenerateResult {
 	manifestPath := path.Join(args.Rel, "Cargo.toml")
 	content, err := os.ReadFile(filepath.Join(args.Dir, "Cargo.toml"))
 	if err != nil {
@@ -344,11 +393,7 @@ func (l *rustLang) generateCargo(args language.GenerateArgs, files []string) lan
 	if len(l.errors) > 0 {
 		return language.GenerateResult{}
 	}
-	if err := checkExistingClaims(args.File, args.OtherGen, result.Gen); err != nil {
-		l.fail("%v", err)
-		return language.GenerateResult{}
-	}
-	return mergeStale(args.File, result)
+	return l.attachNative(args, result, plan)
 }
 
 func claimSources(owners map[string]string, owner string, tree map[string]*FileFacts) error {
@@ -778,6 +823,12 @@ func staleRules(file *rule.File, desired map[string]bool) language.GenerateResul
 		return result
 	}
 	for _, existing := range file.Rules {
+		// Managed config targets never sweep here: a hand-authored
+		// target of a config kind is always preserved, and only the
+		// native plan stages exact removals of generated rules.
+		if isNativeConfigKind(existing.Kind()) {
+			continue
+		}
 		if _, owned := rustKinds[existing.Kind()]; !owned || desired[existing.Kind()+"\x00"+existing.Name()] {
 			continue
 		}

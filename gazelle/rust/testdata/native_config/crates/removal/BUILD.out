@@ -1,0 +1,8 @@
+load("@rules_dx//rust/rules:defs.bzl", "dx_rust_library")
+
+dx_rust_library(
+    name = "removal",
+    srcs = ["src/lib.rs"],
+    crate_name = "removal",
+    crate_root = "src/lib.rs",
+)

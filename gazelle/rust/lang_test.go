@@ -225,11 +225,11 @@ func TestMalformedIgnoreFails(t *testing.T) {
 
 func TestLanguageMetadata(t *testing.T) {
 	l := &rustLang{}
-	if l.Name() != "rust" || len(l.Kinds()) != 3 || l.CheckFlags(flag.NewFlagSet("test", flag.ContinueOnError), config.New()) != nil {
+	if l.Name() != "rust" || len(l.Kinds()) != 8 || l.CheckFlags(flag.NewFlagSet("test", flag.ContinueOnError), config.New()) != nil {
 		t.Fatalf("invalid language metadata")
 	}
 	l.RegisterFlags(flag.NewFlagSet("test", flag.ContinueOnError), "update", config.New())
-	if strings.Join(l.KnownDirectives(), ",") != "dx_ignore_import" || l.Embeds(nil, label.NoLabel) != nil {
+	if strings.Join(l.KnownDirectives(), ",") != "dx_ignore_import,dx_native_tools" || l.Embeds(nil, label.NoLabel) != nil {
 		t.Fatal("invalid directives or embeds")
 	}
 	loads := l.ApparentLoads(func(name string) string {
@@ -244,7 +244,7 @@ func TestLanguageMetadata(t *testing.T) {
 	if loads[0].Name != "@renamed_dx//rust/rules:defs.bzl" || loads[1].Name != "@renamed_crates//:crates.bzl" {
 		t.Errorf("apparent loads = %+v", loads)
 	}
-	if defaults := l.Loads(); defaults[0].Name != "@rules_dx//rust/rules:defs.bzl" {
+	if defaults := l.Loads(); defaults[0].Name != "@rules_dx//rust/rules:defs.bzl" || defaults[2].Name != "@rules_dx//quality:native_config.bzl" {
 		t.Errorf("default loads = %+v", defaults)
 	}
 	defaultApparent := l.ApparentLoads(func(string) string { return "" })
@@ -308,7 +308,7 @@ func TestGenerateCargoAPIAndFailures(t *testing.T) {
 	}
 
 	missingManifest := &rustLang{}
-	missingManifest.generateCargo(language.GenerateArgs{Config: &config.Config{RepoRoot: root}, Dir: filepath.Join(root, "missing"), Rel: "missing"}, nil)
+	missingManifest.generateCargo(language.GenerateArgs{Config: &config.Config{RepoRoot: root}, Dir: filepath.Join(root, "missing"), Rel: "missing"}, nil, &nativePlan{})
 	if len(missingManifest.errors) != 1 || !strings.Contains(missingManifest.errors[0], "Cargo.toml") {
 		t.Errorf("missing manifest errors = %v", missingManifest.errors)
 	}

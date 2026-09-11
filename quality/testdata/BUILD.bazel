@@ -2,7 +2,7 @@
 
 load("//quality:aspect_subject.bzl", "aspect_subject")
 load("//quality:fixtures.bzl", "quality_source_target", "real_source_target")
-load("//quality:native_config.bzl", "clippy_config", "vale_config")
+load("//quality:native_config.bzl", "clippy_config", "rustfmt_config", "vale_config")
 load(":aspect_tests.bzl", "aspect_fixture_tests")
 load(":real_aspect_subject.bzl", "real_aspect_subject")
 load(":real_aspect_tests.bzl", "real_aspect_fixture_tests")
@@ -96,6 +96,16 @@ clippy_config(
     src = "clippy.toml",
 )
 
+rustfmt_config(
+    name = "rustfmt_config",
+    src = "rustfmt.toml",
+)
+
+clippy_config(
+    name = "clippy_config",
+    src = "clippy.toml",
+)
+
 real_source_target(
     name = "fixture_real_rust",
     rust_srcs = ["clean.rs"],
@@ -142,9 +152,26 @@ real_source_target(
     rust_srcs = ["hinted.rs"],
 )
 
+# Generated-shape binding (M10 WP3): default `<tool>_config` names with
+# direct aspect_hints, exactly as Gazelle emits them. Proves the generated
+# multi-tool binding analyzes and binds through the real aspects.
+real_source_target(
+    name = "fixture_real_rust_generated_shape",
+    aspect_hints = [
+        ":clippy_config",
+        ":rustfmt_config",
+    ],
+    rust_srcs = ["generated_shape.rs"],
+)
+
 real_aspect_subject(
     name = "fixture_real_rust_hinted_subject",
     target = ":fixture_real_rust_hinted",
+)
+
+real_aspect_subject(
+    name = "fixture_real_rust_generated_shape_subject",
+    target = ":fixture_real_rust_generated_shape",
 )
 
 real_aspect_subject(
@@ -212,6 +239,7 @@ real_aspect_fixture_tests(
         ":fixture_real_no_lint_subject",
         ":fixture_real_rust_subject",
         ":fixture_real_rust_hinted_subject",
+        ":fixture_real_rust_generated_shape_subject",
         ":fixture_real_starlark_subject",
         ":fixture_real_toml_subject",
         ":real_plain_subject",

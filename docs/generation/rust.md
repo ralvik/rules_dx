@@ -59,6 +59,23 @@ Production crates resolve active normal dependencies. Tests, examples, and bench
 their authoritative development scope. Optional and feature-gated crates resolve only when already
 enabled for that target.
 
+## Native Config
+
+The extension recognizes five checked-in tool configs by exact basename and generates one typed
+target per file named `<tool>_config` (`buildifier_config` for `.buildifier.json`, `taplo_config`
+for `taplo.toml`, `vale_config` for `.vale.ini`, `rustfmt_config` for `rustfmt.toml`, `clippy_config`
+for `clippy.toml`). Vale style closure walks the INI `StylesPath` (default `styles`) into sorted
+`data` labels. Generated targets carry `//<package>:__subpackages__` visibility (`//:__subpackages__`
+at root). Only rustfmt and clippy bind to Rust rules, through direct `aspect_hints` entries;
+buildifier, taplo, and vale targets exist for their own language owners.
+
+`# gazelle:dx_native_tools <tool...>` selects the managed set per directory (nearest wins,
+inherits otherwise; absent means all). Unknown ids and bare directives fail before BUILD emission,
+as do multiple same-kind config targets and same-name different-kind claims. A hand-authored
+same-kind target always wins and is never stubbed; only generator-shaped rules stub out on file
+removal or deselection. Binding merge, lifecycle, and closure semantics follow
+[native configuration](../quality/native-configuration.md#binding).
+
 ## Tests
 
 Each direct `<crate-directory>/tests/*.rs` file is an independently runnable integration-test crate

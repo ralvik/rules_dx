@@ -1,0 +1,3 @@
+# gazelle:dx_native_tools clippy
+
+# Only the selected tool generates; the skipped file stays unmanaged.
