@@ -96,8 +96,10 @@ syntax, validation, precedence, and resolution behavior belong to the
 The canonical execution produces one private declared versioned result manifest artifact
 containing exact edits, write outcomes in default mode, completion state, and ignored-import
 audit records, per [O13](../../open-decisions.md) and scoped selection per
-[O48](../../open-decisions.md). The manifest schema, dispatch, and canonical-target wiring remain
-pending O13. Affected-path,
+[O48](../../open-decisions.md). Dispatch runs `//dx:generate` (`//dx:generate_check` with
+upstream `-mode diff` for `--check`, so check writes nothing while witnessing the same
+rewrite), sets `DX_GENERATE_INTENDED` / `DX_GENERATE_SCOPE` / `DX_GENERATE_MODE`, and
+finalizes the extension witness into the manifest. Affected-path,
 change, mutation, diff, and ignored-import output comes from that manifest; rendering does not rerun
 Gazelle.
 

@@ -441,6 +441,32 @@ func TestEmitEndToEnd(t *testing.T) {
 	}
 }
 
+func TestEmitSortsIgnoredImports(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "intended.json")
+	rec := &manifestRecorder{
+		outPath:       out,
+		mode:          "default",
+		scopes:        []scopeElement{{Element: "//...", Dirs: []string{""}}},
+		apparentLoads: testApparentLoads(),
+	}
+	rec.emit([]*ignoreEntry{
+		{value: "zebra", path: "b", used: true},
+		{value: "apple", path: "b", used: true},
+		{value: "mango", path: "a", used: true},
+	})
+	manifest := readIntended(t, out)
+	want := [][2]string{{"a", "mango"}, {"b", "apple"}, {"b", "zebra"}}
+	if len(manifest.IgnoredImports) != len(want) {
+		t.Fatalf("ignored = %+v, want %v", manifest.IgnoredImports, want)
+	}
+	for i, w := range want {
+		got := manifest.IgnoredImports[i]
+		if got.Path != w[0] || got.Import != w[1] || got.Language != languageName || got.ScopeIndex != 0 {
+			t.Errorf("ignored[%d] = %+v, want path %q import %q", i, got, w[0], w[1])
+		}
+	}
+}
+
 func TestEmitScopeMismatch(t *testing.T) {
 	narrow := func() *manifestRecorder {
 		return &manifestRecorder{

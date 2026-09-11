@@ -13,6 +13,7 @@ dx_rust_library(
     srcs = [
         "src/args.rs",
         "src/exec.rs",
+        "src/finalize.rs",
         "src/generate.rs",
         "src/lib.rs",
         "src/plan.rs",
@@ -30,6 +31,7 @@ dx_rust_library(
         [
             "libc",
             "quick-xml",
+            "serde",
             "serde_json",
         ],
         package_name = "dx/dx_cli",

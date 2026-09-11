@@ -352,12 +352,29 @@ pub fn plan_run(target: &str, app_args: &[String]) -> BuildPlan {
     BuildPlan { argv, summary }
 }
 
-/// Canonical Gazelle runner behind `dx generate`: the repo-wide
-/// `update` entrypoint from M10 WP1. Scoped runs keep this target and
-/// narrow the traversal through positional arguments plus the resolved
-/// scope manifest (`DX_GENERATE_SCOPE`) from M10 WP1; per-command result
-/// projection stays out of this plan pending O13.
+/// Canonical Gazelle runners behind `dx generate`: the repo-wide
+/// `update` entrypoint from M10 WP1, plus the non-mutating check
+/// entrypoint (O13 dispatch). The check target encodes upstream
+/// `-mode diff` in canonical-target wiring: Gazelle computes the same
+/// rewrite, witnesses the same intended manifest through
+/// `AfterResolvingDeps`, writes no workspace file, and exits nonzero
+/// when changes exist. Scoped runs keep the mode target and narrow the
+/// traversal through positional arguments plus the resolved scope
+/// manifest (`DX_GENERATE_SCOPE`) from M10 WP1.
 pub const GENERATE_TARGET: &str = "//dx:generate";
+/// Non-mutating Gazelle entrypoint for `dx generate --check`: identical
+/// language wiring with upstream `-mode diff`.
+pub const GENERATE_CHECK_TARGET: &str = "//dx:generate_check";
+
+/// Private protocol environment the execution wrapper sets on the
+/// Gazelle run (M10 WP1, O13 dispatch). Names mirror the extension
+/// side (`gazelle/rust/manifest.go`); the CLI never reads them back.
+pub const GENERATE_ENV_INTENDED: &str = "DX_GENERATE_INTENDED";
+/// JSON list of `{"element","dirs"}` scope elements, see
+/// [`generate_scope_json`].
+pub const GENERATE_ENV_SCOPE: &str = "DX_GENERATE_SCOPE";
+/// `"check"` for `--check`, `"default"` otherwise.
+pub const GENERATE_ENV_MODE: &str = "DX_GENERATE_MODE";
 
 /// One resolved scope element for the versioned intended-manifest
 /// contract (`DX_GENERATE_SCOPE`, M10 WP1): the owning Bazel target plus
@@ -444,30 +461,37 @@ pub fn generate_traversal_dirs(resolved: &ResolvedScope) -> Vec<String> {
 }
 
 /// Builds the exact `bazel run //dx:generate` argv for a resolved
-/// scope. Only the canonical workspace policy is required; user options
-/// after `--` forward as `run` command options before the target. The
-/// resolved traversal directories from [`generate_traversal_dirs`]
-/// forward after a second `--` separator as Gazelle positional
-/// arguments; the repository root needs no traversal arguments because
-/// Gazelle already walks the whole workspace. Fails before execution
-/// when user options conflict with required policy. There is no BEP
-/// stream: Gazelle owns its output and exit status, and per-command
-/// result transport is pending O13.
+/// scope, or `bazel run //dx:generate_check` when `check` holds. Only
+/// the canonical workspace policy is required; user options after `--`
+/// forward as `run` command options before the target. The resolved
+/// traversal directories from [`generate_traversal_dirs`] forward after
+/// a second `--` separator as Gazelle positional arguments; the
+/// repository root needs no traversal arguments because Gazelle
+/// already walks the whole workspace. Fails before execution when user
+/// options conflict with required policy. There is no BEP stream:
+/// Gazelle owns its output and exit status, and the versioned intended
+/// manifest (O13) carries per-command results.
 pub fn plan_generate(
     resolved: &ResolvedScope,
     bazel_options: &[String],
+    check: bool,
 ) -> Result<BuildPlan, ForwardError> {
     let required = vec![workspace_flag()];
     let protected = vec![ProtectedFlag {
         name: "@rules_dx//config:workspace".to_owned(),
         required: None,
     }];
+    let target = if check {
+        GENERATE_CHECK_TARGET
+    } else {
+        GENERATE_TARGET
+    };
     let mut argv = build_workflow_argv(
         "run",
         bazel_options,
         &required,
         &protected,
-        &[GENERATE_TARGET.to_owned()],
+        &[target.to_owned()],
     )?;
     let dirs = generate_traversal_dirs(resolved);
     let root_only = dirs.len() == 1 && dirs.first().is_some_and(String::is_empty);
@@ -491,6 +515,14 @@ pub fn plan_generate(
 /// (tests, retries); production callers pass a per-run counter.
 pub fn bep_path(temp_dir: &Path, pid: u32, nonce: u64) -> PathBuf {
     temp_dir.join(format!("dx-bep-{pid}-{nonce}.json"))
+}
+
+/// Intended-manifest destination under `temp_dir`, unique per process
+/// invocation like [`bep_path`]. The wrapper passes it as
+/// [`GENERATE_ENV_INTENDED`] so the Gazelle extension witnesses its
+/// exact BUILD changes there for the finalizer.
+pub fn intended_path(temp_dir: &Path, pid: u32, nonce: u64) -> PathBuf {
+    temp_dir.join(format!("dx-generate-{pid}-{nonce}.json"))
 }
 
 #[cfg(test)]
@@ -590,7 +622,8 @@ mod tests {
     #[test]
     fn generate_plan_runs_canonical_runner_repo_wide() {
         assert_eq!(GENERATE_TARGET, "//dx:generate");
-        let plan = plan_generate(&resolved(&[]), &options(&["--jobs=4"])).expect("plan");
+        assert_eq!(GENERATE_CHECK_TARGET, "//dx:generate_check");
+        let plan = plan_generate(&resolved(&[]), &options(&["--jobs=4"]), false).expect("plan");
         assert_eq!(
             plan.argv,
             options(&[
@@ -604,7 +637,7 @@ mod tests {
             ])
         );
         assert_eq!(plan.summary, "Running generate for //...");
-        let bare = plan_generate(&resolved(&[]), &[]).expect("plan");
+        let bare = plan_generate(&resolved(&[]), &[], false).expect("plan");
         assert_eq!(
             bare.argv.last(),
             Some(&GENERATE_TARGET.to_owned()),
@@ -613,24 +646,52 @@ mod tests {
     }
 
     #[test]
+    fn generate_plan_check_selects_non_mutating_runner() {
+        let plan = plan_generate(&resolved(&[]), &[], true).expect("plan");
+        assert_eq!(
+            plan.argv,
+            options(&[
+                "bazel",
+                "--nohome_rc",
+                "--nosystem_rc",
+                "run",
+                "--@rules_dx//config:workspace=//dx:config",
+                "//dx:generate_check",
+            ])
+        );
+        assert_eq!(plan.summary, "Running generate for //...");
+        let scoped = plan_generate(&resolved(&["//a:one"]), &[], true).expect("plan");
+        assert_eq!(
+            scoped.argv.last(),
+            Some(&"a".to_owned()),
+            "check keeps scoped traversal: {scoped:?}"
+        );
+        assert!(
+            scoped.argv.contains(&GENERATE_CHECK_TARGET.to_owned()),
+            "{scoped:?}"
+        );
+    }
+
+    #[test]
     fn generate_plan_rejects_policy_conflicts_and_startup_options() {
         let err = plan_generate(
             &resolved(&[]),
             &options(&["--@rules_dx//config:workspace=//other:config"]),
+            false,
         )
         .expect_err("workspace override must fail");
         assert!(
             matches!(err, ForwardError::ConflictingOption { .. }),
             "got {err:?}"
         );
-        let err = plan_generate(&resolved(&[]), &options(&["--home_rc"]))
+        let err = plan_generate(&resolved(&[]), &options(&["--home_rc"]), false)
             .expect_err("startup option must fail");
         assert!(matches!(err, ForwardError::StartupOption { .. }));
     }
 
     #[test]
     fn generate_plan_forwards_scoped_traversal_dirs() {
-        let plan = plan_generate(&resolved(&["//b/...", "//a:one"]), &[]).expect("plan");
+        let plan = plan_generate(&resolved(&["//b/...", "//a:one"]), &[], false).expect("plan");
         assert_eq!(
             plan.argv,
             options(&[
@@ -650,7 +711,7 @@ mod tests {
 
     #[test]
     fn generate_plan_root_package_label_stays_repo_wide() {
-        let plan = plan_generate(&resolved(&["//:foo"]), &[]).expect("plan");
+        let plan = plan_generate(&resolved(&["//:foo"]), &[], false).expect("plan");
         assert!(
             !plan.argv.contains(&"--".to_owned()),
             "root traversal needs no positional arguments: {plan:?}"

@@ -46,6 +46,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/bazelbuild/bazel-gazelle/config"
@@ -254,6 +255,21 @@ func (r *manifestRecorder) emit(ignores []*ignoreEntry) {
 			ScopeIndex: index,
 		})
 	}
+	// The transport crate requires ignored imports sorted by
+	// (path, language, import); the ignore list arrives in directive-visit
+	// order, so sort before encoding.
+	sort.SliceStable(manifest.IgnoredImports, func(i, j int) bool {
+		a, b := manifest.IgnoredImports[i], manifest.IgnoredImports[j]
+		if a.Path != b.Path {
+			return a.Path < b.Path
+		}
+		// LCOV_EXCL_START - reason: emit stamps every entry with languageName, so languages never differ here; the tiebreak mirrors the crate's (path, language, import) key for protocol evolution.
+		if a.Language != b.Language {
+			return a.Language < b.Language
+		}
+		// LCOV_EXCL_STOP - reason: end of unreachable language-tiebreak exclusion.
+		return a.Import < b.Import
+	})
 	data, err := json.Marshal(manifest)
 	if err != nil {
 		panic(fmt.Sprintf("rust: cannot encode intended manifest: %v", err)) // LCOV_EXCL_LINE - reason: manifest holds only strings, bytes, ints, and bools, so Marshal cannot fail; this branch is defensive only.

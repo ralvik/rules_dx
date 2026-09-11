@@ -567,7 +567,9 @@ pub struct ChildStatus {
 /// uses [`SystemRunner`].
 pub trait Runner {
     /// Spawns `argv[0]` with the remaining entries as arguments in `cwd`.
-    fn run(&self, argv: &[String], cwd: &Path) -> io::Result<ChildStatus>;
+    /// `env` carries extra variables (for example per-command dispatch
+    /// into the child); the parent environment is always inherited.
+    fn run(&self, argv: &[String], cwd: &Path, env: &[(&str, &str)]) -> io::Result<ChildStatus>;
 }
 
 /// Real runner that spawns the process directly. Argument vectors are
@@ -575,12 +577,13 @@ pub trait Runner {
 pub struct SystemRunner;
 
 impl Runner for SystemRunner {
-    fn run(&self, argv: &[String], cwd: &Path) -> io::Result<ChildStatus> {
+    fn run(&self, argv: &[String], cwd: &Path, env: &[(&str, &str)]) -> io::Result<ChildStatus> {
         let (binary, args) = argv.split_first().ok_or_else(|| {
             io::Error::new(io::ErrorKind::InvalidInput, "invocation needs a binary")
         })?;
         let output = Command::new(OsStr::new(binary))
             .args(args)
+            .envs(env.iter().copied())
             .current_dir(cwd)
             .output()?;
         Ok(ChildStatus {
@@ -1137,7 +1140,12 @@ mod tests {
     }
 
     impl Runner for FakeRunner {
-        fn run(&self, argv: &[String], cwd: &Path) -> io::Result<ChildStatus> {
+        fn run(
+            &self,
+            argv: &[String],
+            cwd: &Path,
+            _env: &[(&str, &str)],
+        ) -> io::Result<ChildStatus> {
             assert!(!argv.is_empty());
             assert!(cwd.is_absolute() || cwd.as_os_str() == ".");
             Ok(self.status.clone())
@@ -1150,7 +1158,11 @@ mod tests {
             status: ChildStatus { code: Some(3) },
         };
         let status = runner
-            .run(&["bazel".to_owned(), "build".to_owned()], Path::new("."))
+            .run(
+                &["bazel".to_owned(), "build".to_owned()],
+                Path::new("."),
+                &[],
+            )
             .expect("fake");
         assert_eq!(status.code, Some(3));
     }
@@ -1159,21 +1171,38 @@ mod tests {
     fn system_runner_preserves_exit_codes() {
         let runner = SystemRunner;
         let ok = runner
-            .run(&["/bin/true".to_owned()], Path::new("/"))
+            .run(&["/bin/true".to_owned()], Path::new("/"), &[])
             .expect("true");
         assert_eq!(ok.code, Some(0));
         let fail = runner
-            .run(&["/bin/false".to_owned()], Path::new("/"))
+            .run(&["/bin/false".to_owned()], Path::new("/"), &[])
             .expect("false");
         assert_eq!(fail.code, Some(1));
     }
 
     #[test]
+    fn system_runner_forwards_extra_environment() {
+        let runner = SystemRunner;
+        let probed = runner
+            .run(
+                &[
+                    "/bin/sh".to_owned(),
+                    "-c".to_owned(),
+                    "test \"$DX_RUNNER_PROBE\" = forwarded".to_owned(),
+                ],
+                Path::new("/"),
+                &[("DX_RUNNER_PROBE", "forwarded")],
+            )
+            .expect("probe");
+        assert_eq!(probed.code, Some(0));
+    }
+
+    #[test]
     fn system_runner_rejects_bad_invocations() {
         let runner = SystemRunner;
-        assert!(runner.run(&[], Path::new("/")).is_err());
+        assert!(runner.run(&[], Path::new("/"), &[]).is_err());
         assert!(runner
-            .run(&["/nonexistent-dx-tool".to_owned()], Path::new("/"))
+            .run(&["/nonexistent-dx-tool".to_owned()], Path::new("/"), &[])
             .is_err());
     }
 }

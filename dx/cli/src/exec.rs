@@ -13,8 +13,12 @@ use std::io::{self, BufReader, Write};
 use std::path::Path;
 
 use crate::args::{Command, Invocation};
+use crate::finalize::{finalize, FinalizeError, FinalizeInput};
+use crate::generate::{project, render_diff, text_lines};
 use crate::plan::{
-    bep_path, plan_build, plan_generate, plan_run, plan_workflow, WorkflowVerb, OUTPUT_GROUP,
+    bep_path, generate_scope_json, intended_path, plan_build, plan_generate, plan_run,
+    plan_workflow, WorkflowVerb, GENERATE_ENV_INTENDED, GENERATE_ENV_MODE, GENERATE_ENV_SCOPE,
+    OUTPUT_GROUP,
 };
 use crate::reports::{
     junit_infrastructure_case, parse_test_xml, plan_reports, render_junit, render_sarif,
@@ -26,8 +30,8 @@ use dx_bep::{collect, collect_test_outputs, ArtifactReader, CollectorConfig};
 use dx_diff::{render_patch, FilePatch, PatchKind};
 use dx_output::{
     change_event, command_finished, command_started, diagnostic_event, meets_threshold,
-    mutation_event, report_event, write_event, ChangeEvent, ChangeKind, DiagnosticEvent,
-    FinishedCounts, MutationOutcome, OutputMode, Resolution, Severity, Snapshot,
+    mutation_event, notice_event, report_event, write_event, ChangeEvent, ChangeKind,
+    DiagnosticEvent, FinishedCounts, MutationOutcome, OutputMode, Resolution, Severity, Snapshot,
 };
 use dx_process::{operational_code, pre_exec_code, Runner};
 use quality_result::{decode_validated, digest, proto};
@@ -51,8 +55,9 @@ const CODE_INVALID_BEP: &str = "invalid_bep";
 const CODE_DIFF_FAILED: &str = "diff_failed";
 const CODE_REPORT_FAILED: &str = "report_failed";
 /// Stable operational error code for well-formed requests the current
-/// result transport cannot serve: `dx generate --output=diff` before
-/// the versioned manifest (O13) can render a patch.
+/// result transport cannot serve: a missing, unreadable, or
+/// contradictory generation manifest fails closed with no change or
+/// mutation output.
 const CODE_INVALID_RESULT: &str = "invalid_result";
 
 /// Execution environment: resolved workspace, process seams for the
@@ -496,7 +501,7 @@ pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
     {
         let _ = writeln!(out, "{}", build.summary);
     }
-    let status = match runner.run(&build.argv, workspace) {
+    let status = match runner.run(&build.argv, workspace, &[]) {
         Ok(status) => status,
         Err(error) => {
             return operational(
@@ -1083,7 +1088,7 @@ fn execute_workflow(invocation: &Invocation, env: Env<'_>) -> i32 {
     {
         let _ = writeln!(out, "{}", plan.summary);
     }
-    let status = match runner.run(&plan.argv, workspace) {
+    let status = match runner.run(&plan.argv, workspace, &[]) {
         Ok(status) => status,
         Err(error) => {
             return operational(
@@ -1126,20 +1131,51 @@ fn execute_workflow(invocation: &Invocation, env: Env<'_>) -> i32 {
     )
 }
 
+/// Closes a generate run that produced no reportable manifest: JSON
+/// mode finishes the envelope with `results_complete: false` and no
+/// change, mutation, or notice events; other modes stay silent. The
+/// caller-supplied code (Gazelle's failure or the Bazel status) is
+/// preserved.
+fn finish_incomplete_generate(invocation: &Invocation, out: &mut dyn Write, code: i32) -> i32 {
+    if invocation.output == OutputMode::Json {
+        let _ = write_event(
+            out,
+            &command_finished(
+                code,
+                &FinishedCounts {
+                    results_complete: Some(false),
+                    ..FinishedCounts::default()
+                },
+            ),
+        );
+    }
+    code
+}
+
 /// Runs `dx generate` through the canonical `//dx:generate` Gazelle
-/// runner (M10 WP1). Contract: `docs/cli/commands/generate.md` for the
+/// runner, or `//dx:generate_check` for `--check` (M10 WP1, O13
+/// dispatch). Contract: `docs/cli/commands/generate.md` for the
 /// target surface. Scope positionals resolve through the canonical
 /// target resolution and narrow the runner traversal to the resolved
-/// directories; empty scope stays repo-wide (`//...`). Per-command
-/// result transport stays absent pending O13.
+/// directories; empty scope stays repo-wide (`//...`).
 ///
-/// Gazelle owns its output and exit status: Bazel's exact nonzero code
-/// is preserved, and JSON mode emits the `command_started` /
-/// `command_finished` envelope with `results_complete: false` because
-/// no changes or mutations can be reported without the manifest.
-/// `--check` and `--output=diff` fail because freshness and patch
-/// rendering need the manifest; scope resolution failures (unknown
-/// paths, external scopes) fail pre-execution like every other command.
+/// Dispatch sets the private protocol environment on the Gazelle run:
+/// `DX_GENERATE_INTENDED` (witness destination under the temp dir),
+/// `DX_GENERATE_SCOPE` (resolved scope JSON), and `DX_GENERATE_MODE`
+/// (`check` or `default`). The extension witnesses its exact BUILD
+/// changes there; [`finalize`] turns the witness into the versioned
+/// manifest and text, diff, and NDJSON render from that manifest
+/// without rerunning Gazelle.
+///
+/// Gazelle owns its output and exit status: a nonzero Bazel code is
+/// preserved through the projection, and a structurally valid manifest
+/// that ends after a late failure still reports its validated
+/// attempted prefix. A missing witness after a failed run degrades to
+/// the incomplete envelope; a missing or contradictory witness after a
+/// successful run fails closed (`invalid_result`) with no change or
+/// mutation output, even if Gazelle changed workspace files first.
+/// Scope resolution failures (unknown paths, external scopes) fail
+/// pre-execution like every other command.
 fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
     match plan_reports(
         invocation.command,
@@ -1150,32 +1186,18 @@ fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
         Ok(_) => {}
         Err(error) => return pre_exec(env.err, &error.to_string()),
     }
-    if invocation.check {
-        return pre_exec(
-            env.err,
-            "dx generate --check requires the versioned result manifest (O13); rerun without --check",
-        );
-    }
-    if invocation.output == OutputMode::Diff {
-        return operational(
-            invocation,
-            env.out,
-            env.err,
-            CODE_INVALID_RESULT,
-            "diff output for dx generate requires the versioned result manifest (O13)",
-        );
-    }
     let resolved = match resolve(&invocation.targets, env.workspace, env.query_runner) {
         Ok(resolved) => resolved,
         Err(error) => return pre_exec(env.err, &error.to_string()),
     };
-    let plan = match plan_generate(&resolved, &invocation.bazel_options) {
+    let plan = match plan_generate(&resolved, &invocation.bazel_options, invocation.check) {
         Ok(plan) => plan,
         Err(error) => return pre_exec(env.err, &format!("{error:?}")),
     };
+    let mode = if invocation.check { "check" } else { "default" };
     if invocation.dry_run {
         if invocation.output == OutputMode::Json {
-            if let Ok(event) = command_started(invocation.command.name(), true, "default") {
+            if let Ok(event) = command_started(invocation.command.name(), true, mode) {
                 let _ = write_event(env.out, &event);
             }
             let _ = write_event(env.out, &command_finished(0, &FinishedCounts::default()));
@@ -1187,13 +1209,21 @@ fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
         return 0;
     }
     if invocation.output == OutputMode::Json {
-        if let Ok(event) = command_started(invocation.command.name(), false, "default") {
+        if let Ok(event) = command_started(invocation.command.name(), false, mode) {
             let _ = write_event(env.out, &event);
         }
     } else if matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet {
         let _ = writeln!(env.out, "{}", plan.summary);
     }
-    let status = match env.runner.run(&plan.argv, env.workspace) {
+    let intended = intended_path(env.temp_dir, env.pid, env.nonce);
+    let intended_str = intended.display().to_string();
+    let scope_json = generate_scope_json(&resolved);
+    let dispatch = [
+        (GENERATE_ENV_INTENDED, intended_str.as_str()),
+        (GENERATE_ENV_SCOPE, scope_json.as_str()),
+        (GENERATE_ENV_MODE, mode),
+    ];
+    let status = match env.runner.run(&plan.argv, env.workspace, &dispatch) {
         Ok(status) => status,
         Err(error) => {
             return operational(
@@ -1214,19 +1244,152 @@ fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
             "Bazel terminated by signal",
         );
     };
+    let Some(witness) = std::fs::read(&intended).ok() else {
+        if bazel_code != 0 {
+            return finish_incomplete_generate(invocation, env.out, bazel_code);
+        }
+        return operational(
+            invocation,
+            env.out,
+            env.err,
+            CODE_INVALID_RESULT,
+            "generate completed without a result manifest",
+        );
+    };
+    let manifest = match finalize(&FinalizeInput {
+        intended_json: &witness,
+        workspace: env.workspace,
+        check: invocation.check,
+        gazelle_ok: bazel_code == 0,
+    }) {
+        Ok(manifest) => manifest,
+        Err(FinalizeError::IncompleteCheck) => {
+            return finish_incomplete_generate(invocation, env.out, bazel_code);
+        }
+        Err(error) => {
+            return operational(
+                invocation,
+                env.out,
+                env.err,
+                CODE_INVALID_RESULT,
+                &format!("invalid generation manifest: {error}"),
+            );
+        }
+    };
+    let projected = match project(&manifest) {
+        Ok(projected) => projected,
+        // LCOV_EXCL_START - reason: defense-in-depth; finalize returns a validated manifest and project revalidates the same value deterministically, so projection cannot fail here.
+        Err(error) => {
+            return operational(
+                invocation,
+                env.out,
+                env.err,
+                CODE_INVALID_RESULT,
+                &format!("invalid generation manifest: {error:?}"),
+            );
+        } // LCOV_EXCL_STOP - reason: end of unreachable projection arm.
+    };
     if invocation.output == OutputMode::Json {
+        for file in projected.sorted_files() {
+            match change_event(&file.change) {
+                Ok(event) => {
+                    let _ = write_event(env.out, &event);
+                }
+                // LCOV_EXCL_START - reason: defense-in-depth; project builds changes from a validated manifest (sound paths, non-empty ordered edits, valid hex digests), so change_event cannot fail here.
+                Err(error) => {
+                    return operational(
+                        invocation,
+                        env.out,
+                        env.err,
+                        CODE_INVALID_RESULT,
+                        &format!("invalid change for output: {error:?}"),
+                    );
+                } // LCOV_EXCL_STOP - reason: end of unreachable change arm.
+            }
+        }
+        if !invocation.check {
+            for file in &projected.files {
+                let (outcome, reason) = match file.outcome {
+                    Some(MutationOutcome::Applied) => (MutationOutcome::Applied, None),
+                    Some(MutationOutcome::NotApplied) => {
+                        (MutationOutcome::NotApplied, file.failure_code.as_deref())
+                    }
+                    // LCOV_EXCL_START - reason: defense-in-depth; project maps every default-mode file to Applied or NotApplied, so a missing outcome is unreachable here.
+                    None => {
+                        return operational(
+                            invocation,
+                            env.out,
+                            env.err,
+                            CODE_INVALID_RESULT,
+                            &format!("invalid mutation for output: {}", file.change.path),
+                        );
+                    } // LCOV_EXCL_STOP - reason: end of unreachable outcome arm.
+                };
+                match mutation_event(&file.change.path, file.kind(), outcome, reason) {
+                    Ok(event) => {
+                        let _ = write_event(env.out, &event);
+                    }
+                    // LCOV_EXCL_START - reason: defense-in-depth; manifest validation requires a nonempty failure_code exactly for NotApplied, so mutation_event cannot fail here.
+                    Err(error) => {
+                        return operational(
+                            invocation,
+                            env.out,
+                            env.err,
+                            CODE_INVALID_RESULT,
+                            &format!("invalid mutation for output: {error:?}"),
+                        );
+                    } // LCOV_EXCL_STOP - reason: end of unreachable mutation arm.
+                }
+            }
+        }
+        for notice in &projected.notices {
+            match notice_event(notice) {
+                Ok(event) => {
+                    let _ = write_event(env.out, &event);
+                }
+                // LCOV_EXCL_START - reason: defense-in-depth; project builds notices from validated ignored imports (warning level, nonempty code/message/path/language/import), so notice_event cannot fail here.
+                Err(error) => {
+                    return operational(
+                        invocation,
+                        env.out,
+                        env.err,
+                        CODE_INVALID_RESULT,
+                        &format!("invalid notice for output: {error:?}"),
+                    );
+                } // LCOV_EXCL_STOP - reason: end of unreachable notice arm.
+            }
+        }
+        let code = projected.exit_code(bazel_code);
         let _ = write_event(
             env.out,
-            &command_finished(
-                bazel_code,
-                &FinishedCounts {
-                    results_complete: Some(false),
-                    ..FinishedCounts::default()
-                },
-            ),
+            &command_finished(code, &projected.finished_counts()),
         );
+        return code;
     }
-    bazel_code
+    if invocation.output == OutputMode::Diff {
+        // Diff reserves stdout for the validated patch: no summaries,
+        // notices, or diagnostics move anywhere.
+        match render_diff(&projected) {
+            Ok(patch) => {
+                env.out.write_all(patch.as_bytes()).ok();
+            }
+            // LCOV_EXCL_START - reason: defense-in-depth; validated manifests hold unique paths, empty originals on creates, and no noop edits, so render_diff cannot fail here.
+            Err(error) => {
+                return operational(
+                    invocation,
+                    env.out,
+                    env.err,
+                    CODE_DIFF_FAILED,
+                    &format!("failed to render generate patch: {error}"),
+                );
+            } // LCOV_EXCL_STOP - reason: end of unreachable diff arm.
+        }
+    } else {
+        for line in text_lines(&projected) {
+            let _ = writeln!(env.out, "{line}");
+        }
+    }
+    projected.exit_code(bazel_code)
 }
 
 /// Collects BEP test outputs into JUnit suites or validated LCOV
@@ -1529,7 +1692,7 @@ fn execute_run(invocation: &Invocation, env: Env<'_>) -> i32 {
     if !invocation.quiet {
         let _ = writeln!(err, "{}", plan.summary);
     }
-    let status = match runner.run(&plan.argv, workspace) {
+    let status = match runner.run(&plan.argv, workspace, &[]) {
         Ok(status) => status,
         Err(error) => {
             return operational(
@@ -1587,6 +1750,7 @@ mod tests {
     use std::cell::RefCell;
     use std::collections::HashMap;
     use std::path::PathBuf;
+    use std::rc::Rc;
 
     fn invocation(words: &[&str]) -> Invocation {
         parse(&words.iter().map(ToString::to_string).collect::<Vec<_>>()).expect("parse")
@@ -1610,6 +1774,13 @@ mod tests {
         skip_bep: bool,
         raw_bep: Option<Vec<String>>,
         query: ScriptQuery,
+        /// Canned `DX_GENERATE_INTENDED` witness the fake runner writes
+        /// for generate runs; `None` exercises the missing-witness
+        /// paths.
+        intended: Option<Vec<u8>>,
+        /// Dispatch environments observed by the fake runner, one entry
+        /// per launch in call order.
+        seen_env: Rc<RefCell<Vec<Vec<(String, String)>>>>,
     }
 
     /// Scripted ownership-query runner: replays canned outputs in call
@@ -1653,6 +1824,8 @@ mod tests {
                     calls: RefCell::new(Vec::new()),
                     outputs: RefCell::new(Vec::new()),
                 },
+                intended: None,
+                seen_env: Rc::new(RefCell::new(Vec::new())),
             }
         }
 
@@ -1769,6 +1942,8 @@ mod tests {
                     bep_lines: lines.clone(),
                     io_error: self.io_error,
                     skip_bep: self.skip_bep,
+                    intended: self.intended.clone(),
+                    seen_env: Rc::clone(&self.seen_env),
                 };
             }
             let mut lines = Vec::new();
@@ -1799,6 +1974,8 @@ mod tests {
                 bep_lines: lines,
                 io_error: self.io_error,
                 skip_bep: self.skip_bep,
+                intended: self.intended.clone(),
+                seen_env: Rc::clone(&self.seen_env),
             }
         }
 
@@ -1833,13 +2010,25 @@ mod tests {
         bep_lines: Vec<String>,
         io_error: bool,
         skip_bep: bool,
+        intended: Option<Vec<u8>>,
+        seen_env: Rc<RefCell<Vec<Vec<(String, String)>>>>,
     }
 
     impl Runner for FakeRunner {
-        fn run(&self, argv: &[String], _cwd: &Path) -> io::Result<ChildStatus> {
+        fn run(
+            &self,
+            argv: &[String],
+            _cwd: &Path,
+            env: &[(&str, &str)],
+        ) -> io::Result<ChildStatus> {
             if self.io_error {
                 return Err(io::Error::other("fake launch failure"));
             }
+            self.seen_env.borrow_mut().push(
+                env.iter()
+                    .map(|(key, value)| ((*key).to_owned(), (*value).to_owned()))
+                    .collect(),
+            );
             if !self.skip_bep {
                 if let Some(bep) = argv
                     .iter()
@@ -1848,8 +2037,84 @@ mod tests {
                     std::fs::write(bep, self.bep_lines.join("\n")).expect("BEP file");
                 }
             }
+            if let Some(path) = env
+                .iter()
+                .find_map(|(key, value)| (*key == GENERATE_ENV_INTENDED).then_some(*value))
+            {
+                if let Some(witness) = &self.intended {
+                    std::fs::write(path, witness).expect("intended witness");
+                }
+            }
             Ok(ChildStatus { code: self.code })
         }
+    }
+
+    /// Standard base64 for canned intended-manifest witnesses.
+    fn b64(bytes: &[u8]) -> String {
+        const ALPHABET: &[u8; 64] =
+            b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        let mut out = String::with_capacity((bytes.len() + 2) / 3 * 4);
+        for chunk in bytes.chunks(3) {
+            let b0 = u32::from(chunk[0]);
+            let b1 = u32::from(*chunk.get(1).unwrap_or(&0));
+            let b2 = u32::from(*chunk.get(2).unwrap_or(&0));
+            let n = (b0 << 16) | (b1 << 8) | b2;
+            out.push(ALPHABET[(n >> 18) as usize & 63] as char);
+            out.push(ALPHABET[(n >> 12) as usize & 63] as char);
+            out.push(if chunk.len() > 1 {
+                ALPHABET[(n >> 6) as usize & 63] as char
+            } else {
+                '='
+            });
+            out.push(if chunk.len() > 2 {
+                ALPHABET[n as usize & 63] as char
+            } else {
+                '='
+            });
+        }
+        out
+    }
+
+    /// Canned `DX_GENERATE_INTENDED` witness: one scope, the given file
+    /// entries, and the given ignored-import entries.
+    fn intended_witness(mode: &str, complete: bool, files: &str, ignored: &str) -> Vec<u8> {
+        format!(
+            concat!(
+                r#"{{"schema_major":1,"schema_minor":0,"mode":"{mode}","#,
+                r#""scopes":[{{"value":"//...","results_complete":{complete}}}],"#,
+                r#""files":[{files}],"ignored_imports":[{ignored}]}}"#
+            ),
+            mode = mode,
+            complete = complete,
+            files = files,
+            ignored = ignored,
+        )
+        .into_bytes()
+    }
+
+    /// One modify entry replacing `original` with `candidate` through a
+    /// single full-span edit.
+    fn intended_modify(path: &str, original: &[u8], candidate: &[u8]) -> String {
+        format!(
+            concat!(
+                r#"{{"path":{path},"scope_index":0,"original_content":"{original}","#,
+                r#""edits":[{{"start_byte":0,"end_byte":{end},"replacement":"{candidate}"}}]}}"#
+            ),
+            path = serde_json::to_string(path).expect("path JSON"),
+            original = b64(original),
+            end = original.len(),
+            candidate = b64(candidate),
+        )
+    }
+
+    /// One ignored-import audit entry.
+    fn intended_ignored(path: &str, language: &str, import: &str) -> String {
+        format!(
+            r#"{{"path":{path},"language":{language},"import":{import},"scope_index":0}}"#,
+            path = serde_json::to_string(path).expect("path JSON"),
+            language = serde_json::to_string(language).expect("language JSON"),
+            import = serde_json::to_string(import).expect("import JSON"),
+        )
     }
 
     #[test]
@@ -3585,28 +3850,74 @@ mod tests {
         std::env::remove_var("CI");
     }
 
+    /// Default-mode witness for one `rust/hello/BUILD.bazel` modify
+    /// (`abc` to `xyz`); the workspace holds `workspace_text` so the
+    /// caller selects the write outcome.
+    fn generate_witness(workspace_text: &str, name: &str) -> Harness {
+        let mut harness = Harness::new(name);
+        harness.write_source("rust/hello/BUILD.bazel", workspace_text);
+        harness.intended = Some(intended_witness(
+            "default",
+            true,
+            &intended_modify("rust/hello/BUILD.bazel", b"abc\n", b"xyz\n"),
+            "",
+        ));
+        harness
+    }
+
     #[test]
     fn generate_runs_repo_wide_and_preserves_bazel_status() {
-        let harness = Harness::new("generate-text");
+        let harness = generate_witness("xyz\n", "generate-text");
         let (code, out, err) = harness.run(&["generate", "--output=text"]);
         assert_eq!(code, 0, "{err}");
         assert!(out.contains("Running generate for //..."), "{out}");
+        assert!(out.contains("Modified rust/hello/BUILD.bazel"), "{out}");
         assert_eq!(err, "", "{err}");
         assert!(
             harness.query.calls.borrow().is_empty(),
             "repo-wide generate issues no ownership queries"
         );
 
-        let mut failing = Harness::new("generate-fails");
+        let mut failing = generate_witness("xyz\n", "generate-fails");
         failing.bazel_code = 2;
         let (code, _, _) = failing.run(&["generate", "--output=text"]);
         assert_eq!(code, 2);
     }
 
     #[test]
-    fn generate_json_envelope_marks_results_incomplete() {
+    fn generate_json_reports_changes_mutations_and_notices() {
+        let mut harness = Harness::new("generate-json");
+        harness.write_source("rust/hello/BUILD.bazel", "xyz\n");
+        harness.intended = Some(intended_witness(
+            "default",
+            true,
+            &intended_modify("rust/hello/BUILD.bazel", b"abc\n", b"xyz\n"),
+            &intended_ignored("rust/hello/BUILD.bazel", "rust", "serde"),
+        ));
+        let (code, out, err) = harness.run(&["generate", "--output=json"]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(out.contains("\"command_started\""), "{out}");
+        assert!(out.contains("\"mode\":\"default\""), "{out}");
+        assert!(out.contains("\"event\":\"change\""), "{out}");
+        assert!(out.contains("\"event\":\"mutation\""), "{out}");
+        assert!(out.contains("\"outcome\":\"applied\""), "{out}");
+        assert!(out.contains("\"code\":\"ignored_import\""), "{out}");
+        assert!(out.contains("\"results_complete\":true"), "{out}");
+        assert!(
+            out.contains("\"changes\":{\"create\":0,\"modify\":1}"),
+            "{out}"
+        );
+        assert!(
+            out.contains("\"mutations\":{\"applied\":1,\"not_applied\":0}"),
+            "{out}"
+        );
+        assert!(out.contains("\"exit_code\":0"), "{out}");
+    }
+
+    #[test]
+    fn generate_failure_without_witness_stays_incomplete() {
         for (name, bazel_code, exit_code) in
-            [("generate-json-ok", 0, 0), ("generate-json-fail", 2, 2)]
+            [("generate-json-ok", 0, 1), ("generate-json-fail", 2, 2)]
         {
             let mut harness = Harness::new(name);
             harness.bazel_code = bazel_code;
@@ -3617,7 +3928,182 @@ mod tests {
             assert!(out.contains("\"results_complete\":false"), "{out}");
             assert!(!out.contains("\"changes\""), "{out}");
             assert!(!out.contains("\"mutations\""), "{out}");
+            assert!(!out.contains("\"event\":\"change\""), "{out}");
+            assert!(!out.contains("\"event\":\"mutation\""), "{out}");
+            if bazel_code == 0 {
+                assert!(out.contains("\"code\":\"invalid_result\""), "{out}");
+            }
         }
+    }
+
+    #[test]
+    fn generate_success_without_witness_fails_closed_in_text() {
+        let harness = Harness::new("generate-no-witness");
+        let (code, out, err) = harness.run(&["generate", "--output=text"]);
+        assert_eq!(code, 1, "{out}");
+        assert!(err.contains("invalid_result"), "{err}");
+        assert!(err.contains("without a result manifest"), "{err}");
+        assert!(!out.contains("Modified"), "{out}");
+    }
+
+    #[test]
+    fn generate_malformed_witness_fails_closed() {
+        let mut harness = Harness::new("generate-malformed");
+        harness.intended = Some(b"not json".to_vec());
+        let (code, out, err) = harness.run(&["generate", "--output=json"]);
+        assert_eq!(code, 1, "{out}");
+        assert!(err.contains("invalid_result"), "{err}");
+        assert!(out.contains("\"code\":\"invalid_result\""), "{out}");
+        assert!(!out.contains("\"event\":\"change\""), "{out}");
+        assert!(!out.contains("\"event\":\"mutation\""), "{out}");
+        assert!(out.contains("\"results_complete\":false"), "{out}");
+    }
+
+    #[test]
+    fn generate_invalid_witness_fails_closed() {
+        // Structurally sound JSON that crate validation rejects: a
+        // check run that did not finish its scope.
+        let mut harness = Harness::new("generate-invalid");
+        harness.intended = Some(intended_witness("check", false, "", ""));
+        let (code, _, err) = harness.run(&["generate", "--check", "--output=text"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("invalid_result"), "{err}");
+    }
+
+    #[test]
+    fn generate_partial_default_reports_attempted_prefix() {
+        // A late Gazelle failure after a valid witness still reports
+        // the validated prefix, then keeps the Gazelle code.
+        let mut harness = generate_witness("xyz\n", "generate-partial");
+        harness.bazel_code = 2;
+        let (code, out, _) = harness.run(&["generate", "--output=json"]);
+        assert_eq!(code, 2, "{out}");
+        assert!(out.contains("\"event\":\"change\""), "{out}");
+        assert!(out.contains("\"event\":\"mutation\""), "{out}");
+        assert!(out.contains("\"results_complete\":false"), "{out}");
+        assert!(out.contains("\"exit_code\":2"), "{out}");
+    }
+
+    #[test]
+    fn generate_not_applied_mutation_fails() {
+        // The workspace disagrees with the intended bytes: Gazelle did
+        // not (or not yet) write them, so the run fails with a
+        // machine-readable reason.
+        let harness = generate_witness("stale\n", "generate-not-applied");
+        let (code, out, err) = harness.run(&["generate", "--output=json"]);
+        assert_eq!(code, 1, "{out}{err}");
+        assert!(out.contains("\"outcome\":\"not_applied\""), "{out}");
+        assert!(out.contains("write_mismatch"), "{out}");
+        assert!(out.contains("\"exit_code\":1"), "{out}");
+    }
+
+    #[test]
+    fn generate_check_reports_changes_without_mutations() {
+        let mut harness = Harness::new("generate-check-json");
+        harness.intended = Some(intended_witness(
+            "check",
+            true,
+            &intended_modify("rust/hello/BUILD.bazel", b"abc\n", b"xyz\n"),
+            &intended_ignored("rust/hello/BUILD.bazel", "rust", "serde"),
+        ));
+        let (code, out, err) = harness.run(&["generate", "--check", "--output=json"]);
+        assert_eq!(code, 1, "{out}{err}");
+        assert!(out.contains("\"mode\":\"check\""), "{out}");
+        assert!(out.contains("\"event\":\"change\""), "{out}");
+        assert!(!out.contains("\"event\":\"mutation\""), "{out}");
+        assert!(out.contains("\"code\":\"ignored_import\""), "{out}");
+        assert!(!out.contains("\"mutations\""), "{out}");
+        assert!(out.contains("\"exit_code\":1"), "{out}");
+    }
+
+    #[test]
+    fn generate_check_text_lists_changes_and_clean_succeeds() {
+        let mut harness = Harness::new("generate-check-text");
+        harness.intended = Some(intended_witness(
+            "check",
+            true,
+            &intended_modify("rust/hello/BUILD.bazel", b"abc\n", b"xyz\n"),
+            "",
+        ));
+        let (code, out, err) = harness.run(&["generate", "--check", "--output=text"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(out.contains("Running generate for //..."), "{out}");
+        assert!(out.contains("Modified rust/hello/BUILD.bazel"), "{out}");
+
+        let mut clean = Harness::new("generate-check-clean");
+        clean.intended = Some(intended_witness("check", true, "", ""));
+        let (code, out, err) = clean.run(&["generate", "--check", "--output=text"]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(out.contains("Running generate for //..."), "{out}");
+        assert!(!out.contains("Modified"), "{out}");
+    }
+
+    #[test]
+    fn generate_incomplete_check_reports_nothing() {
+        // Check mode without a successful Gazelle run carries no
+        // trustworthy witness: no changes, Gazelle's code kept.
+        let mut harness = generate_witness("xyz\n", "generate-incomplete-check");
+        harness.bazel_code = 2;
+        let (code, out, _) = harness.run(&["generate", "--check", "--output=json"]);
+        assert_eq!(code, 2, "{out}");
+        assert!(!out.contains("\"event\":\"change\""), "{out}");
+        assert!(!out.contains("\"event\":\"mutation\""), "{out}");
+        assert!(out.contains("\"results_complete\":false"), "{out}");
+    }
+
+    #[test]
+    fn generate_diff_renders_validated_patch_only() {
+        let harness = generate_witness("xyz\n", "generate-diff");
+        let (code, out, err) = harness.run(&["generate", "--output=diff"]);
+        assert_eq!(code, 0, "{err}");
+        assert!(out.contains("rust/hello/BUILD.bazel"), "{out}");
+        assert!(out.contains("-abc"), "{out}");
+        assert!(out.contains("+xyz"), "{out}");
+        assert!(!out.contains("Running generate"), "{out}");
+        assert!(!out.contains("Ignored import"), "{out}");
+        assert_eq!(err, "", "{err}");
+    }
+
+    #[test]
+    fn generate_dispatch_env_carries_scope_mode_and_witness() {
+        let harness = generate_witness("xyz\n", "generate-dispatch");
+        let (code, out, err) = harness.run(&["generate", "//a:one", "--output=text"]);
+        assert_eq!(code, 0, "{out}{err}");
+        let seen = harness.seen_env.borrow();
+        assert_eq!(seen.len(), 1, "{seen:?}");
+        let env: std::collections::HashMap<&str, &str> = seen[0]
+            .iter()
+            .map(|(key, value)| (key.as_str(), value.as_str()))
+            .collect();
+        assert_eq!(
+            env.get(GENERATE_ENV_SCOPE).copied(),
+            Some(r#"[{"dirs":["a"],"element":"//a:one"}]"#),
+            "{seen:?}"
+        );
+        assert_eq!(env.get(GENERATE_ENV_MODE).copied(), Some("default"));
+        let intended = env
+            .get(GENERATE_ENV_INTENDED)
+            .copied()
+            .expect("witness path");
+        assert!(intended.ends_with(".json"), "{intended}");
+        assert_eq!(
+            std::fs::read(intended).expect("witness bytes"),
+            harness.intended.expect("canned witness"),
+            "runner observes the dispatched witness path"
+        );
+
+        let mut check = Harness::new("generate-dispatch-check");
+        check.intended = Some(intended_witness("check", true, "", ""));
+        let (code, _, err) = check.run(&["generate", "--check", "--output=text"]);
+        assert_eq!(code, 0, "{err}");
+        let seen = check.seen_env.borrow();
+        assert_eq!(
+            seen[0]
+                .iter()
+                .find_map(|(key, value)| (*key == GENERATE_ENV_MODE).then_some(value.as_str())),
+            Some("check"),
+            "{seen:?}"
+        );
     }
 
     #[test]
@@ -3636,23 +4122,16 @@ mod tests {
         assert!(out.contains("\"command_started\""), "{out}");
         assert!(out.contains("\"command_finished\""), "{out}");
 
-        let harness = Harness::new("generate-quiet");
-        let (code, out, _) = harness.run(&["generate", "--quiet"]);
+        let mut quiet = Harness::new("generate-quiet");
+        quiet.intended = Some(intended_witness("default", true, "", ""));
+        let (code, out, _) = quiet.run(&["generate", "--quiet"]);
         assert_eq!(code, 0, "{out}");
         assert_eq!(out, "", "{out:?}");
     }
 
     #[test]
-    fn generate_check_fails_pre_exec_pending_manifest() {
-        let harness = Harness::new("generate-check");
-        let (code, _, err) = harness.run(&["generate", "--check"]);
-        assert_eq!(code, 2, "{err}");
-        assert!(err.contains("O13"), "{err}");
-    }
-
-    #[test]
     fn generate_scoped_run_resolves_labels_without_queries() {
-        let harness = Harness::new("generate-scoped");
+        let harness = generate_witness("xyz\n", "generate-scoped");
         let (code, out, err) = harness.run(&["generate", "//a:one", "--output=text"]);
         assert_eq!(code, 0, "{err}");
         assert!(out.contains("Running generate for //a:one"), "{out}");
@@ -3667,15 +4146,6 @@ mod tests {
         let harness = Harness::new("generate-bad-scope");
         let (code, _, err) = harness.run(&["generate", "no/such/dir"]);
         assert_eq!(code, 2, "{err}");
-    }
-
-    #[test]
-    fn generate_diff_fails_operational_pending_manifest() {
-        let harness = Harness::new("generate-diff");
-        let (code, _, err) = harness.run(&["generate", "--output=diff"]);
-        assert_eq!(code, 1, "{err}");
-        assert!(err.contains("invalid_result"), "{err}");
-        assert!(err.contains("O13"), "{err}");
     }
 
     #[test]

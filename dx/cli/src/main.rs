@@ -59,12 +59,16 @@ struct BinaryRunner {
 }
 
 impl Runner for BinaryRunner {
-    fn run(&self, argv: &[String], cwd: &Path) -> io::Result<ChildStatus> {
+    fn run(&self, argv: &[String], cwd: &Path, env: &[(&str, &str)]) -> io::Result<ChildStatus> {
         let (binary, args) = argv.split_first().ok_or_else(|| {
             io::Error::new(io::ErrorKind::InvalidInput, "invocation needs a binary")
         })?;
         let mut command = Command::new(binary);
-        command.args(args).current_dir(cwd).stderr(Stdio::inherit());
+        command
+            .args(args)
+            .envs(env.iter().copied())
+            .current_dir(cwd)
+            .stderr(Stdio::inherit());
         if self.inherit_stdout {
             command.stdout(Stdio::inherit());
         } else {

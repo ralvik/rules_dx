@@ -9,6 +9,7 @@
 
 pub mod args;
 pub mod exec;
+pub mod finalize;
 pub mod generate;
 pub mod plan;
 pub mod reports;
@@ -16,6 +17,10 @@ pub mod resolve;
 
 pub use args::{ArgsError, Command, Invocation, ReportRequest};
 pub use exec::{execute, Env};
+pub use finalize::{
+    finalize, FinalizeError, FinalizeInput, FAILURE_MISSING_FILE, FAILURE_UNREADABLE_FILE,
+    FAILURE_WRITE_MISMATCH,
+};
 pub use generate::{
     ensure_mode, manifest_is_check, project, render_diff, text_lines, ProjectedFile,
     ProjectedManifest, IGNORED_IMPORT_CODE, IGNORED_IMPORT_LEVEL, IGNORED_IMPORT_MESSAGE,
