@@ -239,6 +239,50 @@ dx_rust_library(
 	}
 }
 
+func TestNativeExistingGeneratedConfigRemainsCurrent(t *testing.T) {
+	build := `load("//quality:native_config.bzl", "rustfmt_config")
+
+rustfmt_config(
+    name = "rustfmt_config",
+    src = "rustfmt.toml",
+)
+`
+	_, result := runNativeGenerate(t, "site", map[string]string{
+		"site/rustfmt.toml": "edition = \"2021\"\n",
+	}, build)
+	if findEmpty(result, "rustfmt_config", "rustfmt_config") {
+		t.Error("current generated-shaped config was stubbed")
+	}
+}
+
+func TestNativeHintsIgnoreNonRustAndConfigRules(t *testing.T) {
+	plan := &nativePlan{resolved: map[string]string{"rustfmt": "rustfmt_config"}}
+	foreign := rule.NewRule("filegroup", "assets")
+	applyNativeHints("site", foreign, plan)
+	if foreign.Attr("aspect_hints") != nil {
+		t.Errorf("foreign rule received hints: %v", foreign.AttrStrings("aspect_hints"))
+	}
+	configRule := rule.NewRule("rustfmt_config", "rustfmt_config")
+	applyNativeHints("site", configRule, plan)
+	if configRule.Attr("aspect_hints") != nil {
+		t.Errorf("native config rule received Rust hints: %v", configRule.AttrStrings("aspect_hints"))
+	}
+}
+
+func TestNativeRootCanonicalHintSurvives(t *testing.T) {
+	existing := rule.NewRule(libraryKind, "root")
+	existing.SetAttr("aspect_hints", []string{"//:rustfmt_config"})
+	lib := rule.NewRule(libraryKind, "root")
+	plan := &nativePlan{
+		resolved: map[string]string{"rustfmt": "rustfmt_config"},
+		existing: map[string]*rule.Rule{"root": existing, "rustfmt_config": rule.NewRule("rustfmt_config", "rustfmt_config")},
+	}
+	applyNativeHints("", lib, plan)
+	if got := strings.Join(lib.AttrStrings("aspect_hints"), ","); got != "//:rustfmt_config" {
+		t.Errorf("root hints = %q, want canonical existing hint", got)
+	}
+}
+
 func TestNativeHandConfigWins(t *testing.T) {
 	build := `load("//quality:native_config.bzl", "clippy_config")
 
@@ -426,6 +470,38 @@ func TestNativeValeStylesVariants(t *testing.T) {
 	}
 	if plain.Attr("data") != nil {
 		t.Errorf("self-contained vale data = %v, want absent", plain.AttrStrings("data"))
+	}
+}
+
+func TestNativeValeStylesInvalidPaths(t *testing.T) {
+	root := t.TempDir()
+	vale, ok := nativeToolByID("vale")
+	if !ok {
+		t.Fatal("missing vale tool definition")
+	}
+	if got := valeStylesData(root, root, "", vale); got != nil {
+		t.Errorf("missing config data = %v, want nil", got)
+	}
+
+	for name, styles := range map[string]string{
+		"empty":    "",
+		"absolute": filepath.Join(root, "outside"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			writeFixture(t, dir, ".vale.ini", "StylesPath = "+styles+"\n")
+			if got := valeStylesData(root, dir, "", vale); got != nil {
+				t.Errorf("invalid StylesPath data = %v, want nil", got)
+			}
+		})
+	}
+
+	dir := filepath.Join(root, "site")
+	outside := filepath.Join(root, "outside")
+	writeFixture(t, dir, ".vale.ini", "StylesPath = ../outside\n")
+	writeFixture(t, outside, "rule.yml", "extends: existence\n")
+	if got := valeStylesData(root, dir, "site", vale); got != nil {
+		t.Errorf("escaping StylesPath data = %v, want nil", got)
 	}
 }
 

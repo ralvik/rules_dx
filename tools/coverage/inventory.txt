@@ -1,21 +1,20 @@
-# M00 implementation-coverage source inventory (WP4).
+# First-party implementation-coverage source inventory.
 #
 # Format: `<disposition> <repo-relative path>` per line (`#` comments and
 # blank lines skipped). Dispositions: `eligible` (authored first-party
 # implementation, in the denominator unless removed by a validated
 # source-level ignore) or `support` (never in the denominator).
 #
-# Rust and Go are measured. No `.bzl` files are authored in M00 (only loads of
-# the pinned rulesets), so there is no Starlark inventory yet; see the M00
-# completion report for the Starlark feasibility evidence. Reconciled in CI
+# Rust and Go are measured. Starlark remains covered by behavioral evidence;
+# see milestone completion reports for instrumentation feasibility. Reconciled in CI
 # against `bazel query 'kind("source file", deps(//...))'` filtered to
-# workspace-owned `*.rs` files; test-only sources would be classified
-# `support`, but M00 has none (both `rust_test` targets reuse their
-# library crate via `crate =`).
+# workspace-owned `*.rs` and `*.go` files. Test and fixture sources are
+# classified `support`.
 # M03 WP2c: synthetic quality fixtures are fixture-only, never implementation.
 support quality/testdata/clean.rs
 support quality/testdata/dirty.rs
 support quality/testdata/hinted.rs
+support quality/testdata/generated_shape.rs
 support gazelle/rust/testdata/source_only/crates/demo/src/lib.rs
 support gazelle/rust/testdata/source_only/crates/demo/src/main.rs
 support gazelle/rust/testdata/source_only/crates/demo/src/model.rs
@@ -27,15 +26,21 @@ support gazelle/rust/testdata/cargo/crates/app/spec/acceptance.rs
 support gazelle/rust/testdata/merge/crates/binary/src/main.rs
 support gazelle/rust/testdata/merge/crates/cargo_trim/src/lib.rs
 support gazelle/rust/testdata/merge/crates/merge/src/lib.rs
+support gazelle/rust/testdata/native_config/crates/full/src/lib.rs
+support gazelle/rust/testdata/native_config/crates/merge/src/lib.rs
+support gazelle/rust/testdata/native_config/crates/removal/src/lib.rs
+support gazelle/rust/testdata/native_config/crates/skip/src/lib.rs
 eligible gazelle/rust/cargo.go
 support gazelle/rust/doc.go
 eligible gazelle/rust/lang.go
 eligible gazelle/rust/layout.go
+eligible gazelle/rust/native_config.go
 eligible gazelle/rust/naming.go
 eligible gazelle/rust/parser.go
 support gazelle/rust/cargo_test.go
 support gazelle/rust/lang_test.go
 support gazelle/rust/layout_test.go
+support gazelle/rust/native_config_test.go
 support gazelle/rust/naming_test.go
 support gazelle/rust/parser_test.go
 eligible rust/hello/src/lib.rs

@@ -70,8 +70,9 @@ graph, or mutation semantics:
   opt-in explicit.
 - `--dry-run` lists reclaimable generations and links without deleting.
 
-Exact NDJSON parent framing, report merging, `--bazel` flag shape, and
-in-use detection mechanics are qualified under [O59 and O60](../open-decisions.md).
+NDJSON parent framing and report merging are qualified under resolved
+[O59](../open-decisions.md). The `--bazel` flag shape and in-use detection
+mechanics remain pending under O60.
 
 ## Consequences
 

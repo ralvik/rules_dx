@@ -6,10 +6,10 @@
 repository-wide operation and additionally accepts an explicit v1 scope of zero or more
 paths, labels, or target patterns selecting the Gazelle subtree to refresh. With no scope
 it refreshes the repository. It may create or modify Gazelle-maintained `BUILD` and `BUILD.bazel` files
-within the selected scope. Exact scope syntax and scoped freshness semantics are qualified
+within the selected scope. Exact scope syntax and scoped freshness semantics are frozen
 under [O48](../../open-decisions.md).
 
-Provisional v1 scope (pending O48 freeze, flagged for review): resolution reuses
+V1 scope resolution reuses
 [target resolution](../target-resolution.md) verbatim. Empty scope refreshes `//...`;
 labels and patterns pass through after syntax and workspace validation with
 external-repository scopes rejected; files resolve to depth-1 owners via unconfigured
@@ -17,13 +17,14 @@ external-repository scopes rejected; files resolve to depth-1 owners via unconfi
 directories map to recursive `//path/...` patterns. Scoped `--check` runs the same
 non-mutating workflow over the selected subtree with the freshness boundary at the
 scope edge: a stale or missing Gazelle-maintained file in scope fails; staleness
-outside the selected scope never fails the check. Proposed manifest scoping (pending
-O48 freeze, flagged for review): the versioned run manifest records the resolved run
+outside the selected scope never fails the check. The versioned run manifest records the resolved run
 scope, and each edit/write-outcome/completion/ignored-import record carries its owning
 scope element, so scoped refreshes produce scope-attributed records consumable without
-rereading the workspace. Gazelle merge interaction for scoped refreshes (which trees
-Gazelle rewrites vs preserves under a narrowed scope) remains open under O48 as
-extension-side work; do not implement it against this prose. Scoped-selection fixtures
+rereading the workspace. Gazelle traverses and merges only packages selected by the
+resolved patterns: it preserves every package outside that set and all hand-authored or
+kept content inside it under the common merge contract. A directory pattern includes
+that package and its descendants; an exact label or file-owner scope includes its owning
+package only. Scoped-selection fixtures
 (executable against the resolver mapping): empty scope resolves `//...`; label and
 pattern scopes pass through after validation with external-repository rejection; file
 scopes resolve to depth-1 owners with the no-owner/generated-excluded/not-found/
@@ -95,8 +96,8 @@ syntax, validation, precedence, and resolution behavior belong to the
 The canonical execution produces one private declared versioned result manifest artifact
 containing exact edits, write outcomes in default mode, completion state, and ignored-import
 audit records, per [O13](../../open-decisions.md) and scoped selection per
-[O48](../../open-decisions.md). The manifest schema, dispatch, and canonical-target wiring are
-pending those decisions; do not implement the manifest against this prose. Affected-path,
+[O48](../../open-decisions.md). The manifest schema, dispatch, and canonical-target wiring remain
+pending O13. Affected-path,
 change, mutation, diff, and ignored-import output comes from that manifest; rendering does not rerun
 Gazelle.
 
