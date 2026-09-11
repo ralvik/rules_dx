@@ -1,0 +1,14 @@
+load("@crates//:crates.bzl", "aliases")
+load("@rules_dx//rust/rules:defs.bzl", "dx_rust_library")
+
+dx_rust_library(
+    name = "trim",
+    srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "crates/cargo_trim",
+        normal = True,
+    ),
+    crate_name = "trim",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+)

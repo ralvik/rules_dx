@@ -1,0 +1,18 @@
+load("@rules_dx//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_test")
+
+dx_rust_binary(
+    name = "old_bin",
+    srcs = ["old_main.rs"],
+    crate_name = "old_bin",
+    crate_root = "old_main.rs",
+)
+
+dx_rust_test(
+    name = "old_bin_test",
+    crate = ":old_bin",
+)
+
+filegroup(
+    name = "assets",
+    srcs = ["asset.txt"],
+)

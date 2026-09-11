@@ -1,0 +1,23 @@
+[package]
+name = "cargo-app"
+version = "0.0.0"
+edition = "2024"
+
+[dependencies]
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lib]
+name = "cargo_core"
+path = "source/core.rs"
+
+[[bin]]
+name = "cargo-tool"
+path = "source/main.rs"
+
+[[test]]
+name = "acceptance"
+path = "spec/acceptance.rs"
+harness = false

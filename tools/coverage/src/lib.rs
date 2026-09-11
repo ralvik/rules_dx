@@ -265,8 +265,8 @@ pub struct GateVerdict {
     pub other_sources: Vec<String>,
 }
 
-fn is_rust(path: &str) -> bool {
-    path.ends_with(".rs")
+fn is_covered_language(path: &str) -> bool {
+	path.ends_with(".rs") || path.ends_with(".go")
 }
 
 fn is_starlark(path: &str) -> bool {
@@ -348,11 +348,11 @@ pub fn evaluate(
         );
     }
     for (path, hits) in report {
-        if is_rust(path) {
+        if is_covered_language(path) {
             match inventory.get(path.as_str()) {
                 None => verdict
                     .errors
-                    .push(format!("instrumented Rust source not in inventory: {path}")),
+                    .push(format!("instrumented source not in inventory: {path}")),
                 Some(disposition) if disposition == SUPPORT => {}
                 Some(disposition) if disposition == ELIGIBLE => {
                     if let Some(file) = check_file(path, hits, load_source, &mut verdict.errors) {

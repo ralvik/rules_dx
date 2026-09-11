@@ -18,6 +18,8 @@ EXTRA_PRESETS = {
     "coverage": [
         "coverage --test_env=GENERATE_LLVM_LCOV=1",
         "coverage --combined_report=lcov",
+        "coverage --test_tag_filters=-no-coverage",
+        "coverage --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov",
         "coverage --instrumentation_filter=^//",
     ],
 }

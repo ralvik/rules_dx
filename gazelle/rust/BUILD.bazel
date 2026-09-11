@@ -1,0 +1,95 @@
+"""First-party Rust Gazelle extension (M09, ADR 0015)."""
+
+load("@gazelle//:def.bzl", "gazelle_binary", "gazelle_generation_test")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:private"])
+
+go_library(
+    name = "rust",
+    srcs = [
+        "cargo.go",
+        "doc.go",
+        "lang.go",
+        "layout.go",
+        "naming.go",
+        "parser.go",
+    ],
+    importpath = "github.com/ralvik/rules_dx/gazelle/rust",
+    deps = [
+        "@com_github_bazelbuild_buildtools//build",
+        "@gazelle//config",
+        "@gazelle//language",
+        "@gazelle//repo",
+        "@gazelle//resolve",
+        "@gazelle//rule",
+        "@gazelle//v2/label",
+        "@gazelle//v2/rule",
+    ],
+)
+
+gazelle_binary(
+    name = "gazelle",
+    languages = [":rust"],
+    tags = ["no-coverage"],
+    version = 1,
+)
+
+filegroup(
+    name = "generation_testdata",
+    srcs = glob(["testdata/**"]),
+)
+
+gazelle_generation_test(
+    name = "generation_test",
+    gazelle_binary = ":gazelle",
+    pure = "on",
+    tags = ["no-coverage"],
+    test_data = [":generation_testdata"],
+)
+
+sh_test(
+    name = "failure_test",
+    srcs = ["failure_test.sh"],
+    args = ["$(rootpath :gazelle)"],
+    data = [":gazelle"],
+    tags = ["no-coverage"],
+)
+
+sh_test(
+    name = "idempotent_test",
+    srcs = ["idempotent_test.sh"],
+    args = ["$(rootpath :gazelle)"],
+    data = [":gazelle"],
+    tags = ["no-coverage"],
+)
+
+go_test(
+    name = "rust_test",
+    srcs = [
+        "cargo_test.go",
+        "lang_test.go",
+        "layout_test.go",
+        "naming_test.go",
+        "parser_test.go",
+    ],
+    embed = [":rust"],
+    pure = "on",
+)
+
+real_source_target(
+    name = "corpus",
+    aspect_hints = ["//quality:corpus_vale_config"],
+    markdown_srcs = [
+        "testdata/cargo/README.md",
+        "testdata/merge/README.md",
+        "testdata/source_only/README.md",
+    ],
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = [
+        "testdata/cargo/crates/app/Cargo.toml",
+        "testdata/merge/crates/cargo_trim/Cargo.toml",
+    ],
+)

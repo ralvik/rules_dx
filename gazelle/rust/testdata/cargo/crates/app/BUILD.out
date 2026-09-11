@@ -1,0 +1,69 @@
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+load("@rules_dx//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
+
+dx_rust_library(
+    name = "cargo_core",
+    srcs = ["source/core.rs"],
+    aliases = aliases(
+        package_name = "crates/app",
+        normal = True,
+    ),
+    crate_name = "cargo_core",
+    crate_root = "source/core.rs",
+    edition = "2024",
+    deps = crate_deps(
+        ["serde_json"],
+        package_name = "crates/app",
+    ),
+)
+
+dx_rust_test(
+    name = "cargo_core_test",
+    aliases = aliases(
+        package_name = "crates/app",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":cargo_core",
+    deps = crate_deps(
+        ["tempfile"],
+        package_name = "crates/app",
+    ),
+)
+
+dx_rust_binary(
+    name = "cargo_tool",
+    srcs = ["source/main.rs"],
+    aliases = aliases(
+        package_name = "crates/app",
+        normal = True,
+    ),
+    crate_name = "cargo_tool",
+    crate_root = "source/main.rs",
+    edition = "2024",
+    deps = crate_deps(
+        ["serde_json"],
+        package_name = "crates/app",
+    ),
+)
+
+dx_rust_test(
+    name = "acceptance",
+    srcs = ["spec/acceptance.rs"],
+    aliases = aliases(
+        package_name = "crates/app",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate_name = "acceptance",
+    crate_root = "spec/acceptance.rs",
+    edition = "2024",
+    use_libtest_harness = False,
+    deps = crate_deps(
+        [
+            "serde_json",
+            "tempfile",
+        ],
+        package_name = "crates/app",
+    ),
+)

@@ -14,6 +14,20 @@ bazel_dep(name = "rules_cc", version = "0.2.22")
 # MVS-selected version already in the executed graph (via rules_cc).
 bazel_dep(name = "rules_python", version = "1.7.0")
 
+# M09 WP1: Go toolchain for the first-party Rust Gazelle extension
+# (ADR 0015). Pinned from the Bazel Central Registry; versions verified
+# against Bazel 9.2.0 on the seed host.
+bazel_dep(name = "rules_go", version = "0.63.0")
+bazel_dep(name = "gazelle", version = "0.52.2")
+bazel_dep(name = "rules_shell", version = "0.6.1")
+
+gazelle_go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
+gazelle_go_deps.from_file(go_work = "@gazelle//:go.work")
+use_repo(gazelle_go_deps, "com_github_bazelbuild_buildtools", "com_github_bmatcuk_doublestar_v4", "com_github_fsnotify_fsnotify", "com_github_golang_protobuf", "com_github_google_go_cmp", "com_github_pmezard_go_difflib", "org_golang_google_protobuf", "org_golang_x_mod", "org_golang_x_sync", "org_golang_x_tools_go_vcs")
+
+go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.download(version = "1.26.6")
+
 # M04 WP1: direct dep so MODULE tags can name execution-platform
 # constraints. 1.1.0 is the MVS-selected version already in the executed
 # graph (see the root-module warning that proposed it).

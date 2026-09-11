@@ -66,8 +66,8 @@ adoption scope (depends on M29).
 | M06 | [CLI Process, Output, BEP, And Apply](M06-cli-process-output-bep-apply.md) ([report](M06-completion-report.md)) | M03, M05 | Ready |
 | M07 | [Initial Quality CLI And Full Initial Dogfood](M07-initial-quality-cli-dogfood.md) ([report](M07-completion-report.md)) | M06 | Ready |
 | M08 | [Target Resolution And Basic Commands](M08-target-resolution-basic-commands.md) ([report](M08-completion-report.md)) | M06 | Ready |
-| M09 | [Rust-First Gazelle](M09-rust-first-gazelle.md) | M07, M08 | Pending |
-| M10 | [Public Generate, Config Binding, And Result Transport](M10-public-generate-config-binding-result-transport.md) | M09 | Pending |
+| M09 | [Rust-First Gazelle](M09-rust-first-gazelle.md) ([report](M09-completion-report.md)) | M07, M08 | Ready |
+| M10 | [Public Generate, Config Binding, And Result Transport](M10-public-generate-config-binding-result-transport.md) | M09 | Ready |
 | M11 | [PATH Tools And Environment Bootstrap](M11-path-tools-environment-bootstrap.md) | M07, M08 | Pending |
 | M12 | [Complete Rust Foundation](M12-complete-rust-foundation.md) | M09, M10, M11 | Pending |
 | M13 | [Repository-Corpus Quality Closure](M13-repository-corpus-quality-closure.md) | M12 | Pending |

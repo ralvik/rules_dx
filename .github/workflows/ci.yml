@@ -45,11 +45,11 @@ jobs:
       - name: Enforce implementation-coverage gate
         run: |
           bazel query 'kind("source file", deps(//...))' 2>/dev/null \
-            | grep '^//' | sed 's|^//||; s|:|/|' | grep '\.rs$' | sort > /tmp/m00_sources.txt
+            | grep '^//' | sed 's|^//||; s|:|/|' | grep -E '\.(rs|go)$' | sort > /tmp/implementation_sources.txt
           bazel run //tools/coverage:check -- \
             --report "$GITHUB_WORKSPACE/bazel-out/_coverage/_coverage_report.dat" \
             --inventory "$GITHUB_WORKSPACE/tools/coverage/inventory.txt" \
-            --sources /tmp/m00_sources.txt \
+            --sources /tmp/implementation_sources.txt \
             --root "$GITHUB_WORKSPACE"
   corpus-dogfood:
     name: corpus-dogfood (dx quality commands, Linux x86_64 glibc, local-only)

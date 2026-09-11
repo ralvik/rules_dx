@@ -1,0 +1,15 @@
+load("@rules_dx//rust/rules:defs.bzl", "dx_rust_library", "dx_rust_test")
+
+dx_rust_library(
+    name = "trim",
+    srcs = ["old.rs"],
+    crate_name = "old",
+    crate_root = "old.rs",
+)
+
+dx_rust_test(
+    name = "removed_test",
+    srcs = ["tests/removed.rs"],
+    crate_name = "removed",
+    crate_root = "tests/removed.rs",
+)

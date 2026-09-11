@@ -1,0 +1,32 @@
+load("@rules_dx//rust/rules:defs.bzl", "dx_rust_library", "dx_rust_test")
+
+dx_rust_library(
+    name = "merge",
+    srcs = [
+        "old.rs",
+        "extra/kept.rs",  # keep
+    ],
+    crate_name = "legacy",  # keep
+    crate_root = "old.rs",
+    data = ["asset.txt"],
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+)
+
+dx_rust_library(
+    name = "gone",
+    srcs = ["gone.rs"],
+    crate_name = "gone",
+    crate_root = "gone.rs",
+)
+
+dx_rust_test(
+    name = "gone_test",
+    crate = ":gone",
+)
+
+# keep
+dx_rust_library(
+    name = "retained",
+    srcs = ["removed.rs"],
+)

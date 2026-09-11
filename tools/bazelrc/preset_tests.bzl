@@ -23,12 +23,12 @@ def preset_update_tests(name):
             expect_equal("preset pin", PRESET_BAZEL_VERSION, "9.2.0"),
             expect_equal("upstream flag count", len(PRESET_FLAGS), 3),
             expect_equal("extra presets groups", sorted(EXTRA_PRESETS.keys()), ["coverage"]),
-            expect_equal("coverage flag count", len(EXTRA_PRESETS["coverage"]), 3),
+            expect_equal("coverage flag count", len(EXTRA_PRESETS["coverage"]), 5),
         ],
         file_checks = {
             "//:.bazelversion": "9.2.0",
             "//:.bazelrc": "import %workspace%/tools/bazelrc/preset.bazelrc\ntry-import %workspace%/user.bazelrc",
-            ":bazelrc-preset.bzl": "PRESET_BAZEL_VERSION = \"9.2.0\"\n\"common --enable_bzlmod\",\n\"build --verbose_failures\",\n\"test --test_output=errors\",\n\"coverage\": [\n\"coverage --test_env=GENERATE_LLVM_LCOV=1\",\n\"coverage --combined_report=lcov\",\n\"coverage --instrumentation_filter=^//\",",
-            ":preset.bazelrc": "common --enable_bzlmod\nbuild --verbose_failures\ntest --test_output=errors\n# Owned extra_presets group: coverage.\ncoverage --test_env=GENERATE_LLVM_LCOV=1\ncoverage --combined_report=lcov\ncoverage --instrumentation_filter=^//",
+            ":bazelrc-preset.bzl": "PRESET_BAZEL_VERSION = \"9.2.0\"\n\"common --enable_bzlmod\",\n\"build --verbose_failures\",\n\"test --test_output=errors\",\n\"coverage\": [\n\"coverage --test_env=GENERATE_LLVM_LCOV=1\",\n\"coverage --combined_report=lcov\",\n\"coverage --test_tag_filters=-no-coverage\",\n\"coverage --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\",\n\"coverage --instrumentation_filter=^//\",",
+            ":preset.bazelrc": "common --enable_bzlmod\nbuild --verbose_failures\ntest --test_output=errors\n# Owned extra_presets group: coverage.\ncoverage --test_env=GENERATE_LLVM_LCOV=1\ncoverage --combined_report=lcov\ncoverage --test_tag_filters=-no-coverage\ncoverage --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\ncoverage --instrumentation_filter=^//",
         },
     )

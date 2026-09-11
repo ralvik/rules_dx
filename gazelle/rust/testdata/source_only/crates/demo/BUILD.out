@@ -1,0 +1,38 @@
+load("@rules_dx//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
+
+# A user-owned rule must survive generation unchanged.
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+dx_rust_library(
+    name = "demo",
+    srcs = [
+        "src/lib.rs",
+        "src/model.rs",
+        "src/tests.rs",
+    ],
+    crate_name = "demo",
+    crate_root = "src/lib.rs",
+)
+
+dx_rust_test(
+    name = "demo_test",
+    crate = ":demo",
+)
+
+dx_rust_binary(
+    name = "demo_bin",
+    srcs = ["src/main.rs"],
+    crate_name = "demo",
+    crate_root = "src/main.rs",
+)
+
+dx_rust_test(
+    name = "smoke_test",
+    srcs = ["tests/smoke.rs"],
+    crate_name = "smoke",
+    crate_root = "tests/smoke.rs",
+    deps = [":demo"],
+)

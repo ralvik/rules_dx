@@ -30,6 +30,14 @@ build-script policy, and dependency scopes are authoritative. Generation does no
 contradict Cargo policy and does not read private upstream graph serialization. Missing, duplicate,
 ambiguous, or conflicting declarations fail rather than falling back to source inference.
 
+The initial ordinary-target mapping parses checked-in Cargo declarations in the first-party
+extension, resolves path crates through Gazelle's local rule index, and emits exact imported external
+names through the public `@crates//:crates.bzl` `crate_deps` and `aliases` macros. The macro
+`package_name` is the Bazel package path recorded by crate_universe, not Cargo's package name. The
+extension never reads `Cargo.Bazel.lock`, `cargo-bazel.json`, or crate_universe's private dependency
+maps. Production imports must be declared in `[dependencies]`; test imports may additionally use
+`[dev-dependencies]`.
+
 Cargo behavior is generated only through a stable, fixture-proven public `rules_rs` or patched
 `rules_rust` mapping. The accepted target kinds are ordinary libraries, binaries, tests, proc macros,
 sole `cdylib`, and sole `staticlib`. Unsupported kinds, `dylib`, and multiple crate types for one

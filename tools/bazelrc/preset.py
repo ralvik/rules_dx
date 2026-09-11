@@ -61,6 +61,12 @@ EXTRA_PRESETS = {
          "emits empty coverage.dat files on GCC hosts."),
         ("coverage --combined_report=lcov",
          "Single combined lcov report for the coverage-gate consumer."),
+        ("coverage --test_tag_filters=-no-coverage",
+         "Exclude process-spawning golden tests whose instrumented child output "
+         "would change the asserted stderr contract."),
+        ("coverage --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov",
+         "Work around Bazel 9 rules_go's unconditional C/C++ coverage helper, "
+         "which requires the selected Linux seed host gcov path."),
         ("coverage --instrumentation_filter=^//",
          "Instrument workspace-owned targets only (`@` external repos never "
          "match `^//`). The filter matches labels, so a prefix ending in "
