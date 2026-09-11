@@ -23,6 +23,8 @@ pub enum Command {
     Test,
     Coverage,
     Run,
+    Check,
+    Fix,
 }
 
 impl Command {
@@ -37,6 +39,8 @@ impl Command {
             Command::Test => "test",
             Command::Coverage => "coverage",
             Command::Run => "run",
+            Command::Check => "check",
+            Command::Fix => "fix",
         }
     }
 
@@ -50,6 +54,8 @@ impl Command {
             "test" => Some(Command::Test),
             "coverage" => Some(Command::Coverage),
             "run" => Some(Command::Run),
+            "check" => Some(Command::Check),
+            "fix" => Some(Command::Fix),
             _ => None,
         }
     }
@@ -62,6 +68,13 @@ impl Command {
             self,
             Command::Build | Command::Test | Command::Coverage | Command::Run
         )
+    }
+
+    /// True for the sequential `check`/`fix` umbrellas over
+    /// format, lint, typecheck, and generate (M10 WP4, O59): phases
+    /// run in order with stop-on-first-failure under one NDJSON frame.
+    pub fn is_umbrella(self) -> bool {
+        matches!(self, Command::Check | Command::Fix)
     }
 }
 
@@ -139,12 +152,12 @@ impl std::fmt::Display for ArgsError {
         match self {
             ArgsError::MissingCommand => write!(
                 f,
-                "missing command: want lint|typecheck|format|generate|build|test|coverage|run"
+                "missing command: want lint|typecheck|format|generate|build|test|coverage|run|check|fix"
             ),
             ArgsError::UnknownCommand { command } => {
                 write!(
                     f,
-                    "unknown command {command:?}: want lint|typecheck|format|generate|build|test|coverage|run"
+                    "unknown command {command:?}: want lint|typecheck|format|generate|build|test|coverage|run|check|fix"
                 )
             }
             ArgsError::UnknownOption { option } => write!(f, "unknown option {option:?}"),

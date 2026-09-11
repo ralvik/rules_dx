@@ -104,7 +104,9 @@ change, mutation, diff, and ignored-import output comes from that manifest; rend
 Gazelle.
 
 A complete check-mode manifest is required before any change event or patch is emitted. Incomplete
-check-mode generation emits no changes or mutations and no patch.
+check-mode generation emits no changes or mutations and no patch. A diff-mode `ErrDiff` exit
+(changes found) still finalizes its complete witness, so `--check` lists the changes with exit 1;
+only a missing or incomplete witness degrades to the incomplete envelope.
 
 Default generation preserves truthful partial reporting. A structurally valid manifest that ends
 after a late workflow failure may report only its validated attempted prefix: its `change` events,

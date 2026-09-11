@@ -18,7 +18,11 @@
 //! [`WriteOutcome::Unspecified`] outcomes, and every scope must witness
 //! `results_complete` (a check run that did not finish every scope fails
 //! validation rather than producing a manifest that claims otherwise).
-//! Malformed payloads fail closed with [`FinalizeError`] before any filesystem
+//! A complete check witness finalizes even when the Gazelle run exits
+//! nonzero: upstream writes the witness in `AfterResolvingDeps` before
+//! the emit loop, and without `-patch` the only post-witness failure is
+//! `ErrDiff` ("changes found") — the expected check signal, reported as
+//! exit 1 with the changes listed. Malformed payloads fail closed with [`FinalizeError`] before any filesystem
 //! access beyond the (guarded) outcome reads; paths that are not safe to join
 //! under the workspace root are rejected without being touched.
 //!
@@ -278,9 +282,6 @@ fn default_outcome(workspace: &Path, path: &str, intended: &[u8]) -> (i32, Strin
 /// Build a validated [`GenerationManifest`] from a Gazelle intended-manifest
 /// witness. See the [module-level documentation](self) for the protocol.
 pub fn finalize(input: &FinalizeInput<'_>) -> Result<GenerationManifest, FinalizeError> {
-    if input.check && !input.gazelle_ok {
-        return Err(FinalizeError::IncompleteCheck);
-    }
     let payload: IntendedPayload = serde_json::from_slice(input.intended_json)
         .map_err(|err| FinalizeError::Malformed(format!("invalid intended JSON: {err}")))?;
     if payload.schema_major != generation_result::SCHEMA_MAJOR
@@ -301,6 +302,13 @@ pub fn finalize(input: &FinalizeInput<'_>) -> Result<GenerationManifest, Finaliz
             payload.mode,
         )));
     }
+    // A failed check run with an incomplete witness carries nothing
+    // trustworthy; a *complete* witness finalizes despite the nonzero
+    // exit (see the module docs for the `ErrDiff` ordering argument).
+    let witnessed_complete = payload.scopes.iter().all(|s| s.results_complete);
+    if input.check && !witnessed_complete && !input.gazelle_ok {
+        return Err(FinalizeError::IncompleteCheck);
+    }
     // Guard every path before touching the filesystem.
     for file in &payload.files {
         check_joinable(&file.path)?;
@@ -314,7 +322,15 @@ pub fn finalize(input: &FinalizeInput<'_>) -> Result<GenerationManifest, Finaliz
         .into_iter()
         .map(|scope| Scope {
             value: scope.value,
-            results_complete: Some(input.gazelle_ok && scope.results_complete),
+            // Check mode reports what the witness records: a complete
+            // witness stays complete past the expected `ErrDiff` exit.
+            // Default mode ANDs in run success so a late failure still
+            // reports its validated attempted prefix as incomplete.
+            results_complete: Some(if input.check {
+                scope.results_complete
+            } else {
+                input.gazelle_ok && scope.results_complete
+            }),
         })
         .collect();
 
@@ -557,6 +573,29 @@ mod tests {
     }
 
     #[test]
+    fn check_mode_complete_witness_finalizes_after_failed_run() {
+        // Upstream `-mode diff` exits 1 (`ErrDiff`) exactly when the
+        // witness carries changes, after `AfterResolvingDeps` wrote it:
+        // a complete check witness is trustworthy despite the failure,
+        // and check mode still reads no workspace files.
+        let dir = tempfile_like::TempDir::new();
+        // No workspace files exist at all: the manifest still succeeds.
+        let manifest = finalize(&FinalizeInput {
+            intended_json: &payload("check", true),
+            workspace: dir.path(),
+            check: true,
+            gazelle_ok: false,
+        })
+        .expect("complete check witness finalizes");
+        assert_eq!(manifest.mode, Mode::Check as i32);
+        assert_eq!(manifest.scopes[0].results_complete, Some(true));
+        let file = manifest.files.first().expect("witness file");
+        assert_eq!(file.outcome, WriteOutcome::Unspecified as i32);
+        assert!(file.failure_code.is_empty());
+        assert_eq!(manifest.ignored_imports.len(), 1);
+    }
+
+    #[test]
     fn check_mode_rejects_incomplete_scope() {
         // A check run that did not finish a scope must not produce a manifest
         // claiming otherwise: crate validation fails the whole artifact.
@@ -631,7 +670,15 @@ mod tests {
             FinalizeError::Malformed(_)
         ));
         assert!(matches!(
-            run(&payload("check", true), true, false),
+            run(b"not json", true, false),
+            FinalizeError::Malformed(_)
+        ));
+        assert!(matches!(
+            run(&payload("default", true), true, false),
+            FinalizeError::Malformed(_)
+        ));
+        assert!(matches!(
+            run(&payload("check", false), true, false),
             FinalizeError::IncompleteCheck
         ));
         assert!(matches!(
@@ -729,7 +776,7 @@ mod tests {
     fn error_display_and_incomplete_results_complete() {
         let dir = tempfile_like::TempDir::new();
         let err = finalize(&FinalizeInput {
-            intended_json: &payload("check", true),
+            intended_json: &payload("check", false),
             workspace: dir.path(),
             check: true,
             gazelle_ok: false,

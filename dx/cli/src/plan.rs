@@ -91,6 +91,22 @@ pub fn spec(command: Command) -> CommandSpec {
             aspects: &[],
             reports: &[],
         },
+        // Sequential umbrellas (M10 WP4, O59) never build Bazel
+        // invocations of their own; phases reuse their registries
+        // verbatim. The umbrella routes SARIF requests to the
+        // SARIF-capable phases (lint, typecheck) and merges runs.
+        Command::Check => CommandSpec {
+            command,
+            capability: "check",
+            aspects: &[],
+            reports: &["sarif"],
+        },
+        Command::Fix => CommandSpec {
+            command,
+            capability: "fix",
+            aspects: &[],
+            reports: &["sarif"],
+        },
     }
 }
 
@@ -234,6 +250,7 @@ impl WorkflowVerb {
             Command::Coverage => Some(WorkflowVerb::Coverage),
             Command::Run => Some(WorkflowVerb::Run),
             Command::Lint | Command::Typecheck | Command::Format | Command::Generate => None,
+            Command::Check | Command::Fix => None,
         }
     }
 
@@ -585,6 +602,8 @@ mod tests {
         assert_eq!(WorkflowVerb::of(Command::Lint), None);
         assert_eq!(WorkflowVerb::of(Command::Typecheck), None);
         assert_eq!(WorkflowVerb::of(Command::Format), None);
+        assert_eq!(WorkflowVerb::of(Command::Check), None);
+        assert_eq!(WorkflowVerb::of(Command::Fix), None);
         assert_eq!(WorkflowVerb::Run.name(), "run");
         assert!(!WorkflowVerb::Run.collects_reports());
     }
