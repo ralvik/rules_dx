@@ -1,0 +1,26 @@
+"""Generation result transport shared by Gazelle and the dx CLI."""
+
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["result.proto"])
+
+proto_library(
+    name = "result_proto",
+    srcs = ["result.proto"],
+)
+
+rust_prost_library(
+    name = "result_proto_rs",
+    proto = ":result_proto",
+)
+
+# Repository corpus (M05 WP1): build file owned for direct-Bazel dogfood
+# under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)

@@ -37,6 +37,7 @@ eligible gazelle/rust/layout.go
 eligible gazelle/rust/native_config.go
 eligible gazelle/rust/naming.go
 eligible gazelle/rust/parser.go
+eligible generation/result/src/lib.rs
 support gazelle/rust/cargo_test.go
 support gazelle/rust/lang_test.go
 support gazelle/rust/layout_test.go

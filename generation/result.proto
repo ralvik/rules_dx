@@ -1,0 +1,80 @@
+// Generation Result Protocol schema (M10 O13).
+//
+// Private binary contract between the canonical Gazelle workflow and `dx`.
+// Field and enum numbers are the v1 compatibility surface. Unknown major
+// versions are rejected; newer minor versions are accepted when understood.
+
+syntax = "proto3";
+
+package dx.generation.v1;
+
+enum Mode {
+  MODE_UNSPECIFIED = 0;
+  CHECK = 1;
+  DEFAULT = 2;
+  reserved 3 to 15;
+}
+
+enum WriteOutcome {
+  WRITE_OUTCOME_UNSPECIFIED = 0;
+  APPLIED = 1;
+  NOT_APPLIED = 2;
+  reserved 3 to 15;
+}
+
+// One resolved command-line scope element. Completion is optional so a
+// producer can distinguish an unvisited scope from a visited incomplete one.
+message Scope {
+  string value = 1;
+  optional bool results_complete = 2;
+  reserved 3 to 7;
+}
+
+// One half-open UTF-8 byte edit against Modification.original_content.
+message Edit {
+  uint64 start_byte = 1;
+  uint64 end_byte = 2;
+  bytes replacement = 3;
+  reserved 4 to 7;
+}
+
+// Exact change to an existing BUILD file. The digest is BLAKE3-256 over the
+// embedded original bytes; embedding them makes the artifact self-validating.
+message Modification {
+  bytes original_digest = 1;
+  bytes original_content = 2;
+  repeated Edit edits = 3;
+  reserved 4 to 7;
+}
+
+// One changed BUILD file in deterministic Gazelle attempt order.
+message FileResult {
+  string path = 1;
+  uint32 scope_index = 2;
+  oneof change {
+    bytes create_content = 3;
+    Modification modification = 4;
+  }
+  WriteOutcome outcome = 5;
+  string failure_code = 6;
+  reserved 7 to 15;
+}
+
+// One accepted exact ignored-import directive use.
+message IgnoredImport {
+  string path = 1;
+  string language = 2;
+  string import = 3;
+  uint32 scope_index = 4;
+  reserved 5 to 15;
+}
+
+message GenerationManifest {
+  uint32 schema_major = 1;
+  uint32 schema_minor = 2;
+  Mode mode = 3;
+  repeated Scope scopes = 4;
+  repeated FileResult files = 5;
+  repeated IgnoredImport ignored_imports = 6;
+  reserved 7 to 24;
+}

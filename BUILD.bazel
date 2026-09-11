@@ -11,6 +11,7 @@
 # gazelle:resolve rust dx_diff //dx/diff:dx_diff
 # gazelle:resolve rust dx_output //dx/output:dx_output
 # gazelle:resolve rust dx_process //dx/process:dx_process
+# gazelle:resolve rust generation_result //generation/result:generation_result
 # gazelle:resolve rust marker_proto //env:marker_proto_rs
 # gazelle:resolve rust proto //quality:result_proto_rs
 # gazelle:resolve rust result_proto //quality:result_proto_rs

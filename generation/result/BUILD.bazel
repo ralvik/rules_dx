@@ -1,0 +1,64 @@
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+
+"""Validation and codec helpers for the generation result manifest."""
+
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "dx_rust_library", "dx_rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_rust_library(
+    name = "generation_result",
+    srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "generation/generation_result",
+        normal = True,
+    ),
+    crate_name = "generation_result",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+    deps = crate_deps(
+        ["blake3"],
+        package_name = "generation/generation_result",
+    ) + [
+        "//generation:result_proto_rs",
+        "@rules_rust_prost//private/3rdparty/crates:prost",
+    ],
+)
+
+dx_rust_test(
+    name = "generation_result_test",
+    size = "small",
+    aliases = aliases(
+        package_name = "generation/generation_result",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":generation_result",
+    edition = "2021",
+    deps = crate_deps(
+        ["blake3"],
+        package_name = "generation/generation_result",
+    ),
+)
+
+rustfmt_test(
+    name = "generation_result_fmt_test",
+    size = "small",
+    targets = [":generation_result"],
+)
+
+rust_clippy_test(
+    name = "generation_result_clippy_test",
+    size = "small",
+    targets = [":generation_result"],
+)
+
+exports_files(["Cargo.toml"])
+
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
+)

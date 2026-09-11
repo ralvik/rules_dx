@@ -1,0 +1,11 @@
+[package]
+name = "generation_result"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+blake3 = "1"
+
+[lib]
+name = "generation_result"
+path = "src/lib.rs"
