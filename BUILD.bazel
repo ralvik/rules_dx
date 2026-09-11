@@ -19,6 +19,12 @@
 # gazelle:resolve rust quality_adapter //quality/adapter:quality_adapter
 # gazelle:resolve rust quality_result //quality/result:quality_result
 # gazelle:exclude gazelle/rust/testdata
+# M13: quality/testdata keeps two clippy_config targets by design (legacy
+# hand-named `clippy_cfg` plus generated-shape `clippy_config` prove both
+# hint bindings analyze). Repo-wide generation demands one config per tool
+# so aspect_hints stays unambiguous; the fixture package is hand-maintained
+# and excluded like the Gazelle golden tree above.
+# gazelle:exclude quality/testdata
 
 load("//quality:fixtures.bzl", "real_source_target")
 

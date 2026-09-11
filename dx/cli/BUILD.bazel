@@ -1,7 +1,6 @@
-load("@crates//:crates.bzl", "aliases", "crate_deps")
-
 """M07 WP1 + M08 WP1: quality command planning and scope resolution for the `dx` CLI."""
 
+load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
@@ -60,6 +59,7 @@ dx_rust_binary(
         [
             "libc",
             "quick-xml",
+            "serde",
             "serde_json",
         ],
         package_name = "dx/dx_cli",
@@ -84,12 +84,14 @@ dx_rust_test(
         [
             "libc",
             "quick-xml",
+            "serde",
             "serde_json",
         ],
         package_name = "dx/dx_cli",
     ) + [
         "//dx/output:dx_output",
         "//dx/process:dx_process",
+        "//generation/result:generation_result",
         "//quality/result:quality_result",
     ],
 )

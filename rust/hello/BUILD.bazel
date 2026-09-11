@@ -65,7 +65,10 @@ rust_clippy_test(
 
 # M12 flavor wrappers: one subject per new dx_rust_* shape (proc macro,
 # shared library, static library). No external dependencies: the
-# conformance probe pins forwarding, not dependency plumbing.
+# conformance probe pins forwarding, not dependency plumbing. Cargo cannot
+# express these flavors in one package, so each rule is handwritten and
+# kept across regenerations.
+# keep
 dx_rust_proc_macro(
     name = "hello_derive",
     srcs = ["src/derive.rs"],
@@ -74,6 +77,7 @@ dx_rust_proc_macro(
     edition = "2021",
 )
 
+# keep
 dx_rust_shared_library(
     name = "hello_cdylib",
     srcs = ["src/cdylib.rs"],
@@ -82,6 +86,7 @@ dx_rust_shared_library(
     edition = "2021",
 )
 
+# keep
 dx_rust_static_library(
     name = "hello_staticlib",
     srcs = ["src/staticlib.rs"],

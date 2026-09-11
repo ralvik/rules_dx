@@ -5,6 +5,10 @@
 # Full host coverage and CI qualification stay in M27; unavailable required
 # hosts from ADR 0014 are recorded as gaps, not claimed here.
 #
+# M13 WP3 runs deterministic generation freshness in CI through the
+# canonical public path before the quality commands converge anything: a
+# clean checkout must already be generator-stable.
+#
 # M07 WP3 runs the repository dogfood through the `dx` quality commands
 # (full default path) instead of invoking the aspects directly. Default
 # runs converge the corpus, check runs prove the deterministic no-op;
@@ -67,6 +71,8 @@ jobs:
         run: |
           bazel build @dx_tools//:buildifier @dx_tools//:taplo @dx_tools//:vale \
             //quality/evaluator:quality_evaluator
+      - name: Verify generated-file freshness (M13 WP3)
+        run: bazel run //dx:generate_check
       - name: Audit corpus ownership
         run: |
           git ls-files \

@@ -100,6 +100,7 @@ real_source_target(
     markdown_srcs = [
         "testdata/cargo/README.md",
         "testdata/merge/README.md",
+        "testdata/native_config/README.md",
         "testdata/source_only/README.md",
     ],
     starlark_srcs = ["BUILD.bazel"],
@@ -111,5 +112,12 @@ real_source_target(
         "testdata/cargo/crates/shapes/Cargo.toml",
         "testdata/cargo/crates/staticlib/Cargo.toml",
         "testdata/merge/crates/cargo_trim/Cargo.toml",
+        "testdata/native_config/crates/config_only/taplo.toml",
+        "testdata/native_config/crates/full/clippy.toml",
+        "testdata/native_config/crates/full/rustfmt.toml",
+        "testdata/native_config/crates/merge/clippy.toml",
+        "testdata/native_config/crates/merge/custom.toml",
+        "testdata/native_config/crates/skip/clippy.toml",
+        "testdata/native_config/crates/skip/rustfmt.toml",
     ],
 )

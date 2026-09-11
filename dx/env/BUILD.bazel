@@ -83,6 +83,7 @@ dx_rust_test(
 # LCOV exclusion evaluates to zero eligible lines. It runs no tests; the
 # library unit tests live in `dx_env_test`. Hand-maintained: preserved
 # across dependency regenerations like the runfiles and digest tails.
+# keep
 dx_rust_test(
     name = "dx_env_bin_test",
     size = "small",

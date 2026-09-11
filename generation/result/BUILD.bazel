@@ -1,7 +1,15 @@
-load("@crates//:crates.bzl", "aliases", "crate_deps")
-
 """Validation and codec helpers for the generation result manifest."""
 
+# M13: this package's `proto` alias re-exports generation's schema
+# (`pub use result_proto::dx::generation::v1 as proto`), not quality's, so
+# the package-scoped resolves override both spellings the scanner sees: the
+# `use proto::{...}` alias and the `pub use result_proto::...` re-export. The
+# root mappings point both at quality; without the overrides generation would
+# gain a bogus `//quality:result_proto_rs` edge whose `result_proto` extern
+# collides with `//generation:result_proto_rs`.
+# gazelle:resolve rust proto //generation:result_proto_rs
+# gazelle:resolve rust result_proto //generation:result_proto_rs
+load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_library", "dx_rust_test")
@@ -40,7 +48,7 @@ dx_rust_test(
     deps = crate_deps(
         ["blake3"],
         package_name = "generation/generation_result",
-    ),
+    ) + ["//generation:result_proto_rs"],
 )
 
 rustfmt_test(

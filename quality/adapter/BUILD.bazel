@@ -1,7 +1,6 @@
-load("@crates//:crates.bzl", "aliases", "crate_deps")
-
 """M04 real-tool adapter crate: check/fix execution and output parsing."""
 
+load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_library", "dx_rust_test")

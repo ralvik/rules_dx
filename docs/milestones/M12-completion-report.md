@@ -57,7 +57,7 @@ Focused exact-target projection was run manually and is recorded here:
  //rust/hello:hello_lib` produced `rust-project.json` with exactly one
 crate (`hello`); the file was removed afterwards, so no generated graph is
 checked in and no environment or codegen selection was mutated. Dynamic
-refresh shares those semantics per the [Rust environment](rust.md#ide-integration)
+refresh shares those semantics per the [Rust environment](../environments/rust.md#ide-integration)
 contract.
 
 Coverage is proven through the wrapper, not around it:

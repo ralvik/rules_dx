@@ -70,7 +70,7 @@ adoption scope (depends on M29).
 | M10 | [Public Generate, Config Binding, And Result Transport](M10-public-generate-config-binding-result-transport.md) ([report](M10-completion-report.md)) | M09 | Ready |
 | M11 | [PATH Tools And Environment Bootstrap](M11-path-tools-environment-bootstrap.md) ([report](M11-completion-report.md)) | M07, M08 | Ready |
 | M12 | [Complete Rust Foundation](M12-complete-rust-foundation.md) ([report](M12-completion-report.md)) | M09, M10, M11 | Ready |
-| M13 | [Repository-Corpus Quality Closure](M13-repository-corpus-quality-closure.md) | M12 | Pending |
+| M13 | [Repository-Corpus Quality Closure](M13-repository-corpus-quality-closure.md) ([report](M13-completion-report.md)) | M12 | Ready |
 | M14 | [Python Application Foundation](M14-python-application-foundation.md) | M13 | Pending |
 | M15 | [Python Quality](M15-python-quality.md) | M14 | Pending |
 | M16 | [JavaScript And TypeScript Application Foundation](M16-javascript-typescript-application-foundation.md) | M13 | Pending |
