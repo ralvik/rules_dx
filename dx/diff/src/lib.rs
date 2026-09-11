@@ -291,9 +291,12 @@ fn hunks(old: &[&str], old_nl: bool, new: &[&str], new_nl: bool) -> Vec<Hunk> {
         .filter(|(_, (op, _, _))| *op != Op::Eq)
         .map(|(i, _)| i)
         .collect();
-    // An empty change list is impossible here (a byte-identical modify is
-    // rejected as NoopPatch before hunks run), and the grouping below maps
-    // an empty group list to no hunks, so no early return is needed.
+    // An empty change list happens only for an empty-file create
+    // (original "" and candidate ""): byte-identical modifies are rejected
+    // as NoopPatch before hunks run. No hunks means headers only.
+    if changes.is_empty() {
+        return Vec::new();
+    }
     // Group change indices: a new hunk starts when the gap between
     // consecutive changes exceeds the two adjacent context windows.
     let mut groups: Vec<(usize, usize)> = Vec::new();
@@ -422,6 +425,18 @@ mod tests {
             got,
             "--- /dev/null\n+++ b/new/f.txt\n@@ -0,0 +1,1 @@\n+hi\n"
         );
+    }
+
+    #[test]
+    fn empty_create_renders_headers_only() {
+        let patch = FilePatch {
+            path: "empty/BUILD.bazel",
+            kind: PatchKind::Create,
+            original: "",
+            candidate: "",
+        };
+        let got = render_patch(&[patch]).expect("patch");
+        assert_eq!(got, "--- /dev/null\n+++ b/empty/BUILD.bazel\n");
     }
 
     #[test]

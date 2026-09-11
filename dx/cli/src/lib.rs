@@ -9,12 +9,17 @@
 
 pub mod args;
 pub mod exec;
+pub mod generate;
 pub mod plan;
 pub mod reports;
 pub mod resolve;
 
 pub use args::{ArgsError, Command, Invocation, ReportRequest};
 pub use exec::{execute, Env};
+pub use generate::{
+    ensure_mode, manifest_is_check, project, render_diff, text_lines, ProjectedFile,
+    ProjectedManifest, IGNORED_IMPORT_CODE, IGNORED_IMPORT_LEVEL, IGNORED_IMPORT_MESSAGE,
+};
 pub use plan::{BuildPlan, CommandSpec};
 pub use reports::{Destination, PlannedReport, ReportError, StandardFormat};
 pub use resolve::{

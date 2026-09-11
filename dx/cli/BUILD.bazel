@@ -13,6 +13,7 @@ dx_rust_library(
     srcs = [
         "src/args.rs",
         "src/exec.rs",
+        "src/generate.rs",
         "src/lib.rs",
         "src/plan.rs",
         "src/reports.rs",
@@ -38,6 +39,7 @@ dx_rust_library(
         "//dx/diff:dx_diff",
         "//dx/output:dx_output",
         "//dx/process:dx_process",
+        "//generation/result:generation_result",
         "//quality/result:quality_result",
     ],
 )
