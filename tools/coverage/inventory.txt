@@ -23,6 +23,16 @@ support gazelle/rust/testdata/source_only/crates/demo/tests/smoke.rs
 support gazelle/rust/testdata/cargo/crates/app/source/core.rs
 support gazelle/rust/testdata/cargo/crates/app/source/main.rs
 support gazelle/rust/testdata/cargo/crates/app/spec/acceptance.rs
+support gazelle/rust/testdata/cargo/crates/cdylib/source/cdylib.rs
+support gazelle/rust/testdata/cargo/crates/proc_macro/source/derive.rs
+support gazelle/rust/testdata/cargo/crates/scripted/build/script.rs
+support gazelle/rust/testdata/cargo/crates/scripted/source/lib.rs
+support gazelle/rust/testdata/cargo/crates/scripted/source/main.rs
+support gazelle/rust/testdata/cargo/crates/shapes/benches/criterion.rs
+support gazelle/rust/testdata/cargo/crates/shapes/examples/demo.rs
+support gazelle/rust/testdata/cargo/crates/shapes/examples/plain.rs
+support gazelle/rust/testdata/cargo/crates/shapes/source/lib.rs
+support gazelle/rust/testdata/cargo/crates/staticlib/source/staticlib.rs
 support gazelle/rust/testdata/merge/crates/binary/src/main.rs
 support gazelle/rust/testdata/merge/crates/cargo_trim/src/lib.rs
 support gazelle/rust/testdata/merge/crates/merge/src/lib.rs
