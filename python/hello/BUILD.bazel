@@ -1,6 +1,6 @@
 """M14 seed Python binary and library; consumer of dx_py_* wrappers."""
 
-load("//python/rules:defs.bzl", "dx_py_binary", "dx_py_library")
+load("//python/rules:defs.bzl", "dx_py_binary", "dx_py_library", "dx_py_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
@@ -19,10 +19,29 @@ dx_py_binary(
     deps = [":hello_lib"],
 )
 
-# Repository corpus (M05 WP1): build file owned for direct-Bazel dogfood
-# under the canonical real_fixture_policy. Python sources stay dx-owned
-# (M14 wrappers), never corpus sources.
+dx_py_test(
+    name = "hello_test",
+    srcs = ["hello_test.py"],
+    dep_group = "hello",
+    imports = ["."],
+    deps = [
+        ":hello_lib",
+        "@pypi//coverage",
+        "@pypi//pytest",
+    ],
+)
+
+exports_files([
+    "pyproject.toml",
+    "uv.lock",
+])
+
+# Repository corpus (M05 WP1): build and project metadata owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy. Python
+# sources and the uv lock stay dx-owned/unclassified, never corpus sources.
+# The lock is a generated third-party manifest, excluded like other locks.
 real_source_target(
     name = "corpus",
     starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["pyproject.toml"],
 )
