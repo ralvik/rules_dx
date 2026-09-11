@@ -37,7 +37,10 @@ pub struct CommandSpec {
 /// verbs directly with Bazel-owned status, so they select no aspects.
 /// `test` normalizes `test.xml` artifacts into one JUnit document and
 /// `coverage` normalizes `coverage.dat` artifacts into one LCOV document;
-/// `build` and `run` have no standard report.
+/// `build` and `run` have no standard report. `generate` runs the
+/// canonical `//dx:generate` Gazelle runner with no aspects and no
+/// standard report: per-command result transport is pending O13, so
+/// machine-readable changes and mutations stay absent.
 pub fn spec(command: Command) -> CommandSpec {
     match command {
         Command::Lint => CommandSpec {
@@ -56,6 +59,12 @@ pub fn spec(command: Command) -> CommandSpec {
             command,
             capability: "format",
             aspects: &["//quality:real_aspects.bzl%real_format_aspect"],
+            reports: &[],
+        },
+        Command::Generate => CommandSpec {
+            command,
+            capability: "generate",
+            aspects: &[],
             reports: &[],
         },
         Command::Build => CommandSpec {
@@ -224,7 +233,7 @@ impl WorkflowVerb {
             Command::Test => Some(WorkflowVerb::Test),
             Command::Coverage => Some(WorkflowVerb::Coverage),
             Command::Run => Some(WorkflowVerb::Run),
-            Command::Lint | Command::Typecheck | Command::Format => None,
+            Command::Lint | Command::Typecheck | Command::Format | Command::Generate => None,
         }
     }
 
@@ -343,6 +352,40 @@ pub fn plan_run(target: &str, app_args: &[String]) -> BuildPlan {
     BuildPlan { argv, summary }
 }
 
+/// Canonical Gazelle runner behind `dx generate`: the repo-wide
+/// `update` entrypoint from M10 WP1. Scoped generation stays out of
+/// this plan pending O48 qualification; the executor rejects explicit
+/// scope before planning.
+pub const GENERATE_TARGET: &str = "//dx:generate";
+
+/// Builds the exact `bazel run //dx:generate` argv. Only the canonical
+/// workspace policy is required; user options after `--` forward as
+/// `run` command options before the target. Fails before execution
+/// when user options conflict with required policy. There is no BEP
+/// stream: Gazelle owns its output and exit status, and per-command
+/// result transport is pending O13.
+pub fn plan_generate(bazel_options: &[String]) -> Result<BuildPlan, ForwardError> {
+    let required = vec![workspace_flag()];
+    let protected = vec![ProtectedFlag {
+        name: "@rules_dx//config:workspace".to_owned(),
+        required: None,
+    }];
+    let argv = build_workflow_argv(
+        "run",
+        bazel_options,
+        &required,
+        &protected,
+        &[GENERATE_TARGET.to_owned()],
+    )?;
+    // `run` verbs are self-describing (`Running generate for //...`):
+    // no phase noun applies.
+    let summary = format!(
+        "Running generate for {}",
+        describe_scope(&Scope::Repository)
+    );
+    Ok(BuildPlan { argv, summary })
+}
+
 /// BEP stream destination under `temp_dir`, unique per process
 /// invocation. `nonce` distinguishes repeated runs inside one process
 /// (tests, retries); production callers pass a per-run counter.
@@ -401,6 +444,11 @@ mod tests {
         assert_eq!(run.capability, "run");
         assert!(run.aspects.is_empty());
         assert!(run.reports.is_empty());
+        let generate = spec(Command::Generate);
+        assert_eq!(generate.capability, "generate");
+        assert!(generate.aspects.is_empty());
+        assert!(generate.reports.is_empty());
+        assert_eq!(WorkflowVerb::of(Command::Generate), None);
         assert_eq!(WorkflowVerb::of(Command::Run), Some(WorkflowVerb::Run));
         assert_eq!(WorkflowVerb::of(Command::Lint), None);
         assert_eq!(WorkflowVerb::of(Command::Typecheck), None);
@@ -437,6 +485,43 @@ mod tests {
             workspace_flag(),
             "--@rules_dx//config:workspace=//dx:config"
         );
+    }
+
+    #[test]
+    fn generate_plan_runs_canonical_runner_repo_wide() {
+        assert_eq!(GENERATE_TARGET, "//dx:generate");
+        let plan = plan_generate(&options(&["--jobs=4"])).expect("plan");
+        assert_eq!(
+            plan.argv,
+            options(&[
+                "bazel",
+                "--nohome_rc",
+                "--nosystem_rc",
+                "run",
+                "--@rules_dx//config:workspace=//dx:config",
+                "--jobs=4",
+                "//dx:generate",
+            ])
+        );
+        assert_eq!(plan.summary, "Running generate for //...");
+        let bare = plan_generate(&[]).expect("plan");
+        assert_eq!(
+            bare.argv.last(),
+            Some(&GENERATE_TARGET.to_owned()),
+            "{bare:?}"
+        );
+    }
+
+    #[test]
+    fn generate_plan_rejects_policy_conflicts_and_startup_options() {
+        let err = plan_generate(&options(&["--@rules_dx//config:workspace=//other:config"]))
+            .expect_err("workspace override must fail");
+        assert!(
+            matches!(err, ForwardError::ConflictingOption { .. }),
+            "got {err:?}"
+        );
+        let err = plan_generate(&options(&["--home_rc"])).expect_err("startup option must fail");
+        assert!(matches!(err, ForwardError::StartupOption { .. }));
     }
 
     #[test]

@@ -13,7 +13,9 @@ use std::io::{self, BufReader, Write};
 use std::path::Path;
 
 use crate::args::{Command, Invocation};
-use crate::plan::{bep_path, plan_build, plan_run, plan_workflow, WorkflowVerb, OUTPUT_GROUP};
+use crate::plan::{
+    bep_path, plan_build, plan_generate, plan_run, plan_workflow, WorkflowVerb, OUTPUT_GROUP,
+};
 use crate::reports::{
     junit_infrastructure_case, parse_test_xml, plan_reports, render_junit, render_sarif,
     validate_lcov, Destination, JunitCase, PlannedReport, ReportError,
@@ -48,6 +50,10 @@ const CODE_UNREADABLE_BEP: &str = "unreadable_bep";
 const CODE_INVALID_BEP: &str = "invalid_bep";
 const CODE_DIFF_FAILED: &str = "diff_failed";
 const CODE_REPORT_FAILED: &str = "report_failed";
+/// Stable operational error code for well-formed requests the current
+/// result transport cannot serve: `dx generate --output=diff` before
+/// the versioned manifest (O13) can render a patch.
+const CODE_INVALID_RESULT: &str = "invalid_result";
 
 /// Execution environment: resolved workspace, process seams for the
 /// workflow and for ownership queries, temporary directory for the BEP
@@ -355,7 +361,7 @@ fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
     let _ = writeln!(err, "dx: {message}");
     let _ = writeln!(
         err,
-        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <lint|typecheck|format|build|test|coverage|run> [--check] [scope ...] [-- command-options...]"
+        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <lint|typecheck|format|generate|build|test|coverage|run> [--check] [scope ...] [-- command-options...]"
     );
     pre_exec_code()
 }
@@ -413,6 +419,9 @@ fn change_event_for(change: &FileChange) -> Result<ChangeEvent, String> {
 pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
     if invocation.command.is_workflow() {
         return execute_workflow(invocation, env);
+    }
+    if invocation.command == Command::Generate {
+        return execute_generate(invocation, env);
     }
     let Env {
         workspace,
@@ -1115,6 +1124,108 @@ fn execute_workflow(invocation: &Invocation, env: Env<'_>) -> i32 {
         stdout_report,
         bazel_code,
     )
+}
+
+/// Runs `dx generate` repo-wide through the canonical `//dx:generate`
+/// Gazelle runner (M10 WP1). Contract: `docs/cli/commands/generate.md`
+/// for the target surface; scope selection stays repo-wide pending O48
+/// and per-command result transport stays absent pending O13.
+///
+/// Gazelle owns its output and exit status: Bazel's exact nonzero code
+/// is preserved, and JSON mode emits the `command_started` /
+/// `command_finished` envelope with `results_complete: false` because
+/// no changes or mutations can be reported without the manifest.
+/// `--check` and explicit scope fail pre-execution; `--output=diff`
+/// fails operationally because no patch can be rendered.
+fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
+    match plan_reports(
+        invocation.command,
+        &invocation.reports,
+        &invocation.output,
+        invocation.dry_run,
+    ) {
+        Ok(_) => {}
+        Err(error) => return pre_exec(env.err, &error.to_string()),
+    }
+    if invocation.check {
+        return pre_exec(
+            env.err,
+            "dx generate --check requires the versioned result manifest (O13); rerun without --check",
+        );
+    }
+    if !invocation.targets.is_empty() {
+        return pre_exec(
+            env.err,
+            "scoped dx generate is pending O48 qualification; rerun with no scope",
+        );
+    }
+    if invocation.output == OutputMode::Diff {
+        return operational(
+            invocation,
+            env.out,
+            env.err,
+            CODE_INVALID_RESULT,
+            "diff output for dx generate requires the versioned result manifest (O13)",
+        );
+    }
+    let plan = match plan_generate(&invocation.bazel_options) {
+        Ok(plan) => plan,
+        Err(error) => return pre_exec(env.err, &format!("{error:?}")),
+    };
+    if invocation.dry_run {
+        if invocation.output == OutputMode::Json {
+            if let Ok(event) = command_started(invocation.command.name(), true, "default") {
+                let _ = write_event(env.out, &event);
+            }
+            let _ = write_event(env.out, &command_finished(0, &FinishedCounts::default()));
+        } else if matches!(invocation.output, OutputMode::Text { quiet: false })
+            && !invocation.quiet
+        {
+            let _ = writeln!(env.out, "{}", plan.summary);
+        }
+        return 0;
+    }
+    if invocation.output == OutputMode::Json {
+        if let Ok(event) = command_started(invocation.command.name(), false, "default") {
+            let _ = write_event(env.out, &event);
+        }
+    } else if matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet {
+        let _ = writeln!(env.out, "{}", plan.summary);
+    }
+    let status = match env.runner.run(&plan.argv, env.workspace) {
+        Ok(status) => status,
+        Err(error) => {
+            return operational(
+                invocation,
+                env.out,
+                env.err,
+                CODE_LAUNCH_FAILED,
+                &format!("failed to launch Bazel: {error}"),
+            );
+        }
+    };
+    let Some(bazel_code) = status.code else {
+        return operational(
+            invocation,
+            env.out,
+            env.err,
+            CODE_BAZEL_SIGNALLED,
+            "Bazel terminated by signal",
+        );
+    };
+    if invocation.output == OutputMode::Json {
+        let _ = write_event(
+            env.out,
+            &command_finished(
+                bazel_code,
+                &FinishedCounts {
+                    results_complete: Some(false),
+                    ..FinishedCounts::default()
+                },
+            ),
+        );
+    }
+    bazel_code
 }
 
 /// Collects BEP test outputs into JUnit suites or validated LCOV
@@ -3471,5 +3582,119 @@ mod tests {
             assert!(err.contains("CI=true"), "{err}");
         }
         std::env::remove_var("CI");
+    }
+
+    #[test]
+    fn generate_runs_repo_wide_and_preserves_bazel_status() {
+        let harness = Harness::new("generate-text");
+        let (code, out, err) = harness.run(&["generate", "--output=text"]);
+        assert_eq!(code, 0, "{err}");
+        assert!(out.contains("Running generate for //..."), "{out}");
+        assert_eq!(err, "", "{err}");
+        assert!(
+            harness.query.calls.borrow().is_empty(),
+            "repo-wide generate issues no ownership queries"
+        );
+
+        let mut failing = Harness::new("generate-fails");
+        failing.bazel_code = 2;
+        let (code, _, _) = failing.run(&["generate", "--output=text"]);
+        assert_eq!(code, 2);
+    }
+
+    #[test]
+    fn generate_json_envelope_marks_results_incomplete() {
+        for (name, bazel_code, exit_code) in
+            [("generate-json-ok", 0, 0), ("generate-json-fail", 2, 2)]
+        {
+            let mut harness = Harness::new(name);
+            harness.bazel_code = bazel_code;
+            let (code, out, _) = harness.run(&["generate", "--output=json"]);
+            assert_eq!(code, exit_code, "{out}");
+            assert!(out.contains("\"command_started\""), "{out}");
+            assert!(out.contains("\"command_finished\""), "{out}");
+            assert!(out.contains("\"results_complete\":false"), "{out}");
+            assert!(!out.contains("\"changes\""), "{out}");
+            assert!(!out.contains("\"mutations\""), "{out}");
+        }
+    }
+
+    #[test]
+    fn generate_dry_run_plans_without_launching() {
+        // A nonzero Bazel code would surface if the runner launched:
+        // dry-run plans only.
+        let mut harness = Harness::new("generate-dryrun");
+        harness.bazel_code = 3;
+        let (code, out, _) = harness.run(&["generate", "--dry-run", "--output=text"]);
+        assert_eq!(code, 0, "{out}");
+        assert!(out.contains("Running generate for //..."), "{out}");
+
+        let harness = Harness::new("generate-dryrun-json");
+        let (code, out, _) = harness.run(&["generate", "--dry-run", "--output=json"]);
+        assert_eq!(code, 0, "{out}");
+        assert!(out.contains("\"command_started\""), "{out}");
+        assert!(out.contains("\"command_finished\""), "{out}");
+
+        let harness = Harness::new("generate-quiet");
+        let (code, out, _) = harness.run(&["generate", "--quiet"]);
+        assert_eq!(code, 0, "{out}");
+        assert_eq!(out, "", "{out:?}");
+    }
+
+    #[test]
+    fn generate_check_and_scope_fail_pre_exec_pending_manifest() {
+        let harness = Harness::new("generate-check");
+        let (code, _, err) = harness.run(&["generate", "--check"]);
+        assert_eq!(code, 2, "{err}");
+        assert!(err.contains("O13"), "{err}");
+
+        let harness = Harness::new("generate-scoped");
+        let (code, _, err) = harness.run(&["generate", "//a:one"]);
+        assert_eq!(code, 2, "{err}");
+        assert!(err.contains("O48"), "{err}");
+        assert!(
+            harness.query.calls.borrow().is_empty(),
+            "rejected scope issues no ownership queries"
+        );
+    }
+
+    #[test]
+    fn generate_diff_fails_operational_pending_manifest() {
+        let harness = Harness::new("generate-diff");
+        let (code, _, err) = harness.run(&["generate", "--output=diff"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("invalid_result"), "{err}");
+        assert!(err.contains("O13"), "{err}");
+    }
+
+    #[test]
+    fn generate_reports_and_conflicts_fail_pre_exec() {
+        let harness = Harness::new("generate-report");
+        let (code, _, err) = harness.run(&["generate", "--report=sarif=out.sarif"]);
+        assert_eq!(code, 2, "{err}");
+        assert!(err.contains("no standard report exists"), "{err}");
+
+        let harness = Harness::new("generate-conflict");
+        let (code, _, err) = harness.run(&[
+            "generate",
+            "--",
+            "--@rules_dx//config:workspace=//other:config",
+        ]);
+        assert_eq!(code, 2, "{err}");
+    }
+
+    #[test]
+    fn generate_launch_failure_and_signal_are_operational() {
+        let mut harness = Harness::new("generate-launchfail");
+        harness.io_error = true;
+        let (code, out, err) = harness.run(&["generate", "--output=json"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(out.contains("launch_failed"), "{out}");
+
+        let mut harness = Harness::new("generate-signalled");
+        harness.signalled = true;
+        let (code, _, err) = harness.run(&["generate", "--output=text"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("bazel_signalled"), "{err}");
     }
 }

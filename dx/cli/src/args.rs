@@ -11,12 +11,14 @@
 
 use dx_output::{OutputMode, Threshold};
 
-/// Quality, workflow, and run command selected by the first positional argument.
+/// Quality, generation, workflow, and run command selected by the first
+/// positional argument.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
     Lint,
     Typecheck,
     Format,
+    Generate,
     Build,
     Test,
     Coverage,
@@ -30,6 +32,7 @@ impl Command {
             Command::Lint => "lint",
             Command::Typecheck => "typecheck",
             Command::Format => "format",
+            Command::Generate => "generate",
             Command::Build => "build",
             Command::Test => "test",
             Command::Coverage => "coverage",
@@ -42,6 +45,7 @@ impl Command {
             "lint" => Some(Command::Lint),
             "typecheck" => Some(Command::Typecheck),
             "format" => Some(Command::Format),
+            "generate" => Some(Command::Generate),
             "build" => Some(Command::Build),
             "test" => Some(Command::Test),
             "coverage" => Some(Command::Coverage),
@@ -135,12 +139,12 @@ impl std::fmt::Display for ArgsError {
         match self {
             ArgsError::MissingCommand => write!(
                 f,
-                "missing command: want lint|typecheck|format|build|test|coverage|run"
+                "missing command: want lint|typecheck|format|generate|build|test|coverage|run"
             ),
             ArgsError::UnknownCommand { command } => {
                 write!(
                     f,
-                    "unknown command {command:?}: want lint|typecheck|format|build|test|coverage|run"
+                    "unknown command {command:?}: want lint|typecheck|format|generate|build|test|coverage|run"
                 )
             }
             ArgsError::UnknownOption { option } => write!(f, "unknown option {option:?}"),
@@ -393,6 +397,7 @@ mod tests {
         assert_eq!(Command::Lint.name(), "lint");
         assert_eq!(Command::Typecheck.name(), "typecheck");
         assert_eq!(Command::Format.name(), "format");
+        assert_eq!(Command::Generate.name(), "generate");
         assert_eq!(Command::Build.name(), "build");
         assert_eq!(Command::Test.name(), "test");
         assert_eq!(Command::Coverage.name(), "coverage");
@@ -400,6 +405,7 @@ mod tests {
         assert!(!Command::Lint.is_workflow());
         assert!(!Command::Typecheck.is_workflow());
         assert!(!Command::Format.is_workflow());
+        assert!(!Command::Generate.is_workflow());
         assert!(Command::Build.is_workflow());
         assert!(Command::Test.is_workflow());
         assert!(Command::Coverage.is_workflow());
@@ -428,6 +434,23 @@ mod tests {
         assert_eq!(got.command, Command::Format);
         assert!(got.check);
         assert_eq!(got.mode(), "check");
+    }
+
+    #[test]
+    fn generate_parses_repo_wide_with_bazel_options() {
+        let got = parse(&args(&["generate"])).expect("parse");
+        assert_eq!(got.command, Command::Generate);
+        assert!(!got.check);
+        assert_eq!(got.output, OutputMode::Text { quiet: false });
+        assert!(got.targets.is_empty());
+        assert!(got.bazel_options.is_empty());
+        assert_eq!(got.mode(), "default");
+        let scoped =
+            parse(&args(&["generate", "--check", "//a:one", "--", "--jobs=4"])).expect("parse");
+        assert_eq!(scoped.command, Command::Generate);
+        assert!(scoped.check);
+        assert_eq!(scoped.targets, args(&["//a:one"]));
+        assert_eq!(scoped.bazel_options, args(&["--jobs=4"]));
     }
 
     #[test]
