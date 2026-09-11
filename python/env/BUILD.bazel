@@ -1,0 +1,62 @@
+"""Focused Python environment plans (M14 WP3).
+
+Each `python_env_plan` reads the analyzed authoritative providers of one
+`dx_py_*` wrapper: libraries preserve `PyInfo` plus `PyWheelsInfo`,
+binaries and tests preserve `PyInfo` through the executable forwarder.
+Focused-target only; repository/root/exact-target orchestration remains M25.
+"""
+
+load("//python/env:plan.bzl", "python_env_plan")
+load("//python/env:plan_tests.bzl", "env_plan_tests")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+python_env_plan(
+    name = "hello_lib_plan",
+    target = "//python/hello:hello_lib",
+)
+
+python_env_plan(
+    name = "hello_plan",
+    target = "//python/hello",
+)
+
+python_env_plan(
+    name = "hello_test_plan",
+    testonly = True,
+    target = "//python/hello:hello_test",
+)
+
+python_env_plan(
+    name = "main_plan",
+    target = "//python/entries:main",
+)
+
+python_env_plan(
+    name = "main_bin_plan",
+    target = "//python/entries:main_bin",
+)
+
+env_plan_tests(
+    name = "env_plan_tests",
+    subjects = [
+        ":hello_lib_plan",
+        ":hello_plan",
+        ":hello_test_plan",
+        ":main_bin_plan",
+        ":main_plan",
+    ],
+)
+
+# Repository corpus (M05 WP1): plan Starlark owned for direct-Bazel dogfood
+# under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "aspect.bzl",
+        "plan.bzl",
+        "plan_tests.bzl",
+    ],
+)
