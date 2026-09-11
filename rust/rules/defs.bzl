@@ -30,8 +30,10 @@ using `crate =` reports no direct sources: the crate owner is the single
 source owner, never the test.
 
 `edition` defaults to `"2021"`, matching the pinned toolchain default;
-override per target. Unknown or unregistered toolchain versions fail in
-the upstream toolchain resolution, never here.
+override per target. Per-target toolchain-version selection is omitted under
+ADR 0012: the pinned upstream only accepts a single toolchain version, so
+there is no supported version-selectable API to map. Unknown or unregistered
+toolchain versions fail in the upstream toolchain resolution, never here.
 
 Each crate forwarder advertises `provides = [CrateInfo, DepInfo, DefaultInfo,
 InstrumentedFilesInfo, QualitySourcesInfo]`: Bazel matches an aspect's

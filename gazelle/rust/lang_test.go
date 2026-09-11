@@ -1225,6 +1225,42 @@ func TestGenerateCargoBuildScript(t *testing.T) {
 	}
 }
 
+func TestBuildScriptUserAttrsPreserved(t *testing.T) {
+	// User-owned script attrs (docs/generation/rust.md#build-scripts) must
+	// stay explicit with # keep: generation never infers them, so they must
+	// also stay out of MergeableAttrs or Gazelle would overwrite them.
+	for _, attr := range []string{"data", "tools", "build_script_env", "build_script_env_files", "toolchains"} {
+		if kindInfo().MergeableAttrs[attr] {
+			t.Errorf("MergeableAttrs[%q] = true, want false (user-owned with # keep)", attr)
+		}
+	}
+	// emitBuildScript must not set user-owned attrs: a fresh rule without
+	// them merges cleanly against a kept handwritten value.
+	root := t.TempDir()
+	writeFixture(t, root, "Cargo.toml", "[package]\nname = \"scripted\"\nversion = \"0.5.0\"\nedition = \"2021\"\nbuild = \"build/script.rs\"\n[build-dependencies]\ncc = \"1\"\n[lib]\nname = \"scripted_lib\"\npath = \"source/lib.rs\"\n")
+	writeFixture(t, root, "source/lib.rs", "pub fn value() {}\n")
+	writeFixture(t, root, "build/script.rs", "fn main() {}\n")
+	l := &rustLang{}
+	result := l.GenerateRules(language.GenerateArgs{
+		Config:       &config.Config{RepoRoot: root},
+		Dir:          root,
+		RegularFiles: []string{"Cargo.toml", "source/lib.rs", "build/script.rs"},
+	})
+	if len(l.errors) != 0 {
+		t.Fatalf("script generation errors = %v", l.errors)
+	}
+	for _, r := range result.Gen {
+		if r.Kind() != scriptKind {
+			continue
+		}
+		for _, attr := range []string{"data", "tools", "build_script_env", "build_script_env_files", "toolchains"} {
+			if r.Attr(attr) != nil {
+				t.Errorf("generated %s sets %q, want absent (user-owned)", r.Name(), attr)
+			}
+		}
+	}
+}
+
 func TestGenerateCargoSliceFailures(t *testing.T) {
 	cases := []struct {
 		name     string
