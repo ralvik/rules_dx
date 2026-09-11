@@ -2,8 +2,8 @@
 
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//quality:fixtures.bzl", "real_source_target")
-load(":defs.bzl", "environment_config", "environment_tool")
-load(":defs_tests.bzl", "env_config_analysis_tests", "env_defs_unit_tests")
+load(":defs.bzl", "environment_config", "environment_tool", "environment_tree")
+load(":defs_tests.bzl", "env_config_analysis_tests", "env_defs_unit_tests", "env_tree_analysis_tests")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -45,11 +45,21 @@ env_defs_unit_tests(name = "env_defs_unit")
 
 env_config_analysis_tests(name = "env_config_analysis")
 
+# Staged tree subject (M11 WP2): one symlink per host name plus versioned
+# management metadata, observed for layout and platform rendering.
+environment_tree(
+    name = "tree_under_test",
+    config = ":config_under_test",
+)
+
+env_tree_analysis_tests(name = "env_tree_analysis")
+
 test_suite(
     name = "all",
     tests = [
         ":env_config_analysis",
         ":env_defs_unit",
+        ":env_tree_analysis",
     ],
 )
 

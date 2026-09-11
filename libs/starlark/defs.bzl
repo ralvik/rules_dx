@@ -57,6 +57,14 @@ def _display_label(label):
         return text[2:]
     return text
 
+def display_label(label):
+    """Renders a label with the canonical-repository marker stripped.
+
+    Public alias of the observation rendering for rules that persist
+    labels into outputs (for example staged management metadata).
+    """
+    return _display_label(label)
+
 def _shell_quote(s):
     """Single-quote a string for embedding in the generated runner script."""
     return "'" + s.replace("'", "'\\''") + "'"

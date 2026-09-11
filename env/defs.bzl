@@ -13,7 +13,7 @@ stems (CON, PRN, AUX, NUL, COM1-9, LPT1-9) and explicit executable suffixes
 the platform suffix (M11 WP2).
 """
 
-load("//libs/starlark:defs.bzl", "DxSubjectInfo")
+load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 
 EnvironmentInfo = provider(
     doc = "Transitively composed bootstrap environment tool records.",
@@ -49,6 +49,28 @@ _HOST_RESERVED_STEMS = (
 )
 
 _EXECUTABLE_SUFFIXES = (".bat", ".cmd", ".com", ".exe")
+
+# Version of the staged tree management-metadata schema written by
+# `environment_tree`. The on-disk `.rules_dx_managed` binary Protobuf
+# marker is encoded at install time from this metadata; the schema version
+# travels with both so replacement can refuse metadata it cannot validate.
+ENV_METADATA_SCHEMA_VERSION = 1
+
+def env_host_filename(name, is_windows):
+    """Maps one logical tool name to its host-native filename.
+
+    Args:
+      name: validated logical host name (primary or alias).
+      is_windows: whether the consuming host requires executable suffixes.
+
+    Returns:
+      The logical name unchanged on POSIX, with `.exe` appended on
+      Windows. Validation rejects explicit executable suffixes, so the
+      mapping never doubles one.
+    """
+    if is_windows:
+        return name + ".exe"
+    return name
 
 def env_name_error(name):
     """Validates one host command name.
@@ -111,6 +133,36 @@ def env_tool_record(owner, bin_name, aliases):
         owner = owner,
     )
 
+def env_tree_metadata(records, is_windows):
+    """Renders the staged tree management metadata as a JSON string.
+
+    Args:
+      records: list of `env_tool_record` structs, already validated and
+        collision-free by `environment_config`.
+      is_windows: whether host filenames carry the Windows suffix.
+
+    Returns:
+      JSON with `schema_version` and one entry per tool sorted by
+      (`bin_name`, `owner`), each carrying `owner`, `bin_name`, declared
+      `aliases`, and mapped `host_names` (primary first). Aliases keep
+      declaration order; the encoding is deterministic for a fixed record
+      list. The install step encodes the binary `.rules_dx_managed`
+      marker from this metadata.
+    """
+    tools = []
+    for record in sorted(records, key = lambda r: (r.bin_name, r.owner)):
+        names = [record.bin_name] + list(record.aliases)
+        tools.append({
+            "aliases": list(record.aliases),
+            "bin_name": record.bin_name,
+            "host_names": [env_host_filename(name, is_windows) for name in names],
+            "owner": record.owner,
+        })
+    return json.encode({
+        "schema_version": ENV_METADATA_SCHEMA_VERSION,
+        "tools": tools,
+    })
+
 def env_collision_error(records):
     """Detects host-name collisions across tool records.
 
@@ -152,11 +204,19 @@ def _environment_tool_impl(ctx):
     error = env_tool_error(ctx.attr.bin_name, ctx.attr.aliases)
     if error != "":
         fail("environment_tool " + str(ctx.label) + ": " + error)
-    owner = str(ctx.label)
+
+    # Persisted labels use the observation rendering so staged bytes stay
+    # stable and readable across Bazel renderings (see `display_label`).
+    owner = display_label(ctx.label)
     return [
         EnvironmentInfo(
             runners = {owner: ctx.attr.executable.files_to_run},
             tools = depset([env_tool_record(owner, ctx.attr.bin_name, ctx.attr.aliases)]),
+        ),
+        # The hermetic runtime closure travels through DefaultInfo so
+        # configs and trees compose it without touching provider shapes.
+        DefaultInfo(
+            runfiles = ctx.attr.executable[DefaultInfo].default_runfiles,
         ),
     ]
 
@@ -201,7 +261,13 @@ def _environment_config_impl(ctx):
             runners = runners,
             tools = depset(records),
         ),
-        DefaultInfo(files = depset([])),
+        DefaultInfo(
+            files = depset([]),
+            runfiles = ctx.runfiles().merge_all([
+                tool[DefaultInfo].default_runfiles
+                for tool in ctx.attr.tools
+            ]),
+        ),
         DxSubjectInfo(fields = {
             "count": str(len(records)),
             "names": ",".join(sorted(names.keys())),
@@ -214,8 +280,61 @@ environment_config = rule(
         "tools": attr.label_list(
             default = [],
             doc = "environment_tool and environment_config targets composed transitively.",
-            providers = [EnvironmentInfo],
+            providers = [DefaultInfo, EnvironmentInfo],
         ),
     },
     doc = "Composes environment tool records transitively, failing closed on collisions (M11 WP1).",
+)
+
+def _environment_tree_impl(ctx):
+    info = ctx.attr.config[EnvironmentInfo]
+    records = info.tools.to_list()
+    is_windows = ctx.target_platform_has_constraint(
+        ctx.attr._windows_os[platform_common.ConstraintValueInfo],
+    )
+    links = []
+    host_names = {}
+    for record in records:
+        if record.owner not in info.runners:
+            fail("environment_tree " + str(ctx.label) + ": no runner for " +
+                 record.owner + ": every record needs its environment_tool executable")
+        executable = info.runners[record.owner].executable
+        for name in [record.bin_name] + list(record.aliases):
+            host_name = env_host_filename(name, is_windows)
+            host_names[host_name] = True
+            link = ctx.actions.declare_file("bin/" + host_name)
+            ctx.actions.symlink(
+                output = link,
+                target_file = executable,
+                is_executable = True,
+            )
+            links.append(link)
+    metadata = ctx.actions.declare_file(ctx.label.name + ".metadata.json")
+    ctx.actions.write(metadata, env_tree_metadata(records, is_windows))
+    runfiles = ctx.runfiles(files = links + [metadata]).merge(
+        ctx.attr.config[DefaultInfo].default_runfiles,
+    )
+    return [
+        DefaultInfo(files = depset(links + [metadata]), runfiles = runfiles),
+        DxSubjectInfo(fields = {
+            "count": str(len(records)),
+            "host_names": ",".join(sorted(host_names.keys())),
+            "platform": "windows" if is_windows else "posix",
+        }),
+    ]
+
+environment_tree = rule(
+    implementation = _environment_tree_impl,
+    attrs = {
+        "_windows_os": attr.label(
+            default = "@platforms//os:windows",
+            doc = "Constraint value detecting Windows target platforms.",
+        ),
+        "config": attr.label(
+            doc = "Validated environment_config whose records stage one symlink per host name.",
+            mandatory = True,
+            providers = [DefaultInfo, EnvironmentInfo],
+        ),
+    },
+    doc = "Stages the complete symlink-only tool tree plus versioned management metadata (M11 WP2).",
 )

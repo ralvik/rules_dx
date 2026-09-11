@@ -9,8 +9,16 @@ listing). The analysis test pins the transitive composition observation
 rendering for the fixture config.
 """
 
-load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
-load(":defs.bzl", "env_collision_error", "env_name_error", "env_tool_error", "env_tool_record")
+load("//libs/starlark:defs.bzl", "display_label", "expect_equal", "starlark_test")
+load(
+    ":defs.bzl",
+    "env_collision_error",
+    "env_host_filename",
+    "env_name_error",
+    "env_tool_error",
+    "env_tool_record",
+    "env_tree_metadata",
+)
 
 def env_defs_unit_tests(name):
     starlark_test(
@@ -76,6 +84,16 @@ def env_defs_unit_tests(name):
                 "invalid alias 'bad/x': invalid host name 'bad/x': must not contain '/' or '\\'",
             ),
             expect_equal(
+                "display_label strips the canonical marker from main-repo labels",
+                display_label(Label("//env:tool_alpha")),
+                "//env:tool_alpha",
+            ),
+            expect_equal(
+                "display_label passes marker-free labels through",
+                display_label("//already/plain"),
+                "//already/plain",
+            ),
+            expect_equal(
                 "env_collision_error accepts disjoint records",
                 env_collision_error([
                     env_tool_record("//env:tool_alpha", "alpha", ["a"]),
@@ -116,6 +134,58 @@ def env_defs_unit_tests(name):
                 "host-name collision: host name 'shared' claimed by //env:tool_alpha, //env:tool_beta; " +
                 "host name 'z-shared' claimed by //env:tool_alpha, //env:tool_gamma",
             ),
+            expect_equal(
+                "env_host_filename keeps logical names on POSIX",
+                [env_host_filename("alpha", False), env_host_filename("my-tool.cli", False)],
+                ["alpha", "my-tool.cli"],
+            ),
+            expect_equal(
+                "env_host_filename appends .exe on Windows",
+                [env_host_filename("alpha", True), env_host_filename("my-tool.cli", True)],
+                ["alpha.exe", "my-tool.cli.exe"],
+            ),
+            expect_equal(
+                "env_tree_metadata versions and sorts the tool entries",
+                json.decode(env_tree_metadata(
+                    [
+                        env_tool_record("//env:tool_beta", "beta", []),
+                        env_tool_record("//env:tool_alpha", "alpha", ["a"]),
+                    ],
+                    False,
+                )),
+                {
+                    "schema_version": 1,
+                    "tools": [
+                        {
+                            "aliases": ["a"],
+                            "bin_name": "alpha",
+                            "host_names": ["alpha", "a"],
+                            "owner": "//env:tool_alpha",
+                        },
+                        {
+                            "aliases": [],
+                            "bin_name": "beta",
+                            "host_names": ["beta"],
+                            "owner": "//env:tool_beta",
+                        },
+                    ],
+                },
+            ),
+            expect_equal(
+                "env_tree_metadata maps host names on Windows",
+                json.decode(env_tree_metadata(
+                    [env_tool_record("//env:tool_alpha", "alpha", ["a"])],
+                    True,
+                ))["tools"],
+                [
+                    {
+                        "aliases": ["a"],
+                        "bin_name": "alpha",
+                        "host_names": ["alpha.exe", "a.exe"],
+                        "owner": "//env:tool_alpha",
+                    },
+                ],
+            ),
         ],
     )
 
@@ -129,4 +199,21 @@ def env_config_analysis_tests(name):
         mode = "analysis",
         subjects = [":config_under_test"],
         expected_observations = EXPECTED_ENV_OBSERVATIONS,
+    )
+
+EXPECTED_TREE_OBSERVATIONS = """subject //env:tree_under_test
+file a
+file alpha
+file beta
+file tree_under_test.metadata.json
+field count=2
+field host_names=a,alpha,beta
+field platform=posix"""
+
+def env_tree_analysis_tests(name):
+    starlark_test(
+        name = name,
+        mode = "analysis",
+        subjects = [":tree_under_test"],
+        expected_observations = EXPECTED_TREE_OBSERVATIONS,
     )
