@@ -14,6 +14,11 @@
 //!   where nothing is discoverable).
 //! * Clippy compiles one file per invocation (`rustc` accepts a single
 //!   input root); every other tool takes the whole stage file list.
+//!   `rustc` typecheck likewise compiles one file per invocation as a
+//!   `lib` crate root (`--crate-type=lib`): direct sources are usually
+//!   library files without a `main` entry point, and the default `bin`
+//!   crate type would mask real type errors behind a spurious "no main
+//!   function" failure.
 //! * rustfmt always passes `--edition 2021`: the CLI flag silently wins
 //!   over any config `edition` key, matching the pinned toolchain scope.
 //! * The repo-owned Markdown checker takes one `--source WS_PATH=EXEC_PATH`
@@ -134,6 +139,32 @@ pub fn clippy_check(
         ],
         &[file],
         config_dir_rel.unwrap_or(""),
+    )
+}
+
+/// rustc single-file typecheck invocation. The crate name derives from
+/// the file stem; `--out-dir` keeps metadata inside scratch. Like
+/// Clippy, `rustc` takes one input root per invocation. The crate type
+/// is always `lib`: direct sources are library files without `main`,
+/// and the default `bin` type would report a spurious missing-entry
+/// failure instead of the real type diagnostics. `rustc` performs no
+/// config discovery, so `cwd_rel` is always the scratch root.
+pub fn rustc_check(binary: &Path, file: &Path, crate_name: &str, out_dir: &Path) -> Invocation {
+    invocation(
+        binary,
+        &[
+            "--edition",
+            "2021",
+            "--error-format=json",
+            "--emit=metadata",
+            "--crate-type=lib",
+            "--out-dir",
+            &out_dir.to_string_lossy(),
+            "--crate-name",
+            crate_name,
+        ],
+        &[file],
+        "",
     )
 }
 
@@ -349,6 +380,33 @@ mod tests {
         );
         assert_eq!(argv_strings(&hinted), argv_strings(&invocation));
         assert_eq!(hinted.cwd_rel, "tools/clippy");
+    }
+
+    #[test]
+    fn rustc_check_compiles_one_lib_root_as_json() {
+        let invocation = rustc_check(
+            Path::new(BIN),
+            Path::new(FILE),
+            "main",
+            Path::new("/scratch/out"),
+        );
+        assert_eq!(
+            argv_strings(&invocation),
+            vec![
+                BIN,
+                "--edition",
+                "2021",
+                "--error-format=json",
+                "--emit=metadata",
+                "--crate-type=lib",
+                "--out-dir",
+                "/scratch/out",
+                "--crate-name",
+                "main",
+                FILE
+            ]
+        );
+        assert_eq!(invocation.cwd_rel, "");
     }
 
     #[test]

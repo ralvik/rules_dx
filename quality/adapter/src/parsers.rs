@@ -47,6 +47,11 @@
 //!   mismatch. `MachineApplicable` child spans become byte [`Suggestion`]
 //!   values; Clippy columns are half-open `[start, end)`, Vale-adjusted
 //!   spans aside, every tool column here counts Unicode scalar values.
+//! * rustc `--error-format=json --emit=metadata --crate-type=lib`:
+//!   same JSON diagnostic grammar as Clippy (both are `rustc`
+//!   diagnostics); `tool_id` is `rustc`, findings are typecheck
+//!   diagnostics, and suggestions are parsed but never applied by the
+//!   runner (typecheck is check-only).
 
 use serde::Deserialize;
 
@@ -801,12 +806,12 @@ struct ClippySpan {
     suggestion_applicability: Option<String>,
 }
 
-fn clippy_level(level: &str) -> Result<ToolSeverity, ParseError> {
+fn clippy_level(tool: &'static str, level: &str) -> Result<ToolSeverity, ParseError> {
     match level {
         "warning" => Ok(ToolSeverity::Warning),
         "error" => Ok(ToolSeverity::Error),
         _ => Err(ParseError::Shape {
-            tool: "clippy",
+            tool,
             detail: format!("unknown level: {level}"),
         }),
     }
@@ -820,9 +825,29 @@ pub fn parse_clippy(
     code: Option<i32>,
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
-    const TOOL: &str = "clippy";
+    parse_rust_diagnostics("clippy", stderr, code, files)
+}
+
+/// Parses rustc `--error-format=json` typecheck stderr. The grammar is
+/// the shared `rustc` diagnostic shape Clippy also emits; only the
+/// `tool_id` differs. Suggestions parse identically but the runner
+/// never applies them: typecheck is check-only.
+pub fn parse_rustc(
+    stderr: &[u8],
+    code: Option<i32>,
+    files: &[&str],
+) -> Result<Vec<FileFinding>, ParseError> {
+    parse_rust_diagnostics("rustc", stderr, code, files)
+}
+
+fn parse_rust_diagnostics(
+    tool: &'static str,
+    stderr: &[u8],
+    code: Option<i32>,
+    files: &[&str],
+) -> Result<Vec<FileFinding>, ParseError> {
     let stderr_text = std::str::from_utf8(stderr).map_err(|err| ParseError::Shape {
-        tool: TOOL,
+        tool,
         detail: err.to_string(),
     })?;
     let mut findings = Vec::new();
@@ -833,7 +858,7 @@ pub fn parse_clippy(
         }
         let value: serde_json::Value =
             serde_json::from_str(line).map_err(|err| ParseError::Shape {
-                tool: TOOL,
+                tool,
                 detail: format!("unparsable line: {err}"),
             })?;
         if value
@@ -845,7 +870,7 @@ pub fn parse_clippy(
         }
         let diagnostic: ClippyMessage =
             serde_json::from_value(value).map_err(|err| ParseError::Shape {
-                tool: TOOL,
+                tool,
                 detail: format!("malformed diagnostic: {err}"),
             })?;
         let Some(span) = diagnostic
@@ -864,7 +889,7 @@ pub fn parse_clippy(
                 skipped.push(diagnostic.message);
             } else {
                 return Err(ParseError::Shape {
-                    tool: TOOL,
+                    tool,
                     detail: format!(
                         "diagnostic outside the checked files: {}",
                         diagnostic.message
@@ -879,20 +904,25 @@ pub fn parse_clippy(
             || span.column_end == 0
         {
             return Err(ParseError::Shape {
-                tool: TOOL,
+                tool,
                 detail: format!("zero position in {}", diagnostic.message),
             });
         }
         let mut suggestions = Vec::new();
-        collect_suggestions(&diagnostic.children, &span.file_name, &mut suggestions)?;
-        let checked = known(TOOL, files, &span.file_name)?;
+        collect_suggestions(
+            tool,
+            &diagnostic.children,
+            &span.file_name,
+            &mut suggestions,
+        )?;
+        let checked = known(tool, files, &span.file_name)?;
         findings.push(FileFinding {
             file: checked.to_owned(),
             finding: Finding {
-                tool_id: TOOL.to_owned(),
+                tool_id: tool.to_owned(),
                 rule_id: diagnostic.code.map_or_else(String::new, |code| code.code),
                 message: diagnostic.message,
-                severity: clippy_level(&diagnostic.level)?,
+                severity: clippy_level(tool, &diagnostic.level)?,
                 start: TextPosition {
                     line: span.line_start,
                     column: span.column_start,
@@ -915,13 +945,14 @@ pub fn parse_clippy(
                 )
             },
         );
-        return Err(ParseError::Shape { tool: TOOL, detail });
+        return Err(ParseError::Shape { tool, detail });
     }
     Ok(findings)
 }
 
 /// Harvests `MachineApplicable` child spans for the diagnostic's file.
 fn collect_suggestions(
+    tool: &'static str,
     messages: &[ClippyMessage],
     file: &str,
     out: &mut Vec<Suggestion>,
@@ -934,7 +965,7 @@ fn collect_suggestions(
                 if applicability == "MachineApplicable" && span.file_name == file {
                     if span.byte_start > span.byte_end {
                         return Err(ParseError::Shape {
-                            tool: "clippy",
+                            tool,
                             detail: format!("inverted suggestion span in {}", message.message),
                         });
                     }
@@ -946,7 +977,7 @@ fn collect_suggestions(
                 }
             }
         }
-        collect_suggestions(&message.children, file, out)?;
+        collect_suggestions(tool, &message.children, file, out)?;
     }
     Ok(())
 }
@@ -1191,6 +1222,43 @@ mod tests {
         )
         .expect_err("unplaced failure");
         assert!(err.to_string().contains("1 warning emitted"));
+    }
+
+    const RUSTC_TYPE_ERROR: &str = r#"{"$message_type":"diagnostic","message":"mismatched types","code":{"code":"E0308","explanation":null},"level":"error","spans":[{"file_name":"/s/type.rs","byte_start":27,"byte_end":32,"line_start":2,"line_end":2,"column_start":9,"column_end":14,"is_primary":true,"text":[],"label":"expected `i32`, found `&str`","suggested_replacement":null,"suggestion_applicability":null,"expansion":null}],"children":[],"rendered":null}
+{"$message_type":"diagnostic","message":"aborting due to 1 previous error","code":null,"level":"error","spans":[],"children":[],"rendered":null}"#;
+
+    #[test]
+    fn rustc_parses_the_shared_diagnostic_grammar_as_typecheck() {
+        let findings =
+            parse_rustc(RUSTC_TYPE_ERROR.as_bytes(), Some(1), &["/s/type.rs"]).expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].file, "/s/type.rs");
+        assert_eq!(findings[0].finding.tool_id, "rustc");
+        assert_eq!(findings[0].finding.rule_id, "E0308");
+        assert_eq!(findings[0].finding.severity, ToolSeverity::Error);
+        assert_eq!(
+            (findings[0].finding.start, findings[0].finding.end),
+            (
+                TextPosition { line: 2, column: 9 },
+                Some(TextPosition {
+                    line: 2,
+                    column: 14
+                })
+            )
+        );
+        assert!(parse_rustc(b"", Some(0), &["/s/clean.rs"])
+            .expect("parsed")
+            .is_empty());
+        // Same fail-closed shape as Clippy: nonzero exit with only a
+        // summary keeps the evidence instead of an empty result.
+        let err = parse_rustc(
+            RUSTC_TYPE_ERROR.lines().nth(1).expect("summary").as_bytes(),
+            Some(1),
+            &["/s/type.rs"],
+        )
+        .expect_err("unplaced failure");
+        assert!(err.to_string().contains("rustc"));
+        assert!(err.to_string().contains("aborting due to"));
     }
 
     #[test]

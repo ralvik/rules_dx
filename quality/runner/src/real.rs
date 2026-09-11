@@ -29,8 +29,8 @@
 //! Clippy has no fix command: the backend applies `MachineApplicable`
 //! suggestions in memory and re-checks the patched bytes on the next
 //! round, so only suggestions that truly resolve their finding mark it
-//! fixable. Vale and the Markdown checker are check-only and never
-//! rewrite.
+//! fixable. Vale, the Markdown checker, and rustc typecheck are
+//! check-only and never rewrite.
 
 use std::collections::BTreeMap;
 use std::ffi::{OsStr, OsString};
@@ -48,7 +48,8 @@ use crate::{
 };
 use quality_result::proto::Diagnostic;
 
-/// Real tool IDs for the M04 initial adapters. Mirrors `REAL_ADAPTERS`
+/// Real tool IDs for the M04 initial adapters plus the M12 rustc
+/// typecheck adapter. Mirrors `REAL_ADAPTERS`
 /// in `//quality:adapters.bzl`; the Starlark registry stays authoritative
 /// for pipeline construction, this list pins the dispatch the backend
 /// implements.
@@ -56,6 +57,7 @@ pub const REAL_TOOLS: &[&str] = &[
     "buildifier",
     "clippy",
     "markdown_check",
+    "rustc",
     "rustfmt",
     "taplo",
     "vale",
@@ -356,6 +358,31 @@ impl RealBackend {
                 }
                 Ok(findings)
             }
+            "rustc" => {
+                let out_dir = scratch.root().join("dx-rustc-out");
+                std::fs::create_dir_all(&out_dir)
+                    .map_err(|err| execution(tool_id, format!("out dir: {err}")))?;
+                let mut findings = Vec::new();
+                for (workspace, absolute) in pairs {
+                    let stem = Path::new(workspace)
+                        .file_stem()
+                        .map(|stem| stem.to_string_lossy().into_owned())
+                        .unwrap_or_default();
+                    let invocation = commands::rustc_check(
+                        &tool.binary,
+                        absolute,
+                        &commands::crate_name_for(&stem),
+                        &out_dir,
+                    );
+                    let out = self.run(tool_id, tool, &invocation, scratch)?;
+                    let name = absolute.to_string_lossy().into_owned();
+                    findings.extend(parsed(
+                        tool_id,
+                        parsers::parse_rustc(&out.stderr, out.code, &[&name]),
+                    )?);
+                }
+                Ok(findings)
+            }
             "markdown_check" => {
                 let specs: Vec<(&str, &Path)> = pairs
                     .iter()
@@ -489,14 +516,14 @@ impl RealBackend {
     /// Applies one fix round to a single file's bytes and returns the
     /// result. Format tools run their in-place fix and the bytes are
     /// re-read; Clippy applies `MachineApplicable` suggestions from a
-    /// fresh check in memory; Vale and the Markdown checker return their
-    /// input.
+    /// fresh check in memory; Vale, the Markdown checker, and rustc
+    /// typecheck return their input.
     pub fn apply_fix(&self, tool_id: &str, path: &str, text: &str) -> Result<String, RunnerError> {
         let tool = self.tool(tool_id)?;
         match tool_id {
             "rustfmt" | "buildifier" | "taplo" => self.run_fix(tool_id, tool, path, text),
             "clippy" => self.apply_clippy(tool_id, path, text),
-            "vale" | "markdown_check" => Ok(text.to_owned()),
+            "vale" | "markdown_check" | "rustc" => Ok(text.to_owned()),
             _ => Err(execution(
                 tool_id,
                 format!("unsupported real tool: {tool_id}"),
@@ -1012,6 +1039,50 @@ mod tests {
         })
     }
 
+    const RUSTC_TYPE_ERROR: &str = r#"{"$message_type":"diagnostic","message":"mismatched types","code":{"code":"E0308","explanation":null},"level":"error","spans":[{"file_name":"FILE","byte_start":27,"byte_end":32,"line_start":2,"line_end":2,"column_start":9,"column_end":14,"is_primary":true,"text":[],"label":"expected `i32`, found `&str`","suggested_replacement":null,"suggestion_applicability":null,"expansion":null}],"children":[],"rendered":null}
+{"$message_type":"diagnostic","message":"aborting due to 1 previous error","code":null,"level":"error","spans":[],"children":[],"rendered":null}"#;
+
+    fn rustc_type_error(
+        argv: &[OsString],
+        _cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_hermetic(env);
+        let out_dir = argv
+            .windows(2)
+            .find(|pair| pair[0] == "--out-dir")
+            .map(|pair| pair[1].clone())
+            .expect("rustc passes --out-dir");
+        assert!(
+            Path::new(&out_dir).is_dir(),
+            "rustc out dir is materialized"
+        );
+        assert!(
+            argv.iter().any(|arg| arg == "--crate-type=lib"),
+            "rustc typechecks as a lib root"
+        );
+        let stderr = RUSTC_TYPE_ERROR.replace("FILE", &last_file(argv));
+        Ok(ChildOutput {
+            code: Some(1),
+            stdout: Vec::new(),
+            stderr: stderr.into_bytes(),
+        })
+    }
+
+    fn rustc_garbage(
+        argv: &[OsString],
+        _cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_hermetic(env);
+        let _ = last_file(argv);
+        Ok(ChildOutput {
+            code: Some(1),
+            stdout: Vec::new(),
+            stderr: b"not json lines".to_vec(),
+        })
+    }
+
     fn rustfmt_hinted(
         argv: &[OsString],
         _cwd: &Path,
@@ -1107,13 +1178,14 @@ mod tests {
     }
 
     #[test]
-    fn real_tools_pin_the_m04_set() {
+    fn real_tools_pin_the_m04_set_plus_rustc_typecheck() {
         assert_eq!(
             REAL_TOOLS,
             &[
                 "buildifier",
                 "clippy",
                 "markdown_check",
+                "rustc",
                 "rustfmt",
                 "taplo",
                 "vale"
@@ -1554,6 +1626,40 @@ mod tests {
             .apply_fix("clippy", "src/main.rs", "let y = v.len() == 0;\n")
             .expect("unchanged");
         assert_eq!(patched, "let y = v.len() == 0;\n");
+    }
+
+    #[test]
+    fn rustc_reports_type_errors_as_lib_root() {
+        let backend = backend_for("rustc", plain_tool(), rustc_type_error);
+        let text = "fn f(x: i32) {}\nfn g() { f(\"oops\"); }\n";
+        let findings = backend
+            .diagnose("rustc", "typecheck", &single("src/main.rs", text))
+            .expect("diagnosed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].tool_id, "rustc");
+        assert_eq!(findings[0].rule_id, "E0308");
+        assert_eq!(
+            (findings[0].start_byte, findings[0].end_byte),
+            (Some(24), Some(29))
+        );
+    }
+
+    #[test]
+    fn rustc_apply_is_check_only() {
+        let backend = backend_for("rustc", plain_tool(), rustc_type_error);
+        let text = "fn f(x: i32) {}\nfn g() { f(\"oops\"); }\n";
+        let patched = backend
+            .apply_fix("rustc", "src/main.rs", text)
+            .expect("unchanged");
+        assert_eq!(patched, text);
+    }
+
+    #[test]
+    fn rustc_diagnose_failure_aborts_apply() {
+        let backend = backend_for("rustc", plain_tool(), rustc_garbage);
+        backend
+            .diagnose("rustc", "typecheck", &single("src/main.rs", "x\n"))
+            .expect_err("rustc garbage fails");
     }
 
     #[test]
