@@ -1,0 +1,35 @@
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+load("@rules_dx//rust/rules:defs.bzl", "dx_rust_shared_library", "dx_rust_test")
+
+dx_rust_shared_library(
+    name = "flavors_cdylib",
+    srcs = ["source/cdylib.rs"],
+    aliases = aliases(
+        package_name = "crates/flavors-cdylib",
+        normal = True,
+    ),
+    crate_name = "flavors_cdylib",
+    crate_root = "source/cdylib.rs",
+    edition = "2021",
+    deps = crate_deps(
+        ["serde_json"],
+        package_name = "crates/flavors-cdylib",
+    ),
+)
+
+dx_rust_test(
+    name = "flavors_cdylib_test",
+    aliases = aliases(
+        package_name = "crates/flavors-cdylib",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":flavors_cdylib",
+    deps = crate_deps(
+        [
+            "serde_json",
+            "tempfile",
+        ],
+        package_name = "crates/flavors-cdylib",
+    ),
+)

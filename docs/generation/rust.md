@@ -59,6 +59,10 @@ Production crates resolve active normal dependencies. Tests, examples, and bench
 their authoritative development scope. Optional and feature-gated crates resolve only when already
 enabled for that target.
 
+A first-party path dependency carrying a `version` requirement resolves single-version: the
+provider's `[package] version` must satisfy the depender's requirement (caret, tilde, exact, and
+ordered clauses), else generation fails naming both manifests. Unconstrained path edges pass.
+
 ## Native Config
 
 The extension recognizes five checked-in tool configs by exact basename and generates one typed

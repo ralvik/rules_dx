@@ -105,6 +105,11 @@ real_source_target(
     starlark_srcs = ["BUILD.bazel"],
     toml_srcs = [
         "testdata/cargo/crates/app/Cargo.toml",
+        "testdata/cargo/crates/cdylib/Cargo.toml",
+        "testdata/cargo/crates/proc_macro/Cargo.toml",
+        "testdata/cargo/crates/scripted/Cargo.toml",
+        "testdata/cargo/crates/shapes/Cargo.toml",
+        "testdata/cargo/crates/staticlib/Cargo.toml",
         "testdata/merge/crates/cargo_trim/Cargo.toml",
     ],
 )

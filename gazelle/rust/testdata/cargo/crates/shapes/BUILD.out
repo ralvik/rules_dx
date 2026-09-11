@@ -1,0 +1,112 @@
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+load("@rules_dx//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
+
+dx_rust_library(
+    name = "shapes_lib",
+    srcs = ["source/lib.rs"],
+    aliases = aliases(
+        package_name = "crates/shapes",
+        normal = True,
+    ),
+    crate_name = "shapes_lib",
+    crate_root = "source/lib.rs",
+    edition = "2021",
+    deps = crate_deps(
+        ["serde_json"],
+        package_name = "crates/shapes",
+    ),
+)
+
+dx_rust_test(
+    name = "shapes_lib_test",
+    aliases = aliases(
+        package_name = "crates/shapes",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":shapes_lib",
+    deps = crate_deps(
+        [
+            "serde_json",
+            "tempfile",
+        ],
+        package_name = "crates/shapes",
+    ),
+)
+
+dx_rust_binary(
+    name = "demo_example",
+    srcs = ["examples/demo.rs"],
+    aliases = aliases(
+        package_name = "crates/shapes",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate_name = "demo",
+    crate_root = "examples/demo.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "serde_json",
+            "tempfile",
+        ],
+        package_name = "crates/shapes",
+    ) + [":shapes_lib"],
+)
+
+dx_rust_test(
+    name = "demo_example_test",
+    aliases = aliases(
+        package_name = "crates/shapes",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":demo_example",
+    deps = crate_deps(
+        [
+            "serde_json",
+            "tempfile",
+        ],
+        package_name = "crates/shapes",
+    ),
+)
+
+dx_rust_binary(
+    name = "plain_example",
+    srcs = ["examples/plain.rs"],
+    aliases = aliases(
+        package_name = "crates/shapes",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate_name = "plain",
+    crate_root = "examples/plain.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "serde_json",
+            "tempfile",
+        ],
+        package_name = "crates/shapes",
+    ) + [":shapes_lib"],
+)
+
+dx_rust_binary(
+    name = "criterion_bench",
+    srcs = ["benches/criterion.rs"],
+    aliases = aliases(
+        package_name = "crates/shapes",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate_name = "criterion",
+    crate_root = "benches/criterion.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "serde_json",
+            "tempfile",
+        ],
+        package_name = "crates/shapes",
+    ) + [":shapes_lib"],
+)

@@ -1,0 +1,77 @@
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+load("@rules_dx//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
+load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
+
+dx_rust_library(
+    name = "scripted_lib",
+    srcs = ["source/lib.rs"],
+    aliases = aliases(
+        package_name = "crates/scripted",
+        normal = True,
+    ),
+    crate_name = "scripted_lib",
+    crate_root = "source/lib.rs",
+    edition = "2021",
+    deps = crate_deps(
+        ["serde_json"],
+        package_name = "crates/scripted",
+    ) + [":scripted_build_script"],
+)
+
+dx_rust_test(
+    name = "scripted_lib_test",
+    aliases = aliases(
+        package_name = "crates/scripted",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":scripted_lib",
+    deps = crate_deps(
+        [
+            "serde_json",
+            "tempfile",
+        ],
+        package_name = "crates/scripted",
+    ) + [":scripted_build_script"],
+)
+
+dx_rust_binary(
+    name = "scripted_tool",
+    srcs = ["source/main.rs"],
+    aliases = aliases(
+        package_name = "crates/scripted",
+        normal = True,
+    ),
+    crate_name = "scripted_tool",
+    crate_root = "source/main.rs",
+    edition = "2021",
+    deps = crate_deps(
+        ["serde_json"],
+        package_name = "crates/scripted",
+    ) + [
+        ":scripted_build_script",
+        ":scripted_lib",
+    ],
+)
+
+cargo_build_script(
+    name = "scripted_build_script",
+    srcs = ["build/script.rs"],
+    aliases = aliases(
+        package_name = "crates/scripted",
+        build = True,
+    ),
+    crate_features = [],
+    crate_name = "scripted_build_script",
+    crate_root = "build/script.rs",
+    edition = "2021",
+    emit_warnings = True,
+    pkg_name = "scripted",
+    use_cc_toolchain = 1,
+    use_default_shell_env = 0,
+    version = "0.5.0",
+    deps = crate_deps(
+        ["cc"],
+        package_name = "crates/scripted",
+    ),
+)

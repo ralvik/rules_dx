@@ -12,7 +12,8 @@ executable (Bazel requires executable-providing rules to create the file
 themselves).
 
 Used upstream symbols (`@rules_rust//rust:defs.bzl`): `rust_library`,
-`rust_binary`, `rust_test`, `rust_common` (`crate_info`, `dep_info`,
+`rust_binary`, `rust_test`, `rust_proc_macro`, `rust_shared_library`,
+`rust_static_library`, `rust_common` (`crate_info`, `dep_info`,
 `test_crate_info`), `rustfmt_test`, `rustfmt_aspect`, `rust_clippy_test`,
 `rust_clippy_aspect`. Used toolchain types:
 `@rules_rust//rust:toolchain_type` (`rustc`, `cargo`, `rustfmt`,
@@ -45,7 +46,7 @@ to Starlark reads and `--output_groups`. `QualitySourcesInfo` is
 advertised so M04 quality aspects can gate on it.
 """
 
-load("@rules_rust//rust:defs.bzl", _rust_binary = "rust_binary", _rust_common = "rust_common", _rust_library = "rust_library", _rust_test = "rust_test")
+load("@rules_rust//rust:defs.bzl", _rust_binary = "rust_binary", _rust_common = "rust_common", _rust_library = "rust_library", _rust_proc_macro = "rust_proc_macro", _rust_shared_library = "rust_shared_library", _rust_static_library = "rust_static_library", _rust_test = "rust_test")
 load("//quality:sources.bzl", "QualitySourcesInfo", "RUST", "check_direct_sources")
 
 _DEFAULT_EDITION = "2021"
@@ -339,4 +340,71 @@ def dx_rust_test(
         upstream = name + "_dx_upstream",
         srcs = test_srcs,
         visibility = visibility,
+    )
+
+def dx_rust_proc_macro(
+        name,
+        srcs,
+        crate_name = None,
+        edition = _DEFAULT_EDITION,
+        visibility = None,
+        **kwargs):
+    """Experimental minimal wrapper over `rust_proc_macro` (M12).
+
+    Same forwarding shape as `dx_rust_library`: the private upstream keeps
+    the crate providers and the public target adds QualitySourcesInfo.
+    """
+    _dx_wrap(
+        name,
+        _rust_proc_macro,
+        _dx_rust_forward,
+        srcs,
+        crate_name = crate_name,
+        edition = edition,
+        visibility = visibility,
+        **kwargs
+    )
+
+def dx_rust_shared_library(
+        name,
+        srcs,
+        crate_name = None,
+        edition = _DEFAULT_EDITION,
+        visibility = None,
+        **kwargs):
+    """Experimental minimal wrapper over `rust_shared_library` (M12).
+
+    Same forwarding shape as `dx_rust_library`.
+    """
+    _dx_wrap(
+        name,
+        _rust_shared_library,
+        _dx_rust_forward,
+        srcs,
+        crate_name = crate_name,
+        edition = edition,
+        visibility = visibility,
+        **kwargs
+    )
+
+def dx_rust_static_library(
+        name,
+        srcs,
+        crate_name = None,
+        edition = _DEFAULT_EDITION,
+        visibility = None,
+        **kwargs):
+    """Experimental minimal wrapper over `rust_static_library` (M12).
+
+    Same forwarding shape as `dx_rust_library`.
+    """
+    _dx_wrap(
+        name,
+        _rust_static_library,
+        _dx_rust_forward,
+        srcs,
+        crate_name = crate_name,
+        edition = edition,
+        visibility = visibility,
+        **kwargs
     )

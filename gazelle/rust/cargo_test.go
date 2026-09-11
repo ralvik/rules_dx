@@ -66,6 +66,19 @@ func TestParseCargoFailsClosed(t *testing.T) {
 		"[package]\nname = \"demo\"\n[[test]]\nname = \"x\"\nharness = maybe\n",
 		"[package]\nname = \"demo\"\n[lib]\nname = 1\n",
 		"[package]\nname = \"demo\"\nnot-an-assignment\n",
+		"[package]\nname = \"demo\"\nversion = 1\n",
+		"[package]\nname = \"demo\"\nbuild = 42\n",
+		"[package]\nname = \"demo\"\n[[example]]\nname = \"e\"\ntest = maybe\n",
+		"[package]\nname = \"demo\"\n[[bin]]\nname = \"b\"\ntest = maybe\n",
+		"[package]\nname = \"demo\"\n[[bench]]\nname = \"b\"\nbench = maybe\n",
+		"[package]\nname = \"demo\"\n[[bin]]\nname = \"b\"\ncrate-type = [\"rlib\"]\n",
+		"[package]\nname = \"demo\"\n[lib]\ncrate-type = 42\n",
+		"[package]\nname = \"demo\"\n[lib]\ncrate-type = [42]\n",
+		"[package]\nname = \"demo\"\n[[bin]]\nname = \"b\"\nproc-macro = true\n",
+		"[package]\nname = \"demo\"\n[lib]\nproc-macro = maybe\n",
+		"[package]\nname = \"demo\"\n[[bin]]\nname = \"b\"\nrequired-features = 42\n",
+		"[package]\nname = \"---\"\n",
+		"[package]\nname = \"demo\"\n[[example]]\n",
 	}
 	for _, source := range cases {
 		if _, err := parseCargoManifest("Cargo.toml", []byte(source)); err == nil {
@@ -207,5 +220,289 @@ func TestCargoCallNamesDefensive(t *testing.T) {
 	}
 	if got := cargoCallNames(crateDepsFileExpr([]string{"serde_json"}, "pkg")); len(got) != 1 || got[0] != "serde_json" {
 		t.Errorf("cargoCallNames(crate_deps([...])) = %v, want [serde_json]", got)
+	}
+}
+
+func TestParseCargoExamplesBenches(t *testing.T) {
+	manifest, err := parseCargoManifest("Cargo.toml", []byte(`[package]
+name = "shapes"
+version = "0.3.0"
+
+[lib]
+name = "shapes_lib"
+path = "source/lib.rs"
+
+[[example]]
+name = "demo"
+path = "examples/demo.rs"
+test = true
+
+[[example]]
+name = "plain"
+path = "examples/plain.rs"
+
+[[bench]]
+name = "criterion"
+path = "benches/criterion.rs"
+harness = false
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manifest.version != "0.3.0" {
+		t.Errorf("package version = %q, want 0.3.0", manifest.version)
+	}
+	if len(manifest.targets) != 4 {
+		t.Fatalf("targets = %+v, want 4", manifest.targets)
+	}
+	demo := manifest.targets[1]
+	if demo.kind != exampleKind || demo.name != "demo_example" || demo.logical != "demo" || !demo.exampleTest {
+		t.Errorf("demo example = %+v", demo)
+	}
+	plain := manifest.targets[2]
+	if plain.kind != exampleKind || plain.name != "plain_example" || plain.exampleTest {
+		t.Errorf("plain example = %+v", plain)
+	}
+	bench := manifest.targets[3]
+	if bench.kind != benchKind || bench.name != "criterion_bench" || bench.logical != "criterion" || bench.harness {
+		t.Errorf("criterion bench = %+v", bench)
+	}
+}
+
+func TestParseCargoExampleBenchFailures(t *testing.T) {
+	cases := []struct {
+		name   string
+		source string
+		want   string
+	}{
+		{
+			name:   "bench harness enabled",
+			source: "[package]\nname = \"demo\"\n[[bench]]\nname = \"b\"\nharness = true\n",
+			want:   "harness",
+		},
+		{
+			name:   "bench harness default",
+			source: "[package]\nname = \"demo\"\n[[bench]]\nname = \"b\"\n",
+			want:   "harness",
+		},
+		{
+			name:   "required features",
+			source: "[package]\nname = \"demo\"\n[[example]]\nname = \"e\"\nrequired-features = [\"fast\"]\n",
+			want:   "required-features",
+		},
+		{
+			name:   "example harness rejected",
+			source: "[package]\nname = \"demo\"\n[[example]]\nname = \"e\"\nharness = false\n",
+			want:   "harness",
+		},
+	}
+	for _, tc := range cases {
+		if _, err := parseCargoManifest("Cargo.toml", []byte(tc.source)); err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: err = %v, want %q", tc.name, err, tc.want)
+		}
+	}
+}
+
+func TestParseCargoLibFlavors(t *testing.T) {
+	cases := []struct {
+		source string
+		flavor string
+	}{
+		{"[package]\nname = \"demo\"\n[lib]\nproc-macro = true\n", "proc-macro"},
+		{"[package]\nname = \"demo\"\n[lib]\ncrate-type = [\"cdylib\"]\n", "cdylib"},
+		{"[package]\nname = \"demo\"\n[lib]\ncrate-type = [\"staticlib\"]\n", "staticlib"},
+		{"[package]\nname = \"demo\"\n[lib]\ncrate-type = [\"rlib\"]\n", ""},
+		{"[package]\nname = \"demo\"\n[lib]\ncrate-type = [\"proc-macro\"]\n", "proc-macro"},
+		{"[package]\nname = \"demo\"\n[lib]\ncrate-type = []\n", ""},
+		{"[package]\nname = \"demo\"\n[lib]\n", ""},
+	}
+	for _, tc := range cases {
+		manifest, err := parseCargoManifest("Cargo.toml", []byte(tc.source))
+		if err != nil {
+			t.Errorf("source %q: unexpected error %v", tc.source, err)
+			continue
+		}
+		if manifest.targets[0].flavor != tc.flavor {
+			t.Errorf("source %q: flavor = %q, want %q", tc.source, manifest.targets[0].flavor, tc.flavor)
+		}
+	}
+	failures := []string{
+		"[package]\nname = \"demo\"\n[lib]\ncrate-type = [\"cdylib\", \"staticlib\"]\n",
+		"[package]\nname = \"demo\"\n[lib]\ncrate-type = [\"dylib\"]\n",
+		"[package]\nname = \"demo\"\n[lib]\nproc-macro = true\ncrate-type = [\"cdylib\"]\n",
+		"[package]\nname = \"demo\"\n[lib]\nproc-macro = true\ncrate-type = [\"staticlib\"]\n",
+		"[package]\nname = \"demo\"\n[lib]\nproc-macro = true\ncrate-type = [\"rlib\"]\n",
+	}
+	for _, source := range failures {
+		if _, err := parseCargoManifest("Cargo.toml", []byte(source)); err == nil {
+			t.Errorf("expected failure for %q", source)
+		}
+	}
+}
+
+func TestParseCargoBuildScript(t *testing.T) {
+	disabled, err := parseCargoManifest("Cargo.toml", []byte("[package]\nname = \"demo\"\nbuild = false\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if disabled.build == nil || !disabled.build.disabled {
+		t.Errorf("build = false: %+v, want disabled", disabled.build)
+	}
+	explicit, err := parseCargoManifest("Cargo.toml", []byte("[package]\nname = \"demo\"\nbuild = \"tool/gen.rs\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if explicit.build == nil || explicit.build.disabled || explicit.build.path != "tool/gen.rs" {
+		t.Errorf("build path: %+v", explicit.build)
+	}
+	def, err := parseCargoManifest("Cargo.toml", []byte("[package]\nname = \"demo\"\nbuild = true\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if def.build == nil || def.build.path != "build.rs" {
+		t.Errorf("build = true: %+v, want build.rs", def.build)
+	}
+	undeclared, err := parseCargoManifest("Cargo.toml", []byte("[package]\nname = \"demo\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := undeclared.withImplicitTargets(map[string]bool{"build.rs": true}, ""); err == nil || !strings.Contains(err.Error(), "build.rs") {
+		t.Errorf("undeclared build.rs err = %v", err)
+	}
+	// Build dependencies land in their own scope, and inline tables keep
+	// the original spelling for crate_universe lookup.
+	scoped, err := parseCargoManifest("Cargo.toml", []byte("[package]\nname = \"demo\"\n[build-dependencies]\ncc = \"1\"\nlocal = { path = \"../local\", version = \"0.2\" }\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !scoped.buildDeps["cc"].external {
+		t.Errorf("cc build dep = %+v, want external", scoped.buildDeps["cc"])
+	}
+	if local := scoped.buildDeps["local"]; local.external || local.version != "0.2" || local.depPath != "../local" {
+		t.Errorf("local build dep = %+v", local)
+	}
+}
+
+func TestVersionReqSatisfied(t *testing.T) {
+	cases := []struct {
+		version string
+		req     string
+		want    bool
+	}{
+		{"1.2.3", "1", true},
+		{"1.9.0", "^1.2", true},
+		{"2.0.0", "1", false},
+		{"0.2.5", "0.2", true},
+		{"0.3.0", "0.2", false},
+		{"0.5.0", "^0", true},
+		{"1.0.0", "^0", false},
+		{"0.0.3", "^0.0.3", true},
+		{"0.0.4", "^0.0.3", false},
+		{"1.2.3", "~1.2.0", true},
+		{"1.3.0", "~1.2.0", false},
+		{"1.9.0", "~1", true},
+		{"2.0.0", "~1", false},
+		{"1.2.3", "=1.2.3", true},
+		{"1.2.4", "=1.2.3", false},
+		{"1.2.3", ">=1.0, <2.0", true},
+		{"2.0.0", ">=1.0, <2.0", false},
+		{"1.2.3", "<=1.2.3", true},
+		{"1.2.4", "<=1.2.3", false},
+		{"1.2.4", ">1.2.3", true},
+		{"1.2.3", ">1.2.3", false},
+		{"1.2.3-rc.1", "^1.0", true},
+		{"1.2.3+build", "=1.2.3", true},
+		{"1.2.3.4", "=1.2.3", true},
+		{"abc", ">=1.0", false},
+		{"1.2.3", "*", true},
+		{"1.2.3", "", true},
+	}
+	for _, tc := range cases {
+		if got := versionReqSatisfied(tc.version, tc.req); got != tc.want {
+			t.Errorf("versionReqSatisfied(%q, %q) = %v, want %v", tc.version, tc.req, got, tc.want)
+		}
+	}
+	if got := tomlInlineField(`{ myversion = "9", version = "1.2" }`, "version"); got != "1.2" {
+		t.Errorf("inline version field = %q, want 1.2", got)
+	}
+	if got := tomlInlineField(`{ version = 1 }`, "version"); got != "" {
+		t.Errorf("unquoted inline version = %q, want empty", got)
+	}
+	if got := tomlInlineField(`{ version = "a\\b" }`, "version"); got != `a\b` {
+		t.Errorf("escaped inline version = %q", got)
+	}
+	if got := tomlInlineField(`{ version = "a\qb" }`, "version"); got != "" {
+		t.Errorf("invalid-escape inline version = %q, want empty", got)
+	}
+	if got := tomlInlineField(`{ version = "abc`, "version"); got != "" {
+		t.Errorf("unterminated inline version = %q, want empty", got)
+	}
+	if got := tomlInlineField(`{ path = "x" }`, "version"); got != "" {
+		t.Errorf("absent inline version = %q, want empty", got)
+	}
+	if got := scanPackageVersion([]byte("[package]\nname = \"demo\"\nversion = \"0.2.0\"\n")); got != "0.2.0" {
+		t.Errorf("scanned version = %q, want 0.2.0", got)
+	}
+	if got := scanPackageVersion([]byte("[package]\n\nversion = \"1.0\"\n")); got != "1.0" {
+		t.Errorf("scanned version past blank = %q, want 1.0", got)
+	}
+	if got := scanPackageVersion([]byte("[dependencies]\nfoo = \"1\"\n[package]\nversion = \"1.0\"\n")); got != "1.0" {
+		t.Errorf("scanned version past section = %q, want 1.0", got)
+	}
+	if got := scanPackageVersion([]byte("[package]\nname = \"noversion\"\n")); got != "" {
+		t.Errorf("absent version = %q, want empty", got)
+	}
+}
+
+func TestCheckPathDepVersions(t *testing.T) {
+	root := t.TempDir()
+	writeFixture(t, root, "helper/Cargo.toml", "[package]\nname = \"helper\"\nversion = \"0.2.0\"\n")
+	writeFixture(t, root, "noversion/Cargo.toml", "[package]\nname = \"noversion\"\n")
+	manifest := &cargoManifest{
+		normalDeps: map[string]cargoDependency{
+			"helper": {version: "^0.2", depPath: "helper"},
+			"free":   {depPath: "helper"},
+			"ext":    {external: true, version: "1", depPath: "helper"},
+		},
+		devDeps:   map[string]cargoDependency{},
+		buildDeps: map[string]cargoDependency{},
+	}
+	if err := checkPathDepVersions(root, "Cargo.toml", manifest); err != nil {
+		t.Errorf("satisfied path versions rejected: %v", err)
+	}
+	manifest.normalDeps["helper"] = cargoDependency{version: "^0.3", depPath: "helper"}
+	if err := checkPathDepVersions(root, "Cargo.toml", manifest); err == nil || !strings.Contains(err.Error(), "does not satisfy") {
+		t.Errorf("mismatched path version err = %v", err)
+	}
+	manifest.normalDeps["helper"] = cargoDependency{version: "1", depPath: "noversion"}
+	if err := checkPathDepVersions(root, "Cargo.toml", manifest); err == nil || !strings.Contains(err.Error(), "declares no [package] version") {
+		t.Errorf("unversioned provider err = %v", err)
+	}
+	manifest.normalDeps["helper"] = cargoDependency{version: "1", depPath: "missing"}
+	if err := checkPathDepVersions(root, "Cargo.toml", manifest); err == nil || !strings.Contains(err.Error(), "without a readable Cargo.toml") {
+		t.Errorf("missing provider err = %v", err)
+	}
+}
+
+func TestParseCargoExamplePathDerived(t *testing.T) {
+	manifest, err := parseCargoManifest("Cargo.toml", []byte("[package]\nname = \"demo\"\n[[example]]\npath = \"examples/foo.rs\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(manifest.targets) != 2 {
+		t.Fatalf("targets = %+v", manifest.targets)
+	}
+	example := manifest.targets[0]
+	if example.kind != exampleKind || example.name != "foo_example" || example.logical != "foo" || example.path != "examples/foo.rs" {
+		t.Errorf("path-derived example = %+v", example)
+	}
+	// A truncated inline table keeps its parsed fields; the dangling key
+	// contributes nothing instead of failing the manifest.
+	truncated, err := parseCargoManifest("Cargo.toml", []byte("[package]\nname = \"demo\"\n[dependencies]\nfoo = { version = \"1\", path\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dep := truncated.normalDeps["foo"]; dep.version != "1" || dep.depPath != "" {
+		t.Errorf("truncated inline dep = %+v", dep)
 	}
 }

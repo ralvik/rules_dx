@@ -1,0 +1,15 @@
+[package]
+name = "flavors-cdylib"
+version = "1.2.0"
+edition = "2021"
+
+[dependencies]
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lib]
+name = "flavors_cdylib"
+path = "source/cdylib.rs"
+crate-type = ["cdylib"]

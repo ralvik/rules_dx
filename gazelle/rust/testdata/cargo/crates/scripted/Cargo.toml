@@ -1,0 +1,22 @@
+[package]
+name = "scripted"
+version = "0.5.0"
+edition = "2021"
+build = "build/script.rs"
+
+[dependencies]
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"
+
+[build-dependencies]
+cc = "1"
+
+[lib]
+name = "scripted_lib"
+path = "source/lib.rs"
+
+[[bin]]
+name = "scripted-tool"
+path = "source/main.rs"

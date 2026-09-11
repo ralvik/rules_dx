@@ -1,0 +1,35 @@
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+load("@rules_dx//rust/rules:defs.bzl", "dx_rust_proc_macro", "dx_rust_test")
+
+dx_rust_proc_macro(
+    name = "flavors_derive",
+    srcs = ["source/derive.rs"],
+    aliases = aliases(
+        package_name = "crates/flavors-derive",
+        normal = True,
+    ),
+    crate_name = "flavors_derive",
+    crate_root = "source/derive.rs",
+    edition = "2021",
+    deps = crate_deps(
+        ["serde_json"],
+        package_name = "crates/flavors-derive",
+    ),
+)
+
+dx_rust_test(
+    name = "flavors_derive_test",
+    aliases = aliases(
+        package_name = "crates/flavors-derive",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":flavors_derive",
+    deps = crate_deps(
+        [
+            "serde_json",
+            "tempfile",
+        ],
+        package_name = "crates/flavors-derive",
+    ),
+)

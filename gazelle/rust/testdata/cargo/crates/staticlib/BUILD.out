@@ -1,0 +1,35 @@
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+load("@rules_dx//rust/rules:defs.bzl", "dx_rust_static_library", "dx_rust_test")
+
+dx_rust_static_library(
+    name = "flavors_staticlib",
+    srcs = ["source/staticlib.rs"],
+    aliases = aliases(
+        package_name = "crates/flavors-staticlib",
+        normal = True,
+    ),
+    crate_name = "flavors_staticlib",
+    crate_root = "source/staticlib.rs",
+    edition = "2021",
+    deps = crate_deps(
+        ["serde_json"],
+        package_name = "crates/flavors-staticlib",
+    ),
+)
+
+dx_rust_test(
+    name = "flavors_staticlib_test",
+    aliases = aliases(
+        package_name = "crates/flavors-staticlib",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":flavors_staticlib",
+    deps = crate_deps(
+        [
+            "serde_json",
+            "tempfile",
+        ],
+        package_name = "crates/flavors-staticlib",
+    ),
+)

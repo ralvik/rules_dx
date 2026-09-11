@@ -1,0 +1,28 @@
+[package]
+name = "shapes"
+version = "0.3.0"
+edition = "2021"
+
+[dependencies]
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lib]
+name = "shapes_lib"
+path = "source/lib.rs"
+
+[[example]]
+name = "demo"
+path = "examples/demo.rs"
+test = true
+
+[[example]]
+name = "plain"
+path = "examples/plain.rs"
+
+[[bench]]
+name = "criterion"
+path = "benches/criterion.rs"
+harness = false
