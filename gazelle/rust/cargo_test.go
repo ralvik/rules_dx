@@ -3,6 +3,8 @@ package rust
 import (
 	"strings"
 	"testing"
+
+	bzl "github.com/bazelbuild/buildtools/build"
 )
 
 func TestParseCargoManifest(t *testing.T) {
@@ -175,5 +177,35 @@ func TestCargoLibBinDisambiguation(t *testing.T) {
 	}
 	if len(solo.targets) != 1 || solo.targets[0].name != "solo" || solo.targets[0].crate() != "solo" {
 		t.Errorf("solo library targets = %+v", solo.targets)
+	}
+}
+
+func TestSiblingLibName(t *testing.T) {
+	withLib := &cargoManifest{targets: []cargoTarget{{kind: libraryKind, name: "demo_lib"}, {kind: binaryKind, name: "demo"}}}
+	if got := siblingLibName(withLib, cargoTarget{kind: binaryKind, name: "demo"}); got != "demo_lib" {
+		t.Errorf("siblingLibName with library = %q, want %q", got, "demo_lib")
+	}
+	binOnly := &cargoManifest{targets: []cargoTarget{{kind: binaryKind, name: "tool"}}}
+	if got := siblingLibName(binOnly, cargoTarget{kind: binaryKind, name: "tool"}); got != "" {
+		t.Errorf("siblingLibName without library = %q, want empty", got)
+	}
+}
+
+func TestCargoCallNamesDefensive(t *testing.T) {
+	// Non-call bases and foreign calls yield no names instead of panicking.
+	if got := cargoCallNames(&bzl.StringExpr{Value: "deps"}); got != nil {
+		t.Errorf("cargoCallNames(string) = %v, want nil", got)
+	}
+	if got := cargoCallNames(&bzl.CallExpr{X: &bzl.Ident{Name: "deps"}, List: []bzl.Expr{strListExpr("a")}}); got != nil {
+		t.Errorf("cargoCallNames(deps(...)) = %v, want nil", got)
+	}
+	if got := cargoCallNames(&bzl.CallExpr{X: &bzl.Ident{Name: "crate_deps"}}); got != nil {
+		t.Errorf("cargoCallNames(crate_deps()) = %v, want nil", got)
+	}
+	if got := cargoCallNames(&bzl.CallExpr{X: &bzl.Ident{Name: "crate_deps"}, List: []bzl.Expr{&bzl.StringExpr{Value: "x"}}}); got != nil {
+		t.Errorf("cargoCallNames(crate_deps(string)) = %v, want nil", got)
+	}
+	if got := cargoCallNames(crateDepsFileExpr([]string{"serde_json"}, "pkg")); len(got) != 1 || got[0] != "serde_json" {
+		t.Errorf("cargoCallNames(crate_deps([...])) = %v, want [serde_json]", got)
 	}
 }

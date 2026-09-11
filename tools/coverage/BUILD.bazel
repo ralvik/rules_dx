@@ -1,7 +1,6 @@
-load("@rules_dx//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
-
 """M00 implementation-coverage gate (WP4)."""
 
+load("@rules_dx//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
@@ -53,4 +52,5 @@ dx_rust_binary(
     srcs = ["src/main.rs"],
     crate_name = "coverage",
     crate_root = "src/main.rs",
+    deps = [":coverage_gate"],
 )

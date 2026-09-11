@@ -936,3 +936,40 @@ func TestResolveAmbiguous(t *testing.T) {
 		t.Errorf("ambiguity = %v", l.errors)
 	}
 }
+
+func TestLookupOverrideNilConfig(t *testing.T) {
+	if _, ok := lookupOverride(nil, "anything"); ok {
+		t.Error("lookupOverride(nil, ...) = ok, want not ok")
+	}
+}
+
+func TestValidateTestImportMapping(t *testing.T) {
+	manifest := &cargoManifest{
+		packageName: "demo",
+		normalDeps:  map[string]cargoDependency{},
+		devDeps:     map[string]cargoDependency{},
+	}
+	c := resolverConfig(t, []rule.Directive{{Key: "resolve", Value: "rust tmapped //pkg:target"}})
+	mapped := targetImports{test: []string{"tmapped"}}
+	if err := validateCargoImports(c, manifest, testKind, mapped); err != nil {
+		t.Errorf("override-only test import rejected: %v", err)
+	}
+	// An ignore on the same name conflicts with the exact mapping.
+	c.Exts[languageName] = &rustConfig{ignores: []*ignoreEntry{{value: "tmapped"}}}
+	if err := validateCargoImports(c, manifest, testKind, mapped); err == nil || !strings.Contains(err.Error(), "both") {
+		t.Errorf("test mapping/ignore conflict not reported: %v", err)
+	}
+}
+
+func TestLocalTestImportResolveOverride(t *testing.T) {
+	manifest := &cargoManifest{
+		packageName: "demo",
+		normalDeps:  map[string]cargoDependency{},
+		devDeps:     map[string]cargoDependency{},
+	}
+	c := resolverConfig(t, []rule.Directive{{Key: "resolve", Value: "rust tmapped //pkg:target"}})
+	local := localCargoImports(c, manifest, targetImports{test: []string{"tmapped"}}, true)
+	if strings.Join(local.test, ",") != "tmapped" {
+		t.Errorf("override-only local test imports = %+v, want [tmapped]", local.test)
+	}
+}
