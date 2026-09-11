@@ -116,6 +116,7 @@ dependencies = [
 name = "dx_cli"
 version = "0.0.0"
 dependencies = [
+ "libc",
  "quick-xml",
  "serde_json",
 ]
@@ -123,6 +124,15 @@ dependencies = [
 [[package]]
 name = "dx_diff"
 version = "0.0.0"
+
+[[package]]
+name = "dx_env"
+version = "0.0.0"
+dependencies = [
+ "blake3",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "dx_output"

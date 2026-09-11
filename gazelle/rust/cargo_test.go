@@ -60,7 +60,6 @@ func TestParseCargoFailsClosed(t *testing.T) {
 		"[package]\nedition = \"2021\"\n",
 		"[package]\nname = \"demo\"\n[[test]]\nname = \"x\"\nrequired-features = [\"slow\"]\n",
 		"[package]\nname = \"demo\"\n[[bin]]\nname = \"same\"\n[[bin]]\nname = \"same\"\n",
-		"[package]\nname = \"demo\"\n[lib]\nname = \"same\"\n[[bin]]\nname = \"same\"\n",
 		"[package]\nname = demo\n",
 		"[package]\nname = \"demo\"\n[[test]]\nname = \"x\"\nharness = maybe\n",
 		"[package]\nname = \"demo\"\n[lib]\nname = 1\n",
@@ -147,5 +146,34 @@ func TestCargoImplicitTargetFailures(t *testing.T) {
 	manifest = &cargoManifest{packageName: "app"}
 	if err := manifest.withImplicitTargets(map[string]bool{"pkg/src/lib.rs": true}, "pkg"); err != nil || len(manifest.targets) != 1 {
 		t.Errorf("direct implicit library = %+v, %v", manifest.targets, err)
+	}
+}
+
+func TestCargoLibBinDisambiguation(t *testing.T) {
+	// Explicit same-name library and binary: the library takes the `_lib`
+	// Bazel name while keeping the Rust crate name for dependents.
+	manifest, err := parseCargoManifest("Cargo.toml", []byte("[package]\nname = \"demo\"\n[lib]\nname = \"demo\"\npath = \"src/lib.rs\"\n[[bin]]\nname = \"demo\"\npath = \"src/main.rs\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(manifest.targets) != 2 || manifest.targets[0].name != "demo_lib" || manifest.targets[0].crate() != "demo" || manifest.targets[1].name != "demo" {
+		t.Errorf("explicit lib/bin targets = %+v", manifest.targets)
+	}
+	// Implicit same-name pair disambiguates the same way.
+	implicit := &cargoManifest{packageName: "app"}
+	files := map[string]bool{"pkg/src/lib.rs": true, "pkg/src/main.rs": true}
+	if err := implicit.withImplicitTargets(files, "pkg"); err != nil {
+		t.Fatal(err)
+	}
+	if len(implicit.targets) != 2 || implicit.targets[0].name != "app_lib" || implicit.targets[0].crate() != "app" || implicit.targets[1].name != "app" {
+		t.Errorf("implicit lib/bin targets = %+v", implicit.targets)
+	}
+	// A lone library keeps its bare name and crate.
+	solo, err := parseCargoManifest("Cargo.toml", []byte("[package]\nname = \"solo\"\n[lib]\nname = \"solo\"\npath = \"src/lib.rs\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(solo.targets) != 1 || solo.targets[0].name != "solo" || solo.targets[0].crate() != "solo" {
+		t.Errorf("solo library targets = %+v", solo.targets)
 	}
 }

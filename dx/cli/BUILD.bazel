@@ -1,3 +1,5 @@
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+
 """M07 WP1 + M08 WP1: quality command planning and scope resolution for the `dx` CLI."""
 
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
@@ -16,37 +18,76 @@ dx_rust_library(
         "src/reports.rs",
         "src/resolve.rs",
     ],
+    aliases = aliases(
+        package_name = "dx/dx_cli",
+        normal = True,
+    ),
     crate_name = "dx_cli",
+    crate_root = "src/lib.rs",
     edition = "2021",
-    deps = [
+    deps = crate_deps(
+        [
+            "libc",
+            "quick-xml",
+            "serde_json",
+        ],
+        package_name = "dx/dx_cli",
+    ) + [
         "//dx/apply:dx_apply",
         "//dx/bep:dx_bep",
         "//dx/diff:dx_diff",
         "//dx/output:dx_output",
         "//dx/process:dx_process",
         "//quality/result:quality_result",
-        "@crates//:quick-xml",
-        "@crates//:serde_json",
     ],
 )
 
 dx_rust_binary(
     name = "dx",
     srcs = ["src/main.rs"],
+    aliases = aliases(
+        package_name = "dx/dx_cli",
+        normal = True,
+    ),
+    crate_name = "dx",
+    crate_root = "src/main.rs",
     edition = "2021",
-    deps = [
+    deps = crate_deps(
+        [
+            "libc",
+            "quick-xml",
+            "serde_json",
+        ],
+        package_name = "dx/dx_cli",
+    ) + [
         ":dx_cli",
         "//dx/output:dx_output",
         "//dx/process:dx_process",
-        "@crates//:libc",
     ],
 )
 
 dx_rust_test(
     name = "dx_cli_test",
     size = "small",
+    aliases = aliases(
+        package_name = "dx/dx_cli",
+        normal = True,
+        normal_dev = True,
+    ),
     crate = ":dx_cli",
     edition = "2021",
+    deps = crate_deps(
+        [
+            "libc",
+            "quick-xml",
+            "serde_json",
+        ],
+        package_name = "dx/dx_cli",
+    ) + [
+        "//dx/output:dx_output",
+        "//dx/process:dx_process",
+        "//quality/result:quality_result",
+    ],
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy

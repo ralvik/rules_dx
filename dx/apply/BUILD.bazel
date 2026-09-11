@@ -1,3 +1,5 @@
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+
 """M06 WP3 apply boundary for the `dx` CLI."""
 
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
@@ -15,20 +17,41 @@ dx_rust_library(
         "src/lib.rs",
         "src/validators.rs",
     ],
+    aliases = aliases(
+        package_name = "dx/dx_apply",
+        normal = True,
+    ),
     crate_name = "dx_apply",
+    crate_root = "src/lib.rs",
     edition = "2021",
-    deps = [
-        "@crates//:serde",
-        "@crates//:serde_json",
-        "@crates//:sha2",
-    ],
+    deps = crate_deps(
+        [
+            "serde",
+            "serde_json",
+            "sha2",
+        ],
+        package_name = "dx/dx_apply",
+    ),
 )
 
 dx_rust_test(
     name = "dx_apply_test",
     size = "small",
+    aliases = aliases(
+        package_name = "dx/dx_apply",
+        normal = True,
+        normal_dev = True,
+    ),
     crate = ":dx_apply",
     edition = "2021",
+    deps = crate_deps(
+        [
+            "serde",
+            "serde_json",
+            "sha2",
+        ],
+        package_name = "dx/dx_apply",
+    ),
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy

@@ -1,5 +1,24 @@
 """Root package for the rules_dx seed."""
 
+# First-party import mappings (M10 WP1): every `# gazelle:resolve` here pins
+# one crate name the Rust sources reference to its authoritative Bazel target.
+# Root-level directives apply repo-wide (upstream walks parents), so generated
+# rules depend on hand-maintained wrapper targets by exact label instead of by
+# manifest inference. Labels must stay exact: validation accepts a mapped name
+# without checking the target exists; a stale label surfaces later at resolve.
+# gazelle:resolve rust dx_apply //dx/apply:dx_apply
+# gazelle:resolve rust dx_bep //dx/bep:dx_bep
+# gazelle:resolve rust dx_diff //dx/diff:dx_diff
+# gazelle:resolve rust dx_output //dx/output:dx_output
+# gazelle:resolve rust dx_process //dx/process:dx_process
+# gazelle:resolve rust marker_proto //env:marker_proto_rs
+# gazelle:resolve rust proto //quality:result_proto_rs
+# gazelle:resolve rust result_proto //quality:result_proto_rs
+# gazelle:resolve rust prost @rules_rust_prost//private/3rdparty/crates:prost
+# gazelle:resolve rust quality_adapter //quality/adapter:quality_adapter
+# gazelle:resolve rust quality_result //quality/result:quality_result
+# gazelle:exclude gazelle/rust/testdata
+
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])

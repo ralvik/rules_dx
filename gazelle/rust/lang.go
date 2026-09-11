@@ -70,6 +70,11 @@ type ignoreEntry struct {
 type targetImports struct {
 	production []string
 	test       []string
+	// siblingLib is the Bazel name of the same-package library a binary
+	// target links automatically (Cargo bins bind their sibling lib
+	// without an import). Empty for non-binaries. It flows straight to
+	// deps: validation and manifest indexing ignore it.
+	siblingLib string
 }
 
 // NewLanguage returns the private first-party Rust Gazelle extension.
@@ -301,26 +306,39 @@ func (l *rustLang) generateCargo(args language.GenerateArgs, files []string) lan
 			l.fail("%v", err)
 			continue
 		}
-		r := crateRule(target.kind, target.name, target.name, root, tree, args.Rel)
+		r := crateRule(target.kind, target.name, target.crate(), root, tree, args.Rel)
 		r.SetAttr("edition", manifest.edition)
 		imports := importsFor(tree)
-		if err := validateCargoImports(manifest, target.kind, imports); err != nil {
+		if err := validateCargoImports(args.Config, manifest, target.kind, imports); err != nil {
 			l.fail("rust: %s: target %s: %v", manifestPath, target.name, err)
 			continue
 		}
 		setCargoAttrs(r, args.Rel, manifest, imports, target.kind == testKind)
-		resultImports := localCargoImports(manifest, imports, target.kind == testKind)
+		resultImports := localCargoImports(args.Config, manifest, imports, target.kind == testKind)
+		if target.kind == binaryKind {
+			resultImports.siblingLib = siblingLibName(manifest, target)
+		}
 		if target.kind == testKind && !target.harness {
 			r.SetAttr("use_libtest_harness", false)
 		}
 		result.Gen = append(result.Gen, r)
 		result.Imports = append(result.Imports, resultImports)
 		if target.kind != testKind && hasUnitTests(tree) {
-			t := rule.NewRule(testKind, UnitTestName(target.name))
+			// The unit-test wrapper is named after the Rust crate, not the
+			// Bazel target: `crate` keeps pointing at the (possibly
+			// disambiguated) library target while the test name stays
+			// stable across lib renames. A binary with its own unit tests
+			// takes the `_bin` variant so lib and bin wrappers never share
+			// a name in one package.
+			testName := UnitTestName(target.crate())
+			if target.kind == binaryKind {
+				testName = UnitTestName(target.name + "_bin")
+			}
+			t := rule.NewRule(testKind, testName)
 			t.SetAttr("crate", ":"+target.name)
 			setCargoAttrs(t, args.Rel, manifest, targetImports{test: imports.test}, true)
 			result.Gen = append(result.Gen, t)
-			result.Imports = append(result.Imports, localCargoImports(manifest, targetImports{test: imports.test}, true))
+			result.Imports = append(result.Imports, localCargoImports(args.Config, manifest, targetImports{test: imports.test}, true))
 		}
 	}
 	if len(l.errors) > 0 {
@@ -362,8 +380,32 @@ func checkExistingClaims(file *rule.File, other, generated []*rule.Rule) error {
 	return nil
 }
 
-func validateCargoImports(manifest *cargoManifest, kind string, imports targetImports) error {
+// resolveExtName is upstream Gazelle's private resolve configuration key,
+// pinned through MODULE.bazel (gazelle 0.52.2). It is referenced literally
+// only to probe for user overrides so validation stays silent-safe when the
+// resolve configurer never ran (unit tests with bare configs); the real
+// interpretation of mappings always goes through FindRuleWithOverride.
+const resolveExtName = "_resolve"
+
+func lookupOverride(c *config.Config, name string) (label.Label, bool) {
+	var zero label.Label
+	if c == nil {
+		return zero, false
+	}
+	if _, ok := c.Exts[resolveExtName]; !ok {
+		return zero, false
+	}
+	return resolve.FindRuleWithOverride(c, resolve.ImportSpec{Lang: languageName, Imp: name}, languageName)
+}
+
+func validateCargoImports(c *config.Config, manifest *cargoManifest, kind string, imports targetImports) error {
 	for _, name := range imports.production {
+		if _, ok := lookupOverride(c, name); ok {
+			if ignore := matchingIgnore(c, name); ignore != nil {
+				return fmt.Errorf("import %q has both an exact resolve mapping and an ignore directive", name)
+			}
+			continue
+		}
 		_, normal := manifest.normalDeps[name]
 		_, dev := manifest.devDeps[name]
 		if !normal && !(kind == testKind && dev) && name != strings.ReplaceAll(manifest.packageName, "-", "_") {
@@ -371,6 +413,12 @@ func validateCargoImports(manifest *cargoManifest, kind string, imports targetIm
 		}
 	}
 	for _, name := range imports.test {
+		if _, ok := lookupOverride(c, name); ok {
+			if ignore := matchingIgnore(c, name); ignore != nil {
+				return fmt.Errorf("import %q has both an exact resolve mapping and an ignore directive", name)
+			}
+			continue
+		}
 		_, normal := manifest.normalDeps[name]
 		_, dev := manifest.devDeps[name]
 		if !normal && !dev {
@@ -380,10 +428,12 @@ func validateCargoImports(manifest *cargoManifest, kind string, imports targetIm
 	return nil
 }
 
-func localCargoImports(manifest *cargoManifest, imports targetImports, includeDev bool) targetImports {
+func localCargoImports(c *config.Config, manifest *cargoManifest, imports targetImports, includeDev bool) targetImports {
 	var result targetImports
 	for _, name := range imports.production {
 		if dep, ok := manifest.normalDeps[name]; ok && !dep.external {
+			result.production = append(result.production, name)
+		} else if _, ok := lookupOverride(c, name); ok {
 			result.production = append(result.production, name)
 		}
 	}
@@ -393,6 +443,8 @@ func localCargoImports(manifest *cargoManifest, imports targetImports, includeDe
 				result.test = append(result.test, name)
 			} else if dep, dev := manifest.devDeps[name]; dev && !dep.external {
 				result.test = append(result.test, name)
+			} else if _, ok := lookupOverride(c, name); ok {
+				result.test = append(result.test, name)
 			}
 		}
 	}
@@ -400,28 +452,73 @@ func localCargoImports(manifest *cargoManifest, imports targetImports, includeDe
 }
 
 func setCargoAttrs(r *rule.Rule, packagePath string, manifest *cargoManifest, imports targetImports, includeDev bool) {
+	// crate_universe keys its maps by parent dir + Cargo package name
+	// (e.g. dx/dx_output for //dx/output), not by Bazel package path.
+	packageName := crateUniversePackage(packagePath, manifest)
+	// Cargo links every declared dependency into every target of the package,
+	// including path-only uses (`anyhow::Result`, `libc::c_int`) the use-path
+	// parser never sees. Mirror that: deps carry all declared externals
+	// (original dashed spelling for crate_universe lookup) plus detected
+	// externals resolve to their declared label. First-party labels still
+	// come from detected imports via Resolve.
+	seen := make(map[string]bool)
+	var external []string
+	add := func(key string, dep cargoDependency) {
+		if !dep.external {
+			return
+		}
+		label := dep.label
+		if label == "" {
+			label = key
+		}
+		if !seen[label] {
+			seen[label] = true
+			external = append(external, label)
+		}
+	}
 	names := append([]string{}, imports.production...)
 	if includeDev {
 		names = append(names, imports.test...)
 	}
-	external := names[:0]
 	for _, name := range names {
-		if dep, ok := manifest.normalDeps[name]; ok && dep.external {
-			external = append(external, name)
+		if dep, ok := manifest.normalDeps[name]; ok {
+			add(name, dep)
 			continue
 		}
 		if includeDev {
-			if dep, ok := manifest.devDeps[name]; ok && dep.external {
-				external = append(external, name)
+			if dep, ok := manifest.devDeps[name]; ok {
+				add(name, dep)
 			}
+		}
+	}
+	for key, dep := range manifest.normalDeps {
+		add(key, dep)
+	}
+	if includeDev {
+		for key, dep := range manifest.devDeps {
+			add(key, dep)
 		}
 	}
 	names = external
 	sort.Strings(names)
 	if len(names) > 0 {
-		r.SetAttr("deps", crateDepsCall{names: names, packageName: packagePath})
+		r.SetAttr("deps", crateDepsCall{names: names, packageName: packageName})
 	}
-	r.SetAttr("aliases", cargoCall("aliases", packagePath, includeDev))
+	r.SetAttr("aliases", cargoCall("aliases", packageName, includeDev))
+}
+
+// crateUniversePackage returns the crate_universe map key for a manifest:
+// the parent Bazel directory joined with the Cargo package name. A nil or
+// nameless manifest falls back to the Bazel path; a root-level package has
+// no parent, so the Cargo name alone is the best guess.
+func crateUniversePackage(packagePath string, manifest *cargoManifest) string {
+	if manifest == nil || manifest.packageName == "" {
+		return packagePath
+	}
+	if dir := path.Dir(packagePath); dir != "." && dir != "" {
+		return dir + "/" + manifest.packageName
+	}
+	return manifest.packageName
 }
 
 type crateDepsCall struct {
@@ -436,7 +533,105 @@ func (c crateDepsCall) BzlExpr() bzl.Expr {
 	}}
 }
 
-func (c crateDepsCall) Merge(bzl.Expr) bzl.Expr { return c.BzlExpr() }
+func (c crateDepsCall) Merge(other bzl.Expr) bzl.Expr {
+	managed := make(map[string]bool, len(c.names))
+	for _, name := range c.names {
+		managed[name] = true
+	}
+	if hand := unmanagedDepsLabels(other, managed); len(hand) > 0 {
+		return depsConcatExpr{base: c.BzlExpr(), extra: hand}.BzlExpr()
+	}
+	return c.BzlExpr()
+}
+
+// depsConcatExpr renders `base + [...]`: first-party labels Resolve appends
+// to generated crate_deps(...) calls. Both sides are label lists, so the
+// concatenation stays a valid deps list. Merge takes the freshly resolved
+// value but carries forward hand-maintained labels from the previous
+// expression (e.g. `@rules_rust//tools/runfiles:runfiles`, which no import
+// or directive resolves): dropping them would silently break the build on
+// every generate. Hand labels are therefore never removed by generate;
+// delete them manually when they go stale.
+type depsConcatExpr struct {
+	base  bzl.Expr
+	extra []string
+}
+
+func (c depsConcatExpr) BzlExpr() bzl.Expr {
+	extra := make([]bzl.Expr, len(c.extra))
+	for i, dep := range c.extra {
+		extra[i] = &bzl.StringExpr{Value: dep}
+	}
+	return &bzl.BinaryExpr{X: c.base, Op: "+", Y: &bzl.ListExpr{List: extra}}
+}
+
+func (c depsConcatExpr) Merge(other bzl.Expr) bzl.Expr {
+	managed := make(map[string]bool, len(c.extra))
+	for _, dep := range c.extra {
+		managed[dep] = true
+	}
+	for _, name := range cargoCallNames(c.base) {
+		managed[name] = true
+	}
+	return depsConcatExpr{base: c.base, extra: unionStrings(c.extra, unmanagedDepsLabels(other, managed))}.BzlExpr()
+}
+
+// cargoCallNames collects the crate names referenced by a crate_deps call
+// expression so Merge can tell managed names apart from hand labels. The
+// base is always a rendered *bzl.CallExpr (rule attrs store BzlExpr()
+// output, never the wrapper struct).
+func cargoCallNames(base bzl.Expr) []string {
+	call, ok := base.(*bzl.CallExpr)
+	if !ok {
+		return nil
+	}
+	if ident, ok := call.X.(*bzl.Ident); !ok || ident.Name != "crate_deps" {
+		return nil
+	}
+	if len(call.List) == 0 {
+		return nil
+	}
+	list, ok := call.List[0].(*bzl.ListExpr)
+	if !ok {
+		return nil
+	}
+	var names []string
+	for _, item := range list.List {
+		if s, ok := item.(*bzl.StringExpr); ok {
+			names = append(names, s.Value)
+		}
+	}
+	return names
+}
+
+// unmanagedDepsLabels returns the plain-list string labels in a previous
+// deps expression that are not in the managed set. Only ListExpr nodes
+// (including `+` tails) contribute: strings inside call arguments such as
+// crate_deps' package_name are metadata, not labels, and are skipped.
+func unmanagedDepsLabels(other bzl.Expr, managed map[string]bool) []string {
+	var out []string
+	var walk func(e bzl.Expr)
+	walk = func(e bzl.Expr) {
+		switch e := e.(type) {
+		case *bzl.ListExpr:
+			for _, item := range e.List {
+				if s, ok := item.(*bzl.StringExpr); ok && !managed[s.Value] {
+					out = append(out, s.Value)
+				}
+			}
+		case *bzl.BinaryExpr:
+			if e.Op == "+" {
+				walk(e.X)
+				walk(e.Y)
+			}
+		}
+	}
+	if other != nil {
+		walk(other)
+	}
+	sort.Strings(out)
+	return out
+}
 
 type cargoCallExpr struct {
 	name        string
@@ -533,7 +728,14 @@ func importsFor(tree map[string]*FileFacts) targetImports {
 			addImport(sets, localModules, use.Path, use.CfgTest)
 		}
 		for _, ext := range facts.Externs {
-			addImport(sets, localModules, ext.Name, ext.CfgTest)
+			// An `as` alias renames the crate for every later path in the
+			// crate, so the alias is the name validation and resolution see;
+			// an exact mapping then pins the alias to the real target.
+			name := ext.Name
+			if ext.As != "" {
+				name = ext.As
+			}
+			addImport(sets, localModules, name, ext.CfgTest)
 		}
 	}
 	result := targetImports{}
@@ -585,6 +787,17 @@ func staleRules(file *rule.File, desired map[string]bool) language.GenerateResul
 	return result
 }
 
+// siblingLibName returns the Bazel name of the same-manifest library a
+// binary target links automatically, or "" when the package has no library.
+func siblingLibName(manifest *cargoManifest, bin cargoTarget) string {
+	for _, target := range manifest.targets {
+		if target.kind == libraryKind {
+			return target.name
+		}
+	}
+	return ""
+}
+
 func (l *rustLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *repo.RemoteCache, r *rule.Rule, raw interface{}, from label.Label) {
 	imports, ok := raw.(targetImports)
 	if !ok {
@@ -622,14 +835,41 @@ func (l *rustLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *repo.Remo
 			l.fail("rust: %s: ambiguous import %q resolves to %s", from, name, formatMatches(matches))
 		}
 	}
+	if imports.siblingLib != "" && imports.siblingLib != from.Name {
+		deps[":"+imports.siblingLib] = true
+	}
 	labels := make([]string, 0, len(deps))
 	for dep := range deps {
 		labels = append(labels, dep)
 	}
 	sort.Strings(labels)
-	if len(labels) > 0 {
-		r.SetAttr("deps", labels)
+	if len(labels) == 0 {
+		return
 	}
+	// ResolveAttrs merge takes this output as final, so first-party labels
+	// combine with (never replace) the generated crate_deps call; plain
+	// label lists union in place.
+	switch existing := r.Attr("deps"); existing.(type) {
+	case nil:
+		r.SetAttr("deps", labels)
+	case *bzl.ListExpr:
+		r.SetAttr("deps", unionStrings(r.AttrStrings("deps"), labels))
+	default:
+		r.SetAttr("deps", depsConcatExpr{base: existing, extra: labels})
+	}
+}
+
+func unionStrings(a, b []string) []string {
+	seen := make(map[string]bool, len(a)+len(b))
+	var out []string
+	for _, s := range append(append([]string{}, a...), b...) {
+		if !seen[s] {
+			seen[s] = true
+			out = append(out, s)
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 func matchingIgnore(c *config.Config, name string) *ignoreEntry {

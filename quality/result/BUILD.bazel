@@ -1,3 +1,5 @@
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+
 """M03 result-side validation crate over the frozen result schema."""
 
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
@@ -9,14 +11,18 @@ package(default_visibility = ["//visibility:public"])
 dx_rust_library(
     name = "quality_result",
     srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "quality/quality_result",
+        normal = True,
+    ),
     crate_name = "quality_result",
+    crate_root = "src/lib.rs",
     edition = "2021",
-    deps = [
+    deps = crate_deps(
+        ["blake3"],
+        package_name = "quality/quality_result",
+    ) + [
         "//quality:result_proto_rs",
-        "@crates//:blake3",
-        # The `prost::Message` trait must come from the same crate that
-        # the generated code implements it against: the toolchain-vendored
-        # prost, not a second copy from crate_universe.
         "@rules_rust_prost//private/3rdparty/crates:prost",
     ],
 )
@@ -24,8 +30,17 @@ dx_rust_library(
 dx_rust_test(
     name = "quality_result_test",
     size = "small",
+    aliases = aliases(
+        package_name = "quality/quality_result",
+        normal = True,
+        normal_dev = True,
+    ),
     crate = ":quality_result",
     edition = "2021",
+    deps = crate_deps(
+        ["blake3"],
+        package_name = "quality/quality_result",
+    ),
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy

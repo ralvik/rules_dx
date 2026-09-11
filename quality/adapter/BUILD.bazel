@@ -1,3 +1,5 @@
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+
 """M04 real-tool adapter crate: check/fix execution and output parsing."""
 
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
@@ -15,20 +17,39 @@ dx_rust_library(
         "src/parsers.rs",
         "src/suggest.rs",
     ],
+    aliases = aliases(
+        package_name = "quality/quality_adapter",
+        normal = True,
+    ),
     crate_name = "quality_adapter",
+    crate_root = "src/lib.rs",
     edition = "2021",
-    deps = [
-        "//quality/result:quality_result",
-        "@crates//:serde",
-        "@crates//:serde_json",
-    ],
+    deps = crate_deps(
+        [
+            "serde",
+            "serde_json",
+        ],
+        package_name = "quality/quality_adapter",
+    ) + ["//quality/result:quality_result"],
 )
 
 dx_rust_test(
     name = "quality_adapter_test",
     size = "small",
+    aliases = aliases(
+        package_name = "quality/quality_adapter",
+        normal = True,
+        normal_dev = True,
+    ),
     crate = ":quality_adapter",
     edition = "2021",
+    deps = crate_deps(
+        [
+            "serde",
+            "serde_json",
+        ],
+        package_name = "quality/quality_adapter",
+    ),
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy

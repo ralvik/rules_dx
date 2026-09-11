@@ -266,7 +266,7 @@ pub struct GateVerdict {
 }
 
 fn is_covered_language(path: &str) -> bool {
-	path.ends_with(".rs") || path.ends_with(".go")
+    path.ends_with(".rs") || path.ends_with(".go")
 }
 
 fn is_starlark(path: &str) -> bool {

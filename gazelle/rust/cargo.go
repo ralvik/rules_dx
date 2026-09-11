@@ -8,10 +8,23 @@ import (
 )
 
 type cargoTarget struct {
-	kind    string
-	name    string
-	path    string
-	harness bool
+	kind string
+	// name is the Bazel target name, disambiguated when a library shares
+	// its crate name with a binary (see disambiguateLibBin).
+	name string
+	// crateName is the Rust crate name; empty means name.
+	crateName string
+	path      string
+	harness   bool
+}
+
+// crate reports the Rust crate name, which only differs from the Bazel
+// target name after lib/bin disambiguation.
+func (t cargoTarget) crate() string {
+	if t.crateName != "" {
+		return t.crateName
+	}
+	return t.name
 }
 
 type cargoManifest struct {
@@ -57,7 +70,32 @@ func (m *cargoManifest) withImplicitTargets(files map[string]bool, packagePath s
 		}
 		m.targets = append(m.targets, cargoTarget{kind: testKind, name: IntegrationTestName(name), path: targetPath, harness: true})
 	}
+	m.disambiguateLibBin()
 	return m.validateTargetClaims()
+}
+
+// disambiguateLibBin renames a library target sharing its name with a binary
+// target to `<name>_lib`, preserving the Rust crate name. This converges
+// generated rules with the hand-written convention (library `X_lib`,
+// binary `X`) so same-kind merge takes over the handwritten target instead
+// of failing on a cross-kind claim. Residual collisions still fail loudly
+// in validateTargetClaims.
+func (m *cargoManifest) disambiguateLibBin() {
+	bins := make(map[string]bool)
+	for _, target := range m.targets {
+		if target.kind == binaryKind {
+			bins[target.name] = true
+		}
+	}
+	for i := range m.targets {
+		target := &m.targets[i]
+		if target.kind == libraryKind && bins[target.name] {
+			if target.crateName == "" {
+				target.crateName = target.name
+			}
+			target.name += "_lib"
+		}
+	}
 }
 
 func (m *cargoManifest) validateTargetClaims() error {
@@ -78,6 +116,9 @@ func (m *cargoManifest) validateTargetClaims() error {
 
 type cargoDependency struct {
 	external bool
+	// label is the original Cargo.toml spelling (dashes preserved) for
+	// crate_universe lookup; the map key is the normalized Rust ident.
+	label string
 }
 
 func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, error) {
@@ -160,7 +201,7 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 			}
 		case "dependencies", "dev-dependencies":
 			name := strings.ReplaceAll(key, "-", "_")
-			dependency := cargoDependency{external: !strings.Contains(value, "path")}
+			dependency := cargoDependency{external: !strings.Contains(value, "path"), label: key}
 			if section == "dependencies" {
 				manifest.normalDeps[name] = dependency
 			} else {
@@ -195,6 +236,7 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 		}
 		target.name = normalized
 	}
+	manifest.disambiguateLibBin()
 	if err := manifest.validateTargetClaims(); err != nil {
 		return nil, fmt.Errorf("rust: %s: %v", manifestPath, err)
 	}

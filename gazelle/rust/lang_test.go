@@ -13,6 +13,7 @@ import (
 	"github.com/bazelbuild/bazel-gazelle/config"
 	"github.com/bazelbuild/bazel-gazelle/language"
 	"github.com/bazelbuild/bazel-gazelle/resolve"
+	bzl "github.com/bazelbuild/buildtools/build"
 )
 
 func writeFixture(t *testing.T, root, name, content string) {
@@ -387,6 +388,45 @@ func TestGenerateCargoCustomHarness(t *testing.T) {
 	}
 }
 
+func TestGenerateCargoLibBinTakeover(t *testing.T) {
+	root := t.TempDir()
+	writeFixture(t, root, "Cargo.toml", "[package]\nname = \"demo\"\n[lib]\nname = \"demo\"\npath = \"src/lib.rs\"\n[[bin]]\nname = \"demo\"\npath = \"src/main.rs\"\n")
+	writeFixture(t, root, "src/lib.rs", "#[test]\nfn probe() {}\n")
+	writeFixture(t, root, "src/main.rs", "fn main() {}\n#[test]\nfn bint() {}\n")
+	l := &rustLang{}
+	result := l.GenerateRules(language.GenerateArgs{Config: &config.Config{RepoRoot: root}, Dir: root, RegularFiles: []string{"Cargo.toml"}})
+	if len(l.errors) != 0 {
+		t.Fatalf("generation errors = %v", l.errors)
+	}
+	var names []string
+	for _, r := range result.Gen {
+		names = append(names, r.Kind()+":"+r.Name())
+	}
+	want := []string{libraryKind + ":demo_lib", testKind + ":demo_test", binaryKind + ":demo", testKind + ":demo_bin_test"}
+	if strings.Join(names, ",") != strings.Join(want, ",") {
+		t.Fatalf("generated = %v, want %v", names, want)
+	}
+	if got := result.Gen[0].AttrString("crate_name"); got != "demo" {
+		t.Errorf("lib crate_name = %q, want demo", got)
+	}
+	if got := result.Gen[1].AttrString("crate"); got != ":demo_lib" {
+		t.Errorf("lib test crate = %q, want :demo_lib", got)
+	}
+	if got := result.Gen[3].AttrString("crate"); got != ":demo" {
+		t.Errorf("bin test crate = %q, want :demo", got)
+	}
+	// The binary carries its sibling lib through imports for Resolve.
+	binImports, ok := result.Imports[2].(targetImports)
+	if len(result.Imports) != 4 || !ok || binImports.siblingLib != "demo_lib" {
+		t.Fatalf("bin imports = %+v, want sibling demo_lib", result.Imports)
+	}
+	bin := rule.NewRule(binaryKind, "demo")
+	l.Resolve(resolverConfig(t, nil), resolverIndex(l), nil, bin, binImports, label.New("", "pkg", "demo"))
+	if got := strings.Join(bin.AttrStrings("deps"), ","); got != ":demo_lib" {
+		t.Errorf("bin deps = %q, want :demo_lib", got)
+	}
+}
+
 func TestSourceFilesBoundaries(t *testing.T) {
 	root := t.TempDir()
 	writeFixture(t, root, "src/lib.rs", "")
@@ -479,19 +519,20 @@ func TestCargoImportValidationAndExpressions(t *testing.T) {
 		devDeps:     map[string]cargoDependency{"dev": {external: true}, "local_dev": {}},
 	}
 	imports := targetImports{production: []string{"normal", "local"}, test: []string{"dev", "local_dev"}}
-	if err := validateCargoImports(manifest, libraryKind, imports); err != nil {
+	cfg := &config.Config{}
+	if err := validateCargoImports(cfg, manifest, libraryKind, imports); err != nil {
 		t.Fatal(err)
 	}
-	if err := validateCargoImports(manifest, libraryKind, targetImports{production: []string{"unknown"}}); err == nil {
+	if err := validateCargoImports(cfg, manifest, libraryKind, targetImports{production: []string{"unknown"}}); err == nil {
 		t.Error("unknown production import accepted")
 	}
-	if err := validateCargoImports(manifest, testKind, targetImports{production: []string{"dev"}}); err != nil {
+	if err := validateCargoImports(cfg, manifest, testKind, targetImports{production: []string{"dev"}}); err != nil {
 		t.Errorf("test dev import rejected: %v", err)
 	}
-	if err := validateCargoImports(manifest, testKind, targetImports{test: []string{"unknown"}}); err == nil {
+	if err := validateCargoImports(cfg, manifest, testKind, targetImports{test: []string{"unknown"}}); err == nil {
 		t.Error("unknown test import accepted")
 	}
-	local := localCargoImports(manifest, imports, true)
+	local := localCargoImports(cfg, manifest, imports, true)
 	if strings.Join(local.production, ",") != "local" || strings.Join(local.test, ",") != "local_dev" {
 		t.Errorf("local imports = %+v", local)
 	}
@@ -504,15 +545,234 @@ func TestCargoImportValidationAndExpressions(t *testing.T) {
 	if call.Merge(nil) == nil || (crateDepsCall{names: []string{"normal"}, packageName: "pkg/app"}).Merge(nil) == nil {
 		t.Error("generated expressions did not merge")
 	}
-	withoutDev := localCargoImports(manifest, imports, false)
+	withoutDev := localCargoImports(cfg, manifest, imports, false)
 	if len(withoutDev.test) != 0 {
 		t.Errorf("production local imports include dev: %+v", withoutDev)
 	}
 	empty := rule.NewRule(libraryKind, "empty")
 	setCargoAttrs(empty, "pkg/app", manifest, targetImports{}, false)
-	if empty.Attr("deps") != nil || empty.Attr("aliases") == nil {
-		t.Errorf("empty Cargo attrs = deps:%v aliases:%v", empty.Attr("deps"), empty.Attr("aliases"))
+	if empty.Attr("deps") == nil || empty.Attr("aliases") == nil {
+		t.Errorf("all-declared Cargo attrs = deps:%v aliases:%v", empty.Attr("deps"), empty.Attr("aliases"))
 	}
+	dashedManifest := &cargoManifest{
+		packageName: "app",
+		normalDeps:  map[string]cargoDependency{"quick_xml": {external: true, label: "quick-xml"}, "serde_json": {external: true, label: "serde_json"}},
+		devDeps:     map[string]cargoDependency{},
+	}
+	dashed := rule.NewRule(libraryKind, "dashed")
+	setCargoAttrs(dashed, "pkg/app", dashedManifest, targetImports{}, false)
+	depsExpr := dashed.Attr("deps")
+	depsCall, ok := depsExpr.(*bzl.CallExpr)
+	if !ok {
+		t.Fatalf("dashed deps attr = %T, want crate_deps call", depsExpr)
+	} else {
+		var got []string
+		if len(depsCall.List) > 0 {
+			if list, ok := depsCall.List[0].(*bzl.ListExpr); ok {
+				for _, item := range list.List {
+					if s, ok := item.(*bzl.StringExpr); ok {
+						got = append(got, s.Value)
+					}
+				}
+			}
+		}
+		if strings.Join(got, ",") != "quick-xml,serde_json" {
+			t.Errorf("dashed externals = %q, want quick-xml,serde_json", strings.Join(got, ","))
+		}
+	}
+}
+
+func TestCargoImportResolveOverrides(t *testing.T) {
+	manifest := &cargoManifest{
+		packageName: "demo",
+		normalDeps:  map[string]cargoDependency{},
+		devDeps:     map[string]cargoDependency{},
+	}
+	c := resolverConfig(t, []rule.Directive{{Key: "resolve", Value: "rust mapped //pkg:target"}})
+	mapped := targetImports{production: []string{"mapped"}}
+	if err := validateCargoImports(c, manifest, libraryKind, mapped); err != nil {
+		t.Errorf("mapped import rejected: %v", err)
+	}
+	if err := validateCargoImports(c, manifest, libraryKind, targetImports{production: []string{"mapped", "unknown"}}); err == nil || !strings.Contains(err.Error(), `"unknown"`) {
+		t.Errorf("unmapped import not reported: %v", err)
+	}
+	local := localCargoImports(c, manifest, mapped, false)
+	if strings.Join(local.production, ",") != "mapped" {
+		t.Errorf("mapped local imports = %+v, want [mapped]", local)
+	}
+	// An ignore on the same name conflicts with the exact mapping.
+	c.Exts[languageName] = &rustConfig{ignores: []*ignoreEntry{{value: "mapped"}}}
+	if err := validateCargoImports(c, manifest, libraryKind, mapped); err == nil || !strings.Contains(err.Error(), "both") {
+		t.Errorf("mapping/ignore conflict not reported: %v", err)
+	}
+}
+
+func TestResolvePreservesCrateDeps(t *testing.T) {
+	l := &rustLang{}
+	resolveSibling := func(r *rule.Rule) {
+		l.Resolve(resolverConfig(t, nil), resolverIndex(l), nil, r,
+			targetImports{siblingLib: "core"}, label.New("", "pkg", "tool"))
+	}
+	// No generated deps: plain label list.
+	fresh := rule.NewRule(binaryKind, "tool")
+	resolveSibling(fresh)
+	if got := strings.Join(fresh.AttrStrings("deps"), ","); got != ":core" {
+		t.Errorf("fresh deps = %q, want :core", got)
+	}
+	// Plain label list: union, sorted.
+	listed := rule.NewRule(binaryKind, "tool")
+	listed.SetAttr("deps", []string{":other"})
+	resolveSibling(listed)
+	if got := strings.Join(listed.AttrStrings("deps"), ","); got != ":core,:other" {
+		t.Errorf("listed deps = %q, want :core,:other", got)
+	}
+	// Generated crate_deps call: concatenated, never replaced.
+	called := rule.NewRule(binaryKind, "tool")
+	called.SetAttr("deps", crateDepsCall{names: []string{"serde_json"}, packageName: "pkg"})
+	resolveSibling(called)
+	concat, ok := called.Attr("deps").(*bzl.BinaryExpr)
+	if !ok || concat.Op != "+" {
+		t.Fatalf("concat deps = %#v, want crate_deps + labels", called.Attr("deps"))
+	}
+	if _, ok := concat.X.(*bzl.CallExpr); !ok {
+		t.Errorf("concat base = %T, want crate_deps call", concat.X)
+	}
+	var extra []string
+	if list, ok := concat.Y.(*bzl.ListExpr); ok {
+		for _, item := range list.List {
+			if s, ok := item.(*bzl.StringExpr); ok {
+				extra = append(extra, s.Value)
+			}
+		}
+	}
+	if strings.Join(extra, ",") != ":core" {
+		t.Errorf("concat extra = %q, want :core", strings.Join(extra, ","))
+	}
+	merged := (depsConcatExpr{base: concat.X, extra: []string{":core"}}).Merge(nil)
+	if merged == nil {
+		t.Error("concat merge returned nil")
+	}
+}
+
+func TestCrateUniversePackage(t *testing.T) {
+	for _, tc := range []struct {
+		path, pkg, want string
+	}{
+		{"dx/output", "dx_output", "dx/dx_output"},
+		{"rust/hello", "hello", "rust/hello"},
+		{"crates/app", "cargo-app", "crates/cargo-app"},
+		{"root", "root", "root"},
+		{"dx/output", "", "dx/output"},
+	} {
+		var manifest *cargoManifest
+		if tc.pkg != "" || tc.path == "dx/output" {
+			manifest = &cargoManifest{packageName: tc.pkg}
+		}
+		if got := crateUniversePackage(tc.path, manifest); got != tc.want {
+			t.Errorf("crateUniversePackage(%q, %q) = %q, want %q", tc.path, tc.pkg, got, tc.want)
+		}
+	}
+	if got := crateUniversePackage("dx/output", nil); got != "dx/output" {
+		t.Errorf("nil manifest = %q, want path fallback", got)
+	}
+}
+
+func strListExpr(values ...string) *bzl.ListExpr {
+	list := make([]bzl.Expr, len(values))
+	for i, v := range values {
+		list[i] = &bzl.StringExpr{Value: v}
+	}
+	return &bzl.ListExpr{List: list}
+}
+
+func crateDepsFileExpr(names []string, packageName string, tail ...string) bzl.Expr {
+	call := &bzl.CallExpr{X: &bzl.Ident{Name: "crate_deps"}, List: []bzl.Expr{
+		strListExpr(names...),
+		&bzl.AssignExpr{LHS: &bzl.Ident{Name: "package_name"}, Op: "=", RHS: &bzl.StringExpr{Value: packageName}},
+	}}
+	if len(tail) == 0 {
+		return call
+	}
+	return &bzl.BinaryExpr{X: call, Op: "+", Y: strListExpr(tail...)}
+}
+
+func tailStrings(t *testing.T, e bzl.Expr) []string {
+	t.Helper()
+	bin, ok := e.(*bzl.BinaryExpr)
+	if !ok || bin.Op != "+" {
+		t.Fatalf("merged deps is %T, want + concat", e)
+	}
+	list, ok := bin.Y.(*bzl.ListExpr)
+	if !ok {
+		t.Fatalf("concat tail is %T, want list", bin.Y)
+	}
+	var out []string
+	for _, item := range list.List {
+		s, ok := item.(*bzl.StringExpr)
+		if !ok {
+			t.Fatalf("tail item is %T, want string", item)
+		}
+		out = append(out, s.Value)
+	}
+	return out
+}
+
+func TestDepsMergePreservesHandLabels(t *testing.T) {
+	src := rule.NewRule("dx_rust_binary", "env")
+	src.SetAttr("deps", depsConcatExpr{
+		base:  crateDepsCall{names: []string{"blake3", "serde", "serde_json"}, packageName: "dx/dx_env"}.BzlExpr(),
+		extra: []string{":dx_env"},
+	})
+	dst := rule.NewRule("dx_rust_binary", "env")
+	dst.SetAttr("deps", crateDepsFileExpr(
+		[]string{"blake3", "serde", "serde_json"}, "dx/dx_env",
+		":dx_env", "@rules_rust//tools/runfiles:runfiles",
+	))
+	rule.MergeRules(src, dst, map[string]bool{"deps": true}, "BUILD.bazel")
+	got := tailStrings(t, dst.Attr("deps"))
+	want := []string{":dx_env", "@rules_rust//tools/runfiles:runfiles"}
+	if strings.Join(got, "\x00") != strings.Join(want, "\x00") {
+		t.Errorf("merged tail = %q, want %q", got, want)
+	}
+	// Idempotency: merging the fresh value into its own output is stable.
+	again := rule.NewRule("dx_rust_binary", "env")
+	again.SetAttr("deps", dst.Attr("deps"))
+	rule.MergeRules(src, again, map[string]bool{"deps": true}, "BUILD.bazel")
+	if second := tailStrings(t, again.Attr("deps")); strings.Join(second, "\x00") != strings.Join(want, "\x00") {
+		t.Errorf("second merge tail = %q, want %q (not idempotent)", second, want)
+	}
+}
+
+func TestDepsMergeKeepsStaleHandLabels(t *testing.T) {
+	src := depsConcatExpr{
+		base:  crateDepsCall{names: []string{"serde_json"}, packageName: "dx/dx_a"}.BzlExpr(),
+		extra: []string{":dx_a"},
+	}
+	merged := src.Merge(crateDepsFileExpr([]string{"serde_json"}, "dx/dx_a", ":dx_a", ":old_lib"))
+	if got := tailStrings(t, merged); strings.Join(got, "\x00") != ":dx_a\x00:old_lib" {
+		t.Errorf("merged tail = %q, want stale :old_lib preserved", got)
+	}
+}
+
+func TestCrateDepsCallMerge(t *testing.T) {
+	call := crateDepsCall{names: []string{"serde_json"}, packageName: "dx/dx_a"}
+	if merged := call.Merge(nil); !isBareCall(merged) {
+		t.Errorf("nil merge is %T, want bare *bzl.CallExpr", merged)
+	}
+	merged := call.Merge(strListExpr(":hand", "//env:marker_proto_rs"))
+	if got := tailStrings(t, merged); strings.Join(got, "\x00") != "//env:marker_proto_rs\x00:hand" {
+		t.Errorf("merged tail = %q, want hand labels preserved", got)
+	}
+	// Crate names and package_name metadata must never leak into the tail.
+	merged = call.Merge(crateDepsFileExpr([]string{"serde_json"}, "dx/dx_a"))
+	if _, ok := merged.(*bzl.CallExpr); !ok {
+		t.Errorf("fully managed merge is %T, want bare *bzl.CallExpr", merged)
+	}
+}
+
+func isBareCall(e bzl.Expr) bool {
+	_, ok := e.(*bzl.CallExpr)
+	return ok
 }
 
 func TestLangCoverageClosure(t *testing.T) {
@@ -523,7 +783,7 @@ func TestLangCoverageClosure(t *testing.T) {
 		normalDeps:  map[string]cargoDependency{"shared": {}},
 		devDeps:     map[string]cargoDependency{},
 	}
-	local := localCargoImports(manifest, targetImports{test: []string{"shared"}}, true)
+	local := localCargoImports(&config.Config{}, manifest, targetImports{test: []string{"shared"}}, true)
 	if strings.Join(local.test, ",") != "shared" {
 		t.Errorf("local test imports = %+v, want [shared]", local)
 	}
@@ -532,6 +792,12 @@ func TestLangCoverageClosure(t *testing.T) {
 	imports := importsFor(tree)
 	if strings.Join(imports.production, ",") != "serde" {
 		t.Errorf("extern imports = %+v, want [serde]", imports)
+	}
+	// An `as` alias is the name later paths use, so it is the import seen.
+	aliased := map[string]*FileFacts{"src/lib.rs": {Externs: []ExternCrate{{Name: "result_proto", As: "proto"}}}}
+	aliasedImports := importsFor(aliased)
+	if strings.Join(aliasedImports.production, ",") != "proto" {
+		t.Errorf("aliased extern imports = %+v, want [proto]", aliasedImports)
 	}
 	// Test-kind rules resolve both production and test imports.
 	l := &rustLang{}

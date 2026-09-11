@@ -1,3 +1,5 @@
+load("@crates//:crates.bzl", "aliases")
+
 """M04 WP3 repository-owned Markdown link/structure checker crate."""
 
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
@@ -9,22 +11,26 @@ package(default_visibility = ["//visibility:public"])
 dx_rust_library(
     name = "quality_markdown_lib",
     srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "quality/quality_markdown",
+        normal = True,
+    ),
     crate_name = "quality_markdown",
+    crate_root = "src/lib.rs",
     edition = "2021",
 )
 
 dx_rust_binary(
     name = "quality_markdown",
     srcs = ["src/main.rs"],
+    aliases = aliases(
+        package_name = "quality/quality_markdown",
+        normal = True,
+    ),
+    crate_name = "quality_markdown",
+    crate_root = "src/main.rs",
     edition = "2021",
     deps = [":quality_markdown_lib"],
-)
-
-dx_rust_test(
-    name = "quality_markdown_test",
-    size = "small",
-    crate = ":quality_markdown_lib",
-    edition = "2021",
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy
@@ -55,4 +61,14 @@ real_source_target(
     name = "corpus",
     starlark_srcs = ["BUILD.bazel"],
     toml_srcs = ["Cargo.toml"],
+)
+
+dx_rust_test(
+    name = "quality_markdown_test",
+    aliases = aliases(
+        package_name = "quality/quality_markdown",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":quality_markdown_lib",
 )

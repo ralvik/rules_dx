@@ -1,3 +1,5 @@
+load("@crates//:crates.bzl", "aliases")
+
 """M03 WP3 direct-Bazel per-result threshold evaluator."""
 
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
@@ -9,33 +11,30 @@ package(default_visibility = ["//visibility:public"])
 dx_rust_library(
     name = "quality_evaluator_lib",
     srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "quality/quality_evaluator",
+        normal = True,
+    ),
     crate_name = "quality_evaluator",
+    crate_root = "src/lib.rs",
     edition = "2021",
-    deps = [
-        "//quality:result_proto_rs",
-        "//quality/result:quality_result",
-        # The `prost` types must come from the same crate that the
-        # generated code implements them against: the toolchain-vendored
-        # prost, not a second copy from crate_universe.
-        "@rules_rust_prost//private/3rdparty/crates:prost",
-    ],
+    deps = ["//quality/result:quality_result"],
 )
 
 dx_rust_binary(
     name = "quality_evaluator",
     srcs = ["src/main.rs"],
+    aliases = aliases(
+        package_name = "quality/quality_evaluator",
+        normal = True,
+    ),
+    crate_name = "quality_evaluator",
+    crate_root = "src/main.rs",
     edition = "2021",
     deps = [
         ":quality_evaluator_lib",
         "//quality/result:quality_result",
     ],
-)
-
-dx_rust_test(
-    name = "quality_evaluator_test",
-    size = "small",
-    crate = ":quality_evaluator_lib",
-    edition = "2021",
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy
@@ -66,4 +65,15 @@ real_source_target(
     name = "corpus",
     starlark_srcs = ["BUILD.bazel"],
     toml_srcs = ["Cargo.toml"],
+)
+
+dx_rust_test(
+    name = "quality_evaluator_test",
+    aliases = aliases(
+        package_name = "quality/quality_evaluator",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":quality_evaluator_lib",
+    deps = ["//quality/result:quality_result"],
 )

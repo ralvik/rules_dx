@@ -1,3 +1,5 @@
+load("@crates//:crates.bzl", "aliases")
+
 """M03 WP2b deterministic shared pipeline runner over synthetic adapters."""
 
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
@@ -12,34 +14,33 @@ dx_rust_library(
         "src/lib.rs",
         "src/real.rs",
     ],
+    aliases = aliases(
+        package_name = "quality/quality_runner",
+        normal = True,
+    ),
     crate_name = "quality_runner",
+    crate_root = "src/lib.rs",
     edition = "2021",
     deps = [
-        "//quality:result_proto_rs",
         "//quality/adapter:quality_adapter",
         "//quality/result:quality_result",
-        # The `prost` types must come from the same crate that the
-        # generated code implements them against: the toolchain-vendored
-        # prost, not a second copy from crate_universe.
-        "@rules_rust_prost//private/3rdparty/crates:prost",
     ],
 )
 
 dx_rust_binary(
     name = "quality_runner",
     srcs = ["src/main.rs"],
+    aliases = aliases(
+        package_name = "quality/quality_runner",
+        normal = True,
+    ),
+    crate_name = "quality_runner",
+    crate_root = "src/main.rs",
     edition = "2021",
     deps = [
         ":quality_runner_lib",
         "//quality/result:quality_result",
     ],
-)
-
-dx_rust_test(
-    name = "quality_runner_test",
-    size = "small",
-    crate = ":quality_runner_lib",
-    edition = "2021",
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy
@@ -70,4 +71,15 @@ real_source_target(
     name = "corpus",
     starlark_srcs = ["BUILD.bazel"],
     toml_srcs = ["Cargo.toml"],
+)
+
+dx_rust_test(
+    name = "quality_runner_test",
+    aliases = aliases(
+        package_name = "quality/quality_runner",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":quality_runner_lib",
+    deps = ["//quality/result:quality_result"],
 )

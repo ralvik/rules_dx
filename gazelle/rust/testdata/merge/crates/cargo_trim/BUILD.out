@@ -5,7 +5,7 @@ dx_rust_library(
     name = "trim",
     srcs = ["src/lib.rs"],
     aliases = aliases(
-        package_name = "crates/cargo_trim",
+        package_name = "crates/trim",
         normal = True,
     ),
     crate_name = "trim",

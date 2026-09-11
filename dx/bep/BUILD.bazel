@@ -1,3 +1,5 @@
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+
 """M06 WP2 streaming BEP collector for the `dx` CLI."""
 
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
@@ -9,16 +11,33 @@ package(default_visibility = ["//visibility:public"])
 dx_rust_library(
     name = "dx_bep",
     srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "dx/dx_bep",
+        normal = True,
+    ),
     crate_name = "dx_bep",
+    crate_root = "src/lib.rs",
     edition = "2021",
-    deps = ["@crates//:serde_json"],
+    deps = crate_deps(
+        ["serde_json"],
+        package_name = "dx/dx_bep",
+    ),
 )
 
 dx_rust_test(
     name = "dx_bep_test",
     size = "small",
+    aliases = aliases(
+        package_name = "dx/dx_bep",
+        normal = True,
+        normal_dev = True,
+    ),
     crate = ":dx_bep",
     edition = "2021",
+    deps = crate_deps(
+        ["serde_json"],
+        package_name = "dx/dx_bep",
+    ),
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy

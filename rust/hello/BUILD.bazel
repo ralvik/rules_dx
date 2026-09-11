@@ -1,3 +1,5 @@
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+
 """M00 seed Rust binary, library, and tests; M02 consumer of dx_rust_* wrappers."""
 
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
@@ -11,26 +13,33 @@ package(default_visibility = ["//visibility:public"])
 dx_rust_library(
     name = "hello_lib",
     srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "rust/hello",
+        normal = True,
+    ),
     crate_name = "hello",
+    crate_root = "src/lib.rs",
     edition = "2021",
-    deps = ["@crates//:anyhow"],
+    deps = crate_deps(
+        ["anyhow"],
+        package_name = "rust/hello",
+    ),
 )
 
 dx_rust_binary(
     name = "hello",
     srcs = ["src/main.rs"],
+    aliases = aliases(
+        package_name = "rust/hello",
+        normal = True,
+    ),
+    crate_name = "hello",
+    crate_root = "src/main.rs",
     edition = "2021",
-    deps = [
-        ":hello_lib",
-        "@crates//:anyhow",
-    ],
-)
-
-dx_rust_test(
-    name = "hello_test",
-    size = "small",
-    crate = ":hello_lib",
-    edition = "2021",
+    deps = crate_deps(
+        ["anyhow"],
+        package_name = "rust/hello",
+    ) + [":hello_lib"],
 )
 
 # Authoritative quality identities (M02): rustfmt and Clippy resolve from
@@ -107,4 +116,18 @@ real_source_target(
     name = "corpus",
     starlark_srcs = ["BUILD.bazel"],
     toml_srcs = ["Cargo.toml"],
+)
+
+dx_rust_test(
+    name = "hello_test",
+    aliases = aliases(
+        package_name = "rust/hello",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":hello_lib",
+    deps = crate_deps(
+        ["anyhow"],
+        package_name = "rust/hello",
+    ),
 )

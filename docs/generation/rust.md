@@ -33,10 +33,16 @@ ambiguous, or conflicting declarations fail rather than falling back to source i
 The initial ordinary-target mapping parses checked-in Cargo declarations in the first-party
 extension, resolves path crates through Gazelle's local rule index, and emits exact imported external
 names through the public `@crates//:crates.bzl` `crate_deps` and `aliases` macros. The macro
-`package_name` is the Bazel package path recorded by crate_universe, not Cargo's package name. The
+`package_name` is the crate_universe map key for the manifest: the parent Bazel directory joined
+with the Cargo package name (for example `dx/dx_env` for the `dx_env` package in `//dx/env`), not
+the Bazel package path alone. The
 extension never reads `Cargo.Bazel.lock`, `cargo-bazel.json`, or crate_universe's private dependency
 maps. Production imports must be declared in `[dependencies]`; test imports may additionally use
 `[dev-dependencies]`.
+
+The `crate_deps` call and `aliases` heads are fully managed and rewritten on every generate.
+Hand-maintained labels in a plain-list `+` tail (for example toolchain labels no import resolves)
+are preserved across regenerations and never removed by generate; delete them manually when stale.
 
 Cargo behavior is generated only through a stable, fixture-proven public `rules_rs` or patched
 `rules_rust` mapping. The accepted target kinds are ordinary libraries, binaries, tests, proc macros,
