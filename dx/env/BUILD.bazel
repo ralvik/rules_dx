@@ -2,6 +2,7 @@
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
 
@@ -114,6 +115,19 @@ rust_clippy_test(
 )
 
 exports_files(["Cargo.toml"])
+
+# End-to-end bootstrap proof (gazelle sh_test precedent): runs the real
+# `env` binary against a spaced path under Bazel runfiles. Tagged
+# `no-coverage`: process-spawning tests stay out of the coverage
+# denominator per the repo coverage preset. No corpus entry: shell
+# sources have no `real_source_target` class, like `env/doctor.sh`.
+sh_test(
+    name = "bootstrap_test",
+    srcs = ["bootstrap_test.sh"],
+    args = ["$(rootpath :env)"],
+    data = [":env"],
+    tags = ["no-coverage"],
+)
 
 # Repository corpus (M05 WP1): crate manifest and build file owned for
 # direct-Bazel dogfood under the canonical real_fixture_policy.
