@@ -1,0 +1,17 @@
+"""Experimental minimal Python wrappers (M14, ADR 0010)."""
+
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "defs.bzl",
+])
+
+# Repository corpus (M05 WP1): wrapper Starlark owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. Python sources stay
+# dx-owned (M14 wrappers), never corpus sources.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
+)

@@ -10,9 +10,9 @@ module(
 bazel_dep(name = "rules_rust", version = "0.74.0")
 bazel_dep(name = "rules_cc", version = "0.2.22")
 
-# M04 WP1: direct dep for the artifact-metadata generator. 1.7.0 is the
-# MVS-selected version already in the executed graph (via rules_cc).
-bazel_dep(name = "rules_python", version = "1.7.0")
+# M04 WP1: direct dep for the artifact-metadata generator. 1.9.0 is the
+# MVS-selected version in the executed graph (via aspect_rules_py 2.x).
+bazel_dep(name = "rules_python", version = "1.9.0")
 
 # M09 WP1: Go toolchain for the first-party Rust Gazelle extension
 # (ADR 0015). Pinned from the Bazel Central Registry; versions verified
@@ -37,9 +37,19 @@ bazel_dep(name = "platforms", version = "1.1.0")
 # where they overlap, so MVS keeps the executed tree). `protobuf`/`protoc`
 # itself stays transitive via rules_proto/rules_rust_prost (it resolves above
 # their declared minimums, so a root pin would only add a direct-dep warning).
-bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "bazel_skylib", version = "1.9.0")
 bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "rules_rust_prost", version = "0.74.0")
+
+# M14 WP1: pinned Python foundation (ADR 0010). Exact 2.x prerelease is an
+# explicit exception to ADR 0008 until a compatible stable 2.x exists.
+bazel_dep(name = "aspect_rules_py", version = "2.0.0-alpha.6")
+
+python_interpreters = use_extension("@aspect_rules_py//py:extensions.bzl", "python_interpreters")
+python_interpreters.toolchain(python_version = "3.12")
+use_repo(python_interpreters, "python_interpreters")
+
+register_toolchains("@python_interpreters//:all")
 
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
