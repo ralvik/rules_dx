@@ -1,5 +1,7 @@
-"""Bootstrap environment registry (M11 WP1): tool records plus fixtures and tests."""
+"""Bootstrap environment registry (M11 WP1-WP2): tool records, staged trees, and fixtures."""
 
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//quality:fixtures.bzl", "real_source_target")
 load(":defs.bzl", "environment_config", "environment_tool", "environment_tree")
@@ -53,6 +55,72 @@ environment_tree(
 )
 
 env_tree_analysis_tests(name = "env_tree_analysis")
+
+# Frozen marker schema (M11 WP2): field numbers are the compatibility
+# surface; see `marker.proto` and the managed-state doc.
+proto_library(
+    name = "marker_proto",
+    srcs = ["marker.proto"],
+)
+
+rust_prost_library(
+    name = "marker_proto_rs",
+    proto = ":marker_proto",
+)
+
+# Default runnable environment (M11 WP2-WP3): the curated doctor probe plus
+# the module-matched `dx` CLI and the user-facing quality binaries, all
+# contributed through the same public `environment_tool` path.
+sh_binary(
+    name = "doctor",
+    srcs = ["doctor.sh"],
+)
+
+environment_tool(
+    name = "doctor_tool",
+    bin_name = "doctor",
+    executable = ":doctor",
+)
+
+environment_tool(
+    name = "dx_tool",
+    bin_name = "dx",
+    executable = "//dx/cli:dx",
+)
+
+environment_tool(
+    name = "quality_runner_tool",
+    bin_name = "quality_runner",
+    executable = "//quality/runner:quality_runner",
+)
+
+environment_tool(
+    name = "quality_evaluator_tool",
+    bin_name = "quality_evaluator",
+    executable = "//quality/evaluator:quality_evaluator",
+)
+
+environment_tool(
+    name = "quality_markdown_tool",
+    bin_name = "quality_markdown",
+    executable = "//quality/markdown:quality_markdown",
+)
+
+environment_config(
+    name = "default_config",
+    tools = [
+        ":doctor_tool",
+        ":dx_tool",
+        ":quality_evaluator_tool",
+        ":quality_markdown_tool",
+        ":quality_runner_tool",
+    ],
+)
+
+environment_tree(
+    name = "default_tree",
+    config = ":default_config",
+)
 
 test_suite(
     name = "all",

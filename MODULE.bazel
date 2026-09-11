@@ -76,6 +76,7 @@ crate.from_cargo(
         "//dx/bep:Cargo.toml",
         "//dx/cli:Cargo.toml",
         "//dx/diff:Cargo.toml",
+        "//dx/env:Cargo.toml",
     ],
 )
 use_repo(crate, "crates")

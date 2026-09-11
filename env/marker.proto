@@ -1,0 +1,46 @@
+// Managed environment marker schema (M11 WP2 freeze).
+//
+// Binary contract between the staged `environment_tree` outputs and the
+// `//dx:env` bootstrap installer. The marker is the installed tree's proof
+// of provenance: it binds the exact installed tool set to the installer
+// that wrote it, so replacement can tell managed state from foreign state
+// and no-op when the candidate set is already installed.
+//
+// Field numbers below are frozen compatibility surface. The installer
+// refuses markers whose schema version it does not understand; changing
+// the identity algorithm is a schema-version bump, never silent drift.
+// Contract: `docs/environments/managed-state.md`.
+
+syntax = "proto3";
+
+package dx.env.v1;
+
+// One installed tool: Bazel-built origin plus the host command names it
+// was installed under. Sorted by `(bin_name, owner)` before encoding so
+// the identity is independent of configuration order.
+message ToolEntry {
+  string bin_name = 1;
+  // Configured producer target label (internal identity).
+  string owner = 2;
+  // Host names materialized as links, in staged order.
+  repeated string host_names = 3;
+  reserved 4 to 7;
+}
+
+// Canonical installed-set description. The identity digest is BLAKE3-256
+// over the deterministic encoding of this message. There is no digest
+// algorithm enum; changing the algorithm is a schema-version bump.
+message EnvIdentity {
+  uint32 schema_version = 1;
+  repeated ToolEntry tools = 2;
+  reserved 3 to 7;
+}
+
+// Proof of provenance stored as `.rules_dx_managed` inside the installed
+// `.dx/bin` directory, so it swaps atomically with the tree it describes.
+message EnvMarker {
+  uint32 schema_version = 1;
+  // Exactly 32 bytes: BLAKE3-256 over the canonical `EnvIdentity`.
+  bytes identity = 2;
+  reserved 3 to 7;
+}

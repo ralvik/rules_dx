@@ -1,0 +1,124 @@
+"""M11 WP2 managed `.dx/bin` bootstrap installer crate."""
+
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+# Crate-universe aliases convention: `dx/dx_env` keys match the regenerated
+# lockfile. The runfiles lookup stays a direct toolchain label (it is not a
+# Cargo dependency). The identity digest routes through
+# `//quality/result:quality_result` (M11 WP3); both tails are
+# hand-maintained and preserved across regenerations.
+dx_rust_library(
+    name = "dx_env",
+    srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "dx/dx_env",
+        normal = True,
+    ),
+    crate_name = "dx_env",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "serde",
+            "serde_json",
+        ],
+        package_name = "dx/dx_env",
+    ) + [
+        "//env:marker_proto_rs",
+        "//quality/result:quality_result",
+        "@rules_rust_prost//private/3rdparty/crates:prost",
+    ],
+)
+
+dx_rust_binary(
+    name = "env",
+    srcs = ["src/main.rs"],
+    aliases = aliases(
+        package_name = "dx/dx_env",
+        normal = True,
+    ),
+    crate_name = "env",
+    crate_root = "src/main.rs",
+    data = ["//env:default_tree"],
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "serde",
+            "serde_json",
+        ],
+        package_name = "dx/dx_env",
+    ) + [
+        ":dx_env",
+        "@rules_rust//rust/runfiles",
+    ],
+)
+
+dx_rust_test(
+    name = "dx_env_test",
+    size = "small",
+    aliases = aliases(
+        package_name = "dx/dx_env",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":dx_env",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "serde",
+            "serde_json",
+        ],
+        package_name = "dx/dx_env",
+    ),
+)
+
+# Binary-crate test (dx/cli precedent): compiles `src/main.rs` under the
+# test harness so the thin shim enters the coverage report, where its
+# LCOV exclusion evaluates to zero eligible lines. It runs no tests; the
+# library unit tests live in `dx_env_test`. Hand-maintained: preserved
+# across dependency regenerations like the runfiles and digest tails.
+dx_rust_test(
+    name = "dx_env_bin_test",
+    size = "small",
+    crate = ":env",
+    edition = "2021",
+    deps = [
+        ":dx_env",
+        "@rules_rust//rust/runfiles",
+    ],
+)
+
+# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# resolve from the pinned toolchain, never from ambient host tools.
+rustfmt_test(
+    name = "dx_env_fmt_test",
+    size = "small",
+    targets = [
+        ":dx_env",
+        ":env",
+    ],
+)
+
+rust_clippy_test(
+    name = "dx_env_clippy_test",
+    size = "small",
+    targets = [
+        ":dx_env",
+        ":env",
+    ],
+)
+
+exports_files(["Cargo.toml"])
+
+# Repository corpus (M05 WP1): crate manifest and build file owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
+)

@@ -19,6 +19,13 @@ gazelle(
     gazelle = "//gazelle/rust:gazelle",
 )
 
+# Canonical managed-environment bootstrap (M11 WP2): installs the default
+# staged tool tree into the workspace `.dx/bin` directory.
+alias(
+    name = "env",
+    actual = "//dx/env:env",
+)
+
 filegroup(
     name = "config",
     srcs = [],

@@ -129,7 +129,6 @@ version = "0.0.0"
 name = "dx_env"
 version = "0.0.0"
 dependencies = [
- "blake3",
  "serde",
  "serde_json",
 ]
