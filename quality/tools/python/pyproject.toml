@@ -2,8 +2,4 @@
 name = "dx-python-tools"
 version = "0.0.0"
 requires-python = ">=3.12"
-dependencies = [
-    "pydoclint",
-    "flake8",
-    "pylint",
-]
+dependencies = ["pydoclint", "flake8", "pylint"]
