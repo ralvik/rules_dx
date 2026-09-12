@@ -42,13 +42,14 @@ func generateFixture(t *testing.T, files map[string]string, regular []string) la
 }
 
 func TestGenerateSourceOnlyPackage(t *testing.T) {
-	regular := []string{"demo.py", "demo.pyi", "helper.py", "helper_test.py", "orphan.pyi"}
+	regular := []string{"demo.py", "demo.pyi", "helper.py", "helper_test.py", "helper_test.pyi", "orphan.pyi"}
 	result := generateFixture(t, map[string]string{
-		"pkg/demo/demo.py":        "import helper\nfrom helper import suffix\nimport os\n",
-		"pkg/demo/demo.pyi":       "def greet(name: str) -> str: ...\n",
-		"pkg/demo/helper.py":      "def suffix(tag):\n    return tag\n",
-		"pkg/demo/helper_test.py": "import helper\n",
-		"pkg/demo/orphan.pyi":     "def unused() -> None: ...\n",
+		"pkg/demo/demo.py":         "import helper\nfrom helper import suffix\nimport os\n",
+		"pkg/demo/demo.pyi":        "def greet(name: str) -> str: ...\n",
+		"pkg/demo/helper.py":       "def suffix(tag):\n    return tag\n",
+		"pkg/demo/helper_test.py":  "import helper\n",
+		"pkg/demo/helper_test.pyi": "import stub_only_dep\ndef test_suffix() -> None: ...\n",
+		"pkg/demo/orphan.pyi":      "def unused() -> None: ...\n",
 	}, regular)
 	if len(result.Gen) != 3 || len(result.Imports) != 3 {
 		t.Fatalf("generated %d rules and %d import sets, want 3 each", len(result.Gen), len(result.Imports))
@@ -74,8 +75,12 @@ func TestGenerateSourceOnlyPackage(t *testing.T) {
 	if test.Kind() != testKind || test.Name() != "helper_test" {
 		t.Fatalf("test = %s(%s)", test.Kind(), test.Name())
 	}
-	if got := strings.Join(test.AttrStrings("srcs"), ","); got != "helper_test.py" {
+	if got := strings.Join(test.AttrStrings("srcs"), ","); got != "helper_test.py,helper_test.pyi" {
 		t.Errorf("test srcs = %q", got)
+	}
+	testImports := result.Imports[2].(targetImports)
+	if strings.Join(testImports.imports, ",") != "helper" {
+		t.Errorf("test imports = %+v, want [helper] (stub_only_dep ignored)", testImports)
 	}
 	libImports := result.Imports[0].(targetImports)
 	if strings.Join(libImports.imports, ",") != "helper" {

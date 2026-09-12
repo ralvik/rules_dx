@@ -24,7 +24,10 @@ dx_py_library(
 
 dx_py_test(
     name = "helper_test",
-    srcs = ["helper_test.py"],
+    srcs = [
+        "helper_test.py",
+        "helper_test.pyi",
+    ],
     imports = ["."],
     deps = [":helper"],
 )
