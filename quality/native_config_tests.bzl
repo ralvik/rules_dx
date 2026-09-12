@@ -32,13 +32,14 @@ def native_config_unit_tests(name):
                 ".json",
             ),
             expect_equal(
-                "native_config_extension pins TOML for taplo/rustfmt/clippy",
+                "native_config_extension pins TOML for taplo/rustfmt/clippy/ruff",
                 [
                     native_config_extension("taplo"),
                     native_config_extension("rustfmt"),
                     native_config_extension("clippy"),
+                    native_config_extension("ruff"),
                 ],
-                [".toml", ".toml", ".toml"],
+                [".toml", ".toml", ".toml", ".toml"],
             ),
             expect_equal(
                 "native_config_extension pins the vale INI transport",
@@ -69,7 +70,7 @@ def native_config_unit_tests(name):
                 "native_config_error rejects an unknown tool",
                 native_config_error("prettier", "x.json", True, []),
                 "native_config: unknown tool 'prettier': want one of " +
-                "buildifier, clippy, rustfmt, taplo, vale",
+                "buildifier, clippy, ruff, rustfmt, taplo, vale",
             ),
             expect_equal(
                 "native_config_error requires a config",

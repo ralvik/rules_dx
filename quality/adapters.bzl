@@ -45,7 +45,8 @@ def adapter_supported_classes(tool_id, capability):
     return sorted(SYNTHETIC_ADAPTERS[tool_id].get(capability, []))
 
 # Real initial-adapter capability manifests (M04 WP2-WP3, O20; M12 WP3 adds
-# the rustc typecheck stage).
+# the rustc typecheck stage; M15 WP2 adds the curated Python adapters
+# ruff/ty/pydoclint, with flake8/pylint opt-ins following in M15 WP3).
 #
 # Tool IDs are the stable built-in identifiers users select in policy
 # families. Every class has exactly one tool per capability except
@@ -56,22 +57,31 @@ def adapter_supported_classes(tool_id, capability):
 # apply to one target. Rust typechecking is the toolchain `rustc` itself
 # (`rust_toolchain_rustc`), invoked as a lib-root metadata check with no
 # config discovery; it is check-only and never applies suggestions.
+# Python lint runs pydoclint then ruff in lexical stage order; ruff is
+# also the default and only active Python formatter and ty the
+# typechecker, per the tool-baseline curated defaults.
 REAL_ADAPTERS = {
     "buildifier": {"format": ["starlark"], "lint": ["starlark"]},
     "clippy": {"lint": ["rust"]},
     "markdown_check": {"lint": ["markdown"]},
+    "pydoclint": {"lint": ["python", "python_stub"]},
+    "ruff": {"format": ["python", "python_stub"], "lint": ["python", "python_stub"]},
     "rustc": {"typecheck": ["rust"]},
     "rustfmt": {"format": ["rust"]},
     "taplo": {"format": ["toml"], "lint": ["toml"]},
+    "ty": {"typecheck": ["python", "python_stub"]},
     "vale": {"lint": ["markdown"]},
 }
 
 # WP2 fixture class-to-family assignment for the M04 source classes. Like
 # the synthetic map, this is a fixture, not the frozen taxonomy: the full
 # registry assignment and curated defaults stay pending the O15/O17
-# reviews.
+# reviews. M15 WP2 adds the python/python_stub classes to the python
+# family for the curated Ruff/Ty/pydoclint adapters.
 REAL_CLASS_TO_FAMILY = {
     "markdown": "markdown",
+    "python": "python",
+    "python_stub": "python",
     "rust": "rust",
     "starlark": "starlark",
     "toml": "toml",

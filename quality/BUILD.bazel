@@ -104,10 +104,26 @@ quality_family(
     ],
 )
 
+# Real fixture Python family (M15 WP2): curated defaults per the tool
+# baseline (Ruff lint+format, pydoclint lint, Ty typecheck). Flake8 and
+# pylint remain baseline opt-ins owned by M15 WP3. Like the other real
+# families, this is a fixture, not the frozen taxonomy.
+quality_family(
+    name = "real_python_family",
+    family_id = "python",
+    format = ["ruff"],
+    lint = [
+        "pydoclint",
+        "ruff",
+    ],
+    typecheck = ["ty"],
+)
+
 workspace_policy(
     name = "real_fixture_policy",
     families = [
         ":real_markdown_family",
+        ":real_python_family",
         ":real_rust_family",
         ":real_starlark_family",
         ":real_toml_family",

@@ -1,9 +1,10 @@
-"""Typed native-configuration targets for M04 adapters.
+"""Typed native-configuration targets for M04 adapters plus M15 Ruff.
 
 Each initial adapter reads its behavior from exactly one checked-in
 tool-owned config file (the native-configuration authority contract):
 Buildifier `.buildifier.json`, Taplo `taplo.toml` fragment, Vale `.vale.ini`
-plus style/vocab data, rustfmt `rustfmt.toml`, Clippy `clippy.toml`.
+plus style/vocab data, rustfmt `rustfmt.toml`, Clippy `clippy.toml`, and
+Ruff `ruff.toml` (see below for the dedicated-config rule).
 Source targets opt into a config through `aspect_hints`; the consuming
 aspect resolves hints to stages (see `collect_native_configs`). Without a
 hint the adapter runs pinned upstream defaults, except Vale, which has no
@@ -27,10 +28,14 @@ DxNativeConfigInfo = provider(
 
 # Tool-owned config filename extensions. The extension is part of the
 # transport: it selects the tool's native parser, so a mismatch fails
-# analysis instead of silently changing behavior.
+# analysis instead of silently changing behavior. Ruff recognizes only
+# the dedicated `ruff.toml`/`.ruff.toml` basenames (never `pyproject.toml`);
+# basename recognition is Gazelle's job, the `.toml` extension check here
+# matches the rustfmt/clippy split.
 _NATIVE_CONFIG_EXTENSIONS = {
     "buildifier": ".json",
     "clippy": ".toml",
+    "ruff": ".toml",
     "rustfmt": ".toml",
     "taplo": ".toml",
     "vale": ".ini",
@@ -158,4 +163,9 @@ rustfmt_config = _make_native_config_rule(
 clippy_config = _make_native_config_rule(
     "clippy",
     "Checked-in Clippy TOML config for Rust lint.",
+)
+
+ruff_config = _make_native_config_rule(
+    "ruff",
+    "Checked-in Ruff TOML config (ruff.toml) for Python lint/format. Only the dedicated ruff.toml/.ruff.toml basenames are recognized; pyproject.toml is never a Ruff action input.",
 )
