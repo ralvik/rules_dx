@@ -1,0 +1,25 @@
+"""M16 seed JavaScript binary and library; consumer of dx_js_* wrappers."""
+
+load("//javascript/rules:defs.bzl", "dx_js_binary", "dx_js_library")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_js_library(
+    name = "hello_lib",
+    srcs = ["hello.js"],
+)
+
+dx_js_binary(
+    name = "hello",
+    data = [":hello_lib"],
+    entry_point = "main.js",
+)
+
+# Repository corpus (M05 WP1): build and project metadata owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy. JavaScript
+# sources stay dx-owned, never corpus sources.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
