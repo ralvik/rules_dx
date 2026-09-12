@@ -11,9 +11,9 @@ normalized from the wrapper's direct `srcs`.
 Used upstream symbols (`@aspect_rules_ts//ts:defs.bzl`): `ts_project`,
 `TsConfigInfo`; (`@aspect_rules_js//js:providers.bzl`): `JsInfo`. No other
 upstream surface is used; consumers needing more load the upstream
-module directly. Binaries and tests (`dx_js_binary`, `dx_js_test`,
-`dx_ts_test`) arrive in later slices; TypeScript execution reuses the
-JavaScript binary/test wrappers over compiled outputs.
+module directly. TypeScript execution reuses the JavaScript binary/test
+wrappers (`//javascript/rules`) over compiled outputs; there is no
+separate `dx_ts_binary`/`dx_ts_test` wrapper.
 
 Normalization is deliberately narrow: the only new fact is
 `QualitySourcesInfo(direct_sources = {"typescript": <direct .ts/.mts/.cts>,

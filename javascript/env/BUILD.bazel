@@ -2,10 +2,10 @@
 
 Each `javascript_env_plan` reads the analyzed authoritative providers of one
 `dx_js_library` wrapper: the preserved `JsInfo` plus `QualitySourcesInfo`.
-Focused-target only; binaries and tests do not preserve `JsInfo` through
-their forwarders, so their plans are deferred until the execution wrappers
-preserve it or M25 orchestration lands. Repository/root/exact-target
-orchestration remains M25.
+Focused-target only. Upstream `js_binary`/`jest_test` carry no `JsInfo`
+(by upstream design), so library wrappers are the planned carriers;
+binaries/tests share the same closure through `data`/runfiles.
+Repository/root/exact-target orchestration remains M25.
 """
 
 load("//javascript/env:plan.bzl", "javascript_env_plan")
