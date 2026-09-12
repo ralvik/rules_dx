@@ -114,8 +114,14 @@ REAL_ADAPTERS = {
 # family on the same terms: the `.svelte` container stays one physical
 # owner (dx_svelte_library) with virtual instance/module-script, markup,
 # and style regions handed to execution-time integrations; no adapter
-# claims svelte yet (classification only, no supported claim).
+# claims svelte yet (classification only, no supported claim). M20 WP2 adds
+# the astro class to the astro family on the same terms: the `.astro`
+# container stays one physical owner (dx_astro_library) with virtual
+# frontmatter/server-script, template, client-script, and style regions
+# handed to execution-time integrations; no adapter claims astro yet
+# (classification only, no supported claim).
 REAL_CLASS_TO_FAMILY = {
+    "astro": "astro",
     "javascript": "javascript",
     "json": "json",
     "jsx": "javascript",

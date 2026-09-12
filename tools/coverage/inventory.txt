@@ -73,11 +73,16 @@ eligible gazelle/svelte/lang.go
 eligible gazelle/svelte/naming.go
 eligible gazelle/svelte/parser.go
 eligible gazelle/svelte/stdlib.go
+eligible gazelle/astro/lang.go
+eligible gazelle/astro/naming.go
+eligible gazelle/astro/parser.go
+eligible gazelle/astro/stdlib.go
 support gazelle/python/doc.go
 support gazelle/javascript/doc.go
 support gazelle/typescript/doc.go
 support gazelle/vue/doc.go
 support gazelle/svelte/doc.go
+support gazelle/astro/doc.go
 support gazelle/python/lang_test.go
 support gazelle/python/naming_test.go
 support gazelle/python/parser_test.go
@@ -93,6 +98,9 @@ support gazelle/vue/parser_test.go
 support gazelle/svelte/lang_test.go
 support gazelle/svelte/naming_test.go
 support gazelle/svelte/parser_test.go
+support gazelle/astro/lang_test.go
+support gazelle/astro/naming_test.go
+support gazelle/astro/parser_test.go
 support gazelle/python/testdata/source_only/pkg/demo/demo.py
 support gazelle/python/testdata/source_only/pkg/demo/demo.pyi
 support gazelle/python/testdata/source_only/pkg/demo/helper.py
@@ -119,6 +127,8 @@ support gazelle/vue/testdata/source_only/pkg/demo/demo.vue
 support gazelle/vue/testdata/source_only/pkg/demo/helper.vue
 support gazelle/svelte/testdata/source_only/pkg/demo/demo.svelte
 support gazelle/svelte/testdata/source_only/pkg/demo/helper.svelte
+support gazelle/astro/testdata/source_only/pkg/demo/demo.astro
+support gazelle/astro/testdata/source_only/pkg/demo/helper.astro
 eligible generation/result/src/lib.rs
 support gazelle/rust/cargo_test.go
 support gazelle/rust/lang_test.go

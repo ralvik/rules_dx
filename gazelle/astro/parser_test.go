@@ -258,6 +258,8 @@ func TestOpensScript(t *testing.T) {
 		"<!-- <script> -->",
 		"<!-- <script>",
 		"</script>",
+		"a < b",
+		"trailing <",
 	} {
 		if opensScript([]byte(source)) {
 			t.Errorf("opensScript(%q) = true, want false", source)
