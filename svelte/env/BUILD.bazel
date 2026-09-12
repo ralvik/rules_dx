@@ -1,0 +1,36 @@
+"""Focused Svelte environment plans (M19 WP2).
+
+Each `svelte_env_plan` reads the analyzed authoritative providers of one
+`dx_svelte_library` wrapper: the preserved `JsInfo` plus `QualitySourcesInfo`.
+Focused-target only. Binaries/tests share the same closure through
+`data`/runfiles. Repository/root/exact-target orchestration remains M25.
+"""
+
+load("//quality:fixtures.bzl", "real_source_target")
+load("//svelte/env:plan.bzl", "svelte_env_plan")
+load("//svelte/env:plan_tests.bzl", "env_plan_tests")
+
+package(default_visibility = ["//visibility:public"])
+
+svelte_env_plan(
+    name = "hello_lib_plan",
+    target = "//svelte/hello:hello_lib",
+)
+
+env_plan_tests(
+    name = "env_plan_tests",
+    subjects = [
+        ":hello_lib_plan",
+    ],
+)
+
+# Repository corpus (M05 WP1): plan Starlark owned for direct-Bazel dogfood
+# under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "plan.bzl",
+        "plan_tests.bzl",
+    ],
+)

@@ -110,7 +110,11 @@ REAL_ADAPTERS = {
 # physical owner (dx_vue_library) with virtual script/template/style
 # regions handed to execution-time integrations; no lint/format/typecheck
 # adapter claims vue yet, so the family selects no stages (classification
-# only, no supported claim).
+# only, no supported claim). M19 WP2 adds the svelte class to the svelte
+# family on the same terms: the `.svelte` container stays one physical
+# owner (dx_svelte_library) with virtual instance/module-script, markup,
+# and style regions handed to execution-time integrations; no adapter
+# claims svelte yet (classification only, no supported claim).
 REAL_CLASS_TO_FAMILY = {
     "javascript": "javascript",
     "json": "json",
@@ -120,6 +124,7 @@ REAL_CLASS_TO_FAMILY = {
     "python_stub": "python",
     "rust": "rust",
     "starlark": "starlark",
+    "svelte": "svelte",
     "toml": "toml",
     "typescript": "typescript",
     "tsx": "typescript",

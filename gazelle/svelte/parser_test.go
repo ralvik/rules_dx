@@ -157,7 +157,7 @@ func TestExtractScripts(t *testing.T) {
 		{"upper", "<SCRIPT>\nconst x = 1;\n</SCRIPT>", []string{"const x = 1;"}, false},
 		{"quotedAttr", "<script context=\"a>b\">\nconst x = 1;\n</script>", []string{"const x = 1;"}, false},
 		{"singleQuotedAttr", "<script context='a>b'>\nconst x = 1;\n</script>", []string{"const x = 1;"}, false},
-		{"afterMarkup", "<div>t</div><custom-element foo=\"bar\"/><script>const x = 1;</script>", []string{"const x = 1;"}, false},
+		{"afterMarkup", "<div>t</div><custom-element foo=\"bar\"/><my_tag/><x:y/></template><script>const x = 1;</script>", []string{"const x = 1;"}, false},
 		{"commentedScript", "<!-- <script>import './fake.svelte';</script> --><script>const x = 1;</script>", []string{"const x = 1;"}, false},
 		{"commentInScript", "<script>const x = 1;<!-- not html -->const y = 2;</script>", []string{"const x = 1;<!-- not html -->const y = 2;"}, false},
 		{"selfClosingSkipped", "<script/>\n<script>const x = 1;</script>", []string{"const x = 1;"}, false},
