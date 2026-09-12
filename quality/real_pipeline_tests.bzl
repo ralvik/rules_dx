@@ -1,4 +1,4 @@
-"""Unit tests for real-adapter pipeline construction (M04 WP2, M12 WP3).
+"""Unit tests for real-adapter pipeline construction (M04 WP2, M12 WP3, M15 WP3).
 
 Pins the initial-adapter capability manifests (O20) through the same pure
 pipeline formula the synthetic fixtures use: exact class-to-tool mapping,
@@ -7,7 +7,8 @@ subsets, and omission of unsupported classes/capabilities (no empty
 actions). Cross-toolchain quality evidence (exact-input, no-config, edit,
 cache, empty-PATH) lands in later WP2 commits; these checks prove the
 pure shapes that evidence rests on. M12 WP3 adds the rustc typecheck
-stage over the rust class.
+stage over the rust class. M15 WP3 adds the flake8/pylint Python lint
+opt-ins and their lexical stage order.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
@@ -111,6 +112,24 @@ def real_pipeline_unit_tests(name):
                 [["rust"], [], []],
             ),
             expect_equal(
+                "real_supported_classes returns flake8 lint support only",
+                [
+                    real_supported_classes("flake8", "lint"),
+                    real_supported_classes("flake8", "format"),
+                    real_supported_classes("flake8", "typecheck"),
+                ],
+                [["python", "python_stub"], [], []],
+            ),
+            expect_equal(
+                "real_supported_classes returns pylint lint support only",
+                [
+                    real_supported_classes("pylint", "lint"),
+                    real_supported_classes("pylint", "format"),
+                    real_supported_classes("pylint", "typecheck"),
+                ],
+                [["python", "python_stub"], [], []],
+            ),
+            expect_equal(
                 "authorize_classes maps each real tool to its own class",
                 authorize_classes(_LINT_SELECTIONS, REAL_CLASS_TO_FAMILY),
                 {
@@ -164,6 +183,22 @@ def real_pipeline_unit_tests(name):
                 ),
                 [
                     {"classes": ["rust"], "tool": "rustc"},
+                ],
+            ),
+            expect_equal(
+                "pipeline_stages orders python lint opt-ins lexically",
+                pipeline_stages(
+                    ["python"],
+                    "lint",
+                    {"python": ["ruff", "pylint", "pydoclint", "flake8"]},
+                    REAL_CLASS_TO_FAMILY,
+                    REAL_ADAPTERS,
+                ),
+                [
+                    {"classes": ["python"], "tool": "flake8"},
+                    {"classes": ["python"], "tool": "pydoclint"},
+                    {"classes": ["python"], "tool": "pylint"},
+                    {"classes": ["python"], "tool": "ruff"},
                 ],
             ),
             expect_equal(

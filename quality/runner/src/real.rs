@@ -35,8 +35,8 @@
 //! Clippy has no fix command: the backend applies `MachineApplicable`
 //! suggestions in memory and re-checks the patched bytes on the next
 //! round, so only suggestions that truly resolve their finding mark it
-//! fixable. Vale, the Markdown checker, rustc typecheck, Ty, and
-//! pydoclint are check-only and never rewrite.
+//! fixable. Vale, the Markdown checker, rustc typecheck, Ty, pydoclint,
+//! flake8, and pylint are check-only and never rewrite.
 
 use std::collections::BTreeMap;
 use std::ffi::{OsStr, OsString};
@@ -55,7 +55,8 @@ use crate::{
 use quality_result::proto::Diagnostic;
 
 /// Real tool IDs for the M04 initial adapters plus the M12 rustc
-/// typecheck adapter and the M15 Python adapters (Ruff, Ty, pydoclint).
+/// typecheck adapter and the M15 Python adapters (Ruff, Ty, pydoclint,
+/// flake8, pylint).
 /// Mirrors `REAL_ADAPTERS`
 /// in `//quality:adapters.bzl`; the Starlark registry stays authoritative
 /// for pipeline construction, this list pins the dispatch the backend
@@ -63,8 +64,10 @@ use quality_result::proto::Diagnostic;
 pub const REAL_TOOLS: &[&str] = &[
     "buildifier",
     "clippy",
+    "flake8",
     "markdown_check",
     "pydoclint",
+    "pylint",
     "ruff",
     "rustc",
     "rustfmt",
@@ -494,6 +497,16 @@ impl RealBackend {
                     parsers::parse_pydoclint(&out.stderr, out.code, &strs),
                 )
             }
+            "flake8" => {
+                let invocation = commands::flake8_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(tool_id, parsers::parse_flake8(&out.stdout, out.code, &strs))
+            }
+            "pylint" => {
+                let invocation = commands::pylint_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(tool_id, parsers::parse_pylint(&out.stdout, out.code, &strs))
+            }
             "taplo" => {
                 let invocation = if capability == "format" {
                     commands::taplo_format(&tool.binary, &refs, config.as_deref(), true)
@@ -581,7 +594,8 @@ impl RealBackend {
     /// or 1 (exit 1 signals remaining unfixable findings after the
     /// fixable ones were applied); Clippy applies `MachineApplicable`
     /// suggestions from a fresh check in memory; Vale, the Markdown
-    /// checker, rustc typecheck, Ty, and pydoclint return their input.
+    /// checker, rustc typecheck, Ty, pydoclint, flake8, and pylint return
+    /// their input.
     pub fn apply_fix(
         &self,
         tool_id: &str,
@@ -594,7 +608,9 @@ impl RealBackend {
             "rustfmt" | "buildifier" | "taplo" => self.run_fix(tool_id, tool, path, text),
             "ruff" => self.run_ruff_fix(tool, path, text, capability == "format"),
             "clippy" => self.apply_clippy(tool_id, path, text),
-            "vale" | "markdown_check" | "rustc" | "ty" | "pydoclint" => Ok(text.to_owned()),
+            "vale" | "markdown_check" | "rustc" | "ty" | "pydoclint" | "flake8" | "pylint" => {
+                Ok(text.to_owned())
+            }
             _ => Err(execution(
                 tool_id,
                 format!("unsupported real tool: {tool_id}"),
@@ -1229,6 +1245,94 @@ mod tests {
         })
     }
 
+    /// Content-aware flake8 double: reports F401 exactly when the
+    /// materialized file imports `os`, on stdout as
+    /// `path:row:col:code:message`. Asserts the hermetic flags
+    /// (`--isolated` blocks config discovery, `--jobs=1` keeps output
+    /// order deterministic, `--color=never` blocks ANSI).
+    fn roundtrip_flake8(
+        argv: &[OsString],
+        _cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_hermetic(env);
+        assert!(
+            argv.iter().any(|arg| arg == "--isolated"),
+            "flake8 pins upstream defaults"
+        );
+        assert!(
+            argv.iter().any(|arg| arg == "--jobs=1"),
+            "flake8 keeps output order deterministic"
+        );
+        assert!(
+            argv.iter().any(|arg| arg == "--color=never"),
+            "flake8 never emits color"
+        );
+        let file = last_file(argv);
+        let bytes = std::fs::read(&file).expect("checked file is materialized");
+        let text = String::from_utf8(bytes).expect("checked bytes stay UTF-8");
+        if text.contains("import os") {
+            let stdout = format!("{file}:1:1:F401:'os' imported but unused\n");
+            return Ok(ChildOutput {
+                code: Some(1),
+                stdout: stdout.into_bytes(),
+                stderr: Vec::new(),
+            });
+        }
+        Ok(ChildOutput {
+            code: Some(0),
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+        })
+    }
+
+    /// Content-aware pylint double: reports W0611 exactly when the
+    /// materialized file imports `os`, on stdout as the pinned JSON
+    /// array with 0-based columns. Asserts the hermetic flags
+    /// (`--persistent=n` disables the cache, `--reports=n`/`--score=n`
+    /// suppress the human report).
+    fn roundtrip_pylint(
+        argv: &[OsString],
+        _cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_hermetic(env);
+        assert!(
+            argv.iter().any(|arg| arg == "--persistent=n"),
+            "pylint never caches"
+        );
+        assert!(
+            argv.iter().any(|arg| arg == "--reports=n"),
+            "pylint suppresses the report"
+        );
+        assert!(
+            argv.iter().any(|arg| arg == "--score=n"),
+            "pylint suppresses the score"
+        );
+        assert!(
+            argv.iter().any(|arg| arg == "--output-format=json"),
+            "pylint reports JSON"
+        );
+        let file = last_file(argv);
+        let bytes = std::fs::read(&file).expect("checked file is materialized");
+        let text = String::from_utf8(bytes).expect("checked bytes stay UTF-8");
+        if text.contains("import os") {
+            let stdout = format!(
+                "[{{\"type\": \"warning\", \"module\": \"a\", \"obj\": \"\", \"line\": 1, \"column\": 0, \"endLine\": 1, \"endColumn\": 9, \"path\": \"{file}\", \"symbol\": \"unused-import\", \"message\": \"Unused import os\", \"message-id\": \"W0611\"}}]"
+            );
+            return Ok(ChildOutput {
+                code: Some(4),
+                stdout: stdout.into_bytes(),
+                stderr: Vec::new(),
+            });
+        }
+        Ok(ChildOutput {
+            code: Some(0),
+            stdout: b"[]".to_vec(),
+            stderr: Vec::new(),
+        })
+    }
+
     fn vale_hinted(
         argv: &[OsString],
         cwd: &Path,
@@ -1507,8 +1611,10 @@ mod tests {
             &[
                 "buildifier",
                 "clippy",
+                "flake8",
                 "markdown_check",
                 "pydoclint",
+                "pylint",
                 "ruff",
                 "rustc",
                 "rustfmt",
@@ -2414,6 +2520,65 @@ mod tests {
     }
 
     #[test]
+    fn flake8_reports_and_is_check_only() {
+        let backend = backend_for("flake8", plain_tool(), roundtrip_flake8);
+        let findings = backend
+            .diagnose("flake8", "lint", &single("a.py", "import os\n"))
+            .expect("diagnosed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].tool_id, "flake8");
+        assert_eq!(findings[0].rule_id, "F401");
+        assert_eq!(findings[0].path, "a.py");
+        assert_eq!(
+            findings[0].severity,
+            quality_result::proto::Severity::Error as i32
+        );
+        assert!(backend
+            .diagnose("flake8", "lint", &single("a.py", "\"\"\"Module.\"\"\"\n"))
+            .expect("diagnosed")
+            .is_empty());
+        let text = "import os\n";
+        assert_eq!(
+            backend
+                .apply_fix("flake8", "a.py", text, "lint")
+                .expect("check-only"),
+            text
+        );
+    }
+
+    #[test]
+    fn pylint_reports_and_is_check_only() {
+        let backend = backend_for("pylint", plain_tool(), roundtrip_pylint);
+        let findings = backend
+            .diagnose("pylint", "lint", &single("a.py", "import os\n"))
+            .expect("diagnosed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].tool_id, "pylint");
+        assert_eq!(findings[0].rule_id, "W0611");
+        assert_eq!(findings[0].path, "a.py");
+        assert_eq!(
+            findings[0].severity,
+            quality_result::proto::Severity::Warning as i32
+        );
+        // 0-based columns 0..9 place as the 1-based range 1..10.
+        assert_eq!(
+            (findings[0].start_byte, findings[0].end_byte),
+            (Some(0), Some(9))
+        );
+        assert!(backend
+            .diagnose("pylint", "lint", &single("a.py", "\"\"\"Module.\"\"\"\n"))
+            .expect("diagnosed")
+            .is_empty());
+        let text = "import os\n";
+        assert_eq!(
+            backend
+                .apply_fix("pylint", "a.py", text, "lint")
+                .expect("check-only"),
+            text
+        );
+    }
+
+    #[test]
     fn fix_failure_aborts_real_convergence() {
         let backend = backend_for("rustfmt", plain_tool(), check_ok_fix_missing);
         let stages = vec![stage("rustfmt", &["rust"], &["src/main.rs"])];
@@ -2444,5 +2609,82 @@ mod tests {
             .expect_err("terminal check fails");
         assert!(matches!(err, RunnerError::ToolExecution { .. }));
         assert!(err.to_string().contains("spawn"));
+    }
+
+    fn ruff_fix_crashes(
+        argv: &[OsString],
+        cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        if argv.iter().any(|arg| arg == "--fix") {
+            assert_ruff_hermetic(argv, env);
+            return Ok(ChildOutput {
+                code: Some(2),
+                stdout: Vec::new(),
+                stderr: Vec::new(),
+            });
+        }
+        roundtrip_ruff(argv, cwd, env)
+    }
+
+    fn ty_garbage(
+        argv: &[OsString],
+        _cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_hermetic(env);
+        assert!(
+            argv.iter().any(|arg| arg == "--no-respect-ignore-files"),
+            "ty never observes VCS state"
+        );
+        Ok(ChildOutput {
+            code: Some(1),
+            stdout: b"garbage\n".to_vec(),
+            stderr: Vec::new(),
+        })
+    }
+
+    #[test]
+    fn ruff_format_clean_and_unterminated_fix() {
+        let backend = backend_for("ruff", plain_tool(), roundtrip_ruff);
+        // Clean format check reports no findings (the format-check
+        // clean branch).
+        assert!(backend
+            .diagnose("ruff", "format", &single("a.py", "x = 1\n"))
+            .expect("diagnosed")
+            .is_empty());
+        // A format fix without a trailing newline trims the last line
+        // without appending one.
+        let fixed = backend
+            .apply_fix("ruff", "a.py", "x = 1  ", "format")
+            .expect("fixed");
+        assert_eq!(fixed, "x = 1");
+    }
+
+    #[test]
+    fn ruff_fix_failure_keeps_input() {
+        let backend = backend_for("ruff", plain_tool(), ruff_fix_crashes);
+        let text = "import os\n";
+        assert_eq!(
+            backend
+                .apply_fix("ruff", "a.py", text, "lint")
+                .expect("kept"),
+            text
+        );
+        assert_eq!(
+            backend
+                .apply_fix("ruff", "a.py", text, "format")
+                .expect("kept"),
+            text
+        );
+    }
+
+    #[test]
+    fn ty_output_failure_aborts_diagnose() {
+        let backend = backend_for("ty", plain_tool(), ty_garbage);
+        let err = backend
+            .diagnose("ty", "typecheck", &single("a.py", "x: int = 1\n"))
+            .expect_err("parse fails");
+        assert!(matches!(err, RunnerError::ToolOutput { .. }));
     }
 }

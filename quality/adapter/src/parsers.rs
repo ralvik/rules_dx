@@ -76,6 +76,19 @@
 //!   error. Line `0` (whole-file `DOC002` syntax errors: the file cannot
 //!   be parsed, so no line exists) places a point at 1:1 with the tool's
 //!   message verbatim. Clean is empty output on exit 0.
+//! * flake8 `--isolated --format %(path)s:%(row)s:%(col)s:%(code)s:
+//!   %(text)s`: stdout lines `path:row:col:code:message` (stderr empty),
+//!   split from the left because messages contain colons. Findings are
+//!   points at the reported 1-based position; `E`/`F` codes are errors,
+//!   `W`/`C` codes are warnings, any other family is a grammar mismatch.
+//!   Clean is empty output on exit 0; findings exit 1.
+//! * pylint `--output-format=json`: stdout JSON array, one object per
+//!   message (`type`, `symbol`, `message`, `message-id`, `line`, `column`,
+//!   `endLine`, `endColumn`, `path`). Columns are 0-based, so placement
+//!   adds one; a null end is a point range. `fatal`/`error` are errors,
+//!   `warning`/`refactor`/`convention` are warnings, `info`/
+//!   `information` is info; anything else is a grammar mismatch. Clean is
+//!   `[]` on exit 0; findings exit with the bit-encoded class mask.
 
 use serde::Deserialize;
 
@@ -1348,6 +1361,209 @@ pub fn parse_pydoclint(
     Ok(findings)
 }
 
+// ---------------------------------------------------------------------------
+// flake8
+// ---------------------------------------------------------------------------
+
+/// Maps a flake8 code family onto a severity: `E` (pycodestyle errors)
+/// and `F` (pyflakes) are errors, `W` (pycodestyle warnings) and `C`
+/// (mccabe complexity) are warnings. The pinned flake8 ships no plugins,
+/// so any other family is a grammar mismatch, never a silent downgrade.
+fn flake8_severity(code: &str) -> Result<ToolSeverity, ParseError> {
+    const TOOL: &str = "flake8";
+    match code.chars().next() {
+        Some('E') | Some('F') => Ok(ToolSeverity::Error),
+        Some('W') | Some('C') => Ok(ToolSeverity::Warning),
+        _ => Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("unknown code family: {code:?}"),
+        }),
+    }
+}
+
+/// Splits a `path:row:col:code:message` line from the left: the runner
+/// always passes scratch-absolute paths (colons cannot appear), while
+/// messages routinely contain colons, so right-splitting misreads the
+/// position whenever the message does.
+fn flake8_line(line: &str) -> Result<(&str, u64, u64, &str, &str), ParseError> {
+    const TOOL: &str = "flake8";
+    let mut parts = line.splitn(5, ':');
+    let (path, row_text, column_text, code, message) = (
+        parts.next().unwrap_or_default(),
+        parts.next().unwrap_or_default(),
+        parts.next().unwrap_or_default(),
+        parts.next().unwrap_or_default(),
+        parts.next().unwrap_or_default(),
+    );
+    let (row, column) = (row_text.parse::<u64>(), column_text.parse::<u64>());
+    match (
+        path.is_empty(),
+        row,
+        column,
+        code.is_empty(),
+        message.is_empty(),
+    ) {
+        (false, Ok(row), Ok(column), false, false) if row >= 1 && column >= 1 => {
+            Ok((path, row, column, code, message))
+        }
+        _ => Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("malformed finding: {line:?}"),
+        }),
+    }
+}
+
+/// Parses flake8 `--format` stdout: one `path:row:col:code:message` line
+/// per finding. Findings are points (flake8 reports no extent);
+/// suggestions stay empty because flake8 is check-only. Clean is empty
+/// output on exit 0; empty output on any other exit is a grammar
+/// mismatch.
+pub fn parse_flake8(
+    stdout: &[u8],
+    code: Option<i32>,
+    files: &[&str],
+) -> Result<Vec<FileFinding>, ParseError> {
+    const TOOL: &str = "flake8";
+    let text = std::str::from_utf8(stdout).map_err(|err| ParseError::Shape {
+        tool: TOOL,
+        detail: err.to_string(),
+    })?;
+    let mut findings = Vec::new();
+    for line in text.lines() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        let (path, row, column, rule, message) = flake8_line(line)?;
+        let checked = known(TOOL, files, path)?;
+        let (start, end) = point(row, column);
+        findings.push(FileFinding {
+            file: checked.to_owned(),
+            finding: Finding {
+                tool_id: TOOL.to_owned(),
+                rule_id: rule.to_owned(),
+                message: message.to_owned(),
+                severity: flake8_severity(rule)?,
+                start,
+                end,
+                suggestions: Vec::new(),
+            },
+        });
+    }
+    if findings.is_empty() && code != Some(0) {
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("exit {} with no findings", code_name(code)),
+        });
+    }
+    Ok(findings)
+}
+
+// ---------------------------------------------------------------------------
+// pylint
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+struct PylintMessage {
+    #[serde(rename = "type")]
+    kind: String,
+    symbol: String,
+    message: String,
+    #[serde(rename = "message-id")]
+    message_id: String,
+    line: Option<u64>,
+    column: Option<u64>,
+    #[serde(rename = "endLine")]
+    end_line: Option<u64>,
+    #[serde(rename = "endColumn")]
+    end_column: Option<u64>,
+    path: String,
+}
+
+fn pylint_severity(kind: &str) -> Result<ToolSeverity, ParseError> {
+    const TOOL: &str = "pylint";
+    match kind {
+        "fatal" | "error" => Ok(ToolSeverity::Error),
+        "warning" | "refactor" | "convention" => Ok(ToolSeverity::Warning),
+        "info" | "information" => Ok(ToolSeverity::Info),
+        _ => Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("unknown message type: {kind:?}"),
+        }),
+    }
+}
+
+/// Parses pylint `--output-format=json` stdout into one finding per
+/// message. Pylint columns are 0-based, so placement adds one (a null
+/// column is a line-level point at column 1); a null end is a point
+/// range. Check-only: suggestions stay empty. Clean is `[]` on exit 0;
+/// an empty array on any other exit is a grammar mismatch.
+pub fn parse_pylint(
+    stdout: &[u8],
+    code: Option<i32>,
+    files: &[&str],
+) -> Result<Vec<FileFinding>, ParseError> {
+    const TOOL: &str = "pylint";
+    let messages: Vec<PylintMessage> =
+        serde_json::from_slice(stdout).map_err(|err| ParseError::Json {
+            tool: TOOL,
+            detail: err.to_string(),
+        })?;
+    let mut findings = Vec::with_capacity(messages.len());
+    for message in &messages {
+        let checked = known(TOOL, files, &message.path)?;
+        let line = message.line.unwrap_or(0);
+        if line < 1 {
+            return Err(ParseError::Shape {
+                tool: TOOL,
+                detail: format!("bad line in message {:?}", message.message_id),
+            });
+        }
+        // Pylint columns are 0-based; the adapter places 1-based
+        // positions, so a reported 0 becomes column 1.
+        let column = message.column.unwrap_or(0) + 1;
+        let start = TextPosition { line, column };
+        let end = match (message.end_line, message.end_column) {
+            (Some(end_line), Some(end_column)) if end_line >= 1 => Some(TextPosition {
+                line: end_line,
+                column: end_column + 1,
+            }),
+            (None, None) => None,
+            _ => {
+                return Err(ParseError::Shape {
+                    tool: TOOL,
+                    detail: format!("bad end in message {:?}", message.message_id),
+                });
+            }
+        };
+        if message.symbol.is_empty() || message.message_id.is_empty() || message.message.is_empty()
+        {
+            return Err(ParseError::Shape {
+                tool: TOOL,
+                detail: "message with an empty symbol, id, or text".to_owned(),
+            });
+        }
+        findings.push(FileFinding {
+            file: checked.to_owned(),
+            finding: Finding {
+                tool_id: TOOL.to_owned(),
+                rule_id: message.message_id.clone(),
+                message: message.message.clone(),
+                severity: pylint_severity(&message.kind)?,
+                start,
+                end,
+                suggestions: Vec::new(),
+            },
+        });
+    }
+    if findings.is_empty() && code != Some(0) {
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("exit {} with an empty findings array", code_name(code)),
+        });
+    }
+    Ok(findings)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2088,5 +2304,222 @@ mod grammar_errors {
             (findings[0].finding.start, findings[0].finding.end),
             (TextPosition { line: 1, column: 1 }, None)
         );
+    }
+
+    // Exact shapes probed from the pinned flake8 7.3.0 / pylint 4.0.8
+    // binaries against the real-pipeline fixtures; the fixtures pin the
+    // grammars above, so a tool upgrade that changes its output fails
+    // here instead of silently shifting findings.
+    const FLAKE8_DIRTY: &str = concat!(
+        "/s/dirty.py:3:1:F401:'os' imported but unused\n",
+        "/s/dirty.py:22:6:E231:missing whitespace after ':'\n",
+        "/s/dirty.py:22:10:E225:missing whitespace around operator\n",
+    );
+
+    #[test]
+    fn flake8_reports_points_with_family_severity() {
+        let findings =
+            parse_flake8(FLAKE8_DIRTY.as_bytes(), Some(1), &["/s/dirty.py"]).expect("parsed");
+        assert_eq!(findings.len(), 3);
+        assert_eq!(findings[0].file, "/s/dirty.py");
+        assert_eq!(findings[0].finding.tool_id, "flake8");
+        assert_eq!(findings[0].finding.rule_id, "F401");
+        assert_eq!(findings[0].finding.severity, ToolSeverity::Error);
+        assert_eq!(
+            (findings[0].finding.start, findings[0].finding.end),
+            (TextPosition { line: 3, column: 1 }, None)
+        );
+        assert_eq!(findings[0].finding.message, "'os' imported but unused");
+        assert_eq!(findings[1].finding.rule_id, "E231");
+        assert_eq!(findings[1].finding.severity, ToolSeverity::Error);
+        assert_eq!(findings[2].finding.rule_id, "E225");
+        assert!(findings
+            .iter()
+            .all(|finding| finding.finding.suggestions.is_empty()));
+        assert!(parse_flake8(b"", Some(0), &["/s/dirty.py"])
+            .expect("parsed")
+            .is_empty());
+        // Fail-closed: empty output on a findings exit, unknown files,
+        // unknown code families, and malformed lines are grammar
+        // mismatches.
+        assert!(parse_flake8(b"", Some(1), &["/s/dirty.py"]).is_err());
+        assert!(parse_flake8(FLAKE8_DIRTY.as_bytes(), Some(1), &["/s/other.py"]).is_err());
+        assert!(parse_flake8(b"/s/a.py:1:1:X999:made up\n", Some(1), &["/s/a.py"]).is_err());
+        assert!(parse_flake8(b"garbage\n", Some(1), &["/s/a.py"]).is_err());
+    }
+
+    #[test]
+    fn flake8_survives_colons_inside_the_message() {
+        // E999 syntax errors carry `SyntaxError: ...`, so only a left
+        // split keeps the position intact.
+        let stdout = "/s/broken.py:1:1:E999:SyntaxError: invalid syntax\n";
+        let findings = parse_flake8(stdout.as_bytes(), Some(1), &["/s/broken.py"]).expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].finding.rule_id, "E999");
+        assert_eq!(
+            (findings[0].finding.start, findings[0].finding.end),
+            (TextPosition { line: 1, column: 1 }, None)
+        );
+        assert_eq!(findings[0].finding.message, "SyntaxError: invalid syntax");
+        // W/C families are warnings, not errors.
+        let stdout = "/s/a.py:1:80:W505:doc line too long: fix it\n/s/a.py:2:1:C901:function is too complex\n";
+        let findings = parse_flake8(stdout.as_bytes(), Some(1), &["/s/a.py"]).expect("parsed");
+        assert_eq!(findings.len(), 2);
+        assert!(findings
+            .iter()
+            .all(|finding| finding.finding.severity == ToolSeverity::Warning));
+    }
+
+    const PYLINT_DIRTY: &str = r#"[
+    {
+        "type": "warning",
+        "module": "dirty",
+        "obj": "",
+        "line": 3,
+        "column": 0,
+        "endLine": 3,
+        "endColumn": 9,
+        "path": "/s/dirty.py",
+        "symbol": "unused-import",
+        "message": "Unused import os",
+        "message-id": "W0611"
+    }
+]"#;
+
+    #[test]
+    fn pylint_reports_one_based_ranges() {
+        let findings =
+            parse_pylint(PYLINT_DIRTY.as_bytes(), Some(4), &["/s/dirty.py"]).expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].file, "/s/dirty.py");
+        assert_eq!(findings[0].finding.tool_id, "pylint");
+        assert_eq!(findings[0].finding.rule_id, "W0611");
+        assert_eq!(findings[0].finding.message, "Unused import os");
+        assert_eq!(findings[0].finding.severity, ToolSeverity::Warning);
+        // Pylint columns are 0-based: 0..9 becomes the 1-based range
+        // 3:1..3:10 covering `import os`.
+        assert_eq!(
+            (findings[0].finding.start, findings[0].finding.end),
+            (
+                TextPosition { line: 3, column: 1 },
+                Some(TextPosition {
+                    line: 3,
+                    column: 10
+                })
+            )
+        );
+        assert!(findings[0].finding.suggestions.is_empty());
+        assert!(parse_pylint(b"[]", Some(0), &["/s/dirty.py"])
+            .expect("parsed")
+            .is_empty());
+        // Fail-closed: an empty array on a findings exit, unknown files,
+        // and non-JSON output are grammar mismatches.
+        assert!(parse_pylint(b"[]", Some(4), &["/s/dirty.py"]).is_err());
+        assert!(parse_pylint(PYLINT_DIRTY.as_bytes(), Some(4), &["/s/other.py"]).is_err());
+        assert!(parse_pylint(b"not json", Some(4), &["/s/dirty.py"]).is_err());
+    }
+
+    #[test]
+    fn pylint_maps_kinds_and_null_ends() {
+        // A null end is a point range; convention maps to a warning.
+        let stdout = r#"[
+    {
+        "type": "convention",
+        "module": "a",
+        "obj": "",
+        "line": 1,
+        "column": 0,
+        "endLine": null,
+        "endColumn": null,
+        "path": "/s/a.py",
+        "symbol": "missing-module-docstring",
+        "message": "Missing module docstring",
+        "message-id": "C0114"
+    }
+]"#;
+        let findings = parse_pylint(stdout.as_bytes(), Some(16), &["/s/a.py"]).expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].finding.rule_id, "C0114");
+        assert_eq!(findings[0].finding.severity, ToolSeverity::Warning);
+        assert_eq!(
+            (findings[0].finding.start, findings[0].finding.end),
+            (TextPosition { line: 1, column: 1 }, None)
+        );
+        // fatal/error are errors; unknown kinds and bad lines fail.
+        for (kind, severity) in [
+            ("fatal", ToolSeverity::Error),
+            ("error", ToolSeverity::Error),
+            ("refactor", ToolSeverity::Warning),
+            ("info", ToolSeverity::Info),
+        ] {
+            let stdout = format!(
+                r#"[{{"type": "{kind}", "module": "a", "obj": "", "line": 2, "column": 4, "endLine": 2, "endColumn": 5, "path": "/s/a.py", "symbol": "sym", "message": "msg", "message-id": "X0001"}}]"#
+            );
+            let findings = parse_pylint(stdout.as_bytes(), Some(2), &["/s/a.py"]).expect("parsed");
+            assert_eq!(findings[0].finding.severity, severity, "kind {kind}");
+            assert_eq!(
+                (findings[0].finding.start, findings[0].finding.end),
+                (
+                    TextPosition { line: 2, column: 5 },
+                    Some(TextPosition { line: 2, column: 6 })
+                )
+            );
+        }
+        let bad_kind = r#"[{"type": "nope", "module": "a", "obj": "", "line": 1, "column": 0, "endLine": null, "endColumn": null, "path": "/s/a.py", "symbol": "sym", "message": "msg", "message-id": "X0001"}]"#;
+        assert!(parse_pylint(bad_kind.as_bytes(), Some(1), &["/s/a.py"]).is_err());
+        let bad_line = r#"[{"type": "warning", "module": "a", "obj": "", "line": 0, "column": 0, "endLine": null, "endColumn": null, "path": "/s/a.py", "symbol": "sym", "message": "msg", "message-id": "X0001"}]"#;
+        assert!(parse_pylint(bad_line.as_bytes(), Some(1), &["/s/a.py"]).is_err());
+    }
+
+    #[test]
+    fn python_grammar_mismatches_are_fail_closed() {
+        // Ruff warning maps verbatim; unknown severities and zero
+        // positions are grammar mismatches.
+        let warning = RUFF_LINT_DIRTY.replace("\"severity\":\"error\"", "\"severity\":\"warning\"");
+        let findings = parse_ruff(warning.as_bytes(), Some(1), &["/s/dirty.py"]).expect("parsed");
+        assert_eq!(findings[0].finding.severity, ToolSeverity::Warning);
+        let unknown = RUFF_LINT_DIRTY.replace("\"severity\":\"error\"", "\"severity\":\"info\"");
+        assert!(parse_ruff(unknown.as_bytes(), Some(1), &["/s/dirty.py"]).is_err());
+        let zero_row = RUFF_LINT_DIRTY.replace(
+            "\"location\":{\"column\":8,\"row\":1}",
+            "\"location\":{\"column\":8,\"row\":0}",
+        );
+        assert!(parse_ruff(zero_row.as_bytes(), Some(1), &["/s/dirty.py"]).is_err());
+        let zero_col = RUFF_LINT_DIRTY.replace(
+            "\"location\":{\"column\":8,\"row\":1}",
+            "\"location\":{\"column\":0,\"row\":1}",
+        );
+        assert!(parse_ruff(zero_col.as_bytes(), Some(1), &["/s/dirty.py"]).is_err());
+        // Ruff format: non-JSON output and empty output on a findings
+        // exit are grammar mismatches.
+        assert!(parse_ruff_format(b"not json", Some(1), &["/s/dirty.py"]).is_err());
+        assert!(parse_ruff_format(b"[]", Some(1), &["/s/dirty.py"]).is_err());
+        // Ty: unknown severities, malformed positions, and non-UTF8
+        // output are grammar mismatches.
+        assert!(parse_ty(b"/s/a.py:1:1: info[rule] msg\n", Some(1), &["/s/a.py"]).is_err());
+        assert!(parse_ty(b"/s/a.py:0:1: error[rule] msg\n", Some(1), &["/s/a.py"]).is_err());
+        assert!(parse_ty(&[0xff], Some(1), &["/s/a.py"]).is_err());
+        // pydoclint: bad line numbers, malformed rules, non-UTF8
+        // output, and blank lines around violations.
+        let bad_number = "/s/a.py\n    x: DOC101: msg\n";
+        assert!(parse_pydoclint(bad_number.as_bytes(), Some(1), &["/s/a.py"]).is_err());
+        let bad_rule = "/s/a.py\n    4: DOC: msg\n";
+        assert!(parse_pydoclint(bad_rule.as_bytes(), Some(1), &["/s/a.py"]).is_err());
+        assert!(parse_pydoclint(&[0xff], Some(1), &["/s/a.py"]).is_err());
+        let blanked = "/s/a.py\n\n    4: DOC101: msg\n\n";
+        let findings = parse_pydoclint(blanked.as_bytes(), Some(1), &["/s/a.py"]).expect("parsed");
+        assert_eq!(findings.len(), 1);
+        // flake8: non-UTF8 output fails; blank lines are skipped.
+        assert!(parse_flake8(&[0xff], Some(1), &["/s/dirty.py"]).is_err());
+        let blanked_flake8 = "\n/s/dirty.py:3:1:F401:msg\n\n";
+        let findings =
+            parse_flake8(blanked_flake8.as_bytes(), Some(1), &["/s/dirty.py"]).expect("parsed");
+        assert_eq!(findings.len(), 1);
+        // pylint: half-open ends and empty symbol/id/text are
+        // grammar mismatches.
+        let bad_end = r#"[{"type": "warning", "module": "a", "obj": "", "line": 1, "column": 0, "endLine": 2, "endColumn": null, "path": "/s/a.py", "symbol": "sym", "message": "msg", "message-id": "X0001"}]"#;
+        assert!(parse_pylint(bad_end.as_bytes(), Some(1), &["/s/a.py"]).is_err());
+        let empty_symbol = r#"[{"type": "warning", "module": "a", "obj": "", "line": 1, "column": 0, "endLine": null, "endColumn": null, "path": "/s/a.py", "symbol": "", "message": "msg", "message-id": "X0001"}]"#;
+        assert!(parse_pylint(empty_symbol.as_bytes(), Some(1), &["/s/a.py"]).is_err());
     }
 }

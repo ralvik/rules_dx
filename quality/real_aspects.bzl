@@ -18,7 +18,8 @@ closures, the Markdown link-resolution siblings, and the stage tool
 binaries as inputs. The runner materializes
 exact bytes into a fresh scratch tree, never observes VCS state, and
 launches tools with an empty `PATH` (see `quality_adapter::exec`).
-Python venv launchers (pydoclint) additionally resolve their runtime
+Python venv launchers (pydoclint, flake8, pylint) additionally resolve
+their runtime
 through the runner's runfiles forest via `RUNFILES_DIR`; the forest is
 action-local and never enters findings. Siblings (`markdown_siblings`
 on the visited rule) resolve Markdown link targets only: they are never
@@ -102,8 +103,10 @@ def _real_pipeline_action(target, ctx, capability):
     tool_binaries = {
         "buildifier": ctx.file._buildifier,
         "clippy": clippy_driver,
+        "flake8": ctx.executable._flake8,
         "markdown_check": ctx.file._markdown_check,
         "pydoclint": ctx.executable._pydoclint,
+        "pylint": ctx.executable._pylint,
         "ruff": ctx.file._ruff,
         "rustc": rust_toolchain_rustc(ctx),
         "rustfmt": rustfmt,
@@ -170,19 +173,32 @@ def _real_pipeline_action(target, ctx, capability):
                 args.add("--tool-file", tool + "=" + f.short_path + "=" + f.path)
                 inputs.append(f)
 
-    # The pydoclint launcher is a static stub that locates its interpreter
-    # and site-packages through the runfiles forest (adjacent
-    # `<stub>.runfiles/`, else `RUNFILES_DIR`): the loose closure files
-    # alone leave it unable to initialize. Staging the launcher as a tool
-    # merges its runfiles into the runner's forest, and `RUNFILES_DIR`
-    # points the stub at that forest. The directory is action-local and
-    # transient; it never enters findings or snapshots.
+    # The Python venv launchers (pydoclint, flake8, pylint) are static
+    # stubs that locate their interpreter and site-packages through the
+    # runfiles forest (adjacent `<stub>.runfiles/`, else `RUNFILES_DIR`):
+    # the loose closure files alone leave them unable to initialize.
+    # Staging a launcher as a tool merges its runfiles into the runner's
+    # forest, and `RUNFILES_DIR` points the stub at that forest. The
+    # directory is action-local and transient; it never enters findings
+    # or snapshots.
     run_tools = []
     if "pydoclint" in stage_tools:
         run_tools.append(ctx.attr._pydoclint[DefaultInfo].files_to_run)
         args.add(
             "--tool-env",
             "pydoclint=RUNFILES_DIR=" + ctx.executable._runner.path + ".runfiles",
+        )
+    if "flake8" in stage_tools:
+        run_tools.append(ctx.attr._flake8[DefaultInfo].files_to_run)
+        args.add(
+            "--tool-env",
+            "flake8=RUNFILES_DIR=" + ctx.executable._runner.path + ".runfiles",
+        )
+    if "pylint" in stage_tools:
+        run_tools.append(ctx.attr._pylint[DefaultInfo].files_to_run)
+        args.add(
+            "--tool-env",
+            "pylint=RUNFILES_DIR=" + ctx.executable._runner.path + ".runfiles",
         )
 
     ctx.actions.run(
@@ -213,6 +229,12 @@ _REAL_ATTRS = {
         cfg = "exec",
         doc = "Pinned Buildifier artifact for Starlark pipelines.",
     ),
+    "_flake8": attr.label(
+        default = "//quality/tools/python:flake8",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned flake8 launcher (stub plus runfiles closure) for Python lint opt-ins.",
+    ),
     "_markdown_check": attr.label(
         default = "//quality/markdown:quality_markdown",
         allow_single_file = True,
@@ -229,6 +251,12 @@ _REAL_ATTRS = {
         cfg = "exec",
         executable = True,
         doc = "Pinned pydoclint launcher (stub plus runfiles closure) for Python pipelines.",
+    ),
+    "_pylint": attr.label(
+        default = "//quality/tools/python:pylint",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned pylint launcher (stub plus runfiles closure) for Python lint opt-ins.",
     ),
     "_ruff": attr.label(
         default = "@dx_tools//:ruff",

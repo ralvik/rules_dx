@@ -44,6 +44,19 @@
 //!   checked-filename log, never findings). It runs pinned upstream
 //!   defaults (numpy style); there is no native-config rule, so no config
 //!   flag and scratch-root cwd. Check-only, never rewrites.
+//! * flake8 takes the whole stage file list as `--isolated --color=never
+//!   --jobs=1 --format <template> <files>` (findings on stdout, stderr
+//!   empty; `--isolated` blocks all config discovery, `--jobs=1` keeps
+//!   output order deterministic instead of the default auto parallel fan,
+//!   `--color=never` blocks ANSI). Pinned upstream defaults, no config
+//!   flag, scratch-root cwd. Check-only, never rewrites.
+//! * pylint takes the whole stage file list as `--persistent=n --reports=n
+//!   --score=n --output-format=json --jobs=1 <files>` (findings as a JSON
+//!   array on stdout; `--persistent=n` disables the cache, `--reports=n`
+//!   and `--score=n` suppress the human report/score). The cleared child
+//!   environment (no `HOME`) plus scratch-root cwd leaves no discoverable
+//!   `pylintrc`/`pyproject.toml`, so pinned upstream defaults apply.
+//!   Check-only, never rewrites.
 
 use std::ffi::OsString;
 use std::path::Path;
@@ -379,6 +392,50 @@ pub fn ty_check(binary: &Path, files: &[&Path]) -> Invocation {
 /// Check-only: pydoclint offers no fix mode.
 pub fn pydoclint_check(binary: &Path, files: &[&Path]) -> Invocation {
     let mut argv = vec![binary.as_os_str().to_owned(), OsString::from("--quiet")];
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// flake8 lint check invocation: `--isolated --color=never --jobs=1
+/// --format <template>` over the whole stage file list. One
+/// `path:row:col:code:text` line per finding on stdout (stderr empty);
+/// clean prints nothing. Exit 1 with parsable lines is findings; exit 0
+/// is clean. Check-only: no fix flag exists.
+pub fn flake8_check(binary: &Path, files: &[&Path]) -> Invocation {
+    let mut argv = vec![
+        binary.as_os_str().to_owned(),
+        OsString::from("--isolated"),
+        OsString::from("--color=never"),
+        OsString::from("--jobs=1"),
+        OsString::from("--format"),
+        OsString::from("%(path)s:%(row)s:%(col)s:%(code)s:%(text)s"),
+    ];
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// pylint lint check invocation: `--persistent=n --reports=n --score=n
+/// --output-format=json --jobs=1` over the whole stage file list. A JSON
+/// array on stdout (one object per message); clean prints `[]`. Exit code
+/// is a bit-encoded message-class mask (1 fatal, 2 error, 4 warning, 8
+/// refactor, 16 convention, 32 usage error), so nonzero with parsable JSON
+/// is findings and exit 0 is clean. Check-only: the runner never passes a
+/// fix flag.
+pub fn pylint_check(binary: &Path, files: &[&Path]) -> Invocation {
+    let mut argv = vec![
+        binary.as_os_str().to_owned(),
+        OsString::from("--persistent=n"),
+        OsString::from("--reports=n"),
+        OsString::from("--score=n"),
+        OsString::from("--output-format=json"),
+        OsString::from("--jobs=1"),
+    ];
     argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
     Invocation {
         argv,
@@ -755,6 +812,44 @@ mod tests {
         assert_eq!(
             argv_strings(&invocation),
             vec![BIN, "--quiet", "/scratch/a.py"]
+        );
+        assert_eq!(invocation.cwd_rel, "");
+    }
+
+    #[test]
+    fn flake8_check_is_isolated_single_job() {
+        let file = Path::new("/scratch/a.py");
+        let invocation = flake8_check(Path::new(BIN), &[file]);
+        assert_eq!(
+            argv_strings(&invocation),
+            vec![
+                BIN,
+                "--isolated",
+                "--color=never",
+                "--jobs=1",
+                "--format",
+                "%(path)s:%(row)s:%(col)s:%(code)s:%(text)s",
+                "/scratch/a.py"
+            ]
+        );
+        assert_eq!(invocation.cwd_rel, "");
+    }
+
+    #[test]
+    fn pylint_check_is_json_without_cache_or_report() {
+        let file = Path::new("/scratch/a.py");
+        let invocation = pylint_check(Path::new(BIN), &[file]);
+        assert_eq!(
+            argv_strings(&invocation),
+            vec![
+                BIN,
+                "--persistent=n",
+                "--reports=n",
+                "--score=n",
+                "--output-format=json",
+                "--jobs=1",
+                "/scratch/a.py"
+            ]
         );
         assert_eq!(invocation.cwd_rel, "");
     }
