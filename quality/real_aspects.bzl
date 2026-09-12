@@ -1,4 +1,4 @@
-"""Target-scoped real capability aspects over real adapters (M04 WP2, M15 Python).
+"""Target-scoped real capability aspects over real adapters (M04 WP2, M15 Python, M17 Biome).
 
 Each aspect visits targets carrying `QualitySourcesInfo` and registers one
 exact-input pipeline action for its capability when the real fixture policy
@@ -101,6 +101,7 @@ def _real_pipeline_action(target, ctx, capability):
 
     clippy_driver, rustfmt = rust_toolchain_tools(ctx)
     tool_binaries = {
+        "biome": ctx.file._biome,
         "buildifier": ctx.file._buildifier,
         "clippy": clippy_driver,
         "flake8": ctx.executable._flake8,
@@ -223,6 +224,12 @@ def _real_typecheck_impl(target, ctx):
     return _real_pipeline_action(target, ctx, "typecheck")
 
 _REAL_ATTRS = {
+    "_biome": attr.label(
+        default = "@dx_tools//:biome",
+        allow_single_file = True,
+        cfg = "exec",
+        doc = "Pinned Biome standalone artifact for JavaScript/TypeScript/JSON pipelines.",
+    ),
     "_buildifier": attr.label(
         default = "@dx_tools//:buildifier",
         allow_single_file = True,

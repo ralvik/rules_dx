@@ -2,7 +2,7 @@
 
 load("//quality:aspect_subject.bzl", "aspect_subject")
 load("//quality:fixtures.bzl", "quality_source_target", "real_source_target")
-load("//quality:native_config.bzl", "clippy_config", "ruff_config", "rustfmt_config", "vale_config")
+load("//quality:native_config.bzl", "biome_config", "clippy_config", "ruff_config", "rustfmt_config", "vale_config")
 load(":aspect_tests.bzl", "aspect_fixture_tests")
 load(":real_aspect_subject.bzl", "real_aspect_subject")
 load(":real_aspect_tests.bzl", "real_aspect_fixture_tests")
@@ -111,6 +111,17 @@ clippy_config(
 ruff_config(
     name = "ruff_cfg",
     src = "ruff.toml",
+)
+
+# Hinted Biome policy for the real-pipeline fixture (M17 WP2). Empty
+# object selects pinned upstream defaults explicitly, so the hinted run
+# proves the config closure reaches the tool as --config-path instead of
+# the materialized defaults directory. The config lives in its own
+# subdirectory because Biome rejects a --config-path directory that also
+# contains linted sources.
+biome_config(
+    name = "biome_cfg",
+    src = "biome_cfg/biome.json",
 )
 
 real_source_target(
@@ -267,6 +278,44 @@ real_aspect_subject(
     target = ":fixture_real_python_hinted",
 )
 
+# JavaScript fixtures (M17 WP2): a clean module passing biome
+# lint/format, a dirty module with one deterministic finding per
+# capability (noUnusedVariables lint warning, format diff), and a hinted
+# clean module proving the biome_config closure reaches the tool.
+# Lint/format subjects live in the lint/format presence suite below.
+# (JSON fixtures wait for the Prettier aspect wiring: the json family
+# selects prettier for format, whose bash-wrapper launch is still open.)
+real_source_target(
+    name = "fixture_real_javascript",
+    javascript_srcs = ["real_clean.js"],
+)
+
+real_source_target(
+    name = "fixture_real_javascript_dirty",
+    javascript_srcs = ["real_dirty.js"],
+)
+
+real_source_target(
+    name = "fixture_real_javascript_hinted",
+    aspect_hints = [":biome_cfg"],
+    javascript_srcs = ["real_clean.js"],
+)
+
+real_aspect_subject(
+    name = "fixture_real_javascript_subject",
+    target = ":fixture_real_javascript",
+)
+
+real_aspect_subject(
+    name = "fixture_real_javascript_dirty_subject",
+    target = ":fixture_real_javascript_dirty",
+)
+
+real_aspect_subject(
+    name = "fixture_real_javascript_hinted_subject",
+    target = ":fixture_real_javascript_hinted",
+)
+
 real_aspect_subject(
     name = "real_plain_subject",
     target = ":plain",
@@ -284,6 +333,9 @@ real_aspect_subject(
 real_aspect_fixture_tests(
     name = "real_aspect_presence",
     subjects = [
+        ":fixture_real_javascript_dirty_subject",
+        ":fixture_real_javascript_hinted_subject",
+        ":fixture_real_javascript_subject",
         ":fixture_real_markdown_sibling_subject",
         ":fixture_real_markdown_subject",
         ":fixture_real_mixed_subject",

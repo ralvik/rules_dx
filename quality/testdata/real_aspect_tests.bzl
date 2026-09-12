@@ -8,7 +8,22 @@ prove the capability-level shape resting on the real pipeline unit tests.
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 
-EXPECTED_OBSERVATIONS = """subject //quality/testdata:fixture_real_markdown_sibling_subject
+EXPECTED_OBSERVATIONS = """subject //quality/testdata:fixture_real_javascript_dirty_subject
+field dx_count=2
+field dx_results=fixture_real_javascript_dirty-real-format.pb,fixture_real_javascript_dirty-real-lint.pb
+field has_quality_sources=True
+field label=//quality/testdata:fixture_real_javascript_dirty
+subject //quality/testdata:fixture_real_javascript_hinted_subject
+field dx_count=2
+field dx_results=fixture_real_javascript_hinted-real-format.pb,fixture_real_javascript_hinted-real-lint.pb
+field has_quality_sources=True
+field label=//quality/testdata:fixture_real_javascript_hinted
+subject //quality/testdata:fixture_real_javascript_subject
+field dx_count=2
+field dx_results=fixture_real_javascript-real-format.pb,fixture_real_javascript-real-lint.pb
+field has_quality_sources=True
+field label=//quality/testdata:fixture_real_javascript
+subject //quality/testdata:fixture_real_markdown_sibling_subject
 field dx_count=1
 field dx_results=fixture_real_markdown_sibling-real-lint.pb
 field has_quality_sources=True

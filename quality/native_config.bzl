@@ -1,10 +1,11 @@
-"""Typed native-configuration targets for M04 adapters plus M15 Ruff.
+"""Typed native-configuration targets for M04 adapters plus M15 Ruff and M17 Biome.
 
 Each initial adapter reads its behavior from exactly one checked-in
 tool-owned config file (the native-configuration authority contract):
 Buildifier `.buildifier.json`, Taplo `taplo.toml` fragment, Vale `.vale.ini`
-plus style/vocab data, rustfmt `rustfmt.toml`, Clippy `clippy.toml`, and
-Ruff `ruff.toml` (see below for the dedicated-config rule).
+plus style/vocab data, rustfmt `rustfmt.toml`, Clippy `clippy.toml`,
+Ruff `ruff.toml` (see below for the dedicated-config rule), and Biome
+`biome.json` (see below for the config-dir rule).
 Source targets opt into a config through `aspect_hints`; the consuming
 aspect resolves hints to stages (see `collect_native_configs`). Without a
 hint the adapter runs pinned upstream defaults, except Vale, which has no
@@ -31,8 +32,13 @@ DxNativeConfigInfo = provider(
 # analysis instead of silently changing behavior. Ruff recognizes only
 # the dedicated `ruff.toml`/`.ruff.toml` basenames (never `pyproject.toml`);
 # basename recognition is Gazelle's job, the `.toml` extension check here
-# matches the rustfmt/clippy split.
+# matches the rustfmt/clippy split. Biome takes `biome.json` (or
+# `biome.jsonc`): the adapter passes the config's directory as
+# `--config-path`, so the directory must hold exactly one config file and
+# never linted sources; the `.json` extension check here pins the JSON
+# transport while `.jsonc` support stays future work.
 _NATIVE_CONFIG_EXTENSIONS = {
+    "biome": ".json",
     "buildifier": ".json",
     "clippy": ".toml",
     "ruff": ".toml",
@@ -168,4 +174,9 @@ clippy_config = _make_native_config_rule(
 ruff_config = _make_native_config_rule(
     "ruff",
     "Checked-in Ruff TOML config (ruff.toml) for Python lint/format. Only the dedicated ruff.toml/.ruff.toml basenames are recognized; pyproject.toml is never a Ruff action input.",
+)
+
+biome_config = _make_native_config_rule(
+    "biome",
+    "Checked-in Biome JSON config (biome.json) for JavaScript/TypeScript/JSON lint/format. The adapter passes the config's directory as --config-path.",
 )

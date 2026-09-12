@@ -593,17 +593,36 @@ impl RealBackend {
                     commands::biome_lint_check(&tool.binary, &refs, &config_dir)
                 };
                 let out = self.run(tool_id, tool, &invocation, scratch)?;
-                if capability == "format" {
+                // Biome reports paths relative to its working directory
+                // (the scratch root), so attribute against the
+                // workspace-relative mirror paths, then re-anchor each
+                // finding to its absolute scratch path: the caller
+                // contract stays absolute-addressed. Mirrors the prettier
+                // branch below.
+                let workspaces: Vec<&str> = pairs
+                    .iter()
+                    .map(|(workspace, _)| workspace.as_str())
+                    .collect();
+                let mut findings = if capability == "format" {
                     parsed(
                         tool_id,
-                        parsers::parse_biome_format(&out.stdout, out.code, &strs),
+                        parsers::parse_biome_format(&out.stdout, out.code, &workspaces),
                     )
                 } else {
                     parsed(
                         tool_id,
-                        parsers::parse_biome_lint(&out.stdout, out.code, &strs),
+                        parsers::parse_biome_lint(&out.stdout, out.code, &workspaces),
                     )
+                }?;
+                for found in &mut findings {
+                    let absolute = pairs
+                        .iter()
+                        .find(|(workspace, _)| *workspace == found.file)
+                        .map(|(_, absolute)| absolute.clone())
+                        .expect("parsed file was checked");
+                    found.file = absolute.to_string_lossy().into_owned();
                 }
+                Ok(findings)
             }
             "eslint" => {
                 let invocation = match config.as_ref() {
@@ -1209,10 +1228,12 @@ mod tests {
     /// `noUnusedVariables` exactly when the materialized file contains
     /// `unusedVar`; `format` (check) reports `format` exactly when it
     /// contains `BADFMT`; `format --write` rewrites `BADFMT` away and
-    /// exits 0. Asserts the pinned JSON flags on every launch.
+    /// exits 0. Asserts the pinned JSON flags on every launch. Like the
+    /// real binary, findings address files relative to the working
+    /// directory (the scratch root), so the backend re-anchors them.
     fn roundtrip_biome(
         argv: &[OsString],
-        _cwd: &Path,
+        cwd: &Path,
         env: &[(String, String)],
     ) -> io::Result<ChildOutput> {
         assert_hermetic(env);
@@ -1230,6 +1251,10 @@ mod tests {
             "biome config dir holds exactly one biome.json"
         );
         let file = last_file(argv);
+        let reported = Path::new(&file)
+            .strip_prefix(cwd)
+            .map(|relative| relative.to_string_lossy().into_owned())
+            .unwrap_or(file.clone());
         if argv.get(1).map(OsString::as_os_str) == Some(OsStr::new("lint")) {
             assert!(
                 argv.iter().any(|arg| arg == "--error-on-warnings"),
@@ -1246,7 +1271,7 @@ mod tests {
             let bytes = std::fs::read(&file).expect("checked file is materialized");
             let text = String::from_utf8(bytes).expect("checked bytes stay UTF-8");
             if text.contains("unusedVar") {
-                let stdout = BIOME_LINT_DIRTY.replace("FILE", &file);
+                let stdout = BIOME_LINT_DIRTY.replace("FILE", &reported);
                 return Ok(ChildOutput {
                     code: Some(1),
                     stdout: stdout.into_bytes(),
@@ -1278,7 +1303,7 @@ mod tests {
         let bytes = std::fs::read(&file).expect("checked file is materialized");
         let text = String::from_utf8(bytes).expect("checked bytes stay UTF-8");
         if text.contains("BADFMT") {
-            let stdout = BIOME_FMT_DIRTY.replace("FILE", &file);
+            let stdout = BIOME_FMT_DIRTY.replace("FILE", &reported);
             return Ok(ChildOutput {
                 code: Some(1),
                 stdout: stdout.into_bytes(),

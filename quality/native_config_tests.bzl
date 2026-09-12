@@ -27,9 +27,12 @@ def native_config_unit_tests(name):
         mode = "unit",
         checks = [
             expect_equal(
-                "native_config_extension pins the buildifier JSON transport",
-                native_config_extension("buildifier"),
-                ".json",
+                "native_config_extension pins the buildifier/biome JSON transport",
+                [
+                    native_config_extension("buildifier"),
+                    native_config_extension("biome"),
+                ],
+                [".json", ".json"],
             ),
             expect_equal(
                 "native_config_extension pins TOML for taplo/rustfmt/clippy/ruff",
@@ -70,7 +73,7 @@ def native_config_unit_tests(name):
                 "native_config_error rejects an unknown tool",
                 native_config_error("prettier", "x.json", True, []),
                 "native_config: unknown tool 'prettier': want one of " +
-                "buildifier, clippy, ruff, rustfmt, taplo, vale",
+                "biome, buildifier, clippy, ruff, rustfmt, taplo, vale",
             ),
             expect_equal(
                 "native_config_error requires a config",

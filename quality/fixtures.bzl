@@ -43,6 +43,16 @@ quality_source_target = rule(
 
 def _real_source_target_impl(ctx):
     direct_sources = {}
+    if len(ctx.files.javascript_srcs) > 0:
+        direct_sources["javascript"] = depset(ctx.files.javascript_srcs)
+    if len(ctx.files.jsx_srcs) > 0:
+        direct_sources["jsx"] = depset(ctx.files.jsx_srcs)
+    if len(ctx.files.typescript_srcs) > 0:
+        direct_sources["typescript"] = depset(ctx.files.typescript_srcs)
+    if len(ctx.files.tsx_srcs) > 0:
+        direct_sources["tsx"] = depset(ctx.files.tsx_srcs)
+    if len(ctx.files.json_srcs) > 0:
+        direct_sources["json"] = depset(ctx.files.json_srcs)
     if len(ctx.files.python_srcs) > 0:
         direct_sources["python"] = depset(ctx.files.python_srcs)
     if len(ctx.files.python_stub_srcs) > 0:
@@ -56,7 +66,7 @@ def _real_source_target_impl(ctx):
     if len(ctx.files.markdown_srcs) > 0:
         direct_sources["markdown"] = depset(ctx.files.markdown_srcs)
     check_direct_sources(direct_sources, str(ctx.label))
-    all_files = list(ctx.files.python_srcs) + list(ctx.files.python_stub_srcs) + list(ctx.files.rust_srcs) + list(ctx.files.starlark_srcs) + list(ctx.files.toml_srcs) + list(ctx.files.markdown_srcs)
+    all_files = list(ctx.files.javascript_srcs) + list(ctx.files.jsx_srcs) + list(ctx.files.typescript_srcs) + list(ctx.files.tsx_srcs) + list(ctx.files.json_srcs) + list(ctx.files.python_srcs) + list(ctx.files.python_stub_srcs) + list(ctx.files.rust_srcs) + list(ctx.files.starlark_srcs) + list(ctx.files.toml_srcs) + list(ctx.files.markdown_srcs)
     return [
         DefaultInfo(files = depset(all_files)),
         QualitySourcesInfo(direct_sources = direct_sources),
@@ -65,6 +75,21 @@ def _real_source_target_impl(ctx):
 real_source_target = rule(
     implementation = _real_source_target_impl,
     attrs = {
+        "javascript_srcs": attr.label_list(
+            allow_files = True,
+            default = [],
+            doc = "Directly owned JavaScript sources for this fixture target.",
+        ),
+        "json_srcs": attr.label_list(
+            allow_files = True,
+            default = [],
+            doc = "Directly owned JSON sources for this fixture target.",
+        ),
+        "jsx_srcs": attr.label_list(
+            allow_files = True,
+            default = [],
+            doc = "Directly owned JSX sources for this fixture target.",
+        ),
         "markdown_siblings": attr.label_list(
             allow_files = True,
             default = [],
@@ -99,6 +124,16 @@ real_source_target = rule(
             allow_files = True,
             default = [],
             doc = "Directly owned TOML sources for this fixture target.",
+        ),
+        "tsx_srcs": attr.label_list(
+            allow_files = True,
+            default = [],
+            doc = "Directly owned TSX sources for this fixture target.",
+        ),
+        "typescript_srcs": attr.label_list(
+            allow_files = True,
+            default = [],
+            doc = "Directly owned TypeScript sources for this fixture target.",
         ),
     },
     doc = "Minimal QualitySourcesInfo fixture with native-config hints for real aspect evidence.",
