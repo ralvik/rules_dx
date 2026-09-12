@@ -8,7 +8,10 @@ actions). Cross-toolchain quality evidence (exact-input, no-config, edit,
 cache, empty-PATH) lands in later WP2 commits; these checks prove the
 pure shapes that evidence rests on. M12 WP3 adds the rustc typecheck
 stage over the rust class. M15 WP3 adds the flake8/pylint Python lint
-opt-ins and their lexical stage order.
+opt-ins and their lexical stage order. M17 WP2 adds the curated
+JavaScript/TypeScript/JSON adapters (biome default lint/format,
+eslint lint opt-in, prettier format default for JSON and alternative for
+JS/TS, target-coupled tsc typecheck) and their lexical stage order.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
@@ -16,31 +19,43 @@ load(":adapters.bzl", "REAL_ADAPTERS", "REAL_CLASS_TO_FAMILY", "real_supported_c
 load(":pipeline.bzl", "authorize_classes", "pipeline_stages", "resolve_pipeline")
 
 _LINT_SELECTIONS = {
+    "javascript": ["biome"],
+    "json": ["biome"],
     "markdown": ["markdown_check", "vale"],
     "rust": ["clippy"],
     "starlark": ["buildifier"],
     "toml": ["taplo"],
+    "typescript": ["biome"],
 }
 
 _FORMAT_SELECTIONS = {
+    "javascript": ["biome"],
+    "json": ["prettier"],
     "markdown": [],
     "rust": ["rustfmt"],
     "starlark": ["buildifier"],
     "toml": ["taplo"],
+    "typescript": ["biome"],
 }
 
 _TYPECHECK_SELECTIONS = {
+    "javascript": [],
+    "json": [],
     "markdown": [],
     "rust": ["rustc"],
     "starlark": [],
     "toml": [],
+    "typescript": ["tsc"],
 }
 
 _DIRECT_SOURCES = {
+    "javascript": ["src/app.js", "src/view.jsx"],
+    "json": ["config/data.json"],
     "markdown": ["doc/guide.md"],
     "rust": ["src/lib.rs", "src/main.rs"],
     "starlark": ["BUILD.bazel"],
     "toml": ["Cargo.toml"],
+    "typescript": ["src/main.ts", "src/app.tsx"],
 }
 
 def real_pipeline_unit_tests(name):
@@ -48,6 +63,46 @@ def real_pipeline_unit_tests(name):
         name = name,
         mode = "unit",
         checks = [
+            expect_equal(
+                "real_supported_classes returns biome lint and format support",
+                [
+                    real_supported_classes("biome", "lint"),
+                    real_supported_classes("biome", "format"),
+                    real_supported_classes("biome", "typecheck"),
+                ],
+                [
+                    ["javascript", "json", "jsx", "tsx", "typescript"],
+                    ["javascript", "json", "jsx", "tsx", "typescript"],
+                    [],
+                ],
+            ),
+            expect_equal(
+                "real_supported_classes returns eslint lint support only",
+                [
+                    real_supported_classes("eslint", "lint"),
+                    real_supported_classes("eslint", "format"),
+                    real_supported_classes("eslint", "typecheck"),
+                ],
+                [["javascript", "jsx"], [], []],
+            ),
+            expect_equal(
+                "real_supported_classes returns prettier format support only",
+                [
+                    real_supported_classes("prettier", "lint"),
+                    real_supported_classes("prettier", "format"),
+                    real_supported_classes("prettier", "typecheck"),
+                ],
+                [[], ["javascript", "json", "jsx", "tsx", "typescript"], []],
+            ),
+            expect_equal(
+                "real_supported_classes returns tsc typecheck support only",
+                [
+                    real_supported_classes("tsc", "lint"),
+                    real_supported_classes("tsc", "format"),
+                    real_supported_classes("tsc", "typecheck"),
+                ],
+                [[], [], ["tsx", "typescript"]],
+            ),
             expect_equal(
                 "real_supported_classes returns buildifier lint support",
                 real_supported_classes("buildifier", "lint"),
@@ -133,6 +188,7 @@ def real_pipeline_unit_tests(name):
                 "authorize_classes maps each real tool to its own class",
                 authorize_classes(_LINT_SELECTIONS, REAL_CLASS_TO_FAMILY),
                 {
+                    "biome": ["javascript", "json", "jsx", "tsx", "typescript"],
                     "buildifier": ["starlark"],
                     "clippy": ["rust"],
                     "markdown_check": ["markdown"],
@@ -199,6 +255,102 @@ def real_pipeline_unit_tests(name):
                     {"classes": ["python"], "tool": "pydoclint"},
                     {"classes": ["python"], "tool": "pylint"},
                     {"classes": ["python"], "tool": "ruff"},
+                ],
+            ),
+            expect_equal(
+                "pipeline_stages orders javascript lint opt-ins lexically",
+                pipeline_stages(
+                    ["javascript"],
+                    "lint",
+                    {"javascript": ["eslint", "biome"]},
+                    REAL_CLASS_TO_FAMILY,
+                    REAL_ADAPTERS,
+                ),
+                [
+                    {"classes": ["javascript"], "tool": "biome"},
+                    {"classes": ["javascript"], "tool": "eslint"},
+                ],
+            ),
+            expect_equal(
+                "pipeline_stages orders javascript format alternatives lexically",
+                pipeline_stages(
+                    ["javascript"],
+                    "format",
+                    {"javascript": ["prettier", "biome"]},
+                    REAL_CLASS_TO_FAMILY,
+                    REAL_ADAPTERS,
+                ),
+                [
+                    {"classes": ["javascript"], "tool": "biome"},
+                    {"classes": ["javascript"], "tool": "prettier"},
+                ],
+            ),
+            expect_equal(
+                "pipeline_stages builds one tsc typecheck stage",
+                pipeline_stages(
+                    ["typescript", "tsx"],
+                    "typecheck",
+                    _TYPECHECK_SELECTIONS,
+                    REAL_CLASS_TO_FAMILY,
+                    REAL_ADAPTERS,
+                ),
+                [
+                    {"classes": ["tsx", "typescript"], "tool": "tsc"},
+                ],
+            ),
+            expect_equal(
+                "pipeline_stages omits eslint for typescript with no matching configuration",
+                pipeline_stages(
+                    ["typescript"],
+                    "lint",
+                    {"typescript": ["eslint"]},
+                    REAL_CLASS_TO_FAMILY,
+                    REAL_ADAPTERS,
+                ),
+                [],
+            ),
+            expect_equal(
+                "pipeline_stages unions biome across javascript, json, and typescript families",
+                pipeline_stages(
+                    ["javascript", "json", "typescript"],
+                    "lint",
+                    _LINT_SELECTIONS,
+                    REAL_CLASS_TO_FAMILY,
+                    REAL_ADAPTERS,
+                ),
+                [
+                    {"classes": ["javascript", "json", "typescript"], "tool": "biome"},
+                ],
+            ),
+            expect_equal(
+                "pipeline_stages scopes javascript-only prettier away from typescript, tsx, and json",
+                [
+                    pipeline_stages(
+                        ["typescript"],
+                        "format",
+                        {"javascript": ["prettier"]},
+                        REAL_CLASS_TO_FAMILY,
+                        REAL_ADAPTERS,
+                    ),
+                    pipeline_stages(
+                        ["json"],
+                        "format",
+                        {"javascript": ["prettier"]},
+                        REAL_CLASS_TO_FAMILY,
+                        REAL_ADAPTERS,
+                    ),
+                    pipeline_stages(
+                        ["javascript", "jsx"],
+                        "format",
+                        {"javascript": ["prettier"]},
+                        REAL_CLASS_TO_FAMILY,
+                        REAL_ADAPTERS,
+                    ),
+                ],
+                [
+                    [],
+                    [],
+                    [{"classes": ["javascript", "jsx"], "tool": "prettier"}],
                 ],
             ),
             expect_equal(
@@ -287,6 +439,24 @@ def real_pipeline_unit_tests(name):
                         "classes": ["rust"],
                         "sources": ["src/lib.rs"],
                         "tool": "rustfmt",
+                    },
+                ],
+            ),
+            expect_equal(
+                "resolve_pipeline carries the exact javascript, json, and typescript lint subset",
+                resolve_pipeline(
+                    ["javascript", "json", "typescript"],
+                    _DIRECT_SOURCES,
+                    "lint",
+                    _LINT_SELECTIONS,
+                    REAL_CLASS_TO_FAMILY,
+                    REAL_ADAPTERS,
+                ),
+                [
+                    {
+                        "classes": ["javascript", "json", "typescript"],
+                        "sources": ["config/data.json", "src/app.js", "src/app.tsx", "src/main.ts", "src/view.jsx"],
+                        "tool": "biome",
                     },
                 ],
             ),

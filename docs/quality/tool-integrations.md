@@ -179,8 +179,42 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   Description, Action}`; `--counts` yields `{files, counts}`; line form is
   `path:line:col:check:message`. Missing config reports `E100`; global `xdg .vale.ini` loads in
   addition unless `--no-global`. `StylesPath` plus `.vale-config/*.ini` pipeline files, vocabularies,
-  dictionaries, templates, scripts, and filters form the closure; `sync` downloads packages and must
-  never run in consumer actions.
+   dictionaries, templates, scripts, and filters form the closure; `sync` downloads packages and must
+   never run in consumer actions.
+- **Biome:** qualify `lint --reporter=json --colors=off --error-on-warnings --vcs-enabled=false
+  --config-path=<dir>` and `format --reporter=json --colors=off --config-path=<dir>` over the pinned
+  2.5.12 standalone artifact (`@dx_tools//:biome`). Direct probes show exit `0` when clean and `1`
+  on findings; stdout JSON is `{summary, diagnostics[], command}` with diagnostics carrying
+  `{severity, message, category, location{path,start{line,column},end}, advices[]}`; lint categories
+  include `lint/...` (for example `correctness/noUnusedVariables` as a warning, promoted to exit 1 by
+  `--error-on-warnings`, and `suspicious/noDuplicateObjectKeys` as a JSON error) and `parse` for
+  malformed inputs; format check failures use category `format` with location `0:0` and no diff in
+  JSON; `--write` applies formatting. Unknown extensions are skipped with `No files were processed`
+  and exit `0`. The config directory must never contain linted sources: files inside the
+  `--config-path` directory fail with a nested-root configuration error, while files outside it
+  lint identically from any working directory, including inside a git repository. Hostile-home and
+  sandbox config-discovery fixtures land with the runner wiring.
+- **ESLint:** qualify `-c <checked-in flat config> -f json [--fix-dry-run]` over the pinned 10.10.0
+  private Node graph (`//quality/tools/javascript/bin:eslint`, launched via `js_run_binary` so
+  `BAZEL_BINDIR` is set). Direct probes show JSON results `[{filePath, messages[{ruleId, severity
+  (2 is error), message, line/column, endLine/endColumn, fix?, suggestions?}], errorCount,
+  warningCount, fixable counts, usedDeprecatedRules}]`; `--fix-dry-run` returns the fixed source in
+  `output` with empty messages. Without a config file ESLint hard-fails (`couldn't find an
+  eslint.config.* file`); files outside the base path and files matching no configuration are
+  ignored with a warning, never an error. The curated scope is JavaScript/JSX only: no TypeScript
+  parser is installed, so a JS-only config leaves `.ts` files unmatched. Native configs must not
+  import uninstalled plugins and must avoid deprecated stylistic core rules (for example `semi`,
+  reported under `usedDeprecatedRules` as moved to `@stylistic`).
+- **Prettier:** qualify `--no-config --no-editorconfig --check` (`--write`, `--list-different`) over
+  the pinned 3.9.6 private Node graph (`//quality/tools/javascript/bin:prettier`, launched via
+  `js_run_binary`). Direct probes show parser inference for `.js/.jsx/.ts/.tsx/.json`, `[warn]`
+  plus exit `1` on differences, and in-place `--write`. The `editorconfig` package is absent from
+  the runfiles forest, so `.editorconfig` files are currently inert; `--no-editorconfig` stays
+  mandatory so a future dependency addition cannot change formatting.
+- **tsc:** qualify the pinned 5.9.3 compiler (`@npm_typescript//:tsc`) as a target-coupled typecheck
+  adapter only: it never runs as a bare file invocation and requires the authoritative
+  `typescript_project` context (`TsConfigInfo`). Bare-file use would lose tsconfig and declaration
+  context. Upstream mapping evidence is the `typescript_project` typecheck test target.
 
 Candidate native filenames are `.buildifier.json`, `.taplo.toml`/`taplo.toml`, and `.vale.ini`.
 Freeze them in [Native Configuration](native-configuration.md#discovery) only with exact binding,

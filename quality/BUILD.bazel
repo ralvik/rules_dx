@@ -119,14 +119,47 @@ quality_family(
     typecheck = ["ty"],
 )
 
+# Real fixture JavaScript/TypeScript/JSON families (M17 WP2): curated
+# defaults per the tool baseline (Biome default linter and formatter for
+# JavaScript and TypeScript, Biome default linter for JSON, Prettier
+# default JSON formatter, tsc typecheck for TypeScript). ESLint stays a
+# lint opt-in for the javascript family and Prettier a format alternative
+# for the javascript and typescript families; both remain selectable but
+# absent below. Like the other real families, this is a fixture, not the
+# frozen taxonomy.
+quality_family(
+    name = "real_javascript_family",
+    family_id = "javascript",
+    format = ["biome"],
+    lint = ["biome"],
+)
+
+quality_family(
+    name = "real_json_family",
+    family_id = "json",
+    format = ["prettier"],
+    lint = ["biome"],
+)
+
+quality_family(
+    name = "real_typescript_family",
+    family_id = "typescript",
+    format = ["biome"],
+    lint = ["biome"],
+    typecheck = ["tsc"],
+)
+
 workspace_policy(
     name = "real_fixture_policy",
     families = [
+        ":real_javascript_family",
+        ":real_json_family",
         ":real_markdown_family",
         ":real_python_family",
         ":real_rust_family",
         ":real_starlark_family",
         ":real_toml_family",
+        ":real_typescript_family",
     ],
 )
 
