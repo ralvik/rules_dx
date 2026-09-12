@@ -603,17 +603,12 @@ impl RealBackend {
                     .iter()
                     .map(|(workspace, _)| workspace.as_str())
                     .collect();
-                let mut findings = if capability == "format" {
-                    parsed(
-                        tool_id,
-                        parsers::parse_biome_format(&out.stdout, out.code, &workspaces),
-                    )
+                let report = if capability == "format" {
+                    parsers::parse_biome_format(&out.stdout, out.code, &workspaces)
                 } else {
-                    parsed(
-                        tool_id,
-                        parsers::parse_biome_lint(&out.stdout, out.code, &workspaces),
-                    )
-                }?;
+                    parsers::parse_biome_lint(&out.stdout, out.code, &workspaces)
+                };
+                let mut findings = parsed(tool_id, report)?;
                 for found in &mut findings {
                     let absolute = pairs
                         .iter()
@@ -646,10 +641,8 @@ impl RealBackend {
                     .iter()
                     .map(|(workspace, _)| workspace.as_str())
                     .collect();
-                let mut findings = parsed(
-                    tool_id,
-                    parsers::parse_prettier_check(&out.stderr, out.code, &workspaces),
-                )?;
+                let report = parsers::parse_prettier_check(&out.stderr, out.code, &workspaces);
+                let mut findings = parsed(tool_id, report)?;
                 for found in &mut findings {
                     let absolute = pairs
                         .iter()
@@ -1478,6 +1471,22 @@ mod tests {
     ) -> io::Result<ChildOutput> {
         assert_hermetic(env);
         Err(io::Error::new(io::ErrorKind::NotFound, "no such binary"))
+    }
+
+    /// Fix double that fails outside the ESLint exit-1 re-read, so the
+    /// ESLint fix path must keep the original text.
+    fn fatal_fix(
+        argv: &[OsString],
+        _cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_hermetic(env);
+        let _ = last_file(argv);
+        Ok(ChildOutput {
+            code: Some(2),
+            stdout: Vec::new(),
+            stderr: b"fatal error".to_vec(),
+        })
     }
 
     fn taplo_either(
@@ -3207,6 +3216,73 @@ mod tests {
         );
     }
 
+    #[test]
+    fn biome_root_level_config_resolves_to_scratch_root() {
+        let tool = RealTool {
+            config_rel: Some("biome.json".to_owned()),
+            tool_files: vec![("biome.json".to_owned(), b"{}".to_vec())],
+            ..plain_tool()
+        };
+        let backend = backend_for("biome", tool, roundtrip_biome);
+        let findings = backend
+            .diagnose(
+                "biome",
+                "lint",
+                &single("src/a.js", "const unusedVar = 1;\n"),
+            )
+            .expect("diagnosed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].rule_id, "lint/correctness/noUnusedVariables");
+    }
+
+    #[test]
+    fn prettier_apply_fix_is_format_only() {
+        let backend = backend_for("prettier", plain_tool(), roundtrip_prettier);
+        let text = "const x = BADFMT;\n";
+        assert_eq!(
+            backend
+                .apply_fix("prettier", "src/a.js", text, "lint")
+                .expect("non-format fix is a no-op"),
+            text
+        );
+    }
+
+    #[test]
+    fn biome_fix_failure_keeps_original_text() {
+        let backend = backend_for("biome", plain_tool(), failing_fix);
+        let text = "const x = BADFMT;\n";
+        assert_eq!(
+            backend
+                .apply_fix("biome", "src/a.js", text, "format")
+                .expect("failed fix keeps text"),
+            text
+        );
+    }
+
+    #[test]
+    fn prettier_fix_failure_keeps_original_text() {
+        let backend = backend_for("prettier", plain_tool(), failing_fix);
+        let text = "const x = BADFMT;\n";
+        assert_eq!(
+            backend
+                .apply_fix("prettier", "src/a.js", text, "format")
+                .expect("failed fix keeps text"),
+            text
+        );
+    }
+
+    #[test]
+    fn eslint_fix_failure_keeps_original_text() {
+        let backend = backend_for("eslint", eslint_tool(), fatal_fix);
+        let text = "const unusedVar = 1;\n";
+        assert_eq!(
+            backend
+                .apply_fix("eslint", "src/a.js", text, "lint")
+                .expect("failed fix keeps text"),
+            text
+        );
+    }
+
     /// M17 WP3: Biome/Prettier composition benchmark. Models the measured
     /// direct-probe behavior: Biome formats with tabs, Prettier with two
     /// spaces (pinned defaults, no native config), so the same JS input
@@ -3263,6 +3339,16 @@ mod tests {
         assert_eq!(convergence, Convergence::Stable);
         assert_eq!(completed, 2);
         assert_eq!(terminal["src/app.js"], "spaces\n");
+        // The identity arms are live: each formatter already leaves its
+        // own style unchanged.
+        assert_eq!(
+            normalize("biome", "javascript", "tabs\n").expect("idempotent"),
+            "tabs\n"
+        );
+        assert_eq!(
+            normalize("prettier", "javascript", "spaces\n").expect("idempotent"),
+            "spaces\n"
+        );
     }
 
     #[test]
@@ -3293,6 +3379,14 @@ mod tests {
         // Reverse order converges to the other terminal, proving the order
         // is material and must stay frozen lexically for determinism.
         assert_eq!(terminal["src/app.js"], "tabs\n");
+        assert_eq!(
+            normalize("biome", "javascript", "tabs\n").expect("idempotent"),
+            "tabs\n"
+        );
+        assert_eq!(
+            normalize("prettier", "javascript", "spaces\n").expect("idempotent"),
+            "spaces\n"
+        );
     }
 
     #[test]

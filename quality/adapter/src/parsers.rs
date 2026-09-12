@@ -1920,12 +1920,10 @@ pub fn parse_prettier_check(
         if path.starts_with("Code style issues") {
             continue;
         }
-        if path.is_empty() {
-            return Err(ParseError::Shape {
-                tool: TOOL,
-                detail: "empty warn path".to_owned(),
-            });
-        }
+        // No empty-path guard: `path` is the remainder after the
+        // `"[warn] "` prefix on an already-trimmed line, so it cannot be
+        // empty (a bare `"[warn] "` line trims to `"[warn]"` and fails
+        // the prefix match above). Unknown paths fail closed in `known`.
         let normalized = path.strip_prefix("./").unwrap_or(path);
         let checked = known(TOOL, files, normalized)?;
         let (start, end) = point(1, 1);
@@ -2950,6 +2948,16 @@ mod grammar_errors {
         let unknown_sev =
             BIOME_LINT_DIRTY.replace("\"severity\":\"warning\"", "\"severity\":\"hint\"");
         assert!(parse_biome_lint(unknown_sev.as_bytes(), Some(1), &["/s/dirty.js"]).is_err());
+        let empty_category = BIOME_LINT_DIRTY.replace(
+            "\"category\":\"lint/correctness/noUnusedVariables\"",
+            "\"category\":\"\"",
+        );
+        assert!(parse_biome_lint(empty_category.as_bytes(), Some(1), &["/s/dirty.js"]).is_err());
+        let empty_message = BIOME_LINT_DIRTY.replace(
+            "\"message\":\"This variable unusedVar is unused.\"",
+            "\"message\":\"\"",
+        );
+        assert!(parse_biome_lint(empty_message.as_bytes(), Some(1), &["/s/dirty.js"]).is_err());
     }
 
     #[test]
@@ -2965,11 +2973,21 @@ mod grammar_errors {
             .expect("parsed")
             .is_empty());
         assert!(parse_biome_format(clean.as_bytes(), Some(1), &["/s/c.js"]).is_err());
+        assert!(parse_biome_format(b"not json", Some(1), &["/s/fmt.js"]).is_err());
         let wrong_cat = BIOME_FMT_DIRTY.replace(
             "\"category\":\"format\"",
             "\"category\":\"lint/style/noFoo\"",
         );
         assert!(parse_biome_format(wrong_cat.as_bytes(), Some(1), &["/s/fmt.js"]).is_err());
+        let wrong_command =
+            BIOME_FMT_DIRTY.replace("\"command\":\"format\"", "\"command\":\"lint\"");
+        assert!(parse_biome_format(wrong_command.as_bytes(), Some(1), &["/s/fmt.js"]).is_err());
+        let nonzero_pos = BIOME_FMT_DIRTY.replacen(
+            "\"start\":{\"line\":0,\"column\":0}",
+            "\"start\":{\"line\":1,\"column\":1}",
+            1,
+        );
+        assert!(parse_biome_format(nonzero_pos.as_bytes(), Some(1), &["/s/fmt.js"]).is_err());
     }
 
     const ESLINT_DIRTY: &str = r#"[{"filePath":"/s/dirty.js","messages":[{"ruleId":"no-unused-vars","severity":2,"message":"'unusedVar' is assigned a value but never used.","line":1,"column":7,"endLine":1,"endColumn":16}],"errorCount":1,"warningCount":0}]"#;
@@ -2993,10 +3011,29 @@ mod grammar_errors {
         let findings =
             parse_eslint(fatal_null.as_bytes(), Some(1), &["/s/broken.js"]).expect("parsed");
         assert_eq!(findings[0].finding.rule_id, "");
-        let ignored = r#"[{"filePath":"/s/a.js","messages":[{"ruleId":null,"fatal":false,"severity":1,"message":"File ignored because outside of base path."}],"warningCount":1}]"#;
-        assert!(parse_eslint(ignored.as_bytes(), Some(0), &["/s/a.js"]).is_err());
+        let ignored = r#"[{"filePath":"/s/a.js","messages":[{"ruleId":null,"fatal":false,"severity":1,"message":"File ignored because outside of base path.","line":1,"column":1}],"warningCount":1}]"#;
+        let err = parse_eslint(ignored.as_bytes(), Some(0), &["/s/a.js"]).expect_err("ignored");
+        assert!(err.to_string().contains("ignored file"));
         let bad_sev = ESLINT_DIRTY.replace("\"severity\":2", "\"severity\":3");
         assert!(parse_eslint(bad_sev.as_bytes(), Some(1), &["/s/dirty.js"]).is_err());
+        let warning = ESLINT_DIRTY.replace("\"severity\":2", "\"severity\":1");
+        let findings = parse_eslint(warning.as_bytes(), Some(1), &["/s/dirty.js"]).expect("parsed");
+        assert_eq!(findings[0].finding.severity, ToolSeverity::Warning);
+        let empty_message = ESLINT_DIRTY.replace(
+            "\"message\":\"'unusedVar' is assigned a value but never used.\"",
+            "\"message\":\"\"",
+        );
+        assert!(parse_eslint(empty_message.as_bytes(), Some(1), &["/s/dirty.js"]).is_err());
+        let bad_pos = ESLINT_DIRTY.replace("\"line\":1,\"column\":7", "\"line\":0,\"column\":7");
+        assert!(parse_eslint(bad_pos.as_bytes(), Some(1), &["/s/dirty.js"]).is_err());
+        let bad_end = ESLINT_DIRTY.replace(
+            "\"endLine\":1,\"endColumn\":16",
+            "\"endLine\":0,\"endColumn\":16",
+        );
+        assert!(parse_eslint(bad_end.as_bytes(), Some(1), &["/s/dirty.js"]).is_err());
+        let partial_end = ESLINT_DIRTY.replace(",\"endColumn\":16", "");
+        assert!(parse_eslint(partial_end.as_bytes(), Some(1), &["/s/dirty.js"]).is_err());
+        assert!(parse_eslint(b"not json", Some(1), &["/s/dirty.js"]).is_err());
     }
 
     #[test]
@@ -3012,5 +3049,10 @@ mod grammar_errors {
         assert!(parse_prettier_check(b"", Some(1), &["src/a.js"]).is_err());
         assert!(parse_prettier_check(b"unexpected\n", Some(1), &["src/a.js"]).is_err());
         assert!(parse_prettier_check(stderr.as_bytes(), Some(1), &["src/other.js"]).is_err());
+        assert!(parse_prettier_check(&[0xff], Some(1), &["src/a.js"]).is_err());
+        let padded = "[warn] src/a.js\n\n";
+        let findings =
+            parse_prettier_check(padded.as_bytes(), Some(1), &["src/a.js"]).expect("parsed");
+        assert_eq!(findings.len(), 1);
     }
 }
