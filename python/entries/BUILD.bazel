@@ -1,6 +1,7 @@
 """M14 thin entry fixture: library owns main.py, binary carries main only."""
 
 load("//python/rules:defs.bzl", "dx_py_binary", "dx_py_library", "dx_py_test")
+load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -35,4 +36,12 @@ dx_py_test(
         "@pypi//coverage",
         "@pypi//pytest",
     ],
+)
+
+# Repository corpus (M05 WP1): build declaration owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. Python sources stay
+# dx-owned, never corpus sources (M02/M05 policy).
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
 )
