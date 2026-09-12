@@ -1,7 +1,8 @@
-//! Exact tool invocations for the M04 initial adapters.
+//! Exact tool invocations for the M04 initial adapters plus M15 Python.
 //!
 //! Every flag here was probed against the pinned binaries; probing notes
-//! live in the M04 completion evidence. Rules the builders encode:
+//! live in the M04 completion evidence (M15 Python probes in the M15
+//! evidence). Rules the builders encode:
 //!
 //! * Absolute binary and file paths only; no `PATH` lookup, ever.
 //! * One invocations shape per (tool, mode); config is always explicit:
@@ -25,6 +26,24 @@
 //!   mapping per stage file (its union-closure sibling rule keys off the
 //!   workspace paths) and needs no config: it performs no discovery, so
 //!   `cwd_rel` is always the scratch root.
+//! * Ruff takes the whole stage file list with `--no-cache` and
+//!   `--no-respect-gitignore` (never observes VCS state or cache); the
+//!   config is `--isolated` unhinted (pinned upstream defaults, no upward
+//!   discovery) or `--config <hint>` hinted. Lint check uses `check
+//!   --output-format json`; lint fix uses `check --fix` (in-place,
+//!   re-read even on exit 1, which signals remaining unfixable findings);
+//!   format check uses `format --check --output-format json`; format fix
+//!   uses `format` (in-place).
+//! * Ty takes the whole stage file list as `check --output-format concise
+//!   --no-progress --no-respect-ignore-files` (never observes VCS state);
+//!   it performs no config discovery from flags, so `cwd_rel` is always
+//!   the scratch root. Ty is check-only: the runner never passes `--fix`
+//!   (which would rewrite) nor `--add-ignore` (never used by default).
+//! * pydoclint takes the whole stage file list as `--quiet <files>`
+//!   (violations on stderr, stdout empty; `--quiet` suppresses only the
+//!   checked-filename log, never findings). It runs pinned upstream
+//!   defaults (numpy style); there is no native-config rule, so no config
+//!   flag and scratch-root cwd. Check-only, never rewrites.
 
 use std::ffi::OsString;
 use std::path::Path;
@@ -258,6 +277,113 @@ pub fn vale_check(binary: &Path, ini: &Path, files: &[&Path], ini_dir_rel: &str)
         files,
         ini_dir_rel,
     )
+}
+
+/// Ruff shared prefix: `binary`, the subcommand, then hermetic flags plus
+/// the config selection (`--isolated` unhinted, `--config <hint>` hinted).
+/// Flags follow the subcommand because Ruff only accepts `--no-cache` and
+/// `--no-respect-gitignore` as per-command flags (pre-subcommand placement
+/// exits 2 with empty stdout). Callers append the subcommand-specific flags
+/// and files.
+fn ruff_base(binary: &Path, subcommand: &str, config: Option<&Path>) -> Vec<OsString> {
+    let mut argv = vec![binary.as_os_str().to_owned(), OsString::from(subcommand)];
+    if let Some(path) = config {
+        argv.push(OsString::from("--config"));
+        argv.push(path.as_os_str().to_owned());
+    } else {
+        argv.push(OsString::from("--isolated"));
+    }
+    argv.push(OsString::from("--no-cache"));
+    argv.push(OsString::from("--no-respect-gitignore"));
+    argv
+}
+
+/// Ruff lint check invocation: `check --output-format json` over the whole
+/// stage file list. Exit 1 with valid JSON is findings; exit 0 with `[]`
+/// is clean; any other shape is a grammar mismatch.
+pub fn ruff_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
+    let mut argv = ruff_base(binary, "check", config);
+    argv.push(OsString::from("--output-format"));
+    argv.push(OsString::from("json"));
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Ruff lint fix invocation: `check --fix` (in-place). The caller re-reads
+/// the files even on exit 1 (remaining unfixable findings); only spawn or
+/// re-read failures fail the action.
+pub fn ruff_fix(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
+    let mut argv = ruff_base(binary, "check", config);
+    argv.push(OsString::from("--fix"));
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Ruff format check invocation: `format --check --output-format json`
+/// over the whole stage file list. JSON findings carry `code:
+/// "unformatted"`; clean is `[]`.
+pub fn ruff_format_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
+    let mut argv = ruff_base(binary, "format", config);
+    argv.push(OsString::from("--check"));
+    argv.push(OsString::from("--output-format"));
+    argv.push(OsString::from("json"));
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Ruff format fix invocation: `format` (in-place). The caller re-reads on
+/// exit 0 and returns its input otherwise, mirroring the other format
+/// tools.
+pub fn ruff_format_fix(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
+    let mut argv = ruff_base(binary, "format", config);
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Ty typecheck invocation: `check --output-format concise --no-progress
+/// --no-respect-ignore-files` over the whole stage file list. Exit 1 with
+/// concise diagnostics is findings; `All checks passed!` exit 0 is clean.
+/// Check-only: the runner never passes `--fix` or `--add-ignore`.
+pub fn ty_check(binary: &Path, files: &[&Path]) -> Invocation {
+    let mut argv = vec![
+        binary.as_os_str().to_owned(),
+        OsString::from("check"),
+        OsString::from("--output-format"),
+        OsString::from("concise"),
+        OsString::from("--no-progress"),
+        OsString::from("--no-respect-ignore-files"),
+    ];
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// pydoclint lint check invocation: `--quiet` over the whole stage file
+/// list. Violations print as a `path` header plus `    line: DOCxxx: msg`
+/// lines on stderr (stdout empty); clean prints nothing under `--quiet`.
+/// Exit 1 with parsable violations is findings; exit 0 is clean.
+/// Check-only: pydoclint offers no fix mode.
+pub fn pydoclint_check(binary: &Path, files: &[&Path]) -> Invocation {
+    let mut argv = vec![binary.as_os_str().to_owned(), OsString::from("--quiet")];
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
 }
 
 /// Repo-owned Markdown link/structure check invocation. One `--source`
@@ -536,5 +662,100 @@ mod tests {
             ]
         );
         assert_eq!(invocation.cwd_rel, "v");
+    }
+
+    #[test]
+    fn ruff_check_is_hermetic_and_config_explicit() {
+        let file = Path::new("/scratch/a.py");
+        let bare = ruff_check(Path::new(BIN), &[file], None);
+        assert_eq!(
+            argv_strings(&bare),
+            vec![
+                BIN,
+                "check",
+                "--isolated",
+                "--no-cache",
+                "--no-respect-gitignore",
+                "--output-format",
+                "json",
+                "/scratch/a.py"
+            ]
+        );
+        assert_eq!(bare.cwd_rel, "");
+        let hinted = ruff_check(Path::new(BIN), &[file], Some(Path::new("/scratch/r.toml")));
+        assert_eq!(
+            argv_strings(&hinted),
+            vec![
+                BIN,
+                "check",
+                "--config",
+                "/scratch/r.toml",
+                "--no-cache",
+                "--no-respect-gitignore",
+                "--output-format",
+                "json",
+                "/scratch/a.py"
+            ]
+        );
+        assert!(!argv_strings(&hinted).contains(&"--isolated".to_owned()));
+    }
+
+    #[test]
+    fn ruff_fix_and_format_shapes() {
+        let file = Path::new("/scratch/a.py");
+        let fix = ruff_fix(Path::new(BIN), &[file], None);
+        assert!(argv_strings(&fix).contains(&"--fix".to_owned()));
+        assert!(!argv_strings(&fix).contains(&"--output-format".to_owned()));
+        let check = ruff_format_check(Path::new(BIN), &[file], None);
+        assert_eq!(
+            argv_strings(&check),
+            vec![
+                BIN,
+                "format",
+                "--isolated",
+                "--no-cache",
+                "--no-respect-gitignore",
+                "--check",
+                "--output-format",
+                "json",
+                "/scratch/a.py"
+            ]
+        );
+        let fix_fmt = ruff_format_fix(Path::new(BIN), &[file], Some(Path::new("/s/r.toml")));
+        assert!(argv_strings(&fix_fmt).contains(&"format".to_owned()));
+        assert!(!argv_strings(&fix_fmt).contains(&"--check".to_owned()));
+        assert!(argv_strings(&fix_fmt).contains(&"/s/r.toml".to_owned()));
+    }
+
+    #[test]
+    fn ty_check_is_concise_and_hermetic() {
+        let file = Path::new("/scratch/a.py");
+        let invocation = ty_check(Path::new(BIN), &[file]);
+        assert_eq!(
+            argv_strings(&invocation),
+            vec![
+                BIN,
+                "check",
+                "--output-format",
+                "concise",
+                "--no-progress",
+                "--no-respect-ignore-files",
+                "/scratch/a.py"
+            ]
+        );
+        assert_eq!(invocation.cwd_rel, "");
+        assert!(!argv_strings(&invocation).contains(&"--fix".to_owned()));
+        assert!(!argv_strings(&invocation).contains(&"--add-ignore".to_owned()));
+    }
+
+    #[test]
+    fn pydoclint_check_is_quiet() {
+        let file = Path::new("/scratch/a.py");
+        let invocation = pydoclint_check(Path::new(BIN), &[file]);
+        assert_eq!(
+            argv_strings(&invocation),
+            vec![BIN, "--quiet", "/scratch/a.py"]
+        );
+        assert_eq!(invocation.cwd_rel, "");
     }
 }

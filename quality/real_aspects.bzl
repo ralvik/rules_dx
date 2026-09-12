@@ -1,4 +1,4 @@
-"""Target-scoped real capability aspects over initial adapters (M04 WP2).
+"""Target-scoped real capability aspects over real adapters (M04 WP2, M15 Python).
 
 Each aspect visits targets carrying `QualitySourcesInfo` and registers one
 exact-input pipeline action for its capability when the real fixture policy
@@ -18,8 +18,11 @@ closures, the Markdown link-resolution siblings, and the stage tool
 binaries as inputs. The runner materializes
 exact bytes into a fresh scratch tree, never observes VCS state, and
 launches tools with an empty `PATH` (see `quality_adapter::exec`).
-Siblings (`markdown_siblings` on the visited rule) resolve Markdown link
-targets only: they are never linted and never enter findings or snapshots.
+Python venv launchers (pydoclint) additionally resolve their runtime
+through the runner's runfiles forest via `RUNFILES_DIR`; the forest is
+action-local and never enters findings. Siblings (`markdown_siblings`
+on the visited rule) resolve Markdown link targets only: they are never
+linted and never enter findings or snapshots.
 
 Contract: `docs/quality/tool-integrations.md`,
 `docs/quality/native-configuration.md`,
@@ -100,9 +103,12 @@ def _real_pipeline_action(target, ctx, capability):
         "buildifier": ctx.file._buildifier,
         "clippy": clippy_driver,
         "markdown_check": ctx.file._markdown_check,
+        "pydoclint": ctx.executable._pydoclint,
+        "ruff": ctx.file._ruff,
         "rustc": rust_toolchain_rustc(ctx),
         "rustfmt": rustfmt,
         "taplo": ctx.file._taplo,
+        "ty": ctx.file._ty,
         "vale": ctx.file._vale,
     }
 
@@ -164,9 +170,25 @@ def _real_pipeline_action(target, ctx, capability):
                 args.add("--tool-file", tool + "=" + f.short_path + "=" + f.path)
                 inputs.append(f)
 
+    # The pydoclint launcher is a static stub that locates its interpreter
+    # and site-packages through the runfiles forest (adjacent
+    # `<stub>.runfiles/`, else `RUNFILES_DIR`): the loose closure files
+    # alone leave it unable to initialize. Staging the launcher as a tool
+    # merges its runfiles into the runner's forest, and `RUNFILES_DIR`
+    # points the stub at that forest. The directory is action-local and
+    # transient; it never enters findings or snapshots.
+    run_tools = []
+    if "pydoclint" in stage_tools:
+        run_tools.append(ctx.attr._pydoclint[DefaultInfo].files_to_run)
+        args.add(
+            "--tool-env",
+            "pydoclint=RUNFILES_DIR=" + ctx.executable._runner.path + ".runfiles",
+        )
+
     ctx.actions.run(
         executable = ctx.executable._runner,
         inputs = depset(inputs),
+        tools = run_tools,
         outputs = [out],
         arguments = [args],
         mnemonic = "DxRealQuality" + capability.capitalize(),
@@ -202,6 +224,18 @@ _REAL_ATTRS = {
         providers = [QualityPolicyInfo],
         doc = "Aggregate workspace policy expanding tool IDs to classes.",
     ),
+    "_pydoclint": attr.label(
+        default = "//quality/tools/python:pydoclint",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned pydoclint launcher (stub plus runfiles closure) for Python pipelines.",
+    ),
+    "_ruff": attr.label(
+        default = "@dx_tools//:ruff",
+        allow_single_file = True,
+        cfg = "exec",
+        doc = "Pinned Ruff artifact for Python pipelines.",
+    ),
     "_runner": attr.label(
         default = "//quality/runner:quality_runner",
         executable = True,
@@ -214,6 +248,12 @@ _REAL_ATTRS = {
         allow_single_file = True,
         cfg = "exec",
         doc = "Pinned Taplo artifact for TOML pipelines.",
+    ),
+    "_ty": attr.label(
+        default = "@dx_tools//:ty",
+        allow_single_file = True,
+        cfg = "exec",
+        doc = "Pinned Ty artifact for Python pipelines.",
     ),
     "_vale": attr.label(
         default = "@dx_tools//:vale",

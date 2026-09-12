@@ -43,6 +43,10 @@ quality_source_target = rule(
 
 def _real_source_target_impl(ctx):
     direct_sources = {}
+    if len(ctx.files.python_srcs) > 0:
+        direct_sources["python"] = depset(ctx.files.python_srcs)
+    if len(ctx.files.python_stub_srcs) > 0:
+        direct_sources["python_stub"] = depset(ctx.files.python_stub_srcs)
     if len(ctx.files.rust_srcs) > 0:
         direct_sources["rust"] = depset(ctx.files.rust_srcs)
     if len(ctx.files.starlark_srcs) > 0:
@@ -52,7 +56,7 @@ def _real_source_target_impl(ctx):
     if len(ctx.files.markdown_srcs) > 0:
         direct_sources["markdown"] = depset(ctx.files.markdown_srcs)
     check_direct_sources(direct_sources, str(ctx.label))
-    all_files = list(ctx.files.rust_srcs) + list(ctx.files.starlark_srcs) + list(ctx.files.toml_srcs) + list(ctx.files.markdown_srcs)
+    all_files = list(ctx.files.python_srcs) + list(ctx.files.python_stub_srcs) + list(ctx.files.rust_srcs) + list(ctx.files.starlark_srcs) + list(ctx.files.toml_srcs) + list(ctx.files.markdown_srcs)
     return [
         DefaultInfo(files = depset(all_files)),
         QualitySourcesInfo(direct_sources = direct_sources),
@@ -70,6 +74,16 @@ real_source_target = rule(
             allow_files = True,
             default = [],
             doc = "Directly owned Markdown sources for this fixture target.",
+        ),
+        "python_srcs": attr.label_list(
+            allow_files = True,
+            default = [],
+            doc = "Directly owned Python sources for this fixture target.",
+        ),
+        "python_stub_srcs": attr.label_list(
+            allow_files = True,
+            default = [],
+            doc = "Directly owned Python stub sources for this fixture target.",
         ),
         "rust_srcs": attr.label_list(
             allow_files = True,

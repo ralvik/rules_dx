@@ -1,8 +1,8 @@
-"""WP2c aspect fixtures and evidence (M03 synthetic, M04 real)."""
+"""WP2c aspect fixtures and evidence (M03 synthetic, M04 real, M15 Python)."""
 
 load("//quality:aspect_subject.bzl", "aspect_subject")
 load("//quality:fixtures.bzl", "quality_source_target", "real_source_target")
-load("//quality:native_config.bzl", "clippy_config", "rustfmt_config", "vale_config")
+load("//quality:native_config.bzl", "clippy_config", "ruff_config", "rustfmt_config", "vale_config")
 load(":aspect_tests.bzl", "aspect_fixture_tests")
 load(":real_aspect_subject.bzl", "real_aspect_subject")
 load(":real_aspect_tests.bzl", "real_aspect_fixture_tests")
@@ -108,6 +108,11 @@ clippy_config(
     src = "clippy.toml",
 )
 
+ruff_config(
+    name = "ruff_cfg",
+    src = "ruff.toml",
+)
+
 real_source_target(
     name = "fixture_real_rust",
     rust_srcs = ["clean.rs"],
@@ -141,6 +146,35 @@ real_source_target(
     rust_srcs = ["clean.rs"],
     starlark_srcs = ["real_clean.bzl"],
     tags = ["no-lint"],
+)
+
+# Python fixtures (M15 WP2): a clean module passing ruff lint/format,
+# pydoclint, and ty; a dirty module with one deterministic finding per
+# tool (F401, unformatted line, DOC101/DOC103, invalid-argument-type);
+# and a hinted clean module proving the ruff_config closure reaches the
+# tool. Lint/format subjects live in the lint/format presence suite;
+# typecheck subjects (plus the `no-typecheck` opt-out) live in the
+# typecheck suite below.
+real_source_target(
+    name = "fixture_real_python",
+    python_srcs = ["real_clean.py"],
+)
+
+real_source_target(
+    name = "fixture_real_python_dirty",
+    python_srcs = ["real_dirty.py"],
+)
+
+real_source_target(
+    name = "fixture_real_python_hinted",
+    aspect_hints = [":ruff_cfg"],
+    python_srcs = ["real_clean.py"],
+)
+
+real_source_target(
+    name = "fixture_real_python_no_typecheck",
+    python_srcs = ["real_clean.py"],
+    tags = ["no-typecheck"],
 )
 
 real_aspect_subject(
@@ -219,6 +253,21 @@ real_aspect_subject(
 )
 
 real_aspect_subject(
+    name = "fixture_real_python_subject",
+    target = ":fixture_real_python",
+)
+
+real_aspect_subject(
+    name = "fixture_real_python_dirty_subject",
+    target = ":fixture_real_python_dirty",
+)
+
+real_aspect_subject(
+    name = "fixture_real_python_hinted_subject",
+    target = ":fixture_real_python_hinted",
+)
+
+real_aspect_subject(
     name = "real_plain_subject",
     target = ":plain",
 )
@@ -239,6 +288,9 @@ real_aspect_fixture_tests(
         ":fixture_real_markdown_subject",
         ":fixture_real_mixed_subject",
         ":fixture_real_no_lint_subject",
+        ":fixture_real_python_dirty_subject",
+        ":fixture_real_python_hinted_subject",
+        ":fixture_real_python_subject",
         ":fixture_real_rust_subject",
         ":fixture_real_rust_hinted_subject",
         ":fixture_real_rust_generated_shape_subject",
@@ -287,9 +339,27 @@ real_typecheck_subject(
     target = ":fixture_real_starlark",
 )
 
+real_typecheck_subject(
+    name = "fixture_real_python_typecheck_subject",
+    target = ":fixture_real_python",
+)
+
+real_typecheck_subject(
+    name = "fixture_real_python_dirty_typecheck_subject",
+    target = ":fixture_real_python_dirty",
+)
+
+real_typecheck_subject(
+    name = "fixture_real_python_no_typecheck_subject",
+    target = ":fixture_real_python_no_typecheck",
+)
+
 real_typecheck_fixture_tests(
     name = "real_typecheck_presence",
     subjects = [
+        ":fixture_real_python_dirty_typecheck_subject",
+        ":fixture_real_python_no_typecheck_subject",
+        ":fixture_real_python_typecheck_subject",
         ":fixture_real_rust_typecheck_clean_subject",
         ":fixture_real_rust_typecheck_dirty_subject",
         ":fixture_real_rust_typecheck_no_typecheck_subject",

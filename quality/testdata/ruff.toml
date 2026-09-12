@@ -1,0 +1,5 @@
+# Hinted Ruff policy for the real-pipeline fixture (M15 WP2). Pins the
+# default-equivalent lint selection explicitly so the hinted run proves
+# the config closure reaches the tool instead of `--isolated` defaults.
+[lint]
+select = ["E4", "E7", "E9", "F"]

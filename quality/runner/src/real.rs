@@ -20,17 +20,23 @@
 //! the running capability, so lint results never carry format findings
 //! while format fixes converge them away. Taplo selects its mode by
 //! command instead: `lint` for lint pipelines, `format --check` for
-//! format pipelines.
+//! format pipelines. Ruff likewise: `check` for lint pipelines,
+//! `format --check` for format pipelines, and its fix mode follows the
+//! same capability split (`check --fix` versus `format`).
 //!
 //! Fix application is best-effort per file: a nonzero fix exit leaves
 //! the bytes unchanged and the check diagnostics report the cause, so
 //! syntax-broken files surface findings instead of failing the action.
-//! Spawn, materialization, and re-read failures still fail the action.
+//! The one exception is Ruff lint fix: `check --fix` exits 1 when
+//! unfixable findings remain *after* applying the fixable ones, so the
+//! backend re-reads the bytes on exit 0 or 1 and keeps its input only on
+//! any other exit. Spawn, materialization, and re-read failures still
+//! fail the action.
 //! Clippy has no fix command: the backend applies `MachineApplicable`
 //! suggestions in memory and re-checks the patched bytes on the next
 //! round, so only suggestions that truly resolve their finding mark it
-//! fixable. Vale, the Markdown checker, and rustc typecheck are
-//! check-only and never rewrite.
+//! fixable. Vale, the Markdown checker, rustc typecheck, Ty, and
+//! pydoclint are check-only and never rewrite.
 
 use std::collections::BTreeMap;
 use std::ffi::{OsStr, OsString};
@@ -49,7 +55,8 @@ use crate::{
 use quality_result::proto::Diagnostic;
 
 /// Real tool IDs for the M04 initial adapters plus the M12 rustc
-/// typecheck adapter. Mirrors `REAL_ADAPTERS`
+/// typecheck adapter and the M15 Python adapters (Ruff, Ty, pydoclint).
+/// Mirrors `REAL_ADAPTERS`
 /// in `//quality:adapters.bzl`; the Starlark registry stays authoritative
 /// for pipeline construction, this list pins the dispatch the backend
 /// implements.
@@ -57,9 +64,12 @@ pub const REAL_TOOLS: &[&str] = &[
     "buildifier",
     "clippy",
     "markdown_check",
+    "pydoclint",
+    "ruff",
     "rustc",
     "rustfmt",
     "taplo",
+    "ty",
     "vale",
 ];
 
@@ -433,6 +443,57 @@ impl RealBackend {
                     parsers::parse_rustfmt(&out.stdout, &out.stderr, out.code, &strs),
                 )
             }
+            "ruff" => {
+                let config_ref = config.as_deref();
+                let invocation = if capability == "format" {
+                    commands::ruff_format_check(&tool.binary, &refs, config_ref)
+                } else {
+                    commands::ruff_check(&tool.binary, &refs, config_ref)
+                };
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                if capability == "format" {
+                    parsed(
+                        tool_id,
+                        parsers::parse_ruff_format(&out.stdout, out.code, &strs),
+                    )
+                } else {
+                    parsed(tool_id, parsers::parse_ruff(&out.stdout, out.code, &strs))
+                }
+            }
+            "ty" => {
+                let invocation = commands::ty_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                // Ty prints concise paths relative to its working
+                // directory even for absolute arguments, so attribute
+                // against the workspace-relative mirror paths, then
+                // re-anchor each finding to its absolute scratch path:
+                // the caller contract stays absolute-addressed.
+                let workspaces: Vec<&str> = pairs
+                    .iter()
+                    .map(|(workspace, _)| workspace.as_str())
+                    .collect();
+                let mut findings = parsed(
+                    tool_id,
+                    parsers::parse_ty(&out.stdout, out.code, &workspaces),
+                )?;
+                for found in &mut findings {
+                    let absolute = pairs
+                        .iter()
+                        .find(|(workspace, _)| *workspace == found.file)
+                        .map(|(_, absolute)| absolute.clone())
+                        .expect("parsed file was checked");
+                    found.file = absolute.to_string_lossy().into_owned();
+                }
+                Ok(findings)
+            }
+            "pydoclint" => {
+                let invocation = commands::pydoclint_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(
+                    tool_id,
+                    parsers::parse_pydoclint(&out.stderr, out.code, &strs),
+                )
+            }
             "taplo" => {
                 let invocation = if capability == "format" {
                     commands::taplo_format(&tool.binary, &refs, config.as_deref(), true)
@@ -515,20 +576,61 @@ impl RealBackend {
 
     /// Applies one fix round to a single file's bytes and returns the
     /// result. Format tools run their in-place fix and the bytes are
-    /// re-read; Clippy applies `MachineApplicable` suggestions from a
-    /// fresh check in memory; Vale, the Markdown checker, and rustc
-    /// typecheck return their input.
-    pub fn apply_fix(&self, tool_id: &str, path: &str, text: &str) -> Result<String, RunnerError> {
+    /// re-read; Ruff follows the running capability (`check --fix` for
+    /// lint, `format` for format) and its lint fix re-reads on exit 0
+    /// or 1 (exit 1 signals remaining unfixable findings after the
+    /// fixable ones were applied); Clippy applies `MachineApplicable`
+    /// suggestions from a fresh check in memory; Vale, the Markdown
+    /// checker, rustc typecheck, Ty, and pydoclint return their input.
+    pub fn apply_fix(
+        &self,
+        tool_id: &str,
+        path: &str,
+        text: &str,
+        capability: &str,
+    ) -> Result<String, RunnerError> {
         let tool = self.tool(tool_id)?;
         match tool_id {
             "rustfmt" | "buildifier" | "taplo" => self.run_fix(tool_id, tool, path, text),
+            "ruff" => self.run_ruff_fix(tool, path, text, capability == "format"),
             "clippy" => self.apply_clippy(tool_id, path, text),
-            "vale" | "markdown_check" | "rustc" => Ok(text.to_owned()),
+            "vale" | "markdown_check" | "rustc" | "ty" | "pydoclint" => Ok(text.to_owned()),
             _ => Err(execution(
                 tool_id,
                 format!("unsupported real tool: {tool_id}"),
             )),
         }
+    }
+
+    /// Stages one fix scratch tree with the exact file bytes plus the
+    /// tool files, returning the scratch and the file's absolute path.
+    fn fix_scratch(
+        &self,
+        tool_id: &str,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<(Scratch, PathBuf), RunnerError> {
+        let scratch = fresh_scratch(&self.scratch_parent, tool_id)?;
+        let mut mirrors = vec![MirrorFile {
+            mirror_rel: PathBuf::from(path),
+            contents: MirrorContents::Bytes(text.as_bytes().to_vec()),
+        }];
+        mirrors.extend(Self::mirror_tool_files(tool_id, tool));
+        write_all(&scratch, tool_id, &mirrors)?;
+        let absolute = scratch.root().join(path);
+        Ok((scratch, absolute))
+    }
+
+    /// Re-reads a fixed file as UTF-8. Re-read failures fail the action;
+    /// non-UTF-8 fix output is a tool-output failure, never silent bytes.
+    fn reread_fixed(tool_id: &str, absolute: &Path) -> Result<String, RunnerError> {
+        let fixed = std::fs::read(absolute)
+            .map_err(|err| execution(tool_id, format!("re-read fixed file: {err}")))?;
+        String::from_utf8(fixed).map_err(|err| RunnerError::ToolOutput {
+            tool_id: tool_id.to_owned(),
+            detail: format!("fixed file is not UTF-8: {err}"),
+        })
     }
 
     fn run_fix(
@@ -538,14 +640,7 @@ impl RealBackend {
         path: &str,
         text: &str,
     ) -> Result<String, RunnerError> {
-        let scratch = fresh_scratch(&self.scratch_parent, tool_id)?;
-        let mut mirrors = vec![MirrorFile {
-            mirror_rel: PathBuf::from(path),
-            contents: MirrorContents::Bytes(text.as_bytes().to_vec()),
-        }];
-        mirrors.extend(Self::mirror_tool_files(tool_id, tool));
-        write_all(&scratch, tool_id, &mirrors)?;
-        let absolute = scratch.root().join(path);
+        let (scratch, absolute) = self.fix_scratch(tool_id, tool, path, text)?;
         let refs = [absolute.as_path()];
         let config = self.config_abs(tool_id, tool, &scratch)?;
         let cwd_rel = Self::cwd_rel(tool_id, tool.config_rel.as_deref());
@@ -567,12 +662,41 @@ impl RealBackend {
         if out.code != Some(0) {
             return Ok(text.to_owned());
         }
-        let fixed = std::fs::read(&absolute)
-            .map_err(|err| execution(tool_id, format!("re-read fixed file: {err}")))?;
-        String::from_utf8(fixed).map_err(|err| RunnerError::ToolOutput {
-            tool_id: tool_id.to_owned(),
-            detail: format!("fixed file is not UTF-8: {err}"),
-        })
+        Self::reread_fixed(tool_id, &absolute)
+    }
+
+    /// Runs one Ruff fix round: `format` for format pipelines,
+    /// `check --fix` for everything else. The format fix re-reads only
+    /// on exit 0 like every other format tool; the lint fix re-reads on
+    /// exit 0 or 1 because exit 1 signals remaining unfixable findings
+    /// after the fixable ones were applied. Any other exit keeps the
+    /// input: the check diagnostics report the cause.
+    fn run_ruff_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+        format: bool,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "ruff";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let config = self.config_abs(TOOL_ID, tool, &scratch)?;
+        let invocation = if format {
+            commands::ruff_format_fix(&tool.binary, &refs, config.as_deref())
+        } else {
+            commands::ruff_fix(&tool.binary, &refs, config.as_deref())
+        };
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        let keep_input = if format {
+            out.code != Some(0)
+        } else {
+            out.code != Some(0) && out.code != Some(1)
+        };
+        if keep_input {
+            return Ok(text.to_owned());
+        }
+        Self::reread_fixed(TOOL_ID, &absolute)
     }
 
     fn apply_clippy(&self, tool_id: &str, path: &str, text: &str) -> Result<String, RunnerError> {
@@ -650,7 +774,7 @@ pub fn run_real_pipeline_with_siblings(
         &initial,
         stages,
         MAX_COMPLETED_ROUNDS,
-        |tool, path, text| backend.apply_fix(tool, path, text),
+        |tool, path, text| backend.apply_fix(tool, path, text, capability),
     )?;
     let mut terminal_diagnostics = Vec::new();
     for stage in stages {
@@ -689,6 +813,8 @@ mod tests {
 {"$message_type":"diagnostic","message":"1 warning emitted","code":null,"level":"warning","spans":[],"children":[],"rendered":null}"#;
     const CLIPPY_FAR: &str = r#"{"$message_type":"diagnostic","message":"length comparison to zero","code":{"code":"clippy::len_zero","explanation":null},"level":"warning","spans":[{"file_name":"FILE","byte_start":8,"byte_end":19,"line_start":1,"line_end":1,"column_start":9,"column_end":20,"is_primary":true,"text":[],"label":null,"suggested_replacement":null,"suggestion_applicability":null,"expansion":null}],"children":[{"message":"use is_empty","code":null,"level":"help","spans":[{"file_name":"FILE","byte_start":0,"byte_end":999,"line_start":1,"line_end":1,"column_start":9,"column_end":20,"is_primary":true,"text":[],"label":null,"suggested_replacement":"!v.is_empty()","suggestion_applicability":"MachineApplicable","expansion":null}],"children":[],"rendered":null}],"rendered":null}
 {"$message_type":"diagnostic","message":"1 warning emitted","code":null,"level":"warning","spans":[],"children":[],"rendered":null}"#;
+    const RUFF_F401: &str = r#"[{"cell":null,"code":"F401","end_location":{"column":10,"row":1},"filename":"FILE","fix":{"applicability":"safe","edits":[],"message":"Remove unused import"},"location":{"column":8,"row":1},"message":"`os` imported but unused","name":"unused-import","noqa_row":1,"severity":"error","url":"https://docs.astral.sh/ruff/rules/unused-import"}]"#;
+    const RUFF_UNFORMATTED: &str = r#"[{"cell":null,"code":"unformatted","end_location":{"column":3,"row":1},"filename":"FILE","fix":null,"location":{"column":3,"row":1},"message":"File would be reformatted","name":"unformatted","noqa_row":null,"severity":"error","url":null}]"#;
 
     fn plain_tool() -> RealTool {
         RealTool {
@@ -903,6 +1029,203 @@ mod tests {
             code: Some(1),
             stdout: Vec::new(),
             stderr: b"unexpected taplo output".to_vec(),
+        })
+    }
+
+    /// Asserts the Ruff hermetic flags shared by every shape, so a
+    /// dropped flag fails here instead of silently observing ambient
+    /// state.
+    fn assert_ruff_hermetic(argv: &[OsString], env: &[(String, String)]) {
+        assert_hermetic(env);
+        assert!(
+            argv.iter().any(|arg| arg == "--no-cache"),
+            "ruff never caches"
+        );
+        assert!(
+            argv.iter().any(|arg| arg == "--no-respect-gitignore"),
+            "ruff never observes VCS state"
+        );
+    }
+
+    /// Content-aware Ruff double: lint check reports F401 exactly when
+    /// the materialized file imports `os`; `check --fix` strips that
+    /// import and exits 1 when `UNFIXABLE` remains (the pinned
+    /// partial-fix semantic), else 0; `format --check` reports
+    /// unformatted exactly on trailing whitespace; `format` trims it.
+    /// Unhinted runs assert `--isolated` (pinned upstream defaults).
+    fn roundtrip_ruff(
+        argv: &[OsString],
+        _cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_ruff_hermetic(argv, env);
+        assert!(
+            argv.iter().any(|arg| arg == "--isolated"),
+            "unhinted ruff pins upstream defaults"
+        );
+        ruff_behavior(argv)
+    }
+
+    /// Hinted Ruff double: asserts the `--config` selection (never
+    /// `--isolated`) before delegating to [`ruff_behavior`].
+    fn roundtrip_ruff_hinted(
+        argv: &[OsString],
+        _cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_ruff_hermetic(argv, env);
+        assert!(
+            argv.iter().any(|arg| arg == "--config"),
+            "hinted ruff takes the hint"
+        );
+        assert!(
+            !argv.iter().any(|arg| arg == "--isolated"),
+            "hinted ruff never isolates"
+        );
+        ruff_behavior(argv)
+    }
+
+    fn ruff_behavior(argv: &[OsString]) -> io::Result<ChildOutput> {
+        let file = last_file(argv);
+        let bytes = std::fs::read(&file).expect("checked file is materialized");
+        let text = String::from_utf8(bytes).expect("fix bytes stay UTF-8");
+        if argv.iter().any(|arg| arg == "format") {
+            if argv.iter().any(|arg| arg == "--check") {
+                let dirty = text
+                    .lines()
+                    .any(|line| line.ends_with(' ') || line.ends_with('\t'));
+                if dirty {
+                    let stdout = RUFF_UNFORMATTED.replace("FILE", &file);
+                    return Ok(ChildOutput {
+                        code: Some(1),
+                        stdout: stdout.into_bytes(),
+                        stderr: Vec::new(),
+                    });
+                }
+                return Ok(ChildOutput {
+                    code: Some(0),
+                    stdout: b"[]".to_vec(),
+                    stderr: Vec::new(),
+                });
+            }
+            let mut fixed = Vec::with_capacity(text.len());
+            for line in text.split_inclusive('\n') {
+                let trailing = line.ends_with('\n');
+                let body = if trailing {
+                    &line[..line.len() - 1]
+                } else {
+                    line
+                };
+                fixed.extend_from_slice(trim_end(body.as_bytes()));
+                if trailing {
+                    fixed.push(b'\n');
+                }
+            }
+            std::fs::write(&file, fixed).expect("fix writes back");
+            return Ok(ChildOutput {
+                code: Some(0),
+                stdout: Vec::new(),
+                stderr: Vec::new(),
+            });
+        }
+        if argv.iter().any(|arg| arg == "--fix") {
+            let kept: Vec<&str> = text
+                .lines()
+                .filter(|line| !line.contains("import os"))
+                .collect();
+            let mut fixed = kept.join("\n");
+            if text.ends_with('\n') {
+                fixed.push('\n');
+            }
+            std::fs::write(&file, fixed.clone()).expect("fix writes back");
+            return Ok(ChildOutput {
+                code: Some(i32::from(fixed.contains("UNFIXABLE"))),
+                stdout: Vec::new(),
+                stderr: Vec::new(),
+            });
+        }
+        if text.contains("import os") {
+            let stdout = RUFF_F401.replace("FILE", &file);
+            return Ok(ChildOutput {
+                code: Some(1),
+                stdout: stdout.into_bytes(),
+                stderr: Vec::new(),
+            });
+        }
+        Ok(ChildOutput {
+            code: Some(0),
+            stdout: b"[]".to_vec(),
+            stderr: Vec::new(),
+        })
+    }
+
+    /// Content-aware Ty double: reports invalid-assignment exactly when
+    /// the materialized file contains BADTYPE, else `All checks passed!`.
+    /// The reported path is working-directory-relative like the real Ty,
+    /// which relativizes concise paths against its working directory even
+    /// for absolute arguments.
+    fn roundtrip_ty(
+        argv: &[OsString],
+        cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_hermetic(env);
+        assert!(
+            argv.iter().any(|arg| arg == "--no-respect-ignore-files"),
+            "ty never observes VCS state"
+        );
+        let file = last_file(argv);
+        let reported = Path::new(&file)
+            .strip_prefix(cwd)
+            .map(|relative| relative.to_string_lossy().into_owned())
+            .unwrap_or(file.clone());
+        let bytes = std::fs::read(&file).expect("checked file is materialized");
+        let text = String::from_utf8(bytes).expect("checked bytes stay UTF-8");
+        if text.contains("BADTYPE") {
+            let stdout = format!(
+                "{reported}:1:10: error[invalid-assignment] Object of type `Literal[\"hello\"]` is not assignable to `int`\nFound 1 diagnostic\n"
+            );
+            return Ok(ChildOutput {
+                code: Some(1),
+                stdout: stdout.into_bytes(),
+                stderr: Vec::new(),
+            });
+        }
+        Ok(ChildOutput {
+            code: Some(0),
+            stdout: b"All checks passed!\n".to_vec(),
+            stderr: Vec::new(),
+        })
+    }
+
+    /// Content-aware pydoclint double: reports DOC201 exactly when the
+    /// materialized file contains NODOC, on stderr under a path header.
+    fn roundtrip_pydoclint(
+        argv: &[OsString],
+        _cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_hermetic(env);
+        assert!(
+            argv.iter().any(|arg| arg == "--quiet"),
+            "pydoclint stays quiet"
+        );
+        let file = last_file(argv);
+        let bytes = std::fs::read(&file).expect("checked file is materialized");
+        let text = String::from_utf8(bytes).expect("checked bytes stay UTF-8");
+        if text.contains("NODOC") {
+            let stderr =
+                format!("{file}\n    2: DOC201: Function `foo` does not have a return section in docstring\n");
+            return Ok(ChildOutput {
+                code: Some(1),
+                stdout: Vec::new(),
+                stderr: stderr.into_bytes(),
+            });
+        }
+        Ok(ChildOutput {
+            code: Some(0),
+            stdout: Vec::new(),
+            stderr: Vec::new(),
         })
     }
 
@@ -1178,16 +1501,19 @@ mod tests {
     }
 
     #[test]
-    fn real_tools_pin_the_m04_set_plus_rustc_typecheck() {
+    fn real_tools_pin_the_dispatched_set() {
         assert_eq!(
             REAL_TOOLS,
             &[
                 "buildifier",
                 "clippy",
                 "markdown_check",
+                "pydoclint",
+                "ruff",
                 "rustc",
                 "rustfmt",
                 "taplo",
+                "ty",
                 "vale"
             ]
         );
@@ -1614,7 +1940,7 @@ mod tests {
     fn clippy_apply_uses_machine_applicable_suggestions() {
         let backend = backend_for("clippy", plain_tool(), clippy_len_zero);
         let patched = backend
-            .apply_fix("clippy", "src/main.rs", "let y = v.len() == 0;\n")
+            .apply_fix("clippy", "src/main.rs", "let y = v.len() == 0;\n", "lint")
             .expect("patched");
         assert_eq!(patched, "let y = !v.is_empty();\n");
     }
@@ -1623,7 +1949,7 @@ mod tests {
     fn clippy_apply_keeps_bytes_without_applicable_suggestions() {
         let backend = backend_for("clippy", plain_tool(), clippy_far);
         let patched = backend
-            .apply_fix("clippy", "src/main.rs", "let y = v.len() == 0;\n")
+            .apply_fix("clippy", "src/main.rs", "let y = v.len() == 0;\n", "lint")
             .expect("unchanged");
         assert_eq!(patched, "let y = v.len() == 0;\n");
     }
@@ -1649,7 +1975,7 @@ mod tests {
         let backend = backend_for("rustc", plain_tool(), rustc_type_error);
         let text = "fn f(x: i32) {}\nfn g() { f(\"oops\"); }\n";
         let patched = backend
-            .apply_fix("rustc", "src/main.rs", text)
+            .apply_fix("rustc", "src/main.rs", text, "typecheck")
             .expect("unchanged");
         assert_eq!(patched, text);
     }
@@ -1672,7 +1998,7 @@ mod tests {
             })
         );
         assert_eq!(
-            backend.apply_fix("nope", "src/main.rs", "x\n"),
+            backend.apply_fix("nope", "src/main.rs", "x\n", "lint"),
             Err(RunnerError::UnknownTool {
                 tool_id: "nope".to_owned(),
             })
@@ -1688,7 +2014,7 @@ mod tests {
         assert!(matches!(err, RunnerError::ToolExecution { .. }));
         assert!(err.to_string().contains("unsupported real tool"));
         let err = backend
-            .apply_fix("custom", "src/main.rs", "x\n")
+            .apply_fix("custom", "src/main.rs", "x\n", "lint")
             .expect_err("no dispatch");
         assert!(matches!(err, RunnerError::ToolExecution { .. }));
     }
@@ -1720,7 +2046,7 @@ mod tests {
             .expect_err("grammar fails");
         assert!(matches!(err, RunnerError::ToolOutput { .. }));
         let err = backend
-            .apply_fix("clippy", "src/main.rs", "x\n")
+            .apply_fix("clippy", "src/main.rs", "x\n", "lint")
             .expect_err("clippy without resolution fails");
         assert!(matches!(err, RunnerError::UnknownTool { .. }));
     }
@@ -1752,7 +2078,7 @@ mod tests {
             .expect_err("escape fails");
         assert!(matches!(err, RunnerError::ToolExecution { .. }));
         let err = backend
-            .apply_fix("rustfmt", "../evil.rs", "x\n")
+            .apply_fix("rustfmt", "../evil.rs", "x\n", "format")
             .expect_err("escape fails");
         assert!(matches!(err, RunnerError::ToolExecution { .. }));
     }
@@ -1784,7 +2110,7 @@ mod tests {
         assert!(matches!(err, RunnerError::ToolExecution { .. }));
         assert!(err.to_string().contains("scratch"));
         let err = backend
-            .apply_fix("rustfmt", "src/main.rs", "x\n")
+            .apply_fix("rustfmt", "src/main.rs", "x\n", "format")
             .expect_err("scratch fails");
         assert!(matches!(err, RunnerError::ToolExecution { .. }));
     }
@@ -1816,7 +2142,7 @@ mod tests {
     fn nonzero_fix_keeps_the_input_bytes() {
         let backend = backend_for("rustfmt", plain_tool(), failing_fix);
         let kept = backend
-            .apply_fix("rustfmt", "src/main.rs", "x  \n")
+            .apply_fix("rustfmt", "src/main.rs", "x  \n", "format")
             .expect("kept");
         assert_eq!(kept, "x  \n");
     }
@@ -1825,7 +2151,7 @@ mod tests {
     fn fix_without_output_file_fails_the_action() {
         let backend = backend_for("rustfmt", plain_tool(), deleting_fix);
         let err = backend
-            .apply_fix("rustfmt", "src/main.rs", "x\n")
+            .apply_fix("rustfmt", "src/main.rs", "x\n", "format")
             .expect_err("re-read fails");
         assert!(matches!(err, RunnerError::ToolExecution { .. }));
         assert!(err.to_string().contains("re-read"));
@@ -1835,7 +2161,7 @@ mod tests {
     fn non_utf8_fix_fails_the_action() {
         let backend = backend_for("rustfmt", plain_tool(), binary_fix);
         let err = backend
-            .apply_fix("rustfmt", "src/main.rs", "x\n")
+            .apply_fix("rustfmt", "src/main.rs", "x\n", "format")
             .expect_err("encoding fails");
         assert!(matches!(err, RunnerError::ToolOutput { .. }));
     }
@@ -1844,7 +2170,7 @@ mod tests {
     fn clippy_diagnose_failure_aborts_apply() {
         let backend = backend_for("clippy", plain_tool(), clippy_garbage);
         let err = backend
-            .apply_fix("clippy", "src/main.rs", "x\n")
+            .apply_fix("clippy", "src/main.rs", "x\n", "lint")
             .expect_err("diagnose fails");
         assert!(matches!(err, RunnerError::ToolOutput { .. }));
     }
@@ -1946,7 +2272,7 @@ mod tests {
     fn buildifier_fix_rewrites_the_file() {
         let backend = backend_for("buildifier", plain_tool(), buildifier_fix_ok);
         let fixed = backend
-            .apply_fix("buildifier", "a.bzl", "x = 1\n")
+            .apply_fix("buildifier", "a.bzl", "x = 1\n", "format")
             .expect("fixed");
         assert_eq!(fixed, "fixed\n");
     }
@@ -1955,9 +2281,136 @@ mod tests {
     fn taplo_fix_rewrites_the_file() {
         let backend = backend_for("taplo", plain_tool(), taplo_fix_ok);
         let fixed = backend
-            .apply_fix("taplo", "a.toml", "a=1\n")
+            .apply_fix("taplo", "a.toml", "a=1\n", "lint")
             .expect("fixed");
         assert_eq!(fixed, "a = 1\n");
+    }
+
+    #[test]
+    fn ruff_lint_reports_and_fix_rereads_on_exit_one() {
+        let backend = backend_for("ruff", plain_tool(), roundtrip_ruff);
+        let findings = backend
+            .diagnose("ruff", "lint", &single("a.py", "import os\n# UNFIXABLE\n"))
+            .expect("diagnosed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].tool_id, "ruff");
+        assert_eq!(findings[0].rule_id, "F401");
+        assert_eq!(
+            findings[0].severity,
+            quality_result::proto::Severity::Error as i32
+        );
+        // `check --fix` exits 1 with the unfixable marker remaining, but
+        // the applied import strip is kept, not discarded.
+        let fixed = backend
+            .apply_fix("ruff", "a.py", "import os\n# UNFIXABLE\n", "lint")
+            .expect("fixed");
+        assert_eq!(fixed, "# UNFIXABLE\n");
+        assert!(backend
+            .diagnose("ruff", "lint", &single("a.py", "x = 1\n"))
+            .expect("diagnosed")
+            .is_empty());
+    }
+
+    #[test]
+    fn ruff_format_reports_and_rewrites() {
+        let backend = backend_for("ruff", plain_tool(), roundtrip_ruff);
+        let findings = backend
+            .diagnose("ruff", "format", &single("a.py", "x = 1  \n"))
+            .expect("diagnosed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].rule_id, "unformatted");
+        let fixed = backend
+            .apply_fix("ruff", "a.py", "x = 1  \n", "format")
+            .expect("fixed");
+        assert_eq!(fixed, "x = 1\n");
+    }
+
+    #[test]
+    fn ruff_fix_follows_the_running_capability() {
+        let backend = backend_for("ruff", plain_tool(), roundtrip_ruff);
+        // A lint fix strips the unused import but never reformats:
+        // trailing whitespace outside the stripped line survives.
+        let fixed = backend
+            .apply_fix("ruff", "a.py", "import os\nx = 1  \n", "lint")
+            .expect("fixed");
+        assert_eq!(fixed, "x = 1  \n");
+        // A format fix trims trailing whitespace but never strips imports.
+        let fixed = backend
+            .apply_fix("ruff", "a.py", "import os\nx = 1  \n", "format")
+            .expect("fixed");
+        assert_eq!(fixed, "import os\nx = 1\n");
+    }
+
+    #[test]
+    fn ruff_hinted_config_reaches_the_tool() {
+        let tool = RealTool {
+            config_rel: Some("ruff.toml".to_owned()),
+            tool_files: vec![("ruff.toml".to_owned(), b"".to_vec())],
+            ..plain_tool()
+        };
+        let backend = backend_for("ruff", tool, roundtrip_ruff_hinted);
+        let findings = backend
+            .diagnose("ruff", "lint", &single("a.py", "import os\n"))
+            .expect("diagnosed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].rule_id, "F401");
+    }
+
+    #[test]
+    fn ty_reports_and_is_check_only() {
+        let backend = backend_for("ty", plain_tool(), roundtrip_ty);
+        let findings = backend
+            .diagnose("ty", "typecheck", &single("a.py", "x: int = BADTYPE\n"))
+            .expect("diagnosed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].tool_id, "ty");
+        assert_eq!(findings[0].rule_id, "invalid-assignment");
+        assert_eq!(
+            findings[0].severity,
+            quality_result::proto::Severity::Error as i32
+        );
+        assert!(backend
+            .diagnose("ty", "typecheck", &single("a.py", "x: int = 1\n"))
+            .expect("diagnosed")
+            .is_empty());
+        let text = "x: int = BADTYPE\n";
+        assert_eq!(
+            backend
+                .apply_fix("ty", "a.py", text, "typecheck")
+                .expect("check-only"),
+            text
+        );
+    }
+
+    #[test]
+    fn pydoclint_reports_and_is_check_only() {
+        let backend = backend_for("pydoclint", plain_tool(), roundtrip_pydoclint);
+        let findings = backend
+            .diagnose(
+                "pydoclint",
+                "lint",
+                &single("a.py", "def foo():\n    NODOC\n"),
+            )
+            .expect("diagnosed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].tool_id, "pydoclint");
+        assert_eq!(findings[0].rule_id, "DOC201");
+        assert_eq!(findings[0].path, "a.py");
+        assert!(backend
+            .diagnose(
+                "pydoclint",
+                "lint",
+                &single("a.py", "\"\"\"Module.\"\"\"\n")
+            )
+            .expect("diagnosed")
+            .is_empty());
+        let text = "def foo():\n    NODOC\n";
+        assert_eq!(
+            backend
+                .apply_fix("pydoclint", "a.py", text, "lint")
+                .expect("check-only"),
+            text
+        );
     }
 
     #[test]

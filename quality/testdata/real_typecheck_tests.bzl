@@ -9,7 +9,22 @@ the capability-level shape resting on the real pipeline unit tests.
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 
-EXPECTED_TYPECHECK_OBSERVATIONS = """subject //quality/testdata:fixture_real_rust_typecheck_clean_subject
+EXPECTED_TYPECHECK_OBSERVATIONS = """subject //quality/testdata:fixture_real_python_dirty_typecheck_subject
+field dx_count=1
+field dx_results=fixture_real_python_dirty-real-typecheck.pb
+field has_quality_sources=True
+field label=//quality/testdata:fixture_real_python_dirty
+subject //quality/testdata:fixture_real_python_no_typecheck_subject
+field dx_count=0
+field dx_results=(none)
+field has_quality_sources=True
+field label=//quality/testdata:fixture_real_python_no_typecheck
+subject //quality/testdata:fixture_real_python_typecheck_subject
+field dx_count=1
+field dx_results=fixture_real_python-real-typecheck.pb
+field has_quality_sources=True
+field label=//quality/testdata:fixture_real_python
+subject //quality/testdata:fixture_real_rust_typecheck_clean_subject
 field dx_count=1
 field dx_results=fixture_real_rust_typecheck_clean-real-typecheck.pb
 field has_quality_sources=True

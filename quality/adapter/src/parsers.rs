@@ -1,4 +1,4 @@
-//! Per-tool output grammars for the pinned M04 binaries.
+//! Per-tool output grammars for the pinned M04 binaries plus M15 Python.
 //!
 //! Each parser maps one tool's check output onto [`FileFinding`] values
 //! addressed by the scratch-absolute path the tool reported; the caller
@@ -7,7 +7,8 @@
 //! pinned grammar is a [`ParseError`], which the runner surfaces as an
 //! action failure.
 //!
-//! Pinned shapes (probed against the M04 binaries):
+//! Pinned shapes (probed against the M04 binaries, M15 Python probes in
+//! the M15 evidence):
 //!
 //! * Buildifier `--mode=check --format=json --lint=warn`: stdout JSON
 //!   `{success, files:[{filename, formatted, valid, warnings:[...]}]}`.
@@ -52,6 +53,29 @@
 //!   diagnostics); `tool_id` is `rustc`, findings are typecheck
 //!   diagnostics, and suggestions are parsed but never applied by the
 //!   runner (typecheck is check-only).
+//! * Ruff `check --output-format json`: stdout JSON array, one object per
+//!   finding (`code`, `filename`, `location:{column,row}`,
+//!   `end_location:{column,row}`, `message`, `severity`). `severity`
+//!   `error`/`warning` map onto [`ToolSeverity`]; anything else is a
+//!   grammar mismatch. Clean is `[]` on exit 0; findings exit 1. `fix`
+//!   edits are ignored: the runner converges via `check --fix`
+//!   re-runs, never by applying parsed edits.
+//! * Ruff `format --check --output-format json`: the same JSON array, but
+//!   every entry carries `code: "unformatted"` (one entry per unformatted
+//!   file at its first-differing hunk); any other code is a grammar
+//!   mismatch. Message and severity map verbatim like lint.
+//! * Ty `check --output-format concise --no-progress`: stdout diagnostic
+//!   lines `<path>:<line>:<col>: <severity>[<code>] <message>` plus a
+//!   `Found N diagnostic(s)` summary and, when clean, `All checks
+//!   passed!` on exit 0. Diagnostics are start points (concise carries
+//!   no end); `error`/`warning` map onto [`ToolSeverity`]. Anything else
+//!   on stdout is a grammar mismatch.
+//! * pydoclint `--quiet`: violations on stderr as a bare `<path>` header
+//!   line plus `    <line>: <DOCxxx>: <message>` lines (stdout empty).
+//!   Findings are line-level points at column 1; every violation is an
+//!   error. Line `0` (whole-file `DOC002` syntax errors: the file cannot
+//!   be parsed, so no line exists) places a point at 1:1 with the tool's
+//!   message verbatim. Clean is empty output on exit 0.
 
 use serde::Deserialize;
 
@@ -982,6 +1006,348 @@ fn collect_suggestions(
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Ruff (lint and format share the JSON envelope)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+struct RuffPosition {
+    column: u64,
+    row: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct RuffDiagnostic {
+    code: String,
+    filename: String,
+    location: RuffPosition,
+    end_location: RuffPosition,
+    message: String,
+    severity: String,
+}
+
+fn ruff_severity(tool: &'static str, severity: &str) -> Result<ToolSeverity, ParseError> {
+    match severity {
+        "error" => Ok(ToolSeverity::Error),
+        "warning" => Ok(ToolSeverity::Warning),
+        _ => Err(ParseError::Shape {
+            tool,
+            detail: format!("unknown severity: {severity}"),
+        }),
+    }
+}
+
+fn ruff_position(
+    tool: &'static str,
+    what: &str,
+    position: &RuffPosition,
+) -> Result<TextPosition, ParseError> {
+    if position.row == 0 || position.column == 0 {
+        return Err(ParseError::Shape {
+            tool,
+            detail: format!("zero {what} position"),
+        });
+    }
+    Ok(TextPosition {
+        line: position.row,
+        column: position.column,
+    })
+}
+
+/// Parses Ruff `check --output-format json` stdout into one finding per
+/// diagnostic. `fix` edits are ignored (the runner converges via
+/// `check --fix`); suggestions stay empty and the convergence pass marks
+/// fixability, never the parser.
+pub fn parse_ruff(
+    stdout: &[u8],
+    code: Option<i32>,
+    files: &[&str],
+) -> Result<Vec<FileFinding>, ParseError> {
+    const TOOL: &str = "ruff";
+    let diagnostics: Vec<RuffDiagnostic> =
+        serde_json::from_slice(stdout).map_err(|err| ParseError::Json {
+            tool: TOOL,
+            detail: err.to_string(),
+        })?;
+    let mut findings = Vec::with_capacity(diagnostics.len());
+    for diagnostic in &diagnostics {
+        let checked = known(TOOL, files, &diagnostic.filename)?;
+        let start = ruff_position(TOOL, "start", &diagnostic.location)?;
+        let end = ruff_position(TOOL, "end", &diagnostic.end_location)?;
+        findings.push(FileFinding {
+            file: checked.to_owned(),
+            finding: Finding {
+                tool_id: TOOL.to_owned(),
+                rule_id: diagnostic.code.clone(),
+                message: diagnostic.message.clone(),
+                severity: ruff_severity(TOOL, &diagnostic.severity)?,
+                start,
+                end: Some(end),
+                suggestions: Vec::new(),
+            },
+        });
+    }
+    if findings.is_empty() && code != Some(0) {
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("exit {} with an empty findings array", code_name(code)),
+        });
+    }
+    Ok(findings)
+}
+
+/// Parses Ruff `format --check --output-format json` stdout: the same
+/// envelope as lint, but every entry must carry `code: "unformatted"`
+/// (one entry per unformatted file at its first-differing hunk). Message
+/// and severity map verbatim like lint.
+pub fn parse_ruff_format(
+    stdout: &[u8],
+    code: Option<i32>,
+    files: &[&str],
+) -> Result<Vec<FileFinding>, ParseError> {
+    const TOOL: &str = "ruff_format";
+    let diagnostics: Vec<RuffDiagnostic> =
+        serde_json::from_slice(stdout).map_err(|err| ParseError::Json {
+            tool: TOOL,
+            detail: err.to_string(),
+        })?;
+    let mut findings = Vec::with_capacity(diagnostics.len());
+    for diagnostic in &diagnostics {
+        if diagnostic.code != "unformatted" {
+            return Err(ParseError::Shape {
+                tool: TOOL,
+                detail: format!("unexpected code {:?}", diagnostic.code),
+            });
+        }
+        let checked = known(TOOL, files, &diagnostic.filename)?;
+        let start = ruff_position(TOOL, "start", &diagnostic.location)?;
+        let end = ruff_position(TOOL, "end", &diagnostic.end_location)?;
+        findings.push(FileFinding {
+            file: checked.to_owned(),
+            finding: Finding {
+                tool_id: "ruff".to_owned(),
+                rule_id: diagnostic.code.clone(),
+                message: diagnostic.message.clone(),
+                severity: ruff_severity(TOOL, &diagnostic.severity)?,
+                start,
+                end: Some(end),
+                suggestions: Vec::new(),
+            },
+        });
+    }
+    if findings.is_empty() && code != Some(0) {
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("exit {} with an empty findings array", code_name(code)),
+        });
+    }
+    Ok(findings)
+}
+
+// ---------------------------------------------------------------------------
+// Ty
+// ---------------------------------------------------------------------------
+
+/// Splits a `<path>:<line>:<col>: <severity>[<code>] <message>` concise
+/// diagnostic from the left: the runner always passes mirror-relative paths
+/// (colons cannot appear), while messages routinely contain colons
+/// (`... is incorrect: Expected ...`), so right-splitting misreads the
+/// severity whenever the message does.
+fn ty_diagnostic(line: &str) -> Result<(&str, u64, u64, ToolSeverity, &str, String), ParseError> {
+    const TOOL: &str = "ty";
+    let mut parts = line.splitn(4, ':');
+    let (path, line_text, column_text, tail) = (
+        parts.next().unwrap_or_default(),
+        parts.next().unwrap_or_default(),
+        parts.next().unwrap_or_default(),
+        parts.next().unwrap_or_default(),
+    );
+    if path.is_empty() || tail.is_empty() {
+        return Err(missing(TOOL, "diagnostic", line));
+    }
+    let (line_no, column) = (line_text.parse::<u64>(), column_text.parse::<u64>());
+    let tail = tail
+        .strip_prefix(' ')
+        .ok_or_else(|| missing(TOOL, "diagnostic", line))?;
+    let (severity_text, rest) = tail
+        .split_once('[')
+        .ok_or_else(|| missing(TOOL, "diagnostic", line))?;
+    let (rule, message) = rest
+        .split_once(']')
+        .ok_or_else(|| missing(TOOL, "diagnostic", line))?;
+    let severity = match severity_text {
+        "error" => ToolSeverity::Error,
+        "warning" => ToolSeverity::Warning,
+        _ => {
+            return Err(ParseError::Shape {
+                tool: TOOL,
+                detail: format!("unknown severity in {line:?}"),
+            });
+        }
+    };
+    let message = message.strip_prefix(' ').unwrap_or(message);
+    match (
+        path.is_empty(),
+        line_no,
+        column,
+        rule.is_empty(),
+        message.is_empty(),
+    ) {
+        (false, Ok(line_no), Ok(column), false, false) if line_no >= 1 && column >= 1 => {
+            Ok((path, line_no, column, severity, rule, message.to_owned()))
+        }
+        _ => Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("malformed diagnostic: {line:?}"),
+        }),
+    }
+}
+
+/// Parses Ty `check --output-format concise` stdout. Diagnostics are
+/// start points (concise carries no end); the `Found N diagnostic(s)`
+/// summary and `All checks passed!` are skipped. Anything else on stdout
+/// is a grammar mismatch. Check-only: findings never carry suggestions.
+pub fn parse_ty(
+    stdout: &[u8],
+    code: Option<i32>,
+    files: &[&str],
+) -> Result<Vec<FileFinding>, ParseError> {
+    const TOOL: &str = "ty";
+    let text = std::str::from_utf8(stdout).map_err(|err| ParseError::Shape {
+        tool: TOOL,
+        detail: err.to_string(),
+    })?;
+    let mut findings = Vec::new();
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed == "All checks passed!" {
+            continue;
+        }
+        if trimmed.starts_with("Found ")
+            && (trimmed.ends_with("diagnostic") || trimmed.ends_with("diagnostics"))
+        {
+            continue;
+        }
+        let (path, line_no, column, severity, rule, message) = ty_diagnostic(trimmed)?;
+        let checked = known(TOOL, files, path)?;
+        let (start, end) = point(line_no, column);
+        findings.push(FileFinding {
+            file: checked.to_owned(),
+            finding: Finding {
+                tool_id: TOOL.to_owned(),
+                rule_id: rule.to_owned(),
+                message,
+                severity,
+                start,
+                end,
+                suggestions: Vec::new(),
+            },
+        });
+    }
+    if findings.is_empty() && code != Some(0) {
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("exit {} with no diagnostics", code_name(code)),
+        });
+    }
+    Ok(findings)
+}
+
+// ---------------------------------------------------------------------------
+// pydoclint
+// ---------------------------------------------------------------------------
+
+/// Splits a `<line>: <DOCxxx>: <message>` violation line. Line `0` is
+/// the whole-file `DOC002` unparseable marker (no line exists); the
+/// caller places it at 1:1 with the tool's message verbatim.
+fn pydoclint_violation(line: &str) -> Result<(u64, &str, String), ParseError> {
+    const TOOL: &str = "pydoclint";
+    let (line_text, rest) = line
+        .split_once(':')
+        .ok_or_else(|| missing(TOOL, "violation", line))?;
+    let number = line_text.parse::<u64>().map_err(|_| ParseError::Shape {
+        tool: TOOL,
+        detail: format!("malformed violation: {line:?}"),
+    })?;
+    let rest = rest
+        .strip_prefix(' ')
+        .ok_or_else(|| missing(TOOL, "violation", line))?;
+    let (rule, message) = rest
+        .split_once(':')
+        .ok_or_else(|| missing(TOOL, "violation", line))?;
+    let message = message.strip_prefix(' ').unwrap_or(message);
+    if !(rule.len() > 3
+        && rule.starts_with("DOC")
+        && rule[3..].chars().all(|char| char.is_ascii_digit()))
+        || message.is_empty()
+    {
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("malformed violation: {line:?}"),
+        });
+    }
+    Ok((number, rule, message.to_owned()))
+}
+
+/// Parses pydoclint `--quiet` stderr: bare `<path>` header lines plus
+/// indented violation lines. Findings are line-level points at column 1
+/// and every violation is an error. Clean is empty output on exit 0;
+/// empty output on any other exit is a grammar mismatch. Check-only:
+/// pydoclint offers no fix mode, so suggestions stay empty.
+pub fn parse_pydoclint(
+    stderr: &[u8],
+    code: Option<i32>,
+    files: &[&str],
+) -> Result<Vec<FileFinding>, ParseError> {
+    const TOOL: &str = "pydoclint";
+    let text = std::str::from_utf8(stderr).map_err(|err| ParseError::Shape {
+        tool: TOOL,
+        detail: err.to_string(),
+    })?;
+    let mut findings = Vec::new();
+    let mut current: Option<&str> = None;
+    for raw in text.lines() {
+        if raw.trim().is_empty() {
+            continue;
+        }
+        if raw.starts_with(char::is_whitespace) {
+            let (number, rule, message) = pydoclint_violation(raw.trim())?;
+            let header = current.ok_or_else(|| ParseError::Shape {
+                tool: TOOL,
+                detail: format!("violation without a file header: {raw:?}"),
+            })?;
+            let checked = known(TOOL, files, header)?;
+            // Line 0 marks a whole-file syntax error (DOC002): the file
+            // cannot be parsed, so the finding points at the file top
+            // with the tool's message verbatim.
+            let (start, end) = point(number.max(1), 1);
+            findings.push(FileFinding {
+                file: checked.to_owned(),
+                finding: Finding {
+                    tool_id: TOOL.to_owned(),
+                    rule_id: rule.to_owned(),
+                    message,
+                    severity: ToolSeverity::Error,
+                    start,
+                    end,
+                    suggestions: Vec::new(),
+                },
+            });
+        } else {
+            let header = raw.trim_end();
+            known(TOOL, files, header)?;
+            current = Some(header);
+        }
+    }
+    if findings.is_empty() && code != Some(0) {
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("exit {} with no violations", code_name(code)),
+        });
+    }
+    Ok(findings)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1564,5 +1930,163 @@ mod grammar_errors {
             &inverted,
         );
         assert!(parse_clippy(bad.as_bytes(), Some(0), &["/s/x.rs"]).is_err());
+    }
+
+    // Exact outputs probed from the pinned M15 Python binaries (ruff
+    // 0.16.7, ty 0.0.80, pydoclint 0.9.1); the fixtures pin the
+    // grammars above, so a tool upgrade that changes its output fails
+    // here instead of silently shifting findings.
+
+    const RUFF_LINT_DIRTY: &str = r#"[{"cell":null,"code":"F401","end_location":{"column":10,"row":1},"filename":"/s/dirty.py","fix":{"applicability":"safe","edits":[{"content":"","end_location":{"column":1,"row":2},"location":{"column":1,"row":1}}],"message":"Remove unused import: `os`"},"location":{"column":8,"row":1},"message":"`os` imported but unused","name":"unused-import","noqa_row":1,"severity":"error","url":"https://docs.astral.sh/ruff/rules/unused-import"}]"#;
+
+    const RUFF_FORMAT_DIRTY: &str = r#"[{"cell":null,"code":"unformatted","end_location":{"column":7,"row":5},"filename":"/s/dirty.py","fix":{"applicability":"safe","edits":[{"content":" = ","end_location":{"column":7,"row":5},"location":{"column":6,"row":5}}],"message":null},"location":{"column":6,"row":5},"message":"File would be reformatted","name":"unformatted","noqa_row":null,"severity":"error","url":null}]"#;
+
+    #[test]
+    fn ruff_reports_lint_diagnostics() {
+        let findings =
+            parse_ruff(RUFF_LINT_DIRTY.as_bytes(), Some(1), &["/s/dirty.py"]).expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].file, "/s/dirty.py");
+        assert_eq!(findings[0].finding.tool_id, "ruff");
+        assert_eq!(findings[0].finding.rule_id, "F401");
+        assert_eq!(findings[0].finding.message, "`os` imported but unused");
+        assert_eq!(findings[0].finding.severity, ToolSeverity::Error);
+        assert_eq!(
+            (findings[0].finding.start, findings[0].finding.end),
+            (
+                TextPosition { line: 1, column: 8 },
+                Some(TextPosition {
+                    line: 1,
+                    column: 10
+                })
+            )
+        );
+        assert!(findings[0].finding.suggestions.is_empty());
+        assert!(parse_ruff(b"[]", Some(0), &["/s/dirty.py"])
+            .expect("parsed")
+            .is_empty());
+        assert!(parse_ruff(b"[]", Some(1), &["/s/dirty.py"]).is_err());
+        assert!(parse_ruff(RUFF_LINT_DIRTY.as_bytes(), Some(1), &["/s/other.py"]).is_err());
+        assert!(parse_ruff(b"not json", Some(1), &["/s/dirty.py"]).is_err());
+    }
+
+    #[test]
+    fn ruff_format_accepts_only_unformatted() {
+        let findings = parse_ruff_format(RUFF_FORMAT_DIRTY.as_bytes(), Some(1), &["/s/dirty.py"])
+            .expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].finding.rule_id, "unformatted");
+        assert_eq!(findings[0].finding.message, "File would be reformatted");
+        assert_eq!(
+            (findings[0].finding.start, findings[0].finding.end),
+            (
+                TextPosition { line: 5, column: 6 },
+                Some(TextPosition { line: 5, column: 7 })
+            )
+        );
+        assert!(parse_ruff_format(b"[]", Some(0), &["/s/dirty.py"])
+            .expect("parsed")
+            .is_empty());
+        assert!(parse_ruff_format(RUFF_LINT_DIRTY.as_bytes(), Some(1), &["/s/dirty.py"]).is_err());
+    }
+
+    #[test]
+    fn ty_reports_concise_diagnostics() {
+        let stdout = concat!(
+            "/s/dirty.py:1:10: error[invalid-assignment] Object of type `Literal[\"hello\"]` is not assignable to `int`\n",
+            "Found 1 diagnostic\n",
+        );
+        let findings = parse_ty(stdout.as_bytes(), Some(1), &["/s/dirty.py"]).expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].file, "/s/dirty.py");
+        assert_eq!(findings[0].finding.tool_id, "ty");
+        assert_eq!(findings[0].finding.rule_id, "invalid-assignment");
+        assert_eq!(findings[0].finding.severity, ToolSeverity::Error);
+        assert_eq!(
+            (findings[0].finding.start, findings[0].finding.end),
+            (
+                TextPosition {
+                    line: 1,
+                    column: 10
+                },
+                None
+            )
+        );
+        assert!(findings[0].finding.suggestions.is_empty());
+        assert!(parse_ty(b"All checks passed!\n", Some(0), &["/s/dirty.py"])
+            .expect("parsed")
+            .is_empty());
+        assert!(parse_ty(b"All checks passed!\n", Some(1), &["/s/dirty.py"]).is_err());
+        assert!(parse_ty(b"garbage\n", Some(1), &["/s/dirty.py"]).is_err());
+        assert!(parse_ty(stdout.as_bytes(), Some(1), &["/s/other.py"]).is_err());
+    }
+
+    #[test]
+    fn ty_survives_colons_inside_the_message() {
+        // Pinned shape from the real dirty fixture: the message itself
+        // carries `incorrect: Expected`, so only a left split keeps the
+        // severity intact.
+        let stdout = concat!(
+            "quality/testdata/real_dirty.py:22:18: error[invalid-argument-type] Argument to function `add` is incorrect: Expected `int`, found `Literal[\"two\"]`\n",
+            "Found 1 diagnostic\n",
+        );
+        let findings = parse_ty(
+            stdout.as_bytes(),
+            Some(1),
+            &["quality/testdata/real_dirty.py"],
+        )
+        .expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].finding.rule_id, "invalid-argument-type");
+        assert_eq!(findings[0].finding.severity, ToolSeverity::Error);
+        assert_eq!(
+            (findings[0].finding.start, findings[0].finding.end),
+            (
+                TextPosition {
+                    line: 22,
+                    column: 18
+                },
+                None
+            )
+        );
+    }
+
+    #[test]
+    fn pydoclint_reports_violations_per_header() {
+        let stderr = concat!(
+            "/s/a.py\n",
+            "    4: DOC101: Function `foo`: Docstring contains fewer arguments than in function signature.\n",
+            "    4: DOC201: Function `foo` does not have a return section in docstring\n",
+        );
+        let findings = parse_pydoclint(stderr.as_bytes(), Some(1), &["/s/a.py"]).expect("parsed");
+        assert_eq!(findings.len(), 2);
+        assert_eq!(findings[0].file, "/s/a.py");
+        assert_eq!(findings[0].finding.tool_id, "pydoclint");
+        assert_eq!(findings[0].finding.rule_id, "DOC101");
+        assert_eq!(findings[0].finding.severity, ToolSeverity::Error);
+        assert_eq!(
+            (findings[0].finding.start, findings[0].finding.end),
+            (TextPosition { line: 4, column: 1 }, None)
+        );
+        assert_eq!(findings[1].finding.rule_id, "DOC201");
+        assert!(parse_pydoclint(b"", Some(0), &["/s/a.py"])
+            .expect("parsed")
+            .is_empty());
+        assert!(parse_pydoclint(b"", Some(1), &["/s/a.py"]).is_err());
+        assert!(parse_pydoclint(stderr.as_bytes(), Some(1), &["/s/other.py"]).is_err());
+        assert!(parse_pydoclint(b"    4: DOC101: msg\n", Some(1), &["/s/a.py"]).is_err());
+    }
+
+    #[test]
+    fn pydoclint_syntax_error_points_at_file_top() {
+        let stderr = "/s/broken.py\n    0: DOC002: Syntax errors; cannot parse this Python file.\n";
+        let findings =
+            parse_pydoclint(stderr.as_bytes(), Some(1), &["/s/broken.py"]).expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].finding.rule_id, "DOC002");
+        assert_eq!(
+            (findings[0].finding.start, findings[0].finding.end),
+            (TextPosition { line: 1, column: 1 }, None)
+        );
     }
 }
