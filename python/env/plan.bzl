@@ -48,6 +48,7 @@ def _python_env_plan_impl(ctx):
         fail("python_env_plan: target has no PyInfo: " + display_label(target.label))
     py_info = target[_PyInfo]
     imports = sorted(py_info.imports.to_list())
+
     # First-party/driver `.py` closure for import projection. Wheel payloads
     # are covered by `wheel_count` plus the site-packages import roots above;
     # raw venv markers (e.g. repeated `actual_install.install`) carry no

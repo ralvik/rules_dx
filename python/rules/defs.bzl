@@ -220,6 +220,13 @@ def dx_py_binary(name, srcs = None, main = None, visibility = None, **kwargs):
     `srcs`. The library alone owns the source and its source-derived
     dependencies; the thin binary reports no direct sources. Both shapes
     preserve the upstream providers and execution semantics.
+
+    Args:
+      name: public binary target name (upstream target is name_dx_upstream).
+      srcs: direct binary sources; empty for thin entry binaries.
+      main: entry source for thin binaries; none for ordinary binaries.
+      visibility: visibility of the public forwarding binary target.
+      **kwargs: extra attributes forwarded to the upstream py_binary.
     """
     effective_srcs = srcs if srcs != None else []
     if main != None:
