@@ -346,3 +346,126 @@ func TestStaleIgnoreFails(t *testing.T) {
 	}()
 	l.AfterResolvingDeps(context.Background())
 }
+
+func TestConfigureInheritanceAndOtherDirectives(t *testing.T) {
+	l := &typescriptLang{}
+	l.Before(context.Background())
+	root := config.New()
+	file, err := rule.LoadData("BUILD.bazel", "", []byte("# gazelle:dx_ignore_import typescript missing_dep\n# gazelle:resolve typescript typescript foo //foo:bar\n# gazelle:dx_ignore_import python foo\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.Configure(root, "", file)
+	child := root.Clone()
+	l.Configure(child, "child", nil)
+	ignore := matchingIgnore(child, "missing_dep")
+	if ignore == nil || ignore.path != "" {
+		t.Fatalf("inherited ignore = %+v", ignore)
+	}
+	ignore.used = true
+	if got := matchingIgnore(child, "absent"); got != nil {
+		t.Errorf("ignore miss = %+v, want nil", got)
+	}
+	if got := matchingIgnore(config.New(), "absent"); got != nil {
+		t.Errorf("no-exts ignore = %+v, want nil", got)
+	}
+	l.AfterResolvingDeps(context.Background())
+}
+
+func TestConfigureThreeFieldAndMalformed(t *testing.T) {
+	l := &typescriptLang{}
+	l.Before(context.Background())
+	cfg := config.New()
+	file, err := rule.LoadData("BUILD.bazel", "pkg", []byte("# gazelle:dx_ignore_import typescript typescript mydep\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.Configure(cfg, "pkg", file)
+	ignore := matchingIgnore(cfg, "mydep")
+	if ignore == nil || ignore.value != "mydep" {
+		t.Fatalf("three-field ignore = %+v, want mydep", ignore)
+	}
+	ignore.used = true
+	l.AfterResolvingDeps(context.Background())
+
+	malformed := &typescriptLang{}
+	malformed.Before(context.Background())
+	badCfg := config.New()
+	badFile, err := rule.LoadData("BUILD.bazel", "pkg", []byte("# gazelle:dx_ignore_import typescript\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	malformed.Configure(badCfg, "pkg", badFile)
+	if len(malformed.errors) != 1 || !strings.Contains(malformed.errors[0], "malformed") {
+		t.Errorf("malformed errors = %v", malformed.errors)
+	}
+}
+
+func TestApparentLoadsDefault(t *testing.T) {
+	l := &typescriptLang{}
+	got := l.ApparentLoads(func(string) string { return "" })
+	if len(got) != 1 || got[0].Name != "@rules_dx//typescript/rules:defs.bzl" {
+		t.Errorf("default apparent loads = %+v", got)
+	}
+}
+
+func TestImportsNonProjectKind(t *testing.T) {
+	lang := NewLanguage()
+	if got := lang.Imports(&config.Config{}, rule.NewRule("filegroup", "x"), nil); got != nil {
+		t.Errorf("non-project imports = %+v, want nil", got)
+	}
+}
+
+func TestClaimKindFallback(t *testing.T) {
+	if got := claimKind(Claimant{Name: "x", Source: "x.ts"}); got != projectKind {
+		t.Errorf("fallback kind = %q, want %q", got, projectKind)
+	}
+	if got := claimKind(Claimant{Name: "x", Source: "x.ts", Kind: projectKind}); got != projectKind {
+		t.Errorf("explicit kind = %q, want %q", got, projectKind)
+	}
+}
+
+func TestCheckClaimsOtherAndMismatch(t *testing.T) {
+	claimants := []Claimant{{Name: "demo", Source: "demo.ts", Kind: projectKind}}
+	otherSame := []*rule.Rule{rule.NewRule(projectKind, "demo")}
+	if err := checkClaims(nil, otherSame, claimants); err != nil {
+		t.Errorf("same-kind other claims = %v", err)
+	}
+	otherWrong := []*rule.Rule{rule.NewRule("filegroup", "demo")}
+	if err := checkClaims(nil, otherWrong, claimants); err == nil || !strings.Contains(err.Error(), "existing filegroup") {
+		t.Errorf("other kind mismatch = %v", err)
+	}
+	wrongKind := rule.EmptyFile("BUILD.bazel", "pkg")
+	wrongKind.Rules = append(wrongKind.Rules, rule.NewRule("filegroup", "demo"))
+	if err := checkClaims(wrongKind, nil, claimants); err == nil || !strings.Contains(err.Error(), "existing filegroup") {
+		t.Errorf("kind mismatch = %v", err)
+	}
+	dupes := []Claimant{{Name: "a_b", Source: "a-b.ts", Kind: projectKind}, {Name: "a_b", Source: "a_b.tsx", Kind: projectKind}}
+	existing := rule.EmptyFile("BUILD.bazel", "pkg")
+	existing.Rules = append(existing.Rules, rule.NewRule("filegroup", "a_b"))
+	if err := checkClaims(existing, nil, dupes); err == nil || !strings.Contains(err.Error(), "handwritten") {
+		t.Errorf("collision with handwritten = %v", err)
+	}
+}
+
+func TestUnionStringsEmpty(t *testing.T) {
+	if got := unionStrings(nil, nil); len(got) != 0 {
+		t.Errorf("empty union = %q", got)
+	}
+}
+
+func TestResolveMappingIgnoreConflict(t *testing.T) {
+	l := &typescriptLang{}
+	l.Before(context.Background())
+	cfg := resolverConfig(t, []rule.Directive{{Key: "resolve", Value: "typescript typescript mapped //mapped:dep"}})
+	file, err := rule.LoadData("BUILD.bazel", "app", []byte("# gazelle:dx_ignore_import typescript mapped\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.Configure(cfg, "app", file)
+	r := rule.NewRule(projectKind, "app")
+	l.Resolve(cfg, resolverIndex(l), nil, r, targetImports{imports: []string{"mapped"}}, label.New("", "app", "app"))
+	if len(l.errors) != 1 || !strings.Contains(l.errors[0], "both an exact resolve mapping and ignore") {
+		t.Errorf("conflict errors = %v", l.errors)
+	}
+}

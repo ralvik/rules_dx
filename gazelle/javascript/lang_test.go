@@ -582,3 +582,78 @@ func TestResolveMappingIgnoreConflict(t *testing.T) {
 		t.Errorf("conflict errors = %v", l.errors)
 	}
 }
+
+func TestConfigureSkipsOtherDirectives(t *testing.T) {
+	l := &javascriptLang{}
+	l.Before(context.Background())
+	cfg := config.New()
+	file, err := rule.LoadData("BUILD.bazel", "pkg", []byte("# gazelle:resolve javascript javascript foo //foo:bar\n# gazelle:dx_ignore_import python foo\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.Configure(cfg, "pkg", file)
+	if got := matchingIgnore(cfg, "foo"); got != nil {
+		t.Errorf("other-directive ignore = %+v, want nil", got)
+	}
+	if len(l.errors) != 0 {
+		t.Errorf("other-directive errors = %v", l.errors)
+	}
+}
+
+func TestConfigureThreeFieldAndMalformed(t *testing.T) {
+	l := &javascriptLang{}
+	l.Before(context.Background())
+	cfg := config.New()
+	file, err := rule.LoadData("BUILD.bazel", "pkg", []byte("# gazelle:dx_ignore_import javascript javascript mydep\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.Configure(cfg, "pkg", file)
+	ignore := matchingIgnore(cfg, "mydep")
+	if ignore == nil || ignore.value != "mydep" {
+		t.Fatalf("three-field ignore = %+v, want mydep", ignore)
+	}
+	ignore.used = true
+
+	malformed := &javascriptLang{}
+	malformed.Before(context.Background())
+	badCfg := config.New()
+	badFile, err := rule.LoadData("BUILD.bazel", "pkg", []byte("# gazelle:dx_ignore_import javascript\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	malformed.Configure(badCfg, "pkg", badFile)
+	if len(malformed.errors) != 1 || !strings.Contains(malformed.errors[0], "malformed") {
+		t.Errorf("malformed errors = %v", malformed.errors)
+	}
+	l.AfterResolvingDeps(context.Background())
+}
+
+func TestClaimKind(t *testing.T) {
+	if got := claimKind(Claimant{Name: "x", Source: "x.js", Kind: binaryKind}); got != binaryKind {
+		t.Errorf("explicit kind = %q, want %q", got, binaryKind)
+	}
+	if got := claimKind(Claimant{Name: "a_test", Source: "a_test.js"}); got != testKind {
+		t.Errorf("test kind = %q, want %q", got, testKind)
+	}
+	if got := claimKind(Claimant{Name: "a", Source: "a.js"}); got != libraryKind {
+		t.Errorf("library kind = %q, want %q", got, libraryKind)
+	}
+}
+
+func TestMatchingIgnoreMiss(t *testing.T) {
+	l := &javascriptLang{}
+	l.Before(context.Background())
+	cfg := config.New()
+	file, err := rule.LoadData("BUILD.bazel", "app", []byte("# gazelle:dx_ignore_import javascript other\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.Configure(cfg, "app", file)
+	if got := matchingIgnore(cfg, "missing"); got != nil {
+		t.Errorf("ignore miss = %+v, want nil", got)
+	}
+	if got := matchingIgnore(config.New(), "missing"); got != nil {
+		t.Errorf("no-exts ignore = %+v, want nil", got)
+	}
+}
