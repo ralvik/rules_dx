@@ -110,6 +110,35 @@ func TestGenerateFrontmatterImports(t *testing.T) {
 	}
 }
 
+func TestGenerateMixedRegions(t *testing.T) {
+	regular := []string{"demo.astro", "client.astro", "server.astro"}
+	result := generateFixture(t, map[string]string{
+		"pkg/demo/demo.astro":   "---\nimport server from \"./server.astro\";\nimport fs from \"fs\";\n---\n\n<div>x</div>\n\n<script>\nimport client from \"./client.astro\";\n</script>\n",
+		"pkg/demo/client.astro": component("export const label = \"\";\n"),
+		"pkg/demo/server.astro": component("export const label = \"\";\n"),
+	}, regular)
+	if len(result.Gen) != 3 || len(result.Imports) != 3 {
+		t.Fatalf("generated %d rules and %d import sets, want 3 each", len(result.Gen), len(result.Imports))
+	}
+	// Rules sort by name: client, demo, server.
+	if result.Gen[1].Name() != "demo" {
+		t.Fatalf("middle rule = %s, want demo", result.Gen[1].Name())
+	}
+	libImports := result.Imports[1].(targetImports)
+	if strings.Join(libImports.imports, ",") != "client,server" {
+		t.Errorf("library imports = %+v, want [client server]", libImports)
+	}
+	for idx, want := range []string{"client", "server"} {
+		ruleIdx := idx * 2
+		if got := result.Gen[ruleIdx].Name(); got != want {
+			t.Fatalf("rule[%d] = %s, want %s", ruleIdx, got, want)
+		}
+		if neighbor := result.Imports[ruleIdx].(targetImports); len(neighbor.imports) != 0 {
+			t.Errorf("%s imports = %+v, want empty", want, neighbor)
+		}
+	}
+}
+
 func TestGenerateEmptySweepsStale(t *testing.T) {
 	result := generateFixture(t, nil, []string{"notes.txt"})
 	if len(result.Gen) != 0 || len(result.Empty) != 0 {
