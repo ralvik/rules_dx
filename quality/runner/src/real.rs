@@ -22,12 +22,17 @@
 //! command instead: `lint` for lint pipelines, `format --check` for
 //! format pipelines. Ruff likewise: `check` for lint pipelines,
 //! `format --check` for format pipelines, and its fix mode follows the
-//! same capability split (`check --fix` versus `format`).
+//! same capability split (`check --fix` versus `format`). Biome
+//! likewise: `lint` for lint pipelines, `format` check for format
+//! pipelines, with format fix via `format --write`; Biome lint is
+//! check-only and converges on format. ESLint is lint-only with
+//! `--fix` re-read on exit 0 or 1; Prettier is format-only with
+//! `--write` re-read on exit 0.
 //!
 //! Fix application is best-effort per file: a nonzero fix exit leaves
 //! the bytes unchanged and the check diagnostics report the cause, so
 //! syntax-broken files surface findings instead of failing the action.
-//! The one exception is Ruff lint fix: `check --fix` exits 1 when
+//! The exceptions are Ruff lint fix and ESLint fix: they exit 1 when
 //! unfixable findings remain *after* applying the fixable ones, so the
 //! backend re-reads the bytes on exit 0 or 1 and keeps its input only on
 //! any other exit. Spawn, materialization, and re-read failures still
@@ -36,7 +41,7 @@
 //! suggestions in memory and re-checks the patched bytes on the next
 //! round, so only suggestions that truly resolve their finding mark it
 //! fixable. Vale, the Markdown checker, rustc typecheck, Ty, pydoclint,
-//! flake8, and pylint are check-only and never rewrite.
+//! flake8, pylint, and Biome lint are check-only and never rewrite.
 
 use std::collections::BTreeMap;
 use std::ffi::{OsStr, OsString};
@@ -55,17 +60,22 @@ use crate::{
 use quality_result::proto::Diagnostic;
 
 /// Real tool IDs for the M04 initial adapters plus the M12 rustc
-/// typecheck adapter and the M15 Python adapters (Ruff, Ty, pydoclint,
-/// flake8, pylint).
+/// typecheck adapter, the M15 Python adapters (Ruff, Ty, pydoclint,
+/// flake8, pylint), and the M17 JavaScript/TypeScript/JSON adapters
+/// (Biome, ESLint, Prettier; target-coupled tsc stays pipeline-only and
+/// never runs as a bare backend invocation).
 /// Mirrors `REAL_ADAPTERS`
 /// in `//quality:adapters.bzl`; the Starlark registry stays authoritative
 /// for pipeline construction, this list pins the dispatch the backend
 /// implements.
 pub const REAL_TOOLS: &[&str] = &[
+    "biome",
     "buildifier",
     "clippy",
+    "eslint",
     "flake8",
     "markdown_check",
+    "prettier",
     "pydoclint",
     "pylint",
     "ruff",
@@ -80,6 +90,17 @@ pub const REAL_TOOLS: &[&str] = &[
 /// a hinted config the tool still gets an explicit `--config-path`, so
 /// no upward discovery can observe ambient state.
 const RUSTFMT_DEFAULTS_REL: &str = "dx-rustfmt-default.toml";
+
+/// Scratch-relative home for the materialized Biome defaults: without a
+/// hinted config the tool still gets an explicit `--config-path` dir
+/// holding exactly one `biome.json` (`{}`), so no upward discovery can
+/// observe ambient state. The directory must never contain linted
+/// sources; workspace sources live at their mirror paths while this dir
+/// holds only the defaults file.
+const BIOME_DEFAULTS_REL: &str = "dx-biome-default/biome.json";
+/// Pinned Biome defaults bytes: empty object selects pinned upstream
+/// defaults.
+const BIOME_DEFAULTS_BYTES: &[u8] = b"{}";
 
 /// One resolved real tool: absolute binary, extra hermetic environment
 /// entries, optional mirror-relative config, and extra mirrored files
@@ -218,6 +239,12 @@ impl RealBackend {
                 contents: MirrorContents::Bytes(Vec::new()),
             });
         }
+        if tool_id == "biome" && tool.config_rel.is_none() {
+            mirrors.push(MirrorFile {
+                mirror_rel: PathBuf::from(BIOME_DEFAULTS_REL),
+                contents: MirrorContents::Bytes(BIOME_DEFAULTS_BYTES.to_vec()),
+            });
+        }
         mirrors
     }
 
@@ -266,7 +293,9 @@ impl RealBackend {
 
     /// Resolves the tool config to an absolute scratch path. rustfmt
     /// always resolves: the hinted config, else the materialized
-    /// defaults. Every other tool resolves only its hint.
+    /// defaults. Every other file-config tool resolves only its hint;
+    /// Biome resolves its config directory separately (see
+    /// [`Self::biome_config_dir`]).
     fn config_abs(
         &self,
         tool_id: &str,
@@ -288,6 +317,28 @@ impl RealBackend {
                     .map_err(|err| execution(tool_id, format!("scratch config: {err}")))
             })
             .transpose()
+    }
+
+    /// Resolves the Biome `--config-path` directory to an absolute
+    /// scratch path: the hinted config's parent directory, else the
+    /// materialized defaults directory. The directory holds exactly one
+    /// `biome.json` and never the linted sources (sources mirror at
+    /// their workspace paths).
+    fn biome_config_dir(tool: &RealTool, scratch: &Scratch) -> Result<PathBuf, RunnerError> {
+        const TOOL_ID: &str = "biome";
+        let rel = tool.config_rel.as_deref().unwrap_or(BIOME_DEFAULTS_REL);
+        let dir_rel = Path::new(rel)
+            .parent()
+            .and_then(|parent| parent.to_str())
+            .unwrap_or_default();
+        let dir = if dir_rel.is_empty() {
+            scratch.root().to_path_buf()
+        } else {
+            scratch
+                .resolve(Path::new(dir_rel))
+                .map_err(|err| execution(TOOL_ID, format!("scratch config: {err}")))?
+        };
+        Ok(dir)
     }
 
     /// Scratch working directory for check commands: Buildifier, Clippy,
@@ -534,6 +585,62 @@ impl RealBackend {
                 let out = self.run(tool_id, tool, &invocation, scratch)?;
                 parsed(tool_id, parsers::parse_vale(&out.stdout, out.code, &strs))
             }
+            "biome" => {
+                let config_dir = Self::biome_config_dir(tool, scratch)?;
+                let invocation = if capability == "format" {
+                    commands::biome_format_check(&tool.binary, &refs, &config_dir)
+                } else {
+                    commands::biome_lint_check(&tool.binary, &refs, &config_dir)
+                };
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                if capability == "format" {
+                    parsed(
+                        tool_id,
+                        parsers::parse_biome_format(&out.stdout, out.code, &strs),
+                    )
+                } else {
+                    parsed(
+                        tool_id,
+                        parsers::parse_biome_lint(&out.stdout, out.code, &strs),
+                    )
+                }
+            }
+            "eslint" => {
+                let invocation = match config.as_ref() {
+                    Some(cfg) => commands::eslint_check(&tool.binary, &refs, cfg),
+                    None => {
+                        return Err(execution(tool_id, "eslint requires a config".to_owned()));
+                    }
+                };
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(tool_id, parsers::parse_eslint(&out.stdout, out.code, &strs))
+            }
+            "prettier" => {
+                let invocation = commands::prettier_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                // Prettier reports working-directory-relative paths even
+                // for absolute arguments, so attribute against the
+                // workspace-relative mirror paths, then re-anchor each
+                // finding to its absolute scratch path: the caller
+                // contract stays absolute-addressed.
+                let workspaces: Vec<&str> = pairs
+                    .iter()
+                    .map(|(workspace, _)| workspace.as_str())
+                    .collect();
+                let mut findings = parsed(
+                    tool_id,
+                    parsers::parse_prettier_check(&out.stderr, out.code, &workspaces),
+                )?;
+                for found in &mut findings {
+                    let absolute = pairs
+                        .iter()
+                        .find(|(workspace, _)| *workspace == found.file)
+                        .map(|(_, absolute)| absolute.clone())
+                        .expect("parsed file was checked");
+                    found.file = absolute.to_string_lossy().into_owned();
+                }
+                Ok(findings)
+            }
             _ => Err(execution(
                 tool_id,
                 format!("unsupported real tool: {tool_id}"),
@@ -592,8 +699,10 @@ impl RealBackend {
     /// re-read; Ruff follows the running capability (`check --fix` for
     /// lint, `format` for format) and its lint fix re-reads on exit 0
     /// or 1 (exit 1 signals remaining unfixable findings after the
-    /// fixable ones were applied); Clippy applies `MachineApplicable`
-    /// suggestions from a fresh check in memory; Vale, the Markdown
+    /// fixable ones were applied); ESLint likewise re-reads on exit 0
+    /// or 1; Clippy applies `MachineApplicable`
+    /// suggestions from a fresh check in memory; Biome lint is
+    /// check-only and converges on format; Vale, the Markdown
     /// checker, rustc typecheck, Ty, pydoclint, flake8, and pylint return
     /// their input.
     pub fn apply_fix(
@@ -608,6 +717,21 @@ impl RealBackend {
             "rustfmt" | "buildifier" | "taplo" => self.run_fix(tool_id, tool, path, text),
             "ruff" => self.run_ruff_fix(tool, path, text, capability == "format"),
             "clippy" => self.apply_clippy(tool_id, path, text),
+            "biome" => {
+                if capability == "format" {
+                    self.run_biome_format_fix(tool, path, text)
+                } else {
+                    Ok(text.to_owned())
+                }
+            }
+            "prettier" => {
+                if capability == "format" {
+                    self.run_prettier_fix(tool, path, text)
+                } else {
+                    Ok(text.to_owned())
+                }
+            }
+            "eslint" => self.run_eslint_fix(tool, path, text),
             "vale" | "markdown_check" | "rustc" | "ty" | "pydoclint" | "flake8" | "pylint" => {
                 Ok(text.to_owned())
             }
@@ -710,6 +834,72 @@ impl RealBackend {
             out.code != Some(0) && out.code != Some(1)
         };
         if keep_input {
+            return Ok(text.to_owned());
+        }
+        Self::reread_fixed(TOOL_ID, &absolute)
+    }
+
+    /// Runs one Biome format fix round: `format --write` (in-place).
+    /// Re-reads only on exit 0 like every other format tool; any other
+    /// exit keeps the input and the check diagnostics report the cause.
+    fn run_biome_format_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "biome";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let config_dir = Self::biome_config_dir(tool, &scratch)?;
+        let invocation = commands::biome_format_fix(&tool.binary, &refs, &config_dir);
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
+            return Ok(text.to_owned());
+        }
+        Self::reread_fixed(TOOL_ID, &absolute)
+    }
+
+    /// Runs one Prettier format fix round: `--write` (in-place).
+    /// Re-reads only on exit 0; any other exit keeps the input.
+    fn run_prettier_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "prettier";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let invocation = commands::prettier_fix(&tool.binary, &refs);
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
+            return Ok(text.to_owned());
+        }
+        Self::reread_fixed(TOOL_ID, &absolute)
+    }
+
+    /// Runs one ESLint lint fix round: `-c <config> --fix` (in-place).
+    /// Re-reads on exit 0 or 1 because exit 1 signals remaining
+    /// unfixable findings after the fixable ones were applied, mirroring
+    /// the Ruff lint-fix contract. Any other exit keeps the input; a
+    /// missing config fails the action (ESLint has no usable defaults).
+    fn run_eslint_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "eslint";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let config = self.config_abs(TOOL_ID, tool, &scratch)?;
+        let Some(cfg) = config.as_deref() else {
+            return Err(execution(TOOL_ID, "eslint requires a config".to_owned()));
+        };
+        let invocation = commands::eslint_fix(&tool.binary, &refs, cfg);
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) && out.code != Some(1) {
             return Ok(text.to_owned());
         }
         Self::reread_fixed(TOOL_ID, &absolute)
@@ -995,7 +1185,263 @@ mod tests {
         assert_hermetic(env);
         Ok(ChildOutput {
             code: Some(0),
-            stdout: b"not json".to_vec(),
+            stdout: b"[]".to_vec(),
+            stderr: Vec::new(),
+        })
+    }
+
+    const BIOME_LINT_DIRTY: &str = r#"{"summary":{"changed":0,"unchanged":1},"diagnostics":[{"severity":"warning","message":"This variable unusedVar is unused.","category":"lint/correctness/noUnusedVariables","location":{"path":"FILE","start":{"line":1,"column":7},"end":{"line":1,"column":16}},"advices":[]}],"command":"lint"}"#;
+    const BIOME_LINT_CLEAN: &str =
+        r#"{"summary":{"changed":0,"unchanged":1},"diagnostics":[],"command":"lint"}"#;
+    const BIOME_FMT_DIRTY: &str = r#"{"summary":{"changed":0,"unchanged":1},"diagnostics":[{"severity":"error","message":"Formatter would have printed the following content:","category":"format","location":{"path":"FILE","start":{"line":0,"column":0},"end":{"line":0,"column":0}},"advices":[]}],"command":"format"}"#;
+    const BIOME_FMT_CLEAN: &str = r#"{"summary":{},"diagnostics":[],"command":"format"}"#;
+    const ESLINT_DIRTY: &str = r#"[{"filePath":"FILE","messages":[{"ruleId":"no-unused-vars","severity":2,"message":"'unusedVar' is assigned a value but never used.","line":1,"column":7,"endLine":1,"endColumn":16}],"errorCount":1,"warningCount":0}]"#;
+
+    /// Reads the `--config-path <dir>` value from a Biome argv.
+    fn biome_config_dir_arg(argv: &[OsString]) -> String {
+        argv.windows(2)
+            .find(|pair| pair[0] == "--config-path")
+            .map(|pair| pair[1].to_string_lossy().into_owned())
+            .expect("--config-path is always passed")
+    }
+
+    /// Content-aware Biome double: `lint` reports
+    /// `noUnusedVariables` exactly when the materialized file contains
+    /// `unusedVar`; `format` (check) reports `format` exactly when it
+    /// contains `BADFMT`; `format --write` rewrites `BADFMT` away and
+    /// exits 0. Asserts the pinned JSON flags on every launch.
+    fn roundtrip_biome(
+        argv: &[OsString],
+        _cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_hermetic(env);
+        assert!(
+            argv.iter().any(|arg| arg == "--reporter=json"),
+            "biome reports JSON"
+        );
+        assert!(
+            argv.iter().any(|arg| arg == "--colors=off"),
+            "biome never emits color"
+        );
+        let config_dir = biome_config_dir_arg(argv);
+        assert!(
+            Path::new(config_dir.as_str()).join("biome.json").is_file(),
+            "biome config dir holds exactly one biome.json"
+        );
+        let file = last_file(argv);
+        if argv.get(1).map(OsString::as_os_str) == Some(OsStr::new("lint")) {
+            assert!(
+                argv.iter().any(|arg| arg == "--error-on-warnings"),
+                "biome lint errors on warnings"
+            );
+            assert!(
+                argv.iter().any(|arg| arg == "--vcs-enabled=false"),
+                "biome lint never observes VCS state"
+            );
+            assert!(
+                !argv.iter().any(|arg| arg == "--write"),
+                "biome lint is check-only"
+            );
+            let bytes = std::fs::read(&file).expect("checked file is materialized");
+            let text = String::from_utf8(bytes).expect("checked bytes stay UTF-8");
+            if text.contains("unusedVar") {
+                let stdout = BIOME_LINT_DIRTY.replace("FILE", &file);
+                return Ok(ChildOutput {
+                    code: Some(1),
+                    stdout: stdout.into_bytes(),
+                    stderr: Vec::new(),
+                });
+            }
+            return Ok(ChildOutput {
+                code: Some(0),
+                stdout: BIOME_LINT_CLEAN.as_bytes().to_vec(),
+                stderr: Vec::new(),
+            });
+        }
+        assert_eq!(
+            argv.get(1).map(OsString::as_os_str),
+            Some(OsStr::new("format")),
+            "biome only runs lint or format"
+        );
+        if argv.iter().any(|arg| arg == "--write") {
+            let bytes = std::fs::read(&file).expect("checked file is materialized");
+            let text = String::from_utf8(bytes).expect("checked bytes stay UTF-8");
+            let fixed = text.replace("BADFMT", "1");
+            std::fs::write(&file, fixed).expect("fix writes back");
+            return Ok(ChildOutput {
+                code: Some(0),
+                stdout: Vec::new(),
+                stderr: Vec::new(),
+            });
+        }
+        let bytes = std::fs::read(&file).expect("checked file is materialized");
+        let text = String::from_utf8(bytes).expect("checked bytes stay UTF-8");
+        if text.contains("BADFMT") {
+            let stdout = BIOME_FMT_DIRTY.replace("FILE", &file);
+            return Ok(ChildOutput {
+                code: Some(1),
+                stdout: stdout.into_bytes(),
+                stderr: Vec::new(),
+            });
+        }
+        Ok(ChildOutput {
+            code: Some(0),
+            stdout: BIOME_FMT_CLEAN.as_bytes().to_vec(),
+            stderr: Vec::new(),
+        })
+    }
+
+    /// Biome double asserting the pinned `{}` defaults: the config dir is
+    /// the materialized `dx-biome-default` directory holding exactly that.
+    fn biome_defaults(
+        argv: &[OsString],
+        cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        let config_dir = biome_config_dir_arg(argv);
+        assert!(
+            Path::new(config_dir.as_str()).ends_with("dx-biome-default"),
+            "unhinted biome uses the materialized defaults dir"
+        );
+        let staged = std::fs::read(Path::new(config_dir.as_str()).join("biome.json"))
+            .expect("defaults biome.json is staged");
+        assert_eq!(staged, b"{}", "unhinted biome pins empty-object defaults");
+        roundtrip_biome(argv, cwd, env)
+    }
+
+    /// Biome double asserting a hinted config wins over the defaults.
+    fn biome_hinted(
+        argv: &[OsString],
+        cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        let config_dir = biome_config_dir_arg(argv);
+        assert!(
+            Path::new(config_dir.as_str()).ends_with("cfg"),
+            "hinted biome resolves the hinted config parent"
+        );
+        let staged = std::fs::read(Path::new(config_dir.as_str()).join("biome.json"))
+            .expect("hinted biome.json is staged");
+        assert_eq!(
+            staged, b"{\"linter\":{\"enabled\":false}}",
+            "hinted biome stages the hinted bytes"
+        );
+        roundtrip_biome(argv, cwd, env)
+    }
+
+    /// Content-aware ESLint double: reports `no-unused-vars` exactly
+    /// when the materialized file contains `unusedVar`, else the clean
+    /// array. `--fix` rewrites the marker away and exits 1 (remaining
+    /// unfixable findings after the fixable ones were applied), proving
+    /// the backend re-reads on exit 1. Asserts the explicit `-c` config
+    /// and `-f json` on every launch.
+    fn roundtrip_eslint(
+        argv: &[OsString],
+        _cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_hermetic(env);
+        assert!(
+            argv.iter().any(|arg| arg == "-f") && argv.iter().any(|arg| arg == "json"),
+            "eslint reports JSON"
+        );
+        let config = argv
+            .windows(2)
+            .find(|pair| pair[0] == "-c")
+            .map(|pair| pair[1].to_string_lossy().into_owned())
+            .expect("eslint always takes an explicit config");
+        assert!(
+            Path::new(config.as_str()).is_file(),
+            "eslint config is materialized"
+        );
+        let file = last_file(argv);
+        if argv.iter().any(|arg| arg == "--fix") {
+            let bytes = std::fs::read(&file).expect("checked file is materialized");
+            let text = String::from_utf8(bytes).expect("checked bytes stay UTF-8");
+            let fixed = text.replace("unusedVar", "usedVar");
+            std::fs::write(&file, fixed).expect("fix writes back");
+            return Ok(ChildOutput {
+                code: Some(1),
+                stdout: Vec::new(),
+                stderr: Vec::new(),
+            });
+        }
+        let bytes = std::fs::read(&file).expect("checked file is materialized");
+        let text = String::from_utf8(bytes).expect("checked bytes stay UTF-8");
+        if text.contains("unusedVar") {
+            let stdout = ESLINT_DIRTY.replace("FILE", &file);
+            return Ok(ChildOutput {
+                code: Some(1),
+                stdout: stdout.into_bytes(),
+                stderr: Vec::new(),
+            });
+        }
+        let stdout =
+            format!(r#"[{{"filePath":"{file}","messages":[],"errorCount":0,"warningCount":0}}]"#);
+        Ok(ChildOutput {
+            code: Some(0),
+            stdout: stdout.into_bytes(),
+            stderr: Vec::new(),
+        })
+    }
+
+    /// Content-aware Prettier double: `--check` reports `[warn]
+    /// <workspace-relative>` exactly when the materialized file contains
+    /// `BADFMT`, else exit 0; `--write` rewrites `BADFMT` away and exits
+    /// 0. Reports the scratch-relative path like the real Prettier, which
+    /// relativizes checked paths against its working directory even for
+    /// absolute arguments. Asserts the hermetic `--no-config`
+    /// `--no-editorconfig` flags on every launch.
+    fn roundtrip_prettier(
+        argv: &[OsString],
+        cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_hermetic(env);
+        assert!(
+            argv.iter().any(|arg| arg == "--no-config"),
+            "prettier never observes config files"
+        );
+        assert!(
+            argv.iter().any(|arg| arg == "--no-editorconfig"),
+            "prettier never observes editorconfig"
+        );
+        let file = last_file(argv);
+        let reported = Path::new(&file)
+            .strip_prefix(cwd)
+            .map(|relative| relative.to_string_lossy().into_owned())
+            .unwrap_or(file.clone());
+        if argv.iter().any(|arg| arg == "--write") {
+            let bytes = std::fs::read(&file).expect("checked file is materialized");
+            let text = String::from_utf8(bytes).expect("checked bytes stay UTF-8");
+            let fixed = text.replace("BADFMT", "1");
+            std::fs::write(&file, fixed).expect("fix writes back");
+            return Ok(ChildOutput {
+                code: Some(0),
+                stdout: Vec::new(),
+                stderr: Vec::new(),
+            });
+        }
+        assert!(
+            argv.iter().any(|arg| arg == "--check"),
+            "prettier check stays a check"
+        );
+        let bytes = std::fs::read(&file).expect("checked file is materialized");
+        let text = String::from_utf8(bytes).expect("checked bytes stay UTF-8");
+        if text.contains("BADFMT") {
+            let stderr = format!(
+                "[warn] {reported}\n[warn] Code style issues found in the above file. Run Prettier with --write to fix.\n"
+            );
+            return Ok(ChildOutput {
+                code: Some(1),
+                stdout: Vec::new(),
+                stderr: stderr.into_bytes(),
+            });
+        }
+        Ok(ChildOutput {
+            code: Some(0),
+            stdout: Vec::new(),
             stderr: Vec::new(),
         })
     }
@@ -1609,10 +2055,13 @@ mod tests {
         assert_eq!(
             REAL_TOOLS,
             &[
+                "biome",
                 "buildifier",
                 "clippy",
+                "eslint",
                 "flake8",
                 "markdown_check",
+                "prettier",
                 "pydoclint",
                 "pylint",
                 "ruff",
@@ -2575,6 +3024,161 @@ mod tests {
                 .apply_fix("pylint", "a.py", text, "lint")
                 .expect("check-only"),
             text
+        );
+    }
+
+    #[test]
+    fn biome_lint_uses_pinned_defaults_and_is_check_only() {
+        let backend = backend_for("biome", plain_tool(), biome_defaults);
+        let findings = backend
+            .diagnose(
+                "biome",
+                "lint",
+                &single("src/a.js", "const unusedVar = 1;\n"),
+            )
+            .expect("diagnosed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].tool_id, "biome");
+        assert_eq!(findings[0].rule_id, "lint/correctness/noUnusedVariables");
+        assert_eq!(findings[0].path, "src/a.js");
+        assert!(backend
+            .diagnose("biome", "lint", &single("src/a.js", "const x = 1;\n"))
+            .expect("diagnosed")
+            .is_empty());
+        // Biome lint never rewrites: convergence happens on format.
+        let text = "const unusedVar = 1;\n";
+        assert_eq!(
+            backend
+                .apply_fix("biome", "src/a.js", text, "lint")
+                .expect("check-only"),
+            text
+        );
+    }
+
+    #[test]
+    fn biome_hinted_config_wins_over_defaults() {
+        let tool = RealTool {
+            config_rel: Some("cfg/biome.json".to_owned()),
+            tool_files: vec![(
+                "cfg/biome.json".to_owned(),
+                b"{\"linter\":{\"enabled\":false}}".to_vec(),
+            )],
+            ..plain_tool()
+        };
+        let backend = backend_for("biome", tool, biome_hinted);
+        let findings = backend
+            .diagnose(
+                "biome",
+                "lint",
+                &single("src/a.js", "const unusedVar = 1;\n"),
+            )
+            .expect("diagnosed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].rule_id, "lint/correctness/noUnusedVariables");
+    }
+
+    #[test]
+    fn biome_format_reports_and_fix_rewrites() {
+        let backend = backend_for("biome", plain_tool(), roundtrip_biome);
+        let findings = backend
+            .diagnose(
+                "biome",
+                "format",
+                &single("src/a.js", "const x = BADFMT;\n"),
+            )
+            .expect("diagnosed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].tool_id, "biome");
+        assert_eq!(findings[0].rule_id, "");
+        assert_eq!(findings[0].path, "src/a.js");
+        assert!(backend
+            .diagnose("biome", "format", &single("src/a.js", "const x = 1;\n"))
+            .expect("diagnosed")
+            .is_empty());
+        assert_eq!(
+            backend
+                .apply_fix("biome", "src/a.js", "const x = BADFMT;\n", "format")
+                .expect("fixed"),
+            "const x = 1;\n"
+        );
+    }
+
+    fn eslint_tool() -> RealTool {
+        RealTool {
+            config_rel: Some("eslint.config.mjs".to_owned()),
+            tool_files: vec![(
+                "eslint.config.mjs".to_owned(),
+                b"export default [];".to_vec(),
+            )],
+            ..plain_tool()
+        }
+    }
+
+    #[test]
+    fn eslint_reports_and_fix_rereads_on_exit_1() {
+        let backend = backend_for("eslint", eslint_tool(), roundtrip_eslint);
+        let findings = backend
+            .diagnose(
+                "eslint",
+                "lint",
+                &single("src/a.js", "const unusedVar = 1;\n"),
+            )
+            .expect("diagnosed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].tool_id, "eslint");
+        assert_eq!(findings[0].rule_id, "no-unused-vars");
+        assert_eq!(findings[0].path, "src/a.js");
+        assert!(backend
+            .diagnose("eslint", "lint", &single("src/a.js", "const x = 1;\n"))
+            .expect("diagnosed")
+            .is_empty());
+        // The double exits 1 after rewriting: exit 1 still re-reads,
+        // mirroring the Ruff lint-fix contract.
+        assert_eq!(
+            backend
+                .apply_fix("eslint", "src/a.js", "const unusedVar = 1;\n", "lint")
+                .expect("fixed"),
+            "const usedVar = 1;\n"
+        );
+    }
+
+    #[test]
+    fn eslint_without_config_fails_the_action() {
+        let backend = backend_for("eslint", plain_tool(), roundtrip_eslint);
+        let err = backend
+            .diagnose("eslint", "lint", &single("src/a.js", "const x = 1;\n"))
+            .expect_err("missing config fails");
+        assert!(matches!(err, RunnerError::ToolExecution { .. }));
+        assert!(err.to_string().contains("eslint requires a config"));
+        let err = backend
+            .apply_fix("eslint", "src/a.js", "const x = 1;\n", "lint")
+            .expect_err("missing config fails");
+        assert!(err.to_string().contains("eslint requires a config"));
+    }
+
+    #[test]
+    fn prettier_reports_relative_and_fix_rewrites() {
+        let backend = backend_for("prettier", plain_tool(), roundtrip_prettier);
+        let findings = backend
+            .diagnose(
+                "prettier",
+                "format",
+                &single("src/a.js", "const x = BADFMT;\n"),
+            )
+            .expect("diagnosed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].tool_id, "prettier");
+        assert_eq!(findings[0].rule_id, "");
+        assert_eq!(findings[0].path, "src/a.js");
+        assert!(backend
+            .diagnose("prettier", "format", &single("src/a.js", "const x = 1;\n"))
+            .expect("diagnosed")
+            .is_empty());
+        assert_eq!(
+            backend
+                .apply_fix("prettier", "src/a.js", "const x = BADFMT;\n", "format")
+                .expect("fixed"),
+            "const x = 1;\n"
         );
     }
 
