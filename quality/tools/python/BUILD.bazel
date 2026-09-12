@@ -1,8 +1,8 @@
-"""M15 WP1: private wheel-only Python tool graph (pydoclint + flake8).
+"""M15 WP1/WP3: private wheel-only Python tool graph (pydoclint + flake8 + pylint).
 
 Ruleset-owned ecosystem graph per tool-acquisition: rules_dx owns the
 pyproject/uv.lock, exposes stable entry-point targets through authoritative
-Python rules, and hides hub layout from consumers. Both tools share the
+Python rules, and hides hub layout from consumers. All tools share the
 managed 3.12 interpreter toolchain (no ambient Python).
 """
 
@@ -25,4 +25,10 @@ py_console_script_binary(
     name = "flake8",
     dep_group = "dx-python-tools",
     pkg = "@pypi//flake8",
+)
+
+py_console_script_binary(
+    name = "pylint",
+    dep_group = "dx-python-tools",
+    pkg = "@pypi//pylint",
 )
