@@ -349,6 +349,51 @@ real_aspect_subject(
     target = ":fixture_real_json_dirty",
 )
 
+# TypeScript/JSX/TSX fixtures (M17 WP2): clean modules proving each
+# remaining Biome class, plus a dirty TypeScript module with one
+# deterministic finding per capability (noUnusedVariables lint warning,
+# format diff), mirroring the JavaScript pair. Proves the exact source
+# subsets for the typescript family (typescript/tsx) and the jsx class.
+real_source_target(
+    name = "fixture_real_typescript",
+    typescript_srcs = ["real_clean.ts"],
+)
+
+real_source_target(
+    name = "fixture_real_typescript_dirty",
+    typescript_srcs = ["real_dirty.ts"],
+)
+
+real_source_target(
+    name = "fixture_real_jsx",
+    jsx_srcs = ["real_clean.jsx"],
+)
+
+real_source_target(
+    name = "fixture_real_tsx",
+    tsx_srcs = ["real_clean.tsx"],
+)
+
+real_aspect_subject(
+    name = "fixture_real_typescript_subject",
+    target = ":fixture_real_typescript",
+)
+
+real_aspect_subject(
+    name = "fixture_real_typescript_dirty_subject",
+    target = ":fixture_real_typescript_dirty",
+)
+
+real_aspect_subject(
+    name = "fixture_real_jsx_subject",
+    target = ":fixture_real_jsx",
+)
+
+real_aspect_subject(
+    name = "fixture_real_tsx_subject",
+    target = ":fixture_real_tsx",
+)
+
 real_aspect_subject(
     name = "real_plain_subject",
     target = ":plain",
@@ -371,6 +416,10 @@ real_aspect_fixture_tests(
         ":fixture_real_javascript_subject",
         ":fixture_real_json_dirty_subject",
         ":fixture_real_json_subject",
+        ":fixture_real_jsx_subject",
+        ":fixture_real_tsx_subject",
+        ":fixture_real_typescript_dirty_subject",
+        ":fixture_real_typescript_subject",
         ":fixture_real_markdown_sibling_subject",
         ":fixture_real_markdown_subject",
         ":fixture_real_mixed_subject",
