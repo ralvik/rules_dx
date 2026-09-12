@@ -247,14 +247,11 @@ func equalFold(a []byte, b string) bool {
 		return false
 	}
 	for i := 0; i < len(a); i++ {
-		ca, cb := a[i], b[i]
+		ca := a[i]
 		if ca >= 'A' && ca <= 'Z' {
 			ca += 'a' - 'A'
 		}
-		if cb >= 'A' && cb <= 'Z' {
-			cb += 'a' - 'A'
-		}
-		if ca != cb {
+		if ca != b[i] {
 			return false
 		}
 	}
@@ -453,13 +450,6 @@ func skipRegex(src []byte, i int) int {
 		j++
 	}
 	return len(src)
-}
-
-func skipSpace(src []byte, i int) int {
-	for i < len(src) && (src[i] == ' ' || src[i] == '\t' || src[i] == '\n' || src[i] == '\r') {
-		i++
-	}
-	return i
 }
 
 // skipTrivia advances past whitespace and comments (`//` and `/* */`).

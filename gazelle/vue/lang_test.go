@@ -319,6 +319,12 @@ func TestResolveBranches(t *testing.T) {
 		t.Errorf("self dependency was emitted: %v", self.AttrStrings("deps"))
 	}
 
+	otherKind := rule.NewRule("filegroup", "other")
+	l.Resolve(cfg, index, nil, otherKind, targetImports{imports: []string{"a"}}, label.New("", "app", "other"))
+	if otherKind.Attr("deps") != nil {
+		t.Errorf("non-library resolution emitted deps = %v", otherKind.AttrStrings("deps"))
+	}
+
 	std := rule.NewRule(libraryKind, "uses_std")
 	l.Resolve(cfg, index, nil, std, targetImports{imports: []string{"fs"}}, label.New("", "app", "uses_std"))
 	if std.Attr("deps") != nil || len(l.errors) != 0 {

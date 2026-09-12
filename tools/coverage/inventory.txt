@@ -65,9 +65,14 @@ eligible gazelle/typescript/lang.go
 eligible gazelle/typescript/naming.go
 eligible gazelle/typescript/parser.go
 eligible gazelle/typescript/stdlib.go
+eligible gazelle/vue/lang.go
+eligible gazelle/vue/naming.go
+eligible gazelle/vue/parser.go
+eligible gazelle/vue/stdlib.go
 support gazelle/python/doc.go
 support gazelle/javascript/doc.go
 support gazelle/typescript/doc.go
+support gazelle/vue/doc.go
 support gazelle/python/lang_test.go
 support gazelle/python/naming_test.go
 support gazelle/python/parser_test.go
@@ -77,6 +82,9 @@ support gazelle/javascript/parser_test.go
 support gazelle/typescript/lang_test.go
 support gazelle/typescript/naming_test.go
 support gazelle/typescript/parser_test.go
+support gazelle/vue/lang_test.go
+support gazelle/vue/naming_test.go
+support gazelle/vue/parser_test.go
 support gazelle/python/testdata/source_only/pkg/demo/demo.py
 support gazelle/python/testdata/source_only/pkg/demo/demo.pyi
 support gazelle/python/testdata/source_only/pkg/demo/helper.py
@@ -99,6 +107,8 @@ support gazelle/typescript/testdata/source_only/pkg/demo/widget.d.ts
 support gazelle/typescript/testdata/entries/pkg/demo/helper.ts
 support gazelle/typescript/testdata/entries/pkg/demo/helper_test.ts
 support gazelle/typescript/testdata/entries/pkg/demo/main.ts
+support gazelle/vue/testdata/source_only/pkg/demo/demo.vue
+support gazelle/vue/testdata/source_only/pkg/demo/helper.vue
 eligible generation/result/src/lib.rs
 support gazelle/rust/cargo_test.go
 support gazelle/rust/lang_test.go

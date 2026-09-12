@@ -94,6 +94,10 @@ func TestParseImports(t *testing.T) {
 		{"triviaLineComment", "import //c\n\"./a.vue\";\n", []string{"a"}},
 		{"triviaBlockComment", "import /*c*/ \"./a.vue\";\n", []string{"a"}},
 		{"triviaUnterminatedBlock", "import /* unterminated", nil},
+		{"importBraceComment", "import {a /*c*/} from './real.vue';\n", []string{"real"}},
+		{"exportBraceComment", "export {a /*c*/} from './real.vue';\n", []string{"real"}},
+		{"inertEscape", "\"a\\nb\";\nimport y from './real.vue';\n", []string{"real"}},
+		{"templateInterpObject", "`outer ${ {a: 1} } inner`;\nimport y from './real.vue';\n", []string{"real"}},
 		{"quotedEscape", "import \"a\\\"b\";\n", []string{"a\"b"}},
 		{"quotedBackslashEOF", "import \"abc\\", nil},
 		{"quotedEOF", "import \"abc", nil},
@@ -150,6 +154,7 @@ func TestExtractScript(t *testing.T) {
 		{"selfClosing", "<script/>", "", true},
 		{"unclosedTag", "<script", "", true},
 		{"unclosedAttr", "<script lang=\"ts\"", "", true},
+		{"unterminatedAttrQuote", "<script lang=\"ts>", "", true},
 		{"noClose", "<script>const x = 1;", "", true},
 		{"unterminatedComment", "<!-- <script>", "", true},
 		{"unterminatedCommentInScript", "<script>const x = 1;<!--", "", true},
@@ -165,6 +170,18 @@ func TestExtractScript(t *testing.T) {
 		if strings.TrimSpace(string(got)) != tc.want {
 			t.Errorf("%s: ExtractScript = %q, want %q", tc.name, got, tc.want)
 		}
+	}
+}
+
+func TestSkipQuotedEOF(t *testing.T) {
+	if got := skipQuoted([]byte("\"abc"), 0); got != 4 {
+		t.Errorf("skipQuoted EOF = %d, want 4", got)
+	}
+}
+
+func TestSkipTemplateEOF(t *testing.T) {
+	if got := skipTemplate([]byte("`abc"), 0); got != 4 {
+		t.Errorf("skipTemplate EOF = %d, want 4", got)
 	}
 }
 
