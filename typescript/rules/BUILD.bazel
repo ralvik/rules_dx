@@ -1,0 +1,16 @@
+"""Experimental minimal TypeScript wrappers (M16, ADR 0013)."""
+
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "defs.bzl",
+])
+
+# Repository corpus (M05 WP1): wrapper Starlark owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
+)

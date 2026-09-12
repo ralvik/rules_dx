@@ -1,0 +1,21 @@
+"""M16 seed TypeScript project; consumer of dx_ts_* wrappers."""
+
+load("//quality:fixtures.bzl", "real_source_target")
+load("//typescript/rules:defs.bzl", "dx_ts_project")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_ts_project(
+    name = "hello_lib",
+    srcs = ["hello.ts"],
+    transpiler = "tsc",
+    tsconfig = "tsconfig.json",
+)
+
+# Repository corpus (M05 WP1): build and project metadata owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy. TypeScript
+# sources stay dx-owned, never corpus sources.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
