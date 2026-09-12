@@ -68,6 +68,15 @@ uv.project(
     lock = "//python/hello:uv.lock",
     pyproject = "//python/hello:pyproject.toml",
 )
+# M15 WP1: private wheel-only Python tool graph (pydoclint + flake8 cohort,
+# dep_group dx-python-tools) in the single pypi hub. Consumers never touch
+# the lock or hub labels; public entry points live under
+# //quality/tools/python.
+uv.project(
+    hub_name = "pypi",
+    lock = "//quality/tools/python:uv.lock",
+    pyproject = "//quality/tools/python:pyproject.toml",
+)
 use_repo(uv, "pypi")
 
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
