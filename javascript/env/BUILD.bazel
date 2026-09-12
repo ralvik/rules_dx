@@ -19,10 +19,22 @@ javascript_env_plan(
     target = "//javascript/hello:hello_lib",
 )
 
+javascript_env_plan(
+    name = "helper_plan",
+    target = "//javascript/entries:helper",
+)
+
+javascript_env_plan(
+    name = "main_plan",
+    target = "//javascript/entries:main",
+)
+
 env_plan_tests(
     name = "env_plan_tests",
     subjects = [
         ":hello_lib_plan",
+        ":helper_plan",
+        ":main_plan",
     ],
 )
 

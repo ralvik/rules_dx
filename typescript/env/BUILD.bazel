@@ -17,10 +17,22 @@ typescript_env_plan(
     target = "//typescript/hello:hello_lib",
 )
 
+typescript_env_plan(
+    name = "helper_plan",
+    target = "//typescript/entries:helper",
+)
+
+typescript_env_plan(
+    name = "main_plan",
+    target = "//typescript/entries:main",
+)
+
 env_plan_tests(
     name = "env_plan_tests",
     subjects = [
         ":hello_lib_plan",
+        ":helper_plan",
+        ":main_plan",
     ],
 )
 

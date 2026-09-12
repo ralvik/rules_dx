@@ -9,9 +9,11 @@ package typescript
 
 import "strings"
 
-// nodeBuiltins is the narrow recognized Node builtin set for the M16 slice.
-// Subpaths (`fs/promises`) resolve as stdlib; deeper unknown paths fail
-// closed via strict resolution unless mapped or ignored.
+// nodeBuiltins is the exact recognized Node builtin set for the M16 slice,
+// mirroring the JavaScript extension (Node release backing the pinned
+// toolchain). Subpaths (`fs/promises`) match exactly, never by prefix:
+// deeper unknown paths (`fs/promises/extra`) fail closed via strict
+// resolution unless mapped or ignored.
 var nodeBuiltins = map[string]bool{
 	"assert":              true,
 	"async_hooks":         true,
@@ -27,30 +29,43 @@ var nodeBuiltins = map[string]bool{
 	"domain":              true,
 	"events":              true,
 	"fs":                  true,
+	"fs/promises":         true,
 	"http":                true,
 	"http2":               true,
 	"https":               true,
 	"inspector":           true,
+	"inspector/promises":  true,
 	"module":              true,
 	"net":                 true,
 	"os":                  true,
 	"path":                true,
+	"path/posix":          true,
+	"path/win32":          true,
 	"perf_hooks":          true,
 	"process":             true,
 	"punycode":            true,
 	"querystring":         true,
 	"readline":            true,
+	"readline/promises":   true,
 	"repl":                true,
+	"sea":                 true,
+	"sqlite":              true,
 	"stream":              true,
+	"stream/consumers":    true,
+	"stream/promises":     true,
+	"stream/web":          true,
 	"string_decoder":      true,
 	"sys":                 true,
 	"test":                true,
+	"test/reporters":      true,
 	"timers":              true,
+	"timers/promises":     true,
 	"tls":                 true,
 	"trace_events":        true,
 	"tty":                 true,
 	"url":                 true,
 	"util":                true,
+	"util/types":          true,
 	"v8":                  true,
 	"vm":                  true,
 	"wasi":                true,
@@ -60,11 +75,11 @@ var nodeBuiltins = map[string]bool{
 
 // IsStdLib reports whether a normalized import root is a recognized Node
 // builtin. The `node:` prefix is stripped before lookup; subpaths resolve
-// against their root (`fs/promises` -> `fs`).
+// by exact match only (`fs/promises` matches, `fs/promises/extra` does not).
 func IsStdLib(root string) bool {
 	name := strings.TrimPrefix(root, "node:")
-	if idx := strings.IndexByte(name, '/'); idx >= 0 {
-		name = name[:idx]
+	if name == "" {
+		return false
 	}
 	return nodeBuiltins[name]
 }

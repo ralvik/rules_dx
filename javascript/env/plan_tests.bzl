@@ -9,7 +9,21 @@ field direct_sources=hello.js
 field has_npm=False
 field npm_source_count=0
 field target=//javascript/hello:hello_lib
-field transitive_sources=hello.js"""
+field transitive_sources=hello.js
+subject //javascript/env:helper_plan
+file helper_plan.json
+field direct_sources=helper.js
+field has_npm=False
+field npm_source_count=0
+field target=//javascript/entries:helper
+field transitive_sources=helper.js
+subject //javascript/env:main_plan
+file main_plan.json
+field direct_sources=main.js
+field has_npm=False
+field npm_source_count=0
+field target=//javascript/entries:main
+field transitive_sources=helper.js,main.js"""
 
 def env_plan_tests(name, subjects):
     starlark_test(
