@@ -1,6 +1,6 @@
 """M16 seed JavaScript binary and library; consumer of dx_js_* wrappers."""
 
-load("//javascript/rules:defs.bzl", "dx_js_binary", "dx_js_library")
+load("//javascript/rules:defs.bzl", "dx_js_binary", "dx_js_library", "dx_js_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
@@ -14,6 +14,16 @@ dx_js_binary(
     name = "hello",
     data = [":hello_lib"],
     entry_point = "main.js",
+)
+
+dx_js_test(
+    name = "hello_test",
+    srcs = ["hello.test.js"],
+    data = [":hello_lib"],
+    node_modules = "//:node_modules",
+    # First-party .js is ESM (root `"type": "module"`); jest needs VM
+    # modules to execute it (same flag as upstream's esm example).
+    node_options = ["--experimental-vm-modules"],
 )
 
 # Repository corpus (M05 WP1): build and project metadata owned for

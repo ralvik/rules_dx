@@ -11,10 +11,10 @@ the upstream executable (Bazel requires executable-providing rules to
 create the file themselves).
 
 Used upstream symbols (`@aspect_rules_js//js:defs.bzl`): `js_library`,
-`js_binary`; (`@aspect_rules_js//js:providers.bzl`): `JsInfo`. No other
-upstream surface is used; consumers needing more load the upstream
-module directly. Jest tests (`dx_js_test`) arrive in a later slice over
-`aspect_rules_jest`; TypeScript lives under `//typescript/rules`.
+`js_binary`; (`@aspect_rules_js//js:providers.bzl`): `JsInfo`;
+(`@aspect_rules_jest//jest:defs.bzl`): `jest_test`. No other upstream
+surface is used; consumers needing more load the upstream module
+directly. TypeScript lives under `//typescript/rules`.
 
 Normalization is deliberately narrow: the only new fact is
 `QualitySourcesInfo(direct_sources = {"javascript": <direct .js/.jsx/.mjs/.cjs>})`.
@@ -27,6 +27,7 @@ unknown versions fail in upstream toolchain resolution, never here.
 Source-only local graphs build without package-manager invocation.
 """
 
+load("@aspect_rules_jest//jest:defs.bzl", _jest_test = "jest_test")
 load("@aspect_rules_js//js:defs.bzl", _js_binary = "js_binary", _js_library = "js_library")
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")
 load("//quality:sources.bzl", "QualitySourcesInfo", "check_direct_sources")
@@ -35,6 +36,17 @@ _DX_JS_LIBRARY_PROVIDES = [
     _JsInfo,
     DefaultInfo,
     InstrumentedFilesInfo,
+    QualitySourcesInfo,
+]
+
+# NB: testing.TestEnvironment is returned by the test forwarder (the test
+# runner reads it from the target) but cannot be listed here: it is a
+# constructor value, not a Provider object. InstrumentedFilesInfo is
+# likewise returned only when coverage is enabled (matching upstream
+# jest_test) and so cannot be advertised unconditionally; coverage still
+# works because the runner reads it from the target, not via provides.
+_DX_JS_TEST_PROVIDES = [
+    DefaultInfo,
     QualitySourcesInfo,
 ]
 
@@ -193,3 +205,130 @@ def dx_js_binary(name, srcs = None, visibility = None, **kwargs):
     """
     effective_srcs = srcs if srcs != None else []
     _dx_js_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
+
+def _dx_js_test_forward_impl(ctx):
+    upstream = ctx.attr.upstream
+
+    # The upstream launcher already bakes fixed_env (JEST_JUNIT_OUTPUT_FILE,
+    # snapshot flags) into its executable, which we symlink with runfiles
+    # merged below. Only env_inherit (notably TESTBRIDGE_TEST_ONLY for
+    # sharding/--test_filter) lives solely in TestEnvironment, so rebuild
+    # it from the mirrored env_inherit attribute.
+    env_inherit = list(ctx.attr.env_inherit) if ctx.attr.env_inherit else []
+    if "TESTBRIDGE_TEST_ONLY" not in env_inherit:
+        env_inherit.append("TESTBRIDGE_TEST_ONLY")
+    out = [
+        _dx_js_symlink_default_info(ctx),
+        testing.TestEnvironment({}, env_inherit),
+        _dx_js_quality_sources(ctx),
+    ]
+
+    # Upstream jest_test only provides InstrumentedFilesInfo when coverage
+    # is enabled, so forward it conditionally (unlike the library case).
+    if InstrumentedFilesInfo in upstream:
+        out.append(upstream[InstrumentedFilesInfo])
+    if OutputGroupInfo in upstream:
+        out.append(upstream[OutputGroupInfo])
+
+    # NB: no explicit RunEnvironmentInfo forward: constructing
+    # testing.TestEnvironment above already contributes the runtime
+    # environment provider, and returning both conflicts.
+    return out
+
+_dx_js_test = rule(
+    implementation = _dx_js_test_forward_impl,
+    test = True,
+    provides = _DX_JS_TEST_PROVIDES,
+    attrs = {
+        "srcs": attr.label_list(
+            allow_files = [".js", ".jsx", ".mjs", ".cjs"],
+            doc = "Direct JavaScript test sources owned by this wrapper for QualitySourcesInfo.",
+        ),
+        "upstream": attr.label(
+            mandatory = True,
+            providers = [[DefaultInfo]],
+            doc = "The private upstream jest_test target whose providers are preserved.",
+        ),
+        "env_inherit": attr.string_list(
+            doc = "Environment variables to inherit at test runtime, " +
+                  "mirrored from the upstream jest_test (TESTBRIDGE_TEST_ONLY " +
+                  "is always added for sharding/--test_filter).",
+        ),
+        "_lcov_merger": attr.label(
+            default = configuration_field(fragment = "coverage", name = "output_generator"),
+            executable = True,
+            cfg = "exec",
+            doc = "Coverage-report merger. Bazel's coverage runner passes " +
+                  "this magic attribute as LCOV_MERGER, which merges the " +
+                  "per-test staging report into coverage.dat; without it " +
+                  "the runner exits after touching an empty file even " +
+                  "though the test collected coverage. Same declaration as " +
+                  "upstream jest_test.",
+        ),
+    },
+    doc = "Test forwarder for dx_js_test: symlinks the upstream jest launcher.",
+)
+
+def dx_js_test(name, srcs, node_modules, data = None, visibility = None, tags = None, env_inherit = None, **kwargs):
+    """Experimental minimal wrapper over `jest_test` (M16).
+
+    The private `<name>_dx_upstream` target runs the full jest graph
+    (`srcs` plus caller `data`, with `jest-cli`/`jest-junit` linked from
+    `node_modules` by the upstream macro). The public `<name>` test
+    target symlinks the upstream launcher and preserves
+    `testing.TestEnvironment` (reporter/test-filter wiring) plus the
+    runtime providers, adding `QualitySourcesInfo` normalized from the
+    wrapper's direct `srcs`.
+
+    Jest executes tests as CommonJS by default: first-party `.js` is ESM
+    (the root package.json sets `"type": "module"`), so tests covering
+    ESM sources need
+    `node_options = ["--experimental-vm-modules"]` (see
+    `//javascript/hello:hello_test`) until the transform slice wires
+    static ESM/TS support. The macro always adds `//:package_json` to
+    the upstream data: jest detects ESM by walking up the runfiles tree
+    from each test file, so the scope file must be a runtime input of
+    every test. Upstream-owned runfiles are unaffected (npm packages
+    carry their own package.json, generated helpers are `.cjs`/`.mjs`).
+
+    Args:
+      name: public test target name (upstream target is name_dx_upstream).
+      srcs: direct test sources owned by this wrapper.
+      node_modules: label of the linked node_modules target (e.g.
+        `//:node_modules`) where `jest-cli` (and `jest-junit` when
+        reporters stay auto-configured) is linked.
+      data: extra runtime deps (files under test, configs); `srcs`
+        are always included.
+      visibility: visibility of the public forwarding test target.
+      tags: extra tags for both targets; the upstream target is
+        additionally `manual` so `bazel test //...` exercises the
+        public wrapper only.
+      env_inherit: extra runtime-inherited env vars, mirrored to both
+        the upstream jest_test and the rebuilt TestEnvironment.
+      **kwargs: extra attributes forwarded to the upstream jest_test
+        (config, snapshots, size, timeout, etc.).
+    """
+    upstream_data = list(srcs) + (list(data) if data != None else [])
+
+    # Workspace ESM scope marker (see docstring): must resolve in runfiles
+    # above every first-party test source. Referenced as the root
+    # js_library: js rules reject cross-package source files in data.
+    if "//:package_json" not in upstream_data:
+        upstream_data.append("//:package_json")
+    _jest_test(
+        name = name + "_dx_upstream",
+        node_modules = node_modules,
+        data = upstream_data,
+        env_inherit = env_inherit,
+        visibility = ["//visibility:private"],
+        tags = (list(tags) if tags != None else []) + ["manual"],
+        **kwargs
+    )
+    _dx_js_test(
+        name = name,
+        upstream = name + "_dx_upstream",
+        srcs = srcs,
+        env_inherit = env_inherit,
+        visibility = visibility,
+        tags = tags,
+    )

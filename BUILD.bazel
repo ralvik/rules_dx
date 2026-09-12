@@ -26,14 +26,37 @@
 # and excluded like the Gazelle golden tree above.
 # gazelle:exclude quality/testdata
 
+load("@aspect_rules_js//js:defs.bzl", "js_library")
+load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
+
+# M16 WP1: workspace ESM scope marker. dx_js_test adds it to every
+# test's runfiles so jest's ESM detection resolves first-party .js
+# as ESM (see //javascript/rules:defs.bzl). A js_library hop: js rules
+# require data files to live in the target's own package, so tests
+# reference this target, never //:package.json directly. Upstream
+# js_library (not dx_js_library): package.json is a scope marker, not
+# a JavaScript source, so it must not enter QualitySourcesInfo.
+js_library(
+    name = "package_json",
+    srcs = ["package.json"],
+)
+
+# M16 WP1 slice 4: root importer node_modules facade over the authoritative
+# pnpm store. Gazelle maintains per-importer targets later; the root facade
+# proves the provider-derived layout first.
+npm_link_all_packages(name = "node_modules")
 
 exports_files([
     ".bazelrc",
     ".bazelversion",
     "MODULE.bazel",
+    # M16 WP1: workspace ESM scope marker. dx_js_test adds it to every
+    # test's runfiles so jest's ESM detection resolves first-party .js
+    # as ESM (see //javascript/rules:defs.bzl).
+    "package.json",
 ])
 
 # Repository corpus (M05 WP1): root Starlark and Markdown sources owned for

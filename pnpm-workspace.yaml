@@ -1,0 +1,4 @@
+# M16 WP1 slice 4: single-importer workspace. allowBuilds stays empty:
+# the jest graph is pure JS with no lifecycle hooks; any future native
+# dep must opt in explicitly here (fail-closed per ADR 0013).
+allowBuilds: {}
