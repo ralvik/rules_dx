@@ -105,7 +105,12 @@ REAL_ADAPTERS = {
 # javascript/jsx classes to the javascript family, typescript/tsx to the
 # typescript family, and json to the json family, per the frozen
 # class-to-policy-family assignment (JavaScript owns javascript/jsx,
-# TypeScript owns typescript/tsx, JSON owns the JSON classes).
+# TypeScript owns typescript/tsx, JSON owns the JSON classes). M18 WP2
+# adds the vue class to the vue family: the `.vue` container stays one
+# physical owner (dx_vue_library) with virtual script/template/style
+# regions handed to execution-time integrations; no lint/format/typecheck
+# adapter claims vue yet, so the family selects no stages (classification
+# only, no supported claim).
 REAL_CLASS_TO_FAMILY = {
     "javascript": "javascript",
     "json": "json",
@@ -118,6 +123,7 @@ REAL_CLASS_TO_FAMILY = {
     "toml": "toml",
     "typescript": "typescript",
     "tsx": "typescript",
+    "vue": "vue",
 }
 
 def real_supported_classes(tool_id, capability):

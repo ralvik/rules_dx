@@ -22,8 +22,8 @@ dx_js_test(
     data = [
         ":Hello.vue",
         ":helper_lib",
-        "//:node_modules/vue",
         "//:node_modules/@vue/compiler-sfc",
+        "//:node_modules/vue",
     ],
     node_modules = "//:node_modules",
     node_options = ["--experimental-vm-modules"],
