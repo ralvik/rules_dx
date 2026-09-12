@@ -89,6 +89,36 @@
 //!   `warning`/`refactor`/`convention` are warnings, `info`/
 //!   `information` is info; anything else is a grammar mismatch. Clean is
 //!   `[]` on exit 0; findings exit with the bit-encoded class mask.
+//! * Biome `lint --reporter=json`: stdout JSON
+//!   `{summary, diagnostics[{severity, message, category,
+//!   location{path,start{line,column},end}}], command}`. `severity`
+//!   `warning`/`error`/`info` map onto [`ToolSeverity`]; `category` is the
+//!   rule ID (`lint/...` or `parse`); positions are 1-based and must be
+//!   nonzero. Clean is `[]` on exit 0; findings exit 1. `fix` edits are
+//!   ignored: Biome lint is check-only and converges on format.
+//! * Biome `format --reporter=json` (check): the same envelope, but each
+//!   unformatted file yields one `category: "format"` diagnostic at
+//!   `0:0` with no diff. The parser normalizes each to one `1:1` format
+//!   finding (`rule_id` empty, `file is not formatted`, warning), mirroring
+//!   Taplo/Buildifier; clean is `[]` on exit 0, findings exit 1.
+//! * ESLint `-c <config> -f json`: stdout JSON array, one object per file
+//!   (`filePath`, `messages[{ruleId, severity, message, line, column,
+//!   endLine, endColumn, fatal}]`). `severity` 2 is error, 1 is warning;
+//!   anything else is a grammar mismatch. A null `ruleId` with `fatal`
+//!   is a syntax error (empty rule ID); a null `ruleId` without `fatal`
+//!   is an ignored file (outside the base path or matching no config)
+//!   and fails as a grammar mismatch, never a silent pass. Missing ends
+//!   are point ranges. `fix`/`suggestions` are ignored: the runner
+//!   converges via `--fix` re-runs, never by applying parsed edits. Clean
+//!   is empty messages on exit 0; findings exit 1.
+//! * Prettier `--no-config --no-editorconfig --check`: findings are the
+//!   stderr `[warn] <file>` lines (one per unformatted file, reported
+//!   relative to the working directory even for absolute arguments, so
+//!   the caller passes workspace-relative mirror paths like Ty and
+//!   re-anchors them). Each becomes one `1:1` format finding (empty rule,
+//!   `file is not formatted`, warning). The `[warn] Code style issues`
+//!   summary and `Checking formatting...` stdout are skipped. Clean is
+//!   exit 0 with no warn lines; findings exit 1.
 
 use serde::Deserialize;
 
@@ -1564,6 +1594,363 @@ pub fn parse_pylint(
     Ok(findings)
 }
 
+// ---------------------------------------------------------------------------
+// Biome
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+struct BiomeReport {
+    diagnostics: Vec<BiomeDiagnostic>,
+    command: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct BiomeDiagnostic {
+    severity: String,
+    message: String,
+    category: String,
+    location: BiomeLocation,
+}
+
+#[derive(Debug, Deserialize)]
+struct BiomeLocation {
+    path: String,
+    start: BiomePosition,
+    end: BiomePosition,
+}
+
+#[derive(Debug, Deserialize)]
+struct BiomePosition {
+    line: u64,
+    column: u64,
+}
+
+fn biome_severity(level: &str) -> Result<ToolSeverity, ParseError> {
+    match level {
+        "error" => Ok(ToolSeverity::Error),
+        "warning" => Ok(ToolSeverity::Warning),
+        "info" => Ok(ToolSeverity::Info),
+        _ => Err(ParseError::Shape {
+            tool: "biome",
+            detail: format!("unknown severity: {level}"),
+        }),
+    }
+}
+
+fn biome_position(
+    tool: &'static str,
+    what: &str,
+    position: &BiomePosition,
+) -> Result<TextPosition, ParseError> {
+    if position.line < 1 || position.column < 1 {
+        return Err(ParseError::Shape {
+            tool,
+            detail: format!("bad {what} position {}:{}", position.line, position.column),
+        });
+    }
+    Ok(TextPosition {
+        line: position.line,
+        column: position.column,
+    })
+}
+
+/// Parses Biome `lint --reporter=json` stdout. Every diagnostic is one
+/// finding under its category; positions must be nonzero.
+pub fn parse_biome_lint(
+    stdout: &[u8],
+    code: Option<i32>,
+    files: &[&str],
+) -> Result<Vec<FileFinding>, ParseError> {
+    const TOOL: &str = "biome";
+    let report: BiomeReport = serde_json::from_slice(stdout).map_err(|err| ParseError::Json {
+        tool: TOOL,
+        detail: err.to_string(),
+    })?;
+    if report.command != "lint" {
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("unexpected command {:?}", report.command),
+        });
+    }
+    let mut findings = Vec::with_capacity(report.diagnostics.len());
+    for diagnostic in &report.diagnostics {
+        let checked = known(TOOL, files, &diagnostic.location.path)?;
+        if diagnostic.category.is_empty() || diagnostic.message.is_empty() {
+            return Err(ParseError::Shape {
+                tool: TOOL,
+                detail: "diagnostic with an empty category or message".to_owned(),
+            });
+        }
+        let start = biome_position(TOOL, "start", &diagnostic.location.start)?;
+        let end = biome_position(TOOL, "end", &diagnostic.location.end)?;
+        findings.push(FileFinding {
+            file: checked.to_owned(),
+            finding: Finding {
+                tool_id: TOOL.to_owned(),
+                rule_id: diagnostic.category.clone(),
+                message: diagnostic.message.clone(),
+                severity: biome_severity(&diagnostic.severity)?,
+                start,
+                end: Some(end),
+                suggestions: Vec::new(),
+            },
+        });
+    }
+    if findings.is_empty() && code != Some(0) {
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("exit {} with an empty diagnostics array", code_name(code)),
+        });
+    }
+    Ok(findings)
+}
+
+/// Parses Biome `format --reporter=json` (check) stdout. Each `format`
+/// diagnostic at `0:0` becomes one `1:1` format finding; any other
+/// category or nonzero position is a grammar mismatch.
+pub fn parse_biome_format(
+    stdout: &[u8],
+    code: Option<i32>,
+    files: &[&str],
+) -> Result<Vec<FileFinding>, ParseError> {
+    const TOOL: &str = "biome_format";
+    let report: BiomeReport = serde_json::from_slice(stdout).map_err(|err| ParseError::Json {
+        tool: TOOL,
+        detail: err.to_string(),
+    })?;
+    if report.command != "format" {
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("unexpected command {:?}", report.command),
+        });
+    }
+    let mut findings = Vec::with_capacity(report.diagnostics.len());
+    for diagnostic in &report.diagnostics {
+        if diagnostic.category != "format" {
+            return Err(ParseError::Shape {
+                tool: TOOL,
+                detail: format!("unexpected category {:?}", diagnostic.category),
+            });
+        }
+        let zero = diagnostic.location.start.line == 0
+            && diagnostic.location.start.column == 0
+            && diagnostic.location.end.line == 0
+            && diagnostic.location.end.column == 0;
+        if !zero {
+            return Err(ParseError::Shape {
+                tool: TOOL,
+                detail: "format diagnostic outside 0:0".to_owned(),
+            });
+        }
+        let checked = known(TOOL, files, &diagnostic.location.path)?;
+        let (start, end) = point(1, 1);
+        findings.push(FileFinding {
+            file: checked.to_owned(),
+            finding: Finding {
+                tool_id: "biome".to_owned(),
+                rule_id: String::new(),
+                message: "file is not formatted".to_owned(),
+                severity: ToolSeverity::Warning,
+                start,
+                end,
+                suggestions: Vec::new(),
+            },
+        });
+    }
+    if findings.is_empty() && code != Some(0) {
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("exit {} with an empty diagnostics array", code_name(code)),
+        });
+    }
+    Ok(findings)
+}
+
+// ---------------------------------------------------------------------------
+// ESLint
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+struct EslintFile {
+    #[serde(rename = "filePath")]
+    file_path: String,
+    messages: Vec<EslintMessage>,
+}
+
+#[derive(Debug, Deserialize)]
+struct EslintMessage {
+    #[serde(rename = "ruleId")]
+    rule_id: Option<String>,
+    fatal: Option<bool>,
+    severity: u64,
+    message: String,
+    line: u64,
+    column: u64,
+    #[serde(rename = "endLine")]
+    end_line: Option<u64>,
+    #[serde(rename = "endColumn")]
+    end_column: Option<u64>,
+}
+
+fn eslint_severity(severity: u64) -> Result<ToolSeverity, ParseError> {
+    match severity {
+        2 => Ok(ToolSeverity::Error),
+        1 => Ok(ToolSeverity::Warning),
+        _ => Err(ParseError::Shape {
+            tool: "eslint",
+            detail: format!("unknown severity: {severity}"),
+        }),
+    }
+}
+
+/// Parses ESLint `-f json` stdout. Null-`ruleId` fatal messages are
+/// syntax errors (empty rule ID); null-`ruleId` non-fatal messages are
+/// ignored files and fail as grammar mismatches.
+pub fn parse_eslint(
+    stdout: &[u8],
+    code: Option<i32>,
+    files: &[&str],
+) -> Result<Vec<FileFinding>, ParseError> {
+    const TOOL: &str = "eslint";
+    let reports: Vec<EslintFile> =
+        serde_json::from_slice(stdout).map_err(|err| ParseError::Json {
+            tool: TOOL,
+            detail: err.to_string(),
+        })?;
+    let mut findings = Vec::new();
+    for report in &reports {
+        let checked = known(TOOL, files, &report.file_path)?;
+        for message in &report.messages {
+            if message.message.is_empty() {
+                return Err(ParseError::Shape {
+                    tool: TOOL,
+                    detail: "message with empty text".to_owned(),
+                });
+            }
+            if message.line < 1 || message.column < 1 {
+                return Err(ParseError::Shape {
+                    tool: TOOL,
+                    detail: format!("bad position {}:{}", message.line, message.column),
+                });
+            }
+            let rule_id = match (&message.rule_id, message.fatal) {
+                (Some(rule), _) if !rule.is_empty() => rule.clone(),
+                (Some(_), _) | (None, _) if message.fatal == Some(true) => String::new(),
+                _ => {
+                    return Err(ParseError::Shape {
+                        tool: TOOL,
+                        detail: format!("ignored file {:?}", report.file_path),
+                    });
+                }
+            };
+            let start = TextPosition {
+                line: message.line,
+                column: message.column,
+            };
+            let end = match (message.end_line, message.end_column) {
+                (Some(line), Some(column)) => {
+                    if line < 1 || column < 1 {
+                        return Err(ParseError::Shape {
+                            tool: TOOL,
+                            detail: "bad end position".to_owned(),
+                        });
+                    }
+                    Some(TextPosition { line, column })
+                }
+                (None, None) => None,
+                _ => {
+                    return Err(ParseError::Shape {
+                        tool: TOOL,
+                        detail: "partial end position".to_owned(),
+                    });
+                }
+            };
+            findings.push(FileFinding {
+                file: checked.to_owned(),
+                finding: Finding {
+                    tool_id: TOOL.to_owned(),
+                    rule_id,
+                    message: message.message.clone(),
+                    severity: eslint_severity(message.severity)?,
+                    start,
+                    end,
+                    suggestions: Vec::new(),
+                },
+            });
+        }
+    }
+    if findings.is_empty() && code != Some(0) {
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("exit {} with no messages", code_name(code)),
+        });
+    }
+    Ok(findings)
+}
+
+// ---------------------------------------------------------------------------
+// Prettier
+// ---------------------------------------------------------------------------
+
+/// Parses Prettier `--check` stderr. `files` are the workspace-relative
+/// mirror paths (Prettier reports working-directory-relative paths even
+/// for absolute arguments, so the caller re-anchors them like Ty).
+pub fn parse_prettier_check(
+    stderr: &[u8],
+    code: Option<i32>,
+    files: &[&str],
+) -> Result<Vec<FileFinding>, ParseError> {
+    const TOOL: &str = "prettier";
+    let text = std::str::from_utf8(stderr).map_err(|err| ParseError::Shape {
+        tool: TOOL,
+        detail: err.to_string(),
+    })?;
+    let mut findings = Vec::new();
+    for line in text.lines() {
+        let trimmed = line.trim();
+        let Some(path) = trimmed.strip_prefix("[warn] ") else {
+            if trimmed.is_empty() {
+                continue;
+            }
+            return Err(ParseError::Shape {
+                tool: TOOL,
+                detail: format!("unexpected stderr line: {trimmed:?}"),
+            });
+        };
+        if path.starts_with("Code style issues") {
+            continue;
+        }
+        if path.is_empty() {
+            return Err(ParseError::Shape {
+                tool: TOOL,
+                detail: "empty warn path".to_owned(),
+            });
+        }
+        let normalized = path.strip_prefix("./").unwrap_or(path);
+        let checked = known(TOOL, files, normalized)?;
+        let (start, end) = point(1, 1);
+        findings.push(FileFinding {
+            file: checked.to_owned(),
+            finding: Finding {
+                tool_id: TOOL.to_owned(),
+                rule_id: String::new(),
+                message: "file is not formatted".to_owned(),
+                severity: ToolSeverity::Warning,
+                start,
+                end,
+                suggestions: Vec::new(),
+            },
+        });
+    }
+    if findings.is_empty() && code != Some(0) {
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("exit {} with no warn lines", code_name(code)),
+        });
+    }
+    Ok(findings)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2521,5 +2908,109 @@ mod grammar_errors {
         assert!(parse_pylint(bad_end.as_bytes(), Some(1), &["/s/a.py"]).is_err());
         let empty_symbol = r#"[{"type": "warning", "module": "a", "obj": "", "line": 1, "column": 0, "endLine": null, "endColumn": null, "path": "/s/a.py", "symbol": "", "message": "msg", "message-id": "X0001"}]"#;
         assert!(parse_pylint(empty_symbol.as_bytes(), Some(1), &["/s/a.py"]).is_err());
+    }
+
+    const BIOME_LINT_DIRTY: &str = r#"{"summary":{"changed":0,"unchanged":1},"diagnostics":[{"severity":"warning","message":"This variable unusedVar is unused.","category":"lint/correctness/noUnusedVariables","location":{"path":"/s/dirty.js","start":{"line":1,"column":7},"end":{"line":1,"column":16}},"advices":[]}],"command":"lint"}"#;
+    const BIOME_LINT_CLEAN: &str =
+        r#"{"summary":{"changed":0,"unchanged":1},"diagnostics":[],"command":"lint"}"#;
+    const BIOME_FMT_DIRTY: &str = r#"{"summary":{"changed":0,"unchanged":1},"diagnostics":[{"severity":"error","message":"Formatter would have printed the following content:","category":"format","location":{"path":"/s/fmt.js","start":{"line":0,"column":0},"end":{"line":0,"column":0}},"advices":[]}],"command":"format"}"#;
+
+    #[test]
+    fn biome_lint_reports_categories() {
+        let findings = parse_biome_lint(BIOME_LINT_DIRTY.as_bytes(), Some(1), &["/s/dirty.js"])
+            .expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].file, "/s/dirty.js");
+        assert_eq!(findings[0].finding.tool_id, "biome");
+        assert_eq!(
+            findings[0].finding.rule_id,
+            "lint/correctness/noUnusedVariables"
+        );
+        assert_eq!(findings[0].finding.severity, ToolSeverity::Warning);
+        assert_eq!(
+            (
+                findings[0].finding.start.line,
+                findings[0].finding.start.column
+            ),
+            (1, 7)
+        );
+        let clean = parse_biome_lint(BIOME_LINT_CLEAN.as_bytes(), Some(0), &["/s/clean.js"])
+            .expect("parsed");
+        assert!(clean.is_empty());
+        assert!(parse_biome_lint(BIOME_LINT_CLEAN.as_bytes(), Some(1), &["/s/clean.js"]).is_err());
+        assert!(parse_biome_lint(b"not json", Some(1), &["/s/dirty.js"]).is_err());
+        let wrong_command =
+            BIOME_LINT_DIRTY.replace("\"command\":\"lint\"", "\"command\":\"format\"");
+        assert!(parse_biome_lint(wrong_command.as_bytes(), Some(1), &["/s/dirty.js"]).is_err());
+        let zero_pos = BIOME_LINT_DIRTY.replace(
+            "\"start\":{\"line\":1,\"column\":7}",
+            "\"start\":{\"line\":0,\"column\":0}",
+        );
+        assert!(parse_biome_lint(zero_pos.as_bytes(), Some(1), &["/s/dirty.js"]).is_err());
+        let unknown_sev =
+            BIOME_LINT_DIRTY.replace("\"severity\":\"warning\"", "\"severity\":\"hint\"");
+        assert!(parse_biome_lint(unknown_sev.as_bytes(), Some(1), &["/s/dirty.js"]).is_err());
+    }
+
+    #[test]
+    fn biome_format_normalizes_to_file_findings() {
+        let findings = parse_biome_format(BIOME_FMT_DIRTY.as_bytes(), Some(1), &["/s/fmt.js"])
+            .expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].finding.rule_id, "");
+        assert_eq!(findings[0].finding.message, "file is not formatted");
+        assert_eq!(findings[0].finding.severity, ToolSeverity::Warning);
+        let clean = r#"{"summary":{},"diagnostics":[],"command":"format"}"#;
+        assert!(parse_biome_format(clean.as_bytes(), Some(0), &["/s/c.js"])
+            .expect("parsed")
+            .is_empty());
+        assert!(parse_biome_format(clean.as_bytes(), Some(1), &["/s/c.js"]).is_err());
+        let wrong_cat = BIOME_FMT_DIRTY.replace(
+            "\"category\":\"format\"",
+            "\"category\":\"lint/style/noFoo\"",
+        );
+        assert!(parse_biome_format(wrong_cat.as_bytes(), Some(1), &["/s/fmt.js"]).is_err());
+    }
+
+    const ESLINT_DIRTY: &str = r#"[{"filePath":"/s/dirty.js","messages":[{"ruleId":"no-unused-vars","severity":2,"message":"'unusedVar' is assigned a value but never used.","line":1,"column":7,"endLine":1,"endColumn":16}],"errorCount":1,"warningCount":0}]"#;
+    const ESLINT_CLEAN: &str =
+        r#"[{"filePath":"/s/clean.js","messages":[],"errorCount":0,"warningCount":0}]"#;
+
+    #[test]
+    fn eslint_reports_rules_with_extents() {
+        let findings =
+            parse_eslint(ESLINT_DIRTY.as_bytes(), Some(1), &["/s/dirty.js"]).expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].finding.rule_id, "no-unused-vars");
+        assert_eq!(findings[0].finding.severity, ToolSeverity::Error);
+        let end = findings[0].finding.end.expect("extent");
+        assert_eq!((end.line, end.column), (1, 16));
+        let clean =
+            parse_eslint(ESLINT_CLEAN.as_bytes(), Some(0), &["/s/clean.js"]).expect("parsed");
+        assert!(clean.is_empty());
+        assert!(parse_eslint(ESLINT_CLEAN.as_bytes(), Some(1), &["/s/clean.js"]).is_err());
+        let fatal_null = r#"[{"filePath":"/s/broken.js","messages":[{"ruleId":null,"fatal":true,"severity":2,"message":"Parsing error: Unexpected token","line":2,"column":1}],"errorCount":1}]"#;
+        let findings =
+            parse_eslint(fatal_null.as_bytes(), Some(1), &["/s/broken.js"]).expect("parsed");
+        assert_eq!(findings[0].finding.rule_id, "");
+        let ignored = r#"[{"filePath":"/s/a.js","messages":[{"ruleId":null,"fatal":false,"severity":1,"message":"File ignored because outside of base path."}],"warningCount":1}]"#;
+        assert!(parse_eslint(ignored.as_bytes(), Some(0), &["/s/a.js"]).is_err());
+        let bad_sev = ESLINT_DIRTY.replace("\"severity\":2", "\"severity\":3");
+        assert!(parse_eslint(bad_sev.as_bytes(), Some(1), &["/s/dirty.js"]).is_err());
+    }
+
+    #[test]
+    fn prettier_check_reports_warn_lines() {
+        let stderr = "[warn] src/a.js\n[warn] Code style issues found in the above file. Run Prettier with --write to fix.\n";
+        let findings =
+            parse_prettier_check(stderr.as_bytes(), Some(1), &["src/a.js"]).expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].file, "src/a.js");
+        assert_eq!(findings[0].finding.message, "file is not formatted");
+        let clean = parse_prettier_check(b"", Some(0), &["src/a.js"]).expect("parsed");
+        assert!(clean.is_empty());
+        assert!(parse_prettier_check(b"", Some(1), &["src/a.js"]).is_err());
+        assert!(parse_prettier_check(b"unexpected\n", Some(1), &["src/a.js"]).is_err());
+        assert!(parse_prettier_check(stderr.as_bytes(), Some(1), &["src/other.js"]).is_err());
     }
 }

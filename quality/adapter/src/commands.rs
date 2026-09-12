@@ -57,6 +57,33 @@
 //!   environment (no `HOME`) plus scratch-root cwd leaves no discoverable
 //!   `pylintrc`/`pyproject.toml`, so pinned upstream defaults apply.
 //!   Check-only, never rewrites.
+//! * Biome lint takes the whole stage file list as `lint --reporter=json
+//!   --colors=off --error-on-warnings --vcs-enabled=false --config-path
+//!   <dir> <files>` over scratch-root-relative paths. The config dir holds
+//!   exactly one `biome.json` (hinted config or materialized `{}` defaults),
+//!   so `--config-path` disables default resolution and no upward discovery
+//!   can observe ambient state. Biome reports paths relative to its working
+//!   directory, so backends re-anchor to the workspace-relative mirror paths
+//!   (exit codes per M17 probing: clean 0, findings 1). Biome lint is
+//!   check-only: safe `--write` does not fix the fixable rules (needs
+//!   `--unsafe`), so the runner never passes it and converges on format.
+//! * Biome format takes the whole stage file list as `format
+//!   --reporter=json --colors=off --config-path <dir> <files>` (check);
+//!   format fix is `format --config-path <dir> --write <files>` (in-place,
+//!   re-read on exit 0).
+//! * ESLint takes the whole stage file list as `-c <config> -f json
+//!   <files>` (check); fix is `-c <config> -f json --fix <files>`
+//!   (in-place, re-read on exit 0 or 1, which signals remaining unfixable
+//!   findings after the fixable ones were applied). The config is always
+//!   explicit (no defaults exist); `cwd_rel` is the scratch root so the
+//!   flat-config base path contains the mirrored sources.
+//! * Prettier takes the whole stage file list as `--no-config
+//!   --no-editorconfig --check <files>` (check); fix is `--no-config
+//!   --no-editorconfig --write <files>` (in-place, re-read on exit 0).
+//!   `--no-editorconfig` stays mandatory because the `editorconfig`
+//!   package is absent from the runfiles forest, so `.editorconfig` files
+//!   are currently inert; the flag freezes that behavior against future
+//!   dependency additions.
 
 use std::ffi::OsString;
 use std::path::Path;
@@ -436,6 +463,134 @@ pub fn pylint_check(binary: &Path, files: &[&Path]) -> Invocation {
         OsString::from("--output-format=json"),
         OsString::from("--jobs=1"),
     ];
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Biome shared prefix: `binary`, the subcommand, then machine flags plus
+/// the explicit config selection (`--config-path <dir>`).
+fn biome_base(binary: &Path, subcommand: &str, config_dir: &Path) -> Vec<OsString> {
+    vec![
+        binary.as_os_str().to_owned(),
+        OsString::from(subcommand),
+        OsString::from("--reporter=json"),
+        OsString::from("--colors=off"),
+        OsString::from("--config-path"),
+        config_dir.as_os_str().to_owned(),
+    ]
+}
+
+/// Biome lint check invocation: `lint --error-on-warnings
+/// --vcs-enabled=false` over the whole stage file list. Exit 1 with valid
+/// JSON is findings; exit 0 is clean. Check-only: the runner never passes
+/// `--write` (safe write does not fix the fixable lint rules; only
+/// `--unsafe` would, and it is never used).
+pub fn biome_lint_check(binary: &Path, files: &[&Path], config_dir: &Path) -> Invocation {
+    let mut argv = biome_base(binary, "lint", config_dir);
+    argv.push(OsString::from("--error-on-warnings"));
+    argv.push(OsString::from("--vcs-enabled=false"));
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Biome format check invocation: `format` over the whole stage file list.
+/// Exit 1 with valid JSON is findings; exit 0 is clean.
+pub fn biome_format_check(binary: &Path, files: &[&Path], config_dir: &Path) -> Invocation {
+    let mut argv = biome_base(binary, "format", config_dir);
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Biome format fix invocation: `format --write` (in-place). The caller
+/// re-reads on exit 0 and returns its input otherwise.
+pub fn biome_format_fix(binary: &Path, files: &[&Path], config_dir: &Path) -> Invocation {
+    let mut argv = biome_base(binary, "format", config_dir);
+    argv.push(OsString::from("--write"));
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// ESLint lint check invocation: `-c <config> -f json` over the whole
+/// stage file list. Exit 1 with valid JSON is findings; exit 0 is clean.
+/// The config is always explicit: without one ESLint hard-fails
+/// (`couldn't find an eslint.config.* file`), so the caller resolves it
+/// first and fails the action when absent.
+pub fn eslint_check(binary: &Path, files: &[&Path], config: &Path) -> Invocation {
+    let mut argv = vec![
+        binary.as_os_str().to_owned(),
+        OsString::from("-c"),
+        config.as_os_str().to_owned(),
+        OsString::from("-f"),
+        OsString::from("json"),
+    ];
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// ESLint lint fix invocation: `-c <config> -f json --fix` (in-place).
+/// The caller re-reads on exit 0 or 1 (exit 1 signals remaining unfixable
+/// findings after the fixable ones were applied) and keeps its input on
+/// any other exit, mirroring the Ruff lint-fix contract.
+pub fn eslint_fix(binary: &Path, files: &[&Path], config: &Path) -> Invocation {
+    let mut argv = vec![
+        binary.as_os_str().to_owned(),
+        OsString::from("-c"),
+        config.as_os_str().to_owned(),
+        OsString::from("-f"),
+        OsString::from("json"),
+        OsString::from("--fix"),
+    ];
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Prettier shared prefix: `binary` plus the frozen hermetic flags
+/// (`--no-config --no-editorconfig`, never observing config files).
+/// Callers append the mode flag and files.
+fn prettier_base(binary: &Path) -> Vec<OsString> {
+    vec![
+        binary.as_os_str().to_owned(),
+        OsString::from("--no-config"),
+        OsString::from("--no-editorconfig"),
+    ]
+}
+
+/// Prettier format check invocation: `--check` over the whole stage file
+/// list. Exit 1 with `[warn] <file>` stderr lines is findings; exit 0 is
+/// clean.
+pub fn prettier_check(binary: &Path, files: &[&Path]) -> Invocation {
+    let mut argv = prettier_base(binary);
+    argv.push(OsString::from("--check"));
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Prettier format fix invocation: `--write` (in-place). The caller
+/// re-reads on exit 0 and returns its input otherwise.
+pub fn prettier_fix(binary: &Path, files: &[&Path]) -> Invocation {
+    let mut argv = prettier_base(binary);
+    argv.push(OsString::from("--write"));
     argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
     Invocation {
         argv,
@@ -852,5 +1007,124 @@ mod tests {
             ]
         );
         assert_eq!(invocation.cwd_rel, "");
+    }
+
+    #[test]
+    fn biome_lint_check_is_json_hermetic() {
+        let file = Path::new("/scratch/src/a.js");
+        let config = Path::new("/scratch/cfg");
+        let invocation = biome_lint_check(Path::new(BIN), &[file], config);
+        assert_eq!(
+            argv_strings(&invocation),
+            vec![
+                BIN,
+                "lint",
+                "--reporter=json",
+                "--colors=off",
+                "--config-path",
+                "/scratch/cfg",
+                "--error-on-warnings",
+                "--vcs-enabled=false",
+                "/scratch/src/a.js"
+            ]
+        );
+        assert_eq!(invocation.cwd_rel, "");
+    }
+
+    #[test]
+    fn biome_format_check_and_fix_share_config() {
+        let file = Path::new("/scratch/src/a.js");
+        let config = Path::new("/scratch/cfg");
+        let check = biome_format_check(Path::new(BIN), &[file], config);
+        assert_eq!(
+            argv_strings(&check),
+            vec![
+                BIN,
+                "format",
+                "--reporter=json",
+                "--colors=off",
+                "--config-path",
+                "/scratch/cfg",
+                "/scratch/src/a.js"
+            ]
+        );
+        assert_eq!(check.cwd_rel, "");
+        let fix = biome_format_fix(Path::new(BIN), &[file], config);
+        assert_eq!(
+            argv_strings(&fix),
+            vec![
+                BIN,
+                "format",
+                "--reporter=json",
+                "--colors=off",
+                "--config-path",
+                "/scratch/cfg",
+                "--write",
+                "/scratch/src/a.js"
+            ]
+        );
+        assert_eq!(fix.cwd_rel, "");
+    }
+
+    #[test]
+    fn eslint_check_and_fix_share_config() {
+        let file = Path::new("/scratch/src/a.js");
+        let config = Path::new("/scratch/cfg/eslint.config.js");
+        let check = eslint_check(Path::new(BIN), &[file], config);
+        assert_eq!(
+            argv_strings(&check),
+            vec![
+                BIN,
+                "-c",
+                "/scratch/cfg/eslint.config.js",
+                "-f",
+                "json",
+                "/scratch/src/a.js"
+            ]
+        );
+        assert_eq!(check.cwd_rel, "");
+        let fix = eslint_fix(Path::new(BIN), &[file], config);
+        assert_eq!(
+            argv_strings(&fix),
+            vec![
+                BIN,
+                "-c",
+                "/scratch/cfg/eslint.config.js",
+                "-f",
+                "json",
+                "--fix",
+                "/scratch/src/a.js"
+            ]
+        );
+        assert_eq!(fix.cwd_rel, "");
+    }
+
+    #[test]
+    fn prettier_check_and_fix_are_hermetic() {
+        let file = Path::new("/scratch/src/a.js");
+        let check = prettier_check(Path::new(BIN), &[file]);
+        assert_eq!(
+            argv_strings(&check),
+            vec![
+                BIN,
+                "--no-config",
+                "--no-editorconfig",
+                "--check",
+                "/scratch/src/a.js"
+            ]
+        );
+        assert_eq!(check.cwd_rel, "");
+        let fix = prettier_fix(Path::new(BIN), &[file]);
+        assert_eq!(
+            argv_strings(&fix),
+            vec![
+                BIN,
+                "--no-config",
+                "--no-editorconfig",
+                "--write",
+                "/scratch/src/a.js"
+            ]
+        );
+        assert_eq!(fix.cwd_rel, "");
     }
 }
