@@ -1,0 +1,37 @@
+"""M21 seed MDX document; consumer of dx_mdx_* wrappers."""
+
+load("//mdx/rules:defs.bzl", "dx_mdx_library")
+load("//javascript/rules:defs.bzl", "dx_js_library", "dx_js_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_mdx_library(
+    name = "hello_lib",
+    srcs = ["Hello.mdx"],
+)
+
+dx_js_library(
+    name = "helper_lib",
+    srcs = ["helper.js"],
+)
+
+dx_js_test(
+    name = "hello_test",
+    srcs = ["Hello.test.js"],
+    data = [
+        ":Hello.mdx",
+        ":helper_lib",
+        "//:node_modules/@mdx-js/mdx",
+    ],
+    node_modules = "//:node_modules",
+    node_options = ["--experimental-vm-modules"],
+)
+
+# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. MDX sources stay
+# dx-owned, never corpus sources.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
