@@ -50,6 +50,11 @@ def native_config_unit_tests(name):
                 ".ini",
             ),
             expect_equal(
+                "native_config_extension pins the eslint JS flat-config transport",
+                native_config_extension("eslint"),
+                ".js",
+            ),
+            expect_equal(
                 "native_config_error accepts a checked-in config",
                 native_config_error(
                     "buildifier",
@@ -73,7 +78,7 @@ def native_config_unit_tests(name):
                 "native_config_error rejects an unknown tool",
                 native_config_error("prettier", "x.json", True, []),
                 "native_config: unknown tool 'prettier': want one of " +
-                "biome, buildifier, clippy, ruff, rustfmt, taplo, vale",
+                "biome, buildifier, clippy, eslint, ruff, rustfmt, taplo, vale",
             ),
             expect_equal(
                 "native_config_error requires a config",

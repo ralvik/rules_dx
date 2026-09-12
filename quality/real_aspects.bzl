@@ -1,4 +1,4 @@
-"""Target-scoped real capability aspects over real adapters (M04 WP2, M15 Python, M17 Biome).
+"""Target-scoped real capability aspects over real adapters (M04 WP2, M15 Python, M17 Biome/ESLint/Prettier).
 
 Each aspect visits targets carrying `QualitySourcesInfo` and registers one
 exact-input pipeline action for its capability when the real fixture policy
@@ -10,8 +10,8 @@ No invocation-wide aggregation exists.
 
 Native configuration: source targets opt in through `aspect_hints`
 carrying `DxNativeConfigInfo`. Without a hint the adapter runs pinned
-upstream defaults, except Vale, which has no usable default and fails
-analysis with guidance to supply and bind native policy.
+upstream defaults, except Vale and ESLint, which have no usable default
+and fail analysis with guidance to supply and bind native policy.
 
 Hermeticity: actions declare exactly the direct sources, the hinted config
 closures, the Markdown link-resolution siblings, and the stage tool
@@ -20,8 +20,10 @@ exact bytes into a fresh scratch tree, never observes VCS state, and
 launches tools with an empty `PATH` (see `quality_adapter::exec`).
 Python venv launchers (pydoclint, flake8, pylint) additionally resolve
 their runtime
-through the runner's runfiles forest via `RUNFILES_DIR`; the forest is
-action-local and never enters findings. Siblings (`markdown_siblings`
+through the runner's runfiles forest via `RUNFILES_DIR`; the Node
+js_binary wrappers (eslint, prettier) resolve theirs through `$0.runfiles`
+and run from the scratch tree via `JS_BINARY__NO_CD_BINDIR=1`. The forests
+are action-local and never enter findings. Siblings (`markdown_siblings`
 on the visited rule) resolve Markdown link targets only: they are never
 linted and never enter findings or snapshots.
 
@@ -104,8 +106,10 @@ def _real_pipeline_action(target, ctx, capability):
         "biome": ctx.file._biome,
         "buildifier": ctx.file._buildifier,
         "clippy": clippy_driver,
+        "eslint": ctx.executable._eslint,
         "flake8": ctx.executable._flake8,
         "markdown_check": ctx.file._markdown_check,
+        "prettier": ctx.executable._prettier,
         "pydoclint": ctx.executable._pydoclint,
         "pylint": ctx.executable._pylint,
         "ruff": ctx.file._ruff,
@@ -181,8 +185,24 @@ def _real_pipeline_action(target, ctx, capability):
     # Staging a launcher as a tool merges its runfiles into the runner's
     # forest, and `RUNFILES_DIR` points the stub at that forest. The
     # directory is action-local and transient; it never enters findings
-    # or snapshots.
+    # or snapshots. The Node js_binary wrappers (eslint, prettier) likewise
+    # resolve their runtime through `$0.runfiles`, so they are staged as
+    # tools; the runner spawns them from scratch trees under TMPDIR, so
+    # `JS_BINARY__NO_CD_BINDIR=1` keeps the wrapper from changing directory
+    # into BAZEL_BINDIR (the devserver uses the same flag for custom cwd).
     run_tools = []
+    if "eslint" in stage_tools:
+        run_tools.append(ctx.attr._eslint[DefaultInfo].files_to_run)
+        args.add(
+            "--tool-env",
+            "eslint=JS_BINARY__NO_CD_BINDIR=1",
+        )
+    if "prettier" in stage_tools:
+        run_tools.append(ctx.attr._prettier[DefaultInfo].files_to_run)
+        args.add(
+            "--tool-env",
+            "prettier=JS_BINARY__NO_CD_BINDIR=1",
+        )
     if "pydoclint" in stage_tools:
         run_tools.append(ctx.attr._pydoclint[DefaultInfo].files_to_run)
         args.add(
@@ -236,6 +256,12 @@ _REAL_ATTRS = {
         cfg = "exec",
         doc = "Pinned Buildifier artifact for Starlark pipelines.",
     ),
+    "_eslint": attr.label(
+        default = "//quality/tools/javascript/bin:eslint",
+        cfg = "exec",
+        executable = True,
+        doc = "Private ESLint js_binary wrapper for JavaScript lint opt-ins.",
+    ),
     "_flake8": attr.label(
         default = "//quality/tools/python:flake8",
         cfg = "exec",
@@ -252,6 +278,12 @@ _REAL_ATTRS = {
         default = "//quality:real_fixture_policy",
         providers = [QualityPolicyInfo],
         doc = "Aggregate workspace policy expanding tool IDs to classes.",
+    ),
+    "_prettier": attr.label(
+        default = "//quality/tools/javascript/bin:prettier",
+        cfg = "exec",
+        executable = True,
+        doc = "Private Prettier js_binary wrapper for JavaScript/JSON format.",
     ),
     "_pydoclint": attr.label(
         default = "//quality/tools/python:pydoclint",

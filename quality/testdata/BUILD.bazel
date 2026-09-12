@@ -2,7 +2,7 @@
 
 load("//quality:aspect_subject.bzl", "aspect_subject")
 load("//quality:fixtures.bzl", "quality_source_target", "real_source_target")
-load("//quality:native_config.bzl", "biome_config", "clippy_config", "ruff_config", "rustfmt_config", "vale_config")
+load("//quality:native_config.bzl", "biome_config", "clippy_config", "eslint_config", "ruff_config", "rustfmt_config", "vale_config")
 load(":aspect_tests.bzl", "aspect_fixture_tests")
 load(":real_aspect_subject.bzl", "real_aspect_subject")
 load(":real_aspect_tests.bzl", "real_aspect_fixture_tests")
@@ -122,6 +122,15 @@ ruff_config(
 biome_config(
     name = "biome_cfg",
     src = "biome_cfg/biome.json",
+)
+
+# ESLint flat config for the JavaScript lint opt-in (M17 WP2). Minimal
+# `no-unused-vars` error proves the `-c` closure reaches the js_binary
+# wrapper; the config lives in its own subdirectory so the flat-config
+# base path contains the mirrored sources without shadowing them.
+eslint_config(
+    name = "eslint_cfg",
+    src = "eslint_cfg/eslint.config.js",
 )
 
 real_source_target(
@@ -283,8 +292,6 @@ real_aspect_subject(
 # capability (noUnusedVariables lint warning, format diff), and a hinted
 # clean module proving the biome_config closure reaches the tool.
 # Lint/format subjects live in the lint/format presence suite below.
-# (JSON fixtures wait for the Prettier aspect wiring: the json family
-# selects prettier for format, whose bash-wrapper launch is still open.)
 real_source_target(
     name = "fixture_real_javascript",
     javascript_srcs = ["real_clean.js"],
@@ -316,6 +323,32 @@ real_aspect_subject(
     target = ":fixture_real_javascript_hinted",
 )
 
+# JSON fixtures (M17 WP2): a clean document passing biome lint and
+# prettier format, and a compact document with one deterministic prettier
+# format finding (biome lint stays clean). Proves the Prettier js_binary
+# wrapper launch end to end: the json family selects prettier for format
+# by default, so these subjects exercise the `$0.runfiles` +
+# `JS_BINARY__NO_CD_BINDIR=1` path through the real backend.
+real_source_target(
+    name = "fixture_real_json",
+    json_srcs = ["real_clean.json"],
+)
+
+real_source_target(
+    name = "fixture_real_json_dirty",
+    json_srcs = ["real_dirty.json"],
+)
+
+real_aspect_subject(
+    name = "fixture_real_json_subject",
+    target = ":fixture_real_json",
+)
+
+real_aspect_subject(
+    name = "fixture_real_json_dirty_subject",
+    target = ":fixture_real_json_dirty",
+)
+
 real_aspect_subject(
     name = "real_plain_subject",
     target = ":plain",
@@ -336,6 +369,8 @@ real_aspect_fixture_tests(
         ":fixture_real_javascript_dirty_subject",
         ":fixture_real_javascript_hinted_subject",
         ":fixture_real_javascript_subject",
+        ":fixture_real_json_dirty_subject",
+        ":fixture_real_json_subject",
         ":fixture_real_markdown_sibling_subject",
         ":fixture_real_markdown_subject",
         ":fixture_real_mixed_subject",

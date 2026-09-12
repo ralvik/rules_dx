@@ -1,11 +1,12 @@
-"""Typed native-configuration targets for M04 adapters plus M15 Ruff and M17 Biome.
+"""Typed native-configuration targets for M04 adapters plus M15 Ruff and M17 Biome/ESLint.
 
 Each initial adapter reads its behavior from exactly one checked-in
 tool-owned config file (the native-configuration authority contract):
 Buildifier `.buildifier.json`, Taplo `taplo.toml` fragment, Vale `.vale.ini`
 plus style/vocab data, rustfmt `rustfmt.toml`, Clippy `clippy.toml`,
-Ruff `ruff.toml` (see below for the dedicated-config rule), and Biome
-`biome.json` (see below for the config-dir rule).
+Ruff `ruff.toml` (see below for the dedicated-config rule), Biome
+`biome.json` (see below for the config-dir rule), and ESLint
+`eslint.config.js` flat config (see below).
 Source targets opt into a config through `aspect_hints`; the consuming
 aspect resolves hints to stages (see `collect_native_configs`). Without a
 hint the adapter runs pinned upstream defaults, except Vale, which has no
@@ -36,11 +37,14 @@ DxNativeConfigInfo = provider(
 # `biome.jsonc`): the adapter passes the config's directory as
 # `--config-path`, so the directory must hold exactly one config file and
 # never linted sources; the `.json` extension check here pins the JSON
-# transport while `.jsonc` support stays future work.
+# transport while `.jsonc` support stays future work. ESLint takes the
+# flat-config `eslint.config.js`: the adapter passes it as `-c`, so the
+# `.js` extension pins the JavaScript module transport.
 _NATIVE_CONFIG_EXTENSIONS = {
     "biome": ".json",
     "buildifier": ".json",
     "clippy": ".toml",
+    "eslint": ".js",
     "ruff": ".toml",
     "rustfmt": ".toml",
     "taplo": ".toml",
@@ -179,4 +183,9 @@ ruff_config = _make_native_config_rule(
 biome_config = _make_native_config_rule(
     "biome",
     "Checked-in Biome JSON config (biome.json) for JavaScript/TypeScript/JSON lint/format. The adapter passes the config's directory as --config-path.",
+)
+
+eslint_config = _make_native_config_rule(
+    "eslint",
+    "Checked-in ESLint flat config (eslint.config.js) for JavaScript lint. The adapter passes it as -c; no usable upstream default exists.",
 )
