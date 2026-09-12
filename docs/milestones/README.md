@@ -75,7 +75,7 @@ adoption scope (depends on M29).
 | M15 | [Python Quality](M15-python-quality.md) ([report](M15-completion-report.md)) | M14 | Ready |
 | M16 | [JavaScript And TypeScript Application Foundation](M16-javascript-typescript-application-foundation.md) ([report](M16-completion-report.md)) | M13 | Ready |
 | M17 | [JavaScript And TypeScript Quality](M17-javascript-typescript-quality.md) ([report](M17-completion-report.md)) | M16 | Ready |
-| M18 | [Vue](M18-vue.md) | M16, M17 | Pending |
+| M18 | [Vue](M18-vue.md) ([report](M18-completion-report.md)) | M16, M17 | Pending |
 | M19 | [Svelte](M19-svelte.md) | M16, M17 | Pending |
 | M20 | [Astro](M20-astro.md) | M16, M17 | Pending |
 | M21 | [MDX And Mixed Framework](M21-mdx-mixed-framework.md) | M18, M19, M20 | Pending |
