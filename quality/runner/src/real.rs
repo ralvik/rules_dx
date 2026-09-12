@@ -3207,6 +3207,94 @@ mod tests {
         );
     }
 
+    /// M17 WP3: Biome/Prettier composition benchmark. Models the measured
+    /// direct-probe behavior: Biome formats with tabs, Prettier with two
+    /// spaces (pinned defaults, no native config), so the same JS input
+    /// has no common fixed point while JSON inputs agree. The lexical
+    /// ruleset order (biome, prettier) is the measured order: it is
+    /// deterministic and independent of user declaration order. Both
+    /// orders converge stable with the last writer winning, so the order
+    /// is material and stays frozen; genuine cycles and iteration limits
+    /// remain certified by the shared convergence protocol and fail
+    /// closed.
+    #[test]
+    fn biome_prettier_identical_output_converges_stable() {
+        let stages = vec![
+            stage("biome", &["json"], &["config/data.json"]),
+            stage("prettier", &["json"], &["config/data.json"]),
+        ];
+        let mut initial = BTreeMap::new();
+        initial.insert("config/data.json".to_owned(), "{\"a\":1}\n".to_owned());
+        let agree = |_: &str, _: &str, _: &str| Ok("{\n  \"a\": 1\n}\n".to_owned());
+        let (terminal, completed, convergence) =
+            run_convergence(&initial, &stages, MAX_COMPLETED_ROUNDS, agree).expect("converged");
+        assert_eq!(convergence, Convergence::Stable);
+        assert_eq!(completed, 2);
+        assert_eq!(terminal["config/data.json"], "{\n  \"a\": 1\n}\n");
+    }
+
+    #[test]
+    fn biome_prettier_conflicting_output_converges_last_writer_wins() {
+        let stages = vec![
+            stage("biome", &["javascript"], &["src/app.js"]),
+            stage("prettier", &["javascript"], &["src/app.js"]),
+        ];
+        let mut initial = BTreeMap::new();
+        initial.insert("src/app.js".to_owned(), "compact\n".to_owned());
+        // Stateful normalizers modeling the measured probes: Biome leaves
+        // tabs unchanged and converts anything else to tabs; Prettier
+        // leaves spaces unchanged and converts anything else to spaces.
+        // Lexical order converges stable with the last writer winning.
+        let normalize = |tool: &str, _: &str, text: &str| {
+            if tool == "biome" {
+                if text == "tabs\n" {
+                    Ok(text.to_owned())
+                } else {
+                    Ok("tabs\n".to_owned())
+                }
+            } else if text == "spaces\n" {
+                Ok(text.to_owned())
+            } else {
+                Ok("spaces\n".to_owned())
+            }
+        };
+        let (terminal, completed, convergence) =
+            run_convergence(&initial, &stages, MAX_COMPLETED_ROUNDS, normalize).expect("converged");
+        assert_eq!(convergence, Convergence::Stable);
+        assert_eq!(completed, 2);
+        assert_eq!(terminal["src/app.js"], "spaces\n");
+    }
+
+    #[test]
+    fn biome_prettier_reverse_order_converges_to_other_terminal() {
+        let stages = vec![
+            stage("prettier", &["javascript"], &["src/app.js"]),
+            stage("biome", &["javascript"], &["src/app.js"]),
+        ];
+        let mut initial = BTreeMap::new();
+        initial.insert("src/app.js".to_owned(), "compact\n".to_owned());
+        let normalize = |tool: &str, _: &str, text: &str| {
+            if tool == "biome" {
+                if text == "tabs\n" {
+                    Ok(text.to_owned())
+                } else {
+                    Ok("tabs\n".to_owned())
+                }
+            } else if text == "spaces\n" {
+                Ok(text.to_owned())
+            } else {
+                Ok("spaces\n".to_owned())
+            }
+        };
+        let (terminal, completed, convergence) =
+            run_convergence(&initial, &stages, MAX_COMPLETED_ROUNDS, normalize).expect("converged");
+        assert_eq!(convergence, Convergence::Stable);
+        assert_eq!(completed, 2);
+        // Reverse order converges to the other terminal, proving the order
+        // is material and must stay frozen lexically for determinism.
+        assert_eq!(terminal["src/app.js"], "tabs\n");
+    }
+
     #[test]
     fn fix_failure_aborts_real_convergence() {
         let backend = backend_for("rustfmt", plain_tool(), check_ok_fix_missing);
