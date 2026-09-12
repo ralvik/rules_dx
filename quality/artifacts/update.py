@@ -10,8 +10,8 @@ Usage (maintainer only; requires network plus file/readelf/objdump/tar):
     bazel run //quality/artifacts:update -- --verify-only   # reject changed bytes
 
 Byte-identity policy: a versioned release URL does not guarantee immutable
-bytes. Vale publishes a checksums file, which this generator verifies. Neither
-Buildifier nor Taplo publishes asset digests, so their checked-in digests are
+bytes. Vale publishes a checksums file, which this generator verifies. Buildifier,
+Taplo, and Biome publish no asset digests, so their checked-in digests are
 the maintainer-established byte identity: regeneration fails when upstream
 bytes change instead of silently recording new content.
 """
@@ -44,6 +44,27 @@ TOOLS = {
                 "url": "https://github.com/bazel-contrib/buildtools/releases/download/v8.5.1/buildifier-linux-amd64",
                 "kind": "raw",
                 "executable": "buildifier-linux-amd64",
+            },
+        },
+    },
+    "biome": {
+        "upstream_version": "2.5.12",
+        "release_page": "https://github.com/biomejs/biome/releases/tag/@biomejs/biome@2.5.12",
+        "licenses": [{
+            "name": "MIT",
+            "source": "https://github.com/biomejs/biome/blob/main/LICENSE-MIT",
+        }, {
+            "name": "Apache-2.0",
+            "source": "https://github.com/biomejs/biome/blob/main/LICENSE-APACHE",
+        }],
+        "platforms": {
+            "linux_x86_64": {
+                "os": "linux",
+                "cpu": "x86_64",
+                "asset": "biome-linux-x64",
+                "url": "https://github.com/biomejs/biome/releases/download/@biomejs/biome@2.5.12/biome-linux-x64",
+                "kind": "raw",
+                "executable": "biome-linux-x64",
             },
         },
     },

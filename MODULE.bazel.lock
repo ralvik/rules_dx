@@ -322,12 +322,22 @@
   "moduleExtensions": {
     "//quality/artifacts:extension.bzl%dx_tools": {
       "general": {
-        "bzlTransitiveDigest": "cJj7I7x+HlzJj+1RFn6dUDvjLu6WrBdHaMkyivqHhIc=",
+        "bzlTransitiveDigest": "cERW0dHsxq66ol+FkPiracBll30J8E1ezpN4+e10wiE=",
         "usagesDigest": "bUoLms1RzXZC9mAK2ZTkvN0H8GBlSKy3SN0S17wrT00=",
         "recordedInputs": [
           "REPO_MAPPING:,platforms platforms"
         ],
         "generatedRepoSpecs": {
+          "dx_biome_linux_x86_64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/biomejs/biome/releases/download/@biomejs/biome@2.5.12/biome-linux-x64",
+              "sha256": "e2475688799c9e78dd25ba5cf676676ffe74caf182a35082b1d22039151fdf63",
+              "asset": "biome-linux-x64",
+              "archive_format": "none",
+              "executable": "biome-linux-x64"
+            }
+          },
           "dx_buildifier_linux_x86_64": {
             "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
             "attributes": {
@@ -382,6 +392,9 @@
             "repoRuleId": "@@//quality/artifacts:extension.bzl%_hub_repo",
             "attributes": {
               "artifacts": {
+                "biome": [
+                  "dx_biome_linux_x86_64"
+                ],
                 "buildifier": [
                   "dx_buildifier_linux_x86_64"
                 ],

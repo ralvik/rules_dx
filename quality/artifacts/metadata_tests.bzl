@@ -8,6 +8,7 @@ files from the network; this test guards the checked-in content hermetically.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
+load(":biome.linux_x86_64.bzl", _biome = "ARTIFACT")
 load(":buildifier.linux_x86_64.bzl", _buildifier = "ARTIFACT")
 load(":ruff.linux_x86_64.bzl", _ruff = "ARTIFACT")
 load(":taplo.linux_x86_64.bzl", _taplo = "ARTIFACT")
@@ -58,6 +59,16 @@ def metadata_tests(name):
       name: test target name.
     """
     checks = []
+    checks += _artifact_checks(
+        _biome,
+        "biome",
+        "2.5.12",
+        "https://github.com/biomejs/biome/releases/download/@biomejs/biome@2.5.12/biome-linux-x64",
+        "e2475688799c9e78dd25ba5cf676676ffe74caf182a35082b1d22039151fdf63",
+        63652488,
+        "biome-linux-x64",
+        "e2475688799c9e78dd25ba5cf676676ffe74caf182a35082b1d22039151fdf63",
+    )
     checks += _artifact_checks(
         _buildifier,
         "buildifier",
