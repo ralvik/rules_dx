@@ -1,0 +1,38 @@
+"""Focused JavaScript environment plans (M16 WP3).
+
+Each `javascript_env_plan` reads the analyzed authoritative providers of one
+`dx_js_library` wrapper: the preserved `JsInfo` plus `QualitySourcesInfo`.
+Focused-target only; binaries and tests do not preserve `JsInfo` through
+their forwarders, so their plans are deferred until the execution wrappers
+preserve it or M25 orchestration lands. Repository/root/exact-target
+orchestration remains M25.
+"""
+
+load("//javascript/env:plan.bzl", "javascript_env_plan")
+load("//javascript/env:plan_tests.bzl", "env_plan_tests")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+javascript_env_plan(
+    name = "hello_lib_plan",
+    target = "//javascript/hello:hello_lib",
+)
+
+env_plan_tests(
+    name = "env_plan_tests",
+    subjects = [
+        ":hello_lib_plan",
+    ],
+)
+
+# Repository corpus (M05 WP1): plan Starlark owned for direct-Bazel dogfood
+# under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "plan.bzl",
+        "plan_tests.bzl",
+    ],
+)

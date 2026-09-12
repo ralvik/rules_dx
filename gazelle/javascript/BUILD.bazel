@@ -1,0 +1,70 @@
+"""First-party JavaScript Gazelle extension (M16, ADR 0013)."""
+
+load("@gazelle//:def.bzl", "gazelle_binary", "gazelle_generation_test")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:private"])
+
+go_library(
+    name = "javascript",
+    srcs = [
+        "doc.go",
+        "lang.go",
+        "naming.go",
+        "parser.go",
+        "stdlib.go",
+    ],
+    importpath = "github.com/ralvik/rules_dx/gazelle/javascript",
+    deps = [
+        "@gazelle//config",
+        "@gazelle//language",
+        "@gazelle//repo",
+        "@gazelle//resolve",
+        "@gazelle//rule",
+        "@gazelle//v2/label",
+        "@gazelle//v2/rule",
+    ],
+)
+
+gazelle_binary(
+    name = "gazelle",
+    languages = [":javascript"],
+    tags = ["no-coverage"],
+    version = 1,
+    visibility = ["//dx:__pkg__"],
+)
+
+filegroup(
+    name = "generation_testdata",
+    srcs = glob(["testdata/**"]),
+)
+
+gazelle_generation_test(
+    name = "generation_test",
+    gazelle_binary = ":gazelle",
+    pure = "on",
+    tags = ["no-coverage"],
+    test_data = [":generation_testdata"],
+)
+
+go_test(
+    name = "javascript_test",
+    srcs = [
+        "lang_test.go",
+        "naming_test.go",
+        "parser_test.go",
+    ],
+    embed = [":javascript"],
+    pure = "on",
+)
+
+real_source_target(
+    name = "corpus",
+    aspect_hints = ["//quality:corpus_vale_config"],
+    markdown_srcs = [
+        "testdata/entries/README.md",
+        "testdata/source_only/README.md",
+    ],
+    starlark_srcs = ["BUILD.bazel"],
+)

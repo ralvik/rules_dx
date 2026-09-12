@@ -1,0 +1,31 @@
+"""M16 thin entry fixture: library owns main.ts (execution reuses the JS wrappers over compiled outputs)."""
+
+load("//quality:fixtures.bzl", "real_source_target")
+load("//typescript/rules:defs.bzl", "dx_ts_project")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_ts_project(
+    name = "helper",
+    srcs = ["helper.ts"],
+    declaration = True,
+    transpiler = "tsc",
+    tsconfig = "tsconfig.json",
+)
+
+dx_ts_project(
+    name = "main",
+    srcs = ["main.ts"],
+    declaration = True,
+    transpiler = "tsc",
+    tsconfig = "tsconfig.json",
+    deps = [":helper"],
+)
+
+# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. TypeScript sources
+# stay dx-owned, never corpus sources.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)

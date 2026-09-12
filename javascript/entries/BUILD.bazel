@@ -1,0 +1,42 @@
+"""M16 thin entry fixture: library owns main.js, binary carries entry only."""
+
+load("//javascript/rules:defs.bzl", "dx_js_binary", "dx_js_library", "dx_js_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_js_library(
+    name = "helper",
+    srcs = ["helper.js"],
+)
+
+dx_js_library(
+    name = "main",
+    srcs = ["main.js"],
+    deps = [":helper"],
+)
+
+dx_js_binary(
+    name = "main_bin",
+    data = [":main"],
+    entry_point = "main.js",
+)
+
+dx_js_test(
+    name = "helper_test",
+    srcs = ["helper_test.js"],
+    # Match the one-source `*_test.js` naming (jest's default testMatch
+    # only covers `.test.`/`.spec.` infixes).
+    config = "jest.config.cjs",
+    data = [":helper"],
+    node_modules = "//:node_modules",
+    node_options = ["--experimental-vm-modules"],
+)
+
+# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. JavaScript sources
+# stay dx-owned, never corpus sources.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
