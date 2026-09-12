@@ -9,7 +9,9 @@ files from the network; this test guards the checked-in content hermetically.
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":buildifier.linux_x86_64.bzl", _buildifier = "ARTIFACT")
+load(":ruff.linux_x86_64.bzl", _ruff = "ARTIFACT")
 load(":taplo.linux_x86_64.bzl", _taplo = "ARTIFACT")
+load(":ty.linux_x86_64.bzl", _ty = "ARTIFACT")
 load(":vale.linux_x86_64.bzl", _vale = "ARTIFACT")
 
 # Frozen schema surface (M04 WP1): sorted ARTIFACT keys.
@@ -85,6 +87,26 @@ def metadata_tests(name):
         11736086,
         "vale",
         "17bd39892f5c2e2f62c72d85be47facd83c21d39597154996134d15e34af4428",
+    )
+    checks += _artifact_checks(
+        _ruff,
+        "ruff",
+        "0.16.7",
+        "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-x86_64-unknown-linux-gnu.tar.gz",
+        "73894c7b7c9a53fd66ed715eb3a1ec65077f316328e377057a98bdb7fcba0326",
+        9977676,
+        "ruff-x86_64-unknown-linux-gnu/ruff",
+        "fef5ab1d39e0c8368a3ef2511f33083f372943ac76fe4bb2831f312d0cd9a5bd",
+    )
+    checks += _artifact_checks(
+        _ty,
+        "ty",
+        "0.0.80",
+        "https://github.com/astral-sh/ty/releases/download/0.0.80/ty-x86_64-unknown-linux-gnu.tar.gz",
+        "6c4142846197f39a3ac963a01512126eea2c01813c2fb4cd0ce7356fc1c9304b",
+        13300460,
+        "ty-x86_64-unknown-linux-gnu/ty",
+        "147dde31480eb80efb7ea4646486505673fbd254c0239bbc95785467c3defe39",
     )
     starlark_test(
         name = name,

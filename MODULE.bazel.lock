@@ -273,7 +273,7 @@
   "moduleExtensions": {
     "//quality/artifacts:extension.bzl%dx_tools": {
       "general": {
-        "bzlTransitiveDigest": "TkAMdCl9xz6IClIhnR1zXVZWUi7AtYlKf/leQz3oOxE=",
+        "bzlTransitiveDigest": "cJj7I7x+HlzJj+1RFn6dUDvjLu6WrBdHaMkyivqHhIc=",
         "usagesDigest": "bUoLms1RzXZC9mAK2ZTkvN0H8GBlSKy3SN0S17wrT00=",
         "recordedInputs": [
           "REPO_MAPPING:,platforms platforms"
@@ -289,6 +289,16 @@
               "executable": "buildifier-linux-amd64"
             }
           },
+          "dx_ruff_linux_x86_64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "73894c7b7c9a53fd66ed715eb3a1ec65077f316328e377057a98bdb7fcba0326",
+              "asset": "ruff-x86_64-unknown-linux-gnu.tar.gz",
+              "archive_format": "tar.gz",
+              "executable": "ruff-x86_64-unknown-linux-gnu/ruff"
+            }
+          },
           "dx_taplo_linux_x86_64": {
             "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
             "attributes": {
@@ -297,6 +307,16 @@
               "asset": "taplo-linux-x86_64.gz",
               "archive_format": "gzip",
               "executable": "taplo-x86_64"
+            }
+          },
+          "dx_ty_linux_x86_64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/astral-sh/ty/releases/download/0.0.80/ty-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "6c4142846197f39a3ac963a01512126eea2c01813c2fb4cd0ce7356fc1c9304b",
+              "asset": "ty-x86_64-unknown-linux-gnu.tar.gz",
+              "archive_format": "tar.gz",
+              "executable": "ty-x86_64-unknown-linux-gnu/ty"
             }
           },
           "dx_vale_linux_x86_64": {
@@ -316,8 +336,14 @@
                 "buildifier": [
                   "dx_buildifier_linux_x86_64"
                 ],
+                "ruff": [
+                  "dx_ruff_linux_x86_64"
+                ],
                 "taplo": [
                   "dx_taplo_linux_x86_64"
+                ],
+                "ty": [
+                  "dx_ty_linux_x86_64"
                 ],
                 "vale": [
                   "dx_vale_linux_x86_64"

@@ -14,7 +14,9 @@ py_binary(
 
 exports_files([
     "buildifier.linux_x86_64.bzl",
+    "ruff.linux_x86_64.bzl",
     "taplo.linux_x86_64.bzl",
+    "ty.linux_x86_64.bzl",
     "vale.linux_x86_64.bzl",
 ])
 

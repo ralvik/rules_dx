@@ -84,6 +84,44 @@ TOOLS = {
             },
         },
     },
+    "ruff": {
+        "upstream_version": "0.16.7",
+        "release_page": "https://github.com/astral-sh/ruff/releases/tag/0.16.7",
+        "licenses": [{
+            "name": "MIT",
+            "source": "https://github.com/astral-sh/ruff/blob/0.16.7/LICENSE",
+        }],
+        "platforms": {
+            "linux_x86_64": {
+                "os": "linux",
+                "cpu": "x86_64",
+                "asset": "ruff-x86_64-unknown-linux-gnu.tar.gz",
+                "url": "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-x86_64-unknown-linux-gnu.tar.gz",
+                "kind": "tar.gz",
+                "executable": "ruff-x86_64-unknown-linux-gnu/ruff",
+                "checksums_url": "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-x86_64-unknown-linux-gnu.tar.gz.sha256",
+            },
+        },
+    },
+    "ty": {
+        "upstream_version": "0.0.80",
+        "release_page": "https://github.com/astral-sh/ty/releases/tag/0.0.80",
+        "licenses": [{
+            "name": "MIT",
+            "source": "https://github.com/astral-sh/ty/blob/0.0.80/LICENSE",
+        }],
+        "platforms": {
+            "linux_x86_64": {
+                "os": "linux",
+                "cpu": "x86_64",
+                "asset": "ty-x86_64-unknown-linux-gnu.tar.gz",
+                "url": "https://github.com/astral-sh/ty/releases/download/0.0.80/ty-x86_64-unknown-linux-gnu.tar.gz",
+                "kind": "tar.gz",
+                "executable": "ty-x86_64-unknown-linux-gnu/ty",
+                "checksums_url": "https://github.com/astral-sh/ty/releases/download/0.0.80/sha256.sum",
+            },
+        },
+    },
 }
 
 
@@ -214,7 +252,8 @@ def _collect(tool, platform_key, spec, workdir):
             for line in handle.read().splitlines():
                 parts = line.split()
                 if len(parts) == 2:
-                    published[parts[1]] = parts[0]
+                    # Ty's sha256.sum prefixes binary-mode names with `*`.
+                    published[parts[1].lstrip("*")] = parts[0]
         expected = published.get(spec["asset"])
         if expected != digest:
             sys.exit("update: %s digest %s does not match published %s"

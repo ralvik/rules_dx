@@ -11,12 +11,16 @@ linux_x86_64 is recorded (Linux-first scope, other platforms are gaps).
 """
 
 load("//quality/artifacts:buildifier.linux_x86_64.bzl", _buildifier_linux_x86_64 = "ARTIFACT")
+load("//quality/artifacts:ruff.linux_x86_64.bzl", _ruff_linux_x86_64 = "ARTIFACT")
 load("//quality/artifacts:taplo.linux_x86_64.bzl", _taplo_linux_x86_64 = "ARTIFACT")
+load("//quality/artifacts:ty.linux_x86_64.bzl", _ty_linux_x86_64 = "ARTIFACT")
 load("//quality/artifacts:vale.linux_x86_64.bzl", _vale_linux_x86_64 = "ARTIFACT")
 
 _ARTIFACTS = [
     _buildifier_linux_x86_64,
+    _ruff_linux_x86_64,
     _taplo_linux_x86_64,
+    _ty_linux_x86_64,
     _vale_linux_x86_64,
 ]
 
