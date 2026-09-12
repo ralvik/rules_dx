@@ -1,0 +1,10 @@
+{
+  "name": "dx-node-tools",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.5",
+  "dependencies": {
+    "eslint": "10.10.0",
+    "prettier": "3.9.6"
+  }
+}

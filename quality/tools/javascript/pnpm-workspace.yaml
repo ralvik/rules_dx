@@ -1,0 +1,5 @@
+# M17 WP1 slice 3: private pure-JavaScript tool graph (ESLint + Prettier).
+# allowBuilds stays empty: both packages are pure JS with no lifecycle
+# hooks; any future native dep must opt in explicitly here (fail-closed
+# per tool-acquisition private-graph requirements).
+allowBuilds: {}

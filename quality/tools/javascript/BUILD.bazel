@@ -1,0 +1,35 @@
+"""M17 WP1 slice 3: private pure-JavaScript tool graph (ESLint + Prettier).
+
+Ruleset-owned ecosystem graph per tool-acquisition: rules_dx owns the
+package.json/pnpm-lock.yaml, exposes stable js_binary entry points through
+authoritative rules_js, and hides hub layout from consumers. Both tools
+share the managed Node 22 toolchain (no ambient Node, no consumer
+lock/installer, no lifecycle scripts via allowBuilds: {}).
+"""
+
+load("@npm_tools//:defs.bzl", "npm_link_all_packages")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    ".npmrc",
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+])
+
+# Private importer-local facade over the authoritative pnpm store. Stable
+# tool entry points live in the ./bin subpackage so js_binary outputs
+# never collide with this linked tree (same split as //:node_modules vs
+# //javascript/... wrappers).
+npm_link_all_packages(name = "node_modules")
+
+# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. The package manifest
+# and pnpm lock stay dx-owned/unclassified, never corpus sources. The
+# lock is a generated third-party manifest, excluded like other locks.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
