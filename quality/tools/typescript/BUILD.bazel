@@ -1,0 +1,30 @@
+"""M17 WP1 slice 4: authoritative `tsc` mapping (no separate tool graph).
+
+`tsc` 5.9.3 resolves from the pinned `aspect_rules_ts` toolchain
+(`typescript.deps` -> `@npm_typescript`, MODULE.bazel) on the shared
+managed Node 22 toolchain: no ambient Node, no consumer package manifest,
+no install/lifecycle script. Quality diagnostics must consume the
+`typescript_project` context -- `TsConfigInfo` + `OutputGroupInfo`
+(`typecheck`/`transitive_typecheck`) + the upstream
+`<name>_dx_upstream_typecheck_test` -- never a bare `tsc` file
+invocation, which would lose tsconfig/declaration context.
+
+Provenance (seed host, Linux x86_64, local execution only):
+`bazel run @npm_typescript//:tsc -- --version` reports `Version 5.9.3`;
+`bazel build //typescript/hello:hello_lib` emits `hello.js`;
+`bazel test //typescript/hello:hello_lib_dx_upstream_typecheck_test`
+passes; `which node` finds no ambient Node.
+"""
+
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. There is no
+# ruleset-owned manifest/lock here: the TypeScript toolchain and its
+# managed Node runtime are pinned in MODULE.bazel (M16 WP1).
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
