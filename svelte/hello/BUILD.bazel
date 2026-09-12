@@ -1,0 +1,37 @@
+"""M19 seed Svelte component; consumer of dx_svelte_* wrappers."""
+
+load("//javascript/rules:defs.bzl", "dx_js_library", "dx_js_test")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//svelte/rules:defs.bzl", "dx_svelte_library")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_svelte_library(
+    name = "hello_lib",
+    srcs = ["Hello.svelte"],
+)
+
+dx_js_library(
+    name = "helper_lib",
+    srcs = ["helper.js"],
+)
+
+dx_js_test(
+    name = "hello_test",
+    srcs = ["Hello.test.js"],
+    data = [
+        ":Hello.svelte",
+        ":helper_lib",
+        "//:node_modules/svelte",
+    ],
+    node_modules = "//:node_modules",
+    node_options = ["--experimental-vm-modules"],
+)
+
+# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. Svelte sources stay
+# dx-owned, never corpus sources.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
