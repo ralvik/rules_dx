@@ -165,6 +165,7 @@ dx_tools.platform(
 )
 use_repo(
     dx_tools,
+    "dx_biome_linux_x86_64",
     "dx_buildifier_linux_x86_64",
     "dx_ruff_linux_x86_64",
     "dx_taplo_linux_x86_64",
