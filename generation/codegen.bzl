@@ -20,8 +20,18 @@ adapter claims them here.
 Conflict rule (from `docs/environments/codegen.md`): multiple producers
 claiming an incompatible language import path fail before selection; no
 traversal-order winner is accepted. Byte-identical duplicate records (the
-same producer, language, path, root, and namespace) merge silently, since
-transitive collection reaches one record through many routes.
+same producer, language, path, root, namespace, and exec path) merge
+silently, since transitive collection reaches one record through many
+routes.
+
+Slice 4 adds the optional per-entry `exec_path` BEP-matching suffix
+(field 5 on the wire): empty means a logical-only entry requiring no
+materialized artifact; non-empty must resolve to exactly one BEP-reported
+non-shard artifact (suffix match so output bases differ) and every
+non-shard BEP artifact must be claimed, otherwise collection fails with
+missing/duplicate/unreported before projection planning. The fingerprint
+covers the exec path, so the plan identity binds logical mappings to
+their backing artifacts.
 
 Contract: `docs/environments/codegen.md` (provider contract, filesystem
 projection), `docs/product/scope.md` (automatic workflows).
@@ -90,19 +100,23 @@ def codegen_path_error(path):
             return "invalid codegen path '" + path + "': must not contain '.' or '..' segments"
     return ""
 
-def codegen_entry(logical_path, import_root, namespace = ""):
+def codegen_entry(logical_path, import_root, namespace = "", exec_path = ""):
     """Builds one normalized projection entry struct.
 
     Args:
       logical_path: deterministic workspace-relative generated path.
       import_root: language import/source root, workspace-relative.
       namespace: required package/namespace semantics, or "".
+      exec_path: BEP-matching suffix for the backing artifact, or "" for
+        a logical-only entry requiring no materialized artifact.
 
     Returns:
-      A struct with `logical_path`, `import_root`, `namespace`, and
-      `read_only` (always True: projections are read-only context).
+      A struct with `logical_path`, `import_root`, `namespace`,
+      `exec_path`, and `read_only` (always True: projections are
+      read-only context).
     """
     return struct(
+        exec_path = exec_path,
         import_root = import_root,
         logical_path = logical_path,
         namespace = namespace,
@@ -152,20 +166,47 @@ def codegen_record_error(record):
         error = codegen_path_error(entry.import_root)
         if error != "":
             return "invalid codegen record '" + record.producer + "': " + error
+        error = codegen_exec_error(entry.exec_path)
+        if error != "":
+            return "invalid codegen record '" + record.producer + "': " + error
         if entry.logical_path in seen:
             return "invalid codegen record '" + record.producer + "': duplicate logical path '" + entry.logical_path + "'"
         seen[entry.logical_path] = True
     return ""
 
+def codegen_exec_error(path):
+    """Validates one BEP-matching exec-path suffix.
+
+    Empty means a logical-only entry requiring no artifact. Non-empty
+    follows the same workspace-relative shape rules as logical paths
+    and never uses the reserved shard suffix (a shard never backs
+    another shard).
+
+    Args:
+      path: candidate exec-path suffix.
+
+    Returns:
+      "" when valid, else the failure reason.
+    """
+    if path == "":
+        return ""
+    if path.endswith(DX_CODEGEN_SHARD_SUFFIX):
+        return "invalid codegen exec path '" + path + "': must not use the reserved shard suffix '" + DX_CODEGEN_SHARD_SUFFIX + "'"
+    error = codegen_path_error(path)
+    if error != "":
+        return error.replace("invalid codegen path", "invalid codegen exec path", 1)
+    return ""
+
 def _codegen_entry_key(entry):
-    return (entry.logical_path, entry.import_root, entry.namespace)
+    return (entry.logical_path, entry.import_root, entry.namespace, entry.exec_path)
 
 def codegen_conflict_error(records):
     """Detects incompatible logical-path claims across records.
 
-    Byte-identical duplicates (same producer, language, path, root, and
-    namespace) merge silently. Any other second claim on one logical path
-    fails, listing every claimant: no traversal-order winner is accepted.
+    Byte-identical duplicates (same producer, language, path, root,
+    namespace, and exec path) merge silently. Any other second claim on
+    one logical path fails, listing every claimant: no traversal-order
+    winner is accepted.
 
     Args:
       records: list of `codegen_record` structs.
@@ -196,10 +237,11 @@ def codegen_merge_records(records):
     """Merges records into deterministic normalized order.
 
     Byte-identical duplicate entries collapse; surviving records sort
-    by (producer, language) with entries sorted by logical path. The
-    rendering is the normalized complete-plan form the CLI hashes;
-    repository roots emit no second closure manifest, so shared closures
-    serialize once per record, not once per selected root.
+    by (producer, language) with entries sorted by (logical path,
+    import root, namespace, exec path). The rendering is the normalized
+    complete-plan form the CLI hashes; repository roots emit no second
+    closure manifest, so shared closures serialize once per record, not
+    once per selected root.
 
     Args:
       records: list of `codegen_record` structs.
@@ -230,13 +272,16 @@ def codegen_plan_fingerprint(records):
 
     Returns:
       Deterministic JSON over the merged records: one object per record
-      with producer, language, and entries sorted by logical path.
+      with producer, language, and entries sorted by (logical path,
+      import root, namespace, exec path), each entry carrying its
+      exec-path suffix so the identity binds mappings to artifacts.
     """
     merged = codegen_merge_records(records)
     return json.encode([
         {
             "entries": [
                 {
+                    "exec_path": entry.exec_path,
                     "import_root": entry.import_root,
                     "logical_path": entry.logical_path,
                     "namespace": entry.namespace,
@@ -268,23 +313,29 @@ def codegen_pair_error(schema_kind, language):
     )
 
 def _parse_entry_spec(spec, label_text):
-    """Parses one LOGICAL|ROOT|NAMESPACE entry spec.
+    """Parses one LOGICAL|ROOT|NAMESPACE[|EXEC] entry spec.
+
+    The three-part form declares a logical-only entry (empty exec path,
+    requiring no materialized artifact). The four-part form declares the
+    BEP-matching exec-path suffix for the backing artifact.
 
     Args:
-      spec: raw entry string with exactly two "|" separators.
+      spec: raw entry string with two or three "|" separators.
       label_text: owning label rendering for diagnostics.
 
     Returns:
       A `codegen_entry` struct.
     """
     parts = spec.split("|")
-    if len(parts) != 3:
-        fail(
-            "dx_codegen_shard " + label_text +
-            ": bad entry " + repr(spec) +
-            ": want LOGICAL_PATH|IMPORT_ROOT|NAMESPACE",
-        )
-    return codegen_entry(parts[0], parts[1], parts[2])
+    if len(parts) == 3:
+        return codegen_entry(parts[0], parts[1], parts[2])
+    if len(parts) == 4:
+        return codegen_entry(parts[0], parts[1], parts[2], parts[3])
+    fail(
+        "dx_codegen_shard " + label_text +
+        ": bad entry " + repr(spec) +
+        ": want LOGICAL_PATH|IMPORT_ROOT|NAMESPACE[|EXEC_PATH]",
+    )
 
 def _emit_shard(ctx, producer, language, entry_structs):
     """Validates one record and emits its binary shard via the writer.
@@ -307,10 +358,16 @@ def _emit_shard(ctx, producer, language, entry_structs):
     args.add("--producer", producer)
     args.add("--language", language)
     for entry in entry_structs:
-        args.add(
-            "--entry",
-            entry.logical_path + "|" + entry.import_root + "|" + entry.namespace,
-        )
+        if entry.exec_path == "":
+            args.add(
+                "--entry",
+                entry.logical_path + "|" + entry.import_root + "|" + entry.namespace,
+            )
+        else:
+            args.add(
+                "--entry",
+                entry.logical_path + "|" + entry.import_root + "|" + entry.namespace + "|" + entry.exec_path,
+            )
     args.add("--output", out.path)
     ctx.actions.run(
         executable = ctx.executable._writer,
@@ -320,6 +377,23 @@ def _emit_shard(ctx, producer, language, entry_structs):
         progress_message = "Dx codegen shard %{label}",
     )
     return out, record
+
+def _exec_matches(file_path, exec_path):
+    """Reports whether a Bazel file path satisfies an exec-path suffix.
+
+    Suffix matching (on "/" boundaries, plus exact equality) lets one
+    logical entry resolve under different output bases without scanning
+    `bazel-out`.
+
+    Args:
+      file_path: Bazel `File.path` of a generated artifact.
+      exec_path: non-empty BEP-matching suffix from an entry.
+
+    Returns:
+      True when `file_path` equals `exec_path` or ends with
+      `"/" + exec_path`.
+    """
+    return file_path == exec_path or file_path.endswith("/" + exec_path)
 
 def _dx_codegen_shard_impl(ctx):
     producer = display_label(ctx.label)
@@ -343,7 +417,7 @@ dx_codegen_shard = rule(
         ),
         "entries": attr.string_list(
             mandatory = True,
-            doc = "Non-empty projection entries, each LOGICAL_PATH|IMPORT_ROOT|NAMESPACE.",
+            doc = "Non-empty projection entries, each LOGICAL_PATH|IMPORT_ROOT|NAMESPACE[|EXEC_PATH].",
         ),
         "language": attr.string(
             mandatory = True,
@@ -436,6 +510,41 @@ def _prost_codegen_shard_impl(ctx):
             display_label(upstream.label) + " emitted no generated Rust sources",
         )
     entries = [_parse_entry_spec(spec, producer) for spec in ctx.attr.entries]
+    for entry in entries:
+        if entry.exec_path == "":
+            fail(
+                "prost_codegen_shard " + producer + ": entry '" +
+                entry.logical_path + "' needs an EXEC_PATH suffix binding it to one rust_generated_srcs artifact (logical-only entries carry no backing artifact)",
+            )
+    for entry in entries:
+        matches = [f for f in generated if _exec_matches(f.path, entry.exec_path)]
+        if len(matches) == 0:
+            fail(
+                "prost_codegen_shard " + producer + ": entry '" +
+                entry.logical_path + "' with EXEC_PATH '" + entry.exec_path +
+                "' matches no rust_generated_srcs artifact from " +
+                display_label(upstream.label),
+            )
+        if len(matches) > 1:
+            fail(
+                "prost_codegen_shard " + producer + ": entry '" +
+                entry.logical_path + "' with EXEC_PATH '" + entry.exec_path +
+                "' is ambiguous: matches " + str(len(matches)) +
+                " rust_generated_srcs artifacts, want exactly one",
+            )
+    for f in generated:
+        claimants = [entry for entry in entries if _exec_matches(f.path, entry.exec_path)]
+        if len(claimants) == 0:
+            fail(
+                "prost_codegen_shard " + producer + ": unreported rust_generated_srcs artifact '" +
+                f.path + "' from " + display_label(upstream.label) +
+                ": every generated artifact needs one claiming entry",
+            )
+        if len(claimants) > 1:
+            fail(
+                "prost_codegen_shard " + producer + ": duplicate claim on rust_generated_srcs artifact '" +
+                f.path + "': claimed by " + str(len(claimants)) + " entries, want exactly one",
+            )
     out, record = _emit_shard(ctx, producer, ctx.attr.language, entries)
     return [
         DefaultInfo(files = depset([out])),
@@ -448,7 +557,7 @@ prost_codegen_shard = rule(
     attrs = {
         "entries": attr.string_list(
             mandatory = True,
-            doc = "Explicit logical projection entries, each LOGICAL_PATH|IMPORT_ROOT|NAMESPACE. Paths are never inferred from the upstream action.",
+            doc = "Explicit logical projection entries, each LOGICAL_PATH|IMPORT_ROOT|NAMESPACE|EXEC_PATH. Paths are never inferred from the upstream action; every entry binds one rust_generated_srcs artifact and every generated artifact needs one claimant.",
         ),
         "language": attr.string(
             default = "rust",

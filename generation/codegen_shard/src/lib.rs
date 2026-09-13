@@ -5,8 +5,10 @@
 //! `//generation:codegen.proto`. This crate enforces the checks that mirror
 //! the frozen Starlark semantics in `//generation:codegen.bzl`: producer
 //! label shape, non-empty language, non-empty entries, workspace-relative
-//! paths, within-shard duplicate logical paths, and the always-true
-//! `read_only` wire bit. Cross-record conflict detection and deterministic
+//! paths, within-shard duplicate logical paths, the always-true
+//! `read_only` wire bit, and the optional `exec_path` BEP-matching suffix
+//! (empty for logical-only entries, never the reserved shard suffix).
+//! Cross-record conflict detection and deterministic
 //! merge stay in Starlark (`codegen_conflict_error`, `codegen_merge_records`)
 //! and in the `dx` CLI collection; this crate only validates and encodes
 //! one contributor shard.
@@ -31,6 +33,11 @@ pub enum Error {
         producer: String,
     },
     BadPath {
+        producer: String,
+        path: String,
+        reason: &'static str,
+    },
+    BadExecPath {
         producer: String,
         path: String,
         reason: &'static str,
@@ -75,6 +82,35 @@ fn check_path(producer: &str, path: &str) -> Result<(), Error> {
     }
 }
 
+fn check_exec_path(producer: &str, path: &str) -> Result<(), Error> {
+    // Empty exec paths are logical-only entries requiring no artifact.
+    // Non-empty exec paths are BEP-matching suffixes: same shape rules
+    // as logical paths, plus refusal of the reserved shard suffix so a
+    // shard can never claim another shard as its backing artifact.
+    if path.is_empty() {
+        return Ok(());
+    }
+    if path.ends_with(".dxcodegen.pb") {
+        return Err(Error::BadExecPath {
+            producer: producer.to_owned(),
+            path: path.to_owned(),
+            reason: "must not use the reserved shard suffix",
+        });
+    }
+    check_path(producer, path).map_err(|error| match error {
+        Error::BadPath {
+            producer,
+            path,
+            reason,
+        } => Error::BadExecPath {
+            producer,
+            path,
+            reason,
+        },
+        other => other,
+    })
+}
+
 /// Validates one contributor shard, mirroring `codegen_record_error`.
 pub fn validate(shard: &DxCodegenShard) -> Result<(), Error> {
     if shard.producer.is_empty() {
@@ -99,6 +135,7 @@ pub fn validate(shard: &DxCodegenShard) -> Result<(), Error> {
     for entry in &shard.entries {
         check_path(&shard.producer, &entry.logical_path)?;
         check_path(&shard.producer, &entry.import_root)?;
+        check_exec_path(&shard.producer, &entry.exec_path)?;
         if !entry.read_only {
             return Err(Error::NotReadOnly {
                 producer: shard.producer.clone(),
@@ -139,6 +176,22 @@ mod tests {
             import_root: import_root.into(),
             namespace: namespace.into(),
             read_only: true,
+            exec_path: String::new(),
+        }
+    }
+
+    fn entry_with_exec(
+        logical_path: &str,
+        import_root: &str,
+        namespace: &str,
+        exec_path: &str,
+    ) -> DxCodegenEntry {
+        DxCodegenEntry {
+            logical_path: logical_path.into(),
+            import_root: import_root.into(),
+            namespace: namespace.into(),
+            read_only: true,
+            exec_path: exec_path.into(),
         }
     }
 
@@ -158,6 +211,11 @@ mod tests {
         let shard = sample();
         let bytes = encode_validated(&shard).unwrap();
         assert_eq!(decode_validated(&bytes).unwrap(), shard);
+        // Exec paths round-trip as well.
+        let mut with_exec = sample();
+        with_exec.entries[0] = entry_with_exec("src/beta.rs", "src", "beta", "result.lib.rs");
+        let bytes = encode_validated(&with_exec).unwrap();
+        assert_eq!(decode_validated(&bytes).unwrap(), with_exec);
     }
 
     #[test]
@@ -210,6 +268,20 @@ mod tests {
                 "import root {path:?} must fail",
             );
         }
+        // Empty exec paths are logical-only and valid; non-empty ones
+        // follow the same shape rules and never use the shard suffix.
+        assert!(validate(&sample()).is_ok());
+        for path in ["/out/a.rs", "src\\a.rs", "src/./a.rs", "a.dxcodegen.pb"] {
+            let mut shard = sample();
+            shard.entries[0].exec_path = path.into();
+            assert!(
+                matches!(validate(&shard), Err(Error::BadExecPath { .. })),
+                "exec path {path:?} must fail",
+            );
+        }
+        let mut ok = sample();
+        ok.entries[0].exec_path = "result_proto.lib.rs".into();
+        assert!(validate(&ok).is_ok());
     }
 
     #[test]

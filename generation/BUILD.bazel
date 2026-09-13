@@ -53,7 +53,7 @@ dx_codegen_shard(
 
 prost_codegen_shard(
     name = "codegen_prost_fixture",
-    entries = ["gen/prost_result.rs|gen|result"],
+    entries = ["gen/prost_result.rs|gen|result|result_proto.lib.rs"],
     language = "rust",
     proto_rs = ":result_proto_rs",
 )

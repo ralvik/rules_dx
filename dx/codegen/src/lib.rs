@@ -1,4 +1,4 @@
-//! Normalized codegen plan collection for the `dx` CLI (M25 WP1 slice 3).
+//! Normalized codegen plan collection for the `dx` CLI (M25 WP1 slice 4).
 //!
 //! Contract: `docs/environments/codegen.md` (provider contract, private
 //! `dx_codegen_plans` output group, reserved shard suffix) and
@@ -13,12 +13,19 @@
 //!
 //! The collector reads only BEP-reported artifacts in the requested output
 //! group (via `dx_bep`), recognizes shards by the reserved suffix, and
-//! never scans `bazel-out`: missing, duplicate, or unreported referenced
-//! artifacts fail collection. Byte-identical duplicate records (one record
-//! reached through many transitive routes) merge silently; any other
-//! second claim on a logical path fails before selection with every
-//! claimant listed. The normalized fingerprint is hashed with BLAKE3-256
-//! through `quality_result` (no algorithm negotiation).
+//! never scans `bazel-out`. Each non-empty entry `exec_path` suffix must
+//! resolve to exactly one BEP-reported non-shard artifact (suffix match
+//! on "/" boundaries so output bases differ); missing, ambiguous, or
+//! duplicate claims fail, and every non-shard BEP artifact must be
+//! claimed, otherwise collection fails with unreported before projection
+//! planning. Empty exec paths are logical-only entries requiring no
+//! artifact. Byte-identical duplicate records (one record reached through
+//! many transitive routes) merge silently; any other second claim on a
+//! logical path fails before selection with every claimant listed. The
+//! normalized fingerprint binds exec paths and is hashed with BLAKE3-256
+//! through `quality_result` (no algorithm negotiation). [`plan_projection`]
+//! resolves the merged plan to deterministic mirror leaves
+//! (`logical_path` to full BEP artifact path) for setup to commit.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -111,11 +118,14 @@ pub fn scope_targets(scope: &CodegenScope) -> Vec<String> {
 /// One normalized projection entry. Projections are always read-only
 /// context, so no `read_only` bit is carried: the fingerprint renders
 /// `read_only: true` unconditionally, matching `codegen_entry`.
+/// `exec_path` is the BEP-matching suffix for the backing artifact, or
+/// empty for a logical-only entry requiring no materialized artifact.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CodegenEntry {
     pub logical_path: String,
     pub import_root: String,
     pub namespace: String,
+    pub exec_path: String,
 }
 
 /// One contributor record: all entries from one producer in one
@@ -139,6 +149,23 @@ pub enum CollectError {
     /// matches `codegen_conflict_error` rendering, listing every
     /// claimant: no traversal-order winner is accepted.
     Conflict(String),
+    /// An entry's non-empty exec suffix matches no BEP-reported
+    /// non-shard artifact.
+    MissingArtifact {
+        producer: String,
+        logical_path: String,
+        exec_path: String,
+    },
+    /// An exec suffix matches more than one artifact, or one artifact
+    /// is claimed by more than one entry. `claimants` holds the
+    /// colliding logical paths (ambiguous case) or the artifact path
+    /// rendered once per claimant context; see message construction.
+    DuplicateArtifact {
+        exec_path: String,
+        claimants: Vec<String>,
+    },
+    /// A BEP-reported non-shard artifact is claimed by no entry.
+    UnreportedArtifact { path: String },
 }
 
 impl std::fmt::Display for CollectError {
@@ -157,11 +184,27 @@ pub fn is_shard_artifact(path: &Path) -> bool {
         .ends_with(SHARD_SUFFIX.as_bytes())
 }
 
-/// Decodes every shard among the BEP-reported artifacts, ignoring
-/// non-shard generated artifacts (indexed against shard declarations in
-/// a later slice). Inputs arrive sorted by label from `dx_bep`;
-/// determinism comes from [`merge_records`], never arrival order.
+/// Reports whether a BEP-reported artifact path satisfies an entry's
+/// exec suffix: exact equality or a "/"-boundary suffix match, so
+/// different output bases still resolve without scanning `bazel-out`.
+/// Mirrors `_exec_matches` in `//generation:codegen.bzl`.
+pub fn exec_matches(artifact_path: &Path, exec_path: &str) -> bool {
+    if exec_path.is_empty() {
+        return false;
+    }
+    let rendered = artifact_path.as_os_str().to_string_lossy();
+    rendered.as_ref() == exec_path || rendered.ends_with(&format!("/{exec_path}"))
+}
+
+/// Decodes every shard among the BEP-reported artifacts and validates
+/// the artifact index against shard declarations: each non-empty entry
+/// exec suffix must resolve to exactly one non-shard BEP artifact, and
+/// every non-shard BEP artifact must be claimed by exactly one entry.
+/// Logical-only entries (empty exec) require no artifact. Inputs arrive
+/// sorted by label from `dx_bep`; determinism comes from
+/// [`merge_records`], never arrival order.
 pub fn collect_shards(outputs: &[TargetOutput]) -> Result<Vec<CodegenRecord>, CollectError> {
+    let generated_paths = generated_artifact_paths(outputs);
     let mut records = Vec::new();
     for output in outputs {
         for artifact in &output.artifacts {
@@ -184,23 +227,110 @@ pub fn collect_shards(outputs: &[TargetOutput]) -> Result<Vec<CodegenRecord>, Co
                         logical_path: entry.logical_path,
                         import_root: entry.import_root,
                         namespace: entry.namespace,
+                        exec_path: entry.exec_path,
                     })
                     .collect(),
             });
         }
     }
+    let _ = index_artifacts(&records, &generated_paths)?;
     Ok(records)
 }
 
+/// Lists every BEP-reported non-shard artifact path: the generated
+/// files the shard `exec_path` suffixes index into. Shard files are
+/// recognized by the reserved suffix and excluded.
+fn generated_artifact_paths(outputs: &[TargetOutput]) -> Vec<String> {
+    let mut paths = Vec::new();
+    for output in outputs {
+        for artifact in &output.artifacts {
+            if !is_shard_artifact(&artifact.exec_path) {
+                paths.push(artifact.exec_path.display().to_string());
+            }
+        }
+    }
+    paths
+}
+
+/// Reports whether a BEP-reported artifact path satisfies an entry's
+/// exec suffix: exact equality or a "/"-boundary suffix match.
+fn suffix_matches(artifact: &str, exec_path: &str) -> bool {
+    artifact == exec_path || artifact.ends_with(&format!("/{exec_path}"))
+}
+
+/// Validates the artifact index and resolves every backed entry to its
+/// backing artifact: each non-empty entry exec suffix must resolve to
+/// exactly one non-shard BEP artifact, and every non-shard BEP artifact
+/// must be claimed by exactly one entry. Returns the resolution map
+/// from `(producer, logical_path)` to the full BEP-reported artifact
+/// path; logical-only entries (empty exec) resolve to no artifact and
+/// hold no map entry.
+fn index_artifacts<'a>(
+    records: &'a [CodegenRecord],
+    generated_paths: &[String],
+) -> Result<BTreeMap<(&'a str, &'a str), String>, CollectError> {
+    let claimed: Vec<(&CodegenRecord, &CodegenEntry)> = records
+        .iter()
+        .flat_map(|record| record.entries.iter().map(move |entry| (record, entry)))
+        .filter(|(_, entry)| !entry.exec_path.is_empty())
+        .collect();
+    let mut resolved: BTreeMap<(&str, &str), String> = BTreeMap::new();
+    for (record, entry) in &claimed {
+        let matches: Vec<&String> = generated_paths
+            .iter()
+            .filter(|path| suffix_matches(path, &entry.exec_path))
+            .collect();
+        if matches.is_empty() {
+            return Err(CollectError::MissingArtifact {
+                producer: record.producer.clone(),
+                logical_path: entry.logical_path.clone(),
+                exec_path: entry.exec_path.clone(),
+            });
+        }
+        if matches.len() > 1 {
+            return Err(CollectError::DuplicateArtifact {
+                exec_path: entry.exec_path.clone(),
+                claimants: matches.into_iter().map(|path| (*path).clone()).collect(),
+            });
+        }
+        resolved.insert(
+            (record.producer.as_str(), entry.logical_path.as_str()),
+            (*matches[0]).clone(),
+        );
+    }
+    for path in generated_paths {
+        let claimants: Vec<(&CodegenRecord, &CodegenEntry)> = claimed
+            .iter()
+            .filter(|(_, entry)| suffix_matches(path, &entry.exec_path))
+            .map(|(record, entry)| (*record, *entry))
+            .collect();
+        if claimants.is_empty() {
+            return Err(CollectError::UnreportedArtifact { path: path.clone() });
+        }
+        if claimants.len() > 1 {
+            let exec = claimants[0].1.exec_path.clone();
+            let rendered: Vec<String> = claimants
+                .iter()
+                .map(|(record, entry)| format!("{}:{}", record.producer, entry.logical_path))
+                .collect();
+            return Err(CollectError::DuplicateArtifact {
+                exec_path: exec,
+                claimants: rendered,
+            });
+        }
+    }
+    Ok(resolved)
+}
+
 /// Merge index: owner `(producer, language)` to entry key
-/// `(logical_path, import_root, namespace)` to entry.
+/// `(logical_path, import_root, namespace, exec_path)` to entry.
 type MergeIndex<'a> =
-    BTreeMap<(&'a str, &'a str), BTreeMap<(&'a str, &'a str, &'a str), &'a CodegenEntry>>;
+    BTreeMap<(&'a str, &'a str), BTreeMap<(&'a str, &'a str, &'a str, &'a str), &'a CodegenEntry>>;
 
 /// Merges records into deterministic normalized order, mirroring
 /// `codegen_merge_records`: byte-identical duplicate entries collapse,
 /// surviving records sort by `(producer, language)` with entries sorted
-/// by `(logical_path, import_root, namespace)`.
+/// by `(logical_path, import_root, namespace, exec_path)`.
 pub fn merge_records(records: &[CodegenRecord]) -> Vec<CodegenRecord> {
     let mut owners: MergeIndex<'_> = BTreeMap::new();
     for record in records {
@@ -213,6 +343,7 @@ pub fn merge_records(records: &[CodegenRecord]) -> Vec<CodegenRecord> {
                     entry.logical_path.as_str(),
                     entry.import_root.as_str(),
                     entry.namespace.as_str(),
+                    entry.exec_path.as_str(),
                 ))
                 .or_insert(entry);
         }
@@ -228,11 +359,15 @@ pub fn merge_records(records: &[CodegenRecord]) -> Vec<CodegenRecord> {
 }
 
 /// Detects incompatible logical-path claims across records, mirroring
-/// `codegen_conflict_error`: byte-identical duplicates merge silently,
-/// any other second claim fails, listing every claimant. Returns `""`
-/// when conflict-free.
+/// `codegen_conflict_error`: byte-identical duplicates (same producer,
+/// language, root, namespace, and exec path) merge silently, any other
+/// second claim fails, listing every claimant. Returns `""` when
+/// conflict-free.
 pub fn conflict_error(records: &[CodegenRecord]) -> String {
-    let mut by_path: BTreeMap<&str, BTreeSet<(&str, &str, &str, &str)>> = BTreeMap::new();
+    /// One logical-path claim: owner `(producer, language)` plus the
+    /// full entry identity `(import_root, namespace, exec_path)`.
+    type Claim<'a> = (&'a str, &'a str, &'a str, &'a str, &'a str);
+    let mut by_path: BTreeMap<&str, BTreeSet<Claim<'_>>> = BTreeMap::new();
     for record in records {
         for entry in &record.entries {
             by_path
@@ -243,6 +378,7 @@ pub fn conflict_error(records: &[CodegenRecord]) -> String {
                     record.language.as_str(),
                     entry.import_root.as_str(),
                     entry.namespace.as_str(),
+                    entry.exec_path.as_str(),
                 ));
         }
     }
@@ -282,8 +418,10 @@ fn escape_into(out: &mut String, text: &str) {
 /// Renders the normalized complete-plan hash input, mirroring
 /// `codegen_plan_fingerprint`: deterministic JSON over the merged
 /// records, one object per record with producer, language, and entries
-/// sorted by logical path. Byte-identical to the Starlark rendering for
-/// the same records (pinned by the chain/prost fixture fingerprints).
+/// sorted by (logical path, import root, namespace, exec path), each
+/// entry binding its exec suffix. Byte-identical to the Starlark
+/// rendering for the same records (pinned by the chain/prost fixture
+/// fingerprints).
 pub fn fingerprint(records: &[CodegenRecord]) -> String {
     let merged = merge_records(records);
     let mut out = String::from("[");
@@ -296,7 +434,9 @@ pub fn fingerprint(records: &[CodegenRecord]) -> String {
             if entry_index > 0 {
                 out.push(',');
             }
-            out.push_str("{\"import_root\":\"");
+            out.push_str("{\"exec_path\":\"");
+            escape_into(&mut out, &entry.exec_path);
+            out.push_str("\",\"import_root\":\"");
             escape_into(&mut out, &entry.import_root);
             out.push_str("\",\"logical_path\":\"");
             escape_into(&mut out, &entry.logical_path);
@@ -369,6 +509,54 @@ pub fn collect_plan(outputs: &[TargetOutput]) -> Result<CollectedPlan, CollectEr
     })
 }
 
+/// One planned mirror leaf: the deterministic workspace-relative
+/// logical path and the full BEP-reported artifact path it links to.
+/// Logical-only entries (empty exec) carry no backing artifact and hold
+/// no projection entry: the mirror links backed files only.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProjectionEntry {
+    pub logical_path: String,
+    pub artifact: String,
+    pub import_root: String,
+    pub namespace: String,
+}
+
+/// Plans the read-only mirror from merged records and BEP-reported
+/// outputs: resolves every backed entry to its unique backing artifact
+/// through the same index [`collect_shards`] validates (missing,
+/// ambiguous, duplicate, or unreported artifacts fail here too),
+/// skips logical-only entries, and sorts by logical path so setup
+/// commits one deterministic link tree. Callers pass the merged
+/// [`CollectedPlan::records`]; conflicts must already be rejected by
+/// [`conflict_error`] before selection.
+pub fn plan_projection(
+    records: &[CodegenRecord],
+    outputs: &[TargetOutput],
+) -> Result<Vec<ProjectionEntry>, CollectError> {
+    let generated_paths = generated_artifact_paths(outputs);
+    let resolved = index_artifacts(records, &generated_paths)?;
+    let mut projection: Vec<ProjectionEntry> = Vec::new();
+    for record in records {
+        for entry in &record.entries {
+            if entry.exec_path.is_empty() {
+                continue;
+            }
+            let artifact = resolved
+                .get(&(record.producer.as_str(), entry.logical_path.as_str()))
+                .cloned()
+                .unwrap_or_else(|| entry.exec_path.clone());
+            projection.push(ProjectionEntry {
+                logical_path: entry.logical_path.clone(),
+                artifact,
+                import_root: entry.import_root.clone(),
+                namespace: entry.namespace.clone(),
+            });
+        }
+    }
+    projection.sort_by(|left, right| left.logical_path.cmp(&right.logical_path));
+    Ok(projection)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -382,6 +570,21 @@ mod tests {
             logical_path: logical_path.to_owned(),
             import_root: import_root.to_owned(),
             namespace: namespace.to_owned(),
+            exec_path: String::new(),
+        }
+    }
+
+    fn entry_with_exec(
+        logical_path: &str,
+        import_root: &str,
+        namespace: &str,
+        exec_path: &str,
+    ) -> CodegenEntry {
+        CodegenEntry {
+            logical_path: logical_path.to_owned(),
+            import_root: import_root.to_owned(),
+            namespace: namespace.to_owned(),
+            exec_path: exec_path.to_owned(),
         }
     }
 
@@ -409,18 +612,25 @@ mod tests {
         )
     }
 
-    fn shard_bytes(producer: &str, language: &str, entries: Vec<(&str, &str, &str)>) -> Vec<u8> {
+    fn shard_bytes(
+        producer: &str,
+        language: &str,
+        entries: Vec<(&str, &str, &str, &str)>,
+    ) -> Vec<u8> {
         let shard = DxCodegenShard {
             producer: producer.to_owned(),
             language: language.to_owned(),
             entries: entries
                 .into_iter()
-                .map(|(logical_path, import_root, namespace)| DxCodegenEntry {
-                    logical_path: logical_path.to_owned(),
-                    import_root: import_root.to_owned(),
-                    namespace: namespace.to_owned(),
-                    read_only: true,
-                })
+                .map(
+                    |(logical_path, import_root, namespace, exec_path)| DxCodegenEntry {
+                        logical_path: logical_path.to_owned(),
+                        import_root: import_root.to_owned(),
+                        namespace: namespace.to_owned(),
+                        read_only: true,
+                        exec_path: exec_path.to_owned(),
+                    },
+                )
                 .collect(),
         };
         codegen_shard::encode_validated(&shard).expect("valid shard")
@@ -510,16 +720,39 @@ mod tests {
     }
 
     #[test]
-    fn collect_shards_ignores_generated_artifacts() {
+    fn exec_suffix_matches_on_component_boundaries() {
+        assert!(exec_matches(
+            Path::new("/out/result_proto.lib.rs"),
+            "result_proto.lib.rs"
+        ));
+        assert!(exec_matches(
+            Path::new("/bazel-out/k8-fastbuild/bin/gen/result_proto.lib.rs"),
+            "result_proto.lib.rs"
+        ));
+        assert!(!exec_matches(
+            Path::new("/out/other.lib.rs"),
+            "result_proto.lib.rs"
+        ));
+        // Suffix matches only on "/" boundaries, never mid-segment.
+        assert!(!exec_matches(
+            Path::new("/out/xresult_proto.lib.rs"),
+            "result_proto.lib.rs"
+        ));
+        assert!(!exec_matches(Path::new("/out/a.rs"), ""));
+    }
+
+    #[test]
+    fn collect_shards_accepts_logical_only_without_artifacts() {
         let outputs = vec![output(
             "//gen:beta",
-            vec![
-                (
-                    "/out/beta.dxcodegen.pb",
-                    shard_bytes("//gen:beta", "rust", vec![("gen/beta.rs", "gen", "beta")]),
+            vec![(
+                "/out/beta.dxcodegen.pb",
+                shard_bytes(
+                    "//gen:beta",
+                    "rust",
+                    vec![("gen/beta.rs", "gen", "beta", "")],
                 ),
-                ("/out/beta.lib.rs", vec![1, 2, 3]),
-            ],
+            )],
         )];
         let records = collect_shards(&outputs).expect("collect");
         assert_eq!(
@@ -530,6 +763,120 @@ mod tests {
                 vec![entry("gen/beta.rs", "gen", "beta")]
             )]
         );
+    }
+
+    #[test]
+    fn collect_shards_binds_exec_suffix_to_one_artifact() {
+        let outputs = vec![output(
+            "//gen:beta",
+            vec![
+                (
+                    "/out/beta.dxcodegen.pb",
+                    shard_bytes(
+                        "//gen:beta",
+                        "rust",
+                        vec![("gen/beta.rs", "gen", "beta", "beta.lib.rs")],
+                    ),
+                ),
+                ("/bazel-out/k8-fastbuild/bin/gen/beta.lib.rs", vec![1, 2, 3]),
+            ],
+        )];
+        let records = collect_shards(&outputs).expect("collect");
+        assert_eq!(
+            records,
+            vec![record(
+                "//gen:beta",
+                "rust",
+                vec![entry_with_exec("gen/beta.rs", "gen", "beta", "beta.lib.rs")]
+            )]
+        );
+    }
+
+    #[test]
+    fn collect_shards_rejects_missing_duplicate_and_unreported() {
+        // Missing: exec suffix matches no reported artifact.
+        let missing = vec![output(
+            "//gen:beta",
+            vec![(
+                "/out/beta.dxcodegen.pb",
+                shard_bytes(
+                    "//gen:beta",
+                    "rust",
+                    vec![("gen/beta.rs", "gen", "beta", "beta.lib.rs")],
+                ),
+            )],
+        )];
+        assert_eq!(
+            collect_shards(&missing),
+            Err(CollectError::MissingArtifact {
+                producer: "//gen:beta".to_owned(),
+                logical_path: "gen/beta.rs".to_owned(),
+                exec_path: "beta.lib.rs".to_owned(),
+            })
+        );
+        // Ambiguous: one suffix matches two reported artifacts.
+        let ambiguous = vec![output(
+            "//gen:beta",
+            vec![
+                (
+                    "/out/beta.dxcodegen.pb",
+                    shard_bytes(
+                        "//gen:beta",
+                        "rust",
+                        vec![("gen/beta.rs", "gen", "beta", "beta.lib.rs")],
+                    ),
+                ),
+                ("/out/a/beta.lib.rs", vec![1]),
+                ("/out/b/beta.lib.rs", vec![2]),
+            ],
+        )];
+        assert!(matches!(
+            collect_shards(&ambiguous),
+            Err(CollectError::DuplicateArtifact { .. })
+        ));
+        // Unreported: a non-shard artifact no entry claims.
+        let unreported = vec![output(
+            "//gen:beta",
+            vec![
+                (
+                    "/out/beta.dxcodegen.pb",
+                    shard_bytes(
+                        "//gen:beta",
+                        "rust",
+                        vec![("gen/beta.rs", "gen", "beta", "")],
+                    ),
+                ),
+                ("/out/beta.lib.rs", vec![1, 2, 3]),
+            ],
+        )];
+        assert_eq!(
+            collect_shards(&unreported),
+            Err(CollectError::UnreportedArtifact {
+                path: "/out/beta.lib.rs".to_owned(),
+            })
+        );
+        // Duplicate claim: two entries bind the same artifact.
+        let duplicate = vec![output(
+            "//gen:beta",
+            vec![
+                (
+                    "/out/beta.dxcodegen.pb",
+                    shard_bytes(
+                        "//gen:beta",
+                        "rust",
+                        vec![
+                            ("gen/a.rs", "gen", "a", "shared.lib.rs"),
+                            ("gen/b.rs", "gen", "b", "shared.lib.rs"),
+                        ],
+                    ),
+                ),
+                ("/out/shared.lib.rs", vec![1]),
+            ],
+        )];
+        assert!(matches!(
+            collect_shards(&duplicate),
+            Err(CollectError::DuplicateArtifact { .. })
+        ));
     }
 
     #[test]
@@ -583,8 +930,16 @@ mod tests {
     fn fingerprint_matches_starlark_rendering() {
         assert_eq!(
             fingerprint(&[record_b(), record_a(), record_a()]),
-            "[{\"entries\":[{\"import_root\":\"src\",\"logical_path\":\"src/alpha.rs\",\"namespace\":\"alpha\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:alpha\"},\
-             {\"entries\":[{\"import_root\":\"src\",\"logical_path\":\"src/beta.rs\",\"namespace\":\"beta\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:beta\"}]"
+            "[{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"src\",\"logical_path\":\"src/alpha.rs\",\"namespace\":\"alpha\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:alpha\"},\
+             {\"entries\":[{\"exec_path\":\"\",\"import_root\":\"src\",\"logical_path\":\"src/beta.rs\",\"namespace\":\"beta\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:beta\"}]"
+        );
+        assert_eq!(
+            fingerprint(&[record(
+                "//gen:a",
+                "rust",
+                vec![entry_with_exec("a", "b", "", "out/a.rs")]
+            )]),
+            "[{\"entries\":[{\"exec_path\":\"out/a.rs\",\"import_root\":\"b\",\"logical_path\":\"a\",\"namespace\":\"\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:a\"}]"
         );
     }
 
@@ -604,8 +959,26 @@ mod tests {
         ];
         assert_eq!(
             fingerprint(&records),
-            "[{\"entries\":[{\"import_root\":\"gen\",\"logical_path\":\"gen/alpha.rs\",\"namespace\":\"alpha\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//generation:codegen_shard_alpha\"},\
-             {\"entries\":[{\"import_root\":\"gen\",\"logical_path\":\"gen/beta.rs\",\"namespace\":\"beta\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//generation:codegen_shard_beta\"}]"
+            "[{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"gen\",\"logical_path\":\"gen/alpha.rs\",\"namespace\":\"alpha\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//generation:codegen_shard_alpha\"},\
+             {\"entries\":[{\"exec_path\":\"\",\"import_root\":\"gen\",\"logical_path\":\"gen/beta.rs\",\"namespace\":\"beta\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//generation:codegen_shard_beta\"}]"
+        );
+    }
+
+    #[test]
+    fn fingerprint_matches_prost_fixture() {
+        let records = vec![record(
+            "//generation:codegen_prost_fixture",
+            "rust",
+            vec![entry_with_exec(
+                "gen/prost_result.rs",
+                "gen",
+                "result",
+                "result_proto.lib.rs",
+            )],
+        )];
+        assert_eq!(
+            fingerprint(&records),
+            "[{\"entries\":[{\"exec_path\":\"result_proto.lib.rs\",\"import_root\":\"gen\",\"logical_path\":\"gen/prost_result.rs\",\"namespace\":\"result\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//generation:codegen_prost_fixture\"}]"
         );
     }
 
@@ -640,15 +1013,30 @@ mod tests {
             ]),
             "codegen path conflict: logical path 'src/alpha.rs' claimed by //gen:alpha, //gen:alpha"
         );
+        assert_eq!(
+            conflict_error(&[
+                record_a(),
+                record(
+                    "//gen:alpha",
+                    "rust",
+                    vec![entry_with_exec("src/alpha.rs", "src", "alpha", "out/a.rs")]
+                ),
+            ]),
+            "codegen path conflict: logical path 'src/alpha.rs' claimed by //gen:alpha, //gen:alpha"
+        );
     }
 
     #[test]
     fn collect_plan_merges_hashes_and_sorts_deterministically() {
-        let beta = shard_bytes("//gen:beta", "rust", vec![("src/beta.rs", "src", "beta")]);
+        let beta = shard_bytes(
+            "//gen:beta",
+            "rust",
+            vec![("src/beta.rs", "src", "beta", "")],
+        );
         let alpha = shard_bytes(
             "//gen:alpha",
             "rust",
-            vec![("src/alpha.rs", "src", "alpha")],
+            vec![("src/alpha.rs", "src", "alpha", "")],
         );
         let forward = vec![
             output("//gen:alpha", vec![("/out/a.dxcodegen.pb", alpha.clone())]),
@@ -676,14 +1064,14 @@ mod tests {
                 "//gen:alpha",
                 vec![(
                     "/out/a.dxcodegen.pb",
-                    shard_bytes("//gen:alpha", "rust", vec![("src/same.rs", "src", "a")]),
+                    shard_bytes("//gen:alpha", "rust", vec![("src/same.rs", "src", "a", "")]),
                 )],
             ),
             output(
                 "//gen:evil",
                 vec![(
                     "/out/e.dxcodegen.pb",
-                    shard_bytes("//gen:evil", "rust", vec![("src/same.rs", "src", "e")]),
+                    shard_bytes("//gen:evil", "rust", vec![("src/same.rs", "src", "e", "")]),
                 )],
             ),
         ];
@@ -702,5 +1090,91 @@ mod tests {
         assert!(plan.records.is_empty());
         assert_eq!(plan.fingerprint, "[]");
         assert_eq!(plan.digest, quality_result::digest(b"[]"));
+    }
+
+    #[test]
+    fn projection_resolves_backed_entries_and_sorts() {
+        let outputs = vec![
+            output(
+                "//gen:beta",
+                vec![
+                    (
+                        "/out/beta.dxcodegen.pb",
+                        shard_bytes(
+                            "//gen:beta",
+                            "rust",
+                            vec![
+                                ("gen/z.rs", "gen", "z", "z.lib.rs"),
+                                ("gen/a.rs", "gen", "a", "a.lib.rs"),
+                                ("gen/logical.rs", "gen", "logical", ""),
+                            ],
+                        ),
+                    ),
+                    ("/bazel-out/k8-fastbuild/bin/gen/z.lib.rs", vec![1]),
+                    ("/bazel-out/k8-fastbuild/bin/gen/a.lib.rs", vec![2]),
+                ],
+            ),
+            output(
+                "//gen:alpha",
+                vec![(
+                    "/out/alpha.dxcodegen.pb",
+                    shard_bytes("//gen:alpha", "rust", vec![("gen/m.rs", "gen", "m", "")]),
+                )],
+            ),
+        ];
+        let plan = collect_plan(&outputs).expect("plan");
+        let projection = plan_projection(&plan.records, &outputs).expect("projection");
+        let summary: Vec<(&str, &str)> = projection
+            .iter()
+            .map(|entry| (entry.logical_path.as_str(), entry.artifact.as_str()))
+            .collect();
+        // Sorted by logical path; logical-only entries hold no leaf.
+        assert_eq!(
+            summary,
+            vec![
+                ("gen/a.rs", "/bazel-out/k8-fastbuild/bin/gen/a.lib.rs"),
+                ("gen/z.rs", "/bazel-out/k8-fastbuild/bin/gen/z.lib.rs"),
+            ]
+        );
+        assert_eq!(projection[0].import_root, "gen");
+        assert_eq!(projection[0].namespace, "a");
+    }
+
+    #[test]
+    fn projection_rejects_bad_indexes() {
+        // Missing: exec suffix matches no reported artifact.
+        let missing_records = vec![record(
+            "//gen:beta",
+            "rust",
+            vec![entry_with_exec("gen/beta.rs", "gen", "beta", "beta.lib.rs")],
+        )];
+        assert!(matches!(
+            plan_projection(&missing_records, &[]),
+            Err(CollectError::MissingArtifact { .. })
+        ));
+        // Unreported: an artifact no entry claims.
+        let unreported_outputs = vec![output(
+            "//gen:beta",
+            vec![
+                (
+                    "/out/beta.dxcodegen.pb",
+                    shard_bytes(
+                        "//gen:beta",
+                        "rust",
+                        vec![("gen/beta.rs", "gen", "beta", "")],
+                    ),
+                ),
+                ("/out/beta.lib.rs", vec![1, 2, 3]),
+            ],
+        )];
+        let logical_records = vec![record(
+            "//gen:beta",
+            "rust",
+            vec![entry("gen/beta.rs", "gen", "beta")],
+        )];
+        assert!(matches!(
+            plan_projection(&logical_records, &unreported_outputs),
+            Err(CollectError::UnreportedArtifact { .. })
+        ));
     }
 }

@@ -1,18 +1,22 @@
 """Unit and analysis tests for the normalized codegen plans (M25 WP1).
 
 Unit checks pin every `codegen_path_error` branch (empty, absolute,
-backslash, dot segments), `codegen_record_error` (bad producer, bad
-language, empty entries, bad entry paths, within-record duplicates),
-`codegen_pair_error` (admitted first pair versus GraphQL/Python
-deferrals), `codegen_conflict_error` (clean merge, silent identical
-duplicates, cross-producer collisions, same-producer divergent roots),
-and the deterministic merge/fingerprint rendering (owner grouping, entry
-sorting, duplicate collapse).
+backslash, dot segments), `codegen_exec_error` (empty logical-only,
+relative suffixes, shard-suffix refusal), `codegen_record_error` (bad
+producer, bad language, empty entries, bad entry paths, bad exec paths,
+within-record duplicates), `codegen_pair_error` (admitted first pair
+versus GraphQL/Python deferrals), `codegen_conflict_error` (clean merge,
+silent identical duplicates, cross-producer collisions, same-producer
+divergent roots, divergent exec paths), and the deterministic
+merge/fingerprint rendering (owner grouping, entry sorting over the full
+(logical, root, namespace, exec) key, duplicate collapse, exec-bound
+identity).
 
 Analysis checks pin the slice-2 collection evidence: the chained leaf
 shards merge transitively through `dx_codegen_plan_aspect`, and the
 prost adapter fixture carries its shard plus the verified upstream
-`rust_generated_srcs` artifact in the private output group.
+`rust_generated_srcs` artifact in the private output group, with its
+entry's EXEC_PATH suffix binding the generated artifact.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
@@ -23,6 +27,7 @@ load(
     "DX_CODEGEN_SHARD_SUFFIX",
     "codegen_conflict_error",
     "codegen_entry",
+    "codegen_exec_error",
     "codegen_merge_records",
     "codegen_pair_error",
     "codegen_path_error",
@@ -86,9 +91,29 @@ def codegen_defs_unit_tests(name):
                 ],
             ),
             expect_equal(
-                "codegen_entry marks projections read-only",
-                codegen_entry("src/a.rs", "src", "a").read_only,
-                True,
+                "codegen_entry marks projections read-only with empty exec by default",
+                [codegen_entry("src/a.rs", "src", "a").read_only, codegen_entry("src/a.rs", "src", "a").exec_path],
+                [True, ""],
+            ),
+            expect_equal(
+                "codegen_exec_error accepts empty logical-only and relative suffixes",
+                [codegen_exec_error(""), codegen_exec_error("result_proto.lib.rs"), codegen_exec_error("gen/out.rs")],
+                ["", "", ""],
+            ),
+            expect_equal(
+                "codegen_exec_error rejects bad suffixes",
+                [
+                    codegen_exec_error("/out/a.rs"),
+                    codegen_exec_error("src\\a.rs"),
+                    codegen_exec_error("src/./a.rs"),
+                    codegen_exec_error("a.dxcodegen.pb"),
+                ],
+                [
+                    "invalid codegen exec path '/out/a.rs': must not be absolute",
+                    "invalid codegen exec path 'src\\a.rs': must not contain '\\'",
+                    "invalid codegen exec path 'src/./a.rs': must not contain '.' or '..' segments",
+                    "invalid codegen exec path 'a.dxcodegen.pb': must not use the reserved shard suffix '.dxcodegen.pb'",
+                ],
             ),
             expect_equal(
                 "codegen_record_error accepts a well-formed record",
@@ -123,6 +148,11 @@ def codegen_defs_unit_tests(name):
                 "invalid codegen record '//gen:a': invalid codegen path '/a': must not be absolute",
             ),
             expect_equal(
+                "codegen_record_error rejects bad exec paths",
+                codegen_record_error(codegen_record("//gen:a", "rust", [codegen_entry("a", "b", "", "x.dxcodegen.pb")])),
+                "invalid codegen record '//gen:a': invalid codegen exec path 'x.dxcodegen.pb': must not use the reserved shard suffix '.dxcodegen.pb'",
+            ),
+            expect_equal(
                 "codegen_record_error rejects within-record duplicate paths",
                 codegen_record_error(codegen_record("//gen:a", "rust", [codegen_entry("a", "b"), codegen_entry("a", "c")])),
                 "invalid codegen record '//gen:a': duplicate logical path 'a'",
@@ -154,6 +184,14 @@ def codegen_defs_unit_tests(name):
                 "codegen path conflict: logical path 'src/alpha.rs' claimed by //gen:alpha, //gen:alpha",
             ),
             expect_equal(
+                "codegen_conflict_error fails divergent exec paths",
+                codegen_conflict_error([
+                    _record_a(),
+                    codegen_record("//gen:alpha", "rust", [codegen_entry("src/alpha.rs", "src", "alpha", "out/a.rs")]),
+                ]),
+                "codegen path conflict: logical path 'src/alpha.rs' claimed by //gen:alpha, //gen:alpha",
+            ),
+            expect_equal(
                 "codegen_merge_records groups by owner and sorts entries",
                 [
                     (record.producer, record.language, [entry.logical_path for entry in record.entries])
@@ -173,8 +211,13 @@ def codegen_defs_unit_tests(name):
             expect_equal(
                 "codegen_plan_fingerprint renders the normalized hash input",
                 codegen_plan_fingerprint([_record_b(), _record_a(), _record_a()]),
-                "[{\"entries\":[{\"import_root\":\"src\",\"logical_path\":\"src/alpha.rs\",\"namespace\":\"alpha\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:alpha\"}," +
-                "{\"entries\":[{\"import_root\":\"src\",\"logical_path\":\"src/beta.rs\",\"namespace\":\"beta\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:beta\"}]",
+                "[{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"src\",\"logical_path\":\"src/alpha.rs\",\"namespace\":\"alpha\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:alpha\"}," +
+                "{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"src\",\"logical_path\":\"src/beta.rs\",\"namespace\":\"beta\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:beta\"}]",
+            ),
+            expect_equal(
+                "codegen_plan_fingerprint binds exec paths",
+                codegen_plan_fingerprint([codegen_record("//gen:a", "rust", [codegen_entry("a", "b", "", "out/a.rs")])]),
+                "[{\"entries\":[{\"exec_path\":\"out/a.rs\",\"import_root\":\"b\",\"logical_path\":\"a\",\"namespace\":\"\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:a\"}]",
             ),
             expect_equal(
                 "codegen_pair_error admits only the protobuf->Rust first pair",
@@ -193,16 +236,16 @@ def codegen_defs_unit_tests(name):
     )
 
 _CHAIN_FINGERPRINT = (
-    "[{\"entries\":[{\"import_root\":\"gen\",\"logical_path\":\"gen/alpha.rs\"," +
+    "[{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"gen\",\"logical_path\":\"gen/alpha.rs\"," +
     "\"namespace\":\"alpha\",\"read_only\":true}],\"language\":\"rust\"," +
     "\"producer\":\"//generation:codegen_shard_alpha\"}," +
-    "{\"entries\":[{\"import_root\":\"gen\",\"logical_path\":\"gen/beta.rs\"," +
+    "{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"gen\",\"logical_path\":\"gen/beta.rs\"," +
     "\"namespace\":\"beta\",\"read_only\":true}],\"language\":\"rust\"," +
     "\"producer\":\"//generation:codegen_shard_beta\"}]"
 )
 
 _PROST_FINGERPRINT = (
-    "[{\"entries\":[{\"import_root\":\"gen\",\"logical_path\":\"gen/prost_result.rs\"," +
+    "[{\"entries\":[{\"exec_path\":\"result_proto.lib.rs\",\"import_root\":\"gen\",\"logical_path\":\"gen/prost_result.rs\"," +
     "\"namespace\":\"result\",\"read_only\":true}],\"language\":\"rust\"," +
     "\"producer\":\"//generation:codegen_prost_fixture\"}]"
 )

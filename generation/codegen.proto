@@ -26,4 +26,13 @@ message DxCodegenEntry {
   string namespace = 3;
   // Projections are read-only quality context; always true on the wire.
   bool read_only = 4;
+  // Bazel execution-path suffix identifying the backing artifact's BEP
+  // exec path (basename or relative suffix; matched as a path-component
+  // suffix so different output bases still resolve). Empty means a
+  // logical-only entry requiring no materialized artifact (synthetic
+  // shards and merge/conflict fixtures). Entries that declare an
+  // exec path must resolve to exactly one BEP-reported non-shard
+  // artifact; missing, ambiguous, or unreported artifacts fail
+  // collection and never fall back to scanning `bazel-out`.
+  string exec_path = 5;
 }

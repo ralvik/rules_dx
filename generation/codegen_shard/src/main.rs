@@ -8,9 +8,14 @@
 //! Usage:
 //! ```text
 //! codegen_shard_writer --producer LABEL --language LANG \
-//!   --entry LOGICAL_PATH|IMPORT_ROOT|NAMESPACE [--entry ...] \
+//!   --entry LOGICAL_PATH|IMPORT_ROOT|NAMESPACE[--entry ...] \
+//!   --entry LOGICAL_PATH|IMPORT_ROOT|NAMESPACE|EXEC_PATH [--entry ...] \
 //!   --output OUT.dxcodegen.pb
 //! ```
+//!
+//! The three-part entry form declares a logical-only entry (empty
+//! exec path, requiring no materialized artifact). The four-part form
+//! declares the BEP-matching exec-path suffix for the backing artifact.
 
 // LCOV_EXCL_START - reason: thin binary shim; CLI parsing and file I/O failures are operational action failures verified by build and shard-emission execution, not unit coverage.
 use std::path::PathBuf;
@@ -21,22 +26,30 @@ use codegen_shard::{
 };
 
 fn usage() -> String {
-    "usage: codegen_shard_writer --producer LABEL --language LANG --entry LOGICAL|ROOT|NAMESPACE [--entry ...] --output OUT".into()
+    "usage: codegen_shard_writer --producer LABEL --language LANG --entry LOGICAL|ROOT|NAMESPACE[|EXEC] [--entry ...] --output OUT".into()
 }
 
 fn parse_entry(raw: &str) -> Result<DxCodegenEntry, String> {
     let parts: Vec<&str> = raw.split('|').collect();
-    if parts.len() != 3 {
-        return Err(format!(
-            "bad --entry {raw:?}: want LOGICAL_PATH|IMPORT_ROOT|NAMESPACE"
-        ));
+    match parts.len() {
+        3 => Ok(DxCodegenEntry {
+            logical_path: parts[0].into(),
+            import_root: parts[1].into(),
+            namespace: parts[2].into(),
+            read_only: true,
+            exec_path: String::new(),
+        }),
+        4 => Ok(DxCodegenEntry {
+            logical_path: parts[0].into(),
+            import_root: parts[1].into(),
+            namespace: parts[2].into(),
+            read_only: true,
+            exec_path: parts[3].into(),
+        }),
+        _ => Err(format!(
+            "bad --entry {raw:?}: want LOGICAL_PATH|IMPORT_ROOT|NAMESPACE[|EXEC_PATH]"
+        )),
     }
-    Ok(DxCodegenEntry {
-        logical_path: parts[0].into(),
-        import_root: parts[1].into(),
-        namespace: parts[2].into(),
-        read_only: true,
-    })
 }
 
 fn run(args: &[String]) -> Result<(), String> {
