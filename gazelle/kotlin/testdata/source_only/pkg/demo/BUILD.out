@@ -1,0 +1,15 @@
+load("@rules_dx//kotlin/rules:defs.bzl", "dx_kotlin_library")
+
+# A user-owned rule must survive generation unchanged.
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+dx_kotlin_library(
+    name = "demo",
+    srcs = [
+        "Demo.kt",
+        "Helper.kt",
+    ],
+)

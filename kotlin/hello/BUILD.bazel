@@ -1,0 +1,36 @@
+"""M23 seed Kotlin binary and library; consumer of dx_kotlin_* wrappers."""
+
+load("//kotlin/rules:defs.bzl", "dx_kotlin_binary", "dx_kotlin_library", "dx_kotlin_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_kotlin_library(
+    name = "hello_lib",
+    srcs = ["Hello.kt"],
+)
+
+dx_kotlin_binary(
+    name = "hello",
+    srcs = ["Main.kt"],
+    main_class = "hello.MainKt",
+    deps = [":hello_lib"],
+)
+
+dx_kotlin_test(
+    name = "hello_test",
+    srcs = ["HelloTest.kt"],
+    test_class = "hello.HelloTest",
+    deps = [
+        ":hello_lib",
+        "@maven//:junit_junit",
+    ],
+)
+
+# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. Kotlin sources stay
+# dx-owned, never corpus sources.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)

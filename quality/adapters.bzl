@@ -141,7 +141,13 @@ REAL_ADAPTERS = {
 # java class to the java family on the same terms: each `.java` source has
 # one physical owner (dx_java_library, dx_java_binary, dx_java_test); no
 # adapter claims java yet (classification only, no supported claim). O31
-# qualifies exact adapters later.
+# qualifies exact adapters later. M23 WP2 adds the kotlin class to the
+# kotlin family on the same terms: each `.kt` source has one physical
+# owner (dx_kotlin_library, dx_kotlin_binary, dx_kotlin_test) over the
+# pinned rules_kotlin kt_jvm_* rules, with same-compilation-unit `.java`
+# sources owned alongside and classified java; no adapter claims kotlin
+# yet (classification only, no supported claim). O31 qualifies exact
+# adapters later.
 REAL_CLASS_TO_FAMILY = {
     "astro": "astro",
     "c": "cc",
@@ -154,6 +160,7 @@ REAL_CLASS_TO_FAMILY = {
     "javascript": "javascript",
     "json": "json",
     "jsx": "javascript",
+    "kotlin": "kotlin",
     "markdown": "markdown",
     "mdx": "mdx",
     "pkl": "pkl",

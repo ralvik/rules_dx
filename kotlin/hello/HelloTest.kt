@@ -1,0 +1,12 @@
+// M23 seed Kotlin test; consumer of dx_kotlin_test.
+package hello
+
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class HelloTest {
+  @Test
+  fun testHello() {
+    assertEquals("hello world", Hello.hello("world"))
+  }
+}
