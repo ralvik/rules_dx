@@ -6,6 +6,7 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//quality:fixtures.bzl", "real_source_target")
 load(":defs.bzl", "environment_config", "environment_tool", "environment_tree")
 load(":defs_tests.bzl", "env_config_analysis_tests", "env_default_config_analysis_tests", "env_default_tree_analysis_tests", "env_defs_unit_tests", "env_tree_analysis_tests")
+load(":plan_tests.bzl", "env_plan_defs_unit_tests")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -72,6 +73,22 @@ rust_prost_library(
     proto = ":marker_proto",
 )
 
+# Normalized environment plan shard schema (M25 WP2): field numbers
+# are the compatibility surface; see `plan.proto` and `plan.bzl`.
+# `EnvironmentInfo` stays PATH-tool-only; this is the internal plan
+# contract collected through the private `dx_env_plans` output group.
+proto_library(
+    name = "plan_proto",
+    srcs = ["plan.proto"],
+)
+
+rust_prost_library(
+    name = "plan_proto_rs",
+    proto = ":plan_proto",
+)
+
+env_plan_defs_unit_tests(name = "env_plan_defs_unit")
+
 # Default runnable environment (M11 WP2-WP3, O62): the curated doctor probe
 # plus the module-matched `dx` CLI and the user-facing `markdown_check`
 # quality binary, all contributed through the same public
@@ -122,6 +139,7 @@ test_suite(
         ":env_default_config_analysis",
         ":env_default_tree_analysis",
         ":env_defs_unit",
+        ":env_plan_defs_unit",
         ":env_tree_analysis",
     ],
 )

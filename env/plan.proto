@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package rules_dx.env;
+
+// Normalized per-contributor environment plan shard (M25 WP2).
+//
+// Each contributing configured target emits one shard carrying its direct
+// environment identity records; collectors merge shards transitively and
+// the CLI parses the shards reported through the `dx_env_plans` output
+// group. Field numbers are the compatibility surface: never reuse a number.
+message DxEnvShard {
+  // Contributing target label in observation rendering.
+  string producer = 1;
+  // Language integration class, e.g. "rust".
+  string integration = 2;
+  repeated DxEnvEntry entries = 3;
+}
+
+message DxEnvEntry {
+  // Normalized identity dimension, e.g. "runtime", "abi", or an
+  // adapter-specific identity input name. Single token: never a path.
+  string key = 1;
+  // Normalized identity input value for the key.
+  string value = 2;
+  // Bazel execution-path suffix identifying the backing artifact's BEP
+  // exec path (basename or relative suffix; matched as a path-component
+  // suffix so different output bases still resolve). Empty means a
+  // logical-only identity input requiring no materialized artifact.
+  // Entries that declare an exec path must resolve to exactly one
+  // BEP-reported non-shard artifact; missing, ambiguous, or unreported
+  // artifacts fail collection and never fall back to scanning `bazel-out`.
+  string exec_path = 3;
+}
