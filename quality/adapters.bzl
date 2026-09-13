@@ -132,26 +132,41 @@ REAL_ADAPTERS = {
 # on the same terms: each `.c`/`.h`/`.cc`/`.cpp`/`.cxx` source has one
 # physical owner (dx_cc_library, dx_cc_binary, dx_cc_test) with header
 # ownership per extension; no adapter claims c/cpp yet (classification
-# only, no supported claim).
+# only, no supported claim). M22 WP3 adds the remaining native/toolchain
+# standalone classes, one family per class, on the same terms: each source
+# family keeps its existing ownership (foundation wrappers where admitted,
+# otherwise the file itself); no lint/format/typecheck adapter claims any
+# of these classes yet (classification only, no supported claim). O30
+# qualifies exact adapters later; Qt stays last in M22.
 REAL_CLASS_TO_FAMILY = {
     "astro": "astro",
     "c": "cc",
     "cpp": "cc",
+    "cuda": "cuda",
+    "cue": "cue",
     "go": "go",
+    "go_module": "go_module",
     "javascript": "javascript",
     "json": "json",
     "jsx": "javascript",
     "markdown": "markdown",
     "mdx": "mdx",
+    "pkl": "pkl",
+    "protobuf": "protobuf",
     "python": "python",
     "python_stub": "python",
+    "qml": "qml",
     "rust": "rust",
+    "shell": "shell",
     "starlark": "starlark",
     "svelte": "svelte",
+    "terraform": "terraform",
     "toml": "toml",
     "typescript": "typescript",
     "tsx": "typescript",
     "vue": "vue",
+    "jsonnet": "jsonnet",
+    "yaml": "yaml",
 }
 
 def real_supported_classes(tool_id, capability):
