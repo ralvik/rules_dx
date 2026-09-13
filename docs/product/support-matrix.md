@@ -108,8 +108,8 @@ an active Bzlmod-published upstream ruleset with a concrete dependency-lock
 and toolchain story. Their quality integration is v1 scope with the defaults in
 [Provisional Default Quality Tools](#provisional-default-quality-tools);
 exact versions, rule sets, and adapter mappings continue under O30/O31. Delivery stays with the existing cohorts: Go and C/C++ in M22
-(O30); Java, Kotlin, C#, and F# in M23 (O31); Scala after the M22
-native/toolchain-versus-managed route decision (O30), then M22 or M23.
+(O30); Java, Kotlin, C#, F#, and Scala (managed route frozen by the M22 O30
+decision, delivered in M23 under O31) in M23.
 Unresolved cells block qualification; moving an admitted foundation out later
 requires a new evidence-backed decision.
 
@@ -282,10 +282,13 @@ summarized in [Candidate Disposition Status](#candidate-disposition-status).
   v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
 - Scala: [`rules_scala` 7.x](https://github.com/bazel-contrib/rules_scala)
   (bazel-contrib, Bazel 7/8 plus Bzlmod, Coursier-backed Scala
-  toolchains) is the provisional route. The M22 native/toolchain-versus-managed
-  route decision stands: Coursier-fetched toolchains argue managed, while
-  source-built or toolchain-coupled options argue native. Mappings and the route
-  decision remain open under O30, with M23 consuming the outcome. Admitted to v1
+  toolchains) is the provisional route. M22 route decision (O30, frozen
+  2026-09-13): managed route owned by M23 under O31. Coursier-fetched
+  toolchains share Java's Maven-lock story (`maven_install.json` plus
+  `fail_if_repin_required`), Scalafix semantic rules need semanticdb plus
+  classpath wiring per the adapter-input notes, and no source-built or
+  toolchain-coupled native advantage was evidenced; M23 consumes the
+  outcome. Mappings remain open under O31. Admitted to v1
   by [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
 - C# and F#: [`rules_dotnet` 0.22.2](https://github.com/bazel-contrib/rules_dotnet)
   (Bzlmod, Bazel >= 8) covers both languages with `csharp_*`
@@ -320,7 +323,7 @@ summarized in [Candidate Disposition Status](#candidate-disposition-status).
 | --- | --- | --- | --- |
 | Java | `rules_jvm_external` + `rules_java` | M23 (O31) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | Kotlin | `rules_kotlin` | M23 (O31) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
-| Scala | `rules_scala` | M22 route decision (O30), then M22 or M23 | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
+| Scala | `rules_scala` | M23 managed route (M22 O30 decision, O31 delivery) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | C# | `rules_dotnet` | M23 (O31) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | F# | `rules_dotnet` | M23 (O31) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | Ruby | `rules_ruby` (bazel-contrib) | M23 tool cohort (O31); foundation post-v1 | Deferred beyond v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
@@ -512,8 +515,9 @@ disposition under the admission policy.
 ### Milestone Cohort Determination
 
 Every candidate row above maps to an existing cohort owner: admitted Go and
-C/C++ to M22 under O30; admitted Java, Kotlin, C#, F#, and Scala (after the
-M22 route decision) to M22/M23 under O30/O31. Deferred foundations (Ruby,
+C/C++ to M22 under O30; admitted Java, Kotlin, C#, F#, and Scala (managed
+route frozen by the M22 O30 decision, delivered in M23 under O31) to M23
+under O31. Deferred foundations (Ruby,
 PowerShell) are out of v1 scope; their retained tool cohorts stay with their
 O-item owners. No milestone split or DAG change is required by this review. Splits stay conditional: if O30/O31 qualification
 shows a cohort exceeds reviewable work-package size, O46 splits the affected
