@@ -212,6 +212,9 @@ support kotlin/hello/Main.kt
 support scala/hello/Hello.scala
 support scala/hello/HelloTest.scala
 support scala/hello/Main.scala
+support csharp/hello/Hello.cs
+support csharp/hello/HelloTest.cs
+support csharp/hello/Program.cs
 eligible generation/result/src/lib.rs
 support gazelle/rust/cargo_test.go
 support gazelle/rust/lang_test.go

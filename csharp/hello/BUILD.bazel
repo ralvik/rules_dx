@@ -1,0 +1,31 @@
+"""M23 seed C# binary and library; consumer of dx_csharp_* wrappers."""
+
+load("//csharp/rules:defs.bzl", "dx_csharp_binary", "dx_csharp_library", "dx_csharp_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_csharp_library(
+    name = "hello_lib",
+    srcs = ["Hello.cs"],
+)
+
+dx_csharp_binary(
+    name = "hello",
+    srcs = ["Program.cs"],
+    deps = [":hello_lib"],
+)
+
+dx_csharp_test(
+    name = "hello_test",
+    srcs = ["HelloTest.cs"],
+    deps = [":hello_lib"],
+)
+
+# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. C# sources stay
+# dx-owned, never corpus sources.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)

@@ -1,0 +1,10 @@
+// M23 seed C# binary; consumer of dx_csharp_binary.
+using System;
+
+public static class Program
+{
+    public static void Main(string[] args)
+    {
+        Console.WriteLine(Hello.Greeter.Greet("world"));
+    }
+}

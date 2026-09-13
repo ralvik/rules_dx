@@ -153,11 +153,17 @@ REAL_ADAPTERS = {
 # rules_scala scala_* rules on the managed route (M22 O30 decision), with
 # same-compilation-unit `.java` sources owned alongside and classified
 # java; no adapter claims scala yet (classification only, no supported
-# claim). O31 qualifies exact adapters later.
+# claim). O31 qualifies exact adapters later. M23 WP2 adds the csharp class
+# to the csharp family on the same terms: each `.cs` source has one physical
+# owner (dx_csharp_library, dx_csharp_binary, dx_csharp_test) over the
+# pinned rules_dotnet csharp_* rules; no adapter claims csharp yet
+# (classification only, no supported claim). O31 qualifies exact adapters
+# later.
 REAL_CLASS_TO_FAMILY = {
     "astro": "astro",
     "c": "cc",
     "cpp": "cc",
+    "csharp": "csharp",
     "cuda": "cuda",
     "cue": "cue",
     "go": "go",

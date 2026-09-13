@@ -72,6 +72,24 @@ scala_deps = use_extension("@rules_scala//scala/extensions:deps.bzl", "scala_dep
 scala_deps.scala()
 scala_deps.scalatest()
 
+# M23 .NET slice: pinned .NET foundation (ADR 0019, O31). 0.22.1 is the
+# latest stable in the Bazel Central Registry (Bazel >=9.0.0 per upstream;
+# verified against Bazel 9.2.0 on the seed host). One ruleset covers both
+# admitted .NET languages (csharp_* plus fsharp_* targets) with SDK
+# acquisition through its `dotnet` toolchain extension. SDK 10.0.201 is the
+# upstream-CI toolchain version (matches rules_dotnet's own MODULE pin);
+# the default target framework is net10.0 (wrapper default, overridable per
+# target). Per-platform SDK acquisition, Paket/NuGet lock wiring, and the
+# xUnit/NUnit runner selection stay open under O31 per the provisional
+# test-runner/lock tables. Needs bazel_lib 3.7.0 (rules_dotnet dep; MVS
+# keeps the executed tree on our other pins).
+bazel_dep(name = "rules_dotnet", version = "0.22.1")
+bazel_dep(name = "bazel_lib", version = "3.7.0")
+
+dotnet = use_extension("@rules_dotnet//dotnet:extensions.bzl", "dotnet")
+dotnet.toolchain(dotnet_version = "10.0.201")
+use_repo(dotnet, "dotnet_toolchains")
+
 # M23 JVM dep-route slice: pinned Maven resolver (ADR 0019, O31). 7.1 is the
 # latest stable in the Bazel Central Registry (Bazel >=7.0.0; verified
 # against Bazel 9.2.0 on the seed host). Single shared lock for the admitted
