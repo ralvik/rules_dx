@@ -1,0 +1,16 @@
+load("@rules_dx//cc/rules:defs.bzl", "dx_cc_library")
+
+# A user-owned rule must survive generation unchanged.
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+dx_cc_library(
+    name = "demo",
+    srcs = [
+        "demo.cc",
+        "helper.cc",
+    ],
+    hdrs = ["helper.h"],
+)
