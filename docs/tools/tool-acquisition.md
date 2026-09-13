@@ -274,6 +274,34 @@ adapter-input notes. Exact artifacts, rule-set/config qualification
 required), and adapter qualification remain pending and no adapter claims
 `scala` yet.
 
+M23 focused proof (O31, frozen 2026-09-13): CSharpier and Fantomas take the
+exact-upstream-package plus shared-.NET-runtime route. Each tool resolves to
+its exact official tool package executed as declared DLLs over the one
+managed .NET runtime cohort; no consumer runs `dotnet tool install` or any
+equivalent installer. Exact package versions, runtime compatibility bounds,
+and adapter qualification remain pending and no adapter claims `csharp` or
+`fsharp` yet.
+
+M23 focused proof (O31, frozen 2026-09-13): PSScriptAnalyzer takes the
+exact-module plus portable-PowerShell-runtime route. The analyzer resolves
+to its exact upstream module package imported by explicit path over a
+portable `pwsh` runtime; the PowerShell application foundation stays
+deferred beyond v1 (only this tool cohort is in scope). Exact module
+version, runtime identity, console-parse versus library-API binding choice
+(per the adapter-input notes), and adapter qualification remain pending and
+no adapter claims `powershell` yet.
+
+M23 focused proof (O31, frozen 2026-09-13): RuboCop and StandardRB take the
+release-assembled Ruby closure route (the exceptional bundle within the
+O46-approved packaging-effort boundary). Release CI assembles the complete
+ready-to-run Ruby runtime/package closure with manifest, SBOM, licenses,
+and constituent provenance; consumer builds only download, verify, extract,
+and execute it. The Ruby application foundation stays deferred beyond v1
+(only this tool cohort is in scope). Bundle contents, lock inputs, and
+adapter qualification remain pending and no adapter claims `ruby` yet. This
+closes the O31 order (Python, Node, JVM including Scala/Scalafix managed
+route, .NET, PowerShell, Ruby).
+
 No listed private graph accepts arbitrary consumer packages or plugins in v1. The curated
 lock and configuration are part of the `rules_dx` release. A tool whose required standard
 behavior cannot fit that fixed closure must move to a proven complete artifact/assembled
