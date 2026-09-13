@@ -133,6 +133,15 @@ func TestParseImports(t *testing.T) {
 		{"regexNewlineProse", "const re = /abc\nimport y from './real.mdx';\n", nil},
 		{"regexClassProse", "const re = /[a/b]/;\nimport y from './real.mdx';\n", nil},
 		{"regexEOF", "const re = /abc", nil},
+		{"importBadChar", "importx from \"./fake.mdx\";\n", nil},
+		{"exportBadChar", "exportx from \"./fake.mdx\";\n", nil},
+		{"bareHeadingBoundary", "###\nimport helper from \"./helper.mdx\";\n", []string{"helper"}},
+		{"blankInsideBraces", "import {\n\n} from \"./a.mdx\";\n", []string{"a"}},
+		{"continuationTwoLine", "import {\n} from \"./a.mdx\";\n", []string{"a"}},
+		{"fenceIndentedCloser", "```js\nimport fake from \"./fake.mdx\";\n    ```\nimport helper from \"./helper.mdx\";\n", nil},
+		{"fenceSpacedCloser", "```js\nimport fake from \"./fake.mdx\";\n ```\nimport helper from \"./helper.mdx\";\n", []string{"helper"}},
+		{"fenceShortCloser", "````\nimport fake from \"./fake.mdx\";\n```\nimport helper from \"./helper.mdx\";\n", nil},
+		{"fenceTrailingText", "```js\nimport fake from \"./fake.mdx\";\n``` extra\nimport helper from \"./helper.mdx\";\n", nil},
 	}
 	// Markdown-structure cases exercise full documents directly; JS-edge
 	// cases are single ESM bodies wrapped in a minimal MDX document.
@@ -148,6 +157,9 @@ func TestParseImports(t *testing.T) {
 		"htmlCommentBlockInert": true,
 		"unterminatedHtmlCommentWholeDocInert": true,
 		"jsxInert": true,
+		"bareHeadingBoundary": true,
+		"fenceIndentedCloser": true, "fenceSpacedCloser": true,
+		"fenceShortCloser": true, "fenceTrailingText": true,
 	}
 	for _, tc := range cases {
 		var content []byte
@@ -174,8 +186,17 @@ func TestExtractESMRegions(t *testing.T) {
 		{"blankSeparated", "import a from \"./a.mdx\";\n\nimport b from \"./b.mdx\";\n", []string{"import a from \"./a.mdx\";\n", "import b from \"./b.mdx\";\n"}},
 		{"paragraphContinuationInert", "text\nimport a from \"./a.mdx\";\n", nil},
 		{"headingBoundary", "# T\nimport a from \"./a.mdx\";\n", []string{"import a from \"./a.mdx\";\n"}},
+		{"bareHeadingBoundary", "###\nimport a from \"./a.mdx\";\n", []string{"import a from \"./a.mdx\";\n"}},
 		{"thematicBoundary", "---\nimport a from \"./a.mdx\";\n", []string{"import a from \"./a.mdx\";\n"}},
 		{"fenceInert", "```js\nimport a from \"./a.mdx\";\n```\n", nil},
+		{"fenceSpacedCloser", "```js\nimport a from \"./a.mdx\";\n ```\nimport b from \"./b.mdx\";\n", []string{"import b from \"./b.mdx\";\n"}},
+		{"fenceIndentedCloserInert", "```js\nimport a from \"./a.mdx\";\n    ```\nimport b from \"./b.mdx\";\n", nil},
+		{"fenceShortCloserInert", "````\nimport a from \"./a.mdx\";\n```\nimport b from \"./b.mdx\";\n", nil},
+		{"fenceTrailingTextInert", "```js\nimport a from \"./a.mdx\";\n``` extra\nimport b from \"./b.mdx\";\n", nil},
+		{"blankInsideBraces", "import {\n\n} from \"./a.mdx\";\n", []string{"import {\n\n} from \"./a.mdx\";\n"}},
+		{"continuationTwoLine", "import {\n} from \"./a.mdx\";\n", []string{"import {\n} from \"./a.mdx\";\n"}},
+		{"badImportOpener", "importx from \"./a.mdx\";\n", nil},
+		{"badExportOpener", "exportx from \"./a.mdx\";\n", nil},
 		// Narrow subset: only the opener line is kept when braces span lines.
 		{"multilineBracesNarrow", "import {\n a\n} from \"./a.mdx\";\n", []string{"import {\n"}},
 		{"commentWholeDocInert", "import a from \"./a.mdx\";\n<!-- oops\nimport b from \"./b.mdx\";\n", nil},
@@ -209,6 +230,183 @@ func TestSkipQuotedEOF(t *testing.T) {
 func TestSkipTemplateEOF(t *testing.T) {
 	if got := skipTemplate([]byte("`abc"), 0); got != 4 {
 		t.Errorf("skipTemplate EOF = %d, want 4", got)
+	}
+}
+
+func scanSpecs(src string) []string {
+	var out []string
+	scan([]byte(src), func(s string) { out = append(out, normalizeSpec(s)) })
+	return out
+}
+
+func TestIsSetextUnderline(t *testing.T) {
+	if isSetextUnderline("") {
+		t.Error("isSetextUnderline(\"\") = true, want false")
+	}
+	if !isSetextUnderline("===") {
+		t.Error("isSetextUnderline(\"===\") = false, want true")
+	}
+	if !isSetextUnderline("  ===  ") {
+		t.Error("isSetextUnderline spaced = false, want true")
+	}
+	if isSetextUnderline("abc") {
+		t.Error("isSetextUnderline(\"abc\") = true, want false")
+	}
+	if isSetextUnderline("---") {
+		t.Error("isSetextUnderline(\"---\") = true, want false")
+	}
+}
+
+func TestIsFenceClose(t *testing.T) {
+	if !isFenceClose("```", '`', 3) {
+		t.Error("isFenceClose basic = false, want true")
+	}
+	if !isFenceClose(" ```", '`', 3) {
+		t.Error("isFenceClose spaced = false, want true")
+	}
+	if !isFenceClose("```\t ", '`', 3) {
+		t.Error("isFenceClose trailing = false, want true")
+	}
+	if isFenceClose("    ```", '`', 3) {
+		t.Error("isFenceClose indented = true, want false")
+	}
+	if isFenceClose("```", '`', 4) {
+		t.Error("isFenceClose short = true, want false")
+	}
+	if isFenceClose("``` extra", '`', 3) {
+		t.Error("isFenceClose trailing text = true, want false")
+	}
+	if isFenceClose("~~~", '`', 3) {
+		t.Error("isFenceClose wrong char = true, want false")
+	}
+}
+
+func TestScanBlockComment(t *testing.T) {
+	if got := scanSpecs("/* hello */ import a from \"./a.mdx\";"); !reflect.DeepEqual(got, []string{"a"}) {
+		t.Errorf("scan block comment = %q, want [a]", got)
+	}
+	if got := scanSpecs("/* unterminated"); len(got) != 0 {
+		t.Errorf("scan unterminated block = %q, want empty", got)
+	}
+	if got := scanSpecs("import a from \"./a.mdx\"; /* trailing */"); !reflect.DeepEqual(got, []string{"a"}) {
+		t.Errorf("scan trailing block = %q, want [a]", got)
+	}
+}
+
+func TestScanRegex(t *testing.T) {
+	if got := scanSpecs("/abc/; import a from \"./a.mdx\";"); !reflect.DeepEqual(got, []string{"a"}) {
+		t.Errorf("scan regex prefix = %q, want [a]", got)
+	}
+	if got := scanSpecs("const x = a / b; import y from \"./real.mdx\";"); !reflect.DeepEqual(got, []string{"real"}) {
+		t.Errorf("scan division = %q, want [real]", got)
+	}
+	if got := scanSpecs("const x = (a) / b; import y from \"./real.mdx\";"); !reflect.DeepEqual(got, []string{"real"}) {
+		t.Errorf("scan division paren = %q, want [real]", got)
+	}
+	if got := scanSpecs("const re = /a\\/b/; import y from \"./real.mdx\";"); !reflect.DeepEqual(got, []string{"real"}) {
+		t.Errorf("scan regex escape = %q, want [real]", got)
+	}
+	if got := scanSpecs("const re = /[a/b]/; import y from \"./real.mdx\";"); !reflect.DeepEqual(got, []string{"real"}) {
+		t.Errorf("scan regex class = %q, want [real]", got)
+	}
+	if got := scanSpecs("const re = /abc/gi; import y from \"./real.mdx\";"); !reflect.DeepEqual(got, []string{"real"}) {
+		t.Errorf("scan regex flags = %q, want [real]", got)
+	}
+	if got := scanSpecs("const re = /abc\nimport y from \"./real.mdx\";"); !reflect.DeepEqual(got, []string{"real"}) {
+		t.Errorf("scan regex newline = %q, want [real]", got)
+	}
+	if got := scanSpecs("const re = /abc"); len(got) != 0 {
+		t.Errorf("scan regex EOF = %q, want empty", got)
+	}
+}
+
+func TestScanRequire(t *testing.T) {
+	if got := scanSpecs("require(\"./a.mdx\");"); !reflect.DeepEqual(got, []string{"a"}) {
+		t.Errorf("scan require = %q, want [a]", got)
+	}
+	if got := scanSpecs("obj.require(\"./fake.mdx\");"); len(got) != 0 {
+		t.Errorf("scan method require = %q, want empty", got)
+	}
+	if got := scanSpecs("obj . require(\"./fake.mdx\");"); len(got) != 0 {
+		t.Errorf("scan spaced dot require = %q, want empty", got)
+	}
+	if got := scanSpecs("require;"); len(got) != 0 {
+		t.Errorf("scan require no paren = %q, want empty", got)
+	}
+	if got := scanSpecs("require"); len(got) != 0 {
+		t.Errorf("scan require EOF = %q, want empty", got)
+	}
+	if got := scanSpecs("require(\"a\";"); len(got) != 0 {
+		t.Errorf("scan require missing paren = %q, want empty", got)
+	}
+	if got := scanSpecs("require(\"abc\n\");"); len(got) != 0 {
+		t.Errorf("scan require unterminated = %q, want empty", got)
+	}
+	if got := scanSpecs("import a from \"./a.mdx\"; require(\"./b.mdx\");"); !reflect.DeepEqual(got, []string{"a", "b"}) {
+		t.Errorf("scan import+require = %q, want [a b]", got)
+	}
+}
+
+func TestIsPrecededByDot(t *testing.T) {
+	if isPrecededByDot([]byte("require"), 0) {
+		t.Error("isPrecededByDot start = true, want false")
+	}
+	if !isPrecededByDot([]byte("obj.require"), 4) {
+		t.Error("isPrecededByDot dot = false, want true")
+	}
+	if !isPrecededByDot([]byte("obj . \n require"), 8) {
+		t.Error("isPrecededByDot spaced = false, want true")
+	}
+	if isPrecededByDot([]byte("x require"), 2) {
+		t.Error("isPrecededByDot no dot = true, want false")
+	}
+}
+
+func TestIsRegexStart(t *testing.T) {
+	if !isRegexStart([]byte("/abc"), 0) {
+		t.Error("isRegexStart start = false, want true")
+	}
+	if isRegexStart([]byte("a/b"), 1) {
+		t.Error("isRegexStart after ident = true, want false")
+	}
+	if isRegexStart([]byte("(a)/b"), 3) {
+		t.Error("isRegexStart after ) = true, want false")
+	}
+	if isRegexStart([]byte("[a]/b"), 3) {
+		t.Error("isRegexStart after ] = true, want false")
+	}
+	if isRegexStart([]byte("{a}/b"), 3) {
+		t.Error("isRegexStart after } = true, want false")
+	}
+	if isRegexStart([]byte("\"a\"/b"), 3) {
+		t.Error("isRegexStart after quote = true, want false")
+	}
+	if !isRegexStart([]byte(";/b"), 1) {
+		t.Error("isRegexStart after ; = false, want true")
+	}
+	if !isRegexStart([]byte("   /abc"), 3) {
+		t.Error("isRegexStart spaced start = false, want true")
+	}
+}
+
+func TestScanQuotedTemplate(t *testing.T) {
+	if got := scanSpecs("\"a\\\"b\"; import a from \"./a.mdx\";"); !reflect.DeepEqual(got, []string{"a"}) {
+		t.Errorf("scan quoted escape = %q, want [a]", got)
+	}
+	if got := scanSpecs("`a\\nb`; import a from \"./a.mdx\";"); !reflect.DeepEqual(got, []string{"a"}) {
+		t.Errorf("scan template escape = %q, want [a]", got)
+	}
+	if got := scanSpecs("`outer ${ {a: 1} } inner`; import y from \"./real.mdx\";"); !reflect.DeepEqual(got, []string{"real"}) {
+		t.Errorf("scan template object = %q, want [real]", got)
+	}
+	if got := scanSpecs("`outer ${'x'} inner`; import y from \"./real.mdx\";"); !reflect.DeepEqual(got, []string{"real"}) {
+		t.Errorf("scan template quote = %q, want [real]", got)
+	}
+	if got := scanSpecs("`outer ${`inner`} end`; import y from \"./real.mdx\";"); !reflect.DeepEqual(got, []string{"real"}) {
+		t.Errorf("scan template nested = %q, want [real]", got)
+	}
+	if got := scanSpecs("`outer ${\"x\"} inner`; import y from \"./real.mdx\";"); !reflect.DeepEqual(got, []string{"real"}) {
+		t.Errorf("scan template double quote = %q, want [real]", got)
 	}
 }
 

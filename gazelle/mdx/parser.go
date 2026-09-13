@@ -132,7 +132,6 @@ func ExtractESMRegions(src []byte) [][]byte {
 	inFence := false
 	fenceChar := byte(0)
 	fenceLen := 0
-	inComment := false
 	flush := func() {
 		if len(chunk) > 0 {
 			out = append(out, []byte(strings.Join(chunk, "\n")+"\n"))
@@ -142,14 +141,6 @@ func ExtractESMRegions(src []byte) [][]byte {
 	}
 	for _, raw := range lines {
 		line := raw
-		if inComment {
-			if end := strings.Index(line, "-->"); end >= 0 {
-				inComment = false
-				line = line[end+3:]
-			} else {
-				continue
-			}
-		}
 		if !inFence {
 			if idx := strings.Index(line, "<!--"); idx >= 0 {
 				if end := strings.Index(line[idx+4:], "-->"); end >= 0 {
