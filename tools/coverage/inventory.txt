@@ -48,6 +48,10 @@ support rust/hello/src/staticlib.rs
 support go/hello/hello.go
 support go/hello/hello_test.go
 support go/hello/main.go
+support cc/hello/hello.cc
+support cc/hello/hello.h
+support cc/hello/hello_test.cc
+support cc/hello/main.cc
 eligible gazelle/rust/cargo.go
 support gazelle/rust/doc.go
 eligible gazelle/rust/lang.go

@@ -128,9 +128,15 @@ REAL_ADAPTERS = {
 # physical owner (dx_go_library, dx_go_binary, dx_go_test) with
 # package-level test semantics preserved per the generation contract Go
 # exception; no adapter claims go yet (classification only, no
-# supported claim).
+# supported claim). M22 WP1 adds the c and cpp classes to the cc family
+# on the same terms: each `.c`/`.h`/`.cc`/`.cpp`/`.cxx` source has one
+# physical owner (dx_cc_library, dx_cc_binary, dx_cc_test) with header
+# ownership per extension; no adapter claims c/cpp yet (classification
+# only, no supported claim).
 REAL_CLASS_TO_FAMILY = {
     "astro": "astro",
+    "c": "cc",
+    "cpp": "cc",
     "go": "go",
     "javascript": "javascript",
     "json": "json",
