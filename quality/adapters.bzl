@@ -123,9 +123,15 @@ REAL_ADAPTERS = {
 # to the mdx family on the same terms: the `.mdx` container stays one
 # physical owner (dx_mdx_library) with virtual ESM/prose/JSX regions
 # handed to execution-time integrations; no adapter claims mdx yet
-# (classification only, no supported claim).
+# (classification only, no supported claim). M22 WP1 adds the go class
+# to the go family on the same terms: each `.go` source has one
+# physical owner (dx_go_library, dx_go_binary, dx_go_test) with
+# package-level test semantics preserved per the generation contract Go
+# exception; no adapter claims go yet (classification only, no
+# supported claim).
 REAL_CLASS_TO_FAMILY = {
     "astro": "astro",
+    "go": "go",
     "javascript": "javascript",
     "json": "json",
     "jsx": "javascript",

@@ -45,6 +45,9 @@ support gazelle/rust/testdata/native_config/crates/skip/src/lib.rs
 support rust/hello/src/cdylib.rs
 support rust/hello/src/derive.rs
 support rust/hello/src/staticlib.rs
+support go/hello/hello.go
+support go/hello/hello_test.go
+support go/hello/main.go
 eligible gazelle/rust/cargo.go
 support gazelle/rust/doc.go
 eligible gazelle/rust/lang.go

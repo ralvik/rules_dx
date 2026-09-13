@@ -1,0 +1,33 @@
+"""M22 seed Go binary and library; consumer of dx_go_* wrappers."""
+
+load("//go/rules:defs.bzl", "dx_go_binary", "dx_go_library", "dx_go_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_go_library(
+    name = "hello_lib",
+    srcs = ["hello.go"],
+    importpath = "rules_dx/go/hello",
+)
+
+dx_go_binary(
+    name = "hello",
+    srcs = ["main.go"],
+    importpath = "rules_dx/go/hello/main",
+    deps = [":hello_lib"],
+)
+
+dx_go_test(
+    name = "hello_test",
+    srcs = ["hello_test.go"],
+    embed = [":hello_lib"],
+)
+
+# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. Go sources stay
+# dx-owned, never corpus sources.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
