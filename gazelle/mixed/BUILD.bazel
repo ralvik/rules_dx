@@ -1,0 +1,24 @@
+"""M21 mixed-framework ownership partition proof (no generator of its own)."""
+
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:private"])
+
+go_library(
+    name = "mixed",
+    srcs = ["mixed.go"],
+    importpath = "github.com/ralvik/rules_dx/gazelle/mixed",
+)
+
+go_test(
+    name = "mixed_test",
+    srcs = ["mixed_test.go"],
+    embed = [":mixed"],
+    pure = "on",
+)
+
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)

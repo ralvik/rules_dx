@@ -78,7 +78,7 @@ adoption scope (depends on M29).
 | M18 | [Vue](M18-vue.md) ([report](M18-completion-report.md)) | M16, M17 | Ready |
 | M19 | [Svelte](M19-svelte.md) ([report](M19-completion-report.md)) | M16, M17 | Ready |
 | M20 | [Astro](M20-astro.md) ([report](M20-completion-report.md)) | M16, M17 | Ready |
-| M21 | [MDX And Mixed Framework](M21-mdx-mixed-framework.md) | M18, M19, M20 | Pending |
+| M21 | [MDX And Mixed Framework](M21-mdx-mixed-framework.md) ([report](M21-completion-report.md)) | M18, M19, M20 | Ready |
 | M22 | [Additional Native Foundations And Toolchain Parity](M22-remaining-native-toolchain-parity.md) | M13, M15, M17, M21 | Pending |
 | M23 | [Additional Managed Foundations And Runtime Parity](M23-remaining-managed-runtime-parity.md) | M15, M17, M21, M22 | Pending |
 | M24 | [Parity Closure](M24-parity-closure.md) | M22, M23 | Pending |
