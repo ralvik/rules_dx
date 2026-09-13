@@ -1,0 +1,8 @@
+[package]
+name = "dx_env_plan"
+version = "0.0.0"
+edition = "2021"
+
+[lib]
+name = "dx_env_plan"
+path = "src/lib.rs"
