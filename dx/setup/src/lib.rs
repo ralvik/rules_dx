@@ -1320,6 +1320,79 @@ mod tests {
     }
 
     #[test]
+    fn concurrent_commits_serialize_with_idempotent_reuse() {
+        let root = commit_root("concurrent");
+        let workspace = workspace_of(&root);
+        // Eight racing commits over four distinct pairs: the O36 commit
+        // lock must serialize them so every commit succeeds, every record
+        // installs, and duplicate pairs reuse the installed record
+        // (`AlreadyCurrent` or a same-pair replacement, never a failure
+        // or a lost opposite side). The final pointer names one of the
+        // four pairs.
+        let wanted: Vec<SetupPair> = (0..4)
+            .map(|i| pair((b'1' + i) as char, (b'a' + i) as char))
+            .collect();
+        let outcomes = std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..8)
+                .map(|i| {
+                    let workspace_ref = &workspace;
+                    let candidate = wanted[i % wanted.len()].clone();
+                    scope.spawn(move || commit_pair(workspace_ref, &candidate))
+                })
+                .collect();
+            handles
+                .into_iter()
+                .map(|handle| handle.join().expect("worker panics fail the test"))
+                .collect::<Vec<_>>()
+        });
+        for outcome in &outcomes {
+            assert!(outcome.is_ok(), "racing commit must succeed: {outcome:?}");
+        }
+        let setups = workspace.join(".dx").join("setups");
+        for candidate in &wanted {
+            let record = setups.join(setup_hex(candidate));
+            assert!(record.join("environment").is_symlink());
+            assert!(record.join("generated").is_symlink());
+        }
+        let selected = read_current_pair(&workspace)
+            .expect("read")
+            .expect("selected");
+        assert!(wanted.contains(&selected));
+        assert!(!setups.join("current.next").exists());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn staged_directory_preserves_current() {
+        let root = commit_root("staged-dir");
+        let workspace = workspace_of(&root);
+        assert_eq!(
+            commit_ok(&workspace, &pair('1', '2')),
+            CommitOutcome::InstalledFresh
+        );
+        // An interrupted swap never leaves a directory at the staged
+        // pointer through this code, but a foreign directory there must
+        // refuse the commit with the prior pointer preserved, never be
+        // adopted or silently replaced.
+        let setups = workspace.join(".dx").join("setups");
+        fs::create_dir_all(setups.join("current.next")).expect("foreign staged dir");
+        assert!(matches!(
+            commit_pair(&workspace, &pair('3', '4')),
+            Err(CommitError::Install { .. })
+        ));
+        assert_eq!(
+            read_current_pair(&workspace).expect("read"),
+            Some(pair('1', '2'))
+        );
+        fs::remove_dir(setups.join("current.next")).expect("remove foreign staged dir");
+        assert_eq!(
+            commit_ok(&workspace, &pair('3', '4')),
+            CommitOutcome::InstalledReplacement
+        );
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
     fn commit_errors_display() {
         let errors = [
             CommitError::WorkspaceRoot {
