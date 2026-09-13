@@ -1,4 +1,4 @@
-//! Invocation parsing for the `dx` quality, workflow, and run commands (M07 WP1+WP3, M08 WP1+WP4).
+//! Invocation parsing for the `dx` quality, workflow, run, and clean commands (M07 WP1+WP3, M08 WP1+WP4, M25 WP5).
 //!
 //! Contract: `docs/cli/cli-contract.md#invocation-shape`. Scope positionals
 //! accept explicit Bazel labels and patterns (`//...`, `//pkg:target`,
@@ -8,11 +8,16 @@
 //! fail during resolution, and file ownership resolves through Bazel
 //! query per `docs/cli/target-resolution.md`. With no scope the
 //! repository operation (`//...`) runs.
+//!
+//! `dx clean` takes no scopes: it prunes validated unselected managed
+//! state per `docs/cli/commands/check-fix-clean.md#dx-clean`, with
+//! `--dry-run` listing without deleting and `--bazel` additionally
+//! forwarding `bazel clean`.
 
 use dx_output::{OutputMode, Threshold};
 
-/// Quality, generation, workflow, and run command selected by the first
-/// positional argument.
+/// Quality, generation, workflow, run, and clean command selected by
+/// the first positional argument.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
     Lint,
@@ -25,6 +30,7 @@ pub enum Command {
     Run,
     Check,
     Fix,
+    Clean,
 }
 
 impl Command {
@@ -41,6 +47,7 @@ impl Command {
             Command::Run => "run",
             Command::Check => "check",
             Command::Fix => "fix",
+            Command::Clean => "clean",
         }
     }
 
@@ -56,6 +63,7 @@ impl Command {
             "run" => Some(Command::Run),
             "check" => Some(Command::Check),
             "fix" => Some(Command::Fix),
+            "clean" => Some(Command::Clean),
             _ => None,
         }
     }
@@ -89,7 +97,8 @@ pub struct ReportRequest {
 
 /// Parsed `dx` invocation: command mode, global options, explicit scope,
 /// and Bazel command options after `--`. An empty `targets` selects the
-/// repository scope (`//...`).
+/// repository scope (`//...`). `bazel_clean` is set only by
+/// `dx clean --bazel` (additionally forward `bazel clean` after pruning).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Invocation {
     pub command: Command,
@@ -102,6 +111,7 @@ pub struct Invocation {
     pub fail_on: Threshold,
     pub targets: Vec<String>,
     pub bazel_options: Vec<String>,
+    pub bazel_clean: bool,
 }
 
 impl Invocation {
@@ -152,18 +162,18 @@ impl std::fmt::Display for ArgsError {
         match self {
             ArgsError::MissingCommand => write!(
                 f,
-                "missing command: want lint|typecheck|format|generate|build|test|coverage|run|check|fix"
+                "missing command: want lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean"
             ),
             ArgsError::UnknownCommand { command } => {
                 write!(
                     f,
-                    "unknown command {command:?}: want lint|typecheck|format|generate|build|test|coverage|run|check|fix"
+                    "unknown command {command:?}: want lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean"
                 )
             }
             ArgsError::UnknownOption { option } => write!(f, "unknown option {option:?}"),
             ArgsError::UnsupportedOption { command, option } => write!(
                 f,
-                "option {option:?} is not supported by dx {command}: Bazel owns the workflow status"
+                "option {option:?} is not supported by dx {command}"
             ),
             ArgsError::MissingValue { option } => write!(f, "missing value for {option:?}"),
             ArgsError::BadOutput { value } => {
@@ -255,6 +265,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     let mut fail_on_name = "warning".to_owned();
     let mut targets = Vec::new();
     let mut bazel_options = Vec::new();
+    let mut bazel_clean = false;
     let mut index = 0;
     while index < args.len() {
         let arg = &args[index];
@@ -315,6 +326,14 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                     }
                     check = true;
                 }
+                "--bazel" => {
+                    if inline.is_some() {
+                        return Err(ArgsError::UnknownOption {
+                            option: arg.clone(),
+                        });
+                    }
+                    bazel_clean = true;
+                }
                 _ => {
                     return Err(ArgsError::UnknownOption {
                         option: arg.clone(),
@@ -342,6 +361,54 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         index += 1;
     }
     let command = command.ok_or(ArgsError::MissingCommand)?;
+    if command == Command::Clean {
+        // `dx clean [--dry-run] [--bazel]` prunes validated unselected
+        // managed state with no scopes and no quality/workflow options:
+        // `--dry-run` deletes nothing (a `--bazel` forward is listed,
+        // never run), and only `--workspace`, `--dry-run`, `--quiet`,
+        // and `--bazel` apply.
+        if check {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--check".to_owned(),
+            });
+        }
+        if fail_on_name != "warning" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--fail-on".to_owned(),
+            });
+        }
+        if output_name != "text" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: format!("--output={output_name}"),
+            });
+        }
+        if let Some(request) = reports.first() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: format!("--report={}={}", request.format, request.destination),
+            });
+        }
+        if let Some(scope) = targets.first() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: scope.clone(),
+            });
+        }
+        if !bazel_options.is_empty() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--".to_owned(),
+            });
+        }
+    } else if bazel_clean {
+        return Err(ArgsError::UnsupportedOption {
+            command: command.name(),
+            option: "--bazel".to_owned(),
+        });
+    }
     if command.is_workflow() {
         // Workflow commands run Bazel verbs directly with Bazel-owned
         // status: finding thresholds and check-mode mutation previews do
@@ -394,6 +461,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         fail_on,
         targets,
         bazel_options,
+        bazel_clean,
     })
 }
 
@@ -766,6 +834,88 @@ mod tests {
             parse(&args(&["lint", "--check=x"])),
             Err(ArgsError::UnknownOption {
                 option: "--check=x".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn clean_parses_dry_run_and_bazel() {
+        let got = parse(&args(&["clean"])).expect("parse");
+        assert_eq!(got.command, Command::Clean);
+        assert!(!got.bazel_clean);
+        assert!(!got.dry_run);
+        let got = parse(&args(&["clean", "--dry-run", "--bazel"])).expect("parse");
+        assert_eq!(got.command, Command::Clean);
+        assert!(got.dry_run);
+        assert!(got.bazel_clean);
+        assert_eq!(Command::Clean.name(), "clean");
+        assert!(!Command::Clean.is_workflow());
+        assert!(!Command::Clean.is_umbrella());
+    }
+
+    #[test]
+    fn clean_rejects_scopes_and_quality_options() {
+        assert_eq!(
+            parse(&args(&["clean", "--check"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "clean",
+                option: "--check".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["clean", "--fail-on=error"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "clean",
+                option: "--fail-on".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["clean", "--output=json"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "clean",
+                option: "--output=json".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["clean", "--report=sarif=out.sarif"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "clean",
+                option: "--report=sarif=out.sarif".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["clean", "//a:one"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "clean",
+                option: "//a:one".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["clean", "--", "--jobs=4"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "clean",
+                option: "--".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["clean", "--bazel=yes"])),
+            Err(ArgsError::UnknownOption {
+                option: "--bazel=yes".to_owned(),
+            })
+        );
+        // `--bazel` belongs to clean only.
+        assert_eq!(
+            parse(&args(&["lint", "--bazel"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "lint",
+                option: "--bazel".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["build", "--bazel"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "build",
+                option: "--bazel".to_owned(),
             })
         );
     }

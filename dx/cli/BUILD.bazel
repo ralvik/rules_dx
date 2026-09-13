@@ -37,9 +37,15 @@ dx_rust_library(
     ) + [
         "//dx/apply:dx_apply",
         "//dx/bep:dx_bep",
+        "//dx/clean:dx_clean",
         "//dx/diff:dx_diff",
         "//dx/output:dx_output",
         "//dx/process:dx_process",
+        # Record/link identities for the `dx clean` path (M25 WP5): only
+        # the clean exec tests name `dx_setup` directly (fixture record
+        # names and link layout); production code reaches setup state
+        # through `dx_clean`.
+        "//dx/setup:dx_setup",
         "//generation/result:generation_result",
         "//quality/result:quality_result",
     ],

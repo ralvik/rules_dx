@@ -108,6 +108,16 @@ pub fn spec(command: Command) -> CommandSpec {
             aspects: &[],
             reports: &["sarif"],
         },
+        // Explicit managed-state cleanup (M25 WP5, O60): no Bazel
+        // invocation of its own for the prune itself (filesystem
+        // inventory plus the shared commit lock in `dx_clean`); the
+        // optional `bazel clean` forward is planned at execution.
+        Command::Clean => CommandSpec {
+            command,
+            capability: "clean",
+            aspects: &[],
+            reports: &[],
+        },
     }
 }
 
@@ -251,7 +261,7 @@ impl WorkflowVerb {
             Command::Coverage => Some(WorkflowVerb::Coverage),
             Command::Run => Some(WorkflowVerb::Run),
             Command::Lint | Command::Typecheck | Command::Format | Command::Generate => None,
-            Command::Check | Command::Fix => None,
+            Command::Check | Command::Fix | Command::Clean => None,
         }
     }
 
@@ -608,6 +618,11 @@ mod tests {
         assert_eq!(WorkflowVerb::of(Command::Format), None);
         assert_eq!(WorkflowVerb::of(Command::Check), None);
         assert_eq!(WorkflowVerb::of(Command::Fix), None);
+        let clean = spec(Command::Clean);
+        assert_eq!(clean.capability, "clean");
+        assert!(clean.aspects.is_empty());
+        assert!(clean.reports.is_empty());
+        assert_eq!(WorkflowVerb::of(Command::Clean), None);
         assert_eq!(WorkflowVerb::Run.name(), "run");
         assert!(!WorkflowVerb::Run.collects_reports());
     }
