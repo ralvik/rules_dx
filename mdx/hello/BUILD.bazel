@@ -1,7 +1,7 @@
 """M21 seed MDX document; consumer of dx_mdx_* wrappers."""
 
-load("//mdx/rules:defs.bzl", "dx_mdx_library")
 load("//javascript/rules:defs.bzl", "dx_js_library", "dx_js_test")
+load("//mdx/rules:defs.bzl", "dx_mdx_library")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])

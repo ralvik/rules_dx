@@ -119,6 +119,10 @@ REAL_ADAPTERS = {
 # container stays one physical owner (dx_astro_library) with virtual
 # frontmatter/server-script, template, client-script, and style regions
 # handed to execution-time integrations; no adapter claims astro yet
+# (classification only, no supported claim). M21 WP2 adds the mdx class
+# to the mdx family on the same terms: the `.mdx` container stays one
+# physical owner (dx_mdx_library) with virtual ESM/prose/JSX regions
+# handed to execution-time integrations; no adapter claims mdx yet
 # (classification only, no supported claim).
 REAL_CLASS_TO_FAMILY = {
     "astro": "astro",
@@ -126,6 +130,7 @@ REAL_CLASS_TO_FAMILY = {
     "json": "json",
     "jsx": "javascript",
     "markdown": "markdown",
+    "mdx": "mdx",
     "python": "python",
     "python_stub": "python",
     "rust": "rust",
