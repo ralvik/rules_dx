@@ -1,8 +1,9 @@
 # `dx check`, `dx fix`, And `dx clean`
 
 Owning decision: [ADR 0018](../../decisions/0018-umbrella-check-fix-cleanup-clean.md).
-Umbrella mechanics are frozen under [O59](../../open-decisions.md); cleanup mechanics remain
-pending under O60.
+Umbrella mechanics are frozen under [O59](../../open-decisions.md); cleanup mechanics are
+frozen under O60 except process-scan in-use detection and reclaimable-bytes reporting,
+which remain open (see [`dx clean`](#dx-clean)).
 
 ## `dx check` And `dx fix`
 
@@ -75,3 +76,22 @@ dangling-link recovery guidance (`dx setup`, `dx env`, or `dx codegen`).
 `--dry-run` lists reclaimable generations and links without deleting.
 There is no automatic pruning, age policy, or count limit. CI use is not
 supported.
+
+Frozen mechanics (O60, pinned by `dx_clean`/`dx_cli` fixtures): the flag
+shape is exactly `dx clean [--dry-run] [--bazel]` with no scopes and no
+quality, report, or workflow options (`--bazel` is rejected on every other
+command). A setup record prunes only when it is neither
+`.dx/setups/current` nor active; a generation prunes only when no retained
+record references it and no active process uses it. Unmanaged or
+digest-spoofed paths are refused, and malformed current state fails closed
+with nothing pruned. Apply runs under the shared workspace commit lock
+(O36 route, ten-second deadline), re-reads the live selection under the
+lock, skips entries that became current or referenced, treats missing
+entries as idempotent, and never touches the current pointer. `--dry-run`
+deletes nothing and holds no lock. `--bazel` forwards exactly
+`bazel clean` after pruning (listed, never run, under `--dry-run`) and
+prints the recovery guidance.
+
+Remain open under O60: process-scan in-use detection (v1 takes
+caller-provided active sets, so unknown-live entries prune per plan) and
+reclaimable-bytes reporting.

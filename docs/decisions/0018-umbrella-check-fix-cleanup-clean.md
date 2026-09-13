@@ -71,8 +71,10 @@ graph, or mutation semantics:
 - `--dry-run` lists reclaimable generations and links without deleting.
 
 NDJSON parent framing and report merging are qualified under resolved
-[O59](../open-decisions.md). The `--bazel` flag shape and in-use detection
-mechanics remain pending under O60.
+[O59](../open-decisions.md). The `--bazel` flag shape, dry-run, refusal, and
+commit-lock mechanics are frozen under O60 (see the [check/fix/clean
+contract](../cli/commands/check-fix-clean.md#dx-clean)); process-scan
+in-use detection and reclaimable-bytes reporting remain pending under O60.
 
 ## Consequences
 
