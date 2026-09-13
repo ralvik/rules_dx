@@ -1,4 +1,4 @@
-"""M25 WP3 slice 1: combined setup request planning for the `dx` CLI."""
+"""M25 WP3 slice 3: combined setup commit through the shared lock."""
 
 load("@crates//:crates.bzl", "aliases")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
@@ -17,6 +17,10 @@ dx_rust_library(
     crate_name = "dx_setup",
     crate_root = "src/lib.rs",
     edition = "2021",
+    deps = [
+        "//dx/env:dx_env",
+        "//quality/result:quality_result",
+    ],
 )
 
 dx_rust_test(

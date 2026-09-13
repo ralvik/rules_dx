@@ -8,15 +8,18 @@
 //! of required roots, both aspects, both output groups, and one BEP
 //! stream; codegen and env never invoke each other).
 //!
-//! This crate owns scope resolution and the combined request plan only:
-//! which Bazel roots to build with which aspects and output groups in the
-//! single setup request. Bare `dx setup` builds the two canonical
-//! repository selections (`//dx:codegen` plus `//dx:env`); an exact label
-//! builds that one label with both aspects and both output groups applied,
-//! where provider applicability bounds each aspect to targets with a
-//! nonempty effective stage subset. Staging, validation, carry-forward,
-//! the commit lock, and the atomic `.dx/setups/current` replacement land
-//! in later WP3 slices; no filesystem mutation happens here.
+//! This crate owns scope resolution, the combined request plan, pair
+//! resolution (slice 2), and the commit layer (slice 3): re-reading
+//! `.dx/setups/current` under the O36 commit lock and atomically
+//! replacing the current pointer. Staging, validation, and generation
+//! materialization land in later WP3 slices; the setup record links may
+//! dangle until generations exist (ordinary host missing-target behavior,
+//! never auto-repair).
+
+use std::fs;
+use std::io;
+use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 /// Codegen collecting aspect applied in the combined request. Matches
 /// `dx_codegen_plan_aspect` in `//generation:codegen.bzl` and
@@ -277,6 +280,441 @@ pub fn resolve_pair(inputs: PairInputs) -> Result<SetupPair, ResolveError> {
     }
 }
 
+/// Directory holding every immutable setup record under `.dx`.
+pub const SETUPS_DIR_NAME: &str = "setups";
+
+/// Name of the sole mutable selection pointer inside the setups directory.
+/// It is a symlink to the selected setup record directory name.
+pub const CURRENT_LINK_NAME: &str = "current";
+
+/// Temporary current-pointer name staged beside the live pointer so the
+/// publish rename stays on one directory (one filesystem) and atomic.
+pub const CURRENT_STAGE_NAME: &str = "current.next";
+
+/// Sibling directory holding immutable environment generations. The setup
+/// record links dangle until generations materialize; dangling has the
+/// host's ordinary missing-target behavior, never auto-repair.
+pub const ENVIRONMENTS_DIR_NAME: &str = "environments";
+
+/// Sibling directory holding immutable generated-code generations.
+pub const GENERATED_DIR_NAME: &str = "generated";
+
+/// Link name inside a setup record pointing at its environment generation.
+pub const ENVIRONMENT_LINK_NAME: &str = "environment";
+
+/// Link name inside a setup record pointing at its generated generation.
+pub const GENERATED_LINK_NAME: &str = "generated";
+
+/// How long a setup commit contends for the workspace commit lock before
+/// failing with a busy diagnostic. Mirrors `dx_env::LOCK_TIMEOUT` (O36
+/// ten-second deadline); pinned equal by test, never drifted silently.
+pub const COMMIT_LOCK_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Commit outcome for operator messaging. Mirrors the `dx_env` refresh
+/// outcome vocabulary over the setup pointer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommitOutcome {
+    /// The current pointer already selects this pair; nothing changed.
+    AlreadyCurrent,
+    /// No setup was selected before; the pair is now selected.
+    InstalledFresh,
+    /// A different setup was selected before; it is now replaced.
+    InstalledReplacement,
+}
+
+/// Setup commit failure. Every variant is operational; usage errors
+/// (scope selection) live in [`ScopeError`] and never surface here.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CommitError {
+    /// Workspace root is missing or not a directory.
+    WorkspaceRoot { path: PathBuf },
+    /// Another command holds the commit lock past the deadline.
+    Busy { path: PathBuf },
+    /// The commit lock cannot be opened or locked.
+    LockFailed { path: PathBuf, reason: String },
+    /// `.dx/setups/current` or its record links are present but malformed.
+    /// Never adopted, never repaired: the operator removes the offending
+    /// path or re-runs setup from a clean selection.
+    CurrentInvalid { reason: String },
+    /// A record already exists at the expected setup hash but its links do
+    /// not match the pair byte-for-byte. The commit fails without touching
+    /// the current pointer (digest-spoof refusal).
+    RecordMismatch { reason: String },
+    /// A workspace mutation failed. The current pointer is either untouched
+    /// (pre-swap failure) or fully swapped (the swap itself is one atomic
+    /// rename).
+    Install { reason: String },
+    /// The selected scope prepared neither side; committing an empty or
+    /// recycled pair would hide the usage error. Mirrors [`ResolveError`].
+    NoCapability,
+}
+
+impl std::fmt::Display for CommitError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+
+impl std::error::Error for CommitError {}
+
+/// Freshly prepared sides for an atomic
+/// read-resolve-commit under one lock hold.
+pub struct PreparedSides {
+    pub prepared_environment: Option<GenerationId>,
+    pub prepared_generated: Option<GenerationId>,
+    pub empty_environment: GenerationId,
+    pub empty_generated: GenerationId,
+}
+
+/// Provisional versioned setup fingerprint over the pair. The frozen
+/// versioned binary Protobuf setup identity (containing both generation
+/// identities) lands with its implementing slice; until then this
+/// `dx-setup/v0` prefix keeps the pre-image versioned and deterministic so
+/// the hash-addressed record layout, idempotency checks, and atomic swap
+/// all exercise their real paths. No ad-hoc unversioned digest input.
+pub fn setup_fingerprint(pair: &SetupPair) -> String {
+    format!(
+        "dx-setup/v0\n{}\n{}\n",
+        pair.environment.as_str(),
+        pair.generated.as_str()
+    )
+}
+
+/// BLAKE3-256 over the provisional fingerprint: the setup record identity.
+/// Routed through the shared result crate so the digest algorithm has one
+/// owner.
+pub fn setup_digest(pair: &SetupPair) -> [u8; 32] {
+    quality_result::digest(setup_fingerprint(pair).as_bytes())
+}
+
+/// Lowercase hex of the setup digest: the setup record directory name.
+pub fn setup_hex(pair: &SetupPair) -> String {
+    setup_digest(pair)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
+}
+
+/// Expected relative link text from a setup record to its environment
+/// generation. Relative (never absolute) so the workspace stays
+/// relocatable; the layout's trailing slash denotes a directory, while the
+/// frozen link text carries no trailing slash.
+fn expected_environment_target(pair: &SetupPair) -> String {
+    format!(
+        "../../{}/{}/",
+        ENVIRONMENTS_DIR_NAME,
+        pair.environment.as_str()
+    )
+}
+
+/// Expected relative link text from a setup record to its generated
+/// generation.
+fn expected_generated_target(pair: &SetupPair) -> String {
+    format!("../../{}/{}/", GENERATED_DIR_NAME, pair.generated.as_str())
+}
+
+/// Platform directory-symlink primitive for record and pointer links.
+#[cfg(windows)]
+fn symlink_dir(target: &Path, link: &Path) -> io::Result<()> {
+    std::os::windows::fs::symlink_dir(target, link)
+}
+
+/// Platform directory-symlink primitive for record and pointer links.
+#[cfg(not(windows))]
+fn symlink_dir(target: &Path, link: &Path) -> io::Result<()> {
+    std::os::unix::fs::symlink(target, link)
+}
+
+/// Maps the shared commit-lock failure into the setup commit vocabulary.
+/// Only contention reports busy; every other lock failure aborts
+/// immediately so platform errors are never misreported.
+fn map_lock_error(error: dx_env::Error) -> CommitError {
+    match error {
+        dx_env::Error::Busy { path } => CommitError::Busy { path },
+        dx_env::Error::LockFailed { path, reason } => CommitError::LockFailed { path, reason },
+        other => CommitError::LockFailed {
+            path: PathBuf::from(".dx"),
+            reason: other.to_string(),
+        },
+    }
+}
+
+/// Acquires the shared workspace commit lock. This is the O36 route owned
+/// by `dx_env::acquire_lock` (dedicated lock file, `File::try_lock`,
+/// contention-only retry until the deadline): setup introduces no new lock
+/// file, mechanism, or deadline.
+fn acquire_commit_lock(dx_dir: &Path, timeout: Duration) -> Result<std::fs::File, CommitError> {
+    dx_env::acquire_lock(dx_dir, timeout).map_err(map_lock_error)
+}
+
+/// Extracts a generation digest from a record link target: the final path
+/// component must be a valid [`GenerationId`].
+fn generation_from_link_target(target: &Path) -> Option<GenerationId> {
+    target
+        .file_name()
+        .and_then(|name| name.to_str())
+        .and_then(|text| GenerationId::new(text).ok())
+}
+
+/// Reads the currently selected pair without locking (diagnostics and
+/// tests). The authoritative read inside a commit happens under the commit
+/// lock via the same helper. Absent pointer selects nothing (`Ok(None)`);
+/// any present-but-malformed state fails closed.
+pub fn read_current_pair(workspace_root: &Path) -> Result<Option<SetupPair>, CommitError> {
+    if !workspace_root.is_dir() {
+        return Err(CommitError::WorkspaceRoot {
+            path: workspace_root.to_path_buf(),
+        });
+    }
+    let current = workspace_root
+        .join(".dx")
+        .join(SETUPS_DIR_NAME)
+        .join(CURRENT_LINK_NAME);
+    let meta = match fs::symlink_metadata(&current) {
+        Ok(meta) => meta,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => {
+            return Err(CommitError::CurrentInvalid {
+                reason: format!("cannot inspect {}: {e}", current.display()),
+            });
+        }
+    };
+    if !meta.file_type().is_symlink() {
+        return Err(CommitError::CurrentInvalid {
+            reason: format!(
+                "{} is not a symlink; refusing to adopt foreign state",
+                current.display()
+            ),
+        });
+    }
+    let pointer_target = fs::read_link(&current).map_err(|e| CommitError::CurrentInvalid {
+        reason: format!("cannot read {}: {e}", current.display()),
+    })?;
+    let environment = fs::read_link(current.join(ENVIRONMENT_LINK_NAME))
+        .ok()
+        .and_then(|target| generation_from_link_target(&target));
+    let generated = fs::read_link(current.join(GENERATED_LINK_NAME))
+        .ok()
+        .and_then(|target| generation_from_link_target(&target));
+    let (environment, generated) = match (environment, generated) {
+        (Some(environment), Some(generated)) => (environment, generated),
+        _ => {
+            return Err(CommitError::CurrentInvalid {
+                reason: format!(
+                    "{} does not resolve to a complete setup record",
+                    current.display()
+                ),
+            });
+        }
+    };
+    let pair = SetupPair {
+        environment,
+        generated,
+    };
+    let want = setup_hex(&pair);
+    let pointed = pointer_target
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("");
+    if pointed != want {
+        return Err(CommitError::CurrentInvalid {
+            reason: format!(
+                "{} points at {pointed:?}, want setup {want:?}; refusing digest-spoofed state",
+                current.display()
+            ),
+        });
+    }
+    Ok(Some(pair))
+}
+
+/// Ensures the hash-addressed setup record exists and matches the pair
+/// byte-for-byte. Existing records validate structurally; mismatches fail
+/// without replacement. Returns the record path.
+fn ensure_setup_record(setups_dir: &Path, pair: &SetupPair) -> Result<PathBuf, CommitError> {
+    let record = setups_dir.join(setup_hex(pair));
+    if record.exists() {
+        let environment = fs::read_link(record.join(ENVIRONMENT_LINK_NAME)).map_err(|e| {
+            CommitError::RecordMismatch {
+                reason: format!("existing record {} is malformed: {e}", record.display()),
+            }
+        })?;
+        let generated = fs::read_link(record.join(GENERATED_LINK_NAME)).map_err(|e| {
+            CommitError::RecordMismatch {
+                reason: format!("existing record {} is malformed: {e}", record.display()),
+            }
+        })?;
+        if environment.as_os_str().to_string_lossy().as_ref() != expected_environment_target(pair)
+            || generated.as_os_str().to_string_lossy().as_ref() != expected_generated_target(pair)
+        {
+            return Err(CommitError::RecordMismatch {
+                reason: format!(
+                    "existing record {} does not match the committing pair; refusing to replace it",
+                    record.display()
+                ),
+            });
+        }
+        return Ok(record);
+    }
+    fs::create_dir_all(&record).map_err(|e| CommitError::Install {
+        reason: format!("cannot create {}: {e}", record.display()),
+    })?;
+    let created = |link: &str, target: &str| {
+        symlink_dir(Path::new(target), &record.join(link)).map_err(|e| CommitError::Install {
+            reason: format!("cannot stage setup link '{link}': {e}"),
+        })
+    };
+    if let Err(error) = created(ENVIRONMENT_LINK_NAME, &expected_environment_target(pair))
+        .and_then(|()| created(GENERATED_LINK_NAME, &expected_generated_target(pair)))
+    {
+        let _ = fs::remove_dir_all(&record);
+        return Err(error);
+    }
+    Ok(record)
+}
+
+/// Removes a stale staged pointer left by an interrupted swap.
+/// Best-effort only when the path is a symlink or file; a surviving
+/// directory reports through the install error so it is never silently
+/// adopted.
+fn clear_staged_pointer(stage: &Path) -> Result<(), CommitError> {
+    match fs::symlink_metadata(stage) {
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(CommitError::Install {
+            reason: format!("cannot inspect stale {}: {e}", stage.display()),
+        }),
+        Ok(meta) => {
+            if meta.file_type().is_dir() && !meta.file_type().is_symlink() {
+                Err(CommitError::Install {
+                    reason: format!(
+                        "stale {} is a directory; refusing to adopt foreign state",
+                        stage.display()
+                    ),
+                })
+            } else {
+                fs::remove_file(stage).map_err(|e| CommitError::Install {
+                    reason: format!("cannot clear stale {}: {e}", stage.display()),
+                })
+            }
+        }
+    }
+}
+
+/// Installs the record and atomically swaps the current pointer. The
+/// caller holds the commit lock; the swap itself is one same-directory
+/// rename, so a crash lands on the prior pointer plus a reclaimable staged
+/// link. Records install idempotently; mismatches fail with the prior
+/// pointer preserved.
+fn install_and_swap(
+    setups_dir: &Path,
+    prior: Option<SetupPair>,
+    pair: &SetupPair,
+) -> Result<CommitOutcome, CommitError> {
+    fs::create_dir_all(setups_dir).map_err(|e| CommitError::Install {
+        reason: format!("cannot create {}: {e}", setups_dir.display()),
+    })?;
+    let current = setups_dir.join(CURRENT_LINK_NAME);
+    let stage = setups_dir.join(CURRENT_STAGE_NAME);
+    clear_staged_pointer(&stage)?;
+    let record_name = setup_hex(pair);
+    ensure_setup_record(setups_dir, pair)?;
+    if prior.as_ref() == Some(pair) {
+        return Ok(CommitOutcome::AlreadyCurrent);
+    }
+    let fresh = prior.is_none();
+    symlink_dir(Path::new(&record_name), &stage).map_err(|e| CommitError::Install {
+        reason: format!("cannot stage {}: {e}", stage.display()),
+    })?;
+    fs::rename(&stage, &current).map_err(|e| CommitError::Install {
+        reason: format!(
+            "cannot publish {}: {e}; the prior pointer is preserved",
+            current.display()
+        ),
+    })?;
+    if fresh {
+        Ok(CommitOutcome::InstalledFresh)
+    } else {
+        Ok(CommitOutcome::InstalledReplacement)
+    }
+}
+
+/// Commits an already-resolved pair through the lock and atomic pointer
+/// replacement, re-reading the current selection under the lock so the
+/// no-op check never races a concurrent commit.
+pub fn commit_pair(workspace_root: &Path, pair: &SetupPair) -> Result<CommitOutcome, CommitError> {
+    commit_pair_with_timeout(workspace_root, pair, COMMIT_LOCK_TIMEOUT)
+}
+
+/// [`commit_pair`] with an injectable lock deadline (tests only).
+pub fn commit_pair_with_timeout(
+    workspace_root: &Path,
+    pair: &SetupPair,
+    timeout: Duration,
+) -> Result<CommitOutcome, CommitError> {
+    if !workspace_root.is_dir() {
+        return Err(CommitError::WorkspaceRoot {
+            path: workspace_root.to_path_buf(),
+        });
+    }
+    let dx_dir = workspace_root.join(".dx");
+    fs::create_dir_all(&dx_dir).map_err(|e| CommitError::Install {
+        reason: format!("cannot create {}: {e}", dx_dir.display()),
+    })?;
+    let _lock = acquire_commit_lock(&dx_dir, timeout)?;
+    let setups_dir = dx_dir.join(SETUPS_DIR_NAME);
+    let prior = read_current_pair(workspace_root)?;
+    install_and_swap(&setups_dir, prior, pair)
+}
+
+/// Atomically resolves prepared sides against the newest current pair and
+/// commits the result: one lock hold across the re-read, [`resolve_pair`],
+/// idempotent record installation, and atomic pointer swap. Independent
+/// env/codegen commits use this so a concurrently completed opposite side
+/// is carried forward instead of lost. Both-or-neither: failures before
+/// the swap leave the prior pointer unchanged.
+pub fn commit_prepared(
+    workspace_root: &Path,
+    sides: PreparedSides,
+) -> Result<(SetupPair, CommitOutcome), CommitError> {
+    commit_prepared_with_timeout(workspace_root, sides, COMMIT_LOCK_TIMEOUT)
+}
+
+/// [`commit_prepared`] with an injectable lock deadline (tests only).
+pub fn commit_prepared_with_timeout(
+    workspace_root: &Path,
+    sides: PreparedSides,
+    timeout: Duration,
+) -> Result<(SetupPair, CommitOutcome), CommitError> {
+    if !workspace_root.is_dir() {
+        return Err(CommitError::WorkspaceRoot {
+            path: workspace_root.to_path_buf(),
+        });
+    }
+    let dx_dir = workspace_root.join(".dx");
+    fs::create_dir_all(&dx_dir).map_err(|e| CommitError::Install {
+        reason: format!("cannot create {}: {e}", dx_dir.display()),
+    })?;
+    let _lock = acquire_commit_lock(&dx_dir, timeout)?;
+    let current = read_current_pair(workspace_root)?;
+    let PreparedSides {
+        prepared_environment,
+        prepared_generated,
+        empty_environment,
+        empty_generated,
+    } = sides;
+    let pair = resolve_pair(PairInputs {
+        prepared_environment,
+        prepared_generated,
+        current,
+        empty_environment,
+        empty_generated,
+    })
+    .map_err(|_| CommitError::NoCapability)?;
+    let setups_dir = dx_dir.join(SETUPS_DIR_NAME);
+    let prior = read_current_pair(workspace_root)?;
+    let outcome = install_and_swap(&setups_dir, prior, &pair)?;
+    Ok((pair, outcome))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -485,5 +923,339 @@ mod tests {
         assert!(ResolveError::NoCapability
             .to_string()
             .contains("NoCapability"));
+    }
+
+    fn pair(env: char, gen: char) -> SetupPair {
+        SetupPair {
+            environment: generation(env),
+            generated: generation(gen),
+        }
+    }
+
+    fn commit_root(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("dx-setup-test-{}-{name}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(dir.join("ws")).expect("create workspace");
+        dir
+    }
+
+    fn workspace_of(root: &Path) -> PathBuf {
+        root.join("ws")
+    }
+
+    fn commit_ok(workspace: &Path, pair: &SetupPair) -> CommitOutcome {
+        commit_pair(workspace, pair).expect("commit succeeds")
+    }
+
+    #[test]
+    fn commit_lock_deadline_matches_env_owner() {
+        assert_eq!(COMMIT_LOCK_TIMEOUT, dx_env::LOCK_TIMEOUT);
+    }
+
+    #[test]
+    fn setup_hex_is_deterministic_lowercase_64() {
+        let first = setup_hex(&pair('1', '2'));
+        let second = setup_hex(&pair('1', '2'));
+        assert_eq!(first, second);
+        assert_eq!(first.len(), 64);
+        assert!(first.chars().all(|c| c.is_ascii_hexdigit()));
+        assert_eq!(first, first.to_lowercase());
+        assert_ne!(first, setup_hex(&pair('1', '3')));
+        assert_ne!(first, setup_hex(&pair('3', '2')));
+        assert!(setup_fingerprint(&pair('1', '2')).starts_with("dx-setup/v0\n"));
+    }
+
+    #[test]
+    fn fresh_install_noop_and_replacement() {
+        let root = commit_root("lifecycle");
+        let workspace = workspace_of(&root);
+        assert_eq!(read_current_pair(&workspace).expect("read"), None);
+        assert_eq!(
+            commit_ok(&workspace, &pair('1', '2')),
+            CommitOutcome::InstalledFresh
+        );
+        let selected = read_current_pair(&workspace)
+            .expect("read")
+            .expect("selected");
+        assert_eq!(selected, pair('1', '2'));
+        assert_eq!(
+            commit_ok(&workspace, &pair('1', '2')),
+            CommitOutcome::AlreadyCurrent
+        );
+        assert_eq!(
+            commit_ok(&workspace, &pair('3', '4')),
+            CommitOutcome::InstalledReplacement
+        );
+        assert_eq!(
+            read_current_pair(&workspace).expect("read"),
+            Some(pair('3', '4'))
+        );
+        // The record links are relative, and the pointer names the setup hash.
+        let setups = workspace.join(".dx").join("setups");
+        let record = setups.join(setup_hex(&pair('3', '4')));
+        assert!(record.join("environment").is_symlink());
+        assert!(record.join("generated").is_symlink());
+        assert_eq!(
+            fs::read_link(setups.join("current")).expect("pointer"),
+            PathBuf::from(setup_hex(&pair('3', '4')))
+        );
+        assert!(!setups.join("current.next").exists());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn workspace_path_with_spaces_commits() {
+        let root = commit_root("with space");
+        let workspace = workspace_of(&root);
+        assert_eq!(
+            commit_ok(&workspace, &pair('a', 'b')),
+            CommitOutcome::InstalledFresh
+        );
+        assert_eq!(
+            read_current_pair(&workspace).expect("read"),
+            Some(pair('a', 'b'))
+        );
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn prepared_commits_carry_forward_under_one_lock() {
+        let root = commit_root("carry-commit");
+        let workspace = workspace_of(&root);
+        let sides = |env: Option<char>, gen: Option<char>| PreparedSides {
+            prepared_environment: env.map(generation),
+            prepared_generated: gen.map(generation),
+            empty_environment: generation('e'),
+            empty_generated: generation('0'),
+        };
+        let (first, outcome) = commit_prepared(&workspace, sides(Some('1'), None)).expect("env");
+        assert_eq!(outcome, CommitOutcome::InstalledFresh);
+        assert_eq!(first, pair('1', '0'));
+        let (second, outcome) = commit_prepared(&workspace, sides(None, Some('2'))).expect("gen");
+        assert_eq!(outcome, CommitOutcome::InstalledReplacement);
+        assert_eq!(second, pair('1', '2'));
+        assert_eq!(
+            read_current_pair(&workspace).expect("read"),
+            Some(pair('1', '2'))
+        );
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn prepared_without_capability_fails_before_mutation() {
+        let root = commit_root("no-capability");
+        let workspace = workspace_of(&root);
+        let error = commit_prepared(
+            &workspace,
+            PreparedSides {
+                prepared_environment: None,
+                prepared_generated: None,
+                empty_environment: generation('e'),
+                empty_generated: generation('0'),
+            },
+        )
+        .unwrap_err();
+        assert_eq!(error, CommitError::NoCapability);
+        assert_eq!(read_current_pair(&workspace).expect("read"), None);
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn record_mismatch_preserves_current() {
+        let root = commit_root("mismatch");
+        let workspace = workspace_of(&root);
+        assert_eq!(
+            commit_ok(&workspace, &pair('1', '2')),
+            CommitOutcome::InstalledFresh
+        );
+        // Corrupt the record for a different pair, then try to commit it:
+        // the commit must fail without moving the pointer.
+        let spoofed = pair('3', '4');
+        let setups = workspace.join(".dx").join("setups");
+        let record = setups.join(setup_hex(&spoofed));
+        fs::create_dir_all(&record).expect("spoof record");
+        symlink_dir(
+            Path::new("../../environments/wrong"),
+            &record.join("environment"),
+        )
+        .expect("wrong link");
+        symlink_dir(
+            Path::new(&expected_generated_target(&spoofed)),
+            &record.join("generated"),
+        )
+        .expect("right link");
+        let error = commit_pair(&workspace, &spoofed).unwrap_err();
+        assert!(matches!(error, CommitError::RecordMismatch { .. }));
+        assert_eq!(
+            read_current_pair(&workspace).expect("read"),
+            Some(pair('1', '2'))
+        );
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn unmanaged_current_states_fail_closed() {
+        let root = commit_root("unmanaged");
+        let workspace = workspace_of(&root);
+        assert_eq!(
+            commit_ok(&workspace, &pair('1', '2')),
+            CommitOutcome::InstalledFresh
+        );
+        let setups = workspace.join(".dx").join("setups");
+        let current = setups.join("current");
+        let pointed = fs::read_link(&current).expect("pointer");
+
+        fs::remove_file(&current).expect("remove pointer");
+        fs::write(&current, "not a symlink").expect("file pointer");
+        assert!(matches!(
+            read_current_pair(&workspace),
+            Err(CommitError::CurrentInvalid { .. })
+        ));
+        assert!(matches!(
+            commit_pair(&workspace, &pair('3', '4')),
+            Err(CommitError::CurrentInvalid { .. })
+        ));
+        fs::remove_file(&current).expect("remove file pointer");
+
+        fs::create_dir(&current).expect("dir pointer");
+        assert!(matches!(
+            read_current_pair(&workspace),
+            Err(CommitError::CurrentInvalid { .. })
+        ));
+        fs::remove_dir(&current).expect("remove dir pointer");
+
+        symlink_dir(Path::new("missing-setup"), &current).expect("dangling pointer");
+        assert!(matches!(
+            read_current_pair(&workspace),
+            Err(CommitError::CurrentInvalid { .. })
+        ));
+        fs::remove_file(&current).expect("remove dangling");
+        symlink_dir(Path::new(&pointed), &current).expect("restore pointer");
+        assert_eq!(
+            read_current_pair(&workspace).expect("read"),
+            Some(pair('1', '2'))
+        );
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn digest_spoofed_pointer_fails_closed() {
+        let root = commit_root("spoof");
+        let workspace = workspace_of(&root);
+        assert_eq!(
+            commit_ok(&workspace, &pair('1', '2')),
+            CommitOutcome::InstalledFresh
+        );
+        let setups = workspace.join(".dx").join("setups");
+        let current = setups.join("current");
+        // Point at a valid record directory name that does not match the
+        // pair the record links resolve to.
+        let other = setup_hex(&pair('3', '4'));
+        fs::create_dir_all(setups.join(&other)).expect("other record");
+        symlink_dir(
+            Path::new(&expected_environment_target(&pair('1', '2'))),
+            &setups.join(&other).join("environment"),
+        )
+        .expect("env link");
+        symlink_dir(
+            Path::new(&expected_generated_target(&pair('1', '2'))),
+            &setups.join(&other).join("generated"),
+        )
+        .expect("gen link");
+        fs::remove_file(&current).expect("remove pointer");
+        symlink_dir(Path::new(&other), &current).expect("spoofed pointer");
+        assert!(matches!(
+            read_current_pair(&workspace),
+            Err(CommitError::CurrentInvalid { .. })
+        ));
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn stale_staged_pointer_is_reclaimed() {
+        let root = commit_root("stale-next");
+        let workspace = workspace_of(&root);
+        let setups = workspace.join(".dx").join("setups");
+        fs::create_dir_all(&setups).expect("setups");
+        symlink_dir(Path::new("stale-target"), &setups.join("current.next")).expect("stale");
+        assert_eq!(
+            commit_ok(&workspace, &pair('1', '2')),
+            CommitOutcome::InstalledFresh
+        );
+        assert!(!setups.join("current.next").exists());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn workspace_missing_fails() {
+        let root = commit_root("ws-missing");
+        let missing = root.join("no-such-dir");
+        assert!(matches!(
+            read_current_pair(&missing),
+            Err(CommitError::WorkspaceRoot { .. })
+        ));
+        assert!(matches!(
+            commit_pair(&missing, &pair('1', '2')),
+            Err(CommitError::WorkspaceRoot { .. })
+        ));
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn busy_lock_fails_after_deadline() {
+        let root = commit_root("busy");
+        let workspace = workspace_of(&root);
+        let dx_dir = workspace.join(".dx");
+        fs::create_dir_all(&dx_dir).expect("dx dir");
+        let _held =
+            dx_env::acquire_lock(&dx_dir, Duration::from_secs(10)).expect("hold commit lock");
+        let error = commit_pair_with_timeout(&workspace, &pair('1', '2'), Duration::from_millis(1))
+            .unwrap_err();
+        assert!(matches!(error, CommitError::Busy { .. }));
+        drop(_held);
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn lock_open_failure_aborts() {
+        let root = commit_root("lock-open");
+        let workspace = workspace_of(&root);
+        let dx_dir = workspace.join(".dx");
+        fs::create_dir_all(&dx_dir).expect("dx dir");
+        fs::create_dir_all(dx_dir.join(dx_env::LOCK_FILE_NAME)).expect("lock is a directory");
+        assert!(matches!(
+            commit_pair_with_timeout(&workspace, &pair('1', '2'), Duration::from_secs(1)),
+            Err(CommitError::LockFailed { .. })
+        ));
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn commit_errors_display() {
+        let errors = [
+            CommitError::WorkspaceRoot {
+                path: PathBuf::from("/ws"),
+            },
+            CommitError::Busy {
+                path: PathBuf::from("/ws/.dx/.commit.lock"),
+            },
+            CommitError::LockFailed {
+                path: PathBuf::from("/ws/.dx/.commit.lock"),
+                reason: "r".to_string(),
+            },
+            CommitError::CurrentInvalid {
+                reason: "r".to_string(),
+            },
+            CommitError::RecordMismatch {
+                reason: "r".to_string(),
+            },
+            CommitError::Install {
+                reason: "r".to_string(),
+            },
+            CommitError::NoCapability,
+        ];
+        for error in &errors {
+            assert!(!format!("{error}").is_empty());
+        }
     }
 }
