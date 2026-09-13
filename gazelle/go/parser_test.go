@@ -1,0 +1,81 @@
+package golang
+
+import (
+	"reflect"
+	"testing"
+)
+
+func TestParseImportsLocalNormalizedToBase(t *testing.T) {
+	got, err := ParseImports([]byte("package demo\n\nimport (\n\t\"fmt\"\n\t\"rules_dx/go/hello\"\n)\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// fmt is included (callers filter stdlib); the local import
+	// contributes its final path segment.
+	want := []string{"fmt", "hello"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ParseImports = %v, want %v", got, want)
+	}
+}
+
+func TestParseImportsThirdPartyKeptFull(t *testing.T) {
+	got, err := ParseImports([]byte("package demo\n\nimport _ \"github.com/x/y\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"github.com/x/y"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ParseImports = %v, want %v", got, want)
+	}
+}
+
+func TestParseImportsCommentsAndStringsInert(t *testing.T) {
+	got, err := ParseImports([]byte("package demo\n\n// import \"rules_dx/fake/comment\"\n/* import \"rules_dx/fake/block\" */\nimport \"fmt\"\n\nvar s = \"import rules_dx/fake/string\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"fmt"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ParseImports = %v, want %v", got, want)
+	}
+}
+
+func TestParseImportsDedupedSorted(t *testing.T) {
+	got, err := ParseImports([]byte("package demo\n\nimport (\n\t\"rules_dx/zeta\"\n\t\"rules_dx/alpha\"\n\t\"rules_dx/zeta\"\n)\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"alpha", "zeta"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ParseImports = %v, want %v", got, want)
+	}
+}
+
+func TestParseImportsUnparseableFails(t *testing.T) {
+	if _, err := ParseImports([]byte("package demo\n\nimport (\n")); err == nil {
+		t.Fatal("ParseImports succeeded on an unparseable file")
+	}
+}
+
+func TestParsePackage(t *testing.T) {
+	got, err := ParsePackage([]byte("package demo\n"))
+	if err != nil || got != "demo" {
+		t.Errorf("ParsePackage = %q, %v; want demo, nil", got, err)
+	}
+	if _, err := ParsePackage([]byte("package\n")); err == nil {
+		t.Fatal("ParsePackage succeeded on an unparseable file")
+	}
+}
+
+func TestIsStdLibExact(t *testing.T) {
+	for _, name := range []string{"fmt", "net/http", "encoding/json", "sync/atomic", "testing"} {
+		if !IsStdLib(name) {
+			t.Errorf("IsStdLib(%q) = false, want true", name)
+		}
+	}
+	for _, name := range []string{"", "hello", "rules_dx/go/hello", "github.com/x/y", "fmtx", "net/httpx"} {
+		if IsStdLib(name) {
+			t.Errorf("IsStdLib(%q) = true, want false", name)
+		}
+	}
+}

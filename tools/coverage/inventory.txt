@@ -84,6 +84,10 @@ eligible gazelle/mdx/lang.go
 eligible gazelle/mdx/naming.go
 eligible gazelle/mdx/parser.go
 eligible gazelle/mdx/stdlib.go
+eligible gazelle/go/lang.go
+eligible gazelle/go/naming.go
+eligible gazelle/go/parser.go
+eligible gazelle/go/stdlib.go
 eligible gazelle/mixed/mixed.go
 support gazelle/python/doc.go
 support gazelle/javascript/doc.go
@@ -92,6 +96,7 @@ support gazelle/vue/doc.go
 support gazelle/svelte/doc.go
 support gazelle/astro/doc.go
 support gazelle/mdx/doc.go
+support gazelle/go/doc.go
 support gazelle/python/lang_test.go
 support gazelle/python/naming_test.go
 support gazelle/python/parser_test.go
@@ -113,6 +118,9 @@ support gazelle/astro/parser_test.go
 support gazelle/mdx/lang_test.go
 support gazelle/mdx/naming_test.go
 support gazelle/mdx/parser_test.go
+support gazelle/go/lang_test.go
+support gazelle/go/naming_test.go
+support gazelle/go/parser_test.go
 support gazelle/mixed/mixed_test.go
 support gazelle/python/testdata/source_only/pkg/demo/demo.py
 support gazelle/python/testdata/source_only/pkg/demo/demo.pyi
@@ -144,6 +152,9 @@ support gazelle/astro/testdata/source_only/pkg/demo/demo.astro
 support gazelle/astro/testdata/source_only/pkg/demo/helper.astro
 support gazelle/mdx/testdata/source_only/pkg/demo/demo.mdx
 support gazelle/mdx/testdata/source_only/pkg/demo/helper.mdx
+support gazelle/go/testdata/source_only/pkg/demo/demo.go
+support gazelle/go/testdata/source_only/pkg/demo/demo_test.go
+support gazelle/go/testdata/source_only/pkg/demo/helper.go
 eligible generation/result/src/lib.rs
 support gazelle/rust/cargo_test.go
 support gazelle/rust/lang_test.go
