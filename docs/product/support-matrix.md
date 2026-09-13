@@ -382,7 +382,12 @@ O30/O31.
   conflicts with the default-check suggestion below; both remain provisional under O30,
   not an approved native rule selection.
 - C/C++: clang-format, clang-tidy, and cppcheck as already named;
-  compiler-integrated and standalone analysis are complementary.
+  compiler-integrated and standalone analysis are complementary. M22 route
+  decision (O30, frozen 2026-09-13): clang-format and clang-tidy resolve from
+  the qualified hermetic-llvm LLVM distribution's tool targets
+  (authoritative-toolchain class, no separate acquisition); cppcheck stays a
+  standalone checksummed-artifact candidate pending adapter qualification.
+  No adapter claims c/cpp yet.
 - Java: google-java-format; PMD, Checkstyle, SpotBugs, plus Error Prone, which
   works out of the box with Bazel. The Error Prone version follows the O31
   JDK baseline.
