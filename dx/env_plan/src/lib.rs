@@ -1,4 +1,4 @@
-//! Normalized env plan collection for the `dx` CLI (M25 WP2 slice 3).
+//! Normalized env plan collection for the `dx` CLI (M25 WP2 slice 4).
 //!
 //! Contract: `docs/environments/environment.md` (plan collection,
 //! provider-selective aspects, private output group) and
@@ -13,14 +13,23 @@
 //!
 //! The collector reads only BEP-reported artifacts in the requested output
 //! group (via `dx_bep`), recognizes shards by the reserved suffix, and
-//! never scans `bazel-out`. Byte-identical duplicate records (one record
-//! reached through many transitive routes) merge silently; any other
-//! second claim on one identity key fails before selection with every
-//! claimant listed. The normalized fingerprint binds exec paths and is
-//! hashed with BLAKE3-256 through `quality_result` (no algorithm
-//! negotiation). Artifact-index validation (missing, ambiguous, or
-//! unreported backing artifacts) and projection planning land in the next
-//! slice; this crate only collects, merges, and hashes the plan.
+//! never scans `bazel-out`. Each non-empty entry `exec_path` suffix must
+//! resolve to exactly one BEP-reported non-shard artifact (suffix match
+//! on "/" boundaries so output bases differ); missing or ambiguous
+//! suffixes fail, and every non-shard BEP artifact must be claimed by at
+//! least one entry, otherwise collection fails with unreported before
+//! projection planning. Unlike codegen, two identity keys may share one
+//! backing artifact (selective identity dimensions, not a closed file
+//! manifest), so no duplicate-claim rejection applies. Empty exec paths
+//! are logical-only identity inputs requiring no artifact.
+//! Byte-identical duplicate records (one record reached through many
+//! transitive routes) merge silently; any other second claim on one
+//! identity key fails before selection with every claimant listed. The
+//! normalized fingerprint binds exec paths and is hashed with BLAKE3-256
+//! through `quality_result` (no algorithm negotiation).
+//! [`plan_projection`] resolves the merged plan to deterministic
+//! key-sorted backing leaves (`key`/`value` to full BEP artifact path)
+//! for setup to commit.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -140,6 +149,23 @@ pub enum CollectError {
     /// matches `env_plan_conflict_error` rendering, listing every
     /// claimant: no traversal-order winner is accepted.
     Conflict(String),
+    /// An entry's non-empty exec suffix matches no BEP-reported
+    /// non-shard artifact.
+    MissingArtifact {
+        producer: String,
+        key: String,
+        exec_path: String,
+    },
+    /// An exec suffix matches more than one BEP-reported non-shard
+    /// artifact. `artifacts` holds the colliding full BEP paths.
+    /// Sharing (several keys bound to one artifact) is allowed and
+    /// never reports this variant.
+    AmbiguousArtifact {
+        exec_path: String,
+        artifacts: Vec<String>,
+    },
+    /// A BEP-reported non-shard artifact is claimed by no entry.
+    UnreportedArtifact { path: String },
 }
 
 impl std::fmt::Display for CollectError {
@@ -158,11 +184,27 @@ pub fn is_shard_artifact(path: &Path) -> bool {
         .ends_with(SHARD_SUFFIX.as_bytes())
 }
 
-/// Decodes every shard among the BEP-reported artifacts, ignoring
-/// non-shard backing artifacts (indexed against entry declarations in a
-/// later slice). Inputs arrive sorted by label from `dx_bep`;
-/// determinism comes from [`merge_records`], never arrival order.
+/// Reports whether a BEP-reported artifact path satisfies an entry's
+/// exec suffix: exact equality or a "/"-boundary suffix match, so
+/// different output bases still resolve without scanning `bazel-out`.
+/// Mirrors `_exec_matches` in `//env:plan.bzl`.
+pub fn exec_matches(artifact_path: &Path, exec_path: &str) -> bool {
+    if exec_path.is_empty() {
+        return false;
+    }
+    let rendered = artifact_path.as_os_str().to_string_lossy();
+    rendered.as_ref() == exec_path || rendered.ends_with(&format!("/{exec_path}"))
+}
+
+/// Decodes every shard among the BEP-reported artifacts and validates
+/// the artifact index against entry declarations: each non-empty entry
+/// exec suffix must resolve to exactly one non-shard BEP artifact, and
+/// every non-shard BEP artifact must be claimed by at least one entry
+/// (sharing is allowed). Logical-only entries (empty exec) require no
+/// artifact. Inputs arrive sorted by label from `dx_bep`; determinism
+/// comes from [`merge_records`], never arrival order.
 pub fn collect_shards(outputs: &[TargetOutput]) -> Result<Vec<EnvRecord>, CollectError> {
+    let backing_paths = backing_artifact_paths(outputs);
     let mut records = Vec::new();
     for output in outputs {
         for artifact in &output.artifacts {
@@ -190,7 +232,83 @@ pub fn collect_shards(outputs: &[TargetOutput]) -> Result<Vec<EnvRecord>, Collec
             });
         }
     }
+    let _ = index_artifacts(&records, &backing_paths)?;
     Ok(records)
+}
+
+/// Lists every BEP-reported non-shard artifact path: the backing files
+/// the entry `exec_path` suffixes index into. Shard files are
+/// recognized by the reserved suffix and excluded.
+fn backing_artifact_paths(outputs: &[TargetOutput]) -> Vec<String> {
+    let mut paths = Vec::new();
+    for output in outputs {
+        for artifact in &output.artifacts {
+            if !is_shard_artifact(&artifact.exec_path) {
+                paths.push(artifact.exec_path.display().to_string());
+            }
+        }
+    }
+    paths
+}
+
+/// Reports whether a BEP-reported artifact path satisfies an entry's
+/// exec suffix: exact equality or a "/"-boundary suffix match.
+fn suffix_matches(artifact: &str, exec_path: &str) -> bool {
+    artifact == exec_path || artifact.ends_with(&format!("/{exec_path}"))
+}
+
+/// Validates the artifact index and resolves every exec-bound entry to
+/// its backing artifact: each non-empty entry exec suffix must resolve
+/// to exactly one non-shard BEP artifact, and every non-shard BEP
+/// artifact must be claimed by at least one entry. Sharing (several
+/// keys bound to one artifact) is allowed: selective identity
+/// dimensions are not a closed file manifest, so no duplicate-claim
+/// rejection applies. Returns the resolution map from
+/// `(producer, key)` to the full BEP-reported artifact path;
+/// logical-only entries (empty exec) resolve to no artifact and hold no
+/// map entry.
+fn index_artifacts<'a>(
+    records: &'a [EnvRecord],
+    backing_paths: &[String],
+) -> Result<BTreeMap<(&'a str, &'a str), String>, CollectError> {
+    let bound: Vec<(&EnvRecord, &EnvEntry)> = records
+        .iter()
+        .flat_map(|record| record.entries.iter().map(move |entry| (record, entry)))
+        .filter(|(_, entry)| !entry.exec_path.is_empty())
+        .collect();
+    let mut resolved: BTreeMap<(&str, &str), String> = BTreeMap::new();
+    for (record, entry) in &bound {
+        let matches: Vec<&String> = backing_paths
+            .iter()
+            .filter(|path| suffix_matches(path, &entry.exec_path))
+            .collect();
+        if matches.is_empty() {
+            return Err(CollectError::MissingArtifact {
+                producer: record.producer.clone(),
+                key: entry.key.clone(),
+                exec_path: entry.exec_path.clone(),
+            });
+        }
+        if matches.len() > 1 {
+            return Err(CollectError::AmbiguousArtifact {
+                exec_path: entry.exec_path.clone(),
+                artifacts: matches.into_iter().map(|path| (*path).clone()).collect(),
+            });
+        }
+        resolved.insert(
+            (record.producer.as_str(), entry.key.as_str()),
+            (*matches[0]).clone(),
+        );
+    }
+    for path in backing_paths {
+        if !bound
+            .iter()
+            .any(|(_, entry)| suffix_matches(path, &entry.exec_path))
+        {
+            return Err(CollectError::UnreportedArtifact { path: path.clone() });
+        }
+    }
+    Ok(resolved)
 }
 
 /// Merge index: owner `(producer, integration)` to entry key
@@ -374,6 +492,57 @@ pub fn collect_plan(outputs: &[TargetOutput]) -> Result<CollectedPlan, CollectEr
     })
 }
 
+/// One planned backing leaf: the deterministic identity key and value
+/// plus the full BEP-reported artifact path backing the exec-bound
+/// entry. Logical-only entries (empty exec) carry no backing artifact
+/// and hold no projection entry: the projection links backed identity
+/// inputs only. Producer and integration stay in
+/// [`CollectedPlan::records`] for adapter partitioning; the leaf keeps
+/// the address (`key`), its value, and the artifact, mirroring the
+/// codegen mirror leaf shape.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProjectionEntry {
+    pub key: String,
+    pub value: String,
+    pub artifact: String,
+}
+
+/// Plans the backing leaves from merged records and BEP-reported
+/// outputs: resolves every exec-bound entry to its unique backing
+/// artifact through the same index [`collect_shards`] validates
+/// (missing, ambiguous, or unreported artifacts fail here too), skips
+/// logical-only entries, and sorts by key so setup commits one
+/// deterministic leaf set. Sharing (several keys bound to one
+/// artifact) resolves each key to the shared path. Callers pass the
+/// merged [`CollectedPlan::records`]; conflicts must already be
+/// rejected by [`conflict_error`] before selection.
+pub fn plan_projection(
+    records: &[EnvRecord],
+    outputs: &[TargetOutput],
+) -> Result<Vec<ProjectionEntry>, CollectError> {
+    let backing_paths = backing_artifact_paths(outputs);
+    let resolved = index_artifacts(records, &backing_paths)?;
+    let mut projection: Vec<ProjectionEntry> = Vec::new();
+    for record in records {
+        for entry in &record.entries {
+            if entry.exec_path.is_empty() {
+                continue;
+            }
+            let artifact = resolved
+                .get(&(record.producer.as_str(), entry.key.as_str()))
+                .cloned()
+                .unwrap_or_else(|| entry.exec_path.clone());
+            projection.push(ProjectionEntry {
+                key: entry.key.clone(),
+                value: entry.value.clone(),
+                artifact,
+            });
+        }
+    }
+    projection.sort_by(|left, right| left.key.cmp(&right.key));
+    Ok(projection)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -512,16 +681,26 @@ mod tests {
     }
 
     #[test]
-    fn collect_shards_decodes_and_ignores_non_shards() {
+    fn exec_suffix_matches_on_component_boundaries() {
+        assert!(exec_matches(Path::new("/out/rustc"), "rustc"));
+        assert!(exec_matches(
+            Path::new("/bazel-out/k8-fastbuild/bin/env/rustc"),
+            "env/rustc"
+        ));
+        assert!(!exec_matches(Path::new("/out/other"), "rustc"));
+        // Suffix matches only on "/" boundaries, never mid-segment.
+        assert!(!exec_matches(Path::new("/out/xrustc"), "rustc"));
+        assert!(!exec_matches(Path::new("/out/rustc"), ""));
+    }
+
+    #[test]
+    fn collect_shards_accepts_logical_only_without_artifacts() {
         let outputs = vec![output(
             "//env:beta",
-            vec![
-                (
-                    "/out/beta.dxenv.pb",
-                    shard_bytes("//env:beta", "rust", vec![("abi", "gnu", "")]),
-                ),
-                ("/out/backing.lib.rs", vec![1, 2, 3]),
-            ],
+            vec![(
+                "/out/beta.dxenv.pb",
+                shard_bytes("//env:beta", "rust", vec![("abi", "gnu", "")]),
+            )],
         )];
         let records = collect_shards(&outputs).expect("collect");
         assert_eq!(
@@ -534,14 +713,20 @@ mod tests {
     fn collect_shards_preserves_exec_paths() {
         let outputs = vec![output(
             "//env:rust",
-            vec![(
-                "/out/rust.dxenv.pb",
-                shard_bytes(
-                    "//env:rust",
-                    "rust",
-                    vec![("runtime", "stable-x86_64", "env/env_shard/src/lib.rs")],
+            vec![
+                (
+                    "/out/rust.dxenv.pb",
+                    shard_bytes(
+                        "//env:rust",
+                        "rust",
+                        vec![("runtime", "stable-x86_64", "env/env_shard/src/lib.rs")],
+                    ),
                 ),
-            )],
+                (
+                    "/bazel-out/k8-fastbuild/bin/env/env_shard/src/lib.rs",
+                    vec![1, 2, 3],
+                ),
+            ],
         )];
         let records = collect_shards(&outputs).expect("collect");
         assert_eq!(
@@ -556,6 +741,120 @@ mod tests {
                 )]
             )]
         );
+    }
+
+    #[test]
+    fn collect_shards_binds_exec_suffix_to_one_artifact() {
+        let outputs = vec![output(
+            "//env:rust",
+            vec![
+                (
+                    "/out/rust.dxenv.pb",
+                    shard_bytes(
+                        "//env:rust",
+                        "rust",
+                        vec![("toolchain", "1.89.0", "toolchain/rustc")],
+                    ),
+                ),
+                ("/bazel-out/k8-fastbuild/bin/env/toolchain/rustc", vec![7]),
+            ],
+        )];
+        let records = collect_shards(&outputs).expect("collect");
+        assert_eq!(
+            records,
+            vec![record(
+                "//env:rust",
+                "rust",
+                vec![entry_with_exec("toolchain", "1.89.0", "toolchain/rustc")]
+            )]
+        );
+    }
+
+    #[test]
+    fn collect_shards_rejects_missing_ambiguous_and_unreported() {
+        // Missing: exec suffix matches no reported artifact.
+        let missing = vec![output(
+            "//env:rust",
+            vec![(
+                "/out/rust.dxenv.pb",
+                shard_bytes(
+                    "//env:rust",
+                    "rust",
+                    vec![("toolchain", "1.89.0", "toolchain/rustc")],
+                ),
+            )],
+        )];
+        assert_eq!(
+            collect_shards(&missing),
+            Err(CollectError::MissingArtifact {
+                producer: "//env:rust".to_owned(),
+                key: "toolchain".to_owned(),
+                exec_path: "toolchain/rustc".to_owned(),
+            })
+        );
+        // Ambiguous: one suffix matches two reported artifacts.
+        let ambiguous = vec![output(
+            "//env:rust",
+            vec![
+                (
+                    "/out/rust.dxenv.pb",
+                    shard_bytes(
+                        "//env:rust",
+                        "rust",
+                        vec![("toolchain", "1.89.0", "toolchain/rustc")],
+                    ),
+                ),
+                ("/out/a/toolchain/rustc", vec![1]),
+                ("/out/b/toolchain/rustc", vec![2]),
+            ],
+        )];
+        assert!(matches!(
+            collect_shards(&ambiguous),
+            Err(CollectError::AmbiguousArtifact { .. })
+        ));
+        // Unreported: a non-shard artifact no entry claims.
+        let unreported = vec![output(
+            "//env:beta",
+            vec![
+                (
+                    "/out/beta.dxenv.pb",
+                    shard_bytes("//env:beta", "rust", vec![("abi", "gnu", "")]),
+                ),
+                ("/out/backing.lib.rs", vec![1, 2, 3]),
+            ],
+        )];
+        assert_eq!(
+            collect_shards(&unreported),
+            Err(CollectError::UnreportedArtifact {
+                path: "/out/backing.lib.rs".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn collect_shards_allows_shared_backing_artifact() {
+        // Selective identity dimensions may share one backing artifact:
+        // no duplicate-claim rejection, unlike the codegen file mirror.
+        let outputs = vec![output(
+            "//env:rust",
+            vec![
+                (
+                    "/out/rust.dxenv.pb",
+                    shard_bytes(
+                        "//env:rust",
+                        "rust",
+                        vec![
+                            ("toolchain", "1.89.0", "shared/rustc"),
+                            ("runtime", "stable", "shared/rustc"),
+                        ],
+                    ),
+                ),
+                ("/out/shared/rustc", vec![1]),
+            ],
+        )];
+        let records = collect_shards(&outputs).expect("shared backing");
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].entries.len(), 2);
     }
 
     #[test]
@@ -730,5 +1029,117 @@ mod tests {
         assert!(plan.records.is_empty());
         assert_eq!(plan.fingerprint, "[]");
         assert_eq!(plan.digest, quality_result::digest(b"[]"));
+    }
+
+    #[test]
+    fn projection_resolves_backed_entries_and_sorts() {
+        let outputs = vec![
+            output(
+                "//env:rust",
+                vec![
+                    (
+                        "/out/rust.dxenv.pb",
+                        shard_bytes(
+                            "//env:rust",
+                            "rust",
+                            vec![
+                                ("toolchain", "1.89.0", "toolchain/rustc"),
+                                ("abi", "gnu", ""),
+                                ("runtime", "stable", "env/runtime.json"),
+                            ],
+                        ),
+                    ),
+                    ("/bazel-out/k8-fastbuild/bin/env/toolchain/rustc", vec![1]),
+                    ("/bazel-out/k8-fastbuild/bin/env/env/runtime.json", vec![2]),
+                ],
+            ),
+            output(
+                "//env:beta",
+                vec![(
+                    "/out/beta.dxenv.pb",
+                    shard_bytes("//env:beta", "rust", vec![("extra", "1", "")]),
+                )],
+            ),
+        ];
+        let plan = collect_plan(&outputs).expect("plan");
+        let projection = plan_projection(&plan.records, &outputs).expect("projection");
+        let summary: Vec<(&str, &str)> = projection
+            .iter()
+            .map(|leaf| (leaf.key.as_str(), leaf.artifact.as_str()))
+            .collect();
+        // Sorted by key; logical-only entries hold no leaf.
+        assert_eq!(
+            summary,
+            vec![
+                (
+                    "runtime",
+                    "/bazel-out/k8-fastbuild/bin/env/env/runtime.json"
+                ),
+                (
+                    "toolchain",
+                    "/bazel-out/k8-fastbuild/bin/env/toolchain/rustc"
+                ),
+            ]
+        );
+        assert_eq!(projection[0].value, "stable");
+        assert_eq!(projection[1].value, "1.89.0");
+    }
+
+    #[test]
+    fn projection_shares_one_artifact_across_keys() {
+        let outputs = vec![output(
+            "//env:rust",
+            vec![
+                (
+                    "/out/rust.dxenv.pb",
+                    shard_bytes(
+                        "//env:rust",
+                        "rust",
+                        vec![
+                            ("b-key", "2", "shared/rustc"),
+                            ("a-key", "1", "shared/rustc"),
+                        ],
+                    ),
+                ),
+                ("/out/shared/rustc", vec![1]),
+            ],
+        )];
+        let plan = collect_plan(&outputs).expect("plan");
+        let projection = plan_projection(&plan.records, &outputs).expect("projection");
+        assert_eq!(projection.len(), 2);
+        assert_eq!(projection[0].key, "a-key");
+        assert_eq!(projection[1].key, "b-key");
+        assert_eq!(projection[0].artifact, "/out/shared/rustc");
+        assert_eq!(projection[1].artifact, "/out/shared/rustc");
+    }
+
+    #[test]
+    fn projection_rejects_bad_indexes() {
+        // Missing: exec suffix matches no reported artifact.
+        let missing_records = vec![record(
+            "//env:rust",
+            "rust",
+            vec![entry_with_exec("toolchain", "1.89.0", "toolchain/rustc")],
+        )];
+        assert!(matches!(
+            plan_projection(&missing_records, &[]),
+            Err(CollectError::MissingArtifact { .. })
+        ));
+        // Unreported: an artifact no entry claims.
+        let unreported_outputs = vec![output(
+            "//env:beta",
+            vec![
+                (
+                    "/out/beta.dxenv.pb",
+                    shard_bytes("//env:beta", "rust", vec![("abi", "gnu", "")]),
+                ),
+                ("/out/backing.lib.rs", vec![1, 2, 3]),
+            ],
+        )];
+        let logical_records = vec![record("//env:beta", "rust", vec![entry("abi", "gnu")])];
+        assert!(matches!(
+            plan_projection(&logical_records, &unreported_outputs),
+            Err(CollectError::UnreportedArtifact { .. })
+        ));
     }
 }
