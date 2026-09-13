@@ -253,6 +253,27 @@ artifact qualification remaining pending and no adapter claiming `qml` yet.
 Qt closed the O30 order (clang-format/clang-tidy, Buf, Scalafix routed to
 M23 managed, Qt last).
 
+M23 focused proof (O31, frozen 2026-09-13): google-java-format, Checkstyle,
+PMD, SpotBugs, ktfmt, and ktlint take the complete-upstream-artifact plus
+shared-JDK route. Each tool resolves to its upstream-tested complete CLI
+distribution (google-java-format and Checkstyle all-dependencies JARs, the
+PMD and SpotBugs binary distributions, the ktfmt with-dependencies JAR, the
+ktlint executable JAR) sharing the one managed JDK cohort runtime; no tool
+is reconstructed from Maven modules and no consumer runs an installer,
+solver, or compiler. Exact artifact versions, digests, and adapter
+qualification remain pending and no adapter claims `java` or `kotlin` yet.
+
+M23 focused proof (O31, frozen 2026-09-13): Scalafmt and Scalafix take the
+managed JVM route owned by M23 (M22 O30 decision). Scalafmt resolves to a
+compatible JVM artifact and Scalafix to its semantic-rule artifacts over the
+same shared managed JDK and Maven-lock story as the Scala foundation
+(`maven_install.json` plus `fail_if_repin_required`); Scalafix semantic
+rules additionally need semanticdb plus classpath wiring per the
+adapter-input notes. Exact artifacts, rule-set/config qualification
+(native-configuration review of the provisional Scalafix preset stays
+required), and adapter qualification remain pending and no adapter claims
+`scala` yet.
+
 No listed private graph accepts arbitrary consumer packages or plugins in v1. The curated
 lock and configuration are part of the `rules_dx` release. A tool whose required standard
 behavior cannot fit that fixed closure must move to a proven complete artifact/assembled

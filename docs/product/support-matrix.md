@@ -406,6 +406,17 @@ Typechecking for every admitted language is compiler-owned (javac, kotlinc,
 Roslyn, `go`, clang/gcc, scalac); no separate typechecker is selected, unlike
 the standalone Ty and `tsc` tools in the required core.
 
+M23 focused proofs (O31, frozen 2026-09-13) select the delivery routes in
+[first-release tool routing](../tools/tool-acquisition.md#first-release-tool-routing):
+JVM tools (google-java-format, Checkstyle, PMD, SpotBugs, ktfmt, ktlint)
+take the complete-upstream-artifact plus shared-JDK route; Scalafmt/Scalafix
+take the managed JVM route; CSharpier/Fantomas take the exact-package plus
+shared-.NET-runtime route; PSScriptAnalyzer takes the exact-module plus
+portable-PowerShell-runtime route; RuboCop/StandardRB take the
+release-assembled Ruby closure route. Exact artifacts, versions, rule sets,
+and adapter mappings still qualify under O31/O32; no adapter claims any M23
+class yet.
+
 The [doc-wide defaults posture](#minimal-required-core-freeze-o46-pre-m00) applies to
 enabled tools. Qualify these suggestions against [native configuration](../quality/native-configuration.md)
 before freezing them; curated membership does not authorize hidden presets. The following existing native-configuration suggestions remain provisional
