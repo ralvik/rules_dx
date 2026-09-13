@@ -55,6 +55,23 @@ bazel_dep(name = "rules_java", version = "9.7.0")
 # behavior stay open under O31.
 bazel_dep(name = "rules_kotlin", version = "2.4.10")
 
+# M23 Scala slice: pinned Scala foundation, managed route (ADR 0019, O31;
+# M22 O30 route decision). 7.3.0 is the latest stable in the Bazel Central
+# Registry (Bazel >=7.1 per upstream); verified against Bazel 9.2.0 on the
+# seed host. Scala 2.13.18 is the default toolchain version (latest 2.13.x
+# in the upstream-supported list); Coursier-fetched toolchains share Java's
+# Maven-lock story, so no new Maven lock members land here. Scalafix
+# semantic rules need semanticdb plus classpath wiring (open under O31).
+bazel_dep(name = "rules_scala", version = "7.3.0")
+
+scala_config = use_extension("@rules_scala//scala/extensions:config.bzl", "scala_config")
+scala_config.settings(scala_version = "2.13.18")
+use_repo(scala_config, "rules_scala_config")
+
+scala_deps = use_extension("@rules_scala//scala/extensions:deps.bzl", "scala_deps")
+scala_deps.scala()
+scala_deps.scalatest()
+
 # M23 JVM dep-route slice: pinned Maven resolver (ADR 0019, O31). 7.1 is the
 # latest stable in the Bazel Central Registry (Bazel >=7.0.0; verified
 # against Bazel 9.2.0 on the seed host). Single shared lock for the admitted

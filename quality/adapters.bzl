@@ -147,7 +147,13 @@ REAL_ADAPTERS = {
 # pinned rules_kotlin kt_jvm_* rules, with same-compilation-unit `.java`
 # sources owned alongside and classified java; no adapter claims kotlin
 # yet (classification only, no supported claim). O31 qualifies exact
-# adapters later.
+# adapters later. M23 WP2 adds the scala class to the scala family on the
+# same terms: each `.scala` source has one physical owner
+# (dx_scala_library, dx_scala_binary, dx_scala_test) over the pinned
+# rules_scala scala_* rules on the managed route (M22 O30 decision), with
+# same-compilation-unit `.java` sources owned alongside and classified
+# java; no adapter claims scala yet (classification only, no supported
+# claim). O31 qualifies exact adapters later.
 REAL_CLASS_TO_FAMILY = {
     "astro": "astro",
     "c": "cc",
@@ -169,6 +175,7 @@ REAL_CLASS_TO_FAMILY = {
     "python_stub": "python",
     "qml": "qml",
     "rust": "rust",
+    "scala": "scala",
     "shell": "shell",
     "starlark": "starlark",
     "svelte": "svelte",

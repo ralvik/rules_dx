@@ -1,0 +1,32 @@
+"""M23 seed Scala binary and library; consumer of dx_scala_* wrappers."""
+
+load("//quality:fixtures.bzl", "real_source_target")
+load("//scala/rules:defs.bzl", "dx_scala_binary", "dx_scala_library", "dx_scala_test")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_scala_library(
+    name = "hello_lib",
+    srcs = ["Hello.scala"],
+)
+
+dx_scala_binary(
+    name = "hello",
+    srcs = ["Main.scala"],
+    main_class = "hello.Main",
+    deps = [":hello_lib"],
+)
+
+dx_scala_test(
+    name = "hello_test",
+    srcs = ["HelloTest.scala"],
+    deps = [":hello_lib"],
+)
+
+# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. Scala sources stay
+# dx-owned, never corpus sources.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
