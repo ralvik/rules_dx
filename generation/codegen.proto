@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package rules_dx.codegen;
+
+// Normalized per-contributor codegen plan shard (M25 WP1, O33).
+//
+// Each contributing configured target emits one shard carrying its direct
+// projection records; collectors merge shards transitively and the CLI
+// parses the shards reported through the `dx_codegen_plans` output group.
+// Field numbers are the compatibility surface: never reuse a number.
+message DxCodegenShard {
+  // Contributing target label in observation rendering.
+  string producer = 1;
+  // Generated file class, e.g. "rust".
+  string language = 2;
+  repeated DxCodegenEntry entries = 3;
+}
+
+message DxCodegenEntry {
+  // Deterministic logical workspace-relative generated path.
+  string logical_path = 1;
+  // Language import/source root, workspace-relative.
+  string import_root = 2;
+  // Required generated package or namespace semantics; empty when the
+  // language mapping carries no namespace.
+  string namespace = 3;
+  // Projections are read-only quality context; always true on the wire.
+  bool read_only = 4;
+}
