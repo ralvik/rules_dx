@@ -6,7 +6,8 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//quality:fixtures.bzl", "real_source_target")
 load(":defs.bzl", "environment_config", "environment_tool", "environment_tree")
 load(":defs_tests.bzl", "env_config_analysis_tests", "env_default_config_analysis_tests", "env_default_tree_analysis_tests", "env_defs_unit_tests", "env_tree_analysis_tests")
-load(":plan_tests.bzl", "env_plan_defs_unit_tests")
+load(":plan.bzl", "dx_env_shard", "env_plan_subject", "rust_env_shard")
+load(":plan_tests.bzl", "env_plan_analysis_tests", "env_plan_defs_unit_tests")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -89,6 +90,42 @@ rust_prost_library(
 
 env_plan_defs_unit_tests(name = "env_plan_defs_unit")
 
+# Shard-emission and collection fixtures (M25 WP2 slice 2): two disjoint
+# leaf shards chained through `deps` prove transitive aspect collection,
+# while the Rust adapter fixture proves the narrow dx_rust_library edge
+# through the verified crate source bound by its EXEC_PATH suffix.
+dx_env_shard(
+    name = "env_shard_alpha",
+    entries = ["runtime|stable-x86_64"],
+    integration = "rust",
+)
+
+dx_env_shard(
+    name = "env_shard_beta",
+    entries = ["abi|gnu"],
+    integration = "rust",
+    deps = [":env_shard_alpha"],
+)
+
+rust_env_shard(
+    name = "env_rust_fixture",
+    entries = ["runtime|stable-x86_64|env/env_shard/src/lib.rs"],
+    integration = "rust",
+    target = "//env/env_shard",
+)
+
+env_plan_subject(
+    name = "env_plan_chain_subject",
+    target = ":env_shard_beta",
+)
+
+env_plan_subject(
+    name = "env_plan_rust_subject",
+    target = ":env_rust_fixture",
+)
+
+env_plan_analysis_tests(name = "env_plan_analysis")
+
 # Default runnable environment (M11 WP2-WP3, O62): the curated doctor probe
 # plus the module-matched `dx` CLI and the user-facing `markdown_check`
 # quality binary, all contributed through the same public
@@ -139,6 +176,7 @@ test_suite(
         ":env_default_config_analysis",
         ":env_default_tree_analysis",
         ":env_defs_unit",
+        ":env_plan_analysis",
         ":env_plan_defs_unit",
         ":env_tree_analysis",
     ],

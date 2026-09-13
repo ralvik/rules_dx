@@ -9,8 +9,14 @@ bad entry key/value/exec, within-record duplicates),
 Python/Node), `env_plan_conflict_error` (clean merge, silent identical
 duplicates, cross-producer collisions, same-producer divergent values,
 divergent exec paths), and the deterministic merge/fingerprint
-rendering (owner grouping, entry sorting over the full (key, value,
-exec) triple, duplicate collapse, exec-bound identity).
+ rendering (owner grouping, entry sorting over the full (key, value,
+ exec) triple, duplicate collapse, exec-bound identity).
+
+ Analysis checks pin the slice-2 collection evidence: the chained leaf
+ shards merge transitively through `dx_env_plan_aspect`, and the Rust
+ adapter fixture carries its shard plus the verified upstream crate
+ source in the private output group, with its entry's EXEC_PATH suffix
+ binding the crate source.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
@@ -235,4 +241,38 @@ def env_plan_defs_unit_tests(name):
                 ],
             ),
         ],
+    )
+
+_CHAIN_FINGERPRINT = (
+    "[{\"entries\":[{\"exec_path\":\"\",\"key\":\"runtime\",\"value\":\"stable-x86_64\"}],\"integration\":\"rust\"," +
+    "\"producer\":\"//env:env_shard_alpha\"}," +
+    "{\"entries\":[{\"exec_path\":\"\",\"key\":\"abi\",\"value\":\"gnu\"}],\"integration\":\"rust\"," +
+    "\"producer\":\"//env:env_shard_beta\"}]"
+)
+
+_RUST_FINGERPRINT = (
+    "[{\"entries\":[{\"exec_path\":\"env/env_shard/src/lib.rs\",\"key\":\"runtime\",\"value\":\"stable-x86_64\"}]," +
+    "\"integration\":\"rust\",\"producer\":\"//env:env_rust_fixture\"}]"
+)
+
+EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //env:env_plan_chain_subject
+field files=env_shard_alpha.dxenv.pb,env_shard_beta.dxenv.pb
+field fingerprint=%s
+field label=//env:env_shard_beta
+field record_count=2
+subject //env:env_plan_rust_subject
+field files=env_rust_fixture.dxenv.pb,lib.rs
+field fingerprint=%s
+field label=//env:env_rust_fixture
+field record_count=1""" % (_CHAIN_FINGERPRINT, _RUST_FINGERPRINT)
+
+def env_plan_analysis_tests(name):
+    starlark_test(
+        name = name,
+        mode = "analysis",
+        subjects = [
+            ":env_plan_chain_subject",
+            ":env_plan_rust_subject",
+        ],
+        expected_observations = EXPECTED_ENV_PLAN_OBSERVATIONS,
     )

@@ -1,0 +1,82 @@
+"""Validation/codec helpers plus the shard writer for environment plan shards."""
+
+# gazelle:resolve rust proto //env:plan_proto_rs
+# gazelle:resolve rust plan_proto //env:plan_proto_rs
+load("@crates//:crates.bzl", "aliases")
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_rust_library(
+    name = "env_shard",
+    srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "env/env_shard",
+        normal = True,
+    ),
+    crate_name = "env_shard",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+    deps = [
+        "//env:plan_proto_rs",
+        "@rules_rust_prost//private/3rdparty/crates:prost",
+    ],
+)
+
+dx_rust_binary(
+    name = "env_shard_writer",
+    srcs = ["src/main.rs"],
+    aliases = aliases(
+        package_name = "env/env_shard",
+        normal = True,
+    ),
+    crate_name = "env_shard_writer",
+    crate_root = "src/main.rs",
+    edition = "2021",
+    deps = [":env_shard"],
+)
+
+dx_rust_test(
+    name = "env_shard_test",
+    size = "small",
+    aliases = aliases(
+        package_name = "env/env_shard",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":env_shard",
+    edition = "2021",
+    deps = ["//env:plan_proto_rs"],
+)
+
+# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# resolve from the pinned toolchain, never from ambient host tools.
+rustfmt_test(
+    name = "env_shard_fmt_test",
+    size = "small",
+    targets = [
+        ":env_shard",
+        ":env_shard_writer",
+    ],
+)
+
+rust_clippy_test(
+    name = "env_shard_clippy_test",
+    size = "small",
+    targets = [
+        ":env_shard",
+        ":env_shard_writer",
+    ],
+)
+
+exports_files(["Cargo.toml"])
+
+# Repository corpus (M05 WP1): crate manifest and build file owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
+)

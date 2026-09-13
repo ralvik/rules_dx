@@ -1,0 +1,12 @@
+[package]
+name = "env_shard"
+version = "0.0.0"
+edition = "2021"
+
+[lib]
+name = "env_shard"
+path = "src/lib.rs"
+
+[[bin]]
+name = "env_shard_writer"
+path = "src/main.rs"
