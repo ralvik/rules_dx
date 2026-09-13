@@ -35,6 +35,17 @@ alias(
     actual = "//dx/env:env",
 )
 
+# Canonical repository-wide codegen selection identity (M25 WP1): bare
+# `dx codegen` invokes `//dx:codegen`. PROVISIONAL (open decisions O33/O34,
+# flagged for review): this empty filegroup only reserves the label so the
+# CLI selection identity resolves before the WP4 root benchmark selects the
+# effective Bazel roots (`//...` baseline versus query-produced pattern
+# file). It contributes no plan records itself.
+filegroup(
+    name = "codegen",
+    srcs = [],
+)
+
 filegroup(
     name = "config",
     srcs = [],
