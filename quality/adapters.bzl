@@ -163,7 +163,14 @@ REAL_ADAPTERS = {
 # (dx_fsharp_library, dx_fsharp_binary, dx_fsharp_test) over the pinned
 # rules_dotnet fsharp_* rules with the shared Paket `paket.main` lock
 # (FSharp.Core runtime); no adapter claims fsharp yet (classification only,
-# no supported claim). O31 qualifies exact adapters later.
+# no supported claim). O31 qualifies exact adapters later. M23 WP2 adds the
+# ruby class to the ruby family and the powershell class to the powershell
+# family on the same terms: both application foundations stay deferred
+# beyond v1 per ADR 0019, so each source keeps its existing ownership (the
+# file itself; no foundation wrapper lands here) while the retained
+# RuboCop/StandardRB and PSScriptAnalyzer tool cohorts stay in force; no
+# adapter claims ruby or powershell yet (classification only, no supported
+# claim). O31 qualifies exact adapters later.
 REAL_CLASS_TO_FAMILY = {
     "astro": "astro",
     "c": "cc",
@@ -183,9 +190,11 @@ REAL_CLASS_TO_FAMILY = {
     "mdx": "mdx",
     "pkl": "pkl",
     "protobuf": "protobuf",
+    "powershell": "powershell",
     "python": "python",
     "python_stub": "python",
     "qml": "qml",
+    "ruby": "ruby",
     "rust": "rust",
     "scala": "scala",
     "shell": "shell",
