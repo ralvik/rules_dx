@@ -155,6 +155,128 @@ pub fn plan_request(scope: &SetupScope) -> SetupRequest {
     }
 }
 
+/// One immutable generation reference: the 64-character lowercase
+/// hexadecimal BLAKE3-256 digest of its versioned identity, per
+/// `docs/environments/managed-state.md`. The versioned Protobuf identity
+/// encoding behind each digest freezes with its implementing milestone;
+/// this layer only carries the digest shape, never the encoding.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GenerationId(String);
+
+/// Generation reference failure: anything that is not a 64-character
+/// lowercase hexadecimal digest.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GenerationIdError(String);
+
+impl std::fmt::Display for GenerationIdError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "invalid generation id {:?}: want 64 lowercase hex chars",
+            self.0
+        )
+    }
+}
+
+impl std::error::Error for GenerationIdError {}
+
+impl GenerationId {
+    /// Carries one generation digest, validating its shape.
+    pub fn new(id: &str) -> Result<Self, GenerationIdError> {
+        let valid = id.len() == 64
+            && id
+                .bytes()
+                .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase());
+        if valid {
+            Ok(GenerationId(id.to_owned()))
+        } else {
+            Err(GenerationIdError(id.to_owned()))
+        }
+    }
+
+    /// Renders the digest.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+/// One complete setup selection: exactly one environment generation plus
+/// exactly one generated-code generation, committed together through the
+/// single atomic `.dx/setups/current` replacement.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SetupPair {
+    pub environment: GenerationId,
+    pub generated: GenerationId,
+}
+
+/// Pair resolution failure.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ResolveError {
+    /// The selected scope prepared neither side: an exact target with no
+    /// environment or codegen capability selects nothing, and committing
+    /// an empty pair or re-committing the current pair would hide the
+    /// usage error.
+    NoCapability,
+}
+
+impl std::fmt::Display for ResolveError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+
+impl std::error::Error for ResolveError {}
+
+/// Inputs to [`resolve_pair`]: the freshly prepared sides (each `None`
+/// when the scope carries no such capability), the currently selected
+/// pair (re-read under the commit lock; `None` on first selection), and
+/// the managed empty generations pairing a first selection on one side
+/// with a real immutable identity on the other.
+pub struct PairInputs {
+    pub prepared_environment: Option<GenerationId>,
+    pub prepared_generated: Option<GenerationId>,
+    pub current: Option<SetupPair>,
+    pub empty_environment: GenerationId,
+    pub empty_generated: GenerationId,
+}
+
+/// Resolves the complete pair to commit from prepared sides with
+/// carry-forward, per `docs/environments/managed-state.md#selection-and-carry-forward`:
+/// `dx env` pairs its new environment with the previously selected
+/// generated generation, `dx codegen` pairs its new projection with the
+/// previously selected environment, and `dx setup` pairs both prepared
+/// sides (carrying the current side forward for each capability absent
+/// from an exact target). A missing prior side uses its managed empty
+/// generation. The commit layer commits the returned pair atomically
+/// (both or neither); independent commits re-read the current pair under
+/// the commit lock before calling this so a concurrently completed side
+/// is never lost. Crash and interruption safety (prior pointer
+/// preservation) belongs to the commit layer, not this pure function.
+pub fn resolve_pair(inputs: PairInputs) -> Result<SetupPair, ResolveError> {
+    let PairInputs {
+        prepared_environment,
+        prepared_generated,
+        current,
+        empty_environment,
+        empty_generated,
+    } = inputs;
+    match (prepared_environment, prepared_generated) {
+        (None, None) => Err(ResolveError::NoCapability),
+        (environment, generated) => {
+            let (current_environment, current_generated) = match current {
+                Some(pair) => (Some(pair.environment), Some(pair.generated)),
+                None => (None, None),
+            };
+            Ok(SetupPair {
+                environment: environment
+                    .or(current_environment)
+                    .unwrap_or(empty_environment),
+                generated: generated.or(current_generated).unwrap_or(empty_generated),
+            })
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -253,5 +375,115 @@ mod tests {
         let first = plan_request(&SetupScope::Repository);
         let second = plan_request(&SetupScope::Repository);
         assert_eq!(first, second);
+    }
+
+    fn generation(tag: char) -> GenerationId {
+        GenerationId::new(&tag.to_string().repeat(64)).expect("fixture digest")
+    }
+
+    fn pair_inputs(
+        prepared_environment: Option<GenerationId>,
+        prepared_generated: Option<GenerationId>,
+        current: Option<SetupPair>,
+    ) -> PairInputs {
+        PairInputs {
+            prepared_environment,
+            prepared_generated,
+            current,
+            empty_environment: generation('e'),
+            empty_generated: generation('0'),
+        }
+    }
+
+    #[test]
+    fn generation_ids_validate_digest_shape() {
+        assert_eq!(generation('a').as_str(), &"a".repeat(64));
+        assert!(GenerationId::new(&"0".repeat(64)).is_ok());
+        for bad in [
+            String::new(),
+            "a".repeat(63),
+            "a".repeat(65),
+            "A".repeat(64),
+            "g".repeat(64),
+            format!("{}!", "a".repeat(63)),
+        ] {
+            assert!(GenerationId::new(&bad).is_err(), "digest {bad:?} must fail");
+        }
+        assert!(GenerationIdError("x".to_owned())
+            .to_string()
+            .contains("generation id"));
+    }
+
+    #[test]
+    fn setup_with_both_sides_ignores_current() {
+        let pair = resolve_pair(pair_inputs(
+            Some(generation('1')),
+            Some(generation('2')),
+            Some(SetupPair {
+                environment: generation('3'),
+                generated: generation('4'),
+            }),
+        ))
+        .expect("pair");
+        assert_eq!(pair.environment, generation('1'));
+        assert_eq!(pair.generated, generation('2'));
+    }
+
+    #[test]
+    fn independent_sides_carry_the_current_opposite_forward() {
+        let current = || SetupPair {
+            environment: generation('3'),
+            generated: generation('4'),
+        };
+        let env_pair = resolve_pair(pair_inputs(Some(generation('1')), None, Some(current())))
+            .expect("env pair");
+        assert_eq!(env_pair.environment, generation('1'));
+        assert_eq!(env_pair.generated, generation('4'));
+        let codegen_pair = resolve_pair(pair_inputs(None, Some(generation('2')), Some(current())))
+            .expect("codegen pair");
+        assert_eq!(codegen_pair.environment, generation('3'));
+        assert_eq!(codegen_pair.generated, generation('2'));
+    }
+
+    #[test]
+    fn first_selection_pairs_with_managed_empty_generations() {
+        let env_pair =
+            resolve_pair(pair_inputs(Some(generation('1')), None, None)).expect("env pair");
+        assert_eq!(env_pair.environment, generation('1'));
+        assert_eq!(env_pair.generated, generation('0'));
+        let codegen_pair =
+            resolve_pair(pair_inputs(None, Some(generation('2')), None)).expect("codegen pair");
+        assert_eq!(codegen_pair.environment, generation('e'));
+        assert_eq!(codegen_pair.generated, generation('2'));
+        let setup_pair = resolve_pair(pair_inputs(
+            Some(generation('1')),
+            Some(generation('2')),
+            None,
+        ))
+        .expect("setup pair");
+        assert_eq!(setup_pair.environment, generation('1'));
+        assert_eq!(setup_pair.generated, generation('2'));
+    }
+
+    #[test]
+    fn scope_without_either_capability_fails() {
+        assert_eq!(
+            resolve_pair(pair_inputs(None, None, None)),
+            Err(ResolveError::NoCapability)
+        );
+        assert_eq!(
+            resolve_pair(pair_inputs(
+                None,
+                None,
+                Some(SetupPair {
+                    environment: generation('3'),
+                    generated: generation('4'),
+                }),
+            )),
+            Err(ResolveError::NoCapability)
+        );
+        assert!(ResolveError::NoCapability
+            .to_string()
+            .contains("NoCapability"));
     }
 }
