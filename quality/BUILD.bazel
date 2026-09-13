@@ -5,6 +5,7 @@ load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
 load(":fixtures.bzl", "real_source_target")
 load(":native_config.bzl", "vale_config")
 load(":native_config_tests.bzl", "native_config_unit_tests")
+load(":parity_tests.bzl", "parity_unit_tests")
 load(":pipeline_tests.bzl", "pipeline_unit_tests")
 load(":policy.bzl", "quality_family", "workspace_policy")
 load(":policy_subject.bzl", "policy_subject")
@@ -172,6 +173,8 @@ policy_unit_tests(name = "policy_unit")
 
 pipeline_unit_tests(name = "pipeline_unit")
 
+parity_unit_tests(name = "parity_unit")
+
 real_pipeline_unit_tests(name = "real_pipeline_unit")
 
 native_config_unit_tests(name = "native_config_unit")
@@ -184,6 +187,7 @@ test_suite(
     name = "all",
     tests = [
         ":native_config_unit",
+        ":parity_unit",
         ":pipeline_unit",
         ":policy_analysis",
         ":policy_unit",
