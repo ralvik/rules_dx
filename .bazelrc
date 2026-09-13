@@ -6,5 +6,11 @@ import %workspace%/tools/bazelrc/preset.bazelrc
 # Project overrides stay explicit here, never in the generated fragment.
 # (No project-only flags today; the preset covers the shared baseline.)
 
+# M23 WP2 slice 1: hermetic Java runtime (O31 owns the final baseline).
+# No host JDK exists on the seed host, so the default local JDK cannot
+# resolve; pin the upstream remote JDK 21 (oldest complete LTS in
+# rules_java 9.7.0, provisional until O31 freezes the JDK baseline).
+build --java_runtime_version=remotejdk_21
+
 # Carry over per-person local flags when present (never committed).
 try-import %workspace%/user.bazelrc

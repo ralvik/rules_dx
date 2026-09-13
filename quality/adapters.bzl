@@ -137,7 +137,11 @@ REAL_ADAPTERS = {
 # family keeps its existing ownership (foundation wrappers where admitted,
 # otherwise the file itself); no lint/format/typecheck adapter claims any
 # of these classes yet (classification only, no supported claim). O30
-# qualifies exact adapters later; Qt stays last in M22.
+# qualifies exact adapters later; Qt stays last in M22. M23 WP2 adds the
+# java class to the java family on the same terms: each `.java` source has
+# one physical owner (dx_java_library, dx_java_binary, dx_java_test); no
+# adapter claims java yet (classification only, no supported claim). O31
+# qualifies exact adapters later.
 REAL_CLASS_TO_FAMILY = {
     "astro": "astro",
     "c": "cc",
@@ -146,6 +150,7 @@ REAL_CLASS_TO_FAMILY = {
     "cue": "cue",
     "go": "go",
     "go_module": "go_module",
+    "java": "java",
     "javascript": "javascript",
     "json": "json",
     "jsx": "javascript",

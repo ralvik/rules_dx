@@ -41,6 +41,13 @@ bazel_dep(name = "bazel_skylib", version = "1.9.0")
 bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "rules_rust_prost", version = "0.74.0")
 
+# M23 WP2 slice 1: pinned Java foundation (ADR 0019, O31). Latest stable
+# per ADR 0008 currency (9.7.0, Bazel >=7.0.0; verified against Bazel 9.2.0
+# on the seed host). Remote-JDK toolchain configs register through the
+# upstream module; per-platform JDK acquisition selection stays open under
+# O31 (the hermetic `--java_runtime_version` route from the support matrix).
+bazel_dep(name = "rules_java", version = "9.7.0")
+
 # M14 WP1: pinned Python foundation (ADR 0010). Exact 2.x prerelease is an
 # explicit exception to ADR 0008 until a compatible stable 2.x exists.
 bazel_dep(name = "aspect_rules_py", version = "2.0.0-alpha.6")

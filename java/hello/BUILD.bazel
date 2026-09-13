@@ -1,0 +1,33 @@
+"""M23 seed Java binary and library; consumer of dx_java_* wrappers."""
+
+load("//java/rules:defs.bzl", "dx_java_binary", "dx_java_library", "dx_java_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_java_library(
+    name = "hello_lib",
+    srcs = ["Hello.java"],
+)
+
+dx_java_binary(
+    name = "hello",
+    srcs = ["Main.java"],
+    main_class = "hello.Main",
+    deps = [":hello_lib"],
+)
+
+dx_java_test(
+    name = "hello_test",
+    srcs = ["HelloTest.java"],
+    test_class = "hello.HelloTest",
+    deps = [":hello_lib"],
+)
+
+# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. Java sources stay
+# dx-owned, never corpus sources.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
