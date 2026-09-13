@@ -20,8 +20,13 @@
 //! pure composition of these plans into the codegen/env/setup Bazel
 //! invocations (`repository_plan`, `invocation_targets`, `build_argv`);
 //! the query/aggregate Starlark wiring lives in `//dx/roots:roots.bzl`.
-//! Measured benchmark evidence lands in later WP4 slices; the effective
-//! roots stay on the `//...` baseline until a measured winner is frozen.
+//! Slice 3 freezes the measured cold/warm winner (the `//...` baseline;
+//! see [`frozen_strategy`] and [`FROZEN_EVIDENCE`]). The remaining
+//! benchmark dimensions (source/BUILD edits, target churn, actions,
+//! materialized bytes, projection time, retained memory) plus concurrency,
+//! interruption, remote materialization, and reuse certification land in
+//! later WP4 slices; the effective roots stay on the frozen baseline until
+//! then.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -43,6 +48,59 @@ pub const PATTERN_FILE_FLAG: &str = "--target_pattern_file";
 /// the measured WP4 benchmarks may adjust this weight before the strategy
 /// freeze.
 pub const WARM_WEIGHT: u64 = 2;
+
+/// Frozen O34 repository-root strategy (M25 WP4 slice 3): the `//...`
+/// correctness baseline.
+///
+/// Measured evidence (2026-09-14, Linux x86_64, Bazel 9.2.0 via Bazelisk
+/// v1.29.0, warm persistent server unless noted), codegen plan aspect
+/// (`//generation:codegen.bzl%dx_codegen_plan_aspect`) with the
+/// `dx_codegen_plans` output group throughout:
+/// - `recursive-pattern`: `bazel build //...` — cold 8457 ms (after
+///   `bazel shutdown`), warm 335/410 ms, 685 analyzed targets with 764
+///   aspect applications.
+/// - `query-pattern-file`: pattern file holding `//...` (the
+///   `roots_pattern_fixture` shape) via `--target_pattern_file` — cold
+///   8983 ms, warm 278/381/391 ms, same 685 analyzed targets: equivalent
+///   semantics with a file-indirection cost, never faster than direct
+///   `//...` on cold.
+/// - `monolithic-aggregate`: `//dx/roots:roots_monolith_fixture`
+///   (filegroup over the two empty canonical selections) — warm
+///   294/329/346 ms over 1 analyzed target: it drops the 685 designated
+///   roots, so [`check_semantic_coverage`] fails it closed and
+///   [`select_strategy`] excludes it however fast (same for the
+///   placeholder canonical-only invocation: cold 2294 ms, warm
+///   207/231/245 ms, 1 target).
+/// - `package-shards`: no codegen shard fixtures exist yet; unmeasured
+///   and therefore excluded as non-equivalent.
+///
+/// Weighted scores (`cold_ms + WARM_WEIGHT * warm_ms`, warm medians 372
+/// vs 350): baseline 8457 + 2*372 = 9201 beats query-file 8983 + 2*350 =
+/// 9683 outright; the baseline also wins every tie by [`RootStrategy::ALL`]
+/// order. The remaining [`BenchmarkDimension`] rows (source/BUILD edits,
+/// target churn, actions, materialized bytes, projection time, retained
+/// memory) plus concurrency, interruption, remote materialization, and
+/// reuse certification land in later WP4 slices and cannot displace this
+/// freeze without new measured evidence plus a freeze change here.
+pub const FROZEN_STRATEGY: RootStrategy = RootStrategy::RecursivePattern;
+
+/// Returns the frozen repository-root strategy (see [`FROZEN_STRATEGY`]).
+pub fn frozen_strategy() -> RootStrategy {
+    FROZEN_STRATEGY
+}
+
+/// Headline benchmark samples behind the freeze, in [`RootStrategy::ALL`]
+/// order: measured cold/warm wall times in milliseconds with the
+/// equivalence flags from the evidence above. [`select_strategy`] over
+/// these samples returns [`frozen_strategy`]; the test
+/// `frozen_evidence_selects_the_frozen_strategy` pins that implication so
+/// the numbers and the freeze cannot drift apart silently.
+pub const FROZEN_EVIDENCE: [(RootStrategy, bool, u64, u64); 4] = [
+    (RootStrategy::RecursivePattern, true, 8457, 372),
+    (RootStrategy::QueryPatternFile, true, 8983, 350),
+    (RootStrategy::MonolithicAggregate, false, 2300, 329),
+    (RootStrategy::PackageShards, false, 2000, 300),
+];
 
 /// Repository-root strategy candidates under O34.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -161,10 +219,14 @@ impl RepositoryRootPlan {
 }
 
 /// Plans the repository-wide roots behind a canonical selection
-/// (`//dx:codegen`, `//dx:env`, or their union in `dx setup`): the
-/// correctness baseline until measured WP4 evidence freezes a winner.
+/// (`//dx:codegen`, `//dx:env`, or their union in `dx setup`): the frozen
+/// WP4 strategy's plan. The freeze (see [`frozen_strategy`]) selects the
+/// `//...` baseline, so this is the baseline plan; composing a future
+/// non-baseline winner (pattern-file path, aggregate labels) needs its
+/// invocation-time inputs and lands with that freeze change, not here.
 /// Exact-target scopes bypass root selection entirely and never call this.
 pub fn repository_plan() -> RepositoryRootPlan {
+    debug_assert_eq!(frozen_strategy(), RootStrategy::baseline());
     RepositoryRootPlan::baseline()
 }
 
@@ -583,6 +645,32 @@ mod tests {
     #[test]
     fn repository_plan_is_the_baseline() {
         assert_eq!(repository_plan(), RepositoryRootPlan::baseline());
+    }
+
+    #[test]
+    fn freeze_selects_the_recursive_pattern_baseline() {
+        assert_eq!(FROZEN_STRATEGY, RootStrategy::RecursivePattern);
+        assert_eq!(frozen_strategy(), RootStrategy::baseline());
+        assert_eq!(frozen_strategy().name(), "recursive-pattern");
+        assert_eq!(repository_plan(), RepositoryRootPlan::baseline());
+    }
+
+    #[test]
+    fn frozen_evidence_selects_the_frozen_strategy() {
+        let samples: Vec<BenchmarkSample> = FROZEN_EVIDENCE
+            .iter()
+            .map(|(strategy, equivalent, cold_ms, warm_ms)| BenchmarkSample {
+                strategy: *strategy,
+                equivalent: *equivalent,
+                cold_ms: *cold_ms,
+                warm_ms: *warm_ms,
+            })
+            .collect();
+        assert_eq!(samples.len(), RootStrategy::ALL.len());
+        for (index, strategy) in RootStrategy::ALL.iter().enumerate() {
+            assert_eq!(samples[index].strategy, *strategy);
+        }
+        assert_eq!(select_strategy(&samples), frozen_strategy());
     }
 
     #[test]

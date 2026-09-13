@@ -1,4 +1,4 @@
-"""M25 WP4 slice 2: repository-root strategy planning plus query/aggregate wiring."""
+"""M25 WP4 slice 3: repository-root strategy planning plus query/aggregate wiring, with the cold/warm freeze."""
 
 load("@crates//:crates.bzl", "aliases")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
