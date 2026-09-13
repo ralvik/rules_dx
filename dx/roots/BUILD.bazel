@@ -1,0 +1,56 @@
+"""M25 WP4 slice 1: repository-root strategy planning for the `dx` CLI."""
+
+load("@crates//:crates.bzl", "aliases")
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "dx_rust_library", "dx_rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_rust_library(
+    name = "dx_roots",
+    srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "dx/dx_roots",
+        normal = True,
+    ),
+    crate_name = "dx_roots",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+)
+
+dx_rust_test(
+    name = "dx_roots_test",
+    size = "small",
+    aliases = aliases(
+        package_name = "dx/dx_roots",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":dx_roots",
+    edition = "2021",
+)
+
+# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# resolve from the pinned toolchain, never from ambient host tools.
+rustfmt_test(
+    name = "dx_roots_fmt_test",
+    size = "small",
+    targets = [":dx_roots"],
+)
+
+rust_clippy_test(
+    name = "dx_roots_clippy_test",
+    size = "small",
+    targets = [":dx_roots"],
+)
+
+exports_files(["Cargo.toml"])
+
+# Repository corpus (M05 WP1): crate manifest and build file owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
+)
