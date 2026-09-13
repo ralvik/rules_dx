@@ -1,0 +1,38 @@
+"""M23 seed F# binary and library; consumer of dx_fsharp_* wrappers."""
+
+load("//fsharp/rules:defs.bzl", "dx_fsharp_binary", "dx_fsharp_library", "dx_fsharp_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_fsharp_library(
+    name = "hello_lib",
+    srcs = ["Library.fs"],
+    deps = ["@paket.main//fsharp.core"],
+)
+
+dx_fsharp_binary(
+    name = "hello",
+    srcs = ["Program.fs"],
+    deps = [
+        ":hello_lib",
+        "@paket.main//fsharp.core",
+    ],
+)
+
+dx_fsharp_test(
+    name = "hello_test",
+    srcs = ["HelloTest.fs"],
+    deps = [
+        ":hello_lib",
+        "@paket.main//fsharp.core",
+    ],
+)
+
+# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. F# sources stay
+# dx-owned, never corpus sources.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)

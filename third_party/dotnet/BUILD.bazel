@@ -1,0 +1,36 @@
+"""NuGet Paket lockfile package (M23, O31, ADR 0019).
+
+The authoritative NuGet dependency lock for the admitted .NET foundations
+(C#, F#): `paket.dependencies` plus `paket.lock` via `paket2bazel` into the
+`paket.main` hub (`//third_party/dotnet/deps`). The lock files are
+maintainer-owned pins (restored with `dotnet paket install`, regenerated
+with `bazel run @rules_dotnet//tools/paket2bazel -- --dependencies-file
+$PWD/third_party/dotnet/paket.dependencies --output-folder
+$PWD/third_party/dotnet/deps`) and never edited by hand; every entry
+carries its sha512 so the Bazel downloader verifies each artifact.
+Consumers never load this package directly; they depend on
+`@paket.main//<package>` labels. Seed member is FSharp.Core 10.1.201 only:
+F# assemblies need the FSharp.Core runtime asset next to the app (plain
+fsc output alone throws FileNotFoundException at startup); the xUnit/NUnit
+runner selection stays open under O31 per the provisional test-runner
+table.
+"""
+
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "dotnet-tools.json",
+    "paket.dependencies",
+    "paket.lock",
+])
+
+# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy. The lockfiles themselves
+# are generated output (like Cargo.lock/pnpm-lock.yaml), never corpus
+# sources.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)

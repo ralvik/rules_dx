@@ -158,7 +158,12 @@ REAL_ADAPTERS = {
 # owner (dx_csharp_library, dx_csharp_binary, dx_csharp_test) over the
 # pinned rules_dotnet csharp_* rules; no adapter claims csharp yet
 # (classification only, no supported claim). O31 qualifies exact adapters
-# later.
+# later. M23 WP2 adds the fsharp class to the fsharp family on the same
+# terms: each `.fs`/`.fsi` source has one physical owner
+# (dx_fsharp_library, dx_fsharp_binary, dx_fsharp_test) over the pinned
+# rules_dotnet fsharp_* rules with the shared Paket `paket.main` lock
+# (FSharp.Core runtime); no adapter claims fsharp yet (classification only,
+# no supported claim). O31 qualifies exact adapters later.
 REAL_CLASS_TO_FAMILY = {
     "astro": "astro",
     "c": "cc",
@@ -166,6 +171,7 @@ REAL_CLASS_TO_FAMILY = {
     "csharp": "csharp",
     "cuda": "cuda",
     "cue": "cue",
+    "fsharp": "fsharp",
     "go": "go",
     "go_module": "go_module",
     "java": "java",

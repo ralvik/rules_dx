@@ -215,6 +215,9 @@ support scala/hello/Main.scala
 support csharp/hello/Hello.cs
 support csharp/hello/HelloTest.cs
 support csharp/hello/Program.cs
+support fsharp/hello/Library.fs
+support fsharp/hello/HelloTest.fs
+support fsharp/hello/Program.fs
 eligible generation/result/src/lib.rs
 support gazelle/rust/cargo_test.go
 support gazelle/rust/lang_test.go

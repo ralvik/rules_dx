@@ -90,6 +90,19 @@ dotnet = use_extension("@rules_dotnet//dotnet:extensions.bzl", "dotnet")
 dotnet.toolchain(dotnet_version = "10.0.201")
 use_repo(dotnet, "dotnet_toolchains")
 
+# M23 .NET dep-route slice: pinned NuGet resolver (ADR 0019, O31). Single
+# shared Paket lock for the admitted .NET foundations (C#, F#) per the
+# support matrix: `paket.dependencies` plus `paket.lock` via `paket2bazel`
+# into the `paket.main` hub carrying per-package sha512. Seed member is
+# FSharp.Core 10.1.201 only (F# assemblies need the runtime asset next to
+# the app); the xUnit/NUnit runner selection stays open under O31 per the
+# provisional test-runner table. Regenerate with:
+#   bazel run @rules_dotnet//tools/paket2bazel -- --dependencies-file
+#   $PWD/third_party/dotnet/paket.dependencies --output-folder
+#   $PWD/third_party/dotnet/deps
+dotnet_nuget = use_extension("//third_party/dotnet/deps:paket.main_extension.bzl", "main_extension")
+use_repo(dotnet_nuget, "paket.main")
+
 # M23 JVM dep-route slice: pinned Maven resolver (ADR 0019, O31). 7.1 is the
 # latest stable in the Bazel Central Registry (Bazel >=7.0.0; verified
 # against Bazel 9.2.0 on the seed host). Single shared lock for the admitted
