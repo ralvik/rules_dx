@@ -1,0 +1,78 @@
+package java
+
+import (
+	"reflect"
+	"testing"
+)
+
+func TestParseImportsSingleType(t *testing.T) {
+	got := ParseImports([]byte("package demo;\n\nimport com.example.Widget;\nimport java.util.List;\n"))
+	// java.util.List is included (callers filter stdlib); the local import
+	// contributes its simple class name.
+	want := []string{"Widget", "java.util.List"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ParseImports = %v, want %v", got, want)
+	}
+}
+
+func TestParseImportsStaticAndOnDemand(t *testing.T) {
+	got := ParseImports([]byte("package demo;\n\nimport static com.example.Widget.create;\nimport com.example.*;\n"))
+	want := []string{"create", "example"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ParseImports = %v, want %v", got, want)
+	}
+}
+
+func TestParseImportsCommentsAndStringsInert(t *testing.T) {
+	got := ParseImports([]byte("package demo;\n\n// import com.fake.Commented;\n/* import com.fake.Blocked; */\nimport java.util.List;\n\nString s = \"import com.fake.Literal;\";\n"))
+	want := []string{"java.util.List"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ParseImports = %v, want %v", got, want)
+	}
+}
+
+func TestParseImportsDedupedSorted(t *testing.T) {
+	got := ParseImports([]byte("package demo;\n\nimport com.example.Zeta;\nimport com.example.Alpha;\nimport com.example.Zeta;\n"))
+	want := []string{"Alpha", "Zeta"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ParseImports = %v, want %v", got, want)
+	}
+}
+
+func TestParsePackage(t *testing.T) {
+	got, err := ParsePackage([]byte("package com.example.demo;\n\npublic class Demo {}\n"))
+	if err != nil || got != "com.example.demo" {
+		t.Errorf("ParsePackage = %q, %v; want com.example.demo", got, err)
+	}
+	if got, err := ParsePackage([]byte("public class Demo {}\n")); err != nil || got != "" {
+		t.Errorf("ParsePackage default = %q, %v; want empty", got, err)
+	}
+	if _, err := ParsePackage([]byte("package a;\npackage b;\n")); err == nil {
+		t.Fatal("ParsePackage succeeded on duplicate package clauses")
+	}
+}
+
+func TestDefinesMain(t *testing.T) {
+	if !DefinesMain([]byte("package demo;\n\npublic class Main {\n  public static void main(String[] args) {}\n}\n")) {
+		t.Error("DefinesMain missed a main method")
+	}
+	if DefinesMain([]byte("package demo;\n\npublic class Demo {\n  // public static void main(String[] args)\n}\n")) {
+		t.Error("DefinesMain matched a commented main")
+	}
+	if DefinesMain([]byte("package demo;\n\npublic class Demo {\n  public String hello() { return \"x\"; }\n}\n")) {
+		t.Error("DefinesMain matched a library source")
+	}
+}
+
+func TestIsStdLib(t *testing.T) {
+	for _, imp := range []string{"java.util.List", "javax.inject.Inject", "javafx.application.Application", "jdk.internal.Foo", "org.w3c.dom.Node", "org.xml.sax.Parser"} {
+		if !IsStdLib(imp) {
+			t.Errorf("IsStdLib(%q) = false, want true", imp)
+		}
+	}
+	for _, imp := range []string{"com.example.Widget", "Widget"} {
+		if IsStdLib(imp) {
+			t.Errorf("IsStdLib(%q) = true, want false", imp)
+		}
+	}
+}

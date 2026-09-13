@@ -95,6 +95,10 @@ eligible gazelle/go/stdlib.go
 eligible gazelle/cc/lang.go
 eligible gazelle/cc/naming.go
 eligible gazelle/cc/parser.go
+eligible gazelle/java/lang.go
+eligible gazelle/java/naming.go
+eligible gazelle/java/parser.go
+eligible gazelle/java/stdlib.go
 eligible gazelle/mixed/mixed.go
 support gazelle/python/doc.go
 support gazelle/javascript/doc.go
@@ -105,6 +109,7 @@ support gazelle/astro/doc.go
 support gazelle/mdx/doc.go
 support gazelle/go/doc.go
 support gazelle/cc/doc.go
+support gazelle/java/doc.go
 support gazelle/python/lang_test.go
 support gazelle/python/naming_test.go
 support gazelle/python/parser_test.go
@@ -132,6 +137,9 @@ support gazelle/go/parser_test.go
 support gazelle/cc/lang_test.go
 support gazelle/cc/naming_test.go
 support gazelle/cc/parser_test.go
+support gazelle/java/lang_test.go
+support gazelle/java/naming_test.go
+support gazelle/java/parser_test.go
 support gazelle/mixed/mixed_test.go
 support gazelle/python/testdata/source_only/pkg/demo/demo.py
 support gazelle/python/testdata/source_only/pkg/demo/demo.pyi
@@ -170,6 +178,12 @@ support gazelle/cc/testdata/source_only/pkg/demo/demo.cc
 support gazelle/cc/testdata/source_only/pkg/demo/demo_test.cc
 support gazelle/cc/testdata/source_only/pkg/demo/helper.cc
 support gazelle/cc/testdata/source_only/pkg/demo/helper.h
+support gazelle/java/testdata/source_only/pkg/demo/Demo.java
+support gazelle/java/testdata/source_only/pkg/demo/DemoTest.java
+support gazelle/java/testdata/source_only/pkg/demo/Helper.java
+support java/hello/Hello.java
+support java/hello/HelloTest.java
+support java/hello/Main.java
 eligible generation/result/src/lib.rs
 support gazelle/rust/cargo_test.go
 support gazelle/rust/lang_test.go
