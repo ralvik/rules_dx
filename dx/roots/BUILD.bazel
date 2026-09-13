@@ -1,9 +1,10 @@
-"""M25 WP4 slice 1: repository-root strategy planning for the `dx` CLI."""
+"""M25 WP4 slice 2: repository-root strategy planning plus query/aggregate wiring."""
 
 load("@crates//:crates.bzl", "aliases")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_library", "dx_rust_test")
+load(":roots.bzl", "repository_roots_file", "roots_aggregate")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -47,10 +48,33 @@ rust_clippy_test(
 
 exports_files(["Cargo.toml"])
 
+exports_files(["roots.bzl"])
+
+# Query/aggregate wiring fixtures (M25 WP4 slice 2): the pattern file
+# proves the `repository_roots_file` rule writes one label per line for
+# `--target_pattern_file`, while the monolithic aggregate reserves the
+# one-aggregate identity over the canonical repository-wide selections.
+repository_roots_file(
+    name = "roots_pattern_fixture",
+    out = "roots_pattern_fixture.txt",
+    roots = ["//..."],
+)
+
+roots_aggregate(
+    name = "roots_monolith_fixture",
+    deps = [
+        "//dx:codegen",
+        "//dx:env",
+    ],
+)
+
 # Repository corpus (M05 WP1): crate manifest and build file owned for
 # direct-Bazel dogfood under the canonical real_fixture_policy.
 real_source_target(
     name = "corpus",
-    starlark_srcs = ["BUILD.bazel"],
+    starlark_srcs = [
+        "BUILD.bazel",
+        "roots.bzl",
+    ],
     toml_srcs = ["Cargo.toml"],
 )

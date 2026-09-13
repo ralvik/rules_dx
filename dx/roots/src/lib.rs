@@ -16,11 +16,12 @@
 //! `//dx:env` selections, the designated-root coverage rule (no candidate
 //! may reduce roots based only on an unconfigured query graph, since
 //! transitions, toolchains, and `select()` can diverge from it), and the
-//! benchmark decision rule with its measured dimensions. Measured benchmark
-//! evidence, the query/aggregate Starlark wiring, and composing these plans
-//! into the codegen/env/setup Bazel invocations land in later WP4 slices;
-//! the effective roots stay on the `//...` baseline until a measured winner
-//! is frozen.
+//! benchmark decision rule with its measured dimensions. Slice 2 adds the
+//! pure composition of these plans into the codegen/env/setup Bazel
+//! invocations (`repository_plan`, `invocation_targets`, `build_argv`);
+//! the query/aggregate Starlark wiring lives in `//dx/roots:roots.bzl`.
+//! Measured benchmark evidence lands in later WP4 slices; the effective
+//! roots stay on the `//...` baseline until a measured winner is frozen.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -157,6 +158,57 @@ impl RepositoryRootPlan {
             .as_ref()
             .map(|path| format!("{}={}", PATTERN_FILE_FLAG, path.display()))
     }
+}
+
+/// Plans the repository-wide roots behind a canonical selection
+/// (`//dx:codegen`, `//dx:env`, or their union in `dx setup`): the
+/// correctness baseline until measured WP4 evidence freezes a winner.
+/// Exact-target scopes bypass root selection entirely and never call this.
+pub fn repository_plan() -> RepositoryRootPlan {
+    RepositoryRootPlan::baseline()
+}
+
+/// Composes a root plan into the Bazel command-line patterns behind one
+/// canonical repository-wide selection: the baseline plan keeps the
+/// canonical selection identity (so `//dx:codegen` keeps resolving while
+/// the benchmark runs); every other candidate passes its own roots
+/// through. The query-pattern-file candidate carries no command-line
+/// patterns: Bazel reads the labels from [`PATTERN_FILE_FLAG`] (see
+/// [`RepositoryRootPlan::pattern_file_arg`]).
+pub fn invocation_targets(plan: &RepositoryRootPlan, canonical: &str) -> Vec<String> {
+    if plan.pattern_file.is_some() {
+        return Vec::new();
+    }
+    if plan.strategy == RootStrategy::RecursivePattern
+        && plan.roots == vec![REPOSITORY_PATTERN.to_owned()]
+    {
+        return vec![canonical.to_owned()];
+    }
+    plan.roots.clone()
+}
+
+/// Composes a root plan into a `bazel build` command line: `build` plus
+/// [`invocation_targets`], one `--aspects=` flag per collecting aspect,
+/// one `--output_groups=` flag per plan output group, and the
+/// [`PATTERN_FILE_FLAG`] argument when the plan carries a pattern file.
+pub fn build_argv(
+    plan: &RepositoryRootPlan,
+    canonical: &str,
+    aspects: &[String],
+    output_groups: &[String],
+) -> Vec<String> {
+    let mut argv = vec!["build".to_owned()];
+    argv.extend(invocation_targets(plan, canonical));
+    for aspect in aspects {
+        argv.push(format!("--aspects={aspect}"));
+    }
+    for group in output_groups {
+        argv.push(format!("--output_groups={group}"));
+    }
+    if let Some(pattern_arg) = plan.pattern_file_arg() {
+        argv.push(pattern_arg);
+    }
+    argv
 }
 
 /// Designated-root coverage report: whether a candidate's roots list every
@@ -526,5 +578,74 @@ mod tests {
         );
         let unique: BTreeSet<&str> = names.into_iter().collect();
         assert_eq!(unique.len(), BenchmarkDimension::ALL.len());
+    }
+
+    #[test]
+    fn repository_plan_is_the_baseline() {
+        assert_eq!(repository_plan(), RepositoryRootPlan::baseline());
+    }
+
+    #[test]
+    fn baseline_plan_keeps_the_canonical_selection_identity() {
+        let plan = repository_plan();
+        assert_eq!(
+            invocation_targets(&plan, "//dx:codegen"),
+            vec![label("//dx:codegen")]
+        );
+    }
+
+    #[test]
+    fn aggregate_plans_pass_their_roots_through() {
+        let single = RepositoryRootPlan::monolithic_aggregate("//dx:codegen_roots");
+        assert_eq!(
+            invocation_targets(&single, "//dx:codegen"),
+            vec![label("//dx:codegen_roots")]
+        );
+        let shards = RepositoryRootPlan::package_shards(&labels(&["//a:roots", "//b:roots"]));
+        assert_eq!(
+            invocation_targets(&shards, "//dx:codegen"),
+            labels(&["//a:roots", "//b:roots"])
+        );
+    }
+
+    #[test]
+    fn query_file_plan_carries_no_command_line_patterns() {
+        let plan = RepositoryRootPlan::query_pattern_file(Path::new("/tmp/roots.txt"));
+        assert!(invocation_targets(&plan, "//dx:codegen").is_empty());
+        let argv = build_argv(
+            &plan,
+            "//dx:codegen",
+            &labels(&["//generation:codegen.bzl%dx_codegen_plan_aspect"]),
+            &labels(&["dx_codegen_plans"]),
+        );
+        assert_eq!(
+            argv,
+            vec![
+                "build".to_owned(),
+                "--aspects=//generation:codegen.bzl%dx_codegen_plan_aspect".to_owned(),
+                "--output_groups=dx_codegen_plans".to_owned(),
+                format!("{PATTERN_FILE_FLAG}=/tmp/roots.txt"),
+            ]
+        );
+    }
+
+    #[test]
+    fn build_argv_composes_baseline_invocation() {
+        let plan = repository_plan();
+        let argv = build_argv(
+            &plan,
+            "//dx:codegen",
+            &labels(&["//generation:codegen.bzl%dx_codegen_plan_aspect"]),
+            &labels(&["dx_codegen_plans"]),
+        );
+        assert_eq!(
+            argv,
+            vec![
+                "build".to_owned(),
+                "//dx:codegen".to_owned(),
+                "--aspects=//generation:codegen.bzl%dx_codegen_plan_aspect".to_owned(),
+                "--output_groups=dx_codegen_plans".to_owned(),
+            ]
+        );
     }
 }

@@ -19,6 +19,7 @@ dx_rust_library(
     edition = "2021",
     deps = [
         "//dx/bep:dx_bep",
+        "//dx/roots:dx_roots",
         "//env/env_shard",
         "//quality/result:quality_result",
     ],

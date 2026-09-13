@@ -107,12 +107,35 @@ pub fn resolve_scope(targets: &[String]) -> Result<CodegenScope, ScopeError> {
 }
 
 /// Bazel labels to build for `scope`: the canonical repository target or
-/// the one exact label.
+/// the one exact label. The repository arm composes the WP4 (O34)
+/// [`dx_roots::repository_plan`] (still the `//...` baseline) behind the
+/// `//dx:codegen` selection identity; exact scopes bypass root selection.
 pub fn scope_targets(scope: &CodegenScope) -> Vec<String> {
     match scope {
-        CodegenScope::Repository => vec![REPOSITORY_TARGET.to_owned()],
+        CodegenScope::Repository => targets_for_root_plan(&dx_roots::repository_plan()),
         CodegenScope::Exact(label) => vec![label.clone()],
     }
+}
+
+/// Bazel labels to build for a WP4 root plan behind `//dx:codegen`: the
+/// baseline plan keeps the canonical selection identity while the
+/// benchmark runs; every other candidate passes its own roots through.
+/// The query-pattern-file candidate carries no command-line patterns
+/// (Bazel reads them from `--target_pattern_file`).
+pub fn targets_for_root_plan(plan: &dx_roots::RepositoryRootPlan) -> Vec<String> {
+    dx_roots::invocation_targets(plan, REPOSITORY_TARGET)
+}
+
+/// Full `bazel build` command line for a WP4 root plan: `build` plus the
+/// plan roots, the collecting aspect, and the private output group (plus
+/// `--target_pattern_file` when the plan carries a pattern file).
+pub fn build_argv_for_plan(plan: &dx_roots::RepositoryRootPlan) -> Vec<String> {
+    dx_roots::build_argv(
+        plan,
+        REPOSITORY_TARGET,
+        &[CODEGEN_ASPECT.to_owned()],
+        &[OUTPUT_GROUP.to_owned()],
+    )
 }
 
 /// One normalized projection entry. Projections are always read-only
@@ -667,6 +690,34 @@ mod tests {
         assert_eq!(
             scope_targets(&CodegenScope::Repository),
             vec!["//dx:codegen"]
+        );
+    }
+
+    #[test]
+    fn root_plan_composes_baseline_invocation() {
+        let plan = dx_roots::repository_plan();
+        assert_eq!(targets_for_root_plan(&plan), vec!["//dx:codegen"]);
+        assert_eq!(
+            build_argv_for_plan(&plan),
+            vec![
+                "build".to_owned(),
+                "//dx:codegen".to_owned(),
+                format!("--aspects={CODEGEN_ASPECT}"),
+                format!("--output_groups={OUTPUT_GROUP}"),
+            ]
+        );
+    }
+
+    #[test]
+    fn root_plan_passes_aggregate_roots_through() {
+        let plan = dx_roots::RepositoryRootPlan::monolithic_aggregate("//dx:codegen_roots");
+        assert_eq!(
+            targets_for_root_plan(&plan),
+            vec!["//dx:codegen_roots".to_owned()]
+        );
+        assert_eq!(
+            build_argv_for_plan(&plan)[1],
+            "//dx:codegen_roots".to_owned()
         );
     }
 

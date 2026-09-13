@@ -129,6 +129,53 @@ pub fn request_aspects() -> Vec<String> {
     vec![CODEGEN_ASPECT.to_owned(), ENV_ASPECT.to_owned()]
 }
 
+/// Bazel labels to build for a WP4 root plan behind the canonical
+/// repository-wide selections: the baseline plan keeps both selection
+/// identities (`//dx:codegen` plus `//dx:env`) while the benchmark runs;
+/// every other candidate passes its single union root set through. The
+/// query-pattern-file candidate carries no command-line patterns (Bazel
+/// reads them from `--target_pattern_file`).
+pub fn targets_for_root_plan(plan: &dx_roots::RepositoryRootPlan) -> Vec<String> {
+    if plan.pattern_file.is_some() {
+        return Vec::new();
+    }
+    if *plan == dx_roots::repository_plan() {
+        return scope_targets(&SetupScope::Repository);
+    }
+    plan.roots.clone()
+}
+
+/// Plans the single combined Bazel request for a WP4 root plan: the
+/// plan's union roots with both collecting aspects and both output
+/// groups. Codegen and env never invoke each other; each aspect stays
+/// bounded by provider applicability.
+pub fn plan_request_for_root_plan(plan: &dx_roots::RepositoryRootPlan) -> SetupRequest {
+    SetupRequest {
+        roots: targets_for_root_plan(plan),
+        aspects: request_aspects(),
+        output_groups: request_output_groups(),
+    }
+}
+
+/// Full `bazel build` command line for a WP4 root plan: `build` plus the
+/// union roots, both collecting aspects, and both output groups (plus
+/// `--target_pattern_file` when the plan carries a pattern file).
+pub fn build_argv_for_plan(plan: &dx_roots::RepositoryRootPlan) -> Vec<String> {
+    let request = plan_request_for_root_plan(plan);
+    let mut argv = vec!["build".to_owned()];
+    argv.extend(request.roots);
+    for aspect in &request.aspects {
+        argv.push(format!("--aspects={aspect}"));
+    }
+    for group in &request.output_groups {
+        argv.push(format!("--output_groups={group}"));
+    }
+    if let Some(pattern_arg) = plan.pattern_file_arg() {
+        argv.push(pattern_arg);
+    }
+    argv
+}
+
 /// Output groups requested together in the single setup request: the
 /// codegen plan group plus the env plan group, collected from one BEP
 /// stream. No separate env/codegen Bazel commands or output bases are
@@ -149,12 +196,18 @@ pub struct SetupRequest {
     pub output_groups: Vec<String>,
 }
 
-/// Plans the single combined Bazel request for `scope`.
+/// Plans the single combined Bazel request for `scope`. The repository
+/// arm composes the WP4 (O34) [`dx_roots::repository_plan`] (still the
+/// `//...` baseline) behind both canonical selections; exact scopes
+/// bypass root selection.
 pub fn plan_request(scope: &SetupScope) -> SetupRequest {
-    SetupRequest {
-        roots: scope_targets(scope),
-        aspects: request_aspects(),
-        output_groups: request_output_groups(),
+    match scope {
+        SetupScope::Repository => plan_request_for_root_plan(&dx_roots::repository_plan()),
+        SetupScope::Exact(label) => SetupRequest {
+            roots: vec![label.clone()],
+            aspects: request_aspects(),
+            output_groups: request_output_groups(),
+        },
     }
 }
 
@@ -738,6 +791,42 @@ mod tests {
         assert_eq!(
             scope_targets(&SetupScope::Repository),
             vec!["//dx:codegen", "//dx:env"]
+        );
+    }
+
+    #[test]
+    fn root_plan_composes_baseline_combined_request() {
+        let plan = dx_roots::repository_plan();
+        assert_eq!(
+            targets_for_root_plan(&plan),
+            vec!["//dx:codegen", "//dx:env"]
+        );
+        let request = plan_request_for_root_plan(&plan);
+        assert_eq!(request, plan_request(&SetupScope::Repository));
+        assert_eq!(
+            build_argv_for_plan(&plan),
+            vec![
+                "build".to_owned(),
+                "//dx:codegen".to_owned(),
+                "//dx:env".to_owned(),
+                format!("--aspects={CODEGEN_ASPECT}"),
+                format!("--aspects={ENV_ASPECT}"),
+                format!("--output_groups={CODEGEN_OUTPUT_GROUP}"),
+                format!("--output_groups={ENV_OUTPUT_GROUP}"),
+            ]
+        );
+    }
+
+    #[test]
+    fn root_plan_passes_aggregate_roots_through() {
+        let plan = dx_roots::RepositoryRootPlan::monolithic_aggregate("//dx:setup_roots");
+        assert_eq!(
+            targets_for_root_plan(&plan),
+            vec!["//dx:setup_roots".to_owned()]
+        );
+        assert_eq!(
+            plan_request_for_root_plan(&plan).roots,
+            vec!["//dx:setup_roots".to_owned()]
         );
     }
 
