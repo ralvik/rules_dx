@@ -1,0 +1,36 @@
+"""Focused Go environment plans (M22 WP2).
+
+Each `go_env_plan` reads the analyzed authoritative providers of one
+`dx_go_*` wrapper: `QualitySourcesInfo` for direct sources plus the
+preserved `GoInfo`/`GoArchive` toolchain closure by reference.
+Focused-target only; repository/root/exact-target orchestration remains M25.
+"""
+
+load("//go/env:plan.bzl", "go_env_plan")
+load("//go/env:plan_tests.bzl", "env_plan_tests")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+go_env_plan(
+    name = "hello_lib_plan",
+    target = "//go/hello:hello_lib",
+)
+
+env_plan_tests(
+    name = "env_plan_tests",
+    subjects = [
+        ":hello_lib_plan",
+    ],
+)
+
+# Repository corpus (M05 WP1): plan Starlark owned for direct-Bazel dogfood
+# under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "plan.bzl",
+        "plan_tests.bzl",
+    ],
+)
