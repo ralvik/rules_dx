@@ -81,7 +81,7 @@ adoption scope (depends on M29).
 | M21 | [MDX And Mixed Framework](M21-mdx-mixed-framework.md) ([report](M21-completion-report.md)) | M18, M19, M20 | Ready |
 | M22 | [Additional Native Foundations And Toolchain Parity](M22-remaining-native-toolchain-parity.md) ([report](M22-completion-report.md)) | M13, M15, M17, M21 | Ready |
 | M23 | [Additional Managed Foundations And Runtime Parity](M23-remaining-managed-runtime-parity.md) ([report](M23-completion-report.md)) | M15, M17, M21, M22 | Ready |
-| M24 | [Parity Closure](M24-parity-closure.md) | M22, M23 | Pending |
+| M24 | [Parity Closure](M24-parity-closure.md) ([report](M24-completion-report.md)) | M22, M23 | Ready |
 | M25 | [Codegen, Environments, And Setup](M25-codegen-environments-setup.md) | M12, M14, M15, M16, M17, M21, M24 | Pending |
 | M26 | [Audit And Update](M26-audit-update.md) | M24 | Pending |
 | M27 | [Consumer CI](M27-consumer-ci.md) | M25, M26 | Pending |
