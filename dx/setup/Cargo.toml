@@ -1,0 +1,8 @@
+[package]
+name = "dx_setup"
+version = "0.0.0"
+edition = "2021"
+
+[lib]
+name = "dx_setup"
+path = "src/lib.rs"
