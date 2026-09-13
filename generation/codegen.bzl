@@ -1,12 +1,14 @@
 """Normalized codegen plan records (M25 WP1, O33).
 
 `DxCodegenPlanInfo` is the in-memory shape behind the binary
-`DxCodegenShard` wire schema (`codegen.proto`): each contributing
-configured target carries its direct projection records while collectors
-forward the transitive merge. Shard emission, the collecting aspect, and
-the private `dx_codegen_plans` output group land in a later WP1 slice;
-this file freezes the private names, the admitted first pair, and the
-pure validation/merge semantics those pieces share.
+`DxCodegenShard` wire schema (`codegen.proto`): each shard-emitting rule
+carries its direct projection record. `DxCodegenPlanCollectedInfo` is the
+separate aspect-carried merge: Bazel rejects an aspect that re-provides its
+target's own provider ("provided twice"), so the collecting aspect never
+returns `DxCodegenPlanInfo` and contributing rules never return the
+collected provider. Shard emission, the collecting aspect, and the private
+`dx_codegen_plans` output group land in WP1 slice 2 (this file); the
+narrow prost adapter over the frozen slice-1 semantics is here as well.
 
 O33 freeze (slice 1): the only first-release generator/language pair is
 Protocol Buffer schema to Rust through `rust_prost_library` (dogfooded by
@@ -23,13 +25,31 @@ transitive collection reaches one record through many routes.
 
 Contract: `docs/environments/codegen.md` (provider contract, filesystem
 projection), `docs/product/scope.md` (automatic workflows).
+
+Slice 2 (this file) adds the shard-emission rule, the collecting
+aspect, and the narrow prost adapter over the frozen slice-1 semantics.
+No new pair, name, or merge semantic lands here.
 """
+
+load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 
 DxCodegenPlanInfo = provider(
     doc = "Normalized codegen plan records: direct plus transitive collection.",
     fields = {
         "direct": "List of codegen record structs contributed by this target.",
         "transitive": "Depset of codegen record structs from the closure.",
+    },
+)
+
+# Aspect-carried merge over DxCodegenPlanInfo contributors. Kept distinct
+# because Bazel reports "provided twice" when an aspect returns the same
+# provider its target already provides: shard rules carry direct records
+# in DxCodegenPlanInfo, the aspect merges them here, and fixtures prefer
+# this provider with a direct-rule fallback.
+DxCodegenPlanCollectedInfo = provider(
+    doc = "Aspect-merged codegen plan records from the traversed closure.",
+    fields = {
+        "records": "Depset of merged codegen record structs.",
     },
 )
 
@@ -229,3 +249,264 @@ def codegen_plan_fingerprint(records):
         }
         for record in merged
     ])
+
+def codegen_pair_error(schema_kind, language):
+    """Validates one generator/language pair against the O33 freeze.
+
+    Args:
+      schema_kind: schema kind, e.g. "protobuf".
+      language: generated file class, e.g. "rust".
+
+    Returns:
+      "" when the pair is admitted, else the failure reason.
+    """
+    if (schema_kind, language) in DX_CODEGEN_ADMITTED_PAIRS:
+        return ""
+    return (
+        "unsupported codegen pair ('" + schema_kind + "', '" + language + "'): " +
+        "admitted first-release pairs are " + str(DX_CODEGEN_ADMITTED_PAIRS)
+    )
+
+def _parse_entry_spec(spec, label_text):
+    """Parses one LOGICAL|ROOT|NAMESPACE entry spec.
+
+    Args:
+      spec: raw entry string with exactly two "|" separators.
+      label_text: owning label rendering for diagnostics.
+
+    Returns:
+      A `codegen_entry` struct.
+    """
+    parts = spec.split("|")
+    if len(parts) != 3:
+        fail(
+            "dx_codegen_shard " + label_text +
+            ": bad entry " + repr(spec) +
+            ": want LOGICAL_PATH|IMPORT_ROOT|NAMESPACE",
+        )
+    return codegen_entry(parts[0], parts[1], parts[2])
+
+def _emit_shard(ctx, producer, language, entry_structs):
+    """Validates one record and emits its binary shard via the writer.
+
+    Args:
+      ctx: rule context with executable `_writer`.
+      producer: contributor label in observation rendering.
+      language: generated file class.
+      entry_structs: list of `codegen_entry` structs.
+
+    Returns:
+      The declared shard file.
+    """
+    record = codegen_record(producer, language, entry_structs)
+    record_error = codegen_record_error(record)
+    if record_error != "":
+        fail("dx_codegen_shard " + producer + ": " + record_error)
+    out = ctx.actions.declare_file(ctx.label.name + DX_CODEGEN_SHARD_SUFFIX)
+    args = ctx.actions.args()
+    args.add("--producer", producer)
+    args.add("--language", language)
+    for entry in entry_structs:
+        args.add(
+            "--entry",
+            entry.logical_path + "|" + entry.import_root + "|" + entry.namespace,
+        )
+    args.add("--output", out.path)
+    ctx.actions.run(
+        executable = ctx.executable._writer,
+        arguments = [args],
+        outputs = [out],
+        mnemonic = "DxCodegenShard",
+        progress_message = "Dx codegen shard %{label}",
+    )
+    return out, record
+
+def _dx_codegen_shard_impl(ctx):
+    producer = display_label(ctx.label)
+    pair_error = codegen_pair_error(ctx.attr.schema_kind, ctx.attr.language)
+    if pair_error != "":
+        fail("dx_codegen_shard " + producer + ": " + pair_error)
+    entries = [_parse_entry_spec(spec, producer) for spec in ctx.attr.entries]
+    out, record = _emit_shard(ctx, producer, ctx.attr.language, entries)
+    return [
+        DefaultInfo(files = depset([out])),
+        DxCodegenPlanInfo(direct = [record], transitive = depset([record])),
+        OutputGroupInfo(dx_codegen_plans = depset([out])),
+    ]
+
+dx_codegen_shard = rule(
+    implementation = _dx_codegen_shard_impl,
+    attrs = {
+        "deps": attr.label_list(
+            default = [],
+            doc = "Graph edges the collecting aspect traverses; contributes no records itself.",
+        ),
+        "entries": attr.string_list(
+            mandatory = True,
+            doc = "Non-empty projection entries, each LOGICAL_PATH|IMPORT_ROOT|NAMESPACE.",
+        ),
+        "language": attr.string(
+            mandatory = True,
+            doc = "Generated file class, e.g. 'rust'. Must pair with schema_kind under O33.",
+        ),
+        "schema_kind": attr.string(
+            default = "protobuf",
+            doc = "Generator schema kind, e.g. 'protobuf'. Only the O33 first pair is admitted.",
+        ),
+        "_writer": attr.label(
+            default = "//generation/codegen_shard:codegen_shard_writer",
+            executable = True,
+            cfg = "exec",
+            doc = "Shard writer emitting the validated binary DxCodegenShard protobuf.",
+        ),
+    },
+    doc = "Emits one contributor's normalized binary codegen plan shard (M25 WP1).",
+)
+
+def _edge_targets(rule_attr, name):
+    value = getattr(rule_attr, name, [])
+    if value == None:
+        return []
+    if type(value) == "Target":
+        return [value]
+    return value
+
+# Narrow traversal edges for the collecting aspect: the shard rule's own
+# `deps`, the prost library's `proto` edge, and the prost adapter's
+# `proto_rs` edge. No `data`, `srcs`, `DefaultInfo`, or broad unions are
+# traversed: collectors consume only normalized providers.
+_CODEGEN_ASPECT_ATTRS = ["deps", "proto", "proto_rs"]
+
+def _dx_codegen_plan_aspect_impl(target, ctx):
+    direct_records = []
+    direct_files = []
+    if DxCodegenPlanInfo in target:
+        direct_records = target[DxCodegenPlanInfo].direct
+    if OutputGroupInfo in target:
+        groups = target[OutputGroupInfo]
+        if DX_CODEGEN_PLAN_OUTPUT_GROUP in groups:
+            direct_files = groups[DX_CODEGEN_PLAN_OUTPUT_GROUP].to_list()
+    transitive_records = []
+    transitive_files = []
+    for name in _CODEGEN_ASPECT_ATTRS:
+        for dep in _edge_targets(ctx.rule.attr, name):
+            if DxCodegenPlanCollectedInfo in dep:
+                transitive_records.append(dep[DxCodegenPlanCollectedInfo].records)
+            if OutputGroupInfo in dep:
+                groups = dep[OutputGroupInfo]
+                if DX_CODEGEN_PLAN_OUTPUT_GROUP in groups:
+                    transitive_files.append(groups[DX_CODEGEN_PLAN_OUTPUT_GROUP])
+    merged_records = depset(direct_records, transitive = transitive_records)
+    conflict = codegen_conflict_error(merged_records.to_list())
+    if conflict != "":
+        fail("dx_codegen_plan_aspect on " + display_label(target.label) + ": " + conflict)
+    return [
+        DxCodegenPlanCollectedInfo(records = merged_records),
+        OutputGroupInfo(dx_codegen_plans = depset(direct_files, transitive = transitive_files)),
+    ]
+
+dx_codegen_plan_aspect = aspect(
+    implementation = _dx_codegen_plan_aspect_impl,
+    attr_aspects = _CODEGEN_ASPECT_ATTRS,
+    doc = "Collects normalized codegen plan records and shard files along narrow codegen edges.",
+)
+
+def _prost_codegen_shard_impl(ctx):
+    producer = display_label(ctx.label)
+    pair_error = codegen_pair_error(ctx.attr.schema_kind, ctx.attr.language)
+    if pair_error != "":
+        fail("prost_codegen_shard " + producer + ": " + pair_error)
+    upstream = ctx.attr.proto_rs
+    if OutputGroupInfo not in upstream:
+        fail(
+            "prost_codegen_shard " + producer + ": upstream " +
+            display_label(upstream.label) + " carries no OutputGroupInfo",
+        )
+    groups = upstream[OutputGroupInfo]
+    if "rust_generated_srcs" not in groups:
+        fail(
+            "prost_codegen_shard " + producer + ": upstream " +
+            display_label(upstream.label) +
+            " has no rust_generated_srcs output group (not a rust_prost_library)",
+        )
+    generated = groups["rust_generated_srcs"].to_list()
+    if len(generated) == 0:
+        fail(
+            "prost_codegen_shard " + producer + ": upstream " +
+            display_label(upstream.label) + " emitted no generated Rust sources",
+        )
+    entries = [_parse_entry_spec(spec, producer) for spec in ctx.attr.entries]
+    out, record = _emit_shard(ctx, producer, ctx.attr.language, entries)
+    return [
+        DefaultInfo(files = depset([out])),
+        DxCodegenPlanInfo(direct = [record], transitive = depset([record])),
+        OutputGroupInfo(dx_codegen_plans = depset([out] + generated)),
+    ]
+
+prost_codegen_shard = rule(
+    implementation = _prost_codegen_shard_impl,
+    attrs = {
+        "entries": attr.string_list(
+            mandatory = True,
+            doc = "Explicit logical projection entries, each LOGICAL_PATH|IMPORT_ROOT|NAMESPACE. Paths are never inferred from the upstream action.",
+        ),
+        "language": attr.string(
+            default = "rust",
+            doc = "Generated file class. Only 'rust' is admitted with schema_kind 'protobuf' under O33.",
+        ),
+        "proto_rs": attr.label(
+            mandatory = True,
+            doc = "One rust_prost_library target proving the protobuf->Rust edge via its rust_generated_srcs output group.",
+        ),
+        "schema_kind": attr.string(
+            default = "protobuf",
+            doc = "Generator schema kind. Only 'protobuf' is admitted under O33.",
+        ),
+        "_writer": attr.label(
+            default = "//generation/codegen_shard:codegen_shard_writer",
+            executable = True,
+            cfg = "exec",
+            doc = "Shard writer emitting the validated binary DxCodegenShard protobuf.",
+        ),
+    },
+    doc = "Narrow protobuf->Rust adapter: verifies the rust_prost_library edge and emits one normalized shard (M25 WP1, O33).",
+)
+
+def _codegen_plan_subject_impl(ctx):
+    target = ctx.attr.target
+    records = []
+    if DxCodegenPlanCollectedInfo in target:
+        records = target[DxCodegenPlanCollectedInfo].records.to_list()
+    elif DxCodegenPlanInfo in target:
+        records = target[DxCodegenPlanInfo].transitive.to_list()
+    shard_files = []
+    if OutputGroupInfo in target:
+        groups = target[OutputGroupInfo]
+        if DX_CODEGEN_PLAN_OUTPUT_GROUP in groups:
+            shard_files = sorted(
+                groups[DX_CODEGEN_PLAN_OUTPUT_GROUP].to_list(),
+                key = lambda f: f.basename,
+            )
+    plan = {
+        "files": ",".join([f.basename for f in shard_files]),
+        "fingerprint": codegen_plan_fingerprint(records),
+        "label": display_label(ctx.attr.target.label),
+        "record_count": str(len(codegen_merge_records(records))),
+    }
+    return [
+        DefaultInfo(files = depset([])),
+        OutputGroupInfo(dx_codegen_plans = depset(shard_files)),
+        DxSubjectInfo(fields = plan),
+    ]
+
+codegen_plan_subject = rule(
+    implementation = _codegen_plan_subject_impl,
+    attrs = {
+        "target": attr.label(
+            aspects = [dx_codegen_plan_aspect],
+            mandatory = True,
+            doc = "Fixture target observed with the codegen plan aspect applied.",
+        ),
+    },
+    doc = "Exposes the merged codegen plan fingerprint and shard basenames for aspect evidence.",
+)

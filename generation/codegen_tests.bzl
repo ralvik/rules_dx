@@ -1,11 +1,18 @@
-"""Unit tests for the normalized codegen plan records (M25 WP1).
+"""Unit and analysis tests for the normalized codegen plans (M25 WP1).
 
-Pins every `codegen_path_error` branch (empty, absolute, backslash, dot
-segments), `codegen_record_error` (bad producer, bad language, empty
-entries, bad entry paths, within-record duplicates), `codegen_conflict_error`
-(clean merge, silent identical duplicates, cross-producer collisions,
-same-producer divergent roots), and the deterministic merge/fingerprint
-rendering (owner grouping, entry sorting, duplicate collapse).
+Unit checks pin every `codegen_path_error` branch (empty, absolute,
+backslash, dot segments), `codegen_record_error` (bad producer, bad
+language, empty entries, bad entry paths, within-record duplicates),
+`codegen_pair_error` (admitted first pair versus GraphQL/Python
+deferrals), `codegen_conflict_error` (clean merge, silent identical
+duplicates, cross-producer collisions, same-producer divergent roots),
+and the deterministic merge/fingerprint rendering (owner grouping, entry
+sorting, duplicate collapse).
+
+Analysis checks pin the slice-2 collection evidence: the chained leaf
+shards merge transitively through `dx_codegen_plan_aspect`, and the
+prost adapter fixture carries its shard plus the verified upstream
+`rust_generated_srcs` artifact in the private output group.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
@@ -17,6 +24,7 @@ load(
     "codegen_conflict_error",
     "codegen_entry",
     "codegen_merge_records",
+    "codegen_pair_error",
     "codegen_path_error",
     "codegen_plan_fingerprint",
     "codegen_record",
@@ -168,5 +176,55 @@ def codegen_defs_unit_tests(name):
                 "[{\"entries\":[{\"import_root\":\"src\",\"logical_path\":\"src/alpha.rs\",\"namespace\":\"alpha\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:alpha\"}," +
                 "{\"entries\":[{\"import_root\":\"src\",\"logical_path\":\"src/beta.rs\",\"namespace\":\"beta\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:beta\"}]",
             ),
+            expect_equal(
+                "codegen_pair_error admits only the protobuf->Rust first pair",
+                [
+                    codegen_pair_error("protobuf", "rust"),
+                    codegen_pair_error("graphql", "rust"),
+                    codegen_pair_error("protobuf", "python"),
+                ],
+                [
+                    "",
+                    "unsupported codegen pair ('graphql', 'rust'): admitted first-release pairs are ((\"protobuf\", \"rust\"),)",
+                    "unsupported codegen pair ('protobuf', 'python'): admitted first-release pairs are ((\"protobuf\", \"rust\"),)",
+                ],
+            ),
         ],
+    )
+
+_CHAIN_FINGERPRINT = (
+    "[{\"entries\":[{\"import_root\":\"gen\",\"logical_path\":\"gen/alpha.rs\"," +
+    "\"namespace\":\"alpha\",\"read_only\":true}],\"language\":\"rust\"," +
+    "\"producer\":\"//generation:codegen_shard_alpha\"}," +
+    "{\"entries\":[{\"import_root\":\"gen\",\"logical_path\":\"gen/beta.rs\"," +
+    "\"namespace\":\"beta\",\"read_only\":true}],\"language\":\"rust\"," +
+    "\"producer\":\"//generation:codegen_shard_beta\"}]"
+)
+
+_PROST_FINGERPRINT = (
+    "[{\"entries\":[{\"import_root\":\"gen\",\"logical_path\":\"gen/prost_result.rs\"," +
+    "\"namespace\":\"result\",\"read_only\":true}],\"language\":\"rust\"," +
+    "\"producer\":\"//generation:codegen_prost_fixture\"}]"
+)
+
+EXPECTED_CODEGEN_PLAN_OBSERVATIONS = """subject //generation:codegen_plan_chain_subject
+field files=codegen_shard_alpha.dxcodegen.pb,codegen_shard_beta.dxcodegen.pb
+field fingerprint=%s
+field label=//generation:codegen_shard_beta
+field record_count=2
+subject //generation:codegen_plan_prost_subject
+field files=codegen_prost_fixture.dxcodegen.pb,result_proto.lib.rs
+field fingerprint=%s
+field label=//generation:codegen_prost_fixture
+field record_count=1""" % (_CHAIN_FINGERPRINT, _PROST_FINGERPRINT)
+
+def codegen_plan_analysis_tests(name):
+    starlark_test(
+        name = name,
+        mode = "analysis",
+        subjects = [
+            ":codegen_plan_chain_subject",
+            ":codegen_plan_prost_subject",
+        ],
+        expected_observations = EXPECTED_CODEGEN_PLAN_OBSERVATIONS,
     )

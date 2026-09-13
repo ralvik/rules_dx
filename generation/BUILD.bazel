@@ -3,7 +3,8 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
 load("//quality:fixtures.bzl", "real_source_target")
-load(":codegen_tests.bzl", "codegen_defs_unit_tests")
+load(":codegen.bzl", "codegen_plan_subject", "dx_codegen_shard", "prost_codegen_shard")
+load(":codegen_tests.bzl", "codegen_defs_unit_tests", "codegen_plan_analysis_tests")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -32,6 +33,42 @@ rust_prost_library(
 )
 
 codegen_defs_unit_tests(name = "codegen_defs_unit")
+
+# Shard-emission and collection fixtures (M25 WP1 slice 2): two disjoint
+# leaf shards chained through `deps` prove transitive aspect collection,
+# while the prost adapter fixture proves the narrow rust_prost_library
+# edge through the verified `rust_generated_srcs` output group.
+dx_codegen_shard(
+    name = "codegen_shard_alpha",
+    entries = ["gen/alpha.rs|gen|alpha"],
+    language = "rust",
+)
+
+dx_codegen_shard(
+    name = "codegen_shard_beta",
+    entries = ["gen/beta.rs|gen|beta"],
+    language = "rust",
+    deps = [":codegen_shard_alpha"],
+)
+
+prost_codegen_shard(
+    name = "codegen_prost_fixture",
+    entries = ["gen/prost_result.rs|gen|result"],
+    language = "rust",
+    proto_rs = ":result_proto_rs",
+)
+
+codegen_plan_subject(
+    name = "codegen_plan_chain_subject",
+    target = ":codegen_shard_beta",
+)
+
+codegen_plan_subject(
+    name = "codegen_plan_prost_subject",
+    target = ":codegen_prost_fixture",
+)
+
+codegen_plan_analysis_tests(name = "codegen_plan_analysis")
 
 # Repository corpus (M05 WP1): build file owned for direct-Bazel dogfood
 # under the canonical real_fixture_policy.
