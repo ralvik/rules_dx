@@ -221,14 +221,14 @@ route.
 | Delivery path | Initial tools |
 | --- | --- |
 | Authoritative selected toolchain | `tsc`, gofmt, rustfmt, Clippy |
-| Checksummed native/self-contained artifact | Biome, Buildifier, cppcheck, CUE, gofumpt, jsonnetfmt, keep-sorted, modfmt, Pkl, Ruff, shfmt, ShellCheck, Taplo, Terraform, Ty, Vale, yamlfmt |
+| Checksummed native/self-contained artifact | Biome, `buf`, Buildifier, cppcheck, CUE, gofumpt, jsonnetfmt, keep-sorted, modfmt, Pkl, Ruff, shfmt, ShellCheck, Taplo, Terraform, Ty, Vale, yamlfmt |
 | Complete upstream artifact plus shared JDK | google-java-format, Checkstyle, PMD, SpotBugs, ktfmt, ktlint |
 | Exact upstream package plus shared .NET runtime | CSharpier, Fantomas |
 | Exact upstream module plus portable PowerShell runtime | PSScriptAnalyzer |
 | Private wheel-only Python graph plus shared managed Python | djlint, flake8, pydoclint, pylint, yamllint |
 | Private pure-JavaScript graph plus shared managed Node | ESLint, Prettier, Stylelint, prettier-plugin-gherkin, prettier-plugin-sql, prettier-plugin-xml |
 | Release-assembled Ruby closure | RuboCop, StandardRB |
-| Focused proof selects authoritative toolchain or standalone artifact | `buf`, clang-format, clang-tidy, qmlformat, qmllint |
+| Focused proof selects authoritative toolchain or standalone artifact | clang-format, clang-tidy, qmlformat, qmllint |
 | Focused proof selects compatible native/JVM artifact or target-coupled route | Scalafmt, Scalafix |
 
 Ruff supplies both Python formatting and linting; Buildifier and Taplo each supply formatting
@@ -236,6 +236,13 @@ and linting; `buf` supplies format and lint; Prettier supplies its built-in file
 the three named plugin integrations. A tool appearing once in this table is not downloaded
 again for each capability or semantic file class. Acquisition deduplicates by tool/runtime
 identity even when adapter metadata makes the tool applicable to many classes.
+
+M22 focused proof (O30, frozen 2026-09-13): `buf` takes the checksummed
+native/self-contained artifact route. `buf` ships self-contained per-platform
+release binaries with published checksums, needs no target compiler context
+(unlike clang-tidy, which needs compile commands), and stays
+execution-platform lazy; exact assets, digests, and adapter qualification
+remain pending and no adapter claims `protobuf` yet.
 
 No listed private graph accepts arbitrary consumer packages or plugins in v1. The curated
 lock and configuration are part of the `rules_dx` release. A tool whose required standard
