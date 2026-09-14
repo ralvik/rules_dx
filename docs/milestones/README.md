@@ -88,7 +88,7 @@ adoption scope (depends on M29).
 | M28 | [Stabilization And Release Qualification](M28-stabilization-release-qualification.md) ([report](M28-completion-report.md)) | M27, M30a | Ready |
 | M29 | [Release Publication](M29-release-publication.md) ([report](M29-completion-report.md)) | M28 | Ready |
 | M30a | [Adoption Docs (Release-Blocking)](M30-adoption-bootstrap-first-hour.md#m30a-release-blocking-docs) ([report](M30a-completion-report.md)) | M27 | Ready |
-| M30b | [Adoption Scope (Post-Release)](M30-adoption-bootstrap-first-hour.md#m30b-post-release-adoption) | M29 | Pending |
+| M30b | [Adoption Scope (Post-Release)](M30-adoption-bootstrap-first-hour.md#m30b-post-release-adoption) ([report](M30b-completion-report.md)) | M29 | Ready |
 
 ## Common Entry Definition Of Done
 
