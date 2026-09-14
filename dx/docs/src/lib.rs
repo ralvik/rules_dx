@@ -1,21 +1,24 @@
-//! Pure documentation-delivery planning (M30a slices 1-2: doc-IR version,
-//! identity, validation, mode shape; guides/examples corpus shape).
+//! Pure documentation-delivery planning (M30a slices 1-3: doc-IR version,
+//! identity, validation, mode shape; guides/examples corpus shape;
+//! site-build action planning).
 //!
 //! This crate owns the documentation pipeline shape before any extractor,
 //! schema-number freeze, adapter, site-build rule, or `dx docs` command
 //! lands: IR version compatibility, stable symbol identities, the
 //! extraction-validation gate, check-vs-build mode selection, the drift
-//! upgrade gate, and the guides/examples corpus shape (guide identities
-//! plus CI-executed verification). It plans over injected argument strings
+//! upgrade gate, the guides/examples corpus shape, and the site-build
+//! action graph (extract/aggregate/render with cache, determinism,
+//! laziness, and freshness rules). It plans over injected argument strings
 //! only, so the rules stay deterministic and unit-testable without
 //! extractors, toolchains, a Bazel server, or any renderer.
 //!
 //! Out of scope here (O54 qualification): exact `.proto` field/enum numbers
 //! and reserved ranges, per-language input pins and adapter mappings,
 //! per-language overload-disambiguation schemes, link/reference completeness
-//! proofs, renderer behavior, exact guide-step/CI wiring, and any YAML/rule/
-//! CLI implementation. Those arrive in later M30a slices; this crate
-//! preserves spellings verbatim and never substitutes an implicit default.
+//! proofs, renderer behavior, exact guide-step/CI wiring, rule labels, and
+//! any YAML/rule/CLI implementation. Those arrive in later M30a slices;
+//! this crate preserves spellings verbatim and never substitutes an
+//! implicit default.
 
 /// One versioned documentation-IR identity (`doc_ir_version`).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -324,6 +327,100 @@ pub fn is_under_examples(path: &str) -> bool {
     path == "examples" || path.starts_with("examples/")
 }
 
+// ---------------------------------------------------------------------------
+// Site-build action planning (M30a slice 3).
+// ---------------------------------------------------------------------------
+
+/// Planned site-build action in the extract → aggregate → render chain.
+///
+/// One `Extract` runs per (language, package) unit and emits one IR shard;
+/// one `Aggregate` consumes shards plus prose plus theme/config with shared
+/// validation and emits render inputs; one `Render` runs the pinned mdBook
+/// artifact and emits the static site tree. No watcher or refresh engine:
+/// Bazel incrementality is the only rebuild mechanism.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum DocsAction {
+    /// Per-unit extraction to one cached IR shard.
+    Extract,
+    /// Shared-validation aggregation to render inputs.
+    Aggregate,
+    /// Pinned-renderer site emission.
+    Render,
+}
+
+/// Plan the action chain for a `dx docs` mode: check selects extraction
+/// plus shared-validation aggregation without rendering; build selects the
+/// same validation and then renders. Both modes reject the same invalid IR
+/// and references; only build exercises renderer failures.
+pub fn plan_mode_actions(mode: DocsMode) -> &'static [DocsAction] {
+    match mode {
+        DocsMode::Check => &[DocsAction::Extract, DocsAction::Aggregate],
+        DocsMode::Build => &[
+            DocsAction::Extract,
+            DocsAction::Aggregate,
+            DocsAction::Render,
+        ],
+    }
+}
+
+/// Extraction actions declare every input and never touch the network;
+/// required upstream data arrives as declared inputs.
+pub fn docs_actions_use_network() -> bool {
+    false
+}
+
+/// Outputs are deterministic by construction: sorted keys and symbol order,
+/// workspace-relative paths only, no timestamps, no absolute paths, no host
+/// environment in outputs, locale-independent ordering, UTF-8.
+pub fn docs_outputs_allow_timestamps() -> bool {
+    false
+}
+
+/// Absolute paths must never appear in IR shards, render inputs, or the
+/// site tree.
+pub fn docs_outputs_allow_absolute_paths() -> bool {
+    false
+}
+
+/// Same pinned producer plus same declared inputs rebuild byte-identical;
+/// cross-version compatibility compares decoded semantics, never bytes.
+pub fn same_producer_requires_byte_equality() -> bool {
+    true
+}
+
+/// Cross-serializer or cross-upgrade byte equality is never required.
+pub fn cross_version_requires_byte_equality() -> bool {
+    false
+}
+
+/// Planned cache-miss outcome: a miss causes normal execution, never a
+/// freshness failure. IR shards, render inputs, and HTML are ordinary
+/// generated Bazel artifacts — never committed files or source-adjacent
+/// snapshots, with no snapshot refresh/apply step and no separate docs cache.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CacheMissOutcome {
+    /// Re-execute the action normally.
+    Execute,
+    /// Freshness failure (never selected).
+    FailFreshness,
+}
+
+/// Plan the cache-miss outcome: always re-execute.
+pub fn plan_cache_miss() -> CacheMissOutcome {
+    CacheMissOutcome::Execute
+}
+
+/// Documentation follows normal target scope with no language enable lists:
+/// units from unused foundations emit nothing unless selected.
+pub fn unused_units_emit_without_selection() -> bool {
+    false
+}
+
+/// Bare scope selects the repository.
+pub fn bare_docs_scope_selects_repository() -> bool {
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -535,5 +632,45 @@ mod tests {
         assert!(!is_under_examples(""));
         assert!(!is_under_examples("docs/quickstart.md"));
         assert!(!is_under_examples("example"));
+    }
+
+    #[test]
+    fn check_skips_render_while_build_renders_after_shared_validation() {
+        assert_eq!(
+            plan_mode_actions(DocsMode::Check),
+            &[DocsAction::Extract, DocsAction::Aggregate]
+        );
+        assert_eq!(
+            plan_mode_actions(DocsMode::Build),
+            &[
+                DocsAction::Extract,
+                DocsAction::Aggregate,
+                DocsAction::Render
+            ]
+        );
+    }
+
+    #[test]
+    fn site_actions_are_hermetic_and_deterministic_by_construction() {
+        assert!(!docs_actions_use_network());
+        assert!(!docs_outputs_allow_timestamps());
+        assert!(!docs_outputs_allow_absolute_paths());
+    }
+
+    #[test]
+    fn byte_equality_holds_only_for_the_same_pinned_producer() {
+        assert!(same_producer_requires_byte_equality());
+        assert!(!cross_version_requires_byte_equality());
+    }
+
+    #[test]
+    fn cache_miss_re_executes_never_fails_freshness() {
+        assert_eq!(plan_cache_miss(), CacheMissOutcome::Execute);
+    }
+
+    #[test]
+    fn scope_is_lazy_with_bare_scope_selecting_the_repository() {
+        assert!(!unused_units_emit_without_selection());
+        assert!(bare_docs_scope_selects_repository());
     }
 }
