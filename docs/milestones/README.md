@@ -84,7 +84,7 @@ adoption scope (depends on M29).
 | M24 | [Parity Closure](M24-parity-closure.md) ([report](M24-completion-report.md)) | M22, M23 | Ready |
 | M25 | [Codegen, Environments, And Setup](M25-codegen-environments-setup.md) ([report](M25-completion-report.md)) | M12, M14, M15, M16, M17, M21, M24 | Ready |
 | M26 | [Audit And Update](M26-audit-update.md) ([report](M26-completion-report.md)) | M24 | Ready |
-| M27 | [Consumer CI](M27-consumer-ci.md) | M25, M26 | Pending |
+| M27 | [Consumer CI](M27-consumer-ci.md) ([report](M27-completion-report.md)) | M25, M26 | Ready |
 | M28 | [Stabilization And Release Qualification](M28-stabilization-release-qualification.md) | M27, M30a | Pending |
 | M29 | [Release Publication](M29-release-publication.md) | M28 | Pending |
 | M30a | [Adoption Docs (Release-Blocking)](M30-adoption-bootstrap-first-hour.md#m30a-release-blocking-docs) | M27 | Pending |
