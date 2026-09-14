@@ -2,7 +2,7 @@
 
 `CSharpEnvPlanInfo` is the provider-derived focused-target plan contribution:
 direct sources, source count, and target identity read from the analyzed
-authoritative providers of one `dx_csharp_*` wrapper target. It never scans the
+authoritative providers of one `csharp_*` wrapper target. It never scans the
 checkout, never re-resolves NuGet/Paket metadata, and never mutates environment
 or codegen selection.
 
@@ -68,7 +68,7 @@ csharp_env_plan = rule(
     attrs = {
         "target": attr.label(
             mandatory = True,
-            doc = "One dx_csharp_* wrapper target to plan (focused target only).",
+            doc = "One csharp_* wrapper target to plan (focused target only).",
         ),
     },
     doc = "Emits the provider-derived focused C# environment plan for one wrapper target (M23 WP2).",

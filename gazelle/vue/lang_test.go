@@ -252,7 +252,7 @@ func TestLanguageMetadata(t *testing.T) {
 		}
 		return ""
 	})
-	if len(loads) != 1 || loads[0].Name != "@renamed_dx//vue/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "dx_vue_library" {
+	if len(loads) != 1 || loads[0].Name != "@renamed_dx//vue/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "vue_library" {
 		t.Errorf("apparent loads = %+v", loads)
 	}
 	if defaults := l.Loads(); len(defaults) != 1 || defaults[0].Name != "@rules_dx//vue/rules:defs.bzl" {

@@ -2,8 +2,8 @@
 
 Thin conventional boundary over the pinned `aspect_rules_js 3.4.1`
 ruleset with the standalone `@astrojs/compiler 4.0.0` Go+WASM compiler
-(see root package.json). Each `dx_astro_library` macro creates one
-private `<name>_dx_upstream` `js_library` plus one public forwarding
+(see root package.json). Each `astro_library` macro creates one
+private `<name>_upstream` `js_library` plus one public forwarding
 rule. The forwarder preserves the upstream providers (`JsInfo`,
 `DefaultInfo`, `InstrumentedFilesInfo`) unchanged and adds
 `QualitySourcesInfo` normalized from the wrapper's direct `.astro`
@@ -24,7 +24,7 @@ Used upstream symbols (`@aspect_rules_js//js:defs.bzl`): `js_library`;
 surface is used. Consumers needing more load the upstream module
 directly. Astro execution and tests reuse the JavaScript binary/test
 wrappers over compiled or parsed outputs; there is no separate
-`dx_astro_binary`/`dx_astro_test` wrapper.
+`astro_binary`/`astro_test` wrapper.
 
 Normalization is deliberately narrow: the only new fact is
 `QualitySourcesInfo(direct_sources = {"astro": <direct .astro>})`.
@@ -45,7 +45,7 @@ _DX_ASTRO_LIBRARY_PROVIDES = [
 
 _ASTRO_EXTS = [".astro"]
 
-def _dx_astro_quality_sources(ctx):
+def _astro_quality_sources(ctx):
     astro = [f for f in ctx.files.srcs if f.extension == "astro"]
     direct_sources = {}
     if len(astro) > 0:
@@ -53,17 +53,17 @@ def _dx_astro_quality_sources(ctx):
     check_direct_sources(direct_sources, str(ctx.label))
     return QualitySourcesInfo(direct_sources = direct_sources)
 
-def _dx_astro_preserved_providers(ctx):
+def _astro_preserved_providers(ctx):
     upstream = ctx.attr.upstream
     if _JsInfo not in upstream:
-        fail("dx_astro_*: upstream target has no JsInfo: " + str(ctx.attr.upstream.label))
+        fail("astro_*: upstream target has no JsInfo: " + str(ctx.attr.upstream.label))
     return [upstream[_JsInfo]]
 
-def _dx_astro_forwarded_runtime_providers(ctx):
+def _astro_forwarded_runtime_providers(ctx):
     upstream = ctx.attr.upstream
     out = []
     if InstrumentedFilesInfo not in upstream:
-        fail("dx_astro_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
+        fail("astro_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
     out.append(upstream[InstrumentedFilesInfo])
     if OutputGroupInfo in upstream:
         out.append(upstream[OutputGroupInfo])
@@ -71,16 +71,16 @@ def _dx_astro_forwarded_runtime_providers(ctx):
         out.append(upstream[RunEnvironmentInfo])
     return out
 
-def _dx_astro_library_forward_impl(ctx):
+def _astro_library_forward_impl(ctx):
     return (
-        _dx_astro_preserved_providers(ctx) +
+        _astro_preserved_providers(ctx) +
         [ctx.attr.upstream[DefaultInfo]] +
-        _dx_astro_forwarded_runtime_providers(ctx) +
-        [_dx_astro_quality_sources(ctx)]
+        _astro_forwarded_runtime_providers(ctx) +
+        [_astro_quality_sources(ctx)]
     )
 
-_dx_astro_library_forward = rule(
-    implementation = _dx_astro_library_forward_impl,
+_astro_library_forward = rule(
+    implementation = _astro_library_forward_impl,
     provides = _DX_ASTRO_LIBRARY_PROVIDES,
     attrs = {
         "srcs": attr.label_list(
@@ -96,20 +96,20 @@ _dx_astro_library_forward = rule(
     doc = "Forwards upstream Astro library providers unchanged and adds QualitySourcesInfo.",
 )
 
-def _dx_astro_wrap_library(name, srcs, visibility = None, **kwargs):
+def _astro_wrap_library(name, srcs, visibility = None, **kwargs):
     _js_library(
-        name = name + "_dx_upstream",
+        name = name + "_upstream",
         srcs = srcs,
         visibility = ["//visibility:private"],
         **kwargs
     )
-    _dx_astro_library_forward(
+    _astro_library_forward(
         name = name,
-        upstream = name + "_dx_upstream",
+        upstream = name + "_upstream",
         srcs = srcs,
         visibility = visibility,
     )
 
-def dx_astro_library(name, srcs, visibility = None, **kwargs):
+def astro_library(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `js_library` for Astro components (M20)."""
-    _dx_astro_wrap_library(name, srcs, visibility = visibility, **kwargs)
+    _astro_wrap_library(name, srcs, visibility = visibility, **kwargs)

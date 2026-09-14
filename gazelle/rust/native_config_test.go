@@ -115,7 +115,7 @@ func TestNativeConfigRecognition(t *testing.T) {
 	}
 	lib := findGenerated(result, libraryKind, "site")
 	if lib == nil {
-		t.Fatal("missing dx_rust_library(site)")
+		t.Fatal("missing rust_library(site)")
 	}
 	if got := strings.Join(lib.AttrStrings("aspect_hints"), ","); got != ":clippy_config,:rustfmt_config" {
 		t.Errorf("library aspect_hints = %q, want managed rust additions in canonical order", got)
@@ -206,9 +206,9 @@ func TestNativeConfigDirectiveInheritance(t *testing.T) {
 }
 
 func TestNativeHintsMerge(t *testing.T) {
-	build := `load("@rules_dx//rust/rules:defs.bzl", "dx_rust_library")
+	build := `load("@rules_dx//rust/rules:defs.bzl", "rust_library")
 
-dx_rust_library(
+rust_library(
     name = "site",
     srcs = ["src/lib.rs"],
     crate_name = "site",
@@ -226,7 +226,7 @@ dx_rust_library(
 	}, build)
 	lib := findGenerated(result, libraryKind, "site")
 	if lib == nil {
-		t.Fatal("missing dx_rust_library(site)")
+		t.Fatal("missing rust_library(site)")
 	}
 	// :rustfmt_config is stale (file gone) and drops; the hand entry and
 	// the canonical-form managed entry survive in place; clippy resolves
@@ -307,14 +307,14 @@ clippy_config(
 
 func TestNativeRemoval(t *testing.T) {
 	build := `load("//quality:native_config.bzl", "rustfmt_config")
-load("@rules_dx//rust/rules:defs.bzl", "dx_rust_library")
+load("@rules_dx//rust/rules:defs.bzl", "rust_library")
 
 rustfmt_config(
     name = "rustfmt_config",
     src = "rustfmt.toml",
 )
 
-dx_rust_library(
+rust_library(
     name = "site",
     srcs = ["src/lib.rs"],
     crate_name = "site",
@@ -338,14 +338,14 @@ dx_rust_library(
 
 func TestNativeHandSurvivesRemoval(t *testing.T) {
 	build := `load("//quality:native_config.bzl", "rustfmt_config")
-load("@rules_dx//rust/rules:defs.bzl", "dx_rust_library")
+load("@rules_dx//rust/rules:defs.bzl", "rust_library")
 
 rustfmt_config(
     name = "rustfmt_config",
     src = "custom.toml",
 )
 
-dx_rust_library(
+rust_library(
     name = "site",
     srcs = ["src/lib.rs"],
     crate_name = "site",
@@ -513,7 +513,7 @@ func TestNativeCargoHints(t *testing.T) {
 	}, "")
 	bin := findGenerated(result, binaryKind, "app")
 	if bin == nil {
-		t.Fatal("missing dx_rust_binary(app)")
+		t.Fatal("missing rust_binary(app)")
 	}
 	if got := strings.Join(bin.AttrStrings("aspect_hints"), ","); got != ":rustfmt_config" {
 		t.Errorf("binary aspect_hints = %q", got)

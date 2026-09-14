@@ -1,4 +1,4 @@
-// M23 seed Kotlin library; consumer of dx_kotlin_library.
+// M23 seed Kotlin library; consumer of kotlin_library.
 package hello
 
 object Hello {

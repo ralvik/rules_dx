@@ -177,7 +177,7 @@ func TestCheckClaims(t *testing.T) {
 		t.Errorf("kind mismatch = %v", err)
 	}
 	otherWrong := []*rule.Rule{rule.NewRule(testKind, "demo")}
-	if err := checkClaims(nil, otherWrong, claimants); err == nil || !strings.Contains(err.Error(), "existing dx_py_test") {
+	if err := checkClaims(nil, otherWrong, claimants); err == nil || !strings.Contains(err.Error(), "existing python_test") {
 		t.Errorf("other kind mismatch = %v", err)
 	}
 	dupes := []Claimant{{Name: "a_b", Source: "a-b.py"}, {Name: "a_b", Source: "a_b.py"}}
@@ -268,7 +268,7 @@ func TestLanguageMetadata(t *testing.T) {
 		}
 		return ""
 	})
-	if len(loads) != 1 || loads[0].Name != "@renamed_dx//python/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "dx_py_library,dx_py_test,dx_py_binary" {
+	if len(loads) != 1 || loads[0].Name != "@renamed_dx//python/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "python_library,python_test,python_binary" {
 		t.Errorf("apparent loads = %+v", loads)
 	}
 	if defaults := l.Loads(); len(defaults) != 1 || defaults[0].Name != "@rules_dx//python/rules:defs.bzl" {
@@ -398,11 +398,11 @@ func TestGenerateEntryThinBinary(t *testing.T) {
 	}
 	libIdx, ok := byRule[libraryKind+"\x00main"]
 	if !ok {
-		t.Fatalf("missing dx_py_library(main) in %v", result.Gen)
+		t.Fatalf("missing python_library(main) in %v", result.Gen)
 	}
 	binIdx, ok := byRule[binaryKind+"\x00main_bin"]
 	if !ok {
-		t.Fatalf("missing dx_py_binary(main_bin) in %v", result.Gen)
+		t.Fatalf("missing python_binary(main_bin) in %v", result.Gen)
 	}
 	lib := result.Gen[libIdx]
 	if got := strings.Join(lib.AttrStrings("srcs"), ","); got != "main.py" {
@@ -428,10 +428,10 @@ func TestGenerateEntryThinBinary(t *testing.T) {
 		t.Errorf("binary imports = %+v, want empty", raw)
 	}
 	if _, ok := byRule[libraryKind+"\x00helper"]; !ok {
-		t.Errorf("missing dx_py_library(helper)")
+		t.Errorf("missing python_library(helper)")
 	}
 	if _, ok := byRule[testKind+"\x00helper_test"]; !ok {
-		t.Errorf("missing dx_py_test(helper_test)")
+		t.Errorf("missing python_test(helper_test)")
 	}
 }
 

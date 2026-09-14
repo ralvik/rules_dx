@@ -1,23 +1,23 @@
-"""M23 seed Kotlin binary and library; consumer of dx_kotlin_* wrappers."""
+"""M23 seed Kotlin binary and library; consumer of kotlin_* wrappers."""
 
-load("//kotlin/rules:defs.bzl", "dx_kotlin_binary", "dx_kotlin_library", "dx_kotlin_test")
+load("//kotlin/rules:defs.bzl", "kotlin_binary", "kotlin_library", "kotlin_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
-dx_kotlin_library(
+kotlin_library(
     name = "hello_lib",
     srcs = ["Hello.kt"],
 )
 
-dx_kotlin_binary(
+kotlin_binary(
     name = "hello",
     srcs = ["Main.kt"],
     main_class = "hello.MainKt",
     deps = [":hello_lib"],
 )
 
-dx_kotlin_test(
+kotlin_test(
     name = "hello_test",
     srcs = ["HelloTest.kt"],
     test_class = "hello.HelloTest",

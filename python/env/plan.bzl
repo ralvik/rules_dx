@@ -3,7 +3,7 @@
 `PythonEnvPlanInfo` is the provider-derived focused-target plan contribution:
 direct sources, configured import roots, transitive first-party sources, and
 wheel-closure size read from the analyzed authoritative providers of one
-`dx_py_*` wrapper target. It never scans the checkout, never re-resolves uv
+`python_*` wrapper target. It never scans the checkout, never re-resolves uv
 metadata, and never mutates environment or codegen selection.
 
 `python_env_plan` materializes that plan as a deterministic JSON file plus a
@@ -92,7 +92,7 @@ python_env_plan = rule(
         "target": attr.label(
             mandatory = True,
             aspects = [dx_python_env_wheels_aspect],
-            doc = "One dx_py_* wrapper target to plan (focused target only).",
+            doc = "One python_* wrapper target to plan (focused target only).",
         ),
     },
     doc = "Emits the provider-derived focused Python environment plan for one wrapper target (M14 WP3).",

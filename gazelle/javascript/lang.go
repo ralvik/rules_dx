@@ -19,9 +19,9 @@ import (
 
 const (
 	languageName = "javascript"
-	libraryKind  = "dx_js_library"
-	testKind     = "dx_js_test"
-	binaryKind   = "dx_js_binary"
+	libraryKind  = "javascript_library"
+	testKind     = "javascript_test"
+	binaryKind   = "javascript_binary"
 	// rootNodeModules is the default importer facade for generated tests.
 	// Source-only tests still need a Jest runtime; the root importer proves
 	// the provider-derived layout first. Per-importer facades arrive with

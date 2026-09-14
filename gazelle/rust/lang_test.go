@@ -718,12 +718,12 @@ func tailStrings(t *testing.T, e bzl.Expr) []string {
 }
 
 func TestDepsMergePreservesHandLabels(t *testing.T) {
-	src := rule.NewRule("dx_rust_binary", "env")
+	src := rule.NewRule("rust_binary", "env")
 	src.SetAttr("deps", depsConcatExpr{
 		base:  crateDepsCall{names: []string{"blake3", "serde", "serde_json"}, packageName: "dx/dx_env"}.BzlExpr(),
 		extra: []string{":dx_env"},
 	})
-	dst := rule.NewRule("dx_rust_binary", "env")
+	dst := rule.NewRule("rust_binary", "env")
 	dst.SetAttr("deps", crateDepsFileExpr(
 		[]string{"blake3", "serde", "serde_json"}, "dx/dx_env",
 		":dx_env", "@rules_rust//tools/runfiles:runfiles",
@@ -735,7 +735,7 @@ func TestDepsMergePreservesHandLabels(t *testing.T) {
 		t.Errorf("merged tail = %q, want %q", got, want)
 	}
 	// Idempotency: merging the fresh value into its own output is stable.
-	again := rule.NewRule("dx_rust_binary", "env")
+	again := rule.NewRule("rust_binary", "env")
 	again.SetAttr("deps", dst.Attr("deps"))
 	rule.MergeRules(src, again, map[string]bool{"deps": true}, "BUILD.bazel")
 	if second := tailStrings(t, again.Attr("deps")); strings.Join(second, "\x00") != strings.Join(want, "\x00") {

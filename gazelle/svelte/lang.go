@@ -19,7 +19,7 @@ import (
 
 const (
 	languageName = "svelte"
-	libraryKind  = "dx_svelte_library"
+	libraryKind  = "svelte_library"
 )
 
 var svelteKinds = map[string]rule.KindInfo{

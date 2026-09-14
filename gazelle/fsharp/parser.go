@@ -36,7 +36,7 @@ var (
 	namespaceRe = regexp.MustCompile(`(?m)^\s*(?:namespace|module)\s+([A-Za-z_][\w]*(?:\.[\w]+)*)\s*(?:=\s*)?$`)
 	// mainRe matches the `[<EntryPoint>]` attribute outside comments and
 	// literals. Any non-test source carrying it keeps the directory
-	// handwritten (thin `dx_fsharp_binary` entries are never inferred).
+	// handwritten (thin `fsharp_binary` entries are never inferred).
 	mainRe = regexp.MustCompile(`\[<\s*EntryPoint\s*>\]`)
 )
 

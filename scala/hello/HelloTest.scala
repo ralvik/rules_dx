@@ -1,4 +1,4 @@
-// M23 seed Scala test; consumer of dx_scala_test (ScalaTest).
+// M23 seed Scala test; consumer of scala_test (ScalaTest).
 package hello
 
 import org.scalatest.flatspec.AnyFlatSpec

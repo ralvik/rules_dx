@@ -2,7 +2,7 @@
 
 `MdxEnvPlanInfo` is the provider-derived focused-target plan
 contribution: direct sources, transitive first-party sources, and npm-closure
-size read from the analyzed authoritative providers of one `dx_mdx_*`
+size read from the analyzed authoritative providers of one `mdx_*`
 wrapper target. It never scans the checkout, never invokes pnpm, never
 re-resolves package metadata, and never mutates environment or codegen
 selection.
@@ -78,7 +78,7 @@ mdx_env_plan = rule(
     attrs = {
         "target": attr.label(
             mandatory = True,
-            doc = "One dx_mdx_* wrapper target to plan (focused target only).",
+            doc = "One mdx_* wrapper target to plan (focused target only).",
         ),
     },
     doc = "Emits the provider-derived focused MDX environment plan for one wrapper target (M21 WP2).",

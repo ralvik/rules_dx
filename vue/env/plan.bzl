@@ -2,7 +2,7 @@
 
 `VueEnvPlanInfo` is the provider-derived focused-target plan
 contribution: direct sources, transitive first-party sources, and npm-closure
-size read from the analyzed authoritative providers of one `dx_vue_*`
+size read from the analyzed authoritative providers of one `vue_*`
 wrapper target. It never scans the checkout, never invokes pnpm, never
 re-resolves package metadata, and never mutates environment or codegen
 selection.
@@ -78,7 +78,7 @@ vue_env_plan = rule(
     attrs = {
         "target": attr.label(
             mandatory = True,
-            doc = "One dx_vue_* wrapper target to plan (focused target only).",
+            doc = "One vue_* wrapper target to plan (focused target only).",
         ),
     },
     doc = "Emits the provider-derived focused Vue environment plan for one wrapper target (M18 WP2).",

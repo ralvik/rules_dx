@@ -2,7 +2,7 @@
 
 Thin conventional boundary over the pinned `aspect_rules_js 3.4.1`
 ruleset with the Vue 3.5.42 runtime/compiler (see root package.json).
-Each `dx_vue_library` macro creates one private `<name>_dx_upstream`
+Each `vue_library` macro creates one private `<name>_upstream`
 `js_library` plus one public forwarding rule. The forwarder preserves
 the upstream providers (`JsInfo`, `DefaultInfo`,
 `InstrumentedFilesInfo`) unchanged and adds `QualitySourcesInfo`
@@ -22,7 +22,7 @@ Used upstream symbols (`@aspect_rules_js//js:defs.bzl`): `js_library`;
 surface is used. Consumers needing more load the upstream module
 directly. Vue execution and tests reuse the JavaScript binary/test
 wrappers over compiled or parsed outputs; there is no separate
-`dx_vue_binary`/`dx_vue_test` wrapper.
+`vue_binary`/`vue_test` wrapper.
 
 Normalization is deliberately narrow: the only new fact is
 `QualitySourcesInfo(direct_sources = {"vue": <direct .vue>})`.
@@ -43,7 +43,7 @@ _DX_VUE_LIBRARY_PROVIDES = [
 
 _VUE_EXTS = [".vue"]
 
-def _dx_vue_quality_sources(ctx):
+def _vue_quality_sources(ctx):
     vue = [f for f in ctx.files.srcs if f.extension == "vue"]
     direct_sources = {}
     if len(vue) > 0:
@@ -51,17 +51,17 @@ def _dx_vue_quality_sources(ctx):
     check_direct_sources(direct_sources, str(ctx.label))
     return QualitySourcesInfo(direct_sources = direct_sources)
 
-def _dx_vue_preserved_providers(ctx):
+def _vue_preserved_providers(ctx):
     upstream = ctx.attr.upstream
     if _JsInfo not in upstream:
-        fail("dx_vue_*: upstream target has no JsInfo: " + str(ctx.attr.upstream.label))
+        fail("vue_*: upstream target has no JsInfo: " + str(ctx.attr.upstream.label))
     return [upstream[_JsInfo]]
 
-def _dx_vue_forwarded_runtime_providers(ctx):
+def _vue_forwarded_runtime_providers(ctx):
     upstream = ctx.attr.upstream
     out = []
     if InstrumentedFilesInfo not in upstream:
-        fail("dx_vue_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
+        fail("vue_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
     out.append(upstream[InstrumentedFilesInfo])
     if OutputGroupInfo in upstream:
         out.append(upstream[OutputGroupInfo])
@@ -69,16 +69,16 @@ def _dx_vue_forwarded_runtime_providers(ctx):
         out.append(upstream[RunEnvironmentInfo])
     return out
 
-def _dx_vue_library_forward_impl(ctx):
+def _vue_library_forward_impl(ctx):
     return (
-        _dx_vue_preserved_providers(ctx) +
+        _vue_preserved_providers(ctx) +
         [ctx.attr.upstream[DefaultInfo]] +
-        _dx_vue_forwarded_runtime_providers(ctx) +
-        [_dx_vue_quality_sources(ctx)]
+        _vue_forwarded_runtime_providers(ctx) +
+        [_vue_quality_sources(ctx)]
     )
 
-_dx_vue_library_forward = rule(
-    implementation = _dx_vue_library_forward_impl,
+_vue_library_forward = rule(
+    implementation = _vue_library_forward_impl,
     provides = _DX_VUE_LIBRARY_PROVIDES,
     attrs = {
         "srcs": attr.label_list(
@@ -94,20 +94,20 @@ _dx_vue_library_forward = rule(
     doc = "Forwards upstream Vue library providers unchanged and adds QualitySourcesInfo.",
 )
 
-def _dx_vue_wrap_library(name, srcs, visibility = None, **kwargs):
+def _vue_wrap_library(name, srcs, visibility = None, **kwargs):
     _js_library(
-        name = name + "_dx_upstream",
+        name = name + "_upstream",
         srcs = srcs,
         visibility = ["//visibility:private"],
         **kwargs
     )
-    _dx_vue_library_forward(
+    _vue_library_forward(
         name = name,
-        upstream = name + "_dx_upstream",
+        upstream = name + "_upstream",
         srcs = srcs,
         visibility = visibility,
     )
 
-def dx_vue_library(name, srcs, visibility = None, **kwargs):
+def vue_library(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `js_library` for Vue SFCs (M18)."""
-    _dx_vue_wrap_library(name, srcs, visibility = visibility, **kwargs)
+    _vue_wrap_library(name, srcs, visibility = visibility, **kwargs)

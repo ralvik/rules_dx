@@ -1,7 +1,7 @@
 load("@crates//:crates.bzl", "aliases", "crate_deps")
-load("@rules_dx//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
+load("@rules_dx//rust/rules:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
-dx_rust_library(
+rust_library(
     name = "cargo_core",
     srcs = ["source/core.rs"],
     aliases = aliases(
@@ -17,7 +17,7 @@ dx_rust_library(
     ),
 )
 
-dx_rust_test(
+rust_test(
     name = "cargo_core_test",
     aliases = aliases(
         package_name = "crates/cargo-app",
@@ -34,7 +34,7 @@ dx_rust_test(
     ),
 )
 
-dx_rust_binary(
+rust_binary(
     name = "cargo_tool",
     srcs = ["source/main.rs"],
     aliases = aliases(
@@ -50,7 +50,7 @@ dx_rust_binary(
     ) + [":cargo_core"],
 )
 
-dx_rust_test(
+rust_test(
     name = "acceptance",
     srcs = ["spec/acceptance.rs"],
     aliases = aliases(

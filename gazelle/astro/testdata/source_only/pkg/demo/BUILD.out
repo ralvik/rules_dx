@@ -1,4 +1,4 @@
-load("@rules_dx//astro/rules:defs.bzl", "dx_astro_library")
+load("@rules_dx//astro/rules:defs.bzl", "astro_library")
 
 # A user-owned rule must survive generation unchanged.
 filegroup(
@@ -6,13 +6,13 @@ filegroup(
     srcs = ["README.txt"],
 )
 
-dx_astro_library(
+astro_library(
     name = "demo",
     srcs = ["demo.astro"],
     deps = [":helper"],
 )
 
-dx_astro_library(
+astro_library(
     name = "helper",
     srcs = ["helper.astro"],
 )

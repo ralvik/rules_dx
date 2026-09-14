@@ -1,15 +1,15 @@
-"""M00 seed Rust binary, library, and tests; M02 consumer of dx_rust_* wrappers."""
+"""M00 seed Rust binary, library, and tests; M02 consumer of rust_* wrappers."""
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
-load("//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_proc_macro", "dx_rust_shared_library", "dx_rust_static_library", "dx_rust_test")
+load("//rust/rules:defs.bzl", "rust_binary", "rust_library", "rust_proc_macro", "rust_shared_library", "rust_static_library", "rust_test")
 load("//rust/rules:probe.bzl", "dx_wrapper_cc_subject", "dx_wrapper_subject")
 load("//rust/rules:wrapper_tests.bzl", "dx_wrapper_conformance_tests", "dx_wrapper_registry_tests")
 
 package(default_visibility = ["//visibility:public"])
 
-dx_rust_library(
+rust_library(
     name = "hello_lib",
     srcs = ["src/lib.rs"],
     aliases = aliases(
@@ -25,7 +25,7 @@ dx_rust_library(
     ),
 )
 
-dx_rust_binary(
+rust_binary(
     name = "hello",
     srcs = ["src/main.rs"],
     aliases = aliases(
@@ -44,7 +44,7 @@ dx_rust_binary(
 # Authoritative quality identities: rustfmt and Clippy resolve from
 # the pinned toolchain, never from ambient host tools. Each wrapper is
 # listed explicitly: lint aspects apply to the wrapper's own CrateInfo and
-# do not traverse the private `_dx_upstream` edge.
+# do not traverse the private `_upstream` edge.
 rustfmt_test(
     name = "hello_fmt_test",
     size = "small",
@@ -63,13 +63,13 @@ rust_clippy_test(
     ],
 )
 
-# M12 flavor wrappers: one subject per new dx_rust_* shape (proc macro,
+# M12 flavor wrappers: one subject per new rust_* shape (proc macro,
 # shared library, static library). No external dependencies: the
 # conformance probe pins forwarding, not dependency plumbing. Cargo cannot
 # express these flavors in one package, so each rule is handwritten and
 # kept across regenerations.
 # keep
-dx_rust_proc_macro(
+rust_proc_macro(
     name = "hello_derive",
     srcs = ["src/derive.rs"],
     crate_name = "hello_derive",
@@ -78,7 +78,7 @@ dx_rust_proc_macro(
 )
 
 # keep
-dx_rust_shared_library(
+rust_shared_library(
     name = "hello_cdylib",
     srcs = ["src/cdylib.rs"],
     crate_name = "hello_cdylib",
@@ -87,7 +87,7 @@ dx_rust_shared_library(
 )
 
 # keep
-dx_rust_static_library(
+rust_static_library(
     name = "hello_staticlib",
     srcs = ["src/staticlib.rs"],
     crate_name = "hello_staticlib",
@@ -123,14 +123,14 @@ exports_files([
     "Cargo.lock",
 ])
 
-# Conformance subjects: same package as the private `_dx_upstream`
+# Conformance subjects: same package as the private `_upstream`
 # targets so the probe can observe both sides of the forwarding boundary.
 dx_wrapper_subject(
     name = "hello_lib_subject",
     testonly = True,
     clippy_test = ":hello_clippy_test",
     fmt_test = ":hello_fmt_test",
-    upstream = ":hello_lib_dx_upstream",
+    upstream = ":hello_lib_upstream",
     wrapper = ":hello_lib",
 )
 
@@ -139,7 +139,7 @@ dx_wrapper_subject(
     testonly = True,
     clippy_test = ":hello_clippy_test",
     fmt_test = ":hello_fmt_test",
-    upstream = ":hello_dx_upstream",
+    upstream = ":hello_upstream",
     wrapper = ":hello",
 )
 
@@ -148,7 +148,7 @@ dx_wrapper_subject(
     testonly = True,
     clippy_test = ":hello_clippy_test",
     fmt_test = ":hello_fmt_test",
-    upstream = ":hello_test_dx_upstream",
+    upstream = ":hello_test_upstream",
     wrapper = ":hello_test",
 )
 
@@ -157,7 +157,7 @@ dx_wrapper_subject(
     testonly = True,
     clippy_test = ":hello_flavors_clippy_test",
     fmt_test = ":hello_flavors_fmt_test",
-    upstream = ":hello_derive_dx_upstream",
+    upstream = ":hello_derive_upstream",
     wrapper = ":hello_derive",
 )
 
@@ -166,7 +166,7 @@ dx_wrapper_cc_subject(
     testonly = True,
     clippy_test = ":hello_flavors_clippy_test",
     fmt_test = ":hello_flavors_fmt_test",
-    upstream = ":hello_cdylib_dx_upstream",
+    upstream = ":hello_cdylib_upstream",
     wrapper = ":hello_cdylib",
 )
 
@@ -175,7 +175,7 @@ dx_wrapper_cc_subject(
     testonly = True,
     clippy_test = ":hello_flavors_clippy_test",
     fmt_test = ":hello_flavors_fmt_test",
-    upstream = ":hello_staticlib_dx_upstream",
+    upstream = ":hello_staticlib_upstream",
     wrapper = ":hello_staticlib",
 )
 
@@ -202,7 +202,7 @@ real_source_target(
     toml_srcs = ["Cargo.toml"],
 )
 
-dx_rust_test(
+rust_test(
     name = "hello_test",
     aliases = aliases(
         package_name = "rust/hello",

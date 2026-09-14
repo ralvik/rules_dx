@@ -1,4 +1,4 @@
-load("@rules_dx//mdx/rules:defs.bzl", "dx_mdx_library")
+load("@rules_dx//mdx/rules:defs.bzl", "mdx_library")
 
 # A user-owned rule must survive generation unchanged.
 filegroup(
@@ -6,13 +6,13 @@ filegroup(
     srcs = ["README.txt"],
 )
 
-dx_mdx_library(
+mdx_library(
     name = "demo",
     srcs = ["demo.mdx"],
     deps = [":helper"],
 )
 
-dx_mdx_library(
+mdx_library(
     name = "helper",
     srcs = ["helper.mdx"],
 )

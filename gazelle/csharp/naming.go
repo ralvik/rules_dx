@@ -9,10 +9,10 @@
 // claimant; the extension never invents a language affix or another suffix.
 //
 // CSharp is package-level (Go-style, not Python one-source): one directory
-// holds one reusable `dx_csharp_library` named after the directory basename,
+// holds one reusable `csharp_library` named after the directory basename,
 // with `srcs` as the sorted non-test `.cs` files. `*Test.cs` files are
-// never library sources (handwritten `dx_csharp_test` owns them), thin
-// `dx_csharp_binary` entries are never inferred, and directories mixing a
+// never library sources (handwritten `csharp_test` owns them), thin
+// `csharp_binary` entries are never inferred, and directories mixing a
 // library with a `main`-defining source stay handwritten: generation fails
 // and the owner must split the directory before adopting generated rules.
 package csharp
@@ -29,7 +29,7 @@ import (
 var SupportedExts = []string{".cs"}
 
 // LibraryKind is the single generated rule kind.
-const LibraryKind = "dx_csharp_library"
+const LibraryKind = "csharp_library"
 
 // Normalize maps one name stem to its deterministic Bazel target-name stem.
 // It reports an error instead of an empty name so callers fail closed.

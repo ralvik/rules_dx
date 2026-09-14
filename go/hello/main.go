@@ -1,4 +1,4 @@
-// M22 seed Go binary; consumer of dx_go_binary.
+// M22 seed Go binary; consumer of go_binary.
 package main
 
 import (

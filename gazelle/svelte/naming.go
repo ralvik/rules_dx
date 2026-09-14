@@ -9,9 +9,9 @@
 // claimant; the extension never invents a language affix or another suffix.
 //
 // Every supported `.svelte` component receives one ordinary
-// reusable one-source `dx_svelte_library`. Svelte tests and entries stay
+// reusable one-source `svelte_library`. Svelte tests and entries stay
 // JavaScript-owned (parsed or compiled outputs exercised through the
-// `dx_js_test`/`dx_js_binary` wrappers); `.svelte` sources are never tests
+// `javascript_test`/`javascript_binary` wrappers); `.svelte` sources are never tests
 // or thin binaries, so no test/entry inference exists here.
 package svelte
 

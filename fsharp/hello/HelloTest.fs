@@ -1,4 +1,4 @@
-// M23 seed F# test; consumer of dx_fsharp_test (plain executable: exit
+// M23 seed F# test; consumer of fsharp_test (plain executable: exit
 // code is the verdict; the xUnit/NUnit runner selection stays open under
 // O31).
 module HelloTest

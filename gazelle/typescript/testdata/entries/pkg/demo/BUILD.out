@@ -1,4 +1,4 @@
-load("@rules_dx//typescript/rules:defs.bzl", "dx_ts_project")
+load("@rules_dx//typescript/rules:defs.bzl", "typescript_project")
 
 # A user-owned rule must survive generation unchanged.
 filegroup(
@@ -6,18 +6,18 @@ filegroup(
     srcs = ["README.txt"],
 )
 
-dx_ts_project(
+typescript_project(
     name = "helper",
     srcs = ["helper.ts"],
 )
 
-dx_ts_project(
+typescript_project(
     name = "helper_test",
     srcs = ["helper_test.ts"],
     deps = [":helper"],
 )
 
-dx_ts_project(
+typescript_project(
     name = "main",
     srcs = ["main.ts"],
     deps = [":helper"],

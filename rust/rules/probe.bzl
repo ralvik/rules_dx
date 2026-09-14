@@ -1,7 +1,7 @@
 """Conformance subject for the minimal Rust wrappers (M02).
 
-`dx_wrapper_subject` observes one `dx_rust_*` wrapper next to its private
-`<name>_dx_upstream` target and exposes the comparison as `DxSubjectInfo`
+`dx_wrapper_subject` observes one `rust_*` wrapper next to its private
+`<name>_upstream` target and exposes the comparison as `DxSubjectInfo`
 string fields for `starlark_test` analysis mode. It proves three things the
 M02 milestone evidence requires:
 
@@ -15,7 +15,7 @@ M02 milestone evidence requires:
   repository, never on the host `PATH`.
 
 `dx_wrapper_cc_subject` is the same probe for the Cc-linking shapes
-(`dx_rust_shared_library`, `dx_rust_static_library`), whose upstream
+(`rust_shared_library`, `rust_static_library`), whose upstream
 provides no `CrateInfo`: crate facts are read from the
 `TestCrateInfo`-wrapped crate and the `CcInfo` linking surface is pinned
 by linker-input count (`cc_linker_inputs`, `preserved_cc_inputs`).
@@ -62,7 +62,7 @@ def _toolchain_file(toolchain, name):
         return "(none)"
     return info.basename
 
-def _dx_wrapper_subject_impl(ctx):
+def _wrapper_subject_impl(ctx):
     wrapper = ctx.attr.wrapper
     upstream = ctx.attr.upstream
     crate = wrapper[_rust_common.crate_info]
@@ -112,7 +112,7 @@ def _dx_wrapper_subject_impl(ctx):
     ]
 
 dx_wrapper_subject = rule(
-    implementation = _dx_wrapper_subject_impl,
+    implementation = _wrapper_subject_impl,
     attrs = {
         "clippy_test": attr.label(
             doc = "The rust_clippy_test target over the wrappers, for marker evidence.",
@@ -122,18 +122,18 @@ dx_wrapper_subject = rule(
         ),
         "upstream": attr.label(
             mandatory = True,
-            doc = "The private <name>_dx_upstream target the wrapper forwards.",
+            doc = "The private <name>_upstream target the wrapper forwards.",
         ),
         "wrapper": attr.label(
             mandatory = True,
-            doc = "The public dx_rust_* forwarding target under test.",
+            doc = "The public rust_* forwarding target under test.",
         ),
     },
     toolchains = ["@rules_rust//rust:toolchain_type"],
     doc = "Exposes wrapper-vs-upstream provider comparison as DxSubjectInfo.",
 )
 
-def _dx_wrapper_cc_subject_impl(ctx):
+def _wrapper_cc_subject_impl(ctx):
     wrapper = ctx.attr.wrapper
     upstream = ctx.attr.upstream
     crate = wrapper[_rust_common.test_crate_info].crate
@@ -188,7 +188,7 @@ def _dx_wrapper_cc_subject_impl(ctx):
     ]
 
 dx_wrapper_cc_subject = rule(
-    implementation = _dx_wrapper_cc_subject_impl,
+    implementation = _wrapper_cc_subject_impl,
     attrs = {
         "clippy_test": attr.label(
             doc = "The rust_clippy_test target over the wrappers, for marker evidence.",
@@ -199,12 +199,12 @@ dx_wrapper_cc_subject = rule(
         "upstream": attr.label(
             mandatory = True,
             providers = [[_rust_common.test_crate_info]],
-            doc = "The private <name>_dx_upstream Cc-linking target the wrapper forwards.",
+            doc = "The private <name>_upstream Cc-linking target the wrapper forwards.",
         ),
         "wrapper": attr.label(
             mandatory = True,
             providers = [[_rust_common.test_crate_info]],
-            doc = "The public dx_rust_shared_library/dx_rust_static_library target under test.",
+            doc = "The public rust_shared_library/rust_static_library target under test.",
         ),
     },
     toolchains = ["@rules_rust//rust:toolchain_type"],

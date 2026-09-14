@@ -1,5 +1,5 @@
 // Test-owned fixture sources never enter the generated library:
-// handwritten dx_go_test owns *_test.go via embed.
+// handwritten go_test owns *_test.go via embed.
 package demo_test
 
 import "testing"

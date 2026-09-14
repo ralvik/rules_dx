@@ -107,30 +107,30 @@ REAL_ADAPTERS = {
 # class-to-policy-family assignment (JavaScript owns javascript/jsx,
 # TypeScript owns typescript/tsx, JSON owns the JSON classes). M18 WP2
 # adds the vue class to the vue family: the `.vue` container stays one
-# physical owner (dx_vue_library) with virtual script/template/style
+# physical owner (vue_library) with virtual script/template/style
 # regions handed to execution-time integrations; no lint/format/typecheck
 # adapter claims vue yet, so the family selects no stages (classification
 # only, no supported claim). M19 WP2 adds the svelte class to the svelte
 # family on the same terms: the `.svelte` container stays one physical
-# owner (dx_svelte_library) with virtual instance/module-script, markup,
+# owner (svelte_library) with virtual instance/module-script, markup,
 # and style regions handed to execution-time integrations; no adapter
 # claims svelte yet (classification only, no supported claim). M20 WP2 adds
 # the astro class to the astro family on the same terms: the `.astro`
-# container stays one physical owner (dx_astro_library) with virtual
+# container stays one physical owner (astro_library) with virtual
 # frontmatter/server-script, template, client-script, and style regions
 # handed to execution-time integrations; no adapter claims astro yet
 # (classification only, no supported claim). M21 WP2 adds the mdx class
 # to the mdx family on the same terms: the `.mdx` container stays one
-# physical owner (dx_mdx_library) with virtual ESM/prose/JSX regions
+# physical owner (mdx_library) with virtual ESM/prose/JSX regions
 # handed to execution-time integrations; no adapter claims mdx yet
 # (classification only, no supported claim). M22 WP1 adds the go class
 # to the go family on the same terms: each `.go` source has one
-# physical owner (dx_go_library, dx_go_binary, dx_go_test) with
+# physical owner (go_library, go_binary, go_test) with
 # package-level test semantics preserved per the generation contract Go
 # exception; no adapter claims go yet (classification only, no
 # supported claim). M22 WP1 adds the c and cpp classes to the cc family
 # on the same terms: each `.c`/`.h`/`.cc`/`.cpp`/`.cxx` source has one
-# physical owner (dx_cc_library, dx_cc_binary, dx_cc_test) with header
+# physical owner (cc_library, cc_binary, cc_test) with header
 # ownership per extension; no adapter claims c/cpp yet (classification
 # only, no supported claim). M22 WP3 adds the remaining native/toolchain
 # standalone classes, one family per class, on the same terms: each source
@@ -139,28 +139,28 @@ REAL_ADAPTERS = {
 # of these classes yet (classification only, no supported claim). O30
 # qualifies exact adapters later; Qt stays last in M22. M23 WP2 adds the
 # java class to the java family on the same terms: each `.java` source has
-# one physical owner (dx_java_library, dx_java_binary, dx_java_test); no
+# one physical owner (java_library, java_binary, java_test); no
 # adapter claims java yet (classification only, no supported claim). O31
 # qualifies exact adapters later. M23 WP2 adds the kotlin class to the
 # kotlin family on the same terms: each `.kt` source has one physical
-# owner (dx_kotlin_library, dx_kotlin_binary, dx_kotlin_test) over the
+# owner (kotlin_library, kotlin_binary, kotlin_test) over the
 # pinned rules_kotlin kt_jvm_* rules, with same-compilation-unit `.java`
 # sources owned alongside and classified java; no adapter claims kotlin
 # yet (classification only, no supported claim). O31 qualifies exact
 # adapters later. M23 WP2 adds the scala class to the scala family on the
 # same terms: each `.scala` source has one physical owner
-# (dx_scala_library, dx_scala_binary, dx_scala_test) over the pinned
+# (scala_library, scala_binary, scala_test) over the pinned
 # rules_scala scala_* rules on the managed route (M22 O30 decision), with
 # same-compilation-unit `.java` sources owned alongside and classified
 # java; no adapter claims scala yet (classification only, no supported
 # claim). O31 qualifies exact adapters later. M23 WP2 adds the csharp class
 # to the csharp family on the same terms: each `.cs` source has one physical
-# owner (dx_csharp_library, dx_csharp_binary, dx_csharp_test) over the
+# owner (csharp_library, csharp_binary, csharp_test) over the
 # pinned rules_dotnet csharp_* rules; no adapter claims csharp yet
 # (classification only, no supported claim). O31 qualifies exact adapters
 # later. M23 WP2 adds the fsharp class to the fsharp family on the same
 # terms: each `.fs`/`.fsi` source has one physical owner
-# (dx_fsharp_library, dx_fsharp_binary, dx_fsharp_test) over the pinned
+# (fsharp_library, fsharp_binary, fsharp_test) over the pinned
 # rules_dotnet fsharp_* rules with the shared Paket `paket.main` lock
 # (FSharp.Core runtime); no adapter claims fsharp yet (classification only,
 # no supported claim). O31 qualifies exact adapters later. M23 WP2 adds the

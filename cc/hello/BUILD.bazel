@@ -1,23 +1,23 @@
-"""M22 seed C/C++ binary and library; consumer of dx_cc_* wrappers."""
+"""M22 seed C/C++ binary and library; consumer of cc_* wrappers."""
 
-load("//cc/rules:defs.bzl", "dx_cc_binary", "dx_cc_library", "dx_cc_test")
+load("//cc/rules:defs.bzl", "cc_binary", "cc_library", "cc_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
-dx_cc_library(
+cc_library(
     name = "hello_lib",
     srcs = ["hello.cc"],
     hdrs = ["hello.h"],
 )
 
-dx_cc_binary(
+cc_binary(
     name = "hello",
     srcs = ["main.cc"],
     deps = [":hello_lib"],
 )
 
-dx_cc_test(
+cc_test(
     name = "hello_test",
     srcs = ["hello_test.cc"],
     deps = [":hello_lib"],

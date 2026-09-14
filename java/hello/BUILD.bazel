@@ -1,23 +1,23 @@
-"""M23 seed Java binary and library; consumer of dx_java_* wrappers."""
+"""M23 seed Java binary and library; consumer of java_* wrappers."""
 
-load("//java/rules:defs.bzl", "dx_java_binary", "dx_java_library", "dx_java_test")
+load("//java/rules:defs.bzl", "java_binary", "java_library", "java_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
-dx_java_library(
+java_library(
     name = "hello_lib",
     srcs = ["Hello.java"],
 )
 
-dx_java_binary(
+java_binary(
     name = "hello",
     srcs = ["Main.java"],
     main_class = "hello.Main",
     deps = [":hello_lib"],
 )
 
-dx_java_test(
+java_test(
     name = "hello_test",
     srcs = ["HelloTest.java"],
     test_class = "hello.HelloTest",

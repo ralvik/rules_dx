@@ -176,7 +176,7 @@ func TestCheckClaims(t *testing.T) {
 		t.Errorf("kind mismatch = %v", err)
 	}
 	otherWrong := []*rule.Rule{rule.NewRule(testKind, "demo")}
-	if err := checkClaims(nil, otherWrong, claimants); err == nil || !strings.Contains(err.Error(), "existing dx_js_test") {
+	if err := checkClaims(nil, otherWrong, claimants); err == nil || !strings.Contains(err.Error(), "existing javascript_test") {
 		t.Errorf("other kind mismatch = %v", err)
 	}
 	dupes := []Claimant{{Name: "a_b", Source: "a-b.js"}, {Name: "a_b", Source: "a_b.jsx"}}
@@ -263,7 +263,7 @@ func TestLanguageMetadata(t *testing.T) {
 		}
 		return ""
 	})
-	if len(loads) != 1 || loads[0].Name != "@renamed_dx//javascript/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "dx_js_library,dx_js_test,dx_js_binary" {
+	if len(loads) != 1 || loads[0].Name != "@renamed_dx//javascript/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "javascript_library,javascript_test,javascript_binary" {
 		t.Errorf("apparent loads = %+v", loads)
 	}
 	if defaults := l.Loads(); len(defaults) != 1 || defaults[0].Name != "@rules_dx//javascript/rules:defs.bzl" {
@@ -413,11 +413,11 @@ func TestGenerateEntryThinBinary(t *testing.T) {
 	}
 	libIdx, ok := byRule[libraryKind+"\x00main"]
 	if !ok {
-		t.Fatalf("missing dx_js_library(main) in %v", result.Gen)
+		t.Fatalf("missing javascript_library(main) in %v", result.Gen)
 	}
 	binIdx, ok := byRule[binaryKind+"\x00main_bin"]
 	if !ok {
-		t.Fatalf("missing dx_js_binary(main_bin) in %v", result.Gen)
+		t.Fatalf("missing javascript_binary(main_bin) in %v", result.Gen)
 	}
 	lib := result.Gen[libIdx]
 	if got := strings.Join(lib.AttrStrings("srcs"), ","); got != "main.js" {

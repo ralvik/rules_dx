@@ -19,7 +19,7 @@ import (
 
 const (
 	languageName = "astro"
-	libraryKind  = "dx_astro_library"
+	libraryKind  = "astro_library"
 )
 
 var astroKinds = map[string]rule.KindInfo{

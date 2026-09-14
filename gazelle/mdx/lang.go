@@ -19,7 +19,7 @@ import (
 
 const (
 	languageName = "mdx"
-	libraryKind  = "dx_mdx_library"
+	libraryKind  = "mdx_library"
 )
 
 var mdxKinds = map[string]rule.KindInfo{

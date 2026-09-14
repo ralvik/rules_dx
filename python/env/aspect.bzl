@@ -7,7 +7,7 @@ assembly without re-emitting them. The records themselves live on the
 `py_library`-shaped dep closure (`PyWheelsInfo.wheels`, aggregated
 postorder).
 
-`dx_python_env_wheels_aspect` walks the existing edges from a `dx_py_*`
+`dx_python_env_wheels_aspect` walks the existing edges from a `python_*`
 wrapper — `upstream` into the private upstream target, `venv` into the
 sibling venv lib, `deps` into the library-shaped closure — and merges
 each node's `PyWheelsInfo.wheels` with upstream's postorder merge. It

@@ -1,4 +1,4 @@
-load("@rules_dx//javascript/rules:defs.bzl", "dx_js_binary", "dx_js_library", "dx_js_test")
+load("@rules_dx//javascript/rules:defs.bzl", "javascript_binary", "javascript_library", "javascript_test")
 
 # A user-owned rule must survive generation unchanged.
 filegroup(
@@ -6,25 +6,25 @@ filegroup(
     srcs = ["README.txt"],
 )
 
-dx_js_library(
+javascript_library(
     name = "helper",
     srcs = ["helper.js"],
 )
 
-dx_js_test(
+javascript_test(
     name = "helper_test",
     srcs = ["helper_test.js"],
     data = [":helper"],
     node_modules = "//:node_modules",
 )
 
-dx_js_library(
+javascript_library(
     name = "main",
     srcs = ["main.js"],
     deps = [":helper"],
 )
 
-dx_js_binary(
+javascript_binary(
     name = "main_bin",
     data = [":main"],
     entry_point = "main.js",

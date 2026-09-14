@@ -193,7 +193,7 @@ func (l *scalaLang) generateRules(args language.GenerateArgs) language.GenerateR
 			continue
 		}
 		if DefinesMain(content) {
-			l.fail("scala: %s: %s defines main; thin dx_scala_binary entries stay handwritten, so split main-bearing sources into their own directory before adopting generation", args.Rel, src)
+			l.fail("scala: %s: %s defines main; thin scala_binary entries stay handwritten, so split main-bearing sources into their own directory before adopting generation", args.Rel, src)
 			continue
 		}
 		pkg, err := ParsePackage(content)

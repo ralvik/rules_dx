@@ -1,7 +1,7 @@
 """Experimental minimal Python wrappers (M14, ADR 0010).
 
 Thin conventional boundary over the pinned `aspect_rules_py 2.0.0-alpha.6`
-ruleset. Each `dx_py_*` macro creates one private `<name>_dx_upstream`
+ruleset. Each `python_*` macro creates one private `<name>_upstream`
 target with the passed attributes and one public `<name>` forwarding
 target. The forwarder preserves the upstream providers (`PyInfo`,
 `PyWheelsInfo` for libraries, `DefaultInfo`, `InstrumentedFilesInfo`)
@@ -44,7 +44,7 @@ _DX_PY_BINARY_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-def _dx_py_quality_sources(ctx):
+def _python_quality_sources(ctx):
     py = [f for f in ctx.files.srcs if f.basename.endswith(".py")]
     pyi = [f for f in ctx.files.srcs if f.basename.endswith(".pyi")]
     direct_sources = {}
@@ -55,25 +55,25 @@ def _dx_py_quality_sources(ctx):
     check_direct_sources(direct_sources, str(ctx.label))
     return QualitySourcesInfo(direct_sources = direct_sources)
 
-def _dx_py_preserved_library_providers(ctx):
+def _python_preserved_library_providers(ctx):
     upstream = ctx.attr.upstream
     if _PyInfo not in upstream:
-        fail("dx_py_*: upstream target has no PyInfo: " + str(ctx.attr.upstream.label))
+        fail("python_*: upstream target has no PyInfo: " + str(ctx.attr.upstream.label))
     if _PyWheelsInfo not in upstream:
-        fail("dx_py_*: upstream target has no PyWheelsInfo: " + str(ctx.attr.upstream.label))
+        fail("python_*: upstream target has no PyWheelsInfo: " + str(ctx.attr.upstream.label))
     return [upstream[_PyInfo], upstream[_PyWheelsInfo]]
 
-def _dx_py_preserved_binary_providers(ctx):
+def _python_preserved_binary_providers(ctx):
     upstream = ctx.attr.upstream
     if _PyInfo not in upstream:
-        fail("dx_py_*: upstream target has no PyInfo: " + str(ctx.attr.upstream.label))
+        fail("python_*: upstream target has no PyInfo: " + str(ctx.attr.upstream.label))
     return [upstream[_PyInfo]]
 
-def _dx_py_forwarded_runtime_providers(ctx):
+def _python_forwarded_runtime_providers(ctx):
     upstream = ctx.attr.upstream
     out = []
     if InstrumentedFilesInfo not in upstream:
-        fail("dx_py_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
+        fail("python_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
     out.append(upstream[InstrumentedFilesInfo])
     if OutputGroupInfo in upstream:
         out.append(upstream[OutputGroupInfo])
@@ -81,16 +81,16 @@ def _dx_py_forwarded_runtime_providers(ctx):
         out.append(upstream[RunEnvironmentInfo])
     return out
 
-def _dx_py_library_forward_impl(ctx):
+def _python_library_forward_impl(ctx):
     return (
-        _dx_py_preserved_library_providers(ctx) +
+        _python_preserved_library_providers(ctx) +
         [ctx.attr.upstream[DefaultInfo]] +
-        _dx_py_forwarded_runtime_providers(ctx) +
-        [_dx_py_quality_sources(ctx)]
+        _python_forwarded_runtime_providers(ctx) +
+        [_python_quality_sources(ctx)]
     )
 
-_dx_py_library_forward = rule(
-    implementation = _dx_py_library_forward_impl,
+_python_library_forward = rule(
+    implementation = _python_library_forward_impl,
     provides = _DX_PY_LIBRARY_PROVIDES,
     attrs = {
         "srcs": attr.label_list(
@@ -106,11 +106,11 @@ _dx_py_library_forward = rule(
     doc = "Forwards upstream Python library providers unchanged and adds QualitySourcesInfo.",
 )
 
-def _dx_py_symlink_default_info(ctx):
+def _python_symlink_default_info(ctx):
     upstream = ctx.attr.upstream[DefaultInfo]
     exe = upstream.files_to_run.executable
     if exe == None:
-        fail("dx_py_*: upstream target has no executable: " + str(ctx.attr.upstream.label))
+        fail("python_*: upstream target has no executable: " + str(ctx.attr.upstream.label))
     link = ctx.actions.declare_file(ctx.label.name)
     ctx.actions.symlink(output = link, target_file = exe)
     return DefaultInfo(
@@ -119,18 +119,18 @@ def _dx_py_symlink_default_info(ctx):
         runfiles = ctx.runfiles(files = [link]).merge(upstream.default_runfiles),
     )
 
-def _dx_py_forwarded_binary_non_default_providers(ctx):
+def _python_forwarded_binary_non_default_providers(ctx):
     return (
-        _dx_py_preserved_binary_providers(ctx) +
-        _dx_py_forwarded_runtime_providers(ctx) +
-        [_dx_py_quality_sources(ctx)]
+        _python_preserved_binary_providers(ctx) +
+        _python_forwarded_runtime_providers(ctx) +
+        [_python_quality_sources(ctx)]
     )
 
-def _dx_py_binary_forward_impl(ctx):
-    return [_dx_py_symlink_default_info(ctx)] + _dx_py_forwarded_binary_non_default_providers(ctx)
+def _python_binary_forward_impl(ctx):
+    return [_python_symlink_default_info(ctx)] + _python_forwarded_binary_non_default_providers(ctx)
 
-_dx_py_binary_forward = rule(
-    implementation = _dx_py_binary_forward_impl,
+_python_binary_forward = rule(
+    implementation = _python_binary_forward_impl,
     executable = True,
     provides = _DX_PY_BINARY_PROVIDES,
     attrs = {
@@ -144,14 +144,14 @@ _dx_py_binary_forward = rule(
             doc = "The private upstream py_binary target whose providers are preserved.",
         ),
     },
-    doc = "Executable forwarder for dx_py_binary: symlinks the upstream binary.",
+    doc = "Executable forwarder for python_binary: symlinks the upstream binary.",
 )
 
-def _dx_py_test_forward_impl(ctx):
-    return [_dx_py_symlink_default_info(ctx)] + _dx_py_forwarded_binary_non_default_providers(ctx)
+def _python_test_forward_impl(ctx):
+    return [_python_symlink_default_info(ctx)] + _python_forwarded_binary_non_default_providers(ctx)
 
-_dx_py_forward_test = rule(
-    implementation = _dx_py_test_forward_impl,
+_python_forward_test = rule(
+    implementation = _python_test_forward_impl,
     test = True,
     provides = _DX_PY_BINARY_PROVIDES,
     attrs = {
@@ -176,42 +176,42 @@ _dx_py_forward_test = rule(
                   "upstream py_venv_exec_test.",
         ),
     },
-    doc = "Test forwarder for dx_py_test: symlinks the upstream pytest executable.",
+    doc = "Test forwarder for python_test: symlinks the upstream pytest executable.",
 )
 
-def _dx_py_wrap_library(name, srcs, visibility = None, **kwargs):
+def _python_wrap_library(name, srcs, visibility = None, **kwargs):
     _py_library(
-        name = name + "_dx_upstream",
+        name = name + "_upstream",
         srcs = srcs,
         visibility = ["//visibility:private"],
         **kwargs
     )
-    _dx_py_library_forward(
+    _python_library_forward(
         name = name,
-        upstream = name + "_dx_upstream",
+        upstream = name + "_upstream",
         srcs = srcs,
         visibility = visibility,
     )
 
-def _dx_py_wrap_binary(name, srcs, visibility = None, **kwargs):
+def _python_wrap_binary(name, srcs, visibility = None, **kwargs):
     _py_binary(
-        name = name + "_dx_upstream",
+        name = name + "_upstream",
         srcs = srcs,
         visibility = ["//visibility:private"],
         **kwargs
     )
-    _dx_py_binary_forward(
+    _python_binary_forward(
         name = name,
-        upstream = name + "_dx_upstream",
+        upstream = name + "_upstream",
         srcs = srcs,
         visibility = visibility,
     )
 
-def dx_py_library(name, srcs, visibility = None, **kwargs):
+def python_library(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `py_library` (M14)."""
-    _dx_py_wrap_library(name, srcs, visibility = visibility, **kwargs)
+    _python_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
-def dx_py_binary(name, srcs = None, main = None, visibility = None, **kwargs):
+def python_binary(name, srcs = None, main = None, visibility = None, **kwargs):
     """Experimental minimal wrapper over `py_binary` (M14).
 
     Two shapes: an ordinary binary owns its `srcs` (like the handwritten
@@ -222,7 +222,7 @@ def dx_py_binary(name, srcs = None, main = None, visibility = None, **kwargs):
     preserve the upstream providers and execution semantics.
 
     Args:
-      name: public binary target name (upstream target is name_dx_upstream).
+      name: public binary target name (upstream target is name_upstream).
       srcs: direct binary sources; empty for thin entry binaries.
       main: entry source for thin binaries; none for ordinary binaries.
       visibility: visibility of the public forwarding binary target.
@@ -230,11 +230,11 @@ def dx_py_binary(name, srcs = None, main = None, visibility = None, **kwargs):
     """
     effective_srcs = srcs if srcs != None else []
     if main != None:
-        _dx_py_wrap_binary(name, effective_srcs, visibility = visibility, main = main, **kwargs)
+        _python_wrap_binary(name, effective_srcs, visibility = visibility, main = main, **kwargs)
     else:
-        _dx_py_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
+        _python_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
 
-def dx_py_test(name, srcs, visibility = None, **kwargs):
+def python_test(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `py_pytest_test` (M14).
 
     With `srcs`, those test sources are this test's direct sources for
@@ -243,7 +243,7 @@ def dx_py_test(name, srcs, visibility = None, **kwargs):
     protocols per the Python generation contract.
 
     Args:
-      name: public test target name (upstream target is name_dx_upstream).
+      name: public test target name (upstream target is name_upstream).
       srcs: direct test sources collected by pytest.
       visibility: visibility of the public forwarding test target.
       **kwargs: extra attributes forwarded to the upstream py_pytest_test
@@ -262,13 +262,13 @@ def dx_py_test(name, srcs, visibility = None, **kwargs):
     if srcs != None:
         upstream_kwargs["srcs"] = srcs
     _py_pytest_test(
-        name = name + "_dx_upstream",
+        name = name + "_upstream",
         **upstream_kwargs
     )
-    _dx_py_forward_test(
+    _python_forward_test(
         name = name,
         testonly = True,
-        upstream = name + "_dx_upstream",
+        upstream = name + "_upstream",
         srcs = test_srcs,
         visibility = visibility,
     )

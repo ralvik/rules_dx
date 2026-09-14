@@ -3,7 +3,7 @@
 `TypeScriptEnvPlanInfo` is the provider-derived focused-target plan
 contribution: direct sources, transitive compiled sources, npm-closure size,
 and tsconfig presence read from the analyzed authoritative providers of one
-`dx_ts_project` wrapper target. It never scans the checkout, never invokes
+`typescript_project` wrapper target. It never scans the checkout, never invokes
 pnpm, never re-resolves package metadata, never runs `tsc`, and never
 mutates environment or codegen selection.
 
@@ -84,7 +84,7 @@ typescript_env_plan = rule(
     attrs = {
         "target": attr.label(
             mandatory = True,
-            doc = "One dx_ts_project wrapper target to plan (focused target only).",
+            doc = "One typescript_project wrapper target to plan (focused target only).",
         ),
     },
     doc = "Emits the provider-derived focused TypeScript environment plan for one wrapper target (M16 WP3).",

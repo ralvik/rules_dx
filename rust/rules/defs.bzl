@@ -1,7 +1,7 @@
 """Experimental minimal Rust wrappers (M02, ADR 0013).
 
 Thin conventional boundary over the pinned `rules_rust 0.74.0` ruleset.
-Each `dx_rust_*` macro creates one private `<name>_dx_upstream` target with
+Each `rust_*` macro creates one private `<name>_upstream` target with
 the passed compilation attributes and one public `<name>` forwarding
 target. The forwarder preserves the upstream providers (`CrateInfo` or
 `TestCrateInfo`, `DepInfo`, `DefaultInfo`, `OutputGroupInfo`) unchanged
@@ -40,7 +40,7 @@ InstrumentedFilesInfo, QualitySourcesInfo]`: Bazel matches an aspect's
 `required_providers`
 against advertised providers, so without `provides` the upstream lint
 aspects skip the wrappers and the lint tests pass vacuously. The
-Cc-linking forwarders (`dx_rust_shared_library`, `dx_rust_static_library`)
+Cc-linking forwarders (`rust_shared_library`, `rust_static_library`)
 advertise the same set with `TestCrateInfo` in place of `CrateInfo` plus
 `CcInfo`: upstream provides no `CrateInfo` for those shapes, and the
 advertised `TestCrateInfo` is what keeps the lint aspects matching.
@@ -88,7 +88,7 @@ _DX_FORWARD_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-def _dx_quality_sources(ctx):
+def _quality_sources(ctx):
     direct_sources = {}
     direct = depset(ctx.files.srcs)
     if len(direct.to_list()) != 0:
@@ -96,7 +96,7 @@ def _dx_quality_sources(ctx):
     check_direct_sources(direct_sources, str(ctx.label))
     return QualitySourcesInfo(direct_sources = direct_sources)
 
-def _dx_preserved_crate_providers(ctx):
+def _preserved_crate_providers(ctx):
     """`CrateInfo` + `DepInfo` from the private upstream; both are mandatory.
 
     Every upstream rule the library/binary/test/proc-macro macros create
@@ -106,14 +106,14 @@ def _dx_preserved_crate_providers(ctx):
     """
     upstream = ctx.attr.upstream
     if _rust_common.crate_info not in upstream:
-        fail("dx_rust_*: upstream target has no CrateInfo: " +
+        fail("rust_*: upstream target has no CrateInfo: " +
              str(ctx.attr.upstream.label))
     if _rust_common.dep_info not in upstream:
-        fail("dx_rust_*: upstream target has no DepInfo: " +
+        fail("rust_*: upstream target has no DepInfo: " +
              str(ctx.attr.upstream.label))
     return [upstream[_rust_common.crate_info], upstream[_rust_common.dep_info]]
 
-def _dx_preserved_cc_providers(ctx):
+def _preserved_cc_providers(ctx):
     """`TestCrateInfo` + `DepInfo` + `CcInfo` from the private upstream.
 
     `rust_shared_library`/`rust_static_library` deliberately provide no
@@ -124,13 +124,13 @@ def _dx_preserved_cc_providers(ctx):
     """
     upstream = ctx.attr.upstream
     if _rust_common.test_crate_info not in upstream:
-        fail("dx_rust_*: upstream target has no TestCrateInfo: " +
+        fail("rust_*: upstream target has no TestCrateInfo: " +
              str(ctx.attr.upstream.label))
     if _rust_common.dep_info not in upstream:
-        fail("dx_rust_*: upstream target has no DepInfo: " +
+        fail("rust_*: upstream target has no DepInfo: " +
              str(ctx.attr.upstream.label))
     if CcInfo not in upstream:
-        fail("dx_rust_*: upstream target has no CcInfo: " +
+        fail("rust_*: upstream target has no CcInfo: " +
              str(ctx.attr.upstream.label))
     return [
         upstream[_rust_common.test_crate_info],
@@ -138,7 +138,7 @@ def _dx_preserved_cc_providers(ctx):
         upstream[CcInfo],
     ]
 
-def _dx_forwarded_runtime_providers(ctx):
+def _forwarded_runtime_providers(ctx):
     """Runtime fidelity: coverage metadata, output groups, and test/run env.
 
     `InstrumentedFilesInfo` is mandatory: Bazel only collects coverage for
@@ -150,7 +150,7 @@ def _dx_forwarded_runtime_providers(ctx):
     upstream = ctx.attr.upstream
     out = []
     if InstrumentedFilesInfo not in upstream:
-        fail("dx_rust_*: upstream target has no InstrumentedFilesInfo: " +
+        fail("rust_*: upstream target has no InstrumentedFilesInfo: " +
              str(ctx.attr.upstream.label))
     out.append(upstream[InstrumentedFilesInfo])
     if OutputGroupInfo in upstream:
@@ -159,16 +159,16 @@ def _dx_forwarded_runtime_providers(ctx):
         out.append(upstream[RunEnvironmentInfo])
     return out
 
-def _dx_rust_forward_impl(ctx):
+def _rust_forward_impl(ctx):
     return (
-        _dx_preserved_crate_providers(ctx) +
+        _preserved_crate_providers(ctx) +
         [ctx.attr.upstream[DefaultInfo]] +
-        _dx_forwarded_runtime_providers(ctx) +
-        [_dx_quality_sources(ctx)]
+        _forwarded_runtime_providers(ctx) +
+        [_quality_sources(ctx)]
     )
 
-_dx_rust_forward = rule(
-    implementation = _dx_rust_forward_impl,
+_rust_forward = rule(
+    implementation = _rust_forward_impl,
     provides = _DX_FORWARD_PROVIDES,
     attrs = {
         "srcs": attr.label_list(
@@ -204,16 +204,16 @@ _DX_CC_FORWARD_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-def _dx_rust_forward_cc_impl(ctx):
+def _rust_forward_cc_impl(ctx):
     return (
-        _dx_preserved_cc_providers(ctx) +
+        _preserved_cc_providers(ctx) +
         [ctx.attr.upstream[DefaultInfo]] +
-        _dx_forwarded_runtime_providers(ctx) +
-        [_dx_quality_sources(ctx)]
+        _forwarded_runtime_providers(ctx) +
+        [_quality_sources(ctx)]
     )
 
-_dx_rust_forward_cc = rule(
-    implementation = _dx_rust_forward_cc_impl,
+_rust_forward_cc = rule(
+    implementation = _rust_forward_cc_impl,
     provides = _DX_CC_FORWARD_PROVIDES,
     attrs = {
         "srcs": attr.label_list(
@@ -229,15 +229,15 @@ _dx_rust_forward_cc = rule(
     doc = "Forwards the upstream Cc-linking providers unchanged and adds QualitySourcesInfo.",
 )
 
-def _dx_rust_forwarded_non_default_providers(ctx):
+def _rust_forwarded_non_default_providers(ctx):
     """Preserved upstream providers plus QualitySourcesInfo, minus DefaultInfo."""
     return (
-        _dx_preserved_crate_providers(ctx) +
-        _dx_forwarded_runtime_providers(ctx) +
-        [_dx_quality_sources(ctx)]
+        _preserved_crate_providers(ctx) +
+        _forwarded_runtime_providers(ctx) +
+        [_quality_sources(ctx)]
     )
 
-def _dx_rust_symlink_default_info(ctx):
+def _rust_symlink_default_info(ctx):
     # A rule that provides an executable must create that file itself, so
     # the forwarder cannot pass the upstream DefaultInfo through. A symlink
     # created by this rule's own action satisfies the check while keeping
@@ -246,7 +246,7 @@ def _dx_rust_symlink_default_info(ctx):
     upstream = ctx.attr.upstream[DefaultInfo]
     exe = upstream.files_to_run.executable
     if exe == None:
-        fail("dx_rust_*: upstream target has no executable: " +
+        fail("rust_*: upstream target has no executable: " +
              str(ctx.attr.upstream.label))
     link = ctx.actions.declare_file(ctx.label.name)
     ctx.actions.symlink(output = link, target_file = exe)
@@ -256,11 +256,11 @@ def _dx_rust_symlink_default_info(ctx):
         runfiles = ctx.runfiles(files = [link]).merge(upstream.default_runfiles),
     )
 
-def _dx_rust_forward_binary_impl(ctx):
-    return [_dx_rust_symlink_default_info(ctx)] + _dx_rust_forwarded_non_default_providers(ctx)
+def _rust_forward_binary_impl(ctx):
+    return [_rust_symlink_default_info(ctx)] + _rust_forwarded_non_default_providers(ctx)
 
-_dx_rust_forward_binary = rule(
-    implementation = _dx_rust_forward_binary_impl,
+_rust_forward_binary = rule(
+    implementation = _rust_forward_binary_impl,
     executable = True,
     provides = _DX_FORWARD_PROVIDES,
     attrs = {
@@ -277,14 +277,14 @@ _dx_rust_forward_binary = rule(
             doc = "The private upstream rust_binary target whose providers are preserved.",
         ),
     },
-    doc = "Executable forwarder for dx_rust_binary: symlinks the upstream binary.",
+    doc = "Executable forwarder for rust_binary: symlinks the upstream binary.",
 )
 
-def _dx_rust_forward_test_impl(ctx):
-    return [_dx_rust_symlink_default_info(ctx)] + _dx_rust_forwarded_non_default_providers(ctx)
+def _rust_forward_test_impl(ctx):
+    return [_rust_symlink_default_info(ctx)] + _rust_forwarded_non_default_providers(ctx)
 
-_dx_rust_forward_test = rule(
-    implementation = _dx_rust_forward_test_impl,
+_rust_forward_test = rule(
+    implementation = _rust_forward_test_impl,
     test = True,
     provides = _DX_FORWARD_PROVIDES,
     attrs = {
@@ -313,29 +313,29 @@ _dx_rust_forward_test = rule(
                   "rust_test.",
         ),
     },
-    doc = "Test forwarder for dx_rust_test: symlinks the upstream test executable.",
+    doc = "Test forwarder for rust_test: symlinks the upstream test executable.",
 )
 
-def _dx_wrap(name, upstream_rule, forward_rule, srcs, visibility = None, testonly = False, **kwargs):
+def _wrap(name, upstream_rule, forward_rule, srcs, visibility = None, testonly = False, **kwargs):
     # The private target keeps the wrapper's crate name: upstream derives
     # crate names from target names, and dots are invalid there. It stays
     # package-private: only the public forwarder may depend on it.
     kwargs.setdefault("crate_name", name)
     upstream_rule(
-        name = name + "_dx_upstream",
+        name = name + "_upstream",
         srcs = srcs,
         visibility = ["//visibility:private"],
         **kwargs
     )
     forward_rule(
         name = name,
-        upstream = name + "_dx_upstream",
+        upstream = name + "_upstream",
         srcs = srcs,
         testonly = testonly,
         visibility = visibility,
     )
 
-def dx_rust_library(
+def rust_library(
         name,
         srcs,
         crate_name = None,
@@ -343,10 +343,10 @@ def dx_rust_library(
         visibility = None,
         **kwargs):
     """Experimental minimal wrapper over `rust_library` (M02)."""
-    _dx_wrap(
+    _wrap(
         name,
         _rust_library,
-        _dx_rust_forward,
+        _rust_forward,
         srcs,
         crate_name = crate_name,
         edition = edition,
@@ -354,7 +354,7 @@ def dx_rust_library(
         **kwargs
     )
 
-def dx_rust_binary(
+def rust_binary(
         name,
         srcs,
         crate_name = None,
@@ -362,10 +362,10 @@ def dx_rust_binary(
         visibility = None,
         **kwargs):
     """Experimental minimal wrapper over `rust_binary` (M02)."""
-    _dx_wrap(
+    _wrap(
         name,
         _rust_binary,
-        _dx_rust_forward_binary,
+        _rust_forward_binary,
         srcs,
         crate_name = crate_name,
         edition = edition,
@@ -373,7 +373,7 @@ def dx_rust_binary(
         **kwargs
     )
 
-def dx_rust_test(
+def rust_test(
         name,
         srcs = None,
         crate = None,
@@ -387,7 +387,7 @@ def dx_rust_test(
     this test's direct sources.
 
     Args:
-      name: public test target name (upstream target is name_dx_upstream).
+      name: public test target name (upstream target is name_upstream).
       srcs: direct test sources; none when testing via `crate`.
       crate: wrapper library target owning the sources under test.
       edition: Rust edition forwarded upstream.
@@ -407,18 +407,18 @@ def dx_rust_test(
     if srcs != None:
         upstream_kwargs["srcs"] = srcs
     _rust_test(
-        name = name + "_dx_upstream",
+        name = name + "_upstream",
         **upstream_kwargs
     )
-    _dx_rust_forward_test(
+    _rust_forward_test(
         name = name,
         testonly = True,
-        upstream = name + "_dx_upstream",
+        upstream = name + "_upstream",
         srcs = test_srcs,
         visibility = visibility,
     )
 
-def dx_rust_proc_macro(
+def rust_proc_macro(
         name,
         srcs,
         crate_name = None,
@@ -427,13 +427,13 @@ def dx_rust_proc_macro(
         **kwargs):
     """Experimental minimal wrapper over `rust_proc_macro` (M12).
 
-    Same forwarding shape as `dx_rust_library`: the private upstream keeps
+    Same forwarding shape as `rust_library`: the private upstream keeps
     the crate providers and the public target adds QualitySourcesInfo.
     """
-    _dx_wrap(
+    _wrap(
         name,
         _rust_proc_macro,
-        _dx_rust_forward,
+        _rust_forward,
         srcs,
         crate_name = crate_name,
         edition = edition,
@@ -441,7 +441,7 @@ def dx_rust_proc_macro(
         **kwargs
     )
 
-def dx_rust_shared_library(
+def rust_shared_library(
         name,
         srcs,
         crate_name = None,
@@ -453,13 +453,13 @@ def dx_rust_shared_library(
     Cc-linking forwarding shape: the private upstream keeps the `CcInfo`
     linking context (plus the `TestCrateInfo`-wrapped crate for `rust_test`)
     and the public target adds QualitySourcesInfo. Upstream provides no
-    `CrateInfo` for this shape, so unlike `dx_rust_library` there is none
+    `CrateInfo` for this shape, so unlike `rust_library` there is none
     to preserve.
     """
-    _dx_wrap(
+    _wrap(
         name,
         _rust_shared_library,
-        _dx_rust_forward_cc,
+        _rust_forward_cc,
         srcs,
         crate_name = crate_name,
         edition = edition,
@@ -467,7 +467,7 @@ def dx_rust_shared_library(
         **kwargs
     )
 
-def dx_rust_static_library(
+def rust_static_library(
         name,
         srcs,
         crate_name = None,
@@ -476,12 +476,12 @@ def dx_rust_static_library(
         **kwargs):
     """Experimental minimal wrapper over `rust_static_library` (M12).
 
-    Cc-linking forwarding shape, mirroring `dx_rust_shared_library`.
+    Cc-linking forwarding shape, mirroring `rust_shared_library`.
     """
-    _dx_wrap(
+    _wrap(
         name,
         _rust_static_library,
-        _dx_rust_forward_cc,
+        _rust_forward_cc,
         srcs,
         crate_name = crate_name,
         edition = edition,

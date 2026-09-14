@@ -1,22 +1,22 @@
-"""M19 seed Svelte component; consumer of dx_svelte_* wrappers."""
+"""M19 seed Svelte component; consumer of svelte_* wrappers."""
 
-load("//javascript/rules:defs.bzl", "dx_js_library", "dx_js_test")
+load("//javascript/rules:defs.bzl", "javascript_library", "javascript_test")
 load("//quality:fixtures.bzl", "real_source_target")
-load("//svelte/rules:defs.bzl", "dx_svelte_library")
+load("//svelte/rules:defs.bzl", "svelte_library")
 
 package(default_visibility = ["//visibility:public"])
 
-dx_svelte_library(
+svelte_library(
     name = "hello_lib",
     srcs = ["Hello.svelte"],
 )
 
-dx_js_library(
+javascript_library(
     name = "helper_lib",
     srcs = ["helper.js"],
 )
 
-dx_js_test(
+javascript_test(
     name = "hello_test",
     srcs = ["Hello.test.js"],
     data = [

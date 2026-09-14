@@ -2,8 +2,8 @@
 
 Thin conventional boundary over the pinned `aspect_rules_js 3.4.1`
 ruleset with the pinned `@mdx-js/mdx 3.1.1` compiler (see root
-package.json). Each `dx_mdx_library` macro creates one private
-`<name>_dx_upstream` `js_library` plus one public forwarding rule. The
+package.json). Each `mdx_library` macro creates one private
+`<name>_upstream` `js_library` plus one public forwarding rule. The
 forwarder preserves the upstream providers (`JsInfo`, `DefaultInfo`,
 `InstrumentedFilesInfo`) unchanged and adds `QualitySourcesInfo`
 normalized from the wrapper's direct `.mdx` srcs.
@@ -23,7 +23,7 @@ Used upstream symbols (`@aspect_rules_js//js:defs.bzl`): `js_library`;
 surface is used. Consumers needing more load the upstream module
 directly. MDX execution and tests reuse the JavaScript binary/test
 wrappers over compiled outputs; there is no separate
-`dx_mdx_binary`/`dx_mdx_test` wrapper.
+`mdx_binary`/`mdx_test` wrapper.
 
 Normalization is deliberately narrow: the only new fact is
 `QualitySourcesInfo(direct_sources = {"mdx": <direct .mdx>})`.
@@ -44,7 +44,7 @@ _DX_MDX_LIBRARY_PROVIDES = [
 
 _MDX_EXTS = [".mdx"]
 
-def _dx_mdx_quality_sources(ctx):
+def _mdx_quality_sources(ctx):
     mdx = [f for f in ctx.files.srcs if f.extension == "mdx"]
     direct_sources = {}
     if len(mdx) > 0:
@@ -52,17 +52,17 @@ def _dx_mdx_quality_sources(ctx):
     check_direct_sources(direct_sources, str(ctx.label))
     return QualitySourcesInfo(direct_sources = direct_sources)
 
-def _dx_mdx_preserved_providers(ctx):
+def _mdx_preserved_providers(ctx):
     upstream = ctx.attr.upstream
     if _JsInfo not in upstream:
-        fail("dx_mdx_*: upstream target has no JsInfo: " + str(ctx.attr.upstream.label))
+        fail("mdx_*: upstream target has no JsInfo: " + str(ctx.attr.upstream.label))
     return [upstream[_JsInfo]]
 
-def _dx_mdx_forwarded_runtime_providers(ctx):
+def _mdx_forwarded_runtime_providers(ctx):
     upstream = ctx.attr.upstream
     out = []
     if InstrumentedFilesInfo not in upstream:
-        fail("dx_mdx_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
+        fail("mdx_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
     out.append(upstream[InstrumentedFilesInfo])
     if OutputGroupInfo in upstream:
         out.append(upstream[OutputGroupInfo])
@@ -70,16 +70,16 @@ def _dx_mdx_forwarded_runtime_providers(ctx):
         out.append(upstream[RunEnvironmentInfo])
     return out
 
-def _dx_mdx_library_forward_impl(ctx):
+def _mdx_library_forward_impl(ctx):
     return (
-        _dx_mdx_preserved_providers(ctx) +
+        _mdx_preserved_providers(ctx) +
         [ctx.attr.upstream[DefaultInfo]] +
-        _dx_mdx_forwarded_runtime_providers(ctx) +
-        [_dx_mdx_quality_sources(ctx)]
+        _mdx_forwarded_runtime_providers(ctx) +
+        [_mdx_quality_sources(ctx)]
     )
 
-_dx_mdx_library_forward = rule(
-    implementation = _dx_mdx_library_forward_impl,
+_mdx_library_forward = rule(
+    implementation = _mdx_library_forward_impl,
     provides = _DX_MDX_LIBRARY_PROVIDES,
     attrs = {
         "srcs": attr.label_list(
@@ -95,20 +95,20 @@ _dx_mdx_library_forward = rule(
     doc = "Forwards upstream MDX library providers unchanged and adds QualitySourcesInfo.",
 )
 
-def _dx_mdx_wrap_library(name, srcs, visibility = None, **kwargs):
+def _mdx_wrap_library(name, srcs, visibility = None, **kwargs):
     _js_library(
-        name = name + "_dx_upstream",
+        name = name + "_upstream",
         srcs = srcs,
         visibility = ["//visibility:private"],
         **kwargs
     )
-    _dx_mdx_library_forward(
+    _mdx_library_forward(
         name = name,
-        upstream = name + "_dx_upstream",
+        upstream = name + "_upstream",
         srcs = srcs,
         visibility = visibility,
     )
 
-def dx_mdx_library(name, srcs, visibility = None, **kwargs):
+def mdx_library(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `js_library` for MDX documents (M21)."""
-    _dx_mdx_wrap_library(name, srcs, visibility = visibility, **kwargs)
+    _mdx_wrap_library(name, srcs, visibility = visibility, **kwargs)

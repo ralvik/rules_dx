@@ -1,4 +1,4 @@
-load("@rules_dx//go/rules:defs.bzl", "dx_go_library")
+load("@rules_dx//go/rules:defs.bzl", "go_library")
 
 # A user-owned rule must survive generation unchanged.
 filegroup(
@@ -6,7 +6,7 @@ filegroup(
     srcs = ["README.txt"],
 )
 
-dx_go_library(
+go_library(
     name = "demo",
     srcs = [
         "demo.go",

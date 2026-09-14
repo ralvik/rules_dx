@@ -11,7 +11,7 @@ import (
 const (
 	// exampleKind and benchKind are manifest-internal target kinds for
 	// explicitly declared [[example]] and [[bench]] targets; emission
-	// maps both to ordinary dx_rust_binary rules with affixed names.
+	// maps both to ordinary rust_binary rules with affixed names.
 	exampleKind = "example"
 	benchKind   = "bench"
 )

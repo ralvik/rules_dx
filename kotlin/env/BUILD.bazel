@@ -1,7 +1,7 @@
 """Focused Kotlin environment plans.
 
 Each `kotlin_env_plan` reads the analyzed authoritative providers of one
-`dx_kotlin_*` wrapper: `QualitySourcesInfo` for direct sources plus the
+`kotlin_*` wrapper: `QualitySourcesInfo` for direct sources plus the
 preserved `JavaInfo` toolchain closure by reference.
 Focused-target only; repository/root/exact-target orchestration remains M25.
 """

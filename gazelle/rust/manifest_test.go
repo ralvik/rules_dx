@@ -269,16 +269,16 @@ func TestAppendOrMergeKindMapping(t *testing.T) {
 }
 
 func TestApplyKindMappings(t *testing.T) {
-	loads := []rule.LoadInfo{{Name: "@rules_dx//rust/rules:defs.bzl", Symbols: []string{"dx_rust_library"}}}
-	plain := packageRecord{genKinds: []string{"dx_rust_library"}, cfg: testConfig()}
+	loads := []rule.LoadInfo{{Name: "@rules_dx//rust/rules:defs.bzl", Symbols: []string{"rust_library"}}}
+	plain := packageRecord{genKinds: []string{"rust_library"}, cfg: testConfig()}
 	if got := applyKindMappings(plain, loads); len(got) != 1 {
 		t.Fatalf("applyKindMappings without map = %+v", got)
 	}
 	mappedCfg := testConfig()
 	mappedCfg.KindMap = map[string]config.MappedKind{
-		"dx_rust_library": {FromKind: "dx_rust_library", KindName: "custom_library", KindLoad: "@custom//:defs.bzl"},
+		"rust_library": {FromKind: "rust_library", KindName: "custom_library", KindLoad: "@custom//:defs.bzl"},
 	}
-	mapped := packageRecord{genKinds: []string{"dx_rust_library"}, cfg: mappedCfg}
+	mapped := packageRecord{genKinds: []string{"rust_library"}, cfg: mappedCfg}
 	if got := applyKindMappings(mapped, loads); len(got) != 2 || got[1].Name != "@custom//:defs.bzl" {
 		t.Fatalf("applyKindMappings with map = %+v", got)
 	}
@@ -287,7 +287,7 @@ func TestApplyKindMappings(t *testing.T) {
 func TestWitnessNewFile(t *testing.T) {
 	rec := &manifestRecorder{apparentLoads: testApparentLoads()}
 	cfg := testConfig()
-	gen := []*rule.Rule{rule.NewRule("dx_rust_library", "demo")}
+	gen := []*rule.Rule{rule.NewRule("rust_library", "demo")}
 	file, changed := rec.witness(packageRecord{rel: "pkg", dir: "/repo/pkg", cfg: cfg, gen: gen})
 	if !changed {
 		t.Fatal("witness new file changed = false")
@@ -312,9 +312,9 @@ func TestWitnessNewFile(t *testing.T) {
 }
 
 func TestWitnessModification(t *testing.T) {
-	old := "load(\"@rules_dx//rust/rules:defs.bzl\", \"dx_rust_library\")\n\ndx_rust_library(\n    name = \"demo\",\n)\n"
+	old := "load(\"@rules_dx//rust/rules:defs.bzl\", \"rust_library\")\n\nrust_library(\n    name = \"demo\",\n)\n"
 	f := mustLoad(t, "/repo/pkg/BUILD.bazel", "pkg", old)
-	rule.NewRule("dx_rust_library", "extra").Insert(f)
+	rule.NewRule("rust_library", "extra").Insert(f)
 	rec := &manifestRecorder{apparentLoads: testApparentLoads()}
 	file, changed := rec.witness(packageRecord{rel: "pkg", file: f, cfg: testConfig()})
 	if !changed {
@@ -334,7 +334,7 @@ func TestWitnessModification(t *testing.T) {
 
 func TestWitnessUnchanged(t *testing.T) {
 	path := "/repo/pkg/BUILD.bazel"
-	stable := stableContent(t, path, "pkg", "load(\"@rules_dx//rust/rules:defs.bzl\", \"dx_rust_library\")\n")
+	stable := stableContent(t, path, "pkg", "load(\"@rules_dx//rust/rules:defs.bzl\", \"rust_library\")\n")
 	f := mustLoad(t, path, "pkg", stable)
 	rec := &manifestRecorder{apparentLoads: testApparentLoads()}
 	if file, changed := rec.witness(packageRecord{rel: "pkg", file: f, cfg: testConfig()}); changed {
@@ -343,7 +343,7 @@ func TestWitnessUnchanged(t *testing.T) {
 }
 
 func TestFixLoadsConverges(t *testing.T) {
-	f := mustLoad(t, "/repo/pkg/BUILD.bazel", "pkg", "dx_rust_library(\n    name = \"demo\",\n)\n")
+	f := mustLoad(t, "/repo/pkg/BUILD.bazel", "pkg", "rust_library(\n    name = \"demo\",\n)\n")
 	loads := testApparentLoads()(func(string) string { return "" })
 	merger.FixLoads(f, loads)
 	first := string(f.Format())
@@ -356,10 +356,10 @@ func TestFixLoadsConverges(t *testing.T) {
 func TestKnownLoadsWithKindMap(t *testing.T) {
 	cfg := testConfig()
 	cfg.KindMap = map[string]config.MappedKind{
-		"dx_rust_library": {FromKind: "dx_rust_library", KindName: "custom_library", KindLoad: "@custom//:defs.bzl"},
+		"rust_library": {FromKind: "rust_library", KindName: "custom_library", KindLoad: "@custom//:defs.bzl"},
 	}
 	rec := &manifestRecorder{apparentLoads: testApparentLoads()}
-	loads := rec.knownLoads(packageRecord{genKinds: []string{"dx_rust_library"}, cfg: cfg})
+	loads := rec.knownLoads(packageRecord{genKinds: []string{"rust_library"}, cfg: cfg})
 	found := false
 	for _, load := range loads {
 		if load.Name == "@custom//:defs.bzl" {
@@ -393,18 +393,18 @@ func TestEmitEndToEnd(t *testing.T) {
 		apparentLoads: testApparentLoads(),
 	}
 	cfg := testConfig()
-	old := "load(\"@rules_dx//rust/rules:defs.bzl\", \"dx_rust_library\")\n\ndx_rust_library(\n    name = \"demo\",\n)\n"
+	old := "load(\"@rules_dx//rust/rules:defs.bzl\", \"rust_library\")\n\nrust_library(\n    name = \"demo\",\n)\n"
 	changed := mustLoad(t, "/repo/pkg/BUILD.bazel", "pkg", old)
-	rule.NewRule("dx_rust_library", "extra").Insert(changed)
+	rule.NewRule("rust_library", "extra").Insert(changed)
 	steadyPath := "/repo/steady/BUILD.bazel"
-	steady := mustLoad(t, steadyPath, "steady", stableContent(t, steadyPath, "steady", "load(\"@rules_dx//rust/rules:defs.bzl\", \"dx_rust_library\")\n"))
+	steady := mustLoad(t, steadyPath, "steady", stableContent(t, steadyPath, "steady", "load(\"@rules_dx//rust/rules:defs.bzl\", \"rust_library\")\n"))
 	rec.record(language.GenerateArgs{Rel: "pkg", Dir: "/repo/pkg", File: changed, Config: cfg}, language.GenerateResult{})
 	rec.record(language.GenerateArgs{Rel: "steady", Dir: "/repo/steady", File: steady, Config: cfg}, language.GenerateResult{})
 	rec.record(language.GenerateArgs{
 		Rel:    "new",
 		Dir:    "/repo/new",
 		Config: cfg,
-	}, language.GenerateResult{Gen: []*rule.Rule{rule.NewRule("dx_rust_library", "fresh")}})
+	}, language.GenerateResult{Gen: []*rule.Rule{rule.NewRule("rust_library", "fresh")}})
 	rec.emit([]*ignoreEntry{
 		{value: "used_import", path: "pkg", used: true},
 		{value: "stale_import", path: "pkg", used: false},

@@ -1,7 +1,7 @@
 """Focused JavaScript environment plans.
 
 Each `javascript_env_plan` reads the analyzed authoritative providers of one
-`dx_js_library` wrapper: the preserved `JsInfo` plus `QualitySourcesInfo`.
+`javascript_library` wrapper: the preserved `JsInfo` plus `QualitySourcesInfo`.
 Focused-target only. Upstream `js_binary`/`jest_test` carry no `JsInfo`
 (by upstream design), so library wrappers are the planned carriers;
 binaries/tests share the same closure through `data`/runfiles.

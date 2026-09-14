@@ -2,7 +2,7 @@
 
 `JavaScriptEnvPlanInfo` is the provider-derived focused-target plan
 contribution: direct sources, transitive first-party sources, and npm-closure
-size read from the analyzed authoritative providers of one `dx_js_*`
+size read from the analyzed authoritative providers of one `javascript_*`
 wrapper target. It never scans the checkout, never invokes pnpm, never
 re-resolves package metadata, and never mutates environment or codegen
 selection.
@@ -78,7 +78,7 @@ javascript_env_plan = rule(
     attrs = {
         "target": attr.label(
             mandatory = True,
-            doc = "One dx_js_* wrapper target to plan (focused target only).",
+            doc = "One javascript_* wrapper target to plan (focused target only).",
         ),
     },
     doc = "Emits the provider-derived focused JavaScript environment plan for one wrapper target (M16 WP3).",

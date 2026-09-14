@@ -1,7 +1,7 @@
 """Experimental minimal JavaScript wrappers (M16, ADR 0013).
 
 Thin conventional boundary over the pinned `aspect_rules_js 3.4.1`
-ruleset. Each `dx_js_*` macro creates one private `<name>_dx_upstream`
+ruleset. Each `javascript_*` macro creates one private `<name>_upstream`
 target with the passed attributes and one public `<name>` forwarding
 target. The forwarder preserves the upstream providers (`JsInfo` for
 libraries, `DefaultInfo`, `InstrumentedFilesInfo`) unchanged and adds
@@ -57,7 +57,7 @@ _DX_JS_BINARY_PROVIDES = [
 
 _JS_EXTS = [".js", ".jsx", ".mjs", ".cjs"]
 
-def _dx_js_quality_sources(ctx):
+def _javascript_quality_sources(ctx):
     js = [f for f in ctx.files.srcs if "." + f.extension in _JS_EXTS or f.basename.endswith(".js")]
     direct_sources = {}
     if len(js) > 0:
@@ -65,17 +65,17 @@ def _dx_js_quality_sources(ctx):
     check_direct_sources(direct_sources, str(ctx.label))
     return QualitySourcesInfo(direct_sources = direct_sources)
 
-def _dx_js_preserved_providers(ctx):
+def _javascript_preserved_providers(ctx):
     upstream = ctx.attr.upstream
     if _JsInfo not in upstream:
-        fail("dx_js_*: upstream target has no JsInfo: " + str(ctx.attr.upstream.label))
+        fail("javascript_*: upstream target has no JsInfo: " + str(ctx.attr.upstream.label))
     return [upstream[_JsInfo]]
 
-def _dx_js_forwarded_runtime_providers(ctx):
+def _javascript_forwarded_runtime_providers(ctx):
     upstream = ctx.attr.upstream
     out = []
     if InstrumentedFilesInfo not in upstream:
-        fail("dx_js_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
+        fail("javascript_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
     out.append(upstream[InstrumentedFilesInfo])
     if OutputGroupInfo in upstream:
         out.append(upstream[OutputGroupInfo])
@@ -83,16 +83,16 @@ def _dx_js_forwarded_runtime_providers(ctx):
         out.append(upstream[RunEnvironmentInfo])
     return out
 
-def _dx_js_library_forward_impl(ctx):
+def _javascript_library_forward_impl(ctx):
     return (
-        _dx_js_preserved_providers(ctx) +
+        _javascript_preserved_providers(ctx) +
         [ctx.attr.upstream[DefaultInfo]] +
-        _dx_js_forwarded_runtime_providers(ctx) +
-        [_dx_js_quality_sources(ctx)]
+        _javascript_forwarded_runtime_providers(ctx) +
+        [_javascript_quality_sources(ctx)]
     )
 
-_dx_js_library_forward = rule(
-    implementation = _dx_js_library_forward_impl,
+_javascript_library_forward = rule(
+    implementation = _javascript_library_forward_impl,
     provides = _DX_JS_LIBRARY_PROVIDES,
     attrs = {
         "srcs": attr.label_list(
@@ -108,11 +108,11 @@ _dx_js_library_forward = rule(
     doc = "Forwards upstream JavaScript library providers unchanged and adds QualitySourcesInfo.",
 )
 
-def _dx_js_symlink_default_info(ctx):
+def _javascript_symlink_default_info(ctx):
     upstream = ctx.attr.upstream[DefaultInfo]
     exe = upstream.files_to_run.executable
     if exe == None:
-        fail("dx_js_*: upstream target has no executable: " + str(ctx.attr.upstream.label))
+        fail("javascript_*: upstream target has no executable: " + str(ctx.attr.upstream.label))
     link = ctx.actions.declare_file(ctx.label.name)
     ctx.actions.symlink(output = link, target_file = exe)
     return DefaultInfo(
@@ -121,7 +121,7 @@ def _dx_js_symlink_default_info(ctx):
         runfiles = ctx.runfiles(files = [link]).merge(upstream.default_runfiles),
     )
 
-def _dx_js_forwarded_binary_non_default_providers(ctx):
+def _javascript_forwarded_binary_non_default_providers(ctx):
     upstream = ctx.attr.upstream
     out = []
     if _JsInfo in upstream:
@@ -132,13 +132,13 @@ def _dx_js_forwarded_binary_non_default_providers(ctx):
         out.append(upstream[OutputGroupInfo])
     if RunEnvironmentInfo in upstream:
         out.append(upstream[RunEnvironmentInfo])
-    return out + [_dx_js_quality_sources(ctx)]
+    return out + [_javascript_quality_sources(ctx)]
 
-def _dx_js_binary_forward_impl(ctx):
-    return [_dx_js_symlink_default_info(ctx)] + _dx_js_forwarded_binary_non_default_providers(ctx)
+def _javascript_binary_forward_impl(ctx):
+    return [_javascript_symlink_default_info(ctx)] + _javascript_forwarded_binary_non_default_providers(ctx)
 
-_dx_js_binary_forward = rule(
-    implementation = _dx_js_binary_forward_impl,
+_javascript_binary_forward = rule(
+    implementation = _javascript_binary_forward_impl,
     executable = True,
     provides = _DX_JS_BINARY_PROVIDES,
     attrs = {
@@ -152,41 +152,41 @@ _dx_js_binary_forward = rule(
             doc = "The private upstream js_binary target whose providers are preserved.",
         ),
     },
-    doc = "Executable forwarder for dx_js_binary: symlinks the upstream binary.",
+    doc = "Executable forwarder for javascript_binary: symlinks the upstream binary.",
 )
 
-def _dx_js_wrap_library(name, srcs, visibility = None, **kwargs):
+def _javascript_wrap_library(name, srcs, visibility = None, **kwargs):
     _js_library(
-        name = name + "_dx_upstream",
+        name = name + "_upstream",
         srcs = srcs,
         visibility = ["//visibility:private"],
         **kwargs
     )
-    _dx_js_library_forward(
+    _javascript_library_forward(
         name = name,
-        upstream = name + "_dx_upstream",
+        upstream = name + "_upstream",
         srcs = srcs,
         visibility = visibility,
     )
 
-def _dx_js_wrap_binary(name, srcs, visibility = None, **kwargs):
+def _javascript_wrap_binary(name, srcs, visibility = None, **kwargs):
     _js_binary(
-        name = name + "_dx_upstream",
+        name = name + "_upstream",
         visibility = ["//visibility:private"],
         **kwargs
     )
-    _dx_js_binary_forward(
+    _javascript_binary_forward(
         name = name,
-        upstream = name + "_dx_upstream",
+        upstream = name + "_upstream",
         srcs = srcs,
         visibility = visibility,
     )
 
-def dx_js_library(name, srcs, visibility = None, **kwargs):
+def javascript_library(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `js_library` (M16)."""
-    _dx_js_wrap_library(name, srcs, visibility = visibility, **kwargs)
+    _javascript_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
-def dx_js_binary(name, srcs = None, visibility = None, **kwargs):
+def javascript_binary(name, srcs = None, visibility = None, **kwargs):
     """Experimental minimal wrapper over `js_binary` (M16).
 
     Two shapes: an ordinary binary owns its `srcs`, while a thin entry
@@ -197,16 +197,16 @@ def dx_js_binary(name, srcs = None, visibility = None, **kwargs):
     semantics.
 
     Args:
-      name: public binary target name (upstream target is name_dx_upstream).
+      name: public binary target name (upstream target is name_upstream).
       srcs: direct binary sources for QualitySourcesInfo; empty for thin entries.
       visibility: visibility of the public forwarding binary target.
       **kwargs: extra attributes forwarded to the upstream js_binary
         (entry_point, data, etc.).
     """
     effective_srcs = srcs if srcs != None else []
-    _dx_js_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
+    _javascript_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
 
-def _dx_js_test_forward_impl(ctx):
+def _javascript_test_forward_impl(ctx):
     upstream = ctx.attr.upstream
 
     # The upstream launcher already bakes fixed_env (JEST_JUNIT_OUTPUT_FILE,
@@ -218,9 +218,9 @@ def _dx_js_test_forward_impl(ctx):
     if "TESTBRIDGE_TEST_ONLY" not in env_inherit:
         env_inherit.append("TESTBRIDGE_TEST_ONLY")
     out = [
-        _dx_js_symlink_default_info(ctx),
+        _javascript_symlink_default_info(ctx),
         testing.TestEnvironment({}, env_inherit),
-        _dx_js_quality_sources(ctx),
+        _javascript_quality_sources(ctx),
     ]
 
     # Upstream jest_test only provides InstrumentedFilesInfo when coverage
@@ -235,8 +235,8 @@ def _dx_js_test_forward_impl(ctx):
     # environment provider, and returning both conflicts.
     return out
 
-_dx_js_test = rule(
-    implementation = _dx_js_test_forward_impl,
+_javascript_test = rule(
+    implementation = _javascript_test_forward_impl,
     test = True,
     provides = _DX_JS_TEST_PROVIDES,
     attrs = {
@@ -266,13 +266,13 @@ _dx_js_test = rule(
                   "upstream jest_test.",
         ),
     },
-    doc = "Test forwarder for dx_js_test: symlinks the upstream jest launcher.",
+    doc = "Test forwarder for javascript_test: symlinks the upstream jest launcher.",
 )
 
-def dx_js_test(name, srcs, node_modules, data = None, visibility = None, tags = None, env_inherit = None, **kwargs):
+def javascript_test(name, srcs, node_modules, data = None, visibility = None, tags = None, env_inherit = None, **kwargs):
     """Experimental minimal wrapper over `jest_test` (M16).
 
-    The private `<name>_dx_upstream` target runs the full jest graph
+    The private `<name>_upstream` target runs the full jest graph
     (`srcs` plus caller `data`, with `jest-cli`/`jest-junit` linked from
     `node_modules` by the upstream macro). The public `<name>` test
     target symlinks the upstream launcher and preserves
@@ -292,7 +292,7 @@ def dx_js_test(name, srcs, node_modules, data = None, visibility = None, tags = 
     carry their own package.json, generated helpers are `.cjs`/`.mjs`).
 
     Args:
-      name: public test target name (upstream target is name_dx_upstream).
+      name: public test target name (upstream target is name_upstream).
       srcs: direct test sources owned by this wrapper.
       node_modules: label of the linked node_modules target (e.g.
         `//:node_modules`) where `jest-cli` (and `jest-junit` when
@@ -316,7 +316,7 @@ def dx_js_test(name, srcs, node_modules, data = None, visibility = None, tags = 
     if "//:package_json" not in upstream_data:
         upstream_data.append("//:package_json")
     _jest_test(
-        name = name + "_dx_upstream",
+        name = name + "_upstream",
         node_modules = node_modules,
         data = upstream_data,
         env_inherit = env_inherit,
@@ -324,9 +324,9 @@ def dx_js_test(name, srcs, node_modules, data = None, visibility = None, tags = 
         tags = (list(tags) if tags != None else []) + ["manual"],
         **kwargs
     )
-    _dx_js_test(
+    _javascript_test(
         name = name,
-        upstream = name + "_dx_upstream",
+        upstream = name + "_upstream",
         srcs = srcs,
         env_inherit = env_inherit,
         visibility = visibility,

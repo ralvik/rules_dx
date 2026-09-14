@@ -9,10 +9,10 @@
 // claimant; the extension never invents a language affix or another suffix.
 //
 // Kotlin is package-level (Go-style, not Python one-source): one directory
-// holds one reusable `dx_kotlin_library` named after the directory basename,
+// holds one reusable `kotlin_library` named after the directory basename,
 // with `srcs` as the sorted non-test `.kt` files. `*Test.kt` files are
-// never library sources (handwritten `dx_kotlin_test` owns them), thin
-// `dx_kotlin_binary` entries are never inferred, and directories mixing a
+// never library sources (handwritten `kotlin_test` owns them), thin
+// `kotlin_binary` entries are never inferred, and directories mixing a
 // library with a `main`-defining source stay handwritten: generation fails
 // and the owner must split the directory before adopting generated rules.
 package kotlin
@@ -29,7 +29,7 @@ import (
 var SupportedExts = []string{".kt"}
 
 // LibraryKind is the single generated rule kind.
-const LibraryKind = "dx_kotlin_library"
+const LibraryKind = "kotlin_library"
 
 // Normalize maps one name stem to its deterministic Bazel target-name stem.
 // It reports an error instead of an empty name so callers fail closed.

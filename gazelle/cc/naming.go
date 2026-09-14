@@ -9,10 +9,10 @@
 // claimant; the extension never invents a language affix or another suffix.
 //
 // C++ is package-level (Go-style, not Python one-source): one directory
-// holds one reusable `dx_cc_library` named after the directory basename,
+// holds one reusable `cc_library` named after the directory basename,
 // with `srcs` as the sorted non-test C/C++ sources and `hdrs` as the sorted
 // non-test C/C++ headers. `*_test.*` files are never library sources
-// (handwritten `dx_cc_test` owns them), thin `dx_cc_binary` entries are
+// (handwritten `cc_test` owns them), thin `cc_binary` entries are
 // never inferred, and directories mixing a library with a `main`-defining
 // source stay handwritten: generation fails and the owner must split the
 // directory before adopting generated rules.
@@ -31,12 +31,12 @@ var SupportedSrcExts = []string{".c", ".cc", ".cpp", ".cxx"}
 
 // SupportedHdrExts are the C/C++ header extensions discovered by the
 // extension. Header ownership is per extension, not per including source,
-// matching the `dx_cc_*` wrapper split (`.h` -> `c`, the rest -> `cpp`);
+// matching the `cc_*` wrapper split (`.h` -> `c`, the rest -> `cpp`);
 // a library owning both reports both classes under the single `cc` family.
 var SupportedHdrExts = []string{".h", ".hh", ".hpp", ".hxx"}
 
 // LibraryKind is the single generated rule kind.
-const LibraryKind = "dx_cc_library"
+const LibraryKind = "cc_library"
 
 // Normalize maps one name stem to its deterministic Bazel target-name stem.
 // It reports an error instead of an empty name so callers fail closed.

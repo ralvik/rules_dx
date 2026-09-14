@@ -1,7 +1,7 @@
 """Experimental minimal Java wrappers (M23, O31, ADR 0019).
 
 Thin conventional boundary over the pinned `rules_java 9.7.0` ruleset.
-Each `dx_java_*` macro creates one private `<name>_dx_upstream` target with
+Each `java_*` macro creates one private `<name>_upstream` target with
 the passed attributes and one public `<name>` forwarding target. The library
 forwarder preserves the upstream providers (`JavaInfo`, `DefaultInfo`,
 `InstrumentedFilesInfo`) unchanged and adds `QualitySourcesInfo`
@@ -48,13 +48,13 @@ _DX_JAVA_LIBRARY_PROVIDES = [
 # so no consumer matches on the forwarded providers. `QualitySourcesInfo`
 # is advertised so M23+ quality aspects can gate on it. Coverage reads
 # `InstrumentedFilesInfo` from the test target, not via `provides`
-# (same shape as the `dx_go_*` test forwarder).
+# (same shape as the `go_*` test forwarder).
 _DX_JAVA_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
 ]
 
-def _dx_java_quality_sources(ctx):
+def _java_quality_sources(ctx):
     java = [f for f in ctx.files.srcs if f.extension == "java"]
     direct_sources = {}
     if len(java) > 0:
@@ -62,13 +62,13 @@ def _dx_java_quality_sources(ctx):
     check_direct_sources(direct_sources, str(ctx.label))
     return QualitySourcesInfo(direct_sources = direct_sources)
 
-def _dx_java_preserved_library_providers(ctx):
+def _java_preserved_library_providers(ctx):
     upstream = ctx.attr.upstream
     if JavaInfo not in upstream:
-        fail("dx_java_*: upstream target has no JavaInfo: " + str(ctx.attr.upstream.label))
+        fail("java_*: upstream target has no JavaInfo: " + str(ctx.attr.upstream.label))
     return [upstream[JavaInfo]]
 
-def _dx_java_forwarded_output_providers(ctx):
+def _java_forwarded_output_providers(ctx):
     """Output groups and run env forwarded best-effort when present."""
     upstream = ctx.attr.upstream
     out = []
@@ -78,34 +78,34 @@ def _dx_java_forwarded_output_providers(ctx):
         out.append(upstream[RunEnvironmentInfo])
     return out
 
-def _dx_java_forwarded_java_info(ctx):
+def _java_forwarded_java_info(ctx):
     """Upstream `JavaInfo` forwarded best-effort when present."""
     upstream = ctx.attr.upstream
     if JavaInfo in upstream:
         return [upstream[JavaInfo]]
     return []
 
-def _dx_java_forwarded_instrumented(ctx):
+def _java_forwarded_instrumented(ctx):
     """Upstream `InstrumentedFilesInfo` forwarded best-effort when present."""
     upstream = ctx.attr.upstream
     if InstrumentedFilesInfo in upstream:
         return [upstream[InstrumentedFilesInfo]]
     return []
 
-def _dx_java_library_forward_impl(ctx):
+def _java_library_forward_impl(ctx):
     upstream = ctx.attr.upstream
     if InstrumentedFilesInfo not in upstream:
-        fail("dx_java_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
+        fail("java_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
     return (
-        _dx_java_preserved_library_providers(ctx) +
+        _java_preserved_library_providers(ctx) +
         [upstream[DefaultInfo]] +
         [upstream[InstrumentedFilesInfo]] +
-        _dx_java_forwarded_output_providers(ctx) +
-        [_dx_java_quality_sources(ctx)]
+        _java_forwarded_output_providers(ctx) +
+        [_java_quality_sources(ctx)]
     )
 
-_dx_java_library_forward = rule(
-    implementation = _dx_java_library_forward_impl,
+_java_library_forward = rule(
+    implementation = _java_library_forward_impl,
     provides = _DX_JAVA_LIBRARY_PROVIDES,
     attrs = {
         "srcs": attr.label_list(
@@ -121,11 +121,11 @@ _dx_java_library_forward = rule(
     doc = "Forwards upstream Java library providers unchanged and adds QualitySourcesInfo.",
 )
 
-def _dx_java_symlink_default_info(ctx):
+def _java_symlink_default_info(ctx):
     upstream = ctx.attr.upstream[DefaultInfo]
     exe = upstream.files_to_run.executable
     if exe == None:
-        fail("dx_java_*: upstream target has no executable: " + str(ctx.attr.upstream.label))
+        fail("java_*: upstream target has no executable: " + str(ctx.attr.upstream.label))
     link = ctx.actions.declare_file(ctx.label.name)
     ctx.actions.symlink(output = link, target_file = exe)
     return DefaultInfo(
@@ -134,17 +134,17 @@ def _dx_java_symlink_default_info(ctx):
         runfiles = ctx.runfiles(files = [link]).merge(upstream.default_runfiles),
     )
 
-def _dx_java_binary_forward_impl(ctx):
+def _java_binary_forward_impl(ctx):
     return (
-        [_dx_java_symlink_default_info(ctx)] +
-        _dx_java_forwarded_java_info(ctx) +
-        _dx_java_forwarded_instrumented(ctx) +
-        _dx_java_forwarded_output_providers(ctx) +
-        [_dx_java_quality_sources(ctx)]
+        [_java_symlink_default_info(ctx)] +
+        _java_forwarded_java_info(ctx) +
+        _java_forwarded_instrumented(ctx) +
+        _java_forwarded_output_providers(ctx) +
+        [_java_quality_sources(ctx)]
     )
 
-_dx_java_binary_forward = rule(
-    implementation = _dx_java_binary_forward_impl,
+_java_binary_forward = rule(
+    implementation = _java_binary_forward_impl,
     executable = True,
     provides = _DX_JAVA_EXEC_PROVIDES,
     attrs = {
@@ -157,23 +157,23 @@ _dx_java_binary_forward = rule(
             doc = "The private upstream java_binary target whose executable is symlinked.",
         ),
     },
-    doc = "Executable forwarder for dx_java_binary: symlinks the upstream binary.",
+    doc = "Executable forwarder for java_binary: symlinks the upstream binary.",
 )
 
-def _dx_java_test_forward_impl(ctx):
+def _java_test_forward_impl(ctx):
     upstream = ctx.attr.upstream
     if InstrumentedFilesInfo not in upstream:
-        fail("dx_java_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
+        fail("java_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
     return (
-        [_dx_java_symlink_default_info(ctx)] +
+        [_java_symlink_default_info(ctx)] +
         [upstream[InstrumentedFilesInfo]] +
-        _dx_java_forwarded_java_info(ctx) +
-        _dx_java_forwarded_output_providers(ctx) +
-        [_dx_java_quality_sources(ctx)]
+        _java_forwarded_java_info(ctx) +
+        _java_forwarded_output_providers(ctx) +
+        [_java_quality_sources(ctx)]
     )
 
-_dx_java_forward_test = rule(
-    implementation = _dx_java_test_forward_impl,
+_java_forward_test = rule(
+    implementation = _java_test_forward_impl,
     test = True,
     provides = _DX_JAVA_EXEC_PROVIDES,
     attrs = {
@@ -197,52 +197,52 @@ _dx_java_forward_test = rule(
                   "the upstream-wrapping test forwarders.",
         ),
     },
-    doc = "Test forwarder for dx_java_test: symlinks the upstream test executable.",
+    doc = "Test forwarder for java_test: symlinks the upstream test executable.",
 )
 
-def _dx_java_wrap_library(name, srcs, visibility = None, **kwargs):
+def _java_wrap_library(name, srcs, visibility = None, **kwargs):
     _java_library(
-        name = name + "_dx_upstream",
+        name = name + "_upstream",
         srcs = srcs,
         visibility = ["//visibility:private"],
         **kwargs
     )
-    _dx_java_library_forward(
+    _java_library_forward(
         name = name,
-        upstream = name + "_dx_upstream",
+        upstream = name + "_upstream",
         srcs = srcs,
         visibility = visibility,
     )
 
-def _dx_java_wrap_binary(name, srcs, visibility = None, **kwargs):
+def _java_wrap_binary(name, srcs, visibility = None, **kwargs):
     upstream_kwargs = dict(kwargs)
     if len(srcs) > 0:
         upstream_kwargs["srcs"] = srcs
     _java_binary(
-        name = name + "_dx_upstream",
+        name = name + "_upstream",
         visibility = ["//visibility:private"],
         **upstream_kwargs
     )
-    _dx_java_binary_forward(
+    _java_binary_forward(
         name = name,
-        upstream = name + "_dx_upstream",
+        upstream = name + "_upstream",
         srcs = srcs,
         visibility = visibility,
     )
 
-def dx_java_library(name, srcs, visibility = None, **kwargs):
+def java_library(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `java_library` (M23).
 
     Args:
-      name: public library target name (upstream target is name_dx_upstream).
+      name: public library target name (upstream target is name_upstream).
       srcs: direct Java sources owned by this wrapper.
       visibility: visibility of the public forwarding library target.
       **kwargs: extra attributes forwarded to the upstream java_library
         (deps, resources, data).
     """
-    _dx_java_wrap_library(name, srcs, visibility = visibility, **kwargs)
+    _java_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
-def dx_java_binary(name, srcs = None, main_class = None, visibility = None, **kwargs):
+def java_binary(name, srcs = None, main_class = None, visibility = None, **kwargs):
     """Experimental minimal wrapper over `java_binary` (M23).
 
     An ordinary binary owns its `srcs` plus `deps` on a wrapper library and
@@ -252,7 +252,7 @@ def dx_java_binary(name, srcs = None, main_class = None, visibility = None, **kw
     semantics.
 
     Args:
-      name: public binary target name (upstream target is name_dx_upstream).
+      name: public binary target name (upstream target is name_upstream).
       srcs: direct binary sources; empty for thin entry binaries.
       main_class: binary entry point, passed through with no default.
       visibility: visibility of the public forwarding binary target.
@@ -262,9 +262,9 @@ def dx_java_binary(name, srcs = None, main_class = None, visibility = None, **kw
     upstream_kwargs = dict(kwargs)
     if main_class != None:
         upstream_kwargs["main_class"] = main_class
-    _dx_java_wrap_binary(name, effective_srcs, visibility = visibility, **upstream_kwargs)
+    _java_wrap_binary(name, effective_srcs, visibility = visibility, **upstream_kwargs)
 
-def dx_java_test(name, srcs, visibility = None, **kwargs):
+def java_test(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `java_test` (M23).
 
     With `srcs`, those test sources are this test's direct sources for
@@ -273,7 +273,7 @@ def dx_java_test(name, srcs, visibility = None, **kwargs):
     standard test and coverage protocols.
 
     Args:
-      name: public test target name (upstream target is name_dx_upstream).
+      name: public test target name (upstream target is name_upstream).
       srcs: direct test sources.
       visibility: visibility of the public forwarding test target.
       **kwargs: extra attributes forwarded to the upstream java_test
@@ -293,13 +293,13 @@ def dx_java_test(name, srcs, visibility = None, **kwargs):
     if srcs != None:
         upstream_kwargs["srcs"] = srcs
     _java_test(
-        name = name + "_dx_upstream",
+        name = name + "_upstream",
         **upstream_kwargs
     )
-    _dx_java_forward_test(
+    _java_forward_test(
         name = name,
         testonly = True,
-        upstream = name + "_dx_upstream",
+        upstream = name + "_upstream",
         srcs = test_srcs,
         visibility = visibility,
     )

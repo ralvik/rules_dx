@@ -1,4 +1,4 @@
-// M23 seed Java library; consumer of dx_java_library.
+// M23 seed Java library; consumer of java_library.
 package hello;
 
 public class Hello {

@@ -43,7 +43,7 @@ var (
 	packageRe = regexp.MustCompile(`(?m)^\s*package\s+([A-Za-z_][\w]*(?:\.[\w]+)*)\s*;?\s*$`)
 	// mainRe matches the `def main(` token sequence outside comments and
 	// literals. It is deliberately narrow: any non-test source defining
-	// `main` keeps the directory handwritten (thin `dx_scala_binary`
+	// `main` keeps the directory handwritten (thin `scala_binary`
 	// entries are never inferred).
 	mainRe = regexp.MustCompile(`def\s+main\s*\(`)
 )

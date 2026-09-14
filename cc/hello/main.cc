@@ -1,4 +1,4 @@
-// M22 seed C++ binary; consumer of dx_cc_binary.
+// M22 seed C++ binary; consumer of cc_binary.
 #include <iostream>
 
 #include "cc/hello/hello.h"

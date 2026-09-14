@@ -1,4 +1,4 @@
-// M22 seed Go library; consumer of dx_go_library.
+// M22 seed Go library; consumer of go_library.
 package hello
 
 // Hello returns a greeting for name.

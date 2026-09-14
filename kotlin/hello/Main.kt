@@ -1,4 +1,4 @@
-// M23 seed Kotlin binary; consumer of dx_kotlin_binary.
+// M23 seed Kotlin binary; consumer of kotlin_binary.
 package hello
 
 fun main() {

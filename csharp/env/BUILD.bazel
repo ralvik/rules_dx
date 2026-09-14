@@ -1,7 +1,7 @@
 """Focused C# environment plans.
 
 Each `csharp_env_plan` reads the analyzed authoritative providers of one
-`dx_csharp_*` wrapper: `QualitySourcesInfo` for direct sources plus the
+`csharp_*` wrapper: `QualitySourcesInfo` for direct sources plus the
 preserved `DotnetAssembly*` toolchain closure by reference.
 Focused-target only; repository/root/exact-target orchestration remains M25.
 """

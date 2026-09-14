@@ -2,7 +2,7 @@
 
 `RustEnvPlanInfo` is the provider-derived focused-target plan contribution:
 crate identity, edition, root, direct sources, and direct dependency count
-read from the analyzed authoritative providers of one `dx_rust_*` wrapper
+read from the analyzed authoritative providers of one `rust_*` wrapper
 target. It never scans the checkout, never re-resolves Cargo metadata, and
 never mutates environment or codegen selection.
 
@@ -82,7 +82,7 @@ rust_env_plan = rule(
     attrs = {
         "target": attr.label(
             mandatory = True,
-            doc = "One dx_rust_* wrapper target to plan (focused target only).",
+            doc = "One rust_* wrapper target to plan (focused target only).",
         ),
     },
     doc = "Emits the provider-derived focused Rust environment plan for one wrapper target (M12 WP3).",

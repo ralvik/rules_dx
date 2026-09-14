@@ -1,4 +1,4 @@
-// M23 seed Java test; consumer of dx_java_test.
+// M23 seed Java test; consumer of java_test.
 package hello;
 
 import static org.junit.Assert.assertEquals;

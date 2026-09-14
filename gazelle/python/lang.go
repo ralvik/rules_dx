@@ -19,9 +19,9 @@ import (
 
 const (
 	languageName = "python"
-	libraryKind  = "dx_py_library"
-	testKind     = "dx_py_test"
-	binaryKind   = "dx_py_binary"
+	libraryKind  = "python_library"
+	testKind     = "python_test"
+	binaryKind   = "python_binary"
 	// importsAttr is the conventional source-only import root. Every
 	// generated rule sets imports = ["."] so the owning package directory
 	// resolves first-party siblings exactly like the handwritten seed

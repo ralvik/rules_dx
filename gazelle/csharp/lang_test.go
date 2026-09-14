@@ -54,7 +54,7 @@ func TestGeneratePackageLevelLibrary(t *testing.T) {
 	}
 	lib := result.Gen[0]
 	if lib.Kind() != LibraryKind || lib.Name() != "demo" {
-		t.Fatalf("library = %s(%s), want dx_csharp_library(demo)", lib.Kind(), lib.Name())
+		t.Fatalf("library = %s(%s), want csharp_library(demo)", lib.Kind(), lib.Name())
 	}
 	if got := strings.Join(lib.AttrStrings("srcs"), ","); got != "Demo.cs,Helper.cs" {
 		t.Errorf("library srcs = %q, want Demo.cs,Helper.cs", got)
@@ -204,7 +204,7 @@ func TestLanguageMetadata(t *testing.T) {
 		}
 		return ""
 	})
-	if len(loads) != 1 || loads[0].Name != "@renamed_dx//csharp/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "dx_csharp_library" {
+	if len(loads) != 1 || loads[0].Name != "@renamed_dx//csharp/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "csharp_library" {
 		t.Errorf("apparent loads = %+v", loads)
 	}
 	if defaults := l.Loads(); len(defaults) != 1 || defaults[0].Name != "@rules_dx//csharp/rules:defs.bzl" {

@@ -3,11 +3,11 @@
 load("@crates//:crates.bzl", "aliases")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
-load("//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
+load("//rust/rules:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(default_visibility = ["//visibility:public"])
 
-dx_rust_library(
+rust_library(
     name = "quality_runner_lib",
     srcs = [
         "src/lib.rs",
@@ -26,7 +26,7 @@ dx_rust_library(
     ],
 )
 
-dx_rust_binary(
+rust_binary(
     name = "quality_runner",
     srcs = ["src/main.rs"],
     aliases = aliases(
@@ -72,7 +72,7 @@ real_source_target(
     toml_srcs = ["Cargo.toml"],
 )
 
-dx_rust_test(
+rust_test(
     name = "quality_runner_test",
     aliases = aliases(
         package_name = "quality/quality_runner",

@@ -19,7 +19,7 @@ import (
 
 const (
 	languageName = "vue"
-	libraryKind  = "dx_vue_library"
+	libraryKind  = "vue_library"
 )
 
 var vueKinds = map[string]rule.KindInfo{

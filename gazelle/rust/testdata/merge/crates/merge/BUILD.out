@@ -1,6 +1,6 @@
-load("@rules_dx//rust/rules:defs.bzl", "dx_rust_library")
+load("@rules_dx//rust/rules:defs.bzl", "rust_library")
 
-dx_rust_library(
+rust_library(
     name = "merge",
     srcs = [
         "extra/kept.rs",  # keep
@@ -14,7 +14,7 @@ dx_rust_library(
 )
 
 # keep
-dx_rust_library(
+rust_library(
     name = "retained",
     srcs = ["removed.rs"],
 )

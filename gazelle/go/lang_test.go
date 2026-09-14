@@ -54,7 +54,7 @@ func TestGeneratePackageLevelLibrary(t *testing.T) {
 	}
 	lib := result.Gen[0]
 	if lib.Kind() != LibraryKind || lib.Name() != "demo" {
-		t.Fatalf("library = %s(%s), want dx_go_library(demo)", lib.Kind(), lib.Name())
+		t.Fatalf("library = %s(%s), want go_library(demo)", lib.Kind(), lib.Name())
 	}
 	if got := strings.Join(lib.AttrStrings("srcs"), ","); got != "demo.go,helper.go" {
 		t.Errorf("library srcs = %q, want demo.go,helper.go", got)
@@ -204,7 +204,7 @@ func TestLanguageMetadata(t *testing.T) {
 		}
 		return ""
 	})
-	if len(loads) != 1 || loads[0].Name != "@renamed_dx//go/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "dx_go_library" {
+	if len(loads) != 1 || loads[0].Name != "@renamed_dx//go/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "go_library" {
 		t.Errorf("apparent loads = %+v", loads)
 	}
 	if defaults := l.Loads(); len(defaults) != 1 || defaults[0].Name != "@rules_dx//go/rules:defs.bzl" {

@@ -21,15 +21,15 @@ import (
 
 const (
 	languageName = "rust"
-	libraryKind  = "dx_rust_library"
-	binaryKind   = "dx_rust_binary"
-	testKind     = "dx_rust_test"
+	libraryKind  = "rust_library"
+	binaryKind   = "rust_binary"
+	testKind     = "rust_test"
 	// procMacroKind, sharedKind, and staticKind are the dx wrappers for
 	// Cargo [lib] targets with proc-macro = true, crate-type =
 	// ["cdylib"], and crate-type = ["staticlib"].
-	procMacroKind = "dx_rust_proc_macro"
-	sharedKind    = "dx_rust_shared_library"
-	staticKind    = "dx_rust_static_library"
+	procMacroKind = "rust_proc_macro"
+	sharedKind    = "rust_shared_library"
+	staticKind    = "rust_static_library"
 	// scriptKind is the upstream cargo_build_script wrapper macro (loaded
 	// from @rules_rust//cargo), not a dx wrapper: the macro already owns
 	// the script-binary/runfiles split and stays self-describing.

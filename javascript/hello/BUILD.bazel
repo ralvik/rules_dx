@@ -1,22 +1,22 @@
-"""M16 seed JavaScript binary and library; consumer of dx_js_* wrappers."""
+"""M16 seed JavaScript binary and library; consumer of javascript_* wrappers."""
 
-load("//javascript/rules:defs.bzl", "dx_js_binary", "dx_js_library", "dx_js_test")
+load("//javascript/rules:defs.bzl", "javascript_binary", "javascript_library", "javascript_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
-dx_js_library(
+javascript_library(
     name = "hello_lib",
     srcs = ["hello.js"],
 )
 
-dx_js_binary(
+javascript_binary(
     name = "hello",
     data = [":hello_lib"],
     entry_point = "main.js",
 )
 
-dx_js_test(
+javascript_test(
     name = "hello_test",
     srcs = ["hello.test.js"],
     data = [":hello_lib"],

@@ -1,11 +1,11 @@
 """M16 thin entry fixture: library owns main.ts (execution reuses the JS wrappers over compiled outputs)."""
 
 load("//quality:fixtures.bzl", "real_source_target")
-load("//typescript/rules:defs.bzl", "dx_ts_project")
+load("//typescript/rules:defs.bzl", "typescript_project")
 
 package(default_visibility = ["//visibility:public"])
 
-dx_ts_project(
+typescript_project(
     name = "helper",
     srcs = ["helper.ts"],
     declaration = True,
@@ -13,7 +13,7 @@ dx_ts_project(
     tsconfig = "tsconfig.json",
 )
 
-dx_ts_project(
+typescript_project(
     name = "main",
     srcs = ["main.ts"],
     declaration = True,

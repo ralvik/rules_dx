@@ -193,7 +193,7 @@ func (l *fsharpLang) generateRules(args language.GenerateArgs) language.Generate
 			continue
 		}
 		if DefinesMain(content) {
-			l.fail("fsharp: %s: %s defines main; thin dx_fsharp_binary entries stay handwritten, so split main-bearing sources into their own directory before adopting generation", args.Rel, src)
+			l.fail("fsharp: %s: %s defines main; thin fsharp_binary entries stay handwritten, so split main-bearing sources into their own directory before adopting generation", args.Rel, src)
 			continue
 		}
 		pkg, err := ParsePackage(content)

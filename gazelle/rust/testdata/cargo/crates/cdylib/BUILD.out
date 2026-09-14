@@ -1,7 +1,7 @@
 load("@crates//:crates.bzl", "aliases", "crate_deps")
-load("@rules_dx//rust/rules:defs.bzl", "dx_rust_shared_library", "dx_rust_test")
+load("@rules_dx//rust/rules:defs.bzl", "rust_shared_library", "rust_test")
 
-dx_rust_shared_library(
+rust_shared_library(
     name = "flavors_cdylib",
     srcs = ["source/cdylib.rs"],
     aliases = aliases(
@@ -17,7 +17,7 @@ dx_rust_shared_library(
     ),
 )
 
-dx_rust_test(
+rust_test(
     name = "flavors_cdylib_test",
     aliases = aliases(
         package_name = "crates/flavors-cdylib",

@@ -503,7 +503,7 @@ def _rust_env_shard_impl(ctx):
         fail(
             "rust_env_shard " + producer + ": upstream " +
             display_label(upstream.label) +
-            " carries neither CrateInfo nor TestCrateInfo (not a dx_rust_* wrapper)",
+            " carries neither CrateInfo nor TestCrateInfo (not a rust_* wrapper)",
         )
     candidates_by_path = {}
     for f in crate.srcs.to_list() + [crate.root]:
@@ -563,7 +563,7 @@ rust_env_shard = rule(
         ),
         "target": attr.label(
             mandatory = True,
-            doc = "One dx_rust_* wrapper target proving the Rust edge via its CrateInfo/TestCrateInfo and crate sources.",
+            doc = "One rust_* wrapper target proving the Rust edge via its CrateInfo/TestCrateInfo and crate sources.",
         ),
         "_writer": attr.label(
             default = "//env/env_shard:env_shard_writer",
@@ -572,7 +572,7 @@ rust_env_shard = rule(
             doc = "Shard writer emitting the validated binary DxEnvShard protobuf.",
         ),
     },
-    doc = "Narrow Rust adapter: verifies the dx_rust_* wrapper edge and emits one normalized shard (M25 WP2).",
+    doc = "Narrow Rust adapter: verifies the rust_* wrapper edge and emits one normalized shard (M25 WP2).",
 )
 
 def _env_plan_subject_impl(ctx):

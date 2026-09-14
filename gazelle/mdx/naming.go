@@ -9,9 +9,9 @@
 // claimant; the extension never invents a language affix or another suffix.
 //
 // Every supported `.mdx` component receives one ordinary
-// reusable one-source `dx_mdx_library`. MDX tests and entries stay
+// reusable one-source `mdx_library`. MDX tests and entries stay
 // JavaScript-owned (parsed or compiled outputs exercised through the
-// `dx_js_test`/`dx_js_binary` wrappers); `.mdx` sources are never tests
+// `javascript_test`/`javascript_binary` wrappers); `.mdx` sources are never tests
 // or thin binaries, so no test/entry inference exists here.
 package mdx
 

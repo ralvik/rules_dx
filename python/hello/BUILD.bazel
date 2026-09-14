@@ -1,17 +1,17 @@
-"""M14 seed Python binary and library; consumer of dx_py_* wrappers."""
+"""M14 seed Python binary and library; consumer of python_* wrappers."""
 
-load("//python/rules:defs.bzl", "dx_py_binary", "dx_py_library", "dx_py_test")
+load("//python/rules:defs.bzl", "python_binary", "python_library", "python_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
-dx_py_library(
+python_library(
     name = "hello_lib",
     srcs = ["hello.py"],
     imports = ["."],
 )
 
-dx_py_binary(
+python_binary(
     name = "hello",
     srcs = ["main.py"],
     imports = ["."],
@@ -19,7 +19,7 @@ dx_py_binary(
     deps = [":hello_lib"],
 )
 
-dx_py_test(
+python_test(
     name = "hello_test",
     srcs = ["hello_test.py"],
     dep_group = "hello",

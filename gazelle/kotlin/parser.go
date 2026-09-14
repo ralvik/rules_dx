@@ -43,7 +43,7 @@ var (
 	packageRe = regexp.MustCompile(`(?m)^\s*package\s+([A-Za-z_][\w]*(?:\.[\w]+)*)\s*;?\s*$`)
 	// mainRe matches the `fun main(` token sequence outside comments and
 	// literals. It is deliberately narrow: any non-test source defining
-	// `main` keeps the directory handwritten (thin `dx_kotlin_binary`
+	// `main` keeps the directory handwritten (thin `kotlin_binary`
 	// entries are never inferred).
 	mainRe = regexp.MustCompile(`fun\s+main\s*\(`)
 )

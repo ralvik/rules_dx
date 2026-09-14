@@ -129,7 +129,10 @@ into it. See [Quality Sources and Applicability](../quality/quality-sources.md).
 ### Upstream Authorities
 
 Language foundations wrap pinned upstream rulesets for build, test, toolchain, provider, and IDE
-semantics. Ecosystem manifests, lockfiles, package-manager outputs, and public Bazel metadata remain
+semantics. Wrapper macros use bare conventional names (`python_library`, not `dx_py_library`)
+loaded from `//<language>/rules:defs.bzl`; the load label is the namespace, per
+[ADR 0004](../decisions/0004-naming.md). A file that also needs the same-named upstream symbol
+aliases the upstream load (`_cc_library = "cc_library"`), never the wrapper. Ecosystem manifests, lockfiles, package-manager outputs, and public Bazel metadata remain
 authoritative for dependency and target policy. Generation translates those facts into BUILD graph
 edges but does not resolve versions, install packages, or invent missing ecosystem policy.
 

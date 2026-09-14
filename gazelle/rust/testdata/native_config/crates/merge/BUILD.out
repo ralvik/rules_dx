@@ -1,12 +1,12 @@
 load("@rules_dx//quality:native_config.bzl", "clippy_config")
-load("@rules_dx//rust/rules:defs.bzl", "dx_rust_library")
+load("@rules_dx//rust/rules:defs.bzl", "rust_library")
 
 clippy_config(
     name = "clippy_cfg",
     src = "custom.toml",
 )
 
-dx_rust_library(
+rust_library(
     name = "merge",
     srcs = ["src/lib.rs"],
     aspect_hints = [

@@ -2,7 +2,7 @@
 
 `KotlinEnvPlanInfo` is the provider-derived focused-target plan contribution:
 direct sources, source count, and target identity read from the analyzed
-authoritative providers of one `dx_kotlin_*` wrapper target. It never scans the
+authoritative providers of one `kotlin_*` wrapper target. It never scans the
 checkout, never re-resolves Maven/Coursier metadata, and never mutates environment
 or codegen selection.
 
@@ -68,7 +68,7 @@ kotlin_env_plan = rule(
     attrs = {
         "target": attr.label(
             mandatory = True,
-            doc = "One dx_kotlin_* wrapper target to plan (focused target only).",
+            doc = "One kotlin_* wrapper target to plan (focused target only).",
         ),
     },
     doc = "Emits the provider-derived focused Kotlin environment plan for one wrapper target (M23 WP2).",

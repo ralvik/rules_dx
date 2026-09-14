@@ -1,4 +1,4 @@
-// M23 seed Java binary; consumer of dx_java_binary.
+// M23 seed Java binary; consumer of java_binary.
 package hello;
 
 public class Main {

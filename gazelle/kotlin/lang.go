@@ -193,7 +193,7 @@ func (l *kotlinLang) generateRules(args language.GenerateArgs) language.Generate
 			continue
 		}
 		if DefinesMain(content) {
-			l.fail("kotlin: %s: %s defines main; thin dx_kotlin_binary entries stay handwritten, so split main-bearing sources into their own directory before adopting generation", args.Rel, src)
+			l.fail("kotlin: %s: %s defines main; thin kotlin_binary entries stay handwritten, so split main-bearing sources into their own directory before adopting generation", args.Rel, src)
 			continue
 		}
 		pkg, err := ParsePackage(content)

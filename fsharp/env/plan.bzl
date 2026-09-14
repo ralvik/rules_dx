@@ -2,7 +2,7 @@
 
 `FSharpEnvPlanInfo` is the provider-derived focused-target plan contribution:
 direct sources, source count, and target identity read from the analyzed
-authoritative providers of one `dx_fsharp_*` wrapper target. It never scans the
+authoritative providers of one `fsharp_*` wrapper target. It never scans the
 checkout, never re-resolves NuGet/Paket metadata, and never mutates environment
 or codegen selection.
 
@@ -68,7 +68,7 @@ fsharp_env_plan = rule(
     attrs = {
         "target": attr.label(
             mandatory = True,
-            doc = "One dx_fsharp_* wrapper target to plan (focused target only).",
+            doc = "One fsharp_* wrapper target to plan (focused target only).",
         ),
     },
     doc = "Emits the provider-derived focused F# environment plan for one wrapper target (M23 WP2).",

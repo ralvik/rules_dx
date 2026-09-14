@@ -1,4 +1,4 @@
-// M22 seed C++ test; consumer of dx_cc_test.
+// M22 seed C++ test; consumer of cc_test.
 #include <cassert>
 
 #include "cc/hello/hello.h"

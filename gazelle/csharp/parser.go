@@ -39,7 +39,7 @@ var (
 	namespaceRe = regexp.MustCompile(`(?m)^\s*namespace\s+([A-Za-z_][\w]*(?:\.[\w]+)*)\b`)
 	// mainRe matches `static ... Main(` outside comments and literals. Any
 	// non-test source defining `Main` keeps the directory handwritten (thin
-	// `dx_csharp_binary` entries are never inferred).
+	// `csharp_binary` entries are never inferred).
 	mainRe = regexp.MustCompile(`static\s+[\w<>\[\],\s]*\bMain\s*\(`)
 )
 

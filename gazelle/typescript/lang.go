@@ -19,7 +19,7 @@ import (
 
 const (
 	languageName = "typescript"
-	projectKind  = "dx_ts_project"
+	projectKind  = "typescript_project"
 )
 
 var typescriptKinds = map[string]rule.KindInfo{

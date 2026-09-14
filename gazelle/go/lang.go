@@ -199,7 +199,7 @@ func (l *goLang) generateRules(args language.GenerateArgs) language.GenerateResu
 			continue
 		}
 		if pkg == "main" {
-			l.fail("go: %s: %s declares package main; thin dx_go_binary entries stay handwritten, so split package-main sources into their own directory before adopting generation", args.Rel, src)
+			l.fail("go: %s: %s declares package main; thin go_binary entries stay handwritten, so split package-main sources into their own directory before adopting generation", args.Rel, src)
 			continue
 		}
 		packages[pkg] = true

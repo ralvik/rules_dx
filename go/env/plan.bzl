@@ -2,7 +2,7 @@
 
 `GoEnvPlanInfo` is the provider-derived focused-target plan contribution:
 direct sources, source count, and target identity read from the analyzed
-authoritative providers of one `dx_go_*` wrapper target. It never scans the
+authoritative providers of one `go_*` wrapper target. It never scans the
 checkout, never re-resolves module metadata, and never mutates environment
 or codegen selection.
 
@@ -68,7 +68,7 @@ go_env_plan = rule(
     attrs = {
         "target": attr.label(
             mandatory = True,
-            doc = "One dx_go_* wrapper target to plan (focused target only).",
+            doc = "One go_* wrapper target to plan (focused target only).",
         ),
     },
     doc = "Emits the provider-derived focused Go environment plan for one wrapper target (M22 WP2).",

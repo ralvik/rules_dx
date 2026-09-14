@@ -2,7 +2,7 @@
 
 `JavaEnvPlanInfo` is the provider-derived focused-target plan contribution:
 direct sources, source count, and target identity read from the analyzed
-authoritative providers of one `dx_java_*` wrapper target. It never scans the
+authoritative providers of one `java_*` wrapper target. It never scans the
 checkout, never re-resolves Maven/Coursier metadata, and never mutates environment
 or codegen selection.
 
@@ -68,7 +68,7 @@ java_env_plan = rule(
     attrs = {
         "target": attr.label(
             mandatory = True,
-            doc = "One dx_java_* wrapper target to plan (focused target only).",
+            doc = "One java_* wrapper target to plan (focused target only).",
         ),
     },
     doc = "Emits the provider-derived focused Java environment plan for one wrapper target (M23 WP2).",

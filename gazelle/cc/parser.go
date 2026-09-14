@@ -38,7 +38,7 @@ var (
 	// mainRe matches the token `main` followed by an opening parenthesis
 	// outside comments and literals. It is deliberately narrow: any
 	// non-test source defining `main` keeps the directory handwritten
-	// (thin `dx_cc_binary` entries are never inferred).
+	// (thin `cc_binary` entries are never inferred).
 	mainRe = regexp.MustCompile(`(^|[^A-Za-z0-9_])main\s*\(`)
 )
 

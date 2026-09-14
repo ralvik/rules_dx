@@ -193,7 +193,7 @@ func (l *javaLang) generateRules(args language.GenerateArgs) language.GenerateRe
 			continue
 		}
 		if DefinesMain(content) {
-			l.fail("java: %s: %s defines main; thin dx_java_binary entries stay handwritten, so split main-bearing sources into their own directory before adopting generation", args.Rel, src)
+			l.fail("java: %s: %s defines main; thin java_binary entries stay handwritten, so split main-bearing sources into their own directory before adopting generation", args.Rel, src)
 			continue
 		}
 		pkg, err := ParsePackage(content)

@@ -1,4 +1,4 @@
-load("@rules_dx//csharp/rules:defs.bzl", "dx_csharp_library")
+load("@rules_dx//csharp/rules:defs.bzl", "csharp_library")
 
 # A user-owned rule must survive generation unchanged.
 filegroup(
@@ -6,7 +6,7 @@ filegroup(
     srcs = ["README.txt"],
 )
 
-dx_csharp_library(
+csharp_library(
     name = "demo",
     srcs = [
         "Demo.cs",

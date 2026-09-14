@@ -1,24 +1,24 @@
-"""M22 seed Go binary and library; consumer of dx_go_* wrappers."""
+"""M22 seed Go binary and library; consumer of go_* wrappers."""
 
-load("//go/rules:defs.bzl", "dx_go_binary", "dx_go_library", "dx_go_test")
+load("//go/rules:defs.bzl", "go_binary", "go_library", "go_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
-dx_go_library(
+go_library(
     name = "hello_lib",
     srcs = ["hello.go"],
     importpath = "rules_dx/go/hello",
 )
 
-dx_go_binary(
+go_binary(
     name = "hello",
     srcs = ["main.go"],
     importpath = "rules_dx/go/hello/main",
     deps = [":hello_lib"],
 )
 
-dx_go_test(
+go_test(
     name = "hello_test",
     srcs = ["hello_test.go"],
     embed = [":hello_lib"],

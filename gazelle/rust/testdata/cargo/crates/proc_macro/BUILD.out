@@ -1,7 +1,7 @@
 load("@crates//:crates.bzl", "aliases", "crate_deps")
-load("@rules_dx//rust/rules:defs.bzl", "dx_rust_proc_macro", "dx_rust_test")
+load("@rules_dx//rust/rules:defs.bzl", "rust_proc_macro", "rust_test")
 
-dx_rust_proc_macro(
+rust_proc_macro(
     name = "flavors_derive",
     srcs = ["source/derive.rs"],
     aliases = aliases(
@@ -17,7 +17,7 @@ dx_rust_proc_macro(
     ),
 )
 
-dx_rust_test(
+rust_test(
     name = "flavors_derive_test",
     aliases = aliases(
         package_name = "crates/flavors-derive",

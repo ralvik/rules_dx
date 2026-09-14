@@ -1,22 +1,22 @@
-"""M23 seed C# binary and library; consumer of dx_csharp_* wrappers."""
+"""M23 seed C# binary and library; consumer of csharp_* wrappers."""
 
-load("//csharp/rules:defs.bzl", "dx_csharp_binary", "dx_csharp_library", "dx_csharp_test")
+load("//csharp/rules:defs.bzl", "csharp_binary", "csharp_library", "csharp_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
-dx_csharp_library(
+csharp_library(
     name = "hello_lib",
     srcs = ["Hello.cs"],
 )
 
-dx_csharp_binary(
+csharp_binary(
     name = "hello",
     srcs = ["Program.cs"],
     deps = [":hello_lib"],
 )
 
-dx_csharp_test(
+csharp_test(
     name = "hello_test",
     srcs = ["HelloTest.cs"],
     deps = [":hello_lib"],

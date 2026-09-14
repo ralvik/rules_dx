@@ -1,7 +1,7 @@
 """Focused MDX environment plans.
 
 Each `mdx_env_plan` reads the analyzed authoritative providers of one
-`dx_mdx_library` wrapper: the preserved `JsInfo` plus `QualitySourcesInfo`.
+`mdx_library` wrapper: the preserved `JsInfo` plus `QualitySourcesInfo`.
 Focused-target only. Binaries/tests share the same closure through
 `data`/runfiles. Repository/root/exact-target orchestration remains M25.
 """

@@ -1,47 +1,47 @@
 """M21 mixed-framework package; one physical owner per container (O43).
 
 Each framework container keeps its own wrapper (dx_vue/svelte/astro/mdx_library)
-plus the shared core `helper_lib` (dx_js_library). No container is owned twice,
+plus the shared core `helper_lib` (javascript_library). No container is owned twice,
 no region becomes a core JS/TS target, and no generic fallback exists. Mixed
 cross-framework imports resolve only through explicit Bazel deps to the shared
 helper; framework-to-framework file imports are absent by construction.
 """
 
-load("//astro/rules:defs.bzl", "dx_astro_library")
-load("//javascript/rules:defs.bzl", "dx_js_library", "dx_js_test")
-load("//mdx/rules:defs.bzl", "dx_mdx_library")
+load("//astro/rules:defs.bzl", "astro_library")
+load("//javascript/rules:defs.bzl", "javascript_library", "javascript_test")
+load("//mdx/rules:defs.bzl", "mdx_library")
 load("//quality:fixtures.bzl", "real_source_target")
-load("//svelte/rules:defs.bzl", "dx_svelte_library")
-load("//vue/rules:defs.bzl", "dx_vue_library")
+load("//svelte/rules:defs.bzl", "svelte_library")
+load("//vue/rules:defs.bzl", "vue_library")
 
 package(default_visibility = ["//visibility:public"])
 
-dx_vue_library(
+vue_library(
     name = "vue_lib",
     srcs = ["Hello.vue"],
 )
 
-dx_svelte_library(
+svelte_library(
     name = "svelte_lib",
     srcs = ["Hello.svelte"],
 )
 
-dx_astro_library(
+astro_library(
     name = "astro_lib",
     srcs = ["Hello.astro"],
 )
 
-dx_mdx_library(
+mdx_library(
     name = "mdx_lib",
     srcs = ["Hello.mdx"],
 )
 
-dx_js_library(
+javascript_library(
     name = "helper_lib",
     srcs = ["helper.js"],
 )
 
-dx_js_test(
+javascript_test(
     name = "hello_test",
     srcs = ["Hello.test.js"],
     data = [

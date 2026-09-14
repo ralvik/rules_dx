@@ -1,4 +1,4 @@
-load("@rules_dx//scala/rules:defs.bzl", "dx_scala_library")
+load("@rules_dx//scala/rules:defs.bzl", "scala_library")
 
 # A user-owned rule must survive generation unchanged.
 filegroup(
@@ -6,7 +6,7 @@ filegroup(
     srcs = ["README.txt"],
 )
 
-dx_scala_library(
+scala_library(
     name = "demo",
     srcs = [
         "Demo.scala",

@@ -10,10 +10,10 @@
 //
 // Go is package-level (support-matrix Go exception): one directory holds one
 // Go package (plus its external `*_test` package). The adapter generates at
-// most one reusable `dx_go_library` per directory named after the directory
+// most one reusable `go_library` per directory named after the directory
 // basename, with `srcs` as the sorted non-test `.go` files. `*_test.go`
-// files are never library sources (handwritten `dx_go_test` owns them via
-// `embed`), thin `dx_go_binary` entries are never inferred, and directories
+// files are never library sources (handwritten `go_test` owns them via
+// `embed`), thin `go_binary` entries are never inferred, and directories
 // mixing a library package with a `package main` file stay handwritten:
 // generation includes every non-test `.go` and the owner must split the
 // directory before adopting generated rules.
@@ -31,7 +31,7 @@ import (
 var SupportedExts = []string{".go"}
 
 // LibraryKind is the single generated rule kind.
-const LibraryKind = "dx_go_library"
+const LibraryKind = "go_library"
 
 // Normalize maps one name stem to its deterministic Bazel target-name stem.
 // It reports an error instead of an empty name so callers fail closed.

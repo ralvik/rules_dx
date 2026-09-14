@@ -1,8 +1,8 @@
 load("@crates//:crates.bzl", "aliases", "crate_deps")
-load("@rules_dx//rust/rules:defs.bzl", "dx_rust_binary", "dx_rust_library", "dx_rust_test")
+load("@rules_dx//rust/rules:defs.bzl", "rust_binary", "rust_library", "rust_test")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 
-dx_rust_library(
+rust_library(
     name = "scripted_lib",
     srcs = ["source/lib.rs"],
     aliases = aliases(
@@ -18,7 +18,7 @@ dx_rust_library(
     ) + [":scripted_build_script"],
 )
 
-dx_rust_test(
+rust_test(
     name = "scripted_lib_test",
     aliases = aliases(
         package_name = "crates/scripted",
@@ -35,7 +35,7 @@ dx_rust_test(
     ) + [":scripted_build_script"],
 )
 
-dx_rust_binary(
+rust_binary(
     name = "scripted_tool",
     srcs = ["source/main.rs"],
     aliases = aliases(

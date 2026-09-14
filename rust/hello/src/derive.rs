@@ -1,5 +1,5 @@
 //! M12 conformance fixture: minimal proc-macro crate for the
-//! dx_rust_proc_macro wrapper subject.
+//! rust_proc_macro wrapper subject.
 
 use proc_macro::TokenStream;
 

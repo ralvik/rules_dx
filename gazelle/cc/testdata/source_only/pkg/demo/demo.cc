@@ -1,5 +1,5 @@
 // Source-only generation fixture: one directory, one generated
-// dx_cc_library, toolchain-provided angle includes only alongside one
+// cc_library, toolchain-provided angle includes only alongside one
 // self-owned quoted include (no edge leaves the package).
 #include <string>
 

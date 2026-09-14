@@ -1,7 +1,7 @@
 """Focused Rust environment plans.
 
 Each `rust_env_plan` reads the analyzed authoritative providers of one
-`dx_rust_*` wrapper: library/binary/test through CrateInfo, Cc-linking
+`rust_*` wrapper: library/binary/test through CrateInfo, Cc-linking
 shapes through TestCrateInfo. Focused-target only; repository/root/exact-target
 orchestration remains M25.
 """

@@ -1,7 +1,7 @@
 """Focused C/C++ environment plans.
 
 Each `cc_env_plan` reads the analyzed authoritative providers of one
-`dx_cc_*` wrapper: `QualitySourcesInfo` for direct sources plus the
+`cc_*` wrapper: `QualitySourcesInfo` for direct sources plus the
 preserved `CcInfo` toolchain closure by reference.
 Focused-target only; repository/root/exact-target orchestration remains M25.
 """

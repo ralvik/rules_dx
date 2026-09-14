@@ -194,7 +194,7 @@ func (l *ccLang) generateRules(args language.GenerateArgs) language.GenerateResu
 			continue
 		}
 		if IsSource(file) && DefinesMain(content) {
-			l.fail("cc: %s: %s defines main; thin dx_cc_binary entries stay handwritten, so split main-defining sources into their own directory before adopting generation", args.Rel, file)
+			l.fail("cc: %s: %s defines main; thin cc_binary entries stay handwritten, so split main-defining sources into their own directory before adopting generation", args.Rel, file)
 			continue
 		}
 		for _, root := range ParseQuotedIncludes(content) {
