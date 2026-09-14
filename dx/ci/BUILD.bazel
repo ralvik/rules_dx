@@ -1,4 +1,4 @@
-"""M27 WP1 slices 1-5: pure consumer-CI selection, revision, scheduling, supersession, and reporting planning."""
+"""M27 WP1 slices 1-6: pure consumer-CI selection, revision, scheduling, supersession, reporting, and fork/aggregate planning."""
 
 load("@crates//:crates.bzl", "aliases")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
