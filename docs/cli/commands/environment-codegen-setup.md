@@ -75,3 +75,13 @@ initialization is then `dx setup`.
 If no setup selection exists, running only `dx env` or `dx codegen` creates a managed
 empty generation for the unrequested side. The command does not execute that side, and
 `.dx/setups/current/environment` and `.dx/setups/current/generated` remain valid paths.
+
+## Live Selection Status
+
+PROVISIONAL (open decision O63, flagged for review): the CLI currently plans the
+collection request, runs one live Bazel build, validates the collected plan, then fails
+closed with `managed_deferred` (exit 1) without staging or committing generations.
+`--dry-run` plans only and exits 0. Generation staging, workspace-state validation,
+materialization, and commit land in a later slice; the atomic-selection behavior above
+is the target contract, not current CLI behavior. See
+[Open Decisions](../../open-decisions.md).
