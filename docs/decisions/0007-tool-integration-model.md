@@ -72,7 +72,7 @@ owns delivery, pinning, platform, update, and proof behavior.
 Retaining these delivery classes does not authorize replacement stacks. Language integration
 maintenance follows [Product Scope](../product/scope.md#language-integration-maintenance);
 candidate-specific routes and effort still require review under O46 in the
-[open-decision register](../open-decisions.md).
+open-decision register.
 
 ### Actions And Results
 

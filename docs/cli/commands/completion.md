@@ -1,6 +1,6 @@
 # `dx completion`
 
-Implementation status: frozen under [O61](../../open-decisions.md) and delivered in M30b
+Implementation status: implemented
 (`dx completion` dispatch over the single CLI command-definition source).
 
 ## Invocation
@@ -9,7 +9,7 @@ Implementation status: frozen under [O61](../../open-decisions.md) and delivered
 
 ## Generation Source
 
-Scripts are generated at runtime by the `dx` binary itself from the single CLI command-definition source, following the `kubectl`/`gh` generator-subcommand convention: a framework facility (of the `clap_complete` class) renders every supported shell from the command table, so no script is ever handwritten or stored. The owning source is the [M08 command planner](../../milestones/M08-target-resolution-basic-commands.md#deliverables). Adding a command or flag regenerates every script, so completion cannot drift from the [command reference](README.md) or [ADR 0006](../../decisions/0006-cli-command-surface.md). Fixture tests assert every command and flag appears in each supported shell's output.
+Scripts are generated at runtime by the `dx` binary itself from the single CLI command-definition source, following the `kubectl`/`gh` generator-subcommand convention: a framework facility (of the `clap_complete` class) renders every supported shell from the command table, so no script is ever handwritten or stored. The owning source is the M08 command planner. Adding a command or flag regenerates every script, so completion cannot drift from the [command reference](README.md) or [ADR 0006](../../decisions/0006-cli-command-surface.md). Fixture tests assert every command and flag appears in each supported shell's output.
 
 ## Installation
 

@@ -7,7 +7,7 @@ repository-wide operation and additionally accepts an explicit v1 scope of zero 
 paths, labels, or target patterns selecting the Gazelle subtree to refresh. With no scope
 it refreshes the repository. It may create or modify Gazelle-maintained `BUILD` and `BUILD.bazel` files
 within the selected scope. Exact scope syntax and scoped freshness semantics are frozen
-under [O48](../../open-decisions.md).
+under O48.
 
 V1 scope resolution reuses
 [target resolution](../target-resolution.md) verbatim. Empty scope refreshes `//...`;
@@ -95,8 +95,8 @@ syntax, validation, precedence, and resolution behavior belong to the
 
 The canonical execution produces one private declared versioned result manifest artifact
 containing exact edits, write outcomes in default mode, completion state, and ignored-import
-audit records, per [O13](../../open-decisions.md) and scoped selection per
-[O48](../../open-decisions.md). Dispatch runs `//dx:generate` (`//dx:generate_check` with
+audit records, per O13 and scoped selection per
+O48. Dispatch runs `//dx:generate` (`//dx:generate_check` with
 upstream `-mode diff` for `--check`, so check writes nothing while witnessing the same
 rewrite), sets `DX_GENERATE_INTENDED` / `DX_GENERATE_SCOPE` / `DX_GENERATE_MODE`, and
 finalizes the extension witness into the manifest. Affected-path,

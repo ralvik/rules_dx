@@ -7,7 +7,7 @@ The first release uses tool-list parity with
 as a minimum baseline, not a scope ceiling or an API or behavior compatibility promise.
 Curated expansion is mandatory where upstream implementations or rules permit hermetic thin
 integration under [First-Release Admission](../product/scope.md#first-release-admission) and
-O46 in the [open-decision register](../open-decisions.md), without building replacement stacks.
+O46 in the open-decision register, without building replacement stacks.
 Curated default tool selections are owned by the [tool baseline](../tools/tool-baseline.md);
 this document owns adapter mechanics and does not re-pin defaults.
 Swift and SwiftFormat are excluded from v1 by

@@ -81,7 +81,7 @@ failure in one selected dependency set does not stop independent selected sets. 
 operations dependent on the failed set, preserve successful changes without repository-wide
 rollback, and fail the invocation overall. This preserves useful independent progress
 without claiming dependent work succeeded. Exact aggregate exit code, backend mapping,
-and report qualification follow the frozen [O12](../open-decisions.md) mappings; live
+and report qualification follow the frozen O12 mappings; live
 resolver-backend execution remains a gap. Ordinary
 fail-fast behavior, including `dx check` and `dx fix`, is unchanged.
 
@@ -102,7 +102,7 @@ hook exception so bootstrap can create the module and hooks can select staged pa
 Bootstrap writes are absent-only, without Git-based tracked-file inspection. Unmanaged
 hooks are refused; force cannot overwrite arbitrary existing files or hooks. Bootstrap
 destination mechanics and force syntax/managed-replacement behavior follow the frozen
-[O49](../open-decisions.md) mappings, not an unrestricted overwrite API.
+O49 mappings, not an unrestricted overwrite API.
 
 `dx codegen` is explicitly mutating only in managed `.dx/` state. Bazel actions build
 declared generated artifacts without writing source packages; Rust validates their
@@ -160,7 +160,7 @@ current setup and carries forward the newest opposite generation, preventing los
 updates. Combined setup commits its two prepared generations. Hash-addressed installation
 is idempotent and conflicting existing records fail without changing the current pointer.
 Lock acquisition waits for a fixed short timeout, whose exact value is owned by
-[O36](../open-decisions.md), and then reports the workspace as busy.
+O36, and then reports the workspace as busy.
 An OS-released advisory lock provides crash recovery; the CLI does not break locks based
 on PID files, timestamps, or deletion of the lock path.
 

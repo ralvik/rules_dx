@@ -29,7 +29,7 @@ host SDK. Acquisition and cache/remote behavior require the
 
 The contract is a requirement for the complete first-release tool baseline and mandatory
 curated expansion under [First-Release Admission](../product/scope.md#first-release-admission)
-and O46 in the [open-decision register](../open-decisions.md), on every
+and O46 in the open-decision register, on every
 [required platform](../decisions/0014-tested-platform-release-stack.md#required-platforms).
 Swift and SwiftFormat are excluded from v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md); see
@@ -65,7 +65,7 @@ or support. There is no seed path and no parity step: each adapter lands directl
 
 Prettier and the private Node tool graph are not bootstrap or initial-dogfood dependencies.
 They remain in the frozen first-release baseline but are deferred to
-[JavaScript And TypeScript Quality](../milestones/M17-javascript-typescript-quality.md).
+JavaScript And TypeScript Quality.
 
 ### Initial Artifact Research
 
@@ -119,7 +119,7 @@ runtime.
 
 One generated checked-in metadata file per tool/platform records the exact immutable
 URL, digest, size, archive member, upstream version, execution platform, ABI floor,
-runtime files, and licenses, with a regeneration command per [O20](../open-decisions.md).
+runtime files, and licenses, with a regeneration command per O20.
 One implementation repository exists per tool/platform, and an exec-configured dependency
 or private toolchain selects by Bazel execution platform. Registration must not fetch
 every artifact.

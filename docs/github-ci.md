@@ -242,9 +242,7 @@ reopen the accepted policies above. Resolve them before affected implementation:
 - Qualify fork roles/settings, untrusted artifact and metadata validation, privileged reporting,
   sensitive-content handling, bounded transport retries, and opt-in Code Scanning publication.
 
-[M27](milestones/M27-consumer-ci.md) owns qualification and implementation delivery;
-[M28](milestones/M28-stabilization-release-qualification.md) owns release qualification and
-[M29](milestones/M29-release-publication.md) owns publication of qualified identities.
-This assignment does not approve any milestone. Track unresolved work in the
-[open-decision register](open-decisions.md#consumer-ci-qualification) and prove the contract
+Consumer-CI qualification, release qualification, and publication of qualified
+identities remain open tracks. Track unresolved work in
+[GitHub issues](https://github.com/ralvik/rules_dx/issues) and prove the contract
 through the [consumer CI test matrix](testing/github-ci.md).

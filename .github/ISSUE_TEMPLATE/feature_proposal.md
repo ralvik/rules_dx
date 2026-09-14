@@ -9,7 +9,7 @@ about: Propose a scoped change to the product or design.
 
 ## Proposed Scope
 
-Link the affected milestone, contract, or open-decision row if known.
+Link the affected contract or GitHub issue if known.
 
 ## Alternatives Considered
 

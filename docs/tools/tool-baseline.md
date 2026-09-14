@@ -6,7 +6,7 @@ The frozen `aspect_rules_lint` v2.8.0 tool list is the minimum first-release qua
 not a scope ceiling. Curated quality-tool expansion across languages is mandatory where upstream
 implementations or Bazel rules permit hermetic thin integration under
 [First-Release Admission](../product/scope.md#first-release-admission) and O46 in the
-[open-decision register](../open-decisions.md). This does not authorize building replacement
+open-decision register. This does not authorize building replacement
 language, toolchain, package-management, or framework stacks.
 
 Equivalent tool coverage is required for the first release, subject to explicit feasibility
@@ -92,7 +92,7 @@ diagnostic-only.
 
 Framework-container quality integrations remain gated by the applicable
 [framework adapter contract](../generation/framework-adapters.md) and O29/O40-O43 in the
-[open-decision register](../open-decisions.md). A tool's presence in the frozen list or curated
+open-decision register. A tool's presence in the frozen list or curated
 scope does not settle an exact framework parser, provider, region, or typecheck integration.
 
 Adapter architecture, result normalization, mutation behavior, acquisition, and

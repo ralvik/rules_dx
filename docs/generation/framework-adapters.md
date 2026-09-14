@@ -20,7 +20,7 @@ quality, platform, merge, and stale-cleanup fixtures pass. The adapter follows t
 single ownership, conservative merge, user-owned resources, and fail-closed collisions.
 
 Exact upstream parsers, providers, target mappings, generated-region mappings, and test semantics are
-still unresolved independently in [O29 and O40-O42](../open-decisions.md); additional v1 framework
+still unresolved independently in O29 and O40-O42; additional v1 framework
 scope is O43. These adapters are planned, not implied to be implemented or supported by this
 contract.
 

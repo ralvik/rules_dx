@@ -310,7 +310,7 @@ also prove that lint and test do not duplicate `tsc` actions.
 - Verify authoritative metadata compatibility for Python uv/wheels, JavaScript/TypeScript pnpm
   importers/package stores, and Rust Cargo/crate providers. Upstream shape changes fail closed and
   never fall back to a package-manager invocation, lockfile reconstruction, or guessed dependency.
-- Once [O48](../open-decisions.md) freezes scoped selection, verify accepted path, label, and
+- Once O48 freezes scoped selection, verify accepted path, label, and
   target-pattern forms, empty-scope handling, scoped freshness, manifest boundaries, and Gazelle
   merge behavior against the [generate contract](../cli/commands/generate.md#invocation-and-scope).
 - Verify `generate --check` selects check mode on the same canonical workflow as default

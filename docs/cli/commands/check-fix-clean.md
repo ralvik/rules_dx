@@ -1,7 +1,7 @@
 # `dx check`, `dx fix`, And `dx clean`
 
 Owning decision: [ADR 0018](../../decisions/0018-umbrella-check-fix-cleanup-clean.md).
-Umbrella mechanics are frozen under [O59](../../open-decisions.md); cleanup mechanics are
+Umbrella mechanics are frozen under O59; cleanup mechanics are
 frozen under O60 except process-scan in-use detection and reclaimable-bytes reporting,
 which remain open (see [`dx clean`](#dx-clean)).
 

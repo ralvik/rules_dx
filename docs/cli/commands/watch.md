@@ -1,7 +1,6 @@
 # dx Watch
 
-Implementation status: O44/O55 mappings frozen (see [O44 and O55](../../open-decisions.md)
-and the [M30b completion report](../../milestones/M30b-completion-report.md)).
+Implementation status: implemented.
 Delivered: `dx watch` planning plus dispatch over the wrapped command with 200ms
 debounce, `bazel-*`/`.dx`/`dx.local.toml` ignores, per-iteration re-resolution,
 and local-only enforcement (refuses `CI=true`). Owning decision:
@@ -24,7 +23,7 @@ execution, or deployment mechanism.
 - `--check`, `--output`, `--report`, `--fail-on`, `--quiet`, and `--dry-run`
   pass through to the wrapped command.
 - `dx run` under `watch` enforces single-runnable selection per iteration
-  (`ambiguous_runnable`/`no_runnable` are errors; see [O52](../../open-decisions.md)).
+  (`ambiguous_runnable`/`no_runnable` are errors; see O52).
 - Each iteration emits the wrapped command's normal stream starting with a
   fresh `command_started`. No cross-iteration state is exposed in machine output.
 - Signals forward to the active child per the [CLI contract](../cli-contract.md#exit-status).

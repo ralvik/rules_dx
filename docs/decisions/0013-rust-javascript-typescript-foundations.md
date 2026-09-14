@@ -37,7 +37,7 @@ underlying patched `rules_rust`. Both follow the strict dependency and compatibi
 policy in [ADR 0008](0008-dependency-currency.md). This preferred stack remains selected. Direct
 `rules_rust` is an established upstream alternative to compare if substantial fixes are needed, not
 an automatic fallback. Any switch requires explicit contract/API review and approval through
-[Open Decisions](../open-decisions.md), plus fixture-proven conformance; it does not permit a
+Open Decisions, plus fixture-proven conformance; it does not permit a
 project-owned Rust engine.
 
 Rust native dependencies follow the Windows compatibility baseline and platform-specific native
@@ -55,7 +55,7 @@ For every language, `rules_dx` exposes only narrow conventional wrappers, provid
 owns opinionated defaults and compatibility at that boundary but does not re-export the complete
 upstream API. Consumers needing advanced upstream APIs may declare and load the upstream
 module directly. Exact public symbols and provider mappings remain fixture-gated in
-[Open Decisions](../open-decisions.md) and [Testing](../testing/).
+Open Decisions and [Testing](../testing/).
 
 ### Core-Language Completion And Remediation
 
@@ -123,7 +123,7 @@ guessed, omitted, installed, or deferred to a later build.
 The uniform strict-resolution and user-owned exception policy is authoritative under
 [Generation](../generation/). Exact syntax recognizers, Cargo target mappings, pnpm importer/store
 mappings, version selection, tests, coverage, and other upstream adaptations remain unresolved where
-listed in [Open Decisions](../open-decisions.md).
+listed in Open Decisions.
 
 ### Environment And IDE Direction
 
@@ -140,7 +140,7 @@ their separate Bazel IDE path, but they do not mutate selected environment or co
 Node environments preserve pnpm importer semantics and conventional importer-local `node_modules`
 facades over Bazel-selected artifacts. They do not flatten a multi-importer graph or perform a
 host-side install. Exact Rust and Node provider mappings and persistent shapes remain evidence-gated
-through [Open Decisions](../open-decisions.md).
+through Open Decisions.
 
 Selection, native layouts, immutable state, atomic commits, carry-forward, generated-code separation,
 ownership, and retention are authoritative under [Environments](../environments/), including the

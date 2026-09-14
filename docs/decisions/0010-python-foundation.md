@@ -49,7 +49,7 @@ unstable upstream symbols into `rules_dx` compatibility promises. Advanced consu
 and load upstream APIs directly outside that wrapper contract.
 
 Exact wrapper, provider, pytest, coverage, interpreter, and platform mappings remain evidence-gated
-in [Open Decisions](../open-decisions.md). The detailed verification contract is under
+in Open Decisions. The detailed verification contract is under
 [Testing](../testing/).
 
 ### Generation And Ownership
@@ -75,7 +75,7 @@ standard-library graphs remain possible without ecosystem metadata.
 The shared strict-resolution, literal/computed reference, resource, executable-entry, and Gazelle
 merge rules are owned by the [generation contracts](../generation/). Exact recognizers and upstream
 mappings that have not yet passed fixtures remain unresolved in
-[Open Decisions](../open-decisions.md), not accepted implementation detail in this record.
+Open Decisions, not accepted implementation detail in this record.
 
 ### Environment Direction
 
@@ -93,7 +93,7 @@ repository defaults derive from authoritative configured graph facts rather than
 The canonical layout, graph projection, dependency materialization, conflict handling, identity,
 atomic selection, retention, and safety contracts are owned by
 [Environments](../environments/). Exact Python provider and `.venv` mappings, including typed IDE
-group configuration, remain unresolved in [Open Decisions](../open-decisions.md).
+group configuration, remain unresolved in Open Decisions.
 
 Python is a later concrete environment projection. It does not define a generic environment API for
 Rust, Node, or future languages, and `rules_dx` does not create parallel per-language environment

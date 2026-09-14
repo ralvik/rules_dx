@@ -1,7 +1,7 @@
-# Consumer CI example (M27)
+# Consumer CI example
 
-Caller-owned starter wiring the versioned reusable workflow. See `caller.yml`.
-Pins `rules_dx v0.1.0`; bumps are reviewed, customizations preserved, no silent upgrades.
+Caller-owned starter wiring the reusable workflow at a reviewed commit pin. See `caller.yml`.
+Pins `rules_dx` at a reviewed commit; bumps are reviewed, customizations preserved, no silent upgrades.
 
 Required settings (manual, never configured by the template): approval policy
 `all_external_contributors`, branch protection on stable aggregate `dx-ci` with

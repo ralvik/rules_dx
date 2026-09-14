@@ -185,7 +185,7 @@ implementations demonstrate real reuse. This sequence preserves the accepted fou
 while avoiding speculative cross-language APIs.
 
 The delivery order and delivery gates are maintained in the
-[implementation plan](../implementation-plan.md). Foundation constraints are recorded in
+implementation plan. Foundation constraints are recorded in
 [ADR 0010](../decisions/0010-python-foundation.md),
 [ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md), and
 [ADR 0015](../decisions/0015-first-party-gazelle-extensions.md).
@@ -198,4 +198,4 @@ without exposing unstable subprocess command lines as API. CI checks run
 directly through Bazel; ownership is inspectable through query interfaces.
 Command, output, and report behavior is authoritative under [CLI](../cli/);
 quality evidence under [Quality](../quality/). Unresolved choices stay in
-[Open Decisions](../open-decisions.md).
+Open Decisions.

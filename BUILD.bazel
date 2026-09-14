@@ -60,12 +60,15 @@ exports_files([
     # test's runfiles so jest's ESM detection resolves first-party .js
     # as ESM (see //javascript/rules:defs.bzl).
     "package.json",
+    # Release notes: link-resolution sibling for //docs:corpus, never a
+    # checked source of this package.
+    "CHANGELOG.md",
 ])
 
-# Repository corpus (M05 WP1): root Starlark and Markdown sources owned for
-# direct-Bazel dogfood under the canonical real_fixture_policy. LICENSE and
-# the linked docs pages are unclassified link-resolution siblings, never
-# checked sources.
+# Repository corpus: root Starlark and Markdown sources owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy. LICENSE,
+# the linked docs pages, and CHANGELOG are unclassified link-resolution
+# siblings, never checked sources.
 real_source_target(
     name = "corpus",
     aspect_hints = ["//quality:corpus_vale_config"],
@@ -74,14 +77,13 @@ real_source_target(
         "//docs:contributing/local-workflows.md",
         "//docs:decisions/README.md",
         "//docs:environments/environment.md",
-        "//docs:implementation-plan.md",
-        "//docs:milestones/README.md",
-        "//docs:open-decisions.md",
         "//docs:product/README.md",
         "//docs:product/scope.md",
         "//docs:product/support-matrix.md",
         "//docs:README.md",
+        "//docs:roadmap.md",
         "//docs:testing/README.md",
+        "CHANGELOG.md",
         "LICENSE",
     ],
     markdown_srcs = [

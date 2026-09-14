@@ -1,4 +1,4 @@
-# Consumer caller template (M27 delivery): pins the qualified reusable workflow.
+# Consumer caller template: pins the qualified reusable workflow at a reviewed commit.
 # Copy to .github/workflows/ci.yml in the consumer repo; do not copy per-check logic.
 # Reviewed pin bumps only; customizations (disabled_checks, platforms) preserved across bumps.
 # Required repository settings (documented separately, not configured here):
@@ -13,7 +13,7 @@ on:
   workflow_dispatch: {}
 jobs:
   dx:
-    uses: rules_dx/.github/workflows/reusable-consumer.yml@v0.1.0
+    uses: rules_dx/.github/workflows/reusable-consumer.yml@f6bd03e7877be936e25eb1f141d4aba9fb4f9800
     with:
       rules_dx_version: "0.1.0"
       disabled_checks: ""

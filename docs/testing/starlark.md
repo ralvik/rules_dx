@@ -95,4 +95,4 @@ toolchain / configuration / output-group / action subjects, per-function
 test targets, and Rust orchestration of fixture workspaces with BEP
 consumption are explicitly future work. They require concrete use cases and
 their own milestones; consult [ADR 0009](../decisions/0009-starlark-testing.md)
-and [open decisions](../open-decisions.md) before assuming any of them.
+and open decisions before assuming any of them.

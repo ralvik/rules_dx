@@ -1,25 +1,21 @@
-# M00 minimal CI skeleton: build, test, and implementation-coverage gate on
+# Minimal CI skeleton: build, test, and implementation-coverage gate on
 # the seed host only.
 #
 # Seed host: Linux x86_64 glibc (ubuntu-latest), local execution, no remote.
-# Full host coverage and CI qualification stay in M27; unavailable required
+# Full host coverage and CI qualification stay open; unavailable required
 # hosts from ADR 0014 are recorded as gaps, not claimed here.
 #
-# M13 WP3 runs deterministic generation freshness in CI through the
+# CI runs deterministic generation freshness through the
 # canonical public path before the quality commands converge anything: a
 # clean checkout must already be generator-stable.
 #
-# M07 WP3 runs the repository dogfood through the `dx` quality commands
-# (full default path) instead of invoking the aspects directly. Default
-# runs converge the corpus, check runs prove the deterministic no-op;
-# parity with the direct aspects (findings, changes, thresholds, status)
-# is recorded in `docs/milestones/M07-completion-report.md`. The repository
+# quality runs converge the corpus, check runs prove the deterministic no-op.
+# The repository
 # corpus (`real_source_target(name = "corpus")` per package) is the dogfood
 # scope. CI installs no
 # quality tools: Buildifier, Taplo, Vale, rustfmt, and Clippy execute only
-# as Bazel-resolved pinned actions (exact-input evidence in the M04
-# completion report; actions run with an empty PATH, unit-pinned in
-# `quality_adapter::exec`). Corpus-local configs stay authoritative: aspect
+# as Bazel-resolved pinned actions (actions run with an empty PATH,
+# unit-pinned in `quality_adapter::exec`). Corpus-local configs stay authoritative: aspect
 # runs resolve Vale/Clippy policy solely from the `aspect_hints` bound by
 # each corpus target, never from CI-local copies.
 

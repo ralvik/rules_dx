@@ -1,6 +1,6 @@
 # Diagnostics And Versioning
 
-Implementation status: frozen under [O50/O51](../open-decisions.md) and delivered in M30b
+Implementation status: implemented
 (`dx status` diagnostics plus `dx version` pin/launcher/rollback dispatch).
 
 There is no `dx doctor` command per

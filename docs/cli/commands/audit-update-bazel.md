@@ -20,8 +20,8 @@ dx audit [security|license] [scope ...] [--report <format>=<destination> ...]
 ```
 
 Implementation status: the audit/update policy below is accepted and the
-O11/O12/O58 mappings are frozen (see [O11, O12, and O58](../../open-decisions.md)
-and the [M26 completion report](../../milestones/M26-completion-report.md)).
+O11/O12/O58 mappings are frozen (see O11, O12, and O58
+and the M26 completion report).
 Delivered: the `dx_audit`/`dx_update` planning gates plus `dx audit`/`dx update`
 command dispatch — `--dry-run` plans the request and exits `0`, while live runs
 fail closed (`audit_deferred`/`update_deferred`). Auditor binary wiring, advisory
@@ -51,7 +51,7 @@ not v1 scope. The proposed
 qualify that registry amendment against the single-family registry in
 [Quality Sources](../../quality/quality-sources.md) before implementation.
 The proposed `secrets` policy-family mapping
-must be reconciled with source-class applicability under [O11](../../open-decisions.md).
+must be reconciled with source-class applicability under O11.
 Dependency-vulnerability tools, sources, exact ecosystem mappings, and acquisition/report
 proofs remain unqualified; selecting Gitleaks does not establish working audit support.
 With no scope, audit selects `//...`, while each audit adapter remains responsible
@@ -159,7 +159,7 @@ no implementation or verified audit support is approved by these policy choices 
 
 The outcome and exception rules below are accepted. Use qualified per-root (per-dependency) attribution over
 conservative whole-lock strictness, without silently narrowing complete-lock audit coverage.
-Attribution is frozen per-root under [O58](../../open-decisions.md), with per-ecosystem
+Attribution is frozen per-root under O58, with per-ecosystem
 license-identity, approval/report, and SPDX-shape mappings frozen there as well.
 Proof artifacts and policy-table loading remain gaps; no working license support
 is claimed until qualified tool execution lands.
@@ -317,4 +317,4 @@ The command introduces no `dx` lockfile or dependency resolver.
 Every changed file and invoked operation must be attributable to the
 underlying updater. Ordinary builds and editor activity do not initiate dependency-version upgrades.
 Supported ecosystem mappings, selective-update syntax, remaining non-registry dependency handling, and exact
-upstream operation/report mappings remain open under [O12](../../open-decisions.md).
+upstream operation/report mappings remain open under O12.

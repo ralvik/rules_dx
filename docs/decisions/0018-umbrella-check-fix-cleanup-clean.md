@@ -71,7 +71,7 @@ graph, or mutation semantics:
 - `--dry-run` lists reclaimable generations and links without deleting.
 
 NDJSON parent framing and report merging are qualified under resolved
-[O59](../open-decisions.md). The `--bazel` flag shape, dry-run, refusal, and
+O59. The `--bazel` flag shape, dry-run, refusal, and
 commit-lock mechanics are frozen under O60 (see the [check/fix/clean
 contract](../cli/commands/check-fix-clean.md#dx-clean)); process-scan
 in-use detection and reclaimable-bytes reporting remain pending under O60.
@@ -84,7 +84,7 @@ in-use detection and reclaimable-bytes reporting remain pending under O60.
 - CI continues to use each explicit `--check`; the umbrella never changes
   check selection, platform mapping, or aggregate status.
 - `dx watch` may wrap `check` and `fix` like any other iteration command
-  once [O55](../open-decisions.md) mechanics freeze; it gains no daemon.
+  once O55 mechanics freeze; it gains no daemon.
 - Managed-state retention tests prove current-pointer preservation, refusal
   of unmanaged state, and stale-link recovery through explicit workflows.
 

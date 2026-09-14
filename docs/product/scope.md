@@ -1,31 +1,11 @@
 # Product Scope
 
-## Repository Audit
+## History
 
-At design start the repository was an initial scaffold. The only tracked files then were
-`.gitignore` and `AGENTS.md`. The table below records that starting point; it is historical
-and does not describe the current checkout, which now holds this design, `docs/`, and examples.
-
-| Area | Evidence | Design effect |
-| --- | --- | --- |
-| Bazel | `AGENTS.md` says the repository uses Bazel; no `MODULE.bazel`, lockfile, BUILD files, `.bazelrc`, or version pin exists | Bootstrap choices remain open; no existing target model can be migrated or validated yet |
-| Custom rules | No Starlark, rules, macros, providers, aspects, toolchains, or generators exist | Every public Starlark API in this design is proposed |
-| Languages | No source language or language configuration exists | Rust is selected for `dx` and shared runners; Starlark declares Bazel actions |
-| Developer tools | No formatter, linter, type checker, test framework, coverage tool, or Gazelle setup exists | The frozen tool list is a minimum inventory; first-release admission below governs feasible expansion |
-| Wrappers | No scripts, CLI, task runner, Bazel wrapper, or Bazelisk launcher exists | `dx` has no compatibility obligation; the accepted launcher policy uses `.bazelversion` with Bazelisk |
-| CI and release | No CI, tags, releases, version source, or packaging exists | CI and distribution cannot be assumed by early milestones |
-| Documentation | At design start no README, `docs/`, ADR convention, or examples existed | `docs/` establishes the first architecture convention |
-| Local configuration | `.gitignore` excludes Bazel outputs and `user.bazelrc` | Shared behavior must not rely on untracked local flags |
-
-`AGENTS.md` requires Bazel, warnings as errors, focused tests and documentation,
-formatter and linter execution after code changes, no direct edits to generated
-files, concise README files, and substantial examples under `examples/`. There is
-currently no command capable of satisfying its formatter and linter requirement.
-
-No existing documentation was overwritten. The repository has no established
-architecture location, so the design lives under `docs/`. The requested
-`decisions/` name is retained rather than introducing a competing `adr/`
-convention.
+Early design started from a near-empty scaffold and recorded its starting
+inventory and greenfield risks here. That material now lives only in git
+history; the sections below describe the product as built. See
+`../../CHANGELOG.md` for release status.
 
 ## Product Boundary
 
@@ -79,7 +59,7 @@ quality-tool baseline. A language's foundation deferral is not permission to omi
 The [support matrix](support-matrix.md) is the minimum candidate inventory. Its
 [minimal core freeze](support-matrix.md#minimal-required-core-freeze-o46-pre-m00) records the
 pre-M00 required set, provisional upstreams, owning decisions, delivery milestones, and roles.
-Under [O46](../open-decisions.md), review the wider upstream ecosystem and record each named capability's
+Under O46, review the wider upstream ecosystem and record each named capability's
 rules/tools, acquisition route, public providers, dependency authority, applicable platforms,
 integration effort, contract compatibility, evidence, and delivery owner. Apply the same review to
 existing feature exclusions, additional test runners, framework adapters, plugins, audit/update
@@ -194,7 +174,7 @@ tests remain required.
 The two-test requirement and explained usage exceptions are accepted, but ecosystem-specific
 lock/usage scopes, non-import recognition, native exception/reason-validation mappings, and exact
 public test/capability API remain
-open under [O46](../open-decisions.md). Qualify each supported language's mapping and focused
+open under O46. Qualify each supported language's mapping and focused
 failing/passing consumer fixtures before implementation. Existing strict generation alone is not
 proof of lockfile consistency or declared-dependency usage. This is dependency hygiene, not an
 expansion of `dx audit`.
@@ -264,17 +244,5 @@ resolution, caching, lockfile, action graph, BUILD syntax, or plugin mechanisms.
 Repository-managed dependencies use exact latest-stable pins under
 [ADR 0008](../decisions/0008-dependency-currency.md).
 
-## Greenfield Risks
-
-- The proposed target and action model cannot yet be measured against real source
-  packages.
-- Tool acquisition and platform support have no repository precedent.
-- There is no consumer workspace proving the `aspect_rules_py` 2.x wrappers,
-  providers, uv workflow, venvs, or required platform matrix.
-- There is no CI or remote cache/execution environment in which to validate
-  hermeticity and cache behavior.
-- First-release parity across many ecosystems is a large compatibility and test
-  commitment even though adapters share one architecture.
-
-These risks justify a fixture-first validation milestone before freezing public
-rules or CLI selection behavior.
+History: greenfield risks and the fixture-first validation approach that
+retired them live only in git history.

@@ -11,7 +11,7 @@ public NDJSON and standard-report API in [Output Protocol](../cli/output-protoco
 Every lint, typecheck, or format target/capability pipeline action emits one bounded binary
 Protobuf result message. Non-mutating audit may emit one message per target/tool action. The
 checked-in [`quality/result.proto`](../../quality/result.proto) is the source of truth:
-field/enum numbers and reserved ranges are frozen under [O18](../open-decisions.md) with
+field/enum numbers and reserved ranges are frozen under O18 with
 this initial implementation. Bazel generates the Rust crate `result_proto` via
 `//quality:result_proto_rs`, and `//quality/result:quality_result` implements the result-side
 validation, BLAKE3 digest, and deterministic codec (`validate`, `encode_validated`,

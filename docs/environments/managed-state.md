@@ -148,7 +148,7 @@ all handles to the locked file description close, so the lock handle must not be
 by child processes. PID files, stale-lock age checks, and deleting the lock path never authorize a
 commit. This selection does not establish cross-platform correctness: O36 still requires the
 selected Rust pin, platform semantics, contention, and crash-release evidence in
-[Open Decisions](../open-decisions.md).
+Open Decisions.
 
 ## Installation And Ownership
 
@@ -158,7 +158,7 @@ generation and setup links, generated mirror leaves, `.venv`, and root or import
 projection mode. Windows requires permission to create symlinks, normally through Developer Mode;
 missing capability fails before mutation with actionable setup guidance. Windows CI hosts must
 grant this capability; hosts that cannot are recorded as gaps under
-[O14](../open-decisions.md) rather than receiving a fallback mode.
+O14 rather than receiving a fallback mode.
 
 Initial installation or repair refuses an unmanaged `.dx/bin`, setup pointer, setup record,
 generation directory, `.venv`, `node_modules`, importer facade, or other native facade. A directory

@@ -19,7 +19,7 @@ additional standard report format.
 ## `dx run`
 
 Status: scope and forwarding qualified under
-[O52](../../open-decisions.md); implementation may proceed against this
+O52; implementation may proceed against this
 section. Strict single-target execution applies to file/directory
 resolution scopes only — labels and target patterns pass through to
 `bazel run` unchanged (Bazel owns alias and executability). A file or

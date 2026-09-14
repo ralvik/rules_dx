@@ -22,7 +22,7 @@ dependency cannot force one global graph on its consumers.
 
 This table is the single source for the v1 required-host set. All other
 documents link here instead of restating it. Exact pins, hosts, floors, SDK/CRT
-identities, and qualified routes remain owned by [O14 and O37](../open-decisions.md);
+identities, and qualified routes remain owned by O14 and O37;
 nothing below pins a version.
 
 | Platform | V1 status | Notes |
@@ -61,7 +61,7 @@ compiler/SDK infrastructure. The provisional
 [native qualification plan](../native-toolchains.md) selects the first backend/compiler candidates
 and cross-build cohort from upstream evidence. Final backend adoption, exact compiler/SDK/STL/CRT
 identities, licensing, and public mappings remain gated by
-[Open Decisions](../open-decisions.md). If no existing route satisfies these requirements with
+Open Decisions. If no existing route satisfies these requirements with
 bounded integration, report the blocker rather than silently relaxing acquisition or compatibility.
 No pin, host, floor, or acquisition identity in the provisional native plan is normative
 through this record; O14/O37 own those values.

@@ -173,7 +173,7 @@ Raw Bazel progress and BEP events are never part of this API.
 
 Lint, typecheck, format, generate, check, and fix accept `check`.
 [`docs --check`](commands/docs.md) is validation without rendering; its output mapping
-follows the frozen [O54](../open-decisions.md) mappings. Docs build and check do not emit source `change` or
+follows the frozen O54 mappings. Docs build and check do not emit source `change` or
 `mutation` events for generated Bazel artifacts. Other commands use `default`.
 Subject to the collection and manifest validation rules below, JSON reports each exact calculated
 file change in both check and default modes as a `change`. Default mode additionally reports each
@@ -438,7 +438,7 @@ cannot coexist with NDJSON; successful document output plus process status is it
 confirmation in text mode.
 
 The license family's [SPDX 2.3 JSON report](commands/audit-update-bazel.md#license-family-dx-audit-license)
-follows the frozen [O58](../open-decisions.md) mappings; its shared-report format identifier
+follows the frozen O58 mappings; its shared-report format identifier
 and event mapping are constrained by those mappings, not a new profile defined here.
 
 ```json
@@ -608,7 +608,7 @@ replace the selected failure or reorder durable output.
 The [update exception](commands/audit-update-bazel.md#dx-update) permits later independent
 selected dependency sets to run after a set failure, preserving successes and reporting
 blocked dependents. Operation boundaries, per-set reporting, and aggregate
-exit selection follow the frozen [O12](../open-decisions.md) mappings; live resolver-backend
+exit selection follow the frozen O12 mappings; live resolver-backend
 execution remains a gap. This does not authorize new event fields or update
 mutation events, nor parallel execution.
 
@@ -623,7 +623,7 @@ execution with `conflicting_option` naming `--report`.
 
 ## Standard Reports
 
-The report formats, SARIF/JUnit/LCOV profiles, SPDX mapping (frozen under [O58](../open-decisions.md);
+The report formats, SARIF/JUnit/LCOV profiles, SPDX mapping (frozen under O58;
 SPDX parsing/loading remains a gap), destination validation,
 deterministic ordering, and partial-document behavior are defined in
 [Standard Reports](standard-reports.md). This document owns only report interaction with
@@ -640,7 +640,7 @@ generate, env, codegen, setup, and `dx bazel` therefore preserve Bazel's code wh
 Bazel is the failing operation. Quality commands may return `1` after a successful Bazel
 invocation when normalized findings cross `--fail-on` or check mode proposes changes.
 For multiple selected update sets, any failed set makes the overall command fail; aggregate
-exit-code selection follows the frozen [O12](../open-decisions.md) mappings rather than the first-failure rule above.
+exit-code selection follows the frozen O12 mappings rather than the first-failure rule above.
 
 On Unix, `dx` forwards an interrupting signal and re-raises it after safe cleanup so shell
 signal semantics are preserved; no `command_finished` event is promised after signal

@@ -1,7 +1,6 @@
 # `dx init` And `dx hooks`
 
-Implementation status: O49 mappings frozen (see [O49](../../open-decisions.md)
-and the [M30b completion report](../../milestones/M30b-completion-report.md)).
+Implementation status: implemented.
 Delivered: `dx init` absent-only scaffolding plus `dx hooks`
 install/uninstall/status/run dispatch with hermetic Git and 120s budgets
 (`dx_adopt` gates plus CLI dispatch). Force/unmanaged refusal and two-layer
@@ -14,7 +13,7 @@ execution lands.
 `dx init` scaffolds a new repository: module and `//dx` target wiring, workspace config,
 CI caller template, hermetic hook installation, devcontainer, the single-version `dx`
 pin (the `dx` version equals the pinned `rules_dx` module version per
-[O51](../../open-decisions.md)), the committed direnv `.envrc` defined in
+O51), the committed direnv `.envrc` defined in
 [Direnv Integration](../../environments/environment.md#direnv-integration), and generated
 VSCode configuration. The VSCode output is
 generated settings only (`.vscode/settings.json` pointing rust-analyzer, `gopls`,
@@ -27,7 +26,7 @@ Bootstrap writes are absent-only and do not inspect Git to classify files as tra
 or untracked. Init never contacts the network beyond pinned artifact fetch.
 
 Bootstrap destination mechanics and any `--force` syntax or managed-replacement behavior
-follow the frozen [O49](../../open-decisions.md) mappings: absent-only bootstrap writes,
+follow the frozen O49 mappings: absent-only bootstrap writes,
 unmanaged refusal even with force. Unqualified force behavior remains blocked:
 force cannot authorize overwriting arbitrary existing files or unmanaged hooks.
 

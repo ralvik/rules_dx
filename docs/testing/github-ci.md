@@ -227,5 +227,5 @@ routes and does not install an all-open-PR rerun bot or modify repository settin
 ## Qualification
 
 Qualification requirements are retained with the cases above. See the
-[GitHub CI contract](../github-ci.md) and [open decisions](../open-decisions.md)
+[GitHub CI contract](../github-ci.md) and open decisions
 for unresolved qualification work.

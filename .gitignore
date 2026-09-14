@@ -9,6 +9,11 @@ AGENTS.local.md
 # Ralph Loop local state (machine-managed)
 .opencode/ralph-loop.local.md
 
+# Release outputs (never commit; rebuilt locally on demand)
+# No tags, GitHub releases, or registry submissions without explicit owner approval.
+/dist/
+/release/
+
 # Operating systems
 .DS_Store
 **/.DS_Store

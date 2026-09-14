@@ -1,6 +1,6 @@
 # Decision Records
 
-Unresolved choices live in the [open decisions](../open-decisions.md).
+Open work lives in [GitHub issues](https://github.com/ralvik/rules_dx/issues).
 
 Decision records use zero-padded numbers and these statuses: Accepted, Provisional, Superseded, or
 Rejected. Records carry a `Date:` line only where the decision date is evidenced; the table

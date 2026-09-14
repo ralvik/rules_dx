@@ -1,1 +1,0 @@
-{"predicateType":"local-candidate-only","note":"Detached SLSA attestation issues in CI OIDC; this placeholder binds dist/ digests only, never a signature.","subjectsFrom":"dist/SHA256SUMS"}

@@ -2,24 +2,25 @@
 
 ## Application Foundations
 
-`Planned` means the capability is accepted scope but not implemented or verified.
-`Planned: feasibility` means required v1 evaluation under [first-release admission](scope.md#first-release-admission):
+`Planned` below means accepted scope delivered on the Linux x86_64 seed host
+without required-platform, external-consumer, or trusted-builder release
+evidence; see `../../CHANGELOG.md`. `Planned: feasibility` means evaluation
+under [first-release admission](scope.md#first-release-admission):
 admit qualifying capabilities, or record an approved disposition. Additional foundations may be
 deferred when completion needs substantial infrastructure; required quality tools are independent.
-Upstream mappings are not yet qualified; provisional candidates are recorded separately.
-`Not planned` records an existing capability gap that O46 must reassess, not permission to defer a
+Remaining upstream mappings are tracked in [GitHub issues](https://github.com/ralvik/rules_dx/issues).
+`Not planned` records an existing capability gap reassessed during delivery, not permission to defer a
 qualifying integration. `Deferred beyond v1` records an evidence-backed deferral of an additional
 foundation under [first-release admission](scope.md#first-release-admission); the row's quality-tool
 cells stay in force and are unaffected by the deferral. `External` identifies an
 existing Bazel/Bzlmod capability rather than a `rules_dx` support claim. `N/A` means the
 capability does not apply to that source family. The repository [README](../../README.md) owns the
 current project status; no cell is currently `Supported`. Status cells are owned by
-this matrix, and promotion to `Supported` requires release evidence per the
-[milestone index](../milestones/README.md#capability-terms).
+this matrix, and promotion to `Supported` requires release evidence.
 
 `Audit` means source audit over declared source owners. Ecosystem dependency-vulnerability audit
-coverage is separate and remains unresolved in [O11](../open-decisions.md); this matrix makes no
-ecosystem audit-tool or dependency-source claim.
+coverage is separate; see the [audit contract](../cli/commands/audit-update-bazel.md). This matrix makes no
+ecosystem audit-tool or dependency-source claim beyond that contract.
 
 The following core and named framework foundations are required for v1 on every
 [required platform](../decisions/0014-tested-platform-release-stack.md#required-platforms).
@@ -41,14 +42,14 @@ IDE, coverage, platform, and external-consumer evidence passes. Quality is indep
 and lazy before foundation completion, but `Supported` promotion occurs only during release
 qualification. Generic framework cells intentionally do not select exact tools,
 providers, or region mappings; those choices remain open in
-[O29 and O40-O43](../open-decisions.md).
+O29 and O40-O43.
 
 ## Minimal Required Core Freeze (O46, Pre-M00)
 
 This section is the O46 minimal required core/framework inventory freeze required before
 M00. It records what is in, which provisional upstream each item builds on, which open
 decision owns each remaining mapping, and which milestone delivers it. Exact pins, hosts,
-and floors remain owned by [O14/O37](../open-decisions.md); no version
+and floors remain owned by O14/O37; no version
 below is a release pin. Ownership: the sole repository maintainer owns every row until
 maintenance is explicitly delegated. Effort beyond milestone assignment is estimated from
 qualification evidence as each O-item lands; no person-hour figures are frozen here.
@@ -153,8 +154,10 @@ choices are owned by the [native qualification plan](../native-toolchains.md). O
   [Gazelle](https://github.com/bazel-contrib/bazel-gazelle) offer SDK acquisition, package build/test,
   module dependencies, and generation. The approved narrow Go exception preserves package-level
   tests and declared platform/build constraints under the
-  [generation contract](../generation/common.md#ownership-and-naming); exact mappings remain open.
-  Source-only module identity, strict dependency resolution, and cgo/race scope remain unresolved.
+  [generation contract](../generation/common.md#ownership-and-naming); exact mappings remain open
+  ([issue #7](https://github.com/ralvik/rules_dx/issues/7)).
+  Source-only module identity, strict dependency resolution, and cgo/race scope remain unresolved;
+  open work is tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7).
 - The documented [Go editor driver](https://github.com/bazel-contrib/rules_go/blob/v0.63.0/docs/editors.md)
   invokes Bazel. That automatic integration is approved under
   [environment refresh](../environments/environment.md#ownership-and-refresh), following the
@@ -271,14 +274,14 @@ summarized in [Candidate Disposition Status](#candidate-disposition-status).
   checksum lockfile) is the provisional Maven-dependency route over the bundled
    `rules_java` toolchain. Bazel documents a hermetic compile route via
    `remote_java_repository` and `--java_runtime_version` flags; per-platform JDK
-   acquisition and coverage integration remain open under O31 (M23); lock
+   acquisition and coverage integration remain open ([issue #8](https://github.com/ralvik/rules_dx/issues/7)); lock
    authority is `maven_install.json`
    ([Provisional Default Dependency Locks](#provisional-default-dependency-locks)).
    Admitted to v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
 - Kotlin: [`rules_kotlin` 2.4.10](https://registry.bazel.build/modules/rules_kotlin)
   (Bzlmod) is the provisional build/test route on the same
   JVM toolchain and Maven-lock story as Java. Kotlin compiler acquisition,
-  worker behavior, and IDE projection remain open under O31 (M23). Admitted to
+  worker behavior, and IDE projection remain open ([issue #8](https://github.com/ralvik/rules_dx/issues/7)). Admitted to
   v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
 - Scala: [`rules_scala` 7.x](https://github.com/bazel-contrib/rules_scala)
   (bazel-contrib, Bazel 7/8 plus Bzlmod, Coursier-backed Scala
@@ -288,13 +291,13 @@ summarized in [Candidate Disposition Status](#candidate-disposition-status).
   `fail_if_repin_required`), Scalafix semantic rules need semanticdb plus
   classpath wiring per the adapter-input notes, and no source-built or
   toolchain-coupled native advantage was evidenced; M23 consumes the
-  outcome. Mappings remain open under O31. Admitted to v1
+  outcome. Mappings remain open ([issue #8](https://github.com/ralvik/rules_dx/issues/7)). Admitted to v1
   by [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
 - C# and F#: [`rules_dotnet` 0.22.2](https://github.com/bazel-contrib/rules_dotnet)
   (Bzlmod, Bazel >= 8) covers both languages with `csharp_*`
    and `fsharp_*` targets plus SDK acquisition through its `dotnet` toolchain
    extension, so one upstream review covers both rows. Per-platform SDK
-   acquisition and test-runner versions remain open under O31 (M23); lock
+   acquisition and test-runner versions remain open ([issue #8](https://github.com/ralvik/rules_dx/issues/7)); lock
    authority is the Paket lock
    ([Provisional Default Dependency Locks](#provisional-default-dependency-locks)).
    C# and F# admitted to v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
@@ -305,7 +308,7 @@ summarized in [Candidate Disposition Status](#candidate-disposition-status).
   cohort. Gem/bundler integration and the packaging-effort boundary stay the
   cost drivers under O31; M23 already bounds Ruby as an exceptional bundle
   within the O46-approved effort. Mappings and the effort boundary remain open
-  under O31 (M23). Foundation deferred beyond v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md);
+  ([issue #8](https://github.com/ralvik/rules_dx/issues/7)). Foundation deferred beyond v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md);
   the RuboCop/StandardRB tool cohort stays under O31 (M23).
 - PowerShell: [`rules_powershell` 0.2.0](https://github.com/periareon/rules_powershell)
   (in the Bazel Central Registry, built over `rules_shell`) is the only known
@@ -313,7 +316,7 @@ summarized in [Candidate Disposition Status](#candidate-disposition-status).
   dependency, environment, and IDE stories for `.ps1` application foundations
   are unproven, and PSScriptAnalyzer integration is unassessed; this row
   carries the highest deferral risk if qualification shows substantial missing
-  infrastructure. All mappings remain open under O31 (M23). Foundation deferred
+  infrastructure. All mappings remain open ([issue #8](https://github.com/ralvik/rules_dx/issues/7)). Foundation deferred
   beyond v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md); the PSScriptAnalyzer tool cohort
   stays under O31 (M23).
 
@@ -571,8 +574,8 @@ O46 must verify applicability, including existing `N/A` cells, rather than infer
 | Language-independent text | N/A | N/A | N/A | N/A | N/A | N/A | N/A | Planned: keep-sorted |
 
 Every cell above is current design status. The named quality integrations form the intended
-minimum first-release quality baseline; only the Linux x86_64 seed-host implementation and the
-v0.1.0 local candidate exist so far, and no cell is `Supported` yet (release evidence pending). Swift and SwiftFormat are
+minimum first-release quality baseline; only the Linux x86_64 seed-host implementation
+exists so far, and no cell is `Supported` yet (release evidence tracked in the issue tracker). Swift and SwiftFormat are
 excluded from v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md):
 the `Not planned` Swift row above is an evidence-backed v1 exclusion, not a
 feasibility assessment awaiting O46. A host-toolchain

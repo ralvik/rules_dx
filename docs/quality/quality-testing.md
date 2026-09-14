@@ -521,7 +521,7 @@ maintenance remains covered by the existing [generation tests](../testing/genera
 
 Every required entry in [First-Release Tool Baseline](../tools/tool-baseline.md), including mandatory
 curated expansion under [First-Release Admission](../product/scope.md#first-release-admission)
-and O46 in the [open-decision register](../open-decisions.md), requires a fixture using
+and O46 in the open-decision register, requires a fixture using
 the tool's native configuration, passing and failing diagnostics, supported platform
 coverage, and applicable fix/format output. A generated parity manifest must fail CI
 when a required entry lacks its tests. Swift and SwiftFormat are excluded from v1 by user

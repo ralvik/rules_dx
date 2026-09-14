@@ -16,9 +16,9 @@ a workflow automatic.
 
 Upstream `ibazel` (`bazelbuild/bazel-watcher`) covers `build`/`test`/`run` on
 explicit labels only. It cannot reuse `dx` file-to-owner resolution
-([O44](../open-decisions.md)), all-direct-owners quality selection
+(O44), all-direct-owners quality selection
 ([Target Resolution](../cli/target-resolution.md)), single-runnable enforcement
-([O52](../open-decisions.md)), or `lint`/`typecheck`/`format` converge-and-apply
+(O52), or `lint`/`typecheck`/`format` converge-and-apply
 semantics ([Output Protocol](../cli/output-protocol.md)). Users requested an
 inner loop for `build`, `test`, `run`, `lint`, `typecheck`, and `format`
 including file scope.

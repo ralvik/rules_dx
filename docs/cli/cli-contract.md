@@ -127,7 +127,7 @@ requiring Bzlmod migration; `dx` does not provide a second dependency setup path
 This applies to every command, including `dx bazel`, except that `dx init` may
 bootstrap a new repository without an existing `MODULE.bazel`. This narrow exception
 does not add legacy WORKSPACE support or bypass discovery for ordinary workflows.
-Bootstrap destination mechanics follow the frozen [O49](../open-decisions.md) mappings;
+Bootstrap destination mechanics follow the frozen O49 mappings;
 the [init contract](commands/hooks.md#dx-init) permits absent-only bootstrap writes,
 not Git-based tracked-file safety checks.
 
@@ -215,7 +215,7 @@ an explicit label-representation contract.
   [update contract](commands/audit-update-bazel.md#dx-update) owns dependency-set
   independence and partial-success semantics. Aggregate exit-code selection,
   backend mapping, and report qualification follow the frozen
-  [O12](../open-decisions.md) mappings; live resolver-backend execution remains a gap.
+  O12 mappings; live resolver-backend execution remains a gap.
   Ordinary fail-fast behavior, including `dx check` and
   `dx fix`, is unchanged.
 - Signals are forwarded to the active Bazel process; interruption should preserve

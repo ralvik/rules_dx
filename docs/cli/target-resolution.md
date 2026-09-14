@@ -27,7 +27,7 @@ filesystem source discovery; aspects and providers determine applicable work.
 
 ## File Ownership
 
-Selected strategy ([O44](../open-decisions.md), qualified by M08 WP0 prototypes
+Selected strategy (O44, qualified by M08 WP0 prototypes
 against fixture targets): unconfigured `bazel query` only — no `cquery`, no
 purpose-built aspect. Ownership of one file is
 `kind('rule', rdeps(//..., <file-label>, 1))` at depth exactly 1 over the

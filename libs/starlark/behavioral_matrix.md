@@ -9,8 +9,8 @@ passing test) yielded a 0-byte `coverage.dat` and zero `SF` records, no
 Starlark coverage flags exist (`bazel help build` shows only the generic
 `--coverage_output_generator`, `--coverage_report_generator`,
 `--coverage_support`), and the upstream Starlark-coverage proposal
-(`bazelbuild/bazel#15594`) was never accepted. Full probe detail lives in
-the [M01 completion report](../../docs/milestones/M01-completion-report.md).
+(`bazelbuild/bazel#15594`) was never accepted. Full probe detail is preserved
+in git history.
 
 This matrix is repository metadata, not a result stream. Every inventory
 item maps to passing tests with meaningful behavior assertions. Presence of

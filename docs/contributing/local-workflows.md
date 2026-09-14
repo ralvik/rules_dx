@@ -16,14 +16,14 @@ Coverage follows the mandatory project gate described in
 
 ## Corpus Dogfood
 
-The repository corpus (`real_source_target(name = "corpus")` per package,
-see [M05](../milestones/M05-direct-bazel-dogfood.md)) is checked with the
+The repository corpus (`real_source_target(name = "corpus")` per package)
+is checked with the
 real lint/format aspects; every produced result must pass the per-result
 evaluator at `--fail_on warning`. The same invocations run in CI
 (`.github/workflows/ci.yml`, job `corpus-dogfood`), which installs no
 quality tools: all tools execute as Bazel-resolved pinned actions.
 
-Select the corpus targets (currently 23), then build their `dx_results`:
+Select the corpus targets, then build their `dx_results`:
 
 ```sh
 bazel query "attr(name, '^corpus$', kind(real_source_target, //...))" \
@@ -96,19 +96,18 @@ auto-merge). The loop stays manual: run the regen, review the flag diff,
 update the test pins, run full verification (`bazel build //...`,
 `bazel test //...`, plus the corpus dogfood above), then merge by hand.
 
-## Planned Linux-First Bring-Up
+## Linux-First Bring-Up
 
-M00 starts Linux-first with local-only execution per
-[M00](../milestones/M00-bazel-rust-ci-seed-quality.md). Record unavailable
+Bring-up starts Linux-first with local-only execution. Record unavailable
 required hosts from
 [ADR 0014](../decisions/0014-tested-platform-release-stack.md#required-platforms)
 as gaps at entry; do not claim them. Linux-first is bring-up order, not a scope
 reduction: v1 retains full required-host coverage.
 
-## Planned Local-Only Coverage
+## Local-Only Coverage
 
-M00 coverage is local-only. The mandatory
-[project coverage gate](../testing/README.md#coverage) must pass at M00 exit;
+Coverage is local-only. The mandatory
+[project coverage gate](../testing/README.md#coverage) must pass;
 Codecov service activation and fork-PR handling remain under the
 [O14 qualification requirements](../testing/README.md#github-coverage-reporting).
 Do not present local reports as service evidence.
@@ -120,5 +119,5 @@ Future `dx init`/`dx hooks install` setup is planned to create a root
 The planned overlay merges per-person over the committed typed `hooks`
 workspace-policy section, with both triggers configurable in both layers.
 This checkout does not consume the overlay or currently gitignore it.
-Exact schema stays under [O49](../open-decisions.md) and the
+Exact schema stays under the
 [hooks contract](../cli/commands/hooks.md); this is not a current setup step.

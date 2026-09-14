@@ -29,13 +29,11 @@ authoritative product, design, delivery, and governance documents.
 
 ## Delivery And Governance
 
-- [Implementation plan](implementation-plan.md): delivery flow, dependency order, and milestone index.
-- [Milestones](milestones/README.md): implementation scope and acceptance criteria. Spec format
-  and authoring rules live in [milestone instructions](milestones/AGENTS.md); copy the
-  [milestone template](milestones/TEMPLATE.md) for new milestones.
+- [Roadmap](roadmap.md): current tracks and priorities.
+- [Changelog](../CHANGELOG.md): release history.
 - [Decision records](decisions/README.md): accepted, provisional, superseded, and rejected decisions.
   Authoring rules live in [decision instructions](decisions/AGENTS.md).
-- [Open decisions](open-decisions.md): unresolved choices requiring review.
+- [Planned work](https://github.com/ralvik/rules_dx/issues): scoped tracks.
 
 ## Contributing
 
@@ -53,9 +51,8 @@ authoritative product, design, delivery, and governance documents.
 | Accepted decision records | Normative architectural and product constraints; they override conflicting provisional design prose |
 | Product scope and support matrix | Authoritative product boundary, repository evidence, and current support claims, subject to accepted decisions |
 | Design contracts and protocols | Authoritative component behavior within accepted product and decision constraints |
-| Implementation plan and milestones | Authorized delivery scope, sequence, acceptance criteria, and required evidence; they do not override accepted decisions |
 | Provisional decisions and explicitly provisional design | Validation targets, not stable commitments |
-| Open decisions | Unresolved questions with no authority to select an outcome |
+| Planned work tracker | Scoped planned work with status and next steps in GitHub issues; not normative behavior |
 | Agent instructions | Procedural instructions only; they do not define product semantics or architecture contracts |
 
 If authoritative documents conflict, stop affected work and resolve the documents rather than

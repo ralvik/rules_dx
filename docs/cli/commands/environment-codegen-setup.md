@@ -85,4 +85,5 @@ shared O36 commit lock. `--dry-run` plans only and exits 0. Build, staging,
 validation, or commit failure leaves the current setup unchanged (exit 1
 with `managed_commit_failed`, or `no_capability` when an exact scope provides
 neither capability); staged-but-unselected generations remain as retained
-cache. See [Open Decisions](../../open-decisions.md).
+cache. Remaining collection items are tracked in
+[GitHub issues](https://github.com/ralvik/rules_dx/issues).

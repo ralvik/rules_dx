@@ -33,7 +33,7 @@ The command surface is:
 - `dx docs` for Bazel-owned documentation extraction, validation, and rendering; `--check`
   performs extraction and validation without rendering, and `--serve` previews built outputs.
   Both build and check are source-non-mutating. Exact scope, invocation combinations, and protocol
-  mechanics follow the frozen [O54](../open-decisions.md) mappings in the [docs contract](../cli/commands/docs.md);
+  mechanics follow the frozen O54 mappings in the [docs contract](../cli/commands/docs.md);
   per-language adapter runs and renderer/site-build execution remain gaps.
 - `dx update` for authoritative dependency-update workflows.
 - `dx generate` for the mutating repository-defined Gazelle workflow, with non-mutating
@@ -48,7 +48,7 @@ The command surface is:
    version pin. It may bootstrap without an existing `MODULE.bazel` and writes only
    absent files, without Git-based tracked-file inspection. Bootstrap destination
    mechanics and force syntax/managed-replacement behavior follow the frozen
-   [O49](../open-decisions.md) mappings; unqualified force behavior is blocked.
+   O49 mappings; unqualified force behavior is blocked.
 - `dx hooks` for managing the custom hermetic git-hook runner in an existing repository
   (`install`, `uninstall`, `status`). Hook management and staged-file selection are narrow
   Git exceptions: all product Git operations for hooks use hermetic managed Git, never
@@ -127,7 +127,7 @@ selected dependency sets after a set failure, skip operations dependent on that 
 preserve successful changes, and return overall failure. This preserves independent progress
 without a repository-wide rollback; the [update contract](../cli/commands/audit-update-bazel.md#dx-update)
 owns set independence. Aggregate exit-code selection, backend mapping, and report
-qualification follow the frozen [O12](../open-decisions.md) mappings; live resolver-backend
+qualification follow the frozen O12 mappings; live resolver-backend
 execution remains a gap. Ordinary plans, including
 the `dx check` and `dx fix` umbrellas, retain their first-failure behavior.
 
@@ -139,7 +139,7 @@ arguments, modes, or index controls. Arguments after `--` are Bazel
 command options placed before canonical `//dx:generate`, never Gazelle arguments. Advanced
 users may invoke the Bazel target or Gazelle directly outside the `dx generate` contract.
 Exact scoped-selection syntax, empty-scope handling, and freshness semantics for scoped
-`--check` are qualified under [O48](../open-decisions.md).
+`--check` are qualified under O48.
 The command does not require a recognized manifest or existing application target: Gazelle
 discovers supported sources and creates initial target declarations. Manifests remain
 authoritative for project and dependency metadata, and generation does not analyze or execute the
@@ -239,7 +239,7 @@ absent side uses a versioned managed empty generation.
 - Combining lint and type checking into one command.
 - A `dx new` app/service/component template generator: out of v1 (rejected 2026-09-09); new-repository
   scaffolding stays in `dx init`, BUILD maintenance stays in `dx generate`, and breaking-change
-  rewrites stay open under [O57](../open-decisions.md). No `dx new` command is selected.
+  rewrites stay open under O57. No `dx new` command is selected.
 - Language/profile selectors, path/pattern scope, or an interactive shell under
   `dx env`.
 - Making `env` or `codegen` implicitly run the other instead of using explicit

@@ -1,12 +1,11 @@
 # Documentation IR
 
 Implementation status: the pipeline direction is accepted v1 scope and the
-O54 mappings are frozen (see [O54](../open-decisions.md) and the
-[M30a completion report](../milestones/M30a-completion-report.md)).
+docs-pipeline mappings are frozen.
 Delivered: the `dx_docs` planning gates plus `dx docs` command dispatch —
 `--check` validates without rendering, normal build validates then renders.
 Extractor execution, per-language adapter runs, renderer/site-build execution,
-and guide-step CI wiring remain gaps; no working docs support is claimed until
+and guide-step CI wiring remain gaps ([issue #10](https://github.com/ralvik/rules_dx/issues/10)); no working docs support is claimed until
 qualified execution lands.
 
 ## Versioning
