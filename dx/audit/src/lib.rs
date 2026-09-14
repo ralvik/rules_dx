@@ -21,9 +21,12 @@
 //! which families run over which scope spellings.
 //!
 //! The risk-acceptance exception lifecycle (version-scoped, reasoned,
-//! expiring, obsolete) lives in [`exception`].
+//! expiring, obsolete) lives in [`exception`]. Secrets-integration
+//! qualification planning (Gitleaks artifact identity, SARIF/redact
+//! wiring, exit classification) lives in [`secrets`].
 
 pub mod exception;
+pub mod secrets;
 
 /// Audit family selector. Frozen spellings match the `dx audit` contract
 /// so CLI parsing and help text cannot drift from the qualified shape.

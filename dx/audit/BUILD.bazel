@@ -12,6 +12,7 @@ dx_rust_library(
     srcs = [
         "src/exception.rs",
         "src/lib.rs",
+        "src/secrets.rs",
     ],
     aliases = aliases(
         package_name = "dx/dx_audit",
