@@ -1,4 +1,4 @@
-"""M28 slices 1-3: pure release-qualification planning (blocker disposition, support-label gate, API-change classification, registry exactness, artifact identity/packaging boundary, reproducibility/verification binding)."""
+"""M28 slices 1-4: pure release-qualification planning (blocker disposition, support-label gate, API-change classification, registry exactness, artifact identity/packaging boundary, reproducibility/verification binding, coverage/aggregate/CI-requalification/publication-handoff gates)."""
 
 load("@crates//:crates.bzl", "aliases")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")

@@ -1,6 +1,7 @@
-//! Pure release-qualification planning (M28 slices 1-3: WP1 blocker disposition,
+//! Pure release-qualification planning (M28 slices 1-4: WP1 blocker disposition,
 //! WP2 API/support/registry freeze; WP5 artifact-identity/packaging boundary,
-//! reproducibility and verification binding).
+//! reproducibility and verification binding; WP4/WP6/WP7 evidence inventory,
+//! coverage gate, consumer-CI requalification, publication handoff).
 //!
 //! This crate owns the qualification shape before any release candidate,
 //! platform run, external-consumer run, signing, provenance, or publication
@@ -8,8 +9,10 @@
 //! public-API change classification, command-registry exactness, artifact
 //! identity over exact published bytes, the embedded-vs-detached packaging
 //! boundary, manifest completeness, attestation subject binding,
-//! reproducibility comparison, verification binding, and the self-attestation
-//! level cap. It plans over injected booleans/strings only, so the rules stay
+//! reproducibility comparison, verification binding, the self-attestation
+//! level cap, the release coverage gate, aggregate/matrix completeness, CI
+//! identity requalification, and the M28-to-M29 publication handoff. It plans
+//! over injected booleans/strings/numbers only, so the rules stay
 //! deterministic and unit-testable without platforms, consumers, builders,
 //! or credentials.
 //!
@@ -301,6 +304,86 @@ pub fn self_attested_level_admissible(claimed_level: u8, self_attested: bool) ->
     true
 }
 
+/// Whether the release coverage gate passes for one source class.
+///
+/// The central gate passes only with a present report, valid ignore/reason
+/// directives, and zero uncovered non-ignored executable lines. Missing
+/// reports, invalid or unreasoned ignores, and any uncovered non-ignored line
+/// fail rather than grant a release waiver. This plans the gate shape over
+/// injected inputs; it instruments nothing and counts no lines.
+pub fn coverage_gate_accepts(
+    has_report: bool,
+    ignores_valid: bool,
+    uncovered_nonignored: u32,
+) -> bool {
+    has_report && ignores_valid && uncovered_nonignored == 0
+}
+
+/// Whether every cell in a gate set is green.
+///
+/// Shared by the aggregate CI check and the per-platform coverage rollup: the
+/// set must be non-empty and every cell must hold. An empty set never counts
+/// as success.
+fn all_cells_ok(cells: &[bool]) -> bool {
+    !cells.is_empty() && cells.iter().all(|cell| *cell)
+}
+
+/// Whether the stable aggregate CI check may report success.
+///
+/// Success requires every selected check/platform cell to complete
+/// successfully under its command contract with all required reporting
+/// finished. Missing, blocked, unexpectedly skipped, cancelled, or incomplete
+/// cells (each passed here as `false`) never produce success.
+pub fn aggregate_may_succeed(cell_ok: &[bool]) -> bool {
+    all_cells_ok(cell_ok)
+}
+
+/// Whether per-platform coverage aggregation is complete.
+///
+/// Combining reports must not hide a missing platform or coverage gap: every
+/// required selected platform/configuration cell must be covered. One
+/// uncovered cell fails the rollup even when the rest pass.
+pub fn coverage_aggregation_complete(per_platform_covered: &[bool]) -> bool {
+    all_cells_ok(per_platform_covered)
+}
+
+/// Whether a used release identity matches the qualified identity.
+///
+/// Publication and CI requalification never substitute bytes or revisions:
+/// the used digest/workflow/reporter/caller/module identity must equal the
+/// M28-qualified identity verbatim. Empty identities never match.
+pub fn handoff_identity_matches(qualified: &str, used: &str) -> bool {
+    !qualified.is_empty() && qualified == used
+}
+
+/// Whether the consumer-CI requalification may accept one run.
+///
+/// The candidate workflow, reporter, caller template, and module-matched CLI
+/// must each equal the M28 handoff identity. Any substitution fails the run;
+/// this checks the four equalities, it does not execute CI.
+pub fn ci_requalification_accepts(
+    workflow_matches: bool,
+    reporter_matches: bool,
+    caller_matches: bool,
+    module_cli_matches: bool,
+) -> bool {
+    workflow_matches && reporter_matches && caller_matches && module_cli_matches
+}
+
+/// Whether M28 may hand off to M29 publication.
+///
+/// Handoff needs a qualified candidate whose digests still match the
+/// verified bytes and whose CI identities requalified without substitution.
+/// Publication itself (credentials, registry, release host) stays O45-gated
+/// and never rebuilds or swaps bytes silently.
+pub fn may_hand_off_to_publication(
+    qualified: bool,
+    digests_match: bool,
+    ci_identities_match: bool,
+) -> bool {
+    qualified && digests_match && ci_identities_match
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -580,5 +663,54 @@ mod tests {
         assert!(!self_attested_level_admissible(2, true));
         assert!(!self_attested_level_admissible(3, true));
         assert!(self_attested_level_admissible(3, false));
+    }
+
+    #[test]
+    fn coverage_gate_rejects_missing_invalid_and_uncovered() {
+        assert!(coverage_gate_accepts(true, true, 0));
+        assert!(!coverage_gate_accepts(false, true, 0));
+        assert!(!coverage_gate_accepts(true, false, 0));
+        assert!(!coverage_gate_accepts(true, true, 1));
+        assert!(!coverage_gate_accepts(false, false, 7));
+    }
+
+    #[test]
+    fn aggregate_success_needs_every_cell_green() {
+        assert!(aggregate_may_succeed(&[true, true, true]));
+        assert!(!aggregate_may_succeed(&[true, false, true]));
+        assert!(!aggregate_may_succeed(&[false]));
+        assert!(!aggregate_may_succeed(&[]));
+    }
+
+    #[test]
+    fn coverage_rollup_hides_no_platform_gap() {
+        assert!(coverage_aggregation_complete(&[true, true]));
+        assert!(!coverage_aggregation_complete(&[true, false]));
+        assert!(!coverage_aggregation_complete(&[]));
+    }
+
+    #[test]
+    fn handoff_identities_match_exactly_or_not_at_all() {
+        assert!(handoff_identity_matches("sha256:abc", "sha256:abc"));
+        assert!(!handoff_identity_matches("sha256:abc", "sha256:def"));
+        assert!(!handoff_identity_matches("", ""));
+        assert!(!handoff_identity_matches("wf@42", ""));
+    }
+
+    #[test]
+    fn ci_requalification_rejects_any_substitution() {
+        assert!(ci_requalification_accepts(true, true, true, true));
+        assert!(!ci_requalification_accepts(false, true, true, true));
+        assert!(!ci_requalification_accepts(true, false, true, true));
+        assert!(!ci_requalification_accepts(true, true, false, true));
+        assert!(!ci_requalification_accepts(true, true, true, false));
+    }
+
+    #[test]
+    fn publication_handoff_needs_qualified_matching_requalified() {
+        assert!(may_hand_off_to_publication(true, true, true));
+        assert!(!may_hand_off_to_publication(false, true, true));
+        assert!(!may_hand_off_to_publication(true, false, true));
+        assert!(!may_hand_off_to_publication(true, true, false));
     }
 }
