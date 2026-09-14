@@ -1,0 +1,8 @@
+[package]
+name = "dx_adopt"
+version = "0.0.0"
+edition = "2021"
+
+[lib]
+name = "dx_adopt"
+path = "src/lib.rs"
