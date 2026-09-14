@@ -1584,24 +1584,139 @@ fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
     bazel_code
 }
 
+/// Collects BEP-reported artifacts for one managed output group.
+/// Split from [`validate_managed_collection`] so each selection proves
+/// its own group transport without touching the other group's stream.
+fn collect_managed_group(
+    bep: &Path,
+    group: &str,
+) -> Result<Vec<dx_bep::TargetOutput>, (String, String)> {
+    let file = std::fs::File::open(bep).map_err(|err| {
+        (
+            CODE_UNREADABLE_BEP.to_owned(),
+            format!("failed to read build events: {err}"),
+        )
+    })?;
+    let config = CollectorConfig::new(group).map_err(|err| {
+        (
+            CODE_INVALID_BEP.to_owned(),
+            format!("invalid BEP config: {err:?}"),
+        )
+    })?;
+    collect(BufReader::new(file), &config, &FsArtifacts).map_err(|err| {
+        (
+            CODE_INVALID_BEP.to_owned(),
+            format!("invalid build events: {err:?}"),
+        )
+    })
+}
+
+/// Validates the collected managed plan without staging anything:
+/// decodes shards, rejects conflicts, merges deterministically, and
+/// plans the read-only projection through the same index collection
+/// validates. An empty shard set validates as an empty plan. Staging,
+/// validation of workspace state, materialization, and commit stay in
+/// a later WP3 slice.
+fn validate_managed_collection(command: Command, bep: &Path) -> Result<(), (String, String)> {
+    match command {
+        Command::Codegen => {
+            let outputs = collect_managed_group(bep, dx_codegen::OUTPUT_GROUP)?;
+            let plan = dx_codegen::collect_plan(&outputs).map_err(|err| {
+                (
+                    CODE_INVALID_RESULT.to_owned(),
+                    format!("invalid codegen plan: {err:?}"),
+                )
+            })?;
+            dx_codegen::plan_projection(&plan.records, &outputs)
+                .map_err(|err| {
+                    (
+                        CODE_INVALID_RESULT.to_owned(),
+                        format!("invalid codegen plan: {err:?}"),
+                    )
+                })
+                .map(|_| ())
+        }
+        Command::Env => {
+            let outputs = collect_managed_group(bep, dx_env_plan::OUTPUT_GROUP)?;
+            let plan = dx_env_plan::collect_plan(&outputs).map_err(|err| {
+                (
+                    CODE_INVALID_RESULT.to_owned(),
+                    format!("invalid env plan: {err:?}"),
+                )
+            })?;
+            dx_env_plan::plan_projection(&plan.records, &outputs)
+                .map_err(|err| {
+                    (
+                        CODE_INVALID_RESULT.to_owned(),
+                        format!("invalid env plan: {err:?}"),
+                    )
+                })
+                .map(|_| ())
+        }
+        Command::Setup => {
+            let codegen_outputs = collect_managed_group(bep, dx_codegen::OUTPUT_GROUP)?;
+            let env_outputs = collect_managed_group(bep, dx_env_plan::OUTPUT_GROUP)?;
+            let codegen_plan = dx_codegen::collect_plan(&codegen_outputs).map_err(|err| {
+                (
+                    CODE_INVALID_RESULT.to_owned(),
+                    format!("invalid codegen plan: {err:?}"),
+                )
+            })?;
+            dx_codegen::plan_projection(&codegen_plan.records, &codegen_outputs).map_err(
+                |err| {
+                    (
+                        CODE_INVALID_RESULT.to_owned(),
+                        format!("invalid codegen plan: {err:?}"),
+                    )
+                },
+            )?;
+            let env_plan = dx_env_plan::collect_plan(&env_outputs).map_err(|err| {
+                (
+                    CODE_INVALID_RESULT.to_owned(),
+                    format!("invalid env plan: {err:?}"),
+                )
+            })?;
+            dx_env_plan::plan_projection(&env_plan.records, &env_outputs)
+                .map_err(|err| {
+                    (
+                        CODE_INVALID_RESULT.to_owned(),
+                        format!("invalid env plan: {err:?}"),
+                    )
+                })
+                .map(|_| ())
+        }
+        _ => {
+            debug_assert!(false, "managed validation guards commands");
+            Err((
+                CODE_INVALID_RESULT.to_owned(),
+                "unsupported managed command".to_owned(),
+            ))
+        }
+    }
+}
+
 /// Runs `dx codegen`, `dx env`, and `dx setup` (M25 WP5): validates
 /// the label-only scope through the shared setup scope rules, plans
 /// the Bazel collection request with [`plan_managed`], and either
 /// renders the `--dry-run` summary (planning nothing else, launching
-/// nothing) or fails closed: generation staging, validation,
-/// materialization, and commit land in later WP3 slices, so live
-/// selection refuses with [`CODE_MANAGED_DEFERRED`] before launching
-/// any build. Argument parsing guarantees text output with no
-/// quality-only options on this path.
+/// nothing) or runs the live Bazel build, collects and validates the
+/// plan shards, and then fails closed: generation staging, validation,
+/// materialization, and commit land in later WP3 slices, so validated
+/// selection refuses with [`CODE_MANAGED_DEFERRED`]. Argument parsing
+/// guarantees text output with no quality-only options on this path.
 ///
-/// Exits `0` on `--dry-run`, `1` on live selection (deferred), and
-/// `2` on scope or policy conflicts found before execution.
+/// Exits `0` on `--dry-run`, the Bazel exit code verbatim when the
+/// live build fails, `1` on operational or collection failures and on
+/// validated-but-uncommitted selection (deferred), and `2` on scope or
+/// policy conflicts found before execution.
 fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
     debug_assert!(
         invocation.command.is_managed(),
         "managed dispatch guards commands"
     );
     let Env {
+        workspace,
+        runner,
         temp_dir,
         pid,
         nonce,
@@ -1632,8 +1747,9 @@ fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
         Ok(plan) => plan,
         Err(error) => return pre_exec(err, &format!("{error:?}")),
     };
-    // Human prose is the only output on this path: `--dry-run` prints
-    // the planned operation unless `--quiet` suppresses it.
+    // Human prose is the only output on this path: the planned
+    // operation prints unless `--quiet` suppresses it, in both
+    // `--dry-run` and live modes.
     let verbose =
         matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet;
     if invocation.dry_run {
@@ -1642,13 +1758,47 @@ fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
         }
         return 0;
     }
+    if verbose {
+        let _ = writeln!(out, "{}", plan.summary);
+    }
+    let status = match runner.run(&plan.argv, workspace, &[]) {
+        Ok(status) => status,
+        Err(error) => {
+            return operational(
+                invocation,
+                out,
+                err,
+                CODE_LAUNCH_FAILED,
+                &format!("failed to launch Bazel: {error}"),
+            );
+        }
+    };
+    let Some(bazel_code) = status.code else {
+        let _ = std::fs::remove_file(&bep);
+        return operational(
+            invocation,
+            out,
+            err,
+            CODE_BAZEL_SIGNALLED,
+            "Bazel terminated by signal",
+        );
+    };
+    if bazel_code != 0 {
+        let _ = std::fs::remove_file(&bep);
+        return bazel_code;
+    }
+    if let Err((code, message)) = validate_managed_collection(invocation.command, &bep) {
+        let _ = std::fs::remove_file(&bep);
+        return operational(invocation, out, err, &code, &message);
+    }
+    let _ = std::fs::remove_file(&bep);
     operational(
         invocation,
         out,
         err,
         CODE_MANAGED_DEFERRED,
         &format!(
-            "dx {} selection is not implemented yet: generation staging and commit land in a later slice; use --dry-run to preview the planned Bazel request",
+            "dx {} plan validated: generation staging and commit land in a later slice",
             invocation.command.name(),
         ),
     )
@@ -5073,7 +5223,7 @@ mod tests {
     }
 
     #[test]
-    fn managed_live_selection_defers_without_launching() {
+    fn managed_live_selection_validates_then_defers_commit() {
         for command in ["codegen", "env", "setup"] {
             let name = format!("managed-deferred-{command}");
             let harness = Harness::new(&name);
@@ -5082,10 +5232,70 @@ mod tests {
             let combined = format!("{out}{err}");
             assert!(combined.contains("managed_deferred"), "{combined}");
             assert!(
-                harness.seen_env.borrow().is_empty(),
-                "deferred selection launches nothing"
+                out.contains(&format!("Running {command} for //...")),
+                "{out}"
+            );
+            assert_eq!(
+                harness.seen_env.borrow().len(),
+                1,
+                "validated selection launches one Bazel build"
             );
         }
+    }
+
+    #[test]
+    fn managed_live_launch_failure_is_operational() {
+        let harness = Harness {
+            io_error: true,
+            ..Harness::new("managed-launch-failed")
+        };
+        let (code, _, err) = harness.run(&["codegen"]);
+        assert_eq!(code, 1);
+        assert!(err.contains("dx: launch_failed: failed to launch Bazel"));
+    }
+
+    #[test]
+    fn managed_live_signalled_bazel_is_operational() {
+        let harness = Harness {
+            signalled: true,
+            ..Harness::new("managed-signalled")
+        };
+        let (code, _, err) = harness.run(&["env"]);
+        assert_eq!(code, 1);
+        assert!(err.contains("dx: bazel_signalled: Bazel terminated by signal"));
+    }
+
+    #[test]
+    fn managed_live_bazel_failure_returns_exit_verbatim() {
+        let harness = Harness {
+            bazel_code: 3,
+            ..Harness::new("managed-bazel-failed")
+        };
+        let (code, out, err) = harness.run(&["setup"]);
+        assert_eq!(code, 3, "{out}{err}");
+        assert!(out.contains("Running setup for //..."), "{out}");
+    }
+
+    #[test]
+    fn managed_live_missing_bep_is_operational() {
+        let harness = Harness {
+            skip_bep: true,
+            ..Harness::new("managed-missing-bep")
+        };
+        let (code, _, err) = harness.run(&["codegen"]);
+        assert_eq!(code, 1);
+        assert!(err.contains("dx: unreadable_bep: failed to read build events"));
+    }
+
+    #[test]
+    fn managed_live_malformed_bep_is_operational() {
+        let harness = Harness {
+            raw_bep: Some(vec!["{not json".to_owned()]),
+            ..Harness::new("managed-bad-bep")
+        };
+        let (code, _, err) = harness.run(&["env"]);
+        assert_eq!(code, 1);
+        assert!(err.contains("dx: invalid_bep: invalid build events"));
     }
 
     #[test]
