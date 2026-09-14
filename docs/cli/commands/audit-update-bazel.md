@@ -8,7 +8,10 @@ dx bazel <bazel arguments...>
 
 Invokes the repository's Bazelisk-compatible `bazel` launcher with arguments
 unchanged. The launcher reads the committed `.bazelversion`. `dx bazel` does not
-perform scope resolution. This is the advanced-user escape hatch.
+perform scope resolution. This is the advanced-user escape hatch. Everything
+after the `bazel` word forwards verbatim to the launcher, even tokens that look
+like dx options, so dx globals must precede it (`dx --dry-run bazel ...`);
+a dx-owned option before the command word is rejected rather than forwarded.
 
 ## `dx audit`
 

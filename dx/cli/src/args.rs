@@ -41,6 +41,7 @@ pub enum Command {
     Deps,
     Why,
     Completion,
+    Bazel,
 }
 
 impl Command {
@@ -68,6 +69,7 @@ impl Command {
             Command::Deps => "deps",
             Command::Why => "why",
             Command::Completion => "completion",
+            Command::Bazel => "bazel",
         }
     }
 
@@ -94,6 +96,7 @@ impl Command {
             "deps" => Some(Command::Deps),
             "why" => Some(Command::Why),
             "completion" => Some(Command::Completion),
+            "bazel" => Some(Command::Bazel),
             _ => None,
         }
     }
@@ -118,7 +121,8 @@ impl Command {
     /// True for the delivered adoption/inspect surfaces (`init`, `hooks`,
     /// `status`, `version`, `docs`, `watch`, `owners`, `deps`, `why`,
     /// `completion`): they run local adoption helpers or thin Bazel-query
-    /// forwarding instead of the quality aspect pipeline.
+    /// forwarding instead of the quality aspect pipeline. `bazel` is not
+    /// adoption: it forwards raw arguments to the Bazel launcher.
     pub fn is_adoption(self) -> bool {
         matches!(
             self,
@@ -164,6 +168,12 @@ pub struct Invocation {
     pub bazel_clean: bool,
     /// `dx version --pin <version>`: re-pin target (Version only).
     pub pin: Option<String>,
+    /// `dx version --rollback`: re-pin the recorded previous release
+    /// (Version only; rejected together with `--pin`).
+    pub rollback: bool,
+    /// Inspect wrappers use `cquery` instead of `query` (Owners, Deps,
+    /// Why only).
+    pub configured: bool,
     /// `dx docs --serve`: preview last build outputs locally.
     pub serve: bool,
     /// `dx docs --serve --port <port>`: preview port.
@@ -218,12 +228,12 @@ impl std::fmt::Display for ArgsError {
         match self {
             ArgsError::MissingCommand => write!(
                 f,
-                "missing command: want lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|init|hooks|status|version|docs|watch|owners|deps|why|completion"
+                "missing command: want lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel"
             ),
             ArgsError::UnknownCommand { command } => {
                 write!(
                     f,
-                    "unknown command {command:?}: want lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|init|hooks|status|version|docs|watch|owners|deps|why|completion"
+                    "unknown command {command:?}: want lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel"
                 )
             }
             ArgsError::UnknownOption { option } => write!(f, "unknown option {option:?}"),
@@ -323,6 +333,8 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     let mut bazel_options = Vec::new();
     let mut bazel_clean = false;
     let mut pin: Option<String> = None;
+    let mut rollback = false;
+    let mut configured = false;
     let mut serve = false;
     let mut port: Option<u16> = None;
     let mut index = 0;
@@ -331,6 +343,16 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         if arg == "--" {
             bazel_options.extend(args[index + 1..].iter().cloned());
             break;
+        }
+        // `dx bazel` owns no options of its own: once the command word
+        // is seen, every following token is launcher-owned and forwards
+        // verbatim (flags, labels, and `=` forms alike), per
+        // `docs/cli/commands/audit-update-bazel.md`. dx globals must
+        // precede the command word (`dx --dry-run bazel ...`).
+        if command == Some(Command::Bazel) {
+            bazel_options.push(arg.clone());
+            index += 1;
+            continue;
         }
         if arg.starts_with('-') {
             let (name, inline) = split_inline(arg);
@@ -402,6 +424,22 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                     }
                     pin = Some(value.to_owned());
                 }
+                "--rollback" => {
+                    if inline.is_some() {
+                        return Err(ArgsError::UnknownOption {
+                            option: arg.clone(),
+                        });
+                    }
+                    rollback = true;
+                }
+                "--configured" => {
+                    if inline.is_some() {
+                        return Err(ArgsError::UnknownOption {
+                            option: arg.clone(),
+                        });
+                    }
+                    configured = true;
+                }
                 "--serve" => {
                     if inline.is_some() {
                         return Err(ArgsError::UnknownOption {
@@ -438,6 +476,8 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                     })?,
                 );
             }
+            // `dx bazel` tokens never reach this arm: the verbatim
+            // forwarding above owns every token after the command word.
             Some(_) => {
                 if arg.is_empty() || arg.starts_with(':') {
                     return Err(ArgsError::ScopeNotSupported { scope: arg.clone() });
@@ -523,9 +563,11 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     if command.is_adoption() {
         // Adoption/inspect surfaces run local helpers or thin query
         // forwarding: quality-only thresholds/reports and Bazel forwards
-        // do not apply. `--check` belongs to `docs` only; `--pin`
-        // belongs to `version` only; `--serve`/`--port` belong to
-        // `docs` only.
+        // do not apply. `--check` belongs to `docs` (render validation)
+        // and `version` (pin drift) only; `--pin` belongs to `version`
+        // only; `--serve`/`--port` belong to `docs` only. `--rollback`
+        // and `--configured` ownership is enforced by the catch-all
+        // below.
         if fail_on_name != "warning" {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -550,7 +592,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                 option: "--".to_owned(),
             });
         }
-        if check && command != Command::Docs {
+        if check && command != Command::Docs && command != Command::Version {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
                 option: "--check".to_owned(),
@@ -602,14 +644,79 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                     });
                 }
             }
-            Command::Hooks | Command::Watch | Command::Owners | Command::Deps | Command::Why
+            Command::Hooks | Command::Watch | Command::Owners | Command::Deps
                 if targets.is_empty() =>
             {
                 return Err(ArgsError::MissingValue {
                     option: "<scope>".to_owned(),
                 });
             }
+            // `dx why` resolves one ownership edge per call: exactly one
+            // file scope and one target label, e.g.
+            // `dx why src/main.rs //app:server`.
+            Command::Why if targets.len() != 2 => {
+                return Err(ArgsError::MissingValue {
+                    option: "<file> <label>".to_owned(),
+                });
+            }
             _ => {}
+        }
+    }
+    if command == Command::Bazel {
+        // `dx bazel` forwards arguments unchanged to the workspace
+        // Bazel launcher: no scope resolution, no quality thresholds or
+        // reports, and text terminal output only (the child inherits
+        // stdio). dx-owned options are rejected only when given before
+        // the command word (everything after it already forwarded
+        // verbatim above); `--rollback` and `--configured` ownership is
+        // enforced by the catch-all below.
+        if check {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--check".to_owned(),
+            });
+        }
+        if fail_on_name != "warning" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--fail-on".to_owned(),
+            });
+        }
+        if output_name != "text" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: format!("--output={output_name}"),
+            });
+        }
+        if let Some(request) = reports.first() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: format!("--report={}={}", request.format, request.destination),
+            });
+        }
+        if pin.is_some() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--pin".to_owned(),
+            });
+        }
+        if serve {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--serve".to_owned(),
+            });
+        }
+        if port.is_some() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--port".to_owned(),
+            });
+        }
+        if bazel_clean {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--bazel".to_owned(),
+            });
         }
     }
     if command == Command::Run {
@@ -629,6 +736,28 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
             });
         }
     }
+    // Flag ownership (M30b): `--rollback` belongs to `version` only
+    // and `--configured` to the inspect wrappers only. Command blocks
+    // above already reject them on their own surfaces; this catch-all
+    // keeps every other command (quality, umbrellas, `run`,
+    // `generate`, `clean`) failing fast instead of silently ignoring
+    // them.
+    if rollback && command != Command::Version {
+        return Err(ArgsError::UnsupportedOption {
+            command: command.name(),
+            option: "--rollback".to_owned(),
+        });
+    }
+    if configured
+        && command != Command::Owners
+        && command != Command::Deps
+        && command != Command::Why
+    {
+        return Err(ArgsError::UnsupportedOption {
+            command: command.name(),
+            option: "--configured".to_owned(),
+        });
+    }
     Ok(Invocation {
         command,
         check,
@@ -642,6 +771,8 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         bazel_options,
         bazel_clean,
         pin,
+        rollback,
+        configured,
         serve,
         port,
     })
@@ -665,6 +796,9 @@ mod tests {
         assert_eq!(Command::Test.name(), "test");
         assert_eq!(Command::Coverage.name(), "coverage");
         assert_eq!(Command::Run.name(), "run");
+        assert_eq!(Command::Bazel.name(), "bazel");
+        assert!(!Command::Bazel.is_workflow());
+        assert!(!Command::Bazel.is_adoption());
         assert!(!Command::Lint.is_workflow());
         assert!(!Command::Typecheck.is_workflow());
         assert!(!Command::Format.is_workflow());
@@ -1129,5 +1263,110 @@ mod tests {
         assert_eq!(got.command, Command::Run);
         assert_eq!(got.targets, vec!["//app:bin".to_owned()]);
         assert_eq!(got.bazel_options, vec!["--port=8080".to_owned()]);
+    }
+
+    #[test]
+    fn bazel_forwards_verbatim_and_rejects_dx_options() {
+        let got = parse(&args(&["bazel", "build", "//...", "--", "--jobs=4"])).expect("parse");
+        assert_eq!(got.command, Command::Bazel);
+        assert_eq!(got.command.name(), "bazel");
+        assert!(!got.command.is_workflow());
+        assert!(!got.command.is_adoption());
+        assert!(got.targets.is_empty());
+        assert_eq!(
+            got.bazel_options,
+            vec![
+                "build".to_owned(),
+                "//...".to_owned(),
+                "--jobs=4".to_owned()
+            ]
+        );
+        // Tokens after the command word forward verbatim even when
+        // they look like dx options: dx globals must precede `bazel`.
+        for words in [
+            vec!["bazel", "--jobs=4"],
+            vec!["bazel", "--check"],
+            vec!["bazel", "--pin=0.1.0"],
+            vec!["bazel", "version", "--configured"],
+            vec!["bazel", "--", "--fail-on=error"],
+        ] {
+            let got = parse(&args(&words)).expect("verbatim");
+            assert_eq!(got.command, Command::Bazel, "words: {words:?}");
+            assert!(got.targets.is_empty(), "words: {words:?}");
+        }
+        let got = parse(&args(&["bazel", "build", "--jobs", "4"])).expect("verbatim");
+        assert_eq!(
+            got.bazel_options,
+            vec!["build".to_owned(), "--jobs".to_owned(), "4".to_owned()]
+        );
+        // dx-owned options before the command word still fail fast so
+        // launcher flags can never be misread as dx flags.
+        for words in [
+            vec!["--output=json", "bazel", "version"],
+            vec!["--check", "bazel", "version"],
+            vec!["--pin=0.1.0", "bazel", "version"],
+            vec!["--configured", "bazel", "version"],
+            vec!["--fail-on=error", "bazel", "build", "//..."],
+            vec!["--report=sarif=x.sarif", "bazel", "build"],
+        ] {
+            assert!(
+                matches!(
+                    parse(&args(&words)),
+                    Err(ArgsError::UnsupportedOption { .. })
+                ),
+                "words: {words:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn version_rollback_check_and_configured_parse() {
+        let got = parse(&args(&["version", "--rollback"])).expect("parse");
+        assert_eq!(got.command, Command::Version);
+        assert!(got.rollback);
+        let got = parse(&args(&["version", "--check"])).expect("parse");
+        assert!(got.check);
+        let got = parse(&args(&["deps", "--configured", "//a:one"])).expect("parse");
+        assert_eq!(got.command, Command::Deps);
+        assert!(got.configured);
+        for words in [
+            vec!["status", "--rollback"],
+            vec!["status", "--check"],
+            vec!["owners", "//a:one", "--pin=0.1.0"],
+            vec!["build", "//a:one", "--configured"],
+            vec!["lint", "--rollback"],
+            vec!["check", "//...", "--configured"],
+            vec!["docs", "--rollback"],
+        ] {
+            assert!(
+                matches!(
+                    parse(&args(&words)),
+                    Err(ArgsError::UnsupportedOption { .. })
+                ),
+                "words: {words:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn why_requires_file_and_label() {
+        let got = parse(&args(&["why", "src/a.rs", "//a:one"])).expect("parse");
+        assert_eq!(got.command, Command::Why);
+        assert_eq!(
+            got.targets,
+            vec!["src/a.rs".to_owned(), "//a:one".to_owned()]
+        );
+        for words in [
+            vec!["why", "src/a.rs"],
+            vec!["why", "src/a.rs", "//a:one", "//b:two"],
+        ] {
+            assert_eq!(
+                parse(&args(&words)),
+                Err(ArgsError::MissingValue {
+                    option: "<file> <label>".to_owned(),
+                }),
+                "words: {words:?}"
+            );
+        }
     }
 }

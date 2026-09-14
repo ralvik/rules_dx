@@ -51,6 +51,7 @@ pub const ALL_COMMANDS: &[&str] = &[
     "deps",
     "why",
     "completion",
+    "bazel",
 ];
 
 /// Shells covered by `dx completion` (O61 freeze).
@@ -463,18 +464,59 @@ pub fn plan_watch(command: &str, ci: bool) -> Result<String, String> {
     Ok(format!("watch:{command}:debounce={WATCH_DEBOUNCE_MS}ms"))
 }
 
+/// Planned thin inspect forwarding (O56 freeze): the Bazel verb plus
+/// the single query expression, executed as `bazel <verb> <expr>` with
+/// bytewise-sorted deduplicated canonical labels and no custom graph
+/// engine. The verb and expression stay separate so the caller cannot
+/// double-wrap the expression in a second `query` invocation.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct InspectPlan {
+    /// `query` by default, `cquery` under `--configured`.
+    pub verb: String,
+    /// Single query expression (no verb prefix, no surrounding shell).
+    pub expr: String,
+}
+
 /// Plan one inspect query (O56 freeze).
-pub fn plan_inspect(kind: &str, scope: &str, configured: bool) -> Result<String, String> {
+pub fn plan_inspect(kind: &str, scope: &str, configured: bool) -> Result<InspectPlan, String> {
     if !inspect_scope_allowed(scope, scope.starts_with('@')) {
         return Err(format!("rejected scope: {scope}"));
     }
     let verb = if configured { "cquery" } else { "query" };
-    match kind {
-        "owners" => Ok(format!("{verb} \"kind('rule', rdeps(//..., {scope}, 1))\"")),
-        "deps" => Ok(format!("{verb} \"deps({scope})\"")),
-        "why" => Ok(format!("{verb} \"somepath({scope})\"")),
-        _ => Err(format!("unknown inspect: {kind}")),
+    let expr = match kind {
+        "owners" => format!("kind('rule', rdeps(//..., {scope}, 1))"),
+        "deps" => format!("deps({scope})"),
+        "why" => {
+            return Err(
+                "dx why needs <file> <label>: resolve the file owner first, then plan_somepath"
+                    .to_owned(),
+            );
+        }
+        _ => return Err(format!("unknown inspect: {kind}")),
+    };
+    Ok(InspectPlan {
+        verb: verb.to_owned(),
+        expr,
+    })
+}
+
+/// Plan the `somepath` leg of `dx why <file> <label>` (O56 freeze).
+///
+/// `from` is the resolved file owner (a depth-1 owner label, never the
+/// raw file path) and `to` is the target label, both passed through
+/// verbatim. External scopes are rejected like workflow commands.
+pub fn plan_somepath(from: &str, to: &str, configured: bool) -> Result<InspectPlan, String> {
+    if !inspect_scope_allowed(from, from.starts_with('@')) {
+        return Err(format!("rejected scope: {from}"));
     }
+    if !inspect_scope_allowed(to, to.starts_with('@')) {
+        return Err(format!("rejected scope: {to}"));
+    }
+    let verb = if configured { "cquery" } else { "query" };
+    Ok(InspectPlan {
+        verb: verb.to_owned(),
+        expr: format!("somepath({from}, {to})"),
+    })
 }
 
 /// Render one completion script from the single command table (O61).
@@ -681,13 +723,20 @@ mod tests {
 
     #[test]
     fn inspect_plans_query_forwarding() {
-        assert!(plan_inspect("owners", "//a:one", false)
-            .expect("q")
-            .contains("rdeps"));
-        assert!(plan_inspect("deps", "//a:one", true)
-            .expect("q")
-            .starts_with("cquery"));
+        let owners = plan_inspect("owners", "//a:one", false).expect("q");
+        assert_eq!(owners.verb, "query");
+        assert!(owners.expr.contains("rdeps"));
+        assert!(!owners.expr.contains("query"));
+        let deps = plan_inspect("deps", "//a:one", true).expect("q");
+        assert_eq!(deps.verb, "cquery");
+        assert!(deps.expr.contains("deps("));
         assert!(plan_inspect("owners", "@o//a:one", false).is_err());
+        assert!(plan_inspect("why", "//a:one", false).is_err());
+        let leg = plan_somepath("//a:one", "//b:two", false).expect("somepath");
+        assert_eq!(leg.verb, "query");
+        assert_eq!(leg.expr, "somepath(//a:one, //b:two)");
+        assert!(plan_somepath("@o//a:one", "//b:two", false).is_err());
+        assert!(plan_somepath("//a:one", "", false).is_err());
     }
 
     #[test]

@@ -178,6 +178,47 @@ fn execute_version(
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> i32 {
+    // `--check` validates without mutating and `--pin`/`--rollback`
+    // mutate without validating: combining them is a usage error, as
+    // is combining the two mutations with each other.
+    if invocation.check && (invocation.pin.is_some() || invocation.rollback) {
+        return pre_exec(
+            err,
+            "version --check does not combine with --pin or --rollback",
+        );
+    }
+    if invocation.pin.is_some() && invocation.rollback {
+        return pre_exec(err, "version --pin and --rollback are mutually exclusive");
+    }
+    if invocation.rollback {
+        // Rollback re-pins the previous release recorded by the
+        // ruleset (`dx_adopt::PREVIOUS_VERSION`); there is no deeper
+        // pin history to walk back through. Rolling to the current pin
+        // or to an unknown version is rejected by the admissibility
+        // gate, not silently re-pinned.
+        let previous = dx_adopt::PREVIOUS_VERSION;
+        let current = dx_adopt::read_version_pin(workspace).unwrap_or_default();
+        if !dx_adopt::rollback_re_pins_previous(&current, previous, previous) {
+            return operational(
+                out,
+                err,
+                &format!(
+                    "rollback refused: pin {current:?} is not newer than previous release {previous:?}"
+                ),
+            );
+        }
+        if invocation.dry_run {
+            let _ = writeln!(out, "would pin {previous} (rollback)");
+            return 0;
+        }
+        return match dx_adopt::write_version_pin(workspace, previous) {
+            Ok(()) => {
+                let _ = writeln!(out, "pinned {previous} (rollback)");
+                0
+            }
+            Err(message) => operational(out, err, &message),
+        };
+    }
     if let Some(pin) = &invocation.pin {
         if !dx_adopt::version_pin_matches_module(pin, dx_adopt::MODULE_VERSION)
             && pin != dx_adopt::MODULE_VERSION
@@ -273,32 +314,99 @@ fn execute_inspect(
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> i32 {
+    if invocation.command == Command::Why {
+        return execute_why(invocation, workspace, query_runner, out, err);
+    }
     let kind = invocation.command.name();
     let mut code = 0;
     for scope in &invocation.targets {
-        let query = match dx_adopt::plan_inspect(kind, scope, false) {
-            Ok(query) => query,
+        let plan = match dx_adopt::plan_inspect(kind, scope, invocation.configured) {
+            Ok(plan) => plan,
             Err(message) => return pre_exec(err, &message),
         };
-        let argv = vec!["bazel".to_owned(), "query".to_owned(), query.clone()];
-        match query_runner.run_query(&argv, workspace) {
-            Ok(result) => {
-                if result.code != Some(0) {
-                    let _ = writeln!(err, "dx: {kind}: query failed for {scope}");
-                    code = 1;
-                    continue;
-                }
-                let text = String::from_utf8_lossy(&result.stdout);
-                let mut lines: Vec<&str> = text.lines().collect();
-                lines.sort_unstable();
-                for line in lines {
-                    let _ = writeln!(out, "{line}");
-                }
-            }
-            Err(error) => return operational(out, err, &format!("{kind}: {error}")),
+        let step = run_inspect_query(&plan.verb, &plan.expr, workspace, query_runner, out, err);
+        if step != 0 {
+            code = step;
         }
     }
     code
+}
+
+/// Runs one planned inspect query as `bazel <verb> <expr>` and prints
+/// bytewise-sorted deduplicated labels. The verb and expression stay
+/// separate argv elements so the expression is never double-wrapped
+/// in a second `query` invocation.
+fn run_inspect_query(
+    verb: &str,
+    expr: &str,
+    workspace: &std::path::Path,
+    query_runner: &dyn QueryRunner,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> i32 {
+    let argv = vec!["bazel".to_owned(), verb.to_owned(), expr.to_owned()];
+    match query_runner.run_query(&argv, workspace) {
+        Ok(result) => {
+            if result.code != Some(0) {
+                return operational(out, err, "query failed");
+            }
+            let text = String::from_utf8_lossy(&result.stdout);
+            let mut lines: Vec<&str> = text.lines().collect();
+            lines.sort_unstable();
+            lines.dedup();
+            for line in lines {
+                let _ = writeln!(out, "{line}");
+            }
+            0
+        }
+        Err(error) => operational(out, err, &error.to_string()),
+    }
+}
+
+fn execute_why(
+    invocation: &Invocation,
+    workspace: &std::path::Path,
+    query_runner: &dyn QueryRunner,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> i32 {
+    // Argument parsing guarantees exactly `<file> <label>`.
+    let file = &invocation.targets[0];
+    let label = &invocation.targets[1];
+    // Step 1: resolve the file's depth-1 owner. `why` never resolves
+    // the raw file path against the target graph: Bazel `somepath`
+    // needs rule-to-rule endpoints.
+    let owner_plan = match dx_adopt::plan_inspect("owners", file, invocation.configured) {
+        Ok(plan) => plan,
+        Err(message) => return pre_exec(err, &message),
+    };
+    let owner_argv = vec![
+        "bazel".to_owned(),
+        owner_plan.verb.clone(),
+        owner_plan.expr.clone(),
+    ];
+    let owner = match query_runner.run_query(&owner_argv, workspace) {
+        Ok(result) => {
+            if result.code != Some(0) {
+                return operational(out, err, "query failed");
+            }
+            let text = String::from_utf8_lossy(&result.stdout);
+            let mut labels: Vec<&str> = text.lines().collect();
+            labels.sort_unstable();
+            labels.dedup();
+            match labels.into_iter().next() {
+                Some(owner) => owner.to_owned(),
+                None => return operational(out, err, &format!("no owner for {file}")),
+            }
+        }
+        Err(error) => return operational(out, err, &error.to_string()),
+    };
+    // Step 2: explain one path from the resolved owner to the target.
+    let leg = match dx_adopt::plan_somepath(&owner, label, invocation.configured) {
+        Ok(leg) => leg,
+        Err(message) => return pre_exec(err, &message),
+    };
+    run_inspect_query(&leg.verb, &leg.expr, workspace, query_runner, out, err)
 }
 
 fn execute_completion(invocation: &Invocation, out: &mut dyn Write, err: &mut dyn Write) -> i32 {
@@ -337,6 +445,42 @@ mod tests {
             Ok(crate::resolve::QueryResult {
                 code: Some(0),
                 stdout: b"//a:one\n".to_vec(),
+                stderr: Vec::new(),
+            })
+        }
+    }
+
+    struct ScriptedQuery {
+        calls: std::cell::RefCell<Vec<Vec<String>>>,
+        outputs: Vec<Vec<u8>>,
+        code: Option<i32>,
+    }
+
+    impl ScriptedQuery {
+        fn with(outputs: &[&str]) -> Self {
+            Self {
+                calls: std::cell::RefCell::new(Vec::new()),
+                outputs: outputs
+                    .iter()
+                    .map(|text| text.as_bytes().to_vec())
+                    .collect(),
+                code: Some(0),
+            }
+        }
+    }
+
+    impl QueryRunner for ScriptedQuery {
+        fn run_query(
+            &self,
+            argv: &[String],
+            _cwd: &std::path::Path,
+        ) -> io::Result<crate::resolve::QueryResult> {
+            let mut calls = self.calls.borrow_mut();
+            let stdout = self.outputs.get(calls.len()).cloned().unwrap_or_default();
+            calls.push(argv.to_vec());
+            Ok(crate::resolve::QueryResult {
+                code: self.code,
+                stdout,
                 stderr: Vec::new(),
             })
         }
@@ -458,6 +602,106 @@ mod tests {
     }
 
     #[test]
+    fn version_rollback_pins_previous_release() {
+        let root = temp_root("version-rollback");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let inv = invocation(&["version", "--rollback"]);
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        assert!(String::from_utf8(out).expect("out").contains("rollback"));
+        let pinned = std::fs::read_to_string(root.join(".dx/version")).expect("pin");
+        assert_eq!(pinned.trim(), dx_adopt::PREVIOUS_VERSION);
+        // Rolling back twice is refused: the pin already equals the
+        // previous release, so there is nothing to restore.
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 1);
+        assert!(String::from_utf8(err)
+            .expect("err")
+            .contains("rollback refused"));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn version_rejects_combined_mutation_and_check_flags() {
+        let root = temp_root("version-conflicts");
+        for words in [
+            vec!["version", "--pin=0.1.0", "--rollback"],
+            vec!["version", "--pin=0.1.0", "--check"],
+            vec!["version", "--rollback", "--check"],
+        ] {
+            let mut out = Vec::new();
+            let mut err = Vec::new();
+            let inv = invocation(&words);
+            let code = execute_adoption(
+                &inv,
+                AdoptEnv {
+                    workspace: &root,
+                    query_runner: &NullQuery,
+                    out: &mut out,
+                    err: &mut err,
+                },
+            );
+            assert_eq!(code, 2, "words: {words:?}");
+        }
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn version_check_reports_drift() {
+        let root = temp_root("version-check");
+        std::fs::create_dir_all(root.join(".dx")).expect("dx");
+        std::fs::write(root.join(".dx/version"), "0.1.0\n").expect("pin");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let inv = invocation(&["version", "--check"]);
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        assert!(String::from_utf8(out).expect("out").contains("version ok"));
+        std::fs::write(root.join(".dx/version"), "0.0.0\n").expect("drift");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 1);
+        assert!(String::from_utf8(err).expect("err").contains("drift"));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
     fn docs_plans_check_and_build() {
         let root = temp_root("docs");
         let mut out = Vec::new();
@@ -500,7 +744,8 @@ mod tests {
     }
 
     #[test]
-    fn inspect_forwards_sorted_query() {
+    fn inspect_forwards_single_unwrapped_query() {
+        let runner = ScriptedQuery::with(&["//z:two\n//a:one\n//z:two\n"]);
         let inv = invocation(&["owners", "//a:one"]);
         let root = temp_root("inspect");
         let mut out = Vec::new();
@@ -509,13 +754,109 @@ mod tests {
             &inv,
             AdoptEnv {
                 workspace: &root,
-                query_runner: &NullQuery,
+                query_runner: &runner,
                 out: &mut out,
                 err: &mut err,
             },
         );
         assert_eq!(code, 0);
-        assert!(String::from_utf8(out).expect("out").contains("//a:one"));
+        // Sorted and deduplicated.
+        assert_eq!(String::from_utf8(out).expect("out"), "//a:one\n//z:two\n");
+        // Exactly one query expression: never double-wrapped in a
+        // second `query` invocation and never shell-quoted.
+        let calls = runner.calls.borrow();
+        assert_eq!(calls.len(), 1);
+        assert_eq!(
+            calls[0],
+            vec![
+                "bazel".to_owned(),
+                "query".to_owned(),
+                "kind('rule', rdeps(//..., //a:one, 1))".to_owned(),
+            ]
+        );
+        assert!(String::from_utf8(err).expect("err").is_empty());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn inspect_configured_uses_cquery() {
+        let runner = ScriptedQuery::with(&["//a:one\n"]);
+        let inv = invocation(&["deps", "--configured", "//a:one"]);
+        let root = temp_root("inspect-configured");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &runner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        let calls = runner.calls.borrow();
+        assert_eq!(calls.len(), 1);
+        assert_eq!(calls[0][1], "cquery");
+        assert_eq!(calls[0][2], "deps(//a:one)");
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn why_resolves_owner_then_somepath() {
+        let runner = ScriptedQuery::with(&["//owner:lib\n", "//owner:lib\n//app:server\n"]);
+        let inv = invocation(&["why", "src/lib.rs", "//app:server"]);
+        let root = temp_root("why");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &runner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        let calls = runner.calls.borrow();
+        assert_eq!(calls.len(), 2);
+        // Step 1 resolves the file owner; step 2 explains from the
+        // resolved owner, never from the raw file path.
+        assert_eq!(calls[0][2], "kind('rule', rdeps(//..., src/lib.rs, 1))");
+        assert_eq!(
+            calls[1],
+            vec![
+                "bazel".to_owned(),
+                "query".to_owned(),
+                "somepath(//owner:lib, //app:server)".to_owned(),
+            ]
+        );
+        assert!(String::from_utf8(out)
+            .expect("out")
+            .contains("//app:server"));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn why_without_owner_is_operational() {
+        let runner = ScriptedQuery::with(&[""]);
+        let inv = invocation(&["why", "src/orphan.rs", "//app:server"]);
+        let root = temp_root("why-orphan");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &runner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 1);
+        assert!(String::from_utf8(err).expect("err").contains("no owner"));
+        assert_eq!(runner.calls.borrow().len(), 1);
         let _ = std::fs::remove_dir_all(&root);
     }
 

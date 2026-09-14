@@ -115,7 +115,7 @@ impl Runner for BinaryRunner {
 fn usage_error(message: &str) -> i32 {
     let _ = writeln!(
         io::stderr(),
-        "dx: {message}\nusage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|init|hooks|status|version|docs|watch|owners|deps|why|completion> [--check] [scope ...] [-- command-options...]"
+        "dx: {message}\nusage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]"
     );
     pre_exec_code()
 }
@@ -188,6 +188,10 @@ fn run() -> i32 {
             nonce: 0,
             out: &mut out,
             err: &mut err,
+            // The local-only `dx run` gate reads the launch
+            // environment once here; execution below takes the bit
+            // by value so tests stay hermetic.
+            ci: std::env::var("CI").is_ok_and(|value| value == "true"),
         },
     );
     let _ = out.flush();

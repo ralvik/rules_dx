@@ -16,7 +16,7 @@ use crate::args::{Command, Invocation, ReportRequest};
 use crate::finalize::{finalize, FinalizeError, FinalizeInput};
 use crate::generate::{project, render_diff, text_lines};
 use crate::plan::{
-    bep_path, generate_scope_json, intended_path, plan_build, plan_generate, plan_run,
+    bep_path, generate_scope_json, intended_path, plan_bazel, plan_build, plan_generate, plan_run,
     plan_workflow, spec, WorkflowVerb, GENERATE_ENV_INTENDED, GENERATE_ENV_MODE,
     GENERATE_ENV_SCOPE, OUTPUT_GROUP,
 };
@@ -70,7 +70,11 @@ const CODE_INVALID_RESULT: &str = "invalid_result";
 
 /// Execution environment: resolved workspace, process seams for the
 /// workflow and for ownership queries, temporary directory for the BEP
-/// stream, and owned output streams.
+/// stream, owned output streams, and the CI refusal bit for the
+/// local-only `dx run` gate. `ci` is resolved once at process startup
+/// from the `CI` environment variable so unit tests never mutate
+/// shared process state (parallel test threads would otherwise race
+/// on `set_var`).
 pub struct Env<'a> {
     pub workspace: &'a Path,
     pub runner: &'a dyn Runner,
@@ -80,6 +84,7 @@ pub struct Env<'a> {
     pub nonce: u64,
     pub out: &'a mut dyn Write,
     pub err: &'a mut dyn Write,
+    pub ci: bool,
 }
 
 /// Reads reported artifact bytes from the local filesystem. Bazel owns
@@ -374,7 +379,7 @@ fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
     let _ = writeln!(err, "dx: {message}");
     let _ = writeln!(
         err,
-        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|init|hooks|status|version|docs|watch|owners|deps|why|completion> [--check] [scope ...] [-- command-options...]"
+        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]"
     );
     pre_exec_code()
 }
@@ -454,6 +459,9 @@ pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
     if invocation.command.is_workflow() {
         return execute_workflow(invocation, env);
     }
+    if invocation.command == Command::Bazel {
+        return execute_bazel(invocation, env);
+    }
     if invocation.command == Command::Generate {
         return execute_generate(invocation, env);
     }
@@ -469,6 +477,7 @@ pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
         nonce,
         out,
         err,
+        ci: _,
     } = env;
     let planned_reports = match plan_reports(
         invocation.command,
@@ -1050,6 +1059,7 @@ fn execute_workflow(invocation: &Invocation, env: Env<'_>) -> i32 {
         nonce,
         out,
         err,
+        ci: _,
     } = env;
     let planned_reports = match plan_reports(
         invocation.command,
@@ -1161,6 +1171,57 @@ fn execute_workflow(invocation: &Invocation, env: Env<'_>) -> i32 {
         stdout_report,
         bazel_code,
     )
+}
+
+/// Executes `dx bazel`: raw launcher passthrough for the M26 WP4
+/// helper surface (`dx bazel version`, `dx bazel audit`/
+/// `dx bazel update` when those helpers exist).
+///
+/// The child inherits stdio and its exit code forwards verbatim: no
+/// scope resolution, no quality thresholds or reports, no BEP
+/// stream, and no dx-owned output beyond the dry-run/quiet summary
+/// line. Argument parsing guarantees text output, so only quiet
+/// suppresses the summary.
+fn execute_bazel(invocation: &Invocation, env: Env<'_>) -> i32 {
+    let Env {
+        workspace,
+        runner,
+        out,
+        err,
+        ..
+    } = env;
+    let plan = plan_bazel(&invocation.bazel_options);
+    if invocation.dry_run {
+        if !matches!(invocation.output, OutputMode::Text { quiet: true }) && !invocation.quiet {
+            let _ = writeln!(out, "{}", plan.summary);
+        }
+        return 0;
+    }
+    if matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet {
+        let _ = writeln!(out, "{}", plan.summary);
+    }
+    let status = match runner.run(&plan.argv, workspace, &[]) {
+        Ok(status) => status,
+        Err(error) => {
+            return operational(
+                invocation,
+                out,
+                err,
+                CODE_LAUNCH_FAILED,
+                &format!("failed to launch Bazel: {error}"),
+            );
+        }
+    };
+    let Some(bazel_code) = status.code else {
+        return operational(
+            invocation,
+            out,
+            err,
+            CODE_BAZEL_SIGNALLED,
+            "Bazel terminated by signal",
+        );
+    };
+    bazel_code
 }
 
 /// Closes a generate run that produced no reportable manifest: JSON
@@ -1553,6 +1614,7 @@ fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
         nonce,
         out,
         err,
+        ci,
     } = env;
     let umbrella_check = invocation.command == Command::Check;
     // The umbrella kind dictates the phase mode; an explicit `--check`
@@ -1635,6 +1697,8 @@ fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
             bazel_options: invocation.bazel_options.clone(),
             bazel_clean: false,
             pin: None,
+            rollback: false,
+            configured: false,
             serve: false,
             port: None,
         };
@@ -1650,6 +1714,7 @@ fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
                 nonce: phase_nonce,
                 out: &mut phase_out,
                 err: &mut phase_err,
+                ci,
             };
             if *phase == Command::Generate {
                 execute_generate(&phase_invocation, phase_env)
@@ -2019,8 +2084,9 @@ fn execute_run(invocation: &Invocation, env: Env<'_>) -> i32 {
         nonce: _,
         out,
         err,
+        ci,
     } = env;
-    if std::env::var("CI").is_ok_and(|value| value == "true") {
+    if ci {
         return pre_exec(err, "dx run refuses when CI=true: local-only command");
     }
     let planned_reports = match plan_reports(
@@ -2358,6 +2424,13 @@ mod tests {
         }
 
         fn run(&self, words: &[&str]) -> (i32, String, String) {
+            self.run_with_ci(words, false)
+        }
+
+        /// `dx run` CI-gate probe: drives `execute` with the startup
+        /// refusal bit set, without touching process-global
+        /// environment (parallel tests share one process).
+        fn run_with_ci(&self, words: &[&str], ci: bool) -> (i32, String, String) {
             let inv = invocation(words);
             let runner = self.runner();
             let mut out = Vec::new();
@@ -2373,6 +2446,7 @@ mod tests {
                     nonce: 0,
                     out: &mut out,
                     err: &mut err,
+                    ci,
                 },
             );
             (
@@ -2919,12 +2993,107 @@ mod tests {
                 nonce: 0,
                 out: &mut out,
                 err: &mut err,
+                ci: false,
             },
         );
         assert_eq!(code, 1);
         assert!(String::from_utf8(err)
             .expect("stderr")
             .contains("dx: unreadable_bep: temporary event path is not UTF-8"));
+    }
+
+    /// Argv-recording launcher probe for passthrough tests: the
+    /// shared `FakeRunner` never observes argv, which is the whole
+    /// contract under test here.
+    struct ArgvProbe {
+        code: Option<i32>,
+        seen: Rc<RefCell<Vec<Vec<String>>>>,
+    }
+
+    impl Runner for ArgvProbe {
+        fn run(
+            &self,
+            argv: &[String],
+            _cwd: &Path,
+            _env: &[(&str, &str)],
+        ) -> io::Result<ChildStatus> {
+            self.seen.borrow_mut().push(argv.to_vec());
+            Ok(ChildStatus { code: self.code })
+        }
+    }
+
+    #[test]
+    fn bazel_forwards_argv_verbatim_and_exit_code() {
+        let harness = Harness::new("bazel-passthrough");
+        let seen = Rc::new(RefCell::new(Vec::new()));
+        let probe = ArgvProbe {
+            code: Some(3),
+            seen: Rc::clone(&seen),
+        };
+        let inv = invocation(&["bazel", "build", "//...", "--", "--jobs=4"]);
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute(
+            &inv,
+            Env {
+                workspace: &harness.workspace,
+                runner: &probe,
+                query_runner: &harness.query,
+                temp_dir: &harness.temp,
+                pid: std::process::id(),
+                nonce: 0,
+                out: &mut out,
+                err: &mut err,
+                ci: false,
+            },
+        );
+        assert_eq!(code, 3);
+        let seen = seen.borrow();
+        assert_eq!(seen.len(), 1);
+        assert_eq!(
+            seen[0],
+            vec![
+                "bazel".to_owned(),
+                "build".to_owned(),
+                "//...".to_owned(),
+                "--jobs=4".to_owned(),
+            ]
+        );
+        assert!(String::from_utf8(out)
+            .expect("stdout")
+            .contains("Running bazel build //... --jobs=4"));
+    }
+
+    #[test]
+    fn bazel_dry_run_launches_nothing() {
+        let harness = Harness::new("bazel-dry");
+        let seen = Rc::new(RefCell::new(Vec::new()));
+        let probe = ArgvProbe {
+            code: Some(0),
+            seen: Rc::clone(&seen),
+        };
+        let inv = invocation(&["--dry-run", "bazel", "version"]);
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute(
+            &inv,
+            Env {
+                workspace: &harness.workspace,
+                runner: &probe,
+                query_runner: &harness.query,
+                temp_dir: &harness.temp,
+                pid: std::process::id(),
+                nonce: 0,
+                out: &mut out,
+                err: &mut err,
+                ci: false,
+            },
+        );
+        assert_eq!(code, 0);
+        assert!(seen.borrow().is_empty());
+        assert!(String::from_utf8(out)
+            .expect("stdout")
+            .contains("Running bazel version"));
     }
 
     #[test]
@@ -4100,6 +4269,8 @@ mod tests {
             bazel_options: Vec::new(),
             bazel_clean: false,
             pin: None,
+            rollback: false,
+            configured: false,
             serve: false,
             port: None,
         }
@@ -4120,6 +4291,7 @@ mod tests {
                 nonce: 0,
                 out: &mut out,
                 err: &mut err,
+                ci: false,
             },
         );
         (
@@ -4212,24 +4384,21 @@ mod tests {
 
     #[test]
     fn run_ci_refusal_is_pre_exec() {
-        // Cover both restore arms: first with no prior CI, then with a prior.
-        for preset in [None, Some("0")] {
-            match preset {
-                Some(value) => std::env::set_var("CI", value),
-                None => std::env::remove_var("CI"),
-            }
-            let harness = Harness::new("run-ci");
-            let prior = std::env::var("CI").ok();
-            std::env::set_var("CI", "true");
-            let (code, _, err) = harness.run(&["run", "//app:bin"]);
-            match prior {
-                Some(value) => std::env::set_var("CI", value),
-                None => std::env::remove_var("CI"),
-            }
-            assert_eq!(code, 2, "{err}");
-            assert!(err.contains("CI=true"), "{err}");
-        }
-        std::env::remove_var("CI");
+        // The refusal bit travels inside `Env`, never through
+        // process-global environment: parallel test threads share one
+        // process, so `set_var("CI", ...)` here used to flake
+        // unrelated `run` tests with spurious CI refusals.
+        let harness = Harness::new("run-ci");
+        let (code, _, err) = harness.run_with_ci(&["run", "//app:bin"], true);
+        assert_eq!(code, 2, "{err}");
+        assert!(err.contains("CI=true"), "{err}");
+        // The same invocation without the bit proceeds past the gate
+        // (here: into ambiguous-runnable resolution).
+        std::fs::create_dir_all(harness.workspace.join("app")).expect("dir");
+        harness.query.script_owners("//app:two\n//app:one\n");
+        let (code, _, err) = harness.run(&["run", "app"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("ambiguous_runnable"), "{err}");
     }
 
     /// Default-mode witness for one `rust/hello/BUILD.bazel` modify

@@ -135,6 +135,15 @@ pub fn spec(command: Command) -> CommandSpec {
             aspects: &[],
             reports: &[],
         },
+        // Raw launcher passthrough (M26 WP4 helper surface): no
+        // aspects, no reports, no scope resolution; planned at
+        // execution as launcher plus forwarded arguments.
+        Command::Bazel => CommandSpec {
+            command,
+            capability: "bazel",
+            aspects: &[],
+            reports: &[],
+        },
     }
 }
 
@@ -279,6 +288,9 @@ impl WorkflowVerb {
             Command::Run => Some(WorkflowVerb::Run),
             Command::Lint | Command::Typecheck | Command::Format | Command::Generate => None,
             Command::Check | Command::Fix | Command::Clean => None,
+            // Raw launcher passthrough plans its own argv (launcher
+            // plus forwarded arguments), never a fixed workflow verb.
+            Command::Bazel => None,
             Command::Init
             | Command::Hooks
             | Command::Status
@@ -404,6 +416,26 @@ pub fn plan_run(target: &str, app_args: &[String]) -> BuildPlan {
         argv.extend(app_args.iter().cloned());
     }
     let summary = format!("Running run for {target}");
+    BuildPlan { argv, summary }
+}
+
+/// Builds the exact raw launcher argv for `dx bazel`: the launcher
+/// followed by the verbatim forwarded arguments, per
+/// `docs/cli/commands/audit-update-bazel.md` ("arguments unchanged").
+/// No startup options, no workspace policy, no protected flags, no
+/// scope resolution, no reports: unlike the quality and workflow
+/// paths, the escape hatch applies no rc suppression, so the user's
+/// home and system rc files behave exactly as they do under a direct
+/// `bazel` invocation from the same workspace.
+pub fn plan_bazel(forwarded: &[String]) -> BuildPlan {
+    let mut argv = Vec::with_capacity(1 + forwarded.len());
+    argv.push(dx_process::launcher_argv0().to_owned());
+    argv.extend(forwarded.iter().cloned());
+    let summary = if forwarded.is_empty() {
+        "Running bazel".to_owned()
+    } else {
+        format!("Running bazel {}", forwarded.join(" "))
+    };
     BuildPlan { argv, summary }
 }
 
@@ -650,8 +682,25 @@ mod tests {
         assert!(clean.aspects.is_empty());
         assert!(clean.reports.is_empty());
         assert_eq!(WorkflowVerb::of(Command::Clean), None);
+        let bazel = spec(Command::Bazel);
+        assert_eq!(bazel.capability, "bazel");
+        assert!(bazel.aspects.is_empty());
+        assert!(bazel.reports.is_empty());
+        assert_eq!(WorkflowVerb::of(Command::Bazel), None);
         assert_eq!(WorkflowVerb::Run.name(), "run");
         assert!(!WorkflowVerb::Run.collects_reports());
+    }
+
+    #[test]
+    fn bazel_plan_forwards_arguments_verbatim() {
+        let plan = plan_bazel(&options(&["build", "//...", "--jobs=4"]));
+        assert_eq!(
+            plan.argv,
+            options(&["bazel", "build", "//...", "--jobs=4",])
+        );
+        assert!(plan.summary.contains("build //..."));
+        let bare = plan_bazel(&[]);
+        assert_eq!(bare.argv, options(&["bazel"]));
     }
 
     #[test]
