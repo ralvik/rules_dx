@@ -115,7 +115,7 @@ impl Runner for BinaryRunner {
 fn usage_error(message: &str) -> i32 {
     let _ = writeln!(
         io::stderr(),
-        "dx: {message}\nusage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|codegen|env|setup|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]"
+        "dx: {message}\nusage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]"
     );
     pre_exec_code()
 }

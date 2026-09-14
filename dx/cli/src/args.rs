@@ -23,6 +23,7 @@ use dx_output::{OutputMode, Threshold};
 /// the first positional argument.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
+    Audit,
     Lint,
     Typecheck,
     Format,
@@ -34,6 +35,7 @@ pub enum Command {
     Check,
     Fix,
     Clean,
+    Update,
     Codegen,
     Env,
     Setup,
@@ -54,6 +56,7 @@ impl Command {
     /// Stable command name used in summaries and `command_started`.
     pub fn name(self) -> &'static str {
         match self {
+            Command::Audit => "audit",
             Command::Lint => "lint",
             Command::Typecheck => "typecheck",
             Command::Format => "format",
@@ -65,6 +68,7 @@ impl Command {
             Command::Check => "check",
             Command::Fix => "fix",
             Command::Clean => "clean",
+            Command::Update => "update",
             Command::Codegen => "codegen",
             Command::Env => "env",
             Command::Setup => "setup",
@@ -84,6 +88,7 @@ impl Command {
 
     fn parse(text: &str) -> Option<Self> {
         match text {
+            "audit" => Some(Command::Audit),
             "lint" => Some(Command::Lint),
             "typecheck" => Some(Command::Typecheck),
             "format" => Some(Command::Format),
@@ -95,6 +100,7 @@ impl Command {
             "check" => Some(Command::Check),
             "fix" => Some(Command::Fix),
             "clean" => Some(Command::Clean),
+            "update" => Some(Command::Update),
             "codegen" => Some(Command::Codegen),
             "env" => Some(Command::Env),
             "setup" => Some(Command::Setup),
@@ -128,6 +134,16 @@ impl Command {
     /// run in order with stop-on-first-failure under one NDJSON frame.
     pub fn is_umbrella(self) -> bool {
         matches!(self, Command::Check | Command::Fix)
+    }
+
+    /// True for the delivered audit/update surfaces (`audit`, `update`):
+    /// they plan through the `dx_audit`/`dx_update` libraries over
+    /// family selectors and dependency-set selectors, never the quality
+    /// aspect pipeline. Audit is non-mutating; update is mutating
+    /// without confirmation. Tool and resolver backends land in later
+    /// M26 slices; this only records the planned request.
+    pub fn is_audit_update(self) -> bool {
+        matches!(self, Command::Audit | Command::Update)
     }
 
     /// True for the managed environment/codegen/setup surfaces
@@ -251,12 +267,12 @@ impl std::fmt::Display for ArgsError {
         match self {
             ArgsError::MissingCommand => write!(
                 f,
-                "missing command: want lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|codegen|env|setup|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel"
+                "missing command: want audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel"
             ),
             ArgsError::UnknownCommand { command } => {
                 write!(
                     f,
-                    "unknown command {command:?}: want lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|codegen|env|setup|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel"
+                    "unknown command {command:?}: want audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel"
                 )
             }
             ArgsError::UnknownOption { option } => write!(f, "unknown option {option:?}"),
@@ -627,6 +643,118 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
             });
         }
     }
+    if command == Command::Audit {
+        // Audit plans through `dx_audit` (M26 WP1): family selection
+        // plus scope spellings, non-mutating, with SARIF reports and
+        // `--fail-on` thresholds. `--check` is meaningless (audit never
+        // mutates), Bazel forwards do not apply (no collection build
+        // yet), and version/docs/clean-only flags do not apply.
+        // Family parsing itself stays in `dx_audit::plan_audit`; args
+        // only preserve positionals verbatim (family or scopes).
+        if check {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--check".to_owned(),
+            });
+        }
+        if pin.is_some() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--pin".to_owned(),
+            });
+        }
+        if serve {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--serve".to_owned(),
+            });
+        }
+        if port.is_some() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--port".to_owned(),
+            });
+        }
+        if !bazel_options.is_empty() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--".to_owned(),
+            });
+        }
+        // Scopes use the shared label/path shape; the first positional
+        // may also be a family (`security`/`license`) preserved verbatim
+        // for `dx_audit::plan_audit`. Only package-relative labels and
+        // empty scopes fail here.
+        for scope in &targets {
+            if scope.is_empty() || scope.starts_with(':') {
+                return Err(ArgsError::ScopeNotSupported {
+                    scope: scope.clone(),
+                });
+            }
+        }
+    }
+    if command == Command::Update {
+        // Update plans through `dx_update` (M26 WP2): dependency-set /
+        // package selectors preserved verbatim, mutating without
+        // confirmation. Thresholds, standard reports, and check mode do
+        // not apply on this path; exact aggregate exit/report mappings
+        // stay under O12 qualification.
+        if check {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--check".to_owned(),
+            });
+        }
+        if fail_on_name != "warning" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--fail-on".to_owned(),
+            });
+        }
+        if output_name != "text" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: format!("--output={output_name}"),
+            });
+        }
+        if let Some(request) = reports.first() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: format!("--report={}={}", request.format, request.destination),
+            });
+        }
+        if pin.is_some() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--pin".to_owned(),
+            });
+        }
+        if serve {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--serve".to_owned(),
+            });
+        }
+        if port.is_some() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--port".to_owned(),
+            });
+        }
+        if !bazel_options.is_empty() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--".to_owned(),
+            });
+        }
+        for scope in &targets {
+            if scope.is_empty() || scope.starts_with(':') {
+                return Err(ArgsError::ScopeNotSupported {
+                    scope: scope.clone(),
+                });
+            }
+        }
+    }
     if command.is_workflow() {
         // Workflow commands run Bazel verbs directly with Bazel-owned
         // status: finding thresholds and check-mode mutation previews do
@@ -879,6 +1007,8 @@ mod tests {
 
     #[test]
     fn command_names_are_stable() {
+        assert_eq!(Command::Audit.name(), "audit");
+        assert_eq!(Command::Update.name(), "update");
         assert_eq!(Command::Lint.name(), "lint");
         assert_eq!(Command::Typecheck.name(), "typecheck");
         assert_eq!(Command::Format.name(), "format");
@@ -1332,6 +1462,87 @@ mod tests {
             Err(ArgsError::UnsupportedOption {
                 command: "build",
                 option: "--bazel".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn audit_update_parse_and_reject_unsupported_options() {
+        let audit = parse(&args(&["audit"])).expect("parse audit");
+        assert_eq!(audit.command, Command::Audit);
+        assert_eq!(audit.command.name(), "audit");
+        assert!(audit.command.is_audit_update());
+        assert!(!audit.command.is_workflow());
+        assert!(!audit.command.is_adoption());
+        assert!(!audit.command.is_managed());
+        assert!(audit.targets.is_empty());
+        let families = parse(&args(&["audit", "security"])).expect("parse audit family");
+        assert_eq!(families.targets, vec!["security".to_owned()]);
+        let update = parse(&args(&["update"])).expect("parse update");
+        assert_eq!(update.command, Command::Update);
+        assert_eq!(update.command.name(), "update");
+        assert!(update.command.is_audit_update());
+        let selected = parse(&args(&["update", "crates"])).expect("parse update selector");
+        assert_eq!(selected.targets, vec!["crates".to_owned()]);
+        assert_eq!(
+            parse(&args(&["audit", "--check"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "audit",
+                option: "--check".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["update", "--check"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "update",
+                option: "--check".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["update", "--fail-on=error"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "update",
+                option: "--fail-on".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["update", "--output=json"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "update",
+                option: "--output=json".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["update", "--report=sarif=out.sarif"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "update",
+                option: "--report=sarif=out.sarif".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["update", "--", "--jobs=4"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "update",
+                option: "--".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["audit", "--", "--jobs=4"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "audit",
+                option: "--".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["audit", ":target"])),
+            Err(ArgsError::ScopeNotSupported {
+                scope: ":target".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["update", ":target"])),
+            Err(ArgsError::ScopeNotSupported {
+                scope: ":target".to_owned(),
             })
         );
     }

@@ -30,6 +30,7 @@ pub const WATCH_DEBOUNCE_MS: u64 = 200;
 /// Every `dx completion <shell>` script renders from this table so new
 /// commands cannot drift from the command reference.
 pub const ALL_COMMANDS: &[&str] = &[
+    "audit",
     "lint",
     "typecheck",
     "format",
@@ -41,6 +42,7 @@ pub const ALL_COMMANDS: &[&str] = &[
     "check",
     "fix",
     "clean",
+    "update",
     "codegen",
     "env",
     "setup",

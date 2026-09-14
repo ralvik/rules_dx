@@ -145,6 +145,24 @@ pub fn spec(command: Command) -> CommandSpec {
             aspects: &[],
             reports: &[],
         },
+        // Audit/update planning surfaces (M26 WP1/WP2 slice 1): family
+        // selection and dependency-set selectors plan through the
+        // `dx_audit`/`dx_update` libraries, never the quality aspect
+        // pipeline. Audit exports SARIF through the shared report
+        // contract; update has no standard report until O12 backend
+        // mappings land.
+        Command::Audit => CommandSpec {
+            command,
+            capability: "audit",
+            aspects: &[],
+            reports: &["sarif"],
+        },
+        Command::Update => CommandSpec {
+            command,
+            capability: "update",
+            aspects: &[],
+            reports: &[],
+        },
         // Raw launcher passthrough (M26 WP4 helper surface): no
         // aspects, no reports, no scope resolution; planned at
         // execution as launcher plus forwarded arguments.
@@ -301,6 +319,9 @@ impl WorkflowVerb {
             // Managed selections plan their own collection argv
             // ([`plan_managed`]), never a fixed workflow verb.
             Command::Codegen | Command::Env | Command::Setup => None,
+            // Audit/update plan through `dx_audit`/`dx_update`,
+            // never a fixed workflow verb.
+            Command::Audit | Command::Update => None,
             // Raw launcher passthrough plans its own argv (launcher
             // plus forwarded arguments), never a fixed workflow verb.
             Command::Bazel => None,
@@ -793,6 +814,18 @@ mod tests {
             assert_eq!(WorkflowVerb::of(command), None);
             assert!(command.is_managed());
         }
+        let audit = spec(Command::Audit);
+        assert_eq!(audit.capability, "audit");
+        assert!(audit.aspects.is_empty());
+        assert_eq!(audit.reports, &["sarif"]);
+        assert_eq!(WorkflowVerb::of(Command::Audit), None);
+        assert!(Command::Audit.is_audit_update());
+        let update = spec(Command::Update);
+        assert_eq!(update.capability, "update");
+        assert!(update.aspects.is_empty());
+        assert!(update.reports.is_empty());
+        assert_eq!(WorkflowVerb::of(Command::Update), None);
+        assert!(Command::Update.is_audit_update());
         assert_eq!(WorkflowVerb::Run.name(), "run");
         assert!(!WorkflowVerb::Run.collects_reports());
     }
