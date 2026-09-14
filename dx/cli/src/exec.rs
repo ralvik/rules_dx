@@ -5897,6 +5897,72 @@ mod tests {
     }
 
     #[test]
+    fn audit_dry_run_json_emits_lifecycle() {
+        let harness = Harness::new("audit-dryrun-json");
+        let (code, out, err) = harness.run(&["audit", "--dry-run", "--output=json"]);
+        assert_eq!(code, 0, "{out}{err}");
+        let events: Vec<serde_json::Value> = out
+            .lines()
+            .map(serde_json::from_str)
+            .collect::<Result<_, _>>()
+            .expect("NDJSON");
+        let kinds: Vec<&str> = events
+            .iter()
+            .map(|event| event["event"].as_str().expect("event"))
+            .collect();
+        assert_eq!(kinds, vec!["command_started", "command_finished"]);
+        assert_eq!(
+            events.last().expect("finished")["exit_code"],
+            serde_json::json!(0)
+        );
+        assert!(
+            harness.seen_env.borrow().is_empty(),
+            "dry-run launches nothing"
+        );
+    }
+
+    #[test]
+    fn audit_live_json_emits_deferred_lifecycle() {
+        let harness = Harness::new("audit-live-json");
+        let (code, out, err) = harness.run(&["audit", "--output=json"]);
+        assert_eq!(code, 1, "{out}{err}");
+        assert!(err.contains("audit_deferred"), "{err}");
+        let events: Vec<serde_json::Value> = out
+            .lines()
+            .map(serde_json::from_str)
+            .collect::<Result<_, _>>()
+            .expect("NDJSON");
+        let kinds: Vec<&str> = events
+            .iter()
+            .map(|event| event["event"].as_str().expect("event"))
+            .collect();
+        assert_eq!(kinds, vec!["command_started", "error", "command_finished"]);
+        assert!(
+            harness.seen_env.borrow().is_empty(),
+            "deferred run launches nothing"
+        );
+    }
+
+    #[test]
+    fn audit_update_dry_run_quiet_prints_nothing() {
+        for argv in [
+            vec!["audit", "--dry-run", "--quiet"],
+            vec!["update", "--dry-run", "--quiet"],
+        ] {
+            let name = format!("dryrun-quiet-{}", argv[0]);
+            let harness = Harness::new(&name);
+            let (code, out, err) = harness.run(&argv);
+            assert_eq!(code, 0, "{out}{err}");
+            assert_eq!(out, "", "{out}");
+            assert_eq!(err, "", "{err}");
+            assert!(
+                harness.seen_env.borrow().is_empty(),
+                "dry-run launches nothing"
+            );
+        }
+    }
+
+    #[test]
     fn managed_live_empty_selection_commits_with_empty_counterparts() {
         for command in ["codegen", "env", "setup"] {
             let name = format!("managed-commit-{command}");
