@@ -1,13 +1,16 @@
-//! Pure post-release adoption planning (M30b slice 1: `dx init` scaffolding
-//! discipline and single-version `dx` pinning with rollback).
+//! Pure post-release adoption planning (M30b slices 1-2: `dx init` scaffolding
+//! discipline and single-version `dx` pinning with rollback; hook-runner
+//! hermeticity/overwrite/config shape and devcontainer bootstrap discipline).
 //!
 //! This crate owns the adoption shape before any scaffolding, hook,
 //! devcontainer, diagnostics, versioning, watch, inspect, or completion
 //! behavior lands: absent-only writes, unmanaged refusal, the single tested
-//! version (`dx` version equals the pinned `rules_dx` module version), and
-//! rollback as re-pinning. It plans over injected booleans/strings only, so
-//! the rules stay deterministic and unit-testable without repositories,
-//! editors, containers, networks, or shells.
+//! version (`dx` version equals the pinned `rules_dx` module version),
+//! rollback as re-pinning, hermetic-only hook Git, unmanaged-hook overwrite
+//! refusal, the two-layer hook configuration, and pinned Bazel-delegated
+//! devcontainers. It plans over injected booleans/strings only, so the rules
+//! stay deterministic and unit-testable without repositories, editors,
+//! containers, networks, or shells.
 //!
 //! Out of scope here (M30b delivery, all gated): guide prose and CI wiring
 //! beyond the M30a handoff, hook-runner execution and hermetic-Git
@@ -52,6 +55,49 @@ pub fn rollback_re_pins_previous(current: &str, target: &str, known_previous: &s
     !known_previous.is_empty() && target == known_previous && target != current
 }
 
+/// Whether hook Git sourcing is hermetic.
+///
+/// Hook Git operations use hermetically acquired Git only, never ambient
+/// Git. Any ambient fallback fails the gate; this compares injected flags
+/// and acquires nothing.
+pub fn hook_git_is_hermetic(uses_hermetic_git: bool, uses_ambient_git: bool) -> bool {
+    uses_hermetic_git && !uses_ambient_git
+}
+
+/// Whether installing a managed hook shim may overwrite the existing file.
+///
+/// Unmanaged hooks cannot be overwritten even with force; only a managed
+/// shim may be refreshed. The force flag never authorizes overwriting an
+/// unmanaged hook.
+pub fn hook_shim_overwrite_allowed(existing_managed: bool, _force: bool) -> bool {
+    existing_managed
+}
+
+/// Whether `dx hooks status` shows the effective merged configuration.
+///
+/// Status must show the committed baseline, the personal overlay, and
+/// per-check timings together. Any missing layer fails the gate.
+pub fn hook_status_shows_merged(
+    shows_baseline: bool,
+    shows_overlay: bool,
+    shows_timings: bool,
+) -> bool {
+    shows_baseline && shows_overlay && shows_timings
+}
+
+/// Whether a devcontainer definition is admissible.
+///
+/// Setup uses only pinned artifacts and every tool execution delegates to
+/// Bazel actions: pinned bootstrap plus Bazel delegation with no ambient
+/// tools. Any ambient tool use fails the gate.
+pub fn devcontainer_is_admissible(
+    pinned_bootstrap: bool,
+    delegates_to_bazel: bool,
+    uses_ambient_tools: bool,
+) -> bool {
+    pinned_bootstrap && delegates_to_bazel && !uses_ambient_tools
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,5 +130,37 @@ mod tests {
         assert!(!rollback_re_pins_previous("1.2.3", "1.2.3", "1.2.3"));
         assert!(!rollback_re_pins_previous("1.2.4", "1.2.2", "1.2.3"));
         assert!(!rollback_re_pins_previous("1.2.4", "", ""));
+    }
+
+    #[test]
+    fn hook_git_never_falls_back_to_ambient() {
+        assert!(hook_git_is_hermetic(true, false));
+        assert!(!hook_git_is_hermetic(true, true));
+        assert!(!hook_git_is_hermetic(false, false));
+        assert!(!hook_git_is_hermetic(false, true));
+    }
+
+    #[test]
+    fn unmanaged_hooks_survive_force() {
+        assert!(hook_shim_overwrite_allowed(true, false));
+        assert!(hook_shim_overwrite_allowed(true, true));
+        assert!(!hook_shim_overwrite_allowed(false, false));
+        assert!(!hook_shim_overwrite_allowed(false, true));
+    }
+
+    #[test]
+    fn hook_status_shows_baseline_overlay_and_timings() {
+        assert!(hook_status_shows_merged(true, true, true));
+        assert!(!hook_status_shows_merged(false, true, true));
+        assert!(!hook_status_shows_merged(true, false, true));
+        assert!(!hook_status_shows_merged(true, true, false));
+    }
+
+    #[test]
+    fn devcontainer_needs_pins_and_bazel_delegation() {
+        assert!(devcontainer_is_admissible(true, true, false));
+        assert!(!devcontainer_is_admissible(false, true, false));
+        assert!(!devcontainer_is_admissible(true, false, false));
+        assert!(!devcontainer_is_admissible(true, true, true));
     }
 }
