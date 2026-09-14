@@ -6,7 +6,7 @@
 # source-level ignore) or `support` (never in the denominator).
 #
 # Rust and Go are measured. Starlark remains covered by behavioral evidence;
-# see milestone completion reports for instrumentation feasibility. Reconciled in CI
+# see git history for instrumentation feasibility. Reconciled in CI
 # against `bazel query 'kind("source file", deps(//...))'` filtered to
 # workspace-owned `*.rs` and `*.go` files. Test and fixture sources are
 # classified `support`.

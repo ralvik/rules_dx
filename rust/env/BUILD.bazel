@@ -1,4 +1,4 @@
-"""Focused Rust environment plans (M12 WP3).
+"""Focused Rust environment plans.
 
 Each `rust_env_plan` reads the analyzed authoritative providers of one
 `dx_rust_*` wrapper: library/binary/test through CrateInfo, Cc-linking
@@ -43,7 +43,7 @@ env_plan_tests(
     ],
 )
 
-# Repository corpus (M05 WP1): plan Starlark owned for direct-Bazel dogfood
+# Repository corpus: plan Starlark owned for direct-Bazel dogfood
 # under the canonical real_fixture_policy.
 real_source_target(
     name = "corpus",

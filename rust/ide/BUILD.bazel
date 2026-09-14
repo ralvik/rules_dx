@@ -1,4 +1,4 @@
-"""Upstream Rust IDE tool acquisition (M12 WP3).
+"""Upstream Rust IDE tool acquisition.
 
 The environment contract reuses the pinned patched rules_rust discovery
 and flycheck binaries; this package pins their acquisition. Focused
@@ -24,7 +24,7 @@ sh_test(
     tags = ["no-coverage"],
 )
 
-# Repository corpus (M05 WP1): IDE Starlark owned for direct-Bazel dogfood
+# Repository corpus: IDE Starlark owned for direct-Bazel dogfood
 # under the canonical real_fixture_policy. The acquisition script is a test
 # runner, never a linted corpus source.
 real_source_target(

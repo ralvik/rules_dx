@@ -223,7 +223,11 @@ fn execute_version(
         if !dx_adopt::version_pin_matches_module(pin, dx_adopt::MODULE_VERSION)
             && pin != dx_adopt::MODULE_VERSION
         {
-            return operational(out, err, "version pin must equal module 0.1.0");
+            return operational(
+                out,
+                err,
+                &format!("version pin must equal module {}", dx_adopt::MODULE_VERSION),
+            );
         }
         if invocation.dry_run {
             let _ = writeln!(out, "would pin {pin}");
@@ -564,7 +568,7 @@ mod tests {
         let inv = invocation(&["status"]);
         let root = temp_root("status");
         std::fs::create_dir_all(root.join(".dx")).expect("dx");
-        std::fs::write(root.join(".dx/version"), "0.1.0\n").expect("pin");
+        std::fs::write(root.join(".dx/version"), "0.0.0\n").expect("pin");
         let mut out = Vec::new();
         let mut err = Vec::new();
         let code = execute_adoption(
@@ -586,7 +590,7 @@ mod tests {
         let root = temp_root("version");
         let mut out = Vec::new();
         let mut err = Vec::new();
-        let pin = invocation(&["version", "--pin=0.1.0"]);
+        let pin = invocation(&["version", "--pin=0.0.0"]);
         let code = execute_adoption(
             &pin,
             AdoptEnv {
@@ -644,8 +648,8 @@ mod tests {
     fn version_rejects_combined_mutation_and_check_flags() {
         let root = temp_root("version-conflicts");
         for words in [
-            vec!["version", "--pin=0.1.0", "--rollback"],
-            vec!["version", "--pin=0.1.0", "--check"],
+            vec!["version", "--pin=0.0.0", "--rollback"],
+            vec!["version", "--pin=0.0.0", "--check"],
             vec!["version", "--rollback", "--check"],
         ] {
             let mut out = Vec::new();
@@ -669,7 +673,7 @@ mod tests {
     fn version_check_reports_drift() {
         let root = temp_root("version-check");
         std::fs::create_dir_all(root.join(".dx")).expect("dx");
-        std::fs::write(root.join(".dx/version"), "0.1.0\n").expect("pin");
+        std::fs::write(root.join(".dx/version"), "0.0.0\n").expect("pin");
         let mut out = Vec::new();
         let mut err = Vec::new();
         let inv = invocation(&["version", "--check"]);
@@ -684,7 +688,7 @@ mod tests {
         );
         assert_eq!(code, 0);
         assert!(String::from_utf8(out).expect("out").contains("version ok"));
-        std::fs::write(root.join(".dx/version"), "0.0.0\n").expect("drift");
+        std::fs::write(root.join(".dx/version"), "0.1.0\n").expect("drift");
         let mut out = Vec::new();
         let mut err = Vec::new();
         let code = execute_adoption(

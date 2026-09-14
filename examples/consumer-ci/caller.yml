@@ -15,7 +15,7 @@ jobs:
   dx:
     uses: rules_dx/.github/workflows/reusable-consumer.yml@f6bd03e7877be936e25eb1f141d4aba9fb4f9800
     with:
-      rules_dx_version: "0.1.0"
+      rules_dx_version: "0.0.0"
       disabled_checks: ""
       platforms: '["linux_x86_64"]'
       scheduling_mode: "parallel"

@@ -1,7 +1,6 @@
-# Reusable consumer CI (M27 delivery, versioned with rules_dx releases).
-#
-# Consumer-owned caller pins this file by release tag:
-#   uses: rules_dx/.github/workflows/reusable-consumer.yml@v0.1.0
+# Reusable consumer CI. This repository cuts no releases; the
+# consumer-owned caller pins this file at a reviewed commit:
+#   uses: rules_dx/.github/workflows/reusable-consumer.yml@<commit>
 # Reviewed pin bumps only; no silent upgrades. Consumers never copy
 # per-check execution, parsing, review, or comment-management logic.
 #
@@ -20,7 +19,7 @@ on:
   workflow_call:
     inputs:
       rules_dx_version:
-        description: "Pinned rules_dx release (e.g. 0.1.0). Must match the consumer MODULE.bazel pin."
+        description: "Pinned rules_dx version (e.g. 0.0.0). Must match the consumer MODULE.bazel pin."
         required: true
         type: string
       disabled_checks:

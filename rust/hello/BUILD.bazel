@@ -41,7 +41,7 @@ dx_rust_binary(
     ) + [":hello_lib"],
 )
 
-# Authoritative quality identities (M02): rustfmt and Clippy resolve from
+# Authoritative quality identities: rustfmt and Clippy resolve from
 # the pinned toolchain, never from ambient host tools. Each wrapper is
 # listed explicitly: lint aspects apply to the wrapper's own CrateInfo and
 # do not traverse the private `_dx_upstream` edge.
@@ -95,7 +95,7 @@ dx_rust_static_library(
     edition = "2021",
 )
 
-# Separate lint identities (M12): the M02 hello_fmt_test/hello_clippy_test
+# Separate lint identities: the M02 hello_fmt_test/hello_clippy_test
 # pins stay untouched, so the new shapes get their own lint tests with
 # their own marker sets.
 rustfmt_test(
@@ -123,7 +123,7 @@ exports_files([
     "Cargo.lock",
 ])
 
-# Conformance subjects (M02): same package as the private `_dx_upstream`
+# Conformance subjects: same package as the private `_dx_upstream`
 # targets so the probe can observe both sides of the forwarding boundary.
 dx_wrapper_subject(
     name = "hello_lib_subject",
@@ -193,7 +193,7 @@ dx_wrapper_conformance_tests(
     ],
 )
 
-# Repository corpus (M05 WP1): build file and manifest owned for
+# Repository corpus: build file and manifest owned for
 # direct-Bazel dogfood under the canonical real_fixture_policy. Rust
 # sources stay dx-owned (M02 wrappers), never corpus sources.
 real_source_target(

@@ -15,9 +15,9 @@
 use std::path::Path;
 
 /// Delivered `dx` / `rules_dx` single version (O51 freeze).
-pub const DX_VERSION: &str = "0.1.0";
+pub const DX_VERSION: &str = "0.0.0";
 /// Pinned `rules_dx` module version; `dx version` must equal this.
-pub const MODULE_VERSION: &str = "0.1.0";
+pub const MODULE_VERSION: &str = "0.0.0";
 /// Previous release for rollback demonstration.
 pub const PREVIOUS_VERSION: &str = "0.0.0";
 /// Hook per-check budget seconds (O49 freeze: blocking timeout).
@@ -253,7 +253,7 @@ pub fn plan_init_files(module_name: &str) -> Vec<ScaffoldFile> {
         ScaffoldFile {
             path: ".github/workflows/ci.yml".to_owned(),
             content: format!(
-                "# Caller template: pins the qualified reusable workflow.\nname: ci\non:\n  push: {{}}\n  pull_request: {{}}\njobs:\n  dx:\n    uses: {module}/.github/workflows/reusable-consumer.yml@v{DX_VERSION}\n"
+                "# Caller template: pins the qualified reusable workflow at a reviewed commit.\nname: ci\non:\n  push: {{}}\n  pull_request: {{}}\njobs:\n  dx:\n    uses: {module}/.github/workflows/reusable-consumer.yml@<reviewed-commit>\n"
             ),
         },
         ScaffoldFile {
@@ -453,7 +453,7 @@ pub fn default_status_checks(pinned: &str) -> Vec<StatusCheck> {
             name: "pin".to_owned(),
             status: pin_status.to_owned(),
             detail: format!("dx {pinned} vs module {MODULE_VERSION}"),
-            hint: "dx version --pin 0.1.0".to_owned(),
+            hint: "dx version --pin 0.0.0".to_owned(),
         },
     ]
 }
@@ -660,7 +660,9 @@ mod tests {
     #[test]
     fn delivered_version_matches_module() {
         assert!(version_pin_matches_module(DX_VERSION, MODULE_VERSION));
-        assert!(rollback_re_pins_previous(
+        // Single-version state (no releases cut): the rollback target
+        // equals the delivered version, so rollback correctly refuses.
+        assert!(!rollback_re_pins_previous(
             DX_VERSION,
             PREVIOUS_VERSION,
             PREVIOUS_VERSION

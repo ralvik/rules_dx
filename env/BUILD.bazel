@@ -49,7 +49,7 @@ env_defs_unit_tests(name = "env_defs_unit")
 
 env_config_analysis_tests(name = "env_config_analysis")
 
-# Staged tree subject (M11 WP2): one symlink per host name plus versioned
+# Staged tree subject: one symlink per host name plus versioned
 # management metadata, observed for layout and platform rendering.
 environment_tree(
     name = "tree_under_test",
@@ -62,7 +62,7 @@ env_default_config_analysis_tests(name = "env_default_config_analysis")
 
 env_default_tree_analysis_tests(name = "env_default_tree_analysis")
 
-# Frozen marker schema (M11 WP2): field numbers are the compatibility
+# Frozen marker schema: field numbers are the compatibility
 # surface; see `marker.proto` and the managed-state doc.
 proto_library(
     name = "marker_proto",
@@ -74,7 +74,7 @@ rust_prost_library(
     proto = ":marker_proto",
 )
 
-# Normalized environment plan shard schema (M25 WP2): field numbers
+# Normalized environment plan shard schema: field numbers
 # are the compatibility surface; see `plan.proto` and `plan.bzl`.
 # `EnvironmentInfo` stays PATH-tool-only; this is the internal plan
 # contract collected through the private `dx_env_plans` output group.

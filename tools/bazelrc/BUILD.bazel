@@ -29,7 +29,7 @@ test_suite(
     tests = [":preset.update_test"],
 )
 
-# Repository corpus (M05 WP4): preset Starlark owned for direct-Bazel
+# Repository corpus: preset Starlark owned for direct-Bazel
 # dogfood under the canonical real_fixture_policy. preset.py has no quality
 # class and stays outside the corpus; preset.bazelrc is an unclassified
 # generated fragment, never a checked source.

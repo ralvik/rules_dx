@@ -36,7 +36,7 @@ exports_files([
     "uv.lock",
 ])
 
-# Repository corpus (M05 WP1): build and project metadata owned for
+# Repository corpus: build and project metadata owned for
 # direct-Bazel dogfood under the canonical real_fixture_policy. Python
 # sources and the uv lock stay dx-owned/unclassified, never corpus sources.
 # The lock is a generated third-party manifest, excluded like other locks.

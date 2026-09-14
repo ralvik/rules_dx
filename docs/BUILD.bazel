@@ -1,4 +1,4 @@
-"""Repository documentation corpus (M05 WP1)."""
+"""Repository documentation corpus."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

@@ -12,7 +12,7 @@ dx_ts_project(
     tsconfig = "tsconfig.json",
 )
 
-# Repository corpus (M05 WP1): build and project metadata owned for
+# Repository corpus: build and project metadata owned for
 # direct-Bazel dogfood under the canonical real_fixture_policy. TypeScript
 # sources stay dx-owned, never corpus sources.
 real_source_target(

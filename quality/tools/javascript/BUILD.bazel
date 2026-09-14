@@ -25,7 +25,7 @@ exports_files([
 # //javascript/... wrappers).
 npm_link_all_packages(name = "node_modules")
 
-# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# Repository corpus: build metadata owned for direct-Bazel
 # dogfood under the canonical real_fixture_policy. The package manifest
 # and pnpm lock stay dx-owned/unclassified, never corpus sources. The
 # lock is a generated third-party manifest, excluded like other locks.

@@ -11,7 +11,7 @@ package(default_visibility = ["//visibility:public"])
 # Crate-universe aliases convention: `dx/dx_env` keys match the regenerated
 # lockfile. The runfiles lookup stays a direct toolchain label (it is not a
 # Cargo dependency). The identity digest routes through
-# `//quality/result:quality_result` (M11 WP3); both tails are
+# `//quality/result:quality_result`; both tails are
 # hand-maintained and preserved across regenerations.
 dx_rust_library(
     name = "dx_env",
@@ -130,7 +130,7 @@ sh_test(
     tags = ["no-coverage"],
 )
 
-# Repository corpus (M05 WP1): crate manifest and build file owned for
+# Repository corpus: crate manifest and build file owned for
 # direct-Bazel dogfood under the canonical real_fixture_policy.
 real_source_target(
     name = "corpus",

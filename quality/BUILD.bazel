@@ -41,7 +41,7 @@ rust_prost_library(
     proto = ":result_proto",
 )
 
-# Synthetic fixture policy (M03 WP1): proves multi-family aggregation and
+# Synthetic fixture policy: proves multi-family aggregation and
 # one adapter selected by two families. Tool IDs are synthetic; the real
 # family taxonomy and curated defaults belong to the tool baseline (M04+).
 quality_family(
@@ -68,7 +68,7 @@ workspace_policy(
     ],
 )
 
-# Real fixture policy (M04 WP2): selects the initial-adapter tool IDs for
+# Real fixture policy: selects the initial-adapter tool IDs for
 # the M04 source classes. Like the synthetic fixture policy, this is a
 # fixture, not curated defaults: the real family taxonomy and defaults
 # stay pending the O17 review. M05 WP1: this policy is also the canonical
@@ -105,7 +105,7 @@ quality_family(
     ],
 )
 
-# Real fixture Python family (M15 WP2): curated defaults per the tool
+# Real fixture Python family: curated defaults per the tool
 # baseline (Ruff lint+format, pydoclint lint, Ty typecheck). Flake8 and
 # pylint remain baseline opt-ins owned by M15 WP3. Like the other real
 # families, this is a fixture, not the frozen taxonomy.
@@ -120,7 +120,7 @@ quality_family(
     typecheck = ["ty"],
 )
 
-# Real fixture JavaScript/TypeScript/JSON families (M17 WP2): curated
+# Real fixture JavaScript/TypeScript/JSON families: curated
 # defaults per the tool baseline (Biome default linter and formatter for
 # JavaScript and TypeScript, Biome default linter for JSON, Prettier
 # default JSON formatter, tsc typecheck for TypeScript). ESLint stays a
@@ -196,7 +196,7 @@ test_suite(
     ],
 )
 
-# Corpus Vale configuration (M05 WP1): every Markdown corpus target binds
+# Corpus Vale configuration: every Markdown corpus target binds
 # this hint. The style starts narrow (`Dx.Markers` only); prose rules stay
 # future work, recorded in the M05 completion report.
 vale_config(
@@ -205,7 +205,7 @@ vale_config(
     data = ["corpus_styles/Dx/Markers.yml"],
 )
 
-# Repository corpus (M05 WP1): all Starlark sources in this package owned
+# Repository corpus: all Starlark sources in this package owned
 # for direct-Bazel dogfood under the canonical real_fixture_policy.
 real_source_target(
     name = "corpus",

@@ -20,10 +20,10 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
-# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# Repository corpus: build metadata owned for direct-Bazel
 # dogfood under the canonical real_fixture_policy. There is no
 # ruleset-owned manifest/lock here: the TypeScript toolchain and its
-# managed Node runtime are pinned in MODULE.bazel (M16 WP1).
+# managed Node runtime are pinned in MODULE.bazel.
 real_source_target(
     name = "corpus",
     starlark_srcs = ["BUILD.bazel"],

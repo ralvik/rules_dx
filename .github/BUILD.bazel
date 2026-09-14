@@ -1,10 +1,10 @@
-"""Repository GitHub metadata corpus (M05 WP1)."""
+"""Repository GitHub metadata corpus."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
-# Repository corpus (M05 WP1): Markdown templates owned for direct-Bazel
+# Repository corpus: Markdown templates owned for direct-Bazel
 # dogfood under the canonical real_fixture_policy. ci.yml has no quality
 # class and stays outside the corpus. The linked docs pages are
 # unclassified link-resolution siblings, never checked sources.

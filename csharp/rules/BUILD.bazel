@@ -8,7 +8,7 @@ exports_files([
     "defs.bzl",
 ])
 
-# Repository corpus (M05 WP1): wrapper Starlark owned for direct-Bazel
+# Repository corpus: wrapper Starlark owned for direct-Bazel
 # dogfood under the canonical real_fixture_policy. C# sources stay
 # dx-owned (M23 wrappers), never corpus sources.
 real_source_target(

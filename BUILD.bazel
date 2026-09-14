@@ -1,6 +1,6 @@
 """Root package for the rules_dx seed."""
 
-# First-party import mappings (M10 WP1): every `# gazelle:resolve` here pins
+# First-party import mappings: every `# gazelle:resolve` here pins
 # one crate name the Rust sources reference to its authoritative Bazel target.
 # Root-level directives apply repo-wide (upstream walks parents), so generated
 # rules depend on hand-maintained wrapper targets by exact label instead of by

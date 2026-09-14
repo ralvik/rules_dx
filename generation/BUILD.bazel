@@ -70,7 +70,7 @@ codegen_plan_subject(
 
 codegen_plan_analysis_tests(name = "codegen_plan_analysis")
 
-# Repository corpus (M05 WP1): build file owned for direct-Bazel dogfood
+# Repository corpus: build file owned for direct-Bazel dogfood
 # under the canonical real_fixture_policy.
 real_source_target(
     name = "corpus",

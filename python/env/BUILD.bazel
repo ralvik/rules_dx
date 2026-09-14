@@ -1,4 +1,4 @@
-"""Focused Python environment plans (M14 WP3).
+"""Focused Python environment plans.
 
 Each `python_env_plan` reads the analyzed authoritative providers of one
 `dx_py_*` wrapper: libraries preserve `PyInfo` plus `PyWheelsInfo`,
@@ -49,7 +49,7 @@ env_plan_tests(
     ],
 )
 
-# Repository corpus (M05 WP1): plan Starlark owned for direct-Bazel dogfood
+# Repository corpus: plan Starlark owned for direct-Bazel dogfood
 # under the canonical real_fixture_policy.
 real_source_target(
     name = "corpus",

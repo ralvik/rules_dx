@@ -15,7 +15,7 @@ package(default_visibility = ["//visibility:public"])
 
 exports_files(["maven_install.json"])
 
-# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# Repository corpus: build metadata owned for direct-Bazel
 # dogfood under the canonical real_fixture_policy. The lockfile itself is
 # generated output (like Cargo.lock/pnpm-lock.yaml), never a corpus source.
 real_source_target(

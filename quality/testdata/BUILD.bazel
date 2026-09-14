@@ -113,7 +113,7 @@ ruff_config(
     src = "ruff.toml",
 )
 
-# Hinted Biome policy for the real-pipeline fixture (M17 WP2). Empty
+# Hinted Biome policy for the real-pipeline fixture. Empty
 # object selects pinned upstream defaults explicitly, so the hinted run
 # proves the config closure reaches the tool as --config-path instead of
 # the materialized defaults directory. The config lives in its own
@@ -124,7 +124,7 @@ biome_config(
     src = "biome_cfg/biome.json",
 )
 
-# ESLint flat config for the JavaScript lint opt-in (M17 WP2). Minimal
+# ESLint flat config for the JavaScript lint opt-in. Minimal
 # `no-unused-vars` error proves the `-c` closure reaches the js_binary
 # wrapper; the config lives in its own subdirectory so the flat-config
 # base path contains the mirrored sources without shadowing them.
@@ -168,7 +168,7 @@ real_source_target(
     tags = ["no-lint"],
 )
 
-# Python fixtures (M15 WP2): a clean module passing ruff lint/format,
+# Python fixtures: a clean module passing ruff lint/format,
 # pydoclint, and ty; a dirty module with one deterministic finding per
 # tool (F401, unformatted line, DOC101/DOC103, invalid-argument-type);
 # and a hinted clean module proving the ruff_config closure reaches the
@@ -208,7 +208,7 @@ real_source_target(
     rust_srcs = ["hinted.rs"],
 )
 
-# Generated-shape binding (M10 WP3): default `<tool>_config` names with
+# Generated-shape binding: default `<tool>_config` names with
 # direct aspect_hints, exactly as Gazelle emits them. Proves the generated
 # multi-tool binding analyzes and binds through the real aspects.
 real_source_target(
@@ -287,7 +287,7 @@ real_aspect_subject(
     target = ":fixture_real_python_hinted",
 )
 
-# JavaScript fixtures (M17 WP2): a clean module passing biome
+# JavaScript fixtures: a clean module passing biome
 # lint/format, a dirty module with one deterministic finding per
 # capability (noUnusedVariables lint warning, format diff), and a hinted
 # clean module proving the biome_config closure reaches the tool.
@@ -323,7 +323,7 @@ real_aspect_subject(
     target = ":fixture_real_javascript_hinted",
 )
 
-# JSON fixtures (M17 WP2): a clean document passing biome lint and
+# JSON fixtures: a clean document passing biome lint and
 # prettier format, and a compact document with one deterministic prettier
 # format finding (biome lint stays clean). Proves the Prettier js_binary
 # wrapper launch end to end: the json family selects prettier for format
@@ -349,7 +349,7 @@ real_aspect_subject(
     target = ":fixture_real_json_dirty",
 )
 
-# TypeScript/JSX/TSX fixtures (M17 WP2): clean modules proving each
+# TypeScript/JSX/TSX fixtures: clean modules proving each
 # remaining Biome class, plus a dirty TypeScript module with one
 # deterministic finding per capability (noUnusedVariables lint warning,
 # format diff), mirroring the JavaScript pair. Proves the exact source
@@ -399,7 +399,7 @@ real_aspect_subject(
     target = ":plain",
 )
 
-# Manual negative demo (M04 WP2): markdown without a vale_config hint must
+# Manual negative demo: markdown without a vale_config hint must
 # fail analysis with the actionable config-required error. Never part of
 # `//...` suites: build explicitly with --nobuild to observe the failure.
 real_aspect_subject(
@@ -436,7 +436,7 @@ real_aspect_fixture_tests(
     ],
 )
 
-# Typecheck fixtures (M12 WP3): a clean lib root, a root with a
+# Typecheck fixtures: a clean lib root, a root with a
 # deterministic E0308 mismatch, a `no-typecheck` opt-out, and a
 # non-rust target proving rustc stays rust-only.
 real_source_target(
@@ -503,7 +503,7 @@ real_typecheck_fixture_tests(
     ],
 )
 
-# Repository corpus (M05 WP1): non-fixture Starlark sources in this package
+# Repository corpus: non-fixture Starlark sources in this package
 # owned for direct-Bazel dogfood under the canonical real_fixture_policy.
 # Fixture-owned evidence files stay excluded (evidence frozen); Markdown
 # and TOML here are fixture-owned or bound configs, so no md/toml corpus.

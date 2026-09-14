@@ -1,4 +1,4 @@
-"""Focused C# environment plans (M23 WP2).
+"""Focused C# environment plans.
 
 Each `csharp_env_plan` reads the analyzed authoritative providers of one
 `dx_csharp_*` wrapper: `QualitySourcesInfo` for direct sources plus the
@@ -24,7 +24,7 @@ env_plan_tests(
     ],
 )
 
-# Repository corpus (M05 WP1): plan Starlark owned for direct-Bazel dogfood
+# Repository corpus: plan Starlark owned for direct-Bazel dogfood
 # under the canonical real_fixture_policy.
 real_source_target(
     name = "corpus",

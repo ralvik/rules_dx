@@ -27,7 +27,7 @@ dx_kotlin_test(
     ],
 )
 
-# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# Repository corpus: build metadata owned for direct-Bazel
 # dogfood under the canonical real_fixture_policy. Kotlin sources stay
 # dx-owned, never corpus sources.
 real_source_target(

@@ -67,13 +67,20 @@ jobs:
         run: |
           bazel build @dx_tools//:buildifier @dx_tools//:taplo @dx_tools//:vale \
             //quality/evaluator:quality_evaluator
-      - name: Verify generated-file freshness (M13 WP3)
+      - name: Verify generated-file freshness
         run: bazel run //dx:generate_check
       - name: Audit corpus ownership
         run: |
+          # The paket2bazel hub output below is generator-owned (regenerate via
+          # `bazel run @rules_dotnet//tools/paket2bazel`, see
+          # third_party/dotnet/deps/BUILD.bazel), never corpus sources. The
+          # marker check keeps this exclusion honest: hand edits lose it.
+          head -1 third_party/dotnet/deps/paket.main.bzl | grep -q GENERATED
+          head -1 third_party/dotnet/deps/paket.main_extension.bzl | grep -qi GENERATED
           git ls-files \
             | grep -E '(^|/)(BUILD\.bazel|MODULE\.bazel)$|\.(bzl|toml|md)$' \
             | grep -v -E '\.lock$' \
+            | grep -v -E '^third_party/dotnet/deps/paket\.main(_extension)?\.bzl$' \
             | LC_ALL=C sort -u > /tmp/corpus_applicable.txt
           bazel query "kind('source file', deps(kind(real_source_target, //...)))" 2>/dev/null \
             | grep -E '^(@@)?//' \

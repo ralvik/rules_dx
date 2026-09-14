@@ -132,7 +132,7 @@ rust_clippy_test(
 
 exports_files(["Cargo.toml"])
 
-# Repository corpus (M05 WP1): crate manifest and build file owned for
+# Repository corpus: crate manifest and build file owned for
 # direct-Bazel dogfood under the canonical real_fixture_policy.
 real_source_target(
     name = "corpus",

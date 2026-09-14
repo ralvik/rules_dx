@@ -26,7 +26,7 @@ exports_files([
     "paket.lock",
 ])
 
-# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# Repository corpus: build metadata owned for direct-Bazel
 # dogfood under the canonical real_fixture_policy. The lockfiles themselves
 # are generated output (like Cargo.lock/pnpm-lock.yaml), never corpus
 # sources.

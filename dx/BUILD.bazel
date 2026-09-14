@@ -12,7 +12,7 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
-# Canonical public generation workflow (M10 WP1): repository-wide
+# Canonical public generation workflow: repository-wide
 # default with scoped traversal from resolved scope (O48). The check
 # twin shares the language wiring with upstream `-mode diff` encoded in
 # canonical-target wiring (O13 dispatch): same rewrite and intended
@@ -28,14 +28,14 @@ gazelle(
     mode = "diff",
 )
 
-# Canonical managed-environment bootstrap (M11 WP2): installs the default
+# Canonical managed-environment bootstrap: installs the default
 # staged tool tree into the workspace `.dx/bin` directory.
 alias(
     name = "env",
     actual = "//dx/env:env",
 )
 
-# Canonical repository-wide codegen selection identity (M25 WP1): bare
+# Canonical repository-wide codegen selection identity: bare
 # `dx codegen` invokes `//dx:codegen`. PROVISIONAL (open decisions O33/O34,
 # flagged for review): this empty filegroup only reserves the label so the
 # CLI selection identity resolves before the WP4 root benchmark selects the
@@ -51,7 +51,7 @@ filegroup(
     srcs = [],
 )
 
-# Repository corpus (M05 WP1): build file owned for direct-Bazel dogfood
+# Repository corpus: build file owned for direct-Bazel dogfood
 # under the canonical real_fixture_policy.
 real_source_target(
     name = "corpus",

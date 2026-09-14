@@ -28,7 +28,7 @@ test_suite(
     tests = [":metadata"],
 )
 
-# Repository corpus (M05 WP1): artifact Starlark owned for direct-Bazel
+# Repository corpus: artifact Starlark owned for direct-Bazel
 # dogfood under the canonical real_fixture_policy. update.py has no
 # quality class and stays outside the corpus.
 real_source_target(

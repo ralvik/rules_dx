@@ -29,7 +29,7 @@ dx_js_test(
     node_options = ["--experimental-vm-modules"],
 )
 
-# Repository corpus (M05 WP1): build metadata owned for direct-Bazel
+# Repository corpus: build metadata owned for direct-Bazel
 # dogfood under the canonical real_fixture_policy. Vue sources stay
 # dx-owned, never corpus sources.
 real_source_target(

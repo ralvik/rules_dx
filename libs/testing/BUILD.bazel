@@ -18,7 +18,7 @@ test_suite(
     tests = [":stack_contract"],
 )
 
-# Repository corpus (M05 WP1): helper Starlark owned for direct-Bazel
+# Repository corpus: helper Starlark owned for direct-Bazel
 # dogfood under the canonical real_fixture_policy.
 real_source_target(
     name = "corpus",

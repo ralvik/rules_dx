@@ -55,14 +55,18 @@ done < /tmp/corpus_results.txt
 
 Audit corpus ownership: every applicable file
 (`BUILD.bazel`, `MODULE.bazel`, `*.bzl`, `*.toml`, `*.md`, excluding
-generated locks) must be owned by a corpus target. The reverse direction
+generated locks and the `paket2bazel` hub output under
+`third_party/dotnet/deps/`) must be owned by a corpus target. The reverse direction
 is informational: siblings, native configs, and fixture-owned files are
 corpus-referenced without being applicable sources.
 
 ```sh
+head -1 third_party/dotnet/deps/paket.main.bzl | grep -q GENERATED
+head -1 third_party/dotnet/deps/paket.main_extension.bzl | grep -qi GENERATED
 git ls-files \
   | grep -E '(^|/)(BUILD\.bazel|MODULE\.bazel)$|\.(bzl|toml|md)$' \
   | grep -v -E '\.lock$' \
+  | grep -v -E '^third_party/dotnet/deps/paket\.main(_extension)?\.bzl$' \
   | LC_ALL=C sort -u > /tmp/corpus_applicable.txt
 bazel query "kind('source file', deps(kind(real_source_target, //...)))" 2>/dev/null \
   | grep -E '^(@@)?//' \
