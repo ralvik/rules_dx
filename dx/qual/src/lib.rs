@@ -1,10 +1,12 @@
-//! Pure release-qualification planning (M28 slice 1: WP1 blocker disposition,
-//! WP2 API/support/registry freeze).
+//! Pure release-qualification planning (M28 slices 1-2: WP1 blocker disposition,
+//! WP2 API/support/registry freeze; WP5 artifact-identity/packaging boundary).
 //!
 //! This crate owns the qualification shape before any release candidate,
 //! platform run, external-consumer run, signing, provenance, or publication
 //! lands: blocker-vs-deferral disposition, the support-label evidence gate,
-//! public-API change classification, and command-registry exactness. It plans
+//! public-API change classification, command-registry exactness, artifact
+//! identity over exact published bytes, the embedded-vs-detached packaging
+//! boundary, manifest completeness, and attestation subject binding. It plans
 //! over injected booleans/strings only, so the rules stay deterministic and
 //! unit-testable without platforms, consumers, builders, or credentials.
 //!
@@ -151,6 +153,58 @@ pub fn registry_is_exact(registry: &[String], accepted: &[String]) -> bool {
     got == want
 }
 
+/// Candidate wire-profile predicate URIs (O39 provisional research, not frozen).
+///
+/// From `docs/tools/tool-acquisition.md#provenance-profile-research`: SPDX 2.3
+/// JSON and SLSA Build Provenance v1, each in an in-toto Statement v1. These
+/// name the research candidates the qualification must test; pinning the
+/// strings here does not freeze the profiles, select a builder, or claim an
+/// assurance level.
+pub const CANDIDATE_SPDX_PREDICATE_URI: &str = "https://spdx.dev/Document/v2.3";
+pub const CANDIDATE_SLSA_PREDICATE_URI: &str = "https://slsa.dev/provenance/v1";
+pub const CANDIDATE_STATEMENT_TYPE_URI: &str = "https://in-toto.io/Statement/v1";
+
+/// Whether an attestation subject binds the exact published bytes.
+///
+/// The subject digest must equal the digest of the exact published archive
+/// bytes, matched purely by digest. Empty digests never bind.
+pub fn attestation_binds_exact_bytes(subject_digest: &str, published_digest: &str) -> bool {
+    !subject_digest.is_empty() && subject_digest == published_digest
+}
+
+/// Whether the packaging uses the single correct path.
+///
+/// Per `docs/tools/tool-acquisition.md#artifact-identity-and-metadata`:
+/// payload-only embedded manifest for constituent inputs plus detached
+/// final-archive attestations over the exact published bytes. A manifest
+/// self-entry carrying the final digest (self-referential digest/size) is
+/// rejected, as are null or deferred digests.
+pub fn packaging_uses_single_correct_path(
+    embedded_for_constituents: bool,
+    detached_for_final: bool,
+    has_self_digest_entry: bool,
+) -> bool {
+    embedded_for_constituents && detached_for_final && !has_self_digest_entry
+}
+
+/// Whether the embedded manifest covers every payload file.
+///
+/// No payload file may be silently omitted: every verbatim payload path must
+/// have a matching inventoried entry. Extra inventory entries do not excuse a
+/// missing payload file. An empty payload is vacuously complete.
+pub fn manifest_covers_payload(payload: &[String], inventoried: &[String]) -> bool {
+    payload.iter().all(|file| inventoried.contains(file))
+}
+
+/// Whether changing embedded metadata requires new final-archive attestations.
+///
+/// Adding or changing embedded metadata changes the artifact identity (the
+/// digest of the exact published bytes), so detached attestations bound to
+/// the old digest no longer apply.
+pub fn embedded_change_requires_new_attestation(embedded_changed: bool) -> bool {
+    embedded_changed
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -264,5 +318,61 @@ mod tests {
             &strings(&["Lint", "test", "build"]),
             &accepted
         ));
+    }
+
+    #[test]
+    fn attestation_binds_only_the_exact_published_digest() {
+        assert!(attestation_binds_exact_bytes("sha256:abc", "sha256:abc"));
+        assert!(!attestation_binds_exact_bytes("sha256:abc", "sha256:def"));
+        assert!(!attestation_binds_exact_bytes("", ""));
+        assert!(!attestation_binds_exact_bytes("", "sha256:abc"));
+    }
+
+    #[test]
+    fn candidate_wire_profiles_name_the_o39_research_uris() {
+        assert_eq!(
+            CANDIDATE_SPDX_PREDICATE_URI,
+            "https://spdx.dev/Document/v2.3"
+        );
+        assert_eq!(
+            CANDIDATE_SLSA_PREDICATE_URI,
+            "https://slsa.dev/provenance/v1"
+        );
+        assert_eq!(
+            CANDIDATE_STATEMENT_TYPE_URI,
+            "https://in-toto.io/Statement/v1"
+        );
+    }
+
+    #[test]
+    fn single_correct_packaging_path_rejects_self_reference() {
+        assert!(packaging_uses_single_correct_path(true, true, false));
+        assert!(!packaging_uses_single_correct_path(true, true, true));
+        assert!(!packaging_uses_single_correct_path(false, true, false));
+        assert!(!packaging_uses_single_correct_path(true, false, false));
+    }
+
+    #[test]
+    fn manifest_completeness_rejects_silently_omitted_files() {
+        let payload = strings(&["dx", "NOTICE", "manifest.pb"]);
+        assert!(manifest_covers_payload(
+            &payload,
+            &strings(&["dx", "NOTICE", "manifest.pb"])
+        ));
+        assert!(manifest_covers_payload(
+            &payload,
+            &strings(&["dx", "NOTICE", "manifest.pb", "extra"])
+        ));
+        assert!(!manifest_covers_payload(
+            &payload,
+            &strings(&["dx", "NOTICE"])
+        ));
+        assert!(manifest_covers_payload(&[], &[]));
+    }
+
+    #[test]
+    fn embedded_changes_invalidate_detached_attestations() {
+        assert!(embedded_change_requires_new_attestation(true));
+        assert!(!embedded_change_requires_new_attestation(false));
     }
 }
