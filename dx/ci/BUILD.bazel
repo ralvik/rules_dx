@@ -1,4 +1,4 @@
-"""M27 WP1 slice 1: pure consumer-CI check-selection planning."""
+"""M27 WP1 slices 1-2: pure consumer-CI check-selection and revision planning."""
 
 load("@crates//:crates.bzl", "aliases")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
