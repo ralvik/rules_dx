@@ -1,4 +1,4 @@
-"""M30a slice 1: pure documentation-delivery planning (IR version/identity, validation gate, check-vs-build modes, drift upgrade gate)."""
+"""M30a slices 1-2: pure documentation-delivery planning (IR version/identity, validation gate, check-vs-build modes, drift upgrade gate; guides/examples corpus shape)."""
 
 load("@crates//:crates.bzl", "aliases")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")

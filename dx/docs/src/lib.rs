@@ -1,20 +1,21 @@
-//! Pure documentation-delivery planning (M30a slice 1: doc-IR version,
-//! identity, validation, and mode shape).
+//! Pure documentation-delivery planning (M30a slices 1-2: doc-IR version,
+//! identity, validation, mode shape; guides/examples corpus shape).
 //!
 //! This crate owns the documentation pipeline shape before any extractor,
 //! schema-number freeze, adapter, site-build rule, or `dx docs` command
 //! lands: IR version compatibility, stable symbol identities, the
-//! extraction-validation gate, check-vs-build mode selection, and the drift
-//! upgrade gate. It plans over injected argument strings only, so the rules
-//! stay deterministic and unit-testable without extractors, toolchains, a
-//! Bazel server, or any renderer.
+//! extraction-validation gate, check-vs-build mode selection, the drift
+//! upgrade gate, and the guides/examples corpus shape (guide identities
+//! plus CI-executed verification). It plans over injected argument strings
+//! only, so the rules stay deterministic and unit-testable without
+//! extractors, toolchains, a Bazel server, or any renderer.
 //!
 //! Out of scope here (O54 qualification): exact `.proto` field/enum numbers
 //! and reserved ranges, per-language input pins and adapter mappings,
 //! per-language overload-disambiguation schemes, link/reference completeness
-//! proofs, renderer behavior, and any YAML/rule/CLI implementation. Those
-//! arrive in later M30a slices; this crate preserves spellings verbatim and
-//! never substitutes an implicit default.
+//! proofs, renderer behavior, exact guide-step/CI wiring, and any YAML/rule/
+//! CLI implementation. Those arrive in later M30a slices; this crate
+//! preserves spellings verbatim and never substitutes an implicit default.
 
 /// One versioned documentation-IR identity (`doc_ir_version`).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -272,6 +273,57 @@ pub fn drift_reaches_users_without_release() -> bool {
     false
 }
 
+// ---------------------------------------------------------------------------
+// Guides/examples corpus shape (M30a slice 2).
+// ---------------------------------------------------------------------------
+
+/// Frozen release-blocking guide identities: quickstart, tutorial, and
+/// migration (from existing Bazel setups). Spellings pass through verbatim;
+/// no extra guide is claimed and no implicit default is substituted. Exact
+/// guide-step text and CI wiring freeze under O54.
+pub fn is_known_guide(name: &str) -> bool {
+    matches!(name, "quickstart" | "tutorial" | "migration")
+}
+
+/// Planned guide-freshness outcome.
+///
+/// Every guide step is CI-executed so docs cannot rot: a guide is fresh
+/// only when every step ran in CI and the `examples/` corpus run stayed
+/// green. Any gap leaves the guide stale — never silently fresh.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum GuideFreshness {
+    /// Every step CI-executed and the examples corpus green.
+    Fresh,
+    /// A step went unexecuted or the examples run failed: docs may have rotted.
+    Stale,
+}
+
+/// Plan guide freshness from the injected CI-execution record.
+pub fn plan_guide_freshness(all_steps_executed: bool, examples_green: bool) -> GuideFreshness {
+    if all_steps_executed && examples_green {
+        GuideFreshness::Fresh
+    } else {
+        GuideFreshness::Stale
+    }
+}
+
+/// Guide steps are never allowed to go unexecuted.
+pub fn guide_steps_may_go_unexecuted() -> bool {
+    false
+}
+
+/// Examples corpus root: worked examples live under `examples/` and are the
+/// executable backing for guide steps. Paths pass through verbatim; this
+/// crate never remaps them onto source or output trees.
+pub fn examples_root() -> &'static str {
+    "examples/"
+}
+
+/// Whether a workspace-relative path selects the examples corpus.
+pub fn is_under_examples(path: &str) -> bool {
+    path == "examples" || path.starts_with("examples/")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -449,5 +501,39 @@ mod tests {
     #[test]
     fn upstream_changes_never_reach_users_outside_a_release() {
         assert!(!drift_reaches_users_without_release());
+    }
+
+    #[test]
+    fn only_the_three_release_blocking_guides_are_known() {
+        assert!(is_known_guide("quickstart"));
+        assert!(is_known_guide("tutorial"));
+        assert!(is_known_guide("migration"));
+        assert!(!is_known_guide(""));
+        assert!(!is_known_guide("howto"));
+        assert!(!is_known_guide("Quickstart"));
+    }
+
+    #[test]
+    fn guide_freshness_requires_every_step_executed_and_green_examples() {
+        assert_eq!(plan_guide_freshness(true, true), GuideFreshness::Fresh);
+        assert_eq!(plan_guide_freshness(false, true), GuideFreshness::Stale);
+        assert_eq!(plan_guide_freshness(true, false), GuideFreshness::Stale);
+        assert_eq!(plan_guide_freshness(false, false), GuideFreshness::Stale);
+    }
+
+    #[test]
+    fn no_guide_step_may_go_unexecuted() {
+        assert!(!guide_steps_may_go_unexecuted());
+    }
+
+    #[test]
+    fn examples_corpus_lives_under_the_examples_root() {
+        assert_eq!(examples_root(), "examples/");
+        assert!(is_under_examples("examples"));
+        assert!(is_under_examples("examples/quickstart"));
+        assert!(is_under_examples("examples/quickstart/main.py"));
+        assert!(!is_under_examples(""));
+        assert!(!is_under_examples("docs/quickstart.md"));
+        assert!(!is_under_examples("example"));
     }
 }
