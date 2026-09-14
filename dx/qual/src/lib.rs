@@ -2,6 +2,9 @@
 //! WP2 API/support/registry freeze; WP5 artifact-identity/packaging boundary,
 //! reproducibility and verification binding; WP4/WP6/WP7 evidence inventory,
 //! coverage gate, consumer-CI requalification, publication handoff).
+//! M29 slices 1-2: publication-input verification (destinations, credential
+//! scopes, digest/policy match) and post-publication discipline (no silent
+//! rebuild or substitution, public-artifact smoke tests, recorded incidents).
 //!
 //! This crate owns the qualification shape before any release candidate,
 //! platform run, external-consumer run, signing, provenance, or publication
@@ -384,6 +387,64 @@ pub fn may_hand_off_to_publication(
     qualified && digests_match && ci_identities_match
 }
 
+/// Whether a publication destination is approved.
+///
+/// Destinations are approved by policy (`docs/environments/environment.md#distribution`
+/// selects the module registry and release host only); the used destination
+/// must be a verbatim member of the injected approved set. This checks
+/// membership over injected strings; it approves no destination and performs
+/// no submission.
+pub fn publish_destination_approved(destination: &str, approved: &[String]) -> bool {
+    !destination.is_empty() && approved.contains(&destination.to_owned())
+}
+
+/// Whether granted credential scopes cover every required operation scope.
+///
+/// Every required scope must be present in the granted set. Scope selection
+/// and issuance stay O45-gated; this compares injected scope strings only
+/// and grants nothing.
+pub fn credential_scopes_cover(granted: &[String], required: &[String]) -> bool {
+    required.iter().all(|scope| granted.contains(scope))
+}
+
+/// Whether M29 publication inputs verify before any credentialed operation.
+///
+/// Destinations, credential scopes, artifact digests, and the publication
+/// policy must each match the M28-qualified inputs. Any mismatch blocks
+/// publication; verification performs no credentialed step.
+pub fn publication_inputs_verified(
+    destinations_ok: bool,
+    scopes_ok: bool,
+    digests_match: bool,
+    policy_ok: bool,
+) -> bool {
+    destinations_ok && scopes_ok && digests_match && policy_ok
+}
+
+/// Whether a post-publication smoke test accepts one install path.
+///
+/// The smoke test must run against the public artifact obtained through an
+/// approved destination (never a local substitute), its digest must still
+/// match the qualified digest, and the host run must pass. Any failure in
+/// the triple fails the path.
+pub fn public_install_accepts(
+    uses_public_artifact: bool,
+    digests_match: bool,
+    host_passed: bool,
+) -> bool {
+    uses_public_artifact && digests_match && host_passed
+}
+
+/// Whether a publication incident is disposed without silent byte changes.
+///
+/// Incidents are recorded with the published bytes left unchanged: a
+/// rebuild or substitution without a new qualified release is rejected even
+/// when the incident itself is recorded. Recording alone never authorizes
+/// new bytes.
+pub fn incident_disposition_ok(incident_recorded: bool, bytes_unchanged: bool) -> bool {
+    incident_recorded && bytes_unchanged
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -712,5 +773,53 @@ mod tests {
         assert!(!may_hand_off_to_publication(false, true, true));
         assert!(!may_hand_off_to_publication(true, false, true));
         assert!(!may_hand_off_to_publication(true, true, false));
+    }
+
+    #[test]
+    fn publication_destinations_need_verbatim_approval() {
+        let approved = strings(&["bazel-central-registry", "github-releases"]);
+        assert!(publish_destination_approved("github-releases", &approved));
+        assert!(!publish_destination_approved("personal-blog", &approved));
+        assert!(!publish_destination_approved("", &approved));
+        assert!(!publish_destination_approved("GitHub-Releases", &approved));
+    }
+
+    #[test]
+    fn credential_scopes_must_cover_every_required_scope() {
+        let granted = strings(&["registry:write", "release:write"]);
+        assert!(credential_scopes_cover(
+            &granted,
+            &strings(&["registry:write"])
+        ));
+        assert!(credential_scopes_cover(&granted, &[]));
+        assert!(!credential_scopes_cover(
+            &granted,
+            &strings(&["registry:write", "admin:all"])
+        ));
+    }
+
+    #[test]
+    fn publication_starts_only_on_fully_verified_inputs() {
+        assert!(publication_inputs_verified(true, true, true, true));
+        assert!(!publication_inputs_verified(false, true, true, true));
+        assert!(!publication_inputs_verified(true, false, true, true));
+        assert!(!publication_inputs_verified(true, true, false, true));
+        assert!(!publication_inputs_verified(true, true, true, false));
+    }
+
+    #[test]
+    fn public_install_needs_public_bytes_matching_passing() {
+        assert!(public_install_accepts(true, true, true));
+        assert!(!public_install_accepts(false, true, true));
+        assert!(!public_install_accepts(true, false, true));
+        assert!(!public_install_accepts(true, true, false));
+    }
+
+    #[test]
+    fn incidents_record_without_silent_rebuilds() {
+        assert!(incident_disposition_ok(true, true));
+        assert!(!incident_disposition_ok(false, true));
+        assert!(!incident_disposition_ok(true, false));
+        assert!(!incident_disposition_ok(false, false));
     }
 }
