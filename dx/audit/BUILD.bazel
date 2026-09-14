@@ -9,7 +9,10 @@ package(default_visibility = ["//visibility:public"])
 
 dx_rust_library(
     name = "dx_audit",
-    srcs = ["src/lib.rs"],
+    srcs = [
+        "src/exception.rs",
+        "src/lib.rs",
+    ],
     aliases = aliases(
         package_name = "dx/dx_audit",
         normal = True,

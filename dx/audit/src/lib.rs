@@ -15,10 +15,15 @@
 //! application manifests, lockfiles, or projections.
 //!
 //! Out of scope here (O11/O12/O58 qualification): auditor tool wiring,
-//! advisory snapshot acquisition, severity/report mappings, risk-exception
-//! lifecycle, target-to-dependency-set resolution, and license-policy
+//! advisory snapshot acquisition, severity/report mappings,
+//! target-to-dependency-set resolution, and license-policy
 //! evaluation. Those arrive in later M26 slices; this crate only records
 //! which families run over which scope spellings.
+//!
+//! The risk-acceptance exception lifecycle (version-scoped, reasoned,
+//! expiring, obsolete) lives in [`exception`].
+
+pub mod exception;
 
 /// Audit family selector. Frozen spellings match the `dx audit` contract
 /// so CLI parsing and help text cannot drift from the qualified shape.
