@@ -78,10 +78,11 @@ empty generation for the unrequested side. The command does not execute that sid
 
 ## Live Selection Status
 
-PROVISIONAL (open decision O63, flagged for review): the CLI currently plans the
-collection request, runs one live Bazel build, validates the collected plan, then fails
-closed with `managed_deferred` (exit 1) without staging or committing generations.
-`--dry-run` plans only and exits 0. Generation staging, workspace-state validation,
-materialization, and commit land in a later slice; the atomic-selection behavior above
-is the target contract, not current CLI behavior. See
-[Open Decisions](../../open-decisions.md).
+The CLI plans the collection request, runs one live Bazel build, validates
+the collected plan shards, stages the immutable generations, and commits the
+selection through one atomic `.dx/setups/current` replacement under the
+shared O36 commit lock. `--dry-run` plans only and exits 0. Build, staging,
+validation, or commit failure leaves the current setup unchanged (exit 1
+with `managed_commit_failed`, or `no_capability` when an exact scope provides
+neither capability); staged-but-unselected generations remain as retained
+cache. See [Open Decisions](../../open-decisions.md).
