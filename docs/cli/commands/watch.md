@@ -1,10 +1,14 @@
 # dx Watch
 
-Provisional contract. Do not implement until [O44](../../open-decisions.md) selects
-the target-resolution query and [O55](../../open-decisions.md) freezes debounce,
-ignore set, restart, framing, and local-only semantics. Owning decision:
+Implementation status: O44/O55 mappings frozen (see [O44 and O55](../../open-decisions.md)
+and the [M30b completion report](../../milestones/M30b-completion-report.md)).
+Delivered: `dx watch` planning plus dispatch over the wrapped command with 200ms
+debounce, `bazel-*`/`.dx`/`dx.local.toml` ignores, per-iteration re-resolution,
+and local-only enforcement (refuses `CI=true`). Owning decision:
 [ADR 0017](../../decisions/0017-dx-watch.md), extended to `check` and `fix` by
 [ADR 0018](../../decisions/0018-umbrella-check-fix-cleanup-clean.md) subject to O55.
+Platform evidence beyond Linux x86_64 remains a gap; no working multi-platform
+support is claimed until qualified execution lands.
 
 ```text
 dx watch [--clear] <build|test|run|lint|typecheck|format|check|fix> [scope ...] [-- bazel-options ...]
