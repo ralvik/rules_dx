@@ -46,8 +46,9 @@ per O50/O51/O54/O55/O56/O61.
 ## WP5: Reproducible Candidate And Artifact Verification (delivered locally)
 
 `dist/dx-linux_x86_64` is the exact `//dx/cli:dx` binary bytes built from
-the committed tree (sha256 `5869fa16…3bb1fa4d`, byte-identical to a fresh
-`bazel build //dx/cli:dx`); `dist/MANIFEST.json` covers the payload
+the committed tree (sha256 `8aa44579…7d7bf08`, byte-identical to a fresh
+`bazel build //dx/cli:dx`, rebuilt from HEAD `e0f5439` after post-candidate
+`dx/cli` slices); `dist/MANIFEST.json` covers the payload
 verbatim (payload-only embedded manifest, no self-digest entry);
 `dist/SHA256SUMS` pins every file; `dist/verify.sh` independently
 re-verifies digests and passes. The single correct packaging path holds
@@ -92,7 +93,7 @@ Exact commands on this host, committed tree:
 - `bazel test //tools/coverage:coverage_gate_test`: pass.
 - `sh dist/verify.sh`: `dx-linux_x86_64: OK`, digests match exact
   published bytes; `sha256sum bazel-bin/dx/cli/dx
-  dist/dx-linux_x86_64` identical (`5869fa16…`).
+  dist/dx-linux_x86_64` identical (`8aa44579…`).
 
 Coverage inventory: no new uncovered executable lines beyond the reconciled
 gate; `dx_qual` is a zero-dep pure-planning library fully covered by its
@@ -131,5 +132,5 @@ none claimed.
   only.
 - Milestone exclusions respected: no publication (M29), no post-release
   adoption (M30b), no new languages/tools. M29 handoff: qualified-candidate
-  digests (`5869fa16…`), workflow/reporting/caller identities, and the
+  digests (`8aa44579…`, rebuilt from HEAD `e0f5439`), workflow/reporting/caller identities, and the
   pure gates above as fixtures.

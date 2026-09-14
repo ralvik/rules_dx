@@ -22,13 +22,15 @@ registry/release-host publication plus per-host public smoke runs).
 
 Publication starts only when destinations, credential scopes, digests, and
 policy all verify (`publication_inputs_verified`); the used destination
-must be a verbatim member of the approved set
-(`publish_destination_approved`); granted scopes must cover every required
-scope (`credential_scopes_cover`). The `v0.1.0` tag is published over the
-M28-qualified candidate digests (`5869fa16…`, see the M28 report) with no
-rebuild and no substitution (`rebuild_reproduces`,
-`handoff_identity_matches`). Registry submission and release-host uploads
-stay O45-gated.
+ must be a verbatim member of the approved set
+ (`publish_destination_approved`); granted scopes must cover every required
+ scope (`credential_scopes_cover`). The `v0.1.0` tag was published over the
+ M28-qualified candidate digests at tag time (`5869fa16…`, see git history);
+ the current HEAD candidate rebuilds to (`8aa44579…`, see the M28 report) with no
+ rebuild and no substitution within the current tree (`rebuild_reproduces`,
+ `handoff_identity_matches`), so a new qualified tag is required per incident
+ discipline before any publication. Registry submission and release-host uploads
+ stay O45-gated.
 
 ## WP2/WP4: Immutable Metadata And Incident Discipline (delivered)
 
