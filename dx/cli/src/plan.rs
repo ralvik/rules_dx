@@ -118,6 +118,16 @@ pub fn spec(command: Command) -> CommandSpec {
             aspects: &[],
             reports: &[],
         },
+        // Managed environment/codegen/setup selections (M25 WP5): one
+        // Bazel collection request behind a canonical selection plus
+        // generation commit, never the quality aspect pipeline and no
+        // standard reports. The capability names the selecting command.
+        Command::Codegen | Command::Env | Command::Setup => CommandSpec {
+            command,
+            capability: command.name(),
+            aspects: &[],
+            reports: &[],
+        },
         // Delivered adoption/inspect surfaces (M30b): local helpers or
         // thin query forwarding, never the quality aspect pipeline.
         Command::Init
@@ -288,6 +298,9 @@ impl WorkflowVerb {
             Command::Run => Some(WorkflowVerb::Run),
             Command::Lint | Command::Typecheck | Command::Format | Command::Generate => None,
             Command::Check | Command::Fix | Command::Clean => None,
+            // Managed selections plan their own collection argv
+            // ([`plan_managed`]), never a fixed workflow verb.
+            Command::Codegen | Command::Env | Command::Setup => None,
             // Raw launcher passthrough plans its own argv (launcher
             // plus forwarded arguments), never a fixed workflow verb.
             Command::Bazel => None,
@@ -437,6 +450,91 @@ pub fn plan_bazel(forwarded: &[String]) -> BuildPlan {
         format!("Running bazel {}", forwarded.join(" "))
     };
     BuildPlan { argv, summary }
+}
+
+/// Builds the exact `bazel build` argv for a managed
+/// environment/codegen/setup selection (M25 WP5) over a validated setup
+/// scope: the command's collection roots with its collecting aspects and
+/// private output groups, plus the canonical workspace policy and the
+/// BEP stream path the CLI collects with `dx_bep`. Root computation
+/// delegates to each command's own planning library so the WP4 (O34)
+/// root benchmark flows through unchanged; user options after `--`
+/// forward after the required policy. Fails before execution when user
+/// options conflict with required collection policy. The caller owns
+/// scope validation ([`dx_setup::resolve_scope`]); `command` must be
+/// managed (the debug assertion guards the internal dispatch).
+pub fn plan_managed(
+    command: Command,
+    scope: &dx_setup::SetupScope,
+    bazel_options: &[String],
+    bep_path: &str,
+) -> Result<BuildPlan, ForwardError> {
+    debug_assert!(command.is_managed(), "plan_managed needs a managed command");
+    let (roots, aspects, output_groups) = match command {
+        Command::Codegen => {
+            let scope = match scope {
+                dx_setup::SetupScope::Repository => dx_codegen::CodegenScope::Repository,
+                dx_setup::SetupScope::Exact(label) => {
+                    dx_codegen::CodegenScope::Exact(label.clone())
+                }
+            };
+            (
+                dx_codegen::scope_targets(&scope),
+                vec![dx_codegen::CODEGEN_ASPECT.to_owned()],
+                vec![dx_codegen::OUTPUT_GROUP.to_owned()],
+            )
+        }
+        Command::Env => {
+            let scope = match scope {
+                dx_setup::SetupScope::Repository => dx_env_plan::EnvScope::Repository,
+                dx_setup::SetupScope::Exact(label) => dx_env_plan::EnvScope::Exact(label.clone()),
+            };
+            (
+                dx_env_plan::scope_targets(&scope),
+                vec![dx_env_plan::ENV_ASPECT.to_owned()],
+                vec![dx_env_plan::OUTPUT_GROUP.to_owned()],
+            )
+        }
+        Command::Setup => {
+            let request = dx_setup::plan_request(scope);
+            (request.roots, request.aspects, request.output_groups)
+        }
+        _ => unreachable!("plan_managed dispatch guards commands"), // LCOV_EXCL_LINE - reason: defense-in-depth; the debug assertion above plus the execute dispatch restrict callers to managed commands, so this arm is unreachable.
+    };
+    let mut required = Vec::with_capacity(aspects.len() + output_groups.len() + 2);
+    for aspect in &aspects {
+        required.push(format!("--aspects={aspect}"));
+    }
+    for group in &output_groups {
+        required.push(format!("--output_groups={group}"));
+    }
+    required.push(workspace_flag());
+    required.push(format!("--{BEP_FLAG_NAME}={bep_path}"));
+    let protected = vec![
+        ProtectedFlag {
+            name: "aspects".to_owned(),
+            required: None,
+        },
+        ProtectedFlag {
+            name: "output_groups".to_owned(),
+            required: None,
+        },
+        ProtectedFlag {
+            name: "@rules_dx//config:workspace".to_owned(),
+            required: None,
+        },
+        ProtectedFlag {
+            name: BEP_FLAG_NAME.to_owned(),
+            required: None,
+        },
+    ];
+    let argv = build_workflow_argv("build", bazel_options, &required, &protected, &roots)?;
+    let display = match scope {
+        dx_setup::SetupScope::Repository => "//...",
+        dx_setup::SetupScope::Exact(label) => label,
+    };
+    let summary = format!("Running {} for {}", command.name(), display);
+    Ok(BuildPlan { argv, summary })
 }
 
 /// Canonical Gazelle runners behind `dx generate`: the repo-wide
@@ -687,8 +785,130 @@ mod tests {
         assert!(bazel.aspects.is_empty());
         assert!(bazel.reports.is_empty());
         assert_eq!(WorkflowVerb::of(Command::Bazel), None);
+        for command in [Command::Codegen, Command::Env, Command::Setup] {
+            let entry = spec(command);
+            assert_eq!(entry.capability, command.name());
+            assert!(entry.aspects.is_empty());
+            assert!(entry.reports.is_empty());
+            assert_eq!(WorkflowVerb::of(command), None);
+            assert!(command.is_managed());
+        }
         assert_eq!(WorkflowVerb::Run.name(), "run");
         assert!(!WorkflowVerb::Run.collects_reports());
+    }
+
+    #[test]
+    fn managed_plan_builds_collection_request() {
+        use dx_setup::SetupScope;
+
+        let plan = plan_managed(
+            Command::Codegen,
+            &SetupScope::Repository,
+            &options(&["--jobs=4"]),
+            "/tmp/bep.json",
+        )
+        .expect("plan");
+        assert_eq!(
+            plan.argv,
+            options(&[
+                "bazel",
+                "--nohome_rc",
+                "--nosystem_rc",
+                "build",
+                "--aspects=//generation:codegen.bzl%dx_codegen_plan_aspect",
+                "--output_groups=dx_codegen_plans",
+                "--@rules_dx//config:workspace=//dx:config",
+                "--build_event_json_file=/tmp/bep.json",
+                "--jobs=4",
+                "//dx:codegen",
+            ])
+        );
+        assert_eq!(plan.summary, "Running codegen for //...");
+        let plan = plan_managed(Command::Env, &SetupScope::Repository, &[], "/tmp/bep.json")
+            .expect("plan");
+        assert!(plan
+            .argv
+            .iter()
+            .any(|arg| arg == "--aspects=//env:plan.bzl%dx_env_plan_aspect"));
+        assert!(plan
+            .argv
+            .iter()
+            .any(|arg| arg == "--output_groups=dx_env_plans"));
+        assert_eq!(plan.argv.last(), Some(&"//dx:env".to_owned()));
+        assert_eq!(plan.summary, "Running env for //...");
+        let plan = plan_managed(
+            Command::Setup,
+            &SetupScope::Repository,
+            &[],
+            "/tmp/bep.json",
+        )
+        .expect("plan");
+        assert_eq!(
+            plan.argv
+                .iter()
+                .filter(|arg| arg.starts_with("--aspects="))
+                .count(),
+            2,
+            "setup requests both collecting aspects: {plan:?}"
+        );
+        assert_eq!(
+            plan.argv
+                .iter()
+                .filter(|arg| arg.starts_with("--output_groups="))
+                .count(),
+            2,
+            "setup requests both output groups: {plan:?}"
+        );
+        assert!(plan.argv.contains(&"//dx:codegen".to_owned()));
+        assert!(plan.argv.contains(&"//dx:env".to_owned()));
+        assert_eq!(plan.summary, "Running setup for //...");
+    }
+
+    #[test]
+    fn managed_plan_exact_scope_selects_label() {
+        use dx_setup::SetupScope;
+
+        for command in [Command::Codegen, Command::Env, Command::Setup] {
+            let scope = SetupScope::Exact("//a:one".to_owned());
+            let plan = plan_managed(command, &scope, &[], "/tmp/bep.json").expect("plan");
+            assert_eq!(plan.argv.last(), Some(&"//a:one".to_owned()), "{command:?}");
+            assert_eq!(
+                plan.summary,
+                format!("Running {} for //a:one", command.name())
+            );
+        }
+    }
+
+    #[test]
+    fn managed_plan_rejects_policy_conflicts_and_startup_options() {
+        use dx_setup::SetupScope;
+
+        for conflicting in [
+            "--aspects=//other.bzl%aspect",
+            "--output_groups=other",
+            "--@rules_dx//config:workspace=//other:config",
+            "--build_event_json_file=/tmp/other.json",
+        ] {
+            let err = plan_managed(
+                Command::Setup,
+                &SetupScope::Repository,
+                &options(&[conflicting]),
+                "/tmp/bep.json",
+            )
+            .expect_err("conflict must fail");
+            assert!(
+                matches!(err, ForwardError::ConflictingOption { .. }),
+                "{conflicting} produced {err:?}"
+            );
+        }
+        let err = plan_managed(
+            Command::Codegen,
+            &SetupScope::Repository,
+            &options(&["--home_rc"]),
+            "/tmp/bep.json",
+        )
+        .expect_err("startup option must fail");
+        assert!(matches!(err, ForwardError::StartupOption { .. }));
     }
 
     #[test]

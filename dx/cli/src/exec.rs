@@ -16,9 +16,9 @@ use crate::args::{Command, Invocation, ReportRequest};
 use crate::finalize::{finalize, FinalizeError, FinalizeInput};
 use crate::generate::{project, render_diff, text_lines};
 use crate::plan::{
-    bep_path, generate_scope_json, intended_path, plan_bazel, plan_build, plan_generate, plan_run,
-    plan_workflow, spec, WorkflowVerb, GENERATE_ENV_INTENDED, GENERATE_ENV_MODE,
-    GENERATE_ENV_SCOPE, OUTPUT_GROUP,
+    bep_path, generate_scope_json, intended_path, plan_bazel, plan_build, plan_generate,
+    plan_managed, plan_run, plan_workflow, spec, WorkflowVerb, GENERATE_ENV_INTENDED,
+    GENERATE_ENV_MODE, GENERATE_ENV_SCOPE, OUTPUT_GROUP,
 };
 use crate::reports::{
     junit_infrastructure_case, parse_test_xml, plan_reports, render_junit, render_sarif,
@@ -67,6 +67,9 @@ const CODE_CLEAN_FAILED: &str = "clean_failed";
 /// contradictory generation manifest fails closed with no change or
 /// mutation output.
 const CODE_INVALID_RESULT: &str = "invalid_result";
+/// Stable operational error code for managed selections whose
+/// generation staging and commit land in a later WP3 slice.
+const CODE_MANAGED_DEFERRED: &str = "managed_deferred";
 
 /// Execution environment: resolved workspace, process seams for the
 /// workflow and for ownership queries, temporary directory for the BEP
@@ -379,7 +382,7 @@ fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
     let _ = writeln!(err, "dx: {message}");
     let _ = writeln!(
         err,
-        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]"
+        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|codegen|env|setup|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]"
     );
     pre_exec_code()
 }
@@ -467,6 +470,9 @@ pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
     }
     if invocation.command == Command::Clean {
         return execute_clean(invocation, env);
+    }
+    if invocation.command.is_managed() {
+        return execute_managed(invocation, env);
     }
     let Env {
         workspace,
@@ -1576,6 +1582,76 @@ fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
         let _ = writeln!(out, "{}", RECOVERY_GUIDANCE);
     }
     bazel_code
+}
+
+/// Runs `dx codegen`, `dx env`, and `dx setup` (M25 WP5): validates
+/// the label-only scope through the shared setup scope rules, plans
+/// the Bazel collection request with [`plan_managed`], and either
+/// renders the `--dry-run` summary (planning nothing else, launching
+/// nothing) or fails closed: generation staging, validation,
+/// materialization, and commit land in later WP3 slices, so live
+/// selection refuses with [`CODE_MANAGED_DEFERRED`] before launching
+/// any build. Argument parsing guarantees text output with no
+/// quality-only options on this path.
+///
+/// Exits `0` on `--dry-run`, `1` on live selection (deferred), and
+/// `2` on scope or policy conflicts found before execution.
+fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
+    debug_assert!(
+        invocation.command.is_managed(),
+        "managed dispatch guards commands"
+    );
+    let Env {
+        temp_dir,
+        pid,
+        nonce,
+        out,
+        err,
+        ..
+    } = env;
+    let scope = match dx_setup::resolve_scope(&invocation.targets) {
+        Ok(scope) => scope,
+        Err(error) => return pre_exec(err, &error.to_string()),
+    };
+    let bep = bep_path(temp_dir, pid, nonce);
+    let Some(bep_text) = bep.to_str() else {
+        return operational(
+            invocation,
+            out,
+            err,
+            CODE_UNREADABLE_BEP,
+            "temporary event path is not UTF-8",
+        );
+    };
+    let plan = match plan_managed(
+        invocation.command,
+        &scope,
+        &invocation.bazel_options,
+        bep_text,
+    ) {
+        Ok(plan) => plan,
+        Err(error) => return pre_exec(err, &format!("{error:?}")),
+    };
+    // Human prose is the only output on this path: `--dry-run` prints
+    // the planned operation unless `--quiet` suppresses it.
+    let verbose =
+        matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet;
+    if invocation.dry_run {
+        if verbose {
+            let _ = writeln!(out, "{}", plan.summary);
+        }
+        return 0;
+    }
+    operational(
+        invocation,
+        out,
+        err,
+        CODE_MANAGED_DEFERRED,
+        &format!(
+            "dx {} selection is not implemented yet: generation staging and commit land in a later slice; use --dry-run to preview the planned Bazel request",
+            invocation.command.name(),
+        ),
+    )
 }
 
 /// Umbrella phases in contract order (M10 WP4, O59): format, lint,
@@ -4953,6 +5029,74 @@ mod tests {
         assert!(out.contains("nothing to prune"), "{out}");
         assert!(setups.join("notes").exists(), "unmanaged paths survive");
         assert!(environments.join("README").exists());
+    }
+
+    #[test]
+    fn managed_dry_run_prints_summary_without_launching() {
+        for command in ["codegen", "env", "setup"] {
+            let name = format!("managed-dryrun-{command}");
+            let harness = Harness::new(&name);
+            let (code, out, err) = harness.run(&[command, "--dry-run"]);
+            assert_eq!(code, 0, "{out}{err}");
+            assert!(
+                out.contains(&format!("Running {command} for //...")),
+                "{out}"
+            );
+            assert_eq!(err, "", "{err}");
+            assert!(
+                harness.seen_env.borrow().is_empty(),
+                "dry-run launches nothing"
+            );
+        }
+    }
+
+    #[test]
+    fn managed_dry_run_exact_scope_selects_label() {
+        let harness = Harness::new("managed-dryrun-exact");
+        let (code, out, err) = harness.run(&["env", "//a:one", "--dry-run"]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(out.contains("Running env for //a:one"), "{out}");
+        assert_eq!(err, "", "{err}");
+        assert!(
+            harness.seen_env.borrow().is_empty(),
+            "dry-run launches nothing"
+        );
+    }
+
+    #[test]
+    fn managed_dry_run_quiet_prints_nothing() {
+        let harness = Harness::new("managed-dryrun-quiet");
+        let (code, out, err) = harness.run(&["setup", "--dry-run", "--quiet"]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert_eq!(out, "", "{out}");
+        assert_eq!(err, "", "{err}");
+    }
+
+    #[test]
+    fn managed_live_selection_defers_without_launching() {
+        for command in ["codegen", "env", "setup"] {
+            let name = format!("managed-deferred-{command}");
+            let harness = Harness::new(&name);
+            let (code, out, err) = harness.run(&[command]);
+            assert_eq!(code, 1, "{out}{err}");
+            let combined = format!("{out}{err}");
+            assert!(combined.contains("managed_deferred"), "{combined}");
+            assert!(
+                harness.seen_env.borrow().is_empty(),
+                "deferred selection launches nothing"
+            );
+        }
+    }
+
+    #[test]
+    fn managed_policy_conflict_fails_before_execution() {
+        let harness = Harness::new("managed-conflict");
+        let (code, _, _) = harness.run(&["setup", "--", "--aspects=//other.bzl%aspect"]);
+        assert_eq!(code, 2);
+        assert!(
+            harness.seen_env.borrow().is_empty(),
+            "policy conflict launches nothing"
+        );
     }
 
     /// Umbrella fixture: clean quality results plus a clean

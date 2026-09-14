@@ -1,4 +1,6 @@
-//! Invocation parsing for the `dx` quality, workflow, run, and clean commands (M07 WP1+WP3, M08 WP1+WP4, M25 WP5).
+//! Invocation parsing for the `dx` quality, workflow, run, clean, and
+//! managed environment/codegen/setup commands (M07 WP1+WP3, M08 WP1+WP4,
+//! M25 WP5).
 //!
 //! Contract: `docs/cli/cli-contract.md#invocation-shape`. Scope positionals
 //! accept explicit Bazel labels and patterns (`//...`, `//pkg:target`,
@@ -16,8 +18,9 @@
 
 use dx_output::{OutputMode, Threshold};
 
-/// Quality, generation, workflow, run, clean, adoption, and inspect
-/// command selected by the first positional argument.
+/// Quality, generation, workflow, run, clean, managed
+/// environment/codegen/setup, adoption, and inspect command selected by
+/// the first positional argument.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
     Lint,
@@ -31,6 +34,9 @@ pub enum Command {
     Check,
     Fix,
     Clean,
+    Codegen,
+    Env,
+    Setup,
     Init,
     Hooks,
     Status,
@@ -59,6 +65,9 @@ impl Command {
             Command::Check => "check",
             Command::Fix => "fix",
             Command::Clean => "clean",
+            Command::Codegen => "codegen",
+            Command::Env => "env",
+            Command::Setup => "setup",
             Command::Init => "init",
             Command::Hooks => "hooks",
             Command::Status => "status",
@@ -86,6 +95,9 @@ impl Command {
             "check" => Some(Command::Check),
             "fix" => Some(Command::Fix),
             "clean" => Some(Command::Clean),
+            "codegen" => Some(Command::Codegen),
+            "env" => Some(Command::Env),
+            "setup" => Some(Command::Setup),
             "init" => Some(Command::Init),
             "hooks" => Some(Command::Hooks),
             "status" => Some(Command::Status),
@@ -118,11 +130,22 @@ impl Command {
         matches!(self, Command::Check | Command::Fix)
     }
 
+    /// True for the managed environment/codegen/setup surfaces
+    /// (`codegen`, `env`, `setup`): they run the Bazel collection request
+    /// behind one canonical selection plus generation commit, never the
+    /// quality aspect pipeline. Live selection commits through the
+    /// managed-state commit layer; quality-only options do not apply.
+    pub fn is_managed(self) -> bool {
+        matches!(self, Command::Codegen | Command::Env | Command::Setup)
+    }
+
     /// True for the delivered adoption/inspect surfaces (`init`, `hooks`,
     /// `status`, `version`, `docs`, `watch`, `owners`, `deps`, `why`,
     /// `completion`): they run local adoption helpers or thin Bazel-query
     /// forwarding instead of the quality aspect pipeline. `bazel` is not
     /// adoption: it forwards raw arguments to the Bazel launcher.
+    /// Managed commands (`codegen`, `env`, `setup`) are not adoption
+    /// either: they plan a Bazel collection request of their own.
     pub fn is_adoption(self) -> bool {
         matches!(
             self,
@@ -228,12 +251,12 @@ impl std::fmt::Display for ArgsError {
         match self {
             ArgsError::MissingCommand => write!(
                 f,
-                "missing command: want lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel"
+                "missing command: want lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|codegen|env|setup|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel"
             ),
             ArgsError::UnknownCommand { command } => {
                 write!(
                     f,
-                    "unknown command {command:?}: want lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel"
+                    "unknown command {command:?}: want lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|codegen|env|setup|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel"
                 )
             }
             ArgsError::UnknownOption { option } => write!(f, "unknown option {option:?}"),
@@ -536,6 +559,74 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
             option: "--bazel".to_owned(),
         });
     }
+    if command.is_managed() {
+        // Managed environment/codegen/setup commands (M25 WP5) run one
+        // Bazel collection request behind a canonical selection with
+        // text prose only: no check mode, no finding thresholds, no
+        // standard reports, and no version/docs/clean-only flags.
+        // `--bazel` is rejected by the clean-ownership arm above;
+        // `--rollback`/`--configured` by the catch-alls below. Scope is
+        // repository-wide by default or one exact target label, validated
+        // through the shared setup scope rules (identical across the
+        // codegen, env, and setup libs by contract); user Bazel options
+        // after `--` forward to the collection build.
+        if check {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--check".to_owned(),
+            });
+        }
+        if fail_on_name != "warning" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--fail-on".to_owned(),
+            });
+        }
+        if output_name != "text" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: format!("--output={output_name}"),
+            });
+        }
+        if let Some(request) = reports.first() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: format!("--report={}={}", request.format, request.destination),
+            });
+        }
+        if pin.is_some() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--pin".to_owned(),
+            });
+        }
+        if serve {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--serve".to_owned(),
+            });
+        }
+        if port.is_some() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--port".to_owned(),
+            });
+        }
+        if let Err(error) = dx_setup::resolve_scope(&targets) {
+            return Err(match error {
+                dx_setup::ScopeError::MultipleTargets { .. } => ArgsError::UnsupportedOption {
+                    command: command.name(),
+                    // `MultipleTargets` guarantees at least two
+                    // positionals, so the second one exists.
+                    option: targets[1].clone(),
+                },
+                dx_setup::ScopeError::TargetPattern { value }
+                | dx_setup::ScopeError::NotTargetLabel { value } => {
+                    ArgsError::ScopeNotSupported { scope: value }
+                }
+            });
+        }
+    }
     if command.is_workflow() {
         // Workflow commands run Bazel verbs directly with Bazel-owned
         // status: finding thresholds and check-mode mutation previews do
@@ -740,8 +831,8 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     // and `--configured` to the inspect wrappers only. Command blocks
     // above already reject them on their own surfaces; this catch-all
     // keeps every other command (quality, umbrellas, `run`,
-    // `generate`, `clean`) failing fast instead of silently ignoring
-    // them.
+    // `generate`, `clean`, managed) failing fast instead of silently
+    // ignoring them.
     if rollback && command != Command::Version {
         return Err(ArgsError::UnsupportedOption {
             command: command.name(),
@@ -796,6 +887,15 @@ mod tests {
         assert_eq!(Command::Test.name(), "test");
         assert_eq!(Command::Coverage.name(), "coverage");
         assert_eq!(Command::Run.name(), "run");
+        assert_eq!(Command::Codegen.name(), "codegen");
+        assert_eq!(Command::Env.name(), "env");
+        assert_eq!(Command::Setup.name(), "setup");
+        assert!(Command::Codegen.is_managed());
+        assert!(Command::Env.is_managed());
+        assert!(Command::Setup.is_managed());
+        assert!(!Command::Codegen.is_workflow());
+        assert!(!Command::Codegen.is_adoption());
+        assert!(!Command::Clean.is_managed());
         assert_eq!(Command::Bazel.name(), "bazel");
         assert!(!Command::Bazel.is_workflow());
         assert!(!Command::Bazel.is_adoption());
@@ -1337,6 +1437,67 @@ mod tests {
             vec!["lint", "--rollback"],
             vec!["check", "//...", "--configured"],
             vec!["docs", "--rollback"],
+        ] {
+            assert!(
+                matches!(
+                    parse(&args(&words)),
+                    Err(ArgsError::UnsupportedOption { .. })
+                ),
+                "words: {words:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn managed_commands_parse_repo_and_exact_scopes() {
+        for command in ["codegen", "env", "setup"] {
+            let got = parse(&args(&[command])).expect("parse");
+            assert!(got.command.is_managed());
+            assert!(got.targets.is_empty());
+            assert!(got.bazel_options.is_empty());
+            let got = parse(&args(&[command, "//a:one", "--", "--jobs=4"])).expect("scoped parse");
+            assert_eq!(got.targets, args(&["//a:one"]));
+            assert_eq!(got.bazel_options, args(&["--jobs=4"]));
+            let got = parse(&args(&[command, "@repo//pkg:lib"])).expect("external label");
+            assert_eq!(got.targets, args(&["@repo//pkg:lib"]));
+        }
+        // Scope rules are the shared setup scope rules: multiple
+        // positionals, patterns, and non-labels fail before execution.
+        assert_eq!(
+            parse(&args(&["codegen", "//a:one", "//b:two"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "codegen",
+                option: "//b:two".to_owned(),
+            })
+        );
+        for words in [
+            vec!["env", "//a/..."],
+            vec!["setup", "src/main.rs"],
+            vec!["codegen", ":target"],
+            vec!["env", ""],
+            vec!["setup", "--config=release"],
+        ] {
+            assert!(
+                matches!(
+                    parse(&args(&words)),
+                    Err(ArgsError::ScopeNotSupported { .. }) | Err(ArgsError::UnknownOption { .. })
+                ),
+                "words: {words:?}"
+            );
+        }
+        // Quality-only, version-only, docs-only, and clean-only options
+        // fail fast on managed commands.
+        for words in [
+            vec!["codegen", "--check"],
+            vec!["env", "--fail-on=error"],
+            vec!["setup", "--output=json"],
+            vec!["codegen", "--report=sarif=out.sarif"],
+            vec!["env", "--pin=0.1.0"],
+            vec!["setup", "--rollback"],
+            vec!["codegen", "--configured"],
+            vec!["env", "--serve"],
+            vec!["setup", "--port=8080"],
+            vec!["codegen", "--bazel"],
         ] {
             assert!(
                 matches!(
