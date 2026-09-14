@@ -1,0 +1,56 @@
+"""M30a slice 1: pure documentation-delivery planning (IR version/identity, validation gate, check-vs-build modes, drift upgrade gate)."""
+
+load("@crates//:crates.bzl", "aliases")
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "dx_rust_library", "dx_rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+dx_rust_library(
+    name = "dx_docs",
+    srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "dx/dx_docs",
+        normal = True,
+    ),
+    crate_name = "dx_docs",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+)
+
+dx_rust_test(
+    name = "dx_docs_test",
+    size = "small",
+    aliases = aliases(
+        package_name = "dx/dx_docs",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":dx_docs",
+    edition = "2021",
+)
+
+# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# resolve from the pinned toolchain, never from ambient host tools.
+rustfmt_test(
+    name = "dx_docs_fmt_test",
+    size = "small",
+    targets = [":dx_docs"],
+)
+
+rust_clippy_test(
+    name = "dx_docs_clippy_test",
+    size = "small",
+    targets = [":dx_docs"],
+)
+
+exports_files(["Cargo.toml"])
+
+# Repository corpus (M05 WP1): crate manifest and build file owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
+)
