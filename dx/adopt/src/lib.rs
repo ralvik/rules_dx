@@ -1,6 +1,21 @@
-//! Pure post-release adoption planning (M30b slices 1-2: `dx init` scaffolding
+//! Pure post-release adoption planning (M30b slices 1-3: `dx init` scaffolding
 //! discipline and single-version `dx` pinning with rollback; hook-runner
-//! hermeticity/overwrite/config shape and devcontainer bootstrap discipline).
+//! hermeticity/overwrite/config shape and devcontainer bootstrap discipline;
+//! diagnostics naming, watch locality/scope, inspect forwarding, and
+//! completion single-source generation).
+//!
+//! This crate owns the adoption shape before any scaffolding, hook,
+//! devcontainer, diagnostics, versioning, watch, inspect, or completion
+//! behavior lands: absent-only writes, unmanaged refusal, the single tested
+//! version (`dx` version equals the pinned `rules_dx` module version),
+//! rollback as re-pinning, hermetic-only hook Git, unmanaged-hook overwrite
+//! refusal, the two-layer hook configuration, pinned Bazel-delegated
+//! devcontainers, the rejected-`doctor` diagnostics name, local-only watch
+//! with per-iteration re-resolution, thin inspect forwarding with
+//! external-scope rejection, and single-source completion generation. It
+//! plans over injected booleans/strings only, so the rules stay deterministic
+//! and unit-testable without repositories, editors, containers, networks,
+//! or shells.
 //!
 //! This crate owns the adoption shape before any scaffolding, hook,
 //! devcontainer, diagnostics, versioning, watch, inspect, or completion
@@ -98,6 +113,49 @@ pub fn devcontainer_is_admissible(
     pinned_bootstrap && delegates_to_bazel && !uses_ambient_tools
 }
 
+/// Whether a diagnostics command name is admissible.
+///
+/// Per ADR 0006 there is no `dx doctor`: that name is rejected outright and
+/// the consolidated status surface (O50) must ship under another name. The
+/// empty name is rejected as well; vocabulary and shape stay O50-gated.
+pub fn diagnostics_command_allowed(name: &str) -> bool {
+    !name.is_empty() && name != "doctor"
+}
+
+/// Whether one watch iteration may run.
+///
+/// Watch is a thin local loop reusing the wrapped command verbatim (no
+/// daemon, cache, graph, or remote): each iteration re-resolves its scope,
+/// holds the single-runnable rule for `run`, and refuses when running under
+/// CI. Any violation blocks the iteration.
+pub fn watch_iteration_accepts(
+    scope_reresolved: bool,
+    local_only: bool,
+    single_runnable_held: bool,
+) -> bool {
+    scope_reresolved && local_only && single_runnable_held
+}
+
+/// Whether an inspect scope is admissible.
+///
+/// Inspect wrappers (`owners`/`deps`/`why`) forward canonically to
+/// `bazel query`/`cquery` with deterministic sorting and no custom graph
+/// engine. External scopes are rejected like workflow commands; the empty
+/// scope is rejected as well.
+pub fn inspect_scope_allowed(scope: &str, external: bool) -> bool {
+    !scope.is_empty() && !external
+}
+
+/// Whether a completion script source is admissible.
+///
+/// Completion scripts ship as generated output from the single CLI
+/// command-definition source: handwritten per-shell scripts are rejected so
+/// new commands and flags cannot drift from the command reference. O61 owns
+/// the shell list, mechanics, and drift fixtures.
+pub fn completion_source_is_single(generated_from_single_source: bool, handwritten: bool) -> bool {
+    generated_from_single_source && !handwritten
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -162,5 +220,36 @@ mod tests {
         assert!(!devcontainer_is_admissible(false, true, false));
         assert!(!devcontainer_is_admissible(true, false, false));
         assert!(!devcontainer_is_admissible(true, true, true));
+    }
+
+    #[test]
+    fn doctor_stays_rejected_for_diagnostics() {
+        assert!(diagnostics_command_allowed("status"));
+        assert!(diagnostics_command_allowed("env"));
+        assert!(!diagnostics_command_allowed("doctor"));
+        assert!(!diagnostics_command_allowed(""));
+    }
+
+    #[test]
+    fn watch_iterations_stay_local_reresolved_and_single() {
+        assert!(watch_iteration_accepts(true, true, true));
+        assert!(!watch_iteration_accepts(false, true, true));
+        assert!(!watch_iteration_accepts(true, false, true));
+        assert!(!watch_iteration_accepts(true, true, false));
+    }
+
+    #[test]
+    fn inspect_rejects_empty_and_external_scopes() {
+        assert!(inspect_scope_allowed("//pkg:target", false));
+        assert!(!inspect_scope_allowed("", false));
+        assert!(!inspect_scope_allowed("//pkg:target", true));
+        assert!(!inspect_scope_allowed("@other//pkg:target", true));
+    }
+
+    #[test]
+    fn completion_comes_from_the_single_source_only() {
+        assert!(completion_source_is_single(true, false));
+        assert!(!completion_source_is_single(true, true));
+        assert!(!completion_source_is_single(false, false));
     }
 }

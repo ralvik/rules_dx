@@ -1,4 +1,4 @@
-"""M30b slices 1-2: pure adoption-scaffolding planning (dx init absent-only writes, single-version pin and rollback, hook hermeticity/overwrite/status shape, devcontainer discipline)."""
+"""M30b slices 1-3: pure adoption-scaffolding planning (dx init absent-only writes, single-version pin and rollback, hook hermeticity/overwrite/status shape, devcontainer discipline, diagnostics naming, watch locality/scope, inspect forwarding, completion single-source)."""
 
 load("@crates//:crates.bzl", "aliases")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
