@@ -23,10 +23,12 @@ trigger and staged-content semantics (O49). Unified polyglot documentation deliv
 (O54): generated, Bazel-cached documentation IR, per-language adapters, mdBook site build,
 and the qualified `dx docs` build/check/serve surface.
 Deliver the approved thin local `dx watch` loop and thin `owners` / `deps` / `why` inspect
-wrappers, with mechanics gated by O55/O56 and reuse of M08's qualified resolver.
+wrappers, with mechanics frozen under O55/O56 and reuse of M08's qualified resolver.
 Required-v1 delivery and release sequencing splits M30 into a release-blocking docs subset (M30a,
-consumed by M28) plus post-release adoption scope (M30b). Milestone spec and DAG updates
-are still pending under O54. See the
+consumed by M28) plus post-release adoption scope (M30b). The split is recorded
+in this spec and the [milestone index](README.md#order-status-and-dependencies)
+under the frozen [O54](../open-decisions.md) mappings; per-language adapter runs,
+renderer/site-build execution, and guide-step CI wiring remain gaps. See the
 [cross-document blockers](../open-decisions.md#cross-document-blockers).
 
 ### M30a: Release-Blocking Docs
@@ -56,7 +58,7 @@ Depends on M29.
 - [Watch decision](../decisions/0017-dx-watch.md), its
   [ADR 0018 extension](../decisions/0018-umbrella-check-fix-cleanup-clean.md#consequences), and
   [target resolution](../cli/target-resolution.md) for the inspect wrappers.
-- Open decisions [O49, O50, O51, O54, O55, O56, and O61](../open-decisions.md).
+- Frozen decisions [O49, O50, O51, O54, O55, O56, and O61](../open-decisions.md).
 
 ## Deliverables
 
