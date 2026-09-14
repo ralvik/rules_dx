@@ -1,10 +1,13 @@
 # Documentation IR
 
-Provisional implementation status: the pipeline direction is accepted v1
-scope, but the schema, validation mechanism,
-per-language inputs, and drift policy remain unqualified under
-[O54](../open-decisions.md). Do not implement adapters against this prose
-until those qualifications land.
+Implementation status: the pipeline direction is accepted v1 scope and the
+O54 mappings are frozen (see [O54](../open-decisions.md) and the
+[M30a completion report](../milestones/M30a-completion-report.md)).
+Delivered: the `dx_docs` planning gates plus `dx docs` command dispatch —
+`--check` validates without rendering, normal build validates then renders.
+Extractor execution, per-language adapter runs, renderer/site-build execution,
+and guide-step CI wiring remain gaps; no working docs support is claimed until
+qualified execution lands.
 
 ## Versioning
 

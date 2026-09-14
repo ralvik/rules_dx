@@ -1,10 +1,13 @@
 # Documentation Site Build
 
-Provisional implementation status: accepted v1 direction; rule labels and evidence requirements freeze under
-[O54](../open-decisions.md). mdBook is the decided renderer with no planned
-replacement. Cache and hermeticity properties
+Implementation status: accepted v1 direction with O54 mappings frozen (see
+[O54](../open-decisions.md) and the [M30a completion report](../milestones/M30a-completion-report.md)).
+Delivered: the `dx_docs` site-build action planning plus `dx docs` dispatch over the
+Bazel-cached extract→aggregate→render graph (no committed IR). mdBook is the decided
+renderer with no planned replacement. Cache and hermeticity properties
 below are design requirements, not verified claims; verification follows
-[Testing](../testing/) before any support statement.
+[Testing](../testing/) before any support statement. Renderer/site-build execution
+remains a gap; no working site support is claimed until qualified execution lands.
 
 ## Action Graph
 
