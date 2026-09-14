@@ -1,7 +1,7 @@
 # Contributing
 
-This repository is design-only: no Bazel configuration, build targets, or `dx`
-CLI implementation exists yet. Bazel is the planned execution foundation.
+`rules_dx` is a Bazel developer platform with build targets and a `dx`
+CLI executed through Bazel on the Linux x86_64 seed host.
 Authoritative product and design contracts live under `docs/`.
 
 Start with the [local workflow](docs/contributing/local-workflows.md#current-workflow)
@@ -21,8 +21,7 @@ resolves it. Record decisions in the owning ADR or domain contract.
 
 - Shared behavior must not rely on untracked local flags.
 - Treat warnings as errors. Follow the [current verification workflow](docs/contributing/local-workflows.md#current-workflow);
-  run the repository formatter, linter, focused tests, and Bazel test suite once
-  their entry points exist.
+  run the repository formatter, linter, focused tests, and Bazel test suite.
 - Update focused tests and documentation when behavior or user-facing workflows
   change. Do not edit generated files directly; use the documented generator.
 - Keep README navigation concise. Put substantial examples under `examples/` and detailed

@@ -172,16 +172,17 @@ designed and locally sandbox-tested but remote behavior remains unverified.
 
 ## Documentation Checks
 
-Repository formatter, linter, and Markdown link/structure adapters land in
+Repository formatter, linter, and Markdown link/structure adapters landed in
 [M04](../milestones/M04-initial-quality-adapters.md), with direct-Bazel dogfood in
-[M05](../milestones/M05-direct-bazel-dogfood.md). M00 does not introduce temporary checks.
-This design-only checkout has no repository-defined formatter, linter, Bazel module, or test
-targets. Manual structure and link checks are the available documentation verification:
+[M05](../milestones/M05-direct-bazel-dogfood.md). M00 introduced no temporary checks.
+Run the repository-owned workflows (`bazel run //dx/cli:dx -- lint`,
+`bazel run //dx/cli:dx -- format --check`, plus the corpus dogfood in
+[local workflows](../contributing/local-workflows.md#corpus-dogfood)) alongside
+manual structure and link checks:
 check heading hierarchy, relative targets and anchors, code-fence languages, and consistency
 between owning contracts and their summaries. Review whitespace in both tracked and untracked
 changed files; `git diff --check` alone does not cover untracked files.
-Report absent entry points as verification gaps, not passing checks. Add exact commands here
-when the repository-owned workflows land.
+Report absent entry points as verification gaps, not passing checks.
 
 ## Acceptance Evidence
 

@@ -13,7 +13,7 @@ about: Report a documentation error or a reproducible implementation defect.
 
 For documentation issues, link the affected text. For implementation defects,
 include exact commands, Bazel/Bazelisk version, OS/CPU host, and repository state
-where applicable. The repository is currently design-only.
+where applicable.
 
 ## Evidence
 
