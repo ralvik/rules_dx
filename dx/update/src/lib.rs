@@ -21,9 +21,11 @@
 //! ecosystem package-identity mappings, non-registry handling, backend
 //! operation boundaries, aggregate exit codes, per-set reporting, and
 //! the independent-set continuation/blocked-dependent execution
-//! semantics. Those arrive in later M26 slices; this crate only records
+//! semantics (see [`outcome`]). Those arrive in later M26 slices; this crate only records
 //! which selector spellings a future resolver must satisfy, and that
 //! the run applies immediately once invoked.
+
+pub mod outcome;
 
 /// Planned update request: which dependency-set/package selectors the
 /// future resolver must satisfy. Selector syntax and identity mappings
