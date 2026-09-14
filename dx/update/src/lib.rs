@@ -26,6 +26,7 @@
 //! the run applies immediately once invoked.
 
 pub mod outcome;
+pub mod semantics;
 
 /// Planned update request: which dependency-set/package selectors the
 /// future resolver must satisfy. Selector syntax and identity mappings

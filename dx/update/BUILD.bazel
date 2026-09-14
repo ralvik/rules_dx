@@ -12,6 +12,7 @@ dx_rust_library(
     srcs = [
         "src/lib.rs",
         "src/outcome.rs",
+        "src/semantics.rs",
     ],
     aliases = aliases(
         package_name = "dx/dx_update",
