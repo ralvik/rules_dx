@@ -1,14 +1,17 @@
-//! Pure release-qualification planning (M28 slices 1-2: WP1 blocker disposition,
-//! WP2 API/support/registry freeze; WP5 artifact-identity/packaging boundary).
+//! Pure release-qualification planning (M28 slices 1-3: WP1 blocker disposition,
+//! WP2 API/support/registry freeze; WP5 artifact-identity/packaging boundary,
+//! reproducibility and verification binding).
 //!
 //! This crate owns the qualification shape before any release candidate,
 //! platform run, external-consumer run, signing, provenance, or publication
 //! lands: blocker-vs-deferral disposition, the support-label evidence gate,
 //! public-API change classification, command-registry exactness, artifact
 //! identity over exact published bytes, the embedded-vs-detached packaging
-//! boundary, manifest completeness, and attestation subject binding. It plans
-//! over injected booleans/strings only, so the rules stay deterministic and
-//! unit-testable without platforms, consumers, builders, or credentials.
+//! boundary, manifest completeness, attestation subject binding,
+//! reproducibility comparison, verification binding, and the self-attestation
+//! level cap. It plans over injected booleans/strings only, so the rules stay
+//! deterministic and unit-testable without platforms, consumers, builders,
+//! or credentials.
 //!
 //! Out of scope here (M28 qualification + M29 publication): O6/O37/O38/O39
 //! evidencing, trusted-builder/SBOM/provenance execution, reproducibility
@@ -205,6 +208,99 @@ pub fn embedded_change_requires_new_attestation(embedded_changed: bool) -> bool 
     embedded_changed
 }
 
+/// Whether an independent rebuild reproduces the candidate.
+///
+/// A qualified artifact reproduces from a clean release environment: the
+/// rebuild digest must equal the candidate digest. Empty digests never count
+/// as reproduction. This compares injected digest strings only; it performs
+/// no build and measures no threshold (thresholds stay O39-gated).
+pub fn rebuild_reproduces(candidate_digest: &str, rebuild_digest: &str) -> bool {
+    !candidate_digest.is_empty() && candidate_digest == rebuild_digest
+}
+
+/// First verification mismatch between attested and independently expected values.
+///
+/// Verification binds artifact bytes, predicate type, signer, issuer/source,
+/// and builder policy to independently trusted expectations, never to values
+/// trusted merely because they arrived in the download. The first mismatch in
+/// that order is reported; `None` means every bound value matched.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum VerifyReject {
+    DigestMismatch,
+    PredicateMismatch,
+    SignerMismatch,
+    BuilderMismatch,
+}
+
+/// Plan verification binding over injected attested-vs-expected strings.
+///
+/// All four bindings must match exactly (verbatim, non-empty attested value).
+/// Any mismatch rejects; this executes no cryptography and trusts no log,
+/// timestamp, or certificate on its own (those stay O38/O39-gated).
+#[allow(clippy::too_many_arguments)]
+pub fn verify_rejection(
+    attested_digest: &str,
+    expected_digest: &str,
+    attested_predicate: &str,
+    expected_predicate: &str,
+    attested_signer: &str,
+    expected_signer: &str,
+    attested_builder: &str,
+    expected_builder: &str,
+) -> Option<VerifyReject> {
+    if attested_digest.is_empty() || attested_digest != expected_digest {
+        return Some(VerifyReject::DigestMismatch);
+    }
+    if attested_predicate.is_empty() || attested_predicate != expected_predicate {
+        return Some(VerifyReject::PredicateMismatch);
+    }
+    if attested_signer.is_empty() || attested_signer != expected_signer {
+        return Some(VerifyReject::SignerMismatch);
+    }
+    if attested_builder.is_empty() || attested_builder != expected_builder {
+        return Some(VerifyReject::BuilderMismatch);
+    }
+    None
+}
+
+/// Whether verification accepts the attested values.
+///
+/// Accepts only when every binding matches its independent expectation.
+#[allow(clippy::too_many_arguments)]
+pub fn verification_accepts(
+    attested_digest: &str,
+    expected_digest: &str,
+    attested_predicate: &str,
+    expected_predicate: &str,
+    attested_signer: &str,
+    expected_signer: &str,
+    attested_builder: &str,
+    expected_builder: &str,
+) -> bool {
+    verify_rejection(
+        attested_digest,
+        expected_digest,
+        attested_predicate,
+        expected_predicate,
+        attested_signer,
+        expected_signer,
+        attested_builder,
+        expected_builder,
+    )
+    .is_none()
+}
+
+/// Whether a self-attested provenance level claim is admissible.
+///
+/// Self-attested provenance is L0/L1 at best and must not self-assert L2/L3:
+/// a self-attested claim above level 1 is rejected outright.
+pub fn self_attested_level_admissible(claimed_level: u8, self_attested: bool) -> bool {
+    if self_attested && claimed_level > 1 {
+        return false;
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -374,5 +470,115 @@ mod tests {
     fn embedded_changes_invalidate_detached_attestations() {
         assert!(embedded_change_requires_new_attestation(true));
         assert!(!embedded_change_requires_new_attestation(false));
+    }
+
+    #[test]
+    fn reproduction_needs_equal_nonempty_digests() {
+        assert!(rebuild_reproduces("sha256:abc", "sha256:abc"));
+        assert!(!rebuild_reproduces("sha256:abc", "sha256:def"));
+        assert!(!rebuild_reproduces("", ""));
+    }
+
+    #[test]
+    fn verification_binds_digest_predicate_signer_builder_in_order() {
+        let ok = |d: &str, p: &str, s: &str, b: &str| {
+            verify_rejection(
+                d,
+                "sha256:abc",
+                p,
+                CANDIDATE_SLSA_PREDICATE_URI,
+                s,
+                "sig:alice",
+                b,
+                "builder:trusted",
+            )
+        };
+        assert_eq!(
+            ok(
+                "sha256:abc",
+                CANDIDATE_SLSA_PREDICATE_URI,
+                "sig:alice",
+                "builder:trusted"
+            ),
+            None
+        );
+        assert_eq!(
+            ok(
+                "sha256:zzz",
+                CANDIDATE_SLSA_PREDICATE_URI,
+                "sig:alice",
+                "builder:trusted"
+            ),
+            Some(VerifyReject::DigestMismatch)
+        );
+        assert_eq!(
+            ok(
+                "sha256:abc",
+                "https://example.invalid/other",
+                "sig:alice",
+                "builder:trusted"
+            ),
+            Some(VerifyReject::PredicateMismatch)
+        );
+        assert_eq!(
+            ok(
+                "sha256:abc",
+                CANDIDATE_SLSA_PREDICATE_URI,
+                "sig:mallory",
+                "builder:trusted"
+            ),
+            Some(VerifyReject::SignerMismatch)
+        );
+        assert_eq!(
+            ok(
+                "sha256:abc",
+                CANDIDATE_SLSA_PREDICATE_URI,
+                "sig:alice",
+                "builder:self"
+            ),
+            Some(VerifyReject::BuilderMismatch)
+        );
+        assert_eq!(
+            ok(
+                "",
+                CANDIDATE_SLSA_PREDICATE_URI,
+                "sig:alice",
+                "builder:trusted"
+            ),
+            Some(VerifyReject::DigestMismatch)
+        );
+    }
+
+    #[test]
+    fn verification_accepts_only_fully_bound_attestations() {
+        assert!(verification_accepts(
+            "sha256:abc",
+            "sha256:abc",
+            CANDIDATE_SLSA_PREDICATE_URI,
+            CANDIDATE_SLSA_PREDICATE_URI,
+            "sig:alice",
+            "sig:alice",
+            "builder:trusted",
+            "builder:trusted",
+        ));
+        assert!(!verification_accepts(
+            "sha256:abc",
+            "sha256:abc",
+            CANDIDATE_SLSA_PREDICATE_URI,
+            CANDIDATE_SLSA_PREDICATE_URI,
+            "sig:alice",
+            "sig:alice",
+            "builder:self",
+            "builder:trusted",
+        ));
+    }
+
+    #[test]
+    fn self_attestation_never_claims_l2_or_l3() {
+        assert!(self_attested_level_admissible(1, true));
+        assert!(self_attested_level_admissible(0, true));
+        assert!(!self_attested_level_admissible(2, true));
+        assert!(!self_attested_level_admissible(3, true));
+        assert!(self_attested_level_admissible(3, false));
     }
 }
