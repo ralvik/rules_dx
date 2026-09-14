@@ -33,7 +33,8 @@ The command surface is:
 - `dx docs` for Bazel-owned documentation extraction, validation, and rendering; `--check`
   performs extraction and validation without rendering, and `--serve` previews built outputs.
   Both build and check are source-non-mutating. Exact scope, invocation combinations, and protocol
-  mechanics remain under [O54](../open-decisions.md) in the [docs contract](../cli/commands/docs.md).
+  mechanics follow the frozen [O54](../open-decisions.md) mappings in the [docs contract](../cli/commands/docs.md);
+  per-language adapter runs and renderer/site-build execution remain gaps.
 - `dx update` for authoritative dependency-update workflows.
 - `dx generate` for the mutating repository-defined Gazelle workflow, with non-mutating
   freshness validation through `--check`.
@@ -125,8 +126,9 @@ The approved update failure policy makes `dx update` the narrow exception: conti
 selected dependency sets after a set failure, skip operations dependent on that failure,
 preserve successful changes, and return overall failure. This preserves independent progress
 without a repository-wide rollback; the [update contract](../cli/commands/audit-update-bazel.md#dx-update)
-owns set independence. Exact aggregate exit-code selection, backend mapping, and report
-qualification remain pending under [O12](../open-decisions.md). Ordinary plans, including
+owns set independence. Aggregate exit-code selection, backend mapping, and report
+qualification follow the frozen [O12](../open-decisions.md) mappings; live resolver-backend
+execution remains a gap. Ordinary plans, including
 the `dx check` and `dx fix` umbrellas, retain their first-failure behavior.
 
 Dry-run may execute read-only Bazel queries needed to resolve the plan but never
