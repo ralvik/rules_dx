@@ -25,10 +25,12 @@
 //! qualification planning (Gitleaks artifact identity, SARIF/redact
 //! wiring, exit classification) lives in [`secrets`]. License-expression
 //! evaluation over the allow/review/deny lattice lives in
-//! [`license_expr`].
+//! [`license_expr`]. Tier policy, distribution roots, and the license
+//! exception lifecycle live in [`license_policy`].
 
 pub mod exception;
 pub mod license_expr;
+pub mod license_policy;
 pub mod secrets;
 
 /// Audit family selector. Frozen spellings match the `dx audit` contract

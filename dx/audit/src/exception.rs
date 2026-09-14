@@ -103,9 +103,18 @@ pub fn validate_exception(exception: &RiskException, today: &str) -> Result<(), 
             return Err(ExceptionProblem::MissingField { field });
         }
     }
-    if !is_calendar_date(&exception.expires) {
+    check_expiry(&exception.expires, today)
+}
+
+/// Check one expiration date against the injected audit date
+/// (`YYYY-MM-DD` UTC). Shared by the vulnerability risk-acceptance
+/// lifecycle above and the license-family exceptions: an earlier cached
+/// acceptance never passes a later audit after expiry because the date
+/// is always an explicit input, never ambient clock state.
+pub fn check_expiry(expires: &str, today: &str) -> Result<(), ExceptionProblem> {
+    if !is_calendar_date(expires) {
         return Err(ExceptionProblem::InvalidDate {
-            value: exception.expires.clone(),
+            value: expires.to_owned(),
         });
     }
     if !is_calendar_date(today) {
@@ -113,9 +122,9 @@ pub fn validate_exception(exception: &RiskException, today: &str) -> Result<(), 
             value: today.to_owned(),
         });
     }
-    if exception.expires.as_str() <= today {
+    if expires <= today {
         return Err(ExceptionProblem::Expired {
-            expires: exception.expires.clone(),
+            expires: expires.to_owned(),
             today: today.to_owned(),
         });
     }
