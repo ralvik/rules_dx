@@ -374,7 +374,7 @@ fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
     let _ = writeln!(err, "dx: {message}");
     let _ = writeln!(
         err,
-        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <lint|typecheck|format|generate|build|test|coverage|run> [--check] [scope ...] [-- command-options...]"
+        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|init|hooks|status|version|docs|watch|owners|deps|why|completion> [--check] [scope ...] [-- command-options...]"
     );
     pre_exec_code()
 }
@@ -430,6 +430,24 @@ fn change_event_for(change: &FileChange) -> Result<ChangeEvent, String> {
 /// on stdout, and a stdout report owns stdout while human text moves
 /// to stderr.
 pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
+    if invocation.command.is_adoption() {
+        let Env {
+            workspace,
+            query_runner,
+            out,
+            err,
+            ..
+        } = env;
+        return crate::adopt::execute_adoption(
+            invocation,
+            crate::adopt::AdoptEnv {
+                workspace,
+                query_runner,
+                out,
+                err,
+            },
+        );
+    }
     if invocation.command.is_umbrella() {
         return execute_umbrella(invocation, env);
     }
@@ -1616,6 +1634,9 @@ fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
             targets: invocation.targets.clone(),
             bazel_options: invocation.bazel_options.clone(),
             bazel_clean: false,
+            pin: None,
+            serve: false,
+            port: None,
         };
         let mut phase_out = Vec::new();
         let mut phase_err = Vec::new();
@@ -4078,6 +4099,9 @@ mod tests {
             targets: vec!["//app:bin".to_owned()],
             bazel_options: Vec::new(),
             bazel_clean: false,
+            pin: None,
+            serve: false,
+            port: None,
         }
     }
 

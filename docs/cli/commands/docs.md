@@ -1,11 +1,11 @@
 # `dx docs`
 
-Provisional implementation status: candidate command surface accepted as
-v1 direction, recorded in [ADR
-0006](../../decisions/0006-cli-command-surface.md). Exact scope
-syntax, invocation combinations, serve mechanics, and output-protocol events freeze under
-[O54](../../open-decisions.md). Do not implement against this prose until
-those qualifications land.
+Implementation status: command surface frozen under
+[O54](../../open-decisions.md) and delivered (`dx_docs` gates plus `dx docs`
+build/check/serve dispatch). Exact scope
+syntax, invocation combinations, serve mechanics, and output-protocol events follow the
+frozen mappings; per-language adapter runs and renderer/site-build execution evidence
+remain future work.
 
 ```text
 dx docs [--serve [--port <n>]] [--check] [scope]

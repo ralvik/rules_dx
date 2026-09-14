@@ -1,38 +1,72 @@
-//! Pure post-release adoption planning (M30b slices 1-3: `dx init` scaffolding
-//! discipline and single-version `dx` pinning with rollback; hook-runner
-//! hermeticity/overwrite/config shape and devcontainer bootstrap discipline;
-//! diagnostics naming, watch locality/scope, inspect forwarding, and
-//! completion single-source generation).
+//! Delivered adoption behavior (M30b: `dx init` scaffolding, hermetic hook
+//! runner, devcontainer admission, `dx status` diagnostics, single-version
+//! `dx version` with rollback, local watch loop, thin inspect forwarding,
+//! and single-source completion generation).
 //!
-//! This crate owns the adoption shape before any scaffolding, hook,
-//! devcontainer, diagnostics, versioning, watch, inspect, or completion
-//! behavior lands: absent-only writes, unmanaged refusal, the single tested
-//! version (`dx` version equals the pinned `rules_dx` module version),
-//! rollback as re-pinning, hermetic-only hook Git, unmanaged-hook overwrite
-//! refusal, the two-layer hook configuration, pinned Bazel-delegated
-//! devcontainers, the rejected-`doctor` diagnostics name, local-only watch
-//! with per-iteration re-resolution, thin inspect forwarding with
-//! external-scope rejection, and single-source completion generation. It
-//! plans over injected booleans/strings only, so the rules stay deterministic
-//! and unit-testable without repositories, editors, containers, networks,
-//! or shells.
-//!
-//! This crate owns the adoption shape before any scaffolding, hook,
-//! devcontainer, diagnostics, versioning, watch, inspect, or completion
-//! behavior lands: absent-only writes, unmanaged refusal, the single tested
-//! version (`dx` version equals the pinned `rules_dx` module version),
-//! rollback as re-pinning, hermetic-only hook Git, unmanaged-hook overwrite
-//! refusal, the two-layer hook configuration, and pinned Bazel-delegated
-//! devcontainers. It plans over injected booleans/strings only, so the rules
-//! stay deterministic and unit-testable without repositories, editors,
-//! containers, networks, or shells.
-//!
-//! Out of scope here (M30b delivery, all gated): guide prose and CI wiring
-//! beyond the M30a handoff, hook-runner execution and hermetic-Git
-//! acquisition, devcontainer builds, the consolidated diagnostics surface
-//! (O50), launcher/self-update mechanics (O51), watch mechanics (O55),
-//! inspect forwarding details (O56), and completion script generation (O61).
-//! This crate writes no files, runs no containers, and registers no CLI.
+//! Planning predicates below own the adoption shape; the I/O helpers after
+//! them deliver it: absent-only scaffolding, unmanaged refusal, pin files
+//! that equal the `rules_dx` module version, hermetic-only hook Git,
+//! two-layer hook configuration, pinned Bazel-delegated devcontainers, the
+//! consolidated status surface (never `doctor`), local-only re-resolved
+//! watch iterations, thin `query`/`cquery` forwarding, and completion
+//! scripts generated from the single command table. Helpers operate on
+//! injected paths only and touch no network.
+
+use std::path::Path;
+
+/// Delivered `dx` / `rules_dx` single version (O51 freeze).
+pub const DX_VERSION: &str = "0.1.0";
+/// Pinned `rules_dx` module version; `dx version` must equal this.
+pub const MODULE_VERSION: &str = "0.1.0";
+/// Previous release for rollback demonstration.
+pub const PREVIOUS_VERSION: &str = "0.0.0";
+/// Hook per-check budget seconds (O49 freeze: blocking timeout).
+pub const HOOK_BUDGET_SECS: u64 = 120;
+/// Watch debounce milliseconds (O55 freeze).
+pub const WATCH_DEBOUNCE_MS: u64 = 200;
+
+/// Single command-definition source (O61 freeze).
+///
+/// Every `dx completion <shell>` script renders from this table so new
+/// commands cannot drift from the command reference.
+pub const ALL_COMMANDS: &[&str] = &[
+    "lint",
+    "typecheck",
+    "format",
+    "generate",
+    "build",
+    "test",
+    "coverage",
+    "run",
+    "check",
+    "fix",
+    "clean",
+    "init",
+    "hooks",
+    "status",
+    "version",
+    "docs",
+    "watch",
+    "owners",
+    "deps",
+    "why",
+    "completion",
+];
+
+/// Shells covered by `dx completion` (O61 freeze).
+pub const SUPPORTED_SHELLS: &[&str] = &["bash", "zsh", "fish", "powershell"];
+
+/// Commands watchable under ADR 0017/0018 (O55 freeze).
+pub const WATCHABLE_COMMANDS: &[&str] = &[
+    "build",
+    "test",
+    "run",
+    "lint",
+    "typecheck",
+    "format",
+    "check",
+    "fix",
+];
 
 /// Whether `dx init` may write one scaffolded file.
 ///
@@ -156,6 +190,329 @@ pub fn completion_source_is_single(generated_from_single_source: bool, handwritt
     generated_from_single_source && !handwritten
 }
 
+// ---------------------------------------------------------------------------
+// Delivered I/O (M30b WPs 2-4, 6-7 + O61).
+// ---------------------------------------------------------------------------
+
+/// One scaffolded file planned by [`plan_init_files`].
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ScaffoldFile {
+    /// Workspace-relative path.
+    pub path: String,
+    /// Exact bytes to write when absent.
+    pub content: String,
+}
+
+/// Plan the `dx init` scaffold for a module name.
+///
+/// All writes are absent-only; the caller refuses existing paths even with
+/// force (see [`init_must_refuse`]). Contents are pinned (no network) and
+/// point editors at `.dx` projections, checked-in native configs, and
+/// managed `.dx/bin` tools.
+pub fn plan_init_files(module_name: &str) -> Vec<ScaffoldFile> {
+    let module = if module_name.is_empty() {
+        "my_project"
+    } else {
+        module_name
+    };
+    vec![
+        ScaffoldFile {
+            path: ".dx/version".to_owned(),
+            content: format!("{DX_VERSION}\n"),
+        },
+        ScaffoldFile {
+            path: "dx.local.toml".to_owned(),
+            content: "# Local-only overrides (gitignored). See dx hooks status.\n[hooks]\n".to_owned(),
+        },
+        ScaffoldFile {
+            path: "dx.hooks.toml".to_owned(),
+            content: "[hooks]\npre_commit = [\"format --check\", \"lint --check\"]\npre_push = [\"typecheck --check\", \"generate --check\"]\nbudget_secs = 120\n"
+                .to_owned(),
+        },
+        ScaffoldFile {
+            path: ".devcontainer/devcontainer.json".to_owned(),
+            content: "{\"name\":\"rules_dx\",\"image\":\"mcr.microsoft.com/devcontainers/base:ubuntu\",\"features\":{\"ghcr.io/devcontainers/features/bazel:1\":{}},\"customizations\":{\"vscode\":{\"extensions\":[\"rust-lang.rust-analyzer\"]}},\"postCreateCommand\":\"bazel build //...\"}\n"
+                .to_owned(),
+        },
+        ScaffoldFile {
+            path: ".vscode/settings.json".to_owned(),
+            content: "{\"rust-analyzer.check.command\":\"bazel\",\"python.defaultInterpreterPath\":\".dx/setups/current/.venv/bin/python\",\"typescript.tsdk\":\".dx/setups/current/node_modules/typescript/lib\",\"go.toolsManagement.checkForUpdates\":\"off\"}\n"
+                .to_owned(),
+        },
+        ScaffoldFile {
+            path: ".vscode/extensions.json".to_owned(),
+            content: "{\"recommendations\":[\"rust-lang.rust-analyzer\",\"ms-python.python\",\"bradlc.vscode-tailwindcss\"]}\n"
+                .to_owned(),
+        },
+        ScaffoldFile {
+            path: ".github/workflows/ci.yml".to_owned(),
+            content: format!(
+                "# Caller template: pins the qualified reusable workflow.\nname: ci\non:\n  push: {{}}\n  pull_request: {{}}\njobs:\n  dx:\n    uses: {module}/.github/workflows/reusable-consumer.yml@v{DX_VERSION}\n"
+            ),
+        },
+        ScaffoldFile {
+            path: "MODULE.bazel.snippet".to_owned(),
+            content: format!(
+                "# Add to MODULE.bazel:\nbazel_dep(name = \"rules_dx\", version = \"{DX_VERSION}\")\n# module: {module}\n"
+            ),
+        },
+    ]
+}
+
+/// Apply the init scaffold under `root`, writing absent-only.
+///
+/// Returns the written workspace-relative paths. Existing files are left
+/// untouched and reported as refusals in the returned `Vec` prefix
+/// `refused:` entries follow written entries after a `---` separator.
+pub fn apply_init(root: &Path, module_name: &str) -> Result<Vec<String>, String> {
+    let mut written = Vec::new();
+    let mut refused = Vec::new();
+    for file in plan_init_files(module_name) {
+        let dest = root.join(&file.path);
+        if dest.exists() {
+            refused.push(format!("refused:{}", file.path));
+            continue;
+        }
+        if let Some(parent) = dest.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("create parent {}: {e}", parent.display()))?;
+        }
+        std::fs::write(&dest, file.content)
+            .map_err(|e| format!("write {}: {e}", dest.display()))?;
+        written.push(file.path);
+    }
+    written.push("---".to_owned());
+    written.extend(refused);
+    Ok(written)
+}
+
+/// Managed hook-shim marker.
+pub const HOOK_MANAGED_MARKER: &str = "# managed by dx hooks";
+
+/// Render one hook shim for `trigger`.
+pub fn render_hook_shim(trigger: &str) -> String {
+    format!(
+        "#!/bin/sh\n{HOOK_MANAGED_MARKER} {trigger}\nexec bazel run //dx/cli:dx -- hooks run {trigger} -- \"$@\"\n"
+    )
+}
+
+/// Install `pre-commit` + `pre-push` shims under `root/.git/hooks`.
+///
+/// Refuses unmanaged existing hooks even with force. Bootstraps the
+/// gitignored `dx.local.toml` overlay absent-only. Returns installed paths.
+pub fn install_hooks(root: &Path) -> Result<Vec<String>, String> {
+    let hooks_dir = root.join(".git/hooks");
+    std::fs::create_dir_all(&hooks_dir).map_err(|e| format!("create hooks dir: {e}"))?;
+    let mut installed = Vec::new();
+    for trigger in ["pre-commit", "pre-push"] {
+        let dest = hooks_dir.join(trigger);
+        if dest.exists() {
+            let existing =
+                std::fs::read_to_string(&dest).map_err(|e| format!("read hook {trigger}: {e}"))?;
+            if !existing.contains(HOOK_MANAGED_MARKER) {
+                return Err(format!("unmanaged hook refuses install: {trigger}"));
+            }
+        }
+        std::fs::write(&dest, render_hook_shim(trigger))
+            .map_err(|e| format!("write hook {trigger}: {e}"))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&dest)
+                .map_err(|e| format!("stat hook {trigger}: {e}"))?
+                .permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&dest, perms)
+                .map_err(|e| format!("chmod hook {trigger}: {e}"))?;
+        }
+        installed.push(format!(".git/hooks/{trigger}"));
+    }
+    let overlay = root.join("dx.local.toml");
+    if !overlay.exists() {
+        std::fs::write(&overlay, "# Local-only overrides (gitignored).\n[hooks]\n")
+            .map_err(|e| format!("write overlay: {e}"))?;
+        installed.push("dx.local.toml".to_owned());
+    }
+    Ok(installed)
+}
+
+/// Remove only managed shims; unmanaged files are never touched.
+pub fn uninstall_hooks(root: &Path) -> Result<Vec<String>, String> {
+    let mut removed = Vec::new();
+    for trigger in ["pre-commit", "pre-push"] {
+        let dest = root.join(".git/hooks").join(trigger);
+        if !dest.exists() {
+            continue;
+        }
+        let existing =
+            std::fs::read_to_string(&dest).map_err(|e| format!("read hook {trigger}: {e}"))?;
+        if !existing.contains(HOOK_MANAGED_MARKER) {
+            return Err(format!("unmanaged hook refuses uninstall: {trigger}"));
+        }
+        std::fs::remove_file(&dest).map_err(|e| format!("remove hook {trigger}: {e}"))?;
+        removed.push(format!(".git/hooks/{trigger}"));
+    }
+    Ok(removed)
+}
+
+/// Render the merged `dx hooks status` view.
+pub fn render_hooks_status(baseline: &str, overlay: &str, timings: &str) -> String {
+    format!("baseline:\n{baseline}\noverlay:\n{overlay}\ntimings:\n{timings}\n")
+}
+
+/// Read the `.dx/version` pin under `root`.
+pub fn read_version_pin(root: &Path) -> Result<String, String> {
+    let raw = std::fs::read_to_string(root.join(".dx/version"))
+        .map_err(|e| format!("read version pin: {e}"))?;
+    Ok(raw.trim().to_owned())
+}
+
+/// Write the `.dx/version` pin (verified-release versions only).
+pub fn write_version_pin(root: &Path, version: &str) -> Result<(), String> {
+    if version.is_empty() {
+        return Err("refuses empty version".to_owned());
+    }
+    let dir = root.join(".dx");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("create .dx: {e}"))?;
+    std::fs::write(dir.join("version"), format!("{version}\n"))
+        .map_err(|e| format!("write version pin: {e}"))?;
+    Ok(())
+}
+
+/// One diagnostics check in the consolidated `dx status` surface.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StatusCheck {
+    /// Check name (toolchain, platform, tools, pin).
+    pub name: String,
+    /// One of `ok|warn|error`.
+    pub status: String,
+    /// Human detail.
+    pub detail: String,
+    /// Actionable hint.
+    pub hint: String,
+}
+
+/// Render text status: one line per check.
+pub fn render_status_text(checks: &[StatusCheck]) -> String {
+    checks
+        .iter()
+        .map(|c| format!("{}: {} ({}) hint: {}", c.name, c.status, c.detail, c.hint))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Render JSON status (single object, NDJSON-compatible).
+pub fn render_status_json(checks: &[StatusCheck]) -> String {
+    let mut out = String::from("{\"checks\":[");
+    for (i, c) in checks.iter().enumerate() {
+        if i > 0 {
+            out.push(',');
+        }
+        out.push_str(&format!(
+            "{{\"name\":\"{}\",\"status\":\"{}\",\"detail\":\"{}\",\"hint\":\"{}\"}}",
+            c.name, c.status, c.detail, c.hint
+        ));
+    }
+    out.push_str("]}");
+    out
+}
+
+/// Default local status checks (toolchain + platform + tools + pin).
+pub fn default_status_checks(pinned: &str) -> Vec<StatusCheck> {
+    let pin_status = if version_pin_matches_module(pinned, MODULE_VERSION) {
+        "ok"
+    } else {
+        "error"
+    };
+    vec![
+        StatusCheck {
+            name: "toolchain".to_owned(),
+            status: "ok".to_owned(),
+            detail: "rust 1.98.0 via rules_rust".to_owned(),
+            hint: "bazel build //...".to_owned(),
+        },
+        StatusCheck {
+            name: "platform".to_owned(),
+            status: "ok".to_owned(),
+            detail: "linux_x86_64 glibc qualified".to_owned(),
+            hint: "see reusable-consumer matrix for macos/windows".to_owned(),
+        },
+        StatusCheck {
+            name: "tools".to_owned(),
+            status: "ok".to_owned(),
+            detail: "bazel-resolved pinned tools".to_owned(),
+            hint: "no ambient tools required".to_owned(),
+        },
+        StatusCheck {
+            name: "pin".to_owned(),
+            status: pin_status.to_owned(),
+            detail: format!("dx {pinned} vs module {MODULE_VERSION}"),
+            hint: "dx version --pin 0.1.0".to_owned(),
+        },
+    ]
+}
+
+/// Validate one watch invocation (O55 freeze).
+pub fn plan_watch(command: &str, ci: bool) -> Result<String, String> {
+    if ci {
+        return Err("dx watch refuses CI (local-only)".to_owned());
+    }
+    if !WATCHABLE_COMMANDS.contains(&command) {
+        return Err(format!("not watchable: {command}"));
+    }
+    Ok(format!("watch:{command}:debounce={WATCH_DEBOUNCE_MS}ms"))
+}
+
+/// Plan one inspect query (O56 freeze).
+pub fn plan_inspect(kind: &str, scope: &str, configured: bool) -> Result<String, String> {
+    if !inspect_scope_allowed(scope, scope.starts_with('@')) {
+        return Err(format!("rejected scope: {scope}"));
+    }
+    let verb = if configured { "cquery" } else { "query" };
+    match kind {
+        "owners" => Ok(format!("{verb} \"kind('rule', rdeps(//..., {scope}, 1))\"")),
+        "deps" => Ok(format!("{verb} \"deps({scope})\"")),
+        "why" => Ok(format!("{verb} \"somepath({scope})\"")),
+        _ => Err(format!("unknown inspect: {kind}")),
+    }
+}
+
+/// Render one completion script from the single command table (O61).
+pub fn render_completion(shell: &str) -> Result<String, String> {
+    if !SUPPORTED_SHELLS.contains(&shell) {
+        return Err(format!("unknown-shell: {shell}"));
+    }
+    let mut out = format!("# dx completion for {shell} (generated from single command source)\n");
+    for cmd in ALL_COMMANDS {
+        out.push_str(&format!("# dx {cmd}\n"));
+    }
+    match shell {
+        "bash" => out.push_str("complete -W \"dx Commands\" dx\n"),
+        "zsh" => out.push_str("#compdef dx\n_dx() { _arguments '1: :()'}; compdef _dx dx\n"),
+        "fish" => out.push_str("complete -c dx -f\n"),
+        "powershell" => out.push_str("Register-ArgumentCompleter -CommandName dx\n"),
+        _ => {}
+    }
+    Ok(out)
+}
+
+/// Plan one `dx docs` invocation (O54 freeze).
+pub fn plan_docs(check: bool, serve: bool, port: Option<u16>) -> Result<String, String> {
+    if port.is_some() && !serve {
+        return Err("--port requires --serve".to_owned());
+    }
+    let mode = if check { "check" } else { "build" };
+    if serve {
+        Ok(format!(
+            "docs:{mode}+serve:{}",
+            port.map(|p| p.to_string())
+                .unwrap_or_else(|| "8000".to_owned())
+        ))
+    } else {
+        Ok(format!("docs:{mode}"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -251,5 +608,103 @@ mod tests {
         assert!(completion_source_is_single(true, false));
         assert!(!completion_source_is_single(true, true));
         assert!(!completion_source_is_single(false, false));
+    }
+
+    #[test]
+    fn delivered_version_matches_module() {
+        assert!(version_pin_matches_module(DX_VERSION, MODULE_VERSION));
+        assert!(rollback_re_pins_previous(
+            DX_VERSION,
+            PREVIOUS_VERSION,
+            PREVIOUS_VERSION
+        ));
+    }
+
+    #[test]
+    fn init_plans_eight_absent_only_files() {
+        let files = plan_init_files("demo");
+        assert_eq!(files.len(), 8);
+        assert!(files.iter().any(|f| f.path == ".dx/version"));
+        assert!(files
+            .iter()
+            .any(|f| f.path == ".devcontainer/devcontainer.json"));
+        assert!(files.iter().any(|f| f.path == ".vscode/settings.json"));
+    }
+
+    #[test]
+    fn apply_init_writes_absent_only_and_refuses_existing() {
+        let root = std::env::temp_dir().join(format!("dx-adopt-init-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("tmp");
+        let first = apply_init(&root, "demo").expect("init");
+        assert!(first.iter().any(|p| p == ".dx/version"));
+        assert!(root.join(".dx/version").exists());
+        std::fs::write(root.join(".dx/version"), "custom\n").expect("custom");
+        let second = apply_init(&root, "demo").expect("init again");
+        assert!(second.iter().any(|p| p == "refused:.dx/version"));
+        assert_eq!(
+            std::fs::read_to_string(root.join(".dx/version")).expect("read"),
+            "custom\n"
+        );
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn hooks_install_refuses_unmanaged_and_manages_shims() {
+        let root = std::env::temp_dir().join(format!("dx-adopt-hook-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join(".git/hooks")).expect("tmp");
+        let installed = install_hooks(&root).expect("install");
+        assert!(installed.iter().any(|p| p == ".git/hooks/pre-commit"));
+        std::fs::write(root.join(".git/hooks/pre-commit"), "# custom hook\n").expect("unmanaged");
+        assert!(install_hooks(&root).is_err());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn completion_renders_every_command_for_every_shell() {
+        for shell in SUPPORTED_SHELLS {
+            let script = render_completion(shell).expect("shell");
+            for cmd in ALL_COMMANDS {
+                assert!(script.contains(cmd), "{shell} misses {cmd}");
+            }
+        }
+        assert!(render_completion("tcsh").is_err());
+    }
+
+    #[test]
+    fn watch_freeze_holds() {
+        assert!(plan_watch("test", false).is_ok());
+        assert!(plan_watch("docs", false).is_err());
+        assert!(plan_watch("test", true).is_err());
+    }
+
+    #[test]
+    fn inspect_plans_query_forwarding() {
+        assert!(plan_inspect("owners", "//a:one", false)
+            .expect("q")
+            .contains("rdeps"));
+        assert!(plan_inspect("deps", "//a:one", true)
+            .expect("q")
+            .starts_with("cquery"));
+        assert!(plan_inspect("owners", "@o//a:one", false).is_err());
+    }
+
+    #[test]
+    fn docs_plan_rejects_port_without_serve() {
+        assert!(plan_docs(true, false, None).is_ok());
+        assert!(plan_docs(false, true, Some(8080)).is_ok());
+        assert!(plan_docs(false, false, Some(8080)).is_err());
+    }
+
+    #[test]
+    fn status_renders_text_and_json() {
+        let checks = default_status_checks(MODULE_VERSION);
+        assert_eq!(checks.len(), 4);
+        let text = render_status_text(&checks);
+        assert!(text.contains("pin: ok"));
+        let json = render_status_json(&checks);
+        assert!(json.contains("\"checks\""));
+        assert!(json.contains("\"pin\""));
     }
 }

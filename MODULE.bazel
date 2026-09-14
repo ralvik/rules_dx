@@ -2,7 +2,7 @@
 
 module(
     name = "rules_dx",
-    version = "0.0.0",
+    version = "0.1.0",
 )
 
 # M00 seed pins, frozen from executed runs on the seed host per O14.

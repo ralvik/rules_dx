@@ -118,6 +118,23 @@ pub fn spec(command: Command) -> CommandSpec {
             aspects: &[],
             reports: &[],
         },
+        // Delivered adoption/inspect surfaces (M30b): local helpers or
+        // thin query forwarding, never the quality aspect pipeline.
+        Command::Init
+        | Command::Hooks
+        | Command::Status
+        | Command::Version
+        | Command::Docs
+        | Command::Watch
+        | Command::Owners
+        | Command::Deps
+        | Command::Why
+        | Command::Completion => CommandSpec {
+            command,
+            capability: "adoption",
+            aspects: &[],
+            reports: &[],
+        },
     }
 }
 
@@ -262,6 +279,16 @@ impl WorkflowVerb {
             Command::Run => Some(WorkflowVerb::Run),
             Command::Lint | Command::Typecheck | Command::Format | Command::Generate => None,
             Command::Check | Command::Fix | Command::Clean => None,
+            Command::Init
+            | Command::Hooks
+            | Command::Status
+            | Command::Version
+            | Command::Docs
+            | Command::Watch
+            | Command::Owners
+            | Command::Deps
+            | Command::Why
+            | Command::Completion => None,
         }
     }
 

@@ -10,6 +10,7 @@ package(default_visibility = ["//visibility:public"])
 dx_rust_library(
     name = "dx_cli",
     srcs = [
+        "src/adopt.rs",
         "src/args.rs",
         "src/exec.rs",
         "src/finalize.rs",
@@ -35,10 +36,12 @@ dx_rust_library(
         ],
         package_name = "dx/dx_cli",
     ) + [
+        "//dx/adopt:dx_adopt",
         "//dx/apply:dx_apply",
         "//dx/bep:dx_bep",
         "//dx/clean:dx_clean",
         "//dx/diff:dx_diff",
+        "//dx/docs:dx_docs",
         "//dx/output:dx_output",
         "//dx/process:dx_process",
         "//dx/setup:dx_setup",

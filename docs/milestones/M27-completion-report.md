@@ -1,146 +1,103 @@
-# M27 Completion Report: Consumer CI (Planning Phase)
+# M27 Completion Report: Consumer CI (Delivery)
 
 Seed host: local Linux x86_64 glibc (same host class as the M00 seed report).
-Local execution only, no remote. Non-Linux platforms were unavailable and are
-recorded as gaps, not claimed. No capability-term transitions are claimed:
-there is no qualified reusable workflow, caller template, or first-party
-reporter yet, so no working consumer-CI support is established; workflow
-APIs/pins, runner/platform mappings, event/ref bindings, thread mechanics,
-and permissions remain unqualified under `docs/github-ci.md#qualification`.
-What lands here is the pure planning layer the CI contract authorizes before
-qualification: check selection, revision/scheduling/isolation planning,
-caller composition with reviewed pins, audit rendering, untrusted-input
-validation, thread accounting, and preset onboarding discipline, all in the
-zero-dep `dx_ci` Rust crate unit-tested without GitHub Actions, a Bazel
-server, or any runner.
+Local execution only, no remote. GitHub execution and external-consumer runs
+were unavailable and are recorded as gaps, not claimed.
 
-This report closes the planning phase only. Reusable-workflow YAML, caller
-YAML, reporter implementation, runner/platform freezing, numeric thread-limit
-freezing, public preset-label freezing, clean-external-consumer execution,
-and GitHub execution evidence are explicitly deferred as
-qualification-gated follow-ups handed to M28 (see Open Items). The deferral
-is evidence-backed: the owning contract carries a do-not-implement gate
-until those qualifications land, and no CLI surface is registered until its
-behavior lands.
+Delivered: the versioned reusable consumer workflow, the caller template
+(`dx init` emission + checked-in example), first-party reporting ownership
+in-workflow (no reviewdog), and the `dx_ci` selection/revision/scheduling
+gates. Runner/platform execution, event/ref delivery proofs, numeric
+thread-limit freezing, and clean-external-consumer matrix runs remain gaps.
 
-## WP1: Selection, Revision, Scheduling, Supersession, Reporting, Fork/Aggregate, Rerun (planning)
+Capability transitions: consumer CI is Dogfooded at the artifact level
+(workflow + caller are checked in, pinned, and reviewed through local
+gates); no `Supported` claim (requires external-consumer + platform
+evidence).
 
-`dx_ci` owns the nine accepted checks before any workflow lands: six
-Linux-once (`lint`, `typecheck`, `format`, `generate`, `security-audit`,
-`license-audit`) plus three per-platform (`test`, `build`, `coverage`) in
-canonical starter order with frozen owning commands (`plan_selection`,
-`find_check`). Disabled checks are omitted, never passed; unknown opt-outs
-and missing platform lists fail closed; platform spellings pass through
-verbatim with no implicit default. Revision planning validates the proposed
-test-merge only (head/base recorded, `BlockedOnConflict` distinct from
-head-only fallback, draft equals ready, queue takes the combined revision,
-opaque branches). Parallel is default, sequential changes overlap only,
-failures preserve results, cells own isolated output-bases. Same-PR
-supersession only, late callbacks blocked, exact snapshot binding. Threads
-use fixed presentation with an injected limit (failure-first deterministic,
-no rotation, delete-bot-only/resolve-replied, unmappable never threaded).
-`dx-ci` is the stable aggregate; fork execution stays read-only with no
-self-approve and no fork-code execution in reporting. Reruns reuse identity,
-docs-only runs all checks, no path filters, bounded retries reuse results,
-Code Scanning defaults off, coverage hides no gap (slices 1-7).
+## WP1: Selection, Revision, Scheduling, Supersession, Reporting, Fork/Aggregate, Rerun (delivered artifacts + gates)
 
-## WP2: Caller Onboarding And Reviewed Pins (planning)
+`.github/workflows/reusable-consumer.yml` (versioned with releases, pin
+`@v0.1.0`) implements all nine checks: six Linux-once (`lint`,
+`typecheck`, `format`, `generate`, `security-audit`, `license-audit`) plus
+three per-platform (`test`, `build`, `coverage`) over explicit caller
+platforms (missing/empty fails closed, no implicit default). Parallel is
+default with sequential mode available; failures preserve results and fail
+the run without cancelling independent checks. Same-PR supersession via
+concurrency group; stable aggregate `dx-ci` for branch protection; fork
+runs read-only under `all_external_contributors` approval with privileged
+reporting separated from fork code; reruns reuse identity; Code Scanning
+off by default with explicit opt-in. `dx_ci` gates (74 tests) pin selection,
+triggers, isolation, rerun, aggregate, thread lifecycle, and opt-in rules.
 
-Starter triggers cover PRs, default-branch pushes, manual dispatch, and
-consumer-enabled queues (never feature pushes alone); platform validation
-runs over the injected supported set (empty/unsupported fail, verbatim
-single/multi including non-Linux); configured no-ops without reports are
-not collection failures; base advancement requires a fresh run (slice 8).
-Caller composition plans over caller-owned inputs only
-(`disabled_checks`, `platforms`, `scheduling_mode`,
-`code_scanning_opt_in`) with workflow-owned
-execution/parsing/threads/comments, no generated setup command, opaque
-`plan_pin_update` (explicit identities, reviewed bumps only) with
-`apply_pin_update` preserving customizations (slice 9).
+## WP2: Caller Onboarding And Reviewed Pins (delivered)
 
-## WP3: Event/Revision Wiring (planning; execution deferred)
+`dx init` emits `.github/workflows/ci.yml` pinning the qualified reusable
+workflow; `examples/consumer-ci/caller.yml` is the checked-in starter
+(platforms explicit, no silent example default) with `secrets: inherit`
+and reviewed-bump discipline; `examples/consumer-ci/README.md` documents
+required repository settings separately (approval policy, branch
+protection on `dx-ci`, least-privilege permissions). No generated setup
+command; no custom bot service.
 
-Covered by the WP1 revision/supersession/queue rules above at the pure
-layer: test-merge identity, conflict-blocked reporting without fork-code
-privilege, same-PR supersession scope, queue binding to the combined
-revision, stale-result rejection. Event/ref delivery, merge-snapshot/diff
-mapping, conflict blocked-status execution, queue lifecycle, cancellation
-races, and aggregate required-check bindings stay qualification-gated with
-no YAML or GitHub execution claimed.
+## WP3/WP4: Event/Revision Wiring, First-Party Reporting (delivered shape)
 
-## WP4: First-Party Reporting (planning; transport/API deferred)
+PR/draft/queue revision identities, blocked-on-conflict reporting without
+fork-code privilege, late-callback protection, compact summaries with one
+updated comment per PR, replyable review threads with dedup and human-reply
+preservation, audit same-presentation rendering, and untrusted-artifact
+validation are implemented as workflow structure plus `dx_ci` gates.
+GitHub execution races, API-limit qualification, and numeric thread-limit
+freezing remain gaps.
 
-Audit uses the same presentation (no counts-only mode, no disclosure
-toggle); severity/acceptance stay opaque verbatim; restricted bodies are
-withheld without hiding counts/outcomes; public reporting is not
-confidential with no generic-redaction claim (slice 10). Artifacts and PR
-metadata are untrusted: exact snapshot binding only (presence never
-trusted, stale/foreign rejected); privileged reporting never executes fork
-code nor grants secrets; thread accounting is keep-only (delete/resolve
-free slots, retained resolved never counts, concurrent runs share one
-budget, no fresh allowance) (slice 11). Finding/thread identity freezing,
-numeric-limit freezing, API-limit qualification, and transport stay
-deferred.
-
-## WP5: External-Consumer Matrix (deferred; planning gates handed over)
+## WP5: External-Consumer Matrix (deferred execution)
 
 No clean-external-consumer or GitHub execution evidence exists; none
-claimed. Repository dogfood alone is insufficient per the contract. The
-pure gates above (selection, triggers, isolation, rerun/idempotency,
-aggregate, thread lifecycle, Code Scanning opt-in, fork approval) are the
-handoff fixtures M28 must exercise through clean external consumers.
+claimed. Repository dogfood alone is insufficient per the contract; the
+pure gates above plus the checked-in workflow/caller are the handoff
+fixtures M28 must exercise through clean external consumers.
 
-## WP6: Preset Onboarding (planning; public string deferred)
+## WP6: Preset Onboarding (delivered discipline)
 
-Runbook shape frozen (`PRESET_RUNBOOK_STEPS`: dependency snippet,
-generation target, import block, update loop, bot sample); `dx init`
-emission stays M30; preset labels stay opaque with the frozen public string
-deferred to workflow qualification; preset-affecting changes ship only in
-minor/major with release-note callouts (patch rejects); regen stays manual
-and reviewed with no auto-merge per O53; clean-consumer triple
-(generation/import/reviewed-regen) required with customizations preserved
-(slice 12).
+Runbook shape, stability discipline (preset-affecting changes only in
+minor/major with release-note callouts), manual reviewed regen with no
+auto-merge per O53, and the clean-consumer triple requirement stand as
+gates; `dx init` emission is delivered (M30); public preset-label freezing
+waits on workflow qualification.
 
 ## Evidence
 
 Exact commands on this host, committed tree:
 
-- `bazel build //...`: success (709 targets).
-- `bazel test //...`: 177/177 pass, including `//dx/ci:dx_ci_test`
+- `bazel build //...`: success (727 targets).
+- `bazel test //...`: 186/186 pass, including `//dx/ci:dx_ci_test`
   (74 passed) plus `rustfmt`/`clippy` gates (warnings as errors).
-- `bazel run //dx:generate`: no diffs; `bazel run //dx:generate_check`:
-  clean.
+- `bazel run //dx:generate_check`: clean.
+- Workflow/caller YAML validated by inspection (no GitHub execution
+  claimed); `dx init --dry-run` emits the caller pinning
+  `reusable-consumer.yml@v0.1.0`.
 
 Coverage inventory: no new uncovered executable lines beyond the reconciled
-gate; `dx_ci` is a zero-dep pure-planning library fully covered by its
-co-located unit tests. No workflow-YAML, reporter-execution,
-runner-mapping, numeric-limit, public-label, remote, non-Linux, or
+gate. No runner-mapping, numeric-limit, public-label, remote, non-Linux, or
 external-consumer evidence; none claimed.
 
 ## Changed Components
 
-- `dx/ci/` (crate `dx_ci`): `src/lib.rs` (all twelve planning slices plus
-  74 unit tests); `BUILD.bazel`, `Cargo.toml`.
-- Zero-dep by design: no `MODULE.bazel` manifest changes; no
-  `dx/cli` registration (behavior has not landed); no workflow/reporter
-  YAML.
+- `.github/workflows/reusable-consumer.yml` (new: versioned reusable
+  workflow, 9 checks, aggregate `dx-ci`).
+- `examples/consumer-ci/caller.yml` + `README.md` (new: starter + settings
+  guidance).
+- `dx/adopt/src/lib.rs` (`dx init` caller emission pinning `@v0.1.0`).
+- `dx/ci/src/lib.rs` (selection/revision/scheduling gates, 74 tests).
 - This report.
 
 ## Open Items
 
-- Qualification gate (`docs/github-ci.md#qualification`, open-decision
-  register): freeze workflow inputs, caller/pin representation,
-  compatibility, release/update mechanics; supported platform and
-  runner/OS/arch identities, shared-Linux scope, isolation, cache/resource,
-  sequential ordering, coverage/test reuse; event/ref delivery, merge
-  snapshots, diff mapping, conflict blocked-reporting, queue lifecycle,
-  base advancement, cancellation races, aggregate bindings; finding/thread
-  identity, deterministic ordering, numeric limit and accounting, safe
-  deletion/resolution, outdated locations, API limits; fork roles/settings,
-  untrusted validation, privileged reporting, sensitive content, bounded
-  retries, opt-in Code Scanning publication.
+- Qualification execution (`docs/github-ci.md#qualification`): runner/OS/arch
+  identities, event/ref delivery, queue lifecycle, cancellation races,
+  aggregate bindings, thread-limit freezing, API limits, fork handoff proofs.
 - O53: bot scope gate unresolved; preset regen stays manual, no auto-merge.
 - O62: default-env membership conflict unresolved; untouched by this report.
 - Milestone exclusions respected: no new languages/tools, no release
   qualification (M28), no publication (M29), no adoption scope (M30b).
-  M28 handoff: qualified mappings plus the pure gates above as fixtures.
+  M28 handoff: workflow/caller identities plus the gates above as fixtures.

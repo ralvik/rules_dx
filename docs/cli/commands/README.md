@@ -41,6 +41,8 @@ tests from inactive configurable branches.
 - [`dx audit`, `dx update`, and `dx bazel`](audit-update-bazel.md)
 - [`dx docs`](docs.md): build, check, and serve the unified documentation site (provisional surface)
 - [`dx init` and `dx hooks`](hooks.md): scaffolding and the custom hermetic git-hook runner
+- `dx status` and `dx version`: the consolidated diagnostics surface and single-version
+  pin/launcher with rollback (frozen under [O50/O51](../../open-decisions.md), delivered in M30b)
 - Thin inspect wrappers (`owners`/`deps`/`why`): provisional under
   [O56](../../open-decisions.md), reusing [target resolution](../target-resolution.md) without
   a custom graph engine; exact contracts must freeze before implementation.

@@ -16,8 +16,8 @@
 
 use dx_output::{OutputMode, Threshold};
 
-/// Quality, generation, workflow, run, and clean command selected by
-/// the first positional argument.
+/// Quality, generation, workflow, run, clean, adoption, and inspect
+/// command selected by the first positional argument.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
     Lint,
@@ -31,6 +31,16 @@ pub enum Command {
     Check,
     Fix,
     Clean,
+    Init,
+    Hooks,
+    Status,
+    Version,
+    Docs,
+    Watch,
+    Owners,
+    Deps,
+    Why,
+    Completion,
 }
 
 impl Command {
@@ -48,6 +58,16 @@ impl Command {
             Command::Check => "check",
             Command::Fix => "fix",
             Command::Clean => "clean",
+            Command::Init => "init",
+            Command::Hooks => "hooks",
+            Command::Status => "status",
+            Command::Version => "version",
+            Command::Docs => "docs",
+            Command::Watch => "watch",
+            Command::Owners => "owners",
+            Command::Deps => "deps",
+            Command::Why => "why",
+            Command::Completion => "completion",
         }
     }
 
@@ -64,6 +84,16 @@ impl Command {
             "check" => Some(Command::Check),
             "fix" => Some(Command::Fix),
             "clean" => Some(Command::Clean),
+            "init" => Some(Command::Init),
+            "hooks" => Some(Command::Hooks),
+            "status" => Some(Command::Status),
+            "version" => Some(Command::Version),
+            "docs" => Some(Command::Docs),
+            "watch" => Some(Command::Watch),
+            "owners" => Some(Command::Owners),
+            "deps" => Some(Command::Deps),
+            "why" => Some(Command::Why),
+            "completion" => Some(Command::Completion),
             _ => None,
         }
     }
@@ -83,6 +113,26 @@ impl Command {
     /// run in order with stop-on-first-failure under one NDJSON frame.
     pub fn is_umbrella(self) -> bool {
         matches!(self, Command::Check | Command::Fix)
+    }
+
+    /// True for the delivered adoption/inspect surfaces (`init`, `hooks`,
+    /// `status`, `version`, `docs`, `watch`, `owners`, `deps`, `why`,
+    /// `completion`): they run local adoption helpers or thin Bazel-query
+    /// forwarding instead of the quality aspect pipeline.
+    pub fn is_adoption(self) -> bool {
+        matches!(
+            self,
+            Command::Init
+                | Command::Hooks
+                | Command::Status
+                | Command::Version
+                | Command::Docs
+                | Command::Watch
+                | Command::Owners
+                | Command::Deps
+                | Command::Why
+                | Command::Completion
+        )
     }
 }
 
@@ -112,6 +162,12 @@ pub struct Invocation {
     pub targets: Vec<String>,
     pub bazel_options: Vec<String>,
     pub bazel_clean: bool,
+    /// `dx version --pin <version>`: re-pin target (Version only).
+    pub pin: Option<String>,
+    /// `dx docs --serve`: preview last build outputs locally.
+    pub serve: bool,
+    /// `dx docs --serve --port <port>`: preview port.
+    pub port: Option<u16>,
 }
 
 impl Invocation {
@@ -162,12 +218,12 @@ impl std::fmt::Display for ArgsError {
         match self {
             ArgsError::MissingCommand => write!(
                 f,
-                "missing command: want lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean"
+                "missing command: want lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|init|hooks|status|version|docs|watch|owners|deps|why|completion"
             ),
             ArgsError::UnknownCommand { command } => {
                 write!(
                     f,
-                    "unknown command {command:?}: want lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean"
+                    "unknown command {command:?}: want lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|init|hooks|status|version|docs|watch|owners|deps|why|completion"
                 )
             }
             ArgsError::UnknownOption { option } => write!(f, "unknown option {option:?}"),
@@ -266,6 +322,9 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     let mut targets = Vec::new();
     let mut bazel_options = Vec::new();
     let mut bazel_clean = false;
+    let mut pin: Option<String> = None;
+    let mut serve = false;
+    let mut port: Option<u16> = None;
     let mut index = 0;
     while index < args.len() {
         let arg = &args[index];
@@ -333,6 +392,34 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                         });
                     }
                     bazel_clean = true;
+                }
+                "--pin" => {
+                    let value = take_value(args, &mut index, "--pin", inline)?;
+                    if value.is_empty() {
+                        return Err(ArgsError::MissingValue {
+                            option: "--pin".to_owned(),
+                        });
+                    }
+                    pin = Some(value.to_owned());
+                }
+                "--serve" => {
+                    if inline.is_some() {
+                        return Err(ArgsError::UnknownOption {
+                            option: arg.clone(),
+                        });
+                    }
+                    serve = true;
+                }
+                "--port" => {
+                    let value = take_value(args, &mut index, "--port", inline)?;
+                    match value.parse::<u16>() {
+                        Ok(port_value) => port = Some(port_value),
+                        Err(_) => {
+                            return Err(ArgsError::MissingValue {
+                                option: "--port".to_owned(),
+                            });
+                        }
+                    }
                 }
                 _ => {
                     return Err(ArgsError::UnknownOption {
@@ -433,6 +520,98 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     let fail_on = Threshold::parse(&fail_on_name).map_err(|_| ArgsError::BadFailOn {
         value: fail_on_name.clone(),
     })?;
+    if command.is_adoption() {
+        // Adoption/inspect surfaces run local helpers or thin query
+        // forwarding: quality-only thresholds/reports and Bazel forwards
+        // do not apply. `--check` belongs to `docs` only; `--pin`
+        // belongs to `version` only; `--serve`/`--port` belong to
+        // `docs` only.
+        if fail_on_name != "warning" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--fail-on".to_owned(),
+            });
+        }
+        if let Some(request) = reports.first() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: format!("--report={}={}", request.format, request.destination),
+            });
+        }
+        if bazel_clean {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--bazel".to_owned(),
+            });
+        }
+        if !bazel_options.is_empty() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--".to_owned(),
+            });
+        }
+        if check && command != Command::Docs {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--check".to_owned(),
+            });
+        }
+        if pin.is_some() && command != Command::Version {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--pin".to_owned(),
+            });
+        }
+        if serve && command != Command::Docs {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--serve".to_owned(),
+            });
+        }
+        if port.is_some() && command != Command::Docs {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--port".to_owned(),
+            });
+        }
+        if port.is_some() && !serve {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--port".to_owned(),
+            });
+        }
+        match command {
+            Command::Status | Command::Version => {
+                if !targets.is_empty() && command == Command::Status {
+                    return Err(ArgsError::UnsupportedOption {
+                        command: command.name(),
+                        option: targets[0].clone(),
+                    });
+                }
+                if !targets.is_empty() && command == Command::Version && pin.is_none() {
+                    return Err(ArgsError::UnsupportedOption {
+                        command: command.name(),
+                        option: targets[0].clone(),
+                    });
+                }
+            }
+            Command::Completion => {
+                if targets.len() != 1 {
+                    return Err(ArgsError::MissingValue {
+                        option: "<shell>".to_owned(),
+                    });
+                }
+            }
+            Command::Hooks | Command::Watch | Command::Owners | Command::Deps | Command::Why
+                if targets.is_empty() =>
+            {
+                return Err(ArgsError::MissingValue {
+                    option: "<scope>".to_owned(),
+                });
+            }
+            _ => {}
+        }
+    }
     if command == Command::Run {
         // O52: `dx run` is a local-only single-target launcher with prose
         // lifecycle on stderr. Machine-owned stdout modes are rejected
@@ -462,6 +641,9 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         targets,
         bazel_options,
         bazel_clean,
+        pin,
+        serve,
+        port,
     })
 }
 

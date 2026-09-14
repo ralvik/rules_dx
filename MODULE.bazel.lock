@@ -383,7 +383,7 @@
     "//quality/artifacts:extension.bzl%dx_tools": {
       "general": {
         "bzlTransitiveDigest": "BUiLErn04hVzOL1E7JW5Se9Xl4hhSFFX/D9jVjFNMNo=",
-        "usagesDigest": "bUoLms1RzXZC9mAK2ZTkvN0H8GBlSKy3SN0S17wrT00=",
+        "usagesDigest": "x8Y3YDA0egsaSfD4pbEX6BFgRU/XqdNvFRD1YhTfLUo=",
         "recordedInputs": [
           "REPO_MAPPING:,platforms platforms"
         ],
@@ -560,7 +560,7 @@
     "@@rules_dotnet+//dotnet:extensions.bzl%dotnet": {
       "general": {
         "bzlTransitiveDigest": "Xc5yZNHGGYkICbCqyHpLoWDUwtfzxzvK6ftc5Mby6G0=",
-        "usagesDigest": "+MMRBiaYEaSKiDSsMzhNC2HcueVTbRLAxFXhtI3oTPQ=",
+        "usagesDigest": "unnNk1nP73dekFxrtI8W3fWSJAztlUoXcqF0p1FepMc=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "dotnet_x86_64-apple-darwin": {
@@ -826,7 +826,7 @@
     "@@rules_rust+//crate_universe:extensions.bzl%crate": {
       "general": {
         "bzlTransitiveDigest": "CInYcOe2YlxIxVvaQX2mAnr9Ja/NwITHmJE0/H5aXis=",
-        "usagesDigest": "Xa/Dqy1QpuZmISSNwa1nbP6I1SqCBipo7OYiswdjzYk=",
+        "usagesDigest": "xeaa4VYSkEzwV0pSFQhkq6wKHIBXQYYTmwaQmTS0cNU=",
         "recordedInputs": [
           "ENV:CARGO_BAZEL_DEBUG \\0",
           "ENV:CARGO_BAZEL_GENERATOR_SHA256 \\0",

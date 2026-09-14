@@ -571,7 +571,8 @@ O46 must verify applicability, including existing `N/A` cells, rather than infer
 | Language-independent text | N/A | N/A | N/A | N/A | N/A | N/A | N/A | Planned: keep-sorted |
 
 Every cell above is current design status. The named quality integrations form the intended
-minimum first-release quality baseline, but none is implemented yet. Swift and SwiftFormat are
+minimum first-release quality baseline; only the Linux x86_64 seed-host implementation and the
+v0.1.0 local candidate exist so far, and no cell is `Supported` yet (release evidence pending). Swift and SwiftFormat are
 excluded from v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md):
 the `Not planned` Swift row above is an evidence-backed v1 exclusion, not a
 feasibility assessment awaiting O46. A host-toolchain

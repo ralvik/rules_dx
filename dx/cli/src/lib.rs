@@ -7,6 +7,7 @@
 //! adds scope resolution ([`resolve`]): labels pass through while files
 //! resolve to owning targets through Bazel query.
 
+pub mod adopt;
 pub mod args;
 pub mod exec;
 pub mod finalize;

@@ -1,0 +1,1 @@
+{"module":"rules_dx","version":"0.1.0","payload":["dx-linux_x86_64"],"builder":"local-seed-linux_x86_64","bazel":"9.2.0","bazelisk":"v1.29.0"}

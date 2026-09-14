@@ -1,6 +1,6 @@
 # rules_dx
 
-Status: design only; no implementation or release exists yet.
+Status: v0.1.0 local release candidate (Linux x86_64 seed host only); no `Supported` cells yet, pending required-platform, external-consumer, and trusted-builder release evidence.
 
 `rules_dx` is an opinionated Bazel developer platform designed to provide a tested release stack,
 lazy application foundations, Bazel-owned quality workflows, and a thin `dx` CLI. The product aims
@@ -12,7 +12,7 @@ required platforms, with a broad quality-tool baseline and additional low-cost c
 Upstream patches and packaging support the out-of-the-box experience without rebuilding stacks. See the
 [scope and feasibility gate](docs/product/scope.md#first-release-admission) and
 [mandatory 100% project coverage requirement](docs/testing/README.md#coverage).
-Nothing is implemented or verified yet.
+Implementation and the v0.1.0 local candidate exist on the Linux x86_64 seed host only; release qualification beyond that host is pending.
 
 ## Product
 

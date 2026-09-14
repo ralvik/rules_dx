@@ -58,8 +58,10 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
 
 - Verify the final registry contains exactly `audit`, `lint`, `typecheck`, `test`,
   `format`, `build`, `run`, `watch`, `check`, `fix`, `clean`, `update`, `generate`, `codegen`, `env`, `setup`, `coverage`,
-  `docs`, `init`, `hooks`, and `bazel`, plus `owners`, `deps`, and `why` once
-  [O56](../open-decisions.md) freezes their inspect-wrapper contracts. Compare the final registry
+  `docs`, `init`, `hooks`, `status`, `version`, `completion`, and `bazel`, plus `owners`, `deps`, and `why` once
+  [O56](../open-decisions.md) freezes their inspect-wrapper contracts. `status` and `version` are the
+  [O50/O51](../open-decisions.md) diagnostics/version surface; `completion` is the
+  [O61](../open-decisions.md) generated-script surface. Compare the final registry
   with the qualified [command reference](../cli/commands/README.md), not an earlier partial CLI.
 - Verify `doctor` and `configure` are rejected as unknown.
 - Verify help and machine-readable metadata identify `lint`, `typecheck`, `format`,
@@ -106,8 +108,9 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   no internal/external implementation labels enter structured output.
 - Verify workflow commands reject user-supplied external-repository scopes while
   `dx bazel` continues to forward them unchanged.
-- Verify `--check` for `lint`, `typecheck`, `format`, `generate`, `check`, and `fix`;
-  add [`docs --check`](../cli/commands/docs.md) once [O54](../open-decisions.md) freezes its surface.
+- Verify `--check` for `lint`, `typecheck`, `format`, `generate`, `check`, `fix`, and
+  [`docs --check`](../cli/commands/docs.md) ([O54](../open-decisions.md) frozen: extraction plus shared
+  validation without rendering).
 - Verify docs build and qualified check modes consume generated, Bazel-cached IR without
   requiring committed snapshots or writing IR beside sources. A cold cache triggers normal
   Bazel execution, not a freshness failure; cached IR is not a source change or mutation event.

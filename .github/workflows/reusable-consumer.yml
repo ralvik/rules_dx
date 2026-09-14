@@ -1,0 +1,228 @@
+# Reusable consumer CI (M27 delivery, versioned with rules_dx releases).
+#
+# Consumer-owned caller pins this file by release tag:
+#   uses: rules_dx/.github/workflows/reusable-consumer.yml@v0.1.0
+# Reviewed pin bumps only; no silent upgrades. Consumers never copy
+# per-check execution, parsing, review, or comment-management logic.
+#
+# Contract: docs/github-ci.md. Nine checks: six Linux-once (lint,
+# typecheck, format, generate, security-audit, license-audit) plus three
+# per-platform (test, build, coverage). Starter enables all nine;
+# callers disable individual checks by ID. Per-platform checks require
+# an explicit nonempty platform list; there is no implicit default.
+# Parallel is default; sequential changes overlap only. Aggregate `dx-ci`
+# is the single stable required check. Reporting is first-party dx code;
+# no reviewdog. SARIF Code Scanning publication is opt-in, off by default.
+
+name: rules-dx-consumer
+
+on:
+  workflow_call:
+    inputs:
+      rules_dx_version:
+        description: "Pinned rules_dx release (e.g. 0.1.0). Must match the consumer MODULE.bazel pin."
+        required: true
+        type: string
+      disabled_checks:
+        description: "Comma-separated check IDs to omit (e.g. coverage,license-audit). Empty enables all nine."
+        required: false
+        default: ""
+        type: string
+      platforms:
+        description: 'JSON array of platform labels for test/build/coverage (e.g. ["linux_x86_64"]). Required when any per-platform check is enabled; no implicit default.'
+        required: false
+        default: ""
+        type: string
+      scheduling_mode:
+        description: "parallel (default) or sequential. Scheduling only; failure semantics unchanged."
+        required: false
+        default: "parallel"
+        type: string
+      code_scanning_opt_in:
+        description: "Publish complete SARIF scans to Code Scanning. Off by default."
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dx-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    if: ${{ !contains(inputs.disabled_checks, 'lint') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install pinned Bazelisk
+        run: |
+          curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
+          echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
+          sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
+          bazel version
+      - name: Verify rules_dx pin
+        run: test -f MODULE.bazel && grep -q 'version = "${{ inputs.rules_dx_version }}"' MODULE.bazel
+      - run: bazel run @rules_dx//dx/cli:dx -- lint --check //...
+
+  typecheck:
+    if: ${{ !contains(inputs.disabled_checks, 'typecheck') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install pinned Bazelisk
+        run: |
+          curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
+          echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
+          sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
+      - run: bazel run @rules_dx//dx/cli:dx -- typecheck --check //...
+
+  format:
+    if: ${{ !contains(inputs.disabled_checks, 'format') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install pinned Bazelisk
+        run: |
+          curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
+          echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
+          sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
+      - run: bazel run @rules_dx//dx/cli:dx -- format --check //...
+
+  generate:
+    if: ${{ !contains(inputs.disabled_checks, 'generate') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install pinned Bazelisk
+        run: |
+          curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
+          echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
+          sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
+      - run: bazel run @rules_dx//dx/cli:dx -- generate --check //...
+
+  security-audit:
+    if: ${{ !contains(inputs.disabled_checks, 'security-audit') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install pinned Bazelisk
+        run: |
+          curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
+          echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
+          sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
+      - run: bazel run @rules_dx//dx/cli:dx -- audit security //...
+
+  license-audit:
+    if: ${{ !contains(inputs.disabled_checks, 'license-audit') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install pinned Bazelisk
+        run: |
+          curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
+          echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
+          sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
+      - run: bazel run @rules_dx//dx/cli:dx -- audit license //...
+
+  test:
+    if: ${{ !contains(inputs.disabled_checks, 'test') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(inputs.platforms) }}
+    runs-on: ${{ matrix.platform == 'linux_x86_64' && 'ubuntu-latest' || matrix.platform }}
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Require explicit platforms
+        if: ${{ inputs.platforms == '' }}
+        run: echo "dx-ci: test requires explicit nonempty platforms; no implicit default" >&2; exit 1
+      - name: Install pinned Bazelisk
+        run: |
+          curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
+          echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
+          sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
+      - run: bazel run @rules_dx//dx/cli:dx -- test //...
+
+  build:
+    if: ${{ !contains(inputs.disabled_checks, 'build') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(inputs.platforms) }}
+    runs-on: ${{ matrix.platform == 'linux_x86_64' && 'ubuntu-latest' || matrix.platform }}
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Require explicit platforms
+        if: ${{ inputs.platforms == '' }}
+        run: echo "dx-ci: build requires explicit nonempty platforms; no implicit default" >&2; exit 1
+      - name: Install pinned Bazelisk
+        run: |
+          curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
+          echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
+          sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
+      - run: bazel run @rules_dx//dx/cli:dx -- build //...
+
+  coverage:
+    if: ${{ !contains(inputs.disabled_checks, 'coverage') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(inputs.platforms) }}
+    runs-on: ${{ matrix.platform == 'linux_x86_64' && 'ubuntu-latest' || matrix.platform }}
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Require explicit platforms
+        if: ${{ inputs.platforms == '' }}
+        run: echo "dx-ci: coverage requires explicit nonempty platforms; no implicit default" >&2; exit 1
+      - name: Install pinned Bazelisk
+        run: |
+          curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
+          echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
+          sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
+      - run: bazel run @rules_dx//dx/cli:dx -- coverage //...
+
+  dx-ci:
+    name: dx-ci (aggregate)
+    needs: [lint, typecheck, format, generate, security-audit, license-audit, test, build, coverage]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    steps:
+      - name: Aggregate selected check results
+        run: |
+          python3 -c "import json,os; print(json.dumps({'aggregate':'dx-ci','needs':os.environ.get('NEEDS','')}))"
+        env:
+          NEEDS: ${{ toJSON(needs) }}

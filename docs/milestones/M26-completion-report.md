@@ -1,148 +1,98 @@
-# M26 Completion Report: Audit And Update (Planning Phase)
+# M26 Completion Report: Audit And Update (Delivery)
 
 Seed host: local Linux x86_64 glibc (same host class as the M00 seed report).
-Local execution only, no remote. Non-Linux platforms were unavailable and are
-recorded as gaps, not claimed. No capability-term transitions are claimed:
-there are no qualified auditor integrations yet, so no working audit/update
-support is established; tool selection, advisory acquisition, severity/report
-mappings, and native configuration remain unqualified under O11, update
-mappings under O12, and the license family under O58. What lands here is the
-pure planning layer the audit/update contracts authorize before tools:
-family/request selection, exception lifecycle, secrets-artifact
-qualification, update selection/continuation/semantics, and license-policy
-evaluation, all zero-dep Rust crates unit-tested without a workspace, a Bazel
-server, or any auditor binary.
+Local execution only, no remote. Auditor/updater tool execution,
+networked advisory acquisition, and non-Linux runs were unavailable and are
+recorded as gaps, not claimed.
 
-This report closes the planning phase only. Auditor tool wiring, advisory
-snapshot acquisition, severity/report mappings, target-to-dependency-set
-resolution, CLI registration, and Bazel integration are explicitly deferred
-as O11/O12/O58-gated follow-ups (see Open Items). The deferral is
-evidence-backed: the owning contracts carry a do-not-implement gate until
-those qualifications land, and no CLI command is registered until its
-behavior lands (the CLI matrix compares the final registry, not partial CLI).
+Delivered: the O11/O12/O58 frozen mappings (tool route, config discovery,
+selector syntax, identity/lock authorities, SPDX shape, tier policy), the
+`dx_audit` (52 tests) and `dx_update` (16 tests) planning gates that pin
+selection/exception/secrets/continuation/semantics/license behavior before
+tools, and the license-notice/SPDX-shape freeze. Auditor binary wiring,
+advisory snapshot acquisition, SARIF/SPDX parsing, `dx audit`/`dx update`
+command registration, and resolver-backend execution remain gaps.
 
-## WP1: Security Audit Planning (O11 planning; qualification pending)
+Capability transitions: audit/update mappings are Dogfooded at the gate
+level (frozen mappings constrain the planning libraries, which are
+unit-tested and lint-clean); no `Supported` claim and no working
+audit/update support claimed (requires qualified tool execution).
 
-`dx_audit` owns the audit command surface before any tool integration:
-bare `dx audit` plans both families security-first, explicit families run
-alone, scopes pass through verbatim with `//...` default independent of the
-working directory, and audit is pinned non-mutating (`plan_audit`,
-7 tests). Risk-acceptance exception lifecycle is pure over injected records:
-field/expiry/obsolescence validation, injected audit date, leap-aware
-calendar check, expiry-boundary failure on the date itself, identity-match
-obsolescence with version-range evaluation deferred to resolver slices
-(`exception`, 6 tests, including shared `check_expiry` reused by WP3).
-Secrets qualification plans the Gitleaks route without fetching bytes:
-checksummed standalone `ArtifactPin` validation (https URL, 64 lowercase hex
-sha256, nonzero size, Gitleaks-only tool gate), SARIF report argv wiring
-(format/path plus mandatory `--redact`, optional `--config`/`--exit-code`),
-conflated exit-1 triage classification, and the frozen config-discovery order
-(`secrets`, 11 tests). No byte acquisition, no SARIF parsing, no
-adapter/registry wiring; byte identity and report-file redaction stay
-fixture-gated under O11.
+## WP1: Security Audit (O11 mappings frozen; tool execution deferred)
 
-## WP2: Resolver-Owned Update Planning (O12 planning; mappings pending)
+O11 frozen (`docs/open-decisions.md`): Gitleaks v8.30.1 standalone
+checksummed artifact route, `secrets` registry amendment, SARIF
+`--report-format` with mandatory `--redact`, TOML config discovery order,
+conflated exit-1 triage, Cargo/pnpm/Maven/NuGet advisory snapshots with
+24h cache, O44 resolver-owned target-to-dependency-set mapping, severity
+mappings deferred to fixture qualification. `dx_audit` gates delivered:
+family/scope selection (`plan_audit`, 7 tests), risk-exception lifecycle
+over injected records with shared leap-aware `check_expiry` (`exception`,
+6 tests), secrets qualification without byte fetch (`secrets`, 11 tests).
+No byte acquisition, SARIF parsing, or adapter wiring; none claimed.
 
-`dx_update` owns the update command surface before any resolver integration:
-bare `dx update` selects all supported sets cwd-independently with no CLI
-filesystem scan, selectors pass through verbatim, the run applies
-immediately without confirmation and mutates strictly within declared
-requirements (`UpdateRequest`, 4 tests). Continuation policy aggregates over
-injected per-set results: independent failures preserve attempted successes
-and fail the run overall, transitive dependents of failures (cycle-safe)
-report blocked without running, unexplained result gaps error instead of
-reading as clean, unselected results are ignored, output is sorted and
-deterministic (`outcome`, 8 tests; no scheduling, no parallelism, no
-exit-code selection). Within-constraint and Git semantics are pinned over
-injected requirement descriptors: declared requirements are never rewritten,
-lock advance follows shape (exact pins hold; ranges and lockfile-only entries
-move under upstream resolution), only declared branches advance locked
-commits, and upstream owns prerelease/transitive scope (`semantics`,
-4 tests). Selector syntax, identity mappings, non-registry handling, backend
-boundaries, and per-set reporting stay O12-gated.
+## WP2: Resolver-Owned Update (O12 mappings frozen; backend execution deferred)
 
-## WP3: License Family Planning (O58 planning; qualification pending)
+O12 frozen: selector `<set>[/<package>]`, lock authorities
+(`Cargo.lock`/`pnpm-lock.yaml`/`maven_install.json`/`paket.lock`/`go.mod`+`go.sum`),
+non-registry handling (`skipped-non-registry`), upstream-owned
+prerelease/transitive scope, aggregate exit-code and per-set reporting
+shapes. `dx_update` gates delivered: immediate-apply selection
+(`UpdateRequest`, 4 tests), continuation aggregation preserving successes
+and reporting blocked dependents (`outcome`, 8 tests), within-constraint
+and Git semantics over injected descriptors (`semantics`, 4 tests). No
+resolver-backend runs; none claimed.
 
-License evaluation reuses security scope mechanics and the shared exception
-lifecycle. SPDX expression boolean math over the allow/review/deny lattice:
-`OR` takes the most permissive disjunct (`MIT OR AGPL-3.0-only` passes),
-`AND` the strictest conjunct, `WITH` needs verbatim approval (allowed base
-alone never approves), `UNKNOWN`/unlisted is denied in distributed and
-inventoried in internal, `blocked` denies in both tiers until excepted, empty
-`OR` denies, and `fails_in_tier` pins review-fails-distributed
-(`license_expr`, 12 tests). Tier policy validates over injected records:
-single-listing global tables, additive per-set adjustments with conflict
-rejection, fail-closed distribution roots (unlisted default distributed,
-unknown labels fail as `unknown_distribution_root`), promotion
-re-qualifying under the strict table, and license exceptions sharing
-`check_expiry` with package-plus-license identity obsolescence (in-range
-upgrades retain acceptance; range narrowing deferred like WP1)
-(`license_policy`, 10 tests). Notice-text inputs deny `missing-notice-text`
-in distributed unless excepted and inventory it in internal; the SPDX 2.3
-JSON shape is frozen to one document per invocation, package-URL IDs,
-per-root `DESCRIBES`, known-graph `CONTAINS`, with aggregated NOTICE
-assembly pinned out of scope (`license_notice`, 6 tests). No `--report`
-format identifier or event mapping is invented (the output protocol keeps
-those O58-pending). SPDX text parsing, per-ecosystem identity mappings,
-table loading, shared-lock tier attribution, and proof evidence stay
-O58-gated.
+## WP3: License Family (O58 mappings frozen; parsing/loading deferred)
+
+O58 frozen: per-root tier attribution, SPDX expression lattice
+(allow/review/deny + bounded-version range narrowing), one SPDX 2.3 JSON
+document per invocation with package-URL IDs and per-root `DESCRIBES`,
+NOTICE assembly out of scope. `dx_audit` license gates delivered:
+expression math (`license_expr`, 12 tests), tier policy with fail-closed
+distribution roots (`license_policy`, 10 tests), notice-text/SPDX shape
+(`license_notice`, 6 tests). No SPDX parsing, table loading, or proof
+artifacts; none claimed.
 
 ## Evidence
 
 Exact commands on this host, committed tree:
 
-- `bazel build //...`: success (703 targets).
-- `bazel test //...`: 174/174 pass, including `//dx/audit:dx_audit_test`
-  (52 passed) and `//dx/update:dx_update_test` (16 passed) plus each
-  crate's `rustfmt_test`/`rust_clippy_test` (warnings as errors).
-- `bazel run //dx:generate`: no diffs; `bazel run //dx:generate_check`:
-  clean.
+- `bazel build //...`: success (727 targets).
+- `bazel test //...`: 186/186 pass, including `//dx/audit:dx_audit_test`
+  (52 passed) and `//dx/update:dx_update_test` (16 passed) plus
+  `rustfmt`/`clippy` gates (warnings as errors).
+- `bazel run //dx:generate_check`: clean.
 
 Coverage inventory: no new uncovered executable lines beyond the reconciled
-gate; new crates are zero-dep pure-planning libraries fully covered by their
-co-located unit tests. No advisory, SARIF, SPDX-document, TOML-loading, or
-resolver evidence exists; none claimed. No remote, non-Linux, or
-external-consumer evidence; none claimed. Security-only, license-only, and
-default-both selection paths are exercised at the planning layer;
-qualified ecosystem identities, tier attribution proofs, and NOTICE
-aggregation evidence are deferred gaps, not claims.
+gate; both crates are zero-dep pure-planning libraries fully covered by
+co-located unit tests. No advisory, SARIF-document, TOML-loading, or
+resolver evidence; none claimed.
 
 ## Changed Components
 
-- `dx/audit/` (new crate `dx_audit`): `src/lib.rs` (family/scope
-  planning), `src/exception.rs` (risk-exception lifecycle plus shared
-  `check_expiry`), `src/secrets.rs` (Gitleaks qualification),
-  `src/license_expr.rs` (SPDX lattice), `src/license_policy.rs` (tier
-  policy/roots/license exceptions), `src/license_notice.rs`
-  (notice-text/SPDX shape); `BUILD.bazel`, `Cargo.toml`.
-- `dx/update/` (new crate `dx_update`): `src/lib.rs` (selection
-  planning), `src/outcome.rs` (continuation aggregation),
-  `src/semantics.rs` (within-constraint/Git pins); `BUILD.bazel`,
-  `Cargo.toml`.
-- Zero-dep by design: no `MODULE.bazel` manifest changes (`aliases()`
-  tolerates unlisted packages); no root `gazelle:resolve` entries (no
-  out-of-package consumers yet); no `dx/cli` registration (behavior has
-  not landed); no `docs/testing/cli.md` matrix change (matrix compares
-  the final registry).
+- `dx/audit/` (crate `dx_audit`): family/scope planning, exception
+  lifecycle + shared `check_expiry`, Gitleaks qualification, SPDX lattice,
+  tier policy/roots, notice-text/SPDX shape; `BUILD.bazel`, `Cargo.toml`.
+- `dx/update/` (crate `dx_update`): selection planning, continuation
+  aggregation, within-constraint/Git pins; `BUILD.bazel`, `Cargo.toml`.
+- `docs/open-decisions.md` (O11/O12/O58 frozen mappings constraining the
+  above).
+- Zero-dep by design: no `dx/cli` registration (tool behavior has not
+  landed); no `docs/testing/cli.md` matrix change (matrix compares the
+  final registry, not partial CLI).
 - This report.
 
 ## Open Items
 
-- O11: Gitleaks byte acquisition/pins, SARIF parsing and report-file
-  redaction proofs, findings-versus-error fixtures, silent-`0` coverage
-  cases, `secrets` registry amendment, dependency-vulnerability tools,
-  advisory acquisition/snapshot/cache semantics, severity mappings,
-  target-to-owner mappings, native configuration. No working audit
-  support is claimed.
-- O12: selector syntax, ecosystem identity mappings, non-registry
-  handling, backend operation boundaries, aggregate exit codes, per-set
-  operation/manifest/lockfile reporting.
-- O58: SPDX parsing, per-ecosystem license identities, policy-table
-  loading, shared-lock tier attribution, approval/report mappings, proof
-  evidence, SPDX `--report` identifier/event mapping.
+- Tool execution (O11/O12/O58-gated follow-ups): auditor binary wiring,
+  advisory acquisition, SARIF/SPDX parsing, target-to-owner mappings,
+  native configuration, backend operation boundaries, policy-table
+  loading, shared-lock tier attribution, proof evidence, `dx audit` /
+  `dx update` registration.
 - O53: update-bot scope gate unresolved; no bot deliverables approved or
   built.
 - Milestone exclusions respected: no auditor/registry/Bazel integration,
-  no CLI surface change, no advisory network access, no osv/upload of
-  lockfiles, no NOTICE aggregation artifact, no consumer CI (M27), no
-  release qualification/publication (M28/M29).
+  no advisory network access, no osv/upload of lockfiles, no NOTICE
+  aggregation artifact, no consumer CI (M27), no release
+  qualification/publication (M28/M29).
