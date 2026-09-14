@@ -1,17 +1,20 @@
-# Diagnostics And Versioning Preview
+# Diagnostics And Versioning
 
-Provisional O50/O51 direction only; no `dx` implementation exists yet. This
-preview creates no new API and changes no milestone scope.
+Implementation status: frozen under [O50/O51](../open-decisions.md) and delivered in M30b
+(`dx status` diagnostics plus `dx version` pin/launcher/rollback dispatch).
 
 There is no `dx doctor` command per
-[ADR 0006](../decisions/0006-cli-command-surface.md). The planned requirement is
-for every command to emit structured environment diagnostics in its machine
-output; M30 is planned to add one consolidated status surface over the same
-data. Exact owning command, status vocabulary, and machine-readable shape freeze under
-[O50](../open-decisions.md). See the [hooks contract](../cli/commands/hooks.md)
-for the two-layer hook configuration this surface reports on.
+[ADR 0006](../decisions/0006-cli-command-surface.md). `dx status [--output text|json]`
+reports toolchain resolution, platform/host coverage, missing tools, and pin staleness
+with vocabulary `ok/warn/error` plus actionable hints; JSON shape is
+`{"checks":[{"name","status","detail","hint}]}`. See the [hooks contract](../cli/commands/hooks.md)
+for the two-layer hook configuration this surface reports on. Platform evidence beyond
+Linux x86_64 remains a gap; no working multi-platform support is claimed until qualified
+execution lands.
 
-Planned per-repository `dx` version pinning uses a Bazelisk-style launcher
-resolving a checked-in pin; rollback is re-pinning the previous release. Pin
-format and update mechanics freeze under [O51](../open-decisions.md). See
+Per-repository `dx` version pinning uses a Bazelisk-style launcher
+resolving the checked-in `.dx/version` pin (SemVer); `dx` version equals the pinned
+`rules_dx` module version (`0.1.0`). The launcher refuses skew; `dx version --pin <ver>`
+bumps from verified release artifacts only and `dx version --rollback` re-pins the
+previous release. See
 [distribution](../environments/environment.md#distribution).

@@ -24,8 +24,8 @@ The provisional initial mapping is:
 | `coverage` | LCOV | Validated Bazel combined tracefile |
 
 The license family's [SPDX 2.3 JSON report](commands/audit-update-bazel.md#license-family-dx-audit-license)
-is accepted direction. Its shared `--report` mapping and profile remain pending
-[O58](../open-decisions.md); this table is not an exhaustive prohibition of that report.
+follows the frozen [O58](../open-decisions.md) mappings. SPDX parsing, policy-table loading,
+and proof artifacts remain gaps; this table is not an exhaustive prohibition of that report.
 
 `build`, `format`, `update`, `generate`, `codegen`, `env`, and `setup` have no initial
 standard report. `dx bazel` uses native Bazel options for BEP or other Bazel-owned output.

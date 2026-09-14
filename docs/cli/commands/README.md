@@ -31,22 +31,22 @@ tests from inactive configurable branches.
 ## Commands
 
 - [`dx build`, `dx test`, and `dx coverage`](build-test-coverage.md)
-- [`dx run`](build-test-coverage.md#dx-run): single-runnable execution (provisional, O52)
-- [`dx watch`](watch.md): thin local-only loop over `build/test/run/lint/typecheck/format/check/fix` (mechanics pending O55; [ADR 0017](../../decisions/0017-dx-watch.md), extended by [ADR 0018](../../decisions/0018-umbrella-check-fix-cleanup-clean.md))
+- [`dx run`](build-test-coverage.md#dx-run): single-runnable execution (qualified under [O52](../../open-decisions.md); implementation may proceed)
+- [`dx watch`](watch.md): thin local-only loop over `build/test/run/lint/typecheck/format/check/fix` (frozen under [O55](../../open-decisions.md), delivered in M30b; [ADR 0017](../../decisions/0017-dx-watch.md), extended by [ADR 0018](../../decisions/0018-umbrella-check-fix-cleanup-clean.md))
 - [Quality commands](quality.md): `dx lint`, `dx typecheck`, and `dx format`
 - [`dx check`, `dx fix`, and `dx clean`](check-fix-clean.md): sequential quality/generation umbrellas and managed-state cleanup (see [ADR 0018](../../decisions/0018-umbrella-check-fix-cleanup-clean.md))
 - [`dx generate`](generate.md); BUILD semantics are defined by the
   [generation contracts](../../generation/README.md)
 - [Environment, codegen, and setup commands](environment-codegen-setup.md)
 - [`dx audit`, `dx update`, and `dx bazel`](audit-update-bazel.md)
-- [`dx docs`](docs.md): build, check, and serve the unified documentation site (provisional surface)
+- [`dx docs`](docs.md): build, check, and serve the unified documentation site (frozen under [O54](../../open-decisions.md), delivered in M30b; adapter runs and renderer execution remain gaps)
 - [`dx init` and `dx hooks`](hooks.md): scaffolding and the custom hermetic git-hook runner
 - `dx status` and `dx version`: the consolidated diagnostics surface and single-version
   pin/launcher with rollback (frozen under [O50/O51](../../open-decisions.md), delivered in M30b)
-- Thin inspect wrappers (`owners`/`deps`/`why`): provisional under
-  [O56](../../open-decisions.md), reusing [target resolution](../target-resolution.md) without
-  a custom graph engine; exact contracts must freeze before implementation.
-- [`dx completion`](completion.md): generated static shell scripts (provisional, O61).
+- Thin inspect wrappers (`owners`/`deps`/`why`): frozen under
+  [O56](../../open-decisions.md), delivered in M30b, reusing [target resolution](../target-resolution.md) without
+  a custom graph engine.
+- [`dx completion`](completion.md): generated static shell scripts (frozen under [O61](../../open-decisions.md), delivered in M30b).
 
 ## Excluded Commands
 

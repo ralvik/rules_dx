@@ -1,10 +1,11 @@
 # `dx completion`
 
-Provisional surface under [O61](../../open-decisions.md); exact shell list and script mechanics are pending.
+Implementation status: frozen under [O61](../../open-decisions.md) and delivered in M30b
+(`dx completion` dispatch over the single CLI command-definition source).
 
 ## Invocation
 
-`dx completion <shell>` prints a static completion script for the named shell to stdout and exits `0`. An unknown shell name fails with `unknown-shell` and a non-zero exit. The command writes no files and mutates no shell state.
+`dx completion <shell>` (shells `bash|zsh|fish|powershell`) prints a static completion script for the named shell to stdout and exits `0`. An unknown shell name fails with `unknown-shell` and a non-zero exit. The command writes no files and mutates no shell state.
 
 ## Generation Source
 

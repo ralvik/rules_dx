@@ -31,11 +31,12 @@ schema and golden test fixtures are checked in; ordinary API changes require no 
 - [Site build](site.md): Bazel cache-friendly action design, determinism
   rules, laziness, generated-artifact lifecycle, and the decided mdBook renderer.
   Authoritative for build facts.
-- [`dx docs`](../cli/commands/docs.md): candidate build/check/serve command
+- [`dx docs`](../cli/commands/docs.md): build/check/serve command
   surface. [ADR 0006](../decisions/0006-cli-command-surface.md) records build versus
-  validation-only check; exact mappings remain provisional under [O54](../open-decisions.md).
+  validation-only check; exact mappings follow frozen [O54](../open-decisions.md).
 
 Rust uses pinned nightly `rustdoc --output-format json`; Scala needs a
 Scaladoc/TASTy proof spike; Astro/MDX are prose-only with no API surface.
-v1 ships all thirteen adapters. Per-language input pins and mappings stay
-provisional until O54 qualification.
+v1 ships all thirteen adapters. Per-language input pins and mappings follow
+frozen O54; per-language adapter runs and renderer/site-build execution evidence
+remain future work.

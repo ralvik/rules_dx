@@ -607,8 +607,9 @@ running independent work may settle only for safe cleanup, and its later outcome
 replace the selected failure or reorder durable output.
 The [update exception](commands/audit-update-bazel.md#dx-update) permits later independent
 selected dependency sets to run after a set failure, preserving successes and reporting
-blocked dependents. O12 must qualify operation boundaries, per-set reporting, and aggregate
-exit selection before implementation; this does not authorize new event fields or update
+blocked dependents. Operation boundaries, per-set reporting, and aggregate
+exit selection follow the frozen [O12](../open-decisions.md) mappings; live resolver-backend
+execution remains a gap. This does not authorize new event fields or update
 mutation events, nor parallel execution.
 
 ## Dry Run
@@ -622,7 +623,8 @@ execution with `conflicting_option` naming `--report`.
 
 ## Standard Reports
 
-The report formats, provisional SARIF/JUnit/LCOV profiles, pending SPDX mapping, destination validation,
+The report formats, SARIF/JUnit/LCOV profiles, SPDX mapping (frozen under [O58](../open-decisions.md);
+SPDX parsing/loading remains a gap), destination validation,
 deterministic ordering, and partial-document behavior are defined in
 [Standard Reports](standard-reports.md). This document owns only report interaction with
 live streams and the NDJSON `report` event.
@@ -637,8 +639,8 @@ code; later cleanup cannot replace it. Bazel-authoritative build, test, coverage
 generate, env, codegen, setup, and `dx bazel` therefore preserve Bazel's code when
 Bazel is the failing operation. Quality commands may return `1` after a successful Bazel
 invocation when normalized findings cross `--fail-on` or check mode proposes changes.
-For multiple selected update sets, any failed set makes the overall command fail; exact
-aggregate exit-code selection remains subject to O12 rather than the first-failure rule above.
+For multiple selected update sets, any failed set makes the overall command fail; aggregate
+exit-code selection follows the frozen [O12](../open-decisions.md) mappings rather than the first-failure rule above.
 
 On Unix, `dx` forwards an interrupting signal and re-raises it after safe cleanup so shell
 signal semantics are preserved; no `command_finished` event is promised after signal

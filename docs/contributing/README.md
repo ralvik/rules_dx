@@ -6,7 +6,7 @@ adds no new semantics.
 
 - [Local workflows](local-workflows.md): current manual checks and tooling gaps;
   planned Linux-first bring-up, coverage, and local overrides.
-- [Devcontainer preview](devcontainer.md): provisional M30 direction, not a
-  commitment.
-- [Diagnostics and versioning preview](diagnostics-versioning.md): provisional
-  O50/O51 direction for the consolidated status surface and `dx` pinning.
+- [Devcontainer](devcontainer.md): M30b-delivered scaffolding through `dx init`,
+  not a commitment to working container support.
+- [Diagnostics and versioning](diagnostics-versioning.md): frozen
+  O50/O51 status surface and `dx` pinning, delivered in M30b.
