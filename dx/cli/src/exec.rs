@@ -27,6 +27,9 @@ use crate::reports::{
 use crate::resolve::{resolve, resolve_for_test, resolve_run, QueryRunner, ResolveError};
 use dx_apply::{FileSystem, RealFileSystem};
 use dx_bep::{collect, collect_test_outputs, ArtifactReader, CollectorConfig};
+use dx_clean::{
+    apply_plan, bazel_forward_argv, collect_inventory, render_dry_run, RECOVERY_GUIDANCE,
+};
 use dx_diff::{render_patch, FilePatch, PatchKind};
 use dx_output::{
     change_event, command_finished, command_started, diagnostic_event, meets_threshold,
@@ -1424,7 +1427,7 @@ fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
         err,
         ..
     } = env;
-    let inventory = match dx_clean::collect_inventory(workspace, &[], &[]) {
+    let inventory = match collect_inventory(workspace, &[], &[]) {
         Ok(inventory) => inventory,
         Err(error) => {
             return operational(invocation, out, err, CODE_CLEAN_FAILED, &error.to_string());
@@ -1437,14 +1440,14 @@ fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
         matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet;
     if invocation.dry_run {
         if verbose {
-            let _ = writeln!(out, "{}", dx_clean::render_dry_run(&plan));
+            let _ = writeln!(out, "{}", render_dry_run(&plan));
             if invocation.bazel_clean {
                 let _ = writeln!(out, "would forward: bazel clean");
             }
         }
         return 0;
     }
-    let outcome = match dx_clean::apply_plan(workspace, &plan) {
+    let outcome = match apply_plan(workspace, &plan) {
         Ok(outcome) => outcome,
         Err(error) => {
             return operational(invocation, out, err, CODE_CLEAN_FAILED, &error.to_string());
@@ -1468,7 +1471,7 @@ fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
     // The explicit forward is exactly `bazel clean` (never any other
     // verb): the argv pins to the frozen `dx_clean` forward shape.
     let mut argv = vec!["bazel".to_owned()];
-    argv.extend(dx_clean::bazel_forward_argv());
+    argv.extend(bazel_forward_argv());
     let status = match runner.run(&argv, workspace, &[]) {
         Ok(status) => status,
         Err(error) => {
@@ -1491,7 +1494,7 @@ fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
         );
     };
     if verbose {
-        let _ = writeln!(out, "{}", dx_clean::RECOVERY_GUIDANCE);
+        let _ = writeln!(out, "{}", RECOVERY_GUIDANCE);
     }
     bazel_code
 }
@@ -2095,6 +2098,10 @@ mod tests {
     use crate::args::parse;
     use crate::resolve::{QueryResult, QueryRunner};
     use dx_process::{ChildStatus, Runner};
+    use dx_setup::{
+        commit_pair, read_current_pair, setup_hex, GenerationId, SetupPair, ENVIRONMENTS_DIR_NAME,
+        GENERATED_DIR_NAME,
+    };
     use quality_result::proto::{Capability, Convergence, FileSnapshot, QualityResult, Stage};
     use quality_result::{encode_validated, SCHEMA_MAJOR, SCHEMA_MINOR};
     use std::cell::RefCell;
@@ -4566,17 +4573,13 @@ mod tests {
     /// record hex. Digest tags mirror the `dx_clean` fixtures (one
     /// lowercase-hex character repeated to 64).
     fn commit_clean_pair(harness: &Harness, env: char, gen: char) -> String {
-        let pair = dx_setup::SetupPair {
-            environment: dx_setup::GenerationId::new(&env.to_string().repeat(64))
+        let pair = SetupPair {
+            environment: GenerationId::new(&env.to_string().repeat(64))
                 .expect("environment digest"),
-            generated: dx_setup::GenerationId::new(&gen.to_string().repeat(64))
-                .expect("generated digest"),
+            generated: GenerationId::new(&gen.to_string().repeat(64)).expect("generated digest"),
         };
-        dx_setup::commit_pair(&harness.workspace, &pair).expect("commit pair");
-        for (dir, tag) in [
-            (dx_setup::ENVIRONMENTS_DIR_NAME, env),
-            (dx_setup::GENERATED_DIR_NAME, gen),
-        ] {
+        commit_pair(&harness.workspace, &pair).expect("commit pair");
+        for (dir, tag) in [(ENVIRONMENTS_DIR_NAME, env), (GENERATED_DIR_NAME, gen)] {
             std::fs::create_dir_all(
                 harness
                     .workspace
@@ -4586,7 +4589,7 @@ mod tests {
             )
             .expect("generation dir");
         }
-        dx_setup::setup_hex(&pair)
+        setup_hex(&pair)
     }
 
     #[test]
@@ -4663,13 +4666,13 @@ mod tests {
             "current generations survive"
         );
         assert_eq!(
-            dx_setup::read_current_pair(&harness.workspace).expect("read current"),
-            dx_setup::read_current_pair(&harness.workspace).expect("reread current"),
+            read_current_pair(&harness.workspace).expect("read current"),
+            read_current_pair(&harness.workspace).expect("reread current"),
             "selection read is stable"
         );
-        let live = dx_setup::read_current_pair(&harness.workspace).expect("live pair");
+        let live = read_current_pair(&harness.workspace).expect("live pair");
         let live_pair = live.expect("current still selected");
-        assert_eq!(dx_setup::setup_hex(&live_pair), current);
+        assert_eq!(setup_hex(&live_pair), current);
     }
 
     #[test]

@@ -21,6 +21,10 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+use dx_env::{acquire_lock, Error};
+use dx_roots::{repository_plan, RepositoryRootPlan};
+use quality_result::digest;
+
 /// Codegen collecting aspect applied in the combined request. Matches
 /// `dx_codegen_plan_aspect` in `//generation:codegen.bzl` and
 /// `CODEGEN_ASPECT` in `dx_codegen`.
@@ -135,11 +139,11 @@ pub fn request_aspects() -> Vec<String> {
 /// every other candidate passes its single union root set through. The
 /// query-pattern-file candidate carries no command-line patterns (Bazel
 /// reads them from `--target_pattern_file`).
-pub fn targets_for_root_plan(plan: &dx_roots::RepositoryRootPlan) -> Vec<String> {
+pub fn targets_for_root_plan(plan: &RepositoryRootPlan) -> Vec<String> {
     if plan.pattern_file.is_some() {
         return Vec::new();
     }
-    if *plan == dx_roots::repository_plan() {
+    if *plan == repository_plan() {
         return scope_targets(&SetupScope::Repository);
     }
     plan.roots.clone()
@@ -149,7 +153,7 @@ pub fn targets_for_root_plan(plan: &dx_roots::RepositoryRootPlan) -> Vec<String>
 /// plan's union roots with both collecting aspects and both output
 /// groups. Codegen and env never invoke each other; each aspect stays
 /// bounded by provider applicability.
-pub fn plan_request_for_root_plan(plan: &dx_roots::RepositoryRootPlan) -> SetupRequest {
+pub fn plan_request_for_root_plan(plan: &RepositoryRootPlan) -> SetupRequest {
     SetupRequest {
         roots: targets_for_root_plan(plan),
         aspects: request_aspects(),
@@ -160,7 +164,7 @@ pub fn plan_request_for_root_plan(plan: &dx_roots::RepositoryRootPlan) -> SetupR
 /// Full `bazel build` command line for a WP4 root plan: `build` plus the
 /// union roots, both collecting aspects, and both output groups (plus
 /// `--target_pattern_file` when the plan carries a pattern file).
-pub fn build_argv_for_plan(plan: &dx_roots::RepositoryRootPlan) -> Vec<String> {
+pub fn build_argv_for_plan(plan: &RepositoryRootPlan) -> Vec<String> {
     let request = plan_request_for_root_plan(plan);
     let mut argv = vec!["build".to_owned()];
     argv.extend(request.roots);
@@ -202,7 +206,7 @@ pub struct SetupRequest {
 /// bypass root selection.
 pub fn plan_request(scope: &SetupScope) -> SetupRequest {
     match scope {
-        SetupScope::Repository => plan_request_for_root_plan(&dx_roots::repository_plan()),
+        SetupScope::Repository => plan_request_for_root_plan(&repository_plan()),
         SetupScope::Exact(label) => SetupRequest {
             roots: vec![label.clone()],
             aspects: request_aspects(),
@@ -437,7 +441,7 @@ pub fn setup_fingerprint(pair: &SetupPair) -> String {
 /// Routed through the shared result crate so the digest algorithm has one
 /// owner.
 pub fn setup_digest(pair: &SetupPair) -> [u8; 32] {
-    quality_result::digest(setup_fingerprint(pair).as_bytes())
+    digest(setup_fingerprint(pair).as_bytes())
 }
 
 /// Lowercase hex of the setup digest: the setup record directory name.
@@ -481,10 +485,10 @@ fn symlink_dir(target: &Path, link: &Path) -> io::Result<()> {
 /// Maps the shared commit-lock failure into the setup commit vocabulary.
 /// Only contention reports busy; every other lock failure aborts
 /// immediately so platform errors are never misreported.
-fn map_lock_error(error: dx_env::Error) -> CommitError {
+fn map_lock_error(error: Error) -> CommitError {
     match error {
-        dx_env::Error::Busy { path } => CommitError::Busy { path },
-        dx_env::Error::LockFailed { path, reason } => CommitError::LockFailed { path, reason },
+        Error::Busy { path } => CommitError::Busy { path },
+        Error::LockFailed { path, reason } => CommitError::LockFailed { path, reason },
         other => CommitError::LockFailed {
             path: PathBuf::from(".dx"),
             reason: other.to_string(),
@@ -497,7 +501,7 @@ fn map_lock_error(error: dx_env::Error) -> CommitError {
 /// contention-only retry until the deadline): setup introduces no new lock
 /// file, mechanism, or deadline.
 fn acquire_commit_lock(dx_dir: &Path, timeout: Duration) -> Result<std::fs::File, CommitError> {
-    dx_env::acquire_lock(dx_dir, timeout).map_err(map_lock_error)
+    acquire_lock(dx_dir, timeout).map_err(map_lock_error)
 }
 
 /// Extracts a generation digest from a record link target: the final path

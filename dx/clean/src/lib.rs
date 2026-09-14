@@ -18,7 +18,7 @@
 //! over injected views keeps selection deterministic and unit-testable
 //! without a workspace.
 //!
-//! The commit-lock route is the O36 lock owned by `dx_env::acquire_lock`
+//! The commit-lock route is the O36 lock owned by `acquire_lock`
 //! (dedicated lock file, contention-only retry until the deadline):
 //! clean introduces no new lock file, mechanism, or deadline.
 //! [`CLEAN_LOCK_TIMEOUT`] mirrors `dx_env::LOCK_TIMEOUT`, pinned equal by
@@ -28,6 +28,13 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+
+use dx_env::{acquire_lock, Error};
+use dx_setup::{
+    read_current_pair, setup_hex, GenerationId, SetupPair, CURRENT_LINK_NAME, CURRENT_STAGE_NAME,
+    ENVIRONMENTS_DIR_NAME, ENVIRONMENT_LINK_NAME, GENERATED_DIR_NAME, GENERATED_LINK_NAME,
+    SETUPS_DIR_NAME,
+};
 
 /// `--dry-run` flag: list reclaimable generations and links without
 /// deleting. Matches the `dx clean` contract; frozen here so CLI
@@ -67,8 +74,8 @@ impl GenerationKind {
     /// `dx_setup`.
     pub fn dir_name(&self) -> &'static str {
         match self {
-            GenerationKind::Environment => dx_setup::ENVIRONMENTS_DIR_NAME,
-            GenerationKind::Generated => dx_setup::GENERATED_DIR_NAME,
+            GenerationKind::Environment => ENVIRONMENTS_DIR_NAME,
+            GenerationKind::Generated => GENERATED_DIR_NAME,
         }
     }
 }
@@ -121,18 +128,17 @@ pub fn validate_record(
     generated_hex: &str,
 ) -> Result<SetupRecordView, RecordProblem> {
     for value in [hex, environment_hex, generated_hex] {
-        if dx_setup::GenerationId::new(value).is_err() {
+        if GenerationId::new(value).is_err() {
             return Err(RecordProblem::MalformedDigest {
                 value: value.to_owned(),
             });
         }
     }
-    let pair = dx_setup::SetupPair {
-        environment: dx_setup::GenerationId::new(environment_hex)
-            .expect("validated environment digest"),
-        generated: dx_setup::GenerationId::new(generated_hex).expect("validated generated digest"),
+    let pair = SetupPair {
+        environment: GenerationId::new(environment_hex).expect("validated environment digest"),
+        generated: GenerationId::new(generated_hex).expect("validated generated digest"),
     };
-    let want = dx_setup::setup_hex(&pair);
+    let want = setup_hex(&pair);
     if want != hex {
         return Err(RecordProblem::Spoofed {
             record: hex.to_owned(),
@@ -303,10 +309,10 @@ impl std::error::Error for CleanError {}
 /// Maps the shared commit-lock failure into the clean vocabulary.
 /// Only contention reports busy; every other lock failure aborts
 /// immediately so platform errors are never misreported.
-fn map_lock_error(error: dx_env::Error) -> CleanError {
+fn map_lock_error(error: Error) -> CleanError {
     match error {
-        dx_env::Error::Busy { path } => CleanError::Busy { path },
-        dx_env::Error::LockFailed { path, reason } => CleanError::LockFailed { path, reason },
+        Error::Busy { path } => CleanError::Busy { path },
+        Error::LockFailed { path, reason } => CleanError::LockFailed { path, reason },
         other => CleanError::LockFailed {
             path: PathBuf::from(".dx"),
             reason: other.to_string(),
@@ -392,7 +398,7 @@ fn generation_hex_from_link_target(target: &Path) -> Option<String> {
     target
         .file_name()
         .and_then(|name| name.to_str())
-        .filter(|text| dx_setup::GenerationId::new(text).is_ok())
+        .filter(|text| GenerationId::new(text).is_ok())
         .map(str::to_owned)
 }
 
@@ -412,7 +418,7 @@ pub fn collect_inventory(
         });
     }
     let dx_dir = workspace_root.join(".dx");
-    let setups_dir = dx_dir.join(dx_setup::SETUPS_DIR_NAME);
+    let setups_dir = dx_dir.join(SETUPS_DIR_NAME);
     let mut inventory = CollectedInventory {
         active_setup_hexes: active_setup_hexes.to_vec(),
         active_generation_hexes: active_generation_hexes.to_vec(),
@@ -421,7 +427,7 @@ pub fn collect_inventory(
 
     // Current selection: absent selects nothing; anything present but not
     // a digest-shaped symlink target fails closed.
-    let current_link = setups_dir.join(dx_setup::CURRENT_LINK_NAME);
+    let current_link = setups_dir.join(CURRENT_LINK_NAME);
     match fs::symlink_metadata(&current_link) {
         Err(e) if e.kind() == io::ErrorKind::NotFound => {}
         Err(e) => {
@@ -446,7 +452,7 @@ pub fn collect_inventory(
                 .and_then(|name| name.to_str())
                 .unwrap_or_default()
                 .to_owned();
-            if dx_setup::GenerationId::new(&hex).is_err() {
+            if GenerationId::new(&hex).is_err() {
                 return Err(CleanError::CurrentInvalid {
                     reason: format!(
                         "{} points at {hex:?}, want a setup digest; refusing digest-spoofed state",
@@ -466,18 +472,18 @@ pub fn collect_inventory(
     // (setup reads links via `current/<link>`), so record validation must
     // read links relative to each record directory, not the pointer.
     for name in entry_names(&setups_dir)? {
-        if name == dx_setup::CURRENT_LINK_NAME || name == dx_setup::CURRENT_STAGE_NAME {
+        if name == CURRENT_LINK_NAME || name == CURRENT_STAGE_NAME {
             continue;
         }
-        if dx_setup::GenerationId::new(&name).is_err() {
+        if GenerationId::new(&name).is_err() {
             inventory.unmanaged_names.push(name);
             continue;
         }
         let record = setups_dir.join(&name);
-        let environment = fs::read_link(record.join(dx_setup::ENVIRONMENT_LINK_NAME))
+        let environment = fs::read_link(record.join(ENVIRONMENT_LINK_NAME))
             .ok()
             .and_then(|target| generation_hex_from_link_target(&target));
-        let generated = fs::read_link(record.join(dx_setup::GENERATED_LINK_NAME))
+        let generated = fs::read_link(record.join(GENERATED_LINK_NAME))
             .ok()
             .and_then(|target| generation_hex_from_link_target(&target));
         match (environment, generated) {
@@ -495,7 +501,7 @@ pub fn collect_inventory(
     for kind in [GenerationKind::Environment, GenerationKind::Generated] {
         let dir = dx_dir.join(kind.dir_name());
         for name in entry_names(&dir)? {
-            if dx_setup::GenerationId::new(&name).is_ok() {
+            if GenerationId::new(&name).is_ok() {
                 inventory
                     .generations
                     .push(GenerationView { kind, hex: name });
@@ -559,12 +565,12 @@ pub fn apply_plan_with_timeout(
     fs::create_dir_all(&dx_dir).map_err(|e| CleanError::Install {
         reason: format!("cannot create {}: {e}", dx_dir.display()),
     })?;
-    let _lock = dx_env::acquire_lock(&dx_dir, timeout).map_err(map_lock_error)?;
+    let _lock = acquire_lock(&dx_dir, timeout).map_err(map_lock_error)?;
     // Re-read the live selection under the lock; fail closed on foreign
     // state exactly like collection does.
     let live = collect_inventory(workspace_root, &[], &[])?;
     let live_current = live.current_hex;
-    let live_pair = match dx_setup::read_current_pair(workspace_root) {
+    let live_pair = match read_current_pair(workspace_root) {
         Ok(pair) => pair,
         Err(e) => {
             return Err(CleanError::CurrentInvalid {
@@ -573,9 +579,9 @@ pub fn apply_plan_with_timeout(
         }
     };
     let mut outcome = CleanOutcome::default();
-    let setups_dir = dx_dir.join(dx_setup::SETUPS_DIR_NAME);
+    let setups_dir = dx_dir.join(SETUPS_DIR_NAME);
     for hex in &plan.prune_setup_records {
-        if dx_setup::GenerationId::new(hex).is_err() {
+        if GenerationId::new(hex).is_err() {
             continue;
         }
         if live_current.as_deref() == Some(hex.as_str()) {
@@ -610,7 +616,7 @@ pub fn apply_plan_with_timeout(
         ));
     }
     for generation in &plan.prune_generations {
-        if dx_setup::GenerationId::new(&generation.hex).is_err() {
+        if GenerationId::new(&generation.hex).is_err() {
             continue;
         }
         if live_referenced
@@ -684,13 +690,13 @@ mod tests {
     }
 
     fn pair_env_gen(env: char, gen: char) -> (String, String, String) {
-        let environment = dx_setup::GenerationId::new(&digest(env)).expect("env digest");
-        let generated = dx_setup::GenerationId::new(&digest(gen)).expect("gen digest");
-        let pair = dx_setup::SetupPair {
+        let environment = GenerationId::new(&digest(env)).expect("env digest");
+        let generated = GenerationId::new(&digest(gen)).expect("gen digest");
+        let pair = SetupPair {
             environment,
             generated,
         };
-        (dx_setup::setup_hex(&pair), digest(env), digest(gen))
+        (setup_hex(&pair), digest(env), digest(gen))
     }
 
     fn record(env: char, gen: char) -> SetupRecordView {
@@ -877,10 +883,10 @@ mod tests {
         std::os::unix::fs::symlink(target, link).expect("stage test link");
     }
 
-    fn setup_pair(env: char, gen: char) -> dx_setup::SetupPair {
-        dx_setup::SetupPair {
-            environment: dx_setup::GenerationId::new(&digest(env)).expect("env digest"),
-            generated: dx_setup::GenerationId::new(&digest(gen)).expect("gen digest"),
+    fn setup_pair(env: char, gen: char) -> SetupPair {
+        SetupPair {
+            environment: GenerationId::new(&digest(env)).expect("env digest"),
+            generated: GenerationId::new(&digest(gen)).expect("gen digest"),
         }
     }
 
@@ -914,8 +920,8 @@ mod tests {
             fs::create_dir_all(dx_dir.join(kind.dir_name()).join(digest(tag)))
                 .expect("create generation dir");
         }
-        let stale_hex = dx_setup::setup_hex(&stale);
-        let current_hex = dx_setup::setup_hex(&current);
+        let stale_hex = setup_hex(&stale);
+        let current_hex = setup_hex(&current);
         (workspace, stale_hex, current_hex)
     }
 
@@ -1050,9 +1056,9 @@ mod tests {
             .is_dir());
         assert!(!setups.join(&stale_hex).exists());
         assert_eq!(
-            dx_setup::read_current_pair(&workspace)
+            read_current_pair(&workspace)
                 .expect("read")
-                .map(|pair| dx_setup::setup_hex(&pair)),
+                .map(|pair| setup_hex(&pair)),
             Some(current_hex)
         );
         // Second apply over the same plan is idempotent: nothing left.
@@ -1073,15 +1079,12 @@ mod tests {
         let plan = collect_inventory(&workspace, &[], &[])
             .expect("collect")
             .plan();
-        assert_eq!(plan.prune_setup_records, vec![dx_setup::setup_hex(&first)]);
+        assert_eq!(plan.prune_setup_records, vec![setup_hex(&first)]);
         // A concurrent setup reselects `first` before clean applies.
         dx_setup::commit_pair(&workspace, &first).expect("reselect first");
         let outcome = apply_plan(&workspace, &plan).expect("apply");
         assert!(outcome.removed_setup_records.is_empty());
-        assert_eq!(
-            dx_setup::read_current_pair(&workspace).expect("read"),
-            Some(first)
-        );
+        assert_eq!(read_current_pair(&workspace).expect("read"), Some(first));
         let _ = fs::remove_dir_all(&root);
     }
 
@@ -1123,8 +1126,7 @@ mod tests {
         let workspace = workspace_of(&root);
         let dx_dir = workspace.join(".dx");
         fs::create_dir_all(&dx_dir).expect("dx dir");
-        let _held =
-            dx_env::acquire_lock(&dx_dir, Duration::from_secs(10)).expect("hold commit lock");
+        let _held = acquire_lock(&dx_dir, Duration::from_secs(10)).expect("hold commit lock");
         let plan = CleanPlan {
             prune_setup_records: Vec::new(),
             prune_generations: Vec::new(),

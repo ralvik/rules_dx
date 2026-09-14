@@ -36,8 +36,9 @@ and diagnostics; they do not couple the two lifecycles.
 With no argument, `dx codegen` selects every codegen projection in the currently
 declared Bazel BUILD graph and atomically selects one repository-wide generated-source
 projection. It does not inspect unowned files or decide that BUILD metadata ought to
-exist. The physical root-selection mechanism remains provisional pending the benchmark
-and legality checks below.
+exist. The physical root-selection mechanism is frozen to the `//...` baseline
+(see [`FROZEN_STRATEGY`](../../dx/roots/src/lib.rs) and [O34](../open-decisions.md)):
+cold/warm evidence only, remaining incrementality dimensions unmeasured.
 
 Repository-wide selection includes every registered production, test, example, and
 development projection. It does not omit test-only generators to improve performance.

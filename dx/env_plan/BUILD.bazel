@@ -1,5 +1,6 @@
 """M25 WP2 slice 3: normalized env plan collection for the `dx` CLI."""
 
+# gazelle:resolve rust env_shard //env/env_shard
 load("@crates//:crates.bzl", "aliases")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
@@ -35,6 +36,10 @@ dx_rust_test(
     ),
     crate = ":dx_env_plan",
     edition = "2021",
+    deps = [
+        "//dx/bep:dx_bep",
+        "//env/env_shard",
+    ],
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy

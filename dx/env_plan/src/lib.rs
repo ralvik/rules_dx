@@ -35,6 +35,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use dx_bep::TargetOutput;
+use dx_roots::{build_argv, invocation_targets, repository_plan, RepositoryRootPlan};
+use env_shard::{decode_validated, Error};
+use quality_result::digest;
 
 /// Private output group carrying collected shards plus every referenced
 /// artifact. Frozen in `//env:plan.bzl`; matches
@@ -115,7 +118,7 @@ pub fn resolve_scope(targets: &[String]) -> Result<EnvScope, ScopeError> {
 /// `//dx:env` selection identity; exact scopes bypass root selection.
 pub fn scope_targets(scope: &EnvScope) -> Vec<String> {
     match scope {
-        EnvScope::Repository => targets_for_root_plan(&dx_roots::repository_plan()),
+        EnvScope::Repository => targets_for_root_plan(&repository_plan()),
         EnvScope::Exact(label) => vec![label.clone()],
     }
 }
@@ -125,15 +128,15 @@ pub fn scope_targets(scope: &EnvScope) -> Vec<String> {
 /// benchmark runs; every other candidate passes its own roots through.
 /// The query-pattern-file candidate carries no command-line patterns
 /// (Bazel reads them from `--target_pattern_file`).
-pub fn targets_for_root_plan(plan: &dx_roots::RepositoryRootPlan) -> Vec<String> {
-    dx_roots::invocation_targets(plan, REPOSITORY_TARGET)
+pub fn targets_for_root_plan(plan: &RepositoryRootPlan) -> Vec<String> {
+    invocation_targets(plan, REPOSITORY_TARGET)
 }
 
 /// Full `bazel build` command line for a WP4 root plan: `build` plus the
 /// plan roots, the collecting aspect, and the private output group (plus
 /// `--target_pattern_file` when the plan carries a pattern file).
-pub fn build_argv_for_plan(plan: &dx_roots::RepositoryRootPlan) -> Vec<String> {
-    dx_roots::build_argv(
+pub fn build_argv_for_plan(plan: &RepositoryRootPlan) -> Vec<String> {
+    build_argv(
         plan,
         REPOSITORY_TARGET,
         &[ENV_ASPECT.to_owned()],
@@ -164,10 +167,7 @@ pub struct EnvRecord {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CollectError {
     /// A BEP-reported shard file fails to decode or validate.
-    Shard {
-        path: String,
-        error: env_shard::Error,
-    },
+    Shard { path: String, error: Error },
     /// Two records claim one identity key incompatibly. The message
     /// matches `env_plan_conflict_error` rendering, listing every
     /// claimant: no traversal-order winner is accepted.
@@ -234,11 +234,9 @@ pub fn collect_shards(outputs: &[TargetOutput]) -> Result<Vec<EnvRecord>, Collec
             if !is_shard_artifact(&artifact.exec_path) {
                 continue;
             }
-            let shard = env_shard::decode_validated(&artifact.bytes).map_err(|error| {
-                CollectError::Shard {
-                    path: artifact.exec_path.display().to_string(),
-                    error,
-                }
+            let shard = decode_validated(&artifact.bytes).map_err(|error| CollectError::Shard {
+                path: artifact.exec_path.display().to_string(),
+                error,
             })?;
             records.push(EnvRecord {
                 producer: shard.producer,
@@ -464,7 +462,7 @@ pub fn fingerprint(records: &[EnvRecord]) -> String {
 /// identity, with no algorithm negotiation. Routed through the shared
 /// result crate so the digest algorithm has one owner.
 pub fn plan_digest(fingerprint: &str) -> [u8; 32] {
-    quality_result::digest(fingerprint.as_bytes())
+    digest(fingerprint.as_bytes())
 }
 
 /// Lowercase hex of the plan digest, for operator messaging.
@@ -507,7 +505,7 @@ pub fn collect_plan(outputs: &[TargetOutput]) -> Result<CollectedPlan, CollectEr
     }
     let merged = merge_records(&records);
     let rendered = fingerprint(&merged);
-    let digest = quality_result::digest(rendered.as_bytes());
+    let digest = digest(rendered.as_bytes());
     Ok(CollectedPlan {
         records: merged,
         fingerprint: rendered,

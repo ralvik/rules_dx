@@ -1,5 +1,6 @@
 """M25 WP5 slice 1: explicit `dx clean` pruning of unselected managed generations (O60)."""
 
+# gazelle:resolve rust dx_env //dx/env:dx_env
 load("@crates//:crates.bzl", "aliases")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
@@ -28,6 +29,7 @@ dx_rust_test(
     size = "small",
     aliases = aliases(
         package_name = "dx/dx_clean",
+        normal = True,
         normal_dev = True,
     ),
     crate = ":dx_clean",
