@@ -172,8 +172,8 @@ Raw Bazel progress and BEP events are never part of this API.
 ```
 
 Lint, typecheck, format, generate, check, and fix accept `check`.
-[`docs --check`](commands/docs.md) is validation without rendering; its exact output mapping
-remains pending [O54](../open-decisions.md). Docs build and check do not emit source `change` or
+[`docs --check`](commands/docs.md) is validation without rendering; its output mapping
+follows the frozen [O54](../open-decisions.md) mappings. Docs build and check do not emit source `change` or
 `mutation` events for generated Bazel artifacts. Other commands use `default`.
 Subject to the collection and manifest validation rules below, JSON reports each exact calculated
 file change in both check and default modes as a `change`. Default mode additionally reports each
@@ -429,7 +429,7 @@ A `report` event confirms a successfully emitted standard report.
 
 | Field | Required | Type | Meaning |
 | --- | --- | --- | --- |
-| `format` | yes | string | `sarif`, `junit`, or `lcov`; SPDX shared-report mapping pending O58 (see below) |
+| `format` | yes | string | `sarif`, `junit`, or `lcov`; SPDX shared-report mapping follows frozen O58 (see below) |
 | `path` | yes | string | User-selected file destination |
 | `results_complete` | yes | boolean | Whether all selected result producers completed |
 
@@ -438,8 +438,8 @@ cannot coexist with NDJSON; successful document output plus process status is it
 confirmation in text mode.
 
 The license family's [SPDX 2.3 JSON report](commands/audit-update-bazel.md#license-family-dx-audit-license)
-is accepted direction; its shared-report format identifier and event mapping remain pending
-[O58](../open-decisions.md), not a new profile defined here.
+follows the frozen [O58](../open-decisions.md) mappings; its shared-report format identifier
+and event mapping are constrained by those mappings, not a new profile defined here.
 
 ```json
 {"schema":{"major":1,"minor":0},"event":"report","format":"sarif","path":"reports/lint.sarif","results_complete":true}

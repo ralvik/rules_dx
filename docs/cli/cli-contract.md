@@ -127,7 +127,7 @@ requiring Bzlmod migration; `dx` does not provide a second dependency setup path
 This applies to every command, including `dx bazel`, except that `dx init` may
 bootstrap a new repository without an existing `MODULE.bazel`. This narrow exception
 does not add legacy WORKSPACE support or bypass discovery for ordinary workflows.
-Bootstrap destination mechanics remain pending under [O49](../open-decisions.md);
+Bootstrap destination mechanics follow the frozen [O49](../open-decisions.md) mappings;
 the [init contract](commands/hooks.md#dx-init) permits absent-only bootstrap writes,
 not Git-based tracked-file safety checks.
 
@@ -213,16 +213,17 @@ an explicit label-representation contract.
   independent selected sets, skip operations dependent on the failed set, preserve
   successful changes, and fail the invocation overall. The
   [update contract](commands/audit-update-bazel.md#dx-update) owns dependency-set
-  independence and partial-success semantics. Exact aggregate exit-code selection,
-  backend mapping, and report qualification remain pending under
-  [O12](../open-decisions.md). Ordinary fail-fast behavior, including `dx check` and
+  independence and partial-success semantics. Aggregate exit-code selection,
+  backend mapping, and report qualification follow the frozen
+  [O12](../open-decisions.md) mappings; live resolver-backend execution remains a gap.
+  Ordinary fail-fast behavior, including `dx check` and
   `dx fix`, is unchanged.
 - Signals are forwarded to the active Bazel process; interruption should preserve
   conventional shell behavior. On Unix, `dx` re-raises the signal after safe cleanup.
 
 The common mapping and machine-output behavior are defined in
 [Output Protocol](output-protocol.md#exit-codes); the update aggregate mapping above
-remains unqualified under O12.
+follows the frozen O12 mappings.
 
 ## Machine-Readable Output
 

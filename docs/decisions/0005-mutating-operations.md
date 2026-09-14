@@ -81,7 +81,8 @@ failure in one selected dependency set does not stop independent selected sets. 
 operations dependent on the failed set, preserve successful changes without repository-wide
 rollback, and fail the invocation overall. This preserves useful independent progress
 without claiming dependent work succeeded. Exact aggregate exit code, backend mapping,
-and report qualification remain pending under [O12](../open-decisions.md); ordinary
+and report qualification follow the frozen [O12](../open-decisions.md) mappings; live
+resolver-backend execution remains a gap. Ordinary
 fail-fast behavior, including `dx check` and `dx fix`, is unchanged.
 
 Ordinary CLI commands, including non-mutating commands and `dx bazel`, avoid inspecting Git
@@ -100,8 +101,8 @@ The approved bootstrap/hook exception permits init without an existing `MODULE.b
 hook exception so bootstrap can create the module and hooks can select staged paths.
 Bootstrap writes are absent-only, without Git-based tracked-file inspection. Unmanaged
 hooks are refused; force cannot overwrite arbitrary existing files or hooks. Bootstrap
-destination mechanics and force syntax/managed-replacement behavior remain unqualified
-under [O49](../open-decisions.md), not an unrestricted overwrite API.
+destination mechanics and force syntax/managed-replacement behavior follow the frozen
+[O49](../open-decisions.md) mappings, not an unrestricted overwrite API.
 
 `dx codegen` is explicitly mutating only in managed `.dx/` state. Bazel actions build
 declared generated artifacts without writing source packages; Rust validates their

@@ -1,5 +1,14 @@
 # `dx init` And `dx hooks`
 
+Implementation status: O49 mappings frozen (see [O49](../../open-decisions.md)
+and the [M30b completion report](../../milestones/M30b-completion-report.md)).
+Delivered: `dx init` absent-only scaffolding plus `dx hooks`
+install/uninstall/status/run dispatch with hermetic Git and 120s budgets
+(`dx_adopt` gates plus CLI dispatch). Force/unmanaged refusal and two-layer
+config follow the frozen mappings; platform evidence beyond Linux x86_64
+remains a gap; no working multi-platform support is claimed until qualified
+execution lands.
+
 ## `dx init`
 
 `dx init` scaffolds a new repository: module and `//dx` target wiring, workspace config,
@@ -18,7 +27,8 @@ Bootstrap writes are absent-only and do not inspect Git to classify files as tra
 or untracked. Init never contacts the network beyond pinned artifact fetch.
 
 Bootstrap destination mechanics and any `--force` syntax or managed-replacement behavior
-remain pending under [O49](../../open-decisions.md). Unqualified force behavior is blocked:
+follow the frozen [O49](../../open-decisions.md) mappings: absent-only bootstrap writes,
+unmanaged refusal even with force. Unqualified force behavior remains blocked:
 force cannot authorize overwriting arbitrary existing files or unmanaged hooks.
 
 ## `dx hooks`
@@ -28,7 +38,7 @@ the gitignored root overlay (`dx.local.toml`) and its gitignore entry through ab
 file writes, and verifies the shims resolve to the pinned `dx`. It refuses unmanaged
 existing hooks rather than replacing them, including when force is requested.
 Exact hook destination/identity mechanics and handling of existing ignore configuration
-remain pending under O49; this is not permission to overwrite existing files.
+follow frozen O49: managed shims only, unmanaged refusal; this is not permission to overwrite existing files.
 `dx hooks uninstall` removes only shims it installed. `dx hooks status` prints the
 effective merged configuration and last-run timings per check. Native launcher shims
 cover hosts where shell hooks do not execute.
@@ -42,7 +52,7 @@ status checks or clean-worktree gates, including during init.
 
 The approved bootstrap/hook exception narrows the earlier blanket discovery/Git rules so init can
 create a module and hooks can select staged paths without weakening ordinary workflow
-safety. It does not qualify bootstrap APIs or force behavior under O49.
+safety. Bootstrap APIs and force behavior follow the frozen O49 mappings above.
 
 ## Triggers And Default Checks
 
