@@ -26,10 +26,12 @@
 //! wiring, exit classification) lives in [`secrets`]. License-expression
 //! evaluation over the allow/review/deny lattice lives in
 //! [`license_expr`]. Tier policy, distribution roots, and the license
-//! exception lifecycle live in [`license_policy`].
+//! exception lifecycle live in [`license_policy`]. Notice-text inputs
+//! and the SPDX report-shape pins live in [`license_notice`].
 
 pub mod exception;
 pub mod license_expr;
+pub mod license_notice;
 pub mod license_policy;
 pub mod secrets;
 

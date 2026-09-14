@@ -13,6 +13,7 @@ dx_rust_library(
         "src/exception.rs",
         "src/lib.rs",
         "src/license_expr.rs",
+        "src/license_notice.rs",
         "src/license_policy.rs",
         "src/secrets.rs",
     ],
