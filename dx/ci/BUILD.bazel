@@ -1,4 +1,4 @@
-"""M27 WP1 slices 1-7: pure consumer-CI planning (selection, revision, scheduling, supersession, reporting, fork/aggregate, rerun/scope/retry/scanning)."""
+"""M27 WP1 slices 1-7 + WP2 slice 8: pure consumer-CI planning (selection, revision, scheduling, supersession, reporting, fork/aggregate, rerun/scope/retry/scanning, triggers/platforms/no-op/revalidation)."""
 
 load("@crates//:crates.bzl", "aliases")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
