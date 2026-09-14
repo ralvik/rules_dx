@@ -44,16 +44,16 @@ The command surface is:
 - `dx bazel` for unchanged forwarding to the selected Bazel launcher.
 - `dx init` for new-repository scaffolding: module and `//dx` target wiring, workspace
   config, CI caller template, hermetic hook installation, devcontainer, and the `dx`
-  version pin. It may bootstrap without an existing `MODULE.bazel` and writes only
-  absent files, without Git-based tracked-file inspection. Bootstrap destination
-  mechanics and force syntax/managed-replacement behavior remain pending under
-  [O49](../open-decisions.md); unqualified force behavior is blocked.
+   version pin. It may bootstrap without an existing `MODULE.bazel` and writes only
+   absent files, without Git-based tracked-file inspection. Bootstrap destination
+   mechanics and force syntax/managed-replacement behavior follow the frozen
+   [O49](../open-decisions.md) mappings; unqualified force behavior is blocked.
 - `dx hooks` for managing the custom hermetic git-hook runner in an existing repository
   (`install`, `uninstall`, `status`). Hook management and staged-file selection are narrow
   Git exceptions: all product Git operations for hooks use hermetic managed Git, never
   ambient Git. Refuse unmanaged existing hooks; force cannot authorize arbitrary hook
-  overwrite. Exact installation and snapshot mechanics remain pending under O49; see the
-  [hooks contract](../cli/commands/hooks.md).
+   overwrite. Exact installation and snapshot mechanics follow frozen O49; see the
+   [hooks contract](../cli/commands/hooks.md).
 
 The approved bootstrap/hook exception allows module creation and staged-path hook selection without
 general Git status inspection, clean-worktree requirements, or weakening ordinary workspace
