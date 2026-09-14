@@ -1,24 +1,24 @@
-//! Pure documentation-delivery planning (M30a slices 1-3: doc-IR version,
+//! Pure documentation-delivery planning (M30a slices 1-4: doc-IR version,
 //! identity, validation, mode shape; guides/examples corpus shape;
-//! site-build action planning).
+//! site-build action planning; `dx docs` invocation planning).
 //!
 //! This crate owns the documentation pipeline shape before any extractor,
 //! schema-number freeze, adapter, site-build rule, or `dx docs` command
 //! lands: IR version compatibility, stable symbol identities, the
 //! extraction-validation gate, check-vs-build mode selection, the drift
-//! upgrade gate, the guides/examples corpus shape, and the site-build
-//! action graph (extract/aggregate/render with cache, determinism,
-//! laziness, and freshness rules). It plans over injected argument strings
+//! upgrade gate, the guides/examples corpus shape, the site-build action
+//! graph, and the `dx docs` invocation mapping (scope, serve/port, shared
+//! graph, failure identities). It plans over injected argument strings
 //! only, so the rules stay deterministic and unit-testable without
 //! extractors, toolchains, a Bazel server, or any renderer.
 //!
 //! Out of scope here (O54 qualification): exact `.proto` field/enum numbers
 //! and reserved ranges, per-language input pins and adapter mappings,
 //! per-language overload-disambiguation schemes, link/reference completeness
-//! proofs, renderer behavior, exact guide-step/CI wiring, rule labels, and
-//! any YAML/rule/CLI implementation. Those arrive in later M30a slices;
-//! this crate preserves spellings verbatim and never substitutes an
-//! implicit default.
+//! proofs, renderer behavior, exact guide-step/CI wiring, rule labels,
+//! check/serve combination semantics, and any YAML/rule/CLI implementation.
+//! Those stay deferred; this crate preserves spellings verbatim and never
+//! substitutes an implicit default.
 
 /// One versioned documentation-IR identity (`doc_ir_version`).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -421,6 +421,48 @@ pub fn bare_docs_scope_selects_repository() -> bool {
     true
 }
 
+// ---------------------------------------------------------------------------
+// `dx docs` invocation planning (M30a slice 4).
+// ---------------------------------------------------------------------------
+
+/// Scope follows the same label/pattern/path resolution as the other
+/// workflow commands; no docs-specific scope syntax is introduced.
+pub fn docs_scope_reuses_workflow_resolution() -> bool {
+    true
+}
+
+/// Check and build select the shared Bazel extraction/aggregation graph,
+/// never separate checker implementations. O54 must prove the pre-render
+/// checks are complete; if a required check depended on rendered output,
+/// that conflict is reported before any weaker check mode lands.
+pub fn check_uses_separate_graph() -> bool {
+    false
+}
+
+/// `--serve` builds once and previews the last build outputs locally for
+/// authoring. It performs no caching of its own and stays outside the Bazel
+/// action graph; the served bytes are exactly the last build outputs.
+pub fn serve_caches_own_outputs() -> bool {
+    false
+}
+
+/// `--port` only refines `--serve`; a port flag without serve selects no
+/// preview and is rejected rather than silently ignored.
+pub fn port_without_serve_allowed() -> bool {
+    false
+}
+
+/// Failures name the affected (language, package) unit.
+pub fn failure_names_unit() -> bool {
+    true
+}
+
+/// On extractor drift, failures additionally name the pinned input whose
+/// schema changed.
+pub fn drift_failure_names_pinned_input() -> bool {
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -672,5 +714,28 @@ mod tests {
     fn scope_is_lazy_with_bare_scope_selecting_the_repository() {
         assert!(!unused_units_emit_without_selection());
         assert!(bare_docs_scope_selects_repository());
+    }
+
+    #[test]
+    fn docs_scope_reuses_the_shared_workflow_resolution() {
+        assert!(docs_scope_reuses_workflow_resolution());
+    }
+
+    #[test]
+    fn check_shares_the_extraction_graph_never_a_separate_checker() {
+        assert!(!check_uses_separate_graph());
+    }
+
+    #[test]
+    fn serve_previews_without_caching_and_port_requires_serve() {
+        assert!(!serve_is_build_action());
+        assert!(!serve_caches_own_outputs());
+        assert!(!port_without_serve_allowed());
+    }
+
+    #[test]
+    fn failures_name_the_unit_and_the_drifted_pin() {
+        assert!(failure_names_unit());
+        assert!(drift_failure_names_pinned_input());
     }
 }
