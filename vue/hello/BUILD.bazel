@@ -1,6 +1,6 @@
 """M18 seed Vue single-file component; consumer of dx_vue_* wrappers."""
 
-load("//javascript/rules:defs.bzl", "dx_js_binary", "dx_js_library", "dx_js_test")
+load("//javascript/rules:defs.bzl", "dx_js_library", "dx_js_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//vue/rules:defs.bzl", "dx_vue_library")
 

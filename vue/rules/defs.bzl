@@ -82,7 +82,7 @@ _dx_vue_library_forward = rule(
     provides = _DX_VUE_LIBRARY_PROVIDES,
     attrs = {
         "srcs": attr.label_list(
-            allow_files = [".vue"],
+            allow_files = _VUE_EXTS,
             doc = "Direct Vue single-file components owned by this wrapper for QualitySourcesInfo.",
         ),
         "upstream": attr.label(

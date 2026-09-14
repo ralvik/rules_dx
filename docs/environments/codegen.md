@@ -37,7 +37,7 @@ With no argument, `dx codegen` selects every codegen projection in the currently
 declared Bazel BUILD graph and atomically selects one repository-wide generated-source
 projection. It does not inspect unowned files or decide that BUILD metadata ought to
 exist. The physical root-selection mechanism is frozen to the `//...` baseline
-(see [`FROZEN_STRATEGY`](../../dx/roots/src/lib.rs) and [O34](../open-decisions.md)):
+(see `FROZEN_STRATEGY` in `dx/roots/src/lib.rs` and [O34](../open-decisions.md)):
 cold/warm evidence only, remaining incrementality dimensions unmeasured.
 
 Repository-wide selection includes every registered production, test, example, and

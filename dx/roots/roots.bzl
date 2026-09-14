@@ -32,16 +32,20 @@ REPOSITORY_ROOT_STRATEGIES = [
 def repository_roots(strategy, monolith = None, shards = [], pattern_file = None):
     """Returns the Bazel command-line patterns for `strategy`.
 
-    `recursive-pattern` returns `["//..."]`. `query-pattern-file` returns
-    `[]`: Bazel reads the labels from `pattern_file` (one label per line)
-    through `--target_pattern_file` instead. `monolithic-aggregate` returns
-    `[monolith]` (must be set). `package-shards` returns `list(shards)`.
-    Any other strategy fails. Exact-target scopes bypass root selection
-    entirely and never call this helper.
+    Args:
+      strategy: root strategy name (one of REPOSITORY_ROOT_STRATEGIES).
+      monolith: monolithic aggregate label for `monolithic-aggregate`.
+      shards: package-shard labels for `package-shards`.
+      pattern_file: query-produced label file for `query-pattern-file`.
+
+    Returns:
+      The Bazel command-line patterns for `strategy`.
     """
     if strategy == "recursive-pattern":
         return [REPOSITORY_PATTERN]
     if strategy == "query-pattern-file":
+        if pattern_file == None:
+            fail("query-pattern-file roots need `pattern_file`")
         return []
     if strategy == "monolithic-aggregate":
         if monolith == None:

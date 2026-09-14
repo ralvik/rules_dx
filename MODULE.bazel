@@ -131,7 +131,6 @@ maven.install(
 )
 use_repo(maven, "maven")
 
-
 # M14 WP1: pinned Python foundation (ADR 0010). Exact 2.x prerelease is an
 # explicit exception to ADR 0008 until a compatible stable 2.x exists.
 bazel_dep(name = "aspect_rules_py", version = "2.0.0-alpha.6")
@@ -167,6 +166,7 @@ npm.npm_translate_lock(
     pnpm_lock = "//:pnpm-lock.yaml",
     verify_node_modules_ignored = "//:.bazelignore",
 )
+
 # M17 WP1 slice 3: private pure-JavaScript tool graph (ESLint + Prettier).
 # Separate `npm_tools` hub so the tool closure stays private: consumers
 # never touch this lock or hub labels; public entry points live under

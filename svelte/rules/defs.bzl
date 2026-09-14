@@ -82,7 +82,7 @@ _dx_svelte_library_forward = rule(
     provides = _DX_SVELTE_LIBRARY_PROVIDES,
     attrs = {
         "srcs": attr.label_list(
-            allow_files = [".svelte"],
+            allow_files = _SVELTE_EXTS,
             doc = "Direct Svelte components owned by this wrapper for QualitySourcesInfo.",
         ),
         "upstream": attr.label(

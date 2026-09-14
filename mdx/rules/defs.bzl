@@ -83,7 +83,7 @@ _dx_mdx_library_forward = rule(
     provides = _DX_MDX_LIBRARY_PROVIDES,
     attrs = {
         "srcs": attr.label_list(
-            allow_files = [".mdx"],
+            allow_files = _MDX_EXTS,
             doc = "Direct MDX documents owned by this wrapper for QualitySourcesInfo.",
         ),
         "upstream": attr.label(

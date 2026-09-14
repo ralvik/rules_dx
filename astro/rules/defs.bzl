@@ -84,7 +84,7 @@ _dx_astro_library_forward = rule(
     provides = _DX_ASTRO_LIBRARY_PROVIDES,
     attrs = {
         "srcs": attr.label_list(
-            allow_files = [".astro"],
+            allow_files = _ASTRO_EXTS,
             doc = "Direct Astro components owned by this wrapper for QualitySourcesInfo.",
         ),
         "upstream": attr.label(

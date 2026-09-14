@@ -32,8 +32,8 @@ per the support-matrix feasibility review and fail closed here until O30
 qualifies them.
 """
 
-load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_cc//cc:defs.bzl", _cc_binary = "cc_binary", _cc_library = "cc_library", _cc_test = "cc_test")
+load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("//quality:sources.bzl", "QualitySourcesInfo", "check_direct_sources")
 
 _CC_SRCS = [".c", ".cc", ".cpp", ".cxx"]
