@@ -8,10 +8,12 @@ recorded as gaps, not claimed.
 Delivered: the O11/O12/O58 frozen mappings (tool route, config discovery,
 selector syntax, identity/lock authorities, SPDX shape, tier policy), the
 `dx_audit` (52 tests) and `dx_update` (16 tests) planning gates that pin
-selection/exception/secrets/continuation/semantics/license behavior before
-tools, and the license-notice/SPDX-shape freeze. Auditor binary wiring,
-advisory snapshot acquisition, SARIF/SPDX parsing, `dx audit`/`dx update`
-command registration, and resolver-backend execution remain gaps.
+ selection/exception/secrets/continuation/semantics/license behavior before
+ tools, the license-notice/SPDX-shape freeze, and the `dx audit`/`dx update`
+ planning dispatch (`--dry-run` plans and exits `0`; live runs fail closed
+ `audit_deferred`/`update_deferred`). Auditor binary wiring,
+ advisory snapshot acquisition, SARIF/SPDX parsing, and resolver-backend
+ execution remain gaps.
 
 Capability transitions: audit/update mappings are Dogfooded at the gate
 level (frozen mappings constrain the planning libraries, which are
@@ -78,9 +80,13 @@ resolver evidence; none claimed.
   aggregation, within-constraint/Git pins; `BUILD.bazel`, `Cargo.toml`.
 - `docs/open-decisions.md` (O11/O12/O58 frozen mappings constraining the
   above).
-- Zero-dep by design: no `dx/cli` registration (tool behavior has not
-  landed); no `docs/testing/cli.md` matrix change (matrix compares the
-  final registry, not partial CLI).
+- `dx/cli/` (planning dispatch only): `audit`/`update` family/selection
+  parsing, `--dry-run` plan specs, deferred live execution; `BUILD.bazel`
+  deps on `//dx/audit:dx_audit` and `//dx/update:dx_update`.
+- `dx/adopt/` (`ALL_COMMANDS`), `docs/cli/commands/audit-update-bazel.md`
+  (dispatch status; tool execution still gap).
+- No `docs/testing/cli.md` matrix change (matrix compares final behavior,
+  not planning dispatch).
 - This report.
 
 ## Open Items
@@ -89,7 +95,7 @@ resolver evidence; none claimed.
   advisory acquisition, SARIF/SPDX parsing, target-to-owner mappings,
   native configuration, backend operation boundaries, policy-table
   loading, shared-lock tier attribution, proof evidence, `dx audit` /
-  `dx update` registration.
+  `dx update` live execution.
 - O53: update-bot scope gate unresolved; no bot deliverables approved or
   built.
 - Milestone exclusions respected: no auditor/registry/Bazel integration,
