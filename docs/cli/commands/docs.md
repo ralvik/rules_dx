@@ -23,13 +23,13 @@ itself is non-mutating: it writes only to Bazel outputs, never to sources.
 `--check` performs extraction and validation without rendering HTML. Normal build performs
 the same validation and then renders; both fail on unresolved cross-links and missing API
 references. Both select the shared Bazel extraction/aggregation graph, not separate checker
-implementations. O54 must prove these checks are complete before rendering; if a required check
+implementations. Completeness of pre-render link/reference checks remains a gap; if a required check
 depends on rendered output, report the conflict before implementing a weaker check mode.
 
 Check mode does not compare IR against committed snapshots or previous cache contents, and a
 cache miss is not a check failure. It is not `mdbook test`, whose upstream contract tests Rust
 examples rather than general site correctness. CI must exercise a full build for renderer evidence;
-exact CI wiring remains under O54. Non-mutating means
+exact CI wiring remains a gap. Non-mutating means
 no source-tree writes; Bazel output and cache writes are permitted in both modes.
 Rendered HTML is also a build artifact, never committed.
 
