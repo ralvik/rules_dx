@@ -86,7 +86,7 @@ adoption scope (depends on M29).
 | M26 | [Audit And Update](M26-audit-update.md) ([report](M26-completion-report.md)) | M24 | Ready |
 | M27 | [Consumer CI](M27-consumer-ci.md) ([report](M27-completion-report.md)) | M25, M26 | Ready |
 | M28 | [Stabilization And Release Qualification](M28-stabilization-release-qualification.md) ([report](M28-completion-report.md)) | M27, M30a | Ready |
-| M29 | [Release Publication](M29-release-publication.md) | M28 | Pending |
+| M29 | [Release Publication](M29-release-publication.md) ([report](M29-completion-report.md)) | M28 | Ready |
 | M30a | [Adoption Docs (Release-Blocking)](M30-adoption-bootstrap-first-hour.md#m30a-release-blocking-docs) ([report](M30a-completion-report.md)) | M27 | Ready |
 | M30b | [Adoption Scope (Post-Release)](M30-adoption-bootstrap-first-hour.md#m30b-post-release-adoption) | M29 | Pending |
 
