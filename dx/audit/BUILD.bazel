@@ -12,6 +12,7 @@ dx_rust_library(
     srcs = [
         "src/exception.rs",
         "src/lib.rs",
+        "src/license_expr.rs",
         "src/secrets.rs",
     ],
     aliases = aliases(

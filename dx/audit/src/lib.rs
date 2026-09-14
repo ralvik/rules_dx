@@ -23,9 +23,12 @@
 //! The risk-acceptance exception lifecycle (version-scoped, reasoned,
 //! expiring, obsolete) lives in [`exception`]. Secrets-integration
 //! qualification planning (Gitleaks artifact identity, SARIF/redact
-//! wiring, exit classification) lives in [`secrets`].
+//! wiring, exit classification) lives in [`secrets`]. License-expression
+//! evaluation over the allow/review/deny lattice lives in
+//! [`license_expr`].
 
 pub mod exception;
+pub mod license_expr;
 pub mod secrets;
 
 /// Audit family selector. Frozen spellings match the `dx audit` contract
