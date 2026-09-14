@@ -59,8 +59,8 @@ normal execution, not a freshness failure. No snapshot refresh/apply step or sep
 documentation cache is introduced.
 
 [`dx docs --check`](../cli/commands/docs.md) selects extraction and shared validation but not
-rendering; normal build validates and renders. O54 must prove that required link/reference checks
-are complete at the pre-render boundary. Neither mode compares against committed IR. Build and check
+rendering; normal build validates and renders. Completeness of required link/reference checks
+at the pre-render boundary remains a gap. Neither mode compares against committed IR. Build and check
 may write Bazel outputs and cache entries but never write generated IR beside source
 files. `--serve` previews the built output locally and is not a build action.
 
