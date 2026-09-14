@@ -19,12 +19,15 @@ a dx-owned option before the command word is rejected rather than forwarded.
 dx audit [security|license] [scope ...] [--report <format>=<destination> ...]
 ```
 
-Provisional implementation status: the audit policy below is accepted, but tool selection,
-advisory acquisition/snapshot semantics, severity/report mappings, and native configuration
-remain unqualified under [O11](../../open-decisions.md), update mappings under
-[O12](../../open-decisions.md), and the license family under
-[O58](../../open-decisions.md). Do not implement audit/update integrations against this prose
-until those qualifications land.
+Implementation status: the audit/update policy below is accepted and the
+O11/O12/O58 mappings are frozen (see [O11, O12, and O58](../../open-decisions.md)
+and the [M26 completion report](../../milestones/M26-completion-report.md)).
+Delivered: the `dx_audit`/`dx_update` planning gates plus `dx audit`/`dx update`
+command dispatch — `--dry-run` plans the request and exits `0`, while live runs
+fail closed (`audit_deferred`/`update_deferred`). Auditor binary wiring, advisory
+snapshot acquisition, SARIF/SPDX parsing, and resolver-backend execution remain
+gaps; no working audit/update support is claimed until qualified tool execution
+lands.
 
 Bare `dx audit` runs both families. `dx audit security` runs secrets plus
 dependency-vulnerability analysis only; `dx audit license` runs license-policy
@@ -156,11 +159,10 @@ no implementation or verified audit support is approved by these policy choices 
 
 The outcome and exception rules below are accepted. Use qualified per-root (per-dependency) attribution over
 conservative whole-lock strictness, without silently narrowing complete-lock audit coverage.
-Full-lock tier attribution remains
-unresolved when internal and distributed roots share a lock; no strictest-tier or per-root
-attribution strategy is selected here. Resolve that boundary, per-ecosystem license-identity
-mappings, approval/report mappings, and proof evidence under [O58](../../open-decisions.md)
-before implementation.
+Attribution is frozen per-root under [O58](../../open-decisions.md), with per-ecosystem
+license-identity, approval/report, and SPDX-shape mappings frozen there as well.
+Proof artifacts and policy-table loading remain gaps; no working license support
+is claimed until qualified tool execution lands.
 
 The license family reuses security-audit scope mechanics (default `//...`,
 per-target owning dependency sets, complete-lock coverage, local matching with
