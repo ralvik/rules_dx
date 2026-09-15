@@ -37,8 +37,9 @@ With no argument, `dx codegen` selects every codegen projection in the currently
 declared Bazel BUILD graph and atomically selects one repository-wide generated-source
 projection. It does not inspect unowned files or decide that BUILD metadata ought to
 exist. The physical root-selection mechanism is frozen to the `//...` baseline
-(see `FROZEN_STRATEGY` in `dx/roots/src/lib.rs` and O34):
-cold/warm evidence only, remaining incrementality dimensions unmeasured.
+(see `FROZEN_STRATEGY` in `dx/roots/src/lib.rs`); only cold/warm behavior is measured,
+and the remaining incrementality dimensions are tracked in
+[#25](https://github.com/ralvik/rules_dx/issues/25).
 
 Repository-wide selection includes every registered production, test, example, and
 development projection. It does not omit test-only generators to improve performance.
@@ -193,7 +194,8 @@ uncached generator actions. A query-produced target-pattern file is expected to 
 target-pattern discovery and unrelated loading compared with `//...`, but it still loads
 packages containing indexed labels and analyzes every selected configured closure.
 Bazel's persistent server and action cache are expected to improve unchanged warm runs;
-the required evidence remains a milestone gate rather than a verified claim.
+the required evidence is tracked in
+[#25](https://github.com/ralvik/rules_dx/issues/25) rather than a verified claim.
 
 Exact-target runs bypass repository root selection and analyze only one configured
 target closure. Generator action invalidation may be narrow after one schema change,
@@ -207,7 +209,7 @@ configuration semantics. They measure cold and warm loading/analysis, source and
 edits, target add/remove, actions, materialized bytes, projection time, and retained
 memory. Among equivalent-semantics candidates the fastest wins on both cold and warm,
 with warm weighted above cold for internal paths; otherwise the `//...` correctness
-baseline remains. See O34.
+baseline remains.
 
 ## Test Requirements
 

@@ -8,7 +8,7 @@ language projections such as [Python Environment](python-environment.md) define 
 contain; this document defines how those plans are identified, installed, reused, selected, and
 retained.
 
-Delivery follows the repository's dogfood-first milestone order. Managed `.dx/bin` and the
+Delivery followed the repository's dogfood-first order. Managed `.dx/bin` and the
 PATH/environment bootstrap come first, Rust supplies the first language-native environment
 projection, and Python's `.venv` is a later concrete language projection. Full multi-language env,
 codegen, and setup orchestration follows those foundations. This order does not make Python's native
@@ -48,8 +48,7 @@ PATH-tool tree.
 Environment and generated-code generations are immutable and content-addressed by plan identity.
 Each generation directory hash is the 64-character lowercase hexadecimal BLAKE3-256 digest of a
 versioned, deterministic identity encoded in binary Protobuf management metadata. The exact
-identity field schemas are frozen with their implementing milestones (M11 for environment,
-M25 for codegen and setup scope) and stay deterministic and versioned; no ad-hoc digest
+identity field schemas are frozen and stay deterministic and versioned; no ad-hoc digest
 input is accepted.
 
 An environment identity contains its canonical repository-default or exact-target scope and the
@@ -146,9 +145,8 @@ lock file opened for reading and writing without truncation, not the setup recor
 The OS lock coordinates cooperating commands; it is not a security boundary. Ownership ends when
 all handles to the locked file description close, so the lock handle must not be cloned or inherited
 by child processes. PID files, stale-lock age checks, and deleting the lock path never authorize a
-commit. This selection does not establish cross-platform correctness: O36 still requires the
-selected Rust pin, platform semantics, contention, and crash-release evidence in
-Open Decisions.
+commit. This selection does not establish cross-platform correctness; locking behavior is
+implemented in `dx/env/src` and pinned by its unit tests.
 
 ## Installation And Ownership
 
@@ -157,8 +155,8 @@ generation and setup links, generated mirror leaves, `.venv`, and root or import
 `node_modules`. There is no launcher, junction, copy, materialization, capability-probing, or fallback
 projection mode. Windows requires permission to create symlinks, normally through Developer Mode;
 missing capability fails before mutation with actionable setup guidance. Windows CI hosts must
-grant this capability; hosts that cannot are recorded as gaps under
-O14 rather than receiving a fallback mode.
+grant this capability; hosts that cannot grant it are unsupported rather than receiving
+a fallback mode.
 
 Initial installation or repair refuses an unmanaged `.dx/bin`, setup pointer, setup record,
 generation directory, `.venv`, `node_modules`, importer facade, or other native facade. A directory

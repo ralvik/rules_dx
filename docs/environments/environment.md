@@ -72,7 +72,7 @@ becomes visible without rebuilding or reselecting the environment.
 Persistent language environments have no public contribution or invocation protocol in
 v1. Implementations remain language-specific and directly consume their authoritative
 rules and verified provider data; v1 supports end-user workflows, not third-party
-environment plugins. See O35. They use provider-derived filesystem links for sources,
+environment plugins. They use provider-derived filesystem links for sources,
 dependencies, and toolchains. Generated outputs use the independent symlink-only codegen projection.
 Copying is not a fallback.
 
@@ -123,7 +123,7 @@ reduce discovery only; it does not avoid loading and analyzing selected roots.
 Repository-wide candidates and warm behavior require the benchmark evidence in
 [Generated Code](codegen.md) before one becomes normative. Among equivalent-semantics
 candidates the fastest wins on both cold and warm, with warm weighted above cold for
-internal paths, per O34.
+internal paths.
 
 ## Tool Exposure
 
@@ -151,7 +151,7 @@ The public PATH-tool API is loaded from `@rules_dx//env:defs.bzl`. The convenien
 `environment_tool(name, executable, bin_name)`. Built-in integrations and consumer
 repositories use the same validated constructors and `EnvironmentInfo`
 collection provider; there is no private first-party contribution path. Third-party
-language-integration plugins are deferred past v1 per O35.
+language-integration plugins are deferred past v1.
 
 `EnvironmentInfo` carries zero or more PATH-tool records and composes transitively.
 Each record contains:
@@ -213,7 +213,8 @@ For Go, reuse rules_go's upstream `GOPACKAGESDRIVER` integration rather than cre
 snapshot or replacement package graph. Editor requests may trigger Bazel queries/builds and lazy
 acquisition of their declared dependencies. Document that latency and work, propagate failures rather
 than reporting a successful incomplete package graph, and qualify cancellation/concurrency and target
-isolation. Exact mappings, cgo completion, and required-platform behavior remain O46 gates; this
+isolation. Exact mappings and required-platform behavior are implemented in the Go Gazelle
+extension and pinned by its fixtures; cgo completion is out of scope, and this
 exception does not admit the complete Go foundation.
 
 `bazel clean`, output-base changes, or removed outputs can invalidate links. An automatic editor
@@ -232,8 +233,7 @@ committed `.envrc` next to `MODULE.bazel`; Windows uses documented manual `PATH`
 The committed `.envrc` contains `PATH_add` for `.dx/bin` only, a `watch_file` on `.dx/bin` so
 direnv reloads after refresh, and a missing-directory guard that fails with actionable
 `dx env` or `bazel run //dx:env` regeneration guidance. It never invokes Bazel from the shell
-hook and never exports variables beyond `PATH` in v1, preserving the PATH-tools-only boundary
-in O35. Unlike `bazel_env`, the watched path is the workspace-stable
+hook and never exports variables beyond `PATH` in v1, preserving the PATH-tools-only boundary. Unlike `bazel_env`, the watched path is the workspace-stable
 `.dx/bin` rather than a configuration-specific `bazel-out` directory. `dx` never writes shell
 profiles; the `.envrc` file itself is scaffolded absent-only by `dx init` and refused when an
 unmanaged `.envrc` already exists. direnv requires its shell hook plus `direnv allow`; without
@@ -248,24 +248,21 @@ registry state.
 ## Distribution
 
 The Bazel-first installation path is `bazel run //dx:env`, which exposes the `dx`
-version matching the consumer's pinned module. Optional checksummed standalone
-binaries are also published for Linux x86_64/arm64, macOS x86_64/arm64, and Windows
-x86_64. Standalone installation requires neither a local Rust toolchain nor Bazel.
-
-The documented standalone installation workflow automatically verifies artifact integrity
-and authenticity against an approved publisher identity before installing or executing
-the downloaded `dx` binary. Invalid or unavailable verification fails installation;
-there is no checksum-only fallback or optional verification step. A checksum delivered
-alongside the binary is not by itself proof of publisher identity. Signing technology,
-trust-root and verifier bootstrap, identity binding, and verification inputs remain
-technical qualification work under O38 and O39, without adding
-a Bazel or Rust prerequisite to standalone installation.
+version matching the consumer's pinned module. Standalone installation requires neither
+a local Rust toolchain nor Bazel. Standalone binaries with install-time publisher-identity
+verification, plus the publication mechanics, are planned in
+[#26](https://github.com/ralvik/rules_dx/issues/26); until then the Bazel-first path
+above is the supported installation. There is no checksum-only fallback or optional
+verification step: a checksum delivered alongside a binary is not by itself proof of
+publisher identity. Signing technology, trust-root and verifier bootstrap, identity
+binding, and verification inputs are decided as part of that issue.
 
 The approved v1 destinations are the Bazel Central Registry for the `rules_dx` module
 and GitHub Releases for standalone `dx` binaries. This selects destinations only, not
 credentials, permissions, registry submission procedures, or the publication sequence;
-those remain under O45. Publication still requires explicit
-milestone approval and qualified release artifacts.
+publication mechanics are tracked in
+[#26](https://github.com/ralvik/rules_dx/issues/26). Publication still requires explicit
+approval and qualified release artifacts.
 
 Release hosting, signing, and verification services must satisfy the
 [free-infrastructure constraint](../testing/README.md#infrastructure-budget) without
