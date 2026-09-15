@@ -30,7 +30,8 @@ Source-only local graphs build without package-manager invocation.
 load("@aspect_rules_jest//jest:defs.bzl", _jest_test = "jest_test")
 load("@aspect_rules_js//js:defs.bzl", _js_binary = "js_binary", _js_library = "js_library")
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")
-load("//quality:sources.bzl", "QualitySourcesInfo", "check_direct_sources")
+load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_forward_attrs", "dx_forwarded_optional", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_quality_sources", "dx_symlink_default_info", "dx_wrap")
+load("//quality:sources.bzl", "QualitySourcesInfo")
 
 _DX_JS_LIBRARY_PROVIDES = [
     _JsInfo,
@@ -57,117 +58,37 @@ _DX_JS_BINARY_PROVIDES = [
 
 _JS_EXTS = [".js", ".jsx", ".mjs", ".cjs"]
 
-def _javascript_quality_sources(ctx):
-    js = [f for f in ctx.files.srcs if "." + f.extension in _JS_EXTS or f.basename.endswith(".js")]
-    direct_sources = {}
-    if len(js) > 0:
-        direct_sources["javascript"] = depset(js)
-    check_direct_sources(direct_sources, str(ctx.label))
-    return QualitySourcesInfo(direct_sources = direct_sources)
+_DX_JS_SOURCE_SPECS = [("javascript", ["js", "jsx", "mjs", "cjs"])]
 
-def _javascript_preserved_providers(ctx):
-    upstream = ctx.attr.upstream
-    if _JsInfo not in upstream:
-        fail("javascript_*: upstream target has no JsInfo: " + str(ctx.attr.upstream.label))
-    return [upstream[_JsInfo]]
-
-def _javascript_forwarded_runtime_providers(ctx):
-    upstream = ctx.attr.upstream
-    out = []
-    if InstrumentedFilesInfo not in upstream:
-        fail("javascript_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
-    out.append(upstream[InstrumentedFilesInfo])
-    if OutputGroupInfo in upstream:
-        out.append(upstream[OutputGroupInfo])
-    if RunEnvironmentInfo in upstream:
-        out.append(upstream[RunEnvironmentInfo])
-    return out
-
-def _javascript_library_forward_impl(ctx):
-    return (
-        _javascript_preserved_providers(ctx) +
-        [ctx.attr.upstream[DefaultInfo]] +
-        _javascript_forwarded_runtime_providers(ctx) +
-        [_javascript_quality_sources(ctx)]
-    )
-
-_javascript_library_forward = rule(
-    implementation = _javascript_library_forward_impl,
+_javascript_library_forward = dx_library_forward_rule(
     provides = _DX_JS_LIBRARY_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".js", ".jsx", ".mjs", ".cjs"],
-            doc = "Direct JavaScript sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [[_JsInfo]],
-            doc = "The private upstream js_library target whose providers are preserved.",
-        ),
-    },
+    required_providers = [(_JsInfo, "JsInfo")],
+    quality_specs = _DX_JS_SOURCE_SPECS,
+    what = "javascript_*",
+    allow_files = _JS_EXTS,
+    upstream_providers = [[_JsInfo]],
     doc = "Forwards upstream JavaScript library providers unchanged and adds QualitySourcesInfo.",
+    srcs_doc = "Direct JavaScript sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream js_library target whose providers are preserved.",
 )
 
-def _javascript_symlink_default_info(ctx):
-    upstream = ctx.attr.upstream[DefaultInfo]
-    exe = upstream.files_to_run.executable
-    if exe == None:
-        fail("javascript_*: upstream target has no executable: " + str(ctx.attr.upstream.label))
-    link = ctx.actions.declare_file(ctx.label.name)
-    ctx.actions.symlink(output = link, target_file = exe)
-    return DefaultInfo(
-        executable = link,
-        files = depset([link]),
-        runfiles = ctx.runfiles(files = [link]).merge(upstream.default_runfiles),
-    )
-
-def _javascript_forwarded_binary_non_default_providers(ctx):
-    upstream = ctx.attr.upstream
-    out = []
-    if _JsInfo in upstream:
-        out.append(upstream[_JsInfo])
-    if InstrumentedFilesInfo in upstream:
-        out.append(upstream[InstrumentedFilesInfo])
-    if OutputGroupInfo in upstream:
-        out.append(upstream[OutputGroupInfo])
-    if RunEnvironmentInfo in upstream:
-        out.append(upstream[RunEnvironmentInfo])
-    return out + [_javascript_quality_sources(ctx)]
-
-def _javascript_binary_forward_impl(ctx):
-    return [_javascript_symlink_default_info(ctx)] + _javascript_forwarded_binary_non_default_providers(ctx)
-
-_javascript_binary_forward = rule(
-    implementation = _javascript_binary_forward_impl,
-    executable = True,
+_javascript_binary_forward = dx_executable_forward_rule(
+    kind = "executable",
     provides = _DX_JS_BINARY_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".js", ".jsx", ".mjs", ".cjs"],
-            doc = "Direct JavaScript sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [[DefaultInfo]],
-            doc = "The private upstream js_binary target whose providers are preserved.",
-        ),
-    },
+    required_providers = [],
+    quality_specs = _DX_JS_SOURCE_SPECS,
+    what = "javascript_*",
+    allow_files = _JS_EXTS,
+    upstream_providers = [[DefaultInfo]],
     doc = "Executable forwarder for javascript_binary: symlinks the upstream binary.",
+    srcs_doc = "Direct JavaScript sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream js_binary target whose providers are preserved.",
+    optional_providers = [_JsInfo],
+    runtime = "besteffort",
 )
 
 def _javascript_wrap_library(name, srcs, visibility = None, **kwargs):
-    _js_library(
-        name = name + "_upstream",
-        srcs = srcs,
-        visibility = ["//visibility:private"],
-        **kwargs
-    )
-    _javascript_library_forward(
-        name = name,
-        upstream = name + "_upstream",
-        srcs = srcs,
-        visibility = visibility,
-    )
+    dx_wrap(name, _js_library, _javascript_library_forward, srcs, visibility = visibility, **kwargs)
 
 def _javascript_wrap_binary(name, srcs, visibility = None, **kwargs):
     _js_binary(
@@ -218,54 +139,35 @@ def _javascript_test_forward_impl(ctx):
     if "TESTBRIDGE_TEST_ONLY" not in env_inherit:
         env_inherit.append("TESTBRIDGE_TEST_ONLY")
     out = [
-        _javascript_symlink_default_info(ctx),
+        dx_symlink_default_info(ctx, "javascript_*"),
         testing.TestEnvironment({}, env_inherit),
-        _javascript_quality_sources(ctx),
+        dx_quality_sources(ctx.files.srcs, _DX_JS_SOURCE_SPECS, str(ctx.label)),
     ]
 
     # Upstream jest_test only provides InstrumentedFilesInfo when coverage
     # is enabled, so forward it conditionally (unlike the library case).
-    if InstrumentedFilesInfo in upstream:
-        out.append(upstream[InstrumentedFilesInfo])
-    if OutputGroupInfo in upstream:
-        out.append(upstream[OutputGroupInfo])
-
     # NB: no explicit RunEnvironmentInfo forward: constructing
     # testing.TestEnvironment above already contributes the runtime
     # environment provider, and returning both conflicts.
-    return out
+    return out + dx_forwarded_optional(upstream, [InstrumentedFilesInfo, OutputGroupInfo])
 
 _javascript_test = rule(
     implementation = _javascript_test_forward_impl,
     test = True,
     provides = _DX_JS_TEST_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".js", ".jsx", ".mjs", ".cjs"],
-            doc = "Direct JavaScript test sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [[DefaultInfo]],
-            doc = "The private upstream jest_test target whose providers are preserved.",
-        ),
-        "env_inherit": attr.string_list(
-            doc = "Environment variables to inherit at test runtime, " +
-                  "mirrored from the upstream jest_test (TESTBRIDGE_TEST_ONLY " +
-                  "is always added for sharding/--test_filter).",
-        ),
-        "_lcov_merger": attr.label(
-            default = configuration_field(fragment = "coverage", name = "output_generator"),
-            executable = True,
-            cfg = "exec",
-            doc = "Coverage-report merger. Bazel's coverage runner passes " +
-                  "this magic attribute as LCOV_MERGER, which merges the " +
-                  "per-test staging report into coverage.dat; without it " +
-                  "the runner exits after touching an empty file even " +
-                  "though the test collected coverage. Same declaration as " +
-                  "upstream jest_test.",
-        ),
-    },
+    attrs = dx_forward_attrs(
+        allow_files = _JS_EXTS,
+        srcs_doc = "Direct JavaScript test sources owned by this wrapper for QualitySourcesInfo.",
+        upstream_providers = [[DefaultInfo]],
+        upstream_doc = "The private upstream jest_test target whose providers are preserved.",
+        extra_attrs = {
+            "env_inherit": attr.string_list(
+                doc = "Environment variables to inherit at test runtime, " +
+                      "mirrored from the upstream jest_test (TESTBRIDGE_TEST_ONLY " +
+                      "is always added for sharding/--test_filter).",
+            ),
+        } | dx_lcov_merger_attr(),
+    ),
     doc = "Test forwarder for javascript_test: symlinks the upstream jest launcher.",
 )
 

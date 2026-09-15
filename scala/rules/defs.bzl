@@ -40,7 +40,8 @@ classpath wiring (open under O31).
 
 load("@rules_java//java:defs.bzl", "JavaInfo")
 load("@rules_scala//scala:scala.bzl", _scala_binary = "scala_binary", _scala_library = "scala_library", _scala_test = "scala_test")
-load("//quality:sources.bzl", "QualitySourcesInfo", "check_direct_sources")
+load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap")
+load("//quality:sources.bzl", "QualitySourcesInfo")
 
 _DX_SCALA_LIBRARY_PROVIDES = [
     JavaInfo,
@@ -62,168 +63,53 @@ _DX_SCALA_EXEC_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-def _scala_quality_sources(ctx):
-    scala = [f for f in ctx.files.srcs if f.extension == "scala"]
-    java = [f for f in ctx.files.srcs if f.extension == "java"]
-    direct_sources = {}
-    if len(scala) > 0:
-        direct_sources["scala"] = depset(scala)
-    if len(java) > 0:
-        direct_sources["java"] = depset(java)
-    check_direct_sources(direct_sources, str(ctx.label))
-    return QualitySourcesInfo(direct_sources = direct_sources)
+_DX_SCALA_SOURCE_SPECS = [("scala", "scala"), ("java", "java")]
+_DX_SCALA_SOURCE_EXTS = [".scala", ".java"]
 
-def _scala_preserved_library_providers(ctx):
-    upstream = ctx.attr.upstream
-    if JavaInfo not in upstream:
-        fail("scala_*: upstream target has no JavaInfo: " + str(ctx.attr.upstream.label))
-    return [upstream[JavaInfo]]
-
-def _scala_forwarded_output_providers(ctx):
-    """Output groups and run env forwarded best-effort when present."""
-    upstream = ctx.attr.upstream
-    out = []
-    if OutputGroupInfo in upstream:
-        out.append(upstream[OutputGroupInfo])
-    if RunEnvironmentInfo in upstream:
-        out.append(upstream[RunEnvironmentInfo])
-    return out
-
-def _scala_forwarded_java_info(ctx):
-    """Upstream `JavaInfo` forwarded best-effort when present."""
-    upstream = ctx.attr.upstream
-    if JavaInfo in upstream:
-        return [upstream[JavaInfo]]
-    return []
-
-def _scala_forwarded_instrumented(ctx):
-    """Upstream `InstrumentedFilesInfo` forwarded best-effort when present."""
-    upstream = ctx.attr.upstream
-    if InstrumentedFilesInfo in upstream:
-        return [upstream[InstrumentedFilesInfo]]
-    return []
-
-def _scala_library_forward_impl(ctx):
-    upstream = ctx.attr.upstream
-    if InstrumentedFilesInfo not in upstream:
-        fail("scala_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
-    return (
-        _scala_preserved_library_providers(ctx) +
-        [upstream[DefaultInfo]] +
-        [upstream[InstrumentedFilesInfo]] +
-        _scala_forwarded_output_providers(ctx) +
-        [_scala_quality_sources(ctx)]
-    )
-
-_scala_library_forward = rule(
-    implementation = _scala_library_forward_impl,
+_scala_library_forward = dx_library_forward_rule(
     provides = _DX_SCALA_LIBRARY_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".scala", ".java"],
-            doc = "Direct Scala/Java sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [[JavaInfo]],
-            doc = "The private upstream scala_library target whose providers are preserved.",
-        ),
-    },
+    required_providers = [(JavaInfo, "JavaInfo")],
+    quality_specs = _DX_SCALA_SOURCE_SPECS,
+    what = "scala_*",
+    allow_files = _DX_SCALA_SOURCE_EXTS,
+    upstream_providers = [[JavaInfo]],
     doc = "Forwards upstream Scala library providers unchanged and adds QualitySourcesInfo.",
+    srcs_doc = "Direct Scala/Java sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream scala_library target whose providers are preserved.",
 )
 
-def _scala_symlink_default_info(ctx):
-    upstream = ctx.attr.upstream[DefaultInfo]
-    exe = upstream.files_to_run.executable
-    if exe == None:
-        fail("scala_*: upstream target has no executable: " + str(ctx.attr.upstream.label))
-    link = ctx.actions.declare_file(ctx.label.name)
-    ctx.actions.symlink(output = link, target_file = exe)
-    return DefaultInfo(
-        executable = link,
-        files = depset([link]),
-        runfiles = ctx.runfiles(files = [link]).merge(upstream.default_runfiles),
-    )
-
-def _scala_binary_forward_impl(ctx):
-    return (
-        [_scala_symlink_default_info(ctx)] +
-        _scala_forwarded_java_info(ctx) +
-        _scala_forwarded_instrumented(ctx) +
-        _scala_forwarded_output_providers(ctx) +
-        [_scala_quality_sources(ctx)]
-    )
-
-_scala_binary_forward = rule(
-    implementation = _scala_binary_forward_impl,
-    executable = True,
+_scala_binary_forward = dx_executable_forward_rule(
+    kind = "executable",
     provides = _DX_SCALA_EXEC_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".scala", ".java"],
-            doc = "Direct Scala/Java sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            doc = "The private upstream scala_binary target whose executable is symlinked.",
-        ),
-    },
+    required_providers = [],
+    quality_specs = _DX_SCALA_SOURCE_SPECS,
+    what = "scala_*",
+    allow_files = _DX_SCALA_SOURCE_EXTS,
+    upstream_providers = None,
     doc = "Executable forwarder for scala_binary: symlinks the upstream binary.",
+    srcs_doc = "Direct Scala/Java sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream scala_binary target whose executable is symlinked.",
+    optional_providers = [JavaInfo],
+    runtime = "besteffort",
 )
 
-def _scala_test_forward_impl(ctx):
-    upstream = ctx.attr.upstream
-    if InstrumentedFilesInfo not in upstream:
-        fail("scala_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
-    return (
-        [_scala_symlink_default_info(ctx)] +
-        [upstream[InstrumentedFilesInfo]] +
-        _scala_forwarded_java_info(ctx) +
-        _scala_forwarded_output_providers(ctx) +
-        [_scala_quality_sources(ctx)]
-    )
-
-_scala_forward_test = rule(
-    implementation = _scala_test_forward_impl,
-    test = True,
+_scala_forward_test = dx_executable_forward_rule(
+    kind = "test",
     provides = _DX_SCALA_EXEC_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".scala", ".java"],
-            doc = "Direct Scala/Java test sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            doc = "The private upstream scala_test target whose executable is symlinked.",
-        ),
-        "_lcov_merger": attr.label(
-            default = configuration_field(fragment = "coverage", name = "output_generator"),
-            executable = True,
-            cfg = "exec",
-            doc = "Coverage-report merger. Bazel's coverage runner passes " +
-                  "this magic attribute as LCOV_MERGER, which merges the " +
-                  "per-test staging report into coverage.dat; without it " +
-                  "the runner exits after touching an empty file even " +
-                  "though the test collected coverage. Same declaration as " +
-                  "the upstream-wrapping test forwarders.",
-        ),
-    },
+    required_providers = [],
+    quality_specs = _DX_SCALA_SOURCE_SPECS,
+    what = "scala_*",
+    allow_files = _DX_SCALA_SOURCE_EXTS,
+    upstream_providers = None,
     doc = "Test forwarder for scala_test: symlinks the upstream test executable.",
+    srcs_doc = "Direct Scala/Java test sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream scala_test target whose executable is symlinked.",
+    extra_attrs = dx_lcov_merger_attr(),
+    optional_providers = [JavaInfo],
 )
 
 def _scala_wrap_library(name, srcs, visibility = None, **kwargs):
-    _scala_library(
-        name = name + "_upstream",
-        srcs = srcs,
-        visibility = ["//visibility:private"],
-        **kwargs
-    )
-    _scala_library_forward(
-        name = name,
-        upstream = name + "_upstream",
-        srcs = srcs,
-        visibility = visibility,
-    )
+    dx_wrap(name, _scala_library, _scala_library_forward, srcs, visibility = visibility, **kwargs)
 
 def _scala_wrap_binary(name, srcs, visibility = None, **kwargs):
     upstream_kwargs = dict(kwargs)

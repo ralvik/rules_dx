@@ -39,7 +39,8 @@ under O31.
 
 load("@rules_dotnet//dotnet:defs.bzl", _fsharp_binary = "fsharp_binary", _fsharp_library = "fsharp_library", _fsharp_test = "fsharp_test")
 load("@rules_dotnet//dotnet/private:providers.bzl", "DotnetAssemblyCompileInfo", "DotnetAssemblyRuntimeInfo")
-load("//quality:sources.bzl", "QualitySourcesInfo", "check_direct_sources")
+load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule")
+load("//quality:sources.bzl", "QualitySourcesInfo")
 
 _DX_FSHARP_LIBRARY_PROVIDES = [
     DotnetAssemblyCompileInfo,
@@ -61,150 +62,51 @@ _DX_FSHARP_EXEC_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-def _fsharp_quality_sources(ctx):
-    fsharp = [f for f in ctx.files.srcs if f.extension in ("fs", "fsi")]
-    direct_sources = {}
-    if len(fsharp) > 0:
-        direct_sources["fsharp"] = depset(fsharp)
-    check_direct_sources(direct_sources, str(ctx.label))
-    return QualitySourcesInfo(direct_sources = direct_sources)
+_DX_FSHARP_SOURCE_SPECS = [("fsharp", ["fs", "fsi"])]
+_DX_FSHARP_SOURCE_EXTS = [".fs", ".fsi"]
 
-def _fsharp_preserved_library_providers(ctx):
-    upstream = ctx.attr.upstream
-    if DotnetAssemblyCompileInfo not in upstream:
-        fail("fsharp_*: upstream target has no DotnetAssemblyCompileInfo: " + str(ctx.attr.upstream.label))
-    if DotnetAssemblyRuntimeInfo not in upstream:
-        fail("fsharp_*: upstream target has no DotnetAssemblyRuntimeInfo: " + str(ctx.attr.upstream.label))
-    return [upstream[DotnetAssemblyCompileInfo], upstream[DotnetAssemblyRuntimeInfo]]
-
-def _fsharp_forwarded_output_providers(ctx):
-    """Output groups and run env forwarded best-effort when present."""
-    upstream = ctx.attr.upstream
-    out = []
-    if OutputGroupInfo in upstream:
-        out.append(upstream[OutputGroupInfo])
-    if RunEnvironmentInfo in upstream:
-        out.append(upstream[RunEnvironmentInfo])
-    return out
-
-def _fsharp_forwarded_assembly_infos(ctx):
-    """Upstream assembly infos forwarded best-effort when present."""
-    upstream = ctx.attr.upstream
-    out = []
-    if DotnetAssemblyCompileInfo in upstream:
-        out.append(upstream[DotnetAssemblyCompileInfo])
-    if DotnetAssemblyRuntimeInfo in upstream:
-        out.append(upstream[DotnetAssemblyRuntimeInfo])
-    return out
-
-def _fsharp_forwarded_instrumented(ctx):
-    """Upstream `InstrumentedFilesInfo` forwarded best-effort when present."""
-    upstream = ctx.attr.upstream
-    if InstrumentedFilesInfo in upstream:
-        return [upstream[InstrumentedFilesInfo]]
-    return []
-
-def _fsharp_library_forward_impl(ctx):
-    upstream = ctx.attr.upstream
-    return (
-        _fsharp_preserved_library_providers(ctx) +
-        [upstream[DefaultInfo]] +
-        _fsharp_forwarded_instrumented(ctx) +
-        _fsharp_forwarded_output_providers(ctx) +
-        [_fsharp_quality_sources(ctx)]
-    )
-
-_fsharp_library_forward = rule(
-    implementation = _fsharp_library_forward_impl,
+_fsharp_library_forward = dx_library_forward_rule(
     provides = _DX_FSHARP_LIBRARY_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".fs", ".fsi"],
-            doc = "Direct F# sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [[DotnetAssemblyCompileInfo, DotnetAssemblyRuntimeInfo]],
-            doc = "The private upstream fsharp_library target whose providers are preserved.",
-        ),
-    },
+    required_providers = [(DotnetAssemblyCompileInfo, "DotnetAssemblyCompileInfo"), (DotnetAssemblyRuntimeInfo, "DotnetAssemblyRuntimeInfo")],
+    quality_specs = _DX_FSHARP_SOURCE_SPECS,
+    what = "fsharp_*",
+    allow_files = _DX_FSHARP_SOURCE_EXTS,
+    upstream_providers = [[DotnetAssemblyCompileInfo, DotnetAssemblyRuntimeInfo]],
     doc = "Forwards upstream F# library providers unchanged and adds QualitySourcesInfo.",
+    srcs_doc = "Direct F# sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream fsharp_library target whose providers are preserved.",
+    runtime = "besteffort",
 )
 
-def _fsharp_symlink_default_info(ctx):
-    upstream = ctx.attr.upstream[DefaultInfo]
-    exe = upstream.files_to_run.executable
-    if exe == None:
-        fail("fsharp_*: upstream target has no executable: " + str(ctx.attr.upstream.label))
-    link = ctx.actions.declare_file(ctx.label.name)
-    ctx.actions.symlink(output = link, target_file = exe)
-    return DefaultInfo(
-        executable = link,
-        files = depset([link]),
-        runfiles = ctx.runfiles(files = [link]).merge(upstream.default_runfiles),
-    )
-
-def _fsharp_binary_forward_impl(ctx):
-    return (
-        [_fsharp_symlink_default_info(ctx)] +
-        _fsharp_forwarded_assembly_infos(ctx) +
-        _fsharp_forwarded_instrumented(ctx) +
-        _fsharp_forwarded_output_providers(ctx) +
-        [_fsharp_quality_sources(ctx)]
-    )
-
-_fsharp_binary_forward = rule(
-    implementation = _fsharp_binary_forward_impl,
-    executable = True,
+_fsharp_binary_forward = dx_executable_forward_rule(
+    kind = "executable",
     provides = _DX_FSHARP_EXEC_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".fs", ".fsi"],
-            doc = "Direct F# sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            doc = "The private upstream fsharp_binary target whose executable is symlinked.",
-        ),
-    },
+    required_providers = [],
+    quality_specs = _DX_FSHARP_SOURCE_SPECS,
+    what = "fsharp_*",
+    allow_files = _DX_FSHARP_SOURCE_EXTS,
+    upstream_providers = None,
     doc = "Executable forwarder for fsharp_binary: symlinks the upstream binary.",
+    srcs_doc = "Direct F# sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream fsharp_binary target whose executable is symlinked.",
+    optional_providers = [DotnetAssemblyCompileInfo, DotnetAssemblyRuntimeInfo],
+    runtime = "besteffort",
 )
 
-def _fsharp_test_forward_impl(ctx):
-    return (
-        [_fsharp_symlink_default_info(ctx)] +
-        _fsharp_forwarded_assembly_infos(ctx) +
-        _fsharp_forwarded_instrumented(ctx) +
-        _fsharp_forwarded_output_providers(ctx) +
-        [_fsharp_quality_sources(ctx)]
-    )
-
-_fsharp_forward_test = rule(
-    implementation = _fsharp_test_forward_impl,
-    test = True,
+_fsharp_forward_test = dx_executable_forward_rule(
+    kind = "test",
     provides = _DX_FSHARP_EXEC_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".fs", ".fsi"],
-            doc = "Direct F# test sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            doc = "The private upstream fsharp_test target whose executable is symlinked.",
-        ),
-        "_lcov_merger": attr.label(
-            default = configuration_field(fragment = "coverage", name = "output_generator"),
-            executable = True,
-            cfg = "exec",
-            doc = "Coverage-report merger. Bazel's coverage runner passes " +
-                  "this magic attribute as LCOV_MERGER, which merges the " +
-                  "per-test staging report into coverage.dat; without it " +
-                  "the runner exits after touching an empty file even " +
-                  "though the test collected coverage. Same declaration as " +
-                  "the upstream-wrapping test forwarders.",
-        ),
-    },
+    required_providers = [],
+    quality_specs = _DX_FSHARP_SOURCE_SPECS,
+    what = "fsharp_*",
+    allow_files = _DX_FSHARP_SOURCE_EXTS,
+    upstream_providers = None,
     doc = "Test forwarder for fsharp_test: symlinks the upstream test executable.",
+    srcs_doc = "Direct F# test sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream fsharp_test target whose executable is symlinked.",
+    extra_attrs = dx_lcov_merger_attr(),
+    optional_providers = [DotnetAssemblyCompileInfo, DotnetAssemblyRuntimeInfo],
+    runtime = "besteffort",
 )
 
 def _fsharp_with_tfm(kwargs):

@@ -36,7 +36,8 @@ matrix is qualified separately.
 
 load("@rules_java//java:defs.bzl", "JavaInfo")
 load("@rules_kotlin//kotlin:jvm.bzl", _kt_jvm_binary = "kt_jvm_binary", _kt_jvm_library = "kt_jvm_library", _kt_jvm_test = "kt_jvm_test")
-load("//quality:sources.bzl", "QualitySourcesInfo", "check_direct_sources")
+load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap")
+load("//quality:sources.bzl", "QualitySourcesInfo")
 
 _DX_KOTLIN_LIBRARY_PROVIDES = [
     JavaInfo,
@@ -58,168 +59,53 @@ _DX_KOTLIN_EXEC_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-def _kotlin_quality_sources(ctx):
-    kotlin = [f for f in ctx.files.srcs if f.extension == "kt"]
-    java = [f for f in ctx.files.srcs if f.extension == "java"]
-    direct_sources = {}
-    if len(kotlin) > 0:
-        direct_sources["kotlin"] = depset(kotlin)
-    if len(java) > 0:
-        direct_sources["java"] = depset(java)
-    check_direct_sources(direct_sources, str(ctx.label))
-    return QualitySourcesInfo(direct_sources = direct_sources)
+_DX_KOTLIN_SOURCE_SPECS = [("kotlin", "kt"), ("java", "java")]
+_DX_KOTLIN_SOURCE_EXTS = [".kt", ".java"]
 
-def _kotlin_preserved_library_providers(ctx):
-    upstream = ctx.attr.upstream
-    if JavaInfo not in upstream:
-        fail("kotlin_*: upstream target has no JavaInfo: " + str(ctx.attr.upstream.label))
-    return [upstream[JavaInfo]]
-
-def _kotlin_forwarded_output_providers(ctx):
-    """Output groups and run env forwarded best-effort when present."""
-    upstream = ctx.attr.upstream
-    out = []
-    if OutputGroupInfo in upstream:
-        out.append(upstream[OutputGroupInfo])
-    if RunEnvironmentInfo in upstream:
-        out.append(upstream[RunEnvironmentInfo])
-    return out
-
-def _kotlin_forwarded_java_info(ctx):
-    """Upstream `JavaInfo` forwarded best-effort when present."""
-    upstream = ctx.attr.upstream
-    if JavaInfo in upstream:
-        return [upstream[JavaInfo]]
-    return []
-
-def _kotlin_forwarded_instrumented(ctx):
-    """Upstream `InstrumentedFilesInfo` forwarded best-effort when present."""
-    upstream = ctx.attr.upstream
-    if InstrumentedFilesInfo in upstream:
-        return [upstream[InstrumentedFilesInfo]]
-    return []
-
-def _kotlin_library_forward_impl(ctx):
-    upstream = ctx.attr.upstream
-    if InstrumentedFilesInfo not in upstream:
-        fail("kotlin_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
-    return (
-        _kotlin_preserved_library_providers(ctx) +
-        [upstream[DefaultInfo]] +
-        [upstream[InstrumentedFilesInfo]] +
-        _kotlin_forwarded_output_providers(ctx) +
-        [_kotlin_quality_sources(ctx)]
-    )
-
-_kotlin_library_forward = rule(
-    implementation = _kotlin_library_forward_impl,
+_kotlin_library_forward = dx_library_forward_rule(
     provides = _DX_KOTLIN_LIBRARY_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".kt", ".java"],
-            doc = "Direct Kotlin/Java sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [[JavaInfo]],
-            doc = "The private upstream kt_jvm_library target whose providers are preserved.",
-        ),
-    },
+    required_providers = [(JavaInfo, "JavaInfo")],
+    quality_specs = _DX_KOTLIN_SOURCE_SPECS,
+    what = "kotlin_*",
+    allow_files = _DX_KOTLIN_SOURCE_EXTS,
+    upstream_providers = [[JavaInfo]],
     doc = "Forwards upstream Kotlin library providers unchanged and adds QualitySourcesInfo.",
+    srcs_doc = "Direct Kotlin/Java sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream kt_jvm_library target whose providers are preserved.",
 )
 
-def _kotlin_symlink_default_info(ctx):
-    upstream = ctx.attr.upstream[DefaultInfo]
-    exe = upstream.files_to_run.executable
-    if exe == None:
-        fail("kotlin_*: upstream target has no executable: " + str(ctx.attr.upstream.label))
-    link = ctx.actions.declare_file(ctx.label.name)
-    ctx.actions.symlink(output = link, target_file = exe)
-    return DefaultInfo(
-        executable = link,
-        files = depset([link]),
-        runfiles = ctx.runfiles(files = [link]).merge(upstream.default_runfiles),
-    )
-
-def _kotlin_binary_forward_impl(ctx):
-    return (
-        [_kotlin_symlink_default_info(ctx)] +
-        _kotlin_forwarded_java_info(ctx) +
-        _kotlin_forwarded_instrumented(ctx) +
-        _kotlin_forwarded_output_providers(ctx) +
-        [_kotlin_quality_sources(ctx)]
-    )
-
-_kotlin_binary_forward = rule(
-    implementation = _kotlin_binary_forward_impl,
-    executable = True,
+_kotlin_binary_forward = dx_executable_forward_rule(
+    kind = "executable",
     provides = _DX_KOTLIN_EXEC_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".kt", ".java"],
-            doc = "Direct Kotlin/Java sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            doc = "The private upstream kt_jvm_binary target whose executable is symlinked.",
-        ),
-    },
+    required_providers = [],
+    quality_specs = _DX_KOTLIN_SOURCE_SPECS,
+    what = "kotlin_*",
+    allow_files = _DX_KOTLIN_SOURCE_EXTS,
+    upstream_providers = None,
     doc = "Executable forwarder for kotlin_binary: symlinks the upstream binary.",
+    srcs_doc = "Direct Kotlin/Java sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream kt_jvm_binary target whose executable is symlinked.",
+    optional_providers = [JavaInfo],
+    runtime = "besteffort",
 )
 
-def _kotlin_test_forward_impl(ctx):
-    upstream = ctx.attr.upstream
-    if InstrumentedFilesInfo not in upstream:
-        fail("kotlin_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
-    return (
-        [_kotlin_symlink_default_info(ctx)] +
-        [upstream[InstrumentedFilesInfo]] +
-        _kotlin_forwarded_java_info(ctx) +
-        _kotlin_forwarded_output_providers(ctx) +
-        [_kotlin_quality_sources(ctx)]
-    )
-
-_kotlin_forward_test = rule(
-    implementation = _kotlin_test_forward_impl,
-    test = True,
+_kotlin_forward_test = dx_executable_forward_rule(
+    kind = "test",
     provides = _DX_KOTLIN_EXEC_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".kt", ".java"],
-            doc = "Direct Kotlin/Java test sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            doc = "The private upstream kt_jvm_test target whose executable is symlinked.",
-        ),
-        "_lcov_merger": attr.label(
-            default = configuration_field(fragment = "coverage", name = "output_generator"),
-            executable = True,
-            cfg = "exec",
-            doc = "Coverage-report merger. Bazel's coverage runner passes " +
-                  "this magic attribute as LCOV_MERGER, which merges the " +
-                  "per-test staging report into coverage.dat; without it " +
-                  "the runner exits after touching an empty file even " +
-                  "though the test collected coverage. Same declaration as " +
-                  "the upstream-wrapping test forwarders.",
-        ),
-    },
+    required_providers = [],
+    quality_specs = _DX_KOTLIN_SOURCE_SPECS,
+    what = "kotlin_*",
+    allow_files = _DX_KOTLIN_SOURCE_EXTS,
+    upstream_providers = None,
     doc = "Test forwarder for kotlin_test: symlinks the upstream test executable.",
+    srcs_doc = "Direct Kotlin/Java test sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream kt_jvm_test target whose executable is symlinked.",
+    extra_attrs = dx_lcov_merger_attr(),
+    optional_providers = [JavaInfo],
 )
 
 def _kotlin_wrap_library(name, srcs, visibility = None, **kwargs):
-    _kt_jvm_library(
-        name = name + "_upstream",
-        srcs = srcs,
-        visibility = ["//visibility:private"],
-        **kwargs
-    )
-    _kotlin_library_forward(
-        name = name,
-        upstream = name + "_upstream",
-        srcs = srcs,
-        visibility = visibility,
-    )
+    dx_wrap(name, _kt_jvm_library, _kotlin_library_forward, srcs, visibility = visibility, **kwargs)
 
 def _kotlin_wrap_binary(name, srcs, visibility = None, **kwargs):
     upstream_kwargs = dict(kwargs)

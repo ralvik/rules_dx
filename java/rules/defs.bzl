@@ -32,7 +32,8 @@ qualified separately.
 
 load("@rules_java//java:defs.bzl", _java_binary = "java_binary", _java_library = "java_library", _java_test = "java_test")
 load("@rules_java//java/common:java_info.bzl", "JavaInfo")
-load("//quality:sources.bzl", "QualitySourcesInfo", "check_direct_sources")
+load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap")
+load("//quality:sources.bzl", "QualitySourcesInfo")
 
 _DX_JAVA_LIBRARY_PROVIDES = [
     JavaInfo,
@@ -54,165 +55,53 @@ _DX_JAVA_EXEC_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-def _java_quality_sources(ctx):
-    java = [f for f in ctx.files.srcs if f.extension == "java"]
-    direct_sources = {}
-    if len(java) > 0:
-        direct_sources["java"] = depset(java)
-    check_direct_sources(direct_sources, str(ctx.label))
-    return QualitySourcesInfo(direct_sources = direct_sources)
+_DX_JAVA_SOURCE_SPECS = [("java", "java")]
+_DX_JAVA_SOURCE_EXTS = [".java"]
 
-def _java_preserved_library_providers(ctx):
-    upstream = ctx.attr.upstream
-    if JavaInfo not in upstream:
-        fail("java_*: upstream target has no JavaInfo: " + str(ctx.attr.upstream.label))
-    return [upstream[JavaInfo]]
-
-def _java_forwarded_output_providers(ctx):
-    """Output groups and run env forwarded best-effort when present."""
-    upstream = ctx.attr.upstream
-    out = []
-    if OutputGroupInfo in upstream:
-        out.append(upstream[OutputGroupInfo])
-    if RunEnvironmentInfo in upstream:
-        out.append(upstream[RunEnvironmentInfo])
-    return out
-
-def _java_forwarded_java_info(ctx):
-    """Upstream `JavaInfo` forwarded best-effort when present."""
-    upstream = ctx.attr.upstream
-    if JavaInfo in upstream:
-        return [upstream[JavaInfo]]
-    return []
-
-def _java_forwarded_instrumented(ctx):
-    """Upstream `InstrumentedFilesInfo` forwarded best-effort when present."""
-    upstream = ctx.attr.upstream
-    if InstrumentedFilesInfo in upstream:
-        return [upstream[InstrumentedFilesInfo]]
-    return []
-
-def _java_library_forward_impl(ctx):
-    upstream = ctx.attr.upstream
-    if InstrumentedFilesInfo not in upstream:
-        fail("java_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
-    return (
-        _java_preserved_library_providers(ctx) +
-        [upstream[DefaultInfo]] +
-        [upstream[InstrumentedFilesInfo]] +
-        _java_forwarded_output_providers(ctx) +
-        [_java_quality_sources(ctx)]
-    )
-
-_java_library_forward = rule(
-    implementation = _java_library_forward_impl,
+_java_library_forward = dx_library_forward_rule(
     provides = _DX_JAVA_LIBRARY_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".java"],
-            doc = "Direct Java sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [[JavaInfo]],
-            doc = "The private upstream java_library target whose providers are preserved.",
-        ),
-    },
+    required_providers = [(JavaInfo, "JavaInfo")],
+    quality_specs = _DX_JAVA_SOURCE_SPECS,
+    what = "java_*",
+    allow_files = _DX_JAVA_SOURCE_EXTS,
+    upstream_providers = [[JavaInfo]],
     doc = "Forwards upstream Java library providers unchanged and adds QualitySourcesInfo.",
+    srcs_doc = "Direct Java sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream java_library target whose providers are preserved.",
 )
 
-def _java_symlink_default_info(ctx):
-    upstream = ctx.attr.upstream[DefaultInfo]
-    exe = upstream.files_to_run.executable
-    if exe == None:
-        fail("java_*: upstream target has no executable: " + str(ctx.attr.upstream.label))
-    link = ctx.actions.declare_file(ctx.label.name)
-    ctx.actions.symlink(output = link, target_file = exe)
-    return DefaultInfo(
-        executable = link,
-        files = depset([link]),
-        runfiles = ctx.runfiles(files = [link]).merge(upstream.default_runfiles),
-    )
-
-def _java_binary_forward_impl(ctx):
-    return (
-        [_java_symlink_default_info(ctx)] +
-        _java_forwarded_java_info(ctx) +
-        _java_forwarded_instrumented(ctx) +
-        _java_forwarded_output_providers(ctx) +
-        [_java_quality_sources(ctx)]
-    )
-
-_java_binary_forward = rule(
-    implementation = _java_binary_forward_impl,
-    executable = True,
+_java_binary_forward = dx_executable_forward_rule(
+    kind = "executable",
     provides = _DX_JAVA_EXEC_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".java"],
-            doc = "Direct Java sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            doc = "The private upstream java_binary target whose executable is symlinked.",
-        ),
-    },
+    required_providers = [],
+    quality_specs = _DX_JAVA_SOURCE_SPECS,
+    what = "java_*",
+    allow_files = _DX_JAVA_SOURCE_EXTS,
+    upstream_providers = None,
     doc = "Executable forwarder for java_binary: symlinks the upstream binary.",
+    srcs_doc = "Direct Java sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream java_binary target whose executable is symlinked.",
+    optional_providers = [JavaInfo],
+    runtime = "besteffort",
 )
 
-def _java_test_forward_impl(ctx):
-    upstream = ctx.attr.upstream
-    if InstrumentedFilesInfo not in upstream:
-        fail("java_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
-    return (
-        [_java_symlink_default_info(ctx)] +
-        [upstream[InstrumentedFilesInfo]] +
-        _java_forwarded_java_info(ctx) +
-        _java_forwarded_output_providers(ctx) +
-        [_java_quality_sources(ctx)]
-    )
-
-_java_forward_test = rule(
-    implementation = _java_test_forward_impl,
-    test = True,
+_java_forward_test = dx_executable_forward_rule(
+    kind = "test",
     provides = _DX_JAVA_EXEC_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".java"],
-            doc = "Direct Java test sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            doc = "The private upstream java_test target whose executable is symlinked.",
-        ),
-        "_lcov_merger": attr.label(
-            default = configuration_field(fragment = "coverage", name = "output_generator"),
-            executable = True,
-            cfg = "exec",
-            doc = "Coverage-report merger. Bazel's coverage runner passes " +
-                  "this magic attribute as LCOV_MERGER, which merges the " +
-                  "per-test staging report into coverage.dat; without it " +
-                  "the runner exits after touching an empty file even " +
-                  "though the test collected coverage. Same declaration as " +
-                  "the upstream-wrapping test forwarders.",
-        ),
-    },
+    required_providers = [],
+    quality_specs = _DX_JAVA_SOURCE_SPECS,
+    what = "java_*",
+    allow_files = _DX_JAVA_SOURCE_EXTS,
+    upstream_providers = None,
     doc = "Test forwarder for java_test: symlinks the upstream test executable.",
+    srcs_doc = "Direct Java test sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream java_test target whose executable is symlinked.",
+    extra_attrs = dx_lcov_merger_attr(),
+    optional_providers = [JavaInfo],
 )
 
 def _java_wrap_library(name, srcs, visibility = None, **kwargs):
-    _java_library(
-        name = name + "_upstream",
-        srcs = srcs,
-        visibility = ["//visibility:private"],
-        **kwargs
-    )
-    _java_library_forward(
-        name = name,
-        upstream = name + "_upstream",
-        srcs = srcs,
-        visibility = visibility,
-    )
+    dx_wrap(name, _java_library, _java_library_forward, srcs, visibility = visibility, **kwargs)
 
 def _java_wrap_binary(name, srcs, visibility = None, **kwargs):
     upstream_kwargs = dict(kwargs)
