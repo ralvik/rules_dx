@@ -38,6 +38,25 @@ jobs:
       contents: read
       pages: write
       id-token: write
+  consumer-ci:
+    name: consumer-ci (self-call reusable consumer workflow)
+    # Smoke test for the versioned consumer workflow: proves the reusable
+    # file parses, the pin check passes, and the enabled checks execute
+    # end-to-end on the working tree (local path: no version-pin
+    # chicken-and-egg; rules_dx_version matches MODULE.bazel).
+    # Only build is enabled: lint/typecheck/format/test/coverage over //...
+    # fail on this repo's fixtures/testdata (#12), generate reports
+    # pre-existing freshness drift (#15), and both audits fail closed
+    # (#18). Re-enable each check here as its owner lands.
+    uses: ./.github/workflows/reusable-consumer.yml
+    with:
+      rules_dx_version: "0.0.0"
+      platforms: '["linux_x86_64"]'
+      disabled_checks: "lint,typecheck,format,generate,security-audit,license-audit,test,coverage"
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
   build-test:
     name: build-test (Linux x86_64 glibc, local-only)
     runs-on: ubuntu-latest
