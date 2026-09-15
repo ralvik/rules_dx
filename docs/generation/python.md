@@ -30,7 +30,7 @@ user-owned under the [common resource boundary](common.md#resources).
 A `.py` source is a test only when its basename ends in `_test` immediately before `.py`. A `test_`
 prefix, test-directory placement, pytest configuration, and test functions or classes do not create
 automatic test ownership: such files receive ordinary non-test library ownership. Broader
-ecosystem conventions remain O22/O25 qualification, not automatic recognition.
+ecosystem conventions are not automatically recognized.
 
 Each recognized source receives its own independently runnable `python_test`, named from the source
 basename without `.py`. Test-only references attach only to that target; imported non-test modules

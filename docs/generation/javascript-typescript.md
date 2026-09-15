@@ -44,8 +44,7 @@ strict common resolution. Computed loads remain the manual kept-dependency bound
 A supported source is a test only when its basename ends in `_test` immediately before its language
 extension. A `test_` prefix, test-directory placement, source syntax, runner configuration, or another
 ecosystem naming convention does not create automatic test ownership: such files receive
-ordinary non-test target ownership. Broader conventions remain O27 qualification, not
-automatic recognition.
+ordinary non-test target ownership. Broader conventions are not automatically recognized.
 
 Each recognized source receives its own independently runnable `javascript_test` or
 `typescript_test`, named from the basename without the final extension. Test-only references attach
