@@ -127,8 +127,8 @@ requiring Bzlmod migration; `dx` does not provide a second dependency setup path
 This applies to every command, including `dx bazel`, except that `dx init` may
 bootstrap a new repository without an existing `MODULE.bazel`. This narrow exception
 does not add legacy WORKSPACE support or bypass discovery for ordinary workflows.
-Bootstrap destination mechanics follow the frozen O49 mappings;
-the [init contract](commands/hooks.md#dx-init) permits absent-only bootstrap writes,
+Bootstrap destination mechanics are implemented as specified in the
+[init contract](commands/hooks.md#dx-init): absent-only bootstrap writes,
 not Git-based tracked-file safety checks.
 
 Discovery is directory traversal for workspace location, not source scanning.
@@ -214,8 +214,9 @@ an explicit label-representation contract.
   successful changes, and fail the invocation overall. The
   [update contract](commands/audit-update-bazel.md#dx-update) owns dependency-set
   independence and partial-success semantics. Aggregate exit-code selection,
-  backend mapping, and report qualification follow the frozen
-  O12 mappings; live resolver-backend execution remains a gap.
+  backend mapping, and per-set reporting are specified in that contract; live
+  resolver-backend execution is open under
+  [#19](https://github.com/ralvik/rules_dx/issues/19).
   Ordinary fail-fast behavior, including `dx check` and
   `dx fix`, is unchanged.
 - Signals are forwarded to the active Bazel process; interruption should preserve
@@ -223,7 +224,7 @@ an explicit label-representation contract.
 
 The common mapping and machine-output behavior are defined in
 [Output Protocol](output-protocol.md#exit-codes); the update aggregate mapping above
-follows the frozen O12 mappings.
+is specified in the [update contract](commands/audit-update-bazel.md#dx-update).
 
 ## Machine-Readable Output
 

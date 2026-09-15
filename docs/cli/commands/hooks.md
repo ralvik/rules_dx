@@ -4,7 +4,8 @@ Implementation status: implemented.
 Delivered: `dx init` absent-only scaffolding plus `dx hooks`
 install/uninstall/status/run dispatch with hermetic Git and 120s budgets
 (`dx_adopt` gates plus CLI dispatch). Force/unmanaged refusal and two-layer
-config follow the frozen mappings; platform evidence beyond Linux x86_64
+config are implemented as specified below;
+platform evidence beyond Linux x86_64
 remains a gap; no working multi-platform support is claimed until qualified
 execution lands.
 
@@ -12,8 +13,7 @@ execution lands.
 
 `dx init` scaffolds a new repository: module and `//dx` target wiring, workspace config,
 CI caller template, hermetic hook installation, devcontainer, the single-version `dx`
-pin (the `dx` version equals the pinned `rules_dx` module version per
-O51), the committed direnv `.envrc` defined in
+pin (the `dx` version equals the pinned `rules_dx` module version), the committed direnv `.envrc` defined in
 [Direnv Integration](../../environments/environment.md#direnv-integration), and generated
 VSCode configuration. The VSCode output is
 generated settings only (`.vscode/settings.json` pointing rust-analyzer, `gopls`,
@@ -26,9 +26,9 @@ Bootstrap writes are absent-only and do not inspect Git to classify files as tra
 or untracked. Init never contacts the network beyond pinned artifact fetch.
 
 Bootstrap destination mechanics and any `--force` syntax or managed-replacement behavior
-follow the frozen O49 mappings: absent-only bootstrap writes,
-unmanaged refusal even with force. Unqualified force behavior remains blocked:
-force cannot authorize overwriting arbitrary existing files or unmanaged hooks.
+are implemented as specified here: absent-only bootstrap writes,
+unmanaged refusal even with force. Force cannot authorize overwriting arbitrary existing files
+or unmanaged hooks.
 
 ## `dx hooks`
 
@@ -36,8 +36,8 @@ force cannot authorize overwriting arbitrary existing files or unmanaged hooks.
 the gitignored root overlay (`dx.local.toml`) and its gitignore entry through absent-only
 file writes, and verifies the shims resolve to the pinned `dx`. It refuses unmanaged
 existing hooks rather than replacing them, including when force is requested.
-Exact hook destination/identity mechanics and handling of existing ignore configuration
-follow frozen O49: managed shims only, unmanaged refusal; this is not permission to overwrite existing files.
+Hook destination/identity mechanics and handling of existing ignore configuration
+are implemented as specified here: managed shims only, unmanaged refusal; this is not permission to overwrite existing files.
 `dx hooks uninstall` removes only shims it installed. `dx hooks status` prints the
 effective merged configuration and last-run timings per check. Native launcher shims
 cover hosts where shell hooks do not execute.
@@ -45,13 +45,13 @@ cover hosts where shell hooks do not execute.
 Hook management and staged-file selection are the only exceptions to the common
 prohibition on product Git inspection. All product Git operations for hooks, including
 installation and staged selection, use hermetic managed Git, never ambient Git or a
-PATH fallback. Prefer existing upstream Git rules when they satisfy the workflow;
-otherwise qualify a managed fallback under O49. This does not authorize general Git
+PATH fallback. Prefer existing upstream Git rules when they satisfy the workflow.
+This does not authorize general Git
 status checks or clean-worktree gates, including during init.
 
 The approved bootstrap/hook exception narrows the earlier blanket discovery/Git rules so init can
 create a module and hooks can select staged paths without weakening ordinary workflow
-safety. Bootstrap APIs and force behavior follow the frozen O49 mappings above.
+safety. Bootstrap APIs and force behavior are implemented as specified above.
 
 ## Triggers And Default Checks
 

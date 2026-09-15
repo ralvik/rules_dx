@@ -1,9 +1,10 @@
 # `dx check`, `dx fix`, And `dx clean`
 
 Owning decision: [ADR 0018](../../decisions/0018-umbrella-check-fix-cleanup-clean.md).
-Umbrella mechanics are frozen under O59; cleanup mechanics are
-frozen under O60 except process-scan in-use detection and reclaimable-bytes reporting,
-which remain open (see [`dx clean`](#dx-clean)).
+Umbrella mechanics are implemented as specified below; cleanup mechanics are
+implemented as specified under [`dx clean`](#dx-clean) except process-scan in-use detection
+and reclaimable-bytes reporting, which are open under
+[#20](https://github.com/ralvik/rules_dx/issues/20).
 
 ## `dx check` And `dx fix`
 
@@ -46,7 +47,7 @@ succeeds only when every phase succeeds.
 Each `--report <format>=<destination>` request is routed to the phases whose direct-command
 registry supports that format. Unsupported phases contribute nothing; a format supported by
 no phase fails before execution. Phases render to captures and the umbrella writes one merged
-document per request after the last executed phase. In M10 the only supported umbrella report
+document per request after the last executed phase. The only supported umbrella report
 is SARIF 2.1.0, whose `runs` concatenate in phase order. NDJSON remains `--output json`, not a
 standard report. After a stop-on-first-failure, the merged
 document contains the executed phases only (completed phases plus the failed phase's
@@ -77,7 +78,7 @@ dangling-link recovery guidance (`dx setup`, `dx env`, or `dx codegen`).
 There is no automatic pruning, age policy, or count limit. CI use is not
 supported.
 
-Frozen mechanics (O60, pinned by `dx_clean`/`dx_cli` fixtures): the flag
+Implemented mechanics (pinned by `dx_clean`/`dx_cli` fixtures): the flag
 shape is exactly `dx clean [--dry-run] [--bazel]` with no scopes and no
 quality, report, or workflow options (`--bazel` is rejected on every other
 command). A setup record prunes only when it is neither
@@ -85,13 +86,15 @@ command). A setup record prunes only when it is neither
 record references it and no active process uses it. Unmanaged or
 digest-spoofed paths are refused, and malformed current state fails closed
 with nothing pruned. Apply runs under the shared workspace commit lock
-(O36 route, ten-second deadline), re-reads the live selection under the
+(ten-second deadline; see
+[managed-state locking](../../environments/managed-state.md#commit-lock-and-concurrency)),
+re-reads the live selection under the
 lock, skips entries that became current or referenced, treats missing
 entries as idempotent, and never touches the current pointer. `--dry-run`
 deletes nothing and holds no lock. `--bazel` forwards exactly
 `bazel clean` after pruning (listed, never run, under `--dry-run`) and
 prints the recovery guidance.
 
-Remain open under O60: process-scan in-use detection (v1 takes
+Open under [#20](https://github.com/ralvik/rules_dx/issues/20): process-scan in-use detection (v1 takes
 caller-provided active sets, so unknown-live entries prune per plan) and
 reclaimable-bytes reporting.

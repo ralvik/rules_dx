@@ -3,7 +3,8 @@
 ## Contract
 
 The durable report surface follows [ADR 0006](../decisions/0006-cli-command-surface.md).
-Exact profiles and partial-document rules below remain provisional until M06/M10 qualification.
+Exact profiles and partial-document rules below are implemented as specified and pinned by
+golden and schema fixtures.
 
 Commands accept repeatable `--report <format>=<destination>`, where destination is `-`, a
 workspace-relative path, or an absolute path. Parent directories must already exist.
@@ -15,7 +16,7 @@ The live-stream interaction, `report` NDJSON event, exit codes, and partial-resu
 are defined in [Output Protocol](output-protocol.md). `--dry-run` conflicts with every
 report request.
 
-The provisional initial mapping is:
+The initial mapping is:
 
 | Commands | Format | Contract |
 | --- | --- | --- |
@@ -24,8 +25,9 @@ The provisional initial mapping is:
 | `coverage` | LCOV | Validated Bazel combined tracefile |
 
 The license family's [SPDX 2.3 JSON report](commands/audit-update-bazel.md#license-family-dx-audit-license)
-follows the frozen O58 mappings. SPDX parsing, policy-table loading,
-and proof artifacts remain gaps; this table is not an exhaustive prohibition of that report.
+is specified in the license-family contract. SPDX parsing, policy-table loading,
+and proof artifacts are open under
+[#18](https://github.com/ralvik/rules_dx/issues/18); this table is not an exhaustive prohibition of that report.
 
 `build`, `format`, `update`, `generate`, `codegen`, `env`, and `setup` have no initial
 standard report. `dx bazel` uses native Bazel options for BEP or other Bazel-owned output.

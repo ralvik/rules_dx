@@ -27,8 +27,8 @@ filesystem source discovery; aspects and providers determine applicable work.
 
 ## File Ownership
 
-Selected strategy (O44, qualified by M08 WP0 prototypes
-against fixture targets): unconfigured `bazel query` only — no `cquery`, no
+Selected strategy (implemented as specified below and pinned by resolver fixtures):
+unconfigured `bazel query` only — no `cquery`, no
 purpose-built aspect. Ownership of one file is
 `kind('rule', rdeps(//..., <file-label>, 1))` at depth exactly 1 over the
 main-workspace `//...` universe, one invocation per input file. The file
@@ -44,8 +44,7 @@ Test and coverage mapping is
 `kind('.*_test rule', rdeps(//..., set(<owners>)))` with empty mappings as
 explicit errors. `select()` over-selection stays conservative.
 
-The implementation milestone prototyped ownership against fixture targets
-before this expression became normative. In particular, tests cover source
+Tests cover source
 files named directly in `srcs`, files reached through `filegroup`, generated
 sources, aliases, and files with multiple owners.
 

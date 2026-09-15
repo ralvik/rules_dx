@@ -4,7 +4,7 @@
 
 This document specifies the user-facing output API for every `dx` command. The durable
 surface is established by [ADR 0006](../decisions/0006-cli-command-surface.md); exact
-event schemas and report profiles remain provisional until M06/M10 qualification. It
+event schemas and report profiles are implemented as specified below and pinned by protocol fixtures. It
 covers human output, newline-delimited JSON (NDJSON), standard report exports, stream
 ownership, ordering, partial results, and operational errors. It does not expose the
 Bazel Build Event Protocol (BEP) or the internal action-result Protobuf described in
@@ -173,7 +173,7 @@ Raw Bazel progress and BEP events are never part of this API.
 
 Lint, typecheck, format, generate, check, and fix accept `check`.
 [`docs --check`](commands/docs.md) is validation without rendering; its output mapping
-follows the frozen O54 mappings. Docs build and check do not emit source `change` or
+is specified in the docs command contract. Docs build and check do not emit source `change` or
 `mutation` events for generated Bazel artifacts. Other commands use `default`.
 Subject to the collection and manifest validation rules below, JSON reports each exact calculated
 file change in both check and default modes as a `change`. Default mode additionally reports each
@@ -429,7 +429,7 @@ A `report` event confirms a successfully emitted standard report.
 
 | Field | Required | Type | Meaning |
 | --- | --- | --- | --- |
-| `format` | yes | string | `sarif`, `junit`, or `lcov`; SPDX shared-report mapping follows frozen O58 (see below) |
+| `format` | yes | string | `sarif`, `junit`, or `lcov` (`spdx` arrives with the license-family report below) |
 | `path` | yes | string | User-selected file destination |
 | `results_complete` | yes | boolean | Whether all selected result producers completed |
 
@@ -438,8 +438,9 @@ cannot coexist with NDJSON; successful document output plus process status is it
 confirmation in text mode.
 
 The license family's [SPDX 2.3 JSON report](commands/audit-update-bazel.md#license-family-dx-audit-license)
-follows the frozen O58 mappings; its shared-report format identifier
-and event mapping are constrained by those mappings, not a new profile defined here.
+is specified in the license-family contract; its shared-report format identifier
+and event mapping add no new profile here. Live SPDX emission is open under
+[#18](https://github.com/ralvik/rules_dx/issues/18).
 
 ```json
 {"schema":{"major":1,"minor":0},"event":"report","format":"sarif","path":"reports/lint.sarif","results_complete":true}
@@ -608,8 +609,8 @@ replace the selected failure or reorder durable output.
 The [update exception](commands/audit-update-bazel.md#dx-update) permits later independent
 selected dependency sets to run after a set failure, preserving successes and reporting
 blocked dependents. Operation boundaries, per-set reporting, and aggregate
-exit selection follow the frozen O12 mappings; live resolver-backend
-execution remains a gap. This does not authorize new event fields or update
+exit selection are specified in the [update contract](commands/audit-update-bazel.md#dx-update); live resolver-backend
+execution is open under [#19](https://github.com/ralvik/rules_dx/issues/19). This does not authorize new event fields or update
 mutation events, nor parallel execution.
 
 ## Dry Run
@@ -623,8 +624,9 @@ execution with `conflicting_option` naming `--report`.
 
 ## Standard Reports
 
-The report formats, SARIF/JUnit/LCOV profiles, SPDX mapping (frozen under O58;
-SPDX parsing/loading remains a gap), destination validation,
+The report formats, SARIF/JUnit/LCOV profiles, SPDX mapping (specified in
+[Standard Reports](standard-reports.md); SPDX parsing/loading is open under
+[#18](https://github.com/ralvik/rules_dx/issues/18)), destination validation,
 deterministic ordering, and partial-document behavior are defined in
 [Standard Reports](standard-reports.md). This document owns only report interaction with
 live streams and the NDJSON `report` event.
@@ -640,7 +642,7 @@ generate, env, codegen, setup, and `dx bazel` therefore preserve Bazel's code wh
 Bazel is the failing operation. Quality commands may return `1` after a successful Bazel
 invocation when normalized findings cross `--fail-on` or check mode proposes changes.
 For multiple selected update sets, any failed set makes the overall command fail; aggregate
-exit-code selection follows the frozen O12 mappings rather than the first-failure rule above.
+exit-code selection is specified in the [update contract](commands/audit-update-bazel.md#dx-update) rather than the first-failure rule above.
 
 On Unix, `dx` forwards an interrupting signal and re-raises it after safe cleanup so shell
 signal semantics are preserved; no `command_finished` event is promised after signal
@@ -660,7 +662,7 @@ value requires a new major version.
 
 Protocol fixtures must verify:
 
-- O12-qualified update continuation, per-set success/failure/blocked reporting, and overall
+- Update continuation, per-set success/failure/blocked reporting, and overall
   failure without rollback of successful independent changes or unsupported mutation events.
 - Exclusive stdout ownership and arbitrary subprocess output on stderr.
 - Complete deterministic unified patches in diff mode, including new files, multiple files,
