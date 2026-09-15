@@ -39,8 +39,9 @@ unaffected units can reuse cached outputs. Shared headers or imported types can 
 - Stable symbol IDs ([IR contract](doc-ir.md)) and normalized ordering are necessary but not
   sufficient for reproducibility. Byte equality is required for the same pinned producer and inputs,
   not across serializer or tool upgrades; cache correctness still requires execution evidence.
-- Byte-identical rebuild evidence (two builds, diffed) is a required
-  milestone gate, not an assumed property.
+- Byte-identical rebuild evidence (two builds, diffed) is required, not an assumed
+  property; the evidence is tracked in
+  [issue #10](https://github.com/ralvik/rules_dx/issues/10).
 
 ## Laziness And Scope
 

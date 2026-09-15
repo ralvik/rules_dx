@@ -33,10 +33,11 @@ schema and golden test fixtures are checked in; ordinary API changes require no 
   Authoritative for build facts.
 - [`dx docs`](../cli/commands/docs.md): build/check/serve command
   surface. [ADR 0006](../decisions/0006-cli-command-surface.md) records build versus
-  validation-only check; exact mappings follow frozen O54.
+  validation-only check; exact mappings are tracked in
+  [issue #10](https://github.com/ralvik/rules_dx/issues/10).
 
 Rust uses pinned nightly `rustdoc --output-format json`; Scala needs a
 Scaladoc/TASTy proof spike; Astro/MDX are prose-only with no API surface.
-v1 ships all thirteen adapters. Per-language input pins and mappings follow
-frozen O54; per-language adapter runs and renderer/site-build execution evidence
-remain future work tracked in [issue #10](https://github.com/ralvik/rules_dx/issues/10).
+v1 ships all thirteen adapters. Per-language input pins, mappings, adapter runs, and
+renderer/site-build execution evidence remain future work tracked in
+[issue #10](https://github.com/ralvik/rules_dx/issues/10).
