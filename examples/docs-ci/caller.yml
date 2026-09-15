@@ -13,7 +13,7 @@ on:
   workflow_dispatch: {}
 jobs:
   docs:
-    uses: rules_dx/.github/workflows/reusable-docs.yml@4ff4c7a4f100293f84455e58e3f12a0cdcc699d1
+    uses: rules_dx/.github/workflows/reusable-docs.yml@aacf640300998e518d5bbce6ef403bd54b8e8314
     with:
       rules_dx_version: "0.0.0"
       docs_scope: "//docs/..."
