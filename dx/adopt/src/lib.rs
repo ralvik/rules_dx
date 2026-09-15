@@ -50,7 +50,6 @@ pub const ALL_COMMANDS: &[&str] = &[
     "hooks",
     "status",
     "version",
-    "docs",
     "watch",
     "owners",
     "deps",
@@ -543,23 +542,6 @@ pub fn render_completion(shell: &str) -> Result<String, String> {
     Ok(out)
 }
 
-/// Plan one `dx docs` invocation (O54 freeze).
-pub fn plan_docs(check: bool, serve: bool, port: Option<u16>) -> Result<String, String> {
-    if port.is_some() && !serve {
-        return Err("--port requires --serve".to_owned());
-    }
-    let mode = if check { "check" } else { "build" };
-    if serve {
-        Ok(format!(
-            "docs:{mode}+serve:{}",
-            port.map(|p| p.to_string())
-                .unwrap_or_else(|| "8000".to_owned())
-        ))
-    } else {
-        Ok(format!("docs:{mode}"))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -744,13 +726,6 @@ mod tests {
         assert_eq!(leg.expr, "somepath(//a:one, //b:two)");
         assert!(plan_somepath("@o//a:one", "//b:two", false).is_err());
         assert!(plan_somepath("//a:one", "", false).is_err());
-    }
-
-    #[test]
-    fn docs_plan_rejects_port_without_serve() {
-        assert!(plan_docs(true, false, None).is_ok());
-        assert!(plan_docs(false, true, Some(8080)).is_ok());
-        assert!(plan_docs(false, false, Some(8080)).is_err());
     }
 
     #[test]

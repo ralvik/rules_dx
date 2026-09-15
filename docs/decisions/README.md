@@ -15,7 +15,7 @@ validation and are not stable commitments.
 | [0003: Initial Action Granularity](0003-action-granularity.md) | Provisional | — | Quality actions |
 | [0004: Naming](0004-naming.md) | Accepted | — | Public naming |
 | [0005: Explicit Command Mutation Semantics](0005-mutating-operations.md) | Accepted | — | CLI mutation |
-| [0006: CLI Command Surface](0006-cli-command-surface.md) | Superseded (check/fix/clean surface by 0018) | 2026-09-09 | CLI surface |
+| [0006: CLI Command Surface](0006-cli-command-surface.md) | Superseded (check/fix/clean surface by 0018; docs surface by 0020) | 2026-09-09 | CLI surface |
 | [0007: Tool Integration Model](0007-tool-integration-model.md) | Accepted | — | Quality integrations |
 | [0008: Dependency Currency](0008-dependency-currency.md) | Accepted | — | Dependency governance |
 | [0009: Project-Owned Starlark Testing](0009-starlark-testing.md) | Accepted | — | Testing |
@@ -29,3 +29,4 @@ validation and are not stable commitments.
 | [0017: dx Watch Loop](0017-dx-watch.md) | Provisional | — | CLI iteration |
 | [0018: Umbrella Check/Fix And Managed-State Cleanup](0018-umbrella-check-fix-cleanup-clean.md) | Accepted | — | CLI surface |
 | [0019: First-Release Additional-Foundation Dispositions](0019-first-release-additional-foundations.md) | Accepted | 2026-09-08 | V1 scope dispositions |
+| [0020: Remove The `dx docs` Placeholder Command](0020-remove-dx-docs-placeholder.md) | Accepted | — | CLI surface |

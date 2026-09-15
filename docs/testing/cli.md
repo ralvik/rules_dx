@@ -58,7 +58,7 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
 
 - Verify the final registry contains exactly `audit`, `lint`, `typecheck`, `test`,
   `format`, `build`, `run`, `watch`, `check`, `fix`, `clean`, `update`, `generate`, `codegen`, `env`, `setup`, `coverage`,
-  `docs`, `init`, `hooks`, `status`, `version`, `completion`, and `bazel`, plus implemented
+  `init`, `hooks`, `status`, `version`, `completion`, and `bazel`, plus implemented
   `owners`, `deps`, and `why` inspect commands. `status` and `version`
   are the implemented diagnostics/version surface; `completion` is the
   implemented generated-script surface. Compare the final registry
@@ -109,10 +109,7 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   no internal/external implementation labels enter structured output.
 - Verify workflow commands reject user-supplied external-repository scopes while
   `dx bazel` continues to forward them unchanged.
-- Verify `--check` for `lint`, `typecheck`, `format`, `generate`, `check`, `fix`, and
-  [`docs --check`](../cli/commands/docs.md) (tracked in
-  [issue #10](https://github.com/ralvik/rules_dx/issues/10): extraction plus shared
-  validation without rendering).
+- Verify `--check` for `lint`, `typecheck`, `format`, `generate`, `check`, and `fix`.
 - Verify docs build and qualified check modes consume generated, Bazel-cached IR without
   requiring committed snapshots or writing IR beside sources. A cold cache triggers normal
   Bazel execution, not a freshness failure; cached IR is not a source change or mutation event.

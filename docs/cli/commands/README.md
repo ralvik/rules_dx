@@ -39,7 +39,6 @@ tests from inactive configurable branches.
   [generation contracts](../../generation/README.md)
 - [Environment, codegen, and setup commands](environment-codegen-setup.md)
 - [`dx audit`, `dx update`, and `dx bazel`](audit-update-bazel.md)
-- [`dx docs`](docs.md): build, check, and serve the unified documentation site (adapter runs and renderer/site-build execution tracked in [issue #10](https://github.com/ralvik/rules_dx/issues/10))
 - [`dx init` and `dx hooks`](hooks.md): scaffolding and the custom hermetic git-hook runner
 - `dx status` and `dx version`: the consolidated diagnostics surface and single-version
   pin/launcher with rollback

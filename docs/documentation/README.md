@@ -31,8 +31,10 @@ schema and golden test fixtures are checked in; ordinary API changes require no 
 - [Site build](site.md): Bazel cache-friendly action design, determinism
   rules, laziness, generated-artifact lifecycle, and the decided mdBook renderer.
   Authoritative for build facts.
-- [`dx docs`](../cli/commands/docs.md): build/check/serve command
-  surface. [ADR 0006](../decisions/0006-cli-command-surface.md) records build versus
+- Command surface removed ([issue #31](https://github.com/ralvik/rules_dx/issues/31));
+  reintroduction tracked in [issue #10](https://github.com/ralvik/rules_dx/issues/10)
+  (see the [`dx docs` stub](../cli/commands/docs.md)).
+  [ADR 0006](../decisions/0006-cli-command-surface.md) records build versus
   validation-only check; exact mappings are tracked in
   [issue #10](https://github.com/ralvik/rules_dx/issues/10).
 

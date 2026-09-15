@@ -23,7 +23,7 @@ jobs:
       id-token: write
 ```
 
-`docs-check` runs `dx docs --check` plus `dx lint --check` over
+`docs-check` runs `dx lint --check` over
 `docs_scope`; the lint pass is the Markdown link/structure audit, so
 broken relative targets fail before deploy. `publish: true` uploads
 `docs_dir` and deploys it to the `github-pages` environment. Enable

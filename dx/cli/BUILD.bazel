@@ -43,7 +43,6 @@ rust_library(
         "//dx/clean:dx_clean",
         "//dx/codegen:dx_codegen",
         "//dx/diff:dx_diff",
-        "//dx/docs:dx_docs",
         "//dx/env_plan:dx_env_plan",
         "//dx/output:dx_output",
         "//dx/process:dx_process",

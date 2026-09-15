@@ -43,7 +43,6 @@ pub enum Command {
     Hooks,
     Status,
     Version,
-    Docs,
     Watch,
     Owners,
     Deps,
@@ -76,7 +75,6 @@ impl Command {
             Command::Hooks => "hooks",
             Command::Status => "status",
             Command::Version => "version",
-            Command::Docs => "docs",
             Command::Watch => "watch",
             Command::Owners => "owners",
             Command::Deps => "deps",
@@ -108,7 +106,6 @@ impl Command {
             "hooks" => Some(Command::Hooks),
             "status" => Some(Command::Status),
             "version" => Some(Command::Version),
-            "docs" => Some(Command::Docs),
             "watch" => Some(Command::Watch),
             "owners" => Some(Command::Owners),
             "deps" => Some(Command::Deps),
@@ -156,7 +153,7 @@ impl Command {
     }
 
     /// True for the delivered adoption/inspect surfaces (`init`, `hooks`,
-    /// `status`, `version`, `docs`, `watch`, `owners`, `deps`, `why`,
+    /// `status`, `version`, `watch`, `owners`, `deps`, `why`,
     /// `completion`): they run local adoption helpers or thin Bazel-query
     /// forwarding instead of the quality aspect pipeline. `bazel` is not
     /// adoption: it forwards raw arguments to the Bazel launcher.
@@ -169,7 +166,6 @@ impl Command {
                 | Command::Hooks
                 | Command::Status
                 | Command::Version
-                | Command::Docs
                 | Command::Watch
                 | Command::Owners
                 | Command::Deps
@@ -213,10 +209,6 @@ pub struct Invocation {
     /// Inspect wrappers use `cquery` instead of `query` (Owners, Deps,
     /// Why only).
     pub configured: bool,
-    /// `dx docs --serve`: preview last build outputs locally.
-    pub serve: bool,
-    /// `dx docs --serve --port <port>`: preview port.
-    pub port: Option<u16>,
 }
 
 impl Invocation {
@@ -267,12 +259,12 @@ impl std::fmt::Display for ArgsError {
         match self {
             ArgsError::MissingCommand => write!(
                 f,
-                "missing command: want audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel"
+                "missing command: want audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel"
             ),
             ArgsError::UnknownCommand { command } => {
                 write!(
                     f,
-                    "unknown command {command:?}: want audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel"
+                    "unknown command {command:?}: want audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel"
                 )
             }
             ArgsError::UnknownOption { option } => write!(f, "unknown option {option:?}"),
@@ -374,8 +366,6 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     let mut pin: Option<String> = None;
     let mut rollback = false;
     let mut configured = false;
-    let mut serve = false;
-    let mut port: Option<u16> = None;
     let mut index = 0;
     while index < args.len() {
         let arg = &args[index];
@@ -479,25 +469,6 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                     }
                     configured = true;
                 }
-                "--serve" => {
-                    if inline.is_some() {
-                        return Err(ArgsError::UnknownOption {
-                            option: arg.clone(),
-                        });
-                    }
-                    serve = true;
-                }
-                "--port" => {
-                    let value = take_value(args, &mut index, "--port", inline)?;
-                    match value.parse::<u16>() {
-                        Ok(port_value) => port = Some(port_value),
-                        Err(_) => {
-                            return Err(ArgsError::MissingValue {
-                                option: "--port".to_owned(),
-                            });
-                        }
-                    }
-                }
                 _ => {
                     return Err(ArgsError::UnknownOption {
                         option: arg.clone(),
@@ -579,7 +550,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         // Managed environment/codegen/setup commands (M25 WP5) run one
         // Bazel collection request behind a canonical selection with
         // text prose only: no check mode, no finding thresholds, no
-        // standard reports, and no version/docs/clean-only flags.
+        // standard reports, and no version/clean-only flags.
         // `--bazel` is rejected by the clean-ownership arm above;
         // `--rollback`/`--configured` by the catch-alls below. Scope is
         // repository-wide by default or one exact target label, validated
@@ -616,18 +587,6 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                 option: "--pin".to_owned(),
             });
         }
-        if serve {
-            return Err(ArgsError::UnsupportedOption {
-                command: command.name(),
-                option: "--serve".to_owned(),
-            });
-        }
-        if port.is_some() {
-            return Err(ArgsError::UnsupportedOption {
-                command: command.name(),
-                option: "--port".to_owned(),
-            });
-        }
         if let Err(error) = dx_setup::resolve_scope(&targets) {
             return Err(match error {
                 dx_setup::ScopeError::MultipleTargets { .. } => ArgsError::UnsupportedOption {
@@ -648,7 +607,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         // plus scope spellings, non-mutating, with SARIF reports and
         // `--fail-on` thresholds. `--check` is meaningless (audit never
         // mutates), Bazel forwards do not apply (no collection build
-        // yet), and version/docs/clean-only flags do not apply.
+        // yet), and version/clean-only flags do not apply.
         // Family parsing itself stays in `dx_audit::plan_audit`; args
         // only preserve positionals verbatim (family or scopes).
         if check {
@@ -661,18 +620,6 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
                 option: "--pin".to_owned(),
-            });
-        }
-        if serve {
-            return Err(ArgsError::UnsupportedOption {
-                command: command.name(),
-                option: "--serve".to_owned(),
-            });
-        }
-        if port.is_some() {
-            return Err(ArgsError::UnsupportedOption {
-                command: command.name(),
-                option: "--port".to_owned(),
             });
         }
         if !bazel_options.is_empty() {
@@ -729,18 +676,6 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                 option: "--pin".to_owned(),
             });
         }
-        if serve {
-            return Err(ArgsError::UnsupportedOption {
-                command: command.name(),
-                option: "--serve".to_owned(),
-            });
-        }
-        if port.is_some() {
-            return Err(ArgsError::UnsupportedOption {
-                command: command.name(),
-                option: "--port".to_owned(),
-            });
-        }
         if !bazel_options.is_empty() {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -782,9 +717,9 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     if command.is_adoption() {
         // Adoption/inspect surfaces run local helpers or thin query
         // forwarding: quality-only thresholds/reports and Bazel forwards
-        // do not apply. `--check` belongs to `docs` (render validation)
-        // and `version` (pin drift) only; `--pin` belongs to `version`
-        // only; `--serve`/`--port` belong to `docs` only. `--rollback`
+        // do not apply. `--check` belongs to `version` (pin drift)
+        // only; `--pin` belongs to `version`
+        // only. `--rollback`
         // and `--configured` ownership is enforced by the catch-all
         // below.
         if fail_on_name != "warning" {
@@ -811,7 +746,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                 option: "--".to_owned(),
             });
         }
-        if check && command != Command::Docs && command != Command::Version {
+        if check && command != Command::Version {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
                 option: "--check".to_owned(),
@@ -821,24 +756,6 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
                 option: "--pin".to_owned(),
-            });
-        }
-        if serve && command != Command::Docs {
-            return Err(ArgsError::UnsupportedOption {
-                command: command.name(),
-                option: "--serve".to_owned(),
-            });
-        }
-        if port.is_some() && command != Command::Docs {
-            return Err(ArgsError::UnsupportedOption {
-                command: command.name(),
-                option: "--port".to_owned(),
-            });
-        }
-        if port.is_some() && !serve {
-            return Err(ArgsError::UnsupportedOption {
-                command: command.name(),
-                option: "--port".to_owned(),
             });
         }
         match command {
@@ -919,18 +836,6 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                 option: "--pin".to_owned(),
             });
         }
-        if serve {
-            return Err(ArgsError::UnsupportedOption {
-                command: command.name(),
-                option: "--serve".to_owned(),
-            });
-        }
-        if port.is_some() {
-            return Err(ArgsError::UnsupportedOption {
-                command: command.name(),
-                option: "--port".to_owned(),
-            });
-        }
         if bazel_clean {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -992,8 +897,6 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         pin,
         rollback,
         configured,
-        serve,
-        port,
     })
 }
 
@@ -1647,7 +1550,7 @@ mod tests {
             vec!["build", "//a:one", "--configured"],
             vec!["lint", "--rollback"],
             vec!["check", "//...", "--configured"],
-            vec!["docs", "--rollback"],
+            vec!["status", "--pin=0.1.0"],
         ] {
             assert!(
                 matches!(
@@ -1696,7 +1599,7 @@ mod tests {
                 "words: {words:?}"
             );
         }
-        // Quality-only, version-only, docs-only, and clean-only options
+        // Quality-only, version-only, and clean-only options
         // fail fast on managed commands.
         for words in [
             vec!["codegen", "--check"],
@@ -1706,8 +1609,8 @@ mod tests {
             vec!["env", "--pin=0.1.0"],
             vec!["setup", "--rollback"],
             vec!["codegen", "--configured"],
-            vec!["env", "--serve"],
-            vec!["setup", "--port=8080"],
+            vec!["env", "--configured"],
+            vec!["setup", "--pin=0.2.0"],
             vec!["codegen", "--bazel"],
         ] {
             assert!(

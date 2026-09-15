@@ -1,8 +1,8 @@
 //! Delivered adoption/inspect execution (M30b WPs 2-4, 6-7, O61).
 //!
 //! Contract: `docs/cli/commands/init.md`, `hooks.md`, `status.md`,
-//! `version.md`, `docs.md`, `watch.md`, `inspect.md`, `completion.md`.
-//! Adoption commands run local helpers from `dx_adopt`/`dx_docs` or thin
+//! `version.md`, `watch.md`, `inspect.md`, `completion.md`.
+//! Adoption commands run local helpers from `dx_adopt` or thin
 //! `bazel query`/`cquery` forwarding; they never enter the quality aspect
 //! pipeline. Exit codes follow the CLI contract: `0` success, `1`
 //! operational failure, `2` pre-execution usage failure.
@@ -47,7 +47,6 @@ pub fn execute_adoption(invocation: &Invocation, env: AdoptEnv<'_>) -> i32 {
         Command::Hooks => execute_hooks(invocation, workspace, out, err),
         Command::Status => execute_status(invocation, workspace, out, err),
         Command::Version => execute_version(invocation, workspace, out, err),
-        Command::Docs => execute_docs(invocation, workspace, out, err),
         Command::Watch => execute_watch(invocation, workspace, out, err),
         Command::Owners | Command::Deps | Command::Why => {
             execute_inspect(invocation, workspace, query_runner, out, err)
@@ -259,28 +258,6 @@ fn execute_version(
         let _ = writeln!(out, "rules_dx {}", dx_adopt::MODULE_VERSION);
         let _ = writeln!(out, "pin {current}");
         0
-    }
-}
-
-fn execute_docs(
-    invocation: &Invocation,
-    _workspace: &std::path::Path,
-    out: &mut dyn Write,
-    err: &mut dyn Write,
-) -> i32 {
-    match dx_adopt::plan_docs(invocation.check, invocation.serve, invocation.port) {
-        Ok(plan) => {
-            let mode = dx_docs::plan_docs_mode(invocation.check);
-            let actions = dx_docs::plan_mode_actions(mode);
-            let scope = if invocation.targets.is_empty() {
-                "//...".to_owned()
-            } else {
-                invocation.targets.join(" ")
-            };
-            let _ = writeln!(out, "{plan} actions={} scope={scope}", actions.len());
-            0
-        }
-        Err(message) => pre_exec(err, &message),
     }
 }
 
@@ -702,27 +679,6 @@ mod tests {
         );
         assert_eq!(code, 1);
         assert!(String::from_utf8(err).expect("err").contains("drift"));
-        let _ = std::fs::remove_dir_all(&root);
-    }
-
-    #[test]
-    fn docs_plans_check_and_build() {
-        let root = temp_root("docs");
-        let mut out = Vec::new();
-        let mut err = Vec::new();
-        let check = invocation(&["docs", "--check"]);
-        assert_eq!(
-            execute_adoption(
-                &check,
-                AdoptEnv {
-                    workspace: &root,
-                    query_runner: &NullQuery,
-                    out: &mut out,
-                    err: &mut err,
-                },
-            ),
-            0
-        );
         let _ = std::fs::remove_dir_all(&root);
     }
 
