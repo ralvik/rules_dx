@@ -54,5 +54,17 @@ concurrency:
 jobs:
   docs-check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - run: echo docs-check ok
+      - uses: actions/checkout@v7
+      - name: Install pinned Bazelisk
+        run: |
+          curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
+          echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
+          sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
+          bazel version
+      - name: Verify rules_dx pin
+        run: test -f MODULE.bazel && grep -q 'version = "${{ inputs.rules_dx_version }}"' MODULE.bazel
+      - run: bazel run @rules_dx//dx/cli:dx -- docs --check ${{ inputs.docs_scope }}
+      - run: bazel run @rules_dx//dx/cli:dx -- lint --check ${{ inputs.docs_scope }}
