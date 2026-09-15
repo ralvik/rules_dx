@@ -5,8 +5,9 @@
 //! `#file-ownership`. Main-workspace labels and target patterns pass
 //! through after workspace validation; existing files resolve to every
 //! direct source owner through one unconfigured `bazel query` invocation
-//! per file, addressed by the nearest enclosing package; directories
-//! become recursive Bazel patterns without
+//! per resolver call, with every file label quoted into a single
+//! deterministic set and addressed by the nearest enclosing package;
+//! directories become recursive Bazel patterns without
 //! filesystem enumeration. This module never reads BUILD files and never
 //! lists directories: the only filesystem calls are existence/kind probes
 //! (`symlink_metadata`), and ownership facts come solely from Bazel
@@ -172,10 +173,26 @@ impl std::fmt::Display for ResolveError {
 
 impl std::error::Error for ResolveError {}
 
-/// One `bazel query` invocation per input file (O44): depth-1 reverse
-/// dependencies constrained to rules over the main-workspace universe.
-fn ownership_expression(label: &str) -> String {
-    format!("kind('rule', rdeps(//..., {}, 1))", quote_label(label))
+/// Quotes every item into one deterministic space-separated set literal:
+/// items are bytewise sorted so the query expression is stable and
+/// inspectable no matter the input order.
+fn quote_set(items: &[String]) -> String {
+    let mut sorted: Vec<&String> = items.iter().collect();
+    sorted.sort();
+    sorted
+        .iter()
+        .map(|item| quote_label(item))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Batched ownership expression (O44): depth-1 reverse dependencies
+/// constrained to rules over the main-workspace universe, with every file
+/// label quoted into one deterministic set. One bounded query per
+/// resolver call no matter how many files share the scope; an empty
+/// mapping names the first file scope so the diagnostic stays actionable.
+fn ownership_set_expression(labels: &[String]) -> String {
+    format!("kind('rule', rdeps(//..., set({}), 1))", quote_set(labels))
 }
 
 /// Quotes a label as a double-quoted query string literal, escaping
@@ -193,19 +210,6 @@ fn quote_label(label: &str) -> String {
     }
     quoted.push('"');
     quoted
-}
-
-/// Exact query argv: launcher plus workflow startup options (the
-/// workspace `.bazelrc` stays in effect) and the ownership expression.
-/// No user Bazel options leak into resolution.
-fn ownership_argv(label: &str) -> Vec<String> {
-    let mut argv = Vec::with_capacity(WORKFLOW_STARTUP_OPTS.len() + 4);
-    argv.push(launcher_argv0().to_owned());
-    argv.extend(WORKFLOW_STARTUP_OPTS.iter().map(ToString::to_string));
-    argv.push("query".to_owned());
-    argv.push("--".to_owned());
-    argv.push(ownership_expression(label));
-    argv
 }
 
 /// Exact query argv for an arbitrary unconfigured query expression.
@@ -245,13 +249,14 @@ fn run_label_query(
     parse_owners(&result.stdout, expression)
 }
 
-/// Runnable file-owner expression (O52): depth-1 reverse dependencies
-/// constrained to rules whose kind ends in `_binary`. Aliases are not
+/// Batched runnable file-owner expression (O52): depth-1 reverse
+/// dependencies constrained to rules whose kind ends in `_binary`, with
+/// every file label quoted into one deterministic set. Aliases are not
 /// followed for file scopes: only direct `_binary` owners qualify.
-fn runnable_expression(label: &str) -> String {
+fn runnable_set_expression(labels: &[String]) -> String {
     format!(
-        "kind('.*_binary rule', rdeps(//..., {}, 1))",
-        quote_label(label)
+        "kind('.*_binary rule', rdeps(//..., set({}), 1))",
+        quote_set(labels)
     )
 }
 
@@ -294,60 +299,87 @@ fn normalize_rel(raw: &str) -> Result<String, ResolveError> {
 /// Only existence is probed; contents are never read.
 const PACKAGE_FILES: [&str; 2] = ["BUILD.bazel", "BUILD"];
 
-/// Finds the nearest enclosing Bazel package for a normalized relative
-/// file path by walking from the parent directory up to the workspace
-/// root. Returns `(package, path_in_package)`, where the root package
-/// is `""`. Returns `None` when no directory in the chain holds a
-/// package marker.
-fn enclosing_package(workspace: &Path, rel: &str) -> Option<(String, String)> {
-    let mut dir = match rel.rfind('/') {
-        Some(index) => &rel[..index],
-        None => "",
-    };
-    loop {
+/// Memoized package-marker probes for one resolver call. Only ancestor
+/// directories of input files are ever probed: label and directory
+/// scopes never trigger package walks, and each directory's marker
+/// existence is probed at most once no matter how many files share the
+/// enclosing package.
+#[derive(Default)]
+struct PackageCache {
+    /// Directory ("" for the workspace root) to marker presence.
+    is_package: std::collections::HashMap<String, bool>,
+}
+
+impl PackageCache {
+    /// Reports whether `dir` holds a package marker, probing once.
+    fn is_package(&mut self, workspace: &Path, dir: &str) -> bool {
+        if let Some(hit) = self.is_package.get(dir) {
+            return *hit;
+        }
         let base = if dir.is_empty() {
             workspace.to_path_buf()
         } else {
             workspace.join(dir)
         };
-        if PACKAGE_FILES
+        let found = PACKAGE_FILES
             .iter()
-            .any(|marker| std::fs::symlink_metadata(base.join(marker)).is_ok())
-        {
-            let in_package = if dir.is_empty() {
-                rel.to_owned()
-            } else {
-                rel[dir.len() + 1..].to_owned()
-            };
-            return Some((dir.to_owned(), in_package));
-        }
-        if dir.is_empty() {
-            return None;
-        }
-        dir = match dir.rfind('/') {
-            Some(index) => &dir[..index],
+            .any(|marker| std::fs::symlink_metadata(base.join(marker)).is_ok());
+        self.is_package.insert(dir.to_owned(), found);
+        found
+    }
+
+    /// Finds the nearest enclosing Bazel package for a normalized relative
+    /// file path by walking from the parent directory up to the workspace
+    /// root. Returns `(package, path_in_package)`, where the root package
+    /// is `""`. Returns `None` when no directory in the chain holds a
+    /// package marker.
+    fn enclosing(&mut self, workspace: &Path, rel: &str) -> Option<(String, String)> {
+        let mut dir = match rel.rfind('/') {
+            Some(index) => &rel[..index],
             None => "",
         };
-    }
-}
-
-/// Maps a normalized relative file path to its source label through
-/// the nearest enclosing package (`pkg/src/deep/a.py` to
-/// `//pkg:src/deep/a.py`, root files to `//:file`). Files with no
-/// enclosing package are [`ResolveError::NotAPackage`], never an
-/// invalid label: Bazel file labels require a package.
-fn file_label(workspace: &Path, rel: &str, scope: &str) -> Result<String, ResolveError> {
-    match enclosing_package(workspace, rel) {
-        Some((package, in_package)) => {
-            if package.is_empty() {
-                Ok(format!("//:{in_package}"))
-            } else {
-                Ok(format!("//{package}:{in_package}"))
+        loop {
+            if self.is_package(workspace, dir) {
+                let in_package = if dir.is_empty() {
+                    rel.to_owned()
+                } else {
+                    rel[dir.len() + 1..].to_owned()
+                };
+                return Some((dir.to_owned(), in_package));
             }
+            if dir.is_empty() {
+                return None;
+            }
+            dir = match dir.rfind('/') {
+                Some(index) => &dir[..index],
+                None => "",
+            };
         }
-        None => Err(ResolveError::NotAPackage {
-            scope: scope.to_owned(),
-        }),
+    }
+
+    /// Maps a normalized relative file path to its source label through
+    /// the nearest enclosing package (`pkg/src/deep/a.py` to
+    /// `//pkg:src/deep/a.py`, root files to `//:file`). Files with no
+    /// enclosing package are [`ResolveError::NotAPackage`], never an
+    /// invalid label: Bazel file labels require a package.
+    fn file_label(
+        &mut self,
+        workspace: &Path,
+        rel: &str,
+        scope: &str,
+    ) -> Result<String, ResolveError> {
+        match self.enclosing(workspace, rel) {
+            Some((package, in_package)) => {
+                if package.is_empty() {
+                    Ok(format!("//:{in_package}"))
+                } else {
+                    Ok(format!("//{package}:{in_package}"))
+                }
+            }
+            None => Err(ResolveError::NotAPackage {
+                scope: scope.to_owned(),
+            }),
+        }
     }
 }
 
@@ -393,92 +425,118 @@ fn parse_owners(stdout: &[u8], label: &str) -> Result<Vec<String>, ResolveError>
     Ok(owners)
 }
 
-/// Resolves one file scope to every direct source owner through Bazel
-/// query. The file content and BUILD text are never read: ownership is
-/// a graph fact reported on query stdout.
-fn resolve_file(
-    rel: &str,
-    scope: &str,
+/// One file scope after classification: the original scope text for
+/// diagnostics and the source label through the nearest enclosing
+/// package for queries.
+struct FileScope {
+    /// Original scope positional, for [`ResolveError::NoOwner`].
+    scope: String,
+    /// Source label addressing the file in query syntax.
+    label: String,
+}
+
+/// Scope positionals classified once per resolver call and shared by the
+/// plain, test, and run paths so they cannot drift apart: labels pass
+/// through, directories become recursive patterns without filesystem
+/// enumeration, and files carry their source labels for one batched
+/// ownership query.
+struct ClassifiedScopes {
+    /// Main-workspace labels passing through in input order.
+    labels: Vec<String>,
+    /// File scopes in input order with their source labels.
+    files: Vec<FileScope>,
+    /// Recursive patterns for directory scopes in input order.
+    patterns: Vec<String>,
+    /// Original file and directory positionals in input order, for
+    /// [`ResolveError::NoRunnable`].
+    paths: Vec<String>,
+}
+
+/// Classifies every scope positional: main-workspace labels pass
+/// through, external and package-relative labels fail, and anything else
+/// is a workspace-relative file or directory path. Package-marker walks
+/// run only for file scopes through the shared cache, so directory and
+/// label scopes never trigger enclosing-package probes.
+fn classify_scopes(
+    scopes: &[String],
+    workspace: &Path,
+    cache: &mut PackageCache,
+) -> Result<ClassifiedScopes, ResolveError> {
+    let mut classified = ClassifiedScopes {
+        labels: Vec::new(),
+        files: Vec::new(),
+        patterns: Vec::new(),
+        paths: Vec::new(),
+    };
+    for raw in scopes {
+        if raw.starts_with("//") {
+            classified.labels.push(raw.clone());
+            continue;
+        }
+        if raw.starts_with('@') {
+            return Err(ResolveError::ExternalScope { scope: raw.clone() });
+        }
+        if raw.starts_with(':') {
+            return Err(ResolveError::RelativeLabel { scope: raw.clone() });
+        }
+        let rel = normalize_rel(raw)?;
+        let entry = workspace.join(&rel);
+        let metadata = std::fs::symlink_metadata(&entry).map_err(|error| {
+            if error.kind() == io::ErrorKind::NotFound {
+                ResolveError::PathNotFound { scope: raw.clone() }
+            } else {
+                ResolveError::QueryFailed {
+                    label: cache
+                        .file_label(workspace, &rel, raw)
+                        .unwrap_or_else(|_| raw.clone()),
+                    detail: error.to_string(),
+                }
+            }
+        })?;
+        if metadata.is_dir() {
+            if rel.chars().any(char::is_control) {
+                return Err(ResolveError::UnsupportedName { scope: raw.clone() });
+            }
+            classified.patterns.push(dir_pattern(&rel));
+            classified.paths.push(raw.clone());
+        } else if metadata.is_file() {
+            if rel.chars().any(char::is_control) {
+                return Err(ResolveError::UnsupportedName { scope: raw.clone() });
+            }
+            let label = cache.file_label(workspace, &rel, raw)?;
+            classified.files.push(FileScope {
+                scope: raw.clone(),
+                label,
+            });
+            classified.paths.push(raw.clone());
+        } else {
+            return Err(ResolveError::NotFileOrDir { scope: raw.clone() });
+        }
+    }
+    Ok(classified)
+}
+
+/// Resolves every classified file scope to its direct source owners
+/// through one bounded `bazel query` invocation over the batched label
+/// set. The file content and BUILD text are never read: ownership is a
+/// graph fact reported on query stdout. An empty mapping names the first
+/// file scope, since per-file attribution is not observable from a union.
+fn resolve_file_owners(
+    files: &[FileScope],
     workspace: &Path,
     runner: &dyn QueryRunner,
 ) -> Result<Vec<String>, ResolveError> {
-    if rel.chars().any(char::is_control) {
-        return Err(ResolveError::UnsupportedName {
-            scope: scope.to_owned(),
-        });
-    }
-    let label = file_label(workspace, rel, scope)?;
-    let argv = ownership_argv(&label);
-    let result = runner
-        .run_query(&argv, workspace)
-        .map_err(|error| ResolveError::QueryFailed {
-            label: label.clone(),
-            detail: error.to_string(),
-        })?;
-    if result.code != Some(0) {
-        return Err(ResolveError::QueryFailed {
-            label: label.clone(),
-            detail: first_line(&result.stderr),
-        });
-    }
-    let owners = parse_owners(&result.stdout, &label)?;
+    let labels: Vec<String> = files.iter().map(|file| file.label.clone()).collect();
+    let expression = ownership_set_expression(&labels);
+    let owners = run_label_query(&expression, workspace, runner)?;
     if owners.is_empty() {
+        let first = &files[0];
         return Err(ResolveError::NoOwner {
-            file: scope.to_owned(),
-            label,
+            file: first.scope.clone(),
+            label: first.label.clone(),
         });
     }
     Ok(owners)
-}
-
-/// Classifies one scope positional: main-workspace labels and patterns
-/// pass through, external and package-relative labels fail, and
-/// anything else is a workspace-relative file or directory path.
-fn resolve_one(
-    raw: &str,
-    workspace: &Path,
-    runner: &dyn QueryRunner,
-    labels: &mut Vec<String>,
-    resolved: &mut Vec<String>,
-) -> Result<(), ResolveError> {
-    if raw.starts_with("//") {
-        labels.push(raw.to_owned());
-        return Ok(());
-    }
-    if raw.starts_with('@') {
-        return Err(ResolveError::ExternalScope {
-            scope: raw.to_owned(),
-        });
-    }
-    if raw.starts_with(':') {
-        return Err(ResolveError::RelativeLabel {
-            scope: raw.to_owned(),
-        });
-    }
-    let rel = normalize_rel(raw)?;
-    let entry = workspace.join(&rel);
-    let metadata = std::fs::symlink_metadata(&entry).map_err(|error| {
-        if error.kind() == io::ErrorKind::NotFound {
-            ResolveError::PathNotFound {
-                scope: raw.to_owned(),
-            }
-        } else {
-            ResolveError::QueryFailed {
-                label: file_label(workspace, &rel, raw).unwrap_or_else(|_| raw.to_owned()),
-                detail: error.to_string(),
-            }
-        }
-    })?;
-    if metadata.is_dir() {
-        resolved.push(dir_pattern(&rel));
-    } else if metadata.is_file() {
-        resolved.extend(resolve_file(&rel, raw, workspace, runner)?);
-    } else {
-        return Err(ResolveError::NotFileOrDir {
-            scope: raw.to_owned(),
-        });
-    }
-    Ok(())
 }
 
 /// Resolves explicit scope positionals into exact Bazel targets.
@@ -498,19 +556,19 @@ pub fn resolve(
             targets: vec!["//...".to_owned()],
         });
     }
-    let mut labels = Vec::new();
-    let mut resolved = Vec::new();
-    for raw in scopes {
-        resolve_one(raw, workspace, runner, &mut labels, &mut resolved)?;
-    }
-    if resolved.is_empty() {
+    let mut cache = PackageCache::default();
+    let classified = classify_scopes(scopes, workspace, &mut cache)?;
+    if classified.files.is_empty() && classified.patterns.is_empty() {
         return Ok(ResolvedScope {
-            scope: Scope::Labels(labels.clone()),
-            targets: labels,
+            scope: Scope::Labels(classified.labels.clone()),
+            targets: classified.labels,
         });
     }
-    let mut targets = labels;
-    targets.extend(resolved);
+    let mut targets = classified.labels;
+    if !classified.files.is_empty() {
+        targets.extend(resolve_file_owners(&classified.files, workspace, runner)?);
+    }
+    targets.extend(classified.patterns);
     targets.sort();
     targets.dedup();
     Ok(ResolvedScope {
@@ -539,51 +597,17 @@ pub fn resolve_for_test(
             targets: vec!["//...".to_owned()],
         });
     }
-    let mut labels = Vec::new();
-    let mut patterns = Vec::new();
-    let mut file_owners = Vec::new();
-    let mut saw_resolved = false;
-    for raw in scopes {
-        if raw.starts_with("//") {
-            labels.push(raw.clone());
-            continue;
-        }
-        if raw.starts_with('@') {
-            return Err(ResolveError::ExternalScope { scope: raw.clone() });
-        }
-        if raw.starts_with(':') {
-            return Err(ResolveError::RelativeLabel { scope: raw.clone() });
-        }
-        let rel = normalize_rel(raw)?;
-        let entry = workspace.join(&rel);
-        let metadata = std::fs::symlink_metadata(&entry).map_err(|error| {
-            if error.kind() == io::ErrorKind::NotFound {
-                ResolveError::PathNotFound { scope: raw.clone() }
-            } else {
-                ResolveError::QueryFailed {
-                    label: file_label(workspace, &rel, raw).unwrap_or_else(|_| raw.clone()),
-                    detail: error.to_string(),
-                }
-            }
-        })?;
-        saw_resolved = true;
-        if metadata.is_dir() {
-            patterns.push(dir_pattern(&rel));
-        } else if metadata.is_file() {
-            file_owners.extend(resolve_file(&rel, raw, workspace, runner)?);
-        } else {
-            return Err(ResolveError::NotFileOrDir { scope: raw.clone() });
-        }
-    }
-    if file_owners.is_empty() {
-        if !saw_resolved {
+    let mut cache = PackageCache::default();
+    let classified = classify_scopes(scopes, workspace, &mut cache)?;
+    if classified.files.is_empty() {
+        if classified.patterns.is_empty() {
             return Ok(ResolvedScope {
-                scope: Scope::Labels(labels.clone()),
-                targets: labels,
+                scope: Scope::Labels(classified.labels.clone()),
+                targets: classified.labels,
             });
         }
-        let mut targets = labels;
-        targets.extend(patterns);
+        let mut targets = classified.labels;
+        targets.extend(classified.patterns);
         targets.sort();
         targets.dedup();
         return Ok(ResolvedScope {
@@ -591,11 +615,10 @@ pub fn resolve_for_test(
             targets,
         });
     }
-    file_owners.sort();
-    file_owners.dedup();
+    let file_owners = resolve_file_owners(&classified.files, workspace, runner)?;
     let tests = map_owners_to_tests(&file_owners, workspace, runner)?;
-    let mut targets = labels;
-    targets.extend(patterns);
+    let mut targets = classified.labels;
+    targets.extend(classified.patterns);
     targets.extend(tests);
     targets.sort();
     targets.dedup();
@@ -625,79 +648,45 @@ pub fn resolve_run(
     if scopes.is_empty() {
         return Err(ResolveError::EmptyScope);
     }
-    let mut labels = Vec::new();
-    let mut has_path = false;
-    for raw in scopes {
-        if raw.starts_with("//") {
-            labels.push(raw.clone());
-        } else if raw.starts_with('@') {
-            return Err(ResolveError::ExternalScope { scope: raw.clone() });
-        } else if raw.starts_with(':') {
-            return Err(ResolveError::RelativeLabel { scope: raw.clone() });
+    let mut cache = PackageCache::default();
+    let classified = classify_scopes(scopes, workspace, &mut cache)?;
+    if classified.files.is_empty() && classified.patterns.is_empty() {
+        return Ok(classified.labels);
+    }
+    let mut candidates: Vec<String> = classified.labels;
+    if !classified.files.is_empty() {
+        let labels: Vec<String> = classified
+            .files
+            .iter()
+            .map(|file| file.label.clone())
+            .collect();
+        let found = run_label_query(&runnable_set_expression(&labels), workspace, runner)?;
+        if found.is_empty() {
+            // Distinguish "files owned but not executable" from "files
+            // unowned": check plain ownership once for the batch.
+            let owned = run_label_query(&ownership_set_expression(&labels), workspace, runner)?;
+            if owned.is_empty() {
+                let first = &classified.files[0];
+                return Err(ResolveError::NoOwner {
+                    file: first.scope.clone(),
+                    label: first.label.clone(),
+                });
+            }
         } else {
-            has_path = true;
+            candidates.extend(found);
         }
     }
-    if !has_path {
-        return Ok(labels);
-    }
-    let mut candidates: Vec<String> = labels;
-    let mut scope_names = Vec::new();
-    for raw in scopes {
-        if raw.starts_with("//") || raw.starts_with('@') || raw.starts_with(':') {
-            continue;
-        }
-        let rel = normalize_rel(raw)?;
-        let entry = workspace.join(&rel);
-        let metadata = std::fs::symlink_metadata(&entry).map_err(|error| {
-            if error.kind() == io::ErrorKind::NotFound {
-                ResolveError::PathNotFound { scope: raw.clone() }
-            } else {
-                ResolveError::QueryFailed {
-                    label: raw.clone(),
-                    detail: error.to_string(),
-                }
-            }
-        })?;
-        if metadata.is_dir() {
-            if rel.chars().any(char::is_control) {
-                return Err(ResolveError::UnsupportedName { scope: raw.clone() });
-            }
-            let pattern = dir_pattern(&rel);
-            let found = run_label_query(&dir_runnable_expression(&pattern), workspace, runner)?;
-            candidates.extend(found);
-            scope_names.push(raw.clone());
-        } else if metadata.is_file() {
-            if rel.chars().any(char::is_control) {
-                return Err(ResolveError::UnsupportedName { scope: raw.clone() });
-            }
-            let label = file_label(workspace, &rel, raw)?;
-            let found = run_label_query(&runnable_expression(&label), workspace, runner)?;
-            if found.is_empty() {
-                // Distinguish "file owned but not executable" from "file
-                // unowned": check plain ownership for guidance.
-                let owned = run_label_query(&ownership_expression(&label), workspace, runner)?;
-                if owned.is_empty() {
-                    return Err(ResolveError::NoOwner {
-                        file: raw.clone(),
-                        label,
-                    });
-                }
-            }
-            candidates.extend(found);
-            scope_names.push(raw.clone());
-        } else {
-            return Err(ResolveError::NotFileOrDir { scope: raw.clone() });
-        }
+    for pattern in &classified.patterns {
+        let found = run_label_query(&dir_runnable_expression(pattern), workspace, runner)?;
+        candidates.extend(found);
     }
     candidates.sort();
     candidates.dedup();
     if candidates.is_empty() {
-        scope_names.sort();
-        scope_names.dedup();
-        return Err(ResolveError::NoRunnable {
-            scopes: scope_names,
-        });
+        let mut paths = classified.paths;
+        paths.sort();
+        paths.dedup();
+        return Err(ResolveError::NoRunnable { scopes: paths });
     }
     if candidates.len() > 1 {
         return Err(ResolveError::AmbiguousRunnable { candidates });
@@ -710,14 +699,10 @@ pub fn resolve_run(
 /// universe, at any depth. Owners are bytewise sorted so the expression
 /// is deterministic.
 fn tests_expression(owners: &[String]) -> String {
-    let mut sorted: Vec<&String> = owners.iter().collect();
-    sorted.sort();
-    let set = sorted
-        .iter()
-        .map(|owner| quote_label(owner))
-        .collect::<Vec<_>>()
-        .join(" ");
-    format!("kind('.*_test rule', rdeps(//..., set({set})))")
+    format!(
+        "kind('.*_test rule', rdeps(//..., set({})))",
+        quote_set(owners)
+    )
 }
 
 /// Maps direct source owners to every transitive reverse-dependent test
@@ -851,6 +836,11 @@ mod tests {
         let _ = std::fs::remove_dir_all(workspace);
     }
 
+    /// Test-only one-shot label lookup without a shared cache.
+    fn file_label(workspace: &Path, rel: &str, scope: &str) -> Result<String, ResolveError> {
+        PackageCache::default().file_label(workspace, rel, scope)
+    }
+
     #[test]
     fn empty_scope_selects_repository() {
         let query = NeverQuery;
@@ -922,7 +912,7 @@ mod tests {
                 "--nosystem_rc",
                 "query",
                 "--",
-                "kind('rule', rdeps(//..., \"//pkg:a.py\", 1))",
+                "kind('rule', rdeps(//..., set(\"//pkg:a.py\"), 1))",
             ])
         );
         cleanup(&workspace);
@@ -939,9 +929,65 @@ mod tests {
         assert_eq!(calls.len(), 1);
         assert_eq!(
             calls[0].0.last().expect("expression"),
-            "kind('rule', rdeps(//..., \"//pkg:my file.py\", 1))"
+            "kind('rule', rdeps(//..., set(\"//pkg:my file.py\"), 1))"
         );
         assert_eq!(quote_label("//pkg:a\"b\\c"), "\"//pkg:a\\\"b\\\\c\"");
+        cleanup(&workspace);
+    }
+
+    #[test]
+    fn multiple_files_share_one_bounded_query() {
+        let workspace = temp_workspace("batch");
+        write(&workspace, "pkg/BUILD.bazel", "");
+        write(&workspace, "pkg/a.py", "x = 1\n");
+        write(&workspace, "pkg/b.py", "x = 1\n");
+        let query = FakeQuery::new(vec![FakeQuery::ok("//pkg:lib\n//pkg:extra\n")]);
+        let got = resolve(&scopes(&["pkg/b.py", "pkg/a.py"]), &workspace, &query).expect("resolve");
+        assert_eq!(got.targets, scopes(&["//pkg:extra", "//pkg:lib"]));
+        let calls = query.calls();
+        assert_eq!(calls.len(), 1, "one bounded query per resolver call");
+        assert_eq!(
+            calls[0].0.last().expect("expression"),
+            "kind('rule', rdeps(//..., set(\"//pkg:a.py\" \"//pkg:b.py\"), 1))"
+        );
+        cleanup(&workspace);
+    }
+
+    #[test]
+    fn empty_batch_mapping_names_the_first_file() {
+        let workspace = temp_workspace("batch-empty");
+        write(&workspace, "pkg/BUILD.bazel", "");
+        write(&workspace, "pkg/a.py", "x = 1\n");
+        write(&workspace, "pkg/b.py", "x = 1\n");
+        let query = FakeQuery::new(vec![FakeQuery::ok("\n")]);
+        let err =
+            resolve(&scopes(&["pkg/a.py", "pkg/b.py"]), &workspace, &query).expect_err("orphans");
+        assert_eq!(
+            err,
+            ResolveError::NoOwner {
+                file: "pkg/a.py".to_owned(),
+                label: "//pkg:a.py".to_owned(),
+            }
+        );
+        assert_eq!(query.calls().len(), 1);
+        cleanup(&workspace);
+    }
+
+    #[test]
+    fn file_after_a_packaged_file_without_package_fails_before_query() {
+        let workspace = temp_workspace("batch-no-package");
+        write(&workspace, "pkg/BUILD.bazel", "");
+        write(&workspace, "pkg/a.py", "x = 1\n");
+        write(&workspace, "docs/guide.md", "# guide\n");
+        let query = NeverQuery;
+        let err = resolve(&scopes(&["pkg/a.py", "docs/guide.md"]), &workspace, &query)
+            .expect_err("no package");
+        assert_eq!(
+            err,
+            ResolveError::NotAPackage {
+                scope: "docs/guide.md".to_owned(),
+            }
+        );
         cleanup(&workspace);
     }
 
@@ -1110,7 +1156,7 @@ mod tests {
         assert_eq!(
             err,
             ResolveError::QueryFailed {
-                label: "//pkg:a.py".to_owned(),
+                label: "kind('rule', rdeps(//..., set(\"//pkg:a.py\"), 1))".to_owned(),
                 detail: "no such package 'pkg': BUILD file not found".to_owned(),
             }
         );
@@ -1123,7 +1169,7 @@ mod tests {
         assert_eq!(
             err,
             ResolveError::QueryFailed {
-                label: "//pkg:a.py".to_owned(),
+                label: "kind('rule', rdeps(//..., set(\"//pkg:a.py\"), 1))".to_owned(),
                 detail: "query output is not UTF-8".to_owned(),
             }
         );
@@ -1395,7 +1441,7 @@ mod tests {
         assert_eq!(calls.len(), 1);
         assert_eq!(
             calls[0].0.last().expect("expression"),
-            "kind('.*_binary rule', rdeps(//..., \"//app:main.py\", 1))"
+            "kind('.*_binary rule', rdeps(//..., set(\"//app:main.py\"), 1))"
         );
         cleanup(&workspace);
     }

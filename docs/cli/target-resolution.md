@@ -29,16 +29,22 @@ filesystem source discovery; aspects and providers determine applicable work.
 
 Selected strategy (implemented as specified below and pinned by resolver fixtures):
 unconfigured `bazel query` only — no `cquery`, no
-purpose-built aspect. Ownership of one file is
-`kind('rule', rdeps(//..., <file-label>, 1))` at depth exactly 1 over the
-main-workspace `//...` universe, one invocation per input file. The file
+purpose-built aspect. Ownership of every file scope is resolved by one
+bounded query per resolver call:
+`kind('rule', rdeps(//..., set(<file-labels>), 1))` at depth exactly 1
+over the main-workspace `//...` universe, with every file label quoted
+into a single deterministic (bytewise-sorted) set. The file
 label uses the nearest enclosing package: `dx` walks from the file's
 directory up to the workspace root for the first `BUILD.bazel`/`BUILD`
 marker (existence only; contents are never read), so
 `pkg/src/deep/a.py` queries as `//pkg:src/deep/a.py`. Every depth-1
 rule referrer (including filegroups) is a direct owner; results are
 canonicalized, deduplicated, and bytewise sorted, never lexically
-disambiguated. Non-package directories fail as not-a-package, workspace-missing
+disambiguated. Package-marker probes are memoized per resolver call and
+run only for ancestor directories of input files, so files sharing one
+enclosing package walk each directory once. An empty batch mapping is an
+ownership error naming the first file scope: per-file attribution is not
+observable from a union. Non-package directories fail as not-a-package, workspace-missing
 paths as not-found, and query-visible non-source paths as generated-excluded.
 Test and coverage mapping is
 `kind('.*_test rule', rdeps(//..., set(<owners>)))` with empty mappings as
@@ -119,8 +125,9 @@ defines that behavior.
 
 The CLI constructs query expressions as argument vectors and escapes label values
 according to Bazel query syntax. It does not interpolate raw user text into a
-shell. Large scope sets use one bounded query per input file; any batching
-strategy must preserve deterministic output and remain inspectable.
+shell. Large scope sets use one bounded query per resolver call, with
+file labels batched into a deterministic set; the expression stays a
+plain inspectable query string.
 
 ## Acceptance Cases
 
