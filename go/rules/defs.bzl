@@ -30,7 +30,8 @@ fails closed here until O30 qualifies it.
 """
 
 load("@rules_go//go:def.bzl", _GoArchive = "GoArchive", _GoInfo = "GoInfo", _go_binary = "go_binary", _go_library = "go_library", _go_test = "go_test")
-load("//quality:sources.bzl", "QualitySourcesInfo", "check_direct_sources")
+load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap")
+load("//quality:sources.bzl", "QualitySourcesInfo")
 
 _DX_GO_LIBRARY_PROVIDES = [
     _GoInfo,
@@ -54,169 +55,53 @@ _DX_GO_EXEC_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-def _go_quality_sources(ctx):
-    go = [f for f in ctx.files.srcs if f.extension == "go"]
-    direct_sources = {}
-    if len(go) > 0:
-        direct_sources["go"] = depset(go)
-    check_direct_sources(direct_sources, str(ctx.label))
-    return QualitySourcesInfo(direct_sources = direct_sources)
+_DX_GO_SOURCE_SPECS = [("go", "go")]
+_DX_GO_SOURCE_EXTS = [".go"]
 
-def _go_preserved_library_providers(ctx):
-    upstream = ctx.attr.upstream
-    if _GoInfo not in upstream:
-        fail("go_*: upstream target has no GoInfo: " + str(ctx.attr.upstream.label))
-    if _GoArchive not in upstream:
-        fail("go_*: upstream target has no GoArchive: " + str(ctx.attr.upstream.label))
-    return [upstream[_GoInfo], upstream[_GoArchive]]
-
-def _go_forwarded_output_providers(ctx):
-    """Output groups and run env forwarded best-effort when present."""
-    upstream = ctx.attr.upstream
-    out = []
-    if OutputGroupInfo in upstream:
-        out.append(upstream[OutputGroupInfo])
-    if RunEnvironmentInfo in upstream:
-        out.append(upstream[RunEnvironmentInfo])
-    return out
-
-def _go_forwarded_archive(ctx):
-    """Upstream `GoArchive` forwarded best-effort when present."""
-    upstream = ctx.attr.upstream
-    if _GoArchive in upstream:
-        return [upstream[_GoArchive]]
-    return []
-
-def _go_forwarded_instrumented(ctx):
-    """Upstream `InstrumentedFilesInfo` forwarded best-effort when present."""
-    upstream = ctx.attr.upstream
-    if InstrumentedFilesInfo in upstream:
-        return [upstream[InstrumentedFilesInfo]]
-    return []
-
-def _go_library_forward_impl(ctx):
-    upstream = ctx.attr.upstream
-    if InstrumentedFilesInfo not in upstream:
-        fail("go_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
-    return (
-        _go_preserved_library_providers(ctx) +
-        [upstream[DefaultInfo]] +
-        [upstream[InstrumentedFilesInfo]] +
-        _go_forwarded_output_providers(ctx) +
-        [_go_quality_sources(ctx)]
-    )
-
-_go_library_forward = rule(
-    implementation = _go_library_forward_impl,
+_go_library_forward = dx_library_forward_rule(
     provides = _DX_GO_LIBRARY_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".go"],
-            doc = "Direct Go sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [[_GoInfo]],
-            doc = "The private upstream go_library target whose providers are preserved.",
-        ),
-    },
+    required_providers = [(_GoInfo, "GoInfo"), (_GoArchive, "GoArchive")],
+    quality_specs = _DX_GO_SOURCE_SPECS,
+    what = "go_*",
+    allow_files = _DX_GO_SOURCE_EXTS,
+    upstream_providers = [[_GoInfo]],
     doc = "Forwards upstream Go library providers unchanged and adds QualitySourcesInfo.",
+    srcs_doc = "Direct Go sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream go_library target whose providers are preserved.",
 )
 
-def _go_symlink_default_info(ctx):
-    upstream = ctx.attr.upstream[DefaultInfo]
-    exe = upstream.files_to_run.executable
-    if exe == None:
-        fail("go_*: upstream target has no executable: " + str(ctx.attr.upstream.label))
-    link = ctx.actions.declare_file(ctx.label.name)
-    ctx.actions.symlink(output = link, target_file = exe)
-    return DefaultInfo(
-        executable = link,
-        files = depset([link]),
-        runfiles = ctx.runfiles(files = [link]).merge(upstream.default_runfiles),
-    )
-
-def _go_binary_forward_impl(ctx):
-    return (
-        [_go_symlink_default_info(ctx)] +
-        _go_forwarded_archive(ctx) +
-        _go_forwarded_instrumented(ctx) +
-        _go_forwarded_output_providers(ctx) +
-        [_go_quality_sources(ctx)]
-    )
-
-_go_binary_forward = rule(
-    implementation = _go_binary_forward_impl,
-    executable = True,
+_go_binary_forward = dx_executable_forward_rule(
+    kind = "executable",
     provides = _DX_GO_EXEC_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".go"],
-            doc = "Direct Go sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [[_GoArchive]],
-            doc = "The private upstream go_binary target whose executable is symlinked.",
-        ),
-    },
+    required_providers = [],
+    quality_specs = _DX_GO_SOURCE_SPECS,
+    what = "go_*",
+    allow_files = _DX_GO_SOURCE_EXTS,
+    upstream_providers = [[_GoArchive]],
     doc = "Executable forwarder for go_binary: symlinks the upstream binary.",
+    srcs_doc = "Direct Go sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream go_binary target whose executable is symlinked.",
+    optional_providers = [_GoArchive],
+    runtime = "besteffort",
 )
 
-def _go_test_forward_impl(ctx):
-    upstream = ctx.attr.upstream
-    if InstrumentedFilesInfo not in upstream:
-        fail("go_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
-    return (
-        [_go_symlink_default_info(ctx)] +
-        [upstream[InstrumentedFilesInfo]] +
-        _go_forwarded_archive(ctx) +
-        _go_forwarded_output_providers(ctx) +
-        [_go_quality_sources(ctx)]
-    )
-
-_go_forward_test = rule(
-    implementation = _go_test_forward_impl,
-    test = True,
+_go_forward_test = dx_executable_forward_rule(
+    kind = "test",
     provides = _DX_GO_EXEC_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".go"],
-            doc = "Direct Go test sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [[_GoArchive]],
-            doc = "The private upstream go_test target whose executable is symlinked.",
-        ),
-        "_lcov_merger": attr.label(
-            default = configuration_field(fragment = "coverage", name = "output_generator"),
-            executable = True,
-            cfg = "exec",
-            doc = "Coverage-report merger. Bazel's coverage runner passes " +
-                  "this magic attribute as LCOV_MERGER, which merges the " +
-                  "per-test staging report into coverage.dat; without it " +
-                  "the runner exits after touching an empty file even " +
-                  "though the test collected coverage. Same declaration as " +
-                  "the upstream-wrapping test forwarders.",
-        ),
-    },
+    required_providers = [],
+    quality_specs = _DX_GO_SOURCE_SPECS,
+    what = "go_*",
+    allow_files = _DX_GO_SOURCE_EXTS,
+    upstream_providers = [[_GoArchive]],
     doc = "Test forwarder for go_test: symlinks the upstream test executable.",
+    srcs_doc = "Direct Go test sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream go_test target whose executable is symlinked.",
+    extra_attrs = dx_lcov_merger_attr(),
+    optional_providers = [_GoArchive],
 )
 
 def _go_wrap_library(name, srcs, visibility = None, **kwargs):
-    _go_library(
-        name = name + "_upstream",
-        srcs = srcs,
-        visibility = ["//visibility:private"],
-        **kwargs
-    )
-    _go_library_forward(
-        name = name,
-        upstream = name + "_upstream",
-        srcs = srcs,
-        visibility = visibility,
-    )
+    dx_wrap(name, _go_library, _go_library_forward, srcs, visibility = visibility, **kwargs)
 
 def _go_wrap_binary(name, srcs, visibility = None, **kwargs):
     upstream_kwargs = dict(kwargs)

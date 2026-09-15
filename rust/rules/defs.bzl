@@ -58,7 +58,8 @@ advertised so M04 quality aspects can gate on it.
 
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_rust//rust:defs.bzl", _rust_binary = "rust_binary", _rust_common = "rust_common", _rust_library = "rust_library", _rust_proc_macro = "rust_proc_macro", _rust_shared_library = "rust_shared_library", _rust_static_library = "rust_static_library", _rust_test = "rust_test")
-load("//quality:sources.bzl", "QualitySourcesInfo", "RUST", "check_direct_sources")
+load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap")
+load("//quality:sources.bzl", "QualitySourcesInfo", "RUST")
 
 # Single source of truth for the repository Rust edition (issue #82).
 # All wrapper macros default to this; BUILD files must not repeat the
@@ -94,103 +95,23 @@ _DX_FORWARD_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-def _quality_sources(ctx):
-    direct_sources = {}
-    direct = depset(ctx.files.srcs)
-    if len(direct.to_list()) != 0:
-        direct_sources[RUST] = direct
-    check_direct_sources(direct_sources, str(ctx.label))
-    return QualitySourcesInfo(direct_sources = direct_sources)
+_DX_RUST_SOURCE_SPECS = [(RUST, "rs")]
+_DX_RUST_SOURCE_EXTS = [".rs"]
+_DX_RUST_CRATE_PROVIDERS = [(_rust_common.crate_info, "CrateInfo"), (_rust_common.dep_info, "DepInfo")]
 
-def _preserved_crate_providers(ctx):
-    """`CrateInfo` + `DepInfo` from the private upstream; both are mandatory.
-
-    Every upstream rule the library/binary/test/proc-macro macros create
-    yields both. Anything else is a wrapper bug, so fail loudly
-    instead of silently changing shape (which would also break the
-    advertised `provides` contract above).
-    """
-    upstream = ctx.attr.upstream
-    if _rust_common.crate_info not in upstream:
-        fail("rust_*: upstream target has no CrateInfo: " +
-             str(ctx.attr.upstream.label))
-    if _rust_common.dep_info not in upstream:
-        fail("rust_*: upstream target has no DepInfo: " +
-             str(ctx.attr.upstream.label))
-    return [upstream[_rust_common.crate_info], upstream[_rust_common.dep_info]]
-
-def _preserved_cc_providers(ctx):
-    """`TestCrateInfo` + `DepInfo` + `CcInfo` from the private upstream.
-
-    `rust_shared_library`/`rust_static_library` deliberately provide no
-    `CrateInfo` (upstream: "not supposed to be depended on by other rust
-    targets"); their observable surfaces are the `CcInfo` linking context
-    and the `TestCrateInfo`-wrapped crate for `rust_test`. All three are
-    mandatory here so a shape change fails loudly.
-    """
-    upstream = ctx.attr.upstream
-    if _rust_common.test_crate_info not in upstream:
-        fail("rust_*: upstream target has no TestCrateInfo: " +
-             str(ctx.attr.upstream.label))
-    if _rust_common.dep_info not in upstream:
-        fail("rust_*: upstream target has no DepInfo: " +
-             str(ctx.attr.upstream.label))
-    if CcInfo not in upstream:
-        fail("rust_*: upstream target has no CcInfo: " +
-             str(ctx.attr.upstream.label))
-    return [
-        upstream[_rust_common.test_crate_info],
-        upstream[_rust_common.dep_info],
-        upstream[CcInfo],
-    ]
-
-def _forwarded_runtime_providers(ctx):
-    """Runtime fidelity: coverage metadata, output groups, and test/run env.
-
-    `InstrumentedFilesInfo` is mandatory: Bazel only collects coverage for
-    tests that provide it, so dropping it would silently empty the wrapper
-    test's `coverage.dat` and fail the implementation-coverage gate. Output
-    groups and run env stay best-effort: they are absent on some upstream
-    shapes and their absence changes nothing observable.
-    """
-    upstream = ctx.attr.upstream
-    out = []
-    if InstrumentedFilesInfo not in upstream:
-        fail("rust_*: upstream target has no InstrumentedFilesInfo: " +
-             str(ctx.attr.upstream.label))
-    out.append(upstream[InstrumentedFilesInfo])
-    if OutputGroupInfo in upstream:
-        out.append(upstream[OutputGroupInfo])
-    if RunEnvironmentInfo in upstream:
-        out.append(upstream[RunEnvironmentInfo])
-    return out
-
-def _rust_forward_impl(ctx):
-    return (
-        _preserved_crate_providers(ctx) +
-        [ctx.attr.upstream[DefaultInfo]] +
-        _forwarded_runtime_providers(ctx) +
-        [_quality_sources(ctx)]
-    )
-
-_rust_forward = rule(
-    implementation = _rust_forward_impl,
+_rust_forward = dx_library_forward_rule(
     provides = _DX_FORWARD_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".rs"],
-            doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [
-                [_rust_common.crate_info],
-                [_rust_common.test_crate_info],
-            ],
-            doc = "The private upstream rust_* target whose providers are preserved.",
-        ),
-    },
+    required_providers = _DX_RUST_CRATE_PROVIDERS,
+    quality_specs = _DX_RUST_SOURCE_SPECS,
+    what = "rust_*",
+    allow_files = _DX_RUST_SOURCE_EXTS,
+    upstream_providers = [
+        [_rust_common.crate_info],
+        [_rust_common.test_crate_info],
+    ],
     doc = "Forwards upstream Rust providers unchanged and adds QualitySourcesInfo.",
+    srcs_doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream rust_* target whose providers are preserved.",
 )
 
 # Advertised providers for the Cc-linking shapes (`rust_shared_library`,
@@ -210,136 +131,50 @@ _DX_CC_FORWARD_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-def _rust_forward_cc_impl(ctx):
-    return (
-        _preserved_cc_providers(ctx) +
-        [ctx.attr.upstream[DefaultInfo]] +
-        _forwarded_runtime_providers(ctx) +
-        [_quality_sources(ctx)]
-    )
-
-_rust_forward_cc = rule(
-    implementation = _rust_forward_cc_impl,
+_rust_forward_cc = dx_library_forward_rule(
     provides = _DX_CC_FORWARD_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".rs"],
-            doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [[_rust_common.test_crate_info]],
-            doc = "The private upstream rust_shared_library/rust_static_library target whose providers are preserved.",
-        ),
-    },
+    required_providers = [(_rust_common.test_crate_info, "TestCrateInfo"), (_rust_common.dep_info, "DepInfo"), (CcInfo, "CcInfo")],
+    quality_specs = _DX_RUST_SOURCE_SPECS,
+    what = "rust_*",
+    allow_files = _DX_RUST_SOURCE_EXTS,
+    upstream_providers = [[_rust_common.test_crate_info]],
     doc = "Forwards the upstream Cc-linking providers unchanged and adds QualitySourcesInfo.",
+    srcs_doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream rust_shared_library/rust_static_library target whose providers are preserved.",
 )
 
-def _rust_forwarded_non_default_providers(ctx):
-    """Preserved upstream providers plus QualitySourcesInfo, minus DefaultInfo."""
-    return (
-        _preserved_crate_providers(ctx) +
-        _forwarded_runtime_providers(ctx) +
-        [_quality_sources(ctx)]
-    )
-
-def _rust_symlink_default_info(ctx):
-    # A rule that provides an executable must create that file itself, so
-    # the forwarder cannot pass the upstream DefaultInfo through. A symlink
-    # created by this rule's own action satisfies the check while keeping
-    # run/test behavior identical to the upstream target (verified in
-    # scratch: `bazel run` output and `bazel test` status match).
-    upstream = ctx.attr.upstream[DefaultInfo]
-    exe = upstream.files_to_run.executable
-    if exe == None:
-        fail("rust_*: upstream target has no executable: " +
-             str(ctx.attr.upstream.label))
-    link = ctx.actions.declare_file(ctx.label.name)
-    ctx.actions.symlink(output = link, target_file = exe)
-    return DefaultInfo(
-        executable = link,
-        files = depset([link]),
-        runfiles = ctx.runfiles(files = [link]).merge(upstream.default_runfiles),
-    )
-
-def _rust_forward_binary_impl(ctx):
-    return [_rust_symlink_default_info(ctx)] + _rust_forwarded_non_default_providers(ctx)
-
-_rust_forward_binary = rule(
-    implementation = _rust_forward_binary_impl,
-    executable = True,
+_rust_forward_binary = dx_executable_forward_rule(
+    kind = "executable",
     provides = _DX_FORWARD_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".rs"],
-            doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [
-                [_rust_common.crate_info],
-                [_rust_common.test_crate_info],
-            ],
-            doc = "The private upstream rust_binary target whose providers are preserved.",
-        ),
-    },
+    required_providers = _DX_RUST_CRATE_PROVIDERS,
+    quality_specs = _DX_RUST_SOURCE_SPECS,
+    what = "rust_*",
+    allow_files = _DX_RUST_SOURCE_EXTS,
+    upstream_providers = [
+        [_rust_common.crate_info],
+        [_rust_common.test_crate_info],
+    ],
     doc = "Executable forwarder for rust_binary: symlinks the upstream binary.",
+    srcs_doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream rust_binary target whose providers are preserved.",
 )
 
-def _rust_forward_test_impl(ctx):
-    return [_rust_symlink_default_info(ctx)] + _rust_forwarded_non_default_providers(ctx)
-
-_rust_forward_test = rule(
-    implementation = _rust_forward_test_impl,
-    test = True,
+_rust_forward_test = dx_executable_forward_rule(
+    kind = "test",
     provides = _DX_FORWARD_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".rs"],
-            doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [
-                [_rust_common.crate_info],
-                [_rust_common.test_crate_info],
-            ],
-            doc = "The private upstream rust_test target whose providers are preserved.",
-        ),
-        "_lcov_merger": attr.label(
-            default = configuration_field(fragment = "coverage", name = "output_generator"),
-            executable = True,
-            cfg = "exec",
-            doc = "Coverage-report merger. Bazel's coverage runner passes " +
-                  "this magic attribute as LCOV_MERGER, which merges the " +
-                  "per-test staging report into coverage.dat; without it " +
-                  "the runner exits after touching an empty file even " +
-                  "though the test collected coverage (see " +
-                  "collect_coverage.sh). Same declaration as upstream " +
-                  "rust_test.",
-        ),
-    },
+    required_providers = _DX_RUST_CRATE_PROVIDERS,
+    quality_specs = _DX_RUST_SOURCE_SPECS,
+    what = "rust_*",
+    allow_files = _DX_RUST_SOURCE_EXTS,
+    upstream_providers = [
+        [_rust_common.crate_info],
+        [_rust_common.test_crate_info],
+    ],
     doc = "Test forwarder for rust_test: symlinks the upstream test executable.",
+    srcs_doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream rust_test target whose providers are preserved.",
+    extra_attrs = dx_lcov_merger_attr(),
 )
-
-def _wrap(name, upstream_rule, forward_rule, srcs, visibility = None, testonly = False, **kwargs):
-    # The private target keeps the wrapper's crate name: upstream derives
-    # crate names from target names, and dots are invalid there. It stays
-    # package-private: only the public forwarder may depend on it.
-    kwargs.setdefault("crate_name", name)
-    upstream_rule(
-        name = name + "_upstream",
-        srcs = srcs,
-        visibility = ["//visibility:private"],
-        **kwargs
-    )
-    forward_rule(
-        name = name,
-        upstream = name + "_upstream",
-        srcs = srcs,
-        testonly = testonly,
-        visibility = visibility,
-    )
 
 def rust_library(
         name,
@@ -349,7 +184,7 @@ def rust_library(
         visibility = None,
         **kwargs):
     """Experimental minimal wrapper over `rust_library` (M02)."""
-    _wrap(
+    dx_wrap(
         name,
         _rust_library,
         _rust_forward,
@@ -368,7 +203,7 @@ def rust_binary(
         visibility = None,
         **kwargs):
     """Experimental minimal wrapper over `rust_binary` (M02)."""
-    _wrap(
+    dx_wrap(
         name,
         _rust_binary,
         _rust_forward_binary,
@@ -436,7 +271,7 @@ def rust_proc_macro(
     Same forwarding shape as `rust_library`: the private upstream keeps
     the crate providers and the public target adds QualitySourcesInfo.
     """
-    _wrap(
+    dx_wrap(
         name,
         _rust_proc_macro,
         _rust_forward,
@@ -462,7 +297,7 @@ def rust_shared_library(
     `CrateInfo` for this shape, so unlike `rust_library` there is none
     to preserve.
     """
-    _wrap(
+    dx_wrap(
         name,
         _rust_shared_library,
         _rust_forward_cc,
@@ -484,7 +319,7 @@ def rust_static_library(
 
     Cc-linking forwarding shape, mirroring `rust_shared_library`.
     """
-    _wrap(
+    dx_wrap(
         name,
         _rust_static_library,
         _rust_forward_cc,

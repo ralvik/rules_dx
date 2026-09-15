@@ -30,7 +30,8 @@ Source-only local graphs build without package-manager invocation.
 
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")
 load("@aspect_rules_ts//ts:defs.bzl", _TsConfigInfo = "TsConfigInfo", _ts_project = "ts_project")
-load("//quality:sources.bzl", "QualitySourcesInfo", "check_direct_sources")
+load("//libs/starlark:wrapper.bzl", "dx_library_forward_rule", "dx_wrap")
+load("//quality:sources.bzl", "QualitySourcesInfo")
 
 _DX_TS_PROJECT_PROVIDES = [
     _JsInfo,
@@ -40,82 +41,29 @@ _DX_TS_PROJECT_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-def _typescript_is_declaration(basename):
-    return basename.endswith(".d.ts") or basename.endswith(".d.mts") or basename.endswith(".d.cts")
+# Declaration files (`.d.ts`, `.d.mts`, `.d.cts`) are inert per the
+# generation contract and must not be passed as `srcs`; the exclusion
+# suffixes below keep them out of `QualitySourcesInfo` even if listed.
+_DX_TS_SOURCE_SPECS = [
+    ("typescript", ["ts", "mts", "cts"], [".d.ts", ".d.mts", ".d.cts"]),
+    ("tsx", "tsx"),
+]
+_DX_TS_SOURCE_EXTS = [".ts", ".tsx", ".mts", ".cts"]
 
-def _typescript_quality_sources(ctx):
-    ts = [
-        f
-        for f in ctx.files.srcs
-        if (f.extension in ["ts", "mts", "cts"] and not _typescript_is_declaration(f.basename))
-    ]
-    tsx = [f for f in ctx.files.srcs if f.extension == "tsx"]
-    direct_sources = {}
-    if len(ts) > 0:
-        direct_sources["typescript"] = depset(ts)
-    if len(tsx) > 0:
-        direct_sources["tsx"] = depset(tsx)
-    check_direct_sources(direct_sources, str(ctx.label))
-    return QualitySourcesInfo(direct_sources = direct_sources)
-
-def _typescript_preserved_providers(ctx):
-    upstream = ctx.attr.upstream
-    if _JsInfo not in upstream:
-        fail("typescript_*: upstream target has no JsInfo: " + str(ctx.attr.upstream.label))
-    if _TsConfigInfo not in upstream:
-        fail("typescript_*: upstream target has no TsConfigInfo: " + str(ctx.attr.upstream.label))
-    return [upstream[_JsInfo], upstream[_TsConfigInfo]]
-
-def _typescript_forwarded_runtime_providers(ctx):
-    upstream = ctx.attr.upstream
-    out = []
-    if InstrumentedFilesInfo not in upstream:
-        fail("typescript_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
-    out.append(upstream[InstrumentedFilesInfo])
-    if OutputGroupInfo in upstream:
-        out.append(upstream[OutputGroupInfo])
-    if RunEnvironmentInfo in upstream:
-        out.append(upstream[RunEnvironmentInfo])
-    return out
-
-def _typescript_project_forward_impl(ctx):
-    return (
-        _typescript_preserved_providers(ctx) +
-        [ctx.attr.upstream[DefaultInfo]] +
-        _typescript_forwarded_runtime_providers(ctx) +
-        [_typescript_quality_sources(ctx)]
-    )
-
-_typescript_project_forward = rule(
-    implementation = _typescript_project_forward_impl,
+_typescript_project_forward = dx_library_forward_rule(
     provides = _DX_TS_PROJECT_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".ts", ".tsx", ".mts", ".cts"],
-            doc = "Direct TypeScript sources owned by this wrapper for QualitySourcesInfo. Declaration files (.d.ts/.d.mts/.d.cts) are inert and must not be listed.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [[_JsInfo]],
-            doc = "The private upstream ts_project target whose providers are preserved.",
-        ),
-    },
+    required_providers = [(_JsInfo, "JsInfo"), (_TsConfigInfo, "TsConfigInfo")],
+    quality_specs = _DX_TS_SOURCE_SPECS,
+    what = "typescript_*",
+    allow_files = _DX_TS_SOURCE_EXTS,
+    upstream_providers = [[_JsInfo]],
     doc = "Forwards upstream TypeScript project providers unchanged and adds QualitySourcesInfo.",
+    srcs_doc = "Direct TypeScript sources owned by this wrapper for QualitySourcesInfo. Declaration files (.d.ts/.d.mts/.d.cts) are inert and must not be listed.",
+    upstream_doc = "The private upstream ts_project target whose providers are preserved.",
 )
 
 def _typescript_wrap_project(name, srcs, visibility = None, **kwargs):
-    _ts_project(
-        name = name + "_upstream",
-        srcs = srcs,
-        visibility = ["//visibility:private"],
-        **kwargs
-    )
-    _typescript_project_forward(
-        name = name,
-        upstream = name + "_upstream",
-        srcs = srcs,
-        visibility = visibility,
-    )
+    dx_wrap(name, _ts_project, _typescript_project_forward, srcs, visibility = visibility, **kwargs)
 
 def typescript_project(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `ts_project` (M16)."""
