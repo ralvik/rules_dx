@@ -57,11 +57,13 @@ indefinitely. This exception does not apply to the required core/framework set o
 quality-tool baseline. A language's foundation deferral is not permission to omit its required tools.
 
 The [support matrix](support-matrix.md) is the minimum candidate inventory. Its
-[minimal core freeze](support-matrix.md#minimal-required-core-freeze-o46-pre-m00) records the
-pre-M00 required set, provisional upstreams, owning decisions, delivery milestones, and roles.
-Under O46, review the wider upstream ecosystem and record each named capability's
+[minimal core](support-matrix.md#minimal-required-core) records the
+required set, provisional upstreams, owning trackers, and roles.
+Review the wider upstream ecosystem and record each named capability's
 rules/tools, acquisition route, public providers, dependency authority, applicable platforms,
-integration effort, contract compatibility, evidence, and delivery owner. Apply the same review to
+integration effort, contract compatibility, evidence, and delivery owner, tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7) (framework adapters in
+[issue #8](https://github.com/ralvik/rules_dx/issues/8)). Apply the same review to
 existing feature exclusions, additional test runners, framework adapters, plugins, audit/update
 ecosystems, and codegen pairs. Apply the foundation admission rule above separately from tool and
 workflow obligations; an unreviewed entry is not an exclusion. Freeze a reviewed release inventory
@@ -99,8 +101,9 @@ maintenance owner. Do not rewrite an entire language ruleset or replace compiler
 dependency resolvers, runtimes, or framework engines. Reproducibly building upstream source is not
 reimplementing its semantics.
 
-O46 must still establish candidate-specific effort, patch/build provenance, upgrade strategy, and
-delivery ownership. Exact upstream switches and new public APIs remain unapproved until their
+Candidate-specific effort, patch/build provenance, upgrade strategy, and
+delivery ownership are tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7).
+Exact upstream switches and new public APIs remain unapproved until their
 domain contracts and work packages are accepted. General permission for these maintenance routes
 does not prove any candidate feasible or authorize an unbounded fork.
 
@@ -138,7 +141,8 @@ Usage is assessed across the project's declared supported configurations, not on
 active default configuration. A dependency used by a supported platform or optional feature counts
 as used without an exception merely for being inactive in the current run. Declaration as optional
 or platform-specific is not itself proof of usage. Qualify the authoritative configuration inputs
-and upstream analysis for each language under O46; this does not require executing every target
+and upstream analysis for each language, tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7); this does not require executing every target
 platform's binaries on the checking host or weakening selected-target build isolation.
 
 The usage test also reports incorrect declaration categories as errors where the ecosystem
@@ -146,12 +150,14 @@ distinguishes production, test/development, and build dependencies. For example,
 does not justify a production declaration. Evaluate categories across the declared supported
 configurations using qualified upstream semantics, not one universal category model. Legitimate
 multi-category usage must remain valid. Tests report miscategorization without moving declarations
-or rewriting locks; exact ecosystem category and checker mappings remain under O46.
+or rewriting locks; exact ecosystem category and checker mappings are tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7).
 
 Generate both checks as normal Bazel test targets for the applicable dependency-owning scopes.
 They participate in `bazel test //...` and bare `dx test` by default, without a separate opt-in or
 default `manual` exclusion. They remain independently runnable through their generated labels.
-Exact naming, rules/providers, and generation mappings require qualification under O46.
+Exact naming, rules/providers, and generation mappings require qualification tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7).
 
 Declared-dependency usage permits narrow, explicit exceptions for legitimate uses the checker
 cannot recognize, such as dynamic plugins or tools invoked by scripts. Prefer upstream-native
@@ -163,7 +169,8 @@ improvements recognize the legitimate usage. Assess this against the same declar
 configurations as the usage test, not only the active host configuration. Validation reports the
 obsolete exception without deleting it automatically. Exact native configuration, reason validation,
 and obsolete-exception detection mappings require
-qualification under O46; no separate exception registry or public API is selected here.
+qualification tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7);
+no separate exception registry or public API is selected here.
 
 Gazelle automatically maintains generated Bazel dependency edges under the
 [generation and merge contract](../generation/common.md#merge-and-lifecycle). Do not add a separate
@@ -173,8 +180,8 @@ tests remain required.
 
 The two-test requirement and explained usage exceptions are accepted, but ecosystem-specific
 lock/usage scopes, non-import recognition, native exception/reason-validation mappings, and exact
-public test/capability API remain
-open under O46. Qualify each supported language's mapping and focused
+public test/capability API are tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7). Qualify each supported language's mapping and focused
 failing/passing consumer fixtures before implementation. Existing strict generation alone is not
 proof of lockfile consistency or declared-dependency usage. This is dependency hygiene, not an
 expansion of `dx audit`.
