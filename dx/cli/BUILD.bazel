@@ -1,5 +1,6 @@
 """M07 WP1 + M08 WP1: quality command planning and scope resolution for the `dx` CLI."""
 
+# gazelle:resolve rust coverage_gate //tools/coverage:coverage_gate
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")

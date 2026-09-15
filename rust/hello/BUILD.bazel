@@ -2,6 +2,7 @@
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_binary", "rust_library", "rust_proc_macro", "rust_shared_library", "rust_static_library", "rust_test")
 load("//rust/rules:probe.bzl", "dx_wrapper_cc_subject", "dx_wrapper_subject")
@@ -214,4 +215,17 @@ rust_test(
         ["anyhow"],
         package_name = "rust/hello",
     ),
+)
+
+# Hello smoke as a test target (replaces the bespoke
+# `bazel run //rust/hello:hello` CI step): asserts the seed binary prints
+# the expected greeting. Tagged `no-coverage`: process-spawning tests stay
+# out of the coverage denominator per the repo coverage preset. No corpus
+# entry: shell sources have no `real_source_target` class.
+sh_test(
+    name = "hello_output_test",
+    srcs = ["hello_output_test.sh"],
+    args = ["$(rootpath :hello)"],
+    data = [":hello"],
+    tags = ["no-coverage"],
 )
