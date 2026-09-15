@@ -296,6 +296,25 @@ pub enum ForwardError {
         /// Bare flag name.
         flag: String,
     },
+    /// A required workflow option is missing from the planned required
+    /// set. This signals an internal wiring error, never user input.
+    InvalidRequiredOption {
+        /// Bare flag name.
+        flag: String,
+    },
+    /// A required command setting is malformed. Settings must be
+    /// `--name=value` workflow options; anything else is rejected
+    /// instead of silently protecting the wrong flag name.
+    InvalidSetting {
+        /// The malformed setting option.
+        option: String,
+    },
+    /// A command does not support the requested plan. This signals an
+    /// internal dispatch error, never user input.
+    UnsupportedCommand {
+        /// Command name.
+        command: String,
+    },
 }
 
 impl std::fmt::Display for ForwardError {
@@ -318,6 +337,21 @@ impl std::fmt::Display for ForwardError {
                     f,
                     "invalid_usage: --{flag} targets the test binary; use dx bazel"
                 )
+            }
+            ForwardError::InvalidRequiredOption { flag } => {
+                write!(
+                    f,
+                    "internal_error: required workflow option --{flag} is missing"
+                )
+            }
+            ForwardError::InvalidSetting { option } => {
+                write!(
+                    f,
+                    "internal_error: malformed required setting {option}; expected --name=value"
+                )
+            }
+            ForwardError::UnsupportedCommand { command } => {
+                write!(f, "internal_error: {command} does not support this plan")
             }
         }
     }
@@ -942,6 +976,22 @@ mod tests {
         assert!(!is_test_binary_arg("plain"));
         assert!(flag_name("--").is_none());
         assert!(flag_name("plain").is_none());
+    }
+
+    #[test]
+    fn internal_errors_render_without_echoing_values() {
+        let err = ForwardError::InvalidRequiredOption {
+            flag: "keep_going".to_owned(),
+        };
+        assert!(err.to_string().contains("--keep_going"));
+        let err = ForwardError::InvalidSetting {
+            option: "clippy_output_diagnostics=true".to_owned(),
+        };
+        assert!(err.to_string().contains("malformed required setting"));
+        let err = ForwardError::UnsupportedCommand {
+            command: "lint".to_owned(),
+        };
+        assert!(err.to_string().contains("lint"));
     }
 
     #[test]

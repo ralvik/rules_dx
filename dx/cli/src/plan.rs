@@ -246,8 +246,9 @@ pub const BEP_FLAG_NAME: &str = "build_event_json_file";
 
 /// Required workflow options in argv order, placed after `build` and
 /// before user options by [`build_workflow_argv`]. Command settings
-/// (upstream build-setting flags the aspects require) travel last so
-/// the positional `keep_going` entry in [`protected_flags`] is stable.
+/// (upstream build-setting flags the aspects require) travel last.
+/// [`protected_flags`] locates `keep_going` by value, so this order is
+/// a display choice, not a positional contract.
 pub fn required_options(entry: &CommandSpec, bep_path: &str) -> Vec<String> {
     let mut options = vec![
         format!("--aspects={}", entry.aspects.join(",")),
@@ -265,24 +266,44 @@ pub fn required_options(entry: &CommandSpec, bep_path: &str) -> Vec<String> {
 /// leading dashes and any `=value`, so
 /// `--@rules_rust//rust/settings:clippy_output_diagnostics=true`
 /// protects `@rules_rust//rust/settings:clippy_output_diagnostics`.
-fn setting_name(option: &str) -> String {
-    option
+/// Fails when `option` is not a `--name[=value]` workflow option
+/// instead of silently protecting a wrong name.
+fn setting_name(option: &str) -> Result<String, ForwardError> {
+    let bare = option
         .strip_prefix("--")
-        .unwrap_or(option)
-        .split('=')
-        .next()
-        .unwrap_or("")
-        .to_owned()
+        .ok_or_else(|| ForwardError::InvalidSetting {
+            option: option.to_owned(),
+        })?;
+    let name = bare.split('=').next().unwrap_or("");
+    if name.is_empty() {
+        return Err(ForwardError::InvalidSetting {
+            option: option.to_owned(),
+        });
+    }
+    Ok(name.to_owned())
 }
 
 /// Protected workflow flags derived from [`required_options`]. Aspect,
 /// output-group, workspace, and validate options reject every user
-/// override; `keep_going` accepts repetition of the required value only,
+/// override; `keep_going` accepts repetition of the required value only
+/// (located by value in `required`, never by position),
 /// and `nokeep_going` is always rejected; command settings reject every
 /// user override like the other mechanism flags. The BEP stream has no required
 /// value because the CLI chooses a fresh path per run; the user spelling
 /// is rejected so collection always observes the actual build.
-pub fn protected_flags(required: &[String], settings: &[&str]) -> Vec<ProtectedFlag> {
+/// Fails when the required `keep_going` entry or a command setting is
+/// malformed instead of panicking or hiding the miswiring.
+pub fn protected_flags(
+    required: &[String],
+    settings: &[&str],
+) -> Result<Vec<ProtectedFlag>, ForwardError> {
+    let keep_going = required
+        .iter()
+        .find(|option| option.as_str() == KEEP_GOING_FLAG)
+        .cloned()
+        .ok_or_else(|| ForwardError::InvalidRequiredOption {
+            flag: "keep_going".to_owned(),
+        })?;
     let mut flags = vec![
         ProtectedFlag {
             name: "aspects".to_owned(),
@@ -302,7 +323,7 @@ pub fn protected_flags(required: &[String], settings: &[&str]) -> Vec<ProtectedF
         },
         ProtectedFlag {
             name: "keep_going".to_owned(),
-            required: Some(required[4].clone()),
+            required: Some(keep_going),
         },
         ProtectedFlag {
             name: "nokeep_going".to_owned(),
@@ -315,11 +336,11 @@ pub fn protected_flags(required: &[String], settings: &[&str]) -> Vec<ProtectedF
     ];
     for setting in settings {
         flags.push(ProtectedFlag {
-            name: setting_name(setting),
+            name: setting_name(setting)?,
             required: None,
         });
     }
-    flags
+    Ok(flags)
 }
 
 /// Planned Bazel execution for a quality command.
@@ -330,6 +351,17 @@ pub struct BuildPlan {
     pub argv: Vec<String>,
     /// Human operation display, e.g. `Running lint analysis for //...`.
     pub summary: String,
+}
+
+/// Resolved scope with its exact Bazel labels. Empty targets select
+/// the repository scope (`//...`); every planner shares this fallback
+/// so scope handling cannot drift between commands.
+fn workflow_scope_labels(resolved: &ResolvedScope) -> (Scope, Vec<String>) {
+    if resolved.targets.is_empty() {
+        (Scope::Repository, vec![describe_scope(&Scope::Repository)])
+    } else {
+        (resolved.scope.clone(), resolved.targets.clone())
+    }
 }
 
 /// Builds the exact workflow argv for `command` over a resolved scope.
@@ -346,17 +378,8 @@ pub fn plan_build(
 ) -> Result<BuildPlan, ForwardError> {
     let entry = spec(command);
     let required = required_options(&entry, bep_path);
-    let protected = protected_flags(&required, entry.settings);
-    let scope = if resolved.targets.is_empty() {
-        Scope::Repository
-    } else {
-        resolved.scope.clone()
-    };
-    let labels = if resolved.targets.is_empty() {
-        vec![describe_scope(&Scope::Repository)]
-    } else {
-        resolved.targets.clone()
-    };
+    let protected = protected_flags(&required, entry.settings)?;
+    let (scope, labels) = workflow_scope_labels(resolved);
     let argv = build_workflow_argv("build", bazel_options, &required, &protected, &labels)?;
     let summary = operation_summary(command.name(), "analysis", &scope);
     Ok(BuildPlan { argv, summary })
@@ -479,21 +502,40 @@ pub fn plan_workflow(
 ) -> Result<BuildPlan, ForwardError> {
     let required = workflow_options(verb, bep_path);
     let protected = workflow_protected(verb);
-    let scope = if resolved.targets.is_empty() {
-        Scope::Repository
-    } else {
-        resolved.scope.clone()
-    };
-    let labels = if resolved.targets.is_empty() {
-        vec![describe_scope(&Scope::Repository)]
-    } else {
-        resolved.targets.clone()
-    };
+    let (scope, labels) = workflow_scope_labels(resolved);
     let argv = build_workflow_argv(verb.name(), bazel_options, &required, &protected, &labels)?;
     // Workflow verbs are self-describing (`Running build for ...`):
     // no phase noun applies.
     let summary = format!("Running {} for {}", verb.name(), describe_scope(&scope));
     Ok(BuildPlan { argv, summary })
+}
+
+/// Builds the exact `bazel run` argv for the resolved runnable targets.
+/// `targets` carries one label on the single-runnable path and several
+/// on the label-only multi-target path, which `bazel run` rejects with
+/// its own diagnostic. `app_args` are the verbatim application
+/// arguments after `--`: they are never validated as Bazel options and
+/// forward after a `--` separator. Only the canonical workspace policy
+/// is required; there is no BEP stream, no `keep_going`, and no user
+/// Bazel options on this path. This is the single shared builder
+/// behind [`plan_run`] and the multi-target dispatch so the launcher,
+/// startup options, and workspace policy cannot drift.
+pub fn plan_run_targets(targets: &[String], app_args: &[String]) -> BuildPlan {
+    use dx_process::{launcher_argv0, WORKFLOW_STARTUP_OPTS};
+
+    let mut argv =
+        Vec::with_capacity(WORKFLOW_STARTUP_OPTS.len() + 3 + targets.len() + app_args.len());
+    argv.push(launcher_argv0().to_owned());
+    argv.extend(WORKFLOW_STARTUP_OPTS.iter().map(ToString::to_string));
+    argv.push("run".to_owned());
+    argv.push(workspace_flag());
+    argv.extend(targets.iter().cloned());
+    if !app_args.is_empty() {
+        argv.push("--".to_owned());
+        argv.extend(app_args.iter().cloned());
+    }
+    let summary = format!("Running run for {}", targets.join(" "));
+    BuildPlan { argv, summary }
 }
 
 /// Builds the exact `bazel run` argv for one resolved runnable target.
@@ -505,20 +547,7 @@ pub fn plan_workflow(
 /// workspace policy is required; there is no BEP stream, no `keep_going`,
 /// and no user Bazel options on this path.
 pub fn plan_run(target: &str, app_args: &[String]) -> BuildPlan {
-    use dx_process::{launcher_argv0, WORKFLOW_STARTUP_OPTS};
-
-    let mut argv = Vec::with_capacity(WORKFLOW_STARTUP_OPTS.len() + 4 + app_args.len());
-    argv.push(launcher_argv0().to_owned());
-    argv.extend(WORKFLOW_STARTUP_OPTS.iter().map(ToString::to_string));
-    argv.push("run".to_owned());
-    argv.push(workspace_flag());
-    argv.push(target.to_owned());
-    if !app_args.is_empty() {
-        argv.push("--".to_owned());
-        argv.extend(app_args.iter().cloned());
-    }
-    let summary = format!("Running run for {target}");
-    BuildPlan { argv, summary }
+    plan_run_targets(&[target.to_owned()], app_args)
 }
 
 /// Builds the exact raw launcher argv for `dx bazel`: the launcher
@@ -551,14 +580,20 @@ pub fn plan_bazel(forwarded: &[String]) -> BuildPlan {
 /// forward after the required policy. Fails before execution when user
 /// options conflict with required collection policy. The caller owns
 /// scope validation ([`dx_setup::resolve_scope`]); `command` must be
-/// managed (the debug assertion guards the internal dispatch).
+/// managed (`codegen`, `env`, `setup`) and any other command fails with
+/// [`ForwardError::UnsupportedCommand`] instead of panicking.
 pub fn plan_managed(
     command: Command,
     scope: &dx_setup::SetupScope,
     bazel_options: &[String],
     bep_path: &str,
 ) -> Result<BuildPlan, ForwardError> {
-    debug_assert!(command.is_managed(), "plan_managed needs a managed command");
+    let unsupported = || ForwardError::UnsupportedCommand {
+        command: command.name().to_owned(),
+    };
+    if !command.is_managed() {
+        return Err(unsupported());
+    }
     let (roots, aspects, output_groups) = match command {
         Command::Codegen => {
             let scope = match scope {
@@ -588,7 +623,7 @@ pub fn plan_managed(
             let request = dx_setup::plan_request(scope);
             (request.roots, request.aspects, request.output_groups)
         }
-        _ => unreachable!("plan_managed dispatch guards commands"), // LCOV_EXCL_LINE - reason: defense-in-depth; the debug assertion above plus the execute dispatch restrict callers to managed commands, so this arm is unreachable.
+        _ => return Err(unsupported()),
     };
     let mut required = Vec::with_capacity(aspects.len() + output_groups.len() + 2);
     for aspect in &aspects {
@@ -690,16 +725,11 @@ fn generate_traversal_dir(target: &str) -> String {
 
 /// Projects a resolved scope onto manifest scope elements in
 /// `resolved.targets` order. Empty targets fall back to the repository
-/// scope, mirroring [`plan_workflow`].
+/// scope through [`workflow_scope_labels`], shared with the other
+/// planners.
 pub fn generate_scope_elements(resolved: &ResolvedScope) -> Vec<GenerateScopeElement> {
-    if resolved.targets.is_empty() {
-        return vec![GenerateScopeElement {
-            element: describe_scope(&Scope::Repository),
-            dirs: vec![String::new()],
-        }];
-    }
-    resolved
-        .targets
+    let (_, labels) = workflow_scope_labels(resolved);
+    labels
         .iter()
         .map(|target| GenerateScopeElement {
             element: target.clone(),
@@ -773,11 +803,7 @@ pub fn plan_generate(
         argv.push("--".to_owned());
         argv.extend(dirs);
     }
-    let scope = if resolved.targets.is_empty() {
-        Scope::Repository
-    } else {
-        resolved.scope.clone()
-    };
+    let (scope, _) = workflow_scope_labels(resolved);
     // `run` verbs are self-describing (`Running generate for ...`):
     // no phase noun applies.
     let summary = format!("Running generate for {}", describe_scope(&scope));
@@ -1012,6 +1038,65 @@ mod tests {
         )
         .expect_err("startup option must fail");
         assert!(matches!(err, ForwardError::StartupOption { .. }));
+    }
+
+    #[test]
+    fn protected_flags_find_keep_going_by_value() {
+        let entry = spec(Command::Lint);
+        let required = required_options(&entry, "/tmp/bep.json");
+        let flags = protected_flags(&required, entry.settings).expect("flags");
+        let keep_going = flags
+            .iter()
+            .find(|flag| flag.name == "keep_going")
+            .expect("keep_going guard");
+        assert_eq!(keep_going.required, Some(KEEP_GOING_FLAG.to_owned()));
+    }
+
+    #[test]
+    fn protected_flags_reject_miswired_required_and_settings() {
+        let entry = spec(Command::Lint);
+        let mut required = required_options(&entry, "/tmp/bep.json");
+        required.retain(|option| option.as_str() != KEEP_GOING_FLAG);
+        let err = protected_flags(&required, entry.settings).expect_err("missing keep_going");
+        assert!(
+            matches!(err, ForwardError::InvalidRequiredOption { .. }),
+            "missing keep_going produced {err:?}"
+        );
+        let required = required_options(&entry, "/tmp/bep.json");
+        let err = protected_flags(&required, &["clippy_output_diagnostics=true"])
+            .expect_err("malformed setting");
+        assert!(
+            matches!(err, ForwardError::InvalidSetting { .. }),
+            "malformed setting produced {err:?}"
+        );
+    }
+
+    #[test]
+    fn managed_plan_rejects_unmanaged_commands() {
+        use dx_setup::SetupScope;
+
+        for command in [Command::Build, Command::Lint, Command::Run] {
+            let err = plan_managed(command, &SetupScope::Repository, &[], "/tmp/bep.json")
+                .expect_err("unmanaged command must fail");
+            assert!(
+                matches!(err, ForwardError::UnsupportedCommand { .. }),
+                "{command:?} produced {err:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn run_targets_share_single_builder() {
+        let single = plan_run("//app:bin", &options(&["--port=8080"]));
+        let multi = plan_run_targets(&options(&["//app:bin"]), &options(&["--port=8080"]));
+        assert_eq!(single, multi);
+        let joined = plan_run_targets(&options(&["//a:one", "//b:two"]), &[]);
+        assert_eq!(
+            joined.argv.last(),
+            Some(&"//b:two".to_owned()),
+            "{joined:?}"
+        );
+        assert!(joined.summary.contains("//a:one //b:two"));
     }
 
     #[test]
