@@ -70,7 +70,6 @@ jobs:
       - run: bazel run @rules_dx//dx/cli:dx -- lint --check ${{ inputs.docs_scope }}
 
   docs-publish:
-    name: docs-publish (GitHub Pages)
     needs: [docs-check]
     if: ${{ inputs.publish }}
     runs-on: ubuntu-latest
@@ -79,11 +78,4 @@ jobs:
       pages: write
       id-token: write
     steps:
-      - uses: actions/checkout@v7
-      - name: Upload docs tree as Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ${{ inputs.docs_dir }}
-      - name: Deploy to GitHub Pages
-        id: deploy
-        uses: actions/deploy-pages@v4
+      - run: echo publish placeholder
