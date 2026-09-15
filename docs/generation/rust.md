@@ -65,13 +65,15 @@ ordered clauses), else generation fails naming both manifests. Unconstrained pat
 
 ## Native Config
 
-The extension recognizes five checked-in tool configs by exact basename and generates one typed
+The extension recognizes four checked-in tool configs by exact basename and generates one typed
 target per file named `<tool>_config` (`buildifier_config` for `.buildifier.json`, `taplo_config`
-for `taplo.toml`, `vale_config` for `.vale.ini`, `rustfmt_config` for `rustfmt.toml`, `clippy_config`
-for `clippy.toml`). Vale style closure walks the INI `StylesPath` (default `styles`) into sorted
+for `taplo.toml`, `vale_config` for `.vale.ini`, `rustfmt_config` for `rustfmt.toml`). Vale style closure walks the INI `StylesPath` (default `styles`) into sorted
 `data` labels. Generated targets carry `//<package>:__subpackages__` visibility (`//:__subpackages__`
-at root). Only rustfmt and clippy bind to Rust rules, through direct `aspect_hints` entries;
-buildifier, taplo, and vale targets exist for their own language owners.
+at root). Only rustfmt binds to Rust rules, through direct `aspect_hints` entries;
+buildifier, taplo, and vale targets exist for their own language owners. Clippy is
+intentionally unmanaged (#47): Rust lint is upstream-delegated and a `clippy.toml`
+belongs to the `rules_rust` `clippy.toml` label flag, never to a dx-side config target,
+so `clippy` is not a valid `dx_native_tools` id.
 
 `# gazelle:dx_native_tools <tool...>` selects the managed set per directory (nearest wins,
 inherits otherwise; absent means all). Unknown ids and bare directives fail before BUILD emission,

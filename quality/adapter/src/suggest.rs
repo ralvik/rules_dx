@@ -1,7 +1,7 @@
-//! Machine-applicable suggestion application (Clippy fix mechanism).
+//! Machine-applicable suggestion application.
 //!
-//! Clippy offers no in-place fix mode, so the adapter applies
-//! `MachineApplicable` suggestion spans to the checked bytes in memory.
+//! Tools without an in-place fix mode apply `MachineApplicable`
+//! suggestion spans to the checked bytes in memory.
 //! Application is all or nothing: any out-of-bounds span, any overlap,
 //! or a non-UTF-8 result discards every suggestion and the finding stays
 //! unfixable. Suggestions never enter results directly; the next

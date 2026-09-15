@@ -37,8 +37,11 @@ const nativeToolsDirective = "dx_native_tools"
 // nativeTool describes one managed native-config tool: the exact config
 // filename it owns, the config rule kind the generator manages, and
 // whether owned Rust rules bind to it through aspect_hints. Only tools
-// whose configs a Rust rule can consume (rustfmt, clippy) bind; the rest
+// whose configs a Rust rule can consume (rustfmt) bind; the rest
 // are recognized and targeted uniformly for future language owners.
+// Clippy is intentionally absent (#47): Rust lint is upstream-delegated
+// and takes no dx-side config, so a clippy.toml is unmanaged and
+// `clippy` is not a valid dx_native_tools id.
 type nativeTool struct {
 	id   string
 	file string
@@ -51,7 +54,6 @@ var nativeTools = []nativeTool{
 	{id: "taplo", file: "taplo.toml", kind: "taplo_config"},
 	{id: "vale", file: ".vale.ini", kind: "vale_config"},
 	{id: "rustfmt", file: "rustfmt.toml", kind: "rustfmt_config", rust: true},
-	{id: "clippy", file: "clippy.toml", kind: "clippy_config", rust: true},
 }
 
 // nativeToolByID resolves a tool id to its table row.

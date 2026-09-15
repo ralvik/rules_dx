@@ -2,7 +2,7 @@
 
 load("//quality:aspect_subject.bzl", "aspect_subject")
 load("//quality:fixtures.bzl", "quality_source_target", "real_source_target")
-load("//quality:native_config.bzl", "biome_config", "clippy_config", "eslint_config", "ruff_config", "rustfmt_config", "vale_config")
+load("//quality:native_config.bzl", "biome_config", "eslint_config", "ruff_config", "rustfmt_config", "vale_config")
 load(":aspect_tests.bzl", "aspect_fixture_tests")
 load(":real_aspect_subject.bzl", "real_aspect_subject")
 load(":real_aspect_tests.bzl", "real_aspect_fixture_tests")
@@ -93,19 +93,9 @@ vale_config(
     data = ["styles/.keep"],
 )
 
-clippy_config(
-    name = "clippy_cfg",
-    src = "clippy.toml",
-)
-
 rustfmt_config(
     name = "rustfmt_config",
     src = "rustfmt.toml",
-)
-
-clippy_config(
-    name = "clippy_config",
-    src = "clippy.toml",
 )
 
 ruff_config(
@@ -202,27 +192,17 @@ real_aspect_subject(
     target = ":fixture_real_rust",
 )
 
-real_source_target(
-    name = "fixture_real_rust_hinted",
-    aspect_hints = [":clippy_cfg"],
-    rust_srcs = ["hinted.rs"],
-)
-
-# Generated-shape binding: default `<tool>_config` names with
-# direct aspect_hints, exactly as Gazelle emits them. Proves the generated
-# multi-tool binding analyzes and binds through the real aspects.
+# Generated-shape binding: the default `<tool>_config` name with
+# a direct aspect_hint, exactly as Gazelle emits it. Proves the generated
+# single-tool binding analyzes and binds through the real aspects.
+# (Clippy bindings are gone with #47: Rust lint is upstream-delegated
+# and takes no dx-side config.)
 real_source_target(
     name = "fixture_real_rust_generated_shape",
     aspect_hints = [
-        ":clippy_config",
         ":rustfmt_config",
     ],
     rust_srcs = ["generated_shape.rs"],
-)
-
-real_aspect_subject(
-    name = "fixture_real_rust_hinted_subject",
-    target = ":fixture_real_rust_hinted",
 )
 
 real_aspect_subject(
@@ -428,7 +408,6 @@ real_aspect_fixture_tests(
         ":fixture_real_python_hinted_subject",
         ":fixture_real_python_subject",
         ":fixture_real_rust_subject",
-        ":fixture_real_rust_hinted_subject",
         ":fixture_real_rust_generated_shape_subject",
         ":fixture_real_starlark_subject",
         ":fixture_real_toml_subject",

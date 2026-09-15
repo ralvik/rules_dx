@@ -37,12 +37,9 @@
 //! backend re-reads the bytes on exit 0 or 1 and keeps its input only on
 //! any other exit. Spawn, materialization, and re-read failures still
 //! fail the action.
-//! Legacy Clippy has no fix command: the backend applies
-//! `MachineApplicable` suggestions in memory and re-checks the patched
-//! bytes on the next round, so only suggestions that truly resolve
-//! their finding mark it fixable. Delegated Clippy (#47) is check-only
-//! and never rewrites: its suggestions ride the frozen authoritative
-//! diagnostics. Vale, the Markdown checker, rustc typecheck, Ty,
+//! Clippy (#47) has no fix command and is check-only: its suggestions
+//! ride the frozen authoritative upstream diagnostics and never
+//! rewrite. Vale, the Markdown checker, rustc typecheck, Ty,
 //! pydoclint, flake8, pylint, and Biome lint are check-only and never
 //! rewrite.
 
@@ -54,7 +51,7 @@ use std::path::{Path, PathBuf};
 use quality_adapter::commands::{self, Invocation};
 use quality_adapter::exec::{self, ChildOutput, MirrorContents, MirrorFile, Scratch};
 use quality_adapter::parsers::{self, FileFinding, ParseError};
-use quality_adapter::{place_finding, suggest};
+use quality_adapter::place_finding;
 
 use crate::{
     assemble, run_convergence, stage_subset, validate_request, FileInput, QualityResult,
@@ -348,56 +345,18 @@ impl RealBackend {
         Ok(dir)
     }
 
-    /// Scratch working directory for check commands: Buildifier, Clippy,
-    /// and Vale discover native config upward from the working directory,
+    /// Scratch working directory for check commands: Buildifier and
+    /// Vale discover native config upward from the working directory,
     /// so with a hint the command runs from the mirrored config
     /// directory; every other tool runs from the scratch root.
     fn cwd_rel(tool_id: &str, config_rel: Option<&str>) -> String {
         match tool_id {
-            "buildifier" | "clippy" | "vale" => config_rel.map(parent_rel).unwrap_or_default(),
+            "buildifier" | "vale" => config_rel.map(parent_rel).unwrap_or_default(),
             _ => String::new(),
         }
     }
 
-    /// Legacy Clippy self-run (#47 slice 2 removes this with the
-    /// synthetic fixtures): one guessed `clippy_check` invocation per
-    /// staged file over bytes the runner materialized. Only targets
-    /// without authoritative upstream diagnostics reach here.
-    fn check_clippy_legacy(
-        &self,
-        tool_id: &str,
-        tool: &RealTool,
-        pairs: &[(String, PathBuf)],
-        scratch: &Scratch,
-    ) -> Result<Vec<FileFinding>, RunnerError> {
-        let cwd_rel = Self::cwd_rel(tool_id, tool.config_rel.as_deref());
-        let out_dir = scratch.root().join("dx-clippy-out");
-        std::fs::create_dir_all(&out_dir)
-            .map_err(|err| execution(tool_id, format!("out dir: {err}")))?;
-        let mut findings = Vec::new();
-        for (workspace, absolute) in pairs {
-            let stem = Path::new(workspace)
-                .file_stem()
-                .map(|stem| stem.to_string_lossy().into_owned())
-                .unwrap_or_default();
-            let invocation = commands::clippy_check(
-                &tool.binary,
-                absolute,
-                &commands::crate_name_for(&stem),
-                &out_dir,
-                hint_dir(tool.config_rel.as_deref(), &cwd_rel),
-            );
-            let out = self.run(tool_id, tool, &invocation, scratch)?;
-            let name = absolute.to_string_lossy().into_owned();
-            findings.extend(parsed(
-                tool_id,
-                parsers::parse_clippy(&out.stderr, out.code, &[&name]),
-            )?);
-        }
-        Ok(findings)
-    }
-
-    /// Delegated Clippy check (#47): parses the authoritative upstream
+    /// Clippy check (#47): parses the authoritative upstream
     /// diagnostics files the aspect declared as action inputs. Upstream
     /// spans already address workspace paths, so findings are
     /// re-addressed to the staged scratch-absolute paths the
@@ -476,13 +435,7 @@ impl RealBackend {
                 }
                 Ok(kept)
             }
-            "clippy" => {
-                if tool.upstream_diagnostics.is_empty() {
-                    self.check_clippy_legacy(tool_id, tool, pairs, scratch)
-                } else {
-                    self.check_clippy_delegated(tool_id, tool, pairs)
-                }
-            }
+            "clippy" => self.check_clippy_delegated(tool_id, tool, pairs),
             "rustc" => {
                 let out_dir = scratch.root().join("dx-rustc-out");
                 std::fs::create_dir_all(&out_dir)
@@ -773,10 +726,10 @@ impl RealBackend {
     /// lint, `format` for format) and its lint fix re-reads on exit 0
     /// or 1 (exit 1 signals remaining unfixable findings after the
     /// fixable ones were applied); ESLint likewise re-reads on exit 0
-    /// or 1; legacy Clippy applies `MachineApplicable`
-    /// suggestions from a fresh check in memory (delegated Clippy is
-    /// check-only); Biome lint is
-    /// check-only and converges on format; Vale, the Markdown
+    /// or 1; Clippy is check-only (its suggestions ride the frozen
+    /// upstream diagnostics and cannot track converged bytes, so fixes
+    /// never rewrite); Biome lint is
+    /// check-only and converges on format; Clippy, Vale, the Markdown
     /// checker, rustc typecheck, Ty, pydoclint, flake8, and pylint return
     /// their input.
     pub fn apply_fix(
@@ -790,17 +743,8 @@ impl RealBackend {
         match tool_id {
             "rustfmt" | "buildifier" | "taplo" => self.run_fix(tool_id, tool, path, text),
             "ruff" => self.run_ruff_fix(tool, path, text, capability == "format"),
-            "clippy" => {
-                let tool = self.tool(tool_id)?;
-                if tool.upstream_diagnostics.is_empty() {
-                    self.apply_clippy(tool_id, path, text)
-                } else {
-                    // Delegated Clippy is check-only: suggestions ride
-                    // the frozen authoritative diagnostics and cannot
-                    // track converged bytes, so fixes never rewrite.
-                    Ok(text.to_owned())
-                }
-            }
+            "vale" | "markdown_check" | "rustc" | "ty" | "pydoclint" | "flake8" | "pylint"
+            | "clippy" => Ok(text.to_owned()),
             "biome" => {
                 if capability == "format" {
                     self.run_biome_format_fix(tool, path, text)
@@ -816,9 +760,6 @@ impl RealBackend {
                 }
             }
             "eslint" => self.run_eslint_fix(tool, path, text),
-            "vale" | "markdown_check" | "rustc" | "ty" | "pydoclint" | "flake8" | "pylint" => {
-                Ok(text.to_owned())
-            }
             _ => Err(execution(
                 tool_id,
                 format!("unsupported real tool: {tool_id}"),
@@ -988,23 +929,6 @@ impl RealBackend {
         }
         Self::reread_fixed(TOOL_ID, &absolute)
     }
-
-    fn apply_clippy(&self, tool_id: &str, path: &str, text: &str) -> Result<String, RunnerError> {
-        let tool = self.tool(tool_id)?;
-        let mut single = BTreeMap::new();
-        single.insert(path.to_owned(), text.to_owned());
-        let (scratch, pairs, _) = self.stage_scratch(tool_id, tool, &single, &BTreeMap::new())?;
-        let collected = self.run_check(tool_id, tool, "lint", &pairs, &[], &scratch)?;
-        let mut patched = text.as_bytes().to_vec();
-        for found in &collected {
-            if let Some(next) = suggest::apply_suggestions(&patched, &found.finding.suggestions) {
-                patched = next;
-            }
-        }
-        // `patched` starts as the valid input text and suggestions only
-        // ever produce valid UTF-8, so this never fails on real runs.
-        Ok(String::from_utf8(patched).expect("suggestions preserve UTF-8"))
-    }
 }
 
 /// Executes one ordered pipeline over exact input bytes through real
@@ -1099,10 +1023,6 @@ mod tests {
     const BUILDIFIER_FAR: &str = r#"{"success":false,"files":[{"filename":"FILE","formatted":true,"valid":true,"warnings":[{"start":{"line":99,"column":1},"end":{"line":99,"column":2},"category":"module-docstring","message":"Far away."}]}]}"#;
     const TAPLO_BLOCK: &str = "error: invalid TOML\n  \u{250c}\u{2500} FILE:2:5\n  \u{2502}  \n2 \u{2502}   b = \n  \u{2502} \u{256d}\u{2500}\u{2500}\u{2500}\u{2500}^\n  \u{2502} \u{2570}^ expected value\n";
     const VALE_ALERT: &str = r#"{"FILE": [{"Action": {"Name": "", "Params": null}, "Span": [5, 10], "Check": "Test.Cotton", "Description": "", "Link": "", "Message": "Avoid cotton.", "Severity": "error", "Match": "cotton", "Line": 1}]}"#;
-    const CLIPPY_WARN: &str = r#"{"$message_type":"diagnostic","message":"length comparison to zero","code":{"code":"clippy::len_zero","explanation":null},"level":"warning","spans":[{"file_name":"FILE","byte_start":8,"byte_end":20,"line_start":1,"line_end":1,"column_start":9,"column_end":21,"is_primary":true,"text":[],"label":null,"suggested_replacement":null,"suggestion_applicability":null,"expansion":null}],"children":[{"message":"use is_empty","code":null,"level":"help","spans":[{"file_name":"FILE","byte_start":8,"byte_end":20,"line_start":1,"line_end":1,"column_start":9,"column_end":21,"is_primary":true,"text":[],"label":null,"suggested_replacement":"!v.is_empty()","suggestion_applicability":"MachineApplicable","expansion":null}],"children":[],"rendered":null}],"rendered":null}
-{"$message_type":"diagnostic","message":"1 warning emitted","code":null,"level":"warning","spans":[],"children":[],"rendered":null}"#;
-    const CLIPPY_FAR: &str = r#"{"$message_type":"diagnostic","message":"length comparison to zero","code":{"code":"clippy::len_zero","explanation":null},"level":"warning","spans":[{"file_name":"FILE","byte_start":8,"byte_end":19,"line_start":1,"line_end":1,"column_start":9,"column_end":20,"is_primary":true,"text":[],"label":null,"suggested_replacement":null,"suggestion_applicability":null,"expansion":null}],"children":[{"message":"use is_empty","code":null,"level":"help","spans":[{"file_name":"FILE","byte_start":0,"byte_end":999,"line_start":1,"line_end":1,"column_start":9,"column_end":20,"is_primary":true,"text":[],"label":null,"suggested_replacement":"!v.is_empty()","suggestion_applicability":"MachineApplicable","expansion":null}],"children":[],"rendered":null}],"rendered":null}
-{"$message_type":"diagnostic","message":"1 warning emitted","code":null,"level":"warning","spans":[],"children":[],"rendered":null}"#;
     const RUFF_F401: &str = r#"[{"cell":null,"code":"F401","end_location":{"column":10,"row":1},"filename":"FILE","fix":{"applicability":"safe","edits":[],"message":"Remove unused import"},"location":{"column":8,"row":1},"message":"`os` imported but unused","name":"unused-import","noqa_row":1,"severity":"error","url":"https://docs.astral.sh/ruff/rules/unused-import"}]"#;
     const RUFF_UNFORMATTED: &str = r#"[{"cell":null,"code":"unformatted","end_location":{"column":3,"row":1},"filename":"FILE","fix":null,"location":{"column":3,"row":1},"message":"File would be reformatted","name":"unformatted","noqa_row":null,"severity":"error","url":null}]"#;
     const DELEGATED_CLIPPY_WARN: &str = r#"{"$message_type":"artifact","artifact":"bazel-out/k8-fastbuild/bin/src/lib-123.d","emit":"dep-info"}
@@ -1979,71 +1899,6 @@ mod tests {
         })
     }
 
-    fn clippy_len_zero(
-        argv: &[OsString],
-        _cwd: &Path,
-        env: &[(String, String)],
-    ) -> io::Result<ChildOutput> {
-        assert_hermetic(env);
-        let out_dir = argv
-            .windows(2)
-            .find(|pair| pair[0] == "--out-dir")
-            .map(|pair| pair[1].clone())
-            .expect("clippy passes --out-dir");
-        assert!(
-            Path::new(&out_dir).is_dir(),
-            "clippy out dir is materialized"
-        );
-        let stderr = CLIPPY_WARN.replace("FILE", &last_file(argv));
-        Ok(ChildOutput {
-            code: Some(0),
-            stdout: Vec::new(),
-            stderr: stderr.into_bytes(),
-        })
-    }
-
-    fn clippy_far(
-        argv: &[OsString],
-        cwd: &Path,
-        env: &[(String, String)],
-    ) -> io::Result<ChildOutput> {
-        assert_hermetic(env);
-        let _ = cwd;
-        let stderr = CLIPPY_FAR.replace("FILE", &last_file(argv));
-        Ok(ChildOutput {
-            code: Some(0),
-            stdout: Vec::new(),
-            stderr: stderr.into_bytes(),
-        })
-    }
-
-    fn clippy_hinted(
-        argv: &[OsString],
-        cwd: &Path,
-        env: &[(String, String)],
-    ) -> io::Result<ChildOutput> {
-        assert_hermetic(env);
-        assert!(
-            cwd.ends_with("cfg"),
-            "hinted clippy runs from the config dir"
-        );
-        clippy_len_zero(argv, cwd, env)
-    }
-
-    fn clippy_garbage(
-        argv: &[OsString],
-        _cwd: &Path,
-        env: &[(String, String)],
-    ) -> io::Result<ChildOutput> {
-        assert_hermetic(env);
-        let _ = last_file(argv);
-        Ok(ChildOutput {
-            code: Some(1),
-            stdout: Vec::new(),
-            stderr: b"not json lines".to_vec(),
-        })
-    }
-
     const RUSTC_TYPE_ERROR: &str = r#"{"$message_type":"diagnostic","message":"mismatched types","code":{"code":"E0308","explanation":null},"level":"error","spans":[{"file_name":"FILE","byte_start":27,"byte_end":32,"line_start":2,"line_end":2,"column_start":9,"column_end":14,"is_primary":true,"text":[],"label":"expected `i32`, found `&str`","suggested_replacement":null,"suggestion_applicability":null,"expansion":null}],"children":[],"rendered":null}
 {"$message_type":"diagnostic","message":"aborting due to 1 previous error","code":null,"level":"error","spans":[],"children":[],"rendered":null}"#;
 
@@ -2586,61 +2441,6 @@ mod tests {
         assert!(findings.is_empty());
     }
 
-    #[test]
-    fn clippy_reports_warnings_with_suggestions() {
-        let backend = backend_for("clippy", plain_tool(), clippy_len_zero);
-        let findings = backend
-            .diagnose(
-                "clippy",
-                "lint",
-                &single("src/main.rs", "let y = v.len() == 0;\n"),
-            )
-            .expect("diagnosed");
-        assert_eq!(findings.len(), 1);
-        assert_eq!(findings[0].rule_id, "clippy::len_zero");
-        assert_eq!(
-            (findings[0].start_byte, findings[0].end_byte),
-            (Some(8), Some(20))
-        );
-    }
-
-    #[test]
-    fn clippy_hint_runs_from_the_config_dir() {
-        let tool = RealTool {
-            config_rel: Some("cfg/clippy.toml".to_owned()),
-            tool_files: vec![("cfg/clippy.toml".to_owned(), b"".to_vec())],
-            ..plain_tool()
-        };
-        let backend = backend_for("clippy", tool, clippy_hinted);
-        let findings = backend
-            .diagnose(
-                "clippy",
-                "lint",
-                &single("src/main.rs", "let y = v.len() == 0;\n"),
-            )
-            .expect("diagnosed");
-        assert_eq!(findings.len(), 1);
-        assert_eq!(findings[0].rule_id, "clippy::len_zero");
-    }
-
-    #[test]
-    fn clippy_apply_uses_machine_applicable_suggestions() {
-        let backend = backend_for("clippy", plain_tool(), clippy_len_zero);
-        let patched = backend
-            .apply_fix("clippy", "src/main.rs", "let y = v.len() == 0;\n", "lint")
-            .expect("patched");
-        assert_eq!(patched, "let y = !v.is_empty();\n");
-    }
-
-    #[test]
-    fn clippy_apply_keeps_bytes_without_applicable_suggestions() {
-        let backend = backend_for("clippy", plain_tool(), clippy_far);
-        let patched = backend
-            .apply_fix("clippy", "src/main.rs", "let y = v.len() == 0;\n", "lint")
-            .expect("unchanged");
-        assert_eq!(patched, "let y = v.len() == 0;\n");
-    }
-
     fn no_spawn(_: &[OsString], _: &Path, _: &[(String, String)]) -> io::Result<ChildOutput> {
         panic!("delegated clippy must not spawn")
     }
@@ -2916,15 +2716,6 @@ mod tests {
         let err = backend
             .apply_fix("rustfmt", "src/main.rs", "x\n", "format")
             .expect_err("encoding fails");
-        assert!(matches!(err, RunnerError::ToolOutput { .. }));
-    }
-
-    #[test]
-    fn clippy_diagnose_failure_aborts_apply() {
-        let backend = backend_for("clippy", plain_tool(), clippy_garbage);
-        let err = backend
-            .apply_fix("clippy", "src/main.rs", "x\n", "lint")
-            .expect_err("diagnose fails");
         assert!(matches!(err, RunnerError::ToolOutput { .. }));
     }
 

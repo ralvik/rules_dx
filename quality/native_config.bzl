@@ -3,10 +3,11 @@
 Each initial adapter reads its behavior from exactly one checked-in
 tool-owned config file (the native-configuration authority contract):
 Buildifier `.buildifier.json`, Taplo `taplo.toml` fragment, Vale `.vale.ini`
-plus style/vocab data, rustfmt `rustfmt.toml`, Clippy `clippy.toml`,
-Ruff `ruff.toml` (see below for the dedicated-config rule), Biome
-`biome.json` (see below for the config-dir rule), and ESLint
-`eslint.config.js` flat config (see below).
+plus style/vocab data, rustfmt `rustfmt.toml`, Ruff `ruff.toml` (see
+below for the dedicated-config rule), Biome `biome.json` (see below for
+the config-dir rule), and ESLint `eslint.config.js` flat config (see
+below). Clippy (#47) is upstream-delegated and takes no dx-side
+config: policy rides the `clippy.toml` label flag Bazel itself reads.
 Source targets opt into a config through `aspect_hints`; the consuming
 aspect resolves hints to stages (see `collect_native_configs`). Without a
 hint the adapter runs pinned upstream defaults, except Vale, which has no
@@ -33,7 +34,7 @@ DxNativeConfigInfo = provider(
 # analysis instead of silently changing behavior. Ruff recognizes only
 # the dedicated `ruff.toml`/`.ruff.toml` basenames (never `pyproject.toml`);
 # basename recognition is Gazelle's job, the `.toml` extension check here
-# matches the rustfmt/clippy split. Biome takes `biome.json` (or
+# matches the rustfmt precedent. Biome takes `biome.json` (or
 # `biome.jsonc`): the adapter passes the config's directory as
 # `--config-path`, so the directory must hold exactly one config file and
 # never linted sources; the `.json` extension check here pins the JSON
@@ -43,7 +44,6 @@ DxNativeConfigInfo = provider(
 _NATIVE_CONFIG_EXTENSIONS = {
     "biome": ".json",
     "buildifier": ".json",
-    "clippy": ".toml",
     "eslint": ".js",
     "ruff": ".toml",
     "rustfmt": ".toml",
@@ -168,11 +168,6 @@ vale_config = _make_native_config_rule(
 rustfmt_config = _make_native_config_rule(
     "rustfmt",
     "Checked-in rustfmt TOML config for Rust format.",
-)
-
-clippy_config = _make_native_config_rule(
-    "clippy",
-    "Checked-in Clippy TOML config for Rust lint.",
 )
 
 ruff_config = _make_native_config_rule(
