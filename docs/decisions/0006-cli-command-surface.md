@@ -5,7 +5,8 @@
 Date: 2026-09-09.
 
 Superseded for the `dx check` / `dx fix` / `dx clean` surface by
-[ADR 0018](0018-umbrella-check-fix-cleanup-clean.md). Remaining invocation,
+[ADR 0018](0018-umbrella-check-fix-cleanup-clean.md) and for the `dx docs`
+surface by [ADR 0020](0020-remove-dx-docs-placeholder.md). Remaining invocation,
 scope, output, and workflow-composition constraints stand.
 
 ## Context
@@ -35,6 +36,9 @@ The command surface is:
   Both build and check are source-non-mutating. Exact scope, invocation combinations, and protocol
   mechanics follow the frozen O54 mappings in the [docs contract](../cli/commands/docs.md);
   per-language adapter runs and renderer/site-build execution remain gaps.
+  (Command removed by [ADR 0020](0020-remove-dx-docs-placeholder.md); design
+  contracts stand, reintroduction tracked in
+  [issue #10](https://github.com/ralvik/rules_dx/issues/10).)
 - `dx update` for authoritative dependency-update workflows.
 - `dx generate` for the mutating repository-defined Gazelle workflow, with non-mutating
   freshness validation through `--check`.

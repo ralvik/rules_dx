@@ -28,5 +28,5 @@ execution, or deployment mechanism.
 - Each iteration emits the wrapped command's normal stream starting with a
   fresh `command_started`. No cross-iteration state is exposed in machine output.
 - Signals forward to the active child per the [CLI contract](../cli-contract.md#exit-status).
-  `coverage`, `audit`, `generate`, `env`, `codegen`, `setup`, `update`, `docs`,
+  `coverage`, `audit`, `generate`, `env`, `codegen`, `setup`, `update`,
   `init`, `hooks`, and `bazel` are not watchable. CI use is not supported.

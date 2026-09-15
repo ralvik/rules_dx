@@ -41,7 +41,7 @@ require consumers to use Codecov.
 ## Docs CI
 
 The same caller-pin pattern covers documentation: `.github/workflows/reusable-docs.yml`
-is a reusable workflow running `dx docs --check` plus `dx lint --check` over a
+is a reusable workflow running `dx lint --check` over a
 caller-selected docs scope, with an opt-in `publish` input that deploys the validated
 docs tree to GitHub Pages. The deployed content is the validated tree, not a rendered
 site; the renderer arrives via [issue #10](https://github.com/ralvik/rules_dx/issues/10).

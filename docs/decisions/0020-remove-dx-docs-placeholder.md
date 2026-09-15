@@ -1,0 +1,45 @@
+# ADR 0020: Remove The `dx docs` Placeholder Command
+
+## Status
+
+Accepted. Supersedes the `dx docs` bullet in
+[ADR 0006](./0006-cli-command-surface.md). Reintroduction with real
+extraction/validation is tracked in [issue #10](https://github.com/ralvik/rules_dx/issues/10);
+removal is tracked in [issue #31](https://github.com/ralvik/rules_dx/issues/31).
+
+## Context
+
+[ADR 0006](./0006-cli-command-surface.md) selected `dx docs` for Bazel-owned
+documentation extraction, validation, and rendering. The shipped command never
+did that: `dx docs --check` validated flag shape (one rule: `--port`
+requires `--serve`), printed a planned-action line, and exited 0 without
+opening any Markdown, resolving the scope, or running extraction,
+validation, or rendering. Its only real effects were proving `//dx/cli:dx`
+compiles and rejecting malformed flags.
+
+Meanwhile the green `docs-check` job guarded `docs-publish`, so the command
+name overpromised in front of a deploy gate: the
+[issue #30](https://github.com/ralvik/rules_dx/issues/30) Pages 404 deployed
+through a green check. A placeholder that reports success in front of a
+deploy gate is worse than no placeholder.
+
+## Decision
+
+Delete the `dx docs` command surface (`Command::Docs`, `execute_docs`,
+`plan_docs`, `--serve`/`--port` flags, usage strings, completion entry) and
+the `docs --check` step in the reusable docs workflow. Keep the `dx/docs`
+IR/mode planning library: it remains the
+[issue #10](https://github.com/ralvik/rules_dx/issues/10) contract for
+reintroduction, not a delivered invocation. The docs-content gate in CI is
+`dx lint --check` (repository-owned link/structure audit plus `vale` over
+`//docs:corpus`).
+
+## Consequences
+
+- `dx docs` fails as `unknown command`; the command registry, usage
+  strings, and shell completions no longer list it.
+- The [docs command reference](../cli/commands/docs.md) is a stub pointing
+  at [issue #10](https://github.com/ralvik/rules_dx/issues/10).
+- [Issue #10](https://github.com/ralvik/rules_dx/issues/10) tracks
+  reintroducing the command alongside real extraction/validation behind
+  the invocation.

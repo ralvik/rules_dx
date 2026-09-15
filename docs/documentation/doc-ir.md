@@ -2,7 +2,9 @@
 
 Implementation status: the pipeline direction is accepted v1 scope and the
 docs-pipeline mappings are frozen.
-Delivered: the `dx_docs` planning gates plus `dx docs` command dispatch —
+Delivered: the `dx_docs` planning gates (command dispatch removed in
+[issue #31](https://github.com/ralvik/rules_dx/issues/31); reintroduction tracked in
+[issue #10](https://github.com/ralvik/rules_dx/issues/10)) —
 `--check` validates without rendering, normal build validates then renders.
 Extractor execution, per-language adapter runs, renderer/site-build execution,
 and guide-step CI wiring remain gaps ([issue #10](https://github.com/ralvik/rules_dx/issues/10)); no working docs support is claimed until
@@ -165,7 +167,7 @@ Recheck every pin and schema version at implementation; research observations ar
   plus compiler and TypeScript semantics, not a generic TS-only fallback. Cover runes and legacy
   syntax, snippets versus slots, callback props versus dispatched events, bindings, exports,
   preprocessors, and source locations. Disable or confine tool caches to declared Bazel outputs;
-  native snapshot-check commands are not `dx docs --check`.
+  native snapshot-check commands are not the planned `dx docs --check`.
 - **Scala:** spike the documented [Scala 3 TASTy Inspector](https://docs.scala-lang.org/scala3/reference/metaprogramming/tasty-inspect.html)
   and a compiler-pinned Scaladoc internal-model bridge separately. TASTy supplies semantic trees,
   not a ready-made documentation model; prove retained comments, dependency classpaths, visibility,

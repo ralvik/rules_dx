@@ -4,10 +4,12 @@
 # Reviewed pin bumps only; no silent upgrades. Consumers never copy
 # per-check execution or deploy plumbing.
 #
-# Contract: two checks, Linux-once. `docs-check` runs `dx docs --check`
-# plus `dx lint --check` over the caller-selected docs scope; the lint
+# Contract: one check, Linux-once. `docs-check` runs `dx lint --check`
+# over the caller-selected docs scope; the lint
 # pass is the repository-owned Markdown link/structure audit, so broken
-# relative targets fail before deploy. `docs-publish` runs only when
+# relative targets fail before deploy. (`dx docs --check` was removed in
+# issue #31: it validated flag shape, not docs content. #10 tracks its
+# reintroduction with real extraction/validation.) `docs-publish` runs only when
 # `publish` is true: it uploads `docs_dir` as the Pages artifact and
 # deploys it to the `environment` Pages environment. `publish: false`
 # is pure check-only. The deployed content is the validated docs tree;
@@ -66,7 +68,6 @@ jobs:
           bazel version
       - name: Verify rules_dx pin
         run: test -f MODULE.bazel && grep -q 'version = "${{ inputs.rules_dx_version }}"' MODULE.bazel
-      - run: bazel run @rules_dx//dx/cli:dx -- docs --check ${{ inputs.docs_scope }}
       - run: bazel run @rules_dx//dx/cli:dx -- lint --check ${{ inputs.docs_scope }}
 
   docs-publish:

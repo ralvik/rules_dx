@@ -398,7 +398,7 @@ fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
     let _ = writeln!(err, "dx: {message}");
     let _ = writeln!(
         err,
-        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|docs|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]"
+        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]"
     );
     pre_exec_code()
 }
@@ -2523,8 +2523,6 @@ fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
             pin: None,
             rollback: false,
             configured: false,
-            serve: false,
-            port: None,
         };
         let mut phase_out = Vec::new();
         let mut phase_err = Vec::new();
@@ -5095,8 +5093,6 @@ mod tests {
             pin: None,
             rollback: false,
             configured: false,
-            serve: false,
-            port: None,
         }
     }
 

@@ -134,7 +134,6 @@ pub fn spec(command: Command) -> CommandSpec {
         | Command::Hooks
         | Command::Status
         | Command::Version
-        | Command::Docs
         | Command::Watch
         | Command::Owners
         | Command::Deps
@@ -329,7 +328,6 @@ impl WorkflowVerb {
             | Command::Hooks
             | Command::Status
             | Command::Version
-            | Command::Docs
             | Command::Watch
             | Command::Owners
             | Command::Deps
