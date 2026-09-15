@@ -67,7 +67,7 @@ The repository is one `rules_dx` Bzlmod module, version, and release unit. Sourc
 capability-oriented: CLI, configuration, quality capabilities, generation, environments, language
 foundations, runners, protocols, toolchains, tools, tests, examples, and documentation.
 
-Only capability packages required by approved milestones are created. Domain-specific shared code
+Only capability packages with a concrete consumer are created. Domain-specific shared code
 stays with its domain. General runner, protocol, or apply code is extracted only when there is a
 concrete cross-package caller.
 
@@ -79,13 +79,13 @@ surface belongs to the [CLI](../cli/), [quality](../quality/),
 
 ### Physical Layout
 
-Logical capability packages map to these top-level paths. Only packages required
-by approved milestones are created; M00 creates only the seed subset.
+Logical capability packages map to these top-level paths. Only packages with a concrete
+consumer are created; the repository started from a seed subset.
 
 ```text
 MODULE.bazel          # Bzlmod module, version, dependency pins
 .bazelrc              # shared build/test/coverage flags (no local-only flags)
-.bazelversion         # Bazelisk pin, frozen from M00 executed runs
+.bazelversion         # Bazelisk pin
 BUILD.bazel           # root package (exports, workspace-level aliases)
 config/               # public workspace policy provider (@rules_dx//config)
 quality/              # aspects, QualitySourcesInfo, result protocol, runners
@@ -100,10 +100,10 @@ private/              # internal glue with no public load labels
 docs/                 # authoritative contracts (this tree)
 ```
 
-M00 seed subset: `MODULE.bazel`, `.bazelrc`, `.bazelversion`, root `BUILD.bazel`,
+Seed subset: `MODULE.bazel`, `.bazelrc`, `.bazelversion`, root `BUILD.bazel`,
 minimal `rust/` binary/test fixture, minimal CI skeleton, and coverage-gate
 support. `tools/`, `dx/`, `config/`, `quality/`, `generation/`, and `env/`
-arrive with their implementing milestones (M02–M11). No `lint/` umbrella or
+arrived as their consumers landed. No `lint/` umbrella or
 per-tool top-level packages: individual adapters live under `tools/` or their
 owning `quality/` subpackage until a cross-package caller justifies extraction.
 
