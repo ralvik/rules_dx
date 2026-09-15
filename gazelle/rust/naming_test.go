@@ -52,13 +52,16 @@ func TestNormalizeEmptyFails(t *testing.T) {
 	}
 }
 
-func TestMustNormalizePanics(t *testing.T) {
-	defer func() {
-		if recover() == nil {
-			t.Error("MustNormalize(\"---\") did not panic")
+func TestDerivedNameErrors(t *testing.T) {
+	for name, f := range map[string]func(string) (string, error){
+		"ExampleName":     ExampleName,
+		"BenchName":       BenchName,
+		"BuildScriptName": BuildScriptName,
+	} {
+		if got, err := f("---"); err == nil {
+			t.Errorf("%s(\"---\") = %q, want error", name, got)
 		}
-	}()
-	MustNormalize("---")
+	}
 }
 
 func TestCheckCollisions(t *testing.T) {
@@ -103,16 +106,16 @@ func TestDerivedNames(t *testing.T) {
 	if got := BinaryName("parser"); got != "parser_bin" {
 		t.Errorf("BinaryName(parser) = %q", got)
 	}
-	if got := ExampleName("demo-app"); got != "demo_app_example" {
-		t.Errorf("ExampleName(demo-app) = %q", got)
+	if got, err := ExampleName("demo-app"); err != nil || got != "demo_app_example" {
+		t.Errorf("ExampleName(demo-app) = %q, %v", got, err)
 	}
 	if got := ExampleTestName("demo_app_example"); got != "demo_app_example_test" {
 		t.Errorf("ExampleTestName = %q", got)
 	}
-	if got := BenchName("bench.fast"); got != "bench_fast_bench" {
-		t.Errorf("BenchName = %q", got)
+	if got, err := BenchName("bench.fast"); err != nil || got != "bench_fast_bench" {
+		t.Errorf("BenchName = %q, %v", got, err)
 	}
-	if got := BuildScriptName("my-pkg"); got != "my_pkg_build_script" {
-		t.Errorf("BuildScriptName = %q", got)
+	if got, err := BuildScriptName("my-pkg"); err != nil || got != "my_pkg_build_script" {
+		t.Errorf("BuildScriptName = %q, %v", got, err)
 	}
 }

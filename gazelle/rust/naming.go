@@ -44,18 +44,6 @@ func Normalize(base string) (string, error) {
 	return out, nil
 }
 
-// MustNormalize is Normalize for contexts where the input is already
-// validated (crate-directory basenames from the filesystem walk). It
-// panics on an empty result instead of threading an error through pure
-// plumbing.
-func MustNormalize(base string) string {
-	out, err := Normalize(base)
-	if err != nil {
-		panic(err.Error())
-	}
-	return out
-}
-
 // Claimant records one generated or handwritten target competing for a
 // normalized name in a single Bazel package.
 type Claimant struct {
@@ -123,9 +111,15 @@ func BinaryName(crateName string) string {
 }
 
 // ExampleName derives the `<name>_example` target name for an explicitly
-// declared ordinary-binary Cargo `[[example]]` target.
-func ExampleName(cargoName string) string {
-	return MustNormalize(cargoName) + "_example"
+// declared ordinary-binary Cargo `[[example]]` target. An unnormalizable
+// name is a returned error, never a panic, so callers fail closed with an
+// actionable message.
+func ExampleName(cargoName string) (string, error) {
+	stem, err := Normalize(cargoName)
+	if err != nil {
+		return "", err
+	}
+	return stem + "_example", nil
 }
 
 // ExampleTestName derives the `<example-target>_test` crate-test wrapper
@@ -136,12 +130,24 @@ func ExampleTestName(exampleTarget string) string {
 
 // BenchName derives the `<name>_bench` target name for an explicitly
 // declared ordinary-binary Cargo `[[bench]]` target with `harness = false`.
-func BenchName(cargoName string) string {
-	return MustNormalize(cargoName) + "_bench"
+// An unnormalizable name is a returned error, never a panic, so callers
+// fail closed with an actionable message.
+func BenchName(cargoName string) (string, error) {
+	stem, err := Normalize(cargoName)
+	if err != nil {
+		return "", err
+	}
+	return stem + "_bench", nil
 }
 
 // BuildScriptName derives the `<package-name>_build_script` rule name for
-// an active Cargo build script.
-func BuildScriptName(packageName string) string {
-	return MustNormalize(packageName) + "_build_script"
+// an active Cargo build script. An unnormalizable package name is a
+// returned error, never a panic, so callers fail closed with an actionable
+// message.
+func BuildScriptName(packageName string) (string, error) {
+	stem, err := Normalize(packageName)
+	if err != nil {
+		return "", err
+	}
+	return stem + "_build_script", nil
 }

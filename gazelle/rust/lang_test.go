@@ -152,22 +152,62 @@ func TestImportsIndexesOnlyLibraries(t *testing.T) {
 	}
 }
 
+// stubExitProcess observes the fail-closed exit without leaving the test
+// process: it records the exit code and returns control to the caller.
+func stubExitProcess(t *testing.T) *int {
+	t.Helper()
+	old := exitProcess
+	code := -1
+	exitProcess = func(c int) { code = c }
+	t.Cleanup(func() { exitProcess = old })
+	return &code
+}
+
 func TestErrorsAbortBeforeEmission(t *testing.T) {
+	code := stubExitProcess(t)
 	l := &rustLang{}
 	l.Before(context.Background())
 	l.fail("second")
 	l.fail("first")
-	defer func() {
-		got := recover()
-		if got == nil {
-			t.Fatal("AfterResolvingDeps did not abort")
-		}
-		message := got.(string)
-		if !strings.Contains(message, "first\nsecond") {
-			t.Errorf("errors were not deterministic: %s", message)
-		}
-	}()
 	l.AfterResolvingDeps(context.Background())
+	if *code != 1 {
+		t.Fatalf("exit code = %d, want 1", *code)
+	}
+	if got := strings.Join(l.errors, "\n"); got != "first\nsecond" {
+		t.Errorf("errors were not deterministic: %q", got)
+	}
+}
+
+func TestBeforeRecordsRecorderError(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "intended.json")
+	t.Setenv(envIntendedManifest, out)
+	t.Setenv(envGenerateMode, "print")
+	l := &rustLang{}
+	l.Before(context.Background())
+	if l.manifest != nil {
+		t.Fatal("Before with bad mode sets recorder")
+	}
+	if got := strings.Join(l.errors, "\n"); !strings.Contains(got, `must be "check" or "default"`) {
+		t.Fatalf("errors = %q, want mode error", got)
+	}
+}
+
+func TestAfterResolvingDepsReportsManifestError(t *testing.T) {
+	code := stubExitProcess(t)
+	l := &rustLang{}
+	l.manifest = &manifestRecorder{
+		outPath:       filepath.Join(t.TempDir(), "missing", "intended.json"),
+		mode:          "default",
+		scopes:        []scopeElement{{Element: "//...", Dirs: []string{""}}},
+		apparentLoads: l.ApparentLoads,
+	}
+	l.AfterResolvingDeps(context.Background())
+	if *code != 1 {
+		t.Fatalf("exit code = %d, want 1", *code)
+	}
+	if got := strings.Join(l.errors, "\n"); !strings.Contains(got, "cannot write intended manifest") {
+		t.Errorf("errors = %q, want write error", got)
+	}
 }
 
 func TestIgnoreDirectiveInheritanceAndStaleCheck(t *testing.T) {
@@ -198,12 +238,14 @@ func TestStaleIgnoreFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	l.Configure(cfg, "pkg", file)
-	defer func() {
-		if got := recover(); got == nil || !strings.Contains(got.(string), "stale") {
-			t.Errorf("stale ignore result = %v", got)
-		}
-	}()
+	code := stubExitProcess(t)
 	l.AfterResolvingDeps(context.Background())
+	if *code != 1 {
+		t.Fatalf("exit code = %d, want 1", *code)
+	}
+	if got := strings.Join(l.errors, "\n"); !strings.Contains(got, "stale") {
+		t.Errorf("stale ignore errors = %q, want stale", got)
+	}
 }
 
 func TestMalformedIgnoreFails(t *testing.T) {
@@ -215,12 +257,14 @@ func TestMalformedIgnoreFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	l.Configure(cfg, "pkg", file)
-	defer func() {
-		if got := recover(); got == nil || !strings.Contains(got.(string), "malformed") {
-			t.Errorf("malformed ignore result = %v", got)
-		}
-	}()
+	code := stubExitProcess(t)
 	l.AfterResolvingDeps(context.Background())
+	if *code != 1 {
+		t.Fatalf("exit code = %d, want 1", *code)
+	}
+	if got := strings.Join(l.errors, "\n"); !strings.Contains(got, "malformed") {
+		t.Errorf("malformed ignore errors = %q, want malformed", got)
+	}
 }
 
 func TestLanguageMetadata(t *testing.T) {
@@ -1258,6 +1302,29 @@ func TestBuildScriptUserAttrsPreserved(t *testing.T) {
 				t.Errorf("generated %s sets %q, want absent (user-owned)", r.Name(), attr)
 			}
 		}
+	}
+}
+
+func TestEmitBuildScriptInvalidPackageName(t *testing.T) {
+	// parseCargoManifest pre-validates names, so this reaches
+	// emitBuildScript only defensively; the failure must still fail
+	// closed with an actionable message and emit nothing.
+	l := &rustLang{}
+	result := &language.GenerateResult{}
+	l.emitBuildScript(
+		language.GenerateArgs{Config: &config.Config{}},
+		"Cargo.toml",
+		&cargoManifest{packageName: "---"},
+		map[string]bool{},
+		func(string) ([]byte, error) { return nil, nil },
+		map[string]string{},
+		result,
+	)
+	if got := strings.Join(l.errors, "\n"); !strings.Contains(got, "normalizes to an empty target name") {
+		t.Fatalf("errors = %q, want normalization error", got)
+	}
+	if len(result.Gen) != 0 || len(result.Imports) != 0 {
+		t.Errorf("result = %+v, want nothing emitted", result)
 	}
 }
 

@@ -36,14 +36,14 @@ func mustLoad(t *testing.T, path, pkg, content string) *rule.File {
 	return f
 }
 
-func assertPanics(t *testing.T, message string, f func()) {
+func assertErrorContains(t *testing.T, message string, err error, want string) {
 	t.Helper()
-	defer func() {
-		if recover() == nil {
-			t.Errorf("%s: expected panic, got none", message)
-		}
-	}()
-	f()
+	if err == nil {
+		t.Fatalf("%s: expected error containing %q, got nil", message, want)
+	}
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("%s: error = %q, want substring %q", message, err.Error(), want)
+	}
 }
 
 // applyEdits replays validated edits against the original bytes.
@@ -93,7 +93,10 @@ func stableContent(t *testing.T, path, pkg, seed string) string {
 	content := []byte(seed)
 	for i := 0; i < 3; i++ {
 		f := mustLoad(t, path, pkg, string(content))
-		file, changed := rec.witness(packageRecord{rel: pkg, file: f, cfg: testConfig()})
+		file, changed, err := rec.witness(packageRecord{rel: pkg, file: f, cfg: testConfig()})
+		if err != nil {
+			t.Fatalf("witness: %v", err)
+		}
 		if !changed {
 			return string(content)
 		}
@@ -105,7 +108,11 @@ func stableContent(t *testing.T, path, pkg, seed string) string {
 
 func TestLoadManifestRecorderDisabled(t *testing.T) {
 	t.Setenv(envIntendedManifest, "")
-	if rec := loadManifestRecorder(); rec != nil {
+	rec, err := loadManifestRecorder()
+	if err != nil {
+		t.Fatalf("loadManifestRecorder: %v", err)
+	}
+	if rec != nil {
 		t.Fatalf("loadManifestRecorder without %s = %+v, want nil", envIntendedManifest, rec)
 	}
 }
@@ -114,7 +121,10 @@ func TestLoadManifestRecorderDefaults(t *testing.T) {
 	t.Setenv(envIntendedManifest, filepath.Join(t.TempDir(), "intended.json"))
 	t.Setenv(envGenerateMode, "")
 	t.Setenv(envGenerateScope, "")
-	rec := loadManifestRecorder()
+	rec, err := loadManifestRecorder()
+	if err != nil {
+		t.Fatalf("loadManifestRecorder: %v", err)
+	}
 	if rec == nil {
 		t.Fatal("loadManifestRecorder = nil, want recorder")
 	}
@@ -130,7 +140,10 @@ func TestLoadManifestRecorderExplicit(t *testing.T) {
 	t.Setenv(envIntendedManifest, filepath.Join(t.TempDir(), "intended.json"))
 	t.Setenv(envGenerateMode, "check")
 	t.Setenv(envGenerateScope, `[{"element":"//pkg/...","dirs":["pkg"]}]`)
-	rec := loadManifestRecorder()
+	rec, err := loadManifestRecorder()
+	if err != nil {
+		t.Fatalf("loadManifestRecorder: %v", err)
+	}
 	if rec.mode != "check" {
 		t.Errorf("mode = %q, want check", rec.mode)
 	}
@@ -142,19 +155,22 @@ func TestLoadManifestRecorderExplicit(t *testing.T) {
 func TestLoadManifestRecorderBadMode(t *testing.T) {
 	t.Setenv(envIntendedManifest, filepath.Join(t.TempDir(), "intended.json"))
 	t.Setenv(envGenerateMode, "print")
-	assertPanics(t, "bad mode", func() { loadManifestRecorder() })
+	_, err := loadManifestRecorder()
+	assertErrorContains(t, "bad mode", err, `must be "check" or "default"`)
 }
 
 func TestLoadManifestRecorderMalformedScope(t *testing.T) {
 	t.Setenv(envIntendedManifest, filepath.Join(t.TempDir(), "intended.json"))
 	t.Setenv(envGenerateScope, `[{"element":`)
-	assertPanics(t, "malformed scope", func() { loadManifestRecorder() })
+	_, err := loadManifestRecorder()
+	assertErrorContains(t, "malformed scope", err, "malformed")
 }
 
 func TestLoadManifestRecorderEmptyScopes(t *testing.T) {
 	t.Setenv(envIntendedManifest, filepath.Join(t.TempDir(), "intended.json"))
 	t.Setenv(envGenerateScope, `[]`)
-	assertPanics(t, "empty scopes", func() { loadManifestRecorder() })
+	_, err := loadManifestRecorder()
+	assertErrorContains(t, "empty scopes", err, "at least one scope element")
 }
 
 func TestScopeIndex(t *testing.T) {
@@ -240,20 +256,21 @@ func TestReplacementKind(t *testing.T) {
 		"new_kind": {FromKind: "new_kind", KindName: "final_kind", KindLoad: "@x//:defs.bzl"},
 		"same":     {FromKind: "same", KindName: "same", KindLoad: "@x//:defs.bzl"},
 	}
-	if got := replacementKind(kindMap, "plain"); got != nil {
-		t.Errorf("replacementKind(plain) = %+v, want nil", got)
+	if got, err := replacementKind(kindMap, "plain"); err != nil || got != nil {
+		t.Errorf("replacementKind(plain) = %+v, %v, want nil, nil", got, err)
 	}
-	if got := replacementKind(kindMap, "old_kind"); got == nil || got.KindName != "final_kind" {
-		t.Errorf("replacementKind(old_kind) = %+v, want transitive final_kind", got)
+	if got, err := replacementKind(kindMap, "old_kind"); err != nil || got == nil || got.KindName != "final_kind" {
+		t.Errorf("replacementKind(old_kind) = %+v, %v, want transitive final_kind", got, err)
 	}
-	if got := replacementKind(kindMap, "same"); got == nil || got.KindName != "same" {
-		t.Errorf("replacementKind(same) = %+v, want same", got)
+	if got, err := replacementKind(kindMap, "same"); err != nil || got == nil || got.KindName != "same" {
+		t.Errorf("replacementKind(same) = %+v, %v, want same", got, err)
 	}
 	loop := map[string]config.MappedKind{
 		"a": {FromKind: "a", KindName: "b", KindLoad: "@x//:defs.bzl"},
 		"b": {FromKind: "b", KindName: "a", KindLoad: "@x//:defs.bzl"},
 	}
-	assertPanics(t, "kind map loop", func() { replacementKind(loop, "a") })
+	_, err := replacementKind(loop, "a")
+	assertErrorContains(t, "kind map loop", err, `kind map loop at "b"`)
 }
 
 func TestAppendOrMergeKindMapping(t *testing.T) {
@@ -271,7 +288,11 @@ func TestAppendOrMergeKindMapping(t *testing.T) {
 func TestApplyKindMappings(t *testing.T) {
 	loads := []rule.LoadInfo{{Name: "@rules_dx//rust/rules:defs.bzl", Symbols: []string{"rust_library"}}}
 	plain := packageRecord{genKinds: []string{"rust_library"}, cfg: testConfig()}
-	if got := applyKindMappings(plain, loads); len(got) != 1 {
+	got, err := applyKindMappings(plain, loads)
+	if err != nil {
+		t.Fatalf("applyKindMappings without map: %v", err)
+	}
+	if len(got) != 1 {
 		t.Fatalf("applyKindMappings without map = %+v", got)
 	}
 	mappedCfg := testConfig()
@@ -279,16 +300,30 @@ func TestApplyKindMappings(t *testing.T) {
 		"rust_library": {FromKind: "rust_library", KindName: "custom_library", KindLoad: "@custom//:defs.bzl"},
 	}
 	mapped := packageRecord{genKinds: []string{"rust_library"}, cfg: mappedCfg}
-	if got := applyKindMappings(mapped, loads); len(got) != 2 || got[1].Name != "@custom//:defs.bzl" {
+	got, err = applyKindMappings(mapped, loads)
+	if err != nil {
+		t.Fatalf("applyKindMappings with map: %v", err)
+	}
+	if len(got) != 2 || got[1].Name != "@custom//:defs.bzl" {
 		t.Fatalf("applyKindMappings with map = %+v", got)
 	}
+	loopCfg := testConfig()
+	loopCfg.KindMap = map[string]config.MappedKind{
+		"a": {FromKind: "a", KindName: "b", KindLoad: "@x//:defs.bzl"},
+		"b": {FromKind: "b", KindName: "a", KindLoad: "@x//:defs.bzl"},
+	}
+	_, err = applyKindMappings(packageRecord{genKinds: []string{"a"}, cfg: loopCfg}, loads)
+	assertErrorContains(t, "kind map loop", err, "kind map loop")
 }
 
 func TestWitnessNewFile(t *testing.T) {
 	rec := &manifestRecorder{apparentLoads: testApparentLoads()}
 	cfg := testConfig()
 	gen := []*rule.Rule{rule.NewRule("rust_library", "demo")}
-	file, changed := rec.witness(packageRecord{rel: "pkg", dir: "/repo/pkg", cfg: cfg, gen: gen})
+	file, changed, err := rec.witness(packageRecord{rel: "pkg", dir: "/repo/pkg", cfg: cfg, gen: gen})
+	if err != nil {
+		t.Fatalf("witness new file: %v", err)
+	}
 	if !changed {
 		t.Fatal("witness new file changed = false")
 	}
@@ -301,11 +336,17 @@ func TestWitnessNewFile(t *testing.T) {
 	if !strings.Contains(string(file.CreateContent), `name = "demo"`) {
 		t.Errorf("create content = %q, want generated rule", file.CreateContent)
 	}
-	root, changed := rec.witness(packageRecord{rel: "", dir: "/repo", cfg: cfg, gen: gen})
+	root, changed, err := rec.witness(packageRecord{rel: "", dir: "/repo", cfg: cfg, gen: gen})
+	if err != nil {
+		t.Fatalf("witness root new file: %v", err)
+	}
 	if !changed || root.Path != "BUILD.bazel" {
 		t.Errorf("root new file = %+v, changed = %v, want path BUILD.bazel", root, changed)
 	}
-	empty, changed := rec.witness(packageRecord{rel: "pkg", dir: "/repo/pkg", cfg: cfg})
+	empty, changed, err := rec.witness(packageRecord{rel: "pkg", dir: "/repo/pkg", cfg: cfg})
+	if err != nil {
+		t.Fatalf("witness empty new file: %v", err)
+	}
 	if changed {
 		t.Errorf("witness empty new file changed = true: %+v", empty)
 	}
@@ -316,7 +357,10 @@ func TestWitnessModification(t *testing.T) {
 	f := mustLoad(t, "/repo/pkg/BUILD.bazel", "pkg", old)
 	rule.NewRule("rust_library", "extra").Insert(f)
 	rec := &manifestRecorder{apparentLoads: testApparentLoads()}
-	file, changed := rec.witness(packageRecord{rel: "pkg", file: f, cfg: testConfig()})
+	file, changed, err := rec.witness(packageRecord{rel: "pkg", file: f, cfg: testConfig()})
+	if err != nil {
+		t.Fatalf("witness modification: %v", err)
+	}
 	if !changed {
 		t.Fatal("witness modification changed = false")
 	}
@@ -337,8 +381,8 @@ func TestWitnessUnchanged(t *testing.T) {
 	stable := stableContent(t, path, "pkg", "load(\"@rules_dx//rust/rules:defs.bzl\", \"rust_library\")\n")
 	f := mustLoad(t, path, "pkg", stable)
 	rec := &manifestRecorder{apparentLoads: testApparentLoads()}
-	if file, changed := rec.witness(packageRecord{rel: "pkg", file: f, cfg: testConfig()}); changed {
-		t.Fatalf("witness stable file changed = true: %+v", file)
+	if file, changed, err := rec.witness(packageRecord{rel: "pkg", file: f, cfg: testConfig()}); err != nil || changed {
+		t.Fatalf("witness stable file changed = %v, err = %v, file = %+v", changed, err, file)
 	}
 }
 
@@ -359,7 +403,10 @@ func TestKnownLoadsWithKindMap(t *testing.T) {
 		"rust_library": {FromKind: "rust_library", KindName: "custom_library", KindLoad: "@custom//:defs.bzl"},
 	}
 	rec := &manifestRecorder{apparentLoads: testApparentLoads()}
-	loads := rec.knownLoads(packageRecord{genKinds: []string{"rust_library"}, cfg: cfg})
+	loads, err := rec.knownLoads(packageRecord{genKinds: []string{"rust_library"}, cfg: cfg})
+	if err != nil {
+		t.Fatalf("knownLoads: %v", err)
+	}
 	found := false
 	for _, load := range loads {
 		if load.Name == "@custom//:defs.bzl" {
@@ -369,6 +416,43 @@ func TestKnownLoadsWithKindMap(t *testing.T) {
 	if !found {
 		t.Fatalf("known loads = %+v, want mapped load", loads)
 	}
+}
+
+func TestWitnessKindMapLoopError(t *testing.T) {
+	// A cyclic map_kind mapping must surface as a witness error, not a
+	// panic, so the run fails closed with an actionable message.
+	cfg := testConfig()
+	cfg.KindMap = map[string]config.MappedKind{
+		"a": {FromKind: "a", KindName: "b", KindLoad: "@x//:defs.bzl"},
+		"b": {FromKind: "b", KindName: "a", KindLoad: "@x//:defs.bzl"},
+	}
+	rec := &manifestRecorder{apparentLoads: testApparentLoads()}
+	gen := []*rule.Rule{rule.NewRule("a", "demo")}
+	_, _, err := rec.witness(packageRecord{rel: "pkg", dir: "/repo/pkg", cfg: cfg, gen: gen, genKinds: []string{"a"}})
+	assertErrorContains(t, "witness kind map loop", err, "kind map loop")
+
+	existing := mustLoad(t, "/repo/pkg/BUILD.bazel", "pkg", "load(\"@x//:defs.bzl\", \"a\")\n\na(\n    name = \"demo\",\n)\n")
+	_, _, err = rec.witness(packageRecord{rel: "pkg", file: existing, cfg: cfg, genKinds: []string{"a"}})
+	assertErrorContains(t, "witness existing kind map loop", err, "kind map loop")
+}
+
+func TestEmitKindMapLoopError(t *testing.T) {
+	// A cyclic map_kind mapping must surface as an emit error, not a
+	// panic, so the run fails closed with an actionable message.
+	cfg := testConfig()
+	cfg.KindMap = map[string]config.MappedKind{
+		"a": {FromKind: "a", KindName: "b", KindLoad: "@x//:defs.bzl"},
+		"b": {FromKind: "b", KindName: "a", KindLoad: "@x//:defs.bzl"},
+	}
+	rec := &manifestRecorder{
+		outPath:       filepath.Join(t.TempDir(), "intended.json"),
+		mode:          "default",
+		scopes:        []scopeElement{{Element: "//...", Dirs: []string{""}}},
+		apparentLoads: testApparentLoads(),
+	}
+	rec.record(language.GenerateArgs{Rel: "pkg", Dir: "/repo/pkg", Config: cfg},
+		language.GenerateResult{Gen: []*rule.Rule{rule.NewRule("a", "demo")}})
+	assertErrorContains(t, "emit kind map loop", rec.emit(nil), "kind map loop")
 }
 
 func readIntended(t *testing.T, path string) intendedManifest {
@@ -405,10 +489,12 @@ func TestEmitEndToEnd(t *testing.T) {
 		Dir:    "/repo/new",
 		Config: cfg,
 	}, language.GenerateResult{Gen: []*rule.Rule{rule.NewRule("rust_library", "fresh")}})
-	rec.emit([]*ignoreEntry{
+	if err := rec.emit([]*ignoreEntry{
 		{value: "used_import", path: "pkg", used: true},
 		{value: "stale_import", path: "pkg", used: false},
-	})
+	}); err != nil {
+		t.Fatalf("emit: %v", err)
+	}
 	manifest := readIntended(t, out)
 	if manifest.SchemaMajor != 1 || manifest.SchemaMinor != 0 || manifest.Mode != "check" {
 		t.Errorf("header = %+v", manifest)
@@ -449,11 +535,13 @@ func TestEmitSortsIgnoredImports(t *testing.T) {
 		scopes:        []scopeElement{{Element: "//...", Dirs: []string{""}}},
 		apparentLoads: testApparentLoads(),
 	}
-	rec.emit([]*ignoreEntry{
+	if err := rec.emit([]*ignoreEntry{
 		{value: "zebra", path: "b", used: true},
 		{value: "apple", path: "b", used: true},
 		{value: "mango", path: "a", used: true},
-	})
+	}); err != nil {
+		t.Fatalf("emit: %v", err)
+	}
 	manifest := readIntended(t, out)
 	want := [][2]string{{"a", "mango"}, {"b", "apple"}, {"b", "zebra"}}
 	if len(manifest.IgnoredImports) != len(want) {
@@ -478,12 +566,10 @@ func TestEmitScopeMismatch(t *testing.T) {
 	}
 	outside := narrow()
 	outside.record(language.GenerateArgs{Rel: "b", Dir: "/repo/b", Config: testConfig()}, language.GenerateResult{})
-	assertPanics(t, "file scope mismatch", func() { outside.emit(nil) })
+	assertErrorContains(t, "file scope mismatch", outside.emit(nil), `package "b" matches no`)
 
 	matched := narrow()
-	assertPanics(t, "ignore scope mismatch", func() {
-		matched.emit([]*ignoreEntry{{value: "x", path: "b", used: true}})
-	})
+	assertErrorContains(t, "ignore scope mismatch", matched.emit([]*ignoreEntry{{value: "x", path: "b", used: true}}), `ignored import "x" matches no`)
 }
 
 func TestEmitWriteError(t *testing.T) {
@@ -493,7 +579,7 @@ func TestEmitWriteError(t *testing.T) {
 		scopes:        []scopeElement{{Element: "//...", Dirs: []string{""}}},
 		apparentLoads: testApparentLoads(),
 	}
-	assertPanics(t, "write error", func() { rec.emit(nil) })
+	assertErrorContains(t, "write error", rec.emit(nil), "cannot write intended manifest")
 }
 
 func TestAfterResolvingDepsEmits(t *testing.T) {

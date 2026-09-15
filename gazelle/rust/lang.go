@@ -113,10 +113,20 @@ type targetImports struct {
 // NewLanguage returns the private first-party Rust Gazelle extension.
 func NewLanguage() language.Language { return &rustLang{} }
 
+// exitProcess ends the Gazelle run when generation errors are recorded.
+// It is a variable so unit tests can observe the fail-closed decision
+// without exiting the test process.
+var exitProcess = os.Exit
+
 func (l *rustLang) Before(context.Context) {
 	l.errors = nil
 	l.ignores = nil
-	l.manifest = loadManifestRecorder()
+	l.manifest = nil
+	if rec, err := loadManifestRecorder(); err != nil {
+		l.fail("%v", err)
+	} else {
+		l.manifest = rec
+	}
 	if l.manifest != nil {
 		l.manifest.apparentLoads = l.ApparentLoads
 	}
@@ -181,14 +191,20 @@ func (l *rustLang) AfterResolvingDeps(context.Context) {
 			l.fail("rust: //%s: stale # gazelle:dx_ignore_import rust %s matches no literal reference", ignore.path, ignore.value)
 		}
 	}
-	if len(l.errors) == 0 {
-		if l.manifest != nil {
-			l.manifest.emit(l.ignores)
+	if len(l.errors) == 0 && l.manifest != nil {
+		if err := l.manifest.emit(l.ignores); err != nil {
+			l.fail("%v", err)
 		}
-		return
 	}
-	sort.Strings(l.errors)
-	panic("Rust generation failed before BUILD emission:\n" + strings.Join(l.errors, "\n"))
+	// The framework's Language interface offers no error return here, so a
+	// fatal exit — not a panic and its stack trace — is the only way to
+	// fail the run before BUILD emission. A zero-length error list returns
+	// normally.
+	if len(l.errors) > 0 {
+		sort.Strings(l.errors)
+		fmt.Fprintln(os.Stderr, "Rust generation failed before BUILD emission:\n"+strings.Join(l.errors, "\n"))
+		exitProcess(1)
+	}
 }
 
 func (*rustLang) Name() string { return languageName }
@@ -515,7 +531,11 @@ func wantsUnitTest(target cargoTarget, tree map[string]*FileFacts) bool {
 // tools, data, env, and links stay user-owned via keep: a script needing
 // them fails in the sandbox rather than building silently wrong.
 func (l *rustLang) emitBuildScript(args language.GenerateArgs, manifestPath string, manifest *cargoManifest, existsSet map[string]bool, read func(string) ([]byte, error), owners map[string]string, result *language.GenerateResult) {
-	scriptName := BuildScriptName(manifest.packageName)
+	scriptName, err := BuildScriptName(manifest.packageName)
+	if err != nil {
+		l.fail("rust: %s: %v", manifestPath, err)
+		return
+	}
 	root := path.Join(args.Rel, manifest.build.path)
 	if !existsSet[root] {
 		l.fail("rust: %s: build script %s does not exist", manifestPath, manifest.build.path)
