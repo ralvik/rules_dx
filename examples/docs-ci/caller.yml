@@ -1,0 +1,31 @@
+# Docs caller template: pins the qualified reusable docs workflow at a reviewed commit.
+# Copy to .github/workflows/docs.yml in the consumer repo; do not copy per-check logic.
+# Reviewed pin bumps only; customizations (docs_scope, docs_dir, publish) preserved across bumps.
+# Required repository settings (documented separately, not configured here):
+# - Pages source: GitHub Actions (Settings -> Pages), once, before first publish: true run
+# - permissions: contents read; pages/write + id-token/write granted to the publish job only
+# - branch protection: require docs-check (+ docs-publish when publish is true) as needed
+name: docs
+on:
+  pull_request: {}
+  push:
+    branches: [$default-branch]
+  workflow_dispatch: {}
+jobs:
+  docs:
+    uses: rules_dx/.github/workflows/reusable-docs.yml@4ff4c7a4f100293f84455e58e3f12a0cdcc699d1
+    with:
+      rules_dx_version: "0.0.0"
+      docs_scope: "//docs/..."
+      docs_dir: "docs"
+      # Publishing deploys docs_dir to GitHub Pages. Gate on the default
+      # branch so pull requests stay check-only.
+      publish: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    # Least privilege: the reusable workflow's publish job needs
+    # pages:write + id-token:write, so the caller must grant them on the
+    # calling job (no secrets: inherit: the workflow defines no secrets).
+    # Other jobs in this file keep their own narrower permissions.
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

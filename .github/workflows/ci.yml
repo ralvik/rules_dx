@@ -26,6 +26,18 @@ on:
   pull_request:
 
 jobs:
+  docs-ci:
+    name: docs-ci (self-call reusable docs workflow)
+    uses: ./.github/workflows/reusable-docs.yml
+    with:
+      rules_dx_version: "0.0.0"
+      docs_scope: "//docs/..."
+      docs_dir: "docs"
+      publish: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
   build-test:
     name: build-test (Linux x86_64 glibc, local-only)
     runs-on: ubuntu-latest
