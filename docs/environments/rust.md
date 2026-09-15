@@ -30,7 +30,7 @@ The focused Rust foundation proves provider completeness, proc macros, build-scr
 generated-source visibility, version selection, required platforms, and exact-target isolation. The
 focused environment plan is the provider-derived `rust_env_plan` rule over one `rust_*` wrapper
 (`rust/env/plan.bzl`, pinned by `//rust/env:env_plan_tests`); IDE reuse is pinned by upstream
-`gen_rust_project` + `flycheck` acquisition (`//rust/ide:ide_acquisition_test`) with focused
-exact-target projection recorded in the M12 completion report.
-The public `dx env` repository/root/exact-target orchestration and atomic selection are delivered by the
-repository-workflow milestone.
+`gen_rust_project` + `flycheck` acquisition (`//rust/ide:ide_acquisition_test`), including
+focused exact-target projection.
+The public `dx env` repository/root/exact-target orchestration and atomic selection are implemented in
+`dx/env`.

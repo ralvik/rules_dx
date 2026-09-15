@@ -27,6 +27,6 @@ path conflicts follow authoritative provider output. Unrepresented importers are
 focused selection; later focused refreshes carry forward unrelated selected importer views through
 the shared managed-state contract.
 
-The public `dx env` repository/root/exact-target orchestration and atomic selection are delivered by
-the repository-workflow milestone. The language foundation proves focused plans and projections
+The public `dx env` repository/root/exact-target orchestration and atomic selection are implemented in
+`dx/env`. The language foundation proves focused plans and projections
 without exposing a public persistent-language provider.
