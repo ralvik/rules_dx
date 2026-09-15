@@ -6,7 +6,7 @@ adds no new semantics.
 
 - [Local workflows](local-workflows.md): current manual checks and tooling gaps;
   planned Linux-first bring-up, coverage, and local overrides.
-- [Devcontainer](devcontainer.md): M30b-delivered scaffolding through `dx init`,
+- [Devcontainer](devcontainer.md): scaffolding through `dx init` (implemented in `dx/adopt`),
   not a commitment to working container support.
-- [Diagnostics and versioning](diagnostics-versioning.md): frozen
-  O50/O51 status surface and `dx` pinning, delivered in M30b.
+- [Diagnostics and versioning](diagnostics-versioning.md): implemented `dx status`/`dx version`
+  surface and `dx` pinning.
