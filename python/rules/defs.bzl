@@ -27,7 +27,8 @@ resolution, never here.
 """
 
 load("@aspect_rules_py//py:defs.bzl", _PyInfo = "PyInfo", _PyWheelsInfo = "PyWheelsInfo", _py_binary = "py_binary", _py_library = "py_library", _py_pytest_test = "py_pytest_test")
-load("//quality:sources.bzl", "QualitySourcesInfo", "check_direct_sources")
+load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_library_forward_rule", "dx_wrap")
+load("//quality:sources.bzl", "QualitySourcesInfo")
 
 _DX_PY_LIBRARY_PROVIDES = [
     _PyInfo,
@@ -44,126 +45,46 @@ _DX_PY_BINARY_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-def _python_quality_sources(ctx):
-    py = [f for f in ctx.files.srcs if f.basename.endswith(".py")]
-    pyi = [f for f in ctx.files.srcs if f.basename.endswith(".pyi")]
-    direct_sources = {}
-    if len(py) > 0:
-        direct_sources["python"] = depset(py)
-    if len(pyi) > 0:
-        direct_sources["python_stub"] = depset(pyi)
-    check_direct_sources(direct_sources, str(ctx.label))
-    return QualitySourcesInfo(direct_sources = direct_sources)
+_DX_PY_SOURCE_SPECS = [("python", "py"), ("python_stub", "pyi")]
+_DX_PY_SOURCE_EXTS = [".py", ".pyi"]
 
-def _python_preserved_library_providers(ctx):
-    upstream = ctx.attr.upstream
-    if _PyInfo not in upstream:
-        fail("python_*: upstream target has no PyInfo: " + str(ctx.attr.upstream.label))
-    if _PyWheelsInfo not in upstream:
-        fail("python_*: upstream target has no PyWheelsInfo: " + str(ctx.attr.upstream.label))
-    return [upstream[_PyInfo], upstream[_PyWheelsInfo]]
-
-def _python_preserved_binary_providers(ctx):
-    upstream = ctx.attr.upstream
-    if _PyInfo not in upstream:
-        fail("python_*: upstream target has no PyInfo: " + str(ctx.attr.upstream.label))
-    return [upstream[_PyInfo]]
-
-def _python_forwarded_runtime_providers(ctx):
-    upstream = ctx.attr.upstream
-    out = []
-    if InstrumentedFilesInfo not in upstream:
-        fail("python_*: upstream target has no InstrumentedFilesInfo: " + str(ctx.attr.upstream.label))
-    out.append(upstream[InstrumentedFilesInfo])
-    if OutputGroupInfo in upstream:
-        out.append(upstream[OutputGroupInfo])
-    if RunEnvironmentInfo in upstream:
-        out.append(upstream[RunEnvironmentInfo])
-    return out
-
-def _python_library_forward_impl(ctx):
-    return (
-        _python_preserved_library_providers(ctx) +
-        [ctx.attr.upstream[DefaultInfo]] +
-        _python_forwarded_runtime_providers(ctx) +
-        [_python_quality_sources(ctx)]
-    )
-
-_python_library_forward = rule(
-    implementation = _python_library_forward_impl,
+_python_library_forward = dx_library_forward_rule(
     provides = _DX_PY_LIBRARY_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".py", ".pyi"],
-            doc = "Direct Python sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [[_PyInfo]],
-            doc = "The private upstream py_library target whose providers are preserved.",
-        ),
-    },
+    required_providers = [(_PyInfo, "PyInfo"), (_PyWheelsInfo, "PyWheelsInfo")],
+    quality_specs = _DX_PY_SOURCE_SPECS,
+    what = "python_*",
+    allow_files = _DX_PY_SOURCE_EXTS,
+    upstream_providers = [[_PyInfo]],
     doc = "Forwards upstream Python library providers unchanged and adds QualitySourcesInfo.",
+    srcs_doc = "Direct Python sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream py_library target whose providers are preserved.",
 )
 
-def _python_symlink_default_info(ctx):
-    upstream = ctx.attr.upstream[DefaultInfo]
-    exe = upstream.files_to_run.executable
-    if exe == None:
-        fail("python_*: upstream target has no executable: " + str(ctx.attr.upstream.label))
-    link = ctx.actions.declare_file(ctx.label.name)
-    ctx.actions.symlink(output = link, target_file = exe)
-    return DefaultInfo(
-        executable = link,
-        files = depset([link]),
-        runfiles = ctx.runfiles(files = [link]).merge(upstream.default_runfiles),
-    )
-
-def _python_forwarded_binary_non_default_providers(ctx):
-    return (
-        _python_preserved_binary_providers(ctx) +
-        _python_forwarded_runtime_providers(ctx) +
-        [_python_quality_sources(ctx)]
-    )
-
-def _python_binary_forward_impl(ctx):
-    return [_python_symlink_default_info(ctx)] + _python_forwarded_binary_non_default_providers(ctx)
-
-_python_binary_forward = rule(
-    implementation = _python_binary_forward_impl,
-    executable = True,
+_python_binary_forward = dx_executable_forward_rule(
+    kind = "executable",
     provides = _DX_PY_BINARY_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".py", ".pyi"],
-            doc = "Direct Python sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [[_PyInfo]],
-            doc = "The private upstream py_binary target whose providers are preserved.",
-        ),
-    },
+    required_providers = [(_PyInfo, "PyInfo")],
+    quality_specs = _DX_PY_SOURCE_SPECS,
+    what = "python_*",
+    allow_files = _DX_PY_SOURCE_EXTS,
+    upstream_providers = [[_PyInfo]],
     doc = "Executable forwarder for python_binary: symlinks the upstream binary.",
+    srcs_doc = "Direct Python sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream py_binary target whose providers are preserved.",
 )
 
-def _python_test_forward_impl(ctx):
-    return [_python_symlink_default_info(ctx)] + _python_forwarded_binary_non_default_providers(ctx)
-
-_python_forward_test = rule(
-    implementation = _python_test_forward_impl,
-    test = True,
+_python_forward_test = dx_executable_forward_rule(
+    kind = "test",
     provides = _DX_PY_BINARY_PROVIDES,
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".py", ".pyi"],
-            doc = "Direct Python test sources owned by this wrapper for QualitySourcesInfo.",
-        ),
-        "upstream": attr.label(
-            mandatory = True,
-            providers = [[_PyInfo]],
-            doc = "The private upstream py_pytest_test target whose providers are preserved.",
-        ),
+    required_providers = [(_PyInfo, "PyInfo")],
+    quality_specs = _DX_PY_SOURCE_SPECS,
+    what = "python_*",
+    allow_files = _DX_PY_SOURCE_EXTS,
+    upstream_providers = [[_PyInfo]],
+    doc = "Test forwarder for python_test: symlinks the upstream pytest executable.",
+    srcs_doc = "Direct Python test sources owned by this wrapper for QualitySourcesInfo.",
+    upstream_doc = "The private upstream py_pytest_test target whose providers are preserved.",
+    extra_attrs = {
         "_lcov_merger": attr.label(
             default = configuration_field(fragment = "coverage", name = "output_generator"),
             executable = True,
@@ -176,36 +97,13 @@ _python_forward_test = rule(
                   "upstream py_venv_exec_test.",
         ),
     },
-    doc = "Test forwarder for python_test: symlinks the upstream pytest executable.",
 )
 
 def _python_wrap_library(name, srcs, visibility = None, **kwargs):
-    _py_library(
-        name = name + "_upstream",
-        srcs = srcs,
-        visibility = ["//visibility:private"],
-        **kwargs
-    )
-    _python_library_forward(
-        name = name,
-        upstream = name + "_upstream",
-        srcs = srcs,
-        visibility = visibility,
-    )
+    dx_wrap(name, _py_library, _python_library_forward, srcs, visibility = visibility, **kwargs)
 
 def _python_wrap_binary(name, srcs, visibility = None, **kwargs):
-    _py_binary(
-        name = name + "_upstream",
-        srcs = srcs,
-        visibility = ["//visibility:private"],
-        **kwargs
-    )
-    _python_binary_forward(
-        name = name,
-        upstream = name + "_upstream",
-        srcs = srcs,
-        visibility = visibility,
-    )
+    dx_wrap(name, _py_binary, _python_binary_forward, srcs, visibility = visibility, **kwargs)
 
 def python_library(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `py_library` (M14)."""

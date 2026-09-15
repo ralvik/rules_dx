@@ -5,6 +5,7 @@ load("//quality:fixtures.bzl", "real_source_target")
 exports_files([
     "behavioral_matrix.md",
     "defs.bzl",
+    "wrapper.bzl",
 ])
 
 # Repository corpus: facade Starlark and matrix Markdown owned
@@ -22,5 +23,6 @@ real_source_target(
     starlark_srcs = [
         "BUILD.bazel",
         "defs.bzl",
+        "wrapper.bzl",
     ],
 )
