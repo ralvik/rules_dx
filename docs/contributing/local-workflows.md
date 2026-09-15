@@ -112,8 +112,8 @@ reduction: v1 retains full required-host coverage.
 
 Coverage is local-only. The mandatory
 [project coverage gate](../testing/README.md#coverage) must pass;
-Codecov service activation and fork-PR handling remain under the
-[O14 qualification requirements](../testing/README.md#github-coverage-reporting).
+Codecov service activation and fork-PR handling are tracked in
+[GitHub coverage reporting](../testing/README.md#github-coverage-reporting).
 Do not present local reports as service evidence.
 
 ## Planned Local Overrides
