@@ -84,6 +84,24 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
+      - name: Write stopgap Pages entry point
+        # The artifact is the raw docs tree (Markdown, no index.html) until
+        # the #10 renderer lands. Without an entry point every deployment
+        # 404s (issue #30). Generate one at publish time so the repo tree
+        # stays renderer-clean; #10 replaces this with the rendered site.
+        run: |
+          printf '%s\n' \
+            '<!doctype html>' \
+            '<html lang="en">' \
+            '<head><meta charset="utf-8"><title>rules_dx docs (preview)</title></head>' \
+            '<body>' \
+            '<h1>rules_dx docs</h1>' \
+            '<p>Rendered site pending <a href="https://github.com/ralvik/rules_dx/issues/10">issue #10</a>.' \
+            'Meanwhile the validated docs tree is browsable in the' \
+            '<a href="https://github.com/ralvik/rules_dx/tree/main/docs">repository</a>.</p>' \
+            '</body>' \
+            '</html>' \
+            > "${{ inputs.docs_dir }}/index.html"
       - name: Upload docs tree as Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
