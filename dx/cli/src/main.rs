@@ -15,19 +15,40 @@ use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use dx_cli::args::parse;
+use dx_cli::plan::create_run_temp_dir;
 use dx_cli::{execute, Env, ProcessQueryRunner};
 use dx_output::OutputMode;
 use dx_process::{discover_real, pre_exec_code, ChildStatus, Runner};
 
-/// Pid of the active Bazel child, if any. Written before waiting and
-/// cleared after; the signal handler forwards to it.
+/// Pid of the active Bazel child, if any. Stored before waiting and
+/// cleared after; the signal handler forwards to it. `SeqCst` keeps the
+/// store/load pair obviously ordered across the handler thread; signals
+/// are rare so the fence cost is irrelevant.
 static CHILD_PID: AtomicU32 = AtomicU32::new(0);
 
-/// Forwards `signo` to the active child, if any. Async-signal-safe:
-/// only an atomic load and `kill`.
+/// Signal-forwarding contract (issue #93):
+///
+/// - Forwards SIGINT and SIGTERM only, to the active child if one is
+///   registered. Any other signal keeps its default disposition.
+/// - Async-signal-safe: the handler performs an atomic load and `kill`
+///   only; no allocation, no locking, no I/O.
+/// - If no child is registered (pid 0: startup, or teardown after the
+///   child was reaped) the signal is swallowed by the handler — the
+///   shim itself never dies from a forwarded signal.
+/// - Death semantics live in the runner, not the handler: after the
+///   child is reaped and the pump thread joined, a signal death resets
+///   that signal to `SIG_DFL` and re-raises, so the shell observes the
+///   same signal death as a direct Bazel invocation.
+/// - Known residual race: a signal landing between `wait` returning and
+///   the pid clear forwards to an already-reaped pid. The window is two
+///   stores wide and accepted like any supervisor's; the kill target is
+///   at worst a recycled pid, never shim state.
 extern "C" fn forward_to_child(signo: libc::c_int) {
-    let pid = CHILD_PID.load(Ordering::Relaxed);
+    let pid = CHILD_PID.load(Ordering::SeqCst);
     if pid != 0 {
+        // Handler context: `kill` is async-signal-safe; the return is
+        // deliberately unchecked — a dead child means `wait` below
+        // already owns the outcome.
         unsafe {
             libc::kill(pid as libc::pid_t, signo);
         }
@@ -54,6 +75,11 @@ fn install_forwarding() {
 /// SIGINT/SIGTERM to the child; when the child dies from a signal, the
 /// disposition is reset and the signal re-raised so shell semantics
 /// hold.
+/// Pump-thread teardown contract: the child is reaped first, then the
+/// pid registration is cleared so late signals cannot target a reaped
+/// pid, then the pump is joined so all piped stdout reaches stderr
+/// before the exit status is inspected. Only after the join may a
+/// signal death reset the disposition and re-raise.
 struct BinaryRunner {
     inherit_stdout: bool,
 }
@@ -75,7 +101,7 @@ impl Runner for BinaryRunner {
             command.stdout(Stdio::piped());
         }
         let mut child = command.spawn()?;
-        CHILD_PID.store(child.id(), Ordering::Relaxed);
+        CHILD_PID.store(child.id(), Ordering::SeqCst);
         let pump = if self.inherit_stdout {
             None
         } else {
@@ -88,7 +114,7 @@ impl Runner for BinaryRunner {
             }))
         };
         let status = child.wait();
-        CHILD_PID.store(0, Ordering::Relaxed);
+        CHILD_PID.store(0, Ordering::SeqCst);
         if let Some(pump) = pump {
             let _ = pump.join();
         }
@@ -158,15 +184,20 @@ fn run() -> i32 {
         }
     };
     let pid = std::process::id();
-    let temp_dir: PathBuf = std::env::temp_dir().join(format!("dx-run-{pid}"));
-    if let Err(error) = std::fs::create_dir_all(&temp_dir) {
-        let _ = writeln!(
-            io::stderr(),
-            "dx: cannot create temporary directory {}: {error}",
-            temp_dir.display()
-        );
-        return pre_exec_code();
-    }
+    // Unique scratch directory per invocation (issue #93): embeds a
+    // fresh nonce so recycled PIDs and concurrent runs never share
+    // BEP/intended state. The same nonce flows into `Env` so the
+    // per-run file names inherit the uniqueness.
+    let (temp_dir, nonce) = match create_run_temp_dir(&std::env::temp_dir(), pid) {
+        Ok(run) => run,
+        Err(error) => {
+            let _ = writeln!(
+                io::stderr(),
+                "dx: cannot create temporary directory: {error}"
+            );
+            return pre_exec_code();
+        }
+    };
     let inherit_stdout = matches!(invocation.output, OutputMode::Text { .. })
         && !invocation
             .reports
@@ -185,7 +216,7 @@ fn run() -> i32 {
             query_runner: &query_runner,
             temp_dir: &temp_dir,
             pid,
-            nonce: 0,
+            nonce,
             out: &mut out,
             err: &mut err,
             // The local-only `dx run` gate reads the launch
@@ -195,7 +226,15 @@ fn run() -> i32 {
         },
     );
     let _ = out.flush();
-    let _ = std::fs::remove_dir_all(&temp_dir);
+    // Cleanup failure is a warning, not silent: a stale `dx-run-*`
+    // directory otherwise accumulates with no signal to the operator.
+    if let Err(error) = std::fs::remove_dir_all(&temp_dir) {
+        let _ = writeln!(
+            io::stderr(),
+            "dx: warning: cannot remove temporary directory {}: {error}",
+            temp_dir.display()
+        );
+    }
     code
 }
 // LCOV_EXCL_STOP - reason: end of thin binary shim exclusion.

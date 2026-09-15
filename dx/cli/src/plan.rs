@@ -8,7 +8,11 @@
 //! order while file and directory scopes resolve to owning targets
 //! through [`crate::resolve`].
 
+use std::collections::hash_map::RandomState;
+use std::hash::{BuildHasher, Hasher};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::args::Command;
 use crate::resolve::ResolvedScope;
@@ -825,6 +829,68 @@ pub fn intended_path(temp_dir: &Path, pid: u32, nonce: u64) -> PathBuf {
     temp_dir.join(format!("dx-generate-{pid}-{nonce}.json"))
 }
 
+/// Per-process run counter feeding [`run_nonce`]. `Relaxed` suffices:
+/// no happens-before edge is needed, only atomicity — every fetch
+/// yields a distinct value even under concurrent callers.
+static RUN_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// Fresh nonce for one launcher run (issue #93). Mixes the pid,
+/// wall-clock nanos, and a process-local monotonic counter through
+/// SipHash into a uniform `u64`.
+///
+/// Uniqueness does not depend on hash secrecy: the counter alone makes
+/// every nonce in this process distinct, and (time, pid) separates
+/// processes. The residual risk — PID recycle within one clock tick
+/// across processes — is closed by [`create_run_temp_dir`], which never
+/// reuses a colliding directory.
+pub fn run_nonce(pid: u32) -> u64 {
+    let count = RUN_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_nanos() as u64)
+        .unwrap_or(0);
+    let mut hasher = RandomState::new().build_hasher();
+    hasher.write_u32(pid);
+    hasher.write_u64(nanos);
+    hasher.write_u64(count);
+    hasher.finish()
+}
+
+/// Launcher temporary directory for one run, exclusive-created under
+/// `base` as `dx-run-{pid}-{nonce:016x}`.
+///
+/// Uses `create_dir`, never `create_dir_all`: an `AlreadyExists`
+/// collision mints a fresh nonce and retries instead of reusing the
+/// directory, so recycled PIDs and concurrent invocations can never
+/// share BEP/intended state. Other errors return immediately; after
+/// bounded retries the last collision surfaces as an error.
+pub fn run_temp_dir(base: &Path, pid: u32, nonce: u64) -> PathBuf {
+    base.join(format!("dx-run-{pid}-{nonce:016x}"))
+}
+
+/// Creates a fresh unique run directory and returns it with the nonce
+/// the caller must forward as [`crate::exec::Env::nonce`] so BEP and
+/// intended-manifest paths share the run's uniqueness.
+pub fn create_run_temp_dir(base: &Path, pid: u32) -> std::io::Result<(PathBuf, u64)> {
+    const ATTEMPTS: u32 = 100;
+    for _ in 0..ATTEMPTS {
+        let nonce = run_nonce(pid);
+        let dir = run_temp_dir(base, pid, nonce);
+        match std::fs::create_dir(&dir) {
+            Ok(()) => return Ok((dir, nonce)),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(error),
+        }
+    }
+    Err(std::io::Error::new(
+        std::io::ErrorKind::AlreadyExists,
+        format!(
+            "could not mint a unique dx run directory under {}",
+            base.display()
+        ),
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1577,5 +1643,37 @@ mod tests {
         );
         assert_ne!(bep_path(dir, 42, 0), bep_path(dir, 42, 1));
         assert_ne!(bep_path(dir, 42, 0), bep_path(dir, 43, 0));
+    }
+
+    #[test]
+    fn run_temp_dir_names_pid_and_hex_nonce() {
+        assert_eq!(
+            run_temp_dir(Path::new("/tmp"), 42, 0x123),
+            PathBuf::from("/tmp/dx-run-42-0000000000000123")
+        );
+    }
+
+    #[test]
+    fn run_nonces_are_unique_in_process() {
+        use std::collections::HashSet;
+        let seen: HashSet<u64> = (0..512).map(|_| run_nonce(42)).collect();
+        assert_eq!(seen.len(), 512, "counter-backed nonces must not repeat");
+    }
+
+    #[test]
+    fn create_run_temp_dir_is_unique_and_real() {
+        let base = std::env::temp_dir();
+        let pid = std::process::id();
+        let (first, first_nonce) = create_run_temp_dir(&base, pid).expect("first run dir");
+        let (second, second_nonce) = create_run_temp_dir(&base, pid).expect("second run dir");
+        assert_ne!(
+            first, second,
+            "concurrent runs must never share a directory"
+        );
+        assert_ne!(first_nonce, second_nonce);
+        assert!(first.is_dir() && second.is_dir());
+        assert_eq!(first.parent(), Some(base.as_path()));
+        std::fs::remove_dir_all(&first).expect("cleanup first");
+        std::fs::remove_dir_all(&second).expect("cleanup second");
     }
 }
