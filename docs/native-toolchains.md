@@ -10,7 +10,7 @@ acquisition, Windows interoperability, required Linux profiles, and bounded cros
 [Support Matrix](product/support-matrix.md) owns support and foundation-admission claims.
 
 Research inspected pinned source, documentation, releases, and upstream CI. No `rules_dx` native
-build, test, coverage, remote-execution, or acquisition qualification ran. No implementation milestone
+build, test, coverage, remote-execution, or acquisition qualification ran. No implementation work
 is approved. Source-derived failure paths below need focused reproduction before patches are chosen.
 
 ## Selected Qualification Stack
@@ -34,8 +34,8 @@ compatibility/maintenance evidence; neither compiler removes the acquisition and
 Use the exact current stable Bazel and Rust compilers when qualification begins under
 [dependency currency](decisions/0008-dependency-currency.md). Bazel 9 is a provisional
 initial coverage baseline because the inspected hermetic-llvm coverage fixture requires
-it, not a release pin: the release default follows ADR 0008 and the exact seed pin is
-owned by O14. Do not silently inherit rules_rs's
+it, not a release pin: the release default follows ADR 0008 and the exact seed pin is tracked
+in [issue #5](https://github.com/ralvik/rules_dx/issues/5). Do not silently inherit rules_rs's
 older compiler default or turn a research version into a release pin.
 
 ### Inspected Identities
@@ -124,7 +124,8 @@ Windows-labelled lane builds remote GNULVM targets, not native MSVC tests/covera
 Use public upstream toolchains, `CcInfo`, Rust crate/dependency/build providers and existing
 execution transitions. `rules_rs` static/shared-library wrappers map Cargo `staticlib` and `cdylib`;
 they expose native linking providers rather than ordinary Rust-library providers. Exact public
-`rules_dx` wrapper/provider mappings remain O16/O24 work, not a re-export of every upstream API.
+`rules_dx` wrapper/provider mappings remain open (tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7)), not a re-export of every upstream API.
 
 The [build-script contract](generation/rust.md#build-scripts) remains authoritative: native compiler
 exposure defaults on with a kept opt-out; shell environment and nonhermetic-path discovery default
@@ -249,39 +250,38 @@ See the [pinned discovery source](https://github.com/hermeticbuild/rules_rust/bl
 ## Qualification Questions And Delivery
 
 These are engineering and legal-evidence tasks, not compiler-preference questions for the user.
-Existing decision IDs retain their scope and deadlines. No item is resolved by this research alone.
+Open items are tracked in the linked issues. No item is resolved by this research alone.
 
-| Question to close | Preferred next evidence or remedy | Gate and delivery owner |
+| Question to close | Preferred next evidence or remedy | Tracking |
 | --- | --- | --- |
-| Does the exact current stable stack compose? | Freeze resolved Bzlmod identities; compare rules_rs's LLVM reference with the newer candidate; record checksums, source patches and compiler/profile compatibility. | O14/O37; bootstrap and release maintainers |
-| Can Windows acquisition be immutable and lazy? | Reproduce clean re-resolution; qualify upstream fixed-manifest/package inputs and observed downloads, including missing acceptance and unrelated workflows. | O46; native integration maintainer |
-| Are Apple/Microsoft acquisition and cache rights adequate? | Review actual package terms, deliberate acceptance, extraction, mirrors, redistribution, internal caches and remote workers. Official download availability is not permission. | O46/O39; release maintainer with qualified legal review |
-| Can the kept CC opt-out execute successfully? | Reproduce no-linker analysis path; narrow upstream runner fix; distinguish script compilation inputs from execution inputs. | O24; M12 Rust maintainer |
-| Can third-party scripts retain a declared hermetic closure? | Qualify global shell-env False or upstream annotation extension; test hostile PATH, tool discovery and additional declared tools. | O24; M12 Rust maintainer |
-| Does Windows native transport preserve all inputs and ABI selection? | Fix ABI constraints and path rebasing upstream; test batch wrappers, response files, cc-rs assembly/discovery, SDK libraries and proc-macro DLLs. | O24/O46; Rust and native maintainers |
-| Which prebuilt native libraries interoperate? | Independent MSVC fixtures and Linux libstdc++ comparison; verify STL/CRT modes, unwinding, ownership and runtime deployment. | O24/O37/O46; native maintainer |
-| Are both Linux profiles complete? | Native and cross builds/tests, ELF dependencies, glibc symbols, static-musl test linkage and negative shared-musl cases. | O24/O37; Rust and native maintainers |
-| Which deployment and execution floors are supportable? | Run oldest-target and current-host fixtures separately; inspect compiler, clangd and bindgen loader dependencies. Check Apple's extracted SDK framework subset. | O37; release maintainer |
-| Can every executable first-party line be accounted for? | Rust-only, C/C++-only and mixed/DLL LCOV, missed-line tests, coverage-tool version pairing, native ignores and denominator validation. No ignored collection failures. | O24/O46; language and coverage maintainers |
-| Can bindgen/CXX use one upstream graph? | Separate standalone/build-script bindgen fixtures; execution libclang closure, target flags and identical CXX crate/generator versions. | O24/O33; Rust and codegen maintainers |
-| Can public Cargo metadata represent every generated target? | Prove features, build-script metadata, target kinds and ownership without private serialized dependency-graph access; seek narrow upstream metadata exports where missing. | O22/O24; Rust generation maintainer |
-| Can generation satisfy strict ownership and resolution cheaply? | Quoted/angle/ambiguous/macro include fixtures, authoritative dependency metadata, test grouping, generated headers, assembly dialects and explicit module/PCH disposition. | O46; M22 generation maintainer |
-| Can IDE setup preserve exact context and projection contracts? | Upstream exact-target Rust discovery and action-derived C++ snapshot proof, generated sources, multi-context headers, managed host tools and Bazel-9 compatibility. | O24/O46; Rust and M22 environment maintainers |
-| Which cross routes actually work and execute? | Capture compiler execution platform, native target execution and separate cache/remote evidence for every claimed row. Expand only after the initial cohort passes. | O37/O46; release maintainer |
-| Is the remediation bounded enough for admission? | Reproduce defects, estimate each upstream fix, name actual owners, record patch/upstream issue/upgrade tracking and complete-workflow evidence. | O46; release and foundation maintainers |
+| Does the exact current stable stack compose? | Freeze resolved Bzlmod identities; compare rules_rs's LLVM reference with the newer candidate; record checksums, source patches and compiler/profile compatibility. | [issue #5](https://github.com/ralvik/rules_dx/issues/5) |
+| Can Windows acquisition be immutable and lazy? | Reproduce clean re-resolution; qualify upstream fixed-manifest/package inputs and observed downloads, including missing acceptance and unrelated workflows. | [issue #5](https://github.com/ralvik/rules_dx/issues/5) |
+| Are Apple/Microsoft acquisition and cache rights adequate? | Review actual package terms, deliberate acceptance, extraction, mirrors, redistribution, internal caches and remote workers. Official download availability is not permission. | [issue #5](https://github.com/ralvik/rules_dx/issues/5) |
+| Can the kept CC opt-out execute successfully? | Reproduce no-linker analysis path; narrow upstream runner fix; distinguish script compilation inputs from execution inputs. | [issue #7](https://github.com/ralvik/rules_dx/issues/7) |
+| Can third-party scripts retain a declared hermetic closure? | Qualify global shell-env False or upstream annotation extension; test hostile PATH, tool discovery and additional declared tools. | [issue #7](https://github.com/ralvik/rules_dx/issues/7) |
+| Does Windows native transport preserve all inputs and ABI selection? | Fix ABI constraints and path rebasing upstream; test batch wrappers, response files, cc-rs assembly/discovery, SDK libraries and proc-macro DLLs. | [issue #7](https://github.com/ralvik/rules_dx/issues/7) |
+| Which prebuilt native libraries interoperate? | Independent MSVC fixtures and Linux libstdc++ comparison; verify STL/CRT modes, unwinding, ownership and runtime deployment. | [issue #7](https://github.com/ralvik/rules_dx/issues/7), [issue #5](https://github.com/ralvik/rules_dx/issues/5) |
+| Are both Linux profiles complete? | Native and cross builds/tests, ELF dependencies, glibc symbols, static-musl test linkage and negative shared-musl cases. | [issue #5](https://github.com/ralvik/rules_dx/issues/5), [issue #7](https://github.com/ralvik/rules_dx/issues/7) |
+| Which deployment and execution floors are supportable? | Run oldest-target and current-host fixtures separately; inspect compiler, clangd and bindgen loader dependencies. Check Apple's extracted SDK framework subset. | [issue #5](https://github.com/ralvik/rules_dx/issues/5) |
+| Can every executable first-party line be accounted for? | Rust-only, C/C++-only and mixed/DLL LCOV, missed-line tests, coverage-tool version pairing, native ignores and denominator validation. No ignored collection failures. | [issue #7](https://github.com/ralvik/rules_dx/issues/7) |
+| Can bindgen/CXX use one upstream graph? | Separate standalone/build-script bindgen fixtures; execution libclang closure, target flags and identical CXX crate/generator versions. | [issue #7](https://github.com/ralvik/rules_dx/issues/7), [issue #9](https://github.com/ralvik/rules_dx/issues/9) |
+| Can public Cargo metadata represent every generated target? | Prove features, build-script metadata, target kinds and ownership without private serialized dependency-graph access; seek narrow upstream metadata exports where missing. | [issue #7](https://github.com/ralvik/rules_dx/issues/7) |
+| Can generation satisfy strict ownership and resolution cheaply? | Quoted/angle/ambiguous/macro include fixtures, authoritative dependency metadata, test grouping, generated headers, assembly dialects and explicit module/PCH disposition. | [issue #9](https://github.com/ralvik/rules_dx/issues/9) |
+| Can IDE setup preserve exact context and projection contracts? | Upstream exact-target Rust discovery and action-derived C++ snapshot proof, generated sources, multi-context headers, managed host tools and Bazel-9 compatibility. | [issue #9](https://github.com/ralvik/rules_dx/issues/9), [issue #7](https://github.com/ralvik/rules_dx/issues/7) |
+| Which cross routes actually work and execute? | Capture compiler execution platform, native target execution and separate cache/remote evidence for every claimed row. Expand only after the initial cohort passes. | [issue #5](https://github.com/ralvik/rules_dx/issues/5) |
+| Is the remediation bounded enough for admission? | Reproduce defects, estimate each upstream fix, name actual owners, record patch/upstream issue/upgrade tracking and complete-workflow evidence. | [issue #5](https://github.com/ralvik/rules_dx/issues/5) |
 
 The Apple starting point is hermetic-llvm's pinned MacOSX26.5 SDK extraction. Review the terms
 accompanying that exact package against the
 [Apple SDK agreement](https://www.apple.com/legal/sla/docs/xcode.pdf); Apple-hosted execution does not
 by itself authorize separate extraction or unrestricted caching.
 
-O46 uses a light freeze at M00
-entry — minimal required core/framework inventory plus dispositions only, with detailed
-effort evidence for interfaces affecting M00–M03. Remaining per-candidate mappings,
-effort, and ownership stay pending O30/O31 qualification in M22/M23. The table's roles do not
-pretend maintainers, patch estimates or upstream issue numbers have already been assigned. O16 gates
-early Rust providers, O24 gates M12 integration, O46 gates additional-foundation disposition/M22
-mappings, and O37 owns final route/pin qualification. Preserve the existing milestone DAG.
+Admission records a light inventory entry — minimal required core/framework inventory plus
+dispositions only, with effort evidence recorded as each tracked item lands. Remaining
+per-candidate mappings stay pending
+[additional-foundation qualification](product/support-matrix.md#additional-v1-foundations) under
+[issue #7](https://github.com/ralvik/rules_dx/issues/7). Ownership: the sole repository
+maintainer owns every row until maintenance is explicitly delegated.
 
 The fixture corpus starts with pure-Rust scripts/default and opt-out, cc-rs C/C++, SQLite, OpenSSL
 with declared tools/libraries, ring-style C/assembly, bindgen, CXX, native proc-macro dependencies,
