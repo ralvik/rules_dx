@@ -1,7 +1,9 @@
 # Architecture
 
-Status: design only; no implementation exists yet. This document describes the planned
-system shape, not built behavior.
+Status: implemented. This document summarizes the as-built system shape.
+Implementation lives in `dx/cli/src/main.rs`, `quality/result.proto`,
+`generation/result.proto`, and `dx/BUILD.bazel:20-29`; shipped surfaces are
+tracked in [support matrix](../product/support-matrix.md).
 
 `rules_dx` is a Bazel module and developer workflow layer that makes the Bazel graph the common
 source of truth for local development, coding agents, and CI. This document summarizes the stable
@@ -187,8 +189,8 @@ a universal language abstraction: shared Gazelle mechanics are extracted only wh
 implementations demonstrate real reuse. This sequence preserves the accepted foundation decisions
 while avoiding speculative cross-language APIs.
 
-The delivery order and delivery gates are maintained in the
-implementation plan. Foundation constraints are recorded in
+The delivery order is tracked in [roadmap](../roadmap.md) and
+[GitHub issues](https://github.com/ralvik/rules_dx/issues). Foundation constraints are recorded in
 [ADR 0010](../decisions/0010-python-foundation.md),
 [ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md), and
 [ADR 0015](../decisions/0015-first-party-gazelle-extensions.md).
@@ -200,5 +202,5 @@ Bazel selection, declared actions, normalized results, and optional mutation,
 without exposing unstable subprocess command lines as API. CI checks run
 directly through Bazel; ownership is inspectable through query interfaces.
 Command, output, and report behavior is authoritative under [CLI](../cli/);
-quality evidence under [Quality](../quality/). Unresolved choices stay in
-Open Decisions.
+quality evidence under [Quality](../quality/). Open work lives in
+[GitHub issues](https://github.com/ralvik/rules_dx/issues).

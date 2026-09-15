@@ -151,7 +151,8 @@ Prefer the maintained upstream Codecov GitHub integration. Account/repository ac
 pinned upload tooling, authentication and fork-PR permissions, report paths and identities,
 platform/configuration grouping, and upload-failure handling require qualification
 (tracked in [issue #5](https://github.com/ralvik/rules_dx/issues/5)). Coverage mappings are resolved in the [coverage gate](#coverage). Verify complete-report publication and failure cases before claiming the
-integration works. No workflow or Codecov account configuration exists in this scaffold yet.
+integration works. Workflows exist in `.github/workflows/ci.yml`, `reusable-consumer.yml`, and
+`reusable-docs.yml`; Codecov account activation and upload wiring remain unqualified per issue #5.
 
 ## Infrastructure Budget
 

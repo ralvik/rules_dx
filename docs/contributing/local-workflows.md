@@ -119,12 +119,12 @@ Codecov service activation and fork-PR handling are tracked in
 [GitHub coverage reporting](../testing/README.md#github-coverage-reporting).
 Do not present local reports as service evidence.
 
-## Planned Local Overrides
+## Local Overrides
 
-Future `dx init`/`dx hooks install` setup is planned to create a root
-`dx.local.toml` overlay with a `[hooks]` table and add its gitignore entry.
-The planned overlay merges per-person over the committed typed `hooks`
-workspace-policy section, with both triggers configurable in both layers.
-This checkout does not consume the overlay or currently gitignore it.
-Exact schema stays under the
-[hooks contract](../cli/commands/hooks.md); this is not a current setup step.
+`dx init` absent-only scaffolding and `dx hooks install`/`status`/`run` dispatch are
+implemented as specified in the [`dx init` and `dx hooks` contract](../cli/commands/hooks.md).
+The gitignored root overlay `dx.local.toml` with its `[hooks]` table is created absent-only
+by `dx hooks install`; the committed typed `hooks` workspace-policy section stays the team
+baseline and CI never reads the personal overlay. This checkout does not consume the overlay
+beyond hook-shim merging. Exact schema stays under the
+[hooks contract](../cli/commands/hooks.md); this is not a current setup step beyond hooks.
