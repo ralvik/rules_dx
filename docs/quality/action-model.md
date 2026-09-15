@@ -18,8 +18,10 @@ repository-, language-, or class-wide actions.
 The aggregate workspace provider expands ecosystem tool selections through ruleset-owned
 adapter manifests into class-aware policy; users do not maintain extension or class lists.
 
-This model is plausible but unvalidated because the repository has no source
-targets or remote execution environment. [ADR 0003](../decisions/0003-action-granularity.md)
+This model is exercised through the repository corpus (`real_source_target(name = "corpus")`
+per package, e.g. `dx/BUILD.bazel:54-59`) via the corpus dogfood in
+[local workflows](../contributing/local-workflows.md#corpus-dogfood). Remote execution
+remains unverified. [ADR 0003](../decisions/0003-action-granularity.md)
 therefore remains provisional.
 
 ## Why Target-Level Actions

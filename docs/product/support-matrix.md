@@ -75,7 +75,7 @@ fixture evidence; provisional notes below do not select additional defaults or n
 | Quality core/result contract | Internal Protobuf + NDJSON output | Core mappings | [issue #6](https://github.com/ralvik/rules_dx/issues/6) |
 | Required platforms | [Required-platform table](../decisions/0014-tested-platform-release-stack.md#required-platforms) | Pins, hosts, floors | [issue #5](https://github.com/ralvik/rules_dx/issues/5) |
 | Coverage gate | Instrumentation-first; behavioral fallback only on proof | Resolved in [coverage](../testing/README.md#coverage) | Enforced by CI |
-| Consumer CI | Reusable workflow + caller template | Delivered with [issue #16](https://github.com/ralvik/rules_dx/issues/16) | Shipped |
+| Consumer CI | Reusable workflow + caller template | Delivered; verification tracked in [issue #13](https://github.com/ralvik/rules_dx/issues/13) | Shipped |
 | Repository workflows | Codegen/env/setup implemented; audit/update live execution open | Codegen pairs; audit/update | [issue #9](https://github.com/ralvik/rules_dx/issues/9), [issue #18](https://github.com/ralvik/rules_dx/issues/18), [issue #19](https://github.com/ralvik/rules_dx/issues/19) |
 
 Required platforms and the quality-tool baseline (minus excluded Swift) frame
