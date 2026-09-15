@@ -581,7 +581,29 @@ impl RealBackend {
             "pylint" => {
                 let invocation = commands::pylint_check(&tool.binary, &refs);
                 let out = self.run(tool_id, tool, &invocation, scratch)?;
-                parsed(tool_id, parsers::parse_pylint(&out.stdout, out.code, &strs))
+                // Pylint relativizes reported paths against its working
+                // directory (the scratch root) even for absolute
+                // arguments, so attribute against the workspace-relative
+                // mirror paths, then re-anchor each finding to its
+                // absolute scratch path: the caller contract stays
+                // absolute-addressed. Mirrors the ty branch.
+                let workspaces: Vec<&str> = pairs
+                    .iter()
+                    .map(|(workspace, _)| workspace.as_str())
+                    .collect();
+                let mut findings = parsed(
+                    tool_id,
+                    parsers::parse_pylint(&out.stdout, out.code, &workspaces),
+                )?;
+                for found in &mut findings {
+                    let absolute = pairs
+                        .iter()
+                        .find(|(workspace, _)| *workspace == found.file)
+                        .map(|(_, absolute)| absolute.clone())
+                        .expect("parsed file was checked");
+                    found.file = absolute.to_string_lossy().into_owned();
+                }
+                Ok(findings)
             }
             "taplo" => {
                 let invocation = if capability == "format" {
@@ -1801,12 +1823,15 @@ mod tests {
 
     /// Content-aware pylint double: reports W0611 exactly when the
     /// materialized file imports `os`, on stdout as the pinned JSON
-    /// array with 0-based columns. Asserts the hermetic flags
+    /// array with 0-based columns. The reported path is
+    /// working-directory-relative like the real pylint, which relativizes
+    /// concise paths against its working directory even for absolute
+    /// arguments. Asserts the hermetic flags
     /// (`--persistent=n` disables the cache, `--reports=n`/`--score=n`
     /// suppress the human report).
     fn roundtrip_pylint(
         argv: &[OsString],
-        _cwd: &Path,
+        cwd: &Path,
         env: &[(String, String)],
     ) -> io::Result<ChildOutput> {
         assert_hermetic(env);
@@ -1827,11 +1852,15 @@ mod tests {
             "pylint reports JSON"
         );
         let file = last_file(argv);
+        let reported = Path::new(&file)
+            .strip_prefix(cwd)
+            .map(|relative| relative.to_string_lossy().into_owned())
+            .unwrap_or(file.clone());
         let bytes = std::fs::read(&file).expect("checked file is materialized");
         let text = String::from_utf8(bytes).expect("checked bytes stay UTF-8");
         if text.contains("import os") {
             let stdout = format!(
-                "[{{\"type\": \"warning\", \"module\": \"a\", \"obj\": \"\", \"line\": 1, \"column\": 0, \"endLine\": 1, \"endColumn\": 9, \"path\": \"{file}\", \"symbol\": \"unused-import\", \"message\": \"Unused import os\", \"message-id\": \"W0611\"}}]"
+                "[{{\"type\": \"warning\", \"module\": \"a\", \"obj\": \"\", \"line\": 1, \"column\": 0, \"endLine\": 1, \"endColumn\": 9, \"path\": \"{reported}\", \"symbol\": \"unused-import\", \"message\": \"Unused import os\", \"message-id\": \"W0611\"}}]"
             );
             return Ok(ChildOutput {
                 code: Some(4),
