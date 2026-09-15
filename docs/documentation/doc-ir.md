@@ -10,7 +10,7 @@ Delivered: the checked-in [`documentation/doc_ir.proto`](../../documentation/doc
 (`dx.documentation.v1`, `schema_major: 1`) and the
 [`documentation_ir` codec crate](../../documentation/ir/src/lib.rs)
 (`//documentation/ir:documentation_ir`: validate/encode/decode with
-roundtrip, rejection-parity, extension-ordering, and minor-forward-compat tests).
+roundtrip, rejection-parity, extension- and symbol-ordering, and minor-forward-compat tests).
 Extractor execution, per-language adapter runs, renderer/site-build execution,
 and guide-step CI wiring remain gaps ([issue #10](https://github.com/ralvik/rules_dx/issues/10)); no working docs support is claimed until
 qualified execution lands.

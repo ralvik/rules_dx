@@ -16,14 +16,16 @@ pub enum Error {
     EmptyPackage,
     EmptySymbolId { index: usize },
     DuplicateSymbolId { id: String },
+    UnsortedSymbols { id: String },
     AbsoluteSourcePath { id: String, path: String },
     UnsortedExtensions { id: String },
     DuplicateExtension { id: String, key: String },
 }
 
-/// Validate one shard: schema version, identity segments, symbol-ID
-/// uniqueness, workspace-relative source paths, and strictly increasing
-/// extension keys (which keeps same-producer rebuilds byte-identical).
+/// Validate one shard: schema version, identity segments, strictly
+/// increasing symbol IDs, symbol-ID uniqueness, workspace-relative source
+/// paths, and strictly increasing extension keys (symbol and extension
+/// order both keep same-producer rebuilds byte-identical).
 /// Any failure fails the action — partial shards are never emitted.
 pub fn validate_shard(shard: &DocIr) -> Result<(), Error> {
     if shard.schema_major != SCHEMA_MAJOR {
@@ -38,8 +40,17 @@ pub fn validate_shard(shard: &DocIr) -> Result<(), Error> {
         return Err(Error::EmptyPackage);
     }
     let mut seen: Vec<&str> = Vec::with_capacity(shard.symbols.len());
+    let mut previous_id: Option<&str> = None;
     for (index, symbol) in shard.symbols.iter().enumerate() {
         validate_symbol(symbol, index)?;
+        // Strictly decreasing IDs are an ordering violation; equal IDs
+        // fall through to the duplicate check below.
+        if previous_id.is_some_and(|prev| symbol.id.as_str() < prev) {
+            return Err(Error::UnsortedSymbols {
+                id: symbol.id.clone(),
+            });
+        }
+        previous_id = Some(symbol.id.as_str());
         if seen.contains(&symbol.id.as_str()) {
             return Err(Error::DuplicateSymbolId {
                 id: symbol.id.clone(),
@@ -244,6 +255,43 @@ mod tests {
         }];
         let bytes = encode_shard(&shard).unwrap();
         assert_eq!(encode_shard(&shard).unwrap(), bytes);
+    }
+
+    #[test]
+    fn symbols_must_be_strictly_increasing() {
+        let mut second = example_shard().symbols[0].clone();
+        second.id = "python:mylib:AccountService.delete".to_owned();
+        second.source = Some(SourceRef {
+            file: "src/account.py".to_owned(),
+            line: 84,
+        });
+
+        // Decreasing IDs fail on encode with the offending ID.
+        let mut reversed = example_shard();
+        reversed.symbols = vec![second.clone(), reversed.symbols.remove(0)];
+        assert_eq!(
+            encode_shard(&reversed),
+            Err(Error::UnsortedSymbols {
+                id: "python:mylib:AccountService.create".to_owned(),
+            })
+        );
+
+        // Increasing IDs encode, decode, and rebuild byte-identical.
+        let mut ordered = example_shard();
+        ordered.symbols.push(second);
+        let bytes = encode_shard(&ordered).unwrap();
+        assert_eq!(decode_shard(&bytes).unwrap(), ordered);
+        assert_eq!(encode_shard(&ordered).unwrap(), bytes);
+
+        // Rejection parity: raw prost bytes bypassing validation still
+        // fail on decode.
+        let raw = reversed.encode_to_vec();
+        assert_eq!(
+            decode_shard(&raw),
+            Err(Error::UnsortedSymbols {
+                id: "python:mylib:AccountService.create".to_owned(),
+            })
+        );
     }
 
     #[test]
