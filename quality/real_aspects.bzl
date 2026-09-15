@@ -104,6 +104,21 @@ def _real_pipeline_action(target, ctx, capability):
             clippy_diagnostics = target[OutputGroupInfo]["clippy_output"].to_list()
     clippy_delegated = len(clippy_diagnostics) > 0
 
+    # Delegated rustc (#48): every Rust rule emits the authoritative
+    # `.rustc-output` JSON file into the `rustc_output` output group
+    # when `--@rules_rust//rust/settings:rustc_output_diagnostics` is
+    # set (`dx typecheck` sets it; see `dx/cli/src/plan.rs`). The
+    # runner parses that file instead of spawning rustc, so dependency
+    # context, edition, and crate type always match the real build.
+    # Without the group (non-Rust-rule targets) the rustc stage runs
+    # with no upstream file and reports no findings; the legacy
+    # self-run path is gone, so rustc takes no dx-side invocation.
+    rustc_diagnostics = []
+    if "rustc" in [stage["tool"] for stage in resolved]:
+        if OutputGroupInfo in target and "rustc_output" in target[OutputGroupInfo]:
+            rustc_diagnostics = target[OutputGroupInfo]["rustc_output"].to_list()
+    rustc_delegated = len(rustc_diagnostics) > 0
+
     hints = []
     if hasattr(ctx.rule.attr, "aspect_hints"):
         for hint_target in ctx.rule.attr.aspect_hints:
@@ -190,6 +205,11 @@ def _real_pipeline_action(target, ctx, capability):
             # own `clippy.toml` label flag. The diagnostics file below
             # creates the runner tool entry.
             continue
+        if tool == "rustc" and rustc_delegated:
+            # Delegated rustc needs no spawned binary: the upstream
+            # rule owns the compilation. The diagnostics file below
+            # creates the runner tool entry.
+            continue
         binary = tool_binaries[tool]
         args.add("--tool-binary", tool + "=" + binary.path)
         inputs.append(binary)
@@ -203,6 +223,10 @@ def _real_pipeline_action(target, ctx, capability):
     if clippy_delegated:
         for diagnostics in clippy_diagnostics:
             args.add("--upstream-diagnostics", "clippy=" + diagnostics.path)
+            inputs.append(diagnostics)
+    if rustc_delegated:
+        for diagnostics in rustc_diagnostics:
+            args.add("--upstream-diagnostics", "rustc=" + diagnostics.path)
             inputs.append(diagnostics)
 
     # The Python venv launchers (pydoclint, flake8, pylint) are static
