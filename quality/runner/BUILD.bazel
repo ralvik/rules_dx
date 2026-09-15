@@ -19,7 +19,6 @@ rust_library(
     ),
     crate_name = "quality_runner",
     crate_root = "src/lib.rs",
-    edition = "2021",
     deps = [
         "//quality/adapter:quality_adapter",
         "//quality/result:quality_result",
@@ -35,7 +34,6 @@ rust_binary(
     ),
     crate_name = "quality_runner",
     crate_root = "src/main.rs",
-    edition = "2021",
     deps = [
         ":quality_runner_lib",
         "//quality/result:quality_result",

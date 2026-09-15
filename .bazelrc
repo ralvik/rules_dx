@@ -4,7 +4,16 @@
 import %workspace%/tools/bazelrc/preset.bazelrc
 
 # Project overrides stay explicit here, never in the generated fragment.
-# (No project-only flags today; the preset covers the shared baseline.)
+
+# Warnings are errors for every compiled Rust crate (issue #82): deny
+# warnings via the rules_rust extra_rustc_flags setting. Third-party
+# crate_universe targets stay green because their generated targets carry
+# per-target `--cap-lints=allow`, which ceilings lints below deny.
+# Intentional-warning fixtures (e.g. quality/testdata/dirty.rs) are data
+# consumed by quality aspects through the custom quality_source_target rule
+# and are never rustc targets, so this flag cannot fire on them; a fixture
+# that ever needs compiling must opt out per-target with --cap-lints=allow.
+build --@rules_rust//rust/settings:extra_rustc_flags=--deny=warnings
 
 # Hermetic Java runtime (the JDK baseline stays open under issue #7).
 # No host JDK exists on the seed host, so the default local JDK cannot

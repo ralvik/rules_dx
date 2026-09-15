@@ -22,7 +22,6 @@ rust_library(
     ),
     crate_name = "quality_adapter",
     crate_root = "src/lib.rs",
-    edition = "2021",
     deps = crate_deps(
         [
             "serde",
@@ -41,7 +40,6 @@ rust_test(
         normal_dev = True,
     ),
     crate = ":quality_adapter",
-    edition = "2021",
     deps = crate_deps(
         [
             "serde",

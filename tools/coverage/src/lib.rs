@@ -20,8 +20,6 @@
 //! the line directly above it, and the reason text after the colon must be
 //! non-empty.
 
-#![deny(warnings)]
-
 use std::collections::BTreeMap;
 
 /// Inventory disposition for authored first-party implementation.

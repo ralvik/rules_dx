@@ -17,7 +17,6 @@ rust_library(
     ),
     crate_name = "dx_roots",
     crate_root = "src/lib.rs",
-    edition = "2021",
 )
 
 rust_test(
@@ -29,7 +28,6 @@ rust_test(
         normal_dev = True,
     ),
     crate = ":dx_roots",
-    edition = "2021",
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy

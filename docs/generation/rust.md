@@ -167,6 +167,7 @@ Bazel behavior, subject to the upstream global setting, and creates no private w
 Rust omits per-target toolchain-version selection under
 [ADR 0012](../decisions/0012-language-toolchain-versions.md): the pinned upstream only accepts a
 single toolchain version, so there is no supported version-selectable API to map. The effective
-default is the single pinned toolchain (`MODULE.bazel`); `edition` defaults to `"2021"` with a
+default is the single pinned toolchain (`MODULE.bazel`); `edition` defaults to `RUST_EDITION`
+(`rust/rules/defs.bzl`, currently `"2021"`) with a
 per-target override. Cargo `[package] version` stays authoritative for the generated build-script
 `version` attribute and single-version path-dependency checks, never for toolchain selection.
