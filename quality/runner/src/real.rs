@@ -2030,6 +2030,10 @@ mod tests {
                 "vale"
             ]
         );
+        // tsc is pipeline-only by design (target-coupled, needs a
+        // TsConfig): it has no adapter parser, so parser-sample
+        // backfill intentionally skips it.
+        assert!(!REAL_TOOLS.contains(&"tsc"));
     }
 
     #[test]
