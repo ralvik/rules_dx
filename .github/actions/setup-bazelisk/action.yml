@@ -1,0 +1,39 @@
+# Shared Bazelisk installer for every rules_dx workflow job.
+#
+# Single source for the pinned Bazelisk version, checksum, and install
+# steps (issue #80): previously duplicated per job across ci.yml,
+# reusable-consumer.yml, and reusable-docs.yml, so a version bump meant
+# N identical edits that could drift. Bump the defaults here once.
+#
+# Relative `uses: ./.github/actions/setup-bazelisk` inside the reusable
+# workflows resolves against this repository (the called repo), so
+# external consumer callers get the same pinned installer without
+# copying it.
+name: setup-bazelisk
+description: Install the pinned Bazelisk launcher with checksum verification.
+
+inputs:
+  version:
+    description: "Bazelisk release version (e.g. 1.29.0)."
+    required: false
+    default: "1.29.0"
+  sha256:
+    description: "Expected sha256 of the linux-amd64 Bazelisk binary."
+    required: false
+    default: "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992"
+
+runs:
+  using: composite
+  steps:
+    - name: Install pinned Bazelisk
+      shell: bash
+      env:
+        BAZELISK_VERSION: ${{ inputs.version }}
+        BAZELISK_SHA256: ${{ inputs.sha256 }}
+      run: |
+        set -euo pipefail
+        curl -sL -o /tmp/bazelisk \
+          "https://github.com/bazelbuild/bazelisk/releases/download/v${BAZELISK_VERSION}/bazelisk-linux-amd64"
+        echo "${BAZELISK_SHA256}  /tmp/bazelisk" | sha256sum -c -
+        sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
+        bazel version

@@ -59,6 +59,19 @@ Exercise isolated setup/checkouts, report paths, and Bazel execution contexts to
 cross-check mutation, overwritten reports, or shared-output-base serialization. Preserve
 each command's own failure semantics rather than injecting a new CLI scheduling policy.
 
+### Workflow Hygiene
+
+Verify Bazelisk installation comes from the single reviewed
+`.github/actions/setup-bazelisk` composite action rather than copied shell blocks, and
+every third-party action reference is pinned to a commit SHA (tag in a trailing comment).
+Verify the `platforms-gate` job rejects missing, empty, or unsupported platform selections
+before any per-platform job queues a runner, and the aggregate still fails when the gate
+does. Verify the seed jobs restore a Bazel disk cache (free-tier eligible per the
+infrastructure budget), pass `--noshow_progress` to Bazel invocations, run the corpus
+ownership audit through `bazel run //tools/ci:corpus_audit`, and never rely on a local
+`user.bazelrc` override. Verify docs publishing stages its artifact outside the checkout
+and leaves the tree clean.
+
 ### Repository Scope And Reruns
 
 Verify documentation-only and mixed changes still invoke all selected checks at their

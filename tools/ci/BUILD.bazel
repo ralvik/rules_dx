@@ -1,0 +1,26 @@
+"""CI-owned hygiene scripts (issue #80).
+
+`bazel run //tools/ci:corpus_audit` runs the corpus ownership audit:
+every applicable checked-in file must have a corpus owner
+(`real_source_target`) so the dx quality commands cover the repository
+they dogfood. Promoted from an inline ci.yml shell pipeline so the
+audit logic is versioned and reviewable.
+"""
+
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+sh_binary(
+    name = "corpus_audit",
+    srcs = ["corpus_audit.sh"],
+)
+
+# Repository corpus: build file owned for direct-Bazel dogfood
+# under the canonical real_fixture_policy. The audit script itself is
+# CI tooling, never a corpus source.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
