@@ -81,7 +81,8 @@ empty generation for the unrequested side. The command does not execute that sid
 The CLI plans the collection request, runs one live Bazel build, validates
 the collected plan shards, stages the immutable generations, and commits the
 selection through one atomic `.dx/setups/current` replacement under the
-shared O36 commit lock. `--dry-run` plans only and exits 0. Build, staging,
+shared workspace commit lock (see
+[managed-state locking](../../environments/managed-state.md#commit-lock-and-concurrency)). `--dry-run` plans only and exits 0. Build, staging,
 validation, or commit failure leaves the current setup unchanged (exit 1
 with `managed_commit_failed`, or `no_capability` when an exact scope provides
 neither capability); staged-but-unselected generations remain as retained

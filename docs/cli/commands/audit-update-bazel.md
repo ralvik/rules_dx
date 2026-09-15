@@ -19,15 +19,15 @@ a dx-owned option before the command word is rejected rather than forwarded.
 dx audit [security|license] [scope ...] [--report <format>=<destination> ...]
 ```
 
-Implementation status: the audit/update policy below is accepted and the
-O11/O12/O58 mappings are frozen (see O11, O12, and O58
-and the M26 completion report).
-Delivered: the `dx_audit`/`dx_update` planning gates plus `dx audit`/`dx update`
-command dispatch — `--dry-run` plans the request and exits `0`, while live runs
-fail closed (`audit_deferred`/`update_deferred`). Auditor binary wiring, advisory
-snapshot acquisition, SARIF/SPDX parsing, and resolver-backend execution remain
-gaps; no working audit/update support is claimed until qualified tool execution
-lands.
+Implementation status: the audit/update policy below is accepted. Command dispatch
+and request planning are implemented (the `dx_audit`/`dx_update` planning gates
+plus `dx audit`/`dx update` dispatch — `--dry-run` plans the request and exits `0`,
+while live runs fail closed with `audit_deferred`/`update_deferred`). Live auditor
+wiring, advisory snapshot acquisition, SARIF/SPDX parsing, and resolver-backend
+execution are open under
+[#18](https://github.com/ralvik/rules_dx/issues/18) (audit) and
+[#19](https://github.com/ralvik/rules_dx/issues/19) (update); no working
+audit/update support is claimed until qualified tool execution lands.
 
 Bare `dx audit` runs both families. `dx audit security` runs secrets plus
 dependency-vulnerability analysis only; `dx audit license` runs license-policy
@@ -48,12 +48,11 @@ redaction, findings-versus-operational-error distinction, and silent-`0` cases n
 the latest stable and re-pin exact bytes at implementation. Trufflehog is a future depth option,
 not v1 scope. The proposed
 `secrets` policy-family mapping is its own semantic class with SARIF and secret-value redaction;
-qualify that registry amendment against the single-family registry in
-[Quality Sources](../../quality/quality-sources.md) before implementation.
-The proposed `secrets` policy-family mapping
-must be reconciled with source-class applicability under O11.
+reconciling that registry amendment with source-class applicability in
+[Quality Sources](../../quality/quality-sources.md) is open under
+[#18](https://github.com/ralvik/rules_dx/issues/18) before implementation.
 Dependency-vulnerability tools, sources, exact ecosystem mappings, and acquisition/report
-proofs remain unqualified; selecting Gitleaks does not establish working audit support.
+proofs are open under that issue; selecting Gitleaks does not establish working audit support.
 With no scope, audit selects `//...`, while each audit adapter remains responsible
 for its declared applicability. Source-audit adapters use the same provider-class,
 adapter-class, derived workspace-policy, and capability intersection as convergence stages,
@@ -66,7 +65,8 @@ by those particular targets. Do not filter findings to a target's resolved packa
 Shared owning sets are audited once per distinct audit context; unrelated dependency sets are not
 included merely because they are in the same repository. Bare `dx audit` remains repository-wide.
 This dependency-set scope does not broaden source-audit selection. Exact target-to-owner mappings
-and upstream full-lock audit coverage require qualification under O11.
+and upstream full-lock audit coverage are open under
+[#18](https://github.com/ralvik/rules_dx/issues/18).
 
 Dependency audits automatically refresh applicable vulnerability advisory data through supported
 upstream tooling when invoked; a separate manual refresh is not the default workflow. Supply an
@@ -77,14 +77,15 @@ selected environment/codegen projections. Auditors remain pinned tools; advisory
 authorize automatic tool-version upgrades. If required advisory refresh fails, fail the audit and
 report that current data could not be obtained. Do not fall back to a stale snapshot for the affected
 dependency audit or report that dependency set as clean. Exact acquisition, snapshot identity, and
-refresh/cache semantics remain open under O11.
+refresh/cache semantics are open under
+[#18](https://github.com/ralvik/rules_dx/issues/18).
 
 Keep dependency inventories out of external vulnerability services. Download applicable advisory
 databases and match packages against the identified snapshots within Bazel-owned analysis; do not
 upload lockfiles or send dependency package names and versions through query parameters, request
 bodies, or auditor telemetry. Package-specific advisory requests that disclose the inventory are
-not an alternative to local matching. Qualify database-download and offline-matching routes under
-O11; a query-only upstream service does not satisfy this contract. This restriction concerns
+not an alternative to local matching. Database-download and offline-matching routes are open under
+[#18](https://github.com/ralvik/rules_dx/issues/18); a query-only upstream service does not satisfy this contract. This restriction concerns
 vulnerability services and does not change separately configured Bazel remote execution/cache
 boundaries for declared analysis inputs.
 
@@ -97,22 +98,24 @@ unidentified private packages. Retain validated findings from assessed dependenc
 claim complete coverage or treat an unassessed dependency as having no known vulnerabilities.
 A recognized, assessable package with no matching advisories is a different result and is not
 itself a coverage failure. Advisory-specific risk acceptance does not waive missing assessment.
-Qualify upstream assessment evidence, dependency identities, and incomplete-report mappings under
-O11; an empty findings list alone is not evidence that every selected dependency was assessed.
+Upstream assessment evidence, dependency identities, and incomplete-report mappings are open under
+[#18](https://github.com/ralvik/rules_dx/issues/18); an empty findings list alone is not evidence that every selected dependency was assessed.
 
 Report known vulnerabilities whether or not a fixed version is available, and apply the same
 severity threshold and failure policy in both cases. Lack of a fix must not suppress a finding,
 downgrade its severity, or exempt it from failure. Preserve upstream remediation information when
 available, without treating a dependency-version upgrade as an automatic source fix or mutating
-dependencies during audit. Exact advisory and report mappings require qualification under O11.
+dependencies during audit. Exact advisory and report mappings are open under
+[#18](https://github.com/ralvik/rules_dx/issues/18).
 
 Known applicable vulnerabilities with no severity rating fail audit by default. Report the
 upstream advisory severity as unknown text rather than inventing a rating or silently
 treating missing metadata as non-blocking. The normalized diagnostic level stays in the
 closed `info|warning|error` set owned by the [Output Protocol](../output-protocol.md#diagnostic).
 A valid explicit risk-acceptance exception may exempt the finding from failure while retaining its
-visibility. Qualify the distinction between upstream vulnerability severity and normalized diagnostic
-level, threshold interaction, and text/structured/SARIF representation under O11 before implementation;
+visibility. The distinction between upstream vulnerability severity and normalized diagnostic
+level, threshold interaction, and text/structured/SARIF representation is open under
+[#18](https://github.com/ralvik/rules_dx/issues/18) before implementation;
 this decision does not introduce an unreviewed severity enum or report schema.
 
 Explicit risk-acceptance exceptions may exempt particular vulnerability findings from failure.
@@ -127,16 +130,17 @@ refresh, acquisition, analysis, or report-collection failures, or exempt unrelat
 Accepted vulnerabilities remain visible in normal audit output and reports, explicitly marked as
 accepted/suppressed with their explanatory reason. Preserve their vulnerability identity and
 severity; risk acceptance excludes the finding from the failure decision, not from visibility,
-and must not present it as fixed. Qualify text, structured-output, and SARIF mappings under O11
-before implementation; no new event fields or schema are selected here.
+and must not present it as fixed. Text, structured-output, and SARIF mappings are open under
+[#18](https://github.com/ralvik/rules_dx/issues/18) before implementation; no new event fields or schema are selected here.
 Exact native configuration, identity/alias matching, validation and report mappings, and exception
-lifecycle mappings remain open under O11. Lack of a fix alone is not an implicit exception.
+lifecycle mappings are open under that issue. Lack of a fix alone is not an implicit exception.
 
 Every vulnerability risk-acceptance exception requires an expiration date. Missing, invalid, or
 expired dates fail validation; an expired exception no longer exempts its finding from the normal
 failure policy. Renewal requires an explicit reviewed configuration change, not automatic extension
-by the auditor. Qualify date syntax, expiration boundary/time zone, evaluation-time input, native
-configuration, and cache behavior under O11. An earlier cached acceptance must not allow a later
+by the auditor. Date syntax, expiration boundary/time zone, evaluation-time input, native
+configuration, and cache behavior are open under
+[#18](https://github.com/ralvik/rules_dx/issues/18). An earlier cached acceptance must not allow a later
 audit invocation to pass after expiry. This requirement applies to vulnerability risk acceptance,
 not to the separate declared-dependency usage exceptions.
 
@@ -145,23 +149,25 @@ applicable vulnerability in its complete owning dependency set against the curre
 snapshot; removing the dependency or upgrading beyond the affected versions makes it obsolete.
 Report the obsolete entry for explicit removal, without deleting it automatically. Do not infer
 obsolescence from failed/incomplete analysis or from an unrelated owner being outside the selected
-audit scope. Exact matching, advisory-alias handling, and validation mappings require O11 qualification.
+audit scope. Exact matching, advisory-alias handling, and validation mappings are open under
+[#18](https://github.com/ralvik/rules_dx/issues/18).
 
 Remaining audit integration details follow these established defaults: fail incomplete assessment,
 keep matching local to declared advisory snapshots, preserve truthful visible findings, and permit
 only narrow, explained, version-scoped, expiring risk acceptance. Prefer the simplest conforming
-upstream integration. O11 owns technical qualification of tools, native configuration, identity and
+upstream integration.
+[#18](https://github.com/ralvik/rules_dx/issues/18) owns technical qualification of tools, native configuration, identity and
 severity mappings, date/time and cache semantics, and reporting. These details do not require more
 product-preference decisions unless evidence reveals a contract conflict or requires new public API;
 no implementation or verified audit support is approved by these policy choices alone.
 
 ### License family (`dx audit license`)
 
-The outcome and exception rules below are accepted. Use qualified per-root (per-dependency) attribution over
+The outcome and exception rules below are accepted. Use per-root (per-dependency) attribution over
 conservative whole-lock strictness, without silently narrowing complete-lock audit coverage.
-Attribution is frozen per-root under O58, with per-ecosystem
-license-identity, approval/report, and SPDX-shape mappings frozen there as well.
-Proof artifacts and policy-table loading remain gaps; no working license support
+Per-ecosystem license-identity, approval/report, and SPDX-shape mappings below are accepted as specified.
+Proof artifacts and policy-table loading are open under
+[#18](https://github.com/ralvik/rules_dx/issues/18); no working license support
 is claimed until qualified tool execution lands.
 
 The license family reuses security-audit scope mechanics (default `//...`,
@@ -276,7 +282,8 @@ within selected sets. Delegate package selection to the upstream updater; necess
 changes remain permitted under its resolver semantics. Package selection is not a guarantee that
 only one lockfile entry changes, nor permission to silently substitute an update of the entire set
 when the upstream integration cannot support the requested selection. Exact selector syntax and
-ecosystem package-identity mappings remain subject to O12 qualification.
+ecosystem package-identity mappings are open under
+[#19](https://github.com/ralvik/rules_dx/issues/19).
 
 `dx update` updates selected dependencies to the newest versions permitted by the project's
 declared requirements and authoritative ecosystem resolver, through approved Bazel integration.
@@ -290,7 +297,8 @@ Git dependencies follow upstream update semantics: a declared branch may advance
 while explicit commit pins and declared tags remain unchanged. Do not rewrite a branch, tag, or
 commit requirement to track another reference or select a newer tag. The upstream resolver owns Git
 resolution and lockfile updates; this does not authorize inspecting the consumer's Git worktree.
-Exact ecosystem mappings, including moved-tag behavior, require qualification under O12.
+Exact ecosystem mappings, including moved-tag behavior, are open under
+[#19](https://github.com/ralvik/rules_dx/issues/19).
 
 Transitive dependencies remain governed by upstream resolution; the command does not force every
 transitive package to its newest release regardless of compatibility. A newer release outside the
@@ -307,7 +315,8 @@ merely because they have different Bazel labels.
 This is the explicit update exception to [common fail-fast handling](../cli-contract.md#exit-status),
 not permission to run dependents of failed operations or introduce a private scheduler.
 Exact aggregate exit-code selection, backend operation boundaries, and per-set success/failure/blocked
-reporting remain under O12. Continued updates do not imply parallel execution or a new mutation-event API.
+reporting are open under
+[#19](https://github.com/ralvik/rules_dx/issues/19). Continued updates do not imply parallel execution or a new mutation-event API.
 
 Invoking `dx update` authorizes immediate application without an interactive confirmation prompt or
 separate acceptance flag, in both terminal and noninteractive use. This does not bypass separate
@@ -317,4 +326,5 @@ The command introduces no `dx` lockfile or dependency resolver.
 Every changed file and invoked operation must be attributable to the
 underlying updater. Ordinary builds and editor activity do not initiate dependency-version upgrades.
 Supported ecosystem mappings, selective-update syntax, remaining non-registry dependency handling, and exact
-upstream operation/report mappings remain open under O12.
+upstream operation/report mappings are open under
+[#19](https://github.com/ralvik/rules_dx/issues/19).
