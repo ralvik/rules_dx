@@ -310,7 +310,7 @@ also prove that lint and test do not duplicate `tsc` actions.
 - Verify authoritative metadata compatibility for Python uv/wheels, JavaScript/TypeScript pnpm
   importers/package stores, and Rust Cargo/crate providers. Upstream shape changes fail closed and
   never fall back to a package-manager invocation, lockfile reconstruction, or guessed dependency.
-- Once O48 freezes scoped selection, verify accepted path, label, and
+- Verify accepted path, label, and
   target-pattern forms, empty-scope handling, scoped freshness, manifest boundaries, and Gazelle
   merge behavior against the [generate contract](../cli/commands/generate.md#invocation-and-scope).
 - Verify `generate --check` selects check mode on the same canonical workflow as default
@@ -327,7 +327,7 @@ also prove that lint and test do not duplicate `tsc` actions.
   NDJSON; diff stdout contains only the complete unified patch. Neither reruns Gazelle,
   compares workspace trees, or parses BUILD syntax in Rust.
 - Verify `generate` rejects Gazelle application arguments (including flags, modes, index controls,
-  and raw directory arguments), distinct from O48-scoped selection. Post-`--` values are accepted
+  and raw directory arguments), distinct from scoped selection. Post-`--` values are accepted
   only as valid Bazel options, never Gazelle arguments.
 - Verify `generate` does not scan ownership markers or skip files, preserves Gazelle's
   diagnostics and failure status for ownership conflicts, and adds no Rust-side BUILD

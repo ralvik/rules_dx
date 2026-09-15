@@ -93,7 +93,8 @@ Loaded-file counts and test counts are not source coverage. Record the investiga
 routes, reproducible feasibility evidence, and limitations in the work report before using the
 fallback. Mutation tests may supplement, but not replace, the required evidence.
 
-**Resolved measurement mechanics (O47 resolved, standard-practice rules).** Canonical report format is LCOV from `bazel coverage`, merged per required configuration/platform cell. Rust uses the pinned `rules_rust` llvm-cov integration; Starlark uses custom instrumentation emitting LCOV `DA` records with identical line semantics. Executable lines are `DA` records; blank and comment-only lines are not executable; compiler-generated regions are explicitly listed, not silently dropped; a target with no executable lines is listed as no-code, never an implicit pass. Eligible sources are the repo-owned inventory reconciled against Bazel-declared first-party implementation sources plus generated-source provenance, independent of executed tests; test/fixture-only code, schemas, upstream code, and generated boilerplate are classified separately, and authored logic emitted through generation stays eligible. Aggregation deduplicates by authored source and metric identity within each cell, unions hits across that cell's tests, retains zero-hit eligible sources, and requires every required cell to pass at 100% with exact covered/eligible counts and uncovered locations; languages and metrics stay separate, with no cross-platform union, no averaged percentages, and no rounding up. Missing reports, incomplete instrumentation, and absent eligible sources fail the gate. Negative fixtures cover valid ignores and denominator effects, missing reasons, malformed directives, missing reports, and uncovered lines. Empirical Starlark feasibility evidence ran inside M01 against the pinned Bazel; see the M01 completion report. The enforced gate passes at M00 exit and is retained through M28.
+**Resolved measurement mechanics (standard-practice rules).** Canonical report format is LCOV from `bazel coverage`, merged per required configuration/platform cell. Rust uses the pinned `rules_rust` llvm-cov integration; Starlark uses custom instrumentation emitting LCOV `DA` records with identical line semantics. Executable lines are `DA` records; blank and comment-only lines are not executable; compiler-generated regions are explicitly listed, not silently dropped; a target with no executable lines is listed as no-code, never an implicit pass. Eligible sources are the repo-owned inventory reconciled against Bazel-declared first-party implementation sources plus generated-source provenance, independent of executed tests; test/fixture-only code, schemas, upstream code, and generated boilerplate are classified separately, and authored logic emitted through generation stays eligible. Aggregation deduplicates by authored source and metric identity within each cell, unions hits across that cell's tests, retains zero-hit eligible sources, and requires every required cell to pass at 100% with exact covered/eligible counts and uncovered locations; languages and metrics stay separate, with no cross-platform union, no averaged percentages, and no rounding up. Missing reports, incomplete instrumentation, and absent eligible sources fail the gate. Negative fixtures cover valid ignores and denominator effects, missing reasons, malformed directives, missing reports, and uncovered lines. Empirical Starlark feasibility evidence ran against the pinned Bazel.
+The gate is enforced by the build-test job and retained for the full eligible implementation.
 
 **Accepted mechanics:**
 
@@ -118,11 +119,10 @@ fallback. Mutation tests may supplement, but not replace, the required evidence.
   validate each item's assertion evidence through real Bazel tests, including
   negative conformance cases that reject missing or meaningless mappings.
 
-M00 must establish and pass this gate before the first implementation milestone
-can exit. M01 supplies the Starlark testing capability and the selected measurement
-route. Earlier authored Starlark must satisfy the same instrumentation-first policy
-or its evidence-backed fallback; enforcement is not deferred to M01. Subsequent
-implementation and M28 release qualification must retain the gate for the full
+The gate was established before implementation work began; the Starlark testing capability
+and the selected measurement route are implemented. Earlier authored Starlark satisfies
+the same instrumentation-first policy or its evidence-backed fallback. Release
+qualification retains the gate for the full
 eligible implementation, including newly introduced languages. Coverage does
 not replace the focused behavioral, consumer, or platform suites.
 
@@ -133,9 +133,8 @@ End-to-end suites use the real Bazel launcher and external consumer fixtures. Th
 [Tools](tools.md), and [Quality Workflow](../quality/quality-testing.md) matrices
 define their required behavior and evidence.
 
-Tests for a milestone cover only commands implemented by that milestone. The
-complete end-to-end matrix is required before API stabilization, not during an
-earlier rule prototype or partial CLI milestone.
+Tests cover only implemented commands. The
+complete end-to-end matrix is required before API stabilization.
 
 ## GitHub Coverage Reporting
 
@@ -149,8 +148,8 @@ Starlark behavioral fallback must remain separate from measured line coverage.
 
 Prefer the maintained upstream Codecov GitHub integration. Account/repository activation,
 pinned upload tooling, authentication and fork-PR permissions, report paths and identities,
-platform/configuration grouping, and upload-failure handling require qualification under
-O14. Coverage mappings are resolved in the [coverage gate](#coverage). Verify complete-report publication and failure cases before claiming the
+platform/configuration grouping, and upload-failure handling require qualification
+(tracked in [issue #5](https://github.com/ralvik/rules_dx/issues/5)). Coverage mappings are resolved in the [coverage gate](#coverage). Verify complete-report publication and failure cases before claiming the
 integration works. No workflow or Codecov account configuration exists in this scaffold yet.
 
 ## Infrastructure Budget
@@ -185,7 +184,7 @@ Report absent entry points as verification gaps, not passing checks.
 
 ## Acceptance Evidence
 
-Each implementation milestone reports exact commands, test counts/results,
+Each change reports exact commands, test counts/results,
 supported platforms, relevant `aquery` or execution-log evidence, and known gaps.
 Warnings are failures. Claims about caching, hermeticity, or remote support include
 the evidence that supports them.
