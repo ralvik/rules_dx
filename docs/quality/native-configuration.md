@@ -26,7 +26,8 @@ workflow. It must not generate policy, inject hidden styles, search ambient loca
 skip the adapter. Explicit disablement or no applicable source remains the normal lazy no-op;
 missing required config is not inapplicability. Vale has no upstream default configuration, as
 documented in [initial adapter qualification](tool-integrations.md#initial-adapter-qualification).
-Exact filenames, binding mechanics, and failure reporting still require O20 evidence.
+Exact filenames, binding mechanics, and failure reporting are implemented and pinned by
+native-config fixtures.
 
 Taplo's version-qualified, fail-closed text-diagnostic parser is a permitted tool-specific transport
 exception, subject to the [adapter conformance requirements](tool-integrations.md#initial-adapter-qualification).

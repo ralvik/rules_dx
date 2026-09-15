@@ -22,7 +22,7 @@ Semantic file classes are neither raw filename extensions nor action boundaries.
 The provider concept and source/classification boundary are accepted. The constructor
 (`QualitySourcesInfo(direct_sources = {class ID: depset[File]})`), load label
 (`//quality:sources.bzl`), field name and representation, registry exports, and validation
-placement are frozen in M03 under O15 and pinned by
+placement are implemented as specified here and pinned by
 `//quality:sources_registry`. The attribute
 names in the example below are illustrative placeholders, not frozen upstream attribute
 symbols; do not implement rule attributes against them:
@@ -104,7 +104,7 @@ fallback assigned by generic aspects. A broad adapter such as keep-sorted may ex
 path belongs to one class.
 
 The classification principles are accepted. The provider API and initial IDs above are
-frozen in M03 under O15; the class-to-policy-family assignment and
+implemented as specified here; the class-to-policy-family assignment and
 admissibility mappings remain pending the registry review ([issue #6](https://github.com/ralvik/rules_dx/issues/6)) and must not be published as stable
 API before that decision.
 
@@ -131,7 +131,8 @@ Families appear in workspace configuration only to add or remove supported tools
 disable a capability. If no selected target exposes an effective class, the family creates no
 stage, action, environment contribution caused solely by applicability, or artifact fetch.
 The `secrets` policy family is its own semantic class for Gitleaks source audit, with SARIF and secret-value redaction;
-qualify the registry amendment, redaction, and findings-versus-error evidence before implementation.
+the registry amendment, redaction, and findings-versus-error evidence are open under
+[#18](https://github.com/ralvik/rules_dx/issues/18).
 
 The registry has one source of truth from which exported Starlark constants, provider
 validation, adapter metadata, tests, and Rust diagnostic names are generated or checked. The
@@ -143,7 +144,7 @@ they do not carry independent extension tables.
 
 ## Validation
 
-Validation is split per O15. Provider construction validates
+Validation is split: provider construction validates
 field shape and known IDs: every key is a known canonical semantic file-class ID and every
 value is a depset of Bazel `File` source artifacts. Consuming-aspect analysis validates the
 rest before registering quality actions:
