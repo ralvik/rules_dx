@@ -29,7 +29,7 @@ host SDK. Acquisition and cache/remote behavior require the
 
 The contract is a requirement for the complete first-release tool baseline and mandatory
 curated expansion under [First-Release Admission](../product/scope.md#first-release-admission)
-and O46 in the open-decision register, on every
+(candidate review tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7)), on every
 [required platform](../decisions/0014-tested-platform-release-stack.md#required-platforms).
 Swift and SwiftFormat are excluded from v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md); see
@@ -43,7 +43,7 @@ fixtures pass; a plausible design or an entry in the tool matrix is not implemen
 
 There are no bootstrap-maintained seed tools and no seed-to-adapter
 parity gate. Quality, audit, CI, and other integrations land directly through their
-product adapters when the owning milestone implements them; gaps are accepted until
+product adapters when the owning issue implements them; gaps are accepted until
 then. Nothing in this section authorizes a temporary direct-tool check, fallback
 wrapper, or second acquisition path.
 
@@ -69,7 +69,8 @@ JavaScript And TypeScript Quality.
 
 ### Initial Artifact Research
 
-Read-only upstream research supports the following O20 candidates, not qualified
+Read-only upstream research supports the following candidates (see
+[issue #6](https://github.com/ralvik/rules_dx/issues/6)), not qualified
 pins or platform support. Recheck latest stable and verify actual bytes when adding each adapter.
 
 | Tool | Upstream evidence | Candidate acquisition and remaining risk |
@@ -82,7 +83,8 @@ Record compressed artifact identity separately from extracted executable identit
 release URL does not guarantee immutable bytes; checked-in digests must reject changed content.
 If an upstream asset cannot satisfy a required platform, the existing reviewed release-CI source-build
 route is the alternative, not consumer compilation or ambient libraries. Exact assets, checksums,
-archive members, ABI floors, licenses, metadata schema, and regeneration command remain under O20.
+archive members, ABI floors, licenses, metadata schema, and regeneration command are tracked in
+[issue #6](https://github.com/ralvik/rules_dx/issues/6).
 Adapter-specific issues are tracked in [initial adapter qualification](../quality/tool-integrations.md#initial-adapter-qualification).
 
 ## Delivery Classes
@@ -90,8 +92,9 @@ Adapter-specific issues are tracked in [initial adapter qualification](../qualit
 The acquisition and packaging routes below do not authorize replacement language, toolchain,
 package-management, or framework stacks. Approved language maintenance includes focused patches,
 packaging, and necessary reproducible upstream source builds under
-[Product Scope](../product/scope.md#language-integration-maintenance). O46 still requires review of
-candidate-specific effort, maintenance ownership, and qualification evidence before implementation;
+[Product Scope](../product/scope.md#language-integration-maintenance). Candidate-specific effort,
+maintenance ownership, and qualification evidence still require review
+([issue #7](https://github.com/ralvik/rules_dx/issues/7)) before implementation;
 general route permission does not prove a candidate feasible or admit an unbounded fork.
 
 ### Authoritative Toolchain Components
@@ -119,7 +122,8 @@ runtime.
 
 One generated checked-in metadata file per tool/platform records the exact immutable
 URL, digest, size, archive member, upstream version, execution platform, ABI floor,
-runtime files, and licenses, with a regeneration command per O20.
+runtime files, and licenses, with a regeneration command (see `quality/artifacts/update.py`;
+remaining asset qualification in [issue #6](https://github.com/ralvik/rules_dx/issues/6)).
 One implementation repository exists per tool/platform, and an exec-configured dependency
 or private toolchain selects by Bazel execution platform. Registration must not fetch
 every artifact.
@@ -237,23 +241,25 @@ the three named plugin integrations. A tool appearing once in this table is not 
 again for each capability or semantic file class. Acquisition deduplicates by tool/runtime
 identity even when adapter metadata makes the tool applicable to many classes.
 
-M22 focused proof (O30, frozen 2026-09-13): `buf` takes the checksummed
+Decided route: `buf` takes the checksummed
 native/self-contained artifact route. `buf` ships self-contained per-platform
 release binaries with published checksums, needs no target compiler context
 (unlike clang-tidy, which needs compile commands), and stays
 execution-platform lazy; exact assets, digests, and adapter qualification
-remain pending and no adapter claims `protobuf` yet.
+remain pending and no adapter claims `protobuf` yet
+(tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7)).
 
-M22 focused proof (O30, frozen 2026-09-13, Qt last): clang-format and
+Decided route (Qt last): clang-format and
 clang-tidy take the authoritative-toolchain route from the qualified
 hermetic-llvm LLVM distribution's tool targets (no separate acquisition);
 qmlformat and qmllint take the authoritative-toolchain route from the Qt
 distribution, with exact Qt distribution identity, licensing, and platform
-artifact qualification remaining pending and no adapter claiming `qml` yet.
-Qt closed the O30 order (clang-format/clang-tidy, Buf, Scalafix routed to
-M23 managed, Qt last).
+artifact qualification remaining pending and no adapter claiming `qml` yet
+(tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7)).
+Qt closed that order (clang-format/clang-tidy, Buf, Scalafix routed to
+the managed-JVM route, Qt last).
 
-M23 focused proof (O31, frozen 2026-09-13): google-java-format, Checkstyle,
+Decided route: google-java-format, Checkstyle,
 PMD, SpotBugs, ktfmt, and ktlint take the complete-upstream-artifact plus
 shared-JDK route. Each tool resolves to its upstream-tested complete CLI
 distribution (google-java-format and Checkstyle all-dependencies JARs, the
@@ -261,10 +267,11 @@ PMD and SpotBugs binary distributions, the ktfmt with-dependencies JAR, the
 ktlint executable JAR) sharing the one managed JDK cohort runtime; no tool
 is reconstructed from Maven modules and no consumer runs an installer,
 solver, or compiler. Exact artifact versions, digests, and adapter
-qualification remain pending and no adapter claims `java` or `kotlin` yet.
+qualification remain pending and no adapter claims `java` or `kotlin` yet
+(tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7)).
 
-M23 focused proof (O31, frozen 2026-09-13): Scalafmt and Scalafix take the
-managed JVM route owned by M23 (M22 O30 decision). Scalafmt resolves to a
+Decided route: Scalafmt and Scalafix take the
+managed JVM route. Scalafmt resolves to a
 compatible JVM artifact and Scalafix to its semantic-rule artifacts over the
 same shared managed JDK and Maven-lock story as the Scala foundation
 (`maven_install.json` plus `fail_if_repin_required`); Scalafix semantic
@@ -272,34 +279,36 @@ rules additionally need semanticdb plus classpath wiring per the
 adapter-input notes. Exact artifacts, rule-set/config qualification
 (native-configuration review of the provisional Scalafix preset stays
 required), and adapter qualification remain pending and no adapter claims
-`scala` yet.
+`scala` yet (tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7)).
 
-M23 focused proof (O31, frozen 2026-09-13): CSharpier and Fantomas take the
+Decided route: CSharpier and Fantomas take the
 exact-upstream-package plus shared-.NET-runtime route. Each tool resolves to
 its exact official tool package executed as declared DLLs over the one
 managed .NET runtime cohort; no consumer runs `dotnet tool install` or any
 equivalent installer. Exact package versions, runtime compatibility bounds,
 and adapter qualification remain pending and no adapter claims `csharp` or
-`fsharp` yet.
+`fsharp` yet (tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7)).
 
-M23 focused proof (O31, frozen 2026-09-13): PSScriptAnalyzer takes the
+Decided route: PSScriptAnalyzer takes the
 exact-module plus portable-PowerShell-runtime route. The analyzer resolves
 to its exact upstream module package imported by explicit path over a
 portable `pwsh` runtime; the PowerShell application foundation stays
 deferred beyond v1 (only this tool cohort is in scope). Exact module
 version, runtime identity, console-parse versus library-API binding choice
 (per the adapter-input notes), and adapter qualification remain pending and
-no adapter claims `powershell` yet.
+no adapter claims `powershell` yet
+(tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7)).
 
-M23 focused proof (O31, frozen 2026-09-13): RuboCop and StandardRB take the
+Decided route: RuboCop and StandardRB take the
 release-assembled Ruby closure route (the exceptional bundle within the
-O46-approved packaging-effort boundary). Release CI assembles the complete
+approved packaging-effort boundary). Release CI assembles the complete
 ready-to-run Ruby runtime/package closure with manifest, SBOM, licenses,
 and constituent provenance; consumer builds only download, verify, extract,
 and execute it. The Ruby application foundation stays deferred beyond v1
 (only this tool cohort is in scope). Bundle contents, lock inputs, and
-adapter qualification remain pending and no adapter claims `ruby` yet. This
-closes the O31 order (Python, Node, JVM including Scala/Scalafix managed
+adapter qualification remain pending and no adapter claims `ruby` yet
+(tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7)). This
+closes that order (Python, Node, JVM including Scala/Scalafix managed
 route, .NET, PowerShell, Ruby).
 
 No listed private graph accepts arbitrary consumer packages or plugins in v1. The curated
@@ -328,9 +337,10 @@ attestations. Detached evidence does not replace the required embedded inventory
 This separation avoids digest self-reference and is settled policy, not proof of a working signing
 pipeline. Single correct path: payload-only embedded manifest plus detached final-archive attestation over exact
 published bytes, with a completeness check proving no payload file is silently omitted.
-O39 must still freeze manifest self-entry treatment without self-referential digest/size
+Manifest self-entry treatment must still freeze without self-referential digest/size
 requirements or silently omitting payload files. Exact profiles, trust identities, verification
-inputs, and publication mechanics remain under O38/O39.
+inputs, and publication mechanics are tracked in
+[issue #5](https://github.com/ralvik/rules_dx/issues/5).
 
 Private ecosystem locks are repository inputs and part of the tool identity. Their exact
 wheel/package archives and runtime identity participate in Bazel action keys. A ruleset
@@ -339,8 +349,9 @@ actions without mutable CLI state.
 
 ## Provenance Profile Research
 
-O39 read-only research recommends qualifying SPDX 2.3 JSON and SLSA Build
-Provenance v1, each in an in-toto Statement v1, signed with the accepted Cosign keyless route.
+Read-only research recommends qualifying SPDX 2.3 JSON and SLSA Build
+Provenance v1, each in an in-toto Statement v1, signed with the accepted Cosign keyless route
+(see [issue #5](https://github.com/ralvik/rules_dx/issues/5)).
 This is a provisional wire-profile recommendation, not a dependency pin, assurance-level claim,
 trusted-builder selection, or installer API. SPDX 3.0.1 is published; the 2.3 candidate aligns with
 the existing license report and avoids an unneeded JSON-LD profile change, subject to qualification.
@@ -372,7 +383,8 @@ signer/`builder.id` mismatch, multi-signature DSSE, expired certificates without
 tampered time claims, and roots bundled where they must not appear. Self-attested provenance is L0/L1
 at best and must not self-assert L2/L3 `builder.id`.
 
-O38 retains first-install verifier/trust bootstrap and exact verification inputs. O39 retains
+First-install verifier/trust bootstrap and exact verification inputs are tracked in
+[issue #5](https://github.com/ralvik/rules_dx/issues/5), as are
 required assurance level, trusted builders, complete inventory rules, reproducibility thresholds,
 upstream-evidence exceptions, and manifest self-entry rules. Signing JSON alone proves neither
 complete dependencies, hermeticity, reproducibility, redistribution permission, nor SLSA Build L2/L3.

@@ -5,8 +5,8 @@
 The frozen `aspect_rules_lint` v2.8.0 tool list is the minimum first-release quality baseline,
 not a scope ceiling. Curated quality-tool expansion across languages is mandatory where upstream
 implementations or Bazel rules permit hermetic thin integration under
-[First-Release Admission](../product/scope.md#first-release-admission) and O46 in the
-open-decision register. This does not authorize building replacement
+[First-Release Admission](../product/scope.md#first-release-admission) (candidate review tracked
+in [issue #7](https://github.com/ralvik/rules_dx/issues/7)). This does not authorize building replacement
 language, toolchain, package-management, or framework stacks.
 
 Equivalent tool coverage is required for the first release, subject to explicit feasibility
@@ -74,7 +74,7 @@ authorize hidden behavioral presets. Unselected opt-ins create no actions or too
 
 The planned initial curated Python defaults are Ruff, Ty, and pydoclint. Ruff
 and pydoclint run under lint and Ty runs under typecheck; initial audit tool selection is
-owned by O11 (Bandit excluded from v1 by
+tracked in [issue #18](https://github.com/ralvik/rules_dx/issues/18) (Bandit excluded from v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md)).
 Ruff is planned as the default and only active Python formatter. Flake8 and pylint remain
 baseline opt-ins.
@@ -91,8 +91,8 @@ from `typescript_project`, not by lint or test adapter sets. The initial `tsc` a
 diagnostic-only.
 
 Framework-container quality integrations remain gated by the applicable
-[framework adapter contract](../generation/framework-adapters.md) and O29/O40-O43 in the
-open-decision register. A tool's presence in the frozen list or curated
+[framework adapter contract](../generation/framework-adapters.md)
+(see [issue #8](https://github.com/ralvik/rules_dx/issues/8)). A tool's presence in the frozen list or curated
 scope does not settle an exact framework parser, provider, region, or typecheck integration.
 
 Adapter architecture, result normalization, mutation behavior, acquisition, and
@@ -121,6 +121,6 @@ Swift, including SwiftFormat, is excluded from v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
 SwiftFormat has no proven compliant upstream integration route here, and the v2.8.0
 SwiftFormat integration requires a host Swift toolchain; that route is forbidden. This
-exclusion is an evidence-backed v1 scope decision, not a feasibility assessment awaiting
-O46, and SwiftFormat is not a v1 release blocker. Reconsidering Swift after v1 requires
+exclusion is an evidence-backed v1 scope decision, not a pending feasibility assessment,
+and SwiftFormat is not a v1 release blocker. Reconsidering Swift after v1 requires
 a new scope decision.
