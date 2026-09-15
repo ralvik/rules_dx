@@ -37,7 +37,7 @@ use dx_output::{
     mutation_event, notice_event, report_event, write_event, ChangeEvent, ChangeKind,
     DiagnosticEvent, FinishedCounts, MutationOutcome, OutputMode, Resolution, Severity, Snapshot,
 };
-use dx_process::{operational_code, pre_exec_code, Runner};
+use dx_process::{operational_code, pre_exec_code, ForwardError, Runner};
 use quality_result::{decode_validated, digest, proto};
 use serde_json::{json, Value};
 
@@ -1108,13 +1108,29 @@ fn execute_workflow(invocation: &Invocation, env: Env<'_>) -> i32 {
         Command::Test | Command::Coverage => {
             resolve_for_test(&invocation.targets, workspace, query_runner)
         }
-        _ => unreachable!("workflow dispatch guards commands"), // LCOV_EXCL_LINE - reason: defense-in-depth; execute routes only Build/Test/Coverage/Run here and Run returns early, so this arm is unreachable
+        _ => {
+            return pre_exec(
+                err,
+                &ForwardError::UnsupportedCommand {
+                    command: invocation.command.name().to_owned(),
+                }
+                .to_string(),
+            );
+        }
     };
     let resolved = match resolved {
         Ok(resolved) => resolved,
         Err(error) => return pre_exec(err, &error.to_string()),
     };
-    let verb = WorkflowVerb::of(invocation.command).expect("workflow verb");
+    let Some(verb) = WorkflowVerb::of(invocation.command) else {
+        return pre_exec(
+            err,
+            &ForwardError::UnsupportedCommand {
+                command: invocation.command.name().to_owned(),
+            }
+            .to_string(),
+        );
+    };
     let bep = bep_path(temp_dir, pid, nonce);
     let bep_text = bep.to_str().map(ToString::to_string);
     let Some(bep_text) = bep_text else {
@@ -2192,6 +2208,15 @@ fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
         err,
         ..
     } = env;
+    if !invocation.command.is_managed() {
+        return pre_exec(
+            err,
+            &ForwardError::UnsupportedCommand {
+                command: invocation.command.name().to_owned(),
+            }
+            .to_string(),
+        );
+    }
     let scope = match dx_setup::resolve_scope(&invocation.targets) {
         Ok(scope) => scope,
         Err(error) => return pre_exec(err, &error.to_string()),
@@ -3044,22 +3069,11 @@ fn execute_run(invocation: &Invocation, env: Env<'_>) -> i32 {
 /// File/directory scopes enforce single-runnable selection in
 /// [`resolve_run`]; label scopes pass through unchanged, including
 /// multiple labels. `bazel run` rejects multi-target requests itself,
-/// so this preserves Bazel's exact diagnostic and status.
+/// so this preserves Bazel's exact diagnostic and status. Shares the
+/// single [`crate::plan::plan_run_targets`] builder with [`plan_run`]
+/// so the launcher, startup options, and workspace policy cannot drift.
 fn plan_run_multi(targets: &[String], app_args: &[String]) -> crate::plan::BuildPlan {
-    use crate::plan::workspace_flag;
-    use dx_process::{launcher_argv0, WORKFLOW_STARTUP_OPTS};
-    let mut argv = Vec::new();
-    argv.push(launcher_argv0().to_owned());
-    argv.extend(WORKFLOW_STARTUP_OPTS.iter().map(ToString::to_string));
-    argv.push("run".to_owned());
-    argv.push(workspace_flag());
-    argv.extend(targets.iter().cloned());
-    if !app_args.is_empty() {
-        argv.push("--".to_owned());
-        argv.extend(app_args.iter().cloned());
-    }
-    let summary = format!("Running run for {}", targets.join(" "));
-    crate::plan::BuildPlan { argv, summary }
+    crate::plan::plan_run_targets(targets, app_args)
 }
 
 #[cfg(test)]
