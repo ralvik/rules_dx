@@ -72,7 +72,6 @@ jobs:
           bazel version
       - run: bazel build //...
       - run: bazel test //...
-      - run: bazel run //rust/hello:hello
       - run: bazel run //dx/cli:dx -- coverage --min-coverage 97 //...
   corpus-dogfood:
     name: corpus-dogfood (dx quality commands, Linux x86_64 glibc, local-only)
@@ -91,7 +90,7 @@ jobs:
           bazel build @dx_tools//:buildifier @dx_tools//:taplo @dx_tools//:vale \
             //quality/evaluator:quality_evaluator
       - name: Verify generated-file freshness
-        run: bazel run //dx:generate_check
+        run: bazel run //dx/cli:dx -- generate --check //...
       - name: Audit corpus ownership
         run: |
           # The paket2bazel hub output below is generator-owned (regenerate via
