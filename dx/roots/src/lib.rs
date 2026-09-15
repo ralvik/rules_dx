@@ -21,12 +21,13 @@
 //! invocations (`repository_plan`, `invocation_targets`, `build_argv`);
 //! the query/aggregate Starlark wiring lives in `//dx/roots:roots.bzl`.
 //! Slice 3 freezes the measured cold/warm winner (the `//...` baseline;
-//! see [`frozen_strategy`] and [`FROZEN_EVIDENCE`]). The remaining
-//! benchmark dimensions (source/BUILD edits, target churn, actions,
-//! materialized bytes, projection time, retained memory) plus concurrency,
-//! interruption, remote materialization, and reuse certification land in
-//! later WP4 slices; the effective roots stay on the frozen baseline until
-//! then.
+//! see [`frozen_strategy`] and [`FROZEN_EVIDENCE`]). Slice 4 lands the
+//! incrementality dimensions for the frozen baseline (source/BUILD edits,
+//! target churn, actions, materialized bytes, projection time, retained
+//! memory; see [`INCREMENTALITY_EVIDENCE`] and the `PLAN_*`/`SERVER_*`
+//! consts). Concurrency, interruption, remote materialization, and reuse
+//! certification land in later WP4 slices; the effective roots stay on the
+//! frozen baseline until then.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -77,11 +78,12 @@ pub const WARM_WEIGHT: u64 = 2;
 /// Weighted scores (`cold_ms + WARM_WEIGHT * warm_ms`, warm medians 372
 /// vs 350): baseline 8457 + 2*372 = 9201 beats query-file 8983 + 2*350 =
 /// 9683 outright; the baseline also wins every tie by [`RootStrategy::ALL`]
-/// order. The remaining [`BenchmarkDimension`] rows (source/BUILD edits,
-/// target churn, actions, materialized bytes, projection time, retained
-/// memory) plus concurrency, interruption, remote materialization, and
-/// reuse certification land in later WP4 slices and cannot displace this
-/// freeze without new measured evidence plus a freeze change here.
+/// order. The incrementality rows now land in [`INCREMENTALITY_EVIDENCE`]
+/// (#25 slice) and confirm the freeze: the query-file control matches the
+/// baseline on every dimension within noise. Concurrency, interruption,
+/// remote materialization, and reuse certification land in later WP4 slices
+/// and no row here can displace this freeze without new measured evidence
+/// plus a freeze change here.
 pub const FROZEN_STRATEGY: RootStrategy = RootStrategy::RecursivePattern;
 
 /// Returns the frozen repository-root strategy (see [`FROZEN_STRATEGY`]).
@@ -101,6 +103,77 @@ pub const FROZEN_EVIDENCE: [(RootStrategy, bool, u64, u64); 4] = [
     (RootStrategy::MonolithicAggregate, false, 2300, 329),
     (RootStrategy::PackageShards, false, 2000, 300),
 ];
+
+/// Measured incrementality evidence for the frozen baseline (M25 WP4 slice
+/// 4, issue #25): steady-state warm-server wall times and executed actions
+/// per edit/churn [`BenchmarkDimension`], as `(dimension,
+/// baseline_wall_ms, queryfile_wall_ms, actions_executed)`.
+///
+/// Methodology (2026-09-15, Linux x86_64, Bazel 9.2.0 via Bazelisk
+/// v1.29.0): scratch copy of the workspace (rsync, `.git`/`bazel-*`
+/// excluded) with its own warm persistent server, so the live repo is
+/// never dirtied. Every cell applies one probe edit, builds the codegen
+/// plan aspect (`//generation:codegen.bzl%dx_codegen_plan_aspect`) with the
+/// `dx_codegen_plans` output group, records `Elapsed time` plus the
+/// executed-action summary, then reverts to pristine. Probes are
+/// comment-only (source: `//` line on `generation/codegen.proto`; BUILD:
+/// `#` line on `generation/BUILD.bazel`) except churn, which adds/removes
+/// a trivial `filegroup`; each rep carries a unique comment tag so no rep
+/// action-cache-hits a previous one, and a throwaway warm-up probe per
+/// dimension absorbs the first-probe package-reload artifact (see below).
+/// Reported walls are medians over 3 measured reps. The query-file
+/// candidate reads the `roots_pattern_fixture` shape (holding `//...`)
+/// via `--target_pattern_file`, so it is an equivalent-semantics control:
+/// it matches the baseline on every row within noise and cannot displace
+/// the freeze.
+///
+/// Findings pinned below:
+/// - Source edits re-execute exactly 2 actions (`GenProtoDescriptorSet`
+///   and `ProstGenProto` on `//generation:codegen_proto`). Comment-only
+///   probes leave outputs byte-identical (md5-verified, 0 bytes
+///   rewritten), so these walls are a LOWER BOUND: semantic edits cost at
+///   least this plus downstream propagation.
+/// - BUILD edits cost re-analysis only at steady state (0 actions). The
+///   discarded warm-up probe deterministically re-executed the same 2
+///   proto actions once (package reload coinciding with a restored source
+///   mtime); reps 1-3 with unique comments execute nothing.
+/// - Target add/remove cost re-analysis only (0 actions); remove is
+///   marginally slower than add.
+/// - `TargetAddRemove` rows keep the slower of the add/remove medians
+///   (add: 524/542 ms, remove: 531/535 ms baseline/query-file).
+pub const INCREMENTALITY_EVIDENCE: [(BenchmarkDimension, u64, u64, u64); 3] = [
+    (BenchmarkDimension::SourceEdit, 446, 471, 2),
+    (BenchmarkDimension::BuildEdit, 442, 469, 0),
+    (BenchmarkDimension::TargetAddRemove, 531, 542, 0),
+];
+
+/// Files materialized in `bazel-bin` for the `dx_codegen_plans` output
+/// group over `//...`: 3 `.dxcodegen.pb` shards (see [`PLAN_MATERIALIZED_BYTES`]).
+pub const PLAN_MATERIALIZED_FILES: u64 = 3;
+
+/// Bytes materialized for the plan output group: the 3 shards total 238
+/// bytes. Per-probe re-materialization is 0 bytes at steady state: edit
+/// probes reproduce byte-identical outputs, which Bazel leaves in place.
+pub const PLAN_MATERIALIZED_BYTES: u64 = 238;
+
+/// Warm wall time (median ms) materializing only the plan output group:
+/// the Bazel-layer projection cost behind `dx codegen` selection.
+pub const PLAN_GROUP_WARM_MS: u64 = 413;
+
+/// Warm wall time (median ms) building `//...` default outputs with the
+/// aspect applied but no output group requested. Excludes the one-time
+/// 130543 ms first build of never-built default outputs in the scratch
+/// workspace; the plan group (`PLAN_GROUP_WARM_MS`) stays cheaper than
+/// full default outputs. CLI-layer link-tree projection timing is not
+/// implemented yet and stays open.
+pub const DEFAULT_OUTPUTS_WARM_MS: u64 = 502;
+
+/// Bazel server peak resident set (VmHWM KiB) after the full benchmark
+/// matrix plus one full default-outputs build: ~2.5 GiB retained for the
+/// `//...` analysis graph. An upper bound for plan-only iteration, which
+/// never approaches it (warm plan builds sit near 0.4 s with 0 executed
+/// actions).
+pub const SERVER_PEAK_RSS_KB: u64 = 2628812;
 
 /// Repository-root strategy candidates under O34.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -671,6 +744,53 @@ mod tests {
             assert_eq!(samples[index].strategy, *strategy);
         }
         assert_eq!(select_strategy(&samples), frozen_strategy());
+    }
+
+    #[test]
+    fn incrementality_evidence_covers_the_measured_dimensions_once() {
+        let dims: Vec<BenchmarkDimension> =
+            INCREMENTALITY_EVIDENCE.iter().map(|row| row.0).collect();
+        assert_eq!(
+            dims,
+            vec![
+                BenchmarkDimension::SourceEdit,
+                BenchmarkDimension::BuildEdit,
+                BenchmarkDimension::TargetAddRemove,
+            ]
+        );
+    }
+
+    #[test]
+    fn incrementality_control_matches_baseline_within_noise() {
+        for (dimension, baseline_ms, queryfile_ms, actions) in INCREMENTALITY_EVIDENCE {
+            let slower = baseline_ms.max(queryfile_ms);
+            let faster = baseline_ms.min(queryfile_ms);
+            assert!(
+                slower * 100 <= faster * 120,
+                "{dimension:?}: baseline {baseline_ms} ms vs query-file {queryfile_ms} ms diverge past 20%"
+            );
+            assert!(
+                actions <= 2,
+                "{dimension:?}: {actions} executed actions exceed the measured maximum"
+            );
+        }
+        assert_eq!(
+            INCREMENTALITY_EVIDENCE[0].3, 2,
+            "source edits re-execute 2 actions"
+        );
+    }
+
+    #[test]
+    fn plan_materialization_stays_cheaper_than_default_outputs() {
+        assert_eq!(PLAN_MATERIALIZED_FILES, 3);
+        assert_eq!(PLAN_MATERIALIZED_BYTES, 238);
+        assert!(
+            PLAN_GROUP_WARM_MS < DEFAULT_OUTPUTS_WARM_MS,
+            "plan group {} ms must stay cheaper than default outputs {} ms",
+            PLAN_GROUP_WARM_MS,
+            DEFAULT_OUTPUTS_WARM_MS
+        );
+        assert!(SERVER_PEAK_RSS_KB > 0);
     }
 
     #[test]

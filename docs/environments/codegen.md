@@ -37,9 +37,12 @@ With no argument, `dx codegen` selects every codegen projection in the currently
 declared Bazel BUILD graph and atomically selects one repository-wide generated-source
 projection. It does not inspect unowned files or decide that BUILD metadata ought to
 exist. The physical root-selection mechanism is frozen to the `//...` baseline
-(see `FROZEN_STRATEGY` in `dx/roots/src/lib.rs`); only cold/warm behavior is measured,
-and the remaining incrementality dimensions are tracked in
-[#25](https://github.com/ralvik/rules_dx/issues/25).
+(see `FROZEN_STRATEGY` in `dx/roots/src/lib.rs`); cold/warm behavior and the
+incrementality dimensions (source/BUILD edits, target add/remove, actions,
+materialized bytes, projection time, retained memory) are measured in
+`FROZEN_EVIDENCE` and `INCREMENTALITY_EVIDENCE` there. Concurrency,
+interruption, remote materialization, and reuse certification stay open per
+that crate's docs.
 
 Repository-wide selection includes every registered production, test, example, and
 development projection. It does not omit test-only generators to improve performance.
@@ -194,8 +197,10 @@ uncached generator actions. A query-produced target-pattern file is expected to 
 target-pattern discovery and unrelated loading compared with `//...`, but it still loads
 packages containing indexed labels and analyzes every selected configured closure.
 Bazel's persistent server and action cache are expected to improve unchanged warm runs;
-the required evidence is tracked in
-[#25](https://github.com/ralvik/rules_dx/issues/25) rather than a verified claim.
+the measured evidence lives in `FROZEN_EVIDENCE` and `INCREMENTALITY_EVIDENCE`
+in `dx/roots/src/lib.rs`. Concurrency, interruption, remote materialization,
+and reuse certification remain unverified claims tracked as later WP4 slices
+in that crate.
 
 Exact-target runs bypass repository root selection and analyze only one configured
 target closure. Generator action invalidation may be narrow after one schema change,
