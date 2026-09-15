@@ -37,11 +37,14 @@
 //! backend re-reads the bytes on exit 0 or 1 and keeps its input only on
 //! any other exit. Spawn, materialization, and re-read failures still
 //! fail the action.
-//! Clippy has no fix command: the backend applies `MachineApplicable`
-//! suggestions in memory and re-checks the patched bytes on the next
-//! round, so only suggestions that truly resolve their finding mark it
-//! fixable. Vale, the Markdown checker, rustc typecheck, Ty, pydoclint,
-//! flake8, pylint, and Biome lint are check-only and never rewrite.
+//! Legacy Clippy has no fix command: the backend applies
+//! `MachineApplicable` suggestions in memory and re-checks the patched
+//! bytes on the next round, so only suggestions that truly resolve
+//! their finding mark it fixable. Delegated Clippy (#47) is check-only
+//! and never rewrites: its suggestions ride the frozen authoritative
+//! diagnostics. Vale, the Markdown checker, rustc typecheck, Ty,
+//! pydoclint, flake8, pylint, and Biome lint are check-only and never
+//! rewrite.
 
 use std::collections::BTreeMap;
 use std::ffi::{OsStr, OsString};
@@ -105,12 +108,16 @@ const BIOME_DEFAULTS_BYTES: &[u8] = b"{}";
 /// One resolved real tool: absolute binary, extra hermetic environment
 /// entries, optional mirror-relative config, and extra mirrored files
 /// (hinted configs, Vale styles). The action maps its inputs to the
-/// mirror paths through the CLI.
+/// mirror paths through the CLI. Delegated tools (Clippy, #47) carry
+/// authoritative upstream diagnostics files instead of a spawned
+/// binary: the aspect declares the files as action inputs and maps
+/// them here, and the backend parses them without spawning.
 pub struct RealTool {
     pub binary: PathBuf,
     pub extra_env: Vec<(String, String)>,
     pub config_rel: Option<String>,
     pub tool_files: Vec<(String, Vec<u8>)>,
+    pub upstream_diagnostics: Vec<PathBuf>,
 }
 
 /// Injected tool spawner: absolute argv, scratch working directory,
@@ -352,6 +359,79 @@ impl RealBackend {
         }
     }
 
+    /// Legacy Clippy self-run (#47 slice 2 removes this with the
+    /// synthetic fixtures): one guessed `clippy_check` invocation per
+    /// staged file over bytes the runner materialized. Only targets
+    /// without authoritative upstream diagnostics reach here.
+    fn check_clippy_legacy(
+        &self,
+        tool_id: &str,
+        tool: &RealTool,
+        pairs: &[(String, PathBuf)],
+        scratch: &Scratch,
+    ) -> Result<Vec<FileFinding>, RunnerError> {
+        let cwd_rel = Self::cwd_rel(tool_id, tool.config_rel.as_deref());
+        let out_dir = scratch.root().join("dx-clippy-out");
+        std::fs::create_dir_all(&out_dir)
+            .map_err(|err| execution(tool_id, format!("out dir: {err}")))?;
+        let mut findings = Vec::new();
+        for (workspace, absolute) in pairs {
+            let stem = Path::new(workspace)
+                .file_stem()
+                .map(|stem| stem.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            let invocation = commands::clippy_check(
+                &tool.binary,
+                absolute,
+                &commands::crate_name_for(&stem),
+                &out_dir,
+                hint_dir(tool.config_rel.as_deref(), &cwd_rel),
+            );
+            let out = self.run(tool_id, tool, &invocation, scratch)?;
+            let name = absolute.to_string_lossy().into_owned();
+            findings.extend(parsed(
+                tool_id,
+                parsers::parse_clippy(&out.stderr, out.code, &[&name]),
+            )?);
+        }
+        Ok(findings)
+    }
+
+    /// Delegated Clippy check (#47): parses the authoritative upstream
+    /// diagnostics files the aspect declared as action inputs. Upstream
+    /// spans already address workspace paths, so findings are
+    /// re-addressed to the staged scratch-absolute paths the
+    /// diagnose caller remaps back to workspace paths. Nothing spawns.
+    fn check_clippy_delegated(
+        &self,
+        tool_id: &str,
+        tool: &RealTool,
+        pairs: &[(String, PathBuf)],
+    ) -> Result<Vec<FileFinding>, RunnerError> {
+        let workspaces: Vec<&str> = pairs
+            .iter()
+            .map(|(workspace, _)| workspace.as_str())
+            .collect();
+        let mut findings = Vec::new();
+        for path in &tool.upstream_diagnostics {
+            let bytes = std::fs::read(path)
+                .map_err(|err| execution(tool_id, format!("upstream diagnostics: {err}")))?;
+            findings.extend(parsed(
+                tool_id,
+                parsers::parse_clippy(&bytes, Some(0), &workspaces),
+            )?);
+        }
+        for found in &mut findings {
+            let absolute = pairs
+                .iter()
+                .find(|(workspace, _)| *workspace == found.file)
+                .map(|(_, absolute)| absolute.clone())
+                .expect("parsed file was checked");
+            found.file = absolute.to_string_lossy().into_owned();
+        }
+        Ok(findings)
+    }
+
     /// Runs one check over the staged files and returns the parsed
     /// findings still addressed by absolute scratch path. Sibling pairs
     /// reach only the Markdown checker as `--sibling` mappings; every
@@ -397,30 +477,11 @@ impl RealBackend {
                 Ok(kept)
             }
             "clippy" => {
-                let out_dir = scratch.root().join("dx-clippy-out");
-                std::fs::create_dir_all(&out_dir)
-                    .map_err(|err| execution(tool_id, format!("out dir: {err}")))?;
-                let mut findings = Vec::new();
-                for (workspace, absolute) in pairs {
-                    let stem = Path::new(workspace)
-                        .file_stem()
-                        .map(|stem| stem.to_string_lossy().into_owned())
-                        .unwrap_or_default();
-                    let invocation = commands::clippy_check(
-                        &tool.binary,
-                        absolute,
-                        &commands::crate_name_for(&stem),
-                        &out_dir,
-                        hint_dir(tool.config_rel.as_deref(), &cwd_rel),
-                    );
-                    let out = self.run(tool_id, tool, &invocation, scratch)?;
-                    let name = absolute.to_string_lossy().into_owned();
-                    findings.extend(parsed(
-                        tool_id,
-                        parsers::parse_clippy(&out.stderr, out.code, &[&name]),
-                    )?);
+                if tool.upstream_diagnostics.is_empty() {
+                    self.check_clippy_legacy(tool_id, tool, pairs, scratch)
+                } else {
+                    self.check_clippy_delegated(tool_id, tool, pairs)
                 }
-                Ok(findings)
             }
             "rustc" => {
                 let out_dir = scratch.root().join("dx-rustc-out");
@@ -712,8 +773,9 @@ impl RealBackend {
     /// lint, `format` for format) and its lint fix re-reads on exit 0
     /// or 1 (exit 1 signals remaining unfixable findings after the
     /// fixable ones were applied); ESLint likewise re-reads on exit 0
-    /// or 1; Clippy applies `MachineApplicable`
-    /// suggestions from a fresh check in memory; Biome lint is
+    /// or 1; legacy Clippy applies `MachineApplicable`
+    /// suggestions from a fresh check in memory (delegated Clippy is
+    /// check-only); Biome lint is
     /// check-only and converges on format; Vale, the Markdown
     /// checker, rustc typecheck, Ty, pydoclint, flake8, and pylint return
     /// their input.
@@ -728,7 +790,17 @@ impl RealBackend {
         match tool_id {
             "rustfmt" | "buildifier" | "taplo" => self.run_fix(tool_id, tool, path, text),
             "ruff" => self.run_ruff_fix(tool, path, text, capability == "format"),
-            "clippy" => self.apply_clippy(tool_id, path, text),
+            "clippy" => {
+                let tool = self.tool(tool_id)?;
+                if tool.upstream_diagnostics.is_empty() {
+                    self.apply_clippy(tool_id, path, text)
+                } else {
+                    // Delegated Clippy is check-only: suggestions ride
+                    // the frozen authoritative diagnostics and cannot
+                    // track converged bytes, so fixes never rewrite.
+                    Ok(text.to_owned())
+                }
+            }
             "biome" => {
                 if capability == "format" {
                     self.run_biome_format_fix(tool, path, text)
@@ -1033,6 +1105,9 @@ mod tests {
 {"$message_type":"diagnostic","message":"1 warning emitted","code":null,"level":"warning","spans":[],"children":[],"rendered":null}"#;
     const RUFF_F401: &str = r#"[{"cell":null,"code":"F401","end_location":{"column":10,"row":1},"filename":"FILE","fix":{"applicability":"safe","edits":[],"message":"Remove unused import"},"location":{"column":8,"row":1},"message":"`os` imported but unused","name":"unused-import","noqa_row":1,"severity":"error","url":"https://docs.astral.sh/ruff/rules/unused-import"}]"#;
     const RUFF_UNFORMATTED: &str = r#"[{"cell":null,"code":"unformatted","end_location":{"column":3,"row":1},"filename":"FILE","fix":null,"location":{"column":3,"row":1},"message":"File would be reformatted","name":"unformatted","noqa_row":null,"severity":"error","url":null}]"#;
+    const DELEGATED_CLIPPY_WARN: &str = r#"{"$message_type":"artifact","artifact":"bazel-out/k8-fastbuild/bin/src/lib-123.d","emit":"dep-info"}
+{"$message_type":"diagnostic","message":"length comparison to zero","code":{"code":"clippy::len_zero","explanation":null},"level":"warning","spans":[{"file_name":"src/main.rs","byte_start":8,"byte_end":20,"line_start":1,"line_end":1,"column_start":9,"column_end":21,"is_primary":true,"text":[],"label":null,"suggested_replacement":null,"suggestion_applicability":null,"expansion":null}],"children":[{"message":"use is_empty","code":null,"level":"help","spans":[{"file_name":"src/main.rs","byte_start":8,"byte_end":20,"line_start":1,"line_end":1,"column_start":9,"column_end":21,"is_primary":true,"text":[],"label":null,"suggested_replacement":"!v.is_empty()","suggestion_applicability":"MachineApplicable","expansion":null}],"children":[],"rendered":null}],"rendered":null}
+{"$message_type":"diagnostic","message":"1 warning emitted","code":null,"level":"warning","spans":[],"children":[],"rendered":null}"#;
 
     fn plain_tool() -> RealTool {
         RealTool {
@@ -1040,6 +1115,29 @@ mod tests {
             extra_env: Vec::new(),
             config_rel: None,
             tool_files: Vec::new(),
+            upstream_diagnostics: Vec::new(),
+        }
+    }
+
+    /// Writes `body` to a unique temp file for delegated-tool tests and
+    /// returns its path. Bazel scopes `TMPDIR` per test action, so
+    /// process-scoped names cannot collide; the file is removed after
+    /// the test reads it through the backend.
+    fn upstream_file(name: &str, body: &str) -> PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "dx-delegated-clippy-{}-{}",
+            std::process::id(),
+            name
+        ));
+        std::fs::write(&path, body).expect("write upstream diagnostics fixture");
+        path
+    }
+
+    fn delegated_tool(path: PathBuf) -> RealTool {
+        RealTool {
+            binary: PathBuf::new(),
+            upstream_diagnostics: vec![path],
+            ..plain_tool()
         }
     }
 
@@ -2541,6 +2639,72 @@ mod tests {
             .apply_fix("clippy", "src/main.rs", "let y = v.len() == 0;\n", "lint")
             .expect("unchanged");
         assert_eq!(patched, "let y = v.len() == 0;\n");
+    }
+
+    fn no_spawn(_: &[OsString], _: &Path, _: &[(String, String)]) -> io::Result<ChildOutput> {
+        panic!("delegated clippy must not spawn")
+    }
+
+    #[test]
+    fn clippy_delegated_parses_upstream_file_without_spawning() {
+        let path = upstream_file("warn", DELEGATED_CLIPPY_WARN);
+        let backend = backend_for("clippy", delegated_tool(path.clone()), no_spawn);
+        let findings = backend
+            .diagnose(
+                "clippy",
+                "lint",
+                &single("src/main.rs", "let y = v.len() == 0;\n"),
+            )
+            .expect("diagnosed");
+        std::fs::remove_file(&path).expect("remove upstream fixture");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].rule_id, "clippy::len_zero");
+        assert_eq!(
+            (findings[0].start_byte, findings[0].end_byte),
+            (Some(8), Some(20))
+        );
+        assert_eq!(findings[0].path, "src/main.rs");
+        assert!(!findings[0].fixable);
+    }
+
+    #[test]
+    fn clippy_delegated_fix_is_check_only() {
+        let path = upstream_file("fix", DELEGATED_CLIPPY_WARN);
+        let backend = backend_for("clippy", delegated_tool(path.clone()), no_spawn);
+        let patched = backend
+            .apply_fix("clippy", "src/main.rs", "let y = v.len() == 0;\n", "lint")
+            .expect("check-only keeps input");
+        std::fs::remove_file(&path).expect("remove upstream fixture");
+        assert_eq!(patched, "let y = v.len() == 0;\n");
+    }
+
+    #[test]
+    fn clippy_delegated_missing_file_fails_the_action() {
+        let missing =
+            std::env::temp_dir().join(format!("dx-delegated-clippy-{}-absent", std::process::id()));
+        let backend = backend_for("clippy", delegated_tool(missing), no_spawn);
+        backend
+            .diagnose(
+                "clippy",
+                "lint",
+                &single("src/main.rs", "let y = v.len() == 0;\n"),
+            )
+            .expect_err("missing upstream diagnostics fail");
+    }
+
+    #[test]
+    fn clippy_delegated_empty_file_reports_no_findings() {
+        let path = upstream_file("empty", "");
+        let backend = backend_for("clippy", delegated_tool(path.clone()), no_spawn);
+        let findings = backend
+            .diagnose(
+                "clippy",
+                "lint",
+                &single("src/main.rs", "let y = v.len() == 0;\n"),
+            )
+            .expect("diagnosed");
+        std::fs::remove_file(&path).expect("remove upstream fixture");
+        assert!(findings.is_empty());
     }
 
     #[test]

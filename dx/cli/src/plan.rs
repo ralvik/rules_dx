@@ -19,6 +19,10 @@ use dx_process::{
 /// Static command registry entry: capability, Bazel aspects, and supported
 /// standard-report formats.
 ///
+/// `settings` carries upstream build-setting flags the command's aspects
+/// require as workflow mechanism (never user policy): `dx` always sets
+/// them and rejects every user override, mirroring the workspace and
+/// validate flags.
 /// `typecheck` selects the real typecheck aspect (M12 WP3 wires the rustc
 /// stage over the rust class); families without a typecheck selection
 /// resolve to no stages, so the command stays a silent no-op there per
@@ -31,6 +35,7 @@ pub struct CommandSpec {
     pub capability: &'static str,
     pub aspects: &'static [&'static str],
     pub reports: &'static [&'static str],
+    pub settings: &'static [&'static str],
 }
 
 /// Returns the registry entry for `command`. Quality commands select
@@ -49,48 +54,56 @@ pub fn spec(command: Command) -> CommandSpec {
             capability: "lint",
             aspects: &["//quality:real_aspects.bzl%real_lint_aspect"],
             reports: &["sarif"],
+            settings: &[CLIPPY_DIAGNOSTICS_FLAG],
         },
         Command::Typecheck => CommandSpec {
             command,
             capability: "typecheck",
             aspects: &["//quality:real_aspects.bzl%real_typecheck_aspect"],
             reports: &["sarif"],
+            settings: &[],
         },
         Command::Format => CommandSpec {
             command,
             capability: "format",
             aspects: &["//quality:real_aspects.bzl%real_format_aspect"],
             reports: &[],
+            settings: &[],
         },
         Command::Generate => CommandSpec {
             command,
             capability: "generate",
             aspects: &[],
             reports: &[],
+            settings: &[],
         },
         Command::Build => CommandSpec {
             command,
             capability: "build",
             aspects: &[],
             reports: &[],
+            settings: &[],
         },
         Command::Test => CommandSpec {
             command,
             capability: "test",
             aspects: &[],
             reports: &["junit"],
+            settings: &[],
         },
         Command::Coverage => CommandSpec {
             command,
             capability: "coverage",
             aspects: &[],
             reports: &["lcov"],
+            settings: &[],
         },
         Command::Run => CommandSpec {
             command,
             capability: "run",
             aspects: &[],
             reports: &[],
+            settings: &[],
         },
         // Sequential umbrellas (M10 WP4, O59) never build Bazel
         // invocations of their own; phases reuse their registries
@@ -101,12 +114,14 @@ pub fn spec(command: Command) -> CommandSpec {
             capability: "check",
             aspects: &[],
             reports: &["sarif"],
+            settings: &[],
         },
         Command::Fix => CommandSpec {
             command,
             capability: "fix",
             aspects: &[],
             reports: &["sarif"],
+            settings: &[],
         },
         // Explicit managed-state cleanup (M25 WP5, O60): no Bazel
         // invocation of its own for the prune itself (filesystem
@@ -117,6 +132,7 @@ pub fn spec(command: Command) -> CommandSpec {
             capability: "clean",
             aspects: &[],
             reports: &[],
+            settings: &[],
         },
         // Managed environment/codegen/setup selections (M25 WP5): one
         // Bazel collection request behind a canonical selection plus
@@ -127,6 +143,7 @@ pub fn spec(command: Command) -> CommandSpec {
             capability: command.name(),
             aspects: &[],
             reports: &[],
+            settings: &[],
         },
         // Delivered adoption/inspect surfaces (M30b): local helpers or
         // thin query forwarding, never the quality aspect pipeline.
@@ -143,6 +160,7 @@ pub fn spec(command: Command) -> CommandSpec {
             capability: "adoption",
             aspects: &[],
             reports: &[],
+            settings: &[],
         },
         // Audit/update planning surfaces (M26 WP1/WP2 slice 1): family
         // selection and dependency-set selectors plan through the
@@ -155,12 +173,14 @@ pub fn spec(command: Command) -> CommandSpec {
             capability: "audit",
             aspects: &[],
             reports: &["sarif"],
+            settings: &[],
         },
         Command::Update => CommandSpec {
             command,
             capability: "update",
             aspects: &[],
             reports: &[],
+            settings: &[],
         },
         // Raw launcher passthrough (M26 WP4 helper surface): no
         // aspects, no reports, no scope resolution; planned at
@@ -170,6 +190,7 @@ pub fn spec(command: Command) -> CommandSpec {
             capability: "bazel",
             aspects: &[],
             reports: &[],
+            settings: &[],
         },
     }
 }
@@ -191,6 +212,16 @@ pub fn workspace_flag() -> String {
 /// `dx_results` instead of failing the build action.
 pub const VALIDATE_FLAG: &str = "--@rules_dx//config:validate=false";
 
+/// Upstream Clippy diagnostics capture (#47): the real lint aspect
+/// requires `rust_clippy_aspect`, which writes the authoritative
+/// `.clippy.diagnostics` file only when this setting is set. `dx lint`
+/// always sets it; the runner parses the file instead of spawning
+/// Clippy, so dependency context, edition, and crate type match the
+/// real build. Users cannot override it: without the file the clippy
+/// stage falls back to the legacy self-run.
+pub const CLIPPY_DIAGNOSTICS_FLAG: &str =
+    "--@rules_rust//rust/settings:clippy_output_diagnostics=true";
+
 /// Output group carrying the `QualityResult` protos.
 pub const OUTPUT_GROUP: &str = "dx_results";
 
@@ -201,26 +232,45 @@ pub const KEEP_GOING_FLAG: &str = "--keep_going";
 pub const BEP_FLAG_NAME: &str = "build_event_json_file";
 
 /// Required workflow options in argv order, placed after `build` and
-/// before user options by [`build_workflow_argv`].
-pub fn required_options(aspects: &[&str], bep_path: &str) -> Vec<String> {
-    vec![
-        format!("--aspects={}", aspects.join(",")),
+/// before user options by [`build_workflow_argv`]. Command settings
+/// (upstream build-setting flags the aspects require) travel last so
+/// the positional `keep_going` entry in [`protected_flags`] is stable.
+pub fn required_options(entry: &CommandSpec, bep_path: &str) -> Vec<String> {
+    let mut options = vec![
+        format!("--aspects={}", entry.aspects.join(",")),
         format!("--output_groups={OUTPUT_GROUP}"),
         workspace_flag(),
         VALIDATE_FLAG.to_owned(),
         KEEP_GOING_FLAG.to_owned(),
         format!("--{BEP_FLAG_NAME}={bep_path}"),
-    ]
+    ];
+    options.extend(entry.settings.iter().map(ToString::to_string));
+    options
+}
+
+/// Bare setting name for a required `--name=value` option: strips the
+/// leading dashes and any `=value`, so
+/// `--@rules_rust//rust/settings:clippy_output_diagnostics=true`
+/// protects `@rules_rust//rust/settings:clippy_output_diagnostics`.
+fn setting_name(option: &str) -> String {
+    option
+        .strip_prefix("--")
+        .unwrap_or(option)
+        .split('=')
+        .next()
+        .unwrap_or("")
+        .to_owned()
 }
 
 /// Protected workflow flags derived from [`required_options`]. Aspect,
 /// output-group, workspace, and validate options reject every user
 /// override; `keep_going` accepts repetition of the required value only,
-/// and `nokeep_going` is always rejected. The BEP stream has no required
+/// and `nokeep_going` is always rejected; command settings reject every
+/// user override like the other mechanism flags. The BEP stream has no required
 /// value because the CLI chooses a fresh path per run; the user spelling
 /// is rejected so collection always observes the actual build.
-pub fn protected_flags(required: &[String]) -> Vec<ProtectedFlag> {
-    vec![
+pub fn protected_flags(required: &[String], settings: &[&str]) -> Vec<ProtectedFlag> {
+    let mut flags = vec![
         ProtectedFlag {
             name: "aspects".to_owned(),
             required: None,
@@ -249,7 +299,14 @@ pub fn protected_flags(required: &[String]) -> Vec<ProtectedFlag> {
             name: BEP_FLAG_NAME.to_owned(),
             required: None,
         },
-    ]
+    ];
+    for setting in settings {
+        flags.push(ProtectedFlag {
+            name: setting_name(setting),
+            required: None,
+        });
+    }
+    flags
 }
 
 /// Planned Bazel execution for a quality command.
@@ -275,8 +332,8 @@ pub fn plan_build(
     bep_path: &str,
 ) -> Result<BuildPlan, ForwardError> {
     let entry = spec(command);
-    let required = required_options(entry.aspects, bep_path);
-    let protected = protected_flags(&required);
+    let required = required_options(&entry, bep_path);
+    let protected = protected_flags(&required, entry.settings);
     let scope = if resolved.targets.is_empty() {
         Scope::Repository
     } else {
@@ -758,6 +815,7 @@ mod tests {
             &["//quality:real_aspects.bzl%real_lint_aspect"]
         );
         assert_eq!(lint.reports, &["sarif"]);
+        assert_eq!(lint.settings, &[CLIPPY_DIAGNOSTICS_FLAG]);
         let typecheck = spec(Command::Typecheck);
         assert_eq!(typecheck.capability, "typecheck");
         assert_eq!(
@@ -765,6 +823,7 @@ mod tests {
             &["//quality:real_aspects.bzl%real_typecheck_aspect"]
         );
         assert_eq!(typecheck.reports, &["sarif"]);
+        assert!(typecheck.settings.is_empty());
         let format = spec(Command::Format);
         assert_eq!(format.capability, "format");
         assert_eq!(
@@ -1155,11 +1214,28 @@ mod tests {
                 "--@rules_dx//config:validate=false",
                 "--keep_going",
                 "--build_event_json_file=/tmp/bep.json",
+                "--@rules_rust//rust/settings:clippy_output_diagnostics=true",
                 "--jobs=4",
                 "//...",
             ]
         );
         assert_eq!(plan.summary, "Running lint analysis for //...");
+    }
+
+    #[test]
+    fn lint_plan_enables_upstream_clippy_diagnostics() {
+        let plan = plan_build(Command::Lint, &resolved(&[]), &[], "/tmp/bep.json").expect("plan");
+        assert!(
+            plan.argv.iter().any(|arg| arg == CLIPPY_DIAGNOSTICS_FLAG),
+            "lint sets the upstream diagnostics setting: {plan:?}"
+        );
+        for command in [Command::Typecheck, Command::Format] {
+            let plan = plan_build(command, &resolved(&[]), &[], "/tmp/bep.json").expect("plan");
+            assert!(
+                plan.argv.iter().all(|arg| arg != CLIPPY_DIAGNOSTICS_FLAG),
+                "{command:?} leaves the clippy setting off: {plan:?}"
+            );
+        }
     }
 
     #[test]
@@ -1224,6 +1300,8 @@ mod tests {
             "--@rules_dx//config:validate=true",
             "--nokeep_going",
             "--build_event_json_file=/tmp/other.json",
+            "--@rules_rust//rust/settings:clippy_output_diagnostics=false",
+            "--@rules_rust//rust/settings:clippy_output_diagnostics",
         ] {
             let err = plan_build(
                 Command::Lint,
