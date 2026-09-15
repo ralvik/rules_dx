@@ -791,10 +791,13 @@ mod tests {
 
     #[test]
     fn real_fs_reads_workspace_pin() {
-        let version = pinned_bazel_version_real(Path::new("/home/kuntz/workspace/rules_dx"))
-            .expect("repo pin");
-        assert_eq!(version.trim(), version);
-        assert!(!version.is_empty());
+        let root = std::env::temp_dir().join(format!("dx-pin-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("dirs");
+        std::fs::write(root.join(".bazelversion"), "9.2.0\n").expect("pin");
+        let version = pinned_bazel_version_real(&root).expect("repo pin");
+        assert_eq!(version, "9.2.0");
+        std::fs::remove_dir_all(&root).expect("cleanup");
     }
 
     #[test]

@@ -27,10 +27,13 @@ on:
 
 jobs:
   docs-ci:
-    name: docs-ci (bisect placeholder)
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo bisect
+    name: docs-ci (self-call reusable docs workflow)
+    uses: ./.github/workflows/reusable-docs.yml
+    with:
+      rules_dx_version: "0.0.0"
+      docs_scope: "//docs/..."
+      docs_dir: "docs"
+      publish: false
   build-test:
     name: build-test (Linux x86_64 glibc, local-only)
     runs-on: ubuntu-latest
