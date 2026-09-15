@@ -18,8 +18,6 @@
 //!   direct sources are usually library files without a `main` entry
 //!   point, and the default `bin` crate type would mask real diagnostics
 //!   behind a spurious "no main function" failure.
-//! * rustfmt always passes `--edition 2021`: the CLI flag silently wins
-//!   over any config `edition` key, matching the pinned toolchain scope.
 //! * The repo-owned Markdown checker takes one `--source WS_PATH=EXEC_PATH`
 //!   mapping per stage file (its union-closure sibling rule keys off the
 //!   workspace paths) and needs no config: it performs no discovery, so
@@ -151,12 +149,22 @@ pub fn buildifier_fix(binary: &Path, files: &[&Path], config_dir_rel: Option<&st
 
 /// rustfmt invocation. `config` is always explicit: the hinted config or
 /// a scratch-materialized empty defaults file, so no upward discovery
-/// can observe ambient state.
-pub fn rustfmt(binary: &Path, files: &[&Path], config: &Path, check: bool) -> Invocation {
+/// can observe ambient state. `edition` is always explicit too: the
+/// caller passes the crate's real edition (read from `CrateInfo` by the
+/// quality aspect, never guessed or defaulted here), because the CLI
+/// flag silently wins over any config `edition` key. `check` selects
+/// `--check` instead of the in-place rewrite.
+pub fn rustfmt(
+    binary: &Path,
+    files: &[&Path],
+    config: &Path,
+    edition: &str,
+    check: bool,
+) -> Invocation {
     let mut argv = vec![
         binary.as_os_str().to_owned(),
         OsString::from("--edition"),
-        OsString::from("2021"),
+        OsString::from(edition),
         OsString::from("--color=never"),
         OsString::from("--config-path"),
         config.as_os_str().to_owned(),
@@ -607,9 +615,15 @@ mod tests {
     }
 
     #[test]
-    fn rustfmt_always_pins_edition_and_config() {
+    fn rustfmt_passes_caller_edition_and_config() {
         let file = Path::new(FILE);
-        let check = rustfmt(Path::new(BIN), &[file], Path::new("/scratch/r.toml"), true);
+        let check = rustfmt(
+            Path::new(BIN),
+            &[file],
+            Path::new("/scratch/r.toml"),
+            "2021",
+            true,
+        );
         assert_eq!(
             argv_strings(&check),
             vec![
@@ -623,7 +637,23 @@ mod tests {
                 FILE
             ]
         );
-        let fix = rustfmt(Path::new(BIN), &[file], Path::new("/scratch/r.toml"), false);
+        // The edition is never defaulted: a different crate edition
+        // flows straight through to the flag.
+        let older = rustfmt(
+            Path::new(BIN),
+            &[file],
+            Path::new("/scratch/r.toml"),
+            "2018",
+            true,
+        );
+        assert_eq!(argv_strings(&older)[2], "2018");
+        let fix = rustfmt(
+            Path::new(BIN),
+            &[file],
+            Path::new("/scratch/r.toml"),
+            "2021",
+            false,
+        );
         assert!(!argv_strings(&fix).contains(&"--check".to_owned()));
     }
 

@@ -8,7 +8,8 @@
 //!   --source WORKSPACE_PATH=EXEC_PATH [--source ...] \
 //!   [--sibling WORKSPACE_PATH=EXEC_PATH [--sibling ...]] \
 //!   [--real --tool-binary TOOL=ABS_PATH [--tool-binary ...] \
-//!    [--tool-config TOOL=MIRROR_REL] [--tool-file TOOL=MIRROR_REL=EXEC_PATH] \
+//!    [--tool-config TOOL=MIRROR_REL] [--tool-edition TOOL=EDITION] \
+//!    [--tool-file TOOL=MIRROR_REL=EXEC_PATH] \
 //!    [--upstream-diagnostics TOOL=EXEC_PATH] \
 //!    [--tool-env TOOL=KEY=VALUE] [--scratch-parent PATH]]
 //! ```
@@ -19,7 +20,10 @@
 //! synthetic M03 pipeline runs. With `--real` the M04 real backend runs
 //! `run_real_pipeline` over the resolved tools: each stage tool needs one
 //! `--tool-binary`, configs are mirror-relative `--tool-config` paths whose
-//! bytes arrive via `--tool-file`, and extra hermetic env entries arrive
+//! bytes arrive via `--tool-file`, crate editions arrive via
+//! `--tool-edition` (rustfmt only: the aspect passes the `CrateInfo`
+//! edition, `RUST_EDITION` for provider-less targets; the runner itself
+//! never guesses), and extra hermetic env entries arrive
 //! via `--tool-env`. Delegated tools (Clippy, #47) take no binary:
 //! each `--upstream-diagnostics` maps one authoritative upstream
 //! diagnostics file the backend parses without spawning. Scratch trees
@@ -88,6 +92,18 @@ fn parse_tool_config(spec: &str) -> Result<(String, String), String> {
     Ok((tool.to_owned(), rel.to_owned()))
 }
 
+fn parse_tool_edition(spec: &str) -> Result<(String, String), String> {
+    let (tool, edition) = spec
+        .split_once('=')
+        .ok_or_else(|| format!("malformed --tool-edition {spec:?}, want TOOL=EDITION"))?;
+    if tool.is_empty() || edition.is_empty() {
+        return Err(format!(
+            "malformed --tool-edition {spec:?}, want TOOL=EDITION"
+        ));
+    }
+    Ok((tool.to_owned(), edition.to_owned()))
+}
+
 fn parse_tool_file(spec: &str) -> Result<(String, String, String), String> {
     let (tool, rest) = spec
         .split_once('=')
@@ -142,6 +158,7 @@ fn run() -> Result<(), String> {
     let mut scratch_parent: Option<String> = None;
     let mut binaries: Vec<(String, PathBuf)> = Vec::new();
     let mut configs: Vec<(String, String)> = Vec::new();
+    let mut editions: Vec<(String, String)> = Vec::new();
     let mut tool_files: Vec<(String, String, String)> = Vec::new();
     let mut tool_env: Vec<(String, String, String)> = Vec::new();
     let mut upstream: Vec<(String, PathBuf)> = Vec::new();
@@ -189,6 +206,13 @@ fn run() -> Result<(), String> {
                     &args,
                     &mut index,
                     "--tool-file",
+                )?)?);
+            }
+            "--tool-edition" => {
+                editions.push(parse_tool_edition(&flag_value(
+                    &args,
+                    &mut index,
+                    "--tool-edition",
                 )?)?);
             }
             "--tool-env" => {
@@ -258,6 +282,7 @@ fn run() -> Result<(), String> {
                 binary: absolute,
                 extra_env: Vec::new(),
                 config_rel: None,
+                edition: None,
                 tool_files: Vec::new(),
                 upstream_diagnostics: Vec::new(),
             },
@@ -282,6 +307,7 @@ fn run() -> Result<(), String> {
                 binary: PathBuf::new(),
                 extra_env: Vec::new(),
                 config_rel: None,
+                edition: None,
                 tool_files: Vec::new(),
                 upstream_diagnostics: Vec::new(),
             })
@@ -296,6 +322,15 @@ fn run() -> Result<(), String> {
             return Err(format!("duplicate --tool-config for {tool_id:?}"));
         }
         tool.config_rel = Some(rel);
+    }
+    for (tool_id, edition) in editions {
+        let tool = tools.get_mut(&tool_id).ok_or_else(|| {
+            format!("--tool-edition for unknown tool {tool_id:?}: pass --tool-binary first")
+        })?;
+        if tool.edition.is_some() {
+            return Err(format!("duplicate --tool-edition for {tool_id:?}"));
+        }
+        tool.edition = Some(edition);
     }
     for (tool_id, rel, exec) in tool_files {
         let bytes = std::fs::read(&exec)

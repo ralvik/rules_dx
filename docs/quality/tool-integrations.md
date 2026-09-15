@@ -257,6 +257,19 @@ changed. The dogfood proof is `dx typecheck --check //rust/...`, fully
 clean where the pre-delegation self-run failed on dependency context
 under [issue #12](https://github.com/ralvik/rules_dx/issues/12).
 
+Rust formatting is crate-contextual ([#49](https://github.com/ralvik/rules_dx/issues/49)):
+`dx format` spawns the pinned-toolchain rustfmt binary with an explicit
+`--edition` read from the authoritative `CrateInfo` (test targets use the
+inner crate, exactly as upstream `_get_rustfmt_ready_crate_info`;
+provider-less fixture targets fall back to `RUST_EDITION`). The flag rides
+alongside the always-explicit `--config-path` (hinted config or
+materialized empty defaults), so no ambient config or edition default can
+leak in; the runner fails the action rather than guessing when the edition
+is missing. Generated files are excluded and `no-format` skips the stage,
+matching upstream handling. Structured diffs and fix convergence are
+unchanged: the proof is `matrix_rust_format_fail` (dirty bytes in,
+replacement out) and `dx format --check //rust/...` clean.
+
 - **Repository-owned Markdown checks:** link and structure validation is repository-owned and
   distinct from Vale. The checker is the Rust crate `//quality/markdown`: it parses
   one Markdown source plus its declared sibling-file closure and reports structured findings for

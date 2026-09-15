@@ -13,6 +13,15 @@ carrying `DxNativeConfigInfo`. Without a hint the adapter runs pinned
 upstream defaults, except Vale and ESLint, which have no usable default
 and fail analysis with guidance to supply and bind native policy.
 
+rustfmt crate context (#49): the aspect passes the authoritative crate
+edition via `--tool-edition` (read from `CrateInfo`, or the test crate's
+inner `CrateInfo` exactly as upstream `_get_rustfmt_ready_crate_info`;
+provider-less fixture targets fall back to `RUST_EDITION`, the single
+source of truth from `//rust/rules:defs.bzl`). The runner never guesses
+an edition: a missing value fails the action. Generated files never
+reach the tool (upstream formats `is_source` files only); `no-format`
+skips the stage via the tag check below.
+
 Hermeticity: actions declare exactly the direct sources, the hinted config
 closures, the Markdown link-resolution siblings, and the stage tool
 binaries as inputs. The runner materializes
@@ -33,7 +42,7 @@ Contract: `docs/quality/tool-integrations.md`,
 `docs/quality/quality-result-protocol.md#transport`.
 """
 
-load("@rules_rust//rust:defs.bzl", "rust_clippy_aspect")
+load("@rules_rust//rust:defs.bzl", "rust_clippy_aspect", _rust_common = "rust_common")
 load(
     "//quality:adapters.bzl",
     "REAL_ADAPTERS",
@@ -43,6 +52,7 @@ load("//quality:native_config.bzl", "DxNativeConfigInfo", "collect_native_config
 load("//quality:pipeline.bzl", "resolve_pipeline")
 load("//quality:policy.bzl", "QualityPolicyInfo")
 load("//quality:sources.bzl", "QualitySourcesInfo")
+load("//rust/rules:defs.bzl", "RUST_EDITION")
 load("//rust/toolchains:bindings.bzl", "rust_toolchain_rustc", "rust_toolchain_toolchains", "rust_toolchain_tools")
 
 def _capability_tags(rule_attr, capability):
@@ -87,6 +97,39 @@ def _real_pipeline_action(target, ctx, capability):
     )
     if len(resolved) == 0:
         return []
+
+    # rustfmt crate context (#49): the edition comes from the
+    # authoritative `CrateInfo` (or the test crate's inner `CrateInfo`,
+    # exactly as upstream `_get_rustfmt_ready_crate_info`), and generated
+    # files never reach the tool (upstream formats `is_source` files
+    # only). Provider-less fixture targets carry no crate context, so
+    # they fall back to `RUST_EDITION` (#82 single source of truth).
+    # `no-format` skips the stage via `_capability_tags` above.
+    rustfmt_edition = None
+    if "rustfmt" in [stage["tool"] for stage in resolved]:
+        if _rust_common.crate_info in target:
+            rustfmt_edition = target[_rust_common.crate_info].edition
+        elif _rust_common.test_crate_info in target:
+            rustfmt_edition = target[_rust_common.test_crate_info].crate.edition
+        else:
+            rustfmt_edition = RUST_EDITION
+        generated = {}
+        for class_id in direct_files:
+            for f in direct_files[class_id]:
+                if not f.is_source:
+                    generated[f.short_path] = True
+        if len(generated) > 0:
+            kept = []
+            for stage in resolved:
+                if stage["tool"] == "rustfmt":
+                    sources = [p for p in stage["sources"] if p not in generated]
+                    if len(sources) > 0:
+                        pruned = dict(stage)
+                        pruned["sources"] = sources
+                        kept.append(pruned)
+                else:
+                    kept.append(stage)
+            resolved = kept
 
     # Delegated Clippy (#47): this aspect requires the upstream
     # `rust_clippy_aspect`, which emits the authoritative
@@ -213,6 +256,11 @@ def _real_pipeline_action(target, ctx, capability):
         binary = tool_binaries[tool]
         args.add("--tool-binary", tool + "=" + binary.path)
         inputs.append(binary)
+        if tool == "rustfmt":
+            # Always set when a rustfmt stage survives: provider-less
+            # targets fall back to RUST_EDITION above, so the runner's
+            # mandatory edition always resolves.
+            args.add("--tool-edition", "rustfmt=" + rustfmt_edition)
         if tool in configs_by_tool:
             hint = configs_by_tool[tool]
             config_rel = hint.config.short_path

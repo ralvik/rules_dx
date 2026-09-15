@@ -10,7 +10,10 @@ inputs under any scope: dirty matrix inputs never surface in
 
 Tool wiring mirrors `real_aspects.bzl`: single-file binaries via
 `--tool-binary`, native-config closures via `--tool-config`/`--tool-file`
-(mirror-relative paths are the files' `short_path`s), hermetic launcher
+(mirror-relative paths are the files' `short_path`s), crate editions via
+`--tool-edition` (rustfmt only: the aspect passes the `CrateInfo`
+edition, falling back to `RUST_EDITION`; matrix cases are provider-less
+so they declare the edition explicitly), hermetic launcher
 env via `--tool-env`, and delegated Clippy/rustc via
 `--upstream-diagnostics` over recorded upstream bytes. Runfiles resolve
 as `$TEST_SRCDIR/$TEST_WORKSPACE/<short_path>` for main-repo files and
@@ -101,6 +104,9 @@ def _runner_matrix_test_impl(ctx):
     configs = []  # (tool, rel)
     for i, tool in enumerate(ctx.attr.config_tools):
         configs.append((tool, _single_file(ctx.attr.config_files[i]).short_path))
+    editions = []  # (tool, edition)
+    for i, tool in enumerate(ctx.attr.edition_tools):
+        editions.append((tool, ctx.attr.edition_values[i]))
 
     upstream = []  # (tool, File)
     upstream_src_targets = ctx.attr.upstream_srcs
@@ -175,6 +181,9 @@ def _runner_matrix_test_impl(ctx):
     for tool, rel in configs:
         run.append(_arg([_lit("--tool-config")]))
         run.append(_arg([_lit(tool + "=" + rel)]))
+    for tool, edition in editions:
+        run.append(_arg([_lit("--tool-edition")]))
+        run.append(_arg([_lit(tool + "=" + edition)]))
     for tool, rel, f in tool_files:
         ref = _runfile_ref(f)
         check_refs.append(ref)
@@ -290,6 +299,12 @@ _runner_matrix_test = rule(
             allow_files = True,
             doc = "Parallel to config_tools: primary config files; rel is short_path.",
         ),
+        "edition_tools": attr.string_list(
+            doc = "Parallel to edition_values: tools with a crate edition (rustfmt only).",
+        ),
+        "edition_values": attr.string_list(
+            doc = "Parallel to edition_tools: crate edition per tool, passed via --tool-edition.",
+        ),
         "tool_env": attr.string_list(
             doc = "Runner --tool-env entries TOOL=K=V (hermetic launcher env).",
         ),
@@ -350,6 +365,8 @@ def runner_matrix_suite(name, cases):
             toolfile_srcs = case.get("toolfile_srcs", []),
             config_tools = case.get("config_tools", []),
             config_files = case.get("config_files", []),
+            edition_tools = case.get("edition_tools", []),
+            edition_values = case.get("edition_values", []),
             tool_env = case.get("tool_env", []),
             upstream_tools = case.get("upstream_tools", []),
             upstream_srcs = case.get("upstream_srcs", []),
