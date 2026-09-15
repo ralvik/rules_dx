@@ -68,3 +68,10 @@ jobs:
         run: test -f MODULE.bazel && grep -q 'version = "${{ inputs.rules_dx_version }}"' MODULE.bazel
       - run: bazel run @rules_dx//dx/cli:dx -- docs --check ${{ inputs.docs_scope }}
       - run: bazel run @rules_dx//dx/cli:dx -- lint --check ${{ inputs.docs_scope }}
+
+  docs-publish:
+    needs: [docs-check]
+    if: ${{ inputs.publish }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo publish placeholder
