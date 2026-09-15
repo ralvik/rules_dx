@@ -11,8 +11,11 @@ bazel test //...
 ```
 
 Coverage follows the mandatory project gate described in
-[Testing](../testing/README.md#coverage): `bazel coverage //...` plus
-`bazel run //tools/coverage:check`.
+[Testing](../testing/README.md#coverage):
+
+```sh
+bazel run //dx/cli:dx -- coverage --min-coverage <percent> //...
+```
 
 ## Corpus Dogfood
 

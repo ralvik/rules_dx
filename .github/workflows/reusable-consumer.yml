@@ -42,6 +42,11 @@ on:
         required: false
         default: false
         type: boolean
+      min_coverage:
+        description: "Required line-coverage percent for the coverage check (e.g. 80). Empty collects without enforcing a threshold."
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -208,7 +213,15 @@ jobs:
           curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
           echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
           sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
-      - run: bazel run @rules_dx//dx/cli:dx -- coverage //...
+      - name: Run coverage with optional threshold
+        run: |
+          extra=""
+          if [ -n "${{ inputs.min_coverage }}" ]; then
+            extra="--min-coverage ${{ inputs.min_coverage }}"
+          fi
+          # Unquoted on purpose: empty stays zero words, a value stays one.
+          # shellcheck disable=SC2086
+          bazel run @rules_dx//dx/cli:dx -- coverage $extra //...
 
   dx-ci:
     name: dx-ci (aggregate)

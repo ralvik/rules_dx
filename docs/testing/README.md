@@ -54,8 +54,9 @@ graphs.
 
 ### Coverage
 
-**Accepted requirement.** Project-wide first-party implementation requires 100%
-coverage of non-ignored executable lines, not a changed-lines-only gate. Additional
+**Accepted requirement.** Project-wide first-party implementation must meet the
+pinned `dx coverage --min-coverage` percent over non-ignored executable lines,
+not a changed-lines-only gate. Additional
 implementation languages, such as Go used by first-party Gazelle extensions, also
 require Bazel-owned instrumentation and reporting. Starlark follows the investigation
 and conditional fallback below. No mandatory branch-coverage percentage applies;
@@ -93,8 +94,8 @@ Loaded-file counts and test counts are not source coverage. Record the investiga
 routes, reproducible feasibility evidence, and limitations in the work report before using the
 fallback. Mutation tests may supplement, but not replace, the required evidence.
 
-**Resolved measurement mechanics (standard-practice rules).** Canonical report format is LCOV from `bazel coverage`, merged per required configuration/platform cell. Rust uses the pinned `rules_rust` llvm-cov integration; Starlark uses custom instrumentation emitting LCOV `DA` records with identical line semantics. Executable lines are `DA` records; blank and comment-only lines are not executable; compiler-generated regions are explicitly listed, not silently dropped; a target with no executable lines is listed as no-code, never an implicit pass. Eligible sources are the repo-owned inventory reconciled against Bazel-declared first-party implementation sources plus generated-source provenance, independent of executed tests; test/fixture-only code, schemas, upstream code, and generated boilerplate are classified separately, and authored logic emitted through generation stays eligible. Aggregation deduplicates by authored source and metric identity within each cell, unions hits across that cell's tests, retains zero-hit eligible sources, and requires every required cell to pass at 100% with exact covered/eligible counts and uncovered locations; languages and metrics stay separate, with no cross-platform union, no averaged percentages, and no rounding up. Missing reports, incomplete instrumentation, and absent eligible sources fail the gate. Negative fixtures cover valid ignores and denominator effects, missing reasons, malformed directives, missing reports, and uncovered lines. Empirical Starlark feasibility evidence ran against the pinned Bazel.
-The gate is enforced by the build-test job and retained for the full eligible implementation.
+**Resolved measurement mechanics (standard-practice rules).** Canonical report format is LCOV from `bazel coverage`, merged per required configuration/platform cell. Rust uses the pinned `rules_rust` llvm-cov integration; Starlark uses custom instrumentation emitting LCOV `DA` records with identical line semantics. Executable lines are `DA` records; blank and comment-only lines are not executable; compiler-generated regions are explicitly listed, not silently dropped; a target with no executable lines is listed as no-code, never an implicit pass. Eligible sources are the collected LCOV `DA` records for first-party implementation sources plus generated-source provenance; test/fixture-only code, schemas, upstream code, and generated boilerplate are classified separately, and authored logic emitted through generation stays eligible. Aggregation deduplicates by authored source and metric identity within each cell, unions hits across that cell's tests, retains zero-hit eligible sources, and requires every required cell to meet the pinned `--min-coverage` percent with exact covered/eligible counts and uncovered locations; languages and metrics stay separate, with no cross-platform union, no averaged percentages, and no rounding up. Missing reports, incomplete instrumentation, and absent eligible sources fail the gate. Negative fixtures cover valid ignores and denominator effects, missing reasons, malformed directives, missing reports, and uncovered lines. Empirical Starlark feasibility evidence ran against the pinned Bazel.
+The gate is enforced by `dx coverage --min-coverage` in the build-test job.
 
 **Accepted mechanics:**
 
