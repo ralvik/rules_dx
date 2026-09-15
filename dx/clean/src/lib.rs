@@ -1,4 +1,4 @@
-//! Explicit managed-state cleanup planning for `dx clean` (M25 WP5, O60).
+//! Explicit managed-state cleanup planning for `dx clean`.
 //!
 //! Contract: `docs/cli/commands/check-fix-clean.md` (`dx clean
 //! [--dry-run] [--bazel]`: prune only validated unselected and unused
@@ -13,14 +13,15 @@
 //! setup-record validation against the [`dx_setup`] pair identity,
 //! prune selection over an injected inventory, dry-run rendering, and
 //! the `bazel clean` forwarding shape with its recovery guidance.
-//! Filesystem inventory collection ([`collect_inventory`]) and the locked
-//! apply step ([`apply_plan`]) complete the WP5 slice 2 surface; planning
-//! over injected views keeps selection deterministic and unit-testable
-//! without a workspace.
+//! Filesystem inventory collection ([`collect_inventory`]), process-scan
+//! in-use detection ([`scan_live_hexes`]), reclaimable-bytes measurement
+//! ([`measure_prune_bytes`]), and the locked apply step ([`apply_plan`])
+//! complete the surface; planning over injected views keeps selection
+//! deterministic and unit-testable without a workspace.
 //!
-//! The commit-lock route is the O36 lock owned by `acquire_lock`
-//! (dedicated lock file, contention-only retry until the deadline):
-//! clean introduces no new lock file, mechanism, or deadline.
+//! The commit-lock route is the shared workspace lock owned by
+//! `acquire_lock` (dedicated lock file, contention-only retry until the
+//! deadline): clean introduces no new lock file, mechanism, or deadline.
 //! [`CLEAN_LOCK_TIMEOUT`] mirrors `dx_env::LOCK_TIMEOUT`, pinned equal by
 //! test like `dx_setup::COMMIT_LOCK_TIMEOUT`.
 
@@ -38,7 +39,7 @@ use dx_setup::{
 
 /// `--dry-run` flag: list reclaimable generations and links without
 /// deleting. Matches the `dx clean` contract; frozen here so CLI
-/// parsing and help text cannot drift from the qualified shape (O60).
+/// parsing and help text cannot drift from the qualified shape.
 pub const DRY_RUN_FLAG: &str = "--dry-run";
 
 /// `--bazel` flag: additionally forward `bazel clean` and print
@@ -274,8 +275,8 @@ pub fn plan_prune(inputs: PruneInputs<'_>) -> CleanPlan {
 }
 
 /// How long a clean apply contends for the workspace commit lock before
-/// failing with a busy diagnostic. Mirrors `dx_env::LOCK_TIMEOUT` (O36
-/// ten-second deadline); pinned equal by test, never drifted silently.
+/// failing with a busy diagnostic. Mirrors `dx_env::LOCK_TIMEOUT`
+/// (ten-second deadline); pinned equal by test, never drifted silently.
 pub const CLEAN_LOCK_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Clean failure. Every variant is operational; `--dry-run` rendering
@@ -322,10 +323,9 @@ fn map_lock_error(error: Error) -> CleanError {
 
 /// Owned filesystem inventory behind [`PruneInputs`]: validated setup
 /// records, digest-shaped generations, the current selection, and refused
-/// unmanaged names. Active (in-use) sets are caller-provided: v1 has no
-/// process-scan detector, so callers pass the hexes they know are live
-/// (empty when none is known); unknown-live entries prune exactly as the
-/// pure plan selects. Reclaimable-bytes reporting stays open under O60.
+/// unmanaged names. Active (in-use) sets combine caller-provided hexes
+/// with the [`scan_live_hexes`] process scan; unknown-live entries prune
+/// exactly as the pure plan selects.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct CollectedInventory {
     /// Validated setup records (see [`validate_record`]).
@@ -535,6 +535,146 @@ pub struct CleanOutcome {
     pub removed_generations: Vec<GenerationView>,
 }
 
+/// Setup-record and generation hexes observed live by the process scan
+/// ([`scan_live_hexes`]): never pruned while in use. Deterministic:
+/// outputs sort ascending.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct LiveHexes {
+    /// Live setup-record hexes (paths under `.dx/setups/`).
+    pub setup: Vec<String>,
+    /// Live generations (paths under `.dx/environments/` or
+    /// `.dx/generated/`).
+    pub generations: Vec<GenerationView>,
+}
+
+/// Classifies one observed absolute path: strips the `dx_dir` prefix and
+/// returns the addressed setup hex or generation when the first two
+/// components are a managed root plus a digest-shaped name. Anything
+/// else (foreign paths, unmanaged names, the `current` pointer itself)
+/// contributes nothing.
+fn classify_managed_path(
+    dx_dir: &Path,
+    observed: &Path,
+) -> (Option<String>, Option<GenerationView>) {
+    let Ok(relative) = observed.strip_prefix(dx_dir) else {
+        return (None, None);
+    };
+    let mut components = relative.components();
+    let (Some(root), Some(name)) = (components.next(), components.next()) else {
+        return (None, None);
+    };
+    let (Some(root), Some(name)) = (root.as_os_str().to_str(), name.as_os_str().to_str()) else {
+        return (None, None);
+    };
+    if GenerationId::new(name).is_err() {
+        return (None, None);
+    }
+    if root == SETUPS_DIR_NAME {
+        (Some(name.to_owned()), None)
+    } else if root == ENVIRONMENTS_DIR_NAME {
+        (
+            None,
+            Some(GenerationView {
+                kind: GenerationKind::Environment,
+                hex: name.to_owned(),
+            }),
+        )
+    } else if root == GENERATED_DIR_NAME {
+        (
+            None,
+            Some(GenerationView {
+                kind: GenerationKind::Generated,
+                hex: name.to_owned(),
+            }),
+        )
+    } else {
+        (None, None)
+    }
+}
+
+/// Observes one process directory: its current working directory plus
+/// every open file-descriptor target. Unreadable entries (exited
+/// process, foreign owner, dangling link) contribute nothing; the scan
+/// fails open per process, never aborting the whole sweep.
+fn observe_process(dir: &Path, dx_dir: &Path, live: &mut LiveHexes) {
+    let mut targets: Vec<PathBuf> = Vec::new();
+    if let Ok(cwd) = fs::read_link(dir.join("cwd")) {
+        targets.push(cwd);
+    }
+    if let Ok(fds) = fs::read_dir(dir.join("fd")) {
+        for fd in fds.flatten() {
+            if let Ok(target) = fs::read_link(fd.path()) {
+                targets.push(target);
+            }
+        }
+    }
+    for target in &targets {
+        let text = target.to_string_lossy();
+        let trimmed: &str = text.trim_end_matches(" (deleted)");
+        let (setup, generation) = classify_managed_path(dx_dir, Path::new(trimmed));
+        if let Some(hex) = setup {
+            live.setup.push(hex);
+        }
+        if let Some(generation) = generation {
+            live.generations.push(generation);
+        }
+    }
+}
+
+/// Scans `proc_root` (the live `/proc` on Linux) for processes whose
+/// working directory or open files sit under `dx_dir`, and reports the
+/// addressed setup and generation hexes as live (in-use).
+///
+/// Only numeric process directories are inspected; anything else under
+/// `proc_root` is ignored, so a missing `/proc` (non-Linux hosts)
+/// scans empty rather than failing. Over-retention is the only failure
+/// direction: a hex observed anywhere under the managed roots is
+/// preserved, whether or not it is still referenced. Deterministic:
+/// outputs sort ascending with duplicates removed.
+pub fn scan_live_hexes(proc_root: &Path, dx_dir: &Path) -> LiveHexes {
+    let mut live = LiveHexes::default();
+    let entries = match fs::read_dir(proc_root) {
+        Ok(entries) => entries,
+        Err(_) => return live,
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let pid = name.to_string_lossy();
+        if pid.bytes().all(|byte| byte.is_ascii_digit()) {
+            observe_process(&entry.path(), dx_dir, &mut live);
+        }
+    }
+    live.setup.sort();
+    live.setup.dedup();
+    live.generations.sort_by(|left, right| {
+        left.kind
+            .dir_name()
+            .cmp(right.kind.dir_name())
+            .then_with(|| left.hex.cmp(&right.hex))
+    });
+    live.generations.dedup();
+    live
+}
+
+/// Collects the clean inventory for `workspace_root`, augmenting
+/// caller-visible state with the [`scan_live_hexes`] process scan over
+/// the live `/proc`: shells, editors, or build actions whose working
+/// directory or open files sit under the workspace `.dx` roots pin
+/// their setup and generation hexes as active (never pruned).
+pub fn collect_inventory_with_scan(
+    workspace_root: &Path,
+) -> Result<CollectedInventory, CleanError> {
+    let dx_dir = workspace_root.join(".dx");
+    let live = scan_live_hexes(Path::new("/proc"), &dx_dir);
+    let setup: Vec<String> = live.setup;
+    let generations: Vec<String> = live
+        .generations
+        .iter()
+        .map(|view| view.hex.clone())
+        .collect();
+    collect_inventory(workspace_root, &setup, &generations)
+}
+
 /// Applies `plan` to `workspace_root`: deletes exactly its prune sets
 /// under the shared workspace commit lock, then releases the lock.
 /// `--dry-run` plans never reach this function (rendering deletes
@@ -652,21 +792,149 @@ pub fn apply_plan_with_timeout(
     Ok(outcome)
 }
 
-/// Renders the `--dry-run` listing for `plan`: reclaimable setup
-/// records and generation links, the preserved current selection, and
-/// refused unmanaged paths. Deletes nothing; [`apply_plan`] deletes
-/// exactly the listed prune sets.
-pub fn render_dry_run(plan: &CleanPlan) -> String {
+/// Measured reclaimable bytes behind one [`CleanPlan`]: per-entry
+/// on-disk sizes for exactly the prune sets. Generations are link trees
+/// into Bazel outputs, never artifact copies, so sizes count metadata
+/// plus links only: symlinks are measured, never followed, and Bazel
+/// outputs behind the links contribute nothing. Deterministic: entries
+/// sort ascending like the plan.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct PruneBytes {
+    /// `(setup-record hex, bytes)` for each pruned record, ascending.
+    pub setup_record_bytes: Vec<(String, u64)>,
+    /// `(generation, bytes)` for each pruned generation, ascending.
+    pub generation_bytes: Vec<(GenerationView, u64)>,
+}
+
+impl PruneBytes {
+    /// Total reclaimable bytes across the whole prune set.
+    pub fn total(&self) -> u64 {
+        let mut total = 0u64;
+        for (_, bytes) in &self.setup_record_bytes {
+            total = total.saturating_add(*bytes);
+        }
+        for (_, bytes) in &self.generation_bytes {
+            total = total.saturating_add(*bytes);
+        }
+        total
+    }
+
+    /// Bytes attributable to entries [`apply_plan`] actually removed:
+    /// measured sizes for the outcome's entries only, so entries skipped
+    /// under the lock (reselected current, relinked generations) never
+    /// inflate the reported reclaimed total.
+    pub fn reclaimed(&self, outcome: &CleanOutcome) -> u64 {
+        let mut total = 0u64;
+        for removed in &outcome.removed_setup_records {
+            for (hex, bytes) in &self.setup_record_bytes {
+                if hex == removed {
+                    total = total.saturating_add(*bytes);
+                }
+            }
+        }
+        for removed in &outcome.removed_generations {
+            for (generation, bytes) in &self.generation_bytes {
+                if generation == removed {
+                    total = total.saturating_add(*bytes);
+                }
+            }
+        }
+        total
+    }
+}
+
+/// Sums `symlink_metadata` sizes under `dir` without following symlinks.
+/// A missing directory measures zero (already pruned: idempotent); any
+/// other failure reports through [`CleanError`].
+fn dir_bytes(dir: &Path) -> Result<u64, CleanError> {
+    let fail = |reason: String| CleanError::Install { reason };
+    let mut total = 0u64;
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(current) = stack.pop() {
+        let entries = match fs::read_dir(&current) {
+            Ok(entries) => entries,
+            Err(e) if e.kind() == io::ErrorKind::NotFound => continue,
+            Err(e) => {
+                return Err(fail(format!("cannot list {}: {e}", current.display())));
+            }
+        };
+        for entry in entries {
+            let path = entry
+                .map_err(|e| fail(format!("cannot list {}: {e}", current.display())))?
+                .path();
+            let meta = fs::symlink_metadata(&path)
+                .map_err(|e| fail(format!("cannot inspect {}: {e}", path.display())))?;
+            if meta.is_dir() {
+                stack.push(path);
+            } else {
+                total = total.saturating_add(meta.len());
+            }
+        }
+    }
+    Ok(total)
+}
+
+/// Measures reclaimable bytes for `plan` under `workspace_root`.
+/// Entries that vanished since planning measure zero; the apply step
+/// treats missing entries as idempotent successes, so measure and
+/// apply agree without holding the lock.
+pub fn measure_prune_bytes(
+    workspace_root: &Path,
+    plan: &CleanPlan,
+) -> Result<PruneBytes, CleanError> {
+    if !workspace_root.is_dir() {
+        return Err(CleanError::WorkspaceRoot {
+            path: workspace_root.to_path_buf(),
+        });
+    }
+    let dx_dir = workspace_root.join(".dx");
+    let setups_dir = dx_dir.join(SETUPS_DIR_NAME);
+    let mut measured = PruneBytes::default();
+    for hex in &plan.prune_setup_records {
+        let bytes = dir_bytes(&setups_dir.join(hex))?;
+        measured.setup_record_bytes.push((hex.clone(), bytes));
+    }
+    for generation in &plan.prune_generations {
+        let bytes = dir_bytes(
+            &dx_dir
+                .join(generation.kind.dir_name())
+                .join(&generation.hex),
+        )?;
+        measured.generation_bytes.push((generation.clone(), bytes));
+    }
+    Ok(measured)
+}
+
+/// Renders the `--dry-run` listing for `plan` with measured reclaimable
+/// bytes (`bytes`): reclaimable setup records and generation links with
+/// per-entry sizes, the preserved current selection, refused unmanaged
+/// paths, and the reclaimable total. Deletes nothing; [`apply_plan`]
+/// deletes exactly the listed prune sets.
+pub fn render_dry_run(plan: &CleanPlan, bytes: &PruneBytes) -> String {
     let mut lines = vec!["dx clean --dry-run: reclaimable managed state".to_owned()];
     if plan.prune_setup_records.is_empty() && plan.prune_generations.is_empty() {
         lines.push("nothing to prune".to_owned());
     }
     for hex in &plan.prune_setup_records {
-        lines.push(format!("prune setup record: .dx/setups/{hex}"));
+        let size = bytes
+            .setup_record_bytes
+            .iter()
+            .find(|(entry, _)| entry == hex)
+            .map(|(_, size)| *size)
+            .unwrap_or(0);
+        lines.push(format!(
+            "prune setup record: .dx/setups/{hex} ({size} bytes)"
+        ));
     }
     for generation in &plan.prune_generations {
+        let size = bytes
+            .generation_bytes
+            .iter()
+            .find(|(entry, _)| entry == generation)
+            .map(|(_, size)| *size)
+            .unwrap_or(0);
         lines.push(format!(
-            "prune generation: .dx/{}/{}",
+            "prune generation: .dx/{}/{} ({size} bytes)",
             generation.kind.dir_name(),
             generation.hex
         ));
@@ -678,6 +946,7 @@ pub fn render_dry_run(plan: &CleanPlan) -> String {
     for unmanaged in &plan.refused_unmanaged {
         lines.push(format!("refuse unmanaged path: {unmanaged}"));
     }
+    lines.push(format!("reclaimable total: {} bytes", bytes.total()));
     lines.join("\n")
 }
 
@@ -858,11 +1127,14 @@ mod tests {
             active_generation_hexes: &[],
             unmanaged_names: &unmanaged,
         });
-        let listing = render_dry_run(&plan);
+        let listing = render_dry_run(&plan, &PruneBytes::default());
         assert!(listing.contains(&format!(".dx/setups/{}", stale.hex)));
         assert!(listing.contains(&format!(".dx/environments/{}", digest('3'))));
         assert!(listing.contains(&format!(".dx/setups/{}", current.hex)));
         assert!(listing.contains("latest"));
+        // Unmeasured entries render as zero bytes, never omitted.
+        assert!(listing.contains("(0 bytes)"));
+        assert!(listing.contains("reclaimable total: 0 bytes"));
     }
 
     #[test]
@@ -870,7 +1142,9 @@ mod tests {
         let current = record('1', '2');
         let records = vec![current.clone()];
         let plan = plan_prune(inputs(&records, &[], Some(&current.hex)));
-        assert!(render_dry_run(&plan).contains("nothing to prune"));
+        let listing = render_dry_run(&plan, &PruneBytes::default());
+        assert!(listing.contains("nothing to prune"));
+        assert!(listing.contains("reclaimable total: 0 bytes"));
     }
 
     #[cfg(windows)]
@@ -1184,5 +1458,347 @@ mod tests {
         for error in &errors {
             assert!(!format!("{error}").is_empty());
         }
+    }
+
+    /// Stages a fake process directory under `proc_root/<pid>` with a
+    /// `cwd` symlink and numbered `fd` symlinks to the given targets.
+    /// Unix-only: the fake-`/proc` fixtures below need symlink atoms.
+    #[cfg(unix)]
+    fn stage_process(proc_root: &Path, pid: &str, cwd: Option<&Path>, fds: &[&Path]) {
+        let dir = proc_root.join(pid);
+        fs::create_dir_all(dir.join("fd")).expect("stage fd dir");
+        if let Some(target) = cwd {
+            std::os::unix::fs::symlink(target, dir.join("cwd")).expect("stage cwd");
+        }
+        for (index, target) in fds.iter().enumerate() {
+            std::os::unix::fs::symlink(target, dir.join("fd").join(index.to_string()))
+                .expect("stage fd");
+        }
+    }
+
+    #[test]
+    fn scan_missing_proc_root_scans_empty() {
+        let root = clean_root("scan-missing");
+        let dx_dir = workspace_of(&root).join(".dx");
+        assert_eq!(
+            scan_live_hexes(&root.join("no-such-proc"), &dx_dir),
+            LiveHexes::default()
+        );
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn scan_ignores_non_numeric_entries() {
+        let root = clean_root("scan-nonnumeric");
+        let workspace = workspace_of(&root);
+        let dx_dir = workspace.join(".dx");
+        let proc_root = root.join("proc");
+        fs::create_dir_all(&proc_root).expect("proc root");
+        let stale = digest('3');
+        stage_process(
+            &proc_root,
+            "self",
+            Some(&dx_dir.join("setups").join(&stale)),
+            &[],
+        );
+        assert_eq!(scan_live_hexes(&proc_root, &dx_dir), LiveHexes::default());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn scan_reports_cwd_and_fd_targets_under_managed_roots() {
+        let root = clean_root("scan-live");
+        let workspace = workspace_of(&root);
+        let dx_dir = workspace.join(".dx");
+        let proc_root = root.join("proc");
+        fs::create_dir_all(&proc_root).expect("proc root");
+        let (setup_hex_value, _, _) = pair_env_gen('3', '4');
+        let env_hex = digest('1');
+        let gen_hex = digest('2');
+        let foreign = root.join("elsewhere");
+        stage_process(
+            &proc_root,
+            "4242",
+            Some(&dx_dir.join("setups").join(&setup_hex_value)),
+            &[
+                &dx_dir.join("environments").join(&env_hex),
+                &dx_dir.join("generated").join(&gen_hex),
+                &foreign,
+            ],
+        );
+        let live = scan_live_hexes(&proc_root, &dx_dir);
+        assert_eq!(live.setup, vec![setup_hex_value]);
+        assert_eq!(
+            live.generations,
+            vec![
+                GenerationView {
+                    kind: GenerationKind::Environment,
+                    hex: env_hex,
+                },
+                GenerationView {
+                    kind: GenerationKind::Generated,
+                    hex: gen_hex,
+                },
+            ]
+        );
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn scan_trims_deleted_suffix_and_ignores_unmanaged_paths() {
+        let root = clean_root("scan-edge");
+        let workspace = workspace_of(&root);
+        let dx_dir = workspace.join(".dx");
+        let proc_root = root.join("proc");
+        fs::create_dir_all(&proc_root).expect("proc root");
+        let env_hex = digest('5');
+        // A (deleted) suffix marks an unlinked-but-open directory: still
+        // an observed address, so the staged link carries the suffix the
+        // kernel appends to `readlink` results.
+        let deleted = dx_dir.join("environments").join(&env_hex);
+        let deleted_text = format!("{} (deleted)", deleted.display());
+        let dir = proc_root.join("7");
+        fs::create_dir_all(dir.join("fd")).expect("fd dir");
+        std::os::unix::fs::symlink(&deleted_text, dir.join("cwd")).expect("cwd");
+        // Unmanaged names, non-digest names, and foreign roots
+        // contribute nothing even when observed.
+        std::os::unix::fs::symlink(
+            dx_dir.join("setups").join("latest"),
+            dir.join("fd").join("0"),
+        )
+        .expect("fd");
+        std::os::unix::fs::symlink(
+            dx_dir.join("notes").join(digest('9')),
+            dir.join("fd").join("1"),
+        )
+        .expect("fd");
+        std::os::unix::fs::symlink(
+            root.join("elsewhere").join(digest('8')),
+            dir.join("fd").join("2"),
+        )
+        .expect("fd");
+        let live = scan_live_hexes(&proc_root, &dx_dir);
+        assert!(live.setup.is_empty());
+        assert_eq!(
+            live.generations,
+            vec![GenerationView {
+                kind: GenerationKind::Environment,
+                hex: env_hex,
+            }]
+        );
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn scan_dedupes_and_sorts_across_processes() {
+        let root = clean_root("scan-dedupe");
+        let workspace = workspace_of(&root);
+        let dx_dir = workspace.join(".dx");
+        let proc_root = root.join("proc");
+        fs::create_dir_all(&proc_root).expect("proc root");
+        let low = digest('1');
+        let high = digest('9');
+        stage_process(
+            &proc_root,
+            "100",
+            Some(&dx_dir.join("generated").join(&high)),
+            &[&dx_dir.join("generated").join(&low)],
+        );
+        stage_process(
+            &proc_root,
+            "200",
+            Some(&dx_dir.join("generated").join(&low)),
+            &[&dx_dir.join("generated").join(&high)],
+        );
+        let live = scan_live_hexes(&proc_root, &dx_dir);
+        assert!(live.setup.is_empty());
+        assert_eq!(
+            live.generations,
+            vec![
+                GenerationView {
+                    kind: GenerationKind::Generated,
+                    hex: low,
+                },
+                GenerationView {
+                    kind: GenerationKind::Generated,
+                    hex: high,
+                },
+            ]
+        );
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn with_scan_matches_plain_inventory_without_live_processes() {
+        let root = clean_root("with-scan");
+        let (workspace, stale_hex, _) = two_record_workspace(&root);
+        let scanned = collect_inventory_with_scan(&workspace).expect("scan collect");
+        let plain = collect_inventory(&workspace, &[], &[]).expect("plain collect");
+        // No test-runner process holds the fixture workspace open, so the
+        // live scan pins nothing and both routes agree.
+        assert_eq!(scanned.plan(), plain.plan());
+        assert_eq!(scanned.plan().prune_setup_records, vec![stale_hex]);
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn measure_sums_prune_entries_and_skips_missing() {
+        let root = clean_root("measure");
+        let (workspace, stale_hex, _) = two_record_workspace(&root);
+        let plan = collect_inventory(&workspace, &[], &[])
+            .expect("collect")
+            .plan();
+        let bytes = measure_prune_bytes(&workspace, &plan).expect("measure");
+        // The stale record holds the environment/generated pair links
+        // (measured metadata); the empty generation dirs measure zero.
+        let (measured_hex, record_bytes) = bytes
+            .setup_record_bytes
+            .iter()
+            .find(|(hex, _)| hex == &stale_hex)
+            .expect("stale record measured");
+        assert_eq!(measured_hex, &stale_hex);
+        assert!(
+            *record_bytes > 0,
+            "pair links measure nonzero: {record_bytes}"
+        );
+        assert_eq!(bytes.generation_bytes.len(), 2);
+        assert!(bytes.generation_bytes.iter().all(|(_, size)| *size == 0));
+        assert_eq!(
+            bytes.total(),
+            *record_bytes,
+            "empty generation dirs add nothing"
+        );
+        // Entries that vanished since planning measure zero; apply treats
+        // them as idempotent successes, so measure and apply agree.
+        let ghost = CleanPlan {
+            prune_setup_records: vec![digest('a')],
+            prune_generations: vec![GenerationView {
+                kind: GenerationKind::Environment,
+                hex: digest('b'),
+            }],
+            refused_unmanaged: Vec::new(),
+            preserved_current: None,
+        };
+        let ghost_bytes = measure_prune_bytes(&workspace, &ghost).expect("ghost measure");
+        assert_eq!(ghost_bytes.total(), 0);
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn measure_never_follows_symlinks() {
+        let root = clean_root("measure-nofollow");
+        let workspace = workspace_of(&root);
+        dx_setup::commit_pair(&workspace, &setup_pair('1', '2')).expect("commit");
+        let dx_dir = workspace.join(".dx");
+        // A fat file behind a link inside a pruned generation: the link
+        // measures, the 1 MiB target never does.
+        let outside = root.join("fat.bin");
+        fs::write(&outside, vec![7u8; 1 << 20]).expect("fat file");
+        let stale_gen = dx_dir.join("generated").join(digest('9'));
+        fs::create_dir_all(&stale_gen).expect("stale generation");
+        std::os::unix::fs::symlink(&outside, stale_gen.join("artifact")).expect("link");
+        let plan = CleanPlan {
+            prune_setup_records: Vec::new(),
+            prune_generations: vec![GenerationView {
+                kind: GenerationKind::Generated,
+                hex: digest('9'),
+            }],
+            refused_unmanaged: Vec::new(),
+            preserved_current: None,
+        };
+        let bytes = measure_prune_bytes(&workspace, &plan).expect("measure");
+        assert!(
+            bytes.total() < 1 << 20,
+            "link target must not count: {}",
+            bytes.total()
+        );
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn measure_missing_workspace_fails() {
+        let root = clean_root("measure-missing");
+        let plan = CleanPlan {
+            prune_setup_records: Vec::new(),
+            prune_generations: Vec::new(),
+            refused_unmanaged: Vec::new(),
+            preserved_current: None,
+        };
+        assert!(matches!(
+            measure_prune_bytes(&root.join("no-such-dir"), &plan),
+            Err(CleanError::WorkspaceRoot { .. })
+        ));
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn reclaimed_counts_only_removed_entries() {
+        let removed_hex = digest('3');
+        let removed_generation = GenerationView {
+            kind: GenerationKind::Environment,
+            hex: digest('5'),
+        };
+        let bytes = PruneBytes {
+            setup_record_bytes: vec![(removed_hex.clone(), 100), (digest('4'), 200)],
+            generation_bytes: vec![
+                (removed_generation.clone(), 300),
+                (
+                    GenerationView {
+                        kind: GenerationKind::Generated,
+                        hex: digest('6'),
+                    },
+                    400,
+                ),
+            ],
+        };
+        assert_eq!(bytes.total(), 1000);
+        let outcome = CleanOutcome {
+            removed_setup_records: vec![removed_hex],
+            removed_generations: vec![removed_generation],
+        };
+        // Entries skipped under the lock (reselected current, relinked
+        // generations) never inflate the reported reclaimed total.
+        assert_eq!(bytes.reclaimed(&outcome), 400);
+        assert_eq!(
+            bytes.reclaimed(&CleanOutcome::default()),
+            0,
+            "empty outcome reclaims nothing"
+        );
+    }
+
+    #[test]
+    fn render_lists_per_entry_bytes_and_total() {
+        let stale = record('3', '4');
+        let current = record('1', '2');
+        let records = vec![current.clone(), stale.clone()];
+        let generations = vec![generation(GenerationKind::Environment, '3')];
+        let plan = plan_prune(inputs(&records, &generations, Some(&current.hex)));
+        let bytes = PruneBytes {
+            setup_record_bytes: vec![(stale.hex.clone(), 120)],
+            generation_bytes: vec![(generation(GenerationKind::Environment, '3'), 34)],
+        };
+        let listing = render_dry_run(&plan, &bytes);
+        assert!(
+            listing.contains(&format!(
+                "prune setup record: .dx/setups/{} (120 bytes)",
+                stale.hex
+            )),
+            "{listing}"
+        );
+        assert!(
+            listing.contains(&format!(
+                "prune generation: .dx/environments/{} (34 bytes)",
+                digest('3')
+            )),
+            "{listing}"
+        );
+        assert!(
+            listing.contains("reclaimable total: 154 bytes"),
+            "{listing}"
+        );
     }
 }

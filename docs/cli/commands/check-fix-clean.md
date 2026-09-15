@@ -2,9 +2,7 @@
 
 Owning decision: [ADR 0018](../../decisions/0018-umbrella-check-fix-cleanup-clean.md).
 Umbrella mechanics are implemented as specified below; cleanup mechanics are
-implemented as specified under [`dx clean`](#dx-clean) except process-scan in-use detection
-and reclaimable-bytes reporting, which are open under
-[#20](https://github.com/ralvik/rules_dx/issues/20).
+implemented as specified under [`dx clean`](#dx-clean).
 
 ## `dx check` And `dx fix`
 
@@ -74,8 +72,9 @@ and it refuses unmanaged or digest-spoofed paths.
 
 `dx clean --bazel` additionally forwards `bazel clean` and prints
 dangling-link recovery guidance (`dx setup`, `dx env`, or `dx codegen`).
-`--dry-run` lists reclaimable generations and links without deleting.
-There is no automatic pruning, age policy, or count limit. CI use is not
+`--dry-run` lists reclaimable generations and links with per-entry and
+total reclaimable bytes without deleting. There is no automatic
+pruning, age policy, or count limit. CI use is not
 supported.
 
 Implemented mechanics (pinned by `dx_clean`/`dx_cli` fixtures): the flag
@@ -95,6 +94,14 @@ deletes nothing and holds no lock. `--bazel` forwards exactly
 `bazel clean` after pruning (listed, never run, under `--dry-run`) and
 prints the recovery guidance.
 
-Open under [#20](https://github.com/ralvik/rules_dx/issues/20): process-scan in-use detection (v1 takes
-caller-provided active sets, so unknown-live entries prune per plan) and
-reclaimable-bytes reporting.
+Active means observed live by the process scan: `dx clean` inspects the
+live `/proc` for processes whose working directory or open files sit
+under the workspace `.dx` roots, and observed setup and generation hexes
+never prune. Only numeric process directories are inspected, so a missing
+`/proc` (non-Linux hosts) scans empty rather than failing;
+over-retention is the only failure direction. Reclaimable bytes are
+measured over the planned prune set before any lock or deletion:
+symlinks and metadata count, link targets (Bazel outputs) never do, and
+vanished entries measure zero. The apply summary reports only the bytes
+of entries actually removed, so entries skipped under the lock never
+inflate the total.
