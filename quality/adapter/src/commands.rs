@@ -15,11 +15,11 @@
 //!   where nothing is discoverable).
 //! * Clippy compiles one file per invocation (`rustc` accepts a single
 //!   input root); every other tool takes the whole stage file list.
-//!   `rustc` typecheck likewise compiles one file per invocation as a
-//!   `lib` crate root (`--crate-type=lib`): direct sources are usually
-//!   library files without a `main` entry point, and the default `bin`
-//!   crate type would mask real type errors behind a spurious "no main
-//!   function" failure.
+//!   Clippy and `rustc` typecheck alike compile one file per invocation
+//!   as a `lib` crate root (`--crate-type=lib`): direct sources are
+//!   usually library files without a `main` entry point, and the default
+//!   `bin` crate type would mask real diagnostics behind a spurious "no
+//!   main function" failure.
 //! * rustfmt always passes `--edition 2021`: the CLI flag silently wins
 //!   over any config `edition` key, matching the pinned toolchain scope.
 //! * The repo-owned Markdown checker takes one `--source WS_PATH=EXEC_PATH`
@@ -172,11 +172,14 @@ pub fn buildifier_fix(binary: &Path, files: &[&Path], config_dir_rel: Option<&st
 }
 
 /// Clippy single-file check invocation. The crate name derives from the
-/// file stem; `--out-dir` keeps metadata inside scratch. Clippy offers no
-/// config flag: it discovers `clippy.toml` upward from the working
-/// directory, so a hint pins `cwd_rel` to the mirrored config's directory
-/// while a bare run uses the scratch root (upstream defaults, nothing
-/// discoverable).
+/// file stem; `--out-dir` keeps metadata inside scratch. The crate type
+/// is always `lib`, matching `rustc_check`: direct sources are library
+/// files without `main`, and the default `bin` type would report a
+/// spurious missing-entry failure instead of the real lint diagnostics.
+/// Clippy offers no config flag: it discovers `clippy.toml` upward from
+/// the working directory, so a hint pins `cwd_rel` to the mirrored
+/// config's directory while a bare run uses the scratch root (upstream
+/// defaults, nothing discoverable).
 pub fn clippy_check(
     binary: &Path,
     file: &Path,
@@ -191,6 +194,7 @@ pub fn clippy_check(
             "2021",
             "--error-format=json",
             "--emit=metadata",
+            "--crate-type=lib",
             "--out-dir",
             &out_dir.to_string_lossy(),
             "--crate-name",
@@ -701,6 +705,7 @@ mod tests {
                 "2021",
                 "--error-format=json",
                 "--emit=metadata",
+                "--crate-type=lib",
                 "--out-dir",
                 "/scratch/out",
                 "--crate-name",

@@ -230,7 +230,11 @@ upward from the working directory: a direct probe shows a `clippy_test.toml` in 
 directory is silently ignored while `clippy.toml` applies. Runner wiring pins a hinted run's working
 directory to the mirrored config's parent directory and leaves unhinted runs at the empty scratch
 root. `clippy_cfg` bound to `fixture_real_rust_hinted` proves the binding end to end: its lint
-result carries `clippy::too_many_arguments` where the unhinted fixture stays silent.
+result carries `clippy::too_many_arguments` where the unhinted fixture stays silent. Like the
+`rustc` typecheck below, each Clippy run compiles one file as a `lib` crate root
+(`--crate-type=lib`), so library sources without `main` report real lint diagnostics instead of a
+spurious missing-entry failure. Dependency context (`--extern`) stays open under
+[issue #12](https://github.com/ralvik/rules_dx/issues/12).
 
 Rust typechecking invokes the selected toolchain's `rustc` directly (tool ID `rustc`,
 `real_rust_family` typecheck selection, `dx typecheck` via `real_typecheck_aspect`): one
