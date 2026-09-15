@@ -103,16 +103,19 @@ const BIOME_DEFAULTS_REL: &str = "dx-biome-default/biome.json";
 const BIOME_DEFAULTS_BYTES: &[u8] = b"{}";
 
 /// One resolved real tool: absolute binary, extra hermetic environment
-/// entries, optional mirror-relative config, and extra mirrored files
-/// (hinted configs, Vale styles). The action maps its inputs to the
-/// mirror paths through the CLI. Delegated tools (Clippy, #47) carry
-/// authoritative upstream diagnostics files instead of a spawned
-/// binary: the aspect declares the files as action inputs and maps
-/// them here, and the backend parses them without spawning.
+/// entries, optional mirror-relative config, optional crate edition
+/// (rustfmt only: read from `CrateInfo` by the quality aspect, so the
+/// CLI `--edition` flag matches what the crate compiles as), and extra
+/// mirrored files (hinted configs, Vale styles). The action maps its
+/// inputs to the mirror paths through the CLI. Delegated tools (Clippy,
+/// #47) carry authoritative upstream diagnostics files instead of a
+/// spawned binary: the aspect declares the files as action inputs and
+/// maps them here, and the backend parses them without spawning.
 pub struct RealTool {
     pub binary: PathBuf,
     pub extra_env: Vec<(String, String)>,
     pub config_rel: Option<String>,
+    pub edition: Option<String>,
     pub tool_files: Vec<(String, Vec<u8>)>,
     pub upstream_diagnostics: Vec<PathBuf>,
 }
@@ -323,6 +326,22 @@ impl RealBackend {
             .transpose()
     }
 
+    /// Resolves the rustfmt crate edition: authoritative context from
+    /// the aspect (`CrateInfo.edition`), never guessed here. Defaulting
+    /// would silently reformat e.g. Edition 2015/2024 crates with the
+    /// wrong rules, and the adapter must not reconstruct rustc/edition
+    /// state (#49). A missing edition fails the action so the wiring
+    /// gap surfaces instead of producing wrong diffs.
+    fn rustfmt_edition(tool: &RealTool) -> Result<&str, RunnerError> {
+        const TOOL_ID: &str = "rustfmt";
+        tool.edition.as_deref().ok_or_else(|| {
+            execution(
+                TOOL_ID,
+                "missing tool edition: the quality aspect must pass the CrateInfo edition via --tool-edition".to_owned(),
+            )
+        })
+    }
+
     /// Resolves the Biome `--config-path` directory to an absolute
     /// scratch path: the hinted config's parent directory, else the
     /// materialized defaults directory. The directory holds exactly one
@@ -514,6 +533,7 @@ impl RealBackend {
                     &tool.binary,
                     &refs,
                     config.as_ref().expect("rustfmt always resolves a config"),
+                    Self::rustfmt_edition(tool)?,
                     true,
                 );
                 let out = self.run(tool_id, tool, &invocation, scratch)?;
@@ -847,6 +867,7 @@ impl RealBackend {
                 &tool.binary,
                 &refs,
                 config.as_ref().expect("rustfmt always resolves a config"),
+                Self::rustfmt_edition(tool)?,
                 false,
             ),
             "buildifier" => commands::buildifier_fix(
@@ -1071,8 +1092,19 @@ mod tests {
             binary: PathBuf::from("/fake/bin/tool"),
             extra_env: Vec::new(),
             config_rel: None,
+            edition: None,
             tool_files: Vec::new(),
             upstream_diagnostics: Vec::new(),
+        }
+    }
+
+    /// rustfmt test tool: the aspect always passes a crate edition, so
+    /// every test that reaches the rustfmt check/fix dispatch carries
+    /// one; only the missing-edition test uses `plain_tool()` directly.
+    fn rustfmt_tool() -> RealTool {
+        RealTool {
+            edition: Some("2021".to_owned()),
+            ..plain_tool()
         }
     }
 
@@ -2084,7 +2116,7 @@ mod tests {
 
     #[test]
     fn rustfmt_pipeline_fixes_dirty_files_to_stable() {
-        let backend = backend_for("rustfmt", plain_tool(), roundtrip_rustfmt);
+        let backend = backend_for("rustfmt", rustfmt_tool(), roundtrip_rustfmt);
         let stages = vec![stage("rustfmt", &["rust"], &["src/main.rs"])];
         let files = vec![file("src/main.rs", "x  \ny\t")];
         let result = run_real_pipeline("//quality:test", "format", &stages, &files, &backend)
@@ -2418,6 +2450,7 @@ mod tests {
     fn rustfmt_hinted_config_reaches_the_tool() {
         let tool = RealTool {
             config_rel: Some("hint.toml".to_owned()),
+            edition: Some("2021".to_owned()),
             tool_files: vec![("hint.toml".to_owned(), b"".to_vec())],
             ..plain_tool()
         };
@@ -2434,7 +2467,7 @@ mod tests {
 
     #[test]
     fn rustfmt_without_hint_gets_materialized_defaults() {
-        let backend = backend_for("rustfmt", plain_tool(), rustfmt_defaults);
+        let backend = backend_for("rustfmt", rustfmt_tool(), rustfmt_defaults);
         let findings = backend
             .diagnose(
                 "rustfmt",
@@ -2443,6 +2476,68 @@ mod tests {
             )
             .expect("diagnosed");
         assert!(findings.is_empty());
+    }
+
+    /// rustfmt double asserting the caller edition reaches `--edition`
+    /// verbatim: the backend passes the aspect value through, never a
+    /// default.
+    fn rustfmt_edition_passthrough(
+        argv: &[OsString],
+        _cwd: &Path,
+        env: &[(String, String)],
+    ) -> io::Result<ChildOutput> {
+        assert_hermetic(env);
+        let edition = argv
+            .windows(2)
+            .find(|pair| pair[0] == "--edition")
+            .map(|pair| pair[1].clone())
+            .expect("rustfmt passes --edition");
+        assert_eq!(
+            edition,
+            OsString::from("2018"),
+            "caller edition reaches the tool"
+        );
+        Ok(ChildOutput {
+            code: Some(0),
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+        })
+    }
+
+    #[test]
+    fn rustfmt_caller_edition_reaches_the_tool() {
+        let tool = RealTool {
+            edition: Some("2018".to_owned()),
+            ..plain_tool()
+        };
+        let backend = backend_for("rustfmt", tool, rustfmt_edition_passthrough);
+        let findings = backend
+            .diagnose(
+                "rustfmt",
+                "format",
+                &single("src/main.rs", "fn main() {}\n"),
+            )
+            .expect("diagnosed");
+        assert!(findings.is_empty());
+    }
+
+    #[test]
+    fn rustfmt_without_edition_fails_the_action() {
+        let backend = backend_for("rustfmt", plain_tool(), rustfmt_defaults);
+        let err = backend
+            .diagnose(
+                "rustfmt",
+                "format",
+                &single("src/main.rs", "fn main() {}\n"),
+            )
+            .expect_err("missing edition fails");
+        assert!(matches!(err, RunnerError::ToolExecution { .. }));
+        assert!(err.to_string().contains("--tool-edition"));
+        let err = backend
+            .apply_fix("rustfmt", "src/main.rs", "fn main() {}\n", "format")
+            .expect_err("missing edition fails");
+        assert!(matches!(err, RunnerError::ToolExecution { .. }));
+        assert!(err.to_string().contains("--tool-edition"));
     }
 
     fn no_spawn(_: &[OsString], _: &Path, _: &[(String, String)]) -> io::Result<ChildOutput> {
@@ -2621,7 +2716,7 @@ mod tests {
 
     #[test]
     fn spawn_failure_fails_the_action() {
-        let backend = backend_for("rustfmt", plain_tool(), missing_spawn);
+        let backend = backend_for("rustfmt", rustfmt_tool(), missing_spawn);
         let err = backend
             .diagnose("rustfmt", "format", &single("src/main.rs", "x\n"))
             .expect_err("spawn fails");
@@ -2672,7 +2767,7 @@ mod tests {
 
     #[test]
     fn escaping_paths_fail_the_action() {
-        let backend = backend_for("rustfmt", plain_tool(), roundtrip_rustfmt);
+        let backend = backend_for("rustfmt", rustfmt_tool(), roundtrip_rustfmt);
         let err = backend
             .diagnose("rustfmt", "format", &single("../evil.rs", "x\n"))
             .expect_err("escape fails");
@@ -2687,6 +2782,7 @@ mod tests {
     fn escaping_tool_files_fail_the_action() {
         let tool = RealTool {
             tool_files: vec![("../evil".to_owned(), b"".to_vec())],
+            edition: Some("2021".to_owned()),
             ..plain_tool()
         };
         let backend = backend_for("rustfmt", tool, roundtrip_rustfmt);
@@ -2700,7 +2796,7 @@ mod tests {
     #[test]
     fn unusable_scratch_parent_fails_the_action() {
         let backend = RealBackend {
-            tools: BTreeMap::from([("rustfmt".to_owned(), plain_tool())]),
+            tools: BTreeMap::from([("rustfmt".to_owned(), rustfmt_tool())]),
             scratch_parent: PathBuf::from("/nonexistent-dx-scratch-parent"),
             spawn: roundtrip_rustfmt,
         };
@@ -2729,6 +2825,7 @@ mod tests {
         assert!(err.to_string().contains("scratch config"));
         let tool = RealTool {
             config_rel: Some("../evil.toml".to_owned()),
+            edition: Some("2021".to_owned()),
             ..plain_tool()
         };
         let backend = backend_for("rustfmt", tool, rustfmt_hinted);
@@ -2740,7 +2837,7 @@ mod tests {
 
     #[test]
     fn nonzero_fix_keeps_the_input_bytes() {
-        let backend = backend_for("rustfmt", plain_tool(), failing_fix);
+        let backend = backend_for("rustfmt", rustfmt_tool(), failing_fix);
         let kept = backend
             .apply_fix("rustfmt", "src/main.rs", "x  \n", "format")
             .expect("kept");
@@ -2749,7 +2846,7 @@ mod tests {
 
     #[test]
     fn fix_without_output_file_fails_the_action() {
-        let backend = backend_for("rustfmt", plain_tool(), deleting_fix);
+        let backend = backend_for("rustfmt", rustfmt_tool(), deleting_fix);
         let err = backend
             .apply_fix("rustfmt", "src/main.rs", "x\n", "format")
             .expect_err("re-read fails");
@@ -2759,7 +2856,7 @@ mod tests {
 
     #[test]
     fn non_utf8_fix_fails_the_action() {
-        let backend = backend_for("rustfmt", plain_tool(), binary_fix);
+        let backend = backend_for("rustfmt", rustfmt_tool(), binary_fix);
         let err = backend
             .apply_fix("rustfmt", "src/main.rs", "x\n", "format")
             .expect_err("encoding fails");
@@ -3393,7 +3490,7 @@ mod tests {
 
     #[test]
     fn fix_failure_aborts_real_convergence() {
-        let backend = backend_for("rustfmt", plain_tool(), check_ok_fix_missing);
+        let backend = backend_for("rustfmt", rustfmt_tool(), check_ok_fix_missing);
         let stages = vec![stage("rustfmt", &["rust"], &["src/main.rs"])];
         let files = vec![file("src/main.rs", "x  \n")];
         let err = run_real_pipeline("//quality:test", "format", &stages, &files, &backend)
@@ -3404,7 +3501,7 @@ mod tests {
 
     #[test]
     fn check_spawn_failure_aborts_initial_diagnose() {
-        let backend = backend_for("rustfmt", plain_tool(), missing_spawn);
+        let backend = backend_for("rustfmt", rustfmt_tool(), missing_spawn);
         let stages = vec![stage("rustfmt", &["rust"], &["src/main.rs"])];
         let files = vec![file("src/main.rs", "x\n")];
         let err = run_real_pipeline("//quality:test", "format", &stages, &files, &backend)
@@ -3415,7 +3512,7 @@ mod tests {
 
     #[test]
     fn terminal_check_failure_aborts_the_pipeline() {
-        let backend = backend_for("rustfmt", plain_tool(), check_ok_fix_poisons);
+        let backend = backend_for("rustfmt", rustfmt_tool(), check_ok_fix_poisons);
         let stages = vec![stage("rustfmt", &["rust"], &["src/main.rs"])];
         let files = vec![file("src/main.rs", "x\n")];
         let err = run_real_pipeline("//quality:test", "format", &stages, &files, &backend)

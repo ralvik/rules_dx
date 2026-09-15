@@ -29,6 +29,10 @@ _RUST_CASES = [
         "capability": "format",
         "stages": ["rustfmt;rust;quality/testdata/clean.rs"],
         "rustfmt_from_toolchain": True,
+        # Provider-less matrix input: no CrateInfo, so the edition the
+        # aspect would fall back to (RUST_EDITION) is declared explicitly.
+        "edition_tools": ["rustfmt"],
+        "edition_values": ["2021"],
         "expected": """producer //quality/testdata:matrix_rust_format_pass
 capability FORMAT
 stages 1
@@ -48,6 +52,10 @@ replacements 0
         "capability": "format",
         "stages": ["rustfmt;rust;matrix/rustfmt_dirty.rs"],
         "rustfmt_from_toolchain": True,
+        # Provider-less matrix input: no CrateInfo, so the edition the
+        # aspect would fall back to (RUST_EDITION) is declared explicitly.
+        "edition_tools": ["rustfmt"],
+        "edition_values": ["2021"],
         "expected": """producer //quality/testdata:matrix_rust_format_fail
 capability FORMAT
 stages 1
