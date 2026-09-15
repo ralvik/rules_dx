@@ -146,7 +146,7 @@ applies valid replacements once and does not automatically rerun any selected ty
 not resolved by an applied guaranteed fix at or above `--fail-on`, or apply failures, determine a
 nonzero result. Suppression insertion is excluded from normal fixing. Security analyzers belong
 to `dx audit` and are not selected by lint or typecheck; initial v1 audit tool selection is
-owned by O11 (Bandit excluded from v1 by
+open under [#18](https://github.com/ralvik/rules_dx/issues/18) (Bandit excluded from v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md)).
 
 Several active formatter implementations may claim the same file. They run as stable ordered stages

@@ -76,7 +76,7 @@ thresholds, replacement-present results at every threshold, validation disabled,
 
 ## Initial Adapter Evidence
 
-The O20 [adapter qualification contract](tool-integrations.md#initial-adapter-qualification) requires:
+The [adapter qualification contract](tool-integrations.md#initial-adapter-qualification) requires:
 
 - Buildifier JSON with an omitted unreadable input, syntax errors, config/table closure, and
   lint-fix/format coupling. Exit zero must not hide incomplete analysis. Prove the `success` field
@@ -495,15 +495,17 @@ entries against upstream lock semantics and that neither test mutates manifests 
 Run lockfile consistency with network access denied after declared inputs are provisioned, without
 an undeclared package-manager cache. Both valid and stale-lock cases must produce the expected
 result offline; missing required metadata must fail actionably, not skip validation or pass. Verify
-the test does not query live registries for newer releases. Qualify exact offline routes under O46.
+the test does not query live registries for newer releases. Exact offline routes are open under
+[#22](https://github.com/ralvik/rules_dx/issues/22).
 Run the generated tests through both `bazel test //...` and bare `dx test`, proving each check is
 included without opt-in, propagates failures, and is independently runnable by label. Verify no
 default `manual` exclusion hides either check and unrelated foundations remain inactive.
 Include necessary transitive packages and shared-workspace usage to prevent target-local false
 positives. Verify a legitimate non-import use can pass through an explicit dependency-scoped
 exception with an explanatory reason, while an unrelated unused declaration still fails and the
-exception does not waive lockfile consistency. Missing reasons must fail validation. Qualify native
-configuration, reason validation, non-import recognition, and ecosystem scopes under O46.
+exception does not waive lockfile consistency. Missing reasons must fail validation. Native
+configuration, reason validation, non-import recognition, and ecosystem scopes are open under
+[#22](https://github.com/ralvik/rules_dx/issues/22).
 Verify exceptions for removed dependencies and exceptions that no longer suppress a finding fail
 as obsolete, including after a checker upgrade recognizes legitimate usage. A still-needed explained
 exception must continue to pass. Use the same supported-configuration scope as usage analysis and
@@ -520,8 +522,8 @@ Do not add a duplicate unused-Bazel-edge test; generated edge
 maintenance remains covered by the existing [generation tests](../testing/generation.md).
 
 Every required entry in [First-Release Tool Baseline](../tools/tool-baseline.md), including mandatory
-curated expansion under [First-Release Admission](../product/scope.md#first-release-admission)
-and O46 in the open-decision register, requires a fixture using
+curated expansion under [First-Release Admission](../product/scope.md#first-release-admission),
+requires a fixture using
 the tool's native configuration, passing and failing diagnostics, supported platform
 coverage, and applicable fix/format output. A generated parity manifest must fail CI
 when a required entry lacks its tests. Swift and SwiftFormat are excluded from v1 by user

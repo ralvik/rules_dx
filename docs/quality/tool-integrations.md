@@ -6,8 +6,8 @@ The first release uses tool-list parity with
 [`aspect_rules_lint` v2.8.0](https://github.com/aspect-build/rules_lint/releases/tag/v2.8.0)
 as a minimum baseline, not a scope ceiling or an API or behavior compatibility promise.
 Curated expansion is mandatory where upstream implementations or rules permit hermetic thin
-integration under [First-Release Admission](../product/scope.md#first-release-admission) and
-O46 in the open-decision register, without building replacement stacks.
+integration under [First-Release Admission](../product/scope.md#first-release-admission) and the
+[support matrix](../product/support-matrix.md), without building replacement stacks.
 Curated default tool selections are owned by the [tool baseline](../tools/tool-baseline.md);
 this document owns adapter mechanics and does not re-pin defaults.
 Swift and SwiftFormat are excluded from v1 by
@@ -27,7 +27,10 @@ such as `lint_aspect`, `typecheck_aspect`, `format_aspect`, and `audit_aspect`. 
 internal unless a concrete external API is needed.
 
 `QualitySourcesInfo` is the accepted public cross-rule integration concept for custom source-owning
-rules. Its exact API remains provisional under O15. The authoritative conceptual boundary and
+rules. Its exact API is implemented as specified in
+[Quality Sources and Applicability](quality-sources.md); class-to-policy-family assignment
+and admissibility stay pending the registry review
+([issue #6](https://github.com/ralvik/rules_dx/issues/6)). The authoritative conceptual boundary and
 candidate shape are in [Quality Sources and Applicability](quality-sources.md); this document does
 not redefine its fields.
 
@@ -126,8 +129,9 @@ projections are separately defined in [Output Protocol](../cli/output-protocol.m
 
 ## Initial Adapter Qualification
 
-The Vale config-required and Taplo text-parser exceptions below are approved. Exact O20 mappings remain untested, and no new public API or
-support claim follows from these selections. Acquisition evidence
+The Vale config-required and Taplo text-parser exceptions below are approved. Adapter mappings
+are implemented with conformance fixtures and metadata pins, and no new public API or
+support claim follows from these selections beyond what the fixtures prove. Acquisition evidence
 lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-research).
 
 - **Buildifier:** qualify `--mode=check --format=json` with `--lint=off` for formatting and
@@ -228,7 +232,7 @@ directory to the mirrored config's parent directory and leaves unhinted runs at 
 root. `clippy_cfg` bound to `fixture_real_rust_hinted` proves the binding end to end: its lint
 result carries `clippy::too_many_arguments` where the unhinted fixture stays silent.
 
-Rust typechecking invokes the selected toolchain's `rustc` directly (M12 WP3, tool ID `rustc`,
+Rust typechecking invokes the selected toolchain's `rustc` directly (tool ID `rustc`,
 `real_rust_family` typecheck selection, `dx typecheck` via `real_typecheck_aspect`): one
 `--edition 2021 --error-format=json --emit=metadata --crate-type=lib` invocation per file, with
 `--crate-name` derived from the file stem and a fresh `--out-dir` under the scratch root. The
@@ -240,7 +244,7 @@ suggestions. Like Clippy and rustfmt, the compiler follows the toolchain version
 `rust_toolchain_rustc` with no adapter edit and no `rules_dx`-owned copy.
 
 - **Repository-owned Markdown checks:** link and structure validation is repository-owned and
-  distinct from Vale (M04 WP3, O20). The checker is the Rust crate `//quality/markdown`: it parses
+  distinct from Vale. The checker is the Rust crate `//quality/markdown`: it parses
   one Markdown source plus its declared sibling-file closure and reports structured findings for
   dangling relative file targets, missing same-file or resolved-file anchors, heading-hierarchy
   violations (exactly one H1, no skipped levels), and fenced code blocks without a language tag.
@@ -248,23 +252,23 @@ suggestions. Like Clippy and rustfmt, the compiler follows the toolchain version
   as silent passes. The `//quality/markdown:quality_markdown` binary checks `--source WS_PATH=EXEC_PATH` files
   against the union `--source`/`--sibling WS_PATH=EXEC_PATH` closure and prints one JSON
   `{"path","line","kind","message"}` object per finding; exit `0` when checked, `2` on bad
-  arguments, unreadable files, or non-UTF-8 input.
-  Runner-backend wiring (M04 WP3) follows the M04 real-adapter pattern: tool ID `markdown_check`
+  arguments,   unreadable files, or non-UTF-8 input.
+  Runner-backend wiring follows the real-adapter pattern: tool ID `markdown_check`
   (`REAL_ADAPTERS` lint `markdown`, `real_markdown_family` lint alongside `vale`, aspect binary
   `//quality/markdown:quality_markdown`), one `--source WS=ABS` mapping per stage file with no
   config and scratch-root cwd (`commands::markdown_check`), NDJSON parsing keyed by workspace path
   with re-rooting onto scratch-absolute paths before placement (`parsers::parse_markdown_findings`;
   findings exist only on exit 0, any other exit is an action failure), check-only `apply_fix`
   returning its input, and diagnostics carrying the kebab-case kind as `rule_id` at `Error`
-  severity. Sibling plumbing (M05 WP1): source targets declare unclassified link-resolution files
+  severity. Sibling plumbing: source targets declare unclassified link-resolution files
   via `markdown_siblings` on `real_source_target` (for example a `LICENSE` file); the aspect passes
   one `--sibling WS=ABS` mapping per sibling alongside the action inputs, only when a
   `markdown_check` stage runs, and the runner mirrors siblings into the scratch tree through
   `run_real_pipeline_with_siblings` without linting them or entering snapshots. A sibling
   shadowing a checked source is dropped at the aspect (the source wins); a `--sibling` colliding
   with a `--source` at the runner CLI is a `DuplicateFile` action failure. Direct-Bazel dogfood
-  (executing the wired stage on fixtures) follows in M05; this
-  boundary freezes the checker shape and its pipeline integration, not its execution evidence.
+  executes the wired stage on fixtures; this
+  boundary defines the checker shape and its pipeline integration.
 
 ## First-Release Tool Baseline
 

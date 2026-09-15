@@ -11,14 +11,13 @@ public NDJSON and standard-report API in [Output Protocol](../cli/output-protoco
 Every lint, typecheck, or format target/capability pipeline action emits one bounded binary
 Protobuf result message. Non-mutating audit may emit one message per target/tool action. The
 checked-in [`quality/result.proto`](../../quality/result.proto) is the source of truth:
-field/enum numbers and reserved ranges are frozen under O18 with
-this initial implementation. Bazel generates the Rust crate `result_proto` via
+field/enum numbers and reserved ranges are fixed by the checked-in proto in
+this implementation. Bazel generates the Rust crate `result_proto` via
 `//quality:result_proto_rs`, and `//quality/result:quality_result` implements the result-side
 validation, BLAKE3 digest, and deterministic codec (`validate`, `encode_validated`,
-`decode_validated`). The pipeline producer is `//quality/runner:quality_runner` (M03 WP2b);
-the direct-Bazel per-result evaluator is `//quality/evaluator:quality_evaluator` (M03 WP3).
-Collectors land with the `dx` CLI, so do not build them against the
-semantic prose below until then. The sole
+`decode_validated`). The pipeline producer is `//quality/runner:quality_runner`;
+the direct-Bazel per-result evaluator is `//quality/evaluator:quality_evaluator`.
+Collectors are implemented in the `dx` CLI. The sole
 stable public capability output group is `dx_results`; it contains each result and an enabled
 per-result validation marker. No invocation-level aggregation action exists.
 
