@@ -1,7 +1,7 @@
 # Starlark Testing
 
 Accepted contract for the project-owned `starlark_test` facade under the
-pinned Bazel version, implemented in M01 per
+pinned Bazel version, implemented per
 [ADR 0009](../decisions/0009-starlark-testing.md). The
 [testing strategy](README.md) indexes it alongside the CLI, CI, generation,
 environment, tool, and quality matrices.
@@ -94,5 +94,5 @@ Per-check filtering, richer matchers beyond `expect_equal`, aspect /
 toolchain / configuration / output-group / action subjects, per-function
 test targets, and Rust orchestration of fixture workspaces with BEP
 consumption are explicitly future work. They require concrete use cases and
-their own milestones; consult [ADR 0009](../decisions/0009-starlark-testing.md)
-and open decisions before assuming any of them.
+their own tracking issues; consult [ADR 0009](../decisions/0009-starlark-testing.md)
+before assuming any of them.

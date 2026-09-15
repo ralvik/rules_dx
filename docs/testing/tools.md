@@ -29,9 +29,10 @@ execution-platform behavior.
 
 The Python proof uses one private `rules_dx` lock to export pydoclint and another eligible
 [baseline Python tool](../tools/tool-baseline.md#curated-differences) in a compatible
-[managed runtime cohort](../tools/tool-acquisition.md#shared-runtimes), qualified under O26.
-Fixture membership selects no new tool or product default and does not depend on O11's M26
-audit qualification. The [private-graph requirements](../tools/tool-acquisition.md#ruleset-owned-ecosystem-graphs)
+[managed runtime cohort](../tools/tool-acquisition.md#shared-runtimes), qualified in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7).
+Fixture membership selects no new tool or product default and does not depend on the audit
+qualification tracked in [issue #18](https://github.com/ralvik/rules_dx/issues/18). The [private-graph requirements](../tools/tool-acquisition.md#ruleset-owned-ecosystem-graphs)
 require wheel-only selection, no sdist action, no wheel compilation, no ambient Python,
 one managed runtime shared by both tools, and isolation between tool packages and analyzed
 target dependencies. Tests cover every required execution platform and a non-Linux host
@@ -79,8 +80,9 @@ offline verification with authenticated trust roots, rotation with old-root rete
 Test the approved [packaging boundary](../tools/tool-acquisition.md#artifact-identity-and-metadata):
 constituent provenance remains embedded, final-archive attestations remain detached and bind to the
 published bytes, missing required evidence fails verification, and changing embedded metadata
-invalidates old final-archive attestations. Freeze manifest self-entry rules and remaining O38/O39
-trust/profile policy before asserting those additional outcomes.
+invalidates old final-archive attestations. Freeze manifest self-entry rules and remaining
+trust/profile policy (tracked in [issue #5](https://github.com/ralvik/rules_dx/issues/5))
+before asserting those additional outcomes.
 
 ## Laziness And Performance
 

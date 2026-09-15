@@ -46,8 +46,8 @@ content, never an ambient Git fallback. Exercise a missing or hostile `git` on P
 Git acquisition failure, and the qualified offline hook setup. Installation must refuse
 unmanaged hooks even when force is requested; uninstall removes only owned shims.
 Verify `init` can bootstrap without `MODULE.bazel`, writes absent files only, and preserves
-all existing content without inspecting Git status. Qualify destination selection and any
-managed-file force behavior under O49 before asserting an exact API.
+all existing content without inspecting Git status. Do not assert an exact force API
+for destination selection or managed-file force behavior.
 
 ## GitHub Reporting
 
@@ -58,10 +58,10 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
 
 - Verify the final registry contains exactly `audit`, `lint`, `typecheck`, `test`,
   `format`, `build`, `run`, `watch`, `check`, `fix`, `clean`, `update`, `generate`, `codegen`, `env`, `setup`, `coverage`,
-  `docs`, `init`, `hooks`, `status`, `version`, `completion`, and `bazel`, plus `owners`, `deps`, and `why` once
-  O56 freezes their inspect-wrapper contracts. `status` and `version` are the
-  O50/O51 diagnostics/version surface; `completion` is the
-  O61 generated-script surface. Compare the final registry
+  `docs`, `init`, `hooks`, `status`, `version`, `completion`, and `bazel`, plus implemented
+  `owners`, `deps`, and `why` inspect commands. `status` and `version`
+  are the implemented diagnostics/version surface; `completion` is the
+  implemented generated-script surface. Compare the final registry
   with the qualified [command reference](../cli/commands/README.md), not an earlier partial CLI.
 - Verify `doctor` and `configure` are rejected as unknown.
 - Verify help and machine-readable metadata identify `lint`, `typecheck`, `format`,
@@ -99,8 +99,9 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   preserve successful changes, report every failure, and return an overall failure status. Operations
   depending on the failed update must not run and must be reported as blocked. Include shared-lockfile
   and shared-resolver-workspace fixtures so distinct labels alone do not imply independence; do not
-  roll back successful independent updates. Freeze exact aggregate exit codes and per-set
-  text/NDJSON reporting under O12 before asserting their mappings; successful updates must not
+  roll back successful independent updates. Exact aggregate exit codes and per-set
+  text/NDJSON reporting are tracked in
+  [issue #19](https://github.com/ralvik/rules_dx/issues/19); successful updates must not
   hide a failed set or claim blocked dependents succeeded.
 - Run every compatibility fixture required by [Output Protocol](../cli/output-protocol.md) for
   each command and supported mode. Cross-command fixtures additionally prove that child
@@ -109,7 +110,8 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
 - Verify workflow commands reject user-supplied external-repository scopes while
   `dx bazel` continues to forward them unchanged.
 - Verify `--check` for `lint`, `typecheck`, `format`, `generate`, `check`, `fix`, and
-  [`docs --check`](../cli/commands/docs.md) (O54 frozen: extraction plus shared
+  [`docs --check`](../cli/commands/docs.md) (tracked in
+  [issue #10](https://github.com/ralvik/rules_dx/issues/10): extraction plus shared
   validation without rendering).
 - Verify docs build and qualified check modes consume generated, Bazel-cached IR without
   requiring committed snapshots or writing IR beside sources. A cold cache triggers normal
@@ -125,7 +127,8 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
 - Verify no-scope lint, typecheck, format, audit, check, and fix resolve to `//...` independent
   of the current working directory and do not scan for source files. Verify bare
   `dx audit` runs both `security` and `license` families while each explicit
-  family runs alone; qualify the license family under O58 before implementation.
+  family runs alone; qualify the license family in
+  [issue #6](https://github.com/ralvik/rules_dx/issues/6) before asserting its mappings.
 - Verify license expression math: `MIT OR GPL-3.0-only` passes in `distributed`
   while `MIT AND GPL-3.0-only` fails; a `WITH` exception passes only when listed
   verbatim; `UNKNOWN` fails in `distributed` but is inventoried in `internal`.
@@ -142,7 +145,8 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
 - Verify a license exception survives an upgrade inside its bounded range while the finding
   still applies and the exception is unexpired. Out-of-range versions do not inherit approval;
   expired exceptions and exceptions with no applicable finding fail validation. Do not freeze
-  shared-lock tier expectations until O58 resolves attribution.
+  shared-lock tier expectations until attribution is resolved in
+  [issue #6](https://github.com/ralvik/rules_dx/issues/6).
 - Verify target-scoped dependency audit checks complete owning dependency locks, including a
   vulnerable locked package unused by the selected target, without including unrelated dependency
   sets. Multiple targets sharing an owner must not duplicate the same audit context. Bare audit
@@ -152,7 +156,8 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   while retaining validated findings from assessed dependencies and marking SARIF unsuccessful.
   Contrast a recognized assessable package with no known advisories against unsupported Git revision
   and unidentified private-package fixtures. An empty findings list or advisory risk exception must
-  not hide incomplete assessment; qualify upstream evidence and report mappings under O11.
+  not hide incomplete assessment; qualify upstream evidence and report mappings in
+  [issue #18](https://github.com/ralvik/rules_dx/issues/18).
 - Verify dependency audit automatically refreshes applicable upstream advisory data without a
   separate manual command and supplies an identified snapshot to Bazel-owned analysis. With unchanged
   dependency locks, a new advisory snapshot must invalidate the relevant cached analysis and expose
@@ -161,7 +166,7 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   environment/codegen projections unchanged. A required refresh failure must fail the audit, report
   unavailable current data, and neither analyze a stale fallback snapshot nor claim the affected set
   is clean. Exercise this with and without an existing cached snapshot. Qualify exact refresh/cache
-  mappings under O11 before implementation.
+  mappings in [issue #18](https://github.com/ralvik/rules_dx/issues/18) before implementation.
 - Verify advisory acquisition downloads databases without sending dependency inventories to
   vulnerability services. Inspect request URLs, bodies, and telemetry using fixtures with distinct
   package identities; package-specific advisory queries and lockfile uploads must not occur. Run
@@ -175,12 +180,14 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
 - Verify a known applicable vulnerability with no severity rating fails audit by default and reports
   unknown severity without fabricating a rating. A valid explicit risk exception may exempt it while
   retaining its visible accepted status and reason. Missing severity must not silently suppress the
-  finding; qualify diagnostic-level, threshold, and report mappings under O11.
+  finding; qualify diagnostic-level, threshold, and report mappings in
+  [issue #18](https://github.com/ralvik/rules_dx/issues/18).
 - Verify an explicit, explained advisory/dependency exception exempts only its intended finding
   from failure. Another advisory on the same dependency and unrelated affected dependencies must
   remain subject to the normal policy. Missing reasons or invalid exception identities must fail
   validation; exceptions must not bypass refresh or analysis/collection failures. Qualify native
-  configuration and advisory-alias matching under O11.
+  configuration and advisory-alias matching in
+  [issue #18](https://github.com/ralvik/rules_dx/issues/18).
 - Verify risk acceptance matches only its explicit version or bounded range, using upstream version
   semantics. A still-vulnerable upgrade outside that range must not inherit acceptance; a matching
   version may be accepted only while the exception is otherwise valid. Reject missing or invalid
@@ -190,17 +197,20 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
 - Verify accepted vulnerability findings remain visible in normal text output, structured output,
   and SARIF with accepted/suppressed status and their explanation. Preserve identity and severity,
   do not mark them fixed, and exclude them from failure evaluation without exempting unaccepted
-  findings or operational errors. Exact protocol/report mappings require O11 qualification.
+  findings or operational errors. Exact protocol/report mappings require qualification in
+  [issue #18](https://github.com/ralvik/rules_dx/issues/18).
 - Verify vulnerability risk exceptions require valid expiration dates: missing, malformed, and
   expired dates fail validation, and expired acceptance no longer exempts the finding. Exercise
   before/at/after-expiry boundaries and a later invocation reusing unchanged advisory and dependency
   inputs, so cached acceptance cannot hide expiration. Verify renewal is not automatic; qualify
-  date/time inputs, native mappings, and cache behavior under O11.
+  date/time inputs, native mappings, and cache behavior in
+  [issue #18](https://github.com/ralvik/rules_dx/issues/18).
 - Verify an unexpired risk exception fails as obsolete after dependency removal or upgrade beyond
   the affected versions, while an exception still matching an applicable vulnerability remains
   valid. Validate against the complete selected owning set and current advisory snapshot, not an
   incomplete result or unrelated unselected owner. Report obsolete entries without deleting them;
-  qualify exact advisory identity/alias and applicability mappings under O11.
+  qualify exact advisory identity/alias and applicability mappings in
+  [issue #18](https://github.com/ralvik/rules_dx/issues/18).
 - Verify no-scope build invokes `bazel build //...` independent of the current
   working directory.
 - Verify no-scope test invokes `bazel test //...` independent of the current working
@@ -228,14 +238,14 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   requires exactly one runnable target: zero runnables fail with `no_runnable`
   and multiple runnables fail with `ambiguous_runnable` without choosing by label
   order. Verify labels and patterns pass through, `--` args reach the binary,
-  and execution stays local-only. Qualify remaining O52 mappings before implementation.
+  and execution stays local-only. Qualify remaining run mappings before asserting them.
 - Verify `dx watch` only wraps `build`, `test`, `run`, `lint`, `typecheck`, `format`,
-  `check`, and `fix` per [ADR 0018](../decisions/0018-umbrella-check-fix-cleanup-clean.md),
-  subject to O55; every other command is rejected. Verify scope is re-resolved each
+  `check`, and `fix` per [ADR 0018](../decisions/0018-umbrella-check-fix-cleanup-clean.md);
+  every other command is rejected. Verify scope is re-resolved each
   iteration, each iteration emits a fresh `command_started`, quality iterations
   preserve converge-and-apply semantics, and interruption forwards signals to the
   active child. Qualify debounce, ignore set, restart, framing, and local-only
-  semantics under O55 before implementation.
+  semantics before asserting them.
 - Verify dry-run may execute required read-only query/cquery resolution but never
   executes final workflows, actions, or mutations.
 - Verify the first required query/preparation failure prevents dependent subprocesses and
