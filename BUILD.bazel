@@ -14,6 +14,8 @@
 # gazelle:resolve rust dx_process //dx/process:dx_process
 # gazelle:resolve rust dx_roots //dx/roots:dx_roots
 # gazelle:resolve rust dx_setup //dx/setup:dx_setup
+# gazelle:resolve rust doc_ir_proto //documentation:doc_ir_proto_rs
+# gazelle:resolve rust documentation_ir //documentation/ir:documentation_ir
 # gazelle:resolve rust generation_result //generation/result:generation_result
 # gazelle:resolve rust marker_proto //env:marker_proto_rs
 # gazelle:resolve rust proto //quality:result_proto_rs

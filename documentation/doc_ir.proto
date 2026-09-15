@@ -1,0 +1,92 @@
+// Documentation IR schema (#10).
+//
+// Binary contract between per-language doc extractors, aggregation, and the
+// site renderer. Field and enum numbers are the v1 compatibility surface:
+// minor versions are additive-only, unknown majors are rejected. Extension
+// payloads are repeated key/value pairs in strictly increasing key order so
+// same-producer rebuilds stay byte-identical; readers never drop them.
+
+syntax = "proto3";
+
+package dx.documentation.v1;
+
+enum SymbolKind {
+  SYMBOL_KIND_UNSPECIFIED = 0;
+  MODULE = 1;
+  CLASS = 2;
+  INTERFACE = 3;
+  FUNCTION = 4;
+  METHOD = 5;
+  FIELD = 6;
+  PROPERTY = 7;
+  CONSTANT = 8;
+  ENUM = 9;
+  ENUM_VARIANT = 10;
+  TYPE_ALIAS = 11;
+  reserved 12 to 15;
+}
+
+enum Visibility {
+  VISIBILITY_UNSPECIFIED = 0;
+  PUBLIC = 1;
+  reserved 2 to 15;
+}
+
+message Param {
+  string name = 1;
+  string type = 2;
+  string doc = 3;
+  reserved 4 to 7;
+}
+
+message Returns {
+  string type = 1;
+  string doc = 2;
+  reserved 3 to 7;
+}
+
+message SourceRef {
+  // Workspace-relative path; absolute paths are rejected.
+  string file = 1;
+  uint64 line = 2;
+  reserved 3 to 7;
+}
+
+message Relations {
+  repeated string member_of = 1;
+  repeated string implements = 2;
+  reserved 3 to 7;
+}
+
+message Extension {
+  string key = 1;
+  bytes value = 2;
+  reserved 3 to 7;
+}
+
+message Symbol {
+  // Stable identity: language:package:qualified_name plus the normalized
+  // overload suffix where applicable.
+  string id = 1;
+  SymbolKind kind = 2;
+  string signature_text = 3;
+  string doc_markdown = 4;
+  repeated Param params = 5;
+  Returns returns = 6;
+  repeated string examples = 7;
+  SourceRef source = 8;
+  Visibility visibility = 9;
+  Relations relations = 10;
+  // Language-specific payloads, strictly increasing key order, never dropped.
+  repeated Extension extensions = 11;
+  reserved 12 to 15;
+}
+
+message DocIr {
+  uint32 schema_major = 1;
+  uint32 schema_minor = 2;
+  string language = 3;
+  string package = 4;
+  repeated Symbol symbols = 5;
+  reserved 6 to 15;
+}

@@ -1,0 +1,26 @@
+"""Documentation IR schema (#10)."""
+
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["doc_ir.proto"])
+
+proto_library(
+    name = "doc_ir_proto",
+    srcs = ["doc_ir.proto"],
+)
+
+rust_prost_library(
+    name = "doc_ir_proto_rs",
+    proto = ":doc_ir_proto",
+)
+
+# Repository corpus: build file owned for direct-Bazel dogfood
+# under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)

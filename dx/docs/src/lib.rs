@@ -20,7 +20,8 @@
 //! Those stay deferred; this crate preserves spellings verbatim and never
 //! substitutes an implicit default.
 
-/// One versioned documentation-IR identity (`doc_ir_version`).
+/// One versioned documentation-IR identity (`schema_major`/`schema_minor`
+/// on [`documentation/doc_ir.proto`](../../../documentation/doc_ir.proto)).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct IrVersion {
     /// Major version: breaking changes increment it with a recorded migration.
