@@ -138,6 +138,12 @@ protocol, apply, and evaluator executables are not exposed. Selection depends on
 authoritative graph facts plus declared policy; `//dx:env` does not recursively scan sources or
 observe command history.
 
+The repository-default environment `//env:default_config` contains exactly the `doctor`
+probe, the module-matched `dx` CLI, and the user-facing `quality_markdown` binary.
+Internal pipeline binaries (`quality_runner`, `quality_evaluator`) are not members.
+Membership is pinned by the `env_default_config_analysis` and
+`env_default_tree_analysis` fixtures and the `//dx/env:bootstrap_test` install test.
+
 All managed projections follow the shared symlink-only and host-capability policy in
 [Installation And Ownership](managed-state.md#installation-and-ownership).
 
