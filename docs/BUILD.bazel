@@ -6,8 +6,9 @@ package(default_visibility = ["//visibility:public"])
 
 # Repository corpus: all Markdown under docs/ owned for direct-Bazel
 # dogfood under the canonical real_fixture_policy. The root pages, the
-# linked behavioral matrix, and quality/result.proto are unclassified
-# link-resolution siblings, never checked sources.
+# linked behavioral matrix, quality/result.proto, and the documentation IR
+# schema plus codec source are unclassified link-resolution siblings,
+# never checked sources.
 real_source_target(
     name = "corpus",
     aspect_hints = ["//quality:corpus_vale_config"],
@@ -17,6 +18,8 @@ real_source_target(
         "//:CONTRIBUTING.md",
         "//:README.md",
         "//:SECURITY.md",
+        "//documentation:doc_ir.proto",
+        "//documentation/ir:src/lib.rs",
         "//libs/starlark:behavioral_matrix.md",
         "//quality:result.proto",
     ],

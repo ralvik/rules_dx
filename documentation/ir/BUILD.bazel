@@ -1,0 +1,49 @@
+"""Validation and codec helpers for the Documentation IR (#10)."""
+
+# gazelle:resolve rust proto //documentation:doc_ir_proto_rs
+# gazelle:resolve rust doc_ir_proto //documentation:doc_ir_proto_rs
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_library(
+    name = "documentation_ir",
+    srcs = ["src/lib.rs"],
+    crate_name = "documentation_ir",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+    deps = [
+        "//documentation:doc_ir_proto_rs",
+        "@rules_rust_prost//private/3rdparty/crates:prost",
+    ],
+)
+
+rust_test(
+    name = "documentation_ir_test",
+    size = "small",
+    crate = ":documentation_ir",
+    edition = "2021",
+    deps = ["//documentation:doc_ir_proto_rs"],
+)
+
+rustfmt_test(
+    name = "documentation_ir_fmt_test",
+    size = "small",
+    targets = [":documentation_ir"],
+)
+
+rust_clippy_test(
+    name = "documentation_ir_clippy_test",
+    size = "small",
+    targets = [":documentation_ir"],
+)
+
+exports_files(["Cargo.toml"])
+
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
+)

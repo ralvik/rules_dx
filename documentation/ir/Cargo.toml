@@ -1,0 +1,8 @@
+[package]
+name = "documentation_ir"
+version = "0.0.0"
+edition = "2021"
+
+[lib]
+name = "documentation_ir"
+path = "src/lib.rs"

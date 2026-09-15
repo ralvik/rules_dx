@@ -6,21 +6,28 @@ Delivered: the `dx_docs` planning gates (command dispatch removed in
 [issue #31](https://github.com/ralvik/rules_dx/issues/31); reintroduction tracked in
 [issue #10](https://github.com/ralvik/rules_dx/issues/10)) —
 `--check` validates without rendering, normal build validates then renders.
+Delivered: the checked-in [`documentation/doc_ir.proto`](../../documentation/doc_ir.proto)
+(`dx.documentation.v1`, `schema_major: 1`) and the
+[`documentation_ir` codec crate](../../documentation/ir/src/lib.rs)
+(`//documentation/ir:documentation_ir`: validate/encode/decode with
+roundtrip, rejection-parity, extension-ordering, and minor-forward-compat tests).
 Extractor execution, per-language adapter runs, renderer/site-build execution,
 and guide-step CI wiring remain gaps ([issue #10](https://github.com/ralvik/rules_dx/issues/10)); no working docs support is claimed until
 qualified execution lands.
 
 ## Versioning
 
-Every IR document carries `doc_ir_version`. Minor versions are
+Every IR document carries `schema_major`/`schema_minor`. Minor versions are
 additive-only; breaking changes increment the major version with a recorded
 migration. Unknown extension data is preserved verbatim so extractors can
 advance without a core schema redesign. Per the repository-wide internal
-representation direction, a checked-in `.proto`
-file is the schema source of truth: generated IR action outputs use
+representation direction, the checked-in
+[`documentation/doc_ir.proto`](../../documentation/doc_ir.proto)
+is the schema source of truth: generated IR action outputs use
 binary Protobuf with deterministic serialization, and human-readable review
-uses textproto against the same schema. Exact field and enum numbers,
-reserved ranges, and compatibility fixtures are tracked in
+uses textproto against the same schema. Exact field and enum numbers and
+reserved ranges live in that file, validated by the
+`documentation_ir` codec crate; compatibility fixtures are tracked in
 [issue #10](https://github.com/ralvik/rules_dx/issues/10), following the
 [Quality Result Protocol](../quality/quality-result-protocol.md) precedent.
 
@@ -40,7 +47,8 @@ Shown as textproto for review; on the wire and in action outputs this is
 binary Protobuf. Symbol IDs are stable across rebuilds:
 
 ```text
-doc_ir_version: 1
+schema_major: 1
+schema_minor: 0
 language: "python"
 package: "mylib"
 symbols {
@@ -179,8 +187,35 @@ Recheck every pin and schema version at implementation; research observations ar
 
 The table has thirteen rows but only twelve extraction-family rows; splitting JavaScript/TypeScript
 and C/C++ yields fourteen API identities, with Astro/MDX additional prose-only identities.
-Reconcile the thirteen-adapter claim with an explicit adapter-to-input table against the grouped
+The provisional reconciliation below maps adapter scopes to the grouped
 machine-input inventory above. No language is removed, dummy prose adapter added, or package split mandated by this count.
+
+### Adapter Reconciliation (provisional)
+
+Each extraction-family row maps to one adapter scope; one adapter may cover
+two API identities where the input pipeline is shared. Adapter packaging
+(one crate/binary per scope or grouped) is implementation detail tracked in
+[issue #10](https://github.com/ralvik/rules_dx/issues/10), not mandated here.
+
+| Adapter scope | Machine-input row(s) | API identities |
+| --- | --- | --- |
+| Rust | Rust | Rust |
+| Python | Python | Python |
+| TypeScript | TypeScript/JavaScript | TypeScript, JavaScript |
+| Java | Java | Java |
+| Kotlin | Kotlin | Kotlin |
+| Go | Go | Go |
+| C++ | C/C++ | C, C++ |
+| C# | C# | C# |
+| F# | F# | F# |
+| Vue | Vue | Vue |
+| Svelte | Svelte | Svelte |
+| Scala | Scala | Scala |
+| — | Astro/MDX | Astro/MDX prose identities (no extractor; authored markdown flows straight to the renderer) |
+
+Twelve extraction adapters plus the prose-only path reconcile the
+thirteen-row inventory with the fourteen API identities: the TypeScript and
+C++ scopes each cover two identities over one shared input pipeline.
 
 ## Validation And Fixtures
 
