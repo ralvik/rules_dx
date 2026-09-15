@@ -9,6 +9,7 @@
 //!   [--sibling WORKSPACE_PATH=EXEC_PATH [--sibling ...]] \
 //!   [--real --tool-binary TOOL=ABS_PATH [--tool-binary ...] \
 //!    [--tool-config TOOL=MIRROR_REL] [--tool-file TOOL=MIRROR_REL=EXEC_PATH] \
+//!    [--upstream-diagnostics TOOL=EXEC_PATH] \
 //!    [--tool-env TOOL=KEY=VALUE] [--scratch-parent PATH]]
 //! ```
 //! Stages run in argument order. Each `--source` maps one workspace path
@@ -19,7 +20,10 @@
 //! `run_real_pipeline` over the resolved tools: each stage tool needs one
 //! `--tool-binary`, configs are mirror-relative `--tool-config` paths whose
 //! bytes arrive via `--tool-file`, and extra hermetic env entries arrive
-//! via `--tool-env`. Scratch trees default under `TMPDIR`. Failures exit
+//! via `--tool-env`. Delegated tools (Clippy, #47) take no binary:
+//! each `--upstream-diagnostics` maps one authoritative upstream
+//! diagnostics file the backend parses without spawning. Scratch trees
+//! default under `TMPDIR`. Failures exit
 //! nonzero with a message on stderr and write no output.
 
 // LCOV_EXCL_START - reason: thin binary shim; CLI parsing and file I/O failures are operational action failures verified by build and WP2c aspect execution, not unit coverage.
@@ -114,6 +118,18 @@ fn parse_tool_env(spec: &str) -> Result<(String, String, String), String> {
     Ok((tool.to_owned(), key.to_owned(), value.to_owned()))
 }
 
+fn parse_upstream_diagnostics(spec: &str) -> Result<(String, PathBuf), String> {
+    let (tool, path) = spec
+        .split_once('=')
+        .ok_or_else(|| format!("malformed --upstream-diagnostics {spec:?}, want TOOL=EXEC_PATH"))?;
+    if tool.is_empty() || path.is_empty() {
+        return Err(format!(
+            "malformed --upstream-diagnostics {spec:?}, want TOOL=EXEC_PATH"
+        ));
+    }
+    Ok((tool.to_owned(), PathBuf::from(path)))
+}
+
 fn run() -> Result<(), String> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut producer: Option<String> = None;
@@ -128,6 +144,7 @@ fn run() -> Result<(), String> {
     let mut configs: Vec<(String, String)> = Vec::new();
     let mut tool_files: Vec<(String, String, String)> = Vec::new();
     let mut tool_env: Vec<(String, String, String)> = Vec::new();
+    let mut upstream: Vec<(String, PathBuf)> = Vec::new();
     let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
@@ -179,6 +196,13 @@ fn run() -> Result<(), String> {
                     &args,
                     &mut index,
                     "--tool-env",
+                )?)?);
+            }
+            "--upstream-diagnostics" => {
+                upstream.push(parse_upstream_diagnostics(&flag_value(
+                    &args,
+                    &mut index,
+                    "--upstream-diagnostics",
                 )?)?);
             }
             other => return Err(format!("unknown flag {other:?}")),
@@ -235,8 +259,34 @@ fn run() -> Result<(), String> {
                 extra_env: Vec::new(),
                 config_rel: None,
                 tool_files: Vec::new(),
+                upstream_diagnostics: Vec::new(),
             },
         );
+    }
+    for (tool_id, exec) in upstream {
+        // Like binaries, Bazel actions pass exec-root-relative paths
+        // while the backend reads from its startup working directory
+        // (the action exec root). Delegated tools carry no binary: the
+        // entry exists so stage validation resolves, with an empty
+        // binary no delegated path ever spawns.
+        let absolute = if exec.is_absolute() {
+            exec
+        } else {
+            std::env::current_dir()
+                .map(|cwd| cwd.join(&exec))
+                .unwrap_or(exec)
+        };
+        tools
+            .entry(tool_id.clone())
+            .or_insert(RealTool {
+                binary: PathBuf::new(),
+                extra_env: Vec::new(),
+                config_rel: None,
+                tool_files: Vec::new(),
+                upstream_diagnostics: Vec::new(),
+            })
+            .upstream_diagnostics
+            .push(absolute);
     }
     for (tool_id, rel) in configs {
         let tool = tools.get_mut(&tool_id).ok_or_else(|| {

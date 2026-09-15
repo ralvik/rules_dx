@@ -33,6 +33,7 @@ Contract: `docs/quality/tool-integrations.md`,
 `docs/quality/quality-result-protocol.md#transport`.
 """
 
+load("@rules_rust//rust:defs.bzl", "rust_clippy_aspect")
 load(
     "//quality:adapters.bzl",
     "REAL_ADAPTERS",
@@ -86,6 +87,22 @@ def _real_pipeline_action(target, ctx, capability):
     )
     if len(resolved) == 0:
         return []
+
+    # Delegated Clippy (#47): this aspect requires the upstream
+    # `rust_clippy_aspect`, which emits the authoritative
+    # `.clippy.diagnostics` file into the `clippy_output` output group
+    # when `--@rules_rust//rust/settings:clippy_output_diagnostics` is
+    # set (`dx lint` sets it; see `dx/cli/src/plan.rs`). The runner
+    # parses that file instead of spawning Clippy, so dependency
+    # context, edition, and crate type always match the real build.
+    # Without the group (non-Rust-rule targets, or the setting off) the
+    # clippy stage keeps the legacy self-run path until slice 2 removes
+    # it with the synthetic fixtures.
+    clippy_diagnostics = []
+    if "clippy" in [stage["tool"] for stage in resolved]:
+        if OutputGroupInfo in target and "clippy_output" in target[OutputGroupInfo]:
+            clippy_diagnostics = target[OutputGroupInfo]["clippy_output"].to_list()
+    clippy_delegated = len(clippy_diagnostics) > 0
 
     hints = []
     if hasattr(ctx.rule.attr, "aspect_hints"):
@@ -167,6 +184,12 @@ def _real_pipeline_action(target, ctx, capability):
         inputs.append(f)
     args.add("--real")
     for tool in stage_tools:
+        if tool == "clippy" and clippy_delegated:
+            # Delegated Clippy needs no spawned binary and no dx-side
+            # policy: the upstream aspect owns the invocation and its
+            # own `clippy.toml` label flag. The diagnostics file below
+            # creates the runner tool entry.
+            continue
         binary = tool_binaries[tool]
         args.add("--tool-binary", tool + "=" + binary.path)
         inputs.append(binary)
@@ -177,6 +200,10 @@ def _real_pipeline_action(target, ctx, capability):
             for f in hint.closure.to_list():
                 args.add("--tool-file", tool + "=" + f.short_path + "=" + f.path)
                 inputs.append(f)
+    if clippy_delegated:
+        for diagnostics in clippy_diagnostics:
+            args.add("--upstream-diagnostics", "clippy=" + diagnostics.path)
+            inputs.append(diagnostics)
 
     # The Python venv launchers (pydoclint, flake8, pylint) are static
     # stubs that locate their interpreter and site-packages through the
@@ -335,6 +362,7 @@ real_lint_aspect = aspect(
     attr_aspects = ["aspect_hints"],
     attrs = _REAL_ATTRS,
     toolchains = rust_toolchain_toolchains(),
+    requires = [rust_clippy_aspect],
     doc = "Registers the exact-input real lint pipeline action in dx_results.",
 )
 
