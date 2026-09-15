@@ -136,10 +136,12 @@ Failure reports every marker considered and suggests `--workspace`.
 
 The primary installation path is `bazel run //dx:env`. The project-owned
 cross-platform environment rule exposes the `dx` executable from the consumer's
-pinned `rules_dx` module together with configured development tools. Optional
-prebuilt release binaries are also published for Linux x86_64/arm64, macOS
-x86_64/arm64, and Windows x86_64 with cryptographic checksums and no local Rust
-toolchain requirement. The CLI and rules module share
+pinned `rules_dx` module together with configured development tools. No prebuilt
+binaries are published yet (see
+[#26](https://github.com/ralvik/rules_dx/issues/26)). When published, v1
+destinations are the Bazel Central Registry for the `rules_dx` module and GitHub
+Releases for standalone binaries, with install-time publisher-identity verification
+(no checksum-only fallback). The CLI and rules module share
 [Semantic Versioning](../environments/environment.md#distribution) but use the
 documented result-schema compatibility policy rather than requiring exact patch-
 version equality at runtime.
