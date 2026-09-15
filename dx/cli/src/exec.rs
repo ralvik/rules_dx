@@ -28,7 +28,8 @@ use crate::resolve::{resolve, resolve_for_test, resolve_run, QueryRunner, Resolv
 use dx_apply::{FileSystem, RealFileSystem};
 use dx_bep::{collect, collect_test_outputs, ArtifactReader, CollectorConfig};
 use dx_clean::{
-    apply_plan, bazel_forward_argv, collect_inventory, render_dry_run, RECOVERY_GUIDANCE,
+    apply_plan, bazel_forward_argv, collect_inventory_with_scan, measure_prune_bytes,
+    render_dry_run, RECOVERY_GUIDANCE,
 };
 use dx_diff::{render_patch, FilePatch, PatchKind};
 use dx_output::{
@@ -1513,15 +1514,17 @@ fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
     projected.exit_code(bazel_code)
 }
 
-/// Runs `dx clean [--dry-run] [--bazel]` (M25 WP5, O60): collects the
-/// workspace managed-state inventory, plans the prune set over validated
-/// unselected records and generations, and either renders the `--dry-run`
-/// listing (deleting nothing, holding no lock) or applies the prune set
-/// under the shared commit lock. An explicit `--bazel` additionally
-/// forwards exactly `bazel clean` after pruning and prints the
-/// dangling-link recovery guidance; under `--dry-run` the forward is
-/// listed, never run. Argument parsing guarantees text output with no
-/// scopes, reports, or quality options on this path.
+/// Runs `dx clean [--dry-run] [--bazel]` (issue #20): collects the
+/// workspace managed-state inventory with the process scan (live shells
+/// or actions holding `.dx` paths pin their hexes as active), plans the
+/// prune set over validated unselected records and generations, and
+/// either renders the `--dry-run` listing with reclaimable bytes
+/// (deleting nothing, holding no lock) or applies the prune set under
+/// the shared commit lock. An explicit `--bazel` additionally forwards
+/// exactly `bazel clean` after pruning and prints the dangling-link
+/// recovery guidance; under `--dry-run` the forward is listed, never
+/// run. Argument parsing guarantees text output with no scopes,
+/// reports, or quality options on this path.
 ///
 /// Exits `0` on success (including an empty prune set), `1` on
 /// inventory, lock, or prune failures, and propagates the Bazel exit
@@ -1534,20 +1537,29 @@ fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
         err,
         ..
     } = env;
-    let inventory = match collect_inventory(workspace, &[], &[]) {
+    let inventory = match collect_inventory_with_scan(workspace) {
         Ok(inventory) => inventory,
         Err(error) => {
             return operational(invocation, out, err, CODE_CLEAN_FAILED, &error.to_string());
         }
     };
     let plan = inventory.plan();
+    // Reclaimable bytes measure the planned prune set before any lock or
+    // deletion: symlinks count, targets never do, and vanished entries
+    // measure zero so measure and idempotent apply agree.
+    let bytes = match measure_prune_bytes(workspace, &plan) {
+        Ok(bytes) => bytes,
+        Err(error) => {
+            return operational(invocation, out, err, CODE_CLEAN_FAILED, &error.to_string());
+        }
+    };
     // Human prose is the only output on this path: `--dry-run` and the
     // prune summary print in text mode unless `--quiet` suppresses them.
     let verbose =
         matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet;
     if invocation.dry_run {
         if verbose {
-            let _ = writeln!(out, "{}", render_dry_run(&plan));
+            let _ = writeln!(out, "{}", render_dry_run(&plan, &bytes));
             if invocation.bazel_clean {
                 let _ = writeln!(out, "would forward: bazel clean");
             }
@@ -1566,9 +1578,10 @@ fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
         } else {
             let _ = writeln!(
                 out,
-                "dx clean: pruned {} setup records and {} generations",
+                "dx clean: pruned {} setup records and {} generations ({} bytes reclaimed)",
                 outcome.removed_setup_records.len(),
-                outcome.removed_generations.len()
+                outcome.removed_generations.len(),
+                bytes.reclaimed(&outcome)
             );
         }
     }
@@ -5580,8 +5593,8 @@ mod tests {
         assert!(err.contains("bazel_signalled"), "{err}");
     }
 
-    /// Managed-state fixture for the `dx clean` exec tests (M25 WP5,
-    /// O60): commits `pair` through the real `dx_setup` commit path and
+    /// Managed-state fixture for the `dx clean` exec tests (issue
+    /// #20): commits `pair` through the real `dx_setup` commit path and
     /// materializes both generation directories, returning the setup
     /// record hex. Digest tags mirror the `dx_clean` fixtures (one
     /// lowercase-hex character repeated to 64).
@@ -5634,6 +5647,11 @@ mod tests {
             out.contains(&format!("prune setup record: .dx/setups/{stale}")),
             "{out}"
         );
+        // The listing reports per-entry reclaimable bytes plus the
+        // total; the stale record holds pair links (nonzero) while the
+        // empty generation dirs measure zero.
+        assert!(out.contains("bytes)"), "{out}");
+        assert!(out.contains("reclaimable total:"), "{out}");
         assert!(
             out.contains(&format!("preserve current: .dx/setups/{current}")),
             "{out}"
@@ -5660,6 +5678,7 @@ mod tests {
             out.contains("pruned 1 setup records and 2 generations"),
             "{out}"
         );
+        assert!(out.contains("bytes reclaimed"), "{out}");
         let dx_dir = harness.workspace.join(".dx");
         assert!(!dx_dir.join("setups").join(&stale).exists());
         assert!(dx_dir.join("setups").join(&current).exists());
@@ -5699,6 +5718,7 @@ mod tests {
             out.contains("pruned 1 setup records and 1 generations"),
             "{out}"
         );
+        assert!(out.contains("bytes reclaimed"), "{out}");
         assert!(
             harness
                 .workspace
