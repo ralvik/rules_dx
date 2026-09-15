@@ -8,18 +8,16 @@
 //! * One invocations shape per (tool, mode); config is always explicit:
 //!   `--config=off` for unhinted Buildifier (blocks upward discovery),
 //!   `--config-path` (real or empty-defaults) for rustfmt, `-c` or
-//!   `--no-auto-config` for Taplo, `--config` for Vale, and the hinted
-//!   config's directory as `cwd_rel` for Clippy, which offers no config
-//!   flag (its upward discovery then finds exactly the hinted
-//!   `clippy.toml`; an unhinted Clippy run uses the empty scratch root,
-//!   where nothing is discoverable).
-//! * Clippy compiles one file per invocation (`rustc` accepts a single
+//!   `--no-auto-config` for Taplo, and `--config` for Vale.
+//!   Upstream-owned tools need no builder here: Clippy findings arrive
+//!   via the `rust_clippy_aspect` diagnostics file (#47), never via a
+//!   spawned invocation.
+//! * `rustc` compiles one file per invocation (it accepts a single
 //!   input root); every other tool takes the whole stage file list.
-//!   Clippy and `rustc` typecheck alike compile one file per invocation
-//!   as a `lib` crate root (`--crate-type=lib`): direct sources are
-//!   usually library files without a `main` entry point, and the default
-//!   `bin` crate type would mask real diagnostics behind a spurious "no
-//!   main function" failure.
+//!   `rustc` typechecks each root as a `lib` crate (`--crate-type=lib`):
+//!   direct sources are usually library files without a `main` entry
+//!   point, and the default `bin` crate type would mask real diagnostics
+//!   behind a spurious "no main function" failure.
 //! * rustfmt always passes `--edition 2021`: the CLI flag silently wins
 //!   over any config `edition` key, matching the pinned toolchain scope.
 //! * The repo-owned Markdown checker takes one `--source WS_PATH=EXEC_PATH`
@@ -169,40 +167,6 @@ pub fn buildifier_fix(binary: &Path, files: &[&Path], config_dir_rel: Option<&st
             "",
         ),
     }
-}
-
-/// Clippy single-file check invocation. The crate name derives from the
-/// file stem; `--out-dir` keeps metadata inside scratch. The crate type
-/// is always `lib`, matching `rustc_check`: direct sources are library
-/// files without `main`, and the default `bin` type would report a
-/// spurious missing-entry failure instead of the real lint diagnostics.
-/// Clippy offers no config flag: it discovers `clippy.toml` upward from
-/// the working directory, so a hint pins `cwd_rel` to the mirrored
-/// config's directory while a bare run uses the scratch root (upstream
-/// defaults, nothing discoverable).
-pub fn clippy_check(
-    binary: &Path,
-    file: &Path,
-    crate_name: &str,
-    out_dir: &Path,
-    config_dir_rel: Option<&str>,
-) -> Invocation {
-    invocation(
-        binary,
-        &[
-            "--edition",
-            "2021",
-            "--error-format=json",
-            "--emit=metadata",
-            "--crate-type=lib",
-            "--out-dir",
-            &out_dir.to_string_lossy(),
-            "--crate-name",
-            crate_name,
-        ],
-        &[file],
-        config_dir_rel.unwrap_or(""),
-    )
 }
 
 /// rustc single-file typecheck invocation. The crate name derives from
@@ -686,43 +650,6 @@ mod tests {
         );
         let bare = buildifier_fix(Path::new(BIN), &[file], None);
         assert!(argv_strings(&bare).contains(&"--config=off".to_owned()));
-    }
-
-    #[test]
-    fn clippy_check_encodes_config_discovery() {
-        let invocation = clippy_check(
-            Path::new(BIN),
-            Path::new(FILE),
-            "main",
-            Path::new("/scratch/out"),
-            None,
-        );
-        assert_eq!(
-            argv_strings(&invocation),
-            vec![
-                BIN,
-                "--edition",
-                "2021",
-                "--error-format=json",
-                "--emit=metadata",
-                "--crate-type=lib",
-                "--out-dir",
-                "/scratch/out",
-                "--crate-name",
-                "main",
-                FILE
-            ]
-        );
-        assert_eq!(invocation.cwd_rel, "");
-        let hinted = clippy_check(
-            Path::new(BIN),
-            Path::new(FILE),
-            "main",
-            Path::new("/scratch/out"),
-            Some("tools/clippy"),
-        );
-        assert_eq!(argv_strings(&hinted), argv_strings(&invocation));
-        assert_eq!(hinted.cwd_rel, "tools/clippy");
     }
 
     #[test]

@@ -101,7 +101,6 @@ func TestNativeConfigRecognition(t *testing.T) {
 	}, "")
 	want := map[string]string{
 		"rustfmt_config":    "rustfmt.toml",
-		"clippy_config":     "clippy.toml",
 		"vale_config":       ".vale.ini",
 		"taplo_config":      "taplo.toml",
 		"buildifier_config": ".buildifier.json",
@@ -117,7 +116,7 @@ func TestNativeConfigRecognition(t *testing.T) {
 	if lib == nil {
 		t.Fatal("missing rust_library(site)")
 	}
-	if got := strings.Join(lib.AttrStrings("aspect_hints"), ","); got != ":clippy_config,:rustfmt_config" {
+	if got := strings.Join(lib.AttrStrings("aspect_hints"), ","); got != ":rustfmt_config" {
 		t.Errorf("library aspect_hints = %q, want managed rust additions in canonical order", got)
 	}
 	for name, src := range want {
@@ -134,8 +133,10 @@ func TestNativeConfigRecognition(t *testing.T) {
 			t.Errorf("%s visibility = %q, want package-scoped", name, got)
 		}
 	}
-	if findGenerated(result, "clippy_config", "clippy_cfg") != nil {
-		t.Error("unrecognized vale_test.ini/custom.toml produced a config target")
+	// Clippy is unmanaged since #47: its config file is ignored and no
+	// clippy_config target appears, alongside the other unrecognized files.
+	if findGenerated(result, "clippy_config", "clippy_config") != nil {
+		t.Error("unmanaged clippy.toml produced a config target")
 	}
 	vale := findGenerated(result, "vale_config", "vale_config")
 	if got := strings.Join(vale.AttrStrings("data"), ","); got != "site/styles/org/Rules.yml" {
@@ -150,14 +151,14 @@ func TestNativeConfigSelection(t *testing.T) {
 	files := map[string]string{
 		"site/src/lib.rs":   "pub fn current() {}\n",
 		"site/rustfmt.toml": "edition = \"2021\"\n",
-		"site/clippy.toml":  "[lints]\n",
+		"site/taplo.toml":   "[formatting]\n",
 	}
 	_, result := runNativeGenerate(t, "site", files, "# gazelle:dx_native_tools rustfmt\n")
 	if findGenerated(result, "rustfmt_config", "rustfmt_config") == nil {
 		t.Error("selected rustfmt produced no target")
 	}
-	if findGenerated(result, "clippy_config", "clippy_config") != nil {
-		t.Error("skipped clippy produced a target")
+	if findGenerated(result, "taplo_config", "taplo_config") != nil {
+		t.Error("skipped taplo produced a target")
 	}
 	lib := findGenerated(result, libraryKind, "site")
 	if got := strings.Join(lib.AttrStrings("aspect_hints"), ","); got != ":rustfmt_config" {
@@ -167,6 +168,11 @@ func TestNativeConfigSelection(t *testing.T) {
 	l, _ := runNativeGenerate(t, "site", files, "# gazelle:dx_native_tools rustfmt bogus\n")
 	if len(l.errors) != 1 || !strings.Contains(l.errors[0], `unknown native tool "bogus"`) {
 		t.Errorf("unknown tool errors = %v", l.errors)
+	}
+
+	clippy, _ := runNativeGenerate(t, "site", files, "# gazelle:dx_native_tools clippy\n")
+	if len(clippy.errors) != 1 || !strings.Contains(clippy.errors[0], `unknown native tool "clippy"`) {
+		t.Errorf("removed clippy tool errors = %v", clippy.errors)
 	}
 
 	bare, _ := runNativeGenerate(t, "site", files, "# gazelle:dx_native_tools\n")
@@ -179,21 +185,21 @@ func TestNativeConfigDirectiveInheritance(t *testing.T) {
 	cfg := config.New()
 	l := &rustLang{}
 	l.Configure(cfg, "", nil)
-	parent, err := rule.LoadData("BUILD.bazel", "", []byte("# gazelle:dx_native_tools clippy\n"))
+	parent, err := rule.LoadData("BUILD.bazel", "", []byte("# gazelle:dx_native_tools taplo\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	l.Configure(cfg, "", parent)
-	if got := strings.Join(selectedNativeTools(cfg), ","); got != "clippy" {
-		t.Fatalf("root tools = %q, want clippy", got)
+	if got := strings.Join(selectedNativeTools(cfg), ","); got != "taplo" {
+		t.Fatalf("root tools = %q, want taplo", got)
 	}
 	child, err := rule.LoadData("BUILD.bazel", "sub", []byte("# build comment, no directive\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	l.Configure(cfg, "sub", child)
-	if got := strings.Join(selectedNativeTools(cfg), ","); got != "clippy" {
-		t.Errorf("inherited tools = %q, want clippy", got)
+	if got := strings.Join(selectedNativeTools(cfg), ","); got != "taplo" {
+		t.Errorf("inherited tools = %q, want taplo", got)
 	}
 	override, err := rule.LoadData("BUILD.bazel", "other", []byte("# gazelle:dx_native_tools rustfmt\n# gazelle:dx_native_tools taplo\n"))
 	if err != nil {
@@ -216,22 +222,20 @@ rust_library(
     aspect_hints = [
         ":hand_cfg",
         ":rustfmt_config",
-        "//site:clippy_config",
+        "//site:other_cfg",
     ],
 )
 `
 	_, result := runNativeGenerate(t, "site", map[string]string{
-		"site/src/lib.rs":  "pub fn current() {}\n",
-		"site/clippy.toml": "[lints]\n",
+		"site/src/lib.rs": "pub fn current() {}\n",
 	}, build)
 	lib := findGenerated(result, libraryKind, "site")
 	if lib == nil {
 		t.Fatal("missing rust_library(site)")
 	}
 	// :rustfmt_config is stale (file gone) and drops; the hand entry and
-	// the canonical-form managed entry survive in place; clippy resolves
-	// to the existing target so nothing appends.
-	if got := strings.Join(lib.AttrStrings("aspect_hints"), ","); got != ":hand_cfg,//site:clippy_config" {
+	// the canonical-form cross-package entry survive in place.
+	if got := strings.Join(lib.AttrStrings("aspect_hints"), ","); got != ":hand_cfg,//site:other_cfg" {
 		t.Errorf("merged aspect_hints = %q", got)
 	}
 	if findGenerated(result, "rustfmt_config", "rustfmt_config") != nil {
@@ -284,23 +288,23 @@ func TestNativeRootCanonicalHintSurvives(t *testing.T) {
 }
 
 func TestNativeHandConfigWins(t *testing.T) {
-	build := `load("//quality:native_config.bzl", "clippy_config")
+	build := `load("//quality:native_config.bzl", "rustfmt_config")
 
-clippy_config(
-    name = "clippy_cfg",
+rustfmt_config(
+    name = "rustfmt_cfg",
     src = "custom.toml",
 )
 `
 	_, result := runNativeGenerate(t, "site", map[string]string{
 		"site/src/lib.rs":   "pub fn current() {}\n",
-		"site/clippy.toml":  "[lints]\n",
-		"site/custom.toml":  "[custom]\n",
+		"site/rustfmt.toml": "edition = \"2021\"\n",
+		"site/custom.toml":  "edition = \"2015\"\n",
 	}, build)
-	if findGenerated(result, "clippy_config", "clippy_config") != nil {
-		t.Error("hand clippy_cfg did not suppress generation")
+	if findGenerated(result, "rustfmt_config", "rustfmt_config") != nil {
+		t.Error("hand rustfmt_cfg did not suppress generation")
 	}
 	lib := findGenerated(result, libraryKind, "site")
-	if got := strings.Join(lib.AttrStrings("aspect_hints"), ","); got != ":clippy_cfg" {
+	if got := strings.Join(lib.AttrStrings("aspect_hints"), ","); got != ":rustfmt_cfg" {
 		t.Errorf("library aspect_hints = %q, want the hand target", got)
 	}
 }
@@ -369,16 +373,16 @@ rust_library(
 }
 
 func TestNativeDeselectedOmitsGenerated(t *testing.T) {
-	build := `# gazelle:dx_native_tools clippy
-load("//quality:native_config.bzl", "clippy_config", "rustfmt_config")
+	build := `# gazelle:dx_native_tools taplo
+load("//quality:native_config.bzl", "rustfmt_config", "taplo_config")
 
 rustfmt_config(
     name = "rustfmt_config",
     src = "rustfmt.toml",
 )
 
-clippy_config(
-    name = "clippy_cfg",
+taplo_config(
+    name = "taplo_cfg",
     src = "custom.toml",
 )
 `
@@ -391,29 +395,29 @@ clippy_config(
 	if !findEmpty(result, "rustfmt_config", "rustfmt_config") {
 		t.Error("deselected rustfmt did not omit its generated target")
 	}
-	if findEmpty(result, "clippy_config", "clippy_cfg") {
-		t.Error("hand clippy_cfg was stubbed")
+	if findEmpty(result, "taplo_config", "taplo_cfg") {
+		t.Error("hand taplo_cfg was stubbed")
 	}
-	if findGenerated(result, "clippy_config", "clippy_config") != nil {
-		t.Error("deselected clippy file absence still produced a target")
+	if findGenerated(result, "taplo_config", "taplo_config") != nil {
+		t.Error("selected taplo with no taplo.toml still produced a target")
 	}
 }
 
 func TestNativeAmbiguousFails(t *testing.T) {
-	build := `load("//quality:native_config.bzl", "clippy_config")
+	build := `load("//quality:native_config.bzl", "rustfmt_config")
 
-clippy_config(
-    name = "clippy_cfg",
+rustfmt_config(
+    name = "rustfmt_cfg",
     src = "custom.toml",
 )
 
-clippy_config(
-    name = "clippy_extra",
+rustfmt_config(
+    name = "rustfmt_extra",
     src = "extra.toml",
 )
 `
 	l, result := runNativeGenerate(t, "site", map[string]string{
-		"site/clippy.toml": "[lints]\n",
+		"site/rustfmt.toml": "edition = \"2021\"\n",
 	}, build)
 	if len(result.Gen) != 0 || len(result.Empty) != 0 {
 		t.Error("ambiguous configs produced a partial result")

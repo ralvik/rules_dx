@@ -1,8 +1,8 @@
 load("@rules_dx//rust/rules:defs.bzl", "rust_library")
-load("@rules_dx//quality:native_config.bzl", "clippy_config")
+load("@rules_dx//quality:native_config.bzl", "rustfmt_config")
 
-clippy_config(
-    name = "clippy_cfg",
+rustfmt_config(
+    name = "rustfmt_cfg",
     src = "custom.toml",
 )
 

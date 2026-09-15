@@ -1,8 +1,8 @@
-load("@rules_dx//quality:native_config.bzl", "clippy_config")
+load("@rules_dx//quality:native_config.bzl", "rustfmt_config")
 load("@rules_dx//rust/rules:defs.bzl", "rust_library")
 
-clippy_config(
-    name = "clippy_cfg",
+rustfmt_config(
+    name = "rustfmt_cfg",
     src = "custom.toml",
 )
 
@@ -11,7 +11,7 @@ rust_library(
     srcs = ["src/lib.rs"],
     aspect_hints = [
         ":hand_cfg",
-        ":clippy_cfg",
+        ":rustfmt_cfg",
     ],
     crate_name = "merge",
     crate_root = "src/lib.rs",

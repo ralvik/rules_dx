@@ -225,15 +225,18 @@ Freeze them in [Native Configuration](native-configuration.md#discovery) only wi
 co-location, and complete config-closure tests. Explicit config flags do not themselves prove absence
 of parent/home discovery; qualify source inspection with sandbox and hostile-home fixtures.
 
-Clippy's native filename is frozen as `clippy.toml`. The pinned binary discovers only that basename
-upward from the working directory: a direct probe shows a `clippy_test.toml` in the working
-directory is silently ignored while `clippy.toml` applies. Runner wiring pins a hinted run's working
-directory to the mirrored config's parent directory and leaves unhinted runs at the empty scratch
-root. `clippy_cfg` bound to `fixture_real_rust_hinted` proves the binding end to end: its lint
-result carries `clippy::too_many_arguments` where the unhinted fixture stays silent. Like the
-`rustc` typecheck below, each Clippy run compiles one file as a `lib` crate root
-(`--crate-type=lib`), so library sources without `main` report real lint diagnostics instead of a
-spurious missing-entry failure. Dependency context (`--extern`) stays open under
+Rust lint is upstream-delegated (#47): `dx lint` stages the `rust_clippy_aspect`
+through `real_lint_aspect`, which requires the upstream aspect and reads the
+authoritative `.clippy.diagnostics` file from the `clippy_output` output group
+instead of spawning a Clippy binary. `dx lint` sets
+`--@rules_rust//rust/settings:clippy_output_diagnostics=true` so the group is
+populated; findings parse through `parsers::parse_clippy` and the Clippy apply
+path is check-only. There is no dx-side Clippy config: policy rides the
+`rules_rust` `clippy.toml` label flag Bazel itself reads, so pass e.g.
+`--@rules_rust//rust/settings:clippy.toml=<label>` through to select it. The
+dogfood proof is `dx lint --check //dx/qual:dx_qual`, whose result carries
+`clippy::too_many_arguments` where `//rust/hello:hello_lib` stays silent.
+Dependency context (`--extern`) stays open under
 [issue #12](https://github.com/ralvik/rules_dx/issues/12).
 
 Rust typechecking invokes the selected toolchain's `rustc` directly (tool ID `rustc`,

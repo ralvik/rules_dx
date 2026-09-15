@@ -13,19 +13,24 @@ mkdir -p "${root}/crate/src" "${root}/crate/styles/org"
 touch "${root}/WORKSPACE"
 printf 'pub fn current() {}\n' > "${root}/crate/src/lib.rs"
 printf 'edition = "2021"\n' > "${root}/crate/rustfmt.toml"
-printf '[lints]\n' > "${root}/crate/clippy.toml"
+printf '[formatting]\n' > "${root}/crate/taplo.toml"
 printf 'StylesPath = styles\n' > "${root}/crate/.vale.ini"
 printf 'extends: existence\n' > "${root}/crate/styles/org/Example.yml"
 
 (cd "${root}" && "${gazelle}" -repo_root="${root}")
 build="${root}/crate/BUILD.bazel"
-for want in 'name = "rustfmt_config"' 'name = "clippy_config"' 'name = "vale_config"' 'aspect_hints = [' '":clippy_config"' '":rustfmt_config"' 'data = ["crate/styles/org/Example.yml"]' '//crate:__subpackages__'; do
+for want in 'name = "rustfmt_config"' 'name = "taplo_config"' 'name = "vale_config"' 'aspect_hints = [' '":rustfmt_config"' 'data = ["crate/styles/org/Example.yml"]' '//crate:__subpackages__'; do
   if ! grep -qF "${want}" "${build}"; then
     echo "fresh generation missing ${want}" >&2
     cat "${build}" >&2
     exit 1
   fi
 done
+# taplo has no Rust binding: its target generates but never a hint.
+if grep -q '":taplo_config"' "${build}"; then
+  echo "non-binding tool leaked into aspect_hints" >&2
+  exit 1
+fi
 
 sha256sum "${build}" > "${TEST_TMPDIR}/first.sums"
 (cd "${root}" && "${gazelle}" -repo_root="${root}")
@@ -44,11 +49,13 @@ if grep -q "rustfmt" "${build}"; then
   echo "removed config file left a stale hint behind" >&2
   exit 1
 fi
-if ! grep -q '":clippy_config"' "${build}"; then
-  echo "removal dropped the surviving tool hint" >&2
+# taplo never binds a hint, so after rustfmt.toml goes away no hint
+# remains; the unrelated config targets survive untouched.
+if grep -q "aspect_hints" "${build}"; then
+  echo "removed config file left a stale hint behind" >&2
   exit 1
 fi
-if ! grep -q 'name = "clippy_config"' "${build}"; then
+if ! grep -q 'name = "taplo_config"' "${build}"; then
   echo "removal dropped an unrelated target" >&2
   exit 1
 fi
@@ -73,15 +80,15 @@ fi
 rm -rf "${root:?}/broken"
 mkdir -p "${root}/ambiguous"
 cat > "${root}/ambiguous/BUILD.bazel" <<'EOF'
-load("@rules_dx//quality:native_config.bzl", "clippy_config")
+load("@rules_dx//quality:native_config.bzl", "rustfmt_config")
 
-clippy_config(
-    name = "clippy_cfg",
+rustfmt_config(
+    name = "rustfmt_cfg",
     src = "custom.toml",
 )
 
-clippy_config(
-    name = "clippy_extra",
+rustfmt_config(
+    name = "rustfmt_extra",
     src = "extra.toml",
 )
 EOF

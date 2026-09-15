@@ -225,7 +225,7 @@ func TestMalformedIgnoreFails(t *testing.T) {
 
 func TestLanguageMetadata(t *testing.T) {
 	l := &rustLang{}
-	if l.Name() != "rust" || len(l.Kinds()) != 12 || l.CheckFlags(flag.NewFlagSet("test", flag.ContinueOnError), config.New()) != nil {
+	if l.Name() != "rust" || len(l.Kinds()) != 11 || l.CheckFlags(flag.NewFlagSet("test", flag.ContinueOnError), config.New()) != nil {
 		t.Fatalf("invalid language metadata")
 	}
 	l.RegisterFlags(flag.NewFlagSet("test", flag.ContinueOnError), "update", config.New())

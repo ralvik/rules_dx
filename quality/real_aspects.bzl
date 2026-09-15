@@ -95,9 +95,9 @@ def _real_pipeline_action(target, ctx, capability):
     # set (`dx lint` sets it; see `dx/cli/src/plan.rs`). The runner
     # parses that file instead of spawning Clippy, so dependency
     # context, edition, and crate type always match the real build.
-    # Without the group (non-Rust-rule targets, or the setting off) the
-    # clippy stage keeps the legacy self-run path until slice 2 removes
-    # it with the synthetic fixtures.
+    # Without the group (non-Rust-rule targets) the clippy stage runs
+    # with no upstream file and reports no findings; the legacy
+    # self-run path is gone, so Clippy takes no dx-side config.
     clippy_diagnostics = []
     if "clippy" in [stage["tool"] for stage in resolved]:
         if OutputGroupInfo in target and "clippy_output" in target[OutputGroupInfo]:

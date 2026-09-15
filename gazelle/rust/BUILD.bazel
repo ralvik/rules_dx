@@ -113,11 +113,10 @@ real_source_target(
         "testdata/cargo/crates/staticlib/Cargo.toml",
         "testdata/merge/crates/cargo_trim/Cargo.toml",
         "testdata/native_config/crates/config_only/taplo.toml",
-        "testdata/native_config/crates/full/clippy.toml",
         "testdata/native_config/crates/full/rustfmt.toml",
-        "testdata/native_config/crates/merge/clippy.toml",
         "testdata/native_config/crates/merge/custom.toml",
-        "testdata/native_config/crates/skip/clippy.toml",
+        "testdata/native_config/crates/merge/rustfmt.toml",
         "testdata/native_config/crates/skip/rustfmt.toml",
+        "testdata/native_config/crates/skip/taplo.toml",
     ],
 )
