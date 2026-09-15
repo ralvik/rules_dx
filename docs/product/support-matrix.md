@@ -29,7 +29,7 @@ They are not eligible for the additional-foundation deferral policy.
 | Language | Build | Test | Dependencies | Generate | Environment | IDE | Coverage | Format | Lint | Typecheck | Audit |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Rust | Planned | Planned | Planned: Cargo lock | Planned | Planned: native tools | Planned: rust-analyzer/flycheck | Planned | Planned: rustfmt | Planned: Clippy | Planned: compiler diagnostics | Not planned |
-| Python | Planned | Planned: pytest | Planned: uv lock | Planned | Planned: `.venv` | Planned: interpreter/imports | Planned | Planned: Ruff | Planned: Ruff, pydoclint; flake8/pylint opt-in | Planned: Ty | Planned: O11-selected audit tools |
+| Python | Planned | Planned: pytest | Planned: uv lock | Planned | Planned: `.venv` | Planned: interpreter/imports | Planned | Planned: Ruff | Planned: Ruff, pydoclint; flake8/pylint opt-in | Planned: Ty | Planned: audit tools ([issue #18](https://github.com/ralvik/rules_dx/issues/18)) |
 | JavaScript | Planned | Planned: Jest | Planned: pnpm lock | Planned | Planned: `node_modules` | Planned: Node/modules | Planned | Planned: Biome default, Prettier available | Planned: Biome default, ESLint available | N/A | Not planned |
 | TypeScript | Planned | Planned: Jest | Planned: pnpm lock | Planned | Planned: `node_modules` | Planned: TypeScript/Node | Planned | Planned: Biome default, Prettier available | Planned: Biome default, ESLint available | Planned: `tsc` | Not planned |
 | Vue | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Not planned |
@@ -41,51 +41,51 @@ Complete-foundation claims are made only after build, test, dependency, generati
 IDE, coverage, platform, and external-consumer evidence passes. Quality is independently testable
 and lazy before foundation completion, but `Supported` promotion occurs only during release
 qualification. Generic framework cells intentionally do not select exact tools,
-providers, or region mappings; those choices remain open in
-O29 and O40-O43.
+providers, or region mappings; those choices are tracked in
+[issue #8](https://github.com/ralvik/rules_dx/issues/8).
 
-## Minimal Required Core Freeze (O46, Pre-M00)
+## Minimal Required Core
 
-This section is the O46 minimal required core/framework inventory freeze required before
-M00. It records what is in, which provisional upstream each item builds on, which open
-decision owns each remaining mapping, and which milestone delivers it. Exact pins, hosts,
-and floors remain owned by O14/O37; no version
+This section is the minimal required core/framework inventory. It records
+what is in, which provisional upstream each item builds on, which tracker
+owns each remaining mapping, and the current state. Exact pins, hosts,
+and floors are tracked in [issue #5](https://github.com/ralvik/rules_dx/issues/5); no version
 below is a release pin. Ownership: the sole repository maintainer owns every row until
-maintenance is explicitly delegated. Effort beyond milestone assignment is estimated from
-qualification evidence as each O-item lands; no person-hour figures are frozen here.
+maintenance is explicitly delegated. Effort is estimated from
+qualification evidence as each tracked item lands; no person-hour figures are frozen here.
 
 Quality-tool defaults posture, doc-wide (core rows above and admitted languages below):
 enabled-tool membership follows the [curated baseline](../tools/tool-baseline.md#curated-differences),
 including its explicit opt-ins; naming an integration here does not enable it by default.
 Enabled tools use their pinned native defaults unless an applicable checked-in native config
 supplies policy, per [Native Configuration](../quality/native-configuration.md#authority),
-not a hidden `rules_dx` preset. Owning O-items qualify exact versions and configurations with
+not a hidden `rules_dx` preset. Owning trackers qualify exact versions and configurations with
 fixture evidence; provisional notes below do not select additional defaults or native presets.
 
-| Foundation | Provisional upstream basis | Open mappings | Delivery |
+| Foundation | Provisional upstream basis | Open mappings | Tracking |
 | --- | --- | --- | --- |
-| Rust application | `rules_rs` + pinned patched `rules_rust` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | O16 (providers, M02), O22 (Gazelle, M09), O24 (integration, M12) | M02 → M12 |
-| Python application | `aspect_rules_py` 2.x ([ADR 0010](../decisions/0010-python-foundation.md)) | O25 (mappings, M14) | M14 |
-| JavaScript/TypeScript application | `aspect_rules_js`/`aspect_rules_ts`, `aspect_rules_jest` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | O27 (wrappers/Gazelle, M16) | M16 |
-| JS/TS quality | Biome default; ESLint, Prettier available; `tsc` diagnostic-only | O28 (mappings, M17) | M17 |
-| Python quality | Ruff, Ty, pydoclint (Bandit excluded from v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md)) | O26 (M15), O5/O6 (Ty, M15/M28) | M15 |
-| Vue / Svelte / Astro / MDX | Named upstream adapters per framework | O29/O40/O41/O42 (M18–M21) | M18–M21 |
-| Generation transport | Declared versioned manifest artifact | O13 (M10), O48 scoped syntax (M10) | M10 |
-| Target resolution | Most-correct-first query strategy | O44 (M08) | M08 |
-| Quality core/result contract | Internal Protobuf + NDJSON output | O15 (M02), O17 (M03), O18 (M03), O19 (M03) | M02–M05 |
-| Required platforms | [Required-platform table](../decisions/0014-tested-platform-release-stack.md#required-platforms) | O14 (M00), O37 (M28) | M00 → M28 |
-| Coverage gate | Instrumentation-first; behavioral fallback only on proof | Resolved in [coverage](../testing/README.md#coverage) | M00 |
-| Consumer CI | Reusable workflow + caller template | CI mappings (M27) | M27 |
-| Repository workflows | Codegen/env/setup (M25); audit/update (M26) | O11/O12 (M26), O33–O36 (M25) | M25–M26 |
+| Rust application | `rules_rs` + pinned patched `rules_rust` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Providers, Gazelle, integration | [issue #7](https://github.com/ralvik/rules_dx/issues/7) |
+| Python application | `aspect_rules_py` 2.x ([ADR 0010](../decisions/0010-python-foundation.md)) | Mappings | [issue #7](https://github.com/ralvik/rules_dx/issues/7) |
+| JavaScript/TypeScript application | `aspect_rules_js`/`aspect_rules_ts`, `aspect_rules_jest` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Wrappers/Gazelle | [issue #7](https://github.com/ralvik/rules_dx/issues/7) |
+| JS/TS quality | Biome default; ESLint, Prettier available; `tsc` diagnostic-only | Mappings | [issue #7](https://github.com/ralvik/rules_dx/issues/7) |
+| Python quality | Ruff, Ty, pydoclint (Bandit excluded from v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md)) | Mappings, Ty | [issue #7](https://github.com/ralvik/rules_dx/issues/7) |
+| Vue / Svelte / Astro / MDX | Named upstream adapters per framework | Adapter mappings | [issue #8](https://github.com/ralvik/rules_dx/issues/8) |
+| Generation transport | Declared versioned manifest artifact (`GenerationManifest` in `generation/result.proto`, projected by `ProjectedManifest` in `dx/cli/src/generate.rs`) with explicit path/label/pattern scope | Implemented | Shipped |
+| Target resolution | All-direct-owners query strategy ([Target Resolution](../cli/target-resolution.md), pinned by resolver fixtures) | Implemented | Shipped |
+| Quality core/result contract | Internal Protobuf + NDJSON output | Core mappings | [issue #6](https://github.com/ralvik/rules_dx/issues/6) |
+| Required platforms | [Required-platform table](../decisions/0014-tested-platform-release-stack.md#required-platforms) | Pins, hosts, floors | [issue #5](https://github.com/ralvik/rules_dx/issues/5) |
+| Coverage gate | Instrumentation-first; behavioral fallback only on proof | Resolved in [coverage](../testing/README.md#coverage) | Enforced by CI |
+| Consumer CI | Reusable workflow + caller template | Delivered with [issue #16](https://github.com/ralvik/rules_dx/issues/16) | Shipped |
+| Repository workflows | Codegen/env/setup implemented; audit/update live execution open | Codegen pairs; audit/update | [issue #9](https://github.com/ralvik/rules_dx/issues/9), [issue #18](https://github.com/ralvik/rules_dx/issues/18), [issue #19](https://github.com/ralvik/rules_dx/issues/19) |
 
-Required platforms, the quality-tool baseline (minus excluded Swift), and the milestone
-DAG M00–M30 are the delivery plan for this inventory. Admitted additional
-foundations are owned by their cohort milestones (M22/M23) with closure in M24;
+Required platforms and the quality-tool baseline (minus excluded Swift) frame
+delivery of this inventory. Admitted additional foundations are tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7);
 remaining feasibility detail stays in the
-[feasibility review](#additional-v1-foundations) for M22/M23 qualification.
+[feasibility review](#additional-v1-foundations) for qualification.
 Swift is an evidence-backed v1 exclusion, not a pending assessment. Effort
-beyond role + milestone assignment is estimated from qualification evidence as
-each O-item lands; no person-hour figures are frozen here.
+is estimated from qualification evidence as
+each tracked item lands; no person-hour figures are frozen here.
 
 ## Additional V1 Foundations
 
@@ -94,11 +94,10 @@ Admit/defer/exclude outcomes are decided by
 summarized in [Candidate Disposition Status](#candidate-disposition-status).
 The review below records upstream evidence only. Include complete low-cost
 upstream-backed foundations; substantial missing integration may justify an explicit approved
-deferral under the admission policy. O46 must split each foundation into applicable build, test, dependency, generation,
+deferral under the admission policy. Each foundation is tracked with applicable build, test, dependency, generation,
 environment, IDE, coverage, and quality cells with named upstreams and evidence. No row implies
 that a ruleset has already been selected or that every capability/platform is feasible.
-M22 owns native/toolchain foundations; M23 owns managed-runtime foundations. This is a minimum
-inventory, not an exhaustive list of eligible languages.
+This is a minimum inventory, not an exhaustive list of eligible languages.
 
 ### Admitted To V1
 
@@ -108,9 +107,9 @@ to v1 scope by [ADR 0019](../decisions/0019-first-release-additional-foundations
 an active Bzlmod-published upstream ruleset with a concrete dependency-lock
 and toolchain story. Their quality integration is v1 scope with the defaults in
 [Provisional Default Quality Tools](#provisional-default-quality-tools);
-exact versions, rule sets, and adapter mappings continue under O30/O31. Delivery stays with the existing cohorts: Go and C/C++ in M22
-(O30); Java, Kotlin, C#, F#, and Scala (managed route frozen by the M22 O30
-decision, delivered in M23 under O31) in M23.
+exact versions, rule sets, and adapter mappings are tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7). The managed Scala
+route decision was recorded 2026-09-13.
 Unresolved cells block qualification; moving an admitted foundation out later
 requires a new evidence-backed decision.
 
@@ -123,7 +122,7 @@ Ruby's fragmented ruleset maintenance ownership and gem/bundler packaging
 effort, and PowerShell's single young execution-only upstream with unproven
 generation, dependency, environment, and IDE stories, exceed the low-cost
 hermetic integration bar. Deferred foundations' quality-tool cells (RuboCop,
-StandardRB, PSScriptAnalyzer) stay in force under O31; a foundation
+StandardRB, PSScriptAnalyzer) stay in force; a foundation
 deferral removes no baseline tool. Reconsideration after v1 requires a new
 scope decision.
 
@@ -144,11 +143,12 @@ scope decision.
 
 The approved review order starts with Go and C/C++. C/C++ initially assesses Bazel-native
 projects; CMake/Meson integration is a separate review, not an automatic-migration promise.
-This prioritization admits or defers no foundation and does not change milestone dependencies.
+This prioritization admits or defers no foundation and changes no tracking dependencies.
 
 The following are upstream documentation/source observations, not executed qualification evidence.
 Status cells are owned by this matrix; provisional toolchain and backend
-choices are owned by the [native qualification plan](../native-toolchains.md). O46 must resolve the identified contract conflicts before affected implementation:
+choices are owned by the [native qualification plan](../native-toolchains.md). Identified contract conflicts must be resolved (tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7)) before affected implementation:
 
 - [rules_go](https://github.com/bazel-contrib/rules_go) and
   [Gazelle](https://github.com/bazel-contrib/bazel-gazelle) offer SDK acquisition, package build/test,
@@ -196,13 +196,14 @@ combinations, including mixed Rust/C/C++ dependencies. Qualify specific host-to-
 and target execution separately; compiler target availability alone does not prove either.
 Direct SDK downloads, permission to use, and permission to redistribute are separate checks;
 the qualification plan records an upstream acceptance API, not a promised consumer setup command. The stack decision
-does not admit an additional foundation or approve an implementation milestone.
+does not admit an additional foundation or approve implementation.
 
 The approved [Windows setup requirement](../decisions/0014-tested-platform-release-stack.md#decision)
 allows explicit Microsoft EULA acknowledgement, as required by the inspected toolchains_msvc and
 windows_support routes. This removes the prior setup-policy conflict, not the remaining acquisition,
 licensing, interoperability, or coverage qualification gaps. Automatic acceptance is not approved;
-the exact upstream mechanism and applicable usage/distribution rights remain under O46.
+the exact upstream mechanism and applicable usage/distribution rights are tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7).
 
 ### Native Toolchain Alternatives
 
@@ -239,7 +240,8 @@ musl-compatible by changing the linker; build scripts and proc macros need execu
 while applications need target-platform libraries. The current
 [build-script contract](../generation/rust.md#build-scripts) enables the selected hermetic C/C++
 toolchain by default with an explicit kept opt-out. Additional native inputs remain declared;
-O24 still requires fixture-proven upstream mappings, not automatic compatibility with every crate.
+fixture-proven upstream mappings are still required (tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7)), not automatic compatibility with every crate.
 
 The approved direction is to qualify rules_cc and rules_rs with hermetic-llvm for Linux glibc,
 static-musl, and macOS. Windows first qualifies the toolchains_msvc clang-cl/Microsoft-STL route;
@@ -247,8 +249,9 @@ adoption remains blocked on upstream acquisition, interoperability, and coverage
 Zig remains a comparison candidate where it supplies a concrete benefit. Do not implement missing
 dynamic-musl, coverage, SDK, or compiler-stack infrastructure merely to fill the cross-product.
 Apple/Microsoft acquisition rights and the existing managed-tool packaging/laziness contracts remain
-gates even when upstream technically supports a route. O24/O46 must resolve the evidence and any
-required contract changes before implementation; no exact pins or support claims are established.
+gates even when upstream technically supports a route. The evidence and any
+required contract changes must be resolved (tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7)) before implementation; no exact pins or support claims are established.
 
 The [native qualification plan](../native-toolchains.md) owns the detailed provisional choices,
 execution-to-target cohort, source-derived defects, alternatives, and remaining questions. Findings
@@ -263,7 +266,8 @@ The following extends the documentation/source review pattern to the remaining
 additional-foundation language candidates. These are upstream
 documentation/source observations, not executed qualification evidence.
 Status cells are owned by the matrices above;
-provisional ruleset choices below are candidates for O30/O31 qualification,
+provisional ruleset choices below are candidates for qualification tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7),
 not selections. This review itself admits, defers, or excludes nothing;
 outcomes are decided by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md) and
@@ -274,30 +278,31 @@ summarized in [Candidate Disposition Status](#candidate-disposition-status).
   checksum lockfile) is the provisional Maven-dependency route over the bundled
    `rules_java` toolchain. Bazel documents a hermetic compile route via
    `remote_java_repository` and `--java_runtime_version` flags; per-platform JDK
-   acquisition and coverage integration remain open ([issue #8](https://github.com/ralvik/rules_dx/issues/7)); lock
+   acquisition and coverage integration remain open ([issue #7](https://github.com/ralvik/rules_dx/issues/7)); lock
    authority is `maven_install.json`
    ([Provisional Default Dependency Locks](#provisional-default-dependency-locks)).
    Admitted to v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
 - Kotlin: [`rules_kotlin` 2.4.10](https://registry.bazel.build/modules/rules_kotlin)
   (Bzlmod) is the provisional build/test route on the same
   JVM toolchain and Maven-lock story as Java. Kotlin compiler acquisition,
-  worker behavior, and IDE projection remain open ([issue #8](https://github.com/ralvik/rules_dx/issues/7)). Admitted to
+  worker behavior, and IDE projection remain open ([issue #7](https://github.com/ralvik/rules_dx/issues/7)). Admitted to
   v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
 - Scala: [`rules_scala` 7.x](https://github.com/bazel-contrib/rules_scala)
   (bazel-contrib, Bazel 7/8 plus Bzlmod, Coursier-backed Scala
-  toolchains) is the provisional route. M22 route decision (O30, frozen
-  2026-09-13): managed route owned by M23 under O31. Coursier-fetched
+  toolchains) is the provisional route. Route decision (recorded
+  2026-09-13): managed route tracked in
+  [issue #7](https://github.com/ralvik/rules_dx/issues/7). Coursier-fetched
   toolchains share Java's Maven-lock story (`maven_install.json` plus
   `fail_if_repin_required`), Scalafix semantic rules need semanticdb plus
   classpath wiring per the adapter-input notes, and no source-built or
-  toolchain-coupled native advantage was evidenced; M23 consumes the
-  outcome. Mappings remain open ([issue #8](https://github.com/ralvik/rules_dx/issues/7)). Admitted to v1
+  toolchain-coupled native advantage was evidenced. Mappings are tracked in
+  [issue #7](https://github.com/ralvik/rules_dx/issues/7). Admitted to v1
   by [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
 - C# and F#: [`rules_dotnet` 0.22.2](https://github.com/bazel-contrib/rules_dotnet)
   (Bzlmod, Bazel >= 8) covers both languages with `csharp_*`
    and `fsharp_*` targets plus SDK acquisition through its `dotnet` toolchain
    extension, so one upstream review covers both rows. Per-platform SDK
-   acquisition and test-runner versions remain open ([issue #8](https://github.com/ralvik/rules_dx/issues/7)); lock
+   acquisition and test-runner versions remain open ([issue #7](https://github.com/ralvik/rules_dx/issues/7)); lock
    authority is the Paket lock
    ([Provisional Default Dependency Locks](#provisional-default-dependency-locks)).
    C# and F# admitted to v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
@@ -305,49 +310,47 @@ summarized in [Candidate Disposition Status](#candidate-disposition-status).
   Bzlmod, published to the Bazel Central Registry) is the provisional route,
   but the ruleset history is fragmented (retired `bazelruby/rules_ruby`,
   several forks) and canonical maintenance ownership is the thinnest of this
-  cohort. Gem/bundler integration and the packaging-effort boundary stay the
-  cost drivers under O31; M23 already bounds Ruby as an exceptional bundle
-  within the O46-approved effort. Mappings and the effort boundary remain open
-  ([issue #8](https://github.com/ralvik/rules_dx/issues/7)). Foundation deferred beyond v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md);
-  the RuboCop/StandardRB tool cohort stays under O31 (M23).
+cohort. Gem/bundler integration and the packaging-effort boundary stay the
+cost drivers, tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7). Foundation deferred beyond v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md);
+  the RuboCop/StandardRB tool cohort is tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7).
 - PowerShell: [`rules_powershell` 0.2.0](https://github.com/periareon/rules_powershell)
   (in the Bazel Central Registry, built over `rules_shell`) is the only known
   upstream execution route and the youngest of this cohort. Generation,
   dependency, environment, and IDE stories for `.ps1` application foundations
   are unproven, and PSScriptAnalyzer integration is unassessed; this row
   carries the highest deferral risk if qualification shows substantial missing
-  infrastructure. All mappings remain open ([issue #8](https://github.com/ralvik/rules_dx/issues/7)). Foundation deferred
+  infrastructure. All mappings are tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7). Foundation deferred
   beyond v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md); the PSScriptAnalyzer tool cohort
-  stays under O31 (M23).
+  is tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7).
 
 ### Candidate Disposition Status
 
-| Candidate | Provisional basis | Delivery owner | Disposition |
+| Candidate | Provisional basis | Tracking | Disposition |
 | --- | --- | --- | --- |
-| Java | `rules_jvm_external` + `rules_java` | M23 (O31) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
-| Kotlin | `rules_kotlin` | M23 (O31) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
-| Scala | `rules_scala` | M23 managed route (M22 O30 decision, O31 delivery) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
-| C# | `rules_dotnet` | M23 (O31) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
-| F# | `rules_dotnet` | M23 (O31) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
-| Ruby | `rules_ruby` (bazel-contrib) | M23 tool cohort (O31); foundation post-v1 | Deferred beyond v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
-| PowerShell | `rules_powershell` | M23 tool cohort (O31); foundation post-v1 | Deferred beyond v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
-| Go, C/C++ | Source/documentation review | M22 (O30) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
+| Java | `rules_jvm_external` + `rules_java` | [issue #7](https://github.com/ralvik/rules_dx/issues/7) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
+| Kotlin | `rules_kotlin` | [issue #7](https://github.com/ralvik/rules_dx/issues/7) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
+| Scala | `rules_scala` | [issue #7](https://github.com/ralvik/rules_dx/issues/7) (managed route decided 2026-09-13) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
+| C# | `rules_dotnet` | [issue #7](https://github.com/ralvik/rules_dx/issues/7) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
+| F# | `rules_dotnet` | [issue #7](https://github.com/ralvik/rules_dx/issues/7) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
+| Ruby | `rules_ruby` (bazel-contrib) | [issue #7](https://github.com/ralvik/rules_dx/issues/7) tool cohort; foundation post-v1 | Deferred beyond v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
+| PowerShell | `rules_powershell` | [issue #7](https://github.com/ralvik/rules_dx/issues/7) tool cohort; foundation post-v1 | Deferred beyond v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
+| Go, C/C++ | Source/documentation review | [issue #7](https://github.com/ralvik/rules_dx/issues/7) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | Swift, Bandit | Excluded from v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) | N/A | Evidence-backed v1 exclusion |
 
 No person-hour figures are frozen here; effort is estimated from qualification
-evidence as each O-item lands, per the freeze section above. A deferral or
-exclusion recorded during M22/M23 qualification must be evidence-backed, not
+evidence as each tracked item lands, per the core section above. A deferral or
+exclusion recorded during qualification must be evidence-backed, not
 silent.
 
 ### Provisional Default Test Runners
 
 Upstream documentation observations; provisional defaults, not
 selections. Exact versions, runner mappings, and
-fixture qualification stay under O30/O31.
+fixture qualification are tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7).
 
 - Java and Kotlin: JUnit (≈62–79% JVM adoption, Spring Boot default; JUnit 6
-  adds native Kotlin `suspend` support). JUnit 5 versus 6 follows the O31 JDK
-  baseline; the provisional pin on the 6.x line is 6.1.3,
+  adds native Kotlin `suspend` support). JUnit 5 versus 6 follows the qualified JDK
+  baseline (tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7)); the provisional pin on the 6.x line is 6.1.3,
   with 5.14.x maintained as the fallback line.
 - C# and F#: xUnit v3 4.0.0 (greenfield default: isolation
   and parallelism by default; used by the ASP.NET Core team; Microsoft
@@ -358,7 +361,8 @@ fixture qualification stay under O30/O31.
 - C/C++: GoogleTest v1.18.0 (industry default with native mocking
   and death tests; first-class Bazel support via the Central Registry module
   and `cc_test` integration). The 1.18.x branch requires C++17 or newer,
-  which the O30 toolchain floor must cover. Upstream recommends living at
+  which the qualified toolchain floor must cover (tracked in
+  [issue #7](https://github.com/ralvik/rules_dx/issues/7)). Upstream recommends living at
   head; dx pins the release.
 - Scala: ScalaTest 3.2.20 (covers Scala 2.10–2.13 and 3.x),
   per the rules' own preference (`scala_test` runs suites written using the
@@ -368,7 +372,7 @@ fixture qualification stay under O30/O31.
   requirement.
 
 Where the upstream rules support multiple runners, the runner is a
-configuration choice over the O30/O31-qualified set, not a hard-coded single
+configuration choice over the qualified set, not a hard-coded single
 framework; the defaults above apply when unconfigured. Secondary runners
 (TestNG, NUnit/MSTest, Catch2, specs2/JUnit variants) are therefore
 choice candidates pending qualification evidence, not exclusions and not
@@ -377,23 +381,23 @@ v1 commitments.
 ### Provisional Default Quality Tools
 
 Upstream documentation observations; provisional defaults, not
-selections. Exact versions, rule sets, and adapter mappings stay under
-O30/O31.
+selections. Exact versions, rule sets, and adapter mappings are tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7).
 
 - Go: gofumpt (strict superset of gofmt) for format; staticcheck plus `govet`
   for lint, since neither subsumes the other. The existing `SA`-only suggestion
-  conflicts with the default-check suggestion below; both remain provisional under O30,
+  conflicts with the default-check suggestion below; both remain provisional,
   not an approved native rule selection.
 - C/C++: clang-format, clang-tidy, and cppcheck as already named;
-  compiler-integrated and standalone analysis are complementary. M22 route
-  decision (O30, frozen 2026-09-13): clang-format and clang-tidy resolve from
+  compiler-integrated and standalone analysis are complementary. Route
+  decision (recorded 2026-09-13): clang-format and clang-tidy resolve from
   the qualified hermetic-llvm LLVM distribution's tool targets
   (authoritative-toolchain class, no separate acquisition); cppcheck stays a
   standalone checksummed-artifact candidate pending adapter qualification.
   No adapter claims c/cpp yet.
 - Java: google-java-format; PMD, Checkstyle, SpotBugs, plus Error Prone, which
-  works out of the box with Bazel. The Error Prone version follows the O31
-  JDK baseline.
+  works out of the box with Bazel. The Error Prone version follows the
+  qualified JDK baseline (tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7)).
 - Kotlin: ktfmt for format with ktlint for style (fast, no type resolution);
   detekt for smells, complexity, and potential bugs (200+ rules, type
   resolution optional). Format and analysis stay divided as upstream documents
@@ -409,7 +413,7 @@ Typechecking for every admitted language is compiler-owned (javac, kotlinc,
 Roslyn, `go`, clang/gcc, scalac); no separate typechecker is selected, unlike
 the standalone Ty and `tsc` tools in the required core.
 
-M23 focused proofs (O31, frozen 2026-09-13) select the delivery routes in
+Focused proofs (recorded 2026-09-13) select the delivery routes in
 [first-release tool routing](../tools/tool-acquisition.md#first-release-tool-routing):
 JVM tools (google-java-format, Checkstyle, PMD, SpotBugs, ktfmt, ktlint)
 take the complete-upstream-artifact plus shared-JDK route; Scalafmt/Scalafix
@@ -417,41 +421,45 @@ take the managed JVM route; CSharpier/Fantomas take the exact-package plus
 shared-.NET-runtime route; PSScriptAnalyzer takes the exact-module plus
 portable-PowerShell-runtime route; RuboCop/StandardRB take the
 release-assembled Ruby closure route. Exact artifacts, versions, rule sets,
-and adapter mappings still qualify under O31/O32; no adapter claims any M23
-class yet.
+and adapter mappings are still tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7); no adapter claims any of these
+classes yet.
 
-The [doc-wide defaults posture](#minimal-required-core-freeze-o46-pre-m00) applies to
+The [doc-wide defaults posture](#minimal-required-core) applies to
 enabled tools. Qualify these suggestions against [native configuration](../quality/native-configuration.md)
 before freezing them; curated membership does not authorize hidden presets. The following existing native-configuration suggestions remain provisional
-qualification inputs under O30/O31, not approved presets or additions to curated membership:
+qualification inputs tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7), not approved presets or additions to curated membership:
 
-- staticcheck default checks versus the `SA`-only suggestion above remain an O30
-  conflict; neither is selected here. `govet` and errcheck for unhandled errors
+- staticcheck default checks versus the `SA`-only suggestion above remain an
+  unresolved conflict; neither is selected here. `govet` and errcheck for unhandled errors
   remain the existing complementary-tool suggestions, not new default selections.
 - SpotBugs at default effort; PMD default ruleset; Error Prone at its default severities.
-  The existing Checkstyle Google checks suggestion requires O31 resolution against the
-  native-config contract; it is not an approved hidden or automatically supplied config.
+  The existing Checkstyle Google checks suggestion requires resolution against the
+  native-config contract (tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7)); it is not an approved hidden or automatically supplied config.
 - detekt `buildUponDefaultConfig` (full default set, not `allRules`);
   ktlint standard rules.
 - Roslyn: SDK default analysis mode; StyleCop stays optional since its style
   rules can contradict the built-in IDE rules.
 - clang-tidy default checks; cppcheck default enablement.
 - Scalafix recommended built-ins plus OrganizeImports (import organization)
-  and RemoveUnused (dead code): the existing suggestion remains provisional under O30,
-  with O31 owning any managed-runtime route. It is not an approved hidden preset;
+  and RemoveUnused (dead code): the existing suggestion remains provisional,
+  tracked in [issue #7](https://github.com/ralvik/rules_dx/issues/7). It is not an approved hidden preset;
   native-config and artifact qualification must resolve the conflict before implementation.
 - FSharpLint default ruleset with formatting rules off (Fantomas owns
   formatting).
 
 Beyond-default switches (detekt `allRules`, experimental Error Prone checks,
-`--enable=all`-style opt-in maxima) are not enabled by `rules_dx`. O30/O31 must qualify
-these suggestions against pinned native behavior and checked-in configuration ownership;
+`--enable=all`-style opt-in maxima) are not enabled by `rules_dx`. These
+suggestions must be qualified against pinned native behavior and checked-in
+configuration ownership (tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7));
 this review selects neither a staticcheck rule set nor a Checkstyle/Scalafix preset.
 
 ### Provisional Default Dependency Locks
 
 Upstream documentation observations; provisional defaults, not
-selections. Exact files and fail-closed wiring freeze under O30/O31.
+selections. Exact files and fail-closed wiring are tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7).
 
 - Java, Kotlin, Scala: `maven_install.json` via `rules_jvm_external`
   (`lock_file` plus `fail_if_repin_required`); Scala shares Java's Maven
@@ -476,7 +484,8 @@ selections. Exact files and fail-closed wiring freeze under O30/O31.
 ### Provisional Adapter Input Notes
 
 Upstream documentation observations; provisional input, not
-selections. Adapter design and normalization freeze under O30/O31.
+selections. Adapter design and normalization is tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7).
 
 Diagnostic wire formats:
 
@@ -504,13 +513,15 @@ Fix modes:
   cppcheck, detekt, FSharpLint console.
 - Provisional fix flow: tools run check-only for diagnostics; fixes are
   produced by applying in a sandbox and diffing, rendered as unified
-  patches (precedent: aspect `rules_lint`). O30/O31 confirm.
+  patches (precedent: aspect `rules_lint`).
 
 Test result formats: JUnit XML (surefire/Gradle), xUnit XML,
 `go test -json`, GoogleTest `--gtest_output=json|xml`, ScalaTest `-u`
-JUnit XML. O30/O31 normalize these into the result contract.
+JUnit XML. Normalization into the result contract is tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7).
 
-Open adapter risks for O30/O31:
+Open adapter risks tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7):
 
 - Scalafix: no machine-readable CLI output; semantic rules need semanticdb
   plus classpath wiring, and source rewriting sits uneasily with immutable
@@ -518,35 +529,42 @@ Open adapter risks for O30/O31:
 - Error Prone: no structured diagnostics; patch files need per-target
   declared outputs because `IN_PLACE` patching breaks under sandboxing.
 - Roslyn `/errorlog` SARIF is per compiler invocation (per
-  configuration/TFM/RID pivot); aggregation is O31 work.
+  configuration/TFM/RID pivot); aggregation work remains.
 - FSharpLint: console text parsing versus binding the .NET library API.
 
-### O46 Review Delegation
+### Open Work Tracking
 
-The remaining O46 review dimensions from
+The remaining review dimensions from
 [first-release admission](scope.md#first-release-admission) are owned by their
-existing decisions, not duplicated here: additional test runners by O30/O31
-qualification, framework adapters by the closed v1 set (O43), quality-tool
-plugins and sharing by O31, audit/update ecosystems by O11/O12, and codegen
-pairs by O33. Newly identified candidates still require an explicit
-disposition under the admission policy.
+existing trackers, not duplicated here: additional test runners and
+foundation mappings by
+[issue #7](https://github.com/ralvik/rules_dx/issues/7), framework adapters
+by [issue #8](https://github.com/ralvik/rules_dx/issues/8), quality-tool
+registry and policy by
+[issue #6](https://github.com/ralvik/rules_dx/issues/6), audit/update
+ecosystems by [issue #18](https://github.com/ralvik/rules_dx/issues/18) and
+[issue #19](https://github.com/ralvik/rules_dx/issues/19), and codegen pairs
+by [issue #9](https://github.com/ralvik/rules_dx/issues/9) and
+[issue #25](https://github.com/ralvik/rules_dx/issues/25). Newly identified
+candidates still require an explicit disposition in the issue tracker.
 
-### Milestone Cohort Determination
+### Cohort Tracking
 
-Every candidate row above maps to an existing cohort owner: admitted Go and
-C/C++ to M22 under O30; admitted Java, Kotlin, C#, F#, and Scala (managed
-route frozen by the M22 O30 decision, delivered in M23 under O31) to M23
-under O31. Deferred foundations (Ruby,
-PowerShell) are out of v1 scope; their retained tool cohorts stay with their
-O-item owners. No milestone split or DAG change is required by this review. Splits stay conditional: if O30/O31 qualification
-shows a cohort exceeds reviewable work-package size, O46 splits the affected
-specification and updates the milestone index before implementation.
+Every candidate row above maps to an existing tracker: admitted Go and
+C/C++ plus admitted Java, Kotlin, C#, F#, and Scala (managed route decided
+2026-09-13) to
+[issue #7](https://github.com/ralvik/rules_dx/issues/7). Deferred foundations (Ruby,
+PowerShell) are out of v1 scope; their retained tool cohorts stay tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7). If qualification
+shows a cohort exceeds reviewable work-package size, it is split into
+follow-up issues under the owning tracker before implementation.
 
 ## Quality And File Families
 
 Applicable capabilities also enter the v1 feasibility review. Their application columns remain
 explicit so formatter or linter availability cannot be mistaken for complete foundation support.
-O46 must verify applicability, including existing `N/A` cells, rather than infer it from a file suffix.
+Applicability verification, including existing `N/A` cells, is tracked in
+[issue #7](https://github.com/ralvik/rules_dx/issues/7) rather than inferred from a file suffix.
 
 | Source family | Build | Test | Dependencies | Generate | Environment | IDE | Coverage | Quality |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -578,5 +596,5 @@ minimum first-release quality baseline; only the Linux x86_64 seed-host implemen
 exists so far, and no cell is `Supported` yet (release evidence tracked in the issue tracker). Swift and SwiftFormat are
 excluded from v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md):
 the `Not planned` Swift row above is an evidence-backed v1 exclusion, not a
-feasibility assessment awaiting O46. A host-toolchain
+feasibility assessment. A host-toolchain
 fallback was never approved. Reconsidering Swift after v1 requires a new scope decision.
