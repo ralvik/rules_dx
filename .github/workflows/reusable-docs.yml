@@ -15,6 +15,12 @@
 # is pure check-only. The deployed content is the validated docs tree;
 # the rendered mdBook site arrives via issue #10 without changing this
 # vehicle.
+#
+# Hygiene (issue #80): Bazelisk installs go through the single
+# `.github/actions/setup-bazelisk` composite action; every third-party
+# action is pinned to a commit SHA with its tag in a trailing comment.
+# `docs-publish` stages the artifact in a temp dir so the checkout is
+# never left dirty for later steps.
 
 name: rules-dx-docs
 
@@ -59,15 +65,14 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
-      - name: Install pinned Bazelisk
-        run: |
-          curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
-          echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
-          sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
-          bazel version
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Verify rules_dx pin
-        run: test -f MODULE.bazel && grep -q 'version = "${{ inputs.rules_dx_version }}"' MODULE.bazel
+        env:
+          RULES_DX_PIN: ${{ inputs.rules_dx_version }}
+        run: test -f MODULE.bazel && grep -F -q "version = \"$RULES_DX_PIN\"" MODULE.bazel
       - run: bazel run @rules_dx//dx/cli:dx -- lint --check ${{ inputs.docs_scope }}
 
   docs-publish:
@@ -83,13 +88,23 @@ jobs:
       name: ${{ inputs.environment }}
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v7
-      - name: Write stopgap Pages entry point
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Stage stopgap Pages entry point in a temp dir
         # The artifact is the raw docs tree (Markdown, no index.html) until
         # the #10 renderer lands. Without an entry point every deployment
-        # 404s (issue #30). Generate one at publish time so the repo tree
-        # stays renderer-clean; #10 replaces this with the rendered site.
+        # 404s (issue #30). Stage a copy plus the generated entry point
+        # under RUNNER_TEMP so the repo tree stays renderer-clean and the
+        # checkout is never left dirty; #10 replaces this with the
+        # rendered site.
+        env:
+          DOCS_DIR: ${{ inputs.docs_dir }}
         run: |
+          set -euo pipefail
+          stage="$RUNNER_TEMP/pages"
+          rm -rf "$stage"
+          cp -r "$DOCS_DIR" "$stage"
           printf '%s\n' \
             '<!doctype html>' \
             '<html lang="en">' \
@@ -101,11 +116,14 @@ jobs:
             '<a href="https://github.com/ralvik/rules_dx/tree/main/docs">repository</a>.</p>' \
             '</body>' \
             '</html>' \
-            > "${{ inputs.docs_dir }}/index.html"
+            > "$stage/index.html"
+          echo "PAGES_STAGE=$stage" >> "$GITHUB_ENV"
       - name: Upload docs tree as Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
-          path: ${{ inputs.docs_dir }}
+          path: ${{ env.PAGES_STAGE }}
       - name: Deploy to GitHub Pages
         id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+      - name: Prove checkout left clean
+        run: test -z "$(git status --porcelain)"

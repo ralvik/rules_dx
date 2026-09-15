@@ -18,6 +18,15 @@
 # unit-pinned in `quality_adapter::exec`). Corpus-local configs stay authoritative: aspect
 # runs resolve Vale/Clippy policy solely from the `aspect_hints` bound by
 # each corpus target, never from CI-local copies.
+#
+# Hygiene (issue #80): Bazelisk installs go through the single
+# `.github/actions/setup-bazelisk` composite action; every third-party
+# action is pinned to a commit SHA with its tag in a trailing comment.
+# The Bazel disk cache uses actions/cache, which is free-tier eligible
+# for public repositories, per the infrastructure budget in
+# docs/testing/README.md. CI checkouts never contain `user.bazelrc`
+# (gitignored local-only BCR mirror override), so every run resolves
+# the canonical BCR registry plus MODULE.bazel.lock.
 
 name: ci
 
@@ -67,74 +76,56 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - name: Install pinned Bazelisk
-        run: |
-          curl -sL -o /tmp/bazelisk \
-            https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
-          echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
-          sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
-          bazel version
-      - run: bazel build //...
-      - run: bazel test //...
-      - run: bazel run //dx/cli:dx -- coverage --min-coverage 97 //...
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-seed-
+      - run: bazel build --noshow_progress //...
+      - run: bazel test --noshow_progress //...
+      - run: bazel run --noshow_progress //dx/cli:dx -- coverage --min-coverage 97 //...
   corpus-dogfood:
     name: corpus-dogfood (dx quality commands, Linux x86_64 glibc, local-only)
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - name: Install pinned Bazelisk
-        run: |
-          curl -sL -o /tmp/bazelisk \
-            https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
-          echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
-          sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
-          bazel version
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-dogfood-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-dogfood-
+            bazel-seed-
       - name: Prove Bazel-resolved quality tool execution
         run: |
-          bazel build @dx_tools//:buildifier @dx_tools//:taplo @dx_tools//:vale \
+          bazel build --noshow_progress @dx_tools//:buildifier @dx_tools//:taplo @dx_tools//:vale \
             //quality/evaluator:quality_evaluator
       - name: Verify generated-file freshness
-        run: bazel run //dx/cli:dx -- generate --check //...
+        run: bazel run --noshow_progress //dx/cli:dx -- generate --check //...
       - name: Audit corpus ownership
-        run: |
-          # The paket2bazel hub output below is generator-owned (regenerate via
-          # `bazel run @rules_dotnet//tools/paket2bazel`, see
-          # third_party/dotnet/deps/BUILD.bazel), never corpus sources. The
-          # marker check keeps this exclusion honest: hand edits lose it.
-          head -1 third_party/dotnet/deps/paket.main.bzl | grep -q GENERATED
-          head -1 third_party/dotnet/deps/paket.main_extension.bzl | grep -qi GENERATED
-          git ls-files \
-            | grep -E '(^|/)(BUILD\.bazel|MODULE\.bazel)$|\.(bzl|toml|md)$' \
-            | grep -v -E '\.lock$' \
-            | grep -v -E '^third_party/dotnet/deps/paket\.main(_extension)?\.bzl$' \
-            | LC_ALL=C sort -u > /tmp/corpus_applicable.txt
-          bazel query "kind('source file', deps(kind(real_source_target, //...)))" 2>/dev/null \
-            | grep -E '^(@@)?//' \
-            | sed 's/^@@//; s|^//||; s|:|/|; s|^/||' \
-            | LC_ALL=C sort -u > /tmp/corpus_closure.txt
-          uncovered="$(comm -23 /tmp/corpus_applicable.txt /tmp/corpus_closure.txt | wc -l | tr -d ' ')"
-          if [ "$uncovered" -ne 0 ]; then
-            echo "corpus ownership audit failed: $uncovered applicable files have no corpus owner:"
-            comm -23 /tmp/corpus_applicable.txt /tmp/corpus_closure.txt
-            exit 1
-          fi
+        run: bazel run --noshow_progress //tools/ci:corpus_audit
       - name: Run dx quality commands over the corpus (default mode)
         run: |
           bazel query "attr(name, '^corpus\$', kind(real_source_target, //...))" 2>/dev/null \
             | LC_ALL=C sort -u > /tmp/corpus_targets.txt
           scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
-          bazel run //dx/cli:dx -- lint $scope
-          bazel run //dx/cli:dx -- format $scope
-          bazel run //dx/cli:dx -- typecheck $scope
+          bazel run --noshow_progress //dx/cli:dx -- lint $scope
+          bazel run --noshow_progress //dx/cli:dx -- format $scope
+          bazel run --noshow_progress //dx/cli:dx -- typecheck $scope
       - name: Verify converged no-op in check mode
         run: |
           scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
-          bazel run //dx/cli:dx -- lint --check $scope
-          bazel run //dx/cli:dx -- format --check $scope
-          bazel run //dx/cli:dx -- typecheck --check $scope
+          bazel run --noshow_progress //dx/cli:dx -- lint --check $scope
+          bazel run --noshow_progress //dx/cli:dx -- format --check $scope
+          bazel run --noshow_progress //dx/cli:dx -- typecheck --check $scope
