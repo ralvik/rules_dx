@@ -26,6 +26,10 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   docs-ci:
     name: docs-ci (self-call reusable docs workflow)
@@ -60,9 +64,12 @@ jobs:
       pull-requests: write
   build-test:
     name: build-test (Linux x86_64 glibc, local-only)
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Install pinned Bazelisk
         run: |
           curl -sL -o /tmp/bazelisk \
@@ -75,9 +82,12 @@ jobs:
       - run: bazel run //dx/cli:dx -- coverage --min-coverage 97 //...
   corpus-dogfood:
     name: corpus-dogfood (dx quality commands, Linux x86_64 glibc, local-only)
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Install pinned Bazelisk
         run: |
           curl -sL -o /tmp/bazelisk \

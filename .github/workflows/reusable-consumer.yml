@@ -57,13 +57,16 @@ concurrency:
 
 jobs:
   lint:
-    if: ${{ !contains(inputs.disabled_checks, 'lint') }}
+    if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',lint,') }}
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
       contents: read
       checks: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Install pinned Bazelisk
         run: |
           curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
@@ -71,17 +74,22 @@ jobs:
           sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
           bazel version
       - name: Verify rules_dx pin
-        run: test -f MODULE.bazel && grep -q 'version = "${{ inputs.rules_dx_version }}"' MODULE.bazel
+        env:
+          RULES_DX_PIN: ${{ inputs.rules_dx_version }}
+        run: test -f MODULE.bazel && grep -F -q "version = \"$RULES_DX_PIN\"" MODULE.bazel
       - run: bazel run @rules_dx//dx/cli:dx -- lint --check //...
 
   typecheck:
-    if: ${{ !contains(inputs.disabled_checks, 'typecheck') }}
+    if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',typecheck,') }}
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
       contents: read
       checks: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Install pinned Bazelisk
         run: |
           curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
@@ -90,13 +98,16 @@ jobs:
       - run: bazel run @rules_dx//dx/cli:dx -- typecheck --check //...
 
   format:
-    if: ${{ !contains(inputs.disabled_checks, 'format') }}
+    if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',format,') }}
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
       contents: read
       checks: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Install pinned Bazelisk
         run: |
           curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
@@ -105,13 +116,16 @@ jobs:
       - run: bazel run @rules_dx//dx/cli:dx -- format --check //...
 
   generate:
-    if: ${{ !contains(inputs.disabled_checks, 'generate') }}
+    if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',generate,') }}
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
       contents: read
       checks: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Install pinned Bazelisk
         run: |
           curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
@@ -120,13 +134,16 @@ jobs:
       - run: bazel run @rules_dx//dx/cli:dx -- generate --check //...
 
   security-audit:
-    if: ${{ !contains(inputs.disabled_checks, 'security-audit') }}
+    if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',security-audit,') }}
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
       contents: read
       checks: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Install pinned Bazelisk
         run: |
           curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
@@ -135,13 +152,16 @@ jobs:
       - run: bazel run @rules_dx//dx/cli:dx -- audit security //...
 
   license-audit:
-    if: ${{ !contains(inputs.disabled_checks, 'license-audit') }}
+    if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',license-audit,') }}
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
       contents: read
       checks: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Install pinned Bazelisk
         run: |
           curl -sL -o /tmp/bazelisk https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
@@ -150,17 +170,20 @@ jobs:
       - run: bazel run @rules_dx//dx/cli:dx -- audit license //...
 
   test:
-    if: ${{ !contains(inputs.disabled_checks, 'test') }}
+    if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',test,') }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        platform: ${{ fromJSON(inputs.platforms) }}
+        platform: ${{ fromJSON(inputs.platforms != '' && inputs.platforms || '["linux_x86_64"]') }}
     runs-on: ${{ matrix.platform == 'linux_x86_64' && 'ubuntu-latest' || matrix.platform }}
     permissions:
       contents: read
       checks: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Require explicit platforms
         if: ${{ inputs.platforms == '' }}
         run: 'echo "dx-ci: test requires explicit nonempty platforms; no implicit default" >&2; exit 1'
@@ -172,17 +195,20 @@ jobs:
       - run: bazel run @rules_dx//dx/cli:dx -- test //...
 
   build:
-    if: ${{ !contains(inputs.disabled_checks, 'build') }}
+    if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',build,') }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        platform: ${{ fromJSON(inputs.platforms) }}
+        platform: ${{ fromJSON(inputs.platforms != '' && inputs.platforms || '["linux_x86_64"]') }}
     runs-on: ${{ matrix.platform == 'linux_x86_64' && 'ubuntu-latest' || matrix.platform }}
     permissions:
       contents: read
       checks: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Require explicit platforms
         if: ${{ inputs.platforms == '' }}
         run: 'echo "dx-ci: build requires explicit nonempty platforms; no implicit default" >&2; exit 1'
@@ -194,17 +220,20 @@ jobs:
       - run: bazel run @rules_dx//dx/cli:dx -- build //...
 
   coverage:
-    if: ${{ !contains(inputs.disabled_checks, 'coverage') }}
+    if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',coverage,') }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        platform: ${{ fromJSON(inputs.platforms) }}
+        platform: ${{ fromJSON(inputs.platforms != '' && inputs.platforms || '["linux_x86_64"]') }}
     runs-on: ${{ matrix.platform == 'linux_x86_64' && 'ubuntu-latest' || matrix.platform }}
     permissions:
       contents: read
       checks: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Require explicit platforms
         if: ${{ inputs.platforms == '' }}
         run: 'echo "dx-ci: coverage requires explicit nonempty platforms; no implicit default" >&2; exit 1'
@@ -214,12 +243,19 @@ jobs:
           echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
           sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
       - name: Run coverage with optional threshold
+        env:
+          DX_MIN_COVERAGE: ${{ inputs.min_coverage }}
         run: |
           extra=""
-          if [ -n "${{ inputs.min_coverage }}" ]; then
-            extra="--min-coverage ${{ inputs.min_coverage }}"
+          if [ -n "$DX_MIN_COVERAGE" ]; then
+            case "$DX_MIN_COVERAGE" in
+              ''|*[!0-9.]*|*.*.*|.*|*.) echo "dx-ci: invalid min_coverage '$DX_MIN_COVERAGE': want e.g. 80 or 80.5" >&2; exit 1 ;;
+            esac
+            extra="--min-coverage $DX_MIN_COVERAGE"
           fi
-          # Unquoted on purpose: empty stays zero words, a value stays one.
+          # Unquoted on purpose: empty stays zero words, a validated numeric
+          # threshold stays one flag plus one value. Input travels via env and
+          # is numeric-validated above, never interpolated into the script.
           # shellcheck disable=SC2086
           bazel run @rules_dx//dx/cli:dx -- coverage $extra //...
 
@@ -227,6 +263,7 @@ jobs:
     name: dx-ci (aggregate)
     needs: [lint, typecheck, format, generate, security-audit, license-audit, test, build, coverage]
     if: ${{ always() }}
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     permissions:
       contents: read
