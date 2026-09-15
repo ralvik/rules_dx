@@ -602,7 +602,7 @@ mod tests {
 
     #[test]
     fn modification_content_digest_and_edits() {
-        let mut manifest = sample(Mode::Check);
+        let manifest = sample(Mode::Check);
         assert_eq!(candidate(&manifest.files[0]).unwrap(), b"zbc\n");
         let mut invalid = modification(b"abc\n");
         invalid.original_content = vec![0xff];

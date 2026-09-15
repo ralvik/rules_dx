@@ -19,7 +19,6 @@ rust_library(
     ),
     crate_name = "hello",
     crate_root = "src/lib.rs",
-    edition = "2021",
     deps = crate_deps(
         ["anyhow"],
         package_name = "rust/hello",
@@ -35,7 +34,6 @@ rust_binary(
     ),
     crate_name = "hello",
     crate_root = "src/main.rs",
-    edition = "2021",
     deps = crate_deps(
         ["anyhow"],
         package_name = "rust/hello",
@@ -75,7 +73,6 @@ rust_proc_macro(
     srcs = ["src/derive.rs"],
     crate_name = "hello_derive",
     crate_root = "src/derive.rs",
-    edition = "2021",
 )
 
 # keep
@@ -84,7 +81,6 @@ rust_shared_library(
     srcs = ["src/cdylib.rs"],
     crate_name = "hello_cdylib",
     crate_root = "src/cdylib.rs",
-    edition = "2021",
 )
 
 # keep
@@ -93,7 +89,6 @@ rust_static_library(
     srcs = ["src/staticlib.rs"],
     crate_name = "hello_staticlib",
     crate_root = "src/staticlib.rs",
-    edition = "2021",
 )
 
 # Separate lint identities: the M02 hello_fmt_test/hello_clippy_test

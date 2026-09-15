@@ -29,8 +29,10 @@ the preserved `CrateInfo`; no second provider duplicates them. A test
 using `crate =` reports no direct sources: the crate owner is the single
 source owner, never the test.
 
-`edition` defaults to `"2021"`, matching the pinned toolchain default;
-override per target. Per-target toolchain-version selection is omitted under
+`edition` defaults to `RUST_EDITION`, the single source of truth for the
+repository Rust edition (issue #82): wrapper consumers omit `edition` and
+inherit it, so an edition bump edits this constant only. It matches the
+pinned toolchain default; override per target. Per-target toolchain-version selection is omitted under
 ADR 0012: the pinned upstream only accepts a single toolchain version, so
 there is no supported version-selectable API to map. Unknown or unregistered
 toolchain versions fail in the upstream toolchain resolution, never here.
@@ -58,7 +60,11 @@ load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_rust//rust:defs.bzl", _rust_binary = "rust_binary", _rust_common = "rust_common", _rust_library = "rust_library", _rust_proc_macro = "rust_proc_macro", _rust_shared_library = "rust_shared_library", _rust_static_library = "rust_static_library", _rust_test = "rust_test")
 load("//quality:sources.bzl", "QualitySourcesInfo", "RUST", "check_direct_sources")
 
-_DEFAULT_EDITION = "2021"
+# Single source of truth for the repository Rust edition (issue #82).
+# All wrapper macros default to this; BUILD files must not repeat the
+# literal (omit `edition` on wrapper calls, load `RUST_EDITION` for the
+# rare direct-upstream call).
+RUST_EDITION = "2021"
 
 # Advertised providers. Bazel matches an aspect's `required_providers`
 # against the rule's `provides`, NOT against the providers the rule
@@ -339,7 +345,7 @@ def rust_library(
         name,
         srcs,
         crate_name = None,
-        edition = _DEFAULT_EDITION,
+        edition = RUST_EDITION,
         visibility = None,
         **kwargs):
     """Experimental minimal wrapper over `rust_library` (M02)."""
@@ -358,7 +364,7 @@ def rust_binary(
         name,
         srcs,
         crate_name = None,
-        edition = _DEFAULT_EDITION,
+        edition = RUST_EDITION,
         visibility = None,
         **kwargs):
     """Experimental minimal wrapper over `rust_binary` (M02)."""
@@ -377,7 +383,7 @@ def rust_test(
         name,
         srcs = None,
         crate = None,
-        edition = _DEFAULT_EDITION,
+        edition = RUST_EDITION,
         visibility = None,
         **kwargs):
     """Experimental minimal wrapper over `rust_test` (M02).
@@ -422,7 +428,7 @@ def rust_proc_macro(
         name,
         srcs,
         crate_name = None,
-        edition = _DEFAULT_EDITION,
+        edition = RUST_EDITION,
         visibility = None,
         **kwargs):
     """Experimental minimal wrapper over `rust_proc_macro` (M12).
@@ -445,7 +451,7 @@ def rust_shared_library(
         name,
         srcs,
         crate_name = None,
-        edition = _DEFAULT_EDITION,
+        edition = RUST_EDITION,
         visibility = None,
         **kwargs):
     """Experimental minimal wrapper over `rust_shared_library` (M12).
@@ -471,7 +477,7 @@ def rust_static_library(
         name,
         srcs,
         crate_name = None,
-        edition = _DEFAULT_EDITION,
+        edition = RUST_EDITION,
         visibility = None,
         **kwargs):
     """Experimental minimal wrapper over `rust_static_library` (M12).

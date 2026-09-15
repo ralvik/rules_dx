@@ -13,7 +13,6 @@ rust_library(
     srcs = ["src/lib.rs"],
     crate_name = "documentation_ir",
     crate_root = "src/lib.rs",
-    edition = "2021",
     deps = [
         "//documentation:doc_ir_proto_rs",
         "@rules_rust_prost//private/3rdparty/crates:prost",
@@ -24,7 +23,6 @@ rust_test(
     name = "documentation_ir_test",
     size = "small",
     crate = ":documentation_ir",
-    edition = "2021",
     deps = ["//documentation:doc_ir_proto_rs"],
 )
 

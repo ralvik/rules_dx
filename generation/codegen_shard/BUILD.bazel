@@ -18,7 +18,6 @@ rust_library(
     ),
     crate_name = "codegen_shard",
     crate_root = "src/lib.rs",
-    edition = "2021",
     deps = [
         "//generation:codegen_proto_rs",
         "@rules_rust_prost//private/3rdparty/crates:prost",
@@ -34,7 +33,6 @@ rust_binary(
     ),
     crate_name = "codegen_shard_writer",
     crate_root = "src/main.rs",
-    edition = "2021",
     deps = [":codegen_shard"],
 )
 
@@ -47,7 +45,6 @@ rust_test(
         normal_dev = True,
     ),
     crate = ":codegen_shard",
-    edition = "2021",
     deps = ["//generation:codegen_proto_rs"],
 )
 

@@ -16,7 +16,6 @@ rust_library(
     ),
     crate_name = "quality_result",
     crate_root = "src/lib.rs",
-    edition = "2021",
     deps = crate_deps(
         ["blake3"],
         package_name = "quality/quality_result",
@@ -35,7 +34,6 @@ rust_test(
         normal_dev = True,
     ),
     crate = ":quality_result",
-    edition = "2021",
     deps = crate_deps(
         ["blake3"],
         package_name = "quality/quality_result",
@@ -69,7 +67,6 @@ rust_binary(
     ),
     crate_name = "print_result",
     crate_root = "src/print.rs",
-    edition = "2021",
     deps = [":quality_result"],
 )
 
