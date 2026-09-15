@@ -8,6 +8,7 @@ load(":real_aspect_subject.bzl", "real_aspect_subject")
 load(":real_aspect_tests.bzl", "real_aspect_fixture_tests")
 load(":real_typecheck_subject.bzl", "real_typecheck_subject")
 load(":real_typecheck_tests.bzl", "real_typecheck_fixture_tests")
+load(":runner_matrix_cases.bzl", "runner_matrix_cases")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -171,11 +172,6 @@ real_source_target(
 )
 
 real_source_target(
-    name = "fixture_real_python_dirty",
-    python_srcs = ["real_dirty.py"],
-)
-
-real_source_target(
     name = "fixture_real_python_hinted",
     aspect_hints = [":ruff_cfg"],
     python_srcs = ["real_clean.py"],
@@ -258,11 +254,6 @@ real_aspect_subject(
 )
 
 real_aspect_subject(
-    name = "fixture_real_python_dirty_subject",
-    target = ":fixture_real_python_dirty",
-)
-
-real_aspect_subject(
     name = "fixture_real_python_hinted_subject",
     target = ":fixture_real_python_hinted",
 )
@@ -278,11 +269,6 @@ real_source_target(
 )
 
 real_source_target(
-    name = "fixture_real_javascript_dirty",
-    javascript_srcs = ["real_dirty.js"],
-)
-
-real_source_target(
     name = "fixture_real_javascript_hinted",
     aspect_hints = [":biome_cfg"],
     javascript_srcs = ["real_clean.js"],
@@ -291,11 +277,6 @@ real_source_target(
 real_aspect_subject(
     name = "fixture_real_javascript_subject",
     target = ":fixture_real_javascript",
-)
-
-real_aspect_subject(
-    name = "fixture_real_javascript_dirty_subject",
-    target = ":fixture_real_javascript_dirty",
 )
 
 real_aspect_subject(
@@ -314,19 +295,9 @@ real_source_target(
     json_srcs = ["real_clean.json"],
 )
 
-real_source_target(
-    name = "fixture_real_json_dirty",
-    json_srcs = ["real_dirty.json"],
-)
-
 real_aspect_subject(
     name = "fixture_real_json_subject",
     target = ":fixture_real_json",
-)
-
-real_aspect_subject(
-    name = "fixture_real_json_dirty_subject",
-    target = ":fixture_real_json_dirty",
 )
 
 # TypeScript/JSX/TSX fixtures: clean modules proving each
@@ -337,11 +308,6 @@ real_aspect_subject(
 real_source_target(
     name = "fixture_real_typescript",
     typescript_srcs = ["real_clean.ts"],
-)
-
-real_source_target(
-    name = "fixture_real_typescript_dirty",
-    typescript_srcs = ["real_dirty.ts"],
 )
 
 real_source_target(
@@ -357,11 +323,6 @@ real_source_target(
 real_aspect_subject(
     name = "fixture_real_typescript_subject",
     target = ":fixture_real_typescript",
-)
-
-real_aspect_subject(
-    name = "fixture_real_typescript_dirty_subject",
-    target = ":fixture_real_typescript_dirty",
 )
 
 real_aspect_subject(
@@ -391,20 +352,16 @@ real_aspect_subject(
 real_aspect_fixture_tests(
     name = "real_aspect_presence",
     subjects = [
-        ":fixture_real_javascript_dirty_subject",
         ":fixture_real_javascript_hinted_subject",
         ":fixture_real_javascript_subject",
-        ":fixture_real_json_dirty_subject",
         ":fixture_real_json_subject",
         ":fixture_real_jsx_subject",
         ":fixture_real_tsx_subject",
-        ":fixture_real_typescript_dirty_subject",
         ":fixture_real_typescript_subject",
         ":fixture_real_markdown_sibling_subject",
         ":fixture_real_markdown_subject",
         ":fixture_real_mixed_subject",
         ":fixture_real_no_lint_subject",
-        ":fixture_real_python_dirty_subject",
         ":fixture_real_python_hinted_subject",
         ":fixture_real_python_subject",
         ":fixture_real_rust_subject",
@@ -424,11 +381,6 @@ real_source_target(
 )
 
 real_source_target(
-    name = "fixture_real_rust_typecheck_dirty",
-    rust_srcs = ["typecheck_dirty.rs"],
-)
-
-real_source_target(
     name = "fixture_real_rust_typecheck_no_typecheck",
     rust_srcs = ["typecheck_clean.rs"],
     tags = ["no-typecheck"],
@@ -437,11 +389,6 @@ real_source_target(
 real_typecheck_subject(
     name = "fixture_real_rust_typecheck_clean_subject",
     target = ":fixture_real_rust_typecheck_clean",
-)
-
-real_typecheck_subject(
-    name = "fixture_real_rust_typecheck_dirty_subject",
-    target = ":fixture_real_rust_typecheck_dirty",
 )
 
 real_typecheck_subject(
@@ -460,11 +407,6 @@ real_typecheck_subject(
 )
 
 real_typecheck_subject(
-    name = "fixture_real_python_dirty_typecheck_subject",
-    target = ":fixture_real_python_dirty",
-)
-
-real_typecheck_subject(
     name = "fixture_real_python_no_typecheck_subject",
     target = ":fixture_real_python_no_typecheck",
 )
@@ -472,15 +414,17 @@ real_typecheck_subject(
 real_typecheck_fixture_tests(
     name = "real_typecheck_presence",
     subjects = [
-        ":fixture_real_python_dirty_typecheck_subject",
         ":fixture_real_python_no_typecheck_subject",
         ":fixture_real_python_typecheck_subject",
         ":fixture_real_rust_typecheck_clean_subject",
-        ":fixture_real_rust_typecheck_dirty_subject",
         ":fixture_real_rust_typecheck_no_typecheck_subject",
         ":fixture_real_starlark_typecheck_subject",
     ],
 )
+
+# Layer-2 full-matrix runner tests (#59): real runner over provider-less
+# data; goldens live in runner_matrix_cases.bzl.
+runner_matrix_cases(name = "runner_matrix")
 
 # Repository corpus: non-fixture Starlark sources in this package
 # owned for direct-Bazel dogfood under the canonical real_fixture_policy.

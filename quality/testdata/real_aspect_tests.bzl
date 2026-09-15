@@ -8,12 +8,7 @@ prove the capability-level shape resting on the real pipeline unit tests.
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 
-EXPECTED_OBSERVATIONS = """subject //quality/testdata:fixture_real_javascript_dirty_subject
-field dx_count=2
-field dx_results=fixture_real_javascript_dirty-real-format.pb,fixture_real_javascript_dirty-real-lint.pb
-field has_quality_sources=True
-field label=//quality/testdata:fixture_real_javascript_dirty
-subject //quality/testdata:fixture_real_javascript_hinted_subject
+EXPECTED_OBSERVATIONS = """subject //quality/testdata:fixture_real_javascript_hinted_subject
 field dx_count=2
 field dx_results=fixture_real_javascript_hinted-real-format.pb,fixture_real_javascript_hinted-real-lint.pb
 field has_quality_sources=True
@@ -23,11 +18,6 @@ field dx_count=2
 field dx_results=fixture_real_javascript-real-format.pb,fixture_real_javascript-real-lint.pb
 field has_quality_sources=True
 field label=//quality/testdata:fixture_real_javascript
-subject //quality/testdata:fixture_real_json_dirty_subject
-field dx_count=2
-field dx_results=fixture_real_json_dirty-real-format.pb,fixture_real_json_dirty-real-lint.pb
-field has_quality_sources=True
-field label=//quality/testdata:fixture_real_json_dirty
 subject //quality/testdata:fixture_real_json_subject
 field dx_count=2
 field dx_results=fixture_real_json-real-format.pb,fixture_real_json-real-lint.pb
@@ -58,11 +48,6 @@ field dx_count=1
 field dx_results=fixture_real_no_lint-real-format.pb
 field has_quality_sources=True
 field label=//quality/testdata:fixture_real_no_lint
-subject //quality/testdata:fixture_real_python_dirty_subject
-field dx_count=2
-field dx_results=fixture_real_python_dirty-real-format.pb,fixture_real_python_dirty-real-lint.pb
-field has_quality_sources=True
-field label=//quality/testdata:fixture_real_python_dirty
 subject //quality/testdata:fixture_real_python_hinted_subject
 field dx_count=2
 field dx_results=fixture_real_python_hinted-real-format.pb,fixture_real_python_hinted-real-lint.pb
@@ -98,11 +83,6 @@ field dx_count=2
 field dx_results=fixture_real_tsx-real-format.pb,fixture_real_tsx-real-lint.pb
 field has_quality_sources=True
 field label=//quality/testdata:fixture_real_tsx
-subject //quality/testdata:fixture_real_typescript_dirty_subject
-field dx_count=2
-field dx_results=fixture_real_typescript_dirty-real-format.pb,fixture_real_typescript_dirty-real-lint.pb
-field has_quality_sources=True
-field label=//quality/testdata:fixture_real_typescript_dirty
 subject //quality/testdata:fixture_real_typescript_subject
 field dx_count=2
 field dx_results=fixture_real_typescript-real-format.pb,fixture_real_typescript-real-lint.pb

@@ -1,7 +1,7 @@
 """M03 result-side validation crate over the frozen result schema."""
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
-load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_library", "rust_test")
 
@@ -57,6 +57,21 @@ rust_clippy_test(
 )
 
 exports_files(["Cargo.toml"])
+
+# Layer-2 matrix harness printer (#59): decodes one validated result
+# protobuf into deterministic text for golden diffing. Test-only tooling.
+rust_binary(
+    name = "print_result",
+    srcs = ["src/print.rs"],
+    aliases = aliases(
+        package_name = "quality/quality_result",
+        normal = True,
+    ),
+    crate_name = "print_result",
+    crate_root = "src/print.rs",
+    edition = "2021",
+    deps = [":quality_result"],
+)
 
 # Repository corpus: crate manifest and build file owned for
 # direct-Bazel dogfood under the canonical real_fixture_policy.
