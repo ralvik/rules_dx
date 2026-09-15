@@ -56,9 +56,10 @@ def adapter_supported_classes(tool_id, capability):
 # and Vale (prose style) run as two ordered stages over the same files;
 # no virtual convergence across tools runs yet. The pipeline formula
 # orders stages by sorted tool ID (the provisional O19 rule) when several
-# apply to one target. Rust typechecking is the toolchain `rustc` itself
-# (`rust_toolchain_rustc`), invoked as a lib-root metadata check with no
-# config discovery; it is check-only and never applies suggestions.
+# apply to one target. Rust typechecking is the toolchain `rustc` itself,
+# upstream-delegated: findings parse from the `rustc_output` diagnostics
+# file the upstream rule emits, never from a dx-spawned invocation; it is
+# check-only and never applies suggestions.
 # Python lint runs flake8, pydoclint, pylint, then ruff in lexical stage
 # order when selected; ruff is also the default and only active Python
 # formatter and ty the typechecker, per the tool-baseline curated

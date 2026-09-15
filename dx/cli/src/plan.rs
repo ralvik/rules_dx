@@ -61,7 +61,7 @@ pub fn spec(command: Command) -> CommandSpec {
             capability: "typecheck",
             aspects: &["//quality:real_aspects.bzl%real_typecheck_aspect"],
             reports: &["sarif"],
-            settings: &[],
+            settings: &[RUSTC_DIAGNOSTICS_FLAG],
         },
         Command::Format => CommandSpec {
             command,
@@ -218,9 +218,22 @@ pub const VALIDATE_FLAG: &str = "--@rules_dx//config:validate=false";
 /// always sets it; the runner parses the file instead of spawning
 /// Clippy, so dependency context, edition, and crate type match the
 /// real build. Users cannot override it: without the file the clippy
-/// stage falls back to the legacy self-run.
+/// stage reports no findings.
 pub const CLIPPY_DIAGNOSTICS_FLAG: &str =
     "--@rules_rust//rust/settings:clippy_output_diagnostics=true";
+
+/// Upstream rustc diagnostics capture (#48): the real typecheck aspect
+/// reads the authoritative `.rustc-output` file from the `rustc_output`
+/// output group, which every Rust rule emits only when this setting is
+/// set. `dx typecheck` always sets it; the runner parses the file
+/// instead of spawning rustc, so dependency context, edition, and crate
+/// type match the real build. Users cannot override it: without the
+/// file the rustc stage reports no findings. A crate that fails to
+/// compile produces no diagnostics file, so hard type errors fail the
+/// `dx typecheck` build itself (with the compiler error visible) rather
+/// than arriving as findings.
+pub const RUSTC_DIAGNOSTICS_FLAG: &str =
+    "--@rules_rust//rust/settings:rustc_output_diagnostics=true";
 
 /// Output group carrying the `QualityResult` protos.
 pub const OUTPUT_GROUP: &str = "dx_results";
@@ -823,7 +836,7 @@ mod tests {
             &["//quality:real_aspects.bzl%real_typecheck_aspect"]
         );
         assert_eq!(typecheck.reports, &["sarif"]);
-        assert!(typecheck.settings.is_empty());
+        assert_eq!(typecheck.settings, &[RUSTC_DIAGNOSTICS_FLAG]);
         let format = spec(Command::Format);
         assert_eq!(format.capability, "format");
         assert_eq!(
@@ -1239,6 +1252,23 @@ mod tests {
     }
 
     #[test]
+    fn typecheck_plan_enables_upstream_rustc_diagnostics() {
+        let plan =
+            plan_build(Command::Typecheck, &resolved(&[]), &[], "/tmp/bep.json").expect("plan");
+        assert!(
+            plan.argv.iter().any(|arg| arg == RUSTC_DIAGNOSTICS_FLAG),
+            "typecheck sets the upstream diagnostics setting: {plan:?}"
+        );
+        for command in [Command::Lint, Command::Format] {
+            let plan = plan_build(command, &resolved(&[]), &[], "/tmp/bep.json").expect("plan");
+            assert!(
+                plan.argv.iter().all(|arg| arg != RUSTC_DIAGNOSTICS_FLAG),
+                "{command:?} leaves the rustc setting off: {plan:?}"
+            );
+        }
+    }
+
+    #[test]
     fn explicit_targets_replace_repository_scope() {
         let plan = plan_build(
             Command::Lint,
@@ -1305,6 +1335,22 @@ mod tests {
         ] {
             let err = plan_build(
                 Command::Lint,
+                &resolved(&[]),
+                &options(&[conflicting]),
+                "/tmp/bep.json",
+            )
+            .expect_err("conflict must fail");
+            assert!(
+                matches!(err, ForwardError::ConflictingOption { .. }),
+                "{conflicting} produced {err:?}"
+            );
+        }
+        for conflicting in [
+            "--@rules_rust//rust/settings:rustc_output_diagnostics=false",
+            "--@rules_rust//rust/settings:rustc_output_diagnostics",
+        ] {
+            let err = plan_build(
+                Command::Typecheck,
                 &resolved(&[]),
                 &options(&[conflicting]),
                 "/tmp/bep.json",

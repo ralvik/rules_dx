@@ -391,6 +391,41 @@ impl RealBackend {
         Ok(findings)
     }
 
+    /// rustc check (#48): parses the authoritative upstream
+    /// diagnostics files the aspect declared as action inputs. Upstream
+    /// spans already address workspace paths, so findings are
+    /// re-addressed to the staged scratch-absolute paths the
+    /// diagnose caller remaps back to workspace paths. Nothing spawns.
+    fn check_rustc_delegated(
+        &self,
+        tool_id: &str,
+        tool: &RealTool,
+        pairs: &[(String, PathBuf)],
+    ) -> Result<Vec<FileFinding>, RunnerError> {
+        let workspaces: Vec<&str> = pairs
+            .iter()
+            .map(|(workspace, _)| workspace.as_str())
+            .collect();
+        let mut findings = Vec::new();
+        for path in &tool.upstream_diagnostics {
+            let bytes = std::fs::read(path)
+                .map_err(|err| execution(tool_id, format!("upstream diagnostics: {err}")))?;
+            findings.extend(parsed(
+                tool_id,
+                parsers::parse_rustc(&bytes, Some(0), &workspaces),
+            )?);
+        }
+        for found in &mut findings {
+            let absolute = pairs
+                .iter()
+                .find(|(workspace, _)| *workspace == found.file)
+                .map(|(_, absolute)| absolute.clone())
+                .expect("parsed file was checked");
+            found.file = absolute.to_string_lossy().into_owned();
+        }
+        Ok(findings)
+    }
+
     /// Runs one check over the staged files and returns the parsed
     /// findings still addressed by absolute scratch path. Sibling pairs
     /// reach only the Markdown checker as `--sibling` mappings; every
@@ -436,31 +471,7 @@ impl RealBackend {
                 Ok(kept)
             }
             "clippy" => self.check_clippy_delegated(tool_id, tool, pairs),
-            "rustc" => {
-                let out_dir = scratch.root().join("dx-rustc-out");
-                std::fs::create_dir_all(&out_dir)
-                    .map_err(|err| execution(tool_id, format!("out dir: {err}")))?;
-                let mut findings = Vec::new();
-                for (workspace, absolute) in pairs {
-                    let stem = Path::new(workspace)
-                        .file_stem()
-                        .map(|stem| stem.to_string_lossy().into_owned())
-                        .unwrap_or_default();
-                    let invocation = commands::rustc_check(
-                        &tool.binary,
-                        absolute,
-                        &commands::crate_name_for(&stem),
-                        &out_dir,
-                    );
-                    let out = self.run(tool_id, tool, &invocation, scratch)?;
-                    let name = absolute.to_string_lossy().into_owned();
-                    findings.extend(parsed(
-                        tool_id,
-                        parsers::parse_rustc(&out.stderr, out.code, &[&name]),
-                    )?);
-                }
-                Ok(findings)
-            }
+            "rustc" => self.check_rustc_delegated(tool_id, tool, pairs),
             "markdown_check" => {
                 let specs: Vec<(&str, &Path)> = pairs
                     .iter()
@@ -1028,6 +1039,10 @@ mod tests {
     const DELEGATED_CLIPPY_WARN: &str = r#"{"$message_type":"artifact","artifact":"bazel-out/k8-fastbuild/bin/src/lib-123.d","emit":"dep-info"}
 {"$message_type":"diagnostic","message":"length comparison to zero","code":{"code":"clippy::len_zero","explanation":null},"level":"warning","spans":[{"file_name":"src/main.rs","byte_start":8,"byte_end":20,"line_start":1,"line_end":1,"column_start":9,"column_end":21,"is_primary":true,"text":[],"label":null,"suggested_replacement":null,"suggestion_applicability":null,"expansion":null}],"children":[{"message":"use is_empty","code":null,"level":"help","spans":[{"file_name":"src/main.rs","byte_start":8,"byte_end":20,"line_start":1,"line_end":1,"column_start":9,"column_end":21,"is_primary":true,"text":[],"label":null,"suggested_replacement":"!v.is_empty()","suggestion_applicability":"MachineApplicable","expansion":null}],"children":[],"rendered":null}],"rendered":null}
 {"$message_type":"diagnostic","message":"1 warning emitted","code":null,"level":"warning","spans":[],"children":[],"rendered":null}"#;
+
+    const DELEGATED_RUSTC_WARN: &str = r#"{"$message_type":"artifact","artifact":"bazel-out/k8-fastbuild/bin/dx/qual/libdx_qual-1134879743.rlib","emit":"link"}
+{"$message_type":"diagnostic","message":"mismatched types","code":{"code":"E0308","explanation":null},"level":"error","spans":[{"file_name":"src/main.rs","byte_start":24,"byte_end":29,"line_start":2,"line_end":2,"column_start":13,"column_end":17,"is_primary":true,"text":[],"label":null,"suggested_replacement":null,"suggestion_applicability":null,"expansion":null}],"children":[],"rendered":null}
+{"$message_type":"diagnostic","message":"aborting due to previous error","code":null,"level":"error","spans":[],"children":[],"rendered":null}"#;
 
     fn plain_tool() -> RealTool {
         RealTool {
@@ -1899,50 +1914,6 @@ mod tests {
         })
     }
 
-    const RUSTC_TYPE_ERROR: &str = r#"{"$message_type":"diagnostic","message":"mismatched types","code":{"code":"E0308","explanation":null},"level":"error","spans":[{"file_name":"FILE","byte_start":27,"byte_end":32,"line_start":2,"line_end":2,"column_start":9,"column_end":14,"is_primary":true,"text":[],"label":"expected `i32`, found `&str`","suggested_replacement":null,"suggestion_applicability":null,"expansion":null}],"children":[],"rendered":null}
-{"$message_type":"diagnostic","message":"aborting due to 1 previous error","code":null,"level":"error","spans":[],"children":[],"rendered":null}"#;
-
-    fn rustc_type_error(
-        argv: &[OsString],
-        _cwd: &Path,
-        env: &[(String, String)],
-    ) -> io::Result<ChildOutput> {
-        assert_hermetic(env);
-        let out_dir = argv
-            .windows(2)
-            .find(|pair| pair[0] == "--out-dir")
-            .map(|pair| pair[1].clone())
-            .expect("rustc passes --out-dir");
-        assert!(
-            Path::new(&out_dir).is_dir(),
-            "rustc out dir is materialized"
-        );
-        assert!(
-            argv.iter().any(|arg| arg == "--crate-type=lib"),
-            "rustc typechecks as a lib root"
-        );
-        let stderr = RUSTC_TYPE_ERROR.replace("FILE", &last_file(argv));
-        Ok(ChildOutput {
-            code: Some(1),
-            stdout: Vec::new(),
-            stderr: stderr.into_bytes(),
-        })
-    }
-
-    fn rustc_garbage(
-        argv: &[OsString],
-        _cwd: &Path,
-        env: &[(String, String)],
-    ) -> io::Result<ChildOutput> {
-        assert_hermetic(env);
-        let _ = last_file(argv);
-        Ok(ChildOutput {
-            code: Some(1),
-            stdout: Vec::new(),
-            stderr: b"not json lines".to_vec(),
-        })
-    }
-
     fn rustfmt_hinted(
         argv: &[OsString],
         _cwd: &Path,
@@ -2442,7 +2413,7 @@ mod tests {
     }
 
     fn no_spawn(_: &[OsString], _: &Path, _: &[(String, String)]) -> io::Result<ChildOutput> {
-        panic!("delegated clippy must not spawn")
+        panic!("delegated check must not spawn")
     }
 
     #[test]
@@ -2508,37 +2479,80 @@ mod tests {
     }
 
     #[test]
-    fn rustc_reports_type_errors_as_lib_root() {
-        let backend = backend_for("rustc", plain_tool(), rustc_type_error);
-        let text = "fn f(x: i32) {}\nfn g() { f(\"oops\"); }\n";
+    fn rustc_delegated_parses_upstream_file_without_spawning() {
+        let path = upstream_file("rustc-warn", DELEGATED_RUSTC_WARN);
+        let backend = backend_for("rustc", delegated_tool(path.clone()), no_spawn);
         let findings = backend
-            .diagnose("rustc", "typecheck", &single("src/main.rs", text))
+            .diagnose(
+                "rustc",
+                "typecheck",
+                &single("src/main.rs", "fn f(x: i32) {}\nfn g() { f(\"oops\"); }\n"),
+            )
             .expect("diagnosed");
+        std::fs::remove_file(&path).expect("remove upstream fixture");
         assert_eq!(findings.len(), 1);
-        assert_eq!(findings[0].tool_id, "rustc");
         assert_eq!(findings[0].rule_id, "E0308");
+        // Byte offsets derive from the staged text: line 2 starts at
+        // byte 16, so columns 13..17 (the `oops` token) map to 28..32.
         assert_eq!(
             (findings[0].start_byte, findings[0].end_byte),
-            (Some(24), Some(29))
+            (Some(28), Some(32))
         );
+        assert_eq!(findings[0].path, "src/main.rs");
+        assert!(!findings[0].fixable);
     }
 
     #[test]
-    fn rustc_apply_is_check_only() {
-        let backend = backend_for("rustc", plain_tool(), rustc_type_error);
+    fn rustc_delegated_fix_is_check_only() {
+        let path = upstream_file("rustc-fix", DELEGATED_RUSTC_WARN);
+        let backend = backend_for("rustc", delegated_tool(path.clone()), no_spawn);
         let text = "fn f(x: i32) {}\nfn g() { f(\"oops\"); }\n";
         let patched = backend
             .apply_fix("rustc", "src/main.rs", text, "typecheck")
-            .expect("unchanged");
+            .expect("check-only keeps input");
+        std::fs::remove_file(&path).expect("remove upstream fixture");
         assert_eq!(patched, text);
     }
 
     #[test]
-    fn rustc_diagnose_failure_aborts_apply() {
-        let backend = backend_for("rustc", plain_tool(), rustc_garbage);
+    fn rustc_delegated_missing_file_fails_the_action() {
+        let missing =
+            std::env::temp_dir().join(format!("dx-delegated-rustc-{}-absent", std::process::id()));
+        let backend = backend_for("rustc", delegated_tool(missing), no_spawn);
         backend
-            .diagnose("rustc", "typecheck", &single("src/main.rs", "x\n"))
-            .expect_err("rustc garbage fails");
+            .diagnose(
+                "rustc",
+                "typecheck",
+                &single("src/main.rs", "fn f(x: i32) {}\nfn g() { f(\"oops\"); }\n"),
+            )
+            .expect_err("missing upstream diagnostics fail");
+    }
+
+    #[test]
+    fn rustc_delegated_empty_file_reports_no_findings() {
+        let path = upstream_file("rustc-empty", "");
+        let backend = backend_for("rustc", delegated_tool(path.clone()), no_spawn);
+        let findings = backend
+            .diagnose(
+                "rustc",
+                "typecheck",
+                &single("src/main.rs", "fn f(x: i32) {}\nfn g() { f(\"oops\"); }\n"),
+            )
+            .expect("diagnosed");
+        std::fs::remove_file(&path).expect("remove upstream fixture");
+        assert!(findings.is_empty());
+    }
+
+    #[test]
+    fn rustc_apply_is_check_only() {
+        let path = upstream_file("rustc-check-only", DELEGATED_RUSTC_WARN);
+        let backend = backend_for("rustc", delegated_tool(path.clone()), no_spawn);
+        let text = "fn f(x: i32) {}\nfn g() { f(\"oops\"); }\n";
+        let patched = backend
+            .apply_fix("rustc", "src/main.rs", text, "typecheck")
+            .expect("unchanged");
+        std::fs::remove_file(&path).expect("remove upstream fixture");
+        assert_eq!(patched, text);
     }
 
     #[test]

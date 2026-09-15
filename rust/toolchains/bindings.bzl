@@ -23,11 +23,12 @@ def rust_toolchain_tools(ctx):
     return rust.clippy_driver, rustfmt.rustfmt
 
 def rust_toolchain_rustc(ctx):
-    """Return the `rustc` File for the selected toolchain (M12 WP3).
+    """Return the `rustc` File for the selected toolchain.
 
-    The typecheck pipeline invokes the toolchain compiler directly as a
-    lib-root check (`commands::rustc_check`); like Clippy it follows the
-    selected toolchain with no adapter edit.
+    Declared for rust stages; the delegated typecheck pipeline (#48)
+    never spawns it — findings parse from the upstream `rustc_output`
+    diagnostics file, so the compiler follows the selected toolchain
+    with no adapter edit.
     """
     return ctx.toolchains[RUST_TOOLCHAIN_TYPE].rustc
 

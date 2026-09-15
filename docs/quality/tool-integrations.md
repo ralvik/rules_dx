@@ -239,16 +239,23 @@ dogfood proof is `dx lint --check //dx/qual:dx_qual`, whose result carries
 Dependency context (`--extern`) stays open under
 [issue #12](https://github.com/ralvik/rules_dx/issues/12).
 
-Rust typechecking invokes the selected toolchain's `rustc` directly (tool ID `rustc`,
-`real_rust_family` typecheck selection, `dx typecheck` via `real_typecheck_aspect`): one
-`--edition 2021 --error-format=json --emit=metadata --crate-type=lib` invocation per file, with
-`--crate-name` derived from the file stem and a fresh `--out-dir` under the scratch root. The
-`lib` crate type keeps a `bin`-style root (such as `fn main` with no entry point) from masking
-real type errors as spurious missing-`main` failures. There is no config discovery, so the
-working directory stays at the scratch root. Diagnostics share Clippy's JSON grammar (parsed by
-`parsers::parse_rustc` with `rustc` as the tool ID); the runner is check-only and never applies
-suggestions. Like Clippy and rustfmt, the compiler follows the toolchain version through
-`rust_toolchain_rustc` with no adapter edit and no `rules_dx`-owned copy.
+Rust typechecking is upstream-delegated (#48): `dx typecheck` stages the
+`real_typecheck_aspect`, which reads the authoritative `.rustc-output`
+file from the `rustc_output` output group instead of spawning a rustc
+binary. `dx typecheck` sets
+`--@rules_rust//rust/settings:rustc_output_diagnostics=true` so the group
+is populated; findings parse through `parsers::parse_rustc` and the rustc
+apply path is check-only. There is no dx-side rustc invocation and no
+dx-side config: edition, crate type, and dependency context always match
+the real build. A crate that fails to compile produces no diagnostics
+file, so hard type errors fail the `dx typecheck` build itself (with the
+compiler error visible) rather than arriving as findings. Cost model: a
+typecheck action is build-like — the diagnostics file is produced by the
+ordinary upstream compile action, so steady-state `dx typecheck` runs hit
+the Bazel action cache exactly like `bazel build` and only recompile what
+changed. The dogfood proof is `dx typecheck --check //rust/...`, fully
+clean where the pre-delegation self-run failed on dependency context
+under [issue #12](https://github.com/ralvik/rules_dx/issues/12).
 
 - **Repository-owned Markdown checks:** link and structure validation is repository-owned and
   distinct from Vale. The checker is the Rust crate `//quality/markdown`: it parses

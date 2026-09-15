@@ -106,26 +106,6 @@ fn invocation(binary: &Path, args: &[&str], files: &[&Path], cwd_rel: &str) -> I
     }
 }
 
-/// Sanitizes a file stem into a deterministic `--crate-name`: ASCII
-/// alphanumerics and underscores survive, everything else folds to an
-/// underscore, and an empty stem becomes `crate_`.
-pub fn crate_name_for(stem: &str) -> String {
-    let mut name: String = stem
-        .chars()
-        .map(|ch| {
-            if ch.is_ascii_alphanumeric() || ch == '_' {
-                ch
-            } else {
-                '_'
-            }
-        })
-        .collect();
-    if name.is_empty() {
-        name.push_str("crate_");
-    }
-    name
-}
-
 /// Buildifier check invocation. With a hint, `cwd_rel` is the mirrored
 /// config directory so upward discovery from the working directory finds
 /// exactly the hinted config; without one, `--config=off` blocks any
@@ -167,32 +147,6 @@ pub fn buildifier_fix(binary: &Path, files: &[&Path], config_dir_rel: Option<&st
             "",
         ),
     }
-}
-
-/// rustc single-file typecheck invocation. The crate name derives from
-/// the file stem; `--out-dir` keeps metadata inside scratch. Like
-/// Clippy, `rustc` takes one input root per invocation. The crate type
-/// is always `lib`: direct sources are library files without `main`,
-/// and the default `bin` type would report a spurious missing-entry
-/// failure instead of the real type diagnostics. `rustc` performs no
-/// config discovery, so `cwd_rel` is always the scratch root.
-pub fn rustc_check(binary: &Path, file: &Path, crate_name: &str, out_dir: &Path) -> Invocation {
-    invocation(
-        binary,
-        &[
-            "--edition",
-            "2021",
-            "--error-format=json",
-            "--emit=metadata",
-            "--crate-type=lib",
-            "--out-dir",
-            &out_dir.to_string_lossy(),
-            "--crate-name",
-            crate_name,
-        ],
-        &[file],
-        "",
-    )
 }
 
 /// rustfmt invocation. `config` is always explicit: the hinted config or
@@ -650,41 +604,6 @@ mod tests {
         );
         let bare = buildifier_fix(Path::new(BIN), &[file], None);
         assert!(argv_strings(&bare).contains(&"--config=off".to_owned()));
-    }
-
-    #[test]
-    fn rustc_check_compiles_one_lib_root_as_json() {
-        let invocation = rustc_check(
-            Path::new(BIN),
-            Path::new(FILE),
-            "main",
-            Path::new("/scratch/out"),
-        );
-        assert_eq!(
-            argv_strings(&invocation),
-            vec![
-                BIN,
-                "--edition",
-                "2021",
-                "--error-format=json",
-                "--emit=metadata",
-                "--crate-type=lib",
-                "--out-dir",
-                "/scratch/out",
-                "--crate-name",
-                "main",
-                FILE
-            ]
-        );
-        assert_eq!(invocation.cwd_rel, "");
-    }
-
-    #[test]
-    fn crate_name_for_sanitizes_stems() {
-        assert_eq!(crate_name_for("main"), "main");
-        assert_eq!(crate_name_for("my-crate.rs"), "my_crate_rs");
-        assert_eq!(crate_name_for("caf\u{e9}"), "caf_");
-        assert_eq!(crate_name_for(""), "crate_");
     }
 
     #[test]
