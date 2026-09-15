@@ -140,30 +140,32 @@ type manifestRecorder struct {
 }
 
 // loadManifestRecorder reads the private protocol environment. It returns
-// nil when recording is disabled, so direct Gazelle invocations behave
-// exactly as before.
-func loadManifestRecorder() *manifestRecorder {
+// nil, nil when recording is disabled, so direct Gazelle invocations
+// behave exactly as before. Misconfiguration is a returned error, never a
+// panic: the caller records it through the language error accumulator and
+// the run fails closed before BUILD emission.
+func loadManifestRecorder() (*manifestRecorder, error) {
 	outPath := os.Getenv(envIntendedManifest)
 	if outPath == "" {
-		return nil
+		return nil, nil
 	}
 	mode := os.Getenv(envGenerateMode)
 	if mode == "" {
 		mode = "default"
 	}
 	if mode != "check" && mode != "default" {
-		panic(fmt.Sprintf("rust: %s must be \"check\" or \"default\", got %q", envGenerateMode, mode))
+		return nil, fmt.Errorf("rust: %s must be \"check\" or \"default\", got %q", envGenerateMode, mode)
 	}
 	scopes := []scopeElement{{Element: "//...", Dirs: []string{""}}}
 	if raw := os.Getenv(envGenerateScope); raw != "" {
 		if err := json.Unmarshal([]byte(raw), &scopes); err != nil {
-			panic(fmt.Sprintf("rust: malformed %s: %v", envGenerateScope, err))
+			return nil, fmt.Errorf("rust: malformed %s: %v", envGenerateScope, err)
 		}
 		if len(scopes) == 0 {
-			panic(fmt.Sprintf("rust: %s must list at least one scope element", envGenerateScope))
+			return nil, fmt.Errorf("rust: %s must list at least one scope element", envGenerateScope)
 		}
 	}
-	return &manifestRecorder{outPath: outPath, mode: mode, scopes: scopes}
+	return &manifestRecorder{outPath: outPath, mode: mode, scopes: scopes}, nil
 }
 
 // record retains one GenerateRules visit. Kinds are captured before the
@@ -215,8 +217,11 @@ func (r *manifestRecorder) scopeIndex(rel string) int {
 
 // emit witnesses every visited package and writes the intended manifest.
 // It must run after the PostResolve merge and before the emit loop, which
-// is exactly when the framework calls AfterResolvingDeps.
-func (r *manifestRecorder) emit(ignores []*ignoreEntry) {
+// is exactly when the framework calls AfterResolvingDeps. Scope and
+// transport failures are returned for the language error accumulator,
+// never panics: a typo in the wrapper environment must fail the run with
+// an actionable message, not a Go stack trace.
+func (r *manifestRecorder) emit(ignores []*ignoreEntry) error {
 	manifest := intendedManifest{
 		SchemaMajor: intendedManifestSchemaMajor,
 		SchemaMinor: intendedManifestSchemaMinor,
@@ -231,9 +236,12 @@ func (r *manifestRecorder) emit(ignores []*ignoreEntry) {
 	for _, rec := range r.visited {
 		index := r.scopeIndex(rec.rel)
 		if index < 0 {
-			panic(fmt.Sprintf("rust: package %q matches no %s scope element", rec.rel, envGenerateScope))
+			return fmt.Errorf("rust: package %q matches no %s scope element", rec.rel, envGenerateScope)
 		}
-		file, changed := r.witness(rec)
+		file, changed, err := r.witness(rec)
+		if err != nil {
+			return err
+		}
 		if !changed {
 			continue
 		}
@@ -246,7 +254,7 @@ func (r *manifestRecorder) emit(ignores []*ignoreEntry) {
 		}
 		index := r.scopeIndex(ignore.path)
 		if index < 0 {
-			panic(fmt.Sprintf("rust: ignored import %q matches no %s scope element", ignore.value, envGenerateScope))
+			return fmt.Errorf("rust: ignored import %q matches no %s scope element", ignore.value, envGenerateScope)
 		}
 		manifest.IgnoredImports = append(manifest.IgnoredImports, intendedIgnoredImport{
 			Path:       ignore.path,
@@ -272,46 +280,55 @@ func (r *manifestRecorder) emit(ignores []*ignoreEntry) {
 	})
 	data, err := json.Marshal(manifest)
 	if err != nil {
-		panic(fmt.Sprintf("rust: cannot encode intended manifest: %v", err)) // LCOV_EXCL_LINE - reason: manifest holds only strings, bytes, ints, and bools, so Marshal cannot fail; this branch is defensive only.
+		return fmt.Errorf("rust: cannot encode intended manifest: %v", err) // LCOV_EXCL_LINE - reason: manifest holds only strings, bytes, ints, and bools, so Marshal cannot fail; this branch is defensive only.
 	}
 	if err := os.WriteFile(r.outPath, data, 0o600); err != nil {
-		panic(fmt.Sprintf("rust: cannot write intended manifest: %v", err))
+		return fmt.Errorf("rust: cannot write intended manifest: %v", err)
 	}
+	return nil
 }
 
 // witness replays the framework's own load fixing and formatting for one
 // visited package and diffs against the original bytes. It reports whether
 // the package changed.
-func (r *manifestRecorder) witness(rec packageRecord) (intendedFile, bool) {
+func (r *manifestRecorder) witness(rec packageRecord) (intendedFile, bool, error) {
 	var file intendedFile
 	if rec.file == nil {
 		if len(rec.gen) == 0 {
 			// Mirrors the framework: no file is created when nothing was
 			// generated for a directory without a BUILD file.
-			return file, false
+			return file, false, nil
 		}
 		built := rule.EmptyFile(filepath.Join(rec.dir, rec.cfg.DefaultBuildFileName()), rec.rel)
 		for _, g := range rec.gen {
 			g.Insert(built)
 		}
-		merger.FixLoads(built, r.knownLoads(rec))
+		loads, err := r.knownLoads(rec)
+		if err != nil {
+			return file, false, err
+		}
+		merger.FixLoads(built, loads)
 		file.Path = manifestPath(rec.rel, rec.cfg.DefaultBuildFileName())
 		file.CreateContent = built.Format()
-		return file, true
+		return file, true, nil
 	}
 	original := rec.file.Content
-	merger.FixLoads(rec.file, r.knownLoads(rec))
+	loads, err := r.knownLoads(rec)
+	if err != nil {
+		return file, false, err
+	}
+	merger.FixLoads(rec.file, loads)
 	intended := rec.file.Format()
 	if bytes.Equal(original, intended) {
-		return file, false
+		return file, false, nil
 	}
 	file.Path = manifestPath(rec.rel, filepath.Base(rec.file.Path))
 	file.OriginalContent = original
 	file.Edits = diffLines(original, intended)
 	if len(file.Edits) == 0 {
-		panic(fmt.Sprintf("rust: changed package %q produced no edits", rec.rel)) // LCOV_EXCL_LINE - reason: differing bytes always differ in at least one line run, so a changed package always yields a non-noop edit; this branch is defensive only.
+		return file, false, fmt.Errorf("rust: changed package %q produced no edits", rec.rel) // LCOV_EXCL_LINE - reason: differing bytes always differ in at least one line run, so a changed package always yields a non-noop edit; this branch is defensive only.
 	}
-	return file, true
+	return file, true, nil
 }
 
 // knownLoads replays the framework's load collection for the recorder's
@@ -319,7 +336,9 @@ func (r *manifestRecorder) witness(rec packageRecord) (intendedFile, bool) {
 // kind-mapping adjustment for the package's pre-replacement kinds. With no
 // map_kind matches this is exactly the framework's load list, and
 // merger.FixLoads converges, so the replayed bytes equal the emitted ones.
-func (r *manifestRecorder) knownLoads(rec packageRecord) []rule.LoadInfo {
+// A cyclic kind mapping is a configuration error, returned for the language
+// error accumulator instead of panicking.
+func (r *manifestRecorder) knownLoads(rec packageRecord) ([]rule.LoadInfo, error) {
 	return applyKindMappings(rec, r.apparentLoads(rec.cfg.ModuleToApparentName))
 }
 
@@ -333,23 +352,28 @@ func manifestPath(rel, base string) string {
 
 // applyKindMappings mirrors the framework's load adjustment: kinds
 // recorded before replacement replay the same transitive map_kind
-// resolution over the run's KindMap.
-func applyKindMappings(rec packageRecord, loads []rule.LoadInfo) []rule.LoadInfo {
+// resolution over the run's KindMap. A cyclic mapping is a configuration
+// error, returned instead of panicking.
+func applyKindMappings(rec packageRecord, loads []rule.LoadInfo) ([]rule.LoadInfo, error) {
 	var mapped []config.MappedKind
 	for _, kind := range append(append([]string{}, rec.genKinds...), rec.oldKinds...) {
-		if repl := replacementKind(rec.cfg.KindMap, kind); repl != nil {
+		repl, err := replacementKind(rec.cfg.KindMap, kind)
+		if err != nil {
+			return nil, err
+		}
+		if repl != nil {
 			mapped = append(mapped, *repl)
 		}
 	}
 	if len(mapped) == 0 {
-		return loads
+		return loads, nil
 	}
 	merged := make([]rule.LoadInfo, len(loads))
 	copy(merged, loads)
 	for _, repl := range mapped {
 		merged = appendOrMergeKindMapping(merged, repl)
 	}
-	return merged
+	return merged, nil
 }
 
 // appendOrMergeKindMapping mirrors the framework's load-list adjustment
@@ -368,24 +392,25 @@ func appendOrMergeKindMapping(loads []rule.LoadInfo, repl config.MappedKind) []r
 }
 
 // replacementKind mirrors the framework's transitive map_kind resolution.
-// A loop is unreachable here: the framework panics during generation,
-// before AfterResolvingDeps runs the recorder.
-func replacementKind(kindMap map[string]config.MappedKind, kind string) *config.MappedKind {
+// A cyclic mapping is a configuration error: the recorder detects it here
+// and returns an error so the run fails closed with an actionable message
+// instead of a Go stack trace.
+func replacementKind(kindMap map[string]config.MappedKind, kind string) (*config.MappedKind, error) {
 	var mapped *config.MappedKind
 	seen := make(map[string]struct{})
 	for {
 		replacement, ok := kindMap[kind]
 		if !ok {
-			return mapped
+			return mapped, nil
 		}
 		if _, dup := seen[replacement.KindName]; dup {
-			panic(fmt.Sprintf("rust: kind map loop at %q", replacement.KindName))
+			return nil, fmt.Errorf("rust: kind map loop at %q", replacement.KindName)
 		}
 		seen[replacement.KindName] = struct{}{}
 		current := replacement
 		mapped = &current
 		if kind == replacement.KindName {
-			return mapped
+			return mapped, nil
 		}
 		kind = replacement.KindName
 	}
