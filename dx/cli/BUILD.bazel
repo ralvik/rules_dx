@@ -50,6 +50,7 @@ rust_library(
         "//dx/update:dx_update",
         "//generation/result:generation_result",
         "//quality/result:quality_result",
+        "//tools/coverage:coverage_gate",
     ],
 )
 
@@ -106,6 +107,7 @@ rust_test(
         "//dx/update:dx_update",
         "//generation/result:generation_result",
         "//quality/result:quality_result",
+        "//tools/coverage:coverage_gate",
     ],
 )
 

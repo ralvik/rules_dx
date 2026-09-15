@@ -198,6 +198,10 @@ pub struct Invocation {
     pub output: OutputMode,
     pub reports: Vec<ReportRequest>,
     pub fail_on: Threshold,
+    /// `dx coverage --min-coverage <percent>`: required line-coverage
+    /// percent over the collected LCOV (Coverage only; `None` collects
+    /// without enforcing a threshold).
+    pub min_coverage: Option<u32>,
     pub targets: Vec<String>,
     pub bazel_options: Vec<String>,
     pub bazel_clean: bool,
@@ -246,6 +250,9 @@ pub enum ArgsError {
     BadFailOn {
         value: String,
     },
+    BadMinCoverage {
+        value: String,
+    },
     BadReport {
         value: String,
     },
@@ -278,6 +285,9 @@ impl std::fmt::Display for ArgsError {
             }
             ArgsError::BadFailOn { value } => {
                 write!(f, "unknown --fail-on {value:?}: want info|warning|error")
+            }
+            ArgsError::BadMinCoverage { value } => {
+                write!(f, "invalid --min-coverage {value:?}: want an integer 0-100")
             }
             ArgsError::BadReport { value } => {
                 write!(
@@ -343,6 +353,16 @@ fn parse_report(value: &str) -> Result<ReportRequest, ArgsError> {
     }
 }
 
+/// Parses a `--min-coverage` value into an integer percent 0-100.
+fn parse_min_coverage(value: &str) -> Result<u32, ArgsError> {
+    match value.parse::<u32>() {
+        Ok(percent) if percent <= 100 => Ok(percent),
+        _ => Err(ArgsError::BadMinCoverage {
+            value: value.to_owned(),
+        }),
+    }
+}
+
 /// Parses a full `dx` command line without the executable name.
 ///
 /// Global options may appear before or after the command; the first
@@ -360,6 +380,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     let mut output_name = "text".to_owned();
     let mut reports = Vec::new();
     let mut fail_on_name = "warning".to_owned();
+    let mut min_coverage: Option<u32> = None;
     let mut targets = Vec::new();
     let mut bazel_options = Vec::new();
     let mut bazel_clean = false;
@@ -427,6 +448,10 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                 "--fail-on" => {
                     let value = take_value(args, &mut index, "--fail-on", inline)?;
                     fail_on_name = value.to_owned();
+                }
+                "--min-coverage" => {
+                    let value = take_value(args, &mut index, "--min-coverage", inline)?;
+                    min_coverage = Some(parse_min_coverage(value)?);
                 }
                 "--check" => {
                     if inline.is_some() {
@@ -708,6 +733,15 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
             });
         }
     }
+    // `--min-coverage` belongs to `coverage` only: every other command
+    // (workflow siblings, quality, umbrellas, managed, adoption) fails
+    // fast instead of silently ignoring the threshold.
+    if min_coverage.is_some() && command != Command::Coverage {
+        return Err(ArgsError::UnsupportedOption {
+            command: command.name(),
+            option: "--min-coverage".to_owned(),
+        });
+    }
     let output = OutputMode::parse(&output_name, quiet).map_err(|_| ArgsError::BadOutput {
         value: output_name.clone(),
     })?;
@@ -891,6 +925,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         output,
         reports,
         fail_on,
+        min_coverage,
         targets,
         bazel_options,
         bazel_clean,
@@ -956,6 +991,55 @@ mod tests {
         assert!(got.targets.is_empty());
         assert!(got.bazel_options.is_empty());
         assert_eq!(got.mode(), "default");
+    }
+
+    #[test]
+    fn min_coverage_parses_for_coverage_only() {
+        let got = parse(&args(&["coverage", "--min-coverage", "80"])).expect("parse");
+        assert_eq!(got.command, Command::Coverage);
+        assert_eq!(got.min_coverage, Some(80));
+        let inline = parse(&args(&["coverage", "--min-coverage=100"])).expect("parse");
+        assert_eq!(inline.min_coverage, Some(100));
+        let zero = parse(&args(&["coverage", "--min-coverage=0"])).expect("parse");
+        assert_eq!(zero.min_coverage, Some(0));
+        let bare = parse(&args(&["coverage"])).expect("parse");
+        assert_eq!(bare.min_coverage, None);
+    }
+
+    #[test]
+    fn min_coverage_rejects_bad_values_and_other_commands() {
+        assert_eq!(
+            parse(&args(&["coverage", "--min-coverage=eighty"])),
+            Err(ArgsError::BadMinCoverage {
+                value: "eighty".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["coverage", "--min-coverage=101"])),
+            Err(ArgsError::BadMinCoverage {
+                value: "101".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["coverage", "--min-coverage"])),
+            Err(ArgsError::MissingValue {
+                option: "--min-coverage".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["test", "--min-coverage=80"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "test",
+                option: "--min-coverage".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["lint", "--min-coverage=80"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "lint",
+                option: "--min-coverage".to_owned(),
+            })
+        );
     }
 
     #[test]

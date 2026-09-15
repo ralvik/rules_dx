@@ -46,3 +46,10 @@ format and uses the shared `--report` stdout-or-file destination contract. Addit
 formats require an authoritative adapter or a later compatibility decision. Because
 LCOV has no portable partial marker, failed collection is signaled by command status and
 the live NDJSON or stderr diagnostic while available validated records remain valid LCOV.
+
+`dx coverage --min-coverage <percent>` additionally enforces a line-coverage
+threshold over the collected LCOV: covered over eligible executable lines must
+reach the integer percent, else the command exits 1. `LCOV_EXCL_*` source
+markers (with a nearby `reason:` comment) exclude lines from the denominator;
+sources that fail to load and non-Rust/Go records count raw. Without the flag,
+coverage collects and reports with no threshold verdict.

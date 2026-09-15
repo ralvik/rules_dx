@@ -21,8 +21,8 @@ use crate::plan::{
     GENERATE_ENV_MODE, GENERATE_ENV_SCOPE, OUTPUT_GROUP,
 };
 use crate::reports::{
-    junit_infrastructure_case, parse_test_xml, plan_reports, render_junit, render_sarif,
-    validate_lcov, Destination, JunitCase, PlannedReport, ReportError,
+    coverage_line_rate, junit_infrastructure_case, parse_test_xml, plan_reports, render_junit,
+    render_sarif, validate_lcov, Destination, JunitCase, PlannedReport, ReportError,
 };
 use crate::resolve::{resolve, resolve_for_test, resolve_run, QueryRunner, ResolveError};
 use dx_apply::{FileSystem, RealFileSystem};
@@ -59,6 +59,7 @@ const CODE_UNREADABLE_BEP: &str = "unreadable_bep";
 const CODE_INVALID_BEP: &str = "invalid_bep";
 const CODE_DIFF_FAILED: &str = "diff_failed";
 const CODE_REPORT_FAILED: &str = "report_failed";
+const CODE_COVERAGE_BELOW_MINIMUM: &str = "coverage_below_minimum";
 /// Stable operational error code for managed-state cleanup failures:
 /// a malformed current selection, commit-lock contention, or a prune
 /// mutation error all fail closed with nothing adopted or repaired.
@@ -399,7 +400,7 @@ fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
     let _ = writeln!(err, "dx: {message}");
     let _ = writeln!(
         err,
-        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] <audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]"
+        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]"
     );
     pre_exec_code()
 }
@@ -2530,6 +2531,7 @@ fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
             output: invocation.output,
             reports: phase_reports,
             fail_on: invocation.fail_on,
+            min_coverage: invocation.min_coverage,
             targets: invocation.targets.clone(),
             bazel_options: invocation.bazel_options.clone(),
             bazel_clean: false,
@@ -2884,9 +2886,55 @@ fn execute_test_reports(
             let _ = writeln!(err, "dx: incomplete_results: {detail}");
         }
     }
+    let mut threshold_ok = true;
+    if verb == WorkflowVerb::Coverage {
+        if let Some(minimum) = invocation.min_coverage {
+            let summary = match coverage_line_rate(&lcov_documents, &|path| {
+                std::fs::read_to_string(workspace.join(path)).ok()
+            }) {
+                Ok((covered, eligible)) if eligible > 0 => {
+                    let percent = 100.0 * covered as f64 / eligible as f64;
+                    let passed = covered * 100 >= u64::from(minimum) * eligible;
+                    threshold_ok = passed;
+                    if passed {
+                        format!(
+                            "coverage {percent:.2}% ({covered}/{eligible} lines) meets minimum {minimum}%"
+                        )
+                    } else {
+                        format!(
+                            "coverage_below_minimum: coverage {percent:.2}% ({covered}/{eligible} lines) below minimum {minimum}%"
+                        )
+                    }
+                }
+                Ok(_) => {
+                    threshold_ok = false;
+                    "coverage_below_minimum: no executable lines in the collected LCOV".to_owned()
+                }
+                Err(error) => {
+                    threshold_ok = false;
+                    format!("coverage_below_minimum: {error}")
+                }
+            };
+            if invocation.output == OutputMode::Json {
+                if !threshold_ok {
+                    if let Ok(event) = dx_output::error_event(
+                        CODE_COVERAGE_BELOW_MINIMUM,
+                        &summary,
+                        None,
+                        None,
+                        None,
+                    ) {
+                        let _ = write_event(out, &event);
+                    }
+                }
+            } else {
+                let _ = writeln!(err, "dx: {summary}");
+            }
+        }
+    }
     let code = if bazel_code != 0 {
         bazel_code
-    } else if complete && reports_ok {
+    } else if complete && reports_ok && threshold_ok {
         0
     } else {
         1
@@ -4697,6 +4745,76 @@ mod tests {
         assert!(err.contains("incomplete_results"), "{err}");
     }
 
+    const HALF_LCOV: &str = "SF:src/a.py\nDA:1,1\nDA:2,0\nend_of_record\n";
+
+    fn coverage_harness(name: &str, tracefile: &[u8]) -> Harness {
+        let harness = Harness::new(name);
+        let uri = write_bep_artifact(&harness, "coverage.dat", tracefile);
+        Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(String::from("test.lcov"), uri)],
+            )]),
+            ..harness
+        }
+    }
+
+    #[test]
+    fn coverage_min_coverage_passes_at_threshold() {
+        let harness = coverage_harness("cov-threshold-ok", MINIMAL_LCOV.as_bytes());
+        let (code, _, err) = harness.run(&["coverage", "--output=text", "--min-coverage=100"]);
+        assert_eq!(code, 0, "{err}");
+        assert!(err.contains("meets minimum 100%"), "{err}");
+    }
+
+    #[test]
+    fn coverage_min_coverage_fails_below_threshold() {
+        let harness = coverage_harness("cov-threshold-low", HALF_LCOV.as_bytes());
+        let (code, _, err) = harness.run(&["coverage", "--output=text", "--min-coverage=80"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("coverage_below_minimum"), "{err}");
+        assert!(err.contains("50.00% (1/2 lines)"), "{err}");
+    }
+
+    #[test]
+    fn coverage_min_coverage_failure_reports_json_event() {
+        let harness = coverage_harness("cov-threshold-json", HALF_LCOV.as_bytes());
+        let (code, out, _) = harness.run(&["coverage", "--output=json", "--min-coverage=80"]);
+        assert_eq!(code, 1, "{out}");
+        assert!(out.contains("coverage_below_minimum"), "{out}");
+    }
+
+    #[test]
+    fn coverage_min_coverage_fails_without_executable_lines() {
+        let harness = coverage_harness("cov-threshold-empty", b"SF:src/a.py\nend_of_record\n");
+        let (code, _, err) = harness.run(&["coverage", "--output=text", "--min-coverage=80"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("no executable lines"), "{err}");
+    }
+
+    #[test]
+    fn coverage_min_coverage_rejects_invalid_markers() {
+        let harness = Harness::new("cov-threshold-markers");
+        let source = harness.workspace.join("src/lib.rs");
+        std::fs::create_dir_all(source.parent().expect("parent")).expect("mkdir");
+        std::fs::write(&source, "// LCOV_EXCL_LINE\nfn a() {}\n").expect("write");
+        let uri = write_bep_artifact(
+            &harness,
+            "coverage.dat",
+            b"SF:src/lib.rs\nDA:1,1\nDA:2,1\nend_of_record\n",
+        );
+        let harness = Harness {
+            raw_bep: Some(vec![test_result_line(
+                "//a:t",
+                &[(String::from("test.lcov"), uri)],
+            )]),
+            ..harness
+        };
+        let (code, _, err) = harness.run(&["coverage", "--output=text", "--min-coverage=80"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("coverage_below_minimum"), "{err}");
+    }
+
     #[test]
     fn run_label_passthrough_preserves_status_on_stderr() {
         let harness = Harness::new("run-ok");
@@ -5100,6 +5218,7 @@ mod tests {
             output,
             reports,
             fail_on: dx_output::Threshold::Warning,
+            min_coverage: None,
             targets: vec!["//app:bin".to_owned()],
             bazel_options: Vec::new(),
             bazel_clean: false,
