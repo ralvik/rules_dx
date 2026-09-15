@@ -18,5 +18,14 @@ jobs:
       rules_dx_version: "0.0.0"
       docs_scope: "//docs/..."
       docs_dir: "docs"
-      publish: false
-    secrets: inherit
+      # Publishing deploys docs_dir to GitHub Pages. Gate on the default
+      # branch so pull requests stay check-only.
+      publish: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    # Least privilege: the reusable workflow's publish job needs
+    # pages:write + id-token:write, so the caller must grant them on the
+    # calling job (no secrets: inherit: the workflow defines no secrets).
+    # Other jobs in this file keep their own narrower permissions.
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

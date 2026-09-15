@@ -13,8 +13,14 @@ jobs:
       rules_dx_version: "0.0.0"
       docs_scope: "//docs/..."
       docs_dir: "docs"
-      publish: false # true deploys the validated tree to GitHub Pages
-    secrets: inherit
+      publish: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    # Required: the reusable publish job needs pages:write +
+    # id-token:write, so grant them on the calling job. No
+    # secrets: inherit: the workflow defines no secrets.
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
 ```
 
 `docs-check` runs `dx docs --check` plus `dx lint --check` over

@@ -33,7 +33,11 @@ jobs:
       rules_dx_version: "0.0.0"
       docs_scope: "//docs/..."
       docs_dir: "docs"
-      publish: false
+      publish: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
   build-test:
     name: build-test (Linux x86_64 glibc, local-only)
     runs-on: ubuntu-latest
