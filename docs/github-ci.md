@@ -38,6 +38,18 @@ does not manage consumer repository governance or prescribe CODEOWNERS/reviewer 
 This repository's [Codecov selection](testing/README.md#github-coverage-reporting) does not
 require consumers to use Codecov.
 
+## Docs CI
+
+The same caller-pin pattern covers documentation: `.github/workflows/reusable-docs.yml`
+is a reusable workflow running `dx docs --check` plus `dx lint --check` over a
+caller-selected docs scope, with an opt-in `publish` input that deploys the validated
+docs tree to GitHub Pages. The deployed content is the validated tree, not a rendered
+site; the renderer arrives via [issue #10](https://github.com/ralvik/rules_dx/issues/10).
+Third-party reuse is templated in `examples/docs-ci/`; this repository self-calls the
+workflow from `.github/workflows/ci.yml` (check-only on pull requests, publishing on
+`main`). Pages needs source GitHub Actions enabled in repository settings before the
+first publishing run.
+
 ## Check Selection
 
 All nine checks are enabled in the starter. Consumers may explicitly disable individual
