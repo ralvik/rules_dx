@@ -36,7 +36,8 @@ pub struct FilePatch<'a> {
 }
 
 /// Diff rendering failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{self:?}")]
 pub enum DiffError {
     /// A path cannot be represented unambiguously in unified form.
     UnrepresentablePath { path: String },
@@ -52,14 +53,6 @@ pub enum DiffError {
     /// never panic).
     Internal { detail: String },
 }
-
-impl std::fmt::Display for DiffError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for DiffError {}
 
 /// Number of context lines around each hunk.
 const CONTEXT: usize = 3;

@@ -26,7 +26,7 @@ rust_library(
     crate_name = "generation_result",
     crate_root = "src/lib.rs",
     deps = crate_deps(
-        ["blake3"],
+        ["blake3", "thiserror"],
         package_name = "generation/generation_result",
     ) + [
         "//generation:result_proto_rs",
@@ -44,7 +44,7 @@ rust_test(
     ),
     crate = ":generation_result",
     deps = crate_deps(
-        ["blake3"],
+        ["blake3", "thiserror"],
         package_name = "generation/generation_result",
     ) + ["//generation:result_proto_rs"],
 )
