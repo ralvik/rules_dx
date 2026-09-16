@@ -7,8 +7,10 @@ edition = "2021"
 chrono = { version = "0.4", default-features = false, features = ["alloc"] }
 hex = "0.4"
 semver = "1"
+serde = { version = "1", features = ["derive"] }
 spdx = "0.13"
 thiserror = "2"
+toml = { version = "1", default-features = false, features = ["parse", "serde"] }
 url = "2"
 
 [lib]
