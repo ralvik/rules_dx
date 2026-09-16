@@ -10,7 +10,7 @@ Dirty inputs reuse the existing `real_dirty.*` files by direct file label (no
 `QualitySourcesInfo`, so the real aspects yield no actions for them) or use
 analysis-time-written `generated` bytes. Delegated Clippy/rustc cells inject
 recorded upstream diagnostics byte-identical to the parser unit samples
-(`quality/adapter/src/parsers.rs`); dx never spawns those tools (#47/#48).
+(`quality/adapter/src/parsers/rust.rs`); dx never spawns those tools (#47/#48).
 
 Out of scope by design: `tsc` typechecks `typescript`/`tsx` but is
 target-coupled and never runs as a bare backend invocation (#56), so it has no

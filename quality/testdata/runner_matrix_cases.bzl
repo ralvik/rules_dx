@@ -10,7 +10,7 @@ table in `docs/quality/runner-matrix.md` maps every cell to its case.
 load(":runner_matrix_tests.bzl", "runner_matrix_suite")
 
 # Recorded upstream diagnostics for the delegated cells, byte-identical to
-# the parser unit samples (`quality/adapter/src/parsers.rs`: CLIPPY_LINT,
+# the parser unit samples (`quality/adapter/src/parsers/rust.rs`: CLIPPY_LINT,
 # RUSTC_TYPE_ERROR). Injected verbatim; do not hand-edit.
 _CLIPPY_LINT = """{"$message_type":"diagnostic","message":"length comparison to zero","code":{"code":"clippy::len_zero","explanation":null},"level":"warning","spans":[{"file_name":"matrix/clippy_len.rs","byte_start":19,"byte_end":33,"line_start":2,"line_end":2,"column_start":8,"column_end":22,"is_primary":true,"text":[],"label":null,"suggested_replacement":null,"suggestion_applicability":null,"expansion":null}],"children":[{"message":"using `is_empty` is clearer and more explicit","code":null,"level":"help","spans":[{"file_name":"matrix/clippy_len.rs","byte_start":19,"byte_end":33,"line_start":2,"line_end":2,"column_start":8,"column_end":22,"is_primary":true,"text":[],"label":null,"suggested_replacement":"\\"x\\".is_empty()","suggestion_applicability":"MachineApplicable","expansion":null}],"children":[],"rendered":null}],"rendered":null}
 {"$message_type":"diagnostic","message":"1 warning emitted","code":null,"level":"warning","spans":[],"children":[],"rendered":null}"""
