@@ -34,7 +34,7 @@ rust_library(
             "tempfile",
         ],
         package_name = "dx/dx_apply",
-    ),
+    ) + ["//dx/path:dx_path"],
 )
 
 rust_test(
