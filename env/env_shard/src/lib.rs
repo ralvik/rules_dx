@@ -97,6 +97,9 @@ fn check_exec_path(producer: &str, path: &str) -> Result<(), Error> {
     // artifact. Non-empty exec paths are BEP-matching suffixes:
     // workspace-relative, no backslashes or dot segments, and never the
     // reserved shard suffix so a shard can never back another shard.
+    // Uses `dx_path::classify` for ladder order; Empty/EmptyComponent are
+    // intentionally allowed here (empty returns Ok above; empty-component
+    // preserves parity with Starlark `env_plan_exec_error`) (#72 slice 4).
     if path.is_empty() {
         return Ok(());
     }
@@ -107,14 +110,15 @@ fn check_exec_path(producer: &str, path: &str) -> Result<(), Error> {
             reason: "must not use the reserved shard suffix",
         });
     }
-    let reason = if path.starts_with('/') {
-        Some("must not be absolute")
-    } else if path.contains('\\') {
-        Some("must not contain '\\'")
-    } else if path.split('/').any(|part| part == "." || part == "..") {
-        Some("must not contain '.' or '..' segments")
-    } else {
-        None
+    let reason = match dx_path::classify(path) {
+        None => None,
+        Some(dx_path::PathProblem::Empty) => None,
+        Some(dx_path::PathProblem::Absolute) => Some("must not be absolute"),
+        Some(dx_path::PathProblem::Backslash) => Some("must not contain '\\'"),
+        Some(dx_path::PathProblem::EmptyComponent) => None,
+        Some(dx_path::PathProblem::Dot) | Some(dx_path::PathProblem::DotDot) => {
+            Some("must not contain '.' or '..' segments")
+        }
     };
     match reason {
         Some(reason) => Err(Error::BadExecPath {
