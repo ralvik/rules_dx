@@ -95,20 +95,18 @@ pub fn emit_envelope(envelope: &Envelope) -> Result<String, EnvelopeError> {
 pub fn sha256_hex(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
-    let digest = hasher.finalize();
-    let mut out = String::with_capacity(digest.len() * 2);
-    for byte in digest {
-        out.push_str(&format!("{byte:02x}"));
-    }
-    out
+    hex::encode(hasher.finalize())
 }
 
 /// True for exactly 64 lowercase hex digits (the [`sha256_hex`] output form).
+/// Decode round-trip: `hex` accepts any even-length hex (including
+/// uppercase), so the re-encode comparison is what pins the lowercase-only,
+/// 32-byte form instead of re-implementing the digit loop.
 pub fn is_sha256_hex(text: &str) -> bool {
-    text.len() == 64
-        && text
-            .bytes()
-            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    match hex::decode(text) {
+        Ok(bytes) => bytes.len() == 32 && hex::encode(&bytes) == text,
+        Err(_) => false,
+    }
 }
 
 #[cfg(test)]
