@@ -381,47 +381,19 @@ mod tests {
         .into_bytes()
     }
 
-    fn workspace_with(contents: &[u8]) -> tempfile_like::TempDir {
-        let dir = tempfile_like::TempDir::new();
+    fn test_tempdir() -> tempfile::TempDir {
+        tempfile::Builder::new()
+            .prefix("dx-finalize-test-")
+            .tempdir_in(std::env::temp_dir())
+            .expect("create test scratch")
+    }
+
+    fn workspace_with(contents: &[u8]) -> tempfile::TempDir {
+        let dir = test_tempdir();
         let target = dir.path().join("rust/hello/BUILD.bazel");
         std::fs::create_dir_all(target.parent().unwrap()).unwrap();
         std::fs::write(&target, contents).unwrap();
         dir
-    }
-
-    /// Minimal tempdir helper: std-only so the finalizer itself gains no
-    /// dev-dependency surface.
-    mod tempfile_like {
-        use std::sync::atomic::{AtomicU64, Ordering};
-
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-
-        pub struct TempDir {
-            path: std::path::PathBuf,
-        }
-
-        impl TempDir {
-            pub fn new() -> Self {
-                let id = NEXT.fetch_add(1, Ordering::SeqCst);
-                let path = std::env::temp_dir().join(format!(
-                    "dx-finalize-test-{}-{}",
-                    std::process::id(),
-                    id
-                ));
-                std::fs::create_dir_all(&path).unwrap();
-                TempDir { path }
-            }
-
-            pub fn path(&self) -> &std::path::Path {
-                &self.path
-            }
-        }
-
-        impl Drop for TempDir {
-            fn drop(&mut self) {
-                let _ = std::fs::remove_dir_all(&self.path);
-            }
-        }
     }
 
     #[test]
@@ -474,7 +446,7 @@ mod tests {
         assert_eq!(mismatched.outcome, WriteOutcome::NotApplied as i32);
         assert_eq!(mismatched.failure_code, FAILURE_WRITE_MISMATCH);
 
-        let missing_dir = tempfile_like::TempDir::new();
+        let missing_dir = test_tempdir();
         let missing = run(missing_dir.path());
         assert_eq!(missing.outcome, WriteOutcome::NotApplied as i32);
         assert_eq!(missing.failure_code, FAILURE_MISSING_FILE);
@@ -494,7 +466,7 @@ mod tests {
 
     #[test]
     fn check_mode_reads_no_files_and_marks_unspecified() {
-        let dir = tempfile_like::TempDir::new();
+        let dir = test_tempdir();
         // No workspace files exist at all: check mode must still succeed.
         let manifest = finalize(&FinalizeInput {
             intended_json: &payload("check", true),
@@ -516,7 +488,7 @@ mod tests {
         // witness carries changes, after `AfterResolvingDeps` wrote it:
         // a complete check witness is trustworthy despite the failure,
         // and check mode still reads no workspace files.
-        let dir = tempfile_like::TempDir::new();
+        let dir = test_tempdir();
         // No workspace files exist at all: the manifest still succeeds.
         let manifest = finalize(&FinalizeInput {
             intended_json: &payload("check", true),
@@ -537,7 +509,7 @@ mod tests {
     fn check_mode_rejects_incomplete_scope() {
         // A check run that did not finish a scope must not produce a manifest
         // claiming otherwise: crate validation fails the whole artifact.
-        let dir = tempfile_like::TempDir::new();
+        let dir = test_tempdir();
         let err = finalize(&FinalizeInput {
             intended_json: &payload("check", false),
             workspace: dir.path(),
@@ -576,7 +548,7 @@ mod tests {
 
     #[test]
     fn rejects_garbage_schema_mode_and_shape() {
-        let dir = tempfile_like::TempDir::new();
+        let dir = test_tempdir();
         let run = |json: &[u8], check: bool, gazelle_ok: bool| {
             finalize(&FinalizeInput {
                 intended_json: json,
@@ -662,7 +634,7 @@ mod tests {
 
     #[test]
     fn rejects_unsafe_paths_before_filesystem_access() {
-        let dir = tempfile_like::TempDir::new();
+        let dir = test_tempdir();
         // Even a workspace containing a matching file must not satisfy an
         // escaping path: rejection happens before any join.
         std::fs::create_dir_all(dir.path().join("etc")).unwrap();
@@ -697,7 +669,7 @@ mod tests {
             r#""files":[{"path":"a","scope_index":7,"create_content":"eA=="}],"#,
             r#""ignored_imports":[]}"#,
         );
-        let dir = tempfile_like::TempDir::new();
+        let dir = test_tempdir();
         let err = finalize(&FinalizeInput {
             intended_json: json.as_bytes(),
             workspace: dir.path(),
@@ -712,7 +684,7 @@ mod tests {
 
     #[test]
     fn error_display_and_incomplete_results_complete() {
-        let dir = tempfile_like::TempDir::new();
+        let dir = test_tempdir();
         let err = finalize(&FinalizeInput {
             intended_json: &payload("check", false),
             workspace: dir.path(),
@@ -764,7 +736,7 @@ mod tests {
             r#""scopes":[{"value":"//rust/...","results_complete":true}],"#,
             r#""files":[],"ignored_imports":[]}"#,
         );
-        let dir = tempfile_like::TempDir::new();
+        let dir = test_tempdir();
         let manifest = finalize(&FinalizeInput {
             intended_json: json.as_bytes(),
             workspace: dir.path(),

@@ -255,11 +255,11 @@ fn run() -> i32 {
         }
     }
     let pid = std::process::id();
-    // Unique scratch directory per invocation (issue #93): embeds a
-    // fresh nonce so recycled PIDs and concurrent runs never share
-    // BEP/intended state. The same nonce flows into `Env` so the
-    // per-run file names inherit the uniqueness.
-    let (temp_dir, nonce) = match create_run_temp_dir(&std::env::temp_dir(), pid) {
+    // Unique scratch directory per invocation (issue #93): `tempfile`
+    // mints an exclusive `dx-run-*` directory so recycled PIDs and
+    // concurrent runs never share BEP/intended state. The same nonce
+    // flows into `Env` so the per-run file names inherit the uniqueness.
+    let (temp_dir, nonce) = match create_run_temp_dir(&std::env::temp_dir()) {
         Ok(run) => run,
         Err(error) => {
             let _ = writeln!(
@@ -285,7 +285,7 @@ fn run() -> i32 {
             workspace: &workspace,
             runner: &runner,
             query_runner: &query_runner,
-            temp_dir: &temp_dir,
+            temp_dir: temp_dir.path(),
             pid,
             nonce,
             out: &mut out,
@@ -299,11 +299,13 @@ fn run() -> i32 {
     let _ = out.flush();
     // Cleanup failure is a warning, not silent: a stale `dx-run-*`
     // directory otherwise accumulates with no signal to the operator.
-    if let Err(error) = std::fs::remove_dir_all(&temp_dir) {
+    // `TempDir::close` removes explicitly so the warning survives;
+    // dropping without close would clean silently on success.
+    let temp_display = temp_dir.path().display().to_string();
+    if let Err(error) = temp_dir.close() {
         let _ = writeln!(
             io::stderr(),
-            "dx: warning: cannot remove temporary directory {}: {error}",
-            temp_dir.display()
+            "dx: warning: cannot remove temporary directory {temp_display}: {error}",
         );
     }
     code
