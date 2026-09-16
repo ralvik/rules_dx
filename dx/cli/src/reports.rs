@@ -443,19 +443,28 @@ fn junit_error(detail: impl Into<String>) -> ReportError {
     }
 }
 
-fn xml_escape(text: &str) -> String {
-    let mut escaped = String::with_capacity(text.len());
-    for ch in text.chars() {
-        match ch {
-            '&' => escaped.push_str("&amp;"),
-            '<' => escaped.push_str("&lt;"),
-            '>' => escaped.push_str("&gt;"),
-            '"' => escaped.push_str("&quot;"),
-            '\'' => escaped.push_str("&apos;"),
-            _ => escaped.push(ch),
-        }
-    }
-    escaped
+/// Drops characters forbidden in XML 1.0 documents (`<0x20` except
+/// `\t`, `\n`, `\r`) so the quick-xml writer always emits well-formed
+/// documents even when test names or output capture control bytes.
+/// Forbidden codepoints become U+FFFD to keep the output deterministic
+/// and visibly lossy rather than silently concatenating.
+fn sanitize_xml(text: &str) -> String {
+    text.chars()
+        .map(|c| {
+            if c == '\t' || c == '\n' || c == '\r' || c >= '\u{20}' {
+                // `char` never holds surrogates; exclude non-characters
+                // that XML 1.0 forbids (`FFFE`/`FFFF` planes).
+                let v = c as u32;
+                if v == 0xFFFE || v == 0xFFFF {
+                    '\u{FFFD}'
+                } else {
+                    c
+                }
+            } else {
+                '\u{FFFD}'
+            }
+        })
+        .collect()
 }
 
 fn format_junit_time(time: f64) -> String {
@@ -813,23 +822,31 @@ pub fn parse_test_xml(
 }
 
 fn junit_message_element(kind: &str, message: &JunitMessage) -> String {
-    let mut element = String::from("<");
-    element.push_str(kind);
+    use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
+    use quick_xml::writer::Writer;
+    let mut writer = Writer::new(Vec::new());
+    let mut elem = BytesStart::new(kind);
     if let Some(note) = &message.message {
-        element.push_str(r#" message=""#);
-        element.push_str(&xml_escape(note));
-        element.push('"');
+        let clean_note = sanitize_xml(note);
+        elem.push_attribute(("message", clean_note.as_str()));
     }
     if message.text.is_empty() {
-        element.push_str("/>");
+        writer
+            .write_event(Event::Empty(elem))
+            .expect("junit message writer");
     } else {
-        element.push('>');
-        element.push_str(&xml_escape(&message.text));
-        element.push_str("</");
-        element.push_str(kind);
-        element.push('>');
+        let clean_text = sanitize_xml(&message.text);
+        writer
+            .write_event(Event::Start(elem))
+            .expect("junit message writer");
+        writer
+            .write_event(Event::Text(BytesText::new(&clean_text)))
+            .expect("junit message writer");
+        writer
+            .write_event(Event::End(BytesEnd::new(kind)))
+            .expect("junit message writer");
     }
-    element
+    String::from_utf8(writer.into_inner()).expect("junit writer is UTF-8")
 }
 
 /// Renders normalized Bazel test cases as one JUnit XML document.
@@ -841,6 +858,9 @@ fn junit_message_element(kind: &str, message: &JunitMessage) -> String {
 /// suite `tests`, `failures`, `errors`, `skipped`, and `time` counts
 /// are recomputed from the normalized cases.
 pub fn render_junit(suites: &[(String, Vec<JunitCase>)]) -> String {
+    use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
+    use quick_xml::writer::Writer;
+
     let mut ordered: Vec<(String, Vec<JunitCase>)> = suites.to_vec();
     for (_, cases) in &mut ordered {
         cases.sort_by(|a, b| {
@@ -853,97 +873,220 @@ pub fn render_junit(suites: &[(String, Vec<JunitCase>)]) -> String {
     }
     ordered.sort_by(|a, b| a.0.as_bytes().cmp(b.0.as_bytes()));
 
+    // Precompute per-suite and total counts before streaming the root
+    // element (the writer emits start tags before children).
+    struct SuiteCounts {
+        failures: u64,
+        errors: u64,
+        skipped: u64,
+        time: f64,
+    }
+    let mut suite_counts: Vec<SuiteCounts> = Vec::with_capacity(ordered.len());
     let mut total_tests = 0u64;
     let mut total_failures = 0u64;
     let mut total_errors = 0u64;
     let mut total_skipped = 0u64;
     let mut total_time = 0.0f64;
-    let mut body = String::new();
-    for (label, cases) in &ordered {
-        let mut failures = 0u64;
-        let mut errors = 0u64;
-        let mut skipped = 0u64;
-        let mut time = 0.0f64;
-        let mut rendered_cases = String::new();
+    for (_, cases) in &ordered {
+        let mut counts = SuiteCounts {
+            failures: 0,
+            errors: 0,
+            skipped: 0,
+            time: 0.0,
+        };
         for case in cases {
             total_tests += 1;
-            time += case.time;
-            let mut element = String::from("    <testcase name=\"");
-            element.push_str(&xml_escape(&junit_display_name(
-                &case.name,
-                case.shard,
-                case.attempt,
-            )));
-            element.push('"');
-            if let Some(classname) = &case.classname {
-                element.push_str(" classname=\"");
-                element.push_str(&xml_escape(classname));
-                element.push('"');
+            counts.time += case.time;
+            if case.failure.is_some() {
+                counts.failures += 1;
+                total_failures += 1;
             }
-            element.push_str(" time=\"");
-            element.push_str(&format_junit_time(case.time));
-            element.push('"');
+            if case.error.is_some() {
+                counts.errors += 1;
+                total_errors += 1;
+            }
+            if case.skipped.is_some() {
+                counts.skipped += 1;
+                total_skipped += 1;
+            }
+        }
+        total_time += counts.time;
+        suite_counts.push(counts);
+    }
+
+    let mut writer = Writer::new(Vec::new());
+    writer
+        .write_event(Event::Decl(BytesDecl::new("1.0", Some("UTF-8"), None)))
+        .expect("junit writer");
+    writer
+        .write_event(Event::Text(BytesText::from_escaped("\n")))
+        .expect("junit writer");
+    let mut root = BytesStart::new("testsuites");
+    root.push_attribute(("name", "dx"));
+    root.push_attribute(("tests", total_tests.to_string().as_str()));
+    root.push_attribute(("failures", total_failures.to_string().as_str()));
+    root.push_attribute(("errors", total_errors.to_string().as_str()));
+    root.push_attribute(("skipped", total_skipped.to_string().as_str()));
+    root.push_attribute(("time", format_junit_time(total_time).as_str()));
+    writer
+        .write_event(Event::Start(root))
+        .expect("junit writer");
+    writer
+        .write_event(Event::Text(BytesText::from_escaped("\n")))
+        .expect("junit writer");
+
+    for ((label, cases), counts) in ordered.iter().zip(suite_counts.iter()) {
+        writer
+            .write_event(Event::Text(BytesText::from_escaped("  ")))
+            .expect("junit writer");
+        let mut suite = BytesStart::new("testsuite");
+        let clean_label = sanitize_xml(label);
+        suite.push_attribute(("name", clean_label.as_str()));
+        suite.push_attribute(("tests", cases.len().to_string().as_str()));
+        suite.push_attribute(("failures", counts.failures.to_string().as_str()));
+        suite.push_attribute(("errors", counts.errors.to_string().as_str()));
+        suite.push_attribute(("skipped", counts.skipped.to_string().as_str()));
+        suite.push_attribute(("time", format_junit_time(counts.time).as_str()));
+        writer
+            .write_event(Event::Start(suite))
+            .expect("junit writer");
+        writer
+            .write_event(Event::Text(BytesText::from_escaped("\n")))
+            .expect("junit writer");
+        for case in cases {
+            writer
+                .write_event(Event::Text(BytesText::from_escaped("    ")))
+                .expect("junit writer");
+            let mut testcase = BytesStart::new("testcase");
+            let display = sanitize_xml(&junit_display_name(&case.name, case.shard, case.attempt));
+            testcase.push_attribute(("name", display.as_str()));
+            if let Some(classname) = &case.classname {
+                let clean_class = sanitize_xml(classname);
+                testcase.push_attribute(("classname", clean_class.as_str()));
+            }
+            testcase.push_attribute(("time", format_junit_time(case.time).as_str()));
             let has_children = case.failure.is_some()
                 || case.error.is_some()
                 || case.skipped.is_some()
                 || case.system_out.is_some()
                 || case.system_err.is_some();
             if !has_children {
-                element.push_str("/>\n");
-                rendered_cases.push_str(&element);
+                writer
+                    .write_event(Event::Empty(testcase))
+                    .expect("junit writer");
+                writer
+                    .write_event(Event::Text(BytesText::from_escaped("\n")))
+                    .expect("junit writer");
                 continue;
             }
-            element.push_str(">\n");
+            writer
+                .write_event(Event::Start(testcase))
+                .expect("junit writer");
+            writer
+                .write_event(Event::Text(BytesText::from_escaped("\n")))
+                .expect("junit writer");
+            // Child message elements reuse the writer-backed helper so
+            // escaping stays in one place; the helper output is already
+            // well-formed XML embedded verbatim.
             if let Some(failure) = &case.failure {
-                failures += 1;
-                total_failures += 1;
-                element.push_str("      ");
-                element.push_str(&junit_message_element("failure", failure));
-                element.push('\n');
+                let rendered = junit_message_element("failure", failure);
+                writer
+                    .write_event(Event::Text(BytesText::from_escaped("      ")))
+                    .expect("junit writer");
+                writer
+                    .write_event(Event::Text(BytesText::from_escaped(rendered.as_str())))
+                    .expect("junit writer");
+                writer
+                    .write_event(Event::Text(BytesText::from_escaped("\n")))
+                    .expect("junit writer");
             }
             if let Some(error) = &case.error {
-                errors += 1;
-                total_errors += 1;
-                element.push_str("      ");
-                element.push_str(&junit_message_element("error", error));
-                element.push('\n');
+                let rendered = junit_message_element("error", error);
+                writer
+                    .write_event(Event::Text(BytesText::from_escaped("      ")))
+                    .expect("junit writer");
+                writer
+                    .write_event(Event::Text(BytesText::from_escaped(rendered.as_str())))
+                    .expect("junit writer");
+                writer
+                    .write_event(Event::Text(BytesText::from_escaped("\n")))
+                    .expect("junit writer");
             }
             if let Some(skipped_case) = &case.skipped {
-                skipped += 1;
-                total_skipped += 1;
-                element.push_str("      ");
-                element.push_str(&junit_message_element("skipped", skipped_case));
-                element.push('\n');
+                let rendered = junit_message_element("skipped", skipped_case);
+                writer
+                    .write_event(Event::Text(BytesText::from_escaped("      ")))
+                    .expect("junit writer");
+                writer
+                    .write_event(Event::Text(BytesText::from_escaped(rendered.as_str())))
+                    .expect("junit writer");
+                writer
+                    .write_event(Event::Text(BytesText::from_escaped("\n")))
+                    .expect("junit writer");
             }
             if let Some(out) = &case.system_out {
-                element.push_str("      <system-out>");
-                element.push_str(&xml_escape(out));
-                element.push_str("</system-out>\n");
+                let clean_out = sanitize_xml(out);
+                writer
+                    .write_event(Event::Text(BytesText::from_escaped("      ")))
+                    .expect("junit writer");
+                writer
+                    .write_event(Event::Start(BytesStart::new("system-out")))
+                    .expect("junit writer");
+                writer
+                    .write_event(Event::Text(BytesText::new(&clean_out)))
+                    .expect("junit writer");
+                writer
+                    .write_event(Event::End(BytesEnd::new("system-out")))
+                    .expect("junit writer");
+                writer
+                    .write_event(Event::Text(BytesText::from_escaped("\n")))
+                    .expect("junit writer");
             }
             if let Some(err_text) = &case.system_err {
-                element.push_str("      <system-err>");
-                element.push_str(&xml_escape(err_text));
-                element.push_str("</system-err>\n");
+                let clean_err = sanitize_xml(err_text);
+                writer
+                    .write_event(Event::Text(BytesText::from_escaped("      ")))
+                    .expect("junit writer");
+                writer
+                    .write_event(Event::Start(BytesStart::new("system-err")))
+                    .expect("junit writer");
+                writer
+                    .write_event(Event::Text(BytesText::new(&clean_err)))
+                    .expect("junit writer");
+                writer
+                    .write_event(Event::End(BytesEnd::new("system-err")))
+                    .expect("junit writer");
+                writer
+                    .write_event(Event::Text(BytesText::from_escaped("\n")))
+                    .expect("junit writer");
             }
-            element.push_str("    </testcase>\n");
-            rendered_cases.push_str(&element);
+            writer
+                .write_event(Event::Text(BytesText::from_escaped("    ")))
+                .expect("junit writer");
+            writer
+                .write_event(Event::End(BytesEnd::new("testcase")))
+                .expect("junit writer");
+            writer
+                .write_event(Event::Text(BytesText::from_escaped("\n")))
+                .expect("junit writer");
         }
-        total_time += time;
-        body.push_str(&format!(
-            "  <testsuite name=\"{}\" tests=\"{}\" failures=\"{}\" errors=\"{}\" skipped=\"{}\" time=\"{}\">\n{}  </testsuite>\n",
-            xml_escape(label),
-            cases.len(),
-            failures,
-            errors,
-            skipped,
-            format_junit_time(time),
-            rendered_cases,
-        ));
+        writer
+            .write_event(Event::Text(BytesText::from_escaped("  ")))
+            .expect("junit writer");
+        writer
+            .write_event(Event::End(BytesEnd::new("testsuite")))
+            .expect("junit writer");
+        writer
+            .write_event(Event::Text(BytesText::from_escaped("\n")))
+            .expect("junit writer");
     }
-    format!(
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuites name=\"dx\" tests=\"{total_tests}\" failures=\"{total_failures}\" errors=\"{total_errors}\" skipped=\"{total_skipped}\" time=\"{}\">\n{body}</testsuites>\n",
-        format_junit_time(total_time),
-    )
+    writer
+        .write_event(Event::End(BytesEnd::new("testsuites")))
+        .expect("junit writer");
+    writer
+        .write_event(Event::Text(BytesText::from_escaped("\n")))
+        .expect("junit writer");
+    String::from_utf8(writer.into_inner()).expect("junit writer is UTF-8")
 }
 
 /// Renders one partial-infrastructure suite for JUnit collection that
@@ -1733,6 +1876,45 @@ mod tests {
         assert!(doc.contains("<system-out>out</system-out>"), "{doc}");
         assert!(doc.contains("<system-err>err</system-err>"), "{doc}");
         assert!(doc.starts_with("<?xml"), "{doc}");
+    }
+
+    #[test]
+    fn junit_writer_escapes_specials_and_sanitizes_controls() {
+        // Golden: `&<>"'` plus control bytes must round-trip through the
+        // quick-xml writer as well-formed XML (issue #219).
+        let tricky = "a&<>\"'\u{0}\u{1}\u{8}\u{b}\u{c}\u{e}b";
+        let doc = render_junit(&[(
+            format!("suite&<>\"'{tricky}"),
+            vec![JunitCase {
+                name: tricky.to_owned(),
+                classname: Some(format!("cls&<>\"'{tricky}")),
+                time: 0.5,
+                failure: Some(JunitMessage {
+                    message: Some(format!("msg&<>\"'{tricky}")),
+                    text: format!("body&<>\"'{tricky}"),
+                }),
+                error: None,
+                skipped: None,
+                system_out: Some(format!("out&<>{tricky}")),
+                system_err: Some(format!("err&<>{tricky}")),
+                shard: 0,
+                attempt: 0,
+            }],
+        )]);
+        // Writer escaping for attributes and text.
+        assert!(doc.contains("&amp;"), "{doc}");
+        assert!(doc.contains("&lt;"), "{doc}");
+        // Raw control bytes must never reach the document; they become
+        // U+FFFD via `sanitize_xml` while `\t\n\r` would be preserved.
+        for raw in ['\u{0}', '\u{1}', '\u{8}', '\u{b}', '\u{c}', '\u{e}'] {
+            assert!(!doc.contains(raw), "{doc}");
+        }
+        assert!(doc.contains("\u{FFFD}"), "{doc}");
+        // The writer output must re-parse as XML (well-formedness proof
+        // for Jenkins/GitLab ingestion).
+        let reparsed = parse_test_xml(doc.as_bytes(), 0, 0).expect("reparse");
+        assert_eq!(reparsed.len(), 1);
+        assert!(reparsed[0].failure.is_some());
     }
 
     #[test]
