@@ -1,6 +1,6 @@
 """M27 WP1 slices 1-7 + WP2 slices 8-9 + WP4 slices 10-11 + WP6 slice 12: pure consumer-CI planning (selection, revision, scheduling, supersession, reporting, fork/aggregate, rerun/scope/retry/scanning, triggers/platforms/no-op/revalidation, caller composition/pins, audit rendering, untrusted validation/thread deltas, preset onboarding)."""
 
-load("@crates//:crates.bzl", "aliases")
+load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_library", "rust_test")
@@ -16,6 +16,10 @@ rust_library(
     ),
     crate_name = "dx_ci",
     crate_root = "src/lib.rs",
+    deps = crate_deps(
+        ["thiserror"],
+        package_name = "dx/dx_ci",
+    ),
 )
 
 rust_test(

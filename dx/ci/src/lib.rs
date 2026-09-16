@@ -133,62 +133,36 @@ impl PlannedRevision {
 /// Malformed revision request: missing identities fail closed, and a PR
 /// whose test-merge cannot be created reports blocked — never a
 /// head-only fallback or aggregate success.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum RevisionError {
     /// PR head revision missing or empty.
+    #[error("PR head revision is required")]
     MissingHead,
     /// PR target-branch revision missing or empty.
+    #[error("PR target-branch revision is required")]
     MissingBase,
     /// Test-merge snapshot unavailable (merge conflict): validation is
     /// blocked. GitHub may suppress the PR workflow for conflicting PRs;
     /// the blocked-status path must not execute fork code with reporting
     /// privileges.
+    #[error("proposed merge unavailable (conflict): validation is blocked, not head-only")]
     BlockedOnConflict,
     /// Default-branch landed revision missing or empty.
+    #[error("landed revision is required for default-branch pushes")]
     MissingLanded,
     /// Default-branch name missing or empty.
+    #[error("branch name is required")]
     MissingBranch,
     /// Ordinary non-default-branch pushes alone do not trigger the starter.
+    #[error("non-default-branch pushes alone do not trigger the starter")]
     NotTriggered,
     /// Manual-dispatch revision missing or empty.
+    #[error("dispatch revision is required for manual runs")]
     MissingDispatchRevision,
     /// Merge-queue combined revision missing or empty.
+    #[error("combined queue revision is required for merge-queue runs")]
     MissingQueueRevision,
 }
-
-impl std::fmt::Display for RevisionError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            RevisionError::MissingHead => write!(f, "PR head revision is required"),
-            RevisionError::MissingBase => {
-                write!(f, "PR target-branch revision is required")
-            }
-            RevisionError::BlockedOnConflict => write!(
-                f,
-                "proposed merge unavailable (conflict): validation is blocked, not head-only"
-            ),
-            RevisionError::MissingLanded => {
-                write!(f, "landed revision is required for default-branch pushes")
-            }
-            RevisionError::MissingBranch => write!(f, "branch name is required"),
-            RevisionError::NotTriggered => write!(
-                f,
-                "non-default-branch pushes alone do not trigger the starter"
-            ),
-            RevisionError::MissingDispatchRevision => {
-                write!(f, "dispatch revision is required for manual runs")
-            }
-            RevisionError::MissingQueueRevision => {
-                write!(
-                    f,
-                    "combined queue revision is required for merge-queue runs"
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for RevisionError {}
 
 fn nonempty(value: &str) -> Option<String> {
     if value.is_empty() {
@@ -383,34 +357,15 @@ impl CiSelection {
 
 /// Malformed CI selection: unknown opt-outs or missing platform lists
 /// fail closed instead of silently narrowing validation.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum SelectionError {
     /// Caller disabled an ID outside the frozen nine.
+    #[error("unknown CI check {value:?}; want one of the nine starter checks")]
     UnknownCheck { value: String },
     /// A per-platform check is enabled but no platforms were supplied.
+    #[error("explicit platform selection is required when test, build, or coverage is enabled")]
     MissingPlatforms,
 }
-
-impl std::fmt::Display for SelectionError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SelectionError::UnknownCheck { value } => {
-                write!(
-                    f,
-                    "unknown CI check {value:?}; want one of the nine starter checks"
-                )
-            }
-            SelectionError::MissingPlatforms => {
-                write!(
-                    f,
-                    "explicit platform selection is required when test, build, or coverage is enabled"
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for SelectionError {}
 
 /// Plan a CI selection from caller opt-outs and platform spellings.
 ///
@@ -1109,29 +1064,15 @@ pub fn starter_triggers(request: &RevisionRequest<'_>) -> bool {
 /// mapping arrives with workflow qualification (`docs/github-ci.md#qualification`).
 /// This plans only the mechanics — explicit nonempty selection, no implicit
 /// default or substitution, verbatim spellings — over caller-supplied sets.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum PlatformError {
     /// No platforms supplied while a per-platform check is enabled.
+    #[error("explicit platform selection is required when test, build, or coverage is enabled")]
     Empty,
     /// A supplied spelling is outside the injected supported set.
+    #[error("unsupported platform {value:?}")]
     Unsupported { value: String },
 }
-
-impl std::fmt::Display for PlatformError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PlatformError::Empty => write!(
-                f,
-                "explicit platform selection is required when test, build, or coverage is enabled"
-            ),
-            PlatformError::Unsupported { value } => {
-                write!(f, "unsupported platform {value:?}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for PlatformError {}
 
 /// Validate an explicit platform selection against an injected supported set.
 ///
@@ -1222,30 +1163,14 @@ pub struct PlannedCaller {
 
 /// Malformed caller configuration: unknown opt-outs or platform-gate
 /// failures fail closed instead of silently narrowing validation.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum CallerError {
     /// Unknown check ID or missing platform list (see [`SelectionError`]).
-    Selection(SelectionError),
+    #[error(transparent)]
+    Selection(#[from] SelectionError),
     /// Empty or unsupported platform selection (see [`PlatformError`]).
-    Platform(PlatformError),
-}
-
-impl std::fmt::Display for CallerError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CallerError::Selection(inner) => write!(f, "{inner}"),
-            CallerError::Platform(inner) => write!(f, "{inner}"),
-        }
-    }
-}
-
-impl std::error::Error for CallerError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            CallerError::Selection(inner) => Some(inner),
-            CallerError::Platform(inner) => Some(inner),
-        }
-    }
+    #[error(transparent)]
+    Platform(#[from] PlatformError),
 }
 
 /// Plan one caller configuration from its owned inputs.
@@ -1303,29 +1228,15 @@ pub enum PinUpdate {
 
 /// Malformed pin change: missing pins or silent (unreviewed) upgrades fail
 /// closed — updates use reviewed version-pin changes, never silent upgrades.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum PinError {
     /// Either pin identity is missing or empty (no implicit latest/default).
+    #[error("explicit workflow pin identities are required")]
     MissingPin,
     /// Pin change without review.
+    #[error("workflow pin changes require review, not silent upgrades")]
     UnreviewedChange,
 }
-
-impl std::fmt::Display for PinError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PinError::MissingPin => write!(f, "explicit workflow pin identities are required"),
-            PinError::UnreviewedChange => {
-                write!(
-                    f,
-                    "workflow pin changes require review, not silent upgrades"
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for PinError {}
 
 /// Plan a workflow pin change over opaque pin identities.
 ///
@@ -1461,36 +1372,18 @@ pub fn audit_body_publishable(finding: &AuditFinding) -> bool {
 /// Malformed untrusted artifact: artifacts and PR metadata are untrusted
 /// inputs (`docs/github-ci.md#fork-security`) and privileged reporting must
 /// validate them before use, never trusting by presence.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum ArtifactError {
     /// Artifact snapshot identity missing or empty.
+    #[error("artifact snapshot identity is required")]
     MissingArtifact,
     /// Artifact digest identity missing or empty.
+    #[error("artifact digest identity is required")]
     MissingDigest,
     /// Artifact snapshot does not bind to the required validated snapshot.
+    #[error("artifact does not bind to the required validated snapshot")]
     SnapshotMismatch,
 }
-
-impl std::fmt::Display for ArtifactError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ArtifactError::MissingArtifact => {
-                write!(f, "artifact snapshot identity is required")
-            }
-            ArtifactError::MissingDigest => {
-                write!(f, "artifact digest identity is required")
-            }
-            ArtifactError::SnapshotMismatch => {
-                write!(
-                    f,
-                    "artifact does not bind to the required validated snapshot"
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for ArtifactError {}
 
 /// Validate one untrusted artifact against the required validated snapshot.
 ///
@@ -1521,31 +1414,15 @@ pub fn validate_artifact_snapshot(
 /// Malformed untrusted PR metadata: privileged reporting must validate
 /// metadata against the planned revision before creating, updating, or
 /// cleaning up review threads or the summary.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum MetadataError {
     /// A metadata identity is missing or empty.
+    #[error("PR metadata identities are required")]
     MissingField,
     /// Metadata does not match the planned revision (stale or foreign run).
+    #[error("PR metadata does not match the planned revision snapshot")]
     StaleSnapshot,
 }
-
-impl std::fmt::Display for MetadataError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            MetadataError::MissingField => {
-                write!(f, "PR metadata identities are required")
-            }
-            MetadataError::StaleSnapshot => {
-                write!(
-                    f,
-                    "PR metadata does not match the planned revision snapshot"
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for MetadataError {}
 
 /// Validate untrusted PR metadata against the planned revision.
 ///
@@ -1629,23 +1506,12 @@ pub const PRESET_RUNBOOK_STEPS: [&str; 5] = [
 /// (`docs/github-ci.md#qualification`), not in this crate. This plans only the
 /// shape: an explicit nonempty label preserved verbatim, never an implicit
 /// default or silent substitution.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum PresetLabelError {
     /// Label missing or empty (no implicit default).
+    #[error("explicit preset load label is required")]
     MissingLabel,
 }
-
-impl std::fmt::Display for PresetLabelError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PresetLabelError::MissingLabel => {
-                write!(f, "explicit preset load label is required")
-            }
-        }
-    }
-}
-
-impl std::error::Error for PresetLabelError {}
 
 /// Validate a consumer preset load label: nonempty opaque spellings pass
 /// through verbatim; missing/empty labels fail closed.
@@ -1696,36 +1562,18 @@ pub fn preset_regen_requires_review() -> bool {
 /// regen-and-review update must all be exercised through a clean external
 /// consumer; repository dogfood alone is insufficient (the caller proves the
 /// three legs, this crate only plans the gate).
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum PresetOnboardingError {
     /// Generation leg missing (no clean-consumer generation proof).
+    #[error("clean-consumer preset generation proof is required")]
     MissingGeneration,
     /// Import leg missing (no clean-consumer import proof).
+    #[error("clean-consumer preset import proof is required")]
     MissingImport,
     /// Regen leg missing or unreviewed (no reviewed flag-diff update proof).
+    #[error("preset regen-and-review update requires a reviewed flag diff")]
     UnreviewedRegen,
 }
-
-impl std::fmt::Display for PresetOnboardingError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PresetOnboardingError::MissingGeneration => {
-                write!(f, "clean-consumer preset generation proof is required")
-            }
-            PresetOnboardingError::MissingImport => {
-                write!(f, "clean-consumer preset import proof is required")
-            }
-            PresetOnboardingError::UnreviewedRegen => {
-                write!(
-                    f,
-                    "preset regen-and-review update requires a reviewed flag diff"
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for PresetOnboardingError {}
 
 /// Plan the clean-external-consumer preset proof.
 ///

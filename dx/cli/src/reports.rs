@@ -82,115 +82,69 @@ pub struct PlannedReport {
 /// CLI-detected pre-execution usage errors (exit code 2); rendering
 /// failures fail an otherwise successful invocation without altering
 /// the underlying findings or mutation plan.
-#[derive(Debug, Clone, PartialEq, Eq)]
+fn unsupported_format_message(command: &str, format: &str, supported: &[&str]) -> String {
+    if supported.is_empty() {
+        format!("unsupported report format {format:?} for {command}: no standard report exists")
+    } else {
+        format!(
+            "unsupported report format {format:?} for {command}: want {}",
+            supported.join("|")
+        )
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ReportError {
     /// A report was requested together with `--dry-run`.
+    #[error("--dry-run conflicts with every --report request")]
     DryRunConflict,
     /// The format is not supported by the command.
+    #[error(
+        "{msg}",
+        msg = unsupported_format_message(command, format, supported)
+    )]
     UnsupportedFormat {
         command: &'static str,
         format: String,
         supported: Vec<&'static str>,
     },
     /// The same format/destination pair was requested twice.
+    #[error("duplicate report {format:?} for destination {destination:?}")]
     DuplicateReport { format: String, destination: String },
     /// More than one standard report targets stdout.
+    #[error("more than one standard report targets stdout")]
     MultipleStdoutReports,
     /// A stdout report combined with `--output diff` or `--output json`.
+    #[error(
+        "a stdout report conflicts with --output {mode}: use --output text or a file destination"
+    )]
     StdoutReportConflictsMode { mode: &'static str },
     /// A finding without the stable identity SARIF requires.
+    #[error("invalid finding for SARIF export: {detail}")]
     InvalidFinding { detail: &'static str },
     /// A byte range without a path.
+    #[error("a byte range without a path cannot be located")]
     RangeWithoutPath,
     /// A byte range whose start exceeds its end.
+    #[error("a byte range starts after its end")]
     InvertedRange,
     /// A ranged finding without its source snapshot for line conversion.
+    #[error("missing source snapshot for ranged finding in {path:?}")]
     MissingSnapshot { path: String },
     /// A finding for a tool with no planned run.
+    #[error("finding references unknown tool {tool:?}")]
     UnknownTool { tool: String },
     /// A byte offset outside the snapshot or inside a character.
+    #[error("byte offset {offset} is not a character boundary in {path:?}")]
     BadOffset { path: String, offset: u64 },
     /// A Bazel-reported test XML artifact that cannot be parsed.
+    #[error("invalid Bazel test XML artifact: {detail}")]
     InvalidJunit { detail: String },
     /// A Bazel-reported combined tracefile that is not a syntactically
     /// complete LCOV document.
+    #[error("invalid Bazel combined LCOV tracefile: {detail}")]
     InvalidLcov { detail: String },
 }
-
-impl std::fmt::Display for ReportError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ReportError::DryRunConflict => {
-                write!(f, "--dry-run conflicts with every --report request")
-            }
-            ReportError::UnsupportedFormat {
-                command,
-                format,
-                supported,
-            } => {
-                if supported.is_empty() {
-                    write!(
-                        f,
-                        "unsupported report format {format:?} for {command}: no standard report exists"
-                    )
-                } else {
-                    write!(
-                        f,
-                        "unsupported report format {format:?} for {command}: want {}",
-                        supported.join("|")
-                    )
-                }
-            }
-            ReportError::DuplicateReport {
-                format,
-                destination,
-            } => {
-                write!(
-                    f,
-                    "duplicate report {format:?} for destination {destination:?}"
-                )
-            }
-            ReportError::MultipleStdoutReports => {
-                write!(f, "more than one standard report targets stdout")
-            }
-            ReportError::StdoutReportConflictsMode { mode } => {
-                write!(
-                    f,
-                    "a stdout report conflicts with --output {mode}: use --output text or a file destination"
-                )
-            }
-            ReportError::InvalidFinding { detail } => {
-                write!(f, "invalid finding for SARIF export: {detail}")
-            }
-            ReportError::RangeWithoutPath => {
-                write!(f, "a byte range without a path cannot be located")
-            }
-            ReportError::InvertedRange => {
-                write!(f, "a byte range starts after its end")
-            }
-            ReportError::MissingSnapshot { path } => {
-                write!(f, "missing source snapshot for ranged finding in {path:?}")
-            }
-            ReportError::UnknownTool { tool } => {
-                write!(f, "finding references unknown tool {tool:?}")
-            }
-            ReportError::BadOffset { path, offset } => {
-                write!(
-                    f,
-                    "byte offset {offset} is not a character boundary in {path:?}"
-                )
-            }
-            ReportError::InvalidJunit { detail } => {
-                write!(f, "invalid Bazel test XML artifact: {detail}")
-            }
-            ReportError::InvalidLcov { detail } => {
-                write!(f, "invalid Bazel combined LCOV tracefile: {detail}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for ReportError {}
 
 fn stdout_conflict(error: OutputError) -> ReportError {
     match error {
