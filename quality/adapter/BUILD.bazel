@@ -26,6 +26,7 @@ rust_library(
         "src/parsers/rust.rs",
         "src/parsers/rustfmt.rs",
         "src/parsers/taplo.rs",
+        "src/parsers/tsc.rs",
         "src/parsers/ty.rs",
         "src/parsers/vale.rs",
     ],
