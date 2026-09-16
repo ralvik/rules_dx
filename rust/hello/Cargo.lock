@@ -147,6 +147,7 @@ name = "dx_audit"
 version = "0.0.0"
 dependencies = [
  "hex",
+ "spdx",
  "thiserror",
  "url",
 ]
@@ -643,6 +644,15 @@ name = "smallvec"
 version = "1.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba467056f1b547ed52077911161fc86985becbc60e8e1857c8a144dab0def891"
+
+[[package]]
+name = "spdx"
+version = "0.13.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "081670c233dfbed55690cc0cd38424e0e24ac1b2673d0b408b3f7b684738dfa9"
+dependencies = [
+ "smallvec",
+]
 
 [[package]]
 name = "stable_deref_trait"

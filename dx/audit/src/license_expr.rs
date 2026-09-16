@@ -23,10 +23,10 @@
 //! This module evaluates over injected expression trees and injected
 //! identity/approval predicates only, so the lattice stays deterministic
 //! and unit-testable without any lockfile, advisory snapshot, or TOML
-//! policy file. SPDX text parsing, per-ecosystem license-identity
+//! policy file. [`parse_license`] builds the expression shape from SPDX
+//! text via the upstream `spdx` parser; per-ecosystem license-identity
 //! mappings, policy-table loading, tier attribution for shared locks,
-//! and proof evidence stay O58-gated for later slices; the expression
-//! shape here is the injected AST a future parser must produce.
+//! and proof evidence stay O58-gated for later slices.
 
 /// Distribution tier under evaluation. `distributed` release roots
 /// leave the company and face the strict table; `internal` roots are
@@ -61,9 +61,10 @@ pub enum TierOutcome {
     Deny,
 }
 
-/// Injected SPDX expression tree. A future parser produces this shape
-/// from lock metadata; per-ecosystem text-to-identity mappings are O58
-/// qualification, so unparseable text arrives as [`LicenseExpr::Unknown`].
+/// Injected SPDX expression tree. [`parse_license`] produces this shape
+/// from lock metadata via the upstream `spdx` parser; per-ecosystem
+/// text-to-identity mappings are O58 qualification, so text the parser
+/// rejects arrives as [`LicenseExpr::Unknown`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LicenseExpr {
     /// One SPDX identity (or `UNKNOWN` spelled as unknown text).
@@ -72,8 +73,11 @@ pub enum LicenseExpr {
     Or(Vec<LicenseExpr>),
     /// `A AND B` over two or more conjuncts.
     And(Vec<LicenseExpr>),
-    /// `base WITH exception`: `text` is the complete expression
-    /// verbatim, the only string verbatim approval may name.
+    /// `base WITH exception`: `text` is the canonical `{base} WITH
+    /// {exception}` rendering, the only string verbatim approval may
+    /// name (the upstream parser's requirement span covers the base
+    /// license only, so the full requirement cannot be sliced back out
+    /// of the operator input).
     With {
         base: Box<LicenseExpr>,
         exception: String,
@@ -81,6 +85,104 @@ pub enum LicenseExpr {
     },
     /// Unparseable license text. Never silently allowed.
     Unknown,
+}
+
+/// Parse SPDX license-expression text into the [`LicenseExpr`] shape.
+///
+/// Uses the upstream `spdx` parser in strict mode: syntactically or
+/// semantically invalid text — including unknown SPDX identities — maps
+/// to [`LicenseExpr::Unknown`], denied in `distributed` and inventoried
+/// in `internal` by [`evaluate`]. Unknown-to-SPDX text therefore no
+/// longer reaches per-identity approval as an [`LicenseExpr::Ident`];
+/// failing closed is deliberate (an unrecognized license must never be
+/// silently allowed, and a bare-identity approval must not bless text
+/// the parser cannot attribute).
+///
+/// Valid `WITH` requirements render `text` canonically as `{base}
+/// WITH {exception}`, so verbatim approval matches canonically spelled
+/// policy input; the base identity and exception strings are the
+/// parser's canonical spellings for stable policy-table lookup. Same-operator nesting
+/// flattens (`A OR (B OR C)` parses like `A OR B OR C`), so parsed trees
+/// compare equal to hand-built flat combinations. The allow/review/deny
+/// lattice itself stays custom in [`evaluate`].
+pub fn parse_license(text: &str) -> LicenseExpr {
+    let expr = match spdx::Expression::parse(text) {
+        Ok(expr) => expr,
+        Err(_) => return LicenseExpr::Unknown,
+    };
+    let mut stack: Vec<LicenseExpr> = Vec::new();
+    for node in expr.iter() {
+        match node {
+            spdx::expression::ExprNode::Req(req) => stack.push(leaf_expr(req)),
+            spdx::expression::ExprNode::Op(op) => {
+                let rhs = match stack.pop() {
+                    Some(expr) => expr,
+                    None => return LicenseExpr::Unknown,
+                };
+                let lhs = match stack.pop() {
+                    Some(expr) => expr,
+                    None => return LicenseExpr::Unknown,
+                };
+                stack.push(match op {
+                    spdx::expression::Operator::Or => merge_or(lhs, rhs),
+                    spdx::expression::Operator::And => merge_and(lhs, rhs),
+                });
+            }
+        }
+    }
+    if stack.len() == 1 {
+        stack.pop().unwrap_or(LicenseExpr::Unknown)
+    } else {
+        LicenseExpr::Unknown
+    }
+}
+
+/// Map one parsed license requirement to a [`LicenseExpr`] leaf.
+///
+/// `WITH` requirements become [`LicenseExpr::With`] with the canonical
+/// `{base} WITH {exception}` rendering as `text`; anything else becomes
+/// a canonical-spelling [`LicenseExpr::Ident`].
+fn leaf_expr(req: &spdx::expression::ExpressionReq) -> LicenseExpr {
+    match &req.req.addition {
+        Some(addition) => {
+            let base = req.req.license.to_string();
+            let exception = addition.to_string();
+            LicenseExpr::With {
+                text: format!("{base} WITH {exception}"),
+                base: Box::new(LicenseExpr::Ident(base)),
+                exception,
+            }
+        }
+        None => LicenseExpr::Ident(req.req.license.to_string()),
+    }
+}
+
+/// Combine two disjuncts, flattening nested `OR` so parsed trees match
+/// hand-built flat combinations.
+fn merge_or(lhs: LicenseExpr, rhs: LicenseExpr) -> LicenseExpr {
+    let mut disjuncts = match lhs {
+        LicenseExpr::Or(items) => items,
+        other => vec![other],
+    };
+    match rhs {
+        LicenseExpr::Or(mut items) => disjuncts.append(&mut items),
+        other => disjuncts.push(other),
+    }
+    LicenseExpr::Or(disjuncts)
+}
+
+/// Combine two conjuncts, flattening nested `AND` so parsed trees match
+/// hand-built flat combinations.
+fn merge_and(lhs: LicenseExpr, rhs: LicenseExpr) -> LicenseExpr {
+    let mut conjuncts = match lhs {
+        LicenseExpr::And(items) => items,
+        other => vec![other],
+    };
+    match rhs {
+        LicenseExpr::And(mut items) => conjuncts.append(&mut items),
+        other => conjuncts.push(other),
+    }
+    LicenseExpr::And(conjuncts)
 }
 
 /// Evaluate one expression under a tier.
@@ -459,5 +561,83 @@ mod tests {
     fn lattice_ordering_pins_or_and_extremes() {
         assert!(TierOutcome::Allow < TierOutcome::Review);
         assert!(TierOutcome::Review < TierOutcome::Deny);
+    }
+
+    #[test]
+    fn parse_single_identity_uses_canonical_spelling() {
+        assert_eq!(parse_license("MIT"), ident("MIT"));
+        assert_eq!(parse_license("Apache-2.0"), ident("Apache-2.0"));
+    }
+
+    #[test]
+    fn parse_or_and_match_flat_combinations() {
+        assert_eq!(
+            parse_license("MIT OR Apache-2.0"),
+            LicenseExpr::Or(vec![ident("MIT"), ident("Apache-2.0")])
+        );
+        assert_eq!(
+            parse_license("MIT AND Apache-2.0"),
+            LicenseExpr::And(vec![ident("MIT"), ident("Apache-2.0")])
+        );
+    }
+
+    #[test]
+    fn parse_flattens_same_operator_nesting() {
+        assert_eq!(
+            parse_license("MIT OR Apache-2.0 OR MPL-2.0"),
+            LicenseExpr::Or(vec![ident("MIT"), ident("Apache-2.0"), ident("MPL-2.0")])
+        );
+        assert_eq!(
+            parse_license("(MIT OR Apache-2.0) AND MPL-2.0"),
+            LicenseExpr::And(vec![
+                LicenseExpr::Or(vec![ident("MIT"), ident("Apache-2.0")]),
+                ident("MPL-2.0"),
+            ])
+        );
+    }
+
+    #[test]
+    fn parse_with_renders_canonical_text_for_approval() {
+        assert_eq!(
+            parse_license("Apache-2.0 WITH LLVM-exception"),
+            LicenseExpr::With {
+                base: Box::new(ident("Apache-2.0")),
+                exception: "LLVM-exception".to_owned(),
+                text: "Apache-2.0 WITH LLVM-exception".to_owned(),
+            }
+        );
+    }
+
+    #[test]
+    fn parse_unknown_identities_fail_closed() {
+        assert_eq!(parse_license("MIT OR NOPE"), LicenseExpr::Unknown);
+        assert_eq!(parse_license("Made-Up-1.0"), LicenseExpr::Unknown);
+        assert_eq!(parse_license(""), LicenseExpr::Unknown);
+        assert_eq!(parse_license("not a license !!!"), LicenseExpr::Unknown);
+    }
+
+    #[test]
+    fn parsed_expressions_evaluate_through_the_lattice() {
+        let table = contract_table();
+        let lookup = lookup(&table);
+        let expr = parse_license("MIT OR GPL-3.0-only");
+        assert_eq!(
+            evaluate(&expr, Tier::Distributed, &lookup, &none_approved()),
+            TierOutcome::Allow
+        );
+        let denied = parse_license("GPL-3.0-only");
+        assert_eq!(
+            evaluate(&denied, Tier::Distributed, &lookup, &none_approved()),
+            TierOutcome::Deny
+        );
+        let unknown = parse_license("MIT OR NOPE");
+        assert_eq!(
+            evaluate(&unknown, Tier::Distributed, &lookup, &none_approved()),
+            TierOutcome::Deny
+        );
+        assert_eq!(
+            evaluate(&unknown, Tier::Internal, &lookup, &none_approved()),
+            TierOutcome::Allow
+        );
     }
 }
