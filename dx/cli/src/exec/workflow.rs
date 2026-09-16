@@ -938,19 +938,25 @@ mod tests {
     }
 
     #[test]
-    fn test_report_diff_goes_to_stderr() {
-        let harness = Harness::new("test-diffrep");
-        let uri = write_bep_artifact(&harness, "d.xml", MINIMAL_TEST_XML.as_bytes());
-        let harness = Harness {
-            raw_bep: Some(vec![test_result_line(
-                "//a:t",
-                &[(String::from("test.xml"), uri)],
-            )]),
-            ..harness
-        };
-        let (code, _, err) = harness.run(&["test", "--output=diff", "--report=junit=out.xml"]);
-        assert_eq!(code, 0, "{err}");
-        assert!(err.contains("Wrote junit report"), "{err}");
+    fn test_rejects_diff_output_at_parse() {
+        // Issue #200: `test` emits no patch, so `--output=diff` fails
+        // fast at parse (exit 2, usage error) instead of running Bazel
+        // and silently printing text. The report is never written
+        // because execution never starts.
+        let err = crate::args::parse(
+            &["test", "--output=diff", "--report=junit=out.xml"]
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>(),
+        )
+        .expect_err("diff rejected");
+        assert_eq!(
+            err,
+            crate::args::ArgsError::UnsupportedOption {
+                command: "test",
+                option: "--output=diff".to_owned(),
+            }
+        );
     }
 
     #[test]

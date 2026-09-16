@@ -47,7 +47,7 @@ Global options:
 | `--workspace <path>` | Override upward workspace discovery |
 | `--dry-run` | Resolve and summarize a plan without executing workflows or mutations |
 | `--quiet` | Suppress `dx` operation/planning output while preserving subprocess diagnostics |
-| `--output text\|diff\|json` | Select concise text, complete unified patches, or versioned machine-readable events |
+| `--output text\|diff\|json` | Select concise text, complete unified patches, or versioned machine-readable events (per-command support in [Output Protocol](output-protocol.md); unsupported modes fail fast, never silently ignored) |
 | `--report <format>=<destination>` | Write a supported standard report to a file or `-` for stdout; repeatable |
 | `--fail-on info\|warning\|error` | Lowest diagnostic severity that makes a quality command fail |
 

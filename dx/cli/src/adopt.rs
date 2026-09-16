@@ -33,6 +33,20 @@ fn operational(out: &mut dyn Write, err: &mut dyn Write, message: &str) -> i32 {
     operational_code()
 }
 
+/// True when stdout prose summaries should be suppressed (issue #200).
+/// `--quiet` (and its `Text { quiet: true }` encoding) suppresses `dx`
+/// lifecycle summaries but never result documents: `status` / `version`
+/// (except `version` dry-run plans, which are summaries) / inspect labels
+/// / completion scripts / `hooks status` views always print because they
+/// are the answer, not a summary. Summary owners (`init`,
+/// `hooks install` / `uninstall` / `run`, `watch`, dry-run plans including
+/// `version --dry-run --pin` / `--rollback`) check this; result owners do
+/// not, and that non-suppression is documented in the output protocol
+/// rather than a silent ignore.
+fn summaries_suppressed(invocation: &Invocation) -> bool {
+    invocation.quiet || matches!(invocation.output, OutputMode::Text { quiet: true })
+}
+
 /// Runs one adoption/inspect command. The caller guarantees
 /// `invocation.command.is_adoption()`; other commands are rejected.
 pub fn execute_adoption(invocation: &Invocation, env: AdoptEnv<'_>) -> i32 {
@@ -67,8 +81,10 @@ fn execute_init(
         .first()
         .map_or("my_project", String::as_str);
     if invocation.dry_run {
-        for file in dx_adopt::plan_init_files(module) {
-            let _ = writeln!(out, "would write {}", file.path);
+        if !summaries_suppressed(invocation) {
+            for file in dx_adopt::plan_init_files(module) {
+                let _ = writeln!(out, "would write {}", file.path);
+            }
         }
         return 0;
     }
@@ -80,7 +96,7 @@ fn execute_init(
                 }
                 if let Some(path) = entry.strip_prefix("refused:") {
                     let _ = writeln!(err, "dx: {path} (absent-only, left untouched)");
-                } else {
+                } else if !summaries_suppressed(invocation) {
                     let _ = writeln!(out, "wrote {entry}");
                 }
             }
@@ -100,8 +116,10 @@ fn execute_hooks(
     match verb {
         "install" => match dx_adopt::install_hooks(workspace) {
             Ok(installed) => {
-                for path in installed {
-                    let _ = writeln!(out, "installed {path}");
+                if !summaries_suppressed(invocation) {
+                    for path in installed {
+                        let _ = writeln!(out, "installed {path}");
+                    }
                 }
                 0
             }
@@ -109,8 +127,10 @@ fn execute_hooks(
         },
         "uninstall" => match dx_adopt::uninstall_hooks(workspace) {
             Ok(removed) => {
-                for path in removed {
-                    let _ = writeln!(out, "removed {path}");
+                if !summaries_suppressed(invocation) {
+                    for path in removed {
+                        let _ = writeln!(out, "removed {path}");
+                    }
                 }
                 0
             }
@@ -135,7 +155,9 @@ fn execute_hooks(
             if !dx_adopt::hook_git_is_hermetic(true, false) {
                 return operational(out, err, "hook git must be hermetic");
             }
-            let _ = writeln!(out, "ran {trigger}: ok (budget 120s)");
+            if !summaries_suppressed(invocation) {
+                let _ = writeln!(out, "ran {trigger}: ok (budget 120s)");
+            }
             0
         }
         _ => pre_exec(err, "usage: dx hooks <install|uninstall|status|run>"),
@@ -159,6 +181,10 @@ fn execute_status(
         pinned
     };
     let checks = dx_adopt::default_status_checks(&pinned);
+    // Result document: always prints even under `--quiet` (quiet suppresses
+    // summaries, not answers; see `summaries_suppressed` and the output
+    // protocol). JSON vs text is the only mode branch here; `--output=diff`
+    // is rejected at parse time because status has no patch to emit.
     if invocation.output == OutputMode::Json {
         let _ = writeln!(out, "{}", dx_adopt::render_status_json(&checks));
     } else {
@@ -207,7 +233,9 @@ fn execute_version(
             );
         }
         if invocation.dry_run {
-            let _ = writeln!(out, "would pin {previous} (rollback)");
+            if !summaries_suppressed(invocation) {
+                let _ = writeln!(out, "would pin {previous} (rollback)");
+            }
             return 0;
         }
         return match dx_adopt::write_version_pin(workspace, previous) {
@@ -227,7 +255,9 @@ fn execute_version(
             );
         }
         if invocation.dry_run {
-            let _ = writeln!(out, "would pin {pin}");
+            if !summaries_suppressed(invocation) {
+                let _ = writeln!(out, "would pin {pin}");
+            }
             return 0;
         }
         return match dx_adopt::write_version_pin(workspace, pin) {
@@ -270,16 +300,22 @@ fn execute_watch(
     match dx_adopt::plan_watch(wrapped, ci) {
         Ok(plan) => {
             if invocation.dry_run {
-                let _ = writeln!(out, "would {plan}");
+                if !summaries_suppressed(invocation) {
+                    let _ = writeln!(out, "would {plan}");
+                }
                 return 0;
             }
             // Single delivered iteration: re-resolve scope each loop in the
             // real binary (loop omitted under test via DX_WATCH_ONCE).
-            let _ = writeln!(out, "{plan} scope={}", invocation.targets.join(" "));
+            if !summaries_suppressed(invocation) {
+                let _ = writeln!(out, "{plan} scope={}", invocation.targets.join(" "));
+            }
             if std::env::var("DX_WATCH_ONCE").is_ok() {
                 return 0;
             }
-            let _ = writeln!(out, "watching (Ctrl-C to stop)");
+            if !summaries_suppressed(invocation) {
+                let _ = writeln!(out, "watching (Ctrl-C to stop)");
+            }
             0
         }
         Err(error) => pre_exec(err, &error.to_string()),
@@ -723,6 +759,83 @@ mod tests {
             ),
             0
         );
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn quiet_suppresses_summaries_but_not_results() {
+        // Issue #200: `--quiet` silences `dx` prose summaries while result
+        // documents still print. Init dry-run plans are summaries;
+        // `status` output is the answer.
+        let inv = invocation(&["init", "--dry-run", "--quiet", "demo"]);
+        let root = temp_root("quiet-init");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        assert!(String::from_utf8(out).expect("out").is_empty());
+        let _ = std::fs::remove_dir_all(&root);
+
+        let inv = invocation(&["status", "--quiet"]);
+        let root = temp_root("quiet-status");
+        std::fs::create_dir_all(root.join(".dx")).expect("dx");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        assert!(!String::from_utf8(out).expect("out").is_empty());
+        let _ = std::fs::remove_dir_all(&root);
+
+        // Version dry-run plans are summaries (silenced); version output
+        // itself is the answer (never silenced).
+        let inv = invocation(&["version", "--dry-run", "--pin=0.0.0", "--quiet"]);
+        let root = temp_root("quiet-version-dryrun");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        assert!(String::from_utf8(out).expect("out").is_empty());
+        let _ = std::fs::remove_dir_all(&root);
+
+        let inv = invocation(&["version", "--quiet"]);
+        let root = temp_root("quiet-version");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        assert!(!String::from_utf8(out).expect("out").is_empty());
         let _ = std::fs::remove_dir_all(&root);
     }
 

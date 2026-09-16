@@ -14,7 +14,8 @@ The protocol has four outputs:
 
 - Text is the default live interface for people.
 - Diff is a complete human-readable unified patch for reportable validated workspace changes.
-- NDJSON is the common live machine interface for every command.
+- NDJSON is the common live machine interface for JSON-capable commands (listed below).
+  Text-only commands reject `--output=json` pre-exec (exit 2) instead of silently ignoring it.
 - Standard reports are complete domain documents such as SARIF, JUnit XML, and LCOV.
 
 Selecting a standard report does not change workflow execution, diagnostics, mutation
@@ -26,19 +27,39 @@ invocation fail with `report_failed`.
 
 The default `--output text` mode preserves subprocess stdout and stderr. `dx` writes
 concise workflow summaries without rendering subprocess argv or forwarded option values.
-`--quiet` suppresses those summaries but not Bazel or tool diagnostics.
+`--quiet` suppresses those summaries but not Bazel or tool diagnostics, and never
+suppresses result documents: `status` / `version` output (except `version`
+dry-run plans, which are summaries), inspect labels (`owners` /
+`deps` / `why`), completion scripts, and `hooks status` views always print because they
+are the answer, not a summary. `init`, `hooks install` / `uninstall` / `run`, `watch`,
+and dry-run plans print summaries, so `--quiet` silences their stdout (refusals and
+errors stay on stderr).
 
 `--output diff` reserves stdout exclusively for complete UTF-8 unified diffs derived from
 validated changes. `dx` suppresses its summaries, notices, and normalized diagnostics rather
 than moving them to stderr. Raw subprocess output and operational errors remain on stderr.
-The mode is accepted only by lint, typecheck, format, generate, check, and fix. It never changes
+The mode is accepted only by lint, typecheck, format, generate, check, and fix. Every
+other command rejects `--output=diff` pre-exec (exit 2): workflow, audit, update, and
+status have no patch to emit (empty stdout would mislead), and text-only commands have
+no machine patch surface at all. It never changes
 execution or mutation behavior: check mode still writes nothing, while default mode still
 attempts the same changes. Diff rendering does not rerun a tool, Gazelle, or a comparison
 workflow. `--quiet` has no additional effect on the already patch-only `dx` presentation.
 
 `--output json` reserves stdout exclusively for NDJSON. Every non-empty stdout line is
 one complete UTF-8 JSON object followed by `\n`. `dx` writes no prose or raw subprocess
-bytes to stdout; Bazel and tool stdout and stderr remain visible on stderr.
+bytes to stdout; Bazel and tool stdout and stderr remain visible on stderr. JSON events
+stream per event (`write_event`), never buffer-then-dump, so there is no measurable
+overhead vs text mode on large result sets.
+JSON-capable commands (accepted): lint, typecheck, format, generate, build, test,
+coverage, check, fix, audit, update, status. `update` JSON covers dry-run planning and
+the deferred-live error (`command_started` / `command_finished` like `audit`); per-set
+reporting lands with resolver backends.
+Text-only commands (reject `--output=json` pre-exec, exit 2): clean, codegen, env, setup
+(prose collection lifecycle); `bazel`, `run` (the child owns the terminal); init, hooks,
+version, watch, owners, deps, why, completion (local helpers, thin query lines, or shell
+scripts — automation uses `generate --check`, Bazel query, or `status --output=json`).
+Silent ignore is never allowed: unsupported modes fail fast with `UnsupportedOption`.
 Generate uses its structured Gazelle result manifest in text, diff, and JSON modes. The manifest
 contains exact edits and non-mutating ignored-import audit records; no mode reruns Gazelle to
 produce its output.

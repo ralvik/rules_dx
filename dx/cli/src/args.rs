@@ -152,6 +152,51 @@ impl Command {
         )
     }
 
+    /// True when `--output=json` (NDJSON) is supported (issue #200).
+    /// JSON-capable commands stream one object per line via `write_event`
+    /// (never buffer-then-dump). Text-only commands reject `--output=json`
+    /// pre-exec with `UnsupportedOption` instead of silently ignoring it:
+    /// clean/managed print prose lifecycle, `bazel`/`run` own the terminal
+    /// for passthrough applications, and adoption helpers (except
+    /// `status`) print local-helper prose or thin query lines.
+    /// `update` supports JSON: dry-run planning and the deferred-live
+    /// error both emit `command_started`/`command_finished` like `audit`.
+    pub fn supports_json(self) -> bool {
+        matches!(
+            self,
+            Command::Audit
+                | Command::Lint
+                | Command::Typecheck
+                | Command::Format
+                | Command::Generate
+                | Command::Build
+                | Command::Test
+                | Command::Coverage
+                | Command::Update
+                | Command::Check
+                | Command::Fix
+                | Command::Status
+        )
+    }
+
+    /// True when `--output=diff` emits a unified patch (issue #200).
+    /// Only patch-producing commands accept it (lint, typecheck, format,
+    /// generate, check, fix per the output protocol). Every other command
+    /// rejects `--output=diff` pre-exec: workflow/audit/update/status have
+    /// no patch to emit (empty stdout would mislead), and text-only
+    /// commands have no machine patch surface at all.
+    pub fn supports_diff(self) -> bool {
+        matches!(
+            self,
+            Command::Lint
+                | Command::Typecheck
+                | Command::Format
+                | Command::Generate
+                | Command::Check
+                | Command::Fix
+        )
+    }
+
     /// One-line summary for `--help` (single source with [`Command::name`];
     /// longer behavior lives in docs/cli/commands/, not duplicated here).
     pub fn describe(self) -> &'static str {
@@ -1232,10 +1277,14 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                 option: "--fail-on".to_owned(),
             });
         }
-        if output_name != "text" {
+        // `update` supports `--output=json` (dry-run planning and the
+        // deferred-live error stream `command_started`/`command_finished`
+        // like `audit`); `--output=diff` has no patch to emit so it fails
+        // fast here, with the shared `supports_diff` gate below as backup.
+        if output_name == "diff" {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
-                option: format!("--output={output_name}"),
+                option: "--output=diff".to_owned(),
             });
         }
         if let Some(request) = reports.first() {
@@ -1440,6 +1489,26 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                 option: format!("--report={}={}", request.format, request.destination),
             });
         }
+    }
+    // Uniform `--output` contract (issue #200): shared `supports_json` /
+    // `supports_diff` gate so no command silently ignores a machine-output
+    // request. Commands with their own output arm above (clean, managed,
+    // update, `bazel`, `run`) already returned the same error; this gate
+    // owns adoption/inspect (only `status` supports JSON, none supports
+    // diff), `audit` diff, and workflow `build`/`test`/`coverage` diff.
+    // Quality, generate, umbrellas, `audit`/`update` JSON, workflow JSON,
+    // and `status` JSON pass through to streaming NDJSON execution.
+    if output_name == "json" && !command.supports_json() {
+        return Err(ArgsError::UnsupportedOption {
+            command: command.name(),
+            option: "--output=json".to_owned(),
+        });
+    }
+    if output_name == "diff" && !command.supports_diff() {
+        return Err(ArgsError::UnsupportedOption {
+            command: command.name(),
+            option: "--output=diff".to_owned(),
+        });
     }
     // Profile flags (issue #179): `--debug`/`--release` are mutually
     // exclusive and belong to `build`, `run`, and `test` only
@@ -2149,11 +2218,16 @@ mod tests {
                 option: "--fail-on".to_owned(),
             })
         );
+        // `update` supports `--output=json` (issue #200): dry-run planning
+        // and the deferred-live error stream NDJSON like `audit`.
+        let got = parse(&args(&["update", "--output=json"])).expect("update json");
+        assert_eq!(got.command, Command::Update);
+        assert_eq!(got.output, OutputMode::Json);
         assert_eq!(
-            parse(&args(&["update", "--output=json"])),
+            parse(&args(&["update", "--output=diff"])),
             Err(ArgsError::UnsupportedOption {
                 command: "update",
-                option: "--output=json".to_owned(),
+                option: "--output=diff".to_owned(),
             })
         );
         assert_eq!(
@@ -2218,6 +2292,89 @@ mod tests {
         assert_eq!(got.command, Command::Run);
         assert_eq!(got.targets, vec!["//app:bin".to_owned()]);
         assert_eq!(got.bazel_options, vec!["--port=8080".to_owned()]);
+    }
+
+    #[test]
+    fn output_contract_has_no_silent_ignore() {
+        // Issue #200: every command either supports a machine-output mode or
+        // rejects it pre-exec with `UnsupportedOption`. Silent ignore (accept
+        // the flag, print text anyway) is never allowed.
+        //
+        // JSON-capable: quality, generate, workflow build/test/coverage,
+        // umbrellas, audit, update, status.
+        for command in [
+            "lint",
+            "typecheck",
+            "format",
+            "generate",
+            "build",
+            "test",
+            "coverage",
+            "check",
+            "fix",
+            "audit",
+            "update",
+        ] {
+            let got = parse(&args(&[command, "--output=json"])).expect("json capable");
+            assert_eq!(got.output, OutputMode::Json, "command: {command}");
+            assert!(got.command.supports_json(), "command: {command}");
+        }
+        let got = parse(&args(&["status", "--output=json"])).expect("status json");
+        assert_eq!(got.output, OutputMode::Json);
+        assert!(Command::Status.supports_json());
+        // Diff-capable: patch producers only.
+        for command in ["lint", "typecheck", "format", "generate", "check", "fix"] {
+            let got = parse(&args(&[command, "--output=diff"])).expect("diff capable");
+            assert_eq!(got.output, OutputMode::Diff, "command: {command}");
+            assert!(got.command.supports_diff(), "command: {command}");
+        }
+        // Text-only exemptions fail fast on both machine modes.
+        // (`bazel` takes dx flags before the command word; tokens after it
+        // forward verbatim to the launcher.)
+        for words in [
+            vec!["clean", "--output=json"],
+            vec!["clean", "--output=diff"],
+            vec!["codegen", "--output=json"],
+            vec!["env", "--output=diff"],
+            vec!["setup", "--output=json"],
+            vec!["--output=json", "bazel", "version"],
+            vec!["init", "--output=json"],
+            vec!["init", "proj", "--output=diff"],
+            vec!["hooks", "status", "--output=json"],
+            vec!["version", "--output=json"],
+            vec!["watch", "test", "--output=json"],
+            vec!["owners", "//a:one", "--output=json"],
+            vec!["deps", "//a:one", "--output=diff"],
+            vec!["why", "src/main.rs", "//a:one", "--output=json"],
+            vec!["completion", "bash", "--output=json"],
+        ] {
+            assert!(
+                matches!(
+                    parse(&args(&words)),
+                    Err(ArgsError::UnsupportedOption { .. })
+                ),
+                "words: {words:?}"
+            );
+        }
+        // No patch to emit: JSON-capable but diff-rejecting commands fail
+        // fast on `--output=diff` instead of printing empty stdout.
+        for words in [
+            vec!["build", "//a:one", "--output=diff"],
+            vec!["test", "//a:one", "--output=diff"],
+            vec!["coverage", "--output=diff"],
+            vec!["audit", "--output=diff"],
+            vec!["update", "--output=diff"],
+            vec!["status", "--output=diff"],
+        ] {
+            assert_eq!(
+                parse(&args(&words)),
+                Err(ArgsError::UnsupportedOption {
+                    command: words[0],
+                    option: "--output=diff".to_owned(),
+                }),
+                "words: {words:?}"
+            );
+        }
     }
 
     #[test]
