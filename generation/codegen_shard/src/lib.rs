@@ -19,7 +19,8 @@ pub use codegen_proto::rules_dx::codegen as proto;
 use proto::DxCodegenShard;
 
 /// Validation or codec failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{self:?}")]
 pub enum Error {
     Decode(String),
     EmptyProducer,
@@ -51,14 +52,6 @@ pub enum Error {
         path: String,
     },
 }
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for Error {}
 
 fn check_path(producer: &str, path: &str) -> Result<(), Error> {
     let reason = if path.is_empty() {

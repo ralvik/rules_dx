@@ -258,6 +258,10 @@ crate.from_cargo(
         "//dx/cli:Cargo.toml",
         "//dx/diff:Cargo.toml",
         "//dx/env:Cargo.toml",
+        "//dx/codegen:Cargo.toml",
+        "//dx/env_plan:Cargo.toml",
+        "//env/env_shard:Cargo.toml",
+        "//generation/codegen_shard:Cargo.toml",
         "//documentation/ir:Cargo.toml",
     ],
 )

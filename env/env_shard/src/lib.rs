@@ -19,7 +19,8 @@ pub use plan_proto::rules_dx::env as proto;
 use proto::DxEnvShard;
 
 /// Validation or codec failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{self:?}")]
 pub enum Error {
     Decode(String),
     EmptyProducer,
@@ -52,14 +53,6 @@ pub enum Error {
         key: String,
     },
 }
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for Error {}
 
 fn check_key(producer: &str, key: &str) -> Result<(), Error> {
     let reason = if key.is_empty() {
