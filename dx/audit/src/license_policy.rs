@@ -81,56 +81,24 @@ pub struct Distribution {
 
 /// Policy validation failures. Every variant fails the audit; none
 /// auto-repairs.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum PolicyProblem {
     /// One SPDX identity is listed in more than one policy list.
+    #[error("license {identity:?} is listed in more than one policy list")]
     MultiListed { identity: String },
     /// A per-set adjustment conflicts with the global table.
+    #[error("license {identity:?} for set {set:?} conflicts with the global policy table")]
     SetConflict { set: String, identity: String },
     /// A label under `[distribution]` names no known distributable.
+    #[error("unknown_distribution_root: {label:?} names no known distributable")]
     UnknownDistributionRoot { label: String },
     /// A license exception is invalid, expired, or obsolete.
-    Exception(ExceptionProblem),
+    #[error("license exception invalid: {0}")]
+    Exception(#[from] ExceptionProblem),
     /// A license exception names no package, set, license, versions, or
     /// reason.
+    #[error("license exception missing {field}")]
     ExceptionMissingField { field: &'static str },
-}
-
-impl std::fmt::Display for PolicyProblem {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PolicyProblem::MultiListed { identity } => {
-                write!(
-                    f,
-                    "license {identity:?} is listed in more than one policy list"
-                )
-            }
-            PolicyProblem::SetConflict { set, identity } => {
-                write!(
-                    f,
-                    "license {identity:?} for set {set:?} conflicts with the global policy table"
-                )
-            }
-            PolicyProblem::UnknownDistributionRoot { label } => {
-                write!(
-                    f,
-                    "unknown_distribution_root: {label:?} names no known distributable"
-                )
-            }
-            PolicyProblem::Exception(problem) => write!(f, "license exception invalid: {problem}"),
-            PolicyProblem::ExceptionMissingField { field } => {
-                write!(f, "license exception missing {field}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for PolicyProblem {}
-
-impl From<ExceptionProblem> for PolicyProblem {
-    fn from(problem: ExceptionProblem) -> PolicyProblem {
-        PolicyProblem::Exception(problem)
-    }
 }
 
 impl PolicyTables {

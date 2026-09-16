@@ -109,26 +109,14 @@ impl AuditRequest {
 /// Malformed audit request: the first positional selects a family, so a
 /// first positional that is neither family nor scope-shaped fails here
 /// instead of silently narrowing the run.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum AuditPlanError {
     /// First argument is not a family and not scope-shaped.
+    #[error(
+        "unknown audit family {value:?}; want `{SECURITY_FAMILY}`, `{LICENSE_FAMILY}`, or a scope"
+    )]
     UnknownFamily { value: String },
 }
-
-impl std::fmt::Display for AuditPlanError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            AuditPlanError::UnknownFamily { value } => {
-                write!(
-                    f,
-                    "unknown audit family {value:?}; want `{SECURITY_FAMILY}`, `{LICENSE_FAMILY}`, or a scope"
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for AuditPlanError {}
 
 /// Plan an audit request from the arguments after `dx audit`. The first
 /// argument selects a family when it spells one; every other argument is

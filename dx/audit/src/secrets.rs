@@ -87,46 +87,24 @@ pub struct ArtifactPin {
 
 /// Artifact identity failures. Every variant fails qualification; none
 /// falls back to an ambient tool or an unpinned download.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum PinProblem {
     /// Wrong tool: only Gitleaks qualifies through this module.
+    #[error("gitleaks pin names wrong tool {tool:?}")]
     WrongTool { tool: String },
     /// Empty version, URL, or digest.
+    #[error("gitleaks pin missing {field}")]
     MissingField { field: &'static str },
     /// URL is not an immutable `https://` reference.
+    #[error("gitleaks pin has non-https URL {url:?}")]
     BadUrl { url: String },
     /// Digest is not 64 lowercase hex characters.
+    #[error("gitleaks pin has invalid sha256 {value:?}; want 64 lowercase hex")]
     BadDigest { value: String },
     /// Size is zero: no empty artifact is a valid pin.
+    #[error("gitleaks pin has invalid size {size}; want nonzero")]
     BadSize { size: u64 },
 }
-
-impl std::fmt::Display for PinProblem {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PinProblem::WrongTool { tool } => {
-                write!(f, "gitleaks pin names wrong tool {tool:?}")
-            }
-            PinProblem::MissingField { field } => {
-                write!(f, "gitleaks pin missing {field}")
-            }
-            PinProblem::BadUrl { url } => {
-                write!(f, "gitleaks pin has non-https URL {url:?}")
-            }
-            PinProblem::BadDigest { value } => {
-                write!(
-                    f,
-                    "gitleaks pin has invalid sha256 {value:?}; want 64 lowercase hex"
-                )
-            }
-            PinProblem::BadSize { size } => {
-                write!(f, "gitleaks pin has invalid size {size}; want nonzero")
-            }
-        }
-    }
-}
-
-impl std::error::Error for PinProblem {}
 
 /// Validate a checksummed standalone pin without fetching anything: the
 /// tool must be Gitleaks, version/URL/digest must be present, the URL
@@ -194,26 +172,12 @@ pub struct SecretsReport {
 
 /// Report wiring failures: SARIF is mandatory and destinations must be
 /// explicit file paths, never empty.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum ReportProblem {
     /// Empty report destination.
+    #[error("secrets report needs an explicit --report-path destination")]
     MissingPath,
 }
-
-impl std::fmt::Display for ReportProblem {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ReportProblem::MissingPath => {
-                write!(
-                    f,
-                    "secrets report needs an explicit --report-path destination"
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for ReportProblem {}
 
 impl SecretsReport {
     /// Deterministic report flag fragment for the future adapter
