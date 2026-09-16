@@ -32,12 +32,15 @@ pub fn parse_markdown_findings(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "markdown_check";
+    // Kebab-case ids emitted by the repo-owned checker
+    // (`quality_markdown::kind_id`): every checker kind must parse here,
+    // otherwise real.rs turns live findings into action failures.
     const KINDS: &[&str] = &[
         "missing-file-target",
         "missing-anchor",
-        "missing-heading",
-        "duplicate-heading",
-        "missing-language-tag",
+        "heading-hierarchy",
+        "missing-code-fence-language",
+        "unclosed-code-fence",
     ];
     if code != Some(0) {
         return Err(ParseError::Shape {
@@ -120,9 +123,29 @@ mod tests {
     }
 
     #[test]
+    fn markdown_accepts_every_current_checker_kind() {
+        // Mirrors `quality_markdown::kind_id`: one line per emitted kind.
+        let stdout = concat!(
+            "{\"path\":\"doc/guide.md\",\"line\":3,\"kind\":\"missing-file-target\",\"message\":\"t\"}\n",
+            "{\"path\":\"doc/guide.md\",\"line\":4,\"kind\":\"missing-anchor\",\"message\":\"a\"}\n",
+            "{\"path\":\"doc/guide.md\",\"line\":1,\"kind\":\"heading-hierarchy\",\"message\":\"h\"}\n",
+            "{\"path\":\"doc/guide.md\",\"line\":5,\"kind\":\"missing-code-fence-language\",\"message\":\"l\"}\n",
+            "{\"path\":\"doc/guide.md\",\"line\":5,\"kind\":\"unclosed-code-fence\",\"message\":\"u\"}\n",
+        );
+        let findings =
+            parse_markdown_findings(stdout.as_bytes(), Some(0), &["doc/guide.md"]).expect("parsed");
+        assert_eq!(findings.len(), 5);
+        assert_eq!(findings[2].finding.rule_id, "heading-hierarchy");
+        // Retired ids stay rejected.
+        let stale =
+            "{\"path\":\"doc/guide.md\",\"line\":1,\"kind\":\"missing-heading\",\"message\":\"m\"}";
+        assert!(parse_markdown_findings(stale.as_bytes(), Some(0), &["doc/guide.md"]).is_err());
+    }
+
+    #[test]
     fn markdown_rejects_exits_kinds_lines_and_files() {
         let clean =
-            "{\"path\":\"doc/guide.md\",\"line\":1,\"kind\":\"missing-heading\",\"message\":\"m\"}";
+            "{\"path\":\"doc/guide.md\",\"line\":1,\"kind\":\"heading-hierarchy\",\"message\":\"m\"}";
         // Findings exist only on exit 0: any other exit is an action
         // failure even with parseable lines.
         assert!(parse_markdown_findings(clean.as_bytes(), Some(1), &["doc/guide.md"]).is_err());
@@ -140,9 +163,9 @@ mod tests {
             parse_markdown_findings(unknown_kind.as_bytes(), Some(0), &["doc/guide.md"]).is_err()
         );
         let zero_line =
-            r#"{"path":"doc/guide.md","line":0,"kind":"missing-heading","message":"m"}"#;
+            r#"{"path":"doc/guide.md","line":0,"kind":"heading-hierarchy","message":"m"}"#;
         assert!(parse_markdown_findings(zero_line.as_bytes(), Some(0), &["doc/guide.md"]).is_err());
-        let elsewhere = r#"{"path":"other.md","line":1,"kind":"missing-heading","message":"m"}"#;
+        let elsewhere = r#"{"path":"other.md","line":1,"kind":"heading-hierarchy","message":"m"}"#;
         assert!(parse_markdown_findings(elsewhere.as_bytes(), Some(0), &["doc/guide.md"]).is_err());
     }
 }
