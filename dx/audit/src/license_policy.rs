@@ -19,8 +19,8 @@
 //! match over package plus license. An upgrade within an exception's
 //! bounded version range retains acceptance while the exception still
 //! matches the finding and remains otherwise valid; version-range
-//! narrowing itself uses upstream ecosystem semantics and arrives with
-//! the resolver-owned slices, exactly like the vulnerability deferral
+//! narrowing itself calls [`crate::exception::version_in_scope`] in the
+//! resolver-owned slices, exactly like the vulnerability deferral
 //! in [`crate::exception`].
 //!
 //! This module plans over injected table/root/exception records only,
@@ -181,7 +181,9 @@ pub struct LicenseException {
     /// Approved SPDX identity or complete `WITH` expression verbatim.
     pub license: String,
     /// Accepted versions or bounded range, upstream version semantics.
-    /// Opaque in this slice; evaluated by the ecosystem integration.
+    /// Cargo-flavor scopes evaluate with
+    /// [`crate::exception::version_in_scope`]; non-semver ecosystem
+    /// scopes stay opaque for the resolver-owned ecosystem integration.
     pub versions: String,
     /// Explanatory reason. Empty reasons fail validation.
     pub reason: String,

@@ -30,6 +30,7 @@ rust_library(
         [
             "chrono",
             "hex",
+            "semver",
             "spdx",
             "thiserror",
             "url",
@@ -51,6 +52,7 @@ rust_test(
         [
             "chrono",
             "hex",
+            "semver",
             "spdx",
             "thiserror",
             "url",

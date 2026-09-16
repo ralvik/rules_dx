@@ -7,11 +7,12 @@
 //! dates fail validation; an exception with no applicable finding is
 //! obsolete (reported for explicit removal, never auto-deleted).
 //!
-//! Deferred to the resolver-owned slices: version-range evaluation uses
-//! upstream ecosystem semantics, not a private solver, so range matching
-//! against finding versions is structural here (identity match) and lands
-//! with the ecosystem integrations. Accepted findings stay visible;
-//! acceptance only excludes them from the failure decision.
+//! Deferred to the resolver-owned slices: version-range narrowing
+//! against finding versions uses upstream ecosystem semantics through
+//! [`version_in_scope`], not a private solver, so the check here stays
+//! the structural identity match and narrowing lands with the ecosystem
+//! integrations. Accepted findings stay visible; acceptance only
+//! excludes them from the failure decision.
 
 use chrono::{Datelike, NaiveDate};
 
@@ -27,7 +28,9 @@ pub struct RiskException {
     /// Owning dependency set (lockfile/workspace scope).
     pub set: String,
     /// Accepted versions or bounded range, upstream version semantics.
-    /// Opaque in this slice; evaluated by the ecosystem integration.
+    /// Cargo-flavor scopes evaluate with [`version_in_scope`];
+    /// non-semver ecosystem scopes stay opaque for the resolver-owned
+    /// ecosystem integration.
     pub versions: String,
     /// Explanatory reason. Empty reasons fail validation.
     pub reason: String,
@@ -100,10 +103,37 @@ pub fn check_expiry(expires: &str, today: &str) -> Result<(), ExceptionProblem> 
     Ok(())
 }
 
+/// True when a finding version falls inside an exception's accepted
+/// version scope, using upstream Cargo-flavor semver semantics via the
+/// `semver` crate (ranges like `>=1.2.0, <2.0.0`, carets, tildes,
+/// wildcards). Unparseable scopes or versions fail closed to `false`:
+/// an exception never covers a version the matcher cannot attribute,
+/// and non-semver ecosystem scopes stay opaque for the resolver-owned
+/// integrations. Pre-releases match only the narrow upstream rule (a
+/// requirement with a pre-release on the same version); a bare range
+/// never covers a pre-release.
+///
+/// Shared by the vulnerability risk-acceptance lifecycle above and the
+/// license-family exceptions. The identity gates ([`is_obsolete`]) stay
+/// the conservative applicability check here; resolver-owned ecosystem
+/// integrations call this to narrow coverage by version.
+pub fn version_in_scope(scope: &str, version: &str) -> bool {
+    let requirements = match semver::VersionReq::parse(scope) {
+        Ok(requirements) => requirements,
+        Err(_) => return false,
+    };
+    let version = match semver::Version::parse(version) {
+        Ok(version) => version,
+        Err(_) => return false,
+    };
+    requirements.matches(&version)
+}
+
 /// True when no finding shares the exception's advisory and package
-/// identity. Version-range narrowing arrives with the upstream-semantics
-/// matcher; until then identity match is the conservative applicability
-/// gate (never infers obsolescence from failed analysis).
+/// identity. Version-range narrowing calls [`version_in_scope`] in the
+/// resolver-owned ecosystem integrations; until then identity match is
+/// the conservative applicability gate (never infers obsolescence from
+/// failed analysis).
 pub fn is_obsolete(exception: &RiskException, findings: &[FindingRef]) -> bool {
     !findings.iter().any(|finding| {
         finding.advisory == exception.advisory && finding.package == exception.package
@@ -267,5 +297,39 @@ mod tests {
         };
         assert!(is_obsolete(&exception, &[other]));
         assert!(!is_obsolete(&exception, &[finding()]));
+    }
+
+    #[test]
+    fn version_scopes_match_cargo_flavor_ranges() {
+        let scope = ">=1.2.0, <2.0.0";
+        assert!(version_in_scope(scope, "1.2.0"));
+        assert!(version_in_scope(scope, "1.9.0"));
+        assert!(!version_in_scope(scope, "1.1.9"));
+        assert!(!version_in_scope(scope, "2.0.0"));
+        assert!(version_in_scope("^1.2.0", "1.9.0"));
+        assert!(!version_in_scope("^1.2.0", "2.0.0"));
+        assert!(version_in_scope("~1.2.0", "1.2.9"));
+        assert!(!version_in_scope("~1.2.0", "1.3.0"));
+        assert!(version_in_scope("1.2.0", "1.2.0"));
+        // Bare versions are caret shorthand upstream: "1.2.0" means
+        // ^1.2.0, so exact pins spell "=1.2.0".
+        assert!(version_in_scope("1.2.0", "1.2.1"));
+        assert!(version_in_scope("=1.2.0", "1.2.0"));
+        assert!(!version_in_scope("=1.2.0", "1.2.1"));
+        assert!(version_in_scope("*", "9.9.9"));
+    }
+
+    #[test]
+    fn version_scopes_fail_closed_on_unparseable_input() {
+        assert!(!version_in_scope("not a range", "1.2.0"));
+        assert!(!version_in_scope(">=1.2.0, <2.0.0", "1.2"));
+        assert!(!version_in_scope(">=1.2.0, <2.0.0", "banana"));
+        assert!(!version_in_scope("", "1.2.0"));
+    }
+
+    #[test]
+    fn version_scopes_exclude_prereleases_from_bare_ranges() {
+        assert!(!version_in_scope(">=1.0.0", "2.0.0-alpha"));
+        assert!(version_in_scope(">=1.0.0-alpha, <2.0.0", "1.0.0-alpha"));
     }
 }
