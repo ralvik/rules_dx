@@ -6,7 +6,7 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//dx:__pkg__", "//dx:__subpackages__"])
 
 # Crate-universe aliases convention: `dx/dx_env` keys match the regenerated
 # lockfile. The runfiles lookup stays a direct toolchain label (it is not a
@@ -44,6 +44,7 @@ rust_binary(
     ),
     crate_name = "env",
     crate_root = "src/main.rs",
+    visibility = ["//visibility:public"],
     data = ["//env:default_tree"],
     deps = crate_deps(
         [
@@ -111,7 +112,10 @@ rust_clippy_test(
     ],
 )
 
-exports_files(["Cargo.toml"])
+exports_files(
+    ["Cargo.toml"],
+    visibility = ["//visibility:public"],
+)
 
 # End-to-end bootstrap proof (gazelle sh_test precedent): runs the real
 # `env` binary against a spaced path under Bazel runfiles. Tagged
