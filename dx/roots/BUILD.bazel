@@ -6,7 +6,7 @@ load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_library", "rust_test")
 load(":roots.bzl", "repository_roots_file", "roots_aggregate")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//dx:__pkg__", "//dx:__subpackages__"])
 
 rust_library(
     name = "dx_roots",
@@ -44,7 +44,10 @@ rust_clippy_test(
     targets = [":dx_roots"],
 )
 
-exports_files(["Cargo.toml"])
+exports_files(
+    ["Cargo.toml"],
+    visibility = ["//visibility:public"],
+)
 
 exports_files(["roots.bzl"])
 
