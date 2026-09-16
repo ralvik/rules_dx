@@ -7,6 +7,9 @@ edition = "2021"
 name = "codegen_shard"
 path = "src/lib.rs"
 
+[dependencies]
+thiserror = "2"
+
 [[bin]]
 name = "codegen_shard_writer"
 path = "src/main.rs"

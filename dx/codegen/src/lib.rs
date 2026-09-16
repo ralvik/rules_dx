@@ -63,7 +63,8 @@ pub enum CodegenScope {
 }
 
 /// Exact-target scope failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{self:?}")]
 pub enum ScopeError {
     /// More than one positional target: codegen selects at most one.
     MultipleTargets { count: usize },
@@ -73,14 +74,6 @@ pub enum ScopeError {
     /// profiles/flags, and language selectors.
     NotTargetLabel { value: String },
 }
-
-impl std::fmt::Display for ScopeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for ScopeError {}
 
 /// Resolves the `dx codegen` positional scope: empty selects the
 /// repository (`//dx:codegen`), one exact `//` or `@` label selects its
@@ -164,7 +157,8 @@ pub struct CodegenRecord {
 }
 
 /// Shard collection failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{self:?}")]
 pub enum CollectError {
     /// A BEP-reported shard file fails to decode or validate.
     Shard { path: String, error: Error },
@@ -190,14 +184,6 @@ pub enum CollectError {
     /// A BEP-reported non-shard artifact is claimed by no entry.
     UnreportedArtifact { path: String },
 }
-
-impl std::fmt::Display for CollectError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for CollectError {}
 
 /// Reports whether a BEP-reported artifact path is a plan shard, by
 /// reserved filename suffix on the raw path bytes.

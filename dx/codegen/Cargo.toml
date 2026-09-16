@@ -6,3 +6,6 @@ edition = "2021"
 [lib]
 name = "dx_codegen"
 path = "src/lib.rs"
+
+[dependencies]
+thiserror = "2"
