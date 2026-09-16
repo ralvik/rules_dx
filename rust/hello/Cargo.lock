@@ -194,12 +194,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "dx_docs"
+version = "0.0.0"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
 name = "dx_env"
 version = "0.0.0"
 dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "thiserror",
 ]
 
 [[package]]
@@ -227,10 +235,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "dx_roots"
+version = "0.0.0"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
 name = "dx_setup"
 version = "0.0.0"
 dependencies = [
  "tempfile",
+ "thiserror",
+]
+
+[[package]]
+name = "dx_update"
+version = "0.0.0"
+dependencies = [
  "thiserror",
 ]
 

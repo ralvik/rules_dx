@@ -3,6 +3,9 @@ name = "dx_update"
 version = "0.0.0"
 edition = "2021"
 
+[dependencies]
+thiserror = "2"
+
 [lib]
 name = "dx_update"
 path = "src/lib.rs"

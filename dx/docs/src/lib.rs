@@ -31,23 +31,12 @@ pub struct IrVersion {
 }
 
 /// Malformed IR version: versions are explicit, never implicit.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum VersionError {
     /// Major version zero carries no compatibility meaning (no implicit v0).
+    #[error("explicit nonzero IR major version is required")]
     MissingMajor,
 }
-
-impl std::fmt::Display for VersionError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            VersionError::MissingMajor => {
-                write!(f, "explicit nonzero IR major version is required")
-            }
-        }
-    }
-}
-
-impl std::error::Error for VersionError {}
 
 /// Whether a produced IR shard is readable by a consumer at another version.
 ///
@@ -85,29 +74,18 @@ pub fn drops_unknown_extensions() -> bool {
 }
 
 /// Malformed symbol identity: every segment is explicit.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum SymbolError {
     /// Language segment missing or empty.
+    #[error("symbol language is required")]
     MissingLanguage,
     /// Package segment missing or empty.
+    #[error("symbol package is required")]
     MissingPackage,
     /// Qualified-name segment missing or empty.
+    #[error("symbol qualified name is required")]
     MissingQualifiedName,
 }
-
-impl std::fmt::Display for SymbolError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SymbolError::MissingLanguage => write!(f, "symbol language is required"),
-            SymbolError::MissingPackage => write!(f, "symbol package is required"),
-            SymbolError::MissingQualifiedName => {
-                write!(f, "symbol qualified name is required")
-            }
-        }
-    }
-}
-
-impl std::error::Error for SymbolError {}
 
 /// Plan the stable symbol ID: `language:package:qualified_name`.
 ///
