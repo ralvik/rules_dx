@@ -44,47 +44,21 @@ pub struct FindingRef {
 }
 
 /// Validation failures. Every variant fails the audit; none auto-repair.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum ExceptionProblem {
     /// Empty advisory, package, set, versions, or reason.
+    #[error("risk exception missing {field}")]
     MissingField { field: &'static str },
     /// Expiration is not a calendar `YYYY-MM-DD` date.
+    #[error("risk exception has invalid expiration {value:?}; want YYYY-MM-DD")]
     InvalidDate { value: String },
     /// Expiration reached as of the injected audit date.
+    #[error("risk exception expired {expires} (audit date {today}); renewal needs review")]
     Expired { expires: String, today: String },
     /// No applicable finding: remove explicitly, never automatically.
+    #[error("risk exception for {advisory} on {package} matches no finding; remove it explicitly")]
     Obsolete { advisory: String, package: String },
 }
-
-impl std::fmt::Display for ExceptionProblem {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ExceptionProblem::MissingField { field } => {
-                write!(f, "risk exception missing {field}")
-            }
-            ExceptionProblem::InvalidDate { value } => {
-                write!(
-                    f,
-                    "risk exception has invalid expiration {value:?}; want YYYY-MM-DD"
-                )
-            }
-            ExceptionProblem::Expired { expires, today } => {
-                write!(
-                    f,
-                    "risk exception expired {expires} (audit date {today}); renewal needs review"
-                )
-            }
-            ExceptionProblem::Obsolete { advisory, package } => {
-                write!(
-                    f,
-                    "risk exception for {advisory} on {package} matches no finding; remove it explicitly"
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for ExceptionProblem {}
 
 /// Validate one exception against the injected audit date (`YYYY-MM-DD`
 /// UTC). Checks field presence, calendar-date shape, and expiry. An
