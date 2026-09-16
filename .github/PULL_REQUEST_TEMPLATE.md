@@ -1,8 +1,8 @@
 # Pull Request
 
-## Milestone / Decision
+## Linked Issue + ADR/Contract
 
-Link the milestone file and any ADR or open-decision rows.
+Link the owning GitHub issue and any ADR or contract docs.
 
 ## Changed Components
 
