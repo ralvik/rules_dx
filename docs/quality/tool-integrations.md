@@ -276,7 +276,10 @@ replacement out) and `dx format --check //rust/...` clean.
   dangling relative file targets, missing same-file or resolved-file anchors, heading-hierarchy
   violations (exactly one H1, no skipped levels), and fenced code blocks without a language tag.
   Remote URLs are recorded but never fetched. Undeclared link targets fail closed as findings, never
-  as silent passes. The `//quality/markdown:quality_markdown` binary checks `--source WS_PATH=EXEC_PATH` files
+  as silent passes. Link and block structure resolve through `pulldown-cmark` events: multi-line
+  links resolve, a stray backtick is literal text (a link after it fails closed rather than hiding),
+  HTML blocks contribute neither headings nor links, and only ATX headings count (blockquote, list,
+  and setext headings do not). The `//quality/markdown:quality_markdown` binary checks `--source WS_PATH=EXEC_PATH` files
   against the union `--source`/`--sibling WS_PATH=EXEC_PATH` closure and prints one JSON
   `{"path","line","kind","message"}` object per finding; exit `0` when checked, `2` on bad
   arguments,   unreadable files, or non-UTF-8 input.
