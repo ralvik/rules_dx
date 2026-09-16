@@ -160,6 +160,25 @@ fn parsed<T>(tool_id: &str, result: Result<T, ParseError>) -> Result<T, RunnerEr
     })
 }
 
+/// Re-anchors a parsed finding's workspace path onto its staged
+/// scratch-absolute path. Parsers already reject unknown paths, so a
+/// miss is a tool-output failure surfaced as
+/// [`RunnerError::UnplaceableFinding`], never a panic.
+fn reanchor(
+    tool_id: &str,
+    pairs: &[(String, PathBuf)],
+    workspace: &str,
+) -> Result<PathBuf, RunnerError> {
+    pairs
+        .iter()
+        .find(|(known, _)| known == workspace)
+        .map(|(_, absolute)| absolute.clone())
+        .ok_or_else(|| RunnerError::UnplaceableFinding {
+            tool_id: tool_id.to_owned(),
+            detail: format!("finding names unstaged file: {workspace}"),
+        })
+}
+
 fn fresh_scratch(parent: &Path, tool_id: &str) -> Result<Scratch, RunnerError> {
     Scratch::create(parent).map_err(|err| execution(tool_id, format!("scratch: {err}")))
 }
@@ -400,11 +419,7 @@ impl RealBackend {
             )?);
         }
         for found in &mut findings {
-            let absolute = pairs
-                .iter()
-                .find(|(workspace, _)| *workspace == found.file)
-                .map(|(_, absolute)| absolute.clone())
-                .expect("parsed file was checked");
+            let absolute = reanchor(tool_id, pairs, &found.file)?;
             found.file = absolute.to_string_lossy().into_owned();
         }
         Ok(findings)
@@ -435,11 +450,7 @@ impl RealBackend {
             )?);
         }
         for found in &mut findings {
-            let absolute = pairs
-                .iter()
-                .find(|(workspace, _)| *workspace == found.file)
-                .map(|(_, absolute)| absolute.clone())
-                .expect("parsed file was checked");
+            let absolute = reanchor(tool_id, pairs, &found.file)?;
             found.file = absolute.to_string_lossy().into_owned();
         }
         Ok(findings)
@@ -512,30 +523,28 @@ impl RealBackend {
                 )?;
                 // The checker keys findings off the `--source` workspace
                 // paths; re-root each validated path onto its
-                // scratch-absolute path for placement. The lookup is
-                // infallible: the parser already rejected unknown paths.
+                // scratch-absolute path for placement. A miss is a
+                // tool-output failure, never a panic.
                 let mut rerooted = Vec::with_capacity(reported.len());
                 for found in reported {
-                    let absolute = pairs
-                        .iter()
-                        .find(|(workspace, _)| *workspace == found.file)
-                        .map(|(_, absolute)| absolute.to_string_lossy().into_owned())
-                        .expect("parsed path was checked");
                     rerooted.push(FileFinding {
-                        file: absolute,
+                        file: reanchor(tool_id, pairs, &found.file)?
+                            .to_string_lossy()
+                            .into_owned(),
                         finding: found.finding,
                     });
                 }
                 Ok(rerooted)
             }
             "rustfmt" => {
-                let invocation = commands::rustfmt(
-                    &tool.binary,
-                    &refs,
-                    config.as_ref().expect("rustfmt always resolves a config"),
-                    Self::rustfmt_edition(tool)?,
-                    true,
-                );
+                // `config_abs` always resolves rustfmt (hinted config,
+                // else materialized defaults); a miss fails the action,
+                // never panics.
+                let Some(cfg) = config.as_ref() else {
+                    return Err(execution(tool_id, "rustfmt requires a config".to_owned()));
+                };
+                let invocation =
+                    commands::rustfmt(&tool.binary, &refs, cfg, Self::rustfmt_edition(tool)?, true);
                 let out = self.run(tool_id, tool, &invocation, scratch)?;
                 parsed(
                     tool_id,
@@ -576,11 +585,7 @@ impl RealBackend {
                     parsers::parse_ty(&out.stdout, out.code, &workspaces),
                 )?;
                 for found in &mut findings {
-                    let absolute = pairs
-                        .iter()
-                        .find(|(workspace, _)| *workspace == found.file)
-                        .map(|(_, absolute)| absolute.clone())
-                        .expect("parsed file was checked");
+                    let absolute = reanchor(tool_id, pairs, &found.file)?;
                     found.file = absolute.to_string_lossy().into_owned();
                 }
                 Ok(findings)
@@ -616,11 +621,7 @@ impl RealBackend {
                     parsers::parse_pylint(&out.stdout, out.code, &workspaces),
                 )?;
                 for found in &mut findings {
-                    let absolute = pairs
-                        .iter()
-                        .find(|(workspace, _)| *workspace == found.file)
-                        .map(|(_, absolute)| absolute.clone())
-                        .expect("parsed file was checked");
+                    let absolute = reanchor(tool_id, pairs, &found.file)?;
                     found.file = absolute.to_string_lossy().into_owned();
                 }
                 Ok(findings)
@@ -677,11 +678,7 @@ impl RealBackend {
                 };
                 let mut findings = parsed(tool_id, report)?;
                 for found in &mut findings {
-                    let absolute = pairs
-                        .iter()
-                        .find(|(workspace, _)| *workspace == found.file)
-                        .map(|(_, absolute)| absolute.clone())
-                        .expect("parsed file was checked");
+                    let absolute = reanchor(tool_id, pairs, &found.file)?;
                     found.file = absolute.to_string_lossy().into_owned();
                 }
                 Ok(findings)
@@ -711,11 +708,7 @@ impl RealBackend {
                 let report = parsers::parse_prettier_check(&out.stderr, out.code, &workspaces);
                 let mut findings = parsed(tool_id, report)?;
                 for found in &mut findings {
-                    let absolute = pairs
-                        .iter()
-                        .find(|(workspace, _)| *workspace == found.file)
-                        .map(|(_, absolute)| absolute.clone())
-                        .expect("parsed file was checked");
+                    let absolute = reanchor(tool_id, pairs, &found.file)?;
                     found.file = absolute.to_string_lossy().into_owned();
                 }
                 Ok(findings)
@@ -759,8 +752,13 @@ impl RealBackend {
                 .iter()
                 .find(|(_, absolute)| absolute.as_os_str() == OsStr::new(&found.file))
                 .map(|pair| pair.0.clone())
-                .expect("parsed file was checked");
-            let text = files.get(&workspace).expect("placed path checked");
+                .ok_or_else(|| RunnerError::UnplaceableFinding {
+                    tool_id: tool_id.to_owned(),
+                    detail: format!("finding names unstaged file: {}", found.file),
+                })?;
+            let text = files.get(&workspace).ok_or(RunnerError::MissingFile {
+                path: workspace.clone(),
+            })?;
             diagnostics.push(
                 place_finding(&found.finding, &workspace, text).map_err(|err| {
                     RunnerError::UnplaceableFinding {
@@ -863,13 +861,18 @@ impl RealBackend {
         let config = self.config_abs(tool_id, tool, &scratch)?;
         let cwd_rel = Self::cwd_rel(tool_id, tool.config_rel.as_deref());
         let invocation = match tool_id {
-            "rustfmt" => commands::rustfmt(
-                &tool.binary,
-                &refs,
-                config.as_ref().expect("rustfmt always resolves a config"),
-                Self::rustfmt_edition(tool)?,
-                false,
-            ),
+            "rustfmt" => {
+                let Some(cfg) = config.as_ref() else {
+                    return Err(execution(tool_id, "rustfmt requires a config".to_owned()));
+                };
+                commands::rustfmt(
+                    &tool.binary,
+                    &refs,
+                    cfg,
+                    Self::rustfmt_edition(tool)?,
+                    false,
+                )
+            }
             "buildifier" => commands::buildifier_fix(
                 &tool.binary,
                 &refs,
@@ -1030,7 +1033,7 @@ pub fn run_real_pipeline_with_siblings(
     }
     let mut initial_diagnostics = Vec::new();
     for stage in stages {
-        let subset = stage_subset(stage, &initial);
+        let subset = stage_subset(stage, &initial)?;
         initial_diagnostics.extend(backend.diagnose_with_siblings(
             &stage.tool_id,
             capability,
@@ -1046,7 +1049,7 @@ pub fn run_real_pipeline_with_siblings(
     )?;
     let mut terminal_diagnostics = Vec::new();
     for stage in stages {
-        let subset = stage_subset(stage, &terminal);
+        let subset = stage_subset(stage, &terminal)?;
         terminal_diagnostics.extend(backend.diagnose_with_siblings(
             &stage.tool_id,
             capability,
@@ -1054,7 +1057,7 @@ pub fn run_real_pipeline_with_siblings(
             &sibling_texts,
         )?);
     }
-    Ok(assemble(
+    assemble(
         producer,
         capability_value,
         stages,
@@ -1062,7 +1065,7 @@ pub fn run_real_pipeline_with_siblings(
         &terminal,
         (initial_diagnostics, terminal_diagnostics),
         (completed_rounds, convergence),
-    ))
+    )
 }
 
 #[cfg(test)]
@@ -3596,5 +3599,15 @@ mod tests {
             .diagnose("ty", "typecheck", &single("a.py", "x: int = 1\n"))
             .expect_err("parse fails");
         assert!(matches!(err, RunnerError::ToolOutput { .. }));
+    }
+
+    #[test]
+    fn reanchor_reports_unstaged_file_without_panicking() {
+        // Defense in depth: parsers already reject unknown paths, but
+        // re-anchoring still reports `UnplaceableFinding` instead of
+        // panicking if a tool ever emits one.
+        let pairs = vec![("a.py".to_owned(), PathBuf::from("/scratch/a.py"))];
+        let err = reanchor("ty", &pairs, "b.py").expect_err("unknown path fails");
+        assert!(matches!(err, RunnerError::UnplaceableFinding { .. }));
     }
 }

@@ -170,7 +170,9 @@ fn run_convergence(
         let before = current.clone();
         for stage in stages {
             for path in &stage.source_paths {
-                let body = current.get(path).expect("staged path validated present");
+                let body = current
+                    .get(path)
+                    .ok_or(RunnerError::MissingFile { path: path.clone() })?;
                 let next = apply(&stage.tool_id, path, body)?;
                 current.insert(path.clone(), next);
             }
@@ -270,6 +272,8 @@ fn validate_request(
 /// Shared by synthetic and real pipelines so the semantics cannot drift.
 /// Diagnostics and outcome travel as pairs so the shared helper stays
 /// under the complexity budget without splitting its single purpose.
+/// Stage paths absent from either map fail with [`RunnerError::MissingFile`]
+/// instead of panicking, so validation drift surfaces as an action error.
 fn assemble(
     producer: &str,
     capability_value: i32,
@@ -278,7 +282,7 @@ fn assemble(
     terminal: &BTreeMap<String, String>,
     diagnostics: (Vec<Diagnostic>, Vec<Diagnostic>),
     outcome: (u32, Convergence),
-) -> QualityResult {
+) -> Result<QualityResult, RunnerError> {
     let (mut initial_diagnostics, mut terminal_diagnostics) = diagnostics;
     let (completed_rounds, convergence) = outcome;
     sort_diagnostics(&mut initial_diagnostics);
@@ -286,7 +290,9 @@ fn assemble(
     let stable = convergence == Convergence::Stable;
     let mut replacements = Vec::new();
     for (path, original) in initial {
-        let terminal_body = terminal.get(path).expect("staged path validated present");
+        let terminal_body = terminal
+            .get(path)
+            .ok_or(RunnerError::MissingFile { path: path.clone() })?;
         if stable && terminal_body != original {
             replacements.push(FileEdits {
                 path: path.clone(),
@@ -318,7 +324,7 @@ fn assemble(
             source_paths: stage.source_paths.clone(),
         })
         .collect();
-    QualityResult {
+    Ok(QualityResult {
         schema_major: SCHEMA_MAJOR,
         schema_minor: SCHEMA_MINOR,
         producer: producer.to_owned(),
@@ -331,24 +337,24 @@ fn assemble(
         initial_diagnostics,
         terminal_diagnostics,
         replacements,
-    }
+    })
 }
 
-/// One exact input file's text within a converged run.
-fn stage_subset(stage: &StageSpec, files: &BTreeMap<String, String>) -> BTreeMap<String, String> {
-    stage
-        .source_paths
-        .iter()
-        .map(|path| {
-            (
-                path.clone(),
-                files
-                    .get(path)
-                    .expect("staged path validated present")
-                    .clone(),
-            )
-        })
-        .collect()
+/// One exact input file's text within a converged run. A stage path
+/// absent from the map fails with [`RunnerError::MissingFile`] instead of
+/// panicking, so validation drift surfaces as an action error.
+fn stage_subset(
+    stage: &StageSpec,
+    files: &BTreeMap<String, String>,
+) -> Result<BTreeMap<String, String>, RunnerError> {
+    let mut out = BTreeMap::new();
+    for path in &stage.source_paths {
+        let body = files
+            .get(path)
+            .ok_or(RunnerError::MissingFile { path: path.clone() })?;
+        out.insert(path.clone(), body.clone());
+    }
+    Ok(out)
 }
 
 /// Executes one ordered pipeline over exact input bytes and returns the
@@ -367,27 +373,31 @@ pub fn run_pipeline(
     let mut initial_diagnostics = Vec::new();
     for stage in stages {
         for path in &stage.source_paths {
-            let body = initial.get(path).expect("staged path validated present");
+            let body = initial
+                .get(path)
+                .ok_or(RunnerError::MissingFile { path: path.clone() })?;
             initial_diagnostics.extend(collect_diagnostics(&stage.tool_id, path, body));
         }
     }
-    // Synthetic apply never fails, so a failure here is a runner bug,
-    // not a pipeline error to propagate.
+    // The synthetic apply closure is infallible, but convergence still
+    // reports `MissingFile` instead of panicking if stage/validation drift
+    // ever desynchronizes the maps, so propagate rather than expect.
     let (terminal, completed_rounds, convergence) = run_convergence(
         &initial,
         stages,
         MAX_COMPLETED_ROUNDS,
         |tool, _path, text| Ok(apply_synthetic(tool, text)),
-    )
-    .expect("synthetic apply never fails");
+    )?;
     let mut terminal_diagnostics = Vec::new();
     for stage in stages {
         for path in &stage.source_paths {
-            let body = terminal.get(path).expect("staged path validated present");
+            let body = terminal
+                .get(path)
+                .ok_or(RunnerError::MissingFile { path: path.clone() })?;
             terminal_diagnostics.extend(collect_diagnostics(&stage.tool_id, path, body));
         }
     }
-    Ok(assemble(
+    assemble(
         producer,
         capability_value,
         stages,
@@ -395,7 +405,7 @@ pub fn run_pipeline(
         &terminal,
         (initial_diagnostics, terminal_diagnostics),
         (completed_rounds, convergence),
-    ))
+    )
 }
 
 #[cfg(test)]
@@ -746,5 +756,35 @@ mod tests {
             }
         );
         assert!(rendered.contains("MissingFile"));
+    }
+
+    #[test]
+    fn convergence_reports_missing_stage_path_without_panicking() {
+        // Defense in depth: validation normally rejects stages naming
+        // absent files, but convergence still reports `MissingFile`
+        // instead of panicking if the two ever drift.
+        let stages = vec![stage("lint-a", &["rust"], &["src/missing.rs"])];
+        let initial = BTreeMap::new();
+        let same = |_: &str, _: &str, text: &str| Ok(text.to_owned());
+        assert_eq!(
+            run_convergence(&initial, &stages, 10, same),
+            Err(RunnerError::MissingFile {
+                path: "src/missing.rs".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn stage_subset_reports_missing_path_without_panicking() {
+        // Same drift guard for the per-stage projection the real
+        // pipeline shares: a missing path is an error, never a panic.
+        let stages = vec![stage("lint-a", &["rust"], &["src/missing.rs"])];
+        let files = BTreeMap::new();
+        assert_eq!(
+            stage_subset(&stages[0], &files),
+            Err(RunnerError::MissingFile {
+                path: "src/missing.rs".to_owned(),
+            })
+        );
     }
 }
