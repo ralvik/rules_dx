@@ -1,0 +1,100 @@
+# Publishing dry-run (issue #78): exercise the release path without cutting
+# a release. `workflow_dispatch` only: no push, pull_request, tag, or schedule
+# trigger, so CI stays green by construction and nothing runs uninvited.
+#
+# Seed-host first: builds the Linux x86_64 `dx` binary, records its sha256,
+# and emits a dry-run report to the step summary and logs. The full release
+# matrix (Linux arm64, macOS x86_64/arm64, Windows x86_64), SBOM/provenance
+# generation, BCR dry-run submission, and draft-release creation arrive as
+# follow-ups as platforms qualify (issue #5) and signing/attestation tooling
+# is selected (issue #26). Nothing here tags, publishes, or pushes, with or
+# without approval: `dist/`/`release/` stay git-ignored, staging happens
+# under RUNNER_TEMP so the checkout is never left dirty, and the default run
+# only reports what *would* publish.
+#
+# Hygiene (issue #80): Bazelisk installs go through the single
+# `.github/actions/setup-bazelisk` composite action; the only third-party
+# action (checkout) is pinned to a commit SHA with its tag trailing.
+
+name: publish-dry-run
+
+on:
+  workflow_dispatch:
+    inputs:
+      approve:
+        description: "Owner approval to run the full dry-run qualification. False builds and reports only; nothing publishes either way."
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-dry-run-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Build seed-host release binary
+        run: bazel build //dx/cli:dx
+      - name: Stage binary and emit dry-run report
+        env:
+          APPROVE: ${{ inputs.approve }}
+        run: |
+          set -euo pipefail
+          stage="$RUNNER_TEMP/publish-dry-run"
+          rm -rf "$stage"
+          mkdir -p "$stage"
+          bin="$(bazel cquery --output=files //dx/cli:dx)"
+          cp "$bin" "$stage/dx-linux-x86_64"
+          (cd "$stage" && sha256sum dx-linux-x86_64 > dx-linux-x86_64.sha256)
+          python3 - "$stage" "$APPROVE" <<'EOF'
+          import hashlib
+          import json
+          import sys
+          stage, approve = sys.argv[1], sys.argv[2] == "true"
+          digest = hashlib.sha256(open(f"{stage}/dx-linux-x86_64", "rb").read()).hexdigest()
+          report = {
+              "schema": "publish-dry-run/v1",
+              "approved": approve,
+              "published": False,
+              "artifacts": [
+                  {
+                      "name": "dx-linux-x86_64",
+                      "sha256": digest,
+                      "note": "seed-host binary; release matrix follow-up under issue #5",
+                  },
+              ],
+              "would_publish": [
+                  "Bazel Central Registry `rules_dx` module (dry-run submission pending issue #26 tooling)",
+                  "GitHub Release with standalone `dx` binaries (draft creation disabled; owner approval per issue #5)",
+              ],
+              "not_attempted": [
+                  "SBOM/provenance generation (tooling unselected; issue #26)",
+                  "Non-seed release matrix (platforms unqualified; issue #5)",
+                  "Any tag, registry submission, or release creation",
+              ],
+          }
+          with open(f"{stage}/dry-run-report.json", "w", encoding="utf-8") as fh:
+              json.dump(report, fh, indent=2)
+          print(f"seed binary sha256: {digest}")
+          print(f"approved: {approve}; published: False (dry run never publishes)")
+          EOF
+          {
+            echo "## Publish dry-run report"
+            echo ""
+            echo "- approved: \`$APPROVE\`; published: **no** (dry run never publishes)"
+            echo "- seed binary: \`dx-linux-x86_64\` \`$(cut -d' ' -f1 "$stage/dx-linux-x86_64.sha256")\`"
+            echo "- full report: \`dry-run-report.json\` in the job logs"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Prove checkout left clean
+        run: test -z "$(git status --porcelain)"
