@@ -13,8 +13,6 @@
 //! and in the `dx` CLI collection; this crate only validates and encodes
 //! one contributor shard.
 
-use prost::Message;
-
 pub use codegen_proto::rules_dx::codegen as proto;
 use proto::DxCodegenShard;
 
@@ -138,32 +136,32 @@ pub fn validate(shard: &DxCodegenShard) -> Result<(), Error> {
                 path: entry.logical_path.clone(),
             });
         }
-        if !seen.insert(&entry.logical_path) {
-            return Err(Error::DuplicateLogicalPath {
+        // Shared uniqueness control flow lives in `dx_proto_validate`; only
+        // the crate-local `Error` payload stays here (#72 slice).
+        dx_proto_validate::check_unique_insert(&mut seen, &entry.logical_path, |existing| {
+            Error::DuplicateLogicalPath {
                 producer: shard.producer.clone(),
-                path: entry.logical_path.clone(),
-            });
-        }
+                path: (*existing).clone(),
+            }
+        })?;
     }
     Ok(())
 }
 
 /// Encodes one validated shard to its binary wire form.
 pub fn encode_validated(shard: &DxCodegenShard) -> Result<Vec<u8>, Error> {
-    validate(shard)?;
-    Ok(shard.encode_to_vec())
+    dx_proto_validate::encode_with_validation(shard, validate)
 }
 
 /// Decodes and validates one shard from its binary wire form.
 pub fn decode_validated(bytes: &[u8]) -> Result<DxCodegenShard, Error> {
-    let shard = DxCodegenShard::decode(bytes).map_err(|error| Error::Decode(error.to_string()))?;
-    validate(&shard)?;
-    Ok(shard)
+    dx_proto_validate::decode_with_validation(bytes, validate, Error::Decode)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use prost::Message;
     use proto::DxCodegenEntry;
 
     fn entry(logical_path: &str, import_root: &str, namespace: &str) -> DxCodegenEntry {

@@ -1,7 +1,5 @@
 //! Validation and codec helpers for the Documentation IR (#10).
 
-use prost::Message;
-
 pub use doc_ir_proto::dx::documentation::v1 as proto;
 use proto::{DocIr, Symbol};
 
@@ -36,24 +34,27 @@ pub fn validate_shard(shard: &DocIr) -> Result<(), Error> {
     if shard.package.is_empty() {
         return Err(Error::EmptyPackage);
     }
-    let mut seen: Vec<&str> = Vec::with_capacity(shard.symbols.len());
-    let mut previous_id: Option<&str> = None;
+    let mut previous_id: Option<&String> = None;
     for (index, symbol) in shard.symbols.iter().enumerate() {
         validate_symbol(symbol, index)?;
-        // Strictly decreasing IDs are an ordering violation; equal IDs
-        // fall through to the duplicate check below.
-        if previous_id.is_some_and(|prev| symbol.id.as_str() < prev) {
-            return Err(Error::UnsortedSymbols {
-                id: symbol.id.clone(),
-            });
+        // Shared sorted-unique control flow lives in `dx_proto_validate`;
+        // only the crate-local `Error` payloads stay here (#72 slice).
+        // Equal IDs report Duplicate; smaller IDs report Unsorted, matching
+        // the previous explicit order-then-duplicate checks.
+        match dx_proto_validate::check_sorted_next(previous_id, &symbol.id) {
+            Ok(()) => {}
+            Err(dx_proto_validate::OrderViolation::Duplicate) => {
+                return Err(Error::DuplicateSymbolId {
+                    id: symbol.id.clone(),
+                });
+            }
+            Err(dx_proto_validate::OrderViolation::Unsorted) => {
+                return Err(Error::UnsortedSymbols {
+                    id: symbol.id.clone(),
+                });
+            }
         }
-        previous_id = Some(symbol.id.as_str());
-        if seen.contains(&symbol.id.as_str()) {
-            return Err(Error::DuplicateSymbolId {
-                id: symbol.id.clone(),
-            });
-        }
-        seen.push(symbol.id.as_str());
+        previous_id = Some(&symbol.id);
     }
     Ok(())
 }
@@ -78,23 +79,25 @@ fn validate_symbol(symbol: &Symbol, index: usize) -> Result<(), Error> {
             });
         }
     }
-    let mut previous: Option<&str> = None;
+    let mut previous: Option<&String> = None;
     for extension in symbol.extensions.iter() {
-        match previous {
-            Some(prev) if extension.key.as_str() <= prev => {
-                if extension.key.as_str() == prev {
-                    return Err(Error::DuplicateExtension {
-                        id: symbol.id.clone(),
-                        key: extension.key.clone(),
-                    });
-                }
+        // Shared sorted-unique control flow lives in `dx_proto_validate`;
+        // only the crate-local `Error` payloads stay here (#72 slice).
+        match dx_proto_validate::check_sorted_next(previous, &extension.key) {
+            Ok(()) => {}
+            Err(dx_proto_validate::OrderViolation::Duplicate) => {
+                return Err(Error::DuplicateExtension {
+                    id: symbol.id.clone(),
+                    key: extension.key.clone(),
+                });
+            }
+            Err(dx_proto_validate::OrderViolation::Unsorted) => {
                 return Err(Error::UnsortedExtensions {
                     id: symbol.id.clone(),
                 });
             }
-            _ => {}
         }
-        previous = Some(extension.key.as_str());
+        previous = Some(&extension.key);
     }
     Ok(())
 }
@@ -102,21 +105,19 @@ fn validate_symbol(symbol: &Symbol, index: usize) -> Result<(), Error> {
 /// Encode a validated shard. Validation failures fail encoding: no partial
 /// shard bytes are ever produced.
 pub fn encode_shard(shard: &DocIr) -> Result<Vec<u8>, Error> {
-    validate_shard(shard)?;
-    Ok(shard.encode_to_vec())
+    dx_proto_validate::encode_with_validation(shard, validate_shard)
 }
 
 /// Decode and validate shard bytes. Decode and encode reject the same
 /// invalid shards: both run [`validate_shard`].
 pub fn decode_shard(bytes: &[u8]) -> Result<DocIr, Error> {
-    let shard = DocIr::decode(bytes).map_err(|error| Error::Decode(error.to_string()))?;
-    validate_shard(&shard)?;
-    Ok(shard)
+    dx_proto_validate::decode_with_validation(bytes, validate_shard, Error::Decode)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use prost::Message;
     use proto::{Extension, Param, Relations, Returns, SourceRef, SymbolKind, Visibility};
 
     fn example_shard() -> DocIr {

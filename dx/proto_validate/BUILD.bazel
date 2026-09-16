@@ -1,0 +1,58 @@
+"""Shared validated-codec helpers for proto shards (#72)."""
+
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_library(
+    name = "dx_proto_validate",
+    srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "dx/dx_proto_validate",
+        normal = True,
+    ),
+    crate_name = "dx_proto_validate",
+    crate_root = "src/lib.rs",
+    deps = crate_deps(
+        [],
+        package_name = "dx/dx_proto_validate",
+    ) + ["@rules_rust_prost//private/3rdparty/crates:prost"],
+)
+
+rust_test(
+    name = "dx_proto_validate_test",
+    size = "small",
+    aliases = aliases(
+        package_name = "dx/dx_proto_validate",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":dx_proto_validate",
+)
+
+# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# resolve from the pinned toolchain, never from ambient host tools.
+rustfmt_test(
+    name = "dx_proto_validate_fmt_test",
+    size = "small",
+    targets = [":dx_proto_validate"],
+)
+
+rust_clippy_test(
+    name = "dx_proto_validate_clippy_test",
+    size = "small",
+    targets = [":dx_proto_validate"],
+)
+
+exports_files(["Cargo.toml"])
+
+# Repository corpus: crate manifest and build file owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
+)

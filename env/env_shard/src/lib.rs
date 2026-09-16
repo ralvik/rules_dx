@@ -13,8 +13,6 @@
 //! the `dx` CLI collection; this crate only validates and encodes one
 //! contributor shard.
 
-use prost::Message;
-
 pub use plan_proto::rules_dx::env as proto;
 use proto::DxEnvShard;
 
@@ -155,32 +153,32 @@ pub fn validate(shard: &DxEnvShard) -> Result<(), Error> {
         check_key(&shard.producer, &entry.key)?;
         check_value(&shard.producer, &entry.key, &entry.value)?;
         check_exec_path(&shard.producer, &entry.exec_path)?;
-        if !seen.insert(&entry.key) {
-            return Err(Error::DuplicateKey {
+        // Shared uniqueness control flow lives in `dx_proto_validate`; only
+        // the crate-local `Error` payload stays here (#72 slice).
+        dx_proto_validate::check_unique_insert(&mut seen, &entry.key, |existing| {
+            Error::DuplicateKey {
                 producer: shard.producer.clone(),
-                key: entry.key.clone(),
-            });
-        }
+                key: (*existing).clone(),
+            }
+        })?;
     }
     Ok(())
 }
 
 /// Encodes one validated shard to its binary wire form.
 pub fn encode_validated(shard: &DxEnvShard) -> Result<Vec<u8>, Error> {
-    validate(shard)?;
-    Ok(shard.encode_to_vec())
+    dx_proto_validate::encode_with_validation(shard, validate)
 }
 
 /// Decodes and validates one shard from its binary wire form.
 pub fn decode_validated(bytes: &[u8]) -> Result<DxEnvShard, Error> {
-    let shard = DxEnvShard::decode(bytes).map_err(|error| Error::Decode(error.to_string()))?;
-    validate(&shard)?;
-    Ok(shard)
+    dx_proto_validate::decode_with_validation(bytes, validate, Error::Decode)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use prost::Message;
     use proto::DxEnvEntry;
 
     fn entry(key: &str, value: &str) -> DxEnvEntry {

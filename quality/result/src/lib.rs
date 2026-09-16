@@ -8,8 +8,6 @@
 //! UTF-8-boundary, digest-match, and end-to-end re-application checks run
 //! in the `dx` CLI, which owns the source bytes, in M04+.
 
-use prost::Message;
-
 use proto::{
     Capability, Convergence, Diagnostic, Edit, FileEdits, FileSnapshot, QualityResult, Severity,
     Stage,
@@ -152,11 +150,13 @@ fn check_unique_paths(
     paths: impl Iterator<Item = String>,
     duplicate: impl Fn(String) -> Error,
 ) -> Result<(), Error> {
+    // Shared uniqueness control flow lives in `dx_proto_validate`; only the
+    // crate-local `Error` payload stays here (#72 proto-validate slice).
     let mut seen = std::collections::BTreeSet::new();
     for path in paths {
-        if !seen.insert(path.clone()) {
-            return Err(duplicate(path));
-        }
+        dx_proto_validate::check_unique_insert(&mut seen, path, |existing| {
+            duplicate(existing.clone())
+        })?;
     }
     Ok(())
 }
@@ -314,21 +314,19 @@ fn validate_stage(stage: &Stage, index: usize) -> Result<(), Error> {
 /// Validates then encodes. Stored bytes always decode back to an equal
 /// message: encoding is deterministic for identical bytes.
 pub fn encode_validated(result: &QualityResult) -> Result<Vec<u8>, Error> {
-    validate(result)?;
-    Ok(result.encode_to_vec())
+    dx_proto_validate::encode_with_validation(result, validate)
 }
 
 /// Decodes (unknown fields ignored) then validates. Unknown major
 /// versions fail; newer minors pass when their bytes satisfy these rules.
 pub fn decode_validated(bytes: &[u8]) -> Result<QualityResult, Error> {
-    let result = QualityResult::decode(bytes).map_err(|e| Error::Decode(e.to_string()))?;
-    validate(&result)?;
-    Ok(result)
+    dx_proto_validate::decode_with_validation(bytes, validate, Error::Decode)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use prost::Message;
 
     fn digest_of(byte: u8) -> Vec<u8> {
         vec![byte; DIGEST_LEN]
