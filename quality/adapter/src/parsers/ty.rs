@@ -1,0 +1,191 @@
+//! Ty output grammar.
+//!
+//! Per-family module of [`crate::parsers`]: the pinned-shape contract
+//! and [`ParseError`] semantics live in the parent module docs.
+
+use super::{code_name, known, missing, point, FileFinding, ParseError};
+use crate::{Finding, ToolSeverity};
+
+/// Splits a `<path>:<line>:<col>: <severity>[<code>] <message>` concise
+/// diagnostic from the left: the runner always passes mirror-relative paths
+/// (colons cannot appear), while messages routinely contain colons
+/// (`... is incorrect: Expected ...`), so right-splitting misreads the
+/// severity whenever the message does.
+fn ty_diagnostic(line: &str) -> Result<(&str, u64, u64, ToolSeverity, &str, String), ParseError> {
+    const TOOL: &str = "ty";
+    let mut parts = line.splitn(4, ':');
+    let (path, line_text, column_text, tail) = (
+        parts.next().unwrap_or_default(),
+        parts.next().unwrap_or_default(),
+        parts.next().unwrap_or_default(),
+        parts.next().unwrap_or_default(),
+    );
+    if path.is_empty() || tail.is_empty() {
+        return Err(missing(TOOL, "diagnostic", line));
+    }
+    let (line_no, column) = (line_text.parse::<u64>(), column_text.parse::<u64>());
+    let tail = tail
+        .strip_prefix(' ')
+        .ok_or_else(|| missing(TOOL, "diagnostic", line))?;
+    let (severity_text, rest) = tail
+        .split_once('[')
+        .ok_or_else(|| missing(TOOL, "diagnostic", line))?;
+    let (rule, message) = rest
+        .split_once(']')
+        .ok_or_else(|| missing(TOOL, "diagnostic", line))?;
+    let severity = match severity_text {
+        "error" => ToolSeverity::Error,
+        "warning" => ToolSeverity::Warning,
+        _ => {
+            return Err(ParseError::Shape {
+                tool: TOOL,
+                detail: format!("unknown severity in {line:?}"),
+            });
+        }
+    };
+    let message = message.strip_prefix(' ').unwrap_or(message);
+    match (
+        path.is_empty(),
+        line_no,
+        column,
+        rule.is_empty(),
+        message.is_empty(),
+    ) {
+        (false, Ok(line_no), Ok(column), false, false) if line_no >= 1 && column >= 1 => {
+            Ok((path, line_no, column, severity, rule, message.to_owned()))
+        }
+        _ => Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("malformed diagnostic: {line:?}"),
+        }),
+    }
+}
+
+/// Parses Ty `check --output-format concise` stdout. Diagnostics are
+/// start points (concise carries no end); the `Found N diagnostic(s)`
+/// summary and `All checks passed!` are skipped. Anything else on stdout
+/// is a grammar mismatch. Check-only: findings never carry suggestions.
+pub fn parse_ty(
+    stdout: &[u8],
+    code: Option<i32>,
+    files: &[&str],
+) -> Result<Vec<FileFinding>, ParseError> {
+    const TOOL: &str = "ty";
+    let text = std::str::from_utf8(stdout).map_err(|err| ParseError::Shape {
+        tool: TOOL,
+        detail: err.to_string(),
+    })?;
+    let mut findings = Vec::new();
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed == "All checks passed!" {
+            continue;
+        }
+        if trimmed.starts_with("Found ")
+            && (trimmed.ends_with("diagnostic") || trimmed.ends_with("diagnostics"))
+        {
+            continue;
+        }
+        let (path, line_no, column, severity, rule, message) = ty_diagnostic(trimmed)?;
+        let checked = known(TOOL, files, path)?;
+        let (start, end) = point(line_no, column);
+        findings.push(FileFinding {
+            file: checked.to_owned(),
+            finding: Finding {
+                tool_id: TOOL.to_owned(),
+                rule_id: rule.to_owned(),
+                message,
+                severity,
+                start,
+                end,
+                suggestions: Vec::new(),
+            },
+        });
+    }
+    if findings.is_empty() && code != Some(0) {
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("exit {} with no diagnostics", code_name(code)),
+        });
+    }
+    Ok(findings)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::TextPosition;
+
+    #[test]
+    fn ty_reports_concise_diagnostics() {
+        let stdout = concat!(
+            "/s/dirty.py:1:10: error[invalid-assignment] Object of type `Literal[\"hello\"]` is not assignable to `int`\n",
+            "Found 1 diagnostic\n",
+        );
+        let findings = parse_ty(stdout.as_bytes(), Some(1), &["/s/dirty.py"]).expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].file, "/s/dirty.py");
+        assert_eq!(findings[0].finding.tool_id, "ty");
+        assert_eq!(findings[0].finding.rule_id, "invalid-assignment");
+        assert_eq!(findings[0].finding.severity, ToolSeverity::Error);
+        assert_eq!(
+            (findings[0].finding.start, findings[0].finding.end),
+            (
+                TextPosition {
+                    line: 1,
+                    column: 10
+                },
+                None
+            )
+        );
+        assert!(findings[0].finding.suggestions.is_empty());
+        assert!(parse_ty(b"All checks passed!\n", Some(0), &["/s/dirty.py"])
+            .expect("parsed")
+            .is_empty());
+        assert!(parse_ty(b"All checks passed!\n", Some(1), &["/s/dirty.py"]).is_err());
+        assert!(parse_ty(b"garbage\n", Some(1), &["/s/dirty.py"]).is_err());
+        assert!(parse_ty(stdout.as_bytes(), Some(1), &["/s/other.py"]).is_err());
+    }
+
+    #[test]
+    fn ty_survives_colons_inside_the_message() {
+        // Pinned shape from the real dirty fixture: the message itself
+        // carries `incorrect: Expected`, so only a left split keeps the
+        // severity intact.
+        let stdout = concat!(
+            "quality/testdata/real_dirty.py:22:18: error[invalid-argument-type] Argument to function `add` is incorrect: Expected `int`, found `Literal[\"two\"]`\n",
+            "Found 1 diagnostic\n",
+        );
+        let findings = parse_ty(
+            stdout.as_bytes(),
+            Some(1),
+            &["quality/testdata/real_dirty.py"],
+        )
+        .expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].finding.rule_id, "invalid-argument-type");
+        assert_eq!(findings[0].finding.severity, ToolSeverity::Error);
+        assert_eq!(
+            (findings[0].finding.start, findings[0].finding.end),
+            (
+                TextPosition {
+                    line: 22,
+                    column: 18
+                },
+                None
+            )
+        );
+    }
+
+    #[test]
+    fn ty_grammar_mismatches_are_fail_closed() {
+        // Split from the former cross-family witness: each family
+        // owns its mismatch battery.
+
+        // Ty: unknown severities, malformed positions, and non-UTF8
+        // output are grammar mismatches.
+        assert!(parse_ty(b"/s/a.py:1:1: info[rule] msg\n", Some(1), &["/s/a.py"]).is_err());
+        assert!(parse_ty(b"/s/a.py:0:1: error[rule] msg\n", Some(1), &["/s/a.py"]).is_err());
+        assert!(parse_ty(&[0xff], Some(1), &["/s/a.py"]).is_err());
+    }
+}

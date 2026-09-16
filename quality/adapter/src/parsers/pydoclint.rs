@@ -1,0 +1,165 @@
+//! pydoclint output grammar.
+//!
+//! Per-family module of [`crate::parsers`]: the pinned-shape contract
+//! and [`ParseError`] semantics live in the parent module docs.
+
+use super::{code_name, known, missing, point, FileFinding, ParseError};
+use crate::{Finding, ToolSeverity};
+
+/// Splits a `<line>: <DOCxxx>: <message>` violation line. Line `0` is
+/// the whole-file `DOC002` unparseable marker (no line exists); the
+/// caller places it at 1:1 with the tool's message verbatim.
+fn pydoclint_violation(line: &str) -> Result<(u64, &str, String), ParseError> {
+    const TOOL: &str = "pydoclint";
+    let (line_text, rest) = line
+        .split_once(':')
+        .ok_or_else(|| missing(TOOL, "violation", line))?;
+    let number = line_text.parse::<u64>().map_err(|_| ParseError::Shape {
+        tool: TOOL,
+        detail: format!("malformed violation: {line:?}"),
+    })?;
+    let rest = rest
+        .strip_prefix(' ')
+        .ok_or_else(|| missing(TOOL, "violation", line))?;
+    let (rule, message) = rest
+        .split_once(':')
+        .ok_or_else(|| missing(TOOL, "violation", line))?;
+    let message = message.strip_prefix(' ').unwrap_or(message);
+    if !(rule.len() > 3
+        && rule.starts_with("DOC")
+        && rule[3..].chars().all(|char| char.is_ascii_digit()))
+        || message.is_empty()
+    {
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("malformed violation: {line:?}"),
+        });
+    }
+    Ok((number, rule, message.to_owned()))
+}
+
+/// Parses pydoclint `--quiet` stderr: bare `<path>` header lines plus
+/// indented violation lines. Findings are line-level points at column 1
+/// and every violation is an error. Clean is empty output on exit 0;
+/// empty output on any other exit is a grammar mismatch. Check-only:
+/// pydoclint offers no fix mode, so suggestions stay empty.
+pub fn parse_pydoclint(
+    stderr: &[u8],
+    code: Option<i32>,
+    files: &[&str],
+) -> Result<Vec<FileFinding>, ParseError> {
+    const TOOL: &str = "pydoclint";
+    let text = std::str::from_utf8(stderr).map_err(|err| ParseError::Shape {
+        tool: TOOL,
+        detail: err.to_string(),
+    })?;
+    let mut findings = Vec::new();
+    let mut current: Option<&str> = None;
+    for raw in text.lines() {
+        if raw.trim().is_empty() {
+            continue;
+        }
+        if raw.starts_with(char::is_whitespace) {
+            let (number, rule, message) = pydoclint_violation(raw.trim())?;
+            let header = current.ok_or_else(|| ParseError::Shape {
+                tool: TOOL,
+                detail: format!("violation without a file header: {raw:?}"),
+            })?;
+            let checked = known(TOOL, files, header)?;
+            // Line 0 marks a whole-file syntax error (DOC002): the file
+            // cannot be parsed, so the finding points at the file top
+            // with the tool's message verbatim.
+            let (start, end) = point(number.max(1), 1);
+            findings.push(FileFinding {
+                file: checked.to_owned(),
+                finding: Finding {
+                    tool_id: TOOL.to_owned(),
+                    rule_id: rule.to_owned(),
+                    message,
+                    severity: ToolSeverity::Error,
+                    start,
+                    end,
+                    suggestions: Vec::new(),
+                },
+            });
+        } else {
+            let header = raw.trim_end();
+            known(TOOL, files, header)?;
+            current = Some(header);
+        }
+    }
+    if findings.is_empty() && code != Some(0) {
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("exit {} with no violations", code_name(code)),
+        });
+    }
+    Ok(findings)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::TextPosition;
+
+    #[test]
+    fn pydoclint_reports_violations_per_header() {
+        let stderr = concat!(
+            "/s/a.py\n",
+            "    4: DOC101: Function `foo`: Docstring contains fewer arguments than in function signature.\n",
+            "    4: DOC201: Function `foo` does not have a return section in docstring\n",
+        );
+        let findings = parse_pydoclint(stderr.as_bytes(), Some(1), &["/s/a.py"]).expect("parsed");
+        assert_eq!(findings.len(), 2);
+        assert_eq!(findings[0].file, "/s/a.py");
+        assert_eq!(findings[0].finding.tool_id, "pydoclint");
+        assert_eq!(findings[0].finding.rule_id, "DOC101");
+        assert_eq!(findings[0].finding.severity, ToolSeverity::Error);
+        assert_eq!(
+            (findings[0].finding.start, findings[0].finding.end),
+            (TextPosition { line: 4, column: 1 }, None)
+        );
+        assert_eq!(findings[1].finding.rule_id, "DOC201");
+        assert!(parse_pydoclint(b"", Some(0), &["/s/a.py"])
+            .expect("parsed")
+            .is_empty());
+        assert!(parse_pydoclint(b"", Some(1), &["/s/a.py"]).is_err());
+        assert!(parse_pydoclint(stderr.as_bytes(), Some(1), &["/s/other.py"]).is_err());
+        assert!(parse_pydoclint(b"    4: DOC101: msg\n", Some(1), &["/s/a.py"]).is_err());
+    }
+
+    #[test]
+    fn pydoclint_syntax_error_points_at_file_top() {
+        let stderr = "/s/broken.py\n    0: DOC002: Syntax errors; cannot parse this Python file.\n";
+        let findings =
+            parse_pydoclint(stderr.as_bytes(), Some(1), &["/s/broken.py"]).expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].finding.rule_id, "DOC002");
+        assert_eq!(
+            (findings[0].finding.start, findings[0].finding.end),
+            (TextPosition { line: 1, column: 1 }, None)
+        );
+    }
+
+    // Exact shapes probed from the pinned flake8 7.3.0 / pylint 4.0.8
+    // binaries against the real-pipeline fixtures; the fixtures pin the
+    // grammars above, so a tool upgrade that changes its output fails
+    // here instead of silently shifting findings.
+
+    #[test]
+    fn pydoclint_grammar_mismatches_are_fail_closed() {
+        // Split from the former cross-family witness: each family
+        // owns its mismatch battery.
+
+        // pydoclint: bad line numbers, malformed rules, non-UTF8
+        // output, and blank lines around violations.
+        let bad_number = "/s/a.py\n    x: DOC101: msg\n";
+        assert!(parse_pydoclint(bad_number.as_bytes(), Some(1), &["/s/a.py"]).is_err());
+        let bad_rule = "/s/a.py\n    4: DOC: msg\n";
+        assert!(parse_pydoclint(bad_rule.as_bytes(), Some(1), &["/s/a.py"]).is_err());
+        assert!(parse_pydoclint(&[0xff], Some(1), &["/s/a.py"]).is_err());
+        let blanked = "/s/a.py\n\n    4: DOC101: msg\n\n";
+        let findings = parse_pydoclint(blanked.as_bytes(), Some(1), &["/s/a.py"]).expect("parsed");
+        assert_eq!(findings.len(), 1);
+    }
+}
