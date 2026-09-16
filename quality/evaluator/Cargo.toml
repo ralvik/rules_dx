@@ -7,6 +7,9 @@ edition = "2021"
 name = "quality_evaluator"
 path = "src/lib.rs"
 
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+
 [[bin]]
 name = "quality_evaluator"
 path = "src/main.rs"

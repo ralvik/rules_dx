@@ -8,6 +8,7 @@ name = "env_shard"
 path = "src/lib.rs"
 
 [dependencies]
+clap = { version = "4", features = ["derive"] }
 thiserror = "2"
 
 [[bin]]
