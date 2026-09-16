@@ -125,35 +125,37 @@ fn render_file(out: &mut String, file: &FilePatch<'_>) -> Result<(), DiffError> 
     out.push_str("+++ b/");
     out.push_str(file.path);
     out.push('\n');
-    let (old_lines, old_nl) = split_lines(file.original);
-    let (new_lines, new_nl) = split_lines(file.candidate);
-    for hunk in hunks(&old_lines, old_nl, &new_lines, new_nl)? {
-        render_hunk(
-            out,
-            &old_lines,
-            old_nl,
-            &new_lines,
-            new_nl,
-            &hunk.ops,
-            hunk.old_start,
-            hunk.new_start,
-        );
+    let old = split_lines(file.original);
+    let new = split_lines(file.candidate);
+    for hunk in hunks(&old.lines, old.ends_nl, &new.lines, new.ends_nl)? {
+        render_hunk(out, &hunk, &old, &new);
     }
     Ok(())
 }
 
+/// One side of a file diff: lines without terminators plus whether the
+/// side ends with a line feed. Grouped so hunk rendering takes one
+/// argument per side instead of six positional values.
+struct SidedText<'a> {
+    lines: Vec<&'a str>,
+    ends_nl: bool,
+}
+
 /// Lines of `text` without terminators, plus whether the text ends with a
 /// line feed (vacuously true for empty text, which has no lines at all).
-fn split_lines(text: &str) -> (Vec<&str>, bool) {
+fn split_lines(text: &str) -> SidedText<'_> {
     if text.is_empty() {
-        return (Vec::new(), true);
+        return SidedText {
+            lines: Vec::new(),
+            ends_nl: true,
+        };
     }
     let ends_nl = text.ends_with('\n');
     let mut lines: Vec<&str> = text.split('\n').collect();
     if ends_nl {
         lines.pop();
     }
-    (lines, ends_nl)
+    SidedText { lines, ends_nl }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -340,17 +342,10 @@ fn hunks(old: &[&str], old_nl: bool, new: &[&str], new_nl: bool) -> Result<Vec<H
         .collect())
 }
 
-#[allow(clippy::too_many_arguments)]
-fn render_hunk(
-    out: &mut String,
-    old_lines: &[&str],
-    old_nl: bool,
-    new_lines: &[&str],
-    new_nl: bool,
-    ops: &[(Op, usize, usize)],
-    old_start: usize,
-    new_start: usize,
-) {
+fn render_hunk(out: &mut String, hunk: &Hunk, old: &SidedText<'_>, new: &SidedText<'_>) {
+    let ops = &hunk.ops;
+    let old_start = hunk.old_start;
+    let new_start = hunk.new_start;
     let old_len = ops.iter().filter(|(op, _, _)| *op != Op::Ins).count();
     let new_len = ops.iter().filter(|(op, _, _)| *op != Op::Del).count();
     let old_head = if old_len == 0 {
@@ -370,27 +365,27 @@ fn render_hunk(
         match op {
             Op::Eq => {
                 out.push(' ');
-                out.push_str(old_lines[*oi]);
+                out.push_str(old.lines[*oi]);
                 out.push('\n');
-                let old_last = *oi + 1 == old_lines.len() && !old_nl;
-                let new_last = *ni + 1 == new_lines.len() && !new_nl;
+                let old_last = *oi + 1 == old.lines.len() && !old.ends_nl;
+                let new_last = *ni + 1 == new.lines.len() && !new.ends_nl;
                 if old_last || new_last {
                     out.push_str("\\ No newline at end of file\n");
                 }
             }
             Op::Del => {
                 out.push('-');
-                out.push_str(old_lines[*oi]);
+                out.push_str(old.lines[*oi]);
                 out.push('\n');
-                if *oi + 1 == old_lines.len() && !old_nl {
+                if *oi + 1 == old.lines.len() && !old.ends_nl {
                     out.push_str("\\ No newline at end of file\n");
                 }
             }
             Op::Ins => {
                 out.push('+');
-                out.push_str(new_lines[*ni]);
+                out.push_str(new.lines[*ni]);
                 out.push('\n');
-                if *ni + 1 == new_lines.len() && !new_nl {
+                if *ni + 1 == new.lines.len() && !new.ends_nl {
                     out.push_str("\\ No newline at end of file\n");
                 }
             }

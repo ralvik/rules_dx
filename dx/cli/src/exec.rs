@@ -1206,17 +1206,17 @@ fn execute_workflow(invocation: &Invocation, env: Env<'_>) -> i32 {
         }
         return bazel_code;
     }
-    execute_test_reports(
+    execute_test_reports(TestReportsRequest {
         invocation,
         workspace,
         out,
         err,
         verb,
-        &bep,
-        &planned_reports,
+        bep: &bep,
+        planned_reports: &planned_reports,
         stdout_report,
         bazel_code,
-    )
+    })
 }
 
 /// Executes `dx bazel`: raw launcher passthrough for the M26 WP4
@@ -1794,16 +1794,18 @@ fn ensure_generation_dir(
     Ok(dir)
 }
 
-/// Platform symlink primitive for generation mirror leaves.
-#[cfg(windows)]
+/// Platform symlink primitive for generation mirror leaves: one entry
+/// point with the OS primitive selected inside, instead of two
+/// cfg-gated twin functions with identical call shapes.
 fn symlink_leaf(target: &Path, link: &Path) -> io::Result<()> {
-    std::os::windows::fs::symlink_file(target, link)
-}
-
-/// Platform symlink primitive for generation mirror leaves.
-#[cfg(not(windows))]
-fn symlink_leaf(target: &Path, link: &Path) -> io::Result<()> {
-    std::os::unix::fs::symlink(target, link)
+    #[cfg(windows)]
+    {
+        std::os::windows::fs::symlink_file(target, link)
+    }
+    #[cfg(not(windows))]
+    {
+        std::os::unix::fs::symlink(target, link)
+    }
 }
 
 /// Rejects workspace-absolute, escaping, or empty logical paths before
@@ -2720,21 +2722,36 @@ fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
     }
     code
 }
+/// Inputs to [`execute_test_reports`]: CLI plumbing plus the report plan
+/// and Bazel outcome. Grouped so the 9-argument dispatch takes one value
+/// instead of nine positional arguments.
+struct TestReportsRequest<'a> {
+    invocation: &'a Invocation,
+    workspace: &'a Path,
+    out: &'a mut dyn Write,
+    err: &'a mut dyn Write,
+    verb: WorkflowVerb,
+    bep: &'a Path,
+    planned_reports: &'a [PlannedReport],
+    stdout_report: bool,
+    bazel_code: i32,
+}
+
 /// bytes, renders requested reports, and selects the workflow exit
 /// code: Bazel's exact nonzero code is preserved; success with
 /// incomplete collection or failed reports exits 1.
-#[allow(clippy::too_many_arguments)]
-fn execute_test_reports(
-    invocation: &Invocation,
-    workspace: &Path,
-    out: &mut dyn Write,
-    err: &mut dyn Write,
-    verb: WorkflowVerb,
-    bep: &Path,
-    planned_reports: &[PlannedReport],
-    stdout_report: bool,
-    bazel_code: i32,
-) -> i32 {
+fn execute_test_reports(request: TestReportsRequest<'_>) -> i32 {
+    let TestReportsRequest {
+        invocation,
+        workspace,
+        out,
+        err,
+        verb,
+        bep,
+        planned_reports,
+        stdout_report,
+        bazel_code,
+    } = request;
     let outputs = match std::fs::File::open(bep).map_err(|err| {
         (
             CODE_UNREADABLE_BEP.to_owned(),
