@@ -151,6 +151,39 @@ impl Command {
                 | Command::Completion
         )
     }
+
+    /// One-line summary for `--help` (single source with [`Command::name`];
+    /// longer behavior lives in docs/cli/commands/, not duplicated here).
+    pub fn describe(self) -> &'static str {
+        match self {
+            Command::Audit => "plan a security/license audit (tool backends land later)",
+            Command::Lint => "run lint analysis over resolved scopes",
+            Command::Typecheck => "run typecheck analysis over resolved scopes",
+            Command::Format => "check or rewrite formatting over resolved scopes",
+            Command::Generate => "emit/sync BUILD files (Gazelle pipeline)",
+            Command::Build => "run Bazel build over resolved targets",
+            Command::Test => "run Bazel test over resolved targets",
+            Command::Coverage => "collect LCOV coverage with optional threshold",
+            Command::Run => "build and run a single runnable target",
+            Command::Check => "run format+lint+typecheck+generate checks in order",
+            Command::Fix => "apply format+lint+typecheck+generate fixes in order",
+            Command::Clean => "prune unselected managed state (no scopes)",
+            Command::Update => "plan dependency updates per set (resolvers land later)",
+            Command::Codegen => "collect codegen outputs with atomic commit",
+            Command::Env => "collect the managed development environment",
+            Command::Setup => "collect setup outputs with atomic commit",
+            Command::Init => "scaffold dx into a foreign tree (absent-only)",
+            Command::Hooks => "manage Git hooks via hermetic Git",
+            Command::Status => "report workspace and target status",
+            Command::Version => "report version and pin drift",
+            Command::Watch => "watch for changes and rebuild (local only)",
+            Command::Owners => "query owners of files via Bazel query",
+            Command::Deps => "query dependencies of targets",
+            Command::Why => "explain why a target depends on another",
+            Command::Completion => "emit shell completions from the CLI grammar",
+            Command::Bazel => "forward raw arguments to the Bazel launcher",
+        }
+    }
 }
 
 /// Build profile vocabulary (issue #179, ADR 0021): `--debug` selects
@@ -315,10 +348,15 @@ fn suggestion_hint(suggestion: &Option<String>) -> String {
     }
 }
 
-/// Invocation parsing failure. Every variant is a CLI-detected
-/// pre-execution usage error (exit code 2).
+/// Invocation parsing failure or help request. Usage errors are
+/// CLI-detected pre-execution failures (exit code 2); [`ArgsError::Help`]
+/// is the `--help`/`-h` early exit (exit code 0, human text on stdout,
+/// deliberately outside machine-output guarantees per issue #203).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ArgsError {
+    /// Rendered help text (`dx --help` or `dx <cmd> --help`).
+    #[error("{text}")]
+    Help { text: String },
     #[error(
         "missing command: want audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel"
     )]
@@ -370,51 +408,57 @@ pub enum ArgsError {
 /// Raw `dx` command-line tokens as classified by `clap`: flags may appear
 /// before or after the command word, repeated scalars keep the last
 /// occurrence, and slice shapes (`--report`, scopes, Bazel forwards) keep
-/// `argv` order. Help stays disabled so `--help`/`-h` keep failing as
-/// unknown options per the contract.
+/// `argv` order. `--help`/`-h` render from this same grammar definition
+/// (issue #203): one source feeds parsing, help, and completions/man
+/// pages, never hand-maintained usage strings.
 #[derive(Parser)]
-#[command(disable_help_flag = true)]
+#[command(
+    name = "dx",
+    about = "Transparent UI over Bazel: quality, workflow, and environment commands",
+    long_about = "dx [global-options] <command> [scope ...] [-- bazel-options ...]\n\nScopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. No scope selects //....\n\nExit codes: 0 success; 2 CLI-detected usage/scope/owner errors; 1 operational failures; Bazel-authoritative commands preserve Bazel's code.\n\nOutput: --output text|diff|json (NDJSON machine protocol on stdout, human text otherwise). See docs/cli/cli-contract.md.",
+    version
+)]
 struct Cli {
-    /// `--workspace DIR`.
+    /// Override upward workspace discovery (find MODULE.bazel).
     #[arg(long, allow_negative_numbers = true, overrides_with = "workspace")]
     workspace: Option<String>,
-    /// `--dry-run`.
+    /// Resolve and summarize the plan without executing workflows/mutations.
     #[arg(long)]
     dry_run: bool,
-    /// `--quiet`.
+    /// Suppress dx operation summaries (tool diagnostics still print).
     #[arg(long)]
     quiet: bool,
-    /// `--output text|diff|json`.
+    /// Select concise text, unified patches, or versioned NDJSON events.
     #[arg(long, allow_negative_numbers = true, overrides_with = "output")]
     output: Option<String>,
-    /// Repeatable `--report <format>=<destination>`.
+    /// Write a standard report (sarif/junit/lcov) to file or -; repeatable.
     #[arg(long, allow_negative_numbers = true)]
     report: Vec<String>,
-    /// `--fail-on info|warning|error`.
+    /// Lowest diagnostic severity that fails quality commands.
     #[arg(long, allow_negative_numbers = true, overrides_with = "fail_on")]
     fail_on: Option<String>,
-    /// `--min-coverage 0-100` (coverage only).
+    /// Required line-coverage percent (coverage only, 0-100).
     #[arg(long, allow_negative_numbers = true, overrides_with = "min_coverage")]
     min_coverage: Option<String>,
-    /// `--check`.
+    /// Check mode (quality/version only; no mutations).
     #[arg(long)]
     check: bool,
-    /// `--debug` (build/run/test only; conflicts with `--release`).
+    /// Use dx_debug config (build/run/test only; conflicts with --release).
     #[arg(long)]
     debug: bool,
-    /// `--release` (build/run/test only; conflicts with `--debug`).
+    /// Use dx_release config (build/run/test only; conflicts with --debug).
     #[arg(long)]
     release: bool,
-    /// `--bazel` (clean only).
+    /// Additionally forward `bazel clean` after pruning (clean only).
     #[arg(long = "bazel")]
     bazel_clean: bool,
-    /// `--pin <version>` (version only).
+    /// Re-pin to <version> (version only).
     #[arg(long, allow_negative_numbers = true, overrides_with = "pin")]
     pin: Option<String>,
-    /// `--rollback` (version only).
+    /// Re-pin the recorded previous release (version only).
     #[arg(long)]
     rollback: bool,
-    /// `--configured` (inspect wrappers only).
+    /// Use cquery instead of query (owners/deps/why only).
     #[arg(long)]
     configured: bool,
     /// First positional: the command word.
@@ -603,13 +647,111 @@ fn clap_suggestion(error: &clap::Error) -> Option<String> {
     None
 }
 
+/// Finds the command word for `--help` routing: the first positional
+/// token that parses as [`Command`], skipping flag payloads exactly
+/// like [`split_bazel_verbatim`]. Stops at `--` (everything after is
+/// Bazel-owned). Returns `None` for top-level help when no command
+/// word is present or the first positional is not a command.
+fn help_command_in(args: &[String]) -> Option<Command> {
+    let mut index = 0;
+    while index < args.len() {
+        let arg = &args[index];
+        if arg == "--" {
+            return None;
+        }
+        if arg.starts_with('-') {
+            let name = arg.split_once('=').map_or(arg.as_str(), |(name, _)| name);
+            if !arg.contains('=') && VALUE_OPTIONS.contains(&name) {
+                match args.get(index + 1) {
+                    Some(next) if !next.starts_with("--") && next != "--" => index += 2,
+                    _ => index += 1,
+                }
+                continue;
+            }
+            index += 1;
+            continue;
+        }
+        return Command::parse(arg);
+    }
+    None
+}
+
+/// Renders top-level `--help` from the [`Cli`] grammar definition (one
+/// source for parsing/help/completions; no hand-maintained flag list).
+/// The command list is derived from [`Command`] (the same source as
+/// parsing), because commands are a validated positional rather than
+/// clap subcommands.
+fn render_top_help() -> String {
+    use clap::{CommandFactory, ValueEnum};
+    let mut out = String::new();
+    out.push_str("Commands:\n");
+    for command in Command::value_variants() {
+        out.push_str(&format!(
+            "  {:<12} {}\n",
+            command.name(),
+            command.describe()
+        ));
+    }
+    out.push('\n');
+    out.push_str(&Cli::command().render_long_help().to_string());
+    out
+}
+
+/// Renders per-command `--help`: one-line summary from
+/// [`Command::describe`], usage/scopes/exit/output lines consistent
+/// with `docs/cli/cli-contract.md`, then the full grammar help so the
+/// flag list can never drift.
+fn render_command_help(command: Command) -> String {
+    let usage = match command {
+        Command::Clean => "Usage: dx [global-options] clean [--bazel]",
+        Command::Bazel => "Usage: dx [global-options] bazel [-- bazel-args ...]",
+        Command::Run => "Usage: dx [global-options] run <target> [-- app-args ...]",
+        _ => "Usage: dx [global-options] <command> [scope ...] [-- bazel-options ...]",
+    };
+    let scopes = match command {
+        Command::Clean => "Scopes: none (clean takes no scopes).",
+        Command::Bazel => "Scopes: none (raw Bazel forwarding; no dx scope resolution).",
+        _ => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. No scope selects //....",
+    };
+    let mut out = String::new();
+    out.push_str(&format!(
+        "dx {} - {}\n\n",
+        command.name(),
+        command.describe()
+    ));
+    out.push_str(usage);
+    out.push_str("\n\n");
+    out.push_str(scopes);
+    out.push_str("\nExit codes: 0 success; 2 usage/scope/owner errors; 1 operational failures; Bazel-authoritative failures preserve Bazel's code.");
+    out.push_str(
+        "\nOutput: --output text|diff|json; --report <format>=<destination> (repeatable).",
+    );
+    out.push_str("\n\n");
+    out.push_str(&render_top_help());
+    out
+}
+
 /// Maps a clap parse failure back onto [`ArgsError`] so the contract
-/// surface never changes: unknown flags (including `=value` on booleans
-/// and `--help`) stay unknown options, and missing option values stay
-/// missing values.
+/// surface never changes: unknown flags (including `=value` on booleans)
+/// stay unknown options, and missing option values stay missing values.
+/// `--help`/`-h` and `--version`/`-V` render from the same grammar
+/// (issue #203) as [`ArgsError::Help`], never as usage errors.
 fn map_clap_error(args: &[String], error: &clap::Error) -> ArgsError {
     use clap::error::ErrorKind;
     match error.kind() {
+        ErrorKind::DisplayHelp => {
+            let text = match help_command_in(args) {
+                Some(command) => render_command_help(command),
+                None => render_top_help(),
+            };
+            ArgsError::Help { text }
+        }
+        ErrorKind::DisplayVersion => {
+            use clap::CommandFactory;
+            ArgsError::Help {
+                text: Cli::command().render_version().to_string(),
+            }
+        }
         ErrorKind::UnknownArgument | ErrorKind::TooManyValues => {
             let option = recover_token(args, invalid_token(error));
             let suggestion = clap_suggestion(error).or_else(|| suggest_option(&option));
@@ -2193,5 +2335,65 @@ mod tests {
                 "words: {words:?}"
             );
         }
+    }
+
+    #[test]
+    fn top_level_help_lists_commands_and_flags() {
+        for flag in ["--help", "-h"] {
+            let text = match parse(&args(&[flag])) {
+                Err(ArgsError::Help { text }) => text,
+                other => panic!("{flag}: want Help, got {other:?}"),
+            };
+            for needle in [
+                "dx",
+                "lint",
+                "build",
+                "--workspace",
+                "--output",
+                "--fail-on",
+                "Exit codes",
+            ] {
+                assert!(text.contains(needle), "{flag}: missing {needle:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn per_command_help_covers_usage_scopes_exits_and_output() {
+        for argv in [
+            vec!["lint", "--help"],
+            vec!["--help", "lint"],
+            vec!["clean", "-h"],
+        ] {
+            let text = match parse(&args(&argv)) {
+                Err(ArgsError::Help { text }) => text,
+                other => panic!("{argv:?}: want Help, got {other:?}"),
+            };
+            let command = argv
+                .iter()
+                .find(|word| Command::parse(word).is_some())
+                .expect("command");
+            for needle in [
+                command,
+                "Usage:",
+                "Scopes:",
+                "Exit codes:",
+                "Output:",
+                "--workspace",
+            ] {
+                assert!(text.contains(needle), "{argv:?}: missing {needle:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn help_value_option_payload_is_not_a_command() {
+        // `--output bazel` binds bazel as the value, so `--help` still
+        // renders top-level help rather than bazel help.
+        let text = match parse(&args(&["--output", "bazel", "--help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("want Help, got {other:?}"),
+        };
+        assert!(text.contains("--output"));
     }
 }

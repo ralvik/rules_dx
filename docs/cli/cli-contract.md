@@ -60,6 +60,13 @@ options and test-binary arguments are not supported by other workflow commands; 
 `dx bazel` when either is required. `dx` does not infer an option class from target
 position or reinterpret trailing values heuristically.
 
+`dx --help` and `dx <command> --help` (including `-h`) render
+human-readable help from the same CLI grammar that parses invocations.
+Help exits `0` on stdout and stays outside machine-output guarantees:
+no NDJSON, even with `--output json`. Top-level help lists commands,
+flags, scope forms, exit codes, and output modes; per-command help adds
+that command's usage and scope notes.
+
 Workflow commands reserve flags required for correctness: aspect selection,
 `dx_results`, `@rules_dx//config:workspace`,
 `@rules_dx//config:validate`, the BEP destination/format, the build-profile

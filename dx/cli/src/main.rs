@@ -156,6 +156,15 @@ fn run() -> i32 {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let invocation = match parse(&args) {
         Ok(invocation) => invocation,
+        Err(dx_cli::args::ArgsError::Help { text }) => {
+            // `--help`/`-h` (issue #203): human text on stdout, exit 0,
+            // deliberately outside machine-output guarantees (no NDJSON).
+            let stdout = io::stdout();
+            let mut out = stdout.lock();
+            let _ = write!(out, "{text}");
+            let _ = out.flush();
+            return 0;
+        }
         Err(error) => return usage_error(&error.to_string()),
     };
     // Platform gate (issue #213): unqualified hosts refuse cleanly with a
