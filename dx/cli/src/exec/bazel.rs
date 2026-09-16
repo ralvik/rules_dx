@@ -1,0 +1,139 @@
+//! Raw `dx bazel` launcher passthrough.
+
+use super::common::*;
+use crate::args::Invocation;
+use crate::plan::plan_bazel;
+use dx_output::OutputMode;
+
+/// Executes `dx bazel`: raw launcher passthrough for the M26 WP4
+/// helper surface (`dx bazel version`, `dx bazel audit`/
+/// `dx bazel update` when those helpers exist).
+///
+/// The child inherits stdio and its exit code forwards verbatim: no
+/// scope resolution, no quality thresholds or reports, no BEP
+/// stream, and no dx-owned output beyond the dry-run/quiet summary
+/// line. Argument parsing guarantees text output, so only quiet
+/// suppresses the summary.
+pub(crate) fn execute_bazel(invocation: &Invocation, env: Env<'_>) -> i32 {
+    let Env {
+        workspace,
+        runner,
+        out,
+        err,
+        ..
+    } = env;
+    let plan = plan_bazel(&invocation.bazel_options);
+    if invocation.dry_run {
+        if !matches!(invocation.output, OutputMode::Text { quiet: true }) && !invocation.quiet {
+            let _ = writeln!(out, "{}", plan.summary);
+        }
+        return 0;
+    }
+    if matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet {
+        let _ = writeln!(out, "{}", plan.summary);
+    }
+    let status = match runner.run(&plan.argv, workspace, &[]) {
+        Ok(status) => status,
+        Err(error) => {
+            return operational(
+                invocation,
+                out,
+                err,
+                CODE_LAUNCH_FAILED,
+                &format!("failed to launch Bazel: {error}"),
+            );
+        }
+    };
+    let Some(bazel_code) = status.code else {
+        return operational(
+            invocation,
+            out,
+            err,
+            CODE_BAZEL_SIGNALLED,
+            "Bazel terminated by signal",
+        );
+    };
+    bazel_code
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::test_support::*;
+    use crate::exec::{execute, Env};
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    #[test]
+    fn bazel_forwards_argv_verbatim_and_exit_code() {
+        let harness = Harness::new("bazel-passthrough");
+        let seen = Rc::new(RefCell::new(Vec::new()));
+        let probe = ArgvProbe {
+            code: Some(3),
+            seen: Rc::clone(&seen),
+        };
+        let inv = invocation(&["bazel", "build", "//...", "--", "--jobs=4"]);
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute(
+            &inv,
+            Env {
+                workspace: &harness.workspace,
+                runner: &probe,
+                query_runner: &harness.query,
+                temp_dir: &harness.temp,
+                pid: std::process::id(),
+                nonce: 0,
+                out: &mut out,
+                err: &mut err,
+                ci: false,
+            },
+        );
+        assert_eq!(code, 3);
+        let seen = seen.borrow();
+        assert_eq!(seen.len(), 1);
+        assert_eq!(
+            seen[0],
+            vec![
+                "bazel".to_owned(),
+                "build".to_owned(),
+                "//...".to_owned(),
+                "--jobs=4".to_owned(),
+            ]
+        );
+        assert!(String::from_utf8(out)
+            .expect("stdout")
+            .contains("Running bazel build //... --jobs=4"));
+    }
+
+    #[test]
+    fn bazel_dry_run_launches_nothing() {
+        let harness = Harness::new("bazel-dry");
+        let seen = Rc::new(RefCell::new(Vec::new()));
+        let probe = ArgvProbe {
+            code: Some(0),
+            seen: Rc::clone(&seen),
+        };
+        let inv = invocation(&["--dry-run", "bazel", "version"]);
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute(
+            &inv,
+            Env {
+                workspace: &harness.workspace,
+                runner: &probe,
+                query_runner: &harness.query,
+                temp_dir: &harness.temp,
+                pid: std::process::id(),
+                nonce: 0,
+                out: &mut out,
+                err: &mut err,
+                ci: false,
+            },
+        );
+        assert_eq!(code, 0);
+        assert!(seen.borrow().is_empty());
+        assert!(String::from_utf8(out)
+            .expect("stdout")
+            .contains("Running bazel version"));
+    }
+}
