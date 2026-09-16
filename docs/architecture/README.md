@@ -1,6 +1,6 @@
 # Architecture
 
-Status: implemented. This document summarizes the as-built system shape.
+Status: implemented (seed-host-delivered per the [support-matrix lifecycle](../product/support-matrix.md#status-lifecycle)). This document summarizes the as-built system shape.
 Implementation lives in `dx/cli/src/main.rs`, `quality/result.proto`,
 `generation/result.proto`, and `dx/BUILD.bazel:20-29`; shipped surfaces are
 tracked in [support matrix](../product/support-matrix.md).

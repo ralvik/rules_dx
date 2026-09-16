@@ -1,5 +1,17 @@
 # Support Matrix
 
+## Status Lifecycle
+
+`Planned` → `Seed-host-delivered` → `Platform-qualified` → `Supported`.
+
+`Planned` is accepted scope. `Seed-host-delivered` is implemented and
+verified on the Linux x86_64 seed host only (what `Planned` cells and
+`Implementation status: implemented` / `Status: implemented` notes mean
+today). `Platform-qualified` adds required-platform evidence per
+[ADR 0014](../decisions/0014-tested-platform-release-stack.md). `Supported`
+adds release evidence and is owned by this matrix; no cell is currently
+`Supported`.
+
 ## Application Foundations
 
 `Planned` below means accepted scope delivered on the Linux x86_64 seed host
