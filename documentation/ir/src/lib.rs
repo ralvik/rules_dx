@@ -66,7 +66,15 @@ fn validate_symbol(symbol: &Symbol, index: usize) -> Result<(), Error> {
         return Err(Error::EmptySymbolId { index });
     }
     if let Some(source) = symbol.source.as_ref() {
-        if !source.file.is_empty() && source.file.starts_with('/') {
+        // Uses `dx_path::classify` for ladder order; only Absolute is
+        // rejected to preserve current behavior (empty means no source and
+        // stays valid; backslash/empty-component/dot segments remain allowed
+        // until a future tightening) (#72 slice 7).
+        let is_absolute = matches!(
+            dx_path::classify(&source.file),
+            Some(dx_path::PathProblem::Absolute)
+        );
+        if is_absolute {
             return Err(Error::AbsoluteSourcePath {
                 id: symbol.id.clone(),
                 path: source.file.clone(),
