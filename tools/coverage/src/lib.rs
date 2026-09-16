@@ -11,13 +11,15 @@
 //! non-excluded executable line fail the gate. Percentages are informational
 //! only and never decide the verdict.
 //!
-//! Marker recognition is textual Rust `//` line comments only: a marker is
-//! honored only when it appears after the `//` comment start and outside
-//! string or char literals (byte-level scan honoring `"`/`'` and backslash
-//! escapes). Markers inside block comments, raw strings, or lifetimes-heavy
-//! lines are out of scope for M00; no M00 source uses those shapes. The
-//! `reason:` lookup itself is a textual per-line match on the marker line or
-//! the line directly above it, and the reason text after the colon must be
+//! Marker recognition is textual per-extension comment syntax: `//` line
+//! comments for C-like sources, `#` line comments for Python, Starlark,
+//! TOML, shell, and YAML, and `<!-- ... -->` segments for Markdown and
+//! HTML. A marker is honored only inside its language's comments and
+//! outside string or char literals (byte-level scan honoring `"`/`'`
+//! and backslash escapes). Markers inside block comments or raw strings
+//! are out of scope; no eligible source uses those shapes. The `reason:`
+//! lookup itself is a textual per-line match on the marker line or the
+//! line directly above it, and the reason text after the colon must be
 //! non-empty.
 
 use std::collections::BTreeMap;
@@ -142,9 +144,43 @@ fn nearby_reason(
     ))
 }
 
-/// Comment text after the `//` comment start, honoring `"`/`'` literals and
-/// backslash escapes. Returns `None` when the line has no line comment.
-fn line_comment(line: &str) -> Option<&str> {
+/// Comment style for marker extraction, selected by source extension.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum CommentStyle {
+    /// `//` line comments (Rust, Go, C-family, Java, JavaScript, TypeScript).
+    SlashSlash,
+    /// `#` line comments (Python, Starlark, TOML, shell, YAML).
+    Hash,
+    /// `<!-- ... -->` segments (Markdown, HTML).
+    Html,
+}
+
+/// Marker comment style for `path`, by file extension. Unknown extensions
+/// keep the historical `//` behavior.
+fn comment_style(path: &str) -> CommentStyle {
+    if path.ends_with(".py")
+        || path.ends_with(".bzl")
+        || path.ends_with(".toml")
+        || path.ends_with(".sh")
+        || path.ends_with(".yaml")
+        || path.ends_with(".yml")
+    {
+        CommentStyle::Hash
+    } else if path.ends_with(".md")
+        || path.ends_with(".html")
+        || path.ends_with(".htm")
+        || path.ends_with(".mdx")
+    {
+        CommentStyle::Html
+    } else {
+        CommentStyle::SlashSlash
+    }
+}
+
+/// Comment text after the `opener` comment start, honoring `"`/`'`
+/// literals and backslash escapes. Returns `None` when the line has no
+/// line comment.
+fn line_comment_with<'a>(line: &'a str, opener: &[u8]) -> Option<&'a str> {
     let bytes = line.as_bytes();
     let mut index = 0;
     let mut in_string = false;
@@ -172,12 +208,63 @@ fn line_comment(line: &str) -> Option<&str> {
             in_string = true;
         } else if byte == b'\'' {
             in_char = true;
-        } else if byte == b'/' && index + 1 < bytes.len() && bytes[index + 1] == b'/' {
-            return Some(&line[index + 2..]);
+        } else if bytes[index..].starts_with(opener) {
+            return Some(&line[index + opener.len()..]);
         }
         index += 1;
     }
     None
+}
+
+/// Comment text after the `//` comment start, honoring `"`/`'` literals and
+/// backslash escapes. Returns `None` when the line has no line comment.
+fn line_comment(line: &str) -> Option<&str> {
+    line_comment_with(line, b"//")
+}
+
+/// Comment text after the `#` comment start, with the same literal
+/// handling as [`line_comment`]. Returns `None` when the line has no
+/// `#` comment.
+fn hash_comment(line: &str) -> Option<&str> {
+    line_comment_with(line, b"#")
+}
+
+/// Concatenated `<!-- ... -->` comment segments on one line. An opening
+/// marker without a closer runs to end of line; text outside segments is
+/// code and never scanned for directives.
+fn html_comments(line: &str) -> String {
+    let mut out = String::new();
+    let mut rest = line;
+    while let Some(open) = rest.find("<!--") {
+        let after = &rest[open + "<!--".len()..];
+        match after.find("-->") {
+            Some(close) => {
+                if !out.is_empty() {
+                    out.push(' ');
+                }
+                out.push_str(&after[..close]);
+                rest = &after[close + "-->".len()..];
+            }
+            None => {
+                if !out.is_empty() {
+                    out.push(' ');
+                }
+                out.push_str(after);
+                break;
+            }
+        }
+    }
+    out
+}
+
+/// Scannable comment text for one source `line` of `path`, dispatching on
+/// the extension-selected [`CommentStyle`].
+fn comment_text(path: &str, line: &str) -> String {
+    match comment_style(path) {
+        CommentStyle::SlashSlash => line_comment(line).unwrap_or_default().to_string(),
+        CommentStyle::Hash => hash_comment(line).unwrap_or_default().to_string(),
+        CommentStyle::Html => html_comments(line),
+    }
 }
 
 /// Whether `rest` (text right after the common marker prefix) is `word`
@@ -190,19 +277,20 @@ fn take_word(rest: &str, word: &str) -> bool {
     }
 }
 
-/// Validate the exclusion markers in the Rust source `source` for `path`.
+/// Validate the exclusion markers in the `source` of `path`.
 ///
 /// Every LINE/START/STOP directive needs a nearby non-empty `reason:`; ranges
 /// must open and close exactly once; any other spelling of the marker prefix
 /// is an unrecognized directive and fails. Markers are honored only inside
-/// `//` comments outside literals (see [`line_comment`]).
+/// the extension-selected comment style (see [`comment_style`]) outside
+/// literals.
 pub fn find_ignores(path: &str, source: &str) -> Result<Ignores, String> {
     let lines: Vec<&str> = source.lines().collect();
     let mut ignores = Ignores::default();
     let mut open: Option<(usize, String)> = None;
     for (index, line) in lines.iter().enumerate() {
         let lineno = index + 1;
-        let comment = line_comment(line).unwrap_or_default();
+        let comment = comment_text(path, line);
         for (pos, _) in comment.match_indices("LCOV_EXCL") {
             let rest = &comment[pos + "LCOV_EXCL".len()..];
             if take_word(rest, "_LINE") {
@@ -259,12 +347,25 @@ pub struct GateVerdict {
     pub eligible: u64,
     pub passed: bool,
     pub errors: Vec<String>,
-    /// Non-Rust instrumented sources observed in the report; counted nowhere.
+    /// Instrumented sources outside the covered languages, observed in the
+    /// report but counted nowhere.
     pub other_sources: Vec<String>,
 }
 
-fn is_covered_language(path: &str) -> bool {
-    path.ends_with(".rs") || path.ends_with(".go")
+/// Whether LCOV `SF` records for `path` carry gated line data. Rust and Go
+/// use the pinned Bazel llvm-cov/go integrations; Python and
+/// JavaScript/TypeScript participate in `bazel coverage` through the
+/// repo's pytest/jest wrappers (see `docs/testing/generation.md`). Any
+/// other extension lands in `other_sources` and counts nowhere; Starlark
+/// line data stays a hard error until the M00 measurement route exists.
+pub fn is_covered_language(path: &str) -> bool {
+    path.ends_with(".rs")
+        || path.ends_with(".go")
+        || path.ends_with(".py")
+        || path.ends_with(".js")
+        || path.ends_with(".jsx")
+        || path.ends_with(".ts")
+        || path.ends_with(".tsx")
 }
 
 fn is_starlark(path: &str) -> bool {
@@ -328,8 +429,9 @@ fn check_file(
 /// `inventory` maps repo-owned paths to [`ELIGIBLE`] or [`SUPPORT`];
 /// `bazel_sources` lists the repo-owned `*.rs`/`*.bzl` files declared by
 /// Bazel; `report` is the parsed combined LCOV; `load_source` reads workspace
-/// sources. Support files with hits are skipped silently; non-Rust report
-/// entries are listed separately and never merged into Rust counts, except
+/// sources. Support files with hits are skipped silently; report entries
+/// outside the covered languages are listed separately and never merged
+/// into gated counts, except
 /// that Starlark entries carrying line data fail until a measurement route
 /// and classification exist.
 pub fn evaluate(
@@ -911,6 +1013,87 @@ mod tests {
     }
 
     #[test]
+    fn hash_comment_markers_are_honored_for_python() {
+        let source = file_lines(&[
+            "def f():".to_string(),
+            format!(
+                "    pass  # {} - reason: fixture defensive line.",
+                marker("_LINE")
+            ),
+            "    return 1".to_string(),
+        ]);
+        let ignores = find_ignores("t.py", &source).unwrap();
+        assert!(ignores.singles.contains_key(&2));
+        assert!(!is_ignored(&ignores, 3));
+    }
+
+    #[test]
+    fn hash_markers_inside_python_strings_are_ignored() {
+        let tricky = format!("s = \"code with # {} inside\";", marker("_LINE"));
+        let source = file_lines(&[tricky, "real();".to_string()]);
+        let ignores = find_ignores("t.py", &source).unwrap();
+        assert!(ignores.singles.is_empty());
+        assert!(ignores.ranges.is_empty());
+    }
+
+    #[test]
+    fn slash_markers_are_not_honored_for_python() {
+        let source = file_lines(&[format!("// {} - reason: wrong style.", marker("_LINE"))]);
+        let ignores = find_ignores("t.py", &source).unwrap();
+        assert!(ignores.singles.is_empty());
+        assert!(ignores.ranges.is_empty());
+    }
+
+    #[test]
+    fn hash_marker_without_reason_fails_for_python() {
+        let source = file_lines(&[format!("# {}", marker("_LINE")), "x = 1".to_string()]);
+        let err = find_ignores("t.py", &source).unwrap_err();
+        assert!(err.contains("t.py:1") && err.contains("reason"), "{err}");
+    }
+
+    #[test]
+    fn hash_malformed_directive_fails_for_python() {
+        let source = file_lines(&[format!("# {} - reason: typo.", marker("_RANGE"))]);
+        let err = find_ignores("t.py", &source).unwrap_err();
+        assert!(err.contains("unrecognized"), "{err}");
+    }
+
+    #[test]
+    fn hash_range_excludes_boundaries_for_starlark() {
+        let source = file_lines(&[
+            "def f():".to_string(),
+            format!("    # {} - reason: range opens.", marker("_START")),
+            "    pass".to_string(),
+            format!("    # {} - reason: range closes.", marker("_STOP")),
+        ]);
+        let ignores = find_ignores("t.bzl", &source).unwrap();
+        assert_eq!(ignores.ranges.len(), 1);
+        assert!(is_ignored(&ignores, 2));
+        assert!(is_ignored(&ignores, 3));
+        assert!(is_ignored(&ignores, 4));
+        assert!(!is_ignored(&ignores, 1));
+    }
+
+    #[test]
+    fn html_comment_markers_are_honored_for_markdown() {
+        let source = file_lines(&[
+            "# Title".to_string(),
+            format!("<!-- {} - reason: fixture prose. -->", marker("_LINE")),
+            "Body.".to_string(),
+        ]);
+        let ignores = find_ignores("t.md", &source).unwrap();
+        assert!(ignores.singles.contains_key(&2));
+    }
+
+    #[test]
+    fn html_code_outside_segments_is_not_scanned_for_markdown() {
+        let source = file_lines(&["real `code` here.".to_string(), "More.".to_string()]);
+        let ignores = find_ignores("t.md", &source).unwrap();
+        assert!(ignores.singles.is_empty());
+        assert!(ignores.ranges.is_empty());
+    }
+
+    #[test]
     fn valid_ignore_shrinks_denominator_only_for_its_line() {
         let source = file_lines(&[
             "pub fn classify(n: u32) -> u32 {".to_string(),
@@ -949,6 +1132,99 @@ mod tests {
         assert_eq!(verdict.files[0].uncovered, vec![2]);
         let text = render(&verdict);
         assert!(text.contains("FAIL") && text.contains("elf.rs:2"), "{text}");
+    }
+
+    #[test]
+    fn python_valid_ignore_shrinks_denominator() {
+        let source = file_lines(&[
+            "def classify(n):".to_string(),
+            "    if n == 0:".to_string(),
+            format!(
+                "        return 0  # {} - reason: fixture defensive branch.",
+                marker("_LINE")
+            ),
+            "    return n".to_string(),
+        ]);
+        let files = BTreeMap::from([("elf.py", source)]);
+        let verdict = evaluate(
+            &eligible_inventory(&["elf.py"]),
+            &["elf.py".to_string()],
+            &report_of("elf.py", &[(1, 1), (2, 1), (3, 0), (4, 1)]),
+            &loader(files),
+        );
+        assert!(verdict.passed, "{verdict:?}");
+        assert_eq!(verdict.covered, 3);
+        assert_eq!(verdict.eligible, 3);
+        assert_eq!(verdict.files[0].ignored, 1);
+    }
+
+    #[test]
+    fn python_routes_to_files_not_other_sources() {
+        let files = BTreeMap::from([("elf.py", "x = 1\n".to_string())]);
+        let verdict = evaluate(
+            &eligible_inventory(&["elf.py"]),
+            &["elf.py".to_string()],
+            &report_of("elf.py", &[(1, 1)]),
+            &loader(files),
+        );
+        assert!(verdict.passed, "{verdict:?}");
+        assert!(verdict.other_sources.is_empty());
+        assert_eq!(verdict.files.len(), 1);
+    }
+
+    #[test]
+    fn python_absent_eligible_source_fails() {
+        let files = BTreeMap::from([("elf.py", "x = 1\n".to_string())]);
+        let verdict = evaluate(
+            &eligible_inventory(&["elf.py"]),
+            &["elf.py".to_string()],
+            &BTreeMap::new(),
+            &loader(files),
+        );
+        assert!(!verdict.passed);
+        assert!(
+            verdict.errors.iter().any(|e| e.contains("absent")),
+            "{verdict:?}"
+        );
+    }
+
+    #[test]
+    fn python_uncovered_line_fails_with_location() {
+        let files = BTreeMap::from([("elf.py", "x = 1\ny = 2\n".to_string())]);
+        let verdict = evaluate(
+            &eligible_inventory(&["elf.py"]),
+            &["elf.py".to_string()],
+            &report_of("elf.py", &[(1, 1), (2, 0)]),
+            &loader(files),
+        );
+        assert!(!verdict.passed);
+        assert_eq!(verdict.files[0].uncovered, vec![2]);
+        let text = render(&verdict);
+        assert!(text.contains("FAIL") && text.contains("elf.py:2"), "{text}");
+    }
+
+    #[test]
+    fn javascript_routes_to_files_with_slash_markers() {
+        let source = file_lines(&[
+            "export function f() {".to_string(),
+            format!(
+                "  return 0; // {} - reason: fixture defensive branch.",
+                marker("_LINE")
+            ),
+            "}".to_string(),
+        ]);
+        let files = BTreeMap::from([("elf.js", source)]);
+        let verdict = evaluate(
+            &eligible_inventory(&["elf.js"]),
+            &["elf.js".to_string()],
+            &report_of("elf.js", &[(1, 1), (2, 0), (3, 1)]),
+            &loader(files),
+        );
+        assert!(verdict.passed, "{verdict:?}");
+        assert!(verdict.other_sources.is_empty());
+        assert_eq!(verdict.covered, 2);
+        assert_eq!(verdict.eligible, 2);
+        assert_eq!(verdict.files[0].ignored, 1);
     }
 
     #[test]
