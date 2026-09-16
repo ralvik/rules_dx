@@ -1170,11 +1170,13 @@ mod tests {
         }
     }
 
-    fn clean_root(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("dx-clean-test-{}-{name}", std::process::id()));
-        let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(dir.join("ws")).expect("create workspace");
-        dir
+    fn clean_root(name: &str) -> tempfile::TempDir {
+        let scratch = tempfile::Builder::new()
+            .prefix(format!("dx-clean-test-{name}-").as_str())
+            .tempdir_in(std::env::temp_dir())
+            .expect("create test scratch");
+        fs::create_dir_all(scratch.path().join("ws")).expect("create workspace");
+        scratch
     }
 
     fn workspace_of(root: &Path) -> PathBuf {
@@ -1212,7 +1214,8 @@ mod tests {
 
     #[test]
     fn empty_workspace_collects_nothing() {
-        let root = clean_root("empty");
+        let scratch = clean_root("empty");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let inventory = collect_inventory(&workspace, &[], &[]).expect("collect");
         assert!(inventory.records.is_empty());
@@ -1229,7 +1232,8 @@ mod tests {
 
     #[test]
     fn inventory_validates_records_and_flags_unmanaged() {
-        let root = clean_root("inventory");
+        let scratch = clean_root("inventory");
+        let root = scratch.path().to_path_buf();
         let (workspace, stale_hex, current_hex) = two_record_workspace(&root);
         let dx_dir = workspace.join(".dx");
         // Unmanaged names under each managed root are refused, never
@@ -1281,7 +1285,8 @@ mod tests {
 
     #[test]
     fn malformed_current_fails_closed() {
-        let root = clean_root("bad-current");
+        let scratch = clean_root("bad-current");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         dx_setup::commit_pair(&workspace, &setup_pair('1', '2')).expect("commit");
         let current = workspace.join(".dx").join("setups").join("current");
@@ -1306,7 +1311,8 @@ mod tests {
 
     #[test]
     fn apply_removes_prune_set_and_preserves_current() {
-        let root = clean_root("apply");
+        let scratch = clean_root("apply");
+        let root = scratch.path().to_path_buf();
         let (workspace, stale_hex, current_hex) = two_record_workspace(&root);
         let inventory = collect_inventory(&workspace, &[], &[]).expect("collect");
         let plan = inventory.plan();
@@ -1349,7 +1355,8 @@ mod tests {
 
     #[test]
     fn apply_skips_entries_that_became_current() {
-        let root = clean_root("race");
+        let scratch = clean_root("race");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let first = setup_pair('1', '2');
         let second = setup_pair('3', '4');
@@ -1370,7 +1377,8 @@ mod tests {
 
     #[test]
     fn apply_skips_generations_referenced_by_live_current() {
-        let root = clean_root("race-gen");
+        let scratch = clean_root("race-gen");
+        let root = scratch.path().to_path_buf();
         let (workspace, stale_hex, _) = two_record_workspace(&root);
         let stale_record = record('3', '4');
         // Stale plan: no current known, so the stale generations prune.
@@ -1402,7 +1410,8 @@ mod tests {
 
     #[test]
     fn busy_lock_fails_after_deadline() {
-        let root = clean_root("busy");
+        let scratch = clean_root("busy");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let dx_dir = workspace.join(".dx");
         fs::create_dir_all(&dx_dir).expect("dx dir");
@@ -1422,7 +1431,8 @@ mod tests {
 
     #[test]
     fn workspace_missing_fails() {
-        let root = clean_root("ws-missing");
+        let scratch = clean_root("ws-missing");
+        let root = scratch.path().to_path_buf();
         let missing = root.join("no-such-dir");
         assert!(matches!(
             collect_inventory(&missing, &[], &[]),
@@ -1484,7 +1494,8 @@ mod tests {
 
     #[test]
     fn scan_missing_proc_root_scans_empty() {
-        let root = clean_root("scan-missing");
+        let scratch = clean_root("scan-missing");
+        let root = scratch.path().to_path_buf();
         let dx_dir = workspace_of(&root).join(".dx");
         assert_eq!(
             scan_live_hexes(&root.join("no-such-proc"), &dx_dir),
@@ -1496,7 +1507,8 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn scan_ignores_non_numeric_entries() {
-        let root = clean_root("scan-nonnumeric");
+        let scratch = clean_root("scan-nonnumeric");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let dx_dir = workspace.join(".dx");
         let proc_root = root.join("proc");
@@ -1515,7 +1527,8 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn scan_reports_cwd_and_fd_targets_under_managed_roots() {
-        let root = clean_root("scan-live");
+        let scratch = clean_root("scan-live");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let dx_dir = workspace.join(".dx");
         let proc_root = root.join("proc");
@@ -1555,7 +1568,8 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn scan_trims_deleted_suffix_and_ignores_unmanaged_paths() {
-        let root = clean_root("scan-edge");
+        let scratch = clean_root("scan-edge");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let dx_dir = workspace.join(".dx");
         let proc_root = root.join("proc");
@@ -1601,7 +1615,8 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn scan_dedupes_and_sorts_across_processes() {
-        let root = clean_root("scan-dedupe");
+        let scratch = clean_root("scan-dedupe");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let dx_dir = workspace.join(".dx");
         let proc_root = root.join("proc");
@@ -1640,7 +1655,8 @@ mod tests {
 
     #[test]
     fn with_scan_matches_plain_inventory_without_live_processes() {
-        let root = clean_root("with-scan");
+        let scratch = clean_root("with-scan");
+        let root = scratch.path().to_path_buf();
         let (workspace, stale_hex, _) = two_record_workspace(&root);
         let scanned = collect_inventory_with_scan(&workspace).expect("scan collect");
         let plain = collect_inventory(&workspace, &[], &[]).expect("plain collect");
@@ -1653,7 +1669,8 @@ mod tests {
 
     #[test]
     fn measure_sums_prune_entries_and_skips_missing() {
-        let root = clean_root("measure");
+        let scratch = clean_root("measure");
+        let root = scratch.path().to_path_buf();
         let (workspace, stale_hex, _) = two_record_workspace(&root);
         let plan = collect_inventory(&workspace, &[], &[])
             .expect("collect")
@@ -1696,7 +1713,8 @@ mod tests {
 
     #[test]
     fn measure_never_follows_symlinks() {
-        let root = clean_root("measure-nofollow");
+        let scratch = clean_root("measure-nofollow");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         dx_setup::commit_pair(&workspace, &setup_pair('1', '2')).expect("commit");
         let dx_dir = workspace.join(".dx");
@@ -1727,7 +1745,8 @@ mod tests {
 
     #[test]
     fn measure_missing_workspace_fails() {
-        let root = clean_root("measure-missing");
+        let scratch = clean_root("measure-missing");
+        let root = scratch.path().to_path_buf();
         let plan = CleanPlan {
             prune_setup_records: Vec::new(),
             prune_generations: Vec::new(),

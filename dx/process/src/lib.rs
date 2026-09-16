@@ -752,24 +752,30 @@ mod tests {
 
     #[test]
     fn real_fs_roundtrip_discovers_workspace() {
-        let root = std::env::temp_dir().join(format!("dx-discover-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&root);
+        let scratch = tempfile::Builder::new()
+            .prefix("dx-discover-")
+            .tempdir_in(std::env::temp_dir())
+            .expect("scratch");
+        let root = scratch.path().to_path_buf();
         let nested = root.join("a").join("b");
         std::fs::create_dir_all(&nested).expect("dirs");
         std::fs::write(root.join("MODULE.bazel"), "module(name = \"t\")\n").expect("marker");
         let found = discover_real(&nested, None).expect("real discover");
         assert_eq!(found, root);
-        std::fs::remove_dir_all(&root).expect("cleanup");
+        scratch.close().expect("cleanup");
     }
 
     #[test]
     fn real_fs_missing_module_suggests_override() {
-        let root = std::env::temp_dir().join(format!("dx-missing-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&root);
+        let scratch = tempfile::Builder::new()
+            .prefix("dx-missing-")
+            .tempdir_in(std::env::temp_dir())
+            .expect("scratch");
+        let root = scratch.path().to_path_buf();
         std::fs::create_dir_all(&root).expect("dirs");
         let err = discover_real(&root, None).expect_err("must fail");
         assert!(err.to_string().contains("--workspace"));
-        std::fs::remove_dir_all(&root).expect("cleanup");
+        scratch.close().expect("cleanup");
     }
 
     #[test]
@@ -825,13 +831,16 @@ mod tests {
 
     #[test]
     fn real_fs_reads_workspace_pin() {
-        let root = std::env::temp_dir().join(format!("dx-pin-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&root);
+        let scratch = tempfile::Builder::new()
+            .prefix("dx-pin-")
+            .tempdir_in(std::env::temp_dir())
+            .expect("scratch");
+        let root = scratch.path().to_path_buf();
         std::fs::create_dir_all(&root).expect("dirs");
         std::fs::write(root.join(".bazelversion"), "9.2.0\n").expect("pin");
         let version = pinned_bazel_version_real(&root).expect("repo pin");
         assert_eq!(version, "9.2.0");
-        std::fs::remove_dir_all(&root).expect("cleanup");
+        scratch.close().expect("cleanup");
     }
 
     #[test]

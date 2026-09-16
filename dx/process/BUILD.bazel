@@ -5,7 +5,10 @@ load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_library", "rust_test")
 
-package(default_visibility = ["//dx:__pkg__", "//dx:__subpackages__"])
+package(default_visibility = [
+    "//dx:__pkg__",
+    "//dx:__subpackages__",
+])
 
 rust_library(
     name = "dx_process",
@@ -17,7 +20,10 @@ rust_library(
     crate_name = "dx_process",
     crate_root = "src/lib.rs",
     deps = crate_deps(
-        ["libc"],
+        [
+            "libc",
+            "tempfile",
+        ],
         package_name = "dx/dx_process",
     ),
 )
@@ -32,7 +38,10 @@ rust_test(
     ),
     crate = ":dx_process",
     deps = crate_deps(
-        ["libc"],
+        [
+            "libc",
+            "tempfile",
+        ],
         package_name = "dx/dx_process",
     ),
 )

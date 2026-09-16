@@ -664,8 +664,11 @@ mod tests {
 
     #[test]
     fn apply_init_writes_absent_only_and_refuses_existing() {
-        let root = std::env::temp_dir().join(format!("dx-adopt-init-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&root);
+        let scratch = tempfile::Builder::new()
+            .prefix("dx-adopt-init-")
+            .tempdir_in(std::env::temp_dir())
+            .expect("scratch");
+        let root = scratch.path().to_path_buf();
         std::fs::create_dir_all(&root).expect("tmp");
         let first = apply_init(&root, "demo").expect("init");
         assert!(first.iter().any(|p| p == ".dx/version"));
@@ -677,19 +680,22 @@ mod tests {
             std::fs::read_to_string(root.join(".dx/version")).expect("read"),
             "custom\n"
         );
-        let _ = std::fs::remove_dir_all(&root);
+        scratch.close().expect("cleanup");
     }
 
     #[test]
     fn hooks_install_refuses_unmanaged_and_manages_shims() {
-        let root = std::env::temp_dir().join(format!("dx-adopt-hook-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&root);
+        let scratch = tempfile::Builder::new()
+            .prefix("dx-adopt-hook-")
+            .tempdir_in(std::env::temp_dir())
+            .expect("scratch");
+        let root = scratch.path().to_path_buf();
         std::fs::create_dir_all(root.join(".git/hooks")).expect("tmp");
         let installed = install_hooks(&root).expect("install");
         assert!(installed.iter().any(|p| p == ".git/hooks/pre-commit"));
         std::fs::write(root.join(".git/hooks/pre-commit"), "# custom hook\n").expect("unmanaged");
         assert!(install_hooks(&root).is_err());
-        let _ = std::fs::remove_dir_all(&root);
+        scratch.close().expect("cleanup");
     }
 
     #[test]

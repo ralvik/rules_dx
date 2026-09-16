@@ -118,6 +118,13 @@ name = "documentation_ir"
 version = "0.0.0"
 
 [[package]]
+name = "dx_adopt"
+version = "0.0.0"
+dependencies = [
+ "tempfile",
+]
+
+[[package]]
 name = "dx_apply"
 version = "0.0.0"
 dependencies = [
@@ -125,6 +132,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "tempfile",
 ]
 
 [[package]]
@@ -141,6 +149,13 @@ version = "0.0.0"
 dependencies = [
  "serde_json",
  "url",
+]
+
+[[package]]
+name = "dx_clean"
+version = "0.0.0"
+dependencies = [
+ "tempfile",
 ]
 
 [[package]]
@@ -163,6 +178,7 @@ version = "0.0.0"
 dependencies = [
  "serde",
  "serde_json",
+ "tempfile",
 ]
 
 [[package]]
@@ -177,6 +193,14 @@ name = "dx_process"
 version = "0.0.0"
 dependencies = [
  "libc",
+ "tempfile",
+]
+
+[[package]]
+name = "dx_setup"
+version = "0.0.0"
+dependencies = [
+ "tempfile",
 ]
 
 [[package]]
