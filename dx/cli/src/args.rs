@@ -6,7 +6,8 @@
 //! accept explicit Bazel labels and patterns (`//...`, `//pkg:target`,
 //! `@repo//pkg/...`) as well as workspace-relative file and directory
 //! paths. Package-relative labels (`:target`) and empty scopes fail with
-//! [`ArgsError::ScopeNotSupported`]; external-repository scopes parse but
+//! [`ArgsError::RelativeLabel`] and [`ArgsError::EmptyScope`];
+//! external-repository scopes parse but
 //! fail during resolution, and file ownership resolves through Bazel
 //! query per `docs/cli/target-resolution.md`. With no scope the
 //! repository operation (`//...`) runs.
@@ -337,9 +338,17 @@ pub enum ArgsError {
     #[error("options --debug and --release are mutually exclusive")]
     ConflictingProfiles,
     #[error(
+        "empty scope: pass no scope for repository-wide //... or a //, @, file, or directory scope"
+    )]
+    EmptyScope,
+    #[error(
+        "unsupported scope {scope:?}: package-relative labels resolve against the current directory; spell the workspace label starting with //"
+    )]
+    RelativeLabel { scope: String },
+    #[error(
         "unsupported scope {scope:?}: want // or @ labels, or workspace-relative file and directory paths"
     )]
-    ScopeNotSupported { scope: String },
+    InvalidScope { scope: String },
 }
 
 /// Raw `dx` command-line tokens as classified by `clap`: flags may appear
@@ -399,6 +408,25 @@ struct Cli {
     /// Everything after the first bare `--`, forwarded verbatim.
     #[arg(last = true)]
     bazel_options: Vec<String>,
+}
+
+/// Maps one scope positional onto its shape-specific parse failure:
+/// empty scopes name the repository-wide default, package-relative
+/// labels name the `//` qualification, and anything else keeps the
+/// generic label/path guidance (typo paths and `@` scopes fail later
+/// in resolution with `PathNotFound`/`ExternalScope` context).
+fn scope_error(scope: &str) -> ArgsError {
+    if scope.is_empty() {
+        ArgsError::EmptyScope
+    } else if scope.starts_with(':') {
+        ArgsError::RelativeLabel {
+            scope: scope.to_owned(),
+        }
+    } else {
+        ArgsError::InvalidScope {
+            scope: scope.to_owned(),
+        }
+    }
 }
 
 /// Value options whose next token the tokenizer consumes as their value:
@@ -651,9 +679,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                 });
             }
             if scope.is_empty() || scope.starts_with(':') {
-                return Err(ArgsError::ScopeNotSupported {
-                    scope: scope.clone(),
-                });
+                return Err(scope_error(scope));
             }
         }
     }
@@ -755,9 +781,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                     option: targets[1].clone(),
                 },
                 dx_setup::ScopeError::TargetPattern { value }
-                | dx_setup::ScopeError::NotTargetLabel { value } => {
-                    ArgsError::ScopeNotSupported { scope: value }
-                }
+                | dx_setup::ScopeError::NotTargetLabel { value } => scope_error(&value),
             });
         }
     }
@@ -793,9 +817,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         // empty scopes fail here.
         for scope in &targets {
             if scope.is_empty() || scope.starts_with(':') {
-                return Err(ArgsError::ScopeNotSupported {
-                    scope: scope.clone(),
-                });
+                return Err(scope_error(scope));
             }
         }
     }
@@ -843,9 +865,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         }
         for scope in &targets {
             if scope.is_empty() || scope.starts_with(':') {
-                return Err(ArgsError::ScopeNotSupported {
-                    scope: scope.clone(),
-                });
+                return Err(scope_error(scope));
             }
         }
     }
@@ -1364,16 +1384,11 @@ mod tests {
     fn relative_and_empty_scope_fail() {
         assert_eq!(
             parse(&args(&["lint", ":corpus"])),
-            Err(ArgsError::ScopeNotSupported {
+            Err(ArgsError::RelativeLabel {
                 scope: ":corpus".to_owned(),
             })
         );
-        assert_eq!(
-            parse(&args(&["lint", ""])),
-            Err(ArgsError::ScopeNotSupported {
-                scope: String::new(),
-            })
-        );
+        assert_eq!(parse(&args(&["lint", ""])), Err(ArgsError::EmptyScope));
     }
 
     #[test]
@@ -1498,11 +1513,19 @@ mod tests {
         assert!(format!("{}", ArgsError::MissingCommand).contains("missing command"));
         assert!(format!(
             "{}",
-            ArgsError::ScopeNotSupported {
+            ArgsError::InvalidScope {
                 scope: "//...".to_owned(),
             }
         )
         .contains("//..."));
+        assert!(format!("{}", ArgsError::EmptyScope).contains("empty scope"));
+        assert!(format!(
+            "{}",
+            ArgsError::RelativeLabel {
+                scope: ":corpus".to_owned(),
+            }
+        )
+        .contains(":corpus"));
         assert!(format!(
             "{}",
             ArgsError::UnknownCommand {
@@ -1728,13 +1751,13 @@ mod tests {
         );
         assert_eq!(
             parse(&args(&["audit", ":target"])),
-            Err(ArgsError::ScopeNotSupported {
+            Err(ArgsError::RelativeLabel {
                 scope: ":target".to_owned(),
             })
         );
         assert_eq!(
             parse(&args(&["update", ":target"])),
-            Err(ArgsError::ScopeNotSupported {
+            Err(ArgsError::RelativeLabel {
                 scope: ":target".to_owned(),
             })
         );
@@ -1884,7 +1907,10 @@ mod tests {
             assert!(
                 matches!(
                     parse(&args(&words)),
-                    Err(ArgsError::ScopeNotSupported { .. }) | Err(ArgsError::UnknownOption { .. })
+                    Err(ArgsError::EmptyScope)
+                        | Err(ArgsError::RelativeLabel { .. })
+                        | Err(ArgsError::InvalidScope { .. })
+                        | Err(ArgsError::UnknownOption { .. })
                 ),
                 "words: {words:?}"
             );
