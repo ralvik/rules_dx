@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 serde_json = "1"
+thiserror = "2"
 
 [lib]
 name = "dx_output"
