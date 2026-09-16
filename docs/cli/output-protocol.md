@@ -484,7 +484,13 @@ argv, option values, environment values, external labels, or raw tool output. De
 Bazel/tool diagnostics remain on stderr. `code` is stable machine data; `message` is for
 people and is not a stable value for matching or control flow.
 
-Initial stable codes are:
+The documented list is derived from the code (single source):
+`../../dx/cli/src/exec/common.rs` (`CODE_*`), `../../dx/cli/src/exec/run.rs`
+(`resolve_code`), and `../../dx/cli/src/exec/workflow.rs` (`incomplete_results`).
+New `operational()` call sites must reuse an existing `CODE_*` constant or add the new
+code here in the same change.
+
+Stable codes are:
 
 | Code | Meaning |
 | --- | --- |
@@ -494,10 +500,18 @@ Initial stable codes are:
 | `invalid_scope` | Scope syntax or kind is unsupported for the command |
 | `no_owner` | A file has no declared Bazel owner |
 | `no_tests` | File owners map to no tests for test or coverage |
+| `no_runnable` | File owners map to no runnable for run |
+| `ambiguous_runnable` | File owners map to multiple runnables for run |
 | `conflicting_option` | A forwarded option conflicts with required workflow policy |
 | `bazel_unavailable` | The required Bazelisk-compatible launcher cannot run |
 | `bazel_failed` | A required Bazel subprocess failed |
+| `launch_failed` | Failed to launch Bazel |
+| `bazel_signalled` | Bazel terminated by signal |
+| `unreadable_bep` | Temporary event path is not UTF-8 or build events are unreadable |
+| `invalid_bep` | Build events are malformed or unsupported |
 | `invalid_result` | A BEP artifact or result message is malformed or unsupported |
+| `incomplete_results` | Execution succeeded with incomplete result collection |
+| `diff_failed` | Unified diff rendering failed |
 | `mutation_conflict` | Reserved compatibility code for a proposed mutation conflict without a narrower classification |
 | `quality_oscillation` | A virtual quality pipeline repeated a changed source state |
 | `quality_iteration_limit` | A virtual quality pipeline still changed source in its tenth and final round |
@@ -507,9 +521,17 @@ Initial stable codes are:
 | `workspace_busy` | The bounded commit-lock wait expired |
 | `report_failed` | A requested standard report could not be produced or committed |
 | `commit_failed` | A validated source or managed-state commit failed because of filesystem or I/O error |
+| `clean_failed` | Managed-state cleanup failed |
+| `managed_commit_failed` | Managed-state commit failed |
+| `no_capability` | Exact setup scope provides neither environment nor codegen capability |
+| `coverage_below_minimum` | Coverage is below the configured minimum |
+| `audit_deferred` | Live audit execution is deferred |
+| `update_deferred` | Live update execution is deferred |
 | `unsupported_platform` | The selected workflow has no hermetic platform support |
 | `symlink_unavailable` | Required host symlink capability is unavailable |
 | `internal_error` | An invariant failed without a narrower stable classification |
+
+Provisional (accepted intent, implementation may follow): none currently reserved here.
 
 Adding a code is minor-compatible. Changing the meaning of an existing code is breaking.
 
