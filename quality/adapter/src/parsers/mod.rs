@@ -70,6 +70,11 @@
 //!   passed!` on exit 0. Diagnostics are start points (concise carries
 //!   no end); `error`/`warning` map onto [`ToolSeverity`]. Anything else
 //!   on stdout is a grammar mismatch.
+//! * tsc `--noEmit` (pinned `@npm_typescript//:tsc` 5.9.3): stdout
+//!   diagnostic lines `<path>(<line>,<col>): error TS<code>: <message>`,
+//!   exit 2 with findings and empty stdout on exit 0. Diagnostics are
+//!   start points (classic tsc carries no end); every diagnostic is an
+//!   error. Anything else on stdout is a grammar mismatch.
 //! * pydoclint `--quiet`: violations on stderr as a bare `<path>` header
 //!   line plus `    <line>: <DOCxxx>: <message>` lines (stdout empty).
 //!   Findings are line-level points at column 1; every violation is an
@@ -132,6 +137,7 @@ pub mod ruff;
 pub mod rust;
 pub mod rustfmt;
 pub mod taplo;
+pub mod tsc;
 pub mod ty;
 pub mod vale;
 
@@ -147,6 +153,7 @@ pub use ruff::{parse_ruff, parse_ruff_format};
 pub use rust::{parse_clippy, parse_rustc};
 pub use rustfmt::parse_rustfmt;
 pub use taplo::{parse_taplo_format_check, parse_taplo_lint};
+pub use tsc::parse_tsc;
 pub use ty::parse_ty;
 pub use vale::parse_vale;
 
