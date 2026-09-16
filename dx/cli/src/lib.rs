@@ -13,6 +13,7 @@ pub mod exec;
 pub mod finalize;
 pub mod generate;
 pub mod plan;
+pub mod platform;
 pub mod reports;
 pub mod resolve;
 

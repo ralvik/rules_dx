@@ -12,6 +12,18 @@ today). `Platform-qualified` adds required-platform evidence per
 adds release evidence and is owned by this matrix; no cell is currently
 `Supported`.
 
+## Unqualified Platforms
+
+Only the Linux x86_64 seed host is delivered today. Every other host,
+including the remaining
+[required platforms](../decisions/0014-tested-platform-release-stack.md#required-platforms),
+is unqualified: `dx` refuses cleanly with `unsupported_platform`, naming the
+host and pointing here and at ADR 0014, before any Bazel work starts. It
+never presents partial execution on an unqualified host as success. The
+refusal reads the same qualified-host list that platform evidence extends,
+so a host flips on exactly when its evidence lands. Tracked in
+[issue #213](https://github.com/ralvik/rules_dx/issues/213).
+
 ## Application Foundations
 
 `Planned` below means accepted scope delivered on the Linux x86_64 seed host

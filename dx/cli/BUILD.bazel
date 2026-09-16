@@ -30,6 +30,7 @@ rust_library(
         "src/generate.rs",
         "src/lib.rs",
         "src/plan.rs",
+        "src/platform.rs",
         "src/reports.rs",
         "src/resolve.rs",
     ],

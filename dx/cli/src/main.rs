@@ -17,8 +17,8 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use dx_cli::args::parse;
 use dx_cli::plan::create_run_temp_dir;
 use dx_cli::{execute, Env, ProcessQueryRunner};
-use dx_output::OutputMode;
-use dx_process::{discover_real, pre_exec_code, ChildStatus, Runner};
+use dx_output::{command_finished, error_event, write_event, FinishedCounts, OutputMode};
+use dx_process::{discover_real, operational_code, pre_exec_code, ChildStatus, Runner};
 
 /// Pid of the active Bazel child, if any. Stored before waiting and
 /// cleared after; the signal handler forwards to it. `SeqCst` keeps the
@@ -158,6 +158,33 @@ fn run() -> i32 {
         Ok(invocation) => invocation,
         Err(error) => return usage_error(&error.to_string()),
     };
+    // Platform gate (issue #213): unqualified hosts refuse cleanly with a
+    // qualification pointer before any Bazel work starts, never partial
+    // execution presented as success. Usage errors above still surface so
+    // typos stay diagnosable on every host.
+    if let Some(message) = dx_cli::platform::refusal(std::env::consts::OS, std::env::consts::ARCH) {
+        let stdout = io::stdout();
+        let mut out = stdout.lock();
+        let mut err = io::stderr();
+        let _ = writeln!(err, "dx: {message}");
+        if invocation.output == OutputMode::Json {
+            if let Ok(event) = error_event("unsupported_platform", &message, None, None, None) {
+                let _ = write_event(&mut out, &event);
+            }
+            let _ = write_event(
+                &mut out,
+                &command_finished(
+                    operational_code(),
+                    &FinishedCounts {
+                        results_complete: Some(false),
+                        ..FinishedCounts::default()
+                    },
+                ),
+            );
+        }
+        let _ = out.flush();
+        return operational_code();
+    }
     let cwd = match std::env::current_dir() {
         Ok(cwd) => cwd,
         Err(error) => {
