@@ -14,7 +14,6 @@ rust_library(
         "src/exec.rs",
         "src/lib.rs",
         "src/parsers.rs",
-        "src/suggest.rs",
     ],
     aliases = aliases(
         package_name = "quality/quality_adapter",

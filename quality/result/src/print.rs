@@ -65,11 +65,27 @@ fn print_diagnostics(prefix: &str, diagnostics: &[proto::Diagnostic]) {
 }
 
 fn main() {
-    let path = std::env::args()
-        .nth(1)
-        .expect("usage: print_result OUT.pb");
-    let bytes = std::fs::read(&path).expect("cannot read result protobuf");
-    let result = decode_validated(&bytes).expect("invalid result protobuf");
+    let path = match std::env::args().nth(1) {
+        Some(path) => path,
+        None => {
+            eprintln!("usage: print_result OUT.pb");
+            std::process::exit(2);
+        }
+    };
+    let bytes = match std::fs::read(&path) {
+        Ok(bytes) => bytes,
+        Err(err) => {
+            eprintln!("print_result: cannot read {path}: {err}");
+            std::process::exit(1);
+        }
+    };
+    let result = match decode_validated(&bytes) {
+        Ok(result) => result,
+        Err(err) => {
+            eprintln!("print_result: invalid result protobuf {path}: {err}");
+            std::process::exit(1);
+        }
+    };
     println!("producer {}", result.producer);
     println!("capability {}", capability_name(result.capability));
     println!("stages {}", result.stages.len());
