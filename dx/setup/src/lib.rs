@@ -414,10 +414,7 @@ pub fn setup_digest(pair: &SetupPair) -> [u8; 32] {
 
 /// Lowercase hex of the setup digest: the setup record directory name.
 pub fn setup_hex(pair: &SetupPair) -> String {
-    setup_digest(pair)
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+    hex::encode(setup_digest(pair))
 }
 
 /// Expected relative link text from a setup record to its environment

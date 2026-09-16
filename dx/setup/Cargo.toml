@@ -8,5 +8,6 @@ name = "dx_setup"
 path = "src/lib.rs"
 
 [dependencies]
+hex = "0.4"
 tempfile = "3"
 thiserror = "2"

@@ -307,6 +307,7 @@ name = "dx_cli"
 version = "0.0.0"
 dependencies = [
  "clap",
+ "hex",
  "libc",
  "quick-xml",
  "serde",
@@ -318,6 +319,7 @@ dependencies = [
 name = "dx_codegen"
 version = "0.0.0"
 dependencies = [
+ "hex",
  "thiserror",
 ]
 
@@ -341,6 +343,7 @@ name = "dx_env"
 version = "0.0.0"
 dependencies = [
  "clap",
+ "hex",
  "serde",
  "serde_json",
  "tempfile",
@@ -351,6 +354,7 @@ dependencies = [
 name = "dx_env_plan"
 version = "0.0.0"
 dependencies = [
+ "hex",
  "thiserror",
 ]
 
@@ -395,6 +399,7 @@ version = "0.0.0"
 name = "dx_setup"
 version = "0.0.0"
 dependencies = [
+ "hex",
  "tempfile",
  "thiserror",
 ]

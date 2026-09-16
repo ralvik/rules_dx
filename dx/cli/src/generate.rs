@@ -138,13 +138,7 @@ impl ProjectedManifest {
 
 /// Lowercase hexadecimal over 32 raw digest bytes.
 fn hex_digest(bytes: &[u8]) -> String {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    let mut text = String::with_capacity(bytes.len() * 2);
-    for byte in bytes {
-        text.push(HEX[(byte >> 4) as usize] as char);
-        text.push(HEX[(byte & 0x0f) as usize] as char);
-    }
-    text
+    hex::encode(bytes)
 }
 
 /// True when the manifest carries check-mode semantics.

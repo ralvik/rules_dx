@@ -8,4 +8,5 @@ name = "dx_env_plan"
 path = "src/lib.rs"
 
 [dependencies]
+hex = "0.4"
 thiserror = "2"

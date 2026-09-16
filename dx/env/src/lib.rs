@@ -190,10 +190,7 @@ fn identity_digest(canonical: &[u8]) -> [u8; 32] {
 
 /// Lowercase hex of the identity digest, for operator messaging.
 pub fn identity_hex(tools: &[ToolPlan]) -> String {
-    identity_digest(&canonical_identity_bytes(tools))
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+    hex::encode(identity_digest(&canonical_identity_bytes(tools)))
 }
 
 /// Encodes a provenance marker for `identity`.

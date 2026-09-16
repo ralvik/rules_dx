@@ -470,10 +470,7 @@ pub fn plan_digest(fingerprint: &str) -> [u8; 32] {
 
 /// Lowercase hex of the plan digest, for operator messaging.
 pub fn plan_hex(fingerprint: &str) -> String {
-    plan_digest(fingerprint)
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+    hex::encode(plan_digest(fingerprint))
 }
 
 /// The normalized complete plan: merged records plus their fingerprint
@@ -488,10 +485,7 @@ pub struct CollectedPlan {
 impl CollectedPlan {
     /// Lowercase hex of the plan digest, for operator messaging.
     pub fn hex(&self) -> String {
-        self.digest
-            .iter()
-            .map(|byte| format!("{byte:02x}"))
-            .collect()
+        hex::encode(self.digest)
     }
 }
 

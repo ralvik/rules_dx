@@ -114,13 +114,7 @@ pub(crate) struct Collected {
 
 /// Lowercase hexadecimal over the 32 raw digest bytes.
 pub(crate) fn hex_digest(bytes: &[u8; 32]) -> String {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    let mut text = String::with_capacity(64);
-    for byte in bytes {
-        text.push(HEX[(byte >> 4) as usize] as char);
-        text.push(HEX[(byte & 0x0f) as usize] as char);
-    }
-    text
+    hex::encode(bytes)
 }
 
 pub(crate) fn map_severity(value: i32) -> Option<Severity> {
