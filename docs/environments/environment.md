@@ -270,6 +270,17 @@ publication mechanics are tracked in
 [#26](https://github.com/ralvik/rules_dx/issues/26). Publication still requires explicit
 approval and qualified release artifacts.
 
+Publication dry-run: dispatch `.github/workflows/publish-dry-run.yml` manually from the
+Actions tab. It builds the seed-host Linux x86_64 `dx` binary, records its sha256, and
+reports what *would* publish (BCR module, GitHub Release binaries) without tagging,
+submitting, or creating anything; the report lands in the run summary and logs. The
+`approve` input (default false) runs the fuller qualification; nothing publishes either
+way. The workflow needs only `contents: read` and stores no secrets. The full release
+matrix, SBOM/provenance generation, and BCR dry-run submission arrive as follow-ups
+tracked in [#78](https://github.com/ralvik/rules_dx/issues/78) as platforms qualify
+under [#5](https://github.com/ralvik/rules_dx/issues/5) and signing tooling is selected
+under [#26](https://github.com/ralvik/rules_dx/issues/26).
+
 Release hosting, signing, and verification services must satisfy the
 [free-infrastructure constraint](../testing/README.md#infrastructure-budget) without
 weakening artifact verification or required host coverage.
