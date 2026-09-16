@@ -38,6 +38,7 @@ use dx_bep::TargetOutput;
 use dx_roots::{build_argv, invocation_targets, repository_plan, RepositoryRootPlan};
 use env_shard::{decode_validated, Error};
 use quality_result::digest;
+use serde::Serialize;
 
 /// Private output group carrying collected shards plus every referenced
 /// artifact. Frozen in `//env:plan.bzl`; matches
@@ -393,20 +394,23 @@ pub fn conflict_error(records: &[EnvRecord]) -> String {
     }
 }
 
-fn escape_into(out: &mut String, text: &str) {
-    for c in text.chars() {
-        match c {
-            '"' => out.push_str("\\\""),
-            '\\' => out.push_str("\\\\"),
-            '\n' => out.push_str("\\n"),
-            '\r' => out.push_str("\\r"),
-            '\t' => out.push_str("\\t"),
-            c if (c as u32) < 0x20 => {
-                out.push_str(&format!("\\u{:04x}", c as u32));
-            }
-            c => out.push(c),
-        }
-    }
+/// Serializable fingerprint view: field order matches the frozen
+/// Starlark `env_plan_fingerprint` (`entries`, `integration`,
+/// `producer`; entry `exec_path`, `key`, `value`) so
+/// `serde_json::to_string` stays byte-identical for the pinned
+/// fixtures while gaining correct escaping.
+#[derive(Serialize)]
+struct FingerprintEntry<'a> {
+    exec_path: &'a str,
+    key: &'a str,
+    value: &'a str,
+}
+
+#[derive(Serialize)]
+struct FingerprintRecord<'a> {
+    entries: Vec<FingerprintEntry<'a>>,
+    integration: &'a str,
+    producer: &'a str,
 }
 
 /// Renders the normalized complete-plan hash input, mirroring
@@ -416,32 +420,23 @@ fn escape_into(out: &mut String, text: &str) {
 /// Byte-identical to the Starlark rendering for the same records.
 pub fn fingerprint(records: &[EnvRecord]) -> String {
     let merged = merge_records(records);
-    let mut out = String::from("[");
-    for (index, record) in merged.iter().enumerate() {
-        if index > 0 {
-            out.push(',');
-        }
-        out.push_str("{\"entries\":[");
-        for (entry_index, entry) in record.entries.iter().enumerate() {
-            if entry_index > 0 {
-                out.push(',');
-            }
-            out.push_str("{\"exec_path\":\"");
-            escape_into(&mut out, &entry.exec_path);
-            out.push_str("\",\"key\":\"");
-            escape_into(&mut out, &entry.key);
-            out.push_str("\",\"value\":\"");
-            escape_into(&mut out, &entry.value);
-            out.push_str("\"}");
-        }
-        out.push_str("],\"integration\":\"");
-        escape_into(&mut out, &record.integration);
-        out.push_str("\",\"producer\":\"");
-        escape_into(&mut out, &record.producer);
-        out.push_str("\"}");
-    }
-    out.push(']');
-    out
+    let view: Vec<FingerprintRecord<'_>> = merged
+        .iter()
+        .map(|record| FingerprintRecord {
+            entries: record
+                .entries
+                .iter()
+                .map(|entry| FingerprintEntry {
+                    exec_path: entry.exec_path.as_str(),
+                    key: entry.key.as_str(),
+                    value: entry.value.as_str(),
+                })
+                .collect(),
+            integration: record.integration.as_str(),
+            producer: record.producer.as_str(),
+        })
+        .collect();
+    serde_json::to_string(&view).expect("fingerprint JSON serializes")
 }
 
 /// BLAKE3-256 over the normalized fingerprint bytes: the complete-plan
@@ -961,6 +956,34 @@ mod tests {
             fingerprint(&records),
             "[{\"entries\":[{\"exec_path\":\"\",\"key\":\"runtime\",\"value\":\"stable-x86_64\"}],\"integration\":\"rust\",\"producer\":\"//env:env_shard_alpha\"},\
              {\"entries\":[{\"exec_path\":\"\",\"key\":\"abi\",\"value\":\"gnu\"}],\"integration\":\"rust\",\"producer\":\"//env:env_shard_beta\"}]"
+        );
+    }
+
+    #[test]
+    fn fingerprint_escapes_quotes_newlines_and_controls() {
+        let records = vec![EnvRecord {
+            producer: "//env:\"a\"\n".to_owned(),
+            integration: "rust".to_owned(),
+            entries: vec![EnvEntry {
+                key: "k\"ey".to_owned(),
+                value: "v\nalue\u{1}".to_owned(),
+                exec_path: "out\\bin".to_owned(),
+            }],
+        }];
+        let rendered = fingerprint(&records);
+        assert!(rendered.contains("\\\""), "{rendered}");
+        assert!(rendered.contains("\\n"), "{rendered}");
+        assert!(rendered.contains("\\\\"), "{rendered}");
+        assert!(rendered.contains("\\u0001"), "{rendered}");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&rendered).expect("fingerprint is valid JSON");
+        assert_eq!(
+            parsed[0]["entries"][0]["value"],
+            serde_json::Value::String("v\nalue\u{1}".to_owned())
+        );
+        assert_eq!(
+            serde_json::to_string(&parsed).expect("reserialize"),
+            rendered
         );
     }
 

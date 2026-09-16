@@ -34,6 +34,7 @@ use codegen_shard::{decode_validated, Error};
 use dx_bep::TargetOutput;
 use dx_roots::{build_argv, invocation_targets, repository_plan, RepositoryRootPlan};
 use quality_result::digest;
+use serde::Serialize;
 
 /// Private output group carrying collected shards plus every generated
 /// artifact referenced by them. Frozen under O33; matches
@@ -406,20 +407,26 @@ pub fn conflict_error(records: &[CodegenRecord]) -> String {
     }
 }
 
-fn escape_into(out: &mut String, text: &str) {
-    for c in text.chars() {
-        match c {
-            '"' => out.push_str("\\\""),
-            '\\' => out.push_str("\\\\"),
-            '\n' => out.push_str("\\n"),
-            '\r' => out.push_str("\\r"),
-            '\t' => out.push_str("\\t"),
-            c if (c as u32) < 0x20 => {
-                out.push_str(&format!("\\u{:04x}", c as u32));
-            }
-            c => out.push(c),
-        }
-    }
+/// Serializable fingerprint view: field order matches the frozen
+/// Starlark `codegen_plan_fingerprint` (`entries`, `language`,
+/// `producer`; entry `exec_path`, `import_root`, `logical_path`,
+/// `namespace`, `read_only`) so `serde_json::to_string` stays
+/// byte-identical for the pinned fixtures while gaining correct
+/// escaping for quotes, backslashes, and control characters.
+#[derive(Serialize)]
+struct FingerprintEntry<'a> {
+    exec_path: &'a str,
+    import_root: &'a str,
+    logical_path: &'a str,
+    namespace: &'a str,
+    read_only: bool,
+}
+
+#[derive(Serialize)]
+struct FingerprintRecord<'a> {
+    entries: Vec<FingerprintEntry<'a>>,
+    language: &'a str,
+    producer: &'a str,
 }
 
 /// Renders the normalized complete-plan hash input, mirroring
@@ -431,34 +438,25 @@ fn escape_into(out: &mut String, text: &str) {
 /// fingerprints).
 pub fn fingerprint(records: &[CodegenRecord]) -> String {
     let merged = merge_records(records);
-    let mut out = String::from("[");
-    for (index, record) in merged.iter().enumerate() {
-        if index > 0 {
-            out.push(',');
-        }
-        out.push_str("{\"entries\":[");
-        for (entry_index, entry) in record.entries.iter().enumerate() {
-            if entry_index > 0 {
-                out.push(',');
-            }
-            out.push_str("{\"exec_path\":\"");
-            escape_into(&mut out, &entry.exec_path);
-            out.push_str("\",\"import_root\":\"");
-            escape_into(&mut out, &entry.import_root);
-            out.push_str("\",\"logical_path\":\"");
-            escape_into(&mut out, &entry.logical_path);
-            out.push_str("\",\"namespace\":\"");
-            escape_into(&mut out, &entry.namespace);
-            out.push_str("\",\"read_only\":true}");
-        }
-        out.push_str("],\"language\":\"");
-        escape_into(&mut out, &record.language);
-        out.push_str("\",\"producer\":\"");
-        escape_into(&mut out, &record.producer);
-        out.push_str("\"}");
-    }
-    out.push(']');
-    out
+    let view: Vec<FingerprintRecord<'_>> = merged
+        .iter()
+        .map(|record| FingerprintRecord {
+            entries: record
+                .entries
+                .iter()
+                .map(|entry| FingerprintEntry {
+                    exec_path: entry.exec_path.as_str(),
+                    import_root: entry.import_root.as_str(),
+                    logical_path: entry.logical_path.as_str(),
+                    namespace: entry.namespace.as_str(),
+                    read_only: true,
+                })
+                .collect(),
+            language: record.language.as_str(),
+            producer: record.producer.as_str(),
+        })
+        .collect();
+    serde_json::to_string(&view).expect("fingerprint JSON serializes")
 }
 
 /// BLAKE3-256 over the normalized fingerprint bytes: the complete-plan
@@ -1008,6 +1006,37 @@ mod tests {
         assert_eq!(
             fingerprint(&records),
             "[{\"entries\":[{\"exec_path\":\"result_proto.lib.rs\",\"import_root\":\"gen\",\"logical_path\":\"gen/prost_result.rs\",\"namespace\":\"result\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//generation:codegen_prost_fixture\"}]"
+        );
+    }
+
+    #[test]
+    fn fingerprint_escapes_quotes_newlines_and_controls() {
+        let records = vec![CodegenRecord {
+            producer: "//gen:\"a\"\n".to_owned(),
+            language: "rust".to_owned(),
+            entries: vec![CodegenEntry {
+                logical_path: "a\"b\nc\u{1}d".to_owned(),
+                import_root: "src".to_owned(),
+                namespace: "ns\\q".to_owned(),
+                exec_path: "out/a.rs".to_owned(),
+            }],
+        }];
+        let rendered = fingerprint(&records);
+        // serde_json escaping: quote, newline, backslash, and <0x20.
+        assert!(rendered.contains("\\\""), "{rendered}");
+        assert!(rendered.contains("\\n"), "{rendered}");
+        assert!(rendered.contains("\\\\"), "{rendered}");
+        assert!(rendered.contains("\\u0001"), "{rendered}");
+        // Round-trips through a real JSON parser with identical bytes.
+        let parsed: serde_json::Value =
+            serde_json::from_str(&rendered).expect("fingerprint is valid JSON");
+        assert_eq!(
+            parsed[0]["entries"][0]["logical_path"],
+            serde_json::Value::String("a\"b\nc\u{1}d".to_owned())
+        );
+        assert_eq!(
+            serde_json::to_string(&parsed).expect("reserialize"),
+            rendered
         );
     }
 

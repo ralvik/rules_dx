@@ -256,6 +256,8 @@ version = "0.0.0"
 name = "dx_adopt"
 version = "0.0.0"
 dependencies = [
+ "serde",
+ "serde_json",
  "tempfile",
 ]
 
@@ -327,6 +329,8 @@ name = "dx_codegen"
 version = "0.0.0"
 dependencies = [
  "hex",
+ "serde",
+ "serde_json",
  "thiserror",
 ]
 
@@ -362,6 +366,8 @@ name = "dx_env_plan"
 version = "0.0.0"
 dependencies = [
  "hex",
+ "serde",
+ "serde_json",
  "thiserror",
 ]
 

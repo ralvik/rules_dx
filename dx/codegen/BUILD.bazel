@@ -18,7 +18,7 @@ rust_library(
     crate_name = "dx_codegen",
     crate_root = "src/lib.rs",
     deps = crate_deps(
-        ["hex", "thiserror"],
+        ["hex", "serde", "serde_json", "thiserror"],
         package_name = "dx/dx_codegen",
     ) + [
         "//dx/bep:dx_bep",

@@ -14,6 +14,8 @@
 
 use std::path::Path;
 
+use serde::Serialize;
+
 /// Delivered `dx` / `rules_dx` single version (O51 freeze).
 pub const DX_VERSION: &str = "0.0.0";
 /// Pinned `rules_dx` module version; `dx version` must equal this.
@@ -385,7 +387,7 @@ pub fn write_version_pin(root: &Path, version: &str) -> Result<(), String> {
 }
 
 /// One diagnostics check in the consolidated `dx status` surface.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct StatusCheck {
     /// Check name (toolchain, platform, tools, pin).
     pub name: String,
@@ -395,6 +397,11 @@ pub struct StatusCheck {
     pub detail: String,
     /// Actionable hint.
     pub hint: String,
+}
+
+#[derive(Serialize)]
+struct StatusPayload<'a> {
+    checks: &'a [StatusCheck],
 }
 
 /// Render text status: one line per check.
@@ -408,18 +415,7 @@ pub fn render_status_text(checks: &[StatusCheck]) -> String {
 
 /// Render JSON status (single object, NDJSON-compatible).
 pub fn render_status_json(checks: &[StatusCheck]) -> String {
-    let mut out = String::from("{\"checks\":[");
-    for (i, c) in checks.iter().enumerate() {
-        if i > 0 {
-            out.push(',');
-        }
-        out.push_str(&format!(
-            "{{\"name\":\"{}\",\"status\":\"{}\",\"detail\":\"{}\",\"hint\":\"{}\"}}",
-            c.name, c.status, c.detail, c.hint
-        ));
-    }
-    out.push_str("]}");
-    out
+    serde_json::to_string(&StatusPayload { checks }).expect("status JSON serializes")
 }
 
 /// Default local status checks (toolchain + platform + tools + pin).
@@ -743,5 +739,29 @@ mod tests {
         let json = render_status_json(&checks);
         assert!(json.contains("\"checks\""));
         assert!(json.contains("\"pin\""));
+    }
+
+    #[test]
+    fn status_json_escapes_quotes_newlines_and_controls() {
+        let checks = vec![StatusCheck {
+            name: "we\"ird".to_owned(),
+            status: "ok".to_owned(),
+            detail: "line1\nline2\u{1}".to_owned(),
+            hint: "back\\slash".to_owned(),
+        }];
+        let json = render_status_json(&checks);
+        assert!(json.contains("\\\""), "{json}");
+        assert!(json.contains("\\n"), "{json}");
+        assert!(json.contains("\\\\"), "{json}");
+        assert!(json.contains("\\u0001"), "{json}");
+        let parsed: serde_json::Value = serde_json::from_str(&json).expect("status JSON is valid");
+        assert_eq!(parsed["checks"][0]["name"], "we\"ird");
+        // Re-serializing via `Value` sorts object keys (BTreeMap), while the
+        // struct order stays name,status,detail,hint for byte-stability with
+        // the pre-serde rendering; compare values, not bytes.
+        let reparsed: serde_json::Value =
+            serde_json::from_str(&serde_json::to_string(&parsed).expect("reserialize"))
+                .expect("reserialized JSON is valid");
+        assert_eq!(parsed, reparsed);
     }
 }
