@@ -6,7 +6,7 @@ load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_library", "rust_test")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//dx:__pkg__", "//dx:__subpackages__"])
 
 rust_library(
     name = "dx_codegen",
@@ -54,7 +54,10 @@ rust_clippy_test(
     targets = [":dx_codegen"],
 )
 
-exports_files(["Cargo.toml"])
+exports_files(
+    ["Cargo.toml"],
+    visibility = ["//visibility:public"],
+)
 
 # Repository corpus: crate manifest and build file owned for
 # direct-Bazel dogfood under the canonical real_fixture_policy.
