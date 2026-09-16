@@ -36,6 +36,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
 use serde::Serialize;
 
 /// Structural finding kinds. Every variant is a finding; skipped remote
@@ -98,44 +99,50 @@ pub fn check_markdown(
     let mut definitions: BTreeMap<String, String> = BTreeMap::new();
     let mut slug_counts: BTreeMap<String, usize> = BTreeMap::new();
 
-    let mut open_fence: Option<(char, usize, u32)> = None;
+    // Block structure comes from pulldown-cmark: fence findings and the
+    // suppressed-line set below. Headings, definitions, and links stay
+    // line-scoped until the link migration.
+    let starts = line_starts(text);
+    let regions = code_regions(text, &starts);
+    let source_lines: Vec<&str> = text.lines().collect();
+    let mut suppressed: BTreeSet<u32> = BTreeSet::new();
+    for region in &regions {
+        for line in region.start_line..=region.end_line {
+            suppressed.insert(line);
+        }
+        let Some(info) = region.fence_info.as_deref() else {
+            continue;
+        };
+        if info.trim().is_empty() {
+            push_finding(
+                &mut outcome,
+                region.start_line,
+                FindingKind::MissingCodeFenceLanguage,
+                "fenced code block without a language tag",
+            );
+        }
+        if !is_closed_fence(&source_lines, region) {
+            push_finding(
+                &mut outcome,
+                region.start_line,
+                FindingKind::UnclosedCodeFence,
+                "fenced code block opened here is never closed",
+            );
+        }
+    }
+
     let mut open_span: Option<usize> = None;
     for (index, line) in text.lines().enumerate() {
         let line_no = (index as u32) + 1;
+        if suppressed.contains(&line_no) {
+            // Fence lines and block content are block boundaries: a span
+            // cannot continue past them, and they scan for nothing.
+            open_span = None;
+            continue;
+        }
         if line.trim().is_empty() {
             // Code spans never cross a blank line (paragraph boundary), so
             // an unclosed opener stops hiding links here.
-            open_span = None;
-            continue;
-        }
-        if let Some(marker) = fence_marker(line) {
-            // Fence lines are block boundaries: a span cannot continue past
-            // them.
-            open_span = None;
-            match open_fence {
-                None => {
-                    if marker.2.trim().is_empty() {
-                        push_finding(
-                            &mut outcome,
-                            line_no,
-                            FindingKind::MissingCodeFenceLanguage,
-                            "fenced code block without a language tag",
-                        );
-                    }
-                    open_fence = Some((marker.0, marker.1, line_no));
-                }
-                Some((open_char, open_len, _))
-                    if marker.0 == open_char
-                        && marker.1 >= open_len
-                        && marker.2.trim().is_empty() =>
-                {
-                    open_fence = None;
-                }
-                Some(_) => {}
-            }
-            continue;
-        }
-        if open_fence.is_some() {
             open_span = None;
             continue;
         }
@@ -175,15 +182,6 @@ pub fn check_markdown(
             target,
         }));
     }
-    if let Some((_, _, open_line)) = open_fence {
-        push_finding(
-            &mut outcome,
-            open_line,
-            FindingKind::UnclosedCodeFence,
-            "fenced code block opened here is never closed",
-        );
-    }
-
     check_headings(&headings, &mut outcome);
     let own_slugs: BTreeSet<String> = headings.into_iter().map(|h| h.slug).collect();
     for link in &pending {
@@ -353,20 +351,19 @@ fn check_target(
 }
 
 /// Heading slugs in a sibling file, without cross-file `-1` numbering: only
-/// the base slug of each heading is trusted outside its own file.
+/// the base slug of each heading is trusted outside its own file. Fenced and
+/// indented code regions (per [`code_regions`]) contribute no headings.
 fn slugs_in(content: &str) -> BTreeSet<String> {
-    let mut slugs = BTreeSet::new();
-    let mut open = false;
-    for line in content.lines() {
-        if let Some(marker) = fence_marker(line) {
-            if !open {
-                open = true;
-            } else if marker.2.trim().is_empty() {
-                open = false;
-            }
-            continue;
+    let starts = line_starts(content);
+    let mut suppressed: BTreeSet<u32> = BTreeSet::new();
+    for region in &code_regions(content, &starts) {
+        for line in region.start_line..=region.end_line {
+            suppressed.insert(line);
         }
-        if open {
+    }
+    let mut slugs = BTreeSet::new();
+    for (index, line) in content.lines().enumerate() {
+        if suppressed.contains(&((index as u32) + 1)) {
             continue;
         }
         if let Some((_, text)) = heading(line) {
@@ -374,6 +371,92 @@ fn slugs_in(content: &str) -> BTreeSet<String> {
         }
     }
     slugs
+}
+
+/// Byte offset where each line starts; `starts[0]` is always `0`.
+fn line_starts(text: &str) -> Vec<usize> {
+    let mut starts = vec![0];
+    for (index, byte) in text.bytes().enumerate() {
+        if byte == b'\n' {
+            starts.push(index + 1);
+        }
+    }
+    starts
+}
+
+/// 1-based line number containing `offset`.
+fn line_of(starts: &[usize], offset: usize) -> u32 {
+    starts.partition_point(|start| *start <= offset) as u32
+}
+
+/// One pulldown-cmark code region (fenced or indented), in 1-based lines
+/// covering the opening marker through the closing marker (or end of input
+/// when never closed). `fence_info` is the fenced info string, or `None`
+/// for indented blocks.
+struct CodeRegion {
+    start_line: u32,
+    end_line: u32,
+    fence_info: Option<String>,
+}
+
+/// Code regions from pulldown-cmark block events (`Options::empty()`: no
+/// extensions, so tables and strikethrough stay plain paragraphs exactly as
+/// the line scanner expects).
+fn code_regions(text: &str, starts: &[usize]) -> Vec<CodeRegion> {
+    let mut regions = Vec::new();
+    let mut open: Option<(u32, Option<String>)> = None;
+    for (event, range) in Parser::new_ext(text, Options::empty()).into_offset_iter() {
+        match event {
+            Event::Start(Tag::CodeBlock(kind)) => {
+                let info = match kind {
+                    CodeBlockKind::Fenced(info) => Some(info.to_string()),
+                    CodeBlockKind::Indented => None,
+                };
+                open = Some((line_of(starts, range.start), info));
+            }
+            Event::End(TagEnd::CodeBlock) => {
+                if let Some((start_line, fence_info)) = open.take() {
+                    // The block range ends just past its last byte: the
+                    // closing marker line when closed, the last content line
+                    // when the fence runs to end of input.
+                    let end_line = line_of(starts, range.end.saturating_sub(1)).max(start_line);
+                    regions.push(CodeRegion {
+                        start_line,
+                        end_line,
+                        fence_info,
+                    });
+                }
+            }
+            _ => {}
+        }
+    }
+    regions
+}
+
+/// Whether a fenced region ends with a compatible closing marker: a strictly
+/// later line whose marker shares the opener's run character, runs at least
+/// as long, and carries no info string (the retired line scanner's rule).
+fn is_closed_fence(source_lines: &[&str], region: &CodeRegion) -> bool {
+    if region.end_line <= region.start_line {
+        return false;
+    }
+    let open_line = source_lines
+        .get((region.start_line - 1) as usize)
+        .copied()
+        .unwrap_or("");
+    let Some((open_char, open_len, _)) = fence_marker(open_line) else {
+        return false;
+    };
+    let close_line = source_lines
+        .get((region.end_line - 1) as usize)
+        .copied()
+        .unwrap_or("");
+    match fence_marker(close_line) {
+        Some((close_char, close_len, info)) => {
+            close_char == open_char && close_len >= open_len && info.trim().is_empty()
+        }
+        None => false,
+    }
 }
 
 /// GitHub-style anchor slug defined by this checker, not by an upstream tool.
@@ -893,6 +976,68 @@ mod tests {
     fn unclosed_fence_is_a_finding() {
         let outcome = check_markdown("a.md", "# T\n\n```rust\ncode\n", &siblings(&[]));
         assert_eq!(kinds(&outcome), vec![(3, FindingKind::UnclosedCodeFence)]);
+    }
+
+    #[test]
+    fn fence_closed_by_longer_run_reopens_after() {
+        // ```` closes the ```rust block; the trailing ``` opens a new
+        // untagged block that runs to end of input.
+        let text = "# T\n\n```rust\n````\n```\n";
+        let outcome = check_markdown("a.md", text, &siblings(&[]));
+        assert_eq!(
+            kinds(&outcome),
+            vec![
+                (5, FindingKind::MissingCodeFenceLanguage),
+                (5, FindingKind::UnclosedCodeFence),
+            ]
+        );
+    }
+
+    #[test]
+    fn unclosed_tilde_fence_is_a_finding() {
+        let outcome = check_markdown("a.md", "# T\n\n~~~\ncode\n", &siblings(&[]));
+        assert_eq!(
+            kinds(&outcome),
+            vec![
+                (3, FindingKind::MissingCodeFenceLanguage),
+                (3, FindingKind::UnclosedCodeFence),
+            ]
+        );
+    }
+
+    #[test]
+    fn fence_info_with_extra_words_has_language() {
+        let text = "# T\n\n```rust foo\ncode\n```\n";
+        let outcome = check_markdown("a.md", text, &siblings(&[]));
+        assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
+    }
+
+    #[test]
+    fn unclosed_fence_hides_rest_of_document() {
+        let text = "# T\n\n```rust\n[gone](gone.md)\n\n## Late\n";
+        let outcome = check_markdown("a.md", text, &siblings(&[]));
+        assert_eq!(kinds(&outcome), vec![(3, FindingKind::UnclosedCodeFence)]);
+    }
+
+    #[test]
+    fn indented_code_content_is_suppressed() {
+        // Indented code blocks are CommonMark code: links and headings
+        // inside are content, never findings. (The retired line scanner
+        // treated indented fences as literal text and scanned them.)
+        let text = "# T\n\n    [gone](gone.md)\n\n    ## Fake\n";
+        let outcome = check_markdown("a.md", text, &siblings(&[]));
+        assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
+    }
+
+    #[test]
+    fn sibling_indented_code_headings_are_ignored() {
+        let text = "# T\n\nSee [r](other.md#real).\n";
+        let sibling = "# Part\n\n    ## Fake\n\n## Real\n";
+        let outcome = check_markdown("a.md", text, &siblings(&[("other.md", sibling)]));
+        assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
+        let bad = "# T\n\nSee [f](other.md#fake).\n";
+        let outcome = check_markdown("a.md", bad, &siblings(&[("other.md", sibling)]));
+        assert_eq!(kinds(&outcome), vec![(3, FindingKind::MissingAnchor)]);
     }
 
     #[test]
