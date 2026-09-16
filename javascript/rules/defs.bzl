@@ -171,6 +171,48 @@ _javascript_test = rule(
     doc = "Test forwarder for javascript_test: symlinks the upstream jest launcher.",
 )
 
+def javascript_test_rejection(kwargs):
+    """Returns the contract rejection for forbidden `javascript_test` kwargs, or `None`.
+
+    `javascript_test` always routes through `jest_test` with the standard
+    auto-configured reporters (Bazel test logs) and coverage wiring.
+    Disabling the standard reporters would substitute a project-specific
+    result protocol, which the JavaScript generation contract forbids.
+
+    Args:
+      kwargs: the extra attributes the caller forwarded to `javascript_test`.
+
+    Returns:
+      The rejection diagnostic string, or `None` when the kwargs are clean.
+    """
+    if kwargs.get("auto_configure_reporters", True) == False:
+        return ("javascript_test always uses jest with the standard " +
+                "auto-configured reporters (Bazel test logs); " +
+                "`auto_configure_reporters = False` is not supported " +
+                "(project-specific result protocols are rejected per " +
+                "docs/testing/generation.md).")
+    return None
+
+def javascript_test_env(env_inherit):
+    """Computes the effective test-runtime inherited environment.
+
+    Mirrors the caller's list and always adds `TESTBRIDGE_TEST_ONLY`, which
+    is the Bazel test-filtering (`--test_filter`/sharding) channel the
+    upstream launcher only receives through `TestEnvironment`. The
+    forwarder rebuilds that provider from this exact list, so filtering
+    support is structural, never caller-dependent.
+
+    Args:
+      env_inherit: caller `env_inherit` (or `None`), mirrored, never mutated.
+
+    Returns:
+      The effective env_inherit list including `TESTBRIDGE_TEST_ONLY`.
+    """
+    env = list(env_inherit) if env_inherit != None else []
+    if "TESTBRIDGE_TEST_ONLY" not in env:
+        env.append("TESTBRIDGE_TEST_ONLY")
+    return env
+
 def javascript_test(name, srcs, node_modules, data = None, visibility = None, tags = None, env_inherit = None, **kwargs):
     """Experimental minimal wrapper over `jest_test` (M16).
 
@@ -211,6 +253,10 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
         (config, snapshots, size, timeout, etc.).
     """
     upstream_data = list(srcs) + (list(data) if data != None else [])
+    effective_env = javascript_test_env(env_inherit)
+    rejection = javascript_test_rejection(kwargs)
+    if rejection != None:
+        fail(rejection)
 
     # Workspace ESM scope marker (see docstring): must resolve in runfiles
     # above every first-party test source. Referenced as the root
@@ -221,7 +267,7 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
         name = name + "_upstream",
         node_modules = node_modules,
         data = upstream_data,
-        env_inherit = env_inherit,
+        env_inherit = effective_env,
         visibility = ["//visibility:private"],
         tags = (list(tags) if tags != None else []) + ["manual"],
         **kwargs
@@ -230,7 +276,7 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
         name = name,
         upstream = name + "_upstream",
         srcs = srcs,
-        env_inherit = env_inherit,
+        env_inherit = effective_env,
         visibility = visibility,
         tags = tags,
     )

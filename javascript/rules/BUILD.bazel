@@ -1,11 +1,13 @@
 """Experimental minimal JavaScript wrappers (M16, ADR 0013)."""
 
 load("//quality:fixtures.bzl", "real_source_target")
+load(":wrapper_tests.bzl", "javascript_wrapper_contract_tests")
 
 package(default_visibility = ["//visibility:public"])
 
 exports_files([
     "defs.bzl",
+    "wrapper_tests.bzl",
 ])
 
 # Repository corpus: wrapper Starlark owned for direct-Bazel
@@ -14,3 +16,7 @@ real_source_target(
     name = "corpus",
     starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
 )
+
+# Wrapper-contract negatives (#87 item 2): jest-pipeline enforcement
+# plus the structural test-filtering channel.
+javascript_wrapper_contract_tests(name = "wrapper_contract_tests")
