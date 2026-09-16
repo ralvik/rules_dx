@@ -14,8 +14,6 @@ use std::ffi::OsStr;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Contents of one mirror entry, at a scratch-relative path.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,66 +33,38 @@ pub struct MirrorFile {
 }
 
 /// A fresh scratch tree, removed on drop.
+///
+/// The tree is a `tempfile::TempDir`: OS-random `O_EXCL`-claimed names
+/// with internal collision retries replace the former
+/// wall-clock/pid/counter suffix mixer, and `TempDir`'s own drop is the
+/// best-effort removal fallback. Owners still call [`Scratch::close`] on
+/// success paths so cleanup failures surface as action errors.
 #[derive(Debug)]
 pub struct Scratch {
-    root: PathBuf,
-}
-
-static SCRATCH_COUNTER: AtomicU64 = AtomicU64::new(0);
-
-/// Builds one unguessable directory suffix without a rand dependency
-/// (OS-random names arrive with the #65 tempfile migration): wall-clock
-/// nanoseconds mixed with the pid and an atomic counter, so concurrent
-/// processes neither collide nor guess each other's trees in practice.
-fn unique_suffix() -> String {
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_nanos() as u64)
-        .unwrap_or(0);
-    let counter = SCRATCH_COUNTER.fetch_add(1, Ordering::SeqCst);
-    let mut mixed = nanos
-        .wrapping_add((std::process::id() as u64).wrapping_mul(0x9E3779B97F4A7C15))
-        .wrapping_add(counter.wrapping_mul(0xBF58476D1CE4E5B9));
-    // SplitMix64 avalanche.
-    mixed = (mixed ^ (mixed >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
-    mixed = (mixed ^ (mixed >> 27)).wrapping_mul(0x94D049BB133111EB);
-    mixed ^= mixed >> 31;
-    format!("{mixed:016x}-{counter:04x}")
+    dir: tempfile::TempDir,
 }
 
 impl Scratch {
-    /// Creates `parent/dx-scratch-<unique>`. Parent is normally
-    /// `TMPDIR`, already action-scoped under Bazel.
+    /// Creates `parent/dx-scratch-<os-random>`. Parent is normally
+    /// `TMPDIR`, already action-scoped under Bazel. Fails when the
+    /// parent is unusable; name collisions retry inside `tempfile`
+    /// instead of a caller-visible suffix loop.
     pub fn create(parent: &Path) -> io::Result<Scratch> {
-        Self::create_with(parent, unique_suffix)
-    }
-
-    /// Creates a scratch tree with caller-supplied suffixes (one per
-    /// claim attempt): the production suffix is [`unique_suffix`], tests
-    /// inject deterministic counters to prove collision retries.
-    fn create_with(parent: &Path, mut next_suffix: impl FnMut() -> String) -> io::Result<Scratch> {
-        for _ in 0..100 {
-            let root = parent.join(format!("dx-scratch-{}", next_suffix()));
-            match std::fs::create_dir(&root) {
-                Ok(()) => return Ok(Scratch { root }),
-                Err(err) if err.kind() == io::ErrorKind::AlreadyExists => continue,
-                Err(err) => return Err(err),
-            }
-        }
-        Err(io::Error::new(
-            io::ErrorKind::AlreadyExists,
-            "could not claim a scratch directory",
-        ))
+        let dir = tempfile::Builder::new()
+            .prefix("dx-scratch-")
+            .tempdir_in(parent)?;
+        Ok(Scratch { dir })
     }
 
     /// Absolute scratch root.
     pub fn root(&self) -> &Path {
-        &self.root
+        self.dir.path()
     }
 
     /// Resolves a scratch-relative path, rejecting escapes.
     pub fn resolve(&self, rel: &Path) -> io::Result<PathBuf> {
-        let mut absolute = self.root.clone();
+        let root = self.dir.path();
+        let mut absolute = root.to_owned();
         for component in rel.components() {
             use std::path::Component::{CurDir, Normal, ParentDir, Prefix, RootDir};
             match component {
@@ -106,7 +76,7 @@ impl Scratch {
                     // pop here; a failed pop would leave `absolute`
                     // outside the root and fail the check anyway.
                     absolute.pop();
-                    if absolute != self.root && !absolute.starts_with(&self.root) {
+                    if absolute != root && !absolute.starts_with(root) {
                         return Err(io::Error::new(
                             io::ErrorKind::InvalidInput,
                             format!("mirror path escapes scratch: {}", rel.display()),
@@ -155,13 +125,11 @@ impl Scratch {
 
     /// Removes the tree, surfacing cleanup failures to the caller.
     /// Owners call this on success paths; early-error paths rely on the
-    /// best-effort [`Drop`] fallback below (which cannot return errors).
+    /// best-effort `TempDir` drop fallback (which cannot return errors).
+    /// Consuming `self` skips that fallback: the removal below already
+    /// ran, and a second attempt could only mask this result.
     pub fn close(self) -> io::Result<()> {
-        let root = self.root.clone();
-        // Skip the `Drop` fallback: the removal below already ran, and a
-        // second attempt could only mask this result.
-        std::mem::forget(self);
-        std::fs::remove_dir_all(&root)
+        self.dir.close()
     }
 }
 
@@ -182,16 +150,6 @@ fn link_or_copy(target: &Path, link: &Path) -> io::Result<()> {
 #[cfg(not(unix))]
 fn link_or_copy(target: &Path, link: &Path) -> io::Result<()> {
     std::fs::copy(target, link).map(|_| ())
-}
-
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        // Best-effort fallback for owners that never called `close`
-        // (notably early `?` returns, where the primary error already
-        // fails the action). Errors are unavailable here, so success
-        // paths close explicitly to surface them.
-        let _ = std::fs::remove_dir_all(&self.root);
-    }
 }
 
 /// Captured child outcome. `code` is [`None`] when a signal killed the
@@ -354,24 +312,31 @@ mod tests {
     }
 
     #[test]
-    fn create_with_skips_collisions_and_gives_up_when_full() {
-        // A dedicated parent isolates the claims from the other tests
-        // sharing the system temporary directory. Deterministic
-        // suffixes prove the retry discipline: production names come
-        // from `unique_suffix` and cannot be pre-claimed.
-        let parent = std::env::temp_dir().join(format!("dx-collision-{}", std::process::id()));
+    fn scratch_claims_distinct_prefixed_trees() {
+        // Collision retries now live inside `tempfile` (`O_EXCL`
+        // claims with OS-random names), so no deterministic suffix
+        // injection point remains: prove the observable contract
+        // instead — concurrent claims never share a tree, every tree
+        // lives under the parent with the recognizable prefix.
+        let parent = std::env::temp_dir().join(format!("dx-distinct-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&parent);
-        std::fs::create_dir_all(&parent).expect("collision parent");
-        std::fs::create_dir(parent.join("dx-scratch-taken")).expect("claim taken");
-        // A taken first candidate is skipped for the free one.
-        let mut attempts = ["taken", "free"].into_iter();
-        let scratch = Scratch::create_with(&parent, || attempts.next().expect("suffix").to_owned())
-            .expect("retry claims the free name");
-        assert_eq!(scratch.root(), parent.join("dx-scratch-free"));
-        scratch.close().expect("close");
-        // An always-taken suffix exhausts its retries.
-        assert!(Scratch::create_with(&parent, || "taken".to_owned()).is_err());
-        std::fs::remove_dir_all(&parent).expect("collision cleanup");
+        std::fs::create_dir_all(&parent).expect("distinct parent");
+        let first = Scratch::create(&parent).expect("first");
+        let second = Scratch::create(&parent).expect("second");
+        assert_ne!(first.root(), second.root(), "claims never share a tree");
+        for root in [first.root(), second.root()] {
+            assert!(root.starts_with(&parent), "scratch lives under the parent");
+            assert!(
+                root.file_name()
+                    .expect("scratch name")
+                    .to_string_lossy()
+                    .starts_with("dx-scratch-"),
+                "scratch keeps the recognizable prefix",
+            );
+        }
+        first.close().expect("close");
+        second.close().expect("close");
+        std::fs::remove_dir_all(&parent).expect("distinct cleanup");
     }
 
     #[test]

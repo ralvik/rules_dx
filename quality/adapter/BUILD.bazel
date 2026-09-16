@@ -20,6 +20,7 @@ rust_library(
         "src/parsers/markdown.rs",
         "src/parsers/mod.rs",
         "src/parsers/prettier.rs",
+        "src/parsers/pydoclint.rs",
         "src/parsers/pylint.rs",
         "src/parsers/ruff.rs",
         "src/parsers/rust.rs",
@@ -27,7 +28,6 @@ rust_library(
         "src/parsers/taplo.rs",
         "src/parsers/ty.rs",
         "src/parsers/vale.rs",
-        "src/parsers/pydoclint.rs",
     ],
     aliases = aliases(
         package_name = "quality/quality_adapter",
@@ -39,6 +39,7 @@ rust_library(
         [
             "serde",
             "serde_json",
+            "tempfile",
         ],
         package_name = "quality/quality_adapter",
     ) + ["//quality/result:quality_result"],
@@ -57,6 +58,7 @@ rust_test(
         [
             "serde",
             "serde_json",
+            "tempfile",
         ],
         package_name = "quality/quality_adapter",
     ),
