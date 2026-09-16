@@ -95,6 +95,12 @@ completed results, fail the overall run, and do not cancel independent checks. F
 prerequisites block only actual dependents. Individual `dx` and Bazel fail-fast semantics
 remain unchanged.
 
+Provisional (template status): the reusable workflow schedules parallel only.
+Sequential ordering is [qualification-open](#qualification), so `platforms-gate`
+fails closed on `scheduling_mode: sequential` (and on any other non-`parallel`
+value) rather than silently substituting parallel. The mode input stays declared
+so callers keep one stable interface when sequential qualifies.
+
 Use GitHub Actions scheduling. Isolate mutable checkouts/setup state, report destinations,
 and Bazel execution contexts; do not advertise parallelism while jobs serialize on one
 shared Bazel output-base lock. Reuse coverage-enabled test execution for test results only
