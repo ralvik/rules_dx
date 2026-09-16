@@ -47,11 +47,6 @@ pub enum DiffError {
     CreateWithOriginal { path: String },
     /// A modify entry whose candidate is byte-identical to its original.
     NoopPatch { path: String },
-    /// The Myers backtrack found no solution. Unreachable: the greedy
-    /// search over `0..=n + m` always reaches the end, so this only
-    /// fires on a future search/backtrack divergence (fail closed,
-    /// never panic).
-    Internal { detail: String },
 }
 
 /// Number of context lines around each hunk.
@@ -158,95 +153,32 @@ enum Op {
     Ins,
 }
 
-/// Myers O(ND) greedy diff over line slices, returning the edit script from
-/// the first old line to the last new line. Fails closed with
-/// [`DiffError::Internal`] when the backtrack finds no solution (unreachable
-/// for the greedy search over `0..=n + m`).
-fn diff_ops(old: &[&str], new: &[&str]) -> Result<Vec<Op>, DiffError> {
-    let n = old.len() as isize;
-    let m = new.len() as isize;
-    if n == 0 {
-        return Ok(vec![Op::Ins; m as usize]);
-    }
-    if m == 0 {
-        return Ok(vec![Op::Del; n as usize]);
-    }
-    let max = (n + m) as usize;
-    let off = max as isize;
-    let mut v = vec![0isize; 2 * max + 1];
-    let mut trace: Vec<Vec<isize>> = Vec::new();
-    let mut solved: Option<isize> = None;
-    for d in 0..=max as isize {
-        for k in (-d..=d).step_by(2) {
-            let ki = (k + off) as usize;
-            let mut x = if k == -d || (k != d && v[ki - 1] < v[ki + 1]) {
-                v[ki + 1]
-            } else {
-                v[ki - 1] + 1
-            };
-            let mut y = x - k;
-            while x < n && y < m && old[x as usize] == new[y as usize] {
-                x += 1;
-                y += 1;
-            }
-            v[ki] = x;
-            if x >= n && y >= m {
-                solved = Some(d);
-                break;
-            }
-        }
-        trace.push(v.clone());
-        if solved.is_some() {
-            break;
-        }
-    }
-    let Some(mut d) = solved else {
-        // LCOV_EXCL_LINE - reason: unreachable; the greedy search over 0..=n+m always reaches the end, so this only fires on a future search/backtrack divergence.
-        return Err(DiffError::Internal {
-            detail: "myers greedy search did not reach the end".to_owned(),
-        });
-    };
+/// Edit script from the first old line to the last new line, via
+/// `similar`'s Myers diff (`O((N+M)D)` time, `O(N+M)` space): the retired
+/// hand-rolled greedy search kept a full `O(D²)` trace. `Replace` expands to
+/// deletions then insertions, matching the retired backtrack order (`-old`
+/// before `+new`).
+fn diff_ops(old: &[&str], new: &[&str]) -> Vec<Op> {
+    use similar::{capture_diff_slices, Algorithm, DiffOp};
     let mut ops = Vec::new();
-    let (mut x, mut y) = (n, m);
-    while d > 0 {
-        let prev = &trace[(d - 1) as usize];
-        let k = x - y;
-        let ki = (k + off) as usize;
-        // Mirror the forward decision: the d-th step came down from k+1
-        // (insertion) or right from k-1 (deletion). Snake back along
-        // diagonal k to the previous point, then emit the single step.
-        let (prev_k, prev_x) = if k == -d || (k != d && prev[ki - 1] < prev[ki + 1]) {
-            (k + 1, prev[ki + 1])
-        } else {
-            (k - 1, prev[ki - 1])
-        };
-        let prev_y = prev_x - prev_k;
-        while x > prev_x && y > prev_y {
-            ops.push(Op::Eq);
-            x -= 1;
-            y -= 1;
+    for op in capture_diff_slices(Algorithm::Myers, old, new) {
+        match op {
+            DiffOp::Equal { len, .. } => ops.extend(vec![Op::Eq; len]),
+            DiffOp::Delete { old_len, .. } => {
+                ops.extend(vec![Op::Del; old_len]);
+            }
+            DiffOp::Insert { new_len, .. } => {
+                ops.extend(vec![Op::Ins; new_len]);
+            }
+            DiffOp::Replace {
+                old_len, new_len, ..
+            } => {
+                ops.extend(vec![Op::Del; old_len]);
+                ops.extend(vec![Op::Ins; new_len]);
+            }
         }
-        if x == prev_x {
-            ops.push(Op::Ins);
-            y -= 1;
-        } else {
-            ops.push(Op::Del);
-            x -= 1;
-        }
-        d -= 1;
     }
-    while x > 0 && y > 0 {
-        ops.push(Op::Eq);
-        x -= 1;
-        y -= 1;
-    }
-    // The loop above always consumes the whole round-0 snake: backtracking
-    // round d lands on the (d-1)-path, so after round 1 both coordinates sit
-    // on the initial diagonal-0 snake and reach zero together.
-    debug_assert_eq!(x, y);
-    debug_assert_eq!(x, 0);
-    ops.reverse();
-    Ok(ops)
+    ops
 }
 
 struct Hunk {
@@ -265,7 +197,7 @@ struct Hunk {
 /// patch must still record the newline change (GNU renders `-a` + marker /
 /// `+a` for it).
 fn hunks(old: &[&str], old_nl: bool, new: &[&str], new_nl: bool) -> Result<Vec<Hunk>, DiffError> {
-    let script = diff_ops(old, new)?;
+    let script = diff_ops(old, new);
     // Annotate every op with the old/new line index it consumes.
     let mut annotated: Vec<(Op, usize, usize)> = Vec::with_capacity(script.len());
     let (mut oi, mut ni) = (0usize, 0usize);

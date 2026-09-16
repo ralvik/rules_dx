@@ -9,3 +9,4 @@ path = "src/lib.rs"
 
 [dependencies]
 thiserror = "2"
+similar = "3"
