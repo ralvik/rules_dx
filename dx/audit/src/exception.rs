@@ -13,6 +13,8 @@
 //! with the ecosystem integrations. Accepted findings stay visible;
 //! acceptance only excludes them from the failure decision.
 
+use chrono::{Datelike, NaiveDate};
+
 /// One risk-acceptance exception: narrow, explained, version-scoped,
 /// and expiring. Field shapes mirror the committed policy file so the
 /// future TOML loader cannot reinterpret them.
@@ -84,19 +86,12 @@ pub fn validate_exception(exception: &RiskException, today: &str) -> Result<(), 
 /// (`YYYY-MM-DD` UTC). Shared by the vulnerability risk-acceptance
 /// lifecycle above and the license-family exceptions: an earlier cached
 /// acceptance never passes a later audit after expiry because the date
-/// is always an explicit input, never ambient clock state.
+/// is always an explicit input, never ambient clock state. The boundary
+/// is inclusive: an exception expiring today is expired.
 pub fn check_expiry(expires: &str, today: &str) -> Result<(), ExceptionProblem> {
-    if !is_calendar_date(expires) {
-        return Err(ExceptionProblem::InvalidDate {
-            value: expires.to_owned(),
-        });
-    }
-    if !is_calendar_date(today) {
-        return Err(ExceptionProblem::InvalidDate {
-            value: today.to_owned(),
-        });
-    }
-    if expires <= today {
+    let expires_date = parse_audit_date(expires)?;
+    let today_date = parse_audit_date(today)?;
+    if expires_date <= today_date {
         return Err(ExceptionProblem::Expired {
             expires: expires.to_owned(),
             today: today.to_owned(),
@@ -130,42 +125,41 @@ pub fn check_applies(
     Ok(())
 }
 
-/// Calendar `YYYY-MM-DD` shape with month/day ranges including leap-year
-/// February. Lexicographic order matches chronological order, so validated
-/// dates compare as strings without clock or timezone inputs.
-fn is_calendar_date(text: &str) -> bool {
+/// Parse one audit date (`YYYY-MM-DD` UTC) into a calendar date. The
+/// fixed-width shape gate runs first so only zero-padded text reaches
+/// the parser: non-padded spellings (`2027-3-1`) fail here even where
+/// the parser would accept them, and lexicographic order keeps matching
+/// chronological order for validated dates. The calendar itself —
+/// month lengths, leap-year February — is the upstream `chrono`
+/// parser's, not a private table. Year zero is rejected to preserve the
+/// previous validation (it would otherwise parse and always compare as
+/// expired, changing the failure variant).
+fn parse_audit_date(value: &str) -> Result<NaiveDate, ExceptionProblem> {
+    if !is_date_shape(value) {
+        return Err(ExceptionProblem::InvalidDate {
+            value: value.to_owned(),
+        });
+    }
+    match NaiveDate::parse_from_str(value, "%Y-%m-%d") {
+        Ok(date) if date.year() >= 1 => Ok(date),
+        _ => Err(ExceptionProblem::InvalidDate {
+            value: value.to_owned(),
+        }),
+    }
+}
+
+/// Fixed `YYYY-MM-DD` shape gate: length, dash positions, and digits.
+/// See [`parse_audit_date`] for why the shape stays strict while the
+/// calendar comes from upstream.
+fn is_date_shape(text: &str) -> bool {
     let bytes = text.as_bytes();
     if bytes.len() != 10 || bytes[4] != b'-' || bytes[7] != b'-' {
         return false;
     }
-    for (index, byte) in bytes.iter().enumerate() {
-        if index == 4 || index == 7 {
-            continue;
-        }
-        if !byte.is_ascii_digit() {
-            return false;
-        }
-    }
-    let number = |from: usize, to: usize| -> u32 { text[from..to].parse().unwrap_or(0) };
-    let year = number(0, 4);
-    let month = number(5, 7);
-    let day = number(8, 10);
-    if year == 0 || month == 0 || month > 12 || day == 0 {
-        return false;
-    }
-    let leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
-    let max_day = match month {
-        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-        4 | 6 | 9 | 11 => 30,
-        _ => {
-            if leap {
-                29
-            } else {
-                28
-            }
-        }
-    };
-    day <= max_day
+    bytes
+        .iter()
+        .enumerate()
+        .all(|(index, byte)| index == 4 || index == 7 || byte.is_ascii_digit())
 }
 
 #[cfg(test)]
@@ -215,6 +209,10 @@ mod tests {
             "2027/03/01",
             "2027-13-01",
             "2027-02-30",
+            "2027-04-31",
+            "2027-00-10",
+            "2027-01-00",
+            "0000-01-01",
             "not-a-date",
         ] {
             exception.expires = bad.to_owned();
