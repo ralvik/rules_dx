@@ -16,11 +16,11 @@ use proto::{
 };
 pub use result_proto::dx::quality::v1 as proto;
 
-/// Frozen schema major accepted by this crate.
-pub const SCHEMA_MAJOR: u32 = 1;
-/// Schema minor this crate was written against. Newer minors decode when
-/// their bytes satisfy these rules.
-pub const SCHEMA_MINOR: u32 = 0;
+/// Frozen schema major accepted by this crate (re-exported from `dx_schema`).
+pub use dx_schema::SCHEMA_MAJOR;
+/// Schema minor this crate was written against (re-exported from `dx_schema`).
+/// Newer minors decode when their bytes satisfy these rules.
+pub use dx_schema::SCHEMA_MINOR;
 /// Upper bound on `completed_rounds` from the convergence protocol.
 pub const MAX_COMPLETED_ROUNDS: u32 = 10;
 /// BLAKE3-256 digest length in bytes.
@@ -241,11 +241,8 @@ fn check_edits(file: &FileEdits) -> Result<(), Error> {
 /// Enforces every result-side rule from the protocol compatibility
 /// section. Returns `Ok(())` exactly for storable results.
 pub fn validate(result: &QualityResult) -> Result<(), Error> {
-    if result.schema_major != SCHEMA_MAJOR {
-        return Err(Error::UnsupportedMajor {
-            found: result.schema_major,
-        });
-    }
+    dx_schema::check_major(result.schema_major)
+        .map_err(|found| Error::UnsupportedMajor { found })?;
     if result.producer.is_empty() {
         return Err(Error::EmptyProducer);
     }
