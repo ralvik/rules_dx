@@ -54,16 +54,19 @@ pub enum Error {
 }
 
 fn check_path(producer: &str, path: &str) -> Result<(), Error> {
-    let reason = if path.is_empty() {
-        Some("must be a non-empty workspace-relative path")
-    } else if path.starts_with('/') {
-        Some("must not be absolute")
-    } else if path.contains('\\') {
-        Some("must not contain '\\'")
-    } else if path.split('/').any(|part| part == "." || part == "..") {
-        Some("must not contain '.' or '..' segments")
-    } else {
-        None
+    // Uses `dx_path::classify` for ladder order; EmptyComponent is
+    // intentionally allowed to preserve parity with Starlark
+    // `codegen_path_error`, which only rejects empty/absolute/backslash/dot
+    // segments (#72 slice 3).
+    let reason = match dx_path::classify(path) {
+        None => None,
+        Some(dx_path::PathProblem::Empty) => Some("must be a non-empty workspace-relative path"),
+        Some(dx_path::PathProblem::Absolute) => Some("must not be absolute"),
+        Some(dx_path::PathProblem::Backslash) => Some("must not contain '\\'"),
+        Some(dx_path::PathProblem::EmptyComponent) => None,
+        Some(dx_path::PathProblem::Dot) | Some(dx_path::PathProblem::DotDot) => {
+            Some("must not contain '.' or '..' segments")
+        }
     };
     match reason {
         Some(reason) => Err(Error::BadPath {
