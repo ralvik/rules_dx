@@ -50,14 +50,7 @@ impl OutputMode {
     /// Parses a `--output` value. `quiet` comes from `--quiet` and only
     /// affects text mode.
     pub fn parse(text: &str, quiet: bool) -> Result<Self, OutputError> {
-        match text {
-            "text" => Ok(OutputMode::Text { quiet }),
-            "diff" => Ok(OutputMode::Diff),
-            "json" => Ok(OutputMode::Json),
-            _ => Err(OutputError::UnknownOutputMode {
-                value: text.to_owned(),
-            }),
-        }
+        Ok(OutputModeName::parse(text)?.resolve(quiet))
     }
 
     /// Canonical mode name for summaries and errors.
@@ -66,6 +59,37 @@ impl OutputMode {
             OutputMode::Text { .. } => "text",
             OutputMode::Diff => "diff",
             OutputMode::Json => "json",
+        }
+    }
+}
+
+/// Fieldless `--output` spelling: the `clap::ValueEnum` source of truth
+/// for the accepted mode names (`text|diff|json`). `quiet` cannot live on
+/// the enum (value enums are fieldless), so it resolves separately via
+/// [`OutputModeName::resolve`]: only text mode observes `--quiet`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
+pub enum OutputModeName {
+    Text,
+    Diff,
+    Json,
+}
+
+impl OutputModeName {
+    /// Parses one `--output` spelling, case-sensitively like the retired
+    /// match: `Text` still rejects `TEXT`.
+    pub fn parse(text: &str) -> Result<Self, OutputError> {
+        use clap::ValueEnum;
+        Self::from_str(text, false).map_err(|_| OutputError::UnknownOutputMode {
+            value: text.to_owned(),
+        })
+    }
+
+    /// Resolves the spelling against `--quiet` into the live mode.
+    pub fn resolve(self, quiet: bool) -> OutputMode {
+        match self {
+            OutputModeName::Text => OutputMode::Text { quiet },
+            OutputModeName::Diff => OutputMode::Diff,
+            OutputModeName::Json => OutputMode::Json,
         }
     }
 }
@@ -161,8 +185,9 @@ impl Severity {
 }
 
 /// Lowest diagnostic severity that fails a quality command. The default is
-/// `warning`; there is no `never` value.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// `warning`; there is no `never` value. The variant spellings double as
+/// the `clap::ValueEnum` source of truth for `--fail-on`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub enum Threshold {
     Info,
     Warning,
@@ -187,14 +212,10 @@ impl Threshold {
     }
 
     pub fn parse(text: &str) -> Result<Self, OutputError> {
-        match text {
-            "info" => Ok(Threshold::Info),
-            "warning" => Ok(Threshold::Warning),
-            "error" => Ok(Threshold::Error),
-            _ => Err(OutputError::BadThreshold {
-                value: text.to_owned(),
-            }),
-        }
+        use clap::ValueEnum;
+        Self::from_str(text, false).map_err(|_| OutputError::BadThreshold {
+            value: text.to_owned(),
+        })
     }
 }
 
@@ -916,6 +937,45 @@ mod tests {
     }
 
     #[test]
+    fn output_mode_names_are_clap_value_enum() {
+        use clap::ValueEnum;
+        // Spellings stay exact: the retired match rejected `TEXT`.
+        assert_eq!(
+            OutputModeName::parse("text").expect("text"),
+            OutputModeName::Text
+        );
+        assert_eq!(
+            OutputModeName::parse("diff").expect("diff"),
+            OutputModeName::Diff
+        );
+        assert_eq!(
+            OutputModeName::parse("json").expect("json"),
+            OutputModeName::Json
+        );
+        assert!(OutputModeName::parse("TEXT").is_err());
+        assert!(OutputModeName::parse("xml").is_err());
+        let mut values: Vec<String> = OutputModeName::value_variants()
+            .iter()
+            .map(|variant| {
+                variant
+                    .to_possible_value()
+                    .expect("named")
+                    .get_name()
+                    .to_owned()
+            })
+            .collect();
+        values.sort_unstable();
+        assert_eq!(values, ["diff", "json", "text"]);
+        // `quiet` resolves into text mode only.
+        assert_eq!(
+            OutputModeName::Text.resolve(true),
+            OutputMode::Text { quiet: true }
+        );
+        assert_eq!(OutputModeName::Diff.resolve(true), OutputMode::Diff);
+        assert_eq!(OutputModeName::Json.resolve(false), OutputMode::Json);
+    }
+
+    #[test]
     fn stdout_ownership_per_mode() {
         let text = OutputMode::Text { quiet: false };
         assert_eq!(stdout_owner(&text, false), StdoutOwner::DxText);
@@ -965,6 +1025,26 @@ mod tests {
         );
         assert!(Threshold::parse("never").is_err());
         assert!(Severity::parse("error").expect("error") == Severity::Error);
+    }
+
+    #[test]
+    fn threshold_names_are_clap_value_enum() {
+        use clap::ValueEnum;
+        assert_eq!(Threshold::parse("info").expect("info"), Threshold::Info);
+        assert_eq!(Threshold::parse("error").expect("error"), Threshold::Error);
+        assert!(Threshold::parse("WARNING").is_err());
+        let mut values: Vec<String> = Threshold::value_variants()
+            .iter()
+            .map(|variant| {
+                variant
+                    .to_possible_value()
+                    .expect("named")
+                    .get_name()
+                    .to_owned()
+            })
+            .collect();
+        values.sort_unstable();
+        assert_eq!(values, ["error", "info", "warning"]);
     }
 
     #[test]
