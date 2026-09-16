@@ -128,6 +128,22 @@ does not carry dependencies, tools, configuration, generated context, or transit
 Project wrappers emit that shape, and tested adapters may normalize authoritative upstream providers
 into it. See [Quality Sources and Applicability](../quality/quality-sources.md).
 
+### Facade Twins (Pre-Reorg Mapping)
+
+`dx/` holds the Rust implementation and the consumer-policy facade (`//dx:config`, `//dx:env`,
+`//dx:codegen`, `//dx:generate`). The facade labels below resolve today; the Rust move to
+`cli/` is open work tracked in [issue 76](https://github.com/ralvik/rules_dx/issues/76) with
+visibility decisions in [issue 83](https://github.com/ralvik/rules_dx/issues/83).
+
+| Facade label | Actual owner | Status |
+| --- | --- | --- |
+| `//dx:generate` / `//dx:generate_check` | Same Gazelle wiring, `mode=diff` only on the check twin (`dx/BUILD.bazel`) | Accepted |
+| `//dx:env` | Alias to `//dx/env:env` installer binary (`dx/BUILD.bazel`) | Accepted |
+| `//dx:codegen` | Empty filegroup reserving the CLI selection identity; real plan collector is `//dx/codegen:dx_codegen` | Provisional, resolves with the `cli/` move |
+| `//dx:config` | Empty placeholder default for the `//config:workspace` label flag; typed per-family sections pending | Provisional, resolves with the `cli/` move |
+| `//tools/coverage:coverage_gate` | Single crate after the unused `:coverage` wrapper removal | Accepted |
+| `real_source_target(name="corpus")` boilerplate | Repeated per package; dedup is follow-up owned by [issue 15](https://github.com/ralvik/rules_dx/issues/15), not hand-maintained splits | Open |
+
 ### Upstream Authorities
 
 Language foundations wrap pinned upstream rulesets for build, test, toolchain, provider, and IDE
