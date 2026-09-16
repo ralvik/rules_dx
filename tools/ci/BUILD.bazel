@@ -76,6 +76,15 @@ sh_test(
     ],
 )
 
+# Seed-cell coverage gate harness (issue #89 item 1): runs the real
+# scoped `bazel coverage` report through the `check` gate CLI against the
+# versioned seed inventory, with mutated-input negatives proving it fails
+# closed. Run by CI via `bazel run //tools/ci:coverage_cell`.
+sh_binary(
+    name = "coverage_cell",
+    srcs = ["coverage_cell.sh"],
+)
+
 # Target-tag semantics harness (issue #99 item 3): proves `flaky`
 # forwards to private upstream tests (off by default), `bazel coverage`
 # skips `no-coverage` tests while running untagged ones, and the

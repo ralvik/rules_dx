@@ -1086,6 +1086,28 @@ mod tests {
     }
 
     #[test]
+    fn html_second_comment_on_line_keeps_separator() {
+        let line = format!(
+            "prose <!-- dropped --> more <!-- {} - reason: second segment. -->",
+            marker("_LINE")
+        );
+        let source = file_lines(&[line]);
+        let ignores = find_ignores("t.md", &source).unwrap();
+        assert!(ignores.singles.contains_key(&1));
+    }
+
+    #[test]
+    fn html_unterminated_comment_after_content_keeps_prefix() {
+        let line = format!(
+            "prose <!-- dropped --> tail <!-- {} - reason: unterminated.",
+            marker("_LINE")
+        );
+        let source = file_lines(&[line]);
+        let ignores = find_ignores("t.md", &source).unwrap();
+        assert!(ignores.singles.contains_key(&1));
+    }
+
+    #[test]
     fn html_code_outside_segments_is_not_scanned_for_markdown() {
         let source = file_lines(&["real `code` here.".to_string(), "More.".to_string()]);
         let ignores = find_ignores("t.md", &source).unwrap();

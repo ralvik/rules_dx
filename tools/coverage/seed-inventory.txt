@@ -1,0 +1,14 @@
+# Seed-cell exact-gate inventory (issue #89 item 1).
+#
+# Each required configuration/platform cell gates its own combined LCOV
+# report separately: no cross-platform union, no averaged percentages, no
+# rounding up (docs/testing/README.md). Only the seed host qualifies today
+# (issue #5), so this file lists the seed cell's exact-gate scope.
+#
+# Scope starts with the gate's own implementation because it is fully
+# covered: every eligible line is hit or carries a validated `reason:`
+# ignore. Expand this file (never shrink a passing scope without a
+# recorded decision) as more of the tree reaches zero-uncovered.
+# Dispositions: `eligible` (gated) or `support` (report hits skipped).
+eligible tools/coverage/src/lib.rs
+eligible tools/coverage/src/main.rs
