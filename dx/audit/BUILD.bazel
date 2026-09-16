@@ -29,6 +29,7 @@ rust_library(
     deps = crate_deps(
         [
             "hex",
+            "spdx",
             "thiserror",
             "url",
         ],
@@ -48,6 +49,7 @@ rust_test(
     deps = crate_deps(
         [
             "hex",
+            "spdx",
             "thiserror",
             "url",
         ],

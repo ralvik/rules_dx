@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 hex = "0.4"
+spdx = "0.13"
 thiserror = "2"
 url = "2"
 
