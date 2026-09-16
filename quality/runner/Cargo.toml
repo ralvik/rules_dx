@@ -7,6 +7,9 @@ edition = "2021"
 name = "quality_runner"
 path = "src/lib.rs"
 
+[dependencies]
+tempfile = "3"
+
 [[bin]]
 name = "quality_runner"
 path = "src/main.rs"
