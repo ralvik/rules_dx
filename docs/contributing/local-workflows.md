@@ -1,5 +1,34 @@
 # Local Workflows
 
+## Bootstrap
+
+Fresh clone to green build, copy-paste. Linux x86_64 seed host.
+Pinned versions: Bazel `9.2.0` (via `.bazelversion`), Bazelisk
+`v1.29.0`, pnpm `10.34.5` (via `packageManager`, use corepack).
+
+```sh
+# 1. Pinned Bazelisk launcher (sha256, linux-amd64):
+curl -sL -o /tmp/bazelisk \
+  "https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64"
+echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
+sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
+# 2. Node/pnpm (if you touch the JS graph):
+corepack enable && corepack prepare pnpm@10.34.5 --activate
+# 3. Build and test (Bazelisk reads .bazelversion, no manual Bazel install):
+bazel build //...
+bazel test //...
+```
+
+Behind a proxy that returns 403 for `bcr.bazel.build`, create the
+gitignored `user.bazelrc` overlay (already `try-import`ed from
+`.bazelrc`; canonical lockfile URLs stay `bcr.bazel.build`):
+
+```sh
+printf '%s\n' \
+  'common --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main/' \
+  > user.bazelrc
+```
+
 ## Current Workflow
 
 Build, test, and coverage run through Bazel on Linux x86_64 with local-only
