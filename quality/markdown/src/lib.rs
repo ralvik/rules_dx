@@ -8,20 +8,24 @@
 //! are recorded as skipped and never fetched. Undeclared link targets fail
 //! closed as findings, never as silent passes.
 //!
-//! Scope notes: inline links (`[text](target)`), images, autolinks, and
-//! reference links (`[text][label]` with a `[label]: target` definition,
-//! including collapsed `[text][]` and shortcut `[text]` forms when the text
-//! matches a definition) are resolved. A target that names a directory
-//! resolves to its declared `README.md` index (`docs/cli/` reads
-//! `docs/cli/README.md`); an undeclared index fails closed like any
-//! undeclared target. Email autolinks (`<a@b.c>`) are out of
-//! scope and ignored. Inline code spans suppress link detection with a
-//! same-length backtick toggle that carries across lines until a blank line
-//! or fence (CommonMark multi-line spans); block structure (headings,
-//! definitions, fences) stays line-scoped. Heading slugs follow the
-//! checker's own rule ([`slug`]): lowercase alphanumerics, `-`/`_` kept,
-//! each whitespace character becomes `-`, GitHub-style `-1`/`-2`
-//! deduplication for repeat headings.
+//! Scope notes: inline links (`[text](target)`), images, references
+//! (`[text][label]` with a `[label]: target` definition, including collapsed
+//! `[text][]` and shortcut `[text]` forms), absolute-URI autolinks, and
+//! multi-line links resolve through pulldown-cmark events; relative
+//! `<./target>` autolinks resolve through a fallback scan (they are not
+//! CommonMark autolinks, so the parser emits no event). A target that names
+//! a directory resolves to its declared `README.md` index (`docs/cli/`
+//! reads `docs/cli/README.md`); an undeclared index fails closed like any
+//! undeclared target. Email autolinks (`<a@b.c>`) are out of scope and
+//! ignored. Explicit references with no definition fail closed, keeping the
+//! author's label spelling; bare `[text]` with no definition is literal
+//! text. Code spans suppress link detection natively, including multi-line
+//! spans; a stray backtick is literal text, so a link after it is reported
+//! (fail-closed). HTML blocks contribute neither headings nor links. Only
+//! ATX headings count (blockquote, list, and setext headings do not), and
+//! heading slugs follow the checker's own rule ([`slug`]): lowercase
+//! alphanumerics, `-`/`_` kept, each whitespace character becomes `-`,
+//! GitHub-style `-1`/`-2` deduplication for repeat headings.
 //!
 //! Binary contract: [`run_cli`] checks `--source WS_PATH=EXEC_PATH` files
 //! against a sibling closure (the union of `--source` and
@@ -36,7 +40,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
+use pulldown_cmark::{BrokenLink, CodeBlockKind, Event, LinkType, Options, Parser, Tag, TagEnd};
 use serde::Serialize;
 
 /// Structural finding kinds. Every variant is a finding; skipped remote
@@ -72,16 +76,6 @@ struct Heading {
     slug: String,
 }
 
-enum RawTarget {
-    Inline(String),
-    Reference { label: String, explicit: bool },
-}
-
-struct PendingLink {
-    line: u32,
-    target: RawTarget,
-}
-
 /// Check one Markdown source.
 ///
 /// `source_path` is the source's repo-relative path; relative link targets
@@ -95,13 +89,13 @@ pub fn check_markdown(
 ) -> CheckOutcome {
     let mut outcome = CheckOutcome::default();
     let mut headings: Vec<Heading> = Vec::new();
-    let mut pending: Vec<PendingLink> = Vec::new();
-    let mut definitions: BTreeMap<String, String> = BTreeMap::new();
+    let mut doc_links: Vec<DocLink> = Vec::new();
     let mut slug_counts: BTreeMap<String, usize> = BTreeMap::new();
 
-    // Block structure comes from pulldown-cmark: fence findings and the
-    // suppressed-line set below. Headings, definitions, and links stay
-    // line-scoped until the link migration.
+    // Block structure comes from pulldown-cmark: fence findings, suppressed
+    // lines (code regions plus HTML blocks), headings, links, and code-span
+    // ranges. Reference definitions resolve inside the parser; only
+    // explicitly broken references surface via the callback.
     let starts = line_starts(text);
     let regions = code_regions(text, &starts);
     let source_lines: Vec<&str> = text.lines().collect();
@@ -131,31 +125,119 @@ pub fn check_markdown(
         }
     }
 
-    let mut open_span: Option<usize> = None;
-    for (index, line) in text.lines().enumerate() {
+    let mut heading_lines: Vec<u32> = Vec::new();
+    let mut code_spans: Vec<Span> = Vec::new();
+    let mut link_spans: Vec<Span> = Vec::new();
+    let mut html_spans: Vec<Span> = Vec::new();
+    let mut html_start: Option<usize> = None;
+    let mut broken: Vec<BrokenRef> = Vec::new();
+    {
+        let callbacks = &mut |link: BrokenLink| {
+            broken.push(BrokenRef {
+                span: link.span.clone(),
+                link_type: link.link_type,
+                reference: link.reference.to_string(),
+            });
+            None
+        };
+        let parser = Parser::new_with_broken_link_callback(text, Options::empty(), Some(callbacks));
+        for (event, range) in parser.into_offset_iter() {
+            match event {
+                Event::Start(Tag::Heading { .. }) => {
+                    heading_lines.push(line_of(&starts, range.start));
+                }
+                Event::Start(Tag::Link {
+                    link_type,
+                    dest_url,
+                    ..
+                })
+                | Event::Start(Tag::Image {
+                    link_type,
+                    dest_url,
+                    ..
+                }) => {
+                    // Email autolinks are out of scope and ignored.
+                    if link_type == LinkType::Email {
+                        continue;
+                    }
+                    let at = line_of(&starts, range.start);
+                    link_spans.push(range.clone());
+                    doc_links.push(DocLink::Dest {
+                        line: at,
+                        col: range.start,
+                        target: dest_url.to_string(),
+                    });
+                }
+                Event::Code(_) => {
+                    code_spans.push(range);
+                }
+                // Only real HTML blocks suppress lines: inline HTML leaves
+                // the line's links (and relative autolinks) visible, exactly
+                // as the retired line scanner saw them.
+                Event::Start(Tag::HtmlBlock) => {
+                    html_start = Some(range.start);
+                }
+                Event::End(TagEnd::HtmlBlock) => {
+                    if let Some(start) = html_start.take() {
+                        for line in line_of(&starts, start)..=line_of(&starts, range.end.max(1) - 1)
+                        {
+                            suppressed.insert(line);
+                        }
+                    }
+                }
+                // Inline HTML is markup, never an autolink target: record
+                // its span so the relative-autolink fallback skips it.
+                Event::Html(_) | Event::InlineHtml(_) => {
+                    html_spans.push(range);
+                }
+                _ => {}
+            }
+        }
+    }
+    for broken_ref in &broken {
+        // Shortcut references that resolve nowhere are literal text, never
+        // links; explicit (`[text][label]`) and collapsed (`[text][]`)
+        // references fail closed like any undeclared target.
+        if broken_ref.link_type == LinkType::Shortcut {
+            continue;
+        }
+        let at = line_of(&starts, broken_ref.span.start);
+        doc_links.push(DocLink::UndefinedRef {
+            line: at,
+            col: broken_ref.span.start,
+            label: broken_label(text, broken_ref),
+        });
+    }
+
+    // Relative autolinks (`<./other.md>`) are not CommonMark autolinks, so
+    // the parser emits no event for them: scan unscanned lines for `<target>`
+    // forms exactly as the retired line scanner did, skipping code spans,
+    // link spans, inline HTML tags, and HTML blocks.
+    for (index, line) in source_lines.iter().enumerate() {
         let line_no = (index as u32) + 1;
         if suppressed.contains(&line_no) {
-            // Fence lines and block content are block boundaries: a span
-            // cannot continue past them, and they scan for nothing.
-            open_span = None;
             continue;
         }
-        if line.trim().is_empty() {
-            // Code spans never cross a blank line (paragraph boundary), so
-            // an unclosed opener stops hiding links here.
-            open_span = None;
-            continue;
-        }
-        if let Some((label, target)) = link_definition(line) {
-            // Definitions interrupt a paragraph, ending any open span.
-            open_span = None;
-            definitions.insert(label, target);
-            continue;
-        }
+        let base = starts[index];
+        doc_links.extend(scan_bare_autolinks(
+            line,
+            base,
+            line_no,
+            &code_spans,
+            &link_spans,
+            &html_spans,
+        ));
+    }
+
+    // ATX-only scope is retained: a heading event whose source line is not
+    // an ATX heading (blockquote/list markers, setext underlines) counts for
+    // nothing, and the slug still derives from the source line.
+    for line_no in heading_lines {
+        let line = source_lines
+            .get((line_no - 1) as usize)
+            .copied()
+            .unwrap_or("");
         if let Some((level, text)) = heading(line) {
-            // Headings interrupt a paragraph, ending any open span; the
-            // heading line itself still scans for links.
-            open_span = None;
             let base = slug(&text);
             let slug = if base.is_empty() {
                 base
@@ -175,27 +257,100 @@ pub fn check_markdown(
                 slug,
             });
         }
-        let (found, next_span) = scan_links(line, open_span);
-        open_span = next_span;
-        pending.extend(found.into_iter().map(|target| PendingLink {
-            line: line_no,
-            target,
-        }));
     }
+
+    // Left-to-right per line, matching the retired line scanner order for
+    // `skipped_remotes`.
+    doc_links.sort_by_key(|link| (link.line(), link.col()));
     check_headings(&headings, &mut outcome);
     let own_slugs: BTreeSet<String> = headings.into_iter().map(|h| h.slug).collect();
-    for link in &pending {
-        check_link(
-            source_path,
-            link,
-            &definitions,
-            siblings,
-            &own_slugs,
-            &mut outcome,
-        );
+    for link in &doc_links {
+        match link {
+            DocLink::Dest { line, target, .. } => {
+                check_target(
+                    source_path,
+                    *line,
+                    target,
+                    siblings,
+                    &own_slugs,
+                    &mut outcome,
+                );
+            }
+            DocLink::UndefinedRef { line, label, .. } => {
+                push_finding(
+                    &mut outcome,
+                    *line,
+                    FindingKind::MissingFileTarget,
+                    &format!("reference link label has no definition: [{label}]"),
+                );
+            }
+        }
     }
     outcome.findings.sort_by_key(|f| (f.line, f.kind));
     outcome
+}
+
+/// One link candidate in document order: a resolved destination or an
+/// explicitly broken reference label.
+enum DocLink {
+    Dest {
+        line: u32,
+        col: usize,
+        target: String,
+    },
+    UndefinedRef {
+        line: u32,
+        col: usize,
+        label: String,
+    },
+}
+
+impl DocLink {
+    fn line(&self) -> u32 {
+        match self {
+            DocLink::Dest { line, .. } | DocLink::UndefinedRef { line, .. } => *line,
+        }
+    }
+
+    fn col(&self) -> usize {
+        match self {
+            DocLink::Dest { col, .. } | DocLink::UndefinedRef { col, .. } => *col,
+        }
+    }
+}
+
+type Span = std::ops::Range<usize>;
+
+/// An unresolved reference from the broken-link callback: byte span of the
+/// source form plus its kind and normalized label.
+struct BrokenRef {
+    span: Span,
+    link_type: LinkType,
+    reference: String,
+}
+
+/// Display label for an explicitly broken reference, read back off the
+/// source span so messages keep the author's spelling: the second bracket
+/// group of `[text][label]` (or the inner text of collapsed `[text][]`,
+/// whose callback span covers only `[text]`).
+fn broken_label(text: &str, broken_ref: &BrokenRef) -> String {
+    let span = text.get(broken_ref.span.clone()).unwrap_or("");
+    let span = span.strip_prefix('!').unwrap_or(span);
+    if broken_ref.link_type == LinkType::Collapsed {
+        return span
+            .strip_prefix('[')
+            .unwrap_or(span)
+            .strip_suffix(']')
+            .unwrap_or(span)
+            .to_string();
+    }
+    match span.rfind("][") {
+        Some(index) => span[index + 2..]
+            .strip_suffix(']')
+            .unwrap_or(&span[index + 2..])
+            .to_string(),
+        None => broken_ref.reference.clone(),
+    }
 }
 
 fn push_finding(outcome: &mut CheckOutcome, line: u32, kind: FindingKind, message: &str) {
@@ -244,37 +399,6 @@ fn check_headings(headings: &[Heading], outcome: &mut CheckOutcome) {
         }
         previous = heading.level;
     }
-}
-
-fn check_link(
-    source_path: &str,
-    link: &PendingLink,
-    definitions: &BTreeMap<String, String>,
-    siblings: &BTreeMap<String, String>,
-    own_slugs: &BTreeSet<String>,
-    outcome: &mut CheckOutcome,
-) {
-    let raw = match &link.target {
-        RawTarget::Inline(target) => target.clone(),
-        RawTarget::Reference { label, explicit } => match definitions.get(&label.to_lowercase()) {
-            Some(target) => target.clone(),
-            None => {
-                if !explicit {
-                    // Bare `[text]` with no definition is literal text, not
-                    // a link.
-                    return;
-                }
-                push_finding(
-                    outcome,
-                    link.line,
-                    FindingKind::MissingFileTarget,
-                    &format!("reference link label has no definition: [{label}]"),
-                );
-                return;
-            }
-        },
-    };
-    check_target(source_path, link.line, &raw, siblings, own_slugs, outcome);
 }
 
 fn check_target(
@@ -682,191 +806,56 @@ fn heading(line: &str) -> Option<(usize, String)> {
     Some((level, text))
 }
 
-/// `[label]: target` link definition: (lowercased label, target).
-fn link_definition(line: &str) -> Option<(String, String)> {
-    let stripped = line.trim_start();
-    if line.len() - stripped.len() > 3 || !stripped.starts_with('[') {
-        return None;
-    }
-    let close = stripped.find("]:")?;
-    let label = stripped[1..close].trim().to_lowercase();
-    if label.is_empty() {
-        return None;
-    }
-    let after = stripped[close + 2..].trim();
-    let target = after.split_whitespace().next().unwrap_or("");
-    let target = target
-        .strip_prefix('<')
-        .and_then(|t| t.strip_suffix('>'))
-        .unwrap_or(target);
-    if target.is_empty() {
-        return None;
-    }
-    Some((label, target.to_string()))
-}
-
-/// Raw link targets on one fence-free line: inline `](target)` forms plus
-/// reference usages (`[text][label]`, collapsed `[text][]`, shortcut
-/// `[text]`). Images share the same syntax. `<autolinks>` resolve as
-/// targets except email forms, which are out of scope. Code spans between
-/// matching backtick runs are skipped, including spans opened on a previous
-/// line: `open_span` carries the still-open run length (or `None`), and the
-/// return carries the run left open at end of line (or `None`). A line that
-/// opens a span it never closes hides the rest of the line; callers reset
-/// the carry on blank lines and fences so one stray backtick cannot hide
-/// links past its paragraph.
-fn scan_links(line: &str, open_span: Option<usize>) -> (Vec<RawTarget>, Option<usize>) {
-    let chars: Vec<char> = line.chars().collect();
-    let mut targets = Vec::new();
+/// Relative `<autolink>` targets on one unscanned line. The parser emits no
+/// event for these (only absolute URIs and emails are CommonMark
+/// autolinks), so the retired `<...>` rule is kept as a fallback: a `<`
+/// closed on the same line whose trimmed content is non-empty with no
+/// whitespace and no `@`. Candidates overlapping a code span, a link the
+/// parser already emitted, or an inline HTML tag are skipped.
+fn scan_bare_autolinks(
+    line: &str,
+    base: usize,
+    line_no: u32,
+    code_spans: &[Span],
+    link_spans: &[Span],
+    html_spans: &[Span],
+) -> Vec<DocLink> {
+    let bytes = line.as_bytes();
+    let mut links = Vec::new();
     let mut i = 0;
-    if let Some(run) = open_span {
-        match close_span_run(&chars, 0, run) {
-            Some(next) => {
-                i = next;
-            }
-            None => {
-                return (targets, open_span);
-            }
-        }
-    }
-    while i < chars.len() {
-        if chars[i] == '`' {
-            let run = chars[i..].iter().take_while(|c| **c == '`').count();
-            match close_span_run(&chars, i + run, run) {
-                Some(next) => {
-                    i = next;
-                }
-                None => {
-                    return (targets, Some(run));
-                }
-            }
-            continue;
-        }
-        if chars[i] == '<' {
-            if let Some(end) = chars[i..].iter().position(|c| *c == '>') {
-                let content: String = chars[i + 1..i + end].iter().collect();
-                let content = content.trim();
-                if !content.is_empty()
-                    && !content.contains(char::is_whitespace)
-                    && !content.contains('@')
-                {
-                    targets.push(RawTarget::Inline(content.to_string()));
-                }
-                i += end + 1;
-                continue;
-            }
+    while i < bytes.len() {
+        if bytes[i] != b'<' {
             i += 1;
             continue;
         }
-        if chars[i] == '[' || (chars[i] == '!' && chars.get(i + 1) == Some(&'[')) {
-            let open = if chars[i] == '!' { i + 1 } else { i };
-            match scan_bracket_link(&chars, open) {
-                Some((next, target)) => {
-                    // A bare `[text]` that matches no definition is literal
-                    // text, not a link; resolve it only when the label is
-                    // defined by deferring through the Reference form.
-                    targets.push(target);
-                    i = next;
-                    continue;
-                }
-                None => {
-                    i = open + 1;
-                    continue;
-                }
-            }
+        let Some(length) = bytes[i..].iter().position(|byte| *byte == b'>') else {
+            i += 1;
+            continue;
+        };
+        let candidate = base + i..base + i + length + 1;
+        i += length + 1;
+        let content = line[candidate.start + 1 - base..candidate.end - 1 - base].trim();
+        if content.is_empty()
+            || content.contains(char::is_whitespace)
+            || content.contains('@')
+            || code_spans.iter().any(|span| overlaps(span, &candidate))
+            || link_spans.iter().any(|span| overlaps(span, &candidate))
+            || html_spans.iter().any(|span| overlaps(span, &candidate))
+        {
+            continue;
         }
-        i += 1;
+        links.push(DocLink::Dest {
+            line: line_no,
+            col: candidate.start,
+            target: content.to_string(),
+        });
     }
-    (targets, None)
+    links
 }
 
-/// Index just past the closing run matching a code-span opener: scans for a
-/// backtick run of exactly `run` starting at `from`, skipping shorter or
-/// longer runs as span content. Returns `None` when no closer follows, in
-/// which case the span continues on the next line.
-fn close_span_run(chars: &[char], from: usize, run: usize) -> Option<usize> {
-    let mut j = from;
-    while j < chars.len() {
-        if chars[j] == '`' {
-            let run2 = chars[j..].iter().take_while(|c| **c == '`').count();
-            if run2 == run {
-                return Some(j + run2);
-            }
-            j += run2;
-        } else {
-            j += 1;
-        }
-    }
-    None
-}
-
-/// Parse a `[...]` link starting at the `[` at `open`. Returns the index
-/// after the link plus its raw target. `[text][label]` and collapsed
-/// `[text][]` are explicit references (an undefined label fails closed); a
-/// bare `[text]` is a shortcut reference that is literal text unless the
-/// label is defined.
-fn scan_bracket_link(chars: &[char], open: usize) -> Option<(usize, RawTarget)> {
-    let mut depth = 0;
-    let mut j = open;
-    let mut text_end: Option<usize> = None;
-    while j < chars.len() && text_end.is_none() {
-        if chars[j] == '[' {
-            depth += 1;
-        } else if chars[j] == ']' {
-            depth -= 1;
-            if depth == 0 {
-                text_end = Some(j);
-            }
-        }
-        j += 1;
-    }
-    let text_end = text_end?;
-    let text: String = chars[open + 1..text_end].iter().collect();
-    let after = text_end + 1;
-    if chars.get(after) == Some(&'(') {
-        let mut pdepth = 1;
-        let mut k = after + 1;
-        while k < chars.len() && pdepth > 0 {
-            if chars[k] == '(' {
-                pdepth += 1;
-            } else if chars[k] == ')' {
-                pdepth -= 1;
-            }
-            k += 1;
-        }
-        if pdepth != 0 {
-            return None;
-        }
-        let raw: String = chars[after + 1..k - 1].iter().collect();
-        let target = raw.split_whitespace().next().unwrap_or("").to_string();
-        return Some((k, RawTarget::Inline(target)));
-    }
-    if chars.get(after) == Some(&'[') {
-        let mut k = after + 1;
-        while k < chars.len() && chars[k] != ']' {
-            k += 1;
-        }
-        if k >= chars.len() {
-            return None;
-        }
-        let label: String = chars[after + 1..k].iter().collect();
-        let label = if label.trim().is_empty() { text } else { label };
-        return Some((
-            k + 1,
-            RawTarget::Reference {
-                label,
-                explicit: true,
-            },
-        ));
-    }
-    // Bare `[text]`: a shortcut reference, literal text unless defined.
-    Some((
-        text_end + 1,
-        RawTarget::Reference {
-            label: text,
-            explicit: false,
-        },
-    ))
+/// Whether two byte spans share at least one byte.
+fn overlaps(first: &Span, second: &Span) -> bool {
+    first.start.max(second.start) < first.end.min(second.end)
 }
 
 #[cfg(test)]
@@ -1089,6 +1078,88 @@ mod tests {
         let text = "# T\n\nSee [other][missing].\n";
         let outcome = check_markdown("a.md", text, &siblings(&[]));
         assert_eq!(kinds(&outcome), vec![(3, FindingKind::MissingFileTarget)]);
+        assert_eq!(
+            outcome.findings[0].message,
+            "reference link label has no definition: [missing]"
+        );
+    }
+
+    #[test]
+    fn undefined_collapsed_reference_fails_closed() {
+        let text = "# T\n\nSee [gone][].\n";
+        let outcome = check_markdown("a.md", text, &siblings(&[]));
+        assert_eq!(kinds(&outcome), vec![(3, FindingKind::MissingFileTarget)]);
+        assert_eq!(
+            outcome.findings[0].message,
+            "reference link label has no definition: [gone]"
+        );
+    }
+
+    #[test]
+    fn shortcut_reference_resolves_through_definition() {
+        let text = "# T\n\nSee [other].\n\n[other]: other.md\n";
+        let outcome = check_markdown(
+            "docs/page.md",
+            text,
+            &siblings(&[("docs/other.md", "# Other\n")]),
+        );
+        assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
+    }
+
+    #[test]
+    fn image_with_undefined_reference_fails_closed() {
+        let text = "# T\n\nSee ![alt][missing].\n";
+        let outcome = check_markdown("a.md", text, &siblings(&[]));
+        assert_eq!(kinds(&outcome), vec![(3, FindingKind::MissingFileTarget)]);
+    }
+
+    #[test]
+    fn uri_autolink_is_skipped_never_fetched() {
+        let text = "# T\n\nSee <https://example.com/page#frag>.\n";
+        let outcome = check_markdown("a.md", text, &siblings(&[]));
+        assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
+        assert_eq!(
+            outcome.skipped_remotes,
+            vec!["https://example.com/page#frag".to_string()]
+        );
+    }
+
+    #[test]
+    fn multiline_link_target_resolves() {
+        let text = "# T\n\nSee [multi\nline](other.md).\n";
+        let outcome = check_markdown(
+            "docs/page.md",
+            text,
+            &siblings(&[("docs/other.md", "# Other\n")]),
+        );
+        assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
+    }
+
+    #[test]
+    fn html_block_content_is_ignored() {
+        // Headings and links inside an HTML block are markup content, never
+        // findings (CommonMark renders them verbatim). No blank line: a
+        // blank line would end the block and re-expose the link.
+        let text = "# T\n\n<div>\n# Fake\n[gone](gone.md)\n</div>\n";
+        let outcome = check_markdown("a.md", text, &siblings(&[]));
+        assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
+    }
+
+    #[test]
+    fn inline_html_leaves_line_links_visible() {
+        // Inline HTML is not an HTML block: the link still resolves (and the
+        // tag itself is markup, never an autolink target).
+        let text = "# T\n\nPress <kbd>Ctrl</kbd> plus [gone](gone.md).\n";
+        let outcome = check_markdown("a.md", text, &siblings(&[]));
+        assert_eq!(kinds(&outcome), vec![(3, FindingKind::MissingFileTarget)]);
+        assert!(outcome.findings[0].message.contains("gone.md"));
+    }
+
+    #[test]
+    fn blockquote_heading_is_not_a_heading() {
+        // ATX-only scope: `#` under a blockquote marker is not a heading.
+        let outcome = check_markdown("a.md", "> # Quoted\n", &siblings(&[]));
+        assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
     }
 
     #[test]
@@ -1227,12 +1298,17 @@ mod tests {
 
     #[test]
     fn span_carry_resets_on_blank_line() {
-        // A stray opener hides links only until its paragraph ends.
+        // A stray backtick is literal text under CommonMark, never a span
+        // opener: the link it precedes is reported (fail-closed), while a
+        // span still cannot hide links past its paragraph.
         let text = "# T\n\nStray ` opener hides [gone](gone.md).\n\nSee <also-gone.md>.\n";
         let outcome = check_markdown("a.md", text, &siblings(&[]));
         assert_eq!(
             kinds(&outcome),
-            vec![(5, FindingKind::MissingFileTarget)],
+            vec![
+                (3, FindingKind::MissingFileTarget),
+                (5, FindingKind::MissingFileTarget),
+            ],
             "{:?}",
             outcome.findings
         );
