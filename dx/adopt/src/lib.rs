@@ -169,10 +169,23 @@ pub fn init_must_refuse(target_exists: bool, _force: bool) -> bool {
 /// Whether the single-version pin holds.
 ///
 /// Per O51 direction the `dx` version equals the pinned `rules_dx` module
-/// version: both must be non-empty and verbatim equal. Self-update bumps
+/// version: both must parse as Cargo-flavor semver (via the `semver`
+/// crate, issue #224) and compare exactly equal. Self-update bumps
 /// that pin from verified release artifacts; anything else is rejected here.
+/// Empty strings and non-semver text never match, even when equal.
 pub fn version_pin_matches_module(dx_version: &str, module_version: &str) -> bool {
-    !dx_version.is_empty() && dx_version == module_version
+    if dx_version.is_empty() || module_version.is_empty() {
+        return false;
+    }
+    let dx = match semver::Version::parse(dx_version) {
+        Ok(dx) => dx,
+        Err(_) => return false,
+    };
+    let module = match semver::Version::parse(module_version) {
+        Ok(module) => module,
+        Err(_) => return false,
+    };
+    dx == module
 }
 
 /// Whether a rollback target is admissible.
@@ -681,6 +694,18 @@ mod tests {
         assert!(!version_pin_matches_module("1.2.3", "1.2.4"));
         assert!(!version_pin_matches_module("", ""));
         assert!(!version_pin_matches_module("1.2.3", ""));
+        // Issue #224 (semver pilot): pins must be valid semver; equal
+        // non-semver text never matches, even when verbatim equal.
+        assert!(!version_pin_matches_module("abc", "abc"));
+        assert!(!version_pin_matches_module("v1.2.3", "v1.2.3"));
+        assert!(!version_pin_matches_module("1.2", "1.2"));
+        // Pre-release and build metadata compare exactly.
+        assert!(version_pin_matches_module("1.2.3-alpha.1", "1.2.3-alpha.1"));
+        assert!(!version_pin_matches_module(
+            "1.2.3-alpha.1",
+            "1.2.3-alpha.2"
+        ));
+        assert!(!version_pin_matches_module("1.2.3", "1.2.3-alpha.1"));
     }
 
     #[test]

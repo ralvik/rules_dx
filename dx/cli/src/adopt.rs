@@ -219,9 +219,7 @@ fn execute_version(
         };
     }
     if let Some(pin) = &invocation.pin {
-        if !dx_adopt::version_pin_matches_module(pin, dx_adopt::MODULE_VERSION)
-            && pin != dx_adopt::MODULE_VERSION
-        {
+        if !dx_adopt::version_pin_matches_module(pin, dx_adopt::MODULE_VERSION) {
             return operational(
                 out,
                 err,

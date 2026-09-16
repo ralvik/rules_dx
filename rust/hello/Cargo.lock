@@ -256,6 +256,7 @@ version = "0.0.0"
 name = "dx_adopt"
 version = "0.0.0"
 dependencies = [
+ "semver",
  "serde",
  "serde_json",
  "tempfile",
