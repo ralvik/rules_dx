@@ -1,6 +1,6 @@
 """M04 WP3 repository-owned Markdown link/structure checker crate."""
 
-load("@crates//:crates.bzl", "aliases")
+load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_binary", "rust_library", "rust_test")
@@ -16,6 +16,13 @@ rust_library(
     ),
     crate_name = "quality_markdown",
     crate_root = "src/lib.rs",
+    deps = crate_deps(
+        [
+            "serde",
+            "serde_json",
+        ],
+        package_name = "quality/quality_markdown",
+    ),
 )
 
 rust_binary(
@@ -68,4 +75,11 @@ rust_test(
         normal_dev = True,
     ),
     crate = ":quality_markdown_lib",
+    deps = crate_deps(
+        [
+            "serde",
+            "serde_json",
+        ],
+        package_name = "quality/quality_markdown",
+    ),
 )
