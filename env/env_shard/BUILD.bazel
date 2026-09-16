@@ -36,7 +36,10 @@ rust_binary(
     ),
     crate_name = "env_shard_writer",
     crate_root = "src/main.rs",
-    deps = [":env_shard"],
+    deps = crate_deps(
+        ["clap"],
+        package_name = "env/env_shard",
+    ) + [":env_shard"],
 )
 
 rust_test(

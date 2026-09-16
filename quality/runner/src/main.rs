@@ -34,6 +34,10 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+use clap::{
+    error::{ContextKind, ContextValue, ErrorKind},
+    Parser,
+};
 use quality_result::encode_validated;
 use quality_runner::{
     real::{RealBackend, RealTool},
@@ -47,11 +51,91 @@ fn main() {
     }
 }
 
-fn flag_value(args: &[String], index: &mut usize, flag: &str) -> Result<String, String> {
-    *index += 1;
-    args.get(*index)
-        .cloned()
-        .ok_or_else(|| format!("missing value for {flag}"))
+/// `argv` tokenizer. Repeatable options append in argument order (stages
+/// run in that order); scalars keep last-wins repeats; every value option
+/// consumes the next token unconditionally (even a `--`-led token), matching
+/// the legacy hand loop. Only tokenizing moves to `clap`; all value-shape
+/// validation (`parse_stage`, `parse_tool_*`, mapping splits) is untouched.
+#[derive(Parser)]
+#[command(disable_help_flag = true)]
+struct Cli {
+    #[arg(long, allow_hyphen_values = true, overrides_with = "producer")]
+    producer: Option<String>,
+    #[arg(long, allow_hyphen_values = true, overrides_with = "capability")]
+    capability: Option<String>,
+    #[arg(long, allow_hyphen_values = true, overrides_with = "output")]
+    output: Option<String>,
+    #[arg(long, allow_hyphen_values = true)]
+    stage: Vec<String>,
+    #[arg(long, allow_hyphen_values = true)]
+    source: Vec<String>,
+    #[arg(long, allow_hyphen_values = true)]
+    sibling: Vec<String>,
+    #[arg(long)]
+    real: bool,
+    #[arg(long, allow_hyphen_values = true, overrides_with = "scratch_parent")]
+    scratch_parent: Option<String>,
+    #[arg(long, allow_hyphen_values = true)]
+    tool_binary: Vec<String>,
+    #[arg(long, allow_hyphen_values = true)]
+    tool_config: Vec<String>,
+    #[arg(long, allow_hyphen_values = true)]
+    tool_file: Vec<String>,
+    #[arg(long, allow_hyphen_values = true)]
+    tool_edition: Vec<String>,
+    #[arg(long, allow_hyphen_values = true)]
+    tool_env: Vec<String>,
+    #[arg(long, allow_hyphen_values = true)]
+    upstream_diagnostics: Vec<String>,
+}
+
+/// Raw `argv` token behind a [`clap::Error`], e.g. `--bogus` or `oops`.
+fn invalid_token(error: &clap::Error) -> String {
+    match error.get(ContextKind::InvalidArg) {
+        Some(ContextValue::String(token)) => token.clone(),
+        Some(ContextValue::Strings(tokens)) => tokens.first().cloned().unwrap_or_default(),
+        _ => String::new(),
+    }
+}
+
+/// Map `clap` tokenizing failures onto the legacy `run()` error surface.
+/// Only [`ErrorKind::UnknownArgument`] and [`ErrorKind::InvalidValue`] (a
+/// present flag with no consumable value) are reachable: every option takes
+/// plain strings, so no value parser, conflict, or count error can fire.
+fn parse_error(error: clap::Error, args: &[String]) -> String {
+    let token = invalid_token(&error);
+    match error.kind() {
+        // `clap` strips an attached `=value` from the reported token; the
+        // legacy loop echoed the whole `argv` element, so recover it.
+        ErrorKind::UnknownArgument => {
+            let echoed = args
+                .iter()
+                .find(|arg| *arg == &token)
+                .or_else(|| {
+                    args.iter()
+                        .find(|arg| arg.starts_with(&format!("{token}=")))
+                })
+                .map_or(token.clone(), Clone::clone);
+            format!("unknown flag {echoed:?}")
+        }
+        ErrorKind::InvalidValue => {
+            // `clap` renders the pending option as `--flag <VALUE>`; the
+            // legacy message names the bare `--flag`.
+            let flag = token.split_whitespace().next().unwrap_or(&token);
+            format!("missing value for {flag}")
+        }
+        _ => error
+            .to_string()
+            .lines()
+            .next()
+            .unwrap_or("invalid arguments")
+            .to_owned(),
+    }
+}
+
+fn parse_args(args: &[String]) -> Result<Cli, String> {
+    Cli::try_parse_from(std::iter::once("quality_runner").chain(args.iter().map(|arg| arg as &str)))
+        .map_err(|error| parse_error(error, args))
 }
 
 fn parse_stage(spec: &str) -> Result<StageSpec, String> {
@@ -148,94 +232,54 @@ fn parse_upstream_diagnostics(spec: &str) -> Result<(String, PathBuf), String> {
 
 fn run() -> Result<(), String> {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let mut producer: Option<String> = None;
-    let mut capability: Option<String> = None;
-    let mut output: Option<String> = None;
-    let mut stages: Vec<StageSpec> = Vec::new();
-    let mut sources: Vec<(String, String)> = Vec::new();
-    let mut siblings: Vec<(String, String)> = Vec::new();
-    let mut real = false;
-    let mut scratch_parent: Option<String> = None;
-    let mut binaries: Vec<(String, PathBuf)> = Vec::new();
-    let mut configs: Vec<(String, String)> = Vec::new();
-    let mut editions: Vec<(String, String)> = Vec::new();
-    let mut tool_files: Vec<(String, String, String)> = Vec::new();
-    let mut tool_env: Vec<(String, String, String)> = Vec::new();
-    let mut upstream: Vec<(String, PathBuf)> = Vec::new();
-    let mut index = 0;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--producer" => producer = Some(flag_value(&args, &mut index, "--producer")?),
-            "--capability" => capability = Some(flag_value(&args, &mut index, "--capability")?),
-            "--output" => output = Some(flag_value(&args, &mut index, "--output")?),
-            "--stage" => stages.push(parse_stage(&flag_value(&args, &mut index, "--stage")?)?),
-            "--source" => {
-                let mapping = flag_value(&args, &mut index, "--source")?;
-                let (workspace, exec) = mapping
-                    .split_once('=')
-                    .ok_or_else(|| format!("malformed --source {mapping:?}, want WS_PATH=EXEC"))?;
-                sources.push((workspace.to_owned(), exec.to_owned()));
-            }
-            "--sibling" => {
-                let mapping = flag_value(&args, &mut index, "--sibling")?;
-                let (workspace, exec) = mapping
-                    .split_once('=')
-                    .ok_or_else(|| format!("malformed --sibling {mapping:?}, want WS_PATH=EXEC"))?;
-                siblings.push((workspace.to_owned(), exec.to_owned()));
-            }
-            "--real" => real = true,
-            "--scratch-parent" => {
-                scratch_parent = Some(flag_value(&args, &mut index, "--scratch-parent")?);
-            }
-            "--tool-binary" => {
-                binaries.push(parse_tool_binary(&flag_value(
-                    &args,
-                    &mut index,
-                    "--tool-binary",
-                )?)?);
-            }
-            "--tool-config" => {
-                configs.push(parse_tool_config(&flag_value(
-                    &args,
-                    &mut index,
-                    "--tool-config",
-                )?)?);
-            }
-            "--tool-file" => {
-                tool_files.push(parse_tool_file(&flag_value(
-                    &args,
-                    &mut index,
-                    "--tool-file",
-                )?)?);
-            }
-            "--tool-edition" => {
-                editions.push(parse_tool_edition(&flag_value(
-                    &args,
-                    &mut index,
-                    "--tool-edition",
-                )?)?);
-            }
-            "--tool-env" => {
-                tool_env.push(parse_tool_env(&flag_value(
-                    &args,
-                    &mut index,
-                    "--tool-env",
-                )?)?);
-            }
-            "--upstream-diagnostics" => {
-                upstream.push(parse_upstream_diagnostics(&flag_value(
-                    &args,
-                    &mut index,
-                    "--upstream-diagnostics",
-                )?)?);
-            }
-            other => return Err(format!("unknown flag {other:?}")),
-        }
-        index += 1;
+    let cli = parse_args(&args)?;
+    let producer = cli.producer.ok_or("--producer is required")?;
+    let capability = cli.capability.ok_or("--capability is required")?;
+    let output = cli.output.ok_or("--output is required")?;
+    let mut stages: Vec<StageSpec> = Vec::with_capacity(cli.stage.len());
+    for spec in &cli.stage {
+        stages.push(parse_stage(spec)?);
     }
-    let producer = producer.ok_or("--producer is required")?;
-    let capability = capability.ok_or("--capability is required")?;
-    let output = output.ok_or("--output is required")?;
+    let mut sources: Vec<(String, String)> = Vec::with_capacity(cli.source.len());
+    for mapping in &cli.source {
+        let (workspace, exec) = mapping
+            .split_once('=')
+            .ok_or_else(|| format!("malformed --source {mapping:?}, want WS_PATH=EXEC"))?;
+        sources.push((workspace.to_owned(), exec.to_owned()));
+    }
+    let mut siblings: Vec<(String, String)> = Vec::with_capacity(cli.sibling.len());
+    for mapping in &cli.sibling {
+        let (workspace, exec) = mapping
+            .split_once('=')
+            .ok_or_else(|| format!("malformed --sibling {mapping:?}, want WS_PATH=EXEC"))?;
+        siblings.push((workspace.to_owned(), exec.to_owned()));
+    }
+    let real = cli.real;
+    let scratch_parent = cli.scratch_parent;
+    let mut binaries: Vec<(String, PathBuf)> = Vec::with_capacity(cli.tool_binary.len());
+    for spec in &cli.tool_binary {
+        binaries.push(parse_tool_binary(spec)?);
+    }
+    let mut configs: Vec<(String, String)> = Vec::with_capacity(cli.tool_config.len());
+    for spec in &cli.tool_config {
+        configs.push(parse_tool_config(spec)?);
+    }
+    let mut editions: Vec<(String, String)> = Vec::with_capacity(cli.tool_edition.len());
+    for spec in &cli.tool_edition {
+        editions.push(parse_tool_edition(spec)?);
+    }
+    let mut tool_files: Vec<(String, String, String)> = Vec::with_capacity(cli.tool_file.len());
+    for spec in &cli.tool_file {
+        tool_files.push(parse_tool_file(spec)?);
+    }
+    let mut tool_env: Vec<(String, String, String)> = Vec::with_capacity(cli.tool_env.len());
+    for spec in &cli.tool_env {
+        tool_env.push(parse_tool_env(spec)?);
+    }
+    let mut upstream: Vec<(String, PathBuf)> = Vec::with_capacity(cli.upstream_diagnostics.len());
+    for spec in &cli.upstream_diagnostics {
+        upstream.push(parse_upstream_diagnostics(spec)?);
+    }
     let mut files = Vec::with_capacity(sources.len());
     for (workspace, exec) in &sources {
         let bytes = std::fs::read(exec).map_err(|e| format!("cannot read {workspace:?}: {e}"))?;
