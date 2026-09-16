@@ -1,7 +1,7 @@
 """Vendored Bazel execution preset (M05 WP4, O62) -- GENERATED, do not edit.
 
-Version-matched to Bazel 9.2.0 (`.bazelversion`). Upstream-derived flags and owned
-`extra_presets` groups, each reviewed in `tools/bazelrc/preset.py`. Regenerate:
+Version-matched to Bazel 9.2.0 (`.bazelversion`). Upstream-derived flags, owned `extra_presets` groups, and owned `BUILD_PROFILES`, each reviewed in `tools/bazelrc/preset.py`.
+Regenerate:
 
     bazel run //tools/bazelrc:preset.update
 """
@@ -23,3 +23,9 @@ EXTRA_PRESETS = {
         "coverage --instrumentation_filter=^//",
     ],
 }
+
+BUILD_PROFILES = [
+    "build:dx_debug --compilation_mode=dbg",
+    "build:dx_dev --compilation_mode=fastbuild",
+    "build:dx_release --compilation_mode=opt",
+]

@@ -4,7 +4,7 @@ Source of truth for the repository `.bazelrc` execution policy. Renders two
 checked-in generated files (do not edit by hand):
 
 - `bazelrc-preset.bzl`: Starlark data (`PRESET_BAZEL_VERSION`, `PRESET_FLAGS`,
-  `EXTRA_PRESETS`) pinned by `preset.update_test`.
+  `EXTRA_PRESETS`, `BUILD_PROFILES`) pinned by `preset.update_test`.
 - `preset.bazelrc`: `.bazelrc` fragment imported by the root `.bazelrc`.
 
 Upstream flag recommendations enter only as reviewed inventory edits below;
@@ -76,6 +76,22 @@ EXTRA_PRESETS = {
 }
 
 
+# Owned build profiles (issue #177): stable `dx_*` config names over
+# Bazel-native `compilation_mode`. `dx_dev` equals the Bazel default
+# `fastbuild` for the inner loop; `dx_release` (`opt`) is the deploy
+# default; `dx_debug` (`dbg`) is diagnostics. Defined as `build:` lines
+# so `--config=` applies to build, test, run, and coverage through Bazel
+# config inheritance. No CLI flags in this scope; flags land in #179.
+BUILD_PROFILES = [
+    ("build:dx_debug --compilation_mode=dbg",
+     "Debug diagnostics: unoptimized with debug info."),
+    ("build:dx_dev --compilation_mode=fastbuild",
+     "Inner-loop default: fast build, matches bare-invocation behavior."),
+    ("build:dx_release --compilation_mode=opt",
+     "Release default for deploy: optimized."),
+]
+
+
 def _source_dir():
     """Directory holding the preset package.
 
@@ -93,9 +109,9 @@ def _render_bzl():
     lines = [
         '"""Vendored Bazel execution preset (M05 WP4, O62) -- GENERATED, do not edit.',
         "",
-        "Version-matched to Bazel %s (`.bazelversion`). Upstream-derived flags "
-        "and owned" % PRESET_BAZEL_VERSION,
-        "`extra_presets` groups, each reviewed in `tools/bazelrc/preset.py`. "
+        "Version-matched to Bazel %s (`.bazelversion`). Upstream-derived flags, "
+        "owned `extra_presets` groups, and owned `BUILD_PROFILES`, each "
+        "reviewed in `tools/bazelrc/preset.py`." % PRESET_BAZEL_VERSION,
         "Regenerate:",
         "",
         "    bazel run //tools/bazelrc:preset.update",
@@ -118,6 +134,12 @@ def _render_bzl():
     lines += [
         "}",
         "",
+        "BUILD_PROFILES = [",
+    ]
+    lines += ['    "%s",' % line for line, _review in BUILD_PROFILES]
+    lines += [
+        "]",
+        "",
     ]
     return "\n".join(lines)
 
@@ -134,6 +156,8 @@ def _render_fragment():
     for group in sorted(EXTRA_PRESETS):
         lines += ["# Owned extra_presets group: %s." % group]
         lines += [line for line, _review in EXTRA_PRESETS[group]]
+    lines += ["# Owned build profiles (issue #177)."]
+    lines += [line for line, _review in BUILD_PROFILES]
     lines += [""]
     return "\n".join(lines)
 

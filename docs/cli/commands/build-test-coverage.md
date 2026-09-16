@@ -53,3 +53,21 @@ reach the integer percent, else the command exits 1. `LCOV_EXCL_*` source
 markers (with a nearby `reason:` comment) exclude lines from the denominator;
 sources that fail to load and non-Rust/Go records count raw. Without the flag,
 coverage collects and reports with no threshold verdict.
+
+## Build Profiles
+
+Three shared Bazel configs select `compilation_mode` behind stable
+`dx_*` names (see [ADR 0021](../../decisions/0021-build-profiles.md)):
+
+| Config | `compilation_mode` | Intended default |
+| --- | --- | --- |
+| `dx_debug` | `dbg` | Diagnostics |
+| `dx_dev` | `fastbuild` | `build`/`run`/`test` default; equals bare-invocation behavior |
+| `dx_release` | `opt` | `deploy` default |
+
+The configs live in the vendored preset (`tools/bazelrc/preset.bazelrc`,
+reviewed via `tools/bazelrc/preset.py`, wired through the root
+`.bazelrc`) and are additive: bare invocations keep today's behavior.
+No CLI flags change in this scope; `--debug`/`--release` mapping,
+precedence, and `DX_PROFILE` forwarding are open in
+[#179](https://github.com/ralvik/rules_dx/issues/179).

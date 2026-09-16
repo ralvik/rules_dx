@@ -96,7 +96,9 @@ The verify command rejects stale generated files, prints the flag diff
 under review, and rejects root `.bazelrc` lines that duplicate preset
 flags (reconcile by removing the owned duplicates; project overrides stay
 explicit and `user.bazelrc` stays last). `preset.update_test` pins the pin
-and the inventory in `bazel test //...`.
+and the inventory in `bazel test //...`. Owned build profiles
+(`dx_debug`/`dx_dev`/`dx_release`) are reviewed the same way; see
+[ADR 0021](../decisions/0021-build-profiles.md).
 
 Version bumps arrive as Renovate PRs (`renovate.json`, `bazel` manager, no
 auto-merge). The loop stays manual: run the regen, review the flag diff,

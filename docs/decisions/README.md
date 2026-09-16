@@ -30,3 +30,4 @@ validation and are not stable commitments.
 | [0018: Umbrella Check/Fix And Managed-State Cleanup](0018-umbrella-check-fix-cleanup-clean.md) | Accepted | — | CLI surface |
 | [0019: First-Release Additional-Foundation Dispositions](0019-first-release-additional-foundations.md) | Accepted | 2026-09-08 | V1 scope dispositions |
 | [0020: Remove The `dx docs` Placeholder Command](0020-remove-dx-docs-placeholder.md) | Accepted | — | CLI surface |
+| [0021: Build Profiles](0021-build-profiles.md) | Accepted | — | Configuration |
