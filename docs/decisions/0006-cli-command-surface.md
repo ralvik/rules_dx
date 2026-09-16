@@ -9,6 +9,11 @@ Superseded for the `dx check` / `dx fix` / `dx clean` surface by
 surface by [ADR 0020](0020-remove-dx-docs-placeholder.md). Remaining invocation,
 scope, output, and workflow-composition constraints stand.
 
+Historical note: `Oxx`/`Mxx` identifiers below predate the GitHub-issues work
+register and are not normative. Planned work lives in GitHub issues (see
+[issue #207](https://github.com/ralvik/rules_dx/issues/207)). Read `frozen Oxx`
+phrases as pointers to the linked live contracts, not as open work.
+
 ## Context
 
 The CLI needs a small command set with direct, predictable verbs. General umbrella
@@ -31,14 +36,9 @@ The command surface is:
 - `dx test` for Bazel-owned tests.
 - `dx format` for mutating formatting, with non-mutating `--check`.
 - `dx build` for Bazel builds.
-- `dx docs` for Bazel-owned documentation extraction, validation, and rendering; `--check`
-  performs extraction and validation without rendering, and `--serve` previews built outputs.
-  Both build and check are source-non-mutating. Exact scope, invocation combinations, and protocol
-  mechanics follow the frozen O54 mappings in the [docs contract](../cli/commands/docs.md);
-  per-language adapter runs and renderer/site-build execution remain gaps.
-  (Command removed by [ADR 0020](0020-remove-dx-docs-placeholder.md); design
-  contracts stand, reintroduction tracked in
-  [issue #10](https://github.com/ralvik/rules_dx/issues/10).)
+- `dx docs` was removed by [ADR 0020](0020-remove-dx-docs-placeholder.md); see
+  that record and [issue #10](https://github.com/ralvik/rules_dx/issues/10).
+  No `dx docs` surface is selected.
 - `dx update` for authoritative dependency-update workflows.
 - `dx generate` for the mutating repository-defined Gazelle workflow, with non-mutating
   freshness validation through `--check`.
@@ -51,14 +51,15 @@ The command surface is:
   config, CI caller template, hermetic hook installation, devcontainer, and the `dx`
    version pin. It may bootstrap without an existing `MODULE.bazel` and writes only
    absent files, without Git-based tracked-file inspection. Bootstrap destination
-   mechanics and force syntax/managed-replacement behavior follow the frozen
-   O49 mappings; unqualified force behavior is blocked.
+   mechanics and force syntax/managed-replacement behavior follow the
+   [hooks contract](../cli/commands/hooks.md) (historical O49, see Status note);
+   unqualified force behavior is blocked.
 - `dx hooks` for managing the custom hermetic git-hook runner in an existing repository
   (`install`, `uninstall`, `status`). Hook management and staged-file selection are narrow
   Git exceptions: all product Git operations for hooks use hermetic managed Git, never
   ambient Git. Refuse unmanaged existing hooks; force cannot authorize arbitrary hook
-   overwrite. Exact installation and snapshot mechanics follow frozen O49; see the
-   [hooks contract](../cli/commands/hooks.md).
+   overwrite. Exact installation and snapshot mechanics follow the
+   [hooks contract](../cli/commands/hooks.md) (historical O49, see Status note).
 
 The approved bootstrap/hook exception allows module creation and staged-path hook selection without
 general Git status inspection, clean-worktree requirements, or weakening ordinary workspace
@@ -109,8 +110,8 @@ typecheck, and audit, JUnit XML for test, and LCOV for coverage, with file and s
 destinations. The event schema, error codes, ordering, and stream interaction are defined
 in [Output Protocol](../cli/output-protocol.md); exact format profiles and partial-document
 rules are defined in [Standard Reports](../cli/standard-reports.md). Exact event schemas and
-report profiles are provisional in those contracts until M06/M10 qualification; this record
-freezes only the durable surface (verbs, modes, stream ownership, additive evolution).
+report profiles are provisional in those contracts (historical M06/M10, see Status note);
+this record freezes only the durable surface (verbs, modes, stream ownership, additive evolution).
 
 `--quiet` and `--dry-run` are stable global option names. A non-Gazelle `generate`
 backend requires a new decision.
@@ -131,8 +132,9 @@ selected dependency sets after a set failure, skip operations dependent on that 
 preserve successful changes, and return overall failure. This preserves independent progress
 without a repository-wide rollback; the [update contract](../cli/commands/audit-update-bazel.md#dx-update)
 owns set independence. Aggregate exit-code selection, backend mapping, and report
-qualification follow the frozen O12 mappings; live resolver-backend
-execution remains a gap. Ordinary plans, including
+qualification follow the [update contract](../cli/commands/audit-update-bazel.md#dx-update)
+(historical O12, see Status note); live resolver-backend
+execution remains a gap (see [issue #19](https://github.com/ralvik/rules_dx/issues/19)). Ordinary plans, including
 the `dx check` and `dx fix` umbrellas, retain their first-failure behavior.
 
 Dry-run may execute read-only Bazel queries needed to resolve the plan but never
@@ -143,7 +145,8 @@ arguments, modes, or index controls. Arguments after `--` are Bazel
 command options placed before canonical `//dx:generate`, never Gazelle arguments. Advanced
 users may invoke the Bazel target or Gazelle directly outside the `dx generate` contract.
 Exact scoped-selection syntax, empty-scope handling, and freshness semantics for scoped
-`--check` are qualified under O48.
+`--check` follow the [generate contract](../cli/commands/generate.md)
+(historical O48, see Status note).
 The command does not require a recognized manifest or existing application target: Gazelle
 discovers supported sources and creates initial target declarations. Manifests remain
 authoritative for project and dependency metadata, and generation does not analyze or execute the
@@ -243,7 +246,7 @@ absent side uses a versioned managed empty generation.
 - Combining lint and type checking into one command.
 - A `dx new` app/service/component template generator: out of v1 (rejected 2026-09-09); new-repository
   scaffolding stays in `dx init`, BUILD maintenance stays in `dx generate`, and breaking-change
-  rewrites stay open under O57. No `dx new` command is selected.
+  rewrites remain unselected (historical O57, see Status note). No `dx new` command is selected.
 - Language/profile selectors, path/pattern scope, or an interactive shell under
   `dx env`.
 - Making `env` or `codegen` implicitly run the other instead of using explicit
