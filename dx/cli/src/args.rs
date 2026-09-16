@@ -20,8 +20,11 @@ use dx_output::{OutputMode, Threshold};
 
 /// Quality, generation, workflow, run, clean, managed
 /// environment/codegen/setup, adoption, and inspect command selected by
-/// the first positional argument.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// the first positional argument. The variant spellings double as the
+/// `clap::ValueEnum` source of truth for the command word.
+/// Single-word lowercase variants map to identical clap values, so
+/// [`Command::parse`] delegates to the derive.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub enum Command {
     Audit,
     Lint,
@@ -85,35 +88,8 @@ impl Command {
     }
 
     fn parse(text: &str) -> Option<Self> {
-        match text {
-            "audit" => Some(Command::Audit),
-            "lint" => Some(Command::Lint),
-            "typecheck" => Some(Command::Typecheck),
-            "format" => Some(Command::Format),
-            "generate" => Some(Command::Generate),
-            "build" => Some(Command::Build),
-            "test" => Some(Command::Test),
-            "coverage" => Some(Command::Coverage),
-            "run" => Some(Command::Run),
-            "check" => Some(Command::Check),
-            "fix" => Some(Command::Fix),
-            "clean" => Some(Command::Clean),
-            "update" => Some(Command::Update),
-            "codegen" => Some(Command::Codegen),
-            "env" => Some(Command::Env),
-            "setup" => Some(Command::Setup),
-            "init" => Some(Command::Init),
-            "hooks" => Some(Command::Hooks),
-            "status" => Some(Command::Status),
-            "version" => Some(Command::Version),
-            "watch" => Some(Command::Watch),
-            "owners" => Some(Command::Owners),
-            "deps" => Some(Command::Deps),
-            "why" => Some(Command::Why),
-            "completion" => Some(Command::Completion),
-            "bazel" => Some(Command::Bazel),
-            _ => None,
-        }
+        use clap::ValueEnum;
+        Self::from_str(text, false).ok()
     }
 
     /// True for the Bazel-passthrough workflow commands (`build`, `test`,
@@ -929,6 +905,51 @@ mod tests {
         assert!(Command::Test.is_workflow());
         assert!(Command::Coverage.is_workflow());
         assert!(Command::Run.is_workflow());
+    }
+
+    #[test]
+    fn command_names_are_clap_value_enum() {
+        use clap::ValueEnum;
+        // Every stable name round-trips through the derive, case-sensitively.
+        let commands = [
+            Command::Audit,
+            Command::Lint,
+            Command::Typecheck,
+            Command::Format,
+            Command::Generate,
+            Command::Build,
+            Command::Test,
+            Command::Coverage,
+            Command::Run,
+            Command::Check,
+            Command::Fix,
+            Command::Clean,
+            Command::Update,
+            Command::Codegen,
+            Command::Env,
+            Command::Setup,
+            Command::Init,
+            Command::Hooks,
+            Command::Status,
+            Command::Version,
+            Command::Watch,
+            Command::Owners,
+            Command::Deps,
+            Command::Why,
+            Command::Completion,
+            Command::Bazel,
+        ];
+        assert_eq!(commands.len(), Command::value_variants().len());
+        for command in commands {
+            assert_eq!(Command::parse(command.name()), Some(command));
+            assert_eq!(
+                command.to_possible_value().expect("named").get_name(),
+                command.name()
+            );
+        }
+        assert_eq!(Command::parse("Lint"), None);
+        assert_eq!(Command::parse("type-check"), None);
+        assert_eq!(Command::parse("dx"), None);
     }
 
     #[test]
