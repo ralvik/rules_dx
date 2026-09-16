@@ -64,7 +64,7 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
                 &invocation.bazel_options,
                 bep_text,
             )
-            .map_err(|error| format!("{error:?}"))
+            .map_err(|error| format!("{error}"))
         }) {
         Ok(build) => build,
         Err(message) => return pre_exec(err, &message),
@@ -321,7 +321,7 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
                         out,
                         err,
                         CODE_INVALID_BEP,
-                        &format!("invalid finding for output: {error:?}"),
+                        &format!("invalid finding for output: {error}"),
                     );
                 } // LCOV_EXCL_STOP - reason: end of unreachable defensive arm.
             }
@@ -339,7 +339,7 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
                             out,
                             err,
                             CODE_INVALID_BEP,
-                            &format!("invalid change for output: {error:?}"),
+                            &format!("invalid change for output: {error}"),
                         );
                     } // LCOV_EXCL_STOP - reason: end of unreachable defensive arm.
                 },
@@ -394,7 +394,7 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
                             out,
                             err,
                             CODE_INVALID_BEP,
-                            &format!("invalid mutation for output: {error:?}"),
+                            &format!("invalid mutation for output: {error}"),
                         );
                     } // LCOV_EXCL_STOP - reason: end of unreachable defensive arm.
                 }

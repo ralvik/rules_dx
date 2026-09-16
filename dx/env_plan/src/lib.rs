@@ -68,14 +68,16 @@ pub enum EnvScope {
 
 /// Exact-target scope failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{self:?}")]
 pub enum ScopeError {
     /// More than one positional target: env selects at most one.
+    #[error("expected at most one target, found {count}")]
     MultipleTargets { count: usize },
     /// A target pattern (`...`, `*`, `?`): patterns never select env.
+    #[error("invalid target {value:?}: patterns never select env")]
     TargetPattern { value: String },
     /// Anything that is not an exact target label: paths, directories,
     /// profiles/flags, and language selectors.
+    #[error("invalid target {value:?}: want an exact // or @ label")]
     NotTargetLabel { value: String },
 }
 
@@ -159,16 +161,18 @@ pub struct EnvRecord {
 
 /// Shard collection failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{self:?}")]
 pub enum CollectError {
     /// A BEP-reported shard file fails to decode or validate.
+    #[error("invalid shard {path:?}: {error}")]
     Shard { path: String, error: Error },
     /// Two records claim one identity key incompatibly. The message
     /// matches `env_plan_conflict_error` rendering, listing every
     /// claimant: no traversal-order winner is accepted.
+    #[error("{0}")]
     Conflict(String),
     /// An entry's non-empty exec suffix matches no BEP-reported
     /// non-shard artifact.
+    #[error("missing artifact for {producer} {key:?}: no BEP artifact matches {exec_path:?}")]
     MissingArtifact {
         producer: String,
         key: String,
@@ -178,11 +182,13 @@ pub enum CollectError {
     /// artifact. `artifacts` holds the colliding full BEP paths.
     /// Sharing (several keys bound to one artifact) is allowed and
     /// never reports this variant.
+    #[error("ambiguous artifact {exec_path:?}: matches {artifacts:?}")]
     AmbiguousArtifact {
         exec_path: String,
         artifacts: Vec<String>,
     },
     /// A BEP-reported non-shard artifact is claimed by no entry.
+    #[error("unreported artifact {path:?}: claimed by no entry")]
     UnreportedArtifact { path: String },
 }
 
@@ -691,7 +697,7 @@ mod tests {
     fn scope_errors_display() {
         assert!(ScopeError::MultipleTargets { count: 2 }
             .to_string()
-            .contains("MultipleTargets"));
+            .contains("at most one target"));
     }
 
     #[test]
@@ -886,7 +892,7 @@ mod tests {
         )];
         let error = collect_shards(&outputs).expect_err("invalid shard");
         assert!(matches!(error, CollectError::Shard { .. }));
-        assert!(error.to_string().contains("Shard"));
+        assert!(error.to_string().contains("invalid shard"));
     }
 
     #[test]

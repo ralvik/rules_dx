@@ -101,13 +101,14 @@ pub struct SetupRecordView {
 /// adopted or repaired: the operator removes the offending path or
 /// re-runs setup from a clean selection.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{self:?}")]
 pub enum RecordProblem {
     /// Record, environment, or generated name is not a 64-character
     /// lowercase hexadecimal digest.
+    #[error("malformed digest {value:?}: want 64-character lowercase hex")]
     MalformedDigest { value: String },
     /// Record links resolve to a pair whose digest differs from the
     /// record directory name (digest-spoofed path).
+    #[error("spoofed record {record:?}: links resolve to {pair:?}")]
     Spoofed { record: String, pair: String },
 }
 
@@ -281,21 +282,25 @@ pub const CLEAN_LOCK_TIMEOUT: Duration = Duration::from_secs(10);
 /// Clean failure. Every variant is operational; `--dry-run` rendering
 /// never surfaces these (it deletes nothing and holds no lock).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{self:?}")]
 pub enum CleanError {
     /// Workspace root is missing or not a directory.
+    #[error("invalid workspace root {path:?}: missing or not a directory", path = path.display())]
     WorkspaceRoot { path: PathBuf },
     /// Another command holds the commit lock past the deadline.
+    #[error("workspace busy at {path:?}: another command holds the commit lock", path = path.display())]
     Busy { path: PathBuf },
     /// The commit lock cannot be opened or locked.
+    #[error("cannot lock {path:?}: {reason}", path = path.display())]
     LockFailed { path: PathBuf, reason: String },
     /// `.dx/setups/current` is present but malformed. Never adopted,
     /// never repaired, and nothing is pruned: the operator removes the
     /// offending path or re-runs setup from a clean selection.
+    #[error("invalid current selection: {reason}")]
     CurrentInvalid { reason: String },
     /// A workspace mutation failed. Entries already deleted stay deleted
     /// (each removal is independent); the current pointer is never
     /// touched by clean, so selection is unchanged.
+    #[error("install failed: {reason}")]
     Install { reason: String },
 }
 

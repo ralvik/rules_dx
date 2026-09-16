@@ -65,14 +65,14 @@ fn collect_managed_codegen(bep: &Path) -> Result<ManagedCodegenCollection, (Stri
     let plan = dx_codegen::collect_plan(&outputs).map_err(|err| {
         (
             CODE_INVALID_RESULT.to_owned(),
-            format!("invalid codegen plan: {err:?}"),
+            format!("invalid codegen plan: {err}"),
         )
     })?;
     let projection = dx_codegen::plan_projection(&plan.records, &outputs).map_err(|err| {
         // LCOV_EXCL_START - reason: defense-in-depth; collect_plan runs the identical artifact-index validation over the same outputs, so projection cannot fail after a successful collect; retained so a future divergence fails closed as invalid_result rather than panicking.
         (
             CODE_INVALID_RESULT.to_owned(),
-            format!("invalid codegen plan: {err:?}"),
+            format!("invalid codegen plan: {err}"),
         )
         // LCOV_EXCL_STOP - reason: end of unreachable projection-failure mapping.
     })?;
@@ -86,14 +86,14 @@ fn collect_managed_env(bep: &Path) -> Result<ManagedEnvCollection, (String, Stri
     let plan = dx_env_plan::collect_plan(&outputs).map_err(|err| {
         (
             CODE_INVALID_RESULT.to_owned(),
-            format!("invalid env plan: {err:?}"),
+            format!("invalid env plan: {err}"),
         )
     })?;
     let projection = dx_env_plan::plan_projection(&plan.records, &outputs).map_err(|err| {
         // LCOV_EXCL_START - reason: defense-in-depth; collect_plan runs the identical artifact-index validation over the same outputs, so projection cannot fail after a successful collect; retained so a future divergence fails closed as invalid_result rather than panicking.
         (
             CODE_INVALID_RESULT.to_owned(),
-            format!("invalid env plan: {err:?}"),
+            format!("invalid env plan: {err}"),
         )
         // LCOV_EXCL_STOP - reason: end of unreachable projection-failure mapping.
     })?;
@@ -640,7 +640,7 @@ pub(crate) fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
         bep_text,
     ) {
         Ok(plan) => plan,
-        Err(error) => return pre_exec(err, &format!("{error:?}")),
+        Err(error) => return pre_exec(err, &format!("{error}")),
     };
     // Human prose is the only output on this path: the planned
     // operation prints unless `--quiet` suppresses it, in both

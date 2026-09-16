@@ -18,37 +18,33 @@ use proto::DxCodegenShard;
 
 /// Validation or codec failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{self:?}")]
 pub enum Error {
+    #[error("cannot decode codegen shard: {0}")]
     Decode(String),
+    #[error("empty producer: want a non-empty label")]
     EmptyProducer,
-    BadProducer {
-        value: String,
-    },
-    EmptyLanguage {
-        producer: String,
-    },
-    EmptyEntries {
-        producer: String,
-    },
+    #[error("invalid producer {value:?}: want a // or @ label")]
+    BadProducer { value: String },
+    #[error("empty language for {producer}: want a non-empty language")]
+    EmptyLanguage { producer: String },
+    #[error("empty entries for {producer}: want at least one entry")]
+    EmptyEntries { producer: String },
+    #[error("invalid path for {producer} {path:?}: {reason}")]
     BadPath {
         producer: String,
         path: String,
         reason: &'static str,
     },
+    #[error("invalid exec path for {producer} {path:?}: {reason}")]
     BadExecPath {
         producer: String,
         path: String,
         reason: &'static str,
     },
-    DuplicateLogicalPath {
-        producer: String,
-        path: String,
-    },
-    NotReadOnly {
-        producer: String,
-        path: String,
-    },
+    #[error("duplicate logical path for {producer} {path:?}")]
+    DuplicateLogicalPath { producer: String, path: String },
+    #[error("entry not read-only for {producer} {path:?}: projections are always read-only")]
+    NotReadOnly { producer: String, path: String },
 }
 
 fn check_path(producer: &str, path: &str) -> Result<(), Error> {
@@ -319,6 +315,6 @@ mod tests {
 
     #[test]
     fn display_names_the_error() {
-        assert!(Error::EmptyProducer.to_string().contains("EmptyProducer"));
+        assert!(Error::EmptyProducer.to_string().contains("empty producer"));
     }
 }

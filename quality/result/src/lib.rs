@@ -30,83 +30,72 @@ pub fn digest(bytes: &[u8]) -> [u8; 32] {
     *blake3::hash(bytes).as_bytes()
 }
 
-/// Validation or codec failure.
+/// Validation or codec failure (issue #211 slice).
+///
+/// Every variant renders human-readable via `Display` for CLI
+/// operational diagnostics; binaries render via `to_string()`, never
+/// Rust `Debug`.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{self:?}")]
 pub enum Error {
+    #[error("cannot decode quality result: {0}")]
     Decode(String),
-    UnsupportedMajor {
-        found: u32,
-    },
+    #[error("unsupported schema major {found}: want {major}", major = SCHEMA_MAJOR)]
+    UnsupportedMajor { found: u32 },
+    #[error("empty producer: want a non-empty tool identity")]
     EmptyProducer,
+    #[error("invalid capability: want a known capability")]
     InvalidCapability,
+    #[error("invalid convergence: want a known convergence state")]
     InvalidConvergence,
-    TooManyRounds {
-        found: u32,
-    },
+    #[error("too many completed rounds ({found}): want at most {max}", max = MAX_COMPLETED_ROUNDS)]
+    TooManyRounds { found: u32 },
+    #[error("empty stages: want at least one stage")]
     EmptyStages,
-    EmptyStageToolId {
-        stage: usize,
-    },
-    EmptyStageClasses {
-        stage: usize,
-    },
-    EmptyStageSources {
-        stage: usize,
-    },
+    #[error("empty tool id at stage {stage}: want a non-empty tool identity")]
+    EmptyStageToolId { stage: usize },
+    #[error("empty classes at stage {stage}: want at least one file class")]
+    EmptyStageClasses { stage: usize },
+    #[error("empty sources at stage {stage}: want at least one source")]
+    EmptyStageSources { stage: usize },
+    #[error("invalid path at {at} {path:?}: {reason}")]
     BadPath {
         at: String,
         path: String,
         reason: &'static str,
     },
-    DuplicateSnapshotPath {
-        path: String,
-    },
+    #[error("duplicate snapshot path {path:?}")]
+    DuplicateSnapshotPath { path: String },
+    #[error("invalid digest length at {at} {path:?}: found {found} bytes, want {len}", len = DIGEST_LEN)]
     BadDigestLen {
         at: String,
         path: String,
         found: usize,
     },
-    BadSeverity {
-        index: usize,
-    },
-    EmptyDiagnosticMessage {
-        index: usize,
-    },
-    EmptyDiagnosticToolId {
-        index: usize,
-    },
-    RangeWithoutPath {
-        index: usize,
-    },
-    MissingRange {
-        index: usize,
-    },
-    InvertedRange {
-        index: usize,
-    },
-    EmptyEdits {
-        path: String,
-    },
-    NoopEdit {
-        path: String,
-        index: usize,
-    },
-    InvertedEdit {
-        path: String,
-        index: usize,
-    },
-    InvalidUtf8Replacement {
-        path: String,
-        index: usize,
-    },
-    EditOrder {
-        path: String,
-        index: usize,
-    },
-    DuplicateReplacementsPath {
-        path: String,
-    },
+    #[error("invalid severity at diagnostic[{index}]: want info, warning, or error")]
+    BadSeverity { index: usize },
+    #[error("empty message at diagnostic[{index}]: want a non-empty message")]
+    EmptyDiagnosticMessage { index: usize },
+    #[error("empty tool id at diagnostic[{index}]: want a non-empty tool identity")]
+    EmptyDiagnosticToolId { index: usize },
+    #[error("range without path at diagnostic[{index}]: ranges require a path")]
+    RangeWithoutPath { index: usize },
+    #[error("missing range at diagnostic[{index}]: path diagnostics require a byte range")]
+    MissingRange { index: usize },
+    #[error("inverted range at diagnostic[{index}]: start must not exceed end")]
+    InvertedRange { index: usize },
+    #[error("empty edits for {path:?}: want at least one edit")]
+    EmptyEdits { path: String },
+    #[error("no-op edit at {path:?}[{index}]: replacement is identical")]
+    NoopEdit { path: String, index: usize },
+    #[error("inverted edit at {path:?}[{index}]: start must not exceed end")]
+    InvertedEdit { path: String, index: usize },
+    #[error("invalid UTF-8 replacement at {path:?}[{index}]")]
+    InvalidUtf8Replacement { path: String, index: usize },
+    #[error("unordered edit at {path:?}[{index}]: edits must be ordered and non-overlapping")]
+    EditOrder { path: String, index: usize },
+    #[error("duplicate replacements path {path:?}")]
+    DuplicateReplacementsPath { path: String },
+    #[error("replacements without a stable terminal snapshot")]
     ReplacementsWithoutStability,
 }
 
@@ -763,6 +752,6 @@ mod tests {
     #[test]
     fn error_display_reports_variant() {
         let rendered = format!("{}", Error::ReplacementsWithoutStability);
-        assert!(rendered.contains("ReplacementsWithoutStability"));
+        assert!(rendered.contains("without a stable terminal snapshot"));
     }
 }

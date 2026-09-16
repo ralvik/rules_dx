@@ -46,50 +46,37 @@ pub struct FileInput {
 /// producing a result, so every error here is an action failure, never a
 /// stored diagnostic.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{self:?}")]
 pub enum RunnerError {
+    #[error("empty producer: want a non-empty producer")]
     EmptyProducer,
-    UnknownCapability {
-        capability: String,
-    },
+    #[error("unknown capability {capability:?}: want lint, typecheck, format, or audit")]
+    UnknownCapability { capability: String },
+    #[error("empty stages: want at least one stage")]
     EmptyStages,
-    EmptyToolId {
-        stage: usize,
-    },
-    UnknownTool {
-        tool_id: String,
-    },
-    EmptyClassIds {
-        stage: usize,
-    },
-    EmptyStageSources {
-        stage: usize,
-    },
-    DuplicateFile {
-        path: String,
-    },
-    InvalidUtf8 {
-        path: String,
-    },
-    MissingFile {
-        path: String,
-    },
+    #[error("empty tool id at stage {stage}")]
+    EmptyToolId { stage: usize },
+    #[error("unknown tool {tool_id:?}")]
+    UnknownTool { tool_id: String },
+    #[error("empty class ids at stage {stage}")]
+    EmptyClassIds { stage: usize },
+    #[error("empty stage sources at stage {stage}")]
+    EmptyStageSources { stage: usize },
+    #[error("duplicate file {path:?}")]
+    DuplicateFile { path: String },
+    #[error("invalid UTF-8 for {path:?}")]
+    InvalidUtf8 { path: String },
+    #[error("missing file {path:?}")]
+    MissingFile { path: String },
     /// Tool launch, scratch, or I/O failure in a real backend.
-    ToolExecution {
-        tool_id: String,
-        detail: String,
-    },
+    #[error("tool execution failed for {tool_id}: {detail}")]
+    ToolExecution { tool_id: String, detail: String },
     /// Real tool output outside the pinned grammar, or non-UTF-8 bytes
     /// where the protocol needs text.
-    ToolOutput {
-        tool_id: String,
-        detail: String,
-    },
+    #[error("invalid tool output for {tool_id}: {detail}")]
+    ToolOutput { tool_id: String, detail: String },
     /// A parsed finding positions outside the bytes just checked.
-    UnplaceableFinding {
-        tool_id: String,
-        detail: String,
-    },
+    #[error("unplaceable finding for {tool_id}: {detail}")]
+    UnplaceableFinding { tool_id: String, detail: String },
 }
 
 fn parse_capability(capability: &str) -> Result<i32, RunnerError> {
@@ -820,7 +807,7 @@ mod tests {
                 path: "src/lib.rs".to_owned(),
             }
         );
-        assert!(rendered.contains("MissingFile"));
+        assert!(rendered.contains("missing file"));
     }
 
     #[test]

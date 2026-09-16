@@ -18,38 +18,37 @@ use proto::DxEnvShard;
 
 /// Validation or codec failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{self:?}")]
 pub enum Error {
+    #[error("cannot decode env shard: {0}")]
     Decode(String),
+    #[error("empty producer: want a non-empty label")]
     EmptyProducer,
-    BadProducer {
-        value: String,
-    },
-    EmptyIntegration {
-        producer: String,
-    },
-    EmptyEntries {
-        producer: String,
-    },
+    #[error("invalid producer {value:?}: want a // or @ label")]
+    BadProducer { value: String },
+    #[error("empty integration for {producer}: want a non-empty integration")]
+    EmptyIntegration { producer: String },
+    #[error("empty entries for {producer}: want at least one entry")]
+    EmptyEntries { producer: String },
+    #[error("invalid key for {producer} {key:?}: {reason}")]
     BadKey {
         producer: String,
         key: String,
         reason: &'static str,
     },
+    #[error("invalid value for {producer} {key:?}: {reason}")]
     BadValue {
         producer: String,
         key: String,
         reason: &'static str,
     },
+    #[error("invalid exec path for {producer} {path:?}: {reason}")]
     BadExecPath {
         producer: String,
         path: String,
         reason: &'static str,
     },
-    DuplicateKey {
-        producer: String,
-        key: String,
-    },
+    #[error("duplicate key for {producer} {key:?}")]
+    DuplicateKey { producer: String, key: String },
 }
 
 fn check_key(producer: &str, key: &str) -> Result<(), Error> {
@@ -317,6 +316,6 @@ mod tests {
 
     #[test]
     fn display_names_the_error() {
-        assert!(Error::EmptyProducer.to_string().contains("EmptyProducer"));
+        assert!(Error::EmptyProducer.to_string().contains("empty producer"));
     }
 }

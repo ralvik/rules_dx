@@ -2911,7 +2911,7 @@ mod tests {
                 detail: "bad grammar".to_owned(),
             }
         );
-        assert!(rendered.contains("ToolOutput"));
+        assert!(rendered.contains("invalid tool output"));
     }
 
     fn buildifier_fix_ok(

@@ -313,10 +313,7 @@ pub fn finalize(input: &FinalizeInput<'_>) -> Result<GenerationManifest, Finaliz
             failure_code: String::new(),
         };
         let intended = generation_result::candidate(&probe).map_err(|err| {
-            FinalizeError::Malformed(format!(
-                "file {:?} change does not apply: {err:?}",
-                file.path
-            ))
+            FinalizeError::Malformed(format!("file {:?} change does not apply: {err}", file.path))
         })?;
         let (outcome, failure_code) = if input.check {
             (WriteOutcome::Unspecified as i32, String::new())

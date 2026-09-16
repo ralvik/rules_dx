@@ -231,58 +231,50 @@ pub fn meets_threshold(severity: Severity, threshold: Threshold) -> bool {
 
 /// Output or protocol failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{self:?}")]
 pub enum OutputError {
-    UnknownOutputMode {
-        value: String,
-    },
+    #[error("unknown output mode {value:?}")]
+    UnknownOutputMode { value: String },
     /// A stdout report combined with `--output diff` or `--output json`.
-    ConflictingStdoutReport {
-        mode: &'static str,
-    },
+    #[error("conflicting stdout report with {mode} mode: reports must target files")]
+    ConflictingStdoutReport { mode: &'static str },
     /// More than one standard report targets stdout.
+    #[error("second stdout report: at most one report may target stdout")]
     SecondStdoutReport,
-    EmptyField {
-        field: &'static str,
-    },
+    #[error("empty {field}: want a non-empty value")]
+    EmptyField { field: &'static str },
     /// `command_started` mode outside `default|check`.
-    BadCommandMode {
-        value: String,
-    },
-    BadSeverity {
-        value: String,
-    },
-    BadThreshold {
-        value: String,
-    },
-    BadPath {
-        path: String,
-        reason: &'static str,
-    },
-    BadDigest {
-        field: &'static str,
-        value: String,
-    },
-    BadEdit {
-        index: usize,
-        reason: &'static str,
-    },
+    #[error("invalid command mode {value:?}: want default or check")]
+    BadCommandMode { value: String },
+    #[error("invalid severity {value:?}")]
+    BadSeverity { value: String },
+    #[error("invalid threshold {value:?}")]
+    BadThreshold { value: String },
+    #[error("invalid path {path:?}: {reason}")]
+    BadPath { path: String, reason: &'static str },
+    #[error("invalid digest for {field} {value:?}")]
+    BadDigest { field: &'static str, value: String },
+    #[error("invalid edit at index {index}: {reason}")]
+    BadEdit { index: usize, reason: &'static str },
+    #[error("range without path: ranges require a file path")]
     RangeWithoutPath,
+    #[error("inverted range: start must not exceed end")]
     InvertedRange,
     /// A default-mode initial diagnostic without its required resolution.
+    #[error("missing resolution: default-mode diagnostics require a resolution")]
     MissingResolution,
     /// A check-mode or terminal diagnostic carrying a resolution.
+    #[error("unexpected resolution: check-mode diagnostics carry no resolution")]
     UnexpectedResolution,
     /// A mutation without its required failure reason, or an applied
     /// mutation carrying one.
-    MissingReason {
-        path: String,
-    },
-    UnexpectedReason {
-        path: String,
-    },
+    #[error("missing failure reason for {path:?}")]
+    MissingReason { path: String },
+    #[error("unexpected failure reason for {path:?}: applied mutations carry no reason")]
+    UnexpectedReason { path: String },
     /// A value that is not an NDJSON event object.
+    #[error("not an event: value is not an NDJSON event object")]
     NotAnEvent,
+    #[error("I/O error: {0}")]
     Io(String),
 }
 
@@ -1359,14 +1351,14 @@ mod tests {
     }
 
     #[test]
-    fn display_renders_debug_shape() {
+    fn display_is_human_readable() {
         assert_eq!(
             OutputError::SecondStdoutReport.to_string(),
-            "SecondStdoutReport"
+            "second stdout report: at most one report may target stdout"
         );
         assert_eq!(
             OutputError::MissingResolution.to_string(),
-            "MissingResolution"
+            "missing resolution: default-mode diagnostics require a resolution"
         );
     }
 

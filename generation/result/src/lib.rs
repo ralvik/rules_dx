@@ -10,111 +10,75 @@ pub use dx_schema::SCHEMA_MINOR;
 pub const DIGEST_LEN: usize = 32;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{self:?}")]
 pub enum Error {
+    #[error("cannot decode generation result: {0}")]
     Decode(String),
-    UnsupportedMajor {
-        found: u32,
-    },
-    InvalidMode {
-        found: i32,
-    },
+    #[error("unsupported schema major {found}: want {major}", major = SCHEMA_MAJOR)]
+    UnsupportedMajor { found: u32 },
+    #[error("invalid mode {found}: want default or check")]
+    InvalidMode { found: i32 },
+    #[error("empty scopes: want at least one scope")]
     EmptyScopes,
-    EmptyScope {
-        index: usize,
-    },
-    DuplicateScope {
-        value: String,
-    },
-    ScopeCompletion {
-        index: usize,
-    },
+    #[error("empty scope at scope[{index}]: want a non-empty scope")]
+    EmptyScope { index: usize },
+    #[error("duplicate scope {value:?}")]
+    DuplicateScope { value: String },
+    #[error("incomplete scope at scope[{index}]: check runs require completed scopes")]
+    ScopeCompletion { index: usize },
+    #[error("invalid path at {at} {path:?}: {reason}")]
     BadPath {
         at: String,
         path: String,
         reason: &'static str,
     },
-    BadBuildBasename {
-        path: String,
-    },
-    ScopeIndex {
-        at: String,
-        found: u32,
-    },
-    DuplicateFile {
-        path: String,
-    },
-    MissingChange {
-        path: String,
-    },
-    InvalidUtf8 {
-        at: String,
-    },
-    BadDigestLen {
-        path: String,
-        found: usize,
-    },
-    DigestMismatch {
-        path: String,
-    },
-    EmptyEdits {
-        path: String,
-    },
-    InvertedEdit {
-        path: String,
-        index: usize,
-    },
-    EditOutOfBounds {
-        path: String,
-        index: usize,
-    },
-    EditNotUtf8Boundary {
-        path: String,
-        index: usize,
-    },
-    InvalidUtf8Replacement {
-        path: String,
-        index: usize,
-    },
-    NoopEdit {
-        path: String,
-        index: usize,
-    },
-    EditOrder {
-        path: String,
-        index: usize,
-    },
-    UnchangedCandidate {
-        path: String,
-    },
-    CheckOutcome {
-        path: String,
-    },
-    MissingOutcome {
-        path: String,
-    },
-    InvalidOutcome {
-        path: String,
-        found: i32,
-    },
-    AppliedFailureCode {
-        path: String,
-    },
-    MissingFailureCode {
-        path: String,
-    },
-    EmptyIgnoredLanguage {
-        index: usize,
-    },
-    EmptyIgnoredImport {
-        index: usize,
-    },
-    IgnoredOrder {
-        index: usize,
-    },
-    DuplicateIgnoredImport {
-        index: usize,
-    },
+    #[error("invalid build basename for {path:?}: want a BUILD.bazel path")]
+    BadBuildBasename { path: String },
+    #[error("invalid scope index at {at}: found {found}")]
+    ScopeIndex { at: String, found: u32 },
+    #[error("duplicate file {path:?}")]
+    DuplicateFile { path: String },
+    #[error("missing change for {path:?}")]
+    MissingChange { path: String },
+    #[error("invalid UTF-8 at {at}")]
+    InvalidUtf8 { at: String },
+    #[error("invalid digest length for {path:?}: found {found} bytes, want {len}", len = DIGEST_LEN)]
+    BadDigestLen { path: String, found: usize },
+    #[error("digest mismatch for {path:?}: original digest does not match content")]
+    DigestMismatch { path: String },
+    #[error("empty edits for {path:?}: want at least one edit")]
+    EmptyEdits { path: String },
+    #[error("inverted edit at {path:?}[{index}]: start must not exceed end")]
+    InvertedEdit { path: String, index: usize },
+    #[error("edit out of bounds at {path:?}[{index}]")]
+    EditOutOfBounds { path: String, index: usize },
+    #[error("edit not on UTF-8 boundary at {path:?}[{index}]")]
+    EditNotUtf8Boundary { path: String, index: usize },
+    #[error("invalid UTF-8 replacement at {path:?}[{index}]")]
+    InvalidUtf8Replacement { path: String, index: usize },
+    #[error("no-op edit at {path:?}[{index}]: replacement is identical")]
+    NoopEdit { path: String, index: usize },
+    #[error("unordered edit at {path:?}[{index}]: edits must be ordered and non-overlapping")]
+    EditOrder { path: String, index: usize },
+    #[error("unchanged candidate for {path:?}: candidate is identical to original")]
+    UnchangedCandidate { path: String },
+    #[error("unexpected check outcome for {path:?}: check runs carry no write outcome")]
+    CheckOutcome { path: String },
+    #[error("missing write outcome for {path:?}")]
+    MissingOutcome { path: String },
+    #[error("invalid write outcome {found} for {path:?}")]
+    InvalidOutcome { path: String, found: i32 },
+    #[error("unexpected failure code for applied {path:?}: applied files carry no failure code")]
+    AppliedFailureCode { path: String },
+    #[error("missing failure code for not-applied {path:?}")]
+    MissingFailureCode { path: String },
+    #[error("empty language at ignored_import[{index}]: want a non-empty language")]
+    EmptyIgnoredLanguage { index: usize },
+    #[error("empty import at ignored_import[{index}]: want a non-empty import")]
+    EmptyIgnoredImport { index: usize },
+    #[error("unordered ignored import at index {index}")]
+    IgnoredOrder { index: usize },
+    #[error("duplicate ignored import at index {index}")]
+    DuplicateIgnoredImport { index: usize },
 }
 
 pub fn digest(bytes: &[u8]) -> [u8; DIGEST_LEN] {
@@ -816,6 +780,6 @@ mod tests {
 
     #[test]
     fn display_names_the_error() {
-        assert!(Error::EmptyScopes.to_string().contains("EmptyScopes"));
+        assert!(Error::EmptyScopes.to_string().contains("empty scopes"));
     }
 }

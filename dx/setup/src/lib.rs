@@ -65,14 +65,16 @@ pub enum SetupScope {
 
 /// Exact-target scope failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{self:?}")]
 pub enum ScopeError {
     /// More than one positional target: setup selects at most one.
+    #[error("expected at most one target, found {count}")]
     MultipleTargets { count: usize },
     /// A target pattern (`...`, `*`, `?`): patterns never select setup.
+    #[error("invalid target {value:?}: patterns never select setup")]
     TargetPattern { value: String },
     /// Anything that is not an exact target label: paths, directories,
     /// profiles/flags, and language selectors.
+    #[error("invalid target {value:?}: want an exact // or @ label")]
     NotTargetLabel { value: String },
 }
 
@@ -253,12 +255,12 @@ pub struct SetupPair {
 
 /// Pair resolution failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{self:?}")]
 pub enum ResolveError {
     /// The selected scope prepared neither side: an exact target with no
     /// environment or codegen capability selects nothing, and committing
     /// an empty pair or re-committing the current pair would hide the
     /// usage error.
+    #[error("no capability: selected scope prepared neither environment nor codegen")]
     NoCapability,
 }
 
@@ -357,28 +359,34 @@ pub enum CommitOutcome {
 /// Setup commit failure. Every variant is operational; usage errors
 /// (scope selection) live in [`ScopeError`] and never surface here.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{self:?}")]
 pub enum CommitError {
     /// Workspace root is missing or not a directory.
+    #[error("invalid workspace root {path:?}: missing or not a directory", path = path.display())]
     WorkspaceRoot { path: PathBuf },
     /// Another command holds the commit lock past the deadline.
+    #[error("workspace busy at {path:?}: another command holds the commit lock", path = path.display())]
     Busy { path: PathBuf },
     /// The commit lock cannot be opened or locked.
+    #[error("cannot lock {path:?}: {reason}", path = path.display())]
     LockFailed { path: PathBuf, reason: String },
     /// `.dx/setups/current` or its record links are present but malformed.
     /// Never adopted, never repaired: the operator removes the offending
     /// path or re-runs setup from a clean selection.
+    #[error("invalid current selection: {reason}")]
     CurrentInvalid { reason: String },
     /// A record already exists at the expected setup hash but its links do
     /// not match the pair byte-for-byte. The commit fails without touching
     /// the current pointer (digest-spoof refusal).
+    #[error("record mismatch: {reason}")]
     RecordMismatch { reason: String },
     /// A workspace mutation failed. The current pointer is either untouched
     /// (pre-swap failure) or fully swapped (the swap itself is one atomic
     /// rename).
+    #[error("install failed: {reason}")]
     Install { reason: String },
     /// The selected scope prepared neither side; committing an empty or
     /// recycled pair would hide the usage error. Mirrors [`ResolveError`].
+    #[error("no capability: selected scope prepared neither environment nor codegen")]
     NoCapability,
 }
 
@@ -838,7 +846,7 @@ mod tests {
     fn scope_errors_display() {
         assert!(ScopeError::MultipleTargets { count: 2 }
             .to_string()
-            .contains("MultipleTargets"));
+            .contains("at most one target"));
     }
 
     #[test]
@@ -980,7 +988,7 @@ mod tests {
         );
         assert!(ResolveError::NoCapability
             .to_string()
-            .contains("NoCapability"));
+            .contains("no capability"));
     }
 
     fn pair(env: char, gen: char) -> SetupPair {

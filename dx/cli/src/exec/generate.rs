@@ -77,7 +77,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
     };
     let plan = match plan_generate(&resolved, &invocation.bazel_options, invocation.check) {
         Ok(plan) => plan,
-        Err(error) => return pre_exec(env.err, &format!("{error:?}")),
+        Err(error) => return pre_exec(env.err, &format!("{error}")),
     };
     let mode = if invocation.check { "check" } else { "default" };
     if invocation.dry_run {
@@ -170,7 +170,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                 env.out,
                 env.err,
                 CODE_INVALID_RESULT,
-                &format!("invalid generation manifest: {error:?}"),
+                &format!("invalid generation manifest: {error}"),
             );
         } // LCOV_EXCL_STOP - reason: end of unreachable projection arm.
     };
@@ -187,7 +187,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                         env.out,
                         env.err,
                         CODE_INVALID_RESULT,
-                        &format!("invalid change for output: {error:?}"),
+                        &format!("invalid change for output: {error}"),
                     );
                 } // LCOV_EXCL_STOP - reason: end of unreachable change arm.
             }
@@ -221,7 +221,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                             env.out,
                             env.err,
                             CODE_INVALID_RESULT,
-                            &format!("invalid mutation for output: {error:?}"),
+                            &format!("invalid mutation for output: {error}"),
                         );
                     } // LCOV_EXCL_STOP - reason: end of unreachable mutation arm.
                 }
@@ -239,7 +239,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                         env.out,
                         env.err,
                         CODE_INVALID_RESULT,
-                        &format!("invalid notice for output: {error:?}"),
+                        &format!("invalid notice for output: {error}"),
                     );
                 } // LCOV_EXCL_STOP - reason: end of unreachable notice arm.
             }
