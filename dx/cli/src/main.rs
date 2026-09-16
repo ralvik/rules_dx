@@ -179,7 +179,7 @@ fn run() -> i32 {
     let workspace = match discover_real(&start, invocation.workspace.as_deref().map(Path::new)) {
         Ok(workspace) => workspace,
         Err(error) => {
-            let _ = writeln!(io::stderr(), "dx: cannot resolve workspace: {error:?}");
+            let _ = writeln!(io::stderr(), "dx: cannot resolve workspace: {error}");
             return pre_exec_code();
         }
     };

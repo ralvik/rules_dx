@@ -329,7 +329,14 @@ fn run_inspect_query(
     match query_runner.run_query(&argv, workspace) {
         Ok(result) => {
             if result.code != Some(0) {
-                return operational(out, err, "query failed");
+                return operational(
+                    out,
+                    err,
+                    &format!(
+                        "query failed: bazel {verb} {expr} exited with code {}",
+                        result.code.unwrap_or(-1)
+                    ),
+                );
             }
             let text = String::from_utf8_lossy(&result.stdout);
             let mut lines: Vec<&str> = text.lines().collect();
@@ -369,7 +376,16 @@ fn execute_why(
     let owner = match query_runner.run_query(&owner_argv, workspace) {
         Ok(result) => {
             if result.code != Some(0) {
-                return operational(out, err, "query failed");
+                return operational(
+                    out,
+                    err,
+                    &format!(
+                        "query failed: bazel {} {} for file {file} exited with code {}",
+                        owner_plan.verb,
+                        owner_plan.expr,
+                        result.code.unwrap_or(-1)
+                    ),
+                );
             }
             let text = String::from_utf8_lossy(&result.stdout);
             let mut labels: Vec<&str> = text.lines().collect();
@@ -377,7 +393,16 @@ fn execute_why(
             labels.dedup();
             match labels.into_iter().next() {
                 Some(owner) => owner.to_owned(),
-                None => return operational(out, err, &format!("no owner for {file}")),
+                None => {
+                    return operational(
+                        out,
+                        err,
+                        &format!(
+                            "no owner for {file} via bazel {} {}",
+                            owner_plan.verb, owner_plan.expr
+                        ),
+                    );
+                }
             }
         }
         Err(error) => return operational(out, err, &error.to_string()),
