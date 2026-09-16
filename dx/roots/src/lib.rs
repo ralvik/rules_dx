@@ -371,24 +371,16 @@ impl CoverageReport {
 
 /// Designated-root coverage failure: the candidate drops required semantic
 /// roots.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error(
+    "root candidate drops {missing_len} designated root(s): {missing_list}",
+    missing_len = missing.len(),
+    missing_list = missing.join(", ")
+)]
 pub struct CoverageError {
     /// Sorted deduplicated designated roots absent from the candidate.
     pub missing: Vec<String>,
 }
-
-impl std::fmt::Display for CoverageError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "root candidate drops {} designated root(s): {}",
-            self.missing.len(),
-            self.missing.join(", ")
-        )
-    }
-}
-
-impl std::error::Error for CoverageError {}
 
 fn sorted_set(labels: &[String]) -> BTreeSet<String> {
     labels.iter().cloned().collect()

@@ -109,28 +109,14 @@ impl UpdateReport {
 /// Aggregation failures. Missing results are a caller error, never a
 /// silent success: the planner refuses to guess an outcome the upstream
 /// integration did not report.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum AggregateError {
     /// A selected set has no attempted result and no failed dependency
     /// to explain the gap. Dependents of failures report `Blocked`
     /// instead; only an unexplained gap errors.
+    #[error("update set {set:?} has no reported result; refusing to guess")]
     MissingResult { set: String },
 }
-
-impl std::fmt::Display for AggregateError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            AggregateError::MissingResult { set } => {
-                write!(
-                    f,
-                    "update set {set:?} has no reported result; refusing to guess"
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for AggregateError {}
 
 /// Aggregate one update run.
 ///

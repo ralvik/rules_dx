@@ -83,75 +83,53 @@ struct StagedTool {
 
 /// Refresh failure. Every variant is operational (exit 1 at the shim);
 /// usage errors live in the shim and never surface as this type.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum Error {
     /// Workspace root is missing or not a directory.
+    #[error("workspace root {path} is not a directory", path = path.display())]
     WorkspaceRoot { path: PathBuf },
     /// Staged inputs are missing, unreadable, or structurally invalid.
+    #[error("staged tree is unusable: {reason}")]
     Staged { reason: String },
     /// Staged metadata carries an unsupported schema version.
+    #[error(
+        "staged metadata schema {found} is unsupported (installer handles {STAGED_METADATA_SCHEMA_VERSION}); regenerate the tree"
+    )]
     UnsupportedStagedSchema { found: u32 },
     /// A staged tool record fails validation.
+    #[error("staged tool is invalid: {reason}")]
     InvalidTool { reason: String },
     /// `.dx/bin` exists but is not a tree this installer wrote. Never
     /// adopted, never modified: the operator removes or renames it.
+    #[error("refusing to touch unmanaged {path}: {detail}", path = path.display())]
     Unmanaged { path: PathBuf, detail: String },
     /// The installed marker carries an unsupported schema version,
     /// typically written by a newer installer. Upgrade, do not delete.
+    #[error(
+        "installed marker schema {found} is unsupported (installer handles {MARKER_SCHEMA_VERSION}); upgrade dx instead of deleting state"
+    )]
     UnsupportedMarkerSchema { found: u32 },
     /// The installed marker is present but undecodable.
+    #[error("installed marker is invalid: {reason}")]
     MarkerInvalid { reason: String },
     /// Another refresh holds the commit lock past the deadline.
+    #[error(
+        "another refresh holds {path}; giving up after the commit-lock deadline",
+        path = path.display()
+    )]
     Busy { path: PathBuf },
     /// The commit lock cannot be opened or locked.
+    #[error("cannot lock {path}: {reason}", path = path.display())]
     LockFailed { path: PathBuf, reason: String },
     /// The host cannot create symlinks. Reported before any mutation.
+    #[error("symlinks are unusable on this host: {detail}")]
     SymlinkUnsupported { detail: String },
     /// A workspace mutation failed. Staging is cleaned; the managed tree
     /// is either untouched (pre-commit failure) or fully swapped (the
     /// swap itself is two atomic renames).
+    #[error("installation failed: {reason}")]
     Install { reason: String },
 }
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::WorkspaceRoot { path } => {
-                write!(f, "workspace root {} is not a directory", path.display())
-            }
-            Error::Staged { reason } => write!(f, "staged tree is unusable: {reason}"),
-            Error::UnsupportedStagedSchema { found } => write!(
-                f,
-                "staged metadata schema {found} is unsupported (installer handles {STAGED_METADATA_SCHEMA_VERSION}); regenerate the tree"
-            ),
-            Error::InvalidTool { reason } => write!(f, "staged tool is invalid: {reason}"),
-            Error::Unmanaged { path, detail } => write!(
-                f,
-                "refusing to touch unmanaged {}: {detail}",
-                path.display()
-            ),
-            Error::UnsupportedMarkerSchema { found } => write!(
-                f,
-                "installed marker schema {found} is unsupported (installer handles {MARKER_SCHEMA_VERSION}); upgrade dx instead of deleting state"
-            ),
-            Error::MarkerInvalid { reason } => write!(f, "installed marker is invalid: {reason}"),
-            Error::Busy { path } => write!(
-                f,
-                "another refresh holds {}; giving up after the commit-lock deadline",
-                path.display()
-            ),
-            Error::LockFailed { path, reason } => {
-                write!(f, "cannot lock {}: {reason}", path.display())
-            }
-            Error::SymlinkUnsupported { detail } => {
-                write!(f, "symlinks are unusable on this host: {detail}")
-            }
-            Error::Install { reason } => write!(f, "installation failed: {reason}"),
-        }
-    }
-}
-
-impl std::error::Error for Error {}
 
 /// Refresh inputs. `os` selects the symlink-failure guidance
 /// (`std::env::consts::OS` at the call site) and `lock_timeout` bounds
