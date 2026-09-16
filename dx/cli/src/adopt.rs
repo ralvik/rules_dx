@@ -414,13 +414,13 @@ fn execute_why(
 }
 
 fn execute_completion(invocation: &Invocation, out: &mut dyn Write, err: &mut dyn Write) -> i32 {
+    // Scripts render at runtime from the `Cli` grammar (issue #202):
+    // the same definition feeds parsing, `--help`, and completions, so
+    // output cannot drift from the command reference.
     let shell = invocation.targets.first().map(String::as_str).unwrap_or("");
-    match dx_adopt::render_completion(shell) {
+    match crate::args::render_completion(shell) {
         Ok(script) => {
             let _ = write!(out, "{script}");
-            if !dx_adopt::completion_source_is_single(true, false) {
-                return operational(out, err, "completion must come from the single source");
-            }
             0
         }
         Err(error) => pre_exec(err, &error.to_string()),
@@ -845,23 +845,47 @@ mod tests {
 
     #[test]
     fn completion_renders_from_single_source() {
-        let inv = invocation(&["completion", "bash"]);
-        let root = temp_root("completion");
-        let mut out = Vec::new();
-        let mut err = Vec::new();
-        let code = execute_adoption(
-            &inv,
-            AdoptEnv {
-                workspace: &root,
-                query_runner: &NullQuery,
-                out: &mut out,
-                err: &mut err,
-            },
-        );
-        assert_eq!(code, 0);
-        let text = String::from_utf8(out).expect("out");
-        assert!(text.contains("dx init"));
-        assert!(text.contains("dx completion"));
-        let _ = std::fs::remove_dir_all(&root);
+        use clap::ValueEnum;
+        // Every supported shell renders every command and key flag from
+        // the single Cli grammar (issue #202); no hand-maintained list.
+        for &shell in crate::args::COMPLETION_SHELLS {
+            let inv = invocation(&["completion", shell]);
+            let root = temp_root("completion");
+            let mut out = Vec::new();
+            let mut err = Vec::new();
+            let code = execute_adoption(
+                &inv,
+                AdoptEnv {
+                    workspace: &root,
+                    query_runner: &NullQuery,
+                    out: &mut out,
+                    err: &mut err,
+                },
+            );
+            assert_eq!(code, 0, "shell {shell}");
+            let text = String::from_utf8(out).expect("out");
+            for cmd in crate::args::Command::value_variants() {
+                assert!(
+                    text.contains(cmd.name()),
+                    "shell {shell} misses command {}",
+                    cmd.name()
+                );
+            }
+            for flag in [
+                "workspace",
+                "dry-run",
+                "output",
+                "report",
+                "fail-on",
+                "check",
+            ] {
+                assert!(text.contains(flag), "shell {shell} misses flag {flag}");
+            }
+            let _ = std::fs::remove_dir_all(&root);
+        }
+        // Unknown shells keep the contract error.
+        let unknown = crate::args::render_completion("tcsh");
+        assert!(unknown.is_err());
+        assert!(unknown.unwrap_err().to_string().contains("unknown-shell"));
     }
 }

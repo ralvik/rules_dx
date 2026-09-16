@@ -45,6 +45,7 @@ rust_library(
         [
             "base64",
             "clap",
+            "clap_complete",
             "hex",
             "libc",
             "quick-xml",
@@ -88,6 +89,7 @@ rust_binary(
         [
             "base64",
             "clap",
+            "clap_complete",
             "hex",
             "libc",
             "quick-xml",
@@ -118,6 +120,7 @@ rust_test(
         [
             "base64",
             "clap",
+            "clap_complete",
             "hex",
             "libc",
             "quick-xml",

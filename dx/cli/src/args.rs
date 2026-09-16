@@ -389,6 +389,9 @@ pub enum ArgsError {
     BadMinCoverage { value: String },
     #[error("malformed --report {value:?}: want <format>=<destination>")]
     BadReport { value: String },
+    /// Unknown `dx completion` shell (contract: `bash|zsh|fish|powershell`).
+    #[error("unknown-shell: {shell}")]
+    UnknownShell { shell: String },
     #[error("options --debug and --release are mutually exclusive")]
     ConflictingProfiles,
     #[error(
@@ -461,8 +464,10 @@ struct Cli {
     /// Use cquery instead of query (owners/deps/why only).
     #[arg(long)]
     configured: bool,
-    /// First positional: the command word.
-    command: Option<String>,
+    /// First positional: the command word (a [`Command`] value so the
+    /// same grammar feeds parsing, `--help`, and shell completions).
+    #[arg(value_enum)]
+    command: Option<Command>,
     /// Later positionals: explicit scopes/targets.
     targets: Vec<String>,
     /// Everything after the first bare `--`, forwarded verbatim.
@@ -647,6 +652,79 @@ fn clap_suggestion(error: &clap::Error) -> Option<String> {
     None
 }
 
+/// Shells covered by `dx completion` (contract freeze).
+pub const COMPLETION_SHELLS: &[&str] = &["bash", "zsh", "fish", "powershell"];
+
+/// Renders one completion script from the [`Cli`] grammar definition
+/// (issue #202): commands, flags, and fixed value sets come from the
+/// same source that feeds parsing and `--help`, so generated scripts
+/// cannot drift from the command reference. Generation is an explicit
+/// `dx completion` cost only, never per-invocation. Unknown shells fail
+/// with the contract's `unknown-shell` text.
+pub fn render_completion(shell: &str) -> Result<String, ArgsError> {
+    use clap::CommandFactory;
+    if !COMPLETION_SHELLS.contains(&shell) {
+        return Err(ArgsError::UnknownShell {
+            shell: shell.to_owned(),
+        });
+    }
+    let generator =
+        shell
+            .parse::<clap_complete::aot::Shell>()
+            .map_err(|_| ArgsError::UnknownShell {
+                shell: shell.to_owned(),
+            })?;
+    let mut command = Cli::command();
+    let mut script = Vec::new();
+    clap_complete::generate(generator, &mut command, "dx", &mut script);
+    let mut text = String::from_utf8(script).map_err(|_| ArgsError::UnknownShell {
+        shell: shell.to_owned(),
+    })?;
+    // Fish/powershell generators omit positional `ValueEnum` values, so
+    // commands would be missing there while bash/zsh list them. Append
+    // command completions derived from [`Command`] (same source as
+    // parsing), never hand-maintained, so every shell completes every
+    // command (issue #202).
+    match shell {
+        "fish" => {
+            use clap::ValueEnum;
+            text.push_str("\n# dx commands from the single Command source (issue #202)\n");
+            for cmd in Command::value_variants() {
+                let desc = cmd.describe().replace('\'', "\\'");
+                text.push_str(&format!(
+                    "complete -c dx -f -n '__fish_use_subcommand' -a {} -d '{}'\n",
+                    cmd.name(),
+                    desc
+                ));
+            }
+        }
+        "powershell" => {
+            use clap::ValueEnum;
+            let mut additions = String::new();
+            for cmd in Command::value_variants() {
+                let desc = cmd.describe().replace('\'', "''");
+                additions.push_str(&format!(
+                    "            [CompletionResult]::new('{}', '{}', [CompletionResultType]::ParameterValue, '{}')\n",
+                    cmd.name(),
+                    cmd.name(),
+                    desc
+                ));
+            }
+            let anchor = "            break\n        }\n    })";
+            if let Some(pos) = text.find(anchor) {
+                text.insert_str(pos, &additions);
+            } else {
+                text.push_str("\n# dx commands from the single Command source (issue #202)\n");
+                for cmd in Command::value_variants() {
+                    text.push_str(&format!("# dx {}\n", cmd.name()));
+                }
+            }
+        }
+        _ => {}
+    }
+    Ok(text)
+}
+
 /// Finds the command word for `--help` routing: the first positional
 /// token that parses as [`Command`], skipping flag payloads exactly
 /// like [`split_bazel_verbatim`]. Stops at `--` (everything after is
@@ -731,9 +809,32 @@ fn render_command_help(command: Command) -> String {
     out
 }
 
+/// True when a clap invalid-argument render names the command
+/// positional (`<COMMAND>`): the only `InvalidValue` source that is a
+/// command word rather than an option value.
+fn is_command_positional(token: &str) -> bool {
+    token
+        .trim_matches(|cut| cut == '<' || cut == '>' || cut == '[' || cut == ']')
+        .eq_ignore_ascii_case("command")
+}
+
+/// Reads clap's own command suggestion off a `ValueEnum` positional
+/// rejection (same `jaro` rule as [`best_match`], computed by clap over
+/// the [`Command`] variants).
+fn clap_command_suggestion(error: &clap::Error) -> Option<String> {
+    use clap::error::{ContextKind, ContextValue};
+    match error.get(ContextKind::SuggestedValue) {
+        Some(ContextValue::String(hit)) => Some(hit.clone()),
+        Some(ContextValue::Strings(hits)) => hits.first().cloned(),
+        _ => None,
+    }
+}
+
 /// Maps a clap parse failure back onto [`ArgsError`] so the contract
-/// surface never changes: unknown flags (including `=value` on booleans)
-/// stay unknown options, and missing option values stay missing values.
+/// surface never changes: unknown commands (including `ValueEnum`
+/// rejections of the command positional) stay unknown commands with
+/// typo hints, unknown flags (including `=value` on booleans) stay
+/// unknown options, and missing option values stay missing values.
 /// `--help`/`-h` and `--version`/`-V` render from the same grammar
 /// (issue #203) as [`ArgsError::Help`], never as usage errors.
 fn map_clap_error(args: &[String], error: &clap::Error) -> ArgsError {
@@ -762,6 +863,26 @@ fn map_clap_error(args: &[String], error: &clap::Error) -> ArgsError {
             if invalid_value(error).is_none_or(|value| value.is_empty()) {
                 ArgsError::MissingValue {
                     option: leading_flag(&token),
+                }
+            } else if is_command_positional(&token) {
+                // The command positional is a `ValueEnum`, so unknown
+                // command words fail here, not in `parse`: map them back
+                // onto the unknown-command surface with typo hints
+                // (issue #199). A lone `-` still reads as an unknown
+                // option, exactly like the pre-`ValueEnum` tokenizer did.
+                let value = invalid_value(error).unwrap_or(token);
+                if value.starts_with('-') {
+                    let option = recover_token(args, Some(value.clone()));
+                    let suggestion = clap_suggestion(error).or_else(|| suggest_option(&option));
+                    ArgsError::UnknownOption { option, suggestion }
+                } else {
+                    let command = recover_token(args, Some(value.clone()));
+                    let suggestion =
+                        clap_command_suggestion(error).or_else(|| suggest_command(&command));
+                    ArgsError::UnknownCommand {
+                        command,
+                        suggestion,
+                    }
                 }
             } else {
                 let option = recover_token(args, Some(token));
@@ -798,7 +919,7 @@ fn tokenize(args: &[String]) -> Result<(Cli, Vec<String>), ArgsError> {
         // positional and bails at `--`), so no positionals are lost; the
         // command word itself is the `bazel` token the scan stopped at.
         let mut cli = parse_tokens(&args[..at])?;
-        cli.command = Some(Command::Bazel.name().to_owned());
+        cli.command = Some(Command::Bazel);
         // The first `--` still separates (it is dropped, the rest
         // forwards), exactly like the loop's separator check running
         // before the verbatim arm did.
@@ -892,25 +1013,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     if let Some(value) = &min_coverage_name {
         min_coverage = Some(parse_min_coverage(value)?);
     }
-    let command = command_name
-        .map(|name| {
-            // Option-looking tokens never select a command: the legacy
-            // tokenizer owned every `-`-prefixed token in its option
-            // branch first. clap only lets a lone `-` through to here.
-            if name.starts_with('-') {
-                let suggestion = suggest_option(&name);
-                return Err(ArgsError::UnknownOption {
-                    option: name,
-                    suggestion,
-                });
-            }
-            Command::parse(&name).ok_or_else(|| ArgsError::UnknownCommand {
-                suggestion: suggest_command(&name),
-                command: name,
-            })
-        })
-        .transpose()?
-        .ok_or(ArgsError::MissingCommand)?;
+    let command = command_name.ok_or(ArgsError::MissingCommand)?;
     // `dx bazel` tails never reach this check: the verbatim forwarding
     // above owns every token after the command word.
     if command != Command::Bazel {
