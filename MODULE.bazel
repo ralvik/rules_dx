@@ -254,6 +254,7 @@ crate.from_cargo(
         "//dx/clean:Cargo.toml",
         "//dx/audit:Cargo.toml",
         "//dx/output:Cargo.toml",
+        "//dx/path:Cargo.toml",
         "//dx/bep:Cargo.toml",
         "//dx/cli:Cargo.toml",
         "//dx/diff:Cargo.toml",
