@@ -21,6 +21,7 @@ rust_library(
         package_name = "quality/quality_result",
     ) + [
         "//dx/path:dx_path",
+        "//dx/proto_validate:dx_proto_validate",
         "//dx/schema:dx_schema",
         "//quality:result_proto_rs",
         "@rules_rust_prost//private/3rdparty/crates:prost",
