@@ -9,6 +9,7 @@ path = "src/lib.rs"
 
 [dependencies]
 tempfile = "3"
+thiserror = "2"
 
 [[bin]]
 name = "quality_runner"

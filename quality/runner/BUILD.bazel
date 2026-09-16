@@ -20,7 +20,7 @@ rust_library(
     crate_name = "quality_runner",
     crate_root = "src/lib.rs",
     deps = crate_deps(
-        ["tempfile"],
+        ["tempfile", "thiserror"],
         package_name = "quality/quality_runner",
     ) + [
         "//quality/adapter:quality_adapter",

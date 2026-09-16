@@ -70,24 +70,13 @@ pub struct Finding {
 /// Placement failure. Every variant is an action failure, never a skipped
 /// finding: positions come from the bytes just checked, so an unmappable
 /// position means the adapter, not the source, is broken.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum PlaceError {
+    #[error("position {line}:{column} is outside the checked bytes")]
     UnmappablePosition { line: u64, column: u64 },
+    #[error("end position precedes start position")]
     InvertedRange,
 }
-
-impl std::fmt::Display for PlaceError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PlaceError::UnmappablePosition { line, column } => {
-                write!(f, "position {line}:{column} is outside the checked bytes")
-            }
-            PlaceError::InvertedRange => write!(f, "end position precedes start position"),
-        }
-    }
-}
-
-impl std::error::Error for PlaceError {}
 
 /// Converts a 1-based line/column position to a UTF-8 byte offset into
 /// `text`. A column one past the last character (the newline or end of
