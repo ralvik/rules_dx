@@ -135,10 +135,15 @@ impl Scratch {
         for file in files {
             let absolute = self.resolve(&file.mirror_rel)?;
             // `resolve` only returns paths inside the scratch root, which
-            // always has a parent, so this never fails on real filesystems.
-            let parent = absolute
-                .parent()
-                .expect("scratch paths always have a parent");
+            // always has a parent, so this only fires on a future
+            // resolve/materialize divergence (fail closed, never panic).
+            let parent = absolute.parent().ok_or_else(|| {
+                // LCOV_EXCL_LINE - reason: unreachable; resolve only returns in-root paths which always have a parent, so this only fires on a future resolve/materialize divergence.
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    format!("scratch path has no parent: {}", absolute.display()),
+                )
+            })?;
             std::fs::create_dir_all(parent)?;
             match &file.contents {
                 MirrorContents::Bytes(bytes) => std::fs::write(&absolute, bytes)?,

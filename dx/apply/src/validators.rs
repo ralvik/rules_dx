@@ -109,7 +109,9 @@ pub fn validate(op: &FileOperation, existing: Option<&[u8]>) -> Result<(), Valid
 /// Lowercased text after the final dot of the final segment, or `None` when
 /// the name has no dot (or ends with one).
 fn extension_of(path: &str) -> Option<String> {
-    let name = path.rsplit('/').next().expect("path is non-empty");
+    // `rsplit` always yields at least one item; `unwrap_or_default` keeps
+    // this total without a panic path.
+    let name = path.rsplit('/').next().unwrap_or_default();
     let (_, extension) = name.rsplit_once('.')?;
     if extension.is_empty() {
         return None;

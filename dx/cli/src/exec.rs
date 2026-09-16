@@ -1730,15 +1730,27 @@ fn collect_managed_env(bep: &Path) -> Result<ManagedEnvCollection, (String, Stri
 /// digest (`"[]"` fingerprint) pairing a first independent codegen
 /// selection with a real immutable identity, per
 /// `docs/environments/managed-state.md`.
-fn empty_env_id() -> dx_setup::GenerationId {
-    dx_setup::GenerationId::new(&dx_env_plan::plan_hex("[]"))
-        .expect("empty env fingerprint hashes to a valid digest")
+fn empty_env_id() -> Result<dx_setup::GenerationId, (String, String)> {
+    // LCOV_EXCL_START - reason: defense-in-depth; plan_hex always renders a valid generation id, so construction cannot fail; retained so a future divergence fails closed as invalid_result rather than panicking.
+    dx_setup::GenerationId::new(&dx_env_plan::plan_hex("[]")).map_err(|err| {
+        (
+            CODE_INVALID_RESULT.to_owned(),
+            format!("invalid empty env plan digest: {err}"),
+        )
+    })
+    // LCOV_EXCL_STOP - reason: end of unreachable digest-construction exclusion.
 }
 
 /// Managed empty generated-code identity, mirroring [`empty_env_id`].
-fn empty_generated_id() -> dx_setup::GenerationId {
-    dx_setup::GenerationId::new(&dx_codegen::plan_hex("[]"))
-        .expect("empty codegen fingerprint hashes to a valid digest")
+fn empty_generated_id() -> Result<dx_setup::GenerationId, (String, String)> {
+    // LCOV_EXCL_START - reason: defense-in-depth; plan_hex always renders a valid generation id, so construction cannot fail; retained so a future divergence fails closed as invalid_result rather than panicking.
+    dx_setup::GenerationId::new(&dx_codegen::plan_hex("[]")).map_err(|err| {
+        (
+            CODE_INVALID_RESULT.to_owned(),
+            format!("invalid empty codegen plan digest: {err}"),
+        )
+    })
+    // LCOV_EXCL_STOP - reason: end of unreachable digest-construction exclusion.
 }
 
 /// Ensures the hash-addressed generation directory exists as a managed
@@ -2082,8 +2094,14 @@ fn stage_codegen_side(
     plan: &dx_codegen::CollectedPlan,
     projection: &[dx_codegen::ProjectionEntry],
 ) -> Result<dx_setup::GenerationId, (String, String)> {
-    let id =
-        dx_setup::GenerationId::new(&plan.hex()).expect("plan digests render valid generation ids");
+    let id = dx_setup::GenerationId::new(&plan.hex()).map_err(|err| {
+        // LCOV_EXCL_START - reason: defense-in-depth; plan digests always render valid generation ids, so construction cannot fail; retained so a future divergence fails closed as invalid_result rather than panicking.
+        (
+            CODE_INVALID_RESULT.to_owned(),
+            format!("invalid codegen plan digest: {err}"),
+        )
+        // LCOV_EXCL_STOP - reason: end of unreachable digest-construction exclusion.
+    })?;
     stage_codegen_generation(workspace, &id, projection)?;
     Ok(id)
 }
@@ -2095,8 +2113,14 @@ fn stage_env_side(
     plan: &dx_env_plan::CollectedPlan,
     projection: &[dx_env_plan::ProjectionEntry],
 ) -> Result<dx_setup::GenerationId, (String, String)> {
-    let id =
-        dx_setup::GenerationId::new(&plan.hex()).expect("plan digests render valid generation ids");
+    let id = dx_setup::GenerationId::new(&plan.hex()).map_err(|err| {
+        // LCOV_EXCL_START - reason: defense-in-depth; plan digests always render valid generation ids, so construction cannot fail; retained so a future divergence fails closed as invalid_result rather than panicking.
+        (
+            CODE_INVALID_RESULT.to_owned(),
+            format!("invalid env plan digest: {err}"),
+        )
+        // LCOV_EXCL_STOP - reason: end of unreachable digest-construction exclusion.
+    })?;
     stage_env_generation(workspace, &id, projection)?;
     Ok(id)
 }
@@ -2116,11 +2140,13 @@ fn prepare_managed_sides(
     workspace: &Path,
     bep: &Path,
 ) -> Result<dx_setup::PreparedSides, (String, String)> {
-    let empties = || dx_setup::PreparedSides {
-        prepared_environment: None,
-        prepared_generated: None,
-        empty_environment: empty_env_id(),
-        empty_generated: empty_generated_id(),
+    let empties = || -> Result<dx_setup::PreparedSides, (String, String)> {
+        Ok(dx_setup::PreparedSides {
+            prepared_environment: None,
+            prepared_generated: None,
+            empty_environment: empty_env_id()?,
+            empty_generated: empty_generated_id()?,
+        })
     };
     match command {
         Command::Codegen => {
@@ -2128,7 +2154,7 @@ fn prepare_managed_sides(
             let generated = stage_codegen_side(workspace, &plan, &projection)?;
             Ok(dx_setup::PreparedSides {
                 prepared_generated: Some(generated),
-                ..empties()
+                ..empties()?
             })
         }
         Command::Env => {
@@ -2136,7 +2162,7 @@ fn prepare_managed_sides(
             let environment = stage_env_side(workspace, &plan, &projection)?;
             Ok(dx_setup::PreparedSides {
                 prepared_environment: Some(environment),
-                ..empties()
+                ..empties()?
             })
         }
         Command::Setup => {
@@ -2159,7 +2185,7 @@ fn prepare_managed_sides(
             Ok(dx_setup::PreparedSides {
                 prepared_environment,
                 prepared_generated,
-                ..empties()
+                ..empties()?
             })
         }
         // LCOV_EXCL_START - reason: defense-in-depth; execute routes only managed commands here, so this arm is unreachable; retained to fail closed as invalid_result instead of panicking.
@@ -6137,8 +6163,8 @@ mod tests {
             let pair = read_current_pair(&harness.workspace)
                 .expect("read current")
                 .expect("selection committed");
-            assert_eq!(pair.environment, empty_env_id());
-            assert_eq!(pair.generated, empty_generated_id());
+            assert_eq!(pair.environment, empty_env_id().expect("empty digest"));
+            assert_eq!(pair.generated, empty_generated_id().expect("empty digest"));
             for side in match command {
                 "codegen" => vec![GENERATED_DIR_NAME],
                 "env" => vec![ENVIRONMENTS_DIR_NAME],
@@ -6172,8 +6198,8 @@ mod tests {
             let pair = read_current_pair(&harness.workspace)
                 .expect("read current")
                 .expect("selection committed");
-            assert_eq!(pair.environment, empty_env_id());
-            assert_eq!(pair.generated, empty_generated_id());
+            assert_eq!(pair.environment, empty_env_id().expect("empty digest"));
+            assert_eq!(pair.generated, empty_generated_id().expect("empty digest"));
         }
     }
 
@@ -6297,15 +6323,15 @@ mod tests {
         let workspace = temp_dir("managed-empty-sides-ws");
         let codegen_plan = dx_codegen::collect_plan(&[]).expect("empty codegen plan");
         let staged = stage_codegen_side(&workspace, &codegen_plan, &[]).expect("stage");
-        assert_eq!(staged, empty_generated_id());
+        assert_eq!(staged, empty_generated_id().expect("empty digest"));
         let env_plan = dx_env_plan::collect_plan(&[]).expect("empty env plan");
         let staged = stage_env_side(&workspace, &env_plan, &[]).expect("stage");
-        assert_eq!(staged, empty_env_id());
+        assert_eq!(staged, empty_env_id().expect("empty digest"));
         let values = std::fs::read_to_string(
             workspace
                 .join(".dx")
                 .join(ENVIRONMENTS_DIR_NAME)
-                .join(empty_env_id().as_str())
+                .join(empty_env_id().expect("empty digest").as_str())
                 .join("values.json"),
         )
         .expect("values");
@@ -6315,7 +6341,7 @@ mod tests {
     #[test]
     fn managed_generation_dir_guards_foreign_state() {
         let workspace = temp_dir("managed-gendir-ws");
-        let hex = empty_generated_id();
+        let hex = empty_generated_id().expect("empty digest");
         let first =
             ensure_generation_dir(&workspace, GENERATED_DIR_NAME, hex.as_str()).expect("create");
         assert!(first.is_dir());
@@ -6421,7 +6447,7 @@ mod tests {
     #[test]
     fn managed_stage_codegen_mirrors_and_reuses_leaves() {
         let (workspace, first, second) = managed_stage_fixture("managed-codegen-mirror");
-        let id = empty_generated_id();
+        let id = empty_generated_id().expect("empty digest");
         let projection = vec![
             codegen_entry("gen/a.txt", &first),
             codegen_entry("nested/b.txt", &second),
@@ -6472,7 +6498,7 @@ mod tests {
     #[test]
     fn managed_stage_codegen_rejects_bad_plans() {
         let (workspace, first, second) = managed_stage_fixture("managed-codegen-reject");
-        let id = empty_generated_id();
+        let id = empty_generated_id().expect("empty digest");
         for projection in [
             vec![codegen_entry("", &first)],
             vec![codegen_entry("/absolute", &first)],
@@ -6546,7 +6572,7 @@ mod tests {
     #[test]
     fn managed_stage_codegen_filesystem_failures_fail_closed() {
         let (workspace, first, second) = managed_stage_fixture("managed-codegen-fs");
-        let id = empty_generated_id();
+        let id = empty_generated_id().expect("empty digest");
         // Top-level leaves so the generation directory itself is the
         // leaf parent under test.
         stage_codegen_generation(&workspace, &id, &[codegen_entry("a.txt", &first)])
@@ -6580,7 +6606,7 @@ mod tests {
     #[test]
     fn managed_stage_env_mirrors_leaves_and_values() {
         let (workspace, first, second) = managed_stage_fixture("managed-env-mirror");
-        let id = empty_env_id();
+        let id = empty_env_id().expect("empty digest");
         let projection = vec![
             env_entry("k2", "x\"y", &second),
             env_entry("k1", "v1", &first),
@@ -6627,7 +6653,7 @@ mod tests {
     #[test]
     fn managed_stage_env_rejects_bad_plans() {
         let (workspace, first, second) = managed_stage_fixture("managed-env-reject");
-        let id = empty_env_id();
+        let id = empty_env_id().expect("empty digest");
         for key in ["", "a/b", ".", ".."] {
             let (code, message) =
                 stage_env_generation(&workspace, &id, &[env_entry(key, "v", &first)])
@@ -6702,7 +6728,7 @@ mod tests {
     #[test]
     fn managed_stage_env_filesystem_failures_fail_closed() {
         let (workspace, first, second) = managed_stage_fixture("managed-env-fs");
-        let id = empty_env_id();
+        let id = empty_env_id().expect("empty digest");
         stage_env_generation(&workspace, &id, &[env_entry("k", "v", &first)]).expect("stage");
         let dir = workspace
             .join(".dx")

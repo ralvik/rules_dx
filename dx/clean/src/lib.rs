@@ -118,6 +118,14 @@ impl std::fmt::Display for RecordProblem {
 
 impl std::error::Error for RecordProblem {}
 
+/// Parses one digest-shaped name, refusing malformed values instead of
+/// panicking at the call site.
+fn validated_generation_id(hex: &str) -> Result<GenerationId, RecordProblem> {
+    GenerationId::new(hex).map_err(|_| RecordProblem::MalformedDigest {
+        value: hex.to_owned(),
+    })
+}
+
 /// Validates one setup record against the [`dx_setup`] pair identity:
 /// every name must be digest-shaped and the record name must equal the
 /// digest of the linked pair. Returns the validated view or the reason
@@ -128,16 +136,14 @@ pub fn validate_record(
     environment_hex: &str,
     generated_hex: &str,
 ) -> Result<SetupRecordView, RecordProblem> {
-    for value in [hex, environment_hex, generated_hex] {
-        if GenerationId::new(value).is_err() {
-            return Err(RecordProblem::MalformedDigest {
-                value: value.to_owned(),
-            });
-        }
-    }
+    // Each name validates exactly once through one helper, so a malformed
+    // digest fails here instead of panicking at pair construction.
+    let environment = validated_generation_id(environment_hex)?;
+    let generated = validated_generation_id(generated_hex)?;
+    validated_generation_id(hex)?;
     let pair = SetupPair {
-        environment: GenerationId::new(environment_hex).expect("validated environment digest"),
-        generated: GenerationId::new(generated_hex).expect("validated generated digest"),
+        environment,
+        generated,
     };
     let want = setup_hex(&pair);
     if want != hex {

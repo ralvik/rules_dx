@@ -320,10 +320,9 @@ fn validate_host_name(bin_name: &str, name: &str) -> Result<(), Error> {
             )));
         }
     }
-    let stem = lower
-        .split('.')
-        .next()
-        .expect("split yields at least one item");
+    // `split` always yields at least one item; `unwrap_or_default`
+    // keeps this total without a panic path.
+    let stem = lower.split('.').next().unwrap_or_default();
     if WINDOWS_RESERVED_STEMS.contains(&stem) {
         return Err(bad(&format!("stem '{stem}' is reserved on Windows")));
     }

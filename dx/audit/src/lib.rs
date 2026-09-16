@@ -138,8 +138,8 @@ pub fn plan_audit(args: &[String]) -> Result<AuditRequest, AuditPlanError> {
     let mut families = vec![AuditFamily::Security, AuditFamily::License];
     let mut scopes: &[String] = args;
     if let Some((first, rest)) = args.split_first() {
-        if AuditFamily::parse(first).is_some() {
-            families = vec![AuditFamily::parse(first).expect("parsed family")];
+        if let Some(family) = AuditFamily::parse(first) {
+            families = vec![family];
             scopes = rest;
         } else if looks_like_scope(first) {
             scopes = args;

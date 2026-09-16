@@ -201,16 +201,22 @@ pub fn project(manifest: &GenerationManifest) -> Result<ProjectedManifest, Error
     let mut files = Vec::with_capacity(manifest.files.len());
     for file in &manifest.files {
         // Validated above: candidate, UTF-8, change presence, and outcome
-        // are all well-formed here.
-        let candidate_bytes = candidate(file).expect("validated manifest yields candidate");
-        let change_ref = file
-            .change
-            .as_ref()
-            .expect("validated manifest holds change");
+        // are all well-formed here, so these mappings only fire if a
+        // future `validate` loosens without updating projection (fail
+        // closed, never panic).
+        let candidate_bytes = candidate(file)?;
+        // LCOV_EXCL_START - reason: validated above; `validate` rejects manifests with missing changes before projection, so this only fires on a future validate/projection divergence.
+        let change_ref = file.change.as_ref().ok_or(Error::MissingChange {
+            path: file.path.clone(),
+        })?;
+        // LCOV_EXCL_STOP - reason: end of validated-change exclusion.
         let (change, original, candidate_text) = match change_ref {
             file_result::Change::CreateContent(content) => {
-                let text =
-                    String::from_utf8(content.clone()).expect("validated manifest holds UTF-8");
+                // LCOV_EXCL_START - reason: validated above; `validate` rejects non-UTF-8 content before projection, so this only fires on a future validate/projection divergence.
+                let text = String::from_utf8(content.clone()).map_err(|_| Error::InvalidUtf8 {
+                    at: file.path.clone(),
+                })?;
+                // LCOV_EXCL_STOP - reason: end of validated-UTF-8 exclusion.
                 let change = ChangeEvent {
                     path: file.path.clone(),
                     kind: ChangeKind::Create,
@@ -224,14 +230,26 @@ pub fn project(manifest: &GenerationManifest) -> Result<ProjectedManifest, Error
                 (change, String::new(), text)
             }
             file_result::Change::Modification(modification) => {
+                // LCOV_EXCL_START - reason: validated above; `validate` rejects non-UTF-8 content before projection, so these only fire on a future validate/projection divergence.
                 let original_text = String::from_utf8(modification.original_content.clone())
-                    .expect("validated manifest holds UTF-8");
-                let candidate_text = String::from_utf8(candidate_bytes.clone())
-                    .expect("validated manifest holds UTF-8");
+                    .map_err(|_| Error::InvalidUtf8 {
+                        at: file.path.clone(),
+                    })?;
+                let candidate_text =
+                    String::from_utf8(candidate_bytes.clone()).map_err(|_| Error::InvalidUtf8 {
+                        at: file.path.clone(),
+                    })?;
+                // LCOV_EXCL_STOP - reason: end of validated-UTF-8 exclusion.
                 let mut edits = Vec::with_capacity(modification.edits.len());
                 for edit in &modification.edits {
-                    let replacement = String::from_utf8(edit.replacement.clone())
-                        .expect("validated manifest holds UTF-8");
+                    // LCOV_EXCL_START - reason: validated above; `validate` rejects non-UTF-8 replacements before projection, so this only fires on a future validate/projection divergence.
+                    let replacement =
+                        String::from_utf8(edit.replacement.clone()).map_err(|_| {
+                            Error::InvalidUtf8 {
+                                at: file.path.clone(),
+                            }
+                        })?;
+                    // LCOV_EXCL_STOP - reason: end of validated-UTF-8 exclusion.
                     edits.push(Edit {
                         start: edit.start_byte,
                         end: edit.end_byte,

@@ -46,6 +46,11 @@ pub enum DiffError {
     CreateWithOriginal { path: String },
     /// A modify entry whose candidate is byte-identical to its original.
     NoopPatch { path: String },
+    /// The Myers backtrack found no solution. Unreachable: the greedy
+    /// search over `0..=n + m` always reaches the end, so this only
+    /// fires on a future search/backtrack divergence (fail closed,
+    /// never panic).
+    Internal { detail: String },
 }
 
 impl std::fmt::Display for DiffError {
@@ -101,12 +106,12 @@ pub fn render_patch(files: &[FilePatch<'_>]) -> Result<String, DiffError> {
     }
     let mut out = String::new();
     for file in ordered {
-        render_file(&mut out, file);
+        render_file(&mut out, file)?;
     }
     Ok(out)
 }
 
-fn render_file(out: &mut String, file: &FilePatch<'_>) {
+fn render_file(out: &mut String, file: &FilePatch<'_>) -> Result<(), DiffError> {
     match file.kind {
         PatchKind::Modify => {
             out.push_str("--- a/");
@@ -122,7 +127,7 @@ fn render_file(out: &mut String, file: &FilePatch<'_>) {
     out.push('\n');
     let (old_lines, old_nl) = split_lines(file.original);
     let (new_lines, new_nl) = split_lines(file.candidate);
-    for hunk in hunks(&old_lines, old_nl, &new_lines, new_nl) {
+    for hunk in hunks(&old_lines, old_nl, &new_lines, new_nl)? {
         render_hunk(
             out,
             &old_lines,
@@ -134,6 +139,7 @@ fn render_file(out: &mut String, file: &FilePatch<'_>) {
             hunk.new_start,
         );
     }
+    Ok(())
 }
 
 /// Lines of `text` without terminators, plus whether the text ends with a
@@ -158,15 +164,17 @@ enum Op {
 }
 
 /// Myers O(ND) greedy diff over line slices, returning the edit script from
-/// the first old line to the last new line.
-fn diff_ops(old: &[&str], new: &[&str]) -> Vec<Op> {
+/// the first old line to the last new line. Fails closed with
+/// [`DiffError::Internal`] when the backtrack finds no solution (unreachable
+/// for the greedy search over `0..=n + m`).
+fn diff_ops(old: &[&str], new: &[&str]) -> Result<Vec<Op>, DiffError> {
     let n = old.len() as isize;
     let m = new.len() as isize;
     if n == 0 {
-        return vec![Op::Ins; m as usize];
+        return Ok(vec![Op::Ins; m as usize]);
     }
     if m == 0 {
-        return vec![Op::Del; n as usize];
+        return Ok(vec![Op::Del; n as usize]);
     }
     let max = (n + m) as usize;
     let off = max as isize;
@@ -197,7 +205,12 @@ fn diff_ops(old: &[&str], new: &[&str]) -> Vec<Op> {
             break;
         }
     }
-    let mut d = solved.expect("myers greedy search always reaches the end");
+    let Some(mut d) = solved else {
+        // LCOV_EXCL_LINE - reason: unreachable; the greedy search over 0..=n+m always reaches the end, so this only fires on a future search/backtrack divergence.
+        return Err(DiffError::Internal {
+            detail: "myers greedy search did not reach the end".to_owned(),
+        });
+    };
     let mut ops = Vec::new();
     let (mut x, mut y) = (n, m);
     while d > 0 {
@@ -238,7 +251,7 @@ fn diff_ops(old: &[&str], new: &[&str]) -> Vec<Op> {
     debug_assert_eq!(x, y);
     debug_assert_eq!(x, 0);
     ops.reverse();
-    ops
+    Ok(ops)
 }
 
 struct Hunk {
@@ -256,8 +269,8 @@ struct Hunk {
 /// promoted to a `Del`+`Ins` pair: line diff sees identical text, but the
 /// patch must still record the newline change (GNU renders `-a` + marker /
 /// `+a` for it).
-fn hunks(old: &[&str], old_nl: bool, new: &[&str], new_nl: bool) -> Vec<Hunk> {
-    let script = diff_ops(old, new);
+fn hunks(old: &[&str], old_nl: bool, new: &[&str], new_nl: bool) -> Result<Vec<Hunk>, DiffError> {
+    let script = diff_ops(old, new)?;
     // Annotate every op with the old/new line index it consumes.
     let mut annotated: Vec<(Op, usize, usize)> = Vec::with_capacity(script.len());
     let (mut oi, mut ni) = (0usize, 0usize);
@@ -295,7 +308,7 @@ fn hunks(old: &[&str], old_nl: bool, new: &[&str], new_nl: bool) -> Vec<Hunk> {
     // (original "" and candidate ""): byte-identical modifies are rejected
     // as NoopPatch before hunks run. No hunks means headers only.
     if changes.is_empty() {
-        return Vec::new();
+        return Ok(Vec::new());
     }
     // Group change indices: a new hunk starts when the gap between
     // consecutive changes exceeds the two adjacent context windows.
@@ -310,7 +323,7 @@ fn hunks(old: &[&str], old_nl: bool, new: &[&str], new_nl: bool) -> Vec<Hunk> {
         prev = i;
     }
     groups.push((start, prev));
-    groups
+    Ok(groups
         .into_iter()
         .map(|(first, last)| {
             let lo = first.saturating_sub(CONTEXT);
@@ -324,7 +337,7 @@ fn hunks(old: &[&str], old_nl: bool, new: &[&str], new_nl: bool) -> Vec<Hunk> {
                 ops,
             }
         })
-        .collect()
+        .collect())
 }
 
 #[allow(clippy::too_many_arguments)]
