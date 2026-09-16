@@ -5,8 +5,8 @@ use prost::Message;
 pub use doc_ir_proto::dx::documentation::v1 as proto;
 use proto::{DocIr, Symbol};
 
-pub const SCHEMA_MAJOR: u32 = 1;
-pub const SCHEMA_MINOR: u32 = 0;
+pub use dx_schema::SCHEMA_MAJOR;
+pub use dx_schema::SCHEMA_MINOR;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
@@ -28,11 +28,8 @@ pub enum Error {
 /// order both keep same-producer rebuilds byte-identical).
 /// Any failure fails the action — partial shards are never emitted.
 pub fn validate_shard(shard: &DocIr) -> Result<(), Error> {
-    if shard.schema_major != SCHEMA_MAJOR {
-        return Err(Error::UnsupportedMajor {
-            found: shard.schema_major,
-        });
-    }
+    dx_schema::check_major(shard.schema_major)
+        .map_err(|found| Error::UnsupportedMajor { found })?;
     if shard.language.is_empty() {
         return Err(Error::EmptyLanguage);
     }

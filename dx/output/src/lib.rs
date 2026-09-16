@@ -21,10 +21,10 @@ use serde_json::{json, Value};
 /// Breaking semantic version of the NDJSON stream. One invocation never
 /// mixes schema versions; removing a field, making an optional field
 /// required, or changing semantics requires a new major version.
-pub const SCHEMA_MAJOR: u32 = 1;
+pub use dx_schema::SCHEMA_MAJOR;
 /// Additive feature version: producers may add fields and event kinds and
 /// consumers must ignore unknown ones within one major version.
-pub const SCHEMA_MINOR: u32 = 0;
+pub use dx_schema::SCHEMA_MINOR;
 
 /// The `schema` object shared by every event in one invocation.
 pub fn schema() -> Value {

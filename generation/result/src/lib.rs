@@ -7,8 +7,8 @@ use proto::{
 };
 pub use result_proto::dx::generation::v1 as proto;
 
-pub const SCHEMA_MAJOR: u32 = 1;
-pub const SCHEMA_MINOR: u32 = 0;
+pub use dx_schema::SCHEMA_MAJOR;
+pub use dx_schema::SCHEMA_MINOR;
 pub const DIGEST_LEN: usize = 32;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -365,11 +365,8 @@ fn validate_ignored(ignored: &[IgnoredImport], scope_count: usize) -> Result<(),
 }
 
 pub fn validate(manifest: &GenerationManifest) -> Result<(), Error> {
-    if manifest.schema_major != SCHEMA_MAJOR {
-        return Err(Error::UnsupportedMajor {
-            found: manifest.schema_major,
-        });
-    }
+    dx_schema::check_major(manifest.schema_major)
+        .map_err(|found| Error::UnsupportedMajor { found })?;
     let mode = Mode::try_from(manifest.mode).map_err(|_| Error::InvalidMode {
         found: manifest.mode,
     })?;

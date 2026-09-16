@@ -16,6 +16,7 @@ rust_library(
     deps = [
         "//documentation:doc_ir_proto_rs",
         "//dx/path:dx_path",
+        "//dx/schema:dx_schema",
         "@rules_rust_prost//private/3rdparty/crates:prost",
     ],
 )
