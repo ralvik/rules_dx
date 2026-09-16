@@ -48,6 +48,11 @@ pub enum EnvelopeError {
     EmptyOperations,
     /// An operation path is empty.
     EmptyPath,
+    /// The envelope value cannot be represented as JSON. Unreachable for
+    /// well-typed values (serialization only fails on maps with
+    /// non-string keys, which this schema has none of); kept as a
+    /// `Result` so library callers never panic on serialization.
+    Unserializable(String),
     /// `original_sha256` is present but not 64 lowercase hex digits.
     InvalidDigest { path: String },
 }
@@ -80,8 +85,10 @@ pub fn parse_envelope(json: &str) -> Result<Envelope, EnvelopeError> {
 }
 
 /// Serializes an envelope to its canonical compact JSON form.
-pub fn emit_envelope(envelope: &Envelope) -> String {
-    serde_json::to_string(envelope).expect("envelope serializes to JSON")
+pub fn emit_envelope(envelope: &Envelope) -> Result<String, EnvelopeError> {
+    // LCOV_EXCL_START - reason: unreachable for well-typed envelopes; serde_json only fails serialization on maps with non-string keys, which this schema has none of. The error path exists so library callers get a Result instead of a panic.
+    serde_json::to_string(envelope).map_err(|err| EnvelopeError::Unserializable(err.to_string()))
+    // LCOV_EXCL_STOP - reason: end of unreachable serialization-failure exclusion.
 }
 
 /// Lowercase hex SHA-256 of `bytes`.
@@ -120,14 +127,15 @@ mod tests {
     }
 
     #[test]
-    fn round_trip_parse_emit() {
+    fn round_trip_parse_emit() -> Result<(), EnvelopeError> {
         let envelope = sample();
-        let json = emit_envelope(&envelope);
+        let json = emit_envelope(&envelope)?;
         assert_eq!(parse_envelope(&json), Ok(envelope));
+        Ok(())
     }
 
     #[test]
-    fn create_without_digest_parses() {
+    fn create_without_digest_parses() -> Result<(), EnvelopeError> {
         let envelope = Envelope {
             version: ENVELOPE_VERSION,
             operations: vec![FileOperation {
@@ -136,8 +144,9 @@ mod tests {
                 content: "hi\n".to_owned(),
             }],
         };
-        let json = emit_envelope(&envelope);
+        let json = emit_envelope(&envelope)?;
         assert_eq!(parse_envelope(&json), Ok(envelope));
+        Ok(())
     }
 
     #[test]

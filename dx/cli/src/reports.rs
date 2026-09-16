@@ -826,19 +826,23 @@ pub fn parse_test_xml(
                         if tag != b"testcase" {
                             return Err(junit_error("unbalanced test XML")); // LCOV_EXCL_LINE - reason: defense-in-depth; quick-xml check_end_names rejects mismatched closes before this guard
                         }
-                        let finished = active.take().expect("active case");
-                        cases.push(JunitCase {
-                            name: finished.name,
-                            classname: finished.classname,
-                            time: finished.time,
-                            failure: finished.failure,
-                            error: finished.error,
-                            skipped: finished.skipped,
-                            system_out: finished.system_out,
-                            system_err: finished.system_err,
-                            shard,
-                            attempt,
-                        });
+                        // `active` is `Some` in this branch by the guard
+                        // above; `if let` keeps this total without a panic
+                        // path and without an unreachable error line.
+                        if let Some(finished) = active.take() {
+                            cases.push(JunitCase {
+                                name: finished.name,
+                                classname: finished.classname,
+                                time: finished.time,
+                                failure: finished.failure,
+                                error: finished.error,
+                                skipped: finished.skipped,
+                                system_out: finished.system_out,
+                                system_err: finished.system_err,
+                                shard,
+                                attempt,
+                            });
+                        }
                     }
                 }
                 buf.clear();
