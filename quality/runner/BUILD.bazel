@@ -37,7 +37,10 @@ rust_binary(
     ),
     crate_name = "quality_runner",
     crate_root = "src/main.rs",
-    deps = [
+    deps = crate_deps(
+        ["clap"],
+        package_name = "quality/quality_runner",
+    ) + [
         ":quality_runner_lib",
         "//quality/result:quality_result",
     ],

@@ -18,6 +18,10 @@
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+use clap::{
+    error::{ContextKind, ContextValue, ErrorKind},
+    Parser,
+};
 use dx_env::{identity_hex, parse_staged, probe_symlink, refresh, RefreshOptions, RefreshOutcome};
 
 /// Default tree metadata rlocation candidates, in order. The metadata file
@@ -36,50 +40,91 @@ fn usage_error(message: &str) -> i32 {
     2
 }
 
+/// `argv` tokenizer. Every option keeps the legacyshape: last-wins scalar
+/// repeats and unconditional next-token consumption (even a `--`-led token),
+/// so `--workspace --staged-bin DIR` still binds `--staged-bin` as the
+/// workspace. Only tokenizing moves to `clap`; all value validation below
+/// is untouched.
+#[derive(Parser)]
+#[command(disable_help_flag = true)]
+struct Cli {
+    #[arg(long, allow_hyphen_values = true, overrides_with = "workspace")]
+    workspace: Option<String>,
+    #[arg(long, allow_hyphen_values = true, overrides_with = "staged_bin")]
+    staged_bin: Option<String>,
+    #[arg(long, allow_hyphen_values = true, overrides_with = "metadata")]
+    metadata: Option<String>,
+    #[arg(long, allow_hyphen_values = true, overrides_with = "lock_timeout_ms")]
+    lock_timeout_ms: Option<String>,
+    /// Legacy `--help`/`-h` arm: prints the description line plus usage.
+    #[arg(long = "help", short = 'h', action = clap::ArgAction::SetTrue)]
+    help: bool,
+}
+
+/// Raw `argv` token behind a [`clap::Error`], e.g. `--bogus` or `oops`.
+fn invalid_token(error: &clap::Error) -> String {
+    match error.get(ContextKind::InvalidArg) {
+        Some(ContextValue::String(token)) => token.clone(),
+        Some(ContextValue::Strings(tokens)) => tokens.first().cloned().unwrap_or_default(),
+        _ => String::new(),
+    }
+}
+
+/// Map `clap` tokenizing failures onto [`usage_error`] messages. Only
+/// [`ErrorKind::UnknownArgument`] and [`ErrorKind::InvalidValue`] (a present
+/// flag with no consumable value) are reachable: every option takes plain
+/// strings, so no value parser, conflict, or count error can fire.
+fn parse_error(error: clap::Error, args: &[String]) -> String {
+    let token = invalid_token(&error);
+    match error.kind() {
+        // `clap` strips an attached `=value` from the reported token; the
+        // legacy loop echoed the whole `argv` element, so recover it.
+        ErrorKind::UnknownArgument => {
+            let echoed = args
+                .iter()
+                .find(|arg| *arg == &token)
+                .or_else(|| {
+                    args.iter()
+                        .find(|arg| arg.starts_with(&format!("{token}=")))
+                })
+                .map_or(token.clone(), Clone::clone);
+            format!("unknown flag {echoed:?}")
+        }
+        ErrorKind::InvalidValue => {
+            // `clap` renders the pending option as `--flag <VALUE>`; the
+            // legacy message names the bare `--flag`.
+            let flag = token.split_whitespace().next().unwrap_or(&token);
+            format!("missing value for {flag}")
+        }
+        _ => error
+            .to_string()
+            .lines()
+            .next()
+            .unwrap_or("invalid arguments")
+            .to_owned(),
+    }
+}
+
+fn parse_args(args: &[String]) -> Result<Cli, String> {
+    Cli::try_parse_from(std::iter::once("env").chain(args.iter().map(|arg| arg as &str)))
+        .map_err(|error| parse_error(error, args))
+}
+
 fn run() -> i32 {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let mut workspace: Option<String> = None;
-    let mut staged_bin: Option<String> = None;
-    let mut metadata: Option<String> = None;
-    let mut lock_timeout_ms: Option<String> = None;
-    let mut index = 0;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--workspace" => {
-                index += 1;
-                workspace = Some(match args.get(index) {
-                    Some(value) => value.clone(),
-                    None => return usage_error("missing value for --workspace"),
-                });
-            }
-            "--staged-bin" => {
-                index += 1;
-                staged_bin = Some(match args.get(index) {
-                    Some(value) => value.clone(),
-                    None => return usage_error("missing value for --staged-bin"),
-                });
-            }
-            "--metadata" => {
-                index += 1;
-                metadata = Some(match args.get(index) {
-                    Some(value) => value.clone(),
-                    None => return usage_error("missing value for --metadata"),
-                });
-            }
-            "--lock-timeout-ms" => {
-                index += 1;
-                lock_timeout_ms = Some(match args.get(index) {
-                    Some(value) => value.clone(),
-                    None => return usage_error("missing value for --lock-timeout-ms"),
-                });
-            }
-            "--help" | "-h" => {
-                return usage_error("install the staged environment tree into .dx/bin")
-            }
-            other => return usage_error(&format!("unknown flag {other:?}")),
-        }
-        index += 1;
+    let cli = match parse_args(&args) {
+        Ok(cli) => cli,
+        Err(message) => return usage_error(&message),
+    };
+    if cli.help {
+        return usage_error("install the staged environment tree into .dx/bin");
     }
+    let (workspace, staged_bin, metadata, lock_timeout_ms) = (
+        cli.workspace,
+        cli.staged_bin,
+        cli.metadata,
+        cli.lock_timeout_ms,
+    );
     if staged_bin.is_none() != metadata.is_none() {
         return usage_error("--staged-bin and --metadata must be passed together");
     }

@@ -53,6 +53,7 @@ rust_binary(
     visibility = ["//visibility:public"],
     deps = crate_deps(
         [
+            "clap",
             "serde",
             "serde_json",
         ],

@@ -1,6 +1,6 @@
 """M03 WP3 direct-Bazel per-result threshold evaluator."""
 
-load("@crates//:crates.bzl", "aliases")
+load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_binary", "rust_library", "rust_test")
@@ -28,7 +28,10 @@ rust_binary(
     ),
     crate_name = "quality_evaluator",
     crate_root = "src/main.rs",
-    deps = [
+    deps = crate_deps(
+        ["clap"],
+        package_name = "quality/quality_evaluator",
+    ) + [
         ":quality_evaluator_lib",
         "//quality/result:quality_result",
     ],

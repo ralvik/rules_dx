@@ -36,7 +36,10 @@ rust_binary(
     ),
     crate_name = "codegen_shard_writer",
     crate_root = "src/main.rs",
-    deps = [":codegen_shard"],
+    deps = crate_deps(
+        ["clap"],
+        package_name = "generation/codegen_shard",
+    ) + [":codegen_shard"],
 )
 
 rust_test(
