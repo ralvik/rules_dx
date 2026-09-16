@@ -92,6 +92,8 @@ jobs:
       - run: bazel run --noshow_progress //dx/cli:dx -- coverage --min-coverage 97 //...
       - name: Prove manual negatives still fail as documented
         run: bazel run --noshow_progress //tools/ci:manual_negatives
+      - name: Prove target-tag semantics
+        run: bazel run --noshow_progress //tools/ci:target_tags
   corpus-dogfood:
     name: corpus-dogfood (dx quality commands, Linux x86_64 glibc, local-only)
     timeout-minutes: 60

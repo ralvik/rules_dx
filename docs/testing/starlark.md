@@ -67,7 +67,12 @@ test exercised via its public forwarding wrapper.
 
 Test selection is by target label; the generated runner does not interpret
 `--test_filter` per check. Retries use the standard `flaky` attribute
-(passthrough, off by default); caching, timeouts, and sharding follow
+(passthrough, off by default); wrappers forward the full kwargs dict to
+the private upstream test, so `flaky` lands upstream and never on the
+public forwarding wrapper (fixture `//python/hello:flaky_passthrough_fixture`).
+CI pins this in `bazel run //tools/ci:target_tags`, which also proves
+`bazel coverage` skips `no-coverage` tests and the `no-lint` /
+`no-typecheck` fixtures stay wired. Caching, timeouts, and sharding follow
 ordinary Bazel test semantics. Logs and `test.xml` are Bazel-provided;
 analysis-mode runners also print their observations to `test.log`. Tests
 may be grouped with ordinary `test_suite` targets

@@ -32,6 +32,22 @@ python_test(
     ],
 )
 
+# Retry-semantics fixture (issue #99 item 3): `flaky = True` must land
+# on the private `:flaky_passthrough_fixture_upstream` target through
+# unfiltered kwargs forwarding. The public target stays an ordinary
+# passing test; `//tools/ci:target_tags` asserts the upstream attribute.
+python_test(
+    name = "flaky_passthrough_fixture",
+    srcs = ["flaky_passthrough_test.py"],
+    dep_group = "hello",
+    flaky = True,
+    imports = ["."],
+    deps = [
+        "@pypi//coverage",
+        "@pypi//pytest",
+    ],
+)
+
 exports_files([
     "pyproject.toml",
     "uv.lock",
