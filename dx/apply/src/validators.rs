@@ -34,7 +34,8 @@ pub enum ValidationError {
     AbsolutePath,
     /// Operation path contains a `..` segment and could escape the workspace.
     EscapesWorkspace,
-    /// Operation path has an empty segment (`a//b`, trailing slash).
+    /// Operation path has an empty segment (`a//b`, trailing slash),
+    /// a backslash, or a `.` segment; only canonical forward-slash paths apply.
     MalformedPath,
     /// The final extension is blocklisted.
     BlockedExtension { extension: String },
@@ -54,18 +55,17 @@ pub enum ValidationError {
 /// does not exist). Path checks precede content checks; digest/existence
 /// checks run last.
 pub fn validate(op: &FileOperation, existing: Option<&[u8]>) -> Result<(), ValidationError> {
-    if op.path.is_empty() {
-        return Err(ValidationError::EmptyPath);
-    }
-    if op.path.starts_with('/') {
-        return Err(ValidationError::AbsolutePath);
-    }
-    let segments: Vec<&str> = op.path.split('/').collect();
-    if segments.iter().any(|segment| segment.is_empty()) {
-        return Err(ValidationError::MalformedPath);
-    }
-    if segments.contains(&"..") {
-        return Err(ValidationError::EscapesWorkspace);
+    // Canonical workspace-relative ladder via `dx_path::classify` (#72
+    // slice 6). Tightens historical checks to also reject backslashes and
+    // single-dot segments as malformed; `..` still maps to EscapesWorkspace.
+    match dx_path::classify(&op.path) {
+        None => {}
+        Some(dx_path::PathProblem::Empty) => return Err(ValidationError::EmptyPath),
+        Some(dx_path::PathProblem::Absolute) => return Err(ValidationError::AbsolutePath),
+        Some(dx_path::PathProblem::Backslash)
+        | Some(dx_path::PathProblem::EmptyComponent)
+        | Some(dx_path::PathProblem::Dot) => return Err(ValidationError::MalformedPath),
+        Some(dx_path::PathProblem::DotDot) => return Err(ValidationError::EscapesWorkspace),
     }
     if let Some(extension) = extension_of(&op.path) {
         if BLOCKED_EXTENSIONS.contains(&extension.as_str()) {
@@ -179,6 +179,19 @@ mod tests {
     fn empty_segment_rejected() {
         assert_eq!(
             validate(&create("a//b", "hi\n"), None),
+            Err(ValidationError::MalformedPath)
+        );
+    }
+
+    #[test]
+    fn backslash_and_dot_segment_rejected() {
+        // Tightened to the canonical dx_path ladder (#72 slice 6).
+        assert_eq!(
+            validate(&create("a\\b", "hi\n"), None),
+            Err(ValidationError::MalformedPath)
+        );
+        assert_eq!(
+            validate(&create("a/./b", "hi\n"), None),
             Err(ValidationError::MalformedPath)
         );
     }
