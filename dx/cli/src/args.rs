@@ -306,6 +306,15 @@ impl Invocation {
     }
 }
 
+/// Renders the additive typo hint for unknown commands/options:
+/// empty without a suggestion, `. did you mean "lint"?` with one.
+fn suggestion_hint(suggestion: &Option<String>) -> String {
+    match suggestion {
+        Some(name) => format!(". did you mean {name:?}?"),
+        None => String::new(),
+    }
+}
+
 /// Invocation parsing failure. Every variant is a CLI-detected
 /// pre-execution usage error (exit code 2).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -315,11 +324,18 @@ pub enum ArgsError {
     )]
     MissingCommand,
     #[error(
-        "unknown command {command:?}: want audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel"
+        "unknown command {command:?}: want audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel{suggestion_hint}",
+        suggestion_hint = suggestion_hint(suggestion)
     )]
-    UnknownCommand { command: String },
-    #[error("unknown option {option:?}")]
-    UnknownOption { option: String },
+    UnknownCommand {
+        command: String,
+        suggestion: Option<String>,
+    },
+    #[error("unknown option {option:?}{suggestion_hint}", suggestion_hint = suggestion_hint(suggestion))]
+    UnknownOption {
+        option: String,
+        suggestion: Option<String>,
+    },
     #[error("option {option:?} is not supported by dx {command}")]
     UnsupportedOption {
         command: &'static str,
@@ -513,6 +529,80 @@ fn leading_flag(token: &str) -> String {
     token.split_whitespace().next().unwrap_or(token).to_owned()
 }
 
+/// Best candidate above clap's confidence bar. Mirrors
+/// `clap_builder::parser::features::suggestions::did_you_mean` (same
+/// upstream `strsim::jaro` + `0.7` threshold): that helper is
+/// crate-private, so the typo path re-applies its rule over our own
+/// candidate list instead of hand-rolling edit distance.
+fn best_match(input: &str, candidates: impl Iterator<Item = impl AsRef<str>>) -> Option<String> {
+    let mut best: Option<(f64, String)> = None;
+    for candidate in candidates {
+        let confidence = strsim::jaro(input, candidate.as_ref());
+        if confidence > 0.7 && best.as_ref().is_none_or(|(score, _)| confidence > *score) {
+            best = Some((confidence, candidate.as_ref().to_owned()));
+        }
+    }
+    best.map(|(_, name)| name)
+}
+
+/// Suggests the closest command word from the [`Command`] derive (the
+/// single grammar source), so the hint can never drift from the
+/// accepted spellings.
+fn suggest_command(input: &str) -> Option<String> {
+    use clap::ValueEnum;
+    best_match(
+        input,
+        Command::value_variants().iter().copied().map(Command::name),
+    )
+}
+
+/// Suggests the closest `--flag` for an offending token. Candidates
+/// come from the clap grammar (`Cli::command()` longs), so the hint
+/// tracks `Cli` renames without a second list. Exact matches yield no
+/// hint (the flag is right; the `=value` is wrong), and non-flag
+/// tokens yield none.
+fn suggest_option(token: &str) -> Option<String> {
+    use clap::CommandFactory;
+    let name = token.split(['=', ' ', '\t']).next().unwrap_or(token);
+    let bare = name.strip_prefix("--").or_else(|| name.strip_prefix('-'))?;
+    if bare.is_empty() {
+        return None;
+    }
+    // Single-character `-q`-style tokens never suggest: jaro("q","quiet")
+    // clears 0.7 but a one-letter flag is a missing-short attempt, not a
+    // `--long` typo. Longer typos (`--ouptut`) still flow to best_match.
+    if bare.len() < 2 {
+        return None;
+    }
+    let cmd = Cli::command();
+    let longs: Vec<&str> = cmd
+        .get_arguments()
+        .filter_map(|arg| arg.get_long())
+        .collect();
+    if longs.contains(&bare) {
+        return None;
+    }
+    best_match(bare, longs.into_iter()).map(|hit| format!("--{hit}"))
+}
+
+/// Reads clap's own suggestion off a parse failure (`--flag` render),
+/// when the unknown flag is close enough for clap to name one.
+fn clap_suggestion(error: &clap::Error) -> Option<String> {
+    use clap::error::{ContextKind, ContextValue};
+    for kind in [ContextKind::SuggestedArg, ContextKind::Suggested] {
+        match error.get(kind) {
+            Some(ContextValue::String(hit)) => return Some(hit.clone()),
+            Some(ContextValue::Strings(hits)) => {
+                if let Some(hit) = hits.first() {
+                    return Some(hit.clone());
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 /// Maps a clap parse failure back onto [`ArgsError`] so the contract
 /// surface never changes: unknown flags (including `=value` on booleans
 /// and `--help`) stay unknown options, and missing option values stay
@@ -520,9 +610,11 @@ fn leading_flag(token: &str) -> String {
 fn map_clap_error(args: &[String], error: &clap::Error) -> ArgsError {
     use clap::error::ErrorKind;
     match error.kind() {
-        ErrorKind::UnknownArgument | ErrorKind::TooManyValues => ArgsError::UnknownOption {
-            option: recover_token(args, invalid_token(error)),
-        },
+        ErrorKind::UnknownArgument | ErrorKind::TooManyValues => {
+            let option = recover_token(args, invalid_token(error));
+            let suggestion = clap_suggestion(error).or_else(|| suggest_option(&option));
+            ArgsError::UnknownOption { option, suggestion }
+        }
         ErrorKind::InvalidValue => {
             let token = invalid_token(error).unwrap_or_default();
             if invalid_value(error).is_none_or(|value| value.is_empty()) {
@@ -530,9 +622,9 @@ fn map_clap_error(args: &[String], error: &clap::Error) -> ArgsError {
                     option: leading_flag(&token),
                 }
             } else {
-                ArgsError::UnknownOption {
-                    option: recover_token(args, Some(token)),
-                }
+                let option = recover_token(args, Some(token));
+                let suggestion = clap_suggestion(error).or_else(|| suggest_option(&option));
+                ArgsError::UnknownOption { option, suggestion }
             }
         }
         _ => ArgsError::UnknownOption {
@@ -544,6 +636,7 @@ fn map_clap_error(args: &[String], error: &clap::Error) -> ArgsError {
                 .unwrap_or("dx")
                 .trim()
                 .to_owned(),
+            suggestion: None,
         },
     }
 }
@@ -663,9 +756,16 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
             // tokenizer owned every `-`-prefixed token in its option
             // branch first. clap only lets a lone `-` through to here.
             if name.starts_with('-') {
-                return Err(ArgsError::UnknownOption { option: name });
+                let suggestion = suggest_option(&name);
+                return Err(ArgsError::UnknownOption {
+                    option: name,
+                    suggestion,
+                });
             }
-            Command::parse(&name).ok_or(ArgsError::UnknownCommand { command: name })
+            Command::parse(&name).ok_or_else(|| ArgsError::UnknownCommand {
+                suggestion: suggest_command(&name),
+                command: name,
+            })
         })
         .transpose()?
         .ok_or(ArgsError::MissingCommand)?;
@@ -676,6 +776,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
             if scope == "-" {
                 return Err(ArgsError::UnknownOption {
                     option: scope.clone(),
+                    suggestion: None,
                 });
             }
             if scope.is_empty() || scope.starts_with(':') {
@@ -1355,6 +1456,7 @@ mod tests {
             parse(&args(&["bogus"])),
             Err(ArgsError::UnknownCommand {
                 command: "bogus".to_owned(),
+                suggestion: None,
             })
         );
     }
@@ -1440,26 +1542,55 @@ mod tests {
             parse(&args(&["lint", "--jobs=4"])),
             Err(ArgsError::UnknownOption {
                 option: "--jobs=4".to_owned(),
+                suggestion: None,
             })
         );
         assert_eq!(
             parse(&args(&["lint", "-q"])),
             Err(ArgsError::UnknownOption {
                 option: "-q".to_owned(),
+                suggestion: None,
             })
         );
         assert_eq!(
             parse(&args(&["lint", "--dry-run=yes"])),
             Err(ArgsError::UnknownOption {
                 option: "--dry-run=yes".to_owned(),
+                suggestion: None,
             })
         );
         assert_eq!(
             parse(&args(&["-"])),
             Err(ArgsError::UnknownOption {
                 option: "-".to_owned(),
+                suggestion: None,
             })
         );
+    }
+
+    #[test]
+    fn typo_recovery_suggests_commands_and_options() {
+        assert_eq!(
+            parse(&args(&["lintt"])),
+            Err(ArgsError::UnknownCommand {
+                command: "lintt".to_owned(),
+                suggestion: Some("lint".to_owned()),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["--ouptut=json"])),
+            Err(ArgsError::UnknownOption {
+                option: "--ouptut=json".to_owned(),
+                suggestion: Some("--output".to_owned()),
+            })
+        );
+        // Hints are additive: the usage line stays, the hint appends.
+        let command = parse(&args(&["lintt"])).unwrap_err().to_string();
+        assert!(command.contains("unknown command \"lintt\""));
+        assert!(command.contains("did you mean \"lint\"?"));
+        let option = parse(&args(&["--ouptut=json"])).unwrap_err().to_string();
+        assert!(option.contains("unknown option \"--ouptut=json\""));
+        assert!(option.contains("did you mean \"--output\"?"));
     }
 
     #[test]
@@ -1530,6 +1661,7 @@ mod tests {
             "{}",
             ArgsError::UnknownCommand {
                 command: "bogus".to_owned(),
+                suggestion: None,
             }
         )
         .contains("bogus"));
@@ -1537,6 +1669,7 @@ mod tests {
             "{}",
             ArgsError::UnknownOption {
                 option: "--bogus".to_owned(),
+                suggestion: None,
             }
         )
         .contains("--bogus"));
@@ -1590,12 +1723,14 @@ mod tests {
             parse(&args(&["lint", "--quiet=x"])),
             Err(ArgsError::UnknownOption {
                 option: "--quiet=x".to_owned(),
+                suggestion: None,
             })
         );
         assert_eq!(
             parse(&args(&["lint", "--check=x"])),
             Err(ArgsError::UnknownOption {
                 option: "--check=x".to_owned(),
+                suggestion: None,
             })
         );
     }
@@ -1663,6 +1798,7 @@ mod tests {
             parse(&args(&["clean", "--bazel=yes"])),
             Err(ArgsError::UnknownOption {
                 option: "--bazel=yes".to_owned(),
+                suggestion: None,
             })
         );
         // `--bazel` belongs to clean only.

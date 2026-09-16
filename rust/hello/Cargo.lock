@@ -324,6 +324,7 @@ dependencies = [
  "quick-xml",
  "serde",
  "serde_json",
+ "strsim",
  "tempfile",
  "thiserror",
 ]
