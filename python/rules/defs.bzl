@@ -132,6 +132,28 @@ def python_binary(name, srcs = None, main = None, visibility = None, **kwargs):
     else:
         _python_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
 
+def python_test_rejection(kwargs):
+    """Returns the contract rejection for forbidden `python_test` kwargs, or `None`.
+
+    `python_test` always runs pytest through `py_pytest_test`, which owns
+    the entrypoint wiring. Supplying a generic `main` (or any other
+    alternate test driver) is rejected per the Python generation contract;
+    use `py_pytest_main` plus `py_test` directly for a custom main.
+
+    Args:
+      kwargs: the extra attributes the caller forwarded to `python_test`.
+
+    Returns:
+      The rejection diagnostic string, or `None` when the kwargs are clean.
+    """
+    if "main" in kwargs:
+        return ("python_test always runs pytest and provides its own " +
+                "entrypoint; `main` is not supported (generic mains and " +
+                "alternate test drivers are rejected per " +
+                "docs/testing/generation.md). Use py_pytest_main + py_test " +
+                "directly for a custom main.")
+    return None
+
 def python_test(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `py_pytest_test` (M14).
 
@@ -148,6 +170,9 @@ def python_test(name, srcs, visibility = None, **kwargs):
         (deps must include the pytest package, e.g. `@pypi//pytest`).
     """
     test_srcs = srcs if srcs != None else []
+    rejection = python_test_rejection(kwargs)
+    if rejection != None:
+        fail(rejection)
     upstream_kwargs = dict(kwargs)
     upstream_kwargs.setdefault("tags", ["manual"])
 
