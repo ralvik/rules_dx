@@ -23,6 +23,7 @@ rust_library(
         package_name = "generation/codegen_shard",
     ) + [
         "//dx/path:dx_path",
+        "//dx/proto_validate:dx_proto_validate",
         "//generation:codegen_proto_rs",
         "@rules_rust_prost//private/3rdparty/crates:prost",
     ],
