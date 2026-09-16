@@ -58,6 +58,11 @@ bazel build //libs/starlark/tests/negative:wrong_phase_demo
 
 The last command shows the analysis authoring error for a mode violation.
 
+CI pins these demonstrations: `bazel run //tools/ci:manual_negatives`
+asserts each still fails for its documented reason and that every
+`manual` test is either one of these demos or a private `*_upstream`
+test exercised via its public forwarding wrapper.
+
 ## Selection, Retries, Logs, Suites
 
 Test selection is by target label; the generated runner does not interpret

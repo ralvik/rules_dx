@@ -18,6 +18,17 @@ sh_binary(
     srcs = ["corpus_audit.sh"],
 )
 
+# Manual negative-demo harness (issue #99 item 2): the expected-fail
+# demonstrations in libs/starlark/tests/negative plus the
+# markdown-no-config subject are `manual`, so wildcard suites never run
+# them. Run by CI via `bazel run //tools/ci:manual_negatives` to prove
+# each still fails for its documented reason and that no new manual
+# test appears without explicit classification.
+sh_binary(
+    name = "manual_negatives",
+    srcs = ["manual_negatives.sh"],
+)
+
 # Consumer CI template harness (issue #99 item 1): each script executes
 # the REAL embedded contract out of workflows/reusable-consumer.yml
 # (platforms-gate, dx-ci aggregation, check guards, pins/threshold)
