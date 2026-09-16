@@ -259,6 +259,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "thiserror",
 ]
 
 [[package]]
@@ -270,6 +271,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "tempfile",
+ "thiserror",
 ]
 
 [[package]]

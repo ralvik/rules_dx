@@ -16,6 +16,79 @@ use std::path::Path;
 
 use serde::Serialize;
 
+/// Typed adoption failure (issue #221 pilot).
+///
+/// Every variant renders byte-identical to the historical `String` error
+/// it replaces, so CLI operational diagnostics stay stable while callers
+/// gain matchable structure instead of `format!` string plumbing.
+/// Binary edges (`dx` mains) keep rendering via `Display` (`to_string()`).
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum AdoptError {
+    /// Failed to create a parent directory for scaffolding output.
+    #[error("create parent {parent}: {detail}")]
+    CreateParent { parent: String, detail: String },
+    /// Failed to write a scaffolded or pin file.
+    #[error("write {path}: {detail}")]
+    WriteFile { path: String, detail: String },
+    /// Failed to create `.git/hooks`.
+    #[error("create hooks dir: {detail}")]
+    CreateHooksDir { detail: String },
+    /// Failed to read an existing hook shim.
+    #[error("read hook {trigger}: {detail}")]
+    ReadHook { trigger: String, detail: String },
+    /// Existing unmanaged hook refuses install.
+    #[error("unmanaged hook refuses install: {trigger}")]
+    UnmanagedInstall { trigger: String },
+    /// Failed to write a hook shim.
+    #[error("write hook {trigger}: {detail}")]
+    WriteHook { trigger: String, detail: String },
+    /// Failed to stat a hook shim for chmod.
+    #[error("stat hook {trigger}: {detail}")]
+    StatHook { trigger: String, detail: String },
+    /// Failed to chmod a hook shim.
+    #[error("chmod hook {trigger}: {detail}")]
+    ChmodHook { trigger: String, detail: String },
+    /// Failed to write the `dx.local.toml` overlay.
+    #[error("write overlay: {detail}")]
+    WriteOverlay { detail: String },
+    /// Existing unmanaged hook refuses uninstall.
+    #[error("unmanaged hook refuses uninstall: {trigger}")]
+    UnmanagedUninstall { trigger: String },
+    /// Failed to remove a hook shim.
+    #[error("remove hook {trigger}: {detail}")]
+    RemoveHook { trigger: String, detail: String },
+    /// Failed to read the `.dx/version` pin.
+    #[error("read version pin: {detail}")]
+    ReadVersionPin { detail: String },
+    /// Refused an empty version pin write.
+    #[error("refuses empty version")]
+    EmptyVersion,
+    /// Failed to create `.dx`.
+    #[error("create .dx: {detail}")]
+    CreateDxDir { detail: String },
+    /// Failed to write the version pin.
+    #[error("write version pin: {detail}")]
+    WriteVersionPin { detail: String },
+    /// `dx watch` refuses CI (local-only).
+    #[error("dx watch refuses CI (local-only)")]
+    WatchRefusesCi,
+    /// Command is not watchable.
+    #[error("not watchable: {command}")]
+    NotWatchable { command: String },
+    /// Inspect scope rejected.
+    #[error("rejected scope: {scope}")]
+    RejectedScope { scope: String },
+    /// `dx why` called without the file-owner resolution leg.
+    #[error("dx why needs <file> <label>: resolve the file owner first, then plan_somepath")]
+    WhyNeedsOwner,
+    /// Unknown inspect kind.
+    #[error("unknown inspect: {kind}")]
+    UnknownInspect { kind: String },
+    /// Unknown completion shell.
+    #[error("unknown-shell: {shell}")]
+    UnknownShell { shell: String },
+}
+
 /// Delivered `dx` / `rules_dx` single version (O51 freeze).
 pub const DX_VERSION: &str = "0.0.0";
 /// Pinned `rules_dx` module version; `dx version` must equal this.
@@ -271,7 +344,7 @@ pub fn plan_init_files(module_name: &str) -> Vec<ScaffoldFile> {
 /// Returns the written workspace-relative paths. Existing files are left
 /// untouched and reported as refusals in the returned `Vec` prefix
 /// `refused:` entries follow written entries after a `---` separator.
-pub fn apply_init(root: &Path, module_name: &str) -> Result<Vec<String>, String> {
+pub fn apply_init(root: &Path, module_name: &str) -> Result<Vec<String>, AdoptError> {
     let mut written = Vec::new();
     let mut refused = Vec::new();
     for file in plan_init_files(module_name) {
@@ -281,11 +354,15 @@ pub fn apply_init(root: &Path, module_name: &str) -> Result<Vec<String>, String>
             continue;
         }
         if let Some(parent) = dest.parent() {
-            std::fs::create_dir_all(parent)
-                .map_err(|e| format!("create parent {}: {e}", parent.display()))?;
+            std::fs::create_dir_all(parent).map_err(|e| AdoptError::CreateParent {
+                parent: parent.display().to_string(),
+                detail: e.to_string(),
+            })?;
         }
-        std::fs::write(&dest, file.content)
-            .map_err(|e| format!("write {}: {e}", dest.display()))?;
+        std::fs::write(&dest, file.content).map_err(|e| AdoptError::WriteFile {
+            path: dest.display().to_string(),
+            detail: e.to_string(),
+        })?;
         written.push(file.path);
     }
     written.push("---".to_owned());
@@ -307,56 +384,79 @@ pub fn render_hook_shim(trigger: &str) -> String {
 ///
 /// Refuses unmanaged existing hooks even with force. Bootstraps the
 /// gitignored `dx.local.toml` overlay absent-only. Returns installed paths.
-pub fn install_hooks(root: &Path) -> Result<Vec<String>, String> {
+pub fn install_hooks(root: &Path) -> Result<Vec<String>, AdoptError> {
     let hooks_dir = root.join(".git/hooks");
-    std::fs::create_dir_all(&hooks_dir).map_err(|e| format!("create hooks dir: {e}"))?;
+    std::fs::create_dir_all(&hooks_dir).map_err(|e| AdoptError::CreateHooksDir {
+        detail: e.to_string(),
+    })?;
     let mut installed = Vec::new();
     for trigger in ["pre-commit", "pre-push"] {
         let dest = hooks_dir.join(trigger);
         if dest.exists() {
-            let existing =
-                std::fs::read_to_string(&dest).map_err(|e| format!("read hook {trigger}: {e}"))?;
+            let existing = std::fs::read_to_string(&dest).map_err(|e| AdoptError::ReadHook {
+                trigger: trigger.to_owned(),
+                detail: e.to_string(),
+            })?;
             if !existing.contains(HOOK_MANAGED_MARKER) {
-                return Err(format!("unmanaged hook refuses install: {trigger}"));
+                return Err(AdoptError::UnmanagedInstall {
+                    trigger: trigger.to_owned(),
+                });
             }
         }
-        std::fs::write(&dest, render_hook_shim(trigger))
-            .map_err(|e| format!("write hook {trigger}: {e}"))?;
+        std::fs::write(&dest, render_hook_shim(trigger)).map_err(|e| AdoptError::WriteHook {
+            trigger: trigger.to_owned(),
+            detail: e.to_string(),
+        })?;
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
             let mut perms = std::fs::metadata(&dest)
-                .map_err(|e| format!("stat hook {trigger}: {e}"))?
+                .map_err(|e| AdoptError::StatHook {
+                    trigger: trigger.to_owned(),
+                    detail: e.to_string(),
+                })?
                 .permissions();
             perms.set_mode(0o755);
-            std::fs::set_permissions(&dest, perms)
-                .map_err(|e| format!("chmod hook {trigger}: {e}"))?;
+            std::fs::set_permissions(&dest, perms).map_err(|e| AdoptError::ChmodHook {
+                trigger: trigger.to_owned(),
+                detail: e.to_string(),
+            })?;
         }
         installed.push(format!(".git/hooks/{trigger}"));
     }
     let overlay = root.join("dx.local.toml");
     if !overlay.exists() {
-        std::fs::write(&overlay, "# Local-only overrides (gitignored).\n[hooks]\n")
-            .map_err(|e| format!("write overlay: {e}"))?;
+        std::fs::write(&overlay, "# Local-only overrides (gitignored).\n[hooks]\n").map_err(
+            |e| AdoptError::WriteOverlay {
+                detail: e.to_string(),
+            },
+        )?;
         installed.push("dx.local.toml".to_owned());
     }
     Ok(installed)
 }
 
 /// Remove only managed shims; unmanaged files are never touched.
-pub fn uninstall_hooks(root: &Path) -> Result<Vec<String>, String> {
+pub fn uninstall_hooks(root: &Path) -> Result<Vec<String>, AdoptError> {
     let mut removed = Vec::new();
     for trigger in ["pre-commit", "pre-push"] {
         let dest = root.join(".git/hooks").join(trigger);
         if !dest.exists() {
             continue;
         }
-        let existing =
-            std::fs::read_to_string(&dest).map_err(|e| format!("read hook {trigger}: {e}"))?;
+        let existing = std::fs::read_to_string(&dest).map_err(|e| AdoptError::ReadHook {
+            trigger: trigger.to_owned(),
+            detail: e.to_string(),
+        })?;
         if !existing.contains(HOOK_MANAGED_MARKER) {
-            return Err(format!("unmanaged hook refuses uninstall: {trigger}"));
+            return Err(AdoptError::UnmanagedUninstall {
+                trigger: trigger.to_owned(),
+            });
         }
-        std::fs::remove_file(&dest).map_err(|e| format!("remove hook {trigger}: {e}"))?;
+        std::fs::remove_file(&dest).map_err(|e| AdoptError::RemoveHook {
+            trigger: trigger.to_owned(),
+            detail: e.to_string(),
+        })?;
         removed.push(format!(".git/hooks/{trigger}"));
     }
     Ok(removed)
@@ -368,21 +468,29 @@ pub fn render_hooks_status(baseline: &str, overlay: &str, timings: &str) -> Stri
 }
 
 /// Read the `.dx/version` pin under `root`.
-pub fn read_version_pin(root: &Path) -> Result<String, String> {
-    let raw = std::fs::read_to_string(root.join(".dx/version"))
-        .map_err(|e| format!("read version pin: {e}"))?;
+pub fn read_version_pin(root: &Path) -> Result<String, AdoptError> {
+    let raw = std::fs::read_to_string(root.join(".dx/version")).map_err(|e| {
+        AdoptError::ReadVersionPin {
+            detail: e.to_string(),
+        }
+    })?;
     Ok(raw.trim().to_owned())
 }
 
 /// Write the `.dx/version` pin (verified-release versions only).
-pub fn write_version_pin(root: &Path, version: &str) -> Result<(), String> {
+pub fn write_version_pin(root: &Path, version: &str) -> Result<(), AdoptError> {
     if version.is_empty() {
-        return Err("refuses empty version".to_owned());
+        return Err(AdoptError::EmptyVersion);
     }
     let dir = root.join(".dx");
-    std::fs::create_dir_all(&dir).map_err(|e| format!("create .dx: {e}"))?;
-    std::fs::write(dir.join("version"), format!("{version}\n"))
-        .map_err(|e| format!("write version pin: {e}"))?;
+    std::fs::create_dir_all(&dir).map_err(|e| AdoptError::CreateDxDir {
+        detail: e.to_string(),
+    })?;
+    std::fs::write(dir.join("version"), format!("{version}\n")).map_err(|e| {
+        AdoptError::WriteVersionPin {
+            detail: e.to_string(),
+        }
+    })?;
     Ok(())
 }
 
@@ -454,12 +562,14 @@ pub fn default_status_checks(pinned: &str) -> Vec<StatusCheck> {
 }
 
 /// Validate one watch invocation (O55 freeze).
-pub fn plan_watch(command: &str, ci: bool) -> Result<String, String> {
+pub fn plan_watch(command: &str, ci: bool) -> Result<String, AdoptError> {
     if ci {
-        return Err("dx watch refuses CI (local-only)".to_owned());
+        return Err(AdoptError::WatchRefusesCi);
     }
     if !WATCHABLE_COMMANDS.contains(&command) {
-        return Err(format!("not watchable: {command}"));
+        return Err(AdoptError::NotWatchable {
+            command: command.to_owned(),
+        });
     }
     Ok(format!("watch:{command}:debounce={WATCH_DEBOUNCE_MS}ms"))
 }
@@ -478,21 +588,24 @@ pub struct InspectPlan {
 }
 
 /// Plan one inspect query (O56 freeze).
-pub fn plan_inspect(kind: &str, scope: &str, configured: bool) -> Result<InspectPlan, String> {
+pub fn plan_inspect(kind: &str, scope: &str, configured: bool) -> Result<InspectPlan, AdoptError> {
     if !inspect_scope_allowed(scope, scope.starts_with('@')) {
-        return Err(format!("rejected scope: {scope}"));
+        return Err(AdoptError::RejectedScope {
+            scope: scope.to_owned(),
+        });
     }
     let verb = if configured { "cquery" } else { "query" };
     let expr = match kind {
         "owners" => format!("kind('rule', rdeps(//..., {scope}, 1))"),
         "deps" => format!("deps({scope})"),
         "why" => {
-            return Err(
-                "dx why needs <file> <label>: resolve the file owner first, then plan_somepath"
-                    .to_owned(),
-            );
+            return Err(AdoptError::WhyNeedsOwner);
         }
-        _ => return Err(format!("unknown inspect: {kind}")),
+        _ => {
+            return Err(AdoptError::UnknownInspect {
+                kind: kind.to_owned(),
+            });
+        }
     };
     Ok(InspectPlan {
         verb: verb.to_owned(),
@@ -505,12 +618,16 @@ pub fn plan_inspect(kind: &str, scope: &str, configured: bool) -> Result<Inspect
 /// `from` is the resolved file owner (a depth-1 owner label, never the
 /// raw file path) and `to` is the target label, both passed through
 /// verbatim. External scopes are rejected like workflow commands.
-pub fn plan_somepath(from: &str, to: &str, configured: bool) -> Result<InspectPlan, String> {
+pub fn plan_somepath(from: &str, to: &str, configured: bool) -> Result<InspectPlan, AdoptError> {
     if !inspect_scope_allowed(from, from.starts_with('@')) {
-        return Err(format!("rejected scope: {from}"));
+        return Err(AdoptError::RejectedScope {
+            scope: from.to_owned(),
+        });
     }
     if !inspect_scope_allowed(to, to.starts_with('@')) {
-        return Err(format!("rejected scope: {to}"));
+        return Err(AdoptError::RejectedScope {
+            scope: to.to_owned(),
+        });
     }
     let verb = if configured { "cquery" } else { "query" };
     Ok(InspectPlan {
@@ -520,9 +637,11 @@ pub fn plan_somepath(from: &str, to: &str, configured: bool) -> Result<InspectPl
 }
 
 /// Render one completion script from the single command table (O61).
-pub fn render_completion(shell: &str) -> Result<String, String> {
+pub fn render_completion(shell: &str) -> Result<String, AdoptError> {
     if !SUPPORTED_SHELLS.contains(&shell) {
-        return Err(format!("unknown-shell: {shell}"));
+        return Err(AdoptError::UnknownShell {
+            shell: shell.to_owned(),
+        });
     }
     let mut out = format!("# dx completion for {shell} (generated from single command source)\n");
     for cmd in ALL_COMMANDS {
@@ -763,5 +882,74 @@ mod tests {
             serde_json::from_str(&serde_json::to_string(&parsed).expect("reserialize"))
                 .expect("reserialized JSON is valid");
         assert_eq!(parsed, reparsed);
+    }
+
+    #[test]
+    fn adopt_errors_render_byte_identical_to_legacy_strings() {
+        // Pilot gate for #221: typed errors must preserve the historical
+        // user-facing strings so CLI operational diagnostics stay stable.
+        assert_eq!(
+            AdoptError::WatchRefusesCi.to_string(),
+            "dx watch refuses CI (local-only)"
+        );
+        assert_eq!(
+            AdoptError::NotWatchable {
+                command: "docs".to_owned()
+            }
+            .to_string(),
+            "not watchable: docs"
+        );
+        assert_eq!(
+            AdoptError::RejectedScope {
+                scope: "//a:one".to_owned()
+            }
+            .to_string(),
+            "rejected scope: //a:one"
+        );
+        assert_eq!(
+            AdoptError::UnknownShell {
+                shell: "tcsh".to_owned()
+            }
+            .to_string(),
+            "unknown-shell: tcsh"
+        );
+        assert_eq!(
+            AdoptError::UnknownInspect {
+                kind: "bogus".to_owned()
+            }
+            .to_string(),
+            "unknown inspect: bogus"
+        );
+        assert_eq!(
+            AdoptError::WhyNeedsOwner.to_string(),
+            "dx why needs <file> <label>: resolve the file owner first, then plan_somepath"
+        );
+        assert_eq!(
+            AdoptError::EmptyVersion.to_string(),
+            "refuses empty version"
+        );
+        assert_eq!(
+            AdoptError::UnmanagedInstall {
+                trigger: "pre-commit".to_owned()
+            }
+            .to_string(),
+            "unmanaged hook refuses install: pre-commit"
+        );
+        assert_eq!(
+            AdoptError::ReadVersionPin {
+                detail: "denied".to_owned()
+            }
+            .to_string(),
+            "read version pin: denied"
+        );
+        // Call sites surface the typed errors through `Display`.
+        assert_eq!(
+            plan_watch("docs", false).unwrap_err().to_string(),
+            "not watchable: docs"
+        );
+        assert_eq!(
+            render_completion("tcsh").unwrap_err().to_string(),
+            "unknown-shell: tcsh"
+        );
     }
 }

@@ -83,16 +83,19 @@ pub struct ApplyReport {
 }
 
 /// Application failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ApplyError {
     /// Operation validation failed; nothing was written for this operation.
+    #[error("validation failed for {path}: {cause}")]
     Validation {
         path: String,
         cause: ValidationError,
     },
     /// Filesystem I/O failed.
+    #[error("I/O failed for {path}: {message}")]
     Io { path: String, message: String },
     /// A post-write hook failed after the file was written.
+    #[error("hook failed for {path}: {message}")]
     Hook { path: String, message: String },
 }
 

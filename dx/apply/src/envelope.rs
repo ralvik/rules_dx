@@ -37,23 +37,29 @@ pub struct Envelope {
 }
 
 /// Envelope parse/structural failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum EnvelopeError {
     /// Not valid JSON, or a required key is missing, or an unknown key or
     /// mistyped value is present.
+    #[error("invalid envelope JSON: {0}")]
     InvalidJson(String),
     /// `version` is not [`ENVELOPE_VERSION`].
+    #[error("unsupported envelope version: {got}")]
     UnsupportedVersion { got: u32 },
     /// `operations` is empty.
+    #[error("envelope has no operations")]
     EmptyOperations,
     /// An operation path is empty.
+    #[error("envelope operation has empty path")]
     EmptyPath,
     /// The envelope value cannot be represented as JSON. Unreachable for
     /// well-typed values (serialization only fails on maps with
     /// non-string keys, which this schema has none of); kept as a
     /// `Result` so library callers never panic on serialization.
+    #[error("envelope is not serializable: {0}")]
     Unserializable(String),
     /// `original_sha256` is present but not 64 lowercase hex digits.
+    #[error("invalid digest: {path}")]
     InvalidDigest { path: String },
 }
 

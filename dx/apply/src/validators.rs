@@ -26,28 +26,38 @@ const INJECTION_PATTERNS: &[&str] = &[
 ];
 
 /// Per-operation validation failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ValidationError {
     /// Operation path is empty.
+    #[error("empty path")]
     EmptyPath,
     /// Operation path is absolute; only workspace-relative paths apply.
+    #[error("absolute path")]
     AbsolutePath,
     /// Operation path contains a `..` segment and could escape the workspace.
+    #[error("path escapes workspace")]
     EscapesWorkspace,
     /// Operation path has an empty segment (`a//b`, trailing slash),
     /// a backslash, or a `.` segment; only canonical forward-slash paths apply.
+    #[error("malformed path")]
     MalformedPath,
     /// The final extension is blocklisted.
+    #[error("blocked extension: {extension}")]
     BlockedExtension { extension: String },
     /// New content exceeds [`MAX_OPERATION_BYTES`].
+    #[error("operation too large: {bytes} bytes")]
     TooLarge { bytes: usize },
     /// New content matches a prompt-injection marker.
+    #[error("prompt injection pattern: {pattern}")]
     PromptInjection { pattern: String },
     /// `original_sha256` does not match the current file bytes.
+    #[error("digest mismatch: {path}")]
     DigestMismatch { path: String },
     /// `original_sha256` is `None` (create) but the file already exists.
+    #[error("file exists: {path}")]
     FileExists { path: String },
     /// `original_sha256` is `Some` (update) but the file is missing.
+    #[error("missing file: {path}")]
     MissingFile { path: String },
 }
 

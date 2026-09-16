@@ -26,6 +26,9 @@ ADR or domain contract.
   contracts in named domain documents; preserve existing authoritative index locations.
 - For documentation changes, update the single authoritative source in place
   and link instead of copying.
+- Error handling: library crates (`dx/*`) return typed errors via `thiserror::Error`
+  with stable `Display` strings; only binaries adapt to `anyhow` at the edge
+  for exit-code mapping. Never use `Result<_, String>` for new library APIs.
 
 ## Decisions And Scope
 

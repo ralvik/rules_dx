@@ -86,7 +86,7 @@ fn execute_init(
             }
             0
         }
-        Err(message) => operational(out, err, &message),
+        Err(error) => operational(out, err, &error.to_string()),
     }
 }
 
@@ -105,7 +105,7 @@ fn execute_hooks(
                 }
                 0
             }
-            Err(message) => operational(out, err, &message),
+            Err(error) => operational(out, err, &error.to_string()),
         },
         "uninstall" => match dx_adopt::uninstall_hooks(workspace) {
             Ok(removed) => {
@@ -114,7 +114,7 @@ fn execute_hooks(
                 }
                 0
             }
-            Err(message) => operational(out, err, &message),
+            Err(error) => operational(out, err, &error.to_string()),
         },
         "status" => {
             let baseline = read_optional(workspace, "dx.hooks.toml");
@@ -215,7 +215,7 @@ fn execute_version(
                 let _ = writeln!(out, "pinned {previous} (rollback)");
                 0
             }
-            Err(message) => operational(out, err, &message),
+            Err(error) => operational(out, err, &error.to_string()),
         };
     }
     if let Some(pin) = &invocation.pin {
@@ -237,7 +237,7 @@ fn execute_version(
                 let _ = writeln!(out, "pinned {pin}");
                 0
             }
-            Err(message) => operational(out, err, &message),
+            Err(error) => operational(out, err, &error.to_string()),
         };
     }
     let current = dx_adopt::read_version_pin(workspace).unwrap_or_else(|_| "0.0.0".to_owned());
@@ -284,7 +284,7 @@ fn execute_watch(
             let _ = writeln!(out, "watching (Ctrl-C to stop)");
             0
         }
-        Err(message) => pre_exec(err, &message),
+        Err(error) => pre_exec(err, &error.to_string()),
     }
 }
 
@@ -303,7 +303,7 @@ fn execute_inspect(
     for scope in &invocation.targets {
         let plan = match dx_adopt::plan_inspect(kind, scope, invocation.configured) {
             Ok(plan) => plan,
-            Err(message) => return pre_exec(err, &message),
+            Err(error) => return pre_exec(err, &error.to_string()),
         };
         let step = run_inspect_query(&plan.verb, &plan.expr, workspace, query_runner, out, err);
         if step != 0 {
@@ -366,7 +366,7 @@ fn execute_why(
     // needs rule-to-rule endpoints.
     let owner_plan = match dx_adopt::plan_inspect("owners", file, invocation.configured) {
         Ok(plan) => plan,
-        Err(message) => return pre_exec(err, &message),
+        Err(error) => return pre_exec(err, &error.to_string()),
     };
     let owner_argv = vec![
         "bazel".to_owned(),
@@ -410,7 +410,7 @@ fn execute_why(
     // Step 2: explain one path from the resolved owner to the target.
     let leg = match dx_adopt::plan_somepath(&owner, label, invocation.configured) {
         Ok(leg) => leg,
-        Err(message) => return pre_exec(err, &message),
+        Err(error) => return pre_exec(err, &error.to_string()),
     };
     run_inspect_query(&leg.verb, &leg.expr, workspace, query_runner, out, err)
 }
@@ -425,7 +425,7 @@ fn execute_completion(invocation: &Invocation, out: &mut dyn Write, err: &mut dy
             }
             0
         }
-        Err(message) => pre_exec(err, &message),
+        Err(error) => pre_exec(err, &error.to_string()),
     }
 }
 

@@ -10,15 +10,17 @@ use std::collections::{BTreeMap, BTreeSet};
 use super::envelope::Envelope;
 
 /// Consensus failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ConsensusError {
     /// The envelopes target different file sets. Both sides are reported
     /// sorted so conflicts are reproducible.
+    #[error("envelope path sets differ")]
     PathSetMismatch {
         only_a: Vec<String>,
         only_b: Vec<String>,
     },
     /// Both target `path` but disagree on content or expected digest.
+    #[error("envelope content differs: {path}")]
     ContentMismatch { path: String },
 }
 
