@@ -238,32 +238,55 @@ pub enum VerifyReject {
     BuilderMismatch,
 }
 
+/// One attested-vs-expected verification binding: the claimed value and
+/// the independent expectation it must match exactly (verbatim, non-empty
+/// attested value).
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Binding<'a> {
+    /// Value claimed by the attestation under review.
+    pub attested: &'a str,
+    /// Independently trusted expectation.
+    pub expected: &'a str,
+}
+
+impl Binding<'_> {
+    /// True when the binding rejects: empty attested value or any mismatch.
+    fn rejects(&self) -> bool {
+        self.attested.is_empty() || self.attested != self.expected
+    }
+}
+
+/// The four verification bindings: digest, predicate, signer, builder.
+/// Grouped so verification entry points take one argument instead of
+/// eight positional strings.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct VerificationBindings<'a> {
+    /// Artifact digest binding.
+    pub digest: Binding<'a>,
+    /// Predicate-type binding.
+    pub predicate: Binding<'a>,
+    /// Signer binding.
+    pub signer: Binding<'a>,
+    /// Builder binding.
+    pub builder: Binding<'a>,
+}
+
 /// Plan verification binding over injected attested-vs-expected strings.
 ///
 /// All four bindings must match exactly (verbatim, non-empty attested value).
 /// Any mismatch rejects; this executes no cryptography and trusts no log,
 /// timestamp, or certificate on its own (those stay O38/O39-gated).
-#[allow(clippy::too_many_arguments)]
-pub fn verify_rejection(
-    attested_digest: &str,
-    expected_digest: &str,
-    attested_predicate: &str,
-    expected_predicate: &str,
-    attested_signer: &str,
-    expected_signer: &str,
-    attested_builder: &str,
-    expected_builder: &str,
-) -> Option<VerifyReject> {
-    if attested_digest.is_empty() || attested_digest != expected_digest {
+pub fn verify_rejection(bindings: VerificationBindings<'_>) -> Option<VerifyReject> {
+    if bindings.digest.rejects() {
         return Some(VerifyReject::DigestMismatch);
     }
-    if attested_predicate.is_empty() || attested_predicate != expected_predicate {
+    if bindings.predicate.rejects() {
         return Some(VerifyReject::PredicateMismatch);
     }
-    if attested_signer.is_empty() || attested_signer != expected_signer {
+    if bindings.signer.rejects() {
         return Some(VerifyReject::SignerMismatch);
     }
-    if attested_builder.is_empty() || attested_builder != expected_builder {
+    if bindings.builder.rejects() {
         return Some(VerifyReject::BuilderMismatch);
     }
     None
@@ -272,28 +295,8 @@ pub fn verify_rejection(
 /// Whether verification accepts the attested values.
 ///
 /// Accepts only when every binding matches its independent expectation.
-#[allow(clippy::too_many_arguments)]
-pub fn verification_accepts(
-    attested_digest: &str,
-    expected_digest: &str,
-    attested_predicate: &str,
-    expected_predicate: &str,
-    attested_signer: &str,
-    expected_signer: &str,
-    attested_builder: &str,
-    expected_builder: &str,
-) -> bool {
-    verify_rejection(
-        attested_digest,
-        expected_digest,
-        attested_predicate,
-        expected_predicate,
-        attested_signer,
-        expected_signer,
-        attested_builder,
-        expected_builder,
-    )
-    .is_none()
+pub fn verification_accepts(bindings: VerificationBindings<'_>) -> bool {
+    verify_rejection(bindings).is_none()
 }
 
 /// Whether a self-attested provenance level claim is admissible.
@@ -625,18 +628,26 @@ mod tests {
 
     #[test]
     fn verification_binds_digest_predicate_signer_builder_in_order() {
-        let ok = |d: &str, p: &str, s: &str, b: &str| {
-            verify_rejection(
-                d,
-                "sha256:abc",
-                p,
-                CANDIDATE_SLSA_PREDICATE_URI,
-                s,
-                "sig:alice",
-                b,
-                "builder:trusted",
-            )
-        };
+        fn ok<'a>(d: &'a str, p: &'a str, s: &'a str, b: &'a str) -> Option<VerifyReject> {
+            verify_rejection(VerificationBindings {
+                digest: Binding {
+                    attested: d,
+                    expected: "sha256:abc",
+                },
+                predicate: Binding {
+                    attested: p,
+                    expected: CANDIDATE_SLSA_PREDICATE_URI,
+                },
+                signer: Binding {
+                    attested: s,
+                    expected: "sig:alice",
+                },
+                builder: Binding {
+                    attested: b,
+                    expected: "builder:trusted",
+                },
+            })
+        }
         assert_eq!(
             ok(
                 "sha256:abc",
@@ -695,26 +706,43 @@ mod tests {
 
     #[test]
     fn verification_accepts_only_fully_bound_attestations() {
-        assert!(verification_accepts(
-            "sha256:abc",
+        fn bindings<'a>(
+            digest: &'a str,
+            predicate: &'a str,
+            signer: &'a str,
+            builder: &'a str,
+        ) -> VerificationBindings<'a> {
+            VerificationBindings {
+                digest: Binding {
+                    attested: digest,
+                    expected: "sha256:abc",
+                },
+                predicate: Binding {
+                    attested: predicate,
+                    expected: CANDIDATE_SLSA_PREDICATE_URI,
+                },
+                signer: Binding {
+                    attested: signer,
+                    expected: "sig:alice",
+                },
+                builder: Binding {
+                    attested: builder,
+                    expected: "builder:trusted",
+                },
+            }
+        }
+        assert!(verification_accepts(bindings(
             "sha256:abc",
             CANDIDATE_SLSA_PREDICATE_URI,
-            CANDIDATE_SLSA_PREDICATE_URI,
-            "sig:alice",
             "sig:alice",
             "builder:trusted",
-            "builder:trusted",
-        ));
-        assert!(!verification_accepts(
-            "sha256:abc",
+        )));
+        assert!(!verification_accepts(bindings(
             "sha256:abc",
             CANDIDATE_SLSA_PREDICATE_URI,
-            CANDIDATE_SLSA_PREDICATE_URI,
-            "sig:alice",
             "sig:alice",
             "builder:self",
-            "builder:trusted",
-        ));
+        )));
     }
 
     #[test]
