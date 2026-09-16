@@ -779,11 +779,56 @@ fn render_top_help() -> String {
 /// [`Command::describe`], usage/scopes/exit/output lines consistent
 /// with `docs/cli/cli-contract.md`, then the full grammar help so the
 /// flag list can never drift.
+///
+/// Issue #211 reconciliation: `--bazel` (clean only, forwards
+/// `bazel clean`) and `--configured` (owners/deps/why only, selects
+/// `cquery`) keep their names because they mean different things, and
+/// both stay distinct from the `dx bazel` passthrough command. The
+/// per-command usage + flags lines below name that distinction so the
+/// collision is documented, not hidden.
+fn per_command_flags(command: Command) -> &'static str {
+    match command {
+        Command::Clean => {
+            "Per-command flags: --bazel (also run `bazel clean` after pruning; distinct from `dx bazel`, which forwards raw args)."
+        }
+        Command::Owners | Command::Deps | Command::Why => {
+            "Per-command flags: --configured (use `bazel cquery` instead of `bazel query`; distinct from `dx clean --bazel`, which forwards `bazel clean`)."
+        }
+        Command::Coverage => {
+            "Per-command flags: --min-coverage <0-100> (coverage only; collects without enforcing when absent)."
+        }
+        Command::Build | Command::Test | Command::Run => {
+            "Per-command flags: --debug | --release (build/run/test only; mutually exclusive; bare invocation means dev)."
+        }
+        Command::Version => {
+            "Per-command flags: --check (drift check), --pin <version>, --rollback (version only; --pin and --rollback conflict)."
+        }
+        Command::Bazel => {
+            "Per-command flags: none (raw Bazel forwarding; dx-owned options must precede the command word and most are rejected)."
+        }
+        _ => {
+            "Per-command flags: --check/--fail-on/--report/--min-coverage/--debug/--release/--bazel/--pin/--rollback/--configured are owned per command; unsupported uses fail with `option \"--flag\" is not supported by dx <command>`."
+        }
+    }
+}
+
 fn render_command_help(command: Command) -> String {
     let usage = match command {
-        Command::Clean => "Usage: dx [global-options] clean [--bazel]",
+        Command::Clean => "Usage: dx [global-options] clean [--dry-run] [--bazel]",
         Command::Bazel => "Usage: dx [global-options] bazel [-- bazel-args ...]",
-        Command::Run => "Usage: dx [global-options] run <target> [-- app-args ...]",
+        Command::Run => "Usage: dx [global-options] run [--debug|--release] <target> [-- app-args ...]",
+        Command::Build | Command::Test => {
+            "Usage: dx [global-options] build|test [--debug|--release] [scope ...] [-- bazel-options ...]"
+        }
+        Command::Coverage => {
+            "Usage: dx [global-options] coverage [--min-coverage 0-100] [scope ...] [-- bazel-options ...]"
+        }
+        Command::Owners => "Usage: dx [global-options] owners [--configured] <scope> ...",
+        Command::Deps => "Usage: dx [global-options] deps [--configured] <scope> ...",
+        Command::Why => "Usage: dx [global-options] why [--configured] <file> <label>",
+        Command::Version => {
+            "Usage: dx [global-options] version [--check] [--pin <version>|--rollback]"
+        }
         _ => "Usage: dx [global-options] <command> [scope ...] [-- bazel-options ...]",
     };
     let scopes = match command {
@@ -798,6 +843,8 @@ fn render_command_help(command: Command) -> String {
         command.describe()
     ));
     out.push_str(usage);
+    out.push('\n');
+    out.push_str(per_command_flags(command));
     out.push_str("\n\n");
     out.push_str(scopes);
     out.push_str("\nExit codes: 0 success; 2 usage/scope/owner errors; 1 operational failures; Bazel-authoritative failures preserve Bazel's code.");
@@ -2487,6 +2534,72 @@ mod tests {
                 assert!(text.contains(needle), "{argv:?}: missing {needle:?}");
             }
         }
+    }
+
+    #[test]
+    fn per_command_help_names_owned_flags_and_reconciles_bazel_naming() {
+        // Issue #211: per-command `--bazel`/`--configured` naming is
+        // reconciled by keeping both names (different semantics) and
+        // documenting the distinction; usage/help must show the owned
+        // flags instead of hiding them.
+        let clean = match parse(&args(&["clean", "--help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("clean --help: want Help, got {other:?}"),
+        };
+        assert!(
+            clean.contains("clean [--dry-run] [--bazel]"),
+            "clean usage:\n{clean}"
+        );
+        assert!(clean.contains("--bazel"), "clean flags:\n{clean}");
+        assert!(
+            clean.contains("distinct from `dx bazel`"),
+            "clean disambiguation:\n{clean}"
+        );
+        for command in ["owners", "deps", "why"] {
+            let text = match parse(&args(&[command, "--help"])) {
+                Err(ArgsError::Help { text }) => text,
+                other => panic!("{command} --help: want Help, got {other:?}"),
+            };
+            assert!(text.contains("[--configured]"), "{command} usage:\n{text}");
+            assert!(
+                text.contains("distinct from `dx clean --bazel`"),
+                "{command} disambiguation:\n{text}"
+            );
+        }
+        let coverage = match parse(&args(&["coverage", "--help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("coverage --help: want Help, got {other:?}"),
+        };
+        assert!(
+            coverage.contains("--min-coverage"),
+            "coverage flags:\n{coverage}"
+        );
+        let build = match parse(&args(&["build", "--help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("build --help: want Help, got {other:?}"),
+        };
+        assert!(build.contains("--debug"), "build flags:\n{build}");
+        let version = match parse(&args(&["version", "--help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("version --help: want Help, got {other:?}"),
+        };
+        assert!(version.contains("--pin"), "version flags:\n{version}");
+        // Every per-command help names its owned flags line. `dx bazel
+        // --help` forwards verbatim to Bazel by design (raw passthrough
+        // owns the tail), so Bazel help is checked via the renderer
+        // directly rather than the parse path.
+        for argv in [["lint", "--help"], ["status", "--help"]] {
+            let text = match parse(&args(&argv)) {
+                Err(ArgsError::Help { text }) => text,
+                other => panic!("{argv:?}: want Help, got {other:?}"),
+            };
+            assert!(text.contains("Per-command flags:"), "{argv:?}:\n{text}");
+        }
+        let bazel_help = render_command_help(Command::Bazel);
+        assert!(
+            bazel_help.contains("Per-command flags:"),
+            "bazel help:\n{bazel_help}"
+        );
     }
 
     #[test]

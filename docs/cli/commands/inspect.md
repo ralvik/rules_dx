@@ -18,7 +18,9 @@ depth-1 owner first, then explains one path from that owner to the label with
 By default the wrappers run `bazel query`. With `--configured` they run
 `bazel cquery` instead (`deps`, `owners`, and the `somepath` leg of `why`).
 The flag belongs to these three commands only; every other command rejects
-it pre-exec.
+it pre-exec. It is distinct from `dx clean --bazel` (which forwards
+`bazel clean` after pruning) and from the `dx bazel` passthrough command
+(which forwards raw args): see `dx <command> --help` per-command flags.
 
 ## Output and exit codes
 

@@ -72,6 +72,10 @@ and it refuses unmanaged or digest-spoofed paths.
 
 `dx clean --bazel` additionally forwards `bazel clean` and prints
 dangling-link recovery guidance (`dx setup`, `dx env`, or `dx codegen`).
+`--bazel` belongs to `clean` only and is distinct from
+`dx owners|deps|why --configured` (which selects `cquery`) and from the
+`dx bazel` passthrough command (which forwards raw args):
+see `dx <command> --help` per-command flags.
 `--dry-run` lists reclaimable generations and links with per-entry and
 total reclaimable bytes without deleting. There is no automatic
 pruning, age policy, or count limit. CI use is not
