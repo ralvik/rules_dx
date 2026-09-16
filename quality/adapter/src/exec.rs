@@ -1,16 +1,21 @@
 //! Hermetic scratch mirrors and child execution.
 //!
 //! Tools never observe the real workspace: the adapter materializes the
-//! exact input bytes plus symlinked native-closure files into a fresh
-//! scratch directory, then spawns the tool with an empty-derived
-//! environment (no `PATH`, no inherited config variables) and a pinned
-//! working directory. `Scratch` removes its tree on drop.
+//! exact input bytes plus native-closure files into a fresh scratch
+//! directory, then spawns the tool with an empty-derived environment
+//! (no `PATH`, no inherited config variables) and a pinned working
+//! directory. Native-closure entries are symlinked where the platform
+//! allows and copied otherwise, so Windows works without privileges.
+//! `Scratch` removes its tree on drop as a best-effort fallback;
+//! owners call [`Scratch::close`] on success paths so cleanup failures
+//! surface as action errors instead of vanishing.
 
 use std::ffi::OsStr;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Contents of one mirror entry, at a scratch-relative path.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,16 +42,39 @@ pub struct Scratch {
 
 static SCRATCH_COUNTER: AtomicU64 = AtomicU64::new(0);
 
+/// Builds one unguessable directory suffix without a rand dependency
+/// (OS-random names arrive with the #65 tempfile migration): wall-clock
+/// nanoseconds mixed with the pid and an atomic counter, so concurrent
+/// processes neither collide nor guess each other's trees in practice.
+fn unique_suffix() -> String {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_nanos() as u64)
+        .unwrap_or(0);
+    let counter = SCRATCH_COUNTER.fetch_add(1, Ordering::SeqCst);
+    let mut mixed = nanos
+        .wrapping_add((std::process::id() as u64).wrapping_mul(0x9E3779B97F4A7C15))
+        .wrapping_add(counter.wrapping_mul(0xBF58476D1CE4E5B9));
+    // SplitMix64 avalanche.
+    mixed = (mixed ^ (mixed >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
+    mixed = (mixed ^ (mixed >> 27)).wrapping_mul(0x94D049BB133111EB);
+    mixed ^= mixed >> 31;
+    format!("{mixed:016x}-{counter:04x}")
+}
+
 impl Scratch {
-    /// Creates `parent/dx-scratch-<pid>-<counter>`. Parent is normally
+    /// Creates `parent/dx-scratch-<unique>`. Parent is normally
     /// `TMPDIR`, already action-scoped under Bazel.
     pub fn create(parent: &Path) -> io::Result<Scratch> {
+        Self::create_with(parent, unique_suffix)
+    }
+
+    /// Creates a scratch tree with caller-supplied suffixes (one per
+    /// claim attempt): the production suffix is [`unique_suffix`], tests
+    /// inject deterministic counters to prove collision retries.
+    fn create_with(parent: &Path, mut next_suffix: impl FnMut() -> String) -> io::Result<Scratch> {
         for _ in 0..100 {
-            let root = parent.join(format!(
-                "dx-scratch-{}-{}",
-                std::process::id(),
-                SCRATCH_COUNTER.fetch_add(1, Ordering::SeqCst)
-            ));
+            let root = parent.join(format!("dx-scratch-{}", next_suffix()));
             match std::fs::create_dir(&root) {
                 Ok(()) => return Ok(Scratch { root }),
                 Err(err) if err.kind() == io::ErrorKind::AlreadyExists => continue,
@@ -100,6 +128,9 @@ impl Scratch {
     }
 
     /// Writes byte entries and links closure entries, creating parents.
+    /// Closure entries prefer symlinks but fall back to copies, so
+    /// platforms without symlinks (or without the privilege to create
+    /// them) still materialize working trees.
     pub fn materialize(&self, files: &[MirrorFile]) -> io::Result<()> {
         for file in files {
             let absolute = self.resolve(&file.mirror_rel)?;
@@ -111,15 +142,49 @@ impl Scratch {
             std::fs::create_dir_all(parent)?;
             match &file.contents {
                 MirrorContents::Bytes(bytes) => std::fs::write(&absolute, bytes)?,
-                MirrorContents::Link(target) => std::os::unix::fs::symlink(target, &absolute)?,
+                MirrorContents::Link(target) => link_or_copy(target, &absolute)?,
             }
         }
         Ok(())
     }
+
+    /// Removes the tree, surfacing cleanup failures to the caller.
+    /// Owners call this on success paths; early-error paths rely on the
+    /// best-effort [`Drop`] fallback below (which cannot return errors).
+    pub fn close(self) -> io::Result<()> {
+        let root = self.root.clone();
+        // Skip the `Drop` fallback: the removal below already ran, and a
+        // second attempt could only mask this result.
+        std::mem::forget(self);
+        std::fs::remove_dir_all(&root)
+    }
+}
+
+/// Links `target` at `link`, copying the file when symlinks are
+/// unavailable (non-Unix platforms, or missing privileges): tools only
+/// ever read these native-closure entries.
+#[cfg(unix)]
+fn link_or_copy(target: &Path, link: &Path) -> io::Result<()> {
+    match std::os::unix::fs::symlink(target, link) {
+        Ok(()) => Ok(()),
+        Err(_) => std::fs::copy(target, link).map(|_| ()),
+    }
+}
+
+/// Links `target` at `link`, copying the file when symlinks are
+/// unavailable (non-Unix platforms, or missing privileges): tools only
+/// ever read these native-closure entries.
+#[cfg(not(unix))]
+fn link_or_copy(target: &Path, link: &Path) -> io::Result<()> {
+    std::fs::copy(target, link).map(|_| ())
 }
 
 impl Drop for Scratch {
     fn drop(&mut self) {
+        // Best-effort fallback for owners that never called `close`
+        // (notably early `?` returns, where the primary error already
+        // fails the action). Errors are unavailable here, so success
+        // paths close explicitly to surface them.
         let _ = std::fs::remove_dir_all(&self.root);
     }
 }
@@ -133,15 +198,19 @@ pub struct ChildOutput {
     pub stderr: Vec<u8>,
 }
 
-/// Builds the hermetic child environment: exactly `TMPDIR` plus caller
-/// extras (such as `LD_LIBRARY_PATH` for toolchain binaries). `PATH` is
-/// never set; every argv element is absolute, so tools cannot observe or
-/// depend on ambient lookup.
+/// Builds the hermetic child environment: exactly one `TMPDIR` (the
+/// scratch root) plus caller extras (such as `LD_LIBRARY_PATH` for
+/// toolchain binaries). `PATH` is never set; every argv element is
+/// absolute, so tools cannot observe or depend on ambient lookup.
+/// Extras naming `TMPDIR` are dropped: the scratch root owns temp
+/// files and is never shadowable by tool configuration.
 pub fn hermetic_env(tmpdir: &Path, extra: &[(&str, &str)]) -> Vec<(String, String)> {
     let mut env = Vec::with_capacity(1 + extra.len());
     env.push(("TMPDIR".to_owned(), tmpdir.to_string_lossy().into_owned()));
     for (key, value) in extra {
-        env.push((key.to_string(), value.to_string()));
+        if *key != "TMPDIR" {
+            env.push((key.to_string(), value.to_string()));
+        }
     }
     env
 }
@@ -174,7 +243,11 @@ mod tests {
 
     #[test]
     fn scratch_materializes_and_cleans_up() {
-        let parent = std::env::temp_dir();
+        let parent = std::env::temp_dir().join(format!("dx-materialize-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&parent);
+        std::fs::create_dir_all(&parent).expect("materialize parent");
+        let source = parent.join("native-taplo.toml");
+        std::fs::write(&source, b"config = true\n").expect("closure source");
         let scratch = Scratch::create(&parent).expect("scratch");
         let root = scratch.root().to_owned();
         assert!(root.is_dir());
@@ -186,7 +259,7 @@ mod tests {
                 },
                 MirrorFile {
                     mirror_rel: PathBuf::from("taplo.toml"),
-                    contents: MirrorContents::Link(PathBuf::from("/checked/in/taplo.toml")),
+                    contents: MirrorContents::Link(source.clone()),
                 },
             ])
             .expect("materialize");
@@ -194,12 +267,54 @@ mod tests {
             std::fs::read(root.join("src/main.rs")).expect("read back"),
             b"fn main() {}\n"
         );
+        // Content reads back identically whether the platform linked or
+        // copied the closure entry.
         assert_eq!(
-            std::fs::read_link(root.join("taplo.toml")).expect("link"),
-            PathBuf::from("/checked/in/taplo.toml")
+            std::fs::read(root.join("taplo.toml")).expect("closure entry"),
+            b"config = true\n"
+        );
+        #[cfg(unix)]
+        assert_eq!(
+            std::fs::read_link(root.join("taplo.toml")).expect("symlink preferred on unix"),
+            source,
         );
         drop(scratch);
         assert!(!root.exists(), "scratch is removed on drop");
+        std::fs::remove_dir_all(&parent).expect("materialize cleanup");
+    }
+
+    #[test]
+    fn materialize_copies_closure_entry_when_link_path_exists() {
+        // A pre-existing file at the link path makes symlinking fail,
+        // so the closure entry falls back to a copy: identical content,
+        // no symlink left behind.
+        let parent = std::env::temp_dir().join(format!("dx-fallback-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&parent);
+        std::fs::create_dir_all(&parent).expect("fallback parent");
+        let source = parent.join("native.toml");
+        std::fs::write(&source, b"config = true\n").expect("closure source");
+        let scratch = Scratch::create(&parent).expect("scratch");
+        let dest = scratch.root().join("taplo.toml");
+        std::fs::write(&dest, b"stale\n").expect("pre-existing link path");
+        scratch
+            .materialize(&[MirrorFile {
+                mirror_rel: PathBuf::from("taplo.toml"),
+                contents: MirrorContents::Link(source),
+            }])
+            .expect("fallback copy");
+        assert_eq!(
+            std::fs::read(&dest).expect("copied entry"),
+            b"config = true\n"
+        );
+        assert!(
+            !std::fs::symlink_metadata(&dest)
+                .expect("metadata")
+                .file_type()
+                .is_symlink(),
+            "fallback copies instead of linking"
+        );
+        scratch.close().expect("close");
+        std::fs::remove_dir_all(&parent).expect("fallback cleanup");
     }
 
     #[test]
@@ -234,27 +349,52 @@ mod tests {
     }
 
     #[test]
-    fn create_skips_collisions_and_gives_up_when_full() {
-        // A dedicated parent isolates the pre-created collisions from
-        // the other tests sharing the system temporary directory. The
-        // global claim counter only advances a handful of steps per
-        // test binary, so counters 0..512 always cover its candidates.
+    fn create_with_skips_collisions_and_gives_up_when_full() {
+        // A dedicated parent isolates the claims from the other tests
+        // sharing the system temporary directory. Deterministic
+        // suffixes prove the retry discipline: production names come
+        // from `unique_suffix` and cannot be pre-claimed.
         let parent = std::env::temp_dir().join(format!("dx-collision-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&parent);
         std::fs::create_dir_all(&parent).expect("collision parent");
-        for counter in 0..512 {
-            // The final assertions carry the check: if any pre-create
-            // failed, creation below would succeed and fail the test.
-            let claimed = parent.join(format!("dx-scratch-{}-{counter}", std::process::id()));
-            let _ = std::fs::create_dir(&claimed);
-        }
-        // Every candidate collides, so creation exhausts its retries.
-        assert!(Scratch::create(&parent).is_err());
+        std::fs::create_dir(parent.join("dx-scratch-taken")).expect("claim taken");
+        // A taken first candidate is skipped for the free one.
+        let mut attempts = ["taken", "free"].into_iter();
+        let scratch = Scratch::create_with(&parent, || attempts.next().expect("suffix").to_owned())
+            .expect("retry claims the free name");
+        assert_eq!(scratch.root(), parent.join("dx-scratch-free"));
+        scratch.close().expect("close");
+        // An always-taken suffix exhausts its retries.
+        assert!(Scratch::create_with(&parent, || "taken".to_owned()).is_err());
         std::fs::remove_dir_all(&parent).expect("collision cleanup");
-        // With the collisions gone the same parent works again.
-        std::fs::create_dir_all(&parent).expect("collision parent again");
-        let scratch = Scratch::create(&parent).expect("scratch after cleanup");
-        assert!(scratch.root().is_dir());
+    }
+
+    #[test]
+    fn scratch_names_are_unique() {
+        let parent = std::env::temp_dir();
+        let mut roots = Vec::new();
+        for _ in 0..64 {
+            let scratch = Scratch::create(&parent).expect("scratch");
+            roots.push(scratch.root().to_owned());
+            scratch.close().expect("close");
+        }
+        roots.sort();
+        roots.dedup();
+        assert_eq!(roots.len(), 64, "every scratch claims a distinct tree");
+    }
+
+    #[test]
+    fn close_removes_tree_and_surfaces_errors() {
+        let scratch = Scratch::create(&std::env::temp_dir()).expect("scratch");
+        let root = scratch.root().to_owned();
+        scratch.close().expect("close removes the tree");
+        assert!(!root.exists(), "closed scratch is gone");
+        // A tree that vanished out from under the scratch surfaces its
+        // cleanup failure instead of dropping it in `Drop`.
+        let scratch = Scratch::create(&std::env::temp_dir()).expect("scratch");
+        let root = scratch.root().to_owned();
+        std::fs::remove_dir_all(&root).expect("pre-remove");
+        assert!(scratch.close().is_err(), "missing tree is an error");
     }
 
     #[test]
@@ -267,6 +407,21 @@ mod tests {
                 ("LD_LIBRARY_PATH".to_owned(), "/lib".to_owned()),
             ]
         );
+    }
+
+    #[test]
+    fn hermetic_env_tmpdir_is_never_shadowed() {
+        let env = hermetic_env(
+            Path::new("/tmp/dx"),
+            &[("TMPDIR", "/evil"), ("LD_LIBRARY_PATH", "/lib")],
+        );
+        assert_eq!(
+            env.iter().filter(|(key, _)| key == "TMPDIR").count(),
+            1,
+            "exactly one TMPDIR"
+        );
+        assert_eq!(env[0], ("TMPDIR".to_owned(), "/tmp/dx".to_owned()));
+        assert!(env.contains(&("LD_LIBRARY_PATH".to_owned(), "/lib".to_owned())));
     }
 
     #[test]

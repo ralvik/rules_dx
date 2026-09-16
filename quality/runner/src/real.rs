@@ -189,6 +189,18 @@ fn write_all(scratch: &Scratch, tool_id: &str, mirrors: &[MirrorFile]) -> Result
         .map_err(|err| execution(tool_id, format!("materialize: {err}")))
 }
 
+/// Closes `scratch`, surfacing cleanup failures as action errors, and
+/// returns `value`. Owners use this for every success return so a
+/// failed cleanup fails the action instead of vanishing in `Drop`;
+/// early-error paths propagate their primary error and rely on the
+/// best-effort `Drop` fallback.
+fn cleaned<T>(tool_id: &str, scratch: Scratch, value: T) -> Result<T, RunnerError> {
+    scratch
+        .close()
+        .map_err(|err| execution(tool_id, format!("scratch cleanup: {err}")))?;
+    Ok(value)
+}
+
 /// Selects the working directory for tools with no config flag that
 /// discover native config upward from the working directory (Buildifier,
 /// Clippy): the mirrored config's parent when hinted, so discovery finds
@@ -768,7 +780,7 @@ impl RealBackend {
                 })?,
             );
         }
-        Ok(diagnostics)
+        cleaned(tool_id, scratch, diagnostics)
     }
 
     /// Applies one fix round to a single file's bytes and returns the
@@ -882,9 +894,10 @@ impl RealBackend {
         };
         let out = self.run(tool_id, tool, &invocation, &scratch)?;
         if out.code != Some(0) {
-            return Ok(text.to_owned());
+            return cleaned(tool_id, scratch, text.to_owned());
         }
-        Self::reread_fixed(tool_id, &absolute)
+        let fixed = Self::reread_fixed(tool_id, &absolute)?;
+        cleaned(tool_id, scratch, fixed)
     }
 
     /// Runs one Ruff fix round: `format` for format pipelines,
@@ -916,9 +929,10 @@ impl RealBackend {
             out.code != Some(0) && out.code != Some(1)
         };
         if keep_input {
-            return Ok(text.to_owned());
+            return cleaned(TOOL_ID, scratch, text.to_owned());
         }
-        Self::reread_fixed(TOOL_ID, &absolute)
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
     }
 
     /// Runs one Biome format fix round: `format --write` (in-place).
@@ -937,9 +951,10 @@ impl RealBackend {
         let invocation = commands::biome_format_fix(&tool.binary, &refs, &config_dir);
         let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
         if out.code != Some(0) {
-            return Ok(text.to_owned());
+            return cleaned(TOOL_ID, scratch, text.to_owned());
         }
-        Self::reread_fixed(TOOL_ID, &absolute)
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
     }
 
     /// Runs one Prettier format fix round: `--write` (in-place).
@@ -956,9 +971,10 @@ impl RealBackend {
         let invocation = commands::prettier_fix(&tool.binary, &refs);
         let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
         if out.code != Some(0) {
-            return Ok(text.to_owned());
+            return cleaned(TOOL_ID, scratch, text.to_owned());
         }
-        Self::reread_fixed(TOOL_ID, &absolute)
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
     }
 
     /// Runs one ESLint lint fix round: `-c <config> --fix` (in-place).
@@ -982,9 +998,10 @@ impl RealBackend {
         let invocation = commands::eslint_fix(&tool.binary, &refs, cfg);
         let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
         if out.code != Some(0) && out.code != Some(1) {
-            return Ok(text.to_owned());
+            return cleaned(TOOL_ID, scratch, text.to_owned());
         }
-        Self::reread_fixed(TOOL_ID, &absolute)
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
     }
 }
 
