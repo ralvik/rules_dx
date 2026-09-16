@@ -210,6 +210,50 @@ fn run() -> i32 {
             return pre_exec_code();
         }
     };
+    // Version-skew gate (issue #214): a drifted `.dx/version` pin refuses
+    // mutating/generating commands before any Bazel work starts, with a
+    // diagnostic naming the three versions and the repair. Read-only
+    // commands warn and proceed; the diagnose/repair path stays usable.
+    // One small file read, no subprocesses.
+    let pin = dx_cli::skew::read_pin(&workspace);
+    match dx_cli::skew::disposition(
+        invocation.command,
+        invocation.dry_run,
+        dx_cli::skew::is_skewed(&pin),
+    ) {
+        dx_cli::skew::SkewDisposition::Proceed => {}
+        dx_cli::skew::SkewDisposition::Warn => {
+            let _ = writeln!(
+                io::stderr(),
+                "dx: warning: {} (proceeding: read-only or --dry-run invocation)",
+                dx_cli::skew::diagnostic(&pin)
+            );
+        }
+        dx_cli::skew::SkewDisposition::Refuse => {
+            let message = dx_cli::skew::diagnostic(&pin);
+            let stdout = io::stdout();
+            let mut out = stdout.lock();
+            let mut err = io::stderr();
+            let _ = writeln!(err, "dx: {message}");
+            if invocation.output == OutputMode::Json {
+                if let Ok(event) = error_event("version_skew", &message, None, None, None) {
+                    let _ = write_event(&mut out, &event);
+                }
+                let _ = write_event(
+                    &mut out,
+                    &command_finished(
+                        operational_code(),
+                        &FinishedCounts {
+                            results_complete: Some(false),
+                            ..FinishedCounts::default()
+                        },
+                    ),
+                );
+            }
+            let _ = out.flush();
+            return operational_code();
+        }
+    }
     let pid = std::process::id();
     // Unique scratch directory per invocation (issue #93): embeds a
     // fresh nonce so recycled PIDs and concurrent runs never share

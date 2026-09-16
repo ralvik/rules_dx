@@ -14,7 +14,11 @@ execution lands.
 
 Per-repository `dx` version pinning uses a Bazelisk-style launcher
 resolving the checked-in `.dx/version` pin (SemVer); `dx` version equals the pinned
-`rules_dx` module version (`0.0.0`). The launcher refuses skew; `dx version --pin <ver>`
+`rules_dx` module version (`0.0.0`). The launcher refuses skew on every
+workspace command at startup (fail on mutating/generating commands, warn
+on read-only ones; see the
+[startup skew gate](../cli/commands/status-version.md#startup-skew-gate));
+`dx version --pin <ver>`
 bumps from verified release artifacts only and `dx version --rollback` re-pins the
 previous release. See
 [distribution](../environments/environment.md#distribution).

@@ -16,6 +16,7 @@ pub mod plan;
 pub mod platform;
 pub mod reports;
 pub mod resolve;
+pub mod skew;
 
 pub use args::{ArgsError, Command, Invocation, ReportRequest};
 pub use exec::{execute, Env};

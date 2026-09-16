@@ -40,4 +40,27 @@ neither combines with `--check` (exit `2`), and both accept `--dry-run`
 version, or a rollback with nothing to restore, fails operationally
 (exit `1`).
 
+## Startup skew gate
+
+Every workspace command checks the `.dx/version` pin at startup, before
+any Bazel work starts (one file read, no subprocesses). On skew the
+diagnostic names the three versions (binary, pin, module) and the repair:
+
+```text
+dx: version skew: binary 0.0.0 pin 9.9.9 module 0.0.0; fix with `dx version --pin 0.0.0` or `dx version --rollback`
+```
+
+Fail vs warn follows command class (decided in
+[issue #214](https://github.com/ralvik/rules_dx/issues/214)):
+
+- Proceed silently: `version`, `status` (the diagnose/repair path),
+  `completion` (no version semantics).
+- Warn on stderr and proceed: `check`, `audit`, `owners`, `deps`, `why`
+  (read-only), plus any `--dry-run` preview (never mutates).
+- Refuse (exit `1`, with a `version_skew` error event in JSON mode):
+  every other command.
+
+A missing or empty pin is a never-pinned tree, not skew, so fresh
+checkouts proceed.
+
 There is no `dx doctor` per [ADR 0006](../../decisions/0006-cli-command-surface.md).

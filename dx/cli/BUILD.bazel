@@ -33,6 +33,7 @@ rust_library(
         "src/platform.rs",
         "src/reports.rs",
         "src/resolve.rs",
+        "src/skew.rs",
     ],
     aliases = aliases(
         package_name = "dx/dx_cli",
