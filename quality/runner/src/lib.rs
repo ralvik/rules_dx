@@ -10,7 +10,7 @@
 //! Real tool process execution lands with later adapters; the convergence,
 //! snapshot, diagnostic, and edit-derivation semantics here are final.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 use quality_result::{
     digest,
@@ -18,7 +18,7 @@ use quality_result::{
         Capability, Convergence, Diagnostic, Edit, FileEdits, FileSnapshot, QualityResult,
         Severity, Stage,
     },
-    MAX_COMPLETED_ROUNDS, SCHEMA_MAJOR, SCHEMA_MINOR,
+    DIGEST_LEN, MAX_COMPLETED_ROUNDS, SCHEMA_MAJOR, SCHEMA_MINOR,
 };
 
 pub mod real;
@@ -156,6 +156,21 @@ fn collect_diagnostics(tool_id: &str, path: &str, text: &str) -> Vec<Diagnostic>
     out
 }
 
+/// Canonical identity of one converged-run state: BLAKE3 over the
+/// concatenation of per-file `(digest(path), digest(body))` pairs in
+/// sorted-path order. Keys never change within a run, so equal maps
+/// hash equal; distinct maps collide only by breaking BLAKE3. Hashing
+/// borrows the map, so the oscillation history stores 32-byte ids
+/// instead of full-map clones and probes in O(1).
+fn state_digest(files: &BTreeMap<String, String>) -> [u8; 32] {
+    let mut canonical = Vec::with_capacity(files.len() * 2 * DIGEST_LEN);
+    for (path, body) in files {
+        canonical.extend_from_slice(&digest(path.as_bytes()));
+        canonical.extend_from_slice(&digest(body.as_bytes()));
+    }
+    digest(&canonical)
+}
+
 fn run_convergence(
     initial: &BTreeMap<String, String>,
     stages: &[StageSpec],
@@ -163,27 +178,40 @@ fn run_convergence(
     apply: impl Fn(&str, &str, &str) -> Result<String, RunnerError>,
 ) -> Result<(BTreeMap<String, String>, u32, Convergence), RunnerError> {
     let mut current = initial.clone();
-    let mut seen = vec![initial.clone()];
+    let mut seen = HashSet::with_capacity(max_rounds.min(1024) as usize + 1);
+    let mut prev_id = state_digest(initial);
+    seen.insert(prev_id);
     let mut completed_rounds = 0;
     for round in 1..=max_rounds {
         completed_rounds = round;
-        let before = current.clone();
+        let mut changed = false;
         for stage in stages {
             for path in &stage.source_paths {
                 let body = current
                     .get(path)
                     .ok_or(RunnerError::MissingFile { path: path.clone() })?;
                 let next = apply(&stage.tool_id, path, body)?;
+                if next != *body {
+                    changed = true;
+                }
                 current.insert(path.clone(), next);
             }
         }
-        if current == before {
+        if !changed {
             return Ok((current, completed_rounds, Convergence::Stable));
         }
-        if seen.contains(&current) {
+        // Applies may move individual files yet return the map to its
+        // round-start state (e.g. two formatters undoing each other), so
+        // stability compares round-end to round-start identity, exactly
+        // like the old full-map equality but over 32-byte digests.
+        let id = state_digest(&current);
+        if id == prev_id {
+            return Ok((current, completed_rounds, Convergence::Stable));
+        }
+        if !seen.insert(id) {
             return Ok((current, completed_rounds, Convergence::Oscillation));
         }
-        seen.push(current.clone());
+        prev_id = id;
     }
     Ok((current, completed_rounds, Convergence::IterationLimit))
 }
@@ -710,6 +738,50 @@ mod tests {
             run_convergence(&initial, &stages, 3, grow).expect("converged");
         assert_eq!(convergence, Convergence::IterationLimit);
         assert_eq!(completed, 3);
+    }
+
+    #[test]
+    fn convergence_scales_linearly_in_rounds_and_files() {
+        // Only the last file (sorted last, so a full-map comparison
+        // must walk every entry before finding the difference) changes
+        // each round, producing a unique state per round. A linear
+        // history scan over full-map clones is quadratic here and
+        // effectively hangs; the digest set stays linear.
+        const FILES: usize = 300;
+        const ROUNDS: u32 = 4_000;
+        let paths: Vec<String> = (0..FILES).map(|i| format!("src/f{i:03}.rs")).collect();
+        let last = paths.last().expect("files").clone();
+        let stages = vec![StageSpec {
+            tool_id: "lint-a".to_owned(),
+            class_ids: vec!["rust".to_owned()],
+            source_paths: paths.clone(),
+        }];
+        let mut initial = BTreeMap::new();
+        for path in &paths {
+            initial.insert(path.clone(), "v0".to_owned());
+        }
+        let counter = std::cell::Cell::new(0u32);
+        let bump_last = |_: &str, path: &str, text: &str| {
+            if path == last {
+                let n = counter.get() + 1;
+                counter.set(n);
+                Ok(format!("{text}+{n}"))
+            } else {
+                Ok(text.to_owned())
+            }
+        };
+        let (terminal, completed, convergence) =
+            run_convergence(&initial, &stages, ROUNDS, bump_last).expect("converged");
+        assert_eq!(convergence, Convergence::IterationLimit);
+        assert_eq!(completed, ROUNDS);
+        assert_eq!(counter.get(), ROUNDS);
+        assert_eq!(
+            terminal.get(&last).expect("last file staged"),
+            &format!(
+                "v0{}",
+                (1..=ROUNDS).map(|n| format!("+{n}")).collect::<String>()
+            )
+        );
     }
 
     #[test]
