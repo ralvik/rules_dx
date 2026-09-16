@@ -9,11 +9,11 @@ name: ci
 on:
   pull_request: {}
   push:
-    branches: [$default-branch]
+    branches: [main]
   workflow_dispatch: {}
 jobs:
   dx:
-    uses: rules_dx/.github/workflows/reusable-consumer.yml@0938bf7de121cdc4fb29ad288e219d1bb69c0ba9
+    uses: rules_dx/.github/workflows/reusable-consumer.yml@acbd29ebb1b35586d93c5de7f33c5d55bf798b5b
     with:
       rules_dx_version: "0.0.0"
       disabled_checks: ""

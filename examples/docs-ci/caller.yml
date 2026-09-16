@@ -9,11 +9,11 @@ name: docs
 on:
   pull_request: {}
   push:
-    branches: [$default-branch]
+    branches: [main]
   workflow_dispatch: {}
 jobs:
   docs:
-    uses: rules_dx/.github/workflows/reusable-docs.yml@aacf640300998e518d5bbce6ef403bd54b8e8314
+    uses: rules_dx/.github/workflows/reusable-docs.yml@acbd29ebb1b35586d93c5de7f33c5d55bf798b5b
     with:
       rules_dx_version: "0.0.0"
       docs_scope: "//docs/..."

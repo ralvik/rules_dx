@@ -76,6 +76,25 @@ sh_test(
     ],
 )
 
+# Example caller pin-sync harness (issue #209): both example callers
+# (consumer-ci, docs-ci) share one reviewed reusable-workflow pin; drift
+# between them fails the gate, so a deliberate bump moves both in one
+# reviewed change.
+sh_test(
+    name = "examples_pins_test",
+    srcs = ["examples_pins_test.sh"],
+    args = [
+        "$(rootpath //examples:consumer-ci/caller.yml)",
+        "$(rootpath //examples:docs-ci/caller.yml)",
+        "$(rootpath //:MODULE.bazel)",
+    ],
+    data = [
+        "//:MODULE.bazel",
+        "//examples:consumer-ci/caller.yml",
+        "//examples:docs-ci/caller.yml",
+    ],
+)
+
 # Seed-cell coverage gate harness (issue #89 item 1): runs the real
 # scoped `bazel coverage` report through the `check` gate CLI against the
 # versioned seed inventory, with mutated-input negatives proving it fails

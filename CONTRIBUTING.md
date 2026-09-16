@@ -52,6 +52,8 @@ ADR or domain contract.
   outputs without explicit owner approval. `dist/` and `release/` are
   git-ignored build outputs, never committed.
 - The module stays at `0.0.0`; consumers (including
-  `examples/consumer-ci/caller.yml`) pin reviewed commits, never release
-  tags. Caller pins stay frozen at the last qualified commit and move only
+  `examples/consumer-ci/caller.yml` and `examples/docs-ci/caller.yml`)
+  pin reviewed commits, never release tags. Caller pins stay frozen at
+  the last qualified commit, stay in sync across both example callers
+  (drift fails `//tools/ci:examples_pins_test`), and move only together
   in a deliberate, reviewed bump.

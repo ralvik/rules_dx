@@ -2,25 +2,17 @@
 
 This directory templates third-party reuse of the docs workflow at
 `../../.github/workflows/reusable-docs.yml`. Copy `caller.yml` to
-`.github/workflows/docs.yml` in the consumer repo and set the pin to a
-reviewed commit; never copy the check or deploy steps.
+`.github/workflows/docs.yml` in the consumer repo; never copy the check
+or deploy steps. `caller.yml` is the single source for the caller shape:
+its pin is already a reviewed commit, shared with the consumer-ci caller
+(drift fails `//tools/ci:examples_pins_test`); bumps are deliberate and
+reviewed, customizations preserved, no silent upgrades.
 
-```yaml
-jobs:
-  docs:
-    uses: rules_dx/.github/workflows/reusable-docs.yml@<reviewed-commit>
-    with:
-      rules_dx_version: "0.0.0"
-      docs_scope: "//docs/..."
-      docs_dir: "docs"
-      publish: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    # Required: the reusable publish job needs pages:write +
-    # id-token:write, so grant them on the calling job. No
-    # secrets: inherit: the workflow defines no secrets.
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
+The consumer module pins the same version the caller passes as
+`rules_dx_version` (`0.0.0` today):
+
+```python
+bazel_dep(name = "rules_dx", version = "0.0.0")
 ```
 
 `docs-check` runs `dx lint --check` over
@@ -31,3 +23,7 @@ Pages with source GitHub Actions in repository settings before the
 first publishing run. This repository self-calls the workflow in
 `../../.github/workflows/ci.yml` (check-only on pull requests,
 publishing on `main`).
+
+The reusable publish job needs `pages:write` + `id-token:write`, so the
+calling job grants them (see `permissions` in `caller.yml`). No
+`secrets: inherit`: the workflow defines no secrets.
