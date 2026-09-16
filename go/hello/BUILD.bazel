@@ -1,5 +1,6 @@
 """M22 seed Go binary and library; consumer of go_* wrappers."""
 
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//go/rules:defs.bzl", "go_binary", "go_library", "go_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
@@ -30,4 +31,17 @@ go_test(
 real_source_target(
     name = "corpus",
     starlark_srcs = ["BUILD.bazel"],
+)
+
+# Hello smoke as a test target (#87, same pattern as
+# //rust/hello:hello_output_test): asserts the seed binary prints the
+# expected greeting. Tagged `no-coverage`: process-spawning tests stay
+# out of the coverage denominator per the repo coverage preset. No corpus
+# entry: shell sources have no `real_source_target` class.
+sh_test(
+    name = "hello_output_test",
+    srcs = ["hello_output_test.sh"],
+    args = ["$(rootpath :hello)"],
+    data = [":hello"],
+    tags = ["no-coverage"],
 )
