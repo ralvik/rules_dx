@@ -284,7 +284,7 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
                     out,
                     err,
                     CODE_DIFF_FAILED,
-                    &format!("failed to render patch: {error:?}"),
+                    &format!("failed to render patch: {error}"),
                 );
             }
         }

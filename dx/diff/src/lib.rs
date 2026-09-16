@@ -35,17 +35,24 @@ pub struct FilePatch<'a> {
     pub candidate: &'a str,
 }
 
-/// Diff rendering failure.
+/// Diff rendering failure (issue #211 slice, #221 follow-up).
+///
+/// Every variant renders human-readable via `Display` for CLI
+/// operational diagnostics; binaries render via `to_string()`, never
+/// Rust `Debug`.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{self:?}")]
 pub enum DiffError {
     /// A path cannot be represented unambiguously in unified form.
+    #[error("unrepresentable path {path:?}: paths with tab, carriage return, or line feed cannot be rendered")]
     UnrepresentablePath { path: String },
     /// The same path was supplied twice.
+    #[error("duplicate path {path:?}")]
     DuplicatePath { path: String },
     /// A create entry carries original bytes.
+    #[error("create {path:?} carries original bytes")]
     CreateWithOriginal { path: String },
     /// A modify entry whose candidate is byte-identical to its original.
+    #[error("no change for {path:?}: candidate is identical to original")]
     NoopPatch { path: String },
 }
 
@@ -497,34 +504,37 @@ mod tests {
     }
 
     #[test]
-    fn display_renders_debug_shape() {
+    fn display_is_human_readable() {
+        let unrepresentable = DiffError::UnrepresentablePath {
+            path: "a\tb".to_owned(),
+        };
         assert_eq!(
-            DiffError::UnrepresentablePath {
-                path: "a\tb".to_owned()
-            }
-            .to_string(),
-            "UnrepresentablePath { path: \"a\\tb\" }"
+            unrepresentable.to_string(),
+            "unrepresentable path \"a\\tb\": paths with tab, carriage return, or line feed cannot be rendered"
         );
+        assert!(!unrepresentable
+            .to_string()
+            .contains("UnrepresentablePath {"));
         assert_eq!(
             DiffError::DuplicatePath {
                 path: "a".to_owned()
             }
             .to_string(),
-            "DuplicatePath { path: \"a\" }"
+            "duplicate path \"a\""
         );
         assert_eq!(
             DiffError::CreateWithOriginal {
                 path: "n".to_owned()
             }
             .to_string(),
-            "CreateWithOriginal { path: \"n\" }"
+            "create \"n\" carries original bytes"
         );
         assert_eq!(
             DiffError::NoopPatch {
                 path: "a".to_owned()
             }
             .to_string(),
-            "NoopPatch { path: \"a\" }"
+            "no change for \"a\": candidate is identical to original"
         );
     }
 }
