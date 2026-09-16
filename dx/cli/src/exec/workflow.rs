@@ -220,7 +220,7 @@ fn execute_test_reports(request: TestReportsRequest<'_>) -> i32 {
                     out,
                     err,
                     CODE_INVALID_BEP,
-                    &format!("invalid build events: {error:?}"),
+                    &format!("invalid build events: {error}"),
                 );
             }
         },

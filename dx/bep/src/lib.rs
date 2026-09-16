@@ -77,34 +77,32 @@ pub struct TargetOutput {
     pub artifacts: Vec<CollectedArtifact>,
 }
 
-/// BEP collection failure.
+/// BEP collection failure (issue #211 slice).
+///
+/// Every variant renders human-readable via `Display` for CLI
+/// operational diagnostics; binaries render via `to_string()`, never
+/// Rust `Debug`.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{self:?}")]
 pub enum BepError {
+    /// The requested output group name is empty.
+    #[error("empty output group: want a non-empty output group name")]
     EmptyOutputGroup,
     /// A stream line is not a JSON build-event object with the required
     /// shape. `reason` carries the parse or shape detail without secrets.
-    MalformedEvent {
-        line: u64,
-        reason: String,
-    },
+    #[error("malformed event at line {line}: {reason}")]
+    MalformedEvent { line: u64, reason: String },
     /// A referenced artifact URI that is not a local `file://` URI, such
     /// as a remote `bytestream://` that Bazel never materialized. The CLI
     /// performs no network fetch.
-    UnsupportedUri {
-        uri: String,
-    },
+    #[error("unsupported artifact URI {uri:?}: want a local file:// URI")]
+    UnsupportedUri { uri: String },
     /// A completed target references a named set the stream never defined.
     /// `line` is the completion line holding the dangling reference.
-    MissingNamedSet {
-        id: String,
-        line: u64,
-    },
+    #[error("missing named set {id:?} referenced at line {line}")]
+    MissingNamedSet { id: String, line: u64 },
     /// A reported local file cannot be read.
-    UnreadableArtifact {
-        path: String,
-        message: String,
-    },
+    #[error("unreadable artifact {path:?}: {message}")]
+    UnreadableArtifact { path: String, message: String },
 }
 
 /// One test-action output file reported by a BEP `testResult` event:
@@ -600,8 +598,53 @@ mod tests {
     }
 
     #[test]
-    fn display_renders_debug_shape() {
-        assert_eq!(BepError::EmptyOutputGroup.to_string(), "EmptyOutputGroup");
+    fn display_is_human_readable() {
+        assert_eq!(
+            BepError::EmptyOutputGroup.to_string(),
+            "empty output group: want a non-empty output group name"
+        );
+        assert_eq!(
+            BepError::MalformedEvent {
+                line: 3,
+                reason: "invalid JSON: boom".to_owned(),
+            }
+            .to_string(),
+            "malformed event at line 3: invalid JSON: boom"
+        );
+        assert_eq!(
+            BepError::UnsupportedUri {
+                uri: "bytestream://x".to_owned(),
+            }
+            .to_string(),
+            "unsupported artifact URI \"bytestream://x\": want a local file:// URI"
+        );
+        assert_eq!(
+            BepError::MissingNamedSet {
+                id: "1".to_owned(),
+                line: 2,
+            }
+            .to_string(),
+            "missing named set \"1\" referenced at line 2"
+        );
+        assert_eq!(
+            BepError::UnreadableArtifact {
+                path: "/tmp/a".to_owned(),
+                message: "boom".to_owned(),
+            }
+            .to_string(),
+            "unreadable artifact \"/tmp/a\": boom"
+        );
+        for err in [
+            BepError::EmptyOutputGroup,
+            BepError::MalformedEvent {
+                line: 1,
+                reason: "x".to_owned(),
+            },
+        ] {
+            assert!(!err.to_string().contains("BepError"));
+            assert!(!err.to_string().contains("EmptyOutputGroup {"));
+            assert!(!err.to_string().contains("MalformedEvent {"));
+        }
     }
 
     #[test]

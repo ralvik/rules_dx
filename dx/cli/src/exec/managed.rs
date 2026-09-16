@@ -27,13 +27,13 @@ fn collect_managed_group(
     let config = CollectorConfig::new(group).map_err(|err| {
         (
             CODE_INVALID_BEP.to_owned(),
-            format!("invalid BEP config: {err:?}"),
+            format!("invalid BEP config: {err}"),
         )
     })?;
     collect(BufReader::new(file), &config, &FsArtifacts).map_err(|err| {
         (
             CODE_INVALID_BEP.to_owned(),
-            format!("invalid build events: {err:?}"),
+            format!("invalid build events: {err}"),
         )
     })
 }
