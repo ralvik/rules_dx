@@ -41,6 +41,7 @@ rust_library(
     crate_root = "src/lib.rs",
     deps = crate_deps(
         [
+            "clap",
             "libc",
             "quick-xml",
             "serde",
@@ -79,6 +80,7 @@ rust_binary(
     visibility = ["//visibility:public"],
     deps = crate_deps(
         [
+            "clap",
             "libc",
             "quick-xml",
             "serde",
@@ -104,6 +106,7 @@ rust_test(
     crate = ":dx_cli",
     deps = crate_deps(
         [
+            "clap",
             "libc",
             "quick-xml",
             "serde",
