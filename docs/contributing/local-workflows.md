@@ -100,10 +100,11 @@ and the inventory in `bazel test //...`. Owned build profiles
 (`dx_debug`/`dx_dev`/`dx_release`) are reviewed the same way; see
 [ADR 0021](../decisions/0021-build-profiles.md).
 
-Version bumps arrive as Renovate PRs (`renovate.json`, `bazel` manager, no
-auto-merge). The loop stays manual: run the regen, review the flag diff,
+Version bumps are manual: run the regen, review the flag diff,
 update the test pins, run full verification (`bazel build //...`,
 `bazel test //...`, plus the corpus dogfood above), then merge by hand.
+Version-bump bots are excluded per the
+[automation policy](automation.md).
 
 ## Linux-First Bring-Up
 
