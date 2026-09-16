@@ -33,7 +33,8 @@ pub fn digest(bytes: &[u8]) -> [u8; 32] {
 }
 
 /// Validation or codec failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{self:?}")]
 pub enum Error {
     Decode(String),
     UnsupportedMajor {
@@ -110,14 +111,6 @@ pub enum Error {
     },
     ReplacementsWithoutStability,
 }
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for Error {}
 
 fn check_path(at: &str, path: &str) -> Result<(), Error> {
     let reason = if path.is_empty() {

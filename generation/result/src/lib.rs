@@ -11,7 +11,8 @@ pub const SCHEMA_MAJOR: u32 = 1;
 pub const SCHEMA_MINOR: u32 = 0;
 pub const DIGEST_LEN: usize = 32;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{self:?}")]
 pub enum Error {
     Decode(String),
     UnsupportedMajor {
@@ -117,14 +118,6 @@ pub enum Error {
         index: usize,
     },
 }
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for Error {}
 
 pub fn digest(bytes: &[u8]) -> [u8; DIGEST_LEN] {
     *blake3::hash(bytes).as_bytes()

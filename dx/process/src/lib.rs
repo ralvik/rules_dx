@@ -34,54 +34,33 @@ impl Fs for RealFs {
 }
 
 /// Workspace discovery failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum DiscoverError {
     /// No `MODULE.bazel` found walking up from the start directory.
+    #[error(
+        "workspace_not_found: no MODULE.bazel in {searched_len} directorie(s); pass --workspace <path>",
+        searched_len = searched.len()
+    )]
     NotFound {
         /// Every ancestor directory considered, nearest first.
         searched: Vec<PathBuf>,
     },
     /// A legacy marker without `MODULE.bazel` was found instead.
+    #[error(
+        "unsupported_workspace: {dir} has WORKSPACE without MODULE.bazel; migrate to Bzlmod",
+        dir = dir.display()
+    )]
     UnsupportedLegacy {
         /// Directory holding the legacy marker.
         dir: PathBuf,
     },
     /// An explicit `--workspace` override holds no module marker.
+    #[error("workspace_not_found: --workspace {path} has no MODULE.bazel", path = path.display())]
     InvalidOverride {
         /// The rejected override directory.
         path: PathBuf,
     },
 }
-
-impl std::fmt::Display for DiscoverError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DiscoverError::NotFound { searched } => {
-                write!(
-                    f,
-                    "workspace_not_found: no MODULE.bazel in {} directorie(s); pass --workspace <path>",
-                    searched.len()
-                )
-            }
-            DiscoverError::UnsupportedLegacy { dir } => {
-                write!(
-                    f,
-                    "unsupported_workspace: {} has WORKSPACE without MODULE.bazel; migrate to Bzlmod",
-                    dir.display()
-                )
-            }
-            DiscoverError::InvalidOverride { path } => {
-                write!(
-                    f,
-                    "workspace_not_found: --workspace {} has no MODULE.bazel",
-                    path.display()
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for DiscoverError {}
 
 fn has_module(fs: &dyn Fs, dir: &Path) -> bool {
     fs.is_file(&dir.join("MODULE.bazel"))
@@ -138,19 +117,31 @@ pub fn discover_real(start: &Path, override_dir: Option<&Path>) -> Result<PathBu
 }
 
 /// Launcher selection failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum LauncherError {
     /// No `.bazelversion` pin in the workspace root.
+    #[error(
+        "bazel_unavailable: {workspace} has no .bazelversion pin",
+        workspace = workspace.display()
+    )]
     MissingPin {
         /// Workspace root that was inspected.
         workspace: PathBuf,
     },
     /// The `.bazelversion` pin is blank.
+    #[error(
+        "bazel_unavailable: {workspace} has an empty .bazelversion pin",
+        workspace = workspace.display()
+    )]
     EmptyPin {
         /// Workspace root that was inspected.
         workspace: PathBuf,
     },
     /// The `.bazelversion` pin could not be read.
+    #[error(
+        "bazel_unavailable: cannot read {workspace}/.bazelversion: {reason}",
+        workspace = workspace.display()
+    )]
     UnreadablePin {
         /// Workspace root that was inspected.
         workspace: PathBuf,
@@ -158,36 +149,6 @@ pub enum LauncherError {
         reason: String,
     },
 }
-
-impl std::fmt::Display for LauncherError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            LauncherError::MissingPin { workspace } => {
-                write!(
-                    f,
-                    "bazel_unavailable: {} has no .bazelversion pin",
-                    workspace.display()
-                )
-            }
-            LauncherError::EmptyPin { workspace } => {
-                write!(
-                    f,
-                    "bazel_unavailable: {} has an empty .bazelversion pin",
-                    workspace.display()
-                )
-            }
-            LauncherError::UnreadablePin { workspace, reason } => {
-                write!(
-                    f,
-                    "bazel_unavailable: cannot read {}/.bazelversion: {reason}",
-                    workspace.display()
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for LauncherError {}
 
 /// Reads the pinned Bazel version from `<workspace>/.bazelversion`.
 pub fn pinned_bazel_version(workspace: &Path, fs: &dyn Fs) -> Result<String, LauncherError> {
@@ -279,25 +240,29 @@ pub struct ProtectedFlag {
 
 /// Forwarding failure. Messages carry the flag name and policy only,
 /// never the supplied or generated option value.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ForwardError {
     /// A user option conflicts with required workflow policy.
+    #[error("conflicting_option: --{flag} conflicts with required workflow policy")]
     ConflictingOption {
         /// Bare flag name.
         flag: String,
     },
     /// A Bazel startup option was passed as a command option.
+    #[error("invalid_usage: --{flag} is a startup option; use dx bazel")]
     StartupOption {
         /// Bare flag name.
         flag: String,
     },
     /// Test-binary argument syntax was passed to a workflow command.
+    #[error("invalid_usage: --{flag} targets the test binary; use dx bazel")]
     TestBinaryArgs {
         /// Bare flag name.
         flag: String,
     },
     /// A required workflow option is missing from the planned required
     /// set. This signals an internal wiring error, never user input.
+    #[error("internal_error: required workflow option --{flag} is missing")]
     InvalidRequiredOption {
         /// Bare flag name.
         flag: String,
@@ -305,59 +270,19 @@ pub enum ForwardError {
     /// A required command setting is malformed. Settings must be
     /// `--name=value` workflow options; anything else is rejected
     /// instead of silently protecting the wrong flag name.
+    #[error("internal_error: malformed required setting {option}; expected --name=value")]
     InvalidSetting {
         /// The malformed setting option.
         option: String,
     },
     /// A command does not support the requested plan. This signals an
     /// internal dispatch error, never user input.
+    #[error("internal_error: {command} does not support this plan")]
     UnsupportedCommand {
         /// Command name.
         command: String,
     },
 }
-
-impl std::fmt::Display for ForwardError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ForwardError::ConflictingOption { flag } => {
-                write!(
-                    f,
-                    "conflicting_option: --{flag} conflicts with required workflow policy"
-                )
-            }
-            ForwardError::StartupOption { flag } => {
-                write!(
-                    f,
-                    "invalid_usage: --{flag} is a startup option; use dx bazel"
-                )
-            }
-            ForwardError::TestBinaryArgs { flag } => {
-                write!(
-                    f,
-                    "invalid_usage: --{flag} targets the test binary; use dx bazel"
-                )
-            }
-            ForwardError::InvalidRequiredOption { flag } => {
-                write!(
-                    f,
-                    "internal_error: required workflow option --{flag} is missing"
-                )
-            }
-            ForwardError::InvalidSetting { option } => {
-                write!(
-                    f,
-                    "internal_error: malformed required setting {option}; expected --name=value"
-                )
-            }
-            ForwardError::UnsupportedCommand { command } => {
-                write!(f, "internal_error: {command} does not support this plan")
-            }
-        }
-    }
-}
-
-impl std::error::Error for ForwardError {}
 
 fn flag_name(arg: &str) -> Option<String> {
     if !arg.starts_with("--") {
@@ -507,23 +432,12 @@ pub fn quality_keeps_going(is_quality: bool) -> bool {
 }
 
 /// Dry-run gating failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum DryRunError {
     /// The requested work would execute a final workflow or action.
+    #[error("dry-run: workflow execution is disabled")]
     WouldExecuteAction,
 }
-
-impl std::fmt::Display for DryRunError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DryRunError::WouldExecuteAction => {
-                write!(f, "dry-run: workflow execution is disabled")
-            }
-        }
-    }
-}
-
-impl std::error::Error for DryRunError {}
 
 /// Decides whether dry-run may proceed. Read-only resolution queries
 /// may run; final workflows never run, and resolution that would
