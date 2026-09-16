@@ -623,12 +623,17 @@ fn clean_stage(stage_dir: &Path) {
 mod tests {
     use super::*;
 
-    /// Unique scratch root per test; callers clean up best-effort at the end.
-    fn test_root(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("dx-env-test-{}-{name}", std::process::id()));
-        let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).expect("create test root");
-        dir
+    /// Unique scratch root per test, removed on scope exit (including
+    /// panics). Callers snapshot `scratch.path()` into a `PathBuf`;
+    /// explicit trailing cleanups stay as success-path failure
+    /// surfacing, mirroring the `Scratch::close`/drop contract.
+    fn test_root(name: &str) -> tempfile::TempDir {
+        let scratch = tempfile::Builder::new()
+            .prefix(format!("dx-env-test-{name}-").as_str())
+            .tempdir_in(std::env::temp_dir())
+            .expect("create test root");
+        fs::create_dir_all(scratch.path()).expect("create test root");
+        scratch
     }
 
     /// One tool plan with a single host name.
@@ -768,7 +773,8 @@ mod tests {
 
     #[test]
     fn parse_staged_ok() {
-        let root = test_root("parse-ok");
+        let scratch = test_root("parse-ok");
+        let root = scratch.path().to_path_buf();
         let (_, _, text) = write_staged(
             &root,
             &[
@@ -912,7 +918,8 @@ mod tests {
 
     #[test]
     fn workspace_missing() {
-        let root = test_root("ws-missing");
+        let scratch = test_root("ws-missing");
+        let root = scratch.path().to_path_buf();
         let (staged_bin, metadata, _) = write_staged(&root, &[("a", "//o:a", &["a"])]);
         let mut opts = options(&root, staged_bin, metadata);
         opts.workspace_root = root.join("no-such-dir");
@@ -925,7 +932,8 @@ mod tests {
 
     #[test]
     fn staged_inputs_fail_before_workspace_mutation() {
-        let root = test_root("staged-fail");
+        let scratch = test_root("staged-fail");
+        let root = scratch.path().to_path_buf();
         let (staged_bin, metadata, _) = write_staged(&root, &[("a", "//o:a", &["a"])]);
         let missing_metadata = options(&root, staged_bin.clone(), root.join("nope.json"));
         assert!(matches!(
@@ -943,7 +951,8 @@ mod tests {
 
     #[test]
     fn staged_rejects_non_link_and_dangling() {
-        let root = test_root("staged-links");
+        let scratch = test_root("staged-links");
+        let root = scratch.path().to_path_buf();
         let (staged_bin, metadata, text) = write_staged(&root, &[("a", "//o:a", &["a"])]);
         fs::remove_file(staged_bin.join("a")).expect("remove link");
         fs::write(staged_bin.join("a"), "regular file, not a link").expect("clobber link");
@@ -965,7 +974,8 @@ mod tests {
 
     #[test]
     fn fresh_install_noop_and_replacement() {
-        let root = test_root("lifecycle");
+        let scratch = test_root("lifecycle");
+        let root = scratch.path().to_path_buf();
         let (staged_bin, metadata, _) =
             write_staged(&root, &[("alpha", "//o:alpha", &["alpha", "a"])]);
         let opts = options(&root, staged_bin, metadata);
@@ -995,7 +1005,8 @@ mod tests {
     fn workspace_path_with_spaces_installs() {
         // M11 evidence: the installer never shells out, so workspace roots
         // containing spaces install and resolve exactly like plain paths.
-        let root = test_root("with space");
+        let scratch = test_root("with space");
+        let root = scratch.path().to_path_buf();
         let (staged_bin, metadata, _) = write_staged(&root, &[("a", "//o:a", &["a"])]);
         let opts = options(&root, staged_bin, metadata);
         assert_eq!(refresh_ok(&opts), RefreshOutcome::InstalledFresh);
@@ -1017,7 +1028,8 @@ mod tests {
 
     #[test]
     fn already_current_cleans_stale_staging() {
-        let root = test_root("noop-clean");
+        let scratch = test_root("noop-clean");
+        let root = scratch.path().to_path_buf();
         let (staged_bin, metadata, _) = write_staged(&root, &[("a", "//o:a", &["a"])]);
         let opts = options(&root, staged_bin, metadata);
         assert_eq!(refresh_ok(&opts), RefreshOutcome::InstalledFresh);
@@ -1031,7 +1043,8 @@ mod tests {
 
     #[test]
     fn unmanaged_states_refuse_without_mutation() {
-        let root = test_root("unmanaged");
+        let scratch = test_root("unmanaged");
+        let root = scratch.path().to_path_buf();
         let (staged_bin, metadata, _) = write_staged(&root, &[("a", "//o:a", &["a"])]);
         let opts = options(&root, staged_bin, metadata);
         let dx = root.join("ws").join(".dx");
@@ -1082,7 +1095,8 @@ mod tests {
     #[test]
     fn stale_prev_undeletable_reports_install() {
         use std::os::unix::fs::PermissionsExt;
-        let root = test_root("stale-prev-perms");
+        let scratch = test_root("stale-prev-perms");
+        let root = scratch.path().to_path_buf();
         let (staged_bin, metadata, _) = write_staged(&root, &[("a", "//o:a", &["a"])]);
         let opts = options(&root, staged_bin, metadata);
         assert!(matches!(
@@ -1110,7 +1124,8 @@ mod tests {
     #[test]
     fn stale_stage_undeletable_reports_install() {
         use std::os::unix::fs::PermissionsExt;
-        let root = test_root("stale-stage-perms");
+        let scratch = test_root("stale-stage-perms");
+        let root = scratch.path().to_path_buf();
         let (staged_bin, metadata, _) = write_staged(&root, &[("a", "//o:a", &["a"])]);
         let opts = options(&root, staged_bin, metadata);
         // Fresh workspace with a pre-seeded `.dx`: the lock file already
@@ -1131,7 +1146,8 @@ mod tests {
 
     #[test]
     fn duplicate_host_name_reports_install() {
-        let root = test_root("dup-host");
+        let scratch = test_root("dup-host");
+        let root = scratch.path().to_path_buf();
         let target_a = root.join("tool-a");
         let target_b = root.join("tool-b");
         fs::write(&target_a, b"a").expect("target a");
@@ -1151,7 +1167,8 @@ mod tests {
 
     #[test]
     fn newer_marker_refuses_with_upgrade_guidance() {
-        let root = test_root("newer-marker");
+        let scratch = test_root("newer-marker");
+        let root = scratch.path().to_path_buf();
         let (staged_bin, metadata, _) = write_staged(&root, &[("a", "//o:a", &["a"])]);
         let opts = options(&root, staged_bin, metadata);
         let bin = root.join("ws").join(".dx").join("bin");
@@ -1171,7 +1188,8 @@ mod tests {
 
     #[test]
     fn crash_between_renames_restores_then_replaces() {
-        let root = test_root("crash");
+        let scratch = test_root("crash");
+        let root = scratch.path().to_path_buf();
         let (staged_bin, metadata, _) = write_staged(&root, &[("old", "//o:old", &["old"])]);
         let opts = options(&root, staged_bin, metadata);
         assert_eq!(refresh_ok(&opts), RefreshOutcome::InstalledFresh);
@@ -1187,7 +1205,8 @@ mod tests {
 
     #[test]
     fn stale_prev_is_cleared() {
-        let root = test_root("stale-prev");
+        let scratch = test_root("stale-prev");
+        let root = scratch.path().to_path_buf();
         let (staged_bin, metadata, _) = write_staged(&root, &[("a", "//o:a", &["a"])]);
         let opts = options(&root, staged_bin, metadata);
         assert_eq!(refresh_ok(&opts), RefreshOutcome::InstalledFresh);
@@ -1200,7 +1219,8 @@ mod tests {
 
     #[test]
     fn busy_lock_fails_after_deadline() {
-        let root = test_root("busy");
+        let scratch = test_root("busy");
+        let root = scratch.path().to_path_buf();
         let dx = root.join("ws").join(".dx");
         fs::create_dir_all(&dx).expect("dx dir");
         let _held = acquire_lock(&dx, Duration::from_secs(10)).expect("setup lock");
@@ -1215,7 +1235,8 @@ mod tests {
 
     #[test]
     fn lock_open_failure_aborts() {
-        let root = test_root("lock-open");
+        let scratch = test_root("lock-open");
+        let root = scratch.path().to_path_buf();
         let (staged_bin, metadata, _) = write_staged(&root, &[("a", "//o:a", &["a"])]);
         let opts = options(&root, staged_bin, metadata);
         let dx = root.join("ws").join(".dx");
@@ -1230,7 +1251,8 @@ mod tests {
 
     #[test]
     fn dx_creation_failure_aborts() {
-        let root = test_root("dx-create");
+        let scratch = test_root("dx-create");
+        let root = scratch.path().to_path_buf();
         let (staged_bin, metadata, _) = write_staged(&root, &[("a", "//o:a", &["a"])]);
         let opts = options(&root, staged_bin, metadata);
         fs::create_dir_all(root.join("ws")).expect("ws dir");
@@ -1244,7 +1266,8 @@ mod tests {
 
     #[test]
     fn probe_failure_reports_before_mutation() {
-        let root = test_root("probe-fail");
+        let scratch = test_root("probe-fail");
+        let root = scratch.path().to_path_buf();
         let (staged_bin, metadata, _) = write_staged(&root, &[("a", "//o:a", &["a"])]);
         let failing = |_: &Path| -> io::Result<()> {
             Err(io::Error::new(io::ErrorKind::PermissionDenied, "denied"))
@@ -1269,7 +1292,8 @@ mod tests {
 
     #[test]
     fn default_probe_accepts_writable_dir() {
-        let root = test_root("probe-ok");
+        let scratch = test_root("probe-ok");
+        let root = scratch.path().to_path_buf();
         probe_symlink(&root).expect("probe succeeds");
         assert!(!root.join("symlink.probe").exists());
         let _ = fs::remove_dir_all(&root);

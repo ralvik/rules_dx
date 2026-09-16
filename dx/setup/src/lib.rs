@@ -1025,11 +1025,13 @@ mod tests {
         }
     }
 
-    fn commit_root(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("dx-setup-test-{}-{name}", std::process::id()));
-        let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(dir.join("ws")).expect("create workspace");
-        dir
+    fn commit_root(name: &str) -> tempfile::TempDir {
+        let scratch = tempfile::Builder::new()
+            .prefix(format!("dx-setup-test-{name}-").as_str())
+            .tempdir_in(std::env::temp_dir())
+            .expect("create test scratch");
+        fs::create_dir_all(scratch.path().join("ws")).expect("create workspace");
+        scratch
     }
 
     fn workspace_of(root: &Path) -> PathBuf {
@@ -1060,7 +1062,8 @@ mod tests {
 
     #[test]
     fn fresh_install_noop_and_replacement() {
-        let root = commit_root("lifecycle");
+        let scratch = commit_root("lifecycle");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         assert_eq!(read_current_pair(&workspace).expect("read"), None);
         assert_eq!(
@@ -1098,7 +1101,8 @@ mod tests {
 
     #[test]
     fn workspace_path_with_spaces_commits() {
-        let root = commit_root("with space");
+        let scratch = commit_root("with space");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         assert_eq!(
             commit_ok(&workspace, &pair('a', 'b')),
@@ -1113,7 +1117,8 @@ mod tests {
 
     #[test]
     fn prepared_commits_carry_forward_under_one_lock() {
-        let root = commit_root("carry-commit");
+        let scratch = commit_root("carry-commit");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let sides = |env: Option<char>, gen: Option<char>| PreparedSides {
             prepared_environment: env.map(generation),
@@ -1136,7 +1141,8 @@ mod tests {
 
     #[test]
     fn prepared_without_capability_fails_before_mutation() {
-        let root = commit_root("no-capability");
+        let scratch = commit_root("no-capability");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let error = commit_prepared(
             &workspace,
@@ -1155,7 +1161,8 @@ mod tests {
 
     #[test]
     fn record_mismatch_preserves_current() {
-        let root = commit_root("mismatch");
+        let scratch = commit_root("mismatch");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         assert_eq!(
             commit_ok(&workspace, &pair('1', '2')),
@@ -1188,7 +1195,8 @@ mod tests {
 
     #[test]
     fn unmanaged_current_states_fail_closed() {
-        let root = commit_root("unmanaged");
+        let scratch = commit_root("unmanaged");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         assert_eq!(
             commit_ok(&workspace, &pair('1', '2')),
@@ -1233,7 +1241,8 @@ mod tests {
 
     #[test]
     fn digest_spoofed_pointer_fails_closed() {
-        let root = commit_root("spoof");
+        let scratch = commit_root("spoof");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         assert_eq!(
             commit_ok(&workspace, &pair('1', '2')),
@@ -1266,7 +1275,8 @@ mod tests {
 
     #[test]
     fn stale_staged_pointer_is_reclaimed() {
-        let root = commit_root("stale-next");
+        let scratch = commit_root("stale-next");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let setups = workspace.join(".dx").join("setups");
         fs::create_dir_all(&setups).expect("setups");
@@ -1281,7 +1291,8 @@ mod tests {
 
     #[test]
     fn workspace_missing_fails() {
-        let root = commit_root("ws-missing");
+        let scratch = commit_root("ws-missing");
+        let root = scratch.path().to_path_buf();
         let missing = root.join("no-such-dir");
         assert!(matches!(
             read_current_pair(&missing),
@@ -1296,7 +1307,8 @@ mod tests {
 
     #[test]
     fn busy_lock_fails_after_deadline() {
-        let root = commit_root("busy");
+        let scratch = commit_root("busy");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let dx_dir = workspace.join(".dx");
         fs::create_dir_all(&dx_dir).expect("dx dir");
@@ -1311,7 +1323,8 @@ mod tests {
 
     #[test]
     fn lock_open_failure_aborts() {
-        let root = commit_root("lock-open");
+        let scratch = commit_root("lock-open");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let dx_dir = workspace.join(".dx");
         fs::create_dir_all(&dx_dir).expect("dx dir");
@@ -1325,7 +1338,8 @@ mod tests {
 
     #[test]
     fn concurrent_commits_serialize_with_idempotent_reuse() {
-        let root = commit_root("concurrent");
+        let scratch = commit_root("concurrent");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         // Eight racing commits over four distinct pairs: the O36 commit
         // lock must serialize them so every commit succeeds, every record
@@ -1368,7 +1382,8 @@ mod tests {
 
     #[test]
     fn staged_directory_preserves_current() {
-        let root = commit_root("staged-dir");
+        let scratch = commit_root("staged-dir");
+        let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         assert_eq!(
             commit_ok(&workspace, &pair('1', '2')),

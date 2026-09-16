@@ -6,7 +6,10 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
-package(default_visibility = ["//dx:__pkg__", "//dx:__subpackages__"])
+package(default_visibility = [
+    "//dx:__pkg__",
+    "//dx:__subpackages__",
+])
 
 # Crate-universe aliases convention: `dx/dx_env` keys match the regenerated
 # lockfile. The runfiles lookup stays a direct toolchain label (it is not a
@@ -26,6 +29,7 @@ rust_library(
         [
             "serde",
             "serde_json",
+            "tempfile",
         ],
         package_name = "dx/dx_env",
     ) + [
@@ -44,8 +48,8 @@ rust_binary(
     ),
     crate_name = "env",
     crate_root = "src/main.rs",
-    visibility = ["//visibility:public"],
     data = ["//env:default_tree"],
+    visibility = ["//visibility:public"],
     deps = crate_deps(
         [
             "serde",
@@ -71,6 +75,7 @@ rust_test(
         [
             "serde",
             "serde_json",
+            "tempfile",
         ],
         package_name = "dx/dx_env",
     ),

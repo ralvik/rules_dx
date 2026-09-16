@@ -314,8 +314,11 @@ mod tests {
 
     #[test]
     fn real_filesystem_reads_writes_and_reports_errors() {
-        let dir = std::env::temp_dir().join(format!("dx-apply-fs-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
+        let scratch = tempfile::Builder::new()
+            .prefix("dx-apply-fs-")
+            .tempdir_in(std::env::temp_dir())
+            .expect("scratch");
+        let dir = scratch.path().to_path_buf();
         let fs = RealFileSystem;
         let nested = dir.join("sub").join("a.txt");
         assert_eq!(fs.read(&nested).expect("missing reads as none"), None);
@@ -331,7 +334,7 @@ mod tests {
         fs.write_atomic(&bare, b"bare\n").expect("bare write");
         assert_eq!(fs.read(&bare).expect("bare read"), Some(b"bare\n".to_vec()));
         std::fs::remove_file(&bare).expect("bare cleanup");
-        std::fs::remove_dir_all(&dir).expect("cleanup");
+        scratch.close().expect("cleanup");
     }
 
     #[test]
