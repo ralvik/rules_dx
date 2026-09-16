@@ -208,6 +208,7 @@ name = "dx_setup"
 version = "0.0.0"
 dependencies = [
  "tempfile",
+ "thiserror",
 ]
 
 [[package]]

@@ -64,7 +64,8 @@ pub enum SetupScope {
 }
 
 /// Exact-target scope failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{self:?}")]
 pub enum ScopeError {
     /// More than one positional target: setup selects at most one.
     MultipleTargets { count: usize },
@@ -74,14 +75,6 @@ pub enum ScopeError {
     /// profiles/flags, and language selectors.
     NotTargetLabel { value: String },
 }
-
-impl std::fmt::Display for ScopeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for ScopeError {}
 
 /// Resolves the `dx setup` positional scope: empty selects the
 /// repository (both canonical selections), one exact `//` or `@` label
@@ -225,20 +218,9 @@ pub struct GenerationId(String);
 
 /// Generation reference failure: anything that is not a 64-character
 /// lowercase hexadecimal digest.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("invalid generation id {0:?}: want 64 lowercase hex chars")]
 pub struct GenerationIdError(String);
-
-impl std::fmt::Display for GenerationIdError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "invalid generation id {:?}: want 64 lowercase hex chars",
-            self.0
-        )
-    }
-}
-
-impl std::error::Error for GenerationIdError {}
 
 impl GenerationId {
     /// Carries one generation digest, validating its shape.
@@ -270,7 +252,8 @@ pub struct SetupPair {
 }
 
 /// Pair resolution failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{self:?}")]
 pub enum ResolveError {
     /// The selected scope prepared neither side: an exact target with no
     /// environment or codegen capability selects nothing, and committing
@@ -278,14 +261,6 @@ pub enum ResolveError {
     /// usage error.
     NoCapability,
 }
-
-impl std::fmt::Display for ResolveError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for ResolveError {}
 
 /// Inputs to [`resolve_pair`]: the freshly prepared sides (each `None`
 /// when the scope carries no such capability), the currently selected
@@ -381,7 +356,8 @@ pub enum CommitOutcome {
 
 /// Setup commit failure. Every variant is operational; usage errors
 /// (scope selection) live in [`ScopeError`] and never surface here.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{self:?}")]
 pub enum CommitError {
     /// Workspace root is missing or not a directory.
     WorkspaceRoot { path: PathBuf },
@@ -405,14 +381,6 @@ pub enum CommitError {
     /// recycled pair would hide the usage error. Mirrors [`ResolveError`].
     NoCapability,
 }
-
-impl std::fmt::Display for CommitError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for CommitError {}
 
 /// Freshly prepared sides for an atomic
 /// read-resolve-commit under one lock hold.
