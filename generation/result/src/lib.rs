@@ -1,7 +1,5 @@
 //! Validation and codec helpers for the Generation Result Protocol.
 
-use prost::Message;
-
 use proto::{
     file_result, FileResult, GenerationManifest, IgnoredImport, Mode, Modification, Scope,
 };
@@ -161,16 +159,18 @@ fn validate_scopes(scopes: &[Scope]) -> Result<(), Error> {
     if scopes.is_empty() {
         return Err(Error::EmptyScopes);
     }
+    // Shared uniqueness control flow lives in `dx_proto_validate`; only the
+    // crate-local `Error` payload stays here (#72 proto-validate slice).
     let mut seen = std::collections::BTreeSet::new();
     for (index, scope) in scopes.iter().enumerate() {
         if scope.value.is_empty() {
             return Err(Error::EmptyScope { index });
         }
-        if !seen.insert(&scope.value) {
-            return Err(Error::DuplicateScope {
-                value: scope.value.clone(),
-            });
-        }
+        dx_proto_validate::check_unique_insert(&mut seen, &scope.value, |existing| {
+            Error::DuplicateScope {
+                value: (*existing).clone(),
+            }
+        })?;
     }
     Ok(())
 }
@@ -351,11 +351,14 @@ fn validate_ignored(ignored: &[IgnoredImport], scope_count: usize) -> Result<(),
             item.language.as_str(),
             item.import.as_str(),
         );
-        if let Some(previous) = previous {
-            if previous == key {
+        // Shared sorted-unique control flow lives in `dx_proto_validate`;
+        // only the crate-local `Error` payloads stay here (#72 slice).
+        match dx_proto_validate::check_sorted_next(previous.as_ref(), &key) {
+            Ok(()) => {}
+            Err(dx_proto_validate::OrderViolation::Duplicate) => {
                 return Err(Error::DuplicateIgnoredImport { index });
             }
-            if previous > key {
+            Err(dx_proto_validate::OrderViolation::Unsorted) => {
                 return Err(Error::IgnoredOrder { index });
             }
         }
@@ -386,25 +389,21 @@ pub fn validate(manifest: &GenerationManifest) -> Result<(), Error> {
     let mut files = std::collections::BTreeSet::new();
     for file in &manifest.files {
         validate_file(file, mode, manifest.scopes.len())?;
-        if !files.insert(&file.path) {
-            return Err(Error::DuplicateFile {
-                path: file.path.clone(),
-            });
-        }
+        dx_proto_validate::check_unique_insert(&mut files, &file.path, |existing| {
+            Error::DuplicateFile {
+                path: (*existing).clone(),
+            }
+        })?;
     }
     validate_ignored(&manifest.ignored_imports, manifest.scopes.len())
 }
 
 pub fn encode_validated(manifest: &GenerationManifest) -> Result<Vec<u8>, Error> {
-    validate(manifest)?;
-    Ok(manifest.encode_to_vec())
+    dx_proto_validate::encode_with_validation(manifest, validate)
 }
 
 pub fn decode_validated(bytes: &[u8]) -> Result<GenerationManifest, Error> {
-    let manifest =
-        GenerationManifest::decode(bytes).map_err(|error| Error::Decode(error.to_string()))?;
-    validate(&manifest)?;
-    Ok(manifest)
+    dx_proto_validate::decode_with_validation(bytes, validate, Error::Decode)
 }
 
 #[cfg(test)]
