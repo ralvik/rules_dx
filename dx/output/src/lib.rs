@@ -298,20 +298,18 @@ fn nonempty(field: &'static str, value: &str) -> Result<(), OutputError> {
 /// the main workspace. Mirrors the result-protocol path rules so JSON-shape
 /// failures surface before diff output or mutation planning.
 pub fn check_path(path: &str) -> Result<(), OutputError> {
-    let reason = if path.is_empty() {
-        Some("path must be non-empty")
-    } else if path.starts_with('/') {
-        Some("path must be workspace-relative, not absolute")
-    } else if path.contains('\\') {
-        Some("path must use forward slashes")
-    } else if path.split('/').any(str::is_empty) {
-        Some("path must have no empty component")
-    } else if path.split('/').any(|c| c == ".") {
-        Some("path must have no '.' component")
-    } else if path.split('/').any(|c| c == "..") {
-        Some("path must have no '..' component")
-    } else {
-        None
+    // Ladder order and messages mirror `dx_path::classify` one-to-one;
+    // only the error payload stays crate-local (#72 slice 5).
+    let reason = match dx_path::classify(path) {
+        None => None,
+        Some(dx_path::PathProblem::Empty) => Some("path must be non-empty"),
+        Some(dx_path::PathProblem::Absolute) => {
+            Some("path must be workspace-relative, not absolute")
+        }
+        Some(dx_path::PathProblem::Backslash) => Some("path must use forward slashes"),
+        Some(dx_path::PathProblem::EmptyComponent) => Some("path must have no empty component"),
+        Some(dx_path::PathProblem::Dot) => Some("path must have no '.' component"),
+        Some(dx_path::PathProblem::DotDot) => Some("path must have no '..' component"),
     };
     match reason {
         Some(reason) => Err(OutputError::BadPath {

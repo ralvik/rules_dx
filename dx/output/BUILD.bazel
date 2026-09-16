@@ -19,7 +19,7 @@ rust_library(
     deps = crate_deps(
         ["clap", "serde_json", "thiserror"],
         package_name = "dx/dx_output",
-    ),
+    ) + ["//dx/path:dx_path"],
 )
 
 rust_test(
