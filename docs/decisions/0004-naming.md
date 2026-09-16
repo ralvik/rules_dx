@@ -104,3 +104,7 @@ collision with generated or handwritten targets fails without another affix.
 - Prefixing every public rule with `dx_` or `dx_rules_`.
 - Root labels such as `//:dx_env` or redundant labels such as `//dx:dx_env`.
 - Inventing a repository-policy name before its responsibility exists.
+- Moving the Rust implementation out of `dx/` before the facade twins resolve: `dx/` stays
+  the consumer-policy facade mirroring consumer `//dx`, while `cli/` will own the Rust
+  implementation. The split keeps consumer labels stable during the move; see
+  [issue 76](https://github.com/ralvik/rules_dx/issues/76).
