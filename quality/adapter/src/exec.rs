@@ -206,8 +206,11 @@ mod tests {
 
     #[test]
     fn scratch_materializes_and_cleans_up() {
-        let parent = std::env::temp_dir().join(format!("dx-materialize-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&parent);
+        let parent_tmp = tempfile::Builder::new()
+            .prefix("dx-materialize-")
+            .tempdir_in(std::env::temp_dir())
+            .expect("materialize parent");
+        let parent = parent_tmp.path().to_path_buf();
         std::fs::create_dir_all(&parent).expect("materialize parent");
         let source = parent.join("native-taplo.toml");
         std::fs::write(&source, b"config = true\n").expect("closure source");
@@ -243,7 +246,7 @@ mod tests {
         );
         drop(scratch);
         assert!(!root.exists(), "scratch is removed on drop");
-        std::fs::remove_dir_all(&parent).expect("materialize cleanup");
+        parent_tmp.close().expect("materialize cleanup");
     }
 
     #[test]
@@ -251,8 +254,11 @@ mod tests {
         // A pre-existing file at the link path makes symlinking fail,
         // so the closure entry falls back to a copy: identical content,
         // no symlink left behind.
-        let parent = std::env::temp_dir().join(format!("dx-fallback-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&parent);
+        let parent_tmp = tempfile::Builder::new()
+            .prefix("dx-fallback-")
+            .tempdir_in(std::env::temp_dir())
+            .expect("fallback parent");
+        let parent = parent_tmp.path().to_path_buf();
         std::fs::create_dir_all(&parent).expect("fallback parent");
         let source = parent.join("native.toml");
         std::fs::write(&source, b"config = true\n").expect("closure source");
@@ -277,7 +283,7 @@ mod tests {
             "fallback copies instead of linking"
         );
         scratch.close().expect("close");
-        std::fs::remove_dir_all(&parent).expect("fallback cleanup");
+        parent_tmp.close().expect("fallback cleanup");
     }
 
     #[test]
@@ -318,8 +324,11 @@ mod tests {
         // injection point remains: prove the observable contract
         // instead — concurrent claims never share a tree, every tree
         // lives under the parent with the recognizable prefix.
-        let parent = std::env::temp_dir().join(format!("dx-distinct-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&parent);
+        let parent_tmp = tempfile::Builder::new()
+            .prefix("dx-distinct-")
+            .tempdir_in(std::env::temp_dir())
+            .expect("distinct parent");
+        let parent = parent_tmp.path().to_path_buf();
         std::fs::create_dir_all(&parent).expect("distinct parent");
         let first = Scratch::create(&parent).expect("first");
         let second = Scratch::create(&parent).expect("second");
@@ -336,7 +345,7 @@ mod tests {
         }
         first.close().expect("close");
         second.close().expect("close");
-        std::fs::remove_dir_all(&parent).expect("distinct cleanup");
+        parent_tmp.close().expect("distinct cleanup");
     }
 
     #[test]

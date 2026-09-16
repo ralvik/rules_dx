@@ -466,6 +466,9 @@ dependencies = [
 [[package]]
 name = "quality_runner"
 version = "0.0.0"
+dependencies = [
+ "tempfile",
+]
 
 [[package]]
 name = "quick-xml"

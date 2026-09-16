@@ -1129,17 +1129,19 @@ mod tests {
     }
 
     /// Writes `body` to a unique temp file for delegated-tool tests and
-    /// returns its path. Bazel scopes `TMPDIR` per test action, so
-    /// process-scoped names cannot collide; the file is removed after
-    /// the test reads it through the backend.
-    fn upstream_file(name: &str, body: &str) -> PathBuf {
-        let path = std::env::temp_dir().join(format!(
-            "dx-delegated-clippy-{}-{}",
-            std::process::id(),
-            name
-        ));
-        std::fs::write(&path, body).expect("write upstream diagnostics fixture");
-        path
+    /// returns it. Bazel scopes `TMPDIR` per test action; the
+    /// OS-random `O_EXCL`-claimed name additionally survives parallel
+    /// same-name tests sharing a directory, and the guard removes the
+    /// file on scope exit (including panics). Callers keep their
+    /// explicit removal as success-path failure surfacing.
+    fn upstream_file(name: &str, body: &str) -> tempfile::NamedTempFile {
+        let mut file = tempfile::Builder::new()
+            .prefix(format!("dx-delegated-{name}-").as_str())
+            .tempfile_in(std::env::temp_dir())
+            .expect("claim upstream fixture");
+        std::io::Write::write_all(&mut file, body.as_bytes())
+            .expect("write upstream diagnostics fixture");
+        file
     }
 
     fn delegated_tool(path: PathBuf) -> RealTool {
@@ -2566,7 +2568,8 @@ mod tests {
 
     #[test]
     fn clippy_delegated_parses_upstream_file_without_spawning() {
-        let path = upstream_file("warn", DELEGATED_CLIPPY_WARN);
+        let fixture = upstream_file("warn", DELEGATED_CLIPPY_WARN);
+        let path = fixture.path().to_path_buf();
         let backend = backend_for("clippy", delegated_tool(path.clone()), no_spawn);
         let findings = backend
             .diagnose(
@@ -2588,7 +2591,8 @@ mod tests {
 
     #[test]
     fn clippy_delegated_fix_is_check_only() {
-        let path = upstream_file("fix", DELEGATED_CLIPPY_WARN);
+        let fixture = upstream_file("fix", DELEGATED_CLIPPY_WARN);
+        let path = fixture.path().to_path_buf();
         let backend = backend_for("clippy", delegated_tool(path.clone()), no_spawn);
         let patched = backend
             .apply_fix("clippy", "src/main.rs", "let y = v.len() == 0;\n", "lint")
@@ -2599,8 +2603,13 @@ mod tests {
 
     #[test]
     fn clippy_delegated_missing_file_fails_the_action() {
-        let missing =
-            std::env::temp_dir().join(format!("dx-delegated-clippy-{}-absent", std::process::id()));
+        // Guaranteed-absent without pid tricks: a fresh OS-random
+        // scratch dir always exists, so `absent` inside it never does.
+        let scratch = tempfile::Builder::new()
+            .prefix("dx-delegated-clippy-")
+            .tempdir_in(std::env::temp_dir())
+            .expect("scratch");
+        let missing = scratch.path().join("absent");
         let backend = backend_for("clippy", delegated_tool(missing), no_spawn);
         backend
             .diagnose(
@@ -2613,7 +2622,8 @@ mod tests {
 
     #[test]
     fn clippy_delegated_empty_file_reports_no_findings() {
-        let path = upstream_file("empty", "");
+        let fixture = upstream_file("empty", "");
+        let path = fixture.path().to_path_buf();
         let backend = backend_for("clippy", delegated_tool(path.clone()), no_spawn);
         let findings = backend
             .diagnose(
@@ -2628,7 +2638,8 @@ mod tests {
 
     #[test]
     fn rustc_delegated_parses_upstream_file_without_spawning() {
-        let path = upstream_file("rustc-warn", DELEGATED_RUSTC_WARN);
+        let fixture = upstream_file("rustc-warn", DELEGATED_RUSTC_WARN);
+        let path = fixture.path().to_path_buf();
         let backend = backend_for("rustc", delegated_tool(path.clone()), no_spawn);
         let findings = backend
             .diagnose(
@@ -2652,7 +2663,8 @@ mod tests {
 
     #[test]
     fn rustc_delegated_fix_is_check_only() {
-        let path = upstream_file("rustc-fix", DELEGATED_RUSTC_WARN);
+        let fixture = upstream_file("rustc-fix", DELEGATED_RUSTC_WARN);
+        let path = fixture.path().to_path_buf();
         let backend = backend_for("rustc", delegated_tool(path.clone()), no_spawn);
         let text = "fn f(x: i32) {}\nfn g() { f(\"oops\"); }\n";
         let patched = backend
@@ -2664,8 +2676,13 @@ mod tests {
 
     #[test]
     fn rustc_delegated_missing_file_fails_the_action() {
-        let missing =
-            std::env::temp_dir().join(format!("dx-delegated-rustc-{}-absent", std::process::id()));
+        // Guaranteed-absent without pid tricks: a fresh OS-random
+        // scratch dir always exists, so `absent` inside it never does.
+        let scratch = tempfile::Builder::new()
+            .prefix("dx-delegated-rustc-")
+            .tempdir_in(std::env::temp_dir())
+            .expect("scratch");
+        let missing = scratch.path().join("absent");
         let backend = backend_for("rustc", delegated_tool(missing), no_spawn);
         backend
             .diagnose(
@@ -2678,7 +2695,8 @@ mod tests {
 
     #[test]
     fn rustc_delegated_empty_file_reports_no_findings() {
-        let path = upstream_file("rustc-empty", "");
+        let fixture = upstream_file("rustc-empty", "");
+        let path = fixture.path().to_path_buf();
         let backend = backend_for("rustc", delegated_tool(path.clone()), no_spawn);
         let findings = backend
             .diagnose(
@@ -2693,7 +2711,8 @@ mod tests {
 
     #[test]
     fn rustc_apply_is_check_only() {
-        let path = upstream_file("rustc-check-only", DELEGATED_RUSTC_WARN);
+        let fixture = upstream_file("rustc-check-only", DELEGATED_RUSTC_WARN);
+        let path = fixture.path().to_path_buf();
         let backend = backend_for("rustc", delegated_tool(path.clone()), no_spawn);
         let text = "fn f(x: i32) {}\nfn g() { f(\"oops\"); }\n";
         let patched = backend
