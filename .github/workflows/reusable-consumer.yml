@@ -74,9 +74,21 @@ jobs:
         env:
           PLATFORMS: ${{ inputs.platforms }}
           DISABLED: ${{ inputs.disabled_checks }}
+          SCHEDULING: ${{ inputs.scheduling_mode }}
         run: |
           python3 - <<'EOF'
           import json, os, sys
+          mode = os.environ.get("SCHEDULING", "parallel").strip() or "parallel"
+          if mode == "sequential":
+              print(
+                  "dx-ci: scheduling_mode 'sequential' is qualification-open "
+                  "(docs/github-ci.md#execution): the template schedules "
+                  "parallel only until sequential ordering is qualified"
+              )
+              sys.exit(1)
+          if mode != "parallel":
+              print(f"dx-ci: unsupported scheduling_mode {mode!r}; want 'parallel'")
+              sys.exit(1)
           disabled = ",".join(
               part.strip()
               for part in os.environ["DISABLED"].split(",")

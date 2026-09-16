@@ -4,6 +4,11 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
+# The consumer CI template harness (//tools/ci:consumer_*_test, issue
+# #99) pins the starter caller contract, so caller.yml is exported for
+# hermetic test data.
+exports_files(["consumer-ci/caller.yml"])
+
 # Repository corpus: example Markdown owned for direct-Bazel
 # dogfood under the canonical real_fixture_policy.
 real_source_target(
