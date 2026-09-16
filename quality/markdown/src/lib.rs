@@ -36,6 +36,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use serde::Serialize;
+
 /// Structural finding kinds. Every variant is a finding; skipped remote
 /// targets are reported separately in [`CheckOutcome::skipped_remotes`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -428,6 +430,15 @@ pub fn resolve_target(source: &str, target: &str) -> String {
     parts.join("/")
 }
 
+/// One NDJSON finding line on stdout, serialized with serde_json. Field
+/// order is part of the stable output shape.
+#[derive(Serialize)]
+struct FindingLine<'a> {
+    path: &'a str,
+    line: u32,
+    kind: &'static str,
+    message: &'a str,
+}
 /// Stable kebab-case identifier for a [`FindingKind`], used in JSON output.
 pub fn kind_id(kind: FindingKind) -> &'static str {
     match kind {
@@ -437,27 +448,6 @@ pub fn kind_id(kind: FindingKind) -> &'static str {
         FindingKind::MissingCodeFenceLanguage => "missing-code-fence-language",
         FindingKind::UnclosedCodeFence => "unclosed-code-fence",
     }
-}
-
-/// Minimal JSON string escaper for finding output: the crate stays
-/// dependency-free, so only `"`, `\`, C0 controls, and the standard short
-/// escapes are handled; every other character passes through unchanged.
-pub fn escape_json(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    for c in text.chars() {
-        match c {
-            '"' => out.push_str("\\\""),
-            '\\' => out.push_str("\\\\"),
-            '\n' => out.push_str("\\n"),
-            '\r' => out.push_str("\\r"),
-            '\t' => out.push_str("\\t"),
-            c if (c as u32) < 0x20 => {
-                out.push_str(&format!("\\u{:04x}", c as u32));
-            }
-            c => out.push(c),
-        }
-    }
-    out
 }
 
 fn print_usage(print_err: &mut dyn FnMut(&str)) {
@@ -545,13 +535,13 @@ pub fn run_cli(
         let text = siblings.get(ws).cloned().unwrap_or_default();
         let outcome = check_markdown(ws, &text, &siblings);
         for finding in &outcome.findings {
-            print_out(&format!(
-                "{{\"path\":\"{}\",\"line\":{},\"kind\":\"{}\",\"message\":\"{}\"}}",
-                escape_json(ws),
-                finding.line,
-                kind_id(finding.kind),
-                escape_json(&finding.message),
-            ));
+            let line = FindingLine {
+                path: ws.as_str(),
+                line: finding.line,
+                kind: kind_id(finding.kind),
+                message: finding.message.as_str(),
+            };
+            print_out(&serde_json::to_string(&line).expect("finding line serializes"));
         }
         for remote in &outcome.skipped_remotes {
             if !seen_remotes.iter().any(|seen| seen == remote) {
@@ -1293,11 +1283,28 @@ mod tests {
     }
 
     #[test]
-    fn cli_json_escapes_message_text() {
-        assert_eq!(escape_json("a\"b\\c"), "a\\\"b\\\\c");
-        assert_eq!(escape_json("l1\nl2\r\ttab"), "l1\\nl2\\r\\ttab");
-        assert_eq!(escape_json("bell\x07"), "bell\\u0007");
-        assert_eq!(escape_json("héllo—✓"), "héllo—✓");
+    fn cli_findings_serialize_as_stable_json_lines() {
+        // Byte shape (field order, escaping, unicode passthrough) is the
+        // adapter's NDJSON contract: serde_json agrees with the retired hand
+        // escaper except 0x08/0x0c, which serde_json writes as \b/\f.
+        let line = FindingLine {
+            path: "p.md",
+            line: 3,
+            kind: "missing-file-target",
+            message: "a\"b\\c\né✓",
+        };
+        assert_eq!(
+            serde_json::to_string(&line).expect("serializes"),
+            "{\"path\":\"p.md\",\"line\":3,\"kind\":\"missing-file-target\",\"message\":\"a\\\"b\\\\c\\né✓\"}"
+        );
+        assert_eq!(
+            serde_json::to_string(&"bell\x07").expect("serializes"),
+            "\"bell\\u0007\""
+        );
+    }
+
+    #[test]
+    fn cli_kind_ids_are_stable() {
         assert_eq!(
             kind_id(FindingKind::UnclosedCodeFence),
             "unclosed-code-fence"
