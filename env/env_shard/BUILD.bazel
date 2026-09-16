@@ -22,6 +22,7 @@ rust_library(
         ["thiserror"],
         package_name = "env/env_shard",
     ) + [
+        "//dx/path:dx_path",
         "//env:plan_proto_rs",
         "@rules_rust_prost//private/3rdparty/crates:prost",
     ],
