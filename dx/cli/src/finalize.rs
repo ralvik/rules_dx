@@ -51,7 +51,6 @@ use generation_result::proto::{
     WriteOutcome,
 };
 use serde::Deserialize;
-use std::fmt;
 use std::path::Path;
 
 /// Failure codes recorded on [`WriteOutcome::NotApplied`] file results.
@@ -75,39 +74,20 @@ pub struct FinalizeInput<'a> {
 /// errors: they become [`WriteOutcome::NotApplied`] results with a
 /// `failure_code`, because a concurrent workspace mutation must degrade to a
 /// failing manifest rather than a CLI crash.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, thiserror::Error)]
 pub enum FinalizeError {
     /// Payload is not well-formed JSON of the expected shape (includes bad
     /// base64, schema or mode mismatch, contradictory create+modify, and
     /// paths unsafe to join under the workspace root).
+    #[error("malformed intended manifest: {0}")]
     Malformed(String),
     /// A check run whose gazelle subprocess failed carries no trustworthy
     /// witness, so there is nothing to finalize.
+    #[error("check run cannot be finalized: gazelle did not complete successfully")]
     IncompleteCheck,
     /// A structurally complete manifest failed `generation_result` validation.
-    Invalid(generation_result::Error),
-}
-
-impl fmt::Display for FinalizeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            FinalizeError::Malformed(detail) => write!(f, "malformed intended manifest: {detail}"),
-            FinalizeError::IncompleteCheck => write!(
-                f,
-                "check run cannot be finalized: gazelle did not complete successfully"
-            ),
-            FinalizeError::Invalid(err) => write!(f, "invalid generation manifest: {err}"),
-        }
-    }
-}
-
-impl std::error::Error for FinalizeError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            FinalizeError::Invalid(err) => Some(err),
-            _ => None,
-        }
-    }
+    #[error("invalid generation manifest: {0}")]
+    Invalid(#[from] generation_result::Error),
 }
 
 /// Decode strict standard base64 (RFC 4648 alphabet with `=` padding).
