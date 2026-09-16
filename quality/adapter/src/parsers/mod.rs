@@ -162,39 +162,22 @@ pub struct FileFinding {
 
 /// Grammar or attribution failure. Every variant is an action failure,
 /// never a skipped finding.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ParseError {
     /// Tool stdout is not the pinned JSON grammar.
+    #[error("{tool} output is not the pinned JSON grammar: {detail}")]
     Json { tool: &'static str, detail: String },
     /// Check output matches neither findings nor clean for the pinned
     /// tool, or a placed span/level is outside the pinned grammar.
+    #[error("{tool} output is outside the pinned grammar: {detail}")]
     Shape { tool: &'static str, detail: String },
     /// A reported path is not one of the checked scratch files.
+    #[error("{tool} reported an unchecked file: {path}")]
     UnknownFile { tool: &'static str, path: String },
     /// Vale refused without a usable config (E100/E201 envelope).
+    #[error("vale needs a usable config: {detail}")]
     ValeConfig { detail: String },
 }
-
-impl std::fmt::Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ParseError::Json { tool, detail } => {
-                write!(f, "{tool} output is not the pinned JSON grammar: {detail}")
-            }
-            ParseError::Shape { tool, detail } => {
-                write!(f, "{tool} output is outside the pinned grammar: {detail}")
-            }
-            ParseError::UnknownFile { tool, path } => {
-                write!(f, "{tool} reported an unchecked file: {path}")
-            }
-            ParseError::ValeConfig { detail } => {
-                write!(f, "vale needs a usable config: {detail}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for ParseError {}
 
 /// Resolves a tool-reported path against the checked scratch files.
 fn known<'a>(tool: &'static str, files: &[&'a str], path: &str) -> Result<&'a str, ParseError> {

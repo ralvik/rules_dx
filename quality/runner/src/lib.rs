@@ -45,7 +45,8 @@ pub struct FileInput {
 /// configuration, or protocol failure fails the action instead of
 /// producing a result, so every error here is an action failure, never a
 /// stored diagnostic.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{self:?}")]
 pub enum RunnerError {
     EmptyProducer,
     UnknownCapability {
@@ -90,14 +91,6 @@ pub enum RunnerError {
         detail: String,
     },
 }
-
-impl std::fmt::Display for RunnerError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for RunnerError {}
 
 fn parse_capability(capability: &str) -> Result<i32, RunnerError> {
     match capability {
