@@ -16,6 +16,7 @@
 //! `--dry-run` listing without deleting and `--bazel` additionally
 //! forwarding `bazel clean`.
 
+use clap::Parser;
 use dx_output::{OutputMode, Threshold};
 
 /// Quality, generation, workflow, run, clean, managed
@@ -237,35 +238,211 @@ pub enum ArgsError {
     ScopeNotSupported { scope: String },
 }
 
-/// Splits a `--name=value` argument into its bare name and value.
-fn split_inline(arg: &str) -> (&str, Option<&str>) {
-    match arg.split_once('=') {
-        Some((name, value)) => (name, Some(value)),
-        None => (arg, None),
+/// Raw `dx` command-line tokens as classified by `clap`: flags may appear
+/// before or after the command word, repeated scalars keep the last
+/// occurrence, and slice shapes (`--report`, scopes, Bazel forwards) keep
+/// `argv` order. Help stays disabled so `--help`/`-h` keep failing as
+/// unknown options per the contract.
+#[derive(Parser)]
+#[command(disable_help_flag = true)]
+struct Cli {
+    /// `--workspace DIR`.
+    #[arg(long, allow_negative_numbers = true, overrides_with = "workspace")]
+    workspace: Option<String>,
+    /// `--dry-run`.
+    #[arg(long)]
+    dry_run: bool,
+    /// `--quiet`.
+    #[arg(long)]
+    quiet: bool,
+    /// `--output text|diff|json`.
+    #[arg(long, allow_negative_numbers = true, overrides_with = "output")]
+    output: Option<String>,
+    /// Repeatable `--report <format>=<destination>`.
+    #[arg(long, allow_negative_numbers = true)]
+    report: Vec<String>,
+    /// `--fail-on info|warning|error`.
+    #[arg(long, allow_negative_numbers = true, overrides_with = "fail_on")]
+    fail_on: Option<String>,
+    /// `--min-coverage 0-100` (coverage only).
+    #[arg(long, allow_negative_numbers = true, overrides_with = "min_coverage")]
+    min_coverage: Option<String>,
+    /// `--check`.
+    #[arg(long)]
+    check: bool,
+    /// `--bazel` (clean only).
+    #[arg(long = "bazel")]
+    bazel_clean: bool,
+    /// `--pin <version>` (version only).
+    #[arg(long, allow_negative_numbers = true, overrides_with = "pin")]
+    pin: Option<String>,
+    /// `--rollback` (version only).
+    #[arg(long)]
+    rollback: bool,
+    /// `--configured` (inspect wrappers only).
+    #[arg(long)]
+    configured: bool,
+    /// First positional: the command word.
+    command: Option<String>,
+    /// Later positionals: explicit scopes/targets.
+    targets: Vec<String>,
+    /// Everything after the first bare `--`, forwarded verbatim.
+    #[arg(last = true)]
+    bazel_options: Vec<String>,
+}
+
+/// Value options whose next token the tokenizer consumes as their value:
+/// any token not starting with `--`, including single-dash spellings and
+/// the empty string.
+const VALUE_OPTIONS: &[&str] = &[
+    "--workspace",
+    "--output",
+    "--report",
+    "--fail-on",
+    "--min-coverage",
+    "--pin",
+];
+
+/// Finds the `bazel` command word when it owns the tail: the first
+/// positional token, skipping value-option payloads exactly like the
+/// legacy hand-rolled tokenizer did, so `dx bazel ...` forwards verbatim
+/// while `dx --output bazel build` still binds `bazel` as the output
+/// value. Returns `None` once a bare `--` is seen (everything after it
+/// is Bazel-owned regardless of command) or when a value option is
+/// missing its payload (the full parse then reports the missing value).
+fn split_bazel_verbatim(args: &[String]) -> Option<usize> {
+    let mut index = 0;
+    while index < args.len() {
+        let arg = &args[index];
+        if arg == "--" {
+            return None;
+        }
+        if arg.starts_with('-') {
+            let name = arg.split_once('=').map_or(arg.as_str(), |(name, _)| name);
+            if !arg.contains('=') && VALUE_OPTIONS.contains(&name) {
+                match args.get(index + 1) {
+                    Some(next) if !next.starts_with("--") && next != "--" => index += 2,
+                    _ => return None,
+                }
+                continue;
+            }
+            index += 1;
+            continue;
+        }
+        return (arg == "bazel").then_some(index);
+    }
+    None
+}
+
+/// Reads the clap invalid-argument context (`--flag <VALUE>` render or
+/// bare token) as a string.
+fn invalid_token(error: &clap::Error) -> Option<String> {
+    match error.get(clap::error::ContextKind::InvalidArg) {
+        Some(clap::error::ContextValue::String(token)) => Some(token.clone()),
+        Some(clap::error::ContextValue::Strings(tokens)) => tokens.first().cloned(),
+        _ => None,
     }
 }
 
-/// Takes the value for a value option: the inline `=value` when present,
-/// else the next argument, which must exist and must not be another
-/// option or the `--` separator.
-fn take_value<'a>(
-    args: &'a [String],
-    index: &mut usize,
-    option: &str,
-    inline: Option<&'a str>,
-) -> Result<&'a str, ArgsError> {
-    if let Some(value) = inline {
-        return Ok(value);
+/// Reads the clap invalid-value context (empty when an option value is
+/// missing, the offending value otherwise).
+fn invalid_value(error: &clap::Error) -> Option<String> {
+    match error.get(clap::error::ContextKind::InvalidValue) {
+        Some(clap::error::ContextValue::String(value)) => Some(value.clone()),
+        Some(clap::error::ContextValue::Strings(values)) => values.first().cloned(),
+        _ => None,
     }
-    match args.get(*index + 1) {
-        Some(next) if !next.starts_with("--") && next != "--" => {
-            *index += 1;
-            Ok(next.as_str())
+}
+
+/// Recovers the exact offending `argv` token for an unknown option:
+/// clap reports the bare flag name for `--flag=value` spellings, while
+/// the contract pins the whole token.
+fn recover_token(args: &[String], token: Option<String>) -> String {
+    let token = token.unwrap_or_default();
+    if args.contains(&token) {
+        return token;
+    }
+    let inline = format!("{token}=");
+    if let Some(arg) = args.iter().rfind(|arg| arg.starts_with(&inline)) {
+        return arg.clone();
+    }
+    token
+}
+
+/// Extracts the leading `--flag` from a clap missing-value render such
+/// as `--output <OUTPUT>`.
+fn leading_flag(token: &str) -> String {
+    token.split_whitespace().next().unwrap_or(token).to_owned()
+}
+
+/// Maps a clap parse failure back onto [`ArgsError`] so the contract
+/// surface never changes: unknown flags (including `=value` on booleans
+/// and `--help`) stay unknown options, and missing option values stay
+/// missing values.
+fn map_clap_error(args: &[String], error: &clap::Error) -> ArgsError {
+    use clap::error::ErrorKind;
+    match error.kind() {
+        ErrorKind::UnknownArgument | ErrorKind::TooManyValues => ArgsError::UnknownOption {
+            option: recover_token(args, invalid_token(error)),
+        },
+        ErrorKind::InvalidValue => {
+            let token = invalid_token(error).unwrap_or_default();
+            if invalid_value(error).is_none_or(|value| value.is_empty()) {
+                ArgsError::MissingValue {
+                    option: leading_flag(&token),
+                }
+            } else {
+                ArgsError::UnknownOption {
+                    option: recover_token(args, Some(token)),
+                }
+            }
         }
-        _ => Err(ArgsError::MissingValue {
-            option: option.to_owned(),
-        }),
+        _ => ArgsError::UnknownOption {
+            option: error
+                .render()
+                .to_string()
+                .lines()
+                .next()
+                .unwrap_or("dx")
+                .trim()
+                .to_owned(),
+        },
     }
+}
+
+/// Runs the clap tokenizer over `args` (without the executable name).
+fn parse_tokens(args: &[String]) -> Result<Cli, ArgsError> {
+    Cli::try_parse_from(std::iter::once("dx".to_owned()).chain(args.iter().cloned()))
+        .map_err(|error| map_clap_error(args, &error))
+}
+
+/// Tokenizes `args` into the clap-classified [`Cli`] plus the verbatim
+/// Bazel tail. `dx bazel` owns every token after the command word, so
+/// its tail never reaches clap; every other shape parses whole.
+fn tokenize(args: &[String]) -> Result<(Cli, Vec<String>), ArgsError> {
+    if let Some(at) = split_bazel_verbatim(args) {
+        // The prefix holds flags only (the scan stops at the first
+        // positional and bails at `--`), so no positionals are lost; the
+        // command word itself is the `bazel` token the scan stopped at.
+        let mut cli = parse_tokens(&args[..at])?;
+        cli.command = Some(Command::Bazel.name().to_owned());
+        // The first `--` still separates (it is dropped, the rest
+        // forwards), exactly like the loop's separator check running
+        // before the verbatim arm did.
+        let mut bazel_options = Vec::new();
+        let mut tail = args[at + 1..].iter();
+        for arg in tail.by_ref() {
+            if arg == "--" {
+                break;
+            }
+            bazel_options.push(arg.clone());
+        }
+        bazel_options.extend(tail.cloned());
+        return Ok((cli, bazel_options));
+    }
+    let mut cli = parse_tokens(args)?;
+    let bazel_options = std::mem::take(&mut cli.bazel_options);
+    Ok((cli, bazel_options))
 }
 
 /// Parses one `--report` value into its `format=destination` shape.
@@ -302,157 +479,72 @@ fn parse_min_coverage(value: &str) -> Result<u32, ArgsError> {
 /// package-relative labels and empty scopes fail here. Arguments after
 /// the first bare `--` forward to Bazel as command options verbatim.
 pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
-    let mut command: Option<Command> = None;
-    let mut check = false;
-    let mut workspace: Option<String> = None;
-    let mut dry_run = false;
-    let mut quiet = false;
-    let mut output_name = "text".to_owned();
-    let mut reports = Vec::new();
-    let mut fail_on_name = "warning".to_owned();
-    let mut min_coverage: Option<u32> = None;
-    let mut targets = Vec::new();
-    let mut bazel_options = Vec::new();
-    let mut bazel_clean = false;
-    let mut pin: Option<String> = None;
-    let mut rollback = false;
-    let mut configured = false;
-    let mut index = 0;
-    while index < args.len() {
-        let arg = &args[index];
-        if arg == "--" {
-            bazel_options.extend(args[index + 1..].iter().cloned());
-            break;
-        }
-        // `dx bazel` owns no options of its own: once the command word
-        // is seen, every following token is launcher-owned and forwards
-        // verbatim (flags, labels, and `=` forms alike), per
-        // `docs/cli/commands/audit-update-bazel.md`. dx globals must
-        // precede the command word (`dx --dry-run bazel ...`).
-        if command == Some(Command::Bazel) {
-            bazel_options.push(arg.clone());
-            index += 1;
-            continue;
-        }
-        if arg.starts_with('-') {
-            let (name, inline) = split_inline(arg);
-            match name {
-                "--workspace" => {
-                    if inline.is_some_and(str::is_empty) {
-                        return Err(ArgsError::MissingValue {
-                            option: "--workspace".to_owned(),
-                        });
-                    }
-                    let value = take_value(args, &mut index, "--workspace", inline)?;
-                    if value.is_empty() {
-                        return Err(ArgsError::MissingValue {
-                            option: "--workspace".to_owned(),
-                        });
-                    }
-                    workspace = Some(value.to_owned());
-                }
-                "--dry-run" => {
-                    if inline.is_some() {
-                        return Err(ArgsError::UnknownOption {
-                            option: arg.clone(),
-                        });
-                    }
-                    dry_run = true;
-                }
-                "--quiet" => {
-                    if inline.is_some() {
-                        return Err(ArgsError::UnknownOption {
-                            option: arg.clone(),
-                        });
-                    }
-                    quiet = true;
-                }
-                "--output" => {
-                    let value = take_value(args, &mut index, "--output", inline)?;
-                    output_name = value.to_owned();
-                }
-                "--report" => {
-                    let value = take_value(args, &mut index, "--report", inline)?;
-                    reports.push(parse_report(value)?);
-                }
-                "--fail-on" => {
-                    let value = take_value(args, &mut index, "--fail-on", inline)?;
-                    fail_on_name = value.to_owned();
-                }
-                "--min-coverage" => {
-                    let value = take_value(args, &mut index, "--min-coverage", inline)?;
-                    min_coverage = Some(parse_min_coverage(value)?);
-                }
-                "--check" => {
-                    if inline.is_some() {
-                        return Err(ArgsError::UnknownOption {
-                            option: arg.clone(),
-                        });
-                    }
-                    check = true;
-                }
-                "--bazel" => {
-                    if inline.is_some() {
-                        return Err(ArgsError::UnknownOption {
-                            option: arg.clone(),
-                        });
-                    }
-                    bazel_clean = true;
-                }
-                "--pin" => {
-                    let value = take_value(args, &mut index, "--pin", inline)?;
-                    if value.is_empty() {
-                        return Err(ArgsError::MissingValue {
-                            option: "--pin".to_owned(),
-                        });
-                    }
-                    pin = Some(value.to_owned());
-                }
-                "--rollback" => {
-                    if inline.is_some() {
-                        return Err(ArgsError::UnknownOption {
-                            option: arg.clone(),
-                        });
-                    }
-                    rollback = true;
-                }
-                "--configured" => {
-                    if inline.is_some() {
-                        return Err(ArgsError::UnknownOption {
-                            option: arg.clone(),
-                        });
-                    }
-                    configured = true;
-                }
-                _ => {
-                    return Err(ArgsError::UnknownOption {
-                        option: arg.clone(),
-                    });
-                }
-            }
-            index += 1;
-            continue;
-        }
-        match command {
-            None => {
-                command = Some(
-                    Command::parse(arg).ok_or_else(|| ArgsError::UnknownCommand {
-                        command: arg.clone(),
-                    })?,
-                );
-            }
-            // `dx bazel` tokens never reach this arm: the verbatim
-            // forwarding above owns every token after the command word.
-            Some(_) => {
-                if arg.is_empty() || arg.starts_with(':') {
-                    return Err(ArgsError::ScopeNotSupported { scope: arg.clone() });
-                }
-                targets.push(arg.clone());
-            }
-        }
-        index += 1;
+    let (cli, bazel_options) = tokenize(args)?;
+    let Cli {
+        workspace,
+        dry_run,
+        quiet,
+        output,
+        report,
+        fail_on,
+        min_coverage: min_coverage_name,
+        check,
+        bazel_clean,
+        pin,
+        rollback,
+        configured,
+        command: command_name,
+        targets,
+        ..
+    } = cli;
+    if workspace.as_deref().is_some_and(str::is_empty) {
+        return Err(ArgsError::MissingValue {
+            option: "--workspace".to_owned(),
+        });
     }
-    let command = command.ok_or(ArgsError::MissingCommand)?;
+    if pin.as_deref().is_some_and(str::is_empty) {
+        return Err(ArgsError::MissingValue {
+            option: "--pin".to_owned(),
+        });
+    }
+    let output_name = output.unwrap_or_else(|| "text".to_owned());
+    let fail_on_name = fail_on.unwrap_or_else(|| "warning".to_owned());
+    let mut reports = Vec::new();
+    for value in &report {
+        reports.push(parse_report(value)?);
+    }
+    let mut min_coverage: Option<u32> = None;
+    if let Some(value) = &min_coverage_name {
+        min_coverage = Some(parse_min_coverage(value)?);
+    }
+    let command = command_name
+        .map(|name| {
+            // Option-looking tokens never select a command: the legacy
+            // tokenizer owned every `-`-prefixed token in its option
+            // branch first. clap only lets a lone `-` through to here.
+            if name.starts_with('-') {
+                return Err(ArgsError::UnknownOption { option: name });
+            }
+            Command::parse(&name).ok_or(ArgsError::UnknownCommand { command: name })
+        })
+        .transpose()?
+        .ok_or(ArgsError::MissingCommand)?;
+    // `dx bazel` tails never reach this check: the verbatim forwarding
+    // above owns every token after the command word.
+    if command != Command::Bazel {
+        for scope in &targets {
+            if scope == "-" {
+                return Err(ArgsError::UnknownOption {
+                    option: scope.clone(),
+                });
+            }
+            if scope.is_empty() || scope.starts_with(':') {
+                return Err(ArgsError::ScopeNotSupported {
+                    scope: scope.clone(),
+                });
+            }
+        }
+    }
     if command == Command::Clean {
         // `dx clean [--dry-run] [--bazel]` prunes validated unselected
         // managed state with no scopes and no quality/workflow options:
@@ -1212,6 +1304,12 @@ mod tests {
             parse(&args(&["lint", "--dry-run=yes"])),
             Err(ArgsError::UnknownOption {
                 option: "--dry-run=yes".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["-"])),
+            Err(ArgsError::UnknownOption {
+                option: "-".to_owned(),
             })
         );
     }
