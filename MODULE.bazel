@@ -249,6 +249,7 @@ crate.from_cargo(
         "//quality/runner:Cargo.toml",
         "//dx/process:Cargo.toml",
         "//dx/apply:Cargo.toml",
+        "//dx/audit:Cargo.toml",
         "//dx/output:Cargo.toml",
         "//dx/bep:Cargo.toml",
         "//dx/cli:Cargo.toml",

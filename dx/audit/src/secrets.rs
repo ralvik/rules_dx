@@ -149,17 +149,23 @@ pub fn validate_pin(pin: &ArtifactPin) -> Result<(), PinProblem> {
             return Err(PinProblem::MissingField { field });
         }
     }
-    if !pin.url.starts_with("https://") {
+    // Fail-closed URL shape: the literal `https://` prefix stays the gate
+    // (so an uppercase scheme or bare `https:foo` never newly qualifies)
+    // and `Url::parse` additionally rejects malformed absolute URLs that
+    // the prefix alone would accept.
+    if !(pin.url.starts_with("https://") && url::Url::parse(&pin.url).is_ok()) {
         return Err(PinProblem::BadUrl {
             url: pin.url.clone(),
         });
     }
-    let digest = pin.sha256.as_bytes();
-    if digest.len() != 64
-        || !digest
-            .iter()
-            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
-    {
+    // Decode round-trip pins the 64-lowercase-hex digest form: `hex`
+    // accepts any even-length hex, so the re-encode comparison (not the
+    // decode alone) is what rejects uppercase and wrong lengths.
+    let valid_digest = match hex::decode(&pin.sha256) {
+        Ok(bytes) => bytes.len() == 32 && hex::encode(&bytes) == pin.sha256,
+        Err(_) => false,
+    };
+    if !valid_digest {
         return Err(PinProblem::BadDigest {
             value: pin.sha256.clone(),
         });

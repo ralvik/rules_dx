@@ -502,10 +502,21 @@ fn mentions_group(completed: &serde_json::Map<String, Value>, group: &str) -> bo
 /// Parses a reported `file://` URI into a local path without touching the
 /// filesystem. Any other scheme (notably remote `bytestream://`) fails so
 /// the CLI never performs a network fetch for unmaterialized outputs.
+/// `Url::parse` validates URI structure first (scheme `file`, empty or
+/// `localhost` host); the path itself keeps the exact legacy byte derivation
+/// with no percent-decoding, so accepted inputs resolve identically.
 fn file_uri_to_path(uri: &str) -> Result<PathBuf, BepError> {
     let unsupported = || BepError::UnsupportedUri {
         uri: uri.to_owned(),
     };
+    let parsed = url::Url::parse(uri).map_err(|_| unsupported())?;
+    if parsed.scheme() != "file" {
+        return Err(unsupported());
+    }
+    match parsed.host_str() {
+        None | Some("localhost") => {}
+        Some(_) => return Err(unsupported()),
+    }
     let rest = uri.strip_prefix("file://").ok_or_else(unsupported)?;
     let path = match rest.strip_prefix("localhost/") {
         Some(trailing) => format!("/{trailing}"),
