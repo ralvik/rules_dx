@@ -1,0 +1,80 @@
+"""Deploy rule fixtures and boundary tests (issue #178)."""
+
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("//quality:fixtures.bzl", "real_source_target")
+load(":defs.bzl", "dx_deployment")
+load(":deploy_tests.bzl", "deploy_analysis_tests", "deploy_app_analysis_tests", "deploy_debug_analysis_tests", "deploy_unit_tests")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "defs.bzl",
+    "deploy_tests.bzl",
+])
+
+sh_binary(
+    name = "deploy_program",
+    srcs = ["deploy_program.sh"],
+)
+
+sh_binary(
+    name = "deploy_app",
+    srcs = ["deploy_app.sh"],
+)
+
+dx_deployment(
+    name = "deploy_default",
+    deploy = ":deploy_program",
+)
+
+dx_deployment(
+    name = "deploy_debug",
+    deploy = ":deploy_program",
+    profile = "debug",
+)
+
+dx_deployment(
+    name = "deploy_with_app",
+    app = ":deploy_program",
+    deploy = ":deploy_app",
+)
+
+# Manual negative demo: invalid profiles fail analysis with the helper
+# message. Never part of `//...` suites: build explicitly with
+# --nobuild to observe the failure.
+dx_deployment(
+    name = "deploy_invalid",
+    deploy = ":deploy_program",
+    profile = "staging",
+    tags = ["manual"],
+)
+
+deploy_unit_tests(name = "deploy_unit")
+
+deploy_analysis_tests(name = "deploy_analysis")
+
+deploy_debug_analysis_tests(name = "deploy_debug_analysis")
+
+deploy_app_analysis_tests(name = "deploy_app_analysis")
+
+test_suite(
+    name = "all",
+    tests = [
+        ":deploy_analysis",
+        ":deploy_app_analysis",
+        ":deploy_debug_analysis",
+        ":deploy_unit",
+    ],
+)
+
+# Repository corpus: deploy Starlark owned for direct-Bazel dogfood
+# under the canonical real_fixture_policy. Shell fixtures are tooling
+# with no quality class and stay outside the corpus.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "defs.bzl",
+        "deploy_tests.bzl",
+    ],
+)

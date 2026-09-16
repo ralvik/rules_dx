@@ -1,0 +1,12 @@
+"""Deploy package surface (issue #178)."""
+
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+# Repository corpus: deploy package Starlark owned for direct-Bazel
+# dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
