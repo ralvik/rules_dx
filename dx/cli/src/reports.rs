@@ -17,7 +17,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::args::{Command, ReportRequest};
 use crate::plan::spec;
-use coverage_gate::{find_ignores, is_ignored, parse_lcov};
+use coverage_gate::{find_ignores, is_covered_language, is_ignored, parse_lcov};
 use dx_output::{
     check_output_conflict, sort_diagnostics, DiagnosticEvent, OutputError, OutputMode, Severity,
 };
@@ -1090,12 +1090,13 @@ pub fn validate_lcov(bytes: &[u8]) -> Result<(), ReportError> {
 ///
 /// Returns `(covered, eligible)` executable-line counts. Documents union
 /// per `SF` path with maximum hits winning; source-level exclusion markers
-/// are honored for `.rs`/`.go` sources through the shared `coverage_gate`
-/// scanner (a `reason:` comment stays required exactly as under the
-/// retired M00 gate; see the marker syntax in `docs/testing/README.md`). Sources that fail to load count raw: Bazel may
+/// are honored for the covered languages (`.rs`, `.go`, `.py`, `.js`,
+/// `.jsx`, `.ts`, `.tsx`) through the shared `coverage_gate` scanner (a
+/// `reason:` comment stays required exactly as under the retired M00 gate;
+/// see the marker syntax in `docs/testing/README.md`). Sources that fail to load count raw: Bazel may
 /// instrument generated or external files outside the workspace.
-/// Non-Rust/Go records have no marker language and count raw. Invalid
-/// markers fail the computation.
+/// Records outside the covered languages have no marker language and count
+/// raw. Invalid markers fail the computation.
 pub fn coverage_line_rate(
     documents: &[String],
     load: &dyn Fn(&str) -> Option<String>,
@@ -1117,7 +1118,7 @@ pub fn coverage_line_rate(
     let mut eligible = 0u64;
     for (path, hits) in &merged {
         let mut ignores = None;
-        if path.ends_with(".rs") || path.ends_with(".go") {
+        if is_covered_language(path) {
             if let Some(source) = load(path) {
                 ignores = Some(find_ignores(path, &source)?);
             }
