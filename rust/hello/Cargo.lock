@@ -176,6 +176,7 @@ dependencies = [
  "quick-xml",
  "serde",
  "serde_json",
+ "thiserror",
 ]
 
 [[package]]

@@ -228,84 +228,38 @@ impl Invocation {
 
 /// Invocation parsing failure. Every variant is a CLI-detected
 /// pre-execution usage error (exit code 2).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ArgsError {
+    #[error(
+        "missing command: want audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel"
+    )]
     MissingCommand,
-    UnknownCommand {
-        command: String,
-    },
-    UnknownOption {
-        option: String,
-    },
+    #[error(
+        "unknown command {command:?}: want audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel"
+    )]
+    UnknownCommand { command: String },
+    #[error("unknown option {option:?}")]
+    UnknownOption { option: String },
+    #[error("option {option:?} is not supported by dx {command}")]
     UnsupportedOption {
         command: &'static str,
         option: String,
     },
-    MissingValue {
-        option: String,
-    },
-    BadOutput {
-        value: String,
-    },
-    BadFailOn {
-        value: String,
-    },
-    BadMinCoverage {
-        value: String,
-    },
-    BadReport {
-        value: String,
-    },
-    ScopeNotSupported {
-        scope: String,
-    },
+    #[error("missing value for {option:?}")]
+    MissingValue { option: String },
+    #[error("unknown --output {value:?}: want text|diff|json")]
+    BadOutput { value: String },
+    #[error("unknown --fail-on {value:?}: want info|warning|error")]
+    BadFailOn { value: String },
+    #[error("invalid --min-coverage {value:?}: want an integer 0-100")]
+    BadMinCoverage { value: String },
+    #[error("malformed --report {value:?}: want <format>=<destination>")]
+    BadReport { value: String },
+    #[error(
+        "unsupported scope {scope:?}: want // or @ labels, or workspace-relative file and directory paths"
+    )]
+    ScopeNotSupported { scope: String },
 }
-
-impl std::fmt::Display for ArgsError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ArgsError::MissingCommand => write!(
-                f,
-                "missing command: want audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel"
-            ),
-            ArgsError::UnknownCommand { command } => {
-                write!(
-                    f,
-                    "unknown command {command:?}: want audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel"
-                )
-            }
-            ArgsError::UnknownOption { option } => write!(f, "unknown option {option:?}"),
-            ArgsError::UnsupportedOption { command, option } => write!(
-                f,
-                "option {option:?} is not supported by dx {command}"
-            ),
-            ArgsError::MissingValue { option } => write!(f, "missing value for {option:?}"),
-            ArgsError::BadOutput { value } => {
-                write!(f, "unknown --output {value:?}: want text|diff|json")
-            }
-            ArgsError::BadFailOn { value } => {
-                write!(f, "unknown --fail-on {value:?}: want info|warning|error")
-            }
-            ArgsError::BadMinCoverage { value } => {
-                write!(f, "invalid --min-coverage {value:?}: want an integer 0-100")
-            }
-            ArgsError::BadReport { value } => {
-                write!(
-                    f,
-                    "malformed --report {value:?}: want <format>=<destination>"
-                )
-            }
-            ArgsError::ScopeNotSupported { scope } => {
-                write!(
-                    f,
-                    "unsupported scope {scope:?}: want // or @ labels, or workspace-relative file and directory paths"
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for ArgsError {}
 
 /// Splits a `--name=value` argument into its bare name and value.
 fn split_inline(arg: &str) -> (&str, Option<&str>) {

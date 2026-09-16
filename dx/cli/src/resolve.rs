@@ -75,103 +75,75 @@ pub struct ResolvedScope {
 /// [`ResolveError::AmbiguousRunnable`], which are operational `dx run`
 /// failures (exit 1) per O52: the scope resolved, but no single
 /// executable owner exists.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ResolveError {
     /// Empty positional scope.
+    #[error("empty scope: pass a label, pattern, file, or directory")]
     EmptyScope,
     /// Package-relative label such as `:target`, which would resolve
     /// against the current directory instead of the workspace.
+    #[error(
+        "unsupported scope {scope:?}: package-relative labels resolve against the current directory; spell the workspace label starting with //"
+    )]
     RelativeLabel { scope: String },
     /// External-repository label or pattern for a workflow scope.
+    #[error(
+        "unsupported scope {scope:?}: workflow commands accept main-workspace labels, patterns, files, and directories only"
+    )]
     ExternalScope { scope: String },
     /// Absolute path or a path escaping the workspace through `..`.
+    #[error("unsupported scope {scope:?}: pass a workspace-relative path without .. escapes")]
     OutsideWorkspace { scope: String },
     /// Path with no workspace entry.
+    #[error("unknown path {scope:?}: no such file or directory under the workspace")]
     PathNotFound { scope: String },
     /// Workspace entry that is neither a file nor a directory.
+    #[error("unsupported path {scope:?}: scope paths must be regular files or directories")]
     NotFileOrDir { scope: String },
     /// File whose directory chain holds no Bazel package: no
     /// `BUILD.bazel`/`BUILD` marker exists from the parent directory up
     /// to the workspace root.
+    #[error(
+        "not a package {scope:?}: no enclosing Bazel package holds the file; add a BUILD file for its directory or pass an explicit target label"
+    )]
     NotAPackage { scope: String },
     /// Filename with control characters that cannot round-trip
     /// through query syntax and line-oriented output.
+    #[error(
+        "unsupported path {scope:?}: filenames with control characters cannot resolve through Bazel query"
+    )]
     UnsupportedName { scope: String },
     /// File with no direct source owner in the query graph.
+    #[error(
+        "no Bazel target owns {file:?} (queried as {label}): add the file to a target srcs list or pass an explicit target label"
+    )]
     NoOwner { file: String, label: String },
     /// Direct owners with no reverse-dependent test in the query graph.
     /// Distinct from [`ResolveError::NoOwner`]: the file is owned, but no
     /// test reaches those owners, so there is nothing to run.
+    #[error(
+        "no test depends on {owners}: pass an explicit test label or pattern such as //pkg/...",
+        owners = owners.join(" ")
+    )]
     NoTests { owners: Vec<String> },
     /// `dx run` file/directory scope with no executable owner: no
     /// depth-1 owner has a rule kind ending in `_binary`.
+    #[error(
+        "no executable target owns {scopes}: add a *_binary rule owning the file or pass an explicit runnable label",
+        scopes = scopes.join(" ")
+    )]
     NoRunnable { scopes: Vec<String> },
     /// `dx run` file/directory scope with multiple executable owners.
     /// Candidates are bytewise sorted.
+    #[error(
+        "multiple executable targets own the scope ({candidates}): pass one explicit runnable label",
+        candidates = candidates.join(" ")
+    )]
     AmbiguousRunnable { candidates: Vec<String> },
     /// Ownership query failed or returned unusable output.
+    #[error("ownership query for {label} failed: {detail}")]
     QueryFailed { label: String, detail: String },
 }
-
-impl std::fmt::Display for ResolveError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ResolveError::EmptyScope => write!(f, "empty scope: pass a label, pattern, file, or directory"),
-            ResolveError::RelativeLabel { scope } => write!(
-                f,
-                "unsupported scope {scope:?}: package-relative labels resolve against the current directory; spell the workspace label starting with //"
-            ),
-            ResolveError::ExternalScope { scope } => write!(
-                f,
-                "unsupported scope {scope:?}: workflow commands accept main-workspace labels, patterns, files, and directories only"
-            ),
-            ResolveError::OutsideWorkspace { scope } => write!(
-                f,
-                "unsupported scope {scope:?}: pass a workspace-relative path without .. escapes"
-            ),
-            ResolveError::PathNotFound { scope } => write!(
-                f,
-                "unknown path {scope:?}: no such file or directory under the workspace"
-            ),
-            ResolveError::NotFileOrDir { scope } => write!(
-                f,
-                "unsupported path {scope:?}: scope paths must be regular files or directories"
-            ),
-            ResolveError::NotAPackage { scope } => write!(
-                f,
-                "not a package {scope:?}: no enclosing Bazel package holds the file; add a BUILD file for its directory or pass an explicit target label"
-            ),
-            ResolveError::UnsupportedName { scope } => write!(
-                f,
-                "unsupported path {scope:?}: filenames with control characters cannot resolve through Bazel query"
-            ),
-            ResolveError::NoOwner { file, label } => write!(
-                f,
-                "no Bazel target owns {file:?} (queried as {label}): add the file to a target srcs list or pass an explicit target label"
-            ),
-            ResolveError::NoTests { owners } => write!(
-                f,
-                "no test depends on {}: pass an explicit test label or pattern such as //pkg/...",
-                owners.join(" ")
-            ),
-            ResolveError::NoRunnable { scopes } => write!(
-                f,
-                "no executable target owns {}: add a *_binary rule owning the file or pass an explicit runnable label",
-                scopes.join(" ")
-            ),
-            ResolveError::AmbiguousRunnable { candidates } => write!(
-                f,
-                "multiple executable targets own the scope ({}): pass one explicit runnable label",
-                candidates.join(" ")
-            ),
-            ResolveError::QueryFailed { label, detail } => {
-                write!(f, "ownership query for {label} failed: {detail}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for ResolveError {}
 
 /// Quotes every item into one deterministic space-separated set literal:
 /// items are bytewise sorted so the query expression is stable and

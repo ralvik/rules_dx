@@ -45,6 +45,7 @@ rust_library(
             "quick-xml",
             "serde",
             "serde_json",
+            "thiserror",
         ],
         package_name = "dx/dx_cli",
     ) + [
@@ -82,6 +83,7 @@ rust_binary(
             "quick-xml",
             "serde",
             "serde_json",
+            "thiserror",
         ],
         package_name = "dx/dx_cli",
     ) + [
@@ -106,6 +108,7 @@ rust_test(
             "quick-xml",
             "serde",
             "serde_json",
+            "thiserror",
         ],
         package_name = "dx/dx_cli",
     ) + [
