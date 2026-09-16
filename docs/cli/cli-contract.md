@@ -62,7 +62,8 @@ position or reinterpret trailing values heuristically.
 
 Workflow commands reserve flags required for correctness: aspect selection,
 `dx_results`, `@rules_dx//config:workspace`,
-`@rules_dx//config:validate`, the BEP destination/format, and output download or
+`@rules_dx//config:validate`, the BEP destination/format, the build-profile
+`--config=dx_*` pin on `build`/`test`/`run`, and output download or
 materialization settings needed to consume results. A user-supplied option that
 sets a protected flag to a conflicting value is rejected before execution with the
 flag name and required policy, but neither the supplied nor generated option value is

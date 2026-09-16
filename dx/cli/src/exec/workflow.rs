@@ -94,7 +94,16 @@ pub(crate) fn execute_workflow(invocation: &Invocation, env: Env<'_>) -> i32 {
     } else {
         None
     };
-    let plan = match plan_workflow(verb, &resolved, &invocation.bazel_options, bep_arg) {
+    // Build-profile pin (issue #179): `build`/`test` always carry an
+    // explicit `--config=dx_*` (bare means `dx_dev`); `coverage` has no
+    // profile flags so its argv is unchanged (`None` injects nothing).
+    // `run` returns earlier and never reaches this plan call.
+    let profile = if verb == WorkflowVerb::Coverage {
+        None
+    } else {
+        Some(invocation.profile())
+    };
+    let plan = match plan_workflow(verb, &resolved, &invocation.bazel_options, bep_arg, profile) {
         Ok(plan) => plan,
         Err(error) => return pre_exec(err, &format!("{error:?}")),
     };
@@ -489,6 +498,53 @@ mod tests {
         };
         let (code, _, _) = harness.run(&["build", "--output=text"]);
         assert_eq!(code, 3);
+    }
+
+    #[test]
+    fn build_profile_flags_reach_bazel_argv() {
+        use crate::exec::{execute, Env};
+        use std::cell::RefCell;
+        use std::rc::Rc;
+        // End-to-end pin of the issue #179 mapping: parse selects the
+        // profile and execution injects the matching `--config=dx_*`
+        // (bare means `dx_dev`).
+        for (words, flag) in [
+            (vec!["build"], "--config=dx_dev"),
+            (vec!["build", "--debug"], "--config=dx_debug"),
+            (vec!["build", "--release"], "--config=dx_release"),
+        ] {
+            let harness = Harness::new("build-profile");
+            let seen = Rc::new(RefCell::new(Vec::new()));
+            let probe = ArgvProbe {
+                code: Some(0),
+                seen: Rc::clone(&seen),
+            };
+            let inv = invocation(&words);
+            let mut out = Vec::new();
+            let mut err = Vec::new();
+            let code = execute(
+                &inv,
+                Env {
+                    workspace: &harness.workspace,
+                    runner: &probe,
+                    query_runner: &harness.query,
+                    temp_dir: &harness.temp,
+                    pid: std::process::id(),
+                    nonce: 0,
+                    out: &mut out,
+                    err: &mut err,
+                    ci: false,
+                },
+            );
+            assert_eq!(code, 0, "{words:?}");
+            let seen = seen.borrow();
+            assert_eq!(seen.len(), 1, "{words:?}");
+            assert!(
+                seen[0].contains(&flag.to_owned()),
+                "{words:?} argv missing {flag}: {:?}",
+                seen[0]
+            );
+        }
     }
 
     #[test]

@@ -64,9 +64,9 @@ pub(crate) fn execute_run(invocation: &Invocation, env: Env<'_>) -> i32 {
         }
     };
     let plan = if targets.len() == 1 {
-        plan_run(&targets[0], &invocation.bazel_options)
+        plan_run(&targets[0], &invocation.bazel_options, invocation.profile())
     } else {
-        plan_run_multi(&targets, &invocation.bazel_options)
+        plan_run_multi(&targets, &invocation.bazel_options, invocation.profile())
     };
     if invocation.dry_run {
         if invocation.output == OutputMode::Json {
@@ -114,8 +114,12 @@ pub(crate) fn execute_run(invocation: &Invocation, env: Env<'_>) -> i32 {
 /// so this preserves Bazel's exact diagnostic and status. Shares the
 /// single [`crate::plan::plan_run_targets`] builder with [`plan_run`]
 /// so the launcher, startup options, and workspace policy cannot drift.
-fn plan_run_multi(targets: &[String], app_args: &[String]) -> crate::plan::BuildPlan {
-    crate::plan::plan_run_targets(targets, app_args)
+fn plan_run_multi(
+    targets: &[String],
+    app_args: &[String],
+    profile: crate::args::Profile,
+) -> crate::plan::BuildPlan {
+    crate::plan::plan_run_targets(targets, app_args, profile)
 }
 
 #[cfg(test)]
@@ -258,6 +262,8 @@ mod tests {
         Invocation {
             command,
             check: false,
+            debug: false,
+            release: false,
             workspace: None,
             dry_run,
             quiet: false,
@@ -322,6 +328,52 @@ mod tests {
         assert_eq!(code, 0, "{out}");
         assert!(out.contains("command_started"), "{out}");
         assert!(out.contains("command_finished"), "{out}");
+    }
+
+    #[test]
+    fn run_profile_flags_reach_bazel_argv() {
+        use std::cell::RefCell;
+        use std::rc::Rc;
+        // End-to-end pin of the issue #179 mapping on the `run` path:
+        // parse selects the profile and execution injects the matching
+        // `--config=dx_*` (bare means `dx_dev`).
+        for (words, flag) in [
+            (vec!["run", "//app:bin"], "--config=dx_dev"),
+            (vec!["run", "--debug", "//app:bin"], "--config=dx_debug"),
+            (vec!["run", "//app:bin", "--release"], "--config=dx_release"),
+        ] {
+            let harness = Harness::new("run-profile");
+            let seen = Rc::new(RefCell::new(Vec::new()));
+            let probe = ArgvProbe {
+                code: Some(0),
+                seen: Rc::clone(&seen),
+            };
+            let inv = invocation(&words);
+            let mut out = Vec::new();
+            let mut err = Vec::new();
+            let code = execute(
+                &inv,
+                Env {
+                    workspace: &harness.workspace,
+                    runner: &probe,
+                    query_runner: &harness.query,
+                    temp_dir: &harness.temp,
+                    pid: std::process::id(),
+                    nonce: 0,
+                    out: &mut out,
+                    err: &mut err,
+                    ci: false,
+                },
+            );
+            assert_eq!(code, 0, "{words:?}");
+            let seen = seen.borrow();
+            assert_eq!(seen.len(), 1, "{words:?}");
+            assert!(
+                seen[0].contains(&flag.to_owned()),
+                "{words:?} argv missing {flag}: {:?}",
+                seen[0]
+            );
+        }
     }
 
     #[test]

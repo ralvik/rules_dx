@@ -35,7 +35,8 @@ target names (`//deploy:production`) until a concrete consumer proves
 the need.
 
 Profile vocabulary follows [ADR 0021](../decisions/0021-build-profiles.md).
-Flag precedence and `DX_PROFILE` forwarding belong to
+Precedence (explicit flag over target `profile` over command default)
+and the `DX_PROFILE` name are accepted per
 [issue #179](https://github.com/ralvik/rules_dx/issues/179); the
-`dx deploy` command belongs to
+`dx deploy` command that wires them belongs to
 [issue #180](https://github.com/ralvik/rules_dx/issues/180).

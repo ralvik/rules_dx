@@ -68,6 +68,16 @@ Three shared Bazel configs select `compilation_mode` behind stable
 The configs live in the vendored preset (`tools/bazelrc/preset.bazelrc`,
 reviewed via `tools/bazelrc/preset.py`, wired through the root
 `.bazelrc`) and are additive: bare invocations keep today's behavior.
-No CLI flags change in this scope; `--debug`/`--release` mapping,
-precedence, and `DX_PROFILE` forwarding are open in
-[#179](https://github.com/ralvik/rules_dx/issues/179).
+
+`dx build`, `dx run`, and `dx test` accept `--debug`/`--release` to
+select the profile. The flags are mutually exclusive (both passed is a
+usage failure, exit 2) and map to `--config=dx_debug`/`--config=dx_release`
+on the Bazel argv; the bare invocation passes `--config=dx_dev`
+explicitly. There is no `--dev` flag: bare already means the middle
+mode. `dx coverage` takes no profile flags; its argv is unchanged.
+Precedence is explicit flag over deploy target `profile` attribute over
+command default. The `deploy` default (`release`), the target attribute
+(open in [#178](https://github.com/ralvik/rules_dx/issues/178)), the
+`dx deploy` flag surface, and `DX_PROFILE=debug|dev|release`
+forwarding to the deploy program are provisional until
+[#180](https://github.com/ralvik/rules_dx/issues/180) lands.

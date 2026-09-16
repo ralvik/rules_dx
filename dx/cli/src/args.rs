@@ -152,6 +152,79 @@ impl Command {
     }
 }
 
+/// Build profile vocabulary (issue #179, ADR 0021): `--debug` selects
+/// `dx_debug` (`dbg`), the bare invocation selects `dx_dev`
+/// (`fastbuild`), and `--release` selects `dx_release` (`opt`). There
+/// is no `--dev` flag: the bare invocation already means the middle
+/// mode and keeps `dx build` short.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Profile {
+    Debug,
+    Dev,
+    Release,
+}
+
+impl Profile {
+    /// Stable profile name forwarded as `DX_PROFILE` to deploy programs.
+    pub fn name(self) -> &'static str {
+        match self {
+            Profile::Debug => "debug",
+            Profile::Dev => "dev",
+            Profile::Release => "release",
+        }
+    }
+
+    /// Shared Bazel config backing the profile (ADR 0021).
+    pub fn config(self) -> &'static str {
+        match self {
+            Profile::Debug => "dx_debug",
+            Profile::Dev => "dx_dev",
+            Profile::Release => "dx_release",
+        }
+    }
+
+    /// Required `--config=` flag pinning the profile on a workflow argv.
+    pub fn config_flag(self) -> String {
+        format!("--config={}", self.config())
+    }
+
+    /// Command default: `deploy` defaults to release, every other
+    /// command defaults to dev. No `Command::Deploy` variant exists yet
+    /// (issue #180), so this returns dev for all delivered commands;
+    /// #180 must map deploy to release here.
+    pub fn default_for(command: Command) -> Self {
+        let _ = command;
+        Profile::Dev
+    }
+
+    /// Parses a deploy-target `profile` attribute value (`debug`, `dev`,
+    /// `release`): `None` for anything else so analysis diagnostics own
+    /// the spelling error. Shared so the future `dx deploy` wiring in
+    /// issue #180 reuses the same vocabulary.
+    pub fn parse_attr(value: &str) -> Option<Self> {
+        match value {
+            "debug" => Some(Profile::Debug),
+            "dev" => Some(Profile::Dev),
+            "release" => Some(Profile::Release),
+            _ => None,
+        }
+    }
+}
+
+/// Environment variable forwarding the resolved profile to the deploy
+/// program (issue #179 item 3). Wired by the `dx deploy` CLI in issue
+/// #180; defined here so the name is pinned once.
+pub const DX_PROFILE_ENV: &str = "DX_PROFILE";
+
+/// Precedence for the effective profile (issue #179 item 2): the
+/// explicit `--debug`/`--release` flag wins over the deploy target
+/// `profile` attribute, which wins over the command default. Build,
+/// run, and test have no target attribute, so they resolve flag over
+/// default.
+pub fn resolve_profile(flag: Option<Profile>, attr: Option<Profile>, default: Profile) -> Profile {
+    flag.or(attr).unwrap_or(default)
+}
+
 /// One `--report <format>=<destination>` request. Format support is
 /// validated against the command registry during planning; parsing only
 /// checks the `format=destination` shape.
@@ -169,6 +242,10 @@ pub struct ReportRequest {
 pub struct Invocation {
     pub command: Command,
     pub check: bool,
+    /// `--debug` (build/run/test only).
+    pub debug: bool,
+    /// `--release` (build/run/test only).
+    pub release: bool,
     pub workspace: Option<String>,
     pub dry_run: bool,
     pub quiet: bool,
@@ -201,6 +278,31 @@ impl Invocation {
             "default"
         }
     }
+
+    /// Explicit `--debug`/`--release` flag as a [`Profile`]: `None` for
+    /// the bare invocation (which resolves to the command default).
+    /// Parsing rejects both flags together, so the arms are exclusive.
+    pub fn profile_flag(&self) -> Option<Profile> {
+        if self.debug {
+            Some(Profile::Debug)
+        } else if self.release {
+            Some(Profile::Release)
+        } else {
+            None
+        }
+    }
+
+    /// Effective profile under issue #179 precedence: explicit flag over
+    /// the command default. The deploy target `profile` attribute slots
+    /// between them once `dx deploy` lands (issue #180) via
+    /// [`resolve_profile`]; build/run/test have no target attribute.
+    pub fn profile(&self) -> Profile {
+        resolve_profile(
+            self.profile_flag(),
+            None,
+            Profile::default_for(self.command),
+        )
+    }
 }
 
 /// Invocation parsing failure. Every variant is a CLI-detected
@@ -232,6 +334,8 @@ pub enum ArgsError {
     BadMinCoverage { value: String },
     #[error("malformed --report {value:?}: want <format>=<destination>")]
     BadReport { value: String },
+    #[error("options --debug and --release are mutually exclusive")]
+    ConflictingProfiles,
     #[error(
         "unsupported scope {scope:?}: want // or @ labels, or workspace-relative file and directory paths"
     )]
@@ -270,6 +374,12 @@ struct Cli {
     /// `--check`.
     #[arg(long)]
     check: bool,
+    /// `--debug` (build/run/test only; conflicts with `--release`).
+    #[arg(long)]
+    debug: bool,
+    /// `--release` (build/run/test only; conflicts with `--debug`).
+    #[arg(long)]
+    release: bool,
     /// `--bazel` (clean only).
     #[arg(long = "bazel")]
     bazel_clean: bool,
@@ -489,6 +599,8 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         fail_on,
         min_coverage: min_coverage_name,
         check,
+        debug,
+        release,
         bazel_clean,
         pin,
         rollback,
@@ -916,6 +1028,23 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
             });
         }
     }
+    // Profile flags (issue #179): `--debug`/`--release` are mutually
+    // exclusive and belong to `build`, `run`, and `test` only
+    // (`deploy` joins them in issue #180; every other command fails
+    // fast instead of silently ignoring the profile).
+    if debug && release {
+        return Err(ArgsError::ConflictingProfiles);
+    }
+    if (debug || release) && !matches!(command, Command::Build | Command::Run | Command::Test) {
+        return Err(ArgsError::UnsupportedOption {
+            command: command.name(),
+            option: if debug {
+                "--debug".to_owned()
+            } else {
+                "--release".to_owned()
+            },
+        });
+    }
     // Flag ownership (M30b): `--rollback` belongs to `version` only
     // and `--configured` to the inspect wrappers only. Command blocks
     // above already reject them on their own surfaces; this catch-all
@@ -941,6 +1070,8 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     Ok(Invocation {
         command,
         check,
+        debug,
+        release,
         workspace,
         dry_run,
         quiet,
@@ -1049,6 +1180,8 @@ mod tests {
         let got = parse(&args(&["lint"])).expect("parse");
         assert_eq!(got.command, Command::Lint);
         assert!(!got.check);
+        assert!(!got.debug);
+        assert!(!got.release);
         assert_eq!(got.workspace, None);
         assert!(!got.dry_run);
         assert!(!got.quiet);
@@ -1797,6 +1930,104 @@ mod tests {
                 Err(ArgsError::MissingValue {
                     option: "<file> <label>".to_owned(),
                 }),
+                "words: {words:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn profile_vocabulary_maps_to_shared_configs() {
+        assert_eq!(Profile::Debug.name(), "debug");
+        assert_eq!(Profile::Dev.name(), "dev");
+        assert_eq!(Profile::Release.name(), "release");
+        assert_eq!(Profile::Debug.config(), "dx_debug");
+        assert_eq!(Profile::Dev.config(), "dx_dev");
+        assert_eq!(Profile::Release.config(), "dx_release");
+        assert_eq!(Profile::Debug.config_flag(), "--config=dx_debug");
+        assert_eq!(Profile::Dev.config_flag(), "--config=dx_dev");
+        assert_eq!(Profile::Release.config_flag(), "--config=dx_release");
+        assert_eq!(DX_PROFILE_ENV, "DX_PROFILE");
+    }
+
+    #[test]
+    fn profile_attr_parses_deploy_vocabulary() {
+        assert_eq!(Profile::parse_attr("debug"), Some(Profile::Debug));
+        assert_eq!(Profile::parse_attr("dev"), Some(Profile::Dev));
+        assert_eq!(Profile::parse_attr("release"), Some(Profile::Release));
+        assert_eq!(Profile::parse_attr("staging"), None);
+        assert_eq!(Profile::parse_attr(""), None);
+    }
+
+    #[test]
+    fn profile_precedence_is_flag_over_attr_over_default() {
+        // Explicit flag wins over the deploy target attribute.
+        assert_eq!(
+            resolve_profile(Some(Profile::Debug), Some(Profile::Release), Profile::Dev),
+            Profile::Debug
+        );
+        // Target attribute wins over the command default.
+        assert_eq!(
+            resolve_profile(None, Some(Profile::Release), Profile::Dev),
+            Profile::Release
+        );
+        // Bare invocation resolves to the command default.
+        assert_eq!(resolve_profile(None, None, Profile::Dev), Profile::Dev);
+        assert_eq!(
+            resolve_profile(None, None, Profile::Release),
+            Profile::Release
+        );
+    }
+
+    #[test]
+    fn profile_flags_parse_on_build_run_test() {
+        for command in ["build", "run", "test"] {
+            let bare = parse(&args(&[command])).expect("bare parse");
+            assert!(!bare.debug);
+            assert!(!bare.release);
+            assert_eq!(bare.profile_flag(), None);
+            assert_eq!(bare.profile(), Profile::Dev);
+            let debug = parse(&args(&[command, "--debug"])).expect("debug parse");
+            assert!(debug.debug);
+            assert!(!debug.release);
+            assert_eq!(debug.profile_flag(), Some(Profile::Debug));
+            assert_eq!(debug.profile(), Profile::Debug);
+            let release = parse(&args(&[command, "--release"])).expect("release parse");
+            assert!(!release.debug);
+            assert!(release.release);
+            assert_eq!(release.profile_flag(), Some(Profile::Release));
+            assert_eq!(release.profile(), Profile::Release);
+        }
+        // Flags parse before the command word too.
+        let got = parse(&args(&["--debug", "build"])).expect("parse");
+        assert_eq!(got.profile_flag(), Some(Profile::Debug));
+        let got = parse(&args(&["test", "--release", "//a:t"])).expect("parse");
+        assert_eq!(got.profile_flag(), Some(Profile::Release));
+    }
+
+    #[test]
+    fn profile_flags_reject_conflicts_and_foreign_commands() {
+        for command in ["build", "run", "test"] {
+            assert_eq!(
+                parse(&args(&[command, "--debug", "--release"])),
+                Err(ArgsError::ConflictingProfiles)
+            );
+        }
+        // Coverage, quality, umbrellas, managed, and adoption commands
+        // own no profile flags.
+        for words in [
+            vec!["coverage", "--debug"],
+            vec!["coverage", "--release"],
+            vec!["lint", "--debug"],
+            vec!["check", "--release"],
+            vec!["generate", "--debug"],
+            vec!["codegen", "--release"],
+            vec!["status", "--debug"],
+        ] {
+            assert!(
+                matches!(
+                    parse(&args(&words)),
+                    Err(ArgsError::UnsupportedOption { .. })
+                ),
                 "words: {words:?}"
             );
         }

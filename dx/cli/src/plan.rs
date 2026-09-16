@@ -451,16 +451,29 @@ impl WorkflowVerb {
 }
 
 /// Required workflow options in argv order: canonical workspace policy,
-/// full-target collection, and — for report-collecting verbs — the BEP
-/// stream path. Coverage additionally requires `--combined_report=lcov`
-/// so Bazel emits LCOV tracefiles. Aspects, output groups, and validation
-/// stay off this path: Bazel owns the workflow status. Fail-fast is the
-/// default: no `--keep_going` is forced; an explicit user `--keep_going`
-/// (or `--nocancel` equivalents) forwards via `bazel_options`.
+/// the build-profile config, full-target collection, and — for
+/// report-collecting verbs — the BEP stream path. Coverage additionally
+/// requires `--combined_report=lcov` so Bazel emits LCOV tracefiles.
+/// Aspects, output groups, and validation stay off this path: Bazel owns
+/// the workflow status. Fail-fast is the default: no `--keep_going` is
+/// forced; an explicit user `--keep_going` (or `--nocancel`
+/// equivalents) forwards via `bazel_options`.
+///
+/// `profile` is `Some` for `build`/`test` (always an explicit
+/// `--config=dx_*`, including the `dx_dev` default) and `None` for
+/// `coverage`, which has no profile flags in issue #179 scope: its argv
+/// is unchanged and bare Bazel behavior already equals `fastbuild`.
 pub const COVERAGE_COMBINED_REPORT_FLAG: &str = "--combined_report=lcov";
 
-pub fn workflow_options(verb: WorkflowVerb, bep_path: Option<&str>) -> Vec<String> {
+pub fn workflow_options(
+    verb: WorkflowVerb,
+    bep_path: Option<&str>,
+    profile: Option<crate::args::Profile>,
+) -> Vec<String> {
     let mut required = vec![workspace_flag()];
+    if let Some(profile) = profile {
+        required.push(profile.config_flag());
+    }
     if verb == WorkflowVerb::Coverage {
         required.push(COVERAGE_COMBINED_REPORT_FLAG.to_owned());
     }
@@ -472,12 +485,24 @@ pub fn workflow_options(verb: WorkflowVerb, bep_path: Option<&str>) -> Vec<Strin
 
 /// Protected workflow flags: workspace and BEP reject every user
 /// override; coverage `combined_report` accepts repetition of the
-/// required value only.
-pub fn workflow_protected(verb: WorkflowVerb) -> Vec<ProtectedFlag> {
+/// required value only. The build-profile `--config=dx_*` (issue #179)
+/// accepts repetition of the required value only, so an explicit user
+/// `--config` that conflicts with the resolved profile fails before
+/// execution instead of silently overriding it.
+pub fn workflow_protected(
+    verb: WorkflowVerb,
+    profile: Option<crate::args::Profile>,
+) -> Vec<ProtectedFlag> {
     let mut protected = vec![ProtectedFlag {
         name: "@rules_dx//config:workspace".to_owned(),
         required: None,
     }];
+    if let Some(profile) = profile {
+        protected.push(ProtectedFlag {
+            name: "config".to_owned(),
+            required: Some(profile.config_flag()),
+        });
+    }
     if verb == WorkflowVerb::Coverage {
         protected.push(ProtectedFlag {
             name: "combined_report".to_owned(),
@@ -496,16 +521,19 @@ pub fn workflow_protected(verb: WorkflowVerb) -> Vec<ProtectedFlag> {
 /// Bazel targets (empty selects the repository scope `//...`) and
 /// `resolved.scope` renders the operation summary. `bep_path` carries
 /// the build-event JSON stream for report-collecting verbs and must be
-/// `None` for `build` and `run`. Fails before execution when user options
-/// conflict with required workflow policy.
+/// `None` for `build` and `run`. `profile` carries the `--config=dx_*`
+/// pin for `build`/`test` (always `Some`, including the default) and
+/// must be `None` for `coverage` (no profile flags). Fails before
+/// execution when user options conflict with required workflow policy.
 pub fn plan_workflow(
     verb: WorkflowVerb,
     resolved: &ResolvedScope,
     bazel_options: &[String],
     bep_path: Option<&str>,
+    profile: Option<crate::args::Profile>,
 ) -> Result<BuildPlan, ForwardError> {
-    let required = workflow_options(verb, bep_path);
-    let protected = workflow_protected(verb);
+    let required = workflow_options(verb, bep_path, profile);
+    let protected = workflow_protected(verb, profile);
     let (scope, labels) = workflow_scope_labels(resolved);
     let argv = build_workflow_argv(verb.name(), bazel_options, &required, &protected, &labels)?;
     // Workflow verbs are self-describing (`Running build for ...`):
@@ -519,20 +547,27 @@ pub fn plan_workflow(
 /// on the label-only multi-target path, which `bazel run` rejects with
 /// its own diagnostic. `app_args` are the verbatim application
 /// arguments after `--`: they are never validated as Bazel options and
-/// forward after a `--` separator. Only the canonical workspace policy
-/// is required; there is no BEP stream, no `keep_going`, and no user
-/// Bazel options on this path. This is the single shared builder
-/// behind [`plan_run`] and the multi-target dispatch so the launcher,
-/// startup options, and workspace policy cannot drift.
-pub fn plan_run_targets(targets: &[String], app_args: &[String]) -> BuildPlan {
+/// forward after a `--` separator. Required options are the canonical
+/// workspace policy plus the `--config=dx_*` profile pin (always
+/// explicit, including the `dx_dev` default); there is no BEP stream,
+/// no `keep_going`, and no user Bazel options on this path. This is the
+/// single shared builder behind [`plan_run`] and the multi-target
+/// dispatch so the launcher, startup options, and workspace policy
+/// cannot drift.
+pub fn plan_run_targets(
+    targets: &[String],
+    app_args: &[String],
+    profile: crate::args::Profile,
+) -> BuildPlan {
     use dx_process::{launcher_argv0, WORKFLOW_STARTUP_OPTS};
 
     let mut argv =
-        Vec::with_capacity(WORKFLOW_STARTUP_OPTS.len() + 3 + targets.len() + app_args.len());
+        Vec::with_capacity(WORKFLOW_STARTUP_OPTS.len() + 4 + targets.len() + app_args.len());
     argv.push(launcher_argv0().to_owned());
     argv.extend(WORKFLOW_STARTUP_OPTS.iter().map(ToString::to_string));
     argv.push("run".to_owned());
     argv.push(workspace_flag());
+    argv.push(profile.config_flag());
     argv.extend(targets.iter().cloned());
     if !app_args.is_empty() {
         argv.push("--".to_owned());
@@ -547,11 +582,12 @@ pub fn plan_run_targets(targets: &[String], app_args: &[String]) -> BuildPlan {
 /// `target` is the single runnable label from [`crate::resolve`] (file/dir
 /// scopes) or label/pattern passthrough. `app_args` are the verbatim
 /// application arguments after `--`: they are never validated as Bazel
-/// options and forward after a `--` separator. Only the canonical
-/// workspace policy is required; there is no BEP stream, no `keep_going`,
-/// and no user Bazel options on this path.
-pub fn plan_run(target: &str, app_args: &[String]) -> BuildPlan {
-    plan_run_targets(&[target.to_owned()], app_args)
+/// options and forward after a `--` separator. Required options are the
+/// canonical workspace policy plus the `--config=dx_*` profile pin;
+/// there is no BEP stream, no `keep_going`, and no user Bazel options on
+/// this path.
+pub fn plan_run(target: &str, app_args: &[String], profile: crate::args::Profile) -> BuildPlan {
+    plan_run_targets(&[target.to_owned()], app_args, profile)
 }
 
 /// Builds the exact raw launcher argv for `dx bazel`: the launcher
@@ -894,7 +930,7 @@ pub fn create_run_temp_dir(base: &Path, pid: u32) -> std::io::Result<(PathBuf, u
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::args::{parse, ArgsError};
+    use crate::args::{parse, ArgsError, Profile};
 
     fn options(words: &[&str]) -> Vec<String> {
         words.iter().map(ToString::to_string).collect()
@@ -1153,10 +1189,14 @@ mod tests {
 
     #[test]
     fn run_targets_share_single_builder() {
-        let single = plan_run("//app:bin", &options(&["--port=8080"]));
-        let multi = plan_run_targets(&options(&["//app:bin"]), &options(&["--port=8080"]));
+        let single = plan_run("//app:bin", &options(&["--port=8080"]), Profile::Dev);
+        let multi = plan_run_targets(
+            &options(&["//app:bin"]),
+            &options(&["--port=8080"]),
+            Profile::Dev,
+        );
         assert_eq!(single, multi);
-        let joined = plan_run_targets(&options(&["//a:one", "//b:two"]), &[]);
+        let joined = plan_run_targets(&options(&["//a:one", "//b:two"]), &[], Profile::Dev);
         assert_eq!(
             joined.argv.last(),
             Some(&"//b:two".to_owned()),
@@ -1179,7 +1219,7 @@ mod tests {
 
     #[test]
     fn run_plan_forwards_app_args_verbatim() {
-        let plan = plan_run("//app:bin", &options(&["--port=8080"]));
+        let plan = plan_run("//app:bin", &options(&["--port=8080"]), Profile::Dev);
         assert_eq!(
             plan.argv,
             options(&[
@@ -1188,13 +1228,14 @@ mod tests {
                 "--nosystem_rc",
                 "run",
                 "--@rules_dx//config:workspace=//dx:config",
+                "--config=dx_dev",
                 "//app:bin",
                 "--",
                 "--port=8080",
             ])
         );
         assert!(plan.summary.contains("//app:bin"));
-        let bare = plan_run("//app:bin", &[]);
+        let bare = plan_run("//app:bin", &[], Profile::Dev);
         assert!(!bare.argv.contains(&"--".to_owned()));
     }
 
@@ -1554,30 +1595,38 @@ mod tests {
 
     #[test]
     fn workflow_plan_defaults_to_fail_fast_without_forced_keep_going() {
-        for verb in [
-            WorkflowVerb::Build,
-            WorkflowVerb::Test,
-            WorkflowVerb::Coverage,
+        for (verb, profile) in [
+            (WorkflowVerb::Build, Some(Profile::Dev)),
+            (WorkflowVerb::Test, Some(Profile::Dev)),
+            (WorkflowVerb::Coverage, None),
         ] {
-            let plan = plan_workflow(verb, &resolved(&[]), &[], None).expect("plan");
+            let plan = plan_workflow(verb, &resolved(&[]), &[], None, profile).expect("plan");
             assert!(
                 !plan.argv.iter().any(|arg| arg == "--keep_going"),
                 "{verb:?} must not force keep_going: {plan:?}"
             );
         }
-        let plan = plan_workflow(WorkflowVerb::Test, &resolved(&[]), &[], None).expect("plan");
+        let plan = plan_workflow(
+            WorkflowVerb::Test,
+            &resolved(&[]),
+            &[],
+            None,
+            Some(Profile::Dev),
+        )
+        .expect("plan");
         let argv: Vec<&str> = plan.argv.iter().map(String::as_str).collect();
         assert_eq!(
-            argv[..5],
+            argv[..6],
             [
                 "bazel",
                 "--nohome_rc",
                 "--nosystem_rc",
                 "test",
                 "--@rules_dx//config:workspace=//dx:config",
+                "--config=dx_dev",
             ]
         );
-        assert_eq!(argv[5..], ["//..."]);
+        assert_eq!(argv[6..], ["//..."]);
     }
 
     #[test]
@@ -1587,6 +1636,7 @@ mod tests {
             &resolved(&[]),
             &options(&["--keep_going"]),
             None,
+            Some(Profile::Dev),
         )
         .expect("plan");
         assert!(plan.argv.iter().any(|arg| arg == "--keep_going"));
@@ -1594,7 +1644,8 @@ mod tests {
 
     #[test]
     fn coverage_plan_requires_combined_lcov_report() {
-        let plan = plan_workflow(WorkflowVerb::Coverage, &resolved(&[]), &[], None).expect("plan");
+        let plan =
+            plan_workflow(WorkflowVerb::Coverage, &resolved(&[]), &[], None, None).expect("plan");
         assert!(plan
             .argv
             .iter()
@@ -1603,6 +1654,7 @@ mod tests {
             WorkflowVerb::Coverage,
             &resolved(&[]),
             &options(&[COVERAGE_COMBINED_REPORT_FLAG]),
+            None,
             None,
         )
         .expect("repeated required flag is accepted");
@@ -1615,6 +1667,7 @@ mod tests {
             &resolved(&[]),
             &options(&["--combined_report=json"]),
             None,
+            None,
         )
         .expect_err("conflicting combined_report must fail");
         assert!(
@@ -1626,12 +1679,102 @@ mod tests {
             &resolved(&[]),
             &options(&["--build_event_json_file=/tmp/other.json"]),
             Some("/tmp/bep.json"),
+            Some(Profile::Dev),
         )
         .expect_err("BEP override must fail");
         assert!(
             matches!(err, ForwardError::ConflictingOption { .. }),
             "got {err:?}"
         );
+    }
+
+    #[test]
+    fn workflow_profile_pins_config_flag_in_order() {
+        // Fixture pinning the issue #179 mapping: flag profiles select
+        // their `--config=dx_*` right after the workspace policy; the
+        // bare default is the explicit `dx_dev`.
+        for (profile, flag) in [
+            (Profile::Debug, "--config=dx_debug"),
+            (Profile::Dev, "--config=dx_dev"),
+            (Profile::Release, "--config=dx_release"),
+        ] {
+            let plan = plan_workflow(
+                WorkflowVerb::Build,
+                &resolved(&[]),
+                &[],
+                None,
+                Some(profile),
+            )
+            .expect("plan");
+            let argv: Vec<&str> = plan.argv.iter().map(String::as_str).collect();
+            assert_eq!(
+                argv[..6],
+                [
+                    "bazel",
+                    "--nohome_rc",
+                    "--nosystem_rc",
+                    "build",
+                    "--@rules_dx//config:workspace=//dx:config",
+                    flag,
+                ],
+                "{profile:?}: {plan:?}"
+            );
+        }
+        // Coverage carries no profile pin (no flags in #179 scope).
+        let plan =
+            plan_workflow(WorkflowVerb::Coverage, &resolved(&[]), &[], None, None).expect("plan");
+        assert!(
+            !plan.argv.iter().any(|arg| arg.starts_with("--config=")),
+            "coverage argv is unchanged: {plan:?}"
+        );
+        // Repeating the required profile value is accepted and
+        // canonicalized; a conflicting `--config` fails before
+        // execution instead of silently overriding the profile.
+        let repeated = plan_workflow(
+            WorkflowVerb::Build,
+            &resolved(&[]),
+            &options(&["--config=dx_dev"]),
+            None,
+            Some(Profile::Dev),
+        )
+        .expect("repeated required config is accepted");
+        assert!(repeated.argv.contains(&"--config=dx_dev".to_owned()));
+        let err = plan_workflow(
+            WorkflowVerb::Build,
+            &resolved(&[]),
+            &options(&["--config=dx_release"]),
+            None,
+            Some(Profile::Dev),
+        )
+        .expect_err("conflicting config must fail");
+        assert!(
+            matches!(err, ForwardError::ConflictingOption { .. }),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn run_profile_pins_config_flag() {
+        for (profile, flag) in [
+            (Profile::Debug, "--config=dx_debug"),
+            (Profile::Dev, "--config=dx_dev"),
+            (Profile::Release, "--config=dx_release"),
+        ] {
+            let plan = plan_run("//app:bin", &[], profile);
+            let argv: Vec<&str> = plan.argv.iter().map(String::as_str).collect();
+            assert_eq!(
+                argv[..6],
+                [
+                    "bazel",
+                    "--nohome_rc",
+                    "--nosystem_rc",
+                    "run",
+                    "--@rules_dx//config:workspace=//dx:config",
+                    flag,
+                ],
+                "{profile:?}: {plan:?}"
+            );
+        }
     }
 
     #[test]

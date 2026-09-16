@@ -122,6 +122,10 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
         let phase_invocation = Invocation {
             command: *phase,
             check: phase_check,
+            // Umbrella phases (format/lint/typecheck/generate) take no
+            // profile flags; the parent check/fix rejects them at parse.
+            debug: false,
+            release: false,
             workspace: invocation.workspace.clone(),
             dry_run: invocation.dry_run,
             quiet: invocation.quiet,
