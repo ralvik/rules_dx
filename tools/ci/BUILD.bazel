@@ -76,6 +76,17 @@ sh_test(
     ],
 )
 
+# Target-tag semantics harness (issue #99 item 3): proves `flaky`
+# forwards to private upstream tests (off by default), `bazel coverage`
+# skips `no-coverage` tests while running untagged ones, and the
+# `no-lint` / `no-typecheck` opt-out fixtures stay wired to the
+# capability presence suites. Run by CI via
+# `bazel run //tools/ci:target_tags`.
+sh_binary(
+    name = "target_tags",
+    srcs = ["target_tags.sh"],
+)
+
 # Repository corpus: build file owned for direct-Bazel dogfood
 # under the canonical real_fixture_policy. The audit script itself is
 # CI tooling, never a corpus source.
