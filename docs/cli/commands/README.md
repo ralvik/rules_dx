@@ -40,9 +40,9 @@ tests from inactive configurable branches.
 - [Environment, codegen, and setup commands](environment-codegen-setup.md)
 - [`dx audit`, `dx update`, and `dx bazel`](audit-update-bazel.md)
 - [`dx init` and `dx hooks`](hooks.md): scaffolding and the custom hermetic git-hook runner
-- `dx status` and `dx version`: the consolidated diagnostics surface and single-version
+- [`dx status` and `dx version`](status-version.md): the consolidated diagnostics surface and single-version
   pin/launcher with rollback
-- Thin inspect wrappers (`owners`/`deps`/`why`): canonicalized `bazel query`/`cquery`
+- [Thin inspect wrappers (`owners`/`deps`/`why`)](inspect.md): canonicalized `bazel query`/`cquery`
   forwarding reusing [target resolution](../target-resolution.md) without
   a custom graph engine.
 - [`dx completion`](completion.md): generated static shell scripts.
