@@ -94,53 +94,11 @@ pub enum FinalizeError {
 /// Whitespace and non-alphabet bytes are rejected: the payload is
 /// machine-generated, so leniency would only mask corruption.
 fn decode_b64(value: &str) -> Result<Vec<u8>, ()> {
-    fn sextet(c: u8) -> Result<u8, ()> {
-        match c {
-            b'A'..=b'Z' => Ok(c - b'A'),
-            b'a'..=b'z' => Ok(c - b'a' + 26),
-            b'0'..=b'9' => Ok(c - b'0' + 52),
-            b'+' => Ok(62),
-            b'/' => Ok(63),
-            _ => Err(()),
-        }
-    }
-    let bytes = value.as_bytes();
-    if bytes.is_empty() {
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
+    if value.is_empty() {
         return Ok(Vec::new());
     }
-    if !bytes.len().is_multiple_of(4) {
-        return Err(());
-    }
-    let mut out = Vec::with_capacity(bytes.len() / 4 * 3);
-    let (quanta, _) = bytes.as_chunks::<4>();
-    for (qi, chunk) in quanta.iter().enumerate() {
-        let is_last = qi + 1 == quanta.len();
-        let mut n: u32 = 0;
-        let mut pad = 0u32;
-        for (i, &c) in chunk.iter().enumerate() {
-            if c == b'=' {
-                // Padding is only legal at the tail of the final quantum.
-                if !is_last || i < 2 {
-                    return Err(());
-                }
-                pad += 1;
-                n <<= 6;
-            } else {
-                if pad > 0 {
-                    return Err(());
-                }
-                n = (n << 6) | u32::from(sextet(c)?);
-            }
-        }
-        out.push((n >> 16) as u8);
-        if pad < 2 {
-            out.push((n >> 8) as u8);
-        }
-        if pad == 0 {
-            out.push(n as u8);
-        }
-    }
-    Ok(out)
+    STANDARD.decode(value).map_err(|_| ())
 }
 
 fn de_b64<'de, D>(d: D) -> Result<Vec<u8>, D::Error>
