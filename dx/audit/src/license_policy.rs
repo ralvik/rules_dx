@@ -25,11 +25,14 @@
 //!
 //! This module plans over injected table/root/exception records only,
 //! so policy validation stays deterministic and unit-testable without
-//! any lockfile or Bazel integration. TOML loading, per-ecosystem
-//! license-identity mappings, shared-lock tier attribution, and proof
-//! evidence stay O58-gated for later slices.
+//! any lockfile or Bazel integration. [`load_licenses_toml`] parses the
+//! committed `licenses.toml` root file into those records with `toml`
+//! plus `serde`; per-ecosystem license-identity mappings, shared-lock
+//! tier attribution, and proof evidence stay O58-gated for later slices.
 
 use std::collections::{BTreeMap, BTreeSet};
+
+use serde::Deserialize;
 
 use crate::exception::{check_expiry, ExceptionProblem};
 use crate::license_expr::Tier;
@@ -69,13 +72,16 @@ pub struct SetAdjustment {
 /// internal root to distributed re-qualifies it under the strict table
 /// on the next audit. The name `distributed` is deliberate:
 /// distribution is the legal trigger, while `ship` is slang.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Distribution {
     /// Release roots that leave the company. Listing here is optional:
     /// unlisted labels are distributed anyway.
+    #[serde(default)]
     pub distributed: BTreeSet<String>,
     /// Internal-only roots, inventoried but never gated on the
     /// allow/review/deny table (except `blocked`).
+    #[serde(default)]
     pub internal: BTreeSet<String>,
 }
 
@@ -92,6 +98,9 @@ pub enum PolicyProblem {
     /// A label under `[distribution]` names no known distributable.
     #[error("unknown_distribution_root: {label:?} names no known distributable")]
     UnknownDistributionRoot { label: String },
+    /// A `licenses.toml` document fails to parse or match the file shape.
+    #[error("invalid licenses.toml: {message}")]
+    InvalidLicensesToml { message: String },
     /// A license exception is invalid, expired, or obsolete.
     #[error("license exception invalid: {0}")]
     Exception(#[from] ExceptionProblem),
@@ -170,9 +179,10 @@ impl Distribution {
 
 /// One license-policy exception: a matching, reasoned, version-scoped,
 /// expiring approval of a finding, without hiding it. Field shapes
-/// mirror the committed `licenses.toml` `[[exception]]` entries so a
-/// future TOML loader cannot reinterpret them.
-#[derive(Clone, Debug, Eq, PartialEq)]
+/// mirror the committed `licenses.toml` `[[exception]]` entries so the
+/// TOML loader cannot reinterpret them.
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct LicenseException {
     /// Affected package name.
     pub package: String,
@@ -250,6 +260,124 @@ pub fn check_applies(
         }));
     }
     Ok(())
+}
+
+/// License policy loaded from one `licenses.toml` document: the
+/// converted domain records, ready for the injected-label validation
+/// the call sites own (distribution roots against Bazel-known labels,
+/// exceptions against findings and the audit date).
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LicensePolicy {
+    /// Validated global table.
+    pub tables: PolicyTables,
+    /// Validated per-set adjustments, sorted by set name.
+    pub sets: Vec<SetAdjustment>,
+    /// Distribution roots. Validated against known labels by the caller.
+    pub distribution: Distribution,
+    /// License exceptions. Validated against findings and the audit date
+    /// by the caller.
+    pub exceptions: Vec<LicenseException>,
+}
+
+/// Load and validate one `licenses.toml` document into domain records.
+///
+/// Parses with `toml` plus `serde`, converts the file shape, then
+/// validates the global table and every per-set adjustment, so a
+/// loaded policy never carries multi-listed identities or set
+/// conflicts. Unknown fields fail as [`PolicyProblem::InvalidLicensesToml`]:
+/// a typo'd key (`alow`) must never silently become an empty list —
+/// least of all an empty `blocked` list. Missing sections default to
+/// empty, which stays fail-closed because unlisted identities and
+/// distributables default to the strict side. Distribution roots and
+/// exceptions convert verbatim; their call-site validation (known
+/// labels, findings, audit date) is unchanged.
+pub fn load_licenses_toml(text: &str) -> Result<LicensePolicy, PolicyProblem> {
+    let file: LicensesFile =
+        toml::from_str(text).map_err(|error| PolicyProblem::InvalidLicensesToml {
+            message: error.to_string(),
+        })?;
+    let policy = LicensePolicy {
+        tables: PolicyTables {
+            blocked: file.policy.blocked.into_iter().collect(),
+            allow: file.policy.distributed.allow.into_iter().collect(),
+            review: file.policy.distributed.review.into_iter().collect(),
+            deny: file.policy.distributed.deny.into_iter().collect(),
+        },
+        sets: file
+            .policy
+            .sets
+            .into_iter()
+            .map(|(set, adjustment)| SetAdjustment {
+                set,
+                review: adjustment.review.into_iter().collect(),
+            })
+            .collect(),
+        distribution: file.distribution,
+        exceptions: file.exception,
+    };
+    policy.tables.validate()?;
+    for adjustment in &policy.sets {
+        policy.tables.validate_set(adjustment)?;
+    }
+    Ok(policy)
+}
+
+/// Committed `licenses.toml` root-file shape
+/// (`docs/cli/commands/audit-update-bazel.md#license-family-dx-audit-license`):
+/// dedicated config, no per-directory files, no relaxing overlay.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LicensesFile {
+    /// Global table plus per-set adjustments.
+    #[serde(default)]
+    policy: PolicyFile,
+    /// Distribution roots.
+    #[serde(default)]
+    distribution: Distribution,
+    /// License exceptions.
+    #[serde(default)]
+    exception: Vec<LicenseException>,
+}
+
+/// `[policy]` shape: the global `blocked` list plus the
+/// `[policy.distributed]` allow/review/deny lists and the
+/// `[policy.sets.<name>]` adjustments.
+#[derive(Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PolicyFile {
+    /// Never silently acceptable in any tier.
+    #[serde(default)]
+    blocked: Vec<String>,
+    /// Tier-gating lists.
+    #[serde(default)]
+    distributed: PolicyLists,
+    /// Per-set adjustments keyed by set name.
+    #[serde(default)]
+    sets: BTreeMap<String, SetReview>,
+}
+
+/// `[policy.distributed]` allow/review/deny lists.
+#[derive(Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PolicyLists {
+    /// Passes in `distributed`.
+    #[serde(default)]
+    allow: Vec<String>,
+    /// Needs explicit approval in `distributed`.
+    #[serde(default)]
+    review: Vec<String>,
+    /// Fails in `distributed` unless explicitly approved.
+    #[serde(default)]
+    deny: Vec<String>,
+}
+
+/// One `[policy.sets.<name>]` adjustment: extra reviewed identities.
+#[derive(Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SetReview {
+    /// Additional identities reviewed for this set.
+    #[serde(default)]
+    review: Vec<String>,
 }
 
 #[cfg(test)]
@@ -444,14 +572,154 @@ mod tests {
 
     #[test]
     fn upgrade_within_range_retains_acceptance_at_identity_match() {
-        // Version-range narrowing uses upstream semantics in a later
-        // slice; an upgrade alone never invalidates: the finding still
-        // carries the same package and license identity.
+        // Version-range narrowing calls version_in_scope in the
+        // resolver-owned slices; an upgrade alone never invalidates: the
+        // finding still carries the same package and license identity.
         let upgraded = LicenseFinding {
             version: "1.9.0".to_owned(),
             ..finding()
         };
         assert!(!is_obsolete(&exception(), &[upgraded.clone()]));
         check_applies(&exception(), &[upgraded]).expect("upgrade retains acceptance");
+    }
+
+    fn doc_example() -> &'static str {
+        r#"
+[policy]
+blocked = ["AGPL-3.0-only", "AGPL-3.0-or-later", "SSPL-1.0"]
+
+[policy.distributed]
+allow = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC"]
+review = ["MPL-2.0", "EPL-2.0"]
+deny = ["GPL-3.0-only", "GPL-3.0-or-later"]
+
+[policy.sets.npm-root]
+review = ["Unicode-3.0"]
+
+[distribution]
+distributed = ["//services/payments:image", "//cli:dx"]
+internal = ["//tools/internal-admin:binary"]
+
+[[exception]]
+package = "some-copyleft-lib"
+set = "cargo-lock"
+license = "GPL-3.0-only"
+versions = ">=1.2.0, <2.0.0"
+reason = "Legal approved for internal fork."
+expires = "2027-03-01"
+"#
+    }
+
+    #[test]
+    fn loader_converts_doc_shape_to_domain_records() {
+        let policy = load_licenses_toml(doc_example()).expect("doc example loads");
+        assert_eq!(
+            policy.tables.blocked,
+            ["AGPL-3.0-only", "AGPL-3.0-or-later", "SSPL-1.0"]
+                .iter()
+                .map(|item| (*item).to_owned())
+                .collect()
+        );
+        assert!(policy.tables.allow.contains("MIT"));
+        assert!(policy.tables.review.contains("MPL-2.0"));
+        assert!(policy.tables.deny.contains("GPL-3.0-only"));
+        assert_eq!(
+            policy.sets,
+            vec![SetAdjustment {
+                set: "npm-root".to_owned(),
+                review: ["Unicode-3.0"]
+                    .iter()
+                    .map(|item| (*item).to_owned())
+                    .collect(),
+            }]
+        );
+        assert_eq!(
+            policy.distribution.tier_of("//tools/internal-admin:binary"),
+            Tier::Internal
+        );
+        assert_eq!(policy.distribution.tier_of("//cli:dx"), Tier::Distributed);
+        assert_eq!(
+            policy.distribution.tier_of("//unlisted:thing"),
+            Tier::Distributed
+        );
+        assert_eq!(
+            policy.exceptions,
+            vec![LicenseException {
+                package: "some-copyleft-lib".to_owned(),
+                set: "cargo-lock".to_owned(),
+                license: "GPL-3.0-only".to_owned(),
+                versions: ">=1.2.0, <2.0.0".to_owned(),
+                reason: "Legal approved for internal fork.".to_owned(),
+                expires: "2027-03-01".to_owned(),
+            }]
+        );
+    }
+
+    #[test]
+    fn loader_defaults_missing_sections_to_empty_and_stays_closed() {
+        let policy = load_licenses_toml("").expect("empty document loads");
+        assert_eq!(
+            policy,
+            LicensePolicy {
+                tables: PolicyTables::default(),
+                sets: Vec::new(),
+                distribution: Distribution::default(),
+                exceptions: Vec::new(),
+            }
+        );
+        // Fail closed: unlisted identities and labels land on the strict side.
+        assert_eq!(policy.distribution.tier_of("//cli:dx"), Tier::Distributed);
+    }
+
+    #[test]
+    fn loader_rejects_unknown_fields_typos_and_malformed_toml() {
+        for bad in [
+            // Typo'd list key must not silently become an empty list.
+            "[policy.distributed]\nalow = [\"MIT\"]\n",
+            // Unknown top-level section.
+            "[bogus]\nkey = 1\n",
+            // Unknown exception field.
+            "[[exception]]\npackage = \"p\"\nset = \"s\"\nlicense = \"MIT\"\n\
+             versions = \"*\"\nreason = \"r\"\nexpires = \"2027-03-01\"\nnote = \"x\"\n",
+            // Malformed TOML.
+            "[[exception]\n",
+            // Duplicate keys.
+            "[policy.distributed]\nallow = [\"MIT\"]\nallow = [\"ISC\"]\n",
+        ] {
+            assert!(
+                matches!(
+                    load_licenses_toml(bad),
+                    Err(PolicyProblem::InvalidLicensesToml { .. })
+                ),
+                "{bad:?} must fail as invalid TOML"
+            );
+        }
+    }
+
+    #[test]
+    fn loader_validates_tables_and_set_adjustments() {
+        let multi = "[policy.distributed]\nallow = [\"MIT\"]\ndeny = [\"MIT\"]\n";
+        assert_eq!(
+            load_licenses_toml(multi),
+            Err(PolicyProblem::MultiListed {
+                identity: "MIT".to_owned()
+            })
+        );
+        let conflict = "[policy.distributed]\nallow = [\"MIT\"]\n\
+                        [policy.sets.npm-root]\nreview = [\"MIT\"]\n";
+        assert_eq!(
+            load_licenses_toml(conflict),
+            Err(PolicyProblem::SetConflict {
+                set: "npm-root".to_owned(),
+                identity: "MIT".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn loaded_exceptions_validate_against_audit_date() {
+        let policy = load_licenses_toml(doc_example()).expect("doc example loads");
+        validate_license_exception(&policy.exceptions[0], "2026-09-14").expect("valid");
+        assert!(validate_license_exception(&policy.exceptions[0], "2027-03-01").is_err());
     }
 }
