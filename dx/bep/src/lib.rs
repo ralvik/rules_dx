@@ -78,7 +78,8 @@ pub struct TargetOutput {
 }
 
 /// BEP collection failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{self:?}")]
 pub enum BepError {
     EmptyOutputGroup,
     /// A stream line is not a JSON build-event object with the required
@@ -105,14 +106,6 @@ pub enum BepError {
         message: String,
     },
 }
-
-impl std::fmt::Display for BepError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for BepError {}
 
 /// One test-action output file reported by a BEP `testResult` event:
 /// the owning test label plus the output entry name (such as

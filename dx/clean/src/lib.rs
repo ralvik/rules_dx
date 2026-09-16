@@ -100,7 +100,8 @@ pub struct SetupRecordView {
 /// Setup-record validation failure. Invalid records are refused, never
 /// adopted or repaired: the operator removes the offending path or
 /// re-runs setup from a clean selection.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{self:?}")]
 pub enum RecordProblem {
     /// Record, environment, or generated name is not a 64-character
     /// lowercase hexadecimal digest.
@@ -109,14 +110,6 @@ pub enum RecordProblem {
     /// record directory name (digest-spoofed path).
     Spoofed { record: String, pair: String },
 }
-
-impl std::fmt::Display for RecordProblem {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for RecordProblem {}
 
 /// Parses one digest-shaped name, refusing malformed values instead of
 /// panicking at the call site.
@@ -287,7 +280,8 @@ pub const CLEAN_LOCK_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Clean failure. Every variant is operational; `--dry-run` rendering
 /// never surfaces these (it deletes nothing and holds no lock).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{self:?}")]
 pub enum CleanError {
     /// Workspace root is missing or not a directory.
     WorkspaceRoot { path: PathBuf },
@@ -304,14 +298,6 @@ pub enum CleanError {
     /// touched by clean, so selection is unchanged.
     Install { reason: String },
 }
-
-impl std::fmt::Display for CleanError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for CleanError {}
 
 /// Maps the shared commit-lock failure into the clean vocabulary.
 /// Only contention reports busy; every other lock failure aborts

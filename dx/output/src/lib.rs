@@ -209,7 +209,8 @@ pub fn meets_threshold(severity: Severity, threshold: Threshold) -> bool {
 // ---------------------------------------------------------------------------
 
 /// Output or protocol failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{self:?}")]
 pub enum OutputError {
     UnknownOutputMode {
         value: String,
@@ -263,14 +264,6 @@ pub enum OutputError {
     NotAnEvent,
     Io(String),
 }
-
-impl std::fmt::Display for OutputError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for OutputError {}
 
 fn nonempty(field: &'static str, value: &str) -> Result<(), OutputError> {
     if value.is_empty() {

@@ -17,7 +17,7 @@ rust_library(
     crate_name = "dx_output",
     crate_root = "src/lib.rs",
     deps = crate_deps(
-        ["serde_json"],
+        ["serde_json", "thiserror"],
         package_name = "dx/dx_output",
     ),
 )
@@ -32,7 +32,7 @@ rust_test(
     ),
     crate = ":dx_output",
     deps = crate_deps(
-        ["serde_json"],
+        ["serde_json", "thiserror"],
         package_name = "dx/dx_output",
     ),
 )
