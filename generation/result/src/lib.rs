@@ -124,18 +124,18 @@ pub fn digest(bytes: &[u8]) -> [u8; DIGEST_LEN] {
 }
 
 fn check_path(at: &str, path: &str) -> Result<(), Error> {
-    let reason = if path.is_empty() {
-        Some("path must be non-empty")
-    } else if path.starts_with('/') {
-        Some("path must be workspace-relative")
-    } else if path.contains('\\') {
-        Some("path must use forward slashes")
-    } else if path.split('/').any(str::is_empty) {
-        Some("path must have no empty component")
-    } else if path.split('/').any(|part| part == "." || part == "..") {
-        Some("path must have no dot component")
-    } else {
-        None
+    // Ladder order mirrors `dx_path::classify`; Dot/DotDot share the
+    // historical "dot component" message, so adoption is behavior-preserving
+    // (#72 slice 2).
+    let reason = match dx_path::classify(path) {
+        None => None,
+        Some(dx_path::PathProblem::Empty) => Some("path must be non-empty"),
+        Some(dx_path::PathProblem::Absolute) => Some("path must be workspace-relative"),
+        Some(dx_path::PathProblem::Backslash) => Some("path must use forward slashes"),
+        Some(dx_path::PathProblem::EmptyComponent) => Some("path must have no empty component"),
+        Some(dx_path::PathProblem::Dot) | Some(dx_path::PathProblem::DotDot) => {
+            Some("path must have no dot component")
+        }
     };
     match reason {
         Some(reason) => Err(Error::BadPath {
