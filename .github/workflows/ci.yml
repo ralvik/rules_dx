@@ -230,11 +230,13 @@ jobs:
         run: bazel run --noshow_progress //cli/cli:dx -- generate --check //...
       - name: Audit corpus ownership
         run: bazel run --noshow_progress //tools/ci:corpus_audit
+      - name: Audit code ownership (normal targets, no silent skips)
+        run: bazel run --noshow_progress //tools/ci:code_ownership
       - name: Write job summary
         if: always()
         run: |
           echo "### dogfood-freshness — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Checked: Bazel-resolved tool execution, generate --check freshness, corpus ownership (carve-outs intact)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Checked: Bazel-resolved tool execution, generate --check freshness, corpus ownership (carve-outs intact), code ownership (issue #12 lane A)." >> "$GITHUB_STEP_SUMMARY"
   dogfood-lint:
     name: dogfood-lint (dx lint converge + check)
     needs: [dogfood-freshness]

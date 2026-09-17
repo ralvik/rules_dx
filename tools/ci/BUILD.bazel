@@ -127,6 +127,18 @@ sh_binary(
     srcs = ["release_hygiene.sh"],
 )
 
+# Code-ownership harness (issue #12, lane A slice 1): every checked-in
+# code source must ride its normal target so no production file is
+# silently skipped by `bazel build //...` / `bazel test //...`. Corpus
+# stays for target-less files only. Foreign-tree inert arrivals
+# (adopt-js-ts typings/sourcemaps/Vue SFC) stay explicitly excluded
+# with their generators named. Run by CI via
+# `bazel run //tools/ci:code_ownership`.
+sh_binary(
+    name = "code_ownership",
+    srcs = ["code_ownership.sh"],
+)
+
 # Stage 4 E2E drivers (issue #55): one `manual` (+`exclusive`,
 # `local`, `no-sandbox`) sh_test per landed `integration/` scenario plus
 # the explicit suite. Wildcard suites (`bazel test //...`,
