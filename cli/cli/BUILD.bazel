@@ -24,6 +24,7 @@ rust_library(
         "src/args/command.rs",
         "src/args/completion.rs",
         "src/args/help.rs",
+        "src/args/parser.rs",
         "src/args/suggest.rs",
         "src/exec.rs",
         "src/exec/audit.rs",

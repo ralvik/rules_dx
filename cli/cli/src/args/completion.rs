@@ -5,8 +5,8 @@
 //! stays `crate::args::{COMPLETION_SHELLS, render_completion}`.
 
 use super::command::Command;
+use super::parser::Cli;
 use super::ArgsError;
-use super::Cli;
 
 /// Shells covered by `dx completion` (contract freeze).
 pub const COMPLETION_SHELLS: &[&str] = &["bash", "zsh", "fish", "powershell"];

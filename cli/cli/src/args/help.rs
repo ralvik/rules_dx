@@ -6,8 +6,7 @@
 //! `crate::args` surface is unchanged.
 
 use super::command::Command;
-use super::Cli;
-use super::VALUE_OPTIONS;
+use super::parser::{Cli, VALUE_OPTIONS};
 
 /// Finds the command word for `--help` routing: the first positional
 /// token that parses as [`Command`], skipping flag payloads exactly
