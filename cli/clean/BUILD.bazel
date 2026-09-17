@@ -28,6 +28,7 @@ dx_rust_crate(
     srcs = [
         "src/flags.rs",
         "src/inventory.rs",
+        "src/live.rs",
         "src/planning.rs",
         "src/records.rs",
         "src/lib.rs",
