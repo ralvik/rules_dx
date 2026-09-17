@@ -240,6 +240,38 @@ mod tests {
     }
 
     #[test]
+    fn formatter_replacement_without_diagnostics_fails_like_check_mode() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // check mode to fail on any proposed change independently of
+        // severity and direct Bazel evaluators to enforce the same rule.
+        // Mirror the runner formatter case (fmt-a trims trailing spaces
+        // with zero diagnostics): one whole-file candidate bound to
+        // digest(original) must fail at every threshold with exactly the
+        // replacement-presence reason, proving evaluator parity.
+        use quality_result::proto::Edit;
+        let original = b"x  \n";
+        let terminal = b"x\n";
+        let mut result = clean();
+        assert!(result.initial_diagnostics.is_empty());
+        assert!(result.terminal_diagnostics.is_empty());
+        result.replacements.push(FileEdits {
+            path: "src/main.py".to_owned(),
+            original_digest: vec![0u8; 32],
+            edits: vec![Edit {
+                start_byte: 0,
+                end_byte: original.len() as u64,
+                replacement: terminal.to_vec(),
+            }],
+        });
+        for threshold in [Threshold::Info, Threshold::Warning, Threshold::Error] {
+            let evaluation = evaluate(&result, threshold);
+            assert!(!evaluation.passed);
+            assert_eq!(evaluation.reasons.len(), 1);
+            assert!(evaluation.reasons[0].contains("replacement"));
+        }
+    }
+
+    #[test]
     fn non_stable_convergence_fails_with_no_replacements() {
         for convergence in [Convergence::Oscillation, Convergence::IterationLimit] {
             let result = QualityResult {
