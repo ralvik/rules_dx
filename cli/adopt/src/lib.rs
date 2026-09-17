@@ -550,9 +550,11 @@ pub fn apply_init(root: &Path, module_name: &str) -> Result<Vec<String>, AdoptEr
                 detail: e.to_string(),
             })?;
         }
-        std::fs::write(&dest, file.content).map_err(|e| AdoptError::WriteFile {
-            path: dest.display().to_string(),
-            detail: e.to_string(),
+        dx_atomic_fs::write_atomic(&dest, file.content.as_ref()).map_err(|e| {
+            AdoptError::WriteFile {
+                path: dest.display().to_string(),
+                detail: e.to_string(),
+            }
         })?;
         written.push(file.path);
     }
@@ -594,9 +596,11 @@ pub fn install_hooks(root: &Path) -> Result<Vec<String>, AdoptError> {
                 });
             }
         }
-        std::fs::write(&dest, render_hook_shim(trigger)).map_err(|e| AdoptError::WriteHook {
-            trigger: trigger.to_owned(),
-            detail: e.to_string(),
+        dx_atomic_fs::write_atomic(&dest, render_hook_shim(trigger).as_bytes()).map_err(|e| {
+            AdoptError::WriteHook {
+                trigger: trigger.to_owned(),
+                detail: e.to_string(),
+            }
         })?;
         #[cfg(unix)]
         {
@@ -617,11 +621,10 @@ pub fn install_hooks(root: &Path) -> Result<Vec<String>, AdoptError> {
     }
     let overlay = root.join("dx.local.toml");
     if !overlay.exists() {
-        std::fs::write(&overlay, "# Local-only overrides (gitignored).\n[hooks]\n").map_err(
-            |e| AdoptError::WriteOverlay {
+        dx_atomic_fs::write_atomic(&overlay, b"# Local-only overrides (gitignored).\n[hooks]\n")
+            .map_err(|e| AdoptError::WriteOverlay {
                 detail: e.to_string(),
-            },
-        )?;
+            })?;
         installed.push("dx.local.toml".to_owned());
     }
     Ok(installed)
@@ -677,11 +680,11 @@ pub fn write_version_pin(root: &Path, version: &str) -> Result<(), AdoptError> {
     std::fs::create_dir_all(&dir).map_err(|e| AdoptError::CreateDxDir {
         detail: e.to_string(),
     })?;
-    std::fs::write(dir.join("version"), format!("{version}\n")).map_err(|e| {
-        AdoptError::WriteVersionPin {
+    dx_atomic_fs::write_atomic(&dir.join("version"), format!("{version}\n").as_bytes()).map_err(
+        |e| AdoptError::WriteVersionPin {
             detail: e.to_string(),
-        }
-    })?;
+        },
+    )?;
     Ok(())
 }
 

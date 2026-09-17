@@ -38,6 +38,7 @@ rust_binary(
         package_name = "quality/quality_evaluator",
     ) + [
         ":quality_evaluator_lib",
+        "//cli/atomic_fs:dx_atomic_fs",
         "//quality/result:quality_result",
     ],
 )

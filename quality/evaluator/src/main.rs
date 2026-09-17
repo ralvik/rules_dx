@@ -116,7 +116,8 @@ fn run() -> Result<(), String> {
         result.capability,
         threshold.name()
     );
-    std::fs::write(&output, marker).map_err(|e| format!("cannot write {output:?}: {e}"))?;
+    dx_atomic_fs::write_atomic(std::path::Path::new(&output), marker.as_bytes())
+        .map_err(|e| format!("cannot write {output:?}: {e}"))?;
     Ok(())
 }
 // LCOV_EXCL_STOP - reason: end of thin binary shim exclusion.

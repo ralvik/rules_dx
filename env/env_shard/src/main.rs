@@ -130,7 +130,8 @@ fn run(args: &[String]) -> Result<(), String> {
     // Read back before writing so a codec regression fails the action
     // instead of emitting bytes the CLI would reject.
     decode_validated(&bytes).map_err(|error| error.to_string())?;
-    std::fs::write(output.ok_or_else(usage)?, bytes).map_err(|error| error.to_string())
+    let output = output.ok_or_else(usage)?;
+    dx_atomic_fs::write_atomic(&output, &bytes).map_err(|error| error.to_string())
 }
 
 fn main() {

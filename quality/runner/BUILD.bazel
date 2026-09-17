@@ -53,6 +53,7 @@ rust_binary(
         package_name = "quality/quality_runner",
     ) + [
         ":quality_runner_lib",
+        "//cli/atomic_fs:dx_atomic_fs",
         "//quality/result:quality_result",
     ],
 )

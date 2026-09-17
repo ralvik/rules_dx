@@ -31,7 +31,7 @@ rust_library(
             "thiserror",
         ],
         package_name = "cli/dx_adopt",
-    ),
+    ) + ["//cli/atomic_fs:dx_atomic_fs"],
 )
 
 rust_test(

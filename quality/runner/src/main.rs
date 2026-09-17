@@ -301,7 +301,8 @@ fn run() -> Result<(), String> {
         let result = run_pipeline(&producer, &capability, &stages, &files)
             .map_err(|e| format!("pipeline failed: {e}"))?;
         let bytes = encode_validated(&result).map_err(|e| format!("invalid result: {e}"))?;
-        std::fs::write(&output, bytes).map_err(|e| format!("cannot write {output:?}: {e}"))?;
+        dx_atomic_fs::write_atomic(std::path::Path::new(&output), &bytes)
+            .map_err(|e| format!("cannot write {output:?}: {e}"))?;
         return Ok(());
     }
     let mut tools: BTreeMap<String, RealTool> = BTreeMap::new();
@@ -404,7 +405,8 @@ fn run() -> Result<(), String> {
     )
     .map_err(|e| format!("pipeline failed: {e}"))?;
     let bytes = encode_validated(&result).map_err(|e| format!("invalid result: {e}"))?;
-    std::fs::write(&output, bytes).map_err(|e| format!("cannot write {output:?}: {e}"))?;
+    dx_atomic_fs::write_atomic(std::path::Path::new(&output), &bytes)
+        .map_err(|e| format!("cannot write {output:?}: {e}"))?;
     Ok(())
 }
 // LCOV_EXCL_STOP - reason: end of thin binary shim exclusion.

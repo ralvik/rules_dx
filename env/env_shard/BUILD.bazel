@@ -49,7 +49,7 @@ rust_binary(
             "thiserror",
         ],
         package_name = "env/env_shard",
-    ) + [":env_shard"],
+    ) + [":env_shard", "//cli/atomic_fs:dx_atomic_fs"],
 )
 
 rust_test(
