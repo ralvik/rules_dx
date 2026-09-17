@@ -88,6 +88,14 @@ if [[ "$first_key" != "$second_key" ]]; then ok; else bad "python lint vs format
 # owning capability action. Markers use ecosystem-specific repo strings
 # (dx_ty for Ty, ruff, pydoclint, clippy-driver, rustfmt) to avoid
 # substring collisions with common words like quality.
+union_actions="$(bazel aquery '//quality/testdata:fixture_real_python + //quality/testdata:fixture_real_rust' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+if [[ -z "$union_actions" ]]; then
+  bad "union: empty aquery output"
+else
+  ok
+fi
 python_lint_inputs="$(printf '%s' "$python_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"
 python_format_inputs="$(printf '%s' "$python_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' | head -1 || true)"
 python_typecheck_inputs="$(printf '%s' "$python_actions" | grep -A 8 'Mnemonic: DxRealQualityTypecheck' | grep 'Inputs:' | head -1 || true)"
@@ -105,6 +113,15 @@ if [[ "$rust_lint_inputs" == *"clippy-driver"* ]]; then ok; else bad "rust lint:
 if [[ "$rust_lint_inputs" == *"rustfmt"* ]]; then bad "rust lint: forbidden [rustfmt]"; else ok; fi
 if [[ "$rust_format_inputs" == *"rustfmt"* ]]; then ok; else bad "rust format: want [rustfmt]"; fi
 if [[ "$rust_format_inputs" == *"clippy-driver"* ]]; then bad "rust format: forbidden [clippy-driver]"; else ok; fi
+
+# Aggregate membership only: existing check action keys unchanged when the
+# query widens from one target to a union. Compare sorted python ActionKeys
+# from the single-target query against the python subset of the union
+# (ActionKey follows its action header, so -A captures the owning key).
+single_keys="$(printf '%s' "$python_actions" | grep 'ActionKey:' | sort || true)"
+union_python_keys="$(printf '%s' "$union_actions" | grep -A 8 "action 'Dx.*fixture_real_python'" | grep 'ActionKey:' | sort || true)"
+if [[ -z "$single_keys" ]]; then bad "single: want ActionKeys"; else ok; fi
+if [[ "$single_keys" == "$union_python_keys" ]]; then ok; else bad "aggregate membership must leave existing action keys unchanged (python single vs union)"; fi
 
 echo "quality cache aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
