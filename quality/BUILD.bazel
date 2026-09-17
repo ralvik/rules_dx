@@ -2,6 +2,7 @@
 
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
+load(":curated_defaults_tests.bzl", "curated_defaults_unit_tests")
 load(":fixtures.bzl", "real_source_target")
 load(":native_config.bzl", "vale_config")
 load(":native_config_tests.bzl", "native_config_unit_tests")
@@ -182,6 +183,8 @@ policy_subject(
 
 policy_unit_tests(name = "policy_unit")
 
+curated_defaults_unit_tests(name = "curated_defaults_unit")
+
 pipeline_unit_tests(name = "pipeline_unit")
 
 parity_unit_tests(name = "parity_unit")
@@ -197,6 +200,7 @@ sources_registry_tests(name = "sources_registry")
 test_suite(
     name = "all",
     tests = [
+        ":curated_defaults_unit",
         ":native_config_unit",
         ":parity_unit",
         ":pipeline_unit",

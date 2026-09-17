@@ -127,6 +127,17 @@ sh_binary(
     srcs = ["release_hygiene.sh"],
 )
 
+# Release-policy gate harness (issue #89 item 2): diffs the frozen
+# curated defaults manifest against the default-lifecycle policy (no
+# removals/formatter-set changes in a minor) and gates the parity
+# manifest (every adapter-backed class has real_* + native-config
+# evidence; every deferral names owner + route), with mutated-input
+# negatives. Run by CI via `bazel run //tools/ci:release_policy`.
+sh_binary(
+    name = "release_policy",
+    srcs = ["release_policy.sh"],
+)
+
 # Code-ownership harness (issue #12, lane A slice 1): every checked-in
 # code source must ride its normal target so no production file is
 # silently skipped by `bazel build //...` / `bazel test //...`. Corpus
