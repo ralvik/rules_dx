@@ -105,10 +105,13 @@ load("//quality:fixtures.bzl", "real_source_target")
 load("//quality:sources.bzl", "QualitySourcesInfo", "RUST")
 
 # Single source of truth for the repository Rust edition (issue #82).
+# Defined in `:edition.bzl` so consumer aspects (`quality/real_aspects.bzl`)
+# can load it without pulling `@crates` (issue #55); re-exported here so
+# existing `load("//rust/rules:defs.bzl", "RUST_EDITION")` callers keep working.
 # All wrapper macros default to this; BUILD files must not repeat the
 # literal (omit `edition` on wrapper calls, load `RUST_EDITION` for the
 # rare direct-upstream call).
-RUST_EDITION = "2021"
+load(":edition.bzl", "RUST_EDITION")
 
 # Advertised providers. Bazel matches an aspect's `required_providers`
 # against the rule's `provides`, NOT against the providers the rule

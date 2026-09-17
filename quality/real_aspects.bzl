@@ -17,7 +17,7 @@ rustfmt crate context (#49): the aspect passes the authoritative crate
 edition via `--tool-edition` (read from `CrateInfo`, or the test crate's
 inner `CrateInfo` exactly as upstream `_get_rustfmt_ready_crate_info`;
 provider-less fixture targets fall back to `RUST_EDITION`, the single
-source of truth from `//rust/rules:defs.bzl`). The runner never guesses
+source of truth from `//rust/rules:edition.bzl`). The runner never guesses
 an edition: a missing value fails the action. Generated files never
 reach the tool (upstream formats `is_source` files only); `no-format`
 skips the stage via the tag check below.
@@ -52,7 +52,7 @@ load("//quality:native_config.bzl", "DxNativeConfigInfo", "collect_native_config
 load("//quality:pipeline.bzl", "resolve_pipeline")
 load("//quality:policy.bzl", "QualityPolicyInfo")
 load("//quality:sources.bzl", "QualitySourcesInfo")
-load("//rust/rules:defs.bzl", "RUST_EDITION")
+load("//rust/rules:edition.bzl", "RUST_EDITION")
 load("//rust/toolchains:bindings.bzl", "rust_toolchain_rustc", "rust_toolchain_toolchains", "rust_toolchain_tools")
 
 def _capability_tags(rule_attr, capability):

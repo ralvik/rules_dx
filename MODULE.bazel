@@ -239,6 +239,7 @@ crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
 crate.from_cargo(
     name = "crates",
     cargo_lockfile = "//rust/hello:Cargo.lock",
+    lockfile = "//:cargo-bazel-lock.json",
     manifests = [
         "//rust/hello:Cargo.toml",
         "//generation/result:Cargo.toml",

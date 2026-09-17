@@ -6,6 +6,7 @@ package(default_visibility = ["//visibility:public"])
 
 exports_files([
     "defs.bzl",
+    "edition.bzl",
     "probe.bzl",
     "wrapper_tests.bzl",
 ])
