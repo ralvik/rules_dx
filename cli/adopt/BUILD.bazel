@@ -28,5 +28,6 @@ dx_rust_crate(
         "src/completion.rs",
         "src/lib.rs",
         "src/migrate.rs",
+        "src/version.rs",
     ],
 )
