@@ -286,6 +286,78 @@ func TestGenerateStaleTestSwept(t *testing.T) {
 	}
 }
 
+func TestParseGoModule(t *testing.T) {
+	if got, ok := parseGoModule("module example.com/adopt-go\n\ngo 1.26\n"); !ok || got != "example.com/adopt-go" {
+		t.Errorf("parse = %q,%v, want example.com/adopt-go,true", got, ok)
+	}
+	if got, ok := parseGoModule("// leading comment\nmodule example.com/x\n"); !ok || got != "example.com/x" {
+		t.Errorf("parse with comment = %q,%v, want example.com/x,true", got, ok)
+	}
+	if _, ok := parseGoModule("package foo\n"); ok {
+		t.Error("parse without module line = ok, want false")
+	}
+	if _, ok := parseGoModule(""); ok {
+		t.Error("parse empty = ok, want false")
+	}
+}
+
+func TestGenerateImportPathFromGoMod(t *testing.T) {
+	root := t.TempDir()
+	for name, content := range map[string]string{
+		"go.mod":          "module example.com/adopt-go\n\ngo 1.26\n",
+		"pkg/demo/demo.go": "package demo\n",
+	} {
+		writeFixture(t, root, name, content)
+	}
+	result := NewLanguage().GenerateRules(language.GenerateArgs{
+		Config:       &config.Config{RepoRoot: root},
+		Dir:          filepath.Join(root, "pkg", "demo"),
+		Rel:          "pkg/demo",
+		RegularFiles: []string{"demo.go"},
+	})
+	if len(result.Gen) != 1 {
+		t.Fatalf("generated %d rules, want 1", len(result.Gen))
+	}
+	if got := result.Gen[0].AttrString("importpath"); got != "example.com/adopt-go/pkg/demo" {
+		t.Errorf("importpath = %q, want example.com/adopt-go/pkg/demo", got)
+	}
+}
+
+func TestGenerateImportPathModuleRoot(t *testing.T) {
+	root := t.TempDir()
+	for name, content := range map[string]string{
+		"pkg/demo/go.mod":  "module example.com/demo\n",
+		"pkg/demo/demo.go": "package demo\n",
+	} {
+		writeFixture(t, root, name, content)
+	}
+	// Package at the module root: importpath is the bare module path.
+	result := NewLanguage().GenerateRules(language.GenerateArgs{
+		Config:       &config.Config{RepoRoot: root},
+		Dir:          filepath.Join(root, "pkg", "demo"),
+		Rel:          "pkg/demo",
+		RegularFiles: []string{"demo.go"},
+	})
+	if len(result.Gen) != 1 {
+		t.Fatalf("generated %d rules, want 1", len(result.Gen))
+	}
+	if got := result.Gen[0].AttrString("importpath"); got != "example.com/demo" {
+		t.Errorf("importpath = %q, want example.com/demo", got)
+	}
+}
+
+func TestGenerateImportPathOmittedWithoutGoMod(t *testing.T) {
+	result := generateFixture(t, map[string]string{
+		"pkg/demo/demo.go": "package demo\n",
+	}, []string{"demo.go"})
+	if len(result.Gen) != 1 {
+		t.Fatalf("generated %d rules, want 1", len(result.Gen))
+	}
+	if attr := result.Gen[0].Attr("importpath"); attr != nil {
+		t.Errorf("importpath = %v, want nil without go.mod", result.Gen[0].AttrString("importpath"))
+	}
+}
+
 func TestImportsIndexNonTestSources(t *testing.T) {
 	lang := NewLanguage()
 	lib := rule.NewRule(LibraryKind, "demo")

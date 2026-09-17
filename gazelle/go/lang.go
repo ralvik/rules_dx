@@ -24,8 +24,9 @@ var goKinds = map[string]rule.KindInfo{
 		MatchAttrs:    []string{"srcs"},
 		NonEmptyAttrs: map[string]bool{"srcs": true},
 		MergeableAttrs: map[string]bool{
-			"srcs": true,
-			"deps": true,
+			"srcs":       true,
+			"deps":       true,
+			"importpath": true,
 		},
 		ResolveAttrs: map[string]bool{"deps": true},
 	},
@@ -324,6 +325,9 @@ func (l *goLang) generateRules(args language.GenerateArgs) language.GenerateResu
 	result := language.GenerateResult{}
 	r := rule.NewRule(LibraryKind, name)
 	r.SetAttr("srcs", sources)
+	if importpath, ok := goImportPath(args.Config.RepoRoot, args.Dir); ok {
+		r.SetAttr("importpath", importpath)
+	}
 	result.Gen = append(result.Gen, r)
 	result.Imports = append(result.Imports, targetImports{imports: imports})
 	if len(testSources) > 0 {
@@ -373,6 +377,65 @@ func mergeStale(file *rule.File, result language.GenerateResult) language.Genera
 		result.Empty = append(result.Empty, rule.NewRule(existing.Kind(), existing.Name()))
 	}
 	return result
+}
+
+// goImportPath derives the rules_go importpath for one generated library
+// from the nearest enclosing go.mod: module path plus the slash-separated
+// subpath from the module root to dir. It walks up from dir to repoRoot
+// (inclusive); when no go.mod is found it reports false and the caller
+// omits importpath (source-only fixtures without a module keep their
+// current generation-only shape). A found but unparseable go.mod is a
+// generation failure at the call site, never a guessed path.
+func goImportPath(repoRoot, dir string) (string, bool) {
+	cleanDir := filepath.Clean(dir)
+	cleanRoot := filepath.Clean(repoRoot)
+	for cur := cleanDir; ; cur = filepath.Dir(cur) {
+		candidate := filepath.Join(cur, "go.mod")
+		if content, err := os.ReadFile(candidate); err == nil {
+			module, ok := parseGoModule(string(content))
+			if !ok {
+				return "", false
+			}
+			rel, err := filepath.Rel(cur, cleanDir)
+			if err != nil {
+				return "", false
+			}
+			slash := filepath.ToSlash(rel)
+			if slash == "." || slash == "" {
+				return module, true
+			}
+			return module + "/" + slash, true
+		}
+		if cur == cleanRoot || cur == filepath.Dir(cur) {
+			return "", false
+		}
+		// Do not walk above the repo root: foreign trees carry their own
+		// go.mod; absence means source-only generation without a module.
+		if len(cur) < len(cleanRoot) || !strings.HasPrefix(cur, cleanRoot) {
+			return "", false
+		}
+	}
+}
+
+// parseGoModule extracts the module path from go.mod content: the first
+// `module <path>` line. It reports false when no such line exists so the
+// caller can fail closed instead of inventing a path.
+func parseGoModule(content string) (string, bool) {
+	for _, line := range strings.Split(content, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "//") {
+			continue
+		}
+		fields := strings.Fields(trimmed)
+		if len(fields) >= 2 && fields[0] == "module" {
+			path := strings.Trim(fields[1], "\"'")
+			if path != "" {
+				return path, true
+			}
+			return "", false
+		}
+	}
+	return "", false
 }
 
 func (l *goLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *repo.RemoteCache, r *rule.Rule, raw interface{}, from label.Label) {

@@ -1,0 +1,28 @@
+load("@rules_dx//go/rules:defs.bzl", "go_library", "go_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+go_library(
+    name = "greet",
+    srcs = [
+        "greet.go",
+        "greet_linux.go",
+        "greet_other.go",
+        "helper.go",
+    ],
+    importpath = "example.com/adopt-go/greet",
+)
+
+go_test(
+    name = "greet_test",
+    srcs = [
+        "external_test.go",
+        "greet_test.go",
+        "helper_test.go",
+    ],
+    embed = [":greet"],
+)
+
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)

@@ -1,0 +1,19 @@
+load("@rules_dx//go/rules:defs.bzl", "go_library", "go_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+go_library(
+    name = "solo",
+    srcs = ["pure.go"],
+    importpath = "example.com/adopt-go/solo",
+)
+
+go_test(
+    name = "solo_test",
+    srcs = ["pure_test.go"],
+    embed = [":solo"],
+)
+
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
