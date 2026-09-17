@@ -139,6 +139,75 @@ mod tests {
     }
 
     #[test]
+    fn randomized_query_order_yields_identical_argv() {
+        // Determinism battery (issue #84): `quality-testing.md` requires
+        // randomized query result order to yield identical Bazel argv.
+        // `quote_set` sorts scope labels so shuffled scope orders emit the
+        // same ownership expression, and `parse_owners` sorts and dedups
+        // query stdout so shuffled result lines converge to identical
+        // owners; `run_label_query` must therefore send identical argv.
+        let forward = scopes(&["//pkg:b.py", "//pkg:a.py", "//pkg:c.py"]);
+        let reversed = scopes(&["//pkg:c.py", "//pkg:a.py", "//pkg:b.py"]);
+        let rotated = scopes(&["//pkg:a.py", "//pkg:c.py", "//pkg:b.py"]);
+        assert_eq!(quote_set(&forward), quote_set(&reversed));
+        assert_eq!(quote_set(&forward), quote_set(&rotated));
+        assert_eq!(
+            ownership_set_expression(&forward),
+            ownership_set_expression(&reversed)
+        );
+        assert_eq!(
+            ownership_set_expression(&forward),
+            ownership_set_expression(&rotated)
+        );
+        let shuffled_outputs = [
+            "//pkg:a\n//pkg:b\n//pkg:c\n",
+            "//pkg:c\n//pkg:a\n//pkg:b\n",
+            "//pkg:b\n//pkg:c\n//pkg:a\n//pkg:b\n",
+        ];
+        let mut parsed = Vec::new();
+        for stdout in shuffled_outputs {
+            let owners = parse_owners(stdout.as_bytes(), "owners").expect("parse owners");
+            assert_eq!(owners, vec!["//pkg:a", "//pkg:b", "//pkg:c"]);
+            parsed.push(owners);
+        }
+        assert_eq!(parsed[0], parsed[1]);
+        assert_eq!(parsed[0], parsed[2]);
+        struct Capturing {
+            output: QueryResult,
+            seen: RefCell<Vec<Vec<String>>>,
+        }
+        impl QueryRunner for Capturing {
+            fn run_query(&self, argv: &[String], cwd: &Path) -> std::io::Result<QueryResult> {
+                self.seen.borrow_mut().push(argv.to_vec());
+                let _ = cwd;
+                Ok(QueryResult {
+                    code: self.output.code,
+                    stdout: self.output.stdout.clone(),
+                    stderr: self.output.stderr.clone(),
+                })
+            }
+        }
+        let workspace = temp_workspace("query-order").path().to_path_buf();
+        let mut argvs = Vec::new();
+        for stdout in shuffled_outputs {
+            let runner = Capturing {
+                output: QueryResult {
+                    code: Some(0),
+                    stdout: stdout.as_bytes().to_vec(),
+                    stderr: Vec::new(),
+                },
+                seen: RefCell::new(Vec::new()),
+            };
+            let owners = run_label_query("owners", &workspace, &runner).expect("query");
+            assert_eq!(owners, vec!["//pkg:a", "//pkg:b", "//pkg:c"]);
+            assert_eq!(runner.seen.borrow().len(), 1);
+            argvs.push(runner.seen.borrow()[0].clone());
+        }
+        assert_eq!(argvs[0], argvs[1]);
+        assert_eq!(argvs[0], argvs[2]);
+    }
+
+    #[test]
     fn query_failures_report_the_first_bazel_line() {
         let scratch = temp_workspace("query-fail");
         let workspace = scratch.path().to_path_buf();
