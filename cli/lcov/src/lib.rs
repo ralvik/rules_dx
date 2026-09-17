@@ -25,24 +25,26 @@
 //! Domain split (issue #236): combined-LCOV parsing (`FileHits`,
 //! `parse_lcov`) lives in the `parse` module, source-level exclusion
 //! markers (`Ignores`, `is_ignored`, `find_ignores`) live in the `ignores`
-//! module, and gate evaluation (`FileVerdict`, `GateVerdict`,
+//! module, gate evaluation (`FileVerdict`, `GateVerdict`,
 //! `is_covered_language`, `evaluate`, `render`) lives in the `verdict`
-//! module. This facade keeps the shared error and inventory dispositions;
+//! module, and repo inventory (`ELIGIBLE`, `SUPPORT`, `parse_inventory`)
+//! lives in the `inventory` module. This facade keeps the shared error;
 //! the public paths stay `dx_lcov::{FileHits, parse_lcov, Ignores,
 //! is_ignored, find_ignores, FileVerdict, GateVerdict,
-//! is_covered_language, evaluate, render}` via the re-exports below.
+//! is_covered_language, evaluate, render, ELIGIBLE, SUPPORT,
+//! parse_inventory}` via the re-exports below.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-use std::collections::BTreeMap;
-
 pub mod ignores;
+pub mod inventory;
 pub mod parse;
 pub mod verdict;
 
 pub use ignores::{find_ignores, is_ignored, Ignores};
+pub use inventory::{parse_inventory, ELIGIBLE, SUPPORT};
 pub use parse::{parse_lcov, FileHits};
 pub use verdict::{evaluate, is_covered_language, render, FileVerdict, GateVerdict};
 
@@ -98,36 +100,6 @@ impl From<String> for LcovError {
     fn from(message: String) -> Self {
         Self::Io { message }
     }
-}
-
-/// Inventory disposition for authored first-party implementation.
-pub const ELIGIBLE: &str = "eligible";
-/// Inventory disposition for classified non-implementation (build
-/// declarations, schemas, fixtures, tooling inputs). Never in the denominator.
-pub const SUPPORT: &str = "support";
-
-/// Parse the inventory file: `<disposition> <repo-relative path>` per line;
-/// blank lines and `#` comments are skipped.
-pub fn parse_inventory(text: &str) -> Result<BTreeMap<String, String>, LcovError> {
-    let mut inventory = BTreeMap::new();
-    for (index, raw) in text.lines().enumerate() {
-        let lineno = index + 1;
-        let line = raw.trim();
-        if line.is_empty() || line.starts_with('#') {
-            continue;
-        }
-        let mut parts = line.split_whitespace();
-        let disposition = parts.next().unwrap_or_default();
-        let path = parts.next().unwrap_or_default();
-        if disposition.is_empty() || path.is_empty() || parts.next().is_some() {
-            return Err(LcovError::MalformedInventory {
-                lineno,
-                raw: raw.to_string(),
-            });
-        }
-        inventory.insert(path.to_string(), disposition.to_string());
-    }
-    Ok(inventory)
 }
 
 fn print_usage(print: &mut dyn FnMut(&str)) {
@@ -262,21 +234,9 @@ pub fn run(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use super::*;
-
-    #[test]
-    fn parses_inventory_with_comments_and_blanks() {
-        let inventory = parse_inventory("# comment\n\neligible a.rs\nsupport b.rs  \n").unwrap();
-        assert_eq!(inventory["a.rs"], ELIGIBLE);
-        assert_eq!(inventory["b.rs"], SUPPORT);
-    }
-
-    #[test]
-    fn rejects_malformed_inventory_lines() {
-        assert!(parse_inventory("eligible\n").is_err());
-        assert!(parse_inventory("eligible a.rs extra\n").is_err());
-        assert!(parse_inventory("   \n lone\n").is_err());
-    }
 
     fn run_harness(stored: BTreeMap<&str, &str>, args: &[&str]) -> (i32, Vec<String>) {
         let owned: BTreeMap<String, String> = stored

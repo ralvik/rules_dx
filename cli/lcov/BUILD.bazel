@@ -15,6 +15,7 @@ dx_rust_crate(
         "src/lib.rs",
         "src/ignores.rs",
         "src/parse.rs",
+        "src/inventory.rs",
         "src/verdict.rs",
     ],
 )
