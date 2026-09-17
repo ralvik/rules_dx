@@ -17,6 +17,7 @@ dx_rust_crate(
     srcs = [
         "src/lib.rs",
         "src/revision.rs",
+        "src/scheduling.rs",
         "src/selection.rs",
     ],
 )
