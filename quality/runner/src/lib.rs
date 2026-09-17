@@ -1642,4 +1642,47 @@ mod tests {
         assert_eq!(spliced, b"GOOD shared\n");
         assert!(validate(&result).is_ok());
     }
+
+    #[test]
+    fn iteration_limit_with_mixed_stable_and_growing_files_emits_none() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // the fixed ten-round limit to emit only one original-to-stable
+        // candidate, with complete envelope validation before any write.
+        // A stable sibling must not leak a partial replacement when the
+        // global run hits IterationLimit because an unrelated file keeps
+        // changing every round.
+        let stages = vec![stage(
+            "lint-a",
+            &["rust"],
+            &["src/stable.rs", "src/growing.rs"],
+        )];
+        let mut initial = BTreeMap::new();
+        initial.insert("src/stable.rs".to_owned(), "BAD\n".to_owned());
+        initial.insert("src/growing.rs".to_owned(), "a".to_owned());
+        let mixed = |_: &str, path: &str, text: &str| {
+            if path == "src/stable.rs" {
+                Ok(text.replace("BAD", "GOOD"))
+            } else {
+                Ok(format!("{text}x"))
+            }
+        };
+        let (terminal, completed, convergence) =
+            run_convergence(&initial, &stages, MAX_COMPLETED_ROUNDS, mixed).expect("converged");
+        assert_eq!(convergence, Convergence::IterationLimit);
+        assert_eq!(completed, MAX_COMPLETED_ROUNDS);
+        assert_eq!(terminal["src/stable.rs"], "GOOD\n");
+        assert_ne!(terminal["src/growing.rs"], initial["src/growing.rs"]);
+        let result = assemble(
+            "//quality:test",
+            Capability::Lint as i32,
+            &stages,
+            &initial,
+            &terminal,
+            (Vec::new(), Vec::new()),
+            (completed, convergence),
+        )
+        .unwrap();
+        assert!(result.replacements.is_empty());
+        assert!(quality_result::validate(&result).is_ok());
+    }
 }
