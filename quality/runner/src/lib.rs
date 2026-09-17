@@ -1252,4 +1252,36 @@ mod tests {
         assert!(clean_result.replacements.is_empty());
         assert_ne!(manifests[0], encode_validated(&clean_result).unwrap());
     }
+
+    #[test]
+    fn identical_final_bytes_across_producer_identities() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // identical final bytes across owner/configuration pipeline
+        // results; separate contexts must not merge edits. Different
+        // producers over identical inputs must converge to identical
+        // snapshots, diagnostics, and replacements (producer is metadata
+        // only; terminal bytes are content-derived).
+        let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let files = vec![file("src/lib.rs", "BAD\n")];
+        let first = run_pipeline("//quality:owner-a", "lint", &stages, &files).unwrap();
+        let second = run_pipeline("//quality:owner-b", "lint", &stages, &files).unwrap();
+        assert_eq!(first.producer, "//quality:owner-a");
+        assert_eq!(second.producer, "//quality:owner-b");
+        assert_eq!(first.terminal_snapshot, second.terminal_snapshot);
+        assert_eq!(first.original_snapshot, second.original_snapshot);
+        assert_eq!(first.initial_diagnostics, second.initial_diagnostics);
+        assert_eq!(first.terminal_diagnostics, second.terminal_diagnostics);
+        assert_eq!(first.replacements, second.replacements);
+        assert_eq!(first.replacements.len(), 1);
+        assert_eq!(
+            first.replacements[0].edits[0].replacement,
+            b"GOOD\n".to_vec()
+        );
+        assert_eq!(
+            second.replacements[0].edits[0].replacement,
+            b"GOOD\n".to_vec()
+        );
+        assert!(validate(&first).is_ok());
+        assert!(validate(&second).is_ok());
+    }
 }
