@@ -150,6 +150,16 @@ sh_binary(
     srcs = ["code_ownership.sh"],
 )
 
+# Examples README harness (issue #85, slice 1): every per-foundation
+# external-consumer example workspace records exact commands plus
+# expected evidence in its own README. Acquisition/laziness fixtures
+# stay open per #85. Run by CI via
+# `bazel run //tools/ci:examples_readme`.
+sh_binary(
+    name = "examples_readme",
+    srcs = ["examples_readme.sh"],
+)
+
 # Stage 4 E2E drivers (issue #55): one `manual` (+`exclusive`,
 # `local`, `no-sandbox`) sh_test per landed `integration/` scenario plus
 # the explicit suite. Wildcard suites (`bazel test //...`,
