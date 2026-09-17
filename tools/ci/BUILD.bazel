@@ -183,6 +183,17 @@ sh_binary(
     srcs = ["examples_laziness_query.sh"],
 )
 
+# Examples laziness aquery proof (issue #85, slice 4): action-graph half
+# — each single-foundation example (Rust, Python, JS/TS minimum) mentions
+# its own ecosystem repo and none of the others' repos in `bazel aquery`,
+# so unused foundations contribute zero actions. Network-denied runtime
+# attribution + empty-cache remote-cache execution proof stay open per
+# #85. Run by CI via `bazel run //tools/ci:examples_laziness_aquery`.
+sh_binary(
+    name = "examples_laziness_aquery",
+    srcs = ["examples_laziness_aquery.sh"],
+)
+
 # Stage 4 E2E drivers (issue #55): one `manual` (+`exclusive`,
 # `local`, `no-sandbox`) sh_test per landed `integration/` scenario plus
 # the explicit suite. Wildcard suites (`bazel test //...`,
