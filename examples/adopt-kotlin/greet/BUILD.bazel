@@ -1,0 +1,31 @@
+"""Adopted foreign Kotlin tree (#195): handwritten owners preserved through generation."""
+
+load("@rules_dx//kotlin/rules:defs.bzl", "kotlin_library", "kotlin_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+# Handwritten: the generator never emits kotlin_test; test-owned `*Test.kt`
+# stays out of the generated library and this rule survives regeneration.
+kotlin_test(
+    name = "greet_test",
+    srcs = ["GreetTest.kt"],
+    test_class = "greet.GreetTest",
+    deps = [
+        ":greet",
+        "@maven//:junit_junit",
+    ],
+)
+
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
+
+kotlin_library(
+    name = "greet",
+    srcs = [
+        "Greet.kt",
+        "Helper.kt",
+    ],
+)
