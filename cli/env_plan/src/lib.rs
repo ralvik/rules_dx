@@ -442,7 +442,7 @@ pub fn fingerprint(records: &[EnvRecord]) -> String {
             producer: record.producer.as_str(),
         })
         .collect();
-    serde_json::to_string(&view).expect("fingerprint JSON serializes")
+    dx_fingerprint::to_json(&view)
 }
 
 /// BLAKE3-256 over the normalized fingerprint bytes: the complete-plan

@@ -1,6 +1,5 @@
-"""M25 WP2 slice 3: normalized env plan collection for the `dx` CLI."""
+"""Canonical JSON rendering for plan fingerprints (#237)."""
 
-# gazelle:resolve rust env_shard //env/env_shard
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
@@ -12,64 +11,53 @@ package(default_visibility = [
 ])
 
 rust_library(
-    name = "dx_env_plan",
+    name = "dx_fingerprint",
     srcs = ["src/lib.rs"],
     aliases = aliases(
-        package_name = "cli/dx_env_plan",
+        package_name = "cli/dx_fingerprint",
         normal = True,
     ),
-    crate_name = "dx_env_plan",
+    crate_name = "dx_fingerprint",
     crate_root = "src/lib.rs",
     deps = crate_deps(
         [
             "serde",
             "serde_json",
-            "thiserror",
         ],
-        package_name = "cli/dx_env_plan",
-    ) + [
-        "//cli/bep:dx_bep",
-        "//cli/digest:dx_digest",
-        "//cli/fingerprint:dx_fingerprint",
-        "//cli/roots:dx_roots",
-        "//env/env_shard",
-    ],
+        package_name = "cli/dx_fingerprint",
+    ),
 )
 
 rust_test(
-    name = "dx_env_plan_test",
+    name = "dx_fingerprint_test",
     size = "small",
     aliases = aliases(
-        package_name = "cli/dx_env_plan",
+        package_name = "cli/dx_fingerprint",
         normal = True,
         normal_dev = True,
     ),
-    crate = ":dx_env_plan",
+    crate = ":dx_fingerprint",
     deps = crate_deps(
         [
             "serde",
             "serde_json",
-            "thiserror",
         ],
-        package_name = "cli/dx_env_plan",
-    ) + [
-        "//cli/bep:dx_bep",
-        "//env/env_shard",
-    ],
+        package_name = "cli/dx_fingerprint",
+    ),
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy
 # resolve from the pinned toolchain, never from ambient host tools.
 rustfmt_test(
-    name = "dx_env_plan_fmt_test",
+    name = "dx_fingerprint_fmt_test",
     size = "small",
-    targets = [":dx_env_plan"],
+    targets = [":dx_fingerprint"],
 )
 
 rust_clippy_test(
-    name = "dx_env_plan_clippy_test",
+    name = "dx_fingerprint_clippy_test",
     size = "small",
-    targets = [":dx_env_plan"],
+    targets = [":dx_fingerprint"],
 )
 
 exports_files(
