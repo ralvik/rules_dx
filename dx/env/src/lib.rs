@@ -16,7 +16,7 @@
 use std::fs::{self, File, OpenOptions};
 use std::io;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use marker_proto::dx::env::v1::{EnvIdentity, EnvMarker, ToolEntry};
 use prost::Message;
@@ -43,8 +43,6 @@ pub const PREV_DIR_NAME: &str = "bin.prev";
 pub const IDENTITY_LEN: usize = 32;
 /// How long refresh contends for the commit lock before failing.
 pub const LOCK_TIMEOUT: Duration = Duration::from_secs(10);
-/// Poll interval while contending for the commit lock.
-const LOCK_POLL: Duration = Duration::from_millis(50);
 /// Host-name suffixes the installer refuses to materialize. Mirrors the
 /// Starlark registry so hand-edited staged metadata cannot smuggle an
 /// executable suffix past the boundary.
@@ -307,6 +305,8 @@ fn validate_host_name(bin_name: &str, name: &str) -> Result<(), Error> {
 /// Opens (creating) the commit-lock file and contends for an exclusive
 /// flock until `timeout`. Only contention retries; any other flock failure
 /// aborts immediately so platform errors are never misreported as busy.
+/// The contention loop is owned by `dx_atomic_fs::lock_exclusive` (#74);
+/// this function owns only the lock-file open.
 pub fn acquire_lock(dx_dir: &Path, timeout: Duration) -> Result<File, Error> {
     let path = dx_dir.join(LOCK_FILE_NAME);
     // The lock file's bytes are never read; open-or-create must leave any
@@ -321,25 +321,15 @@ pub fn acquire_lock(dx_dir: &Path, timeout: Duration) -> Result<File, Error> {
             path: path.clone(),
             reason: format!("cannot open commit lock: {e}"),
         })?;
-    let start = Instant::now();
-    loop {
-        match file.try_lock() {
-            Ok(()) => return Ok(file),
-            Err(std::fs::TryLockError::WouldBlock) => {
-                if start.elapsed() >= timeout {
-                    return Err(Error::Busy { path: path.clone() });
-                }
-                std::thread::sleep(LOCK_POLL);
-            }
-            // LCOV_EXCL_START - reason: non-contention flock failures are platform-specific and not triggerable on the seed host; open failures and contention are unit-covered.
-            Err(e) => {
-                return Err(Error::LockFailed {
-                    path: path.clone(),
-                    reason: format!("cannot lock commit lock: {e}"),
-                });
-                // LCOV_EXCL_STOP - reason: end of non-contention lock exclusion.
-            }
-        }
+    match dx_atomic_fs::lock_exclusive(&file, timeout) {
+        Ok(()) => Ok(file),
+        Err(std::fs::TryLockError::WouldBlock) => Err(Error::Busy { path: path.clone() }),
+        // LCOV_EXCL_START - reason: non-contention flock failures are platform-specific and not triggerable on the seed host; open failures and contention are unit-covered.
+        Err(e) => Err(Error::LockFailed {
+            path: path.clone(),
+            reason: format!("cannot lock commit lock: {e}"),
+        }),
+        // LCOV_EXCL_STOP - reason: end of non-contention lock exclusion.
     }
 }
 

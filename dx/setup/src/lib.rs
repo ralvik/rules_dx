@@ -467,9 +467,9 @@ fn map_lock_error(error: Error) -> CommitError {
 }
 
 /// Acquires the shared workspace commit lock. This is the O36 route owned
-/// by `dx_env::acquire_lock` (dedicated lock file, `File::try_lock`,
-/// contention-only retry until the deadline): setup introduces no new lock
-/// file, mechanism, or deadline.
+/// by `dx_env::acquire_lock` over `dx_atomic_fs::lock_exclusive` (#74:
+/// dedicated lock file, `File::try_lock`, contention-only retry until the
+/// deadline): setup introduces no new lock file, mechanism, or deadline.
 fn acquire_commit_lock(dx_dir: &Path, timeout: Duration) -> Result<std::fs::File, CommitError> {
     acquire_lock(dx_dir, timeout).map_err(map_lock_error)
 }
