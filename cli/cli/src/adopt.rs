@@ -7,15 +7,14 @@
 //! pipeline. Exit codes follow the CLI contract: `0` success, `1`
 //! operational failure, `2` pre-execution usage failure.
 //!
-//! Domain split (issue #236): inspect execution (`owners`/`deps`/`why`)
-//! lives in [`inspect`], status execution (`status`) lives in [`status`],
-//! version execution (`version`) lives in [`version`], watch execution
-//! (`watch`) lives in [`watch`], completion execution (`completion`)
-//! lives in [`completion`], init execution (`init`) lives in [`init`];
-//! this facade keeps dispatch plus the remaining execution domains. The
-//! public path stays `crate::adopt::{execute_adoption, AdoptEnv}`.
+//! Domain split (issue #236): each execution domain lives in its own
+//! module — [`inspect`] (`owners`/`deps`/`why`), [`status`], [`version`],
+//! [`watch`], [`completion`], [`init`], [`hooks`]; this facade keeps
+//! dispatch plus shared helpers. The public path stays
+//! `crate::adopt::{execute_adoption, AdoptEnv}`.
 
 mod completion;
+mod hooks;
 mod init;
 mod inspect;
 mod status;
@@ -73,7 +72,7 @@ pub fn execute_adoption(invocation: &Invocation, env: AdoptEnv<'_>) -> i32 {
     } = env;
     match invocation.command {
         Command::Init => init::execute_init(invocation, workspace, out, err),
-        Command::Hooks => execute_hooks(invocation, workspace, out, err),
+        Command::Hooks => hooks::execute_hooks(invocation, workspace, out, err),
         Command::Status => status::execute_status(invocation, workspace, out, err),
         Command::Version => version::execute_version(invocation, workspace, out, err),
         Command::Watch => watch::execute_watch(invocation, workspace, out, err),
@@ -82,64 +81,6 @@ pub fn execute_adoption(invocation: &Invocation, env: AdoptEnv<'_>) -> i32 {
         }
         Command::Completion => completion::execute_completion(invocation, out, err),
         _ => pre_exec(err, "not an adoption command"),
-    }
-}
-
-fn execute_hooks(
-    invocation: &Invocation,
-    workspace: &std::path::Path,
-    out: &mut dyn Write,
-    err: &mut dyn Write,
-) -> i32 {
-    let verb = invocation.targets.first().map(String::as_str).unwrap_or("");
-    match verb {
-        "install" => match dx_adopt::install_hooks(workspace) {
-            Ok(installed) => {
-                if !summaries_suppressed(invocation) {
-                    for path in installed {
-                        let _ = writeln!(out, "installed {path}");
-                    }
-                }
-                0
-            }
-            Err(error) => operational(out, err, &error.to_string()),
-        },
-        "uninstall" => match dx_adopt::uninstall_hooks(workspace) {
-            Ok(removed) => {
-                if !summaries_suppressed(invocation) {
-                    for path in removed {
-                        let _ = writeln!(out, "removed {path}");
-                    }
-                }
-                0
-            }
-            Err(error) => operational(out, err, &error.to_string()),
-        },
-        "status" => {
-            let baseline = read_optional(workspace, "dx.hooks.toml");
-            let overlay = read_optional(workspace, "dx.local.toml");
-            let timings = "pre-commit: p95 12s\npre-push: p95 40s\n";
-            let view = dx_adopt::render_hooks_status(&baseline, &overlay, timings);
-            let _ = write!(out, "{view}");
-            if !dx_adopt::hook_status_shows_merged(true, true, true) {
-                return operational(out, err, "hooks status missing merged layer");
-            }
-            0
-        }
-        "run" => {
-            let trigger = invocation.targets.get(1).map(String::as_str).unwrap_or("");
-            if trigger != "pre-commit" && trigger != "pre-push" {
-                return pre_exec(err, "usage: dx hooks run <pre-commit|pre-push>");
-            }
-            if !dx_adopt::hook_git_is_hermetic(true, false) {
-                return operational(out, err, "hook git must be hermetic");
-            }
-            if !summaries_suppressed(invocation) {
-                let _ = writeln!(out, "ran {trigger}: ok (budget 120s)");
-            }
-            0
-        }
-        _ => pre_exec(err, "usage: dx hooks <install|uninstall|status|run>"),
     }
 }
 
@@ -175,29 +116,6 @@ mod tests {
 
     fn temp_root(name: &str) -> dx_test_scratch::TempDir {
         dx_test_scratch::scratch(&format!("dx-adopt-cmd-{name}-"))
-    }
-
-    #[test]
-    fn hooks_status_shows_merged_layers() {
-        let inv = invocation(&["hooks", "status"]);
-        let scratch = temp_root("hooks-status");
-        let root = scratch.path().to_path_buf();
-        let mut out = Vec::new();
-        let mut err = Vec::new();
-        let code = execute_adoption(
-            &inv,
-            AdoptEnv {
-                workspace: &root,
-                query_runner: &NullQuery,
-                out: &mut out,
-                err: &mut err,
-            },
-        );
-        assert_eq!(code, 0);
-        let text = String::from_utf8(out).expect("out");
-        assert!(text.contains("baseline:"));
-        assert!(text.contains("overlay:"));
-        assert!(text.contains("timings:"));
     }
 
     #[test]
