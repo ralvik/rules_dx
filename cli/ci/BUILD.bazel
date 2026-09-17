@@ -18,6 +18,7 @@ dx_rust_crate(
         "src/lib.rs",
         "src/fork.rs",
         "src/reporting.rs",
+        "src/rerun.rs",
         "src/revision.rs",
         "src/scheduling.rs",
         "src/selection.rs",
