@@ -1,6 +1,12 @@
 //! Quality command execution: runs the planned Bazel workflow, collects results, projects reports, and applies stable candidates.
+//!
+//! Mutation (verified-source collection plus check/incomplete/apply
+//! handling) and status projection live in [`super::quality_apply`]
+//! (issue #236); this module keeps the dispatch, diff-patch rendering,
+//! finding emission, and SARIF reporting.
 
 use super::common::*;
+use super::quality_apply::{apply_collected_changes, project_status};
 use super::results::collect_results;
 use crate::args::Invocation;
 use crate::plan::{bep_path, plan_build};
@@ -10,9 +16,9 @@ use dx_apply::{FileSystem, RealFileSystem};
 use dx_diff::{render_patch, FilePatch, PatchKind};
 use dx_digest::blake3 as digest;
 use dx_output::{
-    change_event, command_finished, command_started, diagnostic_event, meets_threshold,
-    mutation_event, report_event, write_event, ChangeKind, DiagnosticEvent, FinishedCounts,
-    MutationOutcome, OutputMode, Resolution, Severity, Snapshot,
+    change_event, command_finished, command_started, diagnostic_event, mutation_event,
+    report_event, write_event, ChangeKind, FinishedCounts, MutationOutcome, OutputMode, Resolution,
+    Severity, Snapshot,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
@@ -134,79 +140,27 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
         .sort_by(|a, b| a.path.as_bytes().cmp(b.path.as_bytes()));
 
     let fs = RealFileSystem;
-    // Verified source bytes for changed files, read before any
-    // mutation while the workspace still matches the analysis.
-    let mut sources: BTreeMap<String, SourceRead> = BTreeMap::new();
-    for change in &collected.changes {
-        sources
-            .entry(change.path.clone())
-            .or_insert_with(|| read_verified(workspace, &change.path, &change.original_digest));
-    }
-
-    let mut applied: BTreeMap<String, bool> = BTreeMap::new();
-    let mut not_applied: Vec<(String, &'static str)> = Vec::new();
-    if invocation.check {
-        // Check mode never mutates; any proposed change fails the run.
-    } else if !collected.complete {
-        for change in &collected.changes {
-            applied.insert(change.path.clone(), false);
-            not_applied.push((change.path.clone(), REASON_INCOMPLETE_COLLECTION));
-        }
-    } else {
-        for change in &collected.changes {
-            let reason = match sources.get(&change.path) {
-                Some(SourceRead::Bytes(original)) => {
-                    match apply_to_bytes(original, &change.edits) {
-                        Some(candidate) => {
-                            match fs.write_atomic(&workspace.join(&change.path), &candidate) {
-                                Ok(()) => {
-                                    applied.insert(change.path.clone(), true);
-                                    None
-                                }
-                                Err(_) => Some(REASON_UNREADABLE_SOURCE),
-                            }
-                        }
-                        None => Some(REASON_INVALID_EDITS),
-                    }
-                }
-                Some(SourceRead::Unreadable) => Some(REASON_UNREADABLE_SOURCE),
-                Some(SourceRead::Stale) | None => Some(REASON_STALE_SOURCE),
-            };
-            if let Some(reason) = reason {
-                applied.insert(change.path.clone(), false);
-                not_applied.push((change.path.clone(), reason));
-            }
-        }
-    }
-
-    // Status findings under the command policy: every initial
-    // diagnostic in check mode; terminal diagnostics for applied files
-    // plus initial diagnostics for all other files in default mode.
-    // Fixed initials (applied guaranteed fixes) leave all projections.
-    let mut status: Vec<DiagnosticEvent> = Vec::new();
-    if invocation.check {
-        status.extend(collected.initial.iter().cloned());
-    } else {
-        status.extend(collected.terminal.iter().cloned());
-        for diagnostic in &collected.initial {
-            let is_applied = diagnostic
-                .path
-                .as_ref()
-                .is_some_and(|path| applied.get(path).copied().unwrap_or(false));
-            if is_applied && diagnostic.fixable {
-                continue;
-            }
-            status.push(diagnostic.clone());
-        }
-        dx_output::sort_diagnostics(&mut status);
-    }
-    let failing = status
-        .iter()
-        .any(|diagnostic| meets_threshold(diagnostic.severity, invocation.fail_on));
-    let mut failed = failing;
-    if invocation.check && !collected.changes.is_empty() {
-        failed = true;
-    }
+    // Mutation plus status projection live in `quality_apply` (issue
+    // #236): verified-source collection and check/incomplete/apply
+    // handling, then check-mode vs default-mode status with the
+    // fail-closed `failed` flag.
+    let applied_outcome = apply_collected_changes(
+        workspace,
+        invocation.check,
+        collected.complete,
+        &collected.changes,
+    );
+    let sources = applied_outcome.sources;
+    let applied = applied_outcome.applied;
+    let not_applied = applied_outcome.not_applied;
+    let (status, failed) = project_status(
+        invocation.check,
+        &collected.initial,
+        &collected.terminal,
+        &applied,
+        invocation.fail_on,
+        !collected.changes.is_empty(),
+    );
 
     // Projection: text lines, unified patch, or NDJSON events.
     let mut patch = String::new();
