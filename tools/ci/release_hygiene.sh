@@ -9,11 +9,13 @@
 # stays green by construction and nothing runs uninvited.
 #
 # This harness machine-checks the no-publication-inputs half that is
-# verifiable on a clean tree today (10 checks): dist/release
+# verifiable on a clean tree today (12 checks): dist/release
 # git-ignored and uncommitted, module at 0.0.0, no version tags,
 # SECURITY.md reporting link, publish dry-run dispatch-only with a
-# default-closed approve gate, no-secrets minimal permissions, and
-# RUNNER_TEMP staging plus a clean-checkout proof. Platform,
+# default-closed approve gate, no-secrets minimal permissions,
+# RUNNER_TEMP staging plus a clean-checkout proof, explicit release
+# matrix (seed qualified, rest unqualified per #5), and SBOM/BCR
+# deferrals to #26 tooling. Platform,
 # packaging, provenance (SPDX/SLSA), registry submission, and
 # public-install smoke runs stay unqualified per #5 and are recorded
 # as gaps, not claimed here.
@@ -110,6 +112,24 @@ if grep -q -F -e 'No tags, GitHub releases' CONTRIBUTING.md; then
   ok
 else
   bad "CONTRIBUTING.md lost the no-tags/no-releases policy"
+fi
+
+# The dry-run report names the full release matrix explicitly (issue
+# #78): seed linux-x86_64 qualified-built-here, the other four
+# (linux-arm64, macos-x86_64/arm64, windows-x86_64) unqualified per #5.
+if grep -q -F -e 'dx-linux-arm64' .github/workflows/publish-dry-run.yml && grep -q -F -e 'dx-macos-arm64' .github/workflows/publish-dry-run.yml && grep -q -F -e 'dx-windows-x86_64' .github/workflows/publish-dry-run.yml && grep -q -F -e 'unqualified-per-issue-5' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml lost the explicit release-matrix qualification table"
+fi
+
+# SBOM/provenance and BCR submission stay explicitly deferred to #26
+# tooling (issue #78 signing-first): the dry run must name the gap,
+# never claim the tooling.
+if grep -q -F -e 'SBOM/provenance generation (tooling unselected; issue #26)' .github/workflows/publish-dry-run.yml && grep -q -F -e 'BCR dry-run submission (registry tooling unselected; issue #26)' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml lost the SBOM/BCR deferral to issue #26"
 fi
 
 echo "release hygiene harness: $pass passed, $fail failed"

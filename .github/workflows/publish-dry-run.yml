@@ -74,13 +74,21 @@ jobs:
                       "note": "seed-host binary; release matrix follow-up under issue #5",
                   },
               ],
+              "release_matrix": [
+                  {"name": "dx-linux-x86_64", "status": "qualified-seed-built-here"},
+                  {"name": "dx-linux-arm64", "status": "unqualified-per-issue-5"},
+                  {"name": "dx-macos-x86_64", "status": "unqualified-per-issue-5"},
+                  {"name": "dx-macos-arm64", "status": "unqualified-per-issue-5"},
+                  {"name": "dx-windows-x86_64", "status": "unqualified-per-issue-5"},
+              ],
               "would_publish": [
                   "Bazel Central Registry `rules_dx` module (dry-run submission pending issue #26 tooling)",
                   "GitHub Release with standalone `dx` binaries (draft only via //cli/cli:github_draft, issue #182; owner approval per issue #5)",
               ],
               "not_attempted": [
                   "SBOM/provenance generation (tooling unselected; issue #26)",
-                  "Non-seed release matrix (platforms unqualified; issue #5)",
+                  "Non-seed release matrix builds (platforms unqualified; issue #5)",
+                  "BCR dry-run submission (registry tooling unselected; issue #26)",
                   "Any tag, registry submission, or release creation",
               ],
           }
