@@ -37,6 +37,8 @@ rust_library(
         "src/exec/deploy.rs",
         "src/exec/generate.rs",
         "src/exec/managed.rs",
+        "src/exec/managed_codegen.rs",
+        "src/exec/managed_env.rs",
         "src/exec/quality.rs",
         "src/exec/run.rs",
         "src/exec/test_reports.rs",
