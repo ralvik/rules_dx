@@ -194,6 +194,16 @@ sh_binary(
     srcs = ["examples_laziness_aquery.sh"],
 )
 
+# GHCR prebuilt-image hygiene (issue #184, seed slice): separate workflow
+# from releases, PR-paths build, dispatch + default-closed approve gate,
+# digest-pinned base + Bazel delegation + no ambient toolchains,
+# cosign/quota/scaffold deferrals, scaffold still on mcr until first
+# push. Run by CI via `bazel run //tools/ci:ghcr_hygiene`.
+sh_binary(
+    name = "ghcr_hygiene",
+    srcs = ["ghcr_hygiene.sh"],
+)
+
 # Stage 4 E2E drivers (issue #55): one `manual` (+`exclusive`,
 # `local`, `no-sandbox`) sh_test per landed `integration/` scenario plus
 # the explicit suite. Wildcard suites (`bazel test //...`,

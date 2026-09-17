@@ -28,8 +28,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     USE_BAZEL_VERSION=9.2.0
 
 # Bootstrap only: curl/ca-certificates for Bazelisk fetch, git for the
-# checkout. No pip/uv/npm/pnpm/Cargo/Maven/NuGet/Go installs: language
-# toolchains resolve via Bazel at container runtime.
+# checkout. No baked language toolchains: they resolve via Bazel at
+# container runtime.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl git \
     && rm -rf /var/lib/apt/lists/*
