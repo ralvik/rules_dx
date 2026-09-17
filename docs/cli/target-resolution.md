@@ -70,11 +70,18 @@ deduplicated, and all are selected; no distance limit or package-location heuris
 is applied. A source-owning library is never passed directly to `bazel test` or
 `bazel coverage` merely because it owns the file.
 
-This mapping intentionally uses Bazel's unconfigured query graph. It may
+This mapping intentionally uses Bazel's unconfigured query graph (accepted,
+measured in [#187](https://github.com/ralvik/rules_dx/issues/187)). It may
 conservatively include tests reachable only through inactive `select()` branches,
 but it must not prune graph-visible reverse dependencies using CLI heuristics.
-Configuration-aware reverse-dependency mapping is deferred unless measured
-over-selection justifies its additional complexity.
+Configuration-aware (`cquery`) mapping is rejected: measured 2026-09-17 on the
+seed host (Bazel 9.2.0, 3067 targets) across five representative owner sets,
+unconfigured `query` medians 0.28–0.32s and succeeds, while `cquery` medians
+0.42–0.50s and fails on the intentional `manual` negative fixture
+`//deploy/rules:deploy_invalid`. The sole `select()` in the repo lives in the
+external tool-hub template (`quality/artifacts/extension.bzl`), not in the
+main-workspace test graph, so measured over-selection is zero. Revisit only if
+`select()` enters the main-workspace test graph with evidence of material waste.
 
 Resolution queries load the workspace `.bazelrc` and receive only user options the
 specific query command natively supports. Other configuration-affecting build
