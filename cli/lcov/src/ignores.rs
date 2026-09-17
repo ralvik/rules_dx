@@ -1,0 +1,581 @@
+//! Source-level exclusion markers for the coverage gate (issue #236).
+//!
+//! Split from `super` (`lib.rs`): owns [`Ignores`], [`is_ignored`], and
+//! [`find_ignores`] plus the comment-style scanner (`CommentStyle`,
+//! `comment_style`, `line_comment_with`, `line_comment`, `hash_comment`,
+//! `html_comments`, `comment_text`, `take_word`, `reason_value`,
+//! `nearby_reason`). Re-exported through `super` so the public path
+//! stays `dx_lcov::{Ignores, is_ignored, find_ignores}`. Distinct from the
+//! `parse` module (combined-LCOV parsing), the `verdict` module (gate
+//! evaluation), and the `inventory`/`run` modules (repo inventory and CLI).
+
+use std::collections::BTreeMap;
+
+use super::LcovError;
+
+/// Validated source-level exclusions for one file.
+#[derive(Debug, Default, PartialEq, Eq, Clone)]
+pub struct Ignores {
+    /// Singly excluded lines with their reason text.
+    pub singles: BTreeMap<u32, String>,
+    /// Excluded ranges (inclusive start/end) with the opening reason text.
+    pub ranges: Vec<(u32, u32, String)>,
+}
+
+/// Whether `line` (1-based) is excluded by `ignores`.
+pub fn is_ignored(ignores: &Ignores, line: u32) -> bool {
+    if ignores.singles.contains_key(&line) {
+        return true;
+    }
+    for range in &ignores.ranges {
+        if range.0 <= line && line <= range.1 {
+            return true;
+        }
+    }
+    false
+}
+
+/// Non-empty reason text after `reason:` on `line`, if present.
+fn reason_value(line: &str) -> Option<String> {
+    let marker = line.find("reason:")?;
+    let value = line[marker + "reason:".len()..].trim().to_string();
+    if value.is_empty() {
+        None
+    } else {
+        Some(value)
+    }
+}
+
+/// Reason for `directive` at 1-based `lineno`: `reason:` with non-empty text
+/// on the same line or the line directly above it.
+fn nearby_reason(
+    path: &str,
+    directive: &str,
+    lineno: usize,
+    lines: &[&str],
+) -> Result<String, LcovError> {
+    if let Some(reason) = reason_value(lines[lineno - 1]) {
+        return Ok(reason);
+    }
+    if lineno >= 2 {
+        if let Some(reason) = reason_value(lines[lineno - 2]) {
+            return Ok(reason);
+        }
+    }
+    Err(LcovError::MissingReason {
+        path: path.to_string(),
+        lineno,
+        directive: directive.to_string(),
+    })
+}
+
+/// Comment style for marker extraction, selected by source extension.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum CommentStyle {
+    /// `//` line comments (Rust, Go, C-family, Java, JavaScript, TypeScript).
+    SlashSlash,
+    /// `#` line comments (Python, Starlark, TOML, shell, YAML).
+    Hash,
+    /// `<!-- ... -->` segments (Markdown, HTML).
+    Html,
+}
+
+/// Marker comment style for `path`, by file extension. Unknown extensions
+/// keep the historical `//` behavior.
+fn comment_style(path: &str) -> CommentStyle {
+    if path.ends_with(".py")
+        || path.ends_with(".bzl")
+        || path.ends_with(".toml")
+        || path.ends_with(".sh")
+        || path.ends_with(".yaml")
+        || path.ends_with(".yml")
+    {
+        CommentStyle::Hash
+    } else if path.ends_with(".md")
+        || path.ends_with(".html")
+        || path.ends_with(".htm")
+        || path.ends_with(".mdx")
+    {
+        CommentStyle::Html
+    } else {
+        CommentStyle::SlashSlash
+    }
+}
+
+/// Comment text after the `opener` comment start, honoring `"`/`'`
+/// literals and backslash escapes. Returns `None` when the line has no
+/// line comment.
+fn line_comment_with<'a>(line: &'a str, opener: &[u8]) -> Option<&'a str> {
+    let bytes = line.as_bytes();
+    let mut index = 0;
+    let mut in_string = false;
+    let mut in_char = false;
+    let mut escaped = false;
+    while index < bytes.len() {
+        let byte = bytes[index];
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'"' {
+                in_string = false;
+            }
+        } else if in_char {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'\'' {
+                in_char = false;
+            }
+        } else if byte == b'"' {
+            in_string = true;
+        } else if byte == b'\'' {
+            in_char = true;
+        } else if bytes[index..].starts_with(opener) {
+            return Some(&line[index + opener.len()..]);
+        }
+        index += 1;
+    }
+    None
+}
+
+/// Comment text after the `//` comment start, honoring `"`/`'` literals and
+/// backslash escapes. Returns `None` when the line has no line comment.
+fn line_comment(line: &str) -> Option<&str> {
+    line_comment_with(line, b"//")
+}
+
+/// Comment text after the `#` comment start, with the same literal
+/// handling as [`line_comment`]. Returns `None` when the line has no
+/// `#` comment.
+fn hash_comment(line: &str) -> Option<&str> {
+    line_comment_with(line, b"#")
+}
+
+/// Concatenated `<!-- ... -->` comment segments on one line. An opening
+/// marker without a closer runs to end of line; text outside segments is
+/// code and never scanned for directives.
+fn html_comments(line: &str) -> String {
+    let mut out = String::new();
+    let mut rest = line;
+    while let Some(open) = rest.find("<!--") {
+        let after = &rest[open + "<!--".len()..];
+        match after.find("-->") {
+            Some(close) => {
+                if !out.is_empty() {
+                    out.push(' ');
+                }
+                out.push_str(&after[..close]);
+                rest = &after[close + "-->".len()..];
+            }
+            None => {
+                if !out.is_empty() {
+                    out.push(' ');
+                }
+                out.push_str(after);
+                break;
+            }
+        }
+    }
+    out
+}
+
+/// Scannable comment text for one source `line` of `path`, dispatching on
+/// the extension-selected [`CommentStyle`].
+fn comment_text(path: &str, line: &str) -> String {
+    match comment_style(path) {
+        CommentStyle::SlashSlash => line_comment(line).unwrap_or_default().to_string(),
+        CommentStyle::Hash => hash_comment(line).unwrap_or_default().to_string(),
+        CommentStyle::Html => html_comments(line),
+    }
+}
+
+/// Whether `rest` (text right after the common marker prefix) is `word`
+/// followed by a non-word character or end of text.
+fn take_word(rest: &str, word: &str) -> bool {
+    if let Some(tail) = rest.strip_prefix(word) {
+        !tail.starts_with(|c: char| c == '_' || c.is_alphanumeric())
+    } else {
+        false
+    }
+}
+
+/// Validate the exclusion markers in the `source` of `path`.
+///
+/// Every LINE/START/STOP directive needs a nearby non-empty `reason:`; ranges
+/// must open and close exactly once; any other spelling of the marker prefix
+/// is an unrecognized directive and fails. Markers are honored only inside
+/// the extension-selected comment style (see [`comment_style`]) outside
+/// literals.
+pub fn find_ignores(path: &str, source: &str) -> Result<Ignores, LcovError> {
+    let lines: Vec<&str> = source.lines().collect();
+    let mut ignores = Ignores::default();
+    let mut open: Option<(usize, String)> = None;
+    for (index, line) in lines.iter().enumerate() {
+        let lineno = index + 1;
+        let comment = comment_text(path, line);
+        for (pos, _) in comment.match_indices("LCOV_EXCL") {
+            let rest = &comment[pos + "LCOV_EXCL".len()..];
+            if take_word(rest, "_LINE") {
+                let reason = nearby_reason(path, "LINE directive", lineno, &lines)?;
+                ignores.singles.insert(lineno as u32, reason);
+            } else if take_word(rest, "_START") {
+                let reason = nearby_reason(path, "START directive", lineno, &lines)?;
+                if open.is_some() {
+                    return Err(LcovError::NestedStart {
+                        path: path.to_string(),
+                        lineno,
+                    });
+                }
+                open = Some((lineno, reason));
+            } else if take_word(rest, "_STOP") {
+                let reason = nearby_reason(path, "STOP directive", lineno, &lines)?;
+                match open.take() {
+                    Some((start, start_reason)) => {
+                        ignores
+                            .ranges
+                            .push((start as u32, lineno as u32, start_reason));
+                        let _ = reason;
+                    }
+                    None => {
+                        return Err(LcovError::StopWithoutStart {
+                            path: path.to_string(),
+                            lineno,
+                        });
+                    }
+                }
+            } else {
+                return Err(LcovError::UnrecognizedDirective {
+                    path: path.to_string(),
+                    lineno,
+                });
+            }
+        }
+    }
+    if let Some((start, _)) = open {
+        return Err(LcovError::UnclosedStart {
+            path: path.to_string(),
+            start,
+        });
+    }
+    Ok(ignores)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Build a marker suffix without spelling the contiguous literal in this
+    /// file: the gate scans its own sources, so test data must not contribute
+    /// directives. Every marker below lives inside string literals, which the
+    /// comment scanner ignores.
+    fn marker(kind: &str) -> String {
+        ["LCOV", "_EXCL", kind].concat()
+    }
+
+    fn file_lines(lines: &[String]) -> String {
+        let mut out = lines.join("\n");
+        out.push('\n');
+        out
+    }
+
+    #[test]
+    fn single_line_ignore_needs_same_line_reason() {
+        let source = file_lines(&[
+            "pub fn f() -> u32 {".to_string(),
+            format!("    // {} - reason: fixture.", marker("_LINE")),
+            "    1".to_string(),
+            "}".to_string(),
+        ]);
+        let ignores = find_ignores("t.rs", &source).unwrap();
+        assert_eq!(ignores.singles.len(), 1);
+        assert!(ignores.singles.contains_key(&2));
+        assert!(is_ignored(&ignores, 2));
+        assert!(!is_ignored(&ignores, 1));
+        assert!(!is_ignored(&ignores, 3));
+    }
+
+    #[test]
+    fn single_line_ignore_accepts_previous_line_reason() {
+        let source = file_lines(&[
+            "    // reason: fixture explains the next line.".to_string(),
+            format!("    // {}", marker("_LINE")),
+            "    1".to_string(),
+        ]);
+        let ignores = find_ignores("t.rs", &source).unwrap();
+        assert!(ignores.singles.contains_key(&2));
+    }
+
+    #[test]
+    fn single_line_ignore_accepts_marker_at_end_of_line() {
+        let source = file_lines(&[
+            "    // reason: fixture.".to_string(),
+            format!("    // {}", marker("_LINE")),
+            "    1".to_string(),
+        ]);
+        assert!(find_ignores("t.rs", &source)
+            .unwrap()
+            .singles
+            .contains_key(&2));
+    }
+
+    #[test]
+    fn missing_reason_fails_on_first_line() {
+        let source = file_lines(&[format!("// {}", marker("_LINE")), "fn f() {}".to_string()]);
+        let err = find_ignores("t.rs", &source).unwrap_err();
+        assert!(
+            err.to_string().contains("t.rs:1") && err.to_string().contains("reason"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn missing_reason_fails_with_unrelated_previous_line() {
+        let source = file_lines(&[
+            "fn f() {".to_string(),
+            "    // nothing here.".to_string(),
+            format!("    // {} - oops, no reason key.", marker("_LINE")),
+            "}".to_string(),
+        ]);
+        assert!(find_ignores("t.rs", &source).is_err());
+    }
+
+    #[test]
+    fn empty_reason_fails() {
+        let source = file_lines(&[
+            "    // reason:   ".to_string(),
+            format!("    // {}", marker("_LINE")),
+            "    1".to_string(),
+        ]);
+        assert!(find_ignores("t.rs", &source).is_err());
+    }
+
+    #[test]
+    fn distant_reason_fails() {
+        let source = file_lines(&[
+            "    // reason: too far above.".to_string(),
+            "    // filler.".to_string(),
+            format!("    // {}", marker("_LINE")),
+        ]);
+        assert!(find_ignores("t.rs", &source).is_err());
+    }
+
+    #[test]
+    fn range_excludes_interior_and_boundaries() {
+        let source = file_lines(&[
+            "fn f() {".to_string(),
+            format!("    // {} - reason: range opens.", marker("_START")),
+            "    1".to_string(),
+            format!("    // {} - reason: range closes.", marker("_STOP")),
+            "}".to_string(),
+        ]);
+        let ignores = find_ignores("t.rs", &source).unwrap();
+        assert_eq!(ignores.ranges.len(), 1);
+        assert!(is_ignored(&ignores, 2));
+        assert!(is_ignored(&ignores, 3));
+        assert!(is_ignored(&ignores, 4));
+        assert!(!is_ignored(&ignores, 1));
+        assert!(!is_ignored(&ignores, 5));
+    }
+
+    #[test]
+    fn stop_without_reason_fails() {
+        let source = file_lines(&[
+            format!("// {} - reason: opens.", marker("_START")),
+            "code();".to_string(),
+            format!("// {}", marker("_STOP")),
+        ]);
+        assert!(find_ignores("t.rs", &source).is_err());
+    }
+
+    #[test]
+    fn stop_without_start_fails() {
+        let source = file_lines(&[format!("// {} - reason: stray stop.", marker("_STOP"))]);
+        let err = find_ignores("t.rs", &source).unwrap_err();
+        assert!(err.to_string().contains("without START"), "{err}");
+    }
+
+    #[test]
+    fn nested_start_fails() {
+        let source = file_lines(&[
+            format!("// {} - reason: outer.", marker("_START")),
+            format!("// {} - reason: inner.", marker("_START")),
+            format!("// {} - reason: close.", marker("_STOP")),
+            format!("// {} - reason: close.", marker("_STOP")),
+        ]);
+        let err = find_ignores("t.rs", &source).unwrap_err();
+        assert!(err.to_string().contains("nested"), "{err}");
+    }
+
+    #[test]
+    fn unclosed_start_fails() {
+        let source = file_lines(&[
+            "fn f() {".to_string(),
+            format!("    // {} - reason: never closed.", marker("_START")),
+            "}".to_string(),
+        ]);
+        let err = find_ignores("t.rs", &source).unwrap_err();
+        assert!(
+            err.to_string().contains("unclosed") && err.to_string().contains("t.rs:2"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn unrecognized_suffix_fails() {
+        let source = file_lines(&[format!("// {} - reason: typo.", marker("_RANGE"))]);
+        let err = find_ignores("t.rs", &source).unwrap_err();
+        assert!(err.to_string().contains("unrecognized"), "{err}");
+    }
+
+    #[test]
+    fn bare_prefix_fails() {
+        let source = file_lines(&[format!("// {} - reason: bare.", marker(""))]);
+        assert!(find_ignores("t.rs", &source).is_err());
+    }
+
+    #[test]
+    fn word_boundary_suffix_fails() {
+        let source = file_lines(&[format!("// {}X - reason: glued.", marker("_LINE"))]);
+        assert!(find_ignores("t.rs", &source).is_err());
+    }
+
+    #[test]
+    fn markers_inside_string_literals_are_ignored() {
+        let tricky = format!("let s = \"code with // {} inside\";", marker("_LINE"));
+        let source = file_lines(&[tricky, "real();".to_string()]);
+        let ignores = find_ignores("t.rs", &source).unwrap();
+        assert!(ignores.singles.is_empty());
+        assert!(ignores.ranges.is_empty());
+    }
+
+    #[test]
+    fn lexer_survives_escapes_and_char_literals() {
+        let source = file_lines(&[
+            "let s = \"a\\\"b\";".to_string(),
+            "let q = '\\'';".to_string(),
+            "let c = '/';".to_string(),
+            "code();".to_string(),
+        ]);
+        assert!(find_ignores("t.rs", &source).unwrap().singles.is_empty());
+    }
+
+    #[test]
+    fn marker_after_string_state_is_recognized() {
+        let source = file_lines(&[
+            "let s = \"a\\\"b\";".to_string(),
+            format!("// {} - reason: after strings.", marker("_LINE")),
+            "code();".to_string(),
+        ]);
+        let ignores = find_ignores("t.rs", &source).unwrap();
+        assert!(ignores.singles.contains_key(&2));
+    }
+
+    #[test]
+    fn hash_comment_markers_are_honored_for_python() {
+        let source = file_lines(&[
+            "def f():".to_string(),
+            format!(
+                "    pass  # {} - reason: fixture defensive line.",
+                marker("_LINE")
+            ),
+            "    return 1".to_string(),
+        ]);
+        let ignores = find_ignores("t.py", &source).unwrap();
+        assert!(ignores.singles.contains_key(&2));
+        assert!(!is_ignored(&ignores, 3));
+    }
+
+    #[test]
+    fn hash_markers_inside_python_strings_are_ignored() {
+        let tricky = format!("s = \"code with # {} inside\";", marker("_LINE"));
+        let source = file_lines(&[tricky, "real();".to_string()]);
+        let ignores = find_ignores("t.py", &source).unwrap();
+        assert!(ignores.singles.is_empty());
+        assert!(ignores.ranges.is_empty());
+    }
+
+    #[test]
+    fn slash_markers_are_not_honored_for_python() {
+        let source = file_lines(&[format!("// {} - reason: wrong style.", marker("_LINE"))]);
+        let ignores = find_ignores("t.py", &source).unwrap();
+        assert!(ignores.singles.is_empty());
+        assert!(ignores.ranges.is_empty());
+    }
+
+    #[test]
+    fn hash_marker_without_reason_fails_for_python() {
+        let source = file_lines(&[format!("# {}", marker("_LINE")), "x = 1".to_string()]);
+        let err = find_ignores("t.py", &source).unwrap_err();
+        assert!(
+            err.to_string().contains("t.py:1") && err.to_string().contains("reason"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn hash_malformed_directive_fails_for_python() {
+        let source = file_lines(&[format!("# {} - reason: typo.", marker("_RANGE"))]);
+        let err = find_ignores("t.py", &source).unwrap_err();
+        assert!(err.to_string().contains("unrecognized"), "{err}");
+    }
+
+    #[test]
+    fn hash_range_excludes_boundaries_for_starlark() {
+        let source = file_lines(&[
+            "def f():".to_string(),
+            format!("    # {} - reason: range opens.", marker("_START")),
+            "    pass".to_string(),
+            format!("    # {} - reason: range closes.", marker("_STOP")),
+        ]);
+        let ignores = find_ignores("t.bzl", &source).unwrap();
+        assert_eq!(ignores.ranges.len(), 1);
+        assert!(is_ignored(&ignores, 2));
+        assert!(is_ignored(&ignores, 3));
+        assert!(is_ignored(&ignores, 4));
+        assert!(!is_ignored(&ignores, 1));
+    }
+
+    #[test]
+    fn html_comment_markers_are_honored_for_markdown() {
+        let source = file_lines(&[
+            "# Title".to_string(),
+            format!("<!-- {} - reason: fixture prose. -->", marker("_LINE")),
+            "Body.".to_string(),
+        ]);
+        let ignores = find_ignores("t.md", &source).unwrap();
+        assert!(ignores.singles.contains_key(&2));
+    }
+
+    #[test]
+    fn html_second_comment_on_line_keeps_separator() {
+        let line = format!(
+            "prose <!-- dropped --> more <!-- {} - reason: second segment. -->",
+            marker("_LINE")
+        );
+        let source = file_lines(&[line]);
+        let ignores = find_ignores("t.md", &source).unwrap();
+        assert!(ignores.singles.contains_key(&1));
+    }
+
+    #[test]
+    fn html_unterminated_comment_after_content_keeps_prefix() {
+        let line = format!(
+            "prose <!-- dropped --> tail <!-- {} - reason: unterminated.",
+            marker("_LINE")
+        );
+        let source = file_lines(&[line]);
+        let ignores = find_ignores("t.md", &source).unwrap();
+        assert!(ignores.singles.contains_key(&1));
+    }
+
+    #[test]
+    fn html_code_outside_segments_is_not_scanned_for_markdown() {
+        let source = file_lines(&["real `code` here.".to_string(), "More.".to_string()]);
+        let ignores = find_ignores("t.md", &source).unwrap();
+        assert!(ignores.singles.is_empty());
+        assert!(ignores.ranges.is_empty());
+    }
+}

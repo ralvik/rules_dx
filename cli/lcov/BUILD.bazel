@@ -13,6 +13,7 @@ dx_rust_crate(
     deps = ["thiserror"],
     srcs = [
         "src/lib.rs",
+        "src/ignores.rs",
         "src/parse.rs",
     ],
 )
