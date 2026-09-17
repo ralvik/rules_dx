@@ -1,0 +1,40 @@
+load("@rules_dx//javascript/rules:defs.bzl", "javascript_library", "javascript_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+javascript_library(
+    name = "format",
+    srcs = ["format.js"],
+)
+
+javascript_library(
+    name = "greet",
+    srcs = ["greet.js"],
+    deps = [":format"],
+)
+
+javascript_test(
+    name = "greet_test",
+    srcs = ["greet_test.js"],
+    config = "jest.config.cjs",
+    data = [":greet"],
+    node_modules = "//:node_modules",
+    # First-party .js is ESM (`"type": "module"` in package.json); jest
+    # needs VM modules to execute it (same flag as //javascript/hello).
+    node_options = ["--experimental-vm-modules"],
+)
+
+javascript_library(
+    name = "jest_config",
+    srcs = ["jest.config.cjs"],
+)
+
+javascript_library(
+    name = "test_helpers",
+    srcs = ["test_helpers.js"],
+    deps = [":format"],
+)
+
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)

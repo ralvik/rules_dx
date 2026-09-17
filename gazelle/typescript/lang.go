@@ -55,10 +55,15 @@ type ignoreEntry struct {
 }
 
 // targetImports is the deduplicated union of literal specifier roots for one
-// generated rule's sources. Standard-library roots are dropped at
-// collection; every other root resolves strictly or fails generation.
+// generated rule's sources. Bare standard-library roots are dropped at
+// collection; relative roots are always kept (a relative reference resolves
+// locally even when its root collides with a builtin name such as
+// `./util.js`). Every other root resolves strictly or fails generation.
 type targetImports struct {
 	imports []string
+	// local marks roots contributed by at least one relative specifier;
+	// those roots skip the standard-library filter at resolve time.
+	local map[string]bool
 }
 
 // NewLanguage returns the private first-party TypeScript Gazelle extension.
@@ -193,6 +198,7 @@ func (l *typescriptLang) generateRules(args language.GenerateArgs) language.Gene
 		src     string
 		test    bool
 		imports []string
+		local   map[string]bool
 	}
 	var plans []plan
 	for _, src := range sources {
@@ -208,12 +214,24 @@ func (l *typescriptLang) generateRules(args language.GenerateArgs) language.Gene
 		}
 		p := plan{name: name, src: src, test: IsTestFile(src)}
 		seen := make(map[string]bool)
-		for _, root := range ParseImports(content) {
-			if IsStdLib(root) || seen[root] {
+		p.local = make(map[string]bool)
+		for _, ref := range ParseImportRefs(content) {
+			if seen[ref.Root] {
+				if ref.Relative {
+					p.local[ref.Root] = true
+				}
 				continue
 			}
-			seen[root] = true
-			p.imports = append(p.imports, root)
+			// Bare standard-library roots resolve without an edge;
+			// relative roots always resolve locally.
+			if !ref.Relative && IsStdLib(ref.Root) {
+				continue
+			}
+			seen[ref.Root] = true
+			if ref.Relative {
+				p.local[ref.Root] = true
+			}
+			p.imports = append(p.imports, ref.Root)
 		}
 		sort.Strings(p.imports)
 		plans = append(plans, p)
@@ -236,7 +254,7 @@ func (l *typescriptLang) generateRules(args language.GenerateArgs) language.Gene
 		r := rule.NewRule(projectKind, p.name)
 		r.SetAttr("srcs", []string{p.src})
 		result.Gen = append(result.Gen, r)
-		result.Imports = append(result.Imports, targetImports{imports: append([]string(nil), p.imports...)})
+		result.Imports = append(result.Imports, targetImports{imports: append([]string(nil), p.imports...), local: p.local})
 	}
 	return mergeStale(args.File, result)
 }
@@ -320,7 +338,9 @@ func (l *typescriptLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *rep
 	}
 	deps := make(map[string]bool)
 	for _, name := range imports.imports {
-		if IsStdLib(name) {
+		// Bare standard-library roots resolve without an edge; relative
+		// roots always resolve locally even on builtin-name collision.
+		if !imports.local[name] && IsStdLib(name) {
 			continue
 		}
 		spec := resolve.ImportSpec{Lang: languageName, Imp: name}

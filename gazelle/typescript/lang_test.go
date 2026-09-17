@@ -79,6 +79,39 @@ func TestGenerateSourceOnlyPackage(t *testing.T) {
 	}
 }
 
+func TestGenerateRelativeStdlibCollision(t *testing.T) {
+	// `./util.js` normalizes to the `util` root, which collides with the
+	// Node builtin of the same name. The relative edge must survive
+	// generation and resolve locally; the bare builtin still drops.
+	result := generateFixture(t, map[string]string{
+		"pkg/demo/util.ts": "export const add = (a: number, b: number) => a + b;\n",
+		"pkg/demo/app.ts":  "import { add } from \"./util.js\";\nimport fs from \"fs\";\nexport const total = add(1, 2);\n",
+	}, []string{"app.ts", "util.ts"})
+	if len(result.Gen) != 2 || len(result.Imports) != 2 {
+		t.Fatalf("generated %d rules and %d import sets, want 2 each", len(result.Gen), len(result.Imports))
+	}
+	appImports := result.Imports[0].(targetImports)
+	if strings.Join(appImports.imports, ",") != "util" {
+		t.Fatalf("app imports = %+v, want [util]", appImports)
+	}
+	if !appImports.local["util"] {
+		t.Fatalf("app imports = %+v, want util marked relative", appImports)
+	}
+	l := &typescriptLang{}
+	index := resolverIndex(l,
+		struct{ pkg, name string; ext string }{"pkg/demo", "util", ".ts"},
+	)
+	cfg := resolverConfig(t, nil)
+	r := rule.NewRule(projectKind, "app")
+	l.Resolve(cfg, index, nil, r, appImports, label.New("", "pkg/demo", "app"))
+	if got := strings.Join(r.AttrStrings("deps"), ","); got != ":util" {
+		t.Errorf("resolved deps = %q, want %q", got, ":util")
+	}
+	if len(l.errors) != 0 {
+		t.Errorf("resolve errors = %v, want none", l.errors)
+	}
+}
+
 func TestGenerateEmptySweepsStale(t *testing.T) {
 	result := generateFixture(t, nil, []string{"notes.txt", "orphan.d.ts"})
 	if len(result.Gen) != 0 || len(result.Empty) != 0 {

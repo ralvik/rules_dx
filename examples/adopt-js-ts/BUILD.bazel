@@ -1,0 +1,20 @@
+"""Adopted foreign JS/TS tree (#198): corpus ownership for arrival files."""
+
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+# Arrival files (the foreign tree ships no MODULE.bazel and no BUILD
+# files) plus the generator-owned BUILD files the JS/TS Gazelle
+# extensions emit for them. Generated files stay checked in:
+# regeneration must be a no-op. Each generated subpackage carries its
+# own `corpus` rule: handwritten unknown-kind rules survive
+# regeneration, while cross-package file labels cannot reach into a
+# subpackage. This root rule owns only the root arrival files.
+real_source_target(
+    name = "corpus",
+    aspect_hints = ["//quality:corpus_vale_config"],
+    json_srcs = ["package.json"],
+    markdown_srcs = ["README.md"],
+    starlark_srcs = ["BUILD.bazel"],
+)

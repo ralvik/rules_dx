@@ -139,3 +139,32 @@ func TestNormalizeSpec(t *testing.T) {
 		}
 	}
 }
+
+func TestParseImportRefsRelative(t *testing.T) {
+	cases := []struct {
+		name   string
+		source string
+		want   []ImportRef
+	}{
+		{"relativeStdlibCollision", "import { fmt } from \"./util.js\";\n", []ImportRef{{Root: "util", Relative: true}}},
+		{"bareStdlib", "import fs from \"fs\";\n", []ImportRef{{Root: "fs", Relative: false}}},
+		{"bareNonStdlib", "import React from \"react\";\n", []ImportRef{{Root: "react", Relative: false}}},
+		{"mixedCollision", "import { fmt } from \"./util.js\";\nimport u from \"util\";\n", []ImportRef{{Root: "util", Relative: true}}},
+		{"absolute", "import x from \"/abs/path.js\";\n", []ImportRef{{Root: "path", Relative: true}}},
+	}
+	for _, tc := range cases {
+		if got := ParseImportRefs([]byte(tc.source)); !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("%s: ParseImportRefs = %+v, want %+v", tc.name, got, tc.want)
+		}
+	}
+	for _, spec := range []string{"./x.js", "../y.js", "/z.js", " ./w.js "} {
+		if !IsRelativeSpec(spec) {
+			t.Errorf("IsRelativeSpec(%q) = false, want true", spec)
+		}
+	}
+	for _, spec := range []string{"react", "fs", "node:fs", ""} {
+		if IsRelativeSpec(spec) {
+			t.Errorf("IsRelativeSpec(%q) = true, want false", spec)
+		}
+	}
+}

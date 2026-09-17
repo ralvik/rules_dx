@@ -39,7 +39,10 @@ import (
 
 // ParseImports returns the sorted unique normalized import roots for one
 // JavaScript source file. Standard-library identities are included; callers
-// filter them via IsStdLib.
+// filter them via IsStdLib. Relative references are included by root; use
+// ParseImportRefs when the relative/bare distinction matters (a relative
+// reference must never be dropped as standard library even when its root
+// collides with a builtin name such as `./util.js`).
 func ParseImports(content []byte) []string {
 	set := make(map[string]struct{})
 	add := func(spec string) {
@@ -55,6 +58,46 @@ func ParseImports(content []byte) []string {
 		out = append(out, name)
 	}
 	sort.Strings(out)
+	return out
+}
+
+// ImportRef is one normalized import root plus whether any contributing
+// literal specifier was relative (`./`, `../`, `/`). Relative references
+// resolve locally and must never be filtered via IsStdLib.
+type ImportRef struct {
+	Root     string
+	Relative bool
+}
+
+// IsRelativeSpec reports whether a literal specifier is relative (starts
+// with `.` or `/` after trimming space).
+func IsRelativeSpec(spec string) bool {
+	spec = strings.TrimSpace(spec)
+	return strings.HasPrefix(spec, ".") || strings.HasPrefix(spec, "/")
+}
+
+// ParseImportRefs returns the sorted unique normalized import roots with
+// per-root relative marking: Relative is true when at least one
+// contributing literal specifier was relative.
+func ParseImportRefs(content []byte) []ImportRef {
+	rel := make(map[string]bool)
+	add := func(spec string) {
+		root := normalizeSpec(spec)
+		if root == "" {
+			return
+		}
+		if IsRelativeSpec(spec) {
+			rel[root] = true
+		} else if _, ok := rel[root]; !ok {
+			rel[root] = false
+		}
+	}
+	scan(content, add)
+	out := make([]ImportRef, 0, len(rel))
+	for root, relative := range rel {
+		out = append(out, ImportRef{Root: root, Relative: relative})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Root < out[j].Root })
 	return out
 }
 
