@@ -73,3 +73,80 @@ pub enum ArgsError {
     )]
     InvalidScope { scope: String },
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn error_display_reports_variant() {
+        assert!(format!("{}", ArgsError::MissingCommand).contains("missing command"));
+        assert!(format!(
+            "{}",
+            ArgsError::InvalidScope {
+                scope: "//...".to_owned(),
+            }
+        )
+        .contains("//..."));
+        assert!(format!("{}", ArgsError::EmptyScope).contains("empty scope"));
+        assert!(format!(
+            "{}",
+            ArgsError::RelativeLabel {
+                scope: ":corpus".to_owned(),
+            }
+        )
+        .contains(":corpus"));
+        assert!(format!(
+            "{}",
+            ArgsError::UnknownCommand {
+                command: "bogus".to_owned(),
+                suggestion: None,
+            }
+        )
+        .contains("bogus"));
+        assert!(format!(
+            "{}",
+            ArgsError::UnknownOption {
+                option: "--bogus".to_owned(),
+                suggestion: None,
+            }
+        )
+        .contains("--bogus"));
+        assert!(format!(
+            "{}",
+            ArgsError::UnsupportedOption {
+                command: "build",
+                option: "--check".to_owned(),
+            }
+        )
+        .contains("--check"));
+        assert!(format!(
+            "{}",
+            ArgsError::MissingValue {
+                option: "--output".to_owned(),
+            }
+        )
+        .contains("--output"));
+        assert!(format!(
+            "{}",
+            ArgsError::BadOutput {
+                value: "yaml".to_owned(),
+            }
+        )
+        .contains("yaml"));
+        assert!(format!(
+            "{}",
+            ArgsError::BadFailOn {
+                value: "never".to_owned(),
+            }
+        )
+        .contains("never"));
+        assert!(format!(
+            "{}",
+            ArgsError::BadReport {
+                value: "sarif".to_owned(),
+            }
+        )
+        .contains("sarif"));
+    }
+}

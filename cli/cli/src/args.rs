@@ -351,31 +351,6 @@ mod tests {
     }
 
     #[test]
-    fn typo_recovery_suggests_commands_and_options() {
-        assert_eq!(
-            parse(&args(&["lintt"])),
-            Err(ArgsError::UnknownCommand {
-                command: "lintt".to_owned(),
-                suggestion: Some("lint".to_owned()),
-            })
-        );
-        assert_eq!(
-            parse(&args(&["--ouptut=json"])),
-            Err(ArgsError::UnknownOption {
-                option: "--ouptut=json".to_owned(),
-                suggestion: Some("--output".to_owned()),
-            })
-        );
-        // Hints are additive: the usage line stays, the hint appends.
-        let command = parse(&args(&["lintt"])).unwrap_err().to_string();
-        assert!(command.contains("unknown command \"lintt\""));
-        assert!(command.contains("did you mean \"lint\"?"));
-        let option = parse(&args(&["--ouptut=json"])).unwrap_err().to_string();
-        assert!(option.contains("unknown option \"--ouptut=json\""));
-        assert!(option.contains("did you mean \"--output\"?"));
-    }
-
-    #[test]
     fn missing_values_fail() {
         assert_eq!(
             parse(&args(&["lint", "--output"])),
@@ -419,78 +394,6 @@ mod tests {
                 })
             );
         }
-    }
-
-    #[test]
-    fn error_display_reports_variant() {
-        assert!(format!("{}", ArgsError::MissingCommand).contains("missing command"));
-        assert!(format!(
-            "{}",
-            ArgsError::InvalidScope {
-                scope: "//...".to_owned(),
-            }
-        )
-        .contains("//..."));
-        assert!(format!("{}", ArgsError::EmptyScope).contains("empty scope"));
-        assert!(format!(
-            "{}",
-            ArgsError::RelativeLabel {
-                scope: ":corpus".to_owned(),
-            }
-        )
-        .contains(":corpus"));
-        assert!(format!(
-            "{}",
-            ArgsError::UnknownCommand {
-                command: "bogus".to_owned(),
-                suggestion: None,
-            }
-        )
-        .contains("bogus"));
-        assert!(format!(
-            "{}",
-            ArgsError::UnknownOption {
-                option: "--bogus".to_owned(),
-                suggestion: None,
-            }
-        )
-        .contains("--bogus"));
-        assert!(format!(
-            "{}",
-            ArgsError::UnsupportedOption {
-                command: "build",
-                option: "--check".to_owned(),
-            }
-        )
-        .contains("--check"));
-        assert!(format!(
-            "{}",
-            ArgsError::MissingValue {
-                option: "--output".to_owned(),
-            }
-        )
-        .contains("--output"));
-        assert!(format!(
-            "{}",
-            ArgsError::BadOutput {
-                value: "yaml".to_owned(),
-            }
-        )
-        .contains("yaml"));
-        assert!(format!(
-            "{}",
-            ArgsError::BadFailOn {
-                value: "never".to_owned(),
-            }
-        )
-        .contains("never"));
-        assert!(format!(
-            "{}",
-            ArgsError::BadReport {
-                value: "sarif".to_owned(),
-            }
-        )
-        .contains("sarif"));
     }
 
     #[test]

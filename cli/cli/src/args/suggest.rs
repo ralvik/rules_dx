@@ -96,3 +96,36 @@ pub(crate) fn clap_command_suggestion(error: &clap::Error) -> Option<String> {
         _ => None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::{parse, ArgsError};
+
+    fn args(words: &[&str]) -> Vec<String> {
+        words.iter().map(ToString::to_string).collect()
+    }
+
+    #[test]
+    fn typo_recovery_suggests_commands_and_options() {
+        assert_eq!(
+            parse(&args(&["lintt"])),
+            Err(ArgsError::UnknownCommand {
+                command: "lintt".to_owned(),
+                suggestion: Some("lint".to_owned()),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["--ouptut=json"])),
+            Err(ArgsError::UnknownOption {
+                option: "--ouptut=json".to_owned(),
+                suggestion: Some("--output".to_owned()),
+            })
+        );
+        let command = parse(&args(&["lintt"])).unwrap_err().to_string();
+        assert!(command.contains("unknown command \"lintt\""));
+        assert!(command.contains("did you mean \"lint\"?"));
+        let option = parse(&args(&["--ouptut=json"])).unwrap_err().to_string();
+        assert!(option.contains("unknown option \"--ouptut=json\""));
+        assert!(option.contains("did you mean \"--output\"?"));
+    }
+}
