@@ -8,6 +8,10 @@
 //! [`check_major`] enforces the breaking axis only, so callers keep their own
 //! `UnsupportedMajor`-style payloads and messages.
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 /// Frozen schema major accepted by every versioned shard protocol.
 pub const SCHEMA_MAJOR: u32 = 1;
 /// Schema minor the crates were written against. Newer minors decode when

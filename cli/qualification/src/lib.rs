@@ -25,6 +25,10 @@
 //! any tag/registry/release publication (O45-gated). Those stay deferred;
 //! this crate never claims `Supported`, never signs, and never publishes.
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 /// Which inventory cell a release blocker belongs to.
 ///
 /// Per the M28 evidence rule, evidence-backed additional-foundation deferrals

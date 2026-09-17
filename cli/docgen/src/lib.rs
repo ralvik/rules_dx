@@ -20,6 +20,10 @@
 //! Those stay deferred; this crate preserves spellings verbatim and never
 //! substitutes an implicit default.
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 /// One versioned documentation-IR identity (`schema_major`/`schema_minor`
 /// on [`docs/ir/doc_ir.proto`](../../../docs/ir/doc_ir.proto)).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -8,6 +8,10 @@
 //! own error payloads and messages, so adopting it is behavior-preserving.
 //! Check order is pinned: the first problem in ladder order wins.
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 /// One workspace-relative path shape violation, in pinned check order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PathProblem {

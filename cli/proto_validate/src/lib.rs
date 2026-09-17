@@ -5,6 +5,10 @@
 //! `previous` cursor. The per-crate `Error` types stay local; this crate only
 //! provides the control flow so every shard keeps its own messages.
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 use prost::Message;
 use std::collections::BTreeSet;
 
