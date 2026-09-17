@@ -272,7 +272,7 @@ crate.from_cargo(
         "//dx/ci:Cargo.toml",
         "//env/env_shard:Cargo.toml",
         "//generation/codegen_shard:Cargo.toml",
-        "//documentation/ir:Cargo.toml",
+        "//docs/ir/ir:Cargo.toml",
     ],
 )
 use_repo(crate, "crates")

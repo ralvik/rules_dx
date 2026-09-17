@@ -1,6 +1,6 @@
 //! Shared schema-version helpers for versioned shard protocols (#72).
 //!
-//! `quality/result`, `generation/result`, `documentation/ir`, and `dx/output`
+//! `quality/result`, `generation/result`, `docs/ir`, and `dx/output`
 //! all version their wire form with `schema_major = 1` / `schema_minor = 0`.
 //! Major bumps are breaking (decode must fail); minor bumps are
 //! forward-compatible (newer minors decode when their bytes satisfy the

@@ -20,8 +20,8 @@
 # gazelle:resolve rust dx_roots //dx/roots:dx_roots
 # gazelle:resolve rust dx_schema //dx/schema:dx_schema
 # gazelle:resolve rust dx_setup //dx/setup:dx_setup
-# gazelle:resolve rust doc_ir_proto //documentation:doc_ir_proto_rs
-# gazelle:resolve rust documentation_ir //documentation/ir:documentation_ir
+# gazelle:resolve rust doc_ir_proto //docs/ir:doc_ir_proto_rs
+# gazelle:resolve rust documentation_ir //docs/ir/ir:documentation_ir
 # gazelle:resolve rust generation_result //generation/result:generation_result
 # gazelle:resolve rust marker_proto //env:marker_proto_rs
 # gazelle:resolve rust proto //quality:result_proto_rs

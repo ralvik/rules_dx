@@ -6,10 +6,10 @@ Delivered: the `dx_docs` planning gates (command dispatch removed in
 [issue #31](https://github.com/ralvik/rules_dx/issues/31); reintroduction tracked in
 [issue #10](https://github.com/ralvik/rules_dx/issues/10)) —
 `--check` validates without rendering, normal build validates then renders.
-Delivered: the checked-in [`documentation/doc_ir.proto`](../../documentation/doc_ir.proto)
+Delivered: the checked-in [`docs/ir/doc_ir.proto`](../ir/doc_ir.proto)
 (`dx.documentation.v1`, `schema_major: 1`) and the
-[`documentation_ir` codec crate](../../documentation/ir/src/lib.rs)
-(`//documentation/ir:documentation_ir`: validate/encode/decode with
+[`documentation_ir` codec crate](../ir/ir/src/lib.rs)
+(`//docs/ir/ir:documentation_ir`: validate/encode/decode with
 roundtrip, rejection-parity, extension- and symbol-ordering, and minor-forward-compat tests).
 Extractor execution, per-language adapter runs, renderer/site-build execution,
 and guide-step CI wiring remain gaps ([issue #10](https://github.com/ralvik/rules_dx/issues/10)); no working docs support is claimed until
@@ -22,7 +22,7 @@ additive-only; breaking changes increment the major version with a recorded
 migration. Unknown extension data is preserved verbatim so extractors can
 advance without a core schema redesign. Per the repository-wide internal
 representation direction, the checked-in
-[`documentation/doc_ir.proto`](../../documentation/doc_ir.proto)
+[`docs/ir/doc_ir.proto`](../ir/doc_ir.proto)
 is the schema source of truth: generated IR action outputs use
 binary Protobuf with deterministic serialization, and human-readable review
 uses textproto against the same schema. Exact field and enum numbers and

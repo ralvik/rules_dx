@@ -2,7 +2,7 @@
 //!
 //! Extracted for #72: the empty → absolute → backslash → empty-component →
 //! `.` → `..` ladder was copy-pasted across `quality/result`,
-//! `codegen_shard`, `documentation/ir`, `env_shard`, and
+//! `codegen_shard`, `docs/ir`, `env_shard`, and
 //! `dx_apply/validators`, each with its own messages. The classifier here
 //! reports the machine-readable [`PathProblem`] only; callers keep their
 //! own error payloads and messages, so adopting it is behavior-preserving.

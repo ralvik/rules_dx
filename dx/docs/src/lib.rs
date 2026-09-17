@@ -21,7 +21,7 @@
 //! substitutes an implicit default.
 
 /// One versioned documentation-IR identity (`schema_major`/`schema_minor`
-/// on [`documentation/doc_ir.proto`](../../../documentation/doc_ir.proto)).
+/// on [`docs/ir/doc_ir.proto`](../../../docs/ir/doc_ir.proto)).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct IrVersion {
     /// Major version: breaking changes increment it with a recorded migration.

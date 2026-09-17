@@ -2,8 +2,8 @@ load("@crates//:crates.bzl", "aliases")
 
 """Validation and codec helpers for the Documentation IR (#10)."""
 
-# gazelle:resolve rust proto //documentation:doc_ir_proto_rs
-# gazelle:resolve rust doc_ir_proto //documentation:doc_ir_proto_rs
+# gazelle:resolve rust proto //docs/ir:doc_ir_proto_rs
+# gazelle:resolve rust doc_ir_proto //docs/ir:doc_ir_proto_rs
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_library", "rust_test")
@@ -14,14 +14,14 @@ rust_library(
     name = "documentation_ir",
     srcs = ["src/lib.rs"],
     aliases = aliases(
-        package_name = "documentation/documentation_ir",
+        package_name = "docs/ir/documentation_ir",
         normal = True,
     ),
     crate_name = "documentation_ir",
     crate_root = "src/lib.rs",
     edition = "2021",
     deps = [
-        "//documentation:doc_ir_proto_rs",
+        "//docs/ir:doc_ir_proto_rs",
         "//dx/path:dx_path",
         "//dx/proto_validate:dx_proto_validate",
         "//dx/schema:dx_schema",
@@ -32,13 +32,13 @@ rust_test(
     name = "documentation_ir_test",
     size = "small",
     aliases = aliases(
-        package_name = "documentation/documentation_ir",
+        package_name = "docs/ir/documentation_ir",
         normal = True,
         normal_dev = True,
     ),
     crate = ":documentation_ir",
     deps = [
-        "//documentation:doc_ir_proto_rs",
+        "//docs/ir:doc_ir_proto_rs",
         "@rules_rust_prost//private/3rdparty/crates:prost",
     ],
 )
