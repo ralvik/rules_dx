@@ -20,185 +20,37 @@
 //! Domain split (issue #236): the command vocabulary lives in the
 //! `command` module, shell-completion rendering in the `completion`
 //! module, help rendering in the `help` module, typo suggestions in
-//! the `suggest` module, and invocation parsing in the `parser`
-//! module (the `parse` domain; named `parser` so the module and the
-//! `parse` function coexist). This facade keeps the shared types; the
-//! public paths stay `crate::args::Command`,
-//! `crate::args::{COMPLETION_SHELLS, render_completion}`, and
+//! the `suggest` module, build-profile vocabulary in the `profile`
+//! module, shared invocation types in the `invocation` module, error
+//! vocabulary in the `error` module, and invocation parsing in the
+//! `parser` module (the `parse` domain; named `parser` so the module
+//! and the `parse` function coexist). This facade keeps the re-exports;
+//! the public paths stay `crate::args::Command`,
+//! `crate::args::{COMPLETION_SHELLS, render_completion}`,
+//! `crate::args::{Invocation, ReportRequest}`,
+//! `crate::args::ArgsError`, and
 //! `crate::args::{parse, cli_command}` via the re-exports below.
-
-use dx_output::{OutputMode, Threshold};
 
 pub mod command;
 pub mod completion;
+pub mod error;
 pub mod help;
+pub mod invocation;
 pub mod parser;
 pub mod profile;
 pub mod suggest;
 
 pub use command::Command;
 pub use completion::{render_completion, COMPLETION_SHELLS};
+pub use error::ArgsError;
+pub use invocation::{Invocation, ReportRequest};
 pub use parser::{cli_command, parse};
 pub use profile::{resolve_profile, Profile, DX_PROFILE_ENV};
-
-/// One `--report <format>=<destination>` request. Format support is
-/// validated against the command registry during planning; parsing only
-/// checks the `format=destination` shape.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ReportRequest {
-    pub format: String,
-    pub destination: String,
-}
-
-/// Parsed `dx` invocation: command mode, global options, explicit scope,
-/// and Bazel command options after `--`. An empty `targets` selects the
-/// repository scope (`//...`). `bazel_clean` is set only by
-/// `dx clean --bazel` (additionally forward `bazel clean` after pruning).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Invocation {
-    pub command: Command,
-    pub check: bool,
-    /// `--debug` (build/run/test only).
-    pub debug: bool,
-    /// `--release` (build/run/test only).
-    pub release: bool,
-    pub workspace: Option<String>,
-    pub dry_run: bool,
-    pub quiet: bool,
-    /// `--verbose` (issue #222): structured `tracing` diagnostics on
-    /// stderr; orthogonal to `--quiet` (which suppresses human summaries).
-    /// Default stays byte-identical (warn+error only).
-    pub verbose: bool,
-    pub output: OutputMode,
-    pub reports: Vec<ReportRequest>,
-    pub fail_on: Threshold,
-    /// `dx coverage --min-coverage <percent>`: required line-coverage
-    /// percent over the collected LCOV (Coverage only; `None` collects
-    /// without enforcing a threshold).
-    pub min_coverage: Option<u32>,
-    pub targets: Vec<String>,
-    pub bazel_options: Vec<String>,
-    pub bazel_clean: bool,
-    /// `dx version --pin <version>`: re-pin target (Version only).
-    pub pin: Option<String>,
-    /// `dx version --rollback`: re-pin the recorded previous release
-    /// (Version only; rejected together with `--pin`).
-    pub rollback: bool,
-    /// Inspect wrappers use `cquery` instead of `query` (Owners, Deps,
-    /// Why only).
-    pub configured: bool,
-}
-
-impl Invocation {
-    /// `command_started` mode: `check` for `--check`, else `default`.
-    pub fn mode(self) -> &'static str {
-        if self.check {
-            "check"
-        } else {
-            "default"
-        }
-    }
-
-    /// Explicit `--debug`/`--release` flag as a [`Profile`]: `None` for
-    /// the bare invocation (which resolves to the command default).
-    /// Parsing rejects both flags together, so the arms are exclusive.
-    pub fn profile_flag(&self) -> Option<Profile> {
-        if self.debug {
-            Some(Profile::Debug)
-        } else if self.release {
-            Some(Profile::Release)
-        } else {
-            None
-        }
-    }
-
-    /// Effective profile under issue #179 precedence: explicit flag over
-    /// the command default. Deploy resolves flag over the target
-    /// `profile` attribute over the release default (issue #180); the
-    /// target attribute is read during execution via cquery, so this
-    /// returns flag over command default and execution refines it.
-    /// Build/run/test have no target attribute.
-    pub fn profile(&self) -> Profile {
-        resolve_profile(
-            self.profile_flag(),
-            None,
-            Profile::default_for(self.command),
-        )
-    }
-}
-
-/// Renders the additive typo hint for unknown commands/options:
-/// empty without a suggestion, `. did you mean "lint"?` with one.
-fn suggestion_hint(suggestion: &Option<String>) -> String {
-    match suggestion {
-        Some(name) => format!(". did you mean {name:?}?"),
-        None => String::new(),
-    }
-}
-
-/// Invocation parsing failure or help request. Usage errors are
-/// CLI-detected pre-execution failures (exit code 2); [`ArgsError::Help`]
-/// is the `--help`/`-h` early exit (exit code 0, human text on stdout,
-/// deliberately outside machine-output guarantees per issue #203).
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-pub enum ArgsError {
-    /// Rendered help text (`dx --help` or `dx <cmd> --help`).
-    #[error("{text}")]
-    Help { text: String },
-    #[error(
-        "missing command: want audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel"
-    )]
-    MissingCommand,
-    #[error(
-        "unknown command {command:?}: want audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel{suggestion_hint}",
-        suggestion_hint = suggestion_hint(suggestion)
-    )]
-    UnknownCommand {
-        command: String,
-        suggestion: Option<String>,
-    },
-    #[error("unknown option {option:?}{suggestion_hint}", suggestion_hint = suggestion_hint(suggestion))]
-    UnknownOption {
-        option: String,
-        suggestion: Option<String>,
-    },
-    #[error("option {option:?} is not supported by dx {command}")]
-    UnsupportedOption {
-        command: &'static str,
-        option: String,
-    },
-    #[error("missing value for {option:?}")]
-    MissingValue { option: String },
-    #[error("unknown --output {value:?}: want text|diff|json")]
-    BadOutput { value: String },
-    #[error("unknown --fail-on {value:?}: want info|warning|error")]
-    BadFailOn { value: String },
-    #[error("invalid --min-coverage {value:?}: want an integer 0-100")]
-    BadMinCoverage { value: String },
-    #[error("malformed --report {value:?}: want <format>=<destination>")]
-    BadReport { value: String },
-    /// Unknown `dx completion` shell (contract: `bash|zsh|fish|powershell`).
-    #[error("unknown-shell: {shell}")]
-    UnknownShell { shell: String },
-    #[error("options --debug and --release are mutually exclusive")]
-    ConflictingProfiles,
-    #[error(
-        "empty scope: pass no scope for repository-wide //... or a //, @, file, or directory scope"
-    )]
-    EmptyScope,
-    #[error(
-        "unsupported scope {scope:?}: package-relative labels resolve against the current directory; spell the workspace label starting with //"
-    )]
-    RelativeLabel { scope: String },
-    #[error(
-        "unsupported scope {scope:?}: want // or @ labels, or workspace-relative file and directory paths"
-    )]
-    InvalidScope { scope: String },
-}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dx_output::{OutputMode, Threshold};
 
     fn args(words: &[&str]) -> Vec<String> {
         words.iter().map(ToString::to_string).collect()
