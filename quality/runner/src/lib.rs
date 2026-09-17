@@ -1864,6 +1864,45 @@ mod tests {
     }
 
     #[test]
+    fn quality_originated_file_creates_emit_no_replacements() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // quality-originated file creates to be rejected. The runner emits
+        // only whole-file candidates for paths in the original snapshot, so
+        // an extra terminal path must yield no replacement while the valid
+        // stable sibling still emits exactly one bound to digest(original).
+        let stages = vec![stage("lint-a", &["rust"], &["src/a.rs"])];
+        let mut initial = BTreeMap::new();
+        initial.insert("src/a.rs".to_owned(), "BAD\n".to_owned());
+        let mut terminal = BTreeMap::new();
+        terminal.insert("src/a.rs".to_owned(), "GOOD\n".to_owned());
+        terminal.insert("src/extra.rs".to_owned(), "GOOD extra\n".to_owned());
+        let result = assemble(
+            "//quality:test",
+            Capability::Lint as i32,
+            &stages,
+            &initial,
+            &terminal,
+            (Vec::new(), Vec::new()),
+            (2, Convergence::Stable),
+        )
+        .unwrap();
+        assert_eq!(result.replacements.len(), 1);
+        assert_eq!(result.replacements[0].path, "src/a.rs");
+        assert_eq!(
+            result.replacements[0].original_digest,
+            digest("BAD\n".as_bytes())
+        );
+        assert_eq!(result.replacements[0].edits.len(), 1);
+        assert_eq!(result.replacements[0].edits[0].start_byte, 0);
+        assert_eq!(result.replacements[0].edits[0].end_byte, 4);
+        assert_eq!(
+            result.replacements[0].edits[0].replacement,
+            b"GOOD\n".to_vec()
+        );
+        assert!(validate(&result).is_ok());
+    }
+
+    #[test]
     fn file_modes_do_not_alter_pipeline_outputs() {
         // Determinism/apply-safety battery (issue #84):
         // `quality-testing.md` requires file modes preserved and newline
