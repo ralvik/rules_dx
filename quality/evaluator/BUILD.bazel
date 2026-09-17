@@ -5,7 +5,10 @@ load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = [
+    "//quality:__pkg__",
+    "//quality:__subpackages__",
+])
 
 rust_library(
     name = "quality_evaluator_lib",

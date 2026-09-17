@@ -15,6 +15,17 @@ load(":sources_tests.bzl", "sources_registry_tests")
 
 package(default_visibility = ["//visibility:public"])
 
+# Visibility policy (issue #239): leaf packages whose consumers are all
+# inside //quality scope their default to ["//quality:__pkg__",
+# "//quality:__subpackages__"] (precedent: //cli/*, e.g. dx_fingerprint;
+# scoped here: artifacts, testdata, evaluator). Cross-group leaves stay
+# public by necessity: quality/markdown feeds //env:quality_markdown_tool
+# plus testdata fixtures, and the shared //cli/* leaves (digest,
+# atomic_fs, lcov, path, schema, proto_validate) serve //env,
+# //generation, //quality, //docs, and //tools consumers. This root
+# package stays public: the .bzl contracts, result.proto, and fixture
+# policies are referenced repo-wide.
+
 exports_files([
     "adapters.bzl",
     "applicability.bzl",

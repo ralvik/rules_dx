@@ -10,7 +10,10 @@ load(":real_typecheck_subject.bzl", "real_typecheck_subject")
 load(":real_typecheck_tests.bzl", "real_typecheck_fixture_tests")
 load(":runner_matrix_cases.bzl", "runner_matrix_cases")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = [
+    "//quality:__pkg__",
+    "//quality:__subpackages__",
+])
 
 quality_source_target(
     name = "fixture_rust",
