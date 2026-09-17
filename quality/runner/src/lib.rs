@@ -1414,4 +1414,34 @@ mod tests {
         assert!(clean_result.replacements.is_empty());
         assert_ne!(manifests[0], encode_validated(&clean_result).unwrap());
     }
+
+    #[test]
+    fn mixed_changed_and_unchanged_files_apply_independently() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // each selected file to apply atomically and independently after
+        // complete result-envelope validation, with mixed applied and
+        // not-applied outcomes together. One stable changed file must emit
+        // exactly one whole-file candidate while an unchanged sibling emits
+        // none, and the unchanged path must not block the valid candidate.
+        let stages = vec![stage(
+            "lint-a",
+            &["rust"],
+            &["src/changed.rs", "src/clean.rs"],
+        )];
+        let files = vec![
+            file("src/changed.rs", "BAD\n"),
+            file("src/clean.rs", "GOOD\n"),
+        ];
+        let result = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
+        assert_eq!(result.convergence, Convergence::Stable as i32);
+        assert_eq!(result.replacements.len(), 1);
+        let edits = &result.replacements[0];
+        assert_eq!(edits.path, "src/changed.rs");
+        assert_eq!(edits.original_digest, digest("BAD\n".as_bytes()));
+        assert_eq!(edits.edits.len(), 1);
+        assert_eq!(edits.edits[0].start_byte, 0);
+        assert_eq!(edits.edits[0].end_byte, "BAD\n".len() as u64);
+        assert_eq!(&edits.edits[0].replacement, b"GOOD\n");
+        assert!(validate(&result).is_ok());
+    }
 }
