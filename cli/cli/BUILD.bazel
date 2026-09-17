@@ -65,6 +65,7 @@ rust_library(
     ) + [
         "//cli/adopt:dx_adopt",
         "//cli/apply:dx_apply",
+        "//cli/atomic_fs:dx_atomic_fs",
         "//cli/audit:dx_audit",
         "//cli/bep:dx_bep",
         "//cli/clean:dx_clean",

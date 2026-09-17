@@ -419,28 +419,21 @@ fn stage_env_generation(
             })?;
         }
     }
-    let mut values = String::from("{");
-    let mut keys: Vec<&str> = seen.keys().copied().collect();
-    keys.sort();
-    for (index, key) in keys.iter().enumerate() {
-        if index > 0 {
-            values.push(',');
-        }
-        let value = seen[key].0;
-        values.push_str(&serde_json::Value::String((*key).to_owned()).to_string());
-        values.push(':');
-        values.push_str(&serde_json::Value::String(value.to_owned()).to_string());
-    }
-    values.push('}');
-    let target = dir.join("values.json");
-    let staging = dir.join("values.json.next");
-    std::fs::write(&staging, values.as_bytes()).map_err(|e| {
+    // `seen` is already a `BTreeMap`, so serializing the key/value
+    // projection preserves sorted keys; `serde_json` owns string
+    // escaping and `dx_atomic_fs` owns crash-safe publishing (#227).
+    let values: BTreeMap<&str, &str> = seen
+        .iter()
+        .map(|(key, (value, _))| (*key, *value))
+        .collect();
+    let rendered = serde_json::to_string(&values).map_err(|e| {
         (
             CODE_MANAGED_COMMIT_FAILED.to_owned(),
-            format!("cannot stage {}: {e}", staging.display()),
+            format!("cannot render values.json: {e}"),
         )
     })?;
-    std::fs::rename(&staging, &target).map_err(|e| {
+    let target = dir.join("values.json");
+    dx_atomic_fs::write_atomic(&target, rendered.as_bytes()).map_err(|e| {
         (
             CODE_MANAGED_COMMIT_FAILED.to_owned(),
             format!("cannot publish {}: {e}", target.display()),
@@ -1280,17 +1273,16 @@ mod tests {
                 .expect_err("artifacts creation");
         assert_eq!(code, CODE_MANAGED_COMMIT_FAILED);
         assert!(message.contains("cannot create"), "{message}");
-        // A directory at the staging path fails the values write.
+        // A stale `values.json.next` directory (pre-#227 staging
+        // leftover) no longer blocks: atomic staging uses OS-random
+        // sibling names, so the legacy path is ignored.
         let staging_id = dx_setup::GenerationId::new(&"6".repeat(64)).expect("fixture id");
         let staging_dir =
             ensure_generation_dir(&workspace, ENVIRONMENTS_DIR_NAME, staging_id.as_str())
                 .expect("gen dir");
         std::fs::create_dir_all(staging_dir.join("values.json.next")).expect("blocking dir");
-        let (code, message) =
-            stage_env_generation(&workspace, &staging_id, &[env_entry("k", "v", &first)])
-                .expect_err("values staging");
-        assert_eq!(code, CODE_MANAGED_COMMIT_FAILED);
-        assert!(message.contains("cannot stage"), "{message}");
+        stage_env_generation(&workspace, &staging_id, &[env_entry("k", "v", &first)])
+            .expect("legacy staging leftover ignored");
         // A directory at `values.json` fails the publish rename.
         let publish_id = dx_setup::GenerationId::new(&"7".repeat(64)).expect("fixture id");
         let publish_dir =
