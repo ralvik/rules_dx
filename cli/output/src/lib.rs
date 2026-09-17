@@ -17,14 +17,18 @@
 //! ownership live in the `modes` module, normalized severity and fail-on
 //! threshold live in the `severity` module, protocol-shape validation
 //! (paths, digests, edits, `OutputError`) lives in the `validation`
-//! module. This facade keeps NDJSON events; the public path stays
-//! `dx_output::{...}` via the re-exports below.
+//! module, command lifecycle NDJSON events (schema, `command_started` /
+//! `operation` / `report` / `selection` / `error` / `command_finished`,
+//! `FinishedCounts`, `write_event`) live in the `lifecycle` module. This
+//! facade keeps diagnostic/notice/change/mutation events; the public path
+//! stays `dx_output::{...}` via the re-exports below.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 pub mod diagnostics;
+pub mod lifecycle;
 pub mod modes;
 pub mod severity;
 pub mod validation;
@@ -33,89 +37,23 @@ pub use diagnostics::{
     color_enabled, colors_allowed, emit_status, format_status, init_diagnostics, styled_status,
     styled_status_for, DEFAULT_LOG_FILTER, VERBOSE_LOG_FILTER,
 };
+pub use lifecycle::{
+    command_finished, command_started, error_event, operation_event, report_event, schema,
+    selection_event, write_event, FinishedCounts, SCHEMA_MAJOR, SCHEMA_MINOR,
+};
 pub use modes::{
     check_output_conflict, dx_text_visible, stdout_owner, OutputMode, OutputModeName, StdoutOwner,
 };
 pub use severity::{meets_threshold, Severity, Threshold};
 pub use validation::{check_edits, check_path, parse_digest, Edit, OutputError};
 
+use lifecycle::{base, nonempty};
 use serde_json::{json, Value};
 
 // ---------------------------------------------------------------------------
-// Schema version
+// Diagnostic / notice / change / mutation events (still on the facade;
+// lifecycle constructors live in `lifecycle`)
 // ---------------------------------------------------------------------------
-
-/// Breaking semantic version of the NDJSON stream. One invocation never
-/// mixes schema versions; removing a field, making an optional field
-/// required, or changing semantics requires a new major version.
-pub use dx_schema::SCHEMA_MAJOR;
-/// Additive feature version: producers may add fields and event kinds and
-/// consumers must ignore unknown ones within one major version.
-pub use dx_schema::SCHEMA_MINOR;
-
-/// The `schema` object shared by every event in one invocation.
-pub fn schema() -> Value {
-    json!({"major": SCHEMA_MAJOR, "minor": SCHEMA_MINOR})
-}
-
-// ---------------------------------------------------------------------------
-// NDJSON events
-// ---------------------------------------------------------------------------
-
-fn nonempty(field: &'static str, value: &str) -> Result<(), OutputError> {
-    if value.is_empty() {
-        return Err(OutputError::EmptyField { field });
-    }
-    Ok(())
-}
-
-// ---------------------------------------------------------------------------
-// NDJSON events
-// ---------------------------------------------------------------------------
-
-fn base(event: &str) -> serde_json::Map<String, Value> {
-    let mut map = serde_json::Map::new();
-    map.insert("schema".to_owned(), schema());
-    map.insert("event".to_owned(), Value::String(event.to_owned()));
-    map
-}
-
-/// First event of every successfully initialized JSON stream.
-pub fn command_started(command: &str, dry_run: bool, mode: &str) -> Result<Value, OutputError> {
-    nonempty("command", command)?;
-    if mode != "default" && mode != "check" {
-        return Err(OutputError::BadCommandMode {
-            value: mode.to_owned(),
-        });
-    }
-    let mut map = base("command_started");
-    map.insert("command".to_owned(), Value::String(command.to_owned()));
-    map.insert("dry_run".to_owned(), Value::Bool(dry_run));
-    map.insert("mode".to_owned(), Value::String(mode.to_owned()));
-    Ok(Value::Object(map))
-}
-
-/// Announces a durable workflow phase before it begins (or would begin
-/// under dry-run). `scope` is the compact effective main-workspace scope,
-/// omitted before graph resolution.
-pub fn operation_event(
-    command: &str,
-    phase: &str,
-    scope: Option<&[String]>,
-) -> Result<Value, OutputError> {
-    nonempty("command", command)?;
-    nonempty("phase", phase)?;
-    let mut map = base("operation");
-    map.insert("command".to_owned(), Value::String(command.to_owned()));
-    map.insert("phase".to_owned(), Value::String(phase.to_owned()));
-    if let Some(scope) = scope {
-        map.insert(
-            "scope".to_owned(),
-            Value::Array(scope.iter().map(|s| Value::String(s.clone())).collect()),
-        );
-    }
-    Ok(Value::Object(map))
-}
 
 /// Which pipeline snapshot a diagnostic addresses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -437,142 +375,6 @@ pub fn mutation_event(
     Ok(Value::Object(map))
 }
 
-/// Confirms a successfully emitted file report after atomic replacement.
-/// A stdout report cannot coexist with NDJSON, so this event is file-only.
-pub fn report_event(
-    format: &str,
-    path: &str,
-    results_complete: bool,
-) -> Result<Value, OutputError> {
-    nonempty("format", format)?;
-    nonempty("path", path)?;
-    let mut map = base("report");
-    map.insert("format".to_owned(), Value::String(format.to_owned()));
-    map.insert("path".to_owned(), Value::String(path.to_owned()));
-    map.insert("results_complete".to_owned(), Value::Bool(results_complete));
-    Ok(Value::Object(map))
-}
-
-/// Confirms the successfully validated state selected by `env`, `codegen`,
-/// or `setup`. All identities are 64 lowercase hexadecimal characters.
-pub fn selection_event(
-    setup_id: &str,
-    environment_id: &str,
-    codegen_id: &str,
-) -> Result<Value, OutputError> {
-    parse_digest("setup_id", setup_id)?;
-    parse_digest("environment_id", environment_id)?;
-    parse_digest("codegen_id", codegen_id)?;
-    let mut map = base("selection");
-    map.insert("setup_id".to_owned(), Value::String(setup_id.to_owned()));
-    map.insert(
-        "environment_id".to_owned(),
-        Value::String(environment_id.to_owned()),
-    );
-    map.insert(
-        "codegen_id".to_owned(),
-        Value::String(codegen_id.to_owned()),
-    );
-    Ok(Value::Object(map))
-}
-
-/// CLI, orchestration, protocol, or infrastructure failure. Never carries
-/// argv, option values, environment values, external labels, or raw tool
-/// output; `code` is stable machine data while `message` is for people.
-pub fn error_event(
-    code: &str,
-    message: &str,
-    path: Option<&str>,
-    flag: Option<&str>,
-    phase: Option<&str>,
-) -> Result<Value, OutputError> {
-    nonempty("code", code)?;
-    nonempty("message", message)?;
-    if let Some(path) = path {
-        check_path(path)?;
-    }
-    if let Some(flag) = flag {
-        nonempty("flag", flag)?;
-    }
-    if let Some(phase) = phase {
-        nonempty("phase", phase)?;
-    }
-    let mut map = base("error");
-    map.insert("code".to_owned(), Value::String(code.to_owned()));
-    map.insert("message".to_owned(), Value::String(message.to_owned()));
-    if let Some(path) = path {
-        map.insert("path".to_owned(), Value::String(path.to_owned()));
-    }
-    if let Some(flag) = flag {
-        map.insert("flag".to_owned(), Value::String(flag.to_owned()));
-    }
-    if let Some(phase) = phase {
-        map.insert("phase".to_owned(), Value::String(phase.to_owned()));
-    }
-    Ok(Value::Object(map))
-}
-
-/// Optional aggregate counts for the final event. Presence follows the
-/// protocol: each object appears exactly for the commands and modes that
-/// produce it, including zero values. Callers select presence; this crate
-/// only renders.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct FinishedCounts {
-    pub results_complete: Option<bool>,
-    pub diagnostics: Option<[u64; 3]>,
-    pub changes: Option<[u64; 2]>,
-    pub mutations: Option<[u64; 2]>,
-}
-
-/// Last event of every normally terminating JSON invocation. There is no
-/// textual status: `exit_code == 0` means success.
-pub fn command_finished(exit_code: i32, counts: &FinishedCounts) -> Value {
-    let mut map = base("command_finished");
-    map.insert("exit_code".to_owned(), Value::from(exit_code));
-    if let Some(results_complete) = counts.results_complete {
-        map.insert("results_complete".to_owned(), Value::Bool(results_complete));
-    }
-    if let Some([info, warning, error]) = counts.diagnostics {
-        map.insert(
-            "diagnostics".to_owned(),
-            json!({"info": info, "warning": warning, "error": error}),
-        );
-    }
-    if let Some([create, modify]) = counts.changes {
-        map.insert(
-            "changes".to_owned(),
-            json!({"create": create, "modify": modify}),
-        );
-    }
-    if let Some([applied, not_applied]) = counts.mutations {
-        map.insert(
-            "mutations".to_owned(),
-            json!({"applied": applied, "not_applied": not_applied}),
-        );
-    }
-    Value::Object(map)
-}
-
-/// Writes one NDJSON line: exactly one complete UTF-8 JSON object followed
-/// by `\n`. Rejects values that are not event objects so prose can never
-/// leak into a machine-only stream.
-pub fn write_event(writer: &mut dyn std::io::Write, event: &Value) -> Result<(), OutputError> {
-    match event {
-        Value::Object(map) => {
-            let is_event =
-                matches!(map.get("event"), Some(Value::String(_))) && map.contains_key("schema");
-            if !is_event {
-                return Err(OutputError::NotAnEvent);
-            }
-        }
-        _ => return Err(OutputError::NotAnEvent),
-    }
-    serde_json::to_writer(&mut *writer, event).map_err(|e| OutputError::Io(e.to_string()))?;
-    writer
-        .write_all(b"\n")
-        .map_err(|e| OutputError::Io(e.to_string()))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -591,27 +393,6 @@ mod tests {
             fixable: true,
             resolution: None,
         }
-    }
-
-    #[test]
-    fn command_started_shape() {
-        let event = command_started("lint", false, "default").expect("started");
-        assert_eq!(event["event"], Value::String("command_started".to_owned()));
-        assert_eq!(event["schema"], schema());
-        assert_eq!(event["mode"], Value::String("default".to_owned()));
-        assert!(command_started("lint", false, "fancy").is_err());
-    }
-
-    #[test]
-    fn operation_scope_omitted_before_resolution() {
-        let event = operation_event("lint", "resolve", None).expect("op");
-        assert!(event.get("scope").is_none());
-        let scope = vec!["//src/auth/...".to_owned()];
-        let event = operation_event("lint", "execute", Some(&scope)).expect("op");
-        assert_eq!(
-            event["scope"][0],
-            Value::String("//src/auth/...".to_owned())
-        );
     }
 
     #[test]
@@ -766,48 +547,6 @@ mod tests {
     }
 
     #[test]
-    fn error_event_never_carries_values() {
-        let event = error_event(
-            "conflicting_option",
-            "keeps going",
-            None,
-            Some("--keep_going"),
-            None,
-        )
-        .expect("error");
-        assert_eq!(event["flag"], Value::String("--keep_going".to_owned()));
-        assert!(event.get("path").is_none());
-    }
-
-    #[test]
-    fn finished_counts_render_exactly() {
-        let counts = FinishedCounts {
-            results_complete: Some(true),
-            diagnostics: Some([0, 3, 1]),
-            changes: None,
-            mutations: Some([0, 2]),
-        };
-        let event = command_finished(1, &counts);
-        assert_eq!(event["exit_code"], Value::from(1));
-        assert_eq!(event["diagnostics"]["warning"], Value::from(3));
-        assert!(event.get("changes").is_none());
-    }
-
-    #[test]
-    fn writer_rejects_prose() {
-        let mut buf = Vec::new();
-        let event = command_started("lint", false, "default").expect("started");
-        write_event(&mut buf, &event).expect("write");
-        assert!(buf.ends_with(b"\n"));
-        assert_eq!(buf.iter().filter(|b| **b == b'\n').count(), 1);
-        let prose = Value::String("Running lint".to_owned());
-        assert_eq!(
-            write_event(&mut Vec::new(), &prose).expect_err("prose rejected"),
-            OutputError::NotAnEvent
-        );
-    }
-
-    #[test]
     fn inverted_range_fails() {
         let mut bad = finding();
         bad.range = Some((24, 18));
@@ -947,68 +686,6 @@ mod tests {
         assert_eq!(
             event["reason"],
             Value::String("disagreeing_agents".to_owned())
-        );
-    }
-
-    #[test]
-    fn report_event_shape() {
-        let event = report_event("sarif", "out.sarif", true).expect("report");
-        assert_eq!(event["event"], Value::String("report".to_owned()));
-        assert_eq!(event["format"], Value::String("sarif".to_owned()));
-        assert_eq!(event["results_complete"], Value::Bool(true));
-        assert!(report_event("", "out.sarif", true).is_err());
-        assert!(report_event("sarif", "", true).is_err());
-    }
-
-    #[test]
-    fn selection_event_shape() {
-        let event = selection_event(DIGEST, DIGEST, DIGEST).expect("selection");
-        assert_eq!(event["event"], Value::String("selection".to_owned()));
-        assert_eq!(event["setup_id"], Value::String(DIGEST.to_owned()));
-        assert!(selection_event("nope", DIGEST, DIGEST).is_err());
-        assert!(selection_event(DIGEST, DIGEST, "nope").is_err());
-    }
-
-    #[test]
-    fn error_event_carries_optional_fields() {
-        let event = error_event(
-            "bazel_failed",
-            "build broke",
-            Some("src/app.py"),
-            None,
-            Some("execute"),
-        )
-        .expect("error");
-        assert_eq!(event["path"], Value::String("src/app.py".to_owned()));
-        assert_eq!(event["phase"], Value::String("execute".to_owned()));
-        assert!(event.get("flag").is_none());
-        assert!(error_event("", "m", None, None, None).is_err());
-        assert!(error_event("c", "", None, None, None).is_err());
-        assert!(error_event("c", "m", Some("/abs"), None, None).is_err());
-        assert!(error_event("c", "m", None, Some(""), None).is_err());
-        assert!(error_event("c", "m", None, None, Some("")).is_err());
-    }
-
-    #[test]
-    fn finished_changes_render() {
-        let counts = FinishedCounts {
-            results_complete: None,
-            diagnostics: None,
-            changes: Some([1, 2]),
-            mutations: None,
-        };
-        let event = command_finished(0, &counts);
-        assert_eq!(event["changes"]["create"], Value::from(1));
-        assert_eq!(event["changes"]["modify"], Value::from(2));
-        assert!(event.get("diagnostics").is_none());
-    }
-
-    #[test]
-    fn writer_rejects_schemaless_object() {
-        let fake = serde_json::json!({"event": "command_started"});
-        assert_eq!(
-            write_event(&mut Vec::new(), &fake).expect_err("no schema"),
-            OutputError::NotAnEvent
         );
     }
 }
