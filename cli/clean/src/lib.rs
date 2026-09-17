@@ -1208,7 +1208,7 @@ mod tests {
     fn walk_filtered_skips_gitignored_and_glob_excluded_files() {
         // Issue #223: recursive walks honor `.gitignore` (via the
         // `ignore` crate) plus caller-supplied `globset` exclusions.
-        let scratch = tempfile::tempdir().expect("walk scratch");
+        let scratch = dx_test_scratch::scratch("dx-clean-walk-");
         let root = scratch.path();
         fs::write(root.join(".gitignore"), "ignored.txt\n").expect("gitignore");
         fs::write(root.join("ignored.txt"), "skip me").expect("ignored file");
@@ -1270,7 +1270,7 @@ mod tests {
         let _ = fs::remove_dir_all(&missing);
         let empty = walk_filtered(&missing, &[]).expect("missing walks empty");
         assert!(empty.is_empty());
-        let scratch = tempfile::tempdir().expect("glob scratch");
+        let scratch = dx_test_scratch::scratch("dx-clean-glob-");
         assert!(matches!(
             walk_filtered(scratch.path(), &["[invalid".to_owned()]),
             Err(CleanError::Install { .. })
@@ -1294,11 +1294,8 @@ mod tests {
         }
     }
 
-    fn clean_root(name: &str) -> tempfile::TempDir {
-        let scratch = tempfile::Builder::new()
-            .prefix(format!("dx-clean-test-{name}-").as_str())
-            .tempdir_in(std::env::temp_dir())
-            .expect("create test scratch");
+    fn clean_root(name: &str) -> dx_test_scratch::TempDir {
+        let scratch = dx_test_scratch::scratch(&format!("dx-clean-test-{name}-"));
         fs::create_dir_all(scratch.path().join("ws")).expect("create workspace");
         scratch
     }

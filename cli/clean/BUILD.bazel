@@ -24,7 +24,6 @@ rust_library(
         [
             "globset",
             "ignore",
-            "tempfile",
             "thiserror",
             "walkdir",
         ],
@@ -48,12 +47,11 @@ rust_test(
         [
             "globset",
             "ignore",
-            "tempfile",
             "thiserror",
             "walkdir",
         ],
         package_name = "cli/dx_clean",
-    ),
+    ) + ["//cli/test_scratch:dx_test_scratch"],
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy

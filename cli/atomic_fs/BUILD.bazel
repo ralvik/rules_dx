@@ -11,4 +11,5 @@ dx_rust_crate(
     name = "dx_atomic_fs",
     package_name = "cli/dx_atomic_fs",
     deps = ["tempfile"],
+    extra_test_deps = ["//cli/test_scratch:dx_test_scratch"],
 )

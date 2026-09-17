@@ -410,7 +410,6 @@ version = "0.0.0"
 dependencies = [
  "serde",
  "serde_json",
- "tempfile",
  "thiserror",
 ]
 
@@ -456,7 +455,6 @@ version = "0.0.0"
 dependencies = [
  "globset",
  "ignore",
- "tempfile",
  "thiserror",
  "walkdir",
 ]
@@ -597,7 +595,6 @@ name = "dx_setup"
 version = "0.0.0"
 dependencies = [
  "insta",
- "tempfile",
  "thiserror",
 ]
 

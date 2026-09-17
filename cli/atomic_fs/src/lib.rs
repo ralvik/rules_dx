@@ -108,10 +108,7 @@ mod tests {
 
     #[test]
     fn writes_and_overwrites_without_stray_staging_files() {
-        let scratch = tempfile::Builder::new()
-            .prefix("dx-atomic-fs-")
-            .tempdir_in(std::env::temp_dir())
-            .expect("scratch");
+        let scratch = dx_test_scratch::scratch("dx-atomic-fs-");
         let dir = scratch.path().to_path_buf();
         let nested = dir.join("sub").join("a.txt");
         assert_eq!(
@@ -154,10 +151,7 @@ mod tests {
 
     #[test]
     fn creates_parent_directories() {
-        let scratch = tempfile::Builder::new()
-            .prefix("dx-atomic-fs-parents-")
-            .tempdir_in(std::env::temp_dir())
-            .expect("scratch");
+        let scratch = dx_test_scratch::scratch("dx-atomic-fs-parents-");
         let nested = scratch.path().join("a").join("b").join("c.txt");
         write_atomic(&nested, b"deep\n").expect("deep write");
         assert_eq!(std::fs::read(&nested).expect("deep read"), b"deep\n");
@@ -169,10 +163,7 @@ mod tests {
         // A bare file name has no parent directory to create; staging
         // falls back to the current directory. Run in a scratch cwd so
         // the checkout is never left dirty.
-        let scratch = tempfile::Builder::new()
-            .prefix("dx-atomic-fs-bare-")
-            .tempdir_in(std::env::temp_dir())
-            .expect("scratch");
+        let scratch = dx_test_scratch::scratch("dx-atomic-fs-bare-");
         let original = std::env::current_dir().expect("cwd");
         std::env::set_current_dir(scratch.path()).expect("enter scratch");
         let bare = PathBuf::from("dx-atomic-fs-bare-tmp.txt");
@@ -196,10 +187,7 @@ mod tests {
 
     #[test]
     fn lock_exclusive_acquires_uncontended() {
-        let scratch = tempfile::Builder::new()
-            .prefix("dx-atomic-fs-lock-")
-            .tempdir_in(std::env::temp_dir())
-            .expect("scratch");
+        let scratch = dx_test_scratch::scratch("dx-atomic-fs-lock-");
         let path = scratch.path().join(".commit.lock");
         let file = open_lock_file(&path);
         lock_exclusive(&file, Duration::from_secs(10)).expect("acquire");
@@ -213,10 +201,7 @@ mod tests {
 
     #[test]
     fn lock_exclusive_times_out_while_held() {
-        let scratch = tempfile::Builder::new()
-            .prefix("dx-atomic-fs-lock-busy-")
-            .tempdir_in(std::env::temp_dir())
-            .expect("scratch");
+        let scratch = dx_test_scratch::scratch("dx-atomic-fs-lock-busy-");
         let path = scratch.path().join(".commit.lock");
         let held = open_lock_file(&path);
         lock_exclusive(&held, Duration::from_secs(10)).expect("hold lock");

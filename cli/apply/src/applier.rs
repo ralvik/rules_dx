@@ -306,10 +306,7 @@ mod tests {
 
     #[test]
     fn real_filesystem_reads_writes_and_reports_errors() {
-        let scratch = tempfile::Builder::new()
-            .prefix("dx-apply-fs-")
-            .tempdir_in(std::env::temp_dir())
-            .expect("scratch");
+        let scratch = dx_test_scratch::scratch("dx-apply-fs-");
         let dir = scratch.path().to_path_buf();
         let fs = RealFileSystem;
         let nested = dir.join("sub").join("a.txt");

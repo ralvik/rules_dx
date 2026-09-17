@@ -995,11 +995,8 @@ mod tests {
         }
     }
 
-    fn commit_root(name: &str) -> tempfile::TempDir {
-        let scratch = tempfile::Builder::new()
-            .prefix(format!("dx-setup-test-{name}-").as_str())
-            .tempdir_in(std::env::temp_dir())
-            .expect("create test scratch");
+    fn commit_root(name: &str) -> dx_test_scratch::TempDir {
+        let scratch = dx_test_scratch::scratch(&format!("dx-setup-test-{name}-"));
         fs::create_dir_all(scratch.path().join("ws")).expect("create workspace");
         scratch
     }
