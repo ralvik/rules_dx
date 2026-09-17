@@ -7,6 +7,14 @@
 //! positionals resolve to a narrower scope; labels pass through in
 //! order while file and directory scopes resolve to owning targets
 //! through [`crate::resolve`].
+//!
+//! Run/deploy planning (`plan_run`, `plan_run_targets`,
+//! `plan_deploy_build`, `plan_deploy_run`) lives here pending the
+//! resolve/plan/run/deploy unscramble tracked in issue #236 (handoff
+//! from issue #237): the carve shares `PackageCache`,
+//! `classify_scopes`, `BuildPlan`, and `QueryRunner` with `resolve.rs`,
+//! so it moves together with that unscramble rather than as a solo
+//! `dx_run`/`dx_deploy` split.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};

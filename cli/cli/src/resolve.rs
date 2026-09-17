@@ -12,6 +12,11 @@
 //! lists directories: the only filesystem calls are existence/kind probes
 //! (`symlink_metadata`), and ownership facts come solely from Bazel
 //! query stdout.
+//!
+//! Run/deploy resolution (`resolve_run`, `resolve_deploy`,
+//! `check_deployable`) lives here pending the resolve/plan/run/deploy
+//! unscramble tracked in issue #236 (handoff from issue #237);
+//! see the matching note in `plan.rs`.
 
 use std::io;
 use std::path::{Component, Path};
