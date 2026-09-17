@@ -20,6 +20,10 @@
 //! frozen contract and are kept byte-identical through this shim; see the
 //! migration note on [`sha256_hex`].
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 use sha2::{Digest as _, Sha256};
 
 /// Digest length in bytes (BLAKE3-256 and SHA-256 are both 32 bytes).

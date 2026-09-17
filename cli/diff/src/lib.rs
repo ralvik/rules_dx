@@ -15,6 +15,10 @@
 //! writes no bytes. Paths containing a tab, carriage return, or line feed
 //! cannot be represented unambiguously and fail before any output.
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 /// Whether a patch entry modifies an existing file or creates a new one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PatchKind {

@@ -30,6 +30,10 @@
 //! runtime path-wrapping would duplicate the existing discipline at the
 //! same dependency cost. This crate owns only the timeout loop.
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 use std::fs::File;
 use std::io;
 use std::path::Path;
