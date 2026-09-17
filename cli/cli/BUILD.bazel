@@ -43,6 +43,7 @@ rust_library(
         "src/reports.rs",
         "src/reports/junit.rs",
         "src/reports/lcov.rs",
+        "src/reports/sarif.rs",
         "src/resolve.rs",
         "src/skew.rs",
     ],
