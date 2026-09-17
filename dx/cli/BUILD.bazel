@@ -1,6 +1,5 @@
 """M07 WP1 + M08 WP1: quality command planning and scope resolution for the `dx` CLI."""
 
-# gazelle:resolve rust coverage_gate //tools/coverage:coverage_gate
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//deploy/rules:github.bzl", "github_release")
@@ -73,13 +72,13 @@ rust_library(
         "//dx/diff:dx_diff",
         "//dx/digest:dx_digest",
         "//dx/env_plan:dx_env_plan",
+        "//dx/lcov:dx_lcov",
         "//dx/output:dx_output",
         "//dx/process:dx_process",
         "//dx/setup:dx_setup",
         "//dx/update:dx_update",
         "//generation/result:generation_result",
         "//quality/result:quality_result",
-        "//tools/coverage:coverage_gate",
     ],
 )
 
@@ -202,13 +201,13 @@ rust_test(
         "//dx/codegen:dx_codegen",
         "//dx/digest:dx_digest",
         "//dx/env_plan:dx_env_plan",
+        "//dx/lcov:dx_lcov",
         "//dx/output:dx_output",
         "//dx/process:dx_process",
         "//dx/setup:dx_setup",
         "//dx/update:dx_update",
         "//generation/result:generation_result",
         "//quality/result:quality_result",
-        "//tools/coverage:coverage_gate",
     ],
 )
 

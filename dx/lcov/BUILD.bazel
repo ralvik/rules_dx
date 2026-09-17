@@ -1,0 +1,59 @@
+"""M00 implementation-coverage gate promoted to a dx library crate (#74)."""
+
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_library(
+    name = "dx_lcov",
+    srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "dx/dx_lcov",
+        normal = True,
+    ),
+    crate_name = "dx_lcov",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [],
+        package_name = "dx/dx_lcov",
+    ),
+)
+
+rust_test(
+    name = "dx_lcov_test",
+    size = "small",
+    aliases = aliases(
+        package_name = "dx/dx_lcov",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":dx_lcov",
+)
+
+# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# resolve from the pinned toolchain, never from ambient host tools.
+rustfmt_test(
+    name = "dx_lcov_fmt_test",
+    size = "small",
+    targets = [":dx_lcov"],
+)
+
+rust_clippy_test(
+    name = "dx_lcov_clippy_test",
+    size = "small",
+    targets = [":dx_lcov"],
+)
+
+exports_files(["Cargo.toml"])
+
+# Repository corpus: crate manifest and build file owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
+)

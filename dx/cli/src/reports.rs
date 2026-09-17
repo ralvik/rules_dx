@@ -17,7 +17,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::args::{Command, ReportRequest};
 use crate::plan::spec;
-use coverage_gate::{find_ignores, is_covered_language, is_ignored, parse_lcov};
+use dx_lcov::{find_ignores, is_covered_language, is_ignored, parse_lcov};
 use dx_output::{
     check_output_conflict, sort_diagnostics, DiagnosticEvent, OutputError, OutputMode, Severity,
 };
@@ -1188,7 +1188,7 @@ pub fn validate_lcov(bytes: &[u8]) -> Result<(), ReportError> {
 /// Returns `(covered, eligible)` executable-line counts. Documents union
 /// per `SF` path with maximum hits winning; source-level exclusion markers
 /// are honored for the covered languages (`.rs`, `.go`, `.py`, `.js`,
-/// `.jsx`, `.ts`, `.tsx`) through the shared `coverage_gate` scanner (a
+/// `.jsx`, `.ts`, `.tsx`) through the shared `dx_lcov` scanner (a
 /// `reason:` comment stays required exactly as under the retired M00 gate;
 /// see the marker syntax in `docs/testing/README.md`). Sources that fail to load count raw: Bazel may
 /// instrument generated or external files outside the workspace.
@@ -1198,7 +1198,7 @@ pub fn coverage_line_rate(
     documents: &[String],
     load: &dyn Fn(&str) -> Option<String>,
 ) -> Result<(u64, u64), String> {
-    let mut merged: BTreeMap<String, coverage_gate::FileHits> = BTreeMap::new();
+    let mut merged: BTreeMap<String, dx_lcov::FileHits> = BTreeMap::new();
     for document in documents {
         let parsed = parse_lcov(document)?;
         for (path, hits) in parsed {

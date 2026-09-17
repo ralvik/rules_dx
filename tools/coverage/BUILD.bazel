@@ -1,32 +1,12 @@
-"""Shared coverage-marker scanner (`coverage_gate`): LCOV parsing and
-`LCOV_EXCL_*` validation reused by `dx coverage --min-coverage`."""
+"""M00 coverage gate CLI: thin entry point over the promoted `dx_lcov` library (#74)."""
 
-# M13: source-only package (no Cargo manifest), so the same-package
-# `coverage_gate` import (`use coverage_gate;` in `src/main.rs`) has no
-# manifest path edge and the plain `rust_library` provider is not indexed;
-# the package-scoped resolve pins it to the hand-maintained `:coverage_gate`
-# dep instead of letting generation drop it as unresolvable.
-# gazelle:resolve rust coverage_gate //tools/coverage:coverage_gate
-# Hand-maintained canonical single crate (#128): excluded from generation
-# in the root BUILD (coverage_gate differs from the source-only fallback
-# name coverage).
-load("@rules_dx//rust/rules:defs.bzl", "rust_binary", "rust_library", "rust_test")
+# M13: source-only package (no Cargo manifest). The gate library now lives
+# at `//dx/lcov:dx_lcov`; this package owns only the `coverage_bin` entry
+# point, hand-maintained and excluded from generation in the root BUILD.
+load("@rules_rust//rust:defs.bzl", "rust_binary")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
-
-rust_library(
-    name = "coverage_gate",
-    srcs = ["src/lib.rs"],
-    crate_name = "coverage_gate",
-    crate_root = "src/lib.rs",
-)
-
-rust_test(
-    name = "coverage_gate_test",
-    size = "small",
-    crate = ":coverage_gate",
-)
 
 # Repository corpus: build file owned for direct-Bazel dogfood
 # under the canonical real_fixture_policy. Rust sources stay dx-owned
@@ -41,5 +21,5 @@ rust_binary(
     srcs = ["src/main.rs"],
     crate_name = "coverage",
     crate_root = "src/main.rs",
-    deps = ["//tools/coverage:coverage_gate"],
+    deps = ["//dx/lcov:dx_lcov"],
 )
