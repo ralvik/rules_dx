@@ -1284,4 +1284,24 @@ mod tests {
         assert!(validate(&first).is_ok());
         assert!(validate(&second).is_ok());
     }
+
+    #[test]
+    fn check_mode_must_fail_on_replacements_without_diagnostics() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // check mode to fail on any proposed change independently of
+        // diagnostic severity. The formatter produces a whole-file
+        // replacement with zero diagnostics, so a severity-only gate
+        // would pass while a replacement-presence gate fails.
+        let stages = vec![stage("fmt-a", &["python"], &["src/main.py"])];
+        let files = vec![file("src/main.py", "x  \n")];
+        let result = run_pipeline("//quality:test", "format", &stages, &files).unwrap();
+        assert_eq!(result.convergence, Convergence::Stable as i32);
+        assert!(result.initial_diagnostics.is_empty());
+        assert!(result.terminal_diagnostics.is_empty());
+        assert_eq!(result.replacements.len(), 1);
+        assert_eq!(result.replacements[0].edits[0].replacement, b"x\n".to_vec());
+        // Replacement presence alone determines check failure.
+        assert!(!result.replacements.is_empty());
+        assert!(validate(&result).is_ok());
+    }
 }
