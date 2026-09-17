@@ -123,5 +123,26 @@ union_python_keys="$(printf '%s' "$union_actions" | grep -A 8 "action 'Dx.*fixtu
 if [[ -z "$single_keys" ]]; then bad "single: want ActionKeys"; else ok; fi
 if [[ "$single_keys" == "$union_python_keys" ]]; then ok; else bad "aggregate membership must leave existing action keys unchanged (python single vs union)"; fi
 
+# Shared-config isolation: hinted Python consumes ruff.toml in lint/format
+# but typecheck does not, and unhinted lint/format do not. Changing shared
+# Ruff config misses consuming lint/format only; Ty boundaries unaffected
+# unless shared.
+hinted_actions="$(bazel aquery '//quality/testdata:fixture_real_python_hinted' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+if [[ -z "$hinted_actions" ]]; then
+  bad "hinted: empty aquery output"
+else
+  ok
+fi
+hinted_lint_inputs="$(printf '%s' "$hinted_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"
+hinted_format_inputs="$(printf '%s' "$hinted_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' | head -1 || true)"
+hinted_typecheck_inputs="$(printf '%s' "$hinted_actions" | grep -A 8 'Mnemonic: DxRealQualityTypecheck' | grep 'Inputs:' | head -1 || true)"
+if [[ "$hinted_lint_inputs" == *"ruff.toml"* ]]; then ok; else bad "hinted lint: want [ruff.toml] (shared Ruff config is an input)"; fi
+if [[ "$hinted_format_inputs" == *"ruff.toml"* ]]; then ok; else bad "hinted format: want [ruff.toml]"; fi
+if [[ "$hinted_typecheck_inputs" == *"ruff.toml"* ]]; then bad "hinted typecheck: forbidden [ruff.toml] (Ruff config must not invalidate Ty)"; else ok; fi
+if [[ "$python_lint_inputs" == *"ruff.toml"* ]]; then bad "unhinted lint: forbidden [ruff.toml] (unhinted uses default, shared change must not miss)"; else ok; fi
+if [[ "$python_typecheck_inputs" == *"ruff.toml"* ]]; then bad "unhinted typecheck: forbidden [ruff.toml]"; else ok; fi
+
 echo "quality cache aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
