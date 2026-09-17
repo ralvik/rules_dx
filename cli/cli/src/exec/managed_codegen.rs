@@ -5,11 +5,12 @@
 //! [`stage_codegen_generation`], and [`stage_codegen_side`]) — BEP
 //! shard collection over the codegen output group, plan validation,
 //! and immutable mirror-leaf staging. [`super::managed`] keeps the
-//! `codegen`/`env`/`setup` dispatch plus the shared staging
-//! primitives; the env mirror lives in [`super::managed_env`].
+//! `codegen`/`env`/`setup` dispatch plus side preparation; shared
+//! staging primitives live in [`super::managed_staging`]; the env
+//! mirror lives in [`super::managed_env`].
 
 use super::common::*;
-use super::managed::{collect_managed_group, ensure_generation_dir, symlink_leaf};
+use super::managed_staging::{collect_managed_group, ensure_generation_dir, symlink_leaf};
 use std::collections::BTreeMap;
 use std::path::Path;
 

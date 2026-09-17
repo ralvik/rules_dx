@@ -6,11 +6,12 @@
 //! collection over the env output group, key validation, and
 //! immutable `artifacts/` plus `values.json` staging.
 //! [`super::managed`] keeps the `codegen`/`env`/`setup` dispatch plus
-//! the shared staging primitives; the codegen mirror lives in
+//! side preparation; shared staging primitives live in
+//! [`super::managed_staging`]; the codegen mirror lives in
 //! [`super::managed_codegen`].
 
 use super::common::*;
-use super::managed::{collect_managed_group, ensure_generation_dir, symlink_leaf};
+use super::managed_staging::{collect_managed_group, ensure_generation_dir, symlink_leaf};
 use std::collections::BTreeMap;
 use std::path::Path;
 

@@ -2,7 +2,8 @@
 //! families. Each family lives in its own module under `exec/`:
 //! quality, workflow (dispatch) plus test_reports (test/coverage
 //! collection), bazel, generate, clean, managed (dispatch) plus
-//! managed_codegen/managed_env (generation sides), audit, update,
+//! managed_codegen/managed_env (generation sides) plus
+//! managed_staging (shared staging primitives), audit, update,
 //! run, and the check/fix umbrella. Shared plumbing (error codes,
 //! environment, source verification, mutation helpers) lives in
 //! [`common`]; BEP results collection and proto mapping live in
@@ -20,6 +21,7 @@ mod generate;
 mod managed;
 mod managed_codegen;
 mod managed_env;
+mod managed_staging;
 mod quality;
 mod results;
 mod run;
