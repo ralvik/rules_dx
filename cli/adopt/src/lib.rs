@@ -879,26 +879,11 @@ pub fn plan_somepath(from: &str, to: &str, configured: bool) -> Result<InspectPl
     })
 }
 
-/// Render one completion script from the single command table (O61).
-pub fn render_completion(shell: &str) -> Result<String, AdoptError> {
-    if !SUPPORTED_SHELLS.contains(&shell) {
-        return Err(AdoptError::UnknownShell {
-            shell: shell.to_owned(),
-        });
-    }
-    let mut out = format!("# dx completion for {shell} (generated from single command source)\n");
-    for cmd in ALL_COMMANDS {
-        out.push_str(&format!("# dx {cmd}\n"));
-    }
-    match shell {
-        "bash" => out.push_str("complete -W \"dx Commands\" dx\n"),
-        "zsh" => out.push_str("#compdef dx\n_dx() { _arguments '1: :()'}; compdef _dx dx\n"),
-        "fish" => out.push_str("complete -c dx -f\n"),
-        "powershell" => out.push_str("Register-ArgumentCompleter -CommandName dx\n"),
-        _ => {}
-    }
-    Ok(out)
-}
+/// Production `dx completion` renders from the `Cli` grammar via
+/// `clap_complete` (issue #202, `cli/cli/src/args.rs::render_completion`),
+/// so the grammar feeding parsing and `--help` is the single completion
+/// source (issue #235). The `ALL_COMMANDS`/`SUPPORTED_SHELLS` tables above
+/// remain as the O61 frozen vocabulary reference only; they render nothing.
 
 #[cfg(test)]
 mod tests {
@@ -1148,14 +1133,18 @@ mod tests {
     }
 
     #[test]
-    fn completion_renders_every_command_for_every_shell() {
+    fn completion_vocabulary_matches_supported_shells() {
+        // Issue #235: scripts render from the `Cli` grammar via
+        // `clap_complete`, so this gate pins the O61 vocabulary reference
+        // only — every command stays listed, every shell stays supported.
         for shell in SUPPORTED_SHELLS {
-            let script = render_completion(shell).expect("shell");
-            for cmd in ALL_COMMANDS {
-                assert!(script.contains(cmd), "{shell} misses {cmd}");
-            }
+            assert!(!shell.is_empty(), "shell name must not be empty");
         }
-        assert!(render_completion("tcsh").is_err());
+        for cmd in ALL_COMMANDS {
+            assert!(!cmd.is_empty(), "command name must not be empty");
+        }
+        assert!(ALL_COMMANDS.contains(&"completion"));
+        assert!(completion_source_is_single(true, false));
     }
 
     #[test]
@@ -1364,7 +1353,10 @@ mod tests {
             "not watchable: docs"
         );
         assert_eq!(
-            render_completion("tcsh").unwrap_err().to_string(),
+            AdoptError::UnknownShell {
+                shell: "tcsh".to_owned()
+            }
+            .to_string(),
             "unknown-shell: tcsh"
         );
     }

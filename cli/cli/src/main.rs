@@ -55,6 +55,12 @@ extern "C" fn forward_to_child(signo: libc::c_int) {
     }
 }
 
+/// Keep raw `libc::signal` over `signal-hook` (issue #235 spike):
+/// `signal-hook` delivers on a spawned thread through a pipe, adding
+/// latency to the forward-to-child kill and re-implementation of the
+/// pid-0 swallow above, while the `kill` itself stays `unsafe libc`
+/// either way — no safety win for a new dependency, lockfile churn,
+/// and supply-chain review on the #93-hardened forwarding path.
 fn install_forwarding() {
     unsafe {
         libc::signal(
