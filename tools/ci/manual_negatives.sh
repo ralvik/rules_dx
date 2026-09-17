@@ -93,6 +93,7 @@ e2e_tests=(
   "//tools/ci:e2e"
   "//tools/ci:e2e_clean"
   "//tools/ci:e2e_dirty"
+  "//tools/ci:e2e_format_roundtrip"
 )
 while IFS= read -r target; do
   [[ -n "$target" ]] || continue

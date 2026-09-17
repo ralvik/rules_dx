@@ -1,0 +1,9 @@
+# Minimal child-workspace flags (issue #55): `dx format` always carries
+# `--config=dx_dev` (the default profile pin), so the child must define
+# the dx_* configs. Values mirror the parent preset
+# (`tools/bazelrc/preset.bazelrc`): the E2E pins the CLI exit contract,
+# not profile contents, but the configs must exist or nested Bazel fails
+# with "Config value 'dx_dev' is not defined".
+build:dx_debug --compilation_mode=dbg
+build:dx_dev --compilation_mode=fastbuild
+build:dx_release --compilation_mode=opt

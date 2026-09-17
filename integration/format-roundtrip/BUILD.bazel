@@ -1,0 +1,9 @@
+# Stage 4 E2E format-roundtrip scenario (issue #55): one dirty Starlark
+# source owned for `dx format`. Buildifier rewrites `x=1` to `x = 1`;
+# the driver asserts check-fails, fix, check-passes.
+load("@rules_dx//quality:fixtures.bzl", "real_source_target")
+
+real_source_target(
+    name = "fmt",
+    starlark_srcs = ["dirty.bzl"],
+)

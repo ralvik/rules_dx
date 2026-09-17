@@ -1,0 +1,3 @@
+# Consumer-workspace package for the quality aspect shim (see real_aspects.bzl).
+# No targets of its own; its presence lets `//quality:real_aspects.bzl`
+# resolve in the staged child workspace.

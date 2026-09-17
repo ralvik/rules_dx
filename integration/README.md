@@ -15,8 +15,10 @@ against it with a version-pinned Bazel first on `PATH`.
   contract). Paired with `clean/`, this is the negative control:
   always-pass detectors fail `dirty`, always-fail detectors fail
   `clean`.
-- `format-roundtrip/` — planned slice 2 (format round-trip). The suite
-  stays red-free: only landed scenarios are wired into `//tools/ci:e2e`.
+- `format-roundtrip/` — Buildifier format round-trip: `dx format --check
+  //...` exits 1 on the dirty `x=1` source, `dx format //...` rewrites
+  it to `x = 1` (exit 0), then `--check` exits 0. Proves the quality
+  surface is not theater alongside the `dx test` pins.
 
 ## Why `integration/` is invisible to Bazel
 
@@ -53,9 +55,10 @@ workspaces that differ by one failing test. A deliberately broken
 detector stops failing exactly one half (always-pass breaks `dirty`,
 always-fail breaks `clean`). To re-prove manually, invert one
 expectation (e.g. run the driver with `dirty` + want-exit `0`) and
-observe the harness fail. The `format-roundtrip/` scenario remains
-slice 2 (quality-adapter staging in the child, heavier than the
-test-contract pin).
+observe the harness fail. `format-roundtrip/` extends the same
+argument to the quality surface: always-pass breaks the first
+`--check`, always-fail breaks the last, and a non-mutating fixer
+breaks the `x = 1` content check.
 
 ## Consumer-ci verdict (open decision, kept alternative)
 

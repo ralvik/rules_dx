@@ -1,0 +1,22 @@
+"""Stage 4 E2E format-roundtrip scenario (issue #55): Buildifier format pin.
+
+Dirty Starlark (`x=1`) must fail `dx format --check //...` (exit 1),
+pass after `dx format //...` rewrites it to `x = 1`, then pass
+`--check` again (exit 0). Standalone workspace: only `rules_dx`
+(local override, rewritten to an absolute path by the `//tools/ci:e2e`
+harness at stage time) plus one `real_source_target` with a Starlark
+source. The canonical `x=1` -> `x = 1` case mirrors the parent
+`matrix/starlark_dirty.bzl` fixture.
+"""
+
+module(name = "e2e_format_roundtrip")
+
+bazel_dep(name = "rules_dx", version = "0.0.0")
+
+# RULES_DX_ROOT is a placeholder: the harness rewrites it to the
+# absolute parent checkout path when staging (the staged copy lives
+# outside the parent, so no relative path survives).
+local_path_override(
+    module_name = "rules_dx",
+    path = "RULES_DX_ROOT",
+)

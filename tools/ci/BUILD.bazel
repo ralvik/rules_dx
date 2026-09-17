@@ -186,6 +186,33 @@ sh_test(
     ],
 )
 
+# Format-roundtrip half of the CLI-contract pin (issue #55 slice 2): the
+# child has one dirty Starlark source (`x=1`), so `dx format --check
+# //...` must exit 1, `dx format //...` must rewrite it to `x = 1`
+# (exit 0), and `--check` must then exit 0. Paired with the `dx test`
+# clean/dirty pins, this proves the quality surface is not theater:
+# always-pass detectors fail the first check, always-fail detectors
+# fail the last, and a non-mutating fixer fails the content check.
+sh_test(
+    name = "e2e_format_roundtrip",
+    timeout = "long",
+    srcs = ["e2e_format.sh"],
+    args = [
+        "$(rootpath //cli/cli:dx)",
+        "$(rootpath @build_bazel_bazel_9_2_0//:bazel_binary)",
+    ],
+    data = [
+        "//cli/cli:dx",
+        "@build_bazel_bazel_9_2_0//:bazel_binary",
+    ],
+    tags = [
+        "exclusive",
+        "local",
+        "manual",
+        "no-sandbox",
+    ],
+)
+
 test_suite(
     name = "e2e",
     tags = [
@@ -197,6 +224,7 @@ test_suite(
     tests = [
         ":e2e_clean",
         ":e2e_dirty",
+        ":e2e_format_roundtrip",
     ],
 )
 
