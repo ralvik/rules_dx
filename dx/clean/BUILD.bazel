@@ -21,7 +21,7 @@ rust_library(
     crate_name = "dx_clean",
     crate_root = "src/lib.rs",
     deps = crate_deps(
-        ["tempfile", "thiserror"],
+        ["globset", "ignore", "tempfile", "thiserror", "walkdir"],
         package_name = "dx/dx_clean",
     ) + [
         "//dx/env:dx_env",

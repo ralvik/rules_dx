@@ -8,5 +8,8 @@ name = "dx_clean"
 path = "src/lib.rs"
 
 [dependencies]
+globset = "0.4"
+ignore = "0.4"
 tempfile = "3"
 thiserror = "2"
+walkdir = "2"
