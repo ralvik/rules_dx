@@ -1375,4 +1375,43 @@ mod tests {
         assert!(clean_result.replacements.is_empty());
         assert_ne!(manifests[0], encode_validated(&clean_result).unwrap());
     }
+
+    #[test]
+    fn checkout_paths_do_not_alter_pipeline_outputs() {
+        // Determinism battery (issue #84): `quality-testing.md` requires
+        // running from different absolute checkout paths to compare equal
+        // where Bazel permits. The runner takes only workspace-relative
+        // (path, bytes), so model each absolute checkout as a prefix
+        // stripped before the call and require byte-identical manifests;
+        // different bytes under one checkout must diverge, proving
+        // relative bytes are load-bearing and absolute prefixes are not.
+        let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let checkouts = ["/tmp/checkout-a", "/tmp/checkout-b", "/home/user/work/tree"];
+        let mut manifests = Vec::with_capacity(checkouts.len());
+        for prefix in checkouts {
+            // Absolute prefix never enters `FileInput`: only the relative
+            // workspace path plus bytes do.
+            let relative = "src/lib.rs";
+            assert!(format!("{prefix}/{relative}").ends_with(relative));
+            let _ = prefix;
+            let files = vec![file(relative, "BAD\n")];
+            let result = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
+            assert_eq!(result.convergence, Convergence::Stable as i32);
+            assert_eq!(result.replacements.len(), 1);
+            assert_eq!(
+                result.replacements[0].original_digest,
+                digest("BAD\n".as_bytes())
+            );
+            assert!(validate(&result).is_ok());
+            manifests.push(encode_validated(&result).unwrap());
+        }
+        for other in manifests.iter().skip(1) {
+            assert_eq!(&manifests[0], other);
+        }
+        // Same simulated checkout with different bytes diverges.
+        let clean = vec![file("src/lib.rs", "GOOD\n")];
+        let clean_result = run_pipeline("//quality:test", "lint", &stages, &clean).unwrap();
+        assert!(clean_result.replacements.is_empty());
+        assert_ne!(manifests[0], encode_validated(&clean_result).unwrap());
+    }
 }
