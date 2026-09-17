@@ -64,6 +64,41 @@ verifies the checksum and copies `release.tar.gz` +
 else `$BUILD_WORKSPACE_DIRECTORY`, else the cwd). Deploy targets live
 next to the app they release.
 
+## Path D: `github_release` (accepted)
+
+The second deploy macro
+([issue #182](https://github.com/ralvik/rules_dx/issues/182)) publishes
+pinned files as a draft-only GitHub Release via the host `gh` CLI, no
+new module dependencies:
+
+```starlark
+load("@rules_dx//deploy/rules:github.bzl", "github_release")
+
+github_release(
+    name = "github_draft",
+    artifacts = [":dx"],
+)
+```
+
+`bazel run //dx/cli:github_draft` (or `dx deploy
+//dx/cli:github_draft`) execs `gh release create <tag> <assets...>
+--draft --verify-tag`. Draft-only by construction
+([issue #5](https://github.com/ralvik/rules_dx/issues/5)): `draft`
+must stay `True`, `--verify-tag` means the program never creates or
+pushes tags itself, and the default tag is the `v0.0.0-dryrun`
+placeholder. `GH_RELEASE_DRY_RUN=1` prints the would-run command and
+publishes nothing; this is what CI exercises. A real draft needs the
+tag pushed beforehand and explicit owner approval, then publishing
+happens by editing the draft on GitHub.
+
+Our own release runbook is the publish dry-run workflow
+([`publish-dry-run.yml`](../../.github/workflows/publish-dry-run.yml),
+[issue #78](https://github.com/ralvik/rules_dx/issues/78)): it builds
+the seed-host `dx` binary the `//dx/cli:github_draft` macro assembles,
+so workflow and macro stay consistent instead of duplicating logic.
+The full release matrix, SBOM/provenance, and BCR submission arrive as
+follow-ups there as platforms qualify.
+
 ## Custom deployers (accepted)
 
 User-defined rules join `dx deploy` by returning `DxDeployInfo` with an

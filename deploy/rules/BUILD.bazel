@@ -1,4 +1,4 @@
-"""Deploy rule fixtures and boundary tests (issues #178, #181)."""
+"""Deploy rule fixtures and boundary tests (issues #178, #181, #182)."""
 
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
@@ -7,6 +7,8 @@ load(":archive.bzl", "archive_release")
 load(":archive_tests.bzl", "archive_analysis_tests", "archive_debug_analysis_tests", "archive_unit_tests")
 load(":defs.bzl", "dx_deployment")
 load(":deploy_tests.bzl", "deploy_analysis_tests", "deploy_app_analysis_tests", "deploy_debug_analysis_tests", "deploy_unit_tests")
+load(":github.bzl", "github_release")
+load(":github_tests.bzl", "github_analysis_tests", "github_debug_analysis_tests", "github_unit_tests")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -17,6 +19,10 @@ exports_files([
     "archive_verify.sh",
     "defs.bzl",
     "deploy_tests.bzl",
+    "github.bzl",
+    "github_deploy.sh",
+    "github_tests.bzl",
+    "github_verify.sh",
 ])
 
 sh_binary(
@@ -127,9 +133,57 @@ test_suite(
         ":deploy_app_analysis",
         ":deploy_debug_analysis",
         ":deploy_unit",
+        ":github_analysis",
+        ":github_debug_analysis",
+        ":github_demo_verify",
+        ":github_unit",
         ":release_demo_debug_verify",
         ":release_demo_verify",
     ],
+)
+
+# Second deploy macro (issue #182): draft-only GitHub Releases over the
+# archive fixtures, proving macro composition (archive outputs become
+# release assets). The debug variant pins profile passthrough. Draft
+# verification runs with GH_RELEASE_DRY_RUN=1: no network, no mutation.
+github_release(
+    name = "github_demo",
+    artifacts = [
+        ":release_demo_archive",
+        ":release_demo_checksum",
+    ],
+)
+
+github_release(
+    name = "github_demo_debug",
+    artifacts = [
+        ":release_demo_archive",
+        ":release_demo_checksum",
+    ],
+    profile = "debug",
+)
+
+github_unit_tests(name = "github_unit")
+
+github_analysis_tests(name = "github_analysis")
+
+github_debug_analysis_tests(name = "github_debug_analysis")
+
+# Would-run command + draft-only flags per release fixture. Tagged
+# `no-coverage`: process-spawning tests stay out of the coverage
+# denominator per the repo coverage preset. No corpus entry: shell
+# sources have no `real_source_target` class.
+sh_test(
+    name = "github_demo_verify",
+    srcs = ["github_verify.sh"],
+    args = [
+        "$(rootpath :github_demo_program)",
+        "v0.0.0-dryrun",
+        "release_demo.tar.gz",
+        "release_demo.tar.gz.sha256",
+    ],
+    data = [":github_demo_program"],
+    tags = ["no-coverage"],
 )
 
 # Repository corpus: deploy Starlark owned for direct-Bazel dogfood
@@ -143,5 +197,7 @@ real_source_target(
         "archive_tests.bzl",
         "defs.bzl",
         "deploy_tests.bzl",
+        "github.bzl",
+        "github_tests.bzl",
     ],
 )

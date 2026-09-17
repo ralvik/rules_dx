@@ -76,7 +76,7 @@ jobs:
               ],
               "would_publish": [
                   "Bazel Central Registry `rules_dx` module (dry-run submission pending issue #26 tooling)",
-                  "GitHub Release with standalone `dx` binaries (draft creation disabled; owner approval per issue #5)",
+                  "GitHub Release with standalone `dx` binaries (draft only via //dx/cli:github_draft, issue #182; owner approval per issue #5)",
               ],
               "not_attempted": [
                   "SBOM/provenance generation (tooling unselected; issue #26)",
