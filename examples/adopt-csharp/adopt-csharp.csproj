@@ -1,0 +1,10 @@
+<!-- Foreign SDK-style project marker: adopted without upstream changes. The
+     C# Gazelle extension reads only `.cs` sources; this file records the
+     foreign SDK-style layout without participating in Bazel resolution
+     (NuGet lock wiring stays open under #7). -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+</Project>

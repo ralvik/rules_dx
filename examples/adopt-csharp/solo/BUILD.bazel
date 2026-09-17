@@ -1,0 +1,24 @@
+"""Adopted foreign C# tree (#196): handwritten owners preserved through generation."""
+
+load("@rules_dx//csharp/rules:defs.bzl", "csharp_library", "csharp_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+# Handwritten: the generator never emits csharp_test; test-owned `*Test.cs`
+# stays out of the generated library and this rule survives regeneration.
+csharp_test(
+    name = "pure_test",
+    srcs = ["PureTest.cs"],
+    deps = [":solo"],
+)
+
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
+
+csharp_library(
+    name = "solo",
+    srcs = ["Pure.cs"],
+)
