@@ -10,10 +10,12 @@
 //! Domain split (issue #236): inspect execution (`owners`/`deps`/`why`)
 //! lives in [`inspect`], status execution (`status`) lives in [`status`],
 //! version execution (`version`) lives in [`version`], watch execution
-//! (`watch`) lives in [`watch`]; this facade keeps dispatch plus the
-//! remaining execution domains. The public path stays
+//! (`watch`) lives in [`watch`], completion execution (`completion`)
+//! lives in [`completion`]; this facade keeps dispatch plus the remaining
+//! execution domains. The public path stays
 //! `crate::adopt::{execute_adoption, AdoptEnv}`.
 
+mod completion;
 mod inspect;
 mod status;
 mod version;
@@ -77,7 +79,7 @@ pub fn execute_adoption(invocation: &Invocation, env: AdoptEnv<'_>) -> i32 {
         Command::Owners | Command::Deps | Command::Why => {
             inspect::execute_inspect(invocation, workspace, query_runner, out, err)
         }
-        Command::Completion => execute_completion(invocation, out, err),
+        Command::Completion => completion::execute_completion(invocation, out, err),
         _ => pre_exec(err, "not an adoption command"),
     }
 }
@@ -178,20 +180,6 @@ fn execute_hooks(
 
 fn read_optional(root: &std::path::Path, name: &str) -> String {
     std::fs::read_to_string(root.join(name)).unwrap_or_else(|_| format!("(missing {name})"))
-}
-
-fn execute_completion(invocation: &Invocation, out: &mut dyn Write, err: &mut dyn Write) -> i32 {
-    // Scripts render at runtime from the `Cli` grammar (issue #202):
-    // the same definition feeds parsing, `--help`, and completions, so
-    // output cannot drift from the command reference.
-    let shell = invocation.targets.first().map(String::as_str).unwrap_or("");
-    match crate::args::render_completion(shell) {
-        Ok(script) => {
-            let _ = write!(out, "{script}");
-            0
-        }
-        Err(error) => pre_exec(err, &error.to_string()),
-    }
 }
 
 #[cfg(test)]
@@ -364,51 +352,5 @@ mod tests {
         );
         assert_eq!(code, 0);
         assert!(!String::from_utf8(out).expect("out").is_empty());
-    }
-
-    #[test]
-    fn completion_renders_from_single_source() {
-        use clap::ValueEnum;
-        // Every supported shell renders every command and key flag from
-        // the single Cli grammar (issue #202); no hand-maintained list.
-        for &shell in crate::args::COMPLETION_SHELLS {
-            let inv = invocation(&["completion", shell]);
-            let scratch = temp_root("completion");
-            let root = scratch.path().to_path_buf();
-            let mut out = Vec::new();
-            let mut err = Vec::new();
-            let code = execute_adoption(
-                &inv,
-                AdoptEnv {
-                    workspace: &root,
-                    query_runner: &NullQuery,
-                    out: &mut out,
-                    err: &mut err,
-                },
-            );
-            assert_eq!(code, 0, "shell {shell}");
-            let text = String::from_utf8(out).expect("out");
-            for cmd in crate::args::Command::value_variants() {
-                assert!(
-                    text.contains(cmd.name()),
-                    "shell {shell} misses command {}",
-                    cmd.name()
-                );
-            }
-            for flag in [
-                "workspace",
-                "dry-run",
-                "output",
-                "report",
-                "fail-on",
-                "check",
-            ] {
-                assert!(text.contains(flag), "shell {shell} misses flag {flag}");
-            }
-        }
-        // Unknown shells keep the contract error.
-        let unknown = crate::args::render_completion("tcsh");
-        assert!(unknown.is_err());
-        assert!(unknown.unwrap_err().to_string().contains("unknown-shell"));
     }
 }
