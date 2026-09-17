@@ -52,7 +52,8 @@ The repository corpus (`real_source_target(name = "corpus")` per package)
 is checked with the
 real lint/format aspects; every produced result must pass the per-result
 evaluator at `--fail_on warning`. The same invocations run in CI
-(`.github/workflows/ci.yml`, job `corpus-dogfood`), which installs no
+(`.github/workflows/ci.yml`, jobs `dogfood-freshness`, `dogfood-lint`,
+`dogfood-format`, `dogfood-typecheck` sharded per issue #210), which installs no
 quality tools: all tools execute as Bazel-resolved pinned actions.
 
 Select the corpus targets, then build their `dx_results`:

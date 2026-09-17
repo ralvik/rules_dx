@@ -1,5 +1,5 @@
-# Minimal CI skeleton: build, test, and the `dx coverage --min-coverage`
-# threshold on the seed host only.
+# Sharded CI: build, test, coverage, prove, and dogfood stages run as
+# separate jobs with per-job summaries (issue #210).
 #
 # Seed host: Linux x86_64 glibc (ubuntu-latest), local execution, no remote.
 # Full host coverage and CI qualification stay open; unavailable required
@@ -27,6 +27,14 @@
 # docs/testing/README.md. CI checkouts never contain `user.bazelrc`
 # (gitignored local-only BCR mirror override), so every run resolves
 # the canonical BCR registry plus MODULE.bazel.lock.
+#
+# Sharding policy (issue #210): one logical stage per job for failure
+# attribution without log-grep forensics. All jobs stay on ubuntu-latest
+# with the existing actions/cache disk cache (no new runners, no paid
+# services). `needs:` chains enforce fast-fail ordering so a broken build
+# skips downstream stages instead of burning parallel runners. Each job
+# writes a `$GITHUB_STEP_SUMMARY` block so triage starts from the summary,
+# not the raw log.
 
 name: ci
 
@@ -71,8 +79,32 @@ jobs:
       contents: read
       checks: write
       pull-requests: write
-  build-test:
-    name: build-test (Linux x86_64 glibc, local-only)
+  build:
+    name: build (bazel build //...)
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-seed-
+      - name: Build workspace
+        run: bazel build --noshow_progress //...
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### build — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: bazel build //... (seed host, local-only)." >> "$GITHUB_STEP_SUMMARY"
+  test:
+    name: test (bazel test //...)
+    needs: [build]
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
@@ -87,18 +119,69 @@ jobs:
           key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
           restore-keys: |
             bazel-seed-
-      - run: bazel build --noshow_progress //...
-      - run: bazel test --noshow_progress //...
-      - run: bazel run --noshow_progress //dx/cli:dx -- coverage --min-coverage 97 //...
+      - name: Test workspace
+        run: bazel test --noshow_progress //...
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### test — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: bazel test //... (seed host, local-only; manual targets excluded by Bazel tag semantics)." >> "$GITHUB_STEP_SUMMARY"
+  coverage:
+    name: coverage (dx coverage gate, seed cell)
+    needs: [build]
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-seed-
+      - name: Enforce seed coverage cell
+        run: bazel run --noshow_progress //dx/cli:dx -- coverage --min-coverage 97 //...
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### coverage — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: dx coverage --min-coverage 97 //... (seed cell only; per-cell enforcement tracked in #89)." >> "$GITHUB_STEP_SUMMARY"
+  prove:
+    name: prove (manual negatives, target tags, coverage cell)
+    needs: [build]
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-seed-
       - name: Prove manual negatives still fail as documented
         run: bazel run --noshow_progress //tools/ci:manual_negatives
       - name: Prove target-tag semantics
         run: bazel run --noshow_progress //tools/ci:target_tags
       - name: Prove seed coverage cell gate
         run: bazel run --noshow_progress //tools/ci:coverage_cell
-  corpus-dogfood:
-    name: corpus-dogfood (dx quality commands, Linux x86_64 glibc, local-only)
-    timeout-minutes: 60
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### prove — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate." >> "$GITHUB_STEP_SUMMARY"
+  dogfood-freshness:
+    name: dogfood-freshness (tools, generate --check, corpus audit)
+    needs: [build]
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -121,17 +204,107 @@ jobs:
         run: bazel run --noshow_progress //dx/cli:dx -- generate --check //...
       - name: Audit corpus ownership
         run: bazel run --noshow_progress //tools/ci:corpus_audit
-      - name: Run dx quality commands over the corpus (default mode)
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### dogfood-freshness — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Checked: Bazel-resolved tool execution, generate --check freshness, corpus ownership (carve-outs intact)." >> "$GITHUB_STEP_SUMMARY"
+  dogfood-lint:
+    name: dogfood-lint (dx lint converge + check)
+    needs: [dogfood-freshness]
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-dogfood-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-dogfood-
+            bazel-seed-
+      - name: Run dx lint over the corpus (default mode)
         run: |
           bazel query "attr(name, '^corpus\$', kind(real_source_target, //...))" 2>/dev/null \
             | LC_ALL=C sort -u > /tmp/corpus_targets.txt
           scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
           bazel run --noshow_progress //dx/cli:dx -- lint $scope
-          bazel run --noshow_progress //dx/cli:dx -- format $scope
-          bazel run --noshow_progress //dx/cli:dx -- typecheck $scope
-      - name: Verify converged no-op in check mode
+      - name: Verify lint converged no-op in check mode
         run: |
           scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
           bazel run --noshow_progress //dx/cli:dx -- lint --check $scope
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### dogfood-lint — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Ran: dx lint over corpus (default converge) then lint --check no-op proof." >> "$GITHUB_STEP_SUMMARY"
+  dogfood-format:
+    name: dogfood-format (dx format converge + check)
+    needs: [dogfood-freshness]
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-dogfood-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-dogfood-
+            bazel-seed-
+      - name: Run dx format over the corpus (default mode)
+        run: |
+          bazel query "attr(name, '^corpus\$', kind(real_source_target, //...))" 2>/dev/null \
+            | LC_ALL=C sort -u > /tmp/corpus_targets.txt
+          scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
+          bazel run --noshow_progress //dx/cli:dx -- format $scope
+      - name: Verify format converged no-op in check mode
+        run: |
+          scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
           bazel run --noshow_progress //dx/cli:dx -- format --check $scope
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### dogfood-format — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Ran: dx format over corpus (default converge) then format --check no-op proof." >> "$GITHUB_STEP_SUMMARY"
+  dogfood-typecheck:
+    name: dogfood-typecheck (dx typecheck converge + check)
+    needs: [dogfood-freshness]
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-dogfood-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-dogfood-
+            bazel-seed-
+      - name: Run dx typecheck over the corpus (default mode)
+        run: |
+          bazel query "attr(name, '^corpus\$', kind(real_source_target, //...))" 2>/dev/null \
+            | LC_ALL=C sort -u > /tmp/corpus_targets.txt
+          scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
+          bazel run --noshow_progress //dx/cli:dx -- typecheck $scope
+      - name: Verify typecheck converged no-op in check mode
+        run: |
+          scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
           bazel run --noshow_progress //dx/cli:dx -- typecheck --check $scope
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### dogfood-typecheck — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Ran: dx typecheck over corpus (default converge) then typecheck --check no-op proof." >> "$GITHUB_STEP_SUMMARY"
