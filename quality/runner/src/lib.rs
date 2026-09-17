@@ -1148,4 +1148,37 @@ mod tests {
             assert!(quality_result::validate(&result).is_ok(), "{label}");
         }
     }
+
+    #[test]
+    fn source_declaration_reorder_yields_identical_manifests() {
+        // Determinism battery (issue #84): `quality-testing.md` requires
+        // reordered equivalent source declarations to compare equal where
+        // semantic order is irrelevant. The synthetic pipeline transforms
+        // each file independently, so forward vs reversed `source_paths`
+        // must converge to identical snapshots, sorted diagnostics,
+        // sorted replacements, and rounds. Stage echoes keep declaration
+        // order (they record the requested shape), so the test compares
+        // sorted stage sets separately instead of requiring byte-equal
+        // stage order.
+        let files = vec![file("src/a.rs", "BAD a\n"), file("src/b.rs", "BAD b\n")];
+        let forward = vec![stage("lint-a", &["rust"], &["src/a.rs", "src/b.rs"])];
+        let reversed = vec![stage("lint-a", &["rust"], &["src/b.rs", "src/a.rs"])];
+        let first = run_pipeline("//quality:test", "lint", &forward, &files).unwrap();
+        let second = run_pipeline("//quality:test", "lint", &reversed, &files).unwrap();
+        assert_eq!(first.convergence, Convergence::Stable as i32);
+        assert_eq!(second.convergence, Convergence::Stable as i32);
+        assert_eq!(first.completed_rounds, second.completed_rounds);
+        assert_eq!(first.original_snapshot, second.original_snapshot);
+        assert_eq!(first.terminal_snapshot, second.terminal_snapshot);
+        assert_eq!(first.initial_diagnostics, second.initial_diagnostics);
+        assert_eq!(first.terminal_diagnostics, second.terminal_diagnostics);
+        assert_eq!(first.replacements, second.replacements);
+        let mut first_sources = first.stages[0].source_paths.clone();
+        let mut second_sources = second.stages[0].source_paths.clone();
+        first_sources.sort();
+        second_sources.sort();
+        assert_eq!(first_sources, second_sources);
+        assert!(quality_result::validate(&first).is_ok());
+        assert!(quality_result::validate(&second).is_ok());
+    }
 }
