@@ -106,6 +106,13 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
+        Command::Deploy => CommandSpec {
+            command,
+            capability: "deploy",
+            aspects: &[],
+            reports: &[],
+            settings: &[],
+        },
         // Sequential umbrellas (M10 WP4, O59) never build Bazel
         // invocations of their own; phases reuse their registries
         // verbatim. The umbrella routes SARIF requests to the
@@ -389,7 +396,9 @@ pub fn plan_build(
 /// Bazel verb behind a workflow command (`build`, `test`, `coverage`, `run`).
 /// The verb selects the Bazel command line; required workflow policy is
 /// identical across verbs except for the BEP stream, which only
-/// `test` and `coverage` collect report artifacts from.
+/// `test` and `coverage` collect report artifacts from. `deploy` plans
+/// its own build+run argv pair ([`plan_deploy_build`]/[`plan_deploy_run`])
+/// and never maps to a single verb.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WorkflowVerb {
     Build,
@@ -400,13 +409,15 @@ pub enum WorkflowVerb {
 
 impl WorkflowVerb {
     /// Maps a workflow command to its verb. Returns `None` for quality
-    /// commands, which plan through [`plan_build`] instead.
+    /// commands, which plan through [`plan_build`] instead, and for
+    /// `deploy`, which plans a build+run pair instead of one verb.
     pub fn of(command: Command) -> Option<Self> {
         match command {
             Command::Build => Some(WorkflowVerb::Build),
             Command::Test => Some(WorkflowVerb::Test),
             Command::Coverage => Some(WorkflowVerb::Coverage),
             Command::Run => Some(WorkflowVerb::Run),
+            Command::Deploy => None,
             Command::Lint | Command::Typecheck | Command::Format | Command::Generate => None,
             Command::Check | Command::Fix | Command::Clean => None,
             // Managed selections plan their own collection argv
@@ -585,6 +596,45 @@ pub fn plan_run_targets(
 /// this path.
 pub fn plan_run(target: &str, app_args: &[String], profile: crate::args::Profile) -> BuildPlan {
     plan_run_targets(&[target.to_owned()], app_args, profile)
+}
+
+/// Builds the exact `bazel build` argv for one resolved deploy label.
+/// Required options are the canonical workspace policy plus the
+/// `--config=dx_*` profile pin (always explicit, including the
+/// `dx_release` deploy default); there is no BEP stream, no
+/// `keep_going`, and no user Bazel options on this path. Shares the
+/// launcher, startup options, and workspace policy with [`plan_run`].
+pub fn plan_deploy_build(label: &str, profile: crate::args::Profile) -> BuildPlan {
+    use dx_process::{launcher_argv0, WORKFLOW_STARTUP_OPTS};
+
+    let mut argv = Vec::with_capacity(WORKFLOW_STARTUP_OPTS.len() + 4);
+    argv.push(launcher_argv0().to_owned());
+    argv.extend(WORKFLOW_STARTUP_OPTS.iter().map(ToString::to_string));
+    argv.push("build".to_owned());
+    argv.push(workspace_flag());
+    argv.push(profile.config_flag());
+    argv.push(label.to_owned());
+    let summary = format!("Running deploy build for {label}");
+    BuildPlan { argv, summary }
+}
+
+/// Builds the exact `bazel run` argv for one resolved deploy label.
+/// `app_args` are the verbatim deploy-program arguments after `--`:
+/// they are never validated as Bazel options and forward after a `--`
+/// separator. Required options mirror [`plan_deploy_build`]; the caller
+/// sets `DX_PROFILE` on the run environment. Shares the single-run
+/// shape with [`plan_run`] so the launcher and policy cannot drift.
+pub fn plan_deploy_run(
+    label: &str,
+    app_args: &[String],
+    profile: crate::args::Profile,
+) -> BuildPlan {
+    let plan = plan_run(label, app_args, profile);
+    let summary = format!("Running deploy run for {label}");
+    BuildPlan {
+        argv: plan.argv,
+        summary,
+    }
 }
 
 /// Builds the exact raw launcher argv for `dx bazel`: the launcher

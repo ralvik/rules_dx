@@ -32,6 +32,7 @@ tests from inactive configurable branches.
 
 - [`dx build`, `dx test`, and `dx coverage`](build-test-coverage.md)
 - [`dx run`](build-test-coverage.md#dx-run): single-runnable execution
+- [`dx deploy`](build-test-coverage.md#dx-deploy): single-deployable build+run
 - [`dx watch`](watch.md): thin local-only loop over `build/test/run/lint/typecheck/format/check/fix` ([ADR 0017](../../decisions/0017-dx-watch.md), extended by [ADR 0018](../../decisions/0018-umbrella-check-fix-cleanup-clean.md))
 - [Quality commands](quality.md): `dx lint`, `dx typecheck`, and `dx format`
 - [`dx check`, `dx fix`, and `dx clean`](check-fix-clean.md): sequential quality/generation umbrellas and managed-state cleanup (see [ADR 0018](../../decisions/0018-umbrella-check-fix-cleanup-clean.md))

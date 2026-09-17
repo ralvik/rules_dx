@@ -1,6 +1,7 @@
 //! Build/test/coverage workflow execution with JUnit/LCOV collection and report rendering.
 
 use super::common::*;
+use super::deploy::execute_deploy;
 use super::run::execute_run;
 use crate::args::{Command, Invocation};
 use crate::plan::{bep_path, plan_workflow, WorkflowVerb};
@@ -26,6 +27,9 @@ use std::path::Path;
 pub(crate) fn execute_workflow(invocation: &Invocation, env: Env<'_>) -> i32 {
     if invocation.command == Command::Run {
         return execute_run(invocation, env);
+    }
+    if invocation.command == Command::Deploy {
+        return execute_deploy(invocation, env);
     }
     let Env {
         workspace,

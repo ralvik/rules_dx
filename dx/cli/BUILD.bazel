@@ -21,6 +21,7 @@ rust_library(
         "src/exec/bazel.rs",
         "src/exec/clean.rs",
         "src/exec/common.rs",
+        "src/exec/deploy.rs",
         "src/exec/generate.rs",
         "src/exec/managed.rs",
         "src/exec/quality.rs",

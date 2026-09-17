@@ -37,6 +37,7 @@ pub enum Command {
     Test,
     Coverage,
     Run,
+    Deploy,
     Check,
     Fix,
     Clean,
@@ -69,6 +70,7 @@ impl Command {
             Command::Test => "test",
             Command::Coverage => "coverage",
             Command::Run => "run",
+            Command::Deploy => "deploy",
             Command::Check => "check",
             Command::Fix => "fix",
             Command::Clean => "clean",
@@ -95,12 +97,12 @@ impl Command {
     }
 
     /// True for the Bazel-passthrough workflow commands (`build`, `test`,
-    /// `coverage`, `run`): they run Bazel verbs directly instead of the quality
+    /// `coverage`, `run`, `deploy`): they run Bazel verbs directly instead of the quality
     /// aspect pipeline, so quality-only options do not apply to them.
     pub fn is_workflow(self) -> bool {
         matches!(
             self,
-            Command::Build | Command::Test | Command::Coverage | Command::Run
+            Command::Build | Command::Test | Command::Coverage | Command::Run | Command::Deploy
         )
     }
 
@@ -156,7 +158,7 @@ impl Command {
     /// JSON-capable commands stream one object per line via `write_event`
     /// (never buffer-then-dump). Text-only commands reject `--output=json`
     /// pre-exec with `UnsupportedOption` instead of silently ignoring it:
-    /// clean/managed print prose lifecycle, `bazel`/`run` own the terminal
+    /// clean/managed print prose lifecycle, `bazel`/`run`/`deploy` own the terminal
     /// for passthrough applications, and adoption helpers (except
     /// `status`) print local-helper prose or thin query lines.
     /// `update` supports JSON: dry-run planning and the deferred-live
@@ -210,6 +212,7 @@ impl Command {
             Command::Test => "run Bazel test over resolved targets",
             Command::Coverage => "collect LCOV coverage with optional threshold",
             Command::Run => "build and run a single runnable target",
+            Command::Deploy => "build and run a single deployable target",
             Command::Check => "run format+lint+typecheck+generate checks in order",
             Command::Fix => "apply format+lint+typecheck+generate fixes in order",
             Command::Clean => "prune unselected managed state (no scopes)",
@@ -268,18 +271,17 @@ impl Profile {
     }
 
     /// Command default: `deploy` defaults to release, every other
-    /// command defaults to dev. No `Command::Deploy` variant exists yet
-    /// (issue #180), so this returns dev for all delivered commands;
-    /// #180 must map deploy to release here.
+    /// command defaults to dev.
     pub fn default_for(command: Command) -> Self {
-        let _ = command;
-        Profile::Dev
+        match command {
+            Command::Deploy => Profile::Release,
+            _ => Profile::Dev,
+        }
     }
 
     /// Parses a deploy-target `profile` attribute value (`debug`, `dev`,
     /// `release`): `None` for anything else so analysis diagnostics own
-    /// the spelling error. Shared so the future `dx deploy` wiring in
-    /// issue #180 reuses the same vocabulary.
+    /// the spelling error.
     pub fn parse_attr(value: &str) -> Option<Self> {
         match value {
             "debug" => Some(Profile::Debug),
@@ -291,15 +293,15 @@ impl Profile {
 }
 
 /// Environment variable forwarding the resolved profile to the deploy
-/// program (issue #179 item 3). Wired by the `dx deploy` CLI in issue
-/// #180; defined here so the name is pinned once.
+/// program (issue #179 item 3).
 pub const DX_PROFILE_ENV: &str = "DX_PROFILE";
 
 /// Precedence for the effective profile (issue #179 item 2): the
 /// explicit `--debug`/`--release` flag wins over the deploy target
 /// `profile` attribute, which wins over the command default. Build,
 /// run, and test have no target attribute, so they resolve flag over
-/// default.
+/// default; deploy resolves flag over target attribute over the
+/// release default.
 pub fn resolve_profile(flag: Option<Profile>, attr: Option<Profile>, default: Profile) -> Profile {
     flag.or(attr).unwrap_or(default)
 }
@@ -376,9 +378,11 @@ impl Invocation {
     }
 
     /// Effective profile under issue #179 precedence: explicit flag over
-    /// the command default. The deploy target `profile` attribute slots
-    /// between them once `dx deploy` lands (issue #180) via
-    /// [`resolve_profile`]; build/run/test have no target attribute.
+    /// the command default. Deploy resolves flag over the target
+    /// `profile` attribute over the release default (issue #180); the
+    /// target attribute is read during execution via cquery, so this
+    /// returns flag over command default and execution refines it.
+    /// Build/run/test have no target attribute.
     pub fn profile(&self) -> Profile {
         resolve_profile(
             self.profile_flag(),
@@ -407,11 +411,11 @@ pub enum ArgsError {
     #[error("{text}")]
     Help { text: String },
     #[error(
-        "missing command: want audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel"
+        "missing command: want audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel"
     )]
     MissingCommand,
     #[error(
-        "unknown command {command:?}: want audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel{suggestion_hint}",
+        "unknown command {command:?}: want audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel{suggestion_hint}",
         suggestion_hint = suggestion_hint(suggestion)
     )]
     UnknownCommand {
@@ -500,10 +504,10 @@ struct Cli {
     /// Check mode (quality/version only; no mutations).
     #[arg(long)]
     check: bool,
-    /// Use dx_debug config (build/run/test only; conflicts with --release).
+    /// Use dx_debug config (build/run/test/deploy only; conflicts with --release).
     #[arg(long)]
     debug: bool,
-    /// Use dx_release config (build/run/test only; conflicts with --debug).
+    /// Use dx_release config (build/run/test/deploy only; conflicts with --debug).
     #[arg(long)]
     release: bool,
     /// Additionally forward `bazel clean` after pruning (clean only).
@@ -865,8 +869,8 @@ fn per_command_flags(command: Command) -> &'static str {
         Command::Coverage => {
             "Per-command flags: --min-coverage <0-100> (coverage only; collects without enforcing when absent)."
         }
-        Command::Build | Command::Test | Command::Run => {
-            "Per-command flags: --debug | --release (build/run/test only; mutually exclusive; bare invocation means dev)."
+        Command::Build | Command::Test | Command::Run | Command::Deploy => {
+            "Per-command flags: --debug | --release (build/run/test/deploy only; mutually exclusive; bare invocation means dev, except deploy means release)."
         }
         Command::Version => {
             "Per-command flags: --check (drift check), --pin <version>, --rollback (version only; --pin and --rollback conflict)."
@@ -885,6 +889,7 @@ fn render_command_help(command: Command) -> String {
         Command::Clean => "Usage: dx [global-options] clean [--dry-run] [--bazel]",
         Command::Bazel => "Usage: dx [global-options] bazel [-- bazel-args ...]",
         Command::Run => "Usage: dx [global-options] run [--debug|--release] <target> [-- app-args ...]",
+        Command::Deploy => "Usage: dx [global-options] deploy [--debug|--release] <label> [-- app-args ...]",
         Command::Build | Command::Test => {
             "Usage: dx [global-options] build|test [--debug|--release] [scope ...] [-- bazel-options ...]"
         }
@@ -902,6 +907,8 @@ fn render_command_help(command: Command) -> String {
     let scopes = match command {
         Command::Clean => "Scopes: none (clean takes no scopes).",
         Command::Bazel => "Scopes: none (raw Bazel forwarding; no dx scope resolution).",
+        Command::Deploy => "Scopes: exactly one main-workspace label (//pkg:target); patterns (//...), multiple labels, and file/path scopes are usage failures.",
+        Command::Run => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. No scope selects //....",
         _ => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. No scope selects //....",
     };
     let mut out = String::new();
@@ -1497,10 +1504,12 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
             });
         }
     }
-    if command == Command::Run {
+    if command == Command::Run || command == Command::Deploy {
         // O52: `dx run` is a local-only single-target launcher with prose
         // lifecycle on stderr. Machine-owned stdout modes are rejected
-        // pre-exec so the application keeps the terminal.
+        // pre-exec so the application keeps the terminal. `dx deploy`
+        // shares the terminal contract: text only, no reports, args
+        // after `--` forward verbatim to the program.
         if !matches!(output, OutputMode::Text { .. }) {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -1535,13 +1544,18 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         });
     }
     // Profile flags (issue #179): `--debug`/`--release` are mutually
-    // exclusive and belong to `build`, `run`, and `test` only
-    // (`deploy` joins them in issue #180; every other command fails
-    // fast instead of silently ignoring the profile).
+    // exclusive and belong to `build`, `run`, `test`, and `deploy`
+    // only (every other command fails fast instead of silently
+    // ignoring the profile).
     if debug && release {
         return Err(ArgsError::ConflictingProfiles);
     }
-    if (debug || release) && !matches!(command, Command::Build | Command::Run | Command::Test) {
+    if (debug || release)
+        && !matches!(
+            command,
+            Command::Build | Command::Run | Command::Test | Command::Deploy
+        )
+    {
         return Err(ArgsError::UnsupportedOption {
             command: command.name(),
             option: if debug {
@@ -1651,6 +1665,7 @@ mod tests {
             Command::Test,
             Command::Coverage,
             Command::Run,
+            Command::Deploy,
             Command::Check,
             Command::Fix,
             Command::Clean,

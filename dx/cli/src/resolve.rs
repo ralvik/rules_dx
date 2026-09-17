@@ -140,6 +140,24 @@ pub enum ResolveError {
         candidates = candidates.join(" ")
     )]
     AmbiguousRunnable { candidates: Vec<String> },
+    /// `dx deploy` scope count: exactly one label is required.
+    #[error(
+        "dx deploy needs exactly one label, got {count}: pass a deploy label such as //deploy:production"
+    )]
+    DeployCount { count: usize },
+    /// `dx deploy` single scope that is not a main-workspace label:
+    /// patterns, files, directories, external or relative labels.
+    #[error(
+        "unsupported deploy scope {scope:?}: pass exactly one deploy label such as //deploy:production (patterns like //..., files, and directories are not deployable)"
+    )]
+    DeployScope { scope: String },
+    /// `dx deploy` label that is neither a `dx_deployment` (no
+    /// `DxDeployInfo`) nor executable. Bazel owns executability;
+    /// aliases included.
+    #[error(
+        "not_deployable {label}: target provides no DxDeployInfo and is not executable; pass a dx_deployment target or an executable (see docs/deploy/authoring.md)"
+    )]
+    NotDeployable { label: String },
     /// Ownership query failed or returned unusable output.
     #[error("ownership query for {label} failed: {detail}")]
     QueryFailed { label: String, detail: String },
@@ -664,6 +682,170 @@ pub fn resolve_run(
         return Err(ResolveError::AmbiguousRunnable { candidates });
     }
     Ok(candidates)
+}
+
+/// Resolves `dx deploy` scope to exactly one main-workspace label.
+///
+/// Exactly one positional is required; patterns (`//...`,
+/// `//pkg/...`), file/directory paths, external labels (`@repo//...`),
+/// and package-relative labels (`:target`) are usage failures with
+/// guidance to pass a deploy label. No filesystem access and no Bazel
+/// query: label shape alone decides.
+pub fn resolve_deploy(scopes: &[String]) -> Result<String, ResolveError> {
+    if scopes.len() != 1 {
+        return Err(ResolveError::DeployCount {
+            count: scopes.len(),
+        });
+    }
+    let scope = &scopes[0];
+    if scope.starts_with("//") {
+        if scope.contains("...") {
+            return Err(ResolveError::DeployScope {
+                scope: scope.clone(),
+            });
+        }
+        return Ok(scope.clone());
+    }
+    Err(ResolveError::DeployScope {
+        scope: scope.clone(),
+    })
+}
+
+/// Deploy target identity from one `bazel cquery` Starlark evaluation:
+/// the `DxDeployInfo` provider fields plus raw executability. Bazel
+/// owns executability, so aliases resolve before this observation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeployInfo {
+    /// The deploy label as passed.
+    pub label: String,
+    /// True when the target returns `DxDeployInfo`.
+    pub has_provider: bool,
+    /// Raw `profile` attribute (`debug`/`dev`/`release`, `None` when the
+    /// provider omits it, `NONE` when no provider). Callers parse with
+    /// `Profile::parse_attr`.
+    pub profile_raw: String,
+    /// Raw `app` attribute (canonical label, `None` when the program
+    /// itself deploys, `NONE` when no provider).
+    pub app_raw: String,
+    /// True when `files_to_run.executable` exists.
+    pub executable: bool,
+}
+
+/// Starlark expression behind [`check_deployable`]: `has|profile|app|exe`.
+/// `NONE` marks a missing provider; `None` marks a provider field set
+/// to None. Single expression so one cquery answers deployability,
+/// profile default, and app identity together.
+fn deploy_starlark_expr() -> String {
+    const PROVIDER: &str = "//deploy/rules:defs.bzl%DxDeployInfo";
+    format!(
+        "(str(providers(target).get('{PROVIDER}', None) != None)) + '|' + \
+         ((str(providers(target).get('{PROVIDER}', None).profile) if providers(target).get('{PROVIDER}', None) != None else 'NONE')) + '|' + \
+         ((str(providers(target).get('{PROVIDER}', None).app) if providers(target).get('{PROVIDER}', None) != None else 'NONE')) + '|' + \
+         str(target.files_to_run.executable != None)"
+    )
+}
+
+/// Exact cquery argv for a deployability probe: launcher, startup
+/// options, `cquery`, canonical workspace policy, the label, and the
+/// Starlark deploy observation. No user Bazel options leak into
+/// resolution; no `--config` pin (deployability is configuration
+/// independent).
+fn deploy_query_argv(label: &str) -> Vec<String> {
+    let mut argv = Vec::with_capacity(WORKFLOW_STARTUP_OPTS.len() + 6);
+    argv.push(launcher_argv0().to_owned());
+    argv.extend(WORKFLOW_STARTUP_OPTS.iter().map(ToString::to_string));
+    argv.push("cquery".to_owned());
+    argv.push("--@rules_dx//config:workspace=//dx:config".to_owned());
+    argv.push(label.to_owned());
+    argv.push("--output=starlark".to_owned());
+    argv.push(format!("--starlark:expr={}", deploy_starlark_expr()));
+    argv
+}
+
+/// Checks deployability for one resolved deploy label via `bazel cquery`.
+///
+/// Deployable means the target returns `DxDeployInfo` or is executable
+/// (any `*_binary`/executable; Bazel owns executability, aliases
+/// included). Otherwise returns [`ResolveError::NotDeployable`].
+/// Query failures become [`ResolveError::QueryFailed`].
+pub fn check_deployable(
+    label: &str,
+    workspace: &Path,
+    runner: &dyn QueryRunner,
+) -> Result<DeployInfo, ResolveError> {
+    let argv = deploy_query_argv(label);
+    let result = runner
+        .run_query(&argv, workspace)
+        .map_err(|error| ResolveError::QueryFailed {
+            label: label.to_owned(),
+            detail: error.to_string(),
+        })?;
+    if result.code != Some(0) {
+        return Err(ResolveError::QueryFailed {
+            label: label.to_owned(),
+            detail: first_line(&result.stderr),
+        });
+    }
+    let text = std::str::from_utf8(&result.stdout).map_err(|_| ResolveError::QueryFailed {
+        label: label.to_owned(),
+        detail: "query output is not UTF-8".to_owned(),
+    })?;
+    let line = text
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .ok_or_else(|| ResolveError::QueryFailed {
+            label: label.to_owned(),
+            detail: "cquery returned no deploy observation".to_owned(),
+        })?;
+    let mut parts = line.split('|');
+    let (has, profile_raw, app_raw, exe) = match (
+        parts.next(),
+        parts.next(),
+        parts.next(),
+        parts.next(),
+        parts.next(),
+    ) {
+        (Some(has), Some(profile), Some(app), Some(exe), None) => (has, profile, app, exe),
+        _ => {
+            return Err(ResolveError::QueryFailed {
+                label: label.to_owned(),
+                detail: "cquery returned a malformed deploy observation".to_owned(),
+            });
+        }
+    };
+    let has_provider = match has {
+        "True" => true,
+        "False" => false,
+        _ => {
+            return Err(ResolveError::QueryFailed {
+                label: label.to_owned(),
+                detail: "cquery returned a malformed deploy observation".to_owned(),
+            });
+        }
+    };
+    let executable = match exe {
+        "True" => true,
+        "False" => false,
+        _ => {
+            return Err(ResolveError::QueryFailed {
+                label: label.to_owned(),
+                detail: "cquery returned a malformed deploy observation".to_owned(),
+            });
+        }
+    };
+    if !has_provider && !executable {
+        return Err(ResolveError::NotDeployable {
+            label: label.to_owned(),
+        });
+    }
+    Ok(DeployInfo {
+        label: label.to_owned(),
+        has_provider,
+        profile_raw: profile_raw.to_owned(),
+        app_raw: app_raw.to_owned(),
+        executable,
+    })
 }
 
 /// One `bazel query` invocation per owner set (O44): every rule whose

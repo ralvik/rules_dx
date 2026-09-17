@@ -12,6 +12,7 @@ mod audit;
 mod bazel;
 mod clean;
 mod common;
+mod deploy;
 mod generate;
 mod managed;
 mod quality;

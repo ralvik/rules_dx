@@ -36,6 +36,24 @@ emits prose lifecycle on stderr, takes no `--report`, and refuses when
 env `CI=true` (local-only). Multirun remains a separate future
 feature.
 
+## `dx deploy`
+
+Status: implemented as specified in this section. Strict single-label
+execution: exactly one main-workspace label (`//pkg:target`); patterns
+(`//...`), multiple labels, and file/path scopes are usage failures
+(exit 2). Deployability is checked with one `bazel cquery` before any
+build: the target must return `DxDeployInfo` (see
+[Deploy authoring](../../deploy/authoring.md)) or be executable
+(`*_binary`/executable; aliases included, Bazel owns executability),
+else `not_deployable` fails pre-exec (exit 2). The flow is resolve,
+cquery, `bazel build --config=...`, then `bazel run --config=...` with
+`DX_PROFILE=debug|dev|release` forwarded to the deploy program.
+`--dry-run` prints the plan (label, app, profile, build/run commands)
+and executes nothing. Arguments after `--` forward verbatim to the
+program. Exit codes preserve Bazel/program status verbatim; stdio is
+inherited with SIGINT/SIGTERM forwarding, like `dx run`. Like `dx run`,
+only `--output=text`, prose on stderr, no `--report`.
+
 ## `dx coverage`
 
 `dx coverage` resolves scope and invokes Bazel coverage. Bazel owns instrumentation,
@@ -69,15 +87,15 @@ The configs live in the vendored preset (`tools/bazelrc/preset.bazelrc`,
 reviewed via `tools/bazelrc/preset.py`, wired through the root
 `.bazelrc`) and are additive: bare invocations keep today's behavior.
 
-`dx build`, `dx run`, and `dx test` accept `--debug`/`--release` to
+`dx build`, `dx run`, `dx test`, and `dx deploy` accept
+`--debug`/`--release` to
 select the profile. The flags are mutually exclusive (both passed is a
 usage failure, exit 2) and map to `--config=dx_debug`/`--config=dx_release`
 on the Bazel argv; the bare invocation passes `--config=dx_dev`
-explicitly. There is no `--dev` flag: bare already means the middle
+explicitly, except `dx deploy` which passes `--config=dx_release`.
+There is no `--dev` flag: bare already means the middle
 mode. `dx coverage` takes no profile flags; its argv is unchanged.
 Precedence is explicit flag over deploy target `profile` attribute over
-command default. The `deploy` default (`release`), the target attribute
-(open in [#178](https://github.com/ralvik/rules_dx/issues/178)), the
-`dx deploy` flag surface, and `DX_PROFILE=debug|dev|release`
-forwarding to the deploy program are provisional until
-[#180](https://github.com/ralvik/rules_dx/issues/180) lands.
+command default. The deploy target `profile` attribute comes from
+`DxDeployInfo` (see [Deploy authoring](../../deploy/authoring.md));
+`DX_PROFILE=debug|dev|release` is forwarded to the deploy program.
