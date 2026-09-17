@@ -9,9 +9,14 @@
 # stays green by construction and nothing runs uninvited.
 #
 # This harness machine-checks the no-publication-inputs half that is
-# verifiable on a clean tree today. Platform, packaging, provenance
-# (SPDX/SLSA), registry submission, and public-install smoke runs stay
-# unqualified per #5 and are recorded as gaps, not claimed here.
+# verifiable on a clean tree today (10 checks): dist/release
+# git-ignored and uncommitted, module at 0.0.0, no version tags,
+# SECURITY.md reporting link, publish dry-run dispatch-only with a
+# default-closed approve gate, no-secrets minimal permissions, and
+# RUNNER_TEMP staging plus a clean-checkout proof. Platform,
+# packaging, provenance (SPDX/SLSA), registry submission, and
+# public-install smoke runs stay unqualified per #5 and are recorded
+# as gaps, not claimed here.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:release_hygiene`,
 # following //tools/ci:corpus_audit.
@@ -72,6 +77,31 @@ if grep -q -F -e 'workflow_dispatch:' .github/workflows/publish-dry-run.yml && !
   ok
 else
   bad "publish-dry-run.yml gained a non-dispatch trigger"
+fi
+
+# The dry-run approval gate stays explicit and default-closed (issue
+# #78): an `approve` input defaulting to false, with nothing publishing
+# either way.
+if grep -q -F -e 'approve:' .github/workflows/publish-dry-run.yml && grep -q -F -e 'default: false' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml lost the default-closed approve gate"
+fi
+
+# The dry-run stores no secrets and keeps minimal permissions (issue
+# #78): checkout with persist-credentials false, contents read-only.
+if grep -q -F -e 'persist-credentials: false' .github/workflows/publish-dry-run.yml && grep -q -F -e 'contents: read' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml drifted from no-secrets minimal permissions"
+fi
+
+# The dry-run never dirties the checkout (issue #78): staging under
+# RUNNER_TEMP plus a clean-checkout proof step.
+if grep -q -F -e 'RUNNER_TEMP/publish-dry-run' .github/workflows/publish-dry-run.yml && grep -q -F -e 'test -z "$(git status --porcelain)"' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml lost RUNNER_TEMP staging or the clean-checkout proof"
 fi
 
 # The release-hygiene policy itself stays documented (prevents silent
