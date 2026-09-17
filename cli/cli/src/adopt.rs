@@ -468,7 +468,6 @@ mod tests {
     use super::*;
     use crate::args::parse;
     use std::io;
-    use std::path::PathBuf;
 
     fn invocation(words: &[&str]) -> Invocation {
         parse(&words.iter().map(ToString::to_string).collect::<Vec<_>>()).expect("parse")
@@ -526,18 +525,15 @@ mod tests {
         }
     }
 
-    fn temp_root(name: &str) -> PathBuf {
-        let dir =
-            std::env::temp_dir().join(format!("dx-adopt-cmd-{}-{}", std::process::id(), name));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).expect("tmp");
-        dir
+    fn temp_root(name: &str) -> dx_test_scratch::TempDir {
+        dx_test_scratch::scratch(&format!("dx-adopt-cmd-{name}-"))
     }
 
     #[test]
     fn init_dry_run_lists_without_writing() {
         let inv = invocation(&["init", "--dry-run", "demo"]);
-        let root = temp_root("init-dry");
+        let scratch = temp_root("init-dry");
+        let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
         let code = execute_adoption(
@@ -552,13 +548,13 @@ mod tests {
         assert_eq!(code, 0);
         assert!(String::from_utf8(out).expect("out").contains(".dx/version"));
         assert!(!root.join(".dx/version").exists());
-        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
     fn init_applies_absent_only() {
         let inv = invocation(&["init"]);
-        let root = temp_root("init-apply");
+        let scratch = temp_root("init-apply");
+        let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
         let code = execute_adoption(
@@ -573,13 +569,13 @@ mod tests {
         assert_eq!(code, 0);
         assert!(root.join(".dx/version").exists());
         assert!(root.join(".devcontainer/devcontainer.json").exists());
-        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
     fn hooks_status_shows_merged_layers() {
         let inv = invocation(&["hooks", "status"]);
-        let root = temp_root("hooks-status");
+        let scratch = temp_root("hooks-status");
+        let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
         let code = execute_adoption(
@@ -596,13 +592,13 @@ mod tests {
         assert!(text.contains("baseline:"));
         assert!(text.contains("overlay:"));
         assert!(text.contains("timings:"));
-        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
     fn status_reports_pin_and_checks() {
         let inv = invocation(&["status"]);
-        let root = temp_root("status");
+        let scratch = temp_root("status");
+        let root = scratch.path().to_path_buf();
         std::fs::create_dir_all(root.join(".dx")).expect("dx");
         std::fs::write(root.join(".dx/version"), "0.0.0\n").expect("pin");
         let mut out = Vec::new();
@@ -618,12 +614,12 @@ mod tests {
         );
         assert_eq!(code, 0);
         assert!(String::from_utf8(out).expect("out").contains("pin: ok"));
-        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
     fn version_pins_and_reports() {
-        let root = temp_root("version");
+        let scratch = temp_root("version");
+        let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
         let pin = invocation(&["version", "--pin=0.0.0"]);
@@ -638,12 +634,12 @@ mod tests {
         );
         assert_eq!(code, 0);
         assert!(root.join(".dx/version").exists());
-        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
     fn version_rollback_pins_previous_release() {
-        let root = temp_root("version-rollback");
+        let scratch = temp_root("version-rollback");
+        let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
         let inv = invocation(&["version", "--rollback"]);
@@ -677,12 +673,12 @@ mod tests {
         assert!(String::from_utf8(err)
             .expect("err")
             .contains("rollback refused"));
-        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
     fn version_rejects_combined_mutation_and_check_flags() {
-        let root = temp_root("version-conflicts");
+        let scratch = temp_root("version-conflicts");
+        let root = scratch.path().to_path_buf();
         for words in [
             vec!["version", "--pin=0.0.0", "--rollback"],
             vec!["version", "--pin=0.0.0", "--check"],
@@ -702,12 +698,12 @@ mod tests {
             );
             assert_eq!(code, 2, "words: {words:?}");
         }
-        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
     fn version_check_reports_drift() {
-        let root = temp_root("version-check");
+        let scratch = temp_root("version-check");
+        let root = scratch.path().to_path_buf();
         std::fs::create_dir_all(root.join(".dx")).expect("dx");
         std::fs::write(root.join(".dx/version"), "0.0.0\n").expect("pin");
         let mut out = Vec::new();
@@ -738,12 +734,12 @@ mod tests {
         );
         assert_eq!(code, 1);
         assert!(String::from_utf8(err).expect("err").contains("drift"));
-        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
     fn watch_validates_wrapped_command() {
-        let root = temp_root("watch");
+        let scratch = temp_root("watch");
+        let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
         let inv = invocation(&["watch", "test", "//..."]);
@@ -759,7 +755,6 @@ mod tests {
             ),
             0
         );
-        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
@@ -768,7 +763,8 @@ mod tests {
         // documents still print. Init dry-run plans are summaries;
         // `status` output is the answer.
         let inv = invocation(&["init", "--dry-run", "--quiet", "demo"]);
-        let root = temp_root("quiet-init");
+        let scratch = temp_root("quiet-init");
+        let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
         let code = execute_adoption(
@@ -782,10 +778,10 @@ mod tests {
         );
         assert_eq!(code, 0);
         assert!(String::from_utf8(out).expect("out").is_empty());
-        let _ = std::fs::remove_dir_all(&root);
 
         let inv = invocation(&["status", "--quiet"]);
-        let root = temp_root("quiet-status");
+        let scratch = temp_root("quiet-status");
+        let root = scratch.path().to_path_buf();
         std::fs::create_dir_all(root.join(".dx")).expect("dx");
         let mut out = Vec::new();
         let mut err = Vec::new();
@@ -800,12 +796,12 @@ mod tests {
         );
         assert_eq!(code, 0);
         assert!(!String::from_utf8(out).expect("out").is_empty());
-        let _ = std::fs::remove_dir_all(&root);
 
         // Version dry-run plans are summaries (silenced); version output
         // itself is the answer (never silenced).
         let inv = invocation(&["version", "--dry-run", "--pin=0.0.0", "--quiet"]);
-        let root = temp_root("quiet-version-dryrun");
+        let scratch = temp_root("quiet-version-dryrun");
+        let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
         let code = execute_adoption(
@@ -819,10 +815,10 @@ mod tests {
         );
         assert_eq!(code, 0);
         assert!(String::from_utf8(out).expect("out").is_empty());
-        let _ = std::fs::remove_dir_all(&root);
 
         let inv = invocation(&["version", "--quiet"]);
-        let root = temp_root("quiet-version");
+        let scratch = temp_root("quiet-version");
+        let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
         let code = execute_adoption(
@@ -836,14 +832,14 @@ mod tests {
         );
         assert_eq!(code, 0);
         assert!(!String::from_utf8(out).expect("out").is_empty());
-        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
     fn inspect_forwards_single_unwrapped_query() {
         let runner = ScriptedQuery::with(&["//z:two\n//a:one\n//z:two\n"]);
         let inv = invocation(&["owners", "//a:one"]);
-        let root = temp_root("inspect");
+        let scratch = temp_root("inspect");
+        let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
         let code = execute_adoption(
@@ -871,14 +867,14 @@ mod tests {
             ]
         );
         assert!(String::from_utf8(err).expect("err").is_empty());
-        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
     fn inspect_configured_uses_cquery() {
         let runner = ScriptedQuery::with(&["//a:one\n"]);
         let inv = invocation(&["deps", "--configured", "//a:one"]);
-        let root = temp_root("inspect-configured");
+        let scratch = temp_root("inspect-configured");
+        let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
         let code = execute_adoption(
@@ -895,14 +891,14 @@ mod tests {
         assert_eq!(calls.len(), 1);
         assert_eq!(calls[0][1], "cquery");
         assert_eq!(calls[0][2], "deps(//a:one)");
-        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
     fn why_resolves_owner_then_somepath() {
         let runner = ScriptedQuery::with(&["//owner:lib\n", "//owner:lib\n//app:server\n"]);
         let inv = invocation(&["why", "src/lib.rs", "//app:server"]);
-        let root = temp_root("why");
+        let scratch = temp_root("why");
+        let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
         let code = execute_adoption(
@@ -931,14 +927,14 @@ mod tests {
         assert!(String::from_utf8(out)
             .expect("out")
             .contains("//app:server"));
-        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
     fn why_without_owner_is_operational() {
         let runner = ScriptedQuery::with(&[""]);
         let inv = invocation(&["why", "src/orphan.rs", "//app:server"]);
-        let root = temp_root("why-orphan");
+        let scratch = temp_root("why-orphan");
+        let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
         let code = execute_adoption(
@@ -953,7 +949,6 @@ mod tests {
         assert_eq!(code, 1);
         assert!(String::from_utf8(err).expect("err").contains("no owner"));
         assert_eq!(runner.calls.borrow().len(), 1);
-        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
@@ -963,7 +958,8 @@ mod tests {
         // the single Cli grammar (issue #202); no hand-maintained list.
         for &shell in crate::args::COMPLETION_SHELLS {
             let inv = invocation(&["completion", shell]);
-            let root = temp_root("completion");
+            let scratch = temp_root("completion");
+            let root = scratch.path().to_path_buf();
             let mut out = Vec::new();
             let mut err = Vec::new();
             let code = execute_adoption(
@@ -994,7 +990,6 @@ mod tests {
             ] {
                 assert!(text.contains(flag), "shell {shell} misses flag {flag}");
             }
-            let _ = std::fs::remove_dir_all(&root);
         }
         // Unknown shells keep the contract error.
         let unknown = crate::args::render_completion("tcsh");
