@@ -39,6 +39,7 @@ rust_library(
         "src/exec/managed.rs",
         "src/exec/quality.rs",
         "src/exec/run.rs",
+        "src/exec/test_reports.rs",
         "src/exec/test_support.rs",
         "src/exec/umbrella.rs",
         "src/exec/update.rs",

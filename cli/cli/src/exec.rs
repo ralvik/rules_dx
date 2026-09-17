@@ -1,6 +1,7 @@
 //! Quality command execution (M07 WP3): dispatch root across command
 //! families. Each family lives in its own module under `exec/`:
-//! quality, workflow, bazel, generate, clean, managed, audit, update,
+//! quality, workflow (dispatch) plus test_reports (test/coverage
+//! collection), bazel, generate, clean, managed, audit, update,
 //! run, and the check/fix umbrella. Shared plumbing (error codes,
 //! environment, BEP collection, mutation helpers) lives in [`common`];
 //! unit-test fakes live in `test_support`.
@@ -17,6 +18,7 @@ mod generate;
 mod managed;
 mod quality;
 mod run;
+mod test_reports;
 #[cfg(test)]
 mod test_support;
 mod umbrella;
