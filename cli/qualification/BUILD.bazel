@@ -1,60 +1,17 @@
 """M28 slices 1-4 + M29 slices 1-2: pure release-qualification/publication planning (blocker disposition, support-label gate, API-change classification, registry exactness, artifact identity/packaging boundary, reproducibility/verification binding, coverage/aggregate/CI-requalification/publication-handoff gates, publication-input verification, public-install/incident discipline)."""
 
-load("@crates//:crates.bzl", "aliases")
-load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
-load("//quality:fixtures.bzl", "real_source_target")
-load("//rust/rules:defs.bzl", "rust_library", "rust_test")
+load("//rust/rules:defs.bzl", "dx_rust_crate")
 
 package(default_visibility = [
     "//cli:__pkg__",
     "//cli:__subpackages__",
 ])
 
-rust_library(
+# M02 leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# `dx_qual` + `dx_qual_test` + fmt/clippy tests +
+# `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
+dx_rust_crate(
     name = "dx_qual",
-    srcs = ["src/lib.rs"],
-    aliases = aliases(
-        package_name = "cli/dx_qual",
-        normal = True,
-    ),
-    crate_name = "dx_qual",
-    crate_root = "src/lib.rs",
-)
-
-rust_test(
-    name = "dx_qual_test",
-    size = "small",
-    aliases = aliases(
-        package_name = "cli/dx_qual",
-        normal = True,
-        normal_dev = True,
-    ),
-    crate = ":dx_qual",
-)
-
-# Authoritative quality identities (M02 pattern): rustfmt and Clippy
-# resolve from the pinned toolchain, never from ambient host tools.
-rustfmt_test(
-    name = "dx_qual_fmt_test",
-    size = "small",
-    targets = [":dx_qual"],
-)
-
-rust_clippy_test(
-    name = "dx_qual_clippy_test",
-    size = "small",
-    targets = [":dx_qual"],
-)
-
-exports_files(
-    ["Cargo.toml"],
-    visibility = ["//visibility:public"],
-)
-
-# Repository corpus: crate manifest and build file owned for
-# direct-Bazel dogfood under the canonical real_fixture_policy.
-real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"],
-    toml_srcs = ["Cargo.toml"],
+    package_name = "cli/dx_qual",
+    deps = [],
 )

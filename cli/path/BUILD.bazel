@@ -1,54 +1,14 @@
 """Shared workspace-relative path shape checks (#72)."""
 
-load("@crates//:crates.bzl", "aliases")
-load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
-load("//quality:fixtures.bzl", "real_source_target")
-load("//rust/rules:defs.bzl", "rust_library", "rust_test")
+load("//rust/rules:defs.bzl", "dx_rust_crate")
 
 package(default_visibility = ["//visibility:public"])
 
-rust_library(
+# M02 leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# `dx_path` + `dx_path_test` + fmt/clippy tests +
+# `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
+dx_rust_crate(
     name = "dx_path",
-    srcs = ["src/lib.rs"],
-    aliases = aliases(
-        package_name = "cli/dx_path",
-        normal = True,
-    ),
-    crate_name = "dx_path",
-    crate_root = "src/lib.rs",
-)
-
-rust_test(
-    name = "dx_path_test",
-    size = "small",
-    aliases = aliases(
-        package_name = "cli/dx_path",
-        normal = True,
-        normal_dev = True,
-    ),
-    crate = ":dx_path",
-)
-
-# Authoritative quality identities (M02 pattern): rustfmt and Clippy
-# resolve from the pinned toolchain, never from ambient host tools.
-rustfmt_test(
-    name = "dx_path_fmt_test",
-    size = "small",
-    targets = [":dx_path"],
-)
-
-rust_clippy_test(
-    name = "dx_path_clippy_test",
-    size = "small",
-    targets = [":dx_path"],
-)
-
-exports_files(["Cargo.toml"])
-
-# Repository corpus: crate manifest and build file owned for
-# direct-Bazel dogfood under the canonical real_fixture_policy.
-real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"],
-    toml_srcs = ["Cargo.toml"],
+    package_name = "cli/dx_path",
+    deps = [],
 )

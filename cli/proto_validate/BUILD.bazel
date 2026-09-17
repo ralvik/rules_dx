@@ -1,55 +1,17 @@
 """Shared validated-codec helpers for proto shards (#72)."""
 
-load("@crates//:crates.bzl", "aliases")
-load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
-load("//quality:fixtures.bzl", "real_source_target")
-load("//rust/rules:defs.bzl", "rust_library", "rust_test")
+load("//rust/rules:defs.bzl", "dx_rust_crate")
 
 package(default_visibility = ["//visibility:public"])
 
-rust_library(
+# M02 leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# `dx_proto_validate` + `dx_proto_validate_test` + fmt/clippy tests +
+# `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
+# `prost` is a literal third-party label (not a crate_universe crate
+# name), so it travels via `extra_deps`.
+dx_rust_crate(
     name = "dx_proto_validate",
-    srcs = ["src/lib.rs"],
-    aliases = aliases(
-        package_name = "cli/dx_proto_validate",
-        normal = True,
-    ),
-    crate_name = "dx_proto_validate",
-    crate_root = "src/lib.rs",
-    deps = ["@rules_rust_prost//private/3rdparty/crates:prost"],
-)
-
-rust_test(
-    name = "dx_proto_validate_test",
-    size = "small",
-    aliases = aliases(
-        package_name = "cli/dx_proto_validate",
-        normal = True,
-        normal_dev = True,
-    ),
-    crate = ":dx_proto_validate",
-)
-
-# Authoritative quality identities (M02 pattern): rustfmt and Clippy
-# resolve from the pinned toolchain, never from ambient host tools.
-rustfmt_test(
-    name = "dx_proto_validate_fmt_test",
-    size = "small",
-    targets = [":dx_proto_validate"],
-)
-
-rust_clippy_test(
-    name = "dx_proto_validate_clippy_test",
-    size = "small",
-    targets = [":dx_proto_validate"],
-)
-
-exports_files(["Cargo.toml"])
-
-# Repository corpus: crate manifest and build file owned for
-# direct-Bazel dogfood under the canonical real_fixture_policy.
-real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"],
-    toml_srcs = ["Cargo.toml"],
+    package_name = "cli/dx_proto_validate",
+    deps = [],
+    extra_deps = ["@rules_rust_prost//private/3rdparty/crates:prost"],
 )

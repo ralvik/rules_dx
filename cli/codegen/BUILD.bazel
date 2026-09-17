@@ -1,86 +1,29 @@
 """M25 WP1 slice 3: normalized codegen plan collection for the `dx` CLI."""
 
 # gazelle:resolve rust codegen_shard //generation/codegen_shard
-load("@crates//:crates.bzl", "aliases", "crate_deps")
-load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
-load("//quality:fixtures.bzl", "real_source_target")
-load("//rust/rules:defs.bzl", "rust_library", "rust_test")
+load("//rust/rules:defs.bzl", "dx_rust_crate")
 
 package(default_visibility = [
     "//cli:__pkg__",
     "//cli:__subpackages__",
 ])
 
-rust_library(
+# M02 leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# `dx_codegen` + `dx_codegen_test` + fmt/clippy tests +
+# `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
+dx_rust_crate(
     name = "dx_codegen",
-    srcs = ["src/lib.rs"],
-    aliases = aliases(
-        package_name = "cli/dx_codegen",
-        normal = True,
-    ),
-    crate_name = "dx_codegen",
-    crate_root = "src/lib.rs",
-    deps = crate_deps(
-        [
-            "serde",
-            "serde_json",
-            "thiserror",
-        ],
-        package_name = "cli/dx_codegen",
-    ) + [
+    package_name = "cli/dx_codegen",
+    deps = [
+        "serde",
+        "serde_json",
+        "thiserror",
+    ],
+    extra_deps = [
         "//cli/bep:dx_bep",
         "//cli/digest:dx_digest",
         "//cli/fingerprint:dx_fingerprint",
         "//cli/roots:dx_roots",
         "//generation/codegen_shard",
     ],
-)
-
-rust_test(
-    name = "dx_codegen_test",
-    size = "small",
-    aliases = aliases(
-        package_name = "cli/dx_codegen",
-        normal = True,
-        normal_dev = True,
-    ),
-    crate = ":dx_codegen",
-    deps = crate_deps(
-        [
-            "serde",
-            "serde_json",
-            "thiserror",
-        ],
-        package_name = "cli/dx_codegen",
-    ) + [
-        "//cli/bep:dx_bep",
-        "//generation/codegen_shard",
-    ],
-)
-
-# Authoritative quality identities (M02 pattern): rustfmt and Clippy
-# resolve from the pinned toolchain, never from ambient host tools.
-rustfmt_test(
-    name = "dx_codegen_fmt_test",
-    size = "small",
-    targets = [":dx_codegen"],
-)
-
-rust_clippy_test(
-    name = "dx_codegen_clippy_test",
-    size = "small",
-    targets = [":dx_codegen"],
-)
-
-exports_files(
-    ["Cargo.toml"],
-    visibility = ["//visibility:public"],
-)
-
-# Repository corpus: crate manifest and build file owned for
-# direct-Bazel dogfood under the canonical real_fixture_policy.
-real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"],
-    toml_srcs = ["Cargo.toml"],
 )
