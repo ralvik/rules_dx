@@ -290,7 +290,8 @@ pub(crate) fn resolve_file_owners(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::resolve::{quote_label, resolve, resolve_for_test, resolve_run};
+    use crate::resolve::query::quote_label;
+    use crate::resolve::{resolve, resolve_for_test, resolve_run};
     use dx_process::Scope;
     use std::cell::RefCell;
     use std::path::PathBuf;

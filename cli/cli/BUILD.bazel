@@ -56,6 +56,7 @@ rust_library(
         "src/reports/sarif.rs",
         "src/resolve.rs",
         "src/resolve/classify.rs",
+        "src/resolve/query.rs",
         "src/resolve/run_deploy.rs",
         "src/resolve/test_map.rs",
         "src/skew.rs",

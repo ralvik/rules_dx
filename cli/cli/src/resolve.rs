@@ -21,19 +21,21 @@
 //! note in `plan.rs` for the planning carve.
 
 pub mod classify;
+pub mod query;
 pub mod run_deploy;
 pub mod test_map;
 
 pub(crate) use classify::{
     classify_scopes, first_line, parse_owners, resolve_file_owners, PackageCache,
 };
+pub(crate) use query::{ownership_set_expression, quote_set, run_label_query};
 pub use run_deploy::{check_deployable, resolve_deploy, resolve_run, DeployInfo};
 pub use test_map::map_owners_to_tests;
 
 use std::io;
 use std::path::Path;
 
-use dx_process::{launcher_argv0, Scope, WORKFLOW_STARTUP_OPTS};
+use dx_process::Scope;
 
 /// Captured result of one `bazel query` invocation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -180,82 +182,6 @@ pub enum ResolveError {
     QueryFailed { label: String, detail: String },
 }
 
-/// Quotes every item into one deterministic space-separated set literal:
-/// items are bytewise sorted so the query expression is stable and
-/// inspectable no matter the input order.
-pub(crate) fn quote_set(items: &[String]) -> String {
-    let mut sorted: Vec<&String> = items.iter().collect();
-    sorted.sort();
-    sorted
-        .iter()
-        .map(|item| quote_label(item))
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
-/// Batched ownership expression (O44): depth-1 reverse dependencies
-/// constrained to rules over the main-workspace universe, with every file
-/// label quoted into one deterministic set. One bounded query per
-/// resolver call no matter how many files share the scope; an empty
-/// mapping names the first file scope so the diagnostic stays actionable.
-pub(crate) fn ownership_set_expression(labels: &[String]) -> String {
-    format!("kind('rule', rdeps(//..., set({}), 1))", quote_set(labels))
-}
-
-/// Quotes a label as a double-quoted query string literal, escaping
-/// backslashes and quotes. Rejects control characters, which cannot
-/// round-trip through line-oriented query output.
-pub(crate) fn quote_label(label: &str) -> String {
-    let mut quoted = String::with_capacity(label.len() + 2);
-    quoted.push('"');
-    for ch in label.chars() {
-        match ch {
-            '\\' => quoted.push_str("\\\\"),
-            '"' => quoted.push_str("\\\""),
-            _ => quoted.push(ch),
-        }
-    }
-    quoted.push('"');
-    quoted
-}
-
-/// Exact query argv for an arbitrary unconfigured query expression.
-/// Used by runnable and test-mapping queries; no user Bazel options
-/// leak into resolution.
-fn query_argv(expression: &str) -> Vec<String> {
-    let mut argv = Vec::with_capacity(WORKFLOW_STARTUP_OPTS.len() + 4);
-    argv.push(launcher_argv0().to_owned());
-    argv.extend(WORKFLOW_STARTUP_OPTS.iter().map(ToString::to_string));
-    argv.push("query".to_owned());
-    argv.push("--".to_owned());
-    argv.push(expression.to_owned());
-    argv
-}
-
-/// Runs one unconfigured `bazel query` for `expression` and parses
-/// stdout into sorted deduplicated labels. Query failures and non-UTF-8
-/// output become [`ResolveError::QueryFailed`].
-pub(crate) fn run_label_query(
-    expression: &str,
-    workspace: &Path,
-    runner: &dyn QueryRunner,
-) -> Result<Vec<String>, ResolveError> {
-    let argv = query_argv(expression);
-    let result = runner
-        .run_query(&argv, workspace)
-        .map_err(|error| ResolveError::QueryFailed {
-            label: expression.to_owned(),
-            detail: error.to_string(),
-        })?;
-    if result.code != Some(0) {
-        return Err(ResolveError::QueryFailed {
-            label: expression.to_owned(),
-            detail: first_line(&result.stderr),
-        });
-    }
-    parse_owners(&result.stdout, expression)
-}
-
 /// Resolves explicit scope positionals into exact Bazel targets.
 ///
 /// Empty input selects the repository scope (`//...`). Label-only input
@@ -374,14 +300,6 @@ mod tests {
             }
         }
 
-        fn failed(stderr: &str) -> QueryResult {
-            QueryResult {
-                code: Some(2),
-                stdout: Vec::new(),
-                stderr: stderr.as_bytes().to_vec(),
-            }
-        }
-
         fn calls(&self) -> Vec<(Vec<String>, PathBuf)> {
             self.calls.borrow().clone()
         }
@@ -420,48 +338,6 @@ mod tests {
         let full = workspace.join(rel);
         std::fs::create_dir_all(full.parent().expect("parent")).expect("parent dir");
         std::fs::write(full, text).expect("write file");
-    }
-
-    #[test]
-    fn query_failures_report_the_first_bazel_line() {
-        let scratch = temp_workspace("query-fail");
-        let workspace = scratch.path().to_path_buf();
-        write(&workspace, "pkg/BUILD.bazel", "");
-        write(&workspace, "pkg/a.py", "x = 1\n");
-        let query = FakeQuery::new(vec![FakeQuery::failed(
-            "\n  no such package 'pkg': BUILD file not found  \nmore context\n",
-        )]);
-        let err = resolve(&scopes(&["pkg/a.py"]), &workspace, &query).expect_err("failed");
-        assert_eq!(
-            err,
-            ResolveError::QueryFailed {
-                label: "kind('rule', rdeps(//..., set(\"//pkg:a.py\"), 1))".to_owned(),
-                detail: "no such package 'pkg': BUILD file not found".to_owned(),
-            }
-        );
-        let query = FakeQuery::new(vec![QueryResult {
-            code: Some(0),
-            stdout: vec![0xff, 0xfe],
-            stderr: Vec::new(),
-        }]);
-        let err = resolve(&scopes(&["pkg/a.py"]), &workspace, &query).expect_err("non-utf8");
-        assert_eq!(
-            err,
-            ResolveError::QueryFailed {
-                label: "kind('rule', rdeps(//..., set(\"//pkg:a.py\"), 1))".to_owned(),
-                detail: "query output is not UTF-8".to_owned(),
-            }
-        );
-    }
-
-    #[test]
-    fn empty_stderr_reports_a_default_diagnostic() {
-        assert_eq!(first_line(b""), "no Bazel diagnostic");
-        assert_eq!(first_line(b"\n  \n"), "no Bazel diagnostic");
-        let long = format!("x: {}", "y".repeat(400));
-        let got = first_line(long.as_bytes());
-        assert!(got.len() <= 303, "bounded: {}", got.len());
-        assert!(got.ends_with("..."));
     }
 
     #[test]
