@@ -120,209 +120,53 @@ fn render_file(out: &mut String, file: &FilePatch<'_>) -> Result<(), DiffError> 
     out.push_str("+++ b/");
     out.push_str(file.path);
     out.push('\n');
-    let old = split_lines(file.original);
-    let new = split_lines(file.candidate);
-    for hunk in hunks(&old.lines, old.ends_nl, &new.lines, new.ends_nl)? {
-        render_hunk(out, &hunk, &old, &new);
+    // Hunk grouping and line bodies delegate to `similar::TextDiff`
+    // (Myers, `CONTEXT` lines of context). Headers stay canonical `dx`
+    // form with always-explicit `start,length` counts; `similar`'s GNU
+    // `UnifiedHunkHeader` omits `,1`, so it is not used. `diff_lines`
+    // preserves trailing newlines in tokens, so a newline-only change
+    // surfaces natively as `Del`+`Ins` with `missing_newline` set.
+    let diff = similar::TextDiff::configure()
+        .algorithm(similar::Algorithm::Myers)
+        .diff_lines(file.original, file.candidate);
+    let mut unified = diff.unified_diff();
+    unified.context_radius(CONTEXT);
+    for hunk in unified.iter_hunks() {
+        let ops = hunk.ops();
+        let first = &ops[0];
+        let last = &ops[ops.len() - 1];
+        let old_start = first.old_range().start;
+        let new_start = first.new_range().start;
+        let old_len = last.old_range().end - old_start;
+        let new_len = last.new_range().end - new_start;
+        let old_head = if old_len == 0 {
+            old_start
+        } else {
+            old_start + 1
+        };
+        let new_head = if new_len == 0 {
+            new_start
+        } else {
+            new_start + 1
+        };
+        out.push_str(&format!(
+            "@@ -{old_head},{old_len} +{new_head},{new_len} @@\n"
+        ));
+        for change in hunk.iter_changes() {
+            let tag = match change.tag() {
+                similar::ChangeTag::Equal => ' ',
+                similar::ChangeTag::Delete => '-',
+                similar::ChangeTag::Insert => '+',
+            };
+            out.push(tag);
+            out.push_str(&change.to_string_lossy());
+            if change.missing_newline() {
+                out.push('\n');
+                out.push_str("\\ No newline at end of file\n");
+            }
+        }
     }
     Ok(())
-}
-
-/// One side of a file diff: lines without terminators plus whether the
-/// side ends with a line feed. Grouped so hunk rendering takes one
-/// argument per side instead of six positional values.
-struct SidedText<'a> {
-    lines: Vec<&'a str>,
-    ends_nl: bool,
-}
-
-/// Lines of `text` without terminators, plus whether the text ends with a
-/// line feed (vacuously true for empty text, which has no lines at all).
-fn split_lines(text: &str) -> SidedText<'_> {
-    if text.is_empty() {
-        return SidedText {
-            lines: Vec::new(),
-            ends_nl: true,
-        };
-    }
-    let ends_nl = text.ends_with('\n');
-    let mut lines: Vec<&str> = text.split('\n').collect();
-    if ends_nl {
-        lines.pop();
-    }
-    SidedText { lines, ends_nl }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Op {
-    Eq,
-    Del,
-    Ins,
-}
-
-/// Edit script from the first old line to the last new line, via
-/// `similar`'s Myers diff (`O((N+M)D)` time, `O(N+M)` space): the retired
-/// hand-rolled greedy search kept a full `O(D²)` trace. `Replace` expands to
-/// deletions then insertions, matching the retired backtrack order (`-old`
-/// before `+new`).
-fn diff_ops(old: &[&str], new: &[&str]) -> Vec<Op> {
-    use similar::{capture_diff_slices, Algorithm, DiffOp};
-    let mut ops = Vec::new();
-    for op in capture_diff_slices(Algorithm::Myers, old, new) {
-        match op {
-            DiffOp::Equal { len, .. } => ops.extend(vec![Op::Eq; len]),
-            DiffOp::Delete { old_len, .. } => {
-                ops.extend(vec![Op::Del; old_len]);
-            }
-            DiffOp::Insert { new_len, .. } => {
-                ops.extend(vec![Op::Ins; new_len]);
-            }
-            DiffOp::Replace {
-                old_len, new_len, ..
-            } => {
-                ops.extend(vec![Op::Del; old_len]);
-                ops.extend(vec![Op::Ins; new_len]);
-            }
-        }
-    }
-    ops
-}
-
-struct Hunk {
-    /// 0-based old/new line indices where the hunk starts.
-    old_start: usize,
-    new_start: usize,
-    /// Script slice covering the hunk, context lines included.
-    ops: Vec<(Op, usize, usize)>,
-}
-
-/// Groups the edit script into hunks with [`CONTEXT`] lines of context,
-/// merging change groups whose context windows overlap.
-///
-/// An `Eq` pairing whose lines differ only in trailing-newline presence is
-/// promoted to a `Del`+`Ins` pair: line diff sees identical text, but the
-/// patch must still record the newline change (GNU renders `-a` + marker /
-/// `+a` for it).
-fn hunks(old: &[&str], old_nl: bool, new: &[&str], new_nl: bool) -> Result<Vec<Hunk>, DiffError> {
-    let script = diff_ops(old, new);
-    // Annotate every op with the old/new line index it consumes.
-    let mut annotated: Vec<(Op, usize, usize)> = Vec::with_capacity(script.len());
-    let (mut oi, mut ni) = (0usize, 0usize);
-    for op in script {
-        match op {
-            Op::Eq => {
-                let old_missing = oi + 1 == old.len() && !old_nl;
-                let new_missing = ni + 1 == new.len() && !new_nl;
-                if old_missing != new_missing {
-                    annotated.push((Op::Del, oi, ni));
-                    annotated.push((Op::Ins, oi, ni));
-                } else {
-                    annotated.push((op, oi, ni));
-                }
-                oi += 1;
-                ni += 1;
-            }
-            Op::Del => {
-                annotated.push((op, oi, ni));
-                oi += 1;
-            }
-            Op::Ins => {
-                annotated.push((op, oi, ni));
-                ni += 1;
-            }
-        }
-    }
-    let changes: Vec<usize> = annotated
-        .iter()
-        .enumerate()
-        .filter(|(_, (op, _, _))| *op != Op::Eq)
-        .map(|(i, _)| i)
-        .collect();
-    // An empty change list happens only for an empty-file create
-    // (original "" and candidate ""): byte-identical modifies are rejected
-    // as NoopPatch before hunks run. No hunks means headers only.
-    if changes.is_empty() {
-        return Ok(Vec::new());
-    }
-    // Group change indices: a new hunk starts when the gap between
-    // consecutive changes exceeds the two adjacent context windows.
-    let mut groups: Vec<(usize, usize)> = Vec::new();
-    let mut start = changes[0];
-    let mut prev = changes[0];
-    for &i in &changes[1..] {
-        if i - prev > 2 * CONTEXT {
-            groups.push((start, prev));
-            start = i;
-        }
-        prev = i;
-    }
-    groups.push((start, prev));
-    Ok(groups
-        .into_iter()
-        .map(|(first, last)| {
-            let lo = first.saturating_sub(CONTEXT);
-            let hi = (last + CONTEXT + 1).min(annotated.len());
-            let ops = annotated[lo..hi].to_vec();
-            let old_start = ops[0].1;
-            let new_start = ops[0].2;
-            Hunk {
-                old_start,
-                new_start,
-                ops,
-            }
-        })
-        .collect())
-}
-
-fn render_hunk(out: &mut String, hunk: &Hunk, old: &SidedText<'_>, new: &SidedText<'_>) {
-    let ops = &hunk.ops;
-    let old_start = hunk.old_start;
-    let new_start = hunk.new_start;
-    let old_len = ops.iter().filter(|(op, _, _)| *op != Op::Ins).count();
-    let new_len = ops.iter().filter(|(op, _, _)| *op != Op::Del).count();
-    let old_head = if old_len == 0 {
-        old_start
-    } else {
-        old_start + 1
-    };
-    let new_head = if new_len == 0 {
-        new_start
-    } else {
-        new_start + 1
-    };
-    out.push_str(&format!(
-        "@@ -{old_head},{old_len} +{new_head},{new_len} @@\n"
-    ));
-    for (op, oi, ni) in ops {
-        match op {
-            Op::Eq => {
-                out.push(' ');
-                out.push_str(old.lines[*oi]);
-                out.push('\n');
-                let old_last = *oi + 1 == old.lines.len() && !old.ends_nl;
-                let new_last = *ni + 1 == new.lines.len() && !new.ends_nl;
-                if old_last || new_last {
-                    out.push_str("\\ No newline at end of file\n");
-                }
-            }
-            Op::Del => {
-                out.push('-');
-                out.push_str(old.lines[*oi]);
-                out.push('\n');
-                if *oi + 1 == old.lines.len() && !old.ends_nl {
-                    out.push_str("\\ No newline at end of file\n");
-                }
-            }
-            Op::Ins => {
-                out.push('+');
-                out.push_str(new.lines[*ni]);
-                out.push('\n');
-                if *ni + 1 == new.lines.len() && !new.ends_nl {
-                    out.push_str("\\ No newline at end of file\n");
-                }
-            }
-        }
-    }
 }
 
 #[cfg(test)]
@@ -377,6 +221,23 @@ mod tests {
         };
         let got = render_patch(&[patch]).expect("patch");
         assert_eq!(got, "--- /dev/null\n+++ b/empty/BUILD.bazel\n");
+    }
+
+    #[test]
+    fn canonical_headers_always_carry_counts() {
+        // `similar`'s GNU header would render `@@ -1 +1 @@`; `dx` keeps
+        // the canonical explicit `start,length` form.
+        let got = render_patch(&[modify("a.txt", "a\n", "b\n")]).expect("patch");
+        assert_eq!(got, "--- a/a.txt\n+++ b/a.txt\n@@ -1,1 +1,1 @@\n-a\n+b\n");
+    }
+
+    #[test]
+    fn removed_final_newline_marks_new_only() {
+        let got = render_patch(&[modify("a.txt", "one\n", "one")]).expect("patch");
+        assert_eq!(
+            got,
+            "--- a/a.txt\n+++ b/a.txt\n@@ -1,1 +1,1 @@\n-one\n+one\n\\ No newline at end of file\n"
+        );
     }
 
     #[test]
