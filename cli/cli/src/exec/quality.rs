@@ -735,6 +735,74 @@ mod tests {
     }
 
     #[test]
+    fn mixed_applied_and_not_applied_fail_together() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // mixed per-file results to emit applied and not_applied together
+        // and fail when any path is rejected.
+        let mut harness = Harness::new("mixed-apply");
+        harness.write_source("src/a.py", "x = 1\n");
+        harness.write_source("src/b.py", "a = 1\n");
+        let original_a = std::fs::read(harness.workspace.join("src/a.py")).expect("source");
+        let original_b = std::fs::read(harness.workspace.join("src/b.py")).expect("source");
+        let change_a = harness.replacement_at(
+            "src/a.py",
+            digest(&original_a).to_vec(),
+            vec![proto::Edit {
+                start_byte: 0,
+                end_byte: 1,
+                replacement: b"y".to_vec(),
+            }],
+        );
+        let change_b = harness.replacement_at(
+            "src/b.py",
+            digest(&original_b).to_vec(),
+            vec![proto::Edit {
+                start_byte: 0,
+                end_byte: 1,
+                replacement: b"b".to_vec(),
+            }],
+        );
+        let bytes = harness.result_full(
+            vec![
+                Harness::diagnostic("unused", true),
+                Harness::diagnostic_with(
+                    proto::Severity::Warning as i32,
+                    "lint-tool",
+                    "src/b.py",
+                    "unused",
+                    true,
+                ),
+            ],
+            vec![],
+            vec![change_a, change_b],
+            vec![
+                FileSnapshot {
+                    path: "src/a.py".to_owned(),
+                    digest: digest(&original_a).to_vec(),
+                },
+                FileSnapshot {
+                    path: "src/b.py".to_owned(),
+                    digest: digest(&original_b).to_vec(),
+                },
+            ],
+        );
+        harness.results.insert("//test:corpus".to_owned(), bytes);
+        harness.write_source("src/b.py", "z = 2\n");
+        let (code, out, err) = harness.run(&["lint", "--output=text"]);
+        assert_eq!(code, 1);
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/a.py")).expect("source"),
+            b"y = 1\n"
+        );
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/b.py")).expect("source"),
+            b"z = 2\n"
+        );
+        assert!(out.contains("Applied 1 file(s)."));
+        assert!(err.contains("Not applied: src/b.py (stale_source)"));
+    }
+
+    #[test]
     fn missing_source_is_unreadable() {
         let mut harness = Harness::new("missing-src");
         harness.write_source("src/a.py", "x = 1\n");
