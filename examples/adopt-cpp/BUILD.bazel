@@ -1,0 +1,20 @@
+"""Adopted foreign C++ tree (#189): corpus ownership for arrival files."""
+
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+# Arrival files (the foreign tree ships no MODULE.bazel and no BUILD
+# files at arrival; the `greet/` and `solo/` BUILD files below are
+# generator-owned `//gazelle/cc:gazelle` output plus handwritten
+# `cc_test` owners, see below). Generated files stay checked in:
+# regeneration must be a no-op. Each generated subpackage carries its own
+# `corpus` rule: handwritten test owners survive regeneration, while
+# cross-package file labels cannot reach into a subpackage. This root
+# rule owns only the root arrival files.
+real_source_target(
+    name = "corpus",
+    aspect_hints = ["//quality:corpus_vale_config"],
+    markdown_srcs = ["README.md"],
+    starlark_srcs = ["BUILD.bazel"],
+)

@@ -1,0 +1,31 @@
+"""Adopted foreign C++ tree (#189): handwritten owners preserved through generation."""
+
+load("@rules_dx//cc/rules:defs.bzl", "cc_library", "cc_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+# Handwritten: the generator never emits cc_test; test-owned `*_test.cc`
+# stays out of the generated library and this rule survives regeneration.
+cc_test(
+    name = "greet_test",
+    srcs = ["greet_test.cc"],
+    deps = [":greet"],
+)
+
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
+
+cc_library(
+    name = "greet",
+    srcs = [
+        "greet.cc",
+        "helper.cc",
+    ],
+    hdrs = [
+        "greet.h",
+        "helper.h",
+    ],
+)
