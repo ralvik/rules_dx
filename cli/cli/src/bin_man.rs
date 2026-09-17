@@ -15,6 +15,7 @@
 use std::io::Write;
 use std::path::PathBuf;
 
+// LCOV_EXCL_START - reason: thin build-step binary; man-page rendering is verified by the man_pages genrule build, not unit coverage.
 fn main() {
     // Structured diagnostics (issue #232): build-step failures report via
     // `tracing::error!` with the legacy message text; init is idempotent
@@ -50,3 +51,4 @@ fn main() {
         std::process::exit(1);
     });
 }
+// LCOV_EXCL_STOP - reason: end of thin build-step binary exclusion.
