@@ -22,6 +22,10 @@
 //! line directly above it, and the reason text after the colon must be
 //! non-empty.
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 use std::collections::BTreeMap;
 
 /// Typed LCOV gate failure (issue #230).

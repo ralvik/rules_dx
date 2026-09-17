@@ -45,6 +45,10 @@
 //! labels; the frozen public load-label string, workflow/pin representation,
 //! and `dx init` template emission stay deferred (M30).
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 // ---------------------------------------------------------------------------
 // Event and revision planning (M27 WP1 slice 2).
 // ---------------------------------------------------------------------------

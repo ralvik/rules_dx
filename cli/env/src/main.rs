@@ -14,6 +14,10 @@
 //! With no staged-input flags the default `environment_tree` travels in
 //! this binary's runfiles; pass both flags to install any other tree.
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 // LCOV_EXCL_START - reason: thin binary shim; flag parsing, workspace discovery, and runfiles location are operational behaviors verified by build and bootstrap execution, not unit coverage.
 use std::path::{Path, PathBuf};
 use std::time::Duration;

@@ -9,11 +9,16 @@
 # #238 as each crate's non-test code goes `expect`/`unwrap`-free, via
 # `#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]`
 # at the crate root (`cfg_attr(not(test))` keeps `rust_test` bodies
-# ergonomic). Pilot crates: `dx_digest`, `dx_diff`, `dx_bep`,
-# `dx_atomic_fs`, `dx_fingerprint`, plus the trivially clean leaves
+# ergonomic). All `cli/*` crates now carry the deny (verified zero
+# `.expect(`/`.unwrap(` in non-test code via `rg` before the `#[cfg(test)]`
+# marker, with `exec/test_support.rs` exempt as `#[cfg(test)]`-only):
+# `dx_digest`, `dx_diff`, `dx_bep`, `dx_atomic_fs`, `dx_fingerprint`,
 # `dx_path`, `dx_schema`, `dx_proto_validate`, `dx_qualification`,
-# `dx_docgen` (zero `.expect(`/`.unwrap(` in non-test code, verified by
-# `rg '\.(expect|unwrap)\('`). Adding the deny to a crate with
+# `dx_docgen`, plus `dx_adopt`, `dx_apply`, `dx_audit`, `dx_ci`,
+# `dx_clean`, `dx_cli` (+ `dx`/`dx_man` binaries), `dx_codegen`, `dx_env`
+# (+ `env` binary), `dx_env_plan`, `dx_lcov`, `dx_output`, `dx_process`,
+# `dx_roots`, `dx_setup`, `dx_update`, and test-only `dx_test_scratch`.
+# Adding the deny to a crate with
 # remaining infallible paths (e.g. `dx_cli reports`/`finalize` before
 # 1302877/b2c0c13) turns those paths red, so extend the pilot list only
 # after the backfill for that crate lands.

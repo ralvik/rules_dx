@@ -7,6 +7,10 @@
 //! It never renders subprocess argument vectors, option values,
 //! environment values, or reconstructed shell commands.
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 use std::ffi::OsStr;
 use std::io;
 use std::path::{Path, PathBuf};

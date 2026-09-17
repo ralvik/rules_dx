@@ -8,6 +8,10 @@
 //! subcommands, so the grammar yields one page; per-command pages arrive
 //! if the grammar ever gains subcommands.
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 use std::io::Write;
 use std::path::PathBuf;
 

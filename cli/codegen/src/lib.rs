@@ -27,6 +27,10 @@
 //! resolves the merged plan to deterministic mirror leaves
 //! (`logical_path` to full BEP artifact path) for setup to commit.
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 

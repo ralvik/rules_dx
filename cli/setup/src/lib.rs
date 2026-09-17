@@ -16,6 +16,10 @@
 //! dangle until generations exist (ordinary host missing-target behavior,
 //! never auto-repair).
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};

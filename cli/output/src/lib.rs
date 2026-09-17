@@ -12,6 +12,10 @@
 //! JSON objects serialize with `serde_json`'s default key ordering; NDJSON
 //! validity never depends on key order. Consumers parse values, not bytes.
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 use serde_json::{json, Value};
 
 // ---------------------------------------------------------------------------

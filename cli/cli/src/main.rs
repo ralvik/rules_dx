@@ -8,6 +8,10 @@
 //! forwarding to the active Bazel process with shell signal semantics,
 //! and exit-code propagation.
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 // LCOV_EXCL_START - reason: thin binary shim; process wiring, signal forwarding, and stdio routing are operational behaviors verified by build and dogfood execution, not unit coverage.
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};

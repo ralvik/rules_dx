@@ -29,6 +29,10 @@
 //! exception lifecycle live in [`license_policy`]. Notice-text inputs
 //! and the SPDX report-shape pins live in [`license_notice`].
 
+// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 pub mod exception;
 pub mod license_expr;
 pub mod license_notice;
