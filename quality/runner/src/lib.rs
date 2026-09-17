@@ -1215,4 +1215,41 @@ mod tests {
         assert_eq!(naive.as_bytes(), "GOOD\n".as_bytes());
         assert!(quality_result::validate(&result).is_ok());
     }
+
+    #[test]
+    fn mutation_outcome_depends_on_bytes_not_git_status() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // mutation fixtures with tracked, modified, staged, and untracked
+        // inputs to depend on current bytes and source digests rather than
+        // Git status. The runner takes only (path, bytes), so model each
+        // Git status as metadata stripped before the call and require
+        // identical manifests; different bytes under one status must
+        // diverge, proving bytes are load-bearing and status is not.
+        let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let statuses = ["tracked", "modified", "staged", "untracked"];
+        let mut manifests = Vec::with_capacity(statuses.len());
+        for status in statuses {
+            // Git status never enters `FileInput`: only path + bytes do.
+            let _ = status;
+            let files = vec![file("src/lib.rs", "BAD\n")];
+            let result = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
+            assert_eq!(result.convergence, Convergence::Stable as i32, "{status}");
+            assert_eq!(result.replacements.len(), 1, "{status}");
+            assert_eq!(
+                result.replacements[0].original_digest,
+                digest("BAD\n".as_bytes()),
+                "{status}"
+            );
+            assert!(validate(&result).is_ok(), "{status}");
+            manifests.push(encode_validated(&result).unwrap());
+        }
+        for other in manifests.iter().skip(1) {
+            assert_eq!(&manifests[0], other);
+        }
+        // Same simulated status with different bytes diverges.
+        let clean = vec![file("src/lib.rs", "GOOD\n")];
+        let clean_result = run_pipeline("//quality:test", "lint", &stages, &clean).unwrap();
+        assert!(clean_result.replacements.is_empty());
+        assert_ne!(manifests[0], encode_validated(&clean_result).unwrap());
+    }
 }
