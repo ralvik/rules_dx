@@ -2053,4 +2053,73 @@ mod tests {
         let kept = run_pipeline("//quality:test", "lint", &keep_stages, &bad_files).unwrap();
         assert_ne!(fixed.terminal_snapshot, kept.terminal_snapshot);
     }
+
+    #[test]
+    fn interruption_leaves_no_partially_written_file() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // interruption to leave no partially written file and only complete
+        // earlier path commits in deterministic path order. The runner emits
+        // one whole-file edit per stable changed file, so every prefix of
+        // the sorted replacements must leave each path fully original or
+        // fully terminal, and the full prefix must equal the terminal map.
+        let stages = vec![stage(
+            "lint-a",
+            &["rust"],
+            &["src/c.rs", "src/a.rs", "src/b.rs"],
+        )];
+        let mut initial = BTreeMap::new();
+        initial.insert("src/c.rs".to_owned(), "BAD c\n".to_owned());
+        initial.insert("src/b.rs".to_owned(), "BAD b\n".to_owned());
+        initial.insert("src/a.rs".to_owned(), "BAD a\n".to_owned());
+        let mut terminal = BTreeMap::new();
+        terminal.insert("src/c.rs".to_owned(), "GOOD c\n".to_owned());
+        terminal.insert("src/b.rs".to_owned(), "GOOD b\n".to_owned());
+        terminal.insert("src/a.rs".to_owned(), "GOOD a\n".to_owned());
+        let result = assemble(
+            "//quality:test",
+            Capability::Lint as i32,
+            &stages,
+            &initial,
+            &terminal,
+            (Vec::new(), Vec::new()),
+            (2, Convergence::Stable),
+        )
+        .unwrap();
+        assert_eq!(result.replacements.len(), 3);
+        for edits in &result.replacements {
+            let original = initial.get(&edits.path).expect("staged path");
+            assert_eq!(edits.edits.len(), 1);
+            assert_eq!(edits.edits[0].start_byte, 0);
+            assert_eq!(edits.edits[0].end_byte, original.len() as u64);
+        }
+        let paths: Vec<&str> = result
+            .replacements
+            .iter()
+            .map(|edits| edits.path.as_str())
+            .collect();
+        assert_eq!(paths, vec!["src/a.rs", "src/b.rs", "src/c.rs"]);
+        for prefix_len in 0..=result.replacements.len() {
+            let mut state = initial.clone();
+            for edits in result.replacements.iter().take(prefix_len) {
+                state.insert(
+                    edits.path.clone(),
+                    String::from_utf8(edits.edits[0].replacement.clone()).unwrap(),
+                );
+            }
+            for (path, body) in &state {
+                let original = initial.get(path).expect("staged path");
+                let terminal_body = terminal.get(path).expect("staged path");
+                assert!(body == original || body == terminal_body);
+            }
+        }
+        let mut full = initial.clone();
+        for edits in &result.replacements {
+            full.insert(
+                edits.path.clone(),
+                String::from_utf8(edits.edits[0].replacement.clone()).unwrap(),
+            );
+        }
+        assert_eq!(full, terminal);
+        assert!(validate(&result).is_ok());
+    }
 }
