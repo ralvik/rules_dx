@@ -1,0 +1,44 @@
+{
+  "benchmark": "rules_lint_comparison_measured",
+  "seed_harness": {
+    "files": 200,
+    "dirty_files": 20,
+    "dirty_pct": 10,
+    "seed": 86,
+    "tree_sha256": "0a9fbc0f5244c1b86c02f0ed26c043f16f87f97e82dfccb4cc97297f2d8283de",
+    "generation_ms": 78.8
+  },
+  "quality_sample": {
+    "target": "//perf:corpus",
+    "aspects": [
+      "//quality:real_aspects.bzl%real_lint_aspect",
+      "//quality:real_aspects.bzl%real_format_aspect"
+    ],
+    "output_group": "dx_results",
+    "aquery_actions": 2,
+    "mnemonics": [
+      "DxRealQualityFormat",
+      "DxRealQualityLint"
+    ]
+  },
+  "runner_test_timing": {
+    "target": "//quality/runner:quality_runner_test",
+    "aquery_actions": 6,
+    "cold_ish_wall_ms": 1811.9,
+    "cold_ish_executed": "1 out of 1 (with --nocache_test_results, server warm)",
+    "warm_wall_ms": 989.8,
+    "warm_executed": "0 out of 1 (cached)",
+    "cache_hit_evidence": "second consecutive run executes 0 actions; first with --nocache_test_results executes 1"
+  },
+  "peak_memory": {
+    "collected": false,
+    "note": "not collected: /usr/bin/time -v not portable on seed host; record where cheap per methodology, gap tracked here not claimed"
+  },
+  "host": "linux_x86_64",
+  "bazel_version": "9.2.0",
+  "rules_lint_pin": "v2.8.0",
+  "date": "2026-09-17",
+  "gate": false,
+  "claim": "none",
+  "note": "measured seed-host runs, report-not-gate; no parity claim. Synthetic tree is deterministic (see rules_lint_comparison.sh); quality sample is //perf:corpus lint+format (2 actions); runner timing is server-warm with/without --nocache_test_results, not post-shutdown cold. Post-shutdown cold + rules_lint-side numbers follow next."
+}

@@ -90,6 +90,24 @@ sh_test(
     tags = ["no-coverage"],
 )
 
+# Measured-results validation (issue #86): checked-in seed-host numbers
+# (perf/rules_lint_results.json) match a fresh harness regeneration,
+# pins recorded, quality-sample aquery + timing present, report-not-gate.
+# Tagged `no-coverage`: timing data stays out of the coverage denominator.
+sh_test(
+    name = "rules_lint_results_test",
+    srcs = ["rules_lint_results_test.sh"],
+    args = [
+        "$(rootpath :rules_lint_results.json)",
+        "$(rootpath :rules_lint_comparison.sh)",
+    ],
+    data = [
+        "rules_lint_comparison.sh",
+        "rules_lint_results.json",
+    ],
+    tags = ["no-coverage"],
+)
+
 # Repository corpus: benchmark docs owned for direct-Bazel dogfood under
 # the canonical real_fixture_policy. Scripts and baseline data are CI
 # tooling/inputs, never corpus sources (same class as //tools/ci scripts).
