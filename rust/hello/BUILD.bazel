@@ -3,6 +3,7 @@
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//deploy/rules:archive.bzl", "archive_release")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_binary", "rust_library", "rust_proc_macro", "rust_shared_library", "rust_static_library", "rust_test")
 load("//rust/rules:probe.bzl", "dx_wrapper_cc_subject", "dx_wrapper_subject")
@@ -224,5 +225,33 @@ sh_test(
     srcs = ["hello_output_test.sh"],
     args = ["$(rootpath :hello)"],
     data = [":hello"],
+    tags = ["no-coverage"],
+)
+
+# Documented deploy pattern (issue #181): deploy targets live next to the
+# app they release. `bazel run //rust/hello:release` (or
+# `dx deploy //rust/hello:release`) verifies the checksum and copies
+# `release.tar.gz` + `release.tar.gz.sha256` to the output directory.
+archive_release(
+    name = "release",
+    app = ":hello",
+)
+
+# Release contents + checksum validity on the real app binary. Tagged
+# `no-coverage`: process-spawning tests stay out of the coverage
+# denominator per the repo coverage preset. No corpus entry: shell
+# sources have no `real_source_target` class.
+sh_test(
+    name = "release_verify",
+    srcs = ["//deploy/rules:archive_verify.sh"],
+    args = [
+        "$(rootpath :release_archive)",
+        "$(rootpath :release_checksum)",
+        "hello",
+    ],
+    data = [
+        ":release_archive",
+        ":release_checksum",
+    ],
     tags = ["no-coverage"],
 )
