@@ -19,6 +19,7 @@ dx_rust_crate(
         "src/audit.rs",
         "src/caller.rs",
         "src/fork.rs",
+        "src/preset.rs",
         "src/reporting.rs",
         "src/rerun.rs",
         "src/triggers.rs",
