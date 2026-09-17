@@ -26,6 +26,7 @@ dx_rust_crate(
     extra_test_deps = ["//cli/test_scratch:dx_test_scratch"],
     srcs = [
         "src/completion.rs",
+        "src/hooks.rs",
         "src/inspect.rs",
         "src/lib.rs",
         "src/migrate.rs",
