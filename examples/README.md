@@ -13,6 +13,7 @@ Substantial worked examples live here.
 - [adopt-kotlin](adopt-kotlin/) foreign Maven-layout tree adopted by the Kotlin Gazelle extension.
 - [adopt-scala](adopt-scala/) foreign sbt-layout tree adopted by the Scala Gazelle extension.
 - [adopt-csharp](adopt-csharp/) foreign SDK-style tree adopted by the C# Gazelle extension.
+- [adopt-fsharp](adopt-fsharp/) foreign SDK-style tree adopted by the F# Gazelle extension.
 - [adopt-polyglot](adopt-polyglot/) foreign Python+Rust+JS/TS tree adopted package by package.
 
 Each example records exact commands and expected evidence in its own `README.md`. Per-foundation external-consumer workspaces plus acquisition/laziness proof are tracked in [#85](https://github.com/ralvik/rules_dx/issues/85).
