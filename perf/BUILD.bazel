@@ -1,0 +1,83 @@
+"""Bazel-owned benchmark targets emitting JSON-lines results (issue #215).
+
+Microbenchmarks (Rust-side startup/parsing/resolution/rendering proxies) run
+per-PR; scenario benchmarks (scope resolution, generate --check warm) run on
+`main` plus `workflow_dispatch` (free-infra budget). Cold generate --check
+runs in the perf workflow after `bazel shutdown` so server startup is
+measured. No `dx perf` command (ADR 0006 minimal surface).
+"""
+
+load("@rules_python//python:defs.bzl", "py_binary")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+sh_binary(
+    name = "bench_micro",
+    srcs = ["bench.sh"],
+    args = ["micro"],
+)
+
+sh_binary(
+    name = "bench_scenario_warm",
+    srcs = ["bench.sh"],
+    args = ["warm"],
+)
+
+sh_binary(
+    name = "bench_cold",
+    srcs = ["bench.sh"],
+    args = ["cold"],
+)
+
+sh_binary(
+    name = "bench_all",
+    srcs = ["bench.sh"],
+    args = ["all"],
+)
+
+py_binary(
+    name = "compare",
+    srcs = ["compare.py"],
+    main = "compare.py",
+)
+
+py_binary(
+    name = "regenerate",
+    srcs = ["regenerate.py"],
+    main = "regenerate.py",
+)
+
+# Comparison-machinery self-test: feeds synthetic JSON-lines through the
+# real compare.py and proves the contract — gated absolute breach fails,
+# relative regression warns-but-passes, unknown benchmarks warn-but-pass,
+# at-baseline input passes clean. Tagged `no-coverage`: timing harnesses
+# stay out of the coverage denominator per the repo coverage preset.
+sh_test(
+    name = "perf_self_test",
+    srcs = ["perf_self_test.sh"],
+    args = [
+        "$(rootpath :compare.py)",
+        "$(rootpath :baseline.json)",
+    ],
+    data = [
+        "baseline.json",
+        "compare.py",
+    ],
+    tags = ["no-coverage"],
+)
+
+# Repository corpus: benchmark docs owned for direct-Bazel dogfood under
+# the canonical real_fixture_policy. Scripts and baseline data are CI
+# tooling/inputs, never corpus sources (same class as //tools/ci scripts).
+real_source_target(
+    name = "corpus",
+    aspect_hints = ["//quality:corpus_vale_config"],
+    markdown_siblings = [
+        "//docs:performance.md",
+    ],
+    markdown_srcs = ["README.md"],
+    starlark_srcs = ["BUILD.bazel"],
+)
