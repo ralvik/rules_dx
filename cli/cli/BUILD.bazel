@@ -21,6 +21,7 @@ rust_library(
     srcs = [
         "src/adopt.rs",
         "src/args.rs",
+        "src/args/command.rs",
         "src/exec.rs",
         "src/exec/audit.rs",
         "src/exec/bazel.rs",
