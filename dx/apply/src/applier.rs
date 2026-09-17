@@ -7,7 +7,7 @@
 //! so validated operations cannot escape the root.
 
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use super::envelope::{sha256_hex, Envelope};
 use super::validators::{validate, ValidationError};
@@ -34,22 +34,36 @@ impl FileSystem for RealFileSystem {
     }
 
     fn write_atomic(&self, path: &Path, content: &[u8]) -> io::Result<()> {
+        use std::io::Write as _;
         let parent = path
             .parent()
             .filter(|parent| !parent.as_os_str().is_empty());
         if let Some(parent) = parent {
             std::fs::create_dir_all(parent)?;
         }
-        let mut staging = PathBuf::from(path);
-        let staged_name = format!(
-            ".{}.dx-apply-tmp",
-            path.file_name()
-                .map(|name| name.to_string_lossy().into_owned())
-                .unwrap_or_default()
-        );
-        staging.set_file_name(staged_name);
-        std::fs::write(&staging, content)?;
-        std::fs::rename(&staging, path)
+        // Stage in the target directory so the final persist stays an
+        // atomic same-filesystem rename. Bare file names (no parent) stage
+        // in the current directory for the same reason.
+        let staging_dir: &Path = parent.unwrap_or(Path::new("."));
+        // OS-random `O_EXCL`-claimed staging file (issue #74 dx-atomic-fs
+        // direction): replaces the former fixed `.name.dx-apply-tmp`
+        // sibling, which collided under concurrent applies and left stale
+        // files on crash. `NamedTempFile` removes the staging file on drop
+        // unless persisted.
+        let mut staging = tempfile::NamedTempFile::new_in(staging_dir)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt as _;
+            // `std::fs::write` creates `0666 & !umask` (typically 0644);
+            // `NamedTempFile` creates 0600, so restore the conventional
+            // non-executable file mode before persisting.
+            staging
+                .as_file()
+                .set_permissions(std::fs::Permissions::from_mode(0o644))?;
+        }
+        staging.write_all(content)?;
+        staging.persist(path).map_err(|err| err.error)?;
+        Ok(())
     }
 }
 
@@ -139,6 +153,7 @@ pub fn apply_envelope(
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use std::path::PathBuf;
     use std::sync::{Mutex, MutexGuard};
 
     use super::super::envelope::{FileOperation, ENVELOPE_VERSION};
@@ -330,7 +345,36 @@ mod tests {
             fs.read(&nested).expect("read back"),
             Some(b"hello\n".to_vec())
         );
-        assert!(!dir.join("sub").join(".a.txt.dx-apply-tmp").exists());
+        // Staging uses OS-random `O_EXCL` names with drop-cleanup: no
+        // stray staging file remains beside the target after success.
+        let entries: Vec<_> = std::fs::read_dir(dir.join("sub"))
+            .expect("list target dir")
+            .map(|entry| {
+                entry
+                    .expect("dir entry")
+                    .file_name()
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .collect();
+        assert_eq!(entries, vec!["a.txt".to_owned()]);
+        // Overwrites replace the target atomically through the same path.
+        fs.write_atomic(&nested, b"updated\n").expect("overwrite");
+        assert_eq!(
+            fs.read(&nested).expect("read overwrite"),
+            Some(b"updated\n".to_vec())
+        );
+        let entries: Vec<_> = std::fs::read_dir(dir.join("sub"))
+            .expect("list target dir after overwrite")
+            .map(|entry| {
+                entry
+                    .expect("dir entry")
+                    .file_name()
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .collect();
+        assert_eq!(entries, vec!["a.txt".to_owned()]);
         assert!(fs.read(&dir).is_err());
         // A bare file name has no parent directory to create.
         let bare = PathBuf::from("dx-apply-bare-tmp.txt");
