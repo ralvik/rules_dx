@@ -319,4 +319,38 @@ mod tests {
             Some(b"Xb".to_vec())
         );
     }
+
+    #[test]
+    fn change_event_is_deterministic_and_reconstructs_candidate() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // one deterministic exact change event per valid candidate path,
+        // reconstructable from digest plus UTF-8 ranges and replacements
+        // with byte-for-byte equality to default mode planned input.
+        let original = b"BAD\n";
+        let terminal = b"GOOD\n";
+        let change = FileChange {
+            path: "src/lib.rs".to_owned(),
+            original_digest: digest(original),
+            edits: vec![(0, original.len() as u64, terminal.to_vec())],
+        };
+        let first = change_event_for(&change).expect("change event");
+        let second = change_event_for(&change).expect("change event");
+        assert_eq!(first.path, "src/lib.rs");
+        assert_eq!(first.path, second.path);
+        assert_eq!(first.source_digest, second.source_digest);
+        assert_eq!(first.source_digest, Some(hex_digest(&digest(original))));
+        assert_eq!(first.edits.len(), 1);
+        assert_eq!(first.edits[0].start, 0);
+        assert_eq!(first.edits[0].end, original.len() as u64);
+        assert_eq!(first.edits[0].replacement, "GOOD\n");
+        let planned = apply_to_bytes(original, &change.edits).expect("apply");
+        assert_eq!(planned, terminal);
+        let other = FileChange {
+            path: "src/other.rs".to_owned(),
+            original_digest: digest(original),
+            edits: vec![(0, original.len() as u64, terminal.to_vec())],
+        };
+        let other_event = change_event_for(&other).expect("other event");
+        assert_ne!(first.path, other_event.path);
+    }
 }
