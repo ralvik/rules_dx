@@ -9,8 +9,8 @@
 # other foundations' ecosystem repos, so unused foundations contribute
 # no targets/repos to that consumer's build.
 #
-# Covered here (minimum per #85 plus Go + C# follow-ups): Rust, Python,
-# JS/TS, Go, C#. Markers are
+# Covered here (minimum per #85 plus Go + C# + Kotlin follow-ups): Rust,
+# Python, JS/TS, Go, C#, Kotlin. Markers are
 # ecosystem-specific Bazel repos, not shared base toolchains
 # (bazel_tools/skylib/platforms/rules_java appear across closures and
 # are intentionally not asserted here).
@@ -58,16 +58,18 @@ check_example() { # example, want-marker, forbidden-markers...
   done
 }
 
-# Rust: owns rules_rust; Python/JS/Go/DotNet contribute nothing.
-check_example adopt-rust "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_go" "rules_dotnet"
-# Python: owns aspect_rules_py; Rust/JS/Go/DotNet contribute nothing.
-check_example adopt-python "aspect_rules_py" "rules_rust" "aspect_rules_js" "rules_go" "rules_dotnet"
-# JS/TS: owns aspect_rules_js; Rust/Python/Go/DotNet contribute nothing.
-check_example adopt-js-ts "aspect_rules_js" "rules_rust" "aspect_rules_py" "rules_go" "rules_dotnet"
-# Go: owns rules_go; Rust/Python/JS/DotNet contribute nothing.
-check_example adopt-go "rules_go" "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_dotnet"
-# C#: owns rules_dotnet; Rust/Python/JS/Go contribute nothing.
-check_example adopt-csharp "rules_dotnet" "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_go"
+# Rust: owns rules_rust; Python/JS/Go/DotNet/Kotlin contribute nothing.
+check_example adopt-rust "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_go" "rules_dotnet" "rules_kotlin"
+# Python: owns aspect_rules_py; Rust/JS/Go/DotNet/Kotlin contribute nothing.
+check_example adopt-python "aspect_rules_py" "rules_rust" "aspect_rules_js" "rules_go" "rules_dotnet" "rules_kotlin"
+# JS/TS: owns aspect_rules_js; Rust/Python/Go/DotNet/Kotlin contribute nothing.
+check_example adopt-js-ts "aspect_rules_js" "rules_rust" "aspect_rules_py" "rules_go" "rules_dotnet" "rules_kotlin"
+# Go: owns rules_go; Rust/Python/JS/DotNet/Kotlin contribute nothing.
+check_example adopt-go "rules_go" "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_dotnet" "rules_kotlin"
+# C#: owns rules_dotnet; Rust/Python/JS/Go/Kotlin contribute nothing.
+check_example adopt-csharp "rules_dotnet" "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_go" "rules_kotlin"
+# Kotlin: owns rules_kotlin; Rust/Python/JS/Go/DotNet contribute nothing.
+check_example adopt-kotlin "rules_kotlin" "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_go" "rules_dotnet"
 
 echo "examples laziness query: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
