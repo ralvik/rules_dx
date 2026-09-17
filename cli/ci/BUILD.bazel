@@ -16,6 +16,7 @@ dx_rust_crate(
     deps = ["thiserror"],
     srcs = [
         "src/lib.rs",
+        "src/fork.rs",
         "src/reporting.rs",
         "src/revision.rs",
         "src/scheduling.rs",
