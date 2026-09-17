@@ -214,20 +214,20 @@ mod tests {
 
     #[test]
     fn read_pin_round_trips_through_workspace() {
-        let dir = std::env::temp_dir().join(format!("dx-skew-pin-{}", std::process::id()));
+        let scratch = dx_test_scratch::scratch("dx-skew-pin-");
+        let dir = scratch.path().to_path_buf();
         let _ = std::fs::create_dir_all(dir.join(".dx"));
         std::fs::write(dir.join(".dx/version"), "9.9.9\n").expect("write pin");
         let pin = read_pin(&dir);
         assert_eq!(pin, "9.9.9");
         assert!(is_skewed(&pin));
-        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn read_pin_defaults_to_empty_off_workspace() {
-        let dir = std::env::temp_dir().join(format!("dx-skew-nopin-{}", std::process::id()));
+        let scratch = dx_test_scratch::scratch("dx-skew-nopin-");
+        let dir = scratch.path().to_path_buf();
         let _ = std::fs::create_dir_all(&dir);
         assert_eq!(read_pin(&dir), "");
-        let _ = std::fs::remove_dir_all(&dir);
     }
 }
