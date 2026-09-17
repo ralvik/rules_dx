@@ -15,9 +15,9 @@ use std::path::Path;
 
 use dx_process::{launcher_argv0, WORKFLOW_STARTUP_OPTS};
 
+use super::classify::{classify_scopes, PackageCache};
 use super::{
-    classify_scopes, first_line, ownership_set_expression, quote_set, run_label_query,
-    PackageCache, QueryRunner, ResolveError,
+    first_line, ownership_set_expression, quote_set, run_label_query, QueryRunner, ResolveError,
 };
 
 /// Batched runnable file-owner expression (O52): depth-1 reverse

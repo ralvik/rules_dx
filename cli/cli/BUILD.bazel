@@ -55,6 +55,7 @@ rust_library(
         "src/reports/lcov.rs",
         "src/reports/sarif.rs",
         "src/resolve.rs",
+        "src/resolve/classify.rs",
         "src/resolve/run_deploy.rs",
         "src/resolve/test_map.rs",
         "src/skew.rs",
