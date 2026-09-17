@@ -18,15 +18,20 @@
 //! forwarding `bazel clean`.
 //!
 //! Domain split (issue #236): the command vocabulary lives in the
-//! `command` module. This facade keeps parsing plus the shared types;
-//! the public path stays `crate::args::Command` via the re-export below.
+//! `command` module and shell-completion rendering in the `completion`
+//! module. This facade keeps parsing plus the shared types; the public
+//! paths stay `crate::args::Command` and
+//! `crate::args::{COMPLETION_SHELLS, render_completion}` via the
+//! re-exports below.
 
 use clap::Parser;
 use dx_output::{OutputMode, Threshold};
 
 pub mod command;
+pub mod completion;
 
 pub use command::Command;
+pub use completion::{render_completion, COMPLETION_SHELLS};
 
 /// Build profile vocabulary (issue #179, ADR 0021): `--debug` selects
 /// `dx_debug` (`dbg`), the bare invocation selects `dx_dev`
@@ -515,79 +520,6 @@ fn clap_suggestion(error: &clap::Error) -> Option<String> {
         }
     }
     None
-}
-
-/// Shells covered by `dx completion` (contract freeze).
-pub const COMPLETION_SHELLS: &[&str] = &["bash", "zsh", "fish", "powershell"];
-
-/// Renders one completion script from the [`Cli`] grammar definition
-/// (issue #202): commands, flags, and fixed value sets come from the
-/// same source that feeds parsing and `--help`, so generated scripts
-/// cannot drift from the command reference. Generation is an explicit
-/// `dx completion` cost only, never per-invocation. Unknown shells fail
-/// with the contract's `unknown-shell` text.
-pub fn render_completion(shell: &str) -> Result<String, ArgsError> {
-    use clap::CommandFactory;
-    if !COMPLETION_SHELLS.contains(&shell) {
-        return Err(ArgsError::UnknownShell {
-            shell: shell.to_owned(),
-        });
-    }
-    let generator =
-        shell
-            .parse::<clap_complete::aot::Shell>()
-            .map_err(|_| ArgsError::UnknownShell {
-                shell: shell.to_owned(),
-            })?;
-    let mut command = Cli::command();
-    let mut script = Vec::new();
-    clap_complete::generate(generator, &mut command, "dx", &mut script);
-    let mut text = String::from_utf8(script).map_err(|_| ArgsError::UnknownShell {
-        shell: shell.to_owned(),
-    })?;
-    // Fish/powershell generators omit positional `ValueEnum` values, so
-    // commands would be missing there while bash/zsh list them. Append
-    // command completions derived from [`Command`] (same source as
-    // parsing), never hand-maintained, so every shell completes every
-    // command (issue #202).
-    match shell {
-        "fish" => {
-            use clap::ValueEnum;
-            text.push_str("\n# dx commands from the single Command source (issue #202)\n");
-            for cmd in Command::value_variants() {
-                let desc = cmd.describe().replace('\'', "\\'");
-                text.push_str(&format!(
-                    "complete -c dx -f -n '__fish_use_subcommand' -a {} -d '{}'\n",
-                    cmd.name(),
-                    desc
-                ));
-            }
-        }
-        "powershell" => {
-            use clap::ValueEnum;
-            let mut additions = String::new();
-            for cmd in Command::value_variants() {
-                let desc = cmd.describe().replace('\'', "''");
-                additions.push_str(&format!(
-                    "            [CompletionResult]::new('{}', '{}', [CompletionResultType]::ParameterValue, '{}')\n",
-                    cmd.name(),
-                    cmd.name(),
-                    desc
-                ));
-            }
-            let anchor = "            break\n        }\n    })";
-            if let Some(pos) = text.find(anchor) {
-                text.insert_str(pos, &additions);
-            } else {
-                text.push_str("\n# dx commands from the single Command source (issue #202)\n");
-                for cmd in Command::value_variants() {
-                    text.push_str(&format!("# dx {}\n", cmd.name()));
-                }
-            }
-        }
-        _ => {}
-    }
-    Ok(text)
 }
 
 /// Finds the command word for `--help` routing: the first positional
