@@ -19,5 +19,6 @@ dx_rust_crate(
         "src/revision.rs",
         "src/scheduling.rs",
         "src/selection.rs",
+        "src/supersession.rs",
     ],
 )
