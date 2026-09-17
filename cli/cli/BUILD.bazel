@@ -45,7 +45,6 @@ rust_library(
     ),
     crate_name = "dx_cli",
     crate_root = "src/lib.rs",
-    edition = "2021",
     deps = crate_deps(
         [
             "base64",
@@ -92,7 +91,6 @@ rust_binary(
     ),
     crate_name = "dx",
     crate_root = "src/main.rs",
-    edition = "2021",
     visibility = ["//visibility:public"],
     deps = crate_deps(
         [
@@ -140,7 +138,6 @@ rust_binary(
     ),
     crate_name = "dx_man",
     crate_root = "src/bin_man.rs",
-    edition = "2021",
     deps = crate_deps(
         [
             "base64",

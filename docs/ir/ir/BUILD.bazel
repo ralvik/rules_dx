@@ -19,7 +19,6 @@ rust_library(
     ),
     crate_name = "documentation_ir",
     crate_root = "src/lib.rs",
-    edition = "2021",
     deps = [
         "//cli/path:dx_path",
         "//cli/proto_validate:dx_proto_validate",

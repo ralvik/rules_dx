@@ -24,7 +24,6 @@ rust_library(
     ),
     crate_name = "dx_env",
     crate_root = "src/lib.rs",
-    edition = "2021",
     deps = crate_deps(
         [
             "clap",
@@ -52,7 +51,6 @@ rust_binary(
     crate_name = "env",
     crate_root = "src/main.rs",
     data = ["//env:default_tree"],
-    edition = "2021",
     visibility = ["//visibility:public"],
     deps = crate_deps(
         [

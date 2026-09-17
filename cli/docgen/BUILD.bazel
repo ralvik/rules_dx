@@ -19,7 +19,6 @@ rust_library(
     ),
     crate_name = "dx_docs",
     crate_root = "src/lib.rs",
-    edition = "2021",
     deps = crate_deps(
         ["thiserror"],
         package_name = "cli/dx_docs",

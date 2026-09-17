@@ -20,7 +20,6 @@ rust_library(
     ),
     crate_name = "dx_clean",
     crate_root = "src/lib.rs",
-    edition = "2021",
     deps = crate_deps(
         [
             "globset",

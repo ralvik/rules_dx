@@ -20,7 +20,6 @@ rust_library(
     ),
     crate_name = "hello",
     crate_root = "src/lib.rs",
-    edition = "2021",
     deps = crate_deps(
         ["anyhow"],
         package_name = "rust/hello",
@@ -36,7 +35,6 @@ rust_binary(
     ),
     crate_name = "hello",
     crate_root = "src/main.rs",
-    edition = "2021",
     deps = crate_deps(
         ["anyhow"],
         package_name = "rust/hello",

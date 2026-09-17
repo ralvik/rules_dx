@@ -12,7 +12,7 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     std::process::exit(dx_lcov::run(
         &args,
-        &|path| std::fs::read_to_string(path).map_err(|err| err.to_string()),
+        &|path| std::fs::read_to_string(path).map_err(|err| dx_lcov::LcovError::from(err.to_string())),
         &mut |line| println!("{line}"),
     ));
 }

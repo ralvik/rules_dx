@@ -16,7 +16,6 @@ rust_library(
     ),
     crate_name = "quality_evaluator",
     crate_root = "src/lib.rs",
-    edition = "2021",
     deps = crate_deps(
         [
             "clap",
@@ -35,7 +34,6 @@ rust_binary(
     ),
     crate_name = "quality_evaluator",
     crate_root = "src/main.rs",
-    edition = "2021",
     deps = crate_deps(
         [
             "clap",

@@ -3,7 +3,7 @@
 # M13: source-only package (no Cargo manifest). The gate library now lives
 # at `//cli/lcov:dx_lcov`; this package owns only the `coverage_bin` entry
 # point, hand-maintained and excluded from generation in the root BUILD.
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("//rust/rules:defs.bzl", "rust_binary")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])

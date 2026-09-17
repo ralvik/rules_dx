@@ -1,0 +1,10 @@
+# Clippy single source of truth (issues #239, #238).
+#
+# Warnings are already errors via
+# `--@rules_rust//rust/settings:extra_rustc_flags=--deny=warnings` in
+# `.bazelrc` (issue #82); third-party `crate_universe` targets stay green
+# via per-target `--cap-lints=allow`. This file documents lint intent, it
+# does not yet enforce new lints: `clippy::unwrap_used` /
+# `clippy::expect_used` deny outside `#[cfg(test)]` arrives in #238 after
+# the infallible-`expect` backfill lands. Adding the deny today would turn
+# the existing `reports.rs` / `finalize.rs` infallible paths red.
