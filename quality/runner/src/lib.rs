@@ -1535,4 +1535,67 @@ mod tests {
         assert_eq!(completed, 3);
         assert_eq!(terminal["src/lib.rs"], "a");
     }
+
+    #[test]
+    fn tool_selection_reorder_yields_identical_manifests() {
+        // Determinism battery (issue #84): `quality-testing.md` requires
+        // reordered user tool-selection lists and randomized result
+        // arrival to compare equal where semantic order is irrelevant.
+        // `lint-a` fixes BAD needles while `lint-b` only diagnoses FAIL
+        // needles, so both tool orders over the same two-needle files
+        // must converge to identical snapshots, sorted diagnostics,
+        // sorted replacements, and rounds. Stage echoes keep declaration
+        // order (they record the requested shape), so the test compares
+        // sorted stage sets separately instead of requiring byte-equal
+        // stage order.
+        let files = vec![
+            file("src/a.rs", "BAD FAIL a\n"),
+            file("src/b.rs", "BAD FAIL b\n"),
+        ];
+        let forward = vec![
+            stage("lint-a", &["rust"], &["src/a.rs", "src/b.rs"]),
+            stage("lint-b", &["rust"], &["src/a.rs", "src/b.rs"]),
+        ];
+        let reversed = vec![
+            stage("lint-b", &["rust"], &["src/a.rs", "src/b.rs"]),
+            stage("lint-a", &["rust"], &["src/a.rs", "src/b.rs"]),
+        ];
+        let first = run_pipeline("//quality:test", "lint", &forward, &files).unwrap();
+        let second = run_pipeline("//quality:test", "lint", &reversed, &files).unwrap();
+        assert_eq!(first.convergence, Convergence::Stable as i32);
+        assert_eq!(second.convergence, Convergence::Stable as i32);
+        assert_eq!(first.completed_rounds, second.completed_rounds);
+        // BAD fixed by lint-a, FAIL diagnosed by lint-b and persistent.
+        assert_eq!(first.initial_diagnostics.len(), 4);
+        assert_eq!(first.terminal_diagnostics.len(), 2);
+        assert_eq!(first.replacements.len(), 2);
+        assert_eq!(first.original_snapshot, second.original_snapshot);
+        assert_eq!(first.terminal_snapshot, second.terminal_snapshot);
+        assert_eq!(first.initial_diagnostics, second.initial_diagnostics);
+        assert_eq!(first.terminal_diagnostics, second.terminal_diagnostics);
+        assert_eq!(first.replacements, second.replacements);
+        let mut first_stages: Vec<(String, Vec<String>)> = first
+            .stages
+            .iter()
+            .map(|s| {
+                let mut sources = s.source_paths.clone();
+                sources.sort();
+                (s.tool_id.clone(), sources)
+            })
+            .collect();
+        let mut second_stages: Vec<(String, Vec<String>)> = second
+            .stages
+            .iter()
+            .map(|s| {
+                let mut sources = s.source_paths.clone();
+                sources.sort();
+                (s.tool_id.clone(), sources)
+            })
+            .collect();
+        first_stages.sort();
+        second_stages.sort();
+        assert_eq!(first_stages, second_stages);
+        assert!(quality_result::validate(&first).is_ok());
+        assert!(quality_result::validate(&second).is_ok());
+    }
 }
