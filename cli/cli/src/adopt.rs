@@ -11,11 +11,12 @@
 //! lives in [`inspect`], status execution (`status`) lives in [`status`],
 //! version execution (`version`) lives in [`version`], watch execution
 //! (`watch`) lives in [`watch`], completion execution (`completion`)
-//! lives in [`completion`]; this facade keeps dispatch plus the remaining
-//! execution domains. The public path stays
-//! `crate::adopt::{execute_adoption, AdoptEnv}`.
+//! lives in [`completion`], init execution (`init`) lives in [`init`];
+//! this facade keeps dispatch plus the remaining execution domains. The
+//! public path stays `crate::adopt::{execute_adoption, AdoptEnv}`.
 
 mod completion;
+mod init;
 mod inspect;
 mod status;
 mod version;
@@ -71,7 +72,7 @@ pub fn execute_adoption(invocation: &Invocation, env: AdoptEnv<'_>) -> i32 {
         err,
     } = env;
     match invocation.command {
-        Command::Init => execute_init(invocation, workspace, out, err),
+        Command::Init => init::execute_init(invocation, workspace, out, err),
         Command::Hooks => execute_hooks(invocation, workspace, out, err),
         Command::Status => status::execute_status(invocation, workspace, out, err),
         Command::Version => version::execute_version(invocation, workspace, out, err),
@@ -81,42 +82,6 @@ pub fn execute_adoption(invocation: &Invocation, env: AdoptEnv<'_>) -> i32 {
         }
         Command::Completion => completion::execute_completion(invocation, out, err),
         _ => pre_exec(err, "not an adoption command"),
-    }
-}
-
-fn execute_init(
-    invocation: &Invocation,
-    workspace: &std::path::Path,
-    out: &mut dyn Write,
-    err: &mut dyn Write,
-) -> i32 {
-    let module = invocation
-        .targets
-        .first()
-        .map_or("my_project", String::as_str);
-    if invocation.dry_run {
-        if !summaries_suppressed(invocation) {
-            for file in dx_adopt::plan_init_files(module) {
-                let _ = writeln!(out, "would write {}", file.path);
-            }
-        }
-        return 0;
-    }
-    match dx_adopt::apply_init(workspace, module) {
-        Ok(entries) => {
-            for entry in entries {
-                if entry == "---" {
-                    continue;
-                }
-                if let Some(path) = entry.strip_prefix("refused:") {
-                    let _ = writeln!(err, "dx: {path} (absent-only, left untouched)");
-                } else if !summaries_suppressed(invocation) {
-                    let _ = writeln!(out, "wrote {entry}");
-                }
-            }
-            0
-        }
-        Err(error) => operational(out, err, &error.to_string()),
     }
 }
 
@@ -210,48 +175,6 @@ mod tests {
 
     fn temp_root(name: &str) -> dx_test_scratch::TempDir {
         dx_test_scratch::scratch(&format!("dx-adopt-cmd-{name}-"))
-    }
-
-    #[test]
-    fn init_dry_run_lists_without_writing() {
-        let inv = invocation(&["init", "--dry-run", "demo"]);
-        let scratch = temp_root("init-dry");
-        let root = scratch.path().to_path_buf();
-        let mut out = Vec::new();
-        let mut err = Vec::new();
-        let code = execute_adoption(
-            &inv,
-            AdoptEnv {
-                workspace: &root,
-                query_runner: &NullQuery,
-                out: &mut out,
-                err: &mut err,
-            },
-        );
-        assert_eq!(code, 0);
-        assert!(String::from_utf8(out).expect("out").contains(".dx/version"));
-        assert!(!root.join(".dx/version").exists());
-    }
-
-    #[test]
-    fn init_applies_absent_only() {
-        let inv = invocation(&["init"]);
-        let scratch = temp_root("init-apply");
-        let root = scratch.path().to_path_buf();
-        let mut out = Vec::new();
-        let mut err = Vec::new();
-        let code = execute_adoption(
-            &inv,
-            AdoptEnv {
-                workspace: &root,
-                query_runner: &NullQuery,
-                out: &mut out,
-                err: &mut err,
-            },
-        );
-        assert_eq!(code, 0);
-        assert!(root.join(".dx/version").exists());
-        assert!(root.join(".devcontainer/devcontainer.json").exists());
     }
 
     #[test]

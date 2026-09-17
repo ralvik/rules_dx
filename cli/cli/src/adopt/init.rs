@@ -1,0 +1,125 @@
+//! Adoption init execution (`init`, issue #236).
+//!
+//! Split from `super` (`adopt.rs`): owns [`execute_init`], the
+//! absent-only scaffolding apply (dry-run plans are summaries,
+//! suppressed under `--quiet`). Re-exported through `super` so the
+//! dispatch path stays `crate::adopt::execute_adoption`.
+
+use std::io::Write;
+
+use crate::args::Invocation;
+
+use super::{operational, summaries_suppressed};
+
+/// Runs `dx init`: dry-run lists the files that would be written,
+/// otherwise applies the scaffolding absent-only (existing files are
+/// left untouched with a `refused:` note on stderr).
+pub(crate) fn execute_init(
+    invocation: &Invocation,
+    workspace: &std::path::Path,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> i32 {
+    let module = invocation
+        .targets
+        .first()
+        .map_or("my_project", String::as_str);
+    if invocation.dry_run {
+        if !summaries_suppressed(invocation) {
+            for file in dx_adopt::plan_init_files(module) {
+                let _ = writeln!(out, "would write {}", file.path);
+            }
+        }
+        return 0;
+    }
+    match dx_adopt::apply_init(workspace, module) {
+        Ok(entries) => {
+            for entry in entries {
+                if entry == "---" {
+                    continue;
+                }
+                if let Some(path) = entry.strip_prefix("refused:") {
+                    let _ = writeln!(err, "dx: {path} (absent-only, left untouched)");
+                } else if !summaries_suppressed(invocation) {
+                    let _ = writeln!(out, "wrote {entry}");
+                }
+            }
+            0
+        }
+        Err(error) => operational(out, err, &error.to_string()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::adopt::{execute_adoption, AdoptEnv};
+    use crate::args::parse;
+    use std::io;
+
+    fn invocation(words: &[&str]) -> Invocation {
+        parse(&words.iter().map(ToString::to_string).collect::<Vec<_>>()).expect("parse")
+    }
+
+    struct NullQuery;
+
+    impl crate::resolve::QueryRunner for NullQuery {
+        fn run_query(
+            &self,
+            _argv: &[String],
+            _cwd: &std::path::Path,
+        ) -> io::Result<crate::resolve::QueryResult> {
+            Ok(crate::resolve::QueryResult {
+                code: Some(0),
+                stdout: b"//a:one\n".to_vec(),
+                stderr: Vec::new(),
+            })
+        }
+    }
+
+    fn temp_root(name: &str) -> dx_test_scratch::TempDir {
+        dx_test_scratch::scratch(&format!("dx-adopt-init-{name}-"))
+    }
+
+    #[test]
+    fn init_dry_run_lists_without_writing() {
+        let inv = invocation(&["init", "--dry-run", "demo"]);
+        let scratch = temp_root("dry");
+        let root = scratch.path().to_path_buf();
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        assert!(String::from_utf8(out).expect("out").contains(".dx/version"));
+        assert!(!root.join(".dx/version").exists());
+    }
+
+    #[test]
+    fn init_applies_absent_only() {
+        let inv = invocation(&["init"]);
+        let scratch = temp_root("apply");
+        let root = scratch.path().to_path_buf();
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        assert!(root.join(".dx/version").exists());
+        assert!(root.join(".devcontainer/devcontainer.json").exists());
+    }
+}
