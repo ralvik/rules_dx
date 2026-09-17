@@ -46,6 +46,7 @@ rust_library(
         "src/plan.rs",
         "src/plan/generate.rs",
         "src/plan/managed.rs",
+        "src/plan/run_temp.rs",
         "src/plan/quality.rs",
         "src/plan/run_deploy.rs",
         "src/platform.rs",
