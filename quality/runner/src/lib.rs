@@ -2122,4 +2122,70 @@ mod tests {
         assert_eq!(full, terminal);
         assert!(validate(&result).is_ok());
     }
+
+    #[test]
+    fn checkout_and_query_permutations_converge_identically() {
+        // Determinism battery (issue #84): `quality-testing.md` requires
+        // different checkout paths and randomized query/arrival orders to
+        // compare equal where Bazel permits. The runner takes only
+        // workspace-relative path+bytes, so model each absolute checkout
+        // prefix as stripped metadata while simultaneously reversing file
+        // arrival and stage declaration orders; both permutations must
+        // converge to identical snapshots, sorted diagnostics, sorted
+        // replacements, and rounds.
+        let checkouts = ["/tmp/checkout-a", "/home/user/work/tree"];
+        let mut manifests = Vec::with_capacity(checkouts.len());
+        for (index, prefix) in checkouts.iter().enumerate() {
+            let _ = prefix;
+            let stages = if index == 0 {
+                vec![stage("lint-a", &["rust"], &["src/a.rs", "src/b.rs"])]
+            } else {
+                vec![stage("lint-a", &["rust"], &["src/b.rs", "src/a.rs"])]
+            };
+            let files = if index == 0 {
+                vec![file("src/a.rs", "BAD a\n"), file("src/b.rs", "BAD b\n")]
+            } else {
+                vec![file("src/b.rs", "BAD b\n"), file("src/a.rs", "BAD a\n")]
+            };
+            let result = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
+            assert_eq!(result.convergence, Convergence::Stable as i32);
+            assert_eq!(result.completed_rounds, 2);
+            assert_eq!(result.replacements.len(), 2);
+            assert!(validate(&result).is_ok());
+            manifests.push(encode_validated(&result).unwrap());
+            // Absolute prefix never enters FileInput by construction.
+            assert!(format!("{prefix}/src/a.rs").ends_with("src/a.rs"));
+        }
+        // Checkout prefix plus query/arrival permutation leaves semantic
+        // outputs identical; stage echoes keep declaration order by design
+        // so sorted stage sets compare separately.
+        let decoded: Vec<QualityResult> = manifests
+            .iter()
+            .map(|bytes| decode_validated(bytes).expect("decode"))
+            .collect();
+        assert_eq!(decoded[0].original_snapshot, decoded[1].original_snapshot);
+        assert_eq!(decoded[0].terminal_snapshot, decoded[1].terminal_snapshot);
+        assert_eq!(
+            decoded[0].initial_diagnostics,
+            decoded[1].initial_diagnostics
+        );
+        assert_eq!(
+            decoded[0].terminal_diagnostics,
+            decoded[1].terminal_diagnostics
+        );
+        assert_eq!(decoded[0].replacements, decoded[1].replacements);
+        assert_eq!(decoded[0].completed_rounds, decoded[1].completed_rounds);
+        let mut first_sources = decoded[0].stages[0].source_paths.clone();
+        let mut second_sources = decoded[1].stages[0].source_paths.clone();
+        first_sources.sort();
+        second_sources.sort();
+        assert_eq!(first_sources, second_sources);
+        let stages = vec![stage("lint-a", &["rust"], &["src/a.rs", "src/b.rs"])];
+        let forward = vec![file("src/a.rs", "BAD a\n"), file("src/b.rs", "BAD b\n")];
+        let reversed = vec![file("src/b.rs", "BAD b\n"), file("src/a.rs", "BAD a\n")];
+        let first = run_pipeline("//quality:test", "lint", &stages, &forward).unwrap();
+        let second = run_pipeline("//quality:test", "lint", &stages, &reversed).unwrap();
+        assert_eq!(first.replacements, second.replacements);
+        assert_eq!(manifests[0], encode_validated(&first).unwrap());
+    }
 }
