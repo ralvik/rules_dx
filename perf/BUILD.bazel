@@ -69,6 +69,27 @@ sh_test(
     tags = ["no-coverage"],
 )
 
+# Rules-lint comparison synthetic-tree harness (issue #86): deterministic
+# large-tree generator (mixed clean/dirty) emitting a fairness-pinned JSON
+# report skeleton. Report-not-gate, no parity claim; measured runs land
+# next. Run by `bazel run //perf:rules_lint_comparison`.
+sh_binary(
+    name = "rules_lint_comparison",
+    srcs = ["rules_lint_comparison.sh"],
+)
+
+# Harness self-test: same seed yields identical trees/digests, dirty mix
+# and triggers verified, fairness pins recorded, report-not-gate pinned.
+# Tagged `no-coverage`: timing harnesses stay out of the coverage
+# denominator per the repo coverage preset.
+sh_test(
+    name = "rules_lint_comparison_test",
+    srcs = ["rules_lint_comparison_test.sh"],
+    args = ["$(rootpath :rules_lint_comparison.sh)"],
+    data = ["rules_lint_comparison.sh"],
+    tags = ["no-coverage"],
+)
+
 # Repository corpus: benchmark docs owned for direct-Bazel dogfood under
 # the canonical real_fixture_policy. Scripts and baseline data are CI
 # tooling/inputs, never corpus sources (same class as //tools/ci scripts).
