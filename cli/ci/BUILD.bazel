@@ -14,4 +14,8 @@ dx_rust_crate(
     name = "dx_ci",
     package_name = "cli/dx_ci",
     deps = ["thiserror"],
+    srcs = [
+        "src/lib.rs",
+        "src/revision.rs",
+    ],
 )
