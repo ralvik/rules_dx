@@ -1444,4 +1444,36 @@ mod tests {
         assert_eq!(&edits.edits[0].replacement, b"GOOD\n");
         assert!(validate(&result).is_ok());
     }
+
+    #[test]
+    fn incomplete_terminal_collection_rejects_before_any_replacement() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // incomplete collection or invalid envelopes to reject before any
+        // path mutation begins. A stable run whose terminal map drops one
+        // staged path must error instead of emitting a partial
+        // single-file replacement for the present path.
+        let stages = vec![stage("lint-a", &["rust"], &["src/a.rs", "src/b.rs"])];
+        let mut initial = BTreeMap::new();
+        initial.insert("src/a.rs".to_owned(), "BAD a\n".to_owned());
+        initial.insert("src/b.rs".to_owned(), "BAD b\n".to_owned());
+        let mut partial_terminal = BTreeMap::new();
+        partial_terminal.insert("src/a.rs".to_owned(), "GOOD a\n".to_owned());
+        // src/b.rs absent from the terminal map: incomplete collection.
+        let err = assemble(
+            "//quality:test",
+            Capability::Lint as i32,
+            &stages,
+            &initial,
+            &partial_terminal,
+            (Vec::new(), Vec::new()),
+            (2, Convergence::Stable),
+        )
+        .unwrap_err();
+        assert_eq!(
+            err,
+            RunnerError::MissingFile {
+                path: "src/b.rs".to_owned(),
+            }
+        );
+    }
 }
