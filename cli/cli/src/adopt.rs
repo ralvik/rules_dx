@@ -8,11 +8,12 @@
 //! operational failure, `2` pre-execution usage failure.
 //!
 //! Domain split (issue #236): inspect execution (`owners`/`deps`/`why`)
-//! lives in [`inspect`]; this facade keeps dispatch plus the remaining
-//! execution domains. The public path stays
-//! `crate::adopt::{execute_adoption, AdoptEnv}`.
+//! lives in [`inspect`], status execution (`status`) lives in [`status`];
+//! this facade keeps dispatch plus the remaining execution domains. The
+//! public path stays `crate::adopt::{execute_adoption, AdoptEnv}`.
 
 mod inspect;
+mod status;
 
 use std::io::Write;
 
@@ -66,7 +67,7 @@ pub fn execute_adoption(invocation: &Invocation, env: AdoptEnv<'_>) -> i32 {
     match invocation.command {
         Command::Init => execute_init(invocation, workspace, out, err),
         Command::Hooks => execute_hooks(invocation, workspace, out, err),
-        Command::Status => execute_status(invocation, workspace, out, err),
+        Command::Status => status::execute_status(invocation, workspace, out, err),
         Command::Version => execute_version(invocation, workspace, out, err),
         Command::Watch => execute_watch(invocation, workspace, out, err),
         Command::Owners | Command::Deps | Command::Why => {
@@ -173,35 +174,6 @@ fn execute_hooks(
 
 fn read_optional(root: &std::path::Path, name: &str) -> String {
     std::fs::read_to_string(root.join(name)).unwrap_or_else(|_| format!("(missing {name})"))
-}
-
-fn execute_status(
-    invocation: &Invocation,
-    workspace: &std::path::Path,
-    out: &mut dyn Write,
-    err: &mut dyn Write,
-) -> i32 {
-    let pinned = dx_adopt::read_version_pin(workspace).unwrap_or_default();
-    let pinned = if pinned.is_empty() {
-        dx_adopt::DX_VERSION.to_owned()
-    } else {
-        pinned
-    };
-    let checks = dx_adopt::default_status_checks(&pinned);
-    // Result document: always prints even under `--quiet` (quiet suppresses
-    // summaries, not answers; see `summaries_suppressed` and the output
-    // protocol). JSON vs text is the only mode branch here; `--output=diff`
-    // is rejected at parse time because status has no patch to emit.
-    if invocation.output == OutputMode::Json {
-        let _ = writeln!(out, "{}", dx_adopt::render_status_json(&checks));
-    } else {
-        let _ = writeln!(out, "{}", dx_adopt::render_status_text(&checks));
-    }
-    if checks.iter().any(|c| c.status == "error") {
-        let _ = writeln!(err, "dx: status: pin mismatch (see hint)");
-        return operational_code();
-    }
-    0
 }
 
 fn execute_version(
@@ -436,28 +408,6 @@ mod tests {
         assert!(text.contains("baseline:"));
         assert!(text.contains("overlay:"));
         assert!(text.contains("timings:"));
-    }
-
-    #[test]
-    fn status_reports_pin_and_checks() {
-        let inv = invocation(&["status"]);
-        let scratch = temp_root("status");
-        let root = scratch.path().to_path_buf();
-        std::fs::create_dir_all(root.join(".dx")).expect("dx");
-        std::fs::write(root.join(".dx/version"), "0.0.0\n").expect("pin");
-        let mut out = Vec::new();
-        let mut err = Vec::new();
-        let code = execute_adoption(
-            &inv,
-            AdoptEnv {
-                workspace: &root,
-                query_runner: &NullQuery,
-                out: &mut out,
-                err: &mut err,
-            },
-        );
-        assert_eq!(code, 0);
-        assert!(String::from_utf8(out).expect("out").contains("pin: ok"));
     }
 
     #[test]
