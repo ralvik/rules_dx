@@ -10,8 +10,9 @@
 # ecosystem repos, so unused foundations contribute zero actions to that
 # consumer's build.
 #
-# Covered here (minimum per #85 plus Go + C# + Kotlin + Scala follow-ups): Rust,
-# Python, JS/TS, Go, C#, Kotlin, Scala. Markers are
+# Covered here (minimum per #85 plus Go + C# + Kotlin + Scala + F# follow-ups): Rust,
+# Python, JS/TS, Go, C#, Kotlin, Scala, F# (F# shares rules_dotnet with C#).
+# Markers are
 # ecosystem-specific repo strings as they appear in aquery output
 # (rules_rust / aspect_rules_py / aspect_rules_js / rules_go /
 # rules_dotnet / rules_kotlin / rules_scala), not shared base toolchains.
@@ -77,6 +78,8 @@ check_example adopt-csharp "rules_dotnet" "rules_rust" "aspect_rules_py" "aspect
 check_example adopt-kotlin "rules_kotlin" "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_go" "rules_dotnet" "rules_scala"
 # Scala: owns rules_scala; Rust/Python/JS/Go/DotNet/Kotlin contribute no actions.
 check_example adopt-scala "rules_scala" "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_go" "rules_dotnet" "rules_kotlin"
+# F#: owns rules_dotnet (shared with C#); Rust/Python/JS/Go/Kotlin/Scala contribute no actions.
+check_example adopt-fsharp "rules_dotnet" "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_go" "rules_kotlin" "rules_scala"
 
 echo "examples laziness aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
