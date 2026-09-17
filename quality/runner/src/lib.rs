@@ -839,4 +839,35 @@ mod tests {
             })
         );
     }
+
+    #[test]
+    fn diagnostics_sort_deterministically_under_shuffled_arrival() {
+        // Determinism battery seed (issue #84): randomized report
+        // arrival must yield identical manifests.
+        fn diag(path: &str, start: u64, tool: &str, message: &str) -> Diagnostic {
+            Diagnostic {
+                severity: Severity::Warning as i32,
+                message: message.to_owned(),
+                tool_id: tool.to_owned(),
+                path: path.to_owned(),
+                start_byte: Some(start),
+                end_byte: Some(start + 1),
+                fixable: false,
+                ..Default::default()
+            }
+        }
+        let canonical = vec![
+            diag("src/a.rs", 0, "lint-a", "first"),
+            diag("src/a.rs", 5, "lint-a", "second"),
+            diag("src/b.rs", 0, "lint-b", "third"),
+        ];
+        let mut reversed = canonical.clone();
+        reversed.reverse();
+        sort_diagnostics(&mut reversed);
+        assert_eq!(reversed, canonical);
+        let mut rotated = canonical.clone();
+        rotated.rotate_left(1);
+        sort_diagnostics(&mut rotated);
+        assert_eq!(rotated, canonical);
+    }
 }
