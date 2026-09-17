@@ -178,6 +178,30 @@ jobs:
         run: |
           echo "### prove — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate." >> "$GITHUB_STEP_SUMMARY"
+  e2e:
+    name: e2e (Stage 4 CLI-contract suite, explicit invocation)
+    needs: [build]
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-seed-
+      - name: Run explicit E2E suite (manual drivers, never under //...)
+        run: E2E_WORKSPACE=$GITHUB_WORKSPACE bazel test --noshow_progress //tools/ci:e2e --test_env=E2E_WORKSPACE
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### e2e — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: E2E_WORKSPACE=$GITHUB_WORKSPACE bazel test //tools/ci:e2e --test_env=E2E_WORKSPACE (explicit only; manual drivers skip //... under both bazel and dx, issue #55)." >> "$GITHUB_STEP_SUMMARY"
   dogfood-freshness:
     name: dogfood-freshness (tools, generate --check, corpus audit)
     needs: [build]

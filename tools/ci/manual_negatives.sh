@@ -84,6 +84,16 @@ demos=(
   "//libs/starlark/tests/negative:missing_observation_demo"
   "//libs/starlark/tests/negative:wrong_phase_demo"
 )
+# Stage 4 E2E drivers (issue #55) are `manual` (+`exclusive`) so the
+# slow nested-Bazel suite runs only via explicit `bazel test //tools/ci:e2e`,
+# never under wildcards. They are behavior pins, not failure demos: no
+# expected-failure proof here, just enumeration so a new manual test
+# still forces explicit classification below.
+e2e_tests=(
+  "//tools/ci:e2e"
+  "//tools/ci:e2e_clean"
+  "//tools/ci:e2e_dirty"
+)
 while IFS= read -r target; do
   [[ -n "$target" ]] || continue
   if [[ "$target" == *_upstream* ]]; then
@@ -94,6 +104,13 @@ while IFS= read -r target; do
   demo=""
   for demo in "${demos[@]}"; do
     if [[ "$target" == "$demo" ]]; then
+      known=1
+      break
+    fi
+  done
+  e2e=""
+  for e2e in "${e2e_tests[@]}"; do
+    if [[ "$target" == "$e2e" ]]; then
       known=1
       break
     fi

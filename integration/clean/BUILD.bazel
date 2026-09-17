@@ -1,0 +1,7 @@
+# Stage 4 E2E clean scenario (issue #55): one passing test, nothing else.
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+sh_test(
+    name = "pass",
+    srcs = ["pass.sh"],
+)

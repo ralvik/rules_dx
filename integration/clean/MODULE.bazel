@@ -1,0 +1,19 @@
+"""Stage 4 E2E clean scenario (issue #55): all-green child workspace.
+
+`dx test //...` must exit 0 here. Standalone workspace: only
+`rules_dx` (local override, rewritten to an absolute path by the
+`//tools/ci:e2e` harness at stage time) plus one passing `sh_test`.
+"""
+
+module(name = "e2e_clean")
+
+bazel_dep(name = "rules_dx", version = "0.0.0")
+bazel_dep(name = "rules_shell", version = "0.6.1")
+
+# RULES_DX_ROOT is a placeholder: the harness rewrites it to the
+# absolute parent checkout path when staging (the staged copy lives
+# outside the parent, so no relative path survives).
+local_path_override(
+    module_name = "rules_dx",
+    path = "RULES_DX_ROOT",
+)

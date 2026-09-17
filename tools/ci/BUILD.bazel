@@ -115,6 +115,79 @@ sh_binary(
     srcs = ["target_tags.sh"],
 )
 
+# Stage 4 E2E drivers (issue #55): one `manual` (+`exclusive`,
+# `local`, `no-sandbox`) sh_test per landed `integration/` scenario plus
+# the explicit suite. Wildcard suites (`bazel test //...`,
+# `dx test //...`) never run these (manual-tag semantics); CI invokes
+# `E2E_WORKSPACE=$GITHUB_WORKSPACE bazel test //tools/ci:e2e
+# --test_env=E2E_WORKSPACE`. The pinned-Bazel wrapper comes from the
+# `rules_bazel_integration_test` dev-dependency
+# (`bazel_binaries.download`, single 9.2.0 pin tracking
+# //.bazelversion); scenario files arrive by shell copy, never by label,
+# because `integration/` is .bazelignore'd out of the parent universe.
+sh_test(
+    name = "e2e_clean",
+    timeout = "long",
+    srcs = ["e2e.sh"],
+    args = [
+        "clean",
+        "0",
+        "$(rootpath //cli/cli:dx)",
+        "$(rootpath @build_bazel_bazel_9_2_0//:bazel_binary)",
+    ],
+    data = [
+        "//cli/cli:dx",
+        "@build_bazel_bazel_9_2_0//:bazel_binary",
+    ],
+    tags = [
+        "exclusive",
+        "local",
+        "manual",
+        "no-sandbox",
+    ],
+)
+
+# Dirty half of the CLI-contract pin (issue #55): the child has one
+# failing `sh_test`, so `dx test //...` must preserve Bazel's
+# test-failure code 3 verbatim. Paired with `e2e_clean` (exit 0), this
+# is the negative control: always-pass detectors fail here,
+# always-fail detectors fail `clean`.
+sh_test(
+    name = "e2e_dirty",
+    timeout = "long",
+    srcs = ["e2e.sh"],
+    args = [
+        "dirty",
+        "3",
+        "$(rootpath //cli/cli:dx)",
+        "$(rootpath @build_bazel_bazel_9_2_0//:bazel_binary)",
+    ],
+    data = [
+        "//cli/cli:dx",
+        "@build_bazel_bazel_9_2_0//:bazel_binary",
+    ],
+    tags = [
+        "exclusive",
+        "local",
+        "manual",
+        "no-sandbox",
+    ],
+)
+
+test_suite(
+    name = "e2e",
+    tags = [
+        "exclusive",
+        "local",
+        "manual",
+        "no-sandbox",
+    ],
+    tests = [
+        ":e2e_clean",
+        ":e2e_dirty",
+    ],
+)
+
 # Repository corpus: build file owned for direct-Bazel dogfood
 # under the canonical real_fixture_policy. The audit script itself is
 # CI tooling, never a corpus source.

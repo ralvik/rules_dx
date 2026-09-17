@@ -26,10 +26,18 @@ trap 'rm -rf "$scratch"' EXIT
 head -1 third_party/dotnet/deps/paket.main.bzl | grep -q GENERATED
 head -1 third_party/dotnet/deps/paket.main_extension.bzl | grep -qi GENERATED
 
+# Stage 4 E2E carve-out (issue #55): `integration/` scenario workspaces
+# are .bazelignore'd out of the parent universe and staged to scratch
+# by shell copy, so they can never carry corpus owners. The marker
+# check keeps this exclusion honest: dropping the ignore re-lists
+# every scenario file below as uncovered.
+grep -q -F -e 'integration/' .bazelignore
+
 git ls-files \
   | grep -E '(^|/)(BUILD\.bazel|MODULE\.bazel)$|\.(bzl|toml|md)$' \
   | grep -v -E '\.lock$' \
   | grep -v -E '^third_party/dotnet/deps/paket\.main(_extension)?\.bzl$' \
+  | grep -v -E '^integration/' \
   | LC_ALL=C sort -u > "$scratch/corpus_applicable.txt"
 
 bazel query "kind('source file', deps(kind(real_source_target, //...)))" 2>/dev/null \
