@@ -26,7 +26,6 @@ rust_library(
             "semver",
             "serde",
             "serde_json",
-            "tempfile",
             "thiserror",
         ],
         package_name = "cli/dx_adopt",
@@ -50,11 +49,10 @@ rust_test(
             "semver",
             "serde",
             "serde_json",
-            "tempfile",
             "thiserror",
         ],
         package_name = "cli/dx_adopt",
-    ),
+    ) + ["//cli/test_scratch:dx_test_scratch"],
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy

@@ -1101,10 +1101,7 @@ mod tests {
 
     #[test]
     fn apply_init_writes_absent_only_and_refuses_existing() {
-        let scratch = tempfile::Builder::new()
-            .prefix("dx-adopt-init-")
-            .tempdir_in(std::env::temp_dir())
-            .expect("scratch");
+        let scratch = dx_test_scratch::scratch("dx-adopt-init-");
         let root = scratch.path().to_path_buf();
         std::fs::create_dir_all(&root).expect("tmp");
         let first = apply_init(&root, "demo").expect("init");
@@ -1122,10 +1119,7 @@ mod tests {
 
     #[test]
     fn hooks_install_refuses_unmanaged_and_manages_shims() {
-        let scratch = tempfile::Builder::new()
-            .prefix("dx-adopt-hook-")
-            .tempdir_in(std::env::temp_dir())
-            .expect("scratch");
+        let scratch = dx_test_scratch::scratch("dx-adopt-hook-");
         let root = scratch.path().to_path_buf();
         std::fs::create_dir_all(root.join(".git/hooks")).expect("tmp");
         let installed = install_hooks(&root).expect("install");
@@ -1203,7 +1197,7 @@ mod tests {
     fn watch_reports_created_files_and_times_out_when_idle() {
         // Issue #223: a real `notify` watcher emits a debounced trigger
         // for a created file, and reports empty when nothing changes.
-        let scratch = tempfile::tempdir().expect("watch scratch");
+        let scratch = dx_test_scratch::scratch("dx-adopt-watch-");
         let root = scratch.path().to_path_buf();
         let writer = root.clone();
         std::thread::spawn(move || {

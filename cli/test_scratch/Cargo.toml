@@ -1,0 +1,11 @@
+[package]
+name = "dx_test_scratch"
+version = "0.0.0"
+edition = "2021"
+
+[lib]
+name = "dx_test_scratch"
+path = "src/lib.rs"
+
+[dependencies]
+tempfile = "3"

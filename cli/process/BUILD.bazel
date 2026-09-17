@@ -22,7 +22,6 @@ rust_library(
     deps = crate_deps(
         [
             "libc",
-            "tempfile",
             "thiserror",
         ],
         package_name = "cli/dx_process",
@@ -41,11 +40,10 @@ rust_test(
     deps = crate_deps(
         [
             "libc",
-            "tempfile",
             "thiserror",
         ],
         package_name = "cli/dx_process",
-    ),
+    ) + ["//cli/test_scratch:dx_test_scratch"],
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy

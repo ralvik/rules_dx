@@ -378,14 +378,11 @@ mod tests {
         .into_bytes()
     }
 
-    fn test_tempdir() -> tempfile::TempDir {
-        tempfile::Builder::new()
-            .prefix("dx-finalize-test-")
-            .tempdir_in(std::env::temp_dir())
-            .expect("create test scratch")
+    fn test_tempdir() -> dx_test_scratch::TempDir {
+        dx_test_scratch::scratch("dx-finalize-test-")
     }
 
-    fn workspace_with(contents: &[u8]) -> tempfile::TempDir {
+    fn workspace_with(contents: &[u8]) -> dx_test_scratch::TempDir {
         let dir = test_tempdir();
         let target = dir.path().join("rust/hello/BUILD.bazel");
         std::fs::create_dir_all(target.parent().unwrap()).unwrap();

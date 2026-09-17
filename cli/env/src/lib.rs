@@ -592,13 +592,9 @@ mod tests {
     /// panics). Callers snapshot `scratch.path()` into a `PathBuf`;
     /// explicit trailing cleanups stay as success-path failure
     /// surfacing, mirroring the `Scratch::close`/drop contract.
-    fn test_root(name: &str) -> tempfile::TempDir {
-        let scratch = tempfile::Builder::new()
-            .prefix(format!("dx-env-test-{name}-").as_str())
-            .tempdir_in(std::env::temp_dir())
-            .expect("create test root");
-        fs::create_dir_all(scratch.path()).expect("create test root");
-        scratch
+    fn test_root(name: &str) -> dx_test_scratch::TempDir {
+        // `TempDir` already creates the directory; no extra setup needed.
+        dx_test_scratch::scratch(&format!("dx-env-test-{name}-"))
     }
 
     /// One tool plan with a single host name.

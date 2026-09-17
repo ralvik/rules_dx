@@ -401,7 +401,6 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
- "tempfile",
  "thiserror",
 ]
 
@@ -525,7 +524,6 @@ dependencies = [
  "clap",
  "serde",
  "serde_json",
- "tempfile",
  "thiserror",
  "tracing",
 ]
@@ -576,7 +574,6 @@ name = "dx_process"
 version = "0.0.0"
 dependencies = [
  "libc",
- "tempfile",
  "thiserror",
 ]
 
@@ -602,6 +599,13 @@ dependencies = [
  "insta",
  "tempfile",
  "thiserror",
+]
+
+[[package]]
+name = "dx_test_scratch"
+version = "0.0.0"
+dependencies = [
+ "tempfile",
 ]
 
 [[package]]

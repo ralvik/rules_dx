@@ -267,6 +267,7 @@ crate.from_cargo(
         "//cli/codegen:Cargo.toml",
         "//cli/env_plan:Cargo.toml",
         "//cli/fingerprint:Cargo.toml",
+        "//cli/test_scratch:Cargo.toml",
         "//cli/roots:Cargo.toml",
         "//cli/docgen:Cargo.toml",
         "//cli/update:Cargo.toml",

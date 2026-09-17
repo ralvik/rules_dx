@@ -29,7 +29,6 @@ rust_library(
             "clap",
             "serde",
             "serde_json",
-            "tempfile",
             "thiserror",
         ],
         package_name = "cli/dx_env",
@@ -57,7 +56,6 @@ rust_binary(
             "clap",
             "serde",
             "serde_json",
-            "tempfile",
             "thiserror",
             "tracing",
         ],
@@ -83,11 +81,10 @@ rust_test(
             "clap",
             "serde",
             "serde_json",
-            "tempfile",
             "thiserror",
         ],
         package_name = "cli/dx_env",
-    ),
+    ) + ["//cli/test_scratch:dx_test_scratch"],
 )
 
 # Binary-crate test (dx/cli precedent): compiles `src/main.rs` under the

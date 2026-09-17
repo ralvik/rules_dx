@@ -666,10 +666,7 @@ mod tests {
 
     #[test]
     fn real_fs_roundtrip_discovers_workspace() {
-        let scratch = tempfile::Builder::new()
-            .prefix("dx-discover-")
-            .tempdir_in(std::env::temp_dir())
-            .expect("scratch");
+        let scratch = dx_test_scratch::scratch("dx-discover-");
         let root = scratch.path().to_path_buf();
         let nested = root.join("a").join("b");
         std::fs::create_dir_all(&nested).expect("dirs");
@@ -681,10 +678,7 @@ mod tests {
 
     #[test]
     fn real_fs_missing_module_suggests_override() {
-        let scratch = tempfile::Builder::new()
-            .prefix("dx-missing-")
-            .tempdir_in(std::env::temp_dir())
-            .expect("scratch");
+        let scratch = dx_test_scratch::scratch("dx-missing-");
         let root = scratch.path().to_path_buf();
         std::fs::create_dir_all(&root).expect("dirs");
         let err = discover_real(&root, None).expect_err("must fail");
@@ -745,10 +739,7 @@ mod tests {
 
     #[test]
     fn real_fs_reads_workspace_pin() {
-        let scratch = tempfile::Builder::new()
-            .prefix("dx-pin-")
-            .tempdir_in(std::env::temp_dir())
-            .expect("scratch");
+        let scratch = dx_test_scratch::scratch("dx-pin-");
         let root = scratch.path().to_path_buf();
         std::fs::create_dir_all(&root).expect("dirs");
         std::fs::write(root.join(".bazelversion"), "9.2.0\n").expect("pin");
