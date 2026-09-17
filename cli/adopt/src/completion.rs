@@ -1,0 +1,85 @@
+//! Single-source completion vocabulary for `dx completion` (issue #236).
+//!
+//! Split from `super` (`lib.rs`): owns `ALL_COMMANDS`,
+//! `SUPPORTED_SHELLS`, and `completion_source_is_single`.
+//! Re-exported through `super` so the public path stays
+//! `dx_adopt::{ALL_COMMANDS, SUPPORTED_SHELLS, completion_source_is_single}`.
+//!
+//! Production `dx completion` renders from the `Cli` grammar via
+//! `clap_complete` (issue #202, `cli/cli/src/args.rs::render_completion`),
+//! so the grammar feeding parsing and `--help` is the single completion
+//! source (issue #235). The `ALL_COMMANDS`/`SUPPORTED_SHELLS` tables here
+//! remain as the O61 frozen vocabulary reference only; they render nothing.
+
+/// Single command-definition source (O61 freeze).
+///
+/// Every `dx completion <shell>` script renders from this table so new
+/// commands cannot drift from the command reference.
+pub const ALL_COMMANDS: &[&str] = &[
+    "audit",
+    "lint",
+    "typecheck",
+    "format",
+    "generate",
+    "build",
+    "test",
+    "coverage",
+    "run",
+    "check",
+    "fix",
+    "clean",
+    "update",
+    "codegen",
+    "env",
+    "setup",
+    "init",
+    "hooks",
+    "status",
+    "version",
+    "watch",
+    "owners",
+    "deps",
+    "why",
+    "completion",
+    "bazel",
+];
+
+/// Shells covered by `dx completion` (O61 freeze).
+pub const SUPPORTED_SHELLS: &[&str] = &["bash", "zsh", "fish", "powershell"];
+
+/// Whether a completion script source is admissible.
+///
+/// Completion scripts ship as generated output from the single CLI
+/// command-definition source: handwritten per-shell scripts are rejected so
+/// new commands and flags cannot drift from the command reference. O61 owns
+/// the shell list, mechanics, and drift fixtures.
+pub fn completion_source_is_single(generated_from_single_source: bool, handwritten: bool) -> bool {
+    generated_from_single_source && !handwritten
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn completion_comes_from_the_single_source_only() {
+        assert!(completion_source_is_single(true, false));
+        assert!(!completion_source_is_single(true, true));
+        assert!(!completion_source_is_single(false, false));
+    }
+
+    #[test]
+    fn completion_vocabulary_matches_supported_shells() {
+        // Issue #235: scripts render from the `Cli` grammar via
+        // `clap_complete`, so this gate pins the O61 vocabulary reference
+        // only — every command stays listed, every shell stays supported.
+        for shell in SUPPORTED_SHELLS {
+            assert!(!shell.is_empty(), "shell name must not be empty");
+        }
+        for cmd in ALL_COMMANDS {
+            assert!(!cmd.is_empty(), "command name must not be empty");
+        }
+        assert!(ALL_COMMANDS.contains(&"completion"));
+        assert!(completion_source_is_single(true, false));
+    }
+}

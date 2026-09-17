@@ -11,6 +11,11 @@
 //! watch iterations, thin `query`/`cquery` forwarding, and completion
 //! scripts generated from the single command table. Helpers operate on
 //! injected paths only and touch no network.
+//!
+//! Domain split (issue #236): single-source completion vocabulary lives in
+//! the `completion` module. This facade keeps the re-exports; the public
+//! path stays `dx_adopt::{ALL_COMMANDS, SUPPORTED_SHELLS,
+//! completion_source_is_single}` via the re-exports below.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
@@ -20,6 +25,10 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use serde::Serialize;
+
+pub mod completion;
+
+pub use completion::{completion_source_is_single, ALL_COMMANDS, SUPPORTED_SHELLS};
 
 /// Typed adoption failure (issue #221 pilot).
 ///
@@ -116,42 +125,6 @@ pub const PREVIOUS_VERSION: &str = "0.0.0";
 pub const HOOK_BUDGET_SECS: u64 = 120;
 /// Watch debounce milliseconds (O55 freeze).
 pub const WATCH_DEBOUNCE_MS: u64 = 200;
-
-/// Single command-definition source (O61 freeze).
-///
-/// Every `dx completion <shell>` script renders from this table so new
-/// commands cannot drift from the command reference.
-pub const ALL_COMMANDS: &[&str] = &[
-    "audit",
-    "lint",
-    "typecheck",
-    "format",
-    "generate",
-    "build",
-    "test",
-    "coverage",
-    "run",
-    "check",
-    "fix",
-    "clean",
-    "update",
-    "codegen",
-    "env",
-    "setup",
-    "init",
-    "hooks",
-    "status",
-    "version",
-    "watch",
-    "owners",
-    "deps",
-    "why",
-    "completion",
-    "bazel",
-];
-
-/// Shells covered by `dx completion` (O61 freeze).
-pub const SUPPORTED_SHELLS: &[&str] = &["bash", "zsh", "fish", "powershell"];
 
 /// Commands watchable under ADR 0017/0018 (O55 freeze).
 pub const WATCHABLE_COMMANDS: &[&str] = &[
@@ -288,16 +261,6 @@ pub fn watch_iteration_accepts(
 /// scope is rejected as well.
 pub fn inspect_scope_allowed(scope: &str, external: bool) -> bool {
     !scope.is_empty() && !external
-}
-
-/// Whether a completion script source is admissible.
-///
-/// Completion scripts ship as generated output from the single CLI
-/// command-definition source: handwritten per-shell scripts are rejected so
-/// new commands and flags cannot drift from the command reference. O61 owns
-/// the shell list, mechanics, and drift fixtures.
-pub fn completion_source_is_single(generated_from_single_source: bool, handwritten: bool) -> bool {
-    generated_from_single_source && !handwritten
 }
 
 /// Whether a `dx migrate` version pair is a major-release bump (issue #4).
@@ -886,11 +849,9 @@ pub fn plan_somepath(from: &str, to: &str, configured: bool) -> Result<InspectPl
     })
 }
 
-/// Production `dx completion` renders from the `Cli` grammar via
-/// `clap_complete` (issue #202, `cli/cli/src/args.rs::render_completion`),
-/// so the grammar feeding parsing and `--help` is the single completion
-/// source (issue #235). The `ALL_COMMANDS`/`SUPPORTED_SHELLS` tables above
-/// remain as the O61 frozen vocabulary reference only; they render nothing.
+/// Completion vocabulary lives in the `completion` module (issue #236):
+/// production rendering uses the `Cli` grammar, the tables there remain
+/// the O61 frozen vocabulary reference only.
 
 #[cfg(test)]
 mod tests {
@@ -992,13 +953,6 @@ mod tests {
         assert!(!inspect_scope_allowed("", false));
         assert!(!inspect_scope_allowed("//pkg:target", true));
         assert!(!inspect_scope_allowed("@other//pkg:target", true));
-    }
-
-    #[test]
-    fn completion_comes_from_the_single_source_only() {
-        assert!(completion_source_is_single(true, false));
-        assert!(!completion_source_is_single(true, true));
-        assert!(!completion_source_is_single(false, false));
     }
 
     #[test]
@@ -1131,21 +1085,6 @@ mod tests {
         std::fs::write(root.join(".git/hooks/pre-commit"), "# custom hook\n").expect("unmanaged");
         assert!(install_hooks(&root).is_err());
         scratch.close().expect("cleanup");
-    }
-
-    #[test]
-    fn completion_vocabulary_matches_supported_shells() {
-        // Issue #235: scripts render from the `Cli` grammar via
-        // `clap_complete`, so this gate pins the O61 vocabulary reference
-        // only — every command stays listed, every shell stays supported.
-        for shell in SUPPORTED_SHELLS {
-            assert!(!shell.is_empty(), "shell name must not be empty");
-        }
-        for cmd in ALL_COMMANDS {
-            assert!(!cmd.is_empty(), "command name must not be empty");
-        }
-        assert!(ALL_COMMANDS.contains(&"completion"));
-        assert!(completion_source_is_single(true, false));
     }
 
     #[test]
