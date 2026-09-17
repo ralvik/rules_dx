@@ -35,9 +35,11 @@ bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
 
 # No-install attribution, static half: prohibited installer commands must
 # not appear in tool-implementation code. Docs legitimately discuss them
-# (contract + matrix), and this harness names them as patterns, so both
+# (contract + matrix), this harness names them as patterns, and the GHCR
+# hygiene audit (tools/ci/ghcr_hygiene.sh) greps the Dockerfile for them
+# as a negative gate (audit pattern, not an invocation), so all three
 # are excluded from the search scope.
-hits="$(grep -rn -F -e 'pip install' -e 'npm install' -e 'cargo install' -e 'dotnet tool install' -e 'pnpm install' -e 'pnpm add' --include='*.bzl' --include='*.py' --include='*.rs' --include='*.sh' --include='*.js' --include='*.ts' quality/ tools/ rust/ python/ javascript/ typescript/ go/ java/ kotlin/ scala/ csharp/ fsharp/ cc/ dx/ cli/ 2>/dev/null | grep -v -F -e 'tools/ci/examples_laziness.sh' || true)"
+hits="$(grep -rn -F -e 'pip install' -e 'npm install' -e 'cargo install' -e 'dotnet tool install' -e 'pnpm install' -e 'pnpm add' --include='*.bzl' --include='*.py' --include='*.rs' --include='*.sh' --include='*.js' --include='*.ts' quality/ tools/ rust/ python/ javascript/ typescript/ go/ java/ kotlin/ scala/ csharp/ fsharp/ cc/ dx/ cli/ 2>/dev/null | grep -v -F -e 'tools/ci/examples_laziness.sh' | grep -v -F -e 'tools/ci/ghcr_hygiene.sh' || true)"
 if [[ -z "$hits" ]]; then
   ok
 else
