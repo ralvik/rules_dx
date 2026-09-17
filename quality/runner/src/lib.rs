@@ -1512,4 +1512,27 @@ mod tests {
         assert_eq!(spliced, b"GOODGOOD\n");
         assert!(validate(&result).is_ok());
     }
+
+    #[test]
+    fn longer_cycle_repeated_state_reports_oscillation() {
+        // Determinism battery (issue #84): `quality-testing.md` requires
+        // two-stage and longer cycles to report oscillation rather than
+        // false stability, and every repeated changed state to be
+        // detected. A three-state cycle a->b->c->a must report
+        // Oscillation at round 3 with the repeated initial bytes, not
+        // Stability, proving detection beyond the two-state flip.
+        let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let mut initial = BTreeMap::new();
+        initial.insert("src/lib.rs".to_owned(), "a".to_owned());
+        let cycle = |_: &str, _: &str, text: &str| match text {
+            "a" => Ok("b".to_owned()),
+            "b" => Ok("c".to_owned()),
+            _ => Ok("a".to_owned()),
+        };
+        let (terminal, completed, convergence) =
+            run_convergence(&initial, &stages, 10, cycle).expect("converged");
+        assert_eq!(convergence, Convergence::Oscillation);
+        assert_eq!(completed, 3);
+        assert_eq!(terminal["src/lib.rs"], "a");
+    }
 }
