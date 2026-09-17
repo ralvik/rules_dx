@@ -65,3 +65,44 @@ pub(crate) fn render_diff_patch(
         Err(error) => Err(format!("failed to render patch: {error}")),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::common::{FileChange, SourceRead};
+    use super::render_diff_patch;
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn diff_patch_is_deterministic_and_untruncated() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // complete deterministic diff-mode patches from the same edit set
+        // without rerunning tools or truncating replacement content.
+        let original = b"line one\nline two\n";
+        let long_body = format!("{}\n", "x".repeat(10_000));
+        let mut sources = BTreeMap::new();
+        sources.insert("src/a.py".to_owned(), SourceRead::Bytes(original.to_vec()));
+        sources.insert(
+            "src/long.py".to_owned(),
+            SourceRead::Bytes(b"old\n".to_vec()),
+        );
+        let changes = vec![
+            FileChange {
+                path: "src/a.py".to_owned(),
+                original_digest: dx_digest::blake3(original),
+                edits: vec![(0, original.len() as u64, b"line one\nline TWO\n".to_vec())],
+            },
+            FileChange {
+                path: "src/long.py".to_owned(),
+                original_digest: dx_digest::blake3(b"old\n"),
+                edits: vec![(0, 4, long_body.as_bytes().to_vec())],
+            },
+        ];
+        let first = render_diff_patch(&sources, &changes).expect("render patch");
+        let second = render_diff_patch(&sources, &changes).expect("render patch");
+        assert_eq!(first, second);
+        assert!(first.contains("--- a/src/a.py"));
+        assert!(first.contains("+++ b/src/a.py"));
+        assert!(first.contains("line TWO"));
+        assert!(first.contains(&"x".repeat(10_000)));
+    }
+}
