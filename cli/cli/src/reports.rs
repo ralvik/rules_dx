@@ -1197,10 +1197,13 @@ pub fn validate_lcov(bytes: &[u8]) -> Result<(), ReportError> {
 pub fn coverage_line_rate(
     documents: &[String],
     load: &dyn Fn(&str) -> Option<String>,
-) -> Result<(u64, u64), String> {
+) -> Result<(u64, u64), ReportError> {
+    let invalid = |e: dx_lcov::LcovError| ReportError::InvalidLcov {
+        detail: e.to_string(),
+    };
     let mut merged: BTreeMap<String, dx_lcov::FileHits> = BTreeMap::new();
     for document in documents {
-        let parsed = parse_lcov(document)?;
+        let parsed = parse_lcov(document).map_err(&invalid)?;
         for (path, hits) in parsed {
             let slot = merged.entry(path).or_default();
             for (line, count) in hits.lines {
@@ -1217,7 +1220,7 @@ pub fn coverage_line_rate(
         let mut ignores = None;
         if is_covered_language(path) {
             if let Some(source) = load(path) {
-                ignores = Some(find_ignores(path, &source)?);
+                ignores = Some(find_ignores(path, &source).map_err(&invalid)?);
             }
         }
         for (line, count) in &hits.lines {
@@ -2113,7 +2116,7 @@ mod tests {
         assert_eq!(validate_lcov(with_noise.as_bytes()), Ok(()));
     }
 
-    fn rate(documents: &[&str], sources: &[(&str, &str)]) -> Result<(u64, u64), String> {
+    fn rate(documents: &[&str], sources: &[(&str, &str)]) -> Result<(u64, u64), ReportError> {
         let owned: Vec<String> = documents.iter().map(ToString::to_string).collect();
         coverage_line_rate(&owned, &|path| {
             sources

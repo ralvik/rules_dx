@@ -18,7 +18,10 @@ rust_library(
     crate_root = "src/lib.rs",
     edition = "2021",
     deps = crate_deps(
-        ["clap"],
+        [
+            "clap",
+            "thiserror",
+        ],
         package_name = "quality/quality_evaluator",
     ) + ["//quality/result:quality_result"],
 )
@@ -34,7 +37,10 @@ rust_binary(
     crate_root = "src/main.rs",
     edition = "2021",
     deps = crate_deps(
-        ["clap"],
+        [
+            "clap",
+            "thiserror",
+        ],
         package_name = "quality/quality_evaluator",
     ) + [
         ":quality_evaluator_lib",
@@ -82,7 +88,10 @@ rust_test(
     ),
     crate = ":quality_evaluator_lib",
     deps = crate_deps(
-        ["clap"],
+        [
+            "clap",
+            "thiserror",
+        ],
         package_name = "quality/quality_evaluator",
     ) + ["//quality/result:quality_result"],
 )

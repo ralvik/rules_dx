@@ -42,12 +42,21 @@ impl Threshold {
 
 /// Parses a `--fail_on` value. There is no `never`: any spelling outside
 /// `info|warning|error` is an evaluator failure.
-pub fn parse_threshold(text: &str) -> Result<Threshold, String> {
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum EvaluatorError {
+    /// Unknown `--fail_on` value.
+    #[error("unknown fail_on {value:?}, want info|warning|error")]
+    UnknownThreshold { value: String },
+}
+
+pub fn parse_threshold(text: &str) -> Result<Threshold, EvaluatorError> {
     match text {
         "info" => Ok(Threshold::Info),
         "warning" => Ok(Threshold::Warning),
         "error" => Ok(Threshold::Error),
-        _ => Err(format!("unknown fail_on {text:?}, want info|warning|error")),
+        _ => Err(EvaluatorError::UnknownThreshold {
+            value: text.to_owned(),
+        }),
     }
 }
 

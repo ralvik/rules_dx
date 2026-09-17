@@ -70,6 +70,23 @@ pub struct CheckOutcome {
     pub skipped_remotes: Vec<String>,
 }
 
+/// Markdown checker failure (issue #230).
+///
+/// The injected file reader surfaces I/O failures verbatim so CLI
+/// diagnostics stay byte-identical while callers gain a matchable type.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum MarkdownError {
+    /// Injected file read failed; carries the reader's message verbatim.
+    #[error("{message}")]
+    Io { message: String },
+}
+
+impl From<String> for MarkdownError {
+    fn from(message: String) -> Self {
+        Self::Io { message }
+    }
+}
+
 struct Heading {
     level: usize,
     line: u32,
@@ -666,7 +683,7 @@ fn print_usage(print_err: &mut dyn FnMut(&str)) {
 /// checked, `2` on bad arguments, unreadable files, or non-UTF-8 input.
 pub fn run_cli(
     args: &[String],
-    read_file: &dyn Fn(&str) -> Result<Vec<u8>, String>,
+    read_file: &dyn Fn(&str) -> Result<Vec<u8>, MarkdownError>,
     print_out: &mut dyn FnMut(&str),
     print_err: &mut dyn FnMut(&str),
 ) -> i32 {
@@ -1443,10 +1460,9 @@ mod tests {
         let code = run_cli(
             &owned_args,
             &|path| {
-                files
-                    .get(path)
-                    .cloned()
-                    .ok_or_else(|| "missing fixture".to_string())
+                files.get(path).cloned().ok_or_else(|| MarkdownError::Io {
+                    message: "missing fixture".to_string(),
+                })
             },
             &mut |line| out.push(line.to_string()),
             &mut |line| err.push(line.to_string()),

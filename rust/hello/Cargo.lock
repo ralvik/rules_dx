@@ -540,6 +540,9 @@ dependencies = [
 [[package]]
 name = "dx_lcov"
 version = "0.0.0"
+dependencies = [
+ "thiserror",
+]
 
 [[package]]
 name = "dx_output"
@@ -1169,6 +1172,7 @@ name = "quality_evaluator"
 version = "0.0.0"
 dependencies = [
  "clap",
+ "thiserror",
 ]
 
 [[package]]
@@ -1179,6 +1183,7 @@ dependencies = [
  "pulldown-cmark",
  "serde",
  "serde_json",
+ "thiserror",
 ]
 
 [[package]]

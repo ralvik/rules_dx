@@ -105,7 +105,7 @@ fn run() -> Result<(), String> {
         std::fs::read(&result_path).map_err(|e| format!("cannot read {result_path:?}: {e}"))?;
     let result =
         decode_validated(&bytes).map_err(|e| format!("invalid result {result_path:?}: {e:?}"))?;
-    let threshold = parse_threshold(&fail_on)?;
+    let threshold = parse_threshold(&fail_on).map_err(|e| e.to_string())?;
     let evaluation = evaluate(&result, threshold);
     if !evaluation.passed {
         return Err(evaluation.reasons.join("; "));

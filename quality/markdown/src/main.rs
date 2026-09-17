@@ -15,7 +15,11 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let code = quality_markdown::run_cli(
         &args,
-        &|path| std::fs::read(path).map_err(|err| err.to_string()),
+        &|path| {
+            std::fs::read(path).map_err(|err| quality_markdown::MarkdownError::Io {
+                message: err.to_string(),
+            })
+        },
         &mut |line| println!("{line}"),
         &mut |line| eprintln!("{line}"),
     );

@@ -24,6 +24,60 @@
 
 use std::collections::BTreeMap;
 
+/// Typed LCOV gate failure (issue #230).
+///
+/// Every variant renders byte-identical to the historical `String` error
+/// it replaces, so CLI operational diagnostics stay stable while callers
+/// gain matchable structure instead of `format!` string plumbing.
+/// Binary edges keep rendering via `Display` (`to_string()`).
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum LcovError {
+    /// `SF:` record carries no path.
+    #[error("LCOV record with empty SF path")]
+    EmptySfPath,
+    /// `DA:` record appears before any `SF:` record.
+    #[error("LCOV DA record outside any SF record: {line}")]
+    DaOutsideSf { line: String },
+    /// `DA:` line number is not a positive integer.
+    #[error("malformed LCOV DA line number in {path}: {line}")]
+    MalformedLineNumber { path: String, line: String },
+    /// `DA:` hit count is not an integer.
+    #[error("malformed LCOV DA hit count in {path}: {line}")]
+    MalformedHitCount { path: String, line: String },
+    /// Exclusion directive lacks a nearby non-empty `reason:`.
+    #[error("coverage ignore without nearby reason at {path}:{lineno}: {directive} requires a reason: comment on the same or previous line")]
+    MissingReason {
+        path: String,
+        lineno: usize,
+        directive: String,
+    },
+    /// `START` opens while another range is open.
+    #[error("nested range START at {path}:{lineno}")]
+    NestedStart { path: String, lineno: usize },
+    /// `STOP` closes with no open range.
+    #[error("range STOP without START at {path}:{lineno}")]
+    StopWithoutStart { path: String, lineno: usize },
+    /// Marker prefix spells no known directive.
+    #[error("unrecognized coverage ignore directive at {path}:{lineno}")]
+    UnrecognizedDirective { path: String, lineno: usize },
+    /// `START` never closes.
+    #[error("unclosed range START at {path}:{start}")]
+    UnclosedStart { path: String, start: usize },
+    /// Inventory line is not `<disposition> <path>`.
+    #[error("malformed inventory line {lineno}: {raw:?}")]
+    MalformedInventory { lineno: usize, raw: String },
+    /// Injected file read failed; carries the reader's message verbatim
+    /// so gate output stays byte-identical.
+    #[error("{message}")]
+    Io { message: String },
+}
+
+impl From<String> for LcovError {
+    fn from(message: String) -> Self {
+        Self::Io { message }
+    }
+}
+
 /// Inventory disposition for authored first-party implementation.
 pub const ELIGIBLE: &str = "eligible";
 /// Inventory disposition for classified non-implementation (build
@@ -44,7 +98,7 @@ pub struct FileHits {
 /// executable lines; `FN`/`FNDA`/`BRDA`/`LH`/`LF` summaries are informational
 /// and ignored. An empty report parses to an empty map; callers treat that as
 /// a missing report.
-pub fn parse_lcov(report: &str) -> Result<BTreeMap<String, FileHits>, String> {
+pub fn parse_lcov(report: &str) -> Result<BTreeMap<String, FileHits>, LcovError> {
     let mut files: BTreeMap<String, FileHits> = BTreeMap::new();
     let mut current: Option<String> = None;
     for raw in report.lines() {
@@ -54,26 +108,35 @@ pub fn parse_lcov(report: &str) -> Result<BTreeMap<String, FileHits>, String> {
         }
         if let Some(path) = line.strip_prefix("SF:") {
             if path.is_empty() {
-                return Err("LCOV record with empty SF path".to_string());
+                return Err(LcovError::EmptySfPath);
             }
             current = Some(path.to_string());
             files.entry(path.to_string()).or_default();
         } else if let Some(rest) = line.strip_prefix("DA:") {
-            let path = current
-                .clone()
-                .ok_or_else(|| format!("LCOV DA record outside any SF record: {line}"))?;
+            let path = current.clone().ok_or_else(|| LcovError::DaOutsideSf {
+                line: line.to_string(),
+            })?;
             let mut parts = rest.split(',');
             let number_text = parts.next().unwrap_or_default();
             let lineno: u32 = number_text
                 .parse()
-                .map_err(|_| format!("malformed LCOV DA line number in {path}: {line}"))?;
+                .map_err(|_| LcovError::MalformedLineNumber {
+                    path: path.clone(),
+                    line: line.to_string(),
+                })?;
             if lineno == 0 {
-                return Err(format!("malformed LCOV DA line number in {path}: {line}"));
+                return Err(LcovError::MalformedLineNumber {
+                    path: path.clone(),
+                    line: line.to_string(),
+                });
             }
             let hits_text = parts.next().unwrap_or_default();
             let hits: u64 = hits_text
                 .parse()
-                .map_err(|_| format!("malformed LCOV DA hit count in {path}: {line}"))?;
+                .map_err(|_| LcovError::MalformedHitCount {
+                    path: path.clone(),
+                    line: line.to_string(),
+                })?;
             let slot = files
                 .entry(path)
                 .or_default()
@@ -130,7 +193,7 @@ fn nearby_reason(
     directive: &str,
     lineno: usize,
     lines: &[&str],
-) -> Result<String, String> {
+) -> Result<String, LcovError> {
     if let Some(reason) = reason_value(lines[lineno - 1]) {
         return Ok(reason);
     }
@@ -139,9 +202,11 @@ fn nearby_reason(
             return Ok(reason);
         }
     }
-    Err(format!(
-        "coverage ignore without nearby reason at {path}:{lineno}: {directive} requires a reason: comment on the same or previous line"
-    ))
+    Err(LcovError::MissingReason {
+        path: path.to_string(),
+        lineno,
+        directive: directive.to_string(),
+    })
 }
 
 /// Comment style for marker extraction, selected by source extension.
@@ -284,7 +349,7 @@ fn take_word(rest: &str, word: &str) -> bool {
 /// is an unrecognized directive and fails. Markers are honored only inside
 /// the extension-selected comment style (see [`comment_style`]) outside
 /// literals.
-pub fn find_ignores(path: &str, source: &str) -> Result<Ignores, String> {
+pub fn find_ignores(path: &str, source: &str) -> Result<Ignores, LcovError> {
     let lines: Vec<&str> = source.lines().collect();
     let mut ignores = Ignores::default();
     let mut open: Option<(usize, String)> = None;
@@ -299,7 +364,10 @@ pub fn find_ignores(path: &str, source: &str) -> Result<Ignores, String> {
             } else if take_word(rest, "_START") {
                 let reason = nearby_reason(path, "START directive", lineno, &lines)?;
                 if open.is_some() {
-                    return Err(format!("nested range START at {path}:{lineno}"));
+                    return Err(LcovError::NestedStart {
+                        path: path.to_string(),
+                        lineno,
+                    });
                 }
                 open = Some((lineno, reason));
             } else if take_word(rest, "_STOP") {
@@ -312,18 +380,25 @@ pub fn find_ignores(path: &str, source: &str) -> Result<Ignores, String> {
                         let _ = reason;
                     }
                     None => {
-                        return Err(format!("range STOP without START at {path}:{lineno}"));
+                        return Err(LcovError::StopWithoutStart {
+                            path: path.to_string(),
+                            lineno,
+                        });
                     }
                 }
             } else {
-                return Err(format!(
-                    "unrecognized coverage ignore directive at {path}:{lineno}"
-                ));
+                return Err(LcovError::UnrecognizedDirective {
+                    path: path.to_string(),
+                    lineno,
+                });
             }
         }
     }
     if let Some((start, _)) = open {
-        return Err(format!("unclosed range START at {path}:{start}"));
+        return Err(LcovError::UnclosedStart {
+            path: path.to_string(),
+            start,
+        });
     }
     Ok(ignores)
 }
@@ -376,20 +451,20 @@ fn is_starlark(path: &str) -> bool {
 fn check_file(
     path: &str,
     hits: &FileHits,
-    load_source: &dyn Fn(&str) -> Result<String, String>,
+    load_source: &dyn Fn(&str) -> Result<String, LcovError>,
     errors: &mut Vec<String>,
 ) -> Option<FileVerdict> {
     let source = match load_source(path) {
         Ok(text) => text,
-        Err(message) => {
-            errors.push(message);
+        Err(error) => {
+            errors.push(error.to_string());
             return None;
         }
     };
     let ignores = match find_ignores(path, &source) {
         Ok(valid) => valid,
         Err(message) => {
-            errors.push(message);
+            errors.push(message.to_string());
             return None;
         }
     };
@@ -438,7 +513,7 @@ pub fn evaluate(
     inventory: &BTreeMap<String, String>,
     bazel_sources: &[String],
     report: &BTreeMap<String, FileHits>,
-    load_source: &dyn Fn(&str) -> Result<String, String>,
+    load_source: &dyn Fn(&str) -> Result<String, LcovError>,
 ) -> GateVerdict {
     let mut verdict = GateVerdict::default();
     if report.is_empty() {
@@ -578,7 +653,7 @@ pub fn render(verdict: &GateVerdict) -> String {
 
 /// Parse the inventory file: `<disposition> <repo-relative path>` per line;
 /// blank lines and `#` comments are skipped.
-pub fn parse_inventory(text: &str) -> Result<BTreeMap<String, String>, String> {
+pub fn parse_inventory(text: &str) -> Result<BTreeMap<String, String>, LcovError> {
     let mut inventory = BTreeMap::new();
     for (index, raw) in text.lines().enumerate() {
         let lineno = index + 1;
@@ -590,7 +665,10 @@ pub fn parse_inventory(text: &str) -> Result<BTreeMap<String, String>, String> {
         let disposition = parts.next().unwrap_or_default();
         let path = parts.next().unwrap_or_default();
         if disposition.is_empty() || path.is_empty() || parts.next().is_some() {
-            return Err(format!("malformed inventory line {lineno}: {raw:?}"));
+            return Err(LcovError::MalformedInventory {
+                lineno,
+                raw: raw.to_string(),
+            });
         }
         inventory.insert(path.to_string(), disposition.to_string());
     }
@@ -606,7 +684,7 @@ fn print_usage(print: &mut dyn FnMut(&str)) {
 /// unreadable inventory/sources configuration is a usage error (2).
 pub fn run(
     args: &[String],
-    read_file: &dyn Fn(&str) -> Result<String, String>,
+    read_file: &dyn Fn(&str) -> Result<String, LcovError>,
     print: &mut dyn FnMut(&str),
 ) -> i32 {
     let mut report_path: Option<String> = None;
@@ -715,7 +793,9 @@ pub fn run(
         } else {
             format!("{root}/{path}")
         };
-        read_file(&full).map_err(|message| format!("cannot read eligible source {full}: {message}"))
+        read_file(&full).map_err(|error| LcovError::Io {
+            message: format!("cannot read eligible source {full}: {error}"),
+        })
     });
     print(&render(&verdict));
     if verdict.passed {
@@ -759,12 +839,11 @@ mod tests {
 
     fn loader<'a>(
         files: BTreeMap<&'a str, String>,
-    ) -> impl Fn(&str) -> Result<String, String> + 'a {
+    ) -> impl Fn(&str) -> Result<String, LcovError> + 'a {
         move |path| {
-            files
-                .get(path)
-                .cloned()
-                .ok_or_else(|| format!("no such fixture: {path}"))
+            files.get(path).cloned().ok_or_else(|| LcovError::Io {
+                message: format!("no such fixture: {path}"),
+            })
         }
     }
 
@@ -806,7 +885,7 @@ mod tests {
     #[test]
     fn rejects_da_outside_sf() {
         let err = parse_lcov("DA:1,1\n").unwrap_err();
-        assert!(err.contains("outside any SF"), "{err}");
+        assert!(err.to_string().contains("outside any SF"), "{err}");
     }
 
     #[test]
@@ -870,7 +949,10 @@ mod tests {
     fn missing_reason_fails_on_first_line() {
         let source = file_lines(&[format!("// {}", marker("_LINE")), "fn f() {}".to_string()]);
         let err = find_ignores("t.rs", &source).unwrap_err();
-        assert!(err.contains("t.rs:1") && err.contains("reason"), "{err}");
+        assert!(
+            err.to_string().contains("t.rs:1") && err.to_string().contains("reason"),
+            "{err}"
+        );
     }
 
     #[test]
@@ -936,7 +1018,7 @@ mod tests {
     fn stop_without_start_fails() {
         let source = file_lines(&[format!("// {} - reason: stray stop.", marker("_STOP"))]);
         let err = find_ignores("t.rs", &source).unwrap_err();
-        assert!(err.contains("without START"), "{err}");
+        assert!(err.to_string().contains("without START"), "{err}");
     }
 
     #[test]
@@ -948,7 +1030,7 @@ mod tests {
             format!("// {} - reason: close.", marker("_STOP")),
         ]);
         let err = find_ignores("t.rs", &source).unwrap_err();
-        assert!(err.contains("nested"), "{err}");
+        assert!(err.to_string().contains("nested"), "{err}");
     }
 
     #[test]
@@ -959,14 +1041,17 @@ mod tests {
             "}".to_string(),
         ]);
         let err = find_ignores("t.rs", &source).unwrap_err();
-        assert!(err.contains("unclosed") && err.contains("t.rs:2"), "{err}");
+        assert!(
+            err.to_string().contains("unclosed") && err.to_string().contains("t.rs:2"),
+            "{err}"
+        );
     }
 
     #[test]
     fn unrecognized_suffix_fails() {
         let source = file_lines(&[format!("// {} - reason: typo.", marker("_RANGE"))]);
         let err = find_ignores("t.rs", &source).unwrap_err();
-        assert!(err.contains("unrecognized"), "{err}");
+        assert!(err.to_string().contains("unrecognized"), "{err}");
     }
 
     #[test]
@@ -1048,14 +1133,17 @@ mod tests {
     fn hash_marker_without_reason_fails_for_python() {
         let source = file_lines(&[format!("# {}", marker("_LINE")), "x = 1".to_string()]);
         let err = find_ignores("t.py", &source).unwrap_err();
-        assert!(err.contains("t.py:1") && err.contains("reason"), "{err}");
+        assert!(
+            err.to_string().contains("t.py:1") && err.to_string().contains("reason"),
+            "{err}"
+        );
     }
 
     #[test]
     fn hash_malformed_directive_fails_for_python() {
         let source = file_lines(&[format!("# {} - reason: typo.", marker("_RANGE"))]);
         let err = find_ignores("t.py", &source).unwrap_err();
-        assert!(err.contains("unrecognized"), "{err}");
+        assert!(err.to_string().contains("unrecognized"), "{err}");
     }
 
     #[test]
@@ -1519,10 +1607,9 @@ mod tests {
         let code = run(
             &owned_args,
             &|path| {
-                owned
-                    .get(path)
-                    .cloned()
-                    .ok_or_else(|| format!("missing file: {path}"))
+                owned.get(path).cloned().ok_or_else(|| LcovError::Io {
+                    message: format!("missing file: {path}"),
+                })
             },
             &mut |line| printed.push(line.to_string()),
         );

@@ -27,6 +27,32 @@ pub const REASON_INVALID_EDITS: &str = "invalid_edits";
 /// Stable per-file reason: incomplete collection prevents all mutation.
 pub const REASON_INCOMPLETE_COLLECTION: &str = "incomplete_collection";
 
+/// Execution helper failure (issue #230).
+///
+/// Variants render the legacy reason strings verbatim so operational
+/// diagnostics stay byte-identical while callers gain a matchable type.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub(crate) enum ExecError {
+    /// Replacement bytes are not valid UTF-8.
+    #[error("invalid_edits")]
+    InvalidEdits,
+    /// Generated logical path is empty.
+    #[error("generated logical path is empty")]
+    EmptyLogicalPath,
+    /// Generated logical path is absolute.
+    #[error("generated logical path {path:?} is absolute")]
+    AbsoluteLogicalPath { path: String },
+    /// Generated logical path escapes its generation.
+    #[error("generated logical path {path:?} escapes its generation")]
+    EscapingLogicalPath { path: String },
+    /// Env identity key is empty.
+    #[error("env identity key is empty")]
+    EmptyEnvKey,
+    /// Env identity key is not a single filename.
+    #[error("env identity key {key:?} is not a single filename")]
+    BadEnvKey { key: String },
+}
+
 /// Stable operational error codes for NDJSON `error` events.
 pub(crate) const CODE_LAUNCH_FAILED: &str = "launch_failed";
 pub(crate) const CODE_BAZEL_SIGNALLED: &str = "bazel_signalled";
@@ -403,11 +429,11 @@ pub(crate) fn operational(
     operational_code()
 }
 
-pub(crate) fn change_event_for(change: &FileChange) -> Result<ChangeEvent, String> {
+pub(crate) fn change_event_for(change: &FileChange) -> Result<ChangeEvent, ExecError> {
     let mut edits = Vec::with_capacity(change.edits.len());
     for (start, end, replacement) in &change.edits {
         let replacement =
-            String::from_utf8(replacement.clone()).map_err(|_| REASON_INVALID_EDITS.to_owned())?;
+            String::from_utf8(replacement.clone()).map_err(|_| ExecError::InvalidEdits)?;
         edits.push(dx_output::Edit {
             start: *start,
             end: *end,

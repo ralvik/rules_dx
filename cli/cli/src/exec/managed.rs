@@ -184,15 +184,15 @@ fn symlink_leaf(target: &Path, link: &Path) -> io::Result<()> {
 
 /// Rejects workspace-absolute, escaping, or empty logical paths before
 /// any mutation.
-fn validate_logical_path(logical_path: &str) -> Result<(), String> {
+fn validate_logical_path(logical_path: &str) -> Result<(), ExecError> {
     if logical_path.is_empty() {
-        return Err("generated logical path is empty".to_owned());
+        return Err(ExecError::EmptyLogicalPath);
     }
     let path = Path::new(logical_path);
     if path.is_absolute() {
-        return Err(format!(
-            "generated logical path {logical_path:?} is absolute"
-        ));
+        return Err(ExecError::AbsoluteLogicalPath {
+            path: logical_path.to_owned(),
+        });
     }
     if path.components().any(|c| {
         matches!(
@@ -200,9 +200,9 @@ fn validate_logical_path(logical_path: &str) -> Result<(), String> {
             std::path::Component::ParentDir | std::path::Component::Prefix(_)
         )
     }) {
-        return Err(format!(
-            "generated logical path {logical_path:?} escapes its generation"
-        ));
+        return Err(ExecError::EscapingLogicalPath {
+            path: logical_path.to_owned(),
+        });
     }
     Ok(())
 }
@@ -318,12 +318,14 @@ fn stage_codegen_generation(
 
 /// Rejects env keys that are not safe single-path filenames before any
 /// mutation.
-fn validate_env_key(key: &str) -> Result<(), String> {
+fn validate_env_key(key: &str) -> Result<(), ExecError> {
     if key.is_empty() {
-        return Err("env identity key is empty".to_owned());
+        return Err(ExecError::EmptyEnvKey);
     }
     if key.contains('/') || key.contains('\\') || key == "." || key == ".." {
-        return Err(format!("env identity key {key:?} is not a single filename"));
+        return Err(ExecError::BadEnvKey {
+            key: key.to_owned(),
+        });
     }
     Ok(())
 }

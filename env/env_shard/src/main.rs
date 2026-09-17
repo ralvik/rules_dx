@@ -29,6 +29,28 @@ use env_shard::{
     proto::{DxEnvEntry, DxEnvShard},
 };
 
+/// Shard writer failure (issue #230).
+///
+/// Variants render the legacy operational messages verbatim.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum EnvShardError {
+    /// `clap` tokenizing failure mapped onto the legacy surface.
+    #[error("{message}")]
+    Args { message: String },
+    /// `--entry` value without `KEY|VALUE[|EXEC_PATH]` shape.
+    #[error("bad --entry {raw:?}: want KEY|VALUE[|EXEC_PATH]")]
+    BadEntry { raw: String },
+    /// Required field or usage error.
+    #[error("{message}")]
+    Usage { message: String },
+    /// Codec validation failed.
+    #[error("{detail}")]
+    Codec { detail: String },
+    /// Output write failed.
+    #[error("{detail}")]
+    Io { detail: String },
+}
+
 fn usage() -> String {
     "usage: env_shard_writer --producer LABEL --integration LANG --entry KEY|VALUE[|EXEC] [--entry ...] --output OUT".into()
 }
@@ -90,14 +112,16 @@ fn parse_error(error: clap::Error, args: &[String]) -> String {
     }
 }
 
-fn parse_args(args: &[String]) -> Result<Cli, String> {
+fn parse_args(args: &[String]) -> Result<Cli, EnvShardError> {
     Cli::try_parse_from(
         std::iter::once("env_shard_writer").chain(args.iter().map(|arg| arg as &str)),
     )
-    .map_err(|error| parse_error(error, args))
+    .map_err(|error| EnvShardError::Args {
+        message: parse_error(error, args),
+    })
 }
 
-fn parse_entry(raw: &str) -> Result<DxEnvEntry, String> {
+fn parse_entry(raw: &str) -> Result<DxEnvEntry, EnvShardError> {
     let parts: Vec<&str> = raw.split('|').collect();
     match parts.len() {
         2 => Ok(DxEnvEntry {
@@ -110,11 +134,13 @@ fn parse_entry(raw: &str) -> Result<DxEnvEntry, String> {
             value: parts[1].into(),
             exec_path: parts[2].into(),
         }),
-        _ => Err(format!("bad --entry {raw:?}: want KEY|VALUE[|EXEC_PATH]")),
+        _ => Err(EnvShardError::BadEntry {
+            raw: raw.to_owned(),
+        }),
     }
 }
 
-fn run(args: &[String]) -> Result<(), String> {
+fn run(args: &[String]) -> Result<(), EnvShardError> {
     let cli = parse_args(args)?;
     let mut entries = Vec::with_capacity(cli.entry.len());
     for raw in &cli.entry {
@@ -122,16 +148,26 @@ fn run(args: &[String]) -> Result<(), String> {
     }
     let output = cli.output.map(PathBuf::from);
     let shard = DxEnvShard {
-        producer: cli.producer.ok_or_else(usage)?,
-        integration: cli.integration.ok_or_else(usage)?,
+        producer: cli
+            .producer
+            .ok_or_else(|| EnvShardError::Usage { message: usage() })?,
+        integration: cli
+            .integration
+            .ok_or_else(|| EnvShardError::Usage { message: usage() })?,
         entries,
     };
-    let bytes = encode_validated(&shard).map_err(|error| error.to_string())?;
+    let bytes = encode_validated(&shard).map_err(|error| EnvShardError::Codec {
+        detail: error.to_string(),
+    })?;
     // Read back before writing so a codec regression fails the action
     // instead of emitting bytes the CLI would reject.
-    decode_validated(&bytes).map_err(|error| error.to_string())?;
-    let output = output.ok_or_else(usage)?;
-    dx_atomic_fs::write_atomic(&output, &bytes).map_err(|error| error.to_string())
+    decode_validated(&bytes).map_err(|error| EnvShardError::Codec {
+        detail: error.to_string(),
+    })?;
+    let output = output.ok_or_else(|| EnvShardError::Usage { message: usage() })?;
+    dx_atomic_fs::write_atomic(&output, &bytes).map_err(|error| EnvShardError::Io {
+        detail: error.to_string(),
+    })
 }
 
 fn main() {
