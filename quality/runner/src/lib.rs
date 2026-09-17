@@ -990,4 +990,39 @@ mod tests {
         .unwrap();
         assert!(oscillating.replacements.is_empty());
     }
+
+    #[test]
+    fn changing_tenth_round_fails_without_eleventh_invocation() {
+        // Apply-safety battery (issue #84): a pipeline that changes every
+        // round must report IterationLimit at exactly MAX_COMPLETED_ROUNDS
+        // (10) with no eleventh apply invocation, and assemble must emit
+        // no replacements for that outcome even with differing maps.
+        let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let mut initial = BTreeMap::new();
+        initial.insert("src/lib.rs".to_owned(), "a".to_owned());
+        let invocations = std::cell::Cell::new(0u32);
+        let grow = |_: &str, _: &str, text: &str| {
+            invocations.set(invocations.get() + 1);
+            Ok(format!("{text}x"))
+        };
+        let (terminal, completed, convergence) =
+            run_convergence(&initial, &stages, MAX_COMPLETED_ROUNDS, grow).expect("converged");
+        assert_eq!(convergence, Convergence::IterationLimit);
+        assert_eq!(completed, MAX_COMPLETED_ROUNDS);
+        assert_eq!(invocations.get(), MAX_COMPLETED_ROUNDS);
+        assert_ne!(terminal["src/lib.rs"], initial["src/lib.rs"]);
+
+        let result = assemble(
+            "//quality:test",
+            Capability::Lint as i32,
+            &stages,
+            &initial,
+            &terminal,
+            (Vec::new(), Vec::new()),
+            (completed, convergence),
+        )
+        .unwrap();
+        assert!(result.replacements.is_empty());
+        assert!(quality_result::validate(&result).is_ok());
+    }
 }
