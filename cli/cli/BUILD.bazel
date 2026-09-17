@@ -51,6 +51,7 @@ rust_library(
         "src/exec/managed_staging.rs",
         "src/exec/quality.rs",
         "src/exec/quality_apply.rs",
+        "src/exec/quality_patch.rs",
         "src/exec/results.rs",
         "src/exec/run.rs",
         "src/exec/test_reports.rs",

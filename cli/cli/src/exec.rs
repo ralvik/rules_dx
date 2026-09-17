@@ -4,7 +4,8 @@
 //! collection), bazel, generate, clean, managed (dispatch) plus
 //! managed_codegen/managed_env (generation sides) plus
 //! managed_staging (shared staging primitives), quality plus
-//! quality_apply (mutation and status projection), audit, update,
+//! quality_apply (mutation and status projection) plus quality_patch
+//! (diff-patch rendering), audit, update,
 //! run, and the check/fix umbrella. Shared plumbing (error codes,
 //! environment, source verification, mutation helpers) lives in
 //! [`common`]; BEP results collection and proto mapping live in
@@ -25,6 +26,7 @@ mod managed_env;
 mod managed_staging;
 mod quality;
 mod quality_apply;
+mod quality_patch;
 mod results;
 mod run;
 mod test_reports;

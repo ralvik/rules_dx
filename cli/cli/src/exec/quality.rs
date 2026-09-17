@@ -2,18 +2,19 @@
 //!
 //! Mutation (verified-source collection plus check/incomplete/apply
 //! handling) and status projection live in [`super::quality_apply`]
-//! (issue #236); this module keeps the dispatch, diff-patch rendering,
+//! (issue #236); diff-patch rendering lives in
+//! [`super::quality_patch`]; this module keeps the dispatch,
 //! finding emission, and SARIF reporting.
 
 use super::common::*;
 use super::quality_apply::{apply_collected_changes, project_status};
+use super::quality_patch::render_diff_patch;
 use super::results::collect_results;
 use crate::args::Invocation;
 use crate::plan::{bep_path, plan_build};
 use crate::reports::{plan_reports, render_sarif, Destination, ReportError};
 use crate::resolve::resolve;
 use dx_apply::{FileSystem, RealFileSystem};
-use dx_diff::{render_patch, FilePatch, PatchKind};
 use dx_digest::blake3 as digest;
 use dx_output::{
     change_event, command_finished, command_started, diagnostic_event, mutation_event,
@@ -163,84 +164,13 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
     );
 
     // Projection: text lines, unified patch, or NDJSON events.
+    // Diff-patch rendering lives in `quality_patch` (issue #236).
     let mut patch = String::new();
     if invocation.output == OutputMode::Diff {
-        let mut owned: Vec<(String, String, String)> = Vec::with_capacity(collected.changes.len());
-        for change in &collected.changes {
-            let original = match sources.get(&change.path) {
-                Some(SourceRead::Bytes(bytes)) => bytes,
-                _ => {
-                    return operational(
-                        invocation,
-                        out,
-                        err,
-                        CODE_DIFF_FAILED,
-                        &format!(
-                            "cannot render patch without verified source for {}",
-                            change.path
-                        ),
-                    );
-                }
-            };
-            let original_text = match std::str::from_utf8(original) {
-                Ok(text) => text,
-                Err(_) => {
-                    return operational(
-                        invocation,
-                        out,
-                        err,
-                        CODE_DIFF_FAILED,
-                        &format!("source for {} is not UTF-8 text", change.path),
-                    );
-                }
-            };
-            let Some(candidate) = apply_to_bytes(original, &change.edits) else {
-                return operational(
-                    invocation,
-                    out,
-                    err,
-                    CODE_DIFF_FAILED,
-                    &format!("cannot apply recorded edits for {}", change.path),
-                );
-            };
-            let candidate_text = match String::from_utf8(candidate) {
-                Ok(text) => text,
-                // LCOV_EXCL_START - reason: apply_to_bytes only returns valid UTF-8.
-                Err(_) => {
-                    return operational(
-                        invocation,
-                        out,
-                        err,
-                        CODE_DIFF_FAILED,
-                        &format!("candidate for {} is not UTF-8 text", change.path),
-                    );
-                } // LCOV_EXCL_STOP - reason: end of unreachable candidate arm.
-            };
-            owned.push((
-                change.path.clone(),
-                original_text.to_owned(),
-                candidate_text,
-            ));
-        }
-        let patches: Vec<FilePatch<'_>> = owned
-            .iter()
-            .map(|(path, original, candidate)| FilePatch {
-                path,
-                kind: PatchKind::Modify,
-                original,
-                candidate,
-            })
-            .collect();
-        match render_patch(&patches) {
+        match render_diff_patch(&sources, &collected.changes) {
             Ok(rendered) => patch = rendered,
-            Err(error) => {
-                return operational(
-                    invocation,
-                    out,
-                    err,
-                    CODE_DIFF_FAILED,
-                    &format!("failed to render patch: {error}"),
-                );
+            Err(detail) => {
+                return operational(invocation, out, err, CODE_DIFF_FAILED, &detail);
             }
         }
     }
