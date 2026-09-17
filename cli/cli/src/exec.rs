@@ -77,3 +77,108 @@ pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
     }
     quality::execute_quality(invocation, env)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::test_support::Harness;
+    use crate::args::Command;
+
+    /// Dispatch-table pin (issue #238): every `Command` variant must map
+    /// to exactly one execution family in the same order as `execute`
+    /// above. Adding a variant without wiring it here fails loudly
+    /// instead of silently falling to the quality pipeline.
+    fn family(command: Command) -> &'static str {
+        if command.is_adoption() {
+            "adoption"
+        } else if command.is_umbrella() {
+            "umbrella"
+        } else if command.is_workflow() {
+            "workflow"
+        } else if command == Command::Bazel {
+            "bazel"
+        } else if command == Command::Generate {
+            "generate"
+        } else if command == Command::Clean {
+            "clean"
+        } else if command.is_managed() {
+            "managed"
+        } else if command == Command::Audit {
+            "audit"
+        } else if command == Command::Update {
+            "update"
+        } else {
+            "quality"
+        }
+    }
+
+    #[test]
+    fn dispatch_table_covers_every_command() {
+        let cases = [
+            (Command::Audit, "audit"),
+            (Command::Lint, "quality"),
+            (Command::Typecheck, "quality"),
+            (Command::Format, "quality"),
+            (Command::Generate, "generate"),
+            (Command::Build, "workflow"),
+            (Command::Test, "workflow"),
+            (Command::Coverage, "workflow"),
+            (Command::Run, "workflow"),
+            (Command::Deploy, "workflow"),
+            (Command::Check, "umbrella"),
+            (Command::Fix, "umbrella"),
+            (Command::Clean, "clean"),
+            (Command::Update, "update"),
+            (Command::Codegen, "managed"),
+            (Command::Env, "managed"),
+            (Command::Setup, "managed"),
+            (Command::Init, "adoption"),
+            (Command::Hooks, "adoption"),
+            (Command::Status, "adoption"),
+            (Command::Version, "adoption"),
+            (Command::Watch, "adoption"),
+            (Command::Owners, "adoption"),
+            (Command::Deps, "adoption"),
+            (Command::Why, "adoption"),
+            (Command::Completion, "adoption"),
+            (Command::Bazel, "bazel"),
+        ];
+        assert_eq!(cases.len(), 27, "every Command variant pinned");
+        for (command, want) in cases {
+            assert_eq!(family(command), want, "family for {}", command.name());
+        }
+    }
+
+    #[test]
+    fn dry_run_families_launch_nothing() {
+        for argv in [
+            vec!["--dry-run", "bazel", "version"],
+            vec!["audit", "--dry-run"],
+            vec!["update", "--dry-run"],
+        ] {
+            let name = format!("exec-dispatch-{}", argv[0].trim_start_matches('-'));
+            let harness = Harness::new(&name);
+            let (code, _out, err) = harness.run(&argv);
+            assert_eq!(code, 0, "{argv:?}");
+            assert_eq!(err, "", "{argv:?}");
+            assert!(
+                harness.seen_env.borrow().is_empty(),
+                "{argv:?} launches nothing"
+            );
+        }
+    }
+
+    #[test]
+    fn deferred_families_fail_closed_without_launch() {
+        for argv in [vec!["audit"], vec!["update"]] {
+            let name = format!("exec-deferred-{}", argv[0]);
+            let harness = Harness::new(&name);
+            let (code, _out, err) = harness.run(&argv);
+            assert_eq!(code, 1, "{argv:?}");
+            assert!(err.contains("deferred"), "{argv:?} fails closed: {err}");
+            assert!(
+                harness.seen_env.borrow().is_empty(),
+                "{argv:?} launches nothing"
+            );
+        }
+    }
+}

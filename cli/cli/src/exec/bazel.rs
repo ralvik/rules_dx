@@ -136,4 +136,22 @@ mod tests {
             .expect("stdout")
             .contains("Running bazel version"));
     }
+
+    #[test]
+    fn bazel_launch_failure_is_operational() {
+        let mut harness = Harness::new("bazel-launch-fail");
+        harness.io_error = true;
+        let (code, _out, err) = harness.run(&["bazel", "version"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("launch_failed"), "{err}");
+    }
+
+    #[test]
+    fn bazel_signalled_is_operational() {
+        let mut harness = Harness::new("bazel-signalled");
+        harness.signalled = true;
+        let (code, _out, err) = harness.run(&["bazel", "version"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("bazel_signalled"), "{err}");
+    }
 }

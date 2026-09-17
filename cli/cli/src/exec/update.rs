@@ -104,4 +104,51 @@ mod tests {
             "deferred run launches nothing"
         );
     }
+
+    #[test]
+    fn update_dry_run_json_emits_lifecycle() {
+        let harness = Harness::new("update-dryrun-json");
+        let (code, out, err) = harness.run(&["update", "--dry-run", "--output=json"]);
+        assert_eq!(code, 0, "{out}{err}");
+        let events: Vec<serde_json::Value> = out
+            .lines()
+            .map(serde_json::from_str)
+            .collect::<Result<_, _>>()
+            .expect("NDJSON");
+        let kinds: Vec<&str> = events
+            .iter()
+            .map(|event| event["event"].as_str().expect("event"))
+            .collect();
+        assert_eq!(kinds, vec!["command_started", "command_finished"]);
+        assert_eq!(
+            events.last().expect("finished")["exit_code"],
+            serde_json::json!(0)
+        );
+        assert!(
+            harness.seen_env.borrow().is_empty(),
+            "dry-run launches nothing"
+        );
+    }
+
+    #[test]
+    fn update_live_json_emits_deferred_lifecycle() {
+        let harness = Harness::new("update-live-json");
+        let (code, out, err) = harness.run(&["update", "--output=json"]);
+        assert_eq!(code, 1, "{out}{err}");
+        assert!(err.contains("update_deferred"), "{err}");
+        let events: Vec<serde_json::Value> = out
+            .lines()
+            .map(serde_json::from_str)
+            .collect::<Result<_, _>>()
+            .expect("NDJSON");
+        let kinds: Vec<&str> = events
+            .iter()
+            .map(|event| event["event"].as_str().expect("event"))
+            .collect();
+        assert_eq!(kinds, vec!["command_started", "error", "command_finished"]);
+        assert!(
+            harness.seen_env.borrow().is_empty(),
+            "deferred run launches nothing"
+        );
+    }
 }

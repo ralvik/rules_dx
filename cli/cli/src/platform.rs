@@ -53,4 +53,9 @@ mod tests {
             assert!(message.contains("213"), "{message}");
         }
     }
+
+    #[test]
+    fn qualified_set_is_seed_only() {
+        assert_eq!(qualified_hosts(), &[("linux", "x86_64")]);
+    }
 }
