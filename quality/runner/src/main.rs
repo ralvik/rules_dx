@@ -145,7 +145,11 @@ fn main() {
 /// run in that order); scalars keep last-wins repeats; every value option
 /// consumes the next token unconditionally (even a `--`-led token), matching
 /// the legacy hand loop. Only tokenizing moves to `clap`; all value-shape
-/// validation (`parse_stage`, `parse_tool_*`, mapping splits) is untouched.
+/// validation (`parse_stage`, `parse_tool_*`, mapping splits) is untouched:
+/// it stays post-parse (issue #233 fallback) because it is stateful across
+/// values -- duplicate detection, `--tool-config` requiring a preceding
+/// `--tool-binary`, stage ordering -- while `value_parser`s see one value
+/// in isolation and cannot emit the legacy cross-flag errors.
 #[derive(Parser)]
 #[command(disable_help_flag = true)]
 struct Cli {

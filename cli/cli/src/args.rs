@@ -579,6 +579,11 @@ const VALUE_OPTIONS: &[&str] = &[
 /// value. Returns `None` once a bare `--` is seen (everything after it
 /// is Bazel-owned regardless of command) or when a value option is
 /// missing its payload (the full parse then reports the missing value).
+///
+/// Stays hand-rolled (issue #233 fallback): it routes `argv` *before* the
+/// grammar runs, deciding which prefix clap parses and which tail forwards
+/// verbatim. A `value_parser` runs inside parsing on one value and cannot
+/// own the tail, and the Bazel tail is foreign syntax by contract.
 fn split_bazel_verbatim(args: &[String]) -> Option<usize> {
     let mut index = 0;
     while index < args.len() {
@@ -796,6 +801,10 @@ pub fn render_completion(shell: &str) -> Result<String, ArgsError> {
 /// like [`split_bazel_verbatim`]. Stops at `--` (everything after is
 /// Bazel-owned). Returns `None` for top-level help when no command
 /// word is present or the first positional is not a command.
+///
+/// Stays hand-rolled with [`split_bazel_verbatim`] (issue #233 fallback):
+/// help routing inspects `argv` before the grammar runs, so it cannot
+/// itself be a `value_parser`.
 fn help_command_in(args: &[String]) -> Option<Command> {
     let mut index = 0;
     while index < args.len() {
