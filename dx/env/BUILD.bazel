@@ -24,8 +24,10 @@ rust_library(
     ),
     crate_name = "dx_env",
     crate_root = "src/lib.rs",
+    edition = "2021",
     deps = crate_deps(
         [
+            "clap",
             "serde",
             "serde_json",
             "tempfile",
@@ -49,12 +51,15 @@ rust_binary(
     crate_name = "env",
     crate_root = "src/main.rs",
     data = ["//env:default_tree"],
+    edition = "2021",
     visibility = ["//visibility:public"],
     deps = crate_deps(
         [
             "clap",
             "serde",
             "serde_json",
+            "tempfile",
+            "thiserror",
         ],
         package_name = "dx/dx_env",
     ) + [
@@ -74,6 +79,7 @@ rust_test(
     crate = ":dx_env",
     deps = crate_deps(
         [
+            "clap",
             "serde",
             "serde_json",
             "tempfile",

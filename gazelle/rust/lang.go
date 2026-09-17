@@ -1237,10 +1237,10 @@ func (l *rustLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *repo.Remo
 		}
 	}
 	if imports.siblingLib != "" && imports.siblingLib != from.Name {
-		deps[":"+imports.siblingLib] = true
+		addLocalDep(deps, from, imports.siblingLib)
 	}
 	if imports.scriptDep != "" && imports.scriptDep != from.Name {
-		deps[":"+imports.scriptDep] = true
+		addLocalDep(deps, from, imports.scriptDep)
 	}
 	labels := make([]string, 0, len(deps))
 	for dep := range deps {
@@ -1261,6 +1261,47 @@ func (l *rustLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *repo.Remo
 	default:
 		r.SetAttr("deps", depsConcatExpr{base: existing, extra: labels})
 	}
+}
+
+// addLocalDep records a same-package edge (sibling library, build script)
+// in relative :name form. Import resolution can separately resolve the
+// same target and render it absolute (//pkg:name) when the provider match
+// carries a different repo appearance than the importing rule; both
+// strings denote one target and Bazel rejects the duplicate, so drop the
+// absolute form in favor of the relative one.
+func addLocalDep(deps map[string]bool, from label.Label, name string) {
+	for dep := range deps {
+		if pkg, target, ok := splitDepLabel(dep, from); ok && pkg == from.Pkg && target == name {
+			delete(deps, dep)
+		}
+	}
+	deps[":"+name] = true
+}
+
+// splitDepLabel resolves a rendered dep string to its package and target
+// names in from's repo context. It reports false for forms it cannot
+// cheaply classify (which callers keep untouched).
+func splitDepLabel(dep string, from label.Label) (string, string, bool) {
+	rest := dep
+	if strings.HasPrefix(rest, "@") {
+		repo, after, found := strings.Cut(rest[1:], "//")
+		if !found || (repo != "" && repo != from.Repo) {
+			return "", "", false
+		}
+		rest = "//" + after
+	}
+	if strings.HasPrefix(rest, ":") {
+		return from.Pkg, rest[1:], true
+	}
+	pkgTarget := strings.TrimPrefix(rest, "//")
+	pkg, target, found := strings.Cut(pkgTarget, ":")
+	if !found {
+		if i := strings.LastIndex(pkg, "/"); i >= 0 {
+			return pkg, pkg[i+1:], true
+		}
+		return pkg, pkg, true
+	}
+	return pkg, target, true
 }
 
 func unionStrings(a, b []string) []string {

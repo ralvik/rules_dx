@@ -20,8 +20,15 @@ rust_library(
     ),
     crate_name = "dx_clean",
     crate_root = "src/lib.rs",
+    edition = "2021",
     deps = crate_deps(
-        ["globset", "ignore", "tempfile", "thiserror", "walkdir"],
+        [
+            "globset",
+            "ignore",
+            "tempfile",
+            "thiserror",
+            "walkdir",
+        ],
         package_name = "dx/dx_clean",
     ) + [
         "//dx/env:dx_env",
@@ -38,6 +45,16 @@ rust_test(
         normal_dev = True,
     ),
     crate = ":dx_clean",
+    deps = crate_deps(
+        [
+            "globset",
+            "ignore",
+            "tempfile",
+            "thiserror",
+            "walkdir",
+        ],
+        package_name = "dx/dx_clean",
+    ),
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy

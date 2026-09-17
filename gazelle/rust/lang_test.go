@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -695,6 +696,38 @@ func TestResolvePreservesCrateDeps(t *testing.T) {
 	merged := (depsConcatExpr{base: concat.X, extra: []string{":core"}}).Merge(nil)
 	if merged == nil {
 		t.Error("concat merge returned nil")
+	}
+}
+
+func TestResolveDedupesSiblingLibDuplicate(t *testing.T) {
+	// Regression: a bin that both links its sibling lib automatically and
+	// imports the sibling crate used to emit :lib and //pkg:lib for the
+	// same target, which Bazel rejects as a duplicated deps entry.
+	l := &rustLang{}
+	cfg := resolverConfig(t, []rule.Directive{{Key: "resolve", Value: "rust quality_result //quality/result:quality_result"}})
+	r := rule.NewRule(binaryKind, "print_result")
+	l.Resolve(cfg, resolverIndex(l), nil, r,
+		targetImports{production: []string{"quality_result"}, siblingLib: "quality_result"},
+		label.New("rules_dx", "quality/result", "print_result"))
+	if got := strings.Join(r.AttrStrings("deps"), ","); got != ":quality_result" {
+		t.Errorf("deps = %q, want :quality_result", got)
+	}
+	// Unrelated absolute labels and other-repo same-name targets survive.
+	from := label.New("", "quality/result", "print_result")
+	deps := map[string]bool{
+		"//other/pkg:quality_result":  true,
+		"@third//quality/result:tool": true,
+		"//quality/result:quality_result": true,
+	}
+	addLocalDep(deps, from, "quality_result")
+	var got []string
+	for dep := range deps {
+		got = append(got, dep)
+	}
+	sort.Strings(got)
+	want := "//other/pkg:quality_result,:quality_result,@third//quality/result:tool"
+	if strings.Join(got, ",") != want {
+		t.Errorf("deps = %q, want %q", strings.Join(got, ","), want)
 	}
 }
 

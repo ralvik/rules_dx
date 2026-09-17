@@ -3,6 +3,10 @@
 pub use doc_ir_proto::dx::documentation::v1 as proto;
 use proto::{DocIr, Symbol};
 
+use dx_path::{classify, PathProblem};
+use dx_proto_validate::{
+    check_sorted_next, decode_with_validation, encode_with_validation, OrderViolation,
+};
 pub use dx_schema::SCHEMA_MAJOR;
 pub use dx_schema::SCHEMA_MINOR;
 
@@ -41,14 +45,14 @@ pub fn validate_shard(shard: &DocIr) -> Result<(), Error> {
         // only the crate-local `Error` payloads stay here (#72 slice).
         // Equal IDs report Duplicate; smaller IDs report Unsorted, matching
         // the previous explicit order-then-duplicate checks.
-        match dx_proto_validate::check_sorted_next(previous_id, &symbol.id) {
+        match check_sorted_next(previous_id, &symbol.id) {
             Ok(()) => {}
-            Err(dx_proto_validate::OrderViolation::Duplicate) => {
+            Err(OrderViolation::Duplicate) => {
                 return Err(Error::DuplicateSymbolId {
                     id: symbol.id.clone(),
                 });
             }
-            Err(dx_proto_validate::OrderViolation::Unsorted) => {
+            Err(OrderViolation::Unsorted) => {
                 return Err(Error::UnsortedSymbols {
                     id: symbol.id.clone(),
                 });
@@ -64,14 +68,11 @@ fn validate_symbol(symbol: &Symbol, index: usize) -> Result<(), Error> {
         return Err(Error::EmptySymbolId { index });
     }
     if let Some(source) = symbol.source.as_ref() {
-        // Uses `dx_path::classify` for ladder order; only Absolute is
+        // Uses `classify` for ladder order; only Absolute is
         // rejected to preserve current behavior (empty means no source and
         // stays valid; backslash/empty-component/dot segments remain allowed
         // until a future tightening) (#72 slice 7).
-        let is_absolute = matches!(
-            dx_path::classify(&source.file),
-            Some(dx_path::PathProblem::Absolute)
-        );
+        let is_absolute = matches!(classify(&source.file), Some(PathProblem::Absolute));
         if is_absolute {
             return Err(Error::AbsoluteSourcePath {
                 id: symbol.id.clone(),
@@ -83,15 +84,15 @@ fn validate_symbol(symbol: &Symbol, index: usize) -> Result<(), Error> {
     for extension in symbol.extensions.iter() {
         // Shared sorted-unique control flow lives in `dx_proto_validate`;
         // only the crate-local `Error` payloads stay here (#72 slice).
-        match dx_proto_validate::check_sorted_next(previous, &extension.key) {
+        match check_sorted_next(previous, &extension.key) {
             Ok(()) => {}
-            Err(dx_proto_validate::OrderViolation::Duplicate) => {
+            Err(OrderViolation::Duplicate) => {
                 return Err(Error::DuplicateExtension {
                     id: symbol.id.clone(),
                     key: extension.key.clone(),
                 });
             }
-            Err(dx_proto_validate::OrderViolation::Unsorted) => {
+            Err(OrderViolation::Unsorted) => {
                 return Err(Error::UnsortedExtensions {
                     id: symbol.id.clone(),
                 });
@@ -105,13 +106,13 @@ fn validate_symbol(symbol: &Symbol, index: usize) -> Result<(), Error> {
 /// Encode a validated shard. Validation failures fail encoding: no partial
 /// shard bytes are ever produced.
 pub fn encode_shard(shard: &DocIr) -> Result<Vec<u8>, Error> {
-    dx_proto_validate::encode_with_validation(shard, validate_shard)
+    encode_with_validation(shard, validate_shard)
 }
 
 /// Decode and validate shard bytes. Decode and encode reject the same
 /// invalid shards: both run [`validate_shard`].
 pub fn decode_shard(bytes: &[u8]) -> Result<DocIr, Error> {
-    dx_proto_validate::decode_with_validation(bytes, validate_shard, Error::Decode)
+    decode_with_validation(bytes, validate_shard, Error::Decode)
 }
 
 #[cfg(test)]

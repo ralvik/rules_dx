@@ -20,8 +20,12 @@ rust_library(
     ),
     crate_name = "dx_setup",
     crate_root = "src/lib.rs",
+    edition = "2021",
     deps = crate_deps(
-        ["tempfile", "thiserror"],
+        [
+            "tempfile",
+            "thiserror",
+        ],
         package_name = "dx/dx_setup",
     ) + [
         "//dx/digest:dx_digest",
@@ -40,7 +44,11 @@ rust_test(
     ),
     crate = ":dx_setup",
     deps = crate_deps(
-        ["insta"],
+        [
+            "insta",
+            "tempfile",
+            "thiserror",
+        ],
         package_name = "dx/dx_setup",
     ),
 )

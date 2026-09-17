@@ -19,8 +19,13 @@ rust_library(
     ),
     crate_name = "quality_runner",
     crate_root = "src/lib.rs",
+    edition = "2021",
     deps = crate_deps(
-        ["tempfile", "thiserror"],
+        [
+            "clap",
+            "tempfile",
+            "thiserror",
+        ],
         package_name = "quality/quality_runner",
     ) + [
         "//dx/digest:dx_digest",
@@ -38,8 +43,13 @@ rust_binary(
     ),
     crate_name = "quality_runner",
     crate_root = "src/main.rs",
+    edition = "2021",
     deps = crate_deps(
-        ["clap"],
+        [
+            "clap",
+            "tempfile",
+            "thiserror",
+        ],
         package_name = "quality/quality_runner",
     ) + [
         ":quality_runner_lib",
@@ -85,5 +95,15 @@ rust_test(
         normal_dev = True,
     ),
     crate = ":quality_runner_lib",
-    deps = ["//dx/digest:dx_digest", "//quality/result:quality_result"],
+    deps = crate_deps(
+        [
+            "clap",
+            "tempfile",
+            "thiserror",
+        ],
+        package_name = "quality/quality_runner",
+    ) + [
+        "//dx/digest:dx_digest",
+        "//quality/result:quality_result",
+    ],
 )

@@ -16,6 +16,7 @@ rust_library(
     ),
     crate_name = "quality_result",
     crate_root = "src/lib.rs",
+    edition = "2021",
     deps = crate_deps(
         ["thiserror"],
         package_name = "quality/quality_result",
@@ -41,7 +42,7 @@ rust_test(
     deps = crate_deps(
         ["thiserror"],
         package_name = "quality/quality_result",
-    ),
+    ) + ["@rules_rust_prost//private/3rdparty/crates:prost"],
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy
@@ -60,8 +61,14 @@ rust_clippy_test(
 
 exports_files(["Cargo.toml"])
 
-# Layer-2 matrix harness printer (#59): decodes one validated result
-# protobuf into deterministic text for golden diffing. Test-only tooling.
+# Repository corpus: crate manifest and build file owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
+)
+
 rust_binary(
     name = "print_result",
     srcs = ["src/print.rs"],
@@ -71,13 +78,9 @@ rust_binary(
     ),
     crate_name = "print_result",
     crate_root = "src/print.rs",
-    deps = [":quality_result"],
-)
-
-# Repository corpus: crate manifest and build file owned for
-# direct-Bazel dogfood under the canonical real_fixture_policy.
-real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"],
-    toml_srcs = ["Cargo.toml"],
+    edition = "2021",
+    deps = crate_deps(
+        ["thiserror"],
+        package_name = "quality/quality_result",
+    ) + [":quality_result"],
 )

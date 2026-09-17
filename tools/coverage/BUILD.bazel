@@ -7,24 +7,25 @@
 # the package-scoped resolve pins it to the hand-maintained `:coverage_gate`
 # dep instead of letting generation drop it as unresolvable.
 # gazelle:resolve rust coverage_gate //tools/coverage:coverage_gate
-load("@rules_dx//rust/rules:defs.bzl", "RUST_EDITION", "rust_binary")
-load("@rules_rust//rust:defs.bzl", _rust_library = "rust_library", _rust_test = "rust_test")
+# Hand-maintained canonical single crate (#128): excluded from generation
+# in the root BUILD (coverage_gate differs from the source-only fallback
+# name coverage).
+load("@rules_dx//rust/rules:defs.bzl", "rust_binary", "rust_library", "rust_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
-_rust_library(
+rust_library(
     name = "coverage_gate",
     srcs = ["src/lib.rs"],
     crate_name = "coverage_gate",
-    edition = RUST_EDITION,
+    crate_root = "src/lib.rs",
 )
 
-_rust_test(
+rust_test(
     name = "coverage_gate_test",
     size = "small",
     crate = ":coverage_gate",
-    edition = RUST_EDITION,
 )
 
 # Repository corpus: build file owned for direct-Bazel dogfood

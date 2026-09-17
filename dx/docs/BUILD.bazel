@@ -5,7 +5,10 @@ load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_library", "rust_test")
 
-package(default_visibility = ["//dx:__pkg__", "//dx:__subpackages__"])
+package(default_visibility = [
+    "//dx:__pkg__",
+    "//dx:__subpackages__",
+])
 
 rust_library(
     name = "dx_docs",
@@ -16,6 +19,7 @@ rust_library(
     ),
     crate_name = "dx_docs",
     crate_root = "src/lib.rs",
+    edition = "2021",
     deps = crate_deps(
         ["thiserror"],
         package_name = "dx/dx_docs",
@@ -31,6 +35,10 @@ rust_test(
         normal_dev = True,
     ),
     crate = ":dx_docs",
+    deps = crate_deps(
+        ["thiserror"],
+        package_name = "dx/dx_docs",
+    ),
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy

@@ -9,3 +9,11 @@ thiserror = "2"
 [lib]
 name = "quality_result"
 path = "src/lib.rs"
+
+# Layer-2 matrix harness printer (#59): decodes one validated result
+# protobuf into deterministic text for golden diffing. Test-only tooling.
+# Declared so Cargo-based generation owns the target instead of dropping
+# it as stale.
+[[bin]]
+name = "print_result"
+path = "src/print.rs"

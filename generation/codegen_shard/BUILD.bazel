@@ -18,8 +18,12 @@ rust_library(
     ),
     crate_name = "codegen_shard",
     crate_root = "src/lib.rs",
+    edition = "2021",
     deps = crate_deps(
-        ["thiserror"],
+        [
+            "clap",
+            "thiserror",
+        ],
         package_name = "generation/codegen_shard",
     ) + [
         "//dx/path:dx_path",
@@ -38,8 +42,12 @@ rust_binary(
     ),
     crate_name = "codegen_shard_writer",
     crate_root = "src/main.rs",
+    edition = "2021",
     deps = crate_deps(
-        ["clap"],
+        [
+            "clap",
+            "thiserror",
+        ],
         package_name = "generation/codegen_shard",
     ) + [":codegen_shard"],
 )
@@ -53,7 +61,16 @@ rust_test(
         normal_dev = True,
     ),
     crate = ":codegen_shard",
-    deps = ["//generation:codegen_proto_rs"],
+    deps = crate_deps(
+        [
+            "clap",
+            "thiserror",
+        ],
+        package_name = "generation/codegen_shard",
+    ) + [
+        "//generation:codegen_proto_rs",
+        "@rules_rust_prost//private/3rdparty/crates:prost",
+    ],
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy

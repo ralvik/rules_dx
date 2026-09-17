@@ -16,8 +16,10 @@ rust_library(
     ),
     crate_name = "quality_markdown",
     crate_root = "src/lib.rs",
+    edition = "2021",
     deps = crate_deps(
         [
+            "clap",
             "pulldown-cmark",
             "serde",
             "serde_json",
@@ -35,7 +37,16 @@ rust_binary(
     ),
     crate_name = "quality_markdown",
     crate_root = "src/main.rs",
-    deps = [":quality_markdown_lib"],
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "clap",
+            "pulldown-cmark",
+            "serde",
+            "serde_json",
+        ],
+        package_name = "quality/quality_markdown",
+    ) + [":quality_markdown_lib"],
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy
@@ -78,6 +89,7 @@ rust_test(
     crate = ":quality_markdown_lib",
     deps = crate_deps(
         [
+            "clap",
             "pulldown-cmark",
             "serde",
             "serde_json",

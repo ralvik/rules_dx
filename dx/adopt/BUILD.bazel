@@ -19,8 +19,17 @@ rust_library(
     ),
     crate_name = "dx_adopt",
     crate_root = "src/lib.rs",
+    edition = "2021",
     deps = crate_deps(
-        ["notify", "notify-debouncer-mini", "semver", "serde", "serde_json", "tempfile", "thiserror"],
+        [
+            "notify",
+            "notify-debouncer-mini",
+            "semver",
+            "serde",
+            "serde_json",
+            "tempfile",
+            "thiserror",
+        ],
         package_name = "dx/dx_adopt",
     ),
 )
@@ -35,7 +44,16 @@ rust_test(
     ),
     crate = ":dx_adopt",
     deps = crate_deps(
-        ["insta"],
+        [
+            "insta",
+            "notify",
+            "notify-debouncer-mini",
+            "semver",
+            "serde",
+            "serde_json",
+            "tempfile",
+            "thiserror",
+        ],
         package_name = "dx/dx_adopt",
     ),
 )

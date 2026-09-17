@@ -226,6 +226,11 @@ func (r *manifestRecorder) emit(ignores []*ignoreEntry) error {
 		SchemaMajor: intendedManifestSchemaMajor,
 		SchemaMinor: intendedManifestSchemaMinor,
 		Mode:        r.mode,
+		// The Rust finalizer expects sequences, but Go marshals nil slices
+		// as null. Initialize empty so clean runs emit [] not null.
+		Scopes:         []intendedScope{},
+		Files:          []intendedFile{},
+		IgnoredImports: []intendedIgnoredImport{},
 	}
 	for _, scope := range r.scopes {
 		manifest.Scopes = append(manifest.Scopes, intendedScope{
@@ -416,6 +421,14 @@ func replacementKind(kindMap map[string]config.MappedKind, kind string) (*config
 	}
 }
 
+// nonNilBytes normalizes nil to empty so JSON marshals "" not null.
+func nonNilBytes(b []byte) []byte {
+	if b == nil {
+		return []byte{}
+	}
+	return b
+}
+
 // splitLines splits bytes after each '\n' without adding or dropping any,
 // so concatenating the result reproduces the input exactly.
 func splitLines(data []byte) [][]byte {
@@ -448,9 +461,12 @@ func diffLines(original, intended []byte) []intendedEdit {
 			continue
 		}
 		edit := intendedEdit{
-			Start:       oldOffsets[code.I1],
-			End:         oldOffsets[code.I2],
-			Replacement: bytes.Join(newLines[code.J1:code.J2], nil),
+			Start: oldOffsets[code.I1],
+			End:   oldOffsets[code.I2],
+			// bytes.Join returns nil for pure deletions; Go marshals nil
+			// []byte as null, but the Rust finalizer expects a base64
+			// string. Normalize to empty so deletions emit "".
+			Replacement: nonNilBytes(bytes.Join(newLines[code.J1:code.J2], nil)),
 		}
 		// LCOV_EXCL_START - reason: difflib only emits non-equal opcodes for differing line runs, so the replacement always differs from the covered bytes; this guard is defensive only.
 		if bytes.Equal(original[edit.Start:edit.End], edit.Replacement) {

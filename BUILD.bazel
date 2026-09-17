@@ -10,9 +10,13 @@
 # gazelle:resolve rust dx_bep //dx/bep:dx_bep
 # gazelle:resolve rust dx_clean //dx/clean:dx_clean
 # gazelle:resolve rust dx_diff //dx/diff:dx_diff
+# gazelle:resolve rust dx_digest //dx/digest:dx_digest
 # gazelle:resolve rust dx_output //dx/output:dx_output
+# gazelle:resolve rust dx_path //dx/path:dx_path
 # gazelle:resolve rust dx_process //dx/process:dx_process
+# gazelle:resolve rust dx_proto_validate //dx/proto_validate:dx_proto_validate
 # gazelle:resolve rust dx_roots //dx/roots:dx_roots
+# gazelle:resolve rust dx_schema //dx/schema:dx_schema
 # gazelle:resolve rust dx_setup //dx/setup:dx_setup
 # gazelle:resolve rust doc_ir_proto //documentation:doc_ir_proto_rs
 # gazelle:resolve rust documentation_ir //documentation/ir:documentation_ir
@@ -29,6 +33,12 @@
 # demands one config per tool so aspect_hints stays unambiguous; the fixture
 # package is excluded like the Gazelle golden tree above.
 # gazelle:exclude quality/testdata
+# tools/coverage is hand-maintained: the canonical single crate
+# (:coverage_gate + test + coverage_bin, #128) intentionally keeps the
+# coverage_gate crate name, which differs from the source-only fallback
+# (directory basename coverage). Generation would recreate :coverage and
+# delete :coverage_gate, so the package opts out like the fixtures above.
+# gazelle:exclude tools/coverage
 
 load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@npm//:defs.bzl", "npm_link_all_packages")
