@@ -157,6 +157,17 @@ versions. Within a major version, producers may add fields and event kinds. Cons
 must ignore unknown fields and event kinds. Removing a field, making an optional field
 required, or changing existing semantics requires a new major version.
 
+That leniency applies to the event stream only. Versioned machine-authored
+input surfaces parsed by the CLI reject unknown fields instead
+(`#[serde(deny_unknown_fields)]`, 13 sites: the plan input in
+`cli/cli/src/finalize.rs`, the apply envelope in
+`cli/apply/src/envelope.rs`, the license policy in
+`cli/audit/src/license_policy.rs`). An unknown field there means version
+skew or a typo, and rejecting loudly beats silently dropping a field the
+producer meant to enforce. The stream stays lenient because consumers must
+keep working across minor-version additions; inputs stay strict because
+every field gates a mutation or a policy decision.
+
 NDJSON line order is authoritative. The initial schema has no run ID, sequence number,
 timestamp, or operation ID. Concurrent subprocesses within one invocation are contained
 work for safe cleanup under the [CLI contract](cli-contract.md#exit-status) and do not

@@ -717,7 +717,10 @@ pub fn render_status_text(checks: &[StatusCheck]) -> String {
 
 /// Render JSON status (single object, NDJSON-compatible).
 pub fn render_status_json(checks: &[StatusCheck]) -> String {
-    serde_json::to_string(&StatusPayload { checks }).expect("status JSON serializes")
+    // Infallible shape (issue #238): strings only, so `serde_json` cannot
+    // fail; the fallback names the invariant instead of `expect`.
+    serde_json::to_string(&StatusPayload { checks })
+        .unwrap_or_else(|err| unreachable!("status JSON serializes: {err:?}"))
 }
 
 /// Default local status checks (toolchain + platform + tools + pin).
