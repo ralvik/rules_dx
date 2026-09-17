@@ -1730,4 +1730,95 @@ mod tests {
         assert_eq!(other.replacements, result.replacements);
         assert!(validate(&other).is_ok());
     }
+
+    #[test]
+    fn per_stage_malformed_edits_rejected_by_validate_gate() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // each stage's byte-range edits to validate against its current
+        // virtual snapshot before application, rejecting malformed,
+        // overlapping, digest-mismatched, unsorted, or invalid output.
+        // The runner emits only single whole-file candidates, so any
+        // per-stage shape violating ordering, no-op, or inverted rules
+        // must fail `validate`, proving the gate blocks it from leaving
+        // the action.
+        let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let files = vec![file("src/lib.rs", "BAD\n")];
+        let valid = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
+        assert_eq!(valid.replacements.len(), 1);
+        assert!(validate(&valid).is_ok());
+        let edits = &valid.replacements[0];
+        assert_eq!(edits.edits.len(), 1);
+        assert_eq!(edits.edits[0].start_byte, 0);
+        assert_eq!(edits.edits[0].end_byte, 4);
+        assert_eq!(&edits.edits[0].replacement, b"GOOD\n");
+        let mk = |edits: Vec<Edit>| {
+            let mut mutated = valid.clone();
+            mutated.replacements[0].edits = edits;
+            mutated
+        };
+        let overlapping = mk(vec![
+            Edit {
+                start_byte: 0,
+                end_byte: 3,
+                replacement: b"X".to_vec(),
+            },
+            Edit {
+                start_byte: 2,
+                end_byte: 5,
+                replacement: b"Y".to_vec(),
+            },
+        ]);
+        assert!(validate(&overlapping).is_err());
+        let unsorted = mk(vec![
+            Edit {
+                start_byte: 5,
+                end_byte: 6,
+                replacement: b"a".to_vec(),
+            },
+            Edit {
+                start_byte: 0,
+                end_byte: 1,
+                replacement: b"b".to_vec(),
+            },
+        ]);
+        assert!(validate(&unsorted).is_err());
+        let same_offset = mk(vec![
+            Edit {
+                start_byte: 0,
+                end_byte: 1,
+                replacement: b"x".to_vec(),
+            },
+            Edit {
+                start_byte: 0,
+                end_byte: 2,
+                replacement: b"y".to_vec(),
+            },
+        ]);
+        assert!(validate(&same_offset).is_err());
+        let insertion_inside_range = mk(vec![
+            Edit {
+                start_byte: 0,
+                end_byte: 4,
+                replacement: b"x".to_vec(),
+            },
+            Edit {
+                start_byte: 2,
+                end_byte: 2,
+                replacement: b"y".to_vec(),
+            },
+        ]);
+        assert!(validate(&insertion_inside_range).is_err());
+        let noop = mk(vec![Edit {
+            start_byte: 1,
+            end_byte: 1,
+            replacement: vec![],
+        }]);
+        assert!(validate(&noop).is_err());
+        let inverted = mk(vec![Edit {
+            start_byte: 2,
+            end_byte: 1,
+            replacement: b"x".to_vec(),
+        }]);
+        assert!(validate(&inverted).is_err());
+    }
 }
