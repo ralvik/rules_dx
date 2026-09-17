@@ -21,8 +21,10 @@
 //! note in `plan.rs` for the planning carve.
 
 pub mod run_deploy;
+pub mod test_map;
 
 pub use run_deploy::{check_deployable, resolve_deploy, resolve_run, DeployInfo};
+pub use test_map::map_owners_to_tests;
 
 use std::io;
 use std::path::{Component, Path};
@@ -392,7 +394,7 @@ pub(crate) fn first_line(bytes: &[u8]) -> String {
 
 /// Parses query stdout into canonical owner labels: trims lines, drops
 /// empties, sorts bytewise, and deduplicates.
-fn parse_owners(stdout: &[u8], label: &str) -> Result<Vec<String>, ResolveError> {
+pub(crate) fn parse_owners(stdout: &[u8], label: &str) -> Result<Vec<String>, ResolveError> {
     let text = std::str::from_utf8(stdout).map_err(|_| ResolveError::QueryFailed {
         label: label.to_owned(),
         detail: "query output is not UTF-8".to_owned(),
@@ -609,63 +611,6 @@ pub fn resolve_for_test(
         scope: Scope::ResolvedOwners(targets.clone()),
         targets,
     })
-}
-
-/// One `bazel query` invocation per owner set (O44): every rule whose
-/// kind ends in `_test` reaching the owners over the main-workspace
-/// universe, at any depth. Owners are bytewise sorted so the expression
-/// is deterministic.
-fn tests_expression(owners: &[String]) -> String {
-    format!(
-        "kind('.*_test rule', rdeps(//..., set({})))",
-        quote_set(owners)
-    )
-}
-
-/// Maps direct source owners to every transitive reverse-dependent test
-/// target through one unconfigured `bazel query` invocation.
-///
-/// Returned tests are canonicalized, deduplicated, and bytewise sorted;
-/// no distance limit or package-location heuristic is applied, so
-/// `select()`-gated branches stay conservatively included. An empty
-/// mapping is [`ResolveError::NoTests`], never silent success: callers
-/// must not pass a source-owning library to `bazel test` or
-/// `bazel coverage` merely because it owns the file. An empty owner
-/// set maps to no tests without touching Bazel.
-pub fn map_owners_to_tests(
-    owners: &[String],
-    workspace: &Path,
-    runner: &dyn QueryRunner,
-) -> Result<Vec<String>, ResolveError> {
-    if owners.is_empty() {
-        return Ok(Vec::new());
-    }
-    let expression = tests_expression(owners);
-    let mut argv = Vec::with_capacity(WORKFLOW_STARTUP_OPTS.len() + 4);
-    argv.push(launcher_argv0().to_owned());
-    argv.extend(WORKFLOW_STARTUP_OPTS.iter().map(ToString::to_string));
-    argv.push("query".to_owned());
-    argv.push("--".to_owned());
-    argv.push(expression.clone());
-    let result = runner
-        .run_query(&argv, workspace)
-        .map_err(|error| ResolveError::QueryFailed {
-            label: expression.clone(),
-            detail: error.to_string(),
-        })?;
-    if result.code != Some(0) {
-        return Err(ResolveError::QueryFailed {
-            label: expression,
-            detail: first_line(&result.stderr),
-        });
-    }
-    let tests = parse_owners(&result.stdout, &expression)?;
-    if tests.is_empty() {
-        let mut sorted = owners.to_vec();
-        sorted.sort();
-        return Err(ResolveError::NoTests { owners: sorted });
-    }
-    Ok(tests)
 }
 
 #[cfg(test)]
@@ -1227,97 +1172,6 @@ mod tests {
             }
         );
         assert!(err.to_string().contains("not a package"), "{err}");
-    }
-
-    #[test]
-    fn test_mapping_queries_transitive_test_owners() {
-        let scratch = temp_workspace("test-map");
-        let workspace = scratch.path().to_path_buf();
-        let query = FakeQuery::new(vec![FakeQuery::ok("//pkg:unit\n//pkg:e2e\n//pkg:unit\n")]);
-        let got = map_owners_to_tests(&scopes(&["//pkg:lib"]), &workspace, &query).expect("map");
-        assert_eq!(got, scopes(&["//pkg:e2e", "//pkg:unit"]));
-        let calls = query.calls();
-        assert_eq!(calls.len(), 1);
-        assert_eq!(calls[0].1, workspace, "mapping runs in the workspace");
-        assert_eq!(
-            calls[0].0,
-            scopes(&[
-                "bazel",
-                "--nohome_rc",
-                "--nosystem_rc",
-                "query",
-                "--",
-                "kind('.*_test rule', rdeps(//..., set(\"//pkg:lib\")))",
-            ])
-        );
-    }
-
-    #[test]
-    fn test_mapping_sorts_owners_in_set_expression() {
-        let scratch = temp_workspace("test-map-order");
-        let workspace = scratch.path().to_path_buf();
-        let query = FakeQuery::new(vec![FakeQuery::ok("//t:t\n")]);
-        map_owners_to_tests(&scopes(&["//z:lib", "//a:lib"]), &workspace, &query).expect("map");
-        let calls = query.calls();
-        assert_eq!(calls.len(), 1);
-        assert_eq!(
-            calls[0].0.last().expect("expression"),
-            "kind('.*_test rule', rdeps(//..., set(\"//a:lib\" \"//z:lib\")))"
-        );
-    }
-
-    #[test]
-    fn empty_test_mapping_suggests_explicit_label() {
-        let scratch = temp_workspace("test-map-empty");
-        let workspace = scratch.path().to_path_buf();
-        let query = FakeQuery::new(vec![FakeQuery::ok("\n")]);
-        let err = map_owners_to_tests(&scopes(&["//pkg:lib"]), &workspace, &query)
-            .expect_err("empty mapping");
-        assert_eq!(
-            err,
-            ResolveError::NoTests {
-                owners: scopes(&["//pkg:lib"]),
-            }
-        );
-        assert!(
-            err.to_string().contains("explicit test label"),
-            "actionable: {err}"
-        );
-    }
-
-    #[test]
-    fn test_mapping_failures_report_the_first_bazel_line() {
-        let scratch = temp_workspace("test-map-fail");
-        let workspace = scratch.path().to_path_buf();
-        let query = FakeQuery::new(vec![FakeQuery::failed("\n  query failed: blah  \nmore\n")]);
-        let err =
-            map_owners_to_tests(&scopes(&["//pkg:lib"]), &workspace, &query).expect_err("failed");
-        assert_eq!(
-            err,
-            ResolveError::QueryFailed {
-                label: "kind('.*_test rule', rdeps(//..., set(\"//pkg:lib\")))".to_owned(),
-                detail: "query failed: blah".to_owned(),
-            }
-        );
-    }
-
-    #[test]
-    fn empty_owners_map_to_no_tests_without_query() {
-        let scratch = temp_workspace("test-map-no-query");
-        let workspace = scratch.path().to_path_buf();
-        let query = NeverQuery;
-        let got = map_owners_to_tests(&[], &workspace, &query).expect("map");
-        assert!(got.is_empty());
-    }
-
-    #[test]
-    fn no_tests_error_renders_owners_and_guidance() {
-        let error = ResolveError::NoTests {
-            owners: scopes(&["//a:lib", "//b:lib"]),
-        };
-        let text = error.to_string();
-        assert!(text.contains("//a:lib //b:lib"), "{text}");
-        assert!(text.contains("//pkg/..."), "{text}");
     }
 
     #[test]
