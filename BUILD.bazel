@@ -77,7 +77,7 @@ exports_files([
     "CHANGELOG.md",
 ])
 
-# Repository corpus: root Starlark and Markdown sources owned for
+# Repository corpus: root Starlark, TOML, and Markdown sources owned for
 # direct-Bazel dogfood under the canonical real_fixture_policy. LICENSE,
 # the linked docs pages, and CHANGELOG are unclassified link-resolution
 # siblings, never checked sources.
@@ -107,6 +107,10 @@ real_source_target(
     starlark_srcs = [
         "BUILD.bazel",
         "MODULE.bazel",
+    ],
+    toml_srcs = [
+        "clippy.toml",
+        "rustfmt.toml",
     ],
 )
 
