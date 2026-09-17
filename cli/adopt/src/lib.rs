@@ -18,8 +18,9 @@
 //! module, thin inspect forwarding lives in the `inspect` module, the
 //! local watch loop lives in the `watch` module, absent-only `dx init`
 //! scaffolding lives in the `scaffold` module, the hermetic hook
-//! runner lives in the `hooks` module, and the typed failure vocabulary
-//! lives in the `error` module. This facade keeps
+//! runner lives in the `hooks` module, the typed failure vocabulary
+//! lives in the `error` module, and the admissibility policy lives in
+//! the `policy` module. This facade keeps
 //! the re-exports; the public path stays stable via the re-exports below.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
@@ -31,6 +32,7 @@ pub mod error;
 pub mod hooks;
 pub mod inspect;
 pub mod migrate;
+pub mod policy;
 pub mod scaffold;
 pub mod status;
 pub mod version;
@@ -44,6 +46,7 @@ pub use hooks::{
 };
 pub use inspect::{inspect_scope_allowed, plan_inspect, plan_somepath, InspectPlan};
 pub use migrate::{migrate_is_major_bump, migrate_manifest_name, plan_migrate, MigratePlan};
+pub use policy::{devcontainer_is_admissible, diagnostics_command_allowed};
 pub use scaffold::{
     absent_only_write_allowed, apply_init, init_must_refuse, plan_init_files, ScaffoldFile,
     DEVCONTAINER_JSON, RENOVATE_JSON,
@@ -65,6 +68,10 @@ pub use watch::{
 // Typed adoption failure lives in the `error` module (issue #236);
 // the re-export above keeps `AdoptError` on the `dx_adopt` facade.
 
+// Admissibility policy lives in the `policy` module (issue #236);
+// the re-exports above keep `devcontainer_is_admissible` and
+// `diagnostics_command_allowed` on the `dx_adopt` facade.
+
 // Commands watchable under ADR 0017/0018 live in the `watch` module
 // (issue #236); the re-exports above keep `WATCHABLE_COMMANDS` and
 // `WATCH_DEBOUNCE_MS` on the `dx_adopt` facade.
@@ -79,28 +86,6 @@ pub use watch::{
 // `hook_shim_overwrite_allowed`, `hook_status_shows_merged`) lives in the
 // `hooks` module (issue #236); the re-exports above keep those paths on
 // the `dx_adopt` facade.
-
-/// Whether a devcontainer definition is admissible.
-///
-/// Setup uses only pinned artifacts and every tool execution delegates to
-/// Bazel actions: pinned bootstrap plus Bazel delegation with no ambient
-/// tools. Any ambient tool use fails the gate.
-pub fn devcontainer_is_admissible(
-    pinned_bootstrap: bool,
-    delegates_to_bazel: bool,
-    uses_ambient_tools: bool,
-) -> bool {
-    pinned_bootstrap && delegates_to_bazel && !uses_ambient_tools
-}
-
-/// Whether a diagnostics command name is admissible.
-///
-/// Per ADR 0006 there is no `dx doctor`: that name is rejected outright and
-/// the consolidated status surface (O50) must ship under another name. The
-/// empty name is rejected as well; vocabulary and shape stay O50-gated.
-pub fn diagnostics_command_allowed(name: &str) -> bool {
-    !name.is_empty() && name != "doctor"
-}
 
 // ---------------------------------------------------------------------------
 // Delivered I/O (M30b WPs 2-4, 6-7 + O61).
@@ -121,27 +106,6 @@ pub fn diagnostics_command_allowed(name: &str) -> bool {
 // `render_status_text`, `render_status_json`, and
 // `default_status_checks` on the `dx_adopt` facade.
 
-/// Completion vocabulary lives in the `completion` module (issue #236):
-/// production rendering uses the `Cli` grammar, the tables there remain
-/// the O61 frozen vocabulary reference only.
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn devcontainer_needs_pins_and_bazel_delegation() {
-        assert!(devcontainer_is_admissible(true, true, false));
-        assert!(!devcontainer_is_admissible(false, true, false));
-        assert!(!devcontainer_is_admissible(true, false, false));
-        assert!(!devcontainer_is_admissible(true, true, true));
-    }
-
-    #[test]
-    fn doctor_stays_rejected_for_diagnostics() {
-        assert!(diagnostics_command_allowed("status"));
-        assert!(diagnostics_command_allowed("env"));
-        assert!(!diagnostics_command_allowed("doctor"));
-        assert!(!diagnostics_command_allowed(""));
-    }
-}
+// Completion vocabulary lives in the `completion` module (issue #236):
+// production rendering uses the `Cli` grammar, the tables there remain
+// the O61 frozen vocabulary reference only.
