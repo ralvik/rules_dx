@@ -1,4 +1,4 @@
-load("@rules_dx//go/rules:defs.bzl", "go_library")
+load("@rules_dx//go/rules:defs.bzl", "go_library", "go_test")
 
 # A user-owned rule must survive generation unchanged.
 filegroup(
@@ -12,4 +12,10 @@ go_library(
         "demo.go",
         "helper.go",
     ],
+)
+
+go_test(
+    name = "demo_test",
+    srcs = ["demo_test.go"],
+    embed = [":demo"],
 )

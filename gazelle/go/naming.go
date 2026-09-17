@@ -11,12 +11,18 @@
 // Go is package-level (support-matrix Go exception): one directory holds one
 // Go package (plus its external `*_test` package). The adapter generates at
 // most one reusable `go_library` per directory named after the directory
-// basename, with `srcs` as the sorted non-test `.go` files. `*_test.go`
-// files are never library sources (handwritten `go_test` owns them via
-// `embed`), thin `go_binary` entries are never inferred, and directories
-// mixing a library package with a `package main` file stay handwritten:
-// generation includes every non-test `.go` and the owner must split the
-// directory before adopting generated rules.
+// basename, with `srcs` as the sorted non-test `.go` files, plus at most one
+// package-level `go_test` named `<library>_test` owning the sorted
+// `*_test.go` files via `embed` (native package-level test semantics per the
+// generation contract Go exception: shared helpers, `TestMain`,
+// internal/external test packages, and test-only dependencies without
+// per-file targets or inferred `testdata`). Thin `go_binary` entries are
+// never inferred, and directories mixing a library package with a
+// `package main` file stay handwritten: generation includes every non-test
+// `.go` and the owner must split the directory before adopting generated
+// rules. Build constraints (`//go:build` tags) are preserved by including
+// every source and letting the pinned `rules_go` toolchain select per
+// platform; generation never emits `select()` for them.
 package golang
 
 import (
@@ -26,12 +32,16 @@ import (
 )
 
 // SupportedExts are the Go source extensions discovered by the extension.
-// Only `.go` is listed; `*_test.go` files are discovered then excluded from
-// library sources (test-owned, never library-owned).
+// Only `.go` is listed; `*_test.go` files are discovered then owned by the
+// package-level test, never the library.
 var SupportedExts = []string{".go"}
 
-// LibraryKind is the single generated rule kind.
+// LibraryKind is the generated library rule kind. TestKind is the generated
+// package-level test rule kind.
 const LibraryKind = "go_library"
+
+// TestKind is the generated package-level test rule kind.
+const TestKind = "go_test"
 
 // Normalize maps one name stem to its deterministic Bazel target-name stem.
 // It reports an error instead of an empty name so callers fail closed.

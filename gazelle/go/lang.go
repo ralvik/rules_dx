@@ -29,6 +29,16 @@ var goKinds = map[string]rule.KindInfo{
 		},
 		ResolveAttrs: map[string]bool{"deps": true},
 	},
+	TestKind: rule.KindInfo{
+		MatchAttrs:    []string{"srcs"},
+		NonEmptyAttrs: map[string]bool{"srcs": true},
+		MergeableAttrs: map[string]bool{
+			"srcs":  true,
+			"deps":  true,
+			"embed": true,
+		},
+		ResolveAttrs: map[string]bool{"deps": true},
+	},
 }
 
 type goLang struct {
@@ -52,6 +62,14 @@ type ignoreEntry struct {
 // dropped at collection; every other root resolves strictly or fails
 // generation.
 type targetImports struct {
+	imports []string
+}
+
+// testTargetImports is the deduplicated union of normalized import roots for
+// one generated package-level test's `*_test.go` sources. It resolves
+// strictly like library imports; the owning library reaches the test via
+// `embed`, never via an import edge.
+type testTargetImports struct {
 	imports []string
 }
 
@@ -130,13 +148,14 @@ func (l *goLang) ApparentLoads(moduleToApparentName func(string) string) []rule.
 
 func goLoads(rulesRepo string) []rule.LoadInfo {
 	return []rule.LoadInfo{
-		{Name: "@" + rulesRepo + "//go/rules:defs.bzl", Symbols: []string{LibraryKind}},
+		{Name: "@" + rulesRepo + "//go/rules:defs.bzl", Symbols: []string{LibraryKind, TestKind}},
 	}
 }
 
 // Imports indexes one reusable import identity per Go source owned by a
 // library rule: the exact module stem of each non-test source. Test-owned
-// sources never contribute an identity.
+// sources never contribute an identity, and test rules provide no identities
+// (tests are never dependencies).
 func (*goLang) Imports(_ *config.Config, r *rule.Rule, _ *rule.File) []resolve.ImportSpec {
 	if r.Kind() != LibraryKind {
 		return nil
@@ -168,14 +187,27 @@ func isSupported(name string) bool {
 
 func (l *goLang) generateRules(args language.GenerateArgs) language.GenerateResult {
 	var sources []string
+	var testSources []string
 	for _, name := range args.RegularFiles {
-		if isSupported(name) && !IsTestSource(name) {
-			sources = append(sources, name)
+		if !isSupported(name) {
+			continue
 		}
+		if IsTestSource(name) {
+			testSources = append(testSources, name)
+			continue
+		}
+		sources = append(sources, name)
 	}
 	sort.Strings(sources)
-	if len(sources) == 0 {
+	sort.Strings(testSources)
+	if len(sources) == 0 && len(testSources) == 0 {
 		return mergeStale(args.File, language.GenerateResult{})
+	}
+	// Test-only directories have no library to embed: fail closed instead
+	// of generating a dangling test or guessing an owner.
+	if len(sources) == 0 {
+		l.fail("go: %s: test sources %s without non-test sources; add the package sources to this directory or split the tests before adopting generation", args.Rel, strings.Join(testSources, ", "))
+		return language.GenerateResult{}
 	}
 
 	name, err := DirTargetName(args.Rel)
@@ -183,10 +215,12 @@ func (l *goLang) generateRules(args language.GenerateArgs) language.GenerateResu
 		l.fail("go: %s: %v", args.Rel, err)
 		return language.GenerateResult{}
 	}
+	testName := name + "_test"
 
 	packages := make(map[string]bool)
 	seen := make(map[string]bool)
 	var imports []string
+	var libPkg string
 	for _, src := range sources {
 		content, err := os.ReadFile(filepath.Join(args.Dir, src))
 		if err != nil {
@@ -203,6 +237,7 @@ func (l *goLang) generateRules(args language.GenerateArgs) language.GenerateResu
 			continue
 		}
 		packages[pkg] = true
+		libPkg = pkg
 		roots, err := ParseImports(content)
 		if err != nil {
 			l.fail("go: %s: parse imports %s: %v", args.Rel, src, err)
@@ -228,9 +263,60 @@ func (l *goLang) generateRules(args language.GenerateArgs) language.GenerateResu
 		l.fail("go: %s: mixed packages %s in one directory; split the directory before adopting generation", args.Rel, strings.Join(names, ", "))
 		return language.GenerateResult{}
 	}
+	// Every library package contributes exactly one entry here, so libPkg
+	// is set when sources are non-empty and packages are uniform.
+	for pkg := range packages {
+		libPkg = pkg
+	}
 	sort.Strings(imports)
 
-	if err := checkClaims(args.File, args.OtherGen, []Claimant{{Name: name, Source: args.Rel, Kind: LibraryKind}}); err != nil {
+	// Package-level test collection: every `*_test.go` in the directory
+	// belongs to one `go_test` via `embed`. Internal (`package <lib>`)
+	// and external (`package <lib>_test`) forms coexist; any other test
+	// package fails closed. Build constraints are preserved by including
+	// every test source and letting the toolchain select per platform.
+	// Test-only imports resolve onto the test target; the library reaches
+	// the test via `embed`, never via an import edge.
+	testSeen := make(map[string]bool)
+	var testImports []string
+	for _, src := range testSources {
+		content, err := os.ReadFile(filepath.Join(args.Dir, src))
+		if err != nil {
+			l.fail("go: %s: read %s: %v", args.Rel, src, err)
+			continue
+		}
+		pkg, err := ParsePackage(content)
+		if err != nil {
+			l.fail("go: %s: parse package %s: %v", args.Rel, src, err)
+			continue
+		}
+		if pkg != libPkg && pkg != libPkg+"_test" {
+			l.fail("go: %s: %s declares package %s, want %s or %s_test; split the directory before adopting generation", args.Rel, src, pkg, libPkg, libPkg)
+			continue
+		}
+		roots, err := ParseImports(content)
+		if err != nil {
+			l.fail("go: %s: parse imports %s: %v", args.Rel, src, err)
+			continue
+		}
+		for _, root := range roots {
+			if IsStdLib(root) || seen[root] || testSeen[root] {
+				continue
+			}
+			testSeen[root] = true
+			testImports = append(testImports, root)
+		}
+	}
+	if len(l.errors) > 0 {
+		return language.GenerateResult{}
+	}
+	sort.Strings(testImports)
+
+	claimants := []Claimant{{Name: name, Source: args.Rel, Kind: LibraryKind}}
+	if len(testSources) > 0 {
+		claimants = append(claimants, Claimant{Name: testName, Source: args.Rel, Kind: TestKind})
+	}
+	if err := checkClaims(args.File, args.OtherGen, claimants); err != nil {
 		l.fail("go: %s: %v", args.Rel, err)
 		return language.GenerateResult{}
 	}
@@ -240,11 +326,18 @@ func (l *goLang) generateRules(args language.GenerateArgs) language.GenerateResu
 	r.SetAttr("srcs", sources)
 	result.Gen = append(result.Gen, r)
 	result.Imports = append(result.Imports, targetImports{imports: imports})
+	if len(testSources) > 0 {
+		t := rule.NewRule(TestKind, testName)
+		t.SetAttr("srcs", testSources)
+		t.SetAttr("embed", []string{":" + name})
+		result.Gen = append(result.Gen, t)
+		result.Imports = append(result.Imports, testTargetImports{imports: testImports})
+	}
 	return mergeStale(args.File, result)
 }
 
 // checkClaims fails closed on same-package normalized-name collisions: a
-// generated library sharing its name with a handwritten rule of another
+// generated rule sharing its name with a handwritten rule of another
 // kind fails. A same-kind handwritten owner is ordinary Gazelle merge.
 // Handwritten-only duplicates are not ours to judge.
 func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) error {
@@ -258,8 +351,8 @@ func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) erro
 		existing[r.Name()] = r.Kind()
 	}
 	for _, c := range claimants {
-		if have, ok := existing[c.Name]; ok && have != LibraryKind {
-			return fmt.Errorf("target name %q is claimed by generated %s(%s) and existing %s", c.Name, LibraryKind, c.Source, have)
+		if have, ok := existing[c.Name]; ok && have != c.Kind {
+			return fmt.Errorf("target name %q is claimed by generated %s(%s) and existing %s", c.Name, c.Kind, c.Source, have)
 		}
 	}
 	return nil
@@ -283,15 +376,25 @@ func mergeStale(file *rule.File, result language.GenerateResult) language.Genera
 }
 
 func (l *goLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *repo.RemoteCache, r *rule.Rule, raw interface{}, from label.Label) {
-	imports, ok := raw.(targetImports)
-	if !ok {
-		return
-	}
-	if r.Kind() != LibraryKind {
+	var roots []string
+	isTest := false
+	switch typed := raw.(type) {
+	case targetImports:
+		if r.Kind() != LibraryKind {
+			return
+		}
+		roots = typed.imports
+	case testTargetImports:
+		if r.Kind() != TestKind {
+			return
+		}
+		roots = typed.imports
+		isTest = true
+	default:
 		return
 	}
 	deps := make(map[string]bool)
-	for _, name := range imports.imports {
+	for _, name := range roots {
 		if IsStdLib(name) {
 			continue
 		}
@@ -302,15 +405,26 @@ func (l *goLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *repo.Remote
 				l.fail("go: %s: import %q has both an exact resolve mapping and ignore", from, name)
 				continue
 			}
+			// The owning library reaches the package-level test via
+			// `embed`, never via an import edge: drop same-package
+			// overrides on tests to avoid duplicating the embed.
+			if isTest && override.Pkg == from.Pkg {
+				continue
+			}
 			deps[override.Rel(from.Repo, from.Pkg).String()] = true
 			continue
 		}
 		matches := ix.FindRulesByImportWithConfig(c, spec, languageName)
 		switch len(matches) {
 		case 1:
-			if matches[0].Label != from {
-				deps[matches[0].Label.Rel(from.Repo, from.Pkg).String()] = true
+			if matches[0].Label == from {
+				continue
 			}
+			// Same-package library matches reach the test via `embed`.
+			if isTest && matches[0].Label.Pkg == from.Pkg {
+				continue
+			}
+			deps[matches[0].Label.Rel(from.Repo, from.Pkg).String()] = true
 		case 0:
 			if ignore := matchingIgnore(c, name); ignore != nil {
 				ignore.used = true

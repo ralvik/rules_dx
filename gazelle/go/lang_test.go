@@ -49,8 +49,8 @@ func TestGeneratePackageLevelLibrary(t *testing.T) {
 		"pkg/demo/notes.txt":    "not a source\n",
 		"pkg/demo/demo_test.go": "package demo_test\n\nimport \"testing\"\n",
 	}, regular)
-	if len(result.Gen) != 1 || len(result.Imports) != 1 {
-		t.Fatalf("generated %d rules and %d import sets, want 1 each", len(result.Gen), len(result.Imports))
+	if len(result.Gen) != 2 || len(result.Imports) != 2 {
+		t.Fatalf("generated %d rules and %d import sets, want 2 each (library + package-level test)", len(result.Gen), len(result.Imports))
 	}
 	lib := result.Gen[0]
 	if lib.Kind() != LibraryKind || lib.Name() != "demo" {
@@ -63,6 +63,22 @@ func TestGeneratePackageLevelLibrary(t *testing.T) {
 	if strings.Join(got.imports, ",") != "thing" {
 		t.Errorf("library imports = %+v, want [thing]", got.imports)
 	}
+	// Package-level test: one go_test owning every *_test.go via embed,
+	// never per-file targets. The external demo_test package coexists with
+	// the demo library package; stdlib-only test imports stay empty.
+	testRule := result.Gen[1]
+	if testRule.Kind() != TestKind || testRule.Name() != "demo_test" {
+		t.Fatalf("test = %s(%s), want go_test(demo_test)", testRule.Kind(), testRule.Name())
+	}
+	if got := strings.Join(testRule.AttrStrings("srcs"), ","); got != "demo_test.go" {
+		t.Errorf("test srcs = %q, want demo_test.go", got)
+	}
+	if got := strings.Join(testRule.AttrStrings("embed"), ","); got != ":demo" {
+		t.Errorf("test embed = %q, want :demo", got)
+	}
+	if got := result.Imports[1].(testTargetImports); len(got.imports) != 0 {
+		t.Errorf("test imports = %+v, want empty (stdlib-only)", got.imports)
+	}
 }
 
 func TestGenerateTestSourcesExcluded(t *testing.T) {
@@ -71,14 +87,21 @@ func TestGenerateTestSourcesExcluded(t *testing.T) {
 		"pkg/demo/demo.go":      "package demo\n",
 		"pkg/demo/demo_test.go": "package demo_test\n\nimport \"rules_dx/stuff/only_by_test\"\n",
 	}, regular)
-	if len(result.Gen) != 1 || len(result.Imports) != 1 {
-		t.Fatalf("generated %d rules and %d import sets, want 1 each", len(result.Gen), len(result.Imports))
+	if len(result.Gen) != 2 || len(result.Imports) != 2 {
+		t.Fatalf("generated %d rules and %d import sets, want 2 each", len(result.Gen), len(result.Imports))
 	}
 	if got := strings.Join(result.Gen[0].AttrStrings("srcs"), ","); got != "demo.go" {
 		t.Errorf("library srcs = %q, want demo.go", got)
 	}
 	if got := result.Imports[0].(targetImports); len(got.imports) != 0 {
-		t.Errorf("library imports = %+v, want empty", got.imports)
+		t.Errorf("library imports = %+v, want empty (test-only import stays off the library)", got.imports)
+	}
+	// Test-only imports resolve onto the test target, never the library.
+	if got := strings.Join(result.Gen[1].AttrStrings("srcs"), ","); got != "demo_test.go" {
+		t.Errorf("test srcs = %q, want demo_test.go", got)
+	}
+	if got := result.Imports[1].(testTargetImports); strings.Join(got.imports, ",") != "only_by_test" {
+		t.Errorf("test imports = %+v, want [only_by_test]", got.imports)
 	}
 }
 
@@ -143,6 +166,126 @@ func TestGenerateKindMismatchFails(t *testing.T) {
 	}
 }
 
+func TestGenerateInternalAndExternalTestsCoexist(t *testing.T) {
+	regular := []string{"demo.go", "internal_test.go", "external_test.go", "helper_test.go"}
+	result := generateFixture(t, map[string]string{
+		"pkg/demo/demo.go":         "package demo\n",
+		"pkg/demo/internal_test.go": "package demo\n\nimport \"testing\"\n",
+		"pkg/demo/external_test.go": "package demo_test\n\nimport \"testing\"\n",
+		"pkg/demo/helper_test.go":   "package demo\n\nimport \"testing\"\n",
+	}, regular)
+	if len(result.Gen) != 2 {
+		t.Fatalf("generated %d rules, want 2 (library + one package-level test)", len(result.Gen))
+	}
+	testRule := result.Gen[1]
+	if testRule.Kind() != TestKind || testRule.Name() != "demo_test" {
+		t.Fatalf("test = %s(%s), want go_test(demo_test)", testRule.Kind(), testRule.Name())
+	}
+	// One test target owns every *_test.go, sorted; no per-file targets.
+	if got := strings.Join(testRule.AttrStrings("srcs"), ","); got != "external_test.go,helper_test.go,internal_test.go" {
+		t.Errorf("test srcs = %q, want sorted package-level set", got)
+	}
+	if got := strings.Join(testRule.AttrStrings("embed"), ","); got != ":demo" {
+		t.Errorf("test embed = %q, want :demo", got)
+	}
+}
+
+func TestGenerateTestMainAndSharedImport(t *testing.T) {
+	regular := []string{"demo.go", "main_test.go", "extra_test.go"}
+	result := generateFixture(t, map[string]string{
+		"pkg/demo/demo.go":       "package demo\n\nimport \"rules_dx/stuff/shared\"\n",
+		"pkg/demo/main_test.go":  "package demo\n\nimport (\n\"testing\"\n\"rules_dx/stuff/shared\"\n\"rules_dx/stuff/only_by_test\"\n)\n\nfunc TestMain(m *testing.M) {}\n",
+		"pkg/demo/extra_test.go": "package demo_test\n\nimport \"testing\"\n",
+	}, regular)
+	if len(result.Gen) != 2 {
+		t.Fatalf("generated %d rules, want 2", len(result.Gen))
+	}
+	if got := result.Imports[0].(targetImports); strings.Join(got.imports, ",") != "shared" {
+		t.Errorf("library imports = %+v, want [shared]", got.imports)
+	}
+	// Shared imports stay on the library (reachable via embed); only
+	// test-only imports land on the test.
+	if got := result.Imports[1].(testTargetImports); strings.Join(got.imports, ",") != "only_by_test" {
+		t.Errorf("test imports = %+v, want [only_by_test]", got.imports)
+	}
+}
+
+func TestGenerateLibraryOnlyWithoutTestSources(t *testing.T) {
+	result := generateFixture(t, map[string]string{
+		"pkg/demo/demo.go": "package demo\n",
+	}, []string{"demo.go"})
+	if len(result.Gen) != 1 || len(result.Imports) != 1 {
+		t.Fatalf("generated %d rules, want 1 (no test without *_test.go)", len(result.Gen))
+	}
+	if result.Gen[0].Kind() != LibraryKind {
+		t.Errorf("rule = %s, want go_library", result.Gen[0].Kind())
+	}
+}
+
+func TestGenerateTestOnlyDirFails(t *testing.T) {
+	result := generateFixture(t, map[string]string{
+		"pkg/demo/demo_test.go": "package demo_test\n\nimport \"testing\"\n",
+	}, []string{"demo_test.go"})
+	if len(result.Gen) != 0 {
+		t.Fatalf("generated %d rules for a test-only dir, want 0 with a recorded failure", len(result.Gen))
+	}
+}
+
+func TestGenerateMismatchedTestPackageFails(t *testing.T) {
+	result := generateFixture(t, map[string]string{
+		"pkg/demo/demo.go":      "package demo\n",
+		"pkg/demo/demo_test.go": "package other\n",
+	}, []string{"demo.go", "demo_test.go"})
+	if len(result.Gen) != 0 {
+		t.Fatalf("generated %d rules for a mismatched test package, want 0 with a recorded failure", len(result.Gen))
+	}
+}
+
+func TestGenerateTestKindMismatchFails(t *testing.T) {
+	root := t.TempDir()
+	for name, content := range map[string]string{
+		"pkg/demo/demo.go":      "package demo\n",
+		"pkg/demo/demo_test.go": "package demo_test\n",
+	} {
+		writeFixture(t, root, name, content)
+	}
+	existing := &rule.File{}
+	bin := rule.NewRule("go_binary", "demo_test")
+	existing.Rules = append(existing.Rules, bin)
+	result := NewLanguage().GenerateRules(language.GenerateArgs{
+		Config:       &config.Config{RepoRoot: root},
+		Dir:          filepath.Join(root, "pkg", "demo"),
+		Rel:          "pkg/demo",
+		RegularFiles: []string{"demo.go", "demo_test.go"},
+		File:         existing,
+	})
+	if len(result.Gen) != 0 {
+		t.Fatalf("generated %d rules over a test kind mismatch, want 0 with a recorded failure", len(result.Gen))
+	}
+}
+
+func TestGenerateStaleTestSwept(t *testing.T) {
+	root := t.TempDir()
+	writeFixture(t, root, "pkg/demo/demo.go", "package demo\n")
+	existing, err := rule.LoadData("BUILD.bazel", "pkg/demo", []byte("load(\"@rules_dx//go/rules:defs.bzl\", \"go_library\", \"go_test\")\n\ngo_library(name = \"demo\", srcs = [\"demo.go\"])\n\ngo_test(name = \"demo_test\", srcs = [\"old_test.go\"], embed = [\":demo\"])\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := NewLanguage().GenerateRules(language.GenerateArgs{
+		Config:       &config.Config{RepoRoot: root},
+		Dir:          filepath.Join(root, "pkg", "demo"),
+		Rel:          "pkg/demo",
+		RegularFiles: []string{"demo.go"},
+		File:         existing,
+	})
+	if len(result.Gen) != 1 {
+		t.Fatalf("generated %d rules, want 1 library", len(result.Gen))
+	}
+	if len(result.Empty) != 1 || result.Empty[0].Kind() != TestKind || result.Empty[0].Name() != "demo_test" {
+		t.Fatalf("empty = %+v, want stale go_test(demo_test) swept", result.Empty)
+	}
+}
+
 func TestImportsIndexNonTestSources(t *testing.T) {
 	lang := NewLanguage()
 	lib := rule.NewRule(LibraryKind, "demo")
@@ -156,6 +299,9 @@ func TestImportsIndexNonTestSources(t *testing.T) {
 	}
 	if got := lang.Imports(&config.Config{}, rule.NewRule(LibraryKind, "empty"), nil); got != nil {
 		t.Errorf("srcless imports = %+v, want nil", got)
+	}
+	if got := lang.Imports(&config.Config{}, rule.NewRule(TestKind, "demo_test"), nil); got != nil {
+		t.Errorf("test imports = %+v, want nil (tests are never dependencies)", got)
 	}
 }
 
@@ -186,8 +332,14 @@ func TestAfterResolvingDepsClean(t *testing.T) {
 
 func TestLanguageMetadata(t *testing.T) {
 	l := &goLang{}
-	if l.Name() != "go" || len(l.Kinds()) != 1 || l.CheckFlags(flag.NewFlagSet("test", flag.ContinueOnError), config.New()) != nil {
+	if l.Name() != "go" || len(l.Kinds()) != 2 || l.CheckFlags(flag.NewFlagSet("test", flag.ContinueOnError), config.New()) != nil {
 		t.Fatal("invalid language metadata")
+	}
+	if _, ok := l.Kinds()[LibraryKind]; !ok {
+		t.Fatalf("kinds = %v, want go_library", l.Kinds())
+	}
+	if _, ok := l.Kinds()[TestKind]; !ok {
+		t.Fatalf("kinds = %v, want go_test", l.Kinds())
 	}
 	l.RegisterFlags(flag.NewFlagSet("test", flag.ContinueOnError), "update", config.New())
 	l.Configure(config.New(), "pkg", nil)
@@ -204,7 +356,7 @@ func TestLanguageMetadata(t *testing.T) {
 		}
 		return ""
 	})
-	if len(loads) != 1 || loads[0].Name != "@renamed_dx//go/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "go_library" {
+	if len(loads) != 1 || loads[0].Name != "@renamed_dx//go/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "go_library,go_test" {
 		t.Errorf("apparent loads = %+v", loads)
 	}
 	if defaults := l.Loads(); len(defaults) != 1 || defaults[0].Name != "@rules_dx//go/rules:defs.bzl" {
@@ -299,6 +451,52 @@ func TestResolveOverride(t *testing.T) {
 	l.Resolve(cfg, resolverIndex(l), nil, r, targetImports{imports: []string{"mapped"}}, label.New("", "app", "app"))
 	if got := strings.Join(r.AttrStrings("deps"), ","); got != "//mapped:dep" {
 		t.Errorf("override deps = %q", got)
+	}
+}
+
+func TestResolveTestBranches(t *testing.T) {
+	l := &goLang{}
+	index := resolverIndex(l,
+		struct{ pkg, name string }{"lib/sib", "sib"},
+		struct{ pkg, name string }{"pkg/demo", "demo"},
+	)
+	cfg := resolverConfig(t, nil)
+
+	// Sibling imports land on the test deps.
+	sib := rule.NewRule(TestKind, "demo_test")
+	l.Resolve(cfg, index, nil, sib, testTargetImports{imports: []string{"sib"}}, label.New("", "pkg/demo", "demo_test"))
+	if got := strings.Join(sib.AttrStrings("deps"), ","); got != "//lib/sib" {
+		t.Errorf("test sibling deps = %q, want //lib/sib", got)
+	}
+
+	// Same-package library matches stay off the test: embed covers local.
+	self := rule.NewRule(TestKind, "demo_test")
+	l.Resolve(cfg, index, nil, self, testTargetImports{imports: []string{"demo"}}, label.New("", "pkg/demo", "demo_test"))
+	if self.Attr("deps") != nil {
+		t.Errorf("same-package test dep was emitted: %v", self.AttrStrings("deps"))
+	}
+
+	// Library import sets never resolve onto tests and vice versa.
+	cross := rule.NewRule(TestKind, "demo_test")
+	l.Resolve(cfg, index, nil, cross, targetImports{imports: []string{"sib"}}, label.New("", "pkg/demo", "demo_test"))
+	if cross.Attr("deps") != nil {
+		t.Errorf("wrong import type resolved onto test: %v", cross.AttrStrings("deps"))
+	}
+	libCross := rule.NewRule(LibraryKind, "demo")
+	l.Resolve(cfg, index, nil, libCross, testTargetImports{imports: []string{"sib"}}, label.New("", "pkg/demo", "demo"))
+	if libCross.Attr("deps") != nil {
+		t.Errorf("test import type resolved onto library: %v", libCross.AttrStrings("deps"))
+	}
+
+	// Stdlib stays off tests; unresolved test imports fail like libraries.
+	std := rule.NewRule(TestKind, "uses_std_test")
+	l.Resolve(cfg, index, nil, std, testTargetImports{imports: []string{"fmt"}}, label.New("", "pkg/demo", "uses_std_test"))
+	if std.Attr("deps") != nil || len(l.errors) != 0 {
+		t.Errorf("stdlib test resolution = %v, errors = %v", std.AttrStrings("deps"), l.errors)
+	}
+	l.Resolve(cfg, index, nil, rule.NewRule(TestKind, "unknown_test"), testTargetImports{imports: []string{"unknown"}}, label.New("", "pkg/demo", "unknown_test"))
+	if len(l.errors) != 1 || !strings.Contains(l.errors[0], "unresolved import") {
+		t.Errorf("unresolved test errors = %v", l.errors)
 	}
 }
 
