@@ -924,4 +924,70 @@ mod tests {
         sort_diagnostics(&mut rotated);
         assert_eq!(rotated, canonical);
     }
+
+    #[test]
+    fn assemble_emits_replacements_only_when_stable() {
+        // Apply-safety battery seed (issue #84): replacements bind the
+        // original digest (pre-validation), apply whole-file to the
+        // terminal body, vanish when final bytes are identical, and
+        // never emit on oscillation.
+        let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let mut initial = BTreeMap::new();
+        initial.insert("src/lib.rs".to_owned(), "BAD\n".to_owned());
+        let mut terminal = BTreeMap::new();
+        terminal.insert("src/lib.rs".to_owned(), "GOOD\n".to_owned());
+
+        let stable = assemble(
+            "//quality:test",
+            Capability::Lint as i32,
+            &stages,
+            &initial,
+            &terminal,
+            (Vec::new(), Vec::new()),
+            (2, Convergence::Stable),
+        )
+        .unwrap();
+        assert_eq!(stable.replacements.len(), 1);
+        let edits = &stable.replacements[0];
+        assert_eq!(edits.path, "src/lib.rs");
+        assert_eq!(edits.original_digest, digest("BAD\n".as_bytes()));
+        assert_eq!(edits.edits.len(), 1);
+        assert_eq!(edits.edits[0].start_byte, 0);
+        assert_eq!(edits.edits[0].end_byte, 4);
+        // Whole-file edit applies cleanly: original spliced by the edit
+        // yields exactly the terminal body (atomic per-file apply shape).
+        let original = "BAD\n";
+        let applied = format!(
+            "{}{}",
+            &original[..edits.edits[0].start_byte as usize],
+            String::from_utf8_lossy(&edits.edits[0].replacement)
+        );
+        assert_eq!(applied, "GOOD\n");
+
+        // Identical final bytes emit no replacement.
+        let unchanged = assemble(
+            "//quality:test",
+            Capability::Lint as i32,
+            &stages,
+            &initial,
+            &initial,
+            (Vec::new(), Vec::new()),
+            (1, Convergence::Stable),
+        )
+        .unwrap();
+        assert!(unchanged.replacements.is_empty());
+
+        // Oscillation never emits replacements, even with differing maps.
+        let oscillating = assemble(
+            "//quality:test",
+            Capability::Lint as i32,
+            &stages,
+            &initial,
+            &terminal,
+            (Vec::new(), Vec::new()),
+            (10, Convergence::Oscillation),
+        )
+        .unwrap();
+        assert!(oscillating.replacements.is_empty());
+    }
 }
