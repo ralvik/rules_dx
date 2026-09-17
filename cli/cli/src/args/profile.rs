@@ -82,6 +82,7 @@ pub fn resolve_profile(flag: Option<Profile>, attr: Option<Profile>, default: Pr
 
 #[cfg(test)]
 mod tests {
+    use super::super::{parse, ArgsError};
     use super::*;
 
     #[test]
@@ -125,5 +126,61 @@ mod tests {
             resolve_profile(None, None, Profile::Release),
             Profile::Release
         );
+    }
+
+    fn args(words: &[&str]) -> Vec<String> {
+        words.iter().map(ToString::to_string).collect()
+    }
+
+    #[test]
+    fn profile_flags_parse_on_build_run_test() {
+        for command in ["build", "run", "test"] {
+            let bare = parse(&args(&[command])).expect("bare parse");
+            assert!(!bare.debug);
+            assert!(!bare.release);
+            assert_eq!(bare.profile_flag(), None);
+            assert_eq!(bare.profile(), Profile::Dev);
+            let debug = parse(&args(&[command, "--debug"])).expect("debug parse");
+            assert!(debug.debug);
+            assert!(!debug.release);
+            assert_eq!(debug.profile_flag(), Some(Profile::Debug));
+            assert_eq!(debug.profile(), Profile::Debug);
+            let release = parse(&args(&[command, "--release"])).expect("release parse");
+            assert!(!release.debug);
+            assert!(release.release);
+            assert_eq!(release.profile_flag(), Some(Profile::Release));
+            assert_eq!(release.profile(), Profile::Release);
+        }
+        let got = parse(&args(&["--debug", "build"])).expect("parse");
+        assert_eq!(got.profile_flag(), Some(Profile::Debug));
+        let got = parse(&args(&["test", "--release", "//a:t"])).expect("parse");
+        assert_eq!(got.profile_flag(), Some(Profile::Release));
+    }
+
+    #[test]
+    fn profile_flags_reject_conflicts_and_foreign_commands() {
+        for command in ["build", "run", "test"] {
+            assert_eq!(
+                parse(&args(&[command, "--debug", "--release"])),
+                Err(ArgsError::ConflictingProfiles)
+            );
+        }
+        for words in [
+            vec!["coverage", "--debug"],
+            vec!["coverage", "--release"],
+            vec!["lint", "--debug"],
+            vec!["check", "--release"],
+            vec!["generate", "--debug"],
+            vec!["codegen", "--release"],
+            vec!["status", "--debug"],
+        ] {
+            assert!(
+                matches!(
+                    parse(&args(&words)),
+                    Err(ArgsError::UnsupportedOption { .. })
+                ),
+                "words: {words:?}"
+            );
+        }
     }
 }
