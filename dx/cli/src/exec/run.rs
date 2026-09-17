@@ -267,6 +267,7 @@ mod tests {
             workspace: None,
             dry_run,
             quiet: false,
+            verbose: false,
             output,
             reports,
             fail_on: dx_output::Threshold::Warning,

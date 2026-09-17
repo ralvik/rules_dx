@@ -328,6 +328,10 @@ pub struct Invocation {
     pub workspace: Option<String>,
     pub dry_run: bool,
     pub quiet: bool,
+    /// `--verbose` (issue #222): structured `tracing` diagnostics on
+    /// stderr; orthogonal to `--quiet` (which suppresses human summaries).
+    /// Default stays byte-identical (warn+error only).
+    pub verbose: bool,
     pub output: OutputMode,
     pub reports: Vec<ReportRequest>,
     pub fail_on: Threshold,
@@ -476,6 +480,11 @@ struct Cli {
     /// Suppress dx operation summaries (tool diagnostics still print).
     #[arg(long)]
     quiet: bool,
+    /// Enable structured diagnostics on stderr via tracing (issue #222).
+    /// Default stays byte-identical; `--verbose` adds info-level logs.
+    /// Orthogonal to `--quiet` (summaries vs logs).
+    #[arg(long)]
+    verbose: bool,
     /// Select concise text, unified patches, or versioned NDJSON events.
     #[arg(long, allow_negative_numbers = true, overrides_with = "output")]
     output: Option<String>,
@@ -1084,6 +1093,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         workspace,
         dry_run,
         quiet,
+        verbose,
         output,
         report,
         fail_on,
@@ -1571,6 +1581,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         workspace,
         dry_run,
         quiet,
+        verbose,
         output,
         reports,
         fail_on,
@@ -1681,6 +1692,7 @@ mod tests {
         assert_eq!(got.workspace, None);
         assert!(!got.dry_run);
         assert!(!got.quiet);
+        assert!(!got.verbose);
         assert_eq!(got.output, OutputMode::Text { quiet: false });
         assert!(got.reports.is_empty());
         assert_eq!(got.fail_on, Threshold::Warning);
@@ -1787,6 +1799,27 @@ mod tests {
     fn quiet_applies_to_text_output() {
         let got = parse(&args(&["lint", "--quiet"])).expect("parse");
         assert_eq!(got.output, OutputMode::Text { quiet: true });
+    }
+
+    #[test]
+    fn verbose_parses_before_and_after_command_and_stays_orthogonal_to_quiet() {
+        // Issue #222: `--verbose` enables tracing diagnostics without
+        // changing the machine-output contract; `--quiet` still controls
+        // summaries independently.
+        let bare = parse(&args(&["lint", "--verbose"])).expect("parse");
+        assert!(bare.verbose);
+        assert!(!bare.quiet);
+        let before = parse(&args(&["--verbose", "lint"])).expect("parse");
+        assert!(before.verbose);
+        let both = parse(&args(&["lint", "--quiet", "--verbose"])).expect("parse");
+        assert!(both.quiet);
+        assert!(both.verbose);
+        assert_eq!(both.output, OutputMode::Text { quiet: true });
+        let help = match parse(&args(&["--verbose", "--help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("want Help, got {other:?}"),
+        };
+        assert!(help.contains("--verbose"), "top-level help:\n{help}");
     }
 
     #[test]

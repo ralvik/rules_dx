@@ -141,7 +141,7 @@ impl Runner for BinaryRunner {
 fn usage_error(message: &str) -> i32 {
     let _ = writeln!(
         io::stderr(),
-        "dx: {message}\nusage: dx [--workspace DIR] [--dry-run] [--quiet] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]\nper-command flags: clean --bazel (also run `bazel clean`; distinct from `dx bazel` passthrough); owners|deps|why --configured (cquery); coverage --min-coverage; build|run|test --debug|--release; version --check|--pin|--rollback. see `dx <command> --help`."
+        "dx: {message}\nusage: dx [--workspace DIR] [--dry-run] [--quiet] [--verbose] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <audit|lint|typecheck|format|generate|build|test|coverage|run|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]\nper-command flags: clean --bazel (also run `bazel clean`; distinct from `dx bazel` passthrough); owners|deps|why --configured (cquery); coverage --min-coverage; build|run|test --debug|--release; version --check|--pin|--rollback. see `dx <command> --help`."
     );
     pre_exec_code()
 }
@@ -167,6 +167,16 @@ fn run() -> i32 {
         }
         Err(error) => return usage_error(&error.to_string()),
     };
+    // Structured diagnostics (issue #222): tracing subscriber init is
+    // idempotent and emits nothing by default, keeping runs byte-identical
+    // unless `--verbose` (info) or `RUST_LOG` overrides the filter.
+    dx_output::init_diagnostics(invocation.verbose);
+    tracing::info!(
+        command = invocation.command.name(),
+        verbose = invocation.verbose,
+        quiet = invocation.quiet,
+        "dx invocation parsed"
+    );
     // Platform gate (issue #213): unqualified hosts refuse cleanly with a
     // qualification pointer before any Bazel work starts, never partial
     // execution presented as success. Usage errors above still surface so

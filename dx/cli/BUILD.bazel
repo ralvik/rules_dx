@@ -53,6 +53,7 @@ rust_library(
             "strsim",
             "tempfile",
             "thiserror",
+            "tracing",
         ],
         package_name = "dx/dx_cli",
     ) + [
@@ -97,6 +98,7 @@ rust_binary(
             "strsim",
             "tempfile",
             "thiserror",
+            "tracing",
         ],
         package_name = "dx/dx_cli",
     ) + [":dx_cli", "//dx/output:dx_output", "//dx/process:dx_process"],
@@ -156,6 +158,7 @@ rust_test(
             "strsim",
             "tempfile",
             "thiserror",
+            "tracing",
         ],
         package_name = "dx/dx_cli",
     ) + [
