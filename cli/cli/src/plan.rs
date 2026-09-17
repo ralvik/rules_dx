@@ -21,6 +21,7 @@ pub mod managed;
 pub mod quality;
 pub mod run_deploy;
 pub mod run_temp;
+pub mod workflow;
 
 pub use generate::{
     generate_scope_elements, generate_scope_json, generate_traversal_dirs, plan_generate,
@@ -29,12 +30,10 @@ pub use generate::{
 };
 pub use managed::{plan_bazel, plan_managed};
 pub(crate) use quality::workflow_scope_labels;
-pub use quality::{
-    plan_build, plan_workflow, protected_flags, required_options, spec, workflow_options,
-    workflow_protected, CommandSpec, WorkflowVerb,
-};
+pub use quality::{plan_build, protected_flags, required_options, spec, CommandSpec};
 pub use run_deploy::{plan_deploy_build, plan_deploy_run, plan_run, plan_run_targets};
 pub use run_temp::{bep_path, create_run_temp_dir, intended_path, run_nonce};
+pub use workflow::{plan_workflow, workflow_options, workflow_protected, WorkflowVerb};
 
 /// Canonical workspace policy label selected by every quality command.
 /// Matches the committed consumer `.bazelrc` default while staying
