@@ -1,0 +1,112 @@
+# Prebuilt devcontainer images on GHCR (issue #184, seed slice).
+#
+# Separate workflow from releases per owner decision (different lifecycle:
+# per-scaffold-change, not per-tag; base-image rebuilds never block/couple
+# a `dx` release). Build on PR (paths below), push gated on explicit owner
+# approval until standing approval exists. Signing-second after #26/#78:
+# `cosign sign <digest>` on the #26 trust root lands after the human-run
+# signing workflow (#78); this slice pushes nothing without approval and
+# signs nothing yet. Scaffold `image:` digest reference follows the first
+# push; GHCR quotas/retention are recorded on first push (free for public
+# repos, qualified not assumed per docs/testing/README.md).
+#
+# Hygiene (issue #80): Bazelisk installs go through the single
+# `.github/actions/setup-bazelisk` composite action where Bazel is needed;
+# this workflow builds Docker only, so the sole third-party action
+# (checkout) is pinned to a commit SHA with its tag trailing. No
+# `docker/*` actions: plain `docker build`/`push` keeps the push gate
+# explicit in `run:` steps. `dist/`/`release/` stay git-ignored per #5.
+name: ghcr-prebuilt
+
+on:
+  pull_request:
+    paths:
+      - ".devcontainer/Dockerfile.prebuilt"
+      - ".github/workflows/ghcr.yml"
+      - ".devcontainer/devcontainer.json"
+  workflow_dispatch:
+    inputs:
+      approve:
+        description: "Owner approval to push the prebuilt image to GHCR. False builds and reports only; nothing pushes either way until standing approval exists."
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ghcr-prebuilt-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Build prebuilt image (no push on PR)
+        run: |
+          set -euo pipefail
+          docker build \
+            -f .devcontainer/Dockerfile.prebuilt \
+            -t "ghcr.io/${{ github.repository }}/devcontainer:ci-${{ github.sha }}" \
+            .
+          docker images "ghcr.io/${{ github.repository }}/devcontainer" --digests
+      - name: Verify admissibility (pinned bootstrap, Bazel delegation, no ambient tools)
+        run: |
+          set -euo pipefail
+          df=".devcontainer/Dockerfile.prebuilt"
+          grep -qE '^FROM [^ ]+@sha256:[0-9a-f]{64}' "$df" \
+            || { echo "admissibility: FROM must be digest-pinned (@sha256:), never latest/bare tag"; exit 1; }
+          ! grep -qiE 'FROM [^ ]+:latest([ @]|$)' "$df" \
+            || { echo "admissibility: :latest is rejected by the pinned-bootstrap gate"; exit 1; }
+          grep -q "bazelisk-linux-amd64" "$df" \
+            || { echo "admissibility: pre-installed Bazelisk (Bazel delegation) required"; exit 1; }
+          grep -q "sha256sum -c" "$df" \
+            || { echo "admissibility: Bazelisk fetch must be sha256-checked (pinned bootstrap)"; exit 1; }
+          # No ambient language toolchains: tools resolve via Bazel at runtime.
+          ! grep -qiE 'pip install|uv pip|npm install -g|pnpm add -g|cargo install|dotnet tool install|go install' "$df" \
+            || { echo "admissibility: language toolchains must not be baked in"; exit 1; }
+          echo "admissibility: pinned bootstrap + Bazel delegation + no ambient tools (devcontainer_is_admissible(true, true, false))"
+      - name: Push to GHCR (owner approval only)
+        env:
+          APPROVE: ${{ inputs.approve }}
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" != "workflow_dispatch" || "$APPROVE" != "true" ]]; then
+            echo "push gate: event=${{ github.event_name }} approve=$APPROVE -> build-only, nothing pushes."
+            echo "first push (dispatch + approve:true) publishes ghcr.io/${{ github.repository }}/devcontainer:sha-${{ github.sha }}; scaffold digest ref + cosign sign + quota record follow (#26/#78)."
+            exit 0
+          fi
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          tag="ghcr.io/${{ github.repository }}/devcontainer:sha-${{ github.sha }}"
+          docker build -f .devcontainer/Dockerfile.prebuilt -t "$tag" .
+          docker push "$tag"
+          echo "pushed: $tag"
+          docker inspect --format='{{index .RepoDigests 0}}' "$tag" || true
+          {
+            echo "## GHCR prebuilt push"
+            echo ""
+            echo "- tag: \`$tag\`"
+            echo "- scaffold update (digest ref, never latest) + \`cosign sign <digest>\` on the #26 trust root follow (#78 signing-first)."
+            echo "- record GHCR quotas/retention on this first push per docs/testing/README.md."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Write job summary (build-only by default)
+        if: always()
+        run: |
+          {
+            echo "### ghcr-prebuilt — ${{ job.status }}"
+            echo ""
+            echo "- base: \`ubuntu:24.04@sha256:69cecf4...\` (pinned digest, resolved 2026-09-17; re-pin deliberately)."
+            echo "- Bazel: Bazelisk v1.29.0 (pinned sha256) + Bazel 9.2.0 via USE_BAZEL_VERSION; no ambient toolchains."
+            echo "- push: only on workflow_dispatch + approve:true (explicit owner approval); PRs build only."
+            echo "- follow-ups (issue #184): scaffold digest ref, cosign sign/verify + attestation (#26/#78), quota record."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Prove checkout left clean
+        run: test -z "$(git status --porcelain)"
