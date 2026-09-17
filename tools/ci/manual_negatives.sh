@@ -17,7 +17,11 @@
 # `bazel run //tools/ci:manual_negatives`, following //tools/ci:corpus_audit.
 set -euo pipefail
 
-workspace="$(git rev-parse --show-toplevel)"
+if [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" ]]; then
+  workspace="$BUILD_WORKSPACE_DIRECTORY"
+else
+  workspace="$(git rev-parse --show-toplevel)"
+fi
 cd "$workspace"
 
 pass=0

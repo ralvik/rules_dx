@@ -10,5 +10,7 @@
 # ignore. Expand this file (never shrink a passing scope without a
 # recorded decision) as more of the tree reaches zero-uncovered.
 # Dispositions: `eligible` (gated) or `support` (report hits skipped).
-eligible tools/coverage/src/lib.rs
+# The gate library was promoted to //cli/lcov:dx_lcov (#74); the thin
+# binary shim stays at tools/coverage/src/main.rs.
+eligible cli/lcov/src/lib.rs
 eligible tools/coverage/src/main.rs

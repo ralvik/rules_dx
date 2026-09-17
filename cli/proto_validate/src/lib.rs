@@ -5,6 +5,7 @@
 //! `previous` cursor. The per-crate `Error` types stay local; this crate only
 //! provides the control flow so every shard keeps its own messages.
 
+use prost::Message;
 use std::collections::BTreeSet;
 
 /// How a sorted-unique sequence broke its contract.
@@ -52,7 +53,7 @@ pub fn check_unique_insert<T: Ord, E>(
 }
 
 /// Run `validate` on an already-built message, then encode it.
-pub fn encode_with_validation<M: prost::Message, E>(
+pub fn encode_with_validation<M: Message, E>(
     msg: &M,
     validate: impl FnOnce(&M) -> Result<(), E>,
 ) -> Result<Vec<u8>, E> {
@@ -62,7 +63,7 @@ pub fn encode_with_validation<M: prost::Message, E>(
 
 /// Decode a message, then run `validate` on it. Decode failures map through
 /// `map_decode_error` so each crate keeps its own `Error::Decode` shape.
-pub fn decode_with_validation<M: prost::Message + Default, E>(
+pub fn decode_with_validation<M: Message + Default, E>(
     bytes: &[u8],
     validate: impl Fn(&M) -> Result<(), E>,
     map_decode_error: impl FnOnce(String) -> E,
