@@ -30,4 +30,8 @@ dx_rust_crate(
         "//cli/path:dx_path",
         "//cli/schema:dx_schema",
     ],
+    srcs = [
+        "src/diagnostics.rs",
+        "src/lib.rs",
+    ],
 )
