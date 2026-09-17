@@ -38,6 +38,7 @@ rust_library(
         "src/args/profile.rs",
         "src/args/suggest.rs",
         "src/args/tokenizer.rs",
+        "src/args/values.rs",
         "src/exec.rs",
         "src/exec/audit.rs",
         "src/exec/bazel.rs",

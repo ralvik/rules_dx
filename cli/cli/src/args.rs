@@ -25,7 +25,9 @@
 //! `profile` module, shared invocation types in the `invocation` module,
 //! error vocabulary in the `error` module, and invocation parsing in the
 //! `parser` module (the `parse` domain; named `parser` so the module
-//! and the `parse` function coexist), with the Bazel-verbatim tokenizer
+//! and the `parse` function coexist), with the small value helpers
+//! (`scope_error`, `parse_report`, `parse_min_coverage`) in the
+//! `values` module and the Bazel-verbatim tokenizer
 //! and `clap`-error mapping in the `tokenizer` module. This facade keeps the re-exports;
 //! the public paths stay `crate::args::Command`,
 //! `crate::args::{COMPLETION_SHELLS, render_completion}`,
@@ -43,6 +45,7 @@ pub mod parser;
 pub mod profile;
 pub mod suggest;
 pub mod tokenizer;
+pub mod values;
 
 pub use command::Command;
 pub use completion::{render_completion, COMPLETION_SHELLS};
