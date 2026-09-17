@@ -11,4 +11,8 @@ dx_rust_crate(
     name = "dx_lcov",
     package_name = "cli/dx_lcov",
     deps = ["thiserror"],
+    srcs = [
+        "src/lib.rs",
+        "src/parse.rs",
+    ],
 )
