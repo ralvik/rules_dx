@@ -19,7 +19,11 @@
     "mnemonics": [
       "DxRealQualityFormat",
       "DxRealQualityLint"
-    ]
+    ],
+    "no_cache_wall_ms": 379.4,
+    "no_cache_flag": "--nouse_action_cache, server warm",
+    "warm_wall_ms": 329.1,
+    "cache_hit_evidence": "consecutive server-warm builds both hit action cache; wall time dominated by Bazel overhead on 2-action sample, not post-shutdown cold"
   },
   "runner_test_timing": {
     "target": "//quality/runner:quality_runner_test",
@@ -40,5 +44,5 @@
   "date": "2026-09-17",
   "gate": false,
   "claim": "none",
-  "note": "measured seed-host runs, report-not-gate; no parity claim. Synthetic tree is deterministic (see rules_lint_comparison.sh); quality sample is //perf:corpus lint+format (2 actions); runner timing is server-warm with/without --nocache_test_results, not post-shutdown cold. Post-shutdown cold + rules_lint-side numbers follow next."
+  "note": "measured seed-host runs, report-not-gate; no parity claim. Synthetic tree is deterministic (see rules_lint_comparison.sh); quality sample is //perf:corpus lint+format (2 actions, server-warm no-cache ~379ms vs warm ~329ms); runner timing is server-warm with/without --nocache_test_results, not post-shutdown cold. Post-shutdown cold + rules_lint-side numbers follow next."
 }
