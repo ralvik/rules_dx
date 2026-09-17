@@ -25,3 +25,10 @@ AGENTS.local.md
 __pycache__/
 *.pyc
 opencode.json
+
+# Coverage artifacts (llvm-cov profraw/profdata spill to the checkout
+# root when coverage binaries run; never commit — rebuilt on demand.
+# Keeps `git status --porcelain` clean-checks honest, e.g. the
+# publish dry-run's checkout-left-clean proof.)
+*.profraw
+*.profdata
