@@ -1304,4 +1304,30 @@ mod tests {
         assert!(!result.replacements.is_empty());
         assert!(validate(&result).is_ok());
     }
+
+    #[test]
+    fn file_arrival_reorder_yields_identical_manifests() {
+        // Determinism battery (issue #84): `quality-testing.md` requires
+        // reordered equivalent source declarations and randomized
+        // QualitySourcesInfo/checkout arrival order to compare equal.
+        // `validate_request` canonicalizes the FileInput vec into a
+        // sorted-path map, so forward vs reversed arrival order must
+        // converge to identical snapshots, sorted diagnostics, sorted
+        // replacements, and rounds.
+        let stages = vec![stage("lint-a", &["rust"], &["src/a.rs", "src/b.rs"])];
+        let forward = vec![file("src/a.rs", "BAD a\n"), file("src/b.rs", "BAD b\n")];
+        let reversed = vec![file("src/b.rs", "BAD b\n"), file("src/a.rs", "BAD a\n")];
+        let first = run_pipeline("//quality:test", "lint", &stages, &forward).unwrap();
+        let second = run_pipeline("//quality:test", "lint", &stages, &reversed).unwrap();
+        assert_eq!(first.convergence, Convergence::Stable as i32);
+        assert_eq!(second.convergence, Convergence::Stable as i32);
+        assert_eq!(first.completed_rounds, second.completed_rounds);
+        assert_eq!(first.original_snapshot, second.original_snapshot);
+        assert_eq!(first.terminal_snapshot, second.terminal_snapshot);
+        assert_eq!(first.initial_diagnostics, second.initial_diagnostics);
+        assert_eq!(first.terminal_diagnostics, second.terminal_diagnostics);
+        assert_eq!(first.replacements, second.replacements);
+        assert!(validate(&first).is_ok());
+        assert!(validate(&second).is_ok());
+    }
 }
