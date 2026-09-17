@@ -1117,7 +1117,7 @@ mod tests {
     }
 
     #[test]
-    fn staging_collision_fails_atomic_write() {
+    fn legacy_staging_dir_does_not_block_atomic_write() {
         let mut harness = Harness::new("staging-blocked");
         harness.write_source("src/a.py", "x = 1\n");
         harness.results.insert(
@@ -1127,15 +1127,19 @@ mod tests {
                 vec![harness.replacement(b"y")],
             ),
         );
+        // Legacy fixed staging path from before the race-free write (#74):
+        // `write_atomic` now stages via an OS-random `NamedTempFile`, so a
+        // leftover `.dx-apply-tmp` directory must not block the apply.
         std::fs::create_dir_all(harness.workspace.join("src/.a.py.dx-apply-tmp"))
             .expect("staging dir");
-        let (code, _, err) = harness.run(&["lint", "--output=text"]);
-        assert_eq!(code, 1);
+        let (code, out, err) = harness.run(&["lint", "--output=text"]);
+        assert_eq!(code, 0);
         assert_eq!(
             std::fs::read(harness.workspace.join("src/a.py")).expect("source"),
-            b"x = 1\n"
+            b"y = 1\n"
         );
-        assert!(err.contains("Not applied: src/a.py (unreadable_source)"));
+        assert!(out.contains("Applied 1 file(s)."));
+        assert!(!err.contains("Not applied: src/a.py"));
     }
 
     #[test]
