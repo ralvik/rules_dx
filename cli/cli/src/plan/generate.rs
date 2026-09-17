@@ -9,9 +9,9 @@
 //! [`super::workflow_scope_labels`] with the quality/workflow planning in
 //! `super`.
 
-use dx_process::{build_workflow_argv, describe_scope, ProtectedFlag};
+use dx_process::{build_workflow_argv, describe_scope, ForwardError, ProtectedFlag};
 
-use super::{workflow_scope_labels, workspace_flag, BuildPlan, ForwardError};
+use super::{workflow_scope_labels, workspace_flag, BuildPlan};
 use crate::resolve::ResolvedScope;
 
 /// Canonical Gazelle runners behind `dx generate`: the repo-wide
