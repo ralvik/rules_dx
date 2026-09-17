@@ -1958,4 +1958,99 @@ mod tests {
         }];
         assert!(run_pipeline("//quality:test", "lint", &stages, &bad_source).is_err());
     }
+
+    #[test]
+    fn permutation_ranking_prefers_stable_fewer_rounds() {
+        // Determinism battery (issue #84): `quality-testing.md` requires
+        // comparing viable permutations for each multi-tool set, rejecting
+        // incorrect, divergent, oscillating, and unjustifiably different
+        // terminals, and ranking equivalent correct orders by
+        // non-convergence count, rounds, process starts, then wall time.
+        // Equivalent lint-a+fmt-a orders over BAD plus whitespace converge
+        // to identical stable terminals in identical rounds, so their rank
+        // keys tie deterministically; a direct fix in fewer rounds ranks
+        // before a gradual fix to the same terminal; stable ranks before
+        // oscillation and iteration-limit; different terminals diverge and
+        // must be rejected rather than ranked together.
+        let forward = vec![
+            stage("lint-a", &["rust"], &["src/lib.rs"]),
+            stage("fmt-a", &["rust"], &["src/lib.rs"]),
+        ];
+        let reversed = vec![
+            stage("fmt-a", &["rust"], &["src/lib.rs"]),
+            stage("lint-a", &["rust"], &["src/lib.rs"]),
+        ];
+        let files = vec![file("src/lib.rs", "BAD   \n")];
+        let first = run_pipeline("//quality:test", "lint", &forward, &files).unwrap();
+        let second = run_pipeline("//quality:test", "lint", &reversed, &files).unwrap();
+        assert_eq!(first.convergence, Convergence::Stable as i32);
+        assert_eq!(second.convergence, Convergence::Stable as i32);
+        assert_eq!(first.completed_rounds, second.completed_rounds);
+        assert_eq!(first.terminal_snapshot, second.terminal_snapshot);
+        assert_eq!(first.replacements, second.replacements);
+        assert!(validate(&first).is_ok());
+        assert!(validate(&second).is_ok());
+        let rank_key = |result: &QualityResult| {
+            let non_converged = i32::from(result.convergence != Convergence::Stable as i32);
+            (non_converged, result.completed_rounds)
+        };
+        assert_eq!(rank_key(&first), rank_key(&second));
+        assert_eq!(rank_key(&first), (0, 2));
+        let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let mut initial = BTreeMap::new();
+        initial.insert("src/lib.rs".to_owned(), "BAD".to_owned());
+        let direct = |_: &str, _: &str, text: &str| {
+            if text == "BAD" {
+                Ok("GOOD".to_owned())
+            } else {
+                Ok(text.to_owned())
+            }
+        };
+        let gradual = |_: &str, _: &str, text: &str| {
+            if text == "BAD" {
+                Ok("MID".to_owned())
+            } else if text == "MID" {
+                Ok("GOOD".to_owned())
+            } else {
+                Ok(text.to_owned())
+            }
+        };
+        let (fast_terminal, fast_rounds, fast_conv) =
+            run_convergence(&initial, &stages, MAX_COMPLETED_ROUNDS, direct).unwrap();
+        let (slow_terminal, slow_rounds, slow_conv) =
+            run_convergence(&initial, &stages, MAX_COMPLETED_ROUNDS, gradual).unwrap();
+        assert_eq!(fast_conv, Convergence::Stable);
+        assert_eq!(slow_conv, Convergence::Stable);
+        assert_eq!(fast_terminal["src/lib.rs"], "GOOD");
+        assert_eq!(slow_terminal["src/lib.rs"], "GOOD");
+        assert_eq!(fast_rounds, 2);
+        assert_eq!(slow_rounds, 3);
+        assert!(fast_rounds < slow_rounds);
+        let flip = |_: &str, _: &str, text: &str| {
+            if text == "a" {
+                Ok("b".to_owned())
+            } else {
+                Ok("a".to_owned())
+            }
+        };
+        let mut flip_initial = BTreeMap::new();
+        flip_initial.insert("src/lib.rs".to_owned(), "a".to_owned());
+        let (_, _, flip_conv) =
+            run_convergence(&flip_initial, &stages, MAX_COMPLETED_ROUNDS, flip).unwrap();
+        assert_eq!(flip_conv, Convergence::Oscillation);
+        let grow = |_: &str, _: &str, text: &str| Ok(format!("{text}x"));
+        let (_, _, grow_conv) = run_convergence(&flip_initial, &stages, 3, grow).unwrap();
+        assert_eq!(grow_conv, Convergence::IterationLimit);
+        let stable_rank = (0, fast_rounds);
+        let oscillation_rank = (1, 2);
+        let limit_rank = (1, 3);
+        assert!(stable_rank < oscillation_rank);
+        assert!(stable_rank < limit_rank);
+        let fix_stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let keep_stages = vec![stage("lint-b", &["rust"], &["src/lib.rs"])];
+        let bad_files = vec![file("src/lib.rs", "BAD\n")];
+        let fixed = run_pipeline("//quality:test", "lint", &fix_stages, &bad_files).unwrap();
+        let kept = run_pipeline("//quality:test", "lint", &keep_stages, &bad_files).unwrap();
+        assert_ne!(fixed.terminal_snapshot, kept.terminal_snapshot);
+    }
 }
