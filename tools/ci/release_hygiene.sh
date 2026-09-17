@@ -9,7 +9,7 @@
 # stays green by construction and nothing runs uninvited.
 #
 # This harness machine-checks the no-publication-inputs half that is
-# verifiable on a clean tree today (12 checks): dist/release
+# verifiable on a clean tree today (14 checks): dist/release
 # git-ignored and uncommitted, module at 0.0.0, no version tags,
 # SECURITY.md reporting link, publish dry-run dispatch-only with a
 # default-closed approve gate, no-secrets minimal permissions,
@@ -130,6 +130,23 @@ if grep -q -F -e 'SBOM/provenance generation (tooling unselected; issue #26)' .g
   ok
 else
   bad "publish-dry-run.yml lost the SBOM/BCR deferral to issue #26"
+fi
+
+# Signing-first order stays explicit (issue #78/#26): Sigstore keyless +
+# GitHub attestations on the #26 trust root, GHCR signs separately via
+# cosign <digest> under #184 — never claimed here, only deferred.
+if grep -q -F -e 'Signing/attestation (Sigstore keyless + GitHub attestations on the issue #26 trust root' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml lost the signing-first deferral to issue #26"
+fi
+
+# GHCR stays a separate workflow (owner decision, issue #184): the dry
+# run must name the separate ghcr.yml route, never fold images here.
+if grep -q -F -e 'GHCR prebuilt images (separate workflow .github/workflows/ghcr.yml' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml lost the GHCR-separate note (issue #184)"
 fi
 
 echo "release hygiene harness: $pass passed, $fail failed"

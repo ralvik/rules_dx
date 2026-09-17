@@ -87,6 +87,8 @@ jobs:
               ],
               "not_attempted": [
                   "SBOM/provenance generation (tooling unselected; issue #26)",
+                  "Signing/attestation (Sigstore keyless + GitHub attestations on the issue #26 trust root, signing-first; GHCR images sign separately via cosign <digest> under issue #184)",
+                  "GHCR prebuilt images (separate workflow .github/workflows/ghcr.yml per owner decision; issue #184)",
                   "Non-seed release matrix builds (platforms unqualified; issue #5)",
                   "BCR dry-run submission (registry tooling unselected; issue #26)",
                   "Any tag, registry submission, or release creation",
