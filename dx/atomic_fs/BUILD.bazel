@@ -1,0 +1,63 @@
+"""Race-free atomic filesystem writes shared by every apply/commit path (#74)."""
+
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_library(
+    name = "dx_atomic_fs",
+    srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "dx/dx_atomic_fs",
+        normal = True,
+    ),
+    crate_name = "dx_atomic_fs",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+    deps = crate_deps(
+        ["tempfile"],
+        package_name = "dx/dx_atomic_fs",
+    ),
+)
+
+rust_test(
+    name = "dx_atomic_fs_test",
+    size = "small",
+    aliases = aliases(
+        package_name = "dx/dx_atomic_fs",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":dx_atomic_fs",
+    deps = crate_deps(
+        ["tempfile"],
+        package_name = "dx/dx_atomic_fs",
+    ),
+)
+
+# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# resolve from the pinned toolchain, never from ambient host tools.
+rustfmt_test(
+    name = "dx_atomic_fs_fmt_test",
+    size = "small",
+    targets = [":dx_atomic_fs"],
+)
+
+rust_clippy_test(
+    name = "dx_atomic_fs_clippy_test",
+    size = "small",
+    targets = [":dx_atomic_fs"],
+)
+
+exports_files(["Cargo.toml"])
+
+# Repository corpus: crate manifest and build file owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
+)

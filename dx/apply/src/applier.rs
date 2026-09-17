@@ -34,36 +34,10 @@ impl FileSystem for RealFileSystem {
     }
 
     fn write_atomic(&self, path: &Path, content: &[u8]) -> io::Result<()> {
-        use std::io::Write as _;
-        let parent = path
-            .parent()
-            .filter(|parent| !parent.as_os_str().is_empty());
-        if let Some(parent) = parent {
-            std::fs::create_dir_all(parent)?;
-        }
-        // Stage in the target directory so the final persist stays an
-        // atomic same-filesystem rename. Bare file names (no parent) stage
-        // in the current directory for the same reason.
-        let staging_dir: &Path = parent.unwrap_or(Path::new("."));
-        // OS-random `O_EXCL`-claimed staging file (issue #74 dx-atomic-fs
-        // direction): replaces the former fixed `.name.dx-apply-tmp`
-        // sibling, which collided under concurrent applies and left stale
-        // files on crash. `NamedTempFile` removes the staging file on drop
-        // unless persisted.
-        let mut staging = tempfile::NamedTempFile::new_in(staging_dir)?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt as _;
-            // `std::fs::write` creates `0666 & !umask` (typically 0644);
-            // `NamedTempFile` creates 0600, so restore the conventional
-            // non-executable file mode before persisting.
-            staging
-                .as_file()
-                .set_permissions(std::fs::Permissions::from_mode(0o644))?;
-        }
-        staging.write_all(content)?;
-        staging.persist(path).map_err(|err| err.error)?;
-        Ok(())
+        // Single write path owned by `dx_atomic_fs` (#74): OS-random
+        // `O_EXCL`-claimed staging file in the target directory with
+        // drop-cleanup and atomic same-filesystem persist.
+        dx_atomic_fs::write_atomic(path, content)
     }
 }
 

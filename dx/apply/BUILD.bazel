@@ -35,6 +35,7 @@ rust_library(
         ],
         package_name = "dx/dx_apply",
     ) + [
+        "//dx/atomic_fs:dx_atomic_fs",
         "//dx/digest:dx_digest",
         "//dx/path:dx_path",
     ],
