@@ -1,0 +1,13 @@
+{
+  "name": "adopt-polyglot",
+  "private": true,
+  "type": "module",
+  "workspaces": ["widgets", "frontend"],
+  "dependencies": {},
+  "devDependencies": {
+    "jest": "30.2.0"
+  },
+  "optionalDependencies": {
+    "fsevents": "2.3.3"
+  }
+}

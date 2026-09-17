@@ -1,0 +1,33 @@
+load("@rules_dx//typescript/rules:defs.bzl", "typescript_project")
+load("//quality:fixtures.bzl", "real_source_target")
+
+typescript_project(
+    name = "sums",
+    srcs = ["sums.ts"],
+    declaration = True,
+    transpiler = "tsc",
+    tsconfig = "tsconfig.json",
+)
+
+typescript_project(
+    name = "totals",
+    srcs = ["totals.ts"],
+    declaration = True,
+    transpiler = "tsc",
+    tsconfig = "tsconfig.json",
+    deps = [":sums"],
+)
+
+typescript_project(
+    name = "totals_test",
+    srcs = ["totals_test.ts"],
+    declaration = True,
+    transpiler = "tsc",
+    tsconfig = "tsconfig.json",
+    deps = [":totals"],
+)
+
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
