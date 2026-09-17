@@ -9,8 +9,8 @@
 # other foundations' ecosystem repos, so unused foundations contribute
 # no targets/repos to that consumer's build.
 #
-# Covered here (minimum per #85 plus Go follow-up): Rust, Python, JS/TS,
-# Go. Markers are
+# Covered here (minimum per #85 plus Go + C# follow-ups): Rust, Python,
+# JS/TS, Go, C#. Markers are
 # ecosystem-specific Bazel repos, not shared base toolchains
 # (bazel_tools/skylib/platforms/rules_java appear across closures and
 # are intentionally not asserted here).
@@ -66,6 +66,8 @@ check_example adopt-python "aspect_rules_py" "rules_rust" "aspect_rules_js" "rul
 check_example adopt-js-ts "aspect_rules_js" "rules_rust" "aspect_rules_py" "rules_go" "rules_dotnet"
 # Go: owns rules_go; Rust/Python/JS/DotNet contribute nothing.
 check_example adopt-go "rules_go" "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_dotnet"
+# C#: owns rules_dotnet; Rust/Python/JS/Go contribute nothing.
+check_example adopt-csharp "rules_dotnet" "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_go"
 
 echo "examples laziness query: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
