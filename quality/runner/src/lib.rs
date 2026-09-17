@@ -1330,4 +1330,49 @@ mod tests {
         assert!(validate(&first).is_ok());
         assert!(validate(&second).is_ok());
     }
+
+    #[test]
+    fn env_permutations_do_not_alter_pipeline_outputs() {
+        // Determinism battery (issue #84): `quality-testing.md` requires
+        // locale, timezone, home directory, and PATH to leave check
+        // actions unaltered. The runner takes only (producer, capability,
+        // stages, path+bytes), so model each env permutation as metadata
+        // stripped before the call and require byte-identical manifests;
+        // different bytes under one env must diverge, proving bytes are
+        // load-bearing and env is not.
+        let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let envs = [
+            ("C", "UTC", "/home/a", "/usr/bin"),
+            (
+                "en_US.UTF-8",
+                "America/New_York",
+                "/home/b",
+                "/usr/local/bin:/usr/bin",
+            ),
+            ("C.UTF-8", "Europe/Berlin", "/root", "/opt/bin:/usr/bin"),
+        ];
+        let mut manifests = Vec::with_capacity(envs.len());
+        for (locale, tz, home, path) in envs {
+            // Ambient env never enters `FileInput`: only path + bytes do.
+            let _ = (locale, tz, home, path);
+            let files = vec![file("src/lib.rs", "BAD\n")];
+            let result = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
+            assert_eq!(result.convergence, Convergence::Stable as i32);
+            assert_eq!(result.replacements.len(), 1);
+            assert_eq!(
+                result.replacements[0].original_digest,
+                digest("BAD\n".as_bytes())
+            );
+            assert!(validate(&result).is_ok());
+            manifests.push(encode_validated(&result).unwrap());
+        }
+        for other in manifests.iter().skip(1) {
+            assert_eq!(&manifests[0], other);
+        }
+        // Same simulated env with different bytes diverges.
+        let clean = vec![file("src/lib.rs", "GOOD\n")];
+        let clean_result = run_pipeline("//quality:test", "lint", &stages, &clean).unwrap();
+        assert!(clean_result.replacements.is_empty());
+        assert_ne!(manifests[0], encode_validated(&clean_result).unwrap());
+    }
 }
