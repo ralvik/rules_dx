@@ -3,12 +3,14 @@
 //! Mutation (verified-source collection plus check/incomplete/apply
 //! handling) and status projection live in [`super::quality_apply`]
 //! (issue #236); diff-patch rendering lives in
-//! [`super::quality_patch`]; standard-report writing lives in
-//! [`super::quality_reports`]; this module keeps the dispatch,
-//! finding emission, and exit-code selection.
+//! [`super::quality_patch`]; finding/change/mutation emission lives in
+//! [`super::quality_emit`]; standard-report writing lives in
+//! [`super::quality_reports`]; this module keeps the dispatch and
+//! exit-code selection.
 
 use super::common::*;
 use super::quality_apply::{apply_collected_changes, project_status};
+use super::quality_emit::{emit_findings, EmitInputs};
 use super::quality_patch::render_diff_patch;
 use super::quality_reports::{write_standard_reports, StandardReports};
 use super::results::collect_results;
@@ -17,10 +19,8 @@ use crate::plan::{bep_path, plan_build};
 use crate::reports::{plan_reports, Destination};
 use crate::resolve::resolve;
 use dx_output::{
-    change_event, command_finished, command_started, diagnostic_event, mutation_event, write_event,
-    ChangeKind, FinishedCounts, MutationOutcome, OutputMode, Resolution, Severity, Snapshot,
+    command_finished, command_started, write_event, FinishedCounts, OutputMode, Severity,
 };
-use std::io::Write;
 
 /// Runs the quality command to completion and returns the process exit
 /// code. All dx-owned bytes go to `out` except operational diagnostics
@@ -172,137 +172,26 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
         }
     }
 
-    // Human and machine emission of findings, changes, and mutations.
-    let mut applied_count = 0u64;
-    let mut not_applied_count = 0u64;
-    if invocation.output == OutputMode::Json {
-        let mutating = !invocation.check;
-        for diagnostic in &status {
-            let mut event_diagnostic = diagnostic.clone();
-            if mutating && event_diagnostic.snapshot == Snapshot::Initial {
-                let is_applied = event_diagnostic
-                    .path
-                    .as_ref()
-                    .is_some_and(|path| applied.get(path).copied().unwrap_or(false));
-                event_diagnostic.resolution = Some(if is_applied && event_diagnostic.fixable {
-                    Resolution::Fixed // LCOV_EXCL_LINE - reason: defense-in-depth; applied fixable initials are withheld from status by the projection above, so no emitted finding can take this arm; retained for resolution completeness.
-                } else if is_applied {
-                    Resolution::Remaining
-                } else {
-                    Resolution::NotApplied
-                });
-            }
-            match diagnostic_event(&event_diagnostic, mutating) {
-                Ok(event) => {
-                    let _ = write_event(out, &event);
-                }
-                // LCOV_EXCL_START - reason: defense-in-depth; decode_validated plus the resolution assignment above guarantee valid diagnostic_event inputs (nonempty tool/message, sound paths/ranges, consistent snapshot/resolution), so this arm is unreachable.
-                Err(error) => {
-                    return operational(
-                        invocation,
-                        out,
-                        err,
-                        CODE_INVALID_BEP,
-                        &format!("invalid finding for output: {error}"),
-                    );
-                } // LCOV_EXCL_STOP - reason: end of unreachable defensive arm.
-            }
-        }
-        for change in &collected.changes {
-            match change_event_for(change) {
-                Ok(change_event_value) => match change_event(&change_event_value) {
-                    Ok(event) => {
-                        let _ = write_event(out, &event);
-                    }
-                    // LCOV_EXCL_START - reason: defense-in-depth; decode_validated enforces the edit shape check_edits requires (non-empty, ordered, non-overlapping) and change_event_for always supplies valid hex digests, so change_event cannot fail here.
-                    Err(error) => {
-                        return operational(
-                            invocation,
-                            out,
-                            err,
-                            CODE_INVALID_BEP,
-                            &format!("invalid change for output: {error}"),
-                        );
-                    } // LCOV_EXCL_STOP - reason: end of unreachable defensive arm.
-                },
-                // LCOV_EXCL_START - reason: defense-in-depth; decode_validated enforces UTF-8 replacements (InvalidUtf8Replacement), so change_event_for cannot fail on validated results.
-                Err(reason) => {
-                    return operational(
-                        invocation,
-                        out,
-                        err,
-                        CODE_INVALID_BEP,
-                        &format!("invalid change for {}: {reason}", change.path),
-                    );
-                } // LCOV_EXCL_STOP - reason: end of unreachable defensive arm.
-            }
-        }
-        if !invocation.check {
-            for change in &collected.changes {
-                let is_applied = applied.get(&change.path).copied().unwrap_or(false);
-                let reason = if is_applied {
-                    None
-                } else {
-                    Some(
-                        not_applied
-                            .iter()
-                            .find(|(path, _)| path == &change.path)
-                            .map(|(_, reason)| *reason)
-                            .unwrap_or(REASON_INCOMPLETE_COLLECTION),
-                    )
-                };
-                match mutation_event(
-                    &change.path,
-                    ChangeKind::Modify,
-                    if is_applied {
-                        MutationOutcome::Applied
-                    } else {
-                        MutationOutcome::NotApplied
-                    },
-                    reason,
-                ) {
-                    Ok(event) => {
-                        if is_applied {
-                            applied_count += 1;
-                        } else {
-                            not_applied_count += 1;
-                        }
-                        let _ = write_event(out, &event);
-                    }
-                    // LCOV_EXCL_START - reason: defense-in-depth; the mutation reason is Some exactly for NotApplied (INCOMPLETE fallback) and None for Applied by construction, so mutation_event cannot fail here.
-                    Err(error) => {
-                        return operational(
-                            invocation,
-                            out,
-                            err,
-                            CODE_INVALID_BEP,
-                            &format!("invalid mutation for output: {error}"),
-                        );
-                    } // LCOV_EXCL_STOP - reason: end of unreachable defensive arm.
-                }
-            }
-        }
-    } else if matches!(invocation.output, OutputMode::Text { .. }) {
-        let human: &mut dyn Write = if stdout_report { err } else { out };
-        for diagnostic in &status {
-            let _ = writeln!(human, "{}", text_diagnostic(diagnostic));
-        }
-        if !invocation.check {
-            applied_count = applied.values().filter(|applied| **applied).count() as u64;
-            not_applied_count = not_applied.len() as u64;
-            if applied_count > 0 {
-                let _ = writeln!(human, "Applied {applied_count} file(s).");
-            }
-        }
-        for (path, reason) in &not_applied {
-            let _ = writeln!(err, "Not applied: {path} ({reason})");
-        }
-    } else {
-        for (path, reason) in &not_applied {
-            let _ = writeln!(err, "Not applied: {path} ({reason})");
-        }
-        out.write_all(patch.as_bytes()).ok();
-    }
+    // Human and machine emission of findings, changes, and mutations
+    // lives in `quality_emit` (issue #236).
+    let emit_counts = match emit_findings(
+        EmitInputs {
+            invocation,
+            status: &status,
+            changes: &collected.changes,
+            applied: &applied,
+            not_applied: &not_applied,
+            patch: &patch,
+            stdout_report,
+        },
+        out,
+        err,
+    ) {
+        Ok(counts) => counts,
+        Err((code, message)) => return operational(invocation, out, err, code, &message),
+    };
+    let applied_count = emit_counts.applied_count;
+    let not_applied_count = emit_counts.not_applied_count;
     let change_count = collected.changes.len() as u64;
 
     // Standard reports live in `quality_reports` (issue #236): SARIF
