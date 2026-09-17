@@ -6,13 +6,15 @@ package(default_visibility = ["//visibility:public"])
 
 # Repository corpus: all Markdown under docs/ owned for direct-Bazel
 # dogfood under the canonical real_fixture_policy. The root pages, the
-# linked behavioral matrix, quality/result.proto, and the documentation IR
-# schema plus codec source are unclassified link-resolution siblings,
+# linked behavioral matrix, quality/result.proto, the documentation IR
+# schema plus codec source, and the publish dry-run workflow linked from
+# docs/deploy/authoring.md are unclassified link-resolution siblings,
 # never checked sources.
 real_source_target(
     name = "corpus",
     aspect_hints = ["//quality:corpus_vale_config"],
     markdown_siblings = [
+        "//.github:workflows/publish-dry-run.yml",
         "//:AGENTS.md",
         "//:CHANGELOG.md",
         "//:CONTRIBUTING.md",

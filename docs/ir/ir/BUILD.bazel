@@ -1,6 +1,6 @@
-load("@crates//:crates.bzl", "aliases")
-
 """Validation and codec helpers for the Documentation IR (#10)."""
+
+load("@crates//:crates.bzl", "aliases")
 
 # gazelle:resolve rust proto //docs/ir:doc_ir_proto_rs
 # gazelle:resolve rust doc_ir_proto //docs/ir:doc_ir_proto_rs
