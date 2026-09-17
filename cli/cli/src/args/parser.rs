@@ -1,11 +1,13 @@
 //! Invocation parsing for the `dx` CLI (issue #236).
 //!
-//! Split from `super` (`args.rs`): owns the `clap` grammar (`Cli`),
-//! the Bazel-verbatim tokenizer, `clap`-error mapping, and the full
-//! `parse` validation (scope shapes, per-command option ownership,
-//! output-contract gates, profile flags). Re-exported through `super`
-//! so the public paths stay `crate::args::parse` and
-//! `crate::args::cli_command`.
+//! Split from `super` (`args.rs`): owns the Bazel-verbatim tokenizer,
+//! `clap`-error mapping, and the full `parse` validation (scope shapes,
+//! per-command option ownership, output-contract gates, profile flags).
+//! The `clap` grammar (`Cli`, `VALUE_OPTIONS`, `cli_command`) lives in
+//! the [`super::grammar`] sibling; this module re-exports it so the
+//! `crate::args::parser::{Cli, VALUE_OPTIONS, cli_command}` paths stay
+//! stable. Re-exported through `super` so the public paths stay
+//! `crate::args::parse` and `crate::args::cli_command`.
 //!
 //! Named `parser` (not `parse`) so the module and the `parse` function
 //! can coexist without a namespace collision; the domain is the `parse`
@@ -18,85 +20,8 @@ use super::command::Command;
 use super::{help, suggest};
 use super::{ArgsError, Invocation, ReportRequest};
 
-/// Raw `dx` command-line tokens as classified by `clap`: flags may appear
-/// before or after the command word, repeated scalars keep the last
-/// occurrence, and slice shapes (`--report`, scopes, Bazel forwards) keep
-/// `argv` order. `--help`/`-h` render from this same grammar definition
-/// (issue #203): one source feeds parsing, help, and completions/man
-/// pages, never hand-maintained usage strings.
-#[derive(Parser)]
-#[command(
-    name = "dx",
-    about = "Transparent UI over Bazel: quality, workflow, and environment commands",
-    long_about = "dx [global-options] <command> [scope ...] [-- bazel-options ...]\n\nScopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. No scope selects //....\n\nExit codes: 0 success; 2 CLI-detected usage/scope/owner errors; 1 operational failures; Bazel-authoritative commands preserve Bazel's code.\n\nOutput: --output text|diff|json (NDJSON machine protocol on stdout, human text otherwise). See docs/cli/cli-contract.md.",
-    version
-)]
-pub(crate) struct Cli {
-    /// Override upward workspace discovery (find MODULE.bazel).
-    #[arg(long, allow_negative_numbers = true, overrides_with = "workspace")]
-    workspace: Option<String>,
-    /// Resolve and summarize the plan without executing workflows/mutations.
-    #[arg(long)]
-    dry_run: bool,
-    /// Suppress dx operation summaries (tool diagnostics still print).
-    #[arg(long)]
-    quiet: bool,
-    /// Enable structured diagnostics on stderr via tracing (issue #222).
-    /// Default stays byte-identical; `--verbose` adds info-level logs.
-    /// Orthogonal to `--quiet` (summaries vs logs).
-    #[arg(long)]
-    verbose: bool,
-    /// Select concise text, unified patches, or versioned NDJSON events.
-    #[arg(long, allow_negative_numbers = true, overrides_with = "output")]
-    output: Option<String>,
-    /// Write a standard report (sarif/junit/lcov) to file or -; repeatable.
-    #[arg(long, allow_negative_numbers = true)]
-    report: Vec<String>,
-    /// Lowest diagnostic severity that fails quality commands.
-    #[arg(long, allow_negative_numbers = true, overrides_with = "fail_on")]
-    fail_on: Option<String>,
-    /// Required line-coverage percent (coverage only, 0-100).
-    #[arg(long, allow_negative_numbers = true, overrides_with = "min_coverage")]
-    min_coverage: Option<String>,
-    /// Check mode (quality/version only; no mutations).
-    #[arg(long)]
-    check: bool,
-    /// Use dx_debug config (build/run/test/deploy only; conflicts with --release).
-    #[arg(long)]
-    debug: bool,
-    /// Use dx_release config (build/run/test/deploy only; conflicts with --debug).
-    #[arg(long)]
-    release: bool,
-    /// Additionally forward `bazel clean` after pruning (clean only).
-    #[arg(long = "bazel")]
-    bazel_clean: bool,
-    /// Re-pin to <version> (version only).
-    #[arg(long, allow_negative_numbers = true, overrides_with = "pin")]
-    pin: Option<String>,
-    /// Re-pin the recorded previous release (version only).
-    #[arg(long)]
-    rollback: bool,
-    /// Use cquery instead of query (owners/deps/why only).
-    #[arg(long)]
-    configured: bool,
-    /// First positional: the command word (a [`Command`] value so the
-    /// same grammar feeds parsing, `--help`, and shell completions).
-    #[arg(value_enum)]
-    command: Option<Command>,
-    /// Later positionals: explicit scopes/targets.
-    targets: Vec<String>,
-    /// Everything after the first bare `--`, forwarded verbatim.
-    #[arg(last = true)]
-    bazel_options: Vec<String>,
-}
-
-/// Grammar accessor for build steps (issue #225): the `dx_man` binary
-/// renders `man/dx.1` from this command so the manual page tracks the
-/// same grammar as parsing, `--help`, and completions.
-pub fn cli_command() -> clap::Command {
-    use clap::CommandFactory;
-    Cli::command()
-}
+pub use super::grammar::cli_command;
+pub(crate) use super::grammar::{Cli, VALUE_OPTIONS};
 
 /// Maps one scope positional onto its shape-specific parse failure:
 /// empty scopes name the repository-wide default, package-relative
@@ -116,18 +41,6 @@ fn scope_error(scope: &str) -> ArgsError {
         }
     }
 }
-
-/// Value options whose next token the tokenizer consumes as their value:
-/// any token not starting with `--`, including single-dash spellings and
-/// the empty string.
-pub(crate) const VALUE_OPTIONS: &[&str] = &[
-    "--workspace",
-    "--output",
-    "--report",
-    "--fail-on",
-    "--min-coverage",
-    "--pin",
-];
 
 /// Finds the `bazel` command word when it owns the tail: the first
 /// positional token, skipping value-option payloads exactly like the

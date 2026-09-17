@@ -18,11 +18,12 @@
 //! forwarding `bazel clean`.
 //!
 //! Domain split (issue #236): the command vocabulary lives in the
-//! `command` module, shell-completion rendering in the `completion`
-//! module, help rendering in the `help` module, typo suggestions in
-//! the `suggest` module, build-profile vocabulary in the `profile`
-//! module, shared invocation types in the `invocation` module, error
-//! vocabulary in the `error` module, and invocation parsing in the
+//! `command` module, the `clap` grammar (`Cli`, `VALUE_OPTIONS`,
+//! `cli_command`) in the `grammar` module, shell-completion rendering in
+//! the `completion` module, help rendering in the `help` module, typo
+//! suggestions in the `suggest` module, build-profile vocabulary in the
+//! `profile` module, shared invocation types in the `invocation` module,
+//! error vocabulary in the `error` module, and invocation parsing in the
 //! `parser` module (the `parse` domain; named `parser` so the module
 //! and the `parse` function coexist). This facade keeps the re-exports;
 //! the public paths stay `crate::args::Command`,
@@ -34,6 +35,7 @@
 pub mod command;
 pub mod completion;
 pub mod error;
+pub mod grammar;
 pub mod help;
 pub mod invocation;
 pub mod parser;
@@ -43,6 +45,7 @@ pub mod suggest;
 pub use command::Command;
 pub use completion::{render_completion, COMPLETION_SHELLS};
 pub use error::ArgsError;
+pub use grammar::cli_command;
 pub use invocation::{Invocation, ReportRequest};
-pub use parser::{cli_command, parse};
+pub use parser::parse;
 pub use profile::{resolve_profile, Profile, DX_PROFILE_ENV};

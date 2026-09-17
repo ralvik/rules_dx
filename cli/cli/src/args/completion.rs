@@ -5,7 +5,7 @@
 //! stays `crate::args::{COMPLETION_SHELLS, render_completion}`.
 
 use super::command::Command;
-use super::parser::Cli;
+use super::grammar::Cli;
 use super::ArgsError;
 
 /// Shells covered by `dx completion` (contract freeze).

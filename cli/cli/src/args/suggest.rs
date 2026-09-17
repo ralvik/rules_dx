@@ -6,7 +6,7 @@
 //! `crate::args` surface is unchanged.
 
 use super::command::Command;
-use super::parser::Cli;
+use super::grammar::Cli;
 
 /// Best candidate above clap's confidence bar. Mirrors
 /// `clap_builder::parser::features::suggestions::did_you_mean` (same

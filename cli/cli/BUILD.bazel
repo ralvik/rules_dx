@@ -31,6 +31,7 @@ rust_library(
         "src/args/command.rs",
         "src/args/completion.rs",
         "src/args/error.rs",
+        "src/args/grammar.rs",
         "src/args/help.rs",
         "src/args/invocation.rs",
         "src/args/parser.rs",
