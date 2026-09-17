@@ -39,6 +39,10 @@ rust_test(
         normal_dev = True,
     ),
     crate = ":dx_setup",
+    deps = crate_deps(
+        ["insta"],
+        package_name = "dx/dx_setup",
+    ),
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy

@@ -1868,14 +1868,29 @@ mod tests {
             ),
         ];
         let doc = render_junit(&suites);
-        assert!(doc.contains("name=\"//a:t\""), "{doc}");
-        assert!(doc.contains("a2 [shard=1,attempt=2]"), "{doc}");
-        assert!(doc.contains("<failure"), "{doc}");
-        assert!(doc.contains("<error"), "{doc}");
-        assert!(doc.contains("<skipped"), "{doc}");
-        assert!(doc.contains("<system-out>out</system-out>"), "{doc}");
-        assert!(doc.contains("<system-err>err</system-err>"), "{doc}");
-        assert!(doc.starts_with("<?xml"), "{doc}");
+        // Golden pilot (issue #225): full-document insta snapshot replaces
+        // the contains-asserts so render changes review as one diff.
+        // Under Bazel snapshots never self-update (read-only sources):
+        // paste the actual document from the failure diff when the
+        // render intentionally changes. Raw string: the XML carries
+        // double quotes but no `"#` sequences.
+        insta::assert_snapshot!(doc, @r#"<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="dx" tests="3" failures="1" errors="1" skipped="1" time="0.000">
+  <testsuite name="//a:t" tests="2" failures="1" errors="1" skipped="1" time="0.000">
+    <testcase name="a1" time="0.000">
+      <failure message="f">ft</failure>
+    </testcase>
+    <testcase name="a2 [shard=1,attempt=2]" time="0.000">
+      <error/>
+      <skipped/>
+      <system-out>out</system-out>
+      <system-err>err</system-err>
+    </testcase>
+  </testsuite>
+  <testsuite name="//b:t" tests="1" failures="0" errors="0" skipped="0" time="0.000">
+    <testcase name="b" time="0.000"/>
+  </testsuite>
+</testsuites>"#);
     }
 
     #[test]

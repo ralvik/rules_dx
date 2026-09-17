@@ -7,6 +7,9 @@ edition = "2021"
 base64 = "0.22"
 clap = { version = "4", features = ["derive"] }
 clap_complete = "4"
+# Build-step only: the `dx_man` binary renders man/dx.1 from the clap
+# grammar (issue #225). Kept out of the `dx` binary itself.
+clap_mangen = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 strsim = "0.11"
@@ -25,3 +28,14 @@ path = "src/lib.rs"
 [[bin]]
 name = "dx"
 path = "src/main.rs"
+
+[[bin]]
+name = "dx_man"
+path = "src/bin_man.rs"
+
+[dev-dependencies]
+# Golden/process pilot (issue #225): insta snapshots for high-churn
+# goldens, assert_cmd + predicates for hermetic CLI process tests.
+assert_cmd = "2"
+insta = "1"
+predicates = "3"

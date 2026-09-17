@@ -32,7 +32,7 @@ rust_test(
     ),
     crate = ":dx_digest",
     deps = crate_deps(
-        ["blake3", "hex", "sha2", "thiserror"],
+        ["blake3", "hex", "proptest", "sha2", "thiserror"],
         package_name = "dx/dx_digest",
     ),
 )

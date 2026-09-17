@@ -152,6 +152,54 @@ pub fn parse_hex(text: &str) -> Result<RawDigest, DigestError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        /// Property pilot (issue #225): hex encoding round-trips every
+        /// 32-byte input, and the wrapper agrees with the free functions.
+        /// Fixed official vectors stay as plain asserts above; properties
+        /// own the shape (`is_hex`, length, round-trip).
+        #[test]
+        fn hex_round_trip_any_bytes(bytes in prop::array::uniform32(any::<u8>())) {
+            let hex = to_hex(&bytes);
+            prop_assert_eq!(hex.len(), 64);
+            prop_assert!(is_hex(&hex));
+            prop_assert!(is_sha256_hex(&hex));
+            prop_assert_eq!(parse_hex(&hex), Ok(bytes));
+            let wrapped = Digest::new(bytes);
+            prop_assert_eq!(wrapped.to_hex(), hex.clone());
+            prop_assert_eq!(Digest::parse_hex(&hex).unwrap().into_bytes(), bytes);
+        }
+
+        /// Uppercase spellings stay rejected whenever the encoding
+        /// actually contains a hex letter; digit-only encodings are
+        /// case-neutral, so they are assumed away.
+        #[test]
+        fn uppercase_rejected_when_letters_present(
+            bytes in prop::array::uniform32(any::<u8>()),
+        ) {
+            let hex = to_hex(&bytes);
+            prop_assume!(hex.chars().any(|c| c.is_ascii_alphabetic()));
+            prop_assert!(!is_hex(&hex.to_uppercase()));
+            prop_assert!(parse_hex(&hex.to_uppercase()).is_err());
+        }
+
+        /// Length and alphabet mutations of a valid encoding never parse.
+        #[test]
+        fn mutated_encodings_rejected(
+            bytes in prop::array::uniform32(any::<u8>()),
+            idx in 0..64usize,
+        ) {
+            let hex = to_hex(&bytes);
+            let extended = format!("{hex}00");
+            prop_assert!(parse_hex(&extended).is_err());
+            let mut chars: Vec<char> = hex.chars().collect();
+            chars[idx] = 'z';
+            let mutated: String = chars.into_iter().collect();
+            prop_assert!(parse_hex(&mutated).is_err());
+            prop_assert!(!is_hex(&mutated));
+        }
+    }
 
     #[test]
     fn blake3_empty_matches_official_vector() {

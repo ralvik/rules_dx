@@ -1028,6 +1028,13 @@ mod tests {
         assert_ne!(first, setup_hex(&pair('1', '3')));
         assert_ne!(first, setup_hex(&pair('3', '2')));
         assert!(setup_fingerprint(&pair('1', '2')).starts_with("dx-setup/v0\n"));
+        // Golden pilot (issue #225): full-fingerprint insta snapshot pins
+        // the versioned encoding; any encoding change must update this
+        // snapshot alongside the managed-state contract.
+        insta::assert_snapshot!(setup_fingerprint(&pair('1', '2')), @"dx-setup/v0
+1111111111111111111111111111111111111111111111111111111111111111
+2222222222222222222222222222222222222222222222222222222222222222
+");
     }
 
     #[test]

@@ -102,6 +102,35 @@ rust_binary(
     ) + [":dx_cli", "//dx/output:dx_output", "//dx/process:dx_process"],
 )
 
+# Manual-page build step (issue #225): renders man/dx.1 from the clap
+# grammar at build time so the page tracks parsing, `--help`, and
+# completions. Release packaging (issue #26) consumes `:man_pages`.
+rust_binary(
+    name = "dx_man",
+    srcs = ["src/bin_man.rs"],
+    aliases = aliases(
+        package_name = "dx/dx_cli",
+        normal = True,
+    ),
+    crate_name = "dx_man",
+    crate_root = "src/bin_man.rs",
+    deps = crate_deps(
+        [
+            "clap",
+            "clap_mangen",
+        ],
+        package_name = "dx/dx_cli",
+    ) + [":dx_cli"],
+)
+
+genrule(
+    name = "man_pages",
+    outs = ["man/dx.1"],
+    cmd = "$(location :dx_man) $(OUTS)",
+    tools = [":dx_man"],
+    visibility = ["//visibility:public"],
+)
+
 rust_test(
     name = "dx_cli_test",
     size = "small",
@@ -111,12 +140,16 @@ rust_test(
         normal_dev = True,
     ),
     crate = ":dx_cli",
+    data = [":dx"],
     deps = crate_deps(
         [
+            "assert_cmd",
             "base64",
             "clap",
             "clap_complete",
+            "insta",
             "libc",
+            "predicates",
             "quick-xml",
             "serde",
             "serde_json",
@@ -148,6 +181,7 @@ rustfmt_test(
     targets = [
         ":dx_cli",
         ":dx",
+        ":dx_man",
     ],
 )
 
@@ -157,6 +191,7 @@ rust_clippy_test(
     targets = [
         ":dx_cli",
         ":dx",
+        ":dx_man",
     ],
 )
 

@@ -520,6 +520,14 @@ struct Cli {
     bazel_options: Vec<String>,
 }
 
+/// Grammar accessor for build steps (issue #225): the `dx_man` binary
+/// renders `man/dx.1` from this command so the manual page tracks the
+/// same grammar as parsing, `--help`, and completions.
+pub fn cli_command() -> clap::Command {
+    use clap::CommandFactory;
+    Cli::command()
+}
+
 /// Maps one scope positional onto its shape-specific parse failure:
 /// empty scopes name the repository-wide default, package-relative
 /// labels name the `//` qualification, and anything else keeps the
@@ -807,6 +815,12 @@ fn help_command_in(args: &[String]) -> Option<Command> {
 fn render_top_help() -> String {
     use clap::{CommandFactory, ValueEnum};
     let mut out = String::new();
+    // Brand line (issue #225): `render_long_help` below shows `long_about`
+    // but not `about`, so `--help` would otherwise omit the brand that `-h`
+    // shows. Prepend it so both spellings carry the same identity.
+    if let Some(about) = Cli::command().get_about() {
+        out.push_str(&format!("dx - {about}\n\n"));
+    }
     out.push_str("Commands:\n");
     for command in Command::value_variants() {
         out.push_str(&format!(
@@ -2663,6 +2677,25 @@ mod tests {
                 assert!(text.contains(needle), "{flag}: missing {needle:?}");
             }
         }
+    }
+
+    #[test]
+    fn help_process_exits_zero_with_brand() {
+        // Process pilot (issue #225): the built binary serves `--help`
+        // hermetically — parsing answers before workspace discovery, so
+        // no workspace is needed — with exit 0 and the brand on stdout.
+        // The binary arrives via test `data`; the path joins the Bazel
+        // runfiles layout (`$TEST_SRCDIR/$TEST_WORKSPACE/dx/cli/dx`).
+        let root = std::env::var("TEST_SRCDIR").expect("TEST_SRCDIR is set under Bazel");
+        let workspace = std::env::var("TEST_WORKSPACE").expect("TEST_WORKSPACE is set under Bazel");
+        let binary = std::path::Path::new(&root)
+            .join(workspace)
+            .join("dx/cli/dx");
+        assert_cmd::Command::new(binary)
+            .arg("--help")
+            .assert()
+            .success()
+            .stdout(predicates::str::contains("Transparent UI over Bazel"));
     }
 
     #[test]
