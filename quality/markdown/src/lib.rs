@@ -40,6 +40,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use clap::error::{ContextKind, ContextValue, ErrorKind};
+use clap::Parser as ClapParser;
 use pulldown_cmark::{BrokenLink, CodeBlockKind, Event, LinkType, Options, Parser, Tag, TagEnd};
 use serde::Serialize;
 
@@ -674,8 +676,223 @@ pub fn kind_id(kind: FindingKind) -> &'static str {
     }
 }
 
-fn print_usage(print_err: &mut dyn FnMut(&str)) {
-    print_err("usage: quality_markdown --source WS_PATH=EXEC_PATH [--source ...] [--sibling WS_PATH=EXEC_PATH ...]");
+fn usage() -> String {
+    "usage: quality_markdown --source WS_PATH=EXEC_PATH [--source ...] [--sibling WS_PATH=EXEC_PATH ...]".into()
+}
+
+/// `WS_PATH=EXEC_PATH` mapping behind `--source`/`--sibling`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Mapping {
+    ws: String,
+    exec: String,
+}
+
+/// `argv` tokenizer (issue #233). `--source`/`--sibling` append in argument
+/// order; every value option consumes the next token unconditionally (even
+/// a `--`-led token), matching the legacy hand loop. Mapping values validate
+/// through [`parse_source_mapping`]/[`parse_sibling_mapping`] at tokenize
+/// time; shape failures map back onto the legacy `malformed …` text via
+/// [`parse_error`].
+#[derive(ClapParser)]
+#[command(disable_help_flag = true)]
+struct Cli {
+    #[arg(long, allow_hyphen_values = true, value_parser = parse_source_mapping)]
+    source: Vec<Mapping>,
+    #[arg(long, allow_hyphen_values = true, value_parser = parse_sibling_mapping)]
+    sibling: Vec<Mapping>,
+}
+
+/// Raw `argv` token behind a [`clap::Error`], e.g. `--bogus` or `oops`.
+fn invalid_token(error: &clap::Error) -> String {
+    match error.get(ContextKind::InvalidArg) {
+        Some(ContextValue::String(token)) => token.clone(),
+        Some(ContextValue::Strings(tokens)) => tokens.first().cloned().unwrap_or_default(),
+        _ => String::new(),
+    }
+}
+
+/// Rejected mapping value behind a [`clap::Error`], if the error carries a
+/// non-empty one. Empty values (`--source ""`, `--source=`) carry none (or
+/// an empty one); the caller resolves those via [`empty_rejection`].
+fn rejected_value(error: &clap::Error) -> Option<String> {
+    let invalid = error.get(ContextKind::InvalidValue)?;
+    let raw = match invalid {
+        ContextValue::String(value) => value.clone(),
+        ContextValue::Strings(values) => values.first().cloned().unwrap_or_default(),
+        _ => String::new(),
+    };
+    if raw.is_empty() {
+        None
+    } else {
+        Some(raw)
+    }
+}
+
+/// Empty-value rejection with no carried value: mirrors the legacy
+/// left-to-right scan for the first empty shape in `argv`. Attached
+/// (`--source=`) was the whole flag word to the legacy loop, so it keeps
+/// the unknown-argument form; an explicit empty value token in flag-value
+/// position malformed under its flag.
+enum EmptyRejection {
+    Attached(String),
+    Separate(&'static str),
+    Neither,
+}
+
+fn empty_rejection(args: &[String]) -> EmptyRejection {
+    for (index, arg) in args.iter().enumerate() {
+        if arg == "--source=" || arg == "--sibling=" {
+            return EmptyRejection::Attached(arg.clone());
+        }
+        if arg.is_empty() && index > 0 {
+            if args[index - 1] == "--sibling" {
+                return EmptyRejection::Separate("--sibling");
+            }
+            if args[index - 1] == "--source" {
+                return EmptyRejection::Separate("--source");
+            }
+        }
+    }
+    EmptyRejection::Neither
+}
+
+/// Report the legacy `malformed …` text for `raw` under `flag` by re-running
+/// the tokenizing parser (which rejects again), falling back to the raw
+/// `clap` first line if it unexpectedly accepts.
+fn check_mapping(flag: &str, raw: &str, error: &clap::Error) -> Vec<String> {
+    let legacy = if flag == "--sibling" {
+        parse_sibling_mapping(raw)
+    } else {
+        parse_source_mapping(raw)
+    };
+    match legacy {
+        Err(message) => vec![message, usage()],
+        Ok(_) => vec![
+            error
+                .to_string()
+                .lines()
+                .next()
+                .unwrap_or("invalid arguments")
+                .to_owned(),
+            usage(),
+        ],
+    }
+}
+
+/// Flag whose mapping `raw` rejected, recovered from `argv`: the first
+/// occurrence with a known flag before it (a separate value), or the
+/// `--flag=` prefix of an attached value. Falls back to `--source`,
+/// reachable only for values clap reports that appear in neither form
+/// (impossible for real `argv`).
+fn rejecting_flag(args: &[String], raw: &str) -> &'static str {
+    for (index, arg) in args.iter().enumerate() {
+        if arg == raw && index > 0 {
+            if args[index - 1] == "--sibling" {
+                return "--sibling";
+            }
+            if args[index - 1] == "--source" {
+                return "--source";
+            }
+        }
+    }
+    for flag in ["--source", "--sibling"] {
+        if args.iter().any(|arg| arg == &format!("{flag}={raw}")) {
+            return flag;
+        }
+    }
+    "--source"
+}
+
+/// Map `clap` tokenizing failures onto the legacy [`usage`]-routed surface:
+/// every failure prints its reason plus the usage line (exit `2`).
+/// Reachable kinds: [`ErrorKind::UnknownArgument`], [`ErrorKind::InvalidValue`]
+/// (a present flag with no consumable value), and [`ErrorKind::ValueValidation`]
+/// (a mapping rejected by [`parse_source_mapping`]/[`parse_sibling_mapping`],
+/// the only custom value parsers). No other parser, conflict, or count error
+/// can fire.
+fn parse_error(error: clap::Error, args: &[String]) -> Vec<String> {
+    let token = invalid_token(&error);
+    match error.kind() {
+        // `clap` strips an attached `=value` from the reported token; the
+        // legacy loop echoed the whole `argv` element, so recover it.
+        ErrorKind::UnknownArgument => {
+            let echoed = args
+                .iter()
+                .find(|arg| *arg == &token)
+                .or_else(|| {
+                    args.iter()
+                        .find(|arg| arg.starts_with(&format!("{token}=")))
+                })
+                .map_or(token.clone(), Clone::clone);
+            vec![format!("unknown argument: {echoed}"), usage()]
+        }
+        // The legacy loop names the bare `--flag` here.
+        ErrorKind::InvalidValue => {
+            let flag = token.split_whitespace().next().unwrap_or(&token);
+            vec![format!("missing value for {flag}"), usage()]
+        }
+        ErrorKind::ValueValidation => {
+            // Only the two mapping flags carry custom value parsers, so any
+            // rejection is a malformed mapping: resolve its (flag, value)
+            // pair and report the legacy `malformed …` text through the
+            // same parser the tokenizer wraps. The parser only runs on
+            // present values, so the re-check rejects too.
+            if let Some(raw) = rejected_value(&error) {
+                let flag = rejecting_flag(args, &raw);
+                return check_mapping(flag, &raw, &error);
+            }
+            // Empty values carry no rejected value; resolve them via the
+            // legacy-order `argv` scan instead.
+            match empty_rejection(args) {
+                EmptyRejection::Attached(echoed) => {
+                    vec![format!("unknown argument: {echoed}"), usage()]
+                }
+                EmptyRejection::Separate(flag) => check_mapping(flag, "", &error),
+                EmptyRejection::Neither => check_mapping("--source", "", &error),
+            }
+        }
+        _ => vec![
+            error
+                .to_string()
+                .lines()
+                .next()
+                .unwrap_or("invalid arguments")
+                .to_owned(),
+            usage(),
+        ],
+    }
+}
+
+fn parse_args(args: &[String]) -> Result<Cli, Vec<String>> {
+    Cli::try_parse_from(
+        std::iter::once("quality_markdown").chain(args.iter().map(|arg| arg as &str)),
+    )
+    .map_err(|error| parse_error(error, args))
+}
+
+/// Shared `WS_PATH=EXEC_PATH` shape behind [`parse_source_mapping`] and
+/// [`parse_sibling_mapping`]: exactly one `=` with non-empty sides, or the
+/// legacy `malformed {flag} …` text naming the rejecting flag.
+fn parse_mapping(flag: &'static str, raw: &str) -> Result<Mapping, String> {
+    match raw.split_once('=') {
+        Some((ws, exec)) if !ws.is_empty() && !exec.is_empty() => Ok(Mapping {
+            ws: ws.to_string(),
+            exec: exec.to_string(),
+        }),
+        _ => Err(format!("malformed {flag} {raw:?}, want WS_PATH=EXEC_PATH")),
+    }
+}
+
+/// `clap` value parser for `--source` (issue #233): rejections already carry
+/// the legacy `malformed --source …` text that [`parse_error`] recovers.
+fn parse_source_mapping(raw: &str) -> Result<Mapping, String> {
+    parse_mapping("--source", raw)
+}
+
+/// `clap` value parser for `--sibling` (issue #233): rejections already carry
+/// the legacy `malformed --sibling …` text that [`parse_error`] recovers.
+fn parse_sibling_mapping(raw: &str) -> Result<Mapping, String> {
+    parse_mapping("--sibling", raw)
 }
 
 /// Check workspace sources against a sibling closure (M04 WP3 binary
@@ -687,44 +904,25 @@ pub fn run_cli(
     print_out: &mut dyn FnMut(&str),
     print_err: &mut dyn FnMut(&str),
 ) -> i32 {
-    let mut sources: Vec<(String, String)> = Vec::new();
-    let mut sibling_specs: Vec<(String, String)> = Vec::new();
-    let mut index = 0;
-    while index < args.len() {
-        let flag = args[index].as_str();
-        index += 1;
-        let value = args.get(index).cloned();
-        index += 1;
-        let slot = match flag {
-            "--source" => &mut sources,
-            "--sibling" => &mut sibling_specs,
-            _ => {
-                print_err(&format!("unknown argument: {flag}"));
-                print_usage(print_err);
-                return 2;
+    let cli = match parse_args(args) {
+        Ok(cli) => cli,
+        Err(lines) => {
+            for line in &lines {
+                print_err(line);
             }
-        };
-        let Some(spec) = value else {
-            print_err(&format!("missing value for {flag}"));
-            print_usage(print_err);
-            return 2;
-        };
-        let Some((ws, exec)) = spec.split_once('=') else {
-            print_err(&format!(
-                "malformed {flag} {spec:?}, want WS_PATH=EXEC_PATH"
-            ));
-            print_usage(print_err);
-            return 2;
-        };
-        if ws.is_empty() || exec.is_empty() {
-            print_err(&format!(
-                "malformed {flag} {spec:?}, want WS_PATH=EXEC_PATH"
-            ));
-            print_usage(print_err);
             return 2;
         }
-        slot.push((ws.to_string(), exec.to_string()));
-    }
+    };
+    let sources: Vec<(String, String)> = cli
+        .source
+        .into_iter()
+        .map(|mapping| (mapping.ws, mapping.exec))
+        .collect();
+    let sibling_specs: Vec<(String, String)> = cli
+        .sibling
+        .into_iter()
+        .map(|mapping| (mapping.ws, mapping.exec))
+        .collect();
 
     let mut siblings: BTreeMap<String, String> = BTreeMap::new();
     let mut ordered_ws: Vec<String> = Vec::new();
@@ -1657,5 +1855,110 @@ mod tests {
         assert_eq!(code, 2);
         assert!(out.is_empty(), "{out:?}");
         assert_eq!(err, vec!["not UTF-8: bad.md".to_string()]);
+    }
+
+    #[test]
+    fn cli_flag_as_value_is_malformed() {
+        // The legacy loop consumed the next token unconditionally, even a
+        // `--`-led one; `clap` keeps that via `allow_hyphen_values`.
+        let files = cli_files(&[]);
+        for (args, want) in [
+            (
+                vec!["--source", "--sibling"],
+                "malformed --source \"--sibling\"",
+            ),
+            (
+                vec!["--source", "--source"],
+                "malformed --source \"--source\"",
+            ),
+            (
+                vec!["--sibling", "--source"],
+                "malformed --sibling \"--source\"",
+            ),
+        ] {
+            let (code, _, err) = run_harness(&files, &args);
+            assert_eq!(code, 2, "{args:?}");
+            assert_eq!(err.len(), 2, "{args:?} {err:?}");
+            assert_eq!(
+                err[0],
+                format!("{want}, want WS_PATH=EXEC_PATH"),
+                "{args:?}"
+            );
+            assert!(err[1].starts_with("usage: quality_markdown"), "{err:?}");
+        }
+    }
+
+    #[test]
+    fn cli_attached_forms_echo_whole_token() {
+        // The legacy loop saw an attached token as the whole flag/value word.
+        let files = cli_files(&[]);
+        for (args, want) in [
+            (vec!["--bogus=x"], "unknown argument: --bogus=x"),
+            (vec!["--source="], "unknown argument: --source="),
+            (vec!["--sibling="], "unknown argument: --sibling="),
+            (
+                vec!["--sibling=no-equals"],
+                "malformed --sibling \"no-equals\", want WS_PATH=EXEC_PATH",
+            ),
+        ] {
+            let (code, _, err) = run_harness(&files, &args);
+            assert_eq!(code, 2, "{args:?}");
+            assert_eq!(err.len(), 2, "{args:?} {err:?}");
+            assert_eq!(err[0], want, "{args:?}");
+            assert!(err[1].starts_with("usage: quality_markdown"), "{err:?}");
+        }
+    }
+
+    #[test]
+    fn cli_bare_positional_is_unknown_argument() {
+        let files = cli_files(&[]);
+        for token in ["oops", "-x", "--help"] {
+            let (code, out, err) = run_harness(&files, &[token]);
+            assert_eq!(code, 2, "{token}");
+            assert!(out.is_empty());
+            assert_eq!(err.len(), 2, "{token} {err:?}");
+            assert_eq!(err[0], format!("unknown argument: {token}"), "{token}");
+            assert!(err[1].starts_with("usage: quality_markdown"), "{err:?}");
+        }
+    }
+
+    #[test]
+    fn cli_empty_value_is_malformed() {
+        let files = cli_files(&[]);
+        // An explicit empty value token malformed under its flag, like the
+        // legacy loop; attached-empty (`--source=`) was the whole flag word
+        // instead. Mixed shapes resolve left to right, as processed.
+        for (args, want) in [
+            (
+                vec!["--source", ""],
+                "malformed --source \"\", want WS_PATH=EXEC_PATH",
+            ),
+            (
+                vec!["--sibling", ""],
+                "malformed --sibling \"\", want WS_PATH=EXEC_PATH",
+            ),
+            (
+                vec!["--source", "", "--source="],
+                "malformed --source \"\", want WS_PATH=EXEC_PATH",
+            ),
+            (
+                vec!["--source=", "--source", ""],
+                "unknown argument: --source=",
+            ),
+        ] {
+            let (code, _, err) = run_harness(&files, &args);
+            assert_eq!(code, 2, "{args:?}");
+            assert_eq!(err.len(), 2, "{args:?} {err:?}");
+            assert_eq!(err[0], want, "{args:?}");
+            assert!(err[1].starts_with("usage: quality_markdown"), "{err:?}");
+        }
+    }
+
+    #[test]
+    fn cli_unknown_flag_after_valid_source_still_fails() {
+        let files = cli_files(&[]);
+        let (code, _, err) = run_harness(&files, &["--source", "a.md=/exec/a.md", "--bogus"]);
+        assert_eq!(code, 2);
+        assert_eq!(err[0], "unknown argument: --bogus", "{err:?}");
     }
 }
