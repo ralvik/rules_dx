@@ -14,14 +14,19 @@
 //! before Bazel execution) and the SARIF/JUnit/LCOV document rendering.
 //!
 //! Domain split (issue #236): report rendering lives in domain
-//! submodules — SARIF in [`sarif`](self::sarif), JUnit in
-//! [`junit`](self::junit), LCOV in [`lcov`](self::lcov), and planning
+//! submodules — SARIF in [`sarif`](self::sarif), JUnit facade in
+//! [`junit`](self::junit) (types in `junit_types`, parsing in
+//! `junit_parse`, rendering in `junit_render`), LCOV in
+//! [`lcov`](self::lcov), and planning
 //! (`StandardFormat`, `Destination`, `PlannedReport`, `plan_reports`)
 //! in [`planning`](self::planning). This facade keeps the shared error
 //! (used by all four domains); the public path stays
 //! `crate::reports::{...}` via the re-exports below.
 
 pub mod junit;
+mod junit_parse;
+mod junit_render;
+mod junit_types;
 pub mod lcov;
 pub mod planning;
 pub mod sarif;
