@@ -870,4 +870,58 @@ mod tests {
         sort_diagnostics(&mut rotated);
         assert_eq!(rotated, canonical);
     }
+
+    #[test]
+    fn state_digest_independent_of_insertion_order() {
+        // Determinism battery (issue #84): converged-run identity must
+        // not depend on QualitySourcesInfo / checkout arrival order.
+        // BTreeMap canonicalizes to sorted-path order, so two maps with
+        // identical entries inserted in opposite orders hash equal,
+        // while any content change hashes different.
+        let mut forward = BTreeMap::new();
+        forward.insert("src/a.rs".to_owned(), "GOOD\n".to_owned());
+        forward.insert("src/b.rs".to_owned(), "GOOD GOOD\n".to_owned());
+        forward.insert("src/c.rs".to_owned(), "".to_owned());
+        let mut backward = BTreeMap::new();
+        backward.insert("src/c.rs".to_owned(), "".to_owned());
+        backward.insert("src/b.rs".to_owned(), "GOOD GOOD\n".to_owned());
+        backward.insert("src/a.rs".to_owned(), "GOOD\n".to_owned());
+        assert_eq!(state_digest(&forward), state_digest(&backward));
+        let mut mutated = forward.clone();
+        mutated.insert("src/b.rs".to_owned(), "GOOD BAD\n".to_owned());
+        assert_ne!(state_digest(&forward), state_digest(&mutated));
+    }
+
+    #[test]
+    fn diagnostics_tiebreak_deterministically_across_tool_and_message() {
+        // Determinism battery (issue #84): permutation ranking must be
+        // total — same path/offset from concurrent adapters resolves by
+        // (end_byte, tool_id, message) so every arrival permutation
+        // converges to one canonical order.
+        fn diag(tool: &str, message: &str) -> Diagnostic {
+            Diagnostic {
+                severity: Severity::Warning as i32,
+                message: message.to_owned(),
+                tool_id: tool.to_owned(),
+                path: "src/same.rs".to_owned(),
+                start_byte: Some(3),
+                end_byte: Some(4),
+                fixable: false,
+                ..Default::default()
+            }
+        }
+        let canonical = vec![
+            diag("lint-a", "alpha"),
+            diag("lint-a", "beta"),
+            diag("lint-b", "alpha"),
+        ];
+        let mut reversed = canonical.clone();
+        reversed.reverse();
+        sort_diagnostics(&mut reversed);
+        assert_eq!(reversed, canonical);
+        let mut rotated = canonical.clone();
+        rotated.rotate_left(2);
+        sort_diagnostics(&mut rotated);
+        assert_eq!(rotated, canonical);
+    }
 }
