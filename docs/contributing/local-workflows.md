@@ -130,17 +130,17 @@ and the inventory in `bazel test //...`. Owned build profiles
 (`dx_debug`/`dx_dev`/`dx_release`) are reviewed the same way; see
 [ADR 0021](../decisions/0021-build-profiles.md).
 
-Version bumps are manual (native bazel-surface updater,
-[#79](https://github.com/ralvik/rules_dx/issues/79)): run the regen, review the flag diff,
-update the test pins, run full verification (`bazel build //...`,
-`bazel test //...`, plus the corpus dogfood above), then merge by hand.
-Version-bump bots are excluded per the
-[automation policy](automation.md).
+Version bumps flow through Renovate out of the box
+([issue #3](https://github.com/ralvik/rules_dx/issues/3)): `dx init`
+scaffolds `renovate.json` absent-only with the full manager set
+(`bazel` over `.bazelversion` plus Cargo, npm/pnpm, GitHub Actions,
+Go), grouped and scheduled weekly. Renovate proposes pins while
+`dx update` applies and verifies; bump PRs run the manual loop
+(regen, flag-diff review, test-pin updates, full verification) per
+the [automation policy](automation.md). Auto-merge stays off by
+default; when enabled it is update-only on green required checks.
 Bazel-surface PR shape: version-bump only with regen evidence, flag-diff review,
-pin updates, and full verification; schedule is as-needed manual (no bot schedule);
-grouping is bazel surface only (`.bazelversion` + `MODULE.bazel` direct pins);
-permissions are human-merge only (no bot push, no auto-merge). `renovate.json`
-was deleted per the automation policy; do not reintroduce it.
+pin updates, and full verification.
 
 ## Linux-First Bring-Up
 

@@ -10,5 +10,5 @@ adds no new semantics.
   not a commitment to working container support.
 - [Diagnostics and versioning](diagnostics-versioning.md): implemented `dx status`/`dx version`
   surface and `dx` pinning.
-- [Automation](automation.md): allowed bots and bot-opened PRs; no Renovate,
-  no auto-merge, no bot commits to `main`.
+- [Automation](automation.md): allowed bots and bot-opened PRs; Renovate
+  for dependency updates with update-only automerge under guardrails.

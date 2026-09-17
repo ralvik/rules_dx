@@ -29,3 +29,13 @@ reviewed, verified (`bazel build //...`, `bazel test //...`, corpus
 dogfood), merged by hand. This upholds the release-hygiene gate
 ([issue #5](https://github.com/ralvik/rules_dx/issues/5)): no tags,
 releases, or publication outputs without explicit owner approval.
+
+## Scaffold
+
+`dx init` ships `renovate.json` absent-only
+([issue #3](https://github.com/ralvik/rules_dx/issues/3)): full manager
+set from the start (`bazel` plus Cargo, npm/pnpm, GitHub Actions, Go),
+grouped, scheduled weekly, reviewable PRs. Auto-merge off by default;
+when enabled it is update-only as gated above. The repository's own
+`renovate.json` is held byte-identical to the scaffold by
+`//:renovate_parity_test`.

@@ -42,6 +42,7 @@
 
 load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
@@ -107,4 +108,21 @@ real_source_target(
         "BUILD.bazel",
         "MODULE.bazel",
     ],
+)
+
+# Parity fixture: `dx init` scaffold output must stay byte-identical to
+# the checked-in `renovate.json`, so the config we ship is the one we
+# run (issue #3). A drifting hand copy is worse than none.
+sh_test(
+    name = "renovate_parity_test",
+    srcs = ["renovate_parity_test.sh"],
+    args = [
+        "$(rootpath :renovate.json)",
+        "$(rootpath //cli/cli:dx)",
+    ],
+    data = [
+        ":renovate.json",
+        "//cli/cli:dx",
+    ],
+    tags = ["no-coverage"],
 )

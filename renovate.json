@@ -1,0 +1,38 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "schedule": ["before 5am on Monday"],
+  "labels": ["dependencies"],
+  "enabledManagers": ["bazel", "cargo", "github-actions", "gomod", "npm"],
+  "packageRules": [
+    {
+      "description": "Bazel pin surface (.bazelversion + MODULE.bazel direct pins); regen + flag-diff review per preset loop",
+      "matchManagers": ["bazel"],
+      "groupName": "bazel surface"
+    },
+    {
+      "description": "Rust dependencies",
+      "matchManagers": ["cargo"],
+      "groupName": "rust dependencies"
+    },
+    {
+      "description": "JavaScript/TypeScript dependencies (npm/pnpm)",
+      "matchManagers": ["npm"],
+      "groupName": "js dependencies"
+    },
+    {
+      "description": "GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions"
+    },
+    {
+      "description": "Go dependencies",
+      "matchManagers": ["gomod"],
+      "groupName": "go dependencies"
+    }
+  ],
+  "automerge": false,
+  "platformAutomerge": false,
+  "prCreation": "not-pending",
+  "dependencyDashboard": true
+}
