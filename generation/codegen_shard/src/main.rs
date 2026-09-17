@@ -36,7 +36,9 @@ fn usage() -> String {
 /// `argv` tokenizer. `--entry` appends in argument order; scalars keep
 /// last-wins repeats; every value option consumes the next token
 /// unconditionally (even a `--`-led token), matching the legacy hand loop.
-/// Only tokenizing moves to `clap`; entry-shape validation is untouched.
+/// `--entry` values validate through [`parse_entry_value`] at tokenize time
+/// (issue #233); shape failures map back onto the legacy `bad --entry …`
+/// text via [`parse_error`].
 #[derive(Parser)]
 #[command(disable_help_flag = true)]
 struct Cli {
@@ -44,8 +46,8 @@ struct Cli {
     producer: Option<String>,
     #[arg(long, allow_hyphen_values = true, overrides_with = "language")]
     language: Option<String>,
-    #[arg(long, allow_hyphen_values = true)]
-    entry: Vec<String>,
+    #[arg(long, allow_hyphen_values = true, value_parser = parse_entry_value)]
+    entry: Vec<DxCodegenEntry>,
     #[arg(long, allow_hyphen_values = true, overrides_with = "output")]
     output: Option<String>,
 }
@@ -60,9 +62,10 @@ fn invalid_token(error: &clap::Error) -> String {
 }
 
 /// Map `clap` tokenizing failures onto the legacy [`usage`]-routed surface.
-/// Only [`ErrorKind::UnknownArgument`] and [`ErrorKind::InvalidValue`] (a
-/// present flag with no consumable value) are reachable: every option takes
-/// plain strings, so no value parser, conflict, or count error can fire.
+/// Reachable kinds: [`ErrorKind::UnknownArgument`], [`ErrorKind::InvalidValue`]
+/// (a present flag with no consumable value), and [`ErrorKind::ValueValidation`]
+/// (a `--entry` value rejected by [`parse_entry_value`], the only custom value
+/// parser). No other parser, conflict, or count error can fire.
 fn parse_error(error: clap::Error, args: &[String]) -> String {
     let token = invalid_token(&error);
     match error.kind() {
@@ -81,12 +84,44 @@ fn parse_error(error: clap::Error, args: &[String]) -> String {
         }
         // The legacy loop reports a bare usage line here too.
         ErrorKind::InvalidValue => usage(),
+        ErrorKind::ValueValidation => {
+            // Only `--entry` carries a custom value parser, so any
+            // validation failure is a rejected entry: report the legacy
+            // `bad --entry …` text through the same parser the tokenizer
+            // wraps.
+            let raw = rejected_value(&error).unwrap_or_default();
+            match parse_entry_value(&raw) {
+                Err(legacy) => legacy,
+                Ok(_) => error
+                    .to_string()
+                    .lines()
+                    .next()
+                    .unwrap_or("invalid arguments")
+                    .to_owned(),
+            }
+        }
         _ => error
             .to_string()
             .lines()
             .next()
             .unwrap_or("invalid arguments")
             .to_owned(),
+    }
+}
+
+/// Rejected `--entry` value behind a [`clap::Error`], if the error carries a
+/// non-empty one.
+fn rejected_value(error: &clap::Error) -> Option<String> {
+    let invalid = error.get(ContextKind::InvalidValue)?;
+    let raw = match invalid {
+        ContextValue::String(value) => value.clone(),
+        ContextValue::Strings(values) => values.first().cloned().unwrap_or_default(),
+        _ => String::new(),
+    };
+    if raw.is_empty() {
+        None
+    } else {
+        Some(raw)
     }
 }
 
@@ -97,7 +132,11 @@ fn parse_args(args: &[String]) -> Result<Cli, String> {
     .map_err(|error| parse_error(error, args))
 }
 
-fn parse_entry(raw: &str) -> Result<DxCodegenEntry, String> {
+/// `clap` value parser for `--entry` (issue #233): the single source for
+/// `LOGICAL|ROOT|NAMESPACE[|EXEC]` shape, so tokenizing accepts exactly 3-4
+/// `|`-separated parts and rejections already carry the legacy
+/// `bad --entry …` text that [`parse_error`] recovers from the error context.
+fn parse_entry_value(raw: &str) -> Result<DxCodegenEntry, String> {
     let parts: Vec<&str> = raw.split('|').collect();
     match parts.len() {
         3 => Ok(DxCodegenEntry {
@@ -122,15 +161,11 @@ fn parse_entry(raw: &str) -> Result<DxCodegenEntry, String> {
 
 fn run(args: &[String]) -> Result<(), String> {
     let cli = parse_args(args)?;
-    let mut entries = Vec::with_capacity(cli.entry.len());
-    for raw in &cli.entry {
-        entries.push(parse_entry(raw)?);
-    }
     let output = cli.output.map(PathBuf::from);
     let shard = DxCodegenShard {
         producer: cli.producer.ok_or_else(usage)?,
         language: cli.language.ok_or_else(usage)?,
-        entries,
+        entries: cli.entry,
     };
     let bytes = encode_validated(&shard).map_err(|error| error.to_string())?;
     // Read back before writing so a codec regression fails the action
