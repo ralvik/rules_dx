@@ -18,9 +18,10 @@
 //! forwarding `bazel clean`.
 //!
 //! Domain split (issue #236): the command vocabulary lives in the
-//! `command` module and shell-completion rendering in the `completion`
-//! module. This facade keeps parsing plus the shared types; the public
-//! paths stay `crate::args::Command` and
+//! `command` module, shell-completion rendering in the `completion`
+//! module, and typo suggestions in the `suggest` module. This facade
+//! keeps parsing plus the shared types; the public paths stay
+//! `crate::args::Command` and
 //! `crate::args::{COMPLETION_SHELLS, render_completion}` via the
 //! re-exports below.
 
@@ -29,6 +30,7 @@ use dx_output::{OutputMode, Threshold};
 
 pub mod command;
 pub mod completion;
+pub mod suggest;
 
 pub use command::Command;
 pub use completion::{render_completion, COMPLETION_SHELLS};
@@ -448,80 +450,6 @@ fn leading_flag(token: &str) -> String {
     token.split_whitespace().next().unwrap_or(token).to_owned()
 }
 
-/// Best candidate above clap's confidence bar. Mirrors
-/// `clap_builder::parser::features::suggestions::did_you_mean` (same
-/// upstream `strsim::jaro` + `0.7` threshold): that helper is
-/// crate-private, so the typo path re-applies its rule over our own
-/// candidate list instead of hand-rolling edit distance.
-fn best_match(input: &str, candidates: impl Iterator<Item = impl AsRef<str>>) -> Option<String> {
-    let mut best: Option<(f64, String)> = None;
-    for candidate in candidates {
-        let confidence = strsim::jaro(input, candidate.as_ref());
-        if confidence > 0.7 && best.as_ref().is_none_or(|(score, _)| confidence > *score) {
-            best = Some((confidence, candidate.as_ref().to_owned()));
-        }
-    }
-    best.map(|(_, name)| name)
-}
-
-/// Suggests the closest command word from the [`Command`] derive (the
-/// single grammar source), so the hint can never drift from the
-/// accepted spellings.
-fn suggest_command(input: &str) -> Option<String> {
-    use clap::ValueEnum;
-    best_match(
-        input,
-        Command::value_variants().iter().copied().map(Command::name),
-    )
-}
-
-/// Suggests the closest `--flag` for an offending token. Candidates
-/// come from the clap grammar (`Cli::command()` longs), so the hint
-/// tracks `Cli` renames without a second list. Exact matches yield no
-/// hint (the flag is right; the `=value` is wrong), and non-flag
-/// tokens yield none.
-fn suggest_option(token: &str) -> Option<String> {
-    use clap::CommandFactory;
-    let name = token.split(['=', ' ', '\t']).next().unwrap_or(token);
-    let bare = name.strip_prefix("--").or_else(|| name.strip_prefix('-'))?;
-    if bare.is_empty() {
-        return None;
-    }
-    // Single-character `-q`-style tokens never suggest: jaro("q","quiet")
-    // clears 0.7 but a one-letter flag is a missing-short attempt, not a
-    // `--long` typo. Longer typos (`--ouptut`) still flow to best_match.
-    if bare.len() < 2 {
-        return None;
-    }
-    let cmd = Cli::command();
-    let longs: Vec<&str> = cmd
-        .get_arguments()
-        .filter_map(|arg| arg.get_long())
-        .collect();
-    if longs.contains(&bare) {
-        return None;
-    }
-    best_match(bare, longs.into_iter()).map(|hit| format!("--{hit}"))
-}
-
-/// Reads clap's own suggestion off a parse failure (`--flag` render),
-/// when the unknown flag is close enough for clap to name one.
-fn clap_suggestion(error: &clap::Error) -> Option<String> {
-    use clap::error::{ContextKind, ContextValue};
-    for kind in [ContextKind::SuggestedArg, ContextKind::Suggested] {
-        match error.get(kind) {
-            Some(ContextValue::String(hit)) => return Some(hit.clone()),
-            Some(ContextValue::Strings(hits)) => {
-                if let Some(hit) = hits.first() {
-                    return Some(hit.clone());
-                }
-            }
-            _ => {}
-        }
-    }
-    None
-}
-
 /// Finds the command word for `--help` routing: the first positional
 /// token that parses as [`Command`], skipping flag payloads exactly
 /// like [`split_bazel_verbatim`]. Stops at `--` (everything after is
@@ -675,18 +603,6 @@ fn is_command_positional(token: &str) -> bool {
         .eq_ignore_ascii_case("command")
 }
 
-/// Reads clap's own command suggestion off a `ValueEnum` positional
-/// rejection (same `jaro` rule as [`best_match`], computed by clap over
-/// the [`Command`] variants).
-fn clap_command_suggestion(error: &clap::Error) -> Option<String> {
-    use clap::error::{ContextKind, ContextValue};
-    match error.get(ContextKind::SuggestedValue) {
-        Some(ContextValue::String(hit)) => Some(hit.clone()),
-        Some(ContextValue::Strings(hits)) => hits.first().cloned(),
-        _ => None,
-    }
-}
-
 /// Maps a clap parse failure back onto [`ArgsError`] so the contract
 /// surface never changes: unknown commands (including `ValueEnum`
 /// rejections of the command positional) stay unknown commands with
@@ -712,7 +628,8 @@ fn map_clap_error(args: &[String], error: &clap::Error) -> ArgsError {
         }
         ErrorKind::UnknownArgument | ErrorKind::TooManyValues => {
             let option = recover_token(args, invalid_token(error));
-            let suggestion = clap_suggestion(error).or_else(|| suggest_option(&option));
+            let suggestion =
+                suggest::clap_suggestion(error).or_else(|| suggest::suggest_option(&option));
             ArgsError::UnknownOption { option, suggestion }
         }
         ErrorKind::InvalidValue => {
@@ -730,12 +647,13 @@ fn map_clap_error(args: &[String], error: &clap::Error) -> ArgsError {
                 let value = invalid_value(error).unwrap_or(token);
                 if value.starts_with('-') {
                     let option = recover_token(args, Some(value.clone()));
-                    let suggestion = clap_suggestion(error).or_else(|| suggest_option(&option));
+                    let suggestion = suggest::clap_suggestion(error)
+                        .or_else(|| suggest::suggest_option(&option));
                     ArgsError::UnknownOption { option, suggestion }
                 } else {
                     let command = recover_token(args, Some(value.clone()));
-                    let suggestion =
-                        clap_command_suggestion(error).or_else(|| suggest_command(&command));
+                    let suggestion = suggest::clap_command_suggestion(error)
+                        .or_else(|| suggest::suggest_command(&command));
                     ArgsError::UnknownCommand {
                         command,
                         suggestion,
@@ -743,7 +661,8 @@ fn map_clap_error(args: &[String], error: &clap::Error) -> ArgsError {
                 }
             } else {
                 let option = recover_token(args, Some(token));
-                let suggestion = clap_suggestion(error).or_else(|| suggest_option(&option));
+                let suggestion =
+                    suggest::clap_suggestion(error).or_else(|| suggest::suggest_option(&option));
                 ArgsError::UnknownOption { option, suggestion }
             }
         }
