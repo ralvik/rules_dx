@@ -20,21 +20,30 @@ additional standard report format.
 
 Status: implemented as specified in this
 section (pinned by `dx_cli` run fixtures). Strict single-target execution applies to file/directory
-resolution scopes only — labels and target patterns pass through to
-`bazel run` unchanged (Bazel owns alias and executability). A file or
+resolution scopes only. Multiple explicit labels run sequentially in
+scope order (`dx run //demo:frontend //demo:backend`), each as its own
+`bazel run` with the same arguments after `--` forwarded to every
+target; explicit target patterns containing `...` or `*`
+(`dx run //demo/...`) expand Bazel-owned through one
+`kind('.*_binary rule', <pattern>)` query each, then run sequentially
+in input order. A file or
 directory scope resolves through the same ownership query as `dx build`,
 then requires exactly one runnable owner, where runnable means a
 depth-1 owner whose rule kind ends in `_binary` (aliases are not
 followed for file scopes): zero runnables fail pre-resolution with
 `no_runnable`, multiple with `ambiguous_runnable` listing sorted
-candidates; both are operational failures (exit 1). The application
-exit code is preserved verbatim (success included); scope/usage
-failures stay pre-exec (exit 2). The application inherits stdio with
-SIGINT/SIGTERM forwarding; arguments after `--` forward verbatim.
+candidates; both are operational failures (exit 1), and an explicit
+pattern expanding to nothing is `no_runnable`. The application
+exit code is preserved verbatim (success included); sequential multirun
+stops on the first required failure and returns that code, per the
+[CLI contract](../cli-contract.md#exit-status). Scope/usage
+failures stay pre-exec (exit 2). Each application inherits stdio with
+SIGINT/SIGTERM forwarding to the active child (sequential mode never
+has more than one live child, so no supervisor table); arguments after
+`--` forward verbatim.
 `dx run` accepts only `--output=text` (json/diff rejected pre-exec),
-emits prose lifecycle on stderr, takes no `--report`, and refuses when
-env `CI=true` (local-only). Multirun remains a separate future
-feature.
+emits one prose lifecycle line per target on stderr, takes no `--report`, and refuses when
+env `CI=true` (local-only).
 
 ## `dx deploy`
 

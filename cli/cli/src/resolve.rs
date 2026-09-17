@@ -257,6 +257,15 @@ fn dir_runnable_expression(pattern: &str) -> String {
     format!("kind('.*_binary rule', {pattern})")
 }
 
+/// True for explicit `dx run` target patterns needing Bazel-owned
+/// expansion (multirun #186): labels containing `...` or `*` such as
+/// `//demo/...` or `//demo:*`. Plain labels (`//demo:frontend`)
+/// pass through without a query; Bazel owns their alias and
+/// executability.
+fn is_run_pattern(label: &str) -> bool {
+    label.contains("...") || label.contains('*')
+}
+
 /// Normalizes a workspace-relative scope path lexically (no filesystem
 /// access): drops `.` and empty segments, rejects absolute paths and
 /// `..` escapes. An empty result addresses the workspace root.
@@ -618,16 +627,21 @@ pub fn resolve_for_test(
     })
 }
 
-/// Resolves `dx run` scope to exact Bazel targets (O52).
+/// Resolves `dx run` scope to exact Bazel targets (O52, multirun #186).
 ///
-/// Labels and target patterns pass through unchanged in order (Bazel
-/// owns alias and executability) without any query. Once any file or
-/// directory scope is present, every file maps to its depth-1 `_binary`
-/// owners and every directory to its `_binary` rules under the
-/// recursive pattern; explicit labels join the candidate set. Exactly
-/// one candidate must remain: zero is [`ResolveError::NoRunnable`]
-/// and multiple is [`ResolveError::AmbiguousRunnable`], both
-/// operational failures (exit 1). An empty scope is
+/// Explicit labels pass through unchanged in order (Bazel owns alias
+/// and executability) without any query. Explicit target patterns
+/// (labels containing `...` or `*`, e.g. `//demo/...`) expand through
+/// one Bazel-owned `kind('.*_binary rule', <pattern>)` query each into
+/// their runnable labels, in input order. Once any file or directory
+/// scope is present, every file maps to its depth-1 `_binary` owners
+/// and every directory to its `_binary` rules under the recursive
+/// pattern; explicit labels join the candidate set. Exactly one
+/// candidate must remain on that inference path: zero is
+/// [`ResolveError::NoRunnable`] and multiple is
+/// [`ResolveError::AmbiguousRunnable`], both operational failures
+/// (exit 1). An empty expansion of explicit patterns is likewise
+/// [`ResolveError::NoRunnable`]. An empty scope is
 /// [`ResolveError::EmptyScope`] (pre-exec, exit 2): `bazel run`
 /// needs an explicit target.
 pub fn resolve_run(
@@ -641,7 +655,36 @@ pub fn resolve_run(
     let mut cache = PackageCache::default();
     let classified = classify_scopes(scopes, workspace, &mut cache)?;
     if classified.files.is_empty() && classified.patterns.is_empty() {
-        return Ok(classified.labels);
+        // Explicit-label multirun (#186): plain labels pass through in
+        // input order with no query; patterns containing `...` or `*`
+        // expand inline through the same Bazel-owned `_binary` kind
+        // query as directory scopes. File/directory inference below is
+        // untouched, so multirun never activates on inference.
+        if !classified.labels.iter().any(|label| is_run_pattern(label)) {
+            return Ok(classified.labels);
+        }
+        let mut targets: Vec<String> = Vec::new();
+        for label in &classified.labels {
+            if is_run_pattern(label) {
+                targets.extend(run_label_query(
+                    &dir_runnable_expression(label),
+                    workspace,
+                    runner,
+                )?);
+            } else {
+                targets.push(label.clone());
+            }
+        }
+        // Preserve first-seen order across inline expansions; the query
+        // helper already sorts each expansion batch.
+        let mut seen = std::collections::HashSet::new();
+        targets.retain(|target| seen.insert(target.clone()));
+        if targets.is_empty() {
+            return Err(ResolveError::NoRunnable {
+                scopes: scopes.to_vec(),
+            });
+        }
+        return Ok(targets);
     }
     let mut candidates: Vec<String> = classified.labels;
     if !classified.files.is_empty() {

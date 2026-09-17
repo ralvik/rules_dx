@@ -1,4 +1,4 @@
-//! `dx run` single-target launch execution.
+//! `dx run` single-target launcher with explicit-label multirun (#186).
 
 use super::common::*;
 use crate::args::Invocation;
@@ -6,6 +6,8 @@ use crate::plan::plan_run;
 use crate::reports::plan_reports;
 use crate::resolve::{resolve_run, ResolveError};
 use dx_output::{command_finished, command_started, write_event, FinishedCounts, OutputMode};
+use std::io::Write;
+use std::path::Path;
 
 /// Stable operational codes for workflow failures.
 const CODE_NO_RUNNABLE: &str = "no_runnable";
@@ -21,9 +23,16 @@ fn resolve_code(error: &ResolveError) -> &'static str {
     }
 }
 
-/// Executes `dx run`: local-only single-runnable launcher with
-/// verbatim application exit codes. Lifecycle prose goes to stderr;
-/// the application keeps stdout through the process runner.
+/// Executes `dx run`: local-only launcher with verbatim application
+/// exit codes. One resolved target runs one `bazel run`; multiple
+/// explicit labels/patterns (multirun #186) run sequential `bazel run`s
+/// in scope order with the same `--` args forwarded to each. Lifecycle
+/// prose goes to stderr prefixed per target; each application keeps
+/// stdio through the process runner (which forwards SIGINT/SIGTERM to
+/// the active child — sequential mode never has more than one live
+/// child, so no supervisor fan-out table). First required failure
+/// stops the sequence and returns that process's code verbatim, per
+/// the frozen multi-invocation contract.
 pub(crate) fn execute_run(invocation: &Invocation, env: Env<'_>) -> i32 {
     let Env {
         workspace,
@@ -63,11 +72,23 @@ pub(crate) fn execute_run(invocation: &Invocation, env: Env<'_>) -> i32 {
             return pre_exec(err, &message);
         }
     };
-    let plan = if targets.len() == 1 {
-        plan_run(&targets[0], &invocation.bazel_options, invocation.profile())
-    } else {
-        plan_run_multi(&targets, &invocation.bazel_options, invocation.profile())
-    };
+    if targets.len() == 1 {
+        return execute_run_single(invocation, workspace, runner, out, err, &targets[0]);
+    }
+    execute_run_multi(invocation, workspace, runner, out, err, &targets)
+}
+
+/// Single-target `bazel run`: plan, optional dry-run, launch with
+/// verbatim exit-code preservation.
+fn execute_run_single(
+    invocation: &Invocation,
+    workspace: &Path,
+    runner: &dyn dx_process::Runner,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+    target: &str,
+) -> i32 {
+    let plan = plan_run(target, &invocation.bazel_options, invocation.profile());
     if invocation.dry_run {
         if invocation.output == OutputMode::Json {
             if let Ok(event) = command_started(invocation.command.name(), true, "default") {
@@ -82,7 +103,63 @@ pub(crate) fn execute_run(invocation: &Invocation, env: Env<'_>) -> i32 {
     if !invocation.quiet {
         let _ = writeln!(err, "{}", plan.summary);
     }
-    let status = match runner.run(&plan.argv, workspace, &[]) {
+    run_plan(invocation, out, err, workspace, runner, &plan.argv)
+}
+
+/// Multi-target sequential `bazel run`s (multirun #186): Bazel-owned
+/// execution with no supervisor. Each target gets its own `bazel run`
+/// plan with identical app args; lifecycle lines prefix per target so
+/// sequential output stays attributable while each child owns the
+/// terminal. Stops on the first required failure and returns that
+/// code verbatim; launch/signal failures map to the same operational
+/// codes as single-run.
+fn execute_run_multi(
+    invocation: &Invocation,
+    workspace: &Path,
+    runner: &dyn dx_process::Runner,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+    targets: &[String],
+) -> i32 {
+    if invocation.dry_run {
+        if invocation.output == OutputMode::Json {
+            if let Ok(event) = command_started(invocation.command.name(), true, "default") {
+                let _ = write_event(out, &event);
+            }
+            let _ = write_event(out, &command_finished(0, &FinishedCounts::default()));
+        } else if !invocation.quiet {
+            for target in targets {
+                let plan = plan_run(target, &invocation.bazel_options, invocation.profile());
+                let _ = writeln!(err, "{}", plan.summary);
+            }
+        }
+        return 0;
+    }
+    for target in targets {
+        let plan = plan_run(target, &invocation.bazel_options, invocation.profile());
+        if !invocation.quiet {
+            let _ = writeln!(err, "{}", plan.summary);
+        }
+        let code = run_plan(invocation, out, err, workspace, runner, &plan.argv);
+        if code != 0 {
+            return code;
+        }
+    }
+    0
+}
+
+/// Launches one planned `bazel run` argv and maps launch/signal
+/// outcomes to the single-run operational codes, preserving the
+/// application exit code verbatim (success included).
+fn run_plan(
+    invocation: &Invocation,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+    workspace: &Path,
+    runner: &dyn dx_process::Runner,
+    argv: &[String],
+) -> i32 {
+    let status = match runner.run(argv, workspace, &[]) {
         Ok(status) => status,
         Err(error) => {
             return operational(
@@ -104,22 +181,6 @@ pub(crate) fn execute_run(invocation: &Invocation, env: Env<'_>) -> i32 {
         );
     };
     code
-}
-
-/// Plans a label-only multi-target `dx run` argv Bazel owns.
-///
-/// File/directory scopes enforce single-runnable selection in
-/// [`resolve_run`]; label scopes pass through unchanged, including
-/// multiple labels. `bazel run` rejects multi-target requests itself,
-/// so this preserves Bazel's exact diagnostic and status. Shares the
-/// single [`crate::plan::plan_run_targets`] builder with [`plan_run`]
-/// so the launcher, startup options, and workspace policy cannot drift.
-fn plan_run_multi(
-    targets: &[String],
-    app_args: &[String],
-    profile: crate::args::Profile,
-) -> crate::plan::BuildPlan {
-    crate::plan::plan_run_targets(targets, app_args, profile)
 }
 
 #[cfg(test)]
@@ -241,16 +302,140 @@ mod tests {
     }
 
     #[test]
-    fn run_multi_target_uses_multi_plan() {
+    fn run_multi_target_runs_sequential_single_plans() {
+        // Multirun #186: each explicit label gets its own `bazel run`
+        // lifecycle line; the same `--` args forward to each.
         let harness = Harness::new("run-multi");
         let (code, _, err) = harness.run(&["run", "//a:bin", "//b:bin"]);
         assert_eq!(code, 0, "{err}");
-        assert!(err.contains("//a:bin //b:bin"), "{err}");
-        // Multi-target with app args covers the `--` forwarding arm.
+        assert!(err.contains("Running run for //a:bin"), "{err}");
+        assert!(err.contains("Running run for //b:bin"), "{err}");
         let harness = Harness::new("run-multi-args");
         let (code, _, err) = harness.run(&["run", "//a:bin", "//b:bin", "--", "--port=8080"]);
         assert_eq!(code, 0, "{err}");
-        assert!(err.contains("//a:bin //b:bin"), "{err}");
+        assert!(err.contains("Running run for //a:bin"), "{err}");
+        assert!(err.contains("Running run for //b:bin"), "{err}");
+        // App args reach every sequential launch.
+        let harness = Harness::new("run-multi-argv");
+        let seen = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+        let probe = ArgvProbe {
+            code: Some(0),
+            seen: std::rc::Rc::clone(&seen),
+        };
+        let inv = invocation(&["run", "//a:bin", "//b:bin", "--", "--port=8080"]);
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute(
+            &inv,
+            Env {
+                workspace: &harness.workspace,
+                runner: &probe,
+                query_runner: &harness.query,
+                temp_dir: &harness.temp,
+                pid: std::process::id(),
+                nonce: 0,
+                out: &mut out,
+                err: &mut err,
+                ci: false,
+            },
+        );
+        assert_eq!(code, 0);
+        let seen = seen.borrow();
+        assert_eq!(seen.len(), 2, "{seen:?}");
+        for argv in seen.iter() {
+            assert!(argv.contains(&"--port=8080".to_owned()), "{argv:?}");
+        }
+        assert!(seen[0].contains(&"//a:bin".to_owned()), "{seen:?}");
+        assert!(seen[1].contains(&"//b:bin".to_owned()), "{seen:?}");
+    }
+
+    #[test]
+    fn run_multi_stops_on_first_failure() {
+        // Frozen multi-invocation contract: first required failure wins
+        // verbatim; the second target never launches.
+        let harness = Harness {
+            bazel_code: 7,
+            ..Harness::new("run-multi-fail")
+        };
+        let seen = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+        let probe = ArgvProbe {
+            code: Some(7),
+            seen: std::rc::Rc::clone(&seen),
+        };
+        let inv = invocation(&["run", "//a:bin", "//b:bin"]);
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute(
+            &inv,
+            Env {
+                workspace: &harness.workspace,
+                runner: &probe,
+                query_runner: &harness.query,
+                temp_dir: &harness.temp,
+                pid: std::process::id(),
+                nonce: 0,
+                out: &mut out,
+                err: &mut err,
+                ci: false,
+            },
+        );
+        assert_eq!(code, 7);
+        assert_eq!(seen.borrow().len(), 1, "{:?}", seen.borrow());
+    }
+
+    #[test]
+    fn run_pattern_expands_to_runnables() {
+        // `dx run //demo/...` expands Bazel-owned to runnable labels,
+        // then runs them sequentially in sorted order.
+        let harness = Harness::new("run-pattern");
+        harness
+            .query
+            .script_owners("//demo:backend\n//demo:frontend\n");
+        let seen = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+        let probe = ArgvProbe {
+            code: Some(0),
+            seen: std::rc::Rc::clone(&seen),
+        };
+        let inv = invocation(&["run", "//demo/..."]);
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute(
+            &inv,
+            Env {
+                workspace: &harness.workspace,
+                runner: &probe,
+                query_runner: &harness.query,
+                temp_dir: &harness.temp,
+                pid: std::process::id(),
+                nonce: 0,
+                out: &mut out,
+                err: &mut err,
+                ci: false,
+            },
+        );
+        assert_eq!(code, 0, "{}", String::from_utf8_lossy(&err));
+        let seen = seen.borrow();
+        assert_eq!(seen.len(), 2, "{seen:?}");
+        assert!(seen[0].contains(&"//demo:backend".to_owned()), "{seen:?}");
+        assert!(seen[1].contains(&"//demo:frontend".to_owned()), "{seen:?}");
+    }
+
+    #[test]
+    fn run_pattern_without_runnable_is_operational() {
+        let harness = Harness::new("run-pattern-empty");
+        harness.query.script_owners("");
+        let (code, _, err) = harness.run(&["run", "//demo/..."]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("no_runnable"), "{err}");
+    }
+
+    #[test]
+    fn run_multi_dry_run_lists_each_target() {
+        let harness = Harness::new("run-multi-dry");
+        let (code, _, err) = harness.run(&["run", "//a:bin", "//b:bin", "--dry-run"]);
+        assert_eq!(code, 0, "{err}");
+        assert!(err.contains("Running run for //a:bin"), "{err}");
+        assert!(err.contains("Running run for //b:bin"), "{err}");
     }
 
     fn run_invocation(
