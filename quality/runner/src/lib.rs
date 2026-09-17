@@ -1598,4 +1598,48 @@ mod tests {
         assert!(quality_result::validate(&first).is_ok());
         assert!(quality_result::validate(&second).is_ok());
     }
+
+    #[test]
+    fn shared_source_across_owners_converges_without_duplication() {
+        // Determinism battery (issue #84): `quality-testing.md` requires
+        // one source declared in multiple owners to converge with every
+        // relevant stage seeing the edit and no unrelated duplication.
+        // `src/a.rs` is owned by both stages while `src/b.rs` has a
+        // single owner; the shared file must emit exactly one
+        // whole-file candidate bound to digest(original) that splices
+        // byte-for-byte to the terminal.
+        let files = vec![
+            file("src/a.rs", "BAD shared\n"),
+            file("src/b.rs", "BAD solo\n"),
+        ];
+        let stages = vec![
+            stage("lint-a", &["rust"], &["src/a.rs", "src/b.rs"]),
+            stage("lint-b", &["rust"], &["src/a.rs"]),
+        ];
+        let result = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
+        assert_eq!(result.convergence, Convergence::Stable as i32);
+        assert_eq!(result.completed_rounds, 2);
+        // lint-a diagnoses BAD in both files; lint-b finds no FAIL needle.
+        assert_eq!(result.initial_diagnostics.len(), 2);
+        assert!(result.terminal_diagnostics.is_empty());
+        // One candidate per changed path: dual ownership duplicates nothing.
+        assert_eq!(result.replacements.len(), 2);
+        let shared = result
+            .replacements
+            .iter()
+            .find(|edits| edits.path == "src/a.rs")
+            .expect("shared file candidate");
+        assert_eq!(shared.original_digest, digest("BAD shared\n".as_bytes()));
+        assert_eq!(shared.edits.len(), 1);
+        assert_eq!(shared.edits[0].start_byte, 0);
+        assert_eq!(shared.edits[0].end_byte, "BAD shared\n".len() as u64);
+        assert_eq!(&shared.edits[0].replacement, b"GOOD shared\n");
+        let original = "BAD shared\n".as_bytes();
+        let mut spliced = Vec::new();
+        spliced.extend_from_slice(&original[..shared.edits[0].start_byte as usize]);
+        spliced.extend_from_slice(&shared.edits[0].replacement);
+        spliced.extend_from_slice(&original[shared.edits[0].end_byte as usize..]);
+        assert_eq!(spliced, b"GOOD shared\n");
+        assert!(validate(&result).is_ok());
+    }
 }
