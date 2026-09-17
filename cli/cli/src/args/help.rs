@@ -151,3 +151,143 @@ pub(crate) fn render_command_help(command: Command) -> String {
     out.push_str(&render_top_help());
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::{parse, ArgsError, Command};
+    use super::render_command_help;
+
+    fn args(words: &[&str]) -> Vec<String> {
+        words.iter().map(ToString::to_string).collect()
+    }
+
+    #[test]
+    fn top_level_help_lists_commands_and_flags() {
+        for flag in ["--help", "-h"] {
+            let text = match parse(&args(&[flag])) {
+                Err(ArgsError::Help { text }) => text,
+                other => panic!("{flag}: want Help, got {other:?}"),
+            };
+            for needle in [
+                "dx",
+                "lint",
+                "build",
+                "--workspace",
+                "--output",
+                "--fail-on",
+                "Exit codes",
+            ] {
+                assert!(text.contains(needle), "{flag}: missing {needle:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn help_process_exits_zero_with_brand() {
+        let root = std::env::var("TEST_SRCDIR").expect("TEST_SRCDIR is set under Bazel");
+        let workspace = std::env::var("TEST_WORKSPACE").expect("TEST_WORKSPACE is set under Bazel");
+        let binary = std::path::Path::new(&root)
+            .join(workspace)
+            .join("cli/cli/dx");
+        assert_cmd::Command::new(binary)
+            .arg("--help")
+            .assert()
+            .success()
+            .stdout(predicates::str::contains("Transparent UI over Bazel"));
+    }
+
+    #[test]
+    fn per_command_help_covers_usage_scopes_exits_and_output() {
+        for argv in [
+            vec!["lint", "--help"],
+            vec!["--help", "lint"],
+            vec!["clean", "-h"],
+        ] {
+            let text = match parse(&args(&argv)) {
+                Err(ArgsError::Help { text }) => text,
+                other => panic!("{argv:?}: want Help, got {other:?}"),
+            };
+            let command = argv
+                .iter()
+                .find(|word| Command::parse(word).is_some())
+                .expect("command");
+            for needle in [
+                command,
+                "Usage:",
+                "Scopes:",
+                "Exit codes:",
+                "Output:",
+                "--workspace",
+            ] {
+                assert!(text.contains(needle), "{argv:?}: missing {needle:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn per_command_help_names_owned_flags_and_reconciles_bazel_naming() {
+        let clean = match parse(&args(&["clean", "--help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("clean --help: want Help, got {other:?}"),
+        };
+        assert!(
+            clean.contains("clean [--dry-run] [--bazel]"),
+            "clean usage:\n{clean}"
+        );
+        assert!(clean.contains("--bazel"), "clean flags:\n{clean}");
+        assert!(
+            clean.contains("distinct from `dx bazel`"),
+            "clean disambiguation:\n{clean}"
+        );
+        for command in ["owners", "deps", "why"] {
+            let text = match parse(&args(&[command, "--help"])) {
+                Err(ArgsError::Help { text }) => text,
+                other => panic!("{command} --help: want Help, got {other:?}"),
+            };
+            assert!(text.contains("[--configured]"), "{command} usage:\n{text}");
+            assert!(
+                text.contains("distinct from `dx clean --bazel`"),
+                "{command} disambiguation:\n{text}"
+            );
+        }
+        let coverage = match parse(&args(&["coverage", "--help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("coverage --help: want Help, got {other:?}"),
+        };
+        assert!(
+            coverage.contains("--min-coverage"),
+            "coverage flags:\n{coverage}"
+        );
+        let build = match parse(&args(&["build", "--help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("build --help: want Help, got {other:?}"),
+        };
+        assert!(build.contains("--debug"), "build flags:\n{build}");
+        let version = match parse(&args(&["version", "--help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("version --help: want Help, got {other:?}"),
+        };
+        assert!(version.contains("--pin"), "version flags:\n{version}");
+        for argv in [["lint", "--help"], ["status", "--help"]] {
+            let text = match parse(&args(&argv)) {
+                Err(ArgsError::Help { text }) => text,
+                other => panic!("{argv:?}: want Help, got {other:?}"),
+            };
+            assert!(text.contains("Per-command flags:"), "{argv:?}:\n{text}");
+        }
+        let bazel_help = render_command_help(Command::Bazel);
+        assert!(
+            bazel_help.contains("Per-command flags:"),
+            "bazel help:\n{bazel_help}"
+        );
+    }
+
+    #[test]
+    fn help_value_option_payload_is_not_a_command() {
+        let text = match parse(&args(&["--output", "bazel", "--help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("want Help, got {other:?}"),
+        };
+        assert!(text.contains("--output"));
+    }
+}
