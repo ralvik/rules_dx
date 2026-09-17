@@ -19,6 +19,7 @@
 pub mod generate;
 pub mod managed;
 pub mod quality;
+pub mod registry;
 pub mod run_deploy;
 pub mod run_temp;
 pub mod workflow;
@@ -30,7 +31,8 @@ pub use generate::{
 };
 pub use managed::{plan_bazel, plan_managed};
 pub(crate) use quality::workflow_scope_labels;
-pub use quality::{plan_build, protected_flags, required_options, spec, CommandSpec};
+pub use quality::{plan_build, protected_flags, required_options};
+pub use registry::{spec, CommandSpec};
 pub use run_deploy::{plan_deploy_build, plan_deploy_run, plan_run, plan_run_targets};
 pub use run_temp::{bep_path, create_run_temp_dir, intended_path, run_nonce};
 pub use workflow::{plan_workflow, workflow_options, workflow_protected, WorkflowVerb};
