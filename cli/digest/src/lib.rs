@@ -131,22 +131,18 @@ pub fn to_hex_bytes(bytes: &[u8]) -> String {
 }
 
 /// Parses exactly 64 lowercase hex digits into 32 raw bytes.
+///
+/// Single `hex::decode` plus the length and lowercase re-encode check
+/// (the same contract as [`is_hex`]); no manual digit loop.
 pub fn parse_hex(text: &str) -> Result<RawDigest, DigestError> {
-    if !is_hex(text) {
-        return Err(DigestError::BadDigest {
-            value: text.to_owned(),
-        });
+    let bad = || DigestError::BadDigest {
+        value: text.to_owned(),
+    };
+    let bytes = hex::decode(text).map_err(|_| bad())?;
+    if bytes.len() != DIGEST_LEN || hex::encode(&bytes) != text {
+        return Err(bad());
     }
-    let mut out = [0u8; DIGEST_LEN];
-    for (i, chunk) in text.as_bytes().chunks(2).enumerate() {
-        let hex_pair = std::str::from_utf8(chunk).map_err(|_| DigestError::BadDigest {
-            value: text.to_owned(),
-        })?;
-        out[i] = u8::from_str_radix(hex_pair, 16).map_err(|_| DigestError::BadDigest {
-            value: text.to_owned(),
-        })?;
-    }
-    Ok(out)
+    bytes.try_into().map_err(|_| bad())
 }
 
 #[cfg(test)]
