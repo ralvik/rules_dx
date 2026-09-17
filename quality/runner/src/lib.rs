@@ -1685,4 +1685,49 @@ mod tests {
         assert!(result.replacements.is_empty());
         assert!(quality_result::validate(&result).is_ok());
     }
+
+    #[test]
+    fn chained_mutating_stages_see_virtual_snapshot() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // each stage's edits to apply against its current virtual snapshot,
+        // not the round-start original. `lint-a` fixes BAD needles while
+        // `fmt-a` trims trailing whitespace, so one file carrying both
+        // defects must reach the combined terminal when stages chain
+        // through the current map; against-original application would lose
+        // one fix to a stale overwrite.
+        let stages = vec![
+            stage("lint-a", &["rust"], &["src/lib.rs"]),
+            stage("fmt-a", &["rust"], &["src/lib.rs"]),
+        ];
+        let files = vec![file("src/lib.rs", "BAD   \n")];
+        let result = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
+        assert_eq!(result.convergence, Convergence::Stable as i32);
+        assert_eq!(result.completed_rounds, 2);
+        assert_eq!(result.initial_diagnostics.len(), 1);
+        assert!(result.terminal_diagnostics.is_empty());
+        assert_eq!(result.replacements.len(), 1);
+        let edits = &result.replacements[0];
+        assert_eq!(edits.path, "src/lib.rs");
+        assert_eq!(edits.original_digest, digest("BAD   \n".as_bytes()));
+        assert_eq!(edits.edits.len(), 1);
+        assert_eq!(edits.edits[0].start_byte, 0);
+        assert_eq!(edits.edits[0].end_byte, "BAD   \n".len() as u64);
+        assert_eq!(&edits.edits[0].replacement, b"GOOD\n");
+        let original = "BAD   \n".as_bytes();
+        let mut spliced = Vec::new();
+        spliced.extend_from_slice(&original[..edits.edits[0].start_byte as usize]);
+        spliced.extend_from_slice(&edits.edits[0].replacement);
+        spliced.extend_from_slice(&original[edits.edits[0].end_byte as usize..]);
+        assert_eq!(spliced, b"GOOD\n");
+        assert!(validate(&result).is_ok());
+        let reversed = vec![
+            stage("fmt-a", &["rust"], &["src/lib.rs"]),
+            stage("lint-a", &["rust"], &["src/lib.rs"]),
+        ];
+        let other = run_pipeline("//quality:test", "lint", &reversed, &files).unwrap();
+        assert_eq!(other.convergence, Convergence::Stable as i32);
+        assert_eq!(other.terminal_snapshot, result.terminal_snapshot);
+        assert_eq!(other.replacements, result.replacements);
+        assert!(validate(&other).is_ok());
+    }
 }
