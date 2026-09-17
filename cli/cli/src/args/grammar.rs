@@ -4,7 +4,8 @@
 //! the value-option table (`VALUE_OPTIONS`), and the grammar accessor
 //! (`cli_command`). Re-exported through `super` and through `parser`
 //! so the public paths stay `crate::args::cli_command` and
-//! `crate::args::parser::{Cli, VALUE_OPTIONS, cli_command}`.
+//! `crate::args::parser::{Cli, cli_command}` (`VALUE_OPTIONS` stays in
+//! `grammar` and is imported directly by its users).
 //!
 //! Named `grammar` (not `parse`) so the `parse` function keeps its name;
 //! the domain is the grammar half of the `args→command/parse/...` split.

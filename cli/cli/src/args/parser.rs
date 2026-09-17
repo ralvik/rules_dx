@@ -1,27 +1,30 @@
 //! Invocation parsing for the `dx` CLI (issue #236).
 //!
-//! Split from `super` (`args.rs`): owns the Bazel-verbatim tokenizer,
-//! `clap`-error mapping, and the full `parse` validation (scope shapes,
-//! per-command option ownership, output-contract gates, profile flags).
-//! The `clap` grammar (`Cli`, `VALUE_OPTIONS`, `cli_command`) lives in
+//! Split from `super` (`args.rs`): owns the full `parse` validation
+//! (scope shapes, per-command option ownership, output-contract gates,
+//! profile flags) plus the small value helpers (`scope_error`,
+//! `parse_report`, `parse_min_coverage`). The Bazel-verbatim tokenizer
+//! and `clap`-error mapping live in the [`super::tokenizer`] sibling.
+//! The `clap` grammar (`Cli`, `cli_command`) lives in
 //! the [`super::grammar`] sibling; this module re-exports it so the
-//! `crate::args::parser::{Cli, VALUE_OPTIONS, cli_command}` paths stay
-//! stable. Re-exported through `super` so the public paths stay
+//! `crate::args::parser::{Cli, cli_command}` paths stay
+//! stable (`VALUE_OPTIONS` stays in `grammar` and is imported directly
+//! by its users).
+//! Re-exported through `super` so the public paths stay
 //! `crate::args::parse` and `crate::args::cli_command`.
 //!
 //! Named `parser` (not `parse`) so the module and the `parse` function
 //! can coexist without a namespace collision; the domain is the `parse`
 //! half of the `args→command/parse/suggest/help/completion` split.
 
-use clap::Parser;
 use dx_output::{OutputMode, Threshold};
 
 use super::command::Command;
-use super::{help, suggest};
+use super::tokenizer::tokenize;
 use super::{ArgsError, Invocation, ReportRequest};
 
 pub use super::grammar::cli_command;
-pub(crate) use super::grammar::{Cli, VALUE_OPTIONS};
+pub(crate) use super::grammar::Cli;
 
 /// Maps one scope positional onto its shape-specific parse failure:
 /// empty scopes name the repository-wide default, package-relative
@@ -40,204 +43,6 @@ fn scope_error(scope: &str) -> ArgsError {
             scope: scope.to_owned(),
         }
     }
-}
-
-/// Finds the `bazel` command word when it owns the tail: the first
-/// positional token, skipping value-option payloads exactly like the
-/// legacy hand-rolled tokenizer did, so `dx bazel ...` forwards verbatim
-/// while `dx --output bazel build` still binds `bazel` as the output
-/// value. Returns `None` once a bare `--` is seen (everything after it
-/// is Bazel-owned regardless of command) or when a value option is
-/// missing its payload (the full parse then reports the missing value).
-///
-/// Stays hand-rolled (issue #233 fallback): it routes `argv` *before* the
-/// grammar runs, deciding which prefix clap parses and which tail forwards
-/// verbatim. A `value_parser` runs inside parsing on one value and cannot
-/// own the tail, and the Bazel tail is foreign syntax by contract.
-fn split_bazel_verbatim(args: &[String]) -> Option<usize> {
-    let mut index = 0;
-    while index < args.len() {
-        let arg = &args[index];
-        if arg == "--" {
-            return None;
-        }
-        if arg.starts_with('-') {
-            let name = arg.split_once('=').map_or(arg.as_str(), |(name, _)| name);
-            if !arg.contains('=') && VALUE_OPTIONS.contains(&name) {
-                match args.get(index + 1) {
-                    Some(next) if !next.starts_with("--") && next != "--" => index += 2,
-                    _ => return None,
-                }
-                continue;
-            }
-            index += 1;
-            continue;
-        }
-        return (arg == "bazel").then_some(index);
-    }
-    None
-}
-
-/// Reads the clap invalid-argument context (`--flag <VALUE>` render or
-/// bare token) as a string.
-fn invalid_token(error: &clap::Error) -> Option<String> {
-    match error.get(clap::error::ContextKind::InvalidArg) {
-        Some(clap::error::ContextValue::String(token)) => Some(token.clone()),
-        Some(clap::error::ContextValue::Strings(tokens)) => tokens.first().cloned(),
-        _ => None,
-    }
-}
-
-/// Reads the clap invalid-value context (empty when an option value is
-/// missing, the offending value otherwise).
-fn invalid_value(error: &clap::Error) -> Option<String> {
-    match error.get(clap::error::ContextKind::InvalidValue) {
-        Some(clap::error::ContextValue::String(value)) => Some(value.clone()),
-        Some(clap::error::ContextValue::Strings(values)) => values.first().cloned(),
-        _ => None,
-    }
-}
-
-/// Recovers the exact offending `argv` token for an unknown option:
-/// clap reports the bare flag name for `--flag=value` spellings, while
-/// the contract pins the whole token.
-fn recover_token(args: &[String], token: Option<String>) -> String {
-    let token = token.unwrap_or_default();
-    if args.contains(&token) {
-        return token;
-    }
-    let inline = format!("{token}=");
-    if let Some(arg) = args.iter().rfind(|arg| arg.starts_with(&inline)) {
-        return arg.clone();
-    }
-    token
-}
-
-/// Extracts the leading `--flag` from a clap missing-value render such
-/// as `--output <OUTPUT>`.
-fn leading_flag(token: &str) -> String {
-    token.split_whitespace().next().unwrap_or(token).to_owned()
-}
-
-/// True when a clap invalid-argument render names the command
-/// positional (`<COMMAND>`): the only `InvalidValue` source that is a
-/// command word rather than an option value.
-fn is_command_positional(token: &str) -> bool {
-    token
-        .trim_matches(|cut| cut == '<' || cut == '>' || cut == '[' || cut == ']')
-        .eq_ignore_ascii_case("command")
-}
-
-/// Maps a clap parse failure back onto [`ArgsError`] so the contract
-/// surface never changes: unknown commands (including `ValueEnum`
-/// rejections of the command positional) stay unknown commands with
-/// typo hints, unknown flags (including `=value` on booleans) stay
-/// unknown options, and missing option values stay missing values.
-/// `--help`/`-h` and `--version`/`-V` render from the same grammar
-/// (issue #203) as [`ArgsError::Help`], never as usage errors.
-fn map_clap_error(args: &[String], error: &clap::Error) -> ArgsError {
-    use clap::error::ErrorKind;
-    match error.kind() {
-        ErrorKind::DisplayHelp => {
-            let text = match help::help_command_in(args) {
-                Some(command) => help::render_command_help(command),
-                None => help::render_top_help(),
-            };
-            ArgsError::Help { text }
-        }
-        ErrorKind::DisplayVersion => {
-            use clap::CommandFactory;
-            ArgsError::Help {
-                text: Cli::command().render_version().to_string(),
-            }
-        }
-        ErrorKind::UnknownArgument | ErrorKind::TooManyValues => {
-            let option = recover_token(args, invalid_token(error));
-            let suggestion =
-                suggest::clap_suggestion(error).or_else(|| suggest::suggest_option(&option));
-            ArgsError::UnknownOption { option, suggestion }
-        }
-        ErrorKind::InvalidValue => {
-            let token = invalid_token(error).unwrap_or_default();
-            if invalid_value(error).is_none_or(|value| value.is_empty()) {
-                ArgsError::MissingValue {
-                    option: leading_flag(&token),
-                }
-            } else if is_command_positional(&token) {
-                // The command positional is a `ValueEnum`, so unknown
-                // command words fail here, not in `parse`: map them back
-                // onto the unknown-command surface with typo hints
-                // (issue #199). A lone `-` still reads as an unknown
-                // option, exactly like the pre-`ValueEnum` tokenizer did.
-                let value = invalid_value(error).unwrap_or(token);
-                if value.starts_with('-') {
-                    let option = recover_token(args, Some(value.clone()));
-                    let suggestion = suggest::clap_suggestion(error)
-                        .or_else(|| suggest::suggest_option(&option));
-                    ArgsError::UnknownOption { option, suggestion }
-                } else {
-                    let command = recover_token(args, Some(value.clone()));
-                    let suggestion = suggest::clap_command_suggestion(error)
-                        .or_else(|| suggest::suggest_command(&command));
-                    ArgsError::UnknownCommand {
-                        command,
-                        suggestion,
-                    }
-                }
-            } else {
-                let option = recover_token(args, Some(token));
-                let suggestion =
-                    suggest::clap_suggestion(error).or_else(|| suggest::suggest_option(&option));
-                ArgsError::UnknownOption { option, suggestion }
-            }
-        }
-        _ => ArgsError::UnknownOption {
-            option: error
-                .render()
-                .to_string()
-                .lines()
-                .next()
-                .unwrap_or("dx")
-                .trim()
-                .to_owned(),
-            suggestion: None,
-        },
-    }
-}
-
-/// Runs the clap tokenizer over `args` (without the executable name).
-fn parse_tokens(args: &[String]) -> Result<Cli, ArgsError> {
-    Cli::try_parse_from(std::iter::once("dx".to_owned()).chain(args.iter().cloned()))
-        .map_err(|error| map_clap_error(args, &error))
-}
-
-/// Tokenizes `args` into the clap-classified [`Cli`] plus the verbatim
-/// Bazel tail. `dx bazel` owns every token after the command word, so
-/// its tail never reaches clap; every other shape parses whole.
-fn tokenize(args: &[String]) -> Result<(Cli, Vec<String>), ArgsError> {
-    if let Some(at) = split_bazel_verbatim(args) {
-        // The prefix holds flags only (the scan stops at the first
-        // positional and bails at `--`), so no positionals are lost; the
-        // command word itself is the `bazel` token the scan stopped at.
-        let mut cli = parse_tokens(&args[..at])?;
-        cli.command = Some(Command::Bazel);
-        // The first `--` still separates (it is dropped, the rest
-        // forwards), exactly like the loop's separator check running
-        // before the verbatim arm did.
-        let mut bazel_options = Vec::new();
-        let mut tail = args[at + 1..].iter();
-        for arg in tail.by_ref() {
-            if arg == "--" {
-                break;
-            }
-            bazel_options.push(arg.clone());
-        }
-        bazel_options.extend(tail.cloned());
-        return Ok((cli, bazel_options));
-    }
-    let mut cli = parse_tokens(args)?;
-    let bazel_options = std::mem::take(&mut cli.bazel_options);
-    Ok((cli, bazel_options))
 }
 
 /// Parses one `--report` value into its `format=destination` shape.
