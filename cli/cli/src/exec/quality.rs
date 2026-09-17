@@ -3,25 +3,23 @@
 //! Mutation (verified-source collection plus check/incomplete/apply
 //! handling) and status projection live in [`super::quality_apply`]
 //! (issue #236); diff-patch rendering lives in
-//! [`super::quality_patch`]; this module keeps the dispatch,
-//! finding emission, and SARIF reporting.
+//! [`super::quality_patch`]; standard-report writing lives in
+//! [`super::quality_reports`]; this module keeps the dispatch,
+//! finding emission, and exit-code selection.
 
 use super::common::*;
 use super::quality_apply::{apply_collected_changes, project_status};
 use super::quality_patch::render_diff_patch;
+use super::quality_reports::{write_standard_reports, StandardReports};
 use super::results::collect_results;
 use crate::args::Invocation;
 use crate::plan::{bep_path, plan_build};
-use crate::reports::{plan_reports, render_sarif, Destination, ReportError};
+use crate::reports::{plan_reports, Destination};
 use crate::resolve::resolve;
-use dx_apply::{FileSystem, RealFileSystem};
-use dx_digest::blake3 as digest;
 use dx_output::{
-    change_event, command_finished, command_started, diagnostic_event, mutation_event,
-    report_event, write_event, ChangeKind, FinishedCounts, MutationOutcome, OutputMode, Resolution,
-    Severity, Snapshot,
+    change_event, command_finished, command_started, diagnostic_event, mutation_event, write_event,
+    ChangeKind, FinishedCounts, MutationOutcome, OutputMode, Resolution, Severity, Snapshot,
 };
-use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
 
 /// Runs the quality command to completion and returns the process exit
@@ -140,7 +138,6 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
         .changes
         .sort_by(|a, b| a.path.as_bytes().cmp(b.path.as_bytes()));
 
-    let fs = RealFileSystem;
     // Mutation plus status projection live in `quality_apply` (issue
     // #236): verified-source collection and check/incomplete/apply
     // handling, then check-mode vs default-mode status with the
@@ -308,125 +305,21 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
     }
     let change_count = collected.changes.len() as u64;
 
-    // Standard reports: SARIF over current findings with snapshot
-    // line regions, written atomically after validation.
-    let mut reports_ok = true;
-    for planned in &planned_reports {
-        let mut snapshots = BTreeMap::new();
-        let mut snapshot_result: Result<(), ReportError> = Ok(());
-        let mut needed: BTreeSet<&str> = BTreeSet::new();
-        for finding in &status {
-            if let Some(path) = &finding.path {
-                if finding.range.is_some() {
-                    needed.insert(path.as_str());
-                }
-            } // LCOV_EXCL_LINE - reason: closing brace of a fully covered nesting level carries no executable region of its own.
-        }
-        for path in needed {
-            match std::fs::read(workspace.join(path)) {
-                Err(_) => {
-                    snapshot_result = Err(ReportError::MissingSnapshot {
-                        path: path.to_owned(),
-                    });
-                    break;
-                }
-                Ok(bytes) => {
-                    if let Some(expected) = collected.terminal_digests.get(path) {
-                        if digest(&bytes) != *expected {
-                            snapshot_result = Err(ReportError::MissingSnapshot {
-                                path: path.to_owned(),
-                            });
-                            break;
-                        }
-                    } // LCOV_EXCL_LINE - reason: closing brace of a fully covered guard carries no executable region of its own.
-                    match String::from_utf8(bytes) {
-                        Ok(text) => {
-                            snapshots.insert(path.to_owned(), text);
-                        }
-                        Err(_) => {
-                            snapshot_result = Err(ReportError::MissingSnapshot {
-                                path: path.to_owned(),
-                            });
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        let document = match snapshot_result {
-            Err(error) => Err(error),
-            Ok(()) => render_sarif(&collected.tools, &status, &snapshots, collected.complete),
-        };
-        match document {
-            Ok(document) => {
-                let written = match &planned.destination {
-                    Destination::Stdout => out
-                        .write_all(document.as_bytes())
-                        .and_then(|()| out.write_all(b"\n"))
-                        .is_ok(),
-                    Destination::File(destination) => {
-                        let target = workspace.join(destination);
-                        let parent_ok = target
-                            .parent()
-                            .is_none_or(|parent| parent.as_os_str().is_empty() || parent.is_dir());
-                        parent_ok && fs.write_atomic(&target, document.as_bytes()).is_ok()
-                    }
-                };
-                if !written {
-                    reports_ok = false;
-                    let detail = format!(
-                        "failed to write {} report to {}",
-                        planned.format.name(),
-                        planned.destination.display()
-                    );
-                    let _ = writeln!(err, "dx: report_failed: {detail}");
-                    if invocation.output == OutputMode::Json {
-                        if let Ok(event) =
-                            dx_output::error_event(CODE_REPORT_FAILED, &detail, None, None, None)
-                        {
-                            let _ = write_event(out, &event);
-                        }
-                    } // LCOV_EXCL_LINE - reason: closing brace of a fully covered error-reporting guard carries no executable region of its own.
-                    continue;
-                }
-                if invocation.output == OutputMode::Json {
-                    if let Ok(event) = report_event(
-                        planned.format.name(),
-                        planned.destination.display(),
-                        collected.complete,
-                    ) {
-                        let _ = write_event(out, &event);
-                    }
-                } else if matches!(invocation.output, OutputMode::Text { .. }) && !stdout_report {
-                    let _ = writeln!(
-                        out,
-                        "Wrote {} report to {}.",
-                        planned.format.name(),
-                        planned.destination.display()
-                    );
-                } else if invocation.output == OutputMode::Diff {
-                    let _ = writeln!(
-                        err,
-                        "Wrote {} report to {}.",
-                        planned.format.name(),
-                        planned.destination.display()
-                    );
-                }
-            }
-            Err(error) => {
-                reports_ok = false;
-                let detail = format!("failed to render SARIF report: {error}");
-                let _ = writeln!(err, "dx: report_failed: {detail}");
-                if invocation.output == OutputMode::Json {
-                    if let Ok(event) =
-                        dx_output::error_event(CODE_REPORT_FAILED, &detail, None, None, None)
-                    {
-                        let _ = write_event(out, &event);
-                    }
-                }
-            }
-        }
-    }
+    // Standard reports live in `quality_reports` (issue #236): SARIF
+    // over current findings with snapshot line regions, written
+    // atomically after validation.
+    let reports_ok = write_standard_reports(
+        StandardReports {
+            workspace,
+            collected: &collected,
+            status: &status,
+            planned: &planned_reports,
+            output: &invocation.output,
+            stdout_report,
+        },
+        out,
+        err,
+    );
 
     // Counts: diagnostics over emitted status findings; changes over
     // validated change records; mutations in default mode only.
@@ -470,8 +363,8 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::super::test_support::*;
-    use super::*;
     use crate::exec::{execute, Env};
+    use dx_digest::blake3 as digest;
     use quality_result::proto;
     use quality_result::proto::FileSnapshot;
     use std::os::unix::ffi::OsStringExt;
