@@ -30,5 +30,6 @@ dx_rust_crate(
         "src/lib.rs",
         "src/migrate.rs",
         "src/version.rs",
+        "src/watch.rs",
     ],
 )
