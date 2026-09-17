@@ -47,9 +47,11 @@ tests from inactive configurable branches.
   forwarding reusing [target resolution](../target-resolution.md) without
   a custom graph engine.
 - [`dx completion`](completion.md): generated static shell scripts.
+- [`dx migrate`](migrate.md): major-release-only breaking-change rewrites
+  over the generation edit-manifest pattern.
 
 ## Excluded Commands
 
 There is no `dx doctor` or `dx configure`. Their intended
 behavior is covered by explicit commands or is outside the accepted surface.
-A breaking-change `dx migrate` codemod is deferred post-v1.
+There are no `dx new` app or service templates in v1.
