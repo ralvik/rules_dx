@@ -1,0 +1,33 @@
+load("@rules_dx//python/rules:defs.bzl", "python_library", "python_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+python_test(
+    name = "login_test",
+    srcs = ["login_test.py"],
+    # User-owned runtime edges: see app/BUILD.bazel.
+    dep_group = "hello",
+    imports = ["."],
+    deps = [
+        ":logins",
+        "@pypi//coverage",  # keep
+        "@pypi//pytest",  # keep
+    ],
+)
+
+python_library(
+    name = "logins",
+    srcs = ["logins.py"],
+    imports = ["."],
+)
+
+python_library(
+    name = "test_login",
+    srcs = ["test_login.py"],
+    imports = ["."],
+    deps = [":logins"],
+)
+
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)

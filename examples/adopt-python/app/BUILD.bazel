@@ -1,0 +1,43 @@
+load("@rules_dx//python/rules:defs.bzl", "python_library", "python_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+python_library(
+    name = "envelopes",
+    srcs = ["envelopes.py"],
+    imports = ["."],
+    deps = [":handlers"],
+)
+
+python_library(
+    name = "handlers",
+    srcs = ["handlers.py"],
+    imports = ["."],
+)
+
+python_test(
+    name = "handlers_test",
+    srcs = ["handlers_test.py"],
+    # User-owned runtime edges: the pytest runner needs the pytest package
+    # from the shared hello uv graph (entries precedent: no separate lock).
+    # `# keep` preserves them across regeneration (see README).
+    dep_group = "hello",
+    imports = ["."],
+    deps = [
+        ":envelopes",
+        ":handlers",
+        "@pypi//coverage",  # keep
+        "@pypi//pytest",  # keep
+    ],
+)
+
+python_library(
+    name = "test_helpers",
+    srcs = ["test_helpers.py"],
+    imports = ["."],
+    deps = [":envelopes"],
+)
+
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)
