@@ -314,24 +314,12 @@ pub fn check_path(path: &str) -> Result<(), OutputError> {
 
 /// Parses exactly 64 lowercase hexadecimal characters encoding a
 /// BLAKE3-256 digest, used for change source digests and selection IDs.
+/// Spelling owned by `dx_digest` (issue #73).
 pub fn parse_digest(field: &'static str, text: &str) -> Result<[u8; 32], OutputError> {
-    let bad = || OutputError::BadDigest {
+    dx_digest::parse_hex(text).map_err(|_| OutputError::BadDigest {
         field,
         value: text.to_owned(),
-    };
-    if text.len() != 64
-        || !text
-            .bytes()
-            .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
-    {
-        return Err(bad());
-    }
-    let mut out = [0u8; 32];
-    for (i, chunk) in text.as_bytes().chunks(2).enumerate() {
-        out[i] = u8::from_str_radix(std::str::from_utf8(chunk).map_err(|_| bad())?, 16)
-            .map_err(|_| bad())?;
-    }
-    Ok(out)
+    })
 }
 
 /// One exact replacement edit: a half-open UTF-8 byte range in the

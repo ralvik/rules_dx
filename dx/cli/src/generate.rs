@@ -136,9 +136,9 @@ impl ProjectedManifest {
     }
 }
 
-/// Lowercase hexadecimal over 32 raw digest bytes.
+/// Lowercase hexadecimal over 32 raw digest bytes (owned by `dx_digest`).
 fn hex_digest(bytes: &[u8]) -> String {
-    hex::encode(bytes)
+    dx_digest::to_hex_bytes(bytes)
 }
 
 /// True when the manifest carries check-mode semantics.
@@ -337,10 +337,10 @@ pub fn text_lines(projected: &ProjectedManifest) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dx_digest::blake3 as digest;
     use dx_output::{change_event, mutation_event, notice_event};
-    use generation_result::{
-        digest,
-        proto::{Edit as ProtoEdit, FileResult, IgnoredImport, Modification, Scope},
+    use generation_result::proto::{
+        Edit as ProtoEdit, FileResult, IgnoredImport, Modification, Scope,
     };
 
     fn scope(value: &str, complete: bool) -> Scope {

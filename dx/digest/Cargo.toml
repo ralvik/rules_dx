@@ -1,12 +1,14 @@
 [package]
-name = "dx_setup"
+name = "dx_digest"
 version = "0.0.0"
 edition = "2021"
 
 [lib]
-name = "dx_setup"
+name = "dx_digest"
 path = "src/lib.rs"
 
 [dependencies]
-tempfile = "3"
+blake3 = "1"
+hex = "0.4"
+sha2 = "0.10"
 thiserror = "2"

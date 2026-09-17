@@ -17,9 +17,10 @@ rust_library(
     crate_name = "quality_result",
     crate_root = "src/lib.rs",
     deps = crate_deps(
-        ["blake3", "thiserror"],
+        ["thiserror"],
         package_name = "quality/quality_result",
     ) + [
+        "//dx/digest:dx_digest",
         "//dx/path:dx_path",
         "//dx/proto_validate:dx_proto_validate",
         "//dx/schema:dx_schema",
@@ -38,7 +39,7 @@ rust_test(
     ),
     crate = ":quality_result",
     deps = crate_deps(
-        ["blake3", "thiserror"],
+        ["thiserror"],
         package_name = "quality/quality_result",
     ),
 )

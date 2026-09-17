@@ -296,7 +296,7 @@ pub fn finalize(input: &FinalizeInput<'_>) -> Result<GenerationManifest, Finaliz
                 // The digest is finalizer-owned (O13): the extension streams
                 // raw original bytes, and stamping the digest here binds them.
                 file_result::Change::Modification(Modification {
-                    original_digest: generation_result::digest(&original).to_vec(),
+                    original_digest: dx_digest::blake3(&original).to_vec(),
                     original_content: original,
                     edits,
                 })
@@ -418,7 +418,7 @@ mod tests {
         assert_eq!(modification.original_content, b"abc\n");
         assert_eq!(
             modification.original_digest,
-            generation_result::digest(b"abc\n").to_vec()
+            dx_digest::blake3(b"abc\n").to_vec()
         );
         assert_eq!(manifest.scopes[0].results_complete, Some(true));
         assert_eq!(manifest.ignored_imports.len(), 1);

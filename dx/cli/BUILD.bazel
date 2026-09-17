@@ -46,7 +46,6 @@ rust_library(
             "base64",
             "clap",
             "clap_complete",
-            "hex",
             "libc",
             "quick-xml",
             "serde",
@@ -64,6 +63,7 @@ rust_library(
         "//dx/clean:dx_clean",
         "//dx/codegen:dx_codegen",
         "//dx/diff:dx_diff",
+        "//dx/digest:dx_digest",
         "//dx/env_plan:dx_env_plan",
         "//dx/output:dx_output",
         "//dx/process:dx_process",
@@ -90,7 +90,6 @@ rust_binary(
             "base64",
             "clap",
             "clap_complete",
-            "hex",
             "libc",
             "quick-xml",
             "serde",
@@ -100,11 +99,7 @@ rust_binary(
             "thiserror",
         ],
         package_name = "dx/dx_cli",
-    ) + [
-        ":dx_cli",
-        "//dx/output:dx_output",
-        "//dx/process:dx_process",
-    ],
+    ) + [":dx_cli", "//dx/output:dx_output", "//dx/process:dx_process"],
 )
 
 rust_test(
@@ -121,7 +116,6 @@ rust_test(
             "base64",
             "clap",
             "clap_complete",
-            "hex",
             "libc",
             "quick-xml",
             "serde",
@@ -134,6 +128,7 @@ rust_test(
     ) + [
         "//dx/audit:dx_audit",
         "//dx/codegen:dx_codegen",
+        "//dx/digest:dx_digest",
         "//dx/env_plan:dx_env_plan",
         "//dx/output:dx_output",
         "//dx/process:dx_process",

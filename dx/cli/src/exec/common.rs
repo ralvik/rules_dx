@@ -6,12 +6,13 @@ use crate::args::Invocation;
 use crate::plan::OUTPUT_GROUP;
 use crate::resolve::QueryRunner;
 use dx_bep::{collect, ArtifactReader, CollectorConfig};
+use dx_digest::blake3 as digest;
 use dx_output::{
     command_finished, write_event, ChangeEvent, ChangeKind, DiagnosticEvent, FinishedCounts,
     OutputMode, Severity, Snapshot,
 };
 use dx_process::{operational_code, pre_exec_code, Runner};
-use quality_result::{decode_validated, digest, proto};
+use quality_result::{decode_validated, proto};
 use std::io::{self, BufReader, Write};
 use std::path::Path;
 
@@ -112,9 +113,9 @@ pub(crate) struct Collected {
     pub(crate) complete: bool,
 }
 
-/// Lowercase hexadecimal over the 32 raw digest bytes.
+/// Lowercase hexadecimal over the 32 raw digest bytes (owned by `dx_digest`).
 pub(crate) fn hex_digest(bytes: &[u8; 32]) -> String {
-    hex::encode(bytes)
+    dx_digest::to_hex(bytes)
 }
 
 pub(crate) fn map_severity(value: i32) -> Option<Severity> {

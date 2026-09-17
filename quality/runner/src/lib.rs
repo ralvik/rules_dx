@@ -12,13 +12,13 @@
 
 use std::collections::{BTreeMap, HashSet};
 
+use dx_digest::{blake3 as digest, DIGEST_LEN};
 use quality_result::{
-    digest,
     proto::{
         Capability, Convergence, Diagnostic, Edit, FileEdits, FileSnapshot, QualityResult,
         Severity, Stage,
     },
-    DIGEST_LEN, MAX_COMPLETED_ROUNDS, SCHEMA_MAJOR, SCHEMA_MINOR,
+    MAX_COMPLETED_ROUNDS, SCHEMA_MAJOR, SCHEMA_MINOR,
 };
 
 pub mod real;

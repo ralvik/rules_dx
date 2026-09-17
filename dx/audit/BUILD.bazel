@@ -29,7 +29,6 @@ rust_library(
     deps = crate_deps(
         [
             "chrono",
-            "hex",
             "semver",
             "serde",
             "spdx",
@@ -38,7 +37,7 @@ rust_library(
             "url",
         ],
         package_name = "dx/dx_audit",
-    ),
+    ) + ["//dx/digest:dx_digest"],
 )
 
 rust_test(
@@ -53,7 +52,6 @@ rust_test(
     deps = crate_deps(
         [
             "chrono",
-            "hex",
             "semver",
             "serde",
             "spdx",

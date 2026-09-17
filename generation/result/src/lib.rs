@@ -5,9 +5,9 @@ use proto::{
 };
 pub use result_proto::dx::generation::v1 as proto;
 
+pub use dx_digest::DIGEST_LEN;
 pub use dx_schema::SCHEMA_MAJOR;
 pub use dx_schema::SCHEMA_MINOR;
-pub const DIGEST_LEN: usize = 32;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum Error {
@@ -82,7 +82,7 @@ pub enum Error {
 }
 
 pub fn digest(bytes: &[u8]) -> [u8; DIGEST_LEN] {
-    *blake3::hash(bytes).as_bytes()
+    dx_digest::blake3(bytes)
 }
 
 fn check_path(at: &str, path: &str) -> Result<(), Error> {

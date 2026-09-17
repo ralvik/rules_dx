@@ -8,7 +8,6 @@
 //! closed before anything touches the filesystem.
 
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 
 /// Envelope schema version. Parsers accept exactly this version.
 pub const ENVELOPE_VERSION: u32 = 1;
@@ -97,11 +96,10 @@ pub fn emit_envelope(envelope: &Envelope) -> Result<String, EnvelopeError> {
     // LCOV_EXCL_STOP - reason: end of unreachable serialization-failure exclusion.
 }
 
-/// Lowercase hex SHA-256 of `bytes`.
+/// Lowercase hex SHA-256 of `bytes` (frozen envelope contract, issue #73:
+/// bytes owned by `dx_digest` compat shim).
 pub fn sha256_hex(bytes: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(bytes);
-    hex::encode(hasher.finalize())
+    dx_digest::sha256_hex(bytes)
 }
 
 /// True for exactly 64 lowercase hex digits (the [`sha256_hex`] output form).
@@ -109,10 +107,7 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
 /// uppercase), so the re-encode comparison is what pins the lowercase-only,
 /// 32-byte form instead of re-implementing the digit loop.
 pub fn is_sha256_hex(text: &str) -> bool {
-    match hex::decode(text) {
-        Ok(bytes) => bytes.len() == 32 && hex::encode(&bytes) == text,
-        Err(_) => false,
-    }
+    dx_digest::is_sha256_hex(text)
 }
 
 #[cfg(test)]

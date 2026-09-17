@@ -182,15 +182,15 @@ pub fn canonical_identity_bytes(tools: &[ToolPlan]) -> Vec<u8> {
 }
 
 /// BLAKE3-256 over the canonical identity bytes: the snapshot identity,
-/// with no algorithm negotiation. Routed through the shared result crate
-/// so the digest algorithm has one owner.
+/// with no algorithm negotiation. Routed through `dx_digest` so the digest
+/// algorithm has one owner (issue #73).
 fn identity_digest(canonical: &[u8]) -> [u8; 32] {
-    quality_result::digest(canonical)
+    dx_digest::blake3(canonical)
 }
 
 /// Lowercase hex of the identity digest, for operator messaging.
 pub fn identity_hex(tools: &[ToolPlan]) -> String {
-    hex::encode(identity_digest(&canonical_identity_bytes(tools)))
+    dx_digest::to_hex(&identity_digest(&canonical_identity_bytes(tools)))
 }
 
 /// Encodes a provenance marker for `identity`.

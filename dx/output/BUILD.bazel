@@ -20,6 +20,7 @@ rust_library(
         ["clap", "serde_json", "thiserror"],
         package_name = "dx/dx_output",
     ) + [
+        "//dx/digest:dx_digest",
         "//dx/path:dx_path",
         "//dx/schema:dx_schema",
     ],

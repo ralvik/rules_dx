@@ -5,12 +5,13 @@ use crate::args::parse;
 use crate::args::Invocation;
 use crate::plan::GENERATE_ENV_INTENDED;
 use crate::resolve::{QueryResult, QueryRunner};
+use dx_digest::blake3 as digest;
 use dx_process::{ChildStatus, Runner};
 use dx_setup::{
     commit_pair, setup_hex, GenerationId, SetupPair, ENVIRONMENTS_DIR_NAME, GENERATED_DIR_NAME,
 };
+use quality_result::proto;
 use quality_result::proto::{Capability, Convergence, FileSnapshot, QualityResult, Stage};
-use quality_result::{digest, proto};
 use quality_result::{encode_validated, SCHEMA_MAJOR, SCHEMA_MINOR};
 use std::cell::RefCell;
 use std::collections::HashMap;

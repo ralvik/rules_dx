@@ -21,13 +21,13 @@ pub use dx_schema::SCHEMA_MAJOR;
 pub use dx_schema::SCHEMA_MINOR;
 /// Upper bound on `completed_rounds` from the convergence protocol.
 pub const MAX_COMPLETED_ROUNDS: u32 = 10;
-/// BLAKE3-256 digest length in bytes.
-pub const DIGEST_LEN: usize = 32;
+/// BLAKE3-256 digest length in bytes (single owner: `dx_digest`).
+pub use dx_digest::DIGEST_LEN;
 
 /// BLAKE3-256 over exact file bytes. The 32-byte digest is the snapshot
 /// identity; there is no algorithm negotiation.
 pub fn digest(bytes: &[u8]) -> [u8; 32] {
-    *blake3::hash(bytes).as_bytes()
+    dx_digest::blake3(bytes)
 }
 
 /// Validation or codec failure (issue #211 slice).

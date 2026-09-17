@@ -23,7 +23,7 @@
 //! many transitive routes) merge silently; any other second claim on a
 //! logical path fails before selection with every claimant listed. The
 //! normalized fingerprint binds exec paths and is hashed with BLAKE3-256
-//! through `quality_result` (no algorithm negotiation). [`plan_projection`]
+//! through `dx_digest` (no algorithm negotiation). [`plan_projection`]
 //! resolves the merged plan to deterministic mirror leaves
 //! (`logical_path` to full BEP artifact path) for setup to commit.
 
@@ -32,8 +32,8 @@ use std::path::Path;
 
 use codegen_shard::{decode_validated, Error};
 use dx_bep::TargetOutput;
+use dx_digest::blake3 as digest;
 use dx_roots::{build_argv, invocation_targets, repository_plan, RepositoryRootPlan};
-use quality_result::digest;
 use serde::Serialize;
 
 /// Private output group carrying collected shards plus every generated
@@ -468,15 +468,15 @@ pub fn fingerprint(records: &[CodegenRecord]) -> String {
 }
 
 /// BLAKE3-256 over the normalized fingerprint bytes: the complete-plan
-/// identity, with no algorithm negotiation. Routed through the shared
-/// result crate so the digest algorithm has one owner.
+/// identity, with no algorithm negotiation. Routed through `dx_digest` so
+/// the digest algorithm has one owner (issue #73).
 pub fn plan_digest(fingerprint: &str) -> [u8; 32] {
     digest(fingerprint.as_bytes())
 }
 
 /// Lowercase hex of the plan digest, for operator messaging.
 pub fn plan_hex(fingerprint: &str) -> String {
-    hex::encode(plan_digest(fingerprint))
+    dx_digest::to_hex(&plan_digest(fingerprint))
 }
 
 /// The normalized complete plan: merged records plus their fingerprint
@@ -491,7 +491,7 @@ pub struct CollectedPlan {
 impl CollectedPlan {
     /// Lowercase hex of the plan digest, for operator messaging.
     pub fn hex(&self) -> String {
-        hex::encode(self.digest)
+        dx_digest::to_hex(&self.digest)
     }
 }
 
@@ -1155,7 +1155,7 @@ mod tests {
         let plan = collect_plan(&[]).expect("empty plan");
         assert!(plan.records.is_empty());
         assert_eq!(plan.fingerprint, "[]");
-        assert_eq!(plan.digest, quality_result::digest(b"[]"));
+        assert_eq!(plan.digest, dx_digest::blake3(b"[]"));
     }
 
     #[test]

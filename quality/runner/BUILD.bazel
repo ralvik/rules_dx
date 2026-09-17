@@ -23,6 +23,7 @@ rust_library(
         ["tempfile", "thiserror"],
         package_name = "quality/quality_runner",
     ) + [
+        "//dx/digest:dx_digest",
         "//quality/adapter:quality_adapter",
         "//quality/result:quality_result",
     ],
@@ -84,5 +85,5 @@ rust_test(
         normal_dev = True,
     ),
     crate = ":quality_runner_lib",
-    deps = ["//quality/result:quality_result"],
+    deps = ["//dx/digest:dx_digest", "//quality/result:quality_result"],
 )

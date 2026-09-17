@@ -7,12 +7,12 @@ use crate::reports::{plan_reports, render_sarif, Destination, ReportError};
 use crate::resolve::resolve;
 use dx_apply::{FileSystem, RealFileSystem};
 use dx_diff::{render_patch, FilePatch, PatchKind};
+use dx_digest::blake3 as digest;
 use dx_output::{
     change_event, command_finished, command_started, diagnostic_event, meets_threshold,
     mutation_event, report_event, write_event, ChangeKind, DiagnosticEvent, FinishedCounts,
     MutationOutcome, OutputMode, Resolution, Severity, Snapshot,
 };
-use quality_result::digest;
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
 

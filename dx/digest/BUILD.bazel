@@ -1,64 +1,57 @@
-"""M25 WP3 slice 3: combined setup commit through the shared lock."""
+"""Unified digest identities: BLAKE3 canonical + SHA-256 envelope shim (#73)."""
 
-# gazelle:resolve rust dx_env //dx/env:dx_env
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_library", "rust_test")
 
-package(default_visibility = [
-    "//dx:__pkg__",
-    "//dx:__subpackages__",
-])
+package(default_visibility = ["//visibility:public"])
 
 rust_library(
-    name = "dx_setup",
+    name = "dx_digest",
     srcs = ["src/lib.rs"],
     aliases = aliases(
-        package_name = "dx/dx_setup",
+        package_name = "dx/dx_digest",
         normal = True,
     ),
-    crate_name = "dx_setup",
+    crate_name = "dx_digest",
     crate_root = "src/lib.rs",
     deps = crate_deps(
-        ["tempfile", "thiserror"],
-        package_name = "dx/dx_setup",
-    ) + [
-        "//dx/digest:dx_digest",
-        "//dx/env:dx_env",
-        "//dx/roots:dx_roots",
-    ],
+        ["blake3", "hex", "sha2", "thiserror"],
+        package_name = "dx/dx_digest",
+    ),
 )
 
 rust_test(
-    name = "dx_setup_test",
+    name = "dx_digest_test",
     size = "small",
     aliases = aliases(
-        package_name = "dx/dx_setup",
+        package_name = "dx/dx_digest",
         normal = True,
         normal_dev = True,
     ),
-    crate = ":dx_setup",
+    crate = ":dx_digest",
+    deps = crate_deps(
+        ["blake3", "hex", "sha2", "thiserror"],
+        package_name = "dx/dx_digest",
+    ),
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy
 # resolve from the pinned toolchain, never from ambient host tools.
 rustfmt_test(
-    name = "dx_setup_fmt_test",
+    name = "dx_digest_fmt_test",
     size = "small",
-    targets = [":dx_setup"],
+    targets = [":dx_digest"],
 )
 
 rust_clippy_test(
-    name = "dx_setup_clippy_test",
+    name = "dx_digest_clippy_test",
     size = "small",
-    targets = [":dx_setup"],
+    targets = [":dx_digest"],
 )
 
-exports_files(
-    ["Cargo.toml"],
-    visibility = ["//visibility:public"],
-)
+exports_files(["Cargo.toml"])
 
 # Repository corpus: crate manifest and build file owned for
 # direct-Bazel dogfood under the canonical real_fixture_policy.

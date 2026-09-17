@@ -21,9 +21,9 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+use dx_digest::blake3 as digest;
 use dx_env::{acquire_lock, Error};
 use dx_roots::{repository_plan, RepositoryRootPlan};
-use quality_result::digest;
 
 /// Codegen collecting aspect applied in the combined request. Matches
 /// `dx_codegen_plan_aspect` in `//generation:codegen.bzl` and
@@ -225,13 +225,10 @@ pub struct GenerationId(String);
 pub struct GenerationIdError(String);
 
 impl GenerationId {
-    /// Carries one generation digest, validating its shape.
+    /// Carries one generation digest, validating its shape via the single
+    /// digest owner (`dx_digest::is_hex`: 64 lowercase hex chars).
     pub fn new(id: &str) -> Result<Self, GenerationIdError> {
-        let valid = id.len() == 64
-            && id
-                .bytes()
-                .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase());
-        if valid {
+        if dx_digest::is_hex(id) {
             Ok(GenerationId(id.to_owned()))
         } else {
             Err(GenerationIdError(id.to_owned()))
@@ -414,15 +411,15 @@ pub fn setup_fingerprint(pair: &SetupPair) -> String {
 }
 
 /// BLAKE3-256 over the provisional fingerprint: the setup record identity.
-/// Routed through the shared result crate so the digest algorithm has one
-/// owner.
+/// Routed through `dx_digest` so the digest algorithm has one owner
+/// (issue #73).
 pub fn setup_digest(pair: &SetupPair) -> [u8; 32] {
     digest(setup_fingerprint(pair).as_bytes())
 }
 
 /// Lowercase hex of the setup digest: the setup record directory name.
 pub fn setup_hex(pair: &SetupPair) -> String {
-    hex::encode(setup_digest(pair))
+    dx_digest::to_hex(&setup_digest(pair))
 }
 
 /// Expected relative link text from a setup record to its environment

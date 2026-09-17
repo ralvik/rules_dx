@@ -136,13 +136,11 @@ pub fn validate_pin(pin: &ArtifactPin) -> Result<(), PinProblem> {
             url: pin.url.clone(),
         });
     }
-    // Decode round-trip pins the 64-lowercase-hex digest form: `hex`
-    // accepts any even-length hex, so the re-encode comparison (not the
-    // decode alone) is what rejects uppercase and wrong lengths.
-    let valid_digest = match hex::decode(&pin.sha256) {
-        Ok(bytes) => bytes.len() == 32 && hex::encode(&bytes) == pin.sha256,
-        Err(_) => false,
-    };
+    // Decode round-trip pins the 64-lowercase-hex digest form via the
+    // single digest owner (`dx_digest::is_hex`): `hex` accepts any
+    // even-length hex, so the re-encode comparison (not the decode alone)
+    // is what rejects uppercase and wrong lengths.
+    let valid_digest = dx_digest::is_hex(&pin.sha256);
     if !valid_digest {
         return Err(PinProblem::BadDigest {
             value: pin.sha256.clone(),
