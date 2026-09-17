@@ -1935,4 +1935,27 @@ mod tests {
         assert!(clean_result.replacements.is_empty());
         assert_ne!(manifests[0], encode_validated(&clean_result).unwrap());
     }
+
+    #[test]
+    fn invalid_utf8_replacement_rejected_by_validate_gate() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // invalid UTF-8 source and replacement bytes to be rejected. The
+        // runner rejects non-UTF-8 sources at request validation, and
+        // `validate` rejects non-UTF-8 replacements, so a valid stable
+        // BAD->GOOD candidate with corrupted replacement bytes must fail
+        // `validate` while the unmutated result passes.
+        let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let files = vec![file("src/lib.rs", "BAD\n")];
+        let valid = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
+        assert_eq!(valid.replacements.len(), 1);
+        assert!(validate(&valid).is_ok());
+        let mut corrupted = valid.clone();
+        corrupted.replacements[0].edits[0].replacement = vec![0xFF, 0xFE];
+        assert!(validate(&corrupted).is_err());
+        let bad_source = vec![FileInput {
+            path: "src/lib.rs".to_owned(),
+            bytes: vec![0xFF],
+        }];
+        assert!(run_pipeline("//quality:test", "lint", &stages, &bad_source).is_err());
+    }
 }
