@@ -25,4 +25,8 @@ dx_rust_crate(
         "//cli/setup:dx_setup",
     ],
     extra_test_deps = ["//cli/test_scratch:dx_test_scratch"],
+    srcs = [
+        "src/flags.rs",
+        "src/lib.rs",
+    ],
 )
