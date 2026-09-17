@@ -45,9 +45,10 @@ rust_binary(
         [
             "clap",
             "thiserror",
+            "tracing",
         ],
         package_name = "generation/codegen_shard",
-    ) + [":codegen_shard"],
+    ) + [":codegen_shard", "//cli/output:dx_output"],
 )
 
 rust_test(

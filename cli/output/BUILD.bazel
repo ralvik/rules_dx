@@ -8,6 +8,9 @@ load("//rust/rules:defs.bzl", "rust_library", "rust_test")
 package(default_visibility = [
     "//cli:__pkg__",
     "//cli:__subpackages__",
+    "//env:__subpackages__",
+    "//generation:__subpackages__",
+    "//quality:__subpackages__",
 ])
 
 rust_library(

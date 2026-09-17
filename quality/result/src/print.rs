@@ -65,24 +65,28 @@ fn print_diagnostics(prefix: &str, diagnostics: &[proto::Diagnostic]) {
 }
 
 fn main() {
+    // Structured diagnostics (issue #232): init is idempotent and emits
+    // nothing by default; `RUST_LOG` overrides the warn filter. Failures
+    // report via `tracing::error!` with the legacy message text.
+    dx_output::init_diagnostics(false);
     let path = match std::env::args().nth(1) {
         Some(path) => path,
         None => {
-            eprintln!("usage: print_result OUT.pb");
+            tracing::error!("usage: print_result OUT.pb");
             std::process::exit(2);
         }
     };
     let bytes = match std::fs::read(&path) {
         Ok(bytes) => bytes,
         Err(err) => {
-            eprintln!("print_result: cannot read {path}: {err}");
+            tracing::error!("print_result: cannot read {path}: {err}");
             std::process::exit(1);
         }
     };
     let result = match decode_validated(&bytes) {
         Ok(result) => result,
         Err(err) => {
-            eprintln!("print_result: invalid result protobuf {path}: {err}");
+            tracing::error!("print_result: invalid result protobuf {path}: {err}");
             std::process::exit(1);
         }
     };

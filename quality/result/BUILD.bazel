@@ -78,7 +78,7 @@ rust_binary(
     crate_name = "print_result",
     crate_root = "src/print.rs",
     deps = crate_deps(
-        ["thiserror"],
+        ["thiserror", "tracing"],
         package_name = "quality/quality_result",
-    ) + [":quality_result"],
+    ) + [":quality_result", "//cli/output:dx_output"],
 )

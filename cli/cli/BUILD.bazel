@@ -154,7 +154,7 @@ rust_binary(
             "tracing",
         ],
         package_name = "cli/dx_cli",
-    ) + [":dx_cli"],
+    ) + [":dx_cli", "//cli/output:dx_output"],
 )
 
 genrule(

@@ -12,6 +12,10 @@
 
 // LCOV_EXCL_START - reason: thin binary shim; CLI file I/O is covered by library run_cli unit tests with injected readers, not host I/O.
 fn main() {
+    // Structured diagnostics (issue #232): init is idempotent and emits
+    // nothing by default; `RUST_LOG` overrides the warn filter. Library
+    // error lines route through `tracing::error!` with identical text.
+    dx_output::init_diagnostics(false);
     let args: Vec<String> = std::env::args().skip(1).collect();
     let code = quality_markdown::run_cli(
         &args,
@@ -21,7 +25,7 @@ fn main() {
             })
         },
         &mut |line| println!("{line}"),
-        &mut |line| eprintln!("{line}"),
+        &mut |line| tracing::error!("{line}"),
     );
     std::process::exit(code);
 }

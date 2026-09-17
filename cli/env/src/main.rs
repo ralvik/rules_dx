@@ -33,8 +33,10 @@ const METADATA_CANDIDATES: &[(&str, &str)] = &[
 ];
 
 fn usage_error(message: &str) -> i32 {
-    eprintln!("dx env: {message}");
-    eprintln!(
+    // Structured diagnostics (issue #232): usage failures report via
+    // `tracing::error!` with the legacy message text.
+    tracing::error!("dx env: {message}");
+    tracing::error!(
         "usage: env [--workspace DIR] [--staged-bin DIR --metadata FILE] [--lock-timeout-ms N]"
     );
     2
@@ -150,7 +152,7 @@ fn run() -> i32 {
         _ => match locate_default_tree() {
             Some(paths) => paths,
             None => {
-                eprintln!("dx env: default tree not found in runfiles; pass --staged-bin and --metadata explicitly");
+                tracing::error!("dx env: default tree not found in runfiles; pass --staged-bin and --metadata explicitly");
                 return 1;
             }
         },
@@ -166,12 +168,12 @@ fn run() -> i32 {
         Ok(text) => match parse_staged(&text) {
             Ok(tools) => tools,
             Err(error) => {
-                eprintln!("dx env: {error}");
+                tracing::error!("dx env: {error}");
                 return 1;
             }
         },
         Err(error) => {
-            eprintln!(
+            tracing::error!(
                 "dx env: cannot read staged metadata {}: {error}",
                 metadata.display()
             );
@@ -200,7 +202,7 @@ fn run() -> i32 {
             0
         }
         Err(error) => {
-            eprintln!("dx env: {error}");
+            tracing::error!("dx env: {error}");
             1
         }
     }
@@ -227,6 +229,9 @@ fn locate_default_tree() -> Option<(PathBuf, PathBuf)> {
 }
 
 fn main() {
+    // Structured diagnostics (issue #232): init is idempotent and emits
+    // nothing by default; `RUST_LOG` overrides the warn filter.
+    dx_output::init_diagnostics(false);
     std::process::exit(run());
 }
 // LCOV_EXCL_STOP - reason: end of thin binary shim exclusion.

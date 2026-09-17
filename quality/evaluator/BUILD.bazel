@@ -38,11 +38,13 @@ rust_binary(
         [
             "clap",
             "thiserror",
+            "tracing",
         ],
         package_name = "quality/quality_evaluator",
     ) + [
         ":quality_evaluator_lib",
         "//cli/atomic_fs:dx_atomic_fs",
+        "//cli/output:dx_output",
         "//quality/result:quality_result",
     ],
 )

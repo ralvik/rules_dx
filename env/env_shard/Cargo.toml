@@ -10,6 +10,7 @@ path = "src/lib.rs"
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 thiserror = "2"
+tracing = "0.1"
 
 [[bin]]
 name = "env_shard_writer"

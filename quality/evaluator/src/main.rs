@@ -89,8 +89,13 @@ fn parse_args(args: &[String]) -> Result<Cli, String> {
 }
 
 fn main() {
+    // Structured diagnostics (issue #232): init is idempotent and emits
+    // nothing by default; `RUST_LOG` overrides the warn filter. Failures
+    // report via `tracing::error!` with the legacy message text, so action
+    // diagnostics keep their content while gaining filter control.
+    dx_output::init_diagnostics(false);
     if let Err(message) = run() {
-        eprintln!("quality_evaluator: {message}");
+        tracing::error!("quality_evaluator: {message}");
         std::process::exit(1);
     }
 }

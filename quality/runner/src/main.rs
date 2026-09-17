@@ -130,8 +130,13 @@ pub enum RunnerError {
 }
 
 fn main() {
+    // Structured diagnostics (issue #232): init is idempotent and emits
+    // nothing by default; `RUST_LOG` overrides the warn filter. Failures
+    // report via `tracing::error!` with the legacy message text, so action
+    // diagnostics keep their content while gaining filter control.
+    dx_output::init_diagnostics(false);
     if let Err(error) = run() {
-        eprintln!("quality_runner: {error}");
+        tracing::error!("quality_runner: {error}");
         std::process::exit(1);
     }
 }

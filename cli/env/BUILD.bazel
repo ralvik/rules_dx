@@ -59,10 +59,12 @@ rust_binary(
             "serde_json",
             "tempfile",
             "thiserror",
+            "tracing",
         ],
         package_name = "cli/dx_env",
     ) + [
         ":dx_env",
+        "//cli/output:dx_output",
         "@rules_rust//rust/runfiles",
     ],
 )

@@ -44,9 +44,10 @@ rust_binary(
             "serde",
             "serde_json",
             "thiserror",
+            "tracing",
         ],
         package_name = "quality/quality_markdown",
-    ) + [":quality_markdown_lib"],
+    ) + [":quality_markdown_lib", "//cli/output:dx_output"],
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy

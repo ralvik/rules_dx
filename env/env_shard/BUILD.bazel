@@ -45,9 +45,10 @@ rust_binary(
         [
             "clap",
             "thiserror",
+            "tracing",
         ],
         package_name = "env/env_shard",
-    ) + [":env_shard", "//cli/atomic_fs:dx_atomic_fs"],
+    ) + [":env_shard", "//cli/atomic_fs:dx_atomic_fs", "//cli/output:dx_output"],
 )
 
 rust_test(

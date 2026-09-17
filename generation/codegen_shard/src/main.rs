@@ -140,9 +140,14 @@ fn run(args: &[String]) -> Result<(), String> {
 }
 
 fn main() {
+    // Structured diagnostics (issue #232): init is idempotent and emits
+    // nothing by default; `RUST_LOG` overrides the warn filter. Failures
+    // report via `tracing::error!` with the legacy message text, so action
+    // diagnostics keep their content while gaining filter control.
+    dx_output::init_diagnostics(false);
     let args: Vec<String> = std::env::args().skip(1).collect();
     if let Err(error) = run(&args) {
-        eprintln!("codegen_shard_writer: {error}");
+        tracing::error!("codegen_shard_writer: {error}");
         std::process::exit(1);
     }
 }
