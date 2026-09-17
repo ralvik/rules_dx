@@ -1,0 +1,247 @@
+"""M07 WP1 + M08 WP1: quality command planning and scope resolution for the `dx` CLI."""
+
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//deploy/rules:github.bzl", "github_release")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "rust_binary", "rust_library", "rust_test")
+
+package(default_visibility = [
+    "//cli:__pkg__",
+    "//cli:__subpackages__",
+])
+
+rust_library(
+    name = "dx_cli",
+    srcs = [
+        "src/adopt.rs",
+        "src/args.rs",
+        "src/exec.rs",
+        "src/exec/audit.rs",
+        "src/exec/bazel.rs",
+        "src/exec/clean.rs",
+        "src/exec/common.rs",
+        "src/exec/deploy.rs",
+        "src/exec/generate.rs",
+        "src/exec/managed.rs",
+        "src/exec/quality.rs",
+        "src/exec/run.rs",
+        "src/exec/test_support.rs",
+        "src/exec/umbrella.rs",
+        "src/exec/update.rs",
+        "src/exec/workflow.rs",
+        "src/finalize.rs",
+        "src/generate.rs",
+        "src/lib.rs",
+        "src/plan.rs",
+        "src/platform.rs",
+        "src/reports.rs",
+        "src/resolve.rs",
+        "src/skew.rs",
+    ],
+    aliases = aliases(
+        package_name = "cli/dx_cli",
+        normal = True,
+    ),
+    crate_name = "dx_cli",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "base64",
+            "clap",
+            "clap_complete",
+            "clap_mangen",
+            "libc",
+            "quick-xml",
+            "serde",
+            "serde_json",
+            "strsim",
+            "tempfile",
+            "thiserror",
+            "tracing",
+        ],
+        package_name = "cli/dx_cli",
+    ) + [
+        "//cli/adopt:dx_adopt",
+        "//cli/apply:dx_apply",
+        "//cli/audit:dx_audit",
+        "//cli/bep:dx_bep",
+        "//cli/clean:dx_clean",
+        "//cli/codegen:dx_codegen",
+        "//cli/diff:dx_diff",
+        "//cli/digest:dx_digest",
+        "//cli/env_plan:dx_env_plan",
+        "//cli/lcov:dx_lcov",
+        "//cli/output:dx_output",
+        "//cli/process:dx_process",
+        "//cli/setup:dx_setup",
+        "//cli/update:dx_update",
+        "//generation/result:generation_result",
+        "//quality/result:quality_result",
+    ],
+)
+
+rust_binary(
+    name = "dx",
+    srcs = ["src/main.rs"],
+    aliases = aliases(
+        package_name = "cli/dx_cli",
+        normal = True,
+    ),
+    crate_name = "dx",
+    crate_root = "src/main.rs",
+    edition = "2021",
+    visibility = ["//visibility:public"],
+    deps = crate_deps(
+        [
+            "base64",
+            "clap",
+            "clap_complete",
+            "clap_mangen",
+            "libc",
+            "quick-xml",
+            "serde",
+            "serde_json",
+            "strsim",
+            "tempfile",
+            "thiserror",
+            "tracing",
+        ],
+        package_name = "cli/dx_cli",
+    ) + [
+        ":dx_cli",
+        "//cli/output:dx_output",
+        "//cli/process:dx_process",
+    ],
+)
+
+# Dogfood draft release of the standalone `dx` binary (issue #182): the
+# macro assembles the seed-host binary the publish dry-run workflow
+# qualifies, so workflow and macro stay consistent instead of duplicating
+# logic. Draft-only with the dry-run placeholder tag: publishing a real
+# draft needs the tag pushed beforehand and explicit owner approval
+# per issue #5.
+github_release(
+    name = "github_draft",
+    artifacts = [":dx"],
+)
+
+# Manual-page build step (issue #225): renders man/dx.1 from the clap
+# grammar at build time so the page tracks parsing, `--help`, and
+# completions. Release packaging (issue #26) consumes `:man_pages`.
+rust_binary(
+    name = "dx_man",
+    srcs = ["src/bin_man.rs"],
+    aliases = aliases(
+        package_name = "cli/dx_cli",
+        normal = True,
+    ),
+    crate_name = "dx_man",
+    crate_root = "src/bin_man.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "base64",
+            "clap",
+            "clap_complete",
+            "clap_mangen",
+            "libc",
+            "quick-xml",
+            "serde",
+            "serde_json",
+            "strsim",
+            "tempfile",
+            "thiserror",
+            "tracing",
+        ],
+        package_name = "cli/dx_cli",
+    ) + [":dx_cli"],
+)
+
+genrule(
+    name = "man_pages",
+    outs = ["man/dx.1"],
+    cmd = "$(location :dx_man) $(OUTS)",
+    tools = [":dx_man"],
+    visibility = ["//visibility:public"],
+)
+
+rust_test(
+    name = "dx_cli_test",
+    size = "small",
+    aliases = aliases(
+        package_name = "cli/dx_cli",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":dx_cli",
+    data = [":dx"],
+    deps = crate_deps(
+        [
+            "assert_cmd",
+            "base64",
+            "clap",
+            "clap_complete",
+            "clap_mangen",
+            "insta",
+            "libc",
+            "predicates",
+            "quick-xml",
+            "serde",
+            "serde_json",
+            "strsim",
+            "tempfile",
+            "thiserror",
+            "tracing",
+        ],
+        package_name = "cli/dx_cli",
+    ) + [
+        "//cli/audit:dx_audit",
+        "//cli/codegen:dx_codegen",
+        "//cli/digest:dx_digest",
+        "//cli/env_plan:dx_env_plan",
+        "//cli/lcov:dx_lcov",
+        "//cli/output:dx_output",
+        "//cli/process:dx_process",
+        "//cli/setup:dx_setup",
+        "//cli/update:dx_update",
+        "//generation/result:generation_result",
+        "//quality/result:quality_result",
+    ],
+)
+
+# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# resolve from the pinned toolchain, never from ambient host tools.
+rustfmt_test(
+    name = "dx_cli_fmt_test",
+    size = "small",
+    targets = [
+        ":dx_cli",
+        ":dx",
+        ":dx_man",
+    ],
+)
+
+rust_clippy_test(
+    name = "dx_cli_clippy_test",
+    size = "small",
+    targets = [
+        ":dx_cli",
+        ":dx",
+        ":dx_man",
+    ],
+)
+
+exports_files(
+    ["Cargo.toml"],
+    visibility = ["//visibility:public"],
+)
+
+# Repository corpus: crate manifest and build file owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
+)

@@ -1,7 +1,7 @@
 """M00 coverage gate CLI: thin entry point over the promoted `dx_lcov` library (#74)."""
 
 # M13: source-only package (no Cargo manifest). The gate library now lives
-# at `//dx/lcov:dx_lcov`; this package owns only the `coverage_bin` entry
+# at `//cli/lcov:dx_lcov`; this package owns only the `coverage_bin` entry
 # point, hand-maintained and excluded from generation in the root BUILD.
 load("@rules_rust//rust:defs.bzl", "rust_binary")
 load("//quality:fixtures.bzl", "real_source_target")
@@ -21,5 +21,5 @@ rust_binary(
     srcs = ["src/main.rs"],
     crate_name = "coverage",
     crate_root = "src/main.rs",
-    deps = ["//dx/lcov:dx_lcov"],
+    deps = ["//cli/lcov:dx_lcov"],
 )

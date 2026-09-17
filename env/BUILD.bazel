@@ -146,7 +146,7 @@ environment_tool(
 environment_tool(
     name = "dx_tool",
     bin_name = "dx",
-    executable = "//dx/cli:dx",
+    executable = "//cli/cli:dx",
 )
 
 environment_tool(

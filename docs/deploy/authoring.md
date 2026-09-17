@@ -80,8 +80,8 @@ github_release(
 )
 ```
 
-`bazel run //dx/cli:github_draft` (or `dx deploy
-//dx/cli:github_draft`) execs `gh release create <tag> <assets...>
+`bazel run //cli/cli:github_draft` (or `dx deploy
+//cli/cli:github_draft`) execs `gh release create <tag> <assets...>
 --draft --verify-tag`. Draft-only by construction
 ([issue #5](https://github.com/ralvik/rules_dx/issues/5)): `draft`
 must stay `True`, `--verify-tag` means the program never creates or
@@ -94,7 +94,7 @@ happens by editing the draft on GitHub.
 Our own release runbook is the publish dry-run workflow
 ([`publish-dry-run.yml`](../../.github/workflows/publish-dry-run.yml),
 [issue #78](https://github.com/ralvik/rules_dx/issues/78)): it builds
-the seed-host `dx` binary the `//dx/cli:github_draft` macro assembles,
+the seed-host `dx` binary the `//cli/cli:github_draft` macro assembles,
 so workflow and macro stay consistent instead of duplicating logic.
 The full release matrix, SBOM/provenance, and BCR submission arrive as
 follow-ups there as platforms qualify.

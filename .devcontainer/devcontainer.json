@@ -9,5 +9,5 @@
       "extensions": ["rust-lang.rust-analyzer"]
     }
   },
-  "postCreateCommand": "bazel run //dx:env && bazel run //dx/cli:dx -- setup"
+  "postCreateCommand": "bazel run //dx:env && bazel run //cli/cli:dx -- setup"
 }

@@ -13,11 +13,11 @@ sh_test(
     srcs = ["devcontainer_parity_test.sh"],
     args = [
         "$(rootpath :devcontainer.json)",
-        "$(rootpath //dx/cli:dx)",
+        "$(rootpath //cli/cli:dx)",
     ],
     data = [
         ":devcontainer.json",
-        "//dx/cli:dx",
+        "//cli/cli:dx",
     ],
     tags = ["no-coverage"],
 )

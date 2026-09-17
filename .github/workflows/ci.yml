@@ -144,7 +144,7 @@ jobs:
           restore-keys: |
             bazel-seed-
       - name: Enforce seed coverage cell
-        run: bazel run --noshow_progress //dx/cli:dx -- coverage --min-coverage 97 //...
+        run: bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //...
       - name: Write job summary
         if: always()
         run: |
@@ -201,7 +201,7 @@ jobs:
           bazel build --noshow_progress @dx_tools//:buildifier @dx_tools//:taplo @dx_tools//:vale \
             //quality/evaluator:quality_evaluator
       - name: Verify generated-file freshness
-        run: bazel run --noshow_progress //dx/cli:dx -- generate --check //...
+        run: bazel run --noshow_progress //cli/cli:dx -- generate --check //...
       - name: Audit corpus ownership
         run: bazel run --noshow_progress //tools/ci:corpus_audit
       - name: Write job summary
@@ -232,11 +232,11 @@ jobs:
           bazel query "attr(name, '^corpus\$', kind(real_source_target, //...))" 2>/dev/null \
             | LC_ALL=C sort -u > /tmp/corpus_targets.txt
           scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
-          bazel run --noshow_progress //dx/cli:dx -- lint $scope
+          bazel run --noshow_progress //cli/cli:dx -- lint $scope
       - name: Verify lint converged no-op in check mode
         run: |
           scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
-          bazel run --noshow_progress //dx/cli:dx -- lint --check $scope
+          bazel run --noshow_progress //cli/cli:dx -- lint --check $scope
       - name: Write job summary
         if: always()
         run: |
@@ -265,11 +265,11 @@ jobs:
           bazel query "attr(name, '^corpus\$', kind(real_source_target, //...))" 2>/dev/null \
             | LC_ALL=C sort -u > /tmp/corpus_targets.txt
           scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
-          bazel run --noshow_progress //dx/cli:dx -- format $scope
+          bazel run --noshow_progress //cli/cli:dx -- format $scope
       - name: Verify format converged no-op in check mode
         run: |
           scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
-          bazel run --noshow_progress //dx/cli:dx -- format --check $scope
+          bazel run --noshow_progress //cli/cli:dx -- format --check $scope
       - name: Write job summary
         if: always()
         run: |
@@ -298,11 +298,11 @@ jobs:
           bazel query "attr(name, '^corpus\$', kind(real_source_target, //...))" 2>/dev/null \
             | LC_ALL=C sort -u > /tmp/corpus_targets.txt
           scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
-          bazel run --noshow_progress //dx/cli:dx -- typecheck $scope
+          bazel run --noshow_progress //cli/cli:dx -- typecheck $scope
       - name: Verify typecheck converged no-op in check mode
         run: |
           scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
-          bazel run --noshow_progress //dx/cli:dx -- typecheck --check $scope
+          bazel run --noshow_progress //cli/cli:dx -- typecheck --check $scope
       - name: Write job summary
         if: always()
         run: |

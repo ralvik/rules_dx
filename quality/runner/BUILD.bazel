@@ -28,7 +28,7 @@ rust_library(
         ],
         package_name = "quality/quality_runner",
     ) + [
-        "//dx/digest:dx_digest",
+        "//cli/digest:dx_digest",
         "//quality/adapter:quality_adapter",
         "//quality/result:quality_result",
     ],
@@ -103,7 +103,7 @@ rust_test(
         ],
         package_name = "quality/quality_runner",
     ) + [
-        "//dx/digest:dx_digest",
+        "//cli/digest:dx_digest",
         "//quality/result:quality_result",
     ],
 )

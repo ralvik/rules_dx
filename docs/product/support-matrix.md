@@ -94,7 +94,7 @@ fixture evidence; provisional notes below do not select additional defaults or n
 | JS/TS quality | Biome default; ESLint, Prettier available; `tsc` diagnostic-only | Mappings | [issue #7](https://github.com/ralvik/rules_dx/issues/7) |
 | Python quality | Ruff, Ty, pydoclint (Bandit excluded from v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md)) | Mappings, Ty | [issue #7](https://github.com/ralvik/rules_dx/issues/7) |
 | Vue / Svelte / Astro / MDX | Named upstream adapters per framework | Adapter mappings | [issue #8](https://github.com/ralvik/rules_dx/issues/8) |
-| Generation transport | Declared versioned manifest artifact (`GenerationManifest` in `generation/result.proto`, projected by `ProjectedManifest` in `dx/cli/src/generate.rs`) with explicit path/label/pattern scope | Implemented | Shipped |
+| Generation transport | Declared versioned manifest artifact (`GenerationManifest` in `generation/result.proto`, projected by `ProjectedManifest` in `cli/cli/src/generate.rs`) with explicit path/label/pattern scope | Implemented | Shipped |
 | Target resolution | All-direct-owners query strategy ([Target Resolution](../cli/target-resolution.md), pinned by resolver fixtures) | Implemented | Shipped |
 | Quality core/result contract | Internal Protobuf + NDJSON output | Core mappings | [issue #6](https://github.com/ralvik/rules_dx/issues/6) |
 | Required platforms | [Required-platform table](../decisions/0014-tested-platform-release-stack.md#required-platforms) | Pins, hosts, floors | [issue #5](https://github.com/ralvik/rules_dx/issues/5) |

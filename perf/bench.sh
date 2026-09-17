@@ -3,11 +3,11 @@
 # emits JSON-lines results. No `dx perf` command (ADR 0006 minimal surface).
 #
 # Usage:
-#   bazel build //dx/cli:dx //perf:bench_all
+#   bazel build //cli/cli:dx //perf:bench_all
 #   bazel run //perf:bench_micro          # microbenchmarks, per-PR (fast, no Bazel query)
 #   bazel run //perf:bench_scenario_warm  # warm scenario benchmarks (server warm)
 #   bazel run //perf:bench_cold            # cold benchmark: times the full
-#                                        #   `bazel run //dx/cli:dx` stack
+#                                        #   `bazel run //cli/cli:dx` stack
 #                                        #   (server startup included); the
 #                                        #   workflow runs `bazel shutdown`
 #                                        #   first so the cold path is real
@@ -59,11 +59,11 @@ cd "$workspace"
 if [[ -n "$dx_override" ]]; then
   dx_bin="$dx_override"
 else
-  dx_bin="$workspace/bazel-bin/dx/cli/dx"
+  dx_bin="$workspace/bazel-bin/cli/cli/dx"
 fi
 if [[ ! -x "$dx_bin" ]]; then
-  echo "perf bench: building //dx/cli:dx first" >&2
-  bazel build --noshow_progress //dx/cli:dx >&2
+  echo "perf bench: building //cli/cli:dx first" >&2
+  bazel build --noshow_progress //cli/cli:dx >&2
 fi
 
 bazel_version="$(cat .bazelversion 2>/dev/null || echo unknown)"
@@ -97,7 +97,7 @@ run_case() {
 }
 
 run_bazel_case() {
-  # Cold-path helper: times a full `bazel run //dx/cli:dx -- ...` stack
+  # Cold-path helper: times a full `bazel run //cli/cli:dx -- ...` stack
   # (including server startup) instead of the direct binary.
   local name="$1"; shift
   local iterations="$1"; shift
@@ -106,7 +106,7 @@ run_bazel_case() {
     local start end ms rc
     start="$EPOCHREALTIME"
     rc=0
-    bazel run --noshow_progress //dx/cli:dx -- "$@" >/dev/null 2>&1 || rc=$?
+    bazel run --noshow_progress //cli/cli:dx -- "$@" >/dev/null 2>&1 || rc=$?
     end="$EPOCHREALTIME"
     ms="$(awk "BEGIN {print ($end - $start) * 1000.0}")"
     python3 -c 'import json,sys; print(json.dumps({"benchmark": sys.argv[1], "duration_ms": float(sys.argv[2]), "iteration": int(sys.argv[3]), "host": sys.argv[4], "bazel_version": sys.argv[5], "commit": sys.argv[6], "rc": int(sys.argv[7]), "via": "bazel-run"}))' \

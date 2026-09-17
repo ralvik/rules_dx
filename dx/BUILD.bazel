@@ -1,4 +1,9 @@
-"""Consumer canonical workspace policy package (ADR 0011).
+"""Consumer-facing `//dx` facade (issue #76).
+
+Starlark-only: no `Cargo.toml` / `src/` lives under `dx/`. The Rust
+implementation moved to `cli/*`; this package reserves the canonical
+consumer labels so external workspaces keep mirroring `//dx`.
+Consumer policy defaults to ADR 0011.
 
 PROVISIONAL (open decision O17, flagged for review): `config` is an empty
 placeholder so the `@rules_dx//config:workspace` label flag has a resolvable
@@ -32,7 +37,7 @@ gazelle(
 # staged tool tree into the workspace `.dx/bin` directory.
 alias(
     name = "env",
-    actual = "//dx/env:env",
+    actual = "//cli/env:env",
 )
 
 # Canonical repository-wide codegen selection identity: bare

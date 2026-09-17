@@ -43,7 +43,7 @@ Coverage follows the mandatory project gate described in
 [Testing](../testing/README.md#coverage):
 
 ```sh
-bazel run //dx/cli:dx -- coverage --min-coverage <percent> //...
+bazel run //cli/cli:dx -- coverage --min-coverage <percent> //...
 ```
 
 ## Corpus Dogfood

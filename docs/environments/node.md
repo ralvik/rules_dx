@@ -28,5 +28,5 @@ focused selection; later focused refreshes carry forward unrelated selected impo
 the shared managed-state contract.
 
 The public `dx env` repository/root/exact-target orchestration and atomic selection are implemented in
-`dx/env`. The language foundation proves focused plans and projections
+`cli/env`. The language foundation proves focused plans and projections
 without exposing a public persistent-language provider.

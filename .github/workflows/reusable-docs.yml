@@ -73,7 +73,7 @@ jobs:
         env:
           RULES_DX_PIN: ${{ inputs.rules_dx_version }}
         run: test -f MODULE.bazel && grep -F -q "version = \"$RULES_DX_PIN\"" MODULE.bazel
-      - run: bazel run @rules_dx//dx/cli:dx -- lint --check ${{ inputs.docs_scope }}
+      - run: bazel run @rules_dx//cli/cli:dx -- lint --check ${{ inputs.docs_scope }}
 
   docs-publish:
     name: docs-publish (GitHub Pages)

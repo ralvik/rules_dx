@@ -56,7 +56,7 @@ jobs:
             bazel-perf-
             bazel-seed-
       - name: Build benchmark subjects
-        run: bazel build --noshow_progress //dx/cli:dx //perf:bench_all //perf:compare //perf:perf_self_test
+        run: bazel build --noshow_progress //cli/cli:dx //perf:bench_all //perf:compare //perf:perf_self_test
       - name: Prove comparison-machinery self-test
         run: bazel test --noshow_progress //perf:perf_self_test
       - name: Run microbenchmarks
@@ -120,7 +120,7 @@ jobs:
             bazel-perf-
             bazel-seed-
       - name: Build benchmark subjects
-        run: bazel build --noshow_progress //dx/cli:dx //perf:bench_all //perf:compare
+        run: bazel build --noshow_progress //cli/cli:dx //perf:bench_all //perf:compare
       - name: Run warm scenario benchmarks
         run: bazel run --noshow_progress //perf:bench_scenario_warm > /tmp/perf_scenario.jsonl
       - name: Run cold generate --check benchmark

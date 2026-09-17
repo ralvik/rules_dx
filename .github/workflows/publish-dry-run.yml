@@ -45,7 +45,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Build seed-host release binary
-        run: bazel build //dx/cli:dx
+        run: bazel build //cli/cli:dx
       - name: Stage binary and emit dry-run report
         env:
           APPROVE: ${{ inputs.approve }}
@@ -54,7 +54,7 @@ jobs:
           stage="$RUNNER_TEMP/publish-dry-run"
           rm -rf "$stage"
           mkdir -p "$stage"
-          bin="$(bazel cquery --output=files //dx/cli:dx)"
+          bin="$(bazel cquery --output=files //cli/cli:dx)"
           cp "$bin" "$stage/dx-linux-x86_64"
           (cd "$stage" && sha256sum dx-linux-x86_64 > dx-linux-x86_64.sha256)
           python3 - "$stage" "$APPROVE" <<'EOF'
@@ -76,7 +76,7 @@ jobs:
               ],
               "would_publish": [
                   "Bazel Central Registry `rules_dx` module (dry-run submission pending issue #26 tooling)",
-                  "GitHub Release with standalone `dx` binaries (draft only via //dx/cli:github_draft, issue #182; owner approval per issue #5)",
+                  "GitHub Release with standalone `dx` binaries (draft only via //cli/cli:github_draft, issue #182; owner approval per issue #5)",
               ],
               "not_attempted": [
                   "SBOM/provenance generation (tooling unselected; issue #26)",

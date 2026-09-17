@@ -30,7 +30,7 @@
       "description": "generate --check cold on reference fixture (after `bazel shutdown`, includes server startup + analysis). Main + dispatch only; advisory.",
       "floor_ms": 2000,
       "gate": false,
-      "reference": "bench_cold: bazel shutdown then full `bazel run //dx/cli:dx -- generate --check` stack, single timing"
+      "reference": "bench_cold: bazel shutdown then full `bazel run //cli/cli:dx -- generate --check` stack, single timing"
     },
     "generate_check_warm": {
       "baseline_ms": 419.8,

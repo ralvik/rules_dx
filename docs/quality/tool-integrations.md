@@ -234,7 +234,7 @@ populated; findings parse through `parsers::parse_clippy` and the Clippy apply
 path is check-only. There is no dx-side Clippy config: policy rides the
 `rules_rust` `clippy.toml` label flag Bazel itself reads, so pass e.g.
 `--@rules_rust//rust/settings:clippy.toml=<label>` through to select it. The
-dogfood proof is `dx lint --check //dx/qual:dx_qual`, whose result carries
+dogfood proof is `dx lint --check //cli/qualification:dx_qual`, whose result carries
 `clippy::too_many_arguments` where `//rust/hello:hello_lib` stays silent.
 Dependency context (`--extern`) stays open under
 [issue #12](https://github.com/ralvik/rules_dx/issues/12).

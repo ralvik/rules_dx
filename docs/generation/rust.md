@@ -34,7 +34,7 @@ The initial ordinary-target mapping parses checked-in Cargo declarations in the 
 extension, resolves path crates through Gazelle's local rule index, and emits exact imported external
 names through the public `@crates//:crates.bzl` `crate_deps` and `aliases` macros. The macro
 `package_name` is the crate_universe map key for the manifest: the parent Bazel directory joined
-with the Cargo package name (for example `dx/dx_env` for the `dx_env` package in `//dx/env`), not
+with the Cargo package name (for example `dx/dx_env` for the `dx_env` package in `//cli/env`), not
 the Bazel package path alone. The
 extension never reads `Cargo.Bazel.lock`, `cargo-bazel.json`, or crate_universe's private dependency
 maps. Production imports must be declared in `[dependencies]`; test imports may additionally use

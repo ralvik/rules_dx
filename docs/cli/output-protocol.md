@@ -506,8 +506,8 @@ Bazel/tool diagnostics remain on stderr. `code` is stable machine data; `message
 people and is not a stable value for matching or control flow.
 
 The documented list is derived from the code (single source):
-`../../dx/cli/src/exec/common.rs` (`CODE_*`), `../../dx/cli/src/exec/run.rs`
-(`resolve_code`), and `../../dx/cli/src/exec/workflow.rs` (`incomplete_results`).
+`../../cli/cli/src/exec/common.rs` (`CODE_*`), `../../cli/cli/src/exec/run.rs`
+(`resolve_code`), and `../../cli/cli/src/exec/workflow.rs` (`incomplete_results`).
 New `operational()` call sites must reuse an existing `CODE_*` constant or add the new
 code here in the same change.
 

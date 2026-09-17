@@ -135,7 +135,7 @@ def _real_pipeline_action(target, ctx, capability):
     # `rust_clippy_aspect`, which emits the authoritative
     # `.clippy.diagnostics` file into the `clippy_output` output group
     # when `--@rules_rust//rust/settings:clippy_output_diagnostics` is
-    # set (`dx lint` sets it; see `dx/cli/src/plan.rs`). The runner
+    # set (`dx lint` sets it; see `cli/cli/src/plan.rs`). The runner
     # parses that file instead of spawning Clippy, so dependency
     # context, edition, and crate type always match the real build.
     # Without the group (non-Rust-rule targets) the clippy stage runs
@@ -150,7 +150,7 @@ def _real_pipeline_action(target, ctx, capability):
     # Delegated rustc (#48): every Rust rule emits the authoritative
     # `.rustc-output` JSON file into the `rustc_output` output group
     # when `--@rules_rust//rust/settings:rustc_output_diagnostics` is
-    # set (`dx typecheck` sets it; see `dx/cli/src/plan.rs`). The
+    # set (`dx typecheck` sets it; see `cli/cli/src/plan.rs`). The
     # runner parses that file instead of spawning rustc, so dependency
     # context, edition, and crate type always match the real build.
     # Without the group (non-Rust-rule targets) the rustc stage runs

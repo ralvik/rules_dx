@@ -146,7 +146,7 @@ The OS lock coordinates cooperating commands; it is not a security boundary. Own
 all handles to the locked file description close, so the lock handle must not be cloned or inherited
 by child processes. PID files, stale-lock age checks, and deleting the lock path never authorize a
 commit. This selection does not establish cross-platform correctness; locking behavior is
-implemented in `dx/env/src` and pinned by its unit tests.
+implemented in `cli/env/src` and pinned by its unit tests.
 
 ## Installation And Ownership
 

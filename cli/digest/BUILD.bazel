@@ -1,0 +1,74 @@
+"""Unified digest identities: BLAKE3 canonical + SHA-256 envelope shim (#73)."""
+
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_library(
+    name = "dx_digest",
+    srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "cli/dx_digest",
+        normal = True,
+    ),
+    crate_name = "dx_digest",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "blake3",
+            "hex",
+            "sha2",
+            "thiserror",
+        ],
+        package_name = "cli/dx_digest",
+    ),
+)
+
+rust_test(
+    name = "dx_digest_test",
+    size = "small",
+    aliases = aliases(
+        package_name = "cli/dx_digest",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":dx_digest",
+    deps = crate_deps(
+        [
+            "blake3",
+            "hex",
+            "proptest",
+            "sha2",
+            "thiserror",
+        ],
+        package_name = "cli/dx_digest",
+    ),
+)
+
+# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# resolve from the pinned toolchain, never from ambient host tools.
+rustfmt_test(
+    name = "dx_digest_fmt_test",
+    size = "small",
+    targets = [":dx_digest"],
+)
+
+rust_clippy_test(
+    name = "dx_digest_clippy_test",
+    size = "small",
+    targets = [":dx_digest"],
+)
+
+exports_files(["Cargo.toml"])
+
+# Repository corpus: crate manifest and build file owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
+)

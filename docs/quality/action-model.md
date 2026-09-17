@@ -19,7 +19,7 @@ The aggregate workspace provider expands ecosystem tool selections through rules
 adapter manifests into class-aware policy; users do not maintain extension or class lists.
 
 This model is exercised through the repository corpus (`real_source_target(name = "corpus")`
-per package, e.g. `dx/BUILD.bazel:54-59`) via the corpus dogfood in
+per package, e.g. `dx/BUILD.bazel:59-64`) via the corpus dogfood in
 [local workflows](../contributing/local-workflows.md#corpus-dogfood). Remote execution
 remains unverified. [ADR 0003](../decisions/0003-action-granularity.md)
 therefore remains provisional.

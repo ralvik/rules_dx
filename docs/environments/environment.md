@@ -142,7 +142,7 @@ The repository-default environment `//env:default_config` contains exactly the `
 probe, the module-matched `dx` CLI, and the user-facing `quality_markdown` binary.
 Internal pipeline binaries (`quality_runner`, `quality_evaluator`) are not members.
 Membership is pinned by the `env_default_config_analysis` and
-`env_default_tree_analysis` fixtures and the `//dx/env:bootstrap_test` install test.
+`env_default_tree_analysis` fixtures and the `//cli/env:bootstrap_test` install test.
 
 All managed projections follow the shared symlink-only and host-capability policy in
 [Installation And Ownership](managed-state.md#installation-and-ownership).

@@ -104,7 +104,7 @@ def main():
     lines.append("## Running benchmarks")
     lines.append("")
     lines.append("```sh")
-    lines.append("bazel build //dx/cli:dx //perf:bench_all")
+    lines.append("bazel build //cli/cli:dx //perf:bench_all")
     lines.append("bazel run //perf:bench_micro > /tmp/micro.jsonl")
     lines.append("bazel run //perf:bench_scenario_warm > /tmp/scenario.jsonl")
     lines.append("python3 perf/compare.py --baseline perf/baseline.json /tmp/micro.jsonl /tmp/scenario.jsonl")

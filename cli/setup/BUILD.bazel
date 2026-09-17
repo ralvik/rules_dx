@@ -1,0 +1,81 @@
+"""M25 WP3 slice 3: combined setup commit through the shared lock."""
+
+# gazelle:resolve rust dx_env //cli/env:dx_env
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "rust_library", "rust_test")
+
+package(default_visibility = [
+    "//cli:__pkg__",
+    "//cli:__subpackages__",
+])
+
+rust_library(
+    name = "dx_setup",
+    srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "cli/dx_setup",
+        normal = True,
+    ),
+    crate_name = "dx_setup",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "tempfile",
+            "thiserror",
+        ],
+        package_name = "cli/dx_setup",
+    ) + [
+        "//cli/digest:dx_digest",
+        "//cli/env:dx_env",
+        "//cli/roots:dx_roots",
+    ],
+)
+
+rust_test(
+    name = "dx_setup_test",
+    size = "small",
+    aliases = aliases(
+        package_name = "cli/dx_setup",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":dx_setup",
+    deps = crate_deps(
+        [
+            "insta",
+            "tempfile",
+            "thiserror",
+        ],
+        package_name = "cli/dx_setup",
+    ),
+)
+
+# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# resolve from the pinned toolchain, never from ambient host tools.
+rustfmt_test(
+    name = "dx_setup_fmt_test",
+    size = "small",
+    targets = [":dx_setup"],
+)
+
+rust_clippy_test(
+    name = "dx_setup_clippy_test",
+    size = "small",
+    targets = [":dx_setup"],
+)
+
+exports_files(
+    ["Cargo.toml"],
+    visibility = ["//visibility:public"],
+)
+
+# Repository corpus: crate manifest and build file owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
+)

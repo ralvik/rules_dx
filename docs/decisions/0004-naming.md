@@ -105,6 +105,9 @@ collision with generated or handwritten targets fails without another affix.
 - Root labels such as `//:dx_env` or redundant labels such as `//dx:dx_env`.
 - Inventing a repository-policy name before its responsibility exists.
 - Moving the Rust implementation out of `dx/` before the facade twins resolve: `dx/` stays
-  the consumer-policy facade mirroring consumer `//dx`, while `cli/` will own the Rust
-  implementation. The split keeps consumer labels stable during the move; see
+  the Starlark-only consumer-policy facade mirroring consumer `//dx` (`//dx:config`,
+  `//dx:codegen`, `//dx:env`, `//dx:generate`), while `cli/` owns the Rust
+  implementation (`dx_*` crate names stable; the `dx/qual` → `cli/qualification` and
+  `dx/docs` → `cli/docgen` renames fixed the two true collisions). The split kept
+  consumer labels stable during the move; see
   [issue 76](https://github.com/ralvik/rules_dx/issues/76).

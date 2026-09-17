@@ -145,7 +145,7 @@ jobs:
         env:
           RULES_DX_PIN: ${{ inputs.rules_dx_version }}
         run: test -f MODULE.bazel && grep -F -q "version = \"$RULES_DX_PIN\"" MODULE.bazel
-      - run: bazel run @rules_dx//dx/cli:dx -- lint --check //...
+      - run: bazel run @rules_dx//cli/cli:dx -- lint --check //...
 
   typecheck:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',typecheck,') }}
@@ -159,7 +159,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
-      - run: bazel run @rules_dx//dx/cli:dx -- typecheck --check //...
+      - run: bazel run @rules_dx//cli/cli:dx -- typecheck --check //...
 
   format:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',format,') }}
@@ -173,7 +173,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
-      - run: bazel run @rules_dx//dx/cli:dx -- format --check //...
+      - run: bazel run @rules_dx//cli/cli:dx -- format --check //...
 
   generate:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',generate,') }}
@@ -187,7 +187,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
-      - run: bazel run @rules_dx//dx/cli:dx -- generate --check //...
+      - run: bazel run @rules_dx//cli/cli:dx -- generate --check //...
 
   security-audit:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',security-audit,') }}
@@ -201,7 +201,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
-      - run: bazel run @rules_dx//dx/cli:dx -- audit security //...
+      - run: bazel run @rules_dx//cli/cli:dx -- audit security //...
 
   license-audit:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',license-audit,') }}
@@ -215,7 +215,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
-      - run: bazel run @rules_dx//dx/cli:dx -- audit license //...
+      - run: bazel run @rules_dx//cli/cli:dx -- audit license //...
 
   test:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',test,') }}
@@ -237,7 +237,7 @@ jobs:
         if: ${{ inputs.platforms == '' }}
         run: 'echo "dx-ci: test requires explicit nonempty platforms; no implicit default" >&2; exit 1'
       - uses: ./.github/actions/setup-bazelisk
-      - run: bazel run @rules_dx//dx/cli:dx -- test //...
+      - run: bazel run @rules_dx//cli/cli:dx -- test //...
 
   build:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',build,') }}
@@ -259,7 +259,7 @@ jobs:
         if: ${{ inputs.platforms == '' }}
         run: 'echo "dx-ci: build requires explicit nonempty platforms; no implicit default" >&2; exit 1'
       - uses: ./.github/actions/setup-bazelisk
-      - run: bazel run @rules_dx//dx/cli:dx -- build //...
+      - run: bazel run @rules_dx//cli/cli:dx -- build //...
 
   coverage:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',coverage,') }}
@@ -296,7 +296,7 @@ jobs:
           # threshold stays one flag plus one value. Input travels via env and
           # is numeric-validated above, never interpolated into the script.
           # shellcheck disable=SC2086
-          bazel run @rules_dx//dx/cli:dx -- coverage $extra //...
+          bazel run @rules_dx//cli/cli:dx -- coverage $extra //...
 
   dx-ci:
     name: dx-ci (aggregate)

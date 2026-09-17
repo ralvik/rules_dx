@@ -1,8 +1,8 @@
 # Architecture
 
 Status: implemented (seed-host-delivered per the [support-matrix lifecycle](../product/support-matrix.md#status-lifecycle)). This document summarizes the as-built system shape.
-Implementation lives in `dx/cli/src/main.rs`, `quality/result.proto`,
-`generation/result.proto`, and `dx/BUILD.bazel:20-29`; shipped surfaces are
+Implementation lives in `cli/cli/src/main.rs`, `quality/result.proto`,
+`generation/result.proto`, and `dx/BUILD.bazel:24-33`; shipped surfaces are
 tracked in [support matrix](../product/support-matrix.md).
 
 `rules_dx` is a Bazel module and developer workflow layer that makes the Bazel graph the common
@@ -94,7 +94,8 @@ quality/              # aspects, QualitySourcesInfo, result protocol, runners
 generation/           # first-party Gazelle extensions + manifest transport
 env/ codegen/         # environment and codegen projections (//dx:env etc.)
 rust/ python/ js/     # language foundations (wrappers, toolchains, providers)
-dx/                   # dx CLI + shared Rust runners (src/bin/dx, src/runners)
+cli/                  # dx CLI Rust implementation (libs visible to //cli only; tools //cli/cli:dx, //cli/env:env)
+dx/                   # consumer facade, Starlark-only (//dx:generate, //dx:env, //dx:codegen, //dx:config)
 tools/                # internal acquisition, adapters, metadata (not public)
 tests/                # focused contract + fixture suites per domain
 examples/             # consumer-facing minimal workspaces
@@ -128,19 +129,22 @@ does not carry dependencies, tools, configuration, generated context, or transit
 Project wrappers emit that shape, and tested adapters may normalize authoritative upstream providers
 into it. See [Quality Sources and Applicability](../quality/quality-sources.md).
 
-### Facade Twins (Pre-Reorg Mapping)
+### Facade Twins (Post-Reorg Mapping)
 
-`dx/` holds the Rust implementation and the consumer-policy facade (`//dx:config`, `//dx:env`,
-`//dx:codegen`, `//dx:generate`). The facade labels below resolve today; the Rust move to
-`cli/` is open work tracked in [issue 76](https://github.com/ralvik/rules_dx/issues/76) with
-visibility decisions in [issue 83](https://github.com/ralvik/rules_dx/issues/83).
+`cli/` holds the Rust implementation (24 crates, `dx_*` crate names stable) and
+`dx/` is the Starlark-only consumer-policy facade (`//dx:config`, `//dx:env`,
+`//dx:codegen`, `//dx:generate`), landed in
+[issue 76](https://github.com/ralvik/rules_dx/issues/76) with visibility
+decisions in [issue 83](https://github.com/ralvik/rules_dx/issues/83). The move
+fixed the two true collisions (`dx/qual` → `cli/qualification`,
+`dx/docs` → `cli/docgen`); the facade labels below are unchanged.
 
 | Facade label | Actual owner | Status |
 | --- | --- | --- |
 | `//dx:generate` / `//dx:generate_check` | Same Gazelle wiring, `mode=diff` only on the check twin (`dx/BUILD.bazel`) | Accepted |
-| `//dx:env` | Alias to `//dx/env:env` installer binary (`dx/BUILD.bazel`) | Accepted |
-| `//dx:codegen` | Empty filegroup reserving the CLI selection identity; real plan collector is `//dx/codegen:dx_codegen` | Provisional, resolves with the `cli/` move |
-| `//dx:config` | Empty placeholder default for the `//config:workspace` label flag; typed per-family sections pending | Provisional, resolves with the `cli/` move |
+| `//dx:env` | Alias to `//cli/env:env` installer binary (`dx/BUILD.bazel`) | Accepted |
+| `//dx:codegen` | Empty filegroup reserving the CLI selection identity; real plan collector is `//cli/codegen:dx_codegen` | Provisional (open decisions O33/O34) |
+| `//dx:config` | Empty placeholder default for the `//config:workspace` label flag; typed per-family sections pending | Provisional (open decision O17) |
 | `//tools/coverage:coverage_gate` | Single crate after the unused `:coverage` wrapper removal | Accepted |
 | `real_source_target(name="corpus")` boilerplate | Repeated per package; dedup is follow-up owned by [issue 15](https://github.com/ralvik/rules_dx/issues/15), not hand-maintained splits | Open |
 

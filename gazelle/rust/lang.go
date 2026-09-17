@@ -893,7 +893,7 @@ func localCargoBuildImports(c *config.Config, manifest *cargoManifest, imports t
 
 func setCargoAttrs(r *rule.Rule, packagePath string, manifest *cargoManifest, imports targetImports, includeDev bool) {
 	// crate_universe keys its maps by parent dir + Cargo package name
-	// (e.g. dx/dx_output for //dx/output), not by Bazel package path.
+	// (e.g. cli/dx_output for //cli/output), not by Bazel package path.
 	packageName := crateUniversePackage(packagePath, manifest)
 	// Cargo links every declared dependency into every target of the package,
 	// including path-only uses (`anyhow::Result`, `libc::c_int`) the use-path

@@ -37,7 +37,7 @@ With no argument, `dx codegen` selects every codegen projection in the currently
 declared Bazel BUILD graph and atomically selects one repository-wide generated-source
 projection. It does not inspect unowned files or decide that BUILD metadata ought to
 exist. The physical root-selection mechanism is frozen to the `//...` baseline
-(see `FROZEN_STRATEGY` in `dx/roots/src/lib.rs`); cold/warm behavior and the
+(see `FROZEN_STRATEGY` in `cli/roots/src/lib.rs`); cold/warm behavior and the
 incrementality dimensions (source/BUILD edits, target add/remove, actions,
 materialized bytes, projection time, retained memory) are measured in
 `FROZEN_EVIDENCE` and `INCREMENTALITY_EVIDENCE` there. Concurrency,
@@ -198,7 +198,7 @@ target-pattern discovery and unrelated loading compared with `//...`, but it sti
 packages containing indexed labels and analyzes every selected configured closure.
 Bazel's persistent server and action cache are expected to improve unchanged warm runs;
 the measured evidence lives in `FROZEN_EVIDENCE` and `INCREMENTALITY_EVIDENCE`
-in `dx/roots/src/lib.rs`. Concurrency, interruption, remote materialization,
+in `cli/roots/src/lib.rs`. Concurrency, interruption, remote materialization,
 and reuse certification remain unverified claims tracked as later WP4 slices
 in that crate.
 

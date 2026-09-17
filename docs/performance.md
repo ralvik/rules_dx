@@ -13,7 +13,7 @@ Calibrated 2026-09-17 on linux_x86_64 seed host, local execution, no remote (per
 | `dx_startup` | 3.4ms | 100ms | gate | 25% + 10ms | bazel run //perf:bench_micro (direct dx binary), median-of-7 |
 | `dx_status` | 2.9ms | 100ms | advisory | 25% + 10ms | bazel run //perf:bench_micro (direct dx binary), median-of-7 |
 | `dx_status_json` | 3.0ms | 100ms | advisory | 25% + 10ms | bazel run //perf:bench_micro (direct dx binary), median-of-7 |
-| `generate_check_cold` | 11226.5ms | 60000ms | advisory | 25% + 2000ms | bench_cold: bazel shutdown then full `bazel run //dx/cli:dx -- generate --check` stack, single timing |
+| `generate_check_cold` | 11226.5ms | 60000ms | advisory | 25% + 2000ms | bench_cold: bazel shutdown then full `bazel run //cli/cli:dx -- generate --check` stack, single timing |
 | `generate_check_warm` | 419.8ms | 3000ms | advisory | 25% + 100ms | bazel run //perf:bench_scenario_warm (direct dx binary), median-of-5 |
 | `scope_deps` | 190.3ms | 2000ms | advisory | 25% + 100ms | bazel run //perf:bench_scenario_warm (direct dx binary), median-of-5 |
 | `scope_owners` | 233.7ms | 2000ms | advisory | 25% + 100ms | bazel run //perf:bench_scenario_warm (direct dx binary), median-of-5 |
@@ -35,7 +35,7 @@ No `dx perf` command — Bazel targets plus docs (ADR 0006 minimal surface).
 ## Running benchmarks
 
 ```sh
-bazel build //dx/cli:dx //perf:bench_all
+bazel build //cli/cli:dx //perf:bench_all
 bazel run //perf:bench_micro > /tmp/micro.jsonl
 bazel run //perf:bench_scenario_warm > /tmp/scenario.jsonl
 python3 perf/compare.py --baseline perf/baseline.json /tmp/micro.jsonl /tmp/scenario.jsonl

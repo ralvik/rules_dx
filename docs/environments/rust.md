@@ -33,4 +33,4 @@ focused environment plan is the provider-derived `rust_env_plan` rule over one `
 `gen_rust_project` + `flycheck` acquisition (`//rust/ide:ide_acquisition_test`), including
 focused exact-target projection.
 The public `dx env` repository/root/exact-target orchestration and atomic selection are implemented in
-`dx/env`.
+`cli/env`.

@@ -182,8 +182,8 @@ designed and locally sandbox-tested but remote behavior remains unverified.
 
 Repository formatter, linter, and Markdown link/structure adapters are
 repository-owned, with direct-Bazel dogfood. No temporary checks remain.
-Run the repository-owned workflows (`bazel run //dx/cli:dx -- lint`,
-`bazel run //dx/cli:dx -- format --check`, plus the corpus dogfood in
+Run the repository-owned workflows (`bazel run //cli/cli:dx -- lint`,
+`bazel run //cli/cli:dx -- format --check`, plus the corpus dogfood in
 [local workflows](../contributing/local-workflows.md#corpus-dogfood)) alongside
 manual structure and link checks:
 check heading hierarchy, relative targets and anchors, code-fence languages, and consistency

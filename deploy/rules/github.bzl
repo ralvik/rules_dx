@@ -17,7 +17,7 @@ explicit owner approval, then publishing happens by editing the draft
 on GitHub.
 
 Contract: `docs/deploy/authoring.md`. Deploy targets live next to the
-app they release (for example `//dx/cli:github_draft`).
+app they release (for example `//cli/cli:github_draft`).
 """
 
 load(":defs.bzl", "dx_deployment")

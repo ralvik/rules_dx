@@ -1,0 +1,93 @@
+"""M25 WP4 slice 3: repository-root strategy planning plus query/aggregate wiring, with the cold/warm freeze."""
+
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "rust_library", "rust_test")
+load(":roots.bzl", "repository_roots_file", "roots_aggregate")
+
+package(default_visibility = [
+    "//cli:__pkg__",
+    "//cli:__subpackages__",
+])
+
+rust_library(
+    name = "dx_roots",
+    srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "cli/dx_roots",
+        normal = True,
+    ),
+    crate_name = "dx_roots",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+    deps = crate_deps(
+        ["thiserror"],
+        package_name = "cli/dx_roots",
+    ),
+)
+
+rust_test(
+    name = "dx_roots_test",
+    size = "small",
+    aliases = aliases(
+        package_name = "cli/dx_roots",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":dx_roots",
+    deps = crate_deps(
+        ["thiserror"],
+        package_name = "cli/dx_roots",
+    ),
+)
+
+# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# resolve from the pinned toolchain, never from ambient host tools.
+rustfmt_test(
+    name = "dx_roots_fmt_test",
+    size = "small",
+    targets = [":dx_roots"],
+)
+
+rust_clippy_test(
+    name = "dx_roots_clippy_test",
+    size = "small",
+    targets = [":dx_roots"],
+)
+
+exports_files(
+    ["Cargo.toml"],
+    visibility = ["//visibility:public"],
+)
+
+exports_files(["roots.bzl"])
+
+# Query/aggregate wiring fixtures (M25 WP4 slice 2): the pattern file
+# proves the `repository_roots_file` rule writes one label per line for
+# `--target_pattern_file`, while the monolithic aggregate reserves the
+# one-aggregate identity over the canonical repository-wide selections.
+repository_roots_file(
+    name = "roots_pattern_fixture",
+    out = "roots_pattern_fixture.txt",
+    roots = ["//..."],
+)
+
+roots_aggregate(
+    name = "roots_monolith_fixture",
+    deps = [
+        "//dx:codegen",
+        "//dx:env",
+    ],
+)
+
+# Repository corpus: crate manifest and build file owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "roots.bzl",
+    ],
+    toml_srcs = ["Cargo.toml"],
+)
