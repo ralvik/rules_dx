@@ -242,13 +242,15 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:examples_laziness_query
       - name: Audit examples laziness aquery (action-graph zero-work)
         run: bazel run --noshow_progress //tools/ci:examples_laziness_aquery
+      - name: Audit quality cache aquery (action-key isolation seed)
+        run: bazel run --noshow_progress //tools/ci:quality_cache_aquery
       - name: Audit GHCR hygiene (separate workflow, gated push, pinned base)
         run: bazel run --noshow_progress //tools/ci:ghcr_hygiene
       - name: Write job summary
         if: always()
         run: |
           echo "### dogfood-freshness — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Checked: Bazel-resolved tool execution, generate --check freshness, corpus ownership (carve-outs intact), code ownership (issue #12 lane A), examples READMEs (issue #85 commands + evidence), examples laziness (issue #85 no-install + isolation + deps-closure + action-graph zero-work), GHCR hygiene (issue #184 separate workflow + gated push).">> "$GITHUB_STEP_SUMMARY"
+          echo "Checked: Bazel-resolved tool execution, generate --check freshness, corpus ownership (carve-outs intact), code ownership (issue #12 lane A), examples READMEs (issue #85 commands + evidence), examples laziness (issue #85 no-install + isolation + deps-closure + action-graph zero-work), quality cache aquery (issue #84 action-key isolation seed), GHCR hygiene (issue #184 separate workflow + gated push).">> "$GITHUB_STEP_SUMMARY"
   dogfood-lint:
     name: dogfood-lint (dx lint converge + check)
     needs: [dogfood-freshness]

@@ -194,6 +194,17 @@ sh_binary(
     srcs = ["examples_laziness_aquery.sh"],
 )
 
+# Quality cache aquery proof (issue #84, seed slice): action-graph half
+# — Python vs Rust real pipelines mention only their own sources/tools
+# with distinct ActionKeys, so one direct source misses only its owning
+# pipeline while unrelated files cause no miss. Full per-adapter table
+# plus exec-log/remote-cache proof stay open per #84. Run by CI via
+# `bazel run //tools/ci:quality_cache_aquery`.
+sh_binary(
+    name = "quality_cache_aquery",
+    srcs = ["quality_cache_aquery.sh"],
+)
+
 # GHCR prebuilt-image hygiene (issue #184, seed slice): separate workflow
 # from releases, PR-paths build, dispatch + default-closed approve gate,
 # digest-pinned base + Bazel delegation + no ambient toolchains,
