@@ -18,8 +18,17 @@
 //! Lock contract: contention-only retry on `WouldBlock` until the deadline;
 //! any other flock failure aborts immediately so platform errors are never
 //! misreported as busy. Locks release when the holding `File` drops
-//! (fd close). No `fs2` dependency: the stable `std::fs::File::try_lock`
-//! API owns the flock, this crate owns only the timeout loop.
+//! (fd close).
+//!
+//! Dependency evaluation (issue #229, rejected): no `fs2`/`fslock` — the
+//! stable `std::fs::File::try_lock` API is the upstreamed equivalent and
+//! already owns the flock here, so the crates would add supply-chain
+//! review, lockfile churn, and `MODULE.bazel` manifests for zero behavior
+//! gain. No `fs-err` either: every `write_atomic` call site maps failures
+//! into typed errors carrying the target path (e.g. `cannot publish
+//! <path>`, `WriteFile { path, .. }`, `LockFailed { path, .. }`), so
+//! runtime path-wrapping would duplicate the existing discipline at the
+//! same dependency cost. This crate owns only the timeout loop.
 
 use std::fs::File;
 use std::io;
