@@ -1,0 +1,32 @@
+"""Dogfooded `dx init` devcontainer definition (issue #183)."""
+
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+# Parity fixture: `dx init` scaffold output must stay byte-identical to
+# the checked-in definition, so the definition we ship is the one we
+# boot. A drifting hand copy is worse than none.
+sh_test(
+    name = "devcontainer_parity_test",
+    srcs = ["devcontainer_parity_test.sh"],
+    args = [
+        "$(rootpath :devcontainer.json)",
+        "$(rootpath //dx/cli:dx)",
+    ],
+    data = [
+        ":devcontainer.json",
+        "//dx/cli:dx",
+    ],
+    tags = ["no-coverage"],
+)
+
+# Repository corpus: build file owned for direct-Bazel dogfood under the
+# canonical real_fixture_policy. The devcontainer JSON itself is
+# parity-held against the `dx init` scaffold by the test above, and the
+# shell fixture has no quality class; neither is a quality source.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)

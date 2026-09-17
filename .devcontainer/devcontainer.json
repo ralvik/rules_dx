@@ -1,0 +1,13 @@
+{
+  "name": "rules_dx",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/bazel:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["rust-lang.rust-analyzer"]
+    }
+  },
+  "postCreateCommand": "bazel run //dx:env && bazel run //dx/cli:dx -- setup"
+}

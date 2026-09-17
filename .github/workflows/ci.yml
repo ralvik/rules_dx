@@ -308,3 +308,39 @@ jobs:
         run: |
           echo "### dogfood-typecheck — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Ran: dx typecheck over corpus (default converge) then typecheck --check no-op proof." >> "$GITHUB_STEP_SUMMARY"
+  devcontainer-check:
+    name: devcontainer-check (init parity, definition valid)
+    needs: [build]
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-dogfood-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-dogfood-
+            bazel-seed-
+      - name: Prove dx init scaffold matches checked-in definition
+        run: bazel test --noshow_progress //.devcontainer:devcontainer_parity_test
+      - name: Validate devcontainer definition shape
+        run: |
+          python3 - <<'EOF'
+          import json
+          with open(".devcontainer/devcontainer.json") as handle:
+              definition = json.load(handle)
+          post_create = definition["postCreateCommand"]
+          assert "bazel run //dx:env" in post_create, post_create
+          assert "bazel build //..." not in post_create, post_create
+          print("devcontainer definition valid:", post_create)
+          EOF
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### devcontainer-check — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Checked: dx init scaffold parity plus devcontainer definition shape (check-only; container boot stays an open gap per docs/contributing/devcontainer.md)." >> "$GITHUB_STEP_SUMMARY"

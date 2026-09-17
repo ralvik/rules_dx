@@ -296,6 +296,31 @@ pub struct ScaffoldFile {
     pub content: String,
 }
 
+/// `dx init` devcontainer definition (issue #183).
+///
+/// Single source for the scaffolded `.devcontainer/devcontainer.json`:
+/// the repository's own `.devcontainer/devcontainer.json` is held
+/// byte-identical to this string by
+/// `//.devcontainer:devcontainer_parity_test`, so the definition we ship
+/// is the one we boot. `postCreateCommand` runs the user-path bootstrap
+/// (`bazel run //dx:env`, then `dx setup`) instead of a full build, so
+/// container create pays only the managed-environment setup.
+pub const DEVCONTAINER_JSON: &str = concat!(
+    "{\n",
+    "  \"name\": \"rules_dx\",\n",
+    "  \"image\": \"mcr.microsoft.com/devcontainers/base:ubuntu\",\n",
+    "  \"features\": {\n",
+    "    \"ghcr.io/devcontainers/features/bazel:1\": {}\n",
+    "  },\n",
+    "  \"customizations\": {\n",
+    "    \"vscode\": {\n",
+    "      \"extensions\": [\"rust-lang.rust-analyzer\"]\n",
+    "    }\n",
+    "  },\n",
+    "  \"postCreateCommand\": \"bazel run //dx:env && bazel run //dx/cli:dx -- setup\"\n",
+    "}\n",
+);
+
 /// Plan the `dx init` scaffold for a module name.
 ///
 /// All writes are absent-only; the caller refuses existing paths even with
@@ -324,8 +349,7 @@ pub fn plan_init_files(module_name: &str) -> Vec<ScaffoldFile> {
         },
         ScaffoldFile {
             path: ".devcontainer/devcontainer.json".to_owned(),
-            content: "{\"name\":\"rules_dx\",\"image\":\"mcr.microsoft.com/devcontainers/base:ubuntu\",\"features\":{\"ghcr.io/devcontainers/features/bazel:1\":{}},\"customizations\":{\"vscode\":{\"extensions\":[\"rust-lang.rust-analyzer\"]}},\"postCreateCommand\":\"bazel build //...\"}\n"
-                .to_owned(),
+            content: DEVCONTAINER_JSON.to_owned(),
         },
         ScaffoldFile {
             path: ".vscode/settings.json".to_owned(),
@@ -800,6 +824,39 @@ mod tests {
             .iter()
             .any(|f| f.path == ".devcontainer/devcontainer.json"));
         assert!(files.iter().any(|f| f.path == ".vscode/settings.json"));
+    }
+
+    #[test]
+    fn devcontainer_scaffold_runs_bootstrap_not_full_build() {
+        // Issue #183: the scaffolded definition must stay admissible and
+        // bootstrap-shaped. The byte parity with the checked-in definition
+        // lives in //.devcontainer:devcontainer_parity_test; this pins the
+        // contract fields here so scaffold drift fails at the source.
+        let files = plan_init_files("demo");
+        let scaffold = files
+            .iter()
+            .find(|f| f.path == ".devcontainer/devcontainer.json")
+            .expect("devcontainer scaffold");
+        assert_eq!(scaffold.content, DEVCONTAINER_JSON);
+        let parsed: serde_json::Value =
+            serde_json::from_str(&scaffold.content).expect("valid JSON");
+        assert_eq!(parsed["name"], serde_json::Value::from("rules_dx"));
+        assert_eq!(
+            parsed["image"],
+            serde_json::Value::from("mcr.microsoft.com/devcontainers/base:ubuntu")
+        );
+        let post_create = parsed["postCreateCommand"]
+            .as_str()
+            .expect("postCreateCommand string");
+        assert!(
+            post_create.contains("bazel run //dx:env"),
+            "bootstrap first: {post_create}"
+        );
+        assert!(
+            !post_create.contains("bazel build //..."),
+            "no full build on create: {post_create}"
+        );
+        assert!(devcontainer_is_admissible(true, true, false));
     }
 
     #[test]
