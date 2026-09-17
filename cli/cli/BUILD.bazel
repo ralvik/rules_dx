@@ -23,6 +23,7 @@ rust_library(
         "src/adopt/inspect.rs",
         "src/adopt/status.rs",
         "src/adopt/version.rs",
+        "src/adopt/watch.rs",
         "src/args.rs",
         "src/args/command.rs",
         "src/args/completion.rs",

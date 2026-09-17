@@ -9,13 +9,15 @@
 //!
 //! Domain split (issue #236): inspect execution (`owners`/`deps`/`why`)
 //! lives in [`inspect`], status execution (`status`) lives in [`status`],
-//! version execution (`version`) lives in [`version`]; this facade keeps
-//! dispatch plus the remaining execution domains. The public path stays
+//! version execution (`version`) lives in [`version`], watch execution
+//! (`watch`) lives in [`watch`]; this facade keeps dispatch plus the
+//! remaining execution domains. The public path stays
 //! `crate::adopt::{execute_adoption, AdoptEnv}`.
 
 mod inspect;
 mod status;
 mod version;
+mod watch;
 
 use std::io::Write;
 
@@ -71,7 +73,7 @@ pub fn execute_adoption(invocation: &Invocation, env: AdoptEnv<'_>) -> i32 {
         Command::Hooks => execute_hooks(invocation, workspace, out, err),
         Command::Status => status::execute_status(invocation, workspace, out, err),
         Command::Version => version::execute_version(invocation, workspace, out, err),
-        Command::Watch => execute_watch(invocation, workspace, out, err),
+        Command::Watch => watch::execute_watch(invocation, workspace, out, err),
         Command::Owners | Command::Deps | Command::Why => {
             inspect::execute_inspect(invocation, workspace, query_runner, out, err)
         }
@@ -176,39 +178,6 @@ fn execute_hooks(
 
 fn read_optional(root: &std::path::Path, name: &str) -> String {
     std::fs::read_to_string(root.join(name)).unwrap_or_else(|_| format!("(missing {name})"))
-}
-
-fn execute_watch(
-    invocation: &Invocation,
-    _workspace: &std::path::Path,
-    out: &mut dyn Write,
-    err: &mut dyn Write,
-) -> i32 {
-    let wrapped = invocation.targets.first().map(String::as_str).unwrap_or("");
-    let ci = std::env::var("CI").is_ok_and(|v| !v.is_empty());
-    match dx_adopt::plan_watch(wrapped, ci) {
-        Ok(plan) => {
-            if invocation.dry_run {
-                if !summaries_suppressed(invocation) {
-                    let _ = writeln!(out, "would {plan}");
-                }
-                return 0;
-            }
-            // Single delivered iteration: re-resolve scope each loop in the
-            // real binary (loop omitted under test via DX_WATCH_ONCE).
-            if !summaries_suppressed(invocation) {
-                let _ = writeln!(out, "{plan} scope={}", invocation.targets.join(" "));
-            }
-            if std::env::var("DX_WATCH_ONCE").is_ok() {
-                return 0;
-            }
-            if !summaries_suppressed(invocation) {
-                let _ = writeln!(out, "watching (Ctrl-C to stop)");
-            }
-            0
-        }
-        Err(error) => pre_exec(err, &error.to_string()),
-    }
 }
 
 fn execute_completion(invocation: &Invocation, out: &mut dyn Write, err: &mut dyn Write) -> i32 {
@@ -318,27 +287,6 @@ mod tests {
         assert!(text.contains("baseline:"));
         assert!(text.contains("overlay:"));
         assert!(text.contains("timings:"));
-    }
-
-    #[test]
-    fn watch_validates_wrapped_command() {
-        let scratch = temp_root("watch");
-        let root = scratch.path().to_path_buf();
-        let mut out = Vec::new();
-        let mut err = Vec::new();
-        let inv = invocation(&["watch", "test", "//..."]);
-        assert_eq!(
-            execute_adoption(
-                &inv,
-                AdoptEnv {
-                    workspace: &root,
-                    query_runner: &NullQuery,
-                    out: &mut out,
-                    err: &mut err,
-                },
-            ),
-            0
-        );
     }
 
     #[test]
