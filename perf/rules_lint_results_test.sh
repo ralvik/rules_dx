@@ -42,6 +42,7 @@ check_json "quality mnemonics" "'DxRealQualityLint' in doc['quality_sample']['mn
 check_json "runner timing positive" "doc['runner_test_timing']['cold_ish_wall_ms']>0 and doc['runner_test_timing']['warm_wall_ms']>0"
 check_json "runner aquery" "doc['runner_test_timing']['aquery_actions']==6"
 check_json "peak-memory gap explicit" "doc['peak_memory']['collected'] is False"
+check_json "post-shutdown-cold gap explicit" "'post-shutdown cold' in doc['note'].lower() and 'rules_lint-side' in doc['note']"
 
 # Determinism: fresh harness regeneration matches the checked-in digest.
 bash "$harness" --files 200 --dirty-pct 10 --seed 86 --out "$scratch/regen" > "$scratch/regen.json"
