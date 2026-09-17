@@ -1,17 +1,29 @@
 """M06 WP3 apply boundary for the `dx` CLI."""
 
-load("@crates//:crates.bzl", "aliases", "crate_deps")
-load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
-load("//quality:fixtures.bzl", "real_source_target")
-load("//rust/rules:defs.bzl", "rust_library", "rust_test")
+load("//rust/rules:defs.bzl", "dx_rust_crate")
 
 package(default_visibility = [
     "//cli:__pkg__",
     "//cli:__subpackages__",
 ])
 
-rust_library(
+# M02 leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# `dx_apply` + `dx_apply_test` + fmt/clippy tests +
+# `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
+dx_rust_crate(
     name = "dx_apply",
+    package_name = "cli/dx_apply",
+    deps = [
+        "serde",
+        "serde_json",
+        "thiserror",
+    ],
+    extra_deps = [
+        "//cli/atomic_fs:dx_atomic_fs",
+        "//cli/digest:dx_digest",
+        "//cli/path:dx_path",
+    ],
+    extra_test_deps = ["//cli/test_scratch:dx_test_scratch"],
     srcs = [
         "src/applier.rs",
         "src/consensus.rs",
@@ -19,68 +31,4 @@ rust_library(
         "src/lib.rs",
         "src/validators.rs",
     ],
-    aliases = aliases(
-        package_name = "cli/dx_apply",
-        normal = True,
-    ),
-    crate_name = "dx_apply",
-    crate_root = "src/lib.rs",
-    deps = crate_deps(
-        [
-            "serde",
-            "serde_json",
-            "thiserror",
-        ],
-        package_name = "cli/dx_apply",
-    ) + [
-        "//cli/atomic_fs:dx_atomic_fs",
-        "//cli/digest:dx_digest",
-        "//cli/path:dx_path",
-    ],
-)
-
-rust_test(
-    name = "dx_apply_test",
-    size = "small",
-    aliases = aliases(
-        package_name = "cli/dx_apply",
-        normal = True,
-        normal_dev = True,
-    ),
-    crate = ":dx_apply",
-    deps = crate_deps(
-        [
-            "serde",
-            "serde_json",
-            "thiserror",
-        ],
-        package_name = "cli/dx_apply",
-    ) + ["//cli/test_scratch:dx_test_scratch"],
-)
-
-# Authoritative quality identities (M02 pattern): rustfmt and Clippy
-# resolve from the pinned toolchain, never from ambient host tools.
-rustfmt_test(
-    name = "dx_apply_fmt_test",
-    size = "small",
-    targets = [":dx_apply"],
-)
-
-rust_clippy_test(
-    name = "dx_apply_clippy_test",
-    size = "small",
-    targets = [":dx_apply"],
-)
-
-exports_files(
-    ["Cargo.toml"],
-    visibility = ["//visibility:public"],
-)
-
-# Repository corpus: crate manifest and build file owned for
-# direct-Bazel dogfood under the canonical real_fixture_policy.
-real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"],
-    toml_srcs = ["Cargo.toml"],
 )

@@ -344,13 +344,14 @@ def dx_rust_crate(
         extra_deps = None,
         extra_test_deps = None,
         crate_name = None,
+        srcs = None,
         size = "small",
         visibility = None):
     """Single-crate boilerplate: lib + test + lint tests + manifest + corpus (issue #239).
 
     Emits the M02 leaf-crate pattern with names identical to the
     hand-written stanzas it replaces, so migration is a pure BUILD-text
-    change: `<name>` (`rust_library` over `src/lib.rs`), `<name>_test`
+    change: `<name>` (`rust_library` over `srcs`), `<name>_test`
     (`rust_test` via `crate`), `<name>_fmt_test` / `<name>_clippy_test`
     over the library, `exports_files(["Cargo.toml"])` (always public:
     crate_universe reads the manifest from the `@crates` repo), and the
@@ -373,17 +374,20 @@ def dx_rust_crate(
       extra_deps: literal labels appended to lib and test deps.
       extra_test_deps: literal labels appended to test deps only.
       crate_name: Rust crate name, defaults to `name`.
+      srcs: library sources, defaults to `["src/lib.rs"]`; multi-file
+        crates pass the full list with `src/lib.rs` first.
       size: test size for the unit and lint tests.
       visibility: visibility of the library and test forwarders.
     """
     crate = name if crate_name == None else crate_name
+    lib_srcs = srcs or ["src/lib.rs"]
     lib_deps = _crate_deps(
         deps,
         package_name = package_name,
     ) + (extra_deps or [])
     rust_library(
         name = name,
-        srcs = ["src/lib.rs"],
+        srcs = lib_srcs,
         aliases = _aliases(
             package_name = package_name,
             normal = True,
