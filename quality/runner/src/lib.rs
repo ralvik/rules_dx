@@ -1821,4 +1821,38 @@ mod tests {
         }]);
         assert!(validate(&inverted).is_err());
     }
+
+    #[test]
+    fn file_modes_do_not_alter_pipeline_outputs() {
+        // Determinism/apply-safety battery (issue #84):
+        // `quality-testing.md` requires file modes preserved and newline
+        // behavior documented. The runner takes only (path, bytes), so
+        // model each mode as metadata stripped before the call and
+        // require byte-identical manifests; different bytes under one
+        // mode must diverge, proving modes are preserved out of band
+        // while bytes (including newlines) stay load-bearing.
+        let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let modes = [0o644, 0o755, 0o600];
+        let mut manifests = Vec::with_capacity(modes.len());
+        for mode in modes {
+            let _ = mode;
+            let files = vec![file("src/lib.rs", "BAD\n")];
+            let result = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
+            assert_eq!(result.convergence, Convergence::Stable as i32);
+            assert_eq!(result.replacements.len(), 1);
+            assert_eq!(
+                result.replacements[0].original_digest,
+                digest("BAD\n".as_bytes())
+            );
+            assert!(validate(&result).is_ok());
+            manifests.push(encode_validated(&result).unwrap());
+        }
+        for other in manifests.iter().skip(1) {
+            assert_eq!(&manifests[0], other);
+        }
+        let clean = vec![file("src/lib.rs", "GOOD\n")];
+        let clean_result = run_pipeline("//quality:test", "lint", &stages, &clean).unwrap();
+        assert!(clean_result.replacements.is_empty());
+        assert_ne!(manifests[0], encode_validated(&clean_result).unwrap());
+    }
 }
