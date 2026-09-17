@@ -60,6 +60,7 @@ rust_library(
         "src/resolve/query.rs",
         "src/resolve/run_deploy.rs",
         "src/resolve/test_map.rs",
+        "src/resolve/types.rs",
         "src/skew.rs",
     ],
     aliases = aliases(
