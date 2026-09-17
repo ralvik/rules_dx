@@ -1181,4 +1181,38 @@ mod tests {
         assert!(quality_result::validate(&first).is_ok());
         assert!(quality_result::validate(&second).is_ok());
     }
+
+    #[test]
+    fn stale_source_digest_mismatch_must_reject_write() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // validating source digests before writing and rejecting stale
+        // outputs. Whole-file edits mask staleness on splice alone (empty
+        // prefix plus replacement always equals the terminal body), so the
+        // digest binding is the only guard: a concurrent current body with
+        // a different digest must reject even though naive application
+        // would still produce the terminal bytes.
+        let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let mut initial = BTreeMap::new();
+        initial.insert("src/lib.rs".to_owned(), "BAD\n".to_owned());
+        let mut terminal = BTreeMap::new();
+        terminal.insert("src/lib.rs".to_owned(), "GOOD\n".to_owned());
+        let result = assemble(
+            "//quality:test",
+            Capability::Lint as i32,
+            &stages,
+            &initial,
+            &terminal,
+            (Vec::new(), Vec::new()),
+            (2, Convergence::Stable),
+        )
+        .unwrap();
+        assert_eq!(result.replacements.len(), 1);
+        let edits = &result.replacements[0];
+        assert_eq!(edits.original_digest, digest("BAD\n".as_bytes()));
+        let stale = "OTHER\n";
+        assert_ne!(digest(stale.as_bytes()).to_vec(), edits.original_digest);
+        let naive = String::from_utf8_lossy(&edits.edits[0].replacement).into_owned();
+        assert_eq!(naive.as_bytes(), "GOOD\n".as_bytes());
+        assert!(quality_result::validate(&result).is_ok());
+    }
 }
