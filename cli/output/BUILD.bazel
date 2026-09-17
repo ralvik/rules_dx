@@ -33,5 +33,6 @@ dx_rust_crate(
     srcs = [
         "src/diagnostics.rs",
         "src/lib.rs",
+        "src/modes.rs",
     ],
 )
