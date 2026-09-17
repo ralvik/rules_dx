@@ -35,5 +35,6 @@ dx_rust_crate(
         "src/lib.rs",
         "src/modes.rs",
         "src/severity.rs",
+        "src/validation.rs",
     ],
 )

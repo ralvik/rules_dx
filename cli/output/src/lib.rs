@@ -15,9 +15,10 @@
 //! Domain split (issue #236): structured diagnostics and human status
 //! emission live in the `diagnostics` module, live output modes and stdout
 //! ownership live in the `modes` module, normalized severity and fail-on
-//! threshold live in the `severity` module. This facade keeps validation
-//! and NDJSON events; the public path stays `dx_output::{...}` via the
-//! re-exports below.
+//! threshold live in the `severity` module, protocol-shape validation
+//! (paths, digests, edits, `OutputError`) lives in the `validation`
+//! module. This facade keeps NDJSON events; the public path stays
+//! `dx_output::{...}` via the re-exports below.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
@@ -26,6 +27,7 @@
 pub mod diagnostics;
 pub mod modes;
 pub mod severity;
+pub mod validation;
 
 pub use diagnostics::{
     color_enabled, colors_allowed, emit_status, format_status, init_diagnostics, styled_status,
@@ -35,6 +37,7 @@ pub use modes::{
     check_output_conflict, dx_text_visible, stdout_owner, OutputMode, OutputModeName, StdoutOwner,
 };
 pub use severity::{meets_threshold, Severity, Threshold};
+pub use validation::{check_edits, check_path, parse_digest, Edit, OutputError};
 
 use serde_json::{json, Value};
 
@@ -56,145 +59,12 @@ pub fn schema() -> Value {
 }
 
 // ---------------------------------------------------------------------------
-// Protocol-shape validation
+// NDJSON events
 // ---------------------------------------------------------------------------
-
-/// Output or protocol failure.
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-pub enum OutputError {
-    #[error("unknown output mode {value:?}")]
-    UnknownOutputMode { value: String },
-    /// A stdout report combined with `--output diff` or `--output json`.
-    #[error("conflicting stdout report with {mode} mode: reports must target files")]
-    ConflictingStdoutReport { mode: &'static str },
-    /// More than one standard report targets stdout.
-    #[error("second stdout report: at most one report may target stdout")]
-    SecondStdoutReport,
-    #[error("empty {field}: want a non-empty value")]
-    EmptyField { field: &'static str },
-    /// `command_started` mode outside `default|check`.
-    #[error("invalid command mode {value:?}: want default or check")]
-    BadCommandMode { value: String },
-    #[error("invalid severity {value:?}")]
-    BadSeverity { value: String },
-    #[error("invalid threshold {value:?}")]
-    BadThreshold { value: String },
-    #[error("invalid path {path:?}: {reason}")]
-    BadPath { path: String, reason: &'static str },
-    #[error("invalid digest for {field} {value:?}")]
-    BadDigest { field: &'static str, value: String },
-    #[error("invalid edit at index {index}: {reason}")]
-    BadEdit { index: usize, reason: &'static str },
-    #[error("range without path: ranges require a file path")]
-    RangeWithoutPath,
-    #[error("inverted range: start must not exceed end")]
-    InvertedRange,
-    /// A default-mode initial diagnostic without its required resolution.
-    #[error("missing resolution: default-mode diagnostics require a resolution")]
-    MissingResolution,
-    /// A check-mode or terminal diagnostic carrying a resolution.
-    #[error("unexpected resolution: check-mode diagnostics carry no resolution")]
-    UnexpectedResolution,
-    /// A mutation without its required failure reason, or an applied
-    /// mutation carrying one.
-    #[error("missing failure reason for {path:?}")]
-    MissingReason { path: String },
-    #[error("unexpected failure reason for {path:?}: applied mutations carry no reason")]
-    UnexpectedReason { path: String },
-    /// A value that is not an NDJSON event object.
-    #[error("not an event: value is not an NDJSON event object")]
-    NotAnEvent,
-    #[error("I/O error: {0}")]
-    Io(String),
-}
 
 fn nonempty(field: &'static str, value: &str) -> Result<(), OutputError> {
     if value.is_empty() {
         return Err(OutputError::EmptyField { field });
-    }
-    Ok(())
-}
-
-/// Validates a normalized workspace-relative source path: valid UTF-8,
-/// slash-separated, non-empty, lexical, no `.` or `..` component, beneath
-/// the main workspace. Mirrors the result-protocol path rules so JSON-shape
-/// failures surface before diff output or mutation planning.
-pub fn check_path(path: &str) -> Result<(), OutputError> {
-    // Ladder order and messages mirror `dx_path::classify` one-to-one;
-    // only the error payload stays crate-local (#72 slice 5).
-    let reason = match dx_path::classify(path) {
-        None => None,
-        Some(dx_path::PathProblem::Empty) => Some("path must be non-empty"),
-        Some(dx_path::PathProblem::Absolute) => {
-            Some("path must be workspace-relative, not absolute")
-        }
-        Some(dx_path::PathProblem::Backslash) => Some("path must use forward slashes"),
-        Some(dx_path::PathProblem::EmptyComponent) => Some("path must have no empty component"),
-        Some(dx_path::PathProblem::Dot) => Some("path must have no '.' component"),
-        Some(dx_path::PathProblem::DotDot) => Some("path must have no '..' component"),
-    };
-    match reason {
-        Some(reason) => Err(OutputError::BadPath {
-            path: path.to_owned(),
-            reason,
-        }),
-        None => Ok(()),
-    }
-}
-
-/// Parses exactly 64 lowercase hexadecimal characters encoding a
-/// BLAKE3-256 digest, used for change source digests and selection IDs.
-/// Spelling owned by `dx_digest` (issue #73).
-pub fn parse_digest(field: &'static str, text: &str) -> Result<[u8; 32], OutputError> {
-    dx_digest::parse_hex(text).map_err(|_| OutputError::BadDigest {
-        field,
-        value: text.to_owned(),
-    })
-}
-
-/// One exact replacement edit: a half-open UTF-8 byte range in the
-/// original file plus its exact new UTF-8 content.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Edit {
-    pub start: u64,
-    pub end: u64,
-    pub replacement: String,
-}
-
-/// Validates edit shape without source bytes: the set is non-empty, in
-/// strictly increasing `start` order with distinct starts, every
-/// `start <= end`, and no insertion sits inside a replaced range
-/// (`prev.end <= next.start`). No-op edits, UTF-8 boundaries, and digest
-/// agreement need source bytes and are validated during apply.
-pub fn check_edits(edits: &[Edit]) -> Result<(), OutputError> {
-    if edits.is_empty() {
-        return Err(OutputError::BadEdit {
-            index: 0,
-            reason: "edit set must be non-empty",
-        });
-    }
-    for (index, edit) in edits.iter().enumerate() {
-        if edit.start > edit.end {
-            return Err(OutputError::BadEdit {
-                index,
-                reason: "start must not exceed end",
-            });
-        }
-        if index > 0 {
-            let prev = &edits[index - 1];
-            if edit.start <= prev.start {
-                return Err(OutputError::BadEdit {
-                    index,
-                    reason: "edits must be in strictly increasing start order",
-                });
-            }
-            if prev.end > edit.start {
-                return Err(OutputError::BadEdit {
-                    index,
-                    reason: "an insertion cannot sit inside a replaced range",
-                });
-            }
-        }
     }
     Ok(())
 }
@@ -724,78 +594,6 @@ mod tests {
     }
 
     #[test]
-    fn paths_mirror_result_protocol_rules() {
-        check_path("src/app.py").expect("valid");
-        assert!(check_path("").is_err());
-        assert!(check_path("/abs").is_err());
-        assert!(check_path("a\\b").is_err());
-        assert!(check_path("a//b").is_err());
-        assert!(check_path("./a").is_err());
-        assert!(check_path("a/../b").is_err());
-    }
-
-    #[test]
-    fn digests_require_lowercase_hex() {
-        assert_eq!(parse_digest("d", DIGEST).expect("valid").len(), 32);
-        assert!(parse_digest("d", &DIGEST.to_uppercase()).is_err());
-        assert!(parse_digest("d", "0123").is_err());
-        assert!(parse_digest("d", &format!("{DIGEST}00")).is_err());
-        assert!(parse_digest("d", &"zz".repeat(32)).is_err());
-    }
-
-    #[test]
-    fn edit_shapes_validated() {
-        let edits = vec![
-            Edit {
-                start: 0,
-                end: 5,
-                replacement: String::new(),
-            },
-            Edit {
-                start: 5,
-                end: 5,
-                replacement: "x".to_owned(),
-            },
-        ];
-        check_edits(&edits).expect("adjacent ok");
-        assert!(check_edits(&[]).is_err());
-        assert!(check_edits(&[Edit {
-            start: 9,
-            end: 3,
-            replacement: String::new(),
-        }])
-        .is_err());
-        // Shared start offsets are invalid even for pure insertions.
-        assert!(check_edits(&[
-            Edit {
-                start: 4,
-                end: 4,
-                replacement: "a".to_owned(),
-            },
-            Edit {
-                start: 4,
-                end: 4,
-                replacement: "b".to_owned(),
-            },
-        ])
-        .is_err());
-        // An insertion inside a replaced range is invalid.
-        assert!(check_edits(&[
-            Edit {
-                start: 2,
-                end: 8,
-                replacement: "a".to_owned(),
-            },
-            Edit {
-                start: 5,
-                end: 5,
-                replacement: "b".to_owned(),
-            },
-        ])
-        .is_err());
-    }
-
-    #[test]
     fn command_started_shape() {
         let event = command_started("lint", false, "default").expect("started");
         assert_eq!(event["event"], Value::String("command_started".to_owned()));
@@ -1006,18 +804,6 @@ mod tests {
         assert_eq!(
             write_event(&mut Vec::new(), &prose).expect_err("prose rejected"),
             OutputError::NotAnEvent
-        );
-    }
-
-    #[test]
-    fn display_is_human_readable() {
-        assert_eq!(
-            OutputError::SecondStdoutReport.to_string(),
-            "second stdout report: at most one report may target stdout"
-        );
-        assert_eq!(
-            OutputError::MissingResolution.to_string(),
-            "missing resolution: default-mode diagnostics require a resolution"
         );
     }
 
