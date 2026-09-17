@@ -13,4 +13,9 @@
 # The gate library was promoted to //cli/lcov:dx_lcov (#74); the thin
 # binary shim stays at tools/coverage/src/main.rs.
 eligible cli/lcov/src/lib.rs
+eligible cli/lcov/src/ignores.rs
+eligible cli/lcov/src/inventory.rs
+eligible cli/lcov/src/parse.rs
+eligible cli/lcov/src/run.rs
+eligible cli/lcov/src/verdict.rs
 eligible tools/coverage/src/main.rs

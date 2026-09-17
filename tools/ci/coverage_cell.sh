@@ -8,7 +8,8 @@
 # tools/coverage/seed-inventory.txt and the `coverage_bin` gate CLI:
 # - the real scoped `bazel coverage` report passes the real gate,
 # - mutated inputs fail closed (missing report, uninventoried source,
-#   undeclared eligible source, uncovered line with location),
+#   undeclared eligible source, uncovered line with location,
+#   malformed exclusion directive, exclusion without nearby reason),
 # - the //... rate gate step is still present in CI.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:coverage_cell`,
@@ -102,6 +103,38 @@ if [[ "$uncovered_rc" == "1" ]] && echo "$uncovered_out" | grep -q 'uncovered: c
   ok
 else
   bad "uncovered line did not fail with location: rc=$uncovered_rc out=$uncovered_out"
+fi
+
+# A malformed exclusion directive fails closed with its location.
+mkdir -p "$scratch/badroot"
+printf 'fn f() {}\n// LCOV_EXCL_RANGE - reason: typo.\n' > "$scratch/badroot/bad.rs"
+printf 'SF:bad.rs\nDA:1,1\nend_of_record\n' > "$scratch/bad.lcov"
+printf 'eligible bad.rs\n' > "$scratch/bad-inventory.txt"
+printf 'bad.rs\n' > "$scratch/bad-sources.txt"
+bad_rc=0
+bad_out="$("$check_bin" --report "$scratch/bad.lcov" \
+  --inventory "$scratch/bad-inventory.txt" --sources "$scratch/bad-sources.txt" \
+  --root "$scratch/badroot" 2>&1)" || bad_rc=$?
+if [[ "$bad_rc" == "1" ]] && echo "$bad_out" | grep -q 'unrecognized'; then
+  ok
+else
+  bad "malformed exclusion did not fail closed: rc=$bad_rc out=$bad_out"
+fi
+
+# An exclusion without a nearby reason fails closed.
+mkdir -p "$scratch/noreasonroot"
+printf 'fn f() {}\n// LCOV_EXCL_LINE\n' > "$scratch/noreasonroot/noreason.rs"
+printf 'SF:noreason.rs\nDA:1,1\nend_of_record\n' > "$scratch/noreason.lcov"
+printf 'eligible noreason.rs\n' > "$scratch/noreason-inventory.txt"
+printf 'noreason.rs\n' > "$scratch/noreason-sources.txt"
+noreason_rc=0
+noreason_out="$("$check_bin" --report "$scratch/noreason.lcov" \
+  --inventory "$scratch/noreason-inventory.txt" --sources "$scratch/noreason-sources.txt" \
+  --root "$scratch/noreasonroot" 2>&1)" || noreason_rc=$?
+if [[ "$noreason_rc" == "1" ]] && echo "$noreason_out" | grep -q 'reason'; then
+  ok
+else
+  bad "reason-less exclusion did not fail closed: rc=$noreason_rc out=$noreason_out"
 fi
 
 # The //... rate gate still guards the whole tree in CI.

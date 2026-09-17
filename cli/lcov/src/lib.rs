@@ -104,3 +104,20 @@ impl From<String> for LcovError {
         Self::Io { message }
     }
 }
+
+#[cfg(test)]
+mod facade_tests {
+    use super::LcovError;
+
+    #[test]
+    fn string_conversion_preserves_message() {
+        let error = LcovError::from("fixture io failure".to_string());
+        assert_eq!(
+            error,
+            LcovError::Io {
+                message: "fixture io failure".to_string()
+            }
+        );
+        assert!(error.to_string().contains("fixture io failure"));
+    }
+}
