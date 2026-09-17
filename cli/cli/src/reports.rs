@@ -152,7 +152,7 @@ fn stdout_conflict(error: OutputError) -> ReportError {
         OutputError::ConflictingStdoutReport { mode } => {
             ReportError::StdoutReportConflictsMode { mode }
         }
-        unexpected => panic!("unexpected output conflict: {unexpected:?}"), // LCOV_EXCL_LINE - reason: defense-in-depth; check_output_conflict only yields the two stdout variants handled above (covered in dx_output), so this arm is unreachable.
+        unexpected => unreachable!("unexpected output conflict: {unexpected:?}"), // LCOV_EXCL_LINE - reason: defense-in-depth; check_output_conflict only yields the two stdout variants handled above (covered in dx_output), so this arm is unreachable.
     }
 }
 
