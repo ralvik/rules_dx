@@ -11,6 +11,12 @@ package(default_visibility = [
     "//cli:__subpackages__",
 ])
 
+# Hand-written, not `dx_rust_crate` (issue #239): this crate owns two
+# binaries (`dx`, `dx_man`) plus a `data`-carrying integration test and
+# lint `targets` covering lib + binaries. `dx_rust_crate` emits the
+# lib-only leaf pattern; binary crates keep hand-written stanzas per the
+# `quality/evaluator` precedent.
+
 rust_library(
     name = "dx_cli",
     srcs = [

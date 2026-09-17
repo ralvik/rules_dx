@@ -346,7 +346,8 @@ def dx_rust_crate(
         crate_name = None,
         srcs = None,
         size = "small",
-        visibility = None):
+        visibility = None,
+        extra_starlark_srcs = None):
     """Single-crate boilerplate: lib + test + lint tests + manifest + corpus (issue #239).
 
     Emits the M02 leaf-crate pattern with names identical to the
@@ -378,6 +379,9 @@ def dx_rust_crate(
         crates pass the full list with `src/lib.rs` first.
       size: test size for the unit and lint tests.
       visibility: visibility of the library and test forwarders.
+      extra_starlark_srcs: additional Starlark files owned by the
+        `corpus` target alongside `BUILD.bazel` (e.g. `roots.bzl` for
+        `//cli/roots`); `Cargo.toml` stays the only TOML source.
     """
     crate = name if crate_name == None else crate_name
     lib_srcs = srcs or ["src/lib.rs"]
@@ -428,6 +432,6 @@ def dx_rust_crate(
     )
     real_source_target(
         name = "corpus",
-        starlark_srcs = ["BUILD.bazel"],
+        starlark_srcs = ["BUILD.bazel"] + (extra_starlark_srcs or []),
         toml_srcs = ["Cargo.toml"],
     )

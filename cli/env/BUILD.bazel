@@ -11,6 +11,12 @@ package(default_visibility = [
     "//cli:__subpackages__",
 ])
 
+# Hand-written, not `dx_rust_crate` (issue #239): this crate owns the
+# `env` binary plus `dx_env_bin_test` and `bootstrap_test` with lint
+# `targets` covering lib + binary. `dx_rust_crate` emits the lib-only
+# leaf pattern; binary crates keep hand-written stanzas per the
+# `quality/evaluator` precedent.
+
 # Crate-universe aliases convention: `cli/dx_env` keys match the regenerated
 # lockfile. The runfiles lookup stays a direct toolchain label (it is not a
 # Cargo dependency). The identity digest routes through `//cli/digest:dx_digest`;
