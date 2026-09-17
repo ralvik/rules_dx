@@ -1081,4 +1081,71 @@ mod tests {
         assert_eq!(prefix, vec!["src/a.rs", "src/b.rs"]);
         assert!(quality_result::validate(&result).is_ok());
     }
+
+    #[test]
+    fn assemble_covers_insertion_deletion_and_multibyte_boundaries() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // insertion, deletion, multibyte source boundaries, and a
+        // formatter's full-file edit. The runner emits one whole-file edit
+        // per stable changed file, so each case must bind
+        // digest(original), splice byte-for-byte to its terminal body on
+        // char boundaries, and pass `validate` (single-edit shape is
+        // trivially ordered and non-overlapping).
+        let stages = vec![stage("lint-a", &["rust"], &["src/a.rs"])];
+        let cases = vec![
+            ("insertion", "", "GOOD\n"),
+            ("deletion", "BAD\n", ""),
+            (
+                "multibyte",
+                "h\u{e9}llo BAD \u{1f30d}\n",
+                "h\u{e9}llo GOOD \u{1f30d}\n",
+            ),
+        ];
+        for (label, original, terminal_body) in cases {
+            let mut initial = BTreeMap::new();
+            initial.insert("src/a.rs".to_owned(), original.to_owned());
+            let mut terminal = BTreeMap::new();
+            terminal.insert("src/a.rs".to_owned(), terminal_body.to_owned());
+            let result = assemble(
+                "//quality:test",
+                Capability::Lint as i32,
+                &stages,
+                &initial,
+                &terminal,
+                (Vec::new(), Vec::new()),
+                (2, Convergence::Stable),
+            )
+            .unwrap_or_else(|err| panic!("{label}: assemble failed: {err:?}"));
+            assert_eq!(result.replacements.len(), 1, "{label}");
+            let edits = &result.replacements[0];
+            assert_eq!(edits.path, "src/a.rs", "{label}");
+            assert_eq!(
+                edits.original_digest,
+                digest(original.as_bytes()),
+                "{label}"
+            );
+            assert_eq!(edits.edits.len(), 1, "{label}");
+            assert_eq!(edits.edits[0].start_byte, 0, "{label}");
+            assert_eq!(edits.edits[0].end_byte, original.len() as u64, "{label}");
+            assert_eq!(
+                &edits.edits[0].replacement,
+                terminal_body.as_bytes(),
+                "{label}"
+            );
+            // Whole-file boundaries are always char boundaries, so slicing
+            // never splits a multibyte sequence.
+            assert!(original.is_char_boundary(0), "{label}");
+            assert!(original.is_char_boundary(original.len()), "{label}");
+            let spliced = format!(
+                "{}{}",
+                &original[..edits.edits[0].start_byte as usize],
+                String::from_utf8_lossy(&edits.edits[0].replacement)
+            );
+            // Splice from the original prefix plus the replacement must
+            // equal the terminal body byte-for-byte (suffix is empty for
+            // whole-file edits).
+            assert_eq!(spliced.as_bytes(), terminal_body.as_bytes(), "{label}");
+            assert!(quality_result::validate(&result).is_ok(), "{label}");
+        }
+    }
 }
