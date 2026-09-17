@@ -821,6 +821,30 @@ pub fn parse_test_xml(
     Ok(cases)
 }
 
+/// Writes one JUnit event to a `Vec`-backed writer (issue #238).
+///
+/// `quick_xml::Writer<Vec<u8>>` only fails on underlying IO; `Vec` writes are
+/// infallible, so failure is unreachable. Centralized here so the 40+ call
+/// sites carry no `expect`/`unwrap`; the single `unreachable!` documents the
+/// invariant instead of repeating proof comments at every site.
+fn emit_junit(
+    writer: &mut quick_xml::writer::Writer<Vec<u8>>,
+    event: quick_xml::events::Event<'_>,
+) {
+    writer
+        .write_event(event)
+        .unwrap_or_else(|err| unreachable!("junit writer to Vec is infallible: {err:?}"));
+}
+
+/// Finishes a `Vec`-backed JUnit writer as UTF-8 (issue #238).
+///
+/// All inputs are sanitized XML plus ASCII tags, so the bytes are always valid
+/// UTF-8; failure is unreachable.
+fn finish_junit(writer: quick_xml::writer::Writer<Vec<u8>>) -> String {
+    String::from_utf8(writer.into_inner())
+        .unwrap_or_else(|err| unreachable!("junit writer bytes are UTF-8: {err:?}"))
+}
+
 fn junit_message_element(kind: &str, message: &JunitMessage) -> String {
     use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
     use quick_xml::writer::Writer;
@@ -831,22 +855,14 @@ fn junit_message_element(kind: &str, message: &JunitMessage) -> String {
         elem.push_attribute(("message", clean_note.as_str()));
     }
     if message.text.is_empty() {
-        writer
-            .write_event(Event::Empty(elem))
-            .expect("junit message writer");
+        emit_junit(&mut writer, Event::Empty(elem));
     } else {
         let clean_text = sanitize_xml(&message.text);
-        writer
-            .write_event(Event::Start(elem))
-            .expect("junit message writer");
-        writer
-            .write_event(Event::Text(BytesText::new(&clean_text)))
-            .expect("junit message writer");
-        writer
-            .write_event(Event::End(BytesEnd::new(kind)))
-            .expect("junit message writer");
+        emit_junit(&mut writer, Event::Start(elem));
+        emit_junit(&mut writer, Event::Text(BytesText::new(&clean_text)));
+        emit_junit(&mut writer, Event::End(BytesEnd::new(kind)));
     }
-    String::from_utf8(writer.into_inner()).expect("junit writer is UTF-8")
+    finish_junit(writer)
 }
 
 /// Renders normalized Bazel test cases as one JUnit XML document.
@@ -915,12 +931,11 @@ pub fn render_junit(suites: &[(String, Vec<JunitCase>)]) -> String {
     }
 
     let mut writer = Writer::new(Vec::new());
-    writer
-        .write_event(Event::Decl(BytesDecl::new("1.0", Some("UTF-8"), None)))
-        .expect("junit writer");
-    writer
-        .write_event(Event::Text(BytesText::from_escaped("\n")))
-        .expect("junit writer");
+    emit_junit(
+        &mut writer,
+        Event::Decl(BytesDecl::new("1.0", Some("UTF-8"), None)),
+    );
+    emit_junit(&mut writer, Event::Text(BytesText::from_escaped("\n")));
     let mut root = BytesStart::new("testsuites");
     root.push_attribute(("name", "dx"));
     root.push_attribute(("tests", total_tests.to_string().as_str()));
@@ -928,17 +943,11 @@ pub fn render_junit(suites: &[(String, Vec<JunitCase>)]) -> String {
     root.push_attribute(("errors", total_errors.to_string().as_str()));
     root.push_attribute(("skipped", total_skipped.to_string().as_str()));
     root.push_attribute(("time", format_junit_time(total_time).as_str()));
-    writer
-        .write_event(Event::Start(root))
-        .expect("junit writer");
-    writer
-        .write_event(Event::Text(BytesText::from_escaped("\n")))
-        .expect("junit writer");
+    emit_junit(&mut writer, Event::Start(root));
+    emit_junit(&mut writer, Event::Text(BytesText::from_escaped("\n")));
 
     for ((label, cases), counts) in ordered.iter().zip(suite_counts.iter()) {
-        writer
-            .write_event(Event::Text(BytesText::from_escaped("  ")))
-            .expect("junit writer");
+        emit_junit(&mut writer, Event::Text(BytesText::from_escaped("  ")));
         let mut suite = BytesStart::new("testsuite");
         let clean_label = sanitize_xml(label);
         suite.push_attribute(("name", clean_label.as_str()));
@@ -947,16 +956,10 @@ pub fn render_junit(suites: &[(String, Vec<JunitCase>)]) -> String {
         suite.push_attribute(("errors", counts.errors.to_string().as_str()));
         suite.push_attribute(("skipped", counts.skipped.to_string().as_str()));
         suite.push_attribute(("time", format_junit_time(counts.time).as_str()));
-        writer
-            .write_event(Event::Start(suite))
-            .expect("junit writer");
-        writer
-            .write_event(Event::Text(BytesText::from_escaped("\n")))
-            .expect("junit writer");
+        emit_junit(&mut writer, Event::Start(suite));
+        emit_junit(&mut writer, Event::Text(BytesText::from_escaped("\n")));
         for case in cases {
-            writer
-                .write_event(Event::Text(BytesText::from_escaped("    ")))
-                .expect("junit writer");
+            emit_junit(&mut writer, Event::Text(BytesText::from_escaped("    ")));
             let mut testcase = BytesStart::new("testcase");
             let display = sanitize_xml(&junit_display_name(&case.name, case.shard, case.attempt));
             testcase.push_attribute(("name", display.as_str()));
@@ -971,122 +974,69 @@ pub fn render_junit(suites: &[(String, Vec<JunitCase>)]) -> String {
                 || case.system_out.is_some()
                 || case.system_err.is_some();
             if !has_children {
-                writer
-                    .write_event(Event::Empty(testcase))
-                    .expect("junit writer");
-                writer
-                    .write_event(Event::Text(BytesText::from_escaped("\n")))
-                    .expect("junit writer");
+                emit_junit(&mut writer, Event::Empty(testcase));
+                emit_junit(&mut writer, Event::Text(BytesText::from_escaped("\n")));
                 continue;
             }
-            writer
-                .write_event(Event::Start(testcase))
-                .expect("junit writer");
-            writer
-                .write_event(Event::Text(BytesText::from_escaped("\n")))
-                .expect("junit writer");
+            emit_junit(&mut writer, Event::Start(testcase));
+            emit_junit(&mut writer, Event::Text(BytesText::from_escaped("\n")));
             // Child message elements reuse the writer-backed helper so
             // escaping stays in one place; the helper output is already
             // well-formed XML embedded verbatim.
             if let Some(failure) = &case.failure {
                 let rendered = junit_message_element("failure", failure);
-                writer
-                    .write_event(Event::Text(BytesText::from_escaped("      ")))
-                    .expect("junit writer");
-                writer
-                    .write_event(Event::Text(BytesText::from_escaped(rendered.as_str())))
-                    .expect("junit writer");
-                writer
-                    .write_event(Event::Text(BytesText::from_escaped("\n")))
-                    .expect("junit writer");
+                emit_junit(&mut writer, Event::Text(BytesText::from_escaped("      ")));
+                emit_junit(
+                    &mut writer,
+                    Event::Text(BytesText::from_escaped(rendered.as_str())),
+                );
+                emit_junit(&mut writer, Event::Text(BytesText::from_escaped("\n")));
             }
             if let Some(error) = &case.error {
                 let rendered = junit_message_element("error", error);
-                writer
-                    .write_event(Event::Text(BytesText::from_escaped("      ")))
-                    .expect("junit writer");
-                writer
-                    .write_event(Event::Text(BytesText::from_escaped(rendered.as_str())))
-                    .expect("junit writer");
-                writer
-                    .write_event(Event::Text(BytesText::from_escaped("\n")))
-                    .expect("junit writer");
+                emit_junit(&mut writer, Event::Text(BytesText::from_escaped("      ")));
+                emit_junit(
+                    &mut writer,
+                    Event::Text(BytesText::from_escaped(rendered.as_str())),
+                );
+                emit_junit(&mut writer, Event::Text(BytesText::from_escaped("\n")));
             }
             if let Some(skipped_case) = &case.skipped {
                 let rendered = junit_message_element("skipped", skipped_case);
-                writer
-                    .write_event(Event::Text(BytesText::from_escaped("      ")))
-                    .expect("junit writer");
-                writer
-                    .write_event(Event::Text(BytesText::from_escaped(rendered.as_str())))
-                    .expect("junit writer");
-                writer
-                    .write_event(Event::Text(BytesText::from_escaped("\n")))
-                    .expect("junit writer");
+                emit_junit(&mut writer, Event::Text(BytesText::from_escaped("      ")));
+                emit_junit(
+                    &mut writer,
+                    Event::Text(BytesText::from_escaped(rendered.as_str())),
+                );
+                emit_junit(&mut writer, Event::Text(BytesText::from_escaped("\n")));
             }
             if let Some(out) = &case.system_out {
                 let clean_out = sanitize_xml(out);
-                writer
-                    .write_event(Event::Text(BytesText::from_escaped("      ")))
-                    .expect("junit writer");
-                writer
-                    .write_event(Event::Start(BytesStart::new("system-out")))
-                    .expect("junit writer");
-                writer
-                    .write_event(Event::Text(BytesText::new(&clean_out)))
-                    .expect("junit writer");
-                writer
-                    .write_event(Event::End(BytesEnd::new("system-out")))
-                    .expect("junit writer");
-                writer
-                    .write_event(Event::Text(BytesText::from_escaped("\n")))
-                    .expect("junit writer");
+                emit_junit(&mut writer, Event::Text(BytesText::from_escaped("      ")));
+                emit_junit(&mut writer, Event::Start(BytesStart::new("system-out")));
+                emit_junit(&mut writer, Event::Text(BytesText::new(&clean_out)));
+                emit_junit(&mut writer, Event::End(BytesEnd::new("system-out")));
+                emit_junit(&mut writer, Event::Text(BytesText::from_escaped("\n")));
             }
             if let Some(err_text) = &case.system_err {
                 let clean_err = sanitize_xml(err_text);
-                writer
-                    .write_event(Event::Text(BytesText::from_escaped("      ")))
-                    .expect("junit writer");
-                writer
-                    .write_event(Event::Start(BytesStart::new("system-err")))
-                    .expect("junit writer");
-                writer
-                    .write_event(Event::Text(BytesText::new(&clean_err)))
-                    .expect("junit writer");
-                writer
-                    .write_event(Event::End(BytesEnd::new("system-err")))
-                    .expect("junit writer");
-                writer
-                    .write_event(Event::Text(BytesText::from_escaped("\n")))
-                    .expect("junit writer");
+                emit_junit(&mut writer, Event::Text(BytesText::from_escaped("      ")));
+                emit_junit(&mut writer, Event::Start(BytesStart::new("system-err")));
+                emit_junit(&mut writer, Event::Text(BytesText::new(&clean_err)));
+                emit_junit(&mut writer, Event::End(BytesEnd::new("system-err")));
+                emit_junit(&mut writer, Event::Text(BytesText::from_escaped("\n")));
             }
-            writer
-                .write_event(Event::Text(BytesText::from_escaped("    ")))
-                .expect("junit writer");
-            writer
-                .write_event(Event::End(BytesEnd::new("testcase")))
-                .expect("junit writer");
-            writer
-                .write_event(Event::Text(BytesText::from_escaped("\n")))
-                .expect("junit writer");
+            emit_junit(&mut writer, Event::Text(BytesText::from_escaped("    ")));
+            emit_junit(&mut writer, Event::End(BytesEnd::new("testcase")));
+            emit_junit(&mut writer, Event::Text(BytesText::from_escaped("\n")));
         }
-        writer
-            .write_event(Event::Text(BytesText::from_escaped("  ")))
-            .expect("junit writer");
-        writer
-            .write_event(Event::End(BytesEnd::new("testsuite")))
-            .expect("junit writer");
-        writer
-            .write_event(Event::Text(BytesText::from_escaped("\n")))
-            .expect("junit writer");
+        emit_junit(&mut writer, Event::Text(BytesText::from_escaped("  ")));
+        emit_junit(&mut writer, Event::End(BytesEnd::new("testsuite")));
+        emit_junit(&mut writer, Event::Text(BytesText::from_escaped("\n")));
     }
-    writer
-        .write_event(Event::End(BytesEnd::new("testsuites")))
-        .expect("junit writer");
-    writer
-        .write_event(Event::Text(BytesText::from_escaped("\n")))
-        .expect("junit writer");
-    String::from_utf8(writer.into_inner()).expect("junit writer is UTF-8")
+    emit_junit(&mut writer, Event::End(BytesEnd::new("testsuites")));
+    emit_junit(&mut writer, Event::Text(BytesText::from_escaped("\n")));
+    finish_junit(writer)
 }
 
 /// Renders one partial-infrastructure suite for JUnit collection that
