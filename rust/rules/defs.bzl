@@ -15,7 +15,12 @@ Used upstream symbols (`@rules_rust//rust:defs.bzl`): `rust_library`,
 `rust_binary`, `rust_test`, `rust_proc_macro`, `rust_shared_library`,
 `rust_static_library`, `rust_common` (`crate_info`, `dep_info`,
 `test_crate_info`), `rustfmt_test`, `rustfmt_aspect`, `rust_clippy_test`,
-`rust_clippy_aspect`. Used toolchain types:
+`rust_clippy_aspect`. The lint tests re-export as thin `rustfmt_test` /
+`rust_clippy_test` wrappers below (issue #239): consumers load lints from
+this module, never from `@rules_rust` directly, so the lint entry points
+stay single-sourced with the build wrappers. The wrappers forward to the
+upstream tests unchanged; lint precision comes from the forwarder
+`provides` below, not from wrapper logic. Used toolchain types:
 `@rules_rust//rust:toolchain_type` (`rustc`, `cargo`, `rustfmt`,
 `clippy_driver`), `@rules_rust//rust/rustfmt:toolchain_type`
 (`rustfmt`). `CcInfo` loads from `@rules_cc//cc/common:cc_info.bzl` for
@@ -58,6 +63,38 @@ instead of silently changing shape. `OutputGroupInfo` and
 unadvertised, mirroring upstream: unadvertised providers remain visible
 to Starlark reads and `--output_groups`. `QualitySourcesInfo` is
 advertised so M04 quality aspects can gate on it.
+
+Issue #239 close-out decisions (build hygiene):
+
+* Workspace `Cargo.toml`: rejected. `crate_universe` consumes the
+  per-crate manifests listed in `MODULE.bazel` (`crate.from_cargo` with
+  `cargo_lockfile = //rust/hello:Cargo.lock` plus one `Cargo.toml` per
+  crate). A `[workspace]` root would force workspace-mode repins and a
+  second lockfile authority for zero benefit: the edition is already
+  single-sourced via `RUST_EDITION` here plus `rustfmt.toml`, and shared
+  crate versions pin through the single `Cargo.lock`.
+* Rust `pub` surface: leaf crates that are cross-package libraries
+  (`dx_digest`, `dx_atomic_fs`, `dx_path`, `dx_schema`,
+  `dx_proto_validate`, `dx_lcov`) correctly expose `pub` items consumed
+  outside `//cli` (e.g. `quality/result`, `generation/result`,
+  `env/env_shard`, `tools/coverage`). A blanket `pub` -> `pub(crate)`
+  pass would break those edges; narrowing applies only to genuinely
+  crate-internal modules and rides with each crate's own refactor.
+* Bazel visibility: `//cli` crates that only serve the CLI stay scoped
+  to `//cli:__pkg__,//cli:__subpackages__`; the six shared-foundation
+  leaves above plus the `dx`/`dx_man` binaries and their `man_pages`
+  stay `//visibility:public` with the consuming edge as justification.
+  `dx_rust_crate` leaves visibility to the caller for exactly this
+  reason (binary crates keep hand-written stanzas per the
+  `quality/evaluator` precedent).
+* Crate-level `deny(warnings)` / `forbid(unsafe_code)`: rejected as
+  redundant/wrong. Warnings are already errors repo-wide via
+  `--@rules_rust//rust/settings:extra_rustc_flags=--deny=warnings` in
+  `.bazelrc` (issue #82) with `--cap-lints=allow` for third-party
+  targets; per-crate `deny(warnings)` would add a second enforcement
+  point with no new signal. `forbid(unsafe_code)` would forbid the
+  qualified `unsafe` that stays: `libc` signal handling in `dx`/`dx_man`
+  and the documented FFI-adjacent blocks in `dx_output`.
 """
 
 load("@crates//:crates.bzl", _aliases = "aliases", _crate_deps = "crate_deps")
@@ -336,6 +373,34 @@ def rust_static_library(
         **kwargs
     )
 
+def rustfmt_test(name, targets, size = "small", **kwargs):
+    """Thin wrapper over upstream `rustfmt_test` (issue #239).
+
+    Forwards unchanged to the pinned toolchain test. Consumers load this
+    symbol from `//rust/rules:defs.bzl` so lint entry points stay
+    single-sourced with the `rust_*` build wrappers; lint precision comes
+    from the forwarder `provides` above, not from logic here.
+    """
+    _rustfmt_test(
+        name = name,
+        targets = targets,
+        size = size,
+        **kwargs
+    )
+
+def rust_clippy_test(name, targets, size = "small", **kwargs):
+    """Thin wrapper over upstream `rust_clippy_test` (issue #239).
+
+    Same single-source rationale as `rustfmt_test`: consumers load lints
+    from this module, never from `@rules_rust` directly.
+    """
+    _rust_clippy_test(
+        name = name,
+        targets = targets,
+        size = size,
+        **kwargs
+    )
+
 def dx_rust_crate(
         name,
         package_name,
@@ -378,7 +443,13 @@ def dx_rust_crate(
       srcs: library sources, defaults to `["src/lib.rs"]`; multi-file
         crates pass the full list with `src/lib.rs` first.
       size: test size for the unit and lint tests.
-      visibility: visibility of the library and test forwarders.
+      visibility: visibility of the library and test forwarders. Callers
+        keep CLI-only crates scoped to
+        `//cli:__pkg__,//cli:__subpackages__` and leave the shared
+        foundations (`dx_digest`, `dx_atomic_fs`, `dx_path`, `dx_schema`,
+        `dx_proto_validate`, `dx_lcov`) public: they serve `//quality`,
+        `//generation`, `//env`, `//docs/ir`, and `//tools` outside
+        `//cli` (see module docs for the #239 visibility decision).
       extra_starlark_srcs: additional Starlark files owned by the
         `corpus` target alongside `BUILD.bazel` (e.g. `roots.bzl` for
         `//cli/roots`); `Cargo.toml` stays the only TOML source.
@@ -416,12 +487,12 @@ def dx_rust_crate(
         ) + (extra_deps or []) + (extra_test_deps or []),
         visibility = visibility,
     )
-    _rustfmt_test(
+    rustfmt_test(
         name = name + "_fmt_test",
         size = size,
         targets = [":" + name],
     )
-    _rust_clippy_test(
+    rust_clippy_test(
         name = name + "_clippy_test",
         size = size,
         targets = [":" + name],

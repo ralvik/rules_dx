@@ -1,11 +1,10 @@
 """M00 seed Rust binary, library, and tests; M02 consumer of rust_* wrappers."""
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
-load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//deploy/rules:archive.bzl", "archive_release")
 load("//quality:fixtures.bzl", "real_source_target")
-load("//rust/rules:defs.bzl", "rust_binary", "rust_library", "rust_proc_macro", "rust_shared_library", "rust_static_library", "rust_test")
+load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library", "rust_proc_macro", "rust_shared_library", "rust_static_library", "rust_test", "rustfmt_test")
 load("//rust/rules:probe.bzl", "dx_wrapper_cc_subject", "dx_wrapper_subject")
 load("//rust/rules:wrapper_tests.bzl", "dx_wrapper_conformance_tests", "dx_wrapper_registry_tests")
 

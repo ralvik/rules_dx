@@ -4,9 +4,8 @@ load("@crates//:crates.bzl", "aliases")
 
 # gazelle:resolve rust proto //docs/ir:doc_ir_proto_rs
 # gazelle:resolve rust doc_ir_proto //docs/ir:doc_ir_proto_rs
-load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("//quality:fixtures.bzl", "real_source_target")
-load("//rust/rules:defs.bzl", "rust_library", "rust_test")
+load("//rust/rules:defs.bzl", "rust_clippy_test", "rust_library", "rust_test", "rustfmt_test")
 
 package(default_visibility = ["//visibility:public"])
 

@@ -1,10 +1,9 @@
 """M11 WP2 managed `.dx/bin` bootstrap installer crate."""
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
-load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
-load("//rust/rules:defs.bzl", "rust_binary", "rust_library", "rust_test")
+load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library", "rust_test", "rustfmt_test")
 
 package(default_visibility = [
     "//cli:__pkg__",
