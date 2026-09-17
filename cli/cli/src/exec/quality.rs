@@ -1,6 +1,7 @@
 //! Quality command execution: runs the planned Bazel workflow, collects results, projects reports, and applies stable candidates.
 
 use super::common::*;
+use super::results::collect_results;
 use crate::args::Invocation;
 use crate::plan::{bep_path, plan_build};
 use crate::reports::{plan_reports, render_sarif, Destination, ReportError};

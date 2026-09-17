@@ -4,8 +4,9 @@
 //! collection), bazel, generate, clean, managed (dispatch) plus
 //! managed_codegen/managed_env (generation sides), audit, update,
 //! run, and the check/fix umbrella. Shared plumbing (error codes,
-//! environment, BEP collection, mutation helpers) lives in [`common`];
-//! unit-test fakes live in `test_support`.
+//! environment, source verification, mutation helpers) lives in
+//! [`common`]; BEP results collection and proto mapping live in
+//! [`results`]; unit-test fakes live in `test_support`.
 //!
 //! Contract: `docs/cli/commands/quality.md`,
 //! `docs/cli/output-protocol.md`, and `docs/cli/standard-reports.md`.
@@ -20,6 +21,7 @@ mod managed;
 mod managed_codegen;
 mod managed_env;
 mod quality;
+mod results;
 mod run;
 mod test_reports;
 #[cfg(test)]

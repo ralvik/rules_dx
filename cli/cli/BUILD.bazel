@@ -48,6 +48,7 @@ rust_library(
         "src/exec/managed_codegen.rs",
         "src/exec/managed_env.rs",
         "src/exec/quality.rs",
+        "src/exec/results.rs",
         "src/exec/run.rs",
         "src/exec/test_reports.rs",
         "src/exec/test_support.rs",
