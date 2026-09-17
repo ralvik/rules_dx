@@ -17,5 +17,6 @@ dx_rust_crate(
         "src/parse.rs",
         "src/inventory.rs",
         "src/verdict.rs",
+        "src/run.rs",
     ],
 )
