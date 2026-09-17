@@ -1,83 +1,27 @@
 """M30b slices 1-3: pure adoption-scaffolding planning (dx init absent-only writes, single-version pin and rollback, hook hermeticity/overwrite/status shape, devcontainer discipline, diagnostics naming, watch locality/scope, inspect forwarding, completion single-source)."""
 
-load("@crates//:crates.bzl", "aliases", "crate_deps")
-load("@rules_rust//rust:defs.bzl", "rust_clippy_test", "rustfmt_test")
-load("//quality:fixtures.bzl", "real_source_target")
-load("//rust/rules:defs.bzl", "rust_library", "rust_test")
+load("//rust/rules:defs.bzl", "dx_rust_crate")
 
 package(default_visibility = [
     "//cli:__pkg__",
     "//cli:__subpackages__",
 ])
 
-rust_library(
+# M02 leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# `dx_adopt` + `dx_adopt_test` + fmt/clippy tests +
+# `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
+dx_rust_crate(
     name = "dx_adopt",
-    srcs = ["src/lib.rs"],
-    aliases = aliases(
-        package_name = "cli/dx_adopt",
-        normal = True,
-    ),
-    crate_name = "dx_adopt",
-    crate_root = "src/lib.rs",
-    deps = crate_deps(
-        [
-            "notify",
-            "notify-debouncer-mini",
-            "semver",
-            "serde",
-            "serde_json",
-            "thiserror",
-        ],
-        package_name = "cli/dx_adopt",
-    ) + ["//cli/atomic_fs:dx_atomic_fs"],
-)
-
-rust_test(
-    name = "dx_adopt_test",
-    size = "small",
-    aliases = aliases(
-        package_name = "cli/dx_adopt",
-        normal = True,
-        normal_dev = True,
-    ),
-    crate = ":dx_adopt",
-    deps = crate_deps(
-        [
-            "insta",
-            "notify",
-            "notify-debouncer-mini",
-            "semver",
-            "serde",
-            "serde_json",
-            "thiserror",
-        ],
-        package_name = "cli/dx_adopt",
-    ) + ["//cli/test_scratch:dx_test_scratch"],
-)
-
-# Authoritative quality identities (M02 pattern): rustfmt and Clippy
-# resolve from the pinned toolchain, never from ambient host tools.
-rustfmt_test(
-    name = "dx_adopt_fmt_test",
-    size = "small",
-    targets = [":dx_adopt"],
-)
-
-rust_clippy_test(
-    name = "dx_adopt_clippy_test",
-    size = "small",
-    targets = [":dx_adopt"],
-)
-
-exports_files(
-    ["Cargo.toml"],
-    visibility = ["//visibility:public"],
-)
-
-# Repository corpus: crate manifest and build file owned for
-# direct-Bazel dogfood under the canonical real_fixture_policy.
-real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"],
-    toml_srcs = ["Cargo.toml"],
+    package_name = "cli/dx_adopt",
+    deps = [
+        "notify",
+        "notify-debouncer-mini",
+        "semver",
+        "serde",
+        "serde_json",
+        "thiserror",
+    ],
+    dev_deps = ["insta"],
+    extra_deps = ["//cli/atomic_fs:dx_atomic_fs"],
+    extra_test_deps = ["//cli/test_scratch:dx_test_scratch"],
 )
