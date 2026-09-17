@@ -160,6 +160,18 @@ sh_binary(
     srcs = ["examples_readme.sh"],
 )
 
+# Examples laziness harness (issue #85, slice 2): static half of the
+# acquisition/laziness proof — no prohibited installer commands in
+# tool-implementation code, plus per-foundation wrapper isolation over
+# adopt-* examples (unused foundations contribute no targets).
+# Runtime attribution (process logs, aquery/exec-log over external
+# consumers with network denied) stays open per #85. Run by CI via
+# `bazel run //tools/ci:examples_laziness`.
+sh_binary(
+    name = "examples_laziness",
+    srcs = ["examples_laziness.sh"],
+)
+
 # Stage 4 E2E drivers (issue #55): one `manual` (+`exclusive`,
 # `local`, `no-sandbox`) sh_test per landed `integration/` scenario plus
 # the explicit suite. Wildcard suites (`bazel test //...`,
