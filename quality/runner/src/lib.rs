@@ -1476,4 +1476,40 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn adjacent_edits_coalesce_to_single_whole_file_candidate() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // coverage of adjacent edits alongside insertion, deletion, and
+        // multibyte boundaries. Two adjacent BAD needles (0..3, 3..6) in
+        // one file must converge to a single whole-file candidate bound
+        // to digest(original) that splices byte-for-byte to the terminal.
+        let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let files = vec![file("src/lib.rs", "BADBAD\n")];
+        let result = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
+        assert_eq!(result.convergence, Convergence::Stable as i32);
+        assert_eq!(result.initial_diagnostics.len(), 2);
+        assert_eq!(result.initial_diagnostics[0].start_byte, Some(0));
+        assert_eq!(result.initial_diagnostics[0].end_byte, Some(3));
+        assert_eq!(result.initial_diagnostics[1].start_byte, Some(3));
+        assert_eq!(result.initial_diagnostics[1].end_byte, Some(6));
+        assert!(result.terminal_diagnostics.is_empty());
+        assert_eq!(result.replacements.len(), 1);
+        let edits = &result.replacements[0];
+        assert_eq!(edits.path, "src/lib.rs");
+        assert_eq!(edits.original_digest, digest("BADBAD\n".as_bytes()));
+        assert_eq!(edits.edits.len(), 1);
+        assert_eq!(edits.edits[0].start_byte, 0);
+        assert_eq!(edits.edits[0].end_byte, "BADBAD\n".len() as u64);
+        assert_eq!(&edits.edits[0].replacement, b"GOODGOOD\n");
+        // Whole-file splice reproduces the terminal bytes exactly.
+        let original = "BADBAD\n".as_bytes();
+        let replacement = &edits.edits[0].replacement;
+        let mut spliced = Vec::new();
+        spliced.extend_from_slice(&original[..edits.edits[0].start_byte as usize]);
+        spliced.extend_from_slice(replacement);
+        spliced.extend_from_slice(&original[edits.edits[0].end_byte as usize..]);
+        assert_eq!(spliced, b"GOODGOOD\n");
+        assert!(validate(&result).is_ok());
+    }
 }
