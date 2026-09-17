@@ -9,6 +9,7 @@ rust_library(
     aspect_hints = [":rustfmt_config"],
     crate_name = "full",
     crate_root = "src/lib.rs",
+    visibility = ["//visibility:public"],
 )
 
 vale_config(

@@ -46,6 +46,36 @@ var rustKinds = map[string]rule.KindInfo{
 	scriptKind:    kindInfo(),
 }
 
+// isLibraryKind reports whether a rule kind is a linkable library flavor:
+// only libraries are ever valid cross-package dependencies in rules_rust.
+func isLibraryKind(kind string) bool {
+	switch kind {
+	case libraryKind, procMacroKind, sharedKind, staticKind:
+		return true
+	}
+	return false
+}
+
+// shouldSetVisibility reports whether generated library rules need an
+// explicit public visibility: a Cargo workspace links every crate from
+// every other crate, while Bazel defaults to private. Files that already
+// declare a default visibility keep it (their owner opted out
+// explicitly). Bins, tests, and scripts never gain visibility: they are
+// never valid cross-package dependencies, and same-package references
+// (sibling lib, unit-test crate edge, build script) work under the
+// private default.
+func shouldSetVisibility(args language.GenerateArgs) bool {
+	if args.File != nil && args.File.HasDefaultVisibility() {
+		return false
+	}
+	for _, r := range args.OtherGen {
+		if r.Kind() == "package" && r.Attr("default_visibility") != nil {
+			return false
+		}
+	}
+	return true
+}
+
 func init() {
 	// Managed native-config targets merge through the same file the
 	// Rust rules live in, so their kinds register alongside.
@@ -98,10 +128,21 @@ type ignoreEntry struct {
 type targetImports struct {
 	production []string
 	test       []string
-	// siblingLib is the Bazel name of the same-package library a binary
-	// target links automatically (Cargo bins bind their sibling lib
-	// without an import). Empty for non-binaries. It flows straight to
-	// deps: validation and manifest indexing ignore it.
+	// mirrorPaths links every declared first-party path dependency from
+	// the target's visible scopes whether or not any use item names it:
+	// Cargo links all declared dependencies into a target, while import
+	// detection only sees use items (an expression path like
+	// `api::digest(words)` never surfaces). Resolution looks these names
+	// up in the rule index but stays silent on misses and ambiguities:
+	// a declared-but-unused dep is legal, and a used-but-undetected one
+	// that the index cannot place unambiguously is reported by rustc,
+	// not by fail-closed generation. Validation ignores this set.
+	mirrorPaths []string
+	// siblingLib is the Bazel name of the same-package library a binary,
+	// test, example, or bench target links automatically (Cargo binds
+	// the sibling lib without an import). Empty for libraries and
+	// scripts. It flows straight to deps: validation and manifest
+	// indexing ignore it.
 	siblingLib string
 	// scriptDep is the Bazel name of the package's generated build-script
 	// rule. Every crate rule in a package with an active script links it
@@ -322,8 +363,12 @@ func (l *rustLang) generateRules(args language.GenerateArgs) language.GenerateRe
 	}
 
 	var result language.GenerateResult
+	publicLibs := shouldSetVisibility(args)
 	if shape.LibTarget != "" {
 		r := crateRule(libraryKind, shape.LibTarget, shape.Name, roots.LibRoot, trees[roots.LibRoot], args.Rel)
+		if publicLibs {
+			r.SetAttr("visibility", []string{"//visibility:public"})
+		}
 		result.Gen = append(result.Gen, r)
 		result.Imports = append(result.Imports, importsFor(trees[roots.LibRoot]))
 		if shape.LibUnitTest {
@@ -384,6 +429,9 @@ func (l *rustLang) generateCargo(args language.GenerateArgs, files []string, pla
 		l.fail("%v", err)
 		return language.GenerateResult{}
 	}
+	if manifest.virtual {
+		return l.attachNative(args, language.GenerateResult{}, plan)
+	}
 	existsSet := make(map[string]bool, len(files))
 	for _, name := range files {
 		existsSet[name] = true
@@ -401,6 +449,7 @@ func (l *rustLang) generateCargo(args language.GenerateArgs, files []string, pla
 	}
 	var result language.GenerateResult
 	owners := make(map[string]string)
+	publicLibs := shouldSetVisibility(args)
 	for _, target := range manifest.targets {
 		root := path.Join(args.Rel, target.path)
 		if !existsSet[root] {
@@ -421,6 +470,9 @@ func (l *rustLang) generateCargo(args language.GenerateArgs, files []string, pla
 		}
 		r := crateRule(dxKindFor(target), target.name, target.crate(), root, tree, args.Rel)
 		r.SetAttr("edition", manifest.edition)
+		if isLibraryKind(r.Kind()) && publicLibs {
+			r.SetAttr("visibility", []string{"//visibility:public"})
+		}
 		imports := importsFor(tree)
 		// Examples and benches link development dependencies: their
 		// production imports may come from [dev-dependencies]. The
@@ -443,7 +495,12 @@ func (l *rustLang) generateCargo(args language.GenerateArgs, files []string, pla
 		} else {
 			resultImports = localCargoImports(args.Config, manifest, imports, includeDev)
 		}
-		if dxKindFor(target) == binaryKind {
+		// Tests link the sibling library like binaries do: Cargo binds
+		// the package lib into integration tests without an import.
+		// (Examples and benches already arrive here as binaryKind via
+		// dxKindFor.) Unit-test wrappers below keep narrow test-only
+		// imports instead: their `crate` edge carries the package.
+		if dxKindFor(target) == binaryKind || target.kind == testKind {
 			resultImports.siblingLib = siblingLibName(manifest, target)
 		}
 		if target.kind == testKind && !target.harness {
@@ -472,7 +529,13 @@ func (l *rustLang) generateCargo(args language.GenerateArgs, files []string, pla
 			t.SetAttr("crate", ":"+target.name)
 			setCargoAttrs(t, args.Rel, manifest, targetImports{test: imports.test}, true)
 			result.Gen = append(result.Gen, t)
-			result.Imports = append(result.Imports, localCargoImports(args.Config, manifest, targetImports{test: imports.test}, true))
+			wrapperImports := localCargoImports(args.Config, manifest, targetImports{test: imports.test}, true)
+			// The wrapper tests its own crate through the `crate`
+			// edge: mirroring the package's declared path deps here
+			// would only duplicate what the crate target already
+			// links, so the wrapper stays narrow.
+			wrapperImports.mirrorPaths = nil
+			result.Imports = append(result.Imports, wrapperImports)
 		}
 	}
 	if manifest.build != nil && !manifest.build.disabled {
@@ -525,8 +588,7 @@ func wantsUnitTest(target cargoTarget, tree map[string]*FileFacts) bool {
 // compilation. The script rule itself stays unlinked. Generated script
 // attributes mirror crate_universe's script shape (srcs, crate_root,
 // edition, version, pkg_name, crate_features) with hermetic defaults
-// forced (use_cc_toolchain on, default shell env off,
-// allow_build_script_to_detect_nonhermetic_paths off) and diagnostics
+// forced (use_cc_toolchain on, default shell env off) and diagnostics
 // forwarded (emit_warnings on, overridable by the global build setting).
 // tools, data, env, and links stay user-owned via keep: a script needing
 // them fails in the sandbox rather than building silently wrong.
@@ -569,7 +631,6 @@ func (l *rustLang) emitBuildScript(args language.GenerateArgs, manifestPath stri
 	r.SetAttr("emit_warnings", true)
 	r.SetAttr("use_cc_toolchain", 1)
 	r.SetAttr("use_default_shell_env", 0)
-	r.SetAttr("allow_build_script_to_detect_nonhermetic_paths", false)
 	setScriptAttrs(r, args.Rel, manifest)
 	for i, raw := range result.Imports {
 		if current, ok := raw.(targetImports); ok {
@@ -738,6 +799,16 @@ func localCargoImports(c *config.Config, manifest *cargoManifest, imports target
 	for _, name := range imports.production {
 		if dep, ok := manifest.normalDeps[name]; ok && !dep.external {
 			result.production = append(result.production, name)
+		} else if includeDev {
+			// Tests, examples, and benches link [dev-dependencies] in
+			// every code position, including non-test ones: detection
+			// records where the use item sits, not which scope Cargo
+			// links it from.
+			if dep, ok := manifest.devDeps[name]; ok && !dep.external {
+				result.production = append(result.production, name)
+			} else if _, ok := lookupOverride(c, name); ok {
+				result.production = append(result.production, name)
+			}
 		} else if _, ok := lookupOverride(c, name); ok {
 			result.production = append(result.production, name)
 		}
@@ -753,7 +824,30 @@ func localCargoImports(c *config.Config, manifest *cargoManifest, imports target
 			}
 		}
 	}
+	appendMirrorPaths(&result, manifest.normalDeps)
+	if includeDev {
+		appendMirrorPaths(&result, manifest.devDeps)
+	}
 	return result
+}
+
+// appendMirrorPaths links every declared first-party path dependency from
+// the given scopes whether or not any use item names it. The set is
+// deduplicated and sorted so resolution stays deterministic.
+func appendMirrorPaths(result *targetImports, scopes ...map[string]cargoDependency) {
+	seen := make(map[string]bool, len(result.mirrorPaths))
+	for _, name := range result.mirrorPaths {
+		seen[name] = true
+	}
+	for _, scope := range scopes {
+		for name, dep := range scope {
+			if !dep.external && dep.depPath != "" && !seen[name] {
+				seen[name] = true
+				result.mirrorPaths = append(result.mirrorPaths, name)
+			}
+		}
+	}
+	sort.Strings(result.mirrorPaths)
 }
 
 // localCargoExampleImports collects the first-party labels an example or
@@ -771,6 +865,7 @@ func localCargoExampleImports(c *config.Config, manifest *cargoManifest, imports
 			result.production = append(result.production, name)
 		}
 	}
+	appendMirrorPaths(&result, manifest.normalDeps, manifest.devDeps)
 	return result
 }
 
@@ -792,6 +887,7 @@ func localCargoBuildImports(c *config.Config, manifest *cargoManifest, imports t
 			result.test = append(result.test, name)
 		}
 	}
+	appendMirrorPaths(&result, manifest.buildDeps)
 	return result
 }
 
@@ -1234,6 +1330,26 @@ func (l *rustLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *repo.Remo
 			l.fail("rust: %s: unresolved import %q; add a local crate, Cargo mapping, or exact # gazelle:resolve", from, name)
 		default:
 			l.fail("rust: %s: ambiguous import %q resolves to %s", from, name, formatMatches(matches))
+		}
+	}
+	// Declared-but-undetected path dependencies mirror Cargo's linking
+	// without detection evidence: overrides and unique index matches
+	// become edges, while misses, ambiguities, and ignored names stay
+	// silent. A genuinely used dep that detection missed still fails at
+	// rustc with a precise error; failing closed here would instead
+	// break legal trees whose declared deps this target never touches.
+	for _, name := range imports.mirrorPaths {
+		if ignore := matchingIgnore(c, name); ignore != nil {
+			ignore.used = true
+			continue
+		}
+		spec := resolve.ImportSpec{Lang: languageName, Imp: name}
+		if override, found := resolve.FindRuleWithOverride(c, spec, languageName); found {
+			deps[override.Rel(from.Repo, from.Pkg).String()] = true
+			continue
+		}
+		if matches := ix.FindRulesByImportWithConfig(c, spec, languageName); len(matches) == 1 && matches[0].Label != from {
+			deps[matches[0].Label.Rel(from.Repo, from.Pkg).String()] = true
 		}
 	}
 	if imports.siblingLib != "" && imports.siblingLib != from.Name {

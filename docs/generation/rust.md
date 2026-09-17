@@ -56,8 +56,20 @@ a kept handwritten `testonly` target with explicit `crate_features`; it does not
 emit the target unconditionally.
 
 Production crates resolve active normal dependencies. Tests, examples, and benchmarks may add only
-their authoritative development scope. Optional and feature-gated crates resolve only when already
-enabled for that target.
+their authoritative development scope, in every code position: Cargo links `[dev-dependencies]`
+into those targets unconditionally, so a dev-declared name counts wherever its use item sits.
+Optional and feature-gated crates resolve only when already enabled for that target.
+
+Declared first-party path dependencies are also mirrored without detection evidence: Cargo links
+every declared dependency into a target while import detection only sees `use` items, so an
+expression path such as `api::digest(words)` still resolves through the rule index. Mirror misses
+and ambiguities stay silent (an unused declared dep is legal; rustc reports a used one precisely),
+while detected imports keep strict fail-closed resolution. Bins, tests, examples, and benches link
+the same-package library automatically; unit-test wrappers stay narrow because their `crate` edge
+already carries the package. Emitted library flavors (`rust_library`, `rust_proc_macro`,
+`rust_shared_library`, `rust_static_library`) are `//visibility:public` so cross-crate workspace
+edges analyze; bins, tests, and scripts stay private. Files that already declare a default
+visibility keep it.
 
 A first-party path dependency carrying a `version` requirement resolves single-version: the
 provider's `[package] version` must satisfy the depender's requirement (caret, tilde, exact, and
@@ -149,7 +161,6 @@ Generated build-script rules set:
 
 - `use_default_shell_env = False`.
 - `use_cc_toolchain = True`.
-- `allow_build_script_to_detect_nonhermetic_paths = False`.
 - `emit_warnings = True`.
 
 The selected hermetic C/C++ toolchain is exposed through the upstream build-script rule by default,

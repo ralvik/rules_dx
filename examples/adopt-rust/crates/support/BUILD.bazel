@@ -1,15 +1,22 @@
 load("@crates//:crates.bzl", "aliases")
 load("@rules_dx//rust/rules:defs.bzl", "rust_library")
+load("//quality:fixtures.bzl", "real_source_target")
 
 rust_library(
-    name = "trim",
+    name = "support",
     srcs = ["src/lib.rs"],
     aliases = aliases(
-        package_name = "crates/trim",
+        package_name = "examples/adopt-rust/crates/support",
         normal = True,
     ),
-    crate_name = "trim",
+    crate_name = "support",
     crate_root = "src/lib.rs",
     edition = "2021",
     visibility = ["//visibility:public"],
+)
+
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = ["Cargo.toml"],
 )

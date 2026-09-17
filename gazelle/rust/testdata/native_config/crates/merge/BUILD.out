@@ -15,4 +15,5 @@ rust_library(
     ],
     crate_name = "merge",
     crate_root = "src/lib.rs",
+    visibility = ["//visibility:public"],
 )

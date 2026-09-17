@@ -70,6 +70,10 @@ type cargoManifest struct {
 	// buildDeps holds [build-dependencies]: only the build script sees
 	// them, never lib/bin/test/example/bench targets.
 	buildDeps map[string]cargoDependency
+	// virtual marks a workspace-only manifest (`[workspace]` without
+	// `[package]`): it declares members, never a package, so generation
+	// emits no rules for its own directory instead of failing closed.
+	virtual bool
 	// build is nil when [package] declares no build key: build scripts
 	// stay explicit and an undeclared build.rs fails closed.
 	build *cargoBuild
@@ -198,7 +202,8 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 	}
 	section := ""
 	current := -1
-	hasLib := false
+	hasPackage := false
+	hasWorkspace := false
 	for number, raw := range strings.Split(string(content), "\n") {
 		line := strings.TrimSpace(stripTomlComment(raw))
 		if line == "" {
@@ -208,8 +213,10 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 			switch line {
 			case "[package]", "[lib]":
 				section = strings.Trim(line, "[]")
+				if section == "package" {
+					hasPackage = true
+				}
 				if section == "lib" {
-					hasLib = true
 					manifest.targets = append(manifest.targets, cargoTarget{kind: libraryKind, harness: true})
 					current = len(manifest.targets) - 1
 				} else {
@@ -230,6 +237,9 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 				current = len(manifest.targets) - 1
 			default:
 				section = strings.Trim(line, "[]")
+				if section == "workspace" || strings.HasPrefix(section, "workspace.") {
+					hasWorkspace = true
+				}
 				current = -1
 			}
 			continue
@@ -370,6 +380,14 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 		}
 	}
 	if manifest.packageName == "" {
+		// A workspace-only manifest declares members, never a package:
+		// mark it virtual so generation emits no rules for its own
+		// directory. Anything else without a package name stays a
+		// fail-closed malformed manifest.
+		if hasWorkspace && !hasPackage {
+			manifest.virtual = true
+			return manifest, nil
+		}
 		return nil, fmt.Errorf("rust: %s: missing [package].name", manifestPath)
 	}
 	// The package name feeds BuildScriptName's normalizer: reject an
@@ -377,9 +395,11 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 	if _, err := Normalize(manifest.packageName); err != nil {
 		return nil, fmt.Errorf("rust: %s: [package].name %q: %v", manifestPath, manifest.packageName, err)
 	}
-	if !hasLib {
-		manifest.targets = append(manifest.targets, cargoTarget{kind: libraryKind, name: manifest.packageName, path: "src/lib.rs", harness: true})
-	}
+	// No implicit library here: whether src/lib.rs implies a lib target
+	// depends on the file set, which only withImplicitTargets sees.
+	// Synthesizing file-blind would mint a phantom lib for bin-only
+	// crates that the emitter skips but siblingLibName still links,
+	// leaving a dangling :<name>_lib dep.
 	for i := range manifest.targets {
 		target := &manifest.targets[i]
 		if target.name == "" && target.path == "" && (target.kind == exampleKind || target.kind == benchKind) {

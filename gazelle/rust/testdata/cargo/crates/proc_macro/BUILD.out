@@ -11,6 +11,7 @@ rust_proc_macro(
     crate_name = "flavors_derive",
     crate_root = "source/derive.rs",
     edition = "2021",
+    visibility = ["//visibility:public"],
     deps = crate_deps(
         ["serde_json"],
         package_name = "crates/flavors-derive",

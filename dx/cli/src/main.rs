@@ -225,8 +225,22 @@ fn run() -> i32 {
     let workspace = match discover_real(&start, invocation.workspace.as_deref().map(Path::new)) {
         Ok(workspace) => workspace,
         Err(error) => {
-            let _ = writeln!(io::stderr(), "dx: cannot resolve workspace: {error}");
-            return pre_exec_code();
+            // `dx init` bootstraps a new repository without an existing
+            // MODULE.bazel (see `docs/cli/commands/hooks.md`): fall back
+            // to the explicit `--workspace` dir, else the start dir, so
+            // the absent-only scaffold has a root to write under. Every
+            // other command still requires discovery.
+            if invocation.command == dx_cli::args::Command::Init {
+                invocation
+                    .workspace
+                    .as_deref()
+                    .map(Path::new)
+                    .map(Path::to_path_buf)
+                    .unwrap_or(start)
+            } else {
+                let _ = writeln!(io::stderr(), "dx: cannot resolve workspace: {error}");
+                return pre_exec_code();
+            }
         }
     };
     // Version-skew gate (issue #214): a drifted `.dx/version` pin refuses

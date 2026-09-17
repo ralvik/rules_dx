@@ -11,6 +11,7 @@ rust_library(
     aspect_hints = [":rustfmt_config"],
     crate_name = "skip",
     crate_root = "src/lib.rs",
+    visibility = ["//visibility:public"],
 )
 
 rustfmt_config(

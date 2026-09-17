@@ -52,8 +52,17 @@ func TestParseCargoDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(manifest.targets) != 1 || manifest.targets[0].path != "src/lib.rs" || manifest.edition != "2021" {
-		t.Errorf("defaults = %+v", manifest)
+	// A [lib]-less manifest carries no targets on its own: the implicit
+	// library exists only when src/lib.rs does, which only
+	// withImplicitTargets can see.
+	if len(manifest.targets) != 0 || manifest.edition != "2021" {
+		t.Fatalf("defaults = %+v", manifest)
+	}
+	if err := manifest.withImplicitTargets(map[string]bool{"src/lib.rs": true}, ""); err != nil {
+		t.Fatal(err)
+	}
+	if len(manifest.targets) != 1 || manifest.targets[0].path != "src/lib.rs" {
+		t.Errorf("implicit defaults = %+v", manifest.targets)
 	}
 }
 
@@ -190,6 +199,29 @@ func TestCargoLibBinDisambiguation(t *testing.T) {
 	}
 	if len(solo.targets) != 1 || solo.targets[0].name != "solo" || solo.targets[0].crate() != "solo" {
 		t.Errorf("solo library targets = %+v", solo.targets)
+	}
+}
+
+func TestCargoBinOnlyHasNoPhantomLib(t *testing.T) {
+	// A bin-only crate (no [lib], no src/lib.rs) must not gain a phantom
+	// library: the emitter skips unbacked default roots while
+	// siblingLibName still linked the phantom, leaving a dangling
+	// :<name>_lib dep on every binary.
+	manifest, err := parseCargoManifest("Cargo.toml", []byte("[package]\nname = \"worker\"\n[[bin]]\nname = \"worker\"\npath = \"src/main.rs\"\n[dependencies]\napi = { path = \"../api\" }\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(manifest.targets) != 1 || manifest.targets[0].kind != binaryKind || manifest.targets[0].name != "worker" {
+		t.Fatalf("bin-only targets = %+v", manifest.targets)
+	}
+	if err := manifest.withImplicitTargets(map[string]bool{"crates/worker/src/main.rs": true}, "crates/worker"); err != nil {
+		t.Fatal(err)
+	}
+	if len(manifest.targets) != 1 || manifest.targets[0].kind != binaryKind {
+		t.Fatalf("bin-only implicit targets = %+v", manifest.targets)
+	}
+	if got := siblingLibName(manifest, manifest.targets[0]); got != "" {
+		t.Errorf("siblingLibName(bin-only) = %q, want empty", got)
 	}
 }
 
@@ -489,7 +521,7 @@ func TestParseCargoExamplePathDerived(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(manifest.targets) != 2 {
+	if len(manifest.targets) != 1 {
 		t.Fatalf("targets = %+v", manifest.targets)
 	}
 	example := manifest.targets[0]
@@ -504,5 +536,32 @@ func TestParseCargoExamplePathDerived(t *testing.T) {
 	}
 	if dep := truncated.normalDeps["foo"]; dep.version != "1" || dep.depPath != "" {
 		t.Errorf("truncated inline dep = %+v", dep)
+	}
+}
+
+func TestParseCargoVirtualWorkspace(t *testing.T) {
+	virtual, err := parseCargoManifest("Cargo.toml", []byte("[workspace]\nmembers = [\"crates/api\"]\nresolver = \"2\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !virtual.virtual || len(virtual.targets) != 0 {
+		t.Errorf("virtual manifest = %+v, want virtual with no targets", virtual)
+	}
+	dotted, err := parseCargoManifest("Cargo.toml", []byte("[workspace.dependencies]\nserde = \"1\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !dotted.virtual {
+		t.Errorf("dotted workspace manifest = %+v, want virtual", dotted)
+	}
+	packaged, err := parseCargoManifest("Cargo.toml", []byte("[workspace]\n\n[package]\nname = \"demo\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if packaged.virtual || packaged.packageName != "demo" {
+		t.Errorf("root package manifest = %+v, want non-virtual demo", packaged)
+	}
+	if _, err := parseCargoManifest("Cargo.toml", []byte("readme = true\n")); err == nil {
+		t.Error("bare manifest without [package] or [workspace] accepted")
 	}
 }

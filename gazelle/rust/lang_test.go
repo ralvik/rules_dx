@@ -472,6 +472,156 @@ func TestGenerateCargoLibBinTakeover(t *testing.T) {
 	}
 }
 
+func TestGenerateCargoTestLinksSiblingAndMirror(t *testing.T) {
+	root := t.TempDir()
+	writeFixture(t, root, "Cargo.toml", "[package]\nname = \"app\"\n[dependencies]\nlocal = { path = \"../local\" }\n")
+	writeFixture(t, root, "src/lib.rs", "#[test]\nfn probe() {}\n")
+	writeFixture(t, root, "tests/smoke.rs", "")
+	l := &rustLang{}
+	result := l.GenerateRules(language.GenerateArgs{Config: &config.Config{RepoRoot: root}, Dir: root, RegularFiles: []string{"Cargo.toml"}})
+	if len(l.errors) != 0 {
+		t.Fatalf("generation errors = %v", l.errors)
+	}
+	var libName string
+	for _, r := range result.Gen {
+		if r.Kind() == libraryKind {
+			libName = r.Name()
+		}
+	}
+	if libName == "" {
+		t.Fatalf("no library generated: %+v", result.Gen)
+	}
+	for i, r := range result.Gen {
+		if r.Kind() != testKind {
+			continue
+		}
+		imports, ok := result.Imports[i].(targetImports)
+		if !ok {
+			t.Fatalf("test imports = %T, want targetImports", result.Imports[i])
+		}
+		if r.AttrString("crate") != "" {
+			// Unit-test wrapper: narrow test-only imports, no
+			// mirror and no sibling (the `crate` edge covers it).
+			if len(imports.mirrorPaths) != 0 || imports.siblingLib != "" {
+				t.Errorf("wrapper imports = %+v, want no mirror or sibling", imports)
+			}
+			continue
+		}
+		// Integration test: links the sibling lib like a binary and
+		// mirrors the declared path dep without any use item.
+		if imports.siblingLib != libName {
+			t.Errorf("integration sibling = %q, want %q", imports.siblingLib, libName)
+		}
+		if strings.Join(imports.mirrorPaths, ",") != "local" {
+			t.Errorf("integration mirror = %q, want [local]", imports.mirrorPaths)
+		}
+	}
+}
+
+func TestLocalCargoImportsDevProductionAndMirror(t *testing.T) {
+	manifest := &cargoManifest{
+		packageName: "app",
+		normalDeps: map[string]cargoDependency{
+			"local": {depPath: "../local"},
+			"ext":   {external: true, version: "1", depPath: "helper"},
+		},
+		devDeps: map[string]cargoDependency{
+			"local_dev": {depPath: "../local-dev"},
+		},
+	}
+	imports := targetImports{production: []string{"local_dev"}}
+	withDev := localCargoImports(&config.Config{}, manifest, imports, true)
+	if strings.Join(withDev.production, ",") != "local_dev" {
+		t.Errorf("dev production = %+v, want [local_dev]", withDev.production)
+	}
+	if strings.Join(withDev.mirrorPaths, ",") != "local,local_dev" {
+		t.Errorf("dev mirror = %q, want [local local_dev]", withDev.mirrorPaths)
+	}
+	withoutDev := localCargoImports(&config.Config{}, manifest, imports, false)
+	if len(withoutDev.production) != 0 {
+		t.Errorf("production local imports include dev: %+v", withoutDev.production)
+	}
+	if strings.Join(withoutDev.mirrorPaths, ",") != "local" {
+		t.Errorf("production mirror = %q, want [local]", withoutDev.mirrorPaths)
+	}
+}
+
+func TestResolveMirrorPaths(t *testing.T) {
+	l := &rustLang{}
+	index := resolverIndex(l, struct{ pkg, name string }{"lib/b", "b"})
+	cfg := resolverConfig(t, nil)
+	cfg.Exts[languageName] = &rustConfig{}
+	// Unique index match becomes an edge without detection evidence.
+	mirrored := rule.NewRule(binaryKind, "app")
+	l.Resolve(cfg, index, nil, mirrored, targetImports{mirrorPaths: []string{"b"}}, label.New("", "app", "app"))
+	if got := strings.Join(mirrored.AttrStrings("deps"), ","); got != "//lib/b" {
+		t.Errorf("mirrored deps = %q, want //lib/b", got)
+	}
+	// Misses and self-matches stay silent: a declared-but-unused dep
+	// is legal and rustc reports a genuinely used one precisely.
+	silent := rule.NewRule(binaryKind, "quiet")
+	l.Resolve(cfg, index, nil, silent, targetImports{mirrorPaths: []string{"missing"}}, label.New("", "app", "quiet"))
+	if silent.Attr("deps") != nil {
+		t.Errorf("silent mirror emitted deps: %v", silent.AttrStrings("deps"))
+	}
+	own := rule.NewRule(libraryKind, "b")
+	l.Resolve(cfg, index, nil, own, targetImports{mirrorPaths: []string{"b"}}, label.New("", "lib/b", "b"))
+	if own.Attr("deps") != nil {
+		t.Errorf("self mirror emitted deps: %v", own.AttrStrings("deps"))
+	}
+	// Ignored names are consumed without an edge.
+	ignored := &ignoreEntry{value: "b"}
+	cfg.Exts[languageName] = &rustConfig{ignores: []*ignoreEntry{ignored}}
+	skipped := rule.NewRule(binaryKind, "skipped")
+	l.Resolve(cfg, index, nil, skipped, targetImports{mirrorPaths: []string{"b"}}, label.New("", "app", "skipped"))
+	if skipped.Attr("deps") != nil || !ignored.used {
+		t.Errorf("ignored mirror = deps:%v used:%v", skipped.Attr("deps"), ignored.used)
+	}
+	if len(l.errors) != 0 {
+		t.Errorf("mirror errors = %v", l.errors)
+	}
+}
+
+func TestGenerateCargoLibraryVisibility(t *testing.T) {
+	root := t.TempDir()
+	writeFixture(t, root, "Cargo.toml", "[package]\nname = \"app\"\n")
+	writeFixture(t, root, "src/lib.rs", "")
+	writeFixture(t, root, "src/main.rs", "fn main() {}\n")
+	l := &rustLang{}
+	result := l.GenerateRules(language.GenerateArgs{Config: &config.Config{RepoRoot: root}, Dir: root, RegularFiles: []string{"Cargo.toml"}})
+	if len(l.errors) != 0 {
+		t.Fatalf("generation errors = %v", l.errors)
+	}
+	for _, r := range result.Gen {
+		switch r.Kind() {
+		case libraryKind:
+			if got := strings.Join(r.AttrStrings("visibility"), ","); got != "//visibility:public" {
+				t.Errorf("lib visibility = %q, want //visibility:public", got)
+			}
+		case binaryKind:
+			if r.Attr("visibility") != nil {
+				t.Errorf("bin visibility = %v, want none", r.Attr("visibility"))
+			}
+		}
+	}
+	// A file that already declares a default visibility keeps it: no
+	// per-rule attr is emitted.
+	f := rule.EmptyFile("BUILD.bazel", "")
+	pkg := rule.NewRule("package", "")
+	pkg.SetAttr("default_visibility", []string{"//visibility:public"})
+	f.Rules = append(f.Rules, pkg)
+	owned := &rustLang{}
+	kept := owned.GenerateRules(language.GenerateArgs{Config: &config.Config{RepoRoot: root}, Dir: root, RegularFiles: []string{"Cargo.toml"}, File: f})
+	if len(owned.errors) != 0 {
+		t.Fatalf("generation errors = %v", owned.errors)
+	}
+	for _, r := range kept.Gen {
+		if isLibraryKind(r.Kind()) && r.Attr("visibility") != nil {
+			t.Errorf("%s visibility = %v, want none under file default", r.Name(), r.Attr("visibility"))
+		}
+	}
+}
+
 func TestSourceFilesBoundaries(t *testing.T) {
 	root := t.TempDir()
 	writeFixture(t, root, "src/lib.rs", "")
@@ -1275,9 +1425,6 @@ func TestGenerateCargoBuildScript(t *testing.T) {
 	}
 	if shell, ok := script.Attr("use_default_shell_env").(*bzl.LiteralExpr); !ok || shell.Token != "0" {
 		t.Errorf("script use_default_shell_env = %v, want 0", script.Attr("use_default_shell_env"))
-	}
-	if script.Attr("allow_build_script_to_detect_nonhermetic_paths") == nil || script.AttrBool("allow_build_script_to_detect_nonhermetic_paths") {
-		t.Errorf("script nonhermetic paths attr = %v, want False", script.Attr("allow_build_script_to_detect_nonhermetic_paths"))
 	}
 	if !script.AttrBool("emit_warnings") {
 		t.Errorf("script emit_warnings = %v, want True", script.Attr("emit_warnings"))

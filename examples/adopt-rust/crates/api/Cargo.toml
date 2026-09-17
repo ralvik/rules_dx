@@ -1,0 +1,12 @@
+[package]
+name = "api"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[features]
+default = []
+digest_extra = []
+
+[dev-dependencies]
+support = { path = "../support" }

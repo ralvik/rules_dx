@@ -12,6 +12,7 @@ rust_library(
     crate_name = "scripted_lib",
     crate_root = "source/lib.rs",
     edition = "2021",
+    visibility = ["//visibility:public"],
     deps = crate_deps(
         ["serde_json"],
         package_name = "crates/scripted",
@@ -61,7 +62,6 @@ cargo_build_script(
         package_name = "crates/scripted",
         build = True,
     ),
-    allow_build_script_to_detect_nonhermetic_paths = False,
     crate_features = [],
     crate_name = "scripted_build_script",
     crate_root = "build/script.rs",

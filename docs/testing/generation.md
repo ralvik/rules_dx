@@ -247,12 +247,6 @@ also prove that lint and test do not duplicate `tsc` actions.
   toolchain action inputs; scripts requiring those tools fail clearly when opted out. Measure cold
   downloads, action inputs, and compiler-update invalidation for the default and opt-out paths.
   Generation alone and an unused Rust foundation still activate no native-toolchain payload.
-- Verify every generated build-script rule sets
-  `allow_build_script_to_detect_nonhermetic_paths = False`. Scripts that emit absolute host paths
-  through `rustc-link-search`, `rustc-env`, or metadata fail with the pinned upstream diagnostic in
-  local, sandboxed, and remote execution. An explicit kept true override survives regeneration and
-  permits the fixture; an unkept true value is restored to `False`. Relative and declared generated
-  paths continue to work without an override.
 - Verify every generated build-script rule sets `emit_warnings = True`. A representative
   `cargo::warning` appears exactly once on Bazel stderr, not during `dx generate`; the pinned upstream
   global force-off suppresses it and force-on overrides a kept per-rule false value. Warning text does
