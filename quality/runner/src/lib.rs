@@ -1823,6 +1823,47 @@ mod tests {
     }
 
     #[test]
+    fn newline_variants_yield_distinct_manifests() {
+        // Determinism/apply-safety battery (issue #84):
+        // `quality-testing.md` requires file modes preserved and newline
+        // behavior documented. The runner takes only (path, bytes), so
+        // newline bytes must stay load-bearing while modes stay out of
+        // band. LF, missing-final-newline, and CRLF variants of the same
+        // BAD body must converge to distinct manifests with distinct
+        // digests; rerunning one variant must reproduce its own manifest
+        // exactly.
+        let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let variants = ["BAD\n", "BAD", "BAD\r\n"];
+        let terminals = ["GOOD\n", "GOOD", "GOOD\r\n"];
+        let mut manifests = Vec::with_capacity(variants.len());
+        for (index, body) in variants.iter().enumerate() {
+            let files = vec![file("src/lib.rs", body)];
+            let result = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
+            assert_eq!(result.convergence, Convergence::Stable as i32);
+            assert_eq!(result.replacements.len(), 1);
+            assert_eq!(
+                result.replacements[0].original_digest,
+                digest(body.as_bytes())
+            );
+            assert_eq!(result.replacements[0].edits.len(), 1);
+            assert_eq!(result.replacements[0].edits[0].start_byte, 0);
+            assert_eq!(result.replacements[0].edits[0].end_byte, body.len() as u64);
+            assert_eq!(
+                result.replacements[0].edits[0].replacement,
+                terminals[index].as_bytes()
+            );
+            assert!(validate(&result).is_ok());
+            manifests.push(encode_validated(&result).unwrap());
+        }
+        assert_ne!(manifests[0], manifests[1]);
+        assert_ne!(manifests[0], manifests[2]);
+        assert_ne!(manifests[1], manifests[2]);
+        let repeat = vec![file("src/lib.rs", "BAD\n")];
+        let rerun = run_pipeline("//quality:test", "lint", &stages, &repeat).unwrap();
+        assert_eq!(manifests[0], encode_validated(&rerun).unwrap());
+    }
+
+    #[test]
     fn file_modes_do_not_alter_pipeline_outputs() {
         // Determinism/apply-safety battery (issue #84):
         // `quality-testing.md` requires file modes preserved and newline
