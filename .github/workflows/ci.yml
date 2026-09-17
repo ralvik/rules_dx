@@ -151,7 +151,7 @@ jobs:
           echo "### coverage — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Command: dx coverage --min-coverage 97 //... (seed cell only; per-cell enforcement tracked in #89)." >> "$GITHUB_STEP_SUMMARY"
   prove:
-    name: prove (manual negatives, target tags, coverage cell)
+    name: prove (manual negatives, target tags, coverage cell, release hygiene)
     needs: [build]
     timeout-minutes: 30
     runs-on: ubuntu-latest
@@ -173,11 +173,13 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:target_tags
       - name: Prove seed coverage cell gate
         run: bazel run --noshow_progress //tools/ci:coverage_cell
+      - name: Prove release hygiene (no publication inputs without approval)
+        run: bazel run --noshow_progress //tools/ci:release_hygiene
       - name: Write job summary
         if: always()
         run: |
           echo "### prove — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate." >> "$GITHUB_STEP_SUMMARY"
+          echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate, release hygiene (issue #5 no-publication inputs)." >> "$GITHUB_STEP_SUMMARY"
   e2e:
     name: e2e (Stage 4 CLI-contract suite, explicit invocation)
     needs: [build]

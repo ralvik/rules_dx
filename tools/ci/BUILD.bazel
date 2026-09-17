@@ -115,6 +115,18 @@ sh_binary(
     srcs = ["target_tags.sh"],
 )
 
+# Release-hygiene harness (issue #5): machine-checks the
+# no-publication-inputs half verifiable on a clean tree — dist/release
+# git-ignored and uncommitted, module at 0.0.0, no version tags without
+# owner approval, SECURITY.md reporting link, publish dry-run
+# dispatch-only, policy docs present. Platform/packaging/provenance/
+# registry/install-smoke inputs stay unqualified gaps. Run by CI via
+# `bazel run //tools/ci:release_hygiene`.
+sh_binary(
+    name = "release_hygiene",
+    srcs = ["release_hygiene.sh"],
+)
+
 # Stage 4 E2E drivers (issue #55): one `manual` (+`exclusive`,
 # `local`, `no-sandbox`) sh_test per landed `integration/` scenario plus
 # the explicit suite. Wildcard suites (`bazel test //...`,
