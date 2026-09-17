@@ -1025,4 +1025,60 @@ mod tests {
         assert!(result.replacements.is_empty());
         assert!(quality_result::validate(&result).is_ok());
     }
+
+    #[test]
+    fn assemble_replacements_follow_sorted_path_order_for_atomic_apply() {
+        // Determinism + apply-safety battery (issue #84):
+        // `quality-testing.md` requires deterministic path-order commits —
+        // interruption may leave only complete earlier paths in path order,
+        // and each file applies atomically after full-envelope validation.
+        // Replacements must therefore arrive in sorted-path order
+        // regardless of QualitySourcesInfo insertion order, with each entry
+        // binding digest(original) and splicing to its terminal body.
+        let stages = vec![stage(
+            "lint-a",
+            &["rust"],
+            &["src/c.rs", "src/a.rs", "src/b.rs"],
+        )];
+        let mut initial = BTreeMap::new();
+        initial.insert("src/c.rs".to_owned(), "BAD c\n".to_owned());
+        initial.insert("src/b.rs".to_owned(), "BAD b\n".to_owned());
+        initial.insert("src/a.rs".to_owned(), "BAD a\n".to_owned());
+        let mut terminal = BTreeMap::new();
+        terminal.insert("src/c.rs".to_owned(), "GOOD c\n".to_owned());
+        terminal.insert("src/b.rs".to_owned(), "GOOD b\n".to_owned());
+        terminal.insert("src/a.rs".to_owned(), "GOOD a\n".to_owned());
+
+        let result = assemble(
+            "//quality:test",
+            Capability::Lint as i32,
+            &stages,
+            &initial,
+            &terminal,
+            (Vec::new(), Vec::new()),
+            (2, Convergence::Stable),
+        )
+        .unwrap();
+        assert_eq!(result.replacements.len(), 3);
+        let paths: Vec<&str> = result
+            .replacements
+            .iter()
+            .map(|edits| edits.path.as_str())
+            .collect();
+        assert_eq!(paths, vec!["src/a.rs", "src/b.rs", "src/c.rs"]);
+        for edits in &result.replacements {
+            let original = initial.get(&edits.path).expect("staged path");
+            let terminal_body = terminal.get(&edits.path).expect("staged path");
+            assert_eq!(edits.original_digest, digest(original.as_bytes()));
+            assert_eq!(edits.edits.len(), 1);
+            assert_eq!(edits.edits[0].start_byte, 0);
+            assert_eq!(edits.edits[0].end_byte, original.len() as u64);
+            assert_eq!(&edits.edits[0].replacement, terminal_body.as_bytes());
+        }
+        // Interruption prefix property: any prefix of the ordered
+        // replacements is exactly the set of complete earlier-path commits.
+        let prefix: Vec<&str> = paths.iter().take(2).copied().collect();
+        assert_eq!(prefix, vec!["src/a.rs", "src/b.rs"]);
+        assert!(quality_result::validate(&result).is_ok());
+    }
 }
