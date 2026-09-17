@@ -13,6 +13,10 @@ package(default_visibility = [
 dx_rust_crate(
     name = "dx_bep",
     package_name = "cli/dx_bep",
+    srcs = [
+        "src/lib.rs",
+        "src/test_outputs.rs",
+    ],
     deps = [
         "serde_json",
         "thiserror",
