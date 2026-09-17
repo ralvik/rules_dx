@@ -10,7 +10,8 @@
 # ecosystem repos, so unused foundations contribute zero actions to that
 # consumer's build.
 #
-# Covered here (minimum per #85): Rust, Python, JS/TS. Markers are
+# Covered here (minimum per #85 plus Go follow-up): Rust, Python, JS/TS,
+# Go. Markers are
 # ecosystem-specific repo strings as they appear in aquery output
 # (rules_rust / aspect_rules_py / aspect_rules_js / rules_go /
 # rules_dotnet), not shared base toolchains.
@@ -68,6 +69,8 @@ check_example adopt-rust "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules
 check_example adopt-python "aspect_rules_py" "rules_rust" "aspect_rules_js" "rules_go" "rules_dotnet"
 # JS/TS: owns aspect_rules_js; Rust/Python/Go/DotNet contribute no actions.
 check_example adopt-js-ts "aspect_rules_js" "rules_rust" "aspect_rules_py" "rules_go" "rules_dotnet"
+# Go: owns rules_go; Rust/Python/JS/DotNet contribute no actions.
+check_example adopt-go "rules_go" "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_dotnet"
 
 echo "examples laziness aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
