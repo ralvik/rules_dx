@@ -3,105 +3,17 @@
 //! Codegen collection/staging lives in [`super::managed_codegen`]
 //! and env collection/staging in [`super::managed_env`]; shared
 //! staging primitives (BEP group collection, generation directories,
-//! mirror-leaf symlinks) live in [`super::managed_staging`]. This
-//! module keeps the managed dispatch ([`execute_managed`]) plus side
-//! preparation.
+//! mirror-leaf symlinks) live in [`super::managed_staging`]; side
+//! preparation plus commit-error mapping live in
+//! [`super::managed_prepare`]. This
+//! module keeps the managed dispatch ([`execute_managed`]).
 
 use super::common::*;
-use super::managed_codegen::{collect_managed_codegen, empty_generated_id, stage_codegen_side};
-use super::managed_env::{collect_managed_env, empty_env_id, stage_env_side};
-use crate::args::{Command, Invocation};
+use super::managed_prepare::{map_commit_error, prepare_managed_sides};
+use crate::args::Invocation;
 use crate::plan::{bep_path, plan_managed};
 use dx_output::OutputMode;
 use dx_process::ForwardError;
-use std::path::Path;
-
-/// Maps a setup commit failure into the stable managed error vocabulary.
-/// Only the capability error carries its own code; every other commit
-/// failure preserves the prior pointer and reports `managed_commit_failed`.
-fn map_commit_error(error: dx_setup::CommitError) -> (String, String) {
-    match error {
-        dx_setup::CommitError::NoCapability => (
-            CODE_MANAGED_NO_CAPABILITY.to_owned(),
-            "selected scope provides neither environment nor codegen capability".to_owned(),
-        ),
-        other => (CODE_MANAGED_COMMIT_FAILED.to_owned(), other.to_string()),
-    }
-}
-
-/// Collects, validates, and stages the prepared sides for one managed
-/// command without committing: independent commands always prepare
-/// their own side (even an empty plan, which clears a stale selection,
-/// paired downstream with the managed empty counterpart), while an
-/// exact `dx setup` leaves a side with no contributing target
-/// unprepared so the commit carries the current generation forward (or
-/// the managed empty generation on first selection). Repository setup
-/// always prepares both canonical sides. Staged-but-unselected
-/// generations are ordinary retained cache, never selection state.
-fn prepare_managed_sides(
-    command: Command,
-    repository: bool,
-    workspace: &Path,
-    bep: &Path,
-) -> Result<dx_setup::PreparedSides, (String, String)> {
-    let empties = || -> Result<dx_setup::PreparedSides, (String, String)> {
-        Ok(dx_setup::PreparedSides {
-            prepared_environment: None,
-            prepared_generated: None,
-            empty_environment: empty_env_id()?,
-            empty_generated: empty_generated_id()?,
-        })
-    };
-    match command {
-        Command::Codegen => {
-            let (_, plan, projection) = collect_managed_codegen(bep)?;
-            let generated = stage_codegen_side(workspace, &plan, &projection)?;
-            Ok(dx_setup::PreparedSides {
-                prepared_generated: Some(generated),
-                ..empties()?
-            })
-        }
-        Command::Env => {
-            let (_, plan, projection) = collect_managed_env(bep)?;
-            let environment = stage_env_side(workspace, &plan, &projection)?;
-            Ok(dx_setup::PreparedSides {
-                prepared_environment: Some(environment),
-                ..empties()?
-            })
-        }
-        Command::Setup => {
-            let (codegen_outputs, codegen_plan, codegen_projection) = collect_managed_codegen(bep)?;
-            let (env_outputs, env_plan, env_projection) = collect_managed_env(bep)?;
-            let prepared_generated = if repository || !codegen_outputs.is_empty() {
-                Some(stage_codegen_side(
-                    workspace,
-                    &codegen_plan,
-                    &codegen_projection,
-                )?)
-            } else {
-                None
-            };
-            let prepared_environment = if repository || !env_outputs.is_empty() {
-                Some(stage_env_side(workspace, &env_plan, &env_projection)?)
-            } else {
-                None
-            };
-            Ok(dx_setup::PreparedSides {
-                prepared_environment,
-                prepared_generated,
-                ..empties()?
-            })
-        }
-        // LCOV_EXCL_START - reason: defense-in-depth; execute routes only managed commands here, so this arm is unreachable; retained to fail closed as invalid_result instead of panicking.
-        _ => {
-            debug_assert!(false, "managed dispatch guards commands");
-            Err((
-                CODE_INVALID_RESULT.to_owned(),
-                "unsupported managed command".to_owned(),
-            ))
-        } // LCOV_EXCL_STOP - reason: end of unreachable managed-dispatch arm.
-    }
-}
 
 /// Runs `dx codegen`, `dx env`, and `dx setup` (M25 WP3/WP5):
 /// validates the label-only scope through the shared setup scope rules,
@@ -252,10 +164,10 @@ pub(crate) fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
 
 #[cfg(test)]
 mod tests {
+    use super::super::managed_codegen::{empty_generated_id, stage_codegen_side};
+    use super::super::managed_env::{empty_env_id, stage_env_side};
     use super::super::test_support::*;
-    use super::*;
     use dx_setup::{read_current_pair, ENVIRONMENTS_DIR_NAME, GENERATED_DIR_NAME};
-    use std::path::PathBuf;
 
     #[test]
     fn managed_dry_run_prints_summary_without_launching() {
@@ -435,20 +347,6 @@ mod tests {
         )
         .expect("values");
         assert_eq!(values, "{}");
-    }
-
-    #[test]
-    fn managed_commit_errors_map_to_stable_codes() {
-        let (code, message) = map_commit_error(dx_setup::CommitError::NoCapability);
-        assert_eq!(code, CODE_MANAGED_NO_CAPABILITY);
-        assert!(
-            message.contains("neither environment nor codegen"),
-            "{message}"
-        );
-        let (code, _) = map_commit_error(dx_setup::CommitError::WorkspaceRoot {
-            path: PathBuf::from("missing"),
-        });
-        assert_eq!(code, CODE_MANAGED_COMMIT_FAILED);
     }
 
     #[test]

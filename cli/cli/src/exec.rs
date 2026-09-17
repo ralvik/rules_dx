@@ -3,7 +3,8 @@
 //! quality, workflow (dispatch) plus test_reports (test/coverage
 //! collection), bazel, generate, clean, managed (dispatch) plus
 //! managed_codegen/managed_env (generation sides) plus
-//! managed_staging (shared staging primitives), quality plus
+//! managed_staging (shared staging primitives) plus managed_prepare
+//! (side preparation and commit-error mapping), quality plus
 //! quality_apply (mutation and status projection) plus quality_patch
 //! (diff-patch rendering) plus quality_emit (finding/change/mutation
 //! emission) plus quality_reports (standard-report
@@ -25,6 +26,7 @@ mod generate;
 mod managed;
 mod managed_codegen;
 mod managed_env;
+mod managed_prepare;
 mod managed_staging;
 mod quality;
 mod quality_apply;
