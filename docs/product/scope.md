@@ -72,6 +72,9 @@ unnamed tools. Newly identified candidates require an explicit disposition, not 
 
 Each candidate must become required v1 scope, a recorded additional-foundation deferral, or an
 evidence-backed recorded exclusion. No individual foundation is deferred by this policy alone.
+There is no post-v1 bucket for workflow scope: [#3](https://github.com/ralvik/rules_dx/issues/3),
+[#4](https://github.com/ralvik/rules_dx/issues/4), and
+[#186](https://github.com/ralvik/rules_dx/issues/186) are v1 scope per owner decision.
 Record missing upstream rules, non-hermetic acquisition, unsupported platform requirements, or
 substantial integration effort precisely, including concrete gaps and ongoing maintenance ownership.
 Scheduling preference and omission from the original plan are not feasibility failures.

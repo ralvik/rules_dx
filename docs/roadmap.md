@@ -30,11 +30,11 @@ describe current behavior.
   [#82](https://github.com/ralvik/rules_dx/issues/82) (warnings-as-errors),
   [#83](https://github.com/ralvik/rules_dx/issues/83) (visibility hardening),
   [#77](https://github.com/ralvik/rules_dx/issues/77) (cli-contract claims),
-  [#78](https://github.com/ralvik/rules_dx/issues/78) (publishing dry-run),
-  [#79](https://github.com/ralvik/rules_dx/issues/79) (native updater).
+  [#78](https://github.com/ralvik/rules_dx/issues/78) (human-run release path, signing-first),
+  [#26](https://github.com/ralvik/rules_dx/issues/26) (signing stack + distribution),
+  [#184](https://github.com/ralvik/rules_dx/issues/184) (GHCR prebuilt images, separate workflow),
+  [#3](https://github.com/ralvik/rules_dx/issues/3) (Renovate out-of-the-box, native bot deferred),
+  [#212](https://github.com/ralvik/rules_dx/issues/212) (automation policy: Renovate allowed).
+* V1 scope: [#4](https://github.com/ralvik/rules_dx/issues/4) (`dx migrate` syntax + manifest selection),
+  [#186](https://github.com/ralvik/rules_dx/issues/186) (`dx run` multirun). No post-v1 bucket.
 * Rust library extraction: [#64](https://github.com/ralvik/rules_dx/issues/64)–[#74](https://github.com/ralvik/rules_dx/issues/74).
-
-## Parked
-
-* [#3](https://github.com/ralvik/rules_dx/issues/3) — native `dx update` bot stays manual-interim.
-* [#4](https://github.com/ralvik/rules_dx/issues/4) — `dx migrate` stays post-v1 direction-only.
