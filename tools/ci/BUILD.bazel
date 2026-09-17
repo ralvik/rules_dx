@@ -172,6 +172,17 @@ sh_binary(
     srcs = ["examples_laziness.sh"],
 )
 
+# Examples laziness query proof (issue #85, slice 3): dependency-closure
+# half — each single-foundation example (Rust, Python, JS/TS minimum)
+# contains its own ecosystem repo and none of the others' repos in
+# `bazel query deps`, so unused foundations contribute no targets/repos.
+# Empty-cache action proof + network-denied runtime attribution stay open
+# per #85. Run by CI via `bazel run //tools/ci:examples_laziness_query`.
+sh_binary(
+    name = "examples_laziness_query",
+    srcs = ["examples_laziness_query.sh"],
+)
+
 # Stage 4 E2E drivers (issue #55): one `manual` (+`exclusive`,
 # `local`, `no-sandbox`) sh_test per landed `integration/` scenario plus
 # the explicit suite. Wildcard suites (`bazel test //...`,
