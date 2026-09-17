@@ -22,15 +22,15 @@
 
 pub mod classify;
 pub mod entry;
+pub mod packages;
 pub mod query;
 pub mod run_deploy;
 pub mod test_map;
 pub mod types;
 
-pub(crate) use classify::{
-    classify_scopes, first_line, parse_owners, resolve_file_owners, PackageCache,
-};
+pub(crate) use classify::{classify_scopes, first_line, parse_owners, resolve_file_owners};
 pub use entry::{resolve, resolve_for_test};
+pub(crate) use packages::PackageCache;
 pub(crate) use query::{ownership_set_expression, quote_set, run_label_query};
 pub use run_deploy::{check_deployable, resolve_deploy, resolve_run, DeployInfo};
 pub use test_map::map_owners_to_tests;

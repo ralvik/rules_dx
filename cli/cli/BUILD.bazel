@@ -85,6 +85,7 @@ rust_library(
         "src/resolve.rs",
         "src/resolve/classify.rs",
         "src/resolve/entry.rs",
+        "src/resolve/packages.rs",
         "src/resolve/query.rs",
         "src/resolve/run_deploy.rs",
         "src/resolve/test_map.rs",

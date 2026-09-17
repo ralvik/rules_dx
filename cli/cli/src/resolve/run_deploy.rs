@@ -15,7 +15,8 @@ use std::path::Path;
 
 use dx_process::{launcher_argv0, WORKFLOW_STARTUP_OPTS};
 
-use super::classify::{classify_scopes, PackageCache};
+use super::classify::classify_scopes;
+use super::packages::PackageCache;
 use super::{
     first_line, ownership_set_expression, quote_set, run_label_query, QueryRunner, ResolveError,
 };
