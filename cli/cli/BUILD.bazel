@@ -41,6 +41,7 @@ rust_library(
         "src/plan.rs",
         "src/platform.rs",
         "src/reports.rs",
+        "src/reports/junit.rs",
         "src/reports/lcov.rs",
         "src/resolve.rs",
         "src/skew.rs",
