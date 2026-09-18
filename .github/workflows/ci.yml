@@ -199,6 +199,8 @@ jobs:
           key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
           restore-keys: |
             bazel-seed-
+      - name: Prove every scenario is wired (E2E-case convention, issue #54)
+        run: bazel run --noshow_progress //tools/ci:e2e_cases
       - name: Run explicit E2E suite (manual drivers, never under //...)
         run: E2E_WORKSPACE=$GITHUB_WORKSPACE bazel test --noshow_progress //tools/ci:e2e --test_env=E2E_WORKSPACE
       - name: Write job summary
