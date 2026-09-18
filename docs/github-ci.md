@@ -263,4 +263,5 @@ reopen the accepted policies above. Resolve them before affected implementation:
 Consumer-CI qualification, release qualification, and publication of qualified
 identities remain open tracks. Track unresolved work in
 planned work and prove the contract
-through the [consumer CI test matrix](testing/github-ci.md).
+through the [consumer CI test matrix](testing/github-ci.md). The open qualification
+track stays owned under issue #312.

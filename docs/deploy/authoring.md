@@ -97,7 +97,10 @@ open work): it builds
 the seed-host `dx` binary the `//cli/cli:github_draft` macro assembles,
 so workflow and macro stay consistent instead of duplicating logic.
 The full release matrix, SBOM/provenance, and BCR submission arrive as
-follow-ups there as platforms qualify.
+follow-ups there as platforms qualify. Deploy and release gaps stay open under
+issue #311 (full release matrix as platforms qualify, SBOM and provenance generation,
+signing and attestation selection, BCR submission tooling, GHCR prebuilt-image route,
+and the human-run release path; draft-only ceiling enforced, owner approval required).
 
 ## Custom deployers (accepted)
 

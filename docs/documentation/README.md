@@ -36,7 +36,10 @@ schema and golden test fixtures are checked in; ordinary API changes require no 
   (see the [`dx docs` stub](../cli/commands/docs.md)).
   [ADR 0006](../decisions/0006-cli-command-surface.md) records build versus
   validation-only check; exact mappings are tracked in
-  open work.
+  open work. Docs pipeline gaps stay open under issue #310 (per-language adapter runs
+  with pins and mappings, renderer and site execution, byte-identical rebuild proof,
+  link and reference completeness, guide-step CI wiring, first-hour timing proof, and
+  per-release pin-bump plus drift process; no working site claimed).
 
 Rust uses pinned nightly `rustdoc --output-format json`; Scala needs a
 Scaladoc/TASTy proof spike; Astro/MDX are prose-only with no API surface.
