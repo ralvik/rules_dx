@@ -10,18 +10,19 @@
 # battery on a clean tree with docs matching as-built behavior.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (32 checks): hygiene policy, exact 0.0.0 module pin + consumer
-# pin, distribution doc ownership + Bazel-first + standalone-install
-# records + BCR destination + draft-only ceiling, workflow separation
-# + triggers + default-closed approve gates + dry-run report record,
-# signing-first trust-root + SBOM detail, digest-pinned prebuilt base
-# + Bazelisk delegation + cosign deferral + prebuilt doc section +
-# never-latest gate, scaffold state, self-call consumer/docs smoke,
-# security precondition, gitignored outputs, matrix close-out page +
-# Layer-4 E2E + battery-audit record, E2E driver/format slices +
-# E2E-case convention, and no-publish invariants. Matrix/SBOM/BCR/
-# install verification and the full green battery stay open under
-# their issues.
+# today (36 checks): hygiene policy, exact 0.0.0 module pin + consumer
+# pin + reviewed-commit workflow pin, distribution doc ownership +
+# Bazel-first + standalone-install records + BCR + GitHub Releases
+# destinations + draft-only ceiling, workflow separation + triggers +
+# default-closed approve gates + dry-run report record, signing-first
+# trust-root + attestation + SBOM detail, digest-pinned prebuilt base
+# + Bazelisk delegation + cosign deferral + admissibility gate +
+# prebuilt doc section + never-latest gate, scaffold state, self-call
+# consumer/docs smoke, security precondition, gitignored outputs,
+# matrix close-out page + Layer-4 E2E + battery-audit record, E2E
+# driver/format slices + E2E-case convention, and no-publish
+# invariants. Matrix/SBOM/BCR/install verification and the full green
+# battery stay open under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:distribution_closeout_guards`,
 # following //tools/ci:ghcr_publish_guards.
@@ -285,6 +286,39 @@ if grep -q -F -e 'corpus and code ownership audits' docs/testing/verification-ma
   ok
 else
   bad "verification-matrix lost its battery-audit record (#54)"
+fi
+
+# #5 consumer caller pins the reusable workflow at a reviewed commit
+# SHA, never a tag or floating ref (bumps are reviewed pins only).
+if grep -q -F -e 'reusable-consumer.yml@' examples/consumer-ci/caller.yml; then
+  ok
+else
+  bad "consumer-ci caller lost its reviewed-commit workflow pin (#5)"
+fi
+
+# #26 GitHub Releases stays recorded as the standalone-binary
+# destination next to BCR (destinations only, verification open).
+if grep -q -F -e 'GitHub Releases' docs/environments/environment.md; then
+  ok
+else
+  bad "environment.md lost its GitHub Releases destination record (#26)"
+fi
+
+# #78 attestation record stays owned: Sigstore keyless plus GitHub
+# attestations on the #26 trust root (tooling still dry-run only).
+if grep -q -F -e 'attest' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish dry run lost its attestation record (#78)"
+fi
+
+# #184 admissibility gate stays versioned: the scaffold image must
+# pass devcontainer_is_admissible (pinned bootstrap, Bazel
+# delegation, no ambient tools).
+if grep -q -F -e 'devcontainer_is_admissible' cli/adopt/src/lib.rs; then
+  ok
+else
+  bad "adopt crate lost its devcontainer admissibility gate (#184)"
 fi
 
 # No-publish invariant: no tags claimed, no release outputs committed.
