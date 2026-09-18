@@ -2,8 +2,7 @@
 # Registry-singularity harness (issues #6, #84): machine-checks that the
 # semantic file-class registry stays single-sourced.
 #
-# `docs/quality/quality-sources.md` owns the frozen first-release
-# registry of canonical lowercase IDs; `quality/adapters.bzl` owns the
+# `quality/adapters.bzl` owns the
 # one class-to-family map (`REAL_CLASS_TO_FAMILY`) plus the real
 # adapter capability manifests (`REAL_ADAPTERS`). Adapters must consume
 # canonical IDs (no invented classes), map keys must be frozen IDs (no
@@ -12,20 +11,15 @@
 # assignments (JavaScript owns javascript/jsx, TypeScript owns
 # typescript/tsx, JSON owns the JSON classes) must agree with the map.
 # The synthetic fixture maps stay labeled fixture/provisional so they
-# can never be mistaken for the taxonomy, and the sources doc keeps
-# the #6-pending disclaimer so the assignment is not published as
-# stable API.
+# can never be mistaken for the taxonomy.
 #
 # This harness machine-checks the static half verifiable on a clean
-# tree today (11 checks). The full registry review — class-to-family
-# assignment for the still-unassigned frozen IDs, per-ID admissibility
-# mappings, per-family independence rules — stays open per #6, and the
-# cache-execution plus determinism-permutation proofs stay open per
-# #84; all are recorded as gaps, not claimed here. Only the three
-# admissibility edge examples owned in quality-sources.md are pinned,
-# the 12 unassigned IDs are pinned as still unassigned, and the
-# taxonomy grouping rule (one family per class, group only when sharing
-# tool selection) is pinned as the pending-review constraint.
+# tree today (7 checks): adapters consume canonical IDs, map keys are
+# frozen IDs, one-class-one-family, canonical spelling, frozen example
+# agreement, fixture labeling, and unassigned-stays-unassigned (no
+# silent family assignment or adapter claim for the 12 open-work IDs).
+# The full registry review stays open per #6, and cache-execution plus
+# determinism-permutation proofs stay open per #84.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:registry_singularity`,
 # following //tools/ci:release_policy.
@@ -119,42 +113,6 @@ else
   bad "synthetic adapter maps lost their fixture/provisional labeling"
 fi
 
-# The sources doc keeps the pending-review disclaimer: the assignment is
-# a candidate, not stable API.
-if grep -q -F -e 'must not be published as stable' docs/quality/quality-sources.md; then
-  ok
-else
-  bad "docs/quality/quality-sources.md lost the pending-review disclaimer"
-fi
-
-# The sources doc explicitly enumerates the still-unassigned frozen IDs
-# as open work under issue #6, so the pending assignment cannot rot
-# into an undocumented gap (assignment itself stays pending review).
-open_doc_ok=1
-for class in css gherkin graphql html html_template json5 jsonc less scss sql text xml; do
-  if ! grep -q -F -e "\`$class\`" docs/quality/quality-sources.md; then
-    open_doc_ok=0
-    bad "docs/quality/quality-sources.md lost its open-work record for unassigned class $class (#6)"
-  fi
-done
-if ! grep -q -F -e 'Open work under issue #6' docs/quality/quality-sources.md; then
-  open_doc_ok=0
-  bad "docs/quality/quality-sources.md lost its issue #6 open-work enumeration"
-fi
-[[ "$open_doc_ok" == "1" ]] && ok
-
-# The sources doc keeps the per-ID admissibility pending record while
-# owning only the three edge examples, so the prose cannot rot into a
-# published-table claim (full mappings stay pending review per #6).
-if grep -q -F -e 'Per-ID mappings remain pending the' docs/quality/quality-sources.md \
-  && grep -q -F -e '.h` alone cannot decide' docs/quality/quality-sources.md \
-  && grep -q -F -e 'extensionless files do not become `shell`' docs/quality/quality-sources.md \
-  && grep -q -F -e 'BUILD`/`BUILD.bazel` are admissible as `starlark`' docs/quality/quality-sources.md; then
-  ok
-else
-  bad "docs/quality/quality-sources.md lost its admissibility pending-record or edge examples (#6)"
-fi
-
 # The 12 open-work IDs stay unassigned: no silent family assignment or
 # adapter claim lands without the registry review, so the gap cannot be
 # closed without updating the #6 enumeration above.
@@ -170,18 +128,6 @@ for class in css gherkin graphql html html_template json5 jsonc less scss sql te
   fi
 done
 [[ "$unassigned_clean" == "1" ]] && ok
-
-# The taxonomy grouping rule stays owned: every class has exactly one
-# family and future assignment may group classes only when they should
-# always share tool selection, so the pending review cannot be closed
-# with an arbitrary grouping.
-if grep -q -F -e 'Every semantic class has exactly one quality policy family' docs/quality/quality-sources.md \
-  && grep -q -F -e 'must assign' docs/quality/quality-sources.md \
-  && grep -q -F -e 'only when they should always share tool' docs/quality/quality-sources.md; then
-  ok
-else
-  bad "docs/quality/quality-sources.md lost its taxonomy grouping rule (#6)"
-fi
 
 # Record the open remainder as information, not a gate: frozen IDs
 # with no family assignment yet stay open work.

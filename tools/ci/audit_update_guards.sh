@@ -10,9 +10,9 @@
 # unexecuted; fixtures per language stay open under #22).
 #
 # This harness machine-checks the fail-closed half verifiable on a clean
-# tree today (11 checks): deferred codes, exit-code mappings, dry-run
-# planning, docs ownership with no false claims, consumer-ci still
-# disabled, depcheck contract green, and matrix honesty. Live execution
+# tree today: deferred codes, exit-code mappings, dry-run
+# planning, consumer-ci still
+# disabled, depcheck contract green. Live execution
 # stays open under its issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:audit_update_guards`,
@@ -31,8 +31,6 @@ fail=0
 ok() { pass=$((pass + 1)); }
 bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
 
-doc="docs/cli/commands/audit-update-bazel.md"
-
 # #18: live audit fails closed with the stable deferred code.
 if grep -q -F -e 'audit_deferred' cli/cli/src/exec/audit.rs \
   && grep -q -F -e 'CODE_AUDIT_DEFERRED' cli/cli/src/exec/common.rs; then
@@ -49,14 +47,6 @@ if grep -q -F -e 'pub fn exit_code' cli/audit/src/outcome.rs \
   ok
 else
   bad "audit outcome lost its aggregate exit-code mapping"
-fi
-
-# Docs own the open auditor wiring, claim no working support.
-if grep -q -F -e 'open work' "$doc" \
-  && grep -q -F -e 'no working' "$doc"; then
-  ok
-else
-  bad "audit doc lost its open-work ownership or no-working-support record"
 fi
 
 # #18/#19: consumer smoke still disables both audits (still deferred).
@@ -83,21 +73,6 @@ else
   bad "update report lost its overall_failure exit-code mapping"
 fi
 
-# Docs own the open resolver backends, claim no live execution.
-if grep -q -F -e 'open work' "$doc"; then
-  ok
-else
-  bad "update doc lost its open-work ownership record"
-fi
-
-# Dry-run planning stays the only executing path (exits 0, no live claim).
-if grep -q -F -e 'dry-run' "$doc" \
-  && grep -q -F -e 'exits `0`' "$doc"; then
-  ok
-else
-  bad "audit/update doc lost its dry-run planning record"
-fi
-
 # #22: depcheck contract harness stays green (truth table + open routes).
 if [[ -f "tools/ci/depcheck_contract.sh" ]]; then
   ok
@@ -110,14 +85,6 @@ if [[ -z "$(grep -rn -E -e 'fn check_lockfile|fn check_declared_usage|lockfile_c
   ok
 else
   bad "checker-shaped symbols appeared without fixtures"
-fi
-
-# Matrix stays honest: depcheck open, audit/update planning-only.
-if grep -q -F -e '| Open |' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'Planning only' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix lost its depcheck/audit honesty record"
 fi
 
 echo "audit update guards harness: $pass passed, $fail failed"

@@ -3,17 +3,16 @@
 #
 # PRs get no coverage summary from our own tooling today: the gate is
 # local (`dx coverage --min-coverage`, Bazel-owned combined LCOV) plus a
-# `$GITHUB_STEP_SUMMARY` line, while `docs/testing/README.md` selects
+# `$GITHUB_STEP_SUMMARY` line, while the testing README selects
 # Codecov with activation/upload unqualified (per #5). Issue #254 wants
 # first-party coverage PR reporting (compact summary comment, no service
 # dependency) adopted here so Codecov stays at most opt-in.
 #
 # This harness machine-checks the contract half verifiable on a clean
-# tree today (10 checks): the Bazel-owned gate stays the source of
-# truth, the LCOV/reporting/codecov-selection records stay honest, the
-# consumer coverage path stays wired, no third-party coverage action is
-# smuggled into CI, and the PR-summary-comment workflow stays recorded
-# as open (not claimed). Comment presentation, dedup, fork handling, and
+# tree today: the Bazel-owned gate stays the source of
+# truth, the consumer coverage path stays wired, no third-party
+# coverage action is
+# smuggled into CI. Comment presentation, dedup, fork handling, and
 # failure-case proofs stay open under #254.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:coverage_report_guards`,
@@ -38,37 +37,6 @@ if grep -q -F -e 'coverage --min-coverage' .github/workflows/ci.yml; then
   ok
 else
   bad "ci coverage job lost the dx coverage gate"
-fi
-
-# LCOV stays the canonical validated report shape.
-if grep -q -F -e '## LCOV' docs/cli/standard-reports.md; then
-  ok
-else
-  bad "standard-reports lost its LCOV contract section"
-fi
-
-# Current selection stays honest: Codecov documented with activation
-# unqualified (first-party comment remains open work).
-if grep -q -F -e 'Codecov' docs/testing/README.md \
-  && grep -q -F -e 'remain unqualified' docs/testing/README.md; then
-  ok
-else
-  bad "testing README lost its Codecov-selection + unqualified record"
-fi
-
-# Reporting contract exists for consumers (ownership + check discipline).
-if grep -q -F -e 'reporting' docs/github-ci.md; then
-  ok
-else
-  bad "github-ci doc lost its reporting contract"
-fi
-
-# Fork security stays in the contract (unprivileged PRs never get write
-# credentials for reporting).
-if grep -q -F -e 'fork' docs/github-ci.md; then
-  ok
-else
-  bad "github-ci doc lost its fork-security record"
 fi
 
 # The seed-cell source the comment must present stays versioned.

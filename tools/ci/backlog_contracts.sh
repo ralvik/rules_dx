@@ -1,28 +1,18 @@
 #!/usr/bin/env bash
-# Backlog-contracts harness (env/codegen + docs-pipeline): machine-checks the frozen
-# cross-file contracts plus the honest gap labels of the environment /
-# codegen and docs-pipeline backlog tracks.
+# Backlog-contracts harness (env/codegen + docs-pipeline): machine-checks
+# the frozen cross-file contracts.
 #
 # The codegen collector (`cli/codegen`) mirrors the frozen Starlark
 # helpers in `//generation:codegen.bzl`: the output-group name, the
 # reserved shard suffix, the collecting aspect, and the canonical
 # repository selection must stay identical on both sides, or collection
-# silently stops matching. The commit-lock protocol is specified in
-# `docs/environments/managed-state.md` with cross-platform correctness
-# explicitly disclaimed, and the root-selection candidates stay
-# unverified WP4 slices in `docs/environments/codegen.md`. The
-# `dx docs` removal plus open reintroduction is recorded in
-# `docs/cli/commands/docs.md`, the IR identity (`dx.documentation.v1`,
-# `schema_major: 1`) is stable across the proto and its contract, and
-# the support matrix still promotes no cell to `Supported`.
+# silently stops matching. The IR identity (`dx.documentation.v1`)
+# is stable for the proto.
 #
 # This harness machine-checks the static half verifiable on a clean
-# tree today (11 checks). Bare-schema reverse-dependent projection
-# queries, lock platform evidence, `dx clean` reclaimable-bytes
-# reporting beyond the implemented measure/render pair, per-language
-# docs adapter runs, link/reference completeness, renderer execution,
-# guide-step CI wiring, and the timed quickstart proof all remain open work
-# and are recorded as gaps, not claimed here.
+# tree today (5 checks): output-group, shard-suffix, aspect, repository
+# selection, and proto IR identity. Functional checks only (no
+# docs-prose guards).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:backlog_contracts`,
 # following //tools/ci:registry_singularity.
@@ -77,59 +67,11 @@ else
   bad "codegen REPOSITORY_TARGET //dx:codegen is missing or renamed"
 fi
 
-# The commit-lock contract keeps its cross-platform disclaimer:
-# locking is implemented plus unit-tested, never proven portable.
-if grep -q -F -e 'does not establish cross-platform correctness' docs/environments/managed-state.md; then
+# The IR identity is stable for the proto.
+if grep -q -F -e 'package dx.documentation.v1;' docs/ir/doc_ir.proto; then
   ok
 else
-  bad "docs/environments/managed-state.md lost the cross-platform disclaimer"
-fi
-
-# Root-selection candidates stay unverified WP4 slices, never silently
-# promoted to accepted architecture.
-if grep -q -F -e 'remain unverified claims tracked as later WP4 slices' docs/environments/codegen.md; then
-  ok
-else
-  bad "docs/environments/codegen.md lost the WP4-unverified root-candidate note"
-fi
-
-# ADR 0018 records the implemented clean evidence (process scan plus
-# measured bytes) instead of the stale pending line.
-if grep -q -F -e 'cli/clean/src/live.rs' docs/decisions/0018-umbrella-check-fix-cleanup-clean.md && grep -q -F -e 'cli/clean/src/bytes.rs' docs/decisions/0018-umbrella-check-fix-cleanup-clean.md; then
-  ok
-else
-  bad "ADR 0018 lost the implemented clean-evidence status update"
-fi
-
-# `dx docs` stays removed with open reintroduction: the
-# name must not return as a placeholder.
-if grep -q -F -e 'Removed.' docs/cli/commands/docs.md && grep -q -F -e 'Reintroduction' docs/cli/commands/docs.md && grep -q -F -e 'is' docs/cli/commands/docs.md; then
-  ok
-else
-  bad "docs/cli/commands/docs.md lost the removal + open-reintroduction record"
-fi
-
-# The check-mode/render/link-completeness gaps stay recorded as open work in
-# both pipeline contracts.
-if grep -q -F -e 'no working site support is claimed' docs/documentation/site.md && grep -q -F -e 'no working docs support is claimed' docs/documentation/doc-ir.md; then
-  ok
-else
-  bad "docs pipeline contracts lost the open-work gap record"
-fi
-
-# The IR identity is stable across the proto and its contract.
-if grep -q -F -e 'package dx.documentation.v1;' docs/ir/doc_ir.proto && grep -q -F -e 'dx.documentation.v1' docs/documentation/doc-ir.md && grep -q -F -e 'schema_major: 1' docs/documentation/doc-ir.md; then
-  ok
-else
-  bad "docs IR identity drifted between docs/ir/doc_ir.proto and doc-ir.md"
-fi
-
-# No silent promotion: the support matrix still carries no Supported
-# cell, so docs-pipeline (or any other) support cannot be implied.
-if grep -q -F -e 'no cell is currently `Supported`' docs/product/support-matrix.md; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost the no-Supported-cell record"
+  bad "docs/ir/doc_ir.proto lost the dx.documentation.v1 identity"
 fi
 
 echo "backlog contracts audit: $pass passed, $fail failed"

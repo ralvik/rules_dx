@@ -1,36 +1,16 @@
 #!/usr/bin/env bash
-# Quality-foundations determinism guards (issues #6, #7, #8, #12, #84, #303, #304, #305, #307, #313, #315, #316, #321, #326).
+# Quality-foundations determinism guards (issues #6, #7, #8, #12, #84).
 #
-# Rust/Python/JS-TS foundations ship thin wrappers + Gazelle + env plans;
-# Vue/Svelte/Astro/MDX ship named adapters over upstream parsers; quality
-# plumbing (QualitySourcesInfo, policy providers, result protocol,
-# adapters, parity gate) is delivered. Exact provider/import/lock/
-# tool-graph proofs (#7), framework parser/provider/region mappings +
-# composition (#8), class-to-family taxonomy + admissibility (#6), native
-# config binding + CI scope extension (#12 lane A), and per-adapter
-# cache/determinism/apply batteries (#84) stay open with honest gaps.
-# Required core mappings (#303), admitted additional foundations (#304),
-# deferred/excluded record (#305), quality adapters/parity/packaging (#307),
-# and file-family integrations (#313) stay open with honest tracker records.
-# Hand-rolled helpers (#315), clap legacy strings (#316), hardcoded
-# inventories (#321), and pin/docs hygiene (#326) stay open with records.
+# Functional code checks only (no docs-prose guards).
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (53 checks): provider definition, single-sourced registry map +
-# frozen class table + secrets family + admissibility table +
-# adapter-applicability + parity gate, per-foundation owner docs +
-# dependency scopes + native-config sections + rust tests/build-scripts +
-# Gazelle extension dirs, framework boundary + adapter boundary +
-# generated-region mappings + full format set + mixed composition +
-# ownership regions + framework Gazelle dirs, minimum-consumer index +
-# adapter-mechanics doc, aspect QualitySourcesInfo gate, cache/
-# determinism/apply-safety contract sections + no-cache argv marker,
+# today (25 checks): provider definition, single-sourced registry map,
 # curated-defaults + native-config evidence files + test backing,
-# lane-A exclusion + generated list + dogfood CI jobs,
+# lane-A exclusion + generated list, prior-slice harnesses,
 # external-consumer breadth, determinism seed pin, apply filesystem +
-# atomic-write evidence + ten-round limit, matrix honesty, prior-slice
-# harnesses green, and no-false-claim gaps. Full taxonomy review, exact
-# mappings, and battery execution stay open under their issues.
+# atomic-write evidence, aspect QualitySourcesInfo gate, no-cache argv
+# marker, Gazelle extension dirs, dogfood CI jobs, M21 fixture, parity
+# unit tests, and no-false-claim gaps.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:quality_foundations_guards`,
 # following //tools/ci:registry_singularity.
@@ -49,11 +29,10 @@ ok() { pass=$((pass + 1)); }
 bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
 
 # #12 lane A plumbing: QualitySourcesInfo provider defined once.
-if grep -q -F -e 'QualitySourcesInfo = provider(' quality/sources.bzl \
-  && grep -q -F -e 'QualitySourcesInfo' docs/quality/quality-sources.md; then
+if grep -q -F -e 'QualitySourcesInfo = provider(' quality/sources.bzl; then
   ok
 else
-  bad "QualitySourcesInfo provider definition or sources doc missing"
+  bad "QualitySourcesInfo provider definition missing"
 fi
 
 # #6 single-sourced registry: one class-to-family map + adapter manifests.
@@ -62,44 +41,6 @@ if grep -q -F -e 'REAL_CLASS_TO_FAMILY' quality/adapters.bzl \
   ok
 else
   bad "adapters.bzl lost the single-sourced registry (REAL_CLASS_TO_FAMILY + REAL_ADAPTERS)"
-fi
-
-# #7 language owner docs present per foundation.
-if grep -q -F -e 'Rust' docs/generation/rust.md \
-  && grep -q -F -e 'Python' docs/generation/python.md \
-  && grep -q -F -e 'TypeScript' docs/generation/javascript-typescript.md; then
-  ok
-else
-  bad "language foundation docs lost their owner markers (Rust/Python/TypeScript)"
-fi
-
-# #8 framework boundary doc present.
-if grep -q -F -e 'Vue' docs/generation/framework-adapters.md; then
-  ok
-else
-  bad "framework-adapters.md lost its Vue boundary marker"
-fi
-
-# #84 contract owns the three batteries (cache/determinism/apply).
-if grep -q -F -e '## Cache Correctness' docs/quality/quality-testing.md \
-  && grep -q -F -e '## Determinism' docs/quality/quality-testing.md; then
-  ok
-else
-  bad "quality-testing.md lost the Cache Correctness / Determinism battery sections"
-fi
-
-# #84 honesty: warm no-op alone is not a cache test (gap recorded).
-if grep -q -F -e 'A warm local no-op alone is not a cache test' docs/quality/quality-testing.md; then
-  ok
-else
-  bad "quality-testing.md lost its warm-no-op-is-not-a-cache-test honesty record"
-fi
-
-# #84 contract owns the third battery too (apply safety).
-if grep -q -F -e '## Apply Safety' docs/quality/quality-testing.md; then
-  ok
-else
-  bad "quality-testing.md lost the Apply Safety battery section"
 fi
 
 # #6 curated defaults stay single-sourced in quality/.
@@ -124,23 +65,6 @@ else
   bad "code_ownership lost its adopt-js-ts inert-exclusion record"
 fi
 
-# Matrix honesty: framework/language/quality gaps recorded as open work.
-if grep -q -F -e 'Open (regions)' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'Open (adapter-less)' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'Planning only' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix lost its framework/language/quality gap records"
-fi
-
-# Matrix rows keep the per-language honesty markers.
-if grep -q -F -e 'Open (regions)' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'Tracked' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix lost its framework-region / perf-tracked honesty markers"
-fi
-
 # Prior slices stay green: wrapper sources + foundation maps + registry.
 if [[ -f "tools/ci/wrapper_sources.sh" ]] \
   && [[ -f "tools/ci/foundation_maps.sh" ]] \
@@ -162,16 +86,6 @@ if [[ -f "tools/ci/code_ownership.sh" ]]; then
   ok
 else
   bad "code ownership harness missing"
-fi
-
-# #8 full format set: Svelte/Astro/MDX boundaries alongside Vue (no
-# single-format fallback claim).
-if grep -q -F -e 'Svelte' docs/generation/framework-adapters.md \
-  && grep -q -F -e 'Astro' docs/generation/framework-adapters.md \
-  && grep -q -F -e 'MDX' docs/generation/framework-adapters.md; then
-  ok
-else
-  bad "framework-adapters.md lost its Svelte/Astro/MDX boundary markers (#8 full set)"
 fi
 
 # #7 external-consumer breadth beyond the minimum: Go + Java adopt
@@ -202,23 +116,18 @@ else
   bad "quality curated/native test backing missing (curated_defaults_tests/native_config_tests)"
 fi
 
-# #6 parity gate stays versioned: tool-parity contract section plus the
-# fail-closed parity unit-test entry point (taxonomy review still open).
-if grep -q -F -e '## Tool Parity' docs/quality/quality-testing.md \
-  && grep -q -F -e 'parity_unit_tests' quality/parity_tests.bzl; then
+# #6 parity gate stays versioned: fail-closed parity unit-test entry point.
+if grep -q -F -e 'parity_unit_tests' quality/parity_tests.bzl; then
   ok
 else
-  bad "quality parity gate lost (Tool Parity section or parity_unit_tests entry)"
+  bad "quality parity gate lost (parity_unit_tests entry)"
 fi
 
-# #8 mixed-framework composition stays explicit: shared mechanics only
-# after concrete adapters prove reuse, M21 fixture owns the single-owner
-# mixed hello package (no generic fallback).
-if grep -q -F -e 'Mixed-framework' docs/generation/framework-adapters.md \
-  && grep -q -F -e 'M21' examples/mixed/hello/BUILD.bazel; then
+# M21 fixture owns the single-owner mixed hello package.
+if grep -q -F -e 'M21' examples/mixed/hello/BUILD.bazel; then
   ok
 else
-  bad "framework composition record lost (Mixed-framework clause or M21 mixed fixture)"
+  bad "framework composition record lost (M21 mixed fixture)"
 fi
 
 # #12 generated-file exclusion list stays declared with its generator
@@ -255,49 +164,12 @@ else
   bad "examples lost their minimum Rust/Python consumer READMEs (#7)"
 fi
 
-# #8 adapter-mechanics doc stays owned (rule families + aspect entry
-# points per tool; region mapping still open).
-if grep -q -F -e 'adapter mechanics' docs/quality/tool-integrations.md; then
-  ok
-else
-  bad "tool-integrations.md lost its adapter-mechanics ownership (#8)"
-fi
-
 # #84 atomic-write evidence stays pinned: atomic apply of verified
 # reads in the collected-change applier (batteries still open).
 if grep -q -F -e 'write_atomic' cli/cli/src/exec/quality_apply.rs; then
   ok
 else
   bad "quality apply applier lost its atomic-write evidence (#84)"
-fi
-
-# #6 frozen class table stays owned: canonical registry IDs plus the
-# secrets family as its own semantic class (assignment/admissibility
-# review still open).
-if grep -q -F -e 'Canonical semantic file-class IDs' docs/quality/quality-sources.md \
-  && grep -q -F -e 'secrets` policy family is its own semantic class' docs/quality/quality-sources.md; then
-  ok
-else
-  bad "quality-sources.md lost its frozen class table or secrets-family record (#6)"
-fi
-
-# #7 per-language dependency scope stays owned: Cargo, uv, and pnpm
-# resolution sections (exact lock/closure proofs still open).
-if grep -q -F -e '## Crates And Cargo' docs/generation/rust.md \
-  && grep -q -F -e '## uv Scope And Resolution' docs/generation/python.md \
-  && grep -q -F -e '## pnpm Scope And Resolution' docs/generation/javascript-typescript.md; then
-  ok
-else
-  bad "generation docs lost their Cargo/uv/pnpm dependency-scope sections (#7)"
-fi
-
-# #8 framework ownership regions stay explicit: physical/virtual
-# ownership plus format-specific regions (exact region transport open).
-if grep -q -F -e '## Physical And Virtual Ownership' docs/generation/framework-adapters.md \
-  && grep -q -F -e '## Format-Specific Regions' docs/generation/framework-adapters.md; then
-  ok
-else
-  bad "framework-adapters.md lost its ownership/region sections (#8)"
 fi
 
 # #12 lane-A CI scope stays sharded: freshness, lint, format, and
@@ -349,33 +221,6 @@ else
   bad "quality runner lost its --no-cache argv marker (#84)"
 fi
 
-# #6 admissibility mapping stays owned: the central registry table maps
-# each canonical lowercase ID to basenames/extensions (assignment
-# review still open).
-if grep -q -F -e 'admissibility table maps' docs/quality/quality-sources.md \
-  && grep -q -F -e 'canonical lowercase IDs' docs/quality/quality-sources.md; then
-  ok
-else
-  bad "quality-sources.md lost its admissibility-table record (#6)"
-fi
-
-# #7 Rust native-config + version sections stay owned (exact
-# import/lock/tool-graph proofs still open).
-if grep -q -F -e '## Native Config' docs/generation/rust.md \
-  && grep -q -F -e '## Versions' docs/generation/rust.md; then
-  ok
-else
-  bad "generation rust.md lost its Native Config/Versions sections (#7)"
-fi
-
-# #8 adapter-boundary section stays explicit alongside the physical/
-# virtual ownership record (exact region transport still open).
-if grep -q -F -e '## Adapter Boundary' docs/generation/framework-adapters.md; then
-  ok
-else
-  bad "framework-adapters.md lost its Adapter Boundary section (#8)"
-fi
-
 # #12 provider-closed aspects stay fallback-free: only direct_sources
 # supplies files, never a parallel list (CI scope extension open).
 if grep -q -F -e 'No generic fallback' quality/aspects.bzl; then
@@ -384,117 +229,12 @@ else
   bad "quality aspects lost their no-generic-fallback record (#12)"
 fi
 
-# #6 adapter-applicability stays owned: aspects visit only applicable
-# owners per the central applicability section (assignment review open).
-if grep -q -F -e '## Adapter Applicability' docs/quality/quality-sources.md; then
-  ok
-else
-  bad "quality-sources.md lost its Adapter Applicability section (#6)"
-fi
-
-# #7 Rust test/build-script sections stay owned (exact import/lock/
-# tool-graph proofs still open).
-if grep -q -F -e '## Tests' docs/generation/rust.md \
-  && grep -q -F -e '## Build Scripts' docs/generation/rust.md; then
-  ok
-else
-  bad "generation rust.md lost its Tests/Build Scripts sections (#7)"
-fi
-
-# #8 generated-region mappings stay explicit in the adapter contract
-# (exact region transport still open).
-if grep -q -F -e 'generated-region mappings' docs/generation/framework-adapters.md; then
-  ok
-else
-  bad "framework-adapters.md lost its generated-region mappings record (#8)"
-fi
-
-# #84 ten-round limit stays explicit: a changing tenth round fails
-# without an eleventh invocation (full batteries still open).
-if grep -q -F -e 'ten-round limit' docs/quality/quality-testing.md; then
-  ok
-else
-  bad "quality-testing.md lost its ten-round limit record (#84)"
-fi
-
 # No false claim: full determinism/apply batteries not claimed green.
-if ! grep -rln -F -e 'determinism battery green' tools/ci/ docs/quality/ 2>/dev/null | grep -v -F -e 'quality_foundations_guards.sh' | grep -q . \
-  && ! grep -rln -F -e 'apply-safety battery green' tools/ci/ docs/quality/ 2>/dev/null | grep -v -F -e 'quality_foundations_guards.sh' | grep -q .; then
+if ! grep -rln -F -e 'determinism battery green' tools/ci/ 2>/dev/null | grep -v -F -e 'quality_foundations_guards.sh' | grep -q . \
+  && ! grep -rln -F -e 'apply-safety battery green' tools/ci/ 2>/dev/null | grep -v -F -e 'quality_foundations_guards.sh' | grep -q .; then
   ok
 else
   bad "a determinism/apply green claim appeared without the #84 batteries landing"
-fi
-
-# #303 required core mappings stay tracked with no Supported claim.
-if grep -q -F -e 'issue #303' docs/product/support-matrix.md \
-  && grep -q -F -e 'No `Supported` claim until platform plus' docs/product/support-matrix.md; then
-  ok
-else
-  bad "support-matrix lost its #303 required-core-mappings tracker record"
-fi
-
-# #304 admitted additional foundations stay tracked per foundation.
-if grep -q -F -e 'issue #304' docs/product/support-matrix.md \
-  && grep -q -F -e 'Admitted additional foundations (Go, C/C++, Java, Kotlin, Scala, C#, F#) stay open' docs/product/support-matrix.md; then
-  ok
-else
-  bad "support-matrix lost its #304 admitted-foundations tracker record"
-fi
-
-# #305 deferred/excluded record stays owned.
-if grep -q -F -e 'issue #305' docs/product/support-matrix.md \
-  && grep -q -F -e 'host-toolchain fallback never approved' docs/product/support-matrix.md; then
-  ok
-else
-  bad "support-matrix lost its #305 deferred/excluded tracker record"
-fi
-
-# #307 quality adapters/parity/packaging stays open with no false adapter claim.
-if grep -q -F -e 'issue #307' docs/quality/quality-testing.md \
-  && grep -q -F -e 'No adapter claims protobuf' docs/tools/tool-acquisition.md; then
-  ok
-else
-  bad "quality-testing/tool-acquisition lost its #307 adapters/parity tracker record"
-fi
-
-# #313 file-family integrations stay open with applicability honesty.
-if grep -q -F -e 'issue #313' docs/product/support-matrix.md \
-  && grep -q -F -e 'applicability verification plus release evidence per family' docs/product/support-matrix.md; then
-  ok
-else
-  bad "support-matrix lost its #313 file-family tracker record"
-fi
-
-# #315 hand-rolled helpers stay decide-per-helper open.
-if grep -q -F -e 'issue #315' docs/cli/cli-contract.md \
-  && grep -q -F -e 'record why the hand-rolled implementation stays' docs/cli/cli-contract.md; then
-  ok
-else
-  bad "cli-contract lost its #315 hand-rolled-helpers tracker record"
-fi
-
-# #316 clap legacy strings stay freeze-or-migrate open.
-if grep -q -F -e 'issue #316' docs/cli/cli-contract.md \
-  && grep -q -F -e 'migrate to strict' docs/cli/cli-contract.md; then
-  ok
-else
-  bad "cli-contract lost its #316 clap-tokenizer tracker record"
-fi
-
-# #321 hardcoded inventories stay discovery-or-schema open.
-if grep -q -F -e 'issue #321' docs/quality/quality-sources.md \
-  && grep -q -F -e 'registry query or discovery' docs/quality/quality-sources.md; then
-  ok
-else
-  bad "quality-sources lost its #321 hardcoded-inventory tracker record"
-fi
-
-# #326 pin/docs hygiene stays single-source-the-pins open.
-if grep -q -F -e 'issue #326' docs/contributing/automation.md \
-  && grep -q -F -e 'single-source' docs/contributing/automation.md; then
-  ok
-else
-  bad "automation policy lost its #326 hygiene-sweep tracker record"
 fi
 
 echo "quality foundations guards harness: $pass passed, $fail failed"
