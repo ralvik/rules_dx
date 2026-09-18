@@ -9,8 +9,8 @@
 # first push; this build-only slice pushes nothing.
 #
 # This harness machine-checks the gate half verifiable on a clean tree
-# today (11 checks): separate ghcr.yml route, PR-paths build, dispatch +
-# default-closed approve gate, no push/tag/schedule trigger, digest-pinned
+# today (12 checks): separate ghcr.yml route, PR-paths build, dispatch +
+# default-closed approve gate, push run-gate explicit, no push/tag/schedule trigger, digest-pinned
 # base + Bazelisk delegation + no ambient toolchains in Dockerfile.prebuilt,
 # no docker/* actions with checkout SHA-pinned, cosign/quota/scaffold
 # deferrals named, scaffold still on mcr (switch follows first push). First-push
@@ -62,6 +62,15 @@ if ! grep -q -E -e '^  (push|schedule):' .github/workflows/ghcr.yml && grep -q -
   ok
 else
   bad "ghcr.yml gained a push/schedule trigger or lost pull_request build"
+fi
+
+# Push run-gate explicit: the push step must check event_name is
+# workflow_dispatch and APPROVE is true, so PR builds never push even if
+# the inputs block is edited; default stays build-only.
+if grep -q -F -e 'github.event_name' .github/workflows/ghcr.yml && grep -q -F -e 'workflow_dispatch' .github/workflows/ghcr.yml && grep -q -F -e '"$APPROVE" != "true"' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "ghcr.yml lost the explicit push run-gate (dispatch + APPROVE true, build-only by default)"
 fi
 
 # Pinned base digest, never latest/bare tag (admissibility gate).
