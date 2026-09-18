@@ -70,6 +70,10 @@ The ruleset owns one versioned registry of canonical lowercase IDs and each clas
 source shapes. Admissibility may use basename, extension, and authoritative provider semantics.
 It is not equivalent to comparing the class ID with a file extension. This supports cases such
 as extensionless scripts, Starlark `BUILD` files, and ambiguous C-family headers.
+Hardcoded inventories stay open under issue #321 (curated defaults, parity deferrals,
+adapter and class-to-family maps, codegen allowlists, tag charset allowlist, and
+license and exception structs move to registry query or discovery plus versioned schema
+validation so additions do not need allowlist edits).
 
 Once approved and exported, class IDs are public compatibility surface:
 
