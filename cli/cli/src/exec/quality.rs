@@ -613,6 +613,42 @@ mod tests {
     }
 
     #[test]
+    fn undecodable_sibling_blocks_valid_mutation() {
+        // Apply-safety battery (issue #84): `quality-testing.md`
+        // requires rejecting incomplete collection before any path
+        // mutation begins. A valid stable candidate alongside an
+        // undecodable artifact in the same target marks the collection
+        // incomplete and drops the target's staged changes, so default
+        // mode applies nothing: the source keeps its original bytes,
+        // no Applied line emits, and Bazel launches exactly once.
+        let mut harness = Harness::new("partial-undecodable");
+        harness.write_source("src/a.py", "x = 1\n");
+        harness.results.insert(
+            "//test:corpus".to_owned(),
+            harness.valid_result(
+                vec![Harness::diagnostic("unused", true)],
+                vec![harness.replacement(b"y")],
+            ),
+        );
+        harness.results.insert(
+            "//other:corpus".to_owned(),
+            b"not-a-validated-result".to_vec(),
+        );
+        let (code, out, _) = harness.run(&["lint", "--output=text"]);
+        assert_eq!(code, 1);
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/a.py")).expect("source"),
+            b"x = 1\n"
+        );
+        assert!(!out.contains("Applied"));
+        assert_eq!(
+            harness.seen_env.borrow().len(),
+            1,
+            "partial undecodable collection must launch Bazel exactly once, no rerun"
+        );
+    }
+
+    #[test]
     fn launch_failure_is_operational() {
         let harness = Harness {
             io_error: true,
