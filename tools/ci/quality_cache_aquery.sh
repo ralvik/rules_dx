@@ -583,6 +583,12 @@ if [[ "$js_typecheck_count" == "0" ]]; then ok; else bad "js: want 0 typecheck a
 # its own sources with distinct ActionKeys (one direct source misses only
 # its owning pipeline). Markdown_check change must not invalidate
 # python/rust/js (unselected-adapter row for the repo-owned tool).
+# Class-membership typecheck preservation: mixed/no-lint/no-format each
+# carry exactly one rust typecheck (capability-tag removal drops only its
+# owning lint/format pipeline, never typecheck); typecheck keys differ
+# from lint/format (capability isolation holds multi-class for typecheck)
+# and consume runner+rustc only (runner/rustc change misses typecheck;
+# opt-in eslint/flake8/pylint never appear).
 markdown_lint_inputs="$(printf '%s' "$markdown_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"
 if [[ "$markdown_lint_inputs" == *"quality_markdown"* ]]; then ok; else bad "markdown lint: want [quality_markdown] (markdown_check change misses lint)"; fi
 if [[ "$markdown_lint_inputs" == *"vale"* ]]; then ok; else bad "markdown lint: want [vale] (vale change misses lint)"; fi
@@ -611,6 +617,39 @@ if [[ "$markdown_actions" == *"sibling_license.txt"* ]]; then bad "markdown base
 sibling_key="$(printf '%s' "$sibling_actions" | grep 'ActionKey:' | head -1 || true)"
 if [[ -n "$sibling_key" ]]; then ok; else bad "want ActionKey line in sibling output"; fi
 if [[ -n "$sibling_key" && -n "$markdown_key" && "$sibling_key" != "$markdown_key" ]]; then ok; else bad "sibling vs base markdown ActionKeys must differ (one source misses only owning pipeline)"; fi
+
+# Class-membership typecheck preservation: capability-tag removal drops
+# only its owning lint/format pipeline, never typecheck. Mixed (rust+
+# starlark+toml) carries 1 typecheck; no-lint (rust+starlark, no lint)
+# and no-format (rust+starlark, no format) each preserve their single rust
+# typecheck. Typecheck keys differ from lint/format (capability isolation
+# holds multi-class for typecheck) and consume runner+rustc only.
+mixed_typecheck_count="$(printf '%s' "$mixed_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
+no_lint_typecheck_count="$(printf '%s' "$no_lint_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
+no_format_typecheck_count="$(printf '%s' "$no_format_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
+if [[ "$mixed_typecheck_count" == "1" ]]; then ok; else bad "mixed: want exactly 1 typecheck action (capability-tag removal never drops typecheck, got $mixed_typecheck_count)"; fi
+if [[ "$no_lint_typecheck_count" == "1" ]]; then ok; else bad "no-lint: want exactly 1 typecheck action (dropping lint preserves typecheck, got $no_lint_typecheck_count)"; fi
+if [[ "$no_format_typecheck_count" == "1" ]]; then ok; else bad "no-format: want exactly 1 typecheck action (dropping format preserves typecheck, got $no_format_typecheck_count)"; fi
+mixed_typecheck_key="$(printf '%s' "$mixed_actions" | grep -A 10 "Dx real quality typecheck //quality/testdata:fixture_real_mixed" | grep 'ActionKey:' | head -1 || true)"
+no_lint_typecheck_key="$(printf '%s' "$no_lint_actions" | grep -A 10 "Dx real quality typecheck //quality/testdata:fixture_real_no_lint" | grep 'ActionKey:' | head -1 || true)"
+no_format_typecheck_key="$(printf '%s' "$no_format_actions" | grep -A 10 "Dx real quality typecheck //quality/testdata:fixture_real_no_format" | grep 'ActionKey:' | head -1 || true)"
+if [[ -n "$mixed_typecheck_key" && -n "$no_lint_typecheck_key" && -n "$no_format_typecheck_key" ]]; then ok; else bad "want ActionKey lines in mixed/no-lint/no-format typecheck outputs"; fi
+if [[ "$mixed_typecheck_key" != "$mixed_lint_key" ]]; then ok; else bad "mixed typecheck vs lint ActionKeys must differ (capability isolation holds multi-class for typecheck)"; fi
+if [[ "$mixed_typecheck_key" != "$mixed_format_key" ]]; then ok; else bad "mixed typecheck vs format ActionKeys must differ (capability isolation holds multi-class for typecheck)"; fi
+if [[ "$no_lint_typecheck_key" != "$no_lint_format_key" ]]; then ok; else bad "no-lint typecheck vs format ActionKeys must differ (capability isolation holds when lint dropped)"; fi
+if [[ "$no_format_typecheck_key" != "$no_format_lint_key" ]]; then ok; else bad "no-format typecheck vs lint ActionKeys must differ (capability isolation holds when format dropped)"; fi
+mixed_typecheck_inputs="$(printf '%s' "$mixed_actions" | grep -A 8 'Mnemonic: DxRealQualityTypecheck' | grep 'Inputs:' | head -1 || true)"
+no_lint_typecheck_inputs="$(printf '%s' "$no_lint_actions" | grep -A 8 'Mnemonic: DxRealQualityTypecheck' | grep 'Inputs:' | head -1 || true)"
+no_format_typecheck_inputs="$(printf '%s' "$no_format_actions" | grep -A 8 'Mnemonic: DxRealQualityTypecheck' | grep 'Inputs:' | head -1 || true)"
+if [[ "$mixed_typecheck_inputs" == *"quality_runner"* ]]; then ok; else bad "mixed typecheck: want [quality_runner] in inputs (runner change invalidates typecheck)"; fi
+if [[ "$no_lint_typecheck_inputs" == *"quality_runner"* ]]; then ok; else bad "no-lint typecheck: want [quality_runner] in inputs (runner change invalidates typecheck)"; fi
+if [[ "$no_format_typecheck_inputs" == *"quality_runner"* ]]; then ok; else bad "no-format typecheck: want [quality_runner] in inputs (runner change invalidates typecheck)"; fi
+if [[ "$mixed_typecheck_inputs" == *"rustc"* ]]; then ok; else bad "mixed typecheck: want [rustc] (rustc change misses typecheck)"; fi
+if [[ "$no_lint_typecheck_inputs" == *"rustc"* ]]; then ok; else bad "no-lint typecheck: want [rustc] (rustc change misses typecheck)"; fi
+if [[ "$no_format_typecheck_inputs" == *"rustc"* ]]; then ok; else bad "no-format typecheck: want [rustc] (rustc change misses typecheck)"; fi
+if [[ "$mixed_typecheck_inputs" == *"eslint"* || "$mixed_typecheck_inputs" == *"flake8"* || "$mixed_typecheck_inputs" == *"pylint"* ]]; then bad "mixed typecheck: forbidden [eslint/flake8/pylint] (opt-in change must not invalidate typecheck)"; else ok; fi
+if [[ "$no_lint_typecheck_inputs" == *"eslint"* || "$no_lint_typecheck_inputs" == *"flake8"* || "$no_lint_typecheck_inputs" == *"pylint"* ]]; then bad "no-lint typecheck: forbidden [eslint/flake8/pylint] (opt-in change must not invalidate typecheck)"; else ok; fi
+if [[ "$no_format_typecheck_inputs" == *"eslint"* || "$no_format_typecheck_inputs" == *"flake8"* || "$no_format_typecheck_inputs" == *"pylint"* ]]; then bad "no-format typecheck: forbidden [eslint/flake8/pylint] (opt-in change must not invalidate typecheck)"; else ok; fi
 
 echo "quality cache aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
