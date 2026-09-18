@@ -17,13 +17,15 @@
 # stable API.
 #
 # This harness machine-checks the static half verifiable on a clean
-# tree today (10 checks). The full registry review — class-to-family
+# tree today (11 checks). The full registry review — class-to-family
 # assignment for the still-unassigned frozen IDs, per-ID admissibility
 # mappings, per-family independence rules — stays open per #6, and the
 # cache-execution plus determinism-permutation proofs stay open per
 # #84; all are recorded as gaps, not claimed here. Only the three
 # admissibility edge examples owned in quality-sources.md are pinned,
-# and the 12 unassigned IDs are pinned as still unassigned.
+# the 12 unassigned IDs are pinned as still unassigned, and the
+# taxonomy grouping rule (one family per class, group only when sharing
+# tool selection) is pinned as the pending-review constraint.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:registry_singularity`,
 # following //tools/ci:release_policy.
@@ -168,6 +170,18 @@ for class in css gherkin graphql html html_template json5 jsonc less scss sql te
   fi
 done
 [[ "$unassigned_clean" == "1" ]] && ok
+
+# The taxonomy grouping rule stays owned: every class has exactly one
+# family and future assignment may group classes only when they should
+# always share tool selection, so the pending review cannot be closed
+# with an arbitrary grouping.
+if grep -q -F -e 'Every semantic class has exactly one quality policy family' docs/quality/quality-sources.md \
+  && grep -q -F -e 'must assign' docs/quality/quality-sources.md \
+  && grep -q -F -e 'only when they should always share tool' docs/quality/quality-sources.md; then
+  ok
+else
+  bad "docs/quality/quality-sources.md lost its taxonomy grouping rule (#6)"
+fi
 
 # Record the open remainder as information, not a gate: frozen IDs
 # with no family assignment yet stay open work.
