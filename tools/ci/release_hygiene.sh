@@ -9,15 +9,16 @@
 # stays green by construction and nothing runs uninvited.
 #
 # This harness machine-checks the no-publication-inputs half that is
-# verifiable on a clean tree today (19 checks): dist/release
+# verifiable on a clean tree today (20 checks): dist/release
 # git-ignored and uncommitted, module at 0.0.0, no version tags,
-# SECURITY.md reporting link, publish dry-run dispatch-only with a
+# SECURITY.md reporting link + enabled record, publish dry-run dispatch-only with a
 # default-closed approve gate, no-secrets minimal permissions plus no
 # secrets usage, RUNNER_TEMP staging plus a clean-checkout proof, explicit release
 # matrix (seed qualified, rest unqualified per #5), SBOM/BCR
 # deferrals to #26 tooling, signing-first + GHCR-separate notes,
 # checkout SHA pin, typed approve plus non-cancelling concurrency,
-# least-privilege no-packages-write, and sole-tracker deletion. Platform,
+# least-privilege no-packages-write, no-secrets usage, and sole-tracker deletion plus
+# reporting-enabled record. Platform,
 # packaging, provenance (SPDX/SLSA), registry submission, and
 # public-install smoke runs stay unqualified per #5 and are recorded
 # as gaps, not claimed here.
@@ -194,6 +195,16 @@ if [[ ! -e "issues" ]] && [[ ! -e "archive/delivery-v0.1" ]] && [[ -z "$(git ls-
   ok
 else
   bad "issues/ mirror or archive/delivery-v0.1/ reappeared (sole tracker is issue #5)"
+fi
+
+# SECURITY.md reporting stays enabled (issue #5 precondition for any
+# public release): the static half records that private vulnerability
+# reporting is enabled; live API verification remains a manual gap
+# recorded in the issue, never claimed here.
+if grep -q -F -e 'Private vulnerability reporting is enabled' SECURITY.md; then
+  ok
+else
+  bad "SECURITY.md lost the private-reporting-enabled record (precondition per issue #5)"
 fi
 
 echo "release hygiene harness: $pass passed, $fail failed"
