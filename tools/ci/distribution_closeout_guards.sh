@@ -10,13 +10,14 @@
 # battery on a clean tree with docs matching as-built behavior.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (36 checks): hygiene policy, exact 0.0.0 module pin + consumer
+# today (40 checks): hygiene policy, exact 0.0.0 module pin + consumer
 # pin + reviewed-commit workflow pin, distribution doc ownership +
-# Bazel-first + standalone-install records + BCR + GitHub Releases
-# destinations + draft-only ceiling, workflow separation + triggers +
-# default-closed approve gates + dry-run report record, signing-first
-# trust-root + attestation + SBOM detail, digest-pinned prebuilt base
-# + Bazelisk delegation + cosign deferral + admissibility gate +
+# Bazel-first + standalone-install + publisher-identity records + BCR
+# + GitHub Releases destinations + BCR dry-run + draft-only ceiling,
+# workflow separation + triggers + default-closed approve gates +
+# never-publishes + dry-run report record, signing-first trust-root +
+# attestation + SBOM detail, digest-pinned prebuilt base + scaffold
+# state + quota record + Bazelisk delegation + cosign deferral + admissibility gate +
 # prebuilt doc section + never-latest gate, scaffold state, self-call
 # consumer/docs smoke, security precondition, gitignored outputs,
 # matrix close-out page + Layer-4 E2E + battery-audit record, E2E
@@ -319,6 +320,44 @@ if grep -q -F -e 'devcontainer_is_admissible' cli/adopt/src/lib.rs; then
   ok
 else
   bad "adopt crate lost its devcontainer admissibility gate (#184)"
+fi
+
+# #26 publisher-identity + BCR dry-run stays owned: standalone binaries
+# need install-time publisher-identity verification with no
+# checksum-only fallback, and BCR dry-run submission arrives as a
+# follow-up (verification/sequence still owner-run).
+if grep -q -F -e 'install-time publisher-identity' docs/environments/environment.md \
+  && grep -q -F -e 'BCR dry-run submission' docs/environments/environment.md; then
+  ok
+else
+  bad "environment.md lost its publisher-identity/BCR-dry-run record (#26)"
+fi
+
+# #78 never-publishes stays machine-checked: the dry-run report stages
+# a binary with published False and approves nothing by default
+# (release itself stays owner-gated).
+if grep -q -F -e '"published": False' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish dry run lost its never-publishes record (#78)"
+fi
+
+# #184 scaffold + quota record stays explicit: the scaffold still floats
+# off the prebuilt digest until the first push, and GHCR quotas are
+# qualified on first push (this slice pushes nothing).
+if grep -q -F -e 'scaffold still references' .devcontainer/Dockerfile.prebuilt \
+  && grep -q -F -e 'GHCR quotas/retention are qualified on first push' .devcontainer/Dockerfile.prebuilt; then
+  ok
+else
+  bad "Dockerfile.prebuilt lost its scaffold/quota record (#184)"
+fi
+
+# #54 clean-tree battery record stays explicit: the full battery runs on
+# a clean tree after the staged issues land (full green still open).
+if grep -q -F -e 'clean tree after the staged issues land' docs/testing/verification-matrix.md; then
+  ok
+else
+  bad "verification-matrix lost its clean-tree battery record (#54)"
 fi
 
 # No-publish invariant: no tags claimed, no release outputs committed.
