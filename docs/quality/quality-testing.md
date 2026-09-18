@@ -520,6 +520,9 @@ Correctly categorized and legitimate multi-category usage must pass. Include cat
 usage on another supported configuration and verify diagnostics do not mutate declarations or locks.
 Do not add a duplicate unused-Bazel-edge test; generated edge
 maintenance remains covered by the existing [generation tests](../testing/generation.md).
+Unused-dependency hygiene fixtures per language stay open under issue #306 (per-language
+lockfile-consistency plus declared-dependency usage with category checks, explained
+exceptions, and obsolete-exception errors; generation alone is not proof).
 
 Every required entry in [First-Release Tool Baseline](../tools/tool-baseline.md), including mandatory
 curated expansion under [First-Release Admission](../product/scope.md#first-release-admission),

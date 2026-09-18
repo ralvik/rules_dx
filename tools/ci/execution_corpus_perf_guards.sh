@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Execution/corpus/perf guards (issues #18, #19, #22, #15, #86).
+# Execution/corpus/perf guards (issues #18, #19, #22, #15, #86, #301, #306, #308, #322, #324).
 #
 # Live `dx audit`/`dx update` fail closed with audit_deferred /
 # update_deferred; only family selection, selector planning, aggregate
@@ -8,10 +8,13 @@
 # reporting, lockfile-consistency checker, or usage checker is claimed.
 # Corpus stays single `corpus` per directory until `dx generate` emits
 # the per-type split; perf tracks the frozen aspect_rules_lint v2.8.0
-# baseline as a report, never a gate.
+# baseline as a report, never a gate. Supported-claim evidence (#301),
+# per-language depcheck fixtures (#306), per-cell coverage/Codecov/remote
+# (#308), snapshot/schema migration for brittle goldens (#322), and the
+# non-dogfed execution plan (#324) stay open with honest tracker records.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (44 checks): deferred codes, fail-closed unit pins, dry-run
+# today (49 checks): deferred codes, fail-closed unit pins, dry-run
 # planning paths + doc record, audit families + policy modules +
 # SARIF/SPDX mapping record + license global table + advisory snapshot
 # + severity handling, selector planning + update API + per-set report
@@ -416,6 +419,46 @@ if ! grep -rln -F -e 'audit live execution green' tools/ci/ docs/cli/ 2>/dev/nul
   ok
 else
   bad "a live-execution green claim appeared without #18/#19 landing"
+fi
+
+# #301 no-Supported-claim honesty stays tracked in the matrix.
+if grep -q -F -e 'issue #301' docs/testing/verification-matrix.md \
+  && grep -q -F -e 'No cell here is a `Supported` claim' docs/testing/verification-matrix.md; then
+  ok
+else
+  bad "verification-matrix lost its #301 no-Supported-claim tracker record"
+fi
+
+# #306 per-language depcheck fixtures stay open with generation-is-not-proof honesty.
+if grep -q -F -e 'issue #306' docs/quality/quality-testing.md \
+  && grep -q -F -e 'generation alone is not proof' docs/quality/quality-testing.md; then
+  ok
+else
+  bad "quality-testing lost its #306 depcheck-fixtures tracker record"
+fi
+
+# #308 per-cell coverage/Codecov/remote stays open with seed-only honesty.
+if grep -q -F -e 'issue #308' docs/testing/README.md \
+  && grep -q -F -e 'seed cell only today' docs/testing/README.md; then
+  ok
+else
+  bad "testing README lost its #308 per-cell/Codecov/remote tracker record"
+fi
+
+# #322 brittle-golden honesty stays tracked with snapshot/schema direction.
+if grep -q -F -e 'issue #322' docs/testing/README.md \
+  && grep -q -F -e 'UPDATE_EXPECT workflow' docs/testing/README.md; then
+  ok
+else
+  bad "testing README lost its #322 golden-snapshot tracker record"
+fi
+
+# #324 non-dogfed execution plan stays explicit with no silent gaps.
+if grep -q -F -e 'issue #324' docs/testing/verification-matrix.md \
+  && grep -q -F -e 'never silently under the' docs/testing/verification-matrix.md; then
+  ok
+else
+  bad "verification-matrix lost its #324 non-dogfed-paths tracker record"
 fi
 
 echo "execution corpus perf guards harness: $pass passed, $fail failed"

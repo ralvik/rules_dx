@@ -180,6 +180,14 @@ Remote cache tests are required before claiming remote-cache correctness. Remote
 execution tests are required before declaring a toolchain remotely executable.
 If infrastructure is unavailable, documentation must state that hermeticity is
 designed and locally sandbox-tested but remote behavior remains unverified.
+Coverage per-cell enforcement, Codecov wiring, and remote evidence stay open under
+issue #308 (seed cell only today, never union across cells; Starlark instrumentation
+decision, Codecov activation plus upload wiring, quota qualification, and remote-cache
+plus remote-execution tests remain qualification work).
+
+Byte-identical goldens stay brittle-check honest under issue #322 (parity tests, shell
+diff goldens, grep-for-shape harnesses, and exact-tuple codegen merges migrate to
+snapshot testing or schema validation with an UPDATE_EXPECT workflow when qualified).
 
 ## Documentation Checks
 
