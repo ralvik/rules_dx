@@ -5,7 +5,7 @@ cells are claimed; platform/product claims follow the support matrix.
 
 No release has been cut. Tags, GitHub releases, registry submissions, and
 `dist/`/`release/` outputs require explicit owner approval before they are
-created.
+created. Published bytes are never rebuilt or substituted silently.
 
 ## Unreleased
 
