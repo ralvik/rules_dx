@@ -10,13 +10,14 @@
 # battery on a clean tree with docs matching as-built behavior.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (16 checks): hygiene policy, exact 0.0.0 module pin,
-# distribution doc ownership, workflow separation + triggers + gates,
-# signing-first trust-root record, digest-pinned prebuilt base,
-# scaffold state, security precondition, gitignored outputs, matrix
-# close-out page, E2E-case convention, and no-publish invariants.
-# Matrix/SBOM/BCR/install verification and the full green battery stay
-# open under their issues.
+# today (20 checks): hygiene policy, exact 0.0.0 module pin + consumer
+# pin, distribution doc ownership + BCR destination, workflow separation
+# + triggers + default-closed approve gates, signing-first trust-root
+# record, digest-pinned prebuilt base + Bazelisk delegation, scaffold
+# state, security precondition, gitignored outputs, matrix close-out
+# page, E2E-case convention, and no-publish invariants. Matrix/SBOM/BCR/
+# install verification and the full green battery stay open under their
+# issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:distribution_closeout_guards`,
 # following //tools/ci:ghcr_publish_guards.
@@ -119,6 +120,40 @@ if [[ -f "tools/ci/release_hygiene.sh" ]] \
   ok
 else
   bad "prior publication harnesses missing (release_hygiene/publish_trust/ghcr*)"
+fi
+
+# #26 BCR destination stays recorded as the approved v1 module route
+# (destinations only, not credentials/sequence).
+if grep -q -F -e 'Bazel Central Registry' docs/environments/environment.md; then
+  ok
+else
+  bad "environment.md lost its BCR v1-destination record (#26)"
+fi
+
+# #78/#184 approve gates stay default-closed (explicit owner approval
+# until standing approval exists).
+if grep -q -F -e 'default: false' .github/workflows/publish-dry-run.yml \
+  && grep -q -F -e 'default: false' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "publish/ghcr workflows lost their default-closed approve gates (#78/#184)"
+fi
+
+# #184 Bazelisk delegation stays pinned (launcher sha + 9.2.0 via
+# USE_BAZEL_VERSION, no ambient toolchains).
+if grep -q -F -e 'Bazelisk' .devcontainer/Dockerfile.prebuilt \
+  && grep -q -F -e 'USE_BAZEL_VERSION=9.2.0' .devcontainer/Dockerfile.prebuilt; then
+  ok
+else
+  bad "Dockerfile.prebuilt lost its Bazelisk delegation pin (#184)"
+fi
+
+# #5 consumer pin stays on the unpublishable 0.0.0 (reviewed commit
+# SHAs, never tags).
+if grep -q -F -e 'rules_dx_version: "0.0.0"' examples/consumer-ci/caller.yml; then
+  ok
+else
+  bad "consumer-ci caller lost its 0.0.0 unpublishable pin (#5)"
 fi
 
 # #54 close-out page owns the battery + matrix.
