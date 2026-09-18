@@ -50,7 +50,7 @@ standard dogfood gates.
 ## Status
 
 `Delivered` means implemented and verified on the Linux x86_64 seed host
-only. `Open` means open work with no implementation
+only (platform qualification open under issue #298). `Open` means open work with no implementation
 claimed here. `Planning only` means planning is implemented with live
 execution deferred. `Tracked` means measured report-only tracking with no gate.
 

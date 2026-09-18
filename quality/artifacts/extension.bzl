@@ -7,7 +7,8 @@ tool repository only when an action needs its artifact, and `ctx.download`
 rejects bytes whose digest differs from the checked-in pin.
 
 Metadata schema version 1 is frozen by `metadata_tests.bzl`; only
-linux_x86_64 is recorded (Linux-first scope, other platforms are gaps).
+linux_x86_64 is recorded (seed host only per issue #298 and ADR 0014;
+other required hosts are unqualified gaps).
 """
 
 load("//quality/artifacts:biome.linux_x86_64.bzl", _biome_linux_x86_64 = "ARTIFACT")

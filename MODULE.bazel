@@ -283,7 +283,11 @@ use_repo(crate, "crates")
 # M04 WP1: standalone quality-tool acquisition (O20). One lazy repository
 # per tool/platform from generated checked-in metadata, plus an
 # execution-platform hub. Registration fetches nothing; each repository
-# downloads only when an action needs its artifact.
+# downloads only when an action needs its artifact. Seed host only
+# (issue #298): Linux x86_64 glibc per ADR 0014; remaining required
+# hosts stay unqualified gaps until their pins/hosts/floors plus
+# JDK/SDK/CRT, route, per-cell coverage, and consumer/release evidence
+# lands.
 dx_tools = use_extension("//quality/artifacts:extension.bzl", "dx_tools")
 dx_tools.platform(
     cpu_x86_64 = "@platforms//cpu:x86_64",

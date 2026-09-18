@@ -27,6 +27,23 @@ is delivered and tested; every other required host needs pins, hosts, floors,
 JDK/SDK/CRT identities, qualified routes, per-cell coverage, and consumer plus
 release evidence).
 
+Per-required-host qualification state (V1 status from ADR 0014; evidence
+dimensions per issue #298; exact pins, hosts, floors, and SDK/CRT identities
+remain owned by O14/O37 and are not pinned here):
+
+| Host | V1 status | Qualification evidence | Current state |
+| --- | --- | --- | --- |
+| Linux x86_64 glibc | Required, primary bootstrap | Pins/hosts/floors, JDK/SDK/CRT identities, qualified native plus cross routes, per-cell coverage, consumer plus release evidence | Seed-host-delivered (CI: ubuntu-latest; artifacts: linux_x86_64; coverage: seed cell; consumer self-call: build-only on linux_x86_64) |
+| Linux arm64 glibc | Required | Same dimensions as above, native workflow (not cross-only) | Unqualified: clean `unsupported_platform` refusal |
+| Linux x86_64/arm64 static musl | Required profiles | Same dimensions; static native closure; dynamic musl explicitly out of scope | Unqualified: clean `unsupported_platform` refusal |
+| macOS arm64 | Required | Same dimensions; pinned acquired SDK (SDK version is not the deployment floor) | Unqualified: clean `unsupported_platform` refusal |
+| macOS x86_64 | Best-effort | Qualify when a host is available; gaps recorded without blocking required-host release | Unqualified: clean `unsupported_platform` refusal |
+| Windows x86_64 MSVC-compatible | Required, backend blocked | Same dimensions; hermetic acquisition plus MSVC compatibility gates unchanged; explicit EULA acceptance required, never automatic | Unqualified: clean `unsupported_platform` refusal |
+| Windows arm64 | Out of v1 scope | Not a claim of impossibility | Unqualified: clean `unsupported_platform` refusal |
+
+No cell below is `Supported`: promotion requires platform plus consumer plus
+release evidence per the [status lifecycle](#status-lifecycle).
+
 ## Application Foundations
 
 `Planned` below means accepted scope delivered on the Linux x86_64 seed host
