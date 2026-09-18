@@ -10,10 +10,11 @@
 # the #19 resolver prerequisite with Renovate retained as fallback.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (16 checks): codegen/env contracts, docs-pipeline records,
-# examples ownership + laziness slices + index breadth, coverage gate +
-# Codecov honesty + LCOV preset pin, Renovate fallback + full manager
-# set + never-rewrites + ADR pins, prior harnesses green, and
+# today (20 checks): codegen/env contracts + commit-lock detail,
+# docs-pipeline records, examples ownership + laziness slices + full
+# index breadth, coverage gate + Codecov honesty + LCOV preset pin +
+# inventory backing, Renovate fallback + full manager set + automation
+# ownership, never-rewrites + ADR pins, prior harnesses green, and
 # no-false-claim gaps. Reverse queries, adapter runs, comment
 # presentation, and widen implementation stay open under their issues.
 #
@@ -135,6 +136,44 @@ if [[ -f "tools/ci/widen_update_loop.sh" ]]; then
   ok
 else
   bad "widen_update_loop harness missing"
+fi
+
+# #9 commit-lock detail stays pinned beyond the broad commit marker
+# (parallel composition under the lock, atomic codegen commit).
+if grep -q -F -e 'commit lock' docs/environments/managed-state.md \
+  && grep -q -F -e 'atomic commit' docs/environments/codegen.md; then
+  ok
+else
+  bad "env/codegen docs lost their commit-lock/atomic-commit detail (#9)"
+fi
+
+# #85 full index breadth: Java/Kotlin/Scala/C#/F# alongside the
+# go/cpp beyond-minimum slice.
+if grep -q -F -e 'adopt-java' examples/README.md \
+  && grep -q -F -e 'adopt-kotlin' examples/README.md \
+  && grep -q -F -e 'adopt-csharp' examples/README.md \
+  && grep -q -F -e 'adopt-fsharp' examples/README.md; then
+  ok
+else
+  bad "examples index lost its full Java/Kotlin/C#/F# breadth (#85)"
+fi
+
+# #254 inventory + spill backing stays present alongside the gate
+# (seed inventory + profraw containment, presentation still open).
+if [[ -f "tools/coverage/seed-inventory.txt" ]] \
+  && [[ -f "tools/ci/coverage_spill.sh" ]]; then
+  ok
+else
+  bad "coverage inventory/spill backing missing (seed-inventory/coverage_spill)"
+fi
+
+# #260 automation ownership stays explicit (Renovate chosen updater,
+# bump-PR review path, issue #3 link).
+if grep -q -F -e 'Renovate' docs/contributing/automation.md \
+  && grep -q -F -e 'issue #3' docs/contributing/automation.md; then
+  ok
+else
+  bad "automation.md lost its Renovate ownership / issue #3 link (#260)"
 fi
 
 # Matrix honesty for this group.
