@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quality cache aquery proof (issue #84, slices 1-5): per-adapter and
+# Quality cache aquery proof (issue #84, slices 1-6): per-adapter and
 # per-capability action-key isolation via `bazel aquery` over real
 # quality pipelines.
 #
@@ -13,8 +13,9 @@
 # (ruff lint/format, pydoclint lint, Ty typecheck), Rust (clippy lint,
 # rustfmt format + rustfmt.toml native-config isolation), JavaScript
 # (biome lint/format + biome.json native-config isolation), Starlark
-# (buildifier lint/format), TOML (taplo lint/format), and Markdown
-# (vale lint): each pipeline's declared Inputs mention its own source
+# (buildifier lint/format), TOML (taplo lint/format), Markdown
+# (vale lint), TypeScript/JSX/TSX (biome lint/format each owning only
+# its source), and JSON (biome lint + prettier format split): each pipeline's declared Inputs mention its own source
 # and tool and none of the other's, lint vs format vs typecheck
 # ActionKeys differ, per-capability Inputs contain only their owning
 # tool (ruff change misses lint/format but not typecheck; ty misses
@@ -25,7 +26,9 @@
 # pipelines), and unselected adapters never appear in Inputs
 # (biome/eslint/prettier must not invalidate Python; ruff/ty must not
 # invalidate JS; ruff/ty/biome must not invalidate Rust; buildifier/
-# taplo/vale must not invalidate Python/Rust/JS and vice versa).
+# taplo/vale must not invalidate Python/Rust/JS and vice versa;
+# TypeScript/JSX/TSX/JSON each own only their source+tool with
+# JSON lint vs format split across biome vs prettier).
 #
 # Still open per #84 (recorded as gap, not claimed): full per-adapter
 # table remainder (Go/Java/etc. + transitive/tool-version rows),
@@ -278,6 +281,89 @@ if [[ "$starlark_key" != "$toml_key" ]]; then ok; else bad "starlark vs toml Act
 if [[ "$starlark_key" != "$markdown_key" ]]; then ok; else bad "starlark vs markdown ActionKeys must differ"; fi
 if [[ "$toml_key" != "$markdown_key" ]]; then ok; else bad "toml vs markdown ActionKeys must differ"; fi
 if [[ "$starlark_key" != "$python_key" ]]; then ok; else bad "starlark vs python ActionKeys must differ"; fi
+
+# TypeScript/JSX/TSX/JSON isolation: JS-family expansion shares the Biome
+# tool across JS/TS/JSX/TSX/JSON-lint but each pipeline owns only its
+# source; JSON format owns prettier instead (biome lint vs prettier
+# format per-capability split). Changing one JS-family source misses
+# only its owning pipeline; changing prettier misses JSON format only
+# while biome misses lint only; Python/Rust/corpus changes must not
+# miss JS-family pipelines and vice versa. Extends the per-adapter
+# table toward Go/Java/etc. (transitive/tool-version still open).
+typescript_actions="$(bazel aquery '//quality/testdata:fixture_real_typescript' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+jsx_actions="$(bazel aquery '//quality/testdata:fixture_real_jsx' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+tsx_actions="$(bazel aquery '//quality/testdata:fixture_real_tsx' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+json_actions="$(bazel aquery '//quality/testdata:fixture_real_json' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+if [[ -z "$typescript_actions" ]]; then bad "typescript: empty aquery output"; else ok; fi
+if [[ -z "$jsx_actions" ]]; then bad "jsx: empty aquery output"; else ok; fi
+if [[ -z "$tsx_actions" ]]; then bad "tsx: empty aquery output"; else ok; fi
+if [[ -z "$json_actions" ]]; then bad "json: empty aquery output"; else ok; fi
+if [[ "$typescript_actions" == *"real_clean.ts"* ]]; then ok; else bad "typescript: want [real_clean.ts] in inputs"; fi
+if [[ "$typescript_actions" == *"biome"* ]]; then ok; else bad "typescript: want [biome] in inputs"; fi
+if [[ "$jsx_actions" == *"real_clean.jsx"* ]]; then ok; else bad "jsx: want [real_clean.jsx] in inputs"; fi
+if [[ "$jsx_actions" == *"biome"* ]]; then ok; else bad "jsx: want [biome] in inputs"; fi
+if [[ "$tsx_actions" == *"real_clean.tsx"* ]]; then ok; else bad "tsx: want [real_clean.tsx] in inputs"; fi
+if [[ "$tsx_actions" == *"biome"* ]]; then ok; else bad "tsx: want [biome] in inputs"; fi
+if [[ "$json_actions" == *"real_clean.json"* ]]; then ok; else bad "json: want [real_clean.json] in inputs"; fi
+if [[ "$json_actions" == *"biome"* ]]; then ok; else bad "json: want [biome] in inputs (lint owns biome)"; fi
+if [[ "$json_actions" == *"prettier"* ]]; then ok; else bad "json: want [prettier] in inputs (format owns prettier)"; fi
+# Own-tool exclusivity: TS/JSX/TSX must not mention python/rust/corpus
+# tools nor the JSON-format prettier split; JSON must not mention
+# python/rust/corpus tools.
+if [[ "$typescript_actions" == *"ruff"* ]]; then bad "typescript: forbidden [ruff]"; else ok; fi
+if [[ "$typescript_actions" == *"clippy-driver"* ]]; then bad "typescript: forbidden [clippy-driver]"; else ok; fi
+if [[ "$typescript_actions" == *"prettier"* ]]; then bad "typescript: forbidden [prettier] (prettier change must not invalidate TS)"; else ok; fi
+if [[ "$typescript_actions" == *"buildifier"* ]]; then bad "typescript: forbidden [buildifier]"; else ok; fi
+if [[ "$typescript_actions" == *"taplo"* ]]; then bad "typescript: forbidden [taplo]"; else ok; fi
+if [[ "$typescript_actions" == *"vale"* ]]; then bad "typescript: forbidden [vale]"; else ok; fi
+if [[ "$jsx_actions" == *"ruff"* ]]; then bad "jsx: forbidden [ruff]"; else ok; fi
+if [[ "$jsx_actions" == *"clippy-driver"* ]]; then bad "jsx: forbidden [clippy-driver]"; else ok; fi
+if [[ "$jsx_actions" == *"prettier"* ]]; then bad "jsx: forbidden [prettier]"; else ok; fi
+if [[ "$jsx_actions" == *"buildifier"* ]]; then bad "jsx: forbidden [buildifier]"; else ok; fi
+if [[ "$tsx_actions" == *"ruff"* ]]; then bad "tsx: forbidden [ruff]"; else ok; fi
+if [[ "$tsx_actions" == *"clippy-driver"* ]]; then bad "tsx: forbidden [clippy-driver]"; else ok; fi
+if [[ "$tsx_actions" == *"prettier"* ]]; then bad "tsx: forbidden [prettier]"; else ok; fi
+if [[ "$tsx_actions" == *"taplo"* ]]; then bad "tsx: forbidden [taplo]"; else ok; fi
+if [[ "$json_actions" == *"ruff"* ]]; then bad "json: forbidden [ruff]"; else ok; fi
+if [[ "$json_actions" == *"clippy-driver"* ]]; then bad "json: forbidden [clippy-driver]"; else ok; fi
+if [[ "$json_actions" == *"buildifier"* ]]; then bad "json: forbidden [buildifier]"; else ok; fi
+if [[ "$json_actions" == *"taplo"* ]]; then bad "json: forbidden [taplo]"; else ok; fi
+if [[ "$json_actions" == *"vale"* ]]; then bad "json: forbidden [vale]"; else ok; fi
+# Per-capability JSON split: lint owns biome only, format owns prettier
+# only, so changing one misses only its owning capability.
+json_lint_inputs="$(printf '%s' "$json_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"
+json_format_inputs="$(printf '%s' "$json_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' | head -1 || true)"
+if [[ "$json_lint_inputs" == *"biome"* ]]; then ok; else bad "json lint: want [biome]"; fi
+if [[ "$json_lint_inputs" == *"prettier"* ]]; then bad "json lint: forbidden [prettier] (prettier change must not invalidate lint)"; else ok; fi
+if [[ "$json_format_inputs" == *"prettier"* ]]; then ok; else bad "json format: want [prettier]"; fi
+if [[ "$json_format_inputs" == *"biome"* ]]; then bad "json format: forbidden [biome] (biome change must not invalidate format)"; else ok; fi
+# Reverse: existing pipelines must not mention JS-family sources.
+if [[ "$python_actions" == *"real_clean.ts"* ]]; then bad "python: forbidden [real_clean.ts]"; else ok; fi
+if [[ "$python_actions" == *"real_clean.json"* ]]; then bad "python: forbidden [real_clean.json]"; else ok; fi
+if [[ "$rust_actions" == *"real_clean.ts"* ]]; then bad "rust: forbidden [real_clean.ts]"; else ok; fi
+if [[ "$rust_actions" == *"real_clean.json"* ]]; then bad "rust: forbidden [real_clean.json]"; else ok; fi
+if [[ "$js_actions" == *"real_clean.ts"* ]]; then bad "js: forbidden [real_clean.ts] (TS source must not invalidate JS)"; else ok; fi
+if [[ "$js_actions" == *"real_clean.json"* ]]; then bad "js: forbidden [real_clean.json] (JSON source must not invalidate JS)"; else ok; fi
+# ActionKeys differ across JS-family pipelines, so one direct source
+# misses only its owning pipeline while unrelated files cause no miss.
+typescript_key="$(printf '%s' "$typescript_actions" | grep 'ActionKey:' | head -1 || true)"
+jsx_key="$(printf '%s' "$jsx_actions" | grep 'ActionKey:' | head -1 || true)"
+tsx_key="$(printf '%s' "$tsx_actions" | grep 'ActionKey:' | head -1 || true)"
+json_key="$(printf '%s' "$json_actions" | grep 'ActionKey:' | head -1 || true)"
+if [[ -n "$typescript_key" && -n "$jsx_key" && -n "$tsx_key" && -n "$json_key" ]]; then ok; else bad "want ActionKey lines in typescript/jsx/tsx/json outputs"; fi
+if [[ "$typescript_key" != "$jsx_key" ]]; then ok; else bad "typescript vs jsx ActionKeys must differ"; fi
+if [[ "$typescript_key" != "$tsx_key" ]]; then ok; else bad "typescript vs tsx ActionKeys must differ"; fi
+if [[ "$typescript_key" != "$json_key" ]]; then ok; else bad "typescript vs json ActionKeys must differ"; fi
+if [[ "$jsx_key" != "$tsx_key" ]]; then ok; else bad "jsx vs tsx ActionKeys must differ"; fi
+if [[ "$json_key" != "$python_key" ]]; then ok; else bad "json vs python ActionKeys must differ"; fi
 
 echo "quality cache aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
