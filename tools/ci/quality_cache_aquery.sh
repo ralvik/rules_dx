@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quality cache aquery proof (issue #84, slices 1-10): per-adapter and
+# Quality cache aquery proof (issue #84, slices 1-11): per-adapter and
 # per-capability action-key isolation via `bazel aquery` over real
 # quality pipelines.
 #
@@ -10,8 +10,9 @@
 # selected native config invalidates only its consuming capability
 # actions and that changing an unselected adapter leaves keys unchanged.
 # This harness proves the aquery action-shape half for Python
-# (ruff lint/format, pydoclint lint, Ty typecheck), Rust (clippy lint,
-# rustfmt format + rustfmt.toml native-config isolation), JavaScript
+# (ruff lint/format, pydoclint lint, Ty typecheck + runner), Rust (clippy lint,
+# rustfmt format + rustfmt.toml native-config isolation, rustc typecheck +
+# runner), JavaScript
 # (biome lint/format per-capability + biome.json native-config isolation,
 # prettier never an input, eslint/flake8/pylint opt-ins never inputs), Starlark
 # (buildifier lint/format), TOML (taplo lint/format), Markdown
@@ -36,15 +37,18 @@
 # lint, no-format drops format, no-typecheck drops typecheck), and provider-less plain targets
 # emitting zero actions (unsupported classes leave keys unchanged);
 # the apply step never appears as a Bazel action and the runner
-# executable is an action input to every pipeline (runner change
-# invalidates the complete affected target/capability action).
+# executable is an action input to every pipeline including typecheck
+# (runner change invalidates the complete affected target/capability
+# action); typecheck keys differ from lint/format and the manifest holds
+# (python/rust 1 typecheck, JS-family/starlark/toml 0, markdown lint-only).
 #
 # Still open per #84 (recorded as gap, not claimed): full per-adapter
 # table remainder (Go/Java/etc. + transitive/tool-version rows),
 # pipeline invalidation remainder (stage-order/runner policy changes
 # beyond canonical order + per-pipeline executable presence proven here),
 # formatter-set remainder beyond JSON biome/prettier split and
-# class-membership supported-class manifest rows, plus exec-log/remote-cache
+# class-membership full manifest (mixed/no-lint/no-format typecheck
+# preservation + tsc target-coupled rows), plus exec-log/remote-cache
 # proof distinguishing executed actions from cache hits (requires
 # controlled remote cache or separate machines per testing contract;
 # a warm local no-op alone is not a cache test). This harness is
@@ -531,6 +535,38 @@ if [[ "$no_typecheck_actions" == *"pylint"* ]]; then bad "no-typecheck: forbidde
 no_typecheck_lint_inputs="$(printf '%s' "$no_typecheck_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"
 no_typecheck_format_inputs="$(printf '%s' "$no_typecheck_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' | head -1 || true)"
 if [[ "$no_typecheck_lint_inputs" == *"quality_runner"* && "$no_typecheck_format_inputs" == *"quality_runner"* ]]; then ok; else bad "want [quality_runner] in no-typecheck lint/format inputs (runner change invalidates)"; fi
+
+# Typecheck runner + per-capability isolation + supported-class manifest:
+# rust typecheck owns rustc only (clippy/rustfmt changes miss it),
+# both python/ty and rust/rustc typechecks consume the runner (runner
+# change misses typecheck too), typecheck ActionKeys differ from
+# lint/format (one source misses only its owning capability), and the
+# manifest holds (python/rust 1 typecheck, JS-family/starlark/toml 0,
+# markdown 0 format + 0 typecheck). All aqueries defined above; typecheck
+# appears in the lint+format query because aquery includes all
+# dx_results actions for the target (see slice 11 notes).
+rust_typecheck_inputs="$(printf '%s' "$rust_actions" | grep -A 8 'Mnemonic: DxRealQualityTypecheck' | grep 'Inputs:' | head -1 || true)"
+if [[ "$rust_typecheck_inputs" == *"rustc"* ]]; then ok; else bad "rust typecheck: want [rustc] (rustc change misses typecheck)"; fi
+if [[ "$rust_typecheck_inputs" == *"clippy-driver"* ]]; then bad "rust typecheck: forbidden [clippy-driver] (clippy change must not invalidate typecheck)"; else ok; fi
+if [[ "$rust_typecheck_inputs" == *"rustfmt"* ]]; then bad "rust typecheck: forbidden [rustfmt] (rustfmt change must not invalidate typecheck)"; else ok; fi
+if [[ "$rust_typecheck_inputs" == *"quality_runner"* ]]; then ok; else bad "rust typecheck: want [quality_runner] in inputs (runner change invalidates)"; fi
+if [[ "$python_typecheck_inputs" == *"quality_runner"* ]]; then ok; else bad "python typecheck: want [quality_runner] in inputs (runner change invalidates)"; fi
+python_typecheck_key="$(printf '%s' "$python_actions" | grep -A 6 'Mnemonic: DxRealQualityTypecheck' | grep 'ActionKey:' | head -1 || true)"
+python_lint_key="$(printf '%s' "$python_actions" | grep -A 6 'Mnemonic: DxRealQualityLint' | grep 'ActionKey:' | head -1 || true)"
+python_format_key="$(printf '%s' "$python_actions" | grep -A 6 'Mnemonic: DxRealQualityFormat' | grep 'ActionKey:' | head -1 || true)"
+rust_typecheck_key="$(printf '%s' "$rust_actions" | grep -A 6 'Mnemonic: DxRealQualityTypecheck' | grep 'ActionKey:' | head -1 || true)"
+rust_lint_key="$(printf '%s' "$rust_actions" | grep -A 6 'Mnemonic: DxRealQualityLint' | grep 'ActionKey:' | head -1 || true)"
+rust_format_key="$(printf '%s' "$rust_actions" | grep -A 6 'Mnemonic: DxRealQualityFormat' | grep 'ActionKey:' | head -1 || true)"
+if [[ -n "$python_typecheck_key" && -n "$python_lint_key" && -n "$python_format_key" ]]; then ok; else bad "want ActionKey lines in python lint/format/typecheck"; fi
+if [[ "$python_typecheck_key" != "$python_lint_key" && "$python_typecheck_key" != "$python_format_key" ]]; then ok; else bad "python typecheck ActionKey must differ from lint/format (capability isolation)"; fi
+if [[ -n "$rust_typecheck_key" && -n "$rust_lint_key" && -n "$rust_format_key" ]]; then ok; else bad "want ActionKey lines in rust lint/format/typecheck"; fi
+if [[ "$rust_typecheck_key" != "$rust_lint_key" && "$rust_typecheck_key" != "$rust_format_key" ]]; then ok; else bad "rust typecheck ActionKey must differ from lint/format (capability isolation)"; fi
+markdown_format_count="$(printf '%s' "$markdown_actions" | grep -c 'Mnemonic: DxRealQualityFormat' || true)"
+markdown_typecheck_count="$(printf '%s' "$markdown_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
+js_typecheck_count="$(printf '%s' "$js_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
+if [[ "$markdown_format_count" == "0" ]]; then ok; else bad "markdown: want 0 format actions (manifest: lint-only, got $markdown_format_count)"; fi
+if [[ "$markdown_typecheck_count" == "0" ]]; then ok; else bad "markdown: want 0 typecheck actions (manifest: lint-only, got $markdown_typecheck_count)"; fi
+if [[ "$js_typecheck_count" == "0" ]]; then ok; else bad "js: want 0 typecheck actions (manifest: lint+format only, got $js_typecheck_count)"; fi
 
 echo "quality cache aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
