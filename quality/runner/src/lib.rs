@@ -1846,6 +1846,17 @@ mod tests {
         let mut non_utf8 = valid.clone();
         non_utf8.replacements[0].edits[0].replacement = vec![0xFF, 0xFE];
         assert!(validate(&non_utf8).is_err());
+        for bad in [
+            "src\\lib.rs",
+            "src/./lib.rs",
+            "src/../lib.rs",
+            "src//lib.rs",
+            "src/lib.rs/",
+        ] {
+            let mut malformed_path = valid.clone();
+            malformed_path.replacements[0].path = bad.to_owned();
+            assert!(validate(&malformed_path).is_err(), "path accepted: {bad:?}");
+        }
     }
 
     #[test]
