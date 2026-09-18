@@ -11,15 +11,16 @@
 # cache/determinism/apply batteries (#84) stay open with honest gaps.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (28 checks): provider definition, single-sourced registry map +
-# parity gate, per-foundation owner docs, minimum-consumer index +
-# READMEs, framework boundary + full format set + mixed composition,
-# adapter-mechanics doc, cache/determinism/apply-safety contract
-# sections, curated-defaults + native-config evidence files + test
-# backing, lane-A exclusion + generated list, external-consumer
-# breadth, determinism seed pin, apply filesystem + atomic-write
-# evidence, matrix honesty, prior-slice harnesses green, and
-# no-false-claim gaps. Full taxonomy review, exact mappings, and
+# today (32 checks): provider definition, single-sourced registry map +
+# frozen class table + secrets family + parity gate, per-foundation
+# owner docs + dependency scopes, minimum-consumer index + READMEs,
+# framework boundary + full format set + mixed composition + ownership
+# regions, adapter-mechanics doc, cache/determinism/apply-safety
+# contract sections, curated-defaults + native-config evidence files +
+# test backing, lane-A exclusion + generated list + dogfood CI jobs,
+# external-consumer breadth, determinism seed pin, apply filesystem +
+# atomic-write evidence, matrix honesty, prior-slice harnesses green,
+# and no-false-claim gaps. Full taxonomy review, exact mappings, and
 # battery execution stay open under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:quality_foundations_guards`,
@@ -259,6 +260,46 @@ if grep -q -F -e 'write_atomic' cli/cli/src/exec/quality_apply.rs; then
   ok
 else
   bad "quality apply applier lost its atomic-write evidence (#84)"
+fi
+
+# #6 frozen class table stays owned: canonical registry IDs plus the
+# secrets family as its own semantic class (assignment/admissibility
+# review still open).
+if grep -q -F -e 'Canonical semantic file-class IDs' docs/quality/quality-sources.md \
+  && grep -q -F -e 'secrets` policy family is its own semantic class' docs/quality/quality-sources.md; then
+  ok
+else
+  bad "quality-sources.md lost its frozen class table or secrets-family record (#6)"
+fi
+
+# #7 per-language dependency scope stays owned: Cargo, uv, and pnpm
+# resolution sections (exact lock/closure proofs still open).
+if grep -q -F -e '## Crates And Cargo' docs/generation/rust.md \
+  && grep -q -F -e '## uv Scope And Resolution' docs/generation/python.md \
+  && grep -q -F -e '## pnpm Scope And Resolution' docs/generation/javascript-typescript.md; then
+  ok
+else
+  bad "generation docs lost their Cargo/uv/pnpm dependency-scope sections (#7)"
+fi
+
+# #8 framework ownership regions stay explicit: physical/virtual
+# ownership plus format-specific regions (exact region transport open).
+if grep -q -F -e '## Physical And Virtual Ownership' docs/generation/framework-adapters.md \
+  && grep -q -F -e '## Format-Specific Regions' docs/generation/framework-adapters.md; then
+  ok
+else
+  bad "framework-adapters.md lost its ownership/region sections (#8)"
+fi
+
+# #12 lane-A CI scope stays sharded: freshness, lint, format, and
+# typecheck dogfood jobs run our own tools over our own tree.
+if grep -q -F -e 'dogfood-freshness' .github/workflows/ci.yml \
+  && grep -q -F -e 'dogfood-lint' .github/workflows/ci.yml \
+  && grep -q -F -e 'dogfood-format' .github/workflows/ci.yml \
+  && grep -q -F -e 'dogfood-typecheck' .github/workflows/ci.yml; then
+  ok
+else
+  bad "ci.yml lost its sharded lane-A dogfood jobs (#12)"
 fi
 
 # No false claim: full determinism/apply batteries not claimed green.
