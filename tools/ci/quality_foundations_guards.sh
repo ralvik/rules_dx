@@ -11,13 +11,15 @@
 # cache/determinism/apply batteries (#84) stay open with honest gaps.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (32 checks): provider definition, single-sourced registry map +
+# today (36 checks): provider definition, single-sourced registry map +
 # frozen class table + secrets family + parity gate, per-foundation
-# owner docs + dependency scopes, minimum-consumer index + READMEs,
-# framework boundary + full format set + mixed composition + ownership
-# regions, adapter-mechanics doc, cache/determinism/apply-safety
-# contract sections, curated-defaults + native-config evidence files +
-# test backing, lane-A exclusion + generated list + dogfood CI jobs,
+# owner docs + dependency scopes + Gazelle extension dirs, framework
+# boundary + full format set + mixed composition + ownership regions +
+# framework Gazelle dirs, minimum-consumer index + READMEs,
+# adapter-mechanics doc, aspect QualitySourcesInfo gate, cache/
+# determinism/apply-safety contract sections + no-cache argv marker,
+# curated-defaults + native-config evidence files + test backing,
+# lane-A exclusion + generated list + dogfood CI jobs,
 # external-consumer breadth, determinism seed pin, apply filesystem +
 # atomic-write evidence, matrix honesty, prior-slice harnesses green,
 # and no-false-claim gaps. Full taxonomy review, exact mappings, and
@@ -300,6 +302,44 @@ if grep -q -F -e 'dogfood-freshness' .github/workflows/ci.yml \
   ok
 else
   bad "ci.yml lost its sharded lane-A dogfood jobs (#12)"
+fi
+
+# #7 Gazelle language extensions stay present: one extension directory
+# per delivered foundation (upstream rules stay the implementation;
+# exact import/lock proofs still open).
+if [[ -d "gazelle/rust" ]] \
+  && [[ -d "gazelle/python" ]] \
+  && [[ -d "gazelle/typescript" ]]; then
+  ok
+else
+  bad "Gazelle lost a delivered-foundation extension dir (rust/python/typescript, #7)"
+fi
+
+# #8 Gazelle framework extensions stay present alongside the language
+# set (named adapters over upstream parsers, no generic fallback).
+if [[ -d "gazelle/vue" ]] \
+  && [[ -d "gazelle/svelte" ]] \
+  && [[ -d "gazelle/astro" ]] \
+  && [[ -d "gazelle/mdx" ]]; then
+  ok
+else
+  bad "Gazelle lost a framework extension dir (vue/svelte/astro/mdx, #8)"
+fi
+
+# #12 aspect gate stays provider-closed: aspects visit only targets
+# carrying QualitySourcesInfo, never a parallel file list.
+if grep -q -F -e 'QualitySourcesInfo not in target' quality/aspects.bzl; then
+  ok
+else
+  bad "quality aspects lost their QualitySourcesInfo-only gate (#12)"
+fi
+
+# #84 cache-argv marker stays pinned: the runner threads an explicit
+# no-cache argv through (full invalidation batteries still open).
+if grep -q -F -e '--no-cache' quality/runner/src/real.rs; then
+  ok
+else
+  bad "quality runner lost its --no-cache argv marker (#84)"
 fi
 
 # No false claim: full determinism/apply batteries not claimed green.
