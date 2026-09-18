@@ -1228,6 +1228,47 @@ mod tests {
     }
 
     #[test]
+    fn non_utf8_source_is_invalid_in_default_mode() {
+        // Apply-safety battery (issue #84): `quality-testing.md`
+        // requires rejecting invalid UTF-8 source bytes. The 0..1 edit
+        // over b"\xff\xfe" passes proto validation (ordered UTF-8
+        // replacement, correct digest) while `apply_to_bytes` fails the
+        // source UTF-8 check: no write, invalid_edits, single Bazel
+        // launch. Diff mode already proves the render arm
+        // (`diff_non_utf8_source_fails`); this proves the default-mode
+        // mutation arm.
+        let mut harness = Harness::new("nonutf8-default");
+        std::fs::create_dir_all(harness.workspace.join("src")).expect("dirs");
+        std::fs::write(harness.workspace.join("src/a.py"), b"\xff\xfe").expect("bytes");
+        let original = std::fs::read(harness.workspace.join("src/a.py")).expect("source");
+        let change = harness.replacement_at(
+            "src/a.py",
+            digest(&original).to_vec(),
+            vec![proto::Edit {
+                start_byte: 0,
+                end_byte: 1,
+                replacement: b"y".to_vec(),
+            }],
+        );
+        harness.results.insert(
+            "//test:corpus".to_owned(),
+            harness.valid_result(vec![Harness::diagnostic("unused", true)], vec![change]),
+        );
+        let (code, _, err) = harness.run(&["lint", "--output=text"]);
+        assert_eq!(code, 1);
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/a.py")).expect("source"),
+            original
+        );
+        assert!(err.contains("Not applied: src/a.py (invalid_edits)"));
+        assert_eq!(
+            harness.seen_env.borrow().len(),
+            1,
+            "invalid non-UTF8 source must launch Bazel exactly once, no rerun"
+        );
+    }
+
+    #[test]
     fn legacy_staging_dir_does_not_block_atomic_write() {
         let mut harness = Harness::new("staging-blocked");
         harness.write_source("src/a.py", "x = 1\n");
