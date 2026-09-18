@@ -74,8 +74,9 @@ execution deferred. `Tracked` means measured report-only tracking with no gate.
 
 Framework composition evidence (exact parser/compiler, provider,
 generated-region, dependency, test, environment/IDE, quality-region
-mappings) stays open under
-open work. Language
+mappings) is pinned by
+`bazel run //tools/ci:foundation_maps`, with owning qualification in
+[Framework adapters](../generation/framework-adapters.md#framework-mapping-qualification). Language
 provider/import/lock/tool-graph proofs are pinned by
 `bazel run //tools/ci:foundation_maps`, with owning qualification in
 [Generation](../generation/README.md#language-mapping-qualification),

@@ -4,14 +4,17 @@
 # Rust/Python/JS-TS foundations ship thin wrappers + Gazelle + env plans;
 # exact provider/import/lock/tool-graph proofs are pinned here for #7.
 # Vue/Svelte/Astro/MDX ship named adapters over upstream parsers with an
-# end-to-end fixture approach; exact parser/provider/region/dependency/
-# test/env/quality mappings plus composition evidence stay open under #8.
+# end-to-end fixture approach; exact parser/compiler, provider,
+# generated-region, dependency, test, env/IDE, quality-region mappings plus
+# composition evidence are pinned here for #8.
 # Class-to-family taxonomy stays open under #6; native config binding +
 # CI scope extension stay open under #12.
 #
 # This harness machine-checks the qualified mappings: owner links, adapter
 # boundaries, provider advertisement, fixture markers, upstream pins,
-# Gazelle fixtures, env plans, lock authority, and Ty provenance.
+# Gazelle fixtures, env plans, hello wrapper fixtures, lock authority, Ty
+# provenance, plus the framework parser/compiler, provider, region,
+# dependency, test, env/IDE, quality-region, and composition fixtures.
 # Upstream choices are kept; no switch is approved here.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:foundation_maps`,
@@ -189,26 +192,185 @@ else
   bad "tool-graph provenance missing:$tools_missing"
 fi
 
-# #8: all four framework wrappers advertise QualitySourcesInfo.
-fw_missing=""
+# #8: framework provider mappings stay pinned in each wrapper (JsInfo
+# preserved plus QualitySourcesInfo; only js_library/JsInfo used upstream;
+# no separate binary/test wrapper).
+fw_provider_fail=""
 for fw in vue svelte astro mdx; do
+  if ! grep -q -F -e 'JsInfo' "$fw/rules/defs.bzl" 2>/dev/null; then
+    fw_provider_fail="$fw_provider_fail $fw:JsInfo"
+  fi
   if ! grep -q -F -e 'QualitySourcesInfo' "$fw/rules/defs.bzl" 2>/dev/null; then
-    fw_missing="$fw_missing $fw"
+    fw_provider_fail="$fw_provider_fail $fw:QualitySourcesInfo"
+  fi
+  if ! grep -q -F -e 'js_library' "$fw/rules/defs.bzl" 2>/dev/null; then
+    fw_provider_fail="$fw_provider_fail $fw:js_library"
   fi
 done
-if [[ -z "$fw_missing" ]]; then
+if [[ -z "$fw_provider_fail" ]]; then
   ok
 else
-  bad "framework wrappers lost QualitySourcesInfo:$fw_missing"
+  bad "framework provider mappings drifted:$fw_provider_fail"
 fi
 
-# #8: mixed-framework composition fixture stays marked (M21), distinct
-# from external-consumer workspaces.
-if [[ -d "examples/mixed/hello" ]] \
-  && grep -q -F -e 'M21' examples/mixed/hello/BUILD.bazel; then
+# #8: framework upstream parser/compiler choices stay pinned; wrappers match
+# package.json and the JS toolchain pins in MODULE.bazel.
+fw_upstream_fail=""
+grep -q -F -e 'aspect_rules_js 3.4.1' vue/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail vue:ruleset"
+grep -q -F -e 'aspect_rules_js 3.4.1' svelte/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail svelte:ruleset"
+grep -q -F -e 'aspect_rules_js 3.4.1' astro/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail astro:ruleset"
+grep -q -F -e 'aspect_rules_js 3.4.1' mdx/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail mdx:ruleset"
+grep -q -F -e 'Vue 3.5.42' vue/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail vue:compiler"
+grep -q -F -e 'Svelte 5.57.0' svelte/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail svelte:compiler"
+grep -q -F -e '@astrojs/compiler 4.0.0' astro/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail astro:compiler"
+grep -q -F -e '@mdx-js/mdx 3.1.1' mdx/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail mdx:compiler"
+grep -q -F -e '"@vue/compiler-sfc": "3.5.42"' package.json || fw_upstream_fail="$fw_upstream_fail pkg:vue-compiler"
+grep -q -F -e '"vue": "3.5.42"' package.json || fw_upstream_fail="$fw_upstream_fail pkg:vue"
+grep -q -F -e '"svelte": "5.57.0"' package.json || fw_upstream_fail="$fw_upstream_fail pkg:svelte"
+grep -q -F -e '"@astrojs/compiler": "4.0.0"' package.json || fw_upstream_fail="$fw_upstream_fail pkg:astro"
+grep -q -F -e '"@mdx-js/mdx": "3.1.1"' package.json || fw_upstream_fail="$fw_upstream_fail pkg:mdx"
+grep -q -F -e 'bazel_dep(name = "aspect_rules_js", version = "3.4.1")' MODULE.bazel || fw_upstream_fail="$fw_upstream_fail module:js"
+grep -q -F -e 'bazel_dep(name = "aspect_rules_jest", version = "0.26.0")' MODULE.bazel || fw_upstream_fail="$fw_upstream_fail module:jest"
+if [[ -z "$fw_upstream_fail" ]]; then
   ok
 else
-  bad "mixed composition fixture lost its M21 marker"
+  bad "framework upstream choices drifted:$fw_upstream_fail"
+fi
+
+# #8: framework Gazelle fixtures stay present (parser/lang/naming plus
+# focused tests, stdlib, and testdata generation goldens per adapter; mixed
+# ownership partition stays present).
+fw_gazelle_missing=""
+for fw in vue svelte astro mdx; do
+  if [[ ! -f "gazelle/$fw/parser.go" || ! -f "gazelle/$fw/lang.go" || ! -f "gazelle/$fw/naming.go" || ! -f "gazelle/$fw/stdlib.go" ]]; then
+    fw_gazelle_missing="$fw_gazelle_missing $fw:impl"
+  fi
+  if [[ ! -f "gazelle/$fw/parser_test.go" || ! -f "gazelle/$fw/lang_test.go" || ! -f "gazelle/$fw/naming_test.go" ]]; then
+    fw_gazelle_missing="$fw_gazelle_missing $fw:tests"
+  fi
+  if [[ ! -f "gazelle/$fw/testdata/source_only/pkg/demo/BUILD.in" || ! -f "gazelle/$fw/testdata/source_only/pkg/demo/BUILD.out" ]]; then
+    fw_gazelle_missing="$fw_gazelle_missing $fw:testdata"
+  fi
+  if ! grep -q -F -e 'SupportedExts' "gazelle/$fw/naming.go" 2>/dev/null; then
+    fw_gazelle_missing="$fw_gazelle_missing $fw:exts"
+  fi
+  if ! grep -q -F -e "${fw}_library" "gazelle/$fw/testdata/source_only/pkg/demo/BUILD.out" 2>/dev/null; then
+    fw_gazelle_missing="$fw_gazelle_missing $fw:kind"
+  fi
+done
+[[ -f "gazelle/mixed/mixed.go" && -f "gazelle/mixed/mixed_test.go" ]] || fw_gazelle_missing="$fw_gazelle_missing mixed:impl"
+if [[ -z "$fw_gazelle_missing" ]]; then
+  ok
+else
+  bad "framework Gazelle fixtures missing:$fw_gazelle_missing"
+fi
+
+# #8: framework environment plans stay present (plan + focused fixtures plus
+# hello plan target per adapter).
+fw_env_missing=""
+for fw in vue svelte astro mdx; do
+  if [[ ! -f "$fw/env/plan.bzl" || ! -f "$fw/env/plan_tests.bzl" || ! -f "$fw/env/BUILD.bazel" ]]; then
+    fw_env_missing="$fw_env_missing $fw:files"
+  elif ! grep -q -F -e 'JsInfo' "$fw/env/plan.bzl" || ! grep -q -F -e 'QualitySourcesInfo' "$fw/env/plan.bzl"; then
+    fw_env_missing="$fw_env_missing $fw:providers"
+  elif ! grep -q -F -e 'EXPECTED_ENV_PLAN_OBSERVATIONS' "$fw/env/plan_tests.bzl"; then
+    fw_env_missing="$fw_env_missing $fw:tests"
+  elif ! grep -q -F -e 'hello_lib_plan' "$fw/env/BUILD.bazel"; then
+    fw_env_missing="$fw_env_missing $fw:plan-target"
+  fi
+done
+if [[ -z "$fw_env_missing" ]]; then
+  ok
+else
+  bad "framework environment plans missing:$fw_env_missing"
+fi
+
+# #8: framework hello builds stay present as wrapper consumers (container +
+# shared helper + upstream parser/compiler test per adapter).
+fw_hello_missing=""
+for fw in vue svelte astro mdx; do
+  case "$fw" in
+    vue) container="Hello.vue" ;;
+    svelte) container="Hello.svelte" ;;
+    astro) container="Hello.astro" ;;
+    mdx) container="Hello.mdx" ;;
+  esac
+  if [[ ! -f "$fw/hello/BUILD.bazel" || ! -f "$fw/hello/$container" || ! -f "$fw/hello/Hello.test.js" || ! -f "$fw/hello/helper.js" ]]; then
+    fw_hello_missing="$fw_hello_missing $fw:files"
+  elif ! grep -q -F -e "${fw}/rules:defs.bzl" "$fw/hello/BUILD.bazel"; then
+    fw_hello_missing="$fw_hello_missing $fw:wrapper"
+  elif ! grep -q -F -e 'javascript_test' "$fw/hello/BUILD.bazel"; then
+    fw_hello_missing="$fw_hello_missing $fw:test-kind"
+  fi
+done
+if [[ -z "$fw_hello_missing" ]]; then
+  ok
+else
+  bad "framework hello fixtures missing:$fw_hello_missing"
+fi
+
+# #8: framework test semantics stay pinned (javascript_test over the
+# upstream parser/compiler with container plus compiler npm data; no
+# separate framework test wrapper; Hello.test.js exercises the regions).
+fw_test_fail=""
+grep -q -F -e '//:node_modules/@vue/compiler-sfc' vue/hello/BUILD.bazel || fw_test_fail="$fw_test_fail vue:compiler-data"
+grep -q -F -e '//:node_modules/svelte' svelte/hello/BUILD.bazel || fw_test_fail="$fw_test_fail svelte:compiler-data"
+grep -q -F -e '//:node_modules/@astrojs/compiler' astro/hello/BUILD.bazel || fw_test_fail="$fw_test_fail astro:compiler-data"
+grep -q -F -e '//:node_modules/@mdx-js/mdx' mdx/hello/BUILD.bazel || fw_test_fail="$fw_test_fail mdx:compiler-data"
+grep -q -F -e 'parse' vue/hello/Hello.test.js || fw_test_fail="$fw_test_fail vue:parse-test"
+grep -q -F -e 'parse' svelte/hello/Hello.test.js || fw_test_fail="$fw_test_fail svelte:parse-test"
+grep -q -F -e 'parse' astro/hello/Hello.test.js || fw_test_fail="$fw_test_fail astro:parse-test"
+grep -q -F -e 'compile' mdx/hello/Hello.test.js || fw_test_fail="$fw_test_fail mdx:compile-test"
+if grep -R -q -F -e 'vue_test' vue/hello/BUILD.bazel svelte/hello/BUILD.bazel astro/hello/BUILD.bazel mdx/hello/BUILD.bazel 2>/dev/null; then
+  fw_test_fail="$fw_test_fail unexpected-vue_test"
+fi
+if grep -R -q -F -e 'svelte_test' vue/hello/BUILD.bazel svelte/hello/BUILD.bazel astro/hello/BUILD.bazel mdx/hello/BUILD.bazel 2>/dev/null; then
+  fw_test_fail="$fw_test_fail unexpected-svelte_test"
+fi
+if grep -R -q -F -e 'astro_test' vue/hello/BUILD.bazel svelte/hello/BUILD.bazel astro/hello/BUILD.bazel mdx/hello/BUILD.bazel 2>/dev/null; then
+  fw_test_fail="$fw_test_fail unexpected-astro_test"
+fi
+if grep -R -q -F -e 'mdx_test' vue/hello/BUILD.bazel svelte/hello/BUILD.bazel astro/hello/BUILD.bazel mdx/hello/BUILD.bazel 2>/dev/null; then
+  fw_test_fail="$fw_test_fail unexpected-mdx_test"
+fi
+if [[ -z "$fw_test_fail" ]]; then
+  ok
+else
+  bad "framework test mappings drifted:$fw_test_fail"
+fi
+
+# #8: framework quality-region mappings stay pinned (frozen semantic classes
+# plus one classification-only policy family per container; wrappers carry
+# the matching quality_specs).
+fw_quality_fail=""
+for fw in vue svelte astro mdx; do
+  grep -q -F -e "\"$fw\"" quality/sources.bzl || fw_quality_fail="$fw_quality_fail $fw:class"
+  grep -q -F -e "\"$fw\": \"$fw\"" quality/adapters.bzl || fw_quality_fail="$fw_quality_fail $fw:family"
+  grep -q -F -e "quality_specs" "$fw/rules/defs.bzl" || fw_quality_fail="$fw_quality_fail $fw:specs"
+done
+if [[ -z "$fw_quality_fail" ]]; then
+  ok
+else
+  bad "framework quality-region mappings drifted:$fw_quality_fail"
+fi
+
+# #8: mixed-framework composition stays pinned (M21; one wrapper per
+# container plus the shared helper; per-container helper edge with no
+# framework-to-framework imports; disjoint gazelle/mixed partition).
+fw_mixed_fail=""
+[[ -d "examples/mixed/hello" ]] || fw_mixed_fail="$fw_mixed_fail missing-dir"
+grep -q -F -e 'M21' examples/mixed/hello/BUILD.bazel || fw_mixed_fail="$fw_mixed_fail M21-marker"
+for fw in vue svelte astro mdx; do
+  grep -q -F -e "$fw/rules:defs.bzl" examples/mixed/hello/BUILD.bazel || fw_mixed_fail="$fw_mixed_fail mixed:$fw-wrapper"
+  [[ -f "examples/mixed/hello/Hello.${fw#vue:}" ]] 2>/dev/null || true
+done
+[[ -f "examples/mixed/hello/Hello.vue" && -f "examples/mixed/hello/Hello.svelte" && -f "examples/mixed/hello/Hello.astro" && -f "examples/mixed/hello/Hello.mdx" ]] || fw_mixed_fail="$fw_mixed_fail mixed:containers"
+grep -q -F -e 'helper_lib' examples/mixed/hello/BUILD.bazel || fw_mixed_fail="$fw_mixed_fail mixed:helper"
+grep -q -F -e 'Owner' gazelle/mixed/mixed.go || fw_mixed_fail="$fw_mixed_fail mixed:partition"
+if [[ -z "$fw_mixed_fail" ]]; then
+  ok
+else
+  bad "mixed composition fixtures missing:$fw_mixed_fail"
 fi
 
 # #12: wrapper-sources pin + ownership audits stay versioned.

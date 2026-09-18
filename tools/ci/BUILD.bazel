@@ -354,9 +354,10 @@ sh_binary(
 
 # Foundation-mapping guards (issues #7, #8; relates #6, #12): pins the
 # provider advertisement, upstream pins, Gazelle fixtures plus tests, env
-# plans, hello wrapper fixtures, lock authority, Ty provenance, fixture
-# markers, example workspaces, and wrapper/ownership wiring. Functional
-# checks only. Run by CI via
+# plans, hello wrapper fixtures, lock authority, Ty provenance, framework
+# parser/compiler plus provider/region/dependency/test/env-quality mappings
+# and mixed composition, fixture markers, example workspaces, and
+# wrapper/ownership wiring. Functional checks only. Run by CI via
 # `bazel run //tools/ci:foundation_maps`.
 sh_binary(
     name = "foundation_maps",
