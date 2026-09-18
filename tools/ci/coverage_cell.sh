@@ -33,6 +33,13 @@ inventory="tools/coverage/seed-inventory.txt"
 scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
 
+# Issue #252: `bazel coverage` above leaves `coverage_bin` instrumented
+# (`-C instrument-coverage`), and the harness executes it directly 7x from
+# the workspace root. With `LLVM_PROFILE_FILE` unset, Rust writes
+# `default_%m_%p.profraw` to CWD per invocation. Redirect profiles into the
+# auto-cleaned scratch dir so harness runs spill nothing to the checkout.
+export LLVM_PROFILE_FILE="$scratch/profraw_%m_%p.profraw"
+
 # The gate binary must exist (built by the build job / on demand).
 if [[ ! -x "$check_bin" ]]; then
   bazel build --noshow_progress //tools/coverage:coverage_bin >/dev/null 2>&1

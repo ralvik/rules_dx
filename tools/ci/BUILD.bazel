@@ -397,6 +397,15 @@ sh_binary(
     srcs = ["e2e_cases.sh"],
 )
 
+# Coverage-spill containment harness (issues #252, #54): pins the
+# LLVM_PROFILE_FILE scratch redirect in coverage_cell.sh so the
+# coverage-instrumented helper no longer spills default_*.profraw to the
+# checkout. Run by CI via `bazel run //tools/ci:coverage_spill`.
+sh_binary(
+    name = "coverage_spill",
+    srcs = ["coverage_spill.sh"],
+)
+
 # Repository corpus: build file owned for direct-Bazel dogfood
 # under the canonical real_fixture_policy. The audit script itself is
 # CI tooling, never a corpus source.
