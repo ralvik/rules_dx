@@ -10,14 +10,15 @@
 # battery on a clean tree with docs matching as-built behavior.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (20 checks): hygiene policy, exact 0.0.0 module pin + consumer
+# today (24 checks): hygiene policy, exact 0.0.0 module pin + consumer
 # pin, distribution doc ownership + BCR destination, workflow separation
-# + triggers + default-closed approve gates, signing-first trust-root
-# record, digest-pinned prebuilt base + Bazelisk delegation, scaffold
-# state, security precondition, gitignored outputs, matrix close-out
-# page, E2E-case convention, and no-publish invariants. Matrix/SBOM/BCR/
-# install verification and the full green battery stay open under their
-# issues.
+# + triggers + default-closed approve gates, signing-first trust-root +
+# SBOM detail, digest-pinned prebuilt base + Bazelisk delegation + cosign
+# deferral, scaffold state, self-call consumer/docs smoke, security
+# precondition, gitignored outputs, matrix close-out page + Layer-4 E2E
+# record, E2E-case convention, and no-publish invariants. Matrix/SBOM/
+# BCR/install verification and the full green battery stay open under
+# their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:distribution_closeout_guards`,
 # following //tools/ci:ghcr_publish_guards.
@@ -177,6 +178,40 @@ if grep -q -F -e 'bazel build //...' docs/testing/verification-matrix.md \
   ok
 else
   bad "verification-matrix lost its build/test battery record"
+fi
+
+# #26/#78 SBOM + signing-first detail stays recorded in the dry-run
+# report order (tooling unselected, trust root shared with GHCR).
+if grep -q -F -e 'SBOM' .github/workflows/publish-dry-run.yml \
+  && grep -q -F -e 'Signing' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish dry run lost its SBOM/signing-first detail (#26/#78)"
+fi
+
+# #184 cosign deferral stays explicit (signs <digest> on the #26 trust
+# root after the human-run signing workflow, signs nothing yet).
+if grep -q -F -e 'cosign' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "GHCR workflow lost its cosign deferral record (#184)"
+fi
+
+# #5 self-call smoke stays wired: consumer-ci + docs-ci prove the
+# versioned reusable workflows on this repo before consumers use them.
+if grep -q -F -e 'reusable-consumer' .github/workflows/ci.yml \
+  && grep -q -F -e 'reusable-docs' .github/workflows/ci.yml; then
+  ok
+else
+  bad "ci.yml lost its consumer-ci/docs-ci self-call smoke (#5)"
+fi
+
+# #54 Layer-4 E2E suite stays recorded as the thin CLI-contract gate
+# (clean/dirty/format-roundtrip, explicit-only, carve-out automatic).
+if grep -q -F -e 'Layer-4 E2E' docs/testing/verification-matrix.md; then
+  ok
+else
+  bad "verification-matrix lost its Layer-4 E2E suite record (#54)"
 fi
 
 # No-publish invariant: no tags claimed, no release outputs committed.
