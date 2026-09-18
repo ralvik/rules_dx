@@ -10,16 +10,17 @@
 # the #19 resolver prerequisite with Renovate retained as fallback.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (32 checks): codegen/env contracts + commit-lock + try_lock +
-# clean + managed-PATH detail + Node/Python/Rust env records,
-# docs-pipeline records + IR/site identity, examples ownership +
-# laziness slices + full index breadth + Scala/Polyglot entries +
-# mixed disposition, coverage gate + ignore-marker contract + Codecov
-# honesty + LCOV preset pin + inventory backing + fork-security
-# record, Renovate fallback + full manager set + loop policy +
-# preset-update/bump-PR record + automation ownership + schedule
-# policy, never-rewrites + ADR pins, prior harnesses green, and
-# no-false-claim gaps. Reverse queries, adapter runs, comment
+# today (36 checks): codegen/env contracts + commit-lock + try_lock +
+# clean + bootstrap-first + managed-PATH detail + Node/Python/Rust
+# env records, docs-pipeline records + IR/site identity + rustdoc
+# exception, examples ownership + laziness slices + attribution +
+# full index breadth + Scala/Polyglot entries + mixed disposition,
+# coverage gate + min-coverage threshold + ignore-marker contract +
+# Codecov honesty + LCOV preset pin + inventory backing +
+# fork-security record, Renovate fallback + full manager set + loop
+# policy + preset-update/bump-PR record + automation ownership +
+# schedule policy, never-rewrites + ADR pins, prior harnesses green,
+# and no-false-claim gaps. Reverse queries, adapter runs, comment
 # presentation, and widen implementation stay open under their
 # issues.
 #
@@ -289,6 +290,45 @@ if grep -q -F -e 'preset.update -- --verify-only' docs/contributing/local-workfl
   ok
 else
   bad "local-workflows lost its preset-update/bump-PR loop record (#260)"
+fi
+
+# #9 bootstrap-first ordering stays pinned: PATH/environment
+# bootstrap comes first and the managed `.dx/bin` tree stays owned
+# (extension boundary still PATH-tools-only).
+if grep -q -F -e 'bootstrap come first' docs/environments/managed-state.md \
+  && grep -q -F -e '.dx/bin' docs/environments/managed-state.md; then
+  ok
+else
+  bad "env managed-state lost its bootstrap-first/.dx/bin record (#9)"
+fi
+
+# #10 nightly-rustdoc exception stays explicit: the pinned nightly
+# rustdoc JSON route carries a narrow currency exception, with no
+# ambient or stable-output fallback (adapter runs still open).
+if grep -q -F -e 'nightly rustdoc' docs/documentation/doc-ir.md \
+  && grep -q -F -e 'rustdoc-extraction-exception' docs/documentation/doc-ir.md; then
+  ok
+else
+  bad "docs IR lost its nightly-rustdoc exception record (#10)"
+fi
+
+# #85 acquisition attribution stays owned: runtime (logs/aquery) and
+# static (prohibited-installer) attribution prove the private tool
+# graph never shells out to installers (full laziness proof open).
+if grep -q -F -e 'Runtime attribution' tools/ci/examples_laziness.sh \
+  && grep -q -F -e 'No-install attribution' tools/ci/examples_laziness.sh; then
+  ok
+else
+  bad "examples laziness lost its acquisition-attribution record (#85)"
+fi
+
+# #254 min-coverage threshold stays owned: the gate is a pinned
+# `dx coverage --min-coverage` percent over non-ignored executable
+# lines (first-party comment presentation still open).
+if grep -q -F -e 'dx coverage --min-coverage' docs/testing/README.md; then
+  ok
+else
+  bad "coverage doc lost its min-coverage threshold record (#254)"
 fi
 
 # Matrix honesty for this group.
