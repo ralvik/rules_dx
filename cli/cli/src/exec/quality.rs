@@ -2179,4 +2179,84 @@ mod tests {
             b"z = 2\n"
         );
     }
+
+    #[test]
+    fn invalid_edits_in_one_file_do_not_block_valid_sibling() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // each selected file to apply atomically and independently after
+        // complete envelope validation; one rejected path must not block
+        // valid unrelated paths. The mixed stale_source sibling is already
+        // covered; this proves the same independence for the invalid_edits
+        // reason: an out-of-bounds candidate passes proto validation but
+        // fails `apply_to_bytes`, so the valid sibling still applies while
+        // the invalid sibling reports invalid_edits with a single Bazel
+        // launch and no rerun.
+        let mut harness = Harness::new("invalid-edits-sibling");
+        harness.write_source("src/a.py", "x = 1\n");
+        harness.write_source("src/b.py", "a = 1\n");
+        let original_a = std::fs::read(harness.workspace.join("src/a.py")).expect("source");
+        let original_b = std::fs::read(harness.workspace.join("src/b.py")).expect("source");
+        let change_a = harness.replacement_at(
+            "src/a.py",
+            digest(&original_a).to_vec(),
+            vec![proto::Edit {
+                start_byte: 0,
+                end_byte: 1,
+                replacement: b"y".to_vec(),
+            }],
+        );
+        // Out-of-bounds end passes proto ordering checks but fails the
+        // verified-bytes bounds check in `apply_to_bytes`.
+        let change_b = harness.replacement_at(
+            "src/b.py",
+            digest(&original_b).to_vec(),
+            vec![proto::Edit {
+                start_byte: 0,
+                end_byte: 100,
+                replacement: b"x".to_vec(),
+            }],
+        );
+        let bytes = harness.result_full(
+            vec![
+                Harness::diagnostic("unused", true),
+                Harness::diagnostic_with(
+                    proto::Severity::Warning as i32,
+                    "lint-tool",
+                    "src/b.py",
+                    "unused",
+                    true,
+                ),
+            ],
+            vec![],
+            vec![change_a, change_b],
+            vec![
+                FileSnapshot {
+                    path: "src/a.py".to_owned(),
+                    digest: digest(&original_a).to_vec(),
+                },
+                FileSnapshot {
+                    path: "src/b.py".to_owned(),
+                    digest: digest(&original_b).to_vec(),
+                },
+            ],
+        );
+        harness.results.insert("//test:corpus".to_owned(), bytes);
+        let (code, out, err) = harness.run(&["lint", "--output=text"]);
+        assert_eq!(code, 1);
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/a.py")).expect("source"),
+            b"y = 1\n"
+        );
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/b.py")).expect("source"),
+            original_b
+        );
+        assert!(out.contains("Applied 1 file(s)."));
+        assert!(err.contains("Not applied: src/b.py (invalid_edits)"));
+        assert_eq!(
+            harness.seen_env.borrow().len(),
+            1,
+            "invalid sibling must launch Bazel exactly once, no rerun"
+        );
+    }
 }
