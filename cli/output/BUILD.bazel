@@ -16,20 +16,6 @@ package(default_visibility = [
 dx_rust_crate(
     name = "dx_output",
     package_name = "cli/dx_output",
-    deps = [
-        "anstream",
-        "clap",
-        "console",
-        "serde_json",
-        "thiserror",
-        "tracing",
-        "tracing-subscriber",
-    ],
-    extra_deps = [
-        "//cli/digest:dx_digest",
-        "//cli/path:dx_path",
-        "//cli/schema:dx_schema",
-    ],
     srcs = [
         "src/changes.rs",
         "src/diagnostics.rs",
@@ -39,5 +25,19 @@ dx_rust_crate(
         "src/modes.rs",
         "src/severity.rs",
         "src/validation.rs",
+    ],
+    extra_deps = [
+        "//cli/digest:dx_digest",
+        "//cli/path:dx_path",
+        "//cli/schema:dx_schema",
+    ],
+    deps = [
+        "anstream",
+        "clap",
+        "console",
+        "serde_json",
+        "thiserror",
+        "tracing",
+        "tracing-subscriber",
     ],
 )

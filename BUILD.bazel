@@ -1,3 +1,5 @@
+load("@rules_dx//quality:native_config.bzl", "rustfmt_config")
+
 """Root package for the rules_dx seed."""
 
 # First-party import mappings: every `# gazelle:resolve` here pins
@@ -129,4 +131,10 @@ sh_test(
         "//cli/cli:dx",
     ],
     tags = ["no-coverage"],
+)
+
+rustfmt_config(
+    name = "rustfmt_config",
+    src = "rustfmt.toml",
+    visibility = ["//:__subpackages__"],
 )

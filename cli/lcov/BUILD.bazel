@@ -10,13 +10,13 @@ package(default_visibility = ["//visibility:public"])
 dx_rust_crate(
     name = "dx_lcov",
     package_name = "cli/dx_lcov",
-    deps = ["thiserror"],
     srcs = [
-        "src/lib.rs",
         "src/ignores.rs",
-        "src/parse.rs",
         "src/inventory.rs",
-        "src/verdict.rs",
+        "src/lib.rs",
+        "src/parse.rs",
         "src/run.rs",
+        "src/verdict.rs",
     ],
+    deps = ["thiserror"],
 )

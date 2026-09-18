@@ -13,6 +13,15 @@ package(default_visibility = [
 dx_rust_crate(
     name = "dx_audit",
     package_name = "cli/dx_audit",
+    srcs = [
+        "src/exception.rs",
+        "src/lib.rs",
+        "src/license_expr.rs",
+        "src/license_notice.rs",
+        "src/license_policy.rs",
+        "src/secrets.rs",
+    ],
+    extra_deps = ["//cli/digest:dx_digest"],
     deps = [
         "chrono",
         "semver",
@@ -21,14 +30,5 @@ dx_rust_crate(
         "thiserror",
         "toml",
         "url",
-    ],
-    extra_deps = ["//cli/digest:dx_digest"],
-    srcs = [
-        "src/exception.rs",
-        "src/lib.rs",
-        "src/license_expr.rs",
-        "src/license_notice.rs",
-        "src/license_policy.rs",
-        "src/secrets.rs",
     ],
 )

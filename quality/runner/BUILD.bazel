@@ -18,11 +18,13 @@ rust_library(
     ),
     crate_name = "quality_runner",
     crate_root = "src/lib.rs",
+    edition = "2021",
     deps = crate_deps(
         [
             "clap",
             "tempfile",
             "thiserror",
+            "tracing",
         ],
         package_name = "quality/quality_runner",
     ) + [
@@ -41,6 +43,7 @@ rust_binary(
     ),
     crate_name = "quality_runner",
     crate_root = "src/main.rs",
+    edition = "2021",
     deps = crate_deps(
         [
             "clap",
@@ -100,6 +103,7 @@ rust_test(
             "clap",
             "tempfile",
             "thiserror",
+            "tracing",
         ],
         package_name = "quality/quality_runner",
     ) + [

@@ -14,16 +14,16 @@ package(default_visibility = [
 dx_rust_crate(
     name = "dx_env_plan",
     package_name = "cli/dx_env_plan",
-    deps = [
-        "serde",
-        "serde_json",
-        "thiserror",
-    ],
     extra_deps = [
         "//cli/bep:dx_bep",
         "//cli/digest:dx_digest",
         "//cli/fingerprint:dx_fingerprint",
         "//cli/roots:dx_roots",
         "//env/env_shard",
+    ],
+    deps = [
+        "serde",
+        "serde_json",
+        "thiserror",
     ],
 )

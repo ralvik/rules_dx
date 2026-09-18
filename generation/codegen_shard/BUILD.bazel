@@ -17,10 +17,12 @@ rust_library(
     ),
     crate_name = "codegen_shard",
     crate_root = "src/lib.rs",
+    edition = "2021",
     deps = crate_deps(
         [
             "clap",
             "thiserror",
+            "tracing",
         ],
         package_name = "generation/codegen_shard",
     ) + [
@@ -40,6 +42,7 @@ rust_binary(
     ),
     crate_name = "codegen_shard_writer",
     crate_root = "src/main.rs",
+    edition = "2021",
     deps = crate_deps(
         [
             "clap",
@@ -47,7 +50,10 @@ rust_binary(
             "tracing",
         ],
         package_name = "generation/codegen_shard",
-    ) + [":codegen_shard", "//cli/output:dx_output"],
+    ) + [
+        ":codegen_shard",
+        "//cli/output:dx_output",
+    ],
 )
 
 rust_test(
@@ -63,6 +69,7 @@ rust_test(
         [
             "clap",
             "thiserror",
+            "tracing",
         ],
         package_name = "generation/codegen_shard",
     ) + [

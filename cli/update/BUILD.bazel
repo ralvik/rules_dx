@@ -13,10 +13,10 @@ package(default_visibility = [
 dx_rust_crate(
     name = "dx_update",
     package_name = "cli/dx_update",
-    deps = ["thiserror"],
     srcs = [
         "src/lib.rs",
         "src/outcome.rs",
         "src/semantics.rs",
     ],
+    deps = ["thiserror"],
 )
