@@ -1823,6 +1823,12 @@ mod tests {
         let mut bad_digest = valid.clone();
         bad_digest.replacements[0].original_digest = vec![0xAB; DIGEST_LEN + 1];
         assert!(validate(&bad_digest).is_err());
+        let mut short_digest = valid.clone();
+        short_digest.replacements[0].original_digest = vec![0xAB; DIGEST_LEN - 1];
+        assert!(validate(&short_digest).is_err());
+        let mut empty_digest = valid.clone();
+        empty_digest.replacements[0].original_digest = vec![];
+        assert!(validate(&empty_digest).is_err());
         let empty_edits = mk(vec![]);
         assert!(validate(&empty_edits).is_err());
     }
