@@ -142,7 +142,10 @@ End-to-end suites use the real Bazel launcher and external consumer fixtures. Th
 define their required behavior and evidence.
 
 Tests cover only implemented commands. The
-complete end-to-end matrix is required before API stabilization.
+complete end-to-end matrix is required before API stabilization. The
+as-built per-language x per-layer status lives in the
+[verification matrix](verification-matrix.md) (Stage 5 close-out,
+[issue #54](https://github.com/ralvik/rules_dx/issues/54)).
 
 ## GitHub Coverage Reporting
 
