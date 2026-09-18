@@ -142,6 +142,14 @@ pub(crate) fn execute_test_reports(request: TestReportsRequest<'_>) -> i32 {
             match validate_lcov(&bytes) {
                 Ok(()) => lcov_documents.push(String::from_utf8_lossy(&bytes).into_owned()),
                 Err(error) => {
+                    // Starlark-only analysis tests (e.g. env-plan suites with
+                    // no instrumented sources) emit a zero-byte coverage.dat.
+                    // An empty artifact contributes no lines, so skip it
+                    // instead of failing the whole run; non-empty corrupt
+                    // tracefiles still mark the collection incomplete below.
+                    if bytes.iter().all(|b| b.is_ascii_whitespace()) {
+                        continue;
+                    }
                     complete = false;
                     if detail.is_empty() {
                         detail = format!("invalid {}: {error}", output.exec_path.display());
@@ -428,6 +436,44 @@ mod tests {
         let (code, _, err) = harness.run(&["coverage", "--output=text"]);
         assert_eq!(code, 1);
         assert!(err.contains("incomplete_results"), "{err}");
+    }
+
+    #[test]
+    fn coverage_empty_tracefile_skipped_when_valid_present() {
+        // Starlark-only suites emit a zero-byte coverage.dat with no
+        // instrumented lines (e.g. //astro/env:env_plan_tests). An empty
+        // artifact contributes nothing and must not fail a run that has
+        // valid coverage; only non-empty corrupt files are incomplete.
+        let harness = Harness::new("cov-empty-skipped");
+        let empty_uri = write_bep_artifact(&harness, "empty.dat", b"");
+        let valid_uri = write_bep_artifact(&harness, "valid.dat", MINIMAL_LCOV.as_bytes());
+        let harness = Harness {
+            raw_bep: Some(vec![
+                test_result_line("//a:empty", &[(String::from("test.lcov"), empty_uri)]),
+                test_result_line("//a:valid", &[(String::from("test.lcov"), valid_uri)]),
+            ]),
+            ..harness
+        };
+        let (code, _, err) = harness.run(&["coverage", "--output=text", "--min-coverage=100"]);
+        assert_eq!(code, 0, "{err}");
+        assert!(err.contains("meets minimum 100%"), "{err}");
+    }
+
+    #[test]
+    fn coverage_whitespace_only_tracefile_skipped() {
+        let harness = Harness::new("cov-ws-skipped");
+        let ws_uri = write_bep_artifact(&harness, "ws.dat", b"  \n\t\n");
+        let valid_uri = write_bep_artifact(&harness, "valid.dat", MINIMAL_LCOV.as_bytes());
+        let harness = Harness {
+            raw_bep: Some(vec![
+                test_result_line("//a:ws", &[(String::from("test.lcov"), ws_uri)]),
+                test_result_line("//a:valid", &[(String::from("test.lcov"), valid_uri)]),
+            ]),
+            ..harness
+        };
+        let (code, _, err) = harness.run(&["coverage", "--output=text", "--min-coverage=100"]);
+        assert_eq!(code, 0, "{err}");
+        assert!(err.contains("meets minimum 100%"), "{err}");
     }
 
     const HALF_LCOV: &str = "SF:src/a.py\nDA:1,1\nDA:2,0\nend_of_record\n";

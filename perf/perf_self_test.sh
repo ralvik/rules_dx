@@ -86,5 +86,24 @@ else
   fail=$((fail + 1))
 fi
 
+# Workspace-relative baseline proof (issue #86): under `bazel run` the
+# process starts in runfiles, so a relative perf/baseline.json must
+# resolve against BUILD_WORKSPACE_DIRECTORY (same convention as
+# bench.sh/regenerate.py). Mirror a workspace, resolve from elsewhere,
+# and prove the relative path still loads. The compare script path is
+# made absolute first: the check cds away from the test runfiles cwd.
+ws_root="$scratch/ws"
+mkdir -p "$ws_root/perf"
+cp "$baseline" "$ws_root/perf/baseline.json"
+compare_abs="$(CDPATH= cd -- "$(dirname "$compare_py")" && pwd)/$(basename "$compare_py")"
+ws_out=""; rc=0
+ws_out="$(cd /tmp && BUILD_WORKSPACE_DIRECTORY="$ws_root" python3 "$compare_abs" --baseline perf/baseline.json "$at_baseline" 2>&1)" || rc=$?
+if [[ "$rc" == "0" && "$ws_out" == *"No regressions"* ]]; then
+  pass=$((pass + 1))
+else
+  echo "FAIL: workspace-relative baseline (rc=$rc, output: $ws_out)" >&2
+  fail=$((fail + 1))
+fi
+
 echo "perf_self_test: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
