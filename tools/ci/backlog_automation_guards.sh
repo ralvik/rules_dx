@@ -10,10 +10,11 @@
 # the #19 resolver prerequisite with Renovate retained as fallback.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (12 checks): codegen/env contracts, docs-pipeline records,
-# examples ownership + laziness slices, coverage gate + Codecov honesty,
-# Renovate fallback + never-rewrites + ADR pins, prior harnesses green,
-# and no-false-claim gaps. Reverse queries, adapter runs, comment
+# today (16 checks): codegen/env contracts, docs-pipeline records,
+# examples ownership + laziness slices + index breadth, coverage gate +
+# Codecov honesty + LCOV preset pin, Renovate fallback + full manager
+# set + never-rewrites + ADR pins, prior harnesses green, and
+# no-false-claim gaps. Reverse queries, adapter runs, comment
 # presentation, and widen implementation stay open under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:backlog_automation_guards`,
@@ -31,6 +32,13 @@ pass=0
 fail=0
 ok() { pass=$((pass + 1)); }
 bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
+
+# #9 codegen command ownership: dx codegen builds Bazel-owned artifacts.
+if grep -q -F -e 'dx codegen' docs/environments/codegen.md; then
+  ok
+else
+  bad "codegen.md lost its dx codegen ownership (#9)"
+fi
 
 # #9 env/codegen contracts owned in docs.
 if grep -q -F -e 'codegen' docs/environments/codegen.md \
@@ -57,12 +65,28 @@ else
   bad "examples ownership lost (README index or readme/laziness harnesses)"
 fi
 
+# #85 index breadth: beyond the Rust/Python/JS-TS minimum.
+if grep -q -F -e 'adopt-go' examples/README.md \
+  && grep -q -F -e 'adopt-cpp' examples/README.md; then
+  ok
+else
+  bad "examples index lost its beyond-minimum breadth (adopt-go/adopt-cpp)"
+fi
+
 # #85 laziness query/aquery slices stay wired.
 if [[ -f "tools/ci/examples_laziness_query.sh" ]] \
   && [[ -f "tools/ci/examples_laziness_aquery.sh" ]]; then
   ok
 else
   bad "examples laziness query/aquery harnesses missing"
+fi
+
+# #254 LCOV preset pin: combined report owned by Bazel flags.
+if grep -q -F -e 'combined_report=lcov' tools/bazelrc/preset.bazelrc \
+  && [[ -f "tools/ci/coverage_cell.sh" ]]; then
+  ok
+else
+  bad "coverage LCOV preset pin lost (preset.bazelrc or coverage_cell)"
 fi
 
 # #254 gate stays Bazel-owned LCOV, Codecov selection stays honest.
@@ -79,6 +103,13 @@ if [[ -f "tools/ci/coverage_report_guards.sh" ]] \
   ok
 else
   bad "coverage comment gap dishonest (harness missing or comment workflow claimed)"
+fi
+
+# #260 all-ecosystems v1 manager set retained in the fallback.
+if grep -q -F -e '"bazel", "cargo", "github-actions", "gomod", "npm"' renovate.json; then
+  ok
+else
+  bad "Renovate fallback lost its all-ecosystems v1 manager set (#260)"
 fi
 
 # #260 Renovate fallback retained with full manager set.
