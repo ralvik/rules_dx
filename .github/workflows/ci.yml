@@ -253,6 +253,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:quality_cache_aquery
       - name: Audit depcheck contract (truth table + open routes, no false claims)
         run: bazel run --noshow_progress //tools/ci:depcheck_contract
+      - name: Audit execution guards (deferred codes + exit maps, no live claims)
+        run: bazel run --noshow_progress //tools/ci:audit_update_guards
       - name: Audit wrapper sources (QualitySourcesInfo on all wrappers)
         run: bazel run --noshow_progress //tools/ci:wrapper_sources
       - name: Audit registry singularity (single-sourced class taxonomy)
