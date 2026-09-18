@@ -11,14 +11,16 @@
 # baseline as a report, never a gate.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (24 checks): deferred codes, fail-closed unit pins, dry-run
-# planning paths + doc record, exit mappings, doc ownership + auditor/
-# resolver records, depcheck truth-table + offline contract, prior
-# harnesses green, corpus single-name rule + Gazelle ownership +
+# today (28 checks): deferred codes, fail-closed unit pins, dry-run
+# planning paths + doc record, family/selector planning + aggregate
+# verdict pins, exit mappings, doc ownership + auditor/resolver
+# records, depcheck truth-table + offline contract, prior harnesses
+# green, corpus single-name rule + Gazelle ownership + generate doc +
 # generate --check wiring + carve-out record, perf report-not-gate
-# shape + v2.8.0 fairness pin + report honesty + bench harness, and
-# matrix honesty. Live execution, per-type generation, and comparison
-# numbers stay open under their issues.
+# shape + v2.8.0 fairness pin + report honesty + bench harness +
+# comparison-test record, and matrix honesty. Live execution,
+# per-type generation, and comparison numbers stay open under their
+# issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:execution_corpus_perf_guards`,
 # following //tools/ci:verify_perf_corpus.
@@ -210,6 +212,40 @@ if [[ -f "perf/bench.sh" ]] \
   ok
 else
   bad "perf bench/regenerate harness missing (#86)"
+fi
+
+# #18/#19 planning-entry evidence stays pinned: audit family
+# selection plus update selector planning (execution still deferred).
+if grep -q -F -e 'family selection' cli/cli/src/exec/audit.rs \
+  && grep -q -F -e 'UpdateSelection::Selected' cli/cli/src/exec/update.rs; then
+  ok
+else
+  bad "audit/update lost their family-selection/selector-planning entry points"
+fi
+
+# #19 aggregate verdict stays unit-pinned in the update reporter
+# (per-set reporting still open).
+if grep -q -F -e 'overall_failure' cli/update/src/report.rs; then
+  ok
+else
+  bad "update reporter lost its overall_failure aggregate verdict (#19)"
+fi
+
+# #15 generate doc owns the canonical Gazelle workflow (per-type
+# emission still open).
+if grep -q -F -e 'Gazelle' docs/cli/commands/generate.md; then
+  ok
+else
+  bad "generate doc lost its canonical Gazelle workflow record (#15)"
+fi
+
+# #86 comparison-test record stays present: deterministic synthetic
+# tree + fairness-pinned skeleton, proven by its test (numbers open).
+if [[ -f "perf/rules_lint_comparison_test.sh" ]] \
+  && grep -q -F -e 'deterministic synthetic tree' docs/tools/rules_lint-comparison.md; then
+  ok
+else
+  bad "perf lost its comparison-test / synthetic-tree record (#86)"
 fi
 
 # Matrix honesty across this group.
