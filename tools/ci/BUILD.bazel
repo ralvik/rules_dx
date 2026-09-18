@@ -359,6 +359,18 @@ sh_binary(
     srcs = ["execution_corpus_perf_guards.sh"],
 )
 
+# Distribution/closeout guards (issues #5, #26, #78, #184, #54): pins
+# the hygiene policy, distribution ownership, workflow separation +
+# triggers + gates, scaffold state, security precondition, gitignored
+# outputs, matrix close-out page, and no-publish invariants. Matrix,
+# SBOM/BCR/install verification, and the full green battery stay open.
+# Run by CI via `bazel run //tools/ci:distribution_closeout_guards`.
+sh_binary(
+    name = "distribution_closeout_guards",
+    srcs = ["distribution_closeout_guards.sh"],
+)
+)
+
 # Stage 4 E2E drivers (issue #55): one `manual` (+`exclusive`,
 # `local`, `no-sandbox`) sh_test per landed `integration/` scenario plus
 # the explicit suite. Wildcard suites (`bazel test //...`,
