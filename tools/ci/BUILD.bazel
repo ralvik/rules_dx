@@ -224,8 +224,9 @@ sh_binary(
 # adapter manifests consume canonical IDs, map keys are frozen IDs,
 # each class maps to exactly one family with canonical spelling, the
 # frozen example assignments agree with the map, fixture maps stay
-# labeled, and the 12 open-work IDs stay unassigned (no silent
-# assignment/claim). Functional code checks only. Run by CI
+# labeled, the 12 open-work IDs stay unassigned (no silent
+# assignment/claim), and curated defaults stay within the taxonomy
+# (no parallel family/tool). Functional code checks only. Run by CI
 # via `bazel run //tools/ci:registry_singularity`.
 sh_binary(
     name = "registry_singularity",
