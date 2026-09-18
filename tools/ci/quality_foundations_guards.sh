@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quality-foundations determinism guards (issues #6, #7, #8, #12, #84, #303, #304, #305, #307, #313).
+# Quality-foundations determinism guards (issues #6, #7, #8, #12, #84, #303, #304, #305, #307, #313, #315, #316, #321, #326).
 #
 # Rust/Python/JS-TS foundations ship thin wrappers + Gazelle + env plans;
 # Vue/Svelte/Astro/MDX ship named adapters over upstream parsers; quality
@@ -12,9 +12,11 @@
 # Required core mappings (#303), admitted additional foundations (#304),
 # deferred/excluded record (#305), quality adapters/parity/packaging (#307),
 # and file-family integrations (#313) stay open with honest tracker records.
+# Hand-rolled helpers (#315), clap legacy strings (#316), hardcoded
+# inventories (#321), and pin/docs hygiene (#326) stay open with records.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (49 checks): provider definition, single-sourced registry map +
+# today (53 checks): provider definition, single-sourced registry map +
 # frozen class table + secrets family + admissibility table +
 # adapter-applicability + parity gate, per-foundation owner docs +
 # dependency scopes + native-config sections + rust tests/build-scripts +
@@ -461,6 +463,38 @@ if grep -q -F -e 'issue #313' docs/product/support-matrix.md \
   ok
 else
   bad "support-matrix lost its #313 file-family tracker record"
+fi
+
+# #315 hand-rolled helpers stay decide-per-helper open.
+if grep -q -F -e 'issue #315' docs/cli/cli-contract.md \
+  && grep -q -F -e 'record why the hand-rolled implementation stays' docs/cli/cli-contract.md; then
+  ok
+else
+  bad "cli-contract lost its #315 hand-rolled-helpers tracker record"
+fi
+
+# #316 clap legacy strings stay freeze-or-migrate open.
+if grep -q -F -e 'issue #316' docs/cli/cli-contract.md \
+  && grep -q -F -e 'migrate to strict' docs/cli/cli-contract.md; then
+  ok
+else
+  bad "cli-contract lost its #316 clap-tokenizer tracker record"
+fi
+
+# #321 hardcoded inventories stay discovery-or-schema open.
+if grep -q -F -e 'issue #321' docs/quality/quality-sources.md \
+  && grep -q -F -e 'registry query or discovery' docs/quality/quality-sources.md; then
+  ok
+else
+  bad "quality-sources lost its #321 hardcoded-inventory tracker record"
+fi
+
+# #326 pin/docs hygiene stays single-source-the-pins open.
+if grep -q -F -e 'issue #326' docs/contributing/automation.md \
+  && grep -q -F -e 'single-source' docs/contributing/automation.md; then
+  ok
+else
+  bad "automation policy lost its #326 hygiene-sweep tracker record"
 fi
 
 echo "quality foundations guards harness: $pass passed, $fail failed"

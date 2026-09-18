@@ -267,3 +267,15 @@ accept a direct Bazel binary that ignores `.bazelversion`. The pinned Bazel vers
 is the only supported Bazel version. Bootstrap selects the latest stable release
 available at implementation time; later changes to the pin require repository
 tests to pass.
+
+## Implementation Hygiene
+
+Hand-rolled core helpers stay open under issue #315 (atomic write plus lock, path
+ladder, digest wrappers, LCOV parser plus ignore scanner, SPDX parser, date-shape gate,
+scratch wrapper, dir sizing; decide per helper whether to adopt the standard crate or
+record why the hand-rolled implementation stays).
+
+Clap-as-tokenizer legacy error strings stay open under issue #316 (env, codegen shard,
+and markdown paths use clap derive only to map errors back to legacy hand-loop strings;
+decide whether to freeze legacy output as contract with snapshots or migrate to strict
+clap parsing with auto help).

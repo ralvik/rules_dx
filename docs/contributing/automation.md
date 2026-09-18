@@ -39,3 +39,11 @@ grouped, scheduled weekly, reviewable PRs. Auto-merge off by default;
 when enabled it is update-only as gated above. The repository's own
 `renovate.json` is held byte-identical to the scaffold by
 `//:renovate_parity_test`.
+
+## Hygiene Sweep
+
+Pin single-sourcing plus stale-docs wording stays open under issue #326 (Bazelisk and
+Bazel pins live in three places with no single source; caller-pin validation is
+asymmetric; Renovate versus native updater is undecided; bare open-work placeholders
+remain; sharding, Codecov, and sequential wording is stale versus as-built; single-source
+the pins, decide the updater, polish placeholders, and fix stale claims).
