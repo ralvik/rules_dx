@@ -8,13 +8,14 @@
 # clean tree today: each examples/adopt-*/ directory carries a
 # README.md with a fenced shell block running bazel build and bazel
 # test plus an Evidence section, the examples index points at live
-# examples plus the open acquisition/laziness gap, every adopt-* workspace is indexed
+# examples plus the delivered acquisition/laziness proof, every adopt-* workspace is indexed
 # (no silent additions) and every indexed adopt-* link resolves (no
 # stale links), and the mixed-framework fixture stays documented as
 # non-consumer so it can neither drift into the audit silently nor
 # lose its disposition note. Acquisition and laziness fixtures
-# (no-install attribution, unused-foundation zero-work) remain open work
-# and are recorded as gaps, not claimed here.
+# (no-install attribution, unused-foundation zero-work) are delivered
+# across the readme, static, query, aquery, and runtime harnesses,
+# with platform/remote dimensions owned by #298/#308.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:examples_readme`,
 # following //tools/ci:code_ownership.
@@ -33,11 +34,11 @@ ok() { pass=$((pass + 1)); }
 bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
 
 # The index no longer carries the retired milestone stub: it points at
-# live per-foundation examples plus the open acquisition/laziness gap.
-if grep -q -F -e 'adopt-rust' examples/README.md && grep -q -F -e 'acquisition/laziness proof are open' examples/README.md; then
+# live per-foundation examples plus the delivered acquisition/laziness proof.
+if grep -q -F -e 'adopt-rust' examples/README.md && grep -q -F -e 'acquisition/laziness proof are delivered' examples/README.md; then
   ok
 else
-  bad "examples/README.md must point at live adopt-* examples plus the open acquisition/laziness gap"
+  bad "examples/README.md must point at live adopt-* examples plus the delivered acquisition/laziness proof"
 fi
 if grep -q -F -e 'No examples exist yet' examples/README.md; then
   bad "examples/README.md still carries the retired 'No examples exist yet' stub"

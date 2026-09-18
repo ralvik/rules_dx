@@ -24,10 +24,11 @@
 # are intentionally not asserted here; rules_cc likewise spans C++/Kotlin
 # query closures and is not asserted as an ownership marker).
 #
-# Still open per #85 (recorded as gap, not claimed): runtime attribution
-# (process/exec-log proof over external consumers with network denied)
-# plus empty-cache action proof via aquery/exec-log. This harness is
-# query-closure only.
+# Still delivered per #85 together with the runtime action-command proof
+# (examples_laziness_runtime.sh): query-closure plus action-graph plus
+# action-command attribution complete the seed-host proof. Remote-cache /
+# empty-cache download attribution stays owned by #308 and platform
+# evidence by #298. This harness is query-closure only.
 #
 # Run by CI via `bazel run //tools/ci:examples_laziness_query`,
 # after //tools/ci:examples_laziness.

@@ -24,9 +24,11 @@
 # (rules_rust / aspect_rules_py / aspect_rules_js / rules_go /
 # rules_dotnet / rules_kotlin / rules_scala), not shared base toolchains.
 #
-# Still open per #85 (recorded as gap, not claimed): network-denied
-# runtime attribution (process/exec-log proof over external consumers)
-# plus empty-cache remote-cache execution proof. This harness is
+# Delivered per #85 together with the runtime action-command proof
+# (examples_laziness_runtime.sh): dependency closure plus action graph
+# plus action commands complete the seed-host proof. Network-denied
+# execution plus empty-cache remote-cache proof stay owned by #308
+# and platform evidence by #298. This harness is
 # action-graph only, no execution.
 #
 # Run by CI via `bazel run //tools/ci:examples_laziness_aquery`,

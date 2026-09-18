@@ -26,7 +26,8 @@ standard dogfood gates.
   generation (open work).
 - **Examples external-consumer**: per-foundation `adopt-*` workspaces
   proving generation as a consumer, plus acquisition/laziness proof
-  (open work).
+  (delivered on the seed host; platform/remote dimensions owned by
+  #298/#308).
 - **Layer-4 E2E**: thin CLI-contract suite in `integration/` (clean,
   dirty, format-roundtrip), explicit invocation only
   (open work).
