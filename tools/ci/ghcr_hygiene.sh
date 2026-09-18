@@ -9,10 +9,11 @@
 # first push; this build-only slice pushes nothing.
 #
 # This harness machine-checks the gate half verifiable on a clean tree
-# today (12 checks): separate ghcr.yml route, PR-paths build, dispatch +
+# today (13 checks): separate ghcr.yml route, PR-paths build, dispatch +
 # default-closed approve gate, push run-gate explicit, no push/tag/schedule trigger, digest-pinned
 # base + Bazelisk delegation + no ambient toolchains in Dockerfile.prebuilt,
-# no docker/* actions with checkout SHA-pinned, cosign/quota/scaffold
+# no docker/* actions with checkout SHA-pinned, no-secrets checkout plus
+# non-cancelling concurrency, cosign/quota/scaffold
 # deferrals named, scaffold still on mcr (switch follows first push). First-push
 # signing + quota record stay open per #184 and are recorded as gaps, not
 # claimed here.
@@ -102,6 +103,15 @@ if ! grep -q -F -e 'uses: docker/' .github/workflows/ghcr.yml && grep -q -E -e '
   ok
 else
   bad "ghcr.yml gained a docker/* action or lost the checkout SHA pin (plain build/push only)"
+fi
+
+# No-secrets checkout plus non-cancelling concurrency: persist-credentials
+# false keeps the token out of the build, cancel-in-progress false queues
+# overlapping dispatches instead of cancelling the gated push.
+if grep -q -F -e 'persist-credentials: false' .github/workflows/ghcr.yml && grep -q -F -e 'cancel-in-progress: false' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "ghcr.yml lost no-secrets checkout or non-cancelling concurrency"
 fi
 
 # Signing-second deferred explicitly: cosign <digest> on the #26 trust
