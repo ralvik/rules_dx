@@ -369,6 +369,43 @@ mod tests {
     }
 
     #[test]
+    fn typecheck_and_format_apply_without_rerunning_bazel() {
+        // Apply-safety battery (issue #84): `quality-testing.md` no-rerun
+        // clause covers lint, typecheck, and format; the prior test proves
+        // lint only. Typecheck and format share `execute_quality` dispatch
+        // but deserve explicit parity: each default apply must launch Bazel
+        // exactly once, apply the candidate, and succeed without a second
+        // verification build.
+        for (name, command) in [
+            ("no-rerun-typecheck", "typecheck"),
+            ("no-rerun-format", "format"),
+        ] {
+            let mut harness = Harness::new(name);
+            harness.write_source("src/a.py", "x = 1\n");
+            harness.results.insert(
+                "//test:corpus".to_owned(),
+                harness.valid_result(
+                    vec![Harness::diagnostic("unused", true)],
+                    vec![harness.replacement(b"y")],
+                ),
+            );
+            let (code, out, _) = harness.run(&[command, "--output=text"]);
+            assert_eq!(code, 0, "{command} default apply must succeed");
+            assert_eq!(
+                std::fs::read(harness.workspace.join("src/a.py")).expect("source"),
+                b"y = 1\n",
+                "{command} must apply the candidate"
+            );
+            assert!(out.contains("Applied 1 file(s)."), "{command} {out}");
+            assert_eq!(
+                harness.seen_env.borrow().len(),
+                1,
+                "{command} default apply must launch Bazel exactly once, no post-apply rerun"
+            );
+        }
+    }
+
+    #[test]
     fn failed_target_prevents_mutation() {
         let harness = Harness {
             fail_target: true,
