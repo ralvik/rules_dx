@@ -163,12 +163,12 @@ else
   bad "consumer-ci caller lost its 0.0.0 unpublishable pin (#5)"
 fi
 
-# #54 close-out page owns the battery + matrix.
-if grep -q -F -e 'issue #54' docs/testing/verification-matrix.md \
+# Close-out page owns the battery + matrix.
+if grep -q -F -e 'close-out battery' docs/testing/verification-matrix.md \
   && grep -q -F -e '## Battery' docs/testing/verification-matrix.md; then
   ok
 else
-  bad "verification-matrix lost its #54 close-out ownership or Battery section"
+  bad "verification-matrix lost its close-out ownership or Battery section"
 fi
 
 # #54 E2E-case convention: every integration case wired to a driver.

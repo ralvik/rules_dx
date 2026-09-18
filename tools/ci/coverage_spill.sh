@@ -101,10 +101,11 @@ else
 fi
 
 # The Stage 5 battery page still owns the seed cell (no silent promotion).
-if grep -q -F -e 'issues/54' docs/testing/verification-matrix.md; then
+if grep -q -F -e 'seed host' docs/testing/verification-matrix.md \
+  && grep -q -F -e 'close-out battery' docs/testing/verification-matrix.md; then
   ok
 else
-  bad "verification-matrix lost its #54 battery ownership link"
+  bad "verification-matrix lost its Stage 5 battery seed-cell record"
 fi
 
 echo "coverage spill harness: $pass passed, $fail failed"

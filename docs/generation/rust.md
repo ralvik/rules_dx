@@ -83,7 +83,7 @@ for `taplo.toml`, `vale_config` for `.vale.ini`, `rustfmt_config` for `rustfmt.t
 `data` labels. Generated targets carry `//<package>:__subpackages__` visibility (`//:__subpackages__`
 at root). Only rustfmt binds to Rust rules, through direct `aspect_hints` entries;
 buildifier, taplo, and vale targets exist for their own language owners. Clippy is
-intentionally unmanaged (#47): Rust lint is upstream-delegated and a `clippy.toml`
+intentionally unmanaged: Rust lint is upstream-delegated and a `clippy.toml`
 belongs to the `rules_rust` `clippy.toml` label flag, never to a dx-side config target,
 so `clippy` is not a valid `dx_native_tools` id.
 

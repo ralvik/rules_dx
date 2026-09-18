@@ -31,15 +31,15 @@ schema and golden test fixtures are checked in; ordinary API changes require no 
 - [Site build](site.md): Bazel cache-friendly action design, determinism
   rules, laziness, generated-artifact lifecycle, and the decided mdBook renderer.
   Authoritative for build facts.
-- Command surface removed ([issue #31](https://github.com/ralvik/rules_dx/issues/31));
-  reintroduction tracked in [issue #10](https://github.com/ralvik/rules_dx/issues/10)
+- Command surface removed (open work);
+  reintroduction open
   (see the [`dx docs` stub](../cli/commands/docs.md)).
   [ADR 0006](../decisions/0006-cli-command-surface.md) records build versus
   validation-only check; exact mappings are tracked in
-  [issue #10](https://github.com/ralvik/rules_dx/issues/10).
+  open work.
 
 Rust uses pinned nightly `rustdoc --output-format json`; Scala needs a
 Scaladoc/TASTy proof spike; Astro/MDX are prose-only with no API surface.
 v1 ships all thirteen adapters. Per-language input pins, mappings, adapter runs, and
 renderer/site-build execution evidence remain future work tracked in
-[issue #10](https://github.com/ralvik/rules_dx/issues/10).
+open work.

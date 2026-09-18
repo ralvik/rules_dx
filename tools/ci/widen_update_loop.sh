@@ -96,23 +96,23 @@ else
   bad "widen-shaped symbols appeared in cli/ without the #260 implementation landing"
 fi
 
-# Blocked on #19 resolver backends: selector syntax, Git mappings, and
-# upstream operation/report mappings stay linked open, never decided here.
-if [[ "$(grep -c -F -e 'issues/19' "$contract")" -ge 4 ]]; then
+# Blocked on resolver backends: selector syntax, Git mappings, and
+# upstream operation/report mappings stay open, never decided here.
+if [[ "$(grep -c -F -e 'open work' "$contract")" -ge 4 ]]; then
   ok
 else
-  bad "update contract lost its #19 prerequisite links (need >=4 issues/19 references)"
+  bad "update contract lost its open resolver-prerequisite records (need >=4 open-work references)"
 fi
 
 # Automation policy owns the Renovate fallback: absent-only scaffold,
-# full manager set, update-only automerge, issue #3 link.
+# full manager set, update-only automerge.
 if grep -q -F -e 'absent-only' "$automation" \
   && grep -q -F -e 'full manager' "$automation" \
   && grep -q -F -e 'update-only' "$automation" \
-  && grep -q -F -e 'issues/3' "$automation"; then
+  && grep -q -F -e 'Renovate is the chosen updater' "$automation"; then
   ok
 else
-  bad "automation.md lost the Renovate-fallback ownership (absent-only/manager/update-only/#3)"
+  bad "automation.md lost the Renovate-fallback ownership (absent-only/manager/update-only/chosen-updater)"
 fi
 
 # Manual bump-PR verification loop documented: regen evidence,

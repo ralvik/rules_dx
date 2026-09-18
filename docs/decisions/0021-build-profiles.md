@@ -17,12 +17,9 @@ to Bazel-native `compilation_mode` values behind stable `dx_*` config
 names.
 
 This record covers the shared configs only. The `--debug`/`--release`
-CLI flags are open in
-[issue #179](https://github.com/ralvik/rules_dx/issues/179); the deploy
-provider and CLI are open in
-[issues #178](https://github.com/ralvik/rules_dx/issues/178) and
-[issue #180](https://github.com/ralvik/rules_dx/issues/180). Tracked in
-[issue #177](https://github.com/ralvik/rules_dx/issues/177).
+CLI flags remain open work; the deploy
+provider and CLI remain open work.
+Tracked as open work.
 
 ## Decision
 
@@ -41,7 +38,7 @@ inheritance. Bare invocations keep today's behavior, which equals
 
 Command defaults are `dev` for `build`/`run`/`test` and `release` for
 `deploy`. Precedence (flag over target attribute over command default)
-and the `DX_PROFILE` forwarding contract belong to issue #179, not to
+and the `DX_PROFILE` forwarding contract belong to open work, not to
 this record.
 
 ## Consequences

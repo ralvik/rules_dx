@@ -71,7 +71,7 @@ is applied. A source-owning library is never passed directly to `bazel test` or
 `bazel coverage` merely because it owns the file.
 
 This mapping intentionally uses Bazel's unconfigured query graph (accepted,
-measured in [#187](https://github.com/ralvik/rules_dx/issues/187)). It may
+measured in open work). It may
 conservatively include tests reachable only through inactive `select()` branches,
 but it must not prune graph-visible reverse dependencies using CLI heuristics.
 Configuration-aware (`cquery`) mapping is rejected: measured 2026-09-17 on the

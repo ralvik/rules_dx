@@ -13,7 +13,7 @@ recorded upstream diagnostics byte-identical to the parser unit samples
 (`quality/adapter/src/parsers/rust.rs`); dx never spawns those tools (#47/#48).
 
 Out of scope by design: `tsc` typechecks `typescript`/`tsx` but is
-target-coupled and never runs as a bare backend invocation (#56), so it has no
+target-coupled and never runs as a bare backend invocation, so it has no
 matrix cell; adapter-less classes (`cc`, `csharp`, `go`, `java`, `kotlin`,
 `scala`, …) have no backing tool and no cells.
 

@@ -87,4 +87,4 @@ validation, or commit failure leaves the current setup unchanged (exit 1
 with `managed_commit_failed`, or `no_capability` when an exact scope provides
 neither capability); staged-but-unselected generations remain as retained
 cache. Remaining collection items are tracked in
-[GitHub issues](https://github.com/ralvik/rules_dx/issues).
+planned work.

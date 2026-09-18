@@ -10,7 +10,7 @@ for current checks and tooling gaps. Agent procedure lives in the root
 
 ## Delivery Flow
 
-Planned work lives in [GitHub issues](https://github.com/ralvik/rules_dx/issues) and the
+Planned work is listed in the
 [roadmap](docs/roadmap.md). A failed feasibility gate blocks affected scope
 until a scope or design decision resolves it. Record decisions in the owning
 ADR or domain contract.
@@ -33,8 +33,7 @@ ADR or domain contract.
 ## Decisions And Scope
 
 - Accepted constraints live in the [decision records](docs/decisions/README.md).
-  Open work lives in [GitHub issues](https://github.com/ralvik/rules_dx/issues); do not
-  silently decide it elsewhere.
+  Do not silently decide open questions elsewhere.
 - Product scope follows the [product scope](docs/product/scope.md) and
   [support matrix](docs/product/support-matrix.md). If implementation requires an architecture
   or product change, stop the affected work and propose the documentation update
@@ -43,14 +42,12 @@ ADR or domain contract.
   lines, source-level ignores with nearby reasons validated in CI. Bring-up
   is Linux-first local-only; record unavailable required hosts as gaps.
 
-## Issues And Pull Requests
+## Pull Requests
 
 - Use the templates in `.github/` for bug reports, feature proposals, and pull
   requests. Include exact commands, Bazel versions, OS/CPU hosts, and coverage
   evidence where applicable.
-- Planned work that needs an issue lives in
-  [GitHub issues](https://github.com/ralvik/rules_dx/issues), not in `docs/`;
-  docs describe as-built behavior and link to the owning issue for open work.
+- Docs describe as-built behavior only; do not record planned work in `docs/`.
 - No tags, GitHub releases, registry submissions, or `dist/`/`release/`
   outputs without explicit owner approval. `dist/` and `release/` are
   git-ignored build outputs, never committed.

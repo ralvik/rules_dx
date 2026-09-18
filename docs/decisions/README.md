@@ -1,7 +1,5 @@
 # Decision Records
 
-Open work lives in [GitHub issues](https://github.com/ralvik/rules_dx/issues).
-
 Decision records use zero-padded numbers and these statuses: Accepted, Provisional, Superseded, or
 Rejected. Records carry a `Date:` line only where the decision date is evidenced; the table
 shows `—` otherwise. This log is rewritten in place until the first release.

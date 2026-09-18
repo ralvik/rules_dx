@@ -6,8 +6,8 @@
 - Label accepted vs provisional vs open clearly.
 - Keep repo facts separate from future plans.
 - Update related docs together.
-- On conflicts: open a GitHub issue (or use `.github/ISSUE_TEMPLATE/` for external reports), pick the smallest provisional fix, flag for review. Don't present provisional as accepted.
+- On conflicts: pick the smallest provisional fix, flag for review. Don't present provisional as accepted.
 - No verified claims without evidence per `testing/README.md`.
-- No milestone system: do not create `Mxx` specs or an `Oxx` register. Planned work lives in GitHub issues per `roadmap.md`.
+- No milestone system: do not create `Mxx` specs or an `Oxx` register. Planned work is listed in `roadmap.md`; docs describe as-built behavior only.
 - Prototypes stay as marked scratch outside product paths.
 - After edits, report changed files, design changes, and open items.

@@ -1,4 +1,4 @@
-# Stage 4 E2E (issue #55): CLI-contract end-to-end suite
+# Stage 4 E2E (open work): CLI-contract end-to-end suite
 
 Thin true end-to-end layer pinning the `dx ... --check` exit contract
 in consumer-shaped child workspaces. Deliberately few scenarios, not a

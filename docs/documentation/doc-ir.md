@@ -3,8 +3,8 @@
 Implementation status: the pipeline direction is accepted v1 scope and the
 docs-pipeline mappings are frozen.
 Delivered: the `dx_docs` planning gates (command dispatch removed in
-[issue #31](https://github.com/ralvik/rules_dx/issues/31); reintroduction tracked in
-[issue #10](https://github.com/ralvik/rules_dx/issues/10)) —
+open work; reintroduction tracked in
+open work) —
 `--check` validates without rendering, normal build validates then renders.
 Delivered: the checked-in [`docs/ir/doc_ir.proto`](../ir/doc_ir.proto)
 (`dx.documentation.v1`, `schema_major: 1`) and the
@@ -12,7 +12,7 @@ Delivered: the checked-in [`docs/ir/doc_ir.proto`](../ir/doc_ir.proto)
 (`//docs/ir/ir:documentation_ir`: validate/encode/decode with
 roundtrip, rejection-parity, extension- and symbol-ordering, and minor-forward-compat tests).
 Extractor execution, per-language adapter runs, renderer/site-build execution,
-and guide-step CI wiring remain gaps ([issue #10](https://github.com/ralvik/rules_dx/issues/10)); no working docs support is claimed until
+and guide-step CI wiring remain gaps (open work); no working docs support is claimed until
 qualified execution lands.
 
 ## Versioning
@@ -28,7 +28,7 @@ binary Protobuf with deterministic serialization, and human-readable review
 uses textproto against the same schema. Exact field and enum numbers and
 reserved ranges live in that file, validated by the
 `documentation_ir` codec crate; compatibility fixtures are tracked in
-[issue #10](https://github.com/ralvik/rules_dx/issues/10), following the
+open work, following the
 [Quality Result Protocol](../quality/quality-result-protocol.md) precedent.
 
 IR shards are generated and cached by Bazel like other action outputs. They are not
@@ -68,7 +68,7 @@ symbols {
 Symbol IDs are stable across rebuilds: `language:package:qualified_name`,
 with overloads disambiguated by normalized parameter-type list. The exact
 disambiguation scheme per language is tracked in
-[issue #10](https://github.com/ralvik/rules_dx/issues/10). Source paths are
+open work. Source paths are
 workspace-relative. Only public API enters the IR; visibility filtering
 follows each language's native semantics, not a universal heuristic.
 
@@ -84,7 +84,7 @@ Extension payloads live under `extensions` and are never silently dropped.
 v1 ships adapters for all thirteen languages below, including the pinned
 nightly rustdoc route and the Scala proof spike.
 Exact inputs, pins, and adapter mappings are tracked in
-[issue #10](https://github.com/ralvik/rules_dx/issues/10).
+open work.
 
 | Family | Provisional input | Note |
 | --- | --- | --- |
@@ -105,7 +105,7 @@ Exact inputs, pins, and adapter mappings are tracked in
 XML or JSON comment dumps alone do not satisfy an adapter where the
 language separates comments from symbols (notably C#/F#): the adapter must
 join metadata with documentation; that join is tracked in
-[issue #10](https://github.com/ralvik/rules_dx/issues/10).
+open work.
 
 ### Extractor Research
 
@@ -195,7 +195,7 @@ machine-input inventory above. No language is removed, dummy prose adapter added
 Each extraction-family row maps to one adapter scope; one adapter may cover
 two API identities where the input pipeline is shared. Adapter packaging
 (one crate/binary per scope or grouped) is implementation detail tracked in
-[issue #10](https://github.com/ralvik/rules_dx/issues/10), not mandated here.
+open work, not mandated here.
 
 | Adapter scope | Machine-input row(s) | API identities |
 | --- | --- | --- |
@@ -247,4 +247,4 @@ toolchain change can therefore turn rules_dx CI red during release
 preparation, but never a user's build — users stay on pinned, checksummed
 inputs and receive working adapters with the release. The exact per-release
 pin-bump and drift-test process is tracked in
-[issue #10](https://github.com/ralvik/rules_dx/issues/10).
+open work.

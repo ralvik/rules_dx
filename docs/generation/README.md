@@ -19,4 +19,4 @@ ADRs explain why the contracts exist; the test matrix defines the required evide
   [ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md), and
   [ADR 0010](../decisions/0010-python-foundation.md) record the rationale.
 - [Generation test matrix](../testing/generation.md) defines conformance evidence.
-- [Planned work](https://github.com/ralvik/rules_dx/issues) tracks remaining mapping qualification.
+- Remaining mapping qualification is open work.

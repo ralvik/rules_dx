@@ -3,7 +3,7 @@
 Implementation status: planning library delivered (`dx_adopt::plan_migrate`,
 major-release-only gate plus manifest selection); CLI execution fails
 closed until the first major-release manifest lands. Owned by
-[issue #4](https://github.com/ralvik/rules_dx/issues/4).
+open work.
 
 ## Direction
 

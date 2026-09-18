@@ -53,14 +53,14 @@ else
 fi
 
 # Offline routes: network denied after provisioning, no undeclared
-# cache, no live-registry queries; exact routes stay open under #22.
+# cache, no live-registry queries; exact routes stay open work.
 if grep -q -F -e 'with network access denied' "$contract" \
   && grep -q -F -e 'does not query live registries' "$contract" \
   && grep -q -F -e 'Exact offline routes are open under' "$contract" \
-  && grep -q -F -e 'issues/22' "$contract"; then
+  && grep -q -F -e 'open work' "$contract"; then
   ok
 else
-  bad "contract lost the offline-routes clause or its #22 link"
+  bad "contract lost the offline-routes clause or its open-work record"
 fi
 
 # Non-mutating requirement: neither check mutates manifests or locks.
@@ -124,12 +124,12 @@ else
   bad "checker-shaped symbols appeared in code without fixtures: $(grep -rn -E -e 'fn check_lockfile|fn check_declared_usage|lockfile_consistency|declared_usage_check' --include='*.rs' cli/ quality/ tools/ 2>/dev/null | head -n 3)"
 fi
 
-# Open routes stay linked to #22 (offline, native config, scopes),
+# Open routes stay recorded as open work (offline, native config, scopes),
 # never silently decided elsewhere.
-if [[ "$(grep -c -F -e 'issues/22' "$contract")" -ge 2 ]]; then
+if [[ "$(grep -c -F -e 'open work' "$contract")" -ge 2 ]]; then
   ok
 else
-  bad "contract lost its open-route links to issue #22"
+  bad "contract lost its open-work route records"
 fi
 
 echo "depcheck contract harness: $pass passed, $fail failed"

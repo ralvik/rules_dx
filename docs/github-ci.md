@@ -44,7 +44,7 @@ The same caller-pin pattern covers documentation: `.github/workflows/reusable-do
 is a reusable workflow running `dx lint --check` over a
 caller-selected docs scope, with an opt-in `publish` input that deploys the validated
 docs tree to GitHub Pages. The deployed content is the validated tree, not a rendered
-site; the renderer arrives via [issue #10](https://github.com/ralvik/rules_dx/issues/10).
+site; the renderer arrives via open work.
 Third-party reuse is templated in `examples/docs-ci/`; this repository self-calls the
 workflow from `.github/workflows/ci.yml` (check-only on pull requests, publishing on
 `main`). Pages needs source GitHub Actions enabled in repository settings before the
@@ -262,5 +262,5 @@ reopen the accepted policies above. Resolve them before affected implementation:
 
 Consumer-CI qualification, release qualification, and publication of qualified
 identities remain open tracks. Track unresolved work in
-[GitHub issues](https://github.com/ralvik/rules_dx/issues) and prove the contract
+planned work and prove the contract
 through the [consumer CI test matrix](testing/github-ci.md).

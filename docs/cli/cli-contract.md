@@ -146,7 +146,7 @@ The primary installation path is `bazel run //dx:env`. The project-owned
 cross-platform environment rule exposes the `dx` executable from the consumer's
 pinned `rules_dx` module together with configured development tools. No prebuilt
 binaries are published yet (see
-[#26](https://github.com/ralvik/rules_dx/issues/26)). When published, v1
+open work). When published, v1
 destinations are the Bazel Central Registry for the `rules_dx` module and GitHub
 Releases for standalone binaries, with install-time publisher-identity verification
 (no checksum-only fallback). The CLI and rules module share
@@ -226,7 +226,7 @@ an explicit label-representation contract.
   independence and partial-success semantics. Aggregate exit-code selection,
   backend mapping, and per-set reporting are specified in that contract; live
   resolver-backend execution is open under
-  [#19](https://github.com/ralvik/rules_dx/issues/19).
+  open work.
   Ordinary fail-fast behavior, including `dx check` and
   `dx fix`, is unchanged.
 - Signals are forwarded to the active Bazel process; interruption should preserve

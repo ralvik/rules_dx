@@ -109,5 +109,4 @@ collision with generated or handwritten targets fails without another affix.
   `//dx:codegen`, `//dx:env`, `//dx:generate`), while `cli/` owns the Rust
   implementation (`dx_*` crate names stable; the `dx/qual` → `cli/qualification` and
   `dx/docs` → `cli/docgen` renames fixed the two true collisions). The split kept
-  consumer labels stable during the move; see
-  [issue 76](https://github.com/ralvik/rules_dx/issues/76).
+  consumer labels stable during the move.

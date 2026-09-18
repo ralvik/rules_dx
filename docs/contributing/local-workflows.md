@@ -53,7 +53,7 @@ is checked with the
 real lint/format aspects; every produced result must pass the per-result
 evaluator at `--fail_on warning`. The same invocations run in CI
 (`.github/workflows/ci.yml`, jobs `dogfood-freshness`, `dogfood-lint`,
-`dogfood-format`, `dogfood-typecheck` sharded per issue #210), which installs no
+`dogfood-format`, `dogfood-typecheck` sharded remaining unqualified), which installs no
 quality tools: all tools execute as Bazel-resolved pinned actions.
 
 Select the corpus targets, then build their `dx_results`:
@@ -131,7 +131,7 @@ and the inventory in `bazel test //...`. Owned build profiles
 [ADR 0021](../decisions/0021-build-profiles.md).
 
 Version bumps flow through Renovate out of the box
-([issue #3](https://github.com/ralvik/rules_dx/issues/3)): `dx init`
+(open work): `dx init`
 scaffolds `renovate.json` absent-only with the full manager set
 (`bazel` over `.bazelversion` plus Cargo, npm/pnpm, GitHub Actions,
 Go), grouped and scheduled weekly. Renovate proposes pins while

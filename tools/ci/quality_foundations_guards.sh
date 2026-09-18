@@ -119,18 +119,18 @@ else
   bad "code_ownership lost its adopt-js-ts inert-exclusion record"
 fi
 
-# Matrix honesty: framework/language/quality gaps link owners.
-if grep -q -F -e 'issues/8' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'issues/7' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'issues/6' docs/testing/verification-matrix.md; then
+# Matrix honesty: framework/language/quality gaps recorded as open work.
+if grep -q -F -e 'Open (regions)' docs/testing/verification-matrix.md \
+  && grep -q -F -e 'Open (adapter-less)' docs/testing/verification-matrix.md \
+  && grep -q -F -e 'Planning only' docs/testing/verification-matrix.md; then
   ok
 else
-  bad "verification-matrix lost its #6/#7/#8 owner links"
+  bad "verification-matrix lost its framework/language/quality gap records"
 fi
 
 # Matrix rows keep the per-language honesty markers.
-if grep -q -F -e 'Open (regions, #8)' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'Tracked (#86)' docs/testing/verification-matrix.md; then
+if grep -q -F -e 'Open (regions)' docs/testing/verification-matrix.md \
+  && grep -q -F -e 'Tracked' docs/testing/verification-matrix.md; then
   ok
 else
   bad "verification-matrix lost its framework-region / perf-tracked honesty markers"

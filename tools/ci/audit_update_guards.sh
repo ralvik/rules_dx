@@ -51,12 +51,12 @@ else
   bad "audit outcome lost its aggregate exit-code mapping"
 fi
 
-# #18: docs own the open auditor wiring, claim no working support.
-if grep -q -F -e 'issues/18' "$doc" \
+# Docs own the open auditor wiring, claim no working support.
+if grep -q -F -e 'open work' "$doc" \
   && grep -q -F -e 'no working' "$doc"; then
   ok
 else
-  bad "audit doc lost its #18 ownership or no-working-support record"
+  bad "audit doc lost its open-work ownership or no-working-support record"
 fi
 
 # #18/#19: consumer smoke still disables both audits (still deferred).
@@ -83,11 +83,11 @@ else
   bad "update report lost its overall_failure exit-code mapping"
 fi
 
-# #19: docs own the open resolver backends, claim no live execution.
-if grep -q -F -e 'issues/19' "$doc"; then
+# Docs own the open resolver backends, claim no live execution.
+if grep -q -F -e 'open work' "$doc"; then
   ok
 else
-  bad "update doc lost its #19 ownership link"
+  bad "update doc lost its open-work ownership record"
 fi
 
 # Dry-run planning stays the only executing path (exits 0, no live claim).
@@ -113,11 +113,11 @@ else
 fi
 
 # Matrix stays honest: depcheck open, audit/update planning-only.
-if grep -q -F -e 'Open (#22)' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'Planning only (#18/#19)' docs/testing/verification-matrix.md; then
+if grep -q -F -e '| Open |' docs/testing/verification-matrix.md \
+  && grep -q -F -e 'Planning only' docs/testing/verification-matrix.md; then
   ok
 else
-  bad "verification-matrix lost its #22/#18/#19 honesty record"
+  bad "verification-matrix lost its depcheck/audit honesty record"
 fi
 
 echo "audit update guards harness: $pass passed, $fail failed"

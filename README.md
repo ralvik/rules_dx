@@ -12,7 +12,7 @@ required platforms, with a broad quality-tool baseline and additional low-cost c
 Upstream patches and packaging support the out-of-the-box experience without rebuilding stacks. See the
 [scope and feasibility gate](docs/product/scope.md#first-release-admission) and
 [mandatory 100% project coverage requirement](docs/testing/README.md#coverage).
-Implementation exists on the Linux x86_64 seed host only; release qualification beyond that host is tracked in the issue tracker, not claimed here.
+Implementation exists on the Linux x86_64 seed host only; release qualification beyond that host is not claimed here.
 
 ## Product
 

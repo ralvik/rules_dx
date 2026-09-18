@@ -30,11 +30,11 @@ fail=0
 ok() { pass=$((pass + 1)); }
 bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
 
-# #7: support matrix owns the per-language mapping backlog.
-if grep -q -F -e 'issues/7' docs/product/support-matrix.md; then
+# Language mappings stay owned in the support matrix.
+if grep -q -F -e 'Providers, Gazelle' docs/product/support-matrix.md; then
   ok
 else
-  bad "support matrix lost its #7 language-mapping owner link"
+  bad "support matrix lost its language-mapping record"
 fi
 
 # #7: minimum external-consumer example workspaces exist (Rust, Python,
@@ -67,11 +67,11 @@ else
   bad "framework-adapters contract lost its no-generic-parser boundary"
 fi
 
-# #8: support matrix owns the framework composition backlog.
-if grep -q -F -e 'issues/8' docs/product/support-matrix.md; then
+# Framework composition backlog stays owned in the support matrix.
+if grep -q -F -e 'Adapter mappings' docs/product/support-matrix.md; then
   ok
 else
-  bad "support matrix lost its #8 framework-mapping owner link"
+  bad "support matrix lost its framework-mapping record"
 fi
 
 # #8: all four framework wrappers advertise QualitySourcesInfo.
@@ -96,20 +96,20 @@ else
   bad "mixed composition fixture lost its M21 marker"
 fi
 
-# #6: quality-sources owns the pending taxonomy (no stable claim).
-if grep -q -F -e 'issues/6' docs/quality/quality-sources.md; then
+# Quality-sources owns the pending taxonomy (no stable claim).
+if grep -q -F -e 'must not be published as stable' docs/quality/quality-sources.md; then
   ok
 else
-  bad "quality-sources lost its #6 taxonomy owner link"
+  bad "quality-sources lost its pending-taxonomy record"
 fi
 
 # Battery page records the open framework/language/registry gaps.
-if grep -q -F -e 'issues/8' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'issues/7' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'issues/6' docs/testing/verification-matrix.md; then
+if grep -q -F -e 'Open (regions)' docs/testing/verification-matrix.md \
+  && grep -q -F -e 'Open (adapter-less)' docs/testing/verification-matrix.md \
+  && grep -q -F -e 'Planning only' docs/testing/verification-matrix.md; then
   ok
 else
-  bad "verification-matrix lost its #7/#8/#6 gap record"
+  bad "verification-matrix lost its framework/language/registry gap record"
 fi
 
 # #12: wrapper-sources pin + ownership audits stay versioned.
@@ -119,11 +119,11 @@ else
   bad "wrapper_sources/code_ownership harnesses missing"
 fi
 
-# Examples index stays honest about the #85 tracker.
-if grep -q -F -e 'issues/85' examples/README.md; then
+# Examples index stays honest about open acquisition/laziness work.
+if grep -q -F -e 'acquisition/laziness proof are open' examples/README.md; then
   ok
 else
-  bad "examples README lost its #85 tracker link"
+  bad "examples README lost its open-work gap record"
 fi
 
 echo "foundation maps harness: $pass passed, $fail failed"

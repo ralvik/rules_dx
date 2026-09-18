@@ -64,12 +64,12 @@ else
   bad "perf results lost report-not-gate status or the v2.8.0 pin"
 fi
 
-# #86: methodology doc owns the open results, links the tracker, claims nothing.
-if grep -q -F -e 'issues/86' docs/tools/rules_lint-comparison.md \
+# Methodology doc owns the open results, claims nothing.
+if grep -q -F -e 'open work' docs/tools/rules_lint-comparison.md \
   && grep -q -F -e 'no parity claim' docs/tools/rules_lint-comparison.md; then
   ok
 else
-  bad "rules_lint-comparison doc lost its #86 link or no-parity-claim record"
+  bad "rules_lint-comparison doc lost its open-work or no-parity-claim record"
 fi
 
 # #86: harness + results provenance tests stay wired (no silent drift).
@@ -95,14 +95,14 @@ else
   bad "ci.yml lost the generate --check freshness gate"
 fi
 
-# #15/#12/#86/#54: battery page still owns each layer (no silent promotion).
-if grep -q -F -e 'issues/15' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'issues/86' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'issues/12' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'issues/54' docs/testing/verification-matrix.md; then
+# Battery page still owns each layer (no silent promotion).
+if grep -q -F -e 'lane A' docs/testing/verification-matrix.md \
+  && grep -q -F -e 'close-out battery' docs/testing/verification-matrix.md \
+  && grep -q -F -e 'Planning only' docs/testing/verification-matrix.md \
+  && grep -q -F -e 'Tracked' docs/testing/verification-matrix.md; then
   ok
 else
-  bad "verification-matrix lost its #15/#86/#12/#54 owner links"
+  bad "verification-matrix lost its corpus/perf/lane-A/battery gap records"
 fi
 
 # #12: ownership audits stay versioned (corpus for target-less, code for
