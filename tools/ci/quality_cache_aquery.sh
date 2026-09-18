@@ -13,7 +13,7 @@
 # (ruff lint/format, pydoclint lint, Ty typecheck), Rust (clippy lint,
 # rustfmt format + rustfmt.toml native-config isolation), JavaScript
 # (biome lint/format per-capability + biome.json native-config isolation,
-# prettier never an input), Starlark
+# prettier never an input, eslint opt-in never an input), Starlark
 # (buildifier lint/format), TOML (taplo lint/format), Markdown
 # (vale lint), TypeScript/JSX/TSX (biome lint/format each owning only
 # its source), and JSON (biome lint + prettier format split): each pipeline's declared Inputs mention its own source
@@ -225,6 +225,10 @@ if [[ "$js_lint_inputs" == *"biome"* ]]; then ok; else bad "js lint: want [biome
 if [[ "$js_format_inputs" == *"biome"* ]]; then ok; else bad "js format: want [biome] (biome change misses format)"; fi
 if [[ "$js_lint_inputs" == *"prettier"* ]]; then bad "js lint: forbidden [prettier] (prettier change must not invalidate JS lint)"; else ok; fi
 if [[ "$js_format_inputs" == *"prettier"* ]]; then bad "js format: forbidden [prettier] (prettier change must not invalidate JS format)"; else ok; fi
+# ESLint opt-in laziness (JS part): ESLint is an explicit opt-in lint
+# adapter, so the default JS pipeline must never mention it (ESLint
+# change leaves default keys unchanged per the unselected-adapter row).
+if [[ "$js_actions" == *"eslint"* ]]; then bad "js: forbidden [eslint] (opt-in ESLint must not invalidate default JS)"; else ok; fi
 
 # Unselected-adapter isolation: changing an adapter not selected for a
 # pipeline must leave its action key unchanged. The aquery half is that
@@ -382,6 +386,18 @@ if [[ "$typescript_key" != "$tsx_key" ]]; then ok; else bad "typescript vs tsx A
 if [[ "$typescript_key" != "$json_key" ]]; then ok; else bad "typescript vs json ActionKeys must differ"; fi
 if [[ "$jsx_key" != "$tsx_key" ]]; then ok; else bad "jsx vs tsx ActionKeys must differ"; fi
 if [[ "$json_key" != "$python_key" ]]; then ok; else bad "json vs python ActionKeys must differ"; fi
+# ESLint opt-in laziness remainder: default TS/JSX/TSX/JSON/Rust/corpus
+# pipelines must never mention the opt-in ESLint adapter (ESLint change
+# leaves default keys unchanged; python + JS parts already covered
+# above). All variables defined here, after every aquery.
+if [[ "$typescript_actions" == *"eslint"* ]]; then bad "typescript: forbidden [eslint] (opt-in ESLint must not invalidate default TS)"; else ok; fi
+if [[ "$jsx_actions" == *"eslint"* ]]; then bad "jsx: forbidden [eslint] (opt-in ESLint must not invalidate default JSX)"; else ok; fi
+if [[ "$tsx_actions" == *"eslint"* ]]; then bad "tsx: forbidden [eslint] (opt-in ESLint must not invalidate default TSX)"; else ok; fi
+if [[ "$json_actions" == *"eslint"* ]]; then bad "json: forbidden [eslint] (opt-in ESLint must not invalidate default JSON)"; else ok; fi
+if [[ "$rust_actions" == *"eslint"* ]]; then bad "rust: forbidden [eslint] (opt-in ESLint must not invalidate Rust)"; else ok; fi
+if [[ "$starlark_actions" == *"eslint"* ]]; then bad "starlark: forbidden [eslint] (opt-in ESLint must not invalidate Starlark)"; else ok; fi
+if [[ "$toml_actions" == *"eslint"* ]]; then bad "toml: forbidden [eslint] (opt-in ESLint must not invalidate TOML)"; else ok; fi
+if [[ "$markdown_actions" == *"eslint"* ]]; then bad "markdown: forbidden [eslint] (opt-in ESLint must not invalidate Markdown)"; else ok; fi
 
 # Class-membership + stage-source-subset + runner/stage-order/apply
 # isolation: mixed multi-class targets union exact source subsets into
