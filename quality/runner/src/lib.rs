@@ -2188,4 +2188,51 @@ mod tests {
         assert_eq!(first.replacements, second.replacements);
         assert_eq!(manifests[0], encode_validated(&first).unwrap());
     }
+
+    #[test]
+    fn each_stage_runs_once_per_round_without_hidden_passes() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // native tool-internal passes to count as one stage when proving
+        // the fixed ten-round limit. The convergence loop must invoke
+        // each stage exactly once per round per staged path: two stages
+        // over three staged paths converging in 2 rounds invoke apply
+        // exactly 3 x 2 = 6 times, with every (tool, path) pair invoked
+        // exactly once per round (2x). A hidden extra internal pass or a
+        // skipped stage invocation would break either count.
+        let stages = vec![
+            stage("lint-a", &["rust"], &["src/a.rs", "src/b.rs"]),
+            stage("fmt-a", &["rust"], &["src/a.rs"]),
+        ];
+        let mut initial = BTreeMap::new();
+        initial.insert("src/a.rs".to_owned(), "BAD   \n".to_owned());
+        initial.insert("src/b.rs".to_owned(), "BAD\n".to_owned());
+        let calls = std::cell::RefCell::new(BTreeMap::new());
+        let counting = |tool: &str, path: &str, text: &str| {
+            *calls
+                .borrow_mut()
+                .entry((tool.to_owned(), path.to_owned()))
+                .or_insert(0u32) += 1;
+            Ok(apply_synthetic(tool, text))
+        };
+        let (terminal, completed, convergence) =
+            run_convergence(&initial, &stages, MAX_COMPLETED_ROUNDS, counting).unwrap();
+        assert_eq!(convergence, Convergence::Stable);
+        assert_eq!(completed, 2);
+        assert_eq!(terminal["src/a.rs"], "GOOD\n");
+        assert_eq!(terminal["src/b.rs"], "GOOD\n");
+        let calls = calls.borrow();
+        assert_eq!(calls.values().sum::<u32>(), 6);
+        assert_eq!(calls.len(), 3);
+        for pair in [
+            ("lint-a", "src/a.rs"),
+            ("lint-a", "src/b.rs"),
+            ("fmt-a", "src/a.rs"),
+        ] {
+            assert_eq!(
+                calls[&(pair.0.to_owned(), pair.1.to_owned())],
+                2,
+                "each staged (tool, path) runs once per round"
+            );
+        }
+    }
 }
