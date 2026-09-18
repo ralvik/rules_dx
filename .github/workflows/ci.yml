@@ -271,11 +271,13 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:ghcr_publish_guards
       - name: Audit verification foundations (perf pins + corpus rule + lane A)
         run: bazel run --noshow_progress //tools/ci:verify_perf_corpus
+      - name: Audit widen-update loop contract (never-rewrites + manager set, no false claims)
+        run: bazel run --noshow_progress //tools/ci:widen_update_loop
       - name: Write job summary
         if: always()
         run: |
           echo "### dogfood-freshness — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Checked: Bazel-resolved tool execution, generate --check freshness, corpus ownership (carve-outs intact), code ownership (issue #12 lane A), examples READMEs (issue #85 commands + evidence), examples laziness (issue #85 no-install + isolation + deps-closure + action-graph zero-work), quality cache aquery (issue #84 action-key isolation seed), depcheck contract (issue #22 truth table + open routes), wrapper sources (issues #12/#7/#8 QualitySourcesInfo), registry singularity (issues #6/#84 single-sourced taxonomy), backlog contracts (issues #9/#10 frozen pins + gap labels), GHCR hygiene (issue #184 separate workflow + gated push).">> "$GITHUB_STEP_SUMMARY"
+          echo "Checked: Bazel-resolved tool execution, generate --check freshness, corpus ownership (carve-outs intact), code ownership (issue #12 lane A), examples READMEs (issue #85 commands + evidence), examples laziness (issue #85 no-install + isolation + deps-closure + action-graph zero-work), quality cache aquery (issue #84 action-key isolation seed), depcheck contract (issue #22 truth table + open routes), wrapper sources (issues #12/#7/#8 QualitySourcesInfo), registry singularity (issues #6/#84 single-sourced taxonomy), backlog contracts (issues #9/#10 frozen pins + gap labels), GHCR hygiene (issue #184 separate workflow + gated push), widen-update loop contract (issue #260 never-rewrites + manager set).">> "$GITHUB_STEP_SUMMARY"
   dogfood-lint:
     name: dogfood-lint (dx lint converge + check)
     needs: [dogfood-freshness]
