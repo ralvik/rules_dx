@@ -12,8 +12,15 @@
 //! Contract: stage in the target directory so the final persist stays an
 //! atomic same-filesystem rename; OS-random `O_EXCL`-claimed staging names
 //! so concurrent writers never collide; `NamedTempFile` drop-cleanup so a
-//! crash leaves no stale sibling; `0644` on unix to match `std::fs::write`
-//! defaults (`NamedTempFile` creates `0600`).
+//! crash leaves no stale sibling; preserve the existing file mode on
+//! overwrite (new files get `0644` on unix to match `std::fs::write`
+//! defaults, since `NamedTempFile` creates `0600`).
+//!
+//! Newline contract (issue #84): bytes are preserved byte-for-byte with no
+//! normalization. LF, CRLF, and missing-final-newline variants stay
+//! distinct and round-trip exactly; the runner proves this with
+//! `newline_variants_yield_distinct_manifests` and whole-file splice
+//! checks, and every apply path writes the candidate bytes verbatim.
 //!
 //! Lock contract: contention-only retry on `WouldBlock` until the deadline;
 //! any other flock failure aborts immediately so platform errors are never
@@ -62,12 +69,18 @@ pub fn write_atomic(path: &Path, content: &[u8]) -> io::Result<()> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt as _;
-        // `std::fs::write` creates `0666 & !umask` (typically 0644);
-        // `NamedTempFile` creates 0600, so restore the conventional
-        // non-executable file mode before persisting.
+        // Preserve the existing file mode on overwrite so apply never
+        // strips executable bits or widens private modes (issue #84
+        // "Preserve file modes"). New files get `0666 & !umask`
+        // (typically 0644) to match `std::fs::write`; `NamedTempFile`
+        // creates 0600, so restore the conventional non-executable
+        // file mode before persisting.
+        let mode = std::fs::metadata(path)
+            .map(|metadata| metadata.permissions().mode() & 0o777)
+            .unwrap_or(0o644);
         staging
             .as_file()
-            .set_permissions(std::fs::Permissions::from_mode(0o644))?;
+            .set_permissions(std::fs::Permissions::from_mode(mode))?;
     }
     staging.write_all(content)?;
     staging.persist(path).map_err(|err| err.error)?;
@@ -172,6 +185,57 @@ mod tests {
         std::fs::remove_file(&bare).expect("bare cleanup");
         std::env::set_current_dir(original).expect("leave scratch");
         scratch.close().expect("cleanup");
+    }
+
+    #[test]
+    fn preserves_existing_mode_on_overwrite() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // file modes preserved. Overwriting an executable must keep the
+        // executable bit; overwriting a private mode must keep it
+        // private; bytes still round-trip exactly (no newline
+        // normalization).
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt as _;
+            let scratch = dx_test_scratch::scratch("dx-atomic-fs-mode-");
+            let executable = scratch.path().join("run.sh");
+            write_atomic(&executable, b"#!/bin/sh\necho hi\n").expect("create executable");
+            std::fs::set_permissions(&executable, std::fs::Permissions::from_mode(0o755))
+                .expect("chmod 755");
+            write_atomic(&executable, b"#!/bin/sh\necho updated\n").expect("overwrite executable");
+            assert_eq!(
+                std::fs::read(&executable).expect("read back"),
+                b"#!/bin/sh\necho updated\n"
+            );
+            assert_eq!(
+                std::fs::metadata(&executable)
+                    .expect("metadata")
+                    .permissions()
+                    .mode()
+                    & 0o777,
+                0o755
+            );
+            let private = scratch.path().join("secret.txt");
+            write_atomic(&private, b"secret\n").expect("create private");
+            std::fs::set_permissions(&private, std::fs::Permissions::from_mode(0o600))
+                .expect("chmod 600");
+            write_atomic(&private, b"rotated\n").expect("overwrite private");
+            assert_eq!(std::fs::read(&private).expect("read back"), b"rotated\n");
+            assert_eq!(
+                std::fs::metadata(&private)
+                    .expect("metadata")
+                    .permissions()
+                    .mode()
+                    & 0o777,
+                0o600
+            );
+            // CRLF bytes round-trip exactly through the same path.
+            let crlf = scratch.path().join("crlf.txt");
+            write_atomic(&crlf, b"line\r\n").expect("create crlf");
+            write_atomic(&crlf, b"updated\r\n").expect("overwrite crlf");
+            assert_eq!(std::fs::read(&crlf).expect("read back"), b"updated\r\n");
+            scratch.close().expect("cleanup");
+        }
     }
 
     fn open_lock_file(path: &Path) -> File {

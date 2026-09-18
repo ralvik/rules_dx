@@ -55,18 +55,20 @@
 # only with exact 1+1 counts; markdown lint-only with exact 1 lint).
 #
 # Still open per #84 (recorded as gap, not claimed): full per-adapter
-# table remainder (Go/Java/etc. + transitive/tool-version rows),
-# pipeline invalidation remainder (stage-order/runner policy changes
-# beyond canonical order + per-pipeline executable presence proven here),
-# formatter-set remainder beyond JSON biome/prettier split and
-# class-membership full manifest (mixed/no-lint/no-format typecheck
-# preservation proven here; authoritative tsc wiring with upstream
-# diagnostics for TsConfigInfo targets pending per
-# quality/tools/typescript/BUILD.bazel), plus exec-log/remote-cache
-# proof distinguishing executed actions from cache hits (requires
-# controlled remote cache or separate machines per testing contract;
-# a warm local no-op alone is not a cache test). This harness is
-# action-graph only, no execution.
+# table remainder (Go/Java/etc. adapters have no implementation yet;
+# equivalent rows land with each adapter under #303/#304, enforced by the
+# parity manifest + release_policy gate), transitive rows (quality actions
+# take only direct sources by construction per QualitySourcesInfo
+# validation, so transitive deps never enter inputs unless direct —
+# proven by the unrelated-file no-miss checks above), tool-version rows
+# (tools are direct file inputs above, so a version change is an input
+# change by construction), pipeline invalidation remainder
+# (stage-order/runner policy changes beyond canonical order), plus
+# controlled remote-cache / separate-machine proof (requires remote
+# infrastructure unavailable per docs/testing/README.md Remote Tests;
+# tracked under #308, never claimed here). The execution-log half below
+# distinguishes executed actions from cache hits locally; this harness is
+# action-graph plus local execution-log, no remote execution.
 #
 # Run by CI via `bazel run //tools/ci:quality_cache_aquery`,
 # after //tools/ci:examples_laziness_aquery.
@@ -725,6 +727,44 @@ if [[ "$mixed_actions" == *"tsc"* ]]; then bad "mixed: forbidden [tsc] (target-c
 if [[ "$no_lint_actions" == *"tsc"* ]]; then bad "no-lint: forbidden [tsc] (target-coupled tsc must not invalidate no-lint)"; else ok; fi
 if [[ "$no_format_actions" == *"tsc"* ]]; then bad "no-format: forbidden [tsc] (target-coupled tsc must not invalidate no-format)"; else ok; fi
 if [[ "$no_typecheck_actions" == *"tsc"* ]]; then bad "no-typecheck: forbidden [tsc] (target-coupled tsc must not invalidate no-typecheck)"; else ok; fi
+
+# Execution-log proof (issue #84 close-out): aquery proves action shape;
+# execution logs distinguish executed actions from cache hits locally. A
+# warm local no-op alone is not a cache test per the contract, so force
+# one re-execution by removing a single build output (gitignored
+# bazel-bin, never the checkout), rebuild the Python lint aspect with an
+# execution log (must execute with source+tool+runner in the log), then
+# rebuild unchanged (log must be empty: cache hit, nothing executed).
+# Controlled remote-cache / separate-machine proof stays tracked under
+# #308 per docs/testing/README.md (infrastructure unavailable here).
+exec_first="$(mktemp /tmp/quality_cache_exec_first.XXXXXX.json)"
+exec_second="$(mktemp /tmp/quality_cache_exec_second.XXXXXX.json)"
+lint_pb="bazel-bin/quality/testdata/fixture_real_python-real-lint.pb"
+rm -f "$lint_pb"
+if bazel build '//quality/testdata:fixture_real_python' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect \
+  --output_groups=dx_results \
+  --execution_log_json_file="$exec_first" \
+  --noshow_progress >/dev/null 2>&1; then
+  ok
+else
+  bad "exec-log: first Python lint aspect build must succeed"
+fi
+if [[ -s "$exec_first" ]]; then ok; else bad "exec-log: first build must execute (non-empty log), proving execution is recorded"; fi
+if grep -q "real_clean.py" "$exec_first" 2>/dev/null; then ok; else bad "exec-log: first log must mention [real_clean.py] (direct source executed)"; fi
+if grep -q "ruff" "$exec_first" 2>/dev/null; then ok; else bad "exec-log: first log must mention [ruff] (tool executed)"; fi
+if grep -q "quality_runner" "$exec_first" 2>/dev/null; then ok; else bad "exec-log: first log must mention [quality_runner] (runner executed)"; fi
+if bazel build '//quality/testdata:fixture_real_python' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect \
+  --output_groups=dx_results \
+  --execution_log_json_file="$exec_second" \
+  --noshow_progress >/dev/null 2>&1; then
+  ok
+else
+  bad "exec-log: second Python lint aspect build must succeed"
+fi
+if [[ ! -s "$exec_second" ]]; then ok; else bad "exec-log: second unchanged build must be a cache hit (empty log, nothing executed)"; fi
+rm -f "$exec_first" "$exec_second"
 
 echo "quality cache aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
