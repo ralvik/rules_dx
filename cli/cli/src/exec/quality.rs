@@ -1035,6 +1035,83 @@ mod tests {
     }
 
     #[test]
+    fn json_changes_emit_in_sorted_path_order_despite_reversed_arrival() {
+        // Determinism + apply-safety battery (issue #84):
+        // `quality-testing.md` requires deterministic path-order commits
+        // (interruption leaves only complete earlier paths in path order)
+        // and randomized report/replacement ordering to yield identical
+        // manifests. The CLI sorts collected changes by path bytes before
+        // mutation and emission, so reversed proto arrival must still emit
+        // sorted changes and mutations.
+        let mut harness = Harness::new("json-sorted-order");
+        harness.write_source("src/a.py", "x = 1\n");
+        harness.write_source("src/b.py", "a = 1\n");
+        let original_a = std::fs::read(harness.workspace.join("src/a.py")).expect("source");
+        let original_b = std::fs::read(harness.workspace.join("src/b.py")).expect("source");
+        let change_a = harness.replacement_at(
+            "src/a.py",
+            digest(&original_a).to_vec(),
+            vec![proto::Edit {
+                start_byte: 0,
+                end_byte: 1,
+                replacement: b"y".to_vec(),
+            }],
+        );
+        let change_b = harness.replacement_at(
+            "src/b.py",
+            digest(&original_b).to_vec(),
+            vec![proto::Edit {
+                start_byte: 0,
+                end_byte: 1,
+                replacement: b"b".to_vec(),
+            }],
+        );
+        let bytes = harness.result_full(
+            vec![
+                Harness::diagnostic("unused", true),
+                Harness::diagnostic_with(
+                    proto::Severity::Warning as i32,
+                    "lint-tool",
+                    "src/b.py",
+                    "unused",
+                    true,
+                ),
+            ],
+            vec![],
+            vec![change_b, change_a],
+            vec![
+                FileSnapshot {
+                    path: "src/a.py".to_owned(),
+                    digest: digest(&original_a).to_vec(),
+                },
+                FileSnapshot {
+                    path: "src/b.py".to_owned(),
+                    digest: digest(&original_b).to_vec(),
+                },
+            ],
+        );
+        harness.results.insert("//test:corpus".to_owned(), bytes);
+        let (code, out, _) = harness.run(&["lint", "--check", "--output=json"]);
+        assert_eq!(code, 1);
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/a.py")).expect("source"),
+            b"x = 1\n"
+        );
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/b.py")).expect("source"),
+            b"a = 1\n"
+        );
+        let events = json_events(&out);
+        let changes: Vec<&serde_json::Value> = events
+            .iter()
+            .filter(|event| event["event"] == serde_json::json!("change"))
+            .collect();
+        assert_eq!(changes.len(), 2);
+        assert_eq!(changes[0]["path"], serde_json::json!("src/a.py"));
+        assert_eq!(changes[1]["path"], serde_json::json!("src/b.py"));
+    }
+
+    #[test]
     fn missing_source_is_unreadable() {
         let mut harness = Harness::new("missing-src");
         harness.write_source("src/a.py", "x = 1\n");
