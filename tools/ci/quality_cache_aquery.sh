@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quality cache aquery proof (issue #84, slices 1-12): per-adapter and
+# Quality cache aquery proof (issue #84, slices 1-13): per-adapter and
 # per-capability action-key isolation via `bazel aquery` over real
 # quality pipelines.
 #
@@ -46,7 +46,8 @@
 # siblings resolve link targets only (sibling file is an input, never a
 # stage source, and the sibling pipeline owns only its own sources);
 # typecheck keys differ from lint/format and the manifest holds
-# (python/rust 1 typecheck, JS-family/starlark/toml 0, markdown lint-only).
+# (python/rust 1 typecheck; JS/TS/JSX/TSX/JSON/Starlark/TOML lint+format
+# only with exact 1+1 counts; markdown lint-only with exact 1 lint).
 #
 # Still open per #84 (recorded as gap, not claimed): full per-adapter
 # table remainder (Go/Java/etc. + transitive/tool-version rows),
@@ -569,10 +570,52 @@ if [[ -n "$rust_typecheck_key" && -n "$rust_lint_key" && -n "$rust_format_key" ]
 if [[ "$rust_typecheck_key" != "$rust_lint_key" && "$rust_typecheck_key" != "$rust_format_key" ]]; then ok; else bad "rust typecheck ActionKey must differ from lint/format (capability isolation)"; fi
 markdown_format_count="$(printf '%s' "$markdown_actions" | grep -c 'Mnemonic: DxRealQualityFormat' || true)"
 markdown_typecheck_count="$(printf '%s' "$markdown_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
+markdown_lint_count="$(printf '%s' "$markdown_actions" | grep -c 'Mnemonic: DxRealQualityLint' || true)"
 js_typecheck_count="$(printf '%s' "$js_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
+js_lint_count="$(printf '%s' "$js_actions" | grep -c 'Mnemonic: DxRealQualityLint' || true)"
+js_format_count="$(printf '%s' "$js_actions" | grep -c 'Mnemonic: DxRealQualityFormat' || true)"
+typescript_lint_count="$(printf '%s' "$typescript_actions" | grep -c 'Mnemonic: DxRealQualityLint' || true)"
+typescript_format_count="$(printf '%s' "$typescript_actions" | grep -c 'Mnemonic: DxRealQualityFormat' || true)"
+typescript_typecheck_count="$(printf '%s' "$typescript_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
+jsx_lint_count="$(printf '%s' "$jsx_actions" | grep -c 'Mnemonic: DxRealQualityLint' || true)"
+jsx_format_count="$(printf '%s' "$jsx_actions" | grep -c 'Mnemonic: DxRealQualityFormat' || true)"
+jsx_typecheck_count="$(printf '%s' "$jsx_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
+tsx_lint_count="$(printf '%s' "$tsx_actions" | grep -c 'Mnemonic: DxRealQualityLint' || true)"
+tsx_format_count="$(printf '%s' "$tsx_actions" | grep -c 'Mnemonic: DxRealQualityFormat' || true)"
+tsx_typecheck_count="$(printf '%s' "$tsx_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
+json_lint_count="$(printf '%s' "$json_actions" | grep -c 'Mnemonic: DxRealQualityLint' || true)"
+json_format_count="$(printf '%s' "$json_actions" | grep -c 'Mnemonic: DxRealQualityFormat' || true)"
+json_typecheck_count="$(printf '%s' "$json_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
+starlark_lint_count="$(printf '%s' "$starlark_actions" | grep -c 'Mnemonic: DxRealQualityLint' || true)"
+starlark_format_count="$(printf '%s' "$starlark_actions" | grep -c 'Mnemonic: DxRealQualityFormat' || true)"
+starlark_typecheck_count="$(printf '%s' "$starlark_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
+toml_lint_count="$(printf '%s' "$toml_actions" | grep -c 'Mnemonic: DxRealQualityLint' || true)"
+toml_format_count="$(printf '%s' "$toml_actions" | grep -c 'Mnemonic: DxRealQualityFormat' || true)"
+toml_typecheck_count="$(printf '%s' "$toml_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
 if [[ "$markdown_format_count" == "0" ]]; then ok; else bad "markdown: want 0 format actions (manifest: lint-only, got $markdown_format_count)"; fi
 if [[ "$markdown_typecheck_count" == "0" ]]; then ok; else bad "markdown: want 0 typecheck actions (manifest: lint-only, got $markdown_typecheck_count)"; fi
+if [[ "$markdown_lint_count" == "1" ]]; then ok; else bad "markdown: want exactly 1 lint action (manifest: lint-only, got $markdown_lint_count)"; fi
 if [[ "$js_typecheck_count" == "0" ]]; then ok; else bad "js: want 0 typecheck actions (manifest: lint+format only, got $js_typecheck_count)"; fi
+if [[ "$js_lint_count" == "1" ]]; then ok; else bad "js: want exactly 1 lint action (manifest: lint+format only, got $js_lint_count)"; fi
+if [[ "$js_format_count" == "1" ]]; then ok; else bad "js: want exactly 1 format action (manifest: lint+format only, got $js_format_count)"; fi
+if [[ "$typescript_lint_count" == "1" ]]; then ok; else bad "typescript: want exactly 1 lint action (manifest: lint+format only, got $typescript_lint_count)"; fi
+if [[ "$typescript_format_count" == "1" ]]; then ok; else bad "typescript: want exactly 1 format action (manifest: lint+format only, got $typescript_format_count)"; fi
+if [[ "$typescript_typecheck_count" == "0" ]]; then ok; else bad "typescript: want 0 typecheck actions (manifest: lint+format only, got $typescript_typecheck_count)"; fi
+if [[ "$jsx_lint_count" == "1" ]]; then ok; else bad "jsx: want exactly 1 lint action (manifest: lint+format only, got $jsx_lint_count)"; fi
+if [[ "$jsx_format_count" == "1" ]]; then ok; else bad "jsx: want exactly 1 format action (manifest: lint+format only, got $jsx_format_count)"; fi
+if [[ "$jsx_typecheck_count" == "0" ]]; then ok; else bad "jsx: want 0 typecheck actions (manifest: lint+format only, got $jsx_typecheck_count)"; fi
+if [[ "$tsx_lint_count" == "1" ]]; then ok; else bad "tsx: want exactly 1 lint action (manifest: lint+format only, got $tsx_lint_count)"; fi
+if [[ "$tsx_format_count" == "1" ]]; then ok; else bad "tsx: want exactly 1 format action (manifest: lint+format only, got $tsx_format_count)"; fi
+if [[ "$tsx_typecheck_count" == "0" ]]; then ok; else bad "tsx: want 0 typecheck actions (manifest: lint+format only, got $tsx_typecheck_count)"; fi
+if [[ "$json_lint_count" == "1" ]]; then ok; else bad "json: want exactly 1 lint action (manifest: lint+format split, got $json_lint_count)"; fi
+if [[ "$json_format_count" == "1" ]]; then ok; else bad "json: want exactly 1 format action (manifest: lint+format split, got $json_format_count)"; fi
+if [[ "$json_typecheck_count" == "0" ]]; then ok; else bad "json: want 0 typecheck actions (manifest: lint+format split, got $json_typecheck_count)"; fi
+if [[ "$starlark_lint_count" == "1" ]]; then ok; else bad "starlark: want exactly 1 lint action (manifest: lint+format only, got $starlark_lint_count)"; fi
+if [[ "$starlark_format_count" == "1" ]]; then ok; else bad "starlark: want exactly 1 format action (manifest: lint+format only, got $starlark_format_count)"; fi
+if [[ "$starlark_typecheck_count" == "0" ]]; then ok; else bad "starlark: want 0 typecheck actions (manifest: lint+format only, got $starlark_typecheck_count)"; fi
+if [[ "$toml_lint_count" == "1" ]]; then ok; else bad "toml: want exactly 1 lint action (manifest: lint+format only, got $toml_lint_count)"; fi
+if [[ "$toml_format_count" == "1" ]]; then ok; else bad "toml: want exactly 1 format action (manifest: lint+format only, got $toml_format_count)"; fi
+if [[ "$toml_typecheck_count" == "0" ]]; then ok; else bad "toml: want 0 typecheck actions (manifest: lint+format only, got $toml_typecheck_count)"; fi
 
 # Markdown dual-tool + stage-order + sibling isolation: markdown lint owns
 # both markdown_check (repo-owned link/structure) and vale (prose style)
