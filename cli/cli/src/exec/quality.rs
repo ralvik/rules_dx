@@ -893,6 +893,148 @@ mod tests {
     }
 
     #[test]
+    fn json_mixed_applied_and_not_applied_fail_together() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // mixed per-file results to emit applied and not_applied together
+        // and fail when any path is rejected, with one deterministic exact
+        // `change` event per valid candidate path in JSON default mode.
+        // The text-mode sibling proves file outcomes; this proves the
+        // machine contract: both changes emit (sorted path order,
+        // byte-exact reconstruction) while mutations split applied vs
+        // stale_source not_applied.
+        let mut harness = Harness::new("json-mixed-apply");
+        harness.write_source("src/a.py", "x = 1\n");
+        harness.write_source("src/b.py", "a = 1\n");
+        let original_a = std::fs::read(harness.workspace.join("src/a.py")).expect("source");
+        let original_b = std::fs::read(harness.workspace.join("src/b.py")).expect("source");
+        let change_a = harness.replacement_at(
+            "src/a.py",
+            digest(&original_a).to_vec(),
+            vec![proto::Edit {
+                start_byte: 0,
+                end_byte: 1,
+                replacement: b"y".to_vec(),
+            }],
+        );
+        let change_b = harness.replacement_at(
+            "src/b.py",
+            digest(&original_b).to_vec(),
+            vec![proto::Edit {
+                start_byte: 0,
+                end_byte: 1,
+                replacement: b"b".to_vec(),
+            }],
+        );
+        let bytes = harness.result_full(
+            vec![
+                Harness::diagnostic("unused", true),
+                Harness::diagnostic_with(
+                    proto::Severity::Warning as i32,
+                    "lint-tool",
+                    "src/b.py",
+                    "unused",
+                    true,
+                ),
+            ],
+            vec![],
+            vec![change_a, change_b],
+            vec![
+                FileSnapshot {
+                    path: "src/a.py".to_owned(),
+                    digest: digest(&original_a).to_vec(),
+                },
+                FileSnapshot {
+                    path: "src/b.py".to_owned(),
+                    digest: digest(&original_b).to_vec(),
+                },
+            ],
+        );
+        harness.results.insert("//test:corpus".to_owned(), bytes);
+        harness.write_source("src/b.py", "z = 2\n");
+        let (code, out, _) = harness.run(&["lint", "--output=json"]);
+        assert_eq!(code, 1);
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/a.py")).expect("source"),
+            b"y = 1\n"
+        );
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/b.py")).expect("source"),
+            b"z = 2\n"
+        );
+        let events = json_events(&out);
+        let changes: Vec<&serde_json::Value> = events
+            .iter()
+            .filter(|event| event["event"] == serde_json::json!("change"))
+            .collect();
+        assert_eq!(changes.len(), 2);
+        assert_eq!(changes[0]["path"], serde_json::json!("src/a.py"));
+        assert_eq!(changes[1]["path"], serde_json::json!("src/b.py"));
+        for (change, original) in [(&changes[0], &original_a), (&changes[1], &original_b)] {
+            let expected_digest = dx_digest::to_hex(&digest(original));
+            assert_eq!(change["source_digest"], serde_json::json!(expected_digest));
+            let edits = change["edits"].as_array().expect("edits");
+            assert_eq!(edits.len(), 1);
+        }
+        assert_eq!(
+            changes[0]["edits"][0]["replacement"],
+            serde_json::json!("y")
+        );
+        assert_eq!(
+            changes[1]["edits"][0]["replacement"],
+            serde_json::json!("b")
+        );
+        // Reconstruct each candidate from digest plus UTF-8 ranges: the
+        // applied file matches its reconstruction while the stale file
+        // diverges from current bytes, proving the digest guard blocked it.
+        let mut planned_a = Vec::new();
+        planned_a.extend_from_slice(&original_a[0..0]);
+        planned_a.extend_from_slice(b"y");
+        planned_a.extend_from_slice(&original_a[1..]);
+        assert_eq!(planned_a, b"y = 1\n");
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/a.py")).expect("source"),
+            planned_a
+        );
+        let mut intended_b = Vec::new();
+        intended_b.extend_from_slice(&original_b[0..0]);
+        intended_b.extend_from_slice(b"b");
+        intended_b.extend_from_slice(&original_b[1..]);
+        assert_eq!(intended_b, b"b = 1\n");
+        assert_ne!(
+            std::fs::read(harness.workspace.join("src/b.py")).expect("source"),
+            intended_b
+        );
+        let mutations: Vec<&serde_json::Value> = events
+            .iter()
+            .filter(|event| event["event"] == serde_json::json!("mutation"))
+            .collect();
+        assert_eq!(mutations.len(), 2);
+        assert_eq!(mutations[0]["path"], serde_json::json!("src/a.py"));
+        assert_eq!(mutations[0]["outcome"], serde_json::json!("applied"));
+        assert_eq!(mutations[1]["path"], serde_json::json!("src/b.py"));
+        assert_eq!(mutations[1]["outcome"], serde_json::json!("not_applied"));
+        assert_eq!(mutations[1]["reason"], serde_json::json!("stale_source"));
+        let change_idx = events
+            .iter()
+            .position(|event| event["event"] == serde_json::json!("change"))
+            .expect("change index");
+        let mutation_idx = events
+            .iter()
+            .position(|event| event["event"] == serde_json::json!("mutation"))
+            .expect("mutation index");
+        assert!(
+            change_idx < mutation_idx,
+            "default mode must emit the change before its terminal mutation"
+        );
+        let finished = event(&events, "command_finished");
+        assert_eq!(finished["exit_code"], serde_json::json!(1));
+        assert_eq!(
+            finished["mutations"],
+            serde_json::json!({"applied": 1, "not_applied": 1})
+        );
+    }
+
+    #[test]
     fn missing_source_is_unreadable() {
         let mut harness = Harness::new("missing-src");
         harness.write_source("src/a.py", "x = 1\n");
