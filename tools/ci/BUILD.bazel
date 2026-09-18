@@ -205,6 +205,30 @@ sh_binary(
     srcs = ["quality_cache_aquery.sh"],
 )
 
+# Dependency-check contract harness (issue #22, seed slice): the
+# stale-vs-consistent truth table, offline, non-mutating,
+# independently-runnable, non-import/exception, category, and obsolete
+# clauses are present and linked to #22 where routes stay open, and no
+# checker implementation is falsely claimed. Fixtures per language stay
+# open per #22. Run by CI via
+# `bazel run //tools/ci:depcheck_contract`.
+sh_binary(
+    name = "depcheck_contract",
+    srcs = ["depcheck_contract.sh"],
+)
+
+# Wrapper QualitySourcesInfo harness (issues #12 lane A, #7, #8; relates
+# #6): all language/framework wrappers advertise QualitySourcesInfo
+# from direct srcs via the shared forwarder, wrapper tests pin
+# precision, and the corpus/code-ownership split stays honest. Native
+# config binding, CI scope extension, per-language proofs, framework
+# regions, and family taxonomy stay open. Run by CI via
+# `bazel run //tools/ci:wrapper_sources`.
+sh_binary(
+    name = "wrapper_sources",
+    srcs = ["wrapper_sources.sh"],
+)
+
 # GHCR prebuilt-image hygiene (issue #184, seed slice): separate workflow
 # from releases, PR-paths build, dispatch + default-closed approve gate,
 # digest-pinned base + Bazel delegation + no ambient toolchains,
