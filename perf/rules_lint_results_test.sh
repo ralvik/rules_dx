@@ -48,6 +48,7 @@ check_json "peak-memory gap explicit" "doc['peak_memory']['collected'] is False"
 check_json "post-shutdown cold measured" "doc['quality_sample']['post_shutdown_cold_wall_ms']>0 and doc['quality_sample']['warm_after_cold_wall_ms']>0 and doc['quality_sample']['post_shutdown_cold_wall_ms']>doc['quality_sample']['warm_after_cold_wall_ms']"
 check_json "post-shutdown cold evidence" "'bazel shutdown' in doc['quality_sample']['post_shutdown_cold_command'] and '1615' in doc['quality_sample']['post_shutdown_cold_evidence']"
 check_json "no-cache flag explicit" "'--nouse_action_cache' in doc['quality_sample']['no_cache_flag'] and 'server warm' in doc['quality_sample']['no_cache_flag']"
+check_json "runner cache-hit ordering" "doc['runner_test_timing']['cold_ish_wall_ms']>doc['runner_test_timing']['warm_wall_ms']"
 check_json "rules_lint-side gap explicit" "'rules_lint-side' in doc['note']"
 
 # Determinism: fresh harness regeneration matches the checked-in digest.
