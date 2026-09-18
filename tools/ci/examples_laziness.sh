@@ -40,11 +40,12 @@ bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
 # as a negative gate (audit pattern, not an invocation), so all three
 # are excluded from the search scope. Equivalent installers (`uv pip
 # install`, `go install`, `dotnet add`, `bundle install`, `nuget install`,
-# `Install-Module`, `mvn install`, `uv add`, `cargo add`) are covered as
+# `Install-Module`, `mvn install`, `uv add`, `cargo add`, `gem install`,
+# `dotnet restore`, `nuget restore`, `npm ci`) are covered as
 # the contract's "or equivalent installer" clause per issue #85 and the
 # laziness matrix (pip, uv, npm, pnpm, Cargo, Maven, NuGet, Bundler,
 # PowerShell Gallery).
-hits="$(grep -rn -F -e 'pip install' -e 'npm install' -e 'cargo install' -e 'dotnet tool install' -e 'pnpm install' -e 'pnpm add' -e 'uv pip install' -e 'go install' -e 'dotnet add' -e 'bundle install' -e 'nuget install' -e 'Install-Module' -e 'mvn install' -e 'uv add' -e 'cargo add' --include='*.bzl' --include='*.py' --include='*.rs' --include='*.sh' --include='*.js' --include='*.ts' quality/ tools/ rust/ python/ javascript/ typescript/ go/ java/ kotlin/ scala/ csharp/ fsharp/ cc/ dx/ cli/ 2>/dev/null | grep -v -F -e 'tools/ci/examples_laziness.sh' | grep -v -F -e 'tools/ci/ghcr_hygiene.sh' || true)"
+hits="$(grep -rn -F -e 'pip install' -e 'npm install' -e 'cargo install' -e 'dotnet tool install' -e 'pnpm install' -e 'pnpm add' -e 'uv pip install' -e 'go install' -e 'dotnet add' -e 'bundle install' -e 'nuget install' -e 'Install-Module' -e 'mvn install' -e 'uv add' -e 'cargo add' -e 'gem install' -e 'dotnet restore' -e 'nuget restore' -e 'npm ci' --include='*.bzl' --include='*.py' --include='*.rs' --include='*.sh' --include='*.js' --include='*.ts' quality/ tools/ rust/ python/ javascript/ typescript/ go/ java/ kotlin/ scala/ csharp/ fsharp/ cc/ dx/ cli/ 2>/dev/null | grep -v -F -e 'tools/ci/examples_laziness.sh' | grep -v -F -e 'tools/ci/ghcr_hygiene.sh' || true)"
 if [[ -z "$hits" ]]; then
   ok
 else
