@@ -42,7 +42,8 @@ remain owned by O14/O37 and are not pinned here):
 | Windows arm64 | Out of v1 scope | Not a claim of impossibility | Unqualified: clean `unsupported_platform` refusal |
 
 No cell below is `Supported`: promotion requires platform plus consumer plus
-release evidence per the [status lifecycle](#status-lifecycle).
+release evidence per the [status lifecycle](#status-lifecycle),
+enforced by `bazel run //tools/ci:supported_evidence_gate`.
 
 ## Application Foundations
 

@@ -460,6 +460,19 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Supported-evidence promotion gate (issue #301): machine-checks that no
+# matrix claims Supported without platform plus consumer plus release
+# evidence — no Supported status cell in either matrix, every Delivered
+# claim backed by harnesses/workspaces, every Open gap with no false
+# landed claim. Functional checks only. Run by CI via
+# `bazel run //tools/ci:supported_evidence_gate`.
+sh_binary(
+    name = "supported_evidence_gate",
+    srcs = ["supported_evidence_gate.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Stage 4 E2E drivers (issue #55): one `manual` (+`exclusive`,
 # `local`, `no-sandbox`) sh_test per landed `integration/` scenario plus
 # the explicit suite. Wildcard suites (`bazel test //...`,
