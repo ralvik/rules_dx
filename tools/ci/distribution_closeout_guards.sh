@@ -10,17 +10,18 @@
 # battery on a clean tree with docs matching as-built behavior.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (28 checks): hygiene policy, exact 0.0.0 module pin + consumer
-# pin, distribution doc ownership + standalone-install record + BCR
-# destination, workflow separation + triggers + default-closed approve
-# gates + dry-run report record, signing-first trust-root + SBOM
-# detail, digest-pinned prebuilt base + Bazelisk delegation + cosign
-# deferral + prebuilt doc section, scaffold state, self-call
-# consumer/docs smoke, security precondition, gitignored outputs,
-# matrix close-out page + Layer-4 E2E record, E2E driver/format
-# slices + E2E-case convention, and no-publish invariants.
-# Matrix/SBOM/BCR/install verification and the full green battery
-# stay open under their issues.
+# today (32 checks): hygiene policy, exact 0.0.0 module pin + consumer
+# pin, distribution doc ownership + Bazel-first + standalone-install
+# records + BCR destination + draft-only ceiling, workflow separation
+# + triggers + default-closed approve gates + dry-run report record,
+# signing-first trust-root + SBOM detail, digest-pinned prebuilt base
+# + Bazelisk delegation + cosign deferral + prebuilt doc section +
+# never-latest gate, scaffold state, self-call consumer/docs smoke,
+# security precondition, gitignored outputs, matrix close-out page +
+# Layer-4 E2E + battery-audit record, E2E driver/format slices +
+# E2E-case convention, and no-publish invariants. Matrix/SBOM/BCR/
+# install verification and the full green battery stay open under
+# their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:distribution_closeout_guards`,
 # following //tools/ci:ghcr_publish_guards.
@@ -247,6 +248,43 @@ if [[ -f "tools/ci/e2e.sh" ]] \
   ok
 else
   bad "E2E driver/format slices missing (e2e.sh/e2e_format.sh, #54)"
+fi
+
+# #26 Bazel-first path stays explicit: `bazel run //dx:env` is the
+# supported install with no checksum-only fallback (standalone
+# verification still open).
+if grep -q -F -e 'Bazel-first installation path is `bazel run //dx:env`' docs/environments/environment.md \
+  && grep -q -F -e 'checksum-only fallback' docs/environments/environment.md; then
+  ok
+else
+  bad "environment.md lost its Bazel-first/no-checksum-fallback record (#26)"
+fi
+
+# #78 draft-only publisher ceiling stays pinned: draft default with
+# the dry-run placeholder tag, never creating tags itself.
+if grep -q -F -e 'Draft-only publisher ceiling' docs/environments/environment.md \
+  && grep -q -F -e 'v0.0.0-dryrun' docs/environments/environment.md; then
+  ok
+else
+  bad "environment.md lost its draft-only publisher ceiling (#78)"
+fi
+
+# #184 GHCR gate messages stay explicit: digest-pinned FROM, never
+# latest, build-only without approve (push/signing still gated).
+if grep -q -F -e 'never latest/bare tag' .github/workflows/ghcr.yml \
+  && grep -q -F -e 'build-only, nothing pushes' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "GHCR workflow lost its never-latest/build-only gate record (#184)"
+fi
+
+# #54 battery-audit record stays explicit: corpus + code-ownership
+# audits and the explicit E2E suite inside the close-out battery.
+if grep -q -F -e 'corpus and code ownership audits' docs/testing/verification-matrix.md \
+  && grep -q -F -e 'explicit E2E suite' docs/testing/verification-matrix.md; then
+  ok
+else
+  bad "verification-matrix lost its battery-audit record (#54)"
 fi
 
 # No-publish invariant: no tags claimed, no release outputs committed.
