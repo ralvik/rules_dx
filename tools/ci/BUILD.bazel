@@ -223,6 +223,22 @@ sh_binary(
     srcs = ["registry_singularity.sh"],
 )
 
+# Backlog-contracts harness (issues #9, #10): machine-checks the
+# frozen cross-file contracts plus the honest gap labels of the
+# environment/codegen and docs-pipeline tracks — codegen
+# output-group/shard-suffix/aspect/selection parity between Rust and
+# Starlark, the commit-lock cross-platform disclaimer, WP4-unverified
+# root candidates, the ADR 0018 clean-evidence status, the `dx docs`
+# removal record, pipeline #10 gap links, the stable IR identity, and
+# the no-Supported-cell matrix record. Reverse-dependent queries,
+# lock platform evidence, adapter runs, link completeness, renderer
+# execution, and guide proofs stay open. Run by CI via
+# `bazel run //tools/ci:backlog_contracts`.
+sh_binary(
+    name = "backlog_contracts",
+    srcs = ["backlog_contracts.sh"],
+)
+
 # Quality cache aquery proof (issue #84, seed slice): action-graph half
 # — Python vs Rust real pipelines mention only their own sources/tools
 # with distinct ActionKeys, so one direct source misses only its owning
