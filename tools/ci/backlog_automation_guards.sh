@@ -10,12 +10,12 @@
 # the #19 resolver prerequisite with Renovate retained as fallback.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (36 checks): codegen/env contracts + commit-lock + try_lock +
-# clean + bootstrap-first + managed-PATH detail + Node/Python/Rust
-# env records, docs-pipeline records + IR/site identity + rustdoc
-# exception, examples ownership + laziness slices + attribution +
-# full index breadth + Scala/Polyglot entries + mixed disposition,
-# coverage gate + min-coverage threshold + ignore-marker contract +
+# today (40 checks): codegen/env contracts + commit-lock + try_lock +
+# clean + bootstrap-first + installation/retention + managed-PATH
+# detail + Node/Python/Rust env records, docs-pipeline records +
+# IR/site identity + cache-friendly site + rustdoc exception, examples
+# ownership + starter callers + laziness slices + attribution + full
+# index breadth + Scala/Polyglot entries + mixed disposition, coverage gate + min-coverage threshold + ignore-marker contract +
 # Codecov honesty + LCOV preset pin + inventory backing +
 # fork-security record, Renovate fallback + full manager set + loop
 # policy + preset-update/bump-PR record + automation ownership +
@@ -329,6 +329,45 @@ if grep -q -F -e 'dx coverage --min-coverage' docs/testing/README.md; then
   ok
 else
   bad "coverage doc lost its min-coverage threshold record (#254)"
+fi
+
+# #9 installation/retention stays owned: install/ownership plus
+# retention/recovery sections bound the managed-state lifecycle
+# (reverse queries and lock-platform evidence still open).
+if grep -q -F -e '## Installation And Ownership' docs/environments/managed-state.md \
+  && grep -q -F -e '## Retention And Recovery' docs/environments/managed-state.md; then
+  ok
+else
+  bad "env managed-state lost its installation/retention sections (#9)"
+fi
+
+# #10 cache-friendly site stays owned: the docs command links the
+# Bazel cache-friendly site build next to the IR model (adapter runs
+# still open).
+if grep -q -F -e 'cache-friendly' docs/cli/commands/docs.md; then
+  ok
+else
+  bad "docs command lost its cache-friendly site record (#10)"
+fi
+
+# #85 starter callers stay indexed: consumer-ci + docs-ci starter
+# callers alongside the per-foundation adopt workspaces (full
+# laziness proof still open).
+if grep -q -F -e '[consumer-ci](consumer-ci/)' examples/README.md \
+  && grep -q -F -e '[docs-ci](docs-ci/)' examples/README.md; then
+  ok
+else
+  bad "examples index lost its starter caller entries (#85)"
+fi
+
+# #260 reviewable-loop stays pinned: Renovate proposes pins grouped and
+# scheduled weekly while dx verifies, with the bump-PR manual loop
+# (widen implementation still open behind #19).
+if grep -q -F -e 'grouped and scheduled weekly' docs/contributing/local-workflows.md \
+  && grep -q -F -e 'Renovate proposes pins' docs/contributing/local-workflows.md; then
+  ok
+else
+  bad "local-workflows lost its grouped-weekly propose/verify loop record (#260)"
 fi
 
 # Matrix honesty for this group.
