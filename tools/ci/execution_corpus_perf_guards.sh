@@ -11,15 +11,16 @@
 # baseline as a report, never a gate.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (36 checks): deferred codes, fail-closed unit pins, dry-run
+# today (40 checks): deferred codes, fail-closed unit pins, dry-run
 # planning paths + doc record, audit families + policy modules +
-# SARIF/SPDX mapping record, selector planning + update API +
-# per-set report record + aggregate verdict pins, exit mappings, doc
-# ownership + auditor/resolver records, depcheck truth-table +
-# category + missing-reasons + offline contract, prior harnesses
-# green, corpus single-name rule + Gazelle ownership + generate doc +
-# contract + generate --check wiring + carve-out record, perf
-# report-not-gate shape + v2.8.0 fairness pin + Bazel-version pin +
+# SARIF/SPDX mapping record + license global table, selector planning
+# + update API + per-set report record + continuation honesty +
+# aggregate verdict pins, exit mappings, doc ownership +
+# auditor/resolver records, depcheck truth-table + category +
+# missing-reasons + offline contract + offline-fail-closed route, prior
+# harnesses green, corpus single-name rule + Gazelle ownership +
+# canonical workflow + generate doc + contract + generate --check
+# wiring + carve-out record, perf report-not-gate shape + v2.8.0 fairness pin + Bazel-version pin +
 # report honesty + bench harness + comparison-test record, and matrix
 # honesty. Live execution, per-type generation, and comparison
 # numbers stay open under their issues.
@@ -324,6 +325,43 @@ if grep -q -F -e '.bazelversion' docs/tools/rules_lint-comparison.md \
   ok
 else
   bad "rules_lint methodology lost its Bazel-version fairness pin (#86)"
+fi
+
+# #15 canonical workflow stays owned: `dx generate` runs the canonical
+# Gazelle workflow with no Gazelle application arguments (per-type
+# emission still open).
+if grep -q -F -e 'canonical `//dx:generate` Gazelle workflow' docs/cli/commands/generate.md; then
+  ok
+else
+  bad "generate doc lost its canonical Gazelle workflow record (#15)"
+fi
+
+# #18 license global-table record stays explicit: each listed SPDX
+# identity belongs in exactly one list under the License family
+# (tool wiring and acquisition still open).
+if grep -q -F -e 'License family' "$doc" \
+  && grep -q -F -e 'Global table: each listed SPDX identity' "$doc"; then
+  ok
+else
+  bad "audit/update doc lost its license global-table record (#18)"
+fi
+
+# #19 continuation honesty stays explicit: continued updates preserve
+# successes with blocked dependents and never imply parallel execution
+# or a new mutation-event API (backends still open).
+if grep -q -F -e 'Continued updates do not imply parallel execution' "$doc"; then
+  ok
+else
+  bad "audit/update doc lost its continuation-honesty record (#19)"
+fi
+
+# #22 offline fail-closed route stays explicit: catalog offline behavior
+# is offline-or-fail-closed with no live-registry query for newer
+# releases (fixtures still open).
+if grep -q -F -e 'offline-or-fail-closed' docs/quality/quality-testing.md; then
+  ok
+else
+  bad "quality-testing.md lost its offline-or-fail-closed route record (#22)"
 fi
 
 # Matrix honesty across this group.
