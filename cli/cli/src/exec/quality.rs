@@ -1303,6 +1303,31 @@ mod tests {
     }
 
     #[test]
+    fn diff_stale_source_fails_render() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // source digests validated before writing and stale outputs
+        // rejected. In diff mode the patch renders from verified sources,
+        // so a stale source fails closed with diff_failed instead of
+        // rendering from mismatched bytes; the file stays at its current
+        // (stale) bytes and no patch emits.
+        let mut harness = Harness::new("diff-stale");
+        harness.write_source("src/a.py", "x = 1\n");
+        harness.results.insert(
+            "//test:corpus".to_owned(),
+            harness.valid_result(vec![], vec![harness.replacement(b"y")]),
+        );
+        harness.write_source("src/a.py", "z = 2\n");
+        let (code, out, err) = harness.run(&["lint", "--check", "--output=diff"]);
+        assert_eq!(code, 1);
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/a.py")).expect("source"),
+            b"z = 2\n"
+        );
+        assert!(err.contains("cannot render patch without verified source for src/a.py"));
+        assert!(!out.contains("--- a/src/a.py"));
+    }
+
+    #[test]
     fn json_default_marks_remaining_resolution() {
         let mut harness = Harness::new("remaining");
         harness.write_source("src/a.py", "x = 1\n");
