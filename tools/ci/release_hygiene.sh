@@ -9,7 +9,7 @@
 # stays green by construction and nothing runs uninvited.
 #
 # This harness machine-checks the no-publication-inputs half that is
-# verifiable on a clean tree today (20 checks): dist/release
+# verifiable on a clean tree today (21 checks): dist/release
 # git-ignored and uncommitted, module at 0.0.0, no version tags,
 # SECURITY.md reporting link + enabled record, publish dry-run dispatch-only with a
 # default-closed approve gate, no-secrets minimal permissions plus no
@@ -18,7 +18,7 @@
 # deferrals to #26 tooling, signing-first + GHCR-separate notes,
 # checkout SHA pin, typed approve plus non-cancelling concurrency,
 # least-privilege no-packages-write, no-secrets usage, and sole-tracker deletion plus
-# reporting-enabled record. Platform,
+# reporting-enabled record plus consumer-caller SHA pin. Platform,
 # packaging, provenance (SPDX/SLSA), registry submission, and
 # public-install smoke runs stay unqualified per #5 and are recorded
 # as gaps, not claimed here.
@@ -205,6 +205,15 @@ if grep -q -F -e 'Private vulnerability reporting is enabled' SECURITY.md; then
   ok
 else
   bad "SECURITY.md lost the private-reporting-enabled record (precondition per issue #5)"
+fi
+
+# Consumer-CI caller template pins the reusable workflow at a reviewed
+# commit SHA (issue #5 context): never a tag or floating ref, so
+# consumers track qualified commits while MODULE stays at 0.0.0.
+if grep -q -E -e 'reusable-consumer\.yml@[0-9a-f]{40}' examples/consumer-ci/caller.yml; then
+  ok
+else
+  bad "examples/consumer-ci/caller.yml lost its reviewed-commit SHA pin (issue #5)"
 fi
 
 echo "release hygiene harness: $pass passed, $fail failed"
