@@ -107,21 +107,24 @@ fallback assigned by generic aspects. A broad adapter such as keep-sorted may ex
 `text` and other registered text classes. More specific classes remain preferred because one
 path belongs to one class.
 
-The classification principles are accepted. The provider API and initial IDs above are
-implemented as specified here; the class-to-policy-family assignment and
-admissibility mappings remain pending the registry review (open work) and must not be published as stable
-API before that decision.
+The classification principles are accepted. The provider API, initial IDs,
+class-to-policy-family assignment, and per-ID admissibility below are
+implemented as specified here; class IDs remain public compatibility
+surface as above.
 
-Open work under issue #6: the frozen IDs `css`, `gherkin`, `graphql`, `html`,
-`html_template`, `json5`, `jsonc`, `less`, `scss`, `sql`, `text`, and `xml` have no
-family assignment yet. Assigning them stays pending the registry review.
+Closed issue #6: every frozen ID has exactly one family in
+`quality/adapters.bzl:REAL_CLASS_TO_FAMILY`. The final twelve are
+`css`, `less`, and `scss` in the `css` family; `json5` and `jsonc` in
+the `json` family; `graphql`, `html`, `html_template`, `xml`,
+`gherkin`, `sql`, and `text` each in their own family.
 
 Every semantic class has exactly one quality policy family. Families keep unrelated source
 kinds independently configurable even when one adapter supports both. In particular,
 JavaScript policy owns `javascript` and `jsx`, TypeScript policy owns `typescript` and `tsx`,
-and JSON policy owns the JSON classes. Selecting Prettier in JavaScript policy does not format
-TypeScript, JSON, CSS, Markdown, or any other family. The candidate registry review must assign
-every class to one family and may group classes only when they should always share tool
+JSON policy owns `json`, `json5`, and `jsonc`, and CSS policy owns `css`, `less`, and `scss`.
+Selecting Prettier in JavaScript policy does not format
+TypeScript, JSON, CSS, Markdown, or any other family. The registry assigns
+every class to one family and groups classes only when they should always share tool
 selection. A class is split further when the source context genuinely requires independent
 policy; providers do not attach a second ecosystem field to each source.
 
@@ -145,12 +148,61 @@ open work.
 The registry has one source of truth from which exported Starlark constants, provider
 validation, adapter metadata, tests, and Rust diagnostic names are generated or checked. The
 admissibility table maps each ID to typical basenames/extensions and, where filenames are
-ambiguous, required authoritative provider semantics. Per-ID mappings remain pending the
-registry review under issue #6; only the edge examples in this paragraph are owned.
+ambiguous, required authoritative provider semantics. The table below is owned;
+adapters consume canonical IDs and do not carry independent extension tables.
 For example, `.h` alone cannot decide
 `c` versus `cpp`, extensionless files do not become `shell` without rule/provider evidence, and
-`BUILD`/`BUILD.bazel` are admissible as `starlark` by basename. Adapters consume canonical IDs;
-they do not carry independent extension tables.
+`BUILD`/`BUILD.bazel` are admissible as `starlark` by basename.
+
+| Class | Typical basenames / extensions | Provider semantics |
+| --- | --- | --- |
+| `text` | `.txt` | Explicit owner classification only; never inferred as fallback. |
+| `c` | `.c`, `.h` | `.h` requires C owner semantics; alone cannot decide `c` versus `cpp`. |
+| `cpp` | `.cc`, `.cpp`, `.cxx`, `.hh`, `.hpp`, `.h` | `.h` requires C++ owner semantics. |
+| `cuda` | `.cu`, `.cuh` | CUDA owner/toolchain context where ambiguous. |
+| `csharp` | `.cs` | C# owner. |
+| `fsharp` | `.fs`, `.fsi` | F# owner. |
+| `powershell` | `.ps1`, `.psm1`, `.psd1` | PowerShell owner. |
+| `css` | `.css` | CSS owner (`css` family). |
+| `less` | `.less` | Less owner (`css` family). |
+| `scss` | `.scss` | SCSS owner (`css` family). |
+| `javascript` | `.js`, `.mjs`, `.cjs` | JavaScript owner. |
+| `jsx` | `.jsx` | JSX owner. |
+| `typescript` | `.ts`, `.mts`, `.cts` | TypeScript owner. |
+| `tsx` | `.tsx` | TSX owner. |
+| `vue` | `.vue` | `vue_library` container. |
+| `svelte` | `.svelte` | `svelte_library` container. |
+| `astro` | `.astro` | `astro_library` container. |
+| `mdx` | `.mdx` | `mdx_library` container. |
+| `graphql` | `.graphql`, `.gql` | GraphQL owner. |
+| `html` | `.html`, `.htm` | HTML owner. |
+| `html_template` | `.html` with template owner | Requires template provider; bare `.html` without it is `html`. |
+| `json` | `.json` | JSON owner (`json` family). |
+| `json5` | `.json5` | JSON owner (`json` family). |
+| `jsonc` | `.jsonc` | JSON owner (`json` family). |
+| `markdown` | `.md`, `.markdown` | Markdown owner. |
+| `toml` | `.toml` | TOML owner. |
+| `xml` | `.xml` | XML owner. |
+| `yaml` | `.yaml`, `.yml` | YAML owner. |
+| `java` | `.java` | Java owner. |
+| `kotlin` | `.kt`, `.kts` | Kotlin owner; same-unit `.java` stays `java`. |
+| `scala` | `.scala` | Scala owner; same-unit `.java` stays `java`. |
+| `python` | `.py` | Python owner. |
+| `python_stub` | `.pyi` | Paired `.pyi` belongs to its `.py` target; orphan emits no provider. |
+| `cue` | `.cue` | CUE owner. |
+| `gherkin` | `.feature` | Gherkin owner. |
+| `go` | `.go` | Go owner. |
+| `jsonnet` | `.jsonnet`, `.libsonnet` | Jsonnet owner. |
+| `pkl` | `.pkl` | Pkl owner. |
+| `protobuf` | `.proto` | Protobuf owner. |
+| `qml` | `.qml` | QML owner. |
+| `ruby` | `.rb` | Ruby owner (foundation deferred per ADR 0019). |
+| `rust` | `.rs` | Rust owner. |
+| `shell` | `.sh`, `.bash` | Extensionless requires shell rule/provider evidence. |
+| `sql` | `.sql` | SQL owner. |
+| `starlark` | `BUILD`, `BUILD.bazel`, `.bzl` | `BUILD` files admissible by basename. |
+| `terraform` | `.tf`, `.tfvars` | Terraform owner. |
+| `go_module` | `go.mod`, `go.sum` | Go module manifest owner. |
 
 ## Validation
 

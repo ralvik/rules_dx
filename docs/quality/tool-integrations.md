@@ -29,8 +29,7 @@ internal unless a concrete external API is needed.
 `QualitySourcesInfo` is the accepted public cross-rule integration concept for custom source-owning
 rules. Its exact API is implemented as specified in
 [Quality Sources and Applicability](quality-sources.md); class-to-policy-family assignment
-and admissibility stay pending the registry review
-(open work). The authoritative conceptual boundary and
+and admissibility are owned there. The authoritative conceptual boundary and
 candidate shape are in [Quality Sources and Applicability](quality-sources.md); this document does
 not redefine its fields.
 

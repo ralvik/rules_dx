@@ -24,8 +24,8 @@ SYNTHETIC_ADAPTERS = {
     "lint-b": {"lint": ["rust"]},
 }
 
-# WP2 fixture class-to-family assignment. The full registry assignment stays
-# pending the O15 review; this minimal map only authorizes the fixture
+# WP2 fixture class-to-family assignment. The frozen taxonomy lives in
+# REAL_CLASS_TO_FAMILY below; this minimal map only authorizes the fixture
 # families above.
 SYNTHETIC_CLASS_TO_FAMILY = {
     "python": "python",
@@ -98,10 +98,13 @@ REAL_ADAPTERS = {
     "vale": {"lint": ["markdown"]},
 }
 
-# WP2 fixture class-to-family assignment for the M04 source classes. Like
-# the synthetic map, this is a fixture, not the frozen taxonomy: the full
-# registry assignment and curated defaults stay pending the O15/O17
-# reviews. M15 WP2 adds the python/python_stub classes to the python
+# Frozen class-to-family taxonomy (issue #6, closed). This is the
+# single-sourced registry map: every frozen semantic file-class ID has
+# exactly one owning policy family here. Grouping follows the
+# quality-sources rule (group only when classes always share tool
+# selection). Curated defaults stay owned by the tool baseline; families
+# without curated defaults are classification-only with deferred adapters
+# owned by the parity gate. M15 WP2 adds the python/python_stub classes to the python
 # family for the curated Ruff/Ty/pydoclint adapters. M17 WP2 adds the
 # javascript/jsx classes to the javascript family, typescript/tsx to the
 # typescript family, and json to the json family, per the frozen
@@ -171,22 +174,41 @@ REAL_ADAPTERS = {
 # file itself; no foundation wrapper lands here) while the retained
 # RuboCop/StandardRB and PSScriptAnalyzer tool cohorts stay in force; no
 # adapter claims ruby or powershell yet (classification only, no supported
-# claim). O31 qualifies exact adapters later.
+# claim). O31 qualifies exact adapters later. Issue #6 closes the
+# registry: the 12 remaining frozen IDs join the taxonomy on the same
+# classification-only terms (no adapter claim yet; O32 qualifies exact
+# adapters). The `css` family owns `css`, `less`, and `scss` because the
+# tool baseline pairs Prettier plus Stylelint across all three, so they
+# always share tool selection; the `json` family owns `json`, `json5`,
+# and `jsonc` because the baseline pairs Prettier across the JSON
+# classes. `graphql`, `html`, `html_template`, `xml`, `gherkin`, `sql`,
+# and `text` each own their own family because their baseline tools
+# differ (Prettier core versus djlint versus per-format Prettier
+# plugins versus keep-sorted), so grouping them would couple
+# independent selections.
 REAL_CLASS_TO_FAMILY = {
     "astro": "astro",
     "c": "cc",
     "cpp": "cc",
     "csharp": "csharp",
+    "css": "css",
     "cuda": "cuda",
     "cue": "cue",
     "fsharp": "fsharp",
+    "gherkin": "gherkin",
     "go": "go",
     "go_module": "go_module",
+    "graphql": "graphql",
+    "html": "html",
+    "html_template": "html_template",
     "java": "java",
     "javascript": "javascript",
     "json": "json",
+    "json5": "json",
+    "jsonc": "json",
     "jsx": "javascript",
     "kotlin": "kotlin",
+    "less": "css",
     "markdown": "markdown",
     "mdx": "mdx",
     "pkl": "pkl",
@@ -198,15 +220,19 @@ REAL_CLASS_TO_FAMILY = {
     "ruby": "ruby",
     "rust": "rust",
     "scala": "scala",
+    "scss": "css",
     "shell": "shell",
+    "sql": "sql",
     "starlark": "starlark",
     "svelte": "svelte",
     "terraform": "terraform",
+    "text": "text",
     "toml": "toml",
     "typescript": "typescript",
     "tsx": "typescript",
     "vue": "vue",
     "jsonnet": "jsonnet",
+    "xml": "xml",
     "yaml": "yaml",
 }
 

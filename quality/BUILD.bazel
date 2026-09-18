@@ -82,8 +82,9 @@ workspace_policy(
 
 # Real fixture policy: selects the initial-adapter tool IDs for
 # the M04 source classes. Like the synthetic fixture policy, this is a
-# fixture, not curated defaults: the real family taxonomy and defaults
-# stay pending the O17 review. M05 WP1: this policy is also the canonical
+# fixture, not curated defaults: the family taxonomy is frozen in
+# quality/adapters.bzl and curated defaults in quality/curated_defaults.bzl.
+# M05 WP1: this policy is also the canonical
 # workspace policy — every repository corpus target is checked under it
 # (fixtures keep it too), so dogfood findings reproduce under one policy.
 quality_family(

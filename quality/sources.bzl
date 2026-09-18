@@ -15,8 +15,9 @@ class or broadening one requires adapter and policy compatibility tests.
 Validation split (per O15 direction): construction validates field shape
 and known IDs only. Direct ownership, admissibility, and single-class
 membership are the consuming aspect's job (M04+), not this file's. The
-class-to-policy-family assignment and admissibility mappings stay pending
-the registry review; they are not frozen here.
+class-to-policy-family assignment and admissibility mappings are owned
+in `docs/quality/quality-sources.md` and `quality/adapters.bzl`; they
+are not duplicated here.
 """
 
 QualitySourcesInfo = provider(

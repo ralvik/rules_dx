@@ -188,7 +188,7 @@ def real_pipeline_unit_tests(name):
                 "authorize_classes maps each real tool to its own class",
                 authorize_classes(_LINT_SELECTIONS, REAL_CLASS_TO_FAMILY),
                 {
-                    "biome": ["javascript", "json", "jsx", "tsx", "typescript"],
+                    "biome": ["javascript", "json", "json5", "jsonc", "jsx", "tsx", "typescript"],
                     "buildifier": ["starlark"],
                     "clippy": ["rust"],
                     "markdown_check": ["markdown"],
