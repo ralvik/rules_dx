@@ -9,11 +9,11 @@
 # stays green by construction and nothing runs uninvited.
 #
 # This harness machine-checks the no-publication-inputs half that is
-# verifiable on a clean tree today (17 checks): dist/release
+# verifiable on a clean tree today (18 checks): dist/release
 # git-ignored and uncommitted, module at 0.0.0, no version tags,
 # SECURITY.md reporting link, publish dry-run dispatch-only with a
-# default-closed approve gate, no-secrets minimal permissions,
-# RUNNER_TEMP staging plus a clean-checkout proof, explicit release
+# default-closed approve gate, no-secrets minimal permissions plus no
+# secrets usage, RUNNER_TEMP staging plus a clean-checkout proof, explicit release
 # matrix (seed qualified, rest unqualified per #5), SBOM/BCR
 # deferrals to #26 tooling, signing-first + GHCR-separate notes,
 # checkout SHA pin, typed approve plus non-cancelling concurrency, and
@@ -175,6 +175,16 @@ if ! grep -q -F -e 'packages: write' .github/workflows/publish-dry-run.yml; then
   ok
 else
   bad "publish-dry-run.yml gained packages:write (dry run must stay read-only; push lives in ghcr.yml)"
+fi
+
+# The dry-run uses no secrets at all (issue #78): no `secrets.`
+# reference (the gated GHCR push alone uses GITHUB_TOKEN under #184;
+# the dry run only builds locally and reports, so any secret reference
+# would be an unreviewed publication input).
+if ! grep -q -F -e 'secrets.' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml gained a secrets reference (dry run must use no secrets)"
 fi
 
 echo "release hygiene harness: $pass passed, $fail failed"
