@@ -10,15 +10,16 @@
 # the #19 resolver prerequisite with Renovate retained as fallback.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (24 checks): codegen/env contracts + commit-lock + managed-PATH
-# detail, docs-pipeline records + IR identity, examples ownership +
-# laziness slices + full index breadth + mixed disposition, coverage
-# gate + Codecov honesty + LCOV preset pin + inventory backing +
-# fork-security record, Renovate fallback + full manager set +
-# automation ownership + schedule policy, never-rewrites + ADR pins,
-# prior harnesses green, and no-false-claim gaps. Reverse queries,
-# adapter runs, comment presentation, and widen implementation stay
-# open under their issues.
+# today (28 checks): codegen/env contracts + commit-lock + managed-PATH
+# detail + Node/Python/Rust env records, docs-pipeline records + IR
+# identity, examples ownership + laziness slices + full index breadth
+# + Scala/Polyglot entries + mixed disposition, coverage gate +
+# Codecov honesty + LCOV preset pin + inventory backing +
+# fork-security record, Renovate fallback + full manager set + loop
+# policy + automation ownership + schedule policy, never-rewrites +
+# ADR pins, prior harnesses green, and no-false-claim gaps. Reverse
+# queries, adapter runs, comment presentation, and widen
+# implementation stay open under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:backlog_automation_guards`,
 # following //tools/ci:backlog_contracts.
@@ -213,6 +214,41 @@ if grep -q -F -e 'fork' docs/github-ci.md \
   ok
 else
   bad "automation lost its fork-security/schedule-policy record (#254/#260)"
+fi
+
+# #85 Scala/Polyglot index entries stay pinned alongside the full
+# breadth (foreign sbt/polyglot trees via Gazelle extensions).
+if grep -q -F -e 'adopt-scala' examples/README.md \
+  && grep -q -F -e 'adopt-polyglot' examples/README.md; then
+  ok
+else
+  bad "examples index lost its Scala/Polyglot entries (#85)"
+fi
+
+# #9 Node/Python env records stay owned (managed node_modules facade,
+# persistent Python env; bootstrap still first).
+if grep -q -F -e 'Gazelle maintains' docs/environments/node.md \
+  && grep -q -F -e 'persistent environment' docs/environments/python-environment.md; then
+  ok
+else
+  bad "env docs lost their Node/Python ownership records (#9)"
+fi
+
+# #9 Rust env record stays owned (provider-derived plans on the
+# configured toolchain).
+if grep -q -F -e 'provider-derived plans' docs/environments/rust.md; then
+  ok
+else
+  bad "rust.md lost its provider-derived-plans record (#9)"
+fi
+
+# #260 loop policy stays reviewable (no pending-stampede PRs, no
+# automerge, human merge path preserved).
+if grep -q -F -e '"prCreation"' renovate.json \
+  && grep -q -F -e '"dependencyDashboard"' renovate.json; then
+  ok
+else
+  bad "Renovate fallback lost its reviewable-loop policy (#260)"
 fi
 
 # Matrix honesty for this group.
