@@ -23,7 +23,13 @@
     "no_cache_wall_ms": 379.4,
     "no_cache_flag": "--nouse_action_cache, server warm",
     "warm_wall_ms": 329.1,
-    "cache_hit_evidence": "consecutive server-warm builds both hit action cache; wall time dominated by Bazel overhead on 2-action sample, not post-shutdown cold"
+    "cache_hit_evidence": "consecutive server-warm builds both hit action cache; wall time dominated by Bazel overhead on 2-action sample, not post-shutdown cold",
+    "post_shutdown_cold_wall_ms": 6418.5,
+    "post_shutdown_cold_elapsed_ms": 6356.0,
+    "post_shutdown_cold_command": "bazel shutdown; bazel build //perf:corpus --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect --output_groups=dx_results --noshow_progress",
+    "post_shutdown_cold_evidence": "fresh server 9.2.0 startup + analysis 652 packages / 28179 targets / 114 aspects, 1615 disk-cache hits, 1 total action; elapsed 6.356s per Bazel",
+    "warm_after_cold_wall_ms": 248.5,
+    "warm_after_cold_evidence": "immediate rebuild 0 packages loaded, 1 internal, elapsed 0.231s; cold-vs-warm delta is server startup + analysis, not action execution (2-action sample stays cache-hit)"
   },
   "runner_test_timing": {
     "target": "//quality/runner:quality_runner_test",
@@ -44,5 +50,5 @@
   "date": "2026-09-17",
   "gate": false,
   "claim": "none",
-  "note": "measured seed-host runs, report-not-gate; no parity claim. Synthetic tree is deterministic (see rules_lint_comparison.sh); quality sample is //perf:corpus lint+format (2 actions, server-warm no-cache ~379ms vs warm ~329ms); runner timing is server-warm with/without --nocache_test_results, not post-shutdown cold. Post-shutdown cold + rules_lint-side numbers follow next."
+  "note": "measured seed-host runs, report-not-gate; no parity claim. Synthetic tree is deterministic (see rules_lint_comparison.sh); quality sample is //perf:corpus lint+format (2 actions, server-warm no-cache ~379ms vs warm ~329ms; post-shutdown cold ~6419ms wall / 6356ms Bazel elapsed vs warm-after-cold ~249ms, delta is server startup + analysis with disk-cache hits); runner timing is server-warm with/without --nocache_test_results, not post-shutdown cold. rules_lint-side numbers follow next."
 }
