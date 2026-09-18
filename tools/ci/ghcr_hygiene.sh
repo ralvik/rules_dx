@@ -9,7 +9,7 @@
 # first push; this build-only slice pushes nothing.
 #
 # This harness machine-checks the gate half verifiable on a clean tree
-# today (14 checks): separate ghcr.yml route, PR-paths build, dispatch +
+# today (15 checks): separate ghcr.yml route, PR-paths build, dispatch +
 # default-closed approve gate, typed approve, push run-gate explicit, no push/tag/schedule trigger, digest-pinned
 # base + Bazelisk delegation + no ambient toolchains in Dockerfile.prebuilt,
 # no docker/* actions with checkout SHA-pinned, no-secrets checkout plus
@@ -147,6 +147,16 @@ if grep -q -F -e '"image": "mcr.microsoft.com/devcontainers/base' .devcontainer/
   ok
 else
   bad "devcontainer.json image drifted from mcr before the first GHCR push (digest ref follows push)"
+fi
+
+# Least-privilege split explicit (issue #184 parity with #78): only
+# ghcr.yml carries `packages: write` for image push; the dry run stays
+# read-only. Losing the push permission breaks gated publication, while
+# gaining it in publish-dry-run.yml is rejected there.
+if grep -q -F -e 'packages: write' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "ghcr.yml lost packages:write (gated push needs it; dry run must stay read-only)"
 fi
 
 echo "ghcr hygiene harness: $pass passed, $fail failed"
