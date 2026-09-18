@@ -543,13 +543,13 @@ test_suite(
         "manual",
         "no-sandbox",
     ],
+    # Bash-only drivers are Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
     tests = [
         ":e2e_clean",
         ":e2e_dirty",
         ":e2e_format_roundtrip",
     ],
-    # Bash-only drivers are Linux-only (issue #299 shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # E2E scenario-registration guard (issue #54, E2E-case convention):

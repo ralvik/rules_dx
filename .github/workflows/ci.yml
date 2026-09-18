@@ -2,8 +2,8 @@
 # separate jobs with per-job summaries (issue #210).
 #
 # Seed host: Linux x86_64 glibc (ubuntu-latest), local execution, no remote.
-# Full host coverage and CI qualification stay open; unavailable required
-# hosts from ADR 0014 are recorded as gaps, not claimed here.
+# Platform qualification stays open under issue #298: remaining ADR 0014
+# required hosts are unqualified gaps with clean dx refusal, not claimed here.
 #
 # CI runs deterministic generation freshness through the
 # canonical public path before the quality commands converge anything: a
