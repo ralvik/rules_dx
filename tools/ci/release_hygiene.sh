@@ -9,7 +9,7 @@
 # stays green by construction and nothing runs uninvited.
 #
 # This harness machine-checks the no-publication-inputs half that is
-# verifiable on a clean tree today (24 checks): dist/release
+# verifiable on a clean tree today (26 checks): dist/release
 # git-ignored and uncommitted, module at 0.0.0, no version tags,
 # SECURITY.md reporting link + enabled record, publish dry-run dispatch-only with a
 # default-closed approve gate, no-secrets minimal permissions plus no
@@ -19,7 +19,8 @@
 # checkout SHA pin, typed approve plus non-cancelling concurrency,
 # least-privilege no-packages-write, no-secrets usage, and sole-tracker deletion plus
 # reporting-enabled record plus consumer/docs-caller SHA pins plus
-# both-callers policy plus no-tag/no-release/no-submission record. Platform,
+# both-callers policy plus no-tag/no-release/no-submission record plus
+# never-rebuild policy plus byte-identity fail-closed record. Platform,
 # packaging, provenance (SPDX/SLSA), registry submission, and
 # public-install smoke runs stay unqualified per #5 and are recorded
 # as gaps, not claimed here.
@@ -249,6 +250,27 @@ if grep -q -F -e 'Any tag, registry submission, or release creation' .github/wor
   ok
 else
   bad "publish-dry-run.yml lost the no-tag/no-release/no-submission record (issue #5)"
+fi
+
+# Published bytes are never rebuilt or substituted silently (issue #5
+# next-steps): the policy stays recorded in CONTRIBUTING.md plus
+# CHANGELOG.md, so the approval gate cannot be read as allowing a quiet
+# byte swap after approval.
+if grep -q -F -e 'never' CONTRIBUTING.md && grep -q -F -e 'rebuilt or substituted silently' CONTRIBUTING.md && grep -q -F -e 'rebuilt or substituted silently' CHANGELOG.md; then
+  ok
+else
+  bad "CONTRIBUTING.md/CHANGELOG.md lost the never-rebuild-or-substitute record (issue #5)"
+fi
+
+# Byte identity stays fail-closed (issue #5 never-rebuild mechanism):
+# the artifact generator rejects changed upstream bytes instead of
+# silently recording new content, and the dry run records the seed
+# binary sha256 digest, so a substituted byte cannot pass as the same
+# release.
+if grep -q -F -e 'instead of silently recording new content' quality/artifacts/update.py && grep -q -F -e 'does not match published' quality/artifacts/update.py && grep -q -F -e 'sha256' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "byte-identity fail-closed record lost (update.py + dry-run sha256, issue #5)"
 fi
 
 echo "release hygiene harness: $pass passed, $fail failed"

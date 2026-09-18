@@ -50,7 +50,8 @@ ADR or domain contract.
 - Docs describe as-built behavior only; do not record planned work in `docs/`.
 - No tags, GitHub releases, registry submissions, or `dist/`/`release/`
   outputs without explicit owner approval. `dist/` and `release/` are
-  git-ignored build outputs, never committed.
+  git-ignored build outputs, never committed. Published bytes are never
+  rebuilt or substituted silently.
 - The module stays at `0.0.0`; consumers (including
   `examples/consumer-ci/caller.yml` and `examples/docs-ci/caller.yml`)
   pin reviewed commits, never release tags. Caller pins stay frozen at
