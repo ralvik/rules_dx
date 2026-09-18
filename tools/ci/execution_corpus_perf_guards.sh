@@ -11,16 +11,17 @@
 # baseline as a report, never a gate.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (28 checks): deferred codes, fail-closed unit pins, dry-run
-# planning paths + doc record, family/selector planning + aggregate
-# verdict pins, exit mappings, doc ownership + auditor/resolver
-# records, depcheck truth-table + offline contract, prior harnesses
-# green, corpus single-name rule + Gazelle ownership + generate doc +
-# generate --check wiring + carve-out record, perf report-not-gate
-# shape + v2.8.0 fairness pin + report honesty + bench harness +
-# comparison-test record, and matrix honesty. Live execution,
-# per-type generation, and comparison numbers stay open under their
-# issues.
+# today (32 checks): deferred codes, fail-closed unit pins, dry-run
+# planning paths + doc record, audit families + policy modules,
+# selector planning + update API + aggregate verdict pins, exit
+# mappings, doc ownership + auditor/resolver records, depcheck
+# truth-table + category + offline contract, prior harnesses green,
+# corpus single-name rule + Gazelle ownership + generate doc +
+# contract + generate --check wiring + carve-out record, perf
+# report-not-gate shape + v2.8.0 fairness pin + report honesty +
+# bench harness + comparison-test record, and matrix honesty. Live
+# execution, per-type generation, and comparison numbers stay open
+# under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:execution_corpus_perf_guards`,
 # following //tools/ci:verify_perf_corpus.
@@ -246,6 +247,46 @@ if [[ -f "perf/rules_lint_comparison_test.sh" ]] \
   ok
 else
   bad "perf lost its comparison-test / synthetic-tree record (#86)"
+fi
+
+# #18 audit family surface stays pinned: frozen security/license
+# spellings plus the exception/license-policy/secrets policy modules
+# (tool wiring and acquisition still open).
+if grep -q -F -e 'SECURITY_FAMILY' cli/audit/src/lib.rs \
+  && grep -q -F -e 'LICENSE_FAMILY' cli/audit/src/lib.rs \
+  && [[ -f "cli/audit/src/exception.rs" ]] \
+  && [[ -f "cli/audit/src/license_policy.rs" ]] \
+  && [[ -f "cli/audit/src/secrets.rs" ]]; then
+  ok
+else
+  bad "audit crate lost its family constants or policy modules (#18)"
+fi
+
+# #19 update planning API stays pinned: selector planning plus the
+# explicit confirmation/mutation markers (resolver backends open).
+if grep -q -F -e 'requires_confirmation' cli/update/src/lib.rs \
+  && grep -q -F -e 'is_mutating' cli/update/src/lib.rs; then
+  ok
+else
+  bad "update crate lost its confirmation/mutation planning API (#19)"
+fi
+
+# #22 depcheck verdict contract stays explicit: stale lockfiles fail
+# consistency while usage failures need category errors (fixtures open).
+if grep -q -F -e 'A stale lockfile must fail consistency' docs/quality/quality-testing.md \
+  && grep -q -F -e 'must fail the usage test with a category error' docs/quality/quality-testing.md; then
+  ok
+else
+  bad "quality-testing.md lost its depcheck verdict contract (#22)"
+fi
+
+# #15 generate command contract stays owned: contract registry plus
+# the CLI boundary around the Gazelle workflow (emission still open).
+if grep -q -F -e '## Generation Contracts' docs/cli/commands/generate.md \
+  && grep -q -F -e '## CLI Boundary' docs/cli/commands/generate.md; then
+  ok
+else
+  bad "generate doc lost its contracts/CLI-boundary record (#15)"
 fi
 
 # Matrix honesty across this group.
