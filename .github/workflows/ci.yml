@@ -265,6 +265,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:backlog_contracts
       - name: Audit GHCR hygiene (separate workflow, gated push, pinned base)
         run: bazel run --noshow_progress //tools/ci:ghcr_hygiene
+      - name: Audit publication guards (group triggers + gates + policy)
+        run: bazel run --noshow_progress //tools/ci:ghcr_publish_guards
       - name: Audit verification foundations (perf pins + corpus rule + lane A)
         run: bazel run --noshow_progress //tools/ci:verify_perf_corpus
       - name: Write job summary
