@@ -31,6 +31,7 @@ check_json() { # name python-expr
 
 check_json "synth files" "doc['seed_harness']['files']==200"
 check_json "synth dirty" "doc['seed_harness']['dirty_files']==20"
+check_json "synth dirty_pct" "doc['seed_harness']['dirty_pct']==10"
 check_json "synth seed" "doc['seed_harness']['seed']==86"
 check_json "rules_lint pin" "doc['rules_lint_pin']=='v2.8.0'"
 check_json "host" "doc['host']=='linux_x86_64'"
