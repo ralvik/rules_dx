@@ -10,8 +10,15 @@
 # ecosystem repos, so unused foundations contribute zero actions to that
 # consumer's build.
 #
-# Covered here (minimum per #85 plus Go + C# + Kotlin + Scala + F# follow-ups): Rust,
-# Python, JS/TS, Go, C#, Kotlin, Scala, F# (F# shares rules_dotnet with C#).
+# Covered here (minimum per #85 plus Go + C# + Kotlin + Scala + F# + C++/Java
+# follow-ups): Rust, Python, JS/TS, Go, C#, Kotlin, Scala, F# (F# shares
+# rules_dotnet with C#), plus C++ and Java negative-only isolation (none of
+# the seven tracked ecosystem repos leak into their action graphs; no positive
+# ownership marker is asserted -- rules_cc appears in Rust/C++/Kotlin action
+# graphs as base CC toolchain and rules_java appears in Java/Kotlin/Scala
+# action graphs as base JDK toolchain, so neither proves ownership here).
+# Adopt-polyglot stays out of scope by design (multi-foundation consumer,
+# zero-work proof does not apply).
 # Markers are
 # ecosystem-specific repo strings as they appear in aquery output
 # (rules_rust / aspect_rules_py / aspect_rules_js / rules_go /
@@ -64,6 +71,27 @@ check_example() { # example, want-marker, forbidden-markers...
   done
 }
 
+check_negative() { # example, forbidden-markers...
+  local example="$1"; shift
+  local actions
+  if ! actions="$(bazel aquery "//examples/$example/..." --noshow_progress 2>/dev/null)"; then
+    bad "$example: bazel aquery failed"
+    return
+  fi
+  if [[ -z "$actions" ]]; then
+    bad "$example: empty aquery output"
+    return
+  fi
+  local marker
+  for marker in "$@"; do
+    if [[ "$actions" == *"$marker"* ]]; then
+      bad "$example: forbidden marker [$marker] in aquery actions (unused foundation leaks)"
+    else
+      ok
+    fi
+  done
+}
+
 # Rust: owns rules_rust; Python/JS/Go/DotNet/Kotlin/Scala contribute no actions.
 check_example adopt-rust "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_go" "rules_dotnet" "rules_kotlin" "rules_scala"
 # Python: owns aspect_rules_py; Rust/JS/Go/DotNet/Kotlin/Scala contribute no actions.
@@ -80,6 +108,14 @@ check_example adopt-kotlin "rules_kotlin" "rules_rust" "aspect_rules_py" "aspect
 check_example adopt-scala "rules_scala" "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_go" "rules_dotnet" "rules_kotlin"
 # F#: owns rules_dotnet (shared with C#); Rust/Python/JS/Go/Kotlin/Scala contribute no actions.
 check_example adopt-fsharp "rules_dotnet" "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_go" "rules_kotlin" "rules_scala"
+# C++: negative-only isolation; none of the seven tracked ecosystem repos
+# contribute actions (no positive marker: rules_cc is base CC toolchain across
+# Rust/C++/Kotlin action graphs, so it proves no ownership here).
+check_negative adopt-cpp "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_go" "rules_dotnet" "rules_kotlin" "rules_scala"
+# Java: negative-only isolation; none of the seven tracked ecosystem repos
+# contribute actions (no positive marker: rules_java is base JDK toolchain
+# across Java/Kotlin/Scala action graphs).
+check_negative adopt-java "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_go" "rules_dotnet" "rules_kotlin" "rules_scala"
 
 echo "examples laziness aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
