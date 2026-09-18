@@ -285,6 +285,16 @@ sh_binary(
     srcs = ["wrapper_sources.sh"],
 )
 
+# Foundation-mapping guards (issues #7, #8; relates #6, #12): pins the
+# adapter boundaries, provider advertisement, fixture markers, and owner
+# links. Exact provider/import/lock/tool-graph proofs, composition
+# regions, and family taxonomy stay open. Run by CI via
+# `bazel run //tools/ci:foundation_maps`.
+sh_binary(
+    name = "foundation_maps",
+    srcs = ["foundation_maps.sh"],
+)
+
 # GHCR prebuilt-image hygiene (issue #184, seed slice): separate workflow
 # from releases, PR-paths build, dispatch + default-closed approve gate,
 # digest-pinned base + Bazel delegation + no ambient toolchains,
