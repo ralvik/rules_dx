@@ -1837,6 +1837,15 @@ mod tests {
         let mut duplicated = valid.clone();
         duplicated.replacements.push(valid.replacements[0].clone());
         assert!(validate(&duplicated).is_err());
+        let mut empty_path = valid.clone();
+        empty_path.replacements[0].path = String::new();
+        assert!(validate(&empty_path).is_err());
+        let mut absolute_path = valid.clone();
+        absolute_path.replacements[0].path = "/abs/src/lib.rs".to_owned();
+        assert!(validate(&absolute_path).is_err());
+        let mut non_utf8 = valid.clone();
+        non_utf8.replacements[0].edits[0].replacement = vec![0xFF, 0xFE];
+        assert!(validate(&non_utf8).is_err());
     }
 
     #[test]
