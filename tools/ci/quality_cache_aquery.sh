@@ -1,22 +1,29 @@
 #!/usr/bin/env bash
-# Quality cache aquery proof (issue #84, slices 1-2): per-adapter and
+# Quality cache aquery proof (issue #84, slices 1-3): per-adapter and
 # per-capability action-key isolation via `bazel aquery` over real
 # quality pipelines.
 #
 # The cache-correctness table in docs/quality/quality-testing.md requires,
 # for each check kind, that one direct source misses only owning pipelines
 # while unrelated files cause no miss, and that changing one tool
-# invalidates only affected capability actions. This harness proves the
-# aquery action-shape half for Python (ruff lint/format, pydoclint lint,
-# Ty typecheck) and Rust (clippy lint, rustfmt format): each pipeline's
-# declared Inputs mention its own source and tool and none of the other's,
-# lint vs format vs typecheck ActionKeys differ, and per-capability Inputs
-# contain only their owning tool (ruff change misses lint/format but not
-# typecheck; ty misses typecheck only; pydoclint misses lint only).
+# invalidates only affected capability actions plus that changing one
+# selected native config invalidates only its consuming capability
+# actions. This harness proves the aquery action-shape half for Python
+# (ruff lint/format, pydoclint lint, Ty typecheck), Rust (clippy lint,
+# rustfmt format + rustfmt.toml native-config isolation), and JavaScript
+# (biome lint/format + biome.json native-config isolation): each
+# pipeline's declared Inputs mention its own source and tool and none of
+# the other's, lint vs format vs typecheck ActionKeys differ,
+# per-capability Inputs contain only their owning tool (ruff change
+# misses lint/format but not typecheck; ty misses typecheck only;
+# pydoclint misses lint only), and native configs reach only consuming
+# capabilities (ruff.toml misses hinted Python lint/format only;
+# rustfmt.toml misses hinted Rust format only, never lint; biome.json
+# misses hinted JS lint/format only, never unhinted pipelines).
 #
 # Still open per #84 (recorded as gap, not claimed): full per-adapter
-# table (every adapter + transitive/config/tool-version rows),
-# pipeline invalidation (native config/stage-order/runner changes),
+# table (every adapter + transitive/tool-version rows),
+# pipeline invalidation (stage-order/runner changes),
 # formatter-set and class-membership rules, plus exec-log/remote-cache
 # proof distinguishing executed actions from cache hits (requires
 # controlled remote cache or separate machines per testing contract;
@@ -143,6 +150,54 @@ if [[ "$hinted_format_inputs" == *"ruff.toml"* ]]; then ok; else bad "hinted for
 if [[ "$hinted_typecheck_inputs" == *"ruff.toml"* ]]; then bad "hinted typecheck: forbidden [ruff.toml] (Ruff config must not invalidate Ty)"; else ok; fi
 if [[ "$python_lint_inputs" == *"ruff.toml"* ]]; then bad "unhinted lint: forbidden [ruff.toml] (unhinted uses default, shared change must not miss)"; else ok; fi
 if [[ "$python_typecheck_inputs" == *"ruff.toml"* ]]; then bad "unhinted typecheck: forbidden [ruff.toml]"; else ok; fi
+
+# Native-config isolation, Rust: hinted generated-shape format consumes
+# rustfmt.toml while hinted lint and unhinted format do not. Changing the
+# selected rustfmt config misses the consuming format pipeline only;
+# clippy lint is unaffected per the pipeline-invalidation row.
+rust_hinted_actions="$(bazel aquery '//quality/testdata:fixture_real_rust_generated_shape' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+if [[ -z "$rust_hinted_actions" ]]; then
+  bad "rust hinted: empty aquery output"
+else
+  ok
+fi
+rust_hinted_lint_inputs="$(printf '%s' "$rust_hinted_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"
+rust_hinted_format_inputs="$(printf '%s' "$rust_hinted_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' | head -1 || true)"
+if [[ "$rust_hinted_format_inputs" == *"rustfmt.toml"* ]]; then ok; else bad "rust hinted format: want [rustfmt.toml] (selected rustfmt config is an input)"; fi
+if [[ "$rust_hinted_lint_inputs" == *"rustfmt.toml"* ]]; then bad "rust hinted lint: forbidden [rustfmt.toml] (rustfmt config must not invalidate clippy lint)"; else ok; fi
+if [[ "$rust_format_inputs" == *"rustfmt.toml"* ]]; then bad "rust unhinted format: forbidden [rustfmt.toml] (default config, selected change must not miss)"; else ok; fi
+if [[ "$rust_lint_inputs" == *"rustfmt.toml"* ]]; then bad "rust unhinted lint: forbidden [rustfmt.toml]"; else ok; fi
+
+# Native-config isolation, JavaScript: hinted lint/format consume
+# biome.json while unhinted lint/format do not. Changing the selected
+# Biome config misses consuming lint/format together (single Biome tool
+# serves both capabilities) and nothing unhinted.
+js_hinted_actions="$(bazel aquery '//quality/testdata:fixture_real_javascript_hinted' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+if [[ -z "$js_hinted_actions" ]]; then
+  bad "js hinted: empty aquery output"
+else
+  ok
+fi
+js_actions="$(bazel aquery '//quality/testdata:fixture_real_javascript' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+if [[ -z "$js_actions" ]]; then
+  bad "js unhinted: empty aquery output"
+else
+  ok
+fi
+js_hinted_lint_inputs="$(printf '%s' "$js_hinted_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"
+js_hinted_format_inputs="$(printf '%s' "$js_hinted_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' | head -1 || true)"
+js_lint_inputs="$(printf '%s' "$js_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"
+js_format_inputs="$(printf '%s' "$js_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' | head -1 || true)"
+if [[ "$js_hinted_lint_inputs" == *"biome.json"* ]]; then ok; else bad "js hinted lint: want [biome.json] (selected Biome config is an input)"; fi
+if [[ "$js_hinted_format_inputs" == *"biome.json"* ]]; then ok; else bad "js hinted format: want [biome.json]"; fi
+if [[ "$js_lint_inputs" == *"biome.json"* ]]; then bad "js unhinted lint: forbidden [biome.json] (default config, selected change must not miss)"; else ok; fi
+if [[ "$js_format_inputs" == *"biome.json"* ]]; then bad "js unhinted format: forbidden [biome.json]"; else ok; fi
 
 echo "quality cache aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
