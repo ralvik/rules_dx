@@ -528,7 +528,11 @@ the tool's native configuration, passing and failing diagnostics, supported plat
 coverage, and applicable fix/format output. A generated parity manifest must fail CI
 when a required entry lacks its tests. Swift and SwiftFormat are excluded from v1 by user
 scope decision and are not parity requirements; see
-[Swift Feasibility](../tools/tool-baseline.md#swift-feasibility).
+[Swift Feasibility](../tools/tool-baseline.md#swift-feasibility). Quality adapters,
+the parity manifest, and packaging/provenance stay open under issue #307 (per-tool
+native-config plus pass/fail plus platform plus fix/format fixtures, manifest failing
+CI when missing, version/checksum regeneration policy, manifest self-entry, trust
+profiles, SPDX/SLSA/Cosign wire profile).
 
 Tool-update tests regenerate versions and checksums, reject missing platform
 artifacts, and run the affected adapter suite. Scheduled automation proposes changes

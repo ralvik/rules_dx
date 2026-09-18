@@ -38,6 +38,8 @@ Swift and SwiftFormat are excluded from v1 by
 This contract does not state that any integration is currently implemented, dogfooded,
 adapter-tested, or supported. A delivery class is accepted only after its required proof
 fixtures pass; a plausible design or an entry in the tool matrix is not implementation evidence.
+No adapter claims protobuf, qml, java, kotlin, scala, csharp, fsharp, powershell, ruby, or
+c/cpp yet; per-tool qualification stays open under issue #307.
 
 ## Bootstrap Maintenance And Promotion
 
