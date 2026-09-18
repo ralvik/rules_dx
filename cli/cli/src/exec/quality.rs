@@ -2095,4 +2095,88 @@ mod tests {
             "sorted default apply must launch Bazel exactly once, no rerun"
         );
     }
+
+    #[test]
+    fn default_apply_depends_on_bytes_not_git_status() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // mutation fixtures with tracked, modified, staged, and untracked
+        // inputs to depend on current bytes and source digests rather than
+        // Git status. The CLI reads verified source bytes only; git
+        // metadata never enters collection or mutation, so identical bytes
+        // under different simulated git states must apply identically with
+        // a single Bazel launch, while different bytes under one state must
+        // diverge (stale_source fails closed).
+        let statuses = ["tracked", "modified", "staged", "untracked"];
+        let mut digests = Vec::with_capacity(statuses.len());
+        for status in statuses {
+            let mut harness = Harness::new(&format!("git-status-{status}"));
+            harness.write_source("src/a.py", "x = 1\n");
+            // Simulated git state as out-of-band metadata the CLI must
+            // ignore: a .git marker plus a status-specific marker. Neither
+            // path is a quality change path, so verified reads and atomic
+            // mutation must be unaffected.
+            harness.write_source(".git/HEAD", "ref: refs/heads/main\n");
+            harness.write_source(&format!(".git/status-{status}"), status);
+            harness.results.insert(
+                "//test:corpus".to_owned(),
+                harness.valid_result(
+                    vec![Harness::diagnostic("unused", true)],
+                    vec![harness.replacement(b"y")],
+                ),
+            );
+            let (code, out, _) = harness.run(&["lint", "--output=json"]);
+            assert_eq!(code, 0, "{status}");
+            assert_eq!(
+                std::fs::read(harness.workspace.join("src/a.py")).expect("source"),
+                b"y = 1\n",
+                "{status}"
+            );
+            assert_eq!(
+                harness.seen_env.borrow().len(),
+                1,
+                "{status}: default apply must launch Bazel exactly once, no rerun"
+            );
+            // Git markers stay untouched; only the quality path mutates.
+            assert_eq!(
+                std::fs::read(harness.workspace.join(".git/HEAD")).expect("git head"),
+                b"ref: refs/heads/main\n",
+                "{status}"
+            );
+            assert_eq!(
+                std::fs::read(harness.workspace.join(format!(".git/status-{status}")))
+                    .expect("git status marker"),
+                status.as_bytes(),
+                "{status}"
+            );
+            let events = json_events(&out);
+            let change = events
+                .iter()
+                .find(|event| event["event"] == serde_json::json!("change"))
+                .expect("change event");
+            assert_eq!(change["path"], serde_json::json!("src/a.py"));
+            digests.push(change["source_digest"].clone());
+        }
+        for other in digests.iter().skip(1) {
+            assert_eq!(&digests[0], other);
+        }
+        // Bytes stay load-bearing under one git status: bytes changed after
+        // analysis fail closed as stale_source regardless of git markers.
+        let mut stale = Harness::new("git-status-stale");
+        stale.write_source("src/a.py", "x = 1\n");
+        stale.write_source(".git/HEAD", "ref: refs/heads/main\n");
+        stale.write_source(".git/status-staged", "staged");
+        let bytes = stale.valid_result(
+            vec![Harness::diagnostic("unused", true)],
+            vec![stale.replacement(b"y")],
+        );
+        stale.results.insert("//test:corpus".to_owned(), bytes);
+        stale.write_source("src/a.py", "z = 2\n");
+        let (code, _, err) = stale.run(&["lint", "--output=text"]);
+        assert_eq!(code, 1);
+        assert!(err.contains("Not applied: src/a.py (stale_source)"));
+        assert_eq!(
+            std::fs::read(stale.workspace.join("src/a.py")).expect("source"),
+            b"z = 2\n"
+        );
+    }
 }
