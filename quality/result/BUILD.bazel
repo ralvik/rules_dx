@@ -15,8 +15,12 @@ rust_library(
     ),
     crate_name = "quality_result",
     crate_root = "src/lib.rs",
+    edition = "2021",
     deps = crate_deps(
-        ["thiserror"],
+        [
+            "thiserror",
+            "tracing",
+        ],
         package_name = "quality/quality_result",
     ) + [
         "//cli/digest:dx_digest",
@@ -38,7 +42,10 @@ rust_test(
     ),
     crate = ":quality_result",
     deps = crate_deps(
-        ["thiserror"],
+        [
+            "thiserror",
+            "tracing",
+        ],
         package_name = "quality/quality_result",
     ) + ["@rules_rust_prost//private/3rdparty/crates:prost"],
 )
@@ -76,8 +83,15 @@ rust_binary(
     ),
     crate_name = "print_result",
     crate_root = "src/print.rs",
+    edition = "2021",
     deps = crate_deps(
-        ["thiserror", "tracing"],
+        [
+            "thiserror",
+            "tracing",
+        ],
         package_name = "quality/quality_result",
-    ) + [":quality_result", "//cli/output:dx_output"],
+    ) + [
+        ":quality_result",
+        "//cli/output:dx_output",
+    ],
 )

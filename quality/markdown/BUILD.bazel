@@ -15,6 +15,7 @@ rust_library(
     ),
     crate_name = "quality_markdown",
     crate_root = "src/lib.rs",
+    edition = "2021",
     deps = crate_deps(
         [
             "clap",
@@ -22,6 +23,7 @@ rust_library(
             "serde",
             "serde_json",
             "thiserror",
+            "tracing",
         ],
         package_name = "quality/quality_markdown",
     ),
@@ -36,6 +38,7 @@ rust_binary(
     ),
     crate_name = "quality_markdown",
     crate_root = "src/main.rs",
+    edition = "2021",
     deps = crate_deps(
         [
             "clap",
@@ -46,7 +49,10 @@ rust_binary(
             "tracing",
         ],
         package_name = "quality/quality_markdown",
-    ) + [":quality_markdown_lib", "//cli/output:dx_output"],
+    ) + [
+        ":quality_markdown_lib",
+        "//cli/output:dx_output",
+    ],
 )
 
 # Authoritative quality identities (M02 pattern): rustfmt and Clippy
@@ -94,6 +100,7 @@ rust_test(
             "serde",
             "serde_json",
             "thiserror",
+            "tracing",
         ],
         package_name = "quality/quality_markdown",
     ),

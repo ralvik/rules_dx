@@ -34,6 +34,12 @@ const (
 	// from @rules_rust//cargo), not a dx wrapper: the macro already owns
 	// the script-binary/runfiles split and stays self-describing.
 	scriptKind = "cargo_build_script"
+	// dxCrateKind is the leaf-crate boilerplate macro (issue #239): it
+	// expands to `<name>` rust_library + `<name>_test` rust_test + lint
+	// tests + manifest export + corpus. BUILD files hand-maintain it;
+	// generation must recognize it as covering the lib + unit-test it
+	// emits instead of proposing duplicate rust_library/rust_test rules.
+	dxCrateKind = "dx_rust_crate"
 )
 
 var rustKinds = map[string]rule.KindInfo{
@@ -274,7 +280,7 @@ func (l *rustLang) ApparentLoads(moduleToApparentName func(string) string) []rul
 
 func rustLoads(rulesRepo, cratesRepo, rulesRustRepo string) []rule.LoadInfo {
 	return []rule.LoadInfo{
-		{Name: "@" + rulesRepo + "//rust/rules:defs.bzl", Symbols: []string{binaryKind, libraryKind, testKind, procMacroKind, sharedKind, staticKind}},
+		{Name: "@" + rulesRepo + "//rust/rules:defs.bzl", Symbols: []string{binaryKind, libraryKind, testKind, procMacroKind, sharedKind, staticKind, dxCrateKind}},
 		{Name: "@" + rulesRustRepo + "//cargo:defs.bzl", Symbols: []string{scriptKind}},
 		{Name: "@" + cratesRepo + "//:crates.bzl", Symbols: []string{"aliases", "crate_deps"}},
 		nativeConfigLoads(rulesRepo),
@@ -286,6 +292,16 @@ func (*rustLang) Imports(_ *config.Config, r *rule.Rule, _ *rule.File) []resolve
 	// crates: first-party path dependencies resolve to either. Shared and
 	// static libraries cannot be depended on, and binaries (including
 	// emitted examples and benches) are never cross-package providers.
+	// The dx_rust_crate macro expands to an ordinary rust_library, so it
+	// provides the same import as the library it emits (crate_name attr
+	// or the macro name when omitted).
+	if r.Kind() == dxCrateKind {
+		crateName := r.AttrString("crate_name")
+		if crateName == "" {
+			crateName = r.Name()
+		}
+		return []resolve.ImportSpec{{Lang: languageName, Imp: crateName}}
+	}
 	if r.Kind() != libraryKind && r.Kind() != procMacroKind {
 		return nil
 	}
@@ -401,8 +417,11 @@ func (l *rustLang) generateRules(args language.GenerateArgs) language.GenerateRe
 // planned config rules join the generated set before claim validation,
 // Rust rules bind their aspect_hints, and planned removals join the
 // generic stale sweep. Claim collisions stay fail-closed with no partial
-// result.
+// result. Rules already covered by a hand-maintained dx_rust_crate macro
+// (leaf-crate lib + unit-test) are filtered before validation so the
+// macro stays the single owner and no duplicate target is proposed.
 func (l *rustLang) attachNative(args language.GenerateArgs, result language.GenerateResult, plan *nativePlan) language.GenerateResult {
+	result = filterDxCrateCovered(args.File, result)
 	for _, r := range result.Gen {
 		applyNativeHints(args.Rel, r, plan)
 	}
@@ -415,6 +434,72 @@ func (l *rustLang) attachNative(args language.GenerateArgs, result language.Gene
 	merged := mergeStale(args.File, result)
 	merged.Empty = append(merged.Empty, plan.empty...)
 	return merged
+}
+
+// dxCrateNames collects the macro names of hand-maintained dx_rust_crate
+// rules in a BUILD file. Nil files yield no names.
+func dxCrateNames(file *rule.File) map[string]bool {
+	names := make(map[string]bool)
+	if file == nil {
+		return names
+	}
+	for _, existing := range file.Rules {
+		if existing.Kind() == dxCrateKind {
+			names[existing.Name()] = true
+		}
+	}
+	return names
+}
+
+// filterDxCrateCovered drops generated rules already provided by a
+// hand-maintained dx_rust_crate macro in the same package: the ordinary
+// rust_library with the macro name and the unit-test wrapper
+// `<name>_test` via `crate = ":<name>"`. Integration tests (no crate
+// edge), binaries, build scripts, and flavored libraries (proc-macro,
+// cdylib, staticlib) are never covered: the macro only emits the
+// lib-only leaf pattern, so those stay generated and any true conflict
+// still fails closed in checkExistingClaims.
+func filterDxCrateCovered(file *rule.File, result language.GenerateResult) language.GenerateResult {
+	covered := dxCrateNames(file)
+	if len(covered) == 0 || len(result.Gen) == 0 {
+		return result
+	}
+	keptGen := result.Gen[:0]
+	keptImports := result.Imports[:0]
+	for i, r := range result.Gen {
+		if r.Kind() == libraryKind && covered[r.Name()] {
+			continue
+		}
+		if r.Kind() == testKind && r.Attr("crate") != nil {
+			if crate := r.AttrString("crate"); len(crate) > 1 && crate[0] == ':' {
+				if covered[crate[1:]] && r.Name() == crate[1:]+"_test" {
+					continue
+				}
+			}
+		}
+		keptGen = append(keptGen, r)
+		if i < len(result.Imports) {
+			keptImports = append(keptImports, result.Imports[i])
+		}
+	}
+	// When Gen is empty but Imports held only plan-independent entries,
+	// keep the slices consistent for the caller.
+	result.Gen = keptGen
+	if len(result.Gen) == 0 {
+		// Preserve any trailing imports only when they still align;
+		// filtered lib/test imports drop with their rules.
+		if len(keptImports) > len(keptGen) {
+			keptImports = keptImports[:len(keptGen)]
+		}
+		result.Imports = keptImports
+	} else {
+		// Imports parallel Gen for crate rules; truncation above already
+		// keeps alignment when every Gen entry had an import.
+		if len(result.Imports) != len(keptImports) {
+			result.Imports = keptImports
+		}
+	}
+	return result
 }
 
 func (l *rustLang) generateCargo(args language.GenerateArgs, files []string, plan *nativePlan) language.GenerateResult {
@@ -664,6 +749,15 @@ func checkExistingClaims(file *rule.File, other, generated []*rule.Rule) error {
 	}
 	for _, proposed := range generated {
 		if kind, ok := claims[proposed.Name()]; ok && kind != proposed.Kind() {
+			// A hand-maintained dx_rust_crate macro owns the ordinary
+			// rust_library it expands to (issue #239): the macro stays
+			// the single owner and generation filters the covered lib
+			// before this check, so an unfiltered residue must not fail
+			// the run. Flavored libraries (proc-macro/cdylib/staticlib)
+			// never match: the macro only emits ordinary rlibs.
+			if kind == dxCrateKind && proposed.Kind() == libraryKind {
+				continue
+			}
 			return fmt.Errorf("rust: target name %q is claimed by generated %s and existing %s", proposed.Name(), proposed.Kind(), kind)
 		}
 		claims[proposed.Name()] = proposed.Kind()

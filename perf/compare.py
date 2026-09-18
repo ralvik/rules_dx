@@ -19,14 +19,39 @@ Usage:
   python3 perf/compare.py --baseline perf/baseline.json /tmp/micro.jsonl
   python3 perf/compare.py --baseline perf/baseline.json --summary "$GITHUB_STEP_SUMMARY" results.jsonl
 
+Relative ``--baseline`` paths resolve against BUILD_WORKSPACE_DIRECTORY
+when set (``bazel run``), otherwise against the current directory.
+
 Output: human report on stdout; optional GitHub step-summary markdown via
 --summary. Exit 1 only on gated absolute-budget breach or unparsable input;
 never on relative regression (warn-only by design).
 """
 import argparse
 import json
+import os
+import pathlib
 import statistics
 import sys
+
+
+def resolve_baseline(path):
+    """Resolve ``--baseline`` against the real checkout.
+
+    Under ``bazel run`` the process starts in the target's runfiles
+    directory inside bazel-out (where a relative ``perf/baseline.json``
+    does not exist), so a relative baseline must resolve against
+    ``BUILD_WORKSPACE_DIRECTORY`` — the same convention as
+    ``perf/bench.sh`` and ``perf/regenerate.py``. Absolute paths pass
+    through unchanged; direct ``python3 perf/compare.py`` runs from the
+    checkout already, where the relative path resolves naturally.
+    """
+    candidate = pathlib.Path(path)
+    if candidate.is_absolute():
+        return candidate
+    workspace = os.environ.get("BUILD_WORKSPACE_DIRECTORY")
+    if workspace:
+        return pathlib.Path(workspace) / candidate
+    return candidate
 
 
 def load_baseline(path):
@@ -67,7 +92,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        baseline_doc = load_baseline(args.baseline)
+        baseline_doc = load_baseline(str(resolve_baseline(args.baseline)))
     except (OSError, json.JSONDecodeError) as exc:
         print(f"perf compare: cannot read baseline {args.baseline}: {exc}")
         return 2

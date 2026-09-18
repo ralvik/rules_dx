@@ -12,6 +12,6 @@ package(default_visibility = ["//visibility:public"])
 dx_rust_crate(
     name = "dx_proto_validate",
     package_name = "cli/dx_proto_validate",
-    deps = [],
     extra_deps = ["@rules_rust_prost//private/3rdparty/crates:prost"],
+    deps = [],
 )

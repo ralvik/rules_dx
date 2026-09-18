@@ -66,8 +66,11 @@ jobs:
         run: |
           # Warn-only regressions exit 0; only a gated absolute-budget
           # breach exits 1 and fails this step.
+          # Absolute baseline path: `bazel run` starts in runfiles, so a
+          # relative perf/baseline.json does not resolve (compare.py also
+          # resolves relative baselines against BUILD_WORKSPACE_DIRECTORY).
           set +e
-          bazel run --noshow_progress //perf:compare -- --baseline perf/baseline.json --summary "$GITHUB_STEP_SUMMARY" /tmp/perf_micro.jsonl | tee /tmp/perf_compare.txt
+          bazel run --noshow_progress //perf:compare -- --baseline "$GITHUB_WORKSPACE/perf/baseline.json" --summary "$GITHUB_STEP_SUMMARY" /tmp/perf_micro.jsonl | tee /tmp/perf_compare.txt
           rc=${PIPESTATUS[0]}
           echo "exit=$rc" >> "$GITHUB_OUTPUT"
           grep -q "WARNING" /tmp/perf_compare.txt && echo "warned=true" >> "$GITHUB_OUTPUT" || echo "warned=false" >> "$GITHUB_OUTPUT"
@@ -128,7 +131,7 @@ jobs:
           bazel shutdown
           bazel run --noshow_progress //perf:bench_cold >> /tmp/perf_scenario.jsonl
       - name: Compare against baseline
-        run: bazel run --noshow_progress //perf:compare -- --baseline perf/baseline.json --summary "$GITHUB_STEP_SUMMARY" /tmp/perf_scenario.jsonl
+        run: bazel run --noshow_progress //perf:compare -- --baseline "$GITHUB_WORKSPACE/perf/baseline.json" --summary "$GITHUB_STEP_SUMMARY" /tmp/perf_scenario.jsonl
       - name: Write job summary
         if: always()
         run: |

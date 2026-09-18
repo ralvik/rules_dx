@@ -1,5 +1,7 @@
 """Root package for the rules_dx seed."""
 
+load("@rules_dx//quality:native_config.bzl", "rustfmt_config")
+
 # First-party import mappings: every `# gazelle:resolve` here pins
 # one crate name the Rust sources reference to its authoritative Bazel target.
 # Root-level directives apply repo-wide (upstream walks parents), so generated
@@ -129,4 +131,10 @@ sh_test(
         "//cli/cli:dx",
     ],
     tags = ["no-coverage"],
+)
+
+rustfmt_config(
+    name = "rustfmt_config",
+    src = "rustfmt.toml",
+    visibility = ["//:__subpackages__"],
 )

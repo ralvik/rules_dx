@@ -13,9 +13,9 @@ package(default_visibility = [
 dx_rust_crate(
     name = "dx_process",
     package_name = "cli/dx_process",
+    extra_test_deps = ["//cli/test_scratch:dx_test_scratch"],
     deps = [
         "libc",
         "thiserror",
     ],
-    extra_test_deps = ["//cli/test_scratch:dx_test_scratch"],
 )
