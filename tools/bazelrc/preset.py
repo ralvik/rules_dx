@@ -1,20 +1,18 @@
 """Vendored Bazel execution preset generator (M05 WP4, O62).
 
-Source of truth for the repository `.bazelrc` execution policy. Renders two
-checked-in generated files (do not edit by hand):
+Source of truth for the repository `.bazelrc` execution policy. Renders one
+checked-in generated file (do not edit by hand):
 
-- `bazelrc-preset.bzl`: Starlark data (`PRESET_BAZEL_VERSION`, `PRESET_FLAGS`,
-  `EXTRA_PRESETS`, `BUILD_PROFILES`) pinned by `preset.update_test`.
 - `preset.bazelrc`: `.bazelrc` fragment imported by the root `.bazelrc`.
 
 Upstream flag recommendations enter only as reviewed inventory edits below;
 the generator never fetches. The preset is version-matched to the Bazel pin:
 `PRESET_BAZEL_VERSION` must equal `.bazelversion`, so a version bump without
-a reviewed regen fails `preset.update_test`. Regen command (writes files):
+a reviewed regen fails `preset.update_test`. Regen command (writes file):
 
     bazel run //tools/bazelrc:preset.update
 
-Verification command (rejects stale generated files and owned-line
+Verification command (rejects stale generated fragment and owned-line
 collisions with the root `.bazelrc`):
 
     bazel run //tools/bazelrc:preset.update -- --verify-only
@@ -105,45 +103,6 @@ def _source_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
 
-def _render_bzl():
-    lines = [
-        '"""Vendored Bazel execution preset (M05 WP4, O62) -- GENERATED, do not edit.',
-        "",
-        "Version-matched to Bazel %s (`.bazelversion`). Upstream-derived flags, "
-        "owned `extra_presets` groups, and owned `BUILD_PROFILES`, each "
-        "reviewed in `tools/bazelrc/preset.py`." % PRESET_BAZEL_VERSION,
-        "Regenerate:",
-        "",
-        "    bazel run //tools/bazelrc:preset.update",
-        '"""',
-        "",
-        'PRESET_BAZEL_VERSION = "%s"' % PRESET_BAZEL_VERSION,
-        "",
-        "PRESET_FLAGS = [",
-    ]
-    lines += ['    "%s",' % line for line, _review in UPSTREAM_FLAGS]
-    lines += [
-        "]",
-        "",
-        "EXTRA_PRESETS = {",
-    ]
-    for group in sorted(EXTRA_PRESETS):
-        lines += ['    "%s": [' % group]
-        lines += ['        "%s",' % line for line, _review in EXTRA_PRESETS[group]]
-        lines += ["    ],"]
-    lines += [
-        "}",
-        "",
-        "BUILD_PROFILES = [",
-    ]
-    lines += ['    "%s",' % line for line, _review in BUILD_PROFILES]
-    lines += [
-        "]",
-        "",
-    ]
-    return "\n".join(lines)
-
-
 def _render_fragment():
     lines = [
         "# Vendored Bazel execution preset -- GENERATED, do not edit.",
@@ -164,7 +123,6 @@ def _render_fragment():
 
 def _rendered_files(source_dir):
     return {
-        os.path.join(source_dir, "bazelrc-preset.bzl"): _render_bzl(),
         os.path.join(source_dir, "preset.bazelrc"): _render_fragment(),
     }
 
