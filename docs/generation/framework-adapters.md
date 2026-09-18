@@ -53,3 +53,78 @@ generation does not scan prose or code-like text heuristically.
 Shared adapter mechanics may be extracted only after concrete adapters prove reuse. Mixed-framework
 ownership and cross-framework imports must retain deterministic single ownership, with no eager work
 for an unused adapter and no generic fallback.
+
+## Framework Mapping Qualification
+
+Accepted. Each adapter keeps its provisional upstream; no switch is approved here.
+
+Vue, Svelte, Astro, and MDX are qualified by focused end-to-end fixtures:
+thin wrappers in `<fw>/rules/defs.bzl` preserving the upstream `JsInfo` provider and
+adding `QualitySourcesInfo`, Gazelle extensions in `gazelle/<fw>/` with
+parser/naming/lang fixtures plus focused tests and `testdata` generation goldens,
+hello builds in `<fw>/hello/` as wrapper consumers with upstream parser/compiler
+tests, provider-derived environment plans in `<fw>/env/`, and mixed-framework
+composition in `examples/mixed/hello/` plus `gazelle/mixed/`.
+
+Upstream parser/compiler: `vue_library` over `aspect_rules_js 3.4.1` with the Vue
+3.5.42 runtime and `@vue/compiler-sfc 3.5.42`; `svelte_library` over the same
+ruleset with the Svelte 5.57.0 runtime/compiler; `astro_library` over the same
+ruleset with the standalone `@astrojs/compiler 4.0.0` Go+WASM compiler;
+`mdx_library` over the same ruleset with `@mdx-js/mdx 3.1.1`. Pins live in
+`package.json`, `pnpm-lock.yaml`, and `MODULE.bazel`
+(`aspect_rules_js 3.4.1`, `aspect_rules_jest 0.26.0`).
+
+Provider: each wrapper creates one private `<name>_upstream` `js_library` plus
+one public forwarding rule preserving `JsInfo`, `DefaultInfo`, and
+`InstrumentedFilesInfo` unchanged and adding only
+`QualitySourcesInfo(direct_sources = {<fw>: <direct container>})`. Only
+`js_library` and `JsInfo` are used upstream; execution and tests reuse the
+JavaScript binary/test wrappers over parsed or compiled outputs, with no
+separate `<fw>_binary` or `<fw>_test` wrapper.
+
+Target and generated-region mappings: each Gazelle extension discovers only its
+own container (`SupportedExts`: `.vue`, `.svelte`, `.astro`, `.mdx`), generates
+one ordinary reusable one-source `<fw>_library` with deterministic
+basename-derived names, and leaves core JS/TS sources and other containers
+inert. Each container keeps one physical owner; virtual script, template,
+frontmatter, client, style, prose, and expression regions never become
+independent physical sources or core JS/TS targets. Generation never compiles
+a container and never regex-extracts code.
+
+Dependency: each parser extracts only its executable region (`<script>` for
+Vue/Svelte, frontmatter plus client script for Astro, ESM import/export for
+MDX) with a narrow block scanner; template, style, prose, fenced code, comments,
+strings, template-literal specifiers, and computed imports stay inert. Relative
+references normalize to basename without extension, bare specifiers stay
+literal, and Node builtins filter via `IsStdLib`. `testdata` goldens prove
+grouping, local `deps`, merge, and stale cleanup.
+
+Test: each `<fw>/hello/` proves its regions through `javascript_test` over
+`Hello.test.js` with `data` on the container, the shared `helper_lib`, and the
+upstream compiler package. Vue asserts `parse` template/script/style regions
+plus the helper edge; Svelte asserts modern `parse` fragment/instance/css plus
+the helper edge; Astro asserts sync `parse` frontmatter/element regions with
+no diagnostics; MDX asserts `compile` yields exactly the one first-party edge
+with fenced-code imports excluded.
+
+Environment/IDE: each `<fw>/env/plan.bzl` contributes a provider-derived
+focused-target plan reading the preserved `JsInfo` transitive sources plus
+`QualitySourcesInfo` direct sources, pinned by `<fw>/env/plan_tests.bzl` and
+exercised by `<fw>/env:hello_lib_plan` over `//<fw>/hello:hello_lib`.
+Binaries and tests share the same closure through `data`/runfiles;
+repository/root/exact-target orchestration remains M25.
+
+Quality-region: `vue`, `svelte`, `astro`, and `mdx` are frozen semantic
+file classes in `quality/sources.bzl`, each owning its own policy family in
+`quality/adapters.bzl` on classification-only terms: the container stays one
+physical owner with virtual regions handed to execution-time integrations,
+and no lint/format/typecheck adapter claims any framework class yet.
+
+Composition: `examples/mixed/hello/` keeps one wrapper per container plus the
+shared core `helper_lib`, with `hello_test` proving the shared helper edge,
+per-container helper references, and no framework-to-framework imports.
+`gazelle/mixed/` proves the partition is disjoint and complete for the closed
+v1 set with case-sensitive extension matching, no fallback, and no eager work
+for unused adapters.
+
+Pinned by `bazel run //tools/ci:foundation_maps`.
