@@ -1831,6 +1831,12 @@ mod tests {
         assert!(validate(&empty_digest).is_err());
         let empty_edits = mk(vec![]);
         assert!(validate(&empty_edits).is_err());
+        let mut unstable = valid.clone();
+        unstable.convergence = Convergence::Oscillation as i32;
+        assert!(validate(&unstable).is_err());
+        let mut duplicated = valid.clone();
+        duplicated.replacements.push(valid.replacements[0].clone());
+        assert!(validate(&duplicated).is_err());
     }
 
     #[test]
