@@ -45,11 +45,12 @@ bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
 # `pipx install`, `go get`, `dotnet tool restore`, `poetry install`,
 # `poetry add`, `pipenv install`, `bun install`, `Install-Script`,
 # `pip3 install`, `uv tool install`, `npm add`, `bun add`, `bundle add`,
-# `Install-Package`) are
+# `Install-Package`, `pipenv sync`, `poetry sync`, `uv sync`,
+# `uv pip sync`, `dotnet tool update`, `Install-PSResource`) are
 # covered as the contract's "or equivalent installer" clause per issue
 # #85 and the laziness matrix (pip, uv, npm, pnpm, Cargo, Maven, NuGet,
 # Bundler, PowerShell Gallery).
-hits="$(grep -rn -F -e 'pip install' -e 'npm install' -e 'cargo install' -e 'dotnet tool install' -e 'pnpm install' -e 'pnpm add' -e 'uv pip install' -e 'go install' -e 'dotnet add' -e 'bundle install' -e 'nuget install' -e 'Install-Module' -e 'mvn install' -e 'uv add' -e 'cargo add' -e 'gem install' -e 'dotnet restore' -e 'nuget restore' -e 'npm ci' -e 'yarn install' -e 'yarn add' -e 'pipx install' -e 'go get' -e 'dotnet tool restore' -e 'poetry install' -e 'poetry add' -e 'pipenv install' -e 'bun install' -e 'Install-Script' -e 'pip3 install' -e 'uv tool install' -e 'npm add' -e 'bun add' -e 'bundle add' -e 'Install-Package' --include='*.bzl' --include='*.py' --include='*.rs' --include='*.sh' --include='*.js' --include='*.ts' quality/ tools/ rust/ python/ javascript/ typescript/ go/ java/ kotlin/ scala/ csharp/ fsharp/ cc/ dx/ cli/ 2>/dev/null | grep -v -F -e 'tools/ci/examples_laziness.sh' | grep -v -F -e 'tools/ci/ghcr_hygiene.sh' || true)"
+hits="$(grep -rn -F -e 'pip install' -e 'npm install' -e 'cargo install' -e 'dotnet tool install' -e 'pnpm install' -e 'pnpm add' -e 'uv pip install' -e 'go install' -e 'dotnet add' -e 'bundle install' -e 'nuget install' -e 'Install-Module' -e 'mvn install' -e 'uv add' -e 'cargo add' -e 'gem install' -e 'dotnet restore' -e 'nuget restore' -e 'npm ci' -e 'yarn install' -e 'yarn add' -e 'pipx install' -e 'go get' -e 'dotnet tool restore' -e 'poetry install' -e 'poetry add' -e 'pipenv install' -e 'bun install' -e 'Install-Script' -e 'pip3 install' -e 'uv tool install' -e 'npm add' -e 'bun add' -e 'bundle add' -e 'Install-Package' -e 'pipenv sync' -e 'poetry sync' -e 'uv sync' -e 'uv pip sync' -e 'dotnet tool update' -e 'Install-PSResource' --include='*.bzl' --include='*.py' --include='*.rs' --include='*.sh' --include='*.js' --include='*.ts' quality/ tools/ rust/ python/ javascript/ typescript/ go/ java/ kotlin/ scala/ csharp/ fsharp/ cc/ dx/ cli/ 2>/dev/null | grep -v -F -e 'tools/ci/examples_laziness.sh' | grep -v -F -e 'tools/ci/ghcr_hygiene.sh' || true)"
 if [[ -z "$hits" ]]; then
   ok
 else
