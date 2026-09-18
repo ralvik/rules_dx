@@ -181,13 +181,12 @@ unused-Bazel-dependency test duplicating that responsibility. Normal `# keep` an
 protections remain; this does not authorize pruning user-owned edges. Existing generation conformance
 tests remain required.
 
-The two-test requirement and explained usage exceptions are accepted, but ecosystem-specific
-lock/usage scopes, non-import recognition, native exception/reason-validation mappings, and exact
-public test/capability API are tracked in
-open work. Qualify each supported language's mapping and focused
-failing/passing consumer fixtures before implementation. Existing strict generation alone is not
-proof of lockfile consistency or declared-dependency usage. This is dependency hygiene, not an
-expansion of `dx audit`.
+The two-test requirement and explained usage exceptions are accepted, with required-core
+(Rust, Python, JavaScript, TypeScript) lock/usage scopes, non-import recognition, native
+exception/reason-validation mappings, and focused failing/passing fixtures qualified in
+`tools/depcheck/` (issue #22). Admitted-foundation mappings stay open under issue #304.
+Existing strict generation alone is not proof of lockfile consistency or declared-dependency
+usage. This is dependency hygiene, not an expansion of `dx audit`.
 
 ## Automatic Workflows
 

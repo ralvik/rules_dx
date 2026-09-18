@@ -6,8 +6,9 @@
 # (family selection, selector planning, aggregate exit-code mapping from
 # #241; `--dry-run` exits 0). No auditor wiring, advisory acquisition,
 # SARIF/SPDX mapping, resolver backends, or per-set reporting is claimed.
-# No lockfile-consistency or usage checker exists (contract accepted but
-# unexecuted; fixtures per language stay open under #22).
+# Required-core lockfile-consistency and usage checks are delivered in
+# tools/depcheck/ (issue #22); admitted expansion stays open under
+# #304/#306.
 #
 # This harness machine-checks the fail-closed half verifiable on a clean
 # tree today: deferred codes, exit-code mappings, dry-run
@@ -73,18 +74,23 @@ else
   bad "update report lost its overall_failure exit-code mapping"
 fi
 
-# #22: depcheck contract harness stays green (truth table + open routes).
+# #22: depcheck contract harness stays green (truth table + delivered routes).
 if [[ -f "tools/ci/depcheck_contract.sh" ]]; then
   ok
 else
   bad "depcheck contract harness missing"
 fi
 
-# #22: no checker implementation falsely claimed in code.
-if [[ -z "$(grep -rn -E -e 'fn check_lockfile|fn check_declared_usage|lockfile_consistency|declared_usage_check' --include='*.rs' cli/ quality/ tools/ 2>/dev/null || true)" ]]; then
+# #22: required-core checker is implemented with fixtures (no false claim).
+if [[ -f "tools/depcheck/depcheck.py" ]] \
+  && [[ -f "tools/depcheck/BUILD.bazel" ]] \
+  && [[ -d "tools/depcheck/testdata/rust/ok_used" ]] \
+  && [[ -d "tools/depcheck/testdata/python/ok_used" ]] \
+  && [[ -d "tools/depcheck/testdata/js/ok_used" ]] \
+  && [[ -d "tools/depcheck/testdata/ts/ok_used" ]]; then
   ok
 else
-  bad "checker-shaped symbols appeared without fixtures"
+  bad "depcheck implementation or fixtures missing for #22"
 fi
 
 echo "audit update guards harness: $pass passed, $fail failed"

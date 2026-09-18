@@ -6,11 +6,12 @@
 # (Planned -> Seed-host-delivered -> Platform-qualified -> Supported).
 # Seed-host evidence is delivered (corpus dogfood, Layer-2 matrix for the
 # seed languages, generation freshness, adopt-* external-consumer proof,
-# CLI-contract E2E, perf report-not-gate); depcheck fixtures, audit/update
-# live execution, docs-pipeline, env/codegen, per-cell coverage beyond the
-# seed cell, Codecov wiring, remote-cache/exec, and release evidence
-# (SBOM/provenance, signing/attestations, BCR submission, GHCR route,
-# consumer verification) remain open gaps tracked in their owning issues.
+# CLI-contract E2E, required-core depcheck fixtures, perf report-not-gate);
+# audit/update live execution, docs-pipeline, env/codegen, per-cell coverage
+# beyond the seed cell, Codecov wiring, remote-cache/exec, admitted depcheck
+# expansion, and release evidence (SBOM/provenance, signing/attestations,
+# BCR submission, GHCR route, consumer verification) remain open gaps
+# tracked in their owning issues.
 # This harness machine-checks the gate statically on a clean tree:
 # no Supported status cell exists in either matrix, every Delivered claim
 # has a backing harness/workspace, and no Open gap is falsely claimed as
@@ -145,12 +146,13 @@ else
   bad "perf Tracked lost its comparator or v2.8.0 fairness pin"
 fi
 
-# Depcheck Open: contract exists, no checker implementation falsely claimed.
+# Depcheck Delivered for required core: contract plus fixtures plus targets.
 if [[ -f "tools/ci/depcheck_contract.sh" ]] \
-  && [[ -z "$(grep -rn -E -e 'fn check_lockfile|fn check_declared_usage' --include='*.rs' cli/ quality/ 2>/dev/null || true)" ]]; then
+  && [[ -f "tools/depcheck/depcheck.py" ]] \
+  && [[ -f "tools/depcheck/BUILD.bazel" ]]; then
   ok
 else
-  bad "depcheck Open lost its contract or gained an unqualified checker impl"
+  bad "depcheck Delivered lost its contract, checker, or targets"
 fi
 
 # Audit/update Planning only: fail-closed deferred codes + planning paths.

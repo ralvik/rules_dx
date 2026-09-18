@@ -1,0 +1,8 @@
+[project]
+name = "hello"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = ["pytest>=7"]
+
+[dependency-groups]
+dev = ["test-helper==1.0.0"]

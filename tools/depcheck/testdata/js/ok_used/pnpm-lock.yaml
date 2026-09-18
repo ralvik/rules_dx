@@ -1,0 +1,17 @@
+# Fixture pnpm lock (hermetic, minimal): jest 30.2.0 satisfies
+# "30.2.0" even though newer 30.3.0 exists in the registry. The checker
+# never queries the registry, so this passes consistency offline.
+lockfileVersion: '9.0'
+
+importers:
+  .:
+    dependencies:
+      jest:
+        specifier: 30.2.0
+        version: 30.2.0
+
+packages:
+  'jest@30.2.0':
+    resolution: {integrity: sha512-fixture-ok-used-jest}
+  'transitive-dep@1.0.0':
+    resolution: {integrity: sha512-fixture-transitive}

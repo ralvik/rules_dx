@@ -1,0 +1,21 @@
+# Fixture lock (hermetic): pytest 8.0.0 satisfies ">=7" even though
+# newer 8.3.0 exists in the registry. The checker never queries the
+# registry, so this passes consistency offline.
+version = 1
+revision = 3
+requires-python = ">=3.12"
+
+[[package]]
+name = "pytest"
+version = "8.0.0"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "coverage"
+version = "7.16.0"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "iniconfig"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }

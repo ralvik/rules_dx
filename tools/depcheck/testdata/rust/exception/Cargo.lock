@@ -1,0 +1,20 @@
+# build-plugin is used only by build.rs code generation (no `use`
+# in normal sources). It passes usage only through the explained
+# exception; the exception never waives consistency.
+version = 4
+
+[[package]]
+name = "hello"
+version = "0.0.0"
+
+[[package]]
+name = "anyhow"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fixture-exc-anyhow"
+
+[[package]]
+name = "build-plugin"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fixture-exc-plugin"

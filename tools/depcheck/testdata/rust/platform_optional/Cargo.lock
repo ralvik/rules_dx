@@ -1,0 +1,27 @@
+# Platform/optional lock: win-only and optional-feat are locked for
+# all configs. Checked on Linux, both pass when used in their
+# supported config without exceptions; an unused optional still fails
+# (covered by the usage test asserting only these two pass).
+version = 4
+
+[[package]]
+name = "hello"
+version = "0.0.0"
+
+[[package]]
+name = "anyhow"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fixture-plat-anyhow"
+
+[[package]]
+name = "win-only"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fixture-plat-win"
+
+[[package]]
+name = "optional-feat"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fixture-plat-opt"

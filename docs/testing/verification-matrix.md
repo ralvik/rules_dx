@@ -37,9 +37,9 @@ standard dogfood gates.
   measured numbers, comparison against the frozen `aspect_rules_lint`
   v2.8.0 baseline as a report (not a gate)
   (open work).
-- **Dependency checks**: per-language lockfile-consistency and
-  declared-dependency usage fixtures (contract accepted, fixtures open)
-  (open work).
+- **Dependency checks**: required-core lockfile-consistency and
+  declared-dependency usage fixtures delivered in `tools/depcheck/`
+  (issue #22); admitted foundations stay open under issue #304.
 - **Audit/update live execution**: auditor wiring, advisory acquisition,
   SARIF/SPDX mapping, resolver backends, per-set reporting
   (open work,
@@ -59,10 +59,10 @@ execution deferred. `Tracked` means measured report-only tracking with no gate.
 
 | Language | Corpus dogfood | Layer-2 matrix | Generation | Examples | E2E | Perf | Depcheck | Audit/update | Docs | Env/codegen |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Rust | Delivered | Delivered | Delivered | Delivered (`adopt-rust`) | Delivered (contract) | Tracked | Open | Planning only | Open | Open |
-| Python | Delivered | Delivered | Delivered | Delivered (`adopt-python`) | Delivered (contract) | Tracked | Open | Planning only | Open | Open |
-| JavaScript | Delivered | Delivered | Delivered | Delivered (`adopt-js-ts`) | Delivered (contract) | Tracked | Open | Planning only | Open | Open |
-| TypeScript | Delivered | Delivered | Delivered | Delivered (`adopt-js-ts`) | Delivered (contract) | Tracked | Open | Planning only | Open | Open |
+| Rust | Delivered | Delivered | Delivered | Delivered (`adopt-rust`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Planning only | Open | Open |
+| Python | Delivered | Delivered | Delivered | Delivered (`adopt-python`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Planning only | Open | Open |
+| JavaScript | Delivered | Delivered | Delivered | Delivered (`adopt-js-ts`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Planning only | Open | Open |
+| TypeScript | Delivered | Delivered | Delivered | Delivered (`adopt-js-ts`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Planning only | Open | Open |
 | Go | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-go`) | Delivered (contract) | Tracked | Open | Planning only | Open | Open |
 | Java | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-java`) | Delivered (contract) | Tracked | Open | Planning only | Open | Open |
 | Kotlin | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-kotlin`) | Delivered (contract) | Tracked | Open | Planning only | Open | Open |

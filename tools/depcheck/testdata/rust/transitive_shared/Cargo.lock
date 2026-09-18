@@ -1,0 +1,29 @@
+# Shared-workspace lock: root plus two path members share one lock.
+# Transitive memchr appears only in the lock (via anyhow), never as a
+# direct declaration, and must not trigger a usage finding. Usage in
+# crates/b counts for the workspace scope (no target-local false
+# positives).
+version = 4
+
+[[package]]
+name = "a"
+version = "0.0.0"
+
+[[package]]
+name = "b"
+version = "0.0.0"
+
+[[package]]
+name = "anyhow"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fixture-shared-anyhow"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
+name = "memchr"
+version = "2.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fixture-shared-memchr"

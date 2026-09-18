@@ -1,0 +1,14 @@
+# Fixture stale lock: manifest requires anyhow "1" but lock pins
+# 0.9.0. Every declaration is used in sources, yet consistency must
+# fail. Proves stale fails even when used.
+version = 4
+
+[[package]]
+name = "hello"
+version = "0.0.0"
+
+[[package]]
+name = "anyhow"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fixture-stale-anyhow-0.9.0"
