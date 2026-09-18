@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Distribution/closeout guards (issues #5, #26, #78, #184, #54).
+# Distribution/closeout guards (issues #5, #26, #78, #184, #54, #298, #299, #317, #318, #319, #320, #323).
 #
 # No release has been cut: no tags, GitHub releases, registry
 # submissions, or publication outputs without explicit owner approval.
@@ -8,9 +8,13 @@
 # (#184, separate workflow) stay owner-gated with SECURITY reporting as
 # the release precondition. Stage 5 close-out (#54) runs the full
 # battery on a clean tree with docs matching as-built behavior.
+# Platform qualification (#298), shell portability (#299), generated
+# launchers (#317), host-tool hermeticity (#318), runfiles consolidation
+# (#319), platform cfg policy (#320), and shell dedup/portability (#323)
+# stay open with honest contract records.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (44 checks): hygiene policy, exact 0.0.0 module pin + consumer
+# today (51 checks): hygiene policy, exact 0.0.0 module pin + consumer
 # pin + reviewed-commit workflow pin + unqualified-matrix record,
 # distribution doc ownership + Bazel-first + standalone-install +
 # publisher-identity records + BCR + GitHub Releases destinations +
@@ -408,6 +412,63 @@ if ! grep -rn -F -e 'tags:' .github/workflows/publish-dry-run.yml 2>/dev/null | 
   ok
 else
   bad "a tag trigger appeared in publish/ghcr workflows without owner approval"
+fi
+
+# #298 platform qualification stays seed-only honest.
+if grep -q -F -e 'issue #298' docs/product/support-matrix.md \
+  && grep -q -F -e 'only the Linux x86_64 seed host' docs/product/support-matrix.md; then
+  ok
+else
+  bad "support-matrix lost its #298 platform-qualification tracker record"
+fi
+
+# #299 shell portability contract stays bash-only honest.
+if grep -q -F -e 'issue #299' docs/testing/tools.md \
+  && grep -q -F -e 'bash-only on the Linux seed host' docs/testing/tools.md; then
+  ok
+else
+  bad "tools matrix lost its #299 shell-portability tracker record"
+fi
+
+# #320 platform cfg policy stays fail-fast-or-portable open.
+if grep -q -F -e 'issue #320' docs/testing/tools.md \
+  && grep -q -F -e 'decide fail-fast or portable route per' docs/testing/tools.md; then
+  ok
+else
+  bad "tools matrix lost its #320 cfg-policy tracker record"
+fi
+
+# #323 shell dedup/portability stays shared-lib open.
+if grep -q -F -e 'issue #323' docs/testing/tools.md \
+  && grep -q -F -e 'shared lib.sh, shellcheck' docs/testing/tools.md; then
+  ok
+else
+  bad "tools matrix lost its #323 shell-dedup tracker record"
+fi
+
+# #319 runfiles/workspace-root consolidation stays open.
+if grep -q -F -e 'issue #319' docs/testing/tools.md \
+  && grep -q -F -e 'one shared' docs/testing/tools.md \
+  && grep -q -F -e 'workspace_root plus rlocation' docs/testing/tools.md; then
+  ok
+else
+  bad "tools matrix lost its #319 runfiles-consolidation tracker record"
+fi
+
+# #318 host-tool hermeticity stays toolchain-or-contract open.
+if grep -q -F -e 'issue #318' docs/testing/tools.md \
+  && grep -q -F -e 'toolchain-provided' docs/testing/tools.md; then
+  ok
+else
+  bad "tools matrix lost its #318 host-tool tracker record"
+fi
+
+# #317 generated launchers stay sh_binary-plus-runfiles open.
+if grep -q -F -e 'issue #317' docs/testing/tools.md \
+  && grep -q -F -e 'sh_binary plus location expansion plus runfiles' docs/testing/tools.md; then
+  ok
+else
+  bad "tools matrix lost its #317 launcher tracker record"
 fi
 
 echo "distribution closeout guards harness: $pass passed, $fail failed"
