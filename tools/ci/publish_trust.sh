@@ -17,17 +17,19 @@
 # exists.
 #
 # This harness machine-checks the static half verifiable on a clean
-# tree today (10 checks): module name + unpublishable version, no BCR
+# tree today (12 checks): module name + unpublishable version, no BCR
 # submission tooling in workflows, no `draft = False` site, both
 # validators wired to `fail()` in the macro, default placeholder tag
 # at every site, draft-only flags on the real `gh release create`
 # path, no unflagged executable release-create lines, the tag charset
-# gate, and the SECURITY.md no-release record. Signing/attestation
-# (Sigstore keyless + GitHub attestations on the #26 trust root),
-# SBOM/provenance generation, BCR dry-run submission, the release
-# matrix beyond the seed host, and install-time publisher-identity
-# verification stay unimplemented per #26/#78/#5 and are recorded as
-# gaps, not claimed here.
+# gate, the SECURITY.md no-release record, plus install-time
+# publisher-identity verification (#26 implemented via
+# //deploy/install:dx_verify: bundle-required, no checksum-only
+# fallback, TUF trust root, fail-before-install). Signing/attestation
+# generation (Sigstore keyless + GitHub attestations on the #26 trust
+# root), SBOM/provenance generation, BCR dry-run submission, and the
+# release matrix beyond the seed host stay unimplemented per #26/#78/#5
+# and are recorded as gaps, not claimed here.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:publish_trust`,
 # following //tools/ci:release_hygiene.
@@ -124,6 +126,25 @@ if grep -q -F -e 'No release exists yet' SECURITY.md; then
   ok
 else
   bad "SECURITY.md lost the no-release-exists record"
+fi
+
+# Install-time publisher-identity verification is implemented per #26:
+# the verifier requires a bundle plus identity/issuer, refuses
+# checksum-only, and fails before install/exec on the #26 trust root.
+if [[ -f "deploy/install/dx_verify.sh" ]] \
+  && grep -q -F -e 'checksum-only verification is not publisher-identity proof' deploy/install/dx_verify.sh \
+  && grep -q -F -e 'tuf-repo-cdn.sigstore.dev' deploy/install/dx_verify.sh; then
+  ok
+else
+  bad "install verifier missing bundle-required / trust-root record (#26)"
+fi
+
+# Seed-host standalone packaging stays wired; the wider matrix stays
+# unqualified per #5 (no platform claimed qualified beyond the seed).
+if grep -q -F -e 'dx_standalone' cli/cli/BUILD.bazel; then
+  ok
+else
+  bad "seed-host standalone archive missing (//cli/cli:dx_standalone, #26)"
 fi
 
 echo "publish trust audit: $pass passed, $fail failed"

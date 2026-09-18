@@ -10,7 +10,7 @@
 # battery on a clean tree.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (31 checks): hygiene policy, exact 0.0.0 module pin + consumer
+# today (35 checks): hygiene policy, exact 0.0.0 module pin + consumer
 # pin + reviewed-commit workflow pin + unqualified-matrix record,
 # workflow separation + triggers + default-closed approve gates +
 # never-publishes + dry-run report + clean-checkout record,
@@ -19,8 +19,10 @@
 # Bazelisk delegation + cosign deferral + admissibility gate +
 # never-latest gate, scaffold state, self-call consumer smoke, security
 # precondition, gitignored outputs, E2E driver/format slices +
-# E2E-case convention, and no-publish invariants. Matrix/SBOM/BCR/install
-# verification and the full green battery stay open under their issues.
+# E2E-case convention, install-time publisher-identity verification
+# (#26 implemented via //deploy/install:dx_verify + //cli/cli:dx_standalone),
+# and no-publish invariants. Matrix/SBOM generation/BCR submission and
+# the full green battery stay open under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:distribution_closeout_guards`,
 # following //tools/ci:ghcr_publish_guards.
@@ -277,6 +279,40 @@ if grep -q -F -e 'scaffold update' .github/workflows/ghcr.yml; then
   ok
 else
   bad "GHCR workflow lost its scaffold-update record (#184)"
+fi
+
+# #26 install-time publisher-identity verification stays owned: the
+# verifier requires a Sigstore bundle plus identity/issuer, refuses
+# checksum-only, reports the TUF trust root, and fails before
+# install/exec; seed-host standalone packaging stays wired.
+if [[ -f "deploy/install/dx_verify.sh" ]] \
+  && grep -q -F -e 'checksum-only verification is not publisher-identity proof' deploy/install/dx_verify.sh \
+  && grep -q -F -e 'tuf-repo-cdn.sigstore.dev' deploy/install/dx_verify.sh \
+  && grep -q -F -e 'cosign verify-blob' deploy/install/dx_verify.sh; then
+  ok
+else
+  bad "install verifier lost its bundle-required / no-checksum-fallback / trust-root record (#26)"
+fi
+
+if grep -q -F -e 'never executed' deploy/install/dx_verify.sh \
+  && grep -q -F -e 'before any install' deploy/install/dx_verify.sh; then
+  ok
+else
+  bad "install verifier lost its fail-before-install/exec record (#26)"
+fi
+
+if grep -q -F -e 'dx_standalone' cli/cli/BUILD.bazel \
+  && grep -q -F -e 'archive_release(' cli/cli/BUILD.bazel; then
+  ok
+else
+  bad "seed-host standalone archive missing (//cli/cli:dx_standalone, #26)"
+fi
+
+if grep -q -F -e '//deploy/install:dx_verify' docs/deploy/authoring.md \
+  && grep -q -F -e '//deploy/install:dx_verify' docs/environments/environment.md; then
+  ok
+else
+  bad "docs lost the install-verification owner record (#26)"
 fi
 
 # No-publish invariant: no tags claimed, no release outputs committed.

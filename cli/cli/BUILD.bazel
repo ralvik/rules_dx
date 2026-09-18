@@ -1,6 +1,7 @@
 """M07 WP1 + M08 WP1: quality command planning and scope resolution for the `dx` CLI."""
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
+load("//deploy/rules:archive.bzl", "archive_release")
 load("//deploy/rules:github.bzl", "github_release")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library", "rust_test", "rustfmt_test")
@@ -180,6 +181,19 @@ rust_binary(
 github_release(
     name = "github_draft",
     artifacts = [":dx"],
+)
+
+# Seed-host standalone archive (issue #26): credential-free tarball +
+# sha256 of the `dx` binary proving standalone packaging without Bazel
+# or Rust at install time. Seed Linux x86_64 is qualified-built-here;
+# the wider matrix (Linux arm64, macOS x86_64/arm64, Windows x86_64)
+# stays unqualified per #5. Publisher-identity verification of the
+# release bytes is `//deploy/install:dx_verify` (Sigstore bundle +
+# identity/issuer, no checksum-only fallback); the bundle itself arrives
+# with the owner-approved release via the human-run signing workflow.
+archive_release(
+    name = "dx_standalone",
+    app = ":dx",
 )
 
 # Manual-page build step (issue #225): renders man/dx.1 from the clap

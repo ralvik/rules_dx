@@ -1,0 +1,49 @@
+"""Standalone `dx` install-time publisher-identity verification (issue #26)."""
+
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+# Install-time verifier: Sigstore keyless bundle (Fulcio OIDC + Rekor
+# public-good) or GitHub attestation, no checksum-only fallback. Trust
+# root is Sigstore TUF (tuf-repo-cdn.sigstore.dev); verifiers are
+# `cosign verify-blob` / `gh attestation verify` / `slsa-verifier`
+# (documented, not self-hosted). Fails before install/exec; never
+# executes the binary under verification.
+sh_binary(
+    name = "dx_verify",
+    srcs = ["dx_verify.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+# Policy tests: valid accepted; tampered/replaced/unapproved-signer/
+# missing-inputs rejected before install; checksum-only refused; SBOM
+# binding proven. No network: stub cosign/gh via env overrides.
+# Tagged `no-coverage`: process-spawning tests stay out of the coverage
+# denominator per the repo coverage preset. No corpus entry: shell
+# sources have no `real_source_target` class.
+sh_test(
+    name = "dx_verify_test",
+    srcs = ["dx_verify_test.sh"],
+    args = ["$(rootpath :dx_verify)"],
+    data = [":dx_verify"],
+    tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+test_suite(
+    name = "all",
+    tests = [":dx_verify_test"],
+)
+
+# Repository corpus: install Starlark owned for direct-Bazel dogfood
+# under the canonical real_fixture_policy. Shell sources are tooling
+# with no quality class and stay outside the corpus.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+)

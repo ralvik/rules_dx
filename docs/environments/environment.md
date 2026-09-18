@@ -255,13 +255,15 @@ registry state.
 
 The Bazel-first installation path is `bazel run //dx:env`, which exposes the `dx`
 version matching the consumer's pinned module. Standalone installation requires neither
-a local Rust toolchain nor Bazel. Standalone binaries with install-time publisher-identity
-verification, plus the publication mechanics, are planned in
-open work; until then the Bazel-first path
+a local Rust toolchain nor Bazel. Seed-host standalone packaging is
+`//cli/cli:dx_standalone` with install-time publisher-identity verification in
+`//deploy/install:dx_verify`; until releases are cut with owner approval the Bazel-first path
 above is the supported installation. There is no checksum-only fallback or optional
 verification step: a checksum delivered alongside a binary is not by itself proof of
 publisher identity. Signing technology, trust-root and verifier bootstrap, identity
-binding, and verification inputs are decided as part of that issue.
+binding, and verification inputs are implemented in `//deploy/install:dx_verify`
+(Sigstore keyless bundle plus identity/issuer on the TUF trust root, no checksum-only
+fallback, failure before install or exec).
 
 The approved v1 destinations are the Bazel Central Registry for the `rules_dx` module
 and GitHub Releases for standalone `dx` binaries. This selects destinations only, not
@@ -277,17 +279,18 @@ submitting, or creating anything; the report lands in the run summary and logs. 
 `approve` input (default false) runs the fuller qualification; nothing publishes either
 way. The workflow needs only `contents: read` and stores no secrets. The full release
 matrix, SBOM/provenance generation, and BCR dry-run submission arrive as follow-ups
-open as platforms qualify
-under open work and signing tooling is selected
-under open work.
+as platforms qualify
+and signing/attestation generation tooling lands via the human-run workflow;
+install-time verification itself is implemented in `//deploy/install:dx_verify`.
 
 Draft-only publisher ceiling: the `github_release` rule (`deploy/rules/github.bzl`,
 for example `//cli/cli:github_draft`) defaults to `draft = True` with the
 `v0.0.0-dryrun` placeholder tag, fails analysis on any `draft = False` or
 launcher-unsafe tag, and always passes `--draft --verify-tag`, so the program
 never creates or pushes tags itself. The invariants are machine-checked by
-`bazel run //tools/ci:publish_trust`; signing and attestation on the #26 trust
-root arrive after the human-run signing workflow lands.
+`bazel run //tools/ci:publish_trust`; install-time verification on the #26 trust
+root is implemented in `//deploy/install:dx_verify`, while signing and attestation
+generation arrives after the human-run signing workflow lands.
 
 Release hosting, signing, and verification services must satisfy the
 [free-infrastructure constraint](../testing/README.md#infrastructure-budget) without

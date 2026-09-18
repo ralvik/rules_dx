@@ -102,6 +102,25 @@ issue #311 (full release matrix as platforms qualify, SBOM and provenance genera
 signing and attestation selection, BCR submission tooling, GHCR prebuilt-image route,
 and the human-run release path; draft-only ceiling enforced, owner approval required).
 
+## Path E: standalone `dx` install verification (accepted)
+
+Standalone `dx` binaries verify publisher identity at install time via
+`//deploy/install:dx_verify` (`deploy/install/dx_verify.sh`). The verifier
+requires a Sigstore keyless bundle (`cosign sign-blob --bundle`) plus the
+expected certificate identity and issuer, or a GitHub attestation
+(`gh attestation verify`), on the Sigstore TUF trust root
+(`tuf-repo-cdn.sigstore.dev`); verifiers are `cosign verify-blob` /
+`gh attestation verify` / `slsa-verifier` (documented, not self-hosted).
+There is no checksum-only fallback: a sha256 alone is not proof of
+publisher identity and is rejected. Verification runs before any install
+or exec; on failure nothing is installed and the binary never executes.
+SBOM (Syft/CycloneDX) bundles verify through the same cosign path when
+passed as `--sbom`. BCR needs no signing (archive `source.json` +
+integrity hash + `presubmit.yml` + PR review). Seed-host standalone
+packaging is `//cli/cli:dx_standalone`; the wider matrix stays
+unqualified per the [distribution policy](../environments/environment.md#distribution).
+Policy tests are `bazel test //deploy/install:all`.
+
 ## Custom deployers (accepted)
 
 User-defined rules join `dx deploy` by returning `DxDeployInfo` with an
