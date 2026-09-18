@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quality cache aquery proof (issue #84, slices 1-9): per-adapter and
+# Quality cache aquery proof (issue #84, slices 1-10): per-adapter and
 # per-capability action-key isolation via `bazel aquery` over real
 # quality pipelines.
 #
@@ -511,6 +511,26 @@ if [[ "$markdown_actions" == *"flake8"* ]]; then bad "markdown: forbidden [flake
 if [[ "$markdown_actions" == *"pylint"* ]]; then bad "markdown: forbidden [pylint] (opt-in pylint must not invalidate Markdown)"; else ok; fi
 if [[ "$no_format_actions" == *"flake8"* ]]; then bad "no-format: forbidden [flake8] (opt-in flake8 must not invalidate no-format)"; else ok; fi
 if [[ "$no_format_actions" == *"pylint"* ]]; then bad "no-format: forbidden [pylint] (opt-in pylint must not invalidate no-format)"; else ok; fi
+
+# Class-membership opt-in + runner isolation: mixed/no-lint/no-format/
+# no-typecheck pipelines must never mention opt-in adapters (eslint/
+# flake8/pylint change leaves class-membership keys unchanged per the
+# unselected-adapter + opt-in rows), and the no-typecheck lint/format
+# actions still consume the runner executable (runner change misses
+# them). All class-membership aqueries defined above.
+if [[ "$mixed_actions" == *"eslint"* ]]; then bad "mixed: forbidden [eslint] (opt-in ESLint must not invalidate mixed)"; else ok; fi
+if [[ "$no_lint_actions" == *"eslint"* ]]; then bad "no-lint: forbidden [eslint] (opt-in ESLint must not invalidate no-lint)"; else ok; fi
+if [[ "$no_format_actions" == *"eslint"* ]]; then bad "no-format: forbidden [eslint] (opt-in ESLint must not invalidate no-format)"; else ok; fi
+if [[ "$no_typecheck_actions" == *"eslint"* ]]; then bad "no-typecheck: forbidden [eslint] (opt-in ESLint must not invalidate no-typecheck)"; else ok; fi
+if [[ "$mixed_actions" == *"flake8"* ]]; then bad "mixed: forbidden [flake8] (opt-in flake8 must not invalidate mixed)"; else ok; fi
+if [[ "$mixed_actions" == *"pylint"* ]]; then bad "mixed: forbidden [pylint] (opt-in pylint must not invalidate mixed)"; else ok; fi
+if [[ "$no_lint_actions" == *"flake8"* ]]; then bad "no-lint: forbidden [flake8] (opt-in flake8 must not invalidate no-lint)"; else ok; fi
+if [[ "$no_lint_actions" == *"pylint"* ]]; then bad "no-lint: forbidden [pylint] (opt-in pylint must not invalidate no-lint)"; else ok; fi
+if [[ "$no_typecheck_actions" == *"flake8"* ]]; then bad "no-typecheck: forbidden [flake8] (opt-in flake8 must not invalidate no-typecheck)"; else ok; fi
+if [[ "$no_typecheck_actions" == *"pylint"* ]]; then bad "no-typecheck: forbidden [pylint] (opt-in pylint must not invalidate no-typecheck)"; else ok; fi
+no_typecheck_lint_inputs="$(printf '%s' "$no_typecheck_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"
+no_typecheck_format_inputs="$(printf '%s' "$no_typecheck_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' | head -1 || true)"
+if [[ "$no_typecheck_lint_inputs" == *"quality_runner"* && "$no_typecheck_format_inputs" == *"quality_runner"* ]]; then ok; else bad "want [quality_runner] in no-typecheck lint/format inputs (runner change invalidates)"; fi
 
 echo "quality cache aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
