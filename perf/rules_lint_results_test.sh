@@ -54,6 +54,7 @@ check_json "warm-after-cold evidence" "'0 packages loaded' in doc['quality_sampl
 check_json "rules_lint-side gap explicit" "'rules_lint-side' in doc['note']"
 check_json "synth dirty consistency" "doc['seed_harness']['dirty_files']==doc['seed_harness']['files']*doc['seed_harness']['dirty_pct']//100"
 check_json "aquery mnemonics consistency" "len(doc['quality_sample']['mnemonics'])==doc['quality_sample']['aquery_actions']"
+check_json "benchmark identity measured" "doc['benchmark']=='rules_lint_comparison_measured'"
 
 # Determinism: fresh harness regeneration matches the checked-in digest.
 bash "$harness" --files 200 --dirty-pct 10 --seed 86 --out "$scratch/regen" > "$scratch/regen.json"
