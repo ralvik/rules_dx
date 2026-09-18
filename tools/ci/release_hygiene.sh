@@ -9,7 +9,7 @@
 # stays green by construction and nothing runs uninvited.
 #
 # This harness machine-checks the no-publication-inputs half that is
-# verifiable on a clean tree today (23 checks): dist/release
+# verifiable on a clean tree today (24 checks): dist/release
 # git-ignored and uncommitted, module at 0.0.0, no version tags,
 # SECURITY.md reporting link + enabled record, publish dry-run dispatch-only with a
 # default-closed approve gate, no-secrets minimal permissions plus no
@@ -19,7 +19,7 @@
 # checkout SHA pin, typed approve plus non-cancelling concurrency,
 # least-privilege no-packages-write, no-secrets usage, and sole-tracker deletion plus
 # reporting-enabled record plus consumer/docs-caller SHA pins plus
-# both-callers policy. Platform,
+# both-callers policy plus no-tag/no-release/no-submission record. Platform,
 # packaging, provenance (SPDX/SLSA), registry submission, and
 # public-install smoke runs stay unqualified per #5 and are recorded
 # as gaps, not claimed here.
@@ -237,6 +237,18 @@ if grep -q -F -e 'pin reviewed commits, never release tags' CONTRIBUTING.md && g
   ok
 else
   bad "CONTRIBUTING.md lost the both-callers pin policy (issue #5)"
+fi
+
+# The dry-run report stays explicit that it creates nothing (issue #5
+# policy: no tags, GitHub releases, or registry submissions without
+# explicit owner approval): the not_attempted list must name that any
+# tag, registry submission, or release creation is out of scope, so the
+# nothing-publishes ceiling cannot be silently narrowed to only the
+# tooling deferrals above.
+if grep -q -F -e 'Any tag, registry submission, or release creation' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml lost the no-tag/no-release/no-submission record (issue #5)"
 fi
 
 echo "release hygiene harness: $pass passed, $fail failed"
