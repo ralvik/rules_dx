@@ -17,12 +17,13 @@
 # stable API.
 #
 # This harness machine-checks the static half verifiable on a clean
-# tree today (9 checks). The full registry review — class-to-family
+# tree today (10 checks). The full registry review — class-to-family
 # assignment for the still-unassigned frozen IDs, per-ID admissibility
 # mappings, per-family independence rules — stays open per #6, and the
 # cache-execution plus determinism-permutation proofs stay open per
 # #84; all are recorded as gaps, not claimed here. Only the three
-# admissibility edge examples owned in quality-sources.md are pinned.
+# admissibility edge examples owned in quality-sources.md are pinned,
+# and the 12 unassigned IDs are pinned as still unassigned.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:registry_singularity`,
 # following //tools/ci:release_policy.
@@ -151,6 +152,22 @@ if grep -q -F -e 'Per-ID mappings remain pending the' docs/quality/quality-sourc
 else
   bad "docs/quality/quality-sources.md lost its admissibility pending-record or edge examples (#6)"
 fi
+
+# The 12 open-work IDs stay unassigned: no silent family assignment or
+# adapter claim lands without the registry review, so the gap cannot be
+# closed without updating the #6 enumeration above.
+unassigned_clean=1
+for class in css gherkin graphql html html_template json5 jsonc less scss sql text xml; do
+  if grep -q -F -e "\"$class\":" "$scratch/pairs.txt"; then
+    unassigned_clean=0
+    bad "unassigned class $class gained a family assignment without registry review (#6)"
+  fi
+  if grep -q -x -F -e "$class" "$scratch/adapter_classes.txt"; then
+    unassigned_clean=0
+    bad "unassigned class $class gained an adapter claim without registry review (#6)"
+  fi
+done
+[[ "$unassigned_clean" == "1" ]] && ok
 
 # Record the open remainder as information, not a gate: frozen IDs
 # with no family assignment yet stay open work.

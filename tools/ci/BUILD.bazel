@@ -226,7 +226,8 @@ sh_binary(
 # each class maps to exactly one family with canonical spelling, the
 # frozen example assignments agree with the map, fixture maps stay
 # labeled, the #6-pending disclaimer stands, the 12 unassigned
-# frozen IDs stay enumerated as open work, and the admissibility
+# frozen IDs stay enumerated as open work and stay unassigned (no
+# silent assignment/claim), and the admissibility
 # pending-record plus three edge examples stay pinned. The full registry
 # review plus cache-execution/determinism proofs stay open. Run by CI
 # via `bazel run //tools/ci:registry_singularity`.
