@@ -188,7 +188,7 @@ fi
 
 # #7 Gazelle language extensions stay present: one extension directory
 # per delivered foundation (upstream rules stay the implementation;
-# exact import/lock proofs still open).
+# exact import/lock proofs pinned in //tools/ci:foundation_maps).
 if [[ -d "gazelle/rust" ]] \
   && [[ -d "gazelle/python" ]] \
   && [[ -d "gazelle/typescript" ]]; then
