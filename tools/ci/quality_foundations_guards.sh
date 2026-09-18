@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quality-foundations determinism guards (issues #6, #7, #8, #12, #84).
+# Quality-foundations determinism guards (issues #6, #7, #8, #12, #84, #303, #304, #305, #307, #313).
 #
 # Rust/Python/JS-TS foundations ship thin wrappers + Gazelle + env plans;
 # Vue/Svelte/Astro/MDX ship named adapters over upstream parsers; quality
@@ -9,9 +9,12 @@
 # composition (#8), class-to-family taxonomy + admissibility (#6), native
 # config binding + CI scope extension (#12 lane A), and per-adapter
 # cache/determinism/apply batteries (#84) stay open with honest gaps.
+# Required core mappings (#303), admitted additional foundations (#304),
+# deferred/excluded record (#305), quality adapters/parity/packaging (#307),
+# and file-family integrations (#313) stay open with honest tracker records.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (44 checks): provider definition, single-sourced registry map +
+# today (49 checks): provider definition, single-sourced registry map +
 # frozen class table + secrets family + admissibility table +
 # adapter-applicability + parity gate, per-foundation owner docs +
 # dependency scopes + native-config sections + rust tests/build-scripts +
@@ -418,6 +421,46 @@ if ! grep -rln -F -e 'determinism battery green' tools/ci/ docs/quality/ 2>/dev/
   ok
 else
   bad "a determinism/apply green claim appeared without the #84 batteries landing"
+fi
+
+# #303 required core mappings stay tracked with no Supported claim.
+if grep -q -F -e 'issue #303' docs/product/support-matrix.md \
+  && grep -q -F -e 'No `Supported` claim until platform plus' docs/product/support-matrix.md; then
+  ok
+else
+  bad "support-matrix lost its #303 required-core-mappings tracker record"
+fi
+
+# #304 admitted additional foundations stay tracked per foundation.
+if grep -q -F -e 'issue #304' docs/product/support-matrix.md \
+  && grep -q -F -e 'Admitted additional foundations (Go, C/C++, Java, Kotlin, Scala, C#, F#) stay open' docs/product/support-matrix.md; then
+  ok
+else
+  bad "support-matrix lost its #304 admitted-foundations tracker record"
+fi
+
+# #305 deferred/excluded record stays owned.
+if grep -q -F -e 'issue #305' docs/product/support-matrix.md \
+  && grep -q -F -e 'host-toolchain fallback never approved' docs/product/support-matrix.md; then
+  ok
+else
+  bad "support-matrix lost its #305 deferred/excluded tracker record"
+fi
+
+# #307 quality adapters/parity/packaging stays open with no false adapter claim.
+if grep -q -F -e 'issue #307' docs/quality/quality-testing.md \
+  && grep -q -F -e 'No adapter claims protobuf' docs/tools/tool-acquisition.md; then
+  ok
+else
+  bad "quality-testing/tool-acquisition lost its #307 adapters/parity tracker record"
+fi
+
+# #313 file-family integrations stay open with applicability honesty.
+if grep -q -F -e 'issue #313' docs/product/support-matrix.md \
+  && grep -q -F -e 'applicability verification plus release evidence per family' docs/product/support-matrix.md; then
+  ok
+else
+  bad "support-matrix lost its #313 file-family tracker record"
 fi
 
 echo "quality foundations guards harness: $pass passed, $fail failed"

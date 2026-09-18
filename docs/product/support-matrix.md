@@ -101,6 +101,11 @@ fixture evidence; provisional notes below do not select additional defaults or n
 | Consumer CI | Reusable workflow + caller template | Delivered; verification open | Shipped |
 | Repository workflows | Codegen/env/setup implemented; audit/update live execution open | Codegen pairs; audit/update | open |
 
+Required core mappings stay open under issue #303 (Rust providers/Gazelle/integration,
+Python mappings plus Ty, JS/TS wrappers/Gazelle plus quality mappings, Vue/Svelte/Astro/MDX
+adapter mappings plus composition evidence). No `Supported` claim until platform plus
+consumer plus release evidence passes.
+
 Required platforms and the quality-tool baseline (minus excluded Swift) frame
 delivery of this inventory. Admitted additional foundations are tracked in
 open work;
@@ -136,6 +141,10 @@ route decision was recorded 2026-09-13.
 Unresolved cells block qualification; moving an admitted foundation out later
 requires a new evidence-backed decision.
 
+Admitted additional foundations (Go, C/C++, Java, Kotlin, Scala, C#, F#) stay open
+under issue #304: per-foundation exact upstream versions, rulesets, adapter mappings,
+lock wiring, test runners, and quality tools remain qualification work.
+
 ### Deferred Beyond V1
 
 Ruby and PowerShell application foundations are deferred beyond v1 by
@@ -147,7 +156,8 @@ generation, dependency, environment, and IDE stories, exceed the low-cost
 hermetic integration bar. Deferred foundations' quality-tool cells (RuboCop,
 StandardRB, PSScriptAnalyzer) stay in force; a foundation
 deferral removes no baseline tool. Reconsideration after v1 requires a new
-scope decision.
+scope decision. The deferred/excluded record stays owned under issue #305 (Ruby plus
+PowerShell deferred, Swift plus Bandit excluded, host-toolchain fallback never approved).
 
 | Language | Application foundation | Format | Lint, typecheck, or audit |
 | --- | --- | --- | --- |
@@ -587,7 +597,8 @@ follow-up issues under the owning tracker before implementation.
 Applicable capabilities also enter the v1 feasibility review. Their application columns remain
 explicit so formatter or linter availability cannot be mistaken for complete foundation support.
 Applicability verification, including existing `N/A` cells, is tracked in
-open work rather than inferred from a file suffix.
+open work rather than inferred from a file suffix. File-family quality integrations
+stay open under issue #313 (applicability verification plus release evidence per family).
 
 | Source family | Build | Test | Dependencies | Generate | Environment | IDE | Coverage | Quality |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
