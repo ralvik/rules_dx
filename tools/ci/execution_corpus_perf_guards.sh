@@ -11,12 +11,13 @@
 # baseline as a report, never a gate.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (16 checks): deferred codes, fail-closed unit pins, dry-run
-# planning paths, exit mappings, doc ownership, prior harnesses green,
-# corpus single-name rule + Gazelle ownership + generate --check wiring,
-# perf report-not-gate shape + v2.8.0 fairness pin, and matrix honesty.
-# Live execution, per-type generation, and comparison numbers stay open
-# under their issues.
+# today (20 checks): deferred codes, fail-closed unit pins, dry-run
+# planning paths + doc record, exit mappings, doc ownership, depcheck
+# truth-table contract, prior harnesses green, corpus single-name rule +
+# Gazelle ownership + generate --check wiring + carve-out record, perf
+# report-not-gate shape + v2.8.0 fairness pin + report-not-gate honesty,
+# and matrix honesty. Live execution, per-type generation, and
+# comparison numbers stay open under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:execution_corpus_perf_guards`,
 # following //tools/ci:verify_perf_corpus.
@@ -142,6 +143,39 @@ if [[ -f "tools/ci/verify_perf_corpus.sh" ]]; then
   ok
 else
   bad "verify_perf_corpus harness missing"
+fi
+
+# #22 depcheck truth-table contract stays owned in docs (fixtures open,
+# contract accepted, no checker claimed).
+if grep -q -F -e 'lockfile consistency' docs/quality/quality-testing.md \
+  && grep -q -F -e 'declared-dependency usage' docs/quality/quality-testing.md; then
+  ok
+else
+  bad "quality-testing.md lost its #22 lockfile-consistency/usage contract record"
+fi
+
+# #18/#19 dry-run planning contract stays recorded in the command doc
+# (plans without launching, exits 0).
+if grep -q -F -e '--dry-run' "$doc"; then
+  ok
+else
+  bad "audit/update doc lost its --dry-run planning record (#18/#19)"
+fi
+
+# #86 report-not-gate honesty stays explicit in methodology (results
+# arrive as a report, never a gate).
+if grep -q -F -e 'not a gate' docs/tools/rules_lint-comparison.md; then
+  ok
+else
+  bad "rules_lint methodology lost its report-not-gate honesty record (#86)"
+fi
+
+# #15 corpus carve-out record stays explicit (integration scenario
+# workspaces owned outside the audit, no silent skip).
+if grep -q -F -e 'carve-out' tools/ci/corpus_audit.sh; then
+  ok
+else
+  bad "corpus_audit lost its carve-out record (#15)"
 fi
 
 # Matrix honesty across this group.
