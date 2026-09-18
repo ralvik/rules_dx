@@ -84,11 +84,11 @@ pub(crate) const CODE_MANAGED_NO_CAPABILITY: &str = "no_capability";
 /// SARIF mapping land in later M26 slices (O11/O58). Planning
 /// (`--dry-run`) succeeds; live execution fails closed.
 pub(crate) const CODE_AUDIT_DEFERRED: &str = "audit_deferred";
-/// Stable operational error code for live update runs while resolver
-/// backends stay deferred: dependency-set execution and per-set
-/// reporting land in later M26 slices (O12). Planning (`--dry-run`)
-/// succeeds; live execution fails closed.
-pub(crate) const CODE_UPDATE_DEFERRED: &str = "update_deferred";
+/// Stable operational error code for live update per-set failures:
+/// a resolver backend reported failure, was unsupported, failed to launch,
+/// or terminated by signal. Planning (`--dry-run`) succeeds; live runs
+/// continue independent sets, preserve successes, and fail overall.
+pub(crate) const CODE_UPDATE_FAILED: &str = "update_failed";
 
 /// Execution environment: resolved workspace, process seams for the
 /// workflow and for ownership queries, temporary directory for the BEP

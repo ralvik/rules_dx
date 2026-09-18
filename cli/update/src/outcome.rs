@@ -1,4 +1,4 @@
-//! Per-set update outcome aggregation (M26 WP2 slice 2).
+//! Per-set update outcome aggregation (issue #19).
 //!
 //! Pure planning for the accepted continuation policy in the update
 //! contract (`docs/cli/commands/audit-update-bazel.md`): failure in one
@@ -12,16 +12,14 @@
 //! Independence follows the approved upstream integration, not label
 //! distinctness: sets sharing a lockfile or resolver workspace cannot be
 //! treated as independent merely because they have different Bazel
-//! labels. Set identity, workspace sharing, and backend operation
-//! boundaries are O12 qualification; this module aggregates over injected
+//! labels. Set identity lives in [`super::sets`] and backend operation
+//! boundaries in [`super::backend`]; this module aggregates over injected
 //! per-set results and an injected depends-on relation only, so outcome
 //! combination stays deterministic and unit-testable without any updater.
 //!
-//! Out of scope here (O12): backend operation boundaries,
-//! per-set manifest/lockfile reporting, and parallel-execution
-//! scheduling. Aggregate exit-status selection over these reports lives
-//! in [`super::report`]. Continued updates imply no parallelism and no
-//! new mutation-event API.
+//! Out of scope here: parallel-execution scheduling. Aggregate exit-status
+//! selection over these reports lives in [`super::report`]. Continued
+//! updates imply no parallelism and no new mutation-event API.
 
 use std::collections::{BTreeMap, BTreeSet};
 

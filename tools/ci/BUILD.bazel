@@ -329,8 +329,9 @@ sh_binary(
 )
 
 # Audit/update/depcheck execution guards (issues #18, #19, #22): pins the
-# fail-closed deferred codes, the aggregate exit-code mappings, dry-run
-# planning, and prior harnesses. Functional checks only. Run by CI via
+# audit fail-closed deferred code plus update live execution, the aggregate
+# exit-code mappings, dry-run planning, and prior harnesses. Functional checks
+# only. Run by CI via
 # `bazel run //tools/ci:audit_update_guards`.
 sh_binary(
     name = "audit_update_guards",
@@ -403,7 +404,7 @@ sh_binary(
 
 # Widen-one-requirement + dx update PR loop contract (issue #260, seed
 # slice): all-ecosystems v1 manager set, retained Renovate fallback,
-# never-rewrites invariant, #19 resolver prerequisite, manual bump-PR
+# never-rewrites invariant, #19 resolver delivery, manual bump-PR
 # verification loop, ADR 0006 narrow exception, ADR 0008 exact-pin
 # policy, and no-false-claim gaps. Widen implementation, registry
 # clients, loop orchestration, and the scheduled runner stay open. Run
@@ -416,7 +417,7 @@ sh_binary(
 )
 
 # Execution/corpus/perf guards (issues #18, #19, #22, #15, #86): pins
-# the fail-closed deferred codes, exit mappings, prior
+# the audit fail-closed code plus update live execution, exit mappings, prior
 # harnesses, corpus single-name rule + Gazelle ownership, and perf
 # report-not-gate shape. Functional checks only. Run by CI via
 # `bazel run //tools/ci:execution_corpus_perf_guards`.

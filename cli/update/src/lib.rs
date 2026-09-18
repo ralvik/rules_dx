@@ -1,43 +1,42 @@
-//! Pure `dx update` selection planning (M26 WP2 slice 1).
+//! Pure `dx update` selection planning (issue #19).
 //!
-//! This crate owns the update command surface before any resolver
-//! integration lands: bare selection means every supported dependency
-//! set, explicit selectors narrow to sets/packages verbatim, and the
-//! command is mutating without a confirmation prompt. It plans over
-//! injected argument strings only, so selection stays deterministic
-//! and unit-testable without a workspace, a Bazel server, or any
-//! upstream updater.
+//! This crate owns the update command surface with live resolver
+//! integration: bare selection means every supported dependency set,
+//! explicit selectors narrow to sets/packages/targets, and the command is
+//! mutating without a confirmation prompt. It plans over injected argument
+//! strings only, so selection stays deterministic and unit-testable without
+//! a workspace, a Bazel server, or any upstream updater.
 //!
 //! Frozen command shape (`docs/cli/commands/audit-update-bazel.md`):
 //! `dx update [selector ...]`. With no selection every supported
 //! dependency set in the repository updates, independent of the current
 //! working directory and never via a CLI filesystem scan; set discovery
-//! uses approved Bazel integrations. V1 supports dependency-set
-//! selection and individual packages within selected sets through the
-//! upstream updater; transitive changes stay permitted under its
-//! resolver semantics.
+//! uses the approved set registry derived from the Bazel integrations.
+//! V1 supports dependency-set selection, individual packages within
+//! selected sets (executed for npm, reported unsupported for other sets
+//! rather than silently widened), and Bazel label/pattern/file/dir
+//! selectors resolved to owning sets. Transitive changes stay permitted
+//! under upstream resolver semantics.
 //!
-//! Out of scope here (O12 qualification): exact selector syntax and
-//! ecosystem package-identity mappings, non-registry handling, backend
-//! operation boundaries, and per-set reporting. The
-//! independent-set continuation/blocked-dependent execution semantics
-//! live in [`outcome`], and aggregate exit-status selection over its
-//! reports lives in [`report`]. Those remaining items arrive in later
-//! M26 slices; this crate only records which selector spellings a
-//! future resolver must satisfy, and that the run applies immediately
-//! once invoked.
+//! Selector syntax and ecosystem package-identity mappings live in
+//! [`selector`], the five-set registry in [`sets`], and resolver-owned
+//! backend operations in [`backend`]. Independent-set
+//! continuation/blocked-dependent execution semantics live in [`outcome`],
+//! and aggregate exit-status selection over its reports lives in
+//! [`report`]. Within-constraint and Git handling live in [`semantics`].
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
+pub mod backend;
 pub mod outcome;
 pub mod report;
+pub mod selector;
 pub mod semantics;
+pub mod sets;
 
 /// Planned update request: which dependency-set/package selectors the
-/// future resolver must satisfy. Selector syntax and identity mappings
-/// are O12 qualification; the spellings are preserved verbatim.
+/// resolver must satisfy. Exact syntax lives in [`selector`]; the
+/// spellings here are preserved verbatim for planning summaries.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct UpdateRequest {
     /// Selector arguments after `dx update`, verbatim. Empty means

@@ -21,13 +21,13 @@ dx audit [security|license] [scope ...] [--report <format>=<destination> ...]
 
 Implementation status: the audit/update policy below is accepted. Command dispatch
 and request planning are implemented (the `dx_audit`/`dx_update` planning gates
-plus `dx audit`/`dx update` dispatch — `--dry-run` plans the request and exits `0`,
-while live runs fail closed with `audit_deferred`/`update_deferred`). Live auditor
-wiring, advisory snapshot acquisition, SARIF/SPDX parsing, and resolver-backend
-execution are open under
-open work (audit) and
-open work (update); no working
-audit/update support is claimed until qualified tool execution lands.
+plus `dx audit`/`dx update` dispatch — `--dry-run` plans the request and exits `0`).
+Live `dx audit` fails closed with `audit_deferred`. Live `dx update` executes
+resolver-owned backends per dependency set with independent-set continuation
+and per-set reporting as specified in `dx update` below. Live auditor
+wiring, advisory snapshot acquisition, and SARIF/SPDX parsing are open under
+open work (audit); no working
+audit support is claimed until qualified tool execution lands.
 
 Bare `dx audit` runs both families. `dx audit security` runs secrets plus
 dependency-vulnerability analysis only; `dx audit license` runs license-policy
@@ -288,9 +288,11 @@ V1 supports selecting dependency sets (ecosystem workspaces/lockfiles) and indiv
 within selected sets. Delegate package selection to the upstream updater; necessary transitive
 changes remain permitted under its resolver semantics. Package selection is not a guarantee that
 only one lockfile entry changes, nor permission to silently substitute an update of the entire set
-when the upstream integration cannot support the requested selection. Exact selector syntax and
-ecosystem package-identity mappings are open under
-open work.
+when the upstream integration cannot support the requested selection. Selector syntax and
+ecosystem package-identity mappings are implemented in `dx_update::selector` and pinned by
+unit tests: `cargo`/`npm`/`maven`/`nuget`/`go` select sets, `set:package` selects packages
+(`maven:group:artifact` for Maven), and Bazel labels/patterns/files/dirs resolve to owning
+sets via the approved prefix table (bare `//...` and `MODULE.bazel` select all sets).
 
 `dx update` updates selected dependencies to the newest versions permitted by the project's
 declared requirements and authoritative ecosystem resolver, through approved Bazel integration.
@@ -304,8 +306,8 @@ Git dependencies follow upstream update semantics: a declared branch may advance
 while explicit commit pins and declared tags remain unchanged. Do not rewrite a branch, tag, or
 commit requirement to track another reference or select a newer tag. The upstream resolver owns Git
 resolution and lockfile updates; this does not authorize inspecting the consumer's Git worktree.
-Exact ecosystem mappings, including moved-tag behavior, are open under
-open work.
+Moved-tag behavior follows the upstream resolver with no private policy; requirement shapes are
+pinned in `dx_update::semantics` (`GitRequirement`) and unit-tested.
 
 Transitive dependencies remain governed by upstream resolution; the command does not force every
 transitive package to its newest release regardless of compatibility. A newer release outside the
@@ -324,9 +326,12 @@ not permission to run dependents of failed operations or introduce a private sch
 Aggregate exit-code selection is pinned in `dx_update::report`: a run with no failed selected set
 exits `0`; any failed set fails the invocation overall with exit `1`, following the report's
 `overall_failure` verdict (blocked without failure is not a failure). Per-set detail rides the
-per-set report, never a per-set code. Backend operation boundaries and per-set
-success/failure/blocked reporting are open under
-open work. Continued updates do not imply parallel execution or a new mutation-event API.
+per-set report, never a per-set code. Backend operation boundaries are pinned in
+`dx_update::backend` (Cargo `CARGO_BAZEL_REPIN=1 bazel build //rust/hello:hello`, npm
+`bazel run @pnpm//:pnpm -- update`, Maven `REPIN=1 bazel run @maven//:pin`, NuGet
+`paket2bazel` regeneration, Go no-op) and per-set success/failure/blocked reporting rides
+text plus JSON `notice`/`error` events with `command_finished`. Continued updates do not imply
+parallel execution or a new mutation-event API.
 
 Invoking `dx update` authorizes immediate application without an interactive confirmation prompt or
 separate acceptance flag, in both terminal and noninteractive use. This does not bypass separate
@@ -335,6 +340,9 @@ license-consent or mutation-safety requirements.
 The command introduces no `dx` lockfile or dependency resolver.
 Every changed file and invoked operation must be attributable to the
 underlying updater. Ordinary builds and editor activity do not initiate dependency-version upgrades.
-Supported ecosystem mappings, selective-update syntax, remaining non-registry dependency handling, and exact
-upstream operation/report mappings are open under
-open work.
+Supported ecosystem mappings are the five sets in `dx_update::sets` (Cargo, npm, Maven, NuGet, Go
+with manifests/locks pinned there); selective-update syntax is `set:package` in
+`dx_update::selector` (executed for npm, reported `unsupported` for other sets rather than
+silently widened); non-registry handling is upstream-owned (Git branches may advance, tags/commit
+pins stay, path dependencies are upstream no-ops); upstream operation/report mappings are pinned
+in `dx_update::backend` and unit-tested.

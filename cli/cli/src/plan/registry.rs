@@ -164,12 +164,12 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Audit/update planning surfaces (M26 WP1/WP2 slice 1): family
-        // selection and dependency-set selectors plan through the
-        // `dx_audit`/`dx_update` libraries, never the quality aspect
-        // pipeline. Audit exports SARIF through the shared report
-        // contract; update has no standard report until O12 backend
-        // mappings land.
+        // Audit/update surfaces: family selection and dependency-set
+        // selectors plan through the `dx_audit`/`dx_update` libraries,
+        // never the quality aspect pipeline. Audit exports SARIF through
+        // the shared report contract; update reports per-set through live
+        // output (text plus `notice`/`error` in JSON, issue #19) with no
+        // `--report` standard report.
         Command::Audit => CommandSpec {
             command,
             capability: "audit",

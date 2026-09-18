@@ -30,5 +30,6 @@ write-outcome and completion reporting as `dx generate`.
 
 No manifests exist yet (module at `0.0.0`, no releases cut), so
 execution fails closed — the same discipline as `audit_deferred`
-and `update_deferred`. Planning (`migrate_is_major_bump`,
+(`dx update` now executes live with `update_failed` per-set failures).
+Planning (`migrate_is_major_bump`,
 `migrate_manifest_name`, `plan_migrate`) is pinned by unit tests.

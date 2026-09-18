@@ -102,8 +102,8 @@ impl Command {
     /// they plan through the `dx_audit`/`dx_update` libraries over
     /// family selectors and dependency-set selectors, never the quality
     /// aspect pipeline. Audit is non-mutating; update is mutating
-    /// without confirmation. Tool and resolver backends land in later
-    /// M26 slices; this only records the planned request.
+    /// without confirmation. Audit tool backends stay deferred while
+    /// update resolver backends execute live (issue #19).
     pub fn is_audit_update(self) -> bool {
         matches!(self, Command::Audit | Command::Update)
     }
@@ -146,8 +146,9 @@ impl Command {
     /// clean/managed print prose lifecycle, `bazel`/`run`/`deploy` own the terminal
     /// for passthrough applications, and adoption helpers (except
     /// `status`) print local-helper prose or thin query lines.
-    /// `update` supports JSON: dry-run planning and the deferred-live
-    /// error both emit `command_started`/`command_finished` like `audit`.
+    /// `update` supports JSON: dry-run planning emits
+    /// `command_started`/`command_finished`, while live execution adds
+    /// per-set `notice`/`error` events with the same frame (issue #19).
     pub fn supports_json(self) -> bool {
         matches!(
             self,
@@ -201,7 +202,7 @@ impl Command {
             Command::Check => "run format+lint+typecheck+generate checks in order",
             Command::Fix => "apply format+lint+typecheck+generate fixes in order",
             Command::Clean => "prune unselected managed state (no scopes)",
-            Command::Update => "plan dependency updates per set (resolvers land later)",
+            Command::Update => "update dependencies per set through qualified resolvers",
             Command::Codegen => "collect codegen outputs with atomic commit",
             Command::Env => "collect the managed development environment",
             Command::Setup => "collect setup outputs with atomic commit",
