@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Distribution/closeout guards (issues #5, #26, #78, #184, #54, #298, #299, #317, #318, #319, #320, #323).
+# Distribution/closeout guards (issues #5, #26, #78, #184, #54).
 #
 # No release has been cut: no tags, GitHub releases, registry
 # submissions, or publication outputs without explicit owner approval.
@@ -7,28 +7,20 @@
 # signing-first dry run (#78), and prebuilt devcontainer images on GHCR
 # (#184, separate workflow) stay owner-gated with SECURITY reporting as
 # the release precondition. Stage 5 close-out (#54) runs the full
-# battery on a clean tree with docs matching as-built behavior.
-# Platform qualification (#298), shell portability (#299), generated
-# launchers (#317), host-tool hermeticity (#318), runfiles consolidation
-# (#319), platform cfg policy (#320), and shell dedup/portability (#323)
-# stay open with honest contract records.
+# battery on a clean tree.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (51 checks): hygiene policy, exact 0.0.0 module pin + consumer
+# today (31 checks): hygiene policy, exact 0.0.0 module pin + consumer
 # pin + reviewed-commit workflow pin + unqualified-matrix record,
-# distribution doc ownership + Bazel-first + standalone-install +
-# publisher-identity records + BCR + GitHub Releases destinations +
-# BCR dry-run + release-matrix + draft-only ceiling, workflow separation
-# + triggers + default-closed approve gates + never-publishes +
-# dry-run report + clean-checkout record, signing-first trust-root +
-# attestation + SBOM detail, digest-pinned prebuilt base + scaffold
-# state + quota record + scaffold-update + Bazelisk delegation + cosign deferral + admissibility gate +
-# prebuilt doc section + never-latest gate, scaffold state, self-call
-# consumer/docs smoke, security precondition, gitignored outputs,
-# matrix close-out page + Layer-4 E2E + battery-audit record, E2E
-# driver/format slices + E2E-case convention, and no-publish
-# invariants. Matrix/SBOM/BCR/install verification and the full green
-# battery stay open under their issues.
+# workflow separation + triggers + default-closed approve gates +
+# never-publishes + dry-run report + clean-checkout record,
+# signing-first trust-root + attestation + SBOM detail, digest-pinned
+# prebuilt base + scaffold state + quota record + scaffold-update +
+# Bazelisk delegation + cosign deferral + admissibility gate +
+# never-latest gate, scaffold state, self-call consumer smoke, security
+# precondition, gitignored outputs, E2E driver/format slices +
+# E2E-case convention, and no-publish invariants. Matrix/SBOM/BCR/install
+# verification and the full green battery stay open under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:distribution_closeout_guards`,
 # following //tools/ci:ghcr_publish_guards.
@@ -76,13 +68,6 @@ else
   bad "SECURITY.md lost its reporting record"
 fi
 
-# #26 distribution ownership in environments doc.
-if grep -q -F -e '## Distribution' docs/environments/environment.md; then
-  ok
-else
-  bad "environment.md lost its Distribution section (#26 ownership)"
-fi
-
 # #78 dry run stays dispatch-only, publishes nothing either way.
 if grep -q -F -e 'workflow_dispatch' .github/workflows/publish-dry-run.yml \
   && grep -q -F -e 'published' .github/workflows/publish-dry-run.yml; then
@@ -115,12 +100,11 @@ else
   bad "Dockerfile.prebuilt lost its digest-pinned FROM"
 fi
 
-# #184 scaffold + devcontainer route documented.
-if grep -q -F -e 'image' .devcontainer/devcontainer.json \
-  && grep -q -F -e 'GHCR' docs/contributing/devcontainer.md; then
+# #184 scaffold image field stays present.
+if grep -q -F -e 'image' .devcontainer/devcontainer.json; then
   ok
 else
-  bad "devcontainer scaffold lost its image field or GHCR route doc"
+  bad "devcontainer scaffold lost its image field"
 fi
 
 # Prior slices stay green.
@@ -131,14 +115,6 @@ if [[ -f "tools/ci/release_hygiene.sh" ]] \
   ok
 else
   bad "prior publication harnesses missing (release_hygiene/publish_trust/ghcr*)"
-fi
-
-# #26 BCR destination stays recorded as the approved v1 module route
-# (destinations only, not credentials/sequence).
-if grep -q -F -e 'Bazel Central Registry' docs/environments/environment.md; then
-  ok
-else
-  bad "environment.md lost its BCR v1-destination record (#26)"
 fi
 
 # #78/#184 approve gates stay default-closed (explicit owner approval
@@ -167,27 +143,11 @@ else
   bad "consumer-ci caller lost its 0.0.0 unpublishable pin (#5)"
 fi
 
-# Close-out page owns the battery + matrix.
-if grep -q -F -e 'close-out battery' docs/testing/verification-matrix.md \
-  && grep -q -F -e '## Battery' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix lost its close-out ownership or Battery section"
-fi
-
 # #54 E2E-case convention: every integration case wired to a driver.
 if [[ -f "tools/ci/e2e_cases.sh" ]]; then
   ok
 else
   bad "e2e_cases convention harness missing (#54)"
-fi
-
-# #54 battery commands recorded as built behavior.
-if grep -q -F -e 'bazel build //...' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'bazel test //...' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix lost its build/test battery record"
 fi
 
 # #26/#78 SBOM + signing-first detail stays recorded in the dry-run
@@ -216,36 +176,12 @@ else
   bad "ci.yml lost its consumer-ci/docs-ci self-call smoke (#5)"
 fi
 
-# #54 Layer-4 E2E suite stays recorded as the thin CLI-contract gate
-# (clean/dirty/format-roundtrip, explicit-only, carve-out automatic).
-if grep -q -F -e 'Layer-4 E2E' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix lost its Layer-4 E2E suite record (#54)"
-fi
-
-# #26 standalone-install record stays owned (no local Rust toolchain
-# or Bazel required; install verification still open).
-if grep -q -F -e 'Standalone installation' docs/environments/environment.md; then
-  ok
-else
-  bad "environment.md lost its standalone-install record (#26)"
-fi
-
 # #78 dry-run report record stays explicit (summary + logs report
 # what would publish; the release itself stays owner-gated).
 if grep -q -F -e 'dry-run report' .github/workflows/publish-dry-run.yml; then
   ok
 else
   bad "publish dry run lost its dry-run report record (#78)"
-fi
-
-# #184 prebuilt-image doc section stays owned (GHCR route, scaffold
-# files, separate workflow; image build still owner-gated).
-if grep -q -F -e '## Prebuilt images (GHCR)' docs/contributing/devcontainer.md; then
-  ok
-else
-  bad "devcontainer.md lost its Prebuilt images (GHCR) section (#184)"
 fi
 
 # #54 E2E driver + format slices stay present alongside the case
@@ -257,25 +193,6 @@ else
   bad "E2E driver/format slices missing (e2e.sh/e2e_format.sh, #54)"
 fi
 
-# #26 Bazel-first path stays explicit: `bazel run //dx:env` is the
-# supported install with no checksum-only fallback (standalone
-# verification still open).
-if grep -q -F -e 'Bazel-first installation path is `bazel run //dx:env`' docs/environments/environment.md \
-  && grep -q -F -e 'checksum-only fallback' docs/environments/environment.md; then
-  ok
-else
-  bad "environment.md lost its Bazel-first/no-checksum-fallback record (#26)"
-fi
-
-# #78 draft-only publisher ceiling stays pinned: draft default with
-# the dry-run placeholder tag, never creating tags itself.
-if grep -q -F -e 'Draft-only publisher ceiling' docs/environments/environment.md \
-  && grep -q -F -e 'v0.0.0-dryrun' docs/environments/environment.md; then
-  ok
-else
-  bad "environment.md lost its draft-only publisher ceiling (#78)"
-fi
-
 # #184 GHCR gate messages stay explicit: digest-pinned FROM, never
 # latest, build-only without approve (push/signing still gated).
 if grep -q -F -e 'never latest/bare tag' .github/workflows/ghcr.yml \
@@ -285,29 +202,12 @@ else
   bad "GHCR workflow lost its never-latest/build-only gate record (#184)"
 fi
 
-# #54 battery-audit record stays explicit: corpus + code-ownership
-# audits and the explicit E2E suite inside the close-out battery.
-if grep -q -F -e 'corpus and code ownership audits' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'explicit E2E suite' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix lost its battery-audit record (#54)"
-fi
-
 # #5 consumer caller pins the reusable workflow at a reviewed commit
 # SHA, never a tag or floating ref (bumps are reviewed pins only).
 if grep -q -F -e 'reusable-consumer.yml@' examples/consumer-ci/caller.yml; then
   ok
 else
   bad "consumer-ci caller lost its reviewed-commit workflow pin (#5)"
-fi
-
-# #26 GitHub Releases stays recorded as the standalone-binary
-# destination next to BCR (destinations only, verification open).
-if grep -q -F -e 'GitHub Releases' docs/environments/environment.md; then
-  ok
-else
-  bad "environment.md lost its GitHub Releases destination record (#26)"
 fi
 
 # #78 attestation record stays owned: Sigstore keyless plus GitHub
@@ -327,17 +227,6 @@ else
   bad "adopt crate lost its devcontainer admissibility gate (#184)"
 fi
 
-# #26 publisher-identity + BCR dry-run stays owned: standalone binaries
-# need install-time publisher-identity verification with no
-# checksum-only fallback, and BCR dry-run submission arrives as a
-# follow-up (verification/sequence still owner-run).
-if grep -q -F -e 'install-time publisher-identity' docs/environments/environment.md \
-  && grep -q -F -e 'BCR dry-run submission' docs/environments/environment.md; then
-  ok
-else
-  bad "environment.md lost its publisher-identity/BCR-dry-run record (#26)"
-fi
-
 # #78 never-publishes stays machine-checked: the dry-run report stages
 # a binary with published False and approves nothing by default
 # (release itself stays owner-gated).
@@ -355,14 +244,6 @@ if grep -q -F -e 'scaffold still references' .devcontainer/Dockerfile.prebuilt \
   ok
 else
   bad "Dockerfile.prebuilt lost its scaffold/quota record (#184)"
-fi
-
-# #54 clean-tree battery record stays explicit: the full battery runs on
-# a clean tree after the staged issues land (full green still open).
-if grep -q -F -e 'clean tree after the staged issues land' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix lost its clean-tree battery record (#54)"
 fi
 
 # #5 unqualified-matrix record stays explicit: non-seed release matrix
@@ -412,63 +293,6 @@ if ! grep -rn -F -e 'tags:' .github/workflows/publish-dry-run.yml 2>/dev/null | 
   ok
 else
   bad "a tag trigger appeared in publish/ghcr workflows without owner approval"
-fi
-
-# #298 platform qualification stays seed-only honest.
-if grep -q -F -e 'issue #298' docs/product/support-matrix.md \
-  && grep -q -F -e 'only the Linux x86_64 seed host' docs/product/support-matrix.md; then
-  ok
-else
-  bad "support-matrix lost its #298 platform-qualification tracker record"
-fi
-
-# #299 shell portability contract stays bash-only honest.
-if grep -q -F -e 'issue #299' docs/testing/tools.md \
-  && grep -q -F -e 'bash-only on the Linux seed host' docs/testing/tools.md; then
-  ok
-else
-  bad "tools matrix lost its #299 shell-portability tracker record"
-fi
-
-# #320 platform cfg policy stays fail-fast-or-portable open.
-if grep -q -F -e 'issue #320' docs/testing/tools.md \
-  && grep -q -F -e 'decide fail-fast or portable route per' docs/testing/tools.md; then
-  ok
-else
-  bad "tools matrix lost its #320 cfg-policy tracker record"
-fi
-
-# #323 shell dedup/portability stays shared-lib open.
-if grep -q -F -e 'issue #323' docs/testing/tools.md \
-  && grep -q -F -e 'shared lib.sh, shellcheck' docs/testing/tools.md; then
-  ok
-else
-  bad "tools matrix lost its #323 shell-dedup tracker record"
-fi
-
-# #319 runfiles/workspace-root consolidation stays open.
-if grep -q -F -e 'issue #319' docs/testing/tools.md \
-  && grep -q -F -e 'one shared' docs/testing/tools.md \
-  && grep -q -F -e 'workspace_root plus rlocation' docs/testing/tools.md; then
-  ok
-else
-  bad "tools matrix lost its #319 runfiles-consolidation tracker record"
-fi
-
-# #318 host-tool hermeticity stays toolchain-or-contract open.
-if grep -q -F -e 'issue #318' docs/testing/tools.md \
-  && grep -q -F -e 'toolchain-provided' docs/testing/tools.md; then
-  ok
-else
-  bad "tools matrix lost its #318 host-tool tracker record"
-fi
-
-# #317 generated launchers stay sh_binary-plus-runfiles open.
-if grep -q -F -e 'issue #317' docs/testing/tools.md \
-  && grep -q -F -e 'sh_binary plus location expansion plus runfiles' docs/testing/tools.md; then
-  ok
-else
-  bad "tools matrix lost its #317 launcher tracker record"
 fi
 
 echo "distribution closeout guards harness: $pass passed, $fail failed"

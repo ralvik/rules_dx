@@ -105,9 +105,8 @@ sh_binary(
 )
 
 # Coverage-report guards (issue #254; relates #54, #252, #5): pins the
-# Bazel-owned gate as source of truth, the honest Codecov-selection
-# record, and the open PR-comment gap. Comment presentation, dedup,
-# fork handling, and failure proofs stay open. Run by CI via
+# Bazel-owned gate as source of truth, the consumer coverage path, and
+# the no-third-party-action policy. Run by CI via
 # `bazel run //tools/ci:coverage_report_guards`.
 sh_binary(
     name = "coverage_report_guards",
@@ -225,12 +224,8 @@ sh_binary(
 # adapter manifests consume canonical IDs, map keys are frozen IDs,
 # each class maps to exactly one family with canonical spelling, the
 # frozen example assignments agree with the map, fixture maps stay
-# labeled, the #6-pending disclaimer stands, the 12 unassigned
-# frozen IDs stay enumerated as open work and stay unassigned (no
-# silent assignment/claim), the taxonomy grouping rule stays pinned,
-# and the admissibility
-# pending-record plus three edge examples stay pinned. The full registry
-# review plus cache-execution/determinism proofs stay open. Run by CI
+# labeled, and the 12 open-work IDs stay unassigned (no silent
+# assignment/claim). Functional code checks only. Run by CI
 # via `bazel run //tools/ci:registry_singularity`.
 sh_binary(
     name = "registry_singularity",
@@ -238,15 +233,10 @@ sh_binary(
 )
 
 # Backlog-contracts harness (issues #9, #10): machine-checks the
-# frozen cross-file contracts plus the honest gap labels of the
-# environment/codegen and docs-pipeline tracks — codegen
+# frozen cross-file contracts — codegen
 # output-group/shard-suffix/aspect/selection parity between Rust and
-# Starlark, the commit-lock cross-platform disclaimer, WP4-unverified
-# root candidates, the ADR 0018 clean-evidence status, the `dx docs`
-# removal record, pipeline #10 gap links, the stable IR identity, and
-# the no-Supported-cell matrix record. Reverse-dependent queries,
-# lock platform evidence, adapter runs, link completeness, renderer
-# execution, and guide proofs stay open. Run by CI via
+# Starlark plus the stable proto IR identity. Functional checks only.
+# Run by CI via
 # `bazel run //tools/ci:backlog_contracts`.
 sh_binary(
     name = "backlog_contracts",
@@ -278,9 +268,7 @@ sh_binary(
 
 # Audit/update/depcheck execution guards (issues #18, #19, #22): pins the
 # fail-closed deferred codes, the aggregate exit-code mappings, dry-run
-# planning, and the honest open-route record. Live auditor wiring,
-# advisory acquisition, SARIF/SPDX mapping, resolver backends, and
-# per-set reporting stay open. Run by CI via
+# planning, and prior harnesses. Functional checks only. Run by CI via
 # `bazel run //tools/ci:audit_update_guards`.
 sh_binary(
     name = "audit_update_guards",
@@ -290,9 +278,8 @@ sh_binary(
 # Wrapper QualitySourcesInfo harness (issues #12 lane A, #7, #8; relates
 # #6): all language/framework wrappers advertise QualitySourcesInfo
 # from direct srcs via the shared forwarder, wrapper tests pin
-# precision, and the corpus/code-ownership split stays honest. Native
-# config binding, CI scope extension, per-language proofs, framework
-# regions, and family taxonomy stay open. Run by CI via
+# precision, and the corpus/code-ownership split stays honest.
+# Functional checks only. Run by CI via
 # `bazel run //tools/ci:wrapper_sources`.
 sh_binary(
     name = "wrapper_sources",
@@ -300,9 +287,8 @@ sh_binary(
 )
 
 # Foundation-mapping guards (issues #7, #8; relates #6, #12): pins the
-# adapter boundaries, provider advertisement, fixture markers, and owner
-# links. Exact provider/import/lock/tool-graph proofs, composition
-# regions, and family taxonomy stay open. Run by CI via
+# provider advertisement, fixture markers, example workspaces, and
+# wrapper/ownership wiring. Functional checks only. Run by CI via
 # `bazel run //tools/ci:foundation_maps`.
 sh_binary(
     name = "foundation_maps",
@@ -320,9 +306,8 @@ sh_binary(
 )
 
 # Publication-group guards (issues #184, #78, #26, #5): pins the
-# cross-workflow separation/triggers/gates, scaffold state, docs
-# ownership, security precondition, and no-publish policy. Matrix,
-# SBOM/provenance, BCR submission, and install verification stay open.
+# cross-workflow separation/triggers/gates, scaffold state,
+# security precondition, and no-publish policy. Functional checks only.
 # Run by CI via `bazel run //tools/ci:ghcr_publish_guards`.
 sh_binary(
     name = "ghcr_publish_guards",
@@ -330,10 +315,9 @@ sh_binary(
 )
 
 # Quality-foundations guards (issues #6, #7, #8, #12; relates #84): pins
-# the provider definition, single-sourced registry map, per-foundation
-# owner docs, framework boundary, cache/determinism contract sections,
-# matrix honesty, prior-slice harnesses, and no-false-claim gaps. Exact
-# mappings, taxonomy review, and battery execution stay open. Run by CI
+# the provider definition, single-sourced registry map, curated/native
+# evidence files + test backing, wrapper/Gazelle/dogfood wiring, and
+# determinism/apply evidence. Functional checks only. Run by CI
 # via `bazel run //tools/ci:quality_foundations_guards`.
 sh_binary(
     name = "quality_foundations_guards",
@@ -353,10 +337,9 @@ sh_binary(
 )
 
 # Execution/corpus/perf guards (issues #18, #19, #22, #15, #86): pins
-# the fail-closed deferred codes, exit mappings, doc ownership, prior
-# harnesses, corpus single-name rule + Gazelle ownership, perf
-# report-not-gate shape, and matrix honesty. Live execution, per-type
-# generation, and comparison numbers stay open. Run by CI via
+# the fail-closed deferred codes, exit mappings, prior
+# harnesses, corpus single-name rule + Gazelle ownership, and perf
+# report-not-gate shape. Functional checks only. Run by CI via
 # `bazel run //tools/ci:execution_corpus_perf_guards`.
 sh_binary(
     name = "execution_corpus_perf_guards",
@@ -364,10 +347,9 @@ sh_binary(
 )
 
 # Distribution/closeout guards (issues #5, #26, #78, #184, #54): pins
-# the hygiene policy, distribution ownership, workflow separation +
+# the hygiene policy, workflow separation +
 # triggers + gates, scaffold state, security precondition, gitignored
-# outputs, matrix close-out page, and no-publish invariants. Matrix,
-# SBOM/BCR/install verification, and the full green battery stay open.
+# outputs, and no-publish invariants. Functional checks only.
 # Run by CI via `bazel run //tools/ci:distribution_closeout_guards`.
 sh_binary(
     name = "distribution_closeout_guards",
@@ -375,11 +357,9 @@ sh_binary(
 )
 
 # Backlog/automation guards (issues #9, #10, #85, #254, #260): pins
-# the env/codegen + docs-pipeline contracts, examples ownership +
-# laziness slices, Bazel-owned LCOV gate + Codecov honesty, Renovate
-# fallback + never-rewrites + ADR pins, prior harnesses, and
-# no-false-claim gaps. Reverse queries, adapter runs, comment
-# presentation, and widen implementation stay open. Run by CI via
+# examples ownership + laziness slices, Bazel-owned LCOV gate,
+# Renovate fallback + never-rewrites pins, and prior harnesses.
+# Functional checks only. Run by CI via
 # `bazel run //tools/ci:backlog_automation_guards`.
 sh_binary(
     name = "backlog_automation_guards",
@@ -510,9 +490,8 @@ sh_binary(
 
 # Verification-foundations harness (issues #86, #15, #12; relates #54):
 # pins the perf fairness/report-not-gate half, the single-corpus +
-# generate-owned split rule, and the lane-A ownership scope. Full
-# comparison report, per-type generation, and CI scope extension stay
-# open. Run by CI via `bazel run //tools/ci:verify_perf_corpus`.
+# generate-owned split rule, and the lane-A ownership scope.
+# Functional checks only. Run by CI via `bazel run //tools/ci:verify_perf_corpus`.
 sh_binary(
     name = "verify_perf_corpus",
     srcs = ["verify_perf_corpus.sh"],

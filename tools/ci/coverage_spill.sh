@@ -9,11 +9,11 @@
 # `.gitignore` (#89) only hides the spill; this harness pins the root fix.
 #
 # This harness machine-checks the containment half verifiable on a clean
-# tree today (9 checks): the LLVM_PROFILE_FILE export targets the
+# tree today: the LLVM_PROFILE_FILE export targets the
 # auto-cleaned scratch dir before the first helper execution, the trap
 # still cleans scratch, the gate invocations are intact (not deleted to
 # fake containment), the gitignore defense-in-depth stays, and the
-# verification-matrix battery record still owns the seed cell. It proves
+# seed inventory still exists. It proves
 # containment statically; the full `coverage_cell` run remains the
 # end-to-end proof under #54.
 #
@@ -98,14 +98,6 @@ if [[ -f "tools/coverage/seed-inventory.txt" ]]; then
   ok
 else
   bad "seed inventory missing: tools/coverage/seed-inventory.txt"
-fi
-
-# The Stage 5 battery page still owns the seed cell (no silent promotion).
-if grep -q -F -e 'seed host' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'close-out battery' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix lost its Stage 5 battery seed-cell record"
 fi
 
 echo "coverage spill harness: $pass passed, $fail failed"

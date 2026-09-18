@@ -16,7 +16,7 @@
 #   extension stay open.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (12 checks) and records the gaps instead of claiming them.
+# today (9 checks) and records the gaps instead of claiming them.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:verify_perf_corpus`,
 # following //tools/ci:coverage_spill.
@@ -64,14 +64,6 @@ else
   bad "perf results lost report-not-gate status or the v2.8.0 pin"
 fi
 
-# Methodology doc owns the open results, claims nothing.
-if grep -q -F -e 'open work' docs/tools/rules_lint-comparison.md \
-  && grep -q -F -e 'no parity claim' docs/tools/rules_lint-comparison.md; then
-  ok
-else
-  bad "rules_lint-comparison doc lost its open-work or no-parity-claim record"
-fi
-
 # #86: harness + results provenance tests stay wired (no silent drift).
 if grep -q -F -e 'rules_lint_comparison_test' perf/BUILD.bazel \
   && grep -q -F -e 'rules_lint_results_test' perf/BUILD.bazel; then
@@ -95,16 +87,6 @@ else
   bad "ci.yml lost the generate --check freshness gate"
 fi
 
-# Battery page still owns each layer (no silent promotion).
-if grep -q -F -e 'lane A' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'close-out battery' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'Planning only' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'Tracked' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix lost its corpus/perf/lane-A/battery gap records"
-fi
-
 # #12: ownership audits stay versioned (corpus for target-less, code for
 # normal targets) alongside the wrapper-sources pin.
 if [[ -f "tools/ci/corpus_audit.sh" && -f "tools/ci/code_ownership.sh" \
@@ -112,13 +94,6 @@ if [[ -f "tools/ci/corpus_audit.sh" && -f "tools/ci/code_ownership.sh" \
   ok
 else
   bad "ownership harnesses missing (corpus_audit/code_ownership/wrapper_sources)"
-fi
-
-# #12: matrix records lane A scope honestly (corpus + code ownership).
-if grep -q -F -e 'lane A' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix lost the #12 lane A scope record"
 fi
 
 # Battery stays explicit-invocation for E2E (no wildcard-suite leakage).

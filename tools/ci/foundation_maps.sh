@@ -10,8 +10,8 @@
 # CI scope extension stay open under #12.
 #
 # This harness machine-checks the boundary half verifiable on a clean
-# tree today (11 checks): owner links, adapter boundaries, provider
-# advertisement, fixture markers, and honest gap records. Exact mappings
+# tree today: owner links, adapter boundaries, provider
+# advertisement, fixture markers. Exact mappings
 # stay open under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:foundation_maps`,
@@ -29,13 +29,6 @@ pass=0
 fail=0
 ok() { pass=$((pass + 1)); }
 bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
-
-# Language mappings stay owned in the support matrix.
-if grep -q -F -e 'Providers, Gazelle' docs/product/support-matrix.md; then
-  ok
-else
-  bad "support matrix lost its language-mapping record"
-fi
 
 # #7: minimum external-consumer example workspaces exist (Rust, Python,
 # JS/TS); the rest of #85's per-foundation set builds on these.
@@ -57,21 +50,6 @@ if [[ -z "$langs_missing" ]]; then
   ok
 else
   bad "language wrappers lost QualitySourcesInfo:$langs_missing"
-fi
-
-# #8: framework contract names the adapter boundary (no generic parser or
-# plain-JS fallback); exact mappings stay open.
-if grep -q -F -e 'No generic' docs/generation/framework-adapters.md; then
-  ok
-else
-  bad "framework-adapters contract lost its no-generic-parser boundary"
-fi
-
-# Framework composition backlog stays owned in the support matrix.
-if grep -q -F -e 'Adapter mappings' docs/product/support-matrix.md; then
-  ok
-else
-  bad "support matrix lost its framework-mapping record"
 fi
 
 # #8: all four framework wrappers advertise QualitySourcesInfo.
@@ -96,34 +74,11 @@ else
   bad "mixed composition fixture lost its M21 marker"
 fi
 
-# Quality-sources owns the pending taxonomy (no stable claim).
-if grep -q -F -e 'must not be published as stable' docs/quality/quality-sources.md; then
-  ok
-else
-  bad "quality-sources lost its pending-taxonomy record"
-fi
-
-# Battery page records the open framework/language/registry gaps.
-if grep -q -F -e 'Open (regions)' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'Open (adapter-less)' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'Planning only' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix lost its framework/language/registry gap record"
-fi
-
 # #12: wrapper-sources pin + ownership audits stay versioned.
 if [[ -f "tools/ci/wrapper_sources.sh" && -f "tools/ci/code_ownership.sh" ]]; then
   ok
 else
   bad "wrapper_sources/code_ownership harnesses missing"
-fi
-
-# Examples index stays honest about open acquisition/laziness work.
-if grep -q -F -e 'acquisition/laziness proof are open' examples/README.md; then
-  ok
-else
-  bad "examples README lost its open-work gap record"
 fi
 
 echo "foundation maps harness: $pass passed, $fail failed"

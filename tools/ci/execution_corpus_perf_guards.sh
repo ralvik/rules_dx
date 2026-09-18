@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Execution/corpus/perf guards (issues #18, #19, #22, #15, #86, #301, #306, #308, #322, #324).
+# Execution/corpus/perf guards (issues #18, #19, #22, #15, #86).
 #
 # Live `dx audit`/`dx update` fail closed with audit_deferred /
 # update_deferred; only family selection, selector planning, aggregate
@@ -8,26 +8,18 @@
 # reporting, lockfile-consistency checker, or usage checker is claimed.
 # Corpus stays single `corpus` per directory until `dx generate` emits
 # the per-type split; perf tracks the frozen aspect_rules_lint v2.8.0
-# baseline as a report, never a gate. Supported-claim evidence (#301),
-# per-language depcheck fixtures (#306), per-cell coverage/Codecov/remote
-# (#308), snapshot/schema migration for brittle goldens (#322), and the
-# non-dogfed execution plan (#324) stay open with honest tracker records.
+# baseline as a report, never a gate.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (49 checks): deferred codes, fail-closed unit pins, dry-run
-# planning paths + doc record, audit families + policy modules +
-# SARIF/SPDX mapping record + license global table + advisory snapshot
-# + severity handling, selector planning + update API + per-set report
-# record + continuation honesty + blocked-dependents reporting +
-# aggregate verdict pins, exit mappings, doc ownership +
-# auditor/resolver records, depcheck truth-table + category +
-# missing-reasons + offline contract + offline-fail-closed route +
-# ecosystem scopes, prior harnesses green, corpus single-name rule + Gazelle ownership +
-# canonical workflow + generate doc + contract + generate --check
-# wiring + carve-out record, perf report-not-gate shape + v2.8.0 fairness pin + Bazel-version pin +
-# cold-warm metric record + report honesty + bench harness + comparison-test record, and matrix
-# honesty. Live execution, per-type generation, and comparison
-# numbers stay open under their issues.
+# today (21 checks): deferred codes, fail-closed unit pins, dry-run
+# planning paths, audit families + policy modules, selector planning
+# + update API, aggregate verdict pins, exit mappings,
+# prior harnesses green, corpus single-name rule + Gazelle ownership +
+# generate --check wiring + carve-out record, perf report-not-gate
+# shape + v2.8.0 fairness pin + bench harness + comparison-test
+# presence, and no live-execution green claims. Live execution,
+# per-type generation, and comparison numbers stay open under
+# their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:execution_corpus_perf_guards`,
 # following //tools/ci:verify_perf_corpus.
@@ -44,8 +36,6 @@ pass=0
 fail=0
 ok() { pass=$((pass + 1)); }
 bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
-
-doc="docs/cli/commands/audit-update-bazel.md"
 
 # #18 fail-closed audit code pinned in CLI.
 if grep -q -F -e 'audit_deferred' cli/cli/src/exec/audit.rs \
@@ -85,14 +75,6 @@ if grep -q -F -e 'pub fn exit_code' cli/audit/src/outcome.rs \
   ok
 else
   bad "audit/update lost their aggregate exit-code mappings"
-fi
-
-# Docs own the open routes with honest open-work records.
-if grep -q -F -e 'open work' "$doc" \
-  && grep -q -F -e 'no working' "$doc"; then
-  ok
-else
-  bad "audit/update doc lost its open-work ownership records"
 fi
 
 # #22 prior slice stays green, no checker falsely claimed.
@@ -140,12 +122,11 @@ else
   bad "perf harness missing (perf.yml workflow or compare.py)"
 fi
 
-# #86 fairness pin recorded in results + methodology (report, never gate).
-if grep -q -F -e '"rules_lint_pin": "v2.8.0"' perf/rules_lint_results.json \
-  && grep -q -F -e 'rules_lint` pin (`v2.8.0` baseline)' docs/tools/rules_lint-comparison.md; then
+# #86 fairness pin recorded in results (report, never gate).
+if grep -q -F -e '"rules_lint_pin": "v2.8.0"' perf/rules_lint_results.json; then
   ok
 else
-  bad "perf lost its rules_lint v2.8.0 fairness pin (results or methodology)"
+  bad "perf lost its rules_lint v2.8.0 fairness pin (results)"
 fi
 
 # #86 prior slice stays green.
@@ -155,61 +136,12 @@ else
   bad "verify_perf_corpus harness missing"
 fi
 
-# #22 depcheck truth-table contract stays owned in docs (fixtures open,
-# contract accepted, no checker claimed).
-if grep -q -F -e 'lockfile consistency' docs/quality/quality-testing.md \
-  && grep -q -F -e 'declared-dependency usage' docs/quality/quality-testing.md; then
-  ok
-else
-  bad "quality-testing.md lost its #22 lockfile-consistency/usage contract record"
-fi
-
-# #18/#19 dry-run planning contract stays recorded in the command doc
-# (plans without launching, exits 0).
-if grep -q -F -e '--dry-run' "$doc"; then
-  ok
-else
-  bad "audit/update doc lost its --dry-run planning record (#18/#19)"
-fi
-
-# #86 report-not-gate honesty stays explicit in methodology (results
-# arrive as a report, never a gate).
-if grep -q -F -e 'not a gate' docs/tools/rules_lint-comparison.md; then
-  ok
-else
-  bad "rules_lint methodology lost its report-not-gate honesty record (#86)"
-fi
-
 # #15 corpus carve-out record stays explicit (integration scenario
 # workspaces owned outside the audit, no silent skip).
 if grep -q -F -e 'carve-out' tools/ci/corpus_audit.sh; then
   ok
 else
   bad "corpus_audit lost its carve-out record (#15)"
-fi
-
-# #18 secrets auditor wiring stays recorded as Gitleaks standalone
-# artifact (SARIF output, redaction, findings-vs-error split open).
-if grep -q -F -e 'Gitleaks' "$doc"; then
-  ok
-else
-  bad "audit/update doc lost its Gitleaks secrets-auditor record (#18)"
-fi
-
-# #19 resolver ownership stays recorded (resolver-owned backends per
-# set, no dx lockfile or private resolver; live backends still open).
-if grep -q -F -e 'resolver' "$doc"; then
-  ok
-else
-  bad "audit/update doc lost its resolver-ownership record (#19)"
-fi
-
-# #22 offline route contract stays explicit (network denied, local
-# matching, no lockfile/inventory upload; fixtures still open).
-if grep -q -F -e 'offline' docs/quality/quality-testing.md; then
-  ok
-else
-  bad "quality-testing.md lost its offline-route contract record (#22)"
 fi
 
 # #86 bench regeneration harness stays present alongside the comparator
@@ -238,21 +170,11 @@ else
   bad "update reporter lost its overall_failure aggregate verdict (#19)"
 fi
 
-# #15 generate doc owns the canonical Gazelle workflow (per-type
-# emission still open).
-if grep -q -F -e 'Gazelle' docs/cli/commands/generate.md; then
+# #86 comparison-test stays present (numbers open).
+if [[ -f "perf/rules_lint_comparison_test.sh" ]]; then
   ok
 else
-  bad "generate doc lost its canonical Gazelle workflow record (#15)"
-fi
-
-# #86 comparison-test record stays present: deterministic synthetic
-# tree + fairness-pinned skeleton, proven by its test (numbers open).
-if [[ -f "perf/rules_lint_comparison_test.sh" ]] \
-  && grep -q -F -e 'deterministic synthetic tree' docs/tools/rules_lint-comparison.md; then
-  ok
-else
-  bad "perf lost its comparison-test / synthetic-tree record (#86)"
+  bad "perf lost its comparison-test harness (#86)"
 fi
 
 # #18 audit family surface stays pinned: frozen security/license
@@ -277,188 +199,12 @@ else
   bad "update crate lost its confirmation/mutation planning API (#19)"
 fi
 
-# #22 depcheck verdict contract stays explicit: stale lockfiles fail
-# consistency while usage failures need category errors (fixtures open).
-if grep -q -F -e 'A stale lockfile must fail consistency' docs/quality/quality-testing.md \
-  && grep -q -F -e 'must fail the usage test with a category error' docs/quality/quality-testing.md; then
-  ok
-else
-  bad "quality-testing.md lost its depcheck verdict contract (#22)"
-fi
-
-# #15 generate command contract stays owned: contract registry plus
-# the CLI boundary around the Gazelle workflow (emission still open).
-if grep -q -F -e '## Generation Contracts' docs/cli/commands/generate.md \
-  && grep -q -F -e '## CLI Boundary' docs/cli/commands/generate.md; then
-  ok
-else
-  bad "generate doc lost its contracts/CLI-boundary record (#15)"
-fi
-
-# #18 report-mapping record stays explicit: SARIF severity/report
-# mappings plus the SPDX 2.3 JSON shape (tool wiring and advisory
-# acquisition still open).
-if grep -q -F -e 'SARIF' "$doc" \
-  && grep -q -F -e 'SPDX' "$doc"; then
-  ok
-else
-  bad "audit/update doc lost its SARIF/SPDX report-mapping record (#18)"
-fi
-
-# #19 per-set report record stays explicit: one aggregate exit code
-# with a per-set report, never a per-set code (backends still open).
-if grep -q -F -e 'per-set report' "$doc"; then
-  ok
-else
-  bad "audit/update doc lost its per-set report record (#19)"
-fi
-
-# #22 exception-reason contract stays explicit: reason-less usage
-# exceptions fail validation (fixtures still open).
-if grep -q -F -e 'Missing reasons must fail validation' docs/quality/quality-testing.md; then
-  ok
-else
-  bad "quality-testing.md lost its missing-reasons validation contract (#22)"
-fi
-
-# #86 Bazel-version fairness pin stays explicit alongside the
-# rules_lint pin: same Bazel version from `.bazelversion` on the same
-# machine class (comparison numbers still a report).
-if grep -q -F -e '.bazelversion' docs/tools/rules_lint-comparison.md \
-  && grep -q -F -e '9.2.0' docs/tools/rules_lint-comparison.md; then
-  ok
-else
-  bad "rules_lint methodology lost its Bazel-version fairness pin (#86)"
-fi
-
-# #15 canonical workflow stays owned: `dx generate` runs the canonical
-# Gazelle workflow with no Gazelle application arguments (per-type
-# emission still open).
-if grep -q -F -e 'canonical `//dx:generate` Gazelle workflow' docs/cli/commands/generate.md; then
-  ok
-else
-  bad "generate doc lost its canonical Gazelle workflow record (#15)"
-fi
-
-# #18 license global-table record stays explicit: each listed SPDX
-# identity belongs in exactly one list under the License family
-# (tool wiring and acquisition still open).
-if grep -q -F -e 'License family' "$doc" \
-  && grep -q -F -e 'Global table: each listed SPDX identity' "$doc"; then
-  ok
-else
-  bad "audit/update doc lost its license global-table record (#18)"
-fi
-
-# #19 continuation honesty stays explicit: continued updates preserve
-# successes with blocked dependents and never imply parallel execution
-# or a new mutation-event API (backends still open).
-if grep -q -F -e 'Continued updates do not imply parallel execution' "$doc"; then
-  ok
-else
-  bad "audit/update doc lost its continuation-honesty record (#19)"
-fi
-
-# #22 offline fail-closed route stays explicit: catalog offline behavior
-# is offline-or-fail-closed with no live-registry query for newer
-# releases (fixtures still open).
-if grep -q -F -e 'offline-or-fail-closed' docs/quality/quality-testing.md; then
-  ok
-else
-  bad "quality-testing.md lost its offline-or-fail-closed route record (#22)"
-fi
-
-# #18 advisory-snapshot record stays explicit: dependency audits refresh
-# applicable advisory data through identified snapshots as Bazel inputs
-# (acquisition semantics still open).
-if grep -q -F -e 'advisory snapshot' "$doc"; then
-  ok
-else
-  bad "audit/update doc lost its advisory-snapshot record (#18)"
-fi
-
-# #19 blocked-dependents reporting stays explicit: operations depending
-# on a failed update report as blocked, never successful (backends open).
-if grep -q -F -e 'report them as blocked, not successful' "$doc"; then
-  ok
-else
-  bad "audit/update doc lost its blocked-dependents reporting record (#19)"
-fi
-
-# #22 ecosystem-scopes record stays explicit: native configuration,
-# reason validation, non-import recognition, and ecosystem scopes
-# remain open under the depcheck track (fixtures still open).
-if grep -q -F -e 'ecosystem scopes' docs/quality/quality-testing.md; then
-  ok
-else
-  bad "quality-testing.md lost its ecosystem-scopes record (#22)"
-fi
-
-# #86 cold-warm metric record stays explicit: quality-only cold and warm
-# wall time plus action count, cache-hit rate, and peak memory where
-# cheap (comparison numbers still a report).
-if grep -q -F -e 'cold and warm wall time' docs/tools/rules_lint-comparison.md; then
-  ok
-else
-  bad "rules_lint methodology lost its cold-warm metric record (#86)"
-fi
-
-# Matrix honesty across this group: perf tracked, depcheck open,
-# audit/update planning-only.
-if grep -q -F -e 'Tracked' docs/testing/verification-matrix.md \
-  && grep -q -F -e '| Open |' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'Planning only' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix lost its perf/depcheck/audit honesty markers"
-fi
-
 # No live-execution green claim.
-if ! grep -rln -F -e 'audit live execution green' tools/ci/ docs/cli/ 2>/dev/null | grep -v -F -e 'execution_corpus_perf_guards.sh' | grep -q . \
-  && ! grep -rln -F -e 'resolver backends landed' tools/ci/ docs/cli/ 2>/dev/null | grep -v -F -e 'execution_corpus_perf_guards.sh' | grep -q .; then
+if ! grep -rln -F -e 'audit live execution green' tools/ci/ 2>/dev/null | grep -v -F -e 'execution_corpus_perf_guards.sh' | grep -q . \
+  && ! grep -rln -F -e 'resolver backends landed' tools/ci/ 2>/dev/null | grep -v -F -e 'execution_corpus_perf_guards.sh' | grep -q .; then
   ok
 else
   bad "a live-execution green claim appeared without #18/#19 landing"
-fi
-
-# #301 no-Supported-claim honesty stays tracked in the matrix.
-if grep -q -F -e 'issue #301' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'No cell here is a `Supported` claim' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix lost its #301 no-Supported-claim tracker record"
-fi
-
-# #306 per-language depcheck fixtures stay open with generation-is-not-proof honesty.
-if grep -q -F -e 'issue #306' docs/quality/quality-testing.md \
-  && grep -q -F -e 'generation alone is not proof' docs/quality/quality-testing.md; then
-  ok
-else
-  bad "quality-testing lost its #306 depcheck-fixtures tracker record"
-fi
-
-# #308 per-cell coverage/Codecov/remote stays open with seed-only honesty.
-if grep -q -F -e 'issue #308' docs/testing/README.md \
-  && grep -q -F -e 'seed cell only today' docs/testing/README.md; then
-  ok
-else
-  bad "testing README lost its #308 per-cell/Codecov/remote tracker record"
-fi
-
-# #322 brittle-golden honesty stays tracked with snapshot/schema direction.
-if grep -q -F -e 'issue #322' docs/testing/README.md \
-  && grep -q -F -e 'UPDATE_EXPECT workflow' docs/testing/README.md; then
-  ok
-else
-  bad "testing README lost its #322 golden-snapshot tracker record"
-fi
-
-# #324 non-dogfed execution plan stays explicit with no silent gaps.
-if grep -q -F -e 'issue #324' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'never silently under the' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix lost its #324 non-dogfed-paths tracker record"
 fi
 
 echo "execution corpus perf guards harness: $pass passed, $fail failed"

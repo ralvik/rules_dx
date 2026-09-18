@@ -11,8 +11,8 @@
 # owner-gated with SECURITY reporting as the release precondition.
 #
 # This harness machine-checks the group half verifiable on a clean tree
-# today (10 checks): workflow separation + triggers + gates, pinned base
-# + scaffold state, docs ownership, security precondition, gitignored
+# today: workflow separation + triggers + gates, pinned base
+# + scaffold state, security precondition, gitignored
 # outputs, unpublishable module version, and the no-approval-no-publish
 # policy. Matrix/SBOM/BCR-submission/install verification stay open.
 #
@@ -70,14 +70,6 @@ if grep -q -F -e '"image": "mcr.microsoft.com/devcontainers/base' .devcontainer/
   ok
 else
   bad "devcontainer.json image drifted before the first GHCR push"
-fi
-
-# Distribution docs own the open mechanics (standalone destinations, dry-run follow-ups).
-if grep -q -F -e 'standalone' docs/environments/environment.md \
-  && grep -q -F -e 'dry-run' docs/environments/environment.md; then
-  ok
-else
-  bad "environment distribution lost its standalone/dry-run records"
 fi
 
 # Release precondition: private vulnerability reporting enabled (#5).

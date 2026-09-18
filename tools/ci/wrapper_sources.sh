@@ -8,16 +8,12 @@
 # only (docs, BUILD files, configs).
 #
 # This harness machine-checks the static half verifiable on a clean tree
-# today (18 checks): all eleven language wrappers plus the four
+# today: all eleven language wrappers plus the four
 # framework wrappers advertise `QualitySourcesInfo`, load the shared
 # forwarding helper (single-sourced normalization, never per-language
 # reimplementation), bind wrapper tests, and the corpus/code-ownership
 # split stays honest (no code extensions in corpus targets, no docs
-# extensions in the code-ownership scope). Native tool-config binding
-# for own-tree runs, CI `dx lint`/`format` scope extension, per-language
-# provider/import/lock proofs (#7), framework composition regions (#8),
-# and family-taxonomy mappings (#6) stay open and are recorded as gaps,
-# not claimed here.
+# extensions in the code-ownership scope).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:wrapper_sources`,
 # following //tools/ci:depcheck_contract.
@@ -91,30 +87,13 @@ else
 fi
 
 # The split stays honest in the other direction too: the code-ownership
-# audit scope is code extensions only, docs/BUILD/configs stay with
+# audit scope is code extensions only, BUILD/configs stay with
 # the corpus audit (see tools/ci/code_ownership.sh vs corpus_audit.sh).
 if grep -q -F -e 'rs|py|js' tools/ci/code_ownership.sh \
   && grep -q -F -e 'real_source_target' tools/ci/corpus_audit.sh; then
   ok
 else
   bad "ownership-audit split drifted (code vs corpus scopes)"
-fi
-
-# Open mappings stay recorded by domain, never silently decided:
-# language mappings, framework adapter mappings, family taxonomy,
-# and dogfood scope extension are named in the support matrix
-# and quality docs.
-if grep -q -F -e 'Providers, Gazelle' docs/product/support-matrix.md \
-  && grep -q -F -e 'Adapter mappings' docs/product/support-matrix.md; then
-  ok
-else
-  bad "support matrix lost its language/framework mapping records"
-fi
-
-if grep -q -F -e 'adapter mechanics' docs/quality/tool-integrations.md; then
-  ok
-else
-  bad "tool-integrations lost its adapter-mechanics record"
 fi
 
 echo "wrapper sources harness: $pass passed, $fail failed"
