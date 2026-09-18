@@ -72,12 +72,12 @@ else
   bad "devcontainer.json image drifted before the first GHCR push"
 fi
 
-# Distribution docs own the open mechanics (#26 standalone, #78 follow-ups).
-if grep -q -F -e 'issues/26' docs/environments/environment.md \
-  && grep -q -F -e 'issues/78' docs/environments/environment.md; then
+# Distribution docs own the open mechanics (standalone destinations, dry-run follow-ups).
+if grep -q -F -e 'standalone' docs/environments/environment.md \
+  && grep -q -F -e 'dry-run' docs/environments/environment.md; then
   ok
 else
-  bad "environment distribution lost its #26/#78 ownership links"
+  bad "environment distribution lost its standalone/dry-run records"
 fi
 
 # Release precondition: private vulnerability reporting enabled (#5).

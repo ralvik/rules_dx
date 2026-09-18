@@ -1,6 +1,6 @@
 # Performance benchmarks
 
-Bazel-owned benchmark harness with comparison machinery (issue #215).
+Bazel-owned benchmark harness with comparison machinery (open work).
 No `dx perf` command by design; benchmarks are Bazel targets plus docs.
 
 - `bazel run //perf:bench_micro` — microbenchmarks, per-PR (fast).

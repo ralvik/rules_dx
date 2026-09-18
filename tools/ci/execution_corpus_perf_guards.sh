@@ -84,12 +84,12 @@ else
   bad "audit/update lost their aggregate exit-code mappings"
 fi
 
-# Docs own the open routes with honest links.
-if grep -q -F -e 'issues/18' "$doc" \
-  && grep -q -F -e 'issues/19' "$doc"; then
+# Docs own the open routes with honest open-work records.
+if grep -q -F -e 'open work' "$doc" \
+  && grep -q -F -e 'no working' "$doc"; then
   ok
 else
-  bad "audit/update doc lost its #18/#19 ownership links"
+  bad "audit/update doc lost its open-work ownership records"
 fi
 
 # #22 prior slice stays green, no checker falsely claimed.
@@ -400,13 +400,14 @@ else
   bad "rules_lint methodology lost its cold-warm metric record (#86)"
 fi
 
-# Matrix honesty across this group.
-if grep -q -F -e 'Tracked (#86)' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'Open (#22)' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'Planning only (#18/#19)' docs/testing/verification-matrix.md; then
+# Matrix honesty across this group: perf tracked, depcheck open,
+# audit/update planning-only.
+if grep -q -F -e 'Tracked' docs/testing/verification-matrix.md \
+  && grep -q -F -e '| Open |' docs/testing/verification-matrix.md \
+  && grep -q -F -e 'Planning only' docs/testing/verification-matrix.md; then
   ok
 else
-  bad "verification-matrix lost its #86/#22/#18/#19 honesty markers"
+  bad "verification-matrix lost its perf/depcheck/audit honesty markers"
 fi
 
 # No live-execution green claim.

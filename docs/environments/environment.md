@@ -257,7 +257,7 @@ The Bazel-first installation path is `bazel run //dx:env`, which exposes the `dx
 version matching the consumer's pinned module. Standalone installation requires neither
 a local Rust toolchain nor Bazel. Standalone binaries with install-time publisher-identity
 verification, plus the publication mechanics, are planned in
-[#26](https://github.com/ralvik/rules_dx/issues/26); until then the Bazel-first path
+open work; until then the Bazel-first path
 above is the supported installation. There is no checksum-only fallback or optional
 verification step: a checksum delivered alongside a binary is not by itself proof of
 publisher identity. Signing technology, trust-root and verifier bootstrap, identity
@@ -267,7 +267,7 @@ The approved v1 destinations are the Bazel Central Registry for the `rules_dx` m
 and GitHub Releases for standalone `dx` binaries. This selects destinations only, not
 credentials, permissions, registry submission procedures, or the publication sequence;
 publication mechanics are tracked in
-[#26](https://github.com/ralvik/rules_dx/issues/26). Publication still requires explicit
+open work. Publication still requires explicit
 approval and qualified release artifacts.
 
 Publication dry-run: dispatch `.github/workflows/publish-dry-run.yml` manually from the
@@ -277,9 +277,9 @@ submitting, or creating anything; the report lands in the run summary and logs. 
 `approve` input (default false) runs the fuller qualification; nothing publishes either
 way. The workflow needs only `contents: read` and stores no secrets. The full release
 matrix, SBOM/provenance generation, and BCR dry-run submission arrive as follow-ups
-tracked in [#78](https://github.com/ralvik/rules_dx/issues/78) as platforms qualify
-under [#5](https://github.com/ralvik/rules_dx/issues/5) and signing tooling is selected
-under [#26](https://github.com/ralvik/rules_dx/issues/26).
+open as platforms qualify
+under open work and signing tooling is selected
+under open work.
 
 Draft-only publisher ceiling: the `github_release` rule (`deploy/rules/github.bzl`,
 for example `//cli/cli:github_draft`) defaults to `draft = True` with the

@@ -496,7 +496,7 @@ Run lockfile consistency with network access denied after declared inputs are pr
 an undeclared package-manager cache. Both valid and stale-lock cases must produce the expected
 result offline; missing required metadata must fail actionably, not skip validation or pass. Verify
 the test does not query live registries for newer releases. Exact offline routes are open under
-[#22](https://github.com/ralvik/rules_dx/issues/22).
+open work.
 Run the generated tests through both `bazel test //...` and bare `dx test`, proving each check is
 included without opt-in, propagates failures, and is independently runnable by label. Verify no
 default `manual` exclusion hides either check and unrelated foundations remain inactive.
@@ -505,7 +505,7 @@ positives. Verify a legitimate non-import use can pass through an explicit depen
 exception with an explanatory reason, while an unrelated unused declaration still fails and the
 exception does not waive lockfile consistency. Missing reasons must fail validation. Native
 configuration, reason validation, non-import recognition, and ecosystem scopes are open under
-[#22](https://github.com/ralvik/rules_dx/issues/22).
+open work.
 Verify exceptions for removed dependencies and exceptions that no longer suppress a finding fail
 as obsolete, including after a checker upgrade recognizes legitimate usage. A still-needed explained
 exception must continue to pass. Use the same supported-configuration scope as usage analysis and

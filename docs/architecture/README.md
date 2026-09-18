@@ -133,9 +133,8 @@ into it. See [Quality Sources and Applicability](../quality/quality-sources.md).
 
 `cli/` holds the Rust implementation (24 crates, `dx_*` crate names stable) and
 `dx/` is the Starlark-only consumer-policy facade (`//dx:config`, `//dx:env`,
-`//dx:codegen`, `//dx:generate`), landed in
-[issue 76](https://github.com/ralvik/rules_dx/issues/76) with visibility
-decisions in [issue 83](https://github.com/ralvik/rules_dx/issues/83). The move
+`//dx:codegen`, `//dx:generate`), landed as the facade reorganization with visibility
+decisions recorded alongside. The move
 fixed the two true collisions (`dx/qual` → `cli/qualification`,
 `dx/docs` → `cli/docgen`); the facade labels below are unchanged.
 
@@ -146,7 +145,7 @@ fixed the two true collisions (`dx/qual` → `cli/qualification`,
 | `//dx:codegen` | Empty filegroup reserving the CLI selection identity; real plan collector is `//cli/codegen:dx_codegen` | Provisional (open decisions O33/O34) |
 | `//dx:config` | Empty placeholder default for the `//config:workspace` label flag; typed per-family sections pending | Provisional (open decision O17) |
 | `//tools/coverage:coverage_gate` | Single crate after the unused `:coverage` wrapper removal | Accepted |
-| `real_source_target(name="corpus")` boilerplate | Repeated per package; dedup is follow-up owned by [issue 15](https://github.com/ralvik/rules_dx/issues/15), not hand-maintained splits | Open |
+| `real_source_target(name="corpus")` boilerplate | Repeated per package; dedup is open follow-up work, not hand-maintained splits | Open |
 
 ### Upstream Authorities
 
@@ -210,7 +209,7 @@ implementations demonstrate real reuse. This sequence preserves the accepted fou
 while avoiding speculative cross-language APIs.
 
 The delivery order is tracked in [roadmap](../roadmap.md) and
-[GitHub issues](https://github.com/ralvik/rules_dx/issues). Foundation constraints are recorded in
+planned work. Foundation constraints are recorded in
 [ADR 0010](../decisions/0010-python-foundation.md),
 [ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md), and
 [ADR 0015](../decisions/0015-first-party-gazelle-extensions.md).
@@ -223,4 +222,4 @@ without exposing unstable subprocess command lines as API. CI checks run
 directly through Bazel; ownership is inspectable through query interfaces.
 Command, output, and report behavior is authoritative under [CLI](../cli/);
 quality evidence under [Quality](../quality/). Open work lives in
-[GitHub issues](https://github.com/ralvik/rules_dx/issues).
+planned work.

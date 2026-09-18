@@ -1,12 +1,12 @@
 # `dx docs`
 
 Removed. The `dx docs` command was deleted in
-[issue #31](https://github.com/ralvik/rules_dx/issues/31): the shipped
+open work: the shipped
 `--check` mode validated flag shape, not docs content, while its name
 overpromised in front of the docs-publish deploy gate.
 
 Reintroduction with real extraction/validation behind the invocation is
-tracked in [issue #10](https://github.com/ralvik/rules_dx/issues/10).
+open.
 The design contracts it will implement are unchanged:
 
 - [Documentation IR](../../documentation/doc-ir.md): common symbol model,

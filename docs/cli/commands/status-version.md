@@ -51,7 +51,7 @@ dx: version skew: binary 0.0.0 pin 9.9.9 module 0.0.0; fix with `dx version --pi
 ```
 
 Fail vs warn follows command class (decided in
-[issue #214](https://github.com/ralvik/rules_dx/issues/214)):
+open work):
 
 - Proceed silently: `version`, `status` (the diagnose/repair path),
   `completion` (no version semantics).

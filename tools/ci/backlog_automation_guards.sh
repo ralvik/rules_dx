@@ -175,13 +175,13 @@ else
   bad "coverage inventory/spill backing missing (seed-inventory/coverage_spill)"
 fi
 
-# #260 automation ownership stays explicit (Renovate chosen updater,
-# bump-PR review path, issue #3 link).
-if grep -q -F -e 'Renovate' docs/contributing/automation.md \
-  && grep -q -F -e 'issue #3' docs/contributing/automation.md; then
+# Automation ownership stays explicit (Renovate chosen updater,
+# bump-PR review path).
+if grep -q -F -e 'Renovate is the chosen updater' docs/contributing/automation.md \
+  && grep -q -F -e 'Renovate' docs/contributing/automation.md; then
   ok
 else
-  bad "automation.md lost its Renovate ownership / issue #3 link (#260)"
+  bad "automation.md lost its Renovate ownership record"
 fi
 
 # #9 managed-PATH detail stays pinned alongside the commit lock
@@ -406,12 +406,13 @@ else
   bad "Renovate fallback lost its Monday schedule record (#260)"
 fi
 
-# Matrix honesty for this group.
-if grep -q -F -e 'Open (#10)' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'Open (#9)' docs/testing/verification-matrix.md; then
+# Matrix honesty for this group: docs/env-codegen columns stay Open with
+# seed-host-only Delivered semantics.
+if grep -q -F -e '| Open |' docs/testing/verification-matrix.md \
+  && grep -q -F -e 'seed host' docs/testing/verification-matrix.md; then
   ok
 else
-  bad "verification-matrix lost its #9/#10 honesty markers"
+  bad "verification-matrix lost its docs/env open honesty markers"
 fi
 
 # No widen implementation falsely claimed.

@@ -48,12 +48,12 @@ else
 fi
 
 # Current selection stays honest: Codecov documented with activation
-# unqualified per #5 (first-party comment arrives under #254).
+# unqualified (first-party comment remains open work).
 if grep -q -F -e 'Codecov' docs/testing/README.md \
-  && grep -q -F -e 'issues/5' docs/testing/README.md; then
+  && grep -q -F -e 'remain unqualified' docs/testing/README.md; then
   ok
 else
-  bad "testing README lost its Codecov-selection + #5 qualification record"
+  bad "testing README lost its Codecov-selection + unqualified record"
 fi
 
 # Reporting contract exists for consumers (ownership + check discipline).

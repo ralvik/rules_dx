@@ -36,7 +36,6 @@ authoritative product, design, delivery, and governance documents.
 - [Changelog](../CHANGELOG.md): release history.
 - [Decision records](decisions/README.md): accepted, provisional, superseded, and rejected decisions.
   Authoring rules live in [decision instructions](decisions/AGENTS.md).
-- [Planned work](https://github.com/ralvik/rules_dx/issues): scoped tracks.
 
 ## Contributing
 
@@ -55,7 +54,7 @@ authoritative product, design, delivery, and governance documents.
 | Product scope and support matrix | Authoritative product boundary, repository evidence, and current support claims, subject to accepted decisions |
 | Design contracts and protocols | Authoritative component behavior within accepted product and decision constraints |
 | Provisional decisions and explicitly provisional design | Validation targets, not stable commitments |
-| Planned work tracker | Scoped planned work with status and next steps in GitHub issues; not normative behavior |
+| Roadmap | Planned work with status and next steps; not normative behavior |
 | Agent instructions | Procedural instructions only; they do not define product semantics or architecture contracts |
 
 If authoritative documents conflict, stop affected work and resolve the documents rather than

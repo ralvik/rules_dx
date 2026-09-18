@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Backlog-contracts harness (issues #9, #10): machine-checks the frozen
+# Backlog-contracts harness (env/codegen + docs-pipeline): machine-checks the frozen
 # cross-file contracts plus the honest gap labels of the environment /
 # codegen and docs-pipeline backlog tracks.
 #
@@ -11,7 +11,7 @@
 # `docs/environments/managed-state.md` with cross-platform correctness
 # explicitly disclaimed, and the root-selection candidates stay
 # unverified WP4 slices in `docs/environments/codegen.md`. The
-# `dx docs` removal plus #10-tracked reintroduction is recorded in
+# `dx docs` removal plus open reintroduction is recorded in
 # `docs/cli/commands/docs.md`, the IR identity (`dx.documentation.v1`,
 # `schema_major: 1`) is stable across the proto and its contract, and
 # the support matrix still promotes no cell to `Supported`.
@@ -21,8 +21,8 @@
 # queries, lock platform evidence, `dx clean` reclaimable-bytes
 # reporting beyond the implemented measure/render pair, per-language
 # docs adapter runs, link/reference completeness, renderer execution,
-# guide-step CI wiring, and the timed quickstart proof all stay open
-# per #9/#10 and are recorded as gaps, not claimed here.
+# guide-step CI wiring, and the timed quickstart proof all remain open work
+# and are recorded as gaps, not claimed here.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:backlog_contracts`,
 # following //tools/ci:registry_singularity.
@@ -101,20 +101,20 @@ else
   bad "ADR 0018 lost the implemented clean-evidence status update"
 fi
 
-# `dx docs` stays removed with reintroduction tracked in #10: the
+# `dx docs` stays removed with open reintroduction: the
 # name must not return as a placeholder.
-if grep -q -F -e 'issue #31' docs/cli/commands/docs.md && grep -q -F -e 'issues/10' docs/cli/commands/docs.md; then
+if grep -q -F -e 'Removed.' docs/cli/commands/docs.md && grep -q -F -e 'Reintroduction' docs/cli/commands/docs.md && grep -q -F -e 'is' docs/cli/commands/docs.md; then
   ok
 else
-  bad "docs/cli/commands/docs.md lost the removal + #10-tracking record"
+  bad "docs/cli/commands/docs.md lost the removal + open-reintroduction record"
 fi
 
-# The check-mode/render/link-completeness gaps stay linked to #10 in
+# The check-mode/render/link-completeness gaps stay recorded as open work in
 # both pipeline contracts.
-if grep -q -F -e 'issues/10' docs/documentation/site.md && grep -q -F -e 'issues/10' docs/documentation/doc-ir.md; then
+if grep -q -F -e 'no working site support is claimed' docs/documentation/site.md && grep -q -F -e 'no working docs support is claimed' docs/documentation/doc-ir.md; then
   ok
 else
-  bad "docs pipeline contracts lost the #10 gap links"
+  bad "docs pipeline contracts lost the open-work gap record"
 fi
 
 # The IR identity is stable across the proto and its contract.

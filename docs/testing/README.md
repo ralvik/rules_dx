@@ -95,7 +95,7 @@ routes, reproducible feasibility evidence, and limitations in the work report be
 fallback. Mutation tests may supplement, but not replace, the required evidence.
 
 **Resolved measurement mechanics (standard-practice rules).** Canonical report format is LCOV from `bazel coverage`, merged per required configuration/platform cell. Rust uses the pinned `rules_rust` llvm-cov integration; Starlark uses custom instrumentation emitting LCOV `DA` records with identical line semantics. Executable lines are `DA` records; blank and comment-only lines are not executable; compiler-generated regions are explicitly listed, not silently dropped; a target with no executable lines is listed as no-code, never an implicit pass. Eligible sources are the collected LCOV `DA` records for first-party implementation sources plus generated-source provenance; test/fixture-only code, schemas, upstream code, and generated boilerplate are classified separately, and authored logic emitted through generation stays eligible. Aggregation deduplicates by authored source and metric identity within each cell, unions hits across that cell's tests, retains zero-hit eligible sources, and requires every required cell to meet the pinned `--min-coverage` percent with exact covered/eligible counts and uncovered locations; languages and metrics stay separate, with no cross-platform union, no averaged percentages, and no rounding up. Missing reports, incomplete instrumentation, and absent eligible sources fail the gate. Negative fixtures cover valid ignores and denominator effects, missing reasons, malformed directives, missing reports, and uncovered lines. Empirical Starlark feasibility evidence ran against the pinned Bazel.
-The gate is enforced by `dx coverage --min-coverage` in the coverage job (sharded CI, issue #210).
+The gate is enforced by `dx coverage --min-coverage` in the coverage job (sharded CI, open work).
 Each required configuration/platform cell additionally gates its own
 combined LCOV report through the `check` gate CLI against a versioned
 cell inventory (seed cell: `tools/coverage/seed-inventory.txt`): exact
@@ -145,7 +145,7 @@ Tests cover only implemented commands. The
 complete end-to-end matrix is required before API stabilization. The
 as-built per-language x per-layer status lives in the
 [verification matrix](verification-matrix.md) (Stage 5 close-out,
-[issue #54](https://github.com/ralvik/rules_dx/issues/54)).
+open work).
 
 ## GitHub Coverage Reporting
 
@@ -160,9 +160,9 @@ Starlark behavioral fallback must remain separate from measured line coverage.
 Prefer the maintained upstream Codecov GitHub integration. Account/repository activation,
 pinned upload tooling, authentication and fork-PR permissions, report paths and identities,
 platform/configuration grouping, and upload-failure handling require qualification
-(tracked in [issue #5](https://github.com/ralvik/rules_dx/issues/5)). Coverage mappings are resolved in the [coverage gate](#coverage). Verify complete-report publication and failure cases before claiming the
+(open). Coverage mappings are resolved in the [coverage gate](#coverage). Verify complete-report publication and failure cases before claiming the
 integration works. Workflows exist in `.github/workflows/ci.yml`, `reusable-consumer.yml`, and
-`reusable-docs.yml`; Codecov account activation and upload wiring remain unqualified per issue #5.
+`reusable-docs.yml`; Codecov account activation and upload wiring remain unqualified.
 
 ## Infrastructure Budget
 

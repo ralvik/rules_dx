@@ -21,4 +21,4 @@ composition fixture (Vue/Svelte/Astro/MDX over one shared helper, owned by
 the framework track), not an external-consumer workspace, so the
 consumer-example audits above do not apply to it.
 
-Each example records exact commands and expected evidence in its own `README.md`. Per-foundation external-consumer workspaces plus acquisition/laziness proof are tracked in [#85](https://github.com/ralvik/rules_dx/issues/85).
+Each example records exact commands and expected evidence in its own `README.md`. Per-foundation external-consumer workspaces plus acquisition/laziness proof are open.

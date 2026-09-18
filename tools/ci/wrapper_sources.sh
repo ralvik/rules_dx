@@ -100,21 +100,21 @@ else
   bad "ownership-audit split drifted (code vs corpus scopes)"
 fi
 
-# Open mappings stay linked to their owners, never silently decided:
-# language proofs (#7), framework regions (#8), family taxonomy (#6),
-# and dogfood scope extension (#12) are named in the support matrix
+# Open mappings stay recorded by domain, never silently decided:
+# language mappings, framework adapter mappings, family taxonomy,
+# and dogfood scope extension are named in the support matrix
 # and quality docs.
-if grep -q -F -e 'issues/7' docs/product/support-matrix.md \
-  && grep -q -F -e 'issues/8' docs/product/support-matrix.md; then
+if grep -q -F -e 'Providers, Gazelle' docs/product/support-matrix.md \
+  && grep -q -F -e 'Adapter mappings' docs/product/support-matrix.md; then
   ok
 else
-  bad "support matrix lost its #7/#8 owner links"
+  bad "support matrix lost its language/framework mapping records"
 fi
 
-if grep -q -F -e 'issues/12' docs/quality/tool-integrations.md; then
+if grep -q -F -e 'adapter mechanics' docs/quality/tool-integrations.md; then
   ok
 else
-  bad "tool-integrations lost its #12 dogfood link"
+  bad "tool-integrations lost its adapter-mechanics record"
 fi
 
 echo "wrapper sources harness: $pass passed, $fail failed"

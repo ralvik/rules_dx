@@ -8,4 +8,4 @@
 - Update `README.md` on add, remove, or supersede.
 - No impl detail unless needed for the constraint.
 - Fix wording in place. Material reversal needs a new superseding record with links.
-- Open work lives in GitHub issues. A narrow provisional pick is allowed if marked, linked, and flagged for review.
+- A narrow provisional pick is allowed if marked and flagged for review.

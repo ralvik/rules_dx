@@ -3,12 +3,12 @@
 Implementation status: accepted v1 direction with docs-pipeline mappings frozen.
 Delivered: the `dx_docs` site-build action planning over the
 Bazel-cached extract→aggregate→render graph (no committed IR). Command dispatch was
-removed in [issue #31](https://github.com/ralvik/rules_dx/issues/31); reintroduction
-is tracked in [issue #10](https://github.com/ralvik/rules_dx/issues/10). mdBook is the decided
+removed in open work; reintroduction
+is open. mdBook is the decided
 renderer with no planned replacement. Cache and hermeticity properties
 below are design requirements, not verified claims; verification follows
 [Testing](../testing/) before any support statement. Renderer/site-build execution
-remains a gap ([issue #10](https://github.com/ralvik/rules_dx/issues/10)); no working site support is claimed until qualified execution lands.
+remains a gap (open work); no working site support is claimed until qualified execution lands.
 
 ## Action Graph
 
@@ -43,7 +43,7 @@ unaffected units can reuse cached outputs. Shared headers or imported types can 
   not across serializer or tool upgrades; cache correctness still requires execution evidence.
 - Byte-identical rebuild evidence (two builds, diffed) is required, not an assumed
   property; the evidence is tracked in
-  [issue #10](https://github.com/ralvik/rules_dx/issues/10).
+  open work.
 
 ## Laziness And Scope
 
@@ -62,7 +62,7 @@ documentation cache is introduced.
 
 The planned [`dx docs --check`](../cli/commands/docs.md) selects extraction and shared validation but not
 rendering; normal build validates and renders. Completeness of required link/reference checks
-at the pre-render boundary remains a gap ([issue #10](https://github.com/ralvik/rules_dx/issues/10)). Neither mode compares against committed IR. Build and check
+at the pre-render boundary remains a gap (open work). Neither mode compares against committed IR. Build and check
 may write Bazel outputs and cache entries but never write generated IR beside source
 files. The planned `--serve` previews the built output locally and is not a build action.
 

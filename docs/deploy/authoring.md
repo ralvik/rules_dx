@@ -37,14 +37,14 @@ the need.
 Profile vocabulary follows [ADR 0021](../decisions/0021-build-profiles.md).
 Precedence (explicit flag over target `profile` over command default)
 and the `DX_PROFILE` name are accepted per
-[issue #179](https://github.com/ralvik/rules_dx/issues/179); the
+open work; the
 `dx deploy` command wiring them is delivered per
-[issue #180](https://github.com/ralvik/rules_dx/issues/180).
+open work.
 
 ## Path C: `archive_release` (accepted)
 
 The first deploy macro
-([issue #181](https://github.com/ralvik/rules_dx/issues/181)) packages
+(open work) packages
 one executable as a tarball + sha256 checksum with host shell tools
 only (`tar`, `sha256sum`/`shasum`), no new module dependencies, no
 registry, no credentials:
@@ -67,7 +67,7 @@ next to the app they release.
 ## Path D: `github_release` (accepted)
 
 The second deploy macro
-([issue #182](https://github.com/ralvik/rules_dx/issues/182)) publishes
+(open work) publishes
 pinned files as a draft-only GitHub Release via the host `gh` CLI, no
 new module dependencies:
 
@@ -83,7 +83,7 @@ github_release(
 `bazel run //cli/cli:github_draft` (or `dx deploy
 //cli/cli:github_draft`) execs `gh release create <tag> <assets...>
 --draft --verify-tag`. Draft-only by construction
-([issue #5](https://github.com/ralvik/rules_dx/issues/5)): `draft`
+(open work): `draft`
 must stay `True`, `--verify-tag` means the program never creates or
 pushes tags itself, and the default tag is the `v0.0.0-dryrun`
 placeholder. `GH_RELEASE_DRY_RUN=1` prints the would-run command and
@@ -93,7 +93,7 @@ happens by editing the draft on GitHub.
 
 Our own release runbook is the publish dry-run workflow
 ([`publish-dry-run.yml`](../../.github/workflows/publish-dry-run.yml),
-[issue #78](https://github.com/ralvik/rules_dx/issues/78)): it builds
+open work): it builds
 the seed-host `dx` binary the `//cli/cli:github_draft` macro assembles,
 so workflow and macro stay consistent instead of duplicating logic.
 The full release matrix, SBOM/provenance, and BCR submission arrive as

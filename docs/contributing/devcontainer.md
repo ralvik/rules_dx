@@ -19,7 +19,7 @@ qualified execution lands.
 
 Per-create feature installation (Bazel fetch plus a cold postCreate) is
 removed by prebuilt images published to GHCR, tracked in
-[#184](https://github.com/ralvik/rules_dx/issues/184). The route is a
+open work. The route is a
 separate workflow (`.github/workflows/ghcr.yml`), never folded into the
 release workflow: image lifecycle is per-scaffold-change, not per-tag, so
 base-image rebuilds never block or couple a `dx` release.
@@ -39,12 +39,12 @@ As built today (build-only seed slice, no push claimed):
 - Signing follows the release trust root: `cosign sign <digest>`
   (Sigstore keyless) plus attestation verification land after the
   human-run signing workflow
-  ([#78](https://github.com/ralvik/rules_dx/issues/78)), on the same
+  (open work), on the same
   trust root decided under
-  [#26](https://github.com/ralvik/rules_dx/issues/26). Nothing here is
+  open work. Nothing here is
   signed yet.
 - GHCR quotas and retention are recorded on the first push (free for
   public repos, qualified not assumed per the infrastructure budget).
   Image publication is a publication output: no tags, pushes, or
   retention claims without explicit owner approval per the release
-  hygiene in [#5](https://github.com/ralvik/rules_dx/issues/5).
+  hygiene in open work.

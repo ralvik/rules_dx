@@ -115,17 +115,17 @@ else
   bad "synthetic adapter maps lost their fixture/provisional labeling"
 fi
 
-# The sources doc keeps the #6-pending disclaimer: the assignment is
+# The sources doc keeps the pending-review disclaimer: the assignment is
 # a candidate, not stable API.
-if grep -q -F -e 'issues/6' docs/quality/quality-sources.md; then
+if grep -q -F -e 'must not be published as stable' docs/quality/quality-sources.md; then
   ok
 else
-  bad "docs/quality/quality-sources.md lost the issue #6 pending-review disclaimer"
+  bad "docs/quality/quality-sources.md lost the pending-review disclaimer"
 fi
 
 # Record the open remainder as information, not a gate: frozen IDs
-# with no family assignment yet stay open per #6.
+# with no family assignment yet stay open work.
 open="$(comm -23 "$scratch/frozen.txt" "$scratch/keys.txt" | tr '\n' ' ')"
-echo "registry open per #6 (frozen IDs without family assignment): ${open:-none}"
+echo "registry open work (frozen IDs without family assignment): ${open:-none}"
 echo "registry singularity audit: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
