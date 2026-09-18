@@ -52,9 +52,9 @@ bytes to stdout; Bazel and tool stdout and stderr remain visible on stderr. JSON
 stream per event (`write_event`), never buffer-then-dump, so there is no measurable
 overhead vs text mode on large result sets.
 JSON-capable commands (accepted): lint, typecheck, format, generate, build, test,
-coverage, check, fix, audit, update, status. `update` JSON covers dry-run planning and
-the deferred-live error (`command_started` / `command_finished` like `audit`); per-set
-reporting lands with resolver backends.
+coverage, check, fix, audit, update, status. `update` JSON covers dry-run planning
+(`command_started` / `command_finished`) and live execution per-set `notice`/`error`
+events plus `command_finished`; `audit` still reports the deferred-live error.
 Text-only commands (reject `--output=json` pre-exec, exit 2): clean, codegen, env, setup
 (prose collection lifecycle); `bazel`, `run` (the child owns the terminal); init, hooks,
 version, watch, owners, deps, why, completion (local helpers, thin query lines, or shell
@@ -558,7 +558,7 @@ Stable codes are:
 | `no_capability` | Exact setup scope provides neither environment nor codegen capability |
 | `coverage_below_minimum` | Coverage is below the configured minimum |
 | `audit_deferred` | Live audit execution is deferred |
-| `update_deferred` | Live update execution is deferred |
+| `update_failed` | Live update per-set failure (resolver reported failure, unsupported selection, launch failure, or signal) |
 | `unsupported_platform` | The selected workflow has no hermetic platform support |
 | `symlink_unavailable` | Required host symlink capability is unavailable |
 | `internal_error` | An invariant failed without a narrower stable classification |
@@ -664,8 +664,8 @@ The [update exception](commands/audit-update-bazel.md#dx-update) permits later i
 selected dependency sets to run after a set failure, preserving successes and reporting
 blocked dependents. Operation boundaries, per-set reporting, and aggregate
 exit selection are specified in the [update contract](commands/audit-update-bazel.md#dx-update); live resolver-backend
-execution is open under open work. This does not authorize new event fields or update
-mutation events, nor parallel execution.
+execution runs `dx_update::backend` per set with `notice`/`error` per-set events. This does not
+authorize new event fields or update mutation events, nor parallel execution.
 
 ## Dry Run
 

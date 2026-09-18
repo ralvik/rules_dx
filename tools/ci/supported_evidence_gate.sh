@@ -6,8 +6,9 @@
 # (Planned -> Seed-host-delivered -> Platform-qualified -> Supported).
 # Seed-host evidence is delivered (corpus dogfood, Layer-2 matrix for the
 # seed languages, generation freshness, adopt-* external-consumer proof,
-# CLI-contract E2E, required-core depcheck fixtures, perf report-not-gate);
-# audit/update live execution, docs-pipeline, env/codegen, per-cell coverage
+# CLI-contract E2E, required-core depcheck fixtures, `dx update` live execution,
+# perf report-not-gate);
+# audit live execution, docs-pipeline, env/codegen, per-cell coverage
 # beyond the seed cell, Codecov wiring, remote-cache/exec, admitted depcheck
 # expansion, and release evidence (SBOM/provenance, signing/attestations,
 # BCR submission, GHCR route, consumer verification) remain open gaps
@@ -81,13 +82,14 @@ else
 fi
 
 # Verification-matrix vocabulary stays Delivered/Open/Planning only/Tracked
-# (no silent new status that implies support).
+# (no silent new status that implies support). Update is Delivered while
+# audit stays Planning only.
 if grep -q -F -e '| Rust | Delivered' docs/testing/verification-matrix.md \
   && grep -q -F -e '| Go | Delivered (code ownership) | Open (adapter-less)' docs/testing/verification-matrix.md \
-  && grep -q -F -e '| Tracked | Open | Planning only | Open | Open |' docs/testing/verification-matrix.md; then
+  && grep -q -F -e 'Delivered (update) / Planning only (audit)' docs/testing/verification-matrix.md; then
   ok
 else
-  bad "verification-matrix status vocabulary drifted (want Delivered/Open/Planning only/Tracked)"
+  bad "verification-matrix status vocabulary drifted (want Delivered/Open/Planning only/Tracked with update Delivered)"
 fi
 
 # Corpus dogfood Delivered has backing harnesses + CI wiring.
@@ -155,13 +157,15 @@ else
   bad "depcheck Delivered lost its contract, checker, or targets"
 fi
 
-# Audit/update Planning only: fail-closed deferred codes + planning paths.
+# Audit Planning only plus update Delivered: audit fail-closed deferred code,
+# update live execution, plus guards harness.
 if grep -q -F -e 'audit_deferred' cli/cli/src/exec/audit.rs \
-  && grep -q -F -e 'update_deferred' cli/cli/src/exec/update.rs \
+  && grep -q -F -e 'CODE_UPDATE_FAILED' cli/cli/src/exec/common.rs \
+  && grep -q -F -e 'dx_update::backend::plan' cli/cli/src/exec/update.rs \
   && [[ -f "tools/ci/audit_update_guards.sh" ]]; then
   ok
 else
-  bad "audit/update Planning only lost deferred codes or guards harness"
+  bad "audit Planning only / update Delivered lost deferred/live codes or guards harness"
 fi
 
 # Coverage seed-only: cell gate + versioned inventory, no cross-cell union.

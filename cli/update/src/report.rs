@@ -1,4 +1,4 @@
-//! Aggregate exit-status selection for `dx update` (M26 WP2 slice 4).
+//! Aggregate exit-status selection for `dx update` (issue #19).
 //!
 //! Pure mapping from the aggregated per-set [`UpdateReport`] in
 //! [`outcome`] to the process exit code, per the accepted update
@@ -15,9 +15,10 @@
 //! signal forwarding is untouched. There is no Bazel-subprocess code
 //! to preserve here: the update aggregate owns the invocation status
 //! under the narrow continuation exception, not the first-failure
-//! rule. Backend operation boundaries and per-set reporting stay O12
-//! qualification; this module maps over injected reports only, so the
-//! selection stays deterministic and unit-testable without any updater.
+//! rule. Backend operation boundaries live in [`super::backend`] and
+//! per-set reporting rides `notice`/`error` plus `command_finished`;
+//! this module maps over injected reports only, so the selection stays
+//! deterministic and unit-testable without any updater.
 
 use super::outcome::UpdateReport;
 

@@ -233,11 +233,12 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         }
     }
     if command == Command::Update {
-        // Update plans through `dx_update` (M26 WP2): dependency-set /
-        // package selectors preserved verbatim, mutating without
-        // confirmation. Thresholds, standard reports, and check mode do
-        // not apply on this path; exact aggregate exit/report mappings
-        // stay under O12 qualification.
+        // Update plans through `dx_update` (issue #19): dependency-set /
+        // package/target selectors with exact syntax in
+        // `dx_update::selector`, mutating without confirmation.
+        // Thresholds, standard reports, and check mode do not apply on
+        // this path; aggregate exit/report mappings follow
+        // `dx_update::outcome`/`report`.
         if check {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -250,10 +251,11 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                 option: "--fail-on".to_owned(),
             });
         }
-        // `update` supports `--output=json` (dry-run planning and the
-        // deferred-live error stream `command_started`/`command_finished`
-        // like `audit`); `--output=diff` has no patch to emit so it fails
-        // fast here, with the shared `supports_diff` gate below as backup.
+        // `update` supports `--output=json` (dry-run planning emits
+        // `command_started`/`command_finished`; live execution adds
+        // per-set `notice`/`error` events); `--output=diff` has no patch
+        // to emit so it fails fast here, with the shared `supports_diff`
+        // gate below as backup.
         if output_name == "diff" {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -1047,8 +1049,8 @@ mod tests {
                 option: "--fail-on".to_owned(),
             })
         );
-        // `update` supports `--output=json` (issue #200): dry-run planning
-        // and the deferred-live error stream NDJSON like `audit`.
+        // `update` supports `--output=json` (issue #200, #19): dry-run
+        // planning plus live per-set reporting.
         let got = parse(&args(&["update", "--output=json"])).expect("update json");
         assert_eq!(got.command, Command::Update);
         assert_eq!(got.output, OutputMode::Json);

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Widen-one-requirement + dx update PR loop contract (issue #260, seed slice).
 #
-# `dx update` is within-constraints only (live resolver execution deferred
-# under #19) and Renovate proposes bumps today. The owner wants a minimal
+# `dx update` is within-constraints only (live resolver execution delivered
+# in #19) and Renovate proposes bumps today. The owner wants a minimal
 # first-party alternative: one explicit widen operation (separate from
 # `dx update`, e.g. `dx bump <selector> <version>`) plus a one-dep-per-PR
 # loop with an automerge on/off toggle only -- no grouping, schedule, or
@@ -11,13 +11,12 @@
 # This harness machine-checks the contract half verifiable on a clean
 # tree today (12 checks): the all-ecosystems v1 manager set, the
 # Renovate fallback retained, the never-rewrites invariant in code and
-# docs, the #19 resolver prerequisite, the manual bump-PR verification
+# docs, the #19 resolver prerequisite (now delivered), the manual bump-PR verification
 # loop docs, the ADR 0006 narrow exception, the ADR 0008 exact-pin
 # policy, and the no-false-claim gaps (no widen command, no loop
 # workflow). The widen implementation, library-first registry clients,
 # loop orchestration, scheduled runner, and renovate.json disposition
-# stay open under #260 (blocked on #19 backends; dry-run planning only
-# until live `dx update` lands).
+# stay open under #260 (live `dx update` now runs; widen stays unimplemented).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:widen_update_loop`,
 # following //tools/ci:ghcr_hygiene.
@@ -96,12 +95,16 @@ else
   bad "widen-shaped symbols appeared in cli/ without the #260 implementation landing"
 fi
 
-# Blocked on resolver backends: selector syntax, Git mappings, and
-# upstream operation/report mappings stay open, never decided here.
-if [[ "$(grep -c -F -e 'open work' "$contract")" -ge 4 ]]; then
+# Resolver backends delivered in #19 (selector syntax, Git mappings, and
+# upstream operation/report mappings decided in dx_update); audit open work
+# stays, never decided here.
+if grep -q -F -e 'dx_update::selector' "$contract" \
+  && grep -q -F -e 'dx_update::backend' "$contract" \
+  && grep -q -F -e 'dx_update::semantics' "$contract" \
+  && [[ "$(grep -c -F -e 'open work' "$contract")" -ge 4 ]]; then
   ok
 else
-  bad "update contract lost its open resolver-prerequisite records (need >=4 open-work references)"
+  bad "update contract lost its delivered resolver records or audit open-work references"
 fi
 
 # Automation policy owns the Renovate fallback: absent-only scaffold,

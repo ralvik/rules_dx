@@ -188,7 +188,9 @@ mod tests {
 
     #[test]
     fn deferred_families_fail_closed_without_launch() {
-        for argv in [vec!["audit"], vec!["update"]] {
+        // Audit stays deferred (issue #19 is update-only); update now
+        // executes resolver backends live (see exec/update.rs).
+        for argv in [vec!["audit"]] {
             let name = format!("exec-deferred-{}", argv[0]);
             let harness = Harness::new(&name);
             let (code, _out, err) = harness.run(&argv);

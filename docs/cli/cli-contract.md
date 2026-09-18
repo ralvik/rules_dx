@@ -225,8 +225,8 @@ an explicit label-representation contract.
   [update contract](commands/audit-update-bazel.md#dx-update) owns dependency-set
   independence and partial-success semantics. Aggregate exit-code selection,
   backend mapping, and per-set reporting are specified in that contract; live
-  resolver-backend execution is open under
-  open work.
+  resolver-backend execution runs `dx_update::backend` per set with continuation
+  in `dx_update::outcome`.
   Ordinary fail-fast behavior, including `dx check` and
   `dx fix`, is unchanged.
 - Signals are forwarded to the active Bazel process; interruption should preserve

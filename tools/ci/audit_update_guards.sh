@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
 # Audit/update/depcheck execution guards (issues #18, #19, #22).
 #
-# Live `dx audit` fails closed with `audit_deferred` and live `dx update`
-# fails closed with `update_deferred`; only planning is implemented
-# (family selection, selector planning, aggregate exit-code mapping from
-# #241; `--dry-run` exits 0). No auditor wiring, advisory acquisition,
-# SARIF/SPDX mapping, resolver backends, or per-set reporting is claimed.
+# Live `dx audit` fails closed with `audit_deferred`; live `dx update`
+# executes resolver-owned backends per set with independent-set continuation
+# and per-set reporting (issue #19 delivered: selector syntax in
+# `dx_update::selector`, five-set registry in `dx_update::sets`, backend argv
+# in `dx_update::backend`, continuation in `dx_update::outcome`, exit selection
+# in `dx_update::report`; `--dry-run` exits 0). No auditor wiring, advisory
+# acquisition, or SARIF/SPDX mapping is claimed.
 # Required-core lockfile-consistency and usage checks are delivered in
 # tools/depcheck/ (issue #22); admitted expansion stays open under
 # #304/#306.
 #
-# This harness machine-checks the fail-closed half verifiable on a clean
-# tree today: deferred codes, exit-code mappings, dry-run
-# planning, consumer-ci still
-# disabled, depcheck contract green. Live execution
-# stays open under its issues.
+# This harness machine-checks the verifiable halves on a clean
+# tree today: audit deferred code, update live execution, exit-code mappings,
+# dry-run planning, consumer-ci still
+# disabled, depcheck contract green. Audit live execution
+# stays open under its issue.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:audit_update_guards`,
 # following //tools/ci:depcheck_contract.
@@ -58,12 +60,16 @@ else
   bad "consumer-ci lost its disabled security/license audit record"
 fi
 
-# #19: live update fails closed with the stable deferred code.
-if grep -q -F -e 'update_deferred' cli/cli/src/exec/update.rs \
-  && grep -q -F -e 'CODE_UPDATE_DEFERRED' cli/cli/src/exec/common.rs; then
+# #19: live update executes resolver backends with continuation (no deferred code).
+if grep -q -F -e 'CODE_UPDATE_FAILED' cli/cli/src/exec/common.rs \
+  && grep -q -F -e 'dx_update::backend::plan' cli/cli/src/exec/update.rs \
+  && grep -q -F -e 'dx_update::outcome::aggregate' cli/cli/src/exec/update.rs \
+  && grep -q -F -e 'dx_update::report::exit_code' cli/cli/src/exec/update.rs \
+  && ! grep -q -F -e 'CODE_UPDATE_DEFERRED' cli/cli/src/exec/common.rs \
+  && ! grep -q -F -e 'update_deferred' cli/cli/src/exec/update.rs; then
   ok
 else
-  bad "live update lost its update_deferred fail-closed code"
+  bad "live update lost its resolver-backend execution (want CODE_UPDATE_FAILED + backend/aggregate/exit_code, no update_deferred)"
 fi
 
 # #19: aggregate exit-code mapping stays unit-pinned (overall_failure).

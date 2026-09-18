@@ -1,4 +1,4 @@
-//! Within-constraint and Git update semantics (M26 WP2 slice 3).
+//! Within-constraint and Git update semantics (issue #19).
 //!
 //! Pure policy pins for the accepted update semantics in the update
 //! contract (`docs/cli/commands/audit-update-bazel.md`): selected
@@ -25,8 +25,8 @@
 //!
 //! This module classifies over injected requirement descriptors only,
 //! so the pins stay deterministic and unit-testable without any
-//! resolver. Ecosystem mappings, moved-tag behavior, and the exact
-//! upstream operation/report mappings stay O12-gated.
+//! resolver. Ecosystem mappings live in [`super::selector`] and upstream
+//! operation/report mappings in [`super::backend`].
 
 /// Declared version-requirement shape, as recorded by the project (not
 /// inferred by the planner).
