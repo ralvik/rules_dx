@@ -295,6 +295,35 @@ mod tests {
     }
 
     #[test]
+    fn check_mode_fails_on_replacement_without_diagnostics() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // check mode to fail on any proposed change independently of
+        // diagnostic severity, and direct Bazel evaluators to enforce the
+        // same replacement-presence rule. Mirror the evaluator formatter
+        // case (fmt-a trims trailing spaces with zero diagnostics): one
+        // whole-file candidate with zero diagnostics must fail check mode
+        // with no writes, proving CLI/evaluator parity.
+        let mut harness = Harness::new("check-replacement-only");
+        harness.write_source("src/a.py", "x = 1\n");
+        harness.results.insert(
+            "//test:corpus".to_owned(),
+            harness.valid_result(vec![], vec![harness.replacement(b"y")]),
+        );
+        let (code, out, _) = harness.run(&["lint", "--check", "--output=text"]);
+        assert_eq!(code, 1);
+        assert!(out.contains("Running lint analysis for //..."));
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/a.py")).expect("source"),
+            b"x = 1\n"
+        );
+        assert_eq!(
+            harness.seen_env.borrow().len(),
+            1,
+            "check mode must launch Bazel exactly once"
+        );
+    }
+
+    #[test]
     fn default_mode_applies_and_hides_fixed_findings() {
         let mut harness = Harness::new("default-apply");
         harness.write_source("src/a.py", "x = 1\n");
