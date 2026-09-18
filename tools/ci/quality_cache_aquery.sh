@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quality cache aquery proof (issue #84, slices 1-7): per-adapter and
+# Quality cache aquery proof (issue #84, slices 1-8): per-adapter and
 # per-capability action-key isolation via `bazel aquery` over real
 # quality pipelines.
 #
@@ -13,7 +13,7 @@
 # (ruff lint/format, pydoclint lint, Ty typecheck), Rust (clippy lint,
 # rustfmt format + rustfmt.toml native-config isolation), JavaScript
 # (biome lint/format per-capability + biome.json native-config isolation,
-# prettier never an input, eslint opt-in never an input), Starlark
+# prettier never an input, eslint/flake8/pylint opt-ins never inputs), Starlark
 # (buildifier lint/format), TOML (taplo lint/format), Markdown
 # (vale lint), TypeScript/JSX/TSX (biome lint/format each owning only
 # its source), and JSON (biome lint + prettier format split): each pipeline's declared Inputs mention its own source
@@ -466,6 +466,31 @@ mixed_format_stages="$(printf '%s' "$mixed_actions" | grep -A 30 "Dx real qualit
 mixed_lint_stages="$(printf '%s' "$mixed_actions" | grep -A 30 "Dx real quality lint //quality/testdata:fixture_real_mixed" | grep -o "'[a-z_]*;[a-z_]*;" | tr '\n' ' ' || true)"
 if [[ "$mixed_format_stages" == *"'buildifier;starlark;"*"'rustfmt;rust;"*"'taplo;toml;"* ]]; then ok; else bad "mixed format stages must be sorted tool-ID order [buildifier rustfmt taplo] (got $mixed_format_stages)"; fi
 if [[ "$mixed_lint_stages" == *"'buildifier;starlark;"*"'clippy;rust;"*"'taplo;toml;"* ]]; then ok; else bad "mixed lint stages must be sorted tool-ID order [buildifier clippy taplo] (got $mixed_lint_stages)"; fi
+# Flake8/pylint opt-in laziness: both are explicit opt-in Python lint
+# adapters, so default pipelines must never mention them (flake8/pylint
+# change leaves default keys unchanged per the unselected-adapter +
+# opt-in rows; eslint part already covered above). All variables defined
+# here, after every aquery.
+if [[ "$python_actions" == *"flake8"* ]]; then bad "python: forbidden [flake8] (opt-in flake8 must not invalidate default Python)"; else ok; fi
+if [[ "$python_actions" == *"pylint"* ]]; then bad "python: forbidden [pylint] (opt-in pylint must not invalidate default Python)"; else ok; fi
+if [[ "$js_actions" == *"flake8"* ]]; then bad "js: forbidden [flake8] (opt-in flake8 must not invalidate JS)"; else ok; fi
+if [[ "$js_actions" == *"pylint"* ]]; then bad "js: forbidden [pylint] (opt-in pylint must not invalidate JS)"; else ok; fi
+if [[ "$typescript_actions" == *"flake8"* ]]; then bad "typescript: forbidden [flake8] (opt-in flake8 must not invalidate TS)"; else ok; fi
+if [[ "$typescript_actions" == *"pylint"* ]]; then bad "typescript: forbidden [pylint] (opt-in pylint must not invalidate TS)"; else ok; fi
+if [[ "$jsx_actions" == *"flake8"* ]]; then bad "jsx: forbidden [flake8] (opt-in flake8 must not invalidate JSX)"; else ok; fi
+if [[ "$jsx_actions" == *"pylint"* ]]; then bad "jsx: forbidden [pylint] (opt-in pylint must not invalidate JSX)"; else ok; fi
+if [[ "$tsx_actions" == *"flake8"* ]]; then bad "tsx: forbidden [flake8] (opt-in flake8 must not invalidate TSX)"; else ok; fi
+if [[ "$tsx_actions" == *"pylint"* ]]; then bad "tsx: forbidden [pylint] (opt-in pylint must not invalidate TSX)"; else ok; fi
+if [[ "$json_actions" == *"flake8"* ]]; then bad "json: forbidden [flake8] (opt-in flake8 must not invalidate JSON)"; else ok; fi
+if [[ "$json_actions" == *"pylint"* ]]; then bad "json: forbidden [pylint] (opt-in pylint must not invalidate JSON)"; else ok; fi
+if [[ "$rust_actions" == *"flake8"* ]]; then bad "rust: forbidden [flake8] (opt-in flake8 must not invalidate Rust)"; else ok; fi
+if [[ "$rust_actions" == *"pylint"* ]]; then bad "rust: forbidden [pylint] (opt-in pylint must not invalidate Rust)"; else ok; fi
+if [[ "$starlark_actions" == *"flake8"* ]]; then bad "starlark: forbidden [flake8] (opt-in flake8 must not invalidate Starlark)"; else ok; fi
+if [[ "$starlark_actions" == *"pylint"* ]]; then bad "starlark: forbidden [pylint] (opt-in pylint must not invalidate Starlark)"; else ok; fi
+if [[ "$toml_actions" == *"flake8"* ]]; then bad "toml: forbidden [flake8] (opt-in flake8 must not invalidate TOML)"; else ok; fi
+if [[ "$toml_actions" == *"pylint"* ]]; then bad "toml: forbidden [pylint] (opt-in pylint must not invalidate TOML)"; else ok; fi
+if [[ "$markdown_actions" == *"flake8"* ]]; then bad "markdown: forbidden [flake8] (opt-in flake8 must not invalidate Markdown)"; else ok; fi
+if [[ "$markdown_actions" == *"pylint"* ]]; then bad "markdown: forbidden [pylint] (opt-in pylint must not invalidate Markdown)"; else ok; fi
 
 echo "quality cache aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
