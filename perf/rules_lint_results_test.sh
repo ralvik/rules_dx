@@ -52,6 +52,7 @@ check_json "runner cache-hit ordering" "doc['runner_test_timing']['cold_ish_wall
 check_json "runner cache-hit executed" "'1 out of 1' in doc['runner_test_timing']['cold_ish_executed'] and '0 out of 1' in doc['runner_test_timing']['warm_executed']"
 check_json "warm-after-cold evidence" "'0 packages loaded' in doc['quality_sample']['warm_after_cold_evidence'] and 'elapsed' in doc['quality_sample']['warm_after_cold_evidence']"
 check_json "rules_lint-side gap explicit" "'rules_lint-side' in doc['note']"
+check_json "synth dirty consistency" "doc['seed_harness']['dirty_files']==doc['seed_harness']['files']*doc['seed_harness']['dirty_pct']//100"
 
 # Determinism: fresh harness regeneration matches the checked-in digest.
 bash "$harness" --files 200 --dirty-pct 10 --seed 86 --out "$scratch/regen" > "$scratch/regen.json"
