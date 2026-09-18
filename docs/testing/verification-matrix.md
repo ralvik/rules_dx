@@ -5,7 +5,9 @@ which verification layer covers which language, with as-built evidence only.
 No cell here is a `Supported` claim; promotion to `Supported` requires
 release evidence per the [support matrix](../product/support-matrix.md).
 Open cells are recorded as gaps; docs describe as-built behavior only.
-Missing test/release evidence before any `Supported` claim stays open under issue #301.
+No cell is `Supported`: missing test/release evidence blocks promotion until
+platform plus consumer plus release evidence passes per the support matrix,
+enforced by `bazel run //tools/ci:supported_evidence_gate`.
 Non-dogfed paths (integration E2E drivers, negative fixtures, the no-coverage cohort,
 shell sources with no quality class) stay open under issue #324: they run only under
 explicit suites, coverage-excluded runs, or ownership audits, never silently under the
