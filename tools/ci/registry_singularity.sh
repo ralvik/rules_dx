@@ -17,11 +17,12 @@
 # stable API.
 #
 # This harness machine-checks the static half verifiable on a clean
-# tree today (8 checks). The full registry review — class-to-family
-# assignment for the still-unassigned frozen IDs, admissibility
+# tree today (9 checks). The full registry review — class-to-family
+# assignment for the still-unassigned frozen IDs, per-ID admissibility
 # mappings, per-family independence rules — stays open per #6, and the
 # cache-execution plus determinism-permutation proofs stay open per
-# #84; all are recorded as gaps, not claimed here.
+# #84; all are recorded as gaps, not claimed here. Only the three
+# admissibility edge examples owned in quality-sources.md are pinned.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:registry_singularity`,
 # following //tools/ci:release_policy.
@@ -138,6 +139,18 @@ if ! grep -q -F -e 'Open work under issue #6' docs/quality/quality-sources.md; t
   bad "docs/quality/quality-sources.md lost its issue #6 open-work enumeration"
 fi
 [[ "$open_doc_ok" == "1" ]] && ok
+
+# The sources doc keeps the per-ID admissibility pending record while
+# owning only the three edge examples, so the prose cannot rot into a
+# published-table claim (full mappings stay pending review per #6).
+if grep -q -F -e 'Per-ID mappings remain pending the' docs/quality/quality-sources.md \
+  && grep -q -F -e '.h` alone cannot decide' docs/quality/quality-sources.md \
+  && grep -q -F -e 'extensionless files do not become `shell`' docs/quality/quality-sources.md \
+  && grep -q -F -e 'BUILD`/`BUILD.bazel` are admissible as `starlark`' docs/quality/quality-sources.md; then
+  ok
+else
+  bad "docs/quality/quality-sources.md lost its admissibility pending-record or edge examples (#6)"
+fi
 
 # Record the open remainder as information, not a gate: frozen IDs
 # with no family assignment yet stay open work.

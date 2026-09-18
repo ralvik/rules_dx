@@ -145,7 +145,9 @@ open work.
 The registry has one source of truth from which exported Starlark constants, provider
 validation, adapter metadata, tests, and Rust diagnostic names are generated or checked. The
 admissibility table maps each ID to typical basenames/extensions and, where filenames are
-ambiguous, required authoritative provider semantics. For example, `.h` alone cannot decide
+ambiguous, required authoritative provider semantics. Per-ID mappings remain pending the
+registry review under issue #6; only the edge examples in this paragraph are owned.
+For example, `.h` alone cannot decide
 `c` versus `cpp`, extensionless files do not become `shell` without rule/provider evidence, and
 `BUILD`/`BUILD.bazel` are admissible as `starlark` by basename. Adapters consume canonical IDs;
 they do not carry independent extension tables.
