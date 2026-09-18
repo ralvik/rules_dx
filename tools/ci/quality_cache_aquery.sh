@@ -12,7 +12,8 @@
 # This harness proves the aquery action-shape half for Python
 # (ruff lint/format, pydoclint lint, Ty typecheck), Rust (clippy lint,
 # rustfmt format + rustfmt.toml native-config isolation), JavaScript
-# (biome lint/format + biome.json native-config isolation), Starlark
+# (biome lint/format per-capability + biome.json native-config isolation,
+# prettier never an input), Starlark
 # (buildifier lint/format), TOML (taplo lint/format), Markdown
 # (vale lint), TypeScript/JSX/TSX (biome lint/format each owning only
 # its source), and JSON (biome lint + prettier format split): each pipeline's declared Inputs mention its own source
@@ -217,6 +218,13 @@ if [[ "$js_hinted_lint_inputs" == *"biome.json"* ]]; then ok; else bad "js hinte
 if [[ "$js_hinted_format_inputs" == *"biome.json"* ]]; then ok; else bad "js hinted format: want [biome.json]"; fi
 if [[ "$js_lint_inputs" == *"biome.json"* ]]; then bad "js unhinted lint: forbidden [biome.json] (default config, selected change must not miss)"; else ok; fi
 if [[ "$js_format_inputs" == *"biome.json"* ]]; then bad "js unhinted format: forbidden [biome.json]"; else ok; fi
+# JS per-capability owns-biome: both lint and format consume the Biome
+# tool (biome change misses both), while prettier is never an input
+# (prettier change misses nothing in JS, only JSON format).
+if [[ "$js_lint_inputs" == *"biome"* ]]; then ok; else bad "js lint: want [biome] (biome change misses lint)"; fi
+if [[ "$js_format_inputs" == *"biome"* ]]; then ok; else bad "js format: want [biome] (biome change misses format)"; fi
+if [[ "$js_lint_inputs" == *"prettier"* ]]; then bad "js lint: forbidden [prettier] (prettier change must not invalidate JS lint)"; else ok; fi
+if [[ "$js_format_inputs" == *"prettier"* ]]; then bad "js format: forbidden [prettier] (prettier change must not invalidate JS format)"; else ok; fi
 
 # Unselected-adapter isolation: changing an adapter not selected for a
 # pipeline must leave its action key unchanged. The aquery half is that
