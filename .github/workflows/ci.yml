@@ -257,6 +257,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:audit_update_guards
       - name: Audit wrapper sources (QualitySourcesInfo on all wrappers)
         run: bazel run --noshow_progress //tools/ci:wrapper_sources
+      - name: Audit foundation maps (adapter boundaries + owner links)
+        run: bazel run --noshow_progress //tools/ci:foundation_maps
       - name: Audit registry singularity (single-sourced class taxonomy)
         run: bazel run --noshow_progress //tools/ci:registry_singularity
       - name: Audit backlog contracts (env/codegen + docs-pipeline pins)
