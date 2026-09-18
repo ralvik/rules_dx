@@ -316,6 +316,59 @@ mod tests {
     }
 
     #[test]
+    fn default_mode_applies_without_rerunning_bazel() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // no Bazel rerun after lint/typecheck/format application; terminal
+        // pipeline findings plus per-file apply failures determine the
+        // current invocation status. Default apply with one fixable finding
+        // must launch Bazel exactly once, apply the candidate, and succeed
+        // without a second verification build; check mode with pending
+        // changes must likewise launch exactly once and fail on the
+        // recorded change without re-executing.
+        let mut harness = Harness::new("no-rerun-after-apply");
+        harness.write_source("src/a.py", "x = 1\n");
+        harness.results.insert(
+            "//test:corpus".to_owned(),
+            harness.valid_result(
+                vec![Harness::diagnostic("unused", true)],
+                vec![harness.replacement(b"y")],
+            ),
+        );
+        let (code, out, _) = harness.run(&["lint", "--output=text"]);
+        assert_eq!(code, 0);
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/a.py")).expect("source"),
+            b"y = 1\n"
+        );
+        assert!(out.contains("Applied 1 file(s)."));
+        assert_eq!(
+            harness.seen_env.borrow().len(),
+            1,
+            "default apply must launch Bazel exactly once, no post-apply rerun"
+        );
+        let mut check = Harness::new("no-rerun-after-apply-check");
+        check.write_source("src/a.py", "x = 1\n");
+        check.results.insert(
+            "//test:corpus".to_owned(),
+            check.valid_result(
+                vec![Harness::diagnostic("unused", true)],
+                vec![check.replacement(b"y")],
+            ),
+        );
+        let (check_code, _, _) = check.run(&["lint", "--check", "--output=text"]);
+        assert_eq!(check_code, 1);
+        assert_eq!(
+            std::fs::read(check.workspace.join("src/a.py")).expect("source"),
+            b"x = 1\n"
+        );
+        assert_eq!(
+            check.seen_env.borrow().len(),
+            1,
+            "check mode must launch Bazel exactly once"
+        );
+    }
+
+    #[test]
     fn failed_target_prevents_mutation() {
         let harness = Harness {
             fail_target: true,
