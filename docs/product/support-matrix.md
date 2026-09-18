@@ -22,6 +22,10 @@ host and pointing here and at ADR 0014, before any Bazel work starts. It
 never presents partial execution on an unqualified host as success. The
 refusal reads the same qualified-host list that platform evidence extends,
 so a host flips on exactly when its evidence lands. This remains open work.
+Platform qualification stays open under issue #298 (only the Linux x86_64 seed host
+is delivered and tested; every other required host needs pins, hosts, floors,
+JDK/SDK/CRT identities, qualified routes, per-cell coverage, and consumer plus
+release evidence).
 
 ## Application Foundations
 

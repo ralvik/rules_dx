@@ -175,3 +175,29 @@ Include verifier bootstrap and trust-root provenance in qualification evidence r
 than assuming a verifier acquired alongside the binary is trustworthy.
 Environment platform requirements are maintained in
 [Developer Environments](../environments/environment.md).
+
+## Shell And Host-Tool Contract
+
+CI and test harness shell stays bash-only on the Linux seed host until the shell
+contract below qualifies otherwise. Shell portability stays open under issue #299
+(bash-only harness breaks Windows and partially macOS; decide the shell contract with
+honest platform labels, no product behavior change).
+
+Platform cfg hacks stay open under issue #320 (symlink copy fallback, unix-gated tests,
+GNU tar `-h` reliance, linux_x86_64 perf pin; decide fail-fast or portable route per
+site with test cover).
+
+CI shell dedup plus portable forms stay open under issue #323 (shared lib.sh, shellcheck
+plus shfmt, replace non-portable realpath, bare sha256sum, sed `-i -e`, cp `-a`,
+EPOCHREALTIME).
+
+Runfiles and workspace-root probing stays consolidated-open under issue #319 (one shared
+workspace_root plus rlocation usage; remove repeated BUILD_WORKSPACE_DIRECTORY,
+RUNFILES_DIR, TEST_SRCDIR, and bazel-bin probing copies).
+
+Host-tool actions stay open under issue #318 (archive genrules on host tar and hashers,
+extension chmod via ctx.execute, deploy runtime probes; move to toolchain-provided
+hasher/archiver or record the host-tool contract explicitly).
+
+Generated launchers stay open under issue #317 (Starlark string-interpolated bash
+launchers prefer sh_binary plus location expansion plus runfiles rlocation).
