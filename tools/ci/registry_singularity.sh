@@ -17,7 +17,7 @@
 # stable API.
 #
 # This harness machine-checks the static half verifiable on a clean
-# tree today (7 checks). The full registry review — class-to-family
+# tree today (8 checks). The full registry review — class-to-family
 # assignment for the still-unassigned frozen IDs, admissibility
 # mappings, per-family independence rules — stays open per #6, and the
 # cache-execution plus determinism-permutation proofs stay open per
@@ -122,6 +122,22 @@ if grep -q -F -e 'must not be published as stable' docs/quality/quality-sources.
 else
   bad "docs/quality/quality-sources.md lost the pending-review disclaimer"
 fi
+
+# The sources doc explicitly enumerates the still-unassigned frozen IDs
+# as open work under issue #6, so the pending assignment cannot rot
+# into an undocumented gap (assignment itself stays pending review).
+open_doc_ok=1
+for class in css gherkin graphql html html_template json5 jsonc less scss sql text xml; do
+  if ! grep -q -F -e "\`$class\`" docs/quality/quality-sources.md; then
+    open_doc_ok=0
+    bad "docs/quality/quality-sources.md lost its open-work record for unassigned class $class (#6)"
+  fi
+done
+if ! grep -q -F -e 'Open work under issue #6' docs/quality/quality-sources.md; then
+  open_doc_ok=0
+  bad "docs/quality/quality-sources.md lost its issue #6 open-work enumeration"
+fi
+[[ "$open_doc_ok" == "1" ]] && ok
 
 # Record the open remainder as information, not a gate: frozen IDs
 # with no family assignment yet stay open work.

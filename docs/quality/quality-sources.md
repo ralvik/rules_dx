@@ -112,6 +112,10 @@ implemented as specified here; the class-to-policy-family assignment and
 admissibility mappings remain pending the registry review (open work) and must not be published as stable
 API before that decision.
 
+Open work under issue #6: the frozen IDs `css`, `gherkin`, `graphql`, `html`,
+`html_template`, `json5`, `jsonc`, `less`, `scss`, `sql`, `text`, and `xml` have no
+family assignment yet. Assigning them stays pending the registry review.
+
 Every semantic class has exactly one quality policy family. Families keep unrelated source
 kinds independently configurable even when one adapter supports both. In particular,
 JavaScript policy owns `javascript` and `jsx`, TypeScript policy owns `typescript` and `tsx`,
