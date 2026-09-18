@@ -11,17 +11,18 @@
 # baseline as a report, never a gate.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (32 checks): deferred codes, fail-closed unit pins, dry-run
-# planning paths + doc record, audit families + policy modules,
-# selector planning + update API + aggregate verdict pins, exit
-# mappings, doc ownership + auditor/resolver records, depcheck
-# truth-table + category + offline contract, prior harnesses green,
-# corpus single-name rule + Gazelle ownership + generate doc +
+# today (36 checks): deferred codes, fail-closed unit pins, dry-run
+# planning paths + doc record, audit families + policy modules +
+# SARIF/SPDX mapping record, selector planning + update API +
+# per-set report record + aggregate verdict pins, exit mappings, doc
+# ownership + auditor/resolver records, depcheck truth-table +
+# category + missing-reasons + offline contract, prior harnesses
+# green, corpus single-name rule + Gazelle ownership + generate doc +
 # contract + generate --check wiring + carve-out record, perf
-# report-not-gate shape + v2.8.0 fairness pin + report honesty +
-# bench harness + comparison-test record, and matrix honesty. Live
-# execution, per-type generation, and comparison numbers stay open
-# under their issues.
+# report-not-gate shape + v2.8.0 fairness pin + Bazel-version pin +
+# report honesty + bench harness + comparison-test record, and matrix
+# honesty. Live execution, per-type generation, and comparison
+# numbers stay open under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:execution_corpus_perf_guards`,
 # following //tools/ci:verify_perf_corpus.
@@ -287,6 +288,42 @@ if grep -q -F -e '## Generation Contracts' docs/cli/commands/generate.md \
   ok
 else
   bad "generate doc lost its contracts/CLI-boundary record (#15)"
+fi
+
+# #18 report-mapping record stays explicit: SARIF severity/report
+# mappings plus the SPDX 2.3 JSON shape (tool wiring and advisory
+# acquisition still open).
+if grep -q -F -e 'SARIF' "$doc" \
+  && grep -q -F -e 'SPDX' "$doc"; then
+  ok
+else
+  bad "audit/update doc lost its SARIF/SPDX report-mapping record (#18)"
+fi
+
+# #19 per-set report record stays explicit: one aggregate exit code
+# with a per-set report, never a per-set code (backends still open).
+if grep -q -F -e 'per-set report' "$doc"; then
+  ok
+else
+  bad "audit/update doc lost its per-set report record (#19)"
+fi
+
+# #22 exception-reason contract stays explicit: reason-less usage
+# exceptions fail validation (fixtures still open).
+if grep -q -F -e 'Missing reasons must fail validation' docs/quality/quality-testing.md; then
+  ok
+else
+  bad "quality-testing.md lost its missing-reasons validation contract (#22)"
+fi
+
+# #86 Bazel-version fairness pin stays explicit alongside the
+# rules_lint pin: same Bazel version from `.bazelversion` on the same
+# machine class (comparison numbers still a report).
+if grep -q -F -e '.bazelversion' docs/tools/rules_lint-comparison.md \
+  && grep -q -F -e '9.2.0' docs/tools/rules_lint-comparison.md; then
+  ok
+else
+  bad "rules_lint methodology lost its Bazel-version fairness pin (#86)"
 fi
 
 # Matrix honesty across this group.
