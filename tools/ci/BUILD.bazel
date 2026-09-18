@@ -138,6 +138,22 @@ sh_binary(
     srcs = ["release_policy.sh"],
 )
 
+# Publication-trust harness (issues #78, #26, #5): machine-checks
+# the draft-only + nothing-published static invariants the
+# release-hygiene harness does not own — module name at the
+# unpublishable 0.0.0, no BCR submission tooling in workflows, no
+# draft-gate opt-out site, both github.bzl validators wired to analysis
+# failure, default placeholder tag everywhere, draft-only flags on the
+# real publisher path, the tag charset gate, and the SECURITY.md
+# no-release record. Signing/attestation, SBOM/provenance, BCR
+# submission, the wider release matrix, and install-time verification
+# stay unimplemented gaps. Run by CI via
+# `bazel run //tools/ci:publish_trust`.
+sh_binary(
+    name = "publish_trust",
+    srcs = ["publish_trust.sh"],
+)
+
 # Code-ownership harness (issue #12, lane A slice 1): every checked-in
 # code source must ride its normal target so no production file is
 # silently skipped by `bazel build //...` / `bazel test //...`. Corpus
