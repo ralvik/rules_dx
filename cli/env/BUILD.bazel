@@ -148,6 +148,8 @@ sh_test(
     args = ["$(rootpath :env)"],
     data = [":env"],
     tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Repository corpus: crate manifest and build file owned for

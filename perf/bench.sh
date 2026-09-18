@@ -72,20 +72,35 @@ host="linux_x86_64"
 # Named-benchmark filter: `bench.sh <name>` runs one benchmark; no arg runs all warm.
 only="${positional[0]:-all}"
 
+# Portable monotonic stamp (issue #299): `$EPOCHREALTIME` needs bash 5
+# (macOS ships bash 3); fall back to `date +%s.%N`, then whole seconds.
+# The comment below about child-process stamping still applies: this
+# helper runs in the current shell with no fork beyond `date`.
+now_secs() {
+  if [[ -n "${EPOCHREALTIME:-}" ]]; then
+    printf '%s' "${EPOCHREALTIME}"
+  elif date +%s.%N >/dev/null 2>&1; then
+    date +%s.%N
+  else
+    date +%s
+  fi
+}
+
 run_case() {
   local name="$1"; shift
   local iterations="$1"; shift
   local i
   for ((i = 1; i <= iterations; i++)); do
-    # Timing uses the bash-builtin EPOCHREALTIME (no fork): stamping via a
+    # Timing uses the bash-builtin EPOCHREALTIME (no fork) via now_secs()
+    # with a `date` fallback (issue #299): stamping via a
     # child process (e.g. `python3 -c ...perf_counter()...`) inflates the
     # end stamp by the child's own startup (~8ms here) and corrupts
     # single-digit-millisecond benchmarks.
     local start end ms
-    start="$EPOCHREALTIME"
+    start="$(now_secs)"
     "$dx_bin" "$@" >/dev/null 2>&1
     local rc=$?
-    end="$EPOCHREALTIME"
+    end="$(now_secs)"
     ms="$(awk "BEGIN {print ($end - $start) * 1000.0}")"
     python3 -c 'import json,sys; print(json.dumps({"benchmark": sys.argv[1], "duration_ms": float(sys.argv[2]), "iteration": int(sys.argv[3]), "host": sys.argv[4], "bazel_version": sys.argv[5], "commit": sys.argv[6], "rc": int(sys.argv[7])}))' \
       "$name" "$ms" "$i" "$host" "$bazel_version" "$commit" "$rc"
@@ -104,10 +119,10 @@ run_bazel_case() {
   local i
   for ((i = 1; i <= iterations; i++)); do
     local start end ms rc
-    start="$EPOCHREALTIME"
+    start="$(now_secs)"
     rc=0
     bazel run --noshow_progress //cli/cli:dx -- "$@" >/dev/null 2>&1 || rc=$?
-    end="$EPOCHREALTIME"
+    end="$(now_secs)"
     ms="$(awk "BEGIN {print ($end - $start) * 1000.0}")"
     python3 -c 'import json,sys; print(json.dumps({"benchmark": sys.argv[1], "duration_ms": float(sys.argv[2]), "iteration": int(sys.argv[3]), "host": sys.argv[4], "bazel_version": sys.argv[5], "commit": sys.argv[6], "rc": int(sys.argv[7]), "via": "bazel-run"}))' \
       "$name" "$ms" "$i" "$host" "$bazel_version" "$commit" "$rc"

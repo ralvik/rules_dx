@@ -10,6 +10,18 @@
 # (forwarded by `dx deploy`; bare `bazel run` leaves it unset).
 set -euo pipefail
 
+# Portable realpath (issue #299): GNU `realpath` is absent on macOS;
+# `readlink -f` covers some platforms, python3 covers the rest.
+portable_realpath() {
+  if command -v realpath >/dev/null 2>&1; then
+    realpath "$1"
+  elif command -v readlink >/dev/null 2>&1 && readlink -f "$1" >/dev/null 2>&1; then
+    readlink -f "$1"
+  else
+    python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
+  fi
+}
+
 app_rel="$1"
 tarball_rel="$2"
 checksum_rel="$3"
@@ -20,8 +32,8 @@ shift 3
 # upstream`) and resolving would report the final target
 # (`hello_upstream`, `deploy_program.sh`) instead of the release member.
 app_name="$(basename "${app_rel}")"
-tarball="$(realpath "${tarball_rel}")"
-checksum="$(realpath "${checksum_rel}")"
+tarball="$(portable_realpath "${tarball_rel}")"
+checksum="$(portable_realpath "${checksum_rel}")"
 
 outdir=""
 if [ "$#" -ge 1 ]; then

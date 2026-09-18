@@ -97,7 +97,9 @@ trap 'rm -rf "$scratch"' EXIT
 cp -r "$workspace/integration/$scenario/." "$scratch/child/"
 grep -r -q -F -e "RULES_DX_ROOT" "$scratch/child/MODULE.bazel" \
   || { bad "child MODULE.bazel lost its RULES_DX_ROOT placeholder"; exit 1; }
-sed -i -e "s|RULES_DX_ROOT|$workspace|" "$scratch/child/MODULE.bazel"
+# Portable in-place edit (issue #299): GNU `sed -i -e` breaks on macOS
+# BSD sed; the tmpfile form works on both.
+sed -e "s|RULES_DX_ROOT|$workspace|" "$scratch/child/MODULE.bazel" > "$scratch/child/MODULE.bazel.tmp" && mv "$scratch/child/MODULE.bazel.tmp" "$scratch/child/MODULE.bazel"
 grep -r -q -F -e "RULES_DX_ROOT" "$scratch/child/" \
   && { bad "RULES_DX_ROOT placeholder survived staging"; exit 1; }
 ok # staging rewrites the parent path with none left behind

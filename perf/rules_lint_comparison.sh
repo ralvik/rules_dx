@@ -59,7 +59,18 @@ mkdir -p "$out"
 
 dirty_count=$(( files * dirty_pct / 100 ))
 
-start="$EPOCHREALTIME"
+# Portable monotonic stamp (issue #299): `$EPOCHREALTIME` needs bash 5
+# (macOS ships bash 3); fall back to `date +%s.%N`, then whole seconds.
+now_secs() {
+  if [[ -n "${EPOCHREALTIME:-}" ]]; then
+    printf '%s' "${EPOCHREALTIME}"
+  elif date +%s.%N >/dev/null 2>&1; then
+    date +%s.%N
+  else
+    date +%s
+  fi
+}
+start="$(now_secs)"
 i=1
 while [[ "$i" -le "$files" ]]; do
   dirty=0
@@ -81,10 +92,16 @@ while [[ "$i" -le "$files" ]]; do
   fi
   i=$((i + 1))
 done
-end="$EPOCHREALTIME"
+end="$(now_secs)"
 gen_ms="$(awk "BEGIN {print ($end - $start) * 1000.0}")"
 
-tree_sha256="$(cd "$out" && find . -type f | LC_ALL=C sort | xargs sha256sum | sha256sum | cut -d' ' -f1)"
+# Portable tree digest (issue #299): GNU `sha256sum` is absent on macOS;
+# `shasum -a 256` is the portable fallback. Linux behavior unchanged.
+if command -v sha256sum >/dev/null 2>&1; then
+  tree_sha256="$(cd "$out" && find . -type f | LC_ALL=C sort | xargs sha256sum | sha256sum | cut -d' ' -f1)"
+else
+  tree_sha256="$(cd "$out" && find . -type f | LC_ALL=C sort | xargs shasum -a 256 | shasum -a 256 | cut -d' ' -f1)"
+fi
 
 python3 -c '
 import json, sys

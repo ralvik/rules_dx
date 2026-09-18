@@ -106,6 +106,9 @@ sh_test(
         ":release_demo_checksum",
     ],
     tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # POSIX deploy fixtures (:deploy_program, :deploy_app) stay portable.
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 sh_test(
@@ -121,6 +124,8 @@ sh_test(
         ":release_demo_debug_checksum",
     ],
     tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 test_suite(
@@ -184,6 +189,8 @@ sh_test(
     ],
     data = [":github_demo_program"],
     tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Repository corpus: deploy Starlark owned for direct-Bazel dogfood

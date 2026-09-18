@@ -8,7 +8,19 @@
 # under Bazel.
 set -euo pipefail
 
-env_bin="$(realpath "$1")"
+# Portable realpath (issue #299): GNU `realpath` is absent on macOS;
+# `readlink -f` covers some platforms, python3 covers the rest.
+portable_realpath() {
+  if command -v realpath >/dev/null 2>&1; then
+    realpath "$1"
+  elif command -v readlink >/dev/null 2>&1 && readlink -f "$1" >/dev/null 2>&1; then
+    readlink -f "$1"
+  else
+    python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
+  fi
+}
+
+env_bin="$(portable_realpath "$1")"
 runfiles="${RUNFILES_DIR:-$TEST_SRCDIR}"
 root="${TEST_TMPDIR}/work space"
 mkdir -p "$root"
@@ -55,7 +67,9 @@ staged="$(find "${runfiles}" -name default_tree.metadata.json -print -quit)"
 }
 alt="${TEST_TMPDIR}/staged-alt"
 mkdir -p "${alt}"
-cp -a "$(dirname "${staged}")/bin" "${alt}/bin"
+# Portable recursive copy (issue #299): `cp -a` is GNU-only; `cp -RPp`
+# preserves symlinks, modes, and timestamps on GNU and BSD/macOS.
+cp -RPp "$(dirname "${staged}")/bin" "${alt}/bin"
 command -v python3 >/dev/null || {
   echo "python3 required to derive the reduced tree" >&2
   exit 1
