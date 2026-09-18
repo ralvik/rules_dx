@@ -11,10 +11,12 @@
 # baseline as a report, never a gate.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (12 checks): deferred codes, exit mappings, doc ownership, prior
-# harnesses green, corpus single-name rule + Gazelle ownership, perf
-# report-not-gate shape, and matrix honesty. Live execution, per-type
-# generation, and comparison numbers stay open under their issues.
+# today (16 checks): deferred codes, fail-closed unit pins, dry-run
+# planning paths, exit mappings, doc ownership, prior harnesses green,
+# corpus single-name rule + Gazelle ownership + generate --check wiring,
+# perf report-not-gate shape + v2.8.0 fairness pin, and matrix honesty.
+# Live execution, per-type generation, and comparison numbers stay open
+# under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:execution_corpus_perf_guards`,
 # following //tools/ci:verify_perf_corpus.
@@ -48,6 +50,22 @@ if grep -q -F -e 'update_deferred' cli/cli/src/exec/update.rs \
   ok
 else
   bad "live update lost its update_deferred fail-closed code"
+fi
+
+# #18/#19 fail-closed behavior pinned by unit tests, not just codes.
+if grep -q -F -e 'assert!(err.contains("audit_deferred")' cli/cli/src/exec/audit.rs \
+  && grep -q -F -e 'assert!(err.contains("update_deferred")' cli/cli/src/exec/update.rs; then
+  ok
+else
+  bad "audit/update lost their fail-closed unit-test pins"
+fi
+
+# #18/#19 dry-run planning paths execute without launching.
+if grep -q -F -e 'dry_run' cli/cli/src/exec/audit.rs \
+  && grep -q -F -e 'dry_run' cli/cli/src/exec/update.rs; then
+  ok
+else
+  bad "audit/update lost their dry-run planning paths"
 fi
 
 # Aggregate exit-code mappings stay unit-pinned.
@@ -96,12 +114,27 @@ else
   bad "corpus per-type split appeared without #15 generation landing"
 fi
 
+# #15 generate freshness enforced in CI alongside the audit.
+if grep -q -F -e 'generate --check //...' .github/workflows/ci.yml; then
+  ok
+else
+  bad "ci.yml lost its generate --check freshness gate (#15)"
+fi
+
 # #86 perf report-not-gate shape: workflow + comparator present.
 if [[ -f ".github/workflows/perf.yml" ]] \
   && [[ -f "perf/compare.py" ]]; then
   ok
 else
   bad "perf harness missing (perf.yml workflow or compare.py)"
+fi
+
+# #86 fairness pin recorded in results + methodology (report, never gate).
+if grep -q -F -e '"rules_lint_pin": "v2.8.0"' perf/rules_lint_results.json \
+  && grep -q -F -e 'rules_lint` pin (`v2.8.0` baseline)' docs/tools/rules_lint-comparison.md; then
+  ok
+else
+  bad "perf lost its rules_lint v2.8.0 fairness pin (results or methodology)"
 fi
 
 # #86 prior slice stays green.
