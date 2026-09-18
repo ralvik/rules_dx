@@ -9,12 +9,13 @@
 # first push; this build-only slice pushes nothing.
 #
 # This harness machine-checks the gate half verifiable on a clean tree
-# today (10 checks): separate ghcr.yml route, PR-paths build, dispatch +
+# today (11 checks): separate ghcr.yml route, PR-paths build, dispatch +
 # default-closed approve gate, no push/tag/schedule trigger, digest-pinned
 # base + Bazelisk delegation + no ambient toolchains in Dockerfile.prebuilt,
-# cosign/quota/scaffold deferrals named, scaffold still on mcr (switch
-# follows first push). First-push signing + quota record stay open per
-# #184 and are recorded as gaps, not claimed here.
+# no docker/* actions with checkout SHA-pinned, cosign/quota/scaffold
+# deferrals named, scaffold still on mcr (switch follows first push). First-push
+# signing + quota record stay open per #184 and are recorded as gaps, not
+# claimed here.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:ghcr_hygiene`,
 # following //tools/ci:examples_laziness_aquery.
@@ -83,6 +84,15 @@ if ! grep -qi -E -e 'pip install|uv pip|npm install -g|pnpm add -g|cargo install
   ok
 else
   bad "Dockerfile.prebuilt bakes in a language toolchain (must resolve via Bazel)"
+fi
+
+# No docker/* actions: plain `docker build`/`push` keeps the push gate
+# explicit in `run:` steps; the sole third-party action (checkout) stays
+# pinned to a commit SHA per #80.
+if ! grep -q -F -e 'uses: docker/' .github/workflows/ghcr.yml && grep -q -E -e 'uses: actions/checkout@[0-9a-f]{40}' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "ghcr.yml gained a docker/* action or lost the checkout SHA pin (plain build/push only)"
 fi
 
 # Signing-second deferred explicitly: cosign <digest> on the #26 trust
