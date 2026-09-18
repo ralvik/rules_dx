@@ -14,12 +14,13 @@
 # can never be mistaken for the taxonomy.
 #
 # This harness machine-checks the static half verifiable on a clean
-# tree today (7 checks): adapters consume canonical IDs, map keys are
+# tree today (8 checks): adapters consume canonical IDs, map keys are
 # frozen IDs, one-class-one-family, canonical spelling, frozen example
-# agreement, fixture labeling, and unassigned-stays-unassigned (no
-# silent family assignment or adapter claim for the 12 open-work IDs).
-# The full registry review stays open per #6, and cache-execution plus
-# determinism-permutation proofs stay open per #84.
+# agreement, fixture labeling, unassigned-stays-unassigned (no
+# silent family assignment or adapter claim for the 12 open-work IDs),
+# and curated-defaults stay within the taxonomy (no parallel family or
+# tool). The full registry review stays open per #6, and cache-execution
+# plus determinism-permutation proofs stay open per #84.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:registry_singularity`,
 # following //tools/ci:release_policy.
@@ -128,6 +129,36 @@ for class in css gherkin graphql html html_template json5 jsonc less scss sql te
   fi
 done
 [[ "$unassigned_clean" == "1" ]] && ok
+
+# Curated defaults stay within the single-sourced taxonomy: every
+# curated family is a family value in REAL_CLASS_TO_FAMILY and every
+# curated tool is a known REAL_ADAPTERS tool, so curated defaults cannot
+# drift into a parallel taxonomy without the registry review (#6).
+sed -n '/^CURATED_DEFAULTS = {/,/^}/p' quality/curated_defaults.bzl \
+  | grep -E -e '^    "[a-z0-9_]+": \{' | sed 's/^    "//; s/":.*//' \
+  | LC_ALL=C sort -u > "$scratch/curated_families.txt"
+sed -n '/^CURATED_DEFAULTS = {/,/^}/p' quality/curated_defaults.bzl \
+  | grep -o -E -e '"(audit|format|lint|typecheck)": \[[^]]*\]' \
+  | sed 's/^"[^"]*": \[//; s/\]$//' \
+  | tr ',' '\n' | tr -d ' "' | grep -E -e '.+' \
+  | LC_ALL=C sort -u > "$scratch/curated_tools.txt"
+sed -n '/^REAL_ADAPTERS = {/,/^}/p' quality/adapters.bzl \
+  | grep -E -e '^    "[a-z0-9_]+": \{' | sed 's/^    "//; s/":.*//' \
+  | LC_ALL=C sort -u > "$scratch/real_tools.txt"
+curated_clean=1
+if missing="$(comm -23 "$scratch/curated_families.txt" "$scratch/families.txt")"; [[ -z "$missing" ]]; then
+  :
+else
+  curated_clean=0
+  bad "curated defaults name families outside REAL_CLASS_TO_FAMILY: $(echo "$missing" | tr '\n' ' ')"
+fi
+if missing_tools="$(comm -23 "$scratch/curated_tools.txt" "$scratch/real_tools.txt")"; [[ -z "$missing_tools" ]]; then
+  :
+else
+  curated_clean=0
+  bad "curated defaults name tools outside REAL_ADAPTERS: $(echo "$missing_tools" | tr '\n' ' ')"
+fi
+[[ "$curated_clean" == "1" ]] && ok
 
 # Record the open remainder as information, not a gate: frozen IDs
 # with no family assignment yet stay open work.
