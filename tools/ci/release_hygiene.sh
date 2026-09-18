@@ -9,13 +9,14 @@
 # stays green by construction and nothing runs uninvited.
 #
 # This harness machine-checks the no-publication-inputs half that is
-# verifiable on a clean tree today (14 checks): dist/release
+# verifiable on a clean tree today (15 checks): dist/release
 # git-ignored and uncommitted, module at 0.0.0, no version tags,
 # SECURITY.md reporting link, publish dry-run dispatch-only with a
 # default-closed approve gate, no-secrets minimal permissions,
 # RUNNER_TEMP staging plus a clean-checkout proof, explicit release
-# matrix (seed qualified, rest unqualified per #5), and SBOM/BCR
-# deferrals to #26 tooling. Platform,
+# matrix (seed qualified, rest unqualified per #5), SBOM/BCR
+# deferrals to #26 tooling, signing-first + GHCR-separate notes, and
+# checkout SHA pin. Platform,
 # packaging, provenance (SPDX/SLSA), registry submission, and
 # public-install smoke runs stay unqualified per #5 and are recorded
 # as gaps, not claimed here.
@@ -147,6 +148,14 @@ if grep -q -F -e 'GHCR prebuilt images (separate workflow .github/workflows/ghcr
   ok
 else
   bad "publish-dry-run.yml lost the GHCR-separate note (issue #184)"
+fi
+
+# Third-party actions stay SHA-pinned (issue #80): the sole third-party
+# action (checkout) must pin to a commit SHA, never float a tag.
+if grep -q -E -e 'uses: actions/checkout@[0-9a-f]{40}' .github/workflows/publish-dry-run.yml && ! grep -q -F -e 'uses: docker/' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml lost the checkout SHA pin or gained a docker/* action"
 fi
 
 echo "release hygiene harness: $pass passed, $fail failed"
