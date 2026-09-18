@@ -43,6 +43,11 @@ field dx_count=2
 field dx_results=fixture_real_mixed-real-format.pb,fixture_real_mixed-real-lint.pb
 field has_quality_sources=True
 field label=//quality/testdata:fixture_real_mixed
+subject //quality/testdata:fixture_real_no_format_subject
+field dx_count=1
+field dx_results=fixture_real_no_format-real-lint.pb
+field has_quality_sources=True
+field label=//quality/testdata:fixture_real_no_format
 subject //quality/testdata:fixture_real_no_lint_subject
 field dx_count=1
 field dx_results=fixture_real_no_lint-real-format.pb

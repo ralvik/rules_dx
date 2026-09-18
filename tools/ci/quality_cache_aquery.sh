@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quality cache aquery proof (issue #84, slices 1-8): per-adapter and
+# Quality cache aquery proof (issue #84, slices 1-9): per-adapter and
 # per-capability action-key isolation via `bazel aquery` over real
 # quality pipelines.
 #
@@ -33,7 +33,7 @@
 # and stage-subset isolation holds via mixed multi-class unions
 # (rust+starlark+toml single actions own all three sources+tools with
 # sorted tool-ID stage order), capability-tag removal (no-lint drops
-# lint, no-typecheck drops typecheck), and provider-less plain targets
+# lint, no-format drops format, no-typecheck drops typecheck), and provider-less plain targets
 # emitting zero actions (unsupported classes leave keys unchanged);
 # the apply step never appears as a Bazel action and the runner
 # executable is an action input to every pipeline (runner change
@@ -414,6 +414,9 @@ mixed_actions="$(bazel aquery '//quality/testdata:fixture_real_mixed' \
 no_lint_actions="$(bazel aquery '//quality/testdata:fixture_real_no_lint' \
   --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+no_format_actions="$(bazel aquery '//quality/testdata:fixture_real_no_format' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 no_typecheck_actions="$(bazel aquery '//quality/testdata:fixture_real_python_no_typecheck' \
   --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
@@ -424,6 +427,8 @@ mixed_lint_count="$(printf '%s' "$mixed_actions" | grep -c 'Mnemonic: DxRealQual
 mixed_format_count="$(printf '%s' "$mixed_actions" | grep -c 'Mnemonic: DxRealQualityFormat' || true)"
 no_lint_lint_count="$(printf '%s' "$no_lint_actions" | grep -c 'Mnemonic: DxRealQualityLint' || true)"
 no_lint_format_count="$(printf '%s' "$no_lint_actions" | grep -c 'Mnemonic: DxRealQualityFormat' || true)"
+no_format_lint_count="$(printf '%s' "$no_format_actions" | grep -c 'Mnemonic: DxRealQualityLint' || true)"
+no_format_format_count="$(printf '%s' "$no_format_actions" | grep -c 'Mnemonic: DxRealQualityFormat' || true)"
 no_typecheck_typecheck_count="$(printf '%s' "$no_typecheck_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
 python_typecheck_count="$(printf '%s' "$python_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
 plain_dx_count="$(printf '%s' "$plain_actions" | grep -c 'Mnemonic: DxRealQuality' || true)"
@@ -431,22 +436,33 @@ if [[ "$mixed_lint_count" == "1" ]]; then ok; else bad "mixed: want exactly 1 li
 if [[ "$mixed_format_count" == "1" ]]; then ok; else bad "mixed: want exactly 1 format action (got $mixed_format_count)"; fi
 if [[ "$no_lint_lint_count" == "0" ]]; then ok; else bad "no-lint: want 0 lint actions (tag drops owning pipeline, got $no_lint_lint_count)"; fi
 if [[ "$no_lint_format_count" == "1" ]]; then ok; else bad "no-lint: want exactly 1 format action (got $no_lint_format_count)"; fi
+if [[ "$no_format_lint_count" == "1" ]]; then ok; else bad "no-format: want exactly 1 lint action (got $no_format_lint_count)"; fi
+if [[ "$no_format_format_count" == "0" ]]; then ok; else bad "no-format: want 0 format actions (tag drops owning pipeline, got $no_format_format_count)"; fi
 if [[ "$no_typecheck_typecheck_count" == "0" ]]; then ok; else bad "no-typecheck: want 0 typecheck actions (got $no_typecheck_typecheck_count)"; fi
 if [[ "$python_typecheck_count" == "1" ]]; then ok; else bad "python baseline: want 1 typecheck action (tag removal invalidates, got $python_typecheck_count)"; fi
 if [[ "$plain_dx_count" == "0" ]]; then ok; else bad "plain: want 0 quality actions (unsupported with no provider leaves keys unchanged, got $plain_dx_count)"; fi
 mixed_format_inputs="$(printf '%s' "$mixed_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' | head -1 || true)"
 no_lint_format_inputs="$(printf '%s' "$no_lint_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' | head -1 || true)"
+no_format_lint_inputs="$(printf '%s' "$no_format_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"
 if [[ "$mixed_format_inputs" == *"real_clean.toml"* && "$mixed_format_inputs" == *"taplo"* ]]; then ok; else bad "mixed format: want [real_clean.toml+taplo] (exact stage source subset unions all three classes)"; fi
 if [[ "$no_lint_format_inputs" == *"real_clean.toml"* ]]; then bad "no-lint format: forbidden [real_clean.toml] (subset without TOML must not mention it)"; else ok; fi
 if [[ "$no_lint_format_inputs" == *"taplo"* ]]; then bad "no-lint format: forbidden [taplo] (TOML tool must not invalidate subset without TOML)"; else ok; fi
+if [[ "$no_format_lint_inputs" == *"real_clean.bzl"* && "$no_format_lint_inputs" == *"buildifier"* ]]; then ok; else bad "no-format lint: want [real_clean.bzl+buildifier] (exact stage source subset unions both classes)"; fi
+if [[ "$no_format_lint_inputs" == *"real_clean.toml"* ]]; then bad "no-format lint: forbidden [real_clean.toml] (subset without TOML must not mention it)"; else ok; fi
+if [[ "$no_format_lint_inputs" == *"taplo"* ]]; then bad "no-format lint: forbidden [taplo] (TOML tool must not invalidate subset without TOML)"; else ok; fi
+if [[ "$no_format_lint_inputs" == *"rustfmt"* ]]; then bad "no-format lint: forbidden [rustfmt] (format tool must not invalidate lint)"; else ok; fi
+if [[ "$no_format_lint_inputs" == *"clippy-driver"* ]]; then ok; else bad "no-format lint: want [clippy-driver] (lint tool change misses lint)"; fi
 mixed_format_key="$(printf '%s' "$mixed_actions" | grep -A 10 "Dx real quality format //quality/testdata:fixture_real_mixed" | grep 'ActionKey:' | head -1 || true)"
 mixed_lint_key="$(printf '%s' "$mixed_actions" | grep -A 10 "Dx real quality lint //quality/testdata:fixture_real_mixed" | grep 'ActionKey:' | head -1 || true)"
 no_lint_format_key="$(printf '%s' "$no_lint_actions" | grep 'ActionKey:' | head -1 || true)"
-if [[ -n "$mixed_format_key" && -n "$mixed_lint_key" && -n "$no_lint_format_key" ]]; then ok; else bad "want ActionKey lines in mixed/no-lint outputs"; fi
+no_format_lint_key="$(printf '%s' "$no_format_actions" | grep 'ActionKey:' | head -1 || true)"
+if [[ -n "$mixed_format_key" && -n "$mixed_lint_key" && -n "$no_lint_format_key" && -n "$no_format_lint_key" ]]; then ok; else bad "want ActionKey lines in mixed/no-lint/no-format outputs"; fi
 if [[ "$mixed_format_key" != "$no_lint_format_key" ]]; then ok; else bad "mixed vs no-lint format ActionKeys must differ (adding TOML class invalidates)"; fi
 if [[ "$mixed_format_key" != "$mixed_lint_key" ]]; then ok; else bad "mixed lint vs format ActionKeys must differ (capability isolation holds multi-class)"; fi
-if [[ "$mixed_actions" == *"DxApply"* || "$no_lint_actions" == *"DxApply"* || "$no_typecheck_actions" == *"DxApply"* || "$python_actions" == *"DxApply"* ]]; then bad "apply step must never appear as a Bazel action (apply never changes action keys)"; else ok; fi
-if [[ "$mixed_format_inputs" == *"quality_runner"* && "$no_lint_format_inputs" == *"quality_runner"* ]]; then ok; else bad "want [quality_runner] executable in mixed/no-lint inputs (runner change invalidates)"; fi
+if [[ "$mixed_lint_key" != "$no_format_lint_key" ]]; then ok; else bad "mixed vs no-format lint ActionKeys must differ (adding TOML class invalidates)"; fi
+if [[ "$no_format_lint_key" != "$no_lint_format_key" ]]; then ok; else bad "no-format lint vs no-lint format ActionKeys must differ (capability isolation holds multi-class)"; fi
+if [[ "$mixed_actions" == *"DxApply"* || "$no_lint_actions" == *"DxApply"* || "$no_format_actions" == *"DxApply"* || "$no_typecheck_actions" == *"DxApply"* || "$python_actions" == *"DxApply"* ]]; then bad "apply step must never appear as a Bazel action (apply never changes action keys)"; else ok; fi
+if [[ "$mixed_format_inputs" == *"quality_runner"* && "$no_lint_format_inputs" == *"quality_runner"* && "$no_format_lint_inputs" == *"quality_runner"* ]]; then ok; else bad "want [quality_runner] executable in mixed/no-lint/no-format inputs (runner change invalidates)"; fi
 # Runner-everywhere isolation: the runner executable is an input to every
 # pipeline's actions, so changing the runner invalidates the complete
 # affected target/capability action per the pipeline-invalidation row.
@@ -464,8 +480,10 @@ if [[ "$toml_actions" == *"quality_runner"* ]]; then ok; else bad "toml: want [q
 if [[ "$markdown_actions" == *"quality_runner"* ]]; then ok; else bad "markdown: want [quality_runner] in inputs (runner change invalidates)"; fi
 mixed_format_stages="$(printf '%s' "$mixed_actions" | grep -A 30 "Dx real quality format //quality/testdata:fixture_real_mixed" | grep -o "'[a-z_]*;[a-z_]*;" | tr '\n' ' ' || true)"
 mixed_lint_stages="$(printf '%s' "$mixed_actions" | grep -A 30 "Dx real quality lint //quality/testdata:fixture_real_mixed" | grep -o "'[a-z_]*;[a-z_]*;" | tr '\n' ' ' || true)"
+no_format_lint_stages="$(printf '%s' "$no_format_actions" | grep -A 30 "Dx real quality lint //quality/testdata:fixture_real_no_format" | grep -o "'[a-z_]*;[a-z_]*;" | tr '\n' ' ' || true)"
 if [[ "$mixed_format_stages" == *"'buildifier;starlark;"*"'rustfmt;rust;"*"'taplo;toml;"* ]]; then ok; else bad "mixed format stages must be sorted tool-ID order [buildifier rustfmt taplo] (got $mixed_format_stages)"; fi
 if [[ "$mixed_lint_stages" == *"'buildifier;starlark;"*"'clippy;rust;"*"'taplo;toml;"* ]]; then ok; else bad "mixed lint stages must be sorted tool-ID order [buildifier clippy taplo] (got $mixed_lint_stages)"; fi
+if [[ "$no_format_lint_stages" == *"'buildifier;starlark;"*"'clippy;rust;"* ]]; then ok; else bad "no-format lint stages must be sorted tool-ID order [buildifier clippy] (got $no_format_lint_stages)"; fi
 # Flake8/pylint opt-in laziness: both are explicit opt-in Python lint
 # adapters, so default pipelines must never mention them (flake8/pylint
 # change leaves default keys unchanged per the unselected-adapter +
@@ -491,6 +509,8 @@ if [[ "$toml_actions" == *"flake8"* ]]; then bad "toml: forbidden [flake8] (opt-
 if [[ "$toml_actions" == *"pylint"* ]]; then bad "toml: forbidden [pylint] (opt-in pylint must not invalidate TOML)"; else ok; fi
 if [[ "$markdown_actions" == *"flake8"* ]]; then bad "markdown: forbidden [flake8] (opt-in flake8 must not invalidate Markdown)"; else ok; fi
 if [[ "$markdown_actions" == *"pylint"* ]]; then bad "markdown: forbidden [pylint] (opt-in pylint must not invalidate Markdown)"; else ok; fi
+if [[ "$no_format_actions" == *"flake8"* ]]; then bad "no-format: forbidden [flake8] (opt-in flake8 must not invalidate no-format)"; else ok; fi
+if [[ "$no_format_actions" == *"pylint"* ]]; then bad "no-format: forbidden [pylint] (opt-in pylint must not invalidate no-format)"; else ok; fi
 
 echo "quality cache aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]

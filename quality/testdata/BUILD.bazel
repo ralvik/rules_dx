@@ -162,6 +162,13 @@ real_source_target(
     tags = ["no-lint"],
 )
 
+real_source_target(
+    name = "fixture_real_no_format",
+    rust_srcs = ["clean.rs"],
+    starlark_srcs = ["real_clean.bzl"],
+    tags = ["no-format"],
+)
+
 # Python fixtures: a clean module passing ruff lint/format,
 # pydoclint, and ty; a dirty module with one deterministic finding per
 # tool (F401, unformatted line, DOC101/DOC103, invalid-argument-type);
@@ -249,6 +256,11 @@ real_aspect_subject(
 real_aspect_subject(
     name = "fixture_real_no_lint_subject",
     target = ":fixture_real_no_lint",
+)
+
+real_aspect_subject(
+    name = "fixture_real_no_format_subject",
+    target = ":fixture_real_no_format",
 )
 
 real_aspect_subject(
@@ -364,6 +376,7 @@ real_aspect_fixture_tests(
         ":fixture_real_markdown_sibling_subject",
         ":fixture_real_markdown_subject",
         ":fixture_real_mixed_subject",
+        ":fixture_real_no_format_subject",
         ":fixture_real_no_lint_subject",
         ":fixture_real_python_hinted_subject",
         ":fixture_real_python_subject",
