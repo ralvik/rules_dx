@@ -325,6 +325,17 @@ sh_binary(
     srcs = ["ghcr_publish_guards.sh"],
 )
 
+# Quality-foundations guards (issues #6, #7, #8, #12; relates #84): pins
+# the provider definition, single-sourced registry map, per-foundation
+# owner docs, framework boundary, cache/determinism contract sections,
+# matrix honesty, prior-slice harnesses, and no-false-claim gaps. Exact
+# mappings, taxonomy review, and battery execution stay open. Run by CI
+# via `bazel run //tools/ci:quality_foundations_guards`.
+sh_binary(
+    name = "quality_foundations_guards",
+    srcs = ["quality_foundations_guards.sh"],
+)
+
 # Widen-one-requirement + dx update PR loop contract (issue #260, seed
 # slice): all-ecosystems v1 manager set, retained Renovate fallback,
 # never-rewrites invariant, #19 resolver prerequisite, manual bump-PR
