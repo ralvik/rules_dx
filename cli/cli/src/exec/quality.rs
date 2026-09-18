@@ -1455,4 +1455,73 @@ mod tests {
             "default mode must emit the change before its terminal mutation"
         );
     }
+
+    #[test]
+    fn diff_check_and_default_emit_identical_patch_with_byte_equality() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // complete deterministic diff-mode patches from the same edit set
+        // in check and default modes without rerunning tools or truncating
+        // replacement content. Both modes must emit byte-identical patches;
+        // check performs no writes while default applies, and splicing the
+        // recorded 0..1 -> y edit must equal default's planned input
+        // byte-for-byte.
+        let mut check = Harness::new("diff-patch-check");
+        check.write_source("src/a.py", "x = 1\n");
+        check.results.insert(
+            "//test:corpus".to_owned(),
+            check.valid_result(
+                vec![Harness::diagnostic("unused", true)],
+                vec![check.replacement(b"y")],
+            ),
+        );
+        let (check_code, check_out, _) = check.run(&["lint", "--check", "--output=diff"]);
+        assert_eq!(check_code, 1);
+        assert_eq!(
+            std::fs::read(check.workspace.join("src/a.py")).expect("source"),
+            b"x = 1\n"
+        );
+        assert_eq!(
+            check.seen_env.borrow().len(),
+            1,
+            "diff check must launch Bazel exactly once, no rerun"
+        );
+        let mut default = Harness::new("diff-patch-default");
+        default.write_source("src/a.py", "x = 1\n");
+        default.results.insert(
+            "//test:corpus".to_owned(),
+            default.valid_result(
+                vec![Harness::diagnostic("unused", true)],
+                vec![default.replacement(b"y")],
+            ),
+        );
+        let (default_code, default_out, _) = default.run(&["lint", "--output=diff"]);
+        assert_eq!(default_code, 0);
+        assert_eq!(
+            std::fs::read(default.workspace.join("src/a.py")).expect("source"),
+            b"y = 1\n"
+        );
+        assert_eq!(
+            default.seen_env.borrow().len(),
+            1,
+            "diff default must launch Bazel exactly once, no post-apply rerun"
+        );
+        assert_eq!(
+            default_out, check_out,
+            "diff check and default must emit byte-identical patches"
+        );
+        assert!(check_out.contains("--- a/src/a.py"));
+        assert!(check_out.contains("+++ b/src/a.py"));
+        assert!(check_out.contains("-x = 1"));
+        assert!(check_out.contains("+y = 1"));
+        let original = b"x = 1\n";
+        let mut planned = Vec::new();
+        planned.extend_from_slice(&original[0..0]);
+        planned.extend_from_slice(b"y");
+        planned.extend_from_slice(&original[1..]);
+        assert_eq!(planned, b"y = 1\n");
+        assert_eq!(
+            std::fs::read(default.workspace.join("src/a.py")).expect("source"),
+            planned
+        );
+    }
 }
