@@ -369,6 +369,17 @@ sh_binary(
     name = "distribution_closeout_guards",
     srcs = ["distribution_closeout_guards.sh"],
 )
+
+# Backlog/automation guards (issues #9, #10, #85, #254, #260): pins
+# the env/codegen + docs-pipeline contracts, examples ownership +
+# laziness slices, Bazel-owned LCOV gate + Codecov honesty, Renovate
+# fallback + never-rewrites + ADR pins, prior harnesses, and
+# no-false-claim gaps. Reverse queries, adapter runs, comment
+# presentation, and widen implementation stay open. Run by CI via
+# `bazel run //tools/ci:backlog_automation_guards`.
+sh_binary(
+    name = "backlog_automation_guards",
+    srcs = ["backlog_automation_guards.sh"],
 )
 
 # Stage 4 E2E drivers (issue #55): one `manual` (+`exclusive`,
