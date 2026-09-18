@@ -241,4 +241,12 @@ routes and does not install an all-open-PR rerun bot or modify repository settin
 
 Qualification requirements are retained with the cases above. See the
 [GitHub CI contract](../github-ci.md) and open decisions
-for unresolved qualification work.
+for unresolved qualification work. Consumer CI qualification plus automation policy
+stays open under issue #312 (platform, runner, isolation, cache, ordering evidence;
+merge, diff, queue, cancellation, aggregate binding; thread identity, ordering, limits;
+fork, untrusted, sensitive, retries, Code-Scanning qualification; sequential mode
+rejected; tag hygiene plus release-input gaps; Renovate and native-bot follow-ups;
+dx migrate syntax plus dx run multirun). Consumer CI, devcontainer, and perf honesty
+stays open under issue #325 (self-call build-only with 8 of 9 checks disabled,
+devcontainer parity-checked but never booted, perf report-not-gate; qualify and enable
+each path or keep the limitation explicit).

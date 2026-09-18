@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Backlog/automation guards (issues #9, #10, #85, #254, #260).
+# Backlog/automation guards (issues #9, #10, #85, #254, #260, #309, #310, #311, #312, #325).
 #
 # Environment/codegen (#9) and docs-pipeline (#10) keep frozen
 # cross-file contracts with honest gap labels; per-foundation
@@ -8,9 +8,12 @@
 # with the Bazel-owned LCOV gate as source of truth; the
 # widen-one-requirement + update PR loop (#260) stays planned behind
 # the #19 resolver prerequisite with Renovate retained as fallback.
+# Environment/codegen gaps (#309), docs-pipeline gaps (#310),
+# deploy/release gaps (#311), consumer-CI qualification (#312), and
+# consumer/devcontainer/perf honesty (#325) stay open with honest records.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (44 checks): codegen/env contracts + commit-lock + try_lock +
+# today (49 checks): codegen/env contracts + commit-lock + try_lock +
 # clean + bootstrap-first + installation/retention + reverse-dependents
 # + managed-PATH detail + Node/Python/Rust env records, docs-pipeline
 # records + IR/site identity + cache-friendly site + mdBook renderer +
@@ -427,6 +430,46 @@ if ! grep -rn -F -e 'codecov-action' .github/workflows/ci.yml 2>/dev/null | grep
   ok
 else
   bad "a third-party coverage action appeared in ci.yml against #254 policy"
+fi
+
+# #309 environment/codegen gaps stay tracked with required-test honesty.
+if grep -q -F -e 'issue #309' docs/environments/environment.md \
+  && grep -q -F -e 'standalone-without-Bazel path' docs/environments/environment.md; then
+  ok
+else
+  bad "environment.md lost its #309 env/codegen-gaps tracker record"
+fi
+
+# #310 docs-pipeline gaps stay tracked with no-working-site honesty.
+if grep -q -F -e 'issue #310' docs/documentation/README.md \
+  && grep -q -F -e 'no working site claimed' docs/documentation/README.md; then
+  ok
+else
+  bad "documentation README lost its #310 docs-pipeline tracker record"
+fi
+
+# #311 deploy/release gaps stay tracked with draft-only honesty.
+if grep -q -F -e 'issue #311' docs/deploy/authoring.md \
+  && grep -q -F -e 'draft-only ceiling enforced' docs/deploy/authoring.md; then
+  ok
+else
+  bad "deploy authoring lost its #311 release-gaps tracker record"
+fi
+
+# #312 consumer-CI qualification stays tracked in contract + matrix.
+if grep -q -F -e 'issue #312' docs/github-ci.md \
+  && grep -q -F -e 'issue #312' docs/testing/github-ci.md; then
+  ok
+else
+  bad "github-ci contract/matrix lost its #312 qualification tracker record"
+fi
+
+# #325 consumer/devcontainer/perf honesty stays explicit.
+if grep -q -F -e 'issue #325' docs/testing/github-ci.md \
+  && grep -q -F -e 'self-call build-only' docs/testing/github-ci.md; then
+  ok
+else
+  bad "github-ci matrix lost its #325 honesty tracker record"
 fi
 
 echo "backlog automation guards harness: $pass passed, $fail failed"
