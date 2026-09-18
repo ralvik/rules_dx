@@ -255,14 +255,14 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Registry-singularity harness (issues #6, #84): machine-checks
+# Registry-singularity harness (issue #6 closed): machine-checks
 # that the semantic file-class registry stays single-sourced —
 # adapter manifests consume canonical IDs, map keys are frozen IDs,
 # each class maps to exactly one family with canonical spelling, the
-# frozen example assignments agree with the map, fixture maps stay
-# labeled, the 12 open-work IDs stay unassigned (no silent
-# assignment/claim), and curated defaults stay within the taxonomy
-# (no parallel family/tool). Functional code checks only. Run by CI
+# frozen assignments agree with the map, fixture maps stay labeled,
+# every frozen ID has a family (no gap), curated defaults stay within
+# the taxonomy (no parallel family/tool), and admissibility covers
+# every frozen ID. Functional code checks only. Run by CI
 # via `bazel run //tools/ci:registry_singularity`.
 sh_binary(
     name = "registry_singularity",

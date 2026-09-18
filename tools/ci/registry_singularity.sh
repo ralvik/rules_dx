@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Registry-singularity harness (issues #6, #84): machine-checks that the
+# Registry-singularity harness (issue #6 closed): machine-checks that the
 # semantic file-class registry stays single-sourced.
 #
 # `quality/adapters.bzl` owns the
@@ -7,20 +7,21 @@
 # adapter capability manifests (`REAL_ADAPTERS`). Adapters must consume
 # canonical IDs (no invented classes), map keys must be frozen IDs (no
 # rogue IDs), each class must map to exactly one family (no second
-# table assigns them differently), and the explicitly frozen example
-# assignments (JavaScript owns javascript/jsx, TypeScript owns
-# typescript/tsx, JSON owns the JSON classes) must agree with the map.
-# The synthetic fixture maps stay labeled fixture/provisional so they
-# can never be mistaken for the taxonomy.
+# table assigns them differently), and the frozen assignments (JavaScript
+# owns javascript/jsx, TypeScript owns typescript/tsx, JSON owns
+# json/json5/jsonc, CSS owns css/less/scss, plus the single-family
+# graphql/html/html_template/xml/gherkin/sql/text classes) must agree
+# with the map. The synthetic fixture maps stay labeled
+# fixture/provisional so they can never be mistaken for the taxonomy.
 #
 # This harness machine-checks the static half verifiable on a clean
-# tree today (8 checks): adapters consume canonical IDs, map keys are
-# frozen IDs, one-class-one-family, canonical spelling, frozen example
-# agreement, fixture labeling, unassigned-stays-unassigned (no
-# silent family assignment or adapter claim for the 12 open-work IDs),
-# and curated-defaults stay within the taxonomy (no parallel family or
-# tool). The full registry review stays open per #6, and cache-execution
-# plus determinism-permutation proofs stay open per #84.
+# tree today (9 checks): adapters consume canonical IDs, map keys are
+# frozen IDs, one-class-one-family, canonical spelling, frozen assignment
+# agreement, fixture labeling, registry completeness (every frozen ID
+# has exactly one family), curated-defaults stay within the taxonomy
+# (no parallel family or tool), and the admissibility table covers every
+# frozen ID. Cache-execution plus determinism-permutation proofs stay
+# open per #84.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:registry_singularity`,
 # following //tools/ci:release_policy.
@@ -91,11 +92,12 @@ else
   ok
 fi
 
-# The explicitly frozen example assignments agree with the map:
-# JavaScript owns javascript/jsx, TypeScript owns typescript/tsx, JSON
-# owns the JSON classes (quality-sources.md candidate registry).
+# The frozen assignments agree with the map: JavaScript owns
+# javascript/jsx, TypeScript owns typescript/tsx, JSON owns
+# json/json5/jsonc, CSS owns css/less/scss, and graphql, html,
+# html_template, xml, gherkin, sql, and text each own their own family.
 agree=1
-for pair in "javascript:javascript" "jsx:javascript" "typescript:typescript" "tsx:typescript" "json:json"; do
+for pair in "javascript:javascript" "jsx:javascript" "typescript:typescript" "tsx:typescript" "json:json" "json5:json" "jsonc:json" "css:css" "less:css" "scss:css" "graphql:graphql" "html:html" "html_template:html_template" "xml:xml" "gherkin:gherkin" "sql:sql" "text:text"; do
   class="${pair%%:*}"
   want="${pair##*:}"
   got="$(grep -E -e "\"$class\": " "$scratch/pairs.txt" | sed 's/.*": "//; s/"//' || true)"
@@ -114,26 +116,18 @@ else
   bad "synthetic adapter maps lost their fixture/provisional labeling"
 fi
 
-# The 12 open-work IDs stay unassigned: no silent family assignment or
-# adapter claim lands without the registry review, so the gap cannot be
-# closed without updating the #6 enumeration above.
-unassigned_clean=1
-for class in css gherkin graphql html html_template json5 jsonc less scss sql text xml; do
-  if grep -q -F -e "\"$class\":" "$scratch/pairs.txt"; then
-    unassigned_clean=0
-    bad "unassigned class $class gained a family assignment without registry review (#6)"
-  fi
-  if grep -q -x -F -e "$class" "$scratch/adapter_classes.txt"; then
-    unassigned_clean=0
-    bad "unassigned class $class gained an adapter claim without registry review (#6)"
-  fi
-done
-[[ "$unassigned_clean" == "1" ]] && ok
+# Registry completeness (issue #6 closed): every frozen ID has exactly
+# one family, so no silent gap can rot into an undocumented assignment.
+if missing="$(comm -23 "$scratch/frozen.txt" "$scratch/keys.txt")"; [[ -z "$missing" ]]; then
+  ok
+else
+  bad "frozen IDs without family assignment: $(echo "$missing" | tr '\n' ' ')"
+fi
 
 # Curated defaults stay within the single-sourced taxonomy: every
 # curated family is a family value in REAL_CLASS_TO_FAMILY and every
 # curated tool is a known REAL_ADAPTERS tool, so curated defaults cannot
-# drift into a parallel taxonomy without the registry review (#6).
+# drift into a parallel taxonomy without review.
 sed -n '/^CURATED_DEFAULTS = {/,/^}/p' quality/curated_defaults.bzl \
   | grep -E -e '^    "[a-z0-9_]+": \{' | sed 's/^    "//; s/":.*//' \
   | LC_ALL=C sort -u > "$scratch/curated_families.txt"
@@ -160,9 +154,17 @@ else
 fi
 [[ "$curated_clean" == "1" ]] && ok
 
-# Record the open remainder as information, not a gate: frozen IDs
-# with no family assignment yet stay open work.
-open="$(comm -23 "$scratch/frozen.txt" "$scratch/keys.txt" | tr '\n' ' ')"
-echo "registry open work (frozen IDs without family assignment): ${open:-none}"
+# Admissibility covers every frozen ID: the owned table in
+# quality-sources.md names each class once in its first column, so
+# per-ID shapes cannot rot without failing here.
+sed -n '/^| Class |/,/^$/p' docs/quality/quality-sources.md \
+  | grep -E '^\| `' | sed -E 's/^\| `([a-z0-9_]+)`.*/\1/' \
+  | LC_ALL=C sort -u > "$scratch/admissible.txt"
+if missing_adm="$(comm -23 "$scratch/frozen.txt" "$scratch/admissible.txt")"; [[ -z "$missing_adm" ]]; then
+  ok
+else
+  bad "admissibility table misses frozen IDs: $(echo "$missing_adm" | tr '\n' ' ')"
+fi
+
 echo "registry singularity audit: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
