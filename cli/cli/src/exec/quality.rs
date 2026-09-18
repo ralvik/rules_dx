@@ -1371,4 +1371,88 @@ mod tests {
             serde_json::json!("report_failed")
         );
     }
+
+    #[test]
+    fn json_check_and_default_emit_identical_change_with_byte_equality() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // JSON check and default modes to emit one deterministic exact
+        // `change` event per valid candidate path, with check performing
+        // no writes and default emitting the change before its terminal
+        // mutation. Reconstructing the candidate from digest plus UTF-8
+        // ranges and replacements must equal default mode planned input
+        // byte-for-byte.
+        fn changes(out: &str) -> Vec<serde_json::Value> {
+            json_events(out)
+                .into_iter()
+                .filter(|event| event["event"] == serde_json::json!("change"))
+                .collect()
+        }
+        let mut check = Harness::new("json-change-check");
+        check.write_source("src/a.py", "x = 1\n");
+        check.results.insert(
+            "//test:corpus".to_owned(),
+            check.valid_result(
+                vec![Harness::diagnostic("unused", true)],
+                vec![check.replacement(b"y")],
+            ),
+        );
+        let (check_code, check_out, _) = check.run(&["lint", "--check", "--output=json"]);
+        assert_eq!(check_code, 1);
+        assert_eq!(
+            std::fs::read(check.workspace.join("src/a.py")).expect("source"),
+            b"x = 1\n"
+        );
+        let check_changes = changes(&check_out);
+        assert_eq!(check_changes.len(), 1);
+        let mut default = Harness::new("json-change-default");
+        default.write_source("src/a.py", "x = 1\n");
+        default.results.insert(
+            "//test:corpus".to_owned(),
+            default.valid_result(
+                vec![Harness::diagnostic("unused", true)],
+                vec![default.replacement(b"y")],
+            ),
+        );
+        let (default_code, default_out, _) = default.run(&["lint", "--output=json"]);
+        assert_eq!(default_code, 0);
+        assert_eq!(
+            std::fs::read(default.workspace.join("src/a.py")).expect("source"),
+            b"y = 1\n"
+        );
+        let default_changes = changes(&default_out);
+        assert_eq!(default_changes, check_changes);
+        let change = &check_changes[0];
+        assert_eq!(change["path"], serde_json::json!("src/a.py"));
+        assert_eq!(change["kind"], serde_json::json!("modify"));
+        let original = b"x = 1\n";
+        let expected_digest = dx_digest::to_hex(&digest(original));
+        assert_eq!(change["source_digest"], serde_json::json!(expected_digest));
+        let edits = change["edits"].as_array().expect("edits");
+        assert_eq!(edits.len(), 1);
+        assert_eq!(edits[0]["start_byte"], serde_json::json!(0));
+        assert_eq!(edits[0]["end_byte"], serde_json::json!(1));
+        assert_eq!(edits[0]["replacement"], serde_json::json!("y"));
+        let mut planned = Vec::new();
+        planned.extend_from_slice(&original[0..0]);
+        planned.extend_from_slice(b"y");
+        planned.extend_from_slice(&original[1..]);
+        assert_eq!(planned, b"y = 1\n");
+        assert_eq!(
+            std::fs::read(default.workspace.join("src/a.py")).expect("source"),
+            planned
+        );
+        let events = json_events(&default_out);
+        let change_idx = events
+            .iter()
+            .position(|event| event["event"] == serde_json::json!("change"))
+            .expect("change index");
+        let mutation_idx = events
+            .iter()
+            .position(|event| event["event"] == serde_json::json!("mutation"))
+            .expect("mutation index");
+        assert!(
+            change_idx < mutation_idx,
+            "default mode must emit the change before its terminal mutation"
+        );
+    }
 }
