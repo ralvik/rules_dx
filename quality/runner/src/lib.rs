@@ -1894,6 +1894,33 @@ mod tests {
     }
 
     #[test]
+    fn unstable_envelope_with_replacements_rejected_by_validate_gate() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // complete-envelope validation so no partial write escapes on
+        // non-stable terminals. A stable BAD->GOOD result passes
+        // `validate`; the same envelope with IterationLimit or Oscillation
+        // convergence plus replacements must fail; unstable with empty
+        // replacements passes, proving the gate blocks partial writes
+        // while allowing the empty envelope `assemble` emits.
+        let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let files = vec![file("src/lib.rs", "BAD\n")];
+        let valid = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
+        assert_eq!(valid.convergence, Convergence::Stable as i32);
+        assert!(!valid.replacements.is_empty());
+        assert!(validate(&valid).is_ok());
+        let mut limited = valid.clone();
+        limited.convergence = Convergence::IterationLimit as i32;
+        assert!(validate(&limited).is_err());
+        let mut oscillating = valid.clone();
+        oscillating.convergence = Convergence::Oscillation as i32;
+        assert!(validate(&oscillating).is_err());
+        let mut unstable_empty = valid.clone();
+        unstable_empty.convergence = Convergence::IterationLimit as i32;
+        unstable_empty.replacements = Vec::new();
+        assert!(validate(&unstable_empty).is_ok());
+    }
+
+    #[test]
     fn newline_variants_yield_distinct_manifests() {
         // Determinism/apply-safety battery (issue #84):
         // `quality-testing.md` requires file modes preserved and newline
