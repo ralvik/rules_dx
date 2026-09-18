@@ -9,14 +9,15 @@
 # stays green by construction and nothing runs uninvited.
 #
 # This harness machine-checks the no-publication-inputs half that is
-# verifiable on a clean tree today (16 checks): dist/release
+# verifiable on a clean tree today (17 checks): dist/release
 # git-ignored and uncommitted, module at 0.0.0, no version tags,
 # SECURITY.md reporting link, publish dry-run dispatch-only with a
 # default-closed approve gate, no-secrets minimal permissions,
 # RUNNER_TEMP staging plus a clean-checkout proof, explicit release
 # matrix (seed qualified, rest unqualified per #5), SBOM/BCR
 # deferrals to #26 tooling, signing-first + GHCR-separate notes,
-# checkout SHA pin, and typed approve plus non-cancelling concurrency. Platform,
+# checkout SHA pin, typed approve plus non-cancelling concurrency, and
+# least-privilege no-packages-write. Platform,
 # packaging, provenance (SPDX/SLSA), registry submission, and
 # public-install smoke runs stay unqualified per #5 and are recorded
 # as gaps, not claimed here.
@@ -165,6 +166,15 @@ if grep -q -F -e 'type: boolean' .github/workflows/publish-dry-run.yml && grep -
   ok
 else
   bad "publish-dry-run.yml lost the typed approve gate or non-cancelling concurrency"
+fi
+
+# The dry-run stays least-privilege (issue #78): no packages:write
+# (only ghcr.yml needs packages:write for image push; the dry run
+# never publishes, so contents:read is sufficient).
+if ! grep -q -F -e 'packages: write' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml gained packages:write (dry run must stay read-only; push lives in ghcr.yml)"
 fi
 
 echo "release hygiene harness: $pass passed, $fail failed"
