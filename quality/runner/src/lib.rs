@@ -1860,6 +1860,40 @@ mod tests {
     }
 
     #[test]
+    fn diagnostic_envelope_rejected_by_validate_gate() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // complete result-envelope validation before any path mutation.
+        // The runner emits well-formed diagnostics, so any diagnostic
+        // violating severity, message, tool identity, or byte-range rules
+        // must fail `validate`, proving the gate blocks malformed
+        // envelopes from leaving the action.
+        let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let files = vec![file("src/lib.rs", "BAD\n")];
+        let valid = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
+        assert!(!valid.initial_diagnostics.is_empty());
+        assert!(validate(&valid).is_ok());
+        let mut bad_severity = valid.clone();
+        bad_severity.initial_diagnostics[0].severity = Severity::Unspecified as i32;
+        assert!(validate(&bad_severity).is_err());
+        let mut empty_message = valid.clone();
+        empty_message.initial_diagnostics[0].message = String::new();
+        assert!(validate(&empty_message).is_err());
+        let mut empty_tool = valid.clone();
+        empty_tool.initial_diagnostics[0].tool_id = String::new();
+        assert!(validate(&empty_tool).is_err());
+        let mut range_without_path = valid.clone();
+        range_without_path.initial_diagnostics[0].path = String::new();
+        assert!(validate(&range_without_path).is_err());
+        let mut missing_range = valid.clone();
+        missing_range.initial_diagnostics[0].start_byte = None;
+        assert!(validate(&missing_range).is_err());
+        let mut inverted_range = valid.clone();
+        inverted_range.initial_diagnostics[0].start_byte = Some(3);
+        inverted_range.initial_diagnostics[0].end_byte = Some(2);
+        assert!(validate(&inverted_range).is_err());
+    }
+
+    #[test]
     fn newline_variants_yield_distinct_manifests() {
         // Determinism/apply-safety battery (issue #84):
         // `quality-testing.md` requires file modes preserved and newline
