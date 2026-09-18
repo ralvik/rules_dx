@@ -13,3 +13,19 @@ Developer environment and generated-source projection contracts:
 
 The delivery order is dogfood-first: PATH/environment bootstrap precedes the Rust language
 foundation, and Python follows as a later language projection.
+
+## Language Mapping Qualification
+
+Accepted. Each foundation keeps its provisional upstream; no switch is approved here.
+
+Every implemented foundation (`rust`, `python`, `javascript`, `typescript`, `go`,
+`java`, `kotlin`, `scala`, `csharp`, `fsharp`, `cc`) contributes a provider-derived
+plan via `<lang>/env/plan.bzl`, pinned by `<lang>/env/plan_tests.bzl` and exercised
+by `<lang>/hello/`. Rust, Node, and Python projections are further defined in
+[Rust Environment](rust.md), [Node Environment](node.md), and
+[Python Environment](python-environment.md). Additional toolchains use the default
+upstream toolchain now; per-platform acquisition stays open under the native plan.
+Ruby and PowerShell have no environment mapping: deferred beyond v1 by
+[ADR 0019](../decisions/0019-first-release-additional-foundations.md).
+
+Pinned by `bazel run //tools/ci:foundation_maps`.

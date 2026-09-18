@@ -76,8 +76,11 @@ Framework composition evidence (exact parser/compiler, provider,
 generated-region, dependency, test, environment/IDE, quality-region
 mappings) stays open under
 open work. Language
-provider/import/lock/tool-graph proofs stay open under
-open work. Quality
+provider/import/lock/tool-graph proofs are pinned by
+`bazel run //tools/ci:foundation_maps`, with owning qualification in
+[Generation](../generation/README.md#language-mapping-qualification),
+[Environments](../environments/README.md#language-mapping-qualification), and
+[Tools](../tools/README.md#language-mapping-qualification). Quality
 family taxonomy stays open under
 open work.
 

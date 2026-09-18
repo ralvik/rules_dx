@@ -353,7 +353,7 @@ summarized in [Candidate Disposition Status](#candidate-disposition-status).
   toolchain-coupled native advantage was evidenced. Mappings are tracked in
   open work. Admitted to v1
   by [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
-- C# and F#: [`rules_dotnet` 0.22.2](https://github.com/bazel-contrib/rules_dotnet)
+- C# and F#: [`rules_dotnet` 0.22.1](https://github.com/bazel-contrib/rules_dotnet)
   (Bzlmod, Bazel >= 8) covers both languages with `csharp_*`
    and `fsharp_*` targets plus SDK acquisition through its `dotnet` toolchain
    extension, so one upstream review covers both rows. Per-platform SDK
