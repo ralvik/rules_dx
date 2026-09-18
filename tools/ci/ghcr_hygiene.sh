@@ -9,8 +9,8 @@
 # first push; this build-only slice pushes nothing.
 #
 # This harness machine-checks the gate half verifiable on a clean tree
-# today (13 checks): separate ghcr.yml route, PR-paths build, dispatch +
-# default-closed approve gate, push run-gate explicit, no push/tag/schedule trigger, digest-pinned
+# today (14 checks): separate ghcr.yml route, PR-paths build, dispatch +
+# default-closed approve gate, typed approve, push run-gate explicit, no push/tag/schedule trigger, digest-pinned
 # base + Bazelisk delegation + no ambient toolchains in Dockerfile.prebuilt,
 # no docker/* actions with checkout SHA-pinned, no-secrets checkout plus
 # non-cancelling concurrency, cosign/quota/scaffold
@@ -55,6 +55,15 @@ if grep -q -F -e 'workflow_dispatch:' .github/workflows/ghcr.yml && grep -q -F -
   ok
 else
   bad "ghcr.yml lost the dispatch + default-closed approve gate"
+fi
+
+# The approve gate stays typed (issue #184 parity with #78): boolean
+# input type so overlapping dispatches queue via typed approval instead
+# of stringly-typed approval.
+if grep -q -F -e 'type: boolean' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "ghcr.yml lost the typed approve gate (approve must be type boolean)"
 fi
 
 # Never push/tag/schedule-triggered: only pull_request (build-only) and
