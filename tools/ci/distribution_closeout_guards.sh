@@ -10,14 +10,15 @@
 # battery on a clean tree with docs matching as-built behavior.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (40 checks): hygiene policy, exact 0.0.0 module pin + consumer
-# pin + reviewed-commit workflow pin, distribution doc ownership +
-# Bazel-first + standalone-install + publisher-identity records + BCR
-# + GitHub Releases destinations + BCR dry-run + draft-only ceiling,
-# workflow separation + triggers + default-closed approve gates +
-# never-publishes + dry-run report record, signing-first trust-root +
+# today (44 checks): hygiene policy, exact 0.0.0 module pin + consumer
+# pin + reviewed-commit workflow pin + unqualified-matrix record,
+# distribution doc ownership + Bazel-first + standalone-install +
+# publisher-identity records + BCR + GitHub Releases destinations +
+# BCR dry-run + release-matrix + draft-only ceiling, workflow separation
+# + triggers + default-closed approve gates + never-publishes +
+# dry-run report + clean-checkout record, signing-first trust-root +
 # attestation + SBOM detail, digest-pinned prebuilt base + scaffold
-# state + quota record + Bazelisk delegation + cosign deferral + admissibility gate +
+# state + quota record + scaffold-update + Bazelisk delegation + cosign deferral + admissibility gate +
 # prebuilt doc section + never-latest gate, scaffold state, self-call
 # consumer/docs smoke, security precondition, gitignored outputs,
 # matrix close-out page + Layer-4 E2E + battery-audit record, E2E
@@ -358,6 +359,39 @@ if grep -q -F -e 'clean tree after the staged issues land' docs/testing/verifica
   ok
 else
   bad "verification-matrix lost its clean-tree battery record (#54)"
+fi
+
+# #5 unqualified-matrix record stays explicit: non-seed release matrix
+# entries remain unqualified per the release-hygiene track (no platform
+# claimed qualified beyond the seed host).
+if grep -q -F -e 'unqualified-per-issue-5' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish dry run lost its unqualified-matrix record (#5)"
+fi
+
+# #26 release-matrix record stays owned: the dry-run report carries the
+# seed-qualified plus follow-up matrix shape (submission still open).
+if grep -q -F -e 'release_matrix' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish dry run lost its release-matrix record (#26)"
+fi
+
+# #78 clean-checkout record stays explicit: the dry run stages under
+# RUNNER_TEMP and proves the checkout is left clean (release gated).
+if grep -q -F -e 'RUNNER_TEMP' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish dry run lost its clean-checkout record (#78)"
+fi
+
+# #184 scaffold-update record stays explicit: scaffold digest updates
+# plus cosign signing follow on the #26 trust root (push still gated).
+if grep -q -F -e 'scaffold update' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "GHCR workflow lost its scaffold-update record (#184)"
 fi
 
 # No-publish invariant: no tags claimed, no release outputs committed.
