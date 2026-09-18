@@ -10,13 +10,15 @@
 # the #19 resolver prerequisite with Renovate retained as fallback.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (20 checks): codegen/env contracts + commit-lock detail,
-# docs-pipeline records, examples ownership + laziness slices + full
-# index breadth, coverage gate + Codecov honesty + LCOV preset pin +
-# inventory backing, Renovate fallback + full manager set + automation
-# ownership, never-rewrites + ADR pins, prior harnesses green, and
-# no-false-claim gaps. Reverse queries, adapter runs, comment
-# presentation, and widen implementation stay open under their issues.
+# today (24 checks): codegen/env contracts + commit-lock + managed-PATH
+# detail, docs-pipeline records + IR identity, examples ownership +
+# laziness slices + full index breadth + mixed disposition, coverage
+# gate + Codecov honesty + LCOV preset pin + inventory backing +
+# fork-security record, Renovate fallback + full manager set +
+# automation ownership + schedule policy, never-rewrites + ADR pins,
+# prior harnesses green, and no-false-claim gaps. Reverse queries,
+# adapter runs, comment presentation, and widen implementation stay
+# open under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:backlog_automation_guards`,
 # following //tools/ci:backlog_contracts.
@@ -174,6 +176,43 @@ if grep -q -F -e 'Renovate' docs/contributing/automation.md \
   ok
 else
   bad "automation.md lost its Renovate ownership / issue #3 link (#260)"
+fi
+
+# #9 managed-PATH detail stays pinned alongside the commit lock
+# (bootstrap first, PATH-tool tree, lock re-read before compose).
+if grep -q -F -e 'managed PATH' docs/environments/managed-state.md \
+  && grep -q -F -e 'commit lock' docs/environments/managed-state.md; then
+  ok
+else
+  bad "env managed-state lost its managed-PATH/commit-lock detail (#9)"
+fi
+
+# #10 documentation IR identity stays pinned (common symbol model,
+# versioned doc-ir contract; per-language adapter runs still open).
+if grep -q -F -e 'IR' docs/cli/commands/docs.md \
+  && [[ -f "docs/documentation/doc-ir.md" ]]; then
+  ok
+else
+  bad "docs pipeline lost its IR identity record (#10)"
+fi
+
+# #85 mixed-framework fixture disposition stays explicit (intentionally
+# unindexed composition over one shared helper, not a consumer).
+if grep -q -F -e 'mixed/hello' examples/README.md; then
+  ok
+else
+  bad "examples index lost its mixed/hello fixture disposition (#85)"
+fi
+
+# #254 fork-security + #260 schedule policy stay pinned together
+# (no write credentials to fork code; weekly Monday schedule, no
+# automerge, reviewable PRs).
+if grep -q -F -e 'fork' docs/github-ci.md \
+  && grep -q -F -e '"schedule"' renovate.json \
+  && grep -q -F -e '"automerge": false' renovate.json; then
+  ok
+else
+  bad "automation lost its fork-security/schedule-policy record (#254/#260)"
 fi
 
 # Matrix honesty for this group.
