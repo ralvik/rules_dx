@@ -275,11 +275,13 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:widen_update_loop
       - name: Audit quality foundations (provider + registry + mapping owners + battery contracts)
         run: bazel run --noshow_progress //tools/ci:quality_foundations_guards
+      - name: Audit execution/corpus/perf guards (deferred codes + single corpus + report-not-gate)
+        run: bazel run --noshow_progress //tools/ci:execution_corpus_perf_guards
       - name: Write job summary
         if: always()
         run: |
           echo "### dogfood-freshness — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Checked: Bazel-resolved tool execution, generate --check freshness, corpus ownership (carve-outs intact), code ownership (issue #12 lane A), examples READMEs (issue #85 commands + evidence), examples laziness (issue #85 no-install + isolation + deps-closure + action-graph zero-work), quality cache aquery (issue #84 action-key isolation seed), depcheck contract (issue #22 truth table + open routes), wrapper sources (issues #12/#7/#8 QualitySourcesInfo), registry singularity (issues #6/#84 single-sourced taxonomy), backlog contracts (issues #9/#10 frozen pins + gap labels), GHCR hygiene (issue #184 separate workflow + gated push), widen-update loop contract (issue #260 never-rewrites + manager set), quality foundations (issues #6/#7/#8/#12 provider + registry + mapping owners + battery contracts).">> "$GITHUB_STEP_SUMMARY"
+          echo "Checked: Bazel-resolved tool execution, generate --check freshness, corpus ownership (carve-outs intact), code ownership (issue #12 lane A), examples READMEs (issue #85 commands + evidence), examples laziness (issue #85 no-install + isolation + deps-closure + action-graph zero-work), quality cache aquery (issue #84 action-key isolation seed), depcheck contract (issue #22 truth table + open routes), wrapper sources (issues #12/#7/#8 QualitySourcesInfo), registry singularity (issues #6/#84 single-sourced taxonomy), backlog contracts (issues #9/#10 frozen pins + gap labels), GHCR hygiene (issue #184 separate workflow + gated push), widen-update loop contract (issue #260 never-rewrites + manager set), quality foundations (issues #6/#7/#8/#12 provider + registry + mapping owners + battery contracts), execution/corpus/perf guards (issues #18/#19/#22/#15/#86 deferred codes + single corpus + report-not-gate).">> "$GITHUB_STEP_SUMMARY"
   dogfood-lint:
     name: dogfood-lint (dx lint converge + check)
     needs: [dogfood-freshness]
