@@ -9,7 +9,7 @@
 # stays green by construction and nothing runs uninvited.
 #
 # This harness machine-checks the no-publication-inputs half that is
-# verifiable on a clean tree today (22 checks): dist/release
+# verifiable on a clean tree today (23 checks): dist/release
 # git-ignored and uncommitted, module at 0.0.0, no version tags,
 # SECURITY.md reporting link + enabled record, publish dry-run dispatch-only with a
 # default-closed approve gate, no-secrets minimal permissions plus no
@@ -18,7 +18,8 @@
 # deferrals to #26 tooling, signing-first + GHCR-separate notes,
 # checkout SHA pin, typed approve plus non-cancelling concurrency,
 # least-privilege no-packages-write, no-secrets usage, and sole-tracker deletion plus
-# reporting-enabled record plus consumer/docs-caller SHA pins. Platform,
+# reporting-enabled record plus consumer/docs-caller SHA pins plus
+# both-callers policy. Platform,
 # packaging, provenance (SPDX/SLSA), registry submission, and
 # public-install smoke runs stay unqualified per #5 and are recorded
 # as gaps, not claimed here.
@@ -226,6 +227,16 @@ if grep -q -E -e 'reusable-docs\.yml@[0-9a-f]{40}' examples/docs-ci/caller.yml; 
   ok
 else
   bad "examples/docs-ci/caller.yml lost its reviewed-commit SHA pin (issue #5)"
+fi
+
+# CONTRIBUTING both-callers pin policy stays documented (issue #5
+# context): caller pins stay frozen at the last qualified commit, stay
+# in sync across both example callers, and move only together — so the
+# SHA-pin guards above cannot be silently redefined as floating tags.
+if grep -q -F -e 'pin reviewed commits, never release tags' CONTRIBUTING.md && grep -q -F -e 'stay in sync across both example callers' CONTRIBUTING.md; then
+  ok
+else
+  bad "CONTRIBUTING.md lost the both-callers pin policy (issue #5)"
 fi
 
 echo "release hygiene harness: $pass passed, $fail failed"
