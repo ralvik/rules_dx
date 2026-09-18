@@ -19,17 +19,20 @@
 //!
 //! Out of scope here (O12 qualification): exact selector syntax and
 //! ecosystem package-identity mappings, non-registry handling, backend
-//! operation boundaries, aggregate exit codes, per-set reporting, and
-//! the independent-set continuation/blocked-dependent execution
-//! semantics (see [`outcome`]). Those arrive in later M26 slices; this crate only records
-//! which selector spellings a future resolver must satisfy, and that
-//! the run applies immediately once invoked.
+//! operation boundaries, and per-set reporting. The
+//! independent-set continuation/blocked-dependent execution semantics
+//! live in [`outcome`], and aggregate exit-status selection over its
+//! reports lives in [`report`]. Those remaining items arrive in later
+//! M26 slices; this crate only records which selector spellings a
+//! future resolver must satisfy, and that the run applies immediately
+//! once invoked.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 pub mod outcome;
+pub mod report;
 pub mod semantics;
 
 /// Planned update request: which dependency-set/package selectors the

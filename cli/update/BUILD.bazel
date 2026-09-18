@@ -16,6 +16,7 @@ dx_rust_crate(
     srcs = [
         "src/lib.rs",
         "src/outcome.rs",
+        "src/report.rs",
         "src/semantics.rs",
     ],
     deps = ["thiserror"],
