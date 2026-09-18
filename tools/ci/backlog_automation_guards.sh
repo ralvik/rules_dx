@@ -10,16 +10,18 @@
 # the #19 resolver prerequisite with Renovate retained as fallback.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (28 checks): codegen/env contracts + commit-lock + managed-PATH
-# detail + Node/Python/Rust env records, docs-pipeline records + IR
-# identity, examples ownership + laziness slices + full index breadth
-# + Scala/Polyglot entries + mixed disposition, coverage gate +
-# Codecov honesty + LCOV preset pin + inventory backing +
-# fork-security record, Renovate fallback + full manager set + loop
-# policy + automation ownership + schedule policy, never-rewrites +
-# ADR pins, prior harnesses green, and no-false-claim gaps. Reverse
-# queries, adapter runs, comment presentation, and widen
-# implementation stay open under their issues.
+# today (32 checks): codegen/env contracts + commit-lock + try_lock +
+# clean + managed-PATH detail + Node/Python/Rust env records,
+# docs-pipeline records + IR/site identity, examples ownership +
+# laziness slices + full index breadth + Scala/Polyglot entries +
+# mixed disposition, coverage gate + ignore-marker contract + Codecov
+# honesty + LCOV preset pin + inventory backing + fork-security
+# record, Renovate fallback + full manager set + loop policy +
+# preset-update/bump-PR record + automation ownership + schedule
+# policy, never-rewrites + ADR pins, prior harnesses green, and
+# no-false-claim gaps. Reverse queries, adapter runs, comment
+# presentation, and widen implementation stay open under their
+# issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:backlog_automation_guards`,
 # following //tools/ci:backlog_contracts.
@@ -249,6 +251,44 @@ if grep -q -F -e '"prCreation"' renovate.json \
   ok
 else
   bad "Renovate fallback lost its reviewable-loop policy (#260)"
+fi
+
+# #9 lock/clean mechanics stay pinned beyond the commit lock: Rust
+# try_lock evidence plus the explicit `dx clean` removal record.
+if grep -q -F -e 'try_lock' docs/environments/managed-state.md \
+  && grep -q -F -e 'dx clean' docs/environments/managed-state.md; then
+  ok
+else
+  bad "env managed-state lost its try_lock/dx-clean mechanics (#9)"
+fi
+
+# #10 docs command owns its downstream docs: the versioned IR model
+# plus the cache-friendly site build (adapter runs still open).
+if grep -q -F -e 'Documentation IR' docs/cli/commands/docs.md \
+  && grep -q -F -e 'Site build' docs/cli/commands/docs.md \
+  && [[ -f "docs/documentation/doc-ir.md" ]] \
+  && [[ -f "docs/documentation/site.md" ]]; then
+  ok
+else
+  bad "docs command lost its IR/site-build doc ownership (#10)"
+fi
+
+# #254 ignore-marker contract stays explicit: LCOV exclusions need a
+# reason, and missing reasons fail the gate (comment service open).
+if grep -q -F -e 'LCOV_EXCL_LINE' docs/testing/README.md \
+  && grep -q -F -e 'missing reasons' docs/testing/README.md; then
+  ok
+else
+  bad "coverage doc lost its ignore-marker/reason contract (#254)"
+fi
+
+# #260 bump-PR loop record stays owned: preset verify-only review
+# plus the Renovate-proposes/dx-verifies flow (widen loop still open).
+if grep -q -F -e 'preset.update -- --verify-only' docs/contributing/local-workflows.md \
+  && grep -q -F -e 'Version bumps flow through Renovate out of the box' docs/contributing/local-workflows.md; then
+  ok
+else
+  bad "local-workflows lost its preset-update/bump-PR loop record (#260)"
 fi
 
 # Matrix honesty for this group.
