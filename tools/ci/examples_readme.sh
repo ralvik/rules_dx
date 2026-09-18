@@ -7,8 +7,12 @@
 # This harness machine-checks the documentation half verifiable on a
 # clean tree today: each examples/adopt-*/ directory carries a
 # README.md with a fenced shell block running bazel build and bazel
-# test plus an Evidence section, and the examples index points at live
-# examples plus the owning issue. Acquisition and laziness fixtures
+# test plus an Evidence section, the examples index points at live
+# examples plus the owning issue, every adopt-* workspace is indexed
+# (no silent additions) and every indexed adopt-* link resolves (no
+# stale links), and the mixed-framework fixture stays documented as
+# non-consumer so it can neither drift into the audit silently nor
+# lose its disposition note. Acquisition and laziness fixtures
 # (no-install attribution, unused-foundation zero-work) stay open per
 # #85 and are recorded as gaps, not claimed here.
 #
@@ -41,7 +45,11 @@ else
   ok
 fi
 
-# Each per-foundation workspace records commands plus evidence.
+# Each per-foundation workspace records commands plus evidence, and
+# the index covers exactly the existing workspaces: every adopt-*
+# directory is linked (additions cannot land unindexed) and every
+# indexed adopt-* link resolves to a real directory (removals cannot
+# leave stale links).
 for dir in examples/adopt-*/; do
   readme="$dir/README.md"
   name="$(basename "$dir")"
@@ -50,6 +58,11 @@ for dir in examples/adopt-*/; do
     continue
   fi
   ok
+  if grep -q -F -e "($name/)" examples/README.md; then
+    ok
+  else
+    bad "examples/$name/ exists but examples/README.md does not index it"
+  fi
   if grep -q -F -e '```sh' "$readme" && grep -q -F -e 'bazel build' "$readme" && grep -q -F -e 'bazel test' "$readme"; then
     ok
   else
@@ -61,6 +74,31 @@ for dir in examples/adopt-*/; do
     bad "$readme must record expected evidence (Evidence: section)"
   fi
 done
+
+# Every indexed adopt-* link resolves: a removed workspace cannot
+# leave a stale index entry behind.
+while IFS= read -r link; do
+  if [[ -d "examples/$link" ]]; then
+    ok
+  else
+    bad "examples/README.md links [$link] but examples/$link/ does not exist"
+  fi
+done < <(grep -o -E -e '\]\((adopt-[a-z-]+)/\)' examples/README.md | sed 's/^](//; s|/)$||')
+
+# The mixed-framework fixture is documented as non-consumer and stays
+# out of the consumer-example audit: it is a framework-composition
+# workspace (mixed/hello BUILD docstring names the M21 fixture), not
+# an external-consumer workspace with commands plus evidence.
+if grep -q -F -e 'mixed/hello' examples/README.md && ! grep -q -F -e '](mixed/' examples/README.md; then
+  ok
+else
+  bad "examples/README.md must document mixed/hello as non-consumer without indexing it as an example"
+fi
+if grep -q -F -e 'M21 mixed-framework package' examples/mixed/hello/BUILD.bazel; then
+  ok
+else
+  bad "examples/mixed/hello/BUILD.bazel lost the M21 fixture disposition marker"
+fi
 
 echo "examples readme audit: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
