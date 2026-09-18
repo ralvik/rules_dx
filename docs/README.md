@@ -26,6 +26,8 @@ authoritative product, design, delivery, and governance documents.
 - [Quality](quality/README.md): sources, action model, integrations, protocol, tests.
 - [Tools](tools/README.md): acquisition policy and first-release baseline.
 - [Testing](testing/README.md): behavior, hermeticity, cache, platform, consumer evidence.
+- [Verification matrix](testing/verification-matrix.md): as-built language x
+  layer status for Stage 5 close-out (no `Supported` claims).
 - [Performance](performance.md): standing benchmark baseline and comparison policy.
 
 ## Delivery And Governance
