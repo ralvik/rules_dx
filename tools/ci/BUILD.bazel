@@ -316,6 +316,18 @@ test_suite(
     ],
 )
 
+# E2E scenario-registration guard (issue #54, E2E-case convention):
+# every `integration/<name>/` child workspace must be referenced by a
+# driver or by the sh_test wiring above, so an orphan scenario fails
+# CI instead of silently never running. Needs the real checkout
+# (`BUILD_WORKSPACE_DIRECTORY`), so it is a binary run by CI in the
+# `e2e` job via `bazel run //tools/ci:e2e_cases`, following
+# //tools/ci:corpus_audit.
+sh_binary(
+    name = "e2e_cases",
+    srcs = ["e2e_cases.sh"],
+)
+
 # Repository corpus: build file owned for direct-Bazel dogfood
 # under the canonical real_fixture_policy. The audit script itself is
 # CI tooling, never a corpus source.
