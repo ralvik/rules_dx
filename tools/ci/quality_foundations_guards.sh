@@ -11,15 +11,16 @@
 # cache/determinism/apply batteries (#84) stay open with honest gaps.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (24 checks): provider definition, single-sourced registry map +
-# parity gate, per-foundation owner docs, framework boundary + full
-# format set + mixed composition, cache/determinism/apply-safety
-# contract sections, curated-defaults + native-config evidence files +
-# test backing, lane-A exclusion + generated list, external-consumer
-# breadth, determinism seed pin, apply filesystem evidence, matrix
-# honesty, prior-slice harnesses green, and no-false-claim gaps. Full
-# taxonomy review, exact mappings, and battery execution stay open
-# under their issues.
+# today (28 checks): provider definition, single-sourced registry map +
+# parity gate, per-foundation owner docs, minimum-consumer index +
+# READMEs, framework boundary + full format set + mixed composition,
+# adapter-mechanics doc, cache/determinism/apply-safety contract
+# sections, curated-defaults + native-config evidence files + test
+# backing, lane-A exclusion + generated list, external-consumer
+# breadth, determinism seed pin, apply filesystem + atomic-write
+# evidence, matrix honesty, prior-slice harnesses green, and
+# no-false-claim gaps. Full taxonomy review, exact mappings, and
+# battery execution stay open under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:quality_foundations_guards`,
 # following //tools/ci:registry_singularity.
@@ -224,6 +225,40 @@ if grep -q -F -e 'apply_collected_changes' cli/cli/src/exec/quality_apply.rs; th
   ok
 else
   bad "quality apply applier evidence lost (apply_collected_changes fn)"
+fi
+
+# #7 minimum-consumer index stays pinned: Rust + Python adopt entries
+# (foreign Cargo/Python trees via dx generate; broader set above).
+if grep -q -F -e 'adopt-rust' examples/README.md \
+  && grep -q -F -e 'adopt-python' examples/README.md; then
+  ok
+else
+  bad "examples index lost its minimum Rust/Python consumer entries (#7)"
+fi
+
+# #7 minimum-consumer READMEs stay present with commands + evidence
+# (beyond-minimum Go/Java slice owns its own check above).
+if [[ -f "examples/adopt-rust/README.md" ]] \
+  && [[ -f "examples/adopt-python/README.md" ]]; then
+  ok
+else
+  bad "examples lost their minimum Rust/Python consumer READMEs (#7)"
+fi
+
+# #8 adapter-mechanics doc stays owned (rule families + aspect entry
+# points per tool; region mapping still open).
+if grep -q -F -e 'adapter mechanics' docs/quality/tool-integrations.md; then
+  ok
+else
+  bad "tool-integrations.md lost its adapter-mechanics ownership (#8)"
+fi
+
+# #84 atomic-write evidence stays pinned: atomic apply of verified
+# reads in the collected-change applier (batteries still open).
+if grep -q -F -e 'write_atomic' cli/cli/src/exec/quality_apply.rs; then
+  ok
+else
+  bad "quality apply applier lost its atomic-write evidence (#84)"
 fi
 
 # No false claim: full determinism/apply batteries not claimed green.
