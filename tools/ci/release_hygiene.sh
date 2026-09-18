@@ -9,15 +9,15 @@
 # stays green by construction and nothing runs uninvited.
 #
 # This harness machine-checks the no-publication-inputs half that is
-# verifiable on a clean tree today (18 checks): dist/release
+# verifiable on a clean tree today (19 checks): dist/release
 # git-ignored and uncommitted, module at 0.0.0, no version tags,
 # SECURITY.md reporting link, publish dry-run dispatch-only with a
 # default-closed approve gate, no-secrets minimal permissions plus no
 # secrets usage, RUNNER_TEMP staging plus a clean-checkout proof, explicit release
 # matrix (seed qualified, rest unqualified per #5), SBOM/BCR
 # deferrals to #26 tooling, signing-first + GHCR-separate notes,
-# checkout SHA pin, typed approve plus non-cancelling concurrency, and
-# least-privilege no-packages-write. Platform,
+# checkout SHA pin, typed approve plus non-cancelling concurrency,
+# least-privilege no-packages-write, and sole-tracker deletion. Platform,
 # packaging, provenance (SPDX/SLSA), registry submission, and
 # public-install smoke runs stay unqualified per #5 and are recorded
 # as gaps, not claimed here.
@@ -185,6 +185,15 @@ if ! grep -q -F -e 'secrets.' .github/workflows/publish-dry-run.yml; then
   ok
 else
   bad "publish-dry-run.yml gained a secrets reference (dry run must use no secrets)"
+fi
+
+# Sole tracker stays sole (issue #5): the local `issues/` mirror and
+# `archive/delivery-v0.1/` were deleted; delivery history lives in git
+# history. Neither may reappear on disk nor committed.
+if [[ ! -e "issues" ]] && [[ ! -e "archive/delivery-v0.1" ]] && [[ -z "$(git ls-files | grep -E '^(issues|archive/delivery-v0\.1)/' || true)" ]]; then
+  ok
+else
+  bad "issues/ mirror or archive/delivery-v0.1/ reappeared (sole tracker is issue #5)"
 fi
 
 echo "release hygiene harness: $pass passed, $fail failed"
