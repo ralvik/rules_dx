@@ -16,6 +16,9 @@
 # (checkout) is pinned to a commit SHA with its tag trailing. No
 # `docker/*` actions: plain `docker build`/`push` keeps the push gate
 # explicit in `run:` steps. `dist/`/`release/` stay git-ignored per #5.
+# Least privilege: top-level permissions stay read-only; only the build
+# job below carries `packages: write`, so a future job without explicit
+# permissions never inherits push scope.
 name: ghcr-prebuilt
 
 on:
@@ -34,7 +37,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 concurrency:
   group: ghcr-prebuilt-${{ github.ref }}

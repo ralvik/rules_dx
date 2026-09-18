@@ -9,7 +9,7 @@
 # first push; this build-only slice pushes nothing.
 #
 # This harness machine-checks the gate half verifiable on a clean tree
-# today (15 checks): separate ghcr.yml route, PR-paths build, dispatch +
+# today (16 checks): separate ghcr.yml route, PR-paths build, dispatch +
 # default-closed approve gate, typed approve, push run-gate explicit, no push/tag/schedule trigger, digest-pinned
 # base + Bazelisk delegation + no ambient toolchains in Dockerfile.prebuilt,
 # no docker/* actions with checkout SHA-pinned, no-secrets checkout plus
@@ -157,6 +157,16 @@ if grep -q -F -e 'packages: write' .github/workflows/ghcr.yml; then
   ok
 else
   bad "ghcr.yml lost packages:write (gated push needs it; dry run must stay read-only)"
+fi
+
+# Least-privilege default (issue #184): top-level permissions stay
+# read-only (`contents: read`); only the build job carries
+# `packages: write` for the gated push, so a future job without
+# explicit permissions never inherits push scope.
+if ! grep -q -E -e '^  packages: write' .github/workflows/ghcr.yml && grep -q -E -e '^      packages: write' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "ghcr.yml top-level permissions gained push scope (packages:write belongs on the build job only)"
 fi
 
 echo "ghcr hygiene harness: $pass passed, $fail failed"
