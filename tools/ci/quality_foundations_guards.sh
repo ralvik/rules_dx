@@ -11,12 +11,14 @@
 # cache/determinism/apply batteries (#84) stay open with honest gaps.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (16 checks): provider definition, single-sourced registry map,
-# per-foundation owner docs, framework boundary, cache/determinism/
-# apply-safety contract sections, curated-defaults + native-config
-# evidence files, lane-A exclusion record, matrix honesty, prior-slice
-# harnesses green, and no-false-claim gaps. Full taxonomy review,
-# exact mappings, and battery execution stay open under their issues.
+# today (20 checks): provider definition, single-sourced registry map,
+# per-foundation owner docs, framework boundary + full format set,
+# cache/determinism/apply-safety contract sections, curated-defaults +
+# native-config evidence files + test backing, lane-A exclusion record,
+# external-consumer breadth, determinism seed pin, matrix honesty,
+# prior-slice harnesses green, and no-false-claim gaps. Full taxonomy
+# review, exact mappings, and battery execution stay open under their
+# issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:quality_foundations_guards`,
 # following //tools/ci:registry_singularity.
@@ -148,6 +150,44 @@ if [[ -f "tools/ci/code_ownership.sh" ]]; then
   ok
 else
   bad "code ownership harness missing"
+fi
+
+# #8 full format set: Svelte/Astro/MDX boundaries alongside Vue (no
+# single-format fallback claim).
+if grep -q -F -e 'Svelte' docs/generation/framework-adapters.md \
+  && grep -q -F -e 'Astro' docs/generation/framework-adapters.md \
+  && grep -q -F -e 'MDX' docs/generation/framework-adapters.md; then
+  ok
+else
+  bad "framework-adapters.md lost its Svelte/Astro/MDX boundary markers (#8 full set)"
+fi
+
+# #7 external-consumer breadth beyond the minimum: Go + Java adopt
+# workspaces carry their own READMEs with commands + evidence.
+if [[ -f "examples/adopt-go/README.md" ]] \
+  && [[ -f "examples/adopt-java/README.md" ]] \
+  && grep -q -F -e 'adopt-go' examples/README.md \
+  && grep -q -F -e 'adopt-java' examples/README.md; then
+  ok
+else
+  bad "examples lost their beyond-minimum Go/Java consumer breadth (#7)"
+fi
+
+# #84 determinism seed stays pinned: insertion-order independence test
+# present in the runner (QualitySourcesInfo/checkout-order evidence).
+if grep -q -F -e 'state_digest_independent_of_insertion_order' quality/runner/src/lib.rs; then
+  ok
+else
+  bad "quality runner lost its insertion-order determinism seed (#84)"
+fi
+
+# #6 curated/native test backing stays present alongside the evidence
+# files (no untested taxonomy drift).
+if [[ -f "quality/curated_defaults_tests.bzl" ]] \
+  && [[ -f "quality/native_config_tests.bzl" ]]; then
+  ok
+else
+  bad "quality curated/native test backing missing (curated_defaults_tests/native_config_tests)"
 fi
 
 # No false claim: full determinism/apply batteries not claimed green.
