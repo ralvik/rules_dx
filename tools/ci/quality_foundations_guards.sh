@@ -11,14 +11,15 @@
 # cache/determinism/apply batteries (#84) stay open with honest gaps.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (20 checks): provider definition, single-sourced registry map,
-# per-foundation owner docs, framework boundary + full format set,
-# cache/determinism/apply-safety contract sections, curated-defaults +
-# native-config evidence files + test backing, lane-A exclusion record,
-# external-consumer breadth, determinism seed pin, matrix honesty,
-# prior-slice harnesses green, and no-false-claim gaps. Full taxonomy
-# review, exact mappings, and battery execution stay open under their
-# issues.
+# today (24 checks): provider definition, single-sourced registry map +
+# parity gate, per-foundation owner docs, framework boundary + full
+# format set + mixed composition, cache/determinism/apply-safety
+# contract sections, curated-defaults + native-config evidence files +
+# test backing, lane-A exclusion + generated list, external-consumer
+# breadth, determinism seed pin, apply filesystem evidence, matrix
+# honesty, prior-slice harnesses green, and no-false-claim gaps. Full
+# taxonomy review, exact mappings, and battery execution stay open
+# under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:quality_foundations_guards`,
 # following //tools/ci:registry_singularity.
@@ -188,6 +189,41 @@ if [[ -f "quality/curated_defaults_tests.bzl" ]] \
   ok
 else
   bad "quality curated/native test backing missing (curated_defaults_tests/native_config_tests)"
+fi
+
+# #6 parity gate stays versioned: tool-parity contract section plus the
+# fail-closed parity unit-test entry point (taxonomy review still open).
+if grep -q -F -e '## Tool Parity' docs/quality/quality-testing.md \
+  && grep -q -F -e 'parity_unit_tests' quality/parity_tests.bzl; then
+  ok
+else
+  bad "quality parity gate lost (Tool Parity section or parity_unit_tests entry)"
+fi
+
+# #8 mixed-framework composition stays explicit: shared mechanics only
+# after concrete adapters prove reuse, M21 fixture owns the single-owner
+# mixed hello package (no generic fallback).
+if grep -q -F -e 'Mixed-framework' docs/generation/framework-adapters.md \
+  && grep -q -F -e 'M21' examples/mixed/hello/BUILD.bazel; then
+  ok
+else
+  bad "framework composition record lost (Mixed-framework clause or M21 mixed fixture)"
+fi
+
+# #12 generated-file exclusion list stays declared with its generator
+# (beyond the adopt-js-ts inert arrival record above).
+if grep -q -F -e 'generated' tools/ci/code_ownership.sh; then
+  ok
+else
+  bad "code_ownership lost its generated-file exclusion record (#12)"
+fi
+
+# #84 apply-safety filesystem evidence stays pinned: the collected-change
+# applier under test (digest/atomicity/interruption batteries still open).
+if grep -q -F -e 'apply_collected_changes' cli/cli/src/exec/quality_apply.rs; then
+  ok
+else
+  bad "quality apply applier evidence lost (apply_collected_changes fn)"
 fi
 
 # No false claim: full determinism/apply batteries not claimed green.
