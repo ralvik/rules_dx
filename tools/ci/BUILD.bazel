@@ -194,6 +194,19 @@ sh_binary(
     srcs = ["examples_laziness_aquery.sh"],
 )
 
+# Registry-singularity harness (issues #6, #84): machine-checks
+# that the semantic file-class registry stays single-sourced —
+# adapter manifests consume canonical IDs, map keys are frozen IDs,
+# each class maps to exactly one family with canonical spelling, the
+# frozen example assignments agree with the map, fixture maps stay
+# labeled, and the #6-pending disclaimer stands. The full registry
+# review plus cache-execution/determinism proofs stay open. Run by CI
+# via `bazel run //tools/ci:registry_singularity`.
+sh_binary(
+    name = "registry_singularity",
+    srcs = ["registry_singularity.sh"],
+)
+
 # Quality cache aquery proof (issue #84, seed slice): action-graph half
 # — Python vs Rust real pipelines mention only their own sources/tools
 # with distinct ActionKeys, so one direct source misses only its owning
