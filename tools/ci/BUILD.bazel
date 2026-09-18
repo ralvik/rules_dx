@@ -348,6 +348,17 @@ sh_binary(
     srcs = ["widen_update_loop.sh"],
 )
 
+# Execution/corpus/perf guards (issues #18, #19, #22, #15, #86): pins
+# the fail-closed deferred codes, exit mappings, doc ownership, prior
+# harnesses, corpus single-name rule + Gazelle ownership, perf
+# report-not-gate shape, and matrix honesty. Live execution, per-type
+# generation, and comparison numbers stay open. Run by CI via
+# `bazel run //tools/ci:execution_corpus_perf_guards`.
+sh_binary(
+    name = "execution_corpus_perf_guards",
+    srcs = ["execution_corpus_perf_guards.sh"],
+)
+
 # Stage 4 E2E drivers (issue #55): one `manual` (+`exclusive`,
 # `local`, `no-sandbox`) sh_test per landed `integration/` scenario plus
 # the explicit suite. Wildcard suites (`bazel test //...`,
