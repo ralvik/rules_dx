@@ -11,20 +11,21 @@
 # cache/determinism/apply batteries (#84) stay open with honest gaps.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (40 checks): provider definition, single-sourced registry map +
-# frozen class table + secrets family + admissibility table + parity
-# gate, per-foundation owner docs + dependency scopes + native-config
-# sections + Gazelle extension dirs, framework boundary + adapter
-# boundary + full format set + mixed composition + ownership regions +
-# framework Gazelle dirs, minimum-consumer index + READMEs,
+# today (44 checks): provider definition, single-sourced registry map +
+# frozen class table + secrets family + admissibility table +
+# adapter-applicability + parity gate, per-foundation owner docs +
+# dependency scopes + native-config sections + rust tests/build-scripts +
+# Gazelle extension dirs, framework boundary + adapter boundary +
+# generated-region mappings + full format set + mixed composition +
+# ownership regions + framework Gazelle dirs, minimum-consumer index +
 # adapter-mechanics doc, aspect QualitySourcesInfo gate, cache/
 # determinism/apply-safety contract sections + no-cache argv marker,
 # curated-defaults + native-config evidence files + test backing,
 # lane-A exclusion + generated list + dogfood CI jobs,
 # external-consumer breadth, determinism seed pin, apply filesystem +
-# atomic-write evidence, matrix honesty, prior-slice harnesses green,
-# and no-false-claim gaps. Full taxonomy review, exact mappings, and
-# battery execution stay open under their issues.
+# atomic-write evidence + ten-round limit, matrix honesty, prior-slice
+# harnesses green, and no-false-claim gaps. Full taxonomy review, exact
+# mappings, and battery execution stay open under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:quality_foundations_guards`,
 # following //tools/ci:registry_singularity.
@@ -376,6 +377,39 @@ if grep -q -F -e 'No generic fallback' quality/aspects.bzl; then
   ok
 else
   bad "quality aspects lost their no-generic-fallback record (#12)"
+fi
+
+# #6 adapter-applicability stays owned: aspects visit only applicable
+# owners per the central applicability section (assignment review open).
+if grep -q -F -e '## Adapter Applicability' docs/quality/quality-sources.md; then
+  ok
+else
+  bad "quality-sources.md lost its Adapter Applicability section (#6)"
+fi
+
+# #7 Rust test/build-script sections stay owned (exact import/lock/
+# tool-graph proofs still open).
+if grep -q -F -e '## Tests' docs/generation/rust.md \
+  && grep -q -F -e '## Build Scripts' docs/generation/rust.md; then
+  ok
+else
+  bad "generation rust.md lost its Tests/Build Scripts sections (#7)"
+fi
+
+# #8 generated-region mappings stay explicit in the adapter contract
+# (exact region transport still open).
+if grep -q -F -e 'generated-region mappings' docs/generation/framework-adapters.md; then
+  ok
+else
+  bad "framework-adapters.md lost its generated-region mappings record (#8)"
+fi
+
+# #84 ten-round limit stays explicit: a changing tenth round fails
+# without an eleventh invocation (full batteries still open).
+if grep -q -F -e 'ten-round limit' docs/quality/quality-testing.md; then
+  ok
+else
+  bad "quality-testing.md lost its ten-round limit record (#84)"
 fi
 
 # No false claim: full determinism/apply batteries not claimed green.
