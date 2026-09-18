@@ -325,6 +325,18 @@ sh_binary(
     srcs = ["ghcr_publish_guards.sh"],
 )
 
+# Widen-one-requirement + dx update PR loop contract (issue #260, seed
+# slice): all-ecosystems v1 manager set, retained Renovate fallback,
+# never-rewrites invariant, #19 resolver prerequisite, manual bump-PR
+# verification loop, ADR 0006 narrow exception, ADR 0008 exact-pin
+# policy, and no-false-claim gaps. Widen implementation, registry
+# clients, loop orchestration, and the scheduled runner stay open. Run
+# by CI via `bazel run //tools/ci:widen_update_loop`.
+sh_binary(
+    name = "widen_update_loop",
+    srcs = ["widen_update_loop.sh"],
+)
+
 # Stage 4 E2E drivers (issue #55): one `manual` (+`exclusive`,
 # `local`, `no-sandbox`) sh_test per landed `integration/` scenario plus
 # the explicit suite. Wildcard suites (`bazel test //...`,
