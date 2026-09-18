@@ -11,17 +11,18 @@
 # baseline as a report, never a gate.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (40 checks): deferred codes, fail-closed unit pins, dry-run
+# today (44 checks): deferred codes, fail-closed unit pins, dry-run
 # planning paths + doc record, audit families + policy modules +
-# SARIF/SPDX mapping record + license global table, selector planning
-# + update API + per-set report record + continuation honesty +
+# SARIF/SPDX mapping record + license global table + advisory snapshot
+# + severity handling, selector planning + update API + per-set report
+# record + continuation honesty + blocked-dependents reporting +
 # aggregate verdict pins, exit mappings, doc ownership +
 # auditor/resolver records, depcheck truth-table + category +
-# missing-reasons + offline contract + offline-fail-closed route, prior
-# harnesses green, corpus single-name rule + Gazelle ownership +
+# missing-reasons + offline contract + offline-fail-closed route +
+# ecosystem scopes, prior harnesses green, corpus single-name rule + Gazelle ownership +
 # canonical workflow + generate doc + contract + generate --check
 # wiring + carve-out record, perf report-not-gate shape + v2.8.0 fairness pin + Bazel-version pin +
-# report honesty + bench harness + comparison-test record, and matrix
+# cold-warm metric record + report honesty + bench harness + comparison-test record, and matrix
 # honesty. Live execution, per-type generation, and comparison
 # numbers stay open under their issues.
 #
@@ -362,6 +363,41 @@ if grep -q -F -e 'offline-or-fail-closed' docs/quality/quality-testing.md; then
   ok
 else
   bad "quality-testing.md lost its offline-or-fail-closed route record (#22)"
+fi
+
+# #18 advisory-snapshot record stays explicit: dependency audits refresh
+# applicable advisory data through identified snapshots as Bazel inputs
+# (acquisition semantics still open).
+if grep -q -F -e 'advisory snapshot' "$doc"; then
+  ok
+else
+  bad "audit/update doc lost its advisory-snapshot record (#18)"
+fi
+
+# #19 blocked-dependents reporting stays explicit: operations depending
+# on a failed update report as blocked, never successful (backends open).
+if grep -q -F -e 'report them as blocked, not successful' "$doc"; then
+  ok
+else
+  bad "audit/update doc lost its blocked-dependents reporting record (#19)"
+fi
+
+# #22 ecosystem-scopes record stays explicit: native configuration,
+# reason validation, non-import recognition, and ecosystem scopes
+# remain open under the depcheck track (fixtures still open).
+if grep -q -F -e 'ecosystem scopes' docs/quality/quality-testing.md; then
+  ok
+else
+  bad "quality-testing.md lost its ecosystem-scopes record (#22)"
+fi
+
+# #86 cold-warm metric record stays explicit: quality-only cold and warm
+# wall time plus action count, cache-hit rate, and peak memory where
+# cheap (comparison numbers still a report).
+if grep -q -F -e 'cold and warm wall time' docs/tools/rules_lint-comparison.md; then
+  ok
+else
+  bad "rules_lint methodology lost its cold-warm metric record (#86)"
 fi
 
 # Matrix honesty across this group.
