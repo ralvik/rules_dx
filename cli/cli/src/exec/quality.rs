@@ -1190,6 +1190,44 @@ mod tests {
     }
 
     #[test]
+    fn multibyte_split_edit_is_invalid() {
+        // Apply-safety battery (issue #84): `quality-testing.md`
+        // requires rejecting edits that split multibyte boundaries and
+        // invalid UTF-8 source bytes. The 1..2 edit splits the two-byte
+        // é (bytes 1..3 of "héllo"), so proto validation passes (ordered
+        // UTF-8 replacement) while `apply_to_bytes` fails the char
+        // boundary check: no write, invalid_edits, single Bazel launch.
+        let mut harness = Harness::new("multibyte-split");
+        harness.write_source("src/a.py", "héllo\n");
+        let original = std::fs::read(harness.workspace.join("src/a.py")).expect("source");
+        let change = harness.replacement_at(
+            "src/a.py",
+            digest(&original).to_vec(),
+            vec![proto::Edit {
+                start_byte: 1,
+                end_byte: 2,
+                replacement: b"X".to_vec(),
+            }],
+        );
+        harness.results.insert(
+            "//test:corpus".to_owned(),
+            harness.valid_result(vec![Harness::diagnostic("unused", true)], vec![change]),
+        );
+        let (code, _, err) = harness.run(&["lint", "--output=text"]);
+        assert_eq!(code, 1);
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/a.py")).expect("source"),
+            original
+        );
+        assert!(err.contains("Not applied: src/a.py (invalid_edits)"));
+        assert_eq!(
+            harness.seen_env.borrow().len(),
+            1,
+            "invalid multibyte split must launch Bazel exactly once, no rerun"
+        );
+    }
+
+    #[test]
     fn legacy_staging_dir_does_not_block_atomic_write() {
         let mut harness = Harness::new("staging-blocked");
         harness.write_source("src/a.py", "x = 1\n");
