@@ -406,6 +406,16 @@ sh_binary(
     srcs = ["coverage_spill.sh"],
 )
 
+# Verification-foundations harness (issues #86, #15, #12; relates #54):
+# pins the perf fairness/report-not-gate half, the single-corpus +
+# generate-owned split rule, and the lane-A ownership scope. Full
+# comparison report, per-type generation, and CI scope extension stay
+# open. Run by CI via `bazel run //tools/ci:verify_perf_corpus`.
+sh_binary(
+    name = "verify_perf_corpus",
+    srcs = ["verify_perf_corpus.sh"],
+)
+
 # Repository corpus: build file owned for direct-Bazel dogfood
 # under the canonical real_fixture_policy. The audit script itself is
 # CI tooling, never a corpus source.
