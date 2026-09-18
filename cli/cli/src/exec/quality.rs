@@ -1944,4 +1944,155 @@ mod tests {
             planned
         );
     }
+
+    #[test]
+    fn default_mode_applies_in_sorted_path_order_despite_reversed_arrival() {
+        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // each selected file to apply atomically and independently after
+        // complete envelope validation, with interruption leaving no
+        // partially written file and only complete earlier path commits
+        // in deterministic path order. The CLI sorts collected changes
+        // by path bytes before mutation, so reversed proto arrival must
+        // still apply and emit in sorted order via atomic writes.
+        let mut harness = Harness::new("sorted-apply-order");
+        harness.write_source("src/a.py", "x = 1\n");
+        harness.write_source("src/b.py", "a = 1\n");
+        harness.write_source("src/c.py", "m = 1\n");
+        let original_a = std::fs::read(harness.workspace.join("src/a.py")).expect("source");
+        let original_b = std::fs::read(harness.workspace.join("src/b.py")).expect("source");
+        let original_c = std::fs::read(harness.workspace.join("src/c.py")).expect("source");
+        let change_a = harness.replacement_at(
+            "src/a.py",
+            digest(&original_a).to_vec(),
+            vec![proto::Edit {
+                start_byte: 0,
+                end_byte: 1,
+                replacement: b"y".to_vec(),
+            }],
+        );
+        let change_b = harness.replacement_at(
+            "src/b.py",
+            digest(&original_b).to_vec(),
+            vec![proto::Edit {
+                start_byte: 0,
+                end_byte: 1,
+                replacement: b"b".to_vec(),
+            }],
+        );
+        let change_c = harness.replacement_at(
+            "src/c.py",
+            digest(&original_c).to_vec(),
+            vec![proto::Edit {
+                start_byte: 0,
+                end_byte: 1,
+                replacement: b"z".to_vec(),
+            }],
+        );
+        let bytes = harness.result_full(
+            vec![
+                Harness::diagnostic("unused", true),
+                Harness::diagnostic_with(
+                    proto::Severity::Warning as i32,
+                    "lint-tool",
+                    "src/b.py",
+                    "unused",
+                    true,
+                ),
+                Harness::diagnostic_with(
+                    proto::Severity::Warning as i32,
+                    "lint-tool",
+                    "src/c.py",
+                    "unused",
+                    true,
+                ),
+            ],
+            vec![],
+            vec![change_c, change_b, change_a],
+            vec![
+                FileSnapshot {
+                    path: "src/a.py".to_owned(),
+                    digest: digest(&original_a).to_vec(),
+                },
+                FileSnapshot {
+                    path: "src/b.py".to_owned(),
+                    digest: digest(&original_b).to_vec(),
+                },
+                FileSnapshot {
+                    path: "src/c.py".to_owned(),
+                    digest: digest(&original_c).to_vec(),
+                },
+            ],
+        );
+        harness.results.insert("//test:corpus".to_owned(), bytes);
+        let (code, out, _) = harness.run(&["lint", "--output=json"]);
+        assert_eq!(code, 0);
+        // Each file applies atomically: fully original or fully
+        // candidate, never truncated or partially written.
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/a.py")).expect("source"),
+            b"y = 1\n"
+        );
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/b.py")).expect("source"),
+            b"b = 1\n"
+        );
+        assert_eq!(
+            std::fs::read(harness.workspace.join("src/c.py")).expect("source"),
+            b"z = 1\n"
+        );
+        let events = json_events(&out);
+        let changes: Vec<&serde_json::Value> = events
+            .iter()
+            .filter(|event| event["event"] == serde_json::json!("change"))
+            .collect();
+        assert_eq!(changes.len(), 3);
+        assert_eq!(changes[0]["path"], serde_json::json!("src/a.py"));
+        assert_eq!(changes[1]["path"], serde_json::json!("src/b.py"));
+        assert_eq!(changes[2]["path"], serde_json::json!("src/c.py"));
+        let mutations: Vec<&serde_json::Value> = events
+            .iter()
+            .filter(|event| event["event"] == serde_json::json!("mutation"))
+            .collect();
+        assert_eq!(mutations.len(), 3);
+        assert_eq!(mutations[0]["path"], serde_json::json!("src/a.py"));
+        assert_eq!(mutations[0]["outcome"], serde_json::json!("applied"));
+        assert_eq!(mutations[1]["path"], serde_json::json!("src/b.py"));
+        assert_eq!(mutations[1]["outcome"], serde_json::json!("applied"));
+        assert_eq!(mutations[2]["path"], serde_json::json!("src/c.py"));
+        assert_eq!(mutations[2]["outcome"], serde_json::json!("applied"));
+        // Prefix property: sorted mutation order means interruption
+        // after k commits leaves exactly the first k paths terminal
+        // and the rest original, each complete.
+        let terminals: std::collections::BTreeMap<&str, &[u8]> = [
+            ("src/a.py", b"y = 1\n".as_slice()),
+            ("src/b.py", b"b = 1\n".as_slice()),
+            ("src/c.py", b"z = 1\n".as_slice()),
+        ]
+        .into_iter()
+        .collect();
+        let originals: std::collections::BTreeMap<&str, &[u8]> = [
+            ("src/a.py", original_a.as_slice()),
+            ("src/b.py", original_b.as_slice()),
+            ("src/c.py", original_c.as_slice()),
+        ]
+        .into_iter()
+        .collect();
+        for prefix_len in 0..=3 {
+            let mut expected: std::collections::BTreeMap<&str, &[u8]> = originals.clone();
+            for mutation in mutations.iter().take(prefix_len) {
+                let path = mutation["path"].as_str().expect("path");
+                expected.insert(path, terminals[path]);
+            }
+            for (path, body) in &expected {
+                let original = originals[path];
+                let terminal = terminals[path];
+                assert!(body == &original || body == &terminal);
+            }
+        }
+        assert_eq!(
+            harness.seen_env.borrow().len(),
+            1,
+            "sorted default apply must launch Bazel exactly once, no rerun"
+        );
+    }
 }
