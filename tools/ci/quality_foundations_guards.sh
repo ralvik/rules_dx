@@ -11,11 +11,12 @@
 # cache/determinism/apply batteries (#84) stay open with honest gaps.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (12 checks): provider definition, single-sourced registry map,
-# per-foundation owner docs, framework boundary, cache/determinism
-# contract sections, matrix honesty, prior-slice harnesses green, and
-# no-false-claim gaps. Full taxonomy review, exact mappings, and battery
-# execution stay open under their issues.
+# today (16 checks): provider definition, single-sourced registry map,
+# per-foundation owner docs, framework boundary, cache/determinism/
+# apply-safety contract sections, curated-defaults + native-config
+# evidence files, lane-A exclusion record, matrix honesty, prior-slice
+# harnesses green, and no-false-claim gaps. Full taxonomy review,
+# exact mappings, and battery execution stay open under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:quality_foundations_guards`,
 # following //tools/ci:registry_singularity.
@@ -78,6 +79,35 @@ if grep -q -F -e 'A warm local no-op alone is not a cache test' docs/quality/qua
   ok
 else
   bad "quality-testing.md lost its warm-no-op-is-not-a-cache-test honesty record"
+fi
+
+# #84 contract owns the third battery too (apply safety).
+if grep -q -F -e '## Apply Safety' docs/quality/quality-testing.md; then
+  ok
+else
+  bad "quality-testing.md lost the Apply Safety battery section"
+fi
+
+# #6 curated defaults stay single-sourced in quality/.
+if [[ -f "quality/curated_defaults.bzl" ]] \
+  && grep -q -F -e 'curated' quality/adapters.bzl; then
+  ok
+else
+  bad "curated-defaults evidence lost (quality/curated_defaults.bzl or adapters.bzl record)"
+fi
+
+# #6 native-config evidence backing stays present.
+if [[ -f "quality/native_config.bzl" ]]; then
+  ok
+else
+  bad "quality/native_config.bzl missing (native-config evidence backing)"
+fi
+
+# #12 lane-A exclusion record: inert adopt-js-ts arrivals named with generator.
+if grep -q -F -e 'adopt-js-ts' tools/ci/code_ownership.sh; then
+  ok
+else
+  bad "code_ownership lost its adopt-js-ts inert-exclusion record"
 fi
 
 # Matrix honesty: framework/language/quality gaps link owners.
