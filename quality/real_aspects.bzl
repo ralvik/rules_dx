@@ -42,6 +42,7 @@ Contract: `docs/quality/tool-integrations.md`,
 `docs/quality/quality-result-protocol.md#transport`.
 """
 
+load("@aspect_rules_ts//ts:defs.bzl", _TsConfigInfo = "TsConfigInfo")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_aspect", _rust_common = "rust_common")
 load(
     "//quality:adapters.bzl",
@@ -97,6 +98,23 @@ def _real_pipeline_action(target, ctx, capability):
     )
     if len(resolved) == 0:
         return []
+
+    # Target-coupled tsc (#84): tsc never applies from the class alone;
+    # it requires the authoritative typescript_project context
+    # (TsConfigInfo). Fixture QualitySourcesInfo-only targets carry no
+    # TsConfigInfo, so drop tsc stages there (unfetched, keys unchanged
+    # per the target-coupled laziness row). Authoritative wiring
+    # (upstream diagnostics, never a bare tsc invocation per
+    # quality/tools/typescript/BUILD.bazel) remains pending per the tsc
+    # target-coupled rows; fail clearly there rather than KeyError on the
+    # missing tool binary so the gap stays visible.
+    if "tsc" in [stage["tool"] for stage in resolved]:
+        if _TsConfigInfo not in target:
+            resolved = [stage for stage in resolved if stage["tool"] != "tsc"]
+            if len(resolved) == 0:
+                return []
+        else:
+            fail("real_aspect (" + str(target.label) + "): target-coupled tsc typecheck wiring pending (authoritative TsConfigInfo present but upstream diagnostics not yet consumed)")
 
     # rustfmt crate context (#49): the edition comes from the
     # authoritative `CrateInfo` (or the test crate's inner `CrateInfo`,

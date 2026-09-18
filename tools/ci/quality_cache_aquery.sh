@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# Quality cache aquery proof (issue #84, slices 1-13): per-adapter and
+# Quality cache aquery proof (issue #84, slices 1-14): per-adapter and
 # per-capability action-key isolation via `bazel aquery` over real
-# quality pipelines.
+# quality pipelines. All queries request lint+format+typecheck aspects
+# explicitly so typecheck presence (python/rust/mixed) and absence
+# (JS-family/corpus) prove real pipeline shape, never query shape; a
+# fresh `bazel shutdown` still passes (no warm-cache dependence).
 #
 # The cache-correctness table in docs/quality/quality-testing.md requires,
 # for each check kind, that one direct source misses only owning pipelines
@@ -14,7 +17,9 @@
 # rustfmt format + rustfmt.toml native-config isolation, rustc typecheck +
 # runner), JavaScript
 # (biome lint/format per-capability + biome.json native-config isolation,
-# prettier never an input, eslint/flake8/pylint opt-ins never inputs), Starlark
+# prettier never an input except JSON format, eslint/flake8/pylint opt-ins
+# never inputs, target-coupled tsc never an input in default pipelines),
+# Starlark
 # (buildifier lint/format), TOML (taplo lint/format), Markdown
 # (markdown_check + vale dual-tool lint with sorted stage order + sibling
 # link-resolution inputs), TypeScript/JSX/TSX (biome lint/format each owning only
@@ -55,7 +60,9 @@
 # beyond canonical order + per-pipeline executable presence proven here),
 # formatter-set remainder beyond JSON biome/prettier split and
 # class-membership full manifest (mixed/no-lint/no-format typecheck
-# preservation + tsc target-coupled rows), plus exec-log/remote-cache
+# preservation proven here; authoritative tsc wiring with upstream
+# diagnostics for TsConfigInfo targets pending per
+# quality/tools/typescript/BUILD.bazel), plus exec-log/remote-cache
 # proof distinguishing executed actions from cache hits (requires
 # controlled remote cache or separate machines per testing contract;
 # a warm local no-op alone is not a cache test). This harness is
@@ -80,7 +87,7 @@ bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
 query_target() { # target -> aquery output
   local target="$1"
   bazel aquery "$target" \
-    --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+    --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
     --output_groups=dx_results --output=text --noshow_progress 2>/dev/null
 }
 
@@ -127,7 +134,7 @@ if [[ "$first_key" != "$second_key" ]]; then ok; else bad "python lint vs format
 # (dx_ty for Ty, ruff, pydoclint, clippy-driver, rustfmt) to avoid
 # substring collisions with common words like quality.
 union_actions="$(bazel aquery '//quality/testdata:fixture_real_python + //quality/testdata:fixture_real_rust' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 if [[ -z "$union_actions" ]]; then
   bad "union: empty aquery output"
@@ -166,7 +173,7 @@ if [[ "$single_keys" == "$union_python_keys" ]]; then ok; else bad "aggregate me
 # Ruff config misses consuming lint/format only; Ty boundaries unaffected
 # unless shared.
 hinted_actions="$(bazel aquery '//quality/testdata:fixture_real_python_hinted' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 if [[ -z "$hinted_actions" ]]; then
   bad "hinted: empty aquery output"
@@ -187,7 +194,7 @@ if [[ "$python_typecheck_inputs" == *"ruff.toml"* ]]; then bad "unhinted typeche
 # selected rustfmt config misses the consuming format pipeline only;
 # clippy lint is unaffected per the pipeline-invalidation row.
 rust_hinted_actions="$(bazel aquery '//quality/testdata:fixture_real_rust_generated_shape' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 if [[ -z "$rust_hinted_actions" ]]; then
   bad "rust hinted: empty aquery output"
@@ -206,7 +213,7 @@ if [[ "$rust_lint_inputs" == *"rustfmt.toml"* ]]; then bad "rust unhinted lint: 
 # Biome config misses consuming lint/format together (single Biome tool
 # serves both capabilities) and nothing unhinted.
 js_hinted_actions="$(bazel aquery '//quality/testdata:fixture_real_javascript_hinted' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 if [[ -z "$js_hinted_actions" ]]; then
   bad "js hinted: empty aquery output"
@@ -214,7 +221,7 @@ else
   ok
 fi
 js_actions="$(bazel aquery '//quality/testdata:fixture_real_javascript' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 if [[ -z "$js_actions" ]]; then
   bad "js unhinted: empty aquery output"
@@ -265,13 +272,13 @@ if [[ "$rust_actions" == *"biome"* ]]; then bad "rust: forbidden [biome] (unsele
 # and vice versa. Extends the unselected-adapter row toward the full
 # per-adapter table (Go/Java/etc. + transitive/tool-version still open).
 starlark_actions="$(bazel aquery '//quality/testdata:fixture_real_starlark' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 toml_actions="$(bazel aquery '//quality/testdata:fixture_real_toml' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 markdown_actions="$(bazel aquery '//quality/testdata:fixture_real_markdown' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 if [[ -z "$starlark_actions" ]]; then bad "starlark: empty aquery output"; else ok; fi
 if [[ -z "$toml_actions" ]]; then bad "toml: empty aquery output"; else ok; fi
@@ -324,16 +331,16 @@ if [[ "$starlark_key" != "$python_key" ]]; then ok; else bad "starlark vs python
 # miss JS-family pipelines and vice versa. Extends the per-adapter
 # table toward Go/Java/etc. (transitive/tool-version still open).
 typescript_actions="$(bazel aquery '//quality/testdata:fixture_real_typescript' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 jsx_actions="$(bazel aquery '//quality/testdata:fixture_real_jsx' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 tsx_actions="$(bazel aquery '//quality/testdata:fixture_real_tsx' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 json_actions="$(bazel aquery '//quality/testdata:fixture_real_json' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 if [[ -z "$typescript_actions" ]]; then bad "typescript: empty aquery output"; else ok; fi
 if [[ -z "$jsx_actions" ]]; then bad "jsx: empty aquery output"; else ok; fi
@@ -420,19 +427,19 @@ if [[ "$markdown_actions" == *"eslint"* ]]; then bad "markdown: forbidden [eslin
 # toward the full table (supported-class manifests + transitive/
 # tool-version still open).
 mixed_actions="$(bazel aquery '//quality/testdata:fixture_real_mixed' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 no_lint_actions="$(bazel aquery '//quality/testdata:fixture_real_no_lint' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 no_format_actions="$(bazel aquery '//quality/testdata:fixture_real_no_format' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 no_typecheck_actions="$(bazel aquery '//quality/testdata:fixture_real_python_no_typecheck' \
   --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 plain_actions="$(bazel aquery '//quality/testdata:plain' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 mixed_lint_count="$(printf '%s' "$mixed_actions" | grep -c 'Mnemonic: DxRealQualityLint' || true)"
 mixed_format_count="$(printf '%s' "$mixed_actions" | grep -c 'Mnemonic: DxRealQualityFormat' || true)"
@@ -465,8 +472,8 @@ if [[ "$no_format_lint_inputs" == *"rustfmt"* ]]; then bad "no-format lint: forb
 if [[ "$no_format_lint_inputs" == *"clippy-driver"* ]]; then ok; else bad "no-format lint: want [clippy-driver] (lint tool change misses lint)"; fi
 mixed_format_key="$(printf '%s' "$mixed_actions" | grep -A 10 "Dx real quality format //quality/testdata:fixture_real_mixed" | grep 'ActionKey:' | head -1 || true)"
 mixed_lint_key="$(printf '%s' "$mixed_actions" | grep -A 10 "Dx real quality lint //quality/testdata:fixture_real_mixed" | grep 'ActionKey:' | head -1 || true)"
-no_lint_format_key="$(printf '%s' "$no_lint_actions" | grep 'ActionKey:' | head -1 || true)"
-no_format_lint_key="$(printf '%s' "$no_format_actions" | grep 'ActionKey:' | head -1 || true)"
+no_lint_format_key="$(printf '%s' "$no_lint_actions" | grep -A 10 "Dx real quality format //quality/testdata:fixture_real_no_lint" | grep 'ActionKey:' | head -1 || true)"
+no_format_lint_key="$(printf '%s' "$no_format_actions" | grep -A 10 "Dx real quality lint //quality/testdata:fixture_real_no_format" | grep 'ActionKey:' | head -1 || true)"
 if [[ -n "$mixed_format_key" && -n "$mixed_lint_key" && -n "$no_lint_format_key" && -n "$no_format_lint_key" ]]; then ok; else bad "want ActionKey lines in mixed/no-lint/no-format outputs"; fi
 if [[ "$mixed_format_key" != "$no_lint_format_key" ]]; then ok; else bad "mixed vs no-lint format ActionKeys must differ (adding TOML class invalidates)"; fi
 if [[ "$mixed_format_key" != "$mixed_lint_key" ]]; then ok; else bad "mixed lint vs format ActionKeys must differ (capability isolation holds multi-class)"; fi
@@ -644,7 +651,7 @@ if [[ "$python_actions" == *"markdown_check"* ]]; then bad "python: forbidden [m
 if [[ "$rust_actions" == *"markdown_check"* ]]; then bad "rust: forbidden [markdown_check] (unselected repo-owned adapter must not invalidate Rust)"; else ok; fi
 if [[ "$js_actions" == *"markdown_check"* ]]; then bad "js: forbidden [markdown_check] (unselected repo-owned adapter must not invalidate JS)"; else ok; fi
 sibling_actions="$(bazel aquery '//quality/testdata:fixture_real_markdown_sibling' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 if [[ -z "$sibling_actions" ]]; then bad "sibling: empty aquery output"; else ok; fi
 sibling_lint_inputs="$(printf '%s' "$sibling_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"
@@ -693,6 +700,31 @@ if [[ "$no_format_typecheck_inputs" == *"rustc"* ]]; then ok; else bad "no-forma
 if [[ "$mixed_typecheck_inputs" == *"eslint"* || "$mixed_typecheck_inputs" == *"flake8"* || "$mixed_typecheck_inputs" == *"pylint"* ]]; then bad "mixed typecheck: forbidden [eslint/flake8/pylint] (opt-in change must not invalidate typecheck)"; else ok; fi
 if [[ "$no_lint_typecheck_inputs" == *"eslint"* || "$no_lint_typecheck_inputs" == *"flake8"* || "$no_lint_typecheck_inputs" == *"pylint"* ]]; then bad "no-lint typecheck: forbidden [eslint/flake8/pylint] (opt-in change must not invalidate typecheck)"; else ok; fi
 if [[ "$no_format_typecheck_inputs" == *"eslint"* || "$no_format_typecheck_inputs" == *"flake8"* || "$no_format_typecheck_inputs" == *"pylint"* ]]; then bad "no-format typecheck: forbidden [eslint/flake8/pylint] (opt-in change must not invalidate typecheck)"; else ok; fi
+
+# Target-coupled tsc laziness: tsc requires the authoritative
+# typescript_project context (TsConfigInfo) and never applies from the
+# class alone, so default QualitySourcesInfo-only pipelines must never
+# mention it (tsc change leaves default keys unchanged per the
+# unselected-adapter + target-coupled rows; `tsc` never collides with
+# the `typescript` class name as a substring). Authoritative TsConfigInfo
+# wiring (upstream diagnostics, never a bare tsc invocation) remains
+# pending per quality/tools/typescript/BUILD.bazel and fails clearly in
+# the aspect when present; fixtures prove the unfetched half here.
+if [[ "$python_actions" == *"tsc"* ]]; then bad "python: forbidden [tsc] (target-coupled tsc must not invalidate default Python)"; else ok; fi
+if [[ "$rust_actions" == *"tsc"* ]]; then bad "rust: forbidden [tsc] (target-coupled tsc must not invalidate Rust)"; else ok; fi
+if [[ "$js_actions" == *"tsc"* ]]; then bad "js: forbidden [tsc] (target-coupled tsc must not invalidate JS)"; else ok; fi
+if [[ "$typescript_actions" == *"tsc"* ]]; then bad "typescript: forbidden [tsc] (target-coupled tsc must not invalidate default TS fixtures)"; else ok; fi
+if [[ "$jsx_actions" == *"tsc"* ]]; then bad "jsx: forbidden [tsc] (target-coupled tsc must not invalidate default JSX)"; else ok; fi
+if [[ "$tsx_actions" == *"tsc"* ]]; then bad "tsx: forbidden [tsc] (target-coupled tsc must not invalidate default TSX fixtures)"; else ok; fi
+if [[ "$json_actions" == *"tsc"* ]]; then bad "json: forbidden [tsc] (target-coupled tsc must not invalidate JSON)"; else ok; fi
+if [[ "$starlark_actions" == *"tsc"* ]]; then bad "starlark: forbidden [tsc] (target-coupled tsc must not invalidate Starlark)"; else ok; fi
+if [[ "$toml_actions" == *"tsc"* ]]; then bad "toml: forbidden [tsc] (target-coupled tsc must not invalidate TOML)"; else ok; fi
+if [[ "$markdown_actions" == *"tsc"* ]]; then bad "markdown: forbidden [tsc] (target-coupled tsc must not invalidate Markdown)"; else ok; fi
+if [[ "$sibling_actions" == *"tsc"* ]]; then bad "sibling: forbidden [tsc] (target-coupled tsc must not invalidate sibling)"; else ok; fi
+if [[ "$mixed_actions" == *"tsc"* ]]; then bad "mixed: forbidden [tsc] (target-coupled tsc must not invalidate mixed)"; else ok; fi
+if [[ "$no_lint_actions" == *"tsc"* ]]; then bad "no-lint: forbidden [tsc] (target-coupled tsc must not invalidate no-lint)"; else ok; fi
+if [[ "$no_format_actions" == *"tsc"* ]]; then bad "no-format: forbidden [tsc] (target-coupled tsc must not invalidate no-format)"; else ok; fi
+if [[ "$no_typecheck_actions" == *"tsc"* ]]; then bad "no-typecheck: forbidden [tsc] (target-coupled tsc must not invalidate no-typecheck)"; else ok; fi
 
 echo "quality cache aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
