@@ -281,6 +281,14 @@ tracked in [#78](https://github.com/ralvik/rules_dx/issues/78) as platforms qual
 under [#5](https://github.com/ralvik/rules_dx/issues/5) and signing tooling is selected
 under [#26](https://github.com/ralvik/rules_dx/issues/26).
 
+Draft-only publisher ceiling: the `github_release` rule (`deploy/rules/github.bzl`,
+for example `//cli/cli:github_draft`) defaults to `draft = True` with the
+`v0.0.0-dryrun` placeholder tag, fails analysis on any `draft = False` or
+launcher-unsafe tag, and always passes `--draft --verify-tag`, so the program
+never creates or pushes tags itself. The invariants are machine-checked by
+`bazel run //tools/ci:publish_trust`; signing and attestation on the #26 trust
+root arrive after the human-run signing workflow lands.
+
 Release hosting, signing, and verification services must satisfy the
 [free-infrastructure constraint](../testing/README.md#infrastructure-budget) without
 weakening artifact verification or required host coverage.
