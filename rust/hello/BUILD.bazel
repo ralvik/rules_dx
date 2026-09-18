@@ -225,6 +225,8 @@ sh_test(
     args = ["$(rootpath :hello)"],
     data = [":hello"],
     tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Documented deploy pattern (issue #181): deploy targets live next to the
@@ -253,4 +255,6 @@ sh_test(
         ":release_checksum",
     ],
     tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )

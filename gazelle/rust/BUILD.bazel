@@ -61,6 +61,8 @@ sh_test(
     args = ["$(rootpath :gazelle)"],
     data = [":gazelle"],
     tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 sh_test(
@@ -69,6 +71,8 @@ sh_test(
     args = ["$(rootpath :gazelle)"],
     data = [":gazelle"],
     tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 sh_test(
@@ -77,6 +81,8 @@ sh_test(
     args = ["$(rootpath :gazelle)"],
     data = [":gazelle"],
     tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 go_test(

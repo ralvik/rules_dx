@@ -178,10 +178,22 @@ Environment platform requirements are maintained in
 
 ## Shell And Host-Tool Contract
 
-CI and test harness shell stays bash-only on the Linux seed host until the shell
-contract below qualifies otherwise. Shell portability stays open under issue #299
-(bash-only harness breaks Windows and partially macOS; decide the shell contract with
-honest platform labels, no product behavior change).
+CI and test harness shell is bash-only on the Linux seed host (decided
+under issue #299; no product behavior change). Every bash
+`sh_binary`/`sh_test` carries
+`target_compatible_with = ["@platforms//os:linux"]`, so non-Linux hosts
+skip honestly instead of failing obscurely; POSIX `#!/bin/sh` fixtures
+(`env/doctor.sh`, `env/tool.sh`, deploy fixtures, integration
+pass/fail subjects) stay portable with no constraint. macOS
+best-effort hardening rides along with no Linux behavior change:
+`realpath` probe (`realpath` → `readlink -f` → python3),
+`sha256sum` → `shasum -a 256` fallback, portable `sed` tmpfile edits
+(no `sed -i -e`), `cp -RPp` (no `cp -a`), and portable timing
+(`$EPOCHREALTIME` → `date` fallback). Windows stays out per
+[ADR 0014](../decisions/0014-tested-platform-release-stack.md#required-platforms)
+(backend-blocked); product runtime is Rust and shell-free except
+generated deploy launchers plus the managed doctor shim.
+`//tools/ci:shell_contract` machine-checks this contract.
 
 Platform cfg hacks stay open under issue #320 (symlink copy fallback, unix-gated tests,
 GNU tar `-h` reliance, linux_x86_64 perf pin; decide fail-fast or portable route per

@@ -18,24 +18,32 @@ sh_binary(
     name = "bench_micro",
     srcs = ["bench.sh"],
     args = ["micro"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 sh_binary(
     name = "bench_scenario_warm",
     srcs = ["bench.sh"],
     args = ["warm"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 sh_binary(
     name = "bench_cold",
     srcs = ["bench.sh"],
     args = ["cold"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 sh_binary(
     name = "bench_all",
     srcs = ["bench.sh"],
     args = ["all"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 py_binary(
@@ -67,6 +75,8 @@ sh_test(
         "compare.py",
     ],
     tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Rules-lint comparison synthetic-tree harness (issue #86): deterministic
@@ -76,6 +86,8 @@ sh_test(
 sh_binary(
     name = "rules_lint_comparison",
     srcs = ["rules_lint_comparison.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Harness self-test: same seed yields identical trees/digests, dirty mix
@@ -88,6 +100,8 @@ sh_test(
     args = ["$(rootpath :rules_lint_comparison.sh)"],
     data = ["rules_lint_comparison.sh"],
     tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Measured-results validation (issue #86): checked-in seed-host numbers
@@ -106,6 +120,8 @@ sh_test(
         "rules_lint_results.json",
     ],
     tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Repository corpus: benchmark docs owned for direct-Bazel dogfood under

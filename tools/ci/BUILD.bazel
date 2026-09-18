@@ -16,6 +16,8 @@ package(default_visibility = ["//visibility:public"])
 sh_binary(
     name = "corpus_audit",
     srcs = ["corpus_audit.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Manual negative-demo harness (issue #99 item 2): the expected-fail
@@ -27,6 +29,8 @@ sh_binary(
 sh_binary(
     name = "manual_negatives",
     srcs = ["manual_negatives.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Consumer CI template harness (issue #99 item 1): each script executes
@@ -39,6 +43,8 @@ sh_test(
     srcs = ["consumer_scheduling_test.sh"],
     args = ["$(rootpath //.github:workflows/reusable-consumer.yml)"],
     data = ["//.github:workflows/reusable-consumer.yml"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 sh_test(
@@ -46,6 +52,8 @@ sh_test(
     srcs = ["consumer_aggregate_test.sh"],
     args = ["$(rootpath //.github:workflows/reusable-consumer.yml)"],
     data = ["//.github:workflows/reusable-consumer.yml"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 sh_test(
@@ -59,6 +67,8 @@ sh_test(
         "//.github:workflows/reusable-consumer.yml",
         "//examples:consumer-ci/caller.yml",
     ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 sh_test(
@@ -74,6 +84,8 @@ sh_test(
         "//.github:workflows/reusable-consumer.yml",
         "//examples:consumer-ci/caller.yml",
     ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Example caller pin-sync harness (issue #209): both example callers
@@ -93,6 +105,8 @@ sh_test(
         "//examples:consumer-ci/caller.yml",
         "//examples:docs-ci/caller.yml",
     ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Seed-cell coverage gate harness (issue #89 item 1): runs the real
@@ -102,6 +116,8 @@ sh_test(
 sh_binary(
     name = "coverage_cell",
     srcs = ["coverage_cell.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Coverage-report guards (issue #254; relates #54, #252, #5): pins the
@@ -111,6 +127,8 @@ sh_binary(
 sh_binary(
     name = "coverage_report_guards",
     srcs = ["coverage_report_guards.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Target-tag semantics harness (issue #99 item 3): proves `flaky`
@@ -122,6 +140,8 @@ sh_binary(
 sh_binary(
     name = "target_tags",
     srcs = ["target_tags.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Release-hygiene harness (issue #5): machine-checks the
@@ -134,6 +154,8 @@ sh_binary(
 sh_binary(
     name = "release_hygiene",
     srcs = ["release_hygiene.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Release-policy gate harness (issue #89 item 2): diffs the frozen
@@ -145,6 +167,8 @@ sh_binary(
 sh_binary(
     name = "release_policy",
     srcs = ["release_policy.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Publication-trust harness (issues #78, #26, #5): machine-checks
@@ -161,6 +185,8 @@ sh_binary(
 sh_binary(
     name = "publish_trust",
     srcs = ["publish_trust.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Code-ownership harness (issue #12, lane A slice 1): every checked-in
@@ -173,6 +199,8 @@ sh_binary(
 sh_binary(
     name = "code_ownership",
     srcs = ["code_ownership.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Examples README harness (issue #85, slice 1): every per-foundation
@@ -183,6 +211,8 @@ sh_binary(
 sh_binary(
     name = "examples_readme",
     srcs = ["examples_readme.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Examples laziness harness (issue #85, slice 2): static half of the
@@ -195,6 +225,8 @@ sh_binary(
 sh_binary(
     name = "examples_laziness",
     srcs = ["examples_laziness.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Examples laziness query proof (issue #85, slice 3): dependency-closure
@@ -206,6 +238,8 @@ sh_binary(
 sh_binary(
     name = "examples_laziness_query",
     srcs = ["examples_laziness_query.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Examples laziness aquery proof (issue #85, slice 4): action-graph half
@@ -217,6 +251,8 @@ sh_binary(
 sh_binary(
     name = "examples_laziness_aquery",
     srcs = ["examples_laziness_aquery.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Registry-singularity harness (issues #6, #84): machine-checks
@@ -231,6 +267,8 @@ sh_binary(
 sh_binary(
     name = "registry_singularity",
     srcs = ["registry_singularity.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Backlog-contracts harness (issues #9, #10): machine-checks the
@@ -242,6 +280,8 @@ sh_binary(
 sh_binary(
     name = "backlog_contracts",
     srcs = ["backlog_contracts.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Quality cache aquery proof (issue #84, seed slice): action-graph half
@@ -253,6 +293,8 @@ sh_binary(
 sh_binary(
     name = "quality_cache_aquery",
     srcs = ["quality_cache_aquery.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Dependency-check contract harness (issue #22, seed slice): the
@@ -265,6 +307,8 @@ sh_binary(
 sh_binary(
     name = "depcheck_contract",
     srcs = ["depcheck_contract.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Audit/update/depcheck execution guards (issues #18, #19, #22): pins the
@@ -274,6 +318,8 @@ sh_binary(
 sh_binary(
     name = "audit_update_guards",
     srcs = ["audit_update_guards.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Wrapper QualitySourcesInfo harness (issues #12 lane A, #7, #8; relates
@@ -285,6 +331,8 @@ sh_binary(
 sh_binary(
     name = "wrapper_sources",
     srcs = ["wrapper_sources.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Foundation-mapping guards (issues #7, #8; relates #6, #12): pins the
@@ -294,6 +342,8 @@ sh_binary(
 sh_binary(
     name = "foundation_maps",
     srcs = ["foundation_maps.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # GHCR prebuilt-image hygiene (issue #184, seed slice): separate workflow
@@ -304,6 +354,8 @@ sh_binary(
 sh_binary(
     name = "ghcr_hygiene",
     srcs = ["ghcr_hygiene.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Publication-group guards (issues #184, #78, #26, #5): pins the
@@ -313,6 +365,8 @@ sh_binary(
 sh_binary(
     name = "ghcr_publish_guards",
     srcs = ["ghcr_publish_guards.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Quality-foundations guards (issues #6, #7, #8, #12; relates #84): pins
@@ -323,6 +377,8 @@ sh_binary(
 sh_binary(
     name = "quality_foundations_guards",
     srcs = ["quality_foundations_guards.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Widen-one-requirement + dx update PR loop contract (issue #260, seed
@@ -335,6 +391,8 @@ sh_binary(
 sh_binary(
     name = "widen_update_loop",
     srcs = ["widen_update_loop.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Execution/corpus/perf guards (issues #18, #19, #22, #15, #86): pins
@@ -345,6 +403,8 @@ sh_binary(
 sh_binary(
     name = "execution_corpus_perf_guards",
     srcs = ["execution_corpus_perf_guards.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Distribution/closeout guards (issues #5, #26, #78, #184, #54): pins
@@ -355,6 +415,8 @@ sh_binary(
 sh_binary(
     name = "distribution_closeout_guards",
     srcs = ["distribution_closeout_guards.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Backlog/automation guards (issues #9, #10, #85, #254, #260): pins
@@ -365,6 +427,20 @@ sh_binary(
 sh_binary(
     name = "backlog_automation_guards",
     srcs = ["backlog_automation_guards.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+# Shell portability contract guard (issue #299): machine-checks the
+# decided bash-only Linux-only harness — Linux labels on all bash
+# targets, portable POSIX fixtures, portable realpath/shasum/sed/cp/
+# timing forms, and Windows staying out per ADR 0014. Run by CI via
+# `bazel run //tools/ci:shell_contract`.
+sh_binary(
+    name = "shell_contract",
+    srcs = ["shell_contract.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Stage 4 E2E drivers (issue #55): one `manual` (+`exclusive`,
@@ -397,6 +473,8 @@ sh_test(
         "manual",
         "no-sandbox",
     ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Dirty half of the CLI-contract pin (issue #55): the child has one
@@ -424,6 +502,8 @@ sh_test(
         "manual",
         "no-sandbox",
     ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Format-roundtrip half of the CLI-contract pin (issue #55 slice 2): the
@@ -451,6 +531,8 @@ sh_test(
         "manual",
         "no-sandbox",
     ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 test_suite(
@@ -466,6 +548,8 @@ test_suite(
         ":e2e_dirty",
         ":e2e_format_roundtrip",
     ],
+    # Bash-only drivers are Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # E2E scenario-registration guard (issue #54, E2E-case convention):
@@ -478,6 +562,8 @@ test_suite(
 sh_binary(
     name = "e2e_cases",
     srcs = ["e2e_cases.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Coverage-spill containment harness (issues #252, #54): pins the
@@ -487,6 +573,8 @@ sh_binary(
 sh_binary(
     name = "coverage_spill",
     srcs = ["coverage_spill.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Verification-foundations harness (issues #86, #15, #12; relates #54):
@@ -496,6 +584,8 @@ sh_binary(
 sh_binary(
     name = "verify_perf_corpus",
     srcs = ["verify_perf_corpus.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Repository corpus: build file owned for direct-Bazel dogfood

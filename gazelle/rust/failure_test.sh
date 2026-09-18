@@ -1,7 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-gazelle="$(realpath "$1")"
+# Portable realpath (issue #299): GNU `realpath` is absent on macOS;
+# `readlink -f` covers some platforms, python3 covers the rest.
+portable_realpath() {
+  if command -v realpath >/dev/null 2>&1; then
+    realpath "$1"
+  elif command -v readlink >/dev/null 2>&1 && readlink -f "$1" >/dev/null 2>&1; then
+    readlink -f "$1"
+  else
+    python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
+  fi
+}
+
+gazelle="$(portable_realpath "$1")"
 root="${TEST_TMPDIR}/workspace"
 mkdir -p "${root}/crate/src"
 touch "${root}/WORKSPACE"

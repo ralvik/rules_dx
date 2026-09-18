@@ -22,6 +22,8 @@ sh_test(
         "@rules_rust//tools/rust_analyzer:gen_rust_project",
     ],
     tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Repository corpus: IDE Starlark owned for direct-Bazel dogfood

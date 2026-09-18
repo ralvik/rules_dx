@@ -153,7 +153,7 @@ jobs:
           echo "### coverage — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Command: dx coverage --min-coverage 97 //... (seed cell only; per-cell enforcement tracked in #89)." >> "$GITHUB_STEP_SUMMARY"
   prove:
-    name: prove (manual negatives, target tags, coverage cell, release hygiene, release policy, publish trust)
+    name: prove (manual negatives, target tags, coverage cell, release hygiene, release policy, publish trust, shell contract)
     needs: [build]
     timeout-minutes: 30
     runs-on: ubuntu-latest
@@ -183,11 +183,13 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:release_policy
       - name: Prove publish trust (draft-only sites + nothing published)
         run: bazel run --noshow_progress //tools/ci:publish_trust
+      - name: Prove shell contract (bash-only Linux-only harness + portable forms)
+        run: bazel run --noshow_progress //tools/ci:shell_contract
       - name: Write job summary
         if: always()
         run: |
           echo "### prove — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate, release hygiene (issue #5 no-publication inputs), release policy (issue #89 curated defaults + parity gate), publish trust (issues #78/#26/#5 draft-only sites + nothing published)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate, release hygiene (issue #5 no-publication inputs), release policy (issue #89 curated defaults + parity gate), publish trust (issues #78/#26/#5 draft-only sites + nothing published), shell contract (issue #299 bash-only Linux-only harness + portable forms)." >> "$GITHUB_STEP_SUMMARY"
           echo "Proved (follow-up): coverage spill containment (issues #252/#54, LLVM_PROFILE_FILE to scratch)." >> "$GITHUB_STEP_SUMMARY"
   e2e:
     name: e2e (Stage 4 CLI-contract suite, explicit invocation)

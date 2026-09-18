@@ -7,7 +7,29 @@
 # emission, and ambiguous same-tool configs failing closed.
 set -euo pipefail
 
-gazelle="$(realpath "$1")"
+# Portable hasher selection (issue #299): GNU `sha256sum` is absent on
+# macOS; `shasum -a 256` is the portable fallback. Linux behavior unchanged.
+if command -v sha256sum >/dev/null 2>&1; then
+  _sha256=(sha256sum)
+  _sha256_check=(sha256sum -c)
+else
+  _sha256=(shasum -a 256)
+  _sha256_check=(shasum -a 256 -c)
+fi
+
+# Portable realpath (issue #299): GNU `realpath` is absent on macOS;
+# `readlink -f` covers some platforms, python3 covers the rest.
+portable_realpath() {
+  if command -v realpath >/dev/null 2>&1; then
+    realpath "$1"
+  elif command -v readlink >/dev/null 2>&1 && readlink -f "$1" >/dev/null 2>&1; then
+    readlink -f "$1"
+  else
+    python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
+  fi
+}
+
+gazelle="$(portable_realpath "$1")"
 root="${TEST_TMPDIR}/workspace"
 mkdir -p "${root}/crate/src" "${root}/crate/styles/org"
 touch "${root}/WORKSPACE"
@@ -32,9 +54,9 @@ if grep -q '":taplo_config"' "${build}"; then
   exit 1
 fi
 
-sha256sum "${build}" > "${TEST_TMPDIR}/first.sums"
+"${_sha256[@]}" "${build}" > "${TEST_TMPDIR}/first.sums"
 (cd "${root}" && "${gazelle}" -repo_root="${root}")
-sha256sum -c "${TEST_TMPDIR}/first.sums" > /dev/null || {
+"${_sha256_check[@]}" "${TEST_TMPDIR}/first.sums" > /dev/null || {
   echo "rerun was not idempotent" >&2
   exit 1
 }

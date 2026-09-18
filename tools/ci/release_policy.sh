@@ -147,7 +147,9 @@ fi
 # Simulate by dropping the python ruff formatter from a scratch copy
 # and requiring the frozen-formatter grep to reject it.
 cp "$manifest" "$scratch/removed.bzl"
-sed -i -e 's/"python": \["ruff"\]/"python": []/' "$scratch/removed.bzl"
+# Portable in-place edit (issue #299): GNU `sed -i -e` breaks on macOS
+# BSD sed; the tmpfile form works on both.
+sed -e 's/"python": \["ruff"\]/"python": []/' "$scratch/removed.bzl" > "$scratch/removed.bzl.tmp" && mv "$scratch/removed.bzl.tmp" "$scratch/removed.bzl"
 if grep -q -F -e '"python": ["ruff"]' "$scratch/removed.bzl"; then
   bad "removal negative did not fail: scratch still matches frozen python formatter"
 else
@@ -157,7 +159,8 @@ fi
 # Negative: a formatter-set change (biome -> prettier for typescript)
 # fails the frozen check.
 cp "$manifest" "$scratch/reformatted.bzl"
-sed -i -e 's/"typescript": \["biome"\]/"typescript": ["prettier"]/' "$scratch/reformatted.bzl"
+# Portable in-place edit (issue #299): see above.
+sed -e 's/"typescript": \["biome"\]/"typescript": ["prettier"]/' "$scratch/reformatted.bzl" > "$scratch/reformatted.bzl.tmp" && mv "$scratch/reformatted.bzl.tmp" "$scratch/reformatted.bzl"
 if grep -q -F -e '"typescript": ["biome"]' "$scratch/reformatted.bzl"; then
   bad "formatter-change negative did not fail: scratch still matches frozen typescript formatter"
 else
