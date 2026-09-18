@@ -10,15 +10,17 @@
 # battery on a clean tree with docs matching as-built behavior.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (24 checks): hygiene policy, exact 0.0.0 module pin + consumer
-# pin, distribution doc ownership + BCR destination, workflow separation
-# + triggers + default-closed approve gates, signing-first trust-root +
-# SBOM detail, digest-pinned prebuilt base + Bazelisk delegation + cosign
-# deferral, scaffold state, self-call consumer/docs smoke, security
-# precondition, gitignored outputs, matrix close-out page + Layer-4 E2E
-# record, E2E-case convention, and no-publish invariants. Matrix/SBOM/
-# BCR/install verification and the full green battery stay open under
-# their issues.
+# today (28 checks): hygiene policy, exact 0.0.0 module pin + consumer
+# pin, distribution doc ownership + standalone-install record + BCR
+# destination, workflow separation + triggers + default-closed approve
+# gates + dry-run report record, signing-first trust-root + SBOM
+# detail, digest-pinned prebuilt base + Bazelisk delegation + cosign
+# deferral + prebuilt doc section, scaffold state, self-call
+# consumer/docs smoke, security precondition, gitignored outputs,
+# matrix close-out page + Layer-4 E2E record, E2E driver/format
+# slices + E2E-case convention, and no-publish invariants.
+# Matrix/SBOM/BCR/install verification and the full green battery
+# stay open under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:distribution_closeout_guards`,
 # following //tools/ci:ghcr_publish_guards.
@@ -212,6 +214,39 @@ if grep -q -F -e 'Layer-4 E2E' docs/testing/verification-matrix.md; then
   ok
 else
   bad "verification-matrix lost its Layer-4 E2E suite record (#54)"
+fi
+
+# #26 standalone-install record stays owned (no local Rust toolchain
+# or Bazel required; install verification still open).
+if grep -q -F -e 'Standalone installation' docs/environments/environment.md; then
+  ok
+else
+  bad "environment.md lost its standalone-install record (#26)"
+fi
+
+# #78 dry-run report record stays explicit (summary + logs report
+# what would publish; the release itself stays owner-gated).
+if grep -q -F -e 'dry-run report' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish dry run lost its dry-run report record (#78)"
+fi
+
+# #184 prebuilt-image doc section stays owned (GHCR route, scaffold
+# files, separate workflow; image build still owner-gated).
+if grep -q -F -e '## Prebuilt images (GHCR)' docs/contributing/devcontainer.md; then
+  ok
+else
+  bad "devcontainer.md lost its Prebuilt images (GHCR) section (#184)"
+fi
+
+# #54 E2E driver + format slices stay present alongside the case
+# convention (full green battery still open).
+if [[ -f "tools/ci/e2e.sh" ]] \
+  && [[ -f "tools/ci/e2e_format.sh" ]]; then
+  ok
+else
+  bad "E2E driver/format slices missing (e2e.sh/e2e_format.sh, #54)"
 fi
 
 # No-publish invariant: no tags claimed, no release outputs committed.
