@@ -35,12 +35,13 @@
 # lint, no-typecheck drops typecheck), and provider-less plain targets
 # emitting zero actions (unsupported classes leave keys unchanged);
 # the apply step never appears as a Bazel action and the runner
-# executable is an action input (runner change invalidates).
+# executable is an action input to every pipeline (runner change
+# invalidates the complete affected target/capability action).
 #
 # Still open per #84 (recorded as gap, not claimed): full per-adapter
 # table remainder (Go/Java/etc. + transitive/tool-version rows),
 # pipeline invalidation remainder (stage-order/runner policy changes
-# beyond canonical order + executable presence proven here),
+# beyond canonical order + per-pipeline executable presence proven here),
 # formatter-set remainder beyond JSON biome/prettier split and
 # class-membership supported-class manifest rows, plus exec-log/remote-cache
 # proof distinguishing executed actions from cache hits (requires
@@ -422,6 +423,21 @@ if [[ "$mixed_format_key" != "$no_lint_format_key" ]]; then ok; else bad "mixed 
 if [[ "$mixed_format_key" != "$mixed_lint_key" ]]; then ok; else bad "mixed lint vs format ActionKeys must differ (capability isolation holds multi-class)"; fi
 if [[ "$mixed_actions" == *"DxApply"* || "$no_lint_actions" == *"DxApply"* || "$no_typecheck_actions" == *"DxApply"* || "$python_actions" == *"DxApply"* ]]; then bad "apply step must never appear as a Bazel action (apply never changes action keys)"; else ok; fi
 if [[ "$mixed_format_inputs" == *"quality_runner"* && "$no_lint_format_inputs" == *"quality_runner"* ]]; then ok; else bad "want [quality_runner] executable in mixed/no-lint inputs (runner change invalidates)"; fi
+# Runner-everywhere isolation: the runner executable is an input to every
+# pipeline's actions, so changing the runner invalidates the complete
+# affected target/capability action per the pipeline-invalidation row.
+# Extends the mixed/no-lint runner presence above to the full per-adapter
+# table (python/rust/js-family/corpus).
+if [[ "$python_actions" == *"quality_runner"* ]]; then ok; else bad "python: want [quality_runner] in inputs (runner change invalidates)"; fi
+if [[ "$rust_actions" == *"quality_runner"* ]]; then ok; else bad "rust: want [quality_runner] in inputs (runner change invalidates)"; fi
+if [[ "$js_actions" == *"quality_runner"* ]]; then ok; else bad "js: want [quality_runner] in inputs (runner change invalidates)"; fi
+if [[ "$typescript_actions" == *"quality_runner"* ]]; then ok; else bad "typescript: want [quality_runner] in inputs (runner change invalidates)"; fi
+if [[ "$jsx_actions" == *"quality_runner"* ]]; then ok; else bad "jsx: want [quality_runner] in inputs (runner change invalidates)"; fi
+if [[ "$tsx_actions" == *"quality_runner"* ]]; then ok; else bad "tsx: want [quality_runner] in inputs (runner change invalidates)"; fi
+if [[ "$json_actions" == *"quality_runner"* ]]; then ok; else bad "json: want [quality_runner] in inputs (runner change invalidates)"; fi
+if [[ "$starlark_actions" == *"quality_runner"* ]]; then ok; else bad "starlark: want [quality_runner] in inputs (runner change invalidates)"; fi
+if [[ "$toml_actions" == *"quality_runner"* ]]; then ok; else bad "toml: want [quality_runner] in inputs (runner change invalidates)"; fi
+if [[ "$markdown_actions" == *"quality_runner"* ]]; then ok; else bad "markdown: want [quality_runner] in inputs (runner change invalidates)"; fi
 mixed_format_stages="$(printf '%s' "$mixed_actions" | grep -A 30 "Dx real quality format //quality/testdata:fixture_real_mixed" | grep -o "'[a-z_]*;[a-z_]*;" | tr '\n' ' ' || true)"
 mixed_lint_stages="$(printf '%s' "$mixed_actions" | grep -A 30 "Dx real quality lint //quality/testdata:fixture_real_mixed" | grep -o "'[a-z_]*;[a-z_]*;" | tr '\n' ' ' || true)"
 if [[ "$mixed_format_stages" == *"'buildifier;starlark;"*"'rustfmt;rust;"*"'taplo;toml;"* ]]; then ok; else bad "mixed format stages must be sorted tool-ID order [buildifier rustfmt taplo] (got $mixed_format_stages)"; fi
