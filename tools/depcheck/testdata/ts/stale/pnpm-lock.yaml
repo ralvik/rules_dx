@@ -1,0 +1,14 @@
+# Stale lock: manifest requires jest 30.2.0 but lock pins 29.0.0.
+# Every declaration is used, yet consistency must fail.
+lockfileVersion: '9.0'
+
+importers:
+  .:
+    dependencies:
+      jest:
+        specifier: 30.2.0
+        version: 29.0.0
+
+packages:
+  'jest@29.0.0':
+    resolution: {integrity: sha512-fixture-stale-jest}

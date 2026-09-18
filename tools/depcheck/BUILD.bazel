@@ -1,0 +1,177 @@
+"""Cross-language dependency checks (issue #22).
+
+Hermetic lockfile-consistency and declared-dependency usage fixtures
+for the required core (Rust/Cargo, Python/uv, JavaScript+TypeScript/pnpm).
+No network, no registry queries, non-mutating, normal test targets in
+`bazel test //...` and bare `dx test` (no `manual`), independently
+runnable by label. Unrelated foundations stay inactive (only
+python3+bash, no ecosystem toolchains).
+"""
+
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "checker",
+    srcs = ["depcheck.py"],
+)
+
+filegroup(
+    name = "rust_testdata",
+    srcs = glob(["testdata/rust/**"]),
+)
+
+filegroup(
+    name = "python_testdata",
+    srcs = glob(["testdata/python/**"]),
+)
+
+filegroup(
+    name = "js_testdata",
+    srcs = glob(["testdata/js/**"]),
+)
+
+filegroup(
+    name = "ts_testdata",
+    srcs = glob(["testdata/ts/**"]),
+)
+
+sh_test(
+    name = "rust_consistency_test",
+    srcs = ["consistency_test.sh"],
+    args = [
+        "rust",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/rust",
+    ],
+    data = [
+        ":checker",
+        ":rust_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "rust_usage_test",
+    srcs = ["usage_test.sh"],
+    args = [
+        "rust",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/rust",
+    ],
+    data = [
+        ":checker",
+        ":rust_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "python_consistency_test",
+    srcs = ["consistency_test.sh"],
+    args = [
+        "python",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/python",
+    ],
+    data = [
+        ":checker",
+        ":python_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "python_usage_test",
+    srcs = ["usage_test.sh"],
+    args = [
+        "python",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/python",
+    ],
+    data = [
+        ":checker",
+        ":python_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "js_consistency_test",
+    srcs = ["consistency_test.sh"],
+    args = [
+        "js",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/js",
+    ],
+    data = [
+        ":checker",
+        ":js_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "js_usage_test",
+    srcs = ["usage_test.sh"],
+    args = [
+        "js",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/js",
+    ],
+    data = [
+        ":checker",
+        ":js_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "ts_consistency_test",
+    srcs = ["consistency_test.sh"],
+    args = [
+        "ts",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/ts",
+    ],
+    data = [
+        ":checker",
+        ":ts_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "ts_usage_test",
+    srcs = ["usage_test.sh"],
+    args = [
+        "ts",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/ts",
+    ],
+    data = [
+        ":checker",
+        ":ts_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+# Repository corpus: build file plus all TOML fixtures owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy. Python
+# sources, Rust sources, JS/TS sources, and locks stay dx-owned or
+# testdata (code ownership via test data), never corpus sources.
+real_source_target(
+    name = "corpus",
+    starlark_srcs = ["BUILD.bazel"],
+    toml_srcs = glob(["testdata/**/*.toml"]),
+)

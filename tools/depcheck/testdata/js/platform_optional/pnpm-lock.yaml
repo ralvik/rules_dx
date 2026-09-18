@@ -1,0 +1,18 @@
+lockfileVersion: '9.0'
+
+importers:
+  .:
+    dependencies:
+      jest:
+        specifier: 30.2.0
+        version: 30.2.0
+    optionalDependencies:
+      optional-feat:
+        specifier: 1.0.0
+        version: 1.0.0
+
+packages:
+  'jest@30.2.0':
+    resolution: {integrity: sha512-fixture-plat-jest}
+  'optional-feat@1.0.0':
+    resolution: {integrity: sha512-fixture-plat-opt}

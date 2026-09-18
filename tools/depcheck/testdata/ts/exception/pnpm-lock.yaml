@@ -1,0 +1,17 @@
+lockfileVersion: '9.0'
+
+importers:
+  .:
+    dependencies:
+      jest:
+        specifier: 30.2.0
+        version: 30.2.0
+      build-plugin:
+        specifier: 0.3.0
+        version: 0.3.0
+
+packages:
+  'jest@30.2.0':
+    resolution: {integrity: sha512-fixture-exc-jest}
+  'build-plugin@0.3.0':
+    resolution: {integrity: sha512-fixture-exc-plugin}

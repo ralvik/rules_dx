@@ -1,0 +1,19 @@
+[package]
+name = "hello"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1"
+win-only = "1"
+optional-feat = { version = "1", optional = true }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+win-only = "1"
+
+[features]
+myfeat = ["optional-feat"]
+
+[lib]
+name = "hello"
+path = "src/lib.rs"

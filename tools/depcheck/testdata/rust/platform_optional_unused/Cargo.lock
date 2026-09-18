@@ -1,0 +1,17 @@
+version = 4
+
+[[package]]
+name = "hello"
+version = "0.0.0"
+
+[[package]]
+name = "anyhow"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fixture-plat-unused-anyhow"
+
+[[package]]
+name = "unused-opt"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fixture-plat-unused-opt"

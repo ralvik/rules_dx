@@ -1,0 +1,15 @@
+# Stale lock: manifest requires coverage==7.16.0 but lock pins
+# 7.0.0. Every declaration is used, yet consistency must fail.
+version = 1
+revision = 3
+requires-python = ">=3.12"
+
+[[package]]
+name = "pytest"
+version = "8.0.0"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "coverage"
+version = "7.0.0"
+source = { registry = "https://pypi.org/simple" }

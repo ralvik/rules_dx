@@ -1,0 +1,29 @@
+# Fixture consistent lock with an unused declaration: both anyhow
+# 1.0.0 and unused-crate 2.0.0 match the manifest, so consistency
+# passes, but usage must fail for unused-crate.
+version = 4
+
+[[package]]
+name = "hello"
+version = "0.0.0"
+
+[[package]]
+name = "anyhow"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fixture-unused-anyhow"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
+name = "memchr"
+version = "2.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fixture-unused-memchr"
+
+[[package]]
+name = "unused-crate"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fixture-unused-crate"

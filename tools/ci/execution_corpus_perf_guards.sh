@@ -4,9 +4,9 @@
 # Live `dx audit`/`dx update` fail closed with audit_deferred /
 # update_deferred; only family selection, selector planning, aggregate
 # exit-code mapping, and --dry-run planning execute. No auditor wiring,
-# advisory acquisition, SARIF/SPDX mapping, resolver backends, per-set
-# reporting, lockfile-consistency checker, or usage checker is claimed.
-# Corpus stays single `corpus` per directory until `dx generate` emits
+# advisory acquisition, SARIF/SPDX mapping, resolver backends, or per-set
+# reporting is claimed. Required-core depcheck (issue #22) is delivered
+# in tools/depcheck/; admitted expansion stays open. Corpus stays single `corpus` per directory until `dx generate` emits
 # the per-type split; perf tracks the frozen aspect_rules_lint v2.8.0
 # baseline as a report, never a gate.
 #
@@ -77,18 +77,20 @@ else
   bad "audit/update lost their aggregate exit-code mappings"
 fi
 
-# #22 prior slice stays green, no checker falsely claimed.
+# #22 delivered slice stays green with fixtures landed.
 if [[ -f "tools/ci/depcheck_contract.sh" ]] \
-  && [[ -f "tools/ci/audit_update_guards.sh" ]]; then
+  && [[ -f "tools/ci/audit_update_guards.sh" ]] \
+  && [[ -f "tools/depcheck/depcheck.py" ]]; then
   ok
 else
-  bad "prior execution harnesses missing (depcheck_contract/audit_update_guards)"
+  bad "prior execution harnesses missing (depcheck_contract/audit_update_guards/depcheck)"
 fi
 
-if [[ -z "$(grep -rn -E -e 'fn check_lockfile|fn check_declared_usage' --include='*.rs' cli/ quality/ 2>/dev/null || true)" ]]; then
+if [[ -d "tools/depcheck/testdata/rust/ok_used" ]] \
+  && [[ -d "tools/depcheck/testdata/python/ok_used" ]]; then
   ok
 else
-  bad "checker-shaped symbols appeared without #22 fixtures landing"
+  bad "#22 fixtures missing after delivery"
 fi
 
 # #15 corpus rule: single `corpus` per directory until generation owns split.

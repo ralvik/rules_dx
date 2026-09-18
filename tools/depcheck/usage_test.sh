@@ -1,0 +1,186 @@
+#!/usr/bin/env bash
+# Declared-dependency usage test driver (issue #22).
+# Usage: usage_test.sh <ecosystem> <depcheck.py> <testdata-root>
+# Verifies usage truth table, transitive/shared, non-import exceptions
+# with reasons, obsolete, platform/optional, category, non-mutating,
+# offline halves for one language.
+set -euo pipefail
+
+eco="$1"
+checker_in="$2"
+root_in="$3"
+
+resolve() {
+  local p="$1"
+  if [[ "$p" = /* ]] && [[ -e "$p" ]]; then echo "$p"; return; fi
+  if [[ -n "${TEST_SRCDIR:-}" ]]; then
+    for cand in "$TEST_SRCDIR/rules_dx/$p" "$TEST_SRCDIR/_main/$p" "$TEST_SRCDIR/$p"; do
+      if [[ -e "$cand" ]]; then echo "$cand"; return; fi
+    done
+    found="$(find "${TEST_SRCDIR:-/nonexistent}" -path "*$p" -print -quit 2>/dev/null || true)"
+    if [[ -n "$found" ]]; then echo "$found"; return; fi
+  fi
+  if [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" && -e "$BUILD_WORKSPACE_DIRECTORY/$p" ]]; then echo "$BUILD_WORKSPACE_DIRECTORY/$p"; return; fi
+  if [[ -e "$p" ]]; then echo "$p"; return; fi
+  ws="$(git rev-parse --show-toplevel 2>/dev/null || echo .)"
+  echo "$ws/$p"
+}
+checker="$(resolve "$checker_in")"
+root="$(resolve "$root_in")"
+
+pass=0
+fail=0
+ok() { pass=$((pass+1)); echo "ok: $1"; }
+bad() { echo "FAIL: $1" >&2; fail=$((fail+1)); }
+
+run_use() {
+  # $1 manifest, $2 sources, $3 exceptions (optional)
+  if [[ -n "${3:-}" ]]; then
+    python3 "$checker" usage --ecosystem "$eco" --manifest "$1" --sources "$2" --exceptions "$3"
+  else
+    python3 "$checker" usage --ecosystem "$eco" --manifest "$1" --sources "$2"
+  fi
+}
+
+case "$eco" in
+  rust) man="Cargo.toml" ;;
+  python) man="pyproject.toml" ;;
+  js|ts) man="package.json" ;;
+  *) echo "unknown ecosystem $eco" >&2; exit 2 ;;
+esac
+
+srcdir() {
+  # sources dir for a case: rust uses src/ or crates/, python src/ or
+  # pkgs, js/ts src/ or packages/. Pass the case root; checker scans
+  # recursively across the owning scope.
+  echo "$root/$1"
+}
+
+# ok_used passes (all declarations used, transitive ignored).
+if run_use "$root/ok_used/$man" "$(srcdir ok_used)" >/dev/null; then ok "$eco all-used passes"; else bad "$eco ok_used should pass"; fi
+
+# stale sources (all used) pass usage even though consistency fails.
+if run_use "$root/stale/$man" "$(srcdir stale)" >/dev/null; then ok "$eco stale-used passes usage"; else bad "$eco stale should pass usage"; fi
+
+# consistent+unused fails usage.
+if run_use "$root/unused/$man" "$(srcdir unused)" >/dev/null; then bad "$eco unused should fail"; else
+  code=$?
+  if [[ "$code" == "1" ]]; then ok "$eco consistent+unused fails usage"; else bad "$eco unused exit=$code want 1"; fi
+fi
+
+# transitive + shared-workspace passes (transitive ignored, cross-use counts).
+if run_use "$root/transitive_shared/$man" "$(srcdir transitive_shared)" >/dev/null; then ok "$eco transitive+shared passes"; else bad "$eco transitive_shared should pass usage"; fi
+
+# non-import exception with reason passes.
+if run_use "$root/exception/$man" "$(srcdir exception)" "$root/exception/depcheck_exceptions.toml" >/dev/null; then ok "$eco explained exception passes"; else bad "$eco exception should pass"; fi
+
+# unrelated unused still fails even with a valid exception present.
+scratch="$(mktemp -d "${TEST_TMPDIR:-/tmp}/depcheck.XXXXXX")"
+trap 'rm -rf "$scratch"' EXIT
+cp -RL "$root/exception/." "$scratch/" 2>/dev/null || cp -rL "$root/exception/." "$scratch/"
+chmod -R u+w "$scratch"
+if [[ "$eco" == "rust" ]]; then
+  python3 - "$scratch/Cargo.toml" <<'PY'
+import sys
+p = sys.argv[1]
+t = open(p).read()
+t = t.replace('[dependencies]\n', '[dependencies]\nunused-extra = "9"\n', 1)
+open(p, "w").write(t)
+PY
+  cat >> "$scratch/Cargo.lock" <<'EOF'
+
+[[package]]
+name = "unused-extra"
+version = "9.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fixture-extra"
+EOF
+elif [[ "$eco" == "python" ]]; then
+  # append an unused dep to pyproject + lock
+  python3 - "$scratch/pyproject.toml" <<'PY'
+import sys
+p = sys.argv[1]
+t = open(p).read()
+t = t.replace('dependencies = ["pytest>=7"', 'dependencies = ["pytest>=7", "unused-extra==9.0.0"')
+open(p, "w").write(t)
+PY
+  cat >> "$scratch/uv.lock" <<'EOF'
+
+[[package]]
+name = "unused-extra"
+version = "9.0.0"
+source = { registry = "https://pypi.org/simple" }
+EOF
+else
+  python3 - "$scratch/package.json" <<'PY'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p))
+d.setdefault("dependencies", {})["unused-extra"] = "9.0.0"
+json.dump(d, open(p, "w"), indent=2)
+PY
+  cat >> "$scratch/pnpm-lock.yaml" <<'EOF'
+  'unused-extra@9.0.0':
+    resolution: {integrity: sha512-fixture-extra}
+EOF
+fi
+if run_use "$scratch/$man" "$scratch" "$scratch/depcheck_exceptions.toml" >/dev/null 2>&1; then bad "$eco unrelated unused should still fail"; else
+  code=$?
+  if [[ "$code" == "1" ]]; then ok "$eco exception does not suppress unrelated unused"; else bad "$eco extra-unused exit=$code want 1"; fi
+fi
+rm -rf "$scratch"; mkdir -p "$scratch"
+trap 'rm -rf "$scratch"' EXIT
+
+# missing reason fails validation.
+scratch2="$(mktemp -d "${TEST_TMPDIR:-/tmp}/depcheck.XXXXXX")"
+cp -RL "$root/exception/." "$scratch2/" 2>/dev/null || cp -rL "$root/exception/." "$scratch2/"
+chmod -R u+w "$scratch2"
+cat > "$scratch2/depcheck_exceptions.toml" <<'EOF'
+[[exception]]
+dependency = "build-plugin"
+reason = ""
+EOF
+if run_use "$scratch2/$man" "$scratch2" "$scratch2/depcheck_exceptions.toml" >/dev/null 2>&1; then bad "$eco missing reason should fail"; else
+  code=$?
+  if [[ "$code" == "1" ]]; then ok "$eco missing reason fails validation"; else bad "$eco missing-reason exit=$code want 1"; fi
+fi
+rm -rf "$scratch2"
+
+# obsolete: removed dep + unnecessary exception both fail; still-needed passes elsewhere.
+if run_use "$root/obsolete/$man" "$(srcdir obsolete)" "$root/obsolete/depcheck_exceptions.toml" >/dev/null 2>&1; then bad "$eco obsolete should fail"; else
+  code=$?
+  if [[ "$code" == "1" ]]; then ok "$eco obsolete exceptions fail"; else bad "$eco obsolete exit=$code want 1"; fi
+fi
+# still-needed explained exception continues to pass (exception fixture above).
+
+# platform/optional used in supported config passes without exceptions.
+if run_use "$root/platform_optional/$man" "$(srcdir platform_optional)" >/dev/null; then ok "$eco platform/optional passes without exception"; else bad "$eco platform_optional should pass"; fi
+
+# unused optional/platform-specific still fails (optional is not proof).
+if run_use "$root/platform_optional_unused/$man" "$(srcdir platform_optional_unused)" >/dev/null 2>&1; then bad "$eco unused optional should fail"; else
+  code=$?
+  if [[ "$code" == "1" ]]; then ok "$eco unused optional still fails"; else bad "$eco unused-optional exit=$code want 1"; fi
+fi
+
+# category: prod used only by tests fails with a category error.
+if run_use "$root/category/$man" "$(srcdir category)" >/dev/null 2>&1; then bad "$eco category should fail"; else
+  out="$(run_use "$root/category/$man" "$(srcdir category)" 2>&1 || true)"
+  if echo "$out" | grep -q -F -e 'category error'; then ok "$eco prod-only-in-tests fails with category error"; else bad "$eco category missing 'category error'"; echo "$out" >&2; fi
+fi
+
+# correctly categorized + multi-category passes (incl. other-config use).
+if run_use "$root/category_ok/$man" "$(srcdir category_ok)" >/dev/null; then ok "$eco correctly categorized + multi passes"; else bad "$eco category_ok should pass"; fi
+
+# diagnostics do not mutate manifests/locks/sources.
+for case in ok_used unused category; do
+  before="$(find "$root/$case" -type f | LC_ALL=C sort | xargs sha256sum | sha256sum | cut -d' ' -f1)"
+  run_use "$root/$case/$man" "$(srcdir "$case")" >/dev/null 2>&1 || true
+  after="$(find "$root/$case" -type f | LC_ALL=C sort | xargs sha256sum | sha256sum | cut -d' ' -f1)"
+  if [[ "$before" == "$after" ]]; then ok "$eco $case diagnostics do not mutate"; else bad "$eco $case mutated"; fi
+done
+
+# no network imports (offline route); no foreign execution (text scan only).
+if grep -rn -E -e 'import urllib|import socket|import http|import requests|from urllib|subprocess|os\.system|os\.exec' "$checker" >/dev/null 2>&1; then bad "$eco checker must stay offline/no-exec"; else ok "$eco offline/no-exec (no network/subprocess imports)"; fi
+
+echo "usage $eco: $pass passed, $fail failed"
+[[ "$fail" == "0" ]]

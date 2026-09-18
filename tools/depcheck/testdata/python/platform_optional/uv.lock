@@ -1,0 +1,18 @@
+version = 1
+revision = 3
+requires-python = ">=3.12"
+
+[[package]]
+name = "pytest"
+version = "8.0.0"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "win-only"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "optional-feat"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }

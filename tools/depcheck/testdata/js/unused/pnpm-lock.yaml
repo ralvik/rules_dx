@@ -1,0 +1,19 @@
+lockfileVersion: '9.0'
+
+importers:
+  .:
+    dependencies:
+      jest:
+        specifier: 30.2.0
+        version: 30.2.0
+      unused-pkg:
+        specifier: 2.0.0
+        version: 2.0.0
+
+packages:
+  'jest@30.2.0':
+    resolution: {integrity: sha512-fixture-unused-jest}
+  'unused-pkg@2.0.0':
+    resolution: {integrity: sha512-fixture-unused-pkg}
+  'transitive-dep@1.0.0':
+    resolution: {integrity: sha512-fixture-transitive}
