@@ -10,11 +10,13 @@
 # battery on a clean tree with docs matching as-built behavior.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (12 checks): hygiene policy, distribution doc ownership,
-# workflow separation + triggers + gates, scaffold state, security
-# precondition, gitignored outputs, matrix close-out page, and
-# no-publish invariants. Matrix/SBOM/BCR/install verification and the
-# full green battery stay open under their issues.
+# today (16 checks): hygiene policy, exact 0.0.0 module pin,
+# distribution doc ownership, workflow separation + triggers + gates,
+# signing-first trust-root record, digest-pinned prebuilt base,
+# scaffold state, security precondition, gitignored outputs, matrix
+# close-out page, E2E-case convention, and no-publish invariants.
+# Matrix/SBOM/BCR/install verification and the full green battery stay
+# open under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:distribution_closeout_guards`,
 # following //tools/ci:ghcr_publish_guards.
@@ -48,6 +50,13 @@ else
   bad "MODULE.bazel lost its version string record"
 fi
 
+# #5 exact 0.0.0 pin: consumers pin reviewed commits, never tags.
+if grep -q -F -e 'version = "0.0.0"' MODULE.bazel; then
+  ok
+else
+  bad "MODULE.bazel lost its exact 0.0.0 unpublishable pin"
+fi
+
 # #5 SECURITY reporting precondition present.
 if grep -q -F -e 'report' SECURITY.md; then
   ok
@@ -79,6 +88,21 @@ else
   bad "GHCR workflow lost its separate-file / dispatch + approve gate shape"
 fi
 
+# #26 signing-first trust root named in the dry-run report order.
+if grep -q -F -e 'Sigstore keyless' .github/workflows/publish-dry-run.yml \
+  && grep -q -F -e 'issue #26 trust root' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish dry run lost its #26 signing-first trust-root record"
+fi
+
+# #184 prebuilt base stays digest-pinned, never floating.
+if grep -q -E -e '^FROM [^ ]+@sha256:[0-9a-f]{64}' .devcontainer/Dockerfile.prebuilt; then
+  ok
+else
+  bad "Dockerfile.prebuilt lost its digest-pinned FROM"
+fi
+
 # #184 scaffold + devcontainer route documented.
 if grep -q -F -e 'image' .devcontainer/devcontainer.json \
   && grep -q -F -e 'GHCR' docs/contributing/devcontainer.md; then
@@ -103,6 +127,13 @@ if grep -q -F -e 'issue #54' docs/testing/verification-matrix.md \
   ok
 else
   bad "verification-matrix lost its #54 close-out ownership or Battery section"
+fi
+
+# #54 E2E-case convention: every integration case wired to a driver.
+if [[ -f "tools/ci/e2e_cases.sh" ]]; then
+  ok
+else
+  bad "e2e_cases convention harness missing (#54)"
 fi
 
 # #54 battery commands recorded as built behavior.
