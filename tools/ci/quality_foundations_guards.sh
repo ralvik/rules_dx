@@ -11,9 +11,10 @@
 # cache/determinism/apply batteries (#84) stay open with honest gaps.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (36 checks): provider definition, single-sourced registry map +
-# frozen class table + secrets family + parity gate, per-foundation
-# owner docs + dependency scopes + Gazelle extension dirs, framework
+# today (40 checks): provider definition, single-sourced registry map +
+# frozen class table + secrets family + admissibility table + parity
+# gate, per-foundation owner docs + dependency scopes + native-config
+# sections + Gazelle extension dirs, framework boundary + adapter
 # boundary + full format set + mixed composition + ownership regions +
 # framework Gazelle dirs, minimum-consumer index + READMEs,
 # adapter-mechanics doc, aspect QualitySourcesInfo gate, cache/
@@ -340,6 +341,41 @@ if grep -q -F -e '--no-cache' quality/runner/src/real.rs; then
   ok
 else
   bad "quality runner lost its --no-cache argv marker (#84)"
+fi
+
+# #6 admissibility mapping stays owned: the central registry table maps
+# each canonical lowercase ID to basenames/extensions (assignment
+# review still open).
+if grep -q -F -e 'admissibility table maps' docs/quality/quality-sources.md \
+  && grep -q -F -e 'canonical lowercase IDs' docs/quality/quality-sources.md; then
+  ok
+else
+  bad "quality-sources.md lost its admissibility-table record (#6)"
+fi
+
+# #7 Rust native-config + version sections stay owned (exact
+# import/lock/tool-graph proofs still open).
+if grep -q -F -e '## Native Config' docs/generation/rust.md \
+  && grep -q -F -e '## Versions' docs/generation/rust.md; then
+  ok
+else
+  bad "generation rust.md lost its Native Config/Versions sections (#7)"
+fi
+
+# #8 adapter-boundary section stays explicit alongside the physical/
+# virtual ownership record (exact region transport still open).
+if grep -q -F -e '## Adapter Boundary' docs/generation/framework-adapters.md; then
+  ok
+else
+  bad "framework-adapters.md lost its Adapter Boundary section (#8)"
+fi
+
+# #12 provider-closed aspects stay fallback-free: only direct_sources
+# supplies files, never a parallel list (CI scope extension open).
+if grep -q -F -e 'No generic fallback' quality/aspects.bzl; then
+  ok
+else
+  bad "quality aspects lost their no-generic-fallback record (#12)"
 fi
 
 # No false claim: full determinism/apply batteries not claimed green.
