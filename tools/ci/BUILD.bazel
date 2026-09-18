@@ -305,6 +305,16 @@ sh_binary(
     srcs = ["ghcr_hygiene.sh"],
 )
 
+# Publication-group guards (issues #184, #78, #26, #5): pins the
+# cross-workflow separation/triggers/gates, scaffold state, docs
+# ownership, security precondition, and no-publish policy. Matrix,
+# SBOM/provenance, BCR submission, and install verification stay open.
+# Run by CI via `bazel run //tools/ci:ghcr_publish_guards`.
+sh_binary(
+    name = "ghcr_publish_guards",
+    srcs = ["ghcr_publish_guards.sh"],
+)
+
 # Stage 4 E2E drivers (issue #55): one `manual` (+`exclusive`,
 # `local`, `no-sandbox`) sh_test per landed `integration/` scenario plus
 # the explicit suite. Wildcard suites (`bazel test //...`,
