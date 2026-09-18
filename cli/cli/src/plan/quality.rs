@@ -161,7 +161,11 @@ mod tests {
     use super::*;
     use crate::args::{parse, ArgsError};
     use crate::plan::{CLIPPY_DIAGNOSTICS_FLAG, RUSTC_DIAGNOSTICS_FLAG};
+    use crate::resolve::{resolve, QueryResult, QueryRunner};
     use dx_process::Scope;
+    use std::cell::RefCell;
+    use std::io;
+    use std::path::{Path, PathBuf};
 
     fn options(words: &[&str]) -> Vec<String> {
         words.iter().map(ToString::to_string).collect()
@@ -302,6 +306,58 @@ mod tests {
         let argv: Vec<&str> = plan.argv.iter().map(String::as_str).collect();
         assert_eq!(argv[argv.len() - 2..], ["//a:a", "//b:b"]);
         assert_eq!(plan.summary, "Running lint analysis for //a:a //b:b");
+    }
+
+    /// Scripted query runner replaying canned owner listings in call order.
+    struct FakeQuery {
+        outputs: RefCell<Vec<QueryResult>>,
+    }
+
+    impl FakeQuery {
+        fn new(outputs: Vec<QueryResult>) -> Self {
+            FakeQuery {
+                outputs: RefCell::new(outputs),
+            }
+        }
+
+        fn ok(lines: &str) -> QueryResult {
+            QueryResult {
+                code: Some(0),
+                stdout: lines.as_bytes().to_vec(),
+                stderr: Vec::new(),
+            }
+        }
+    }
+
+    impl QueryRunner for FakeQuery {
+        fn run_query(&self, _argv: &[String], _cwd: &Path) -> io::Result<QueryResult> {
+            Ok(self.outputs.borrow_mut().remove(0))
+        }
+    }
+
+    #[test]
+    fn shuffled_query_orders_yield_identical_build_argv() {
+        // Determinism battery (issue #84): `quality-testing.md` requires
+        // randomized query result order to yield identical Bazel argv.
+        // Resolve the same file scope twice with reversed owner lines;
+        // ownership canonicalization (sort + dedup) must converge both to
+        // identical targets, so `plan_build` emits byte-identical argv.
+        let scratch = dx_test_scratch::scratch("dx-quality-query-order-");
+        let root: PathBuf = scratch.path().to_path_buf();
+        std::fs::create_dir_all(root.join("pkg")).expect("pkg dir");
+        std::fs::write(root.join("pkg/BUILD.bazel"), "").expect("BUILD file");
+        std::fs::write(root.join("pkg/a.py"), "x = 1\n").expect("source file");
+        let forward = FakeQuery::new(vec![FakeQuery::ok("//pkg:lib\n//pkg:extra\n")]);
+        let reversed = FakeQuery::new(vec![FakeQuery::ok("//pkg:extra\n//pkg:lib\n")]);
+        let first = resolve(&options(&["pkg/a.py"]), &root, &forward).expect("forward");
+        let second = resolve(&options(&["pkg/a.py"]), &root, &reversed).expect("reversed");
+        assert_eq!(first.targets, second.targets);
+        assert_eq!(first.targets, options(&["//pkg:extra", "//pkg:lib"]));
+        let first_plan =
+            plan_build(Command::Lint, &first, &[], "/tmp/bep.json").expect("forward plan");
+        let second_plan =
+            plan_build(Command::Lint, &second, &[], "/tmp/bep.json").expect("reversed plan");
+        assert_eq!(first_plan.argv, second_plan.argv);
     }
 
     #[test]
