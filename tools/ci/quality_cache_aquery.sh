@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quality cache aquery proof (issue #84, slices 1-11): per-adapter and
+# Quality cache aquery proof (issue #84, slices 1-12): per-adapter and
 # per-capability action-key isolation via `bazel aquery` over real
 # quality pipelines.
 #
@@ -16,7 +16,8 @@
 # (biome lint/format per-capability + biome.json native-config isolation,
 # prettier never an input, eslint/flake8/pylint opt-ins never inputs), Starlark
 # (buildifier lint/format), TOML (taplo lint/format), Markdown
-# (vale lint), TypeScript/JSX/TSX (biome lint/format each owning only
+# (markdown_check + vale dual-tool lint with sorted stage order + sibling
+# link-resolution inputs), TypeScript/JSX/TSX (biome lint/format each owning only
 # its source), and JSON (biome lint + prettier format split): each pipeline's declared Inputs mention its own source
 # and tool and none of the other's, lint vs format vs typecheck
 # ActionKeys differ, per-capability Inputs contain only their owning
@@ -39,7 +40,12 @@
 # the apply step never appears as a Bazel action and the runner
 # executable is an action input to every pipeline including typecheck
 # (runner change invalidates the complete affected target/capability
-# action); typecheck keys differ from lint/format and the manifest holds
+# action, including markdown sibling lint); python lint stages run in
+# sorted tool-ID order [pydoclint ruff] and markdown lint stages in
+# [markdown_check vale] (stage-order policy change invalidates); markdown
+# siblings resolve link targets only (sibling file is an input, never a
+# stage source, and the sibling pipeline owns only its own sources);
+# typecheck keys differ from lint/format and the manifest holds
 # (python/rust 1 typecheck, JS-family/starlark/toml 0, markdown lint-only).
 #
 # Still open per #84 (recorded as gap, not claimed): full per-adapter
@@ -567,6 +573,44 @@ js_typecheck_count="$(printf '%s' "$js_actions" | grep -c 'Mnemonic: DxRealQuali
 if [[ "$markdown_format_count" == "0" ]]; then ok; else bad "markdown: want 0 format actions (manifest: lint-only, got $markdown_format_count)"; fi
 if [[ "$markdown_typecheck_count" == "0" ]]; then ok; else bad "markdown: want 0 typecheck actions (manifest: lint-only, got $markdown_typecheck_count)"; fi
 if [[ "$js_typecheck_count" == "0" ]]; then ok; else bad "js: want 0 typecheck actions (manifest: lint+format only, got $js_typecheck_count)"; fi
+
+# Markdown dual-tool + stage-order + sibling isolation: markdown lint owns
+# both markdown_check (repo-owned link/structure) and vale (prose style)
+# in one action with sorted tool-ID stage order [markdown_check vale], so
+# changing either tool misses lint together; python lint stages run in
+# sorted order [pydoclint ruff]; markdown siblings are link-resolution
+# inputs only (never stage sources), and the sibling pipeline owns only
+# its own sources with distinct ActionKeys (one direct source misses only
+# its owning pipeline). Markdown_check change must not invalidate
+# python/rust/js (unselected-adapter row for the repo-owned tool).
+markdown_lint_inputs="$(printf '%s' "$markdown_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"
+if [[ "$markdown_lint_inputs" == *"quality_markdown"* ]]; then ok; else bad "markdown lint: want [quality_markdown] (markdown_check change misses lint)"; fi
+if [[ "$markdown_lint_inputs" == *"vale"* ]]; then ok; else bad "markdown lint: want [vale] (vale change misses lint)"; fi
+if [[ "$markdown_lint_inputs" == *"quality_runner"* ]]; then ok; else bad "markdown lint: want [quality_runner] in inputs (runner change invalidates)"; fi
+markdown_lint_stages="$(printf '%s' "$markdown_actions" | grep -A 30 "Dx real quality lint //quality/testdata:fixture_real_markdown" | grep -o "'[a-z_]*;[a-z_]*;" | tr '\n' ' ' || true)"
+if [[ "$markdown_lint_stages" == *"'markdown_check;markdown;"*"'vale;markdown;"* ]]; then ok; else bad "markdown lint stages must be sorted tool-ID order [markdown_check vale] (got $markdown_lint_stages)"; fi
+python_lint_stages="$(printf '%s' "$python_actions" | grep -A 30 "Dx real quality lint //quality/testdata:fixture_real_python" | grep -o "'[a-z_]*;[a-z_]*;" | tr '\n' ' ' || true)"
+if [[ "$python_lint_stages" == *"'pydoclint;python;"*"'ruff;python;"* ]]; then ok; else bad "python lint stages must be sorted tool-ID order [pydoclint ruff] (got $python_lint_stages)"; fi
+if [[ "$python_actions" == *"markdown_check"* ]]; then bad "python: forbidden [markdown_check] (unselected repo-owned adapter must not invalidate Python)"; else ok; fi
+if [[ "$rust_actions" == *"markdown_check"* ]]; then bad "rust: forbidden [markdown_check] (unselected repo-owned adapter must not invalidate Rust)"; else ok; fi
+if [[ "$js_actions" == *"markdown_check"* ]]; then bad "js: forbidden [markdown_check] (unselected repo-owned adapter must not invalidate JS)"; else ok; fi
+sibling_actions="$(bazel aquery '//quality/testdata:fixture_real_markdown_sibling' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+if [[ -z "$sibling_actions" ]]; then bad "sibling: empty aquery output"; else ok; fi
+sibling_lint_inputs="$(printf '%s' "$sibling_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"
+if [[ "$sibling_lint_inputs" == *"sibling_clean.md"* ]]; then ok; else bad "sibling lint: want [sibling_clean.md] in inputs"; fi
+if [[ "$sibling_lint_inputs" == *"sibling_license.txt"* ]]; then ok; else bad "sibling lint: want [sibling_license.txt] in inputs (sibling link target resolves)"; fi
+if [[ "$sibling_lint_inputs" == *"quality_markdown"* && "$sibling_lint_inputs" == *"vale"* ]]; then ok; else bad "sibling lint: want [quality_markdown+vale] (both tools miss sibling lint)"; fi
+if [[ "$sibling_lint_inputs" == *"quality_runner"* ]]; then ok; else bad "sibling lint: want [quality_runner] in inputs (runner change invalidates)"; fi
+sibling_stages="$(printf '%s' "$sibling_actions" | grep -o "'[a-z_]*;markdown;[^']*'" | tr '\n' ' ' || true)"
+if [[ "$sibling_stages" == *"sibling_clean.md"* ]]; then ok; else bad "sibling stages: want [sibling_clean.md] as stage source"; fi
+if [[ "$sibling_stages" == *"sibling_license.txt"* ]]; then bad "sibling stages: forbidden [sibling_license.txt] as stage source (sibling never linted, input only)"; else ok; fi
+if [[ "$markdown_actions" == *"sibling_clean.md"* ]]; then bad "markdown base: forbidden [sibling_clean.md] (sibling source must not invalidate base)"; else ok; fi
+if [[ "$markdown_actions" == *"sibling_license.txt"* ]]; then bad "markdown base: forbidden [sibling_license.txt] (sibling input must not invalidate base)"; else ok; fi
+sibling_key="$(printf '%s' "$sibling_actions" | grep 'ActionKey:' | head -1 || true)"
+if [[ -n "$sibling_key" ]]; then ok; else bad "want ActionKey line in sibling output"; fi
+if [[ -n "$sibling_key" && -n "$markdown_key" && "$sibling_key" != "$markdown_key" ]]; then ok; else bad "sibling vs base markdown ActionKeys must differ (one source misses only owning pipeline)"; fi
 
 echo "quality cache aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
