@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quality cache aquery proof (issue #84, slices 1-6): per-adapter and
+# Quality cache aquery proof (issue #84, slices 1-7): per-adapter and
 # per-capability action-key isolation via `bazel aquery` over real
 # quality pipelines.
 #
@@ -28,12 +28,21 @@
 # invalidate JS; ruff/ty/biome must not invalidate Rust; buildifier/
 # taplo/vale must not invalidate Python/Rust/JS and vice versa;
 # TypeScript/JSX/TSX/JSON each own only their source+tool with
-# JSON lint vs format split across biome vs prettier).
+# JSON lint vs format split across biome vs prettier). Class-membership
+# and stage-subset isolation holds via mixed multi-class unions
+# (rust+starlark+toml single actions own all three sources+tools with
+# sorted tool-ID stage order), capability-tag removal (no-lint drops
+# lint, no-typecheck drops typecheck), and provider-less plain targets
+# emitting zero actions (unsupported classes leave keys unchanged);
+# the apply step never appears as a Bazel action and the runner
+# executable is an action input (runner change invalidates).
 #
 # Still open per #84 (recorded as gap, not claimed): full per-adapter
 # table remainder (Go/Java/etc. + transitive/tool-version rows),
-# pipeline invalidation (stage-order/runner changes),
-# formatter-set and class-membership rules, plus exec-log/remote-cache
+# pipeline invalidation remainder (stage-order/runner policy changes
+# beyond canonical order + executable presence proven here),
+# formatter-set remainder beyond JSON biome/prettier split and
+# class-membership supported-class manifest rows, plus exec-log/remote-cache
 # proof distinguishing executed actions from cache hits (requires
 # controlled remote cache or separate machines per testing contract;
 # a warm local no-op alone is not a cache test). This harness is
@@ -364,6 +373,59 @@ if [[ "$typescript_key" != "$tsx_key" ]]; then ok; else bad "typescript vs tsx A
 if [[ "$typescript_key" != "$json_key" ]]; then ok; else bad "typescript vs json ActionKeys must differ"; fi
 if [[ "$jsx_key" != "$tsx_key" ]]; then ok; else bad "jsx vs tsx ActionKeys must differ"; fi
 if [[ "$json_key" != "$python_key" ]]; then ok; else bad "json vs python ActionKeys must differ"; fi
+
+# Class-membership + stage-source-subset + runner/stage-order/apply
+# isolation: mixed multi-class targets union exact source subsets into
+# one action per capability with sorted tool-ID stage order; capability
+# tags drop only their owning pipeline; provider-less targets emit zero
+# actions (unsupported classes leave keys unchanged); apply never
+# appears as a Bazel action while the runner executable is always an
+# input. Covers the class-membership and pipeline-invalidation rows
+# toward the full table (supported-class manifests + transitive/
+# tool-version still open).
+mixed_actions="$(bazel aquery '//quality/testdata:fixture_real_mixed' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+no_lint_actions="$(bazel aquery '//quality/testdata:fixture_real_no_lint' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+no_typecheck_actions="$(bazel aquery '//quality/testdata:fixture_real_python_no_typecheck' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+plain_actions="$(bazel aquery '//quality/testdata:plain' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+mixed_lint_count="$(printf '%s' "$mixed_actions" | grep -c 'Mnemonic: DxRealQualityLint' || true)"
+mixed_format_count="$(printf '%s' "$mixed_actions" | grep -c 'Mnemonic: DxRealQualityFormat' || true)"
+no_lint_lint_count="$(printf '%s' "$no_lint_actions" | grep -c 'Mnemonic: DxRealQualityLint' || true)"
+no_lint_format_count="$(printf '%s' "$no_lint_actions" | grep -c 'Mnemonic: DxRealQualityFormat' || true)"
+no_typecheck_typecheck_count="$(printf '%s' "$no_typecheck_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
+python_typecheck_count="$(printf '%s' "$python_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
+plain_dx_count="$(printf '%s' "$plain_actions" | grep -c 'Mnemonic: DxRealQuality' || true)"
+if [[ "$mixed_lint_count" == "1" ]]; then ok; else bad "mixed: want exactly 1 lint action (got $mixed_lint_count)"; fi
+if [[ "$mixed_format_count" == "1" ]]; then ok; else bad "mixed: want exactly 1 format action (got $mixed_format_count)"; fi
+if [[ "$no_lint_lint_count" == "0" ]]; then ok; else bad "no-lint: want 0 lint actions (tag drops owning pipeline, got $no_lint_lint_count)"; fi
+if [[ "$no_lint_format_count" == "1" ]]; then ok; else bad "no-lint: want exactly 1 format action (got $no_lint_format_count)"; fi
+if [[ "$no_typecheck_typecheck_count" == "0" ]]; then ok; else bad "no-typecheck: want 0 typecheck actions (got $no_typecheck_typecheck_count)"; fi
+if [[ "$python_typecheck_count" == "1" ]]; then ok; else bad "python baseline: want 1 typecheck action (tag removal invalidates, got $python_typecheck_count)"; fi
+if [[ "$plain_dx_count" == "0" ]]; then ok; else bad "plain: want 0 quality actions (unsupported with no provider leaves keys unchanged, got $plain_dx_count)"; fi
+mixed_format_inputs="$(printf '%s' "$mixed_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' | head -1 || true)"
+no_lint_format_inputs="$(printf '%s' "$no_lint_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' | head -1 || true)"
+if [[ "$mixed_format_inputs" == *"real_clean.toml"* && "$mixed_format_inputs" == *"taplo"* ]]; then ok; else bad "mixed format: want [real_clean.toml+taplo] (exact stage source subset unions all three classes)"; fi
+if [[ "$no_lint_format_inputs" == *"real_clean.toml"* ]]; then bad "no-lint format: forbidden [real_clean.toml] (subset without TOML must not mention it)"; else ok; fi
+if [[ "$no_lint_format_inputs" == *"taplo"* ]]; then bad "no-lint format: forbidden [taplo] (TOML tool must not invalidate subset without TOML)"; else ok; fi
+mixed_format_key="$(printf '%s' "$mixed_actions" | grep -A 10 "Dx real quality format //quality/testdata:fixture_real_mixed" | grep 'ActionKey:' | head -1 || true)"
+mixed_lint_key="$(printf '%s' "$mixed_actions" | grep -A 10 "Dx real quality lint //quality/testdata:fixture_real_mixed" | grep 'ActionKey:' | head -1 || true)"
+no_lint_format_key="$(printf '%s' "$no_lint_actions" | grep 'ActionKey:' | head -1 || true)"
+if [[ -n "$mixed_format_key" && -n "$mixed_lint_key" && -n "$no_lint_format_key" ]]; then ok; else bad "want ActionKey lines in mixed/no-lint outputs"; fi
+if [[ "$mixed_format_key" != "$no_lint_format_key" ]]; then ok; else bad "mixed vs no-lint format ActionKeys must differ (adding TOML class invalidates)"; fi
+if [[ "$mixed_format_key" != "$mixed_lint_key" ]]; then ok; else bad "mixed lint vs format ActionKeys must differ (capability isolation holds multi-class)"; fi
+if [[ "$mixed_actions" == *"DxApply"* || "$no_lint_actions" == *"DxApply"* || "$no_typecheck_actions" == *"DxApply"* || "$python_actions" == *"DxApply"* ]]; then bad "apply step must never appear as a Bazel action (apply never changes action keys)"; else ok; fi
+if [[ "$mixed_format_inputs" == *"quality_runner"* && "$no_lint_format_inputs" == *"quality_runner"* ]]; then ok; else bad "want [quality_runner] executable in mixed/no-lint inputs (runner change invalidates)"; fi
+mixed_format_stages="$(printf '%s' "$mixed_actions" | grep -A 30 "Dx real quality format //quality/testdata:fixture_real_mixed" | grep -o "'[a-z_]*;[a-z_]*;" | tr '\n' ' ' || true)"
+mixed_lint_stages="$(printf '%s' "$mixed_actions" | grep -A 30 "Dx real quality lint //quality/testdata:fixture_real_mixed" | grep -o "'[a-z_]*;[a-z_]*;" | tr '\n' ' ' || true)"
+if [[ "$mixed_format_stages" == *"'buildifier;starlark;"*"'rustfmt;rust;"*"'taplo;toml;"* ]]; then ok; else bad "mixed format stages must be sorted tool-ID order [buildifier rustfmt taplo] (got $mixed_format_stages)"; fi
+if [[ "$mixed_lint_stages" == *"'buildifier;starlark;"*"'clippy;rust;"*"'taplo;toml;"* ]]; then ok; else bad "mixed lint stages must be sorted tool-ID order [buildifier clippy taplo] (got $mixed_lint_stages)"; fi
 
 echo "quality cache aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
