@@ -1820,6 +1820,11 @@ mod tests {
             replacement: b"x".to_vec(),
         }]);
         assert!(validate(&inverted).is_err());
+        let mut bad_digest = valid.clone();
+        bad_digest.replacements[0].original_digest = vec![0xAB; DIGEST_LEN + 1];
+        assert!(validate(&bad_digest).is_err());
+        let empty_edits = mk(vec![]);
+        assert!(validate(&empty_edits).is_err());
     }
 
     #[test]
