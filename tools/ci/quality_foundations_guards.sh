@@ -74,11 +74,13 @@ else
   bad "prior quality harnesses missing (wrapper_sources/foundation_maps/registry_singularity)"
 fi
 
-# #84 seed slice stays green: aquery action-key isolation proof.
-if [[ -f "tools/ci/quality_cache_aquery.sh" ]]; then
+# #84 cache proof stays pinned: aquery action-key isolation plus local
+# execution-log executed-vs-cached proof.
+if [[ -f "tools/ci/quality_cache_aquery.sh" ]] \
+  && grep -q -F -e 'execution_log_json_file' tools/ci/quality_cache_aquery.sh; then
   ok
 else
-  bad "quality cache aquery seed harness missing"
+  bad "quality cache aquery harness missing its execution-log proof (#84)"
 fi
 
 # #12 lane A audits stay wired: code ownership harness present.
@@ -139,7 +141,7 @@ else
 fi
 
 # #84 apply-safety filesystem evidence stays pinned: the collected-change
-# applier under test (digest/atomicity/interruption batteries still open).
+# applier under test (digest/atomicity/interruption batteries).
 if grep -q -F -e 'apply_collected_changes' cli/cli/src/exec/quality_apply.rs; then
   ok
 else
@@ -165,8 +167,9 @@ else
 fi
 
 # #84 atomic-write evidence stays pinned: atomic apply of verified
-# reads in the collected-change applier (batteries still open).
-if grep -q -F -e 'write_atomic' cli/cli/src/exec/quality_apply.rs; then
+# reads in the collected-change applier plus mode-preserving writes.
+if grep -q -F -e 'write_atomic' cli/cli/src/exec/quality_apply.rs \
+  && grep -q -F -e 'preserves_existing_mode_on_overwrite' cli/atomic_fs/src/lib.rs; then
   ok
 else
   bad "quality apply applier lost its atomic-write evidence (#84)"
