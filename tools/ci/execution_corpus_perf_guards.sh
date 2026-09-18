@@ -11,13 +11,14 @@
 # baseline as a report, never a gate.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (20 checks): deferred codes, fail-closed unit pins, dry-run
-# planning paths + doc record, exit mappings, doc ownership, depcheck
-# truth-table contract, prior harnesses green, corpus single-name rule +
-# Gazelle ownership + generate --check wiring + carve-out record, perf
-# report-not-gate shape + v2.8.0 fairness pin + report-not-gate honesty,
-# and matrix honesty. Live execution, per-type generation, and
-# comparison numbers stay open under their issues.
+# today (24 checks): deferred codes, fail-closed unit pins, dry-run
+# planning paths + doc record, exit mappings, doc ownership + auditor/
+# resolver records, depcheck truth-table + offline contract, prior
+# harnesses green, corpus single-name rule + Gazelle ownership +
+# generate --check wiring + carve-out record, perf report-not-gate
+# shape + v2.8.0 fairness pin + report honesty + bench harness, and
+# matrix honesty. Live execution, per-type generation, and comparison
+# numbers stay open under their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:execution_corpus_perf_guards`,
 # following //tools/ci:verify_perf_corpus.
@@ -176,6 +177,39 @@ if grep -q -F -e 'carve-out' tools/ci/corpus_audit.sh; then
   ok
 else
   bad "corpus_audit lost its carve-out record (#15)"
+fi
+
+# #18 secrets auditor wiring stays recorded as Gitleaks standalone
+# artifact (SARIF output, redaction, findings-vs-error split open).
+if grep -q -F -e 'Gitleaks' "$doc"; then
+  ok
+else
+  bad "audit/update doc lost its Gitleaks secrets-auditor record (#18)"
+fi
+
+# #19 resolver ownership stays recorded (resolver-owned backends per
+# set, no dx lockfile or private resolver; live backends still open).
+if grep -q -F -e 'resolver' "$doc"; then
+  ok
+else
+  bad "audit/update doc lost its resolver-ownership record (#19)"
+fi
+
+# #22 offline route contract stays explicit (network denied, local
+# matching, no lockfile/inventory upload; fixtures still open).
+if grep -q -F -e 'offline' docs/quality/quality-testing.md; then
+  ok
+else
+  bad "quality-testing.md lost its offline-route contract record (#22)"
+fi
+
+# #86 bench regeneration harness stays present alongside the comparator
+# (synthetic tree + methodology; comparison numbers still a report).
+if [[ -f "perf/bench.sh" ]] \
+  && [[ -f "perf/regenerate.py" ]]; then
+  ok
+else
+  bad "perf bench/regenerate harness missing (#86)"
 fi
 
 # Matrix honesty across this group.
