@@ -145,6 +145,8 @@ jobs:
             bazel-seed-
       - name: Enforce seed coverage cell
         run: bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //...
+      - name: Prove coverage report contract (gate-owned LCOV, comment gap open)
+        run: bazel run --noshow_progress //tools/ci:coverage_report_guards
       - name: Write job summary
         if: always()
         run: |

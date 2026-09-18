@@ -104,6 +104,16 @@ sh_binary(
     srcs = ["coverage_cell.sh"],
 )
 
+# Coverage-report guards (issue #254; relates #54, #252, #5): pins the
+# Bazel-owned gate as source of truth, the honest Codecov-selection
+# record, and the open PR-comment gap. Comment presentation, dedup,
+# fork handling, and failure proofs stay open. Run by CI via
+# `bazel run //tools/ci:coverage_report_guards`.
+sh_binary(
+    name = "coverage_report_guards",
+    srcs = ["coverage_report_guards.sh"],
+)
+
 # Target-tag semantics harness (issue #99 item 3): proves `flaky`
 # forwards to private upstream tests (off by default), `bazel coverage`
 # skips `no-coverage` tests while running untagged ones, and the
