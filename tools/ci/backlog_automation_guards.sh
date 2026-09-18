@@ -2,13 +2,14 @@
 # Backlog/automation guards (issues #85, #254, #260).
 #
 # Per-foundation external-consumer examples + acquisition/laziness proof
-# (#85) grow slice by slice; first-party coverage PR comments (#254)
+# (#85) delivered across readme, static, query, aquery, and runtime slices;
+# first-party coverage PR comments (#254)
 # stay open with the Bazel-owned LCOV gate as source of truth; the
 # widen-one-requirement + update PR loop (#260) stays planned behind
 # the #19 resolver prerequisite with Renovate retained as fallback.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (21 checks): examples ownership + starter callers + laziness
+# today (22 checks): examples ownership + starter callers + laziness
 # slices + attribution + full index breadth + Scala/Polyglot entries +
 # mixed disposition, LCOV preset pin + inventory backing,
 # Renovate fallback + full manager set + loop policy + Monday schedule
@@ -63,6 +64,15 @@ if [[ -f "tools/ci/examples_laziness_query.sh" ]] \
   ok
 else
   bad "examples laziness query/aquery harnesses missing"
+fi
+
+# #85 laziness runtime close-out stays wired (target + CI step).
+if [[ -f "tools/ci/examples_laziness_runtime.sh" ]] \
+  && grep -q -F -e 'examples_laziness_runtime' tools/ci/BUILD.bazel \
+  && grep -q -F -e 'examples_laziness_runtime' .github/workflows/ci.yml; then
+  ok
+else
+  bad "examples laziness runtime close-out missing (harness, target, or CI step)"
 fi
 
 # #254 LCOV preset pin: combined report owned by Bazel flags.
@@ -165,19 +175,21 @@ else
   bad "Renovate fallback lost its reviewable-loop policy (#260)"
 fi
 
-# #85 acquisition attribution stays owned: runtime (logs/aquery) and
-# static (prohibited-installer) attribution prove the private tool
-# graph never shells out to installers (full laziness proof open).
+# #85 acquisition attribution stays owned: static (prohibited-installer)
+# plus runtime (aquery action-command) attribution prove the private tool
+# graph never shells out to installers; remote/empty-cache attribution
+# stays owned by #298/#308.
 if grep -q -F -e 'Runtime attribution' tools/ci/examples_laziness.sh \
-  && grep -q -F -e 'No-install attribution' tools/ci/examples_laziness.sh; then
+  && grep -q -F -e 'No-install attribution' tools/ci/examples_laziness.sh \
+  && grep -q -F -e 'No-install attribution' tools/ci/examples_laziness_runtime.sh; then
   ok
 else
   bad "examples laziness lost its acquisition-attribution record (#85)"
 fi
 
 # #85 starter callers stay indexed: consumer-ci + docs-ci starter
-# callers alongside the per-foundation adopt workspaces (full
-# laziness proof still open).
+# callers alongside the per-foundation adopt workspaces (laziness proof
+# delivered on the seed host).
 if grep -q -F -e '[consumer-ci](consumer-ci/)' examples/README.md \
   && grep -q -F -e '[docs-ci](docs-ci/)' examples/README.md; then
   ok

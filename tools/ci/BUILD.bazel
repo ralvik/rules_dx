@@ -205,8 +205,8 @@ sh_binary(
 
 # Examples README harness (issue #85, slice 1): every per-foundation
 # external-consumer example workspace records exact commands plus
-# expected evidence in its own README. Acquisition/laziness fixtures
-# stay open per #85. Run by CI via
+# expected evidence in its own README. Delivered with the slice-5
+# runtime close-out. Run by CI via
 # `bazel run //tools/ci:examples_readme`.
 sh_binary(
     name = "examples_readme",
@@ -219,8 +219,8 @@ sh_binary(
 # acquisition/laziness proof — no prohibited installer commands in
 # tool-implementation code, plus per-foundation wrapper isolation over
 # adopt-* examples (unused foundations contribute no targets).
-# Runtime attribution (process logs, aquery/exec-log over external
-# consumers with network denied) stays open per #85. Run by CI via
+# Action-command attribution closes the proof in slice 5
+# (//tools/ci:examples_laziness_runtime). Run by CI via
 # `bazel run //tools/ci:examples_laziness`.
 sh_binary(
     name = "examples_laziness",
@@ -233,8 +233,8 @@ sh_binary(
 # half — each single-foundation example (Rust, Python, JS/TS minimum)
 # contains its own ecosystem repo and none of the others' repos in
 # `bazel query deps`, so unused foundations contribute no targets/repos.
-# Empty-cache action proof + network-denied runtime attribution stay open
-# per #85. Run by CI via `bazel run //tools/ci:examples_laziness_query`.
+# Delivered with the slice-5 runtime close-out.
+# Run by CI via `bazel run //tools/ci:examples_laziness_query`.
 sh_binary(
     name = "examples_laziness_query",
     srcs = ["examples_laziness_query.sh"],
@@ -245,12 +245,26 @@ sh_binary(
 # Examples laziness aquery proof (issue #85, slice 4): action-graph half
 # — each single-foundation example (Rust, Python, JS/TS minimum) mentions
 # its own ecosystem repo and none of the others' repos in `bazel aquery`,
-# so unused foundations contribute zero actions. Network-denied runtime
-# attribution + empty-cache remote-cache execution proof stay open per
-# #85. Run by CI via `bazel run //tools/ci:examples_laziness_aquery`.
+# so unused foundations contribute zero actions. Delivered with the
+# slice-5 runtime close-out. Run by CI via
+# `bazel run //tools/ci:examples_laziness_aquery`.
 sh_binary(
     name = "examples_laziness_aquery",
     srcs = ["examples_laziness_aquery.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+# Examples laziness runtime proof (issue #85, slice 5, final):
+# action-command attribution half — no prohibited installer command in
+# declared `bazel aquery` actions over every adopt-* consumer, so the
+# action graph never shells out to an ecosystem installer. With slices
+# 1-4 this completes the acquisition/laziness proof on the seed host;
+# remote/empty-cache attribution stays owned by issues #298/#308.
+# Run by CI via `bazel run //tools/ci:examples_laziness_runtime`.
+sh_binary(
+    name = "examples_laziness_runtime",
+    srcs = ["examples_laziness_runtime.sh"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -420,7 +434,8 @@ sh_binary(
 )
 
 # Backlog/automation guards (issues #9, #10, #85, #254, #260): pins
-# examples ownership + laziness slices, Bazel-owned LCOV gate,
+# examples ownership + laziness slices (readme/static/query/aquery/runtime),
+# Bazel-owned LCOV gate,
 # Renovate fallback + never-rewrites pins, and prior harnesses.
 # Functional checks only. Run by CI via
 # `bazel run //tools/ci:backlog_automation_guards`.
