@@ -2190,6 +2190,73 @@ mod tests {
     }
 
     #[test]
+    fn permutation_ranking_uses_process_starts_then_wall_time_tiebreak() {
+        // Determinism battery (issue #84): `quality-testing.md` requires
+        // equivalent correct orders to rank by non-convergence count,
+        // rounds, process starts, then measured wall time. The existing
+        // ranking test proves the first two keys; this proves the last
+        // two tiebreaks deterministically. Two pipelines converge to the
+        // same stable GOOD terminal in the same 2 rounds: single-stage
+        // (2 starts) vs lint-a plus identity lint-b (4 starts). Fewer
+        // starts must rank first; with equal starts the smaller synthetic
+        // wall time must rank first (real wall time is measured, ordering
+        // here proves the tiebreak is total and stable).
+        let single = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
+        let doubled = vec![
+            stage("lint-a", &["rust"], &["src/lib.rs"]),
+            stage("lint-b", &["rust"], &["src/lib.rs"]),
+        ];
+        let mut initial = BTreeMap::new();
+        initial.insert("src/lib.rs".to_owned(), "BAD\n".to_owned());
+        let single_calls = std::cell::RefCell::new(0u32);
+        let single_counting = |tool: &str, _: &str, text: &str| {
+            *single_calls.borrow_mut() += 1;
+            Ok(apply_synthetic(tool, text))
+        };
+        let (single_terminal, single_rounds, single_conv) =
+            run_convergence(&initial, &single, MAX_COMPLETED_ROUNDS, single_counting).unwrap();
+        let doubled_calls = std::cell::RefCell::new(0u32);
+        let doubled_counting = |tool: &str, _: &str, text: &str| {
+            *doubled_calls.borrow_mut() += 1;
+            Ok(apply_synthetic(tool, text))
+        };
+        let (doubled_terminal, doubled_rounds, doubled_conv) =
+            run_convergence(&initial, &doubled, MAX_COMPLETED_ROUNDS, doubled_counting).unwrap();
+        assert_eq!(single_conv, Convergence::Stable);
+        assert_eq!(doubled_conv, Convergence::Stable);
+        assert_eq!(single_terminal["src/lib.rs"], "GOOD\n");
+        assert_eq!(doubled_terminal["src/lib.rs"], "GOOD\n");
+        assert_eq!(single_terminal, doubled_terminal);
+        assert_eq!(single_rounds, 2);
+        assert_eq!(doubled_rounds, 2);
+        let single_starts = *single_calls.borrow();
+        let doubled_starts = *doubled_calls.borrow();
+        assert_eq!(single_starts, 2);
+        assert_eq!(doubled_starts, 4);
+        let rank_key = |convergence: Convergence, rounds: u32, starts: u32, wall_ms: u64| {
+            (
+                i32::from(convergence != Convergence::Stable),
+                rounds,
+                starts,
+                wall_ms,
+            )
+        };
+        let single_rank = rank_key(Convergence::Stable, single_rounds, single_starts, 10);
+        let doubled_rank = rank_key(Convergence::Stable, doubled_rounds, doubled_starts, 5);
+        assert!(
+            single_rank < doubled_rank,
+            "fewer process starts ranks first even with larger wall time"
+        );
+        let fast_rank = rank_key(Convergence::Stable, 2, 2, 10);
+        let slow_rank = rank_key(Convergence::Stable, 2, 2, 20);
+        assert!(
+            fast_rank < slow_rank,
+            "smaller wall time ranks first on full tie"
+        );
+        assert_eq!(fast_rank, (0, 2, 2, 10));
+    }
+
+    #[test]
     fn each_stage_runs_once_per_round_without_hidden_passes() {
         // Apply-safety battery (issue #84): `quality-testing.md` requires
         // native tool-internal passes to count as one stage when proving
