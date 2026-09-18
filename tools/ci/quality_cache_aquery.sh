@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quality cache aquery proof (issue #84, slices 1-3): per-adapter and
+# Quality cache aquery proof (issue #84, slices 1-4): per-adapter and
 # per-capability action-key isolation via `bazel aquery` over real
 # quality pipelines.
 #
@@ -8,7 +8,8 @@
 # while unrelated files cause no miss, and that changing one tool
 # invalidates only affected capability actions plus that changing one
 # selected native config invalidates only its consuming capability
-# actions. This harness proves the aquery action-shape half for Python
+# actions and that changing an unselected adapter leaves keys unchanged.
+# This harness proves the aquery action-shape half for Python
 # (ruff lint/format, pydoclint lint, Ty typecheck), Rust (clippy lint,
 # rustfmt format + rustfmt.toml native-config isolation), and JavaScript
 # (biome lint/format + biome.json native-config isolation): each
@@ -16,10 +17,13 @@
 # the other's, lint vs format vs typecheck ActionKeys differ,
 # per-capability Inputs contain only their owning tool (ruff change
 # misses lint/format but not typecheck; ty misses typecheck only;
-# pydoclint misses lint only), and native configs reach only consuming
+# pydoclint misses lint only), native configs reach only consuming
 # capabilities (ruff.toml misses hinted Python lint/format only;
 # rustfmt.toml misses hinted Rust format only, never lint; biome.json
-# misses hinted JS lint/format only, never unhinted pipelines).
+# misses hinted JS lint/format only, never unhinted pipelines), and
+# unselected adapters never appear in Inputs (biome/eslint/prettier
+# must not invalidate Python; ruff/ty must not invalidate JS;
+# ruff/ty/biome must not invalidate Rust).
 #
 # Still open per #84 (recorded as gap, not claimed): full per-adapter
 # table (every adapter + transitive/tool-version rows),
@@ -198,6 +202,24 @@ if [[ "$js_hinted_lint_inputs" == *"biome.json"* ]]; then ok; else bad "js hinte
 if [[ "$js_hinted_format_inputs" == *"biome.json"* ]]; then ok; else bad "js hinted format: want [biome.json]"; fi
 if [[ "$js_lint_inputs" == *"biome.json"* ]]; then bad "js unhinted lint: forbidden [biome.json] (default config, selected change must not miss)"; else ok; fi
 if [[ "$js_format_inputs" == *"biome.json"* ]]; then bad "js unhinted format: forbidden [biome.json]"; else ok; fi
+
+# Unselected-adapter isolation: changing an adapter not selected for a
+# pipeline must leave its action key unchanged. The aquery half is that
+# unselected tool binaries never appear in Inputs, so their change
+# cannot invalidate the action. Python must not mention JS/Rust
+# tooling; JS must not mention Python/Rust tooling; Rust must not
+# mention Python/JS tooling.
+if [[ "$python_actions" == *"biome"* ]]; then bad "python: forbidden [biome] (unselected JS adapter must not invalidate Python)"; else ok; fi
+if [[ "$python_actions" == *"eslint"* ]]; then bad "python: forbidden [eslint] (unselected JS adapter must not invalidate Python)"; else ok; fi
+if [[ "$python_actions" == *"prettier"* ]]; then bad "python: forbidden [prettier] (unselected JS adapter must not invalidate Python)"; else ok; fi
+if [[ "$python_actions" == *"rustfmt"* ]]; then bad "python: forbidden [rustfmt] (unselected Rust adapter must not invalidate Python)"; else ok; fi
+if [[ "$js_actions" == *"ruff"* ]]; then bad "js: forbidden [ruff] (unselected Python adapter must not invalidate JS)"; else ok; fi
+if [[ "$js_actions" == *"dx_ty"* ]]; then bad "js: forbidden [dx_ty] (unselected Python typecheck must not invalidate JS)"; else ok; fi
+if [[ "$js_actions" == *"pydoclint"* ]]; then bad "js: forbidden [pydoclint] (unselected Python adapter must not invalidate JS)"; else ok; fi
+if [[ "$js_actions" == *"clippy-driver"* ]]; then bad "js: forbidden [clippy-driver] (unselected Rust adapter must not invalidate JS)"; else ok; fi
+if [[ "$rust_actions" == *"ruff"* ]]; then bad "rust: forbidden [ruff] (unselected Python adapter must not invalidate Rust)"; else ok; fi
+if [[ "$rust_actions" == *"dx_ty"* ]]; then bad "rust: forbidden [dx_ty] (unselected Python typecheck must not invalidate Rust)"; else ok; fi
+if [[ "$rust_actions" == *"biome"* ]]; then bad "rust: forbidden [biome] (unselected JS adapter must not invalidate Rust)"; else ok; fi
 
 echo "quality cache aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
