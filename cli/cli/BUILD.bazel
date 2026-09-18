@@ -71,8 +71,8 @@ rust_library(
         "src/plan/managed.rs",
         "src/plan/quality.rs",
         "src/plan/registry.rs",
-        "src/plan/run_temp.rs",
         "src/plan/run_deploy.rs",
+        "src/plan/run_temp.rs",
         "src/plan/workflow.rs",
         "src/platform.rs",
         "src/reports.rs",
@@ -99,6 +99,7 @@ rust_library(
     ),
     crate_name = "dx_cli",
     crate_root = "src/lib.rs",
+    edition = "2021",
     deps = crate_deps(
         [
             "base64",
@@ -145,6 +146,7 @@ rust_binary(
     ),
     crate_name = "dx",
     crate_root = "src/main.rs",
+    edition = "2021",
     visibility = ["//visibility:public"],
     deps = crate_deps(
         [
@@ -192,6 +194,7 @@ rust_binary(
     ),
     crate_name = "dx_man",
     crate_root = "src/bin_man.rs",
+    edition = "2021",
     deps = crate_deps(
         [
             "base64",
@@ -208,7 +211,10 @@ rust_binary(
             "tracing",
         ],
         package_name = "cli/dx_cli",
-    ) + [":dx_cli", "//cli/output:dx_output"],
+    ) + [
+        ":dx_cli",
+        "//cli/output:dx_output",
+    ],
 )
 
 genrule(

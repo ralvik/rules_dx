@@ -16,8 +16,8 @@ package(default_visibility = [
 dx_rust_crate(
     name = "dx_roots",
     package_name = "cli/dx_roots",
-    deps = ["thiserror"],
     extra_starlark_srcs = ["roots.bzl"],
+    deps = ["thiserror"],
 )
 
 exports_files(["roots.bzl"])

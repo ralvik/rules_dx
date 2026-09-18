@@ -11,6 +11,7 @@ rust_binary(
     ),
     crate_name = "worker",
     crate_root = "src/main.rs",
+    edition = "2021",
     deps = ["//examples/adopt-rust/crates/api"],
 )
 

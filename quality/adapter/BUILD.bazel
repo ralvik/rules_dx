@@ -35,6 +35,7 @@ rust_library(
     ),
     crate_name = "quality_adapter",
     crate_root = "src/lib.rs",
+    edition = "2021",
     deps = crate_deps(
         [
             "serde",

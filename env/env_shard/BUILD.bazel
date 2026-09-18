@@ -17,10 +17,12 @@ rust_library(
     ),
     crate_name = "env_shard",
     crate_root = "src/lib.rs",
+    edition = "2021",
     deps = crate_deps(
         [
             "clap",
             "thiserror",
+            "tracing",
         ],
         package_name = "env/env_shard",
     ) + [
@@ -40,6 +42,7 @@ rust_binary(
     ),
     crate_name = "env_shard_writer",
     crate_root = "src/main.rs",
+    edition = "2021",
     deps = crate_deps(
         [
             "clap",
@@ -47,7 +50,11 @@ rust_binary(
             "tracing",
         ],
         package_name = "env/env_shard",
-    ) + [":env_shard", "//cli/atomic_fs:dx_atomic_fs", "//cli/output:dx_output"],
+    ) + [
+        ":env_shard",
+        "//cli/atomic_fs:dx_atomic_fs",
+        "//cli/output:dx_output",
+    ],
 )
 
 rust_test(
@@ -63,6 +70,7 @@ rust_test(
         [
             "clap",
             "thiserror",
+            "tracing",
         ],
         package_name = "env/env_shard",
     ) + [

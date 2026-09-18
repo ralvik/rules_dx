@@ -14,16 +14,16 @@ package(default_visibility = [
 dx_rust_crate(
     name = "dx_codegen",
     package_name = "cli/dx_codegen",
-    deps = [
-        "serde",
-        "serde_json",
-        "thiserror",
-    ],
     extra_deps = [
         "//cli/bep:dx_bep",
         "//cli/digest:dx_digest",
         "//cli/fingerprint:dx_fingerprint",
         "//cli/roots:dx_roots",
         "//generation/codegen_shard",
+    ],
+    deps = [
+        "serde",
+        "serde_json",
+        "thiserror",
     ],
 )

@@ -10,13 +10,13 @@ package(default_visibility = ["//visibility:public"])
 dx_rust_crate(
     name = "dx_digest",
     package_name = "cli/dx_digest",
+    dev_deps = [
+        "proptest",
+    ],
     deps = [
         "blake3",
         "hex",
         "sha2",
         "thiserror",
-    ],
-    dev_deps = [
-        "proptest",
     ],
 )

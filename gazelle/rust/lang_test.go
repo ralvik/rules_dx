@@ -1569,6 +1569,127 @@ func TestGenerateCargoSliceFailures(t *testing.T) {
 	}
 }
 
+func TestDxCrateImports(t *testing.T) {
+	lang := NewLanguage()
+	// Explicit crate_name wins: the macro expands to a rust_library with
+	// that crate name, so dependents resolve through it identically.
+	named := rule.NewRule(dxCrateKind, "dx_digest")
+	named.SetAttr("crate_name", "digest_crate")
+	if got := lang.Imports(&config.Config{}, named, nil); len(got) != 1 || got[0].Imp != "digest_crate" {
+		t.Errorf("named macro imports = %+v, want [digest_crate]", got)
+	}
+	// Without crate_name the macro name is the crate name.
+	bare := rule.NewRule(dxCrateKind, "dx_atomic_fs")
+	if got := lang.Imports(&config.Config{}, bare, nil); len(got) != 1 || got[0].Imp != "dx_atomic_fs" {
+		t.Errorf("bare macro imports = %+v, want [dx_atomic_fs]", got)
+	}
+	// Non-provider kinds still resolve nothing through the macro path.
+	if got := lang.Imports(&config.Config{}, rule.NewRule(binaryKind, "tool"), nil); got != nil {
+		t.Errorf("binary imports = %+v, want nil", got)
+	}
+}
+
+func TestDxCrateNames(t *testing.T) {
+	if got := dxCrateNames(nil); len(got) != 0 {
+		t.Errorf("nil file names = %+v, want empty", got)
+	}
+	empty := rule.EmptyFile("BUILD.bazel", "pkg")
+	if got := dxCrateNames(empty); len(got) != 0 {
+		t.Errorf("empty file names = %+v, want empty", got)
+	}
+	mixed := rule.EmptyFile("BUILD.bazel", "pkg")
+	mixed.Rules = append(mixed.Rules,
+		rule.NewRule(libraryKind, "plain"),
+		rule.NewRule(dxCrateKind, "dx_a"),
+		rule.NewRule(dxCrateKind, "dx_b"),
+	)
+	got := dxCrateNames(mixed)
+	if len(got) != 2 || !got["dx_a"] || !got["dx_b"] {
+		t.Errorf("mixed names = %+v, want [dx_a dx_b]", got)
+	}
+}
+
+func TestFilterDxCrateCovered(t *testing.T) {
+	file := rule.EmptyFile("BUILD.bazel", "pkg")
+	file.Rules = append(file.Rules, rule.NewRule(dxCrateKind, "dx_a"))
+	lib := rule.NewRule(libraryKind, "dx_a")
+	unit := rule.NewRule(testKind, "dx_a_test")
+	unit.SetAttr("crate", ":dx_a")
+	integration := rule.NewRule(testKind, "smoke_test")
+	flavored := rule.NewRule(procMacroKind, "dx_a")
+	binary := rule.NewRule(binaryKind, "tool")
+	otherLib := rule.NewRule(libraryKind, "other")
+	otherUnit := rule.NewRule(testKind, "other_test")
+	otherUnit.SetAttr("crate", ":other")
+	result := filterDxCrateCovered(file, language.GenerateResult{
+		Gen:     []*rule.Rule{lib, unit, integration, flavored, binary, otherLib, otherUnit},
+		Imports: []interface{}{"lib", "unit", "integration", "flavored", "binary", "otherLib", "otherUnit"},
+	})
+	var names []string
+	for _, r := range result.Gen {
+		names = append(names, r.Kind()+":"+r.Name())
+	}
+	want := testKind + ":smoke_test," + procMacroKind + ":dx_a," + binaryKind + ":tool," + libraryKind + ":other," + testKind + ":other_test"
+	if strings.Join(names, ",") != want {
+		t.Errorf("filtered = %q, want %q", strings.Join(names, ","), want)
+	}
+	// Imports stay parallel with the kept rules.
+	if len(result.Imports) != len(result.Gen) {
+		t.Fatalf("imports = %d, want %d", len(result.Imports), len(result.Gen))
+	}
+	if result.Imports[0] != "integration" || result.Imports[3] != "otherLib" {
+		t.Errorf("imports = %+v, want kept entries only", result.Imports)
+	}
+	// Nil files and empty results pass through untouched.
+	plain := language.GenerateResult{Gen: []*rule.Rule{rule.NewRule(libraryKind, "x")}}
+	if out := filterDxCrateCovered(nil, plain); len(out.Gen) != 1 {
+		t.Errorf("nil file filtered %d rules, want 1", len(out.Gen))
+	}
+	if out := filterDxCrateCovered(file, language.GenerateResult{}); len(out.Gen) != 0 {
+		t.Errorf("empty result filtered %d rules, want 0", len(out.Gen))
+	}
+}
+
+func TestCheckExistingClaimsDxCrate(t *testing.T) {
+	file := rule.EmptyFile("BUILD.bazel", "pkg")
+	file.Rules = append(file.Rules, rule.NewRule(dxCrateKind, "dx_a"))
+	// The macro owns the ordinary rust_library it expands to: no error.
+	if err := checkExistingClaims(file, nil, []*rule.Rule{rule.NewRule(libraryKind, "dx_a")}); err != nil {
+		t.Errorf("macro-owned library rejected: %v", err)
+	}
+	// Flavored libraries never match the macro shape: still fail closed.
+	flavored := rule.NewRule(procMacroKind, "dx_a")
+	if err := checkExistingClaims(file, nil, []*rule.Rule{flavored}); err == nil {
+		t.Error("macro/flavored collision accepted")
+	}
+	// Unrelated collisions still fail closed.
+	if err := checkExistingClaims(file, nil, []*rule.Rule{rule.NewRule(libraryKind, "other")}); err != nil {
+		t.Errorf("unique generated target rejected: %v", err)
+	}
+	colliding := rule.EmptyFile("BUILD.bazel", "pkg")
+	colliding.Rules = append(colliding.Rules, rule.NewRule("filegroup", "dx_a"))
+	if err := checkExistingClaims(colliding, nil, []*rule.Rule{rule.NewRule(libraryKind, "dx_a")}); err == nil {
+		t.Error("filegroup/library collision accepted")
+	}
+}
+
+func TestRustLoadsIncludeDxCrate(t *testing.T) {
+	l := &rustLang{}
+	found := false
+	for _, load := range l.Loads() {
+		if strings.HasSuffix(load.Name, "//rust/rules:defs.bzl") {
+			for _, sym := range load.Symbols {
+				if sym == dxCrateKind {
+					found = true
+				}
+			}
+		}
+	}
+	if !found {
+		t.Errorf("Loads() symbols = %+v, want %q", l.Loads(), dxCrateKind)
+	}
+}
+
 func TestGenerateCargoExampleScopes(t *testing.T) {
 	root := t.TempDir()
 	writeFixture(t, root, "Cargo.toml", "[package]\nname = \"app\"\n[dev-dependencies]\nhelper = { path = \"helpers\" }\n[[example]]\nname = \"demo\"\npath = \"examples/demo.rs\"\ntest = true\n")
