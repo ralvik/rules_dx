@@ -9,14 +9,14 @@
 # stays green by construction and nothing runs uninvited.
 #
 # This harness machine-checks the no-publication-inputs half that is
-# verifiable on a clean tree today (15 checks): dist/release
+# verifiable on a clean tree today (16 checks): dist/release
 # git-ignored and uncommitted, module at 0.0.0, no version tags,
 # SECURITY.md reporting link, publish dry-run dispatch-only with a
 # default-closed approve gate, no-secrets minimal permissions,
 # RUNNER_TEMP staging plus a clean-checkout proof, explicit release
 # matrix (seed qualified, rest unqualified per #5), SBOM/BCR
-# deferrals to #26 tooling, signing-first + GHCR-separate notes, and
-# checkout SHA pin. Platform,
+# deferrals to #26 tooling, signing-first + GHCR-separate notes,
+# checkout SHA pin, and typed approve plus non-cancelling concurrency. Platform,
 # packaging, provenance (SPDX/SLSA), registry submission, and
 # public-install smoke runs stay unqualified per #5 and are recorded
 # as gaps, not claimed here.
@@ -156,6 +156,15 @@ if grep -q -E -e 'uses: actions/checkout@[0-9a-f]{40}' .github/workflows/publish
   ok
 else
   bad "publish-dry-run.yml lost the checkout SHA pin or gained a docker/* action"
+fi
+
+# The approve gate stays typed and non-cancelling (issue #78): boolean
+# input type plus concurrency cancel-in-progress false so overlapping
+# dispatches queue instead of cancelling the qualification run.
+if grep -q -F -e 'type: boolean' .github/workflows/publish-dry-run.yml && grep -q -F -e 'cancel-in-progress: false' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml lost the typed approve gate or non-cancelling concurrency"
 fi
 
 echo "release hygiene harness: $pass passed, $fail failed"
