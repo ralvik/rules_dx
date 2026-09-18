@@ -28,6 +28,10 @@
 //! [`license_expr`]. Tier policy, distribution roots, and the license
 //! exception lifecycle live in [`license_policy`]. Notice-text inputs
 //! and the SPDX report-shape pins live in [`license_notice`].
+//! Dx-level family aggregation and aggregate exit-status selection live
+//! in [`outcome`]: family-result production stays with the future
+//! auditors, but the clean/findings/incomplete verdict combination and
+//! its exit code are pinned here.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
@@ -37,6 +41,7 @@ pub mod exception;
 pub mod license_expr;
 pub mod license_notice;
 pub mod license_policy;
+pub mod outcome;
 pub mod secrets;
 
 /// Audit family selector. Frozen spellings match the `dx audit` contract

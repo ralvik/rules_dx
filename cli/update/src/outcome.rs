@@ -17,10 +17,11 @@
 //! per-set results and an injected depends-on relation only, so outcome
 //! combination stays deterministic and unit-testable without any updater.
 //!
-//! Out of scope here (O12): exact aggregate exit-code selection, backend
-//! operation boundaries, per-set manifest/lockfile reporting, and
-//! parallel-execution scheduling. Continued updates imply no parallelism
-//! and no new mutation-event API.
+//! Out of scope here (O12): backend operation boundaries,
+//! per-set manifest/lockfile reporting, and parallel-execution
+//! scheduling. Aggregate exit-status selection over these reports lives
+//! in [`super::report`]. Continued updates imply no parallelism and no
+//! new mutation-event API.
 
 use std::collections::{BTreeMap, BTreeSet};
 

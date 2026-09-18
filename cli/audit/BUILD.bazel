@@ -19,6 +19,7 @@ dx_rust_crate(
         "src/license_expr.rs",
         "src/license_notice.rs",
         "src/license_policy.rs",
+        "src/outcome.rs",
         "src/secrets.rs",
     ],
     extra_deps = ["//cli/digest:dx_digest"],

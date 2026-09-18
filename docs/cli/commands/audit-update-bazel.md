@@ -156,6 +156,13 @@ Remaining audit integration details follow these established defaults: fail inco
 keep matching local to declared advisory snapshots, preserve truthful visible findings, and permit
 only narrow, explained, version-scoped, expiring risk acceptance. Prefer the simplest conforming
 upstream integration.
+
+Aggregate exit status is pinned in `dx_audit::outcome`: a fully assessed run with no unexempted
+findings exits `0`; unexempted findings or incomplete assessment exit `1`, with the
+findings-versus-error split recorded in the report rather than the code. Family results arrive
+in canonical security-first order. Usage errors stay exit `2` at the CLI layer per the common
+contract. Auditor wiring and report mappings stay open under
+[#18](https://github.com/ralvik/rules_dx/issues/18).
 [#18](https://github.com/ralvik/rules_dx/issues/18) owns technical qualification of tools, native configuration, identity and
 severity mappings, date/time and cache semantics, and reporting. These details do not require more
 product-preference decisions unless evidence reveals a contract conflict or requires new public API;
@@ -314,8 +321,11 @@ upstream integration: sets sharing a lockfile or resolver workspace cannot be tr
 merely because they have different Bazel labels.
 This is the explicit update exception to [common fail-fast handling](../cli-contract.md#exit-status),
 not permission to run dependents of failed operations or introduce a private scheduler.
-Exact aggregate exit-code selection, backend operation boundaries, and per-set success/failure/blocked
-reporting are open under
+Aggregate exit-code selection is pinned in `dx_update::report`: a run with no failed selected set
+exits `0`; any failed set fails the invocation overall with exit `1`, following the report's
+`overall_failure` verdict (blocked without failure is not a failure). Per-set detail rides the
+per-set report, never a per-set code. Backend operation boundaries and per-set
+success/failure/blocked reporting are open under
 [#19](https://github.com/ralvik/rules_dx/issues/19). Continued updates do not imply parallel execution or a new mutation-event API.
 
 Invoking `dx update` authorizes immediate application without an interactive confirmation prompt or
