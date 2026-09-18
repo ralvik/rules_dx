@@ -10,16 +10,18 @@
 # the #19 resolver prerequisite with Renovate retained as fallback.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (40 checks): codegen/env contracts + commit-lock + try_lock +
-# clean + bootstrap-first + installation/retention + managed-PATH
-# detail + Node/Python/Rust env records, docs-pipeline records +
-# IR/site identity + cache-friendly site + rustdoc exception, examples
-# ownership + starter callers + laziness slices + attribution + full
-# index breadth + Scala/Polyglot entries + mixed disposition, coverage gate + min-coverage threshold + ignore-marker contract +
+# today (44 checks): codegen/env contracts + commit-lock + try_lock +
+# clean + bootstrap-first + installation/retention + reverse-dependents
+# + managed-PATH detail + Node/Python/Rust env records, docs-pipeline
+# records + IR/site identity + cache-friendly site + mdBook renderer +
+# rustdoc exception, examples ownership + starter callers + laziness
+# slices + attribution + full index breadth + Scala/Polyglot entries +
+# mixed disposition, coverage gate + min-coverage threshold +
+# ignore-marker contract + per-cell measurement + Codecov honesty +
 # Codecov honesty + LCOV preset pin + inventory backing +
 # fork-security record, Renovate fallback + full manager set + loop
-# policy + preset-update/bump-PR record + automation ownership +
-# schedule policy, never-rewrites + ADR pins, prior harnesses green,
+# policy + Monday schedule + preset-update/bump-PR record + automation
+# ownership + schedule policy, never-rewrites + ADR pins, prior harnesses green,
 # and no-false-claim gaps. Reverse queries, adapter runs, comment
 # presentation, and widen implementation stay open under their
 # issues.
@@ -368,6 +370,40 @@ if grep -q -F -e 'grouped and scheduled weekly' docs/contributing/local-workflow
   ok
 else
   bad "local-workflows lost its grouped-weekly propose/verify loop record (#260)"
+fi
+
+# #9 reverse-dependents record stays owned: the CLI asks Bazel query
+# for projection reverse dependents since aspects cannot traverse them
+# (bare-schema/replacement/boundary evidence still open).
+if grep -q -F -e 'reverse dependents' docs/environments/codegen.md; then
+  ok
+else
+  bad "codegen doc lost its reverse-dependents record (#9)"
+fi
+
+# #10 mdBook renderer stays decided: the site build uses the decided
+# mdBook renderer next to the IR model (adapter runs still open).
+if grep -q -F -e 'mdBook renderer' docs/cli/commands/docs.md; then
+  ok
+else
+  bad "docs command lost its mdBook renderer record (#10)"
+fi
+
+# #254 per-cell measurement stays owned: the canonical report merges
+# per required configuration/platform cell with exact counts and no
+# cross-cell union (comment presentation still open).
+if grep -q -F -e 'per required configuration' docs/testing/README.md; then
+  ok
+else
+  bad "coverage doc lost its per-cell measurement record (#254)"
+fi
+
+# #260 Monday schedule stays pinned: Renovate runs before 5am on Monday
+# with reviewable PRs and no automerge (widen loop still open).
+if grep -q -F -e 'before 5am on Monday' renovate.json; then
+  ok
+else
+  bad "Renovate fallback lost its Monday schedule record (#260)"
 fi
 
 # Matrix honesty for this group.
