@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quality cache aquery proof (issue #84, slices 1-4): per-adapter and
+# Quality cache aquery proof (issue #84, slices 1-5): per-adapter and
 # per-capability action-key isolation via `bazel aquery` over real
 # quality pipelines.
 #
@@ -11,22 +11,24 @@
 # actions and that changing an unselected adapter leaves keys unchanged.
 # This harness proves the aquery action-shape half for Python
 # (ruff lint/format, pydoclint lint, Ty typecheck), Rust (clippy lint,
-# rustfmt format + rustfmt.toml native-config isolation), and JavaScript
-# (biome lint/format + biome.json native-config isolation): each
-# pipeline's declared Inputs mention its own source and tool and none of
-# the other's, lint vs format vs typecheck ActionKeys differ,
-# per-capability Inputs contain only their owning tool (ruff change
-# misses lint/format but not typecheck; ty misses typecheck only;
-# pydoclint misses lint only), native configs reach only consuming
-# capabilities (ruff.toml misses hinted Python lint/format only;
-# rustfmt.toml misses hinted Rust format only, never lint; biome.json
-# misses hinted JS lint/format only, never unhinted pipelines), and
-# unselected adapters never appear in Inputs (biome/eslint/prettier
-# must not invalidate Python; ruff/ty must not invalidate JS;
-# ruff/ty/biome must not invalidate Rust).
+# rustfmt format + rustfmt.toml native-config isolation), JavaScript
+# (biome lint/format + biome.json native-config isolation), Starlark
+# (buildifier lint/format), TOML (taplo lint/format), and Markdown
+# (vale lint): each pipeline's declared Inputs mention its own source
+# and tool and none of the other's, lint vs format vs typecheck
+# ActionKeys differ, per-capability Inputs contain only their owning
+# tool (ruff change misses lint/format but not typecheck; ty misses
+# typecheck only; pydoclint misses lint only), native configs reach
+# only consuming capabilities (ruff.toml misses hinted Python
+# lint/format only; rustfmt.toml misses hinted Rust format only, never
+# lint; biome.json misses hinted JS lint/format only, never unhinted
+# pipelines), and unselected adapters never appear in Inputs
+# (biome/eslint/prettier must not invalidate Python; ruff/ty must not
+# invalidate JS; ruff/ty/biome must not invalidate Rust; buildifier/
+# taplo/vale must not invalidate Python/Rust/JS and vice versa).
 #
 # Still open per #84 (recorded as gap, not claimed): full per-adapter
-# table (every adapter + transitive/tool-version rows),
+# table remainder (Go/Java/etc. + transitive/tool-version rows),
 # pipeline invalidation (stage-order/runner changes),
 # formatter-set and class-membership rules, plus exec-log/remote-cache
 # proof distinguishing executed actions from cache hits (requires
@@ -220,6 +222,62 @@ if [[ "$js_actions" == *"clippy-driver"* ]]; then bad "js: forbidden [clippy-dri
 if [[ "$rust_actions" == *"ruff"* ]]; then bad "rust: forbidden [ruff] (unselected Python adapter must not invalidate Rust)"; else ok; fi
 if [[ "$rust_actions" == *"dx_ty"* ]]; then bad "rust: forbidden [dx_ty] (unselected Python typecheck must not invalidate Rust)"; else ok; fi
 if [[ "$rust_actions" == *"biome"* ]]; then bad "rust: forbidden [biome] (unselected JS adapter must not invalidate Rust)"; else ok; fi
+
+# Starlark/TOML/Markdown isolation: each target-less corpus adapter owns
+# only its source and tool. Changing buildifier/taplo/vale must miss
+# only its owning pipeline; Python/Rust/JS changes must not miss them
+# and vice versa. Extends the unselected-adapter row toward the full
+# per-adapter table (Go/Java/etc. + transitive/tool-version still open).
+starlark_actions="$(bazel aquery '//quality/testdata:fixture_real_starlark' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+toml_actions="$(bazel aquery '//quality/testdata:fixture_real_toml' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+markdown_actions="$(bazel aquery '//quality/testdata:fixture_real_markdown' \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
+if [[ -z "$starlark_actions" ]]; then bad "starlark: empty aquery output"; else ok; fi
+if [[ -z "$toml_actions" ]]; then bad "toml: empty aquery output"; else ok; fi
+if [[ -z "$markdown_actions" ]]; then bad "markdown: empty aquery output"; else ok; fi
+if [[ "$starlark_actions" == *"real_clean.bzl"* ]]; then ok; else bad "starlark: want [real_clean.bzl] in inputs"; fi
+if [[ "$starlark_actions" == *"buildifier"* ]]; then ok; else bad "starlark: want [buildifier] in inputs"; fi
+if [[ "$toml_actions" == *"real_clean.toml"* ]]; then ok; else bad "toml: want [real_clean.toml] in inputs"; fi
+if [[ "$toml_actions" == *"taplo"* ]]; then ok; else bad "toml: want [taplo] in inputs"; fi
+if [[ "$markdown_actions" == *"real_clean.md"* ]]; then ok; else bad "markdown: want [real_clean.md] in inputs"; fi
+if [[ "$markdown_actions" == *"vale"* ]]; then ok; else bad "markdown: want [vale] in inputs"; fi
+# Own-tool exclusivity: starlark must not mention python/rust/js tools.
+if [[ "$starlark_actions" == *"ruff"* ]]; then bad "starlark: forbidden [ruff]"; else ok; fi
+if [[ "$starlark_actions" == *"dx_ty"* ]]; then bad "starlark: forbidden [dx_ty]"; else ok; fi
+if [[ "$starlark_actions" == *"biome"* ]]; then bad "starlark: forbidden [biome]"; else ok; fi
+if [[ "$starlark_actions" == *"clippy-driver"* ]]; then bad "starlark: forbidden [clippy-driver]"; else ok; fi
+if [[ "$toml_actions" == *"ruff"* ]]; then bad "toml: forbidden [ruff]"; else ok; fi
+if [[ "$toml_actions" == *"biome"* ]]; then bad "toml: forbidden [biome]"; else ok; fi
+if [[ "$toml_actions" == *"buildifier"* ]]; then bad "toml: forbidden [buildifier] (starlark tool must not invalidate TOML)"; else ok; fi
+if [[ "$markdown_actions" == *"ruff"* ]]; then bad "markdown: forbidden [ruff]"; else ok; fi
+if [[ "$markdown_actions" == *"biome"* ]]; then bad "markdown: forbidden [biome]"; else ok; fi
+if [[ "$markdown_actions" == *"buildifier"* ]]; then bad "markdown: forbidden [buildifier]"; else ok; fi
+if [[ "$markdown_actions" == *"taplo"* ]]; then bad "markdown: forbidden [taplo]"; else ok; fi
+# Reverse: python/rust/js must not mention corpus-adapter tools.
+if [[ "$python_actions" == *"buildifier"* ]]; then bad "python: forbidden [buildifier]"; else ok; fi
+if [[ "$python_actions" == *"taplo"* ]]; then bad "python: forbidden [taplo]"; else ok; fi
+if [[ "$python_actions" == *"vale"* ]]; then bad "python: forbidden [vale]"; else ok; fi
+if [[ "$rust_actions" == *"buildifier"* ]]; then bad "rust: forbidden [buildifier]"; else ok; fi
+if [[ "$rust_actions" == *"taplo"* ]]; then bad "rust: forbidden [taplo]"; else ok; fi
+if [[ "$rust_actions" == *"vale"* ]]; then bad "rust: forbidden [vale]"; else ok; fi
+if [[ "$js_actions" == *"buildifier"* ]]; then bad "js: forbidden [buildifier]"; else ok; fi
+if [[ "$js_actions" == *"taplo"* ]]; then bad "js: forbidden [taplo]"; else ok; fi
+if [[ "$js_actions" == *"vale"* ]]; then bad "js: forbidden [vale]"; else ok; fi
+# ActionKeys differ across corpus adapters, so one direct source misses
+# only its owning pipeline while unrelated files cause no miss.
+starlark_key="$(printf '%s' "$starlark_actions" | grep 'ActionKey:' | head -1 || true)"
+toml_key="$(printf '%s' "$toml_actions" | grep 'ActionKey:' | head -1 || true)"
+markdown_key="$(printf '%s' "$markdown_actions" | grep 'ActionKey:' | head -1 || true)"
+if [[ -n "$starlark_key" && -n "$toml_key" && -n "$markdown_key" ]]; then ok; else bad "want ActionKey lines in starlark/toml/markdown outputs"; fi
+if [[ "$starlark_key" != "$toml_key" ]]; then ok; else bad "starlark vs toml ActionKeys must differ"; fi
+if [[ "$starlark_key" != "$markdown_key" ]]; then ok; else bad "starlark vs markdown ActionKeys must differ"; fi
+if [[ "$toml_key" != "$markdown_key" ]]; then ok; else bad "toml vs markdown ActionKeys must differ"; fi
+if [[ "$starlark_key" != "$python_key" ]]; then ok; else bad "starlark vs python ActionKeys must differ"; fi
 
 echo "quality cache aquery: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]
