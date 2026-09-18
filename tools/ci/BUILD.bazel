@@ -262,6 +262,17 @@ sh_binary(
     srcs = ["depcheck_contract.sh"],
 )
 
+# Audit/update/depcheck execution guards (issues #18, #19, #22): pins the
+# fail-closed deferred codes, the aggregate exit-code mappings, dry-run
+# planning, and the honest open-route record. Live auditor wiring,
+# advisory acquisition, SARIF/SPDX mapping, resolver backends, and
+# per-set reporting stay open. Run by CI via
+# `bazel run //tools/ci:audit_update_guards`.
+sh_binary(
+    name = "audit_update_guards",
+    srcs = ["audit_update_guards.sh"],
+)
+
 # Wrapper QualitySourcesInfo harness (issues #12 lane A, #7, #8; relates
 # #6): all language/framework wrappers advertise QualitySourcesInfo
 # from direct srcs via the shared forwarder, wrapper tests pin
