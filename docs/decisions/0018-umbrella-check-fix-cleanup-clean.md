@@ -74,7 +74,17 @@ NDJSON parent framing and report merging are qualified under resolved
 O59. The `--bazel` flag shape, dry-run, refusal, and
 commit-lock mechanics are frozen under O60 (see the [check/fix/clean
 contract](../cli/commands/check-fix-clean.md#dx-clean)); process-scan
-in-use detection and reclaimable-bytes reporting remain pending under O60.
+in-use detection and reclaimable-bytes reporting were pending under O60
+at decision time (see the status update below).
+
+Status update: since implemented and covered by unit tests —
+process-scan in-use detection in `cli/clean/src/live.rs` (Linux
+`/proc` scan, empty scan elsewhere with over-retention as the only
+failure direction) and reclaimable-bytes reporting in
+`cli/clean/src/bytes.rs` (symlink-aware, link targets never counted,
+reported totals cover only removed entries), both described as
+implemented in the check/fix/clean contract above. Cross-platform
+lock correctness stays pending per the managed-state contract.
 
 ## Consequences
 
