@@ -31,10 +31,12 @@ else
   bad "docs/testing/tools.md lost the decided #299 shell contract record"
 fi
 
-# Every bash sh target carries the Linux-only label (67 bash targets;
-# 6 POSIX fixtures stay portable). Count labels vs bash sh targets.
+# Every bash sh target carries the Linux-only label (issue #407 removed
+# the 6 nested-E2E label sites; POSIX fixtures stay portable). Count
+# labels vs bash sh targets.
 labels="$(grep -r -F -e 'target_compatible_with = ["@platforms//os:linux"]' --include='BUILD.bazel' --exclude-dir='bazel-*' --exclude-dir='.git' . | wc -l)"
-# 67 bash sh_* + devcontainer parity + e2e test_suite = 69 label sites.
+# Bash sh_* plus devcontainer parity stay Linux-only; threshold keeps the
+# contract fail-closed after the #407 E2E deletion.
 if [[ "$labels" -ge 69 ]]; then
   ok
 else
@@ -42,11 +44,10 @@ else
 fi
 
 # POSIX fixtures stay portable: no Linux constraint in their packages'
-# POSIX-only targets (env tool/doctor, integration pass/fail).
+# POSIX-only targets (env tool/doctor; issue #407 deleted the
+# integration pass/fail fixtures).
 if ! grep -A4 -e 'name = "tool_sh"' env/BUILD.bazel | grep -q -F -e 'target_compatible_with' &&
-  ! grep -A4 -e 'name = "doctor"' env/BUILD.bazel | grep -q -F -e 'target_compatible_with' &&
-  ! grep -A4 -e 'name = "pass"' integration/clean/BUILD.bazel | grep -q -F -e 'target_compatible_with' &&
-  ! grep -A4 -e 'name = "fail"' integration/dirty/BUILD.bazel | grep -q -F -e 'target_compatible_with'; then
+  ! grep -A4 -e 'name = "doctor"' env/BUILD.bazel | grep -q -F -e 'target_compatible_with'; then
   ok
 else
   bad "a POSIX fixture gained a Linux-only label (must stay portable)"
@@ -145,10 +146,11 @@ fi
 # Issue #323 dedup: harness counters live once in tools/sh/lib.sh
 # (dx_test_init/ok/bad/dx_test_summary); drivers use them, no per-file
 # copies (deploy/install/dx_verify_test.sh stays standalone: deploy
-# hermetic scope, issue #318).
+# hermetic scope, issue #318; issue #407 deleted the e2e drivers, so the
+# witness pair is coverage_cell plus non_dogfed_paths).
 if [[ "$(grep -rln -e '^ok() {' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | grep -v -F -e 'tools/sh/lib.sh' | grep -v -F -e 'deploy/install/dx_verify_test.sh' | grep -v -F -e 'tools/ci/shell_contract.sh' | wc -l)" == "0" ]] &&
-  grep -q -F -e 'dx_test_init' tools/ci/e2e.sh &&
-  grep -q -F -e 'dx_test_summary' tools/ci/e2e.sh; then
+  grep -q -F -e 'dx_test_init' tools/ci/coverage_cell.sh &&
+  grep -q -F -e 'dx_test_summary' tools/ci/non_dogfed_paths.sh; then
   ok
 else
   bad "harness counters must live once in tools/sh/lib.sh (dx_test_init/ok/bad) with drivers using them (issue #323)"
@@ -159,17 +161,17 @@ fi
 # (tools/sh/snapshot.sh owns its RETURN-scoped tmp, deploy stays standalone).
 if [[ "$(grep -rln -F -e 'scratch="$(mktemp -d)"' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | grep -v -F -e 'deploy/install/dx_verify_test.sh' | grep -v -F -e 'tools/sh/snapshot.sh' | grep -v -F -e 'tools/sh/lib.sh' | grep -v -F -e 'tools/ci/shell_contract.sh' | grep -v -F -e 'tools/ci/coverage_spill.sh' | wc -l)" == "0" ]] &&
   grep -q -F -e 'dx_mkscratch' tools/ci/coverage_cell.sh &&
-  grep -q -F -e 'dx_mkscratch' tools/ci/e2e.sh; then
+  grep -q -F -e 'dx_mkscratch' tools/ci/non_dogfed_paths.sh; then
   ok
 else
   bad "scratch dirs must use tools/sh/lib.sh dx_mkscratch with EXIT cleanup (issue #323)"
 fi
 
 # Issue #323 dedup: portable sed lives once in tools/sh/lib.sh (dx_replace
-# tmpfile+mv, no sed -i); drivers use it for in-place edits.
+# tmpfile+mv, no sed -i); drivers use it for in-place edits (issue #407
+# deleted the e2e drivers, so the witness is release_policy).
 if grep -q -F -e 'dx_replace() {' tools/sh/lib.sh &&
-  grep -q -F -e 'dx_replace' tools/ci/e2e.sh &&
-  grep -q -F -e 'dx_replace' tools/ci/e2e_format.sh; then
+  grep -q -F -e 'dx_replace' tools/ci/release_policy.sh; then
   ok
 else
   bad "portable sed must live once in tools/sh/lib.sh (dx_replace) with drivers using it (issue #323)"

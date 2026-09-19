@@ -8,12 +8,12 @@ Open cells are recorded as gaps; docs describe as-built behavior only.
 No cell is `Supported`: missing test/release evidence blocks promotion until
 platform plus consumer plus release evidence passes per the support matrix,
 enforced by `bazel run //tools/ci:supported_evidence_gate`.
-Non-dogfed execution plan delivered under issue #324
-(`bazel run //tools/ci:non_dogfed_paths`): integration E2E drivers run only
-via the explicit `:e2e` suite, negative fixtures via explicit failure proofs,
-the no-coverage cohort via coverage-excluded runs, and shell sources via
-ownership plus test/explicit execution with no quality class by design —
-never silently under the standard dogfood gates.
+Non-dogfed execution plan delivered under issues #324/#407
+(`bazel run //tools/ci:non_dogfed_paths`): CLI-contract coverage runs
+hermetically under `bazel test //...` (no nested Bazel), negative fixtures
+via explicit failure proofs, the no-coverage cohort via coverage-excluded
+runs, and shell sources via ownership plus test execution with no quality
+class by design — never silently under the standard dogfood gates.
 
 ## Layers
 
@@ -33,11 +33,16 @@ never silently under the standard dogfood gates.
   proving generation as a consumer, plus acquisition/laziness proof
   (delivered on the seed host; platform/remote dimensions owned by
   #298/#308).
-- **Layer-4 E2E**: thin CLI-contract suite in `integration/` (clean,
-  dirty, format-roundtrip), explicit invocation only
-  (`E2E_WORKSPACE=$PWD bazel test //tools/ci:e2e --test_env=E2E_WORKSPACE`;
-  manual drivers never run under `//...`; orphan-guarded by
-  `bazel run //tools/ci:e2e_cases`).
+- **Layer-4 CLI-contract (issue #407, hermetic, replaces nested E2E)**:
+  `dx test`/`dx build` exit-code preservation via `cli/cli/src/exec` unit
+  pins (including Bazel test-failure code 3), format rewrite `x=1` →
+  `x = 1` via `//quality/testdata:runner_matrix` goldens, aspect wiring via
+  `DxSubjectInfo` pins (`//quality/testdata:real_aspect_presence`), preset
+  check→update→recheck via `//:preset_parity_test`; `local_path_override` +
+  `dx_dev` wiring via the adopt-rust smoke in normal CI
+  (`bazel build //examples/adopt-rust/... --config=dx_dev` in the build job).
+  What is lost: real-daemon exit 3, real Buildifier rewrite, full consumer
+  wiring now smoke-only.
 - **Perf tracking**: Bazel-owned harness with baselines regenerated from
   measured numbers, comparison against the frozen `aspect_rules_lint`
   v2.8.0 baseline as a report (not a gate)
@@ -65,19 +70,18 @@ never silently under the standard dogfood gates.
   Windows fallback, standalone, signing/trust, plus bootstrap/lock/roots/
   collector/env-plan/node projection evidence with unproven tests as owned
   gaps).
-- **Non-dogfed execution plan**: the four cohorts that never run under the
+- **Non-dogfed execution plan**: the cohorts that never run under the
   standard dogfood gates each have an explicit path, pinned by
-  `bazel run //tools/ci:non_dogfed_paths` (issue #324): integration/E2E
-  drivers via the explicit `:e2e` suite (`.bazelignore` carve-out, manual
-  drivers, `e2e_cases` orphan guard, CI `e2e` job, shell-copy staging);
+  `bazel run //tools/ci:non_dogfed_paths` (issues #324/#407): CLI-contract
+  via hermetic pins under `bazel test //...` (no nested Bazel, no manual;
+  plus the adopt-rust `dx_dev` smoke in normal CI; loss recorded here);
   negative fixtures via green hermetic proofs (issue #406: sh_test goldens +
   failure_test, no manual, CI `test` job via `bazel test //...`); the no-coverage cohort via coverage-excluded runs (preset
   `test_tag_filters=-no-coverage`, `target_tags` skip proof,
   `coverage_cell`/`coverage_qualification` gates, CI `test` execution);
   shell sources with no quality class by design (`shell` known but no
   `shell_srcs` owner, corpus/code-ownership filters exclude `.sh`, every
-  `.sh` in `deps(//...)` except the two integration POSIX fixtures,
-  execution via `bazel test //...` plus explicit `:e2e`, portability via
+  `.sh` in `deps(//...)`, execution via `bazel test //...`, portability via
   `shell_contract`).
 
 ## Status
@@ -120,16 +124,15 @@ open work.
 Accepted record of the as-built close-out battery. The full battery runs in
 `.github/workflows/ci.yml` on a clean tree on the Linux x86_64 seed host:
 
-- `build`: `bazel build //...`.
-- `test`: `bazel test //...` (manual targets excluded by Bazel tag semantics).
+- `build`: `bazel build //...` plus the adopt-rust `dx_dev` smoke
+  (`bazel build //examples/adopt-rust/... --config=dx_dev`) for
+  `local_path_override` + `dx_dev` wiring (issue #407, normal CI, no nested Bazel).
+- `test`: `bazel test //...` (no manual tests; hermetic CLI-contract pins run here).
 - `coverage`: `bazel run //cli/cli:dx -- coverage --min-coverage 97 //...`
   (seed cell only) plus `bazel run //tools/ci:coverage_report_guards`.
 - `prove`: `:target_tags`, `:coverage_cell`,
   `:coverage_spill`, `:release_hygiene`, `:release_policy`, `:publish_trust`,
   `:shell_contract`.
-- `e2e`: `bazel run //tools/ci:e2e_cases` convention guard plus the explicit
-  suite `E2E_WORKSPACE=$PWD bazel test //tools/ci:e2e
-  --test_env=E2E_WORKSPACE`; manual drivers never run under `//...`.
 - `dogfood-freshness`: `bazel run //cli/cli:dx -- generate --check //...`,
   `//tools/ci:corpus_audit`, `:code_ownership`, `:non_dogfed_paths`,
   examples READMEs and
@@ -146,8 +149,8 @@ Accepted record of the as-built close-out battery. The full battery runs in
   //rust/tests/fixtures/hello/...` where enforcing.
 - `devcontainer-check`, `docs-ci`, `consumer-ci` (build-only self-call).
 
-Green here (static guards on a clean tree, no full rebuild): `e2e_cases`
-3/3, `non_dogfed_paths` 35/35, `supported_evidence_gate` 20/20, `distribution_closeout_guards` 35/35,
+Green here (static guards on a clean tree, no full rebuild):
+`non_dogfed_paths`, `supported_evidence_gate`, `distribution_closeout_guards`,
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 26/26,
 `consumer_ci_qualification` 29/29, `file_family_qualification` 24/24,
 `helper_qualification` 23/23, `clap_tokenizer_qualification` 19/19.
@@ -207,14 +210,11 @@ Remaining reds stay owned gaps, not green claims:
   allow_hyphen_values plus invalid_token/parse_error mapping for unknown,
   missing, malformed, hyphen-value, and attached-echo shapes; strict clap
   parsing with auto help stays owned gap).
-- Non-dogfed execution plan delivered under #324
-  (`bazel run //tools/ci:non_dogfed_paths`; explicit `:e2e` suite,
+- Non-dogfed execution plan delivered under #324/#407
+  (`bazel run //tools/ci:non_dogfed_paths`; hermetic CLI-contract pins,
   green hermetic failure proofs (issue #406), coverage-excluded runs, shell ownership
-  plus test/explicit execution with no quality class by design).
+  plus test execution with no quality class by design).
 
-The E2E-case convention lives in the
-[integration README](../../integration/README.md#adding-a-case-convention)
-(`manual` plus `exclusive`, `local`, `no-sandbox` drivers, `:e2e` suite
-membership, explicit-only invocation). The consumer aggregate `dx-ci`
+The consumer aggregate `dx-ci`
 ([contract](../github-ci.md#aggregate-status)) is unchanged: stable identity,
 disabled-as-skipped stays green, any other non-success fails.

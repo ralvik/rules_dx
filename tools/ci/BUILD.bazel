@@ -566,162 +566,21 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Stage 4 E2E drivers (issue #55): one `manual` (+`exclusive`,
-# `local`, `no-sandbox`) sh_test per landed `integration/` scenario plus
-# the explicit suite. Wildcard suites (`bazel test //...`,
-# `dx test //...`) never run these (manual-tag semantics); CI invokes
-# `E2E_WORKSPACE=$GITHUB_WORKSPACE bazel test //tools/ci:e2e
-# --test_env=E2E_WORKSPACE`. The pinned-Bazel wrapper comes from the
-# `rules_bazel_integration_test` dev-dependency
-# (`bazel_binaries.download`, single 9.2.0 pin tracking
-# //.bazelversion); scenario files arrive by shell copy, never by label,
-# because `integration/` is .bazelignore'd out of the parent universe.
-sh_test(
-    name = "e2e_clean",
-    timeout = "long",
-    srcs = ["e2e.sh"],
-    args = [
-        "clean",
-        "0",
-        "$(rootpath //cli/cli:dx)",
-        "$(rootpath @build_bazel_bazel_9_2_0//:bazel_binary)",
-    ],
-    data = [
-        "//tools/sh:lib",
-        "//cli/cli:dx",
-        "@build_bazel_bazel_9_2_0//:bazel_binary",
-    ],
-    tags = [
-        "exclusive",
-        "local",
-        "manual",
-        "no-sandbox",
-    ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-# Dirty half of the CLI-contract pin (issue #55): the child has one
-# failing `sh_test`, so `dx test //...` must preserve Bazel's
-# test-failure code 3 verbatim. Paired with `e2e_clean` (exit 0), this
-# is the negative control: always-pass detectors fail here,
-# always-fail detectors fail `clean`.
-sh_test(
-    name = "e2e_dirty",
-    timeout = "long",
-    srcs = ["e2e.sh"],
-    args = [
-        "dirty",
-        "3",
-        "$(rootpath //cli/cli:dx)",
-        "$(rootpath @build_bazel_bazel_9_2_0//:bazel_binary)",
-    ],
-    data = [
-        "//tools/sh:lib",
-        "//cli/cli:dx",
-        "@build_bazel_bazel_9_2_0//:bazel_binary",
-    ],
-    tags = [
-        "exclusive",
-        "local",
-        "manual",
-        "no-sandbox",
-    ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-# Format-roundtrip half of the CLI-contract pin (issue #55 slice 2): the
-# child has one dirty Starlark source (`x=1`), so `dx format --check
-# //...` must exit 1, `dx format //...` must rewrite it to `x = 1`
-# (exit 0), and `--check` must then exit 0. Paired with the `dx test`
-# clean/dirty pins, this proves the quality surface is not theater:
-# always-pass detectors fail the first check, always-fail detectors
-# fail the last, and a non-mutating fixer fails the content check.
-sh_test(
-    name = "e2e_format_roundtrip",
-    timeout = "long",
-    srcs = ["e2e_format.sh"],
-    args = [
-        "$(rootpath //cli/cli:dx)",
-        "$(rootpath @build_bazel_bazel_9_2_0//:bazel_binary)",
-    ],
-    data = [
-        "//tools/sh:lib",
-        "//cli/cli:dx",
-        "@build_bazel_bazel_9_2_0//:bazel_binary",
-    ],
-    tags = [
-        "exclusive",
-        "local",
-        "manual",
-        "no-sandbox",
-    ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-# Preset-stale half of the CLI-contract pin (issue #332): the child
-# (`integration/preset-stale/`) has one dirty preset fragment, so
-# `dx update --check` must exit 1, `dx update go` must regenerate the
-# reviewed inventory (exit 0, no Bazel launch: `--check` is file I/O,
-# `go` is a no-op backend), and `--check` must then exit 0. Paired with
-# `//:preset_parity_test`, this proves the preset surface is not theater.
-# `manual` (+`exclusive`, `local`, `no-sandbox`): wildcard suites never
-# run it; CI invokes the explicit `:e2e` suite.
-sh_test(
-    name = "e2e_preset",
-    timeout = "short",
-    srcs = ["e2e_preset.sh"],
-    args = [
-        "$(rootpath //cli/cli:dx)",
-    ],
-    data = [
-        "//tools/sh:lib",
-        "//cli/cli:dx",
-    ],
-    tags = [
-        "exclusive",
-        "local",
-        "manual",
-        "no-sandbox",
-    ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-test_suite(
-    name = "e2e",
-    tags = [
-        "exclusive",
-        "local",
-        "manual",
-        "no-sandbox",
-    ],
-    # Bash-only drivers are Linux-only (issue #299 shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-    tests = [
-        ":e2e_clean",
-        ":e2e_dirty",
-        ":e2e_format_roundtrip",
-        ":e2e_preset",
-    ],
-)
-
-# E2E scenario-registration guard (issue #54, E2E-case convention):
-# every `integration/<name>/` child workspace must be referenced by a
-# driver or by the sh_test wiring above, so an orphan scenario fails
-# CI instead of silently never running. Needs the real checkout
-# (`BUILD_WORKSPACE_DIRECTORY`), so it is a binary run by CI in the
-# `e2e` job via `bazel run //tools/ci:e2e_cases`, following
-# //tools/ci:corpus_audit.
-sh_binary(
-    name = "e2e_cases",
-    srcs = ["e2e_cases.sh"],
-    data = ["//tools/sh:lib"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
+# Hermetic CLI-contract coverage (issue #407, replaces issue #55 nested E2E):
+# former `integration/` clean/dirty/format-roundtrip/preset-stale drivers
+# (manual+exclusive+local+no-sandbox, second Bazel download via
+# `rules_bazel_integration_test`) are deleted. Equivalents run under
+# `bazel test //...` with no nested Bazel, no manual/local tags:
+# `dx test`/`dx build` exit-code preservation via `cli/cli/src/exec`
+# unit pins (`test_support.rs` harness + `bazel.rs`/`workflow.rs`/`test_reports.rs`
+# argv/code asserts, including Bazel test-failure code 3); format rewrite
+# `x=1` -> `x = 1` via `//quality/testdata:runner_matrix` goldens;
+# aspect wiring via `DxSubjectInfo` pins (`//quality/testdata:real_aspect_*`);
+# preset check→update→recheck via `//:preset_parity_test`;
+# `local_path_override` + `dx_dev` wiring via the adopt-rust smoke in normal
+# CI (`bazel build //examples/adopt-rust/... --config=dx_dev` in the build job).
+# What is lost: real-daemon exit 3, real Buildifier rewrite.
+# See `docs/testing/verification-matrix.md` for the loss record.
 
 # Coverage-spill containment harness (issues #252, #54): pins the
 # LLVM_PROFILE_FILE scratch redirect in coverage_cell.sh so the
@@ -857,12 +716,13 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Non-dogfed execution-plan harness (issue #324): proves the four cohorts
+# Non-dogfed execution-plan harness (issue #324, updated #407): proves the cohorts
 # that never run under the standard dogfood gates each have an explicit
-# execution path — integration/E2E drivers via the explicit :e2e suite,
+# execution path — CLI-contract via hermetic pins under `bazel test //...`
+# (no nested Bazel, no manual; see hermetic coverage comment above),
 # negative fixtures via green hermetic proofs (issue #406, no manual),
 # no-coverage cohort via test execution plus coverage-excluded runs, shell
-# sources via deps ownership plus test/explicit execution with no quality
+# sources via deps ownership plus test execution with no quality
 # class by design. Run by CI via
 # `bazel run //tools/ci:non_dogfed_paths`.
 sh_binary(

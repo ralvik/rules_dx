@@ -44,8 +44,14 @@ check_bazel_pin() { # description, actual
   fi
 }
 
-module_pin="$(grep -o -E -e 'bazel_binaries\.download\(version = "[^"]+"' "$module" | head -1 | cut -d'"' -f2 || true)"
-check_bazel_pin "MODULE.bazel bazel_binaries pin" "$module_pin"
+# Issue #407: nested E2E removed, so MODULE.bazel carries no second-Bazel
+# `bazel_binaries.download` pin. CI uses the single canonical `.bazelversion`
+# Bazel via Bazelisk only; the pin must stay absent.
+if grep -q -F -e 'bazel_binaries.download' "$module"; then
+  bad "MODULE.bazel must not carry a bazel_binaries.download pin (issue #407: single Bazel only)"
+else
+  ok
+fi
 
 preset_py_pin="$(grep -o -E -e 'PRESET_BAZEL_VERSION = "[^"]+"' "$preset_py" | head -1 | cut -d'"' -f2 || true)"
 check_bazel_pin "tools/bazelrc/preset.py pin" "$preset_py_pin"

@@ -113,7 +113,7 @@ sh_test(
 # the one dogfooded here (issue #332, snapshot workflow issue #322).
 # Schema plus snapshot: contract fields fail first, byte drift refreshes
 # via UPDATE_EXPECT. Also pins the check→update→recheck stale gate
-# hermetically (mirrors `//tools/ci:e2e_preset` without Bazel).
+# hermetically under `bazel test //...` (issue #407; no nested Bazel).
 sh_test(
     name = "preset_parity_test",
     srcs = ["preset_parity_test.sh"],

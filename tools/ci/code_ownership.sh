@@ -34,12 +34,9 @@ dx_cd_workspace
 
 dx_mkscratch scratch
 
-# Stage 4 E2E carve-out (issue #55): `integration/` scenario workspaces
-# are .bazelignore'd out of the parent universe and staged to scratch
-# by shell copy, so they can never be owned by //... targets. The
-# marker check keeps this exclusion honest: dropping the ignore
-# re-lists every scenario file below as uncovered.
-grep -q -F -e 'integration/' .bazelignore
+# Issue #407: nested E2E removed, so no `integration/` carve-out. Every
+# checked-in code source must ride a normal `//...` target; the former
+# `.bazelignore` exclusion plus shell-copy staging are deleted.
 
 # Declared exclusions, one per line: foreign-tree inert arrivals.
 # Generators: //gazelle/javascript:gazelle and
@@ -58,7 +55,6 @@ EOF
 
 git ls-files |
   grep -E '\.(rs|py|js|mjs|cjs|ts|mts|cts|jsx|tsx|go|java|kt|kts|scala|cs|fs|fsx|c|h|cc|cpp|hpp|vue|svelte|astro|mdx)$|\.js\.map$' |
-  grep -v -E '^integration/' |
   LC_ALL=C sort -u >"$scratch/code_applicable.txt"
 
 bazel query "kind('source file', deps(//...))" 2>/dev/null |

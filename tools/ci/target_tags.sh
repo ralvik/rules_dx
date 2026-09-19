@@ -9,9 +9,10 @@
 #   still running untagged ones (tools/bazelrc/preset.bazelrc).
 # - `no-lint` / `no-typecheck`: the quality pipelines must suppress
 #   only the named capability for tagged owners.
-# - `manual`: exactly the explicit E2E suite (issue #406 green proofs
-#   replaced the manual_negatives enumeration; `bazel query
-#   'attr(tags, manual, kind(test, //...))'` must list only :e2e members).
+# - `manual`: no manual tests remain (issues #406/#407: green hermetic
+#   proofs replaced manual_negatives, nested E2E deleted; `bazel query
+#   'attr(tags, manual, kind(test, //...))'` must be empty; red subjects
+#   stay manual only as non-tests).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:target_tags`,
 # following //tools/ci:corpus_audit.
