@@ -12,8 +12,10 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
 
 * Tag hygiene and release-input gaps, no publication pressure.
 * Toolchain, provider, and adapter qualification backlogs.
-* Docs-pipeline execution gaps (adapter runs, site build, guide-step CI,
-  first-hour timing proof).
+* Docs-pipeline execution gaps stay open under issue #310 (adapter runs with pins
+  and mappings, renderer and site execution, byte-identical rebuild proof, link and
+  reference completeness, guide prose with guide-step CI wiring, first-hour timing proof,
+  and per-release pin-bump plus drift process; no working site claimed).
 * Verification stages: hello smoke as test, parser-sample backfill, E2E via
   integration test, close-out battery + docs, rustfmt with crate edition.
 * Robustness and hygiene: repo reorg, CI hygiene, split exec.rs,

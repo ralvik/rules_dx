@@ -1,18 +1,19 @@
 # Documentation IR
 
-Implementation status: the pipeline direction is accepted v1 scope and the
-docs-pipeline mappings are frozen.
-Delivered: the `dx_docs` planning gates (command dispatch removed in
-open work; reintroduction tracked in
-open work) —
+Implementation status: accepted v1 direction with provisional inputs;
+execution open. Accepted: the `dx_docs` planning library
+(command dispatch removed per [ADR 0020](../decisions/0020-remove-dx-docs-placeholder.md);
+reintroduction tracked under issue #310) —
 `--check` validates without rendering, normal build validates then renders.
-Delivered: the checked-in [`docs/ir/doc_ir.proto`](../ir/doc_ir.proto)
+Accepted: the checked-in [`docs/ir/doc_ir.proto`](../ir/doc_ir.proto)
 (`dx.documentation.v1`, `schema_major: 1`) and the
 [`documentation_ir` codec crate](../ir/ir/src/lib.rs)
 (`//docs/ir/ir:documentation_ir`: validate/encode/decode with
 roundtrip, rejection-parity, extension- and symbol-ordering, and minor-forward-compat tests).
-Extractor execution, per-language adapter runs, renderer/site-build execution,
-and guide-step CI wiring remain gaps (open work); no working docs support is claimed until
+Open under issue #310 (see [Documentation](README.md#contracts) for the full list):
+per-language adapter runs with pins and mappings, symbol-count inventory and
+native-output comparison fixtures, same-producer byte-identical rebuild proof,
+and per-release pin-bump plus drift process. No working docs support is claimed until
 qualified execution lands.
 
 ## Versioning
@@ -27,14 +28,14 @@ is the schema source of truth: generated IR action outputs use
 binary Protobuf with deterministic serialization, and human-readable review
 uses textproto against the same schema. Exact field and enum numbers and
 reserved ranges live in that file, validated by the
-`documentation_ir` codec crate; compatibility fixtures are tracked in
-open work, following the
+`documentation_ir` codec crate; compatibility fixtures are tracked under
+issue #310, following the
 [Quality Result Protocol](../quality/quality-result-protocol.md) precedent.
 
 IR shards are generated and cached by Bazel like other action outputs. They are not
 committed, written beside source files, or copied into a source-tree projection.
-The checked-in schema and reviewed golden test fixtures define the format and expected
-behavior; they are not snapshots that consumers must refresh when their APIs change.
+The checked-in schema and `documentation_ir` codec tests define the format and expected
+behavior; adapter golden fixtures remain open under issue #310. They are not snapshots that consumers must refresh when their APIs change.
 
 Determinism requires reproducible bytes for the same pinned producer and declared inputs, not
 canonical bytes across different serializers or upgrades. Follow the
@@ -67,8 +68,8 @@ symbols {
 
 Symbol IDs are stable across rebuilds: `language:package:qualified_name`,
 with overloads disambiguated by normalized parameter-type list. The exact
-disambiguation scheme per language is tracked in
-open work. Source paths are
+disambiguation scheme per language is tracked under
+issue #310. Source paths are
 workspace-relative. Only public API enters the IR; visibility filtering
 follows each language's native semantics, not a universal heuristic.
 
@@ -81,10 +82,10 @@ Extension payloads live under `extensions` and are never silently dropped.
 
 ## Machine Inputs
 
-v1 ships adapters for all thirteen languages below, including the pinned
-nightly rustdoc route and the Scala proof spike.
-Exact inputs, pins, and adapter mappings are tracked in
-open work.
+Accepted scope covers thirteen adapter scopes below, including the pinned
+nightly rustdoc route and the Scala proof spike. No adapter execution exists today.
+Exact inputs, pins, and adapter mappings are tracked under
+issue #310.
 
 | Family | Provisional input | Note |
 | --- | --- | --- |
@@ -104,8 +105,8 @@ open work.
 
 XML or JSON comment dumps alone do not satisfy an adapter where the
 language separates comments from symbols (notably C#/F#): the adapter must
-join metadata with documentation; that join is tracked in
-open work.
+join metadata with documentation; that join is tracked under
+issue #310.
 
 ### Extractor Research
 
@@ -194,8 +195,8 @@ machine-input inventory above. No language is removed, dummy prose adapter added
 
 Each extraction-family row maps to one adapter scope; one adapter may cover
 two API identities where the input pipeline is shared. Adapter packaging
-(one crate/binary per scope or grouped) is implementation detail tracked in
-open work, not mandated here.
+(one crate/binary per scope or grouped) is implementation detail tracked under
+issue #310, not mandated here.
 
 | Adapter scope | Machine-input row(s) | API identities |
 | --- | --- | --- |
@@ -219,7 +220,7 @@ C++ scopes each cover two identities over one shared input pipeline.
 
 ## Validation And Fixtures
 
-Each adapter ships golden fixtures covering representative and difficult
+Required (Open; no adapter execution exists today): each adapter ships golden fixtures covering representative and difficult
 constructs for its language (generics, overloads, re-exports, inheritance,
 deprecation), not just minimal APIs. Required checks:
 
@@ -238,7 +239,7 @@ misclassifies APIs; the fixture suite exists to make that failure loud.
 
 ## Drift Policy
 
-rules_dx pins every extractor and toolchain
+Accepted policy; execution open (zero adapters pinned today). rules_dx pins every extractor and toolchain
 input, and users never upgrade those pins themselves. Upgrades arrive only
 through rules_dx releases: each release bumps pins, runs drift testing
 (contract suite, golden fixtures, determinism evidence) against the new
@@ -246,5 +247,5 @@ inputs, and ships only when everything is green. An upstream format or
 toolchain change can therefore turn rules_dx CI red during release
 preparation, but never a user's build — users stay on pinned, checksummed
 inputs and receive working adapters with the release. The exact per-release
-pin-bump and drift-test process is tracked in
-open work.
+pin-bump and drift-test process is tracked under
+issue #310.

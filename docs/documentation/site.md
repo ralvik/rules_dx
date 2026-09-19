@@ -1,14 +1,17 @@
 # Documentation Site Build
 
-Implementation status: accepted v1 direction with docs-pipeline mappings frozen.
-Delivered: the `dx_docs` site-build action planning over the
+Implementation status: accepted v1 direction with provisional inputs;
+execution open. Accepted: the `dx_docs` site-build action planning over the
 Bazel-cached extract→aggregate→render graph (no committed IR). Command dispatch was
-removed in open work; reintroduction
-is open. mdBook is the decided
+removed per [ADR 0020](../decisions/0020-remove-dx-docs-placeholder.md); reintroduction
+is open under issue #310. mdBook is the decided
 renderer with no planned replacement. Cache and hermeticity properties
 below are design requirements, not verified claims; verification follows
-[Testing](../testing/) before any support statement. Renderer/site-build execution
-remains a gap (open work); no working site support is claimed until qualified execution lands.
+[Testing](../testing/) before any support statement. Open under issue #310
+(see [Documentation](README.md#contracts) for the full list):
+renderer/site execution, byte-identical rebuild proof, link/reference completeness,
+cache reuse and invalidation fixtures, guide-step CI wiring, and first-hour timing proof.
+No working site support is claimed until qualified execution lands.
 
 ## Action Graph
 
@@ -35,15 +38,16 @@ unaffected units can reuse cached outputs. Shared headers or imported types can 
   compiler metadata, classpaths, preprocessors, and include closures. No network access inside actions;
   any required upstream data arrives as declared inputs, following the audit
   snapshot precedent.
-- Outputs are deterministic by construction: sorted keys and symbol order,
+- Outputs are designed to be deterministic: sorted keys and symbol order,
   workspace-relative paths only, no timestamps, no absolute paths, no host
-  environment in outputs, locale-independent ordering, UTF-8.
+  environment in outputs, locale-independent ordering, UTF-8. Determinism is a
+  design requirement; byte-identical rebuild evidence remains open.
 - Stable symbol IDs ([IR contract](doc-ir.md)) and normalized ordering are necessary but not
   sufficient for reproducibility. Byte equality is required for the same pinned producer and inputs,
   not across serializer or tool upgrades; cache correctness still requires execution evidence.
 - Byte-identical rebuild evidence (two builds, diffed) is required, not an assumed
-  property; the evidence is tracked in
-  open work.
+  property; the evidence is tracked under
+  issue #310.
 
 ## Laziness And Scope
 
@@ -62,11 +66,11 @@ documentation cache is introduced.
 
 The planned [`dx docs --check`](../cli/commands/docs.md) selects extraction and shared validation but not
 rendering; normal build validates and renders. Completeness of required link/reference checks
-at the pre-render boundary remains a gap (open work). Neither mode compares against committed IR. Build and check
+at the pre-render boundary remains a gap (issue #310). Neither mode compares against committed IR. Build and check
 may write Bazel outputs and cache entries but never write generated IR beside source
 files. The planned `--serve` previews the built output locally and is not a build action.
 
-Required fixtures prove a clean build without checked-in IR, cache reuse for unchanged
+Required (Open; no site execution exists today) fixtures must prove a clean build without checked-in IR, cache reuse for unchanged
 inputs, appropriate invalidation after source/extractor/configuration changes, and no
 source-tree writes. Cache reuse and rebuilds must produce equivalent validated artifacts;
 remote-cache claims additionally require the central [testing evidence](../testing/README.md#remote-tests).
