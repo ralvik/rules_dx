@@ -189,10 +189,14 @@ wrappers preserving upstream providers plus `QualitySourcesInfo`, Gazelle extens
 env plans, hello builds, and lock authority (`maven_install.json` plus fail-closed,
 Paket plus `paket.main`, Go stdlib-only, C/C++ none), with test runners (`go test`,
 ScalaTest, JUnit 4 seed, plain `cc`/`csharp`/`fsharp` executables) and
-classification-only quality families. Remaining gaps (GoogleTest v1.18.0, JUnit 6.1.3
-plus 5.14.x fallback, xUnit v3 4.0.0, Go `from_file` when non-stdlib deps land, quality
-adapters under issue #307, C/C++ MSVC interop plus SDK licensing) stay owned under
-issue #304. No `Supported` claim until platform plus consumer plus release evidence passes.
+classification-only quality families. Dependency hygiene (lockfile-consistency plus
+declared-dependency usage with category, exception, and obsolete checks) is qualified for
+all admitted languages in `tools/depcheck/` (issue #306) with native authorities (go.sum,
+`maven_install.json`, `paket.lock`, per-archive sha256) and focused fixtures. Remaining gaps
+(GoogleTest v1.18.0, JUnit 6.1.3 plus 5.14.x fallback, xUnit v3 4.0.0, Go `from_file` when
+non-stdlib deps land, quality adapters under issue #307, C/C++ MSVC interop plus SDK licensing)
+stay owned under issue #304. No `Supported` claim until platform plus consumer plus release
+evidence passes.
 
 ### Deferred Beyond V1
 

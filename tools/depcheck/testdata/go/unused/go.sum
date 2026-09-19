@@ -1,0 +1,4 @@
+example.com/greet v1.0.0 h1:fixture-hash-example-com-greet-v1.0.0
+example.com/greet v1.0.0/go.mod h1:fixture-mod-hash-example.com-greet-v1.0.0
+example.com/unusedextra v9.0.0 h1:fixture-hash-example-com-unusedextra-v9.0.0
+example.com/unusedextra v9.0.0/go.mod h1:fixture-mod-hash-example.com-unusedextra-v9.0.0

@@ -1,0 +1,15 @@
+[[dep]]
+group = "example"
+artifact = "greet"
+version = "1.0.0"
+scope = "compile"
+optional = false
+platform = false
+
+[[dep]]
+group = "example"
+artifact = "buildplugin"
+version = "0.3.0"
+scope = "compile"
+optional = false
+platform = false

@@ -314,12 +314,12 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Dependency-check contract harness (issue #22, delivered): the
+# Dependency-check contract harness (issues #22, #306, delivered): the
 # stale-vs-consistent truth table, offline, non-mutating,
 # independently-runnable, non-import/exception, category, and obsolete
-# clauses are present and recorded as accepted for #22, with the hermetic
+# clauses are present and recorded as accepted for #22/#306, with the hermetic
 # checker plus per-language fixtures and targets in tools/depcheck/.
-# Admitted expansion stays open per #304/#306. Run by CI via
+# Remaining adapter/foundation work stays open per #307/#304. Run by CI via
 # `bazel run //tools/ci:depcheck_contract`.
 sh_binary(
     name = "depcheck_contract",

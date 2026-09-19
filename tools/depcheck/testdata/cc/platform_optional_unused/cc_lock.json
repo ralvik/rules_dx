@@ -1,0 +1,12 @@
+{
+  "packages": {
+    "greet": {
+      "version": "1.0.0",
+      "sha256": "fixture-sha256-greet-1.0.0"
+    },
+    "winonly": {
+      "version": "1.0.0",
+      "sha256": "fixture-sha256-winonly-1.0.0"
+    }
+  }
+}

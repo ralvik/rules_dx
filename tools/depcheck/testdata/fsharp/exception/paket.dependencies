@@ -1,0 +1,5 @@
+source https://api.nuget.org/v3/index.json
+framework: net10.0
+
+nuget Greet 1.0.0
+nuget BuildPlugin 0.3.0

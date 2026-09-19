@@ -1,0 +1,16 @@
+{
+  "artifacts": {
+    "example:greet": {
+      "version": "1.0.0",
+      "shasums": {
+        "jar": "fixture-sha-example-greet-1.0.0"
+      }
+    },
+    "example:unusedextra": {
+      "version": "9.0.0",
+      "shasums": {
+        "jar": "fixture-sha-example-unusedextra-9.0.0"
+      }
+    }
+  }
+}

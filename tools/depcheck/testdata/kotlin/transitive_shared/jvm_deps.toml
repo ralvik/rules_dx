@@ -1,0 +1,7 @@
+[[dep]]
+group = "example"
+artifact = "greet"
+version = "1.0.0"
+scope = "compile"
+optional = false
+platform = false

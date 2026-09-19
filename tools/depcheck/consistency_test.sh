@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Lockfile-consistency test driver (issue #22).
+# Lockfile-consistency test driver (issues #22, #306).
 # Usage: consistency_test.sh <ecosystem> <depcheck.py> <testdata-root>
 # Verifies the stale-vs-consistent truth table, transitive/shared,
 # non-mutating, offline, no-registry-query halves for one language.
@@ -42,6 +42,10 @@ case "$eco" in
   rust) man="Cargo.toml"; lock="Cargo.lock" ;;
   python) man="pyproject.toml"; lock="uv.lock" ;;
   js|ts) man="package.json"; lock="pnpm-lock.yaml" ;;
+  go) man="go.mod"; lock="go.sum" ;;
+  java|kotlin|scala) man="jvm_deps.toml"; lock="maven_install.json" ;;
+  csharp|fsharp) man="paket.dependencies"; lock="paket.lock" ;;
+  cc) man="cc_deps.toml"; lock="cc_lock.json" ;;
   *) echo "unknown ecosystem $eco" >&2; exit 2 ;;
 esac
 

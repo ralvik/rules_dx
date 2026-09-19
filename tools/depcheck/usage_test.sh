@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Declared-dependency usage test driver (issue #22).
+# Declared-dependency usage test driver (issues #22, #306).
 # Usage: usage_test.sh <ecosystem> <depcheck.py> <testdata-root>
 # Verifies usage truth table, transitive/shared, non-import exceptions
 # with reasons, obsolete, platform/optional, category, non-mutating,
@@ -46,6 +46,10 @@ case "$eco" in
   rust) man="Cargo.toml" ;;
   python) man="pyproject.toml" ;;
   js|ts) man="package.json" ;;
+  go) man="go.mod" ;;
+  java|kotlin|scala) man="jvm_deps.toml" ;;
+  csharp|fsharp) man="paket.dependencies" ;;
+  cc) man="cc_deps.toml" ;;
   *) echo "unknown ecosystem $eco" >&2; exit 2 ;;
 esac
 
@@ -111,6 +115,49 @@ name = "unused-extra"
 version = "9.0.0"
 source = { registry = "https://pypi.org/simple" }
 EOF
+elif [[ "$eco" == "go" ]]; then
+  printf '\nrequire example.com/unusedextra v9.0.0\n' >> "$scratch/go.mod"
+  cat >> "$scratch/go.sum" <<'EOF'
+example.com/unusedextra v9.0.0 h1:fixture-extra-unusedextra-9.0.0
+example.com/unusedextra v9.0.0/go.mod h1:fixture-mod-extra-unusedextra
+EOF
+elif [[ "$eco" == "java" || "$eco" == "kotlin" || "$eco" == "scala" ]]; then
+  cat >> "$scratch/jvm_deps.toml" <<'EOF'
+
+[[dep]]
+group = "example"
+artifact = "unusedextra"
+version = "9.0.0"
+scope = "compile"
+EOF
+  python3 - "$scratch/maven_install.json" <<'PY'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p))
+d.setdefault("artifacts", {})["example:unusedextra"] = {"version": "9.0.0", "shasums": {"jar": "fixture-extra"}}
+json.dump(d, open(p, "w"), indent=2)
+PY
+elif [[ "$eco" == "csharp" || "$eco" == "fsharp" ]]; then
+  printf '\nnuget UnusedExtra 9.0.0\n' >> "$scratch/paket.dependencies"
+  cat >> "$scratch/paket.lock" <<'EOF'
+    UnusedExtra (9.0.0)
+EOF
+elif [[ "$eco" == "cc" ]]; then
+  cat >> "$scratch/cc_deps.toml" <<'EOF'
+
+[[dep]]
+name = "unused-extra"
+version = "9.0.0"
+sha256 = "fixture-sha256-unused-extra-9.0.0"
+scope = "prod"
+EOF
+  python3 - "$scratch/cc_lock.json" <<'PY'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p))
+d.setdefault("packages", {})["unused-extra"] = {"version": "9.0.0", "sha256": "fixture-sha256-unused-extra-9.0.0"}
+json.dump(d, open(p, "w"), indent=2)
+PY
 else
   python3 - "$scratch/package.json" <<'PY'
 import json, sys
@@ -135,9 +182,17 @@ trap 'rm -rf "$scratch"' EXIT
 scratch2="$(mktemp -d "${TEST_TMPDIR:-/tmp}/depcheck.XXXXXX")"
 cp -RL "$root/exception/." "$scratch2/" 2>/dev/null || cp -rL "$root/exception/." "$scratch2/"
 chmod -R u+w "$scratch2"
-cat > "$scratch2/depcheck_exceptions.toml" <<'EOF'
+case "$eco" in
+  go) exc_dep="example.com/buildplugin" ;;
+  java|kotlin|scala) exc_dep="example:buildplugin" ;;
+  csharp|fsharp) exc_dep="BuildPlugin" ;;
+  cc) exc_dep="build-plugin" ;;
+  rust|python|js|ts) exc_dep="build-plugin" ;;
+  *) exc_dep="build-plugin" ;;
+esac
+cat > "$scratch2/depcheck_exceptions.toml" <<EOF
 [[exception]]
-dependency = "build-plugin"
+dependency = "$exc_dep"
 reason = ""
 EOF
 if run_use "$scratch2/$man" "$scratch2" "$scratch2/depcheck_exceptions.toml" >/dev/null 2>&1; then bad "$eco missing reason should fail"; else

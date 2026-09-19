@@ -1,7 +1,10 @@
-"""Cross-language dependency checks (issue #22).
+"""Cross-language dependency checks (issues #22, #306).
 
 Hermetic lockfile-consistency and declared-dependency usage fixtures
-for the required core (Rust/Cargo, Python/uv, JavaScript+TypeScript/pnpm).
+for the required core (Rust/Cargo, Python/uv, JavaScript+TypeScript/pnpm)
+plus admitted foundations (Go/go.mod+go.sum, Java/Kotlin/Scala
+jvm_deps.toml+maven_install.json, C#/F# paket.dependencies+paket.lock,
+C/C++ cc_deps.toml+cc_lock.json).
 No network, no registry queries, non-mutating, normal test targets in
 `bazel test //...` and bare `dx test` (no `manual`), independently
 runnable by label. Unrelated foundations stay inactive (only
@@ -36,6 +39,41 @@ filegroup(
 filegroup(
     name = "ts_testdata",
     srcs = glob(["testdata/ts/**"]),
+)
+
+filegroup(
+    name = "go_testdata",
+    srcs = glob(["testdata/go/**"]),
+)
+
+filegroup(
+    name = "java_testdata",
+    srcs = glob(["testdata/java/**"]),
+)
+
+filegroup(
+    name = "kotlin_testdata",
+    srcs = glob(["testdata/kotlin/**"]),
+)
+
+filegroup(
+    name = "scala_testdata",
+    srcs = glob(["testdata/scala/**"]),
+)
+
+filegroup(
+    name = "csharp_testdata",
+    srcs = glob(["testdata/csharp/**"]),
+)
+
+filegroup(
+    name = "fsharp_testdata",
+    srcs = glob(["testdata/fsharp/**"]),
+)
+
+filegroup(
+    name = "cc_testdata",
+    srcs = glob(["testdata/cc/**"]),
 )
 
 sh_test(
@@ -166,6 +204,230 @@ sh_test(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+sh_test(
+    name = "go_consistency_test",
+    srcs = ["consistency_test.sh"],
+    args = [
+        "go",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/go",
+    ],
+    data = [
+        ":checker",
+        ":go_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "go_usage_test",
+    srcs = ["usage_test.sh"],
+    args = [
+        "go",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/go",
+    ],
+    data = [
+        ":checker",
+        ":go_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "java_consistency_test",
+    srcs = ["consistency_test.sh"],
+    args = [
+        "java",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/java",
+    ],
+    data = [
+        ":checker",
+        ":java_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "java_usage_test",
+    srcs = ["usage_test.sh"],
+    args = [
+        "java",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/java",
+    ],
+    data = [
+        ":checker",
+        ":java_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "kotlin_consistency_test",
+    srcs = ["consistency_test.sh"],
+    args = [
+        "kotlin",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/kotlin",
+    ],
+    data = [
+        ":checker",
+        ":kotlin_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "kotlin_usage_test",
+    srcs = ["usage_test.sh"],
+    args = [
+        "kotlin",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/kotlin",
+    ],
+    data = [
+        ":checker",
+        ":kotlin_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "scala_consistency_test",
+    srcs = ["consistency_test.sh"],
+    args = [
+        "scala",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/scala",
+    ],
+    data = [
+        ":checker",
+        ":scala_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "scala_usage_test",
+    srcs = ["usage_test.sh"],
+    args = [
+        "scala",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/scala",
+    ],
+    data = [
+        ":checker",
+        ":scala_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "csharp_consistency_test",
+    srcs = ["consistency_test.sh"],
+    args = [
+        "csharp",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/csharp",
+    ],
+    data = [
+        ":checker",
+        ":csharp_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "csharp_usage_test",
+    srcs = ["usage_test.sh"],
+    args = [
+        "csharp",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/csharp",
+    ],
+    data = [
+        ":checker",
+        ":csharp_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "fsharp_consistency_test",
+    srcs = ["consistency_test.sh"],
+    args = [
+        "fsharp",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/fsharp",
+    ],
+    data = [
+        ":checker",
+        ":fsharp_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "fsharp_usage_test",
+    srcs = ["usage_test.sh"],
+    args = [
+        "fsharp",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/fsharp",
+    ],
+    data = [
+        ":checker",
+        ":fsharp_testdata",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "cc_consistency_test",
+    srcs = ["consistency_test.sh"],
+    args = [
+        "cc",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/cc",
+    ],
+    data = [
+        ":cc_testdata",
+        ":checker",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "cc_usage_test",
+    srcs = ["usage_test.sh"],
+    args = [
+        "cc",
+        "$(rootpath :checker)",
+        "tools/depcheck/testdata/cc",
+    ],
+    data = [
+        ":cc_testdata",
+        ":checker",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
@@ -176,8 +438,50 @@ real_source_target(
     name = "corpus_toml",
     tags = ["corpus"],
     toml_srcs = [
+        "testdata/cc/category/cc_deps.toml",
+        "testdata/cc/category_ok/cc_deps.toml",
+        "testdata/cc/exception/cc_deps.toml",
+        "testdata/cc/exception/depcheck_exceptions.toml",
+        "testdata/cc/obsolete/cc_deps.toml",
+        "testdata/cc/obsolete/depcheck_exceptions.toml",
+        "testdata/cc/ok_used/cc_deps.toml",
+        "testdata/cc/platform_optional/cc_deps.toml",
+        "testdata/cc/platform_optional_unused/cc_deps.toml",
+        "testdata/cc/stale/cc_deps.toml",
+        "testdata/cc/transitive_shared/cc_deps.toml",
+        "testdata/cc/unused/cc_deps.toml",
+        "testdata/csharp/exception/depcheck_exceptions.toml",
+        "testdata/csharp/obsolete/depcheck_exceptions.toml",
+        "testdata/fsharp/exception/depcheck_exceptions.toml",
+        "testdata/fsharp/obsolete/depcheck_exceptions.toml",
+        "testdata/go/exception/depcheck_exceptions.toml",
+        "testdata/go/obsolete/depcheck_exceptions.toml",
+        "testdata/java/category/jvm_deps.toml",
+        "testdata/java/category_ok/jvm_deps.toml",
+        "testdata/java/exception/depcheck_exceptions.toml",
+        "testdata/java/exception/jvm_deps.toml",
+        "testdata/java/obsolete/depcheck_exceptions.toml",
+        "testdata/java/obsolete/jvm_deps.toml",
+        "testdata/java/ok_used/jvm_deps.toml",
+        "testdata/java/platform_optional/jvm_deps.toml",
+        "testdata/java/platform_optional_unused/jvm_deps.toml",
+        "testdata/java/stale/jvm_deps.toml",
+        "testdata/java/transitive_shared/jvm_deps.toml",
+        "testdata/java/unused/jvm_deps.toml",
         "testdata/js/exception/depcheck_exceptions.toml",
         "testdata/js/obsolete/depcheck_exceptions.toml",
+        "testdata/kotlin/category/jvm_deps.toml",
+        "testdata/kotlin/category_ok/jvm_deps.toml",
+        "testdata/kotlin/exception/depcheck_exceptions.toml",
+        "testdata/kotlin/exception/jvm_deps.toml",
+        "testdata/kotlin/obsolete/depcheck_exceptions.toml",
+        "testdata/kotlin/obsolete/jvm_deps.toml",
+        "testdata/kotlin/ok_used/jvm_deps.toml",
+        "testdata/kotlin/platform_optional/jvm_deps.toml",
+        "testdata/kotlin/platform_optional_unused/jvm_deps.toml",
+        "testdata/kotlin/stale/jvm_deps.toml",
+        "testdata/kotlin/transitive_shared/jvm_deps.toml",
+        "testdata/kotlin/unused/jvm_deps.toml",
         "testdata/python/category/pyproject.toml",
         "testdata/python/category_ok/pyproject.toml",
         "testdata/python/exception/depcheck_exceptions.toml",
@@ -204,6 +508,18 @@ real_source_target(
         "testdata/rust/transitive_shared/crates/a/Cargo.toml",
         "testdata/rust/transitive_shared/crates/b/Cargo.toml",
         "testdata/rust/unused/Cargo.toml",
+        "testdata/scala/category/jvm_deps.toml",
+        "testdata/scala/category_ok/jvm_deps.toml",
+        "testdata/scala/exception/depcheck_exceptions.toml",
+        "testdata/scala/exception/jvm_deps.toml",
+        "testdata/scala/obsolete/depcheck_exceptions.toml",
+        "testdata/scala/obsolete/jvm_deps.toml",
+        "testdata/scala/ok_used/jvm_deps.toml",
+        "testdata/scala/platform_optional/jvm_deps.toml",
+        "testdata/scala/platform_optional_unused/jvm_deps.toml",
+        "testdata/scala/stale/jvm_deps.toml",
+        "testdata/scala/transitive_shared/jvm_deps.toml",
+        "testdata/scala/unused/jvm_deps.toml",
         "testdata/ts/exception/depcheck_exceptions.toml",
         "testdata/ts/obsolete/depcheck_exceptions.toml",
     ],
