@@ -85,6 +85,7 @@ sh_test(
         "tools/depcheck/testdata/rust",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":rust_testdata",
     ],
@@ -101,6 +102,7 @@ sh_test(
         "tools/depcheck/testdata/rust",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":rust_testdata",
     ],
@@ -117,6 +119,7 @@ sh_test(
         "tools/depcheck/testdata/python",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":python_testdata",
     ],
@@ -133,6 +136,7 @@ sh_test(
         "tools/depcheck/testdata/python",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":python_testdata",
     ],
@@ -149,6 +153,7 @@ sh_test(
         "tools/depcheck/testdata/js",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":js_testdata",
     ],
@@ -165,6 +170,7 @@ sh_test(
         "tools/depcheck/testdata/js",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":js_testdata",
     ],
@@ -181,6 +187,7 @@ sh_test(
         "tools/depcheck/testdata/ts",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":ts_testdata",
     ],
@@ -197,6 +204,7 @@ sh_test(
         "tools/depcheck/testdata/ts",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":ts_testdata",
     ],
@@ -213,6 +221,7 @@ sh_test(
         "tools/depcheck/testdata/go",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":go_testdata",
     ],
@@ -229,6 +238,7 @@ sh_test(
         "tools/depcheck/testdata/go",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":go_testdata",
     ],
@@ -245,6 +255,7 @@ sh_test(
         "tools/depcheck/testdata/java",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":java_testdata",
     ],
@@ -261,6 +272,7 @@ sh_test(
         "tools/depcheck/testdata/java",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":java_testdata",
     ],
@@ -277,6 +289,7 @@ sh_test(
         "tools/depcheck/testdata/kotlin",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":kotlin_testdata",
     ],
@@ -293,6 +306,7 @@ sh_test(
         "tools/depcheck/testdata/kotlin",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":kotlin_testdata",
     ],
@@ -309,6 +323,7 @@ sh_test(
         "tools/depcheck/testdata/scala",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":scala_testdata",
     ],
@@ -325,6 +340,7 @@ sh_test(
         "tools/depcheck/testdata/scala",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":scala_testdata",
     ],
@@ -341,6 +357,7 @@ sh_test(
         "tools/depcheck/testdata/csharp",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":csharp_testdata",
     ],
@@ -357,6 +374,7 @@ sh_test(
         "tools/depcheck/testdata/csharp",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":csharp_testdata",
     ],
@@ -373,6 +391,7 @@ sh_test(
         "tools/depcheck/testdata/fsharp",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":fsharp_testdata",
     ],
@@ -389,6 +408,7 @@ sh_test(
         "tools/depcheck/testdata/fsharp",
     ],
     data = [
+        "//tools/sh:lib",
         ":checker",
         ":fsharp_testdata",
     ],
@@ -405,6 +425,7 @@ sh_test(
         "tools/depcheck/testdata/cc",
     ],
     data = [
+        "//tools/sh:lib",
         ":cc_testdata",
         ":checker",
     ],
@@ -421,6 +442,7 @@ sh_test(
         "tools/depcheck/testdata/cc",
     ],
     data = [
+        "//tools/sh:lib",
         ":cc_testdata",
         ":checker",
     ],

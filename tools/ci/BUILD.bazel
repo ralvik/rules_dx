@@ -16,6 +16,7 @@ package(default_visibility = ["//visibility:public"])
 sh_binary(
     name = "corpus_audit",
     srcs = ["corpus_audit.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -29,6 +30,7 @@ sh_binary(
 sh_binary(
     name = "manual_negatives",
     srcs = ["manual_negatives.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -116,6 +118,7 @@ sh_test(
 sh_binary(
     name = "coverage_cell",
     srcs = ["coverage_cell.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -127,6 +130,7 @@ sh_binary(
 sh_binary(
     name = "coverage_report_guards",
     srcs = ["coverage_report_guards.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -140,6 +144,7 @@ sh_binary(
 sh_binary(
     name = "target_tags",
     srcs = ["target_tags.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -155,6 +160,7 @@ sh_binary(
 sh_binary(
     name = "release_hygiene",
     srcs = ["release_hygiene.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -168,6 +174,7 @@ sh_binary(
 sh_binary(
     name = "release_policy",
     srcs = ["release_policy.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -183,6 +190,7 @@ sh_binary(
 sh_binary(
     name = "quality_adapters_parity",
     srcs = ["quality_adapters_parity.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -201,6 +209,7 @@ sh_binary(
 sh_binary(
     name = "publish_trust",
     srcs = ["publish_trust.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -215,6 +224,7 @@ sh_binary(
 sh_binary(
     name = "code_ownership",
     srcs = ["code_ownership.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -227,6 +237,7 @@ sh_binary(
 sh_binary(
     name = "examples_readme",
     srcs = ["examples_readme.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -241,6 +252,7 @@ sh_binary(
 sh_binary(
     name = "examples_laziness",
     srcs = ["examples_laziness.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -254,6 +266,7 @@ sh_binary(
 sh_binary(
     name = "examples_laziness_query",
     srcs = ["examples_laziness_query.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -267,6 +280,7 @@ sh_binary(
 sh_binary(
     name = "examples_laziness_aquery",
     srcs = ["examples_laziness_aquery.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -281,6 +295,7 @@ sh_binary(
 sh_binary(
     name = "examples_laziness_runtime",
     srcs = ["examples_laziness_runtime.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -297,6 +312,7 @@ sh_binary(
 sh_binary(
     name = "registry_singularity",
     srcs = ["registry_singularity.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -310,6 +326,7 @@ sh_binary(
 sh_binary(
     name = "backlog_contracts",
     srcs = ["backlog_contracts.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -325,6 +342,7 @@ sh_binary(
 sh_binary(
     name = "quality_cache_aquery",
     srcs = ["quality_cache_aquery.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -339,6 +357,7 @@ sh_binary(
 sh_binary(
     name = "depcheck_contract",
     srcs = ["depcheck_contract.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -351,6 +370,7 @@ sh_binary(
 sh_binary(
     name = "audit_update_guards",
     srcs = ["audit_update_guards.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -364,6 +384,7 @@ sh_binary(
 sh_binary(
     name = "wrapper_sources",
     srcs = ["wrapper_sources.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -382,6 +403,7 @@ sh_binary(
 sh_binary(
     name = "foundation_maps",
     srcs = ["foundation_maps.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -394,6 +416,7 @@ sh_binary(
 sh_binary(
     name = "ghcr_hygiene",
     srcs = ["ghcr_hygiene.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -405,6 +428,7 @@ sh_binary(
 sh_binary(
     name = "ghcr_publish_guards",
     srcs = ["ghcr_publish_guards.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -417,6 +441,7 @@ sh_binary(
 sh_binary(
     name = "quality_foundations_guards",
     srcs = ["quality_foundations_guards.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -431,6 +456,7 @@ sh_binary(
 sh_binary(
     name = "widen_update_loop",
     srcs = ["widen_update_loop.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -443,6 +469,7 @@ sh_binary(
 sh_binary(
     name = "execution_corpus_perf_guards",
     srcs = ["execution_corpus_perf_guards.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -456,6 +483,7 @@ sh_binary(
 sh_binary(
     name = "distribution_closeout_guards",
     srcs = ["distribution_closeout_guards.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -469,6 +497,7 @@ sh_binary(
 sh_binary(
     name = "backlog_automation_guards",
     srcs = ["backlog_automation_guards.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -481,6 +510,7 @@ sh_binary(
 sh_binary(
     name = "shell_contract",
     srcs = ["shell_contract.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -494,6 +524,7 @@ sh_binary(
 sh_binary(
     name = "supported_evidence_gate",
     srcs = ["supported_evidence_gate.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -519,6 +550,7 @@ sh_test(
         "$(rootpath @build_bazel_bazel_9_2_0//:bazel_binary)",
     ],
     data = [
+        "//tools/sh:lib",
         "//cli/cli:dx",
         "@build_bazel_bazel_9_2_0//:bazel_binary",
     ],
@@ -548,6 +580,7 @@ sh_test(
         "$(rootpath @build_bazel_bazel_9_2_0//:bazel_binary)",
     ],
     data = [
+        "//tools/sh:lib",
         "//cli/cli:dx",
         "@build_bazel_bazel_9_2_0//:bazel_binary",
     ],
@@ -577,6 +610,7 @@ sh_test(
         "$(rootpath @build_bazel_bazel_9_2_0//:bazel_binary)",
     ],
     data = [
+        "//tools/sh:lib",
         "//cli/cli:dx",
         "@build_bazel_bazel_9_2_0//:bazel_binary",
     ],
@@ -617,6 +651,7 @@ test_suite(
 sh_binary(
     name = "e2e_cases",
     srcs = ["e2e_cases.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -628,6 +663,7 @@ sh_binary(
 sh_binary(
     name = "coverage_spill",
     srcs = ["coverage_spill.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -639,6 +675,7 @@ sh_binary(
 sh_binary(
     name = "verify_perf_corpus",
     srcs = ["verify_perf_corpus.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -651,6 +688,7 @@ sh_binary(
 sh_binary(
     name = "coverage_qualification",
     srcs = ["coverage_qualification.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -665,6 +703,7 @@ sh_binary(
 sh_binary(
     name = "env_codegen_qualification",
     srcs = ["env_codegen_qualification.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -679,6 +718,7 @@ sh_binary(
 sh_binary(
     name = "docs_pipeline_qualification",
     srcs = ["docs_pipeline_qualification.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -697,6 +737,7 @@ sh_binary(
 sh_binary(
     name = "consumer_ci_qualification",
     srcs = ["consumer_ci_qualification.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -712,6 +753,7 @@ sh_binary(
 sh_binary(
     name = "file_family_qualification",
     srcs = ["file_family_qualification.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -727,6 +769,7 @@ sh_binary(
 sh_binary(
     name = "helper_qualification",
     srcs = ["helper_qualification.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -741,6 +784,7 @@ sh_binary(
 sh_binary(
     name = "clap_tokenizer_qualification",
     srcs = ["clap_tokenizer_qualification.sh"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )

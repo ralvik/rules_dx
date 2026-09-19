@@ -28,9 +28,12 @@ use clap::{
 };
 use dx_env::{identity_hex, parse_staged, probe_symlink, refresh, RefreshOptions, RefreshOutcome};
 
-/// Default tree metadata rlocation candidates, in order. The metadata file
-/// has a stable name while tool link names vary, so one lookup locates the
-/// staged tree: its parent directory plus `bin`.
+/// Default tree metadata rlocation candidates, in order (issue #319).
+/// Single source for the default-tree lookup: the metadata file has a
+/// stable name while tool link names vary, so one lookup locates the
+/// staged tree (parent plus `bin`). Uses the standard `runfiles` library
+/// (`rlocation_from`); prod code never reads `TEST_SRCDIR` directly.
+/// Two entries cover Bzlmod (`_main/`) plus legacy (`rules_dx/`) layouts.
 const METADATA_CANDIDATES: &[(&str, &str)] = &[
     ("rules_dx/env/default_tree.metadata.json", "_main"),
     ("_main/env/default_tree.metadata.json", "_main"),
@@ -142,15 +145,15 @@ fn run() -> i32 {
             Err(_) => return usage_error("--lock-timeout-ms must be a non-negative integer"),
         },
     };
-    // `bazel run` executes with the working directory inside the runfiles
-    // tree under bazel-out; `BUILD_WORKSPACE_DIRECTORY` points back at the
-    // source workspace. An explicit `--workspace` still wins.
+    // Workspace start (issue #319): single-sourced via
+    // `dx_process::workspace_start` (shell: `tools/sh/lib.sh`).
+    // An explicit `--workspace` still wins.
     let start = match workspace {
         Some(dir) => PathBuf::from(dir),
-        None => std::env::var_os("BUILD_WORKSPACE_DIRECTORY")
-            .map(PathBuf::from)
-            .filter(|dir| dir.is_absolute())
-            .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))),
+        None => {
+            let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            dx_process::workspace_start(&cwd)
+        }
     };
     let (staged_bin, metadata) = match (staged_bin, metadata) {
         (Some(bin), Some(meta)) => (PathBuf::from(bin), PathBuf::from(meta)),

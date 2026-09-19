@@ -120,6 +120,23 @@ pub fn discover_real(start: &Path, override_dir: Option<&Path>) -> Result<PathBu
     discover(start, override_dir, &RealFs)
 }
 
+/// Workspace start directory for `bazel run` (issue #319).
+///
+/// `bazel run` executes with the working directory inside the runfiles tree
+/// under `bazel-out`, whose symlinks resolve into the execution root (nested
+/// Bazel refuses there). `BUILD_WORKSPACE_DIRECTORY` points back at the
+/// source workspace root, so discovery starts there when available and
+/// absolute. Otherwise falls back to `cwd`. An explicit `--workspace`
+/// override still wins inside `discover`/`discover_real`.
+/// Single-sources the `BUILD_WORKSPACE_DIRECTORY || cwd` probe repeated in
+/// the `dx` and `env` binaries; shell drivers use `tools/sh/lib.sh`.
+pub fn workspace_start(cwd: &Path) -> PathBuf {
+    std::env::var_os("BUILD_WORKSPACE_DIRECTORY")
+        .map(PathBuf::from)
+        .filter(|dir| dir.is_absolute())
+        .unwrap_or_else(|| cwd.to_path_buf())
+}
+
 /// Launcher selection failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum LauncherError {

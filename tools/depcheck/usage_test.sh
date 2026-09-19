@@ -6,27 +6,17 @@
 # offline halves for one language.
 set -euo pipefail
 
+# Shared workspace + runfiles helpers (issue #319).
+# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
+
 eco="$1"
 checker_in="$2"
 root_in="$3"
 
-resolve() {
-  local p="$1"
-  if [[ "$p" = /* ]] && [[ -e "$p" ]]; then echo "$p"; return; fi
-  if [[ -n "${TEST_SRCDIR:-}" ]]; then
-    for cand in "$TEST_SRCDIR/rules_dx/$p" "$TEST_SRCDIR/_main/$p" "$TEST_SRCDIR/$p"; do
-      if [[ -e "$cand" ]]; then echo "$cand"; return; fi
-    done
-    found="$(find "${TEST_SRCDIR:-/nonexistent}" -path "*$p" -print -quit 2>/dev/null || true)"
-    if [[ -n "$found" ]]; then echo "$found"; return; fi
-  fi
-  if [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" && -e "$BUILD_WORKSPACE_DIRECTORY/$p" ]]; then echo "$BUILD_WORKSPACE_DIRECTORY/$p"; return; fi
-  if [[ -e "$p" ]]; then echo "$p"; return; fi
-  ws="$(git rev-parse --show-toplevel 2>/dev/null || echo .)"
-  echo "$ws/$p"
-}
-checker="$(resolve "$checker_in")"
-root="$(resolve "$root_in")"
+# `resolve` removed (issue #319): use dx_resolve_runfile from tools/sh/lib.sh.
+checker="$(dx_resolve_runfile "$checker_in")" || { echo "FAIL: cannot resolve $checker_in" >&2; exit 1; }
+root="$(dx_resolve_runfile "$root_in")" || { echo "FAIL: cannot resolve $root_in" >&2; exit 1; }
 
 pass=0
 fail=0
