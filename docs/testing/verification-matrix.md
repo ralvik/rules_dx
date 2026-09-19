@@ -89,15 +89,51 @@ open work.
 
 ## Battery
 
-The full close-out battery (open work)
-runs on a clean tree after the staged issues land:
+Accepted record of the as-built close-out battery. The full battery runs in
+`.github/workflows/ci.yml` on a clean tree on the Linux x86_64 seed host:
 
-```sh
-bazel build //...
-bazel test //...
-bazel run //cli/cli:dx -- generate --check //...
-```
+- `build`: `bazel build //...`.
+- `test`: `bazel test //...` (manual targets excluded by Bazel tag semantics).
+- `coverage`: `bazel run //cli/cli:dx -- coverage --min-coverage 97 //...`
+  (seed cell only) plus `bazel run //tools/ci:coverage_report_guards`.
+- `prove`: `//tools/ci:manual_negatives`, `:target_tags`, `:coverage_cell`,
+  `:coverage_spill`, `:release_hygiene`, `:release_policy`, `:publish_trust`,
+  `:shell_contract`.
+- `e2e`: `bazel run //tools/ci:e2e_cases` convention guard plus the explicit
+  suite `E2E_WORKSPACE=$PWD bazel test //tools/ci:e2e
+  --test_env=E2E_WORKSPACE`; manual drivers never run under `//...`.
+- `dogfood-freshness`: `bazel run //cli/cli:dx -- generate --check //...`,
+  `//tools/ci:corpus_audit`, `:code_ownership`, examples READMEs and
+  laziness proofs, quality-cache aquery, depcheck contract, audit/update
+  guards, wrapper sources, foundation maps, registry singularity, backlog
+  contracts, GHCR hygiene and publish guards, perf/corpus verification,
+  widen-update loop, quality/execution/distribution/backlog guards, and
+  `:supported_evidence_gate`.
+- `dogfood-lint`, `dogfood-format`, `dogfood-typecheck`: corpus converge then
+  `--check` no-op proof, plus lane-A trees `//python/... //javascript/...
+  //rust/hello/...` where enforcing.
+- `devcontainer-check`, `docs-ci`, `consumer-ci` (build-only self-call).
 
-plus the corpus and code ownership audits, the per-harness audits in
-`dogfood-freshness`, and the explicit E2E suite. Remaining reds each name
-their open gap above; docs match as-built behavior.
+Green here (static guards on a clean tree, no full rebuild): `e2e_cases`
+3/3, `supported_evidence_gate` 20/20, `distribution_closeout_guards` 35/35.
+Full `build`/`test` green is owned by CI on this tree; the last full-tree
+record is noted on the issue, not re-claimed here.
+
+Remaining reds stay owned gaps, not green claims:
+
+- Full-tree `dx lint/format/typecheck/test --check //...` over fixtures and
+  testdata stays open under #12 (lane A only) and #325 (consumer honesty).
+- Per-cell coverage beyond the seed cell, Codecov wiring, and remote
+  cache/exec evidence stay open under #308.
+- Docs pipeline and environment/codegen stay open under #310 and #309 (see
+  [Documentation](../documentation/README.md#contracts)).
+- Consumer-CI qualification stays open under #312; platform qualification
+  beyond the seed host stays open under #298.
+- Non-dogfed paths stay open under #324.
+
+The E2E-case convention lives in the
+[integration README](../../integration/README.md#adding-a-case-convention)
+(`manual` plus `exclusive`, `local`, `no-sandbox` drivers, `:e2e` suite
+membership, explicit-only invocation). The consumer aggregate `dx-ci`
+([contract](../github-ci.md#aggregate-status)) is unchanged: stable identity,
+disabled-as-skipped stays green, any other non-success fails.
