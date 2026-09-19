@@ -15,7 +15,8 @@ adds release evidence and is owned by this matrix; no cell is currently
 ## Unqualified Platforms
 
 Only the Linux x86_64 seed host plus Linux arm64 glibc native (issue
-#410) are delivered today. Every other host, including the remaining
+#410) plus the two Linux static-musl profiles (issue #411) are delivered
+today. Every other host, including the remaining
 [required platforms](../decisions/0014-tested-platform-release-stack.md#required-platforms),
 is unqualified: `dx` refuses cleanly with `unsupported_platform`, naming the
 host and pointing here and at ADR 0014, before any Bazel work starts. It
@@ -23,10 +24,10 @@ never presents partial execution on an unqualified host as success. The
 refusal reads the same qualified-host list that platform evidence extends,
 so a host flips on exactly when its evidence lands. This remains open work.
 Platform qualification was tracked under issue #298 (closed): the Linux
-x86_64 seed host plus Linux arm64 native are delivered and tested; every
-other required host needs pins, hosts, floors, JDK/SDK/CRT identities,
-qualified routes, per-cell coverage, and consumer plus release evidence
-under its per-host successor.
+x86_64 seed host plus Linux arm64 native plus the two static-musl profiles
+are delivered and tested; every other required host needs pins, hosts,
+floors, JDK/SDK/CRT identities, qualified routes, per-cell coverage, and
+consumer plus release evidence under its per-host successor.
 
 Per-required-host qualification state (V1 status from ADR 0014; evidence
 dimensions per issue #298; exact pins, hosts, floors, and SDK/CRT identities
@@ -36,7 +37,7 @@ remain owned by O14/O37 and are not pinned here):
 | --- | --- | --- | --- |
 | Linux x86_64 glibc | Required, primary bootstrap | Pins/hosts/floors, JDK/SDK/CRT identities, qualified native plus cross routes, per-cell coverage, consumer plus release evidence | Seed-host-delivered (CI: ubuntu-latest; artifacts: linux_x86_64; coverage: seed cell; consumer self-call: build-only on linux_x86_64) |
 | Linux arm64 glibc | Required | Same dimensions as above, native workflow (not cross-only) | Platform-qualified (issue #410; CI: ubuntu-24.04-arm; dx_tools linux_arm64 artifacts stay an owned follow-up gap with the recorded no-artifact diagnostic; coverage: arm64 cell; consumer self-call: build on linux_x86_64 plus linux_arm64; release evidence open) |
-| Linux x86_64/arm64 static musl | Required profiles | Same dimensions; static native closure; dynamic musl explicitly out of scope | Unqualified: clean `unsupported_platform` refusal |
+| Linux x86_64/arm64 static musl | Required profiles | Same dimensions; static native closure; dynamic musl explicitly out of scope | Platform-qualified (issue #411; CI: ubuntu-latest plus ubuntu-24.04-arm cross-build with per-profile bazel-musl-* cache scopes; Rust musl std via extra_target_triples with exec-platform tools for build scripts/proc macros and target musl libs for apps, prebuilt glibc libs never musl-compatible by linker change alone; hermetic-llvm static-only musl targets stay provisional; coverage: musl x86_64 plus musl arm64 cells with no union; consumer self-call plus musl jobs; release evidence open) |
 | macOS arm64 | Required | Same dimensions; pinned acquired SDK (SDK version is not the deployment floor) | Unqualified: clean `unsupported_platform` refusal |
 | macOS x86_64 | Best-effort | Qualify when a host is available; gaps recorded without blocking required-host release | Unqualified: clean `unsupported_platform` refusal |
 | Windows x86_64 MSVC-compatible | Required, backend blocked | Same dimensions; hermetic acquisition plus MSVC compatibility gates unchanged; explicit EULA acceptance required, never automatic | Unqualified: clean `unsupported_platform` refusal |
@@ -49,7 +50,8 @@ enforced by `bazel run //tools/ci:supported_evidence_gate`.
 ## Application Foundations
 
 `Planned` below means accepted scope delivered on the Linux x86_64 seed host
-plus Linux arm64 native (issue #410) without remaining-required-platform,
+plus Linux arm64 native (issue #410) plus the two static-musl profiles
+(issue #411) without remaining-required-platform,
 external-consumer, or trusted-builder release evidence; see
 `../../CHANGELOG.md`. `Planned: feasibility` means evaluation
 under [first-release admission](scope.md#first-release-admission):
@@ -703,7 +705,8 @@ consumer plus release evidence stay owned gaps; no Supported claim).
 
 Every cell above is current design status. The named quality integrations form the intended
 minimum first-release quality baseline; the Linux x86_64 seed-host plus
-Linux arm64 native (issue #410) implementations exist so far, and no cell is `Supported` yet (release evidence tracked in the issue tracker). Swift and SwiftFormat are
+Linux arm64 native (issue #410) plus the two static-musl profiles (issue
+#411) implementations exist so far, and no cell is `Supported` yet (release evidence tracked in the issue tracker). Swift and SwiftFormat are
 excluded from v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md):
 the `Not planned` Swift row above is an evidence-backed v1 exclusion, not a
 feasibility assessment. A host-toolchain
