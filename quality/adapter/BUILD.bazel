@@ -38,6 +38,7 @@ rust_library(
     edition = "2021",
     deps = crate_deps(
         [
+            "normpath",
             "serde",
             "serde_json",
             "tempfile",
@@ -58,6 +59,7 @@ rust_test(
     crate = ":quality_adapter",
     deps = crate_deps(
         [
+            "normpath",
             "serde",
             "serde_json",
             "tempfile",

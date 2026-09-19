@@ -633,27 +633,55 @@ fn has_scheme(target: &str) -> bool {
 
 /// Resolve `target` against the parent directory of `source`, lexically
 /// normalizing `.`/`..`. A leading `/` resolves from the sibling root.
+///
+/// Dependency evaluation (issue #391, stays hand-rolled for this call
+/// site): repo-relative sibling targets are virtual forward-slash strings
+/// with clamped `..` (excessive `..` stays at the root, never errors) and
+/// no filesystem access. `normpath::BasePathBuf` cannot represent relative
+/// virtual paths on Windows (requires a `Prefix`), `PathExt::normalize`
+/// needs on-disk existence (`canonicalize` on Unix, `GetFullPathNameW` on
+/// Windows) and `normalize_virtually` is Windows-only, and `BasePathBuf::push`
+/// is a plain `PathBuf::push` on Unix (no `..` normalization), so adopting it
+/// would add lockfile churn plus `MODULE.bazel` manifests for zero behavior
+/// gain while breaking portable `/` output and clamped semantics. The small
+/// string walk below owns those semantics explicitly, mirroring `dx_path`
+/// staying hand-rolled per #315; `normpath` is adopted in `quality/adapter`
+/// where absolute scratch roots (with prefix) benefit from its OS-correct
+/// `Prefix`/verbatim handling.
 pub fn resolve_target(source: &str, target: &str) -> String {
-    if let Some(stripped) = target.strip_prefix('/') {
-        return stripped.to_string();
+    fn normalize<I>(segments: I) -> String
+    where
+        I: IntoIterator<Item = String>,
+    {
+        let mut parts: Vec<String> = Vec::new();
+        for segment in segments {
+            match segment.as_str() {
+                "" | "." => {}
+                ".." => {
+                    parts.pop();
+                }
+                other => parts.push(other.to_owned()),
+            }
+        }
+        parts.join("/")
     }
-    let mut parts: Vec<&str> = match source.rfind('/') {
+    if let Some(stripped) = target.strip_prefix('/') {
+        // Absolute-from-root also normalizes (former verbatim return left
+        // `..`/`.`/`//`/trailing-slash unnormalized): clamped `..` stays at
+        // the root to match the relative case.
+        return normalize(stripped.split('/').map(str::to_owned));
+    }
+    let parent: Vec<String> = match source.rfind('/') {
         Some(index) => source[..index]
             .split('/')
             .filter(|s| !s.is_empty())
+            .map(str::to_owned)
             .collect(),
         None => Vec::new(),
     };
-    for segment in target.split('/') {
-        match segment {
-            "" | "." => {}
-            ".." => {
-                parts.pop();
-            }
-            other => parts.push(other),
-        }
-    }
-    parts.join("/")
+    let mut combined = parent;
+    combined.extend(target.split('/').map(str::to_owned));
+    normalize(combined)
 }
 
 /// One NDJSON finding line on stdout, serialized with serde_json. Field
@@ -1391,6 +1419,23 @@ mod tests {
         assert_eq!(resolve_target("docs/a/b.md", "../c.md"), "docs/c.md");
         assert_eq!(resolve_target("docs/b.md", "/x/y.md"), "x/y.md");
         assert_eq!(resolve_target("b.md", "./c.md"), "c.md");
+    }
+
+    #[test]
+    fn resolve_target_normalizes_dot_segments_and_clamps_excessive_dotdot() {
+        // Issue #391 fixtures: `a/b/../c`, `./`, trailing-slash,
+        // excessive-`..` (clamped to the sibling root, never errors).
+        assert_eq!(resolve_target("docs/a.md", "a/b/../c.md"), "docs/a/c.md");
+        assert_eq!(resolve_target("docs/a.md", "./c.md"), "docs/c.md");
+        assert_eq!(resolve_target("docs/a.md", "b/./c.md"), "docs/b/c.md");
+        assert_eq!(resolve_target("docs/a.md", "b/c/"), "docs/b/c");
+        assert_eq!(resolve_target("a/b.md", "../../c.md"), "c.md");
+        assert_eq!(resolve_target("a.md", "../../../c.md"), "c.md");
+        assert_eq!(resolve_target("docs/a.md", "/x/../y.md"), "y.md");
+        assert_eq!(resolve_target("docs/a.md", "/./y.md"), "y.md");
+        assert_eq!(resolve_target("docs/a.md", "/a/b/"), "a/b");
+        assert_eq!(resolve_target("docs/a.md", "/../y.md"), "y.md");
+        assert_eq!(resolve_target("docs/a/b.md", "x/../../c.md"), "docs/c.md");
     }
 
     #[test]
