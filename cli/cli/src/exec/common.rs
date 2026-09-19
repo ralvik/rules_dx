@@ -79,11 +79,12 @@ pub(crate) const CODE_MANAGED_COMMIT_FAILED: &str = "managed_commit_failed";
 /// neither environment nor codegen capability: committing an empty or
 /// recycled pair would hide the usage error.
 pub(crate) const CODE_MANAGED_NO_CAPABILITY: &str = "no_capability";
-/// Stable operational error code for live audit runs while auditor
-/// wiring stays deferred: advisory acquisition, tool execution, and
-/// SARIF mapping land in later M26 slices (O11/O58). Planning
-/// (`--dry-run`) succeeds; live execution fails closed.
-pub(crate) const CODE_AUDIT_DEFERRED: &str = "audit_deferred";
+/// Stable operational error code for live audit per-family failures:
+/// unexempted findings, incomplete assessment, advisory refresh failure,
+/// or auditor launch failure. Planning (`--dry-run`) succeeds; live runs
+/// execute qualified auditors per family over resolved scopes with
+/// per-family reporting (issue #18).
+pub(crate) const CODE_AUDIT_FAILED: &str = "audit_failed";
 /// Stable operational error code for live update per-set failures:
 /// a resolver backend reported failure, was unsupported, failed to launch,
 /// or terminated by signal. Planning (`--dry-run`) succeeds; live runs

@@ -21,6 +21,7 @@ pub enum StandardFormat {
     Sarif,
     Junit,
     Lcov,
+    Spdx,
 }
 
 impl StandardFormat {
@@ -30,6 +31,7 @@ impl StandardFormat {
             StandardFormat::Sarif => "sarif",
             StandardFormat::Junit => "junit",
             StandardFormat::Lcov => "lcov",
+            StandardFormat::Spdx => "spdx",
         }
     }
 
@@ -38,6 +40,7 @@ impl StandardFormat {
             "sarif" => Some(StandardFormat::Sarif),
             "junit" => Some(StandardFormat::Junit),
             "lcov" => Some(StandardFormat::Lcov),
+            "spdx" => Some(StandardFormat::Spdx),
             _ => None,
         }
     }

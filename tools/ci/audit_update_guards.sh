@@ -1,22 +1,25 @@
 #!/usr/bin/env bash
 # Audit/update/depcheck execution guards (issues #18, #19, #22).
 #
-# Live `dx audit` fails closed with `audit_deferred`; live `dx update`
+# Live `dx audit` executes qualified auditors per family over resolved scopes
+# with per-family reporting (issue #18 delivered: Gitleaks subprocess planning
+# in `dx_audit::backend`, advisory snapshots with 24h cache semantics in
+# `dx_audit::advisory`, offline matching in `dx_audit::vuln`, SPDX 2.3 JSON in
+# `dx_audit::spdx`, plus `dx_audit::outcome` aggregation; `--dry-run` exits 0).
+# Live `dx update`
 # executes resolver-owned backends per set with independent-set continuation
 # and per-set reporting (issue #19 delivered: selector syntax in
 # `dx_update::selector`, five-set registry in `dx_update::sets`, backend argv
 # in `dx_update::backend`, continuation in `dx_update::outcome`, exit selection
-# in `dx_update::report`; `--dry-run` exits 0). No auditor wiring, advisory
-# acquisition, or SARIF/SPDX mapping is claimed.
+# in `dx_update::report`; `--dry-run` exits 0).
 # Required-core lockfile-consistency and usage checks are delivered in
 # tools/depcheck/ (issue #22); admitted expansion stays open under
 # #304/#306.
 #
 # This harness machine-checks the verifiable halves on a clean
-# tree today: audit deferred code, update live execution, exit-code mappings,
+# tree today: audit live execution, update live execution, exit-code mappings,
 # dry-run planning, consumer-ci still
-# disabled, depcheck contract green. Audit live execution
-# stays open under its issue.
+# disabled, depcheck contract green.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:audit_update_guards`,
 # following //tools/ci:depcheck_contract.
@@ -34,12 +37,16 @@ fail=0
 ok() { pass=$((pass + 1)); }
 bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
 
-# #18: live audit fails closed with the stable deferred code.
-if grep -q -F -e 'audit_deferred' cli/cli/src/exec/audit.rs \
-  && grep -q -F -e 'CODE_AUDIT_DEFERRED' cli/cli/src/exec/common.rs; then
+# #18: live audit executes qualified auditors with per-family reporting (no deferred code).
+if grep -q -F -e 'CODE_AUDIT_FAILED' cli/cli/src/exec/common.rs \
+  && grep -q -F -e 'dx_audit::backend::plan_secrets' cli/cli/src/exec/audit.rs \
+  && grep -q -F -e 'dx_audit::outcome::AuditReport' cli/cli/src/exec/audit.rs \
+  && grep -q -F -e 'dx_audit::outcome::exit_code' cli/cli/src/exec/audit.rs \
+  && ! grep -q -F -e 'CODE_AUDIT_DEFERRED' cli/cli/src/exec/common.rs \
+  && ! grep -q -F -e 'audit_deferred' cli/cli/src/exec/audit.rs; then
   ok
 else
-  bad "live audit lost its audit_deferred fail-closed code"
+  bad "live audit lost its auditor execution (want CODE_AUDIT_FAILED + backend/aggregate/exit_code, no audit_deferred)"
 fi
 
 # #18: aggregate exit-code mapping stays unit-pinned (clean 0, findings
@@ -52,7 +59,7 @@ else
   bad "audit outcome lost its aggregate exit-code mapping"
 fi
 
-# #18/#19: consumer smoke still disables both audits (still deferred).
+# #18/#19: consumer smoke still disables both audits (live, not yet gated).
 if grep -q -F -e 'security-audit' .github/workflows/ci.yml \
   && grep -q -F -e 'license-audit' .github/workflows/ci.yml; then
   ok

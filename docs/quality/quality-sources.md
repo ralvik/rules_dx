@@ -141,9 +141,8 @@ enable list: matching direct source classes make the relevant default adapters a
 Families appear in workspace configuration only to add or remove supported tools or explicitly
 disable a capability. If no selected target exposes an effective class, the family creates no
 stage, action, environment contribution caused solely by applicability, or artifact fetch.
-The `secrets` policy family is its own semantic class for Gitleaks source audit, with SARIF and secret-value redaction;
-the registry amendment, redaction, and findings-versus-error evidence are open under
-open work.
+The `secrets` policy family is its own semantic class for Gitleaks source audit, with SARIF and secret-value redaction,
+pinned by fixtures in `dx_audit::secrets` plus `dx_audit::backend` and live execution in `dx audit security`.
 
 The registry has one source of truth from which exported Starlark constants, provider
 validation, adapter metadata, tests, and Rust diagnostic names are generated or checked. The

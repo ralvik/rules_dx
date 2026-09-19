@@ -188,18 +188,16 @@ mod tests {
 
     #[test]
     fn deferred_families_fail_closed_without_launch() {
-        // Audit stays deferred (issue #19 is update-only); update now
-        // executes resolver backends live (see exec/update.rs).
+        // Audit executes live auditors per family (issue #18); update
+        // executes resolver backends live (see exec/update.rs). Both fail
+        // closed with their stable operational codes when workspaces lack
+        // lockfiles.
         for argv in [vec!["audit"]] {
             let name = format!("exec-deferred-{}", argv[0]);
             let harness = Harness::new(&name);
             let (code, _out, err) = harness.run(&argv);
             assert_eq!(code, 1, "{argv:?}");
-            assert!(err.contains("deferred"), "{argv:?} fails closed: {err}");
-            assert!(
-                harness.seen_env.borrow().is_empty(),
-                "{argv:?} launches nothing"
-            );
+            assert!(err.contains("audit_failed"), "{argv:?} fails closed: {err}");
         }
     }
 }

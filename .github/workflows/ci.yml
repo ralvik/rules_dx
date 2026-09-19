@@ -259,7 +259,7 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:quality_cache_aquery
       - name: Audit depcheck contract (truth table + open routes, no false claims)
         run: bazel run --noshow_progress //tools/ci:depcheck_contract
-      - name: Audit execution guards (audit deferred + update live + exit maps)
+      - name: Audit execution guards (audit live + update live + exit maps)
         run: bazel run --noshow_progress //tools/ci:audit_update_guards
       - name: Audit wrapper sources (QualitySourcesInfo on all wrappers)
         run: bazel run --noshow_progress //tools/ci:wrapper_sources
@@ -279,7 +279,7 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:widen_update_loop
       - name: Audit quality foundations (provider + registry + mapping owners + battery contracts)
         run: bazel run --noshow_progress //tools/ci:quality_foundations_guards
-      - name: Audit execution/corpus/perf guards (audit deferred + update live + single corpus + report-not-gate)
+      - name: Audit execution/corpus/perf guards (audit live + update live + single corpus + report-not-gate)
         run: bazel run --noshow_progress //tools/ci:execution_corpus_perf_guards
       - name: Audit distribution/closeout guards (hygiene + workflows + no-publish invariants)
         run: bazel run --noshow_progress //tools/ci:distribution_closeout_guards
@@ -291,7 +291,7 @@ jobs:
         if: always()
         run: |
           echo "### dogfood-freshness — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Checked: Bazel-resolved tool execution, generate --check freshness, corpus ownership (carve-outs intact), code ownership (issue #12 lane A), examples READMEs (issue #85 commands + evidence), examples laziness (issue #85 no-install + isolation + deps-closure + action-graph + action-command zero-work), quality cache aquery (issue #84 action-key isolation seed), depcheck contract (issue #22 truth table + open routes), wrapper sources (issues #12/#7/#8 QualitySourcesInfo), registry singularity (issues #6/#84 single-sourced taxonomy), backlog contracts (issues #9/#10 frozen pins + gap labels), GHCR hygiene (issue #184 separate workflow + gated push), widen-update loop contract (issue #260 never-rewrites + manager set), quality foundations (issues #6/#7/#8/#12 provider + registry + mapping owners + battery contracts), execution/corpus/perf guards (issues #18/#19/#22/#15/#86 audit deferred + update live + single corpus + report-not-gate), distribution/closeout guards (issues #5/#26/#78/#184/#54 hygiene + workflows + no-publish invariants), backlog/automation guards (issues #9/#10/#85/#254/#260 contracts + examples + coverage/Renovate honesty), Supported-evidence gate (issue #301 no Supported without platform+consumer+release).">> "$GITHUB_STEP_SUMMARY"
+          echo "Checked: Bazel-resolved tool execution, generate --check freshness, corpus ownership (carve-outs intact), code ownership (issue #12 lane A), examples READMEs (issue #85 commands + evidence), examples laziness (issue #85 no-install + isolation + deps-closure + action-graph + action-command zero-work), quality cache aquery (issue #84 action-key isolation seed), depcheck contract (issue #22 truth table + open routes), wrapper sources (issues #12/#7/#8 QualitySourcesInfo), registry singularity (issues #6/#84 single-sourced taxonomy), backlog contracts (issues #9/#10 frozen pins + gap labels), GHCR hygiene (issue #184 separate workflow + gated push), widen-update loop contract (issue #260 never-rewrites + manager set), quality foundations (issues #6/#7/#8/#12 provider + registry + mapping owners + battery contracts), execution/corpus/perf guards (issues #18/#19/#22/#15/#86 audit live + update live + single corpus + report-not-gate), distribution/closeout guards (issues #5/#26/#78/#184/#54 hygiene + workflows + no-publish invariants), backlog/automation guards (issues #9/#10/#85/#254/#260 contracts + examples + coverage/Renovate honesty), Supported-evidence gate (issue #301 no Supported without platform+consumer+release).">> "$GITHUB_STEP_SUMMARY"
   dogfood-lint:
     name: dogfood-lint (dx lint converge + check)
     needs: [dogfood-freshness]

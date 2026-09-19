@@ -166,15 +166,16 @@ pub fn spec(command: Command) -> CommandSpec {
         },
         // Audit/update surfaces: family selection and dependency-set
         // selectors plan through the `dx_audit`/`dx_update` libraries,
-        // never the quality aspect pipeline. Audit exports SARIF through
-        // the shared report contract; update reports per-set through live
-        // output (text plus `notice`/`error` in JSON, issue #19) with no
-        // `--report` standard report.
+        // never the quality aspect pipeline. Audit exports SARIF (security
+        // findings) and SPDX 2.3 JSON (license inventory) through the
+        // shared report contract (issue #18); update reports per-set
+        // through live output (text plus `notice`/`error` in JSON, issue
+        // #19) with no `--report` standard report.
         Command::Audit => CommandSpec {
             command,
             capability: "audit",
             aspects: &[],
-            reports: &["sarif"],
+            reports: &["sarif", "spdx"],
             settings: &[],
         },
         Command::Update => CommandSpec {
@@ -270,7 +271,7 @@ mod tests {
         let audit = spec(Command::Audit);
         assert_eq!(audit.capability, "audit");
         assert!(audit.aspects.is_empty());
-        assert_eq!(audit.reports, &["sarif"]);
+        assert_eq!(audit.reports, &["sarif", "spdx"]);
         assert_eq!(WorkflowVerb::of(Command::Audit), None);
         assert!(Command::Audit.is_audit_update());
         let update = spec(Command::Update);

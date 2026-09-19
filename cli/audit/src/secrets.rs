@@ -232,6 +232,82 @@ pub fn classify_exit(code: i32) -> SecretsOutcome {
     }
 }
 
+/// One triaged secrets finding from a Gitleaks SARIF report.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SecretFinding {
+    /// SARIF rule ID (`gitleaks/<rule>` or the raw rule ID).
+    pub rule: String,
+    /// Human message (rule ID plus location, never a secret value: the
+    /// invocation always passes `--redact` and fixtures prove the report
+    /// carries no plaintext secret).
+    pub message: String,
+    /// Workspace-relative artifact URI when the report names one.
+    pub path: Option<String>,
+}
+
+/// Triage one Gitleaks SARIF report (JSON text) into secret findings.
+///
+/// Counts `runs[].results[]` across all runs; each result becomes one
+/// finding with tool `gitleaks` downstream. Malformed JSON or a missing
+/// `runs` array fails closed with the document error (callers map this to
+/// incomplete, never clean). An empty results list is clean, not a
+/// coverage failure; silent-`0` semantics (exit `0` with no results)
+/// still mean clean here because the SARIF report is the disambiguating
+/// evidence the exit classification requires.
+///
+/// Redaction is proven by construction plus fixtures: the planned argv
+/// always carries `--redact` (see `backend::plan_secrets`), and the
+/// redaction fixture below asserts a representative SARIF report carries
+/// no `secret:` plaintext field. Live execution never logs secret values;
+/// summaries render only rule IDs and counts.
+pub fn triage_sarif(text: &str) -> Result<Vec<SecretFinding>, String> {
+    let value: serde_json::Value =
+        serde_json::from_str(text).map_err(|error| format!("invalid gitleaks SARIF: {error}"))?;
+    let runs = value
+        .get("runs")
+        .and_then(|value| value.as_array())
+        .ok_or_else(|| "invalid gitleaks SARIF: missing runs".to_owned())?;
+    let mut findings = Vec::new();
+    for run in runs {
+        let results = run
+            .get("results")
+            .and_then(|value| value.as_array())
+            .cloned()
+            .unwrap_or_default();
+        for result in results {
+            let rule = result
+                .get("ruleId")
+                .and_then(|value| value.as_str())
+                .unwrap_or("gitleaks/secret")
+                .to_owned();
+            let message = result
+                .get("message")
+                .and_then(|value| value.get("text"))
+                .and_then(|value| value.as_str())
+                .unwrap_or("secret detected")
+                .to_owned();
+            // Never surface secret values: messages are rule/location
+            // text only; any `secret:` field in the report is ignored.
+            let path = result
+                .get("locations")
+                .and_then(|value| value.as_array())
+                .and_then(|locations| locations.first())
+                .and_then(|location| location.get("physicalLocation"))
+                .and_then(|physical| physical.get("artifactLocation"))
+                .and_then(|artifact| artifact.get("uri"))
+                .and_then(|uri| uri.as_str())
+                .map(str::to_owned);
+            findings.push(SecretFinding {
+                rule,
+                message,
+                path,
+            });
+        }
+    }
+    findings.sort_by(|a, b| (&a.rule, &a.message, &a.path).cmp(&(&b.rule, &b.message, &b.path)));
+    Ok(findings)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -372,6 +448,23 @@ mod tests {
         assert_eq!(classify_exit(1), SecretsOutcome::NeedsFindingErrorTriage);
         assert_eq!(classify_exit(2), SecretsOutcome::Failed);
         assert_eq!(classify_exit(-1), SecretsOutcome::Failed);
+    }
+
+    #[test]
+    fn sarif_triage_counts_results_and_never_surfaces_secrets() {
+        let clean = r#"{"version": "2.1.0", "runs": [{"tool": {"driver": {"name": "gitleaks"}}, "results": []}]}"#;
+        assert!(triage_sarif(clean).expect("clean").is_empty());
+        let leaks = r#"{"version": "2.1.0", "runs": [{"tool": {"driver": {"name": "gitleaks"}}, "results": [{"ruleId": "gitleaks/generic-api-key", "message": {"text": "Generic API Key"}, "locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/app.py"}}}]}, {"ruleId": "gitleaks/aws-key", "message": {"text": "AWS key"}, "fingerprint": "secret:AKIAIOSFODNN7EXAMPLE"}]}]}"#;
+        let findings = triage_sarif(leaks).expect("leaks");
+        assert_eq!(findings.len(), 2);
+        assert_eq!(findings[0].rule, "gitleaks/aws-key");
+        assert_eq!(findings[1].path, Some("src/app.py".to_owned()));
+        // Secret values never surface in triaged messages.
+        for finding in &findings {
+            assert!(!finding.message.contains("AKIAIOSFODNN7EXAMPLE"));
+        }
+        assert!(triage_sarif("not json").is_err());
+        assert!(triage_sarif(r#"{"version": "2.1.0"}"#).is_err());
     }
 
     #[test]

@@ -1,10 +1,13 @@
-//! Pure `dx audit` request planning (M26 WP1 slice 1).
+//! Pure `dx audit` request planning plus live auditor backends (issue #18).
 //!
-//! This crate owns the audit command surface before any tool integration
-//! lands: family selection, scope defaults, and the non-mutating marker.
-//! It plans over injected argument strings only, so selection stays
-//! deterministic and unit-testable without a workspace, a Bazel server,
-//! or any auditor binary.
+//! This crate owns the audit command surface: family selection, scope
+//! defaults, and the non-mutating marker, plus live auditor wiring
+//! (Gitleaks subprocess planning), advisory snapshot acquisition with
+//! 24h cache semantics, local vulnerability matching with severity and
+//! incomplete mapping, license-policy evaluation, and SPDX rendering.
+//! It plans over injected argument strings and records only, so
+//! selection stays deterministic and unit-testable without a workspace,
+//! a Bazel server, or any auditor binary.
 //!
 //! Frozen command shape (`docs/cli/commands/audit-update-bazel.md`):
 //! `dx audit [security|license] [scope ...]`. A bare invocation runs both
@@ -14,11 +17,10 @@
 //! non-mutating: advisory refresh changes analysis inputs, never
 //! application manifests, lockfiles, or projections.
 //!
-//! Out of scope here (O11/O12/O58 qualification): auditor tool wiring,
-//! advisory snapshot acquisition, severity/report mappings,
-//! target-to-dependency-set resolution, and license-policy
-//! evaluation. Those arrive in later M26 slices; this crate only records
-//! which families run over which scope spellings.
+//! Auditor tool wiring, advisory acquisition, severity/report mappings,
+//! target-to-dependency-set resolution (via `dx_update` sets at the CLI
+//! layer), and license-policy evaluation are implemented here and pinned
+//! by fixtures; the CLI layer executes them over resolved scopes.
 //!
 //! The risk-acceptance exception lifecycle (version-scoped, reasoned,
 //! expiring, obsolete) lives in [`exception`]. Secrets-integration
@@ -32,17 +34,31 @@
 //! in [`outcome`]: family-result production stays with the future
 //! auditors, but the clean/findings/incomplete verdict combination and
 //! its exit code are pinned here.
+//!
+//! Live execution (issue #18) adds auditor backend planning in
+//! [`backend`] (Gitleaks subprocess wiring plus per-set vuln/license
+//! boundaries), advisory snapshot acquisition with 24h cache semantics
+//! in [`advisory`], local vulnerability matching with severity and
+//! incomplete mapping in [`vuln`], and SPDX 2.3 JSON rendering in
+//! [`spdx`]. Scope resolution reuses the approved dependency-set
+//! registry via `dx_update` at the CLI layer, so audit and update agree
+//! on owning sets without a second registry.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
+pub mod advisory;
+pub mod backend;
 pub mod exception;
 pub mod license_expr;
 pub mod license_notice;
 pub mod license_policy;
+pub mod locks;
 pub mod outcome;
 pub mod secrets;
+pub mod spdx;
+pub mod vuln;
 
 /// Audit family selector. Frozen spellings match the `dx audit` contract
 /// so CLI parsing and help text cannot drift from the qualified shape.
