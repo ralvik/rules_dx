@@ -47,4 +47,13 @@ in `gazelle/rust/lang.go`, proven by `gazelle/rust/lang_test.go`); remaining nat
 exact-target discovery) stay owned under issue #303 per the
 [native plan](../native-toolchains.md#qualification-questions-and-delivery).
 
+Admitted additional foundations keep their provisional upstreams with hello test runners
+pinned (`go_test` over `go test` with package-level `embed`, `scala_test` over ScalaTest,
+`java_test`/`kotlin_test` over the JUnit 4 seed, plain `cc_test`/`csharp_test`/`fsharp_test`
+executables) and lock authority (`third_party/jvm/maven_install.json`,
+`third_party/dotnet/paket.lock` plus `paket.dependencies`, Go stdlib-only, C/C++ none).
+Upgrades (GoogleTest v1.18.0, JUnit 6.1.3 plus 5.14.x fallback, xUnit v3 4.0.0, Go
+`from_file` when non-stdlib deps land) stay owned under issue #304; no `Supported` claim
+until platform plus consumer plus release evidence passes.
+
 Pinned by `bazel run //tools/ci:foundation_maps`.

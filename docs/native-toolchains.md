@@ -260,6 +260,11 @@ in `gazelle/rust/lang.go`, proven by `gazelle/rust/lang_test.go`) and pinned by
 `bazel run //tools/ci:foundation_maps`; the five gaps above remain open with no `Supported`
 claim.
 
+Admitted C/C++ foundation stays owned under issue #304: MSVC interop plus SDK licensing
+blocks Windows qualification per the [support matrix](product/support-matrix.md#initial-feasibility-review)
+and [Windows acquisition](#windows-acquisition-and-compatibility) above; no `Supported`
+claim until acquisition, interoperability, coverage, and release evidence passes.
+
 | Question to close | Preferred next evidence or remedy | Tracking |
 | --- | --- | --- |
 | Does the exact current stable stack compose? | Freeze resolved Bzlmod identities; compare rules_rs's LLVM reference with the newer candidate; record checksums, source patches and compiler/profile compatibility. | open work |

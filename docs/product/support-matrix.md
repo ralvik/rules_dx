@@ -179,7 +179,20 @@ requires a new evidence-backed decision.
 
 Admitted additional foundations (Go, C/C++, Java, Kotlin, Scala, C#, F#) stay open
 under issue #304: per-foundation exact upstream versions, rulesets, adapter mappings,
-lock wiring, test runners, and quality tools remain qualification work.
+lock wiring, test runners, and quality tools remain qualification work. Qualified mappings
+are pinned by `bazel run //tools/ci:foundation_maps` with owning qualification in
+[Generation](../generation/README.md#language-mapping-qualification),
+[Environments](../environments/README.md#language-mapping-qualification),
+[Tools](../tools/README.md#language-mapping-qualification), and the
+[native plan](../native-toolchains.md#qualification-questions-and-delivery):
+wrappers preserving upstream providers plus `QualitySourcesInfo`, Gazelle extensions,
+env plans, hello builds, and lock authority (`maven_install.json` plus fail-closed,
+Paket plus `paket.main`, Go stdlib-only, C/C++ none), with test runners (`go test`,
+ScalaTest, JUnit 4 seed, plain `cc`/`csharp`/`fsharp` executables) and
+classification-only quality families. Remaining gaps (GoogleTest v1.18.0, JUnit 6.1.3
+plus 5.14.x fallback, xUnit v3 4.0.0, Go `from_file` when non-stdlib deps land, quality
+adapters under issue #307, C/C++ MSVC interop plus SDK licensing) stay owned under
+issue #304. No `Supported` claim until platform plus consumer plus release evidence passes.
 
 ### Deferred Beyond V1
 
