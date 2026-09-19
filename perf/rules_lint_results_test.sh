@@ -56,6 +56,18 @@ check_json "synth dirty consistency" "doc['seed_harness']['dirty_files']==doc['s
 check_json "aquery mnemonics consistency" "len(doc['quality_sample']['mnemonics'])==doc['quality_sample']['aquery_actions']"
 check_json "benchmark identity measured" "doc['benchmark']=='rules_lint_comparison_measured'"
 check_json "post-shutdown elapsed consistency" "doc['quality_sample']['post_shutdown_cold_elapsed_ms']>0 and doc['quality_sample']['post_shutdown_cold_elapsed_ms']<=doc['quality_sample']['post_shutdown_cold_wall_ms']"
+check_json "fairness bazel pinned" "doc['fairness']['bazel_version']=='9.2.0' and doc['fairness']['bazel_source']=='.bazelversion'"
+check_json "fairness host and machine" "doc['fairness']['host']=='linux_x86_64' and 'ubuntu-latest' in doc['fairness']['machine_class'] and 'local-only' in doc['fairness']['machine_class']"
+check_json "fairness rules_lint pin" "doc['fairness']['rules_lint_pin']=='v2.8.0'"
+check_json "fairness pins consistent" "doc['fairness']['bazel_version']==doc['bazel_version'] and doc['fairness']['host']==doc['host'] and doc['fairness']['rules_lint_pin']==doc['rules_lint_pin']"
+check_json "dx tool versions explicit" "doc['fairness']['dx_tool_versions']['ruff']=='0.16.7' and doc['fairness']['dx_tool_versions']['buildifier']=='8.5.1' and doc['fairness']['dx_tool_versions']['biome']=='2.5.12' and doc['fairness']['dx_tool_versions']['eslint']=='10.10.0' and doc['fairness']['dx_tool_versions']['prettier']=='3.9.6'"
+check_json "dx tool versions extended" "doc['fairness']['dx_tool_versions']['taplo']=='0.10.0' and doc['fairness']['dx_tool_versions']['ty']=='0.0.80' and doc['fairness']['dx_tool_versions']['vale']=='3.20.0' and doc['fairness']['dx_tool_versions']['tsc']=='5.9.3'"
+check_json "adapter-version skew explicit" "'explicit' in doc['fairness']['adapter_version_skew'] and 'ADR 0007' in doc['fairness']['adapter_version_skew'] and 'no parity claim' in doc['fairness']['adapter_version_skew']"
+check_json "same-tool policy explicit" "'same Bazel version' in doc['fairness']['same_tool_policy'] and 'same machine class' in doc['fairness']['same_tool_policy']"
+check_json "comparison dx_side measured" "'//perf:corpus' in doc['comparison']['dx_side'] and '2 actions' in doc['comparison']['dx_side']"
+check_json "comparison rules_lint reference" "'ADR 0007' in doc['comparison']['rules_lint_side'] and 'no dep' in doc['comparison']['rules_lint_side'] and '200 files' in doc['comparison']['rules_lint_side']"
+check_json "comparison methodology" "'synthetic' in doc['comparison']['methodology'] and 'aquery' in doc['comparison']['methodology'] and 'cache-hit' in doc['comparison']['methodology']"
+check_json "comparison verdict report-not-gate" "'report-not-gate' in doc['comparison']['verdict'] and 'no parity claim' in doc['comparison']['verdict']"
 
 # Determinism: fresh harness regeneration matches the checked-in digest.
 bash "$harness" --files 200 --dirty-pct 10 --seed 86 --out "$scratch/regen" > "$scratch/regen.json"
