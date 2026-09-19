@@ -9,6 +9,21 @@
 //! `Scratch` removes its tree on drop as a best-effort fallback;
 //! owners call [`Scratch::close`] on success paths so cleanup failures
 //! surface as action errors instead of vanishing.
+//!
+//! Dependency evaluation (issue #392, rejected): no `strict-path` — the
+//! scratch threat model stays TempDir-internal (fresh OS-random `TempDir`
+//! plus internal `mirror_rel` from Bazel action inputs, never untrusted
+//! archives/HTTP/LLM paths), so the lexical `Component` walk plus
+//! `starts_with` boundary plus the explicit empty/null/backslash guards
+//! and the on-disk symlink-prefix guard below own the 19+ CVE-pattern
+//! class here. Adopting `strict-path 0.2` (`PathBoundary`/`StrictPath`
+//! over `soft-canonicalize` plus `dunce`, single maintainer, on-disk
+//! resolve per join, `interop_path`/`StrictPath` API churn) would add
+//! supply-chain review, lockfile churn, and `MODULE.bazel` manifests for
+//! zero behavior gain today; `soft-canonicalize` alone carries no
+//! boundary policy and `normpath` alone is normalization without on-disk
+//! resolve (see #391). Re-evaluate with `VirtualRoot`-style boundary plus
+//! safe-I/O only if adapters ever accept untrusted entries.
 
 use std::ffi::OsStr;
 use std::io;
@@ -62,8 +77,36 @@ impl Scratch {
     }
 
     /// Resolves a scratch-relative path, rejecting escapes.
+    ///
+    /// Lexical boundary plus explicit shape guards (empty, null byte,
+    /// backslash for portable Unix/Windows behavior) plus a final
+    /// containment check. On-disk symlink escapes are owned by
+    /// [`Scratch::materialize`]'s symlink-prefix guard, not by this
+    /// lexical join: this returns the lexical location, materialize
+    /// refuses to traverse a symlink to reach it.
     pub fn resolve(&self, rel: &Path) -> io::Result<PathBuf> {
         let root = self.dir.path();
+        // Encoded bytes keep the shape check exact on non-UTF8 inputs:
+        // null and backslash are ASCII, so byte and lossy views agree.
+        let raw = rel.as_os_str().as_encoded_bytes();
+        if raw.is_empty() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "mirror path is empty",
+            ));
+        }
+        if raw.contains(&0) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("mirror path contains null byte: {}", rel.display()),
+            ));
+        }
+        if raw.contains(&b'\\') {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("mirror path contains backslash: {}", rel.display()),
+            ));
+        }
         let mut absolute = root.to_owned();
         for component in rel.components() {
             use std::path::Component::{CurDir, Normal, ParentDir, Prefix, RootDir};
@@ -91,9 +134,16 @@ impl Scratch {
                 }
             }
         }
-        // Invariant: every component either descends (Normal), is neutral
-        // (CurDir), was range-checked (ParentDir), or was rejected
-        // (RootDir/Prefix), so `absolute` is still inside the root here.
+        // Defense in depth beyond the per-pop checks: every component
+        // either descended (Normal), was neutral (CurDir), was
+        // range-checked (ParentDir), or was rejected (RootDir/Prefix),
+        // so this only fires on a future walk divergence.
+        if absolute != root && !absolute.starts_with(root) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("mirror path escapes scratch: {}", rel.display()),
+            ));
+        }
         Ok(absolute)
     }
 
@@ -101,7 +151,15 @@ impl Scratch {
     /// Closure entries prefer symlinks but fall back to copies, so
     /// platforms without symlinks (or without the privilege to create
     /// them) still materialize working trees.
+    ///
+    /// Boundary enforcement is lexical (`resolve`) plus on-disk: the
+    /// symlink-prefix guard refuses to traverse a symlink directory
+    /// created by an earlier entry, and an existing symlink at the
+    /// target itself is rejected instead of followed. Fresh scratch
+    /// trees start symlink-free, so the guard only fires on escape
+    /// attempts or future `Link`-to-directory misuse.
     pub fn materialize(&self, files: &[MirrorFile]) -> io::Result<()> {
+        let root = self.dir.path();
         for file in files {
             let absolute = self.resolve(&file.mirror_rel)?;
             // `resolve` only returns paths inside the scratch root, which
@@ -114,7 +172,26 @@ impl Scratch {
                     format!("scratch path has no parent: {}", absolute.display()),
                 )
             })?;
+            // Lexical resolve cannot see symlinks: refuse to traverse a
+            // symlink prefix before creating parents.
+            ensure_no_symlink_prefix(root, parent, &file.mirror_rel)?;
+            // Refuse to follow an existing symlink at the target: a byte
+            // write or a fallback copy through it would land outside.
+            if let Ok(meta) = std::fs::symlink_metadata(&absolute) {
+                if meta.file_type().is_symlink() {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        format!(
+                            "mirror path escapes scratch via symlink: {}",
+                            file.mirror_rel.display()
+                        ),
+                    ));
+                }
+            }
             std::fs::create_dir_all(parent)?;
+            // `create_dir_all` follows symlinks, so re-check after
+            // creation (no concurrent actor today, but fail closed).
+            ensure_no_symlink_prefix(root, parent, &file.mirror_rel)?;
             match &file.contents {
                 MirrorContents::Bytes(bytes) => std::fs::write(&absolute, bytes)?,
                 MirrorContents::Link(target) => link_or_copy(target, &absolute)?,
@@ -131,6 +208,51 @@ impl Scratch {
     pub fn close(self) -> io::Result<()> {
         self.dir.close()
     }
+}
+
+/// Rejects on-disk symlink prefixes between `root` (exclusive) and
+/// `path` (inclusive): any existing prefix that is a symlink would make
+/// a lexically inside `absolute` land outside on disk.
+///
+/// Missing prefixes cannot be symlinks yet; they become real directories
+/// via `create_dir_all` after this guard. `root` itself is the fresh
+/// `TempDir` and is never a symlink, so only its children are checked.
+fn ensure_no_symlink_prefix(root: &Path, path: &Path, rel: &Path) -> io::Result<()> {
+    let suffix = path.strip_prefix(root).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("mirror path escapes scratch: {}", rel.display()),
+        )
+    })?;
+    let mut current = root.to_owned();
+    for component in suffix.components() {
+        use std::path::Component::{CurDir, Normal, ParentDir, Prefix, RootDir};
+        match component {
+            Normal(part) => current.push(part),
+            CurDir => {}
+            ParentDir => {
+                current.pop();
+            }
+            RootDir | Prefix(_) => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    format!("mirror path escapes scratch: {}", rel.display()),
+                ));
+            }
+        }
+        match std::fs::symlink_metadata(&current) {
+            Ok(meta) if meta.file_type().is_symlink() => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    format!("mirror path escapes scratch via symlink: {}", rel.display()),
+                ));
+            }
+            Ok(_) => {}
+            Err(err) if err.kind() == io::ErrorKind::NotFound => {}
+            Err(err) => return Err(err),
+        }
+    }
+    Ok(())
 }
 
 /// Links `target` at `link`, copying the file when symlinks are
@@ -308,6 +430,100 @@ mod tests {
                 .expect("dot component"),
             scratch.root().join("ok.rs")
         );
+    }
+
+    #[test]
+    fn resolve_rejects_empty_null_and_backslash() {
+        // Issue #392: explicit shape guards for the TempDir-internal
+        // lexical boundary — portable across Unix/Windows, fail closed
+        // without on-disk canonicalization.
+        let scratch = Scratch::create(&std::env::temp_dir()).expect("scratch");
+        assert!(scratch.resolve(Path::new("")).is_err(), "empty");
+        assert!(scratch.resolve(Path::new("a\0b")).is_err(), "null byte");
+        assert!(scratch.resolve(Path::new("a\\b")).is_err(), "backslash");
+        assert!(
+            scratch.resolve(Path::new("..\\evil")).is_err(),
+            "mixed separators"
+        );
+        assert!(
+            scratch.resolve(Path::new("\\\\server\\share")).is_err(),
+            "UNC"
+        );
+        // Forward-slash nesting stays inside.
+        assert_eq!(
+            scratch.resolve(Path::new("a/b/c.rs")).expect("nested"),
+            scratch.root().join("a/b/c.rs")
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn materialize_rejects_symlink_directory_escape() {
+        // Issue #392 traversal fixture: a symlink directory prefix from
+        // an earlier entry must not let a later lexically inside path
+        // land outside on disk.
+        let parent_tmp = tempfile::Builder::new()
+            .prefix("dx-symlink-dir-")
+            .tempdir_in(std::env::temp_dir())
+            .expect("symlink parent");
+        let parent = parent_tmp.path().to_path_buf();
+        let outside = parent.join("outside");
+        std::fs::create_dir_all(&outside).expect("outside dir");
+        let scratch = Scratch::create(&parent).expect("scratch");
+        let root = scratch.root().to_owned();
+        // Plant a directory symlink via the Link entry shape.
+        scratch
+            .materialize(&[MirrorFile {
+                mirror_rel: PathBuf::from("evil"),
+                contents: MirrorContents::Link(outside.clone()),
+            }])
+            .expect("plant symlink dir");
+        assert_eq!(
+            std::fs::read_link(root.join("evil")).expect("symlink planted"),
+            outside,
+        );
+        // A later entry through that prefix fails closed.
+        let err = scratch
+            .materialize(&[MirrorFile {
+                mirror_rel: PathBuf::from("evil/pwned"),
+                contents: MirrorContents::Bytes(b"pwned\n".to_vec()),
+            }])
+            .expect_err("symlink prefix must fail");
+        assert_eq!(err.kind(), io::ErrorKind::InvalidInput);
+        assert!(!outside.join("pwned").exists(), "outside stays clean");
+        scratch.close().expect("close");
+        parent_tmp.close().expect("cleanup");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn materialize_rejects_symlink_file_overwrite() {
+        // Issue #392 traversal fixture: an existing symlink at the
+        // target must not be followed by a byte write or fallback copy.
+        let parent_tmp = tempfile::Builder::new()
+            .prefix("dx-symlink-file-")
+            .tempdir_in(std::env::temp_dir())
+            .expect("symlink parent");
+        let parent = parent_tmp.path().to_path_buf();
+        let outside = parent.join("secret");
+        std::fs::write(&outside, b"secret\n").expect("outside file");
+        let scratch = Scratch::create(&parent).expect("scratch");
+        let root = scratch.root().to_owned();
+        std::os::unix::fs::symlink(&outside, root.join("link")).expect("plant file symlink");
+        let err = scratch
+            .materialize(&[MirrorFile {
+                mirror_rel: PathBuf::from("link"),
+                contents: MirrorContents::Bytes(b"pwned\n".to_vec()),
+            }])
+            .expect_err("symlink target must fail");
+        assert_eq!(err.kind(), io::ErrorKind::InvalidInput);
+        assert_eq!(
+            std::fs::read(&outside).expect("outside read"),
+            b"secret\n",
+            "outside unchanged"
+        );
+        scratch.close().expect("close");
+        parent_tmp.close().expect("cleanup");
     }
 
     #[test]
