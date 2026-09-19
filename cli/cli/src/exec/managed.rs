@@ -332,6 +332,7 @@ mod tests {
     #[test]
     fn managed_empty_sides_derive_the_managed_empty_identities() {
         let workspace = temp_dir("managed-empty-sides-ws");
+        let workspace = workspace.path();
         let codegen_plan = dx_codegen::collect_plan(&[]).expect("empty codegen plan");
         let staged = stage_codegen_side(&workspace, &codegen_plan, &[]).expect("stage");
         assert_eq!(staged, empty_generated_id().expect("empty digest"));

@@ -5,6 +5,7 @@ use crate::args::parse;
 use crate::args::Invocation;
 use crate::plan::GENERATE_ENV_INTENDED;
 use crate::resolve::{QueryResult, QueryRunner};
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use dx_digest::blake3 as digest;
 use dx_process::{ChildStatus, Runner};
 use dx_setup::{
@@ -24,16 +25,20 @@ pub(crate) fn invocation(words: &[&str]) -> Invocation {
     parse(&words.iter().map(ToString::to_string).collect::<Vec<_>>()).expect("parse")
 }
 
-pub(crate) fn temp_dir(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("dx-exec-test-{}-{name}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).expect("temp dir");
-    dir
+pub(crate) fn temp_dir(prefix: &str) -> tempfile::TempDir {
+    tempfile::Builder::new()
+        .prefix(&format!("dx-exec-test-{prefix}-"))
+        .tempdir()
+        .expect("temp dir")
 }
 
 pub(crate) struct Harness {
     pub(crate) workspace: PathBuf,
     pub(crate) temp: PathBuf,
+    /// Retains the workspace `TempDir` so `workspace` auto-cleans on drop.
+    pub(crate) _workspace_guard: tempfile::TempDir,
+    /// Retains the scratch `TempDir` so `temp` auto-cleans on drop.
+    pub(crate) _temp_guard: tempfile::TempDir,
     pub(crate) results: HashMap<String, Vec<u8>>,
     pub(crate) bazel_code: i32,
     pub(crate) fail_target: bool,
@@ -78,9 +83,15 @@ impl QueryRunner for ScriptQuery {
 
 impl Harness {
     pub(crate) fn new(name: &str) -> Self {
+        let workspace_guard = temp_dir(&format!("{name}-ws"));
+        let temp_guard = temp_dir(&format!("{name}-tmp"));
+        let workspace = workspace_guard.path().to_path_buf();
+        let temp = temp_guard.path().to_path_buf();
         Harness {
-            workspace: temp_dir(&format!("{name}-ws")),
-            temp: temp_dir(&format!("{name}-tmp")),
+            workspace,
+            temp,
+            _workspace_guard: workspace_guard,
+            _temp_guard: temp_guard,
             results: HashMap::new(),
             bazel_code: 0,
             fail_target: false,
@@ -220,19 +231,27 @@ impl Harness {
             let safe = label.replace(['/', ':'], "_");
             let artifact = self.temp.join(format!("{safe}.pb"));
             std::fs::write(&artifact, bytes).expect("artifact");
-            files.push(format!(
-                "{{\"uri\": \"file://{}\"}}",
-                artifact.to_string_lossy()
-            ));
+            files
+                .push(serde_json::json!({"uri": format!("file://{}", artifact.to_string_lossy())}));
         }
-        lines.push(format!(
-            "{{\"id\": {{\"namedSet\": {{\"id\": \"0\"}}}}, \"namedSetOfFiles\": {{\"files\": [{}]}}}}",
-            files.join(",")
-        ));
-        let success = if self.fail_target { "false" } else { "true" };
-        lines.push(format!(
-            "{{\"id\": {{\"targetCompleted\": {{\"label\": \"//test:corpus\"}}}}, \"completed\": {{\"success\": {success}, \"outputGroup\": [{{\"name\": \"dx_results\", \"fileSets\": [{{\"id\": \"0\"}}]}}]}}}}"
-        ));
+        lines.push(
+            serde_json::json!({
+                "id": {"namedSet": {"id": "0"}},
+                "namedSetOfFiles": {"files": files},
+            })
+            .to_string(),
+        );
+        let success = !self.fail_target;
+        lines.push(
+            serde_json::json!({
+                "id": {"targetCompleted": {"label": "//test:corpus"}},
+                "completed": {
+                    "success": success,
+                    "outputGroup": [{"name": "dx_results", "fileSets": [{"id": "0"}]}],
+                },
+            })
+            .to_string(),
+        );
         FakeRunner {
             code: if self.signalled {
                 None
@@ -320,71 +339,55 @@ impl Runner for FakeRunner {
     }
 }
 
-/// Standard base64 for canned intended-manifest witnesses.
-pub(crate) fn b64(bytes: &[u8]) -> String {
-    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut out = String::with_capacity((bytes.len() + 2) / 3 * 4);
-    for chunk in bytes.chunks(3) {
-        let b0 = u32::from(chunk[0]);
-        let b1 = u32::from(*chunk.get(1).unwrap_or(&0));
-        let b2 = u32::from(*chunk.get(2).unwrap_or(&0));
-        let n = (b0 << 16) | (b1 << 8) | b2;
-        out.push(ALPHABET[(n >> 18) as usize & 63] as char);
-        out.push(ALPHABET[(n >> 12) as usize & 63] as char);
-        out.push(if chunk.len() > 1 {
-            ALPHABET[(n >> 6) as usize & 63] as char
-        } else {
-            '='
-        });
-        out.push(if chunk.len() > 2 {
-            ALPHABET[n as usize & 63] as char
-        } else {
-            '='
-        });
-    }
-    out
-}
-
 /// Canned `DX_GENERATE_INTENDED` witness: one scope, the given file
 /// entries, and the given ignored-import entries.
 pub(crate) fn intended_witness(mode: &str, complete: bool, files: &str, ignored: &str) -> Vec<u8> {
-    format!(
-        concat!(
-            r#"{{"schema_major":1,"schema_minor":0,"mode":"{mode}","#,
-            r#""scopes":[{{"value":"//...","results_complete":{complete}}}],"#,
-            r#""files":[{files}],"ignored_imports":[{ignored}]}}"#
-        ),
-        mode = mode,
-        complete = complete,
-        files = files,
-        ignored = ignored,
-    )
-    .into_bytes()
+    let files_value: Vec<serde_json::Value> = if files.trim().is_empty() {
+        Vec::new()
+    } else {
+        serde_json::from_str(&format!("[{files}]")).expect("files JSON")
+    };
+    let ignored_value: Vec<serde_json::Value> = if ignored.trim().is_empty() {
+        Vec::new()
+    } else {
+        serde_json::from_str(&format!("[{ignored}]")).expect("ignored JSON")
+    };
+    serde_json::to_vec(&serde_json::json!({
+        "schema_major": 1,
+        "schema_minor": 0,
+        "mode": mode,
+        "scopes": [{"value": "//...", "results_complete": complete}],
+        "files": files_value,
+        "ignored_imports": ignored_value,
+    }))
+    .expect("witness JSON")
 }
 
 /// One modify entry replacing `original` with `candidate` through a
 /// single full-span edit.
 pub(crate) fn intended_modify(path: &str, original: &[u8], candidate: &[u8]) -> String {
-    format!(
-        concat!(
-            r#"{{"path":{path},"scope_index":0,"original_content":"{original}","#,
-            r#""edits":[{{"start_byte":0,"end_byte":{end},"replacement":"{candidate}"}}]}}"#
-        ),
-        path = serde_json::to_string(path).expect("path JSON"),
-        original = b64(original),
-        end = original.len(),
-        candidate = b64(candidate),
-    )
+    serde_json::json!({
+        "path": path,
+        "scope_index": 0,
+        "original_content": STANDARD.encode(original),
+        "edits": [{
+            "start_byte": 0,
+            "end_byte": original.len(),
+            "replacement": STANDARD.encode(candidate),
+        }],
+    })
+    .to_string()
 }
 
 /// One ignored-import audit entry.
 pub(crate) fn intended_ignored(path: &str, language: &str, import: &str) -> String {
-    format!(
-        r#"{{"path":{path},"language":{language},"import":{import},"scope_index":0}}"#,
-        path = serde_json::to_string(path).expect("path JSON"),
-        language = serde_json::to_string(language).expect("language JSON"),
-        import = serde_json::to_string(import).expect("import JSON"),
-    )
+    serde_json::json!({
+        "path": path,
+        "language": language,
+        "import": import,
+        "scope_index": 0,
+    })
+    .to_string()
 }
 
 /// Argv-recording launcher probe for passthrough tests: the
@@ -423,14 +426,15 @@ pub(crate) fn write_bep_artifact(harness: &Harness, name: &str, bytes: &[u8]) ->
 }
 
 pub(crate) fn test_result_line(label: &str, entries: &[(String, String)]) -> String {
-    let outputs = entries
+    let outputs: Vec<serde_json::Value> = entries
         .iter()
-        .map(|(name, uri)| format!("{{\"name\": \"{name}\", \"uri\": \"{uri}\"}}"))
-        .collect::<Vec<_>>()
-        .join(",");
-    format!(
-        "{{\"id\": {{\"testResult\": {{\"label\": \"{label}\"}} }}, \"testResult\": {{\"status\": \"PASSED\", \"testActionOutput\": [{outputs}]}}}}"
-    )
+        .map(|(name, uri)| serde_json::json!({"name": name, "uri": uri}))
+        .collect();
+    serde_json::json!({
+        "id": {"testResult": {"label": label}},
+        "testResult": {"status": "PASSED", "testActionOutput": outputs},
+    })
+    .to_string()
 }
 
 pub(crate) fn coverage_harness(name: &str, tracefile: &[u8]) -> Harness {
@@ -488,26 +492,52 @@ pub(crate) fn commit_clean_pair(harness: &Harness, env: char, gen: char) -> Stri
 /// output group: the fake runner writes these lines verbatim.
 pub(crate) fn managed_shard_bep(shard: &Path, group: &str) -> Vec<String> {
     vec![
-        format!(
-            "{{\"id\": {{\"namedSet\": {{\"id\": \"0\"}}}}, \"namedSetOfFiles\": {{\"files\": [{{\"uri\": \"file://{}\"}}]}}}}",
-            shard.to_string_lossy()
-        ),
-        format!(
-            "{{\"id\": {{\"targetCompleted\": {{\"label\": \"//a:one\"}}}}, \"completed\": {{\"success\": true, \"outputGroup\": [{{\"name\": \"{group}\", \"fileSets\": [{{\"id\": \"0\"}}]}}]}}}}"
-        ),
+        serde_json::json!({
+            "id": {"namedSet": {"id": "0"}},
+            "namedSetOfFiles": {"files": [{"uri": format!("file://{}", shard.to_string_lossy())}]},
+        })
+        .to_string(),
+        serde_json::json!({
+            "id": {"targetCompleted": {"label": "//a:one"}},
+            "completed": {
+                "success": true,
+                "outputGroup": [{"name": group, "fileSets": [{"id": "0"}]}],
+            },
+        })
+        .to_string(),
     ]
 }
 
 /// Fresh managed workspace plus two real artifact files the tests
-/// stage mirror leaves against.
-pub(crate) fn managed_stage_fixture(name: &str) -> (PathBuf, PathBuf, PathBuf) {
-    let workspace = temp_dir(&format!("{name}-ws"));
-    let artifacts = temp_dir(&format!("{name}-artifacts"));
-    let first = artifacts.join("first.txt");
-    let second = artifacts.join("second.txt");
+/// stage mirror leaves against. Both `TempDir` guards are returned so
+/// the directories auto-clean on drop; `first`/`second` live inside
+/// the artifacts guard.
+pub(crate) struct ManagedStageFixture {
+    pub(crate) workspace_guard: tempfile::TempDir,
+    pub(crate) _artifacts_guard: tempfile::TempDir,
+    pub(crate) first: PathBuf,
+    pub(crate) second: PathBuf,
+}
+
+impl ManagedStageFixture {
+    pub(crate) fn workspace(&self) -> &Path {
+        self.workspace_guard.path()
+    }
+}
+
+pub(crate) fn managed_stage_fixture(name: &str) -> ManagedStageFixture {
+    let workspace_guard = temp_dir(&format!("{name}-ws"));
+    let artifacts_guard = temp_dir(&format!("{name}-artifacts"));
+    let first = artifacts_guard.path().join("first.txt");
+    let second = artifacts_guard.path().join("second.txt");
     std::fs::write(&first, "first").expect("artifact");
     std::fs::write(&second, "second").expect("artifact");
-    (workspace, first, second)
+    ManagedStageFixture {
+        workspace_guard,
+        _artifacts_guard: artifacts_guard,
+        first,
+        second,
+    }
 }
 
 pub(crate) fn codegen_entry(logical: &str, artifact: &Path) -> dx_codegen::ProjectionEntry {

@@ -80,6 +80,7 @@ rust_binary(
     edition = "2021",
     deps = crate_deps(
         [
+            "clap",
             "thiserror",
             "tracing",
         ],

@@ -8,5 +8,6 @@ name = "dx_lcov"
 path = "src/lib.rs"
 
 [dependencies]
+clap = { version = "4", features = ["derive"] }
 lcov = "0.8"
 thiserror = "2"

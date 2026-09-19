@@ -244,7 +244,10 @@ mod tests {
 
     #[test]
     fn managed_stage_env_mirrors_leaves_and_values() {
-        let (workspace, first, second) = managed_stage_fixture("managed-env-mirror");
+        let fixture = managed_stage_fixture("managed-env-mirror");
+        let workspace = fixture.workspace().to_path_buf();
+        let first = fixture.first.clone();
+        let second = fixture.second.clone();
         let id = empty_env_id().expect("empty digest");
         let projection = vec![
             env_entry("k2", "x\"y", &second),
@@ -291,7 +294,10 @@ mod tests {
 
     #[test]
     fn managed_stage_env_rejects_bad_plans() {
-        let (workspace, first, second) = managed_stage_fixture("managed-env-reject");
+        let fixture = managed_stage_fixture("managed-env-reject");
+        let workspace = fixture.workspace().to_path_buf();
+        let first = fixture.first.clone();
+        let second = fixture.second.clone();
         let id = empty_env_id().expect("empty digest");
         for key in ["", "a/b", ".", ".."] {
             let (code, message) =
@@ -365,7 +371,10 @@ mod tests {
 
     #[test]
     fn managed_stage_env_filesystem_failures_fail_closed() {
-        let (workspace, first, second) = managed_stage_fixture("managed-env-fs");
+        let fixture = managed_stage_fixture("managed-env-fs");
+        let workspace = fixture.workspace().to_path_buf();
+        let first = fixture.first.clone();
+        let second = fixture.second.clone();
         let id = empty_env_id().expect("empty digest");
         stage_env_generation(&workspace, &id, &[env_entry("k", "v", &first)]).expect("stage");
         let dir = workspace

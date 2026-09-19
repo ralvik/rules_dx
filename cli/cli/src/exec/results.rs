@@ -249,7 +249,7 @@ mod tests {
     #[test]
     fn invalid_output_group_rejected() {
         let dir = temp_dir("group-tmp");
-        let bep = dir.join("empty.json");
+        let bep = dir.path().join("empty.json");
         std::fs::write(&bep, "").expect("bep");
         let Err((code, message)) = collect_results_in(&bep, "") else {
             panic!("empty output group must fail"); // LCOV_EXCL_LINE - reason: defensive test panic that never fires when the seam rejects correctly.

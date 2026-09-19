@@ -143,10 +143,10 @@ mod tests {
     use super::apply_collected_changes;
     use dx_digest::blake3 as digest;
 
-    fn write_workspace(name: &str, files: &[(&str, &[u8])]) -> std::path::PathBuf {
+    fn write_workspace(name: &str, files: &[(&str, &[u8])]) -> tempfile::TempDir {
         let workspace = temp_dir(name);
         for (path, bytes) in files {
-            let full = workspace.join(path);
+            let full = workspace.path().join(path);
             std::fs::create_dir_all(full.parent().expect("parent")).expect("mkdir");
             std::fs::write(&full, bytes).expect("write source");
         }
@@ -168,9 +168,9 @@ mod tests {
         // and reports no applied paths.
         let workspace = write_workspace("apply-check", &[("src/a.rs", b"BAD\n")]);
         let change = full_replace("src/a.rs", b"BAD\n", b"GOOD\n");
-        let outcome = apply_collected_changes(&workspace, true, true, &[change]);
+        let outcome = apply_collected_changes(workspace.path(), true, true, &[change]);
         assert_eq!(
-            std::fs::read(workspace.join("src/a.rs")).expect("read back"),
+            std::fs::read(workspace.path().join("src/a.rs")).expect("read back"),
             b"BAD\n"
         );
         assert!(outcome.applied.is_empty());
@@ -184,9 +184,9 @@ mod tests {
         // `incomplete_collection` before any mutation runs.
         let workspace = write_workspace("apply-incomplete", &[("src/a.rs", b"BAD\n")]);
         let change = full_replace("src/a.rs", b"BAD\n", b"GOOD\n");
-        let outcome = apply_collected_changes(&workspace, false, false, &[change]);
+        let outcome = apply_collected_changes(workspace.path(), false, false, &[change]);
         assert_eq!(
-            std::fs::read(workspace.join("src/a.rs")).expect("read back"),
+            std::fs::read(workspace.path().join("src/a.rs")).expect("read back"),
             b"BAD\n"
         );
         assert_eq!(outcome.applied.get("src/a.rs"), Some(&false));
@@ -210,13 +210,13 @@ mod tests {
             original_digest: digest(b"OTHER\n"),
             edits: vec![(0, 6, b"NEW\n".to_vec())],
         };
-        let outcome = apply_collected_changes(&workspace, false, true, &[valid, stale]);
+        let outcome = apply_collected_changes(workspace.path(), false, true, &[valid, stale]);
         assert_eq!(
-            std::fs::read(workspace.join("src/a.rs")).expect("read back"),
+            std::fs::read(workspace.path().join("src/a.rs")).expect("read back"),
             b"GOOD\n"
         );
         assert_eq!(
-            std::fs::read(workspace.join("src/b.rs")).expect("read back"),
+            std::fs::read(workspace.path().join("src/b.rs")).expect("read back"),
             b"STALE\n"
         );
         assert_eq!(outcome.applied.get("src/a.rs"), Some(&true));
@@ -238,9 +238,9 @@ mod tests {
             original_digest: digest(b"BAD\n"),
             edits: vec![(5, 2, b"X".to_vec())],
         };
-        let outcome = apply_collected_changes(&workspace, false, true, &[change]);
+        let outcome = apply_collected_changes(workspace.path(), false, true, &[change]);
         assert_eq!(
-            std::fs::read(workspace.join("src/a.rs")).expect("read back"),
+            std::fs::read(workspace.path().join("src/a.rs")).expect("read back"),
             b"BAD\n"
         );
         assert_eq!(outcome.applied.get("src/a.rs"), Some(&false));
