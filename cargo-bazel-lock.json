@@ -1,5 +1,5 @@
 {
-  "checksum": "8826ee78c8baa0f94d98a7bf22ba1f9566b26c7b806598c42eba00ae9be30afc",
+  "checksum": "81384a58e72c5c9a2c7e332a7a60083185ed2307121b00382ca1b4986367e666",
   "conditions": {
     "aarch64-apple-darwin": [
       "aarch64-apple-darwin"
@@ -2306,6 +2306,10 @@
           {
             "id": "url 2.5.8",
             "target": "url"
+          },
+          {
+            "id": "yaml_serde 0.10.7",
+            "target": "yaml_serde"
           }
         ],
         "edition": "2021"
@@ -5034,6 +5038,34 @@
       ],
       "version": "0.2.189"
     },
+    "libyaml-rs 0.3.0": {
+      "common_attrs": {
+        "edition": "2021"
+      },
+      "library_target_name": "libyaml_rs",
+      "license": "MIT",
+      "license_file": "LICENSE-MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "name": "libyaml-rs",
+      "package_url": "https://github.com/yaml/libyaml-rs",
+      "repository": {
+        "Http": {
+          "sha256": "2e126dda6f34391ab7b444f9922055facc83c07a910da3eb16f1e4d9c45dc777",
+          "url": "https://static.crates.io/crates/libyaml-rs/0.3.0/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "libyaml_rs",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "0.3.0"
+    },
     "linux-raw-sys 0.12.1": {
       "common_attrs": {
         "crate_features": [
@@ -7087,6 +7119,35 @@
       ],
       "version": "0.3.1"
     },
+    "ryu 1.0.23": {
+      "common_attrs": {
+        "edition": "2021"
+      },
+      "library_target_name": "ryu",
+      "license": "Apache-2.0 OR BSL-1.0",
+      "license_file": "LICENSE-APACHE",
+      "license_ids": [
+        "Apache-2.0",
+        "BSL-1.0"
+      ],
+      "name": "ryu",
+      "package_url": "https://github.com/dtolnay/ryu",
+      "repository": {
+        "Http": {
+          "sha256": "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f",
+          "url": "https://static.crates.io/crates/ryu/1.0.23/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "ryu",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "1.0.23"
+    },
     "same-file 1.0.6": {
       "common_attrs": {
         "deps": {
@@ -7164,6 +7225,7 @@
       "build_script_attrs": {},
       "common_attrs": {
         "crate_features": [
+          "alloc",
           "default",
           "derive",
           "serde_derive",
@@ -10818,6 +10880,61 @@
       ],
       "version": "0.6.4"
     },
+    "yaml_serde 0.10.7": {
+      "common_attrs": {
+        "crate_features": [
+          "default",
+          "std"
+        ],
+        "deps": [
+          {
+            "id": "indexmap 2.14.2",
+            "target": "indexmap"
+          },
+          {
+            "id": "itoa 1.0.18",
+            "target": "itoa"
+          },
+          {
+            "id": "libyaml-rs 0.3.0",
+            "target": "libyaml_rs"
+          },
+          {
+            "id": "ryu 1.0.23",
+            "target": "ryu"
+          },
+          {
+            "id": "serde 1.0.229",
+            "target": "serde"
+          }
+        ],
+        "edition": "2021"
+      },
+      "library_target_name": "yaml_serde",
+      "license": "MIT OR Apache-2.0",
+      "license_file": "LICENSE-APACHE",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "name": "yaml_serde",
+      "package_url": "https://github.com/yaml/yaml-serde",
+      "repository": {
+        "Http": {
+          "sha256": "33b729a08a9a6be689bbad3e2bf8015926db54b6622cc89c3a5f7dc174b9e918",
+          "url": "https://static.crates.io/crates/yaml_serde/0.10.7/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "yaml_serde",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "0.10.7"
+    },
     "yoke 0.8.3": {
       "common_attrs": {
         "crate_features": [
@@ -11303,7 +11420,8 @@
     "tracing 0.1.44",
     "tracing-subscriber 0.3.23",
     "url 2.5.8",
-    "walkdir 2.5.0"
+    "walkdir 2.5.0",
+    "yaml_serde 0.10.7"
   ],
   "direct_dev_deps": [
     "assert_cmd 2.2.2",

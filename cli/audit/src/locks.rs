@@ -13,8 +13,8 @@
 //!   never clean); path-only workspace members (no `source`, version
 //!   `0.0.0`) are first-party and skipped, not assessed.
 //! - npm (`pnpm-lock.yaml`, YAML): external `packages:` entries are
-//!   assessable via minimal line parsing (no YAML dependency); `link:`
-//!   entries are workspace members and skipped.
+//!   assessable via `yaml_serde`; `link:` entries are workspace members
+//!   and skipped.
 //! - Maven (`third_party/jvm/maven_install.json`, JSON): `artifacts`
 //!   carry `group:artifact` plus `version`.
 //! - NuGet (`third_party/dotnet/paket.lock`, text): `Name (version)`
@@ -91,72 +91,48 @@ pub fn parse_cargo_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
 }
 
 /// Parse one `pnpm-lock.yaml` into assessable packages for the `npm` set
-/// via minimal line parsing (no YAML dependency). External entries under
-/// `packages:` shaped `'name@version':` or `'@scope/name@version':`
-/// become assessable; `link:` entries (workspace members) are skipped.
-/// Versions with peer suffixes (`1.0.0(peer@2.0.0)`) strip the suffix.
+/// via `yaml_serde`. External entries under `packages:` shaped
+/// `name@version` or `@scope/name@version` become assessable; `link:`
+/// entries (workspace members) are skipped. Versions with peer suffixes
+/// (`1.0.0(peer@2.0.0)`) strip the suffix.
 pub fn parse_pnpm_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
+    let value: yaml_serde::Value =
+        yaml_serde::from_str(text).map_err(|error| format!("invalid pnpm-lock.yaml: {error}"))?;
+    if value.is_null() {
+        return Ok(Vec::new());
+    }
+    let packages = match value.get("packages") {
+        None | Some(yaml_serde::Value::Null) => return Ok(Vec::new()),
+        Some(packages) => packages,
+    };
+    let mapping = packages
+        .as_mapping()
+        .ok_or_else(|| "invalid pnpm-lock.yaml: missing packages".to_owned())?;
     let mut out = Vec::new();
-    let mut in_packages = false;
-    for line in text.lines() {
-        let trimmed = line.trim();
-        if trimmed == "packages:" {
-            in_packages = true;
+    for (key_value, _) in mapping {
+        let key = key_value.as_str().unwrap_or("").trim().to_owned();
+        if key.is_empty() {
             continue;
         }
-        if in_packages {
-            // Top-level keys are two-space indented; deeper keys (e.g.
-            // `resolution:`) are four-space+ and skipped. A new top-level
-            // section (no indent) ends the packages block.
-            if !line.starts_with(' ') {
-                if !trimmed.is_empty() && !trimmed.starts_with('#') {
-                    break;
-                }
+        // `link:` entries appear as `name@link:...` keys; skip them.
+        if key.contains("link:") {
+            continue;
+        }
+        if let Some((name, version)) = split_pnpm_key(&key) {
+            if name.is_empty() || version.is_empty() {
                 continue;
             }
-            if line.starts_with("    ") || line.starts_with('\t') {
+            // Skip workspace `link:` versions that slipped through.
+            if version.starts_with("link:") {
                 continue;
             }
-            if !(line.starts_with("  ") && trimmed.starts_with('\'') || trimmed.starts_with('"')) {
-                // Allow both quoted and bare keys, but only two-space keys.
-                if !(line.starts_with("  ") && !trimmed.is_empty() && !trimmed.contains(':')) {
-                    // Heuristic: two-space lines with a colon are package keys.
-                    if !(line.starts_with("  ") && trimmed.contains(':')) {
-                        continue;
-                    }
-                }
-            }
-            // Extract the quoted key: `'...':` or `"...":`.
-            let key = extract_quoted_key(trimmed).unwrap_or_else(|| {
-                trimmed
-                    .split_once(':')
-                    .map(|(key, _)| key.trim().to_owned())
-                    .unwrap_or_default()
+            out.push(LockedPackage {
+                name,
+                version,
+                set: "npm".to_owned(),
+                is_git: false,
+                is_private: false,
             });
-            if key.is_empty() {
-                continue;
-            }
-            // Skip importers and link entries encoded in the value line?
-            // `link:` entries appear as `name@link:...` keys; skip them.
-            if key.contains("link:") {
-                continue;
-            }
-            if let Some((name, version)) = split_pnpm_key(&key) {
-                if name.is_empty() || version.is_empty() {
-                    continue;
-                }
-                // Skip workspace `link:` versions that slipped through.
-                if version.starts_with("link:") {
-                    continue;
-                }
-                out.push(LockedPackage {
-                    name,
-                    version,
-                    set: "npm".to_owned(),
-                    is_git: false,
-                    is_private: false,
-                });
-            }
         }
     }
     out.sort_by(|a, b| (&a.name, &a.version).cmp(&(&b.name, &b.version)));
@@ -164,39 +140,34 @@ pub fn parse_pnpm_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
     Ok(out)
 }
 
-fn extract_quoted_key(trimmed: &str) -> Option<String> {
-    for quote in ['\'', '"'] {
-        if trimmed.starts_with(quote) {
-            if let Some(end) = trimmed[1..].find(quote) {
-                return Some(trimmed[1..1 + end].to_owned());
-            }
-        }
-    }
-    None
-}
-
 /// Split one pnpm package key (`name@version` or `@scope/name@version`)
 /// into name and version, stripping peer suffixes (`1.0.0(peer)`).
 fn split_pnpm_key(key: &str) -> Option<(String, String)> {
-    // Scoped: `@scope/name@version`; unscoped: `name@version`.
-    let (name, version) = if key.starts_with('@') {
-        let slash = key.find('/')?;
-        let rest = &key[slash + 1..];
-        let at = rest.rfind('@')?;
-        let scope = &key[..slash];
-        let base = &rest[..at];
-        let version = &rest[at + 1..];
-        (format!("{scope}/{base}"), version.to_owned())
-    } else {
-        let at = key.rfind('@')?;
-        (key[..at].to_owned(), key[at + 1..].to_owned())
-    };
-    let version = version
+    // Strip peer suffixes first: `jest@30.2.0(@types/node@22.20.2)` must
+    // split on the version `@`, not the peer `@`.
+    let base = key
         .split_once('(')
-        .map(|(base, _)| base)
-        .unwrap_or(&version)
-        .trim()
-        .to_owned();
+        .map(|(stem, _)| stem)
+        .unwrap_or(key)
+        .trim();
+    if base.is_empty() {
+        return None;
+    }
+    // Scoped: `@scope/name@version`; unscoped: `name@version`.
+    let (name, version) = if base.starts_with('@') {
+        let slash = base.find('/')?;
+        let rest = &base[slash + 1..];
+        let at = rest.rfind('@')?;
+        let scope = &base[..slash];
+        let name_base = &rest[..at];
+        let version = &rest[at + 1..];
+        (format!("{scope}/{name_base}"), version.to_owned())
+    } else {
+        let at = base.rfind('@')?;
+        (base[..at].to_owned(), base[at + 1..].to_owned())
+    };
+    let name = name.trim().to_owned();
+    let version = version.trim().to_owned();
     if name.is_empty() || version.is_empty() {
         return None;
     }
@@ -433,6 +404,44 @@ version = "0.0.0"
             .iter()
             .any(|package| package.name == "@astrojs/compiler" && package.version == "4.0.0"));
         assert!(!packages.iter().any(|package| package.name.contains("link")));
+    }
+
+    #[test]
+    fn pnpm_lock_handles_quoted_bare_scoped_peer_and_link_keys() {
+        let text = "lockfileVersion: '9.0'\npackages:\n  'react@18.2.0':\n    resolution: {integrity: sha512-abc}\n  \"lodash@4.17.21\":\n    resolution: {integrity: sha512-def}\n  acorn@8.18.0:\n    resolution: {integrity: sha512-ghi}\n  '@babel/core@7.29.7':\n    resolution: {integrity: sha512-jkl}\n  'jest@30.2.0(@types/node@22.20.2)':\n    resolution: {integrity: sha512-mno}\n  'my-workspace@link:.':\n    resolution: {directory: .}\n  some-pkg@link:../some-pkg:\n    resolution: {directory: ../some-pkg}\n";
+        let packages = parse_pnpm_lock(text).expect("parses");
+        assert!(packages
+            .iter()
+            .any(|package| package.name == "react" && package.version == "18.2.0"));
+        assert!(packages
+            .iter()
+            .any(|package| package.name == "lodash" && package.version == "4.17.21"));
+        assert!(packages
+            .iter()
+            .any(|package| package.name == "acorn" && package.version == "8.18.0"));
+        assert!(packages
+            .iter()
+            .any(|package| package.name == "@babel/core" && package.version == "7.29.7"));
+        assert!(packages
+            .iter()
+            .any(|package| package.name == "jest" && package.version == "30.2.0"));
+        assert!(!packages.iter().any(|package| package.name.contains("link")));
+        assert!(!packages
+            .iter()
+            .any(|package| package.version.contains("link:")));
+        assert_eq!(packages.len(), 5);
+    }
+
+    #[test]
+    fn pnpm_lock_missing_packages_is_empty_and_invalid_fails() {
+        let missing = "lockfileVersion: '9.0'\nimporters:\n  .:\n    specifier: 1.0.0\n";
+        let packages = parse_pnpm_lock(missing).expect("missing packages is empty");
+        assert!(packages.is_empty());
+        let empty_packages = "packages: {}\n";
+        let packages = parse_pnpm_lock(empty_packages).expect("empty packages is empty");
+        assert!(packages.is_empty());
+        assert!(parse_pnpm_lock("packages: [unclosed").is_err());
+        assert!(parse_pnpm_lock("packages: ['a', 'b']").is_err());
     }
 
     #[test]
