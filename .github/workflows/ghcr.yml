@@ -1,14 +1,15 @@
-# Prebuilt devcontainer images on GHCR (issue #184, seed slice).
+# Prebuilt devcontainer images on GHCR (issues #184, #311).
 #
 # Separate workflow from releases per owner decision (different lifecycle:
 # per-scaffold-change, not per-tag; base-image rebuilds never block/couple
 # a `dx` release). Build on PR (paths below), push gated on explicit owner
-# approval until standing approval exists. Signing-second after #26/#78:
-# `cosign sign <digest>` on the #26 trust root lands after the human-run
-# signing workflow (#78); this slice pushes nothing without approval and
-# signs nothing yet. Scaffold `image:` digest reference follows the first
-# push; GHCR quotas/retention are recorded on first push (free for public
-# repos, qualified not assumed per docs/testing/README.md).
+# approval until standing approval exists. Signing-second after #26/#78
+# and selected in #311: `cosign sign <digest>` on the #311 trust root
+# (same as //deploy/release:signing_demo) runs owner-gated after push;
+# dry-run prints would-sign and signs nothing. Scaffold `image:` digest
+# reference follows the first push; GHCR quotas/retention are recorded on
+# first push (free for public repos, qualified not assumed per
+# docs/testing/README.md).
 #
 # Hygiene (issue #80): Bazelisk installs go through the single
 # `.github/actions/setup-bazelisk` composite action where Bazel is needed;
@@ -83,7 +84,8 @@ jobs:
           set -euo pipefail
           if [[ "${{ github.event_name }}" != "workflow_dispatch" || "$APPROVE" != "true" ]]; then
             echo "push gate: event=${{ github.event_name }} approve=$APPROVE -> build-only, nothing pushes."
-            echo "first push (dispatch + approve:true) publishes ghcr.io/${{ github.repository }}/devcontainer:sha-${{ github.sha }}; scaffold digest ref + cosign sign + quota record follow (#26/#78)."
+            echo "first push (dispatch + approve:true) publishes ghcr.io/${{ github.repository }}/devcontainer:sha-${{ github.sha }}; scaffold digest ref + cosign sign + quota record follow (#311 signing-second)."
+            echo "signing dry-run (RELEASE_SIGN_DRY_RUN=1 equivalent, signs nothing): cosign sign <digest> on the #311 trust root (https://tuf-repo-cdn.sigstore.dev) plus gh attestation create, same selection as //deploy/release:signing_demo."
             exit 0
           fi
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
@@ -92,11 +94,13 @@ jobs:
           docker push "$tag"
           echo "pushed: $tag"
           docker inspect --format='{{index .RepoDigests 0}}' "$tag" || true
+          digest="$(docker inspect --format='{{index .RepoDigests 0}}' "$tag" | cut -d'@' -f2 || echo '<digest>')"
+          echo "signing: cosign sign <digest> on the #311 trust root (https://tuf-repo-cdn.sigstore.dev) for $digest plus gh attestation create (owner-approved human-run path, see docs/deploy/release-runbook.md)."
           {
             echo "## GHCR prebuilt push"
             echo ""
             echo "- tag: \`$tag\`"
-            echo "- scaffold update (digest ref, never latest) + \`cosign sign <digest>\` on the #26 trust root follow (#78 signing-first)."
+            echo "- scaffold update (digest ref, never latest) + \`cosign sign <digest>\` on the #311 trust root follow (#311 signing-second, same as //deploy/release:signing_demo)."
             echo "- record GHCR quotas/retention on this first push per docs/testing/README.md."
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary (build-only by default)
@@ -108,7 +112,8 @@ jobs:
             echo "- base: \`ubuntu:24.04@sha256:69cecf4...\` (pinned digest, resolved 2026-09-17; re-pin deliberately)."
             echo "- Bazel: Bazelisk v1.29.0 (pinned sha256) + Bazel 9.2.0 via USE_BAZEL_VERSION; no ambient toolchains."
             echo "- push: only on workflow_dispatch + approve:true (explicit owner approval); PRs build only."
-            echo "- follow-ups (issue #184): scaffold digest ref, cosign sign/verify + attestation (#26/#78), quota record."
+            echo "- signing: dry-run would-sign \`cosign sign <digest>\` on the #311 trust root plus attestation (same as //deploy/release:signing_demo); real sign follows push."
+            echo "- follow-ups (issue #184): scaffold digest ref, quota record."
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Prove checkout left clean
         run: test -z "$(git status --porcelain)"

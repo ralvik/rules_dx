@@ -270,24 +270,30 @@ binding, and verification inputs are implemented in `//deploy/install:dx_verify`
 fallback, failure before install or exec).
 
 The approved v1 destinations are the Bazel Central Registry for the `rules_dx` module
-and GitHub Releases for standalone `dx` binaries. This selects destinations only, not
-credentials, permissions, registry submission procedures, or the publication sequence;
-publication mechanics are tracked in
-open work. Publication still requires explicit
+and GitHub Releases for standalone `dx` binaries. Publication mechanics are
+implemented owner-gated dry-run-first in `deploy/release/` per the
+[release runbook](../deploy/release-runbook.md): full matrix in
+`deploy/release/matrix.bzl`, SBOM/provenance in `deploy/release/sbom.bzl`,
+signing/attestation selection (Sigstore keyless plus GitHub attestations)
+in `deploy/release/signing.bzl`, BCR shape tooling in
+`deploy/release/bcr.bzl`, GHCR via the separate `ghcr.yml` route, and the
+human-run driver in `deploy/release/release.sh`. Publication still requires explicit
 approval and qualified release artifacts.
 
 Publication dry-run: dispatch `.github/workflows/publish-dry-run.yml` manually from the
 Actions tab. It builds the seed-host Linux x86_64 `dx` binary plus the
-`//cli/cli:dx_standalone` archive, records sha256 digests, exercises
-`//cli/cli:github_draft` in `GH_RELEASE_DRY_RUN=1` mode, checks the `rules_dx`
-at `0.0.0` module shape without submitting, and proves
+`//cli/cli:dx_standalone` archive, records sha256 digests, generates SBOM
+and provenance via `//deploy/release:sbom_demo`, exercises
+`//cli/cli:github_draft` in `GH_RELEASE_DRY_RUN=1` mode, exercises
+`//deploy/release:signing_demo` in `RELEASE_SIGN_DRY_RUN=1` mode, checks the `rules_dx`
+at `0.0.0` module shape via `//deploy/release:bcr_demo` without submitting, and proves
 `//deploy/install:dx_verify` refuses checksum-only inputs, all staged under
 `RUNNER_TEMP` without tagging, submitting, or creating anything; the report lands
 in the run summary and logs. The `approve` input (default false) runs the fuller
 qualification; nothing publishes either way. The workflow needs only `contents: read`
-and stores no secrets. The wider matrix, SBOM/provenance generation,
-signing/attestation generation, and BCR submission stay deferred as platforms qualify
-and signing tooling lands; install-time verification itself is implemented in
+and stores no secrets. The full matrix, SBOM/provenance generation,
+signing/attestation generation, and BCR submission are implemented
+owner-gated in `//deploy/release:all`; install-time verification itself is implemented in
 `//deploy/install:dx_verify`.
 
 Draft-only publisher ceiling: the `github_release` rule (`deploy/rules/github.bzl`,
@@ -297,7 +303,8 @@ launcher-unsafe tag, and always passes `--draft --verify-tag`, so the program
 never creates or pushes tags itself. The invariants are machine-checked by
 `bazel run //tools/ci:publish_trust`; install-time verification on the #26 trust
 root is implemented in `//deploy/install:dx_verify`, while signing and attestation
-generation arrives after the human-run signing workflow lands.
+generation is implemented owner-gated in `//deploy/release:signing_demo`
+with the human-run path in `docs/deploy/release-runbook.md`.
 
 Release hosting, signing, and verification services must satisfy the
 [free-infrastructure constraint](../testing/README.md#infrastructure-budget) without

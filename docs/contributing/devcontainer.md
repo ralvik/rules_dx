@@ -18,13 +18,13 @@ qualified execution lands.
 ## Prebuilt images (GHCR)
 
 Per-create feature installation (Bazel fetch plus a cold postCreate) is
-removed by prebuilt images published to GHCR, tracked in
-open work. The route is a
+removed by prebuilt images published to GHCR per the
+[release runbook](../deploy/release-runbook.md). The route is a
 separate workflow (`.github/workflows/ghcr.yml`), never folded into the
 release workflow: image lifecycle is per-scaffold-change, not per-tag, so
 base-image rebuilds never block or couple a `dx` release.
 
-As built today (build-only seed slice, no push claimed):
+As built today (owner-gated push plus dry-run signing, no push claimed):
 
 - CI builds the image on PRs touching the scaffold inputs
   (`.devcontainer/Dockerfile.prebuilt`, `ghcr.yml`,
@@ -37,14 +37,13 @@ As built today (build-only seed slice, no push claimed):
   references the public base image; the `ghcr.io` digest reference lands
   with the first push.
 - Signing follows the release trust root: `cosign sign <digest>`
-  (Sigstore keyless) plus attestation verification land after the
-  human-run signing workflow
-  (open work), on the same
-  trust root decided under
-  open work. Nothing here is
+  (Sigstore keyless) plus attestation on the same trust root as
+  `//deploy/release:signing_demo` (`deploy/release/signing.bzl`); the
+  GHCR workflow exercises the would-sign commands in dry-run mode and
+  signs only on `workflow_dispatch` with `approve: true`. Nothing here is
   signed yet.
 - GHCR quotas and retention are recorded on the first push (free for
   public repos, qualified not assumed per the infrastructure budget).
   Image publication is a publication output: no tags, pushes, or
   retention claims without explicit owner approval per the release
-  hygiene in open work.
+  hygiene in [Contributing](../../CONTRIBUTING.md).

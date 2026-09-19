@@ -1,0 +1,154 @@
+"""Full release path: matrix, SBOM/provenance, signing, BCR, human-run (issue #311)."""
+
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//quality:fixtures.bzl", "real_source_target")
+load(":bcr.bzl", "bcr_check")
+load(":bcr_tests.bzl", "bcr_unit_tests")
+load(":matrix_tests.bzl", "matrix_unit_tests")
+load(":sbom.bzl", "sbom_release")
+load(":sbom_tests.bzl", "sbom_unit_tests")
+load(":signing.bzl", "signed_release")
+load(":signing_tests.bzl", "signing_unit_tests")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "bcr.bzl",
+    "bcr_deploy.sh",
+    "bcr_tests.bzl",
+    "bcr_verify.sh",
+    "matrix.bzl",
+    "matrix_tests.bzl",
+    "release.sh",
+    "release_verify.sh",
+    "sbom.bzl",
+    "sbom_tests.bzl",
+    "sbom_verify.sh",
+    "sign_deploy.sh",
+    "signing.bzl",
+    "signing_tests.bzl",
+    "signing_verify.sh",
+])
+
+# Seed fixture: reuse the portable POSIX deploy program as the SBOM
+# subject (no new binary needed; SBOM binds exact artifact bytes).
+matrix_unit_tests(name = "matrix_unit")
+
+sbom_unit_tests(name = "sbom_unit")
+
+signing_unit_tests(name = "signing_unit")
+
+bcr_unit_tests(name = "bcr_unit")
+
+# SBOM demo over the seed release tarball: proves SPDX +
+# provenance bind the exact artifact bytes.
+sbom_release(
+    name = "sbom_demo",
+    artifact = "//deploy/rules:release_demo_archive",
+)
+
+sh_test(
+    name = "sbom_demo_verify",
+    srcs = ["sbom_verify.sh"],
+    args = [
+        "$(rootpath //deploy/rules:release_demo_archive)",
+        "$(rootpath :sbom_demo_spdx)",
+        "$(rootpath :sbom_demo_provenance)",
+    ],
+    data = [
+        "//deploy/rules:release_demo_archive",
+        ":sbom_demo_provenance",
+        ":sbom_demo_spdx",
+    ],
+    tags = ["no-coverage"],
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+# Signing demo over the SBOM demo outputs: proves the dry-run would-sign
+# path binds Sigstore keyless + attestation without network.
+signed_release(
+    name = "signing_demo",
+    artifacts = [
+        ":sbom_demo_spdx",
+        ":sbom_demo_provenance",
+    ],
+    identity = "https://github.com/ralvik/rules_dx/.github/workflows/release.yml@refs/tags/v0.0.0-dryrun",
+)
+
+sh_test(
+    name = "signing_demo_verify",
+    srcs = ["signing_verify.sh"],
+    args = ["$(rootpath :signing_demo_program)"],
+    data = [":signing_demo_program"],
+    tags = ["no-coverage"],
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+# BCR demo at the unpublishable shape: proves the would-submit PR prints
+# without submitting.
+bcr_check(
+    name = "bcr_demo",
+    inputs = [":sbom_demo_spdx"],
+    module_name = "rules_dx",
+    version = "0.0.0",
+)
+
+sh_test(
+    name = "bcr_demo_verify",
+    srcs = ["bcr_verify.sh"],
+    args = [
+        "$(rootpath :bcr_demo_program)",
+        "rules_dx",
+        "0.0.0",
+    ],
+    data = [":bcr_demo_program"],
+    tags = ["no-coverage"],
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+# Human-run driver dry-run gate (owner approval + tag ceiling).
+sh_binary(
+    name = "release_driver",
+    srcs = ["release.sh"],
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "release_driver_verify",
+    srcs = ["release_verify.sh"],
+    args = ["$(rootpath :release_driver)"],
+    data = [":release_driver"],
+    tags = ["no-coverage"],
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+test_suite(
+    name = "all",
+    tests = [
+        ":bcr_demo_verify",
+        ":bcr_unit",
+        ":matrix_unit",
+        ":release_driver_verify",
+        ":sbom_demo_verify",
+        ":sbom_unit",
+        ":signing_demo_verify",
+        ":signing_unit",
+    ],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "bcr.bzl",
+        "bcr_tests.bzl",
+        "matrix.bzl",
+        "matrix_tests.bzl",
+        "sbom.bzl",
+        "sbom_tests.bzl",
+        "signing.bzl",
+        "signing_tests.bzl",
+    ],
+    tags = ["corpus"],
+)

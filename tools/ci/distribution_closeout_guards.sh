@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# Distribution/closeout guards (issues #5, #26, #78, #184, #54).
+# Distribution/closeout guards (issues #5, #26, #78, #184, #54, #311).
 #
 # No release has been cut: no tags, GitHub releases, registry
 # submissions, or publication outputs without explicit owner approval.
-# Standalone dx binaries + BCR publication (#26), the human-run
-# signing-first dry run (#78), and prebuilt devcontainer images on GHCR
-# (#184, separate workflow) stay owner-gated with SECURITY reporting as
-# the release precondition. Stage 5 close-out (#54) runs the full
-# battery on a clean tree.
+# Standalone dx binaries + BCR publication + matrix/SBOM/signing (#311),
+# the human-run signing-first dry run (#78/#311), and prebuilt devcontainer
+# images on GHCR (#184, separate workflow) stay owner-gated with SECURITY
+# reporting as the release precondition. Stage 5 close-out (#54) runs the
+# full battery on a clean tree.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (37 checks): hygiene policy, exact 0.0.0 module pin + consumer
+# today (39 checks): hygiene policy, exact 0.0.0 module pin + consumer
 # pin + reviewed-commit workflow pin + unqualified-matrix record,
 # workflow separation + triggers + default-closed approve gates +
 # never-publishes + dry-run report + clean-checkout record + seed
@@ -23,8 +23,9 @@
 # precondition, gitignored outputs, E2E driver/format slices +
 # E2E-case convention, install-time publisher-identity verification
 # (#26 implemented via //deploy/install:dx_verify + //cli/cli:dx_standalone),
-# and no-publish invariants. Matrix/SBOM generation/BCR submission and
-# the full green battery stay open under their issues.
+# and no-publish invariants. Full matrix/SBOM/signing/BCR/human-run are
+# implemented owner-gated per #311 (//deploy/release:all + runbook); the
+# full green battery stays open under its issue.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:distribution_closeout_guards`,
 # following //tools/ci:ghcr_publish_guards.
@@ -89,12 +90,12 @@ else
   bad "GHCR workflow lost its separate-file / dispatch + approve gate shape"
 fi
 
-# #26 signing-first trust root named in the dry-run report order.
+# #311 signing-first trust root named in the dry-run report order.
 if grep -q -F -e 'Sigstore keyless' .github/workflows/publish-dry-run.yml \
-  && grep -q -F -e 'issue #26 trust root' .github/workflows/publish-dry-run.yml; then
+  && grep -q -F -e 'issue #311 trust root' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "publish dry run lost its #26 signing-first trust-root record"
+  bad "publish dry run lost its #311 signing-first trust-root record"
 fi
 
 # #184 prebuilt base stays digest-pinned, never floating.
@@ -154,21 +155,21 @@ else
   bad "e2e_cases convention harness missing (#54)"
 fi
 
-# #26/#78 SBOM + signing-first detail stays recorded in the dry-run
-# report order (tooling unselected, trust root shared with GHCR).
+# #311 SBOM + signing-first detail stays recorded in the dry-run
+# report order (owner-gated tooling, trust root shared with GHCR).
 if grep -q -F -e 'SBOM' .github/workflows/publish-dry-run.yml \
   && grep -q -F -e 'Signing' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "publish dry run lost its SBOM/signing-first detail (#26/#78)"
+  bad "publish dry run lost its SBOM/signing-first detail (#311)"
 fi
 
-# #184 cosign deferral stays explicit (signs <digest> on the #26 trust
-# root after the human-run signing workflow, signs nothing yet).
+# #184/#311 cosign record stays explicit (signs <digest> on the #311
+# trust root owner-gated after push, dry-run would-sign otherwise).
 if grep -q -F -e 'cosign' .github/workflows/ghcr.yml; then
   ok
 else
-  bad "GHCR workflow lost its cosign deferral record (#184)"
+  bad "GHCR workflow lost its cosign record (#184/#311)"
 fi
 
 # #5 self-call smoke stays wired: consumer-ci + docs-ci prove the
@@ -214,12 +215,12 @@ else
   bad "consumer-ci caller lost its reviewed-commit workflow pin (#5)"
 fi
 
-# #78 attestation record stays owned: Sigstore keyless plus GitHub
-# attestations on the #26 trust root (tooling still dry-run only).
+# #311 attestation record stays owned: Sigstore keyless plus GitHub
+# attestations on the #311 trust root (owner-gated dry-run-first).
 if grep -q -F -e 'attest' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "publish dry run lost its attestation record (#78)"
+  bad "publish dry run lost its attestation record (#311)"
 fi
 
 # #184 admissibility gate stays versioned: the scaffold image must
@@ -250,21 +251,22 @@ else
   bad "Dockerfile.prebuilt lost its scaffold/quota record (#184)"
 fi
 
-# #5 unqualified-matrix record stays explicit: non-seed release matrix
-# entries remain unqualified per the release-hygiene track (no platform
-# claimed qualified beyond the seed host).
-if grep -q -F -e 'unqualified-per-issue-5' .github/workflows/publish-dry-run.yml; then
+# #311 unqualified-matrix record stays explicit: non-seed release matrix
+# entries remain unqualified per the frozen matrix (no platform
+# claimed qualified beyond the seed host without host evidence).
+if grep -q -F -e 'unqualified-per-issue-311' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "publish dry run lost its unqualified-matrix record (#5)"
+  bad "publish dry run lost its unqualified-matrix record (#311)"
 fi
 
-# #26 release-matrix record stays owned: the dry-run report carries the
-# seed-qualified plus follow-up matrix shape (submission still open).
+# #311 release-matrix record stays owned: the dry-run report carries the
+# seed-qualified plus follow-up matrix shape (frozen in
+# deploy/release/matrix.bzl).
 if grep -q -F -e 'release_matrix' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "publish dry run lost its release-matrix record (#26)"
+  bad "publish dry run lost its release-matrix record (#311)"
 fi
 
 # #78 clean-checkout record stays explicit: the dry run stages under
@@ -275,8 +277,8 @@ else
   bad "publish dry run lost its clean-checkout record (#78)"
 fi
 
-# #184 scaffold-update record stays explicit: scaffold digest updates
-# plus cosign signing follow on the #26 trust root (push still gated).
+# #184/#311 scaffold-update record stays explicit: scaffold digest updates
+# plus cosign signing follow on the #311 trust root (push still gated).
 if grep -q -F -e 'scaffold update' .github/workflows/ghcr.yml; then
   ok
 else
@@ -333,28 +335,53 @@ else
   bad "a tag trigger appeared in publish/ghcr workflows without owner approval"
 fi
 
-# #78 seed exercised path stays explicit: standalone archive plus draft
-# dry-run plus BCR shape plus verifier refusal staged under RUNNER_TEMP,
-# publishing nothing either way.
+# #78/#311 seed exercised path stays explicit: standalone archive plus
+# draft dry-run plus SBOM plus signing dry-run plus BCR shape plus
+# verifier refusal staged under RUNNER_TEMP, publishing nothing either way.
 if grep -q -F -e 'dx-standalone.tar.gz' .github/workflows/publish-dry-run.yml \
   && grep -q -F -e 'GH_RELEASE_DRY_RUN=1 bazel run //cli/cli:github_draft' .github/workflows/publish-dry-run.yml \
   && grep -q -F -e 'bcr-shape.txt' .github/workflows/publish-dry-run.yml \
-  && grep -q -F -e 'verify-refusal.log' .github/workflows/publish-dry-run.yml; then
+  && grep -q -F -e 'verify-refusal.log' .github/workflows/publish-dry-run.yml \
+  && grep -q -F -e '//deploy/release:sbom_demo' .github/workflows/publish-dry-run.yml \
+  && grep -q -F -e 'RELEASE_SIGN_DRY_RUN=1 bazel run //deploy/release:signing_demo' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "publish dry run lost its seed exercised path record (#78 standalone + draft + BCR shape + verifier refusal)"
+  bad "publish dry run lost its seed exercised path record (#78/#311 standalone + draft + SBOM + signing + BCR shape + verifier refusal)"
 fi
 
-# #78 exercised report shape stays explicit: the dry-run report carries
-# the exercised seed steps plus draft/BCR/verify detail with published
-# False everywhere, so the nothing-publishes ceiling cannot be narrowed.
+# #78/#311 exercised report shape stays explicit: the dry-run report
+# carries the exercised seed steps plus draft/SBOM/signing/BCR/verify
+# detail with published False everywhere, so the nothing-publishes
+# ceiling cannot be narrowed.
 if grep -q -F -e '"exercised"' .github/workflows/publish-dry-run.yml \
   && grep -q -F -e '"draft_dry_run"' .github/workflows/publish-dry-run.yml \
   && grep -q -F -e '"bcr_shape"' .github/workflows/publish-dry-run.yml \
-  && grep -q -F -e '"verify_refusal"' .github/workflows/publish-dry-run.yml; then
+  && grep -q -F -e '"verify_refusal"' .github/workflows/publish-dry-run.yml \
+  && grep -q -F -e '"sbom"' .github/workflows/publish-dry-run.yml \
+  && grep -q -F -e '"signing_dry_run"' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "publish dry run lost its exercised report shape (#78 exercised + draft/BCR/verify detail)"
+  bad "publish dry run lost its exercised report shape (#78/#311 exercised + draft/SBOM/signing/BCR/verify detail)"
+fi
+
+# #311 full release path stays owned: matrix + SBOM + signing + BCR +
+# human-run driver wired with policy tests.
+if [[ -f "deploy/release/matrix.bzl" ]] \
+  && [[ -f "deploy/release/sbom.bzl" ]] \
+  && [[ -f "deploy/release/signing.bzl" ]] \
+  && [[ -f "deploy/release/bcr.bzl" ]] \
+  && [[ -f "deploy/release/release.sh" ]] \
+  && [[ -f "docs/deploy/release-runbook.md" ]]; then
+  ok
+else
+  bad "full release path missing (deploy/release matrix/sbom/signing/bcr/release.sh + runbook, #311)"
+fi
+
+# #311 release policy tests stay wired.
+if grep -q -F -e '//deploy/release:all' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish dry run lost the release policy tests record (//deploy/release:all, #311)"
 fi
 
 echo "distribution closeout guards harness: $pass passed, $fail failed"

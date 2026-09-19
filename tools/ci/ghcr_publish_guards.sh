@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Publication-group guards (issues #184, #78, #26, #5).
+# Publication-group guards (issues #184, #78, #26, #5, #311).
 #
 # Prebuilt devcontainer images (#184) ship from a workflow kept separate
 # from releases per owner decision, build on PR, and push only on

@@ -93,16 +93,43 @@ happens by editing the draft on GitHub.
 
 Our own release runbook is the publish dry-run workflow
 ([`publish-dry-run.yml`](../../.github/workflows/publish-dry-run.yml),
-open work): it builds the seed-host `dx` binary plus the `dx_standalone` archive,
-exercises `//cli/cli:github_draft` in dry-run mode, checks the BCR module shape
-without submitting, and proves the install verifier refuses checksum-only inputs,
+accepted) plus the human-run path ([release runbook](release-runbook.md),
+accepted): it builds the seed-host `dx` binary plus the `dx_standalone` archive,
+exercises `//cli/cli:github_draft` in dry-run mode, generates SBOM and
+provenance via `//deploy/release:sbom_demo`, exercises owner-gated
+signing via `//deploy/release:signing_demo` in dry-run mode, checks the
+BCR module shape via `//deploy/release:bcr_demo` without submitting,
+and proves the install verifier refuses checksum-only inputs,
 so workflow and macro stay consistent instead of duplicating logic.
-The wider matrix, SBOM/provenance generation, signing/attestation generation, and
-BCR submission stay deferred there as platforms qualify and signing tooling lands.
-Deploy and release gaps stay open under
-issue #311 (full release matrix as platforms qualify, SBOM and provenance generation,
-signing and attestation selection, BCR submission tooling, GHCR prebuilt-image route,
-and the human-run release path; draft-only ceiling enforced, owner approval required).
+The full matrix is frozen in `deploy/release/matrix.bzl` (seed Linux
+x86_64 qualified; four follow-ups unqualified until their hosts
+qualify). Draft-only ceiling enforced, owner approval required.
+
+## Path F: release matrix, SBOM/provenance, signing, BCR, human-run (accepted)
+
+The full release path (issue #311) is owner-gated dry-run-first
+tooling in `deploy/release/` with policy tests `bazel test
+//deploy/release:all`:
+
+- Matrix (`matrix.bzl`): five cells, seed `dx-linux-x86_64`
+  qualified-built-here, four follow-ups unqualified per ADR 0014 until
+  host plus toolchain evidence lands.
+- SBOM/provenance (`sbom.bzl`): SPDX 2.3 JSON plus SLSA v1 in-toto
+  Statement v1 from host tools only, subject digest equals artifact
+  sha256; verifies via `//deploy/install:dx_verify --sbom`.
+- Signing/attestation (`signing.bzl` plus `sign_deploy.sh`): Sigstore
+  keyless (`cosign sign-blob --bundle`) plus GitHub attestations on the
+  TUF trust root; `RELEASE_SIGN_DRY_RUN=1` prints would-sign,
+  publishes nothing.
+- BCR (`bcr.bzl` plus `bcr_deploy.sh`): `source.json` plus integrity
+  shape check; `BCR_DRY_RUN=1` prints would-submit, submits nothing;
+  `0.0.0` never submits.
+- Human-run driver (`release.sh`): dry-run by default, requires
+  `RELEASE_APPROVE=1` plus a pre-pushed tag plus clean tree; never
+  creates tags, never runs on CI.
+- GHCR stays the separate `.github/workflows/ghcr.yml` route (image
+  lifecycle per-scaffold-change); push plus `cosign sign <digest>`
+  stay owner-gated with dry-run first.
 
 ## Path E: standalone `dx` install verification (accepted)
 

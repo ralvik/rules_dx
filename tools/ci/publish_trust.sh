@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Publication-trust harness (issues #78, #26, #5): machine-checks the
-# draft-only + nothing-published invariants that the release-hygiene
+# Publication-trust harness (issues #78, #26, #5, #311): machine-checks
+# the draft-only + nothing-published invariants that the release-hygiene
 # harness does not own.
 #
 # The publish dry-run stays `workflow_dispatch`-only with a
@@ -10,15 +10,15 @@
 # `deploy/rules/github.bzl`, tags validate against the launcher-safe
 # charset with the `v0.0.0-dryrun` placeholder default, and the deploy
 # program always passes `--draft --verify-tag` so it never creates or
-# pushes tags. BCR submission tooling stays unselected per #26: the
-# registry is named only in dry-run report strings and docs, never in
-# workflow steps. The module stays `rules_dx` at `0.0.0`, an
+# pushes tags. BCR runs owner-gated dry-run-first per #311
+# (`BCR_DRY_RUN=1` prints would-submit, submits nothing; no
+# auto-submit in workflows). The module stays `rules_dx` at `0.0.0`, an
 # unpublishable shape, and SECURITY.md still records that no release
 # exists.
 #
 # This harness machine-checks the static half verifiable on a clean
-# tree today (15 checks): module name + unpublishable version, no BCR
-# submission tooling in workflows, no `draft = False` site, both
+# tree today (22 checks): module name + unpublishable version, no BCR
+# auto-submit in workflows, no `draft = False` site, both
 # validators wired to `fail()` in the macro, default placeholder tag
 # at every site, draft-only flags on the real `gh release create`
 # path, no unflagged executable release-create lines, the tag charset
@@ -28,10 +28,12 @@
 # fallback, TUF trust root, fail-before-install) plus seed exercised
 # path (standalone wired, draft dry-run with GH_RELEASE_DRY_RUN=1 still
 # publishing nothing, BCR shape checked-not-submitted, verifier refusal
-# proved in the workflow). Signing/attestation generation (Sigstore
-# keyless + GitHub attestations on the #26 trust root), SBOM/provenance
-# generation, BCR submission, and the release matrix beyond the seed host
-# stay unimplemented per #26/#78/#5 and are recorded as gaps, not claimed here.
+# proved in the workflow) plus the full #311 release path (matrix
+# frozen with seed qualified, SBOM SPDX-2.3 + SLSA v1 wired, signing
+# Sigstore keyless + attestation selected with dry-run gate, BCR
+# owner-gated with dry-run gate, human-run driver with tag ceiling,
+# workflow exercises release tests + signing/bcr/human-run dry-runs
+# with published/submitted False everywhere).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:publish_trust`,
 # following //tools/ci:release_hygiene.
@@ -62,11 +64,16 @@ else
   bad "MODULE.bazel drifted from the unpublishable version 0.0.0"
 fi
 
-# BCR submission stays unselected per #26: no registry tooling runs in
-# any workflow. The registry is named only in dry-run report strings
-# and docs (the pending destination), never as an executed step.
+# BCR runs owner-gated dry-run-first per #311: no auto-submit tooling
+# runs in any workflow (no publish-to-bcr, no BCR_APPROVE=1); the
+# dry-run prints would-submit via //deploy/release:bcr_demo.
 if grep -rn -E -e 'publish-to-bcr|bcr publish|bazel-central-registry' .github/ | grep -v -E -e '^\s*#' | head -n 5 | grep -q .; then
-  bad "a workflow executes BCR submission tooling (stays unselected per #26)"
+  bad "a workflow executes BCR auto-submit tooling (owner-gated dry-run only per #311)"
+else
+  ok
+fi
+if grep -rn -F -e 'BCR_APPROVE=1' .github/ | head -n 5 | grep -q .; then
+  bad "a workflow carries BCR_APPROVE=1 (submission is human-run only per #311)"
 else
   ok
 fi
@@ -141,8 +148,9 @@ else
   bad "install verifier missing bundle-required / trust-root record (#26)"
 fi
 
-# Seed-host standalone packaging stays wired; the wider matrix stays
-# unqualified per #5 (no platform claimed qualified beyond the seed).
+# Seed-host standalone packaging stays wired; the wider matrix is frozen
+# in deploy/release/matrix.bzl with seed qualified (no platform claimed
+# qualified beyond the seed without host evidence).
 if grep -q -F -e 'dx_standalone' cli/cli/BUILD.bazel; then
   ok
 else
@@ -158,13 +166,13 @@ else
   bad "publish dry run lost the draft-only exercised record (GH_RELEASE_DRY_RUN=1 + published False, issue #78)"
 fi
 
-# BCR shape stays checked-not-submitted (issue #78): the workflow checks
-# the module shape and records submitted False without running registry
-# tooling (still unselected per #26, proven above).
-if grep -q -F -e '"submitted": False' .github/workflows/publish-dry-run.yml && grep -q -F -e 'checked, not submitted' .github/workflows/publish-dry-run.yml; then
+# BCR shape stays checked-not-submitted (issue #311): the workflow runs
+# //deploy/release:bcr_demo in BCR_DRY_RUN=1 mode and records submitted
+# False without auto-submitting.
+if grep -q -F -e '"submitted": False' .github/workflows/publish-dry-run.yml && grep -q -F -e 'BCR_DRY_RUN=1 bazel run //deploy/release:bcr_demo' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "publish dry run lost the BCR checked-not-submitted record (issue #78)"
+  bad "publish dry run lost the BCR owner-gated record (BCR_DRY_RUN=1 + submitted False, issue #311)"
 fi
 
 # Verifier refusal stays exercised in the workflow (issue #78
@@ -174,6 +182,65 @@ if grep -q -F -e 'verify-refusal.log' .github/workflows/publish-dry-run.yml && g
   ok
 else
   bad "publish dry run lost the verifier-refusal exercised record (issue #78)"
+fi
+
+# Full matrix frozen per #311: five cells, seed qualified, four
+# follow-ups unqualified with owner-approval qualification.
+if [[ -f "deploy/release/matrix.bzl" ]] \
+  && grep -q -F -e 'dx-linux-x86_64' deploy/release/matrix.bzl \
+  && grep -q -F -e 'unqualified-per-issue-311' deploy/release/matrix.bzl \
+  && grep -q -F -e 'unqualified-per-issue-311' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "release matrix missing frozen five-cell shape (deploy/release/matrix.bzl + workflow, #311)"
+fi
+
+# SBOM/provenance selected per #311: SPDX-2.3 + SLSA v1 wired in the
+# macro and exercised in the workflow, publishing nothing.
+if grep -q -F -e 'SPDX-2.3' deploy/release/sbom.bzl \
+  && grep -q -F -e 'https://slsa.dev/provenance/v1' deploy/release/sbom.bzl \
+  && grep -q -F -e '//deploy/release:sbom_demo' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "SBOM/provenance selection missing (SPDX-2.3 + SLSA v1 via //deploy/release:sbom_demo, #311)"
+fi
+
+# Signing/attestation selected per #311: Sigstore keyless + GitHub
+# attestations on the TUF trust root, dry-run gate in workflow.
+if grep -q -F -e 'tuf-repo-cdn.sigstore.dev' deploy/release/signing.bzl \
+  && grep -q -F -e 'RELEASE_SIGN_DRY_RUN=1 bazel run //deploy/release:signing_demo' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "signing selection missing (Sigstore keyless + attestation dry-run via //deploy/release:signing_demo, #311)"
+fi
+
+# BCR owner-gated tooling per #311: macro plus dry-run gate in workflow.
+if [[ -f "deploy/release/bcr.bzl" ]] \
+  && grep -q -F -e 'BCR_DRY_RUN=1' deploy/release/bcr_deploy.sh \
+  && grep -q -F -e 'BCR_DRY_RUN=1 bazel run //deploy/release:bcr_demo' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "BCR owner-gated tooling missing (deploy/release/bcr.bzl + BCR_DRY_RUN=1, #311)"
+fi
+
+# Human-run driver per #311: dry-run by default, tag ceiling, owner
+# approval gate, exercised in the workflow.
+if [[ -f "deploy/release/release.sh" ]] \
+  && grep -q -F -e 'never creates or pushes tags' deploy/release/release.sh \
+  && grep -q -F -e 'deploy/release/release.sh' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "human-run release driver missing (deploy/release/release.sh + workflow exercise, #311)"
+fi
+
+# Release tests stay exercised in the workflow: //deploy/release:all
+# green with published/submitted False everywhere.
+if grep -q -F -e 'bazel test //deploy/release:all' .github/workflows/publish-dry-run.yml \
+  && grep -q -F -e '"submitted": False' .github/workflows/publish-dry-run.yml \
+  && grep -q -F -e '"published": False' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish dry run lost the release-tests exercised record (//deploy/release:all + published/submitted False, #311)"
 fi
 
 echo "publish trust audit: $pass passed, $fail failed"
