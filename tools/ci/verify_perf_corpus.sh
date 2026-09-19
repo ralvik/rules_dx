@@ -12,12 +12,19 @@
 #   ["corpus"]`); CI scopes query `attr(tags, corpus, ...)`, never
 #   hand-maintained singletons.
 # - #12 dogfood lane A: production code rides normal targets with
-#   QualitySourcesInfo (pinned by //tools/ci:wrapper_sources); native
-#   tool-config binding for own-tree runs plus CI `dx lint` scope
-#   extension stay open.
+#   QualitySourcesInfo (pinned by //tools/ci:wrapper_sources); workspace-level
+#   native policy (`//:ruff_config`, `//:biome_config`, `//:rustfmt_config`)
+#   binds normal targets via direct `aspect_hints` through the shared
+#   forwarder (pinned by //tools/ci:wrapper_sources); CI `dx lint`/`format`
+#   scope covers the proven language trees (`//python/...`,
+#   `//javascript/...`, `//rust/hello/...`, enforcing at --fail-on warning)
+#   alongside the corpus. Remaining gaps stay open with no false claim:
+#   broader trees (for example `//cli/...` BUILD docstring warnings),
+#   CrateInfo/DepInfo context plumbing for Rust dep-coupled classes, and
+#   vacuous classification-only families (Go/Java/Kotlin/Scala/C#/...).
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (9 checks) and records the gaps instead of claiming them.
+# today (11 checks) and records the gaps instead of claiming them.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:verify_perf_corpus`,
 # following //tools/ci:coverage_spill.
@@ -98,6 +105,32 @@ if [[ -f "tools/ci/corpus_audit.sh" && -f "tools/ci/code_ownership.sh" \
   ok
 else
   bad "ownership harnesses missing (corpus_audit/code_ownership/wrapper_sources)"
+fi
+
+# #12 lane A: workspace-level native policy binds normal targets (root
+# ruff/biome/rustfmt configs plus direct aspect_hints on the proof
+# bindings); the shared forwarder carries hints to the QualitySourcesInfo
+# owner.
+if [[ -f "ruff.toml" && -f "biome.json" && -f "rustfmt.toml" ]] \
+  && grep -q -F -e 'ruff_config' BUILD.bazel \
+  && grep -q -F -e 'biome_config' BUILD.bazel \
+  && grep -q -F -e 'aspect_hints' python/hello/BUILD.bazel \
+  && grep -q -F -e 'aspect_hints' javascript/hello/BUILD.bazel \
+  && grep -q -F -e 'aspect_hints' rust/hello/BUILD.bazel \
+  && grep -q -F -e 'aspect_hints' libs/starlark/wrapper.bzl; then
+  ok
+else
+  bad "lane-A workspace-level native policy binding missing (root configs + proof aspect_hints + forwarder plumbing)"
+fi
+
+# #12 lane A: CI dx lint/format scope covers the proven language trees
+# alongside the corpus (enforcing at --fail-on warning once clean).
+if grep -q -F -e '//python/...' .github/workflows/ci.yml \
+  && grep -q -F -e '//javascript/...' .github/workflows/ci.yml \
+  && grep -q -F -e '//rust/hello/...' .github/workflows/ci.yml; then
+  ok
+else
+  bad "ci.yml lost the lane-A language-tree lint/format scope (want //python/... //javascript/... //rust/hello/... alongside corpus)"
 fi
 
 # Battery stays explicit-invocation for E2E (no wildcard-suite leakage).

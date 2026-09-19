@@ -9,6 +9,11 @@ package(default_visibility = ["//visibility:public"])
 javascript_library(
     name = "hello_lib",
     srcs = ["hello.js"],
+    # Lane A proof binding (issue #12): normal JavaScript targets carry the
+    # workspace-level Biome policy via direct `aspect_hints`, mirroring how
+    # corpus targets carry Vale. Proves the forwarder plumbing reaches the
+    # real aspect.
+    aspect_hints = ["//:biome_config"],
 )
 
 javascript_binary(

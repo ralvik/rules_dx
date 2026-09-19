@@ -121,6 +121,7 @@ def _kotlin_wrap_binary(name, srcs, visibility = None, **kwargs):
         upstream = name + "_upstream",
         srcs = srcs,
         visibility = visibility,
+        **({"aspect_hints": kwargs["aspect_hints"]} if "aspect_hints" in kwargs else {})
     )
 
 def kotlin_library(name, srcs, visibility = None, **kwargs):
@@ -195,4 +196,5 @@ def kotlin_test(name, srcs, visibility = None, **kwargs):
         upstream = name + "_upstream",
         srcs = test_srcs,
         visibility = visibility,
+        **({"aspect_hints": kwargs["aspect_hints"]} if "aspect_hints" in kwargs else {})
     )

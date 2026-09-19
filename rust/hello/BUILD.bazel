@@ -17,6 +17,11 @@ rust_library(
         package_name = "rust/hello",
         normal = True,
     ),
+    # Lane A proof binding (issue #12): normal Rust targets carry the
+    # workspace-level rustfmt policy via direct `aspect_hints`, mirroring
+    # how corpus targets carry Vale. Proves the forwarder plumbing in
+    # `//libs/starlark:wrapper.bzl` reaches the real aspect.
+    aspect_hints = ["//:rustfmt_config"],
     crate_name = "hello",
     crate_root = "src/lib.rs",
     edition = "2021",

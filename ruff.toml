@@ -1,0 +1,11 @@
+# Own-tree Ruff policy (issue #12, lane A): single source of truth for
+# Python lint/format in this workspace, shared by editors, language
+# servers, direct tool invocations, and Bazel quality actions.
+#
+# Pins the default-equivalent lint selection explicitly so hinted runs
+# prove the config closure reaches the tool instead of `--isolated`
+# defaults (same selection as the `quality/testdata` fixture). Pinned
+# upstream defaults stay authoritative for omitted settings; this file
+# owns only the lint selection.
+[lint]
+select = ["E4", "E7", "E9", "F"]

@@ -71,6 +71,39 @@ else
   bad "language wrappers drifted off the shared forwarding helper"
 fi
 
+# Lane-A native-config plumbing (issue #12): aspect_hints ride the public
+# QualitySourcesInfo owner across every wrapper family (shared dx_wrap
+# plus custom binary/test forwarders), so own-tree runs bind workspace-level
+# native policy exactly like corpus targets bind their local configs.
+if grep -q -F -e 'aspect_hints' libs/starlark/wrapper.bzl \
+  && grep -q -F -e 'aspect_hints' go/rules/defs.bzl \
+  && grep -q -F -e 'aspect_hints' java/rules/defs.bzl \
+  && grep -q -F -e 'aspect_hints' kotlin/rules/defs.bzl \
+  && grep -q -F -e 'aspect_hints' scala/rules/defs.bzl \
+  && grep -q -F -e 'aspect_hints' csharp/rules/defs.bzl \
+  && grep -q -F -e 'aspect_hints' fsharp/rules/defs.bzl \
+  && grep -q -F -e 'aspect_hints' cc/rules/defs.bzl \
+  && grep -q -F -e 'aspect_hints' python/rules/defs.bzl \
+  && grep -q -F -e 'aspect_hints' rust/rules/defs.bzl \
+  && grep -q -F -e 'aspect_hints' javascript/rules/defs.bzl; then
+  ok
+else
+  bad "wrappers lost their lane-A aspect_hints forwarder plumbing"
+fi
+
+# Lane-A workspace-level native policy (issue #12): root ruff/biome/rustfmt
+# configs exist as checked-in sources with proof bindings on normal targets.
+if [[ -f "ruff.toml" && -f "biome.json" && -f "rustfmt.toml" ]] \
+  && grep -q -F -e 'ruff_config' BUILD.bazel \
+  && grep -q -F -e 'biome_config' BUILD.bazel \
+  && grep -q -F -e 'aspect_hints = ["//:ruff_config"]' python/hello/BUILD.bazel \
+  && grep -q -F -e 'aspect_hints = ["//:biome_config"]' javascript/hello/BUILD.bazel \
+  && grep -q -F -e 'aspect_hints = ["//:rustfmt_config"]' rust/hello/BUILD.bazel; then
+  ok
+else
+  bad "lane-A workspace-level native policy binding missing (root configs + proof aspect_hints)"
+fi
+
 # Wrapper precision is pinned by wrapper tests alongside the wrappers.
 if [[ -f python/rules/wrapper_tests.bzl && -f javascript/rules/wrapper_tests.bzl && -f rust/rules/wrapper_tests.bzl ]]; then
   ok

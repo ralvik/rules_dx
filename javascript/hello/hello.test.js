@@ -6,5 +6,5 @@ import { hello } from "./hello.js";
 // jest's ESM support. Static-import coverage of TypeScript sources
 // needs the transform slice (a later M16 slice wires babel-jest).
 test("greets by name", () => {
-  expect(hello("world")).toBe("hello world");
+	expect(hello("world")).toBe("hello world");
 });

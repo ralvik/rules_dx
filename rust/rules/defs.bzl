@@ -295,12 +295,18 @@ def rust_test(
         name = name + "_upstream",
         **upstream_kwargs
     )
+    forward_kwargs = {}
+    if "aspect_hints" in kwargs:
+        # Lane A (issue #12): hints ride the QualitySourcesInfo owner
+        # where aspects visit, not only the private upstream.
+        forward_kwargs["aspect_hints"] = kwargs["aspect_hints"]
     _rust_forward_test(
         name = name,
         testonly = True,
         upstream = name + "_upstream",
         srcs = test_srcs,
         visibility = visibility,
+        **forward_kwargs
     )
 
 def rust_proc_macro(

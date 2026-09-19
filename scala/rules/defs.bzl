@@ -125,6 +125,7 @@ def _scala_wrap_binary(name, srcs, visibility = None, **kwargs):
         upstream = name + "_upstream",
         srcs = srcs,
         visibility = visibility,
+        **({"aspect_hints": kwargs["aspect_hints"]} if "aspect_hints" in kwargs else {})
     )
 
 def scala_library(name, srcs, visibility = None, **kwargs):
@@ -199,4 +200,5 @@ def scala_test(name, srcs, visibility = None, **kwargs):
         upstream = name + "_upstream",
         srcs = test_srcs,
         visibility = visibility,
+        **({"aspect_hints": kwargs["aspect_hints"]} if "aspect_hints" in kwargs else {})
     )

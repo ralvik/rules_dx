@@ -117,6 +117,7 @@ def _go_wrap_binary(name, srcs, visibility = None, **kwargs):
         upstream = name + "_upstream",
         srcs = srcs,
         visibility = visibility,
+        **({"aspect_hints": kwargs["aspect_hints"]} if "aspect_hints" in kwargs else {})
     )
 
 def go_library(name, srcs, importpath, visibility = None, **kwargs):
@@ -196,4 +197,5 @@ def go_test(name, srcs, visibility = None, **kwargs):
         upstream = name + "_upstream",
         srcs = test_srcs,
         visibility = visibility,
+        **({"aspect_hints": kwargs["aspect_hints"]} if "aspect_hints" in kwargs else {})
     )

@@ -4,13 +4,14 @@
 # Functional code checks only (no docs-prose guards).
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (25 checks): provider definition, single-sourced registry map,
+# today (27 checks): provider definition, single-sourced registry map,
 # curated-defaults + native-config evidence files + test backing,
 # lane-A exclusion + generated list, prior-slice harnesses,
 # external-consumer breadth, determinism seed pin, apply filesystem +
 # atomic-write evidence, aspect QualitySourcesInfo gate, no-cache argv
 # marker, Gazelle extension dirs, dogfood CI jobs, M21 fixture, parity
-# unit tests, and no-false-claim gaps.
+# unit tests, lane-A forwarder plumbing + language-tree CI scope,
+# and no-false-claim gaps.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:quality_foundations_guards`,
 # following //tools/ci:registry_singularity.
@@ -225,11 +226,36 @@ else
 fi
 
 # #12 provider-closed aspects stay fallback-free: only direct_sources
-# supplies files, never a parallel list (CI scope extension open).
+# supplies files, never a parallel list (proven language trees now run in
+# CI alongside the corpus; broader trees stay open with no false claim).
 if grep -q -F -e 'No generic fallback' quality/aspects.bzl; then
   ok
 else
   bad "quality aspects lost their no-generic-fallback record (#12)"
+fi
+
+# #12 lane-A native-config binding stays forwarder-closed: hints ride the
+# public QualitySourcesInfo owner across every wrapper family (shared
+# dx_wrap plus the custom binary/test forwarders).
+if grep -q -F -e 'aspect_hints' libs/starlark/wrapper.bzl \
+  && grep -q -F -e 'aspect_hints' go/rules/defs.bzl \
+  && grep -q -F -e 'aspect_hints' java/rules/defs.bzl \
+  && grep -q -F -e 'aspect_hints' python/rules/defs.bzl \
+  && grep -q -F -e 'aspect_hints' rust/rules/defs.bzl \
+  && grep -q -F -e 'aspect_hints' javascript/rules/defs.bzl; then
+  ok
+else
+  bad "wrappers lost their lane-A aspect_hints forwarder plumbing (#12)"
+fi
+
+# #12 lane-A CI scope covers the proven language trees alongside the
+# corpus (enforcing at --fail-on warning).
+if grep -q -F -e '//python/...' .github/workflows/ci.yml \
+  && grep -q -F -e '//javascript/...' .github/workflows/ci.yml \
+  && grep -q -F -e '//rust/hello/...' .github/workflows/ci.yml; then
+  ok
+else
+  bad "ci.yml lost its lane-A language-tree scope (#12)"
 fi
 
 # No false claim: full determinism/apply batteries not claimed green.
