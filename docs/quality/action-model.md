@@ -18,8 +18,8 @@ repository-, language-, or class-wide actions.
 The aggregate workspace provider expands ecosystem tool selections through ruleset-owned
 adapter manifests into class-aware policy; users do not maintain extension or class lists.
 
-This model is exercised through the repository corpus (`real_source_target(name = "corpus")`
-per package, e.g. `dx/BUILD.bazel:59-64`) via the corpus dogfood in
+This model is exercised through the repository corpus (`real_source_target(name = "corpus_*")`
+per content type per package, issue #15, e.g. `dx/BUILD.bazel`) via the corpus dogfood in
 [local workflows](../contributing/local-workflows.md#corpus-dogfood). Remote execution
 remains unverified. [ADR 0003](../decisions/0003-action-granularity.md)
 therefore remains provisional.

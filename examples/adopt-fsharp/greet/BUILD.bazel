@@ -16,15 +16,16 @@ fsharp_test(
     ],
 )
 
-real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"],
-)
-
 fsharp_library(
     name = "greet",
     srcs = [
         "Greet.fs",
         "Helper.fs",
     ],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
 )

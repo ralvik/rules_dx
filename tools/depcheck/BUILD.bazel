@@ -166,12 +166,45 @@ sh_test(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Repository corpus: build file plus all TOML fixtures owned for
-# direct-Bazel dogfood under the canonical real_fixture_policy. Python
-# sources, Rust sources, JS/TS sources, and locks stay dx-owned or
-# testdata (code ownership via test data), never corpus sources.
 real_source_target(
-    name = "corpus",
+    name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
-    toml_srcs = glob(["testdata/**/*.toml"]),
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = [
+        "testdata/js/exception/depcheck_exceptions.toml",
+        "testdata/js/obsolete/depcheck_exceptions.toml",
+        "testdata/python/category/pyproject.toml",
+        "testdata/python/category_ok/pyproject.toml",
+        "testdata/python/exception/depcheck_exceptions.toml",
+        "testdata/python/exception/pyproject.toml",
+        "testdata/python/obsolete/depcheck_exceptions.toml",
+        "testdata/python/obsolete/pyproject.toml",
+        "testdata/python/ok_used/pyproject.toml",
+        "testdata/python/platform_optional/pyproject.toml",
+        "testdata/python/platform_optional_unused/pyproject.toml",
+        "testdata/python/stale/pyproject.toml",
+        "testdata/python/transitive_shared/pyproject.toml",
+        "testdata/python/unused/pyproject.toml",
+        "testdata/rust/category/Cargo.toml",
+        "testdata/rust/category_ok/Cargo.toml",
+        "testdata/rust/exception/Cargo.toml",
+        "testdata/rust/exception/depcheck_exceptions.toml",
+        "testdata/rust/obsolete/Cargo.toml",
+        "testdata/rust/obsolete/depcheck_exceptions.toml",
+        "testdata/rust/ok_used/Cargo.toml",
+        "testdata/rust/platform_optional/Cargo.toml",
+        "testdata/rust/platform_optional_unused/Cargo.toml",
+        "testdata/rust/stale/Cargo.toml",
+        "testdata/rust/transitive_shared/Cargo.toml",
+        "testdata/rust/transitive_shared/crates/a/Cargo.toml",
+        "testdata/rust/transitive_shared/crates/b/Cargo.toml",
+        "testdata/rust/unused/Cargo.toml",
+        "testdata/ts/exception/depcheck_exceptions.toml",
+        "testdata/ts/obsolete/depcheck_exceptions.toml",
+    ],
 )

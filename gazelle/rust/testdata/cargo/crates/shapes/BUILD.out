@@ -1,4 +1,5 @@
 load("@crates//:crates.bzl", "aliases", "crate_deps")
+load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 load("@rules_dx//rust/rules:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 rust_library(
@@ -110,4 +111,16 @@ rust_binary(
         ],
         package_name = "crates/shapes",
     ) + [":shapes_lib"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = ["Cargo.toml"],
 )

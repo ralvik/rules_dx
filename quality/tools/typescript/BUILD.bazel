@@ -20,11 +20,8 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
-# Repository corpus: build metadata owned for direct-Bazel
-# dogfood under the canonical real_fixture_policy. There is no
-# ruleset-owned manifest/lock here: the TypeScript toolchain and its
-# managed Node runtime are pinned in MODULE.bazel.
 real_source_target(
-    name = "corpus",
+    name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
 )

@@ -221,9 +221,29 @@ vale_config(
     data = ["corpus_styles/Dx/Markers.yml"],
 )
 
-# Repository corpus: all Starlark sources in this package owned
-# for direct-Bazel dogfood under the canonical real_fixture_policy.
 real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
+    name = "corpus_starlark",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "adapters.bzl",
+        "applicability.bzl",
+        "aspect_subject.bzl",
+        "aspects.bzl",
+        "curated_defaults.bzl",
+        "curated_defaults_tests.bzl",
+        "fixtures.bzl",
+        "native_config.bzl",
+        "native_config_tests.bzl",
+        "parity_tests.bzl",
+        "pipeline.bzl",
+        "pipeline_tests.bzl",
+        "policy.bzl",
+        "policy_subject.bzl",
+        "policy_tests.bzl",
+        "real_aspects.bzl",
+        "real_pipeline_tests.bzl",
+        "sources.bzl",
+        "sources_tests.bzl",
+    ],
+    tags = ["corpus"],
 )

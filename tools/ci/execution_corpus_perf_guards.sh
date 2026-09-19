@@ -6,20 +6,21 @@
 # resolver-owned backends per set with continuation and per-set reporting
 # (issues #18 and #19 delivered). Family selection plus update selector planning,
 # aggregate exit-code mapping, and --dry-run planning execute for both. Required-core depcheck (issue #22) is delivered
-# in tools/depcheck/; admitted expansion stays open. Corpus stays single `corpus` per directory until `dx generate` emits
-# the per-type split; perf tracks the frozen aspect_rules_lint v2.8.0
+# in tools/depcheck/; admitted expansion stays open. Corpus split per content
+# type per directory landed with `dx generate` (issue #15, shared tag);
+# perf tracks the frozen aspect_rules_lint v2.8.0
 # baseline as a report, never a gate.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
 # today (21 checks): audit plus update live execution, fail-closed/live unit pins, dry-run
 # planning paths, audit families + policy modules, selector planning
 # + update API, aggregate verdict pins, exit mappings,
-# prior harnesses green, corpus single-name rule + Gazelle ownership +
+# prior harnesses green, corpus split rule + Gazelle ownership +
 # generate --check wiring + carve-out record, perf report-not-gate
 # shape + v2.8.0 fairness pin + bench harness + comparison-test
 # presence. Update plus audit live execution
-# is delivered (#19 plus #18); per-type generation and comparison numbers stay open under
-# their issues.
+# is delivered (#19 plus #18); comparison numbers stay open under
+# their issue.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:execution_corpus_perf_guards`,
 # following //tools/ci:verify_perf_corpus.
@@ -97,20 +98,29 @@ else
   bad "#22 fixtures missing after delivery"
 fi
 
-# #15 corpus rule: single `corpus` per directory until generation owns split.
+# #15 corpus rule: per-type split per directory (corpus_markdown/
+# corpus_starlark/corpus_toml, plus corpus_json where preserved), each with
+# exactly its own tool config, shared `tags = ["corpus"]`; CI scopes query
+# the tag, never the legacy single name.
 if [[ -f "tools/ci/corpus_audit.sh" ]] \
-  && grep -q -F -e 'attr(name,' .github/workflows/ci.yml; then
+  && grep -q -F -e 'attr(tags, corpus,' .github/workflows/ci.yml \
+  && ! grep -q -F -e "attr(name, '^corpus" .github/workflows/ci.yml; then
   ok
 else
-  bad "corpus single-name rule lost (corpus_audit harness or ci corpus query)"
+  bad "corpus split rule lost (want corpus_audit harness + tag-scoped ci query, no legacy single-name query)"
 fi
 
-# #15 generation ownership: Gazelle extension present, no hand split claimed.
-if [[ -f "gazelle/rust/lang.go" ]] \
-  && ! grep -rln -F -e 'corpus_markdown' --include='BUILD.bazel' . 2>/dev/null | grep -q .; then
+# #15 generation ownership: Gazelle extension owns every corpus block
+# (`dx generate`), splits carry the shared tag, legacy singletons gone
+# except hand-maintained excluded fixtures.
+if [[ -f "gazelle/rust/corpus.go" ]] \
+  && [[ -f "gazelle/rust/lang.go" ]] \
+  && grep -q -F -e 'corpusTag' gazelle/rust/corpus.go \
+  && grep -rln -F -e 'corpus_markdown' --include='BUILD.bazel' . 2>/dev/null | grep -q . \
+  && ! grep -rln -F -e 'name = "corpus"' --include='BUILD.bazel' cli docs dx BUILD.bazel 2>/dev/null | grep -q .; then
   ok
 else
-  bad "corpus per-type split appeared without #15 generation landing"
+  bad "corpus generation ownership lost (want gazelle/rust/corpus.go + tag + splits, no legacy singletons in cli/docs/dx)"
 fi
 
 # #15 generate freshness enforced in CI alongside the audit.

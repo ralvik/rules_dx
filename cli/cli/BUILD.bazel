@@ -153,6 +153,7 @@ rust_binary(
     deps = crate_deps(
         [
             "base64",
+            "chrono",
             "clap",
             "clap_complete",
             "clap_mangen",
@@ -213,6 +214,7 @@ rust_binary(
     deps = crate_deps(
         [
             "base64",
+            "chrono",
             "clap",
             "clap_complete",
             "clap_mangen",
@@ -254,6 +256,7 @@ rust_test(
         [
             "assert_cmd",
             "base64",
+            "chrono",
             "clap",
             "clap_complete",
             "clap_mangen",
@@ -312,10 +315,14 @@ exports_files(
     visibility = ["//visibility:public"],
 )
 
-# Repository corpus: crate manifest and build file owned for
-# direct-Bazel dogfood under the canonical real_fixture_policy.
 real_source_target(
-    name = "corpus",
+    name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
     toml_srcs = ["Cargo.toml"],
 )

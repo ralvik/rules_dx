@@ -280,9 +280,11 @@ func nativeVisibility(rel string) string {
 // merged outcome: surviving entries keep their relative position, stale
 // managed entries drop, and resolved additions append in canonical-label
 // order. An empty outcome stays absent so the merger deletes a fully
-// stale attribute instead of rendering an empty list.
+// stale attribute instead of rendering an empty list. Corpus splits
+// (issue #15) never bind Rust hints: they already carry exactly their own
+// tool's native config (markdown binds Vale, others run pinned defaults).
 func applyNativeHints(rel string, r *rule.Rule, plan *nativePlan) {
-	if _, owned := rustKinds[r.Kind()]; !owned || isNativeConfigKind(r.Kind()) {
+	if _, owned := rustKinds[r.Kind()]; !owned || isNativeConfigKind(r.Kind()) || r.Kind() == corpusKind {
 		return
 	}
 	existing := plan.existing[r.Name()]

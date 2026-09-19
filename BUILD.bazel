@@ -41,6 +41,9 @@ load("@rules_dx//quality:native_config.bzl", "rustfmt_config")
 # promoted `//cli/lcov:dx_lcov` library with no manifest of its own, so the
 # package opts out like the fixtures above.
 # gazelle:exclude tools/coverage
+# tools/depcheck/testdata holds depcheck fixtures with intentionally
+# unresolved imports (issue #22 truth table); Gazelle never owns them.
+# gazelle:exclude tools/depcheck/testdata
 
 load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@npm//:defs.bzl", "npm_link_all_packages")
@@ -83,39 +86,6 @@ exports_files([
 # direct-Bazel dogfood under the canonical real_fixture_policy. LICENSE,
 # the linked docs pages, and CHANGELOG are unclassified link-resolution
 # siblings, never checked sources.
-real_source_target(
-    name = "corpus",
-    aspect_hints = ["//quality:corpus_vale_config"],
-    markdown_siblings = [
-        "//docs:architecture/README.md",
-        "//docs:contributing/local-workflows.md",
-        "//docs:decisions/README.md",
-        "//docs:environments/environment.md",
-        "//docs:product/README.md",
-        "//docs:product/scope.md",
-        "//docs:product/support-matrix.md",
-        "//docs:README.md",
-        "//docs:roadmap.md",
-        "//docs:testing/README.md",
-        "CHANGELOG.md",
-        "LICENSE",
-    ],
-    markdown_srcs = [
-        "AGENTS.md",
-        "CONTRIBUTING.md",
-        "README.md",
-        "SECURITY.md",
-    ],
-    starlark_srcs = [
-        "BUILD.bazel",
-        "MODULE.bazel",
-    ],
-    toml_srcs = [
-        "clippy.toml",
-        "rustfmt.toml",
-    ],
-)
-
 # Parity fixture: `dx init` scaffold output must stay byte-identical to
 # the checked-in `renovate.json`, so the config we ship is the one we
 # run (issue #3). A drifting hand copy is worse than none.
@@ -139,4 +109,48 @@ rustfmt_config(
     name = "rustfmt_config",
     src = "rustfmt.toml",
     visibility = ["//:__subpackages__"],
+)
+
+real_source_target(
+    name = "corpus_markdown",
+    aspect_hints = ["//quality:corpus_vale_config"],
+    markdown_siblings = [
+        "//docs:README.md",
+        "//docs:architecture/README.md",
+        "//docs:contributing/local-workflows.md",
+        "//docs:decisions/README.md",
+        "//docs:environments/environment.md",
+        "//docs:product/README.md",
+        "//docs:product/scope.md",
+        "//docs:product/support-matrix.md",
+        "//docs:roadmap.md",
+        "//docs:testing/README.md",
+        "CHANGELOG.md",
+        "LICENSE",
+    ],
+    markdown_srcs = [
+        "AGENTS.md",
+        "CONTRIBUTING.md",
+        "README.md",
+        "SECURITY.md",
+    ],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "MODULE.bazel",
+    ],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = [
+        "clippy.toml",
+        "rustfmt.toml",
+    ],
 )

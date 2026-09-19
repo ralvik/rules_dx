@@ -57,12 +57,6 @@ exports_files([
 # direct-Bazel dogfood under the canonical real_fixture_policy. Python
 # sources and the uv lock stay dx-owned/unclassified, never corpus sources.
 # The lock is a generated third-party manifest, excluded like other locks.
-real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"],
-    toml_srcs = ["pyproject.toml"],
-)
-
 # Hello smoke as a test target (#87, same pattern as
 # //rust/hello:hello_output_test): asserts the seed binary prints the
 # expected greeting. Tagged `no-coverage`: process-spawning tests stay
@@ -76,4 +70,16 @@ sh_test(
     tags = ["no-coverage"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = ["pyproject.toml"],
 )

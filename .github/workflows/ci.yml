@@ -11,7 +11,8 @@
 #
 # quality runs converge the corpus, check runs prove the deterministic no-op.
 # The repository
-# corpus (`real_source_target(name = "corpus")` per package) is the dogfood
+# corpus (`real_source_target(name = "corpus_*")` per content type per package,
+# issue #15, shared `tags = ["corpus"]`) is the dogfood
 # scope. CI installs no
 # quality tools: Buildifier, Taplo, Vale, rustfmt, and Clippy execute only
 # as Bazel-resolved pinned actions (actions run with an empty PATH,
@@ -279,7 +280,7 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:widen_update_loop
       - name: Audit quality foundations (provider + registry + mapping owners + battery contracts)
         run: bazel run --noshow_progress //tools/ci:quality_foundations_guards
-      - name: Audit execution/corpus/perf guards (audit live + update live + single corpus + report-not-gate)
+      - name: Audit execution/corpus/perf guards (audit live + update live + corpus split + report-not-gate)
         run: bazel run --noshow_progress //tools/ci:execution_corpus_perf_guards
       - name: Audit distribution/closeout guards (hygiene + workflows + no-publish invariants)
         run: bazel run --noshow_progress //tools/ci:distribution_closeout_guards
@@ -291,7 +292,7 @@ jobs:
         if: always()
         run: |
           echo "### dogfood-freshness — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Checked: Bazel-resolved tool execution, generate --check freshness, corpus ownership (carve-outs intact), code ownership (issue #12 lane A), examples READMEs (issue #85 commands + evidence), examples laziness (issue #85 no-install + isolation + deps-closure + action-graph + action-command zero-work), quality cache aquery (issue #84 action-key isolation seed), depcheck contract (issue #22 truth table + open routes), wrapper sources (issues #12/#7/#8 QualitySourcesInfo), registry singularity (issues #6/#84 single-sourced taxonomy), backlog contracts (issues #9/#10 frozen pins + gap labels), GHCR hygiene (issue #184 separate workflow + gated push), widen-update loop contract (issue #260 never-rewrites + manager set), quality foundations (issues #6/#7/#8/#12 provider + registry + mapping owners + battery contracts), execution/corpus/perf guards (issues #18/#19/#22/#15/#86 audit live + update live + single corpus + report-not-gate), distribution/closeout guards (issues #5/#26/#78/#184/#54 hygiene + workflows + no-publish invariants), backlog/automation guards (issues #9/#10/#85/#254/#260 contracts + examples + coverage/Renovate honesty), Supported-evidence gate (issue #301 no Supported without platform+consumer+release).">> "$GITHUB_STEP_SUMMARY"
+          echo "Checked: Bazel-resolved tool execution, generate --check freshness, corpus ownership (carve-outs intact), code ownership (issue #12 lane A), examples READMEs (issue #85 commands + evidence), examples laziness (issue #85 no-install + isolation + deps-closure + action-graph + action-command zero-work), quality cache aquery (issue #84 action-key isolation seed), depcheck contract (issue #22 truth table + open routes), wrapper sources (issues #12/#7/#8 QualitySourcesInfo), registry singularity (issues #6/#84 single-sourced taxonomy), backlog contracts (issues #9/#10 frozen pins + gap labels), GHCR hygiene (issue #184 separate workflow + gated push), widen-update loop contract (issue #260 never-rewrites + manager set), quality foundations (issues #6/#7/#8/#12 provider + registry + mapping owners + battery contracts), execution/corpus/perf guards (issues #18/#19/#22/#15/#86 audit live + update live + corpus split + report-not-gate), distribution/closeout guards (issues #5/#26/#78/#184/#54 hygiene + workflows + no-publish invariants), backlog/automation guards (issues #9/#10/#85/#254/#260 contracts + examples + coverage/Renovate honesty), Supported-evidence gate (issue #301 no Supported without platform+consumer+release).">> "$GITHUB_STEP_SUMMARY"
   dogfood-lint:
     name: dogfood-lint (dx lint converge + check)
     needs: [dogfood-freshness]
@@ -312,7 +313,7 @@ jobs:
             bazel-seed-
       - name: Run dx lint over the corpus (default mode)
         run: |
-          bazel query "attr(name, '^corpus\$', kind(real_source_target, //...))" 2>/dev/null \
+          bazel query "attr(tags, corpus, kind(real_source_target, //...))" 2>/dev/null \
             | LC_ALL=C sort -u > /tmp/corpus_targets.txt
           scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
           bazel run --noshow_progress //cli/cli:dx -- lint $scope
@@ -345,7 +346,7 @@ jobs:
             bazel-seed-
       - name: Run dx format over the corpus (default mode)
         run: |
-          bazel query "attr(name, '^corpus\$', kind(real_source_target, //...))" 2>/dev/null \
+          bazel query "attr(tags, corpus, kind(real_source_target, //...))" 2>/dev/null \
             | LC_ALL=C sort -u > /tmp/corpus_targets.txt
           scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
           bazel run --noshow_progress //cli/cli:dx -- format $scope
@@ -378,7 +379,7 @@ jobs:
             bazel-seed-
       - name: Run dx typecheck over the corpus (default mode)
         run: |
-          bazel query "attr(name, '^corpus\$', kind(real_source_target, //...))" 2>/dev/null \
+          bazel query "attr(tags, corpus, kind(real_source_target, //...))" 2>/dev/null \
             | LC_ALL=C sort -u > /tmp/corpus_targets.txt
           scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
           bazel run --noshow_progress //cli/cli:dx -- typecheck $scope

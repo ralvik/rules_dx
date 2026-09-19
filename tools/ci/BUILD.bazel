@@ -418,7 +418,7 @@ sh_binary(
 
 # Execution/corpus/perf guards (issues #18, #19, #22, #15, #86): pins
 # the audit fail-closed code plus update live execution, exit mappings, prior
-# harnesses, corpus single-name rule + Gazelle ownership, and perf
+# harnesses, corpus split rule + Gazelle ownership, and perf
 # report-not-gate shape. Functional checks only. Run by CI via
 # `bazel run //tools/ci:execution_corpus_perf_guards`.
 sh_binary(
@@ -613,8 +613,8 @@ sh_binary(
 )
 
 # Verification-foundations harness (issues #86, #15, #12; relates #54):
-# pins the perf fairness/report-not-gate half, the single-corpus +
-# generate-owned split rule, and the lane-A ownership scope.
+# pins the perf fairness/report-not-gate half, the corpus-split +
+# generate-owned rule, and the lane-A ownership scope.
 # Functional checks only. Run by CI via `bazel run //tools/ci:verify_perf_corpus`.
 sh_binary(
     name = "verify_perf_corpus",
@@ -623,10 +623,8 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Repository corpus: build file owned for direct-Bazel dogfood
-# under the canonical real_fixture_policy. The audit script itself is
-# CI tooling, never a corpus source.
 real_source_target(
-    name = "corpus",
+    name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
 )

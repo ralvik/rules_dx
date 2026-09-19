@@ -23,10 +23,8 @@ cc_test(
     deps = [":hello_lib"],
 )
 
-# Repository corpus: build metadata owned for direct-Bazel
-# dogfood under the canonical real_fixture_policy. C/C++ sources stay
-# dx-owned, never corpus sources.
 real_source_target(
-    name = "corpus",
+    name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
 )

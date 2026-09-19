@@ -26,9 +26,8 @@ upstream tests unchanged; lint precision comes from the forwarder
 (`rustfmt`). `CcInfo` loads from `@rules_cc//cc/common:cc_info.bzl` for
 the shared/static linking surface. No other upstream surface is used; consumers needing more
 load the upstream module directly. `dx_rust_crate` additionally loads
-`aliases` / `crate_deps` from the generated `@crates//:crates.bzl` and
-`real_source_target` from `//quality:fixtures.bzl` to emit the full
-M02 leaf-crate pattern (lib + test + lint tests + manifest + corpus);
+`aliases` / `crate_deps` from the generated `@crates//:crates.bzl` to emit
+the M02 leaf-crate pattern (lib + test + lint tests + manifest);
 neither target loads this module back, so the load graph stays acyclic.
 
 Normalization (WP3) is deliberately narrow: the only new fact is
@@ -101,7 +100,6 @@ load("@crates//:crates.bzl", _aliases = "aliases", _crate_deps = "crate_deps")
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_rust//rust:defs.bzl", _rust_binary = "rust_binary", _rust_clippy_test = "rust_clippy_test", _rust_common = "rust_common", _rust_library = "rust_library", _rust_proc_macro = "rust_proc_macro", _rust_shared_library = "rust_shared_library", _rust_static_library = "rust_static_library", _rust_test = "rust_test", _rustfmt_test = "rustfmt_test")
 load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap")
-load("//quality:fixtures.bzl", "real_source_target")
 load("//quality:sources.bzl", "QualitySourcesInfo", "RUST")
 
 # Single source of truth for the repository Rust edition (issue #82).
@@ -414,18 +412,19 @@ def dx_rust_crate(
         crate_name = None,
         srcs = None,
         size = "small",
-        visibility = None,
-        extra_starlark_srcs = None):
-    """Single-crate boilerplate: lib + test + lint tests + manifest + corpus (issue #239).
+        visibility = None):
+    """Single-crate boilerplate: lib + test + lint tests + manifest (issue #239).
 
     Emits the M02 leaf-crate pattern with names identical to the
     hand-written stanzas it replaces, so migration is a pure BUILD-text
     change: `<name>` (`rust_library` over `srcs`), `<name>_test`
     (`rust_test` via `crate`), `<name>_fmt_test` / `<name>_clippy_test`
-    over the library, `exports_files(["Cargo.toml"])` (always public:
-    crate_universe reads the manifest from the `@crates` repo), and the
-    `corpus` `real_source_target` owning `BUILD.bazel` + `Cargo.toml`
-    for direct-Bazel dogfood. Dependency labels resolve through
+    over the library, and `exports_files(["Cargo.toml"])` (always public:
+    crate_universe reads the manifest from the `@crates` repo). Corpus
+    splits (`corpus_starlark` owning `BUILD.bazel` plus any `*.bzl` like
+    `roots.bzl`, `corpus_toml` owning `Cargo.toml`) are owned by `dx
+    generate` (issue #15), never by this macro, so dogfood stays
+    generator-stable. Dependency labels resolve through
     crate_universe exactly like the hand-written calls: `deps` /
     `dev_deps` are crate names, `extra_deps` / `extra_test_deps` are
     literal labels appended after the resolved ones.
@@ -453,9 +452,6 @@ def dx_rust_crate(
         `dx_proto_validate`, `dx_lcov`) public: they serve `//quality`,
         `//generation`, `//env`, `//docs/ir`, and `//tools` outside
         `//cli` (see module docs for the #239 visibility decision).
-      extra_starlark_srcs: additional Starlark files owned by the
-        `corpus` target alongside `BUILD.bazel` (e.g. `roots.bzl` for
-        `//cli/roots`); `Cargo.toml` stays the only TOML source.
     """
     crate = name if crate_name == None else crate_name
     lib_srcs = srcs or ["src/lib.rs"]
@@ -503,9 +499,4 @@ def dx_rust_crate(
     native.exports_files(
         ["Cargo.toml"],
         visibility = ["//visibility:public"],
-    )
-    real_source_target(
-        name = "corpus",
-        starlark_srcs = ["BUILD.bazel"] + (extra_starlark_srcs or []),
-        toml_srcs = ["Cargo.toml"],
     )

@@ -11,10 +11,14 @@ exports_files([
     "wrapper_tests.bzl",
 ])
 
-# Repository corpus: wrapper Starlark owned for direct-Bazel
-# dogfood under the canonical real_fixture_policy. Rust sources stay
-# dx-owned (M02 wrappers), never corpus sources.
 real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
+    name = "corpus_starlark",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "defs.bzl",
+        "edition.bzl",
+        "probe.bzl",
+        "wrapper_tests.bzl",
+    ],
+    tags = ["corpus"],
 )

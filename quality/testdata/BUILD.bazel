@@ -446,10 +446,13 @@ runner_matrix_cases(name = "runner_matrix")
 # owned for direct-Bazel dogfood under the canonical real_fixture_policy.
 # Fixture-owned evidence files stay excluded (evidence frozen); Markdown
 # and TOML here are fixture-owned or bound configs, so no md/toml corpus.
+# Hand-maintained: this package is excluded from generation, so the
+# starlark split carries the shared corpus tag manually (issue #15).
 real_source_target(
-    name = "corpus",
+    name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"] + glob(
         ["*.bzl"],
         exclude = ["real_clean.bzl"],
     ),
+    tags = ["corpus"],
 )

@@ -6,10 +6,11 @@
 # - #86 perf: synthetic-tree harness + fairness pins + report-not-gate
 #   results exist; rules_lint-side numbers, full comparison report, and
 #   any gate stay open (no parity claim until measured runs land).
-# - #15 corpus: single `corpus` per directory stays the rule; the
-#   per-type split (corpus_markdown/corpus_starlark/...) lands only with
-#   generation (`dx generate`), never hand-maintained. CI scopes still
-#   query `attr(name, '^corpus$')`.
+# - #15 corpus: per-type split (corpus_markdown/corpus_starlark/corpus_toml,
+#   plus corpus_json where preserved) landed with generation
+#   (`dx generate`, Gazelle owns every corpus block, shared `tags =
+#   ["corpus"]`); CI scopes query `attr(tags, corpus, ...)`, never
+#   hand-maintained singletons.
 # - #12 dogfood lane A: production code rides normal targets with
 #   QualitySourcesInfo (pinned by //tools/ci:wrapper_sources); native
 #   tool-config binding for own-tree runs plus CI `dx lint` scope
@@ -72,12 +73,15 @@ else
   bad "perf BUILD lost the comparison/results provenance tests"
 fi
 
-# #15: no hand-split corpus — CI scopes still query the single `corpus`
-# name; the per-type split lands only with generation.
-if grep -q -F -e "attr(name, '^corpus" .github/workflows/ci.yml; then
+# #15: corpus split landed with generation — CI scopes query the shared
+# `corpus` tag (per-type splits), never the legacy single `corpus` name;
+# every corpus block is Gazelle-owned via `dx generate`.
+if grep -q -F -e "attr(tags, corpus," .github/workflows/ci.yml \
+  && ! grep -q -F -e "attr(name, '^corpus" .github/workflows/ci.yml \
+  && grep -rln -F -e 'corpus_markdown' --include='BUILD.bazel' . 2>/dev/null | grep -q .; then
   ok
 else
-  bad "ci.yml lost the single-corpus scope query (hand-split without generation?)"
+  bad "ci.yml lost the tag-scoped corpus split query (want attr(tags, corpus) + generated corpus_markdown, no legacy single-corpus query)"
 fi
 
 # #15: generation freshness still gates dogfood before quality converges.

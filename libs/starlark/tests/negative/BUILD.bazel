@@ -18,10 +18,11 @@ missing_fragment_demo(name = "missing_fragment_demo")
 
 wrong_phase_demo(name = "wrong_phase_demo")
 
-# Repository corpus: demo Starlark owned for direct-Bazel
-# dogfood under the canonical real_fixture_policy. .txt fixtures have
-# no quality class and stay outside the corpus.
 real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
+    name = "corpus_starlark",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "negative_tests.bzl",
+    ],
+    tags = ["corpus"],
 )

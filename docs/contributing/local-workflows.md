@@ -48,8 +48,8 @@ bazel run //cli/cli:dx -- coverage --min-coverage <percent> //...
 
 ## Corpus Dogfood
 
-The repository corpus (`real_source_target(name = "corpus")` per package)
-is checked with the
+The repository corpus (`real_source_target(name = "corpus_*")` per content
+type per package, issue #15, shared `tags = ["corpus"]`) is checked with the
 real lint/format aspects; every produced result must pass the per-result
 evaluator at `--fail_on warning`. The same invocations run in CI
 (`.github/workflows/ci.yml`, jobs `dogfood-freshness`, `dogfood-lint`,
@@ -59,7 +59,7 @@ quality tools: all tools execute as Bazel-resolved pinned actions.
 Select the corpus targets, then build their `dx_results`:
 
 ```sh
-bazel query "attr(name, '^corpus$', kind(real_source_target, //...))" \
+bazel query "attr(tags, corpus, kind(real_source_target, //...))" \
   | LC_ALL=C sort -u > /tmp/corpus_targets.txt
 bazel build $(tr '\n' ' ' < /tmp/corpus_targets.txt) \
   --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \

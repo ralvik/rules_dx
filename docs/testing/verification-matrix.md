@@ -15,7 +15,8 @@ standard dogfood gates.
 
 ## Layers
 
-- **Corpus dogfood**: `real_source_target(name = "corpus")` per package
+- **Corpus dogfood**: `real_source_target(name = "corpus_*")` per content type
+  per package (issue #15, shared `tags = ["corpus"]`)
   checked with the real lint/format aspects at `--fail_on warning`, plus
   the corpus and code ownership audits. Scope: Markdown/Starlark/TOML
   target-less files (corpus) and production code on normal targets

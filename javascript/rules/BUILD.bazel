@@ -12,11 +12,16 @@ exports_files([
 
 # Repository corpus: wrapper Starlark owned for direct-Bazel
 # dogfood under the canonical real_fixture_policy.
-real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
-)
-
 # Wrapper-contract negatives (#87 item 2): jest-pipeline enforcement
 # plus the structural test-filtering channel.
 javascript_wrapper_contract_tests(name = "wrapper_contract_tests")
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "defs.bzl",
+        "wrapper_tests.bzl",
+    ],
+    tags = ["corpus"],
+)

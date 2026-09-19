@@ -1,3 +1,5 @@
+load("@rules_dx//quality:fixtures.bzl", "real_source_target")
+
 """M25 WP3 slice 3: combined setup commit through the shared lock."""
 
 # gazelle:resolve rust dx_env //cli/env:dx_env
@@ -22,4 +24,16 @@ dx_rust_crate(
     ],
     extra_test_deps = ["//cli/test_scratch:dx_test_scratch"],
     deps = ["thiserror"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = ["Cargo.toml"],
 )

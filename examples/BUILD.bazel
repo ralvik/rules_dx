@@ -14,13 +14,8 @@ exports_files([
     "docs-ci/caller.yml",
 ])
 
-# Repository corpus: example Markdown owned for direct-Bazel
-# dogfood under the canonical real_fixture_policy. Adopt-example READMEs
-# are unclassified link-resolution siblings for the index links above
-# (directory targets resolve to their README.md index), never checked
-# sources of this package.
 real_source_target(
-    name = "corpus",
+    name = "corpus_markdown",
     aspect_hints = ["//quality:corpus_vale_config"],
     markdown_siblings = [
         "//examples/adopt-cpp:README.md",
@@ -40,5 +35,11 @@ real_source_target(
         "consumer-ci/README.md",
         "docs-ci/README.md",
     ],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
 )

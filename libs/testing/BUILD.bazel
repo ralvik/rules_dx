@@ -18,9 +18,12 @@ test_suite(
     tests = [":stack_contract"],
 )
 
-# Repository corpus: helper Starlark owned for direct-Bazel
-# dogfood under the canonical real_fixture_policy.
 real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
+    name = "corpus_starlark",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "tested_stack.bzl",
+        "tested_stack_tests.bzl",
+    ],
+    tags = ["corpus"],
 )

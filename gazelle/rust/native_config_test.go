@@ -105,12 +105,15 @@ func TestNativeConfigRecognition(t *testing.T) {
 		"taplo_config":      "taplo.toml",
 		"buildifier_config": ".buildifier.json",
 	}
-	if len(result.Gen) != len(want)+1 {
+	// Lib plus configs plus corpus splits owning BUILD.bazel and the TOML
+	// sources (rustfmt/clippy/taplo/custom, issue #15). Dotfiles
+	// (.vale.ini, .buildifier.json) never enter the corpus.
+	if len(result.Gen) != len(want)+3 {
 		names := []string{}
 		for _, r := range result.Gen {
 			names = append(names, r.Kind()+":"+r.Name())
 		}
-		t.Fatalf("generated %d rules %v, want lib plus %d configs", len(result.Gen), names, len(want))
+		t.Fatalf("generated %d rules %v, want lib plus %d configs plus corpus splits", len(result.Gen), names, len(want))
 	}
 	lib := findGenerated(result, libraryKind, "site")
 	if lib == nil {
@@ -431,12 +434,20 @@ func TestNativeConfigOnlyDir(t *testing.T) {
 	_, result := runNativeGenerate(t, "site", map[string]string{
 		"site/taplo.toml": "[formatting]\n",
 	}, "")
-	if len(result.Gen) != 1 {
-		t.Fatalf("generated %d rules, want only taplo_config", len(result.Gen))
+	// Config-only dirs gain the taplo_config plus corpus splits owning
+	// BUILD.bazel and taplo.toml (issue #15).
+	if len(result.Gen) != 3 {
+		t.Fatalf("generated %d rules, want taplo_config plus corpus splits", len(result.Gen))
 	}
 	taplo := findGenerated(result, "taplo_config", "taplo_config")
 	if taplo == nil || taplo.AttrString("src") != "taplo.toml" {
 		t.Errorf("taplo target = %v", taplo)
+	}
+	if findGenerated(result, corpusKind, "corpus_toml") == nil {
+		t.Error("missing corpus_toml split for taplo.toml")
+	}
+	if findGenerated(result, corpusKind, "corpus_starlark") == nil {
+		t.Error("missing corpus_starlark split for BUILD.bazel")
 	}
 }
 

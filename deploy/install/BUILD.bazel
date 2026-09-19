@@ -40,10 +40,8 @@ test_suite(
     tests = [":dx_verify_test"],
 )
 
-# Repository corpus: install Starlark owned for direct-Bazel dogfood
-# under the canonical real_fixture_policy. Shell sources are tooling
-# with no quality class and stay outside the corpus.
 real_source_target(
-    name = "corpus",
+    name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
 )

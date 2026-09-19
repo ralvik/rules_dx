@@ -1,3 +1,5 @@
+load("@rules_dx//quality:fixtures.bzl", "real_source_target")
+
 """M27 WP1 slices 1-7 + WP2 slices 8-9 + WP4 slices 10-11 + WP6 slice 12: pure consumer-CI planning (selection, revision, scheduling, supersession, reporting, fork/aggregate, rerun/scope/retry/scanning, triggers/platforms/no-op/revalidation, caller composition/pins, audit rendering, untrusted validation/thread deltas, preset onboarding)."""
 
 load("//rust/rules:defs.bzl", "dx_rust_crate")
@@ -29,4 +31,16 @@ dx_rust_crate(
         "src/untrusted.rs",
     ],
     deps = ["thiserror"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = ["Cargo.toml"],
 )

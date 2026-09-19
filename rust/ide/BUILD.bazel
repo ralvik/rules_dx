@@ -26,10 +26,8 @@ sh_test(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Repository corpus: IDE Starlark owned for direct-Bazel dogfood
-# under the canonical real_fixture_policy. The acquisition script is a test
-# runner, never a linted corpus source.
 real_source_target(
-    name = "corpus",
+    name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
 )

@@ -13,8 +13,14 @@ package(default_visibility = ["//visibility:public"])
 # cross-package file labels cannot reach into a subpackage. This root
 # rule owns only the root arrival files.
 real_source_target(
-    name = "corpus",
+    name = "corpus_markdown",
     aspect_hints = ["//quality:corpus_vale_config"],
     markdown_srcs = ["README.md"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
 )

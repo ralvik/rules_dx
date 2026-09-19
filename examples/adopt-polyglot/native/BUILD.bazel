@@ -26,7 +26,13 @@ rust_test(
 )
 
 real_source_target(
-    name = "corpus",
+    name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
     toml_srcs = ["Cargo.toml"],
 )

@@ -1,3 +1,5 @@
+load("@rules_dx//quality:fixtures.bzl", "real_source_target")
+
 """M30a slices 1-4: pure documentation-delivery planning (IR version/identity, validation gate, check-vs-build modes, drift upgrade gate; guides/examples corpus shape; site-build action planning; dx docs invocation planning)."""
 
 load("//rust/rules:defs.bzl", "dx_rust_crate")
@@ -14,4 +16,16 @@ dx_rust_crate(
     name = "dx_docs",
     package_name = "cli/dx_docs",
     deps = ["thiserror"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = ["Cargo.toml"],
 )

@@ -10,10 +10,13 @@ package(default_visibility = ["//visibility:public"])
 
 # Repository corpus: build file owned for direct-Bazel dogfood
 # under the canonical real_fixture_policy. Rust sources stay dx-owned
-# (M02 wrappers), never corpus sources.
+# (M02 wrappers), never corpus sources. Hand-maintained: this package is
+# excluded from generation (no manifest), so the starlark split carries
+# the shared corpus tag manually (issue #15).
 real_source_target(
-    name = "corpus",
+    name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
 )
 
 rust_binary(
