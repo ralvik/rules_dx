@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# Rules-lint measured-results validation (issue #86).
+# Rules-lint measured-results validation (issue #86, schema workflow issue #322).
 #
 # Validates the checked-in seed-host measured report
 # (perf/rules_lint_results.json): JSON parses, synth-tree digest matches a
 # fresh harness regeneration (determinism), fairness pins recorded,
 # quality-sample aquery count present, timing fields positive, and the
-# report stays report-not-gate (gate false, claim none). Tagged
-# `no-coverage`: timing data stays out of the coverage denominator.
+# report stays report-not-gate (gate false, claim none). Schema validation,
+# not brittle equality: dx tool versions assert presence plus semver shape,
+# never exact pins, so tool bumps do not break the harness; frozen
+# qualification pins (Bazel, host, rules_lint) stay exact snapshots below.
+# Tagged `no-coverage`: timing data stays out of the coverage denominator.
 set -euo pipefail
 
 results="$1"
@@ -60,8 +63,12 @@ check_json "fairness bazel pinned" "doc['fairness']['bazel_version']=='9.2.0' an
 check_json "fairness host and machine" "doc['fairness']['host']=='linux_x86_64' and 'ubuntu-latest' in doc['fairness']['machine_class'] and 'local-only' in doc['fairness']['machine_class']"
 check_json "fairness rules_lint pin" "doc['fairness']['rules_lint_pin']=='v2.8.0'"
 check_json "fairness pins consistent" "doc['fairness']['bazel_version']==doc['bazel_version'] and doc['fairness']['host']==doc['host'] and doc['fairness']['rules_lint_pin']==doc['rules_lint_pin']"
-check_json "dx tool versions explicit" "doc['fairness']['dx_tool_versions']['ruff']=='0.16.7' and doc['fairness']['dx_tool_versions']['buildifier']=='8.5.1' and doc['fairness']['dx_tool_versions']['biome']=='2.5.12' and doc['fairness']['dx_tool_versions']['eslint']=='10.10.0' and doc['fairness']['dx_tool_versions']['prettier']=='3.9.6'"
-check_json "dx tool versions extended" "doc['fairness']['dx_tool_versions']['taplo']=='0.10.0' and doc['fairness']['dx_tool_versions']['ty']=='0.0.80' and doc['fairness']['dx_tool_versions']['vale']=='3.20.0' and doc['fairness']['dx_tool_versions']['tsc']=='5.9.3'"
+# Schema validation (issue #322): dx tool versions assert presence plus
+# semver shape, never exact pins. Exact pins would break on every tool bump;
+# the schema proves the report records a version per required tool while
+# staying bump-tolerant. Frozen pins above (Bazel, host, rules_lint) stay exact.
+check_json "dx tool versions present" "all(k in doc['fairness']['dx_tool_versions'] for k in ['ruff','buildifier','biome','eslint','prettier','taplo','ty','vale','tsc'])"
+check_json "dx tool versions semver-shaped" "all(isinstance(v,str) and len(v)>0 and '.' in v and all(c in '0123456789.' for c in v) and not v.startswith('.') and not v.endswith('.') for v in doc['fairness']['dx_tool_versions'].values())"
 check_json "adapter-version skew explicit" "'explicit' in doc['fairness']['adapter_version_skew'] and 'ADR 0007' in doc['fairness']['adapter_version_skew'] and 'no parity claim' in doc['fairness']['adapter_version_skew']"
 check_json "same-tool policy explicit" "'same Bazel version' in doc['fairness']['same_tool_policy'] and 'same machine class' in doc['fairness']['same_tool_policy']"
 check_json "comparison dx_side measured" "'//perf:corpus' in doc['comparison']['dx_side'] and '2 actions' in doc['comparison']['dx_side']"

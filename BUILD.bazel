@@ -86,9 +86,10 @@ exports_files([
 # direct-Bazel dogfood under the canonical real_fixture_policy. LICENSE,
 # the linked docs pages, and CHANGELOG are unclassified link-resolution
 # siblings, never checked sources.
-# Parity fixture: `dx init` scaffold output must stay byte-identical to
-# the checked-in `renovate.json`, so the config we ship is the one we
-# run (issue #3). A drifting hand copy is worse than none.
+# Parity fixture: `dx init` scaffold output is a snapshot of the
+# checked-in `renovate.json`, so the config we ship is the one we
+# run (issue #3, snapshot workflow issue #322). Schema plus snapshot:
+# contract fields fail first, byte drift refreshes via UPDATE_EXPECT.
 sh_test(
     name = "renovate_parity_test",
     srcs = ["renovate_parity_test.sh"],
@@ -99,6 +100,7 @@ sh_test(
     data = [
         ":renovate.json",
         "//cli/cli:dx",
+        "//tools/sh:snapshot",
     ],
     tags = ["no-coverage"],
     # Bash-only harness is Linux-only (issue #299 shell contract).

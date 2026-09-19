@@ -270,6 +270,65 @@ def codegen_merge_records(records):
         merged.append(codegen_record(owner[0], owner[1], entries))
     return merged
 
+def codegen_merge_schema_error(records, merged):
+    """Validates merged is the normalized form of records (issue #322).
+
+    Checks shape without pinning exact contents, so adding owners or entries
+    edits test data only: owners sorted and unique, entries sorted and unique
+    per owner, every input entry present deduped, every merged entry sourced,
+    and each merged record valid. Exact owner/entry values stay in snapshot
+    assertions; this proves normalization.
+
+    Args:
+      records: input list of `codegen_record` structs.
+      merged: candidate `codegen_merge_records(records)` output.
+
+    Returns:
+      "" when valid, else the failure reason.
+    """
+    if type(merged) != "list":
+        return "codegen merge: want a list, got " + type(merged)
+    owners = []
+    for record in merged:
+        err = codegen_record_error(record)
+        if err != "":
+            return "codegen merge: " + err
+        owners.append((record.producer, record.language))
+    if owners != sorted(owners):
+        return "codegen merge: owners must sort by (producer, language): " + str(owners)
+    seen_owners = {}
+    for owner in owners:
+        if owner in seen_owners:
+            return "codegen merge: duplicate owner " + str(owner)
+        seen_owners[owner] = True
+    for record in merged:
+        keys = [_codegen_entry_key(e) for e in record.entries]
+        if keys != sorted(keys):
+            return "codegen merge: entries for " + record.producer + " must sort by (logical, root, namespace, exec)"
+        seen_keys = {}
+        for key in keys:
+            if key in seen_keys:
+                return "codegen merge: duplicate entry " + str(key) + " for " + record.producer
+            seen_keys[key] = True
+    input_by_owner = {}
+    for record in records:
+        owner = (record.producer, record.language)
+        owned = input_by_owner.setdefault(owner, {})
+        for entry in record.entries:
+            owned[_codegen_entry_key(entry)] = True
+    merged_by_owner = {}
+    for record in merged:
+        owner = (record.producer, record.language)
+        owned = merged_by_owner.setdefault(owner, {})
+        for entry in record.entries:
+            owned[_codegen_entry_key(entry)] = True
+    if sorted(input_by_owner.keys()) != sorted(merged_by_owner.keys()):
+        return "codegen merge: owners must match input owners: " + str(sorted(merged_by_owner.keys())) + " vs " + str(sorted(input_by_owner.keys()))
+    for owner in input_by_owner.keys():
+        if sorted(input_by_owner[owner].keys()) != sorted(merged_by_owner[owner].keys()):
+            return "codegen merge: entries for " + str(owner) + " must match deduped input entries"
+    return ""
+
 def codegen_plan_fingerprint(records):
     """Renders the normalized complete-plan hash input.
 
@@ -300,6 +359,68 @@ def codegen_plan_fingerprint(records):
         }
         for record in merged
     ])
+
+def codegen_fingerprint_schema_error(fingerprint):
+    """Validates a plan fingerprint JSON shape (issue #322).
+
+    Checks structure without pinning exact bytes, so entry additions edit
+    test data only: a list of {producer, language, entries} sorted by
+    (producer, language) with entries sorted by the full key, each entry
+    carrying validated paths plus read-only truth. Exact fingerprint bytes
+    stay in snapshot assertions; this proves the hash-input contract.
+
+    Args:
+      fingerprint: `codegen_plan_fingerprint` output string.
+
+    Returns:
+      "" when valid, else the failure reason.
+    """
+    decoded = json.decode(fingerprint)
+    if type(decoded) != "list" or len(decoded) == 0:
+        return "codegen fingerprint: want a non-empty list"
+    owners = []
+    for item in decoded:
+        if type(item) != "dict":
+            return "codegen fingerprint: want objects, got " + type(item)
+        for key in ("producer", "language", "entries"):
+            if key not in item:
+                return "codegen fingerprint: missing key '" + key + "'"
+        producer = item["producer"]
+        language = item["language"]
+        entries = item["entries"]
+        if type(producer) != "string" or producer == "":
+            return "codegen fingerprint: producer must be non-empty"
+        if not (producer.startswith("//") or producer.startswith("@")):
+            return "codegen fingerprint: producer '" + producer + "' must be a label"
+        if type(language) != "string" or language == "":
+            return "codegen fingerprint: language must be non-empty"
+        if type(entries) != "list" or len(entries) == 0:
+            return "codegen fingerprint: entries must be non-empty for " + producer
+        owners.append((producer, language))
+        keys = []
+        for entry in entries:
+            if type(entry) != "dict":
+                return "codegen fingerprint: want entry objects for " + producer
+            for ekey in ("exec_path", "import_root", "logical_path", "namespace", "read_only"):
+                if ekey not in entry:
+                    return "codegen fingerprint: missing entry key '" + ekey + "' for " + producer
+            if entry["read_only"] != True:
+                return "codegen fingerprint: read_only must stay true for " + producer
+            err = codegen_path_error(entry["logical_path"])
+            if err != "":
+                return "codegen fingerprint: " + err
+            err = codegen_path_error(entry["import_root"])
+            if err != "":
+                return "codegen fingerprint: " + err
+            err = codegen_exec_error(entry["exec_path"])
+            if err != "":
+                return "codegen fingerprint: " + err
+            keys.append((entry["logical_path"], entry["import_root"], entry["namespace"], entry["exec_path"]))
+        if keys != sorted(keys):
+            return "codegen fingerprint: entries for " + producer + " must sort by (logical, root, namespace, exec)"
+    if owners != sorted(owners):
+        return "codegen fingerprint: records must sort by (producer, language): " + str(owners)
+    return ""
 
 def codegen_admitted_pairs():
     """Returns the admitted generator/language pairs via registry query.

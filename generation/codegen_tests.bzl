@@ -1,4 +1,4 @@
-"""Unit and analysis tests for the normalized codegen plans (M25 WP1).
+"""Unit and analysis tests for the normalized codegen plans (M25 WP1, snapshot workflow issue #322).
 
 Unit checks pin every `codegen_path_error` branch (empty, absolute,
 backslash, dot segments), `codegen_exec_error` (empty logical-only,
@@ -7,10 +7,16 @@ producer, bad language, empty entries, bad entry paths, bad exec paths,
 within-record duplicates), `codegen_pair_error` (admitted first pair
 versus GraphQL/Python deferrals), `codegen_conflict_error` (clean merge,
 silent identical duplicates, cross-producer collisions, same-producer
-divergent roots, divergent exec paths), and the deterministic
-merge/fingerprint rendering (owner grouping, entry sorting over the full
+divergent roots, divergent exec paths), plus merge/fingerprint schema
+validation (normalized order without pinning exact contents) alongside
+deterministic snapshots (owner grouping, entry sorting over the full
 (logical, root, namespace, exec) key, duplicate collapse, exec-bound
 identity).
+
+Snapshot workflow: exact merge tuples and fingerprint JSON below are
+snapshots. Schema checks fail first on shape drift; byte drift fails with
+expected/actual rendering. To refresh a snapshot, run the failing test,
+copy the reported actual into the expected block, review, and re-run.
 
 Analysis checks pin the slice-2 collection evidence: the chained leaf
 shards merge transitively through `dx_codegen_plan_aspect`, and the
@@ -30,7 +36,9 @@ load(
     "codegen_conflict_error",
     "codegen_entry",
     "codegen_exec_error",
+    "codegen_fingerprint_schema_error",
     "codegen_merge_records",
+    "codegen_merge_schema_error",
     "codegen_pair_error",
     "codegen_path_error",
     "codegen_plan_fingerprint",
@@ -214,7 +222,25 @@ def codegen_defs_unit_tests(name):
                 "codegen path conflict: logical path 'src/alpha.rs' claimed by //gen:alpha, //gen:alpha",
             ),
             expect_equal(
-                "codegen_merge_records groups by owner and sorts entries",
+                "codegen_merge_records normalizes without pinning exact contents (schema)",
+                codegen_merge_schema_error(
+                    [
+                        codegen_record("//gen:b", "rust", [codegen_entry("z.rs", "s"), codegen_entry("a.rs", "s")]),
+                        _record_a(),
+                        _record_a(),
+                        codegen_record("//gen:a", "python", [codegen_entry("m.py", "s")]),
+                    ],
+                    codegen_merge_records([
+                        codegen_record("//gen:b", "rust", [codegen_entry("z.rs", "s"), codegen_entry("a.rs", "s")]),
+                        _record_a(),
+                        _record_a(),
+                        codegen_record("//gen:a", "python", [codegen_entry("m.py", "s")]),
+                    ]),
+                ),
+                "",
+            ),
+            expect_equal(
+                "codegen_merge_records groups by owner and sorts entries (snapshot)",
                 [
                     (record.producer, record.language, [entry.logical_path for entry in record.entries])
                     for record in codegen_merge_records([
@@ -231,13 +257,23 @@ def codegen_defs_unit_tests(name):
                 ],
             ),
             expect_equal(
-                "codegen_plan_fingerprint renders the normalized hash input",
+                "codegen_plan_fingerprint validates hash-input shape (schema)",
+                codegen_fingerprint_schema_error(codegen_plan_fingerprint([_record_b(), _record_a(), _record_a()])),
+                "",
+            ),
+            expect_equal(
+                "codegen_plan_fingerprint renders the normalized hash input (snapshot)",
                 codegen_plan_fingerprint([_record_b(), _record_a(), _record_a()]),
                 "[{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"src\",\"logical_path\":\"src/alpha.rs\",\"namespace\":\"alpha\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:alpha\"}," +
                 "{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"src\",\"logical_path\":\"src/beta.rs\",\"namespace\":\"beta\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:beta\"}]",
             ),
             expect_equal(
-                "codegen_plan_fingerprint binds exec paths",
+                "codegen_plan_fingerprint exec paths validate shape (schema)",
+                codegen_fingerprint_schema_error(codegen_plan_fingerprint([codegen_record("//gen:a", "rust", [codegen_entry("a", "b", "", "out/a.rs")])])),
+                "",
+            ),
+            expect_equal(
+                "codegen_plan_fingerprint binds exec paths (snapshot)",
                 codegen_plan_fingerprint([codegen_record("//gen:a", "rust", [codegen_entry("a", "b", "", "out/a.rs")])]),
                 "[{\"entries\":[{\"exec_path\":\"out/a.rs\",\"import_root\":\"b\",\"logical_path\":\"a\",\"namespace\":\"\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:a\"}]",
             ),

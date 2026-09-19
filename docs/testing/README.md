@@ -205,9 +205,14 @@ behavior remains unverified, with no remote cache or executor wired
 (issue #308, `bazel run //tools/ci:coverage_qualification`). First-party PR
 reporting itself is adopted under #254; Codecov stays opt-in only.
 
-Byte-identical goldens stay brittle-check honest under issue #322 (parity tests, shell
-diff goldens, grep-for-shape harnesses, and exact-tuple codegen merges migrate to
-snapshot testing or schema validation with an UPDATE_EXPECT workflow when qualified).
+Snapshot goldens use schema validation plus byte snapshots with an
+UPDATE_EXPECT refresh workflow (issue #322): parity tests, shell
+snapshot goldens, dict-shape harnesses, and codegen merge/fingerprint checks
+assert contract shape first, then exact bytes. Refresh via
+`UPDATE_EXPECT=1 bazel test <target> --test_env=UPDATE_EXPECT`, review the
+diff, then commit. Idempotence assertions between two fresh runs (Gazelle
+reruns, synthetic-tree `diff -r`) carry no checked-in golden, so
+UPDATE_EXPECT does not apply there.
 
 ## Documentation Checks
 
