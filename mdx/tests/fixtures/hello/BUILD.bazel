@@ -5,8 +5,8 @@ load("//mdx/rules:defs.bzl", "mdx_library")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(
-    default_visibility = ["//:__subpackages__"],
     default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
 )
 
 mdx_library(
@@ -33,6 +33,7 @@ javascript_test(
 
 real_source_target(
     name = "corpus_starlark",
+    testonly = True,
     starlark_srcs = ["BUILD.bazel"],
     tags = ["corpus"],
 )

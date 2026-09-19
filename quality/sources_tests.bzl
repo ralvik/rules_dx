@@ -8,7 +8,7 @@ queried via `is_known_semantic_class` / `sources_schema_error`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
-load(":sources.bzl", "KNOWN_SEMANTIC_FILE_CLASSES", "RUST", "SOURCES_REGISTRY_SCHEMA_VERSION", "is_known_semantic_class", "sources_schema_error")
+load(":sources.bzl", "RUST", "SOURCES_REGISTRY_SCHEMA_VERSION", "is_known_semantic_class", "sources_schema_error")
 
 # Frozen core pin: every ID below must stay known. Additions append to the
 # registry data without editing this list; removals/renames fail here plus

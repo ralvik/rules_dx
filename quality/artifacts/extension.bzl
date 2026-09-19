@@ -12,10 +12,12 @@ other required hosts are unqualified gaps).
 
 Host-tool contract (issue #318): repository fetching uses Bazel-native
 `ctx.download`/`ctx.extract` only. Direct downloads set
-`executable = True` so no host `chmod` runs; archive members already
+`executable = True` so no host `chmod` runs; tar members already
 carry `0o755` in their upstream tarballs (recorded as `mode`/`is_executable`
 in the metadata), so extraction preserves executability without
-`ctx.execute`. No host hasher/archiver runs in repository rules.
+`ctx.execute`. The single gzip member (taplo) carries no mode in the
+gzip header, so its extracted file needs one `chmod +x` (POSIX
+coreutils only, no hasher/archiver probing). No host hasher/archiver runs in repository rules.
 """
 
 load("//quality/artifacts:biome.linux_x86_64.bzl", _biome_linux_x86_64 = "ARTIFACT")
@@ -54,9 +56,11 @@ def _standalone_tool_repo_impl(ctx):
         )
 
         # A bare single-file gzip extracts to the repo root under its
-        # recorded member name; no output directory is used. The upstream
-        # member already carries the executable bit, so no host chmod runs.
+        # recorded member name; no output directory is used. Gzip stores
+        # no unix mode, so the extracted file lands 644 and needs one
+        # mode fix (taplo only; tar.gz members already carry 0o755).
         ctx.extract(ctx.attr.asset)
+        ctx.execute(["chmod", "+x", ctx.attr.executable])
     elif kind == "tar.gz":
         ctx.download(
             url = ctx.attr.url,

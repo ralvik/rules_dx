@@ -104,7 +104,11 @@ def curated_families():
     return sorted(CURATED_DEFAULTS.keys())
 
 def curated_tools():
-    """Returns the sorted unique curated tool IDs across families."""
+    """Returns the sorted unique curated tool IDs across families.
+
+    Returns:
+      Sorted list of curated tool IDs.
+    """
     seen = {}
     for family in CURATED_DEFAULTS:
         for capability in CURATED_DEFAULTS[family]:

@@ -110,7 +110,14 @@ pub fn parse_test_xml(
 /// suites are normalized to `name="dx"` so parsing stays total; real
 /// artifacts already carry names and are unaffected.
 fn deserialize_report(text: &str) -> Result<quick_junit::Report, ReportError> {
-    let normalized = text
+    // Jest (and other emitters) write `timestamp="2026-09-19T21:10:02"`
+    // without a timezone; quick-junit 0.8 validates timestamps as RFC3339
+    // and rejects those artifacts. Timestamps are unused (caller groups by
+    // Bazel label), so strip the attribute from suite start tags before
+    // deserializing. Restricted to `<testsuite*` start tags so failure
+    // text containing `timestamp="..."` is preserved.
+    let without_ts = strip_timestamp_attrs(text);
+    let normalized = without_ts
         .replace("<testsuite>", "<testsuite name=\"dx\">")
         .replace("<testsuite/>", "<testsuite name=\"dx\"/>");
     match quick_junit::Report::deserialize_from_str(&normalized) {
@@ -153,6 +160,66 @@ fn strip_leading_decl(text: &str) -> &str {
         }
     }
     text
+}
+
+fn strip_timestamp_attrs(text: &str) -> String {
+    fn remove_one(tag: &mut String) -> bool {
+        let mut search_from = 0;
+        while let Some(rel) = tag[search_from..].find("timestamp") {
+            let pos = search_from + rel;
+            if pos > 0 && !tag.as_bytes()[pos - 1].is_ascii_whitespace() {
+                search_from = pos + 1;
+                continue;
+            }
+            let mut j = pos + "timestamp".len();
+            while j < tag.len() && tag.as_bytes()[j].is_ascii_whitespace() {
+                j += 1;
+            }
+            if j >= tag.len() || tag.as_bytes()[j] != b'=' {
+                search_from = pos + 1;
+                continue;
+            }
+            j += 1;
+            while j < tag.len() && tag.as_bytes()[j].is_ascii_whitespace() {
+                j += 1;
+            }
+            if j >= tag.len() || (tag.as_bytes()[j] != b'"' && tag.as_bytes()[j] != b'\'') {
+                search_from = pos + 1;
+                continue;
+            }
+            let quote = tag.as_bytes()[j];
+            j += 1;
+            while j < tag.len() && tag.as_bytes()[j] != quote {
+                j += 1;
+            }
+            if j >= tag.len() {
+                return false;
+            }
+            j += 1;
+            tag.replace_range(pos..j, "");
+            return true;
+        }
+        false
+    }
+
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(tag_start) = rest.find("<testsuite") {
+        out.push_str(&rest[..tag_start]);
+        let tag_rest = &rest[tag_start..];
+        let Some(tag_end_rel) = tag_rest.find('>') else {
+            out.push_str(tag_rest);
+            rest = "";
+            break;
+        };
+        let tag_end = tag_end_rel + 1;
+        let mut tag = tag_rest[..tag_end].to_owned();
+        while remove_one(&mut tag) {}
+        out.push_str(&tag);
+        rest = &rest[tag_start + tag_end..];
+    }
+    out.push_str(rest);
+    out
 }
 
 #[cfg(test)]
@@ -332,5 +399,32 @@ mod tests {
         )
         .is_ok());
         assert!(parse_test_xml(b"<testsuite><testcase name=\"a\"></testsuite>", 0, 0).is_err());
+    }
+
+    #[test]
+    fn junit_parse_accepts_jest_timestamp_without_timezone() {
+        // Jest emits `timestamp="2026-09-19T21:10:02"` without a timezone;
+        // quick-junit validates RFC3339 and would reject it. dx ignores
+        // suite timestamps, so the attribute is stripped and cases parse.
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="2" failures="0" errors="0" time="0.803">
+  <testsuite name="Hello.astro" errors="0" failures="0" skipped="0" timestamp="2026-09-19T21:10:02" time="0.602" tests="2">
+    <testcase classname="Hello.astro parses" name="parses" time="0.005">
+    </testcase>
+    <testcase classname="Hello.astro reports" name="reports" time="0.002">
+    </testcase>
+  </testsuite>
+</testsuites>"#;
+        let cases = parse_test_xml(xml.as_bytes(), 0, 0).expect("jest timestamp");
+        assert_eq!(cases.len(), 2);
+        // Failure text containing timestamp-looking content is preserved.
+        let tricky = r#"<testsuite name="a" timestamp="2026-09-19T21:10:02"><testcase name="a"><failure>timestamp="kept"</failure></testcase></testsuite>"#;
+        let cases = parse_test_xml(tricky.as_bytes(), 0, 0).expect("tricky");
+        assert!(cases[0]
+            .failure
+            .as_ref()
+            .expect("failure")
+            .text
+            .contains("kept"));
     }
 }

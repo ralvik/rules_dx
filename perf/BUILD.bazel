@@ -17,8 +17,8 @@ package(default_visibility = ["//visibility:public"])
 sh_binary(
     name = "bench_micro",
     srcs = ["bench.sh"],
-    data = ["//tools/sh:lib"],
     args = ["micro"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -26,8 +26,8 @@ sh_binary(
 sh_binary(
     name = "bench_scenario_warm",
     srcs = ["bench.sh"],
-    data = ["//tools/sh:lib"],
     args = ["warm"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -35,8 +35,8 @@ sh_binary(
 sh_binary(
     name = "bench_cold",
     srcs = ["bench.sh"],
-    data = ["//tools/sh:lib"],
     args = ["cold"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -44,8 +44,8 @@ sh_binary(
 sh_binary(
     name = "bench_all",
     srcs = ["bench.sh"],
-    data = ["//tools/sh:lib"],
     args = ["all"],
+    data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )

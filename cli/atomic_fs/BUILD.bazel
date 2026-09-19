@@ -1,7 +1,6 @@
-load("@rules_dx//quality:fixtures.bzl", "real_source_target")
-
 """Race-free atomic filesystem writes shared by every apply/commit path (#74)."""
 
+load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_crate")
 
 package(default_visibility = ["//visibility:public"])

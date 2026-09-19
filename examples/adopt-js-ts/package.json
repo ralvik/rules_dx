@@ -2,7 +2,10 @@
   "name": "adopt-js-ts",
   "private": true,
   "type": "module",
-  "workspaces": ["app", "web"],
+  "workspaces": [
+    "app",
+    "web"
+  ],
   "dependencies": {},
   "devDependencies": {
     "jest": "30.2.0"

@@ -280,6 +280,7 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
             upstream_kwargs["tags"] = kept
         else:
             upstream_kwargs.pop("tags")
+
     # Workspace ESM scope marker (see docstring): must resolve in runfiles
     # above every first-party test source. Referenced as the root
     # js_library: js rules reject cross-package source files in data.

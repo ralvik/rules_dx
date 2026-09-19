@@ -221,6 +221,7 @@ def _runner_matrix_test_impl(ctx):
         " " + _var_ref("$OUT") +
         " > " + _var_ref("$ACTUAL") + ' || fail "printer failed"',
     )
+
     # Schema validation (issue #322): the decoded print_result shape fails
     # first, so tool-message churn surfaces as a contract error, not a silent
     # byte drift. Checks required headers plus stage/initial/terminal/

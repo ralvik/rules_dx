@@ -5,8 +5,8 @@ load("//fsharp/rules:defs.bzl", "fsharp_binary", "fsharp_library", "fsharp_test"
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(
-    default_visibility = ["//:__subpackages__"],
     default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
 )
 
 fsharp_library(
@@ -45,7 +45,10 @@ sh_test(
     name = "hello_output_test",
     srcs = ["hello_output_test.sh"],
     args = ["$(rootpath :hello)"],
-    data = [":hello", "//tools/sh:lib"],
+    data = [
+        ":hello",
+        "//tools/sh:lib",
+    ],
     tags = ["no-coverage"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
@@ -53,6 +56,7 @@ sh_test(
 
 real_source_target(
     name = "corpus_starlark",
+    testonly = True,
     starlark_srcs = ["BUILD.bazel"],
     tags = ["corpus"],
 )

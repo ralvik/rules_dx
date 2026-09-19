@@ -1,7 +1,6 @@
-load("@rules_dx//quality:fixtures.bzl", "real_source_target")
-
 """M25 WP4 slice 3: repository-root strategy planning plus query/aggregate wiring, with the cold/warm freeze."""
 
+load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_crate")
 load(":roots.bzl", "repository_roots_file", "roots_aggregate")
 

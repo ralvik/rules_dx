@@ -44,9 +44,11 @@ rust_binary(
     deps = crate_deps(
         [
             "clap",
+            "deunicode",
             "pulldown-cmark",
             "serde",
             "serde_json",
+            "slug",
             "thiserror",
             "tracing",
         ],

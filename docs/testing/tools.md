@@ -225,8 +225,9 @@ Host-tool actions are hermetic under issue #318 (archive/SBOM/BCR
 genrules run toolchain-provided Python archiver/hasher/generators as
 declared `tools` with deterministic bytes and no host
 `tar`/`sha256sum`/`shasum`/`python3` probing; `extension.bzl` uses
-Bazel-native `ctx.download(executable=True)` plus archive-carried modes
-with no `ctx.execute chmod`; deploy runtime needs bash + python3 +
+Bazel-native `ctx.download(executable=True)` plus archive-carried modes,
+with one `chmod +x` for the gzip single-file member (taplo, no mode in
+gzip header); deploy runtime needs bash + python3 +
 POSIX coreutils only with hashing, realpath, and tar listing through
 python3).
 

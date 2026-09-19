@@ -28,7 +28,11 @@ def registry_classes():
     return sorted(REAL_CLASS_TO_FAMILY.keys())
 
 def registry_families():
-    """Returns the sorted unique owning families via query."""
+    """Returns the sorted unique owning families via query.
+
+    Returns:
+      Sorted list of owning family names.
+    """
     seen = {}
     for class_id in REAL_CLASS_TO_FAMILY:
         seen[REAL_CLASS_TO_FAMILY[class_id]] = True
@@ -91,6 +95,7 @@ def registry_schema_error():
     err = parity_schema_error()
     if err != "":
         return err
+
     # Cross-registry singularity without duplicating inventories: every
     # known source class has a family assignment, every adapter-backed
     # class is classified, every curated family is a registry family, and

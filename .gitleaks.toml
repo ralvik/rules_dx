@@ -1,0 +1,6 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "docs SBOM prose is not a secret (generic-api-key false positive on 'SBOM/provenance')"
+regexes = ["SBOM/provenance"]

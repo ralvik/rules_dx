@@ -148,8 +148,8 @@ sh_test(
     srcs = ["bootstrap_test.sh"],
     args = ["$(rootpath :env)"],
     data = [
-        "//tools/sh:lib",
         ":env",
+        "//tools/sh:lib",
     ],
     tags = ["no-coverage"],
     # Bash-only harness is Linux-only (issue #299 shell contract).

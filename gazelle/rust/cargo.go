@@ -204,8 +204,67 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 	current := -1
 	hasPackage := false
 	hasWorkspace := false
+	// Taplo formats long inline tables/arrays across lines (e.g. features
+	// = ["parse", "serde"] split over three lines). Join physical lines
+	// while brackets stay open so each assignment parses as one logical
+	// line; section headers always stand alone at depth zero.
+	type logicalLine struct {
+		number int
+		text   string
+	}
+	var logical []logicalLine
+	var pending strings.Builder
+	pendingNumber := 0
+	depth := 0
+	inString := false
+	flush := func(number int) {
+		if strings.TrimSpace(pending.String()) != "" {
+			logical = append(logical, logicalLine{number: pendingNumber, text: pending.String()})
+		}
+		pending.Reset()
+		depth = 0
+		inString = false
+		_ = number
+	}
 	for number, raw := range strings.Split(string(content), "\n") {
-		line := strings.TrimSpace(stripTomlComment(raw))
+		stripped := strings.TrimSpace(stripTomlComment(raw))
+		if stripped == "" && pending.Len() == 0 {
+			continue
+		}
+		if pending.Len() == 0 {
+			pendingNumber = number + 1
+		} else {
+			pending.WriteString(" ")
+		}
+		pending.WriteString(stripped)
+		for i := 0; i < len(stripped); i++ {
+			c := stripped[i]
+			if inString {
+				if c == '"' && (i == 0 || stripped[i-1] != '\\') {
+					inString = false
+				}
+				continue
+			}
+			switch c {
+			case '"':
+				inString = true
+			case '[', '{':
+				depth++
+			case ']', '}':
+				depth--
+			}
+		}
+		if depth <= 0 {
+			depth = 0
+			flush(number + 1)
+		}
+	}
+	if strings.TrimSpace(pending.String()) != "" {
+		logical = append(logical, logicalLine{number: pendingNumber, text: pending.String()})
+	}
+	for _, ll := range logical {
+		number := ll.number - 1
+		line := strings.TrimSpace(ll.text)
 		if line == "" {
 			continue
 		}
