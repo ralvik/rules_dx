@@ -1,0 +1,8 @@
+{
+  "packages": {
+    "greet": {
+      "version": "0.9.0",
+      "sha256": "fixture-sha256-greet-0.9.0"
+    }
+  }
+}

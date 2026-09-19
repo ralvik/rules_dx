@@ -1,0 +1,15 @@
+[[dep]]
+name = "greet"
+version = "1.0.0"
+sha256 = "fixture-sha256-greet-1.0.0"
+scope = "prod"
+optional = false
+platform = false
+
+[[dep]]
+name = "unused-extra"
+version = "9.0.0"
+sha256 = "fixture-sha256-unused-extra-9.0.0"
+scope = "prod"
+optional = false
+platform = false

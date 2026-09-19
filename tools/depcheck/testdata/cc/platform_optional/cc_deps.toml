@@ -1,0 +1,23 @@
+[[dep]]
+name = "greet"
+version = "1.0.0"
+sha256 = "fixture-sha256-greet-1.0.0"
+scope = "prod"
+optional = false
+platform = false
+
+[[dep]]
+name = "winonly"
+version = "1.0.0"
+sha256 = "fixture-sha256-winonly-1.0.0"
+scope = "prod"
+optional = false
+platform = true
+
+[[dep]]
+name = "optionalfeat"
+version = "1.0.0"
+sha256 = "fixture-sha256-optionalfeat-1.0.0"
+scope = "prod"
+optional = true
+platform = false

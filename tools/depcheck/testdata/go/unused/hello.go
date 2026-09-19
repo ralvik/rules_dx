@@ -1,0 +1,7 @@
+package hello
+
+import "example.com/greet"
+
+func Hello(name string) string {
+	return "hello " + name
+}

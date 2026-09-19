@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Audit/update/depcheck execution guards (issues #18, #19, #22).
+# Audit/update/depcheck execution guards (issues #18, #19, #22, #306).
 #
 # Live `dx audit` executes qualified auditors per family over resolved scopes
 # with per-family reporting (issue #18 delivered: Gitleaks subprocess planning
@@ -12,9 +12,9 @@
 # `dx_update::selector`, five-set registry in `dx_update::sets`, backend argv
 # in `dx_update::backend`, continuation in `dx_update::outcome`, exit selection
 # in `dx_update::report`; `--dry-run` exits 0).
-# Required-core lockfile-consistency and usage checks are delivered in
-# tools/depcheck/ (issue #22); admitted expansion stays open under
-# #304/#306.
+# Required-core plus admitted lockfile-consistency and usage checks are
+# delivered in tools/depcheck/ (issues #22, #306); remaining adapter work
+# stays open under #307, foundation mappings under #304.
 #
 # This harness machine-checks the verifiable halves on a clean
 # tree today: audit live execution, update live execution, exit-code mappings,
@@ -87,23 +87,30 @@ else
   bad "update report lost its overall_failure exit-code mapping"
 fi
 
-# #22: depcheck contract harness stays green (truth table + delivered routes).
+# #22/#306: depcheck contract harness stays green (truth table + delivered routes).
 if [[ -f "tools/ci/depcheck_contract.sh" ]]; then
   ok
 else
   bad "depcheck contract harness missing"
 fi
 
-# #22: required-core checker is implemented with fixtures (no false claim).
+# #22/#306: required-core plus admitted checker is implemented with fixtures (no false claim).
 if [[ -f "tools/depcheck/depcheck.py" ]] \
   && [[ -f "tools/depcheck/BUILD.bazel" ]] \
   && [[ -d "tools/depcheck/testdata/rust/ok_used" ]] \
   && [[ -d "tools/depcheck/testdata/python/ok_used" ]] \
   && [[ -d "tools/depcheck/testdata/js/ok_used" ]] \
-  && [[ -d "tools/depcheck/testdata/ts/ok_used" ]]; then
+  && [[ -d "tools/depcheck/testdata/ts/ok_used" ]] \
+  && [[ -d "tools/depcheck/testdata/go/ok_used" ]] \
+  && [[ -d "tools/depcheck/testdata/java/ok_used" ]] \
+  && [[ -d "tools/depcheck/testdata/kotlin/ok_used" ]] \
+  && [[ -d "tools/depcheck/testdata/scala/ok_used" ]] \
+  && [[ -d "tools/depcheck/testdata/csharp/ok_used" ]] \
+  && [[ -d "tools/depcheck/testdata/fsharp/ok_used" ]] \
+  && [[ -d "tools/depcheck/testdata/cc/ok_used" ]]; then
   ok
 else
-  bad "depcheck implementation or fixtures missing for #22"
+  bad "depcheck implementation or fixtures missing for #22/#306"
 fi
 
 echo "audit update guards harness: $pass passed, $fail failed"

@@ -38,9 +38,9 @@ standard dogfood gates.
   measured numbers, comparison against the frozen `aspect_rules_lint`
   v2.8.0 baseline as a report (not a gate)
   (open work).
-- **Dependency checks**: required-core lockfile-consistency and
+- **Dependency checks**: required-core plus admitted lockfile-consistency and
   declared-dependency usage fixtures delivered in `tools/depcheck/`
-  (issue #22); admitted foundations stay open under issue #304.
+  (issues #22, #306); framework-composition depcheck stays with the JS/TS pnpm route.
 - **Audit/update live execution**: `dx update` resolver backends per set with independent-set
   continuation and per-set reporting delivered (issue #19); `dx audit` auditor wiring, advisory
   acquisition with 24h cache semantics and offline matching, plus SARIF/SPDX mapping delivered
@@ -65,13 +65,13 @@ execution deferred. `Tracked` means measured report-only tracking with no gate.
 | Python | Delivered | Delivered | Delivered | Delivered (`adopt-python`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
 | JavaScript | Delivered | Delivered | Delivered | Delivered (`adopt-js-ts`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
 | TypeScript | Delivered | Delivered | Delivered | Delivered (`adopt-js-ts`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
-| Go | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-go`) | Delivered (contract) | Tracked | Open | Delivered | Open | Open |
-| Java | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-java`) | Delivered (contract) | Tracked | Open | Delivered | Open | Open |
-| Kotlin | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-kotlin`) | Delivered (contract) | Tracked | Open | Delivered | Open | Open |
-| Scala | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-scala`) | Delivered (contract) | Tracked | Open | Delivered | Open | Open |
-| C# | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-csharp`) | Delivered (contract) | Tracked | Open | Delivered | Open | Open |
-| F# | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-fsharp`) | Delivered (contract) | Tracked | Open | Delivered | Open | Open |
-| C++ | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-cpp`) | Delivered (contract) | Tracked | Open | Delivered | Open | Open |
+| Go | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-go`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| Java | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-java`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| Kotlin | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-kotlin`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| Scala | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-scala`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| C# | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-csharp`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| F# | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-fsharp`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| C++ | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-cpp`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
 | Vue/Svelte/Astro/MDX | Delivered (code ownership) | Open (regions) | Delivered | Open (composition) | Delivered (contract) | Tracked | Open | Delivered | Open | Open |
 
 Framework composition evidence (exact parser/compiler, provider,

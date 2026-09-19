@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
-# Dependency-check contract harness (issue #22, delivered).
+# Dependency-check contract harness (issues #22, #306, delivered).
 #
-# Required-core (Rust/Python/JavaScript/TypeScript) lockfile-consistency
-# and declared-dependency usage fixtures are implemented in
+# Required-core (Rust/Python/JavaScript/TypeScript) plus admitted (Go,
+# Java/Kotlin/Scala, C#/F#, C/C++) lockfile-consistency and
+# declared-dependency usage fixtures are implemented in
 # tools/depcheck/ (hermetic checker plus per-language truth-table,
 # transitive/shared, exception, obsolete, platform, and category
-# fixtures as normal test targets). Admitted-foundation expansion stays
-# open under issues #304/#306.
+# fixtures as normal test targets). Remaining admitted quality-adapter
+# work stays open under issue #307; foundation mappings under #304.
 #
 # This harness machine-checks the delivered half on a clean tree:
 # the truth table, offline, non-mutating, independently-runnable,
 # non-import/exception, category, and obsolete clauses are present in
-# docs/quality/quality-testing.md and recorded as accepted for #22,
+# docs/quality/quality-testing.md and recorded as accepted for #22/#306,
 # the checker exists with no network imports, per-language fixtures and
 # targets exist with no `manual` exclusion, and docs describe only what
 # runs. Run by CI via `bazel run //tools/ci:depcheck_contract`,
@@ -49,14 +50,14 @@ else
   bad "contract lost the stale-vs-consistent truth table"
 fi
 
-# Offline routes qualified for #22 (no open-work placeholder).
+# Offline routes qualified for #22/#306 (no open-work placeholder).
 if grep -q -F -e 'with network access denied' "$contract" \
   && grep -q -F -e 'does not query live registries' "$contract" \
-  && grep -q -F -e 'Accepted (issue #22)' "$contract" \
+  && grep -q -F -e 'Accepted (issues #22, #306)' "$contract" \
   && grep -q -F -e 'bazel test //tools/depcheck/...' "$contract"; then
   ok
 else
-  bad "contract lost the qualified offline-routes record for #22"
+  bad "contract lost the qualified offline-routes record for #22/#306"
 fi
 
 # Non-mutating requirement.
@@ -110,9 +111,9 @@ else
   bad "checker missing or not hermetic: $checker"
 fi
 
-# Per-language fixtures exist (truth table + edge cases for each core lang).
+# Per-language fixtures exist (truth table + edge cases for each core+admitted lang).
 fixtures_ok=1
-for lang in rust python js ts; do
+for lang in rust python js ts go java kotlin scala csharp fsharp cc; do
   for case in ok_used stale unused transitive_shared exception obsolete platform_optional platform_optional_unused category category_ok; do
     if [[ ! -d "tools/depcheck/testdata/$lang/$case" ]]; then
       fixtures_ok=0
@@ -125,10 +126,10 @@ else
   bad "per-language depcheck fixtures missing under tools/depcheck/testdata/"
 fi
 
-# Eight normal test targets exist, independently runnable, no manual,
+# Twenty-two normal test targets exist, independently runnable, no manual,
 # Linux-only per the shell contract.
 targets_ok=1
-for t in rust_consistency_test rust_usage_test python_consistency_test python_usage_test js_consistency_test js_usage_test ts_consistency_test ts_usage_test; do
+for t in rust_consistency_test rust_usage_test python_consistency_test python_usage_test js_consistency_test js_usage_test ts_consistency_test ts_usage_test go_consistency_test go_usage_test java_consistency_test java_usage_test kotlin_consistency_test kotlin_usage_test scala_consistency_test scala_usage_test csharp_consistency_test csharp_usage_test fsharp_consistency_test fsharp_usage_test cc_consistency_test cc_usage_test; do
   if ! grep -q -F -e "name = \"$t\"" "$build"; then
     targets_ok=0
   fi
@@ -139,19 +140,20 @@ if [[ "$targets_ok" == "1" ]] \
 else
   bad "depcheck test targets missing or carry manual exclusion"
 fi
-if [[ "$(grep -c -F -e 'target_compatible_with = ["@platforms//os:linux"]' "$build")" -ge 8 ]]; then
+if [[ "$(grep -c -F -e 'target_compatible_with = ["@platforms//os:linux"]' "$build")" -ge 22 ]]; then
   ok
 else
   bad "depcheck sh_tests missing Linux-only labels"
 fi
 
-# Docs describe only what runs: required-core accepted for #22, admitted
-# open under #304/#306 (never silently decided elsewhere).
-if grep -q -F -e 'Accepted (issue #22)' "$contract" \
-  && grep -q -F -e 'Admitted-foundation' "$contract"; then
+# Docs describe only what runs: required-core plus admitted accepted for
+# #22/#306, remaining adapter/foundation work owned under #307/#304.
+if grep -q -F -e 'Accepted (issues #22, #306)' "$contract" \
+  && grep -q -F -e 'issue #307' "$contract" \
+  && grep -q -F -e 'issue #304' "$contract"; then
   ok
 else
-  bad "contract lost its accepted-vs-open record for #22"
+  bad "contract lost its accepted-vs-open record for #22/#306"
 fi
 
 echo "depcheck contract harness: $pass passed, $fail failed"

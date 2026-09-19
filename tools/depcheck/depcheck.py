@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Hermetic lockfile-consistency and declared-dependency usage checker.
 
-Issue #22: separate non-mutating Bazel-owned checks per language.
+Issue #22 (required core) + issue #306 (admitted foundations):
+separate non-mutating Bazel-owned checks per language.
 Offline, no network, no registry queries, no manifest/lock writes.
 Only reads declared inputs; missing inputs fail actionably (exit 2).
 
@@ -15,6 +16,26 @@ Ecosystems (required core):
   js     - package.json + pnpm-lock.yaml, categories: dependencies
            (prod), devDependencies (dev), optionalDependencies
            (optional/platform). Covers JavaScript and TypeScript sources.
+
+Ecosystems (admitted, issue #306):
+  go     - go.mod + go.sum, categories: require (prod) plus
+           `// depcheck:test` marker (dev) for fixture scope;
+           `// depcheck:optional` / `// depcheck:platform` markers.
+           Native lock authority is go.sum verification.
+  java   - jvm_deps.toml + maven_install.json (rules_jvm_external
+           lock authority with fail_if_repin_required), scopes:
+           compile (prod), test (dev), plus optional/platform flags.
+           Covers Java sources.
+  kotlin - same lock authority as java, Kotlin sources.
+  scala  - same lock authority as java, Scala sources.
+  csharp - paket.dependencies + paket.lock (Paket lock authority
+           via paket2bazel), groups: Main (prod), Test (dev),
+           plus `// optional` / `// platform` markers.
+  fsharp - same lock authority as csharp, F# sources.
+  cc     - cc_deps.toml + cc_lock.json (http_archive sha256
+           authority: every archive carries sha256/integrity),
+           scopes: prod/test plus optional/platform flags.
+           Covers C/C++ sources.
 
 Usage is assessed across the owning scope (all sources under --sources),
 not one target. Transitive locked packages not directly declared are
@@ -57,6 +78,22 @@ def normalize_rs(name):
     return name.lower().replace("-", "_")
 
 
+def normalize_go(name):
+    return name.lower()
+
+
+def normalize_jvm(name):
+    return name.lower()
+
+
+def normalize_dotnet(name):
+    return name.lower()
+
+
+def normalize_cc(name):
+    return name.lower().replace("-", "_")
+
+
 def satisfies(spec, locked):
     """Minimal semver compatibility for fixtures (no registry query).
 
@@ -64,10 +101,19 @@ def satisfies(spec, locked):
     ~ means same major.minor; exact (==/=) means full equality.
     Newer compatible releases in a registry never affect the result:
     only manifest spec vs locked version is compared.
+    Leading `v` (Go/Maven tags) is ignored on both sides.
     """
     s = spec.strip().strip("\"'").strip()
     # Remove extras/markers after ; or [ (python) and whitespace.
     s = s.split(";")[0].strip()
+    # Strip leading v for Go-style tags (v1.2.3 == 1.2.3).
+    if s.startswith("v") and len(s) > 1 and s[1].isdigit():
+        s = s[1:]
+    lv_raw = locked.strip()
+    if lv_raw.startswith("v") and len(lv_raw) > 1 and lv_raw[1].isdigit():
+        locked = lv_raw[1:]
+    else:
+        locked = lv_raw
     # For python "name>=1.2" style, caller passes version part only.
     # Handle common prefixes.
     exact = False
@@ -328,6 +374,259 @@ def parse_pnpm_lock(path):
     return pkgs, ""
 
 
+def parse_go_manifest(path):
+    """Parse go.mod requires (native, hermetic fixture subset).
+
+    Understands `require <mod> <ver>` single lines and `require (...)`
+    blocks. Fixture scope markers in trailing comments:
+      `// depcheck:test` -> dev category (test-only),
+      `// depcheck:optional` -> optional flag,
+      `// depcheck:platform` -> platform flag.
+    Without markers every require is prod, non-optional, non-platform.
+    """
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+    except Exception as e:
+        return None, f"unreadable manifest: {e}"
+    deps = {}
+    in_require = False
+    for rawline in text.splitlines():
+        line = rawline.strip()
+        if not line or line.startswith("//") and not line.startswith("// depcheck"):
+            # Skip comments except depcheck markers handled below.
+            if line.startswith("module ") or line.startswith("go "):
+                continue
+            if line.startswith("//"):
+                continue
+        if line.startswith("require ("):
+            in_require = True
+            continue
+        if in_require and line == ")":
+            in_require = False
+            continue
+        m = None
+        if line.startswith("require ") and not in_require:
+            # Single-line require.
+            m = re.match(r"^require\s+(\S+)\s+(\S+)(.*)$", line)
+        elif in_require:
+            m = re.match(r"^(\S+)\s+(\S+)(.*)$", line)
+        if not m:
+            continue
+        mod, ver, rest = m.group(1), m.group(2), m.group(3) or ""
+        # Skip indirect-only markers? No: indirect is still a declaration.
+        # Strip `// indirect` but keep depcheck markers.
+        category = "prod"
+        optional = False
+        platform = False
+        low = rest.lower()
+        if "depcheck:test" in low:
+            category = "dev"
+        if "depcheck:optional" in low or "optional" in low and "depcheck" in low:
+            optional = True
+        if "depcheck:platform" in low:
+            platform = True
+        # Handle `// optional` / `// platform` shorthand in fixtures.
+        if re.search(r"//\s*optional\b", rest, re.I):
+            optional = True
+        if re.search(r"//\s*platform\b", rest, re.I):
+            platform = True
+        if re.search(r"//\s*test\b", rest, re.I):
+            category = "dev"
+        deps[normalize_go(mod)] = {"spec": ver, "category": category,
+                                   "optional": optional, "platform": platform,
+                                   "raw": mod}
+    return deps, ""
+
+
+def parse_go_lock(path):
+    """Parse go.sum (native): `<module> <version> <hash>` lines."""
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+    except Exception as e:
+        return None, f"unreadable lock: {e}"
+    pkgs = {}
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split()
+        if len(parts) < 2:
+            continue
+        mod, ver = parts[0], parts[1]
+        # go.sum has `<mod> <ver>/go.mod <hash>` for module graphs;
+        # strip the trailing /go.mod for the version key.
+        if ver.endswith("/go.mod"):
+            ver = ver[:-len("/go.mod")]
+        key = normalize_go(mod)
+        if key not in pkgs:
+            pkgs[key] = ver
+    # (Fixtures are minimal; first occurrence wins.)
+    if not pkgs:
+        return {}, ""
+    return pkgs, ""
+
+
+def parse_jvm_manifest(path):
+    """Parse jvm_deps.toml fixture manifest (public depcheck test API).
+
+    Format:
+      [[dep]]
+      group = "junit"
+      artifact = "junit"
+      version = "4.13.2"
+      scope = "compile"  # compile=prod, test=dev
+      optional = false
+      platform = false
+    Key is `group:artifact` (lowercased). Native lock authority is
+    maven_install.json; this TOML is the focused fixture declaration.
+    """
+    try:
+        import tomllib
+    except ImportError:
+        return None, "tomllib unavailable"
+    try:
+        data = tomllib.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception as e:
+        return None, f"unreadable manifest: {e}"
+    deps = {}
+    for item in data.get("dep", []) or []:
+        grp = str(item.get("group", "")).strip()
+        art = str(item.get("artifact", "")).strip()
+        ver = str(item.get("version", "*")).strip()
+        if not grp or not art:
+            return None, "jvm dep entry without group/artifact"
+        scope = str(item.get("scope", "compile")).strip().lower()
+        category = "dev" if scope in ("test", "dev") else "prod"
+        key = normalize_jvm(f"{grp}:{art}")
+        deps[key] = {"spec": ver, "category": category,
+                     "optional": bool(item.get("optional", False)),
+                     "platform": bool(item.get("platform", False)),
+                     "raw": f"{grp}:{art}"}
+    return deps, ""
+
+
+def parse_jvm_lock(path):
+    """Parse maven_install.json (native rules_jvm_external lock)."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception as e:
+        return None, f"unreadable lock: {e}"
+    pkgs = {}
+    arts = data.get("artifacts", {}) or {}
+    for coord, info in arts.items():
+        ver = str((info or {}).get("version", ""))
+        pkgs[normalize_jvm(coord)] = ver
+    return pkgs, ""
+
+
+def parse_dotnet_manifest(path):
+    """Parse paket.dependencies (native Paket, hermetic subset).
+
+    Understands `source`, `framework:` (ignored), `group <Name>`
+    (Main=prod, Test/dev groups=dev), and `nuget <Name> <version>`
+    with optional trailing `// optional` / `// platform` markers.
+    """
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+    except Exception as e:
+        return None, f"unreadable manifest: {e}"
+    deps = {}
+    group = "Main"
+    for rawline in text.splitlines():
+        line = rawline.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("//"):
+            continue
+        if line.lower().startswith("source ") or line.lower().startswith("framework:"):
+            continue
+        m = re.match(r"^group\s+(\S+)", line, re.I)
+        if m:
+            group = m.group(1)
+            continue
+        m = re.match(r"^nuget\s+(\S+)\s+(\S+)(.*)$", line, re.I)
+        if not m:
+            continue
+        name, ver, rest = m.group(1), m.group(2), m.group(3) or ""
+        category = "prod" if group.lower() in ("main", "prod", "compile") else "dev"
+        optional = bool(re.search(r"//\s*optional\b", rest, re.I))
+        platform = bool(re.search(r"//\s*platform\b", rest, re.I))
+        deps[normalize_dotnet(name)] = {"spec": ver, "category": category,
+                                        "optional": optional, "platform": platform,
+                                        "raw": name}
+    return deps, ""
+
+
+def parse_dotnet_lock(path):
+    """Parse paket.lock (native): `Name (version)` under NUGET."""
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+    except Exception as e:
+        return None, f"unreadable lock: {e}"
+    pkgs = {}
+    for line in text.splitlines():
+        m = re.match(r"^\s*([A-Za-z0-9_.\-]+)\s+\(([^)]+)\)", line)
+        if m:
+            pkgs[normalize_dotnet(m.group(1))] = m.group(2).strip()
+    return pkgs, ""
+
+
+def parse_cc_manifest(path):
+    """Parse cc_deps.toml fixture manifest (http_archive sha256 authority).
+
+    Format:
+      [[dep]]
+      name = "fmt"
+      version = "1.0.0"
+      sha256 = "fixture-sha256-..."
+      scope = "prod"  # prod or test/dev
+      optional = false
+      platform = false
+    Every entry must carry sha256 (mirrors the every-http_archive-has-hash
+    rule); missing sha256 is a consistency failure.
+    """
+    try:
+        import tomllib
+    except ImportError:
+        return None, "tomllib unavailable"
+    try:
+        data = tomllib.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception as e:
+        return None, f"unreadable manifest: {e}"
+    deps = {}
+    for item in data.get("dep", []) or []:
+        name = str(item.get("name", "")).strip()
+        ver = str(item.get("version", "")).strip()
+        sha = str(item.get("sha256", "")).strip()
+        if not name:
+            return None, "cc dep entry without name"
+        scope = str(item.get("scope", "prod")).strip().lower()
+        category = "dev" if scope in ("test", "dev") else "prod"
+        deps[normalize_cc(name)] = {"spec": ver or "*", "category": category,
+                                    "optional": bool(item.get("optional", False)),
+                                    "platform": bool(item.get("platform", False)),
+                                    "sha256": sha, "raw": name}
+    return deps, ""
+
+
+def parse_cc_lock(path):
+    """Parse cc_lock.json: `{"packages": {name: {version, sha256}}}`."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception as e:
+        return None, f"unreadable lock: {e}"
+    pkgs = {}
+    sha = {}
+    for name, info in (data.get("packages", {}) or {}).items():
+        ver = str((info or {}).get("version", ""))
+        pkgs[normalize_cc(name)] = ver
+        sha[normalize_cc(name)] = str((info or {}).get("sha256", ""))
+    # Attach sha map via a side channel: caller re-reads for hash check.
+    # Store in a global for consistency (small fixtures, no threads).
+    parse_cc_lock._sha = sha
+    return pkgs, ""
+
+
 def parse_exceptions(path):
     if path is None:
         return {}, ""
@@ -365,6 +664,18 @@ def is_test_file(ecosystem, path):
     if ecosystem == "python":
         n = Path(s).name
         return n.startswith("test_") or n.endswith("_test.py") or "/tests/" in s
+    if ecosystem == "go":
+        n = Path(s).name
+        return n.endswith("_test.go") or "/tests/" in s or "/test/" in s
+    if ecosystem in ("java", "kotlin", "scala"):
+        n = Path(s).name
+        return ("Test" in n) or "/test/" in s.lower() or "/tests/" in s.lower()
+    if ecosystem in ("csharp", "fsharp"):
+        n = Path(s).name
+        return ("Test" in n) or "/test/" in s.lower() or "/tests/" in s.lower()
+    if ecosystem == "cc":
+        n = Path(s).name.lower()
+        return ("test" in n) or "/test/" in s.lower() or "/tests/" in s.lower()
     # js/ts
     n = Path(s).name
     return n.endswith(".test.js") or n.endswith(".test.ts") or "/__tests__/" in s or "/tests/" in s
@@ -378,15 +689,28 @@ def find_usages(ecosystem, sources_root, dep_names):
     """
     out = {k: {"src": False, "test": False, "build": False} for k in dep_names}
     files = list(iter_sources(sources_root))
-    # Read all text once (small fixtures).
+    # Read all text once (small fixtures). Skip manifests, locks, and
+    # exception files by name: usage is assessed in sources, not in
+    # declarations (prevents self-matching on quoted dep names).
+    skip_names = {"Cargo.toml", "Cargo.lock", "pyproject.toml", "uv.lock",
+                  "package.json", "pnpm-lock.yaml",
+                  "go.mod", "go.sum", "jvm_deps.toml", "maven_install.json",
+                  "paket.dependencies", "paket.lock",
+                  "cc_deps.toml", "cc_lock.json",
+                  "depcheck_exceptions.toml"}
     texts = {}
     for f in files:
         try:
-            if f.suffix in (".rs", ".py", ".js", ".ts", ".mjs", ".cjs", ".jsx", ".tsx", ".toml", ".json", ".yaml", ".yml"):
+            if f.name in skip_names:
+                continue
+            if f.suffix in (".rs", ".py", ".js", ".ts", ".mjs", ".cjs", ".jsx", ".tsx",
+                            ".go", ".java", ".kt", ".kts", ".scala",
+                            ".cs", ".fs", ".fsi", ".fsx",
+                            ".cc", ".cpp", ".cxx", ".c", ".h", ".hpp"):
                 texts[str(f)] = f.read_text(encoding="utf-8", errors="ignore")
             else:
-                # still scan build.rs etc. by extension already covered;
-                # skip binaries.
+                # Manifests/locks/exceptions (.toml/.json/.yaml) are not
+                # sources; skip binaries and other files.
                 continue
         except Exception:
             continue
@@ -407,6 +731,40 @@ def find_usages(ecosystem, sources_root, dep_names):
                 re.compile(rf"^\s*from\s+{re.escape(mod)}\b", re.M),
                 re.compile(rf"^\s*import\s+{re.escape(raw_dash)}\b", re.M),
                 re.compile(rf"^\s*from\s+{re.escape(raw_dash)}\b", re.M),
+            ]
+        elif ecosystem == "go":
+            # Go imports are full module paths in quoted import specs.
+            # Require import context so go.mod/exception TOML quotes do
+            # not self-match (those files are also skipped by name).
+            pats = [
+                re.compile(rf'import\s+(?:\(\s*)?["\']{re.escape(dep)}["\']'),
+                re.compile(rf'["\']{re.escape(dep)}(?:/[^"\']*)?["\']'),
+            ]
+        elif ecosystem in ("java", "kotlin", "scala"):
+            # JVM imports contain the artifact id as a substring in
+            # fixtures (e.g. artifact `junit` via `import org.junit...`).
+            # Also match group tail (e.g. `guava` via `com.google.guava`).
+            art = dep.split(":")[-1] if ":" in dep else dep
+            art_dash = art.replace("-", "_").replace(".", "_")
+            pats = [
+                re.compile(rf"^\s*import\s+.*{re.escape(art)}\b", re.M),
+                re.compile(rf"^\s*import\s+.*{re.escape(art_dash)}\b", re.M),
+            ]
+        elif ecosystem in ("csharp", "fsharp"):
+            # `using Foo.Bar;` (C#) / `open Foo.Bar` (F#); fixtures use
+            # the package name as a substring (e.g. Newtonsoft.Json).
+            base = dep.split(".")[-1] if "." in dep else dep
+            pats = [
+                re.compile(rf"^\s*(using|open)\s+.*{re.escape(dep)}\b", re.M | re.I),
+                re.compile(rf"^\s*(using|open)\s+.*{re.escape(base)}\b", re.M | re.I),
+            ]
+        elif ecosystem == "cc":
+            # `#include <fmt/core.h>` / `#include "fmt/x.h"`; match dep
+            # name as substring (fixtures use the dep name in the path).
+            cname = dep.replace("-", "_")
+            pats = [
+                re.compile(rf"#\s*include\s+[<\"].*{re.escape(dep)}.*[>\"]"),
+                re.compile(rf"#\s*include\s+[<\"].*{re.escape(cname)}.*[>\"]"),
             ]
         else:
             pats = [
@@ -466,10 +824,55 @@ def cmd_consistency(args):
             return 2
         # peers are not lock-owned; drop them from consistency.
         deps = {k: v for k, v in deps.items() if not v.get("peer")}
+    elif args.ecosystem == "go":
+        deps, err = parse_go_manifest(manifest)
+        if deps is None:
+            print(f"depcheck: ERROR: {err}", file=sys.stderr)
+            return 2
+        pkgs, err = parse_go_lock(lock)
+        if pkgs is None:
+            print(f"depcheck: ERROR: {err}", file=sys.stderr)
+            return 2
+    elif args.ecosystem in ("java", "kotlin", "scala"):
+        deps, err = parse_jvm_manifest(manifest)
+        if deps is None:
+            print(f"depcheck: ERROR: {err}", file=sys.stderr)
+            return 2
+        pkgs, err = parse_jvm_lock(lock)
+        if pkgs is None:
+            print(f"depcheck: ERROR: {err}", file=sys.stderr)
+            return 2
+    elif args.ecosystem in ("csharp", "fsharp"):
+        deps, err = parse_dotnet_manifest(manifest)
+        if deps is None:
+            print(f"depcheck: ERROR: {err}", file=sys.stderr)
+            return 2
+        pkgs, err = parse_dotnet_lock(lock)
+        if pkgs is None:
+            print(f"depcheck: ERROR: {err}", file=sys.stderr)
+            return 2
+    elif args.ecosystem == "cc":
+        deps, err = parse_cc_manifest(manifest)
+        if deps is None:
+            print(f"depcheck: ERROR: {err}", file=sys.stderr)
+            return 2
+        pkgs, err = parse_cc_lock(lock)
+        if pkgs is None:
+            print(f"depcheck: ERROR: {err}", file=sys.stderr)
+            return 2
     else:
         print(f"depcheck: ERROR: unknown ecosystem: {args.ecosystem}", file=sys.stderr)
         return 2
     failures = []
+    # CC hash authority: every manifest entry must carry sha256 and match lock.
+    cc_lock_sha = {}
+    if args.ecosystem == "cc":
+        try:
+            lock_data = json.loads(Path(lock).read_text(encoding="utf-8"))
+            for n, info in (lock_data.get("packages", {}) or {}).items():
+                cc_lock_sha[normalize_cc(n)] = str((info or {}).get("sha256", ""))
+        except Exception:
+            pass
     for name, info in sorted(deps.items()):
         locked = pkgs.get(name)
         # js scoped names: lock keys normalized lower; already handled.
@@ -482,6 +885,14 @@ def cmd_consistency(args):
         elif not satisfies(info["spec"], locked):
             failures.append(
                 f"stale lock entry for '{info.get('raw', name)}': manifest requires {info['spec']}, lock has {locked}")
+        elif args.ecosystem == "cc":
+            want_sha = (info.get("sha256") or "").strip()
+            got_sha = (cc_lock_sha.get(name) or "").strip()
+            if not want_sha:
+                failures.append(f"missing sha256 for '{info.get('raw', name)}' (every http_archive carries sha256/integrity)")
+            elif want_sha != got_sha:
+                failures.append(
+                    f"stale sha256 for '{info.get('raw', name)}': manifest has {want_sha}, lock has {got_sha}")
     if failures:
         for f in failures:
             print(f"depcheck: FAIL: consistency: {f}", file=sys.stderr)
@@ -507,6 +918,14 @@ def cmd_usage(args):
         deps, err = parse_js_manifest(manifest)
         if deps is not None:
             deps = {k: v for k, v in deps.items() if not v.get("peer")}
+    elif args.ecosystem == "go":
+        deps, err = parse_go_manifest(manifest)
+    elif args.ecosystem in ("java", "kotlin", "scala"):
+        deps, err = parse_jvm_manifest(manifest)
+    elif args.ecosystem in ("csharp", "fsharp"):
+        deps, err = parse_dotnet_manifest(manifest)
+    elif args.ecosystem == "cc":
+        deps, err = parse_cc_manifest(manifest)
     else:
         print(f"depcheck: ERROR: unknown ecosystem: {args.ecosystem}", file=sys.stderr)
         return 2
@@ -524,6 +943,14 @@ def cmd_usage(args):
             nk = normalize_py(v["raw"])
         elif args.ecosystem == "rust":
             nk = v["raw"].lower()
+        elif args.ecosystem == "go":
+            nk = normalize_go(v["raw"])
+        elif args.ecosystem in ("java", "kotlin", "scala"):
+            nk = normalize_jvm(v["raw"])
+        elif args.ecosystem in ("csharp", "fsharp"):
+            nk = normalize_dotnet(v["raw"])
+        elif args.ecosystem == "cc":
+            nk = normalize_cc(v["raw"])
         else:
             nk = normalize_js(v["raw"])
         norm_exc[nk] = v
@@ -582,12 +1009,15 @@ def cmd_usage(args):
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="depcheck")
     sub = ap.add_subparsers(dest="cmd", required=True)
+    ecosystems = ["rust", "python", "js", "ts",
+                  "go", "java", "kotlin", "scala",
+                  "csharp", "fsharp", "cc"]
     c = sub.add_parser("consistency", help="verify manifest vs lock (offline, non-mutating)")
-    c.add_argument("--ecosystem", required=True, choices=["rust", "python", "js", "ts"])
+    c.add_argument("--ecosystem", required=True, choices=ecosystems)
     c.add_argument("--manifest", required=True)
     c.add_argument("--lock", required=True)
     u = sub.add_parser("usage", help="verify declared deps are used in owning scope")
-    u.add_argument("--ecosystem", required=True, choices=["rust", "python", "js", "ts"])
+    u.add_argument("--ecosystem", required=True, choices=ecosystems)
     u.add_argument("--manifest", required=True)
     u.add_argument("--sources", required=True)
     u.add_argument("--exceptions", default=None)
