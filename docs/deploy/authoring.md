@@ -60,7 +60,7 @@ archive_release(
 )
 ```
 
-`bazel run //rust/hello:release` (or `dx deploy //rust/hello:release`)
+`bazel run //rust/tests/fixtures/hello:release` (or `dx deploy //rust/tests/fixtures/hello:release`)
 verifies the checksum and copies `release.tar.gz` +
 `release.tar.gz.sha256` to the output directory (first arg after `--`,
 else `$BUILD_WORKSPACE_DIRECTORY`, else the cwd). Build actions are

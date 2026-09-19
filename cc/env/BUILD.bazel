@@ -13,8 +13,9 @@ load("//quality:fixtures.bzl", "real_source_target")
 package(default_visibility = ["//visibility:public"])
 
 cc_env_plan(
+    testonly = True,
     name = "hello_lib_plan",
-    target = "//cc/hello:hello_lib",
+    target = "//cc/tests/fixtures/hello:hello_lib",
 )
 
 env_plan_tests(

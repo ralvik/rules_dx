@@ -33,13 +33,13 @@ fi
 
 # flaky passes through: the fixture's upstream carries `flaky = True`
 # while the public forwarding wrapper stays an ordinary test.
-upstream_build="$(bazel query --output=build '//python/hello:flaky_passthrough_fixture_upstream' 2>/dev/null)"
+upstream_build="$(bazel query --output=build '//python/tests/fixtures/hello:flaky_passthrough_fixture_upstream' 2>/dev/null)"
 if echo "$upstream_build" | grep -q -E '^  flaky = True,$'; then
   ok
 else
   bad "flaky did not reach flaky_passthrough_fixture_upstream"
 fi
-public_build="$(bazel query --output=build '//python/hello:flaky_passthrough_fixture' 2>/dev/null)"
+public_build="$(bazel query --output=build '//python/tests/fixtures/hello:flaky_passthrough_fixture' 2>/dev/null)"
 if echo "$public_build" | grep -q -E '^  flaky = '; then
   bad "flaky leaked onto the public forwarding wrapper"
 else
@@ -58,8 +58,8 @@ fi
 # no-coverage is behavioral: under `bazel coverage` the tagged
 # process-spawning hello_output_test is skipped while untagged tests
 # run and emit coverage data. (The manual upstream is absent too.)
-cov_out="$(bazel coverage --noshow_progress --nocache_test_results //python/hello/... 2>&1)"
-if echo "$cov_out" | grep -q -E '//python/hello:hello_test +PASSED'; then
+cov_out="$(bazel coverage --noshow_progress --nocache_test_results //python/tests/fixtures/hello/... 2>&1)"
+if echo "$cov_out" | grep -q -E '//python/tests/fixtures/hello:hello_test +PASSED'; then
   ok
 else
   bad "untagged hello_test did not run under bazel coverage"

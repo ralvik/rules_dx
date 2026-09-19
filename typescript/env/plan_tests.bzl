@@ -9,7 +9,7 @@ field direct_sources=hello.ts,main.ts
 field has_npm=False
 field has_tsconfig=True
 field npm_source_count=0
-field target=//typescript/hello:hello_lib
+field target=//typescript/tests/fixtures/hello:hello_lib
 field transitive_sources=hello.js,main.js
 subject //typescript/env:helper_plan
 file helper_plan.json
@@ -17,7 +17,7 @@ field direct_sources=helper.ts
 field has_npm=False
 field has_tsconfig=True
 field npm_source_count=0
-field target=//typescript/entries:helper
+field target=//typescript/tests/fixtures/entries:helper
 field transitive_sources=helper.js
 subject //typescript/env:main_plan
 file main_plan.json
@@ -25,7 +25,7 @@ field direct_sources=main.ts
 field has_npm=False
 field has_tsconfig=True
 field npm_source_count=0
-field target=//typescript/entries:main
+field target=//typescript/tests/fixtures/entries:main
 field transitive_sources=helper.js,main.js"""
 
 def env_plan_tests(name, subjects):

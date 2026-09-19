@@ -6,7 +6,7 @@ import (
 )
 
 func TestParseImportsLocalNormalizedToBase(t *testing.T) {
-	got, err := ParseImports([]byte("package demo\n\nimport (\n\t\"fmt\"\n\t\"rules_dx/go/hello\"\n)\n"))
+	got, err := ParseImports([]byte("package demo\n\nimport (\n\t\"fmt\"\n\t\"rules_dx/go/tests/fixtures/hello\"\n)\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func TestIsStdLibExact(t *testing.T) {
 			t.Errorf("IsStdLib(%q) = false, want true", name)
 		}
 	}
-	for _, name := range []string{"", "hello", "rules_dx/go/hello", "github.com/x/y", "fmtx", "net/httpx"} {
+	for _, name := range []string{"", "hello", "rules_dx/go/tests/fixtures/hello", "github.com/x/y", "fmtx", "net/httpx"} {
 		if IsStdLib(name) {
 			t.Errorf("IsStdLib(%q) = true, want false", name)
 		}

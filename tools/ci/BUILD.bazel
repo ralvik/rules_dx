@@ -411,6 +411,19 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Test-only fixture layout guards (issue #404): pins the
+# <lang>/tests/fixtures/hello plus entries move, repo-only visibility with
+# testonly, product-rules never depending on tests, env plans testonly over
+# testonly fixtures, and Gazelle auto-testonly for fixture paths.
+# Functional checks only. Run by CI via `bazel run //tools/ci:fixture_layout`.
+sh_binary(
+    name = "fixture_layout",
+    srcs = ["fixture_layout.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # GHCR prebuilt-image hygiene (issues #184, #311): separate workflow
 # from releases, PR-paths build, dispatch + default-closed approve gate,
 # digest-pinned base + Bazel delegation + no ambient toolchains,

@@ -19,7 +19,7 @@
 // resolve only through an exact `# gazelle:resolve` mapping; standard
 // library paths are included and filtered by callers via IsStdLib; every
 // other import is local and contributes its final path segment
-// (`rules_dx/go/hello` -> `hello`), which matches the owning library's
+// (`rules_dx/go/tests/fixtures/hello` -> `hello`), which matches the owning library's
 // indexed module stem. Two local packages sharing one final segment are
 // ambiguous and fail resolution; owners add an exact mapping or rename.
 package golang

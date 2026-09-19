@@ -210,7 +210,7 @@ impl BumpRequest {
                     "MODULE.bazel"
                 }
             }
-            BumpSet::Cargo => "rust/hello/Cargo.toml",
+            BumpSet::Cargo => "rust/tests/fixtures/hello/Cargo.toml",
             BumpSet::GithubActions => ".github/workflows/ci.yml",
             BumpSet::Go => "go/go.mod",
             BumpSet::Npm => "package.json",
@@ -343,7 +343,7 @@ fn plan_cargo_toml(
         WidenVersion::Semver(version) => version.to_string(),
         _ => {
             return Err(BumpError::UnsupportedManifest {
-                manifest: "rust/hello/Cargo.toml".to_owned(),
+                manifest: "rust/tests/fixtures/hello/Cargo.toml".to_owned(),
                 reason: "expected exact semver".to_owned(),
             });
         }
@@ -357,7 +357,7 @@ fn plan_cargo_toml(
         content
             .parse::<toml_edit::DocumentMut>()
             .map_err(|_| BumpError::UnsupportedManifest {
-                manifest: "rust/hello/Cargo.toml".to_owned(),
+                manifest: "rust/tests/fixtures/hello/Cargo.toml".to_owned(),
                 reason: "manifest is not valid TOML".to_owned(),
             })?;
     let paths = cargo_dependency_table_paths(&doc);
@@ -373,7 +373,7 @@ fn plan_cargo_toml(
             CargoDepShape::Registry => matches.push(path.clone()),
             CargoDepShape::GitOrPath => {
                 return Err(BumpError::UnsupportedManifest {
-                    manifest: "rust/hello/Cargo.toml".to_owned(),
+                    manifest: "rust/tests/fixtures/hello/Cargo.toml".to_owned(),
                     reason: format!(
                         "{package:?} is git/path-shaped; v1 widens registry versions only"
                     ),
@@ -381,7 +381,7 @@ fn plan_cargo_toml(
             }
             CargoDepShape::Workspace => {
                 return Err(BumpError::UnsupportedManifest {
-                    manifest: "rust/hello/Cargo.toml".to_owned(),
+                    manifest: "rust/tests/fixtures/hello/Cargo.toml".to_owned(),
                     reason: format!(
                         "{package:?} inherits workspace version; v1 widens registry versions only"
                     ),
@@ -389,7 +389,7 @@ fn plan_cargo_toml(
             }
             CargoDepShape::NoVersion => {
                 return Err(BumpError::UnsupportedManifest {
-                    manifest: "rust/hello/Cargo.toml".to_owned(),
+                    manifest: "rust/tests/fixtures/hello/Cargo.toml".to_owned(),
                     reason: format!("{package:?} has no version to widen"),
                 });
             }
@@ -397,26 +397,26 @@ fn plan_cargo_toml(
     }
     match matches.len() {
         0 => Err(BumpError::NotFound {
-            manifest: "rust/hello/Cargo.toml".to_owned(),
+            manifest: "rust/tests/fixtures/hello/Cargo.toml".to_owned(),
             package: package.to_owned(),
         }),
         1 => {
             let table = cargo_table_at_mut(&mut doc, &matches[0]).ok_or_else(|| {
                 BumpError::UnsupportedManifest {
-                    manifest: "rust/hello/Cargo.toml".to_owned(),
+                    manifest: "rust/tests/fixtures/hello/Cargo.toml".to_owned(),
                     reason: format!("{package:?} has no version to widen"),
                 }
             })?;
             cargo_set_version(table, package, &new).ok_or_else(|| {
                 BumpError::UnsupportedManifest {
-                    manifest: "rust/hello/Cargo.toml".to_owned(),
+                    manifest: "rust/tests/fixtures/hello/Cargo.toml".to_owned(),
                     reason: format!("{package:?} has no version to widen"),
                 }
             })?;
             Ok(doc.to_string())
         }
         count => Err(BumpError::Ambiguous {
-            manifest: "rust/hello/Cargo.toml".to_owned(),
+            manifest: "rust/tests/fixtures/hello/Cargo.toml".to_owned(),
             package: package.to_owned(),
             count,
         }),
@@ -1018,7 +1018,10 @@ mod tests {
         let bump = BumpRequest::parse("cargo:anyhow", "1.2.3").expect("cargo");
         assert_eq!(bump.set, BumpSet::Cargo);
         assert_eq!(bump.package, "anyhow");
-        assert_eq!(bump.target_manifest(), "rust/hello/Cargo.toml");
+        assert_eq!(
+            bump.target_manifest(),
+            "rust/tests/fixtures/hello/Cargo.toml"
+        );
         assert!(bump.needs_update_refresh());
 
         let bump = BumpRequest::parse("npm:react", "1.2.3").expect("npm");
@@ -1062,11 +1065,11 @@ mod tests {
             Err(BumpError::BareSet { .. })
         ));
         assert!(matches!(
-            BumpRequest::parse("//rust/hello:hello", "1.2.3"),
+            BumpRequest::parse("//rust/tests/fixtures/hello:hello", "1.2.3"),
             Err(BumpError::NotAPackage { .. })
         ));
         assert!(matches!(
-            BumpRequest::parse("rust/hello/Cargo.toml", "1.2.3"),
+            BumpRequest::parse("rust/tests/fixtures/hello/Cargo.toml", "1.2.3"),
             Err(BumpError::NotAPackage { .. })
         ));
         assert!(matches!(

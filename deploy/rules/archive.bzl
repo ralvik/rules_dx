@@ -9,7 +9,7 @@ participate. The archive and checksum are built with the managed Python
 no registry, no credentials, no new module dependencies.
 
 Contract: `docs/deploy/authoring.md`. Deploy targets live next to the
-app they release (for example `//rust/hello:release`).
+app they release (for example `//rust/tests/fixtures/hello:release`).
 
 Host-tool contract (issue #318): build actions are hermetic
 (toolchain-provided archiver/hasher, declared `tools`, deterministic

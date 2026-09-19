@@ -80,7 +80,7 @@ if grep -q -F -e 'dx_realpath() {' tools/sh/lib.sh &&
   grep -q -F -e 'portable_realpath() {' tools/sh/lib.sh &&
   [[ "$(grep -rl -F -e 'portable_realpath() {' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | grep -v -F -e 'tools/sh/lib.sh' | grep -v -F -e 'tools/ci/shell_contract.sh' | wc -l)" == "0" ]] &&
   grep -q -F -e 'dx_realpath' cli/env/bootstrap_test.sh &&
-  grep -q -F -e 'dx_realpath' go/hello/hello_output_test.sh; then
+  grep -q -F -e 'dx_realpath' go/tests/fixtures/hello/hello_output_test.sh; then
   ok
 else
   bad "portable realpath must live once in tools/sh/lib.sh (dx_realpath) with drivers using it (issue #323)"

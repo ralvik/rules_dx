@@ -18,7 +18,7 @@ javascript_test(
     data = [":widgets"],
     node_modules = "//:node_modules",
     # First-party .js is ESM (`"type": "module"` in package.json); jest
-    # needs VM modules to execute it (same flag as //javascript/hello).
+    # needs VM modules to execute it (same flag as //javascript/tests/fixtures/hello).
     node_options = ["--experimental-vm-modules"],
 )
 

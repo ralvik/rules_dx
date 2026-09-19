@@ -229,7 +229,7 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
     (the root package.json sets `"type": "module"`), so tests covering
     ESM sources need
     `node_options = ["--experimental-vm-modules"]` (see
-    `//javascript/hello:hello_test`) until the transform slice wires
+    `//javascript/tests/fixtures/hello:hello_test`) until the transform slice wires
     static ESM/TS support. The macro always adds `//:package_json` to
     the upstream data: jest detects ESM by walking up the runfiles tree
     from each test file, so the scope file must be a runtime input of

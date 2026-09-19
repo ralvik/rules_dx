@@ -60,7 +60,7 @@ func TestIsSourceIsHeader(t *testing.T) {
 }
 
 func TestHeaderIdentity(t *testing.T) {
-	if got := HeaderIdentity("cc/hello/hello.h"); got != "hello.h" {
+	if got := HeaderIdentity("cc/tests/fixtures/hello/hello.h"); got != "hello.h" {
 		t.Errorf("HeaderIdentity = %q, want hello.h", got)
 	}
 }

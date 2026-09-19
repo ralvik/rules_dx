@@ -16,7 +16,7 @@ field direct_dep_count=0
 field direct_sources=cdylib.rs
 field edition=2021
 field root=cdylib.rs
-field target=//rust/hello:hello_cdylib
+field target=//rust/tests/fixtures/hello:hello_cdylib
 field via_test_crate=True
 subject //rust/env:hello_lib_plan
 file hello_lib_plan.json
@@ -26,7 +26,7 @@ field direct_dep_count=1
 field direct_sources=lib.rs
 field edition=2021
 field root=lib.rs
-field target=//rust/hello:hello_lib
+field target=//rust/tests/fixtures/hello:hello_lib
 field via_test_crate=False
 subject //rust/env:hello_plan
 file hello_plan.json
@@ -36,7 +36,7 @@ field direct_dep_count=2
 field direct_sources=main.rs
 field edition=2021
 field root=main.rs
-field target=//rust/hello:hello
+field target=//rust/tests/fixtures/hello:hello
 field via_test_crate=False
 subject //rust/env:hello_test_plan
 file hello_test_plan.json
@@ -46,7 +46,7 @@ field direct_dep_count=1
 field direct_sources=
 field edition=2021
 field root=lib.rs
-field target=//rust/hello:hello_test
+field target=//rust/tests/fixtures/hello:hello_test
 field via_test_crate=False"""
 
 def env_plan_tests(name, subjects):

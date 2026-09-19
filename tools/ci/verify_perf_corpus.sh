@@ -17,7 +17,7 @@
 #   binds normal targets via direct `aspect_hints` through the shared
 #   forwarder (pinned by //tools/ci:wrapper_sources); CI `dx lint`/`format`
 #   scope covers the proven language trees (`//python/...`,
-#   `//javascript/...`, `//rust/hello/...`, enforcing at --fail-on warning)
+#   `//javascript/...`, `//rust/tests/fixtures/hello/...`, enforcing at --fail-on warning)
 #   alongside the corpus. Remaining gaps stay open with no false claim:
 #   broader trees (for example `//cli/...` BUILD docstring warnings),
 #   CrateInfo/DepInfo context plumbing for Rust dep-coupled classes, and
@@ -110,9 +110,9 @@ fi
 if [[ -f "ruff.toml" && -f "biome.json" && -f "rustfmt.toml" ]] &&
   grep -q -F -e 'ruff_config' BUILD.bazel &&
   grep -q -F -e 'biome_config' BUILD.bazel &&
-  grep -q -F -e 'aspect_hints' python/hello/BUILD.bazel &&
-  grep -q -F -e 'aspect_hints' javascript/hello/BUILD.bazel &&
-  grep -q -F -e 'aspect_hints' rust/hello/BUILD.bazel &&
+  grep -q -F -e 'aspect_hints' python/tests/fixtures/hello/BUILD.bazel &&
+  grep -q -F -e 'aspect_hints' javascript/tests/fixtures/hello/BUILD.bazel &&
+  grep -q -F -e 'aspect_hints' rust/tests/fixtures/hello/BUILD.bazel &&
   grep -q -F -e 'aspect_hints' libs/starlark/wrapper.bzl; then
   ok
 else
@@ -123,10 +123,10 @@ fi
 # alongside the corpus (enforcing at --fail-on warning once clean).
 if grep -q -F -e '//python/...' .github/workflows/ci.yml &&
   grep -q -F -e '//javascript/...' .github/workflows/ci.yml &&
-  grep -q -F -e '//rust/hello/...' .github/workflows/ci.yml; then
+  grep -q -F -e '//rust/tests/fixtures/hello/...' .github/workflows/ci.yml; then
   ok
 else
-  bad "ci.yml lost the lane-A language-tree lint/format scope (want //python/... //javascript/... //rust/hello/... alongside corpus)"
+  bad "ci.yml lost the lane-A language-tree lint/format scope (want //python/... //javascript/... //rust/tests/fixtures/hello/... alongside corpus)"
 fi
 
 # Battery stays explicit-invocation for E2E (no wildcard-suite leakage).

@@ -1,0 +1,274 @@
+"""M00 seed Rust binary, library, and tests; M02 consumer of rust_* wrappers."""
+
+load("@crates//:crates.bzl", "aliases", "crate_deps")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//deploy/rules:archive.bzl", "archive_release")
+load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library", "rust_proc_macro", "rust_shared_library", "rust_static_library", "rust_test", "rustfmt_test")
+load("//rust/rules:probe.bzl", "dx_wrapper_cc_subject", "dx_wrapper_subject")
+load("//rust/rules:wrapper_tests.bzl", "dx_wrapper_conformance_tests", "dx_wrapper_registry_tests")
+
+package(
+    default_visibility = ["//:__subpackages__"],
+    default_testonly = True,
+)
+
+rust_library(
+    name = "hello_lib",
+    srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "rust/tests/fixtures/hello",
+        normal = True,
+    ),
+    # Lane A proof binding (issue #12): normal Rust targets carry the
+    # workspace-level rustfmt policy via direct `aspect_hints`, mirroring
+    # how corpus targets carry Vale. Proves the forwarder plumbing in
+    # `//libs/starlark:wrapper.bzl` reaches the real aspect.
+    aspect_hints = ["//:rustfmt_config"],
+    crate_name = "hello",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+    deps = crate_deps(
+        ["anyhow"],
+        package_name = "rust/tests/fixtures/hello",
+    ),
+)
+
+rust_binary(
+    name = "hello",
+    srcs = ["src/main.rs"],
+    aliases = aliases(
+        package_name = "rust/tests/fixtures/hello",
+        normal = True,
+    ),
+    crate_name = "hello",
+    crate_root = "src/main.rs",
+    edition = "2021",
+    deps = crate_deps(
+        ["anyhow"],
+        package_name = "rust/tests/fixtures/hello",
+    ) + [":hello_lib"],
+)
+
+# Authoritative quality identities: rustfmt and Clippy resolve from
+# the pinned toolchain, never from ambient host tools. Each wrapper is
+# listed explicitly: lint aspects apply to the wrapper's own CrateInfo and
+# do not traverse the private `_upstream` edge.
+rustfmt_test(
+    name = "hello_fmt_test",
+    size = "small",
+    targets = [
+        ":hello_lib",
+        ":hello",
+    ],
+)
+
+rust_clippy_test(
+    name = "hello_clippy_test",
+    size = "small",
+    targets = [
+        ":hello_lib",
+        ":hello",
+    ],
+)
+
+# M12 flavor wrappers: one subject per new rust_* shape (proc macro,
+# shared library, static library). No external dependencies: the
+# conformance probe pins forwarding, not dependency plumbing. Cargo cannot
+# express these flavors in one package, so each rule is handwritten and
+# kept across regenerations.
+# keep
+rust_proc_macro(
+    name = "hello_derive",
+    srcs = ["src/derive.rs"],
+    crate_name = "hello_derive",
+    crate_root = "src/derive.rs",
+)
+
+# keep
+rust_shared_library(
+    name = "hello_cdylib",
+    srcs = ["src/cdylib.rs"],
+    crate_name = "hello_cdylib",
+    crate_root = "src/cdylib.rs",
+)
+
+# keep
+rust_static_library(
+    name = "hello_staticlib",
+    srcs = ["src/staticlib.rs"],
+    crate_name = "hello_staticlib",
+    crate_root = "src/staticlib.rs",
+)
+
+# Separate lint identities: the M02 hello_fmt_test/hello_clippy_test
+# pins stay untouched, so the new shapes get their own lint tests with
+# their own marker sets.
+rustfmt_test(
+    name = "hello_flavors_fmt_test",
+    size = "small",
+    targets = [
+        ":hello_cdylib",
+        ":hello_derive",
+        ":hello_staticlib",
+    ],
+)
+
+rust_clippy_test(
+    name = "hello_flavors_clippy_test",
+    size = "small",
+    targets = [
+        ":hello_cdylib",
+        ":hello_derive",
+        ":hello_staticlib",
+    ],
+)
+
+exports_files([
+    "Cargo.toml",
+    "Cargo.lock",
+])
+
+# Conformance subjects: same package as the private `_upstream`
+# targets so the probe can observe both sides of the forwarding boundary.
+dx_wrapper_subject(
+    name = "hello_lib_subject",
+    testonly = True,
+    clippy_test = ":hello_clippy_test",
+    fmt_test = ":hello_fmt_test",
+    upstream = ":hello_lib_upstream",
+    wrapper = ":hello_lib",
+)
+
+dx_wrapper_subject(
+    name = "hello_subject",
+    testonly = True,
+    clippy_test = ":hello_clippy_test",
+    fmt_test = ":hello_fmt_test",
+    upstream = ":hello_upstream",
+    wrapper = ":hello",
+)
+
+dx_wrapper_subject(
+    name = "hello_test_subject",
+    testonly = True,
+    clippy_test = ":hello_clippy_test",
+    fmt_test = ":hello_fmt_test",
+    upstream = ":hello_test_upstream",
+    wrapper = ":hello_test",
+)
+
+dx_wrapper_subject(
+    name = "hello_derive_subject",
+    testonly = True,
+    clippy_test = ":hello_flavors_clippy_test",
+    fmt_test = ":hello_flavors_fmt_test",
+    upstream = ":hello_derive_upstream",
+    wrapper = ":hello_derive",
+)
+
+dx_wrapper_cc_subject(
+    name = "hello_cdylib_subject",
+    testonly = True,
+    clippy_test = ":hello_flavors_clippy_test",
+    fmt_test = ":hello_flavors_fmt_test",
+    upstream = ":hello_cdylib_upstream",
+    wrapper = ":hello_cdylib",
+)
+
+dx_wrapper_cc_subject(
+    name = "hello_staticlib_subject",
+    testonly = True,
+    clippy_test = ":hello_flavors_clippy_test",
+    fmt_test = ":hello_flavors_fmt_test",
+    upstream = ":hello_staticlib_upstream",
+    wrapper = ":hello_staticlib",
+)
+
+dx_wrapper_registry_tests(name = "wrapper_registry_tests")
+
+dx_wrapper_conformance_tests(
+    name = "wrapper_conformance_tests",
+    subjects = [
+        ":hello_lib_subject",
+        ":hello_subject",
+        ":hello_test_subject",
+        ":hello_derive_subject",
+        ":hello_cdylib_subject",
+        ":hello_staticlib_subject",
+    ],
+)
+
+# Repository corpus: build file and manifest owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy. Rust
+# sources stay dx-owned (M02 wrappers), never corpus sources.
+rust_test(
+    name = "hello_test",
+    aliases = aliases(
+        package_name = "rust/tests/fixtures/hello",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":hello_lib",
+    deps = crate_deps(
+        ["anyhow"],
+        package_name = "rust/tests/fixtures/hello",
+    ),
+)
+
+# Hello smoke as a test target (replaces the bespoke
+# `bazel run //rust/tests/fixtures/hello:hello` CI step): asserts the seed binary prints
+# the expected greeting. Tagged `no-coverage`: process-spawning tests stay
+# out of the coverage denominator per the repo coverage preset. No corpus
+# entry: shell sources have no `real_source_target` class.
+sh_test(
+    name = "hello_output_test",
+    srcs = ["hello_output_test.sh"],
+    args = ["$(rootpath :hello)"],
+    data = [":hello", "//tools/sh:lib"],
+    tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+# Documented deploy pattern (issue #181): deploy targets live next to the
+# app they release. `bazel run //rust/tests/fixtures/hello:release` (or
+# `dx deploy //rust/tests/fixtures/hello:release`) verifies the checksum and copies
+# `release.tar.gz` + `release.tar.gz.sha256` to the output directory.
+archive_release(
+    name = "release",
+    app = ":hello",
+)
+
+# Release contents + checksum validity on the real app binary. Tagged
+# `no-coverage`: process-spawning tests stay out of the coverage
+# denominator per the repo coverage preset. No corpus entry: shell
+# sources have no `real_source_target` class.
+sh_test(
+    name = "release_verify",
+    srcs = ["//deploy/rules:archive_verify.sh"],
+    args = [
+        "$(rootpath :release_archive)",
+        "$(rootpath :release_checksum)",
+        "hello",
+    ],
+    data = [
+        ":release_archive",
+        ":release_checksum",
+    ],
+    tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = ["Cargo.toml"],
+)

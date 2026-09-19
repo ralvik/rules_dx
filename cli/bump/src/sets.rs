@@ -28,7 +28,7 @@
 pub enum BumpSet {
     /// Bazel modules plus `.bazelversion` (`.bazelversion`, `MODULE.bazel`).
     Bazel,
-    /// Rust/Cargo (`rust/hello/Cargo.toml`).
+    /// Rust/Cargo (`rust/tests/fixtures/hello/Cargo.toml`).
     Cargo,
     /// GitHub Actions (`.github/workflows/*.yml`, SHA-plus-tag pins).
     GithubActions,
@@ -86,7 +86,7 @@ impl BumpSet {
     pub fn manifests(self) -> &'static [&'static str] {
         match self {
             BumpSet::Bazel => &[".bazelversion", "MODULE.bazel"],
-            BumpSet::Cargo => &["rust/hello/Cargo.toml"],
+            BumpSet::Cargo => &["rust/tests/fixtures/hello/Cargo.toml"],
             BumpSet::GithubActions => &[".github/workflows/ci.yml"],
             BumpSet::Go => &["go/go.mod"],
             BumpSet::Npm => &["package.json"],
@@ -100,7 +100,10 @@ impl BumpSet {
     pub fn locks(self) -> &'static [&'static str] {
         match self {
             BumpSet::Bazel => &[],
-            BumpSet::Cargo => &["rust/hello/Cargo.lock", "cargo-bazel-lock.json"],
+            BumpSet::Cargo => &[
+                "rust/tests/fixtures/hello/Cargo.lock",
+                "cargo-bazel-lock.json",
+            ],
             BumpSet::GithubActions => &[],
             BumpSet::Go => &["go/go.sum"],
             BumpSet::Npm => &["pnpm-lock.yaml"],
@@ -122,7 +125,7 @@ impl BumpSet {
                 "file-only (edit .bazelversion or MODULE.bazel pin, then preset flag-diff review)"
             }
             BumpSet::Cargo => {
-                "crate_universe repin (CARGO_BAZEL_REPIN=1 bazel build //rust/hello:hello)"
+                "crate_universe repin (CARGO_BAZEL_REPIN=1 bazel build //rust/tests/fixtures/hello:hello)"
             }
             BumpSet::GithubActions => {
                 "file-only (edit workflow SHA-plus-tag pin via upstream GitHub releases client)"
@@ -198,7 +201,10 @@ mod tests {
     fn manifests_cover_the_v1_manager_set() {
         assert!(BumpSet::Bazel.manifests().contains(&".bazelversion"));
         assert!(BumpSet::Bazel.manifests().contains(&"MODULE.bazel"));
-        assert_eq!(BumpSet::Cargo.manifests(), &["rust/hello/Cargo.toml"]);
+        assert_eq!(
+            BumpSet::Cargo.manifests(),
+            &["rust/tests/fixtures/hello/Cargo.toml"]
+        );
         assert_eq!(BumpSet::Npm.manifests(), &["package.json"]);
         assert!(BumpSet::GithubActions
             .manifests()

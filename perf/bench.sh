@@ -133,8 +133,8 @@ micro() {
 }
 
 scenario_warm() {
-  run_case scope_owners 5 owners python/hello/hello.py
-  run_case scope_deps 5 deps //python/hello:hello
+  run_case scope_owners 5 owners python/tests/fixtures/hello/hello.py
+  run_case scope_deps 5 deps //python/tests/fixtures/hello:hello
   run_case generate_check_warm 5 generate --check //examples/adopt-rust/...
 }
 
@@ -149,8 +149,8 @@ case "$only" in
   dx_startup) run_case dx_startup 7 --help ;;
   dx_status) run_case dx_status 7 status ;;
   dx_status_json) run_case dx_status_json 7 status --output json ;;
-  scope_owners) run_case scope_owners 5 owners python/hello/hello.py ;;
-  scope_deps) run_case scope_deps 5 deps //python/hello:hello ;;
+  scope_owners) run_case scope_owners 5 owners python/tests/fixtures/hello/hello.py ;;
+  scope_deps) run_case scope_deps 5 deps //python/tests/fixtures/hello:hello ;;
   generate_check_warm) run_case generate_check_warm 5 generate --check //examples/adopt-rust/... ;;
   generate_check_cold) run_bazel_case generate_check_cold 1 generate --check //examples/adopt-rust/... ;;
   *)

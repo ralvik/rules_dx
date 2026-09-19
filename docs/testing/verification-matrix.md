@@ -144,7 +144,7 @@ Accepted record of the as-built close-out battery. The full battery runs in
   `:helper_qualification`, and `:clap_tokenizer_qualification`.
 - `dogfood-lint`, `dogfood-format`, `dogfood-typecheck`: corpus converge then
   `--check` no-op proof, plus lane-A trees `//python/... //javascript/...
-  //rust/hello/...` where enforcing.
+  //rust/tests/fixtures/hello/...` where enforcing.
 - `devcontainer-check`, `docs-ci`, `consumer-ci` (build-only self-call).
 
 Green here (static guards on a clean tree, no full rebuild): `e2e_cases`

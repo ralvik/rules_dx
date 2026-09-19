@@ -234,7 +234,7 @@ path is check-only. There is no dx-side Clippy config: policy rides the
 `rules_rust` `clippy.toml` label flag Bazel itself reads, so pass e.g.
 `--@rules_rust//rust/settings:clippy.toml=<label>` through to select it. The
 dogfood proof is `dx lint --check //cli/qualification:dx_qual`, whose result carries
-`clippy::too_many_arguments` where `//rust/hello:hello_lib` stays silent.
+`clippy::too_many_arguments` where `//rust/tests/fixtures/hello:hello_lib` stays silent.
 Dependency context (`--extern`) stays open under
 open work.
 

@@ -1,0 +1,60 @@
+"""M16 seed JavaScript binary and library; consumer of javascript_* wrappers."""
+
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//javascript/rules:defs.bzl", "javascript_binary", "javascript_library", "javascript_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_visibility = ["//:__subpackages__"],
+    default_testonly = True,
+)
+
+javascript_library(
+    name = "hello_lib",
+    srcs = ["hello.js"],
+    # Lane A proof binding (issue #12): normal JavaScript targets carry the
+    # workspace-level Biome policy via direct `aspect_hints`, mirroring how
+    # corpus targets carry Vale. Proves the forwarder plumbing reaches the
+    # real aspect.
+    aspect_hints = ["//:biome_config"],
+)
+
+javascript_binary(
+    name = "hello",
+    data = [":hello_lib"],
+    entry_point = "main.js",
+)
+
+javascript_test(
+    name = "hello_test",
+    srcs = ["hello.test.js"],
+    data = [":hello_lib"],
+    node_modules = "//:node_modules",
+    # First-party .js is ESM (root `"type": "module"`); jest needs VM
+    # modules to execute it (same flag as upstream's esm example).
+    node_options = ["--experimental-vm-modules"],
+)
+
+# Repository corpus: build and project metadata owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy. JavaScript
+# sources stay dx-owned, never corpus sources.
+# Hello smoke as a test target (#87, same pattern as
+# //rust/tests/fixtures/hello:hello_output_test): asserts the seed binary prints the
+# expected greeting. Tagged `no-coverage`: process-spawning tests stay
+# out of the coverage denominator per the repo coverage preset. No corpus
+# entry: shell sources have no `real_source_target` class.
+sh_test(
+    name = "hello_output_test",
+    srcs = ["hello_output_test.sh"],
+    args = ["$(rootpath :hello)"],
+    data = [":hello", "//tools/sh:lib"],
+    tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)

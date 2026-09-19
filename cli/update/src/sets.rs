@@ -10,9 +10,9 @@
 //!
 //! Manifest/lock paths are workspace-relative and verbatim:
 //! - Cargo shares one `crate_universe` lock: manifests under
-//!   `rust/hello/Cargo.toml` (plus the workspace Rust crates listed in
-//!   `MODULE.bazel` sharing `rust/hello/Cargo.lock`), lock
-//!   `rust/hello/Cargo.lock`, derived `cargo-bazel-lock.json` regenerated
+//!   `rust/tests/fixtures/hello/Cargo.toml` (plus the workspace Rust crates listed in
+//!   `MODULE.bazel` sharing `rust/tests/fixtures/hello/Cargo.lock`), lock
+//!   `rust/tests/fixtures/hello/Cargo.lock`, derived `cargo-bazel-lock.json` regenerated
 //!   via the documented repin.
 //! - npm is the root JS/TS graph: manifest `package.json`, lock
 //!   `pnpm-lock.yaml` via the Bazel-pinned pnpm.
@@ -32,7 +32,7 @@
 /// V1 dependency-set identity.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum SetId {
-    /// Rust/Cargo via `crate_universe` (`rust/hello/Cargo.lock`).
+    /// Rust/Cargo via `crate_universe` (`rust/tests/fixtures/hello/Cargo.lock`).
     Cargo,
     /// Empty Go set (no `go.mod` in the main workspace).
     Go,
@@ -80,7 +80,7 @@ impl SetId {
     /// Workspace-relative manifests owned by this set.
     pub fn manifests(self) -> &'static [&'static str] {
         match self {
-            SetId::Cargo => &["rust/hello/Cargo.toml"],
+            SetId::Cargo => &["rust/tests/fixtures/hello/Cargo.toml"],
             SetId::Go => &[],
             SetId::Maven => &["MODULE.bazel"],
             SetId::Npm => &["package.json"],
@@ -91,7 +91,10 @@ impl SetId {
     /// Workspace-relative lockfiles refreshed by this set.
     pub fn locks(self) -> &'static [&'static str] {
         match self {
-            SetId::Cargo => &["rust/hello/Cargo.lock", "cargo-bazel-lock.json"],
+            SetId::Cargo => &[
+                "rust/tests/fixtures/hello/Cargo.lock",
+                "cargo-bazel-lock.json",
+            ],
             SetId::Go => &[],
             SetId::Maven => &["third_party/jvm/maven_install.json"],
             SetId::Npm => &["pnpm-lock.yaml"],
@@ -103,7 +106,7 @@ impl SetId {
     pub fn updater(self) -> &'static str {
         match self {
             SetId::Cargo => {
-                "crate_universe repin (CARGO_BAZEL_REPIN=1 bazel build //rust/hello:hello)"
+                "crate_universe repin (CARGO_BAZEL_REPIN=1 bazel build //rust/tests/fixtures/hello:hello)"
             }
             SetId::Go => "empty set (no go.mod in the main workspace; no-op success)",
             SetId::Maven => "rules_jvm_external pin (REPIN=1 bazel run @maven//:pin)",
@@ -165,10 +168,16 @@ mod tests {
 
     #[test]
     fn cargo_npm_maven_nuget_paths_are_pinned() {
-        assert_eq!(SetId::Cargo.manifests(), &["rust/hello/Cargo.toml"]);
+        assert_eq!(
+            SetId::Cargo.manifests(),
+            &["rust/tests/fixtures/hello/Cargo.toml"]
+        );
         assert_eq!(
             SetId::Cargo.locks(),
-            &["rust/hello/Cargo.lock", "cargo-bazel-lock.json"]
+            &[
+                "rust/tests/fixtures/hello/Cargo.lock",
+                "cargo-bazel-lock.json"
+            ]
         );
         assert_eq!(SetId::Npm.manifests(), &["package.json"]);
         assert_eq!(SetId::Npm.locks(), &["pnpm-lock.yaml"]);

@@ -13,7 +13,7 @@
 //!
 //! V1 operations (all through approved Bazel integrations, never a CLI
 //! filesystem scan):
-//! - Cargo (full only): `CARGO_BAZEL_REPIN=1 bazel build //rust/hello:hello`
+//! - Cargo (full only): `CARGO_BAZEL_REPIN=1 bazel build //rust/tests/fixtures/hello:hello`
 //!   regenerates `cargo-bazel-lock.json` from `Cargo.lock` via
 //!   `crate_universe`. Selective `cargo:crate` is unsupported in V1 and
 //!   reports `unsupported` rather than silently substituting a full update.
@@ -68,7 +68,7 @@ pub enum BackendError {
 pub fn plan(set: SetId, request: &SetRequest) -> Result<BackendPlan, BackendError> {
     match (set, request) {
         (SetId::Cargo, SetRequest::Full) => Ok(BackendPlan::Run {
-            argv: strings(&["bazel", "build", "//rust/hello:hello"]),
+            argv: strings(&["bazel", "build", "//rust/tests/fixtures/hello:hello"]),
             env: vec![("CARGO_BAZEL_REPIN".to_owned(), "1".to_owned())],
         }),
         (SetId::Cargo, SetRequest::Packages(_)) => Err(BackendError::Unsupported {
@@ -139,7 +139,7 @@ mod tests {
                 argv: vec![
                     "bazel".to_owned(),
                     "build".to_owned(),
-                    "//rust/hello:hello".to_owned(),
+                    "//rust/tests/fixtures/hello:hello".to_owned(),
                 ],
                 env: vec![("CARGO_BAZEL_REPIN".to_owned(), "1".to_owned())],
             }
@@ -228,7 +228,7 @@ mod tests {
             ),
             (
                 SetId::Go,
-                SetRequest::Packages(vec!["rules_dx/go/hello".to_owned()]),
+                SetRequest::Packages(vec!["rules_dx/go/tests/fixtures/hello".to_owned()]),
             ),
         ] {
             let error = plan(set, &packages).expect_err("unsupported");

@@ -319,7 +319,7 @@ Aggregate exit-code selection is pinned in `dx_update::report`: a run with no fa
 exits `0`; any failed set fails the invocation overall with exit `1`, following the report's
 `overall_failure` verdict (blocked without failure is not a failure). Per-set detail rides the
 per-set report, never a per-set code. Backend operation boundaries are pinned in
-`dx_update::backend` (Cargo `CARGO_BAZEL_REPIN=1 bazel build //rust/hello:hello`, npm
+`dx_update::backend` (Cargo `CARGO_BAZEL_REPIN=1 bazel build //rust/tests/fixtures/hello:hello`, npm
 `bazel run @pnpm//:pnpm -- update`, Maven `REPIN=1 bazel run @maven//:pin`, NuGet
 `paket2bazel` regeneration, Go no-op) and per-set success/failure/blocked reporting rides
 text plus JSON `notice`/`error` events with `command_finished`. Continued updates do not imply
@@ -381,7 +381,7 @@ Transitives stay resolver-governed (`dx_update::semantics`
 pins intact); bump never forces every transitive to newest.
 
 Manifests widened atomically (one file per invocation): `.bazelversion` or
-`MODULE.bazel` (Bazel, file-only), `rust/hello/Cargo.toml` (Cargo),
+`MODULE.bazel` (Bazel, file-only), `rust/tests/fixtures/hello/Cargo.toml` (Cargo),
 `package.json` (npm), `go/go.mod` (Go), `.github/workflows/ci.yml`
 (GitHub Actions, SHA-plus-tag pins). Lock refresh stays resolver-owned
 through `dx update <set>` for Cargo/npm/Go

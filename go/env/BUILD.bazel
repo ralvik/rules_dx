@@ -13,8 +13,9 @@ load("//quality:fixtures.bzl", "real_source_target")
 package(default_visibility = ["//visibility:public"])
 
 go_env_plan(
+    testonly = True,
     name = "hello_lib_plan",
-    target = "//go/hello:hello_lib",
+    target = "//go/tests/fixtures/hello:hello_lib",
 )
 
 env_plan_tests(

@@ -27,7 +27,7 @@ def dx_wrapper_registry_tests(name):
 # Filled in from the observed rendering on the pinned stack; any wrapper or
 # upstream change that alters providers, owners, markers, or tool identities
 # fails here first.
-EXPECTED_OBSERVATIONS = """subject //rust/hello:hello_cdylib_subject
+EXPECTED_OBSERVATIONS = """subject //rust/tests/fixtures/hello:hello_cdylib_subject
 file hello_cdylib_subject.txt
 field cargo_tool=cargo
 field cc_linker_inputs=2
@@ -36,7 +36,7 @@ field clippy_tool=clippy-driver
 field crate_edition=2021
 field crate_is_test=False
 field crate_name=hello_cdylib
-field crate_owner=//rust/hello:hello_cdylib_upstream
+field crate_owner=//rust/tests/fixtures/hello:hello_cdylib_upstream
 field crate_root=cdylib.rs
 field crate_srcs=cdylib.rs
 field crate_type=cdylib
@@ -52,13 +52,13 @@ field preserved_type=True
 field rustc_tool=rustc
 field rustfmt_tool=rustfmt
 field tools_pinned=True
-field upstream=//rust/hello:hello_cdylib_upstream
+field upstream=//rust/tests/fixtures/hello:hello_cdylib_upstream
 field upstream_has_instrumented_files=True
 field upstream_has_quality_sources=False
-field wrapper=//rust/hello:hello_cdylib
+field wrapper=//rust/tests/fixtures/hello:hello_cdylib
 field wrapper_has_instrumented_files=True
 field wrapper_has_quality_sources=True
-subject //rust/hello:hello_derive_subject
+subject //rust/tests/fixtures/hello:hello_derive_subject
 file hello_derive_subject.txt
 field cargo_tool=cargo
 field clippy_markers=hello_cdylib.clippy.ok,hello_derive.clippy.ok,hello_staticlib.clippy.ok
@@ -66,7 +66,7 @@ field clippy_tool=clippy-driver
 field crate_edition=2021
 field crate_is_test=False
 field crate_name=hello_derive
-field crate_owner=//rust/hello:hello_derive_upstream
+field crate_owner=//rust/tests/fixtures/hello:hello_derive_upstream
 field crate_root=derive.rs
 field crate_srcs=derive.rs
 field crate_type=proc-macro
@@ -81,13 +81,13 @@ field preserved_type=True
 field rustc_tool=rustc
 field rustfmt_tool=rustfmt
 field tools_pinned=True
-field upstream=//rust/hello:hello_derive_upstream
+field upstream=//rust/tests/fixtures/hello:hello_derive_upstream
 field upstream_has_instrumented_files=True
 field upstream_has_quality_sources=False
-field wrapper=//rust/hello:hello_derive
+field wrapper=//rust/tests/fixtures/hello:hello_derive
 field wrapper_has_instrumented_files=True
 field wrapper_has_quality_sources=True
-subject //rust/hello:hello_lib_subject
+subject //rust/tests/fixtures/hello:hello_lib_subject
 file hello_lib_subject.txt
 field cargo_tool=cargo
 field clippy_markers=hello.clippy.ok,hello_lib.clippy.ok
@@ -95,7 +95,7 @@ field clippy_tool=clippy-driver
 field crate_edition=2021
 field crate_is_test=False
 field crate_name=hello
-field crate_owner=//rust/hello:hello_lib_upstream
+field crate_owner=//rust/tests/fixtures/hello:hello_lib_upstream
 field crate_root=lib.rs
 field crate_srcs=lib.rs
 field crate_type=rlib
@@ -110,13 +110,13 @@ field preserved_type=True
 field rustc_tool=rustc
 field rustfmt_tool=rustfmt
 field tools_pinned=True
-field upstream=//rust/hello:hello_lib_upstream
+field upstream=//rust/tests/fixtures/hello:hello_lib_upstream
 field upstream_has_instrumented_files=True
 field upstream_has_quality_sources=False
-field wrapper=//rust/hello:hello_lib
+field wrapper=//rust/tests/fixtures/hello:hello_lib
 field wrapper_has_instrumented_files=True
 field wrapper_has_quality_sources=True
-subject //rust/hello:hello_staticlib_subject
+subject //rust/tests/fixtures/hello:hello_staticlib_subject
 file hello_staticlib_subject.txt
 field cargo_tool=cargo
 field cc_linker_inputs=2
@@ -125,7 +125,7 @@ field clippy_tool=clippy-driver
 field crate_edition=2021
 field crate_is_test=False
 field crate_name=hello_staticlib
-field crate_owner=//rust/hello:hello_staticlib_upstream
+field crate_owner=//rust/tests/fixtures/hello:hello_staticlib_upstream
 field crate_root=staticlib.rs
 field crate_srcs=staticlib.rs
 field crate_type=staticlib
@@ -141,13 +141,13 @@ field preserved_type=True
 field rustc_tool=rustc
 field rustfmt_tool=rustfmt
 field tools_pinned=True
-field upstream=//rust/hello:hello_staticlib_upstream
+field upstream=//rust/tests/fixtures/hello:hello_staticlib_upstream
 field upstream_has_instrumented_files=True
 field upstream_has_quality_sources=False
-field wrapper=//rust/hello:hello_staticlib
+field wrapper=//rust/tests/fixtures/hello:hello_staticlib
 field wrapper_has_instrumented_files=True
 field wrapper_has_quality_sources=True
-subject //rust/hello:hello_subject
+subject //rust/tests/fixtures/hello:hello_subject
 file hello_subject.txt
 field cargo_tool=cargo
 field clippy_markers=hello.clippy.ok,hello_lib.clippy.ok
@@ -155,7 +155,7 @@ field clippy_tool=clippy-driver
 field crate_edition=2021
 field crate_is_test=False
 field crate_name=hello
-field crate_owner=//rust/hello:hello_upstream
+field crate_owner=//rust/tests/fixtures/hello:hello_upstream
 field crate_root=main.rs
 field crate_srcs=main.rs
 field crate_type=bin
@@ -170,13 +170,13 @@ field preserved_type=True
 field rustc_tool=rustc
 field rustfmt_tool=rustfmt
 field tools_pinned=True
-field upstream=//rust/hello:hello_upstream
+field upstream=//rust/tests/fixtures/hello:hello_upstream
 field upstream_has_instrumented_files=True
 field upstream_has_quality_sources=False
-field wrapper=//rust/hello:hello
+field wrapper=//rust/tests/fixtures/hello:hello
 field wrapper_has_instrumented_files=True
 field wrapper_has_quality_sources=True
-subject //rust/hello:hello_test_subject
+subject //rust/tests/fixtures/hello:hello_test_subject
 file hello_test_subject.txt
 field cargo_tool=cargo
 field clippy_markers=hello.clippy.ok,hello_lib.clippy.ok
@@ -184,7 +184,7 @@ field clippy_tool=clippy-driver
 field crate_edition=2021
 field crate_is_test=True
 field crate_name=hello
-field crate_owner=//rust/hello:hello_test_upstream
+field crate_owner=//rust/tests/fixtures/hello:hello_test_upstream
 field crate_root=lib.rs
 field crate_srcs=lib.rs
 field crate_type=bin
@@ -199,10 +199,10 @@ field preserved_type=True
 field rustc_tool=rustc
 field rustfmt_tool=rustfmt
 field tools_pinned=True
-field upstream=//rust/hello:hello_test_upstream
+field upstream=//rust/tests/fixtures/hello:hello_test_upstream
 field upstream_has_instrumented_files=True
 field upstream_has_quality_sources=False
-field wrapper=//rust/hello:hello_test
+field wrapper=//rust/tests/fixtures/hello:hello_test
 field wrapper_has_instrumented_files=True
 field wrapper_has_quality_sources=True"""
 

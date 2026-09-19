@@ -185,14 +185,22 @@ mod tests {
     #[test]
     fn dry_run_plans_without_writing() {
         let harness = Harness::new("bump-dryrun");
-        harness.write_source("rust/hello/Cargo.toml", "[dependencies]\nanyhow = \"1\"\n");
+        harness.write_source(
+            "rust/tests/fixtures/hello/Cargo.toml",
+            "[dependencies]\nanyhow = \"1\"\n",
+        );
         let (code, out, err) = harness.run(&["bump", "cargo:anyhow", "1.2.3", "--dry-run"]);
         assert_eq!(code, 0, "{out}{err}");
         assert!(out.contains("Widen cargo:anyhow"), "{out}");
         assert_eq!(err, "", "{err}");
         // Dry-run writes nothing.
         assert_eq!(
-            std::fs::read_to_string(harness.workspace.join("rust/hello/Cargo.toml")).expect("read"),
+            std::fs::read_to_string(
+                harness
+                    .workspace
+                    .join("rust/tests/fixtures/hello/Cargo.toml")
+            )
+            .expect("read"),
             "[dependencies]\nanyhow = \"1\"\n"
         );
     }
@@ -211,15 +219,19 @@ mod tests {
     fn live_widens_one_cargo_requirement_atomically() {
         let harness = Harness::new("bump-live-cargo");
         harness.write_source(
-            "rust/hello/Cargo.toml",
+            "rust/tests/fixtures/hello/Cargo.toml",
             "[dependencies]\nanyhow = \"1\"\nserde = \"1\"\n",
         );
         let (code, out, err) = harness.run(&["bump", "cargo:anyhow", "1.2.3"]);
         assert_eq!(code, 0, "{out}{err}");
         assert!(out.contains("widened cargo:anyhow to 1.2.3"), "{out}");
         assert!(err.is_empty(), "{err}");
-        let widened =
-            std::fs::read_to_string(harness.workspace.join("rust/hello/Cargo.toml")).expect("read");
+        let widened = std::fs::read_to_string(
+            harness
+                .workspace
+                .join("rust/tests/fixtures/hello/Cargo.toml"),
+        )
+        .expect("read");
         assert!(widened.contains("anyhow = \"1.2.3\""), "{widened}");
         assert!(widened.contains("serde = \"1\""), "{widened}");
     }
@@ -227,13 +239,21 @@ mod tests {
     #[test]
     fn live_missing_requirement_fails_without_writing() {
         let harness = Harness::new("bump-live-missing");
-        harness.write_source("rust/hello/Cargo.toml", "[dependencies]\nserde = \"1\"\n");
+        harness.write_source(
+            "rust/tests/fixtures/hello/Cargo.toml",
+            "[dependencies]\nserde = \"1\"\n",
+        );
         let (code, _, err) = harness.run(&["bump", "cargo:anyhow", "1.2.3"]);
         assert_eq!(code, 1, "{err}");
         assert!(err.contains("bump_failed"), "{err}");
         assert!(err.contains("no declared requirement"), "{err}");
         assert_eq!(
-            std::fs::read_to_string(harness.workspace.join("rust/hello/Cargo.toml")).expect("read"),
+            std::fs::read_to_string(
+                harness
+                    .workspace
+                    .join("rust/tests/fixtures/hello/Cargo.toml")
+            )
+            .expect("read"),
             "[dependencies]\nserde = \"1\"\n"
         );
     }

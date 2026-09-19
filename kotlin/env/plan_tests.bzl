@@ -8,7 +8,7 @@ file hello_lib_plan.json
 field direct_sources=Hello.kt
 field has_sources=True
 field source_count=1
-field target=//kotlin/hello:hello_lib"""
+field target=//kotlin/tests/fixtures/hello:hello_lib"""
 
 def env_plan_tests(name, subjects):
     starlark_test(

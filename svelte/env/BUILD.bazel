@@ -13,8 +13,9 @@ load("//svelte/env:plan_tests.bzl", "env_plan_tests")
 package(default_visibility = ["//visibility:public"])
 
 svelte_env_plan(
+    testonly = True,
     name = "hello_lib_plan",
-    target = "//svelte/hello:hello_lib",
+    target = "//svelte/tests/fixtures/hello:hello_lib",
 )
 
 env_plan_tests(

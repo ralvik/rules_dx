@@ -32,12 +32,12 @@
 //!   "schema_major": 1, "schema_minor": 0, "mode": "check",
 //!   "scopes": [{"value": "//...", "results_complete": true}],
 //!   "files": [{
-//!     "path": "rust/hello/BUILD.bazel", "scope_index": 0,
+//!     "path": "rust/tests/fixtures/hello/BUILD.bazel", "scope_index": 0,
 //!     "original_content": "<base64>", "create_content": "<base64>",
 //!     "edits": [{"start_byte": 0, "end_byte": 5, "replacement": "<base64>"}]
 //!   }],
 //!   "ignored_imports": [{
-//!     "path": "rust/hello/BUILD.bazel", "language": "rust",
+//!     "path": "rust/tests/fixtures/hello/BUILD.bazel", "language": "rust",
 //!     "import": "serde", "scope_index": 0
 //!   }]
 //! }
@@ -366,10 +366,10 @@ mod tests {
             concat!(
                 r#"{{"schema_major":1,"schema_minor":0,"mode":"{mode}","#,
                 r#""scopes":[{{"value":"//...","results_complete":{complete}}}],"#,
-                r#""files":[{{"path":"rust/hello/BUILD.bazel","scope_index":0,"#,
+                r#""files":[{{"path":"rust/tests/fixtures/hello/BUILD.bazel","scope_index":0,"#,
                 r#""original_content":"YWJjCg==","#,
                 r#""edits":[{{"start_byte":0,"end_byte":4,"replacement":"eHl6Cg=="}}]}}],"#,
-                r#""ignored_imports":[{{"path":"rust/hello/BUILD.bazel","language":"rust","#,
+                r#""ignored_imports":[{{"path":"rust/tests/fixtures/hello/BUILD.bazel","language":"rust","#,
                 r#""import":"serde","scope_index":0}}]}}"#
             ),
             mode = mode,
@@ -384,7 +384,7 @@ mod tests {
 
     fn workspace_with(contents: &[u8]) -> dx_test_scratch::TempDir {
         let dir = test_tempdir();
-        let target = dir.path().join("rust/hello/BUILD.bazel");
+        let target = dir.path().join("rust/tests/fixtures/hello/BUILD.bazel");
         std::fs::create_dir_all(target.parent().unwrap()).unwrap();
         std::fs::write(&target, contents).unwrap();
         dir
@@ -446,13 +446,15 @@ mod tests {
         assert_eq!(missing.failure_code, FAILURE_MISSING_FILE);
 
         // A directory where the file should be is not a readable file.
-        std::fs::create_dir_all(dir.path().join("rust/hello/BUILD.bazel.dir")).unwrap();
+        std::fs::create_dir_all(dir.path().join("rust/tests/fixtures/hello/BUILD.bazel.dir"))
+            .unwrap();
         std::fs::rename(
-            dir.path().join("rust/hello/BUILD.bazel"),
-            dir.path().join("rust/hello/BUILD.bazel.dir/BUILD.bazel"),
+            dir.path().join("rust/tests/fixtures/hello/BUILD.bazel"),
+            dir.path()
+                .join("rust/tests/fixtures/hello/BUILD.bazel.dir/BUILD.bazel"),
         )
         .unwrap();
-        std::fs::create_dir_all(dir.path().join("rust/hello/BUILD.bazel")).unwrap();
+        std::fs::create_dir_all(dir.path().join("rust/tests/fixtures/hello/BUILD.bazel")).unwrap();
         let unreadable = run(dir.path());
         assert_eq!(unreadable.outcome, WriteOutcome::NotApplied as i32);
         assert_eq!(unreadable.failure_code, FAILURE_UNREADABLE_FILE);

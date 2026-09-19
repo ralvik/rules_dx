@@ -342,7 +342,8 @@ fn success_line(set: dx_update::sets::SetId, request: &dx_update::selector::SetR
     match request {
         dx_update::selector::SetRequest::Full => match set {
             dx_update::sets::SetId::Cargo => {
-                "updated cargo (rust/hello/Cargo.lock, cargo-bazel-lock.json)".to_owned()
+                "updated cargo (rust/tests/fixtures/hello/Cargo.lock, cargo-bazel-lock.json)"
+                    .to_owned()
             }
             dx_update::sets::SetId::Npm => "updated npm (pnpm-lock.yaml)".to_owned(),
             dx_update::sets::SetId::Maven => {
@@ -399,7 +400,7 @@ mod tests {
         }
 
         fn key_for(argv: &[String]) -> String {
-            if argv.contains(&"//rust/hello:hello".to_owned()) {
+            if argv.contains(&"//rust/tests/fixtures/hello:hello".to_owned()) {
                 "cargo".to_owned()
             } else if argv.contains(&"@pnpm//:pnpm".to_owned()) {
                 "npm".to_owned()
@@ -492,7 +493,11 @@ mod tests {
         let (code, _, err) = harness.run(&["update", "crates", "--dry-run"]);
         assert_eq!(code, 2, "{err}");
         let harness = Harness::new("update-dryrun-unowned");
-        let (code, _, err) = harness.run(&["update", "python/hello/hello.py", "--dry-run"]);
+        let (code, _, err) = harness.run(&[
+            "update",
+            "python/tests/fixtures/hello/hello.py",
+            "--dry-run",
+        ]);
         assert_eq!(code, 2, "{err}");
     }
 
@@ -560,7 +565,7 @@ mod tests {
     #[test]
     fn live_target_resolves_to_owning_set_only() {
         let runner = ScriptRunner::new(&[]);
-        let (code, out, err) = run_with(&["update", "//go/hello:hello"], &runner);
+        let (code, out, err) = run_with(&["update", "//go/tests/fixtures/hello:hello"], &runner);
         assert_eq!(code, 0, "{out}{err}");
         assert!(out.contains("Running update for go"), "{out}");
         assert!(out.contains("updated go (nothing to update)"), "{out}");

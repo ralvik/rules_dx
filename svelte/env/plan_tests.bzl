@@ -8,7 +8,7 @@ file hello_lib_plan.json
 field direct_sources=Hello.svelte
 field has_npm=False
 field npm_source_count=0
-field target=//svelte/hello:hello_lib
+field target=//svelte/tests/fixtures/hello:hello_lib
 field transitive_sources=Hello.svelte"""
 
 def env_plan_tests(name, subjects):

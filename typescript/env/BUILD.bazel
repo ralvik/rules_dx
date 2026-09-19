@@ -13,18 +13,21 @@ load("//typescript/env:plan_tests.bzl", "env_plan_tests")
 package(default_visibility = ["//visibility:public"])
 
 typescript_env_plan(
+    testonly = True,
     name = "hello_lib_plan",
-    target = "//typescript/hello:hello_lib",
+    target = "//typescript/tests/fixtures/hello:hello_lib",
 )
 
 typescript_env_plan(
+    testonly = True,
     name = "helper_plan",
-    target = "//typescript/entries:helper",
+    target = "//typescript/tests/fixtures/entries:helper",
 )
 
 typescript_env_plan(
+    testonly = True,
     name = "main_plan",
-    target = "//typescript/entries:main",
+    target = "//typescript/tests/fixtures/entries:main",
 )
 
 env_plan_tests(
