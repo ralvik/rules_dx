@@ -19,7 +19,11 @@ Ruff and Ty via checksummed standalone artifacts
 (`quality/artifacts/ruff.linux_x86_64.bzl`, `quality/artifacts/ty.linux_x86_64.bzl`);
 Biome, Buildifier, Taplo, and Vale via their standalone artifacts.
 Ty provenance is pinned: upstream `0.0.80` with URL, sha256, and licenses in
-`quality/artifacts/ty.linux_x86_64.bzl`.
+`quality/artifacts/ty.linux_x86_64.bzl`. Ty maps to `typecheck` over `python`/`python_stub`,
+Ruff maps to `format`/`lint` over the same classes, and Biome/ESLint/Prettier/`tsc` map
+JS/TS classes per `quality/adapters.bzl` with parsers in `quality/adapter/src/parsers/`
+(`ty.rs`, `ruff.rs`, `biome.rs`, `eslint.rs`, `prettier.rs`, `tsc.rs`); required-core
+quality mappings stay owned under issue #303.
 Additional-language adapters (Java, Kotlin, Scala, C#, F#, C/C++, Go) have no
 claimed adapter yet; per-tool qualification stays open under issue #307.
 Ruby and PowerShell tool cohorts stay deferred beyond v1 by

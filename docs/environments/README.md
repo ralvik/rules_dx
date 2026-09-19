@@ -28,4 +28,8 @@ upstream toolchain now; per-platform acquisition stays open under the native pla
 Ruby and PowerShell have no environment mapping: deferred beyond v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
 
+Required-core exact-target discovery stays owned under issue #303 per the
+[native plan](../native-toolchains.md#qualification-questions-and-delivery);
+current plans are provider-derived focused-target plans, not exact-target proof.
+
 Pinned by `bazel run //tools/ci:foundation_maps`.

@@ -353,13 +353,14 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Foundation-mapping guards (issues #7, #8; relates #6, #12): pins the
+# Foundation-mapping guards (issues #7, #8, #303; relates #6, #12): pins the
 # provider advertisement, upstream pins, Gazelle fixtures plus tests, env
 # plans, hello wrapper fixtures, lock authority, Ty provenance, framework
 # parser/compiler plus provider/region/dependency/test/env-quality mappings
 # and mixed composition, fixture markers, example workspaces, and
-# wrapper/ownership wiring. Functional checks only. Run by CI via
-# `bazel run //tools/ci:foundation_maps`.
+# wrapper/ownership wiring, plus the #303 build-script hermetic defaults,
+# Ty/quality adapter mappings, and native-gap ownership. Functional checks
+# only. Run by CI via `bazel run //tools/ci:foundation_maps`.
 sh_binary(
     name = "foundation_maps",
     srcs = ["foundation_maps.sh"],
