@@ -3,11 +3,12 @@
 #
 # Every `integration/<name>/` child workspace carrying MODULE.bazel is a
 # Stage 4 CLI-contract scenario that must actually run: referenced by a
-# driver (`tools/ci/e2e.sh` args, `tools/ci/e2e_format.sh`, or future
-# focused drivers) or by `tools/ci/BUILD.bazel` (sh_test args plus `:e2e`
-# suite membership). An orphan scenario directory would silently never
-# execute under either the explicit suite or wildcard suites (drivers
-# are `manual`), so this guard fails `bazel test //...` instead.
+# driver (`tools/ci/e2e.sh` args, `tools/ci/e2e_format.sh`,
+# `tools/ci/e2e_preset.sh`, or future focused drivers) or by
+# `tools/ci/BUILD.bazel` (sh_test args plus `:e2e` suite membership). An
+# orphan scenario directory would silently never execute under either the
+# explicit suite or wildcard suites (drivers are `manual`), so this guard
+# fails `bazel test //...` instead.
 #
 # The structural convention itself (child workspace layout, driver
 # reuse, manual sh_test + suite membership, explicit-only invocation,
@@ -27,10 +28,10 @@ dx_test_init
 
 for mod in integration/*/MODULE.bazel; do
   name="$(basename "$(dirname "$mod")")"
-  if grep -rq -F -e "$name" tools/ci/e2e.sh tools/ci/e2e_format.sh tools/ci/BUILD.bazel; then
+  if grep -rq -F -e "$name" tools/ci/e2e.sh tools/ci/e2e_format.sh tools/ci/e2e_preset.sh tools/ci/BUILD.bazel; then
     ok
   else
-    bad "integration/$name/ is orphaned: no reference in tools/ci/e2e.sh, tools/ci/e2e_format.sh, or tools/ci/BUILD.bazel (see integration/README.md 'Adding a case')"
+    bad "integration/$name/ is orphaned: no reference in tools/ci/e2e.sh, tools/ci/e2e_format.sh, tools/ci/e2e_preset.sh, or tools/ci/BUILD.bazel (see integration/README.md 'Adding a case')"
   fi
 done
 

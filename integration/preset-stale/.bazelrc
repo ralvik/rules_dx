@@ -1,0 +1,5 @@
+# Consumer-shaped root `.bazelrc` for the preset-stale pin (issue #332).
+# Preset flags live in the generated fragment; project overrides stay
+# explicit here and `user.bazelrc` stays last (never committed).
+import %workspace%/tools/bazelrc/preset.bazelrc
+try-import %workspace%/user.bazelrc

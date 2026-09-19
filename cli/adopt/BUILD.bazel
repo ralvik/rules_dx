@@ -23,6 +23,7 @@ dx_rust_crate(
         "src/lib.rs",
         "src/migrate.rs",
         "src/policy.rs",
+        "src/preset_fragment.rs",
         "src/scaffold.rs",
         "src/status.rs",
         "src/version.rs",

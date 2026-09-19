@@ -339,6 +339,27 @@ silently widened); non-registry handling is upstream-owned (Git branches may adv
 pins stay, path dependencies are upstream no-ops); upstream operation/report mappings are pinned
 in `dx_update::backend` and unit-tested.
 
+### `dx update --check` (preset stale gate, accepted)
+
+```text
+dx update --check
+```
+
+Non-mutating preset freshness gate: regenerates the vendored
+`tools/bazelrc/preset.bazelrc` fragment in memory, diffs against the
+checked-in file, and exits `0` clean / `1` stale (copies the
+[`dx generate --check`](generate.md#modes) exit contract). Selectors are
+ignored; only the fragment is checked. Root `.bazelrc` lines duplicating
+preset flags fail operationally (`update_failed`) like the
+`preset.update -- --verify-only` collision gate. Text prints the unified
+flag diff on stale; JSON emits `command_started` (`mode: check`),
+`error`, and `command_finished`. `--dry-run` plans without reading.
+Default `dx update` always regenerates the fragment atomically first
+(preserving overrides, creating `tools/bazelrc/` for consumers), then
+runs the selected dependency backends. See the
+[preset update loop](../../contributing/local-workflows.md#preset-update-loop)
+for the regen-and-review workflow.
+
 ## `dx bump`
 
 ```text

@@ -233,18 +233,15 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         }
     }
     if command == Command::Update {
-        // Update plans through `dx_update` (issue #19): dependency-set /
-        // package/target selectors with exact syntax in
-        // `dx_update::selector`, mutating without confirmation.
-        // Thresholds, standard reports, and check mode do not apply on
-        // this path; aggregate exit/report mappings follow
-        // `dx_update::outcome`/`report`.
-        if check {
-            return Err(ArgsError::UnsupportedOption {
-                command: command.name(),
-                option: "--check".to_owned(),
-            });
-        }
+        // Update plans through `dx_update` (issue #19) plus the vendored
+        // preset fragment (issue #332): dependency-set / package/target
+        // selectors with exact syntax in `dx_update::selector`, mutating
+        // without confirmation. `dx update --check` is the preset stale
+        // gate (non-mutating, exit 0 clean / 1 stale, copying the
+        // `generate --check` exit contract); it ignores selectors and
+        // checks only the fragment. Thresholds and standard reports do
+        // not apply on this path; aggregate exit/report mappings follow
+        // `dx_update::outcome`/`report` in default mode.
         if fail_on_name != "warning" {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -1093,13 +1090,12 @@ mod tests {
                 option: "--check".to_owned(),
             })
         );
-        assert_eq!(
-            parse(&args(&["update", "--check"])),
-            Err(ArgsError::UnsupportedOption {
-                command: "update",
-                option: "--check".to_owned(),
-            })
-        );
+        // `dx update --check` is the preset stale gate (issue #332):
+        // non-mutating, exit 0 clean / 1 stale, ignoring selectors.
+        let check = parse(&args(&["update", "--check"])).expect("parse update check");
+        assert_eq!(check.command, Command::Update);
+        assert!(check.check);
+        assert_eq!(check.mode(), "check");
         assert_eq!(
             parse(&args(&["update", "--fail-on=error"])),
             Err(ArgsError::UnsupportedOption {

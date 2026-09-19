@@ -1,6 +1,7 @@
 # Vendored Bazel execution preset -- GENERATED, do not edit.
-# Version-matched to Bazel 9.2.0 (`.bazelversion`); reviewed inventory in `tools/bazelrc/preset.py`.
+# Version-matched to Bazel 9.2.0 (`.bazelversion`) and dx 0.0.0 (`MODULE.bazel`); reviewed inventory in `tools/bazelrc/preset.py`.
 # Regenerate: `bazel run //tools/bazelrc:preset.update`.
+# Consumer refresh: `dx update` regenerates the fragment, `dx update --check` fails when stale.
 # Upstream-derived flags (reviewed):
 common --enable_bzlmod
 build --verbose_failures

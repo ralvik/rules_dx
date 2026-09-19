@@ -107,6 +107,36 @@ jobs:
         run: |
           echo "### build — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Command: bazel build //... (seed host, local-only)." >> "$GITHUB_STEP_SUMMARY"
+  preset-stale:
+    name: preset-stale (dx update --check, Linux once)
+    # Consumer-CI stale cell (issue #332): Linux-once preset freshness
+    # gate. Review-required with no auto-merge per O53
+    # (`dx_ci::preset_bot_auto_merge_allowed()==false`,
+    # `preset_regen_requires_review()==true`): a stale fragment fails
+    # here and must be fixed by a reviewed `dx update` plus flag-diff.
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-seed-
+      - name: Check preset freshness
+        run: |
+          bazel run --noshow_progress //tools/bazelrc:preset.update -- --verify-only
+          bazel run --noshow_progress //cli/cli:dx -- update --check
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### preset-stale — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commands: bazel run //tools/bazelrc:preset.update -- --verify-only; bazel run //cli/cli:dx -- update --check (Linux once, review-required, no auto-merge)." >> "$GITHUB_STEP_SUMMARY"
   test:
     name: test (bazel test //...)
     needs: [build]

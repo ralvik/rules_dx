@@ -124,7 +124,6 @@ sh_test(
         "$(rootpath //:.bazelversion)",
         "$(rootpath //:MODULE.bazel)",
         "$(rootpath //tools/bazelrc:preset.py)",
-        "$(rootpath //tools/bazelrc:bazelrc-preset.bzl)",
         "$(rootpath //.devcontainer:Dockerfile.prebuilt)",
         "$(rootpath //libs/testing:tested_stack.bzl)",
         "$(rootpath //.github/actions/setup-bazelisk:action.yml)",
@@ -137,7 +136,6 @@ sh_test(
         "//.github/actions/setup-bazelisk:action.yml",
         "//docs:contributing/local-workflows.md",
         "//libs/testing:tested_stack.bzl",
-        "//tools/bazelrc:bazelrc-preset.bzl",
         "//tools/bazelrc:preset.py",
         "//tools/sh:lib",
     ],
@@ -672,6 +670,35 @@ sh_test(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Preset-stale half of the CLI-contract pin (issue #332): the child
+# (`integration/preset-stale/`) has one dirty preset fragment, so
+# `dx update --check` must exit 1, `dx update go` must regenerate the
+# reviewed inventory (exit 0, no Bazel launch: `--check` is file I/O,
+# `go` is a no-op backend), and `--check` must then exit 0. Paired with
+# `//:preset_parity_test`, this proves the preset surface is not theater.
+# `manual` (+`exclusive`, `local`, `no-sandbox`): wildcard suites never
+# run it; CI invokes the explicit `:e2e` suite.
+sh_test(
+    name = "e2e_preset",
+    timeout = "short",
+    srcs = ["e2e_preset.sh"],
+    args = [
+        "$(rootpath //cli/cli:dx)",
+    ],
+    data = [
+        "//tools/sh:lib",
+        "//cli/cli:dx",
+    ],
+    tags = [
+        "exclusive",
+        "local",
+        "manual",
+        "no-sandbox",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 test_suite(
     name = "e2e",
     tags = [
@@ -686,6 +713,7 @@ test_suite(
         ":e2e_clean",
         ":e2e_dirty",
         ":e2e_format_roundtrip",
+        ":e2e_preset",
     ],
 )
 

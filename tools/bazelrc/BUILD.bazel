@@ -2,8 +2,9 @@
 
 `bazel run //tools/bazelrc:preset.update` regenerates the checked-in
 fragment from the reviewed inventory in `preset.py`;
-`preset.update_test` pins the version-matched pin and the flag inventory
-via file substring checks on the fragment.
+`preset.update_test` pins the Bazel pin, the per-release dx stamp, and
+the flag inventory via file substring checks on the fragment. Consumers
+refresh via `dx update` and gate staleness via `dx update --check`.
 """
 
 load("@rules_python//python:defs.bzl", "py_binary")

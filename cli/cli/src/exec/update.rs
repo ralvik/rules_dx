@@ -1,4 +1,5 @@
-//! Update command execution: live resolver backends with continuation (issue #19).
+//! Update command execution: live resolver backends with continuation (issue #19)
+//! plus the vendored preset fragment (issue #332).
 
 use super::common::*;
 use crate::args::{Command, Invocation};
@@ -9,26 +10,18 @@ use dx_output::{
 };
 use std::collections::BTreeMap;
 
-/// Runs `dx update` (issue #19): dependency-set/package/target selectors
-/// through `dx_update`, mutating without confirmation. `--dry-run` prints
-/// the planned selection and exits `0` without launching; live execution
-/// runs resolver-owned backends per set with independent-set continuation
-/// (preserved successes, reported failures, blocked dependents via
-/// `dx_update::outcome`), per-set manifest/lock/report output, and
-/// aggregate exit-code selection via `dx_update::report` (`0` clean, `1`
-/// any failed set). Usage errors exit `2` before any launch.
+/// Runs `dx update` (issue #19) with the preset fragment (issue #332):
+/// default mode updates dependency-set/package/target selectors through
+/// `dx_update` (mutating without confirmation) plus the preset fragment
+/// atomically; `--check` is the non-mutating preset stale gate (exit `0`
+/// clean / `1` stale, copying the `generate --check` exit contract) and
+/// ignores selectors. `--dry-run` plans without launching or touching
+/// the tree. Usage errors exit `2` before any launch.
 pub(crate) fn execute_update(invocation: &Invocation, env: Env<'_>) -> i32 {
     debug_assert!(
         invocation.command == Command::Update,
         "update dispatch guards commands"
     );
-    let Env {
-        workspace,
-        runner,
-        out,
-        err,
-        ..
-    } = env;
     match plan_reports(
         invocation.command,
         &invocation.reports,
@@ -36,15 +29,88 @@ pub(crate) fn execute_update(invocation: &Invocation, env: Env<'_>) -> i32 {
         invocation.dry_run,
     ) {
         Ok(_) => {}
-        Err(error) => return pre_exec(err, &error.to_string()),
+        Err(error) => return pre_exec(env.err, &error.to_string()),
     }
+    let verbose =
+        matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet;
+    // Preset stale gate: non-mutating, preset-only, no backend launches.
+    if invocation.check {
+        let Env {
+            workspace,
+            out,
+            err,
+            ..
+        } = env;
+        let mode = "check";
+        if invocation.dry_run {
+            if invocation.output == OutputMode::Json {
+                if let Ok(event) = command_started(invocation.command.name(), true, mode) {
+                    let _ = write_event(out, &event);
+                }
+                let finished = command_finished(0, &FinishedCounts::default());
+                let _ = write_event(out, &finished);
+            } else if verbose {
+                let _ = writeln!(out, "Would check preset fragment");
+            }
+            return 0;
+        }
+        if invocation.output == OutputMode::Json {
+            if let Ok(event) = command_started(invocation.command.name(), false, mode) {
+                let _ = write_event(out, &event);
+            }
+        } else if verbose {
+            let _ = writeln!(out, "Running update --check for preset");
+        }
+        match dx_adopt::check_preset(workspace) {
+            Ok(()) => {
+                if invocation.output == OutputMode::Json {
+                    let finished = command_finished(0, &FinishedCounts::default());
+                    let _ = write_event(out, &finished);
+                } else if verbose {
+                    let _ = writeln!(out, "preset clean");
+                }
+                0
+            }
+            Err(dx_adopt::PresetError::Stale { detail }) => {
+                if invocation.output == OutputMode::Json {
+                    if let Ok(event) =
+                        error_event(CODE_UPDATE_FAILED, &detail, None, None, Some("execute"))
+                    {
+                        let _ = write_event(out, &event);
+                    }
+                    let finished = command_finished(1, &FinishedCounts::default());
+                    let _ = write_event(out, &finished);
+                } else {
+                    // Check failure (like `generate --check`): report the
+                    // diff to stdout, exit 1, no stderr.
+                    let _ = writeln!(out, "{detail}");
+                }
+                1
+            }
+            Err(error) => {
+                // Owned collisions and I/O failures are operational.
+                operational(invocation, out, err, CODE_UPDATE_FAILED, &error.to_string())
+            }
+        }
+    } else {
+        execute_update_default(invocation, env, verbose)
+    }
+}
+
+#[allow(clippy::too_many_lines)]
+fn execute_update_default(invocation: &Invocation, env: Env<'_>, verbose: bool) -> i32 {
+    let Env {
+        workspace,
+        runner,
+        out,
+        err,
+        ..
+    } = env;
     let resolved = match dx_update::selector::resolve(&invocation.targets) {
         Ok(resolved) => resolved,
         Err(error) => return pre_exec(err, &error.to_string()),
     };
     let summary = display_summary(&resolved);
-    let verbose =
-        matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet;
     if invocation.dry_run {
         if invocation.output == OutputMode::Json {
             if let Ok(event) = command_started(invocation.command.name(), true, "default") {
@@ -54,6 +120,7 @@ pub(crate) fn execute_update(invocation: &Invocation, env: Env<'_>) -> i32 {
             let _ = write_event(out, &finished);
         } else if verbose {
             let _ = writeln!(out, "{summary}");
+            let _ = writeln!(out, "Would update preset fragment");
         }
         return 0;
     }
@@ -63,6 +130,14 @@ pub(crate) fn execute_update(invocation: &Invocation, env: Env<'_>) -> i32 {
         }
     } else if verbose {
         let _ = writeln!(out, "{summary}");
+    }
+    // Preset first, atomically, preserving overrides (fail fast on
+    // collisions; independent of dependency backends).
+    if let Err(error) = dx_adopt::update_preset(workspace) {
+        return operational(invocation, out, err, CODE_UPDATE_FAILED, &error.to_string());
+    }
+    if verbose && invocation.output != OutputMode::Json {
+        let _ = writeln!(out, "updated preset (tools/bazelrc/preset.bazelrc)");
     }
     // Live: run backends in sorted set order, continuing independent sets
     // after failures. V1 sets are independent (distinct locks), so the
@@ -434,10 +509,13 @@ mod tests {
     fn run_with(argv: &[&str], runner: &ScriptRunner) -> (i32, String, String) {
         use crate::args::parse;
         use crate::exec::{execute, Env};
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let id = COUNTER.fetch_add(1, Ordering::SeqCst);
         let words: Vec<String> = argv.iter().map(|word| (*word).to_owned()).collect();
         let invocation = parse(&words).expect("parse");
-        let workspace = temp_dir("update-live");
-        let temp = temp_dir("update-live-tmp");
+        let workspace = temp_dir(&format!("update-live-{id}"));
+        let temp = temp_dir(&format!("update-live-tmp-{id}"));
         let query = ScriptQuery {
             calls: RefCell::new(Vec::new()),
             outputs: RefCell::new(Vec::new()),
@@ -612,5 +690,140 @@ mod tests {
             .map(|event| event["event"].as_str().expect("event"))
             .collect();
         assert_eq!(kinds, vec!["command_started", "command_finished"]);
+    }
+
+    #[test]
+    fn check_clean_passes_without_launching() {
+        let harness = Harness::new("update-check-clean");
+        harness.write_source(
+            ".bazelrc",
+            "import %workspace%/tools/bazelrc/preset.bazelrc\ntry-import %workspace%/user.bazelrc\n",
+        );
+        harness.write_source(
+            "tools/bazelrc/preset.bazelrc",
+            &dx_adopt::render_preset_fragment(),
+        );
+        let (code, out, err) = harness.run(&["update", "--check"]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(out.contains("Running update --check for preset"), "{out}");
+        assert!(out.contains("preset clean"), "{out}");
+        assert_eq!(err, "", "{err}");
+        assert!(
+            harness.seen_env.borrow().is_empty(),
+            "check launches nothing"
+        );
+    }
+
+    #[test]
+    fn check_stale_fails_with_diff_and_no_mutation() {
+        let harness = Harness::new("update-check-stale");
+        harness.write_source(
+            ".bazelrc",
+            "import %workspace%/tools/bazelrc/preset.bazelrc\ntry-import %workspace%/user.bazelrc\n",
+        );
+        harness.write_source("tools/bazelrc/preset.bazelrc", "# dirty\n");
+        let (code, out, err) = harness.run(&["update", "--check"]);
+        assert_eq!(code, 1, "{out}{err}");
+        assert!(out.contains("stale"), "{out}");
+        assert!(out.contains("checked-in"), "{out}");
+        assert_eq!(err, "", "{err}");
+        // Check never writes.
+        assert_eq!(
+            std::fs::read_to_string(harness.workspace.join("tools/bazelrc/preset.bazelrc"))
+                .expect("read"),
+            "# dirty\n"
+        );
+        assert!(harness.seen_env.borrow().is_empty());
+    }
+
+    #[test]
+    fn check_missing_fails_closed() {
+        let harness = Harness::new("update-check-missing");
+        harness.write_source(
+            ".bazelrc",
+            "import %workspace%/tools/bazelrc/preset.bazelrc\n",
+        );
+        let (code, out, err) = harness.run(&["update", "--check"]);
+        assert_eq!(code, 1, "{out}{err}");
+        assert!(out.contains("stale"), "{out}");
+        assert_eq!(err, "", "{err}");
+    }
+
+    #[test]
+    fn check_collision_fails_operational() {
+        let harness = Harness::new("update-check-collision");
+        harness.write_source(
+            ".bazelrc",
+            "import %workspace%/tools/bazelrc/preset.bazelrc\ncommon --enable_bzlmod\n",
+        );
+        harness.write_source(
+            "tools/bazelrc/preset.bazelrc",
+            &dx_adopt::render_preset_fragment(),
+        );
+        let (code, _, err) = harness.run(&["update", "--check"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("update_failed"), "{err}");
+        assert!(err.contains("duplicates preset"), "{err}");
+    }
+
+    #[test]
+    fn check_json_reports_stale_and_clean() {
+        let clean = Harness::new("update-check-json-clean");
+        clean.write_source(
+            ".bazelrc",
+            "import %workspace%/tools/bazelrc/preset.bazelrc\n",
+        );
+        clean.write_source(
+            "tools/bazelrc/preset.bazelrc",
+            &dx_adopt::render_preset_fragment(),
+        );
+        let (code, out, err) = clean.run(&["update", "--check", "--output=json"]);
+        assert_eq!(code, 0, "{out}{err}");
+        let events: Vec<serde_json::Value> = out
+            .lines()
+            .map(serde_json::from_str)
+            .collect::<Result<_, _>>()
+            .expect("NDJSON");
+        assert_eq!(events[0]["event"], serde_json::json!("command_started"));
+        assert_eq!(events[0]["mode"], serde_json::json!("check"));
+        assert_eq!(
+            events.last().expect("finished")["exit_code"],
+            serde_json::json!(0)
+        );
+
+        let dirty = Harness::new("update-check-json-stale");
+        dirty.write_source(
+            ".bazelrc",
+            "import %workspace%/tools/bazelrc/preset.bazelrc\n",
+        );
+        dirty.write_source("tools/bazelrc/preset.bazelrc", "# dirty\n");
+        let (code, out, err) = dirty.run(&["update", "--check", "--output=json"]);
+        assert_eq!(code, 1, "{out}{err}");
+        assert!(out.contains("\"event\":\"error\""), "{out}");
+        assert!(out.contains("update_failed"), "{out}");
+    }
+
+    #[test]
+    fn default_updates_preset_atomically() {
+        // Go is a no-op backend (no launch), so the preset fix is the
+        // only mutation; proves default mode regenerates the fragment.
+        let harness = Harness::new("update-default-preset");
+        harness.write_source(
+            ".bazelrc",
+            "import %workspace%/tools/bazelrc/preset.bazelrc\ntry-import %workspace%/user.bazelrc\n",
+        );
+        harness.write_source("tools/bazelrc/preset.bazelrc", "# dirty\n");
+        let (code, out, err) = harness.run(&["update", "go"]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(
+            out.contains("updated preset (tools/bazelrc/preset.bazelrc)"),
+            "{out}"
+        );
+        assert_eq!(
+            std::fs::read_to_string(harness.workspace.join("tools/bazelrc/preset.bazelrc"))
+                .expect("read"),
+            dx_adopt::render_preset_fragment()
+        );
+        assert_eq!(err, "", "{err}");
     }
 }

@@ -118,21 +118,28 @@ owner.
 ## Preset Update Loop
 
 Shared Bazel execution flags live in the vendored preset (`tools/bazelrc`),
-version-matched to `.bazelversion`. Review and change flags only through
-the inventory in `tools/bazelrc/preset.py`:
+version-matched to `.bazelversion` and stamped with the per-release
+`dx` version (`MODULE.bazel`). Review and change flags only through
+the inventory in `tools/bazelrc/preset.py` (mirrored in
+`cli/adopt/src/preset_fragment.rs`; `//:preset_parity_test` proves
+byte-identity):
 
 ```sh
 bazel run //tools/bazelrc:preset.update -- --verify-only
 bazel run //tools/bazelrc:preset.update
+bazel run //cli/cli:dx -- update --check
+bazel run //cli/cli:dx -- update go
 ```
 
-The verify command rejects stale generated files, prints the flag diff
-under review, and rejects root `.bazelrc` lines that duplicate preset
-flags (reconcile by removing the owned duplicates; project overrides stay
-explicit and `user.bazelrc` stays last). `preset.update_test` pins the pin
-and the inventory in `bazel test //...`. Owned build profiles
-(`dx_debug`/`dx_dev`/`dx_release`) are reviewed the same way; see
-[ADR 0021](../decisions/0021-build-profiles.md).
+The verify and `--check` commands reject stale generated files, print
+the flag diff under review, and reject root `.bazelrc` lines that
+duplicate preset flags (reconcile by removing the owned duplicates;
+project overrides stay explicit and `user.bazelrc` stays last).
+`preset.update_test` pins the Bazel pin, the dx stamp, and the inventory
+in `bazel test //...`; `dx update` regenerates the consumer fragment
+atomically and `--check` gates staleness (exit `0` clean / `1` stale).
+Owned build profiles (`dx_debug`/`dx_dev`/`dx_release`) are reviewed the
+same way; see [ADR 0021](../decisions/0021-build-profiles.md).
 
 Version bumps flow through the native widen-one-requirement loop
 (delivered, issue #260) alongside Renovate (complementary roles decided in
