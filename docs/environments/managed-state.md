@@ -131,22 +131,29 @@ without replacement. The command then atomically replaces `.dx/setups/current` a
 lock. No command exposes a mixed old/new pair or uses sequential facade replacement with best-effort
 rollback.
 
-Lock acquisition waits at most ten seconds, measured with a monotonic clock, then fails with an
-actionable busy diagnostic rather than hanging indefinitely. The selected implementation route is
+Accepted: lock acquisition waits at most ten seconds, measured with a monotonic
+clock, then fails with an actionable busy diagnostic rather than hanging
+indefinitely. The selected implementation route is
 Rust's standard-library [`File::try_lock`](https://doc.rust-lang.org/stable/std/fs/struct.File.html#method.try_lock),
 stable since Rust 1.89, rather than an additional locking crate. It reports
 `TryLockError::WouldBlock` for contention versus `TryLockError::Error` for other failures; retry
 only contention until the deadline and fail other lock errors immediately. The mapping is Unix
 `flock(LOCK_EX|LOCK_NB)` and Windows `LockFileEx` exclusive non-blocking, and locks are advisory and
-released when all duplicated/inherited handles close. Same-handle relock behavior is unspecified,
-append-only opens fail to lock on Windows, and crash release follows handle closure. Use a dedicated
+released when all duplicated/inherited handles close. Use a dedicated
 lock file opened for reading and writing without truncation, not the setup record or current pointer.
+The lock handle must not be cloned or inherited by child processes. PID files,
+stale-lock age checks, and deleting the lock path never authorize a commit.
+Pinned by `cli/env` and `cli/atomic_fs` unit tests, including contention timeout,
+immediate non-contention errors, no child-handle inheritance, drop-release, and
+crash/interruption preservation of the prior pointer.
 
-The OS lock coordinates cooperating commands; it is not a security boundary. Ownership ends when
-all handles to the locked file description close, so the lock handle must not be cloned or inherited
-by child processes. PID files, stale-lock age checks, and deleting the lock path never authorize a
-commit. This selection does not establish cross-platform correctness; locking behavior is
-implemented in `cli/env/src` and pinned by its unit tests.
+Open: NFS, append-only, and same-handle relock. No NFS evidence exists and NFS
+correctness is not claimed. The implementation never opens the lock append-only;
+append-only opens failing to lock on Windows is a platform fact, not a pinned
+case. Same-handle relock behavior is unspecified. Crash release follows handle
+closure on the seed host; cross-platform crash-release beyond that stays open.
+The OS lock coordinates cooperating commands; it is not a security boundary.
+Locking behavior is implemented in `cli/env/src` and pinned by its unit tests.
 
 ## Installation And Ownership
 
@@ -191,17 +198,15 @@ cost metadata plus links while Bazel's output lifecycle bounds artifact bytes. T
 age policy, count limit, or automatic retention bound; explicit cleanup runs only through
 [`dx clean`](../cli/commands/check-fix-clean.md).
 
-A user may explicitly remove an unselected managed generation with `dx clean`
+Accepted: a user may explicitly remove an unselected managed generation with `dx clean`
 when it is no longer in use. A setup
 record may be removed only when it is neither `.dx/setups/current` nor used by an active process; the
 current link and its selected target are never cleanup candidates. `dx clean`
 refuses unmanaged or digest-spoofed paths and never deletes tracked sources,
 BUILD files, Bazel outputs (beyond an explicit `dx clean --bazel` forward),
-shell profiles, or global PATH entries.
-
-A user may explicitly remove an unselected managed generation when it is no longer in use. A setup
-record may be removed only when it is neither `.dx/setups/current` nor used by an active process; the
-current link and its selected target are never cleanup candidates.
+shell profiles, or global PATH entries. In-use means observed live by the
+`/proc` scan; reclaimable bytes count links and metadata only. Mechanics live in
+[`dx clean`](../cli/commands/check-fix-clean.md#dx-clean).
 
 `bazel clean`, an output-base change, or removed outputs can leave managed links dangling. Links have
 the host's ordinary missing-target behavior and never invoke Bazel to repair themselves. Recovery is
@@ -229,7 +234,8 @@ Managed-state tests must cover:
   paths with spaces, and absence of junction, copy, launcher, or automatic fallback projection modes.
 - Atomic whole-tree `.dx/bin` replacement, stale tool removal, valid and invalid ownership markers,
   independence from setup selection, and no shell-profile, registry, or global PATH mutation.
-- Retention with explicit `dx clean` pruning only, safe explicit removal of unselected records, and stale-link
+- Retention with explicit `dx clean` pruning only, live-process in-use preservation,
+  reclaimable-bytes reporting, safe explicit removal of unselected records, and stale-link
   recovery only through explicit workflows.
 
 Workflow-specific tests remain in [Developer Environments](environment.md#test-requirements),

@@ -53,18 +53,24 @@ aspect derives generated source artifacts and language import/source roots from 
 configured target's transitive closure. It builds and selects only that exact
 projection; no generated sibling target is required for the selected consumer.
 
-When the label is a registered bare schema target rather than a language consumer,
-codegen builds every declared generated-language projection that directly or through a
-tested projection edge consumes that schema. Because an aspect cannot traverse reverse
-dependencies, the CLI asks Bazel query for registered projection reverse dependents and
-passes the returned labels back to Bazel analysis. Rust does not infer wrappers or
+Accepted: `dx codegen <target>` selects only that configured target's
+transitive closure. No reverse-dependency expansion runs: `plan_managed`
+passes the single label to one Bazel build with the codegen aspect, and an
+empty shard set selects an empty exact projection.
+
+Open: bare-schema expansion to every registered generated-language
+projection consuming that schema. An aspect cannot traverse reverse
+dependencies, so this needs a Bazel query for registered projection reverse
+dependents passed back to analysis. Not implemented; no query step exists
+today. Rust does not infer wrappers or
 language semantics. Missing wrappers are absent BUILD graph facts, not stale-metadata
 errors; users run `dx generate` when they want Gazelle to create them.
 
-`dx setup <bare-schema>` uses the same all-projection expansion and carries the selected
-environment generation forward because the schema has no environment capability. Its first-run
-empty counterpart and later carry-forward behavior follow
-[Managed Environment State](managed-state.md#selection-and-carry-forward).
+Accepted: `dx setup <target>` with a capability-absent side carries the
+selected generation forward, or the managed empty generation on first run
+(see [Managed Environment State](managed-state.md#selection-and-carry-forward)).
+A bare schema therefore carries the environment forward today; all-projection
+expansion waits on the open query above.
 
 Paths, directories, target patterns, multiple labels, profiles, and language selectors
 are rejected. A compatible target whose closure has no generated sources successfully
@@ -136,10 +142,11 @@ declared inputs and outputs; aspects collect providers and may adapt outputs but
 infer late dependency edges.
 
 A generated logical module/path that conflicts with checked-in source also fails before
-selection. Root ordering never silently chooses checked-in or generated content. An
-integration may permit a generated replacement only through an explicit tested adapter
-contract identifying the replaced source and generated artifact; a generic user flag
-cannot waive the conflict. Generated-to-generated duplicates require identical
+selection. Root ordering never silently chooses checked-in or generated content. Accepted:
+fail-closed with no generic waiver flag; staging refuses the workspace collision
+before selection. Open: zero adapters currently define an explicit tested
+replacement contract identifying a replaced source and generated artifact, so
+every such collision fails today. Generated-to-generated duplicates require identical
 artifacts and explicit mergeable semantics, otherwise they fail.
 
 Each ruleset adapter defines the narrow tested edge and provider mapping needed to
@@ -224,8 +231,9 @@ Codegen tests must cover:
   closure selection with equivalent effective roots and outputs.
 - Inclusion of production, test, example, and development projections in repository-
   wide mode without performance-motivated omission.
-- Bare-schema selection of every registered language projection and consumer-target
-  closure selection without reverse-dependency inference.
+- Bare-schema exact-closure selection today; all-projection reverse-dependent
+  expansion stays open with no query step. Consumer-target
+  closure selection requires no reverse-dependency inference.
 - Empty exact projections and transitions between root, exact, and empty selections.
 - Gazelle-created wrappers and current BUILD-graph query selection for every supported
   generator/language pair.
@@ -236,8 +244,8 @@ Codegen tests must cover:
 - Per-contributor Protobuf shards, transitive depset deduplication, deterministic merge,
   reserved-suffix recognition only among BEP-reported files, and rejection of missing,
   duplicate, or unreported referenced artifacts.
-- Checked-in/generated logical path conflicts, explicit adapter replacement contracts,
-  and no root-order shadowing.
+- Checked-in/generated logical path collisions fail closed today; zero adapters
+  define a replacement contract. No root-order shadowing.
 - Workspace-relative mirror paths, cross-language coexistence, leaf symlinks to Bazel
   outputs, and no root or source-directory overlay facade.
 - Read-only generated artifacts and exclusion from formatting or replacement.
