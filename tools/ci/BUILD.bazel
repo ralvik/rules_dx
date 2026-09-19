@@ -701,6 +701,21 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# File-family quality qualification harness (issue #313): proves the as-built
+# file-family record with fixture evidence and owned gaps, without claiming
+# Supported — provider-class applicability with never-suffix inference,
+# Starlark/Buildifier plus TOML/Taplo adapter-backed evidence, parity-deferred
+# CSS/djlint/buf/yaml/keep-sorted/shell plus cue/jsonnet/pkl/qml/terraform
+# routes with owner plus frozen acquisition; deferred execution, exact pins,
+# and platform/consumer/release gaps owned under #313.
+# Run by CI via `bazel run //tools/ci:file_family_qualification`.
+sh_binary(
+    name = "file_family_qualification",
+    srcs = ["file_family_qualification.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],

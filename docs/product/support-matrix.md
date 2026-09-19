@@ -666,9 +666,13 @@ follow-up issues under the owning tracker before implementation.
 
 Applicable capabilities also enter the v1 feasibility review. Their application columns remain
 explicit so formatter or linter availability cannot be mistaken for complete foundation support.
-Applicability verification, including existing `N/A` cells, is tracked in
-open work rather than inferred from a file suffix. File-family quality integrations
-stay open under issue #313 (applicability verification plus release evidence per family).
+Applicability verification, including existing `N/A` cells, is owned by the registry
+rather than inferred from a file suffix. File-family quality integrations
+qualified seed-only under issue #313 (`bazel run //tools/ci:file_family_qualification`;
+provider-class applicability with never-suffix inference, Starlark/Buildifier plus TOML/Taplo
+adapter-backed evidence, parity-deferred routes with owner plus frozen acquisition per family;
+adapter execution, exact pins/digests/rule-sets/adapter mappings per family, and platform plus
+consumer plus release evidence stay owned gaps; no Supported claim).
 
 | Source family | Build | Test | Dependencies | Generate | Environment | IDE | Coverage | Quality |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
