@@ -49,6 +49,12 @@ standard dogfood gates.
   renderer/site artifacts, cache and determinism measurements, guide prose with
   guide-step verification, and first-hour timing proof stay open under issue #310
   (see [Documentation](../documentation/README.md#contracts)); no working site claimed.
+  IR plus planning records with fixture evidence qualified seed-only under #310
+  (`bazel run //tools/ci:docs_pipeline_qualification`; versioned IR schema,
+  codec roundtrip/parity/ordering/compat, dx_docs planning units, frozen
+  contracts, removed stub behind ADR 0020, with adapter runs, renderer/site
+  execution, rebuild proof, link completeness, guide-step wiring, timing proof,
+  and pin-bump/drift as owned gaps).
 - **Environment/codegen**: deferred/unsupported records plus fixture
   evidence qualified seed-only under #309
   (`bazel run //tools/ci:env_codegen_qualification`; public protocol,
@@ -112,8 +118,8 @@ Accepted record of the as-built close-out battery. The full battery runs in
   guards, wrapper sources, foundation maps, registry singularity, backlog
   contracts, GHCR hygiene and publish guards, perf/corpus verification,
   widen-update loop, quality/execution/distribution/backlog guards,
-  `:supported_evidence_gate`, `:quality_adapters_parity`, and
-  `:env_codegen_qualification`.
+  `:supported_evidence_gate`, `:quality_adapters_parity`,
+  `:env_codegen_qualification`, and `:docs_pipeline_qualification`.
 - `dogfood-lint`, `dogfood-format`, `dogfood-typecheck`: corpus converge then
   `--check` no-op proof, plus lane-A trees `//python/... //javascript/...
   //rust/hello/...` where enforcing.
@@ -121,7 +127,7 @@ Accepted record of the as-built close-out battery. The full battery runs in
 
 Green here (static guards on a clean tree, no full rebuild): `e2e_cases`
 3/3, `supported_evidence_gate` 20/20, `distribution_closeout_guards` 35/35,
-`env_codegen_qualification` 23/23.
+`env_codegen_qualification` 23/23, `docs_pipeline_qualification` 26/26.
 Full `build`/`test` green is owned by CI on this tree; the last full-tree
 record is noted on the issue, not re-claimed here.
 
@@ -139,7 +145,12 @@ Remaining reds stay owned gaps, not green claims:
   (`bazel run //tools/ci:env_codegen_qualification`; no junction/copy
   fallback, no checksum-only fallback, no third-party plugin claim; bootstrap,
   fidelity, spaces, stale-clean, IDE, atomic-commit, BEP, projection,
-  root-candidate, and cold/warm tests stay owned gaps).
+  root-candidate, and cold/warm tests stay owned gaps). Docs-pipeline IR plus
+  planning records with fixture evidence are qualified seed-only under #310
+  (`bazel run //tools/ci:docs_pipeline_qualification`; versioned IR, codec,
+  planning, frozen contracts, removed stub; adapter runs, renderer/site
+  execution, rebuild proof, link completeness, guide-step wiring, timing proof,
+  and pin-bump/drift stay owned gaps; no working site claimed).
 - Consumer-CI qualification stays open under #312; platform qualification
   beyond the seed host stays open under #298.
 - Non-dogfed paths stay open under #324.

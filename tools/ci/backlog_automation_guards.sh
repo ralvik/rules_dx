@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Backlog/automation guards (issues #85, #254, #260).
+# Backlog/automation guards (issues #85, #254, #260, #310).
 #
 # Per-foundation external-consumer examples + acquisition/laziness proof
 # (#85) delivered across readme, static, query, aquery, and runtime slices;
@@ -9,13 +9,13 @@
 # retained as fallback (disposition vs #3 open).
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (22 checks): examples ownership + starter callers + laziness
+# today (23 checks): examples ownership + starter callers + laziness
 # slices + attribution + full index breadth + Scala/Polyglot entries +
 # mixed disposition, LCOV preset pin + inventory backing + comment landing,
 # Renovate fallback + full manager set + loop policy + Monday schedule
 # + schedule policy, never-rewrites pin, prior harnesses green,
-# and the delivered widen implementation. Reverse queries and adapter runs
-# stay open under their
+# delivered widen implementation, plus the #310 docs-pipeline tracker.
+# Reverse queries and adapter runs stay open under their
 # issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:backlog_automation_guards`,
@@ -223,6 +223,13 @@ if ! grep -rn -F -e 'codecov-action' .github/workflows/ci.yml 2>/dev/null | grep
   ok
 else
   bad "a third-party coverage action appeared in ci.yml against #254 policy"
+fi
+
+# #310 docs-pipeline gaps stay tracked in the documentation contract.
+if grep -q -F -e 'Docs pipeline gaps stay open under issue #310' docs/documentation/README.md; then
+  ok
+else
+  bad "documentation README lost its #310 docs-pipeline tracker record"
 fi
 
 echo "backlog automation guards harness: $pass passed, $fail failed"

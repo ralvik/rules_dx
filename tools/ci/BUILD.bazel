@@ -669,6 +669,20 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Docs-pipeline qualification harness (issue #310): proves the as-built
+# docs-pipeline record with fixture evidence and owned gaps, without
+# claiming a working site — versioned IR schema plus codec plus dx_docs
+# planning with unit tests, frozen design contracts, removed dx docs stub
+# behind ADR 0020, thirteen adapter scopes plus renderer/site plus rebuild
+# plus link plus guide-step plus timing plus pin-bump gaps owned under
+# #310. Run by CI via `bazel run //tools/ci:docs_pipeline_qualification`.
+sh_binary(
+    name = "docs_pipeline_qualification",
+    srcs = ["docs_pipeline_qualification.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
