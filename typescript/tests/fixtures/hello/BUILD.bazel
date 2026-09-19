@@ -16,6 +16,7 @@ typescript_project(
         "hello.ts",
         "main.ts",
     ],
+    declaration = True,
     transpiler = "tsc",
     tsconfig = "tsconfig.json",
 )

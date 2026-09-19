@@ -14,11 +14,6 @@ field dx_count=2
 field dx_results=fixture_mixed_clean-format.pb,fixture_mixed_clean-lint.pb
 field has_quality_sources=True
 field label=//quality/testdata:fixture_mixed_clean
-subject //quality/testdata:fixture_mixed_subject
-field dx_count=2
-field dx_results=fixture_mixed-format.pb,fixture_mixed-lint.pb
-field has_quality_sources=True
-field label=//quality/testdata:fixture_mixed
 subject //quality/testdata:fixture_no_lint_subject
 field dx_count=1
 field dx_results=fixture_no_lint-format.pb

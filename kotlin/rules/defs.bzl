@@ -176,13 +176,14 @@ def kotlin_test(name, srcs, visibility = None, **kwargs):
     """
     test_srcs = srcs if srcs != None else []
     upstream_kwargs = dict(kwargs)
-    upstream_kwargs.setdefault("tags", ["manual"])
 
-    # The private test is an implementation detail: tag it manual so
-    # `bazel test //...` exercises the public wrapper target only. Preserve
-    # caller tags by appending.
+    # The private upstream test stays an implementation detail via private
+    # visibility; both it and the public wrapper run under `bazel test //...`
+    # (issue #406: no manual; double-execution is the cost of green suites).
     if "tags" in kwargs:
-        upstream_kwargs["tags"] = list(kwargs["tags"]) + ["manual"]
+        upstream_kwargs["tags"] = list(kwargs["tags"])
+    elif "tags" in upstream_kwargs:
+        upstream_kwargs.pop("tags")
     upstream_kwargs["visibility"] = ["//visibility:private"]
     if srcs != None:
         upstream_kwargs["srcs"] = srcs

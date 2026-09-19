@@ -174,13 +174,16 @@ def python_test(name, srcs, visibility = None, **kwargs):
     if rejection != None:
         fail(rejection)
     upstream_kwargs = dict(kwargs)
-    upstream_kwargs.setdefault("tags", ["manual"])
 
-    # The private test is an implementation detail: tag it manual so
-    # `bazel test //...` exercises the public wrapper target only. Preserve
-    # caller tags by appending.
-    if "tags" in kwargs:
-        upstream_kwargs["tags"] = list(kwargs["tags"]) + ["manual"]
+    # The private upstream test stays an implementation detail via private
+    # visibility; both it and the public wrapper run under `bazel test //...`
+    # (issue #406: no manual; double-execution is the cost of green suites).
+    if "tags" in upstream_kwargs:
+        kept = [t for t in upstream_kwargs["tags"] if t != "manual"]
+        if len(kept) > 0:
+            upstream_kwargs["tags"] = kept
+        else:
+            upstream_kwargs.pop("tags")
     upstream_kwargs["visibility"] = ["//visibility:private"]
     if srcs != None:
         upstream_kwargs["srcs"] = srcs

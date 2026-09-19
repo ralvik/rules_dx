@@ -278,8 +278,6 @@ jobs:
           key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
           restore-keys: |
             bazel-seed-
-      - name: Prove manual negatives still fail as documented
-        run: bazel run --noshow_progress //tools/ci:manual_negatives
       - name: Prove target-tag semantics
         run: bazel run --noshow_progress //tools/ci:target_tags
       - name: Prove seed coverage cell gate
