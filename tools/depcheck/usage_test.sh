@@ -15,13 +15,16 @@ checker_in="$2"
 root_in="$3"
 
 # `resolve` removed (issue #319): use dx_resolve_runfile from tools/sh/lib.sh.
-checker="$(dx_resolve_runfile "$checker_in")" || { echo "FAIL: cannot resolve $checker_in" >&2; exit 1; }
-root="$(dx_resolve_runfile "$root_in")" || { echo "FAIL: cannot resolve $root_in" >&2; exit 1; }
+checker="$(dx_resolve_runfile "$checker_in")" || {
+  echo "FAIL: cannot resolve $checker_in" >&2
+  exit 1
+}
+root="$(dx_resolve_runfile "$root_in")" || {
+  echo "FAIL: cannot resolve $root_in" >&2
+  exit 1
+}
 
-pass=0
-fail=0
-ok() { pass=$((pass+1)); echo "ok: $1"; }
-bad() { echo "FAIL: $1" >&2; fail=$((fail+1)); }
+dx_test_init
 
 run_use() {
   # $1 manifest, $2 sources, $3 exceptions (optional)
@@ -35,12 +38,15 @@ run_use() {
 case "$eco" in
   rust) man="Cargo.toml" ;;
   python) man="pyproject.toml" ;;
-  js|ts) man="package.json" ;;
+  js | ts) man="package.json" ;;
   go) man="go.mod" ;;
-  java|kotlin|scala) man="jvm_deps.toml" ;;
-  csharp|fsharp) man="paket.dependencies" ;;
+  java | kotlin | scala) man="jvm_deps.toml" ;;
+  csharp | fsharp) man="paket.dependencies" ;;
   cc) man="cc_deps.toml" ;;
-  *) echo "unknown ecosystem $eco" >&2; exit 2 ;;
+  *)
+    echo "unknown ecosystem $eco" >&2
+    exit 2
+    ;;
 esac
 
 srcdir() {
@@ -69,8 +75,7 @@ if run_use "$root/transitive_shared/$man" "$(srcdir transitive_shared)" >/dev/nu
 if run_use "$root/exception/$man" "$(srcdir exception)" "$root/exception/depcheck_exceptions.toml" >/dev/null; then ok "$eco explained exception passes"; else bad "$eco exception should pass"; fi
 
 # unrelated unused still fails even with a valid exception present.
-scratch="$(mktemp -d "${TEST_TMPDIR:-/tmp}/depcheck.XXXXXX")"
-trap 'rm -rf "$scratch"' EXIT
+dx_mkscratch scratch "${TEST_TMPDIR:-/tmp}/depcheck.XXXXXX"
 cp -RL "$root/exception/." "$scratch/" 2>/dev/null || cp -rL "$root/exception/." "$scratch/"
 chmod -R u+w "$scratch"
 if [[ "$eco" == "rust" ]]; then
@@ -81,7 +86,7 @@ t = open(p).read()
 t = t.replace('[dependencies]\n', '[dependencies]\nunused-extra = "9"\n', 1)
 open(p, "w").write(t)
 PY
-  cat >> "$scratch/Cargo.lock" <<'EOF'
+  cat >>"$scratch/Cargo.lock" <<'EOF'
 
 [[package]]
 name = "unused-extra"
@@ -98,7 +103,7 @@ t = open(p).read()
 t = t.replace('dependencies = ["pytest>=7"', 'dependencies = ["pytest>=7", "unused-extra==9.0.0"')
 open(p, "w").write(t)
 PY
-  cat >> "$scratch/uv.lock" <<'EOF'
+  cat >>"$scratch/uv.lock" <<'EOF'
 
 [[package]]
 name = "unused-extra"
@@ -106,13 +111,13 @@ version = "9.0.0"
 source = { registry = "https://pypi.org/simple" }
 EOF
 elif [[ "$eco" == "go" ]]; then
-  printf '\nrequire example.com/unusedextra v9.0.0\n' >> "$scratch/go.mod"
-  cat >> "$scratch/go.sum" <<'EOF'
+  printf '\nrequire example.com/unusedextra v9.0.0\n' >>"$scratch/go.mod"
+  cat >>"$scratch/go.sum" <<'EOF'
 example.com/unusedextra v9.0.0 h1:fixture-extra-unusedextra-9.0.0
 example.com/unusedextra v9.0.0/go.mod h1:fixture-mod-extra-unusedextra
 EOF
 elif [[ "$eco" == "java" || "$eco" == "kotlin" || "$eco" == "scala" ]]; then
-  cat >> "$scratch/jvm_deps.toml" <<'EOF'
+  cat >>"$scratch/jvm_deps.toml" <<'EOF'
 
 [[dep]]
 group = "example"
@@ -128,12 +133,12 @@ d.setdefault("artifacts", {})["example:unusedextra"] = {"version": "9.0.0", "sha
 json.dump(d, open(p, "w"), indent=2)
 PY
 elif [[ "$eco" == "csharp" || "$eco" == "fsharp" ]]; then
-  printf '\nnuget UnusedExtra 9.0.0\n' >> "$scratch/paket.dependencies"
-  cat >> "$scratch/paket.lock" <<'EOF'
+  printf '\nnuget UnusedExtra 9.0.0\n' >>"$scratch/paket.dependencies"
+  cat >>"$scratch/paket.lock" <<'EOF'
     UnusedExtra (9.0.0)
 EOF
 elif [[ "$eco" == "cc" ]]; then
-  cat >> "$scratch/cc_deps.toml" <<'EOF'
+  cat >>"$scratch/cc_deps.toml" <<'EOF'
 
 [[dep]]
 name = "unused-extra"
@@ -156,7 +161,7 @@ d = json.load(open(p))
 d.setdefault("dependencies", {})["unused-extra"] = "9.0.0"
 json.dump(d, open(p, "w"), indent=2)
 PY
-  cat >> "$scratch/pnpm-lock.yaml" <<'EOF'
+  cat >>"$scratch/pnpm-lock.yaml" <<'EOF'
   'unused-extra@9.0.0':
     resolution: {integrity: sha512-fixture-extra}
 EOF
@@ -165,22 +170,22 @@ if run_use "$scratch/$man" "$scratch" "$scratch/depcheck_exceptions.toml" >/dev/
   code=$?
   if [[ "$code" == "1" ]]; then ok "$eco exception does not suppress unrelated unused"; else bad "$eco extra-unused exit=$code want 1"; fi
 fi
-rm -rf "$scratch"; mkdir -p "$scratch"
-trap 'rm -rf "$scratch"' EXIT
+rm -rf "$scratch"
+mkdir -p "$scratch"
 
 # missing reason fails validation.
-scratch2="$(mktemp -d "${TEST_TMPDIR:-/tmp}/depcheck.XXXXXX")"
+dx_mkscratch scratch2 "${TEST_TMPDIR:-/tmp}/depcheck.XXXXXX"
 cp -RL "$root/exception/." "$scratch2/" 2>/dev/null || cp -rL "$root/exception/." "$scratch2/"
 chmod -R u+w "$scratch2"
 case "$eco" in
   go) exc_dep="example.com/buildplugin" ;;
-  java|kotlin|scala) exc_dep="example:buildplugin" ;;
-  csharp|fsharp) exc_dep="BuildPlugin" ;;
+  java | kotlin | scala) exc_dep="example:buildplugin" ;;
+  csharp | fsharp) exc_dep="BuildPlugin" ;;
   cc) exc_dep="build-plugin" ;;
-  rust|python|js|ts) exc_dep="build-plugin" ;;
+  rust | python | js | ts) exc_dep="build-plugin" ;;
   *) exc_dep="build-plugin" ;;
 esac
-cat > "$scratch2/depcheck_exceptions.toml" <<EOF
+cat >"$scratch2/depcheck_exceptions.toml" <<EOF
 [[exception]]
 dependency = "$exc_dep"
 reason = ""
@@ -210,22 +215,25 @@ fi
 # category: prod used only by tests fails with a category error.
 if run_use "$root/category/$man" "$(srcdir category)" >/dev/null 2>&1; then bad "$eco category should fail"; else
   out="$(run_use "$root/category/$man" "$(srcdir category)" 2>&1 || true)"
-  if echo "$out" | grep -q -F -e 'category error'; then ok "$eco prod-only-in-tests fails with category error"; else bad "$eco category missing 'category error'"; echo "$out" >&2; fi
+  if echo "$out" | grep -q -F -e 'category error'; then ok "$eco prod-only-in-tests fails with category error"; else
+    bad "$eco category missing 'category error'"
+    echo "$out" >&2
+  fi
 fi
 
 # correctly categorized + multi-category passes (incl. other-config use).
 if run_use "$root/category_ok/$man" "$(srcdir category_ok)" >/dev/null; then ok "$eco correctly categorized + multi passes"; else bad "$eco category_ok should pass"; fi
 
 # diagnostics do not mutate manifests/locks/sources.
+# Portable tree digest via dx_tree_sha256 (issues #299, #323).
 for case in ok_used unused category; do
-  before="$(find "$root/$case" -type f | LC_ALL=C sort | xargs sha256sum | sha256sum | cut -d' ' -f1)"
+  before="$(dx_tree_sha256 "$root/$case")"
   run_use "$root/$case/$man" "$(srcdir "$case")" >/dev/null 2>&1 || true
-  after="$(find "$root/$case" -type f | LC_ALL=C sort | xargs sha256sum | sha256sum | cut -d' ' -f1)"
+  after="$(dx_tree_sha256 "$root/$case")"
   if [[ "$before" == "$after" ]]; then ok "$eco $case diagnostics do not mutate"; else bad "$eco $case mutated"; fi
 done
 
 # no network imports (offline route); no foreign execution (text scan only).
 if grep -rn -E -e 'import urllib|import socket|import http|import requests|from urllib|subprocess|os\.system|os\.exec' "$checker" >/dev/null 2>&1; then bad "$eco checker must stay offline/no-exec"; else ok "$eco offline/no-exec (no network/subprocess imports)"; fi
 
-echo "usage $eco: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "usage $eco"

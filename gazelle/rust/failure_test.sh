@@ -1,23 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Portable realpath (issue #299): GNU `realpath` is absent on macOS;
-# `readlink -f` covers some platforms, python3 covers the rest.
-portable_realpath() {
-  if command -v realpath >/dev/null 2>&1; then
-    realpath "$1"
-  elif command -v readlink >/dev/null 2>&1 && readlink -f "$1" >/dev/null 2>&1; then
-    readlink -f "$1"
-  else
-    python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
-  fi
-}
+# Shared workspace + runfiles helpers (issues #319, #323).
+# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../../tools/sh/lib.sh"
 
-gazelle="$(portable_realpath "$1")"
+# Portable helpers via tools/sh/lib.sh dx_realpath/dx_sha256 (issues #299, #323).
+
+gazelle="$(dx_realpath "$1")"
 root="${TEST_TMPDIR}/workspace"
 mkdir -p "${root}/crate/src"
 touch "${root}/WORKSPACE"
-printf 'use missing_crate::Thing;\n' > "${root}/crate/src/lib.rs"
+printf 'use missing_crate::Thing;\n' >"${root}/crate/src/lib.rs"
 
 set +e
 output="$(cd "${root}" && "${gazelle}" -repo_root="${root}" 2>&1)"
@@ -43,7 +37,7 @@ if [[ -e "${root}/crate/BUILD.bazel" || -e "${root}/crate/BUILD" ]]; then
   exit 1
 fi
 
-printf '# gazelle:dx_ignore_import rust missing_crate\n' > "${root}/BUILD.bazel"
+printf '# gazelle:dx_ignore_import rust missing_crate\n' >"${root}/BUILD.bazel"
 (cd "${root}" && "${gazelle}" -repo_root="${root}")
 if [[ ! -f "${root}/crate/BUILD.bazel" ]]; then
   echo "exact inherited ignore did not permit generation" >&2

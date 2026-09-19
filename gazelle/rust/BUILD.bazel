@@ -60,7 +60,7 @@ sh_test(
     name = "failure_test",
     srcs = ["failure_test.sh"],
     args = ["$(rootpath :gazelle)"],
-    data = [":gazelle"],
+    data = [":gazelle", "//tools/sh:lib"],
     tags = ["no-coverage"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
@@ -70,7 +70,7 @@ sh_test(
     name = "idempotent_test",
     srcs = ["idempotent_test.sh"],
     args = ["$(rootpath :gazelle)"],
-    data = [":gazelle"],
+    data = [":gazelle", "//tools/sh:lib"],
     tags = ["no-coverage"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
@@ -80,7 +80,7 @@ sh_test(
     name = "native_config_test",
     srcs = ["native_config_test.sh"],
     args = ["$(rootpath :gazelle)"],
-    data = [":gazelle"],
+    data = [":gazelle", "//tools/sh:lib"],
     tags = ["no-coverage"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],

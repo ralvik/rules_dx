@@ -18,6 +18,7 @@ sh_test(
     data = [
         ":devcontainer.json",
         "//cli/cli:dx",
+        "//tools/sh:lib",
         "//tools/sh:snapshot",
     ],
     tags = ["no-coverage"],

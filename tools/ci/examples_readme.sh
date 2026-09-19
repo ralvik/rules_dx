@@ -25,13 +25,9 @@ set -euo pipefail
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
-workspace="$(dx_workspace_root)"
-cd "$workspace"
+dx_cd_workspace
 
-pass=0
-fail=0
-ok() { pass=$((pass + 1)); }
-bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
+dx_test_init
 
 # The index no longer carries the retired milestone stub: it points at
 # live per-foundation examples plus the delivered acquisition/laziness proof.
@@ -101,5 +97,4 @@ else
   bad "examples/mixed/hello/BUILD.bazel lost the M21 fixture disposition marker"
 fi
 
-echo "examples readme audit: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "examples readme audit"

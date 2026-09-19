@@ -11,16 +11,21 @@
 # policy change.
 set -euo pipefail
 
+# Shared workspace + runfiles helpers (issues #319, #323).
+# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../tools/sh/lib.sh"
+
 compare_py="$1"
 baseline="$2"
 
-command -v python3 >/dev/null || { echo "python3 is required" >&2; exit 1; }
+command -v python3 >/dev/null || {
+  echo "python3 is required" >&2
+  exit 1
+}
 
-scratch="$(mktemp -d)"
-trap 'rm -rf "$scratch"' EXIT
+dx_mkscratch scratch
 
-pass=0
-fail=0
+dx_test_init
 
 emit() { # file benchmark median_ms count
   local file="$1" name="$2" med="$3" count="$4"
@@ -29,7 +34,7 @@ import json, sys
 name, med, count = sys.argv[1], float(sys.argv[2]), int(sys.argv[3])
 for i in range(1, count + 1):
     print(json.dumps({"benchmark": name, "duration_ms": med, "iteration": i}))
-' "$name" "$med" "$count" >> "$file"
+' "$name" "$med" "$count" >>"$file"
 }
 
 check() { # name, want_exit, want_substring, results-file...
@@ -56,8 +61,12 @@ regressed="$scratch/regressed.jsonl"
 emit "$regressed" scope_owners 500.0 5
 check "relative regression warns" 0 "REGRESSION scope_owners" "$regressed"
 # Warn-only proof: the same regressed input must NOT fail the gate.
-out="$(python3 "$compare_py" --baseline "$baseline" "$regressed" 2>&1)"; rc=$?
-[[ "$rc" == "0" ]] || { echo "FAIL: relative regression must exit 0, got $rc" >&2; fail=$((fail + 1)); }
+out="$(python3 "$compare_py" --baseline "$baseline" "$regressed" 2>&1)"
+rc=$?
+[[ "$rc" == "0" ]] || {
+  echo "FAIL: relative regression must exit 0, got $rc" >&2
+  fail=$((fail + 1))
+}
 
 unknown="$scratch/unknown.jsonl"
 emit "$unknown" dx_startup 2.5 7
@@ -95,8 +104,11 @@ fi
 ws_root="$scratch/ws"
 mkdir -p "$ws_root/perf"
 cp "$baseline" "$ws_root/perf/baseline.json"
+# shellcheck disable=SC1007
+# CDPATH= cd clears CDPATH for one cd (portable).
 compare_abs="$(CDPATH= cd -- "$(dirname "$compare_py")" && pwd)/$(basename "$compare_py")"
-ws_out=""; rc=0
+ws_out=""
+rc=0
 ws_out="$(cd /tmp && BUILD_WORKSPACE_DIRECTORY="$ws_root" python3 "$compare_abs" --baseline perf/baseline.json "$at_baseline" 2>&1)" || rc=$?
 if [[ "$rc" == "0" && "$ws_out" == *"No regressions"* ]]; then
   pass=$((pass + 1))
@@ -105,5 +117,4 @@ else
   fail=$((fail + 1))
 fi
 
-echo "perf_self_test: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "perf_self_test"

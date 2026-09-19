@@ -23,13 +23,9 @@ set -euo pipefail
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
-workspace="$(dx_workspace_root)"
-cd "$workspace"
+dx_cd_workspace
 
-pass=0
-fail=0
-ok() { pass=$((pass + 1)); }
-bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
+dx_test_init
 
 proto="docs/ir/doc_ir.proto"
 codec="docs/ir/ir/src/lib.rs"
@@ -50,55 +46,55 @@ cli_errors="cli/cli/src/args/error.rs"
 backlog_guards="tools/ci/backlog_automation_guards.sh"
 
 # IR schema identity stays dx.documentation.v1 with v1 enums and messages.
-if grep -q -F -e 'package dx.documentation.v1;' "$proto" \
-  && grep -q -F -e 'enum SymbolKind' "$proto" \
-  && grep -q -F -e 'enum Visibility' "$proto" \
-  && grep -q -F -e 'message DocIr' "$proto" \
-  && grep -q -F -e 'message Symbol' "$proto" \
-  && grep -q -F -e 'message Extension' "$proto"; then
+if grep -q -F -e 'package dx.documentation.v1;' "$proto" &&
+  grep -q -F -e 'enum SymbolKind' "$proto" &&
+  grep -q -F -e 'enum Visibility' "$proto" &&
+  grep -q -F -e 'message DocIr' "$proto" &&
+  grep -q -F -e 'message Symbol' "$proto" &&
+  grep -q -F -e 'message Extension' "$proto"; then
   ok
 else
   bad "doc_ir.proto lost its dx.documentation.v1 identity or v1 messages"
 fi
 
 # Proto keeps reserved ranges plus same-producer byte-identical ordering rule.
-if grep -q -F -e 'reserved 12 to 15;' "$proto" \
-  && grep -q -F -e 'reserved 6 to 15;' "$proto" \
-  && grep -q -F -e 'same-producer rebuilds stay byte-identical' "$proto" \
-  && grep -q -F -e 'strictly increasing key order' "$proto"; then
+if grep -q -F -e 'reserved 12 to 15;' "$proto" &&
+  grep -q -F -e 'reserved 6 to 15;' "$proto" &&
+  grep -q -F -e 'same-producer rebuilds stay byte-identical' "$proto" &&
+  grep -q -F -e 'strictly increasing key order' "$proto"; then
   ok
 else
   bad "doc_ir.proto lost its reserved ranges or byte-identical ordering rule"
 fi
 
 # Codec crate delivers validate/encode/decode with shared schema major.
-if grep -q -F -e 'pub fn validate_shard' "$codec" \
-  && grep -q -F -e 'pub fn encode_shard' "$codec" \
-  && grep -q -F -e 'pub fn decode_shard' "$codec" \
-  && grep -q -F -e 'pub use dx_schema::SCHEMA_MAJOR' "$codec" \
-  && grep -q -F -e 'pub const SCHEMA_MAJOR: u32 = 1;' "$schema"; then
+if grep -q -F -e 'pub fn validate_shard' "$codec" &&
+  grep -q -F -e 'pub fn encode_shard' "$codec" &&
+  grep -q -F -e 'pub fn decode_shard' "$codec" &&
+  grep -q -F -e 'pub use dx_schema::SCHEMA_MAJOR' "$codec" &&
+  grep -q -F -e 'pub const SCHEMA_MAJOR: u32 = 1;' "$schema"; then
   ok
 else
   bad "documentation_ir codec lost validate/encode/decode or SCHEMA_MAJOR pin"
 fi
 
 # Codec tests prove roundtrip, rejection parity, ordering, minor compat.
-if grep -q -F -e 'documented_example_roundtrips_byte_identical' "$codec" \
-  && grep -q -F -e 'encode_and_decode_reject_the_same_invalid_shards' "$codec" \
-  && grep -q -F -e 'extension_keys_must_be_strictly_increasing' "$codec" \
-  && grep -q -F -e 'symbols_must_be_strictly_increasing' "$codec" \
-  && grep -q -F -e 'newer_minors_decode_when_understood' "$codec" \
-  && grep -q -F -e 'Same producer plus same inputs rebuild byte-identical' "$codec"; then
+if grep -q -F -e 'documented_example_roundtrips_byte_identical' "$codec" &&
+  grep -q -F -e 'encode_and_decode_reject_the_same_invalid_shards' "$codec" &&
+  grep -q -F -e 'extension_keys_must_be_strictly_increasing' "$codec" &&
+  grep -q -F -e 'symbols_must_be_strictly_increasing' "$codec" &&
+  grep -q -F -e 'newer_minors_decode_when_understood' "$codec" &&
+  grep -q -F -e 'Same producer plus same inputs rebuild byte-identical' "$codec"; then
   ok
 else
   bad "documentation_ir codec lost its roundtrip/parity/ordering/compat tests"
 fi
 
 # Codec BUILD keeps library plus unit, fmt, and clippy tests.
-if grep -q -F -e 'name = "documentation_ir"' "$codec_build" \
-  && grep -q -F -e 'name = "documentation_ir_test"' "$codec_build" \
-  && grep -q -F -e 'name = "documentation_ir_fmt_test"' "$codec_build" \
-  && grep -q -F -e 'name = "documentation_ir_clippy_test"' "$codec_build"; then
+if grep -q -F -e 'name = "documentation_ir"' "$codec_build" &&
+  grep -q -F -e 'name = "documentation_ir_test"' "$codec_build" &&
+  grep -q -F -e 'name = "documentation_ir_fmt_test"' "$codec_build" &&
+  grep -q -F -e 'name = "documentation_ir_clippy_test"' "$codec_build"; then
   ok
 else
   bad "docs/ir/ir BUILD lost its library/test/fmt/clippy targets"
@@ -106,31 +102,31 @@ fi
 
 # Planning library delivers version, identity, validation, mode, drift,
 # guide, and site planning entry points.
-if grep -q -F -e 'pub fn plan_version_compat' "$planning" \
-  && grep -q -F -e 'pub fn plan_symbol_id' "$planning" \
-  && grep -q -F -e 'pub fn plan_overload_id' "$planning" \
-  && grep -q -F -e 'pub fn plan_validation' "$planning" \
-  && grep -q -F -e 'pub fn plan_docs_mode' "$planning" \
-  && grep -q -F -e 'pub fn mode_selects_render' "$planning" \
-  && grep -q -F -e 'pub fn plan_mode_actions' "$planning" \
-  && grep -q -F -e 'pub fn plan_drift_upgrade' "$planning" \
-  && grep -q -F -e 'pub fn plan_guide_freshness' "$planning" \
-  && grep -q -F -e 'pub fn is_known_guide' "$planning" \
-  && grep -q -F -e 'pub fn same_producer_requires_byte_equality' "$planning" \
-  && grep -q -F -e 'pub fn plan_cache_miss' "$planning"; then
+if grep -q -F -e 'pub fn plan_version_compat' "$planning" &&
+  grep -q -F -e 'pub fn plan_symbol_id' "$planning" &&
+  grep -q -F -e 'pub fn plan_overload_id' "$planning" &&
+  grep -q -F -e 'pub fn plan_validation' "$planning" &&
+  grep -q -F -e 'pub fn plan_docs_mode' "$planning" &&
+  grep -q -F -e 'pub fn mode_selects_render' "$planning" &&
+  grep -q -F -e 'pub fn plan_mode_actions' "$planning" &&
+  grep -q -F -e 'pub fn plan_drift_upgrade' "$planning" &&
+  grep -q -F -e 'pub fn plan_guide_freshness' "$planning" &&
+  grep -q -F -e 'pub fn is_known_guide' "$planning" &&
+  grep -q -F -e 'pub fn same_producer_requires_byte_equality' "$planning" &&
+  grep -q -F -e 'pub fn plan_cache_miss' "$planning"; then
   ok
 else
   bad "dx_docs planning lost its version/identity/validation/mode/drift/guide/site entry points"
 fi
 
 # Planning hermeticity and lifecycle invariants stay pinned.
-if grep -q -F -e 'pub fn docs_actions_use_network' "$planning" \
-  && grep -q -F -e 'pub fn check_uses_separate_graph' "$planning" \
-  && grep -q -F -e 'pub fn serve_is_build_action' "$planning" \
-  && grep -q -F -e 'pub fn emits_partial_shards' "$planning" \
-  && grep -q -F -e 'pub fn docs_build_mutates_sources' "$planning" \
-  && grep -q -F -e 'pub fn commits_ir_shards' "$planning" \
-  && grep -q -F -e 'pub fn drift_reaches_users_without_release' "$planning"; then
+if grep -q -F -e 'pub fn docs_actions_use_network' "$planning" &&
+  grep -q -F -e 'pub fn check_uses_separate_graph' "$planning" &&
+  grep -q -F -e 'pub fn serve_is_build_action' "$planning" &&
+  grep -q -F -e 'pub fn emits_partial_shards' "$planning" &&
+  grep -q -F -e 'pub fn docs_build_mutates_sources' "$planning" &&
+  grep -q -F -e 'pub fn commits_ir_shards' "$planning" &&
+  grep -q -F -e 'pub fn drift_reaches_users_without_release' "$planning"; then
   ok
 else
   bad "dx_docs planning lost its hermeticity/lifecycle invariants"
@@ -138,24 +134,24 @@ fi
 
 # Planning unit tests cover compat, identity, validation, mode, drift,
 # guide, site, byte-equality, cache, scope, and serve.
-if grep -q -F -e 'same_major_is_compatible_in_either_minor_direction' "$planning" \
-  && grep -q -F -e 'major_skew_requires_the_recorded_migration' "$planning" \
-  && grep -q -F -e 'zero_major_fails_closed' "$planning" \
-  && grep -q -F -e 'validation_emits_only_when_every_gate_holds' "$planning" \
-  && grep -q -F -e 'check_flag_selects_validation_only_build_validates_and_renders' "$planning" \
-  && grep -q -F -e 'drift_upgrades_ship_only_when_green_and_reviewed' "$planning" \
-  && grep -q -F -e 'guide_freshness_requires_every_step_executed_and_green_examples' "$planning" \
-  && grep -q -F -e 'site_actions_are_hermetic_and_deterministic_by_construction' "$planning" \
-  && grep -q -F -e 'byte_equality_holds_only_for_the_same_pinned_producer' "$planning" \
-  && grep -q -F -e 'cache_miss_re_executes_never_fails_freshness' "$planning"; then
+if grep -q -F -e 'same_major_is_compatible_in_either_minor_direction' "$planning" &&
+  grep -q -F -e 'major_skew_requires_the_recorded_migration' "$planning" &&
+  grep -q -F -e 'zero_major_fails_closed' "$planning" &&
+  grep -q -F -e 'validation_emits_only_when_every_gate_holds' "$planning" &&
+  grep -q -F -e 'check_flag_selects_validation_only_build_validates_and_renders' "$planning" &&
+  grep -q -F -e 'drift_upgrades_ship_only_when_green_and_reviewed' "$planning" &&
+  grep -q -F -e 'guide_freshness_requires_every_step_executed_and_green_examples' "$planning" &&
+  grep -q -F -e 'site_actions_are_hermetic_and_deterministic_by_construction' "$planning" &&
+  grep -q -F -e 'byte_equality_holds_only_for_the_same_pinned_producer' "$planning" &&
+  grep -q -F -e 'cache_miss_re_executes_never_fails_freshness' "$planning"; then
   ok
 else
   bad "dx_docs planning lost its compat/validation/mode/drift/guide/site unit tests"
 fi
 
 # Planning crate keeps its M30a BUILD wiring.
-if grep -q -F -e 'name = "dx_docs"' "$planning_build" \
-  && grep -q -F -e 'package_name = "cli/dx_docs"' "$planning_build"; then
+if grep -q -F -e 'name = "dx_docs"' "$planning_build" &&
+  grep -q -F -e 'package_name = "cli/dx_docs"' "$planning_build"; then
   ok
 else
   bad "cli/docgen BUILD lost its dx_docs crate wiring"
@@ -163,21 +159,21 @@ fi
 
 # Thirteen adapter scopes stay documented with provisional inputs and no
 # execution claim.
-if grep -q -F -e '| Rust | Pinned nightly' "$docir" \
-  && grep -q -F -e '| Python | Griffe model' "$docir" \
-  && grep -q -F -e '| TypeScript/JavaScript | TypeDoc JSON' "$docir" \
-  && grep -q -F -e '| Java | Custom Javadoc Doclet' "$docir" \
-  && grep -q -F -e '| Kotlin | Dokka model' "$docir" \
-  && grep -q -F -e '| Go | `go/packages`' "$docir" \
-  && grep -q -F -e '| C/C++ | Doxygen XML' "$docir" \
-  && grep -q -F -e '| C# | Assembly metadata' "$docir" \
-  && grep -q -F -e '| F# | Compiler-service metadata' "$docir" \
-  && grep -q -F -e '| Vue | `vue-docgen-api` JSON' "$docir" \
-  && grep -q -F -e '| Svelte | `sveld` JSON' "$docir" \
-  && grep -q -F -e '| Scala | Scala 3 TASTy Inspector' "$docir" \
-  && grep -q -F -e '| Astro/MDX | None; prose-only' "$docir" \
-  && grep -q -F -e 'Accepted scope covers thirteen adapter scopes' "$docir" \
-  && grep -q -F -e 'No adapter execution exists today' "$docir"; then
+if grep -q -F -e '| Rust | Pinned nightly' "$docir" &&
+  grep -q -F -e '| Python | Griffe model' "$docir" &&
+  grep -q -F -e '| TypeScript/JavaScript | TypeDoc JSON' "$docir" &&
+  grep -q -F -e '| Java | Custom Javadoc Doclet' "$docir" &&
+  grep -q -F -e '| Kotlin | Dokka model' "$docir" &&
+  grep -q -F -e '| Go | `go/packages`' "$docir" &&
+  grep -q -F -e '| C/C++ | Doxygen XML' "$docir" &&
+  grep -q -F -e '| C# | Assembly metadata' "$docir" &&
+  grep -q -F -e '| F# | Compiler-service metadata' "$docir" &&
+  grep -q -F -e '| Vue | `vue-docgen-api` JSON' "$docir" &&
+  grep -q -F -e '| Svelte | `sveld` JSON' "$docir" &&
+  grep -q -F -e '| Scala | Scala 3 TASTy Inspector' "$docir" &&
+  grep -q -F -e '| Astro/MDX | None; prose-only' "$docir" &&
+  grep -q -F -e 'Accepted scope covers thirteen adapter scopes' "$docir" &&
+  grep -q -F -e 'No adapter execution exists today' "$docir"; then
   ok
 else
   bad "doc-ir lost its thirteen adapter scopes or no-execution honesty"
@@ -185,12 +181,12 @@ fi
 
 # Per-language overload, join, and packaging details stay tracked under
 # #310, never claimed as delivered.
-if grep -q -F -e 'tracked under' "$docir" \
-  && grep -q -F -e 'issue #310' "$docir" \
-  && grep -q -F -e 'The exact' "$docir" \
-  && grep -q -F -e 'disambiguation scheme per language' "$docir" \
-  && grep -q -F -e 'the adapter must' "$docir" \
-  && grep -q -F -e 'join metadata with documentation' "$docir"; then
+if grep -q -F -e 'tracked under' "$docir" &&
+  grep -q -F -e 'issue #310' "$docir" &&
+  grep -q -F -e 'The exact' "$docir" &&
+  grep -q -F -e 'disambiguation scheme per language' "$docir" &&
+  grep -q -F -e 'the adapter must' "$docir" &&
+  grep -q -F -e 'join metadata with documentation' "$docir"; then
   ok
 else
   bad "doc-ir lost its per-language overload/join/packaging #310 tracker"
@@ -198,13 +194,13 @@ fi
 
 # Site build keeps the decided mdBook renderer with no replacement and an
 # honest open-execution record.
-if grep -q -F -e 'mdBook is the decided renderer' "$site" \
-  && grep -q -F -e 'There is no planned replacement' "$site" \
-  && grep -q -F -e 'No working site support is claimed until qualified execution lands' "$site" \
-  && grep -q -F -e 'Open under issue #310' "$site" \
-  && grep -q -F -e 'one DocsExtract action per (language, package) unit' "$site" \
-  && grep -q -F -e 'one DocsAggregate action' "$site" \
-  && grep -q -F -e 'one DocsRender action (pinned mdBook artifact)' "$site"; then
+if grep -q -F -e 'mdBook is the decided renderer' "$site" &&
+  grep -q -F -e 'There is no planned replacement' "$site" &&
+  grep -q -F -e 'No working site support is claimed until qualified execution lands' "$site" &&
+  grep -q -F -e 'Open under issue #310' "$site" &&
+  grep -q -F -e 'one DocsExtract action per (language, package) unit' "$site" &&
+  grep -q -F -e 'one DocsAggregate action' "$site" &&
+  grep -q -F -e 'one DocsRender action (pinned mdBook artifact)' "$site"; then
   ok
 else
   bad "site build lost its mdBook decision or open-execution record"
@@ -212,31 +208,31 @@ fi
 
 # Determinism stays a design requirement with byte-identical rebuild
 # evidence open, never an assumed property.
-if grep -q -F -e 'Outputs are designed to be deterministic' "$site" \
-  && grep -q -F -e 'Determinism is a' "$site" \
-  && grep -q -F -e 'design requirement; byte-identical rebuild evidence remains open' "$site" \
-  && grep -q -F -e 'Byte-identical rebuild evidence (two builds, diffed) is required' "$site" \
-  && grep -q -F -e 'same_producer_requires_byte_equality' "$planning"; then
+if grep -q -F -e 'Outputs are designed to be deterministic' "$site" &&
+  grep -q -F -e 'Determinism is a' "$site" &&
+  grep -q -F -e 'design requirement; byte-identical rebuild evidence remains open' "$site" &&
+  grep -q -F -e 'Byte-identical rebuild evidence (two builds, diffed) is required' "$site" &&
+  grep -q -F -e 'same_producer_requires_byte_equality' "$planning"; then
   ok
 else
   bad "site determinism lost its design-requirement plus open-evidence record"
 fi
 
 # Laziness and freshness keep no-committed-IR plus no-source-write honesty.
-if grep -q -F -e 'IR shards, render inputs, and rendered HTML are ordinary generated Bazel artifacts' "$site" \
-  && grep -q -F -e 'not committed files or source-adjacent snapshots' "$site" \
-  && grep -q -F -e 'never write generated IR beside source' "$site" \
-  && grep -q -F -e 'Required (Open; no site execution exists today)' "$site" \
-  && grep -q -F -e 'The planned [`dx docs --check`]' "$site"; then
+if grep -q -F -e 'IR shards, render inputs, and rendered HTML are ordinary generated Bazel artifacts' "$site" &&
+  grep -q -F -e 'not committed files or source-adjacent snapshots' "$site" &&
+  grep -q -F -e 'never write generated IR beside source' "$site" &&
+  grep -q -F -e 'Required (Open; no site execution exists today)' "$site" &&
+  grep -q -F -e 'The planned [`dx docs --check`]' "$site"; then
   ok
 else
   bad "site lost its laziness/freshness no-committed-IR record"
 fi
 
 # Link/reference completeness at the pre-render boundary stays an owned gap.
-if grep -q -F -e 'Completeness of required link/reference checks' "$site" \
-  && grep -q -F -e 'at the pre-render boundary remains a gap (issue #310)' "$site" \
-  && grep -q -F -e 'link/reference completeness' "$site"; then
+if grep -q -F -e 'Completeness of required link/reference checks' "$site" &&
+  grep -q -F -e 'at the pre-render boundary remains a gap (issue #310)' "$site" &&
+  grep -q -F -e 'link/reference completeness' "$site"; then
   ok
 else
   bad "site lost its link/reference pre-render completeness gap"
@@ -244,21 +240,21 @@ fi
 
 # Guide-step CI wiring plus first-hour timing stay owned gaps with no
 # working-site claim.
-if grep -q -F -e 'guide-step CI wiring' "$site" \
-  && grep -q -F -e 'first-hour timing proof' "$site" \
-  && grep -q -F -e 'guide-step verification' "$matrix" \
-  && grep -q -F -e 'first-hour timing proof' "$matrix" \
-  && grep -q -F -e 'guide prose with' "$roadmap"; then
+if grep -q -F -e 'guide-step CI wiring' "$site" &&
+  grep -q -F -e 'first-hour timing proof' "$site" &&
+  grep -q -F -e 'guide-step verification' "$matrix" &&
+  grep -q -F -e 'first-hour timing proof' "$matrix" &&
+  grep -q -F -e 'guide prose with' "$roadmap"; then
   ok
 else
   bad "guide-step CI wiring or first-hour timing gap lost its owner"
 fi
 
 # Drift policy stays accepted with execution open and zero adapters pinned.
-if grep -q -F -e 'Accepted policy; execution open (zero adapters pinned today)' "$docir" \
-  && grep -q -F -e 'The exact per-release' "$docir" \
-  && grep -q -F -e 'pin-bump and drift-test process is tracked under' "$docir" \
-  && grep -q -F -e 'per-release pin-bump plus drift process' "$readme"; then
+if grep -q -F -e 'Accepted policy; execution open (zero adapters pinned today)' "$docir" &&
+  grep -q -F -e 'The exact per-release' "$docir" &&
+  grep -q -F -e 'pin-bump and drift-test process is tracked under' "$docir" &&
+  grep -q -F -e 'per-release pin-bump plus drift process' "$readme"; then
   ok
 else
   bad "drift policy lost its accepted-but-open plus zero-pinned record"
@@ -266,12 +262,12 @@ fi
 
 # Validation fixtures stay required-open with symbol-count, stability,
 # native-comparison, upgrade, and same-producer byte-identical gates.
-if grep -q -F -e 'Required (Open; no adapter execution exists today)' "$docir" \
-  && grep -q -F -e 'A symbol-count inventory test detects silent public-API omissions' "$docir" \
-  && grep -q -F -e 'Symbol IDs and cross-links are stable across fixture reruns' "$docir" \
-  && grep -q -F -e 'Selected generated pages are compared against native-tool output' "$docir" \
-  && grep -q -F -e 'Upgrades run old and new extractor versions against the same fixtures' "$docir" \
-  && grep -q -F -e 'Same-producer rebuilds are byte-identical' "$docir"; then
+if grep -q -F -e 'Required (Open; no adapter execution exists today)' "$docir" &&
+  grep -q -F -e 'A symbol-count inventory test detects silent public-API omissions' "$docir" &&
+  grep -q -F -e 'Symbol IDs and cross-links are stable across fixture reruns' "$docir" &&
+  grep -q -F -e 'Selected generated pages are compared against native-tool output' "$docir" &&
+  grep -q -F -e 'Upgrades run old and new extractor versions against the same fixtures' "$docir" &&
+  grep -q -F -e 'Same-producer rebuilds are byte-identical' "$docir"; then
   ok
 else
   bad "validation fixtures lost their required-open inventory/stability/comparison gates"
@@ -279,11 +275,11 @@ fi
 
 # dx docs stub stays removed behind ADR 0020 with reintroduction open
 # under #310.
-if grep -q -F -e 'Removed. The `dx docs` command was deleted per' "$stub" \
-  && grep -q -F -e 'open under issue #310' "$stub" \
-  && grep -q -F -e 'Delete the `dx docs` command surface' "$adr20" \
-  && grep -q -F -e 'Reintroducing the command alongside real extraction/validation' "$adr20" \
-  && grep -q -F -e 'removed; reintroduction with real extraction/validation open under issue #310' "$scope"; then
+if grep -q -F -e 'Removed. The `dx docs` command was deleted per' "$stub" &&
+  grep -q -F -e 'open under issue #310' "$stub" &&
+  grep -q -F -e 'Delete the `dx docs` command surface' "$adr20" &&
+  grep -q -F -e 'Reintroducing the command alongside real extraction/validation' "$adr20" &&
+  grep -q -F -e 'removed; reintroduction with real extraction/validation open under issue #310' "$scope"; then
   ok
 else
   bad "dx docs stub lost its removed-plus-ADR-0020-plus-#310 record"
@@ -291,9 +287,9 @@ fi
 
 # CLI registry carries no Docs command: unknown-command surface never
 # lists docs and no Command::Docs implementation exists.
-if ! grep -q -F -e 'docs' "$cli_errors" \
-  && ! grep -rn -F -e 'Command::Docs' cli/cli/src/ 2>/dev/null | grep -q . \
-  && ! grep -rn -F -e 'execute_docs' cli/ 2>/dev/null | grep -q .; then
+if ! grep -q -F -e 'docs' "$cli_errors" &&
+  ! grep -rn -F -e 'Command::Docs' cli/cli/src/ 2>/dev/null | grep -q . &&
+  ! grep -rn -F -e 'execute_docs' cli/ 2>/dev/null | grep -q .; then
   ok
 else
   bad "CLI gained a Docs command or docs in the unknown-command surface"
@@ -301,34 +297,34 @@ fi
 
 # No false adapter execution: no adapter implementation directory or
 # Bazel target, docs keep the no-execution record.
-if [[ ! -d "docs/adapters" ]] \
-  && ! grep -rn -F -e 'docs/adapters' --include='BUILD.bazel' . 2>/dev/null | grep -q . \
-  && grep -q -F -e 'no adapter execution exists today' "$readme" \
-  && grep -q -F -e 'no working site claimed' "$readme"; then
+if [[ ! -d "docs/adapters" ]] &&
+  ! grep -rn -F -e 'docs/adapters' --include='BUILD.bazel' . 2>/dev/null | grep -q . &&
+  grep -q -F -e 'no adapter execution exists today' "$readme" &&
+  grep -q -F -e 'no working site claimed' "$readme"; then
   ok
 else
   bad "a docs adapter implementation appeared or the no-execution record drifted"
 fi
 
 # Contracts keep the full #310 gap list with no working-site honesty.
-if grep -q -F -e 'Docs pipeline gaps stay open under issue #310' "$readme" \
-  && grep -q -F -e 'per-language adapter runs' "$readme" \
-  && grep -q -F -e 'renderer and site execution' "$readme" \
-  && grep -q -F -e 'byte-identical rebuild proof' "$readme" \
-  && grep -q -F -e 'link and reference completeness' "$readme" \
-  && grep -q -F -e 'guide-step CI wiring' "$readme" \
-  && grep -q -F -e 'first-hour timing proof' "$readme" \
-  && grep -q -F -e 'per-release pin-bump plus drift process' "$readme"; then
+if grep -q -F -e 'Docs pipeline gaps stay open under issue #310' "$readme" &&
+  grep -q -F -e 'per-language adapter runs' "$readme" &&
+  grep -q -F -e 'renderer and site execution' "$readme" &&
+  grep -q -F -e 'byte-identical rebuild proof' "$readme" &&
+  grep -q -F -e 'link and reference completeness' "$readme" &&
+  grep -q -F -e 'guide-step CI wiring' "$readme" &&
+  grep -q -F -e 'first-hour timing proof' "$readme" &&
+  grep -q -F -e 'per-release pin-bump plus drift process' "$readme"; then
   ok
 else
   bad "documentation README lost its full #310 gap list"
 fi
 
 # Roadmap keeps the same #310 execution-gap list.
-if grep -q -F -e 'Docs-pipeline execution gaps stay open under issue #310' "$roadmap" \
-  && grep -q -F -e 'adapter runs with pins' "$roadmap" \
-  && grep -q -F -e 'renderer and site execution' "$roadmap" \
-  && grep -q -F -e 'no working site claimed' "$roadmap"; then
+if grep -q -F -e 'Docs-pipeline execution gaps stay open under issue #310' "$roadmap" &&
+  grep -q -F -e 'adapter runs with pins' "$roadmap" &&
+  grep -q -F -e 'renderer and site execution' "$roadmap" &&
+  grep -q -F -e 'no working site claimed' "$roadmap"; then
   ok
 else
   bad "roadmap lost its #310 docs-pipeline execution-gap list"
@@ -336,32 +332,31 @@ fi
 
 # Verification matrix keeps Docs Open with no Supported claim and no
 # working site.
-if grep -q -F -e 'stay open under issue #310' "$matrix" \
-  && grep -q -F -e 'no working site claimed' "$matrix" \
-  && ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$matrix" | grep -q . \
-  && ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$support" | grep -q .; then
+if grep -q -F -e 'stay open under issue #310' "$matrix" &&
+  grep -q -F -e 'no working site claimed' "$matrix" &&
+  ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$matrix" | grep -q . &&
+  ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$support" | grep -q .; then
   ok
 else
   bad "verification matrix lost its Docs Open plus no-Supported gate"
 fi
 
 # Functional: schema major pins agree (proto v1, codec example, shared helper).
-if grep -q -F -e 'uint32 schema_major = 1;' "$proto" \
-  && grep -q -F -e 'schema_major: 1,' "$codec" \
-  && grep -q -F -e 'IrVersion { major: 1' "$planning" \
-  && [[ "$(grep -F -e 'pub const SCHEMA_MAJOR' "$schema" | sed 's/.*= //; s/;.*//')" == "1" ]]; then
+if grep -q -F -e 'uint32 schema_major = 1;' "$proto" &&
+  grep -q -F -e 'schema_major: 1,' "$codec" &&
+  grep -q -F -e 'IrVersion { major: 1' "$planning" &&
+  [[ "$(grep -F -e 'pub const SCHEMA_MAJOR' "$schema" | sed 's/.*= //; s/;.*//')" == "1" ]]; then
   ok
 else
   bad "schema-major pins drifted across proto/codec/planning"
 fi
 
 # Backlog guards still track the #310 docs-pipeline gap.
-if grep -q -F -e '#310 docs-pipeline gaps stay tracked' "$backlog_guards" \
-  && grep -q -F -e "documentation README lost its #310 docs-pipeline tracker record" "$backlog_guards"; then
+if grep -q -F -e '#310 docs-pipeline gaps stay tracked' "$backlog_guards" &&
+  grep -q -F -e "documentation README lost its #310 docs-pipeline tracker record" "$backlog_guards"; then
   ok
 else
   bad "backlog automation guards lost their #310 tracker"
 fi
 
-echo "docs pipeline qualification harness: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "docs pipeline qualification harness"

@@ -25,13 +25,9 @@ set -euo pipefail
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
-workspace="$(dx_workspace_root)"
-cd "$workspace"
+dx_cd_workspace
 
-pass=0
-fail=0
-ok() { pass=$((pass + 1)); }
-bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
+dx_test_init
 
 cell="tools/ci/coverage_cell.sh"
 
@@ -60,11 +56,12 @@ else
 fi
 
 # Scratch is still auto-cleaned so redirected profiles never accumulate.
-if grep -q -F -e 'scratch="$(mktemp -d)"' "$cell" \
-  && grep -q -F -e 'trap '"'"'rm -rf "$scratch"'"'"' EXIT' "$cell"; then
+# Issue #323 dedup: coverage_cell.sh uses tools/sh/lib.sh dx_mkscratch
+# (EXIT auto-cleanup) instead of a per-file mktemp+trap copy.
+if grep -q -F -e 'dx_mkscratch scratch' "$cell"; then
   ok
 else
-  bad "coverage_cell.sh lost the auto-cleaned scratch dir"
+  bad "coverage_cell.sh lost the auto-cleaned scratch dir (want dx_mkscratch, issue #323)"
 fi
 
 # Gate invocations stay intact: containment must not delete the 7 helper
@@ -78,8 +75,8 @@ fi
 
 # The coverage step still instruments the seed scope (the fix redirects
 # profiles, it never weakens coverage collection itself).
-if grep -q -F -e 'bazel coverage' "$cell" \
-  && grep -q -F -e "instrumentation_filter" "$cell"; then
+if grep -q -F -e 'bazel coverage' "$cell" &&
+  grep -q -F -e "instrumentation_filter" "$cell"; then
   ok
 else
   bad "coverage_cell.sh lost the instrumented bazel coverage step"
@@ -100,5 +97,4 @@ else
   bad "seed inventory missing: tools/coverage/seed-inventory.txt"
 fi
 
-echo "coverage spill harness: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "coverage spill harness"

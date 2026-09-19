@@ -36,13 +36,9 @@ set -euo pipefail
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
-workspace="$(dx_workspace_root)"
-cd "$workspace"
+dx_cd_workspace
 
-pass=0
-fail=0
-ok() { pass=$((pass + 1)); }
-bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
+dx_test_init
 
 # Same prohibited-installer set as the static half (examples_laziness.sh):
 # the contract's "or equivalent installer" clause per issue #85 and the
@@ -80,5 +76,4 @@ check_no_installers adopt-csharp
 check_no_installers adopt-fsharp
 check_no_installers adopt-polyglot
 
-echo "examples laziness runtime: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "examples laziness runtime"

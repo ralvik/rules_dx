@@ -11,22 +11,33 @@
 # missing the failing job must stop failing.
 set -euo pipefail
 
+# Shared workspace + runfiles helpers (issues #319, #323).
+# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
+
 workflow="$1"
 
-command -v python3 >/dev/null || { echo "python3 is required" >&2; exit 1; }
+command -v python3 >/dev/null || {
+  echo "python3 is required" >&2
+  exit 1
+}
 
-scratch="$(mktemp -d)"
-trap 'rm -rf "$scratch"' EXIT
+dx_mkscratch scratch
 
 heredocs="$(grep -c "python3 - <<'EOF'" "$workflow" || true)"
-[[ "$heredocs" == "2" ]] || { echo "want 2 embedded python heredocs, found $heredocs" >&2; exit 1; }
+[[ "$heredocs" == "2" ]] || {
+  echo "want 2 embedded python heredocs, found $heredocs" >&2
+  exit 1
+}
 
 # Strip the `run: |` block indent so the extract parses as top-level python.
-awk "/python3 - <<'EOF'/{count++; f=(count==2); next} f && /^[[:space:]]*EOF$/{exit} f{sub(/^          /, \"\"); print}" "$workflow" > "$scratch/aggregate.py"
-grep -q "failing checks" "$scratch/aggregate.py" || { echo "aggregate extraction missed the script" >&2; exit 1; }
+awk "/python3 - <<'EOF'/{count++; f=(count==2); next} f && /^[[:space:]]*EOF$/{exit} f{sub(/^          /, \"\"); print}" "$workflow" >"$scratch/aggregate.py"
+grep -q "failing checks" "$scratch/aggregate.py" || {
+  echo "aggregate extraction missed the script" >&2
+  exit 1
+}
 
-pass=0
-fail=0
+dx_test_init
 check() { # name, want_exit, want_substring, NEEDS-json
   local name="$1" want_exit="$2" want_sub="$3" needs="$4"
   local out rc=0
@@ -78,5 +89,4 @@ else
   fail=$((fail + 1))
 fi
 
-echo "consumer aggregate harness: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "consumer aggregate harness"

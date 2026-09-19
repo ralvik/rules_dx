@@ -14,27 +14,54 @@ checker_in="$2"
 root_in="$3"
 
 # `resolve` removed (issue #319): use dx_resolve_runfile from tools/sh/lib.sh.
-checker="$(dx_resolve_runfile "$checker_in")" || { echo "FAIL: cannot resolve $checker_in" >&2; exit 1; }
-root="$(dx_resolve_runfile "$root_in")" || { echo "FAIL: cannot resolve $root_in" >&2; exit 1; }
+checker="$(dx_resolve_runfile "$checker_in")" || {
+  echo "FAIL: cannot resolve $checker_in" >&2
+  exit 1
+}
+root="$(dx_resolve_runfile "$root_in")" || {
+  echo "FAIL: cannot resolve $root_in" >&2
+  exit 1
+}
 
-pass=0
-fail=0
-ok() { pass=$((pass+1)); echo "ok: $1"; }
-bad() { echo "FAIL: $1" >&2; fail=$((fail+1)); }
+dx_test_init
 
 run_chk() {
   python3 "$checker" consistency --ecosystem "$eco" --manifest "$1" --lock "$2"
 }
 
 case "$eco" in
-  rust) man="Cargo.toml"; lock="Cargo.lock" ;;
-  python) man="pyproject.toml"; lock="uv.lock" ;;
-  js|ts) man="package.json"; lock="pnpm-lock.yaml" ;;
-  go) man="go.mod"; lock="go.sum" ;;
-  java|kotlin|scala) man="jvm_deps.toml"; lock="maven_install.json" ;;
-  csharp|fsharp) man="paket.dependencies"; lock="paket.lock" ;;
-  cc) man="cc_deps.toml"; lock="cc_lock.json" ;;
-  *) echo "unknown ecosystem $eco" >&2; exit 2 ;;
+  rust)
+    man="Cargo.toml"
+    lock="Cargo.lock"
+    ;;
+  python)
+    man="pyproject.toml"
+    lock="uv.lock"
+    ;;
+  js | ts)
+    man="package.json"
+    lock="pnpm-lock.yaml"
+    ;;
+  go)
+    man="go.mod"
+    lock="go.sum"
+    ;;
+  java | kotlin | scala)
+    man="jvm_deps.toml"
+    lock="maven_install.json"
+    ;;
+  csharp | fsharp)
+    man="paket.dependencies"
+    lock="paket.lock"
+    ;;
+  cc)
+    man="cc_deps.toml"
+    lock="cc_lock.json"
+    ;;
+  *)
+    echo "unknown ecosystem $eco" >&2
+    exit 2
+    ;;
 esac
 
 # ok_used passes (even though newer compatible releases exist; the
@@ -53,10 +80,15 @@ if run_chk "$root/unused/$man" "$root/unused/$lock" >/dev/null; then ok "$eco co
 # transitive + shared-workspace passes (transitive in lock ignored,
 # cross-package use counts).
 if [[ "$eco" == "rust" ]]; then
-  tman="$root/transitive_shared/Cargo.toml"; tlock="$root/transitive_shared/Cargo.lock"
+  tman="$root/transitive_shared/Cargo.toml"
+  tlock="$root/transitive_shared/Cargo.lock"
 else
-  tman="$root/transitive_shared/$man"; tlock="$root/transitive_shared/$lock"
-  if [[ "$eco" == "python" ]]; then tman="$root/transitive_shared/pyproject.toml"; tlock="$root/transitive_shared/uv.lock"; fi
+  tman="$root/transitive_shared/$man"
+  tlock="$root/transitive_shared/$lock"
+  if [[ "$eco" == "python" ]]; then
+    tman="$root/transitive_shared/pyproject.toml"
+    tlock="$root/transitive_shared/uv.lock"
+  fi
 fi
 if run_chk "$tman" "$tlock" >/dev/null; then ok "$eco transitive+shared passes"; else bad "$eco transitive_shared should pass"; fi
 
@@ -77,12 +109,13 @@ if run_chk "$root/ok_used/$man" "$root/ok_used/MISSING.lock" >/dev/null 2>&1; th
 fi
 
 # non-mutating: hashes unchanged across both outcomes.
+# Portable file hashes via dx_sha256_file (issues #299, #323).
 for case in ok_used stale; do
-  before_m="$(sha256sum "$root/$case/$man" | cut -d' ' -f1)"
-  before_l="$(sha256sum "$root/$case/$lock" | cut -d' ' -f1)"
+  before_m="$(dx_sha256_file "$root/$case/$man")"
+  before_l="$(dx_sha256_file "$root/$case/$lock")"
   run_chk "$root/$case/$man" "$root/$case/$lock" >/dev/null 2>&1 || true
-  after_m="$(sha256sum "$root/$case/$man" | cut -d' ' -f1)"
-  after_l="$(sha256sum "$root/$case/$lock" | cut -d' ' -f1)"
+  after_m="$(dx_sha256_file "$root/$case/$man")"
+  after_l="$(dx_sha256_file "$root/$case/$lock")"
   if [[ "$before_m" == "$after_m" && "$before_l" == "$after_l" ]]; then ok "$eco $case non-mutating"; else bad "$eco $case mutated"; fi
 done
 
@@ -92,5 +125,4 @@ done
 if grep -rn -E -e 'import urllib|import socket|import http|import requests|from urllib|from socket' "$checker" >/dev/null 2>&1; then bad "$eco checker contains network imports"; else ok "$eco no network imports"; fi
 if env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY python3 "$checker" consistency --ecosystem "$eco" --manifest "$root/ok_used/$man" --lock "$root/ok_used/$lock" >/dev/null; then ok "$eco offline pass"; else bad "$eco offline should pass"; fi
 
-echo "consistency $eco: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "consistency $eco"

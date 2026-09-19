@@ -23,13 +23,9 @@ set -euo pipefail
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
-workspace="$(dx_workspace_root)"
-cd "$workspace"
+dx_cd_workspace
 
-pass=0
-fail=0
-ok() { pass=$((pass + 1)); }
-bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
+dx_test_init
 
 # All eleven language wrappers advertise QualitySourcesInfo normalized
 # from direct srcs (single toolchain source of truth per wrapper).
@@ -63,9 +59,9 @@ fi
 
 # Normalization stays single-sourced: wrappers load the shared
 # forwarding helper instead of reimplementing provider construction.
-if grep -q -F -e 'libs/starlark' python/rules/defs.bzl \
-  && grep -q -F -e 'libs/starlark' javascript/rules/defs.bzl \
-  && grep -q -F -e 'libs/starlark' rust/rules/defs.bzl; then
+if grep -q -F -e 'libs/starlark' python/rules/defs.bzl &&
+  grep -q -F -e 'libs/starlark' javascript/rules/defs.bzl &&
+  grep -q -F -e 'libs/starlark' rust/rules/defs.bzl; then
   ok
 else
   bad "language wrappers drifted off the shared forwarding helper"
@@ -75,17 +71,17 @@ fi
 # QualitySourcesInfo owner across every wrapper family (shared dx_wrap
 # plus custom binary/test forwarders), so own-tree runs bind workspace-level
 # native policy exactly like corpus targets bind their local configs.
-if grep -q -F -e 'aspect_hints' libs/starlark/wrapper.bzl \
-  && grep -q -F -e 'aspect_hints' go/rules/defs.bzl \
-  && grep -q -F -e 'aspect_hints' java/rules/defs.bzl \
-  && grep -q -F -e 'aspect_hints' kotlin/rules/defs.bzl \
-  && grep -q -F -e 'aspect_hints' scala/rules/defs.bzl \
-  && grep -q -F -e 'aspect_hints' csharp/rules/defs.bzl \
-  && grep -q -F -e 'aspect_hints' fsharp/rules/defs.bzl \
-  && grep -q -F -e 'aspect_hints' cc/rules/defs.bzl \
-  && grep -q -F -e 'aspect_hints' python/rules/defs.bzl \
-  && grep -q -F -e 'aspect_hints' rust/rules/defs.bzl \
-  && grep -q -F -e 'aspect_hints' javascript/rules/defs.bzl; then
+if grep -q -F -e 'aspect_hints' libs/starlark/wrapper.bzl &&
+  grep -q -F -e 'aspect_hints' go/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' java/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' kotlin/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' scala/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' csharp/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' fsharp/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' cc/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' python/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' rust/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' javascript/rules/defs.bzl; then
   ok
 else
   bad "wrappers lost their lane-A aspect_hints forwarder plumbing"
@@ -93,12 +89,12 @@ fi
 
 # Lane-A workspace-level native policy (issue #12): root ruff/biome/rustfmt
 # configs exist as checked-in sources with proof bindings on normal targets.
-if [[ -f "ruff.toml" && -f "biome.json" && -f "rustfmt.toml" ]] \
-  && grep -q -F -e 'ruff_config' BUILD.bazel \
-  && grep -q -F -e 'biome_config' BUILD.bazel \
-  && grep -q -F -e 'aspect_hints = ["//:ruff_config"]' python/hello/BUILD.bazel \
-  && grep -q -F -e 'aspect_hints = ["//:biome_config"]' javascript/hello/BUILD.bazel \
-  && grep -q -F -e 'aspect_hints = ["//:rustfmt_config"]' rust/hello/BUILD.bazel; then
+if [[ -f "ruff.toml" && -f "biome.json" && -f "rustfmt.toml" ]] &&
+  grep -q -F -e 'ruff_config' BUILD.bazel &&
+  grep -q -F -e 'biome_config' BUILD.bazel &&
+  grep -q -F -e 'aspect_hints = ["//:ruff_config"]' python/hello/BUILD.bazel &&
+  grep -q -F -e 'aspect_hints = ["//:biome_config"]' javascript/hello/BUILD.bazel &&
+  grep -q -F -e 'aspect_hints = ["//:rustfmt_config"]' rust/hello/BUILD.bazel; then
   ok
 else
   bad "lane-A workspace-level native policy binding missing (root configs + proof aspect_hints)"
@@ -122,12 +118,11 @@ fi
 # The split stays honest in the other direction too: the code-ownership
 # audit scope is code extensions only, BUILD/configs stay with
 # the corpus audit (see tools/ci/code_ownership.sh vs corpus_audit.sh).
-if grep -q -F -e 'rs|py|js' tools/ci/code_ownership.sh \
-  && grep -q -F -e 'real_source_target' tools/ci/corpus_audit.sh; then
+if grep -q -F -e 'rs|py|js' tools/ci/code_ownership.sh &&
+  grep -q -F -e 'real_source_target' tools/ci/corpus_audit.sh; then
   ok
 else
   bad "ownership-audit split drifted (code vs corpus scopes)"
 fi
 
-echo "wrapper sources harness: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "wrapper sources harness"

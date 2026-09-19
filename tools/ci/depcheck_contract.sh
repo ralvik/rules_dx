@@ -24,13 +24,9 @@ set -euo pipefail
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
-workspace="$(dx_workspace_root)"
-cd "$workspace"
+dx_cd_workspace
 
-pass=0
-fail=0
-ok() { pass=$((pass + 1)); }
-bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
+dx_test_init
 
 contract="docs/quality/quality-testing.md"
 checker="tools/depcheck/depcheck.py"
@@ -43,19 +39,19 @@ else
 fi
 
 # Truth table stays in the contract.
-if grep -q -F -e 'A stale lockfile must fail consistency even when every declaration is used' "$contract" \
-  && grep -q -F -e 'a consistent lockfile' "$contract" \
-  && grep -q -F -e 'must pass both, even when newer compatible releases exist' "$contract"; then
+if grep -q -F -e 'A stale lockfile must fail consistency even when every declaration is used' "$contract" &&
+  grep -q -F -e 'a consistent lockfile' "$contract" &&
+  grep -q -F -e 'must pass both, even when newer compatible releases exist' "$contract"; then
   ok
 else
   bad "contract lost the stale-vs-consistent truth table"
 fi
 
 # Offline routes qualified for #22/#306 (no open-work placeholder).
-if grep -q -F -e 'with network access denied' "$contract" \
-  && grep -q -F -e 'does not query live registries' "$contract" \
-  && grep -q -F -e 'Accepted (issues #22, #306)' "$contract" \
-  && grep -q -F -e 'bazel test //tools/depcheck/...' "$contract"; then
+if grep -q -F -e 'with network access denied' "$contract" &&
+  grep -q -F -e 'does not query live registries' "$contract" &&
+  grep -q -F -e 'Accepted (issues #22, #306)' "$contract" &&
+  grep -q -F -e 'bazel test //tools/depcheck/...' "$contract"; then
   ok
 else
   bad "contract lost the qualified offline-routes record for #22/#306"
@@ -69,44 +65,44 @@ else
 fi
 
 # Independently runnable in both bazel test and bare dx test.
-if grep -q -F -e 'bazel test //...' "$contract" \
-  && grep -q -F -e 'bare `dx test`' "$contract" \
-  && grep -q -F -e 'independently runnable by label' "$contract" \
-  && grep -q -F -e 'manual' "$contract"; then
+if grep -q -F -e 'bazel test //...' "$contract" &&
+  grep -q -F -e 'bare `dx test`' "$contract" &&
+  grep -q -F -e 'independently runnable by label' "$contract" &&
+  grep -q -F -e 'manual' "$contract"; then
   ok
 else
   bad "contract lost the independently-runnable clause"
 fi
 
 # Non-import/exception clause.
-if grep -q -F -e 'non-import use can pass through an explicit dependency-scoped' "$contract" \
-  && grep -q -F -e 'Missing reasons must fail validation' "$contract" \
-  && grep -q -F -e 'does not waive lockfile consistency' "$contract"; then
+if grep -q -F -e 'non-import use can pass through an explicit dependency-scoped' "$contract" &&
+  grep -q -F -e 'Missing reasons must fail validation' "$contract" &&
+  grep -q -F -e 'does not waive lockfile consistency' "$contract"; then
   ok
 else
   bad "contract lost the non-import/exception-reason clause"
 fi
 
 # Category validation clause.
-if grep -q -F -e 'must fail the usage test with a category error' "$contract" \
-  && grep -q -F -e 'Correctly categorized and legitimate multi-category usage must pass' "$contract"; then
+if grep -q -F -e 'must fail the usage test with a category error' "$contract" &&
+  grep -q -F -e 'Correctly categorized and legitimate multi-category usage must pass' "$contract"; then
   ok
 else
   bad "contract lost the category-validation clause"
 fi
 
 # Obsolete-exception clause.
-if grep -q -F -e 'as obsolete' "$contract" \
-  && grep -q -F -e 'without deleting them' "$contract"; then
+if grep -q -F -e 'as obsolete' "$contract" &&
+  grep -q -F -e 'without deleting them' "$contract"; then
   ok
 else
   bad "contract lost the obsolete-exception clause"
 fi
 
 # Checker exists, hermetic (no network imports), non-mutating (reads only).
-if [[ -f "$checker" ]] \
-  && ! grep -rn -E -e 'import urllib|import socket|import http|import requests|from urllib|from socket' "$checker" >/dev/null 2>&1 \
-  && ! grep -rn -E -e 'subprocess|os\.system|os\.exec' "$checker" >/dev/null 2>&1; then
+if [[ -f "$checker" ]] &&
+  ! grep -rn -E -e 'import urllib|import socket|import http|import requests|from urllib|from socket' "$checker" >/dev/null 2>&1 &&
+  ! grep -rn -E -e 'subprocess|os\.system|os\.exec' "$checker" >/dev/null 2>&1; then
   ok
 else
   bad "checker missing or not hermetic: $checker"
@@ -135,8 +131,8 @@ for t in rust_consistency_test rust_usage_test python_consistency_test python_us
     targets_ok=0
   fi
 done
-if [[ "$targets_ok" == "1" ]] \
-  && ! grep -A8 -e 'depcheck' "$build" | grep -q -F -e '"manual"'; then
+if [[ "$targets_ok" == "1" ]] &&
+  ! grep -A8 -e 'depcheck' "$build" | grep -q -F -e '"manual"'; then
   ok
 else
   bad "depcheck test targets missing or carry manual exclusion"
@@ -149,13 +145,12 @@ fi
 
 # Docs describe only what runs: required-core plus admitted accepted for
 # #22/#306, qualified adapter work under #307 plus foundation under #304.
-if grep -q -F -e 'Accepted (issues #22, #306)' "$contract" \
-  && grep -q -F -e 'issue #307' "$contract" \
-  && grep -q -F -e 'issue #304' "$contract"; then
+if grep -q -F -e 'Accepted (issues #22, #306)' "$contract" &&
+  grep -q -F -e 'issue #307' "$contract" &&
+  grep -q -F -e 'issue #304' "$contract"; then
   ok
 else
   bad "contract lost its accepted-vs-open record for #22/#306"
 fi
 
-echo "depcheck contract harness: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "depcheck contract harness"

@@ -11,23 +11,34 @@
 # copy with the mode validation removed must stop failing.
 set -euo pipefail
 
+# Shared workspace + runfiles helpers (issues #319, #323).
+# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
+
 workflow="$1"
 
-command -v python3 >/dev/null || { echo "python3 is required" >&2; exit 1; }
+command -v python3 >/dev/null || {
+  echo "python3 is required" >&2
+  exit 1
+}
 
-scratch="$(mktemp -d)"
-trap 'rm -rf "$scratch"' EXIT
+dx_mkscratch scratch
 
 heredocs="$(grep -c "python3 - <<'EOF'" "$workflow" || true)"
-[[ "$heredocs" == "2" ]] || { echo "want 2 embedded python heredocs, found $heredocs" >&2; exit 1; }
+[[ "$heredocs" == "2" ]] || {
+  echo "want 2 embedded python heredocs, found $heredocs" >&2
+  exit 1
+}
 
 # The script body sits indented inside the `run: |` block; strip the
 # block indent so the extracted file parses as top-level python.
-awk "/python3 - <<'EOF'/{count++; f=(count==1); next} f && /^[[:space:]]*EOF$/{exit} f{sub(/^          /, \"\"); print}" "$workflow" > "$scratch/gate.py"
-grep -q "no per-platform check enabled" "$scratch/gate.py" || { echo "gate extraction missed the script" >&2; exit 1; }
+awk "/python3 - <<'EOF'/{count++; f=(count==1); next} f && /^[[:space:]]*EOF$/{exit} f{sub(/^          /, \"\"); print}" "$workflow" >"$scratch/gate.py"
+grep -q "no per-platform check enabled" "$scratch/gate.py" || {
+  echo "gate extraction missed the script" >&2
+  exit 1
+}
 
-pass=0
-fail=0
+dx_test_init
 check() { # name, want_exit, want_substring, VAR=val...
   local name="$1" want_exit="$2" want_sub="$3"
   shift 3
@@ -85,7 +96,7 @@ block = '''          if mode == "sequential":
 assert text.count(block) == 1, "mode block not found exactly once"
 open(sys.argv[2], "w").write(text.replace(block, ""))
 EOF
-awk "/python3 - <<'EOF'/{count++; f=(count==1); next} f && /^[[:space:]]*EOF$/{exit} f{sub(/^          /, \"\"); print}" "$mutated" > "$scratch/mutated_gate.py"
+awk "/python3 - <<'EOF'/{count++; f=(count==1); next} f && /^[[:space:]]*EOF$/{exit} f{sub(/^          /, \"\"); print}" "$mutated" >"$scratch/mutated_gate.py"
 mut_out="$(SCHEDULING="sequential" PLATFORMS='["linux_x86_64"]' DISABLED="" python3 "$scratch/mutated_gate.py" 2>&1)" && mut_rc=0 || mut_rc=$?
 if [[ "$mut_rc" == "0" ]]; then
   pass=$((pass + 1))
@@ -94,5 +105,4 @@ else
   fail=$((fail + 1))
 fi
 
-echo "consumer scheduling harness: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "consumer scheduling harness"

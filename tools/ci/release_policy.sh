@@ -43,13 +43,9 @@ set -euo pipefail
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
-workspace="$(dx_workspace_root)"
-cd "$workspace"
+dx_cd_workspace
 
-pass=0
-fail=0
-ok() { pass=$((pass + 1)); }
-bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
+dx_test_init
 
 manifest="quality/curated_defaults.bzl"
 adapters="quality/adapters.bzl"
@@ -58,26 +54,26 @@ baseline="docs/tools/tool-baseline.md"
 changelog="CHANGELOG.md"
 
 # The frozen manifest exists and pins the documented curated defaults.
-if [[ -f "$manifest" ]] \
-  && grep -q -F -e '"python"' "$manifest" \
-  && grep -q -F -e '"ruff"' "$manifest" \
-  && grep -q -F -e '"ty"' "$manifest" \
-  && grep -q -F -e '"pydoclint"' "$manifest" \
-  && grep -q -F -e '"biome"' "$manifest" \
-  && grep -q -F -e '"rustfmt"' "$manifest" \
-  && grep -q -F -e '"clippy"' "$manifest" \
-  && grep -q -F -e '"buildifier"' "$manifest" \
-  && grep -q -F -e '"taplo"' "$manifest"; then
+if [[ -f "$manifest" ]] &&
+  grep -q -F -e '"python"' "$manifest" &&
+  grep -q -F -e '"ruff"' "$manifest" &&
+  grep -q -F -e '"ty"' "$manifest" &&
+  grep -q -F -e '"pydoclint"' "$manifest" &&
+  grep -q -F -e '"biome"' "$manifest" &&
+  grep -q -F -e '"rustfmt"' "$manifest" &&
+  grep -q -F -e '"clippy"' "$manifest" &&
+  grep -q -F -e '"buildifier"' "$manifest" &&
+  grep -q -F -e '"taplo"' "$manifest"; then
   ok
 else
   bad "curated manifest lost its frozen defaults"
 fi
 
 # Docs still describe the same curated baseline the manifest pins.
-if grep -q -F -e 'Ruff, Ty, and pydoclint' "$baseline" \
-  && grep -q -F -e 'Biome is a planned' "$baseline" \
-  && grep -q -F -e 'Prettier remains' "$baseline" \
-  && grep -q -F -e 'ESLint is an opt-in' "$baseline"; then
+if grep -q -F -e 'Ruff, Ty, and pydoclint' "$baseline" &&
+  grep -q -F -e 'Biome is a planned' "$baseline" &&
+  grep -q -F -e 'Prettier remains' "$baseline" &&
+  grep -q -F -e 'ESLint is an opt-in' "$baseline"; then
   ok
 else
   bad "tool-baseline.md drifted from the frozen curated baseline"
@@ -86,13 +82,13 @@ fi
 # Default formatter set is frozen: every family keeps its exact entry.
 # A removal or formatter-set change requires a major release, never a
 # minor, so any drift here fails closed.
-if grep -q -F -e '"javascript": ["biome"]' "$manifest" \
-  && grep -q -F -e '"json": ["prettier"]' "$manifest" \
-  && grep -q -F -e '"python": ["ruff"]' "$manifest" \
-  && grep -q -F -e '"rust": ["rustfmt"]' "$manifest" \
-  && grep -q -F -e '"starlark": ["buildifier"]' "$manifest" \
-  && grep -q -F -e '"toml": ["taplo"]' "$manifest" \
-  && grep -q -F -e '"typescript": ["biome"]' "$manifest"; then
+if grep -q -F -e '"javascript": ["biome"]' "$manifest" &&
+  grep -q -F -e '"json": ["prettier"]' "$manifest" &&
+  grep -q -F -e '"python": ["ruff"]' "$manifest" &&
+  grep -q -F -e '"rust": ["rustfmt"]' "$manifest" &&
+  grep -q -F -e '"starlark": ["buildifier"]' "$manifest" &&
+  grep -q -F -e '"toml": ["taplo"]' "$manifest" &&
+  grep -q -F -e '"typescript": ["biome"]' "$manifest"; then
   ok
 else
   bad "FORMAT_FROZEN drifted: formatter-set changes require a major release"
@@ -110,10 +106,10 @@ fi
 # Parity: every adapter-backed class is classified, and every deferred
 # class names an owner + route (mirrors the parity_tests.bzl unit gate
 # so CI fails here too if the manifest rots).
-if grep -q -F -e 'PARITY_DEFERRED = {' "$parity" \
-  && grep -q -F -e '"go": ["O32"' "$parity" \
-  && grep -q -F -e 'REAL_CLASS_TO_FAMILY = {' "$adapters" \
-  && grep -q -F -e 'REAL_ADAPTERS = {' "$adapters"; then
+if grep -q -F -e 'PARITY_DEFERRED = {' "$parity" &&
+  grep -q -F -e '"go": ["O32"' "$parity" &&
+  grep -q -F -e 'REAL_CLASS_TO_FAMILY = {' "$adapters" &&
+  grep -q -F -e 'REAL_ADAPTERS = {' "$adapters"; then
   ok
 else
   bad "parity manifests lost their classification/deferral shape"
@@ -129,8 +125,7 @@ fi
 # upstream-delegated, target-coupled, or check-only (see
 # //tools/ci:quality_adapters_parity for the full sixteen-tool
 # parser/matrix plus artifact plus packaging evidence).
-scratch="$(mktemp -d)"
-trap 'rm -rf "$scratch"' EXIT
+dx_mkscratch scratch
 evidence_ok=1
 for class in rust python markdown starlark toml javascript typescript json jsx tsx; do
   if ! grep -rq -F -e "$class" quality/testdata/BUILD.bazel; then
@@ -158,9 +153,9 @@ fi
 # Simulate by dropping the python ruff formatter from a scratch copy
 # and requiring the frozen-formatter grep to reject it.
 cp "$manifest" "$scratch/removed.bzl"
-# Portable in-place edit (issue #299): GNU `sed -i -e` breaks on macOS
-# BSD sed; the tmpfile form works on both.
-sed -e 's/"python": \["ruff"\]/"python": []/' "$scratch/removed.bzl" > "$scratch/removed.bzl.tmp" && mv "$scratch/removed.bzl.tmp" "$scratch/removed.bzl"
+# Portable in-place edit via dx_replace (issues #299, #323): GNU `sed -i -e`
+# breaks on macOS BSD sed; the tmpfile form works on both.
+dx_replace 's/"python": \["ruff"\]/"python": []/' "$scratch/removed.bzl"
 if grep -q -F -e '"python": ["ruff"]' "$scratch/removed.bzl"; then
   bad "removal negative did not fail: scratch still matches frozen python formatter"
 else
@@ -170,8 +165,8 @@ fi
 # Negative: a formatter-set change (biome -> prettier for typescript)
 # fails the frozen check.
 cp "$manifest" "$scratch/reformatted.bzl"
-# Portable in-place edit (issue #299): see above.
-sed -e 's/"typescript": \["biome"\]/"typescript": ["prettier"]/' "$scratch/reformatted.bzl" > "$scratch/reformatted.bzl.tmp" && mv "$scratch/reformatted.bzl.tmp" "$scratch/reformatted.bzl"
+# Portable in-place edit via dx_replace (issues #299, #323): see above.
+dx_replace 's/"typescript": \["biome"\]/"typescript": ["prettier"]/' "$scratch/reformatted.bzl"
 if grep -q -F -e '"typescript": ["biome"]' "$scratch/reformatted.bzl"; then
   bad "formatter-change negative did not fail: scratch still matches frozen typescript formatter"
 else
@@ -179,12 +174,11 @@ else
 fi
 
 # Negative: a deferral without owner/route fails the parity shape check.
-printf 'PARITY_DEFERRED = {\n    "go": ["", ""],\n}\n' > "$scratch/bad-parity.bzl"
+printf 'PARITY_DEFERRED = {\n    "go": ["", ""],\n}\n' >"$scratch/bad-parity.bzl"
 if grep -q -F -e '"go": ["O32"' "$scratch/bad-parity.bzl"; then
   bad "malformed-deferral negative did not fail"
 else
   ok
 fi
 
-echo "release policy harness: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "release policy harness"

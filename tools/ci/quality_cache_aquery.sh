@@ -78,13 +78,9 @@ set -euo pipefail
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
-workspace="$(dx_workspace_root)"
-cd "$workspace"
+dx_cd_workspace
 
-pass=0
-fail=0
-ok() { pass=$((pass + 1)); }
-bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
+dx_test_init
 
 query_target() { # target -> aquery output
   local target="$1"
@@ -766,5 +762,4 @@ fi
 if [[ ! -s "$exec_second" ]]; then ok; else bad "exec-log: second unchanged build must be a cache hit (empty log, nothing executed)"; fi
 rm -f "$exec_first" "$exec_second"
 
-echo "quality cache aquery: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "quality cache aquery"

@@ -40,7 +40,7 @@ sh_test(
     name = "hello_output_test",
     srcs = ["hello_output_test.sh"],
     args = ["$(rootpath :hello)"],
-    data = [":hello"],
+    data = [":hello", "//tools/sh:lib"],
     tags = ["no-coverage"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
