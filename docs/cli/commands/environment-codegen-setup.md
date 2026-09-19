@@ -9,9 +9,10 @@ Bazel root mechanism documented in [Generated Code](../../environments/codegen.m
 
 `dx codegen <target>` accepts exactly one explicit target label and selects generated
 sources from that configured target's transitive provider closure. It does not require
-a sibling projection target for a consumer. A registered bare schema target selects
-all currently declared generated-language projection reverse dependents found through
-Bazel query. Paths, patterns, multiple labels, profiles, and language selectors are
+a sibling projection target for a consumer. Accepted: exact-closure selection
+only; a bare schema selects its own closure (empty when it contributes no
+shards). Open: reverse-dependent expansion to all registered projections
+consuming a bare schema via Bazel query. Paths, patterns, multiple labels, profiles, and language selectors are
 rejected. A target with no generated sources selects an empty exact projection rather
 than retaining unrelated generated imports.
 
@@ -64,8 +65,9 @@ configured closures and actions; provider applicability keeps each aspect bounde
 targets with nonempty effective stage subsets.
 
 For an exact target with only one capability, setup prepares that side and carries the
-other current generation forward. A bare schema therefore builds all registered codegen
-projections without replacing the selected environment. A missing prior side uses its
+other current generation forward. A bare schema therefore carries the selected
+environment forward today; all-projection codegen expansion waits on the open
+reverse-dependent query. A missing prior side uses its
 managed empty generation.
 
 Before `dx` is installed, `bazel run //dx:env` remains the minimal bootstrap that
@@ -86,5 +88,7 @@ shared workspace commit lock (see
 validation, or commit failure leaves the current setup unchanged (exit 1
 with `managed_commit_failed`, or `no_capability` when an exact scope provides
 neither capability); staged-but-unselected generations remain as retained
-cache. Remaining collection items are tracked in
-planned work.
+cache. See [Generated Code](../../environments/codegen.md),
+[Developer Environments](../../environments/environment.md), and
+[Managed Environment State](../../environments/managed-state.md) for the
+owning contracts.

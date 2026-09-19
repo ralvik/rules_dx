@@ -69,10 +69,12 @@ Language and LSP configuration refers to `.dx/setups/current/generated`, not to 
 generation captured by the environment identity. An explicit codegen refresh therefore
 becomes visible without rebuilding or reselecting the environment.
 
-Persistent language environments have no public contribution or invocation protocol in
-v1. Implementations remain language-specific and directly consume their authoritative
-rules and verified provider data; v1 supports end-user workflows, not third-party
-environment plugins. They use provider-derived filesystem links for sources,
+Accepted: persistent language environments have no public contribution or invocation
+protocol in v1. Implementations remain language-specific and directly consume
+their authoritative rules and verified provider data; v1 supports end-user
+workflows, not third-party environment plugins. This is the PATH-tools-only
+extension boundary: `EnvironmentInfo` stays PATH-tool-only and is not a
+persistent-environment plugin API. They use provider-derived filesystem links for sources,
 dependencies, and toolchains. Generated outputs use the independent symlink-only codegen projection.
 Copying is not a fallback.
 
@@ -153,11 +155,13 @@ signal behavior.
 
 ## Public Tool API
 
-The public PATH-tool API is loaded from `@rules_dx//env:defs.bzl`. The convenience rule is
+Accepted: the public PATH-tool API is loaded from `@rules_dx//env:defs.bzl`. The convenience rule is
 `environment_tool(name, executable, bin_name)`. Built-in integrations and consumer
 repositories use the same validated constructors and `EnvironmentInfo`
-collection provider; there is no private first-party contribution path. Third-party
-language-integration plugins are deferred past v1.
+collection provider; there is no private first-party contribution path. Pinned by
+`env/defs_tests.bzl` and the `//cli/env:bootstrap_test` install test.
+
+Open: third-party language-integration plugins are deferred past v1.
 
 `EnvironmentInfo` carries zero or more PATH-tool records and composes transitively.
 Each record contains:
