@@ -13,8 +13,9 @@
 # in `dx_update::backend`, continuation in `dx_update::outcome`, exit selection
 # in `dx_update::report`; `--dry-run` exits 0).
 # Required-core plus admitted lockfile-consistency and usage checks are
-# delivered in tools/depcheck/ (issues #22, #306); remaining adapter work
-# stays open under #307, foundation mappings under #304.
+# delivered in tools/depcheck/ (issues #22, #306); remaining adapter
+# implementation stays owned by O32/O31 plus ADR 0019 (qualified under
+# #307), foundation mappings under #304.
 #
 # This harness machine-checks the verifiable halves on a clean
 # tree today: audit live execution, update live execution, exit-code mappings,

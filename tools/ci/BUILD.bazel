@@ -172,6 +172,21 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Quality-adapter parity/provenance harness (issue #307, qualified):
+# required-core adapters plus Buildifier/Taplo/Vale probes with fixture
+# evidence (parsers, matrix pass/fail plus fix/format, native-config or
+# explicit config-free/delegated status, artifact metadata plus
+# regeneration, packaging single-correct-path plus wire profiles); the ten
+# missing families keep frozen routes owned by O32/O31 plus ADR 0019 with
+# no false adapter claim; Buildifier/Taplo/Vale stay provisional. Run by
+# CI via `bazel run //tools/ci:quality_adapters_parity`.
+sh_binary(
+    name = "quality_adapters_parity",
+    srcs = ["quality_adapters_parity.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Publication-trust harness (issues #78, #26, #5): machine-checks
 # the draft-only + nothing-published static invariants the
 # release-hygiene harness does not own — module name at the
@@ -319,7 +334,7 @@ sh_binary(
 # independently-runnable, non-import/exception, category, and obsolete
 # clauses are present and recorded as accepted for #22/#306, with the hermetic
 # checker plus per-language fixtures and targets in tools/depcheck/.
-# Remaining adapter/foundation work stays open per #307/#304. Run by CI via
+# Qualified adapter work under #307 plus foundation under #304. Run by CI via
 # `bazel run //tools/ci:depcheck_contract`.
 sh_binary(
     name = "depcheck_contract",

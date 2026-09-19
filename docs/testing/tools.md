@@ -80,8 +80,10 @@ offline verification with authenticated trust roots, rotation with old-root rete
 Test the approved [packaging boundary](../tools/tool-acquisition.md#artifact-identity-and-metadata):
 constituent provenance remains embedded, final-archive attestations remain detached and bind to the
 published bytes, missing required evidence fails verification, and changing embedded metadata
-invalidates old final-archive attestations. Freeze manifest self-entry rules and remaining
-trust/profile policy (open)
+invalidates old final-archive attestations. Manifest self-entry rules are frozen under issue #307
+(no self-referential digest/size via `packaging_uses_single_correct_path` plus manifest
+completeness via `manifest_covers_payload` in `cli/qualification`); remaining trust/profile
+policy (trusted builders, rotation, offline roots, rebuild thresholds) stays owned by O38/O39
 before asserting those additional outcomes.
 
 ## Laziness And Performance

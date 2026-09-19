@@ -13,7 +13,8 @@
 # Admitted additional foundations (Go, C/C++, Java, Kotlin, Scala, C#, F#)
 # keep provisional upstreams with hello test runners, lock authority, and
 # classification-only quality families pinned here for #304; upgrades plus
-# quality adapters (under #307) plus the C/C++ MSVC block stay owned gaps.
+# quality adapters (qualified under #307 with deferred O32/O31 routes) plus
+# the C/C++ MSVC block stay owned gaps.
 # Deferred/excluded record (Ruby plus PowerShell deferred, Swift plus Bandit
 # excluded, host-toolchain fallback never approved) is pinned here for #305;
 # retained cohorts plus exclusion evidence stay owned gaps with reconsideration
@@ -512,7 +513,8 @@ else
 fi
 
 # #304: admitted quality classification stays pinned (families exist,
-# no adapter claims admitted classes yet; adapter side stays under #307).
+# no adapter claims admitted classes yet; adapter side qualified under #307
+# with deferred O32 routes).
 class304_fail=""
 for cls in go c cpp java kotlin scala csharp fsharp; do
   grep -q -F -e "\"$cls\":" quality/adapters.bzl || class304_fail="$class304_fail $cls:family"

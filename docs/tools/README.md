@@ -24,9 +24,15 @@ Ruff maps to `format`/`lint` over the same classes, and Biome/ESLint/Prettier/`t
 JS/TS classes per `quality/adapters.bzl` with parsers in `quality/adapter/src/parsers/`
 (`ty.rs`, `ruff.rs`, `biome.rs`, `eslint.rs`, `prettier.rs`, `tsc.rs`); required-core
 quality mappings stay owned under issue #303.
+Quality adapters plus parity plus packaging are qualified under issue #307 with
+fixture evidence (`quality/testdata/runner_matrix_cases.bzl` pass/fail plus fix/format,
+`quality/native_config.bzl` bindings or explicit config-free/delegated status,
+`quality/artifacts/metadata_tests.bzl` plus `update.py --verify-only`, `cli/qualification`
+single-correct-path plus SPDX/SLSA wire profiles; Buildifier/Taplo/Vale probes stay
+provisional) with deferred implementation owned by O32/O31 plus ADR 0019.
 Additional-language adapters (Java, Kotlin, Scala, C#, F#, C/C++, Go) have no
 claimed adapter yet; foundation-side classification stays owned under issue #304 and
-per-tool qualification stays open under issue #307.
+per-tool qualification is qualified under issue #307 with deferred routes owned by O32.
 Ruby and PowerShell tool cohorts stay deferred beyond v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md);
 Swift is excluded from v1 by the same record.
