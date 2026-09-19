@@ -23,9 +23,10 @@
 //! spans; a stray backtick is literal text, so a link after it is reported
 //! (fail-closed). HTML blocks contribute neither headings nor links. Only
 //! ATX headings count (blockquote, list, and setext headings do not), and
-//! heading slugs follow the checker's own rule ([`slug`]): lowercase
-//! alphanumerics, `-`/`_` kept, each whitespace character becomes `-`,
-//! GitHub-style `-1`/`-2` deduplication for repeat headings.
+//! heading slugs follow [`slug`] (`slug::slugify` over `deunicode`
+//! transliteration: ASCII `a-z`/`0-9`/`-` only, collapsed and trimmed,
+//! non-ASCII transliterated) with GitHub-style `-1`/`-2` deduplication
+//! for repeat headings.
 //!
 //! Binary contract: [`run_cli`] checks `--source WS_PATH=EXEC_PATH` files
 //! against a sibling closure (the union of `--source` and
@@ -602,19 +603,11 @@ fn is_closed_fence(source_lines: &[&str], region: &CodeRegion) -> bool {
     }
 }
 
-/// GitHub-style anchor slug defined by this checker, not by an upstream tool.
+/// Anchor slug via `slug::slugify` over `deunicode` transliteration (issue
+/// #393): ASCII `a-z`/`0-9`/`-` only, collapsed and trimmed; non-ASCII
+/// headings transliterate instead of stripping.
 pub fn slug(text: &str) -> String {
-    let mut out = String::new();
-    for c in text.chars() {
-        if c.is_alphanumeric() {
-            out.extend(c.to_lowercase());
-        } else if c == '-' || c == '_' {
-            out.push(c);
-        } else if c.is_whitespace() {
-            out.push('-');
-        }
-    }
-    out
+    slug::slugify(deunicode::deunicode(text))
 }
 
 /// `scheme:` prefix with a multi-character scheme (single letters are
@@ -1589,8 +1582,30 @@ mod tests {
     }
 
     #[test]
-    fn slug_keeps_dashes_and_underscores() {
-        let text = "# T\n\n## well-known_name\n\nSee [s](#well-known_name).\n";
+    fn slug_collapses_dashes_and_underscores() {
+        // Issue #393 (`slug::slugify`): `_` becomes `-`, runs collapse.
+        let text = "# T\n\n## well-known_name\n\nSee [s](#well-known-name).\n";
+        let outcome = check_markdown("a.md", text, &siblings(&[]));
+        assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
+    }
+
+    #[test]
+    fn slug_transliterates_unicode_fixtures() {
+        // Issue #393 fixtures: transliteration via `deunicode`, collapsed.
+        assert_eq!(slug("Привет"), "privet");
+        assert_eq!(slug("你好"), "ni-hao");
+        assert_eq!(slug("😄 emoji"), "smile-emoji");
+        assert_eq!(slug("Æúű"), "aeuu");
+        assert_eq!(slug("a   b"), "a-b");
+    }
+
+    #[test]
+    fn transliterated_anchors_resolve() {
+        // End-to-end: non-ASCII headings link via transliterated slugs.
+        let text = "# T\n\n## Привет\n\n## 你好\n\nSee [ru](#privet) and [zh](#ni-hao).\n";
+        let outcome = check_markdown("a.md", text, &siblings(&[]));
+        assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
+        let text = "# T\n\n## 😄 emoji\n\n## Æúű\n\nSee [e](#smile-emoji) and [a](#aeuu).\n";
         let outcome = check_markdown("a.md", text, &siblings(&[]));
         assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
     }
