@@ -687,7 +687,7 @@ struct Mapping {
     exec: String,
 }
 
-/// `argv` tokenizer (issue #233). `--source`/`--sibling` append in argument
+/// `argv` tokenizer (issue #233; qualified under issue #316: frozen legacy contract). `--source`/`--sibling` append in argument
 /// order; every value option consumes the next token unconditionally (even
 /// a `--`-led token), matching the legacy hand loop. Mapping values validate
 /// through [`parse_source_mapping`]/[`parse_sibling_mapping`] at tokenize

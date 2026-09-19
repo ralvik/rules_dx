@@ -120,8 +120,8 @@ Accepted record of the as-built close-out battery. The full battery runs in
   widen-update loop, quality/execution/distribution/backlog guards,
   `:supported_evidence_gate`, `:quality_adapters_parity`,
   `:env_codegen_qualification`, `:docs_pipeline_qualification`,
-  `:consumer_ci_qualification`, `:file_family_qualification`, and
-  `:helper_qualification`.
+  `:consumer_ci_qualification`, `:file_family_qualification`,
+  `:helper_qualification`, and `:clap_tokenizer_qualification`.
 - `dogfood-lint`, `dogfood-format`, `dogfood-typecheck`: corpus converge then
   `--check` no-op proof, plus lane-A trees `//python/... //javascript/...
   //rust/hello/...` where enforcing.
@@ -131,7 +131,7 @@ Green here (static guards on a clean tree, no full rebuild): `e2e_cases`
 3/3, `supported_evidence_gate` 20/20, `distribution_closeout_guards` 35/35,
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 26/26,
 `consumer_ci_qualification` 29/29, `file_family_qualification` 24/24,
-`helper_qualification` 23/23.
+`helper_qualification` 23/23, `clap_tokenizer_qualification` 19/19.
 Full `build`/`test` green is owned by CI on this tree; the last full-tree
 record is noted on the issue, not re-claimed here.
 
@@ -180,6 +180,13 @@ Remaining reds stay owned gaps, not green claims:
   chrono, scratch via tempfile, dir sizing and walks via walkdir/ignore/globset
   with stays-hand-rolled atomic lock, path ladder, LCOV parser plus scanner
   reasons; upstream re-evaluation plus any future migration stays owned gap).
+- Clap-as-tokenizer legacy errors with fixture evidence qualified seed-only under #316
+  (`bazel run //tools/ci:clap_tokenizer_qualification`; frozen legacy output as
+  contract with snapshots across env, codegen shard, env shard, evaluator,
+  runner, markdown, plus dx CLI tokenizer via disable_help_flag plus
+  allow_hyphen_values plus invalid_token/parse_error mapping for unknown,
+  missing, malformed, hyphen-value, and attached-echo shapes; strict clap
+  parsing with auto help stays owned gap).
 - Non-dogfed paths stay open under #324.
 
 The E2E-case convention lives in the

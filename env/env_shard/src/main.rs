@@ -55,7 +55,8 @@ fn usage() -> String {
     "usage: env_shard_writer --producer LABEL --integration LANG --entry KEY|VALUE[|EXEC] [--entry ...] --output OUT".into()
 }
 
-/// `argv` tokenizer. `--entry` appends in argument order; scalars keep
+/// `argv` tokenizer (qualified under issue #316: frozen legacy contract).
+/// `--entry` appends in argument order; scalars keep
 /// last-wins repeats; every value option consumes the next token
 /// unconditionally (even a `--`-led token), matching the legacy hand loop.
 /// `--entry` values validate through [`parse_entry_value`] at tokenize time

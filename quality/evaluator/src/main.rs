@@ -18,6 +18,9 @@ use clap::{
 use quality_evaluator::{evaluate, parse_threshold, Threshold};
 use quality_result::decode_validated;
 
+/// `argv` tokenizer (qualified under issue #316: frozen legacy contract).
+/// Scalars keep last-wins repeats; every value option consumes the next
+/// token unconditionally (even a `--`-led token), matching the legacy loop.
 #[derive(Parser)]
 #[command(disable_help_flag = true)]
 struct Cli {
