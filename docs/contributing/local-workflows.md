@@ -3,8 +3,11 @@
 ## Bootstrap
 
 Fresh clone to green build, copy-paste. Linux x86_64 seed host.
-Pinned versions: Bazel `9.2.0` (via `.bazelversion`), Bazelisk
-`v1.29.0`, pnpm `10.34.5` (via `packageManager`, use corepack).
+Pinned versions: Bazel `9.2.0` (canonical `.bazelversion`), Bazelisk
+`v1.29.0` (canonical `.github/actions/setup-bazelisk/action.yml`
+defaults), pnpm `10.34.5` (via `packageManager`, use corepack).
+Tracked copies in `.devcontainer/Dockerfile.prebuilt` and below must equal
+their canonical source; `//tools/ci:pin_consistency_test` fails on drift.
 
 ```sh
 # 1. Pinned Bazelisk launcher (sha256, linux-amd64):
@@ -53,7 +56,8 @@ type per package, issue #15, shared `tags = ["corpus"]`) is checked with the
 real lint/format aspects; every produced result must pass the per-result
 evaluator at `--fail_on warning`. The same invocations run in CI
 (`.github/workflows/ci.yml`, jobs `dogfood-freshness`, `dogfood-lint`,
-`dogfood-format`, `dogfood-typecheck` sharded remaining unqualified), which installs no
+`dogfood-format`, `dogfood-typecheck` sequenced via `needs`, one logical
+stage per job), which installs no
 quality tools: all tools execute as Bazel-resolved pinned actions.
 
 Select the corpus targets, then build their `dx_results`:
@@ -131,7 +135,8 @@ and the inventory in `bazel test //...`. Owned build profiles
 [ADR 0021](../decisions/0021-build-profiles.md).
 
 Version bumps flow through the native widen-one-requirement loop
-(delivered, issue #260) with Renovate retained as fallback: `dx init`
+(delivered, issue #260) alongside Renovate (complementary roles decided in
+issue #326: Renovate proposes, `dx bump`/`dx update` applies): `dx init`
 scaffolds `renovate.json` absent-only with the full manager set
 (`bazel` over `.bazelversion` plus Cargo, npm/pnpm, GitHub Actions,
 Go), grouped and scheduled weekly. `dx bump <set:package> <version>` widens

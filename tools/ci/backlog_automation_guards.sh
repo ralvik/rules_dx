@@ -6,13 +6,13 @@
 # first-party coverage PR comments (#254) landed with the Bazel-owned LCOV
 # gate as source of truth; the
 # widen-one-requirement + update PR loop (#260) is delivered with Renovate
-# retained as fallback (disposition vs #3 open).
+# proposing alongside it (complementary roles decided in issue #326).
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
 # today (23 checks): examples ownership + starter callers + laziness
 # slices + attribution + full index breadth + Scala/Polyglot entries +
 # mixed disposition, LCOV preset pin + inventory backing + comment landing,
-# Renovate fallback + full manager set + loop policy + Monday schedule
+# Renovate plus full manager set + loop policy + Monday schedule
 # + schedule policy, never-rewrites pin, prior harnesses green,
 # delivered widen implementation, plus the #310 docs-pipeline tracker.
 # Reverse queries and adapter runs stay open under their
@@ -93,15 +93,15 @@ fi
 if grep -q -F -e '"bazel", "cargo", "github-actions", "gomod", "npm"' renovate.json; then
   ok
 else
-  bad "Renovate fallback lost its all-ecosystems v1 manager set (#260)"
+  bad "Renovate lost its all-ecosystems v1 manager set (#260)"
 fi
 
-# #260 Renovate fallback retained with full manager set.
+# #260 Renovate retained with full manager set (complementary, issue #326).
 if grep -q -F -e 'npm' renovate.json &&
   grep -q -F -e 'automerge' renovate.json; then
   ok
 else
-  bad "Renovate fallback lost its manager set (#260)"
+  bad "Renovate lost its manager set (#260)"
 fi
 
 # #260 never-rewrites invariant intact.
@@ -170,7 +170,7 @@ if grep -q -F -e '"prCreation"' renovate.json &&
   grep -q -F -e '"dependencyDashboard"' renovate.json; then
   ok
 else
-  bad "Renovate fallback lost its reviewable-loop policy (#260)"
+  bad "Renovate lost its reviewable-loop policy (#260)"
 fi
 
 # #85 acquisition attribution stays owned: static (prohibited-installer)
@@ -200,7 +200,7 @@ fi
 if grep -q -F -e 'before 5am on Monday' renovate.json; then
   ok
 else
-  bad "Renovate fallback lost its Monday schedule record (#260)"
+  bad "Renovate lost its Monday schedule record (#260)"
 fi
 
 # Widen implementation delivered (#260): explicit bump command plus the

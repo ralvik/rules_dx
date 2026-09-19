@@ -180,7 +180,8 @@ Remaining reds stay owned gaps, not green claims:
   (`bazel run //tools/ci:consumer_ci_qualification`; nine checks, explicit
   platforms, fail-closed sequential, stable dx-ci aggregate, hygiene,
   concurrency, permissions, per-cell coverage with fork-safe comments,
-  build-only self-call smoke, native bump loop plus Renovate fallback,
+  build-only self-call smoke, native bump loop plus Renovate (complementary,
+  issue #326),
   dx migrate planning plus dx run multirun, tag hygiene as-built; platform,
   runner, isolation, cache, ordering, merge, diff, queue, cancellation,
   aggregate binding, thread identity, ordering, limits, fork, untrusted,

@@ -5,6 +5,8 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
+exports_files(["Dockerfile.prebuilt"])
+
 # Parity fixture: `dx init` scaffold output is a snapshot of the
 # checked-in definition, so the definition we ship is the one we
 # boot (snapshot + schema, UPDATE_EXPECT refreshes the golden).

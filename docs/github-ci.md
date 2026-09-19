@@ -46,7 +46,7 @@ The same caller-pin pattern covers documentation: `.github/workflows/reusable-do
 is a reusable workflow running `dx lint --check` over a
 caller-selected docs scope, with an opt-in `publish` input that deploys the validated
 docs tree to GitHub Pages. The deployed content is the validated tree, not a rendered
-site; the renderer arrives via open work.
+site; the renderer arrives via the docs-pipeline track (open, issue #310).
 Third-party reuse is templated in `examples/docs-ci/`; this repository self-calls the
 workflow from `.github/workflows/ci.yml` (check-only on pull requests, publishing on
 `main`). Pages needs source GitHub Actions enabled in repository settings before the
@@ -271,6 +271,6 @@ plus gate/aggregate fixture evidence qualified seed-only under #312
 (`bazel run //tools/ci:consumer_ci_qualification`; nine checks, explicit
 platforms, fail-closed sequential, stable aggregate, hygiene, concurrency,
 permissions, per-cell coverage with fork-safe comments, build-only self-call,
-native bump loop plus Renovate fallback, migrate planning plus run multirun,
-tag hygiene as-built, with platform, merge, thread, fork, sequential,
-tag/release, Renovate, and migrate-execution gaps owned under #312).
+native bump loop plus Renovate (complementary, issue #326), migrate planning
+plus run multirun, tag hygiene as-built, with platform, merge, thread, fork,
+sequential, tag/release, Renovate, and migrate-execution gaps owned under #312).

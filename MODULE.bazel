@@ -1,4 +1,4 @@
-"""rules_dx: Bazel-first developer platform (M00 seed)."""
+"""rules_dx: Bazel-first developer platform."""
 
 module(
     name = "rules_dx",
@@ -7,8 +7,10 @@ module(
     version = "0.0.0",
 )
 
-# M00 seed pins, frozen from executed runs on the seed host per O14.
-# Bazel itself is pinned via .bazelversion (Bazelisk v1.29.0 -> Bazel 9.2.0).
+# Seed pins, frozen from executed runs on the seed host.
+# Bazel itself is pinned via the canonical `.bazelversion` (Bazelisk v1.29.0
+# from `.github/actions/setup-bazelisk/action.yml` -> Bazel 9.2.0);
+# `//tools/ci:pin_consistency_test` fails on drift.
 bazel_dep(name = "rules_rust", version = "0.74.0")
 bazel_dep(name = "rules_cc", version = "0.2.22")
 
@@ -308,10 +310,11 @@ use_repo(
 # Stage 4 E2E (issue #55): true end-to-end CLI-contract tests over the
 # `integration/` child workspaces. Dev-only: invisible to consumers
 # (dev_dependency); the only artifact used is the version-pinned Bazel
-# binary (single version, no multi-version matrix). The pin tracks
-# //.bazelversion (9.2.0); bump both together.
+# binary (single version, no multi-version matrix). The pin tracks the
+# canonical `.bazelversion` (9.2.0); bump both together
+# (`//tools/ci:pin_consistency_test` enforces this).
 bazel_dep(name = "rules_bazel_integration_test", version = "0.37.1", dev_dependency = True)
 
 bazel_binaries = use_extension("@rules_bazel_integration_test//:extensions.bzl", "bazel_binaries", dev_dependency = True)
-bazel_binaries.download(version = "9.2.0")  # tracks //.bazelversion; single version, no matrix (#55)
+bazel_binaries.download(version = "9.2.0")  # tracks canonical //.bazelversion; single version, no matrix (#55)
 use_repo(bazel_binaries, "bazel_binaries", "bazel_binaries_bazelisk", "build_bazel_bazel_9_2_0")

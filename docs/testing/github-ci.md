@@ -52,8 +52,11 @@ qualify any shared coverage/test execution against both commands' result contrac
 ### Scheduling And Isolation
 
 Verify independent checks are scheduled concurrently by default when runner capacity
-permits, and explicit sequential mode executes them without overlap. In both modes,
-inject an early check failure and verify independent checks still execute, results are
+permits. Sequential mode is qualification-open: the reusable workflow declares
+the `scheduling_mode` input but `platforms-gate` fails closed on
+`sequential` (see the [contract](../github-ci.md#execution)), so matrix
+cases prove parallel scheduling plus the fail-closed sequential rejection.
+In parallel mode, inject an early check failure and verify independent checks still execute, results are
 collected, and the overall run fails. Failed prerequisites block only dependent work.
 Exercise isolated setup/checkouts, report paths, and Bazel execution contexts to detect
 cross-check mutation, overwritten reports, or shared-output-base serialization. Preserve
@@ -245,14 +248,15 @@ for unresolved qualification work. Consumer CI qualification plus automation pol
 stays open under issue #312 (platform, runner, isolation, cache, ordering evidence;
 merge, diff, queue, cancellation, aggregate binding; thread identity, ordering, limits;
 fork, untrusted, sensitive, retries, Code-Scanning qualification; sequential mode
-rejected; tag hygiene plus release-input gaps; Renovate and native-bot follow-ups;
-dx migrate syntax plus dx run multirun). Reusable-workflow contract plus caller
+fail-closed pending qualification; tag hygiene plus release-input gaps;
+Renovate and native-bot follow-ups with complementary roles decided in issue
+#326; dx migrate syntax plus dx run multirun). Reusable-workflow contract plus caller
 plus gate/aggregate fixture evidence qualified seed-only under #312
 (`bazel run //tools/ci:consumer_ci_qualification`; nine checks, explicit
 platforms, fail-closed sequential, stable aggregate, hygiene, concurrency,
 permissions, per-cell coverage with fork-safe comments, build-only self-call,
-native bump loop plus Renovate fallback, migrate planning plus run multirun,
-tag hygiene as-built, with the open gaps above owned under #312).
+native bump loop plus Renovate (complementary, issue #326), migrate planning
+plus run multirun, tag hygiene as-built, with the open gaps above owned under #312).
 Consumer CI, devcontainer, and perf honesty
 stays open under issue #325 (self-call build-only with 8 of 9 checks disabled,
 devcontainer parity-checked but never booted, perf report-not-gate; qualify and enable

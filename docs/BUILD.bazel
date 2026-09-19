@@ -124,3 +124,5 @@ real_source_target(
     starlark_srcs = ["BUILD.bazel"],
     tags = ["corpus"],
 )
+
+exports_files(["contributing/local-workflows.md"])

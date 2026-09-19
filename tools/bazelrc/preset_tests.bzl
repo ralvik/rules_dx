@@ -1,4 +1,4 @@
-"""Preset freshness tests (M05 WP4, O62).
+"""Preset freshness tests.
 
 Pins the version-matched Bazel pin and the reviewed flag inventory
 hermetically: a version bump without a reviewed regen, a stale generated
