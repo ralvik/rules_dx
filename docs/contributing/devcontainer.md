@@ -14,7 +14,13 @@ managed-environment setup.
 Container boot (devcontainer CLI build plus `postCreateCommand` execution
 asserting the managed environment materializes) and non-Linux runs remain
 open gaps; no working container or multi-platform support is claimed until
-qualified execution lands.
+qualified execution lands. Linux arm64 hosts are affected the same way:
+the scaffold `devcontainer.json` itself is arch-independent and the pinned
+Ubuntu base digest resolves from a multi-arch index, but the prebuilt image
+stays a linux/amd64 seed slice (`.devcontainer/Dockerfile.prebuilt` pins
+the amd64 Bazelisk launcher), so arm64 container boot plus an arm64
+prebuilt variant stay open gaps (issue #410 qualifies `dx` and CI natively
+on arm64, not container boot).
 
 ## Prebuilt images (GHCR)
 

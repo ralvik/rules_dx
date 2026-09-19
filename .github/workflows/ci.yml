@@ -1,9 +1,11 @@
 # Sharded CI: build, test, coverage, prove, and dogfood stages run as
 # separate jobs with per-job summaries (issue #210).
 #
-# Seed host: Linux x86_64 glibc (ubuntu-latest), local execution, no remote.
-# Platform qualification stays open under issue #298: remaining ADR 0014
-# required hosts are unqualified gaps with clean dx refusal, not claimed here.
+# Qualified hosts: Linux x86_64 glibc (ubuntu-latest) plus Linux arm64
+# glibc native (ubuntu-24.04-arm, issue #410), local execution, no remote.
+# Platform qualification for the remaining ADR 0014 required hosts stays
+# open under issue #298 (closed; per-host successors own each host):
+# they are unqualified gaps with clean dx refusal, not claimed here.
 #
 # CI runs deterministic generation freshness through the
 # canonical public path before the quality commands converge anything: a
@@ -34,12 +36,13 @@
 # the canonical BCR registry plus MODULE.bazel.lock.
 #
 # Sharding policy (issue #210): one logical stage per job for failure
-# attribution without log-grep forensics. All jobs stay on ubuntu-latest
-# with the existing actions/cache disk cache (no new runners, no paid
-# services). `needs:` chains enforce fast-fail ordering so a broken build
-# skips downstream stages instead of burning parallel runners. Each job
-# writes a `$GITHUB_STEP_SUMMARY` block so triage starts from the summary,
-# not the raw log.
+# attribution without log-grep forensics. Seed jobs stay on ubuntu-latest
+# with the `bazel-seed-` disk-cache scope; Linux arm64 native jobs
+# (issue #410) stay on ubuntu-24.04-arm with the separate `bazel-arm64-`
+# scope (free-tier eligible, no paid services). `needs:` chains enforce
+# fast-fail ordering so a broken build skips downstream stages instead of
+# burning parallel runners. Each job writes a `$GITHUB_STEP_SUMMARY` block
+# so triage starts from the summary, not the raw log.
 
 name: ci
 
@@ -74,11 +77,12 @@ jobs:
     # Only build is enabled: lint/typecheck/format/test/coverage over //...
     # fail on this repo's fixtures/testdata (#12), generate reports
     # pre-existing freshness drift (#15), and both audits fail closed
-    # (#18). Re-enable each check here as its owner lands.
+    # (#18). Re-enable each check here as its owner lands. Build runs on
+    # both qualified Linux hosts (seed plus arm64 native, issue #410).
     uses: ./.github/workflows/reusable-consumer.yml
     with:
       rules_dx_version: "0.0.0"
-      platforms: '["linux_x86_64"]'
+      platforms: '["linux_x86_64", "linux_arm64"]'
       disabled_checks: "lint,typecheck,format,generate,security-audit,license-audit,test,coverage"
     permissions:
       contents: read
@@ -263,6 +267,109 @@ jobs:
         run: |
           echo "### coverage — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Command: dx coverage --min-coverage 97 //... (seed cell only; per-cell enforcement tracked in #89). First-party PR summary from the same seed LCOV (issue #254; Codecov at most opt-in)." >> "$GITHUB_STEP_SUMMARY"
+  build-arm64:
+    name: build-arm64 (bazel build //..., linux arm64 native)
+    timeout-minutes: 60
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-arm64-
+      - name: Build workspace
+        run: bazel build --noshow_progress //...
+      - name: Adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)
+        run: bazel build --noshow_progress //examples/adopt-rust/... --config=dx_dev
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### build-arm64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: bazel build //... plus adopt-rust dx_dev smoke (linux arm64 native, local-only; issue #410)." >> "$GITHUB_STEP_SUMMARY"
+  test-arm64:
+    name: test-arm64 (bazel test //..., linux arm64 native)
+    needs: [build-arm64]
+    timeout-minutes: 90
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-arm64-
+      - name: Test workspace
+        run: bazel test --noshow_progress //...
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### test-arm64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: bazel test //... (linux arm64 native, local-only; manual targets excluded by Bazel tag semantics; issue #410)." >> "$GITHUB_STEP_SUMMARY"
+  coverage-arm64:
+    name: coverage-arm64 (dx coverage gate, arm64 cell)
+    needs: [build-arm64]
+    timeout-minutes: 90
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-arm64-
+      - name: Enforce arm64 coverage cell
+        run: |
+          set +e
+          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee /tmp/dx_coverage_arm64.log
+          rc=${PIPESTATUS[0]}
+          echo "$rc" > /tmp/dx_coverage_arm64.rc
+          exit $rc
+      - name: Render arm64 per-cell summary (same scope, no union)
+        # Per-cell evidence without a cross-cell union (issue #410): the
+        # arm64 runner gates its own combined LCOV through the arm64 cell
+        # inventory; the verdict lands in the step summary only, never
+        # merged with the seed cell. Codecov stays opt-in only.
+        if: always()
+        run: |
+          set -euo pipefail
+          dx_rc="$(cat /tmp/dx_coverage_arm64.rc 2>/dev/null || echo unknown)"
+          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' /tmp/dx_coverage_arm64.log 2>/dev/null | head -n 1 || true)"
+          if [[ "$dx_rc" == "0" ]]; then status="PASS"; else status="FAIL"; fi
+          {
+            echo "<!-- dx-coverage-summary: arm64 linux_arm64 -->"
+            echo "## Coverage summary — arm64 linux_arm64 — $status"
+            echo ""
+            echo "Analyzed revision: \`${GITHUB_SHA}\` | Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} | Cell: \`arm64 linux_arm64\`."
+            echo ""
+            if [[ -n "$dx_line" ]]; then echo "$dx_line"; echo ""; fi
+            echo "Gate exit: $dx_rc (summary never changes this outcome)."
+            echo ""
+            echo "Scope: per-cell exact counts only; no cross-cell union, no averaged percentages, no rounding up. Codecov stays opt-in only, never required."
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/dx_coverage_arm64.log >> "$GITHUB_STEP_SUMMARY"
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### coverage-arm64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: dx coverage --min-coverage 97 //... (arm64 cell only, per-cell no-union; issue #410)." >> "$GITHUB_STEP_SUMMARY"
   prove:
     name: prove (manual negatives, target tags, coverage cell, release hygiene, release policy, publish trust, shell contract)
     needs: [build]

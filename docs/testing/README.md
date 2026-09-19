@@ -95,17 +95,19 @@ routes, reproducible feasibility evidence, and limitations in the work report be
 fallback. Mutation tests may supplement, but not replace, the required evidence.
 
 **Resolved measurement mechanics (standard-practice rules).** Canonical report format is LCOV from `bazel coverage`, merged per required configuration/platform cell. Rust uses the pinned `rules_rust` llvm-cov integration; Starlark uses custom instrumentation emitting LCOV `DA` records with identical line semantics. Executable lines are `DA` records; blank and comment-only lines are not executable; compiler-generated regions are explicitly listed, not silently dropped; a target with no executable lines is listed as no-code, never an implicit pass. Eligible sources are the collected LCOV `DA` records for first-party implementation sources plus generated-source provenance; test/fixture-only code, schemas, upstream code, and generated boilerplate are classified separately, and authored logic emitted through generation stays eligible. Aggregation deduplicates by authored source and metric identity within each cell, unions hits across that cell's tests, retains zero-hit eligible sources, and requires every required cell to meet the pinned `--min-coverage` percent with exact covered/eligible counts and uncovered locations; languages and metrics stay separate, with no cross-platform union, no averaged percentages, and no rounding up. Missing reports, incomplete instrumentation, and absent eligible sources fail the gate. Negative fixtures cover valid ignores and denominator effects, missing reasons, malformed directives, missing reports, and uncovered lines. Empirical Starlark feasibility evidence ran against the pinned Bazel.
-The gate is enforced by `dx coverage --min-coverage` in the single `coverage`
-job in `.github/workflows/ci.yml` (accepted; one logical stage per job, no
+The gate is enforced by `dx coverage --min-coverage` in the `coverage`
+(seed) plus `coverage-arm64` (arm64 native, issue #410) jobs in
+`.github/workflows/ci.yml` (accepted; one logical stage per job, no
 matrix sharding).
 Each required configuration/platform cell additionally gates its own
 combined LCOV report through the `check` gate CLI against a versioned
-cell inventory (seed cell: `tools/coverage/seed-inventory.txt`): exact
+cell inventory (seed cell: `tools/coverage/seed-inventory.txt`; arm64 cell:
+`tools/coverage/arm64-inventory.txt`, same scope): exact
 covered/eligible counts with zero uncovered lines, missing reports and
 uninventoried sources failing closed. CI pins this in
 `bazel run //tools/ci:coverage_cell`. The required-cell registry is
-`tools/coverage/cells.txt` (seed qualified, five v1 hosts unqualified per
-the platform policy); no cross-cell union, never unioned across cells to hide gaps.
+`tools/coverage/cells.txt` (seed plus arm64 qualified, four remaining
+hosts unqualified per the platform policy); no cross-cell union, never unioned across cells to hide gaps.
 Per-cell enforcement plus the Starlark, Codecov, quota, and remote halves
 below is qualified by `bazel run //tools/ci:coverage_qualification`
 (issue #308).
@@ -200,7 +202,7 @@ assuming public-repository status makes every service free. Exhausted quotas or 
 required hosts block affected work; they do not waive platform, coverage, artifact-trust,
 or release evidence requirements. Qualified mappings (issue #308,
 `bazel run //tools/ci:coverage_qualification`): standard GitHub-hosted runners is free
-for public repositories (`ubuntu-latest`, `macos-14`; no self-hosted). Larger runners are always charged.
+for public repositories (`ubuntu-latest`, `ubuntu-24.04-arm`, `macos-14`; no self-hosted). Larger runners are always charged.
 `actions/cache` disk cache is 10 GB per repository; artifact storage is 500 MB.
 GHCR container storage/bandwidth is currently free for public repos (at least one month notice before any pricing change per GitHub Packages billing; private-Packages quotas 500 MB/1 GB do not apply to containers today). Retention is manual; build-only PRs consume no quota and the first gated push records exact bytes (issue #184, `docs/contributing/devcontainer.md`); Pages is free.
 

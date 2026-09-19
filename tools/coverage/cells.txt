@@ -1,9 +1,10 @@
-# Required coverage cells (issue #308).
+# Required coverage cells (issues #308, #410).
 #
 # Each required configuration/platform cell gates its own combined LCOV
 # report separately: no cross-cell union, no averaged percentages, no
-# rounding up (docs/testing/README.md#coverage). Only the seed host
-# qualifies today (issues #5/#298); the rest are unqualified gaps with
+# rounding up (docs/testing/README.md#coverage). The Linux x86_64 seed
+# host plus Linux arm64 glibc native (issue #410) qualify today
+# (issues #5/#298); the rest are unqualified gaps with
 # clean refusal, never silent substitution.
 #
 # Format: `<disposition> <cell> <detail>`.
@@ -12,7 +13,7 @@
 # Expand qualified rows (never shrink a passing scope without a recorded
 # decision) as hosts qualify per ADR 0014 plus the platform policy.
 qualified seed-linux_x86_64 tools/coverage/seed-inventory.txt
-unqualified linux_arm64 issue-298
+qualified linux_arm64 tools/coverage/arm64-inventory.txt
 unqualified linux_x86_64_musl issue-298
 unqualified linux_arm64_musl issue-298
 unqualified macos_arm64 issue-298

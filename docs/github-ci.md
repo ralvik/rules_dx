@@ -83,6 +83,12 @@ a silently active example value in the template. Missing, empty, or unsupported 
 produce actionable configuration failures, not skipped validation or platform substitution.
 Linux execution for shared quality checks does not add Linux to the validation matrix.
 
+Supported platform identifiers are `linux_x86_64`, `linux_arm64` (native,
+issue #410), and `macos_arm64`. The reusable workflow routes
+`linux_x86_64` to `ubuntu-latest`, `linux_arm64` to `ubuntu-24.04-arm`,
+and `macos_arm64` to `macos-14`; every other spelling fails closed in
+`platforms-gate` before any per-platform job queues a runner.
+
 Selection does not change language activation, analyzer applicability, configured no-op
 behavior, or dormant-foundation laziness. Run selected checks at their normal repository
 scope without workflow path filters or a second affected-target calculation. Documentation-only

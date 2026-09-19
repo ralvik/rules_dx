@@ -40,8 +40,9 @@ unused-foundation laziness rather than forcing inactive analyzers or languages t
 Verify onboarding requires explicit supported platform selection for enabled tests, build,
 or coverage, without an implicit Linux/current-runner/all-platforms default. Missing, empty,
 or unsupported selections must fail clearly rather than produce skipped or substituted
-validation. Exercise single- and multi-platform selections, including one without Linux.
-Selected test/build/coverage checks must run for every selected platform, while selected
+validation. Exercise single- and multi-platform selections, including one without Linux
+and one with `linux_arm64` (which must queue an `ubuntu-24.04-arm` runner, never
+the macOS runner). Selected test/build/coverage checks must run for every selected platform, while selected
 quality checks run once on Linux without silently narrowing declared source/dependency scope.
 Verify platform identities remain visible and one failed or missing required platform cell
 prevents aggregate success. Coverage aggregation must not hide platform-specific gaps;
@@ -69,8 +70,8 @@ Verify Bazelisk installation comes from the single reviewed
 every third-party action reference is pinned to a commit SHA (tag in a trailing comment).
 Verify the `platforms-gate` job rejects missing, empty, or unsupported platform selections
 before any per-platform job queues a runner, and the aggregate still fails when the gate
-does. Verify the seed jobs restore a Bazel disk cache (free-tier eligible per the
-infrastructure budget), pass `--noshow_progress` to Bazel invocations, run the corpus
+does. Verify the seed plus arm64 jobs restore a Bazel disk cache (free-tier eligible per the
+infrastructure budget; arm64 jobs use the separate `bazel-arm64-` scope), pass `--noshow_progress` to Bazel invocations, run the corpus
 ownership audit through `bazel run //tools/ci:corpus_audit`, and never rely on a local
 `user.bazelrc` override. Verify docs publishing stages its artifact outside the checkout
 and leaves the tree clean.

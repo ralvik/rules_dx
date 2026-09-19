@@ -28,7 +28,7 @@ nothing below pins a version.
 | Platform | V1 status | Notes |
 | --- | --- | --- |
 | Linux x86_64 glibc | Required, primary bootstrap | First host; release CI must cover it |
-| Linux arm64 glibc | Required | Native workflow, not cross-only |
+| Linux arm64 glibc | Required | Native workflow, not cross-only; native glibc qualified under issue #410 (exact pins, hosts, floors, and SDK/CRT identities stay owned by O14/O37, not pinned here) |
 | Linux x86_64/arm64 static musl | Required profiles | Dynamic musl is not an initial requirement |
 | macOS arm64 | Required | Pinned acquired SDK; SDK version is not the deployment floor |
 | macOS x86_64 | Best-effort | Qualify when a host is available; record gaps without blocking required-host release |

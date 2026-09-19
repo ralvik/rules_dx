@@ -8,9 +8,10 @@
 # seed languages, generation freshness, adopt-* external-consumer proof,
 # hermetic CLI-contract pins (issue #407 replaces nested E2E),
 # required-core depcheck fixtures, `dx update` live execution,
-# perf report-not-gate, seed-only coverage/remote qualification under #308);
-# audit live execution, docs-pipeline, env/codegen, non-seed platform cells
-# (issue #298), admitted depcheck
+# perf report-not-gate, seed plus arm64 coverage/remote qualification under
+# #308/#410); audit live execution, docs-pipeline, env/codegen, remaining
+# non-qualified platform cells (issue #298; Linux arm64 qualified under
+# #410), admitted depcheck
 # expansion, and release evidence (SBOM/provenance, signing/attestations,
 # BCR submission, GHCR route, consumer verification) remain open gaps
 # tracked in their owning issues.
@@ -61,6 +62,15 @@ if grep -q -F -e 'Seed-host-delivered' docs/product/support-matrix.md &&
   ok
 else
   bad "support-matrix lost its seed-delivered vs unqualified platform record"
+fi
+
+# Linux arm64 native is Platform-qualified (issue #410), never Supported
+# without release evidence and never back to unqualified refusal.
+if grep -E -e '^\| Linux arm64 glibc \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (issue #410' &&
+  grep -E -e '^\| Linux arm64 glibc \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open'; then
+  ok
+else
+  bad "support-matrix lost the Linux arm64 Platform-qualified record (issue #410, release evidence open)"
 fi
 
 # No Supported status cell in support-matrix tables (promotion gate core).
@@ -168,16 +178,17 @@ else
   bad "audit/update Delivered lost live codes or guards harness"
 fi
 
-# Coverage seed-only qualified (#308): cell gate + versioned inventory and
-# registry plus qualification harness, no cross-cell union.
+# Coverage seed plus arm64 qualified (#308/#410): cell gate + versioned
+# inventories and registry plus qualification harness, no cross-cell union.
 if [[ -f "tools/ci/coverage_cell.sh" ]] &&
   [[ -f "tools/coverage/seed-inventory.txt" ]] &&
+  [[ -f "tools/coverage/arm64-inventory.txt" ]] &&
   [[ -f "tools/coverage/cells.txt" ]] &&
   [[ -f "tools/ci/coverage_qualification.sh" ]] &&
   grep -q -F -e 'seed cell' tools/coverage/seed-inventory.txt; then
   ok
 else
-  bad "coverage seed-only lost its cell gate, inventory, registry, or qualification harness"
+  bad "coverage seed plus arm64 lost its cell gate, inventories, registry, or qualification harness"
 fi
 
 # Env/codegen + docs-pipeline Open: backlog contracts pin frozen halves.
