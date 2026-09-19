@@ -18,7 +18,10 @@ checksum-only fallback, fail-before-install).
 Contract: `docs/deploy/release-runbook.md`.
 """
 
+load("@bazel_skylib//lib:shell.bzl", "shell")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//deploy/rules:defs.bzl", "dx_deployment")
+load("//deploy/rules:launcher.bzl", "RUNFILES_BASH_INIT", "rlocation_path")
 
 # Trust root is documented, not self-hosted.
 SIGNING_TRUST_ROOT = "https://tuf-repo-cdn.sigstore.dev"
@@ -55,16 +58,9 @@ def signing_bundle_names(name):
     """
     return (name + ".bundle", name + ".attestation")
 
-def _signing_rlocation(ctx, f):
-    sp = f.short_path
-    if sp.startswith("../"):
-        return sp[3:]
-    return ctx.workspace_name + "/" + sp
-
-def _signing_program_impl(ctx):
+def _signing_launcher_impl(ctx):
     asset_files = []
     asset_rlocs = []
-    runfiles = ctx.runfiles()
     for target in ctx.attr.artifacts:
         info = target[DefaultInfo]
         f = info.files_to_run.executable
@@ -76,59 +72,37 @@ def _signing_program_impl(ctx):
                      str(len(files)) + " files, want exactly one")
             f = files[0]
         asset_files.append(f)
-        asset_rlocs.append(_signing_rlocation(ctx, f))
-        runfiles = runfiles.merge(info.default_runfiles)
+        asset_rlocs.append(rlocation_path(ctx, f))
     deploy_file = ctx.file.deploy_sh
-    deploy_rloc = _signing_rlocation(ctx, deploy_file)
-    runfiles = runfiles.merge(ctx.runfiles(files = asset_files + [deploy_file]))
-    asset_lines = "".join(["  \"$(rloc \"%s\")\"\n" % rloc for rloc in asset_rlocs])
-    launcher = ctx.actions.declare_file(ctx.label.name)
+    deploy_rloc = rlocation_path(ctx, deploy_file)
+    asset_lines = "".join(["  \"$(rlocation " + shell.quote(rloc) + ")\"\n" for rloc in asset_rlocs])
+    launcher = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.write(
         output = launcher,
         content = """#!/usr/bin/env bash
 # Deploy launcher for `signed_release` (issue #311). Generated. Do not edit.
+# Resolves inputs via the standard `runfiles.bash` `rlocation`; wrapped
+# as `sh_binary` (see `signed_release`).
 set -euo pipefail
-if [[ -n "${RUNFILES_DIR:-}" && -d "${RUNFILES_DIR}" ]]; then
-  RF="${RUNFILES_DIR}"
-  MANIFEST=0
-elif [[ -d "$0.runfiles" ]]; then
-  RF="$0.runfiles"
-  MANIFEST=0
-elif [[ -f "$0.runfiles_manifest" ]]; then
-  MANIFEST_FILE="$0.runfiles_manifest"
-  MANIFEST=1
-else
-  echo "signing: cannot locate runfiles (tried RUNFILES_DIR, $0.runfiles)" >&2
-  exit 1
-fi
-rloc() {
-  local p="$1"
-  if [[ "${MANIFEST}" == 1 ]]; then
-    grep -sm1 "^${p} " "${MANIFEST_FILE}" | cut -f2- -d' '
-  else
-    printf "%%s/%%s" "${RF}" "${p}"
-  fi
-}
-if [[ "$#" -gt 0 ]]; then
+""" + RUNFILES_BASH_INIT + """if [[ "$#" -gt 0 ]]; then
   echo "signing: this deploy target takes no extra args; artifacts are pinned at analysis time" >&2
   exit 1
 fi
-DEPLOY="$(rloc "%s")"
-IDENTITY="%s"
-ISSUER="%s"
+DEPLOY="$(rlocation """ + shell.quote(deploy_rloc) + """)"
+IDENTITY=""" + shell.quote(ctx.attr.identity) + """
+ISSUER=""" + shell.quote(ctx.attr.issuer) + """
 ASSETS=(
-%s)
+""" + asset_lines + """)
 export SIGNING_IDENTITY="${IDENTITY}"
 export SIGNING_ISSUER="${ISSUER}"
 exec "${DEPLOY}" "${ASSETS[@]}"
-""" % (deploy_rloc, ctx.attr.identity, ctx.attr.issuer, asset_lines),
+""",
         is_executable = True,
     )
-    return [DefaultInfo(executable = launcher, runfiles = runfiles)]
+    return [DefaultInfo(files = depset([launcher]))]
 
-_signing_program = rule(
-    implementation = _signing_program_impl,
-    executable = True,
+_signing_launcher = rule(
+    implementation = _signing_launcher_impl,
     attrs = {
         "artifacts": attr.label_list(mandatory = True),
         "identity": attr.string(mandatory = True),
@@ -143,12 +117,14 @@ _signing_program = rule(
 def signed_release(name, artifacts, identity, issuer = "https://token.actions.githubusercontent.com", profile = "release"):
     """Creates an owner-gated signing deploy target for pinned artifacts.
 
-    Creates `<name>_program` (runfiles-resolved launcher) and `<name>`
-    (deployment returning `DxDeployInfo`). Run with
-    `RELEASE_SIGN_DRY_RUN=1 bazel run :<name>` to print the would-run
-    `cosign sign-blob` + `gh attestation` commands (what CI exercises,
-    publishes nothing). Real signing needs the tag pushed beforehand,
-    explicit owner approval, and OIDC identity per the runbook.
+    Creates `<name>_launcher` (generated launcher script via
+    `runfiles.bash` `rlocation` with `shell.quote`), `<name>_program`
+    (`sh_binary` wrapping the launcher with pinned `data` plus the
+    runfiles library), and `<name>` (deployment returning `DxDeployInfo`).
+    Run with `RELEASE_SIGN_DRY_RUN=1 bazel run :<name>` to print the
+    would-run `cosign sign-blob` + `gh attestation` commands (what CI
+    exercises, publishes nothing). Real signing needs the tag pushed
+    beforehand, explicit owner approval, and OIDC identity per the runbook.
 
     Args:
       name: instance name; also the deploy target name.
@@ -163,11 +139,18 @@ def signed_release(name, artifacts, identity, issuer = "https://token.actions.gi
     if len(artifacts) == 0:
         fail("signed_release " + native.package_name() + ":" + name + ": need at least one artifact")
     program_target = name + "_program"
-    _signing_program(
-        name = program_target,
+    launcher_target = program_target + "_launcher"
+    _signing_launcher(
+        name = launcher_target,
         artifacts = artifacts,
         identity = identity,
         issuer = issuer,
+    )
+    sh_binary(
+        name = program_target,
+        srcs = [":" + launcher_target],
+        data = artifacts + ["//deploy/release:sign_deploy.sh"],
+        deps = ["@rules_shell//shell/runfiles"],
     )
     dx_deployment(
         name = name,

@@ -20,7 +20,10 @@ Contract: `docs/deploy/authoring.md`. Deploy targets live next to the
 app they release (for example `//cli/cli:github_draft`).
 """
 
+load("@bazel_skylib//lib:shell.bzl", "shell")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load(":defs.bzl", "dx_deployment")
+load(":launcher.bzl", "RUNFILES_BASH_INIT", "rlocation_path")
 
 # Release tags embed directly in the generated launcher, so the charset
 # is restricted to what is safe inside double quotes.
@@ -60,44 +63,30 @@ def github_draft_error(draft):
                 "the release on GitHub after approval")
     return ""
 
-def _github_rlocation(ctx, f):
-    """Returns the runfiles rlocation for one file.
-
-    Args:
-      ctx: rule context for the workspace name.
-      f: the File to locate.
-
-    Returns:
-      The `workspace/short_path` rlocation string.
-    """
-    sp = f.short_path
-    if sp.startswith("../"):
-        return sp[3:]
-    return ctx.workspace_name + "/" + sp
-
-def _github_program_impl(ctx):
-    """Writes the executable deploy launcher for one draft release.
+def _github_launcher_impl(ctx):
+    """Writes the `sh_binary` launcher script for one draft release.
 
     Each artifact resolves to a single file: executables (for example
     `rust_binary`, `sh_binary`) resolve to `files_to_run.executable`,
     plain files (for example `archive_release` tarballs) must be the
-    sole member of `DefaultInfo.files`. Like `archive_release`,
-    `sh_binary(args=...)` cannot carry paths through `dx_deployment`
-    (which symlinks only `files_to_run.executable`), so the launcher
-    resolves the deploy script and every asset from its own runfiles
-    forest and execs `github_deploy.sh` with the tag plus the asset
-    paths. Extra user args after `--` are rejected: a release takes
-    exactly the artifacts pinned at analysis time.
+    sole member of `DefaultInfo.files`. The script sources the standard
+    `runfiles.bash` initialization (v3) and resolves the deploy script,
+    tag, and every pinned asset via `rlocation`, then execs
+    `github_deploy.sh`. Rlocation strings and the tag embed with
+    `shell.quote` (single-quote), never manual double-quote
+    interpolation. The wrapping `sh_binary` (see `github_release`)
+    carries the pinned inputs in `data` plus the runfiles library.
+    Extra user args after `--` are rejected: a release takes exactly
+    the artifacts pinned at analysis time.
 
     Args:
       ctx: rule context with `artifacts`, `tag`, `deploy_sh`.
 
     Returns:
-      `DefaultInfo` with the executable launcher and its runfiles.
+      `DefaultInfo` with the launcher script file.
     """
     asset_files = []
     asset_rlocs = []
-    runfiles = ctx.runfiles()
     for target in ctx.attr.artifacts:
         info = target[DefaultInfo]
         f = info.files_to_run.executable
@@ -110,67 +99,38 @@ def _github_program_impl(ctx):
                      "(executables resolve to their binary)")
             f = files[0]
         asset_files.append(f)
-        asset_rlocs.append(_github_rlocation(ctx, f))
-        runfiles = runfiles.merge(info.default_runfiles)
+        asset_rlocs.append(rlocation_path(ctx, f))
     deploy_file = ctx.file.deploy_sh
-    deploy_rloc = _github_rlocation(ctx, deploy_file)
-    runfiles = runfiles.merge(
-        ctx.runfiles(files = asset_files + [deploy_file]),
-    )
+    deploy_rloc = rlocation_path(ctx, deploy_file)
 
     asset_lines = "".join(
-        ["  \"$(rloc \"%s\")\"\n" % rloc for rloc in asset_rlocs],
+        ["  \"$(rlocation " + shell.quote(rloc) + ")\"\n" for rloc in asset_rlocs],
     )
-    launcher = ctx.actions.declare_file(ctx.label.name)
+    launcher = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.write(
         output = launcher,
         content = """#!/usr/bin/env bash
 # Deploy launcher for `github_release` (issue #182). Generated. Do not edit.
-# Resolves the deploy script and every pinned asset from this launcher's
-# runfiles forest, then execs the deploy script with the tag plus the
-# asset paths. `dx_deployment` symlinks only the executable, so
-# `sh_binary` `args` cannot survive; runfiles lookup keeps the paths
-# intact. Works under `bazel run`, `dx deploy`, and direct `bazel-bin`
-# execution via `RUNFILES_DIR` / `$0.runfiles` / manifest.
+# Resolves the deploy script and every pinned asset via the standard
+# `runfiles.bash` `rlocation`, then execs the deploy script with the tag
+# plus the asset paths. Wrapped as `sh_binary` (see `github_release`).
 set -euo pipefail
-if [[ -n "${RUNFILES_DIR:-}" && -d "${RUNFILES_DIR}" ]]; then
-  RF="${RUNFILES_DIR}"
-  MANIFEST=0
-elif [[ -d "$0.runfiles" ]]; then
-  RF="$0.runfiles"
-  MANIFEST=0
-elif [[ -f "$0.runfiles_manifest" ]]; then
-  MANIFEST_FILE="$0.runfiles_manifest"
-  MANIFEST=1
-else
-  echo "github: cannot locate runfiles (tried RUNFILES_DIR, $0.runfiles)" >&2
-  exit 1
-fi
-rloc() {
-  local p="$1"
-  if [[ "${MANIFEST}" == 1 ]]; then
-    grep -sm1 "^${p} " "${MANIFEST_FILE}" | cut -f2- -d' '
-  else
-    printf "%%s/%%s" "${RF}" "${p}"
-  fi
-}
-if [[ "$#" -gt 0 ]]; then
+""" + RUNFILES_BASH_INIT + """if [[ "$#" -gt 0 ]]; then
   echo "github: this deploy target takes no extra args; the release is exactly the artifacts pinned at analysis time" >&2
   exit 1
 fi
-DEPLOY="$(rloc "%s")"
-TAG="%s"
+DEPLOY="$(rlocation """ + shell.quote(deploy_rloc) + """)"
+TAG=""" + shell.quote(ctx.attr.tag) + """
 ASSETS=(
-%s)
+""" + asset_lines + """)
 exec "${DEPLOY}" "${TAG}" "${ASSETS[@]}"
-""" % (deploy_rloc, ctx.attr.tag, asset_lines),
+""",
         is_executable = True,
     )
-    return [DefaultInfo(executable = launcher, runfiles = runfiles)]
+    return [DefaultInfo(files = depset([launcher]))]
 
-_github_program = rule(
-    implementation = _github_program_impl,
-    executable = True,
+_github_launcher = rule(
+    implementation = _github_launcher_impl,
     attrs = {
         "artifacts": attr.label_list(
             doc = "Release asset files (executables resolve to their binary).",
@@ -185,18 +145,21 @@ _github_program = rule(
             default = "//deploy/rules:github_deploy.sh",
         ),
     },
-    doc = "Executable deploy launcher for github_release (runfiles-resolved).",
+    doc = "Launcher script for github_release (wrapped as sh_binary).",
 )
 
 def github_release(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile = "release"):
     """Publishes pinned files as a draft-only GitHub Release.
 
-    Creates `<name>_program` (runfiles-resolved deploy launcher) and
-    `<name>` (the `dx_deployment` returning `DxDeployInfo` with no app
-    and `profile`). Run with `bazel run :<name>` or `dx deploy :<name>`;
-    the program execs `gh release create <tag> <assets...> --draft
-    --verify-tag`. With `GH_RELEASE_DRY_RUN=1` it prints the command and
-    publishes nothing (this is what CI exercises).
+    Creates `<name>_launcher` (generated launcher script resolving
+    inputs via `runfiles.bash` `rlocation` with `shell.quote`),
+    `<name>_program` (`sh_binary` wrapping the launcher with pinned
+    `data` plus the runfiles library), and `<name>` (the `dx_deployment`
+    returning `DxDeployInfo` with no app and `profile`). Run with
+    `bazel run :<name>` or `dx deploy :<name>`; the program execs
+    `gh release create <tag> <assets...> --draft --verify-tag`. With
+    `GH_RELEASE_DRY_RUN=1` it prints the command and publishes nothing
+    (this is what CI exercises).
 
     Args:
       name: instance name; also the deploy target name.
@@ -216,10 +179,21 @@ def github_release(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile
              ": need at least one artifact")
 
     program_target = name + "_program"
-    _github_program(
-        name = program_target,
+    launcher_target = program_target + "_launcher"
+    _github_launcher(
+        name = launcher_target,
         artifacts = artifacts,
         tag = tag,
+    )
+
+    # `sh_binary` wrapper (issue #317): `srcs` is the generated launcher,
+    # `data` pins the runfiles the launcher resolves via `rlocation`
+    # (location expansion), `deps` carries the standard runfiles library.
+    sh_binary(
+        name = program_target,
+        srcs = [":" + launcher_target],
+        data = artifacts + ["//deploy/rules:github_deploy.sh"],
+        deps = ["@rules_shell//shell/runfiles"],
     )
 
     dx_deployment(

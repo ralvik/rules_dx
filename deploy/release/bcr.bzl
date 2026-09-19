@@ -17,7 +17,10 @@ first release; `0.0.0` submissions fail analysis by construction.
 Contract: `docs/deploy/release-runbook.md`.
 """
 
+load("@bazel_skylib//lib:shell.bzl", "shell")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//deploy/rules:defs.bzl", "dx_deployment")
+load("//deploy/rules:launcher.bzl", "RUNFILES_BASH_INIT", "rlocation_path")
 
 def bcr_source_error(module_name, version):
     """Validates the BCR module name + version pair.
@@ -65,22 +68,17 @@ def bcr_submit_error(version, approve):
                 "run with BCR_DRY_RUN=1 to print the would-submit PR")
     return ""
 
-def _bcr_rlocation(ctx, f):
-    sp = f.short_path
-    if sp.startswith("../"):
-        return sp[3:]
-    return ctx.workspace_name + "/" + sp
+def _bcr_launcher_impl(ctx):
+    """Writes the owner-gated BCR deploy launcher script.
 
-def _bcr_program_impl(ctx):
-    """Writes the owner-gated BCR deploy launcher.
-
-    Resolves the source.json template + integrity file from runfiles and
-    execs `bcr_deploy.sh` with module/version. Extra user args are
-    rejected: a submission is exactly the pinned inputs.
+    Resolves the source.json template + integrity file from runfiles via
+    the standard `runfiles.bash` `rlocation` and execs `bcr_deploy.sh`
+    with module/version. Extra user args are rejected: a submission is
+    exactly the pinned inputs. All interpolations use `shell.quote`;
+    wrapped as `sh_binary` (see `bcr_check`).
     """
     files = []
     rlocs = []
-    runfiles = ctx.runfiles()
     for target in ctx.attr.inputs:
         info = target[DefaultInfo]
         fl = info.files.to_list()
@@ -90,57 +88,35 @@ def _bcr_program_impl(ctx):
                  " files, want exactly one")
         f = fl[0]
         files.append(f)
-        rlocs.append(_bcr_rlocation(ctx, f))
-        runfiles = runfiles.merge(info.default_runfiles)
+        rlocs.append(rlocation_path(ctx, f))
     deploy_file = ctx.file.deploy_sh
-    deploy_rloc = _bcr_rlocation(ctx, deploy_file)
-    runfiles = runfiles.merge(ctx.runfiles(files = files + [deploy_file]))
-    input_lines = "".join(["  \"$(rloc \"%s\")\"\n" % r for r in rlocs])
-    launcher = ctx.actions.declare_file(ctx.label.name)
+    deploy_rloc = rlocation_path(ctx, deploy_file)
+    input_lines = "".join(["  \"$(rlocation " + shell.quote(r) + ")\"\n" for r in rlocs])
+    launcher = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.write(
         output = launcher,
         content = """#!/usr/bin/env bash
 # Deploy launcher for `bcr_check` (issue #311). Generated. Do not edit.
+# Resolves inputs via the standard `runfiles.bash` `rlocation`; wrapped
+# as `sh_binary` (see `bcr_check`).
 set -euo pipefail
-if [[ -n "${RUNFILES_DIR:-}" && -d "${RUNFILES_DIR}" ]]; then
-  RF="${RUNFILES_DIR}"
-  MANIFEST=0
-elif [[ -d "$0.runfiles" ]]; then
-  RF="$0.runfiles"
-  MANIFEST=0
-elif [[ -f "$0.runfiles_manifest" ]]; then
-  MANIFEST_FILE="$0.runfiles_manifest"
-  MANIFEST=1
-else
-  echo "bcr: cannot locate runfiles (tried RUNFILES_DIR, $0.runfiles)" >&2
-  exit 1
-fi
-rloc() {
-  local p="$1"
-  if [[ "${MANIFEST}" == 1 ]]; then
-    grep -sm1 "^${p} " "${MANIFEST_FILE}" | cut -f2- -d' '
-  else
-    printf "%%s/%%s" "${RF}" "${p}"
-  fi
-}
-if [[ "$#" -gt 0 ]]; then
+""" + RUNFILES_BASH_INIT + """if [[ "$#" -gt 0 ]]; then
   echo "bcr: this deploy target takes no extra args; the submission is exactly the pinned inputs" >&2
   exit 1
 fi
-DEPLOY="$(rloc "%s")"
-MODULE="%s"
-VERSION="%s"
+DEPLOY="$(rlocation """ + shell.quote(deploy_rloc) + """)"
+MODULE=""" + shell.quote(ctx.attr.module_name) + """
+VERSION=""" + shell.quote(ctx.attr.version) + """
 INPUTS=(
-%s)
+""" + input_lines + """)
 exec "${DEPLOY}" "${MODULE}" "${VERSION}" "${INPUTS[@]}"
-""" % (deploy_rloc, ctx.attr.module_name, ctx.attr.version, input_lines),
+""",
         is_executable = True,
     )
-    return [DefaultInfo(executable = launcher, runfiles = runfiles)]
+    return [DefaultInfo(files = depset([launcher]))]
 
-_bcr_program = rule(
-    implementation = _bcr_program_impl,
-    executable = True,
+_bcr_launcher = rule(
+    implementation = _bcr_launcher_impl,
     attrs = {
         "inputs": attr.label_list(mandatory = True),
         "module_name": attr.string(mandatory = True),
@@ -156,11 +132,14 @@ def bcr_check(name, module_name = "rules_dx", version = "0.0.0", inputs = [], pr
     """Creates an owner-gated BCR shape-check deploy target.
 
     Creates `<name>_source.json` (BCR source template for the version),
-    `<name>_program` (runfiles-resolved launcher), and `<name>` (the
-    `dx_deployment`). Run with `BCR_DRY_RUN=1 bazel run :<name>` to print
-    the would-submit PR (what CI exercises, submits nothing). A real
-    submission needs an owner-approved SemVer version plus explicit
-    approval per the runbook; `0.0.0` fails submission by construction.
+    `<name>_launcher` (generated launcher script via `runfiles.bash`
+    `rlocation` with `shell.quote`), `<name>_program` (`sh_binary`
+    wrapping the launcher with pinned `data` plus the runfiles library),
+    and `<name>` (the `dx_deployment`). Run with `BCR_DRY_RUN=1 bazel run
+    :<name>` to print the would-submit PR (what CI exercises, submits
+    nothing). A real submission needs an owner-approved SemVer version
+    plus explicit approval per the runbook; `0.0.0` fails submission by
+    construction.
 
     Args:
       name: instance name; also the deploy target name.
@@ -188,11 +167,20 @@ def bcr_check(name, module_name = "rules_dx", version = "0.0.0", inputs = [], pr
     )
 
     program_target = name + "_program"
-    _bcr_program(
-        name = program_target,
-        inputs = [":" + name + "_source"] + inputs,
+    launcher_target = program_target + "_launcher"
+    all_inputs = [":" + name + "_source"] + inputs
+    _bcr_launcher(
+        name = launcher_target,
+        inputs = all_inputs,
         module_name = module_name,
         version = version,
+    )
+
+    sh_binary(
+        name = program_target,
+        srcs = [":" + launcher_target],
+        data = all_inputs + ["//deploy/release:bcr_deploy.sh"],
+        deps = ["@rules_shell//shell/runfiles"],
     )
 
     dx_deployment(

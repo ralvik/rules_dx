@@ -23,6 +23,7 @@ exports_files([
     "github_deploy.sh",
     "github_tests.bzl",
     "github_verify.sh",
+    "launcher.bzl",
 ])
 
 sh_binary(
@@ -203,6 +204,7 @@ real_source_target(
         "deploy_tests.bzl",
         "github.bzl",
         "github_tests.bzl",
+        "launcher.bzl",
     ],
     tags = ["corpus"],
 )
