@@ -3,19 +3,19 @@
 #
 # Per-foundation external-consumer examples + acquisition/laziness proof
 # (#85) delivered across readme, static, query, aquery, and runtime slices;
-# first-party coverage PR comments (#254)
-# stay open with the Bazel-owned LCOV gate as source of truth; the
+# first-party coverage PR comments (#254) landed with the Bazel-owned LCOV
+# gate as source of truth; the
 # widen-one-requirement + update PR loop (#260) stays planned behind
 # the #19 resolver prerequisite with Renovate retained as fallback.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
 # today (22 checks): examples ownership + starter callers + laziness
 # slices + attribution + full index breadth + Scala/Polyglot entries +
-# mixed disposition, LCOV preset pin + inventory backing,
+# mixed disposition, LCOV preset pin + inventory backing + comment landing,
 # Renovate fallback + full manager set + loop policy + Monday schedule
 # + schedule policy, never-rewrites pin, prior harnesses green,
-# and no-false-claim gaps. Reverse queries, adapter runs, comment
-# presentation, and widen implementation stay open under their
+# and no-false-claim gaps. Reverse queries, adapter runs, and widen
+# implementation stay open under their
 # issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:backlog_automation_guards`,
@@ -83,12 +83,14 @@ else
   bad "coverage LCOV preset pin lost (preset.bazelrc or coverage_cell)"
 fi
 
-# #254 prior slice stays green, no comment workflow falsely claimed.
+# #254 landed slice stays green: first-party comment renderer plus
+# marker-owned PR wiring in both workflows (Codecov opt-in only).
 if [[ -f "tools/ci/coverage_report_guards.sh" ]] \
-  && ! grep -rln -F -e 'coverage-summary-comment' .github/workflows/ 2>/dev/null | grep -q .; then
+  && [[ -x "tools/coverage/coverage_comment.sh" ]] \
+  && grep -rln -F -e 'dx-coverage-summary' .github/workflows/ 2>/dev/null | grep -q .; then
   ok
 else
-  bad "coverage comment gap dishonest (harness missing or comment workflow claimed)"
+  bad "coverage comment landing dishonest (harness/renderer/marker wiring missing)"
 fi
 
 # #260 all-ecosystems v1 manager set retained in the fallback.
@@ -212,7 +214,7 @@ else
   bad "a widen bump command appeared in cli/ without #260 landing"
 fi
 
-# No first-party comment service falsely claimed.
+# No third-party coverage service smuggled in (#254 first-party only).
 if ! grep -rn -F -e 'codecov-action' .github/workflows/ci.yml 2>/dev/null | grep -q .; then
   ok
 else

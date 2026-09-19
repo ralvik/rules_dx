@@ -273,6 +273,7 @@ jobs:
     permissions:
       contents: read
       checks: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -285,6 +286,7 @@ jobs:
         env:
           DX_MIN_COVERAGE: ${{ inputs.min_coverage }}
         run: |
+          set +e
           extra=""
           if [ -n "$DX_MIN_COVERAGE" ]; then
             case "$DX_MIN_COVERAGE" in
@@ -296,7 +298,65 @@ jobs:
           # threshold stays one flag plus one value. Input travels via env and
           # is numeric-validated above, never interpolated into the script.
           # shellcheck disable=SC2086
-          bazel run @rules_dx//cli/cli:dx -- coverage $extra //...
+          bazel run @rules_dx//cli/cli:dx -- coverage $extra //... 2>&1 | tee /tmp/dx_coverage.log
+          rc=${PIPESTATUS[0]}
+          echo "$rc" > /tmp/dx_coverage.rc
+          exit $rc
+      - name: Render first-party coverage summary (per-cell, no union)
+        # First-party PR reporting (issue #254): same comment contract as
+        # this repo's seed cell, per platform cell. Bazel-owned dx coverage
+        # stays the gate; this step only presents its counts. No cross-cell
+        # union, no averaged percentages, no rounding up. Findings stay in
+        # counts only with no invented locations.
+        if: always()
+        run: |
+          set -euo pipefail
+          cell="coverage ${{ matrix.platform }}"
+          dx_rc="$(cat /tmp/dx_coverage.rc 2>/dev/null || echo unknown)"
+          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' /tmp/dx_coverage.log 2>/dev/null | head -n 1 || true)"
+          if [[ "$dx_rc" == "0" ]]; then status="PASS"; else status="FAIL"; fi
+          {
+            echo "<!-- dx-coverage-summary: $cell -->"
+            echo "## Coverage summary — $cell — $status"
+            echo ""
+            echo "Analyzed revision: \`${GITHUB_SHA}\` | Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} | Cell: \`$cell\`."
+            echo ""
+            if [[ -n "$dx_line" ]]; then echo "$dx_line"; echo ""; fi
+            echo "Gate exit: $dx_rc (comment never changes this outcome)."
+            echo ""
+            echo "LCOV: Bazel-owned combined report for this cell (see workflow run ${GITHUB_RUN_ID})."
+            echo ""
+            echo "Scope: per-cell exact counts only; no cross-cell union, no averaged percentages, no rounding up. Codecov stays opt-in only, never required."
+            echo ""
+            echo "Findings outside the diff stay in counts only; no invented review locations."
+          } > /tmp/coverage_comment.md
+          cat /tmp/coverage_comment.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish PR summary comment (dedup marker, fork-safe)
+        # One updated comment per PR per cell marker; human comments never
+        # touched; stale runs never overwrite current (concurrency cancels
+        # superseded runs). Fork PRs skip so fork code never gets write
+        # credentials. Publication failure fails separately while the gate
+        # outcome above stays preserved.
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          head_repo="${{ github.event.pull_request.head.repo.full_name }}"
+          base_repo="${{ github.repository }}"
+          if [[ "$head_repo" != "$base_repo" ]]; then
+            echo "Fork PR detected: step-summary only, no PR comment." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          marker="dx-coverage-summary: coverage ${{ matrix.platform }}"
+          pr="${{ github.event.pull_request.number }}"
+          existing="$(gh api "repos/$base_repo/issues/$pr/comments?per_page=100" --jq "[.[] | select(.body | contains(\"$marker\")) | .id] | last // empty" || true)"
+          if [[ -n "$existing" ]]; then
+            jq -Rs '{body: .}' /tmp/coverage_comment.md > /tmp/coverage_payload.json
+            gh api -X PATCH "repos/$base_repo/issues/comments/$existing" --input /tmp/coverage_payload.json --jq .id
+          else
+            gh pr comment "$pr" --body-file /tmp/coverage_comment.md
+          fi
 
   dx-ci:
     name: dx-ci (aggregate)

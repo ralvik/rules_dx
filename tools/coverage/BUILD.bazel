@@ -3,6 +3,7 @@
 # M13: source-only package (no Cargo manifest). The gate library now lives
 # at `//cli/lcov:dx_lcov`; this package owns only the `coverage_bin` entry
 # point, hand-maintained and excluded from generation in the root BUILD.
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//rust/rules:defs.bzl", "rust_binary")
 load("//quality:fixtures.bzl", "real_source_target")
 
@@ -25,4 +26,14 @@ rust_binary(
     crate_name = "coverage",
     crate_root = "src/main.rs",
     deps = ["//cli/lcov:dx_lcov"],
+)
+
+# First-party coverage PR summary renderer (issue #254): presents the
+# Bazel-owned gate verdict as the adopted compact summary comment.
+# Run by CI via `bazel run //tools/coverage:coverage_comment -- ...`.
+sh_binary(
+    name = "coverage_comment",
+    srcs = ["coverage_comment.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )
