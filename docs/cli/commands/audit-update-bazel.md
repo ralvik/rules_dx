@@ -365,8 +365,10 @@ closed as usage errors (exit `2`), never as partial widens.
 
 Library-first (ADR 0008): registry discovery, version comparison, and manifest
 parsing use upstream libraries (BCR / crates.io / npm / Go proxy / GitHub
-releases clients plus `semver`, `serde_json`, `toml`), never custom
-HTTP/version/resolver code. Custom code is limited to the thin
+releases clients plus `semver`, `serde_json`, `toml`, `toml_edit`), never
+custom HTTP/version/resolver code. Cargo edits preserve comments,
+whitespace, and order through `toml_edit::DocumentMut`; `package.json`
+stays on `serde_json::Value`. Custom code is limited to the thin
 widen-one-requirement edit in `dx_bump::request`, loop orchestration, and PR
 handling. All deps pin exactly per ADR 0008 (latest stable). Version shapes
 validate through upstream `semver` (`dx_bump::version`): exact semver for

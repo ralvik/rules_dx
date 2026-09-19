@@ -348,13 +348,30 @@ fn plan_cargo_toml(
             });
         }
     };
-    // Supports `package = "old"` and `package = { version = "old", ... }`
-    // on one line. Git/path/table shapes fail closed as unsupported.
-    let mut matches = 0usize;
-    let mut out = String::with_capacity(content.len());
-    for line in content.split_inclusive('\n') {
-        if line_covers_cargo_package(line, package) {
-            if line.contains("git =") || line.contains("path =") {
+    // Format-preserving edit via `toml_edit::DocumentMut`: locate the dep
+    // by table key (`package = "old"` or `package = { version = "old" }`
+    // or `[dependencies.package] version = "old"`), preserve
+    // comments/whitespace/order, keep fail-closed `git`/`path` behavior
+    // as explicit typed errors, keep 1-match/0-ambiguous counting.
+    let mut doc =
+        content
+            .parse::<toml_edit::DocumentMut>()
+            .map_err(|_| BumpError::UnsupportedManifest {
+                manifest: "rust/hello/Cargo.toml".to_owned(),
+                reason: "manifest is not valid TOML".to_owned(),
+            })?;
+    let paths = cargo_dependency_table_paths(&doc);
+    let mut matches: Vec<Vec<String>> = Vec::new();
+    for path in &paths {
+        let Some(table) = cargo_table_at(&doc, path) else {
+            continue;
+        };
+        let Some(item) = table.get(package) else {
+            continue;
+        };
+        match cargo_dep_shape(item) {
+            CargoDepShape::Registry => matches.push(path.clone()),
+            CargoDepShape::GitOrPath => {
                 return Err(BumpError::UnsupportedManifest {
                     manifest: "rust/hello/Cargo.toml".to_owned(),
                     reason: format!(
@@ -362,28 +379,42 @@ fn plan_cargo_toml(
                     ),
                 });
             }
-            match replace_first_quoted_version(line, &new) {
-                Some(replaced) => {
-                    matches += 1;
-                    out.push_str(&replaced);
-                    continue;
-                }
-                None => {
-                    return Err(BumpError::UnsupportedManifest {
-                        manifest: "rust/hello/Cargo.toml".to_owned(),
-                        reason: format!("{package:?} has no quoted version on its line"),
-                    });
-                }
+            CargoDepShape::Workspace => {
+                return Err(BumpError::UnsupportedManifest {
+                    manifest: "rust/hello/Cargo.toml".to_owned(),
+                    reason: format!(
+                        "{package:?} inherits workspace version; v1 widens registry versions only"
+                    ),
+                });
+            }
+            CargoDepShape::NoVersion => {
+                return Err(BumpError::UnsupportedManifest {
+                    manifest: "rust/hello/Cargo.toml".to_owned(),
+                    reason: format!("{package:?} has no version to widen"),
+                });
             }
         }
-        out.push_str(line);
     }
-    match matches {
-        1 => Ok(out),
+    match matches.len() {
         0 => Err(BumpError::NotFound {
             manifest: "rust/hello/Cargo.toml".to_owned(),
             package: package.to_owned(),
         }),
+        1 => {
+            let table = cargo_table_at_mut(&mut doc, &matches[0]).ok_or_else(|| {
+                BumpError::UnsupportedManifest {
+                    manifest: "rust/hello/Cargo.toml".to_owned(),
+                    reason: format!("{package:?} has no version to widen"),
+                }
+            })?;
+            cargo_set_version(table, package, &new).ok_or_else(|| {
+                BumpError::UnsupportedManifest {
+                    manifest: "rust/hello/Cargo.toml".to_owned(),
+                    reason: format!("{package:?} has no version to widen"),
+                }
+            })?;
+            Ok(doc.to_string())
+        }
         count => Err(BumpError::Ambiguous {
             manifest: "rust/hello/Cargo.toml".to_owned(),
             package: package.to_owned(),
@@ -392,25 +423,175 @@ fn plan_cargo_toml(
     }
 }
 
-fn line_covers_cargo_package(line: &str, package: &str) -> bool {
-    let trimmed = line.trim_start();
-    if trimmed.starts_with('#') {
-        return false;
+/// Dependency shapes for `plan_cargo_toml`: registry-owned (widenable)
+/// versus fail-closed shapes (explicit typed errors, never guessed).
+enum CargoDepShape {
+    /// `package = "old"`, `package = { version = "old", .. }`, or
+    /// `[table.package] version = "old"`.
+    Registry,
+    /// `git =` / `path =` present (v1 widens registry versions only).
+    GitOrPath,
+    /// `workspace = true` inheritance (version lives in `[workspace]`).
+    Workspace,
+    /// No string `version` to widen (table shapes fail closed).
+    NoVersion,
+}
+
+/// Classifies one dep entry by table key, never by line text.
+fn cargo_dep_shape(item: &toml_edit::Item) -> CargoDepShape {
+    match item {
+        toml_edit::Item::Value(toml_edit::Value::String(_)) => CargoDepShape::Registry,
+        toml_edit::Item::Value(toml_edit::Value::InlineTable(table)) => cargo_inline_shape(table),
+        toml_edit::Item::Table(table) => cargo_table_shape(table),
+        _ => CargoDepShape::NoVersion,
     }
-    // `anyhow = "1"` or `anyhow = { version = ... }` at line start
-    // (allowing leading whitespace). Avoid matching `my-anyhow` when
-    // seeking `anyhow` by requiring the character after the name to be
-    // whitespace, `=`, or end-of-identifier boundary.
-    if let Some(rest) = trimmed.strip_prefix(package) {
-        let boundary = rest
-            .chars()
-            .next()
-            .is_none_or(|c| c == ' ' || c == '\t' || c == '=');
-        if boundary && line.contains('=') {
-            return true;
+}
+
+/// Classifies `package = { ... }` inline tables.
+fn cargo_inline_shape(table: &toml_edit::InlineTable) -> CargoDepShape {
+    if table.contains_key("git") || table.contains_key("path") {
+        return CargoDepShape::GitOrPath;
+    }
+    if table
+        .get("workspace")
+        .is_some_and(|v| v.as_bool() == Some(true))
+    {
+        return CargoDepShape::Workspace;
+    }
+    match table.get("version") {
+        Some(toml_edit::Value::String(_)) => CargoDepShape::Registry,
+        _ => CargoDepShape::NoVersion,
+    }
+}
+
+/// Classifies `[table.package] ...` tables.
+fn cargo_table_shape(table: &toml_edit::Table) -> CargoDepShape {
+    if table.contains_key("git") || table.contains_key("path") {
+        return CargoDepShape::GitOrPath;
+    }
+    if table
+        .get("workspace")
+        .is_some_and(|item| item.as_bool() == Some(true))
+    {
+        return CargoDepShape::Workspace;
+    }
+    match table.get("version") {
+        Some(toml_edit::Item::Value(toml_edit::Value::String(_))) => CargoDepShape::Registry,
+        _ => CargoDepShape::NoVersion,
+    }
+}
+
+/// All dependency-like tables that may own `package`: top-level
+/// `dependencies`/`dev-dependencies`/`build-dependencies`,
+/// `workspace.dependencies`, per-target
+/// `target.<cfg>.{dependencies,dev-dependencies,build-dependencies}`,
+/// and `patch.<source>` (matched by old line surgery, kept here so the
+/// rewrite is strictly fewer false `NotFound`s).
+fn cargo_dependency_table_paths(doc: &toml_edit::DocumentMut) -> Vec<Vec<String>> {
+    let mut paths: Vec<Vec<String>> = Vec::new();
+    for name in ["dependencies", "dev-dependencies", "build-dependencies"] {
+        if doc.get(name).is_some_and(|item| item.is_table()) {
+            paths.push(vec![name.to_owned()]);
         }
     }
-    false
+    if doc
+        .get("workspace")
+        .and_then(|item| item.as_table())
+        .is_some_and(|workspace| {
+            workspace
+                .get("dependencies")
+                .is_some_and(|item| item.is_table())
+        })
+    {
+        paths.push(vec!["workspace".to_owned(), "dependencies".to_owned()]);
+    }
+    if let Some(targets) = doc.get("target").and_then(|item| item.as_table()) {
+        for (target_name, target_item) in targets.iter() {
+            let Some(target_table) = target_item.as_table() else {
+                continue;
+            };
+            for kind in ["dependencies", "dev-dependencies", "build-dependencies"] {
+                if target_table.get(kind).is_some_and(|item| item.is_table()) {
+                    paths.push(vec![
+                        "target".to_owned(),
+                        target_name.to_owned(),
+                        kind.to_owned(),
+                    ]);
+                }
+            }
+        }
+    }
+    if let Some(patch) = doc.get("patch").and_then(|item| item.as_table()) {
+        for (source, _) in patch.iter() {
+            paths.push(vec!["patch".to_owned(), source.to_owned()]);
+        }
+    }
+    paths
+}
+
+/// Immutable lookup of a dependency-like table by path.
+fn cargo_table_at<'a>(
+    doc: &'a toml_edit::DocumentMut,
+    path: &[String],
+) -> Option<&'a toml_edit::Table> {
+    let mut item: &toml_edit::Item = doc.as_item();
+    for key in path {
+        item = item.as_table()?.get(key)?;
+    }
+    item.as_table()
+}
+
+/// Mutable lookup of a dependency-like table by path.
+fn cargo_table_at_mut<'a>(
+    doc: &'a mut toml_edit::DocumentMut,
+    path: &[String],
+) -> Option<&'a mut toml_edit::Table> {
+    let mut item: &mut toml_edit::Item = doc.as_item_mut();
+    for key in path {
+        // `as_table_mut` on the current item, then `get_mut` the next key.
+        // Split borrows so the mutable chain typechecks.
+        let table = item.as_table_mut()?;
+        item = table.get_mut(key)?;
+    }
+    item.as_table_mut()
+}
+
+/// Sets the registry version for one dep entry, preserving decor
+/// (comments/whitespace) and sibling keys. Returns false when the entry
+/// is not registry-shaped (caller already classified it).
+fn cargo_set_version(table: &mut toml_edit::Table, package: &str, new: &str) -> bool {
+    let Some(item) = table.get_mut(package) else {
+        return false;
+    };
+    match item {
+        toml_edit::Item::Value(toml_edit::Value::String(formatted)) => {
+            let decor = formatted.decor().clone();
+            *formatted = toml_edit::Formatted::new(new.to_owned());
+            *formatted.decor_mut() = decor;
+            true
+        }
+        toml_edit::Item::Value(toml_edit::Value::InlineTable(inline)) => {
+            let Some(toml_edit::Value::String(formatted)) = inline.get_mut("version") else {
+                return false;
+            };
+            let decor = formatted.decor().clone();
+            *formatted = toml_edit::Formatted::new(new.to_owned());
+            *formatted.decor_mut() = decor;
+            true
+        }
+        toml_edit::Item::Table(inner) => {
+            let Some(toml_edit::Item::Value(toml_edit::Value::String(formatted))) =
+                inner.get_mut("version")
+            else {
+                return false;
+            };
+            let decor = formatted.decor().clone();
+            *formatted = toml_edit::Formatted::new(new.to_owned());
+            *formatted.decor_mut() = decor;
+            true
+        }
+        _ => false,
+    }
 }
 
 fn plan_package_json(
@@ -650,20 +831,6 @@ fn replace_gha_sha(line: &str, needle: &str, sha: &str) -> Option<String> {
     replaced.push_str(&line[..at]);
     replaced.push_str(sha);
     replaced.push_str(&rest[end..]);
-    Some(replaced)
-}
-
-/// Replaces the first `"quoted"` version-like string on one line with
-/// `"new"`. Used for `Cargo.toml` single-line entries; callers already
-/// scoped the line to exactly one requirement.
-fn replace_first_quoted_version(line: &str, new: &str) -> Option<String> {
-    let start = line.find('"')?;
-    let after_start = &line[start + 1..];
-    let end_rel = after_start.find('"')?;
-    let mut replaced = String::with_capacity(line.len());
-    replaced.push_str(&line[..=start]);
-    replaced.push_str(new);
-    replaced.push_str(&after_start[end_rel..]);
     Some(replaced)
 }
 
@@ -1003,6 +1170,75 @@ mod tests {
         let bump = BumpRequest::parse("go:example.com/mod", "1.3.0").expect("go");
         let widened = bump.plan_edit(gomod).expect("edit");
         assert!(widened.contains("example.com/mod v1.3.0"), "{widened}");
+    }
+
+    #[test]
+    fn cargo_toml_preserves_format_and_fails_closed() {
+        let bump = BumpRequest::parse("cargo:anyhow", "1.2.3").expect("cargo");
+
+        // Inline table keeps sibling keys, comments, and order.
+        let cargo = "[dependencies]\nanyhow = { version = \"1\", features = [\"derive\"] } # keep\nserde = \"1\"\n";
+        let widened = bump.plan_edit(cargo).expect("inline");
+        assert!(
+            widened.contains("anyhow = { version = \"1.2.3\""),
+            "{widened}"
+        );
+        assert!(widened.contains("features = [\"derive\"]"), "{widened}");
+        assert!(widened.contains("# keep"), "{widened}");
+        assert!(widened.contains("serde = \"1\""), "{widened}");
+
+        // `[dependencies.package]` table form widens `version`.
+        let cargo = "[dependencies.anyhow]\nversion = \"1\"\nfeatures = [\"derive\"]\n";
+        let widened = bump.plan_edit(cargo).expect("table");
+        assert!(widened.contains("version = \"1.2.3\""), "{widened}");
+        assert!(widened.contains("features ="), "{widened}");
+
+        // Single `dev-dependencies` entry widens.
+        let cargo = "[dev-dependencies]\nanyhow = \"1\"\n";
+        let widened = bump.plan_edit(cargo).expect("dev");
+        assert!(widened.contains("anyhow = \"1.2.3\""), "{widened}");
+
+        // Same crate in two tables is ambiguous (never batch).
+        let cargo = "[dependencies]\nanyhow = \"1\"\n[dev-dependencies]\nanyhow = \"1\"\n";
+        assert!(matches!(
+            bump.plan_edit(cargo),
+            Err(BumpError::Ambiguous { count: 2, .. })
+        ));
+
+        // Git/path shapes fail closed as unsupported.
+        let cargo =
+            "[dependencies]\nanyhow = { git = \"https://example.com/repo\", tag = \"v1\" }\n";
+        assert!(matches!(
+            bump.plan_edit(cargo),
+            Err(BumpError::UnsupportedManifest { .. })
+        ));
+        let cargo = "[dependencies]\nanyhow = { path = \"../anyhow\" }\n";
+        assert!(matches!(
+            bump.plan_edit(cargo),
+            Err(BumpError::UnsupportedManifest { .. })
+        ));
+
+        // Workspace inheritance and missing versions fail closed.
+        let cargo = "[dependencies]\nanyhow = { workspace = true }\n";
+        assert!(matches!(
+            bump.plan_edit(cargo),
+            Err(BumpError::UnsupportedManifest { .. })
+        ));
+        let cargo = "[dependencies]\nanyhow = { optional = true }\n";
+        assert!(matches!(
+            bump.plan_edit(cargo),
+            Err(BumpError::UnsupportedManifest { .. })
+        ));
+
+        // Invalid TOML and missing deps fail closed without widening.
+        assert!(matches!(
+            bump.plan_edit("[dependencies\nanyhow = "),
+            Err(BumpError::UnsupportedManifest { .. })
+        ));
+        assert!(matches!(
+            bump.plan_edit("[dependencies]\nserde = \"1\"\n"),
+            Err(BumpError::NotFound { .. })
+        ));
     }
 
     #[test]
