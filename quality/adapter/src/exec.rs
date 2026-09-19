@@ -25,10 +25,14 @@
 //! resolve per join, `interop_path`/`StrictPath` API churn) would add
 //! supply-chain review, lockfile churn, and `MODULE.bazel` manifests for
 //! zero behavior gain today; `soft-canonicalize` alone carries no
-//! boundary policy and `normpath` alone is normalization without on-disk
-//! resolve (see #391). Re-evaluate with `VirtualRoot`-style boundary plus
-//! safe-I/O only if adapters ever accept untrusted entries.
+//! boundary policy. `normpath` is adopted for lexical accumulation only
+//! (issue #391: `BasePathBuf` owns Windows `Prefix`/verbatim edge semantics
+//! instead of the former hand `PathBuf`); on-disk symlink escapes stay owned
+//! by the symlink-prefix guard below, not by normalization. Re-evaluate with
+//! `VirtualRoot`-style boundary plus safe-I/O only if adapters ever accept
+//! untrusted entries.
 
+use normpath::BasePathBuf;
 use std::ffi::OsStr;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -82,12 +86,14 @@ impl Scratch {
 
     /// Resolves a scratch-relative path, rejecting escapes.
     ///
-    /// Lexical boundary plus explicit shape guards (empty, null byte,
-    /// backslash for portable Unix/Windows behavior) plus a final
-    /// containment check. On-disk symlink escapes are owned by
-    /// [`Scratch::materialize`]'s symlink-prefix guard, not by this
-    /// lexical join: this returns the lexical location, materialize
-    /// refuses to traverse a symlink to reach it.
+    /// Lexical boundary (issue #391: `normpath::BasePathBuf` accumulation
+    /// owns Windows `Prefix`/verbatim edge semantics instead of hand
+    /// `PathBuf`) plus explicit shape guards (empty, null byte, backslash
+    /// for portable Unix/Windows behavior) plus a final containment check.
+    /// On-disk symlink escapes are owned by [`Scratch::materialize`]'s
+    /// symlink-prefix guard, not by this lexical join: this returns the
+    /// lexical location, materialize refuses to traverse a symlink to
+    /// reach it.
     pub fn resolve(&self, rel: &Path) -> io::Result<PathBuf> {
         let root = self.dir.path();
         // Encoded bytes keep the shape check exact on non-UTF8 inputs:
@@ -111,7 +117,12 @@ impl Scratch {
                 format!("mirror path contains backslash: {}", rel.display()),
             ));
         }
-        let mut absolute = root.to_owned();
+        let mut absolute = BasePathBuf::new(root.to_owned()).map_err(|error| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("scratch root is not a base path: {error}"),
+            )
+        })?;
         for component in rel.components() {
             use std::path::Component::{CurDir, Normal, ParentDir, Prefix, RootDir};
             match component {
@@ -121,9 +132,16 @@ impl Scratch {
                     // `absolute` starts at the scratch root and every pop
                     // is range-checked below, so it always has depth to
                     // pop here; a failed pop would leave `absolute`
-                    // outside the root and fail the check anyway.
-                    absolute.pop();
-                    if absolute != root && !absolute.starts_with(root) {
+                    // outside the root and fail the check anyway. `pop`
+                    // errors only on a future walk divergence (non-`Normal`/
+                    // non-`RootDir` tail), which fails closed as an escape.
+                    if absolute.pop().is_err() {
+                        return Err(io::Error::new(
+                            io::ErrorKind::InvalidInput,
+                            format!("mirror path escapes scratch: {}", rel.display()),
+                        ));
+                    }
+                    if absolute.as_path() != root && !absolute.starts_with(root) {
                         return Err(io::Error::new(
                             io::ErrorKind::InvalidInput,
                             format!("mirror path escapes scratch: {}", rel.display()),
@@ -142,13 +160,13 @@ impl Scratch {
         // either descended (Normal), was neutral (CurDir), was
         // range-checked (ParentDir), or was rejected (RootDir/Prefix),
         // so this only fires on a future walk divergence.
-        if absolute != root && !absolute.starts_with(root) {
+        if absolute.as_path() != root && !absolute.starts_with(root) {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
                 format!("mirror path escapes scratch: {}", rel.display()),
             ));
         }
-        Ok(absolute)
+        Ok(absolute.into_path_buf())
     }
 
     /// Writes byte entries and links closure entries, creating parents.
@@ -453,6 +471,28 @@ mod tests {
                 .expect("dot component"),
             scratch.root().join("ok.rs")
         );
+    }
+
+    #[test]
+    fn resolve_normalizes_dot_segments_via_normpath() {
+        // Issue #391 fixtures: `a/b/../c`, `./`, trailing-slash,
+        // excessive-`..` (escapes fail closed here, unlike markdown's
+        // clamped sibling-root semantics).
+        let scratch = Scratch::create(&std::env::temp_dir()).expect("scratch");
+        assert_eq!(
+            scratch.resolve(Path::new("a/b/../c.rs")).expect("a/b/../c"),
+            scratch.root().join("a/c.rs")
+        );
+        assert_eq!(
+            scratch.resolve(Path::new("./a.rs")).expect("dot slash"),
+            scratch.root().join("a.rs")
+        );
+        assert_eq!(
+            scratch.resolve(Path::new("a/b/")).expect("trailing slash"),
+            scratch.root().join("a/b")
+        );
+        assert!(scratch.resolve(Path::new("a/../../evil")).is_err());
+        assert!(scratch.resolve(Path::new("a/b/../../../evil")).is_err());
     }
 
     #[test]
