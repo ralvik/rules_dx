@@ -1,12 +1,12 @@
 # `dx docs`
 
-Removed. The `dx docs` command was deleted in
-open work: the shipped
+Removed. The `dx docs` command was deleted per
+[ADR 0020](../../decisions/0020-remove-dx-docs-placeholder.md): the shipped
 `--check` mode validated flag shape, not docs content, while its name
 overpromised in front of the docs-publish deploy gate.
 
 Reintroduction with real extraction/validation behind the invocation is
-open.
+open under issue #310.
 The design contracts it will implement are unchanged:
 
 - [Documentation IR](../../documentation/doc-ir.md): common symbol model,

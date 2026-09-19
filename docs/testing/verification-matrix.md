@@ -46,8 +46,9 @@ standard dogfood gates.
   acquisition with 24h cache semantics and offline matching, plus SARIF/SPDX mapping delivered
   (issue #18).
 - **Docs pipeline**: per-language adapter runs, link/reference proofs,
-  renderer/site artifacts, guide-step verification
-  (open work).
+  renderer/site artifacts, cache and determinism measurements, guide prose with
+  guide-step verification, and first-hour timing proof stay open under issue #310
+  (see [Documentation](../documentation/README.md#contracts)); no working site claimed.
 - **Environment/codegen**: projection queries, replacement contracts,
   boundary evidence (open work).
 
