@@ -279,7 +279,11 @@ def is_classified(class_id):
     return class_id in REAL_CLASS_TO_FAMILY
 
 def registry_families():
-    """Returns the sorted unique owning families in the registry."""
+    """Returns the sorted unique owning families in the registry.
+
+    Returns:
+      Sorted list of owning family names.
+    """
     seen = {}
     for class_id in REAL_CLASS_TO_FAMILY:
         seen[REAL_CLASS_TO_FAMILY[class_id]] = True

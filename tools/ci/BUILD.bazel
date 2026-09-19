@@ -35,7 +35,10 @@ sh_test(
     name = "consumer_scheduling_test",
     srcs = ["consumer_scheduling_test.sh"],
     args = ["$(rootpath //.github:workflows/reusable-consumer.yml)"],
-    data = ["//.github:workflows/reusable-consumer.yml", "//tools/sh:lib"],
+    data = [
+        "//.github:workflows/reusable-consumer.yml",
+        "//tools/sh:lib",
+    ],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -44,7 +47,10 @@ sh_test(
     name = "consumer_aggregate_test",
     srcs = ["consumer_aggregate_test.sh"],
     args = ["$(rootpath //.github:workflows/reusable-consumer.yml)"],
-    data = ["//.github:workflows/reusable-consumer.yml", "//tools/sh:lib"],
+    data = [
+        "//.github:workflows/reusable-consumer.yml",
+        "//tools/sh:lib",
+    ],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )

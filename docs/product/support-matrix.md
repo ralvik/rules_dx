@@ -217,7 +217,7 @@ qualification in [Generation](../generation/README.md#language-mapping-qualifica
 [Environments](../environments/README.md#language-mapping-qualification),
 [Tools](../tools/README.md#language-mapping-qualification),
 [tool baseline](../tools/tool-baseline.md), [tool acquisition](../tools/tool-acquisition.md),
-and the [parity gate](../../quality/parity_tests.bzl): no `ruby/`, `powershell/`, or `swift/`
+and the parity gate (`quality/parity_tests.bzl`): no `ruby/`, `powershell/`, or `swift/`
 foundation dirs, wrappers, Gazelle extensions, env plans, hello builds, or `MODULE.bazel` deps;
 `ruby`/`powershell` classes classified with no adapter claim (`quality/adapters.bzl` plus
 `PARITY_DEFERRED` with O31/O32 and ADR 0019); retained cohorts (RuboCop/StandardRB via

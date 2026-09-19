@@ -1,6 +1,6 @@
-load("@rules_dx//quality:fixtures.bzl", "real_source_target")
-
 """M25 WP3 slice 3: combined setup commit through the shared lock."""
+
+load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 
 # gazelle:resolve rust dx_env //cli/env:dx_env
 load("//rust/rules:defs.bzl", "dx_rust_crate")

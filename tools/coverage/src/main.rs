@@ -5,14 +5,16 @@
 // scanner, which resolves imports from `use`/`extern crate` items only: the
 // `dx_lcov::run` call path alone yields no import, so generation would
 // strip the `:dx_lcov` dep the binary links.
-use dx_lcov;
+use dx_lcov::run;
 
 // LCOV_EXCL_START - reason: thin binary shim with no branches; behavior verified by build and gate runs.
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    std::process::exit(dx_lcov::run(
+    std::process::exit(run(
         &args,
-        &|path| std::fs::read_to_string(path).map_err(|err| dx_lcov::LcovError::from(err.to_string())),
+        &|path| {
+            std::fs::read_to_string(path).map_err(|err| dx_lcov::LcovError::from(err.to_string()))
+        },
         &mut |line| println!("{line}"),
     ));
 }

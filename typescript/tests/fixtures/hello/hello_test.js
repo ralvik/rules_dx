@@ -5,5 +5,5 @@
 import { hello } from "./hello.js";
 
 test("greets by name", () => {
-  expect(hello("world")).toBe("hello world");
+	expect(hello("world")).toBe("hello world");
 });

@@ -414,20 +414,24 @@ pub fn cargo_licenses(cargo_bazel_text: &str, packages: &[LockedPackage]) -> Vec
         }
     };
     // `cargo-bazel-lock.json` keys are `name version` (e.g. `serde 1.0.229`).
+    // Real files use `crates` (per-crate `license`); unit fixtures use
+    // `packages`. Accept both so SBOM stays accurate on dogfood.
     let mut by_name_version = std::collections::BTreeMap::new();
-    if let Some(packages_map) = value.get("packages").and_then(|value| value.as_object()) {
-        for (key, detail) in packages_map {
-            let license = detail
-                .get("license")
-                .and_then(|value| value.as_str())
-                .unwrap_or("UNKNOWN")
-                .trim();
-            let license = if license.is_empty() {
-                "UNKNOWN"
-            } else {
-                license
-            };
-            by_name_version.insert(key.clone(), license.to_owned());
+    for key in ["crates", "packages"] {
+        if let Some(packages_map) = value.get(key).and_then(|value| value.as_object()) {
+            for (key, detail) in packages_map {
+                let license = detail
+                    .get("license")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("UNKNOWN")
+                    .trim();
+                let license = if license.is_empty() {
+                    "UNKNOWN"
+                } else {
+                    license
+                };
+                by_name_version.insert(key.clone(), license.to_owned());
+            }
         }
     }
     packages

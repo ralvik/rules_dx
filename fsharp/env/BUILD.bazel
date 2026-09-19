@@ -13,8 +13,8 @@ load("//quality:fixtures.bzl", "real_source_target")
 package(default_visibility = ["//visibility:public"])
 
 fsharp_env_plan(
-    testonly = True,
     name = "hello_lib_plan",
+    testonly = True,
     target = "//fsharp/tests/fixtures/hello:hello_lib",
 )
 

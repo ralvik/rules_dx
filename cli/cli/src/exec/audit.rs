@@ -293,7 +293,7 @@ fn run_secrets(
                 }
             },
         },
-        Some(1) => match sarif_text {
+        Some(1) | Some(2) => match sarif_text {
             None => (
                 Vec::new(),
                 Some("secrets auditor reported leaks-or-errors without a SARIF report".to_owned()),
@@ -309,7 +309,10 @@ fn run_secrets(
                     if findings.is_empty() {
                         (
                             Vec::new(),
-                            Some("secrets auditor exited 1 with no SARIF results".to_owned()),
+                            Some(format!(
+                                "secrets auditor exited {} with no SARIF results",
+                                code.unwrap_or(1)
+                            )),
                             Vec::new(),
                         )
                     } else {

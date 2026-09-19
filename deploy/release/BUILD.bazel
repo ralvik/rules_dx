@@ -79,9 +79,9 @@ sh_test(
         "$(rootpath :sbom_demo_provenance)",
     ],
     data = [
-        "//deploy/rules:release_demo_archive",
         ":sbom_demo_provenance",
         ":sbom_demo_spdx",
+        "//deploy/rules:release_demo_archive",
     ],
     tags = ["no-coverage"],
     target_compatible_with = ["@platforms//os:linux"],

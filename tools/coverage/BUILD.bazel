@@ -4,8 +4,8 @@
 # at `//cli/lcov:dx_lcov`; this package owns only the `coverage_bin` entry
 # point, hand-maintained and excluded from generation in the root BUILD.
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
-load("//rust/rules:defs.bzl", "rust_binary")
 load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "rust_binary")
 
 package(default_visibility = ["//visibility:public"])
 

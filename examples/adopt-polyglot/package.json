@@ -2,7 +2,10 @@
   "name": "adopt-polyglot",
   "private": true,
   "type": "module",
-  "workspaces": ["widgets", "frontend"],
+  "workspaces": [
+    "widgets",
+    "frontend"
+  ],
   "dependencies": {},
   "devDependencies": {
     "jest": "30.2.0"

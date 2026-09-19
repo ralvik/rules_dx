@@ -1,6 +1,6 @@
-load("@rules_dx//quality:fixtures.bzl", "real_source_target")
-
 """M25 WP1 slice 3: normalized codegen plan collection for the `dx` CLI."""
+
+load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 
 # gazelle:resolve rust codegen_shard //generation/codegen_shard
 load("//rust/rules:defs.bzl", "dx_rust_crate")

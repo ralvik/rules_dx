@@ -37,7 +37,9 @@ fn convergence_name(value: i32) -> &'static str {
 }
 
 fn opt_number(value: Option<u64>) -> String {
-    value.map(|v| v.to_string()).unwrap_or_else(|| "-".to_owned())
+    value
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "-".to_owned())
 }
 
 fn rule_name(rule: &str) -> &str {
@@ -87,7 +89,12 @@ fn main() {
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,
         Err(error) => {
-            let first = error.to_string().lines().next().unwrap_or("invalid arguments").to_owned();
+            let first = error
+                .to_string()
+                .lines()
+                .next()
+                .unwrap_or("invalid arguments")
+                .to_owned();
             tracing::error!("{first}");
             tracing::error!("usage: print_result OUT.pb");
             std::process::exit(2);

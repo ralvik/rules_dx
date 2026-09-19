@@ -10,15 +10,15 @@ const source = fs.readFileSync(path.join(here, "Hello.svelte"), "utf8");
 const ast = parse(source, { modern: true });
 
 describe("Hello.svelte", () => {
-  test("parses with template/fragment, script/instance, and style/css regions", () => {
-    expect(ast.fragment).toBeDefined();
-    expect(ast.fragment.nodes.length).toBeGreaterThan(0);
-    expect(ast.instance).not.toBeNull();
-    expect(ast.css).not.toBeNull();
-  });
+	test("parses with template/fragment, script/instance, and style/css regions", () => {
+		expect(ast.fragment).toBeDefined();
+		expect(ast.fragment.nodes.length).toBeGreaterThan(0);
+		expect(ast.instance).not.toBeNull();
+		expect(ast.css).not.toBeNull();
+	});
 
-  test("script block imports the local helper", () => {
-    const script = source.slice(ast.instance.start, ast.instance.end);
-    expect(script).toMatch("./helper.js");
-  });
+	test("script block imports the local helper", () => {
+		const script = source.slice(ast.instance.start, ast.instance.end);
+		expect(script).toMatch("./helper.js");
+	});
 });

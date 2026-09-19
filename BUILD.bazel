@@ -203,5 +203,6 @@ real_source_target(
         "clippy.toml",
         "ruff.toml",
         "rustfmt.toml",
+        "licenses.toml",
     ],
 )
