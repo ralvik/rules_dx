@@ -1059,6 +1059,10 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn stale_prev_undeletable_reports_install() {
+        // Issue #320 fail-fast policy: POSIX read-only bits (0555) have
+        // no Windows ACL equivalent; the generic `Install` error path is
+        // proven portably elsewhere, so this permission fixture stays
+        // unix-gated.
         use std::os::unix::fs::PermissionsExt;
         let scratch = test_root("stale-prev-perms");
         let root = scratch.path().to_path_buf();
@@ -1088,6 +1092,8 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn stale_stage_undeletable_reports_install() {
+        // Issue #320 fail-fast policy: POSIX read-only bits (0555) have
+        // no Windows ACL equivalent; see the stale-prev test above.
         use std::os::unix::fs::PermissionsExt;
         let scratch = test_root("stale-stage-perms");
         let root = scratch.path().to_path_buf();

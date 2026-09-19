@@ -247,6 +247,22 @@ mod tests {
         root.join("ws")
     }
 
+    /// Portable symlink planter for the no-follow fixture (issue #320
+    /// portable route): sizing never follows links on any host, so the
+    /// fixture must run everywhere. Windows planting fails fast with the
+    /// OS privilege error rather than silently skipping cover.
+    #[cfg(windows)]
+    fn test_symlink(target: &Path, link: &Path) {
+        std::os::windows::fs::symlink_file(target, link).expect("link");
+    }
+
+    /// Portable symlink planter for the no-follow fixture (issue #320
+    /// portable route): see the windows variant above.
+    #[cfg(not(windows))]
+    fn test_symlink(target: &Path, link: &Path) {
+        std::os::unix::fs::symlink(target, link).expect("link");
+    }
+
     /// Commits two setup pairs (stale `('3','4')`, then current
     /// `('1','2')`) and materializes all four generation directories.
     /// Returns the workspace path plus the (stale, current) setup hexes.
@@ -306,9 +322,11 @@ mod tests {
         assert!(listing.contains("reclaimable total: 0 bytes"));
     }
 
-    #[cfg(unix)]
     #[test]
     fn measure_sums_prune_entries_and_skips_missing() {
+        // Issue #320 portable route: sizing is symlink-aware without
+        // following links on every host, so this runs everywhere instead
+        // of unix-gating.
         let scratch = clean_root("measure");
         let root = scratch.path().to_path_buf();
         let (workspace, stale_hex, _) = two_record_workspace(&root);
@@ -364,7 +382,7 @@ mod tests {
         fs::write(&outside, vec![7u8; 1 << 20]).expect("fat file");
         let stale_gen = dx_dir.join("generated").join(digest('9'));
         fs::create_dir_all(&stale_gen).expect("stale generation");
-        std::os::unix::fs::symlink(&outside, stale_gen.join("artifact")).expect("link");
+        test_symlink(&outside, &stale_gen.join("artifact"));
         let plan = CleanPlan {
             prune_setup_records: Vec::new(),
             prune_generations: vec![GenerationView {

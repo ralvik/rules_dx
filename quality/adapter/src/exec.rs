@@ -4,8 +4,12 @@
 //! exact input bytes plus native-closure files into a fresh scratch
 //! directory, then spawns the tool with an empty-derived environment
 //! (no `PATH`, no inherited config variables) and a pinned working
-//! directory. Native-closure entries are symlinked where the platform
-//! allows and copied otherwise, so Windows works without privileges.
+//! directory. Native-closure entries follow the issue #320 portable
+//! route: symlinked where the platform allows and copied otherwise, so
+//! Windows works without privileges. The copy fallback is intentional
+//! (tools only read these entries); `materialize_copies_closure_entry_
+//! when_link_path_exists` plus the non-unix no-symlink assertion in
+//! `scratch_materializes_and_cleans_up` prove both branches.
 //! `Scratch` removes its tree on drop as a best-effort fallback;
 //! owners call [`Scratch::close`] on success paths so cleanup failures
 //! surface as action errors instead of vanishing.
@@ -257,7 +261,11 @@ fn ensure_no_symlink_prefix(root: &Path, path: &Path, rel: &Path) -> io::Result<
 
 /// Links `target` at `link`, copying the file when symlinks are
 /// unavailable (non-Unix platforms, or missing privileges): tools only
-/// ever read these native-closure entries.
+/// ever read these native-closure entries. Issue #320 portable route:
+/// the copy fallback is intentional, not a silent privilege-gap hide;
+/// directory targets fail fast via the `copy` error instead of a
+/// half-materialized tree. Non-unix always copies; unix prefers a
+/// symlink and copies only when linking fails.
 #[cfg(unix)]
 fn link_or_copy(target: &Path, link: &Path) -> io::Result<()> {
     match std::os::unix::fs::symlink(target, link) {
@@ -268,7 +276,11 @@ fn link_or_copy(target: &Path, link: &Path) -> io::Result<()> {
 
 /// Links `target` at `link`, copying the file when symlinks are
 /// unavailable (non-Unix platforms, or missing privileges): tools only
-/// ever read these native-closure entries.
+/// ever read these native-closure entries. Issue #320 portable route:
+/// the copy fallback is intentional, not a silent privilege-gap hide;
+/// directory targets fail fast via the `copy` error instead of a
+/// half-materialized tree. Non-unix always copies; unix prefers a
+/// symlink and copies only when linking fails.
 #[cfg(not(unix))]
 fn link_or_copy(target: &Path, link: &Path) -> io::Result<()> {
     std::fs::copy(target, link).map(|_| ())
@@ -366,6 +378,17 @@ mod tests {
             std::fs::read_link(root.join("taplo.toml")).expect("symlink preferred on unix"),
             source,
         );
+        // Issue #320 portable route: non-unix always copies, so no
+        // symlink must remain; content equality above already proves
+        // the copy branch.
+        #[cfg(not(unix))]
+        assert!(
+            !std::fs::symlink_metadata(root.join("taplo.toml"))
+                .expect("metadata")
+                .file_type()
+                .is_symlink(),
+            "non-unix closure entries copy instead of linking",
+        );
         drop(scratch);
         assert!(!root.exists(), "scratch is removed on drop");
         parent_tmp.close().expect("materialize cleanup");
@@ -459,6 +482,13 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn materialize_rejects_symlink_directory_escape() {
+        // Issue #392 traversal fixture, issue #320 fail-fast policy:
+        // the symlink-prefix guard only fires when the platform can
+        // plant a symlink. Non-unix `Link` entries always copy, so no
+        // symlink prefix can arise from `Link` there; the copy branch
+        // is proven by `materialize_copies_closure_entry_when_link_path_
+        // exists` plus the non-unix assertion in
+        // `scratch_materializes_and_cleans_up`.
         // Issue #392 traversal fixture: a symlink directory prefix from
         // an earlier entry must not let a later lexically inside path
         // land outside on disk.
@@ -498,6 +528,10 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn materialize_rejects_symlink_file_overwrite() {
+        // Issue #392 traversal fixture, issue #320 fail-fast policy:
+        // planting a file symlink needs symlink privilege, unavailable
+        // on non-unix `Link` paths (always copy). See the directory
+        // escape test above for the non-unix cover.
         // Issue #392 traversal fixture: an existing symlink at the
         // target must not be followed by a byte write or fallback copy.
         let parent_tmp = tempfile::Builder::new()

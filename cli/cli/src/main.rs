@@ -129,6 +129,9 @@ impl Runner for BinaryRunner {
             let _ = pump.join();
         }
         let status = status?;
+        // Issue #320 fail-fast policy: signal re-raise exists only on
+        // unix (`ExitStatusExt::signal`); Windows reports codes only, so
+        // this stays gated instead of a portable fake.
         #[cfg(unix)]
         {
             use std::os::unix::process::ExitStatusExt;

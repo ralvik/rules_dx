@@ -68,7 +68,9 @@ fi
 
 bazel_version="$(cat .bazelversion 2>/dev/null || echo unknown)"
 commit="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-host="linux_x86_64"
+# Issue #320 portable route: record the actual host instead of the
+# hard-coded seed label; unknown OS/CPU fails fast in dx_perf_host.
+host="$(dx_perf_host)"
 # Named-benchmark filter: `bench.sh <name>` runs one benchmark; no arg runs all warm.
 only="${positional[0]:-all}"
 

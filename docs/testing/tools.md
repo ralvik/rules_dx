@@ -197,9 +197,19 @@ best-effort hardening rides along with no Linux behavior change:
 generated deploy launchers plus the managed doctor shim.
 `//tools/ci:shell_contract` machine-checks this contract.
 
-Platform cfg hacks stay open under issue #320 (symlink copy fallback, unix-gated tests,
-GNU tar `-h` reliance, linux_x86_64 perf pin; decide fail-fast or portable route per
-site with test cover).
+Platform policy is decided under issue #320 (no silent cfg hacks):
+symlink copy fallback follows the portable route (`quality/adapter`
+copies unreadable-link closures, proven by the fallback test plus the
+non-unix no-symlink assertion); `/proc` scan plus clean-measure and
+resolve-symlink fixtures run portably via OS-selected planters, while
+unix-socket, POSIX-mode, permission-bit, and byte-path fixtures stay
+unix-gated with fail-fast reasons; release archives stay hermetic
+Python (`archiver.py` tarfile dereferences like `tar -h`, no host
+`tar`, proven by `archive_verify` plus `//tools/ci:shell_contract`);
+perf harnesses record the actual host via `dx_perf_host` and fail fast
+on unknown OS/CPU (checked-in seed reports stay `linux_x86_64`, proven
+by `//perf:rules_lint_results_test`). `//tools/ci:shell_contract`
+machine-checks the perf-host and no-host-tar pins.
 
 CI shell dedup plus portable forms stay open under issue #323 (shared lib.sh, shellcheck
 plus shfmt, replace non-portable realpath, bare sha256sum, sed `-i -e`, cp `-a`,
