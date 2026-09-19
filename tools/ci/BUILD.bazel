@@ -683,6 +683,24 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Consumer-CI qualification harness (issue #312): proves the as-built
+# reusable-workflow contract plus caller plus gate/aggregate fixture evidence
+# with owned gaps, without claiming unqualified integration — nine checks,
+# explicit platforms, fail-closed sequential, stable dx-ci aggregate, hygiene,
+# concurrency, permissions, per-cell coverage with fork-safe comments, self-call
+# build-only smoke, native bump loop plus Renovate fallback, dx migrate planning
+# plus dx run multirun, tag hygiene as-built; platform/runner/isolation/cache/
+# ordering, merge/diff/queue/cancellation/aggregate, thread identity/ordering/
+# limits, fork/untrusted/sensitive/retries/Code-Scanning, sequential rejected,
+# tag/release, Renovate/native-bot, migrate-execution gaps owned under #312.
+# Run by CI via `bazel run //tools/ci:consumer_ci_qualification`.
+sh_binary(
+    name = "consumer_ci_qualification",
+    srcs = ["consumer_ci_qualification.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],

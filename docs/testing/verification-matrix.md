@@ -119,7 +119,8 @@ Accepted record of the as-built close-out battery. The full battery runs in
   contracts, GHCR hygiene and publish guards, perf/corpus verification,
   widen-update loop, quality/execution/distribution/backlog guards,
   `:supported_evidence_gate`, `:quality_adapters_parity`,
-  `:env_codegen_qualification`, and `:docs_pipeline_qualification`.
+  `:env_codegen_qualification`, `:docs_pipeline_qualification`, and
+  `:consumer_ci_qualification`.
 - `dogfood-lint`, `dogfood-format`, `dogfood-typecheck`: corpus converge then
   `--check` no-op proof, plus lane-A trees `//python/... //javascript/...
   //rust/hello/...` where enforcing.
@@ -127,7 +128,8 @@ Accepted record of the as-built close-out battery. The full battery runs in
 
 Green here (static guards on a clean tree, no full rebuild): `e2e_cases`
 3/3, `supported_evidence_gate` 20/20, `distribution_closeout_guards` 35/35,
-`env_codegen_qualification` 23/23, `docs_pipeline_qualification` 26/26.
+`env_codegen_qualification` 23/23, `docs_pipeline_qualification` 26/26,
+`consumer_ci_qualification` 29/29.
 Full `build`/`test` green is owned by CI on this tree; the last full-tree
 record is noted on the issue, not re-claimed here.
 
@@ -151,7 +153,17 @@ Remaining reds stay owned gaps, not green claims:
   planning, frozen contracts, removed stub; adapter runs, renderer/site
   execution, rebuild proof, link completeness, guide-step wiring, timing proof,
   and pin-bump/drift stay owned gaps; no working site claimed).
-- Consumer-CI qualification stays open under #312; platform qualification
+- Consumer-CI contract plus caller plus gate/aggregate fixture evidence
+  qualified seed-only under #312
+  (`bazel run //tools/ci:consumer_ci_qualification`; nine checks, explicit
+  platforms, fail-closed sequential, stable dx-ci aggregate, hygiene,
+  concurrency, permissions, per-cell coverage with fork-safe comments,
+  build-only self-call smoke, native bump loop plus Renovate fallback,
+  dx migrate planning plus dx run multirun, tag hygiene as-built; platform,
+  runner, isolation, cache, ordering, merge, diff, queue, cancellation,
+  aggregate binding, thread identity, ordering, limits, fork, untrusted,
+  sensitive, retries, Code-Scanning, sequential, tag/release, Renovate and
+  native-bot, migrate-execution gaps stay owned gaps); platform qualification
   beyond the seed host stays open under #298.
 - Non-dogfed paths stay open under #324.
 
