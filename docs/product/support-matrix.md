@@ -194,7 +194,8 @@ declared-dependency usage with category, exception, and obsolete checks) is qual
 all admitted languages in `tools/depcheck/` (issue #306) with native authorities (go.sum,
 `maven_install.json`, `paket.lock`, per-archive sha256) and focused fixtures. Remaining gaps
 (GoogleTest v1.18.0, JUnit 6.1.3 plus 5.14.x fallback, xUnit v3 4.0.0, Go `from_file` when
-non-stdlib deps land, quality adapters under issue #307, C/C++ MSVC interop plus SDK licensing)
+non-stdlib deps land, quality adapters qualified under issue #307 with deferred implementation
+owned by O32/O31 plus ADR 0019, C/C++ MSVC interop plus SDK licensing)
 stay owned under issue #304. No `Supported` claim until platform plus consumer plus release
 evidence passes.
 
@@ -223,7 +224,8 @@ foundation dirs, wrappers, Gazelle extensions, env plans, hello builds, or `MODU
 release-assembled Ruby closure, PSScriptAnalyzer via exact-module plus portable PowerShell
 runtime); Swift/SwiftFormat plus Bandit exclusions with host-toolchain fallback never approved.
 Remaining gaps (bundle contents, lock inputs, module/runtime identities, console-parse versus
-library-API binding, and per-tool adapter mappings under issue #307; reconsideration requires
+library-API binding, and per-tool adapter mappings qualified under issue #307 with deferred
+implementation owned by O32/O31 plus ADR 0019; reconsideration requires
 a new scope decision) stay owned under issue #305. No `Supported` claim until platform plus
 consumer plus release evidence passes.
 

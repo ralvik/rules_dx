@@ -39,7 +39,9 @@ This contract does not state that any integration is currently implemented, dogf
 adapter-tested, or supported. A delivery class is accepted only after its required proof
 fixtures pass; a plausible design or an entry in the tool matrix is not implementation evidence.
 No adapter claims protobuf, qml, java, kotlin, scala, csharp, fsharp, powershell, ruby, or
-c/cpp yet; per-tool qualification stays open under issue #307.
+c/cpp yet; required-core plus Buildifier/Taplo/Vale probes are qualified under issue #307
+with parity manifest plus regeneration plus packaging evidence (deferred implementation owned
+by O32/O31 plus ADR 0019; Buildifier/Taplo/Vale probes stay provisional).
 
 ## Bootstrap Maintenance And Promotion
 

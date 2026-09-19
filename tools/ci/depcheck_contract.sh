@@ -7,7 +7,8 @@
 # tools/depcheck/ (hermetic checker plus per-language truth-table,
 # transitive/shared, exception, obsolete, platform, and category
 # fixtures as normal test targets). Remaining admitted quality-adapter
-# work stays open under issue #307; foundation mappings under #304.
+# implementation stays owned by O32/O31 plus ADR 0019 (qualified under
+# issue #307); foundation mappings under #304.
 #
 # This harness machine-checks the delivered half on a clean tree:
 # the truth table, offline, non-mutating, independently-runnable,
@@ -147,7 +148,7 @@ else
 fi
 
 # Docs describe only what runs: required-core plus admitted accepted for
-# #22/#306, remaining adapter/foundation work owned under #307/#304.
+# #22/#306, qualified adapter work under #307 plus foundation under #304.
 if grep -q -F -e 'Accepted (issues #22, #306)' "$contract" \
   && grep -q -F -e 'issue #307' "$contract" \
   && grep -q -F -e 'issue #304' "$contract"; then

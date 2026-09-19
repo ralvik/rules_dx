@@ -545,10 +545,17 @@ coverage, and applicable fix/format output. A generated parity manifest must fai
 when a required entry lacks its tests. Swift and SwiftFormat are excluded from v1 by user
 scope decision and are not parity requirements; see
 [Swift Feasibility](../tools/tool-baseline.md#swift-feasibility). Quality adapters,
-the parity manifest, and packaging/provenance stay open under issue #307 (per-tool
-native-config plus pass/fail plus platform plus fix/format fixtures, manifest failing
-CI when missing, version/checksum regeneration policy, manifest self-entry, trust
-profiles, SPDX/SLSA/Cosign wire profile).
+the parity manifest, and packaging/provenance are qualified under issue #307: required-core
+plus Buildifier/Taplo/Vale probes carry per-tool native-config (or explicit config-free
+or delegated status) plus pass/fail plus seed-platform plus fix/format fixtures in
+`quality/testdata/runner_matrix_cases.bzl`, the parity manifest fails CI via
+`quality/parity_tests.bzl` plus `bazel run //tools/ci:release_policy` plus
+`bazel run //tools/ci:quality_adapters_parity`, version/checksum regeneration via
+`quality/artifacts/update.py --verify-only` plus `metadata_tests.bzl`, and packaging
+single-correct-path plus manifest completeness plus SPDX/SLSA/Cosign wire profiles via
+`cli/qualification` (execution plus trusted builders stay owned by O38/O39; platform gaps
+beyond seed Linux x86_64 stay owned under issue #298; deferred adapters owned by O32/O31
+plus ADR 0019; Buildifier/Taplo/Vale probes stay provisional).
 
 Tool-update tests regenerate versions and checksums, reject missing platform
 artifacts, and run the affected adapter suite. Scheduled automation proposes changes
