@@ -30,6 +30,9 @@
 //! silently substituting a full update.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::OnceLock;
+
+use regex::Regex;
 
 use super::sets::SetId;
 
@@ -122,13 +125,113 @@ pub fn parse_selector(text: &str) -> Result<Selector, SelectorError> {
     })
 }
 
-/// True for Bazel labels/patterns and file/dir paths.
+/// True for Bazel labels/patterns and file/dir paths. The `//`/`@`
+/// prefix plus `/`/`.` containment is a declarative
+/// `^(//|@)|[/.]` (issue #397); `...` is subsumed by the `.` branch but
+/// kept explicit so the intent stays readable.
+fn target_shape_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r"^(//|@)|[/.]") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
 fn is_target_shape(text: &str) -> bool {
+    if let Some(re) = target_shape_re() {
+        return text == "..." || re.is_match(text);
+    }
     text.starts_with("//")
         || text.starts_with('@')
         || text.contains('/')
         || text.contains('.')
         || text == "..."
+}
+
+/// Validates an ecosystem package identity (upstream-native, no versions).
+/// Character classes are declarative `regex` (issue #397); structural
+/// splits (`:`/`/` scope handling) stay textual. Falls back to the
+/// historical char loops when a static pattern fails to compile.
+fn dotted_name_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r"^[A-Za-z0-9_.-]+$") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
+fn cargo_name_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r"^[A-Za-z0-9_-]+$") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
+fn scoped_npm_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r"^@[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
+fn go_charset_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r"^[A-Za-z0-9/._~+-]+$") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
+fn is_dotted_name(text: &str) -> bool {
+    if let Some(re) = dotted_name_re() {
+        return re.is_match(text);
+    }
+    !text.is_empty()
+        && text
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
+}
+
+fn is_cargo_name(text: &str) -> bool {
+    if let Some(re) = cargo_name_re() {
+        return re.is_match(text);
+    }
+    !text.is_empty()
+        && text
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
 }
 
 /// Validates an ecosystem package identity (upstream-native, no versions).
@@ -140,11 +243,7 @@ fn validate_package(set: SetId, package: &str) -> Result<(), SelectorError> {
     };
     match set {
         SetId::Cargo => {
-            if package.is_empty()
-                || !package
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
-            {
+            if !is_cargo_name(package) {
                 return Err(invalid("cargo crate names use [A-Za-z0-9_-] only"));
             }
             Ok(())
@@ -154,6 +253,20 @@ fn validate_package(set: SetId, package: &str) -> Result<(), SelectorError> {
                 return Err(invalid("npm package names never contain ':' or spaces"));
             }
             if let Some(rest) = package.strip_prefix('@') {
+                if let Some(re) = scoped_npm_re() {
+                    if re.is_match(package) {
+                        return Ok(());
+                    }
+                    let (scope, slash, name) = match rest.find('/') {
+                        Some(idx) => (&rest[..idx], true, &rest[idx + 1..]),
+                        None => ("", false, ""),
+                    };
+                    let _ = slash;
+                    if scope.is_empty() || name.is_empty() || !slash {
+                        return Err(invalid("scoped npm names are @scope/name"));
+                    }
+                    return Err(invalid("npm scope/name use [A-Za-z0-9_.-] only"));
+                }
                 let (scope, slash, name) = match rest.find('/') {
                     Some(idx) => (&rest[..idx], true, &rest[idx + 1..]),
                     None => ("", false, ""),
@@ -162,28 +275,18 @@ fn validate_package(set: SetId, package: &str) -> Result<(), SelectorError> {
                 if scope.is_empty() || name.is_empty() || !slash {
                     return Err(invalid("scoped npm names are @scope/name"));
                 }
-                if !scope
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
-                    || !name
-                        .chars()
-                        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
-                {
+                if !is_dotted_name(scope) || !is_dotted_name(name) {
                     return Err(invalid("npm scope/name use [A-Za-z0-9_.-] only"));
                 }
-                Ok(())
-            } else {
-                if package.contains('/') {
-                    return Err(invalid("unscoped npm names never contain '/'"));
-                }
-                if !package
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
-                {
-                    return Err(invalid("npm names use [A-Za-z0-9_.-] only"));
-                }
-                Ok(())
+                return Ok(());
             }
+            if package.contains('/') {
+                return Err(invalid("unscoped npm names never contain '/'"));
+            }
+            if !is_dotted_name(package) {
+                return Err(invalid("npm names use [A-Za-z0-9_.-] only"));
+            }
+            Ok(())
         }
         SetId::Maven => {
             let (group, artifact) = match package.split_once(':') {
@@ -203,11 +306,7 @@ fn validate_package(set: SetId, package: &str) -> Result<(), SelectorError> {
             Ok(())
         }
         SetId::NuGet => {
-            if package.is_empty()
-                || !package
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
-            {
+            if !is_dotted_name(package) {
                 return Err(invalid("nuget ids use [A-Za-z0-9_.-] only"));
             }
             Ok(())
@@ -222,9 +321,14 @@ fn validate_package(set: SetId, package: &str) -> Result<(), SelectorError> {
             {
                 return Err(invalid("go module paths never contain ':' or spaces"));
             }
-            if !package.chars().all(|c| {
-                c.is_ascii_alphanumeric() || matches!(c, '/' | '.' | '-' | '_' | '~' | '+')
-            }) {
+            let charset_ok = if let Some(re) = go_charset_re() {
+                re.is_match(package)
+            } else {
+                package.chars().all(|c| {
+                    c.is_ascii_alphanumeric() || matches!(c, '/' | '.' | '-' | '_' | '~' | '+')
+                })
+            };
+            if !charset_ok {
                 return Err(invalid("go module paths use [A-Za-z0-9/_.-~+] only"));
             }
             Ok(())
@@ -305,7 +409,63 @@ pub fn owning_sets(target: &str) -> Vec<SetId> {
 }
 
 /// Package path for prefix matching: Bazel labels use their package,
-/// files/dirs use their normalized path.
+/// files/dirs use their normalized path. Recursive `/...` and trailing
+/// `/` stripping is declarative (`/...$`, `/+$`, `(./)+`); the `//`
+/// label split and `:` cut stay textual because they branch on syntax,
+/// not character classes (issue #397).
+fn recursive_suffix_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r"/\.\.\.$") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
+fn trailing_slash_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r"/+$") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
+fn dot_slash_prefix_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r"^(?:\./)+") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
+fn strip_recursive_suffix(text: &str) -> Option<String> {
+    if let Some(re) = recursive_suffix_re() {
+        if re.is_match(text) {
+            let stripped = re.replacen(text, 1, "");
+            return Some(stripped.into_owned());
+        }
+        return None;
+    }
+    text.strip_suffix("/...").map(str::to_owned)
+}
+
 fn package_path(target: &str) -> String {
     if let Some(rest) = target.strip_prefix("//") {
         // `//:target` (root package) carries no package path.
@@ -314,8 +474,8 @@ fn package_path(target: &str) -> String {
         }
         // `//foo/...` and `//foo/bar/...` strip the recursive suffix;
         // `//foo` stays `foo`.
-        if let Some(prefix) = rest.strip_suffix("/...") {
-            return prefix.to_owned();
+        if let Some(prefix) = strip_recursive_suffix(rest) {
+            return prefix;
         }
         return rest.to_owned();
     }
@@ -326,14 +486,30 @@ fn package_path(target: &str) -> String {
     // File/dir path: strip leading `./`, trailing `/`, and a trailing
     // `/...` pattern suffix when present.
     let mut path = target.to_owned();
-    while let Some(rest) = path.strip_prefix("./") {
-        path = rest.to_owned();
+    if let Some(re) = dot_slash_prefix_re() {
+        if re.is_match(&path) {
+            path = re.replacen(&path, 1, "").into_owned();
+            // `replacen` with `(?:\./)+` strips all leading `./` at once.
+        }
+    } else {
+        while let Some(rest) = path.strip_prefix("./") {
+            path = rest.to_owned();
+        }
     }
-    while path.ends_with('/') && path.len() > 1 {
-        path.pop();
+    if let Some(re) = trailing_slash_re() {
+        if path.len() > 1 && re.is_match(&path) {
+            path = re.replacen(&path, 1, "").into_owned();
+            if path.is_empty() {
+                path = "/".to_owned();
+            }
+        }
+    } else {
+        while path.ends_with('/') && path.len() > 1 {
+            path.pop();
+        }
     }
-    if let Some(prefix) = path.strip_suffix("/...") {
-        return prefix.to_owned();
+    if let Some(prefix) = strip_recursive_suffix(&path) {
+        return prefix;
     }
     // For files, match on the full path so `rust/tests/fixtures/hello/Cargo.toml`
     // matches `rust` via prefix below.
@@ -341,7 +517,48 @@ fn package_path(target: &str) -> String {
 }
 
 /// Root (`""` package) owning sets by filename/target spelling.
+/// Case-insensitive `package.json | pnpm-lock.yaml | ...` alternatives
+/// replace the `to_lowercase` + `contains` chain (issue #397).
+fn root_npm_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    match Regex::new(
+        r"(?i)package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc|node_modules|package_json",
+    ) {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
+fn root_cargo_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r"(?i)cargo-bazel-lock\.json|cargo\.toml|cargo\.lock") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
 fn root_owning_sets(target: &str) -> Vec<SetId> {
+    if let (Some(npm), Some(cargo)) = (root_npm_re(), root_cargo_re()) {
+        if npm.is_match(target) {
+            return vec![SetId::Npm];
+        }
+        if cargo.is_match(target) {
+            return vec![SetId::Cargo];
+        }
+        return vec![];
+    }
     let lower = target.to_ascii_lowercase();
     if lower.contains("package.json")
         || lower.contains("pnpm-lock.yaml")
@@ -362,7 +579,14 @@ fn root_owning_sets(target: &str) -> Vec<SetId> {
 }
 
 fn has_prefix(package: &str, prefix: &str) -> bool {
-    package == prefix || package.starts_with(&format!("{prefix}/"))
+    // `^prefix(?:/|$)` with an escaped prefix (issue #397): `go` matches
+    // `go` and `go/...` but never `gold`. Falls back to the equality +
+    // `starts_with("{prefix}/")` check when the dynamic pattern fails.
+    let pattern = format!(r"^{}(?:/|$)", regex::escape(prefix));
+    match Regex::new(&pattern) {
+        Ok(re) => re.is_match(package),
+        Err(_) => package == prefix || package.starts_with(&format!("{prefix}/")),
+    }
 }
 
 /// Resolves selectors to per-set requests (deterministic, sorted).
@@ -596,5 +820,42 @@ mod tests {
             resolve(&strings(&["docs/cli/README.md"])),
             Err(SelectorError::NoOwningSet { .. })
         ));
+    }
+
+    #[test]
+    fn regex_prefix_never_matches_sibling_names() {
+        // `^prefix(?:/|$)` must not match `gold` for `go`, `rusty` for
+        // `rust`, or `quality-tools` for `quality`.
+        assert!(has_prefix("go", "go"));
+        assert!(has_prefix("go/tests/fixtures/hello", "go"));
+        assert!(!has_prefix("gold", "go"));
+        assert!(!has_prefix("rusty", "rust"));
+        assert!(!has_prefix("quality-tools/x", "quality"));
+        assert!(has_prefix("quality/tools/x", "quality"));
+    }
+
+    #[test]
+    fn regex_package_path_normalizes_dotslash_and_suffixes() {
+        assert_eq!(
+            package_path("./go/tests/fixtures/hello"),
+            "go/tests/fixtures/hello"
+        );
+        assert_eq!(
+            package_path("go/tests/fixtures/hello/"),
+            "go/tests/fixtures/hello"
+        );
+        assert_eq!(
+            package_path("//go/tests/fixtures/hello/..."),
+            "go/tests/fixtures/hello"
+        );
+        assert_eq!(package_path("//:target"), "");
+        assert_eq!(package_path("@crates//:lock"), "");
+    }
+
+    #[test]
+    fn regex_root_owning_sets_match_case_insensitively() {
+        assert_eq!(owning_sets("PACKAGE.JSON"), vec![SetId::Npm]);
+        assert_eq!(owning_sets("Cargo.TOML"), vec![SetId::Cargo]);
+        assert!(owning_sets("libs/starlark/defs.bzl").is_empty());
     }
 }
