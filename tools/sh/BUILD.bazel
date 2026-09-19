@@ -1,9 +1,11 @@
-"""Shared shell helpers (issue #319).
+"""Shared shell helpers (issue #319, snapshot workflow issue #322).
 
 Single-sources the workspace-root probe plus runfiles `rlocation` usage
-repeated across every shell driver. Drivers source `lib.sh` via a
-runfiles-first bootstrap and depend on `:lib` so the file rides their
-runfiles forest under `bazel test` / `bazel run`.
+repeated across every shell driver, plus the snapshot-testing workflow
+(`snapshot.sh`: byte-identical and canonical-JSON asserts with
+UPDATE_EXPECT refresh). Drivers source `lib.sh` / `snapshot.sh` via a
+runfiles-first bootstrap and depend on `:lib` / `:snapshot` so the files
+ride their runfiles forest under `bazel test` / `bazel run`.
 """
 
 load("@rules_shell//shell:sh_library.bzl", "sh_library")
@@ -14,6 +16,13 @@ package(default_visibility = ["//visibility:public"])
 sh_library(
     name = "lib",
     srcs = ["lib.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_library(
+    name = "snapshot",
+    srcs = ["snapshot.sh"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )

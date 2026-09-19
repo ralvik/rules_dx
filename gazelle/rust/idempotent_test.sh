@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# Gazelle idempotence check (snapshot workflow issue #322): compares two
+# fresh generation runs, not a checked-in golden, so UPDATE_EXPECT does not
+# apply. The `diff -u` below is an idempotence assertion (run-to-run
+# equality), not a snapshot refresh path.
 set -euo pipefail
 
 # Portable hasher selection (issue #299): GNU `sha256sum` is absent on

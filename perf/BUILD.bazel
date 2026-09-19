@@ -103,16 +103,21 @@ sh_test(
     name = "rules_lint_comparison_test",
     srcs = ["rules_lint_comparison_test.sh"],
     args = ["$(rootpath :rules_lint_comparison.sh)"],
-    data = ["rules_lint_comparison.sh"],
+    data = [
+        "rules_lint_comparison.sh",
+        "//tools/sh:lib",
+    ],
     tags = ["no-coverage"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Measured-results validation (issue #86): checked-in seed-host numbers
-# (perf/rules_lint_results.json) match a fresh harness regeneration,
-# pins recorded, quality-sample aquery + timing present, report-not-gate.
-# Tagged `no-coverage`: timing data stays out of the coverage denominator.
+# Measured-results validation (issue #86, schema workflow issue #322):
+# checked-in seed-host numbers (perf/rules_lint_results.json) match a fresh
+# harness regeneration, pins recorded, quality-sample aquery + timing
+# present, report-not-gate. Schema plus snapshot: tool versions assert shape,
+# frozen pins stay exact. Tagged `no-coverage`: timing data stays out of the
+# coverage denominator.
 sh_test(
     name = "rules_lint_results_test",
     srcs = ["rules_lint_results_test.sh"],
@@ -123,6 +128,7 @@ sh_test(
     data = [
         "rules_lint_comparison.sh",
         "rules_lint_results.json",
+        "//tools/sh:lib",
     ],
     tags = ["no-coverage"],
     # Bash-only harness is Linux-only (issue #299 shell contract).

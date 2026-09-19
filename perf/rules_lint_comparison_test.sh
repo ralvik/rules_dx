@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# Rules-lint comparison harness self-test (issue #86).
+# Rules-lint comparison harness self-test (issue #86, schema workflow issue #322).
 #
 # Exercises the REAL perf/rules_lint_comparison.sh: same seed yields the
 # same tree_sha256 (deterministic generator), dirty counts match the
 # requested mix, fairness pins (bazel_version, rules_lint v2.8.0, host)
 # are recorded, and the report stays report-not-gate (gate false, no
-# parity claim). Tagged `no-coverage`: timing harnesses stay out of the
-# coverage denominator per the repo coverage preset.
+# parity claim). Schema validation, not brittle equality: dict-shape checks
+# assert types/presence (never exact tool pins); the on-disk `diff -r` below
+# is an idempotence assertion between two fresh runs, not a checked-in
+# golden, so UPDATE_EXPECT does not apply. Tagged `no-coverage`: timing
+# harnesses stay out of the coverage denominator per the repo coverage preset.
 set -euo pipefail
 
 harness="$1"

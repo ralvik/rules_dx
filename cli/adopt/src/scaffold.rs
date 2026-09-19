@@ -39,13 +39,13 @@ pub struct ScaffoldFile {
     pub content: String,
 }
 
-/// `dx init` devcontainer definition (issue #183).
+/// `dx init` devcontainer definition (issue #183, snapshot workflow issue #322).
 ///
 /// Single source for the scaffolded `.devcontainer/devcontainer.json`:
-/// the repository's own `.devcontainer/devcontainer.json` is held
-/// byte-identical to this string by
-/// `//.devcontainer:devcontainer_parity_test`, so the definition we ship
-/// is the one we boot. `postCreateCommand` runs the user-path bootstrap
+/// the repository's own `.devcontainer/devcontainer.json` is a snapshot of
+/// this string held by `//.devcontainer:devcontainer_parity_test`
+/// (schema plus byte snapshot, UPDATE_EXPECT refreshes the golden), so the
+/// definition we ship is the one we boot. `postCreateCommand` runs the user-path bootstrap
 /// (`bazel run //dx:env`, then `dx setup`) instead of a full build, so
 /// container create pays only the managed-environment setup.
 pub const DEVCONTAINER_JSON: &str = concat!(
@@ -64,11 +64,12 @@ pub const DEVCONTAINER_JSON: &str = concat!(
     "}\n",
 );
 
-/// `dx init` Renovate definition (issue #3).
+/// `dx init` Renovate definition (issue #3, snapshot workflow issue #322).
 ///
 /// Single source for the scaffolded `renovate.json`: the repository's
-/// own `renovate.json` is held byte-identical to this string by
-/// `//:renovate_parity_test`, so the config we ship is the one we run.
+/// own `renovate.json` is a snapshot of this string held by
+/// `//:renovate_parity_test` (schema plus byte snapshot, UPDATE_EXPECT
+/// refreshes the golden), so the config we ship is the one we run.
 /// Full manager set from the start (owner-confirmed): `bazel` over the
 /// `.bazelversion` pin surface plus Cargo, npm/pnpm, GitHub Actions,
 /// and Go — grouped, scheduled weekly, reviewable PRs. Auto-merge is
@@ -254,9 +255,10 @@ mod tests {
 
     #[test]
     fn devcontainer_scaffold_runs_bootstrap_not_full_build() {
-        // Issue #183: the scaffolded definition must stay admissible and
-        // bootstrap-shaped. The byte parity with the checked-in definition
-        // lives in //.devcontainer:devcontainer_parity_test; this pins the
+        // Issue #183 (snapshot workflow #322): the scaffolded definition
+        // must stay admissible and bootstrap-shaped. The snapshot with the
+        // checked-in definition lives in
+        // //.devcontainer:devcontainer_parity_test; this pins the
         // contract fields here so scaffold drift fails at the source.
         let files = plan_init_files("demo");
         let scaffold = files
@@ -287,11 +289,11 @@ mod tests {
 
     #[test]
     fn renovate_scaffold_ships_full_manager_set_automerge_off() {
-        // Issue #3: `dx init` ships `renovate.json` absent-only with the
-        // full manager set from the start, grouped, scheduled, reviewable.
-        // Byte parity with the checked-in definition lives in
-        // `//:renovate_parity_test`; this pins the contract fields here
-        // so scaffold drift fails at the source.
+        // Issue #3 (snapshot workflow #322): `dx init` ships `renovate.json`
+        // absent-only with the full manager set from the start, grouped,
+        // scheduled, reviewable. The snapshot with the checked-in definition
+        // lives in `//:renovate_parity_test`; this pins the contract fields
+        // here so scaffold drift fails at the source.
         let files = plan_init_files("demo");
         let scaffold = files
             .iter()

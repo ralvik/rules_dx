@@ -90,8 +90,12 @@ matrix cell; adapter-less classes (`cc`, `csharp`, `go`, `java`, `kotlin`,
 ## Adding a cell
 
 Append to the per-class list in `runner_matrix_cases.bzl` with a placeholder
-`expected`, run the case to capture the `actual print_result` text from the
-golden-mismatch output, then pin it. Prefer reusing `real_clean.*` /
+`expected`, then run with `UPDATE_EXPECT=1` to stage the fresh actual
+(`bazel test //quality/testdata:<case> --test_env=UPDATE_EXPECT`): the
+harness schema-validates the decoded `print_result` first, then writes the
+replacement `expected` block plus `$TEST_UNDECLARED_OUTPUTS_DIR/*.update`.
+Review the staged shape (producer, capability, stage/count consistency)
+before pinning. Prefer reusing `real_clean.*` /
 `real_dirty.*` by file label; use `generated` bytes only when no such file
 exists. Never add an aspect-visible dirty subject: matrix inputs must stay
 provider-less so `dx lint/format/typecheck --check //...` stays fixture-free.

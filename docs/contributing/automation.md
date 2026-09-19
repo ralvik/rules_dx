@@ -56,8 +56,9 @@ releases, or publication outputs without explicit owner approval.
 set from the start (`bazel` plus Cargo, npm/pnpm, GitHub Actions, Go),
 grouped, scheduled weekly, reviewable PRs. Auto-merge off by default;
 when enabled it is update-only as gated above. The repository's own
-`renovate.json` is held byte-identical to the scaffold by
-`//:renovate_parity_test`.
+`renovate.json` is a snapshot of the scaffold held by
+`//:renovate_parity_test` (schema plus byte snapshot, UPDATE_EXPECT
+refreshes the golden).
 
 ## Hygiene Sweep
 
