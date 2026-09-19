@@ -38,10 +38,8 @@ python_test(
     ],
 )
 
-# Repository corpus: build declaration owned for direct-Bazel
-# dogfood under the canonical real_fixture_policy. Python sources stay
-# dx-owned, never corpus sources (M02/M05 policy).
 real_source_target(
-    name = "corpus",
+    name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
 )

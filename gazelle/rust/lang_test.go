@@ -50,8 +50,11 @@ func TestGenerateSourceOnlyCrate(t *testing.T) {
 		"crates/demo/tests/common.rs":     "use demo::Thing;\n",
 		"crates/demo/tests/helper/mod.rs": "use ignored_nested_root::Nope;\n",
 	})
-	if len(result.Gen) != 3 || len(result.Imports) != 3 {
-		t.Fatalf("generated %d rules and %d import sets, want 3 each", len(result.Gen), len(result.Imports))
+	// Three Rust rules plus the corpus_starlark split owning BUILD.bazel
+	// (issue #15); the synthetic fixture has no BUILD file yet, but the
+	// generated BUILD will exist so the split stays for idempotency.
+	if len(result.Gen) != 4 || len(result.Imports) != 4 {
+		t.Fatalf("generated %d rules and %d import sets, want 4 each", len(result.Gen), len(result.Imports))
 	}
 	lib := result.Gen[0]
 	if lib.Kind() != libraryKind || lib.Name() != "demo" {
@@ -85,7 +88,8 @@ func TestGenerateSourceOnlyBinaryUnitTest(t *testing.T) {
 	result := generateFixture(t, map[string]string{
 		"crates/demo/src/main.rs": "#[test]\nfn works() {}\n",
 	})
-	if len(result.Gen) != 2 || result.Gen[0].Kind() != binaryKind || result.Gen[1].AttrString("crate") != ":demo" {
+	// Binary plus wrapper plus corpus_starlark (issue #15).
+	if len(result.Gen) != 3 || result.Gen[0].Kind() != binaryKind || result.Gen[1].AttrString("crate") != ":demo" {
 		t.Errorf("binary unit-test generation = %+v", result.Gen)
 	}
 }
@@ -270,7 +274,7 @@ func TestMalformedIgnoreFails(t *testing.T) {
 
 func TestLanguageMetadata(t *testing.T) {
 	l := &rustLang{}
-	if l.Name() != "rust" || len(l.Kinds()) != 11 || l.CheckFlags(flag.NewFlagSet("test", flag.ContinueOnError), config.New()) != nil {
+	if l.Name() != "rust" || len(l.Kinds()) != 12 || l.CheckFlags(flag.NewFlagSet("test", flag.ContinueOnError), config.New()) != nil {
 		t.Fatalf("invalid language metadata")
 	}
 	l.RegisterFlags(flag.NewFlagSet("test", flag.ContinueOnError), "update", config.New())
@@ -329,11 +333,16 @@ func TestGenerateCargoAPIAndFailures(t *testing.T) {
 		Rel:          "crates/app",
 		RegularFiles: []string{"Cargo.toml"},
 	})
-	if len(l.errors) != 0 || len(result.Gen) != 2 {
+	// Cargo packages gain corpus splits owning BUILD.bazel and Cargo.toml
+	// (issue #15) alongside the lib and its unit-test wrapper.
+	if len(l.errors) != 0 || len(result.Gen) != 4 {
 		t.Fatalf("cargo generation errors=%v result=%+v", l.errors, result)
 	}
 	if result.Gen[0].AttrString("edition") != "2021" || result.Gen[1].AttrString("crate") != ":app" {
 		t.Errorf("cargo rules = %+v", result.Gen)
+	}
+	if result.Gen[2].Kind() != corpusKind || result.Gen[3].Kind() != corpusKind {
+		t.Errorf("corpus splits = %+v, want starlark plus toml", result.Gen[2:])
 	}
 
 	badRoot := t.TempDir()
@@ -428,7 +437,9 @@ func TestGenerateCargoCustomHarness(t *testing.T) {
 	writeFixture(t, root, "tests/custom.rs", "fn main() {}\n")
 	l := &rustLang{}
 	result := l.GenerateRules(language.GenerateArgs{Config: &config.Config{RepoRoot: root}, Dir: root, RegularFiles: []string{"Cargo.toml"}})
-	if len(l.errors) != 0 || len(result.Gen) != 1 || result.Gen[0].Attr("use_libtest_harness") == nil {
+	// Custom-harness test plus corpus splits (BUILD.bazel self plus
+	// Cargo.toml, issue #15).
+	if len(l.errors) != 0 || len(result.Gen) != 3 || result.Gen[0].Attr("use_libtest_harness") == nil {
 		t.Errorf("custom harness generation errors=%v result=%+v", l.errors, result.Gen)
 	}
 }
@@ -447,7 +458,7 @@ func TestGenerateCargoLibBinTakeover(t *testing.T) {
 	for _, r := range result.Gen {
 		names = append(names, r.Kind()+":"+r.Name())
 	}
-	want := []string{libraryKind + ":demo_lib", testKind + ":demo_test", binaryKind + ":demo", testKind + ":demo_bin_test"}
+	want := []string{libraryKind + ":demo_lib", testKind + ":demo_test", binaryKind + ":demo", testKind + ":demo_bin_test", corpusKind + ":corpus_starlark", corpusKind + ":corpus_toml"}
 	if strings.Join(names, ",") != strings.Join(want, ",") {
 		t.Fatalf("generated = %v, want %v", names, want)
 	}
@@ -462,7 +473,7 @@ func TestGenerateCargoLibBinTakeover(t *testing.T) {
 	}
 	// The binary carries its sibling lib through imports for Resolve.
 	binImports, ok := result.Imports[2].(targetImports)
-	if len(result.Imports) != 4 || !ok || binImports.siblingLib != "demo_lib" {
+	if len(result.Imports) != 6 || !ok || binImports.siblingLib != "demo_lib" {
 		t.Fatalf("bin imports = %+v, want sibling demo_lib", result.Imports)
 	}
 	bin := rule.NewRule(binaryKind, "demo")

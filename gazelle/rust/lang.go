@@ -36,7 +36,8 @@ const (
 	scriptKind = "cargo_build_script"
 	// dxCrateKind is the leaf-crate boilerplate macro (issue #239): it
 	// expands to `<name>` rust_library + `<name>_test` rust_test + lint
-	// tests + manifest export + corpus. BUILD files hand-maintain it;
+	// tests + manifest export. Corpus splits are owned by generation
+	// (issue #15), never by this macro. BUILD files hand-maintain it;
 	// generation must recognize it as covering the lib + unit-test it
 	// emits instead of proposing duplicate rust_library/rust_test rules.
 	dxCrateKind = "dx_rust_crate"
@@ -84,8 +85,14 @@ func shouldSetVisibility(args language.GenerateArgs) bool {
 
 func init() {
 	// Managed native-config targets merge through the same file the
-	// Rust rules live in, so their kinds register alongside.
+	// Rust rules live in, so their kinds register alongside. Corpus
+	// splits (`real_source_target` per content type, issue #15) merge
+	// through the same file as well: every corpus block is written and
+	// maintained by this workflow (`dx generate`).
 	for kind, info := range nativeConfigKinds() {
+		rustKinds[kind] = info
+	}
+	for kind, info := range corpusKinds() {
 		rustKinds[kind] = info
 	}
 }
@@ -284,6 +291,7 @@ func rustLoads(rulesRepo, cratesRepo, rulesRustRepo string) []rule.LoadInfo {
 		{Name: "@" + rulesRustRepo + "//cargo:defs.bzl", Symbols: []string{scriptKind}},
 		{Name: "@" + cratesRepo + "//:crates.bzl", Symbols: []string{"aliases", "crate_deps"}},
 		nativeConfigLoads(rulesRepo),
+		corpusLoads(rulesRepo),
 	}
 }
 
@@ -413,13 +421,17 @@ func (l *rustLang) generateRules(args language.GenerateArgs) language.GenerateRe
 	return l.attachNative(args, result, plan)
 }
 
-// attachNative folds the native-config plan into a generation result:
-// planned config rules join the generated set before claim validation,
-// Rust rules bind their aspect_hints, and planned removals join the
-// generic stale sweep. Claim collisions stay fail-closed with no partial
-// result. Rules already covered by a hand-maintained dx_rust_crate macro
-// (leaf-crate lib + unit-test) are filtered before validation so the
-// macro stays the single owner and no duplicate target is proposed.
+// attachNative folds the native-config plan and the corpus split plan
+// (issue #15) into a generation result: planned config rules join the
+// generated set before claim validation, Rust rules bind their
+// aspect_hints, corpus splits join as fully owned targets, and planned
+// removals join the generic stale sweep. Claim collisions stay
+// fail-closed with no partial result. Rules already covered by a
+// hand-maintained dx_rust_crate macro (leaf-crate lib + unit-test) are
+// filtered before validation so the macro stays the single owner and no
+// duplicate target is proposed. Corpus splits are never filtered: the
+// macro no longer emits `corpus` (Gazelle owns every corpus block), so a
+// macro package still gains its `corpus_*` targets from generation.
 func (l *rustLang) attachNative(args language.GenerateArgs, result language.GenerateResult, plan *nativePlan) language.GenerateResult {
 	result = filterDxCrateCovered(args.File, result)
 	for _, r := range result.Gen {
@@ -427,12 +439,21 @@ func (l *rustLang) attachNative(args language.GenerateArgs, result language.Gene
 	}
 	result.Gen = append(result.Gen, plan.gen...)
 	result.Imports = append(result.Imports, plan.imports...)
+	hasOtherGen := len(result.Gen) > 0 || args.File != nil
+	corpus := planCorpus(args, hasOtherGen)
+	result.Gen = append(result.Gen, corpus.gen...)
+	// Corpus imports parallel Gen with empty targetImports so Resolve
+	// stays aligned; corpus rules never resolve deps.
+	for range corpus.gen {
+		result.Imports = append(result.Imports, targetImports{})
+	}
 	if err := checkExistingClaims(args.File, args.OtherGen, result.Gen); err != nil {
 		l.fail("%v", err)
 		return language.GenerateResult{}
 	}
 	merged := mergeStale(args.File, result)
 	merged.Empty = append(merged.Empty, plan.empty...)
+	merged.Empty = append(merged.Empty, corpus.empty...)
 	return merged
 }
 

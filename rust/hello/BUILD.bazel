@@ -194,12 +194,6 @@ dx_wrapper_conformance_tests(
 # Repository corpus: build file and manifest owned for
 # direct-Bazel dogfood under the canonical real_fixture_policy. Rust
 # sources stay dx-owned (M02 wrappers), never corpus sources.
-real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"],
-    toml_srcs = ["Cargo.toml"],
-)
-
 rust_test(
     name = "hello_test",
     aliases = aliases(
@@ -257,4 +251,16 @@ sh_test(
     tags = ["no-coverage"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = ["Cargo.toml"],
 )

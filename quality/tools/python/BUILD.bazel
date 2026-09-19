@@ -45,13 +45,14 @@ py_binary(
     deps = ["@pypi//pylint"],
 )
 
-# Repository corpus: build and project metadata owned for
-# direct-Bazel dogfood under the canonical real_fixture_policy. Python
-# entry wrappers and the uv lock stay dx-owned/unclassified, never corpus
-# sources. The lock is a generated third-party manifest, excluded like
-# other locks.
 real_source_target(
-    name = "corpus",
+    name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
     toml_srcs = ["pyproject.toml"],
 )

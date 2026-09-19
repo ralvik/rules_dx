@@ -1,3 +1,5 @@
+load("@rules_dx//quality:fixtures.bzl", "real_source_target")
+
 """M25 WP4 slice 3: repository-root strategy planning plus query/aggregate wiring, with the cold/warm freeze."""
 
 load("//rust/rules:defs.bzl", "dx_rust_crate")
@@ -9,14 +11,13 @@ package(default_visibility = [
 ])
 
 # M02 leaf-crate pattern via `dx_rust_crate` (issue #239): emits
-# `dx_roots` + `dx_roots_test` + fmt/clippy tests +
-# `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
-# `extra_starlark_srcs` keeps `roots.bzl` owned by `corpus` alongside
-# `BUILD.bazel`, matching the pre-migration `real_source_target`.
+# `dx_roots` + `dx_roots_test` + fmt/clippy tests + `Cargo.toml` export,
+# identical to the hand-written stanzas. Corpus splits (`corpus_starlark`
+# owning `BUILD.bazel` + `roots.bzl`, `corpus_toml` owning `Cargo.toml`)
+# are owned by `dx generate` (issue #15).
 dx_rust_crate(
     name = "dx_roots",
     package_name = "cli/dx_roots",
-    extra_starlark_srcs = ["roots.bzl"],
     deps = ["thiserror"],
 )
 
@@ -38,4 +39,19 @@ roots_aggregate(
         "//dx:codegen",
         "//dx:env",
     ],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "roots.bzl",
+    ],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = ["Cargo.toml"],
 )

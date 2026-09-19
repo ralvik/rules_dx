@@ -13,15 +13,16 @@ scala_test(
     deps = [":greet"],
 )
 
-real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"],
-)
-
 scala_library(
     name = "greet",
     srcs = [
         "Greet.scala",
         "Helper.scala",
     ],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
 )

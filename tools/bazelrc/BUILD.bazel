@@ -29,11 +29,12 @@ test_suite(
     tests = [":preset.update_test"],
 )
 
-# Repository corpus: preset Starlark owned for direct-Bazel
-# dogfood under the canonical real_fixture_policy. preset.py has no quality
-# class and stays outside the corpus; preset.bazelrc is an unclassified
-# generated fragment, never a checked source.
 real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
+    name = "corpus_starlark",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "bazelrc-preset.bzl",
+        "preset_tests.bzl",
+    ],
+    tags = ["corpus"],
 )

@@ -1,3 +1,5 @@
+load("@rules_dx//quality:fixtures.bzl", "real_source_target")
+
 """M26 WP1 slice 1: pure `dx audit` request planning (O11/O58)."""
 
 load("//rust/rules:defs.bzl", "dx_rust_crate")
@@ -38,4 +40,16 @@ dx_rust_crate(
         "toml",
         "url",
     ],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = ["Cargo.toml"],
 )

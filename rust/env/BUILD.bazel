@@ -43,13 +43,12 @@ env_plan_tests(
     ],
 )
 
-# Repository corpus: plan Starlark owned for direct-Bazel dogfood
-# under the canonical real_fixture_policy.
 real_source_target(
-    name = "corpus",
+    name = "corpus_starlark",
     starlark_srcs = [
         "BUILD.bazel",
         "plan.bzl",
         "plan_tests.bzl",
     ],
+    tags = ["corpus"],
 )

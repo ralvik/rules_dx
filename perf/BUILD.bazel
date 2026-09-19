@@ -124,15 +124,16 @@ sh_test(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Repository corpus: benchmark docs owned for direct-Bazel dogfood under
-# the canonical real_fixture_policy. Scripts and baseline data are CI
-# tooling/inputs, never corpus sources (same class as //tools/ci scripts).
 real_source_target(
-    name = "corpus",
+    name = "corpus_markdown",
     aspect_hints = ["//quality:corpus_vale_config"],
-    markdown_siblings = [
-        "//docs:performance.md",
-    ],
+    markdown_siblings = ["//docs:performance.md"],
     markdown_srcs = ["README.md"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
 )

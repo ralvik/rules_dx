@@ -1,3 +1,5 @@
+load("@rules_dx//quality:fixtures.bzl", "real_source_target")
+
 """M28 slices 1-4 + M29 slices 1-2: pure release-qualification/publication planning (blocker disposition, support-label gate, API-change classification, registry exactness, artifact identity/packaging boundary, reproducibility/verification binding, coverage/aggregate/CI-requalification/publication-handoff gates, publication-input verification, public-install/incident discipline)."""
 
 load("//rust/rules:defs.bzl", "dx_rust_crate")
@@ -14,4 +16,16 @@ dx_rust_crate(
     name = "dx_qual",
     package_name = "cli/dx_qual",
     deps = [],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = ["Cargo.toml"],
 )

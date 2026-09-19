@@ -193,11 +193,8 @@ sh_test(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Repository corpus: deploy Starlark owned for direct-Bazel dogfood
-# under the canonical real_fixture_policy. Shell fixtures are tooling
-# with no quality class and stay outside the corpus.
 real_source_target(
-    name = "corpus",
+    name = "corpus_starlark",
     starlark_srcs = [
         "BUILD.bazel",
         "archive.bzl",
@@ -207,4 +204,5 @@ real_source_target(
         "github.bzl",
         "github_tests.bzl",
     ],
+    tags = ["corpus"],
 )

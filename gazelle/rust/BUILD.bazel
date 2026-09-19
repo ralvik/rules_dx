@@ -11,6 +11,7 @@ go_library(
     name = "rust",
     srcs = [
         "cargo.go",
+        "corpus.go",
         "doc.go",
         "lang.go",
         "layout.go",
@@ -101,7 +102,7 @@ go_test(
 )
 
 real_source_target(
-    name = "corpus",
+    name = "corpus_markdown",
     aspect_hints = ["//quality:corpus_vale_config"],
     markdown_srcs = [
         "testdata/cargo/README.md",
@@ -109,7 +110,18 @@ real_source_target(
         "testdata/native_config/README.md",
         "testdata/source_only/README.md",
     ],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
     toml_srcs = [
         "testdata/cargo/crates/app/Cargo.toml",
         "testdata/cargo/crates/cdylib/Cargo.toml",

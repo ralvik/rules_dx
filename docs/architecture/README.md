@@ -145,7 +145,7 @@ fixed the two true collisions (`dx/qual` → `cli/qualification`,
 | `//dx:codegen` | Empty filegroup reserving the CLI selection identity; real plan collector is `//cli/codegen:dx_codegen` | Provisional (open decisions O33/O34) |
 | `//dx:config` | Empty placeholder default for the `//config:workspace` label flag; typed per-family sections pending | Provisional (open decision O17) |
 | `//tools/coverage:coverage_gate` | Single crate after the unused `:coverage` wrapper removal | Accepted |
-| `real_source_target(name="corpus")` boilerplate | Repeated per package; dedup is open follow-up work, not hand-maintained splits | Open |
+| `real_source_target(name="corpus_*")` splits | Per content type per package, Gazelle-owned via `dx generate`, shared `tags = ["corpus"]` (issue #15) | Accepted |
 
 ### Upstream Authorities
 

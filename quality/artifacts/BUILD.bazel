@@ -31,10 +31,18 @@ test_suite(
     tests = [":metadata"],
 )
 
-# Repository corpus: artifact Starlark owned for direct-Bazel
-# dogfood under the canonical real_fixture_policy. update.py has no
-# quality class and stays outside the corpus.
 real_source_target(
-    name = "corpus",
-    starlark_srcs = ["BUILD.bazel"] + glob(["*.bzl"]),
+    name = "corpus_starlark",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "biome.linux_x86_64.bzl",
+        "buildifier.linux_x86_64.bzl",
+        "extension.bzl",
+        "metadata_tests.bzl",
+        "ruff.linux_x86_64.bzl",
+        "taplo.linux_x86_64.bzl",
+        "ty.linux_x86_64.bzl",
+        "vale.linux_x86_64.bzl",
+    ],
+    tags = ["corpus"],
 )
