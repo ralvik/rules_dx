@@ -1,5 +1,5 @@
 {
-  "checksum": "384c33339b9034b4e1d66e27eb682b8ade15c1f678630ca06c02e8b704463a92",
+  "checksum": "a8e02e25b7323e1ec7557e5611d9b618c836382c6297f0c7754ff6bb4f6eac39",
   "conditions": {
     "aarch64-apple-darwin": [
       "aarch64-apple-darwin"
@@ -86,6 +86,10 @@
       "wasm32-wasip1",
       "x86_64-unknown-linux-gnu",
       "x86_64-unknown-nixos-gnu"
+    ],
+    "cfg(target_family = \"wasm\")": [
+      "wasm32-unknown-unknown",
+      "wasm32-wasip1"
     ],
     "cfg(target_os = \"android\")": [],
     "cfg(target_os = \"haiku\")": [],
@@ -2078,6 +2082,38 @@
         }
       ],
       "version": "0.1.7"
+    },
+    "deunicode 1.6.2": {
+      "common_attrs": {
+        "crate_features": [
+          "alloc",
+          "default"
+        ],
+        "edition": "2021"
+      },
+      "library_target_name": "deunicode",
+      "license": "BSD-3-Clause",
+      "license_file": "LICENSE",
+      "license_ids": [
+        "BSD-3-Clause"
+      ],
+      "name": "deunicode",
+      "package_url": "https://github.com/kornelski/deunicode/",
+      "repository": {
+        "Http": {
+          "sha256": "abd57806937c9cc163efc8ea3910e00a62e2aeb0b8119f1793a978088f8f6b04",
+          "url": "https://static.crates.io/crates/deunicode/1.6.2/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "deunicode",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "1.6.2"
     },
     "difflib 0.4.0": {
       "common_attrs": {
@@ -6425,6 +6461,10 @@
             "target": "clap"
           },
           {
+            "id": "deunicode 1.6.2",
+            "target": "deunicode"
+          },
+          {
             "id": "pulldown-cmark 0.13.4",
             "target": "pulldown_cmark"
           },
@@ -6435,6 +6475,10 @@
           {
             "id": "serde_json 1.0.151",
             "target": "serde_json"
+          },
+          {
+            "id": "slug 0.1.6",
+            "target": "slug"
           },
           {
             "id": "thiserror 2.0.20",
@@ -8106,6 +8150,51 @@
         }
       ],
       "version": "0.4.12"
+    },
+    "slug 0.1.6": {
+      "common_attrs": {
+        "deps": {
+          "common": [
+            {
+              "id": "deunicode 1.6.2",
+              "target": "deunicode"
+            }
+          ],
+          "selects": {
+            "cfg(target_family = \"wasm\")": [
+              {
+                "id": "wasm-bindgen 0.2.128",
+                "target": "wasm_bindgen"
+              }
+            ]
+          }
+        },
+        "edition": "2021"
+      },
+      "library_target_name": "slug",
+      "license": "MIT/Apache-2.0",
+      "license_file": "LICENSE-APACHE",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "name": "slug",
+      "package_url": "https://github.com/Stebalien/slug-rs",
+      "repository": {
+        "Http": {
+          "sha256": "882a80f72ee45de3cc9a5afeb2da0331d58df69e4e7d8eeb5d3c7784ae67e724",
+          "url": "https://static.crates.io/crates/slug/0.1.6/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "slug",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "0.1.6"
     },
     "smallvec 1.16.1": {
       "common_attrs": {
@@ -12056,6 +12145,7 @@
     "clap_complete 4.6.11",
     "clap_mangen 0.2.33",
     "console 0.15.11",
+    "deunicode 1.6.2",
     "globset 0.4.20",
     "hex 0.4.3",
     "ignore 0.4.33",
@@ -12073,6 +12163,7 @@
     "serde_json 1.0.151",
     "sha2 0.10.9",
     "similar 3.2.0",
+    "slug 0.1.6",
     "spdx 0.13.5",
     "strsim 0.11.1",
     "tempfile 3.27.0",
