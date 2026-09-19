@@ -2,7 +2,11 @@
 //!
 //! Split from `super` (`reports.rs`): owns `validate_lcov` and
 //! `coverage_line_rate`. Re-exported through `super` so the public path
-//! stays `crate::reports::{validate_lcov, coverage_line_rate}`.
+//! stays `crate::reports::{validate_lcov, coverage_line_rate}`. Both are
+//! thin projections over `dx_lcov` (issue #395): validation delegates to
+//! `dx_lcov::validate_lcov_report` and rate computation merges via
+//! `dx_lcov::parse_lcov`, so the `lcov`-crate `SF`/`DA`/`end_of_record`
+//! acceptance lives once in `//cli/lcov`.
 
 use std::collections::BTreeMap;
 
@@ -13,68 +17,17 @@ use super::ReportError;
 /// Validates that `bytes` are a syntactically complete LCOV tracefile.
 ///
 /// The exact bytes are preserved for the report; validation only
-/// checks UTF-8, at least one `SF:` record with a non-empty path, no
-/// `DA:` outside an `SF:` section, well-formed `DA:<line>,<hits>`
-/// counters with `line >= 1`, and that every `SF:` section closes with
-/// `end_of_record`. Unknown `FN`/`BRDA`/summary lines are ignored like
-/// the M00 gate parser. Failures return [`ReportError::InvalidLcov`]
-/// so callers emit no LCOV report.
+/// checks UTF-8 via [`std::str::from_utf8`] and delegates the structural
+/// `SF`/`DA`/`end_of_record` checks to `dx_lcov::validate_lcov_report`
+/// (the shared `lcov`-crate parser, issue #395). Unknown
+/// `FN`/`BRDA`/summary lines are ignored like the M00 gate parser.
+/// Failures return [`ReportError::InvalidLcov`] so callers emit no LCOV
+/// report.
 pub fn validate_lcov(bytes: &[u8]) -> Result<(), ReportError> {
     let invalid = |detail: String| ReportError::InvalidLcov { detail };
     let text =
         std::str::from_utf8(bytes).map_err(|e| invalid(format!("LCOV is not UTF-8: {e}")))?;
-    let mut sections = 0u64;
-    let mut open = false;
-    for raw in text.lines() {
-        let line = raw.trim();
-        if line.is_empty() {
-            continue;
-        }
-        if let Some(path) = line.strip_prefix("SF:") {
-            if path.is_empty() {
-                return Err(invalid("LCOV record with empty SF path".to_owned()));
-            }
-            if open {
-                return Err(invalid("LCOV SF record before end_of_record".to_owned()));
-            }
-            open = true;
-            sections += 1;
-        } else if let Some(rest) = line.strip_prefix("DA:") {
-            if !open {
-                return Err(invalid(format!(
-                    "LCOV DA record outside any SF record: {line}"
-                )));
-            }
-            let mut parts = rest.split(',');
-            let lineno: u32 = parts
-                .next()
-                .unwrap_or_default()
-                .parse()
-                .map_err(|_| invalid(format!("malformed LCOV DA line number: {line}")))?;
-            if lineno == 0 {
-                return Err(invalid(format!("malformed LCOV DA line number: {line}")));
-            }
-            parts
-                .next()
-                .unwrap_or_default()
-                .parse::<u64>()
-                .map_err(|_| invalid(format!("malformed LCOV DA hit count: {line}")))?;
-        } else if line == "end_of_record" {
-            if !open {
-                return Err(invalid(
-                    "LCOV end_of_record outside any SF record".to_owned(),
-                ));
-            }
-            open = false;
-        }
-    }
-    if sections == 0 {
-        return Err(invalid("LCOV has no SF records".to_owned()));
-    }
-    if open {
-        return Err(invalid("LCOV SF record without end_of_record".to_owned()));
-    }
-    Ok(())
+    dx_lcov::validate_lcov_report(text).map_err(|e| invalid(e.to_string()))
 }
 
 /// Line-coverage rate over validated LCOV documents for

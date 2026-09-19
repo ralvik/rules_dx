@@ -8,4 +8,5 @@ name = "dx_lcov"
 path = "src/lib.rs"
 
 [dependencies]
+lcov = "0.8"
 thiserror = "2"

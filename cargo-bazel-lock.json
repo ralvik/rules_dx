@@ -1,5 +1,5 @@
 {
-  "checksum": "3154e07d935f390edaa6d0965c0a107c0ed28225cc0e269b15fc356149e7ed22",
+  "checksum": "ae2eb7a21fce470fbfb21968ada5c1c13cf561b31574c536ce879b476a84fdd8",
   "conditions": {
     "aarch64-apple-darwin": [
       "aarch64-apple-darwin"
@@ -2866,6 +2866,10 @@
       "common_attrs": {
         "deps": [
           {
+            "id": "lcov 0.8.2",
+            "target": "lcov"
+          },
+          {
             "id": "thiserror 2.0.20",
             "target": "thiserror"
           }
@@ -5089,6 +5093,40 @@
         }
       ],
       "version": "1.5.0"
+    },
+    "lcov 0.8.2": {
+      "common_attrs": {
+        "deps": [
+          {
+            "id": "thiserror 2.0.20",
+            "target": "thiserror"
+          }
+        ],
+        "edition": "2021"
+      },
+      "library_target_name": "lcov",
+      "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "name": "lcov",
+      "package_url": "https://github.com/gifnksm/lcov/",
+      "repository": {
+        "Http": {
+          "sha256": "4dab4f1d99e0dd8008da0d3452bb71ce08e1645465c2accc124bcb599c6b3143",
+          "url": "https://static.crates.io/crates/lcov/0.8.2/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "lcov",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "0.8.2"
     },
     "libc 0.2.189": {
       "build_script_attrs": {},
@@ -12257,6 +12295,7 @@
     "globset 0.4.20",
     "hex 0.4.3",
     "ignore 0.4.33",
+    "lcov 0.8.2",
     "libc 0.2.189",
     "line-index 0.1.2",
     "normpath 1.5.2",

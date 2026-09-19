@@ -28,14 +28,14 @@ dx_test_init
 contract="docs/cli/cli-contract.md"
 verify="docs/testing/verification-matrix.md"
 
-# Contract owns the qualified seed-only record under #315.
-if grep -q -F -e 'qualified seed-only under issue #315' "$contract" &&
+# Contract owns the qualified seed-only record under #315/#395.
+if grep -q -F -e 'qualified seed-only under issues #315/#395' "$contract" &&
   grep -q -F -e 'bazel run //tools/ci:helper_qualification' "$contract" &&
   grep -q -F -e 'upstream' "$contract" &&
   grep -q -F -e 'stays owned gap' "$contract"; then
   ok
 else
-  bad "cli-contract lost its qualified seed-only record under #315"
+  bad "cli-contract lost its qualified seed-only record under #315/#395"
 fi
 
 # Contract names adopted crates plus stays-hand-rolled owners.
@@ -44,7 +44,8 @@ if grep -q -F -e 'digest via `hex`/`blake3`/`sha2`' "$contract" &&
   grep -q -F -e 'SPDX parse via `spdx`' "$contract" &&
   grep -q -F -e 'date calendar via `chrono`' "$contract" &&
   grep -q -F -e 'scratch via `tempfile`' "$contract" &&
-  grep -q -F -e '`walkdir`/`ignore`/`globset`' "$contract"; then
+  grep -q -F -e '`walkdir`/`ignore`/`globset`' "$contract" &&
+  grep -q -F -e 'LCOV `SF`/`DA` parsing via `lcov`' "$contract"; then
   ok
 else
   bad "cli-contract lost its adopted-crate list"
@@ -52,7 +53,7 @@ fi
 
 if grep -q -F -e 'atomic' "$contract" &&
   grep -q -F -e 'path-ladder' "$contract" &&
-  grep -q -F -e 'LCOV parser plus ignore scanner' "$contract"; then
+  grep -q -F -e 'LCOV ignore scanner with inventory plus verdict' "$contract"; then
   ok
 else
   bad "cli-contract lost its stays-hand-rolled owner list"
@@ -132,26 +133,35 @@ else
   bad "diff lost its similar adopted evidence"
 fi
 
-# LCOV parser plus ignore scanner stays hand-rolled with owned reason.
+# LCOV parser adopted via lcov crate (issue #395); ignores/inventory/verdict
+# stay hand-rolled with owned reasons.
 if grep -q -F -e 'issue #315' cli/lcov/src/lib.rs &&
+  grep -q -F -e 'issue #395' cli/lcov/src/lib.rs &&
   grep -q -F -e 'stays hand-rolled' cli/lcov/src/lib.rs &&
   grep -q -F -e 'parse_lcov' cli/lcov/src/lib.rs &&
-  grep -q -F -e 'cargo-llvm-cov' cli/lcov/src/lib.rs; then
+  grep -q -F -e 'validate_lcov_report' cli/lcov/src/lib.rs &&
+  grep -q -F -e 'cargo-llvm-cov' cli/lcov/src/lib.rs &&
+  grep -q -F -e 'lcov' cli/lcov/src/lib.rs; then
   ok
 else
-  bad "lcov lost its #315 stays-hand-rolled reason"
+  bad "lcov lost its #395 adopted parser reason"
 fi
 
-# LCOV Cargo stays thiserror-only with SF/DA plus reason: evidence.
-if grep -q -F -e 'thiserror = "2"' cli/lcov/Cargo.toml &&
-  ! grep -E -e '^[[:space:]]*lcov[[:space:]]*=' cli/lcov/Cargo.toml | grep -q . &&
+# LCOV Cargo pins lcov plus thiserror with lcov::Record plus reason: evidence,
+# and cli/cli reuses dx_lcov instead of a second hand parser.
+if grep -q -F -e 'lcov = "0.8"' cli/lcov/Cargo.toml &&
+  grep -q -F -e 'thiserror = "2"' cli/lcov/Cargo.toml &&
   ! grep -F -e 'cargo-llvm' cli/lcov/Cargo.toml | grep -q . &&
-  grep -q -F -e 'strip_prefix("SF:")' cli/lcov/src/parse.rs &&
-  grep -q -F -e 'strip_prefix("DA:")' cli/lcov/src/parse.rs &&
+  grep -q -F -e '"lcov"' cli/lcov/BUILD.bazel &&
+  grep -q -F -e 'lcov::Record' cli/lcov/src/parse.rs &&
+  grep -q -F -e 'validate_lcov_report' cli/lcov/src/parse.rs &&
+  ! grep -F -e 'strip_prefix("SF:")' cli/lcov/src/parse.rs | grep -q . &&
+  ! grep -F -e 'strip_prefix("SF:")' cli/cli/src/reports/lcov.rs | grep -q . &&
+  grep -q -F -e 'validate_lcov_report' cli/cli/src/reports/lcov.rs &&
   grep -q -F -e 'reason:' cli/lcov/src/ignores.rs; then
   ok
 else
-  bad "lcov gained a parser dependency or lost SF/DA plus reason evidence"
+  bad "lcov lost its lcov-crate adopted evidence or kept a second hand parser"
 fi
 
 # SPDX parse adopted: Cargo plus BUILD pin spdx.
