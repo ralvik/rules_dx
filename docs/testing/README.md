@@ -149,20 +149,29 @@ open work).
 
 ## GitHub Coverage Reporting
 
-Use Codecov for this project's GitHub coverage reporting under the
-[free-infrastructure constraint](#infrastructure-budget). This selects a repository
-service, not a required dependency or service for `rules_dx` consumers. Publish reports
-from Bazel-owned coverage workflows; Codecov does not replace instrumentation, ignore
-validation, or the authoritative [coverage gate](#coverage). A Codecov summary must not
-turn missing reports or failing required coverage into success, and any permitted
-Starlark behavioral fallback must remain separate from measured line coverage.
+Use first-party coverage PR reporting for this project's GitHub coverage
+reporting under the [free-infrastructure constraint](#infrastructure-budget)
+(issue #254, adopted). The `coverage` job renders the compact summary
+comment from the Bazel-owned gate verdict (`tools/coverage/coverage_comment.sh`
+over the seed-cell `coverage_bin` verdict from the same combined LCOV) and
+publishes one integration-owned updated comment per PR with the
+`dx-coverage-summary` marker; consumers get the same per-cell shape through
+`reusable-consumer.yml`. This selects repository code, not a required
+dependency or service for `rules_dx` consumers. Publish from Bazel-owned
+coverage workflows; the summary does not replace instrumentation, ignore
+validation, or the authoritative [coverage gate](#coverage). A summary
+comment must not turn missing reports or failing required coverage into
+success, and any permitted Starlark behavioral fallback must remain separate
+from measured line coverage.
 
-Prefer the maintained upstream Codecov GitHub integration. Account/repository activation,
-pinned upload tooling, authentication and fork-PR permissions, report paths and identities,
-platform/configuration grouping, and upload-failure handling require qualification
-(open). Coverage mappings are resolved in the [coverage gate](#coverage). Verify complete-report publication and failure cases before claiming the
-integration works. Workflows exist in `.github/workflows/ci.yml`, `reusable-consumer.yml`, and
-`reusable-docs.yml`; Codecov account activation and upload wiring remain unqualified.
+Codecov stays at most opt-in and is never required. No Codecov account
+activation or upload wiring is used here; the first-party comment is the
+adopted surface. Coverage mappings are resolved in the [coverage gate](#coverage).
+Complete-report publication and failure cases (missing report, uncovered
+lines, partial LCOV, rerun dedup, fork PR) are proven by
+`bazel run //tools/ci:coverage_report_guards`. Workflows exist in
+`.github/workflows/ci.yml`, `reusable-consumer.yml`, and
+`reusable-docs.yml`.
 
 ## Infrastructure Budget
 
@@ -180,10 +189,11 @@ Remote cache tests are required before claiming remote-cache correctness. Remote
 execution tests are required before declaring a toolchain remotely executable.
 If infrastructure is unavailable, documentation must state that hermeticity is
 designed and locally sandbox-tested but remote behavior remains unverified.
-Coverage per-cell enforcement, Codecov wiring, and remote evidence stay open under
+Coverage per-cell enforcement and remote evidence stay open under
 issue #308 (seed cell only today, never union across cells; Starlark instrumentation
-decision, Codecov activation plus upload wiring, quota qualification, and remote-cache
-plus remote-execution tests remain qualification work).
+decision, quota qualification, and remote-cache
+plus remote-execution tests remain qualification work). First-party PR
+reporting itself is adopted under #254; Codecov stays opt-in only.
 
 Byte-identical goldens stay brittle-check honest under issue #322 (parity tests, shell
 diff goldens, grep-for-shape harnesses, and exact-tuple codegen merges migrate to

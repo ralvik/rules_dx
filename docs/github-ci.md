@@ -35,8 +35,10 @@ Preserve canonical workspace configuration and module-matched CLI bootstrap. Doc
 prerequisite consumer Bazel setup, permissions, and required repository settings separately
 from the caller file: a template cannot configure those settings by itself. The integration
 does not manage consumer repository governance or prescribe CODEOWNERS/reviewer policies.
-This repository's [Codecov selection](testing/README.md#github-coverage-reporting) does not
-require consumers to use Codecov.
+This repository's [first-party coverage selection](testing/README.md#github-coverage-reporting) does not
+require consumers to use Codecov. Codecov stays opt-in only and is never
+required; consumers get the same first-party per-cell summary through the
+reusable coverage path.
 
 ## Docs CI
 

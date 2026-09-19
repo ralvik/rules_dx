@@ -153,10 +153,11 @@ reduction: v1 retains full required-host coverage.
 ## Local-Only Coverage
 
 Coverage is local-only. The mandatory
-[project coverage gate](../testing/README.md#coverage) must pass;
-Codecov service activation and fork-PR handling are tracked in
-[GitHub coverage reporting](../testing/README.md#github-coverage-reporting).
-Do not present local reports as service evidence.
+[project coverage gate](../testing/README.md#coverage) must pass; the
+adopted [first-party PR summary](../testing/README.md#github-coverage-reporting)
+renders from the same Bazel-owned LCOV in CI with fork-PR step-summary-only
+handling. Codecov stays opt-in only. Do not present local reports as service
+evidence.
 
 ## Local Overrides
 

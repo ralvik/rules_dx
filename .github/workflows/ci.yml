@@ -136,6 +136,9 @@ jobs:
     needs: [build]
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -149,14 +152,85 @@ jobs:
           restore-keys: |
             bazel-seed-
       - name: Enforce seed coverage cell
-        run: bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //...
-      - name: Prove coverage report contract (gate-owned LCOV, comment gap open)
+        run: |
+          set +e
+          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee /tmp/dx_coverage.log
+          rc=${PIPESTATUS[0]}
+          echo "$rc" > /tmp/dx_coverage.rc
+          exit $rc
+      - name: Render first-party coverage summary (seed cell, same LCOV)
+        # First-party PR reporting (issue #254): Bazel-owned gate stays the
+        # source of truth; this step only presents the verdict already
+        # computed by the gate. Execution runs without secrets so fork code
+        # never sees write credentials; publication below uses GH_TOKEN only
+        # on non-fork PRs and never executes fork targets.
+        if: always()
+        run: |
+          set -euo pipefail
+          export LLVM_PROFILE_FILE="/tmp/profraw_%m_%p.profraw"
+          bazel build --noshow_progress //tools/coverage:coverage_bin //tools/coverage:coverage_comment >/dev/null 2>&1
+          bazel coverage --noshow_progress //cli/lcov/... //tools/coverage/... \
+            --combined_report=lcov \
+            --instrumentation_filter='^//(cli/lcov|tools/coverage)' >/dev/null 2>&1 || true
+          bazel query 'kind("source file", deps(//cli/lcov/... + //tools/coverage/...))' 2>/dev/null \
+            | grep -E '^//(cli/lcov|tools/coverage)[:/].*\.rs$' \
+            | sed -e 's|^//||' -e 's|:|/|' \
+            | LC_ALL=C sort -u > /tmp/seed_sources.txt
+          set +e
+          bazel-bin/tools/coverage/coverage_bin --report bazel-out/_coverage/_coverage_report.dat \
+            --inventory tools/coverage/seed-inventory.txt --sources /tmp/seed_sources.txt --root . > /tmp/seed_verdict.txt 2>&1
+          echo "$?" > /tmp/seed_gate.rc
+          set -e
+          dx_rc="$(cat /tmp/dx_coverage.rc 2>/dev/null || echo unknown)"
+          cp /tmp/dx_coverage.log /tmp/dx_coverage_out.txt 2>/dev/null || true
+          bazel run --noshow_progress //tools/coverage:coverage_comment -- \
+            --cell "seed linux_x86_64" \
+            --revision "${GITHUB_SHA}" \
+            --run "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --out /tmp/coverage_comment.md \
+            --gate-output /tmp/seed_verdict.txt \
+            --gate-exit "$(cat /tmp/seed_gate.rc)" \
+            --lcov bazel-out/_coverage/_coverage_report.dat \
+            --dx-output /tmp/dx_coverage_out.txt \
+            --dx-exit "$dx_rc"
+          echo "### coverage summary (seed linux_x86_64, first-party, issue #254)" >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/coverage_comment.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish PR summary comment (dedup marker, fork-safe)
+        # One integration-owned updated comment per PR (docs/github-ci.md).
+        # Dedup by marker; human comments never touched; concurrency group
+        # cancels superseded runs so stale runs never overwrite current.
+        # Fork PRs skip (step-summary only) so fork code never gets write
+        # credentials. Publication failure fails this step separately while
+        # the gate outcomes above stay preserved in the summary.
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          head_repo="${{ github.event.pull_request.head.repo.full_name }}"
+          base_repo="${{ github.repository }}"
+          if [[ "$head_repo" != "$base_repo" ]]; then
+            echo "Fork PR detected ($head_repo != $base_repo): step-summary only, no PR comment (fork code never gets write credentials)." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          marker="dx-coverage-summary: seed linux_x86_64"
+          pr="${{ github.event.pull_request.number }}"
+          existing="$(gh api "repos/$base_repo/issues/$pr/comments?per_page=100" --jq "[.[] | select(.body | contains(\"$marker\")) | .id] | last // empty" || true)"
+          if [[ -n "$existing" ]]; then
+            jq -Rs '{body: .}' /tmp/coverage_comment.md > /tmp/coverage_payload.json
+            gh api -X PATCH "repos/$base_repo/issues/comments/$existing" --input /tmp/coverage_payload.json --jq .id
+            echo "Updated coverage summary comment $existing on PR #$pr." >> "$GITHUB_STEP_SUMMARY"
+          else
+            gh pr comment "$pr" --body-file /tmp/coverage_comment.md
+            echo "Created coverage summary comment on PR #$pr." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Prove coverage report contract (gate-owned LCOV, first-party comment)
         run: bazel run --noshow_progress //tools/ci:coverage_report_guards
       - name: Write job summary
         if: always()
         run: |
           echo "### coverage — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Command: dx coverage --min-coverage 97 //... (seed cell only; per-cell enforcement tracked in #89)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: dx coverage --min-coverage 97 //... (seed cell only; per-cell enforcement tracked in #89). First-party PR summary from the same seed LCOV (issue #254; Codecov at most opt-in)." >> "$GITHUB_STEP_SUMMARY"
   prove:
     name: prove (manual negatives, target tags, coverage cell, release hygiene, release policy, publish trust, shell contract)
     needs: [build]
