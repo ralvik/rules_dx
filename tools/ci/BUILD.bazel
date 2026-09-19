@@ -793,6 +793,22 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Non-dogfed execution-plan harness (issue #324): proves the four cohorts
+# that never run under the standard dogfood gates each have an explicit
+# execution path — integration/E2E drivers via the explicit :e2e suite,
+# negative fixtures via manual_negatives explicit failure proofs,
+# no-coverage cohort via test execution plus coverage-excluded runs, shell
+# sources via deps ownership plus test/explicit execution with no quality
+# class by design. Run by CI via
+# `bazel run //tools/ci:non_dogfed_paths`.
+sh_binary(
+    name = "non_dogfed_paths",
+    srcs = ["non_dogfed_paths.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
