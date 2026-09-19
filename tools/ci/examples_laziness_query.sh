@@ -38,16 +38,13 @@ set -euo pipefail
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
-workspace="$(dx_workspace_root)"
-cd "$workspace"
+dx_cd_workspace
 
-pass=0
-fail=0
-ok() { pass=$((pass + 1)); }
-bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
+dx_test_init
 
 check_example() { # example, want-marker, forbidden-markers...
-  local example="$1" want="$2"; shift 2
+  local example="$1" want="$2"
+  shift 2
   local deps
   if ! deps="$(bazel query "deps(//examples/$example/...)" --noshow_progress 2>/dev/null)"; then
     bad "$example: bazel query failed"
@@ -69,7 +66,8 @@ check_example() { # example, want-marker, forbidden-markers...
 }
 
 check_negative() { # example, forbidden-markers...
-  local example="$1"; shift
+  local example="$1"
+  shift
   local deps
   if ! deps="$(bazel query "deps(//examples/$example/...)" --noshow_progress 2>/dev/null)"; then
     bad "$example: bazel query failed"
@@ -115,5 +113,4 @@ check_negative adopt-cpp "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules
 # closure and rules_java is base across all closures).
 check_negative adopt-java "rules_rust" "aspect_rules_py" "aspect_rules_js" "rules_go" "rules_dotnet" "rules_kotlin" "rules_scala"
 
-echo "examples laziness query: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "examples laziness query"

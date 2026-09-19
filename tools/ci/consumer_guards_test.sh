@@ -8,14 +8,16 @@
 # run against a mutated workflow copy missing one guard must fail.
 set -euo pipefail
 
+# Shared workspace + runfiles helpers (issues #319, #323).
+# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
+
 workflow="$1"
 caller="$2"
 
-scratch="$(mktemp -d)"
-trap 'rm -rf "$scratch"' EXIT
+dx_mkscratch scratch
 
-pass=0
-fail=0
+dx_test_init
 check_file() { # file, name, want_count, fixed needle
   local file="$1" name="$2" want="$3" needle="$4"
   local got
@@ -60,7 +62,7 @@ done
 # (pipefail would poison a `grep -c | grep -q` pipeline because grep -c
 # exits 1 on zero matches, so capture the count first.)
 mutated="$scratch/mutated.yml"
-grep -v -F -e "inputs.disabled_checks), ',coverage,') }}" "$workflow" > "$mutated"
+grep -v -F -e "inputs.disabled_checks), ',coverage,') }}" "$workflow" >"$mutated"
 remaining="$(grep -c -F -e "inputs.disabled_checks), ',coverage,') }}" "$mutated" || true)"
 if [[ "$remaining" == "0" ]]; then
   pass=$((pass + 1))
@@ -69,5 +71,4 @@ else
   fail=$((fail + 1))
 fi
 
-echo "consumer guards harness: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "consumer guards harness"

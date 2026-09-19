@@ -30,11 +30,9 @@ set -euo pipefail
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
-workspace="$(dx_workspace_root)"
-cd "$workspace"
+dx_cd_workspace
 
-scratch="$(mktemp -d)"
-trap 'rm -rf "$scratch"' EXIT
+dx_mkscratch scratch
 
 # Stage 4 E2E carve-out (issue #55): `integration/` scenario workspaces
 # are .bazelignore'd out of the parent universe and staged to scratch
@@ -50,7 +48,7 @@ grep -q -F -e 'integration/' .bazelignore
 # bytes are tsc sourcemap arrivals, the .vue file is a framework SFC
 # arrival pending the #8 composition regions, and the .d.ts files are
 # typings arrivals pending qualified TS declaration handling (#7).
-cat > "$scratch/excluded.txt" <<'EOF'
+cat >"$scratch/excluded.txt" <<'EOF'
 examples/adopt-js-ts/app/greet.js.map
 examples/adopt-js-ts/app/types.d.ts
 examples/adopt-js-ts/app/widget.vue
@@ -58,15 +56,15 @@ examples/adopt-js-ts/web/app.js.map
 examples/adopt-js-ts/web/types.d.ts
 EOF
 
-git ls-files \
-  | grep -E '\.(rs|py|js|mjs|cjs|ts|mts|cts|jsx|tsx|go|java|kt|kts|scala|cs|fs|fsx|c|h|cc|cpp|hpp|vue|svelte|astro|mdx)$|\.js\.map$' \
-  | grep -v -E '^integration/' \
-  | LC_ALL=C sort -u > "$scratch/code_applicable.txt"
+git ls-files |
+  grep -E '\.(rs|py|js|mjs|cjs|ts|mts|cts|jsx|tsx|go|java|kt|kts|scala|cs|fs|fsx|c|h|cc|cpp|hpp|vue|svelte|astro|mdx)$|\.js\.map$' |
+  grep -v -E '^integration/' |
+  LC_ALL=C sort -u >"$scratch/code_applicable.txt"
 
-bazel query "kind('source file', deps(//...))" 2>/dev/null \
-  | grep -E '^(@@)?//' \
-  | sed 's/^@@//; s|^//||; s|:|/|; s|^/||' \
-  | LC_ALL=C sort -u > "$scratch/code_closure.txt"
+bazel query "kind('source file', deps(//...))" 2>/dev/null |
+  grep -E '^(@@)?//' |
+  sed 's/^@@//; s|^//||; s|:|/|; s|^/||' |
+  LC_ALL=C sort -u >"$scratch/code_closure.txt"
 
 # Every exclusion must still be present and still unowned: a newly
 # owned exclusion is a stale entry, not a pass.
@@ -82,14 +80,14 @@ while read -r excluded; do
     echo "code ownership audit failed: exclusion now owned by //...: $excluded (drop it from the exclusion list)"
     stale=1
   fi
-done < "$scratch/excluded.txt"
+done <"$scratch/excluded.txt"
 if [[ "$stale" -ne 0 ]]; then
   exit 1
 fi
 
-comm -23 "$scratch/code_applicable.txt" "$scratch/code_closure.txt" \
-  | grep -v -F -x -f "$scratch/excluded.txt" > "$scratch/uncovered.txt" || true
-uncovered="$(wc -l < "$scratch/uncovered.txt" | tr -d ' ')"
+comm -23 "$scratch/code_applicable.txt" "$scratch/code_closure.txt" |
+  grep -v -F -x -f "$scratch/excluded.txt" >"$scratch/uncovered.txt" || true
+uncovered="$(wc -l <"$scratch/uncovered.txt" | tr -d ' ')"
 if [[ "$uncovered" -ne 0 ]]; then
   echo "code ownership audit failed: $uncovered code files have no //... target owner:"
   cat "$scratch/uncovered.txt"

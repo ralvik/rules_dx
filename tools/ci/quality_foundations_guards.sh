@@ -21,13 +21,9 @@ set -euo pipefail
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
-workspace="$(dx_workspace_root)"
-cd "$workspace"
+dx_cd_workspace
 
-pass=0
-fail=0
-ok() { pass=$((pass + 1)); }
-bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
+dx_test_init
 
 # #12 lane A plumbing: QualitySourcesInfo provider defined once.
 if grep -q -F -e 'QualitySourcesInfo = provider(' quality/sources.bzl; then
@@ -37,16 +33,16 @@ else
 fi
 
 # #6 single-sourced registry: one class-to-family map + adapter manifests.
-if grep -q -F -e 'REAL_CLASS_TO_FAMILY' quality/adapters.bzl \
-  && grep -q -F -e 'REAL_ADAPTERS' quality/adapters.bzl; then
+if grep -q -F -e 'REAL_CLASS_TO_FAMILY' quality/adapters.bzl &&
+  grep -q -F -e 'REAL_ADAPTERS' quality/adapters.bzl; then
   ok
 else
   bad "adapters.bzl lost the single-sourced registry (REAL_CLASS_TO_FAMILY + REAL_ADAPTERS)"
 fi
 
 # #6 curated defaults stay single-sourced in quality/.
-if [[ -f "quality/curated_defaults.bzl" ]] \
-  && grep -q -F -e 'curated' quality/adapters.bzl; then
+if [[ -f "quality/curated_defaults.bzl" ]] &&
+  grep -q -F -e 'curated' quality/adapters.bzl; then
   ok
 else
   bad "curated-defaults evidence lost (quality/curated_defaults.bzl or adapters.bzl record)"
@@ -67,9 +63,9 @@ else
 fi
 
 # Prior slices stay green: wrapper sources + foundation maps + registry.
-if [[ -f "tools/ci/wrapper_sources.sh" ]] \
-  && [[ -f "tools/ci/foundation_maps.sh" ]] \
-  && [[ -f "tools/ci/registry_singularity.sh" ]]; then
+if [[ -f "tools/ci/wrapper_sources.sh" ]] &&
+  [[ -f "tools/ci/foundation_maps.sh" ]] &&
+  [[ -f "tools/ci/registry_singularity.sh" ]]; then
   ok
 else
   bad "prior quality harnesses missing (wrapper_sources/foundation_maps/registry_singularity)"
@@ -77,8 +73,8 @@ fi
 
 # #84 cache proof stays pinned: aquery action-key isolation plus local
 # execution-log executed-vs-cached proof.
-if [[ -f "tools/ci/quality_cache_aquery.sh" ]] \
-  && grep -q -F -e 'execution_log_json_file' tools/ci/quality_cache_aquery.sh; then
+if [[ -f "tools/ci/quality_cache_aquery.sh" ]] &&
+  grep -q -F -e 'execution_log_json_file' tools/ci/quality_cache_aquery.sh; then
   ok
 else
   bad "quality cache aquery harness missing its execution-log proof (#84)"
@@ -93,10 +89,10 @@ fi
 
 # #7 external-consumer breadth beyond the minimum: Go + Java adopt
 # workspaces carry their own READMEs with commands + evidence.
-if [[ -f "examples/adopt-go/README.md" ]] \
-  && [[ -f "examples/adopt-java/README.md" ]] \
-  && grep -q -F -e 'adopt-go' examples/README.md \
-  && grep -q -F -e 'adopt-java' examples/README.md; then
+if [[ -f "examples/adopt-go/README.md" ]] &&
+  [[ -f "examples/adopt-java/README.md" ]] &&
+  grep -q -F -e 'adopt-go' examples/README.md &&
+  grep -q -F -e 'adopt-java' examples/README.md; then
   ok
 else
   bad "examples lost their beyond-minimum Go/Java consumer breadth (#7)"
@@ -112,8 +108,8 @@ fi
 
 # #6 curated/native test backing stays present alongside the evidence
 # files (no untested taxonomy drift).
-if [[ -f "quality/curated_defaults_tests.bzl" ]] \
-  && [[ -f "quality/native_config_tests.bzl" ]]; then
+if [[ -f "quality/curated_defaults_tests.bzl" ]] &&
+  [[ -f "quality/native_config_tests.bzl" ]]; then
   ok
 else
   bad "quality curated/native test backing missing (curated_defaults_tests/native_config_tests)"
@@ -151,8 +147,8 @@ fi
 
 # #7 minimum-consumer index stays pinned: Rust + Python adopt entries
 # (foreign Cargo/Python trees via dx generate; broader set above).
-if grep -q -F -e 'adopt-rust' examples/README.md \
-  && grep -q -F -e 'adopt-python' examples/README.md; then
+if grep -q -F -e 'adopt-rust' examples/README.md &&
+  grep -q -F -e 'adopt-python' examples/README.md; then
   ok
 else
   bad "examples index lost its minimum Rust/Python consumer entries (#7)"
@@ -160,8 +156,8 @@ fi
 
 # #7 minimum-consumer READMEs stay present with commands + evidence
 # (beyond-minimum Go/Java slice owns its own check above).
-if [[ -f "examples/adopt-rust/README.md" ]] \
-  && [[ -f "examples/adopt-python/README.md" ]]; then
+if [[ -f "examples/adopt-rust/README.md" ]] &&
+  [[ -f "examples/adopt-python/README.md" ]]; then
   ok
 else
   bad "examples lost their minimum Rust/Python consumer READMEs (#7)"
@@ -169,8 +165,8 @@ fi
 
 # #84 atomic-write evidence stays pinned: atomic apply of verified
 # reads in the collected-change applier plus mode-preserving writes.
-if grep -q -F -e 'write_atomic' cli/cli/src/exec/quality_apply.rs \
-  && grep -q -F -e 'preserves_existing_mode_on_overwrite' cli/atomic_fs/src/lib.rs; then
+if grep -q -F -e 'write_atomic' cli/cli/src/exec/quality_apply.rs &&
+  grep -q -F -e 'preserves_existing_mode_on_overwrite' cli/atomic_fs/src/lib.rs; then
   ok
 else
   bad "quality apply applier lost its atomic-write evidence (#84)"
@@ -178,10 +174,10 @@ fi
 
 # #12 lane-A CI scope stays sharded: freshness, lint, format, and
 # typecheck dogfood jobs run our own tools over our own tree.
-if grep -q -F -e 'dogfood-freshness' .github/workflows/ci.yml \
-  && grep -q -F -e 'dogfood-lint' .github/workflows/ci.yml \
-  && grep -q -F -e 'dogfood-format' .github/workflows/ci.yml \
-  && grep -q -F -e 'dogfood-typecheck' .github/workflows/ci.yml; then
+if grep -q -F -e 'dogfood-freshness' .github/workflows/ci.yml &&
+  grep -q -F -e 'dogfood-lint' .github/workflows/ci.yml &&
+  grep -q -F -e 'dogfood-format' .github/workflows/ci.yml &&
+  grep -q -F -e 'dogfood-typecheck' .github/workflows/ci.yml; then
   ok
 else
   bad "ci.yml lost its sharded lane-A dogfood jobs (#12)"
@@ -190,9 +186,9 @@ fi
 # #7 Gazelle language extensions stay present: one extension directory
 # per delivered foundation (upstream rules stay the implementation;
 # exact import/lock proofs pinned in //tools/ci:foundation_maps).
-if [[ -d "gazelle/rust" ]] \
-  && [[ -d "gazelle/python" ]] \
-  && [[ -d "gazelle/typescript" ]]; then
+if [[ -d "gazelle/rust" ]] &&
+  [[ -d "gazelle/python" ]] &&
+  [[ -d "gazelle/typescript" ]]; then
   ok
 else
   bad "Gazelle lost a delivered-foundation extension dir (rust/python/typescript, #7)"
@@ -200,10 +196,10 @@ fi
 
 # #8 Gazelle framework extensions stay present alongside the language
 # set (named adapters over upstream parsers, no generic fallback).
-if [[ -d "gazelle/vue" ]] \
-  && [[ -d "gazelle/svelte" ]] \
-  && [[ -d "gazelle/astro" ]] \
-  && [[ -d "gazelle/mdx" ]]; then
+if [[ -d "gazelle/vue" ]] &&
+  [[ -d "gazelle/svelte" ]] &&
+  [[ -d "gazelle/astro" ]] &&
+  [[ -d "gazelle/mdx" ]]; then
   ok
 else
   bad "Gazelle lost a framework extension dir (vue/svelte/astro/mdx, #8)"
@@ -237,12 +233,12 @@ fi
 # #12 lane-A native-config binding stays forwarder-closed: hints ride the
 # public QualitySourcesInfo owner across every wrapper family (shared
 # dx_wrap plus the custom binary/test forwarders).
-if grep -q -F -e 'aspect_hints' libs/starlark/wrapper.bzl \
-  && grep -q -F -e 'aspect_hints' go/rules/defs.bzl \
-  && grep -q -F -e 'aspect_hints' java/rules/defs.bzl \
-  && grep -q -F -e 'aspect_hints' python/rules/defs.bzl \
-  && grep -q -F -e 'aspect_hints' rust/rules/defs.bzl \
-  && grep -q -F -e 'aspect_hints' javascript/rules/defs.bzl; then
+if grep -q -F -e 'aspect_hints' libs/starlark/wrapper.bzl &&
+  grep -q -F -e 'aspect_hints' go/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' java/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' python/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' rust/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' javascript/rules/defs.bzl; then
   ok
 else
   bad "wrappers lost their lane-A aspect_hints forwarder plumbing (#12)"
@@ -250,21 +246,20 @@ fi
 
 # #12 lane-A CI scope covers the proven language trees alongside the
 # corpus (enforcing at --fail-on warning).
-if grep -q -F -e '//python/...' .github/workflows/ci.yml \
-  && grep -q -F -e '//javascript/...' .github/workflows/ci.yml \
-  && grep -q -F -e '//rust/hello/...' .github/workflows/ci.yml; then
+if grep -q -F -e '//python/...' .github/workflows/ci.yml &&
+  grep -q -F -e '//javascript/...' .github/workflows/ci.yml &&
+  grep -q -F -e '//rust/hello/...' .github/workflows/ci.yml; then
   ok
 else
   bad "ci.yml lost its lane-A language-tree scope (#12)"
 fi
 
 # No false claim: full determinism/apply batteries not claimed green.
-if ! grep -rln -F -e 'determinism battery green' tools/ci/ 2>/dev/null | grep -v -F -e 'quality_foundations_guards.sh' | grep -q . \
-  && ! grep -rln -F -e 'apply-safety battery green' tools/ci/ 2>/dev/null | grep -v -F -e 'quality_foundations_guards.sh' | grep -q .; then
+if ! grep -rln -F -e 'determinism battery green' tools/ci/ 2>/dev/null | grep -v -F -e 'quality_foundations_guards.sh' | grep -q . &&
+  ! grep -rln -F -e 'apply-safety battery green' tools/ci/ 2>/dev/null | grep -v -F -e 'quality_foundations_guards.sh' | grep -q .; then
   ok
 else
   bad "a determinism/apply green claim appeared without the #84 batteries landing"
 fi
 
-echo "quality foundations guards harness: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "quality foundations guards harness"

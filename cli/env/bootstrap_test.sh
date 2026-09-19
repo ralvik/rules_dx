@@ -8,23 +8,13 @@
 # under Bazel.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers (issues #319, #323).
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../../tools/sh/lib.sh"
 
-# Portable realpath (issue #299): GNU `realpath` is absent on macOS;
-# `readlink -f` covers some platforms, python3 covers the rest.
-portable_realpath() {
-  if command -v realpath >/dev/null 2>&1; then
-    realpath "$1"
-  elif command -v readlink >/dev/null 2>&1 && readlink -f "$1" >/dev/null 2>&1; then
-    readlink -f "$1"
-  else
-    python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
-  fi
-}
+# Portable realpath via tools/sh/lib.sh dx_realpath (issues #299, #323).
 
-env_bin="$(portable_realpath "$1")"
+env_bin="$(dx_realpath "$1")"
 runfiles="$(dx_runfiles_root)"
 root="${TEST_TMPDIR}/work space"
 mkdir -p "$root"
@@ -117,7 +107,7 @@ restore="$("${env_bin}" --workspace "${root}")"
 # A foreign `.dx/bin` is never adopted and never modified.
 foreign="${TEST_TMPDIR}/foreign"
 mkdir -p "${foreign}/.dx/bin"
-printf 'stale' > "${foreign}/.dx/bin/stale_tool"
+printf 'stale' >"${foreign}/.dx/bin/stale_tool"
 set +e
 refused="$("${env_bin}" --workspace "${foreign}" 2>&1)"
 status=$?

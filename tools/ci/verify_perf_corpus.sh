@@ -34,17 +34,13 @@ set -euo pipefail
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
-workspace="$(dx_workspace_root)"
-cd "$workspace"
+dx_cd_workspace
 
-pass=0
-fail=0
-ok() { pass=$((pass + 1)); }
-bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
+dx_test_init
 
 # #86: synthetic-tree harness exists and is deterministic.
-if [[ -f "perf/rules_lint_comparison.sh" ]] \
-  && grep -q -F -e 'tree_sha256' perf/rules_lint_comparison.sh; then
+if [[ -f "perf/rules_lint_comparison.sh" ]] &&
+  grep -q -F -e 'tree_sha256' perf/rules_lint_comparison.sh; then
   ok
 else
   bad "perf synthetic-tree harness missing or lost determinism (tree_sha256)"
@@ -58,8 +54,8 @@ else
 fi
 
 # #86: fairness pin — same Bazel version from .bazelversion.
-if grep -q -F -e '.bazelversion' perf/rules_lint_comparison.sh \
-  && [[ -f ".bazelversion" ]]; then
+if grep -q -F -e '.bazelversion' perf/rules_lint_comparison.sh &&
+  [[ -f ".bazelversion" ]]; then
   ok
 else
   bad "perf harness lost the .bazelversion fairness pin"
@@ -73,8 +69,8 @@ else
 fi
 
 # #86: harness + results provenance tests stay wired (no silent drift).
-if grep -q -F -e 'rules_lint_comparison_test' perf/BUILD.bazel \
-  && grep -q -F -e 'rules_lint_results_test' perf/BUILD.bazel; then
+if grep -q -F -e 'rules_lint_comparison_test' perf/BUILD.bazel &&
+  grep -q -F -e 'rules_lint_results_test' perf/BUILD.bazel; then
   ok
 else
   bad "perf BUILD lost the comparison/results provenance tests"
@@ -83,9 +79,9 @@ fi
 # #15: corpus split landed with generation — CI scopes query the shared
 # `corpus` tag (per-type splits), never the legacy single `corpus` name;
 # every corpus block is Gazelle-owned via `dx generate`.
-if grep -q -F -e "attr(tags, corpus," .github/workflows/ci.yml \
-  && ! grep -q -F -e "attr(name, '^corpus" .github/workflows/ci.yml \
-  && grep -rln -F -e 'corpus_markdown' --include='BUILD.bazel' . 2>/dev/null | grep -q .; then
+if grep -q -F -e "attr(tags, corpus," .github/workflows/ci.yml &&
+  ! grep -q -F -e "attr(name, '^corpus" .github/workflows/ci.yml &&
+  grep -rln -F -e 'corpus_markdown' --include='BUILD.bazel' . 2>/dev/null | grep -q .; then
   ok
 else
   bad "ci.yml lost the tag-scoped corpus split query (want attr(tags, corpus) + generated corpus_markdown, no legacy single-corpus query)"
@@ -100,8 +96,8 @@ fi
 
 # #12: ownership audits stay versioned (corpus for target-less, code for
 # normal targets) alongside the wrapper-sources pin.
-if [[ -f "tools/ci/corpus_audit.sh" && -f "tools/ci/code_ownership.sh" \
-  && -f "tools/ci/wrapper_sources.sh" ]]; then
+if [[ -f "tools/ci/corpus_audit.sh" && -f "tools/ci/code_ownership.sh" &&
+  -f "tools/ci/wrapper_sources.sh" ]]; then
   ok
 else
   bad "ownership harnesses missing (corpus_audit/code_ownership/wrapper_sources)"
@@ -111,13 +107,13 @@ fi
 # ruff/biome/rustfmt configs plus direct aspect_hints on the proof
 # bindings); the shared forwarder carries hints to the QualitySourcesInfo
 # owner.
-if [[ -f "ruff.toml" && -f "biome.json" && -f "rustfmt.toml" ]] \
-  && grep -q -F -e 'ruff_config' BUILD.bazel \
-  && grep -q -F -e 'biome_config' BUILD.bazel \
-  && grep -q -F -e 'aspect_hints' python/hello/BUILD.bazel \
-  && grep -q -F -e 'aspect_hints' javascript/hello/BUILD.bazel \
-  && grep -q -F -e 'aspect_hints' rust/hello/BUILD.bazel \
-  && grep -q -F -e 'aspect_hints' libs/starlark/wrapper.bzl; then
+if [[ -f "ruff.toml" && -f "biome.json" && -f "rustfmt.toml" ]] &&
+  grep -q -F -e 'ruff_config' BUILD.bazel &&
+  grep -q -F -e 'biome_config' BUILD.bazel &&
+  grep -q -F -e 'aspect_hints' python/hello/BUILD.bazel &&
+  grep -q -F -e 'aspect_hints' javascript/hello/BUILD.bazel &&
+  grep -q -F -e 'aspect_hints' rust/hello/BUILD.bazel &&
+  grep -q -F -e 'aspect_hints' libs/starlark/wrapper.bzl; then
   ok
 else
   bad "lane-A workspace-level native policy binding missing (root configs + proof aspect_hints + forwarder plumbing)"
@@ -125,9 +121,9 @@ fi
 
 # #12 lane A: CI dx lint/format scope covers the proven language trees
 # alongside the corpus (enforcing at --fail-on warning once clean).
-if grep -q -F -e '//python/...' .github/workflows/ci.yml \
-  && grep -q -F -e '//javascript/...' .github/workflows/ci.yml \
-  && grep -q -F -e '//rust/hello/...' .github/workflows/ci.yml; then
+if grep -q -F -e '//python/...' .github/workflows/ci.yml &&
+  grep -q -F -e '//javascript/...' .github/workflows/ci.yml &&
+  grep -q -F -e '//rust/hello/...' .github/workflows/ci.yml; then
   ok
 else
   bad "ci.yml lost the lane-A language-tree lint/format scope (want //python/... //javascript/... //rust/hello/... alongside corpus)"
@@ -140,5 +136,4 @@ else
   bad "tools/ci BUILD lost the manual-tag E2E battery record"
 fi
 
-echo "verify perf corpus harness: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "verify perf corpus harness"

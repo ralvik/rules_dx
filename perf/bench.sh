@@ -25,7 +25,7 @@
 # workspace flag only changes which checkout the dx binary measures.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers (issues #319, #323).
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../tools/sh/lib.sh"
 
@@ -74,27 +74,20 @@ host="$(dx_perf_host)"
 # Named-benchmark filter: `bench.sh <name>` runs one benchmark; no arg runs all warm.
 only="${positional[0]:-all}"
 
-# Portable monotonic stamp (issue #299): `$EPOCHREALTIME` needs bash 5
-# (macOS ships bash 3); fall back to `date +%s.%N`, then whole seconds.
-# The comment below about child-process stamping still applies: this
-# helper runs in the current shell with no fork beyond `date`.
-now_secs() {
-  if [[ -n "${EPOCHREALTIME:-}" ]]; then
-    printf '%s' "${EPOCHREALTIME}"
-  elif date +%s.%N >/dev/null 2>&1; then
-    date +%s.%N
-  else
-    date +%s
-  fi
-}
+# Portable timing via tools/sh/lib.sh dx_now_secs/now_secs (issues #299, #323).
+# Child-process stamping still applies: now_secs() runs in the current shell
+# with no fork beyond `date` (a python3 perf_counter child would inflate
+# single-digit-millisecond benchmarks by ~8ms startup).
 
 run_case() {
-  local name="$1"; shift
-  local iterations="$1"; shift
+  local name="$1"
+  shift
+  local iterations="$1"
+  shift
   local i
   for ((i = 1; i <= iterations; i++)); do
     # Timing uses the bash-builtin EPOCHREALTIME (no fork) via now_secs()
-    # with a `date` fallback (issue #299): stamping via a
+    # with a `date` fallback (issues #299, #323 via tools/sh/lib.sh): stamping via a
     # child process (e.g. `python3 -c ...perf_counter()...`) inflates the
     # end stamp by the child's own startup (~8ms here) and corrupts
     # single-digit-millisecond benchmarks.
@@ -116,8 +109,10 @@ run_case() {
 run_bazel_case() {
   # Cold-path helper: times a full `bazel run //cli/cli:dx -- ...` stack
   # (including server startup) instead of the direct binary.
-  local name="$1"; shift
-  local iterations="$1"; shift
+  local name="$1"
+  shift
+  local iterations="$1"
+  shift
   local i
   for ((i = 1; i <= iterations; i++)); do
     local start end ms rc
@@ -145,9 +140,12 @@ scenario_warm() {
 
 case "$only" in
   micro) micro ;;
-  scenario_warm|warm) scenario_warm ;;
+  scenario_warm | warm) scenario_warm ;;
   cold) run_bazel_case generate_check_cold 1 generate --check //examples/adopt-rust/... ;;
-  all) micro; scenario_warm ;;
+  all)
+    micro
+    scenario_warm
+    ;;
   dx_startup) run_case dx_startup 7 --help ;;
   dx_status) run_case dx_status 7 status ;;
   dx_status_json) run_case dx_status_json 7 status --output json ;;
@@ -155,5 +153,8 @@ case "$only" in
   scope_deps) run_case scope_deps 5 deps //python/hello:hello ;;
   generate_check_warm) run_case generate_check_warm 5 generate --check //examples/adopt-rust/... ;;
   generate_check_cold) run_bazel_case generate_check_cold 1 generate --check //examples/adopt-rust/... ;;
-  *) echo "perf bench: unknown benchmark '$only'; want micro|warm|cold|all|<name>" >&2; exit 2 ;;
+  *)
+    echo "perf bench: unknown benchmark '$only'; want micro|warm|cold|all|<name>" >&2
+    exit 2
+    ;;
 esac

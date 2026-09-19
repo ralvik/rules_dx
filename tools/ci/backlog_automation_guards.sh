@@ -26,13 +26,9 @@ set -euo pipefail
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
-workspace="$(dx_workspace_root)"
-cd "$workspace"
+dx_cd_workspace
 
-pass=0
-fail=0
-ok() { pass=$((pass + 1)); }
-bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
+dx_test_init
 
 # #10 prior slice stays green.
 if [[ -f "tools/ci/backlog_contracts.sh" ]]; then
@@ -42,42 +38,42 @@ else
 fi
 
 # #85 examples ownership: index + per-foundation READMEs + slices green.
-if grep -q -F -e 'example' examples/README.md \
-  && [[ -f "tools/ci/examples_readme.sh" ]] \
-  && [[ -f "tools/ci/examples_laziness.sh" ]]; then
+if grep -q -F -e 'example' examples/README.md &&
+  [[ -f "tools/ci/examples_readme.sh" ]] &&
+  [[ -f "tools/ci/examples_laziness.sh" ]]; then
   ok
 else
   bad "examples ownership lost (README index or readme/laziness harnesses)"
 fi
 
 # #85 index breadth: beyond the Rust/Python/JS-TS minimum.
-if grep -q -F -e 'adopt-go' examples/README.md \
-  && grep -q -F -e 'adopt-cpp' examples/README.md; then
+if grep -q -F -e 'adopt-go' examples/README.md &&
+  grep -q -F -e 'adopt-cpp' examples/README.md; then
   ok
 else
   bad "examples index lost its beyond-minimum breadth (adopt-go/adopt-cpp)"
 fi
 
 # #85 laziness query/aquery slices stay wired.
-if [[ -f "tools/ci/examples_laziness_query.sh" ]] \
-  && [[ -f "tools/ci/examples_laziness_aquery.sh" ]]; then
+if [[ -f "tools/ci/examples_laziness_query.sh" ]] &&
+  [[ -f "tools/ci/examples_laziness_aquery.sh" ]]; then
   ok
 else
   bad "examples laziness query/aquery harnesses missing"
 fi
 
 # #85 laziness runtime close-out stays wired (target + CI step).
-if [[ -f "tools/ci/examples_laziness_runtime.sh" ]] \
-  && grep -q -F -e 'examples_laziness_runtime' tools/ci/BUILD.bazel \
-  && grep -q -F -e 'examples_laziness_runtime' .github/workflows/ci.yml; then
+if [[ -f "tools/ci/examples_laziness_runtime.sh" ]] &&
+  grep -q -F -e 'examples_laziness_runtime' tools/ci/BUILD.bazel &&
+  grep -q -F -e 'examples_laziness_runtime' .github/workflows/ci.yml; then
   ok
 else
   bad "examples laziness runtime close-out missing (harness, target, or CI step)"
 fi
 
 # #254 LCOV preset pin: combined report owned by Bazel flags.
-if grep -q -F -e 'combined_report=lcov' tools/bazelrc/preset.bazelrc \
-  && [[ -f "tools/ci/coverage_cell.sh" ]]; then
+if grep -q -F -e 'combined_report=lcov' tools/bazelrc/preset.bazelrc &&
+  [[ -f "tools/ci/coverage_cell.sh" ]]; then
   ok
 else
   bad "coverage LCOV preset pin lost (preset.bazelrc or coverage_cell)"
@@ -85,9 +81,9 @@ fi
 
 # #254 landed slice stays green: first-party comment renderer plus
 # marker-owned PR wiring in both workflows (Codecov opt-in only).
-if [[ -f "tools/ci/coverage_report_guards.sh" ]] \
-  && [[ -x "tools/coverage/coverage_comment.sh" ]] \
-  && grep -rln -F -e 'dx-coverage-summary' .github/workflows/ 2>/dev/null | grep -q .; then
+if [[ -f "tools/ci/coverage_report_guards.sh" ]] &&
+  [[ -x "tools/coverage/coverage_comment.sh" ]] &&
+  grep -rln -F -e 'dx-coverage-summary' .github/workflows/ 2>/dev/null | grep -q .; then
   ok
 else
   bad "coverage comment landing dishonest (harness/renderer/marker wiring missing)"
@@ -101,8 +97,8 @@ else
 fi
 
 # #260 Renovate fallback retained with full manager set.
-if grep -q -F -e 'npm' renovate.json \
-  && grep -q -F -e 'automerge' renovate.json; then
+if grep -q -F -e 'npm' renovate.json &&
+  grep -q -F -e 'automerge' renovate.json; then
   ok
 else
   bad "Renovate fallback lost its manager set (#260)"
@@ -124,10 +120,10 @@ fi
 
 # #85 full index breadth: Java/Kotlin/Scala/C#/F# alongside the
 # go/cpp beyond-minimum slice.
-if grep -q -F -e 'adopt-java' examples/README.md \
-  && grep -q -F -e 'adopt-kotlin' examples/README.md \
-  && grep -q -F -e 'adopt-csharp' examples/README.md \
-  && grep -q -F -e 'adopt-fsharp' examples/README.md; then
+if grep -q -F -e 'adopt-java' examples/README.md &&
+  grep -q -F -e 'adopt-kotlin' examples/README.md &&
+  grep -q -F -e 'adopt-csharp' examples/README.md &&
+  grep -q -F -e 'adopt-fsharp' examples/README.md; then
   ok
 else
   bad "examples index lost its full Java/Kotlin/C#/F# breadth (#85)"
@@ -135,8 +131,8 @@ fi
 
 # #254 inventory + spill backing stays present alongside the gate
 # (seed inventory + profraw containment, presentation still open).
-if [[ -f "tools/coverage/seed-inventory.txt" ]] \
-  && [[ -f "tools/ci/coverage_spill.sh" ]]; then
+if [[ -f "tools/coverage/seed-inventory.txt" ]] &&
+  [[ -f "tools/ci/coverage_spill.sh" ]]; then
   ok
 else
   bad "coverage inventory/spill backing missing (seed-inventory/coverage_spill)"
@@ -152,8 +148,8 @@ fi
 
 # #254/#260 schedule policy stays pinned together
 # (weekly Monday schedule, no automerge, reviewable PRs).
-if grep -q -F -e '"schedule"' renovate.json \
-  && grep -q -F -e '"automerge": false' renovate.json; then
+if grep -q -F -e '"schedule"' renovate.json &&
+  grep -q -F -e '"automerge": false' renovate.json; then
   ok
 else
   bad "automation lost its schedule-policy record (#254/#260)"
@@ -161,8 +157,8 @@ fi
 
 # #85 Scala/Polyglot index entries stay pinned alongside the full
 # breadth (foreign sbt/polyglot trees via Gazelle extensions).
-if grep -q -F -e 'adopt-scala' examples/README.md \
-  && grep -q -F -e 'adopt-polyglot' examples/README.md; then
+if grep -q -F -e 'adopt-scala' examples/README.md &&
+  grep -q -F -e 'adopt-polyglot' examples/README.md; then
   ok
 else
   bad "examples index lost its Scala/Polyglot entries (#85)"
@@ -170,8 +166,8 @@ fi
 
 # #260 loop policy stays reviewable (no pending-stampede PRs, no
 # automerge, human merge path preserved).
-if grep -q -F -e '"prCreation"' renovate.json \
-  && grep -q -F -e '"dependencyDashboard"' renovate.json; then
+if grep -q -F -e '"prCreation"' renovate.json &&
+  grep -q -F -e '"dependencyDashboard"' renovate.json; then
   ok
 else
   bad "Renovate fallback lost its reviewable-loop policy (#260)"
@@ -181,9 +177,9 @@ fi
 # plus runtime (aquery action-command) attribution prove the private tool
 # graph never shells out to installers; remote/empty-cache attribution
 # stays owned by #298/#308.
-if grep -q -F -e 'Runtime attribution' tools/ci/examples_laziness.sh \
-  && grep -q -F -e 'No-install attribution' tools/ci/examples_laziness.sh \
-  && grep -q -F -e 'No-install attribution' tools/ci/examples_laziness_runtime.sh; then
+if grep -q -F -e 'Runtime attribution' tools/ci/examples_laziness.sh &&
+  grep -q -F -e 'No-install attribution' tools/ci/examples_laziness.sh &&
+  grep -q -F -e 'No-install attribution' tools/ci/examples_laziness_runtime.sh; then
   ok
 else
   bad "examples laziness lost its acquisition-attribution record (#85)"
@@ -192,8 +188,8 @@ fi
 # #85 starter callers stay indexed: consumer-ci + docs-ci starter
 # callers alongside the per-foundation adopt workspaces (laziness proof
 # delivered on the seed host).
-if grep -q -F -e '[consumer-ci](consumer-ci/)' examples/README.md \
-  && grep -q -F -e '[docs-ci](docs-ci/)' examples/README.md; then
+if grep -q -F -e '[consumer-ci](consumer-ci/)' examples/README.md &&
+  grep -q -F -e '[docs-ci](docs-ci/)' examples/README.md; then
   ok
 else
   bad "examples index lost its starter caller entries (#85)"
@@ -209,10 +205,10 @@ fi
 
 # Widen implementation delivered (#260): explicit bump command plus the
 # scheduled loop runner and native-loop automation docs.
-if grep -rn -F -e '"bump"' --include='*.rs' cli/ 2>/dev/null | grep -q . \
-  && [[ -f ".github/workflows/bump.yml" ]] \
-  && grep -q -F -e 'dx bump' docs/contributing/automation.md \
-  && grep -q -F -e 'dx bump' docs/cli/commands/audit-update-bazel.md; then
+if grep -rn -F -e '"bump"' --include='*.rs' cli/ 2>/dev/null | grep -q . &&
+  [[ -f ".github/workflows/bump.yml" ]] &&
+  grep -q -F -e 'dx bump' docs/contributing/automation.md &&
+  grep -q -F -e 'dx bump' docs/cli/commands/audit-update-bazel.md; then
   ok
 else
   bad "widen bump implementation missing for #260 (want bump command + bump.yml + automation/contract docs)"
@@ -232,5 +228,4 @@ else
   bad "documentation README lost its #310 docs-pipeline tracker record"
 fi
 
-echo "backlog automation guards harness: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "backlog automation guards harness"

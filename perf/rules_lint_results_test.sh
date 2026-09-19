@@ -12,15 +12,20 @@
 # Tagged `no-coverage`: timing data stays out of the coverage denominator.
 set -euo pipefail
 
+# Shared workspace + runfiles helpers (issues #319, #323).
+# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../tools/sh/lib.sh"
+
 results="$1"
 harness="$2"
-command -v python3 >/dev/null || { echo "python3 is required" >&2; exit 1; }
+command -v python3 >/dev/null || {
+  echo "python3 is required" >&2
+  exit 1
+}
 
-scratch="$(mktemp -d)"
-trap 'rm -rf "$scratch"' EXIT
+dx_mkscratch scratch
 
-pass=0
-fail=0
+dx_test_init
 
 check_json() { # name python-expr
   local name="$1" expr="$2"
@@ -77,10 +82,12 @@ check_json "comparison methodology" "'synthetic' in doc['comparison']['methodolo
 check_json "comparison verdict report-not-gate" "'report-not-gate' in doc['comparison']['verdict'] and 'no parity claim' in doc['comparison']['verdict']"
 
 # Determinism: fresh harness regeneration matches the checked-in digest.
-bash "$harness" --files 200 --dirty-pct 10 --seed 86 --out "$scratch/regen" > "$scratch/regen.json"
+bash "$harness" --files 200 --dirty-pct 10 --seed 86 --out "$scratch/regen" >"$scratch/regen.json"
 d_regen="$(python3 -c 'import json; print(json.load(open("'"$scratch"'/regen.json"))["tree_sha256"])')"
 d_checked="$(python3 -c 'import json; print(json.load(open("'"$results"'"))["seed_harness"]["tree_sha256"])')"
-if [[ "$d_regen" == "$d_checked" && -n "$d_regen" ]]; then pass=$((pass + 1)); else echo "FAIL: regen digest ($d_regen vs $d_checked)" >&2; fail=$((fail + 1)); fi
+if [[ "$d_regen" == "$d_checked" && -n "$d_regen" ]]; then pass=$((pass + 1)); else
+  echo "FAIL: regen digest ($d_regen vs $d_checked)" >&2
+  fail=$((fail + 1))
+fi
 
-echo "rules_lint_results_test: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "rules_lint_results_test"

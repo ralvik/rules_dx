@@ -13,11 +13,9 @@ set -euo pipefail
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
-workspace="$(dx_workspace_root)"
-cd "$workspace"
+dx_cd_workspace
 
-scratch="$(mktemp -d)"
-trap 'rm -rf "$scratch"' EXIT
+dx_mkscratch scratch
 
 # The paket2bazel hub output below is generator-owned (regenerate via
 # `bazel run @rules_dotnet//tools/paket2bazel`, see
@@ -33,20 +31,20 @@ head -1 third_party/dotnet/deps/paket.main_extension.bzl | grep -qi GENERATED
 # every scenario file below as uncovered.
 grep -q -F -e 'integration/' .bazelignore
 
-git ls-files \
-  | grep -E '(^|/)(BUILD\.bazel|MODULE\.bazel)$|\.(bzl|toml|md)$' \
-  | grep -v -E '\.lock$' \
-  | grep -v -E '^third_party/dotnet/deps/paket\.main(_extension)?\.bzl$' \
-  | grep -v -E '^integration/' \
-  | LC_ALL=C sort -u > "$scratch/corpus_applicable.txt"
+git ls-files |
+  grep -E '(^|/)(BUILD\.bazel|MODULE\.bazel)$|\.(bzl|toml|md)$' |
+  grep -v -E '\.lock$' |
+  grep -v -E '^third_party/dotnet/deps/paket\.main(_extension)?\.bzl$' |
+  grep -v -E '^integration/' |
+  LC_ALL=C sort -u >"$scratch/corpus_applicable.txt"
 
-bazel query "kind('source file', deps(kind(real_source_target, //...)))" 2>/dev/null \
-  | grep -E '^(@@)?//' \
-  | sed 's/^@@//; s|^//||; s|:|/|; s|^/||' \
-  | LC_ALL=C sort -u > "$scratch/corpus_closure.txt"
+bazel query "kind('source file', deps(kind(real_source_target, //...)))" 2>/dev/null |
+  grep -E '^(@@)?//' |
+  sed 's/^@@//; s|^//||; s|:|/|; s|^/||' |
+  LC_ALL=C sort -u >"$scratch/corpus_closure.txt"
 
 uncovered="$(comm -23 "$scratch/corpus_applicable.txt" "$scratch/corpus_closure.txt" | wc -l | tr -d ' ')"
-if [ "$uncovered" -ne 0 ]; then
+if [[ "$uncovered" -ne 0 ]]; then
   echo "corpus ownership audit failed: $uncovered applicable files have no corpus owner:"
   comm -23 "$scratch/corpus_applicable.txt" "$scratch/corpus_closure.txt"
   exit 1

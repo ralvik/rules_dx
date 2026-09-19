@@ -21,11 +21,9 @@ set -euo pipefail
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
-workspace="$(dx_workspace_root)"
-cd "$workspace"
+dx_cd_workspace
 
-pass=0
-fail=0
+dx_test_init
 expect_fail() { # name, then want-substrings, then --, then bazel args
   local name="$1"
   shift
@@ -124,5 +122,4 @@ while IFS= read -r target; do
   fi
 done < <(bazel query 'attr(tags, manual, kind(test, //...))' 2>/dev/null | LC_ALL=C sort -u)
 
-echo "manual negatives harness: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "manual negatives harness"

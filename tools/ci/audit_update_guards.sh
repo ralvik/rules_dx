@@ -30,21 +30,17 @@ set -euo pipefail
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
-workspace="$(dx_workspace_root)"
-cd "$workspace"
+dx_cd_workspace
 
-pass=0
-fail=0
-ok() { pass=$((pass + 1)); }
-bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
+dx_test_init
 
 # #18: live audit executes qualified auditors with per-family reporting (no deferred code).
-if grep -q -F -e 'CODE_AUDIT_FAILED' cli/cli/src/exec/common.rs \
-  && grep -q -F -e 'dx_audit::backend::plan_secrets' cli/cli/src/exec/audit.rs \
-  && grep -q -F -e 'dx_audit::outcome::AuditReport' cli/cli/src/exec/audit.rs \
-  && grep -q -F -e 'dx_audit::outcome::exit_code' cli/cli/src/exec/audit.rs \
-  && ! grep -q -F -e 'CODE_AUDIT_DEFERRED' cli/cli/src/exec/common.rs \
-  && ! grep -q -F -e 'audit_deferred' cli/cli/src/exec/audit.rs; then
+if grep -q -F -e 'CODE_AUDIT_FAILED' cli/cli/src/exec/common.rs &&
+  grep -q -F -e 'dx_audit::backend::plan_secrets' cli/cli/src/exec/audit.rs &&
+  grep -q -F -e 'dx_audit::outcome::AuditReport' cli/cli/src/exec/audit.rs &&
+  grep -q -F -e 'dx_audit::outcome::exit_code' cli/cli/src/exec/audit.rs &&
+  ! grep -q -F -e 'CODE_AUDIT_DEFERRED' cli/cli/src/exec/common.rs &&
+  ! grep -q -F -e 'audit_deferred' cli/cli/src/exec/audit.rs; then
   ok
 else
   bad "live audit lost its auditor execution (want CODE_AUDIT_FAILED + backend/aggregate/exit_code, no audit_deferred)"
@@ -52,37 +48,37 @@ fi
 
 # #18: aggregate exit-code mapping stays unit-pinned (clean 0, findings
 # or incomplete 1; detail in the report, not the code).
-if grep -q -F -e 'pub fn exit_code' cli/audit/src/outcome.rs \
-  && grep -q -F -e 'Findings' cli/audit/src/outcome.rs \
-  && grep -q -F -e 'Incomplete' cli/audit/src/outcome.rs; then
+if grep -q -F -e 'pub fn exit_code' cli/audit/src/outcome.rs &&
+  grep -q -F -e 'Findings' cli/audit/src/outcome.rs &&
+  grep -q -F -e 'Incomplete' cli/audit/src/outcome.rs; then
   ok
 else
   bad "audit outcome lost its aggregate exit-code mapping"
 fi
 
 # #18/#19: consumer smoke still disables both audits (live, not yet gated).
-if grep -q -F -e 'security-audit' .github/workflows/ci.yml \
-  && grep -q -F -e 'license-audit' .github/workflows/ci.yml; then
+if grep -q -F -e 'security-audit' .github/workflows/ci.yml &&
+  grep -q -F -e 'license-audit' .github/workflows/ci.yml; then
   ok
 else
   bad "consumer-ci lost its disabled security/license audit record"
 fi
 
 # #19: live update executes resolver backends with continuation (no deferred code).
-if grep -q -F -e 'CODE_UPDATE_FAILED' cli/cli/src/exec/common.rs \
-  && grep -q -F -e 'dx_update::backend::plan' cli/cli/src/exec/update.rs \
-  && grep -q -F -e 'dx_update::outcome::aggregate' cli/cli/src/exec/update.rs \
-  && grep -q -F -e 'dx_update::report::exit_code' cli/cli/src/exec/update.rs \
-  && ! grep -q -F -e 'CODE_UPDATE_DEFERRED' cli/cli/src/exec/common.rs \
-  && ! grep -q -F -e 'update_deferred' cli/cli/src/exec/update.rs; then
+if grep -q -F -e 'CODE_UPDATE_FAILED' cli/cli/src/exec/common.rs &&
+  grep -q -F -e 'dx_update::backend::plan' cli/cli/src/exec/update.rs &&
+  grep -q -F -e 'dx_update::outcome::aggregate' cli/cli/src/exec/update.rs &&
+  grep -q -F -e 'dx_update::report::exit_code' cli/cli/src/exec/update.rs &&
+  ! grep -q -F -e 'CODE_UPDATE_DEFERRED' cli/cli/src/exec/common.rs &&
+  ! grep -q -F -e 'update_deferred' cli/cli/src/exec/update.rs; then
   ok
 else
   bad "live update lost its resolver-backend execution (want CODE_UPDATE_FAILED + backend/aggregate/exit_code, no update_deferred)"
 fi
 
 # #19: aggregate exit-code mapping stays unit-pinned (overall_failure).
-if grep -q -F -e 'overall_failure' cli/update/src/report.rs \
-  && grep -q -F -e 'pub fn exit_code' cli/update/src/report.rs; then
+if grep -q -F -e 'overall_failure' cli/update/src/report.rs &&
+  grep -q -F -e 'pub fn exit_code' cli/update/src/report.rs; then
   ok
 else
   bad "update report lost its overall_failure exit-code mapping"
@@ -96,23 +92,22 @@ else
 fi
 
 # #22/#306: required-core plus admitted checker is implemented with fixtures (no false claim).
-if [[ -f "tools/depcheck/depcheck.py" ]] \
-  && [[ -f "tools/depcheck/BUILD.bazel" ]] \
-  && [[ -d "tools/depcheck/testdata/rust/ok_used" ]] \
-  && [[ -d "tools/depcheck/testdata/python/ok_used" ]] \
-  && [[ -d "tools/depcheck/testdata/js/ok_used" ]] \
-  && [[ -d "tools/depcheck/testdata/ts/ok_used" ]] \
-  && [[ -d "tools/depcheck/testdata/go/ok_used" ]] \
-  && [[ -d "tools/depcheck/testdata/java/ok_used" ]] \
-  && [[ -d "tools/depcheck/testdata/kotlin/ok_used" ]] \
-  && [[ -d "tools/depcheck/testdata/scala/ok_used" ]] \
-  && [[ -d "tools/depcheck/testdata/csharp/ok_used" ]] \
-  && [[ -d "tools/depcheck/testdata/fsharp/ok_used" ]] \
-  && [[ -d "tools/depcheck/testdata/cc/ok_used" ]]; then
+if [[ -f "tools/depcheck/depcheck.py" ]] &&
+  [[ -f "tools/depcheck/BUILD.bazel" ]] &&
+  [[ -d "tools/depcheck/testdata/rust/ok_used" ]] &&
+  [[ -d "tools/depcheck/testdata/python/ok_used" ]] &&
+  [[ -d "tools/depcheck/testdata/js/ok_used" ]] &&
+  [[ -d "tools/depcheck/testdata/ts/ok_used" ]] &&
+  [[ -d "tools/depcheck/testdata/go/ok_used" ]] &&
+  [[ -d "tools/depcheck/testdata/java/ok_used" ]] &&
+  [[ -d "tools/depcheck/testdata/kotlin/ok_used" ]] &&
+  [[ -d "tools/depcheck/testdata/scala/ok_used" ]] &&
+  [[ -d "tools/depcheck/testdata/csharp/ok_used" ]] &&
+  [[ -d "tools/depcheck/testdata/fsharp/ok_used" ]] &&
+  [[ -d "tools/depcheck/testdata/cc/ok_used" ]]; then
   ok
 else
   bad "depcheck implementation or fixtures missing for #22/#306"
 fi
 
-echo "audit update guards harness: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "audit update guards harness"

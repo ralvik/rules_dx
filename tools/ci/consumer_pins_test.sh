@@ -12,19 +12,22 @@
 # with a floating action tag, and a malformed threshold value, must fail.
 set -euo pipefail
 
+# Shared workspace + runfiles helpers (issues #319, #323).
+# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
+
 workflow="$1"
 caller="$2"
 module="$3"
 
-command -v python3 >/dev/null || { echo "python3 is required" >&2; exit 1; }
+command -v python3 >/dev/null || {
+  echo "python3 is required" >&2
+  exit 1
+}
 
-scratch="$(mktemp -d)"
-trap 'rm -rf "$scratch"' EXIT
+dx_mkscratch scratch
 
-pass=0
-fail=0
-ok() { pass=$((pass + 1)); }
-bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
+dx_test_init
 
 # Starter references the reusable workflow by full commit SHA, once.
 if [[ "$(grep -c -E -e 'uses: rules_dx/\.github/workflows/reusable-consumer\.yml@[0-9a-f]{40}' "$caller")" == "1" ]]; then
@@ -76,8 +79,11 @@ fi
 # Coverage threshold fragment: extract the DX_MIN_COVERAGE block from
 # the coverage job (anchored to the `run: |` indent so the range cannot
 # bleed into the following steps) and execute it over a value matrix.
-awk '/^          extra=""$/,/^          fi$/ {sub(/^          /, ""); print}' "$workflow" > "$scratch/threshold.sh"
-grep -q 'DX_MIN_COVERAGE' "$scratch/threshold.sh" || { echo "threshold extraction missed the block" >&2; exit 1; }
+awk '/^          extra=""$/,/^          fi$/ {sub(/^          /, ""); print}' "$workflow" >"$scratch/threshold.sh"
+grep -q 'DX_MIN_COVERAGE' "$scratch/threshold.sh" || {
+  echo "threshold extraction missed the block" >&2
+  exit 1
+}
 if grep -q -E -e '^ *- (name|uses|run):' -e '^  [a-z-]+:' "$scratch/threshold.sh"; then
   echo "threshold extraction bled outside its block" >&2
   exit 1
@@ -88,7 +94,7 @@ threshold() { # value-or-unset, want_extra, want_exit
   {
     cat "$scratch/threshold.sh"
     echo 'printf "%s:%s" "$extra" "$?"'
-  } > "$script"
+  } >"$script"
   local out rc=0
   if [[ "$value" == "UNSET" ]]; then
     out="$(env -u DX_MIN_COVERAGE bash "$script" 2>&1)" || rc=$?
@@ -125,12 +131,11 @@ threshold "80;evil" "dx-ci: invalid min_coverage '80;evil': want e.g. 80 or 80.5
 # Negative control: float one action pin to its tag (the realistic
 # regression: `uses: actions/checkout@v7`); the pin check must fail.
 mutated="$scratch/mutated.yml"
-sed -E 's|@[0-9a-f]{40} # v([0-9]+)|@v\1|' "$workflow" > "$mutated"
+sed -E 's|@[0-9a-f]{40} # v([0-9]+)|@v\1|' "$workflow" >"$mutated"
 if grep -E -e 'uses: [^ ]+@(v[0-9]|main|master|latest)' "$mutated" >/dev/null; then
   ok
 else
   bad "negative control setup broken (no floating tag after mutation)"
 fi
 
-echo "consumer pins harness: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "consumer pins harness"

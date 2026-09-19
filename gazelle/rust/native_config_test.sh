@@ -7,37 +7,21 @@
 # emission, and ambiguous same-tool configs failing closed.
 set -euo pipefail
 
-# Portable hasher selection (issue #299): GNU `sha256sum` is absent on
-# macOS; `shasum -a 256` is the portable fallback. Linux behavior unchanged.
-if command -v sha256sum >/dev/null 2>&1; then
-  _sha256=(sha256sum)
-  _sha256_check=(sha256sum -c)
-else
-  _sha256=(shasum -a 256)
-  _sha256_check=(shasum -a 256 -c)
-fi
+# Shared workspace + runfiles helpers (issues #319, #323).
+# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../../tools/sh/lib.sh"
 
-# Portable realpath (issue #299): GNU `realpath` is absent on macOS;
-# `readlink -f` covers some platforms, python3 covers the rest.
-portable_realpath() {
-  if command -v realpath >/dev/null 2>&1; then
-    realpath "$1"
-  elif command -v readlink >/dev/null 2>&1 && readlink -f "$1" >/dev/null 2>&1; then
-    readlink -f "$1"
-  else
-    python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
-  fi
-}
+# Portable helpers via tools/sh/lib.sh dx_realpath/dx_sha256 (issues #299, #323).
 
-gazelle="$(portable_realpath "$1")"
+gazelle="$(dx_realpath "$1")"
 root="${TEST_TMPDIR}/workspace"
 mkdir -p "${root}/crate/src" "${root}/crate/styles/org"
 touch "${root}/WORKSPACE"
-printf 'pub fn current() {}\n' > "${root}/crate/src/lib.rs"
-printf 'edition = "2021"\n' > "${root}/crate/rustfmt.toml"
-printf '[formatting]\n' > "${root}/crate/taplo.toml"
-printf 'StylesPath = styles\n' > "${root}/crate/.vale.ini"
-printf 'extends: existence\n' > "${root}/crate/styles/org/Example.yml"
+printf 'pub fn current() {}\n' >"${root}/crate/src/lib.rs"
+printf 'edition = "2021"\n' >"${root}/crate/rustfmt.toml"
+printf '[formatting]\n' >"${root}/crate/taplo.toml"
+printf 'StylesPath = styles\n' >"${root}/crate/.vale.ini"
+printf 'extends: existence\n' >"${root}/crate/styles/org/Example.yml"
 
 (cd "${root}" && "${gazelle}" -repo_root="${root}")
 build="${root}/crate/BUILD.bazel"
@@ -54,9 +38,9 @@ if grep -q '":taplo_config"' "${build}"; then
   exit 1
 fi
 
-"${_sha256[@]}" "${build}" > "${TEST_TMPDIR}/first.sums"
+printf '%s  %s\n' "$(dx_sha256_file "${build}")" "${build}" >"${TEST_TMPDIR}/first.sums"
 (cd "${root}" && "${gazelle}" -repo_root="${root}")
-"${_sha256_check[@]}" "${TEST_TMPDIR}/first.sums" > /dev/null || {
+dx_sha256_check "${TEST_TMPDIR}/first.sums" >/dev/null || {
   echo "rerun was not idempotent" >&2
   exit 1
 }
@@ -84,7 +68,7 @@ fi
 
 rm -rf "${root:?}/crate"
 mkdir -p "${root}/broken"
-printf '# gazelle:dx_native_tools rustfmt bogus\n' > "${root}/broken/BUILD.bazel"
+printf '# gazelle:dx_native_tools rustfmt bogus\n' >"${root}/broken/BUILD.bazel"
 set +e
 output="$(cd "${root}" && "${gazelle}" -repo_root="${root}" 2>&1)"
 status=$?
@@ -101,7 +85,7 @@ fi
 
 rm -rf "${root:?}/broken"
 mkdir -p "${root}/ambiguous"
-cat > "${root}/ambiguous/BUILD.bazel" <<'EOF'
+cat >"${root}/ambiguous/BUILD.bazel" <<'EOF'
 load("@rules_dx//quality:native_config.bzl", "rustfmt_config")
 
 rustfmt_config(

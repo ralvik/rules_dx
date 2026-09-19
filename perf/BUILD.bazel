@@ -77,6 +77,7 @@ sh_test(
     data = [
         "baseline.json",
         "compare.py",
+        "//tools/sh:lib",
     ],
     tags = ["no-coverage"],
     # Bash-only harness is Linux-only (issue #299 shell contract).

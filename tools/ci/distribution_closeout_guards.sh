@@ -35,18 +35,14 @@ set -euo pipefail
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
-workspace="$(dx_workspace_root)"
-cd "$workspace"
+dx_cd_workspace
 
-pass=0
-fail=0
-ok() { pass=$((pass + 1)); }
-bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
+dx_test_init
 
 # #5 release hygiene policy: approval gate + gitignored outputs.
-if grep -q -F -e 'approval' CONTRIBUTING.md \
-  && grep -q -F -e 'dist/' .gitignore \
-  && grep -q -F -e 'release/' .gitignore; then
+if grep -q -F -e 'approval' CONTRIBUTING.md &&
+  grep -q -F -e 'dist/' .gitignore &&
+  grep -q -F -e 'release/' .gitignore; then
   ok
 else
   bad "release hygiene lost its approval policy or dist/release gitignore"
@@ -74,25 +70,25 @@ else
 fi
 
 # #78 dry run stays dispatch-only, publishes nothing either way.
-if grep -q -F -e 'workflow_dispatch' .github/workflows/publish-dry-run.yml \
-  && grep -q -F -e 'published' .github/workflows/publish-dry-run.yml; then
+if grep -q -F -e 'workflow_dispatch' .github/workflows/publish-dry-run.yml &&
+  grep -q -F -e 'published' .github/workflows/publish-dry-run.yml; then
   ok
 else
   bad "publish dry run lost its dispatch-only / nothing-publishes shape"
 fi
 
 # #184 GHCR stays a separate workflow from releases, gated push.
-if [[ -f ".github/workflows/ghcr.yml" ]] \
-  && grep -q -F -e 'workflow_dispatch' .github/workflows/ghcr.yml \
-  && grep -q -F -e 'approve' .github/workflows/ghcr.yml; then
+if [[ -f ".github/workflows/ghcr.yml" ]] &&
+  grep -q -F -e 'workflow_dispatch' .github/workflows/ghcr.yml &&
+  grep -q -F -e 'approve' .github/workflows/ghcr.yml; then
   ok
 else
   bad "GHCR workflow lost its separate-file / dispatch + approve gate shape"
 fi
 
 # #311 signing-first trust root named in the dry-run report order.
-if grep -q -F -e 'Sigstore keyless' .github/workflows/publish-dry-run.yml \
-  && grep -q -F -e 'issue #311 trust root' .github/workflows/publish-dry-run.yml; then
+if grep -q -F -e 'Sigstore keyless' .github/workflows/publish-dry-run.yml &&
+  grep -q -F -e 'issue #311 trust root' .github/workflows/publish-dry-run.yml; then
   ok
 else
   bad "publish dry run lost its #311 signing-first trust-root record"
@@ -113,10 +109,10 @@ else
 fi
 
 # Prior slices stay green.
-if [[ -f "tools/ci/release_hygiene.sh" ]] \
-  && [[ -f "tools/ci/publish_trust.sh" ]] \
-  && [[ -f "tools/ci/ghcr_hygiene.sh" ]] \
-  && [[ -f "tools/ci/ghcr_publish_guards.sh" ]]; then
+if [[ -f "tools/ci/release_hygiene.sh" ]] &&
+  [[ -f "tools/ci/publish_trust.sh" ]] &&
+  [[ -f "tools/ci/ghcr_hygiene.sh" ]] &&
+  [[ -f "tools/ci/ghcr_publish_guards.sh" ]]; then
   ok
 else
   bad "prior publication harnesses missing (release_hygiene/publish_trust/ghcr*)"
@@ -124,8 +120,8 @@ fi
 
 # #78/#184 approve gates stay default-closed (explicit owner approval
 # until standing approval exists).
-if grep -q -F -e 'default: false' .github/workflows/publish-dry-run.yml \
-  && grep -q -F -e 'default: false' .github/workflows/ghcr.yml; then
+if grep -q -F -e 'default: false' .github/workflows/publish-dry-run.yml &&
+  grep -q -F -e 'default: false' .github/workflows/ghcr.yml; then
   ok
 else
   bad "publish/ghcr workflows lost their default-closed approve gates (#78/#184)"
@@ -133,8 +129,8 @@ fi
 
 # #184 Bazelisk delegation stays pinned (launcher sha + 9.2.0 via
 # USE_BAZEL_VERSION, no ambient toolchains).
-if grep -q -F -e 'Bazelisk' .devcontainer/Dockerfile.prebuilt \
-  && grep -q -F -e 'USE_BAZEL_VERSION=9.2.0' .devcontainer/Dockerfile.prebuilt; then
+if grep -q -F -e 'Bazelisk' .devcontainer/Dockerfile.prebuilt &&
+  grep -q -F -e 'USE_BAZEL_VERSION=9.2.0' .devcontainer/Dockerfile.prebuilt; then
   ok
 else
   bad "Dockerfile.prebuilt lost its Bazelisk delegation pin (#184)"
@@ -157,8 +153,8 @@ fi
 
 # #311 SBOM + signing-first detail stays recorded in the dry-run
 # report order (owner-gated tooling, trust root shared with GHCR).
-if grep -q -F -e 'SBOM' .github/workflows/publish-dry-run.yml \
-  && grep -q -F -e 'Signing' .github/workflows/publish-dry-run.yml; then
+if grep -q -F -e 'SBOM' .github/workflows/publish-dry-run.yml &&
+  grep -q -F -e 'Signing' .github/workflows/publish-dry-run.yml; then
   ok
 else
   bad "publish dry run lost its SBOM/signing-first detail (#311)"
@@ -174,8 +170,8 @@ fi
 
 # #5 self-call smoke stays wired: consumer-ci + docs-ci prove the
 # versioned reusable workflows on this repo before consumers use them.
-if grep -q -F -e 'reusable-consumer' .github/workflows/ci.yml \
-  && grep -q -F -e 'reusable-docs' .github/workflows/ci.yml; then
+if grep -q -F -e 'reusable-consumer' .github/workflows/ci.yml &&
+  grep -q -F -e 'reusable-docs' .github/workflows/ci.yml; then
   ok
 else
   bad "ci.yml lost its consumer-ci/docs-ci self-call smoke (#5)"
@@ -191,8 +187,8 @@ fi
 
 # #54 E2E driver + format slices stay present alongside the case
 # convention (full green battery still open).
-if [[ -f "tools/ci/e2e.sh" ]] \
-  && [[ -f "tools/ci/e2e_format.sh" ]]; then
+if [[ -f "tools/ci/e2e.sh" ]] &&
+  [[ -f "tools/ci/e2e_format.sh" ]]; then
   ok
 else
   bad "E2E driver/format slices missing (e2e.sh/e2e_format.sh, #54)"
@@ -200,8 +196,8 @@ fi
 
 # #184 GHCR gate messages stay explicit: digest-pinned FROM, never
 # latest, build-only without approve (push/signing still gated).
-if grep -q -F -e 'never latest/bare tag' .github/workflows/ghcr.yml \
-  && grep -q -F -e 'build-only, nothing pushes' .github/workflows/ghcr.yml; then
+if grep -q -F -e 'never latest/bare tag' .github/workflows/ghcr.yml &&
+  grep -q -F -e 'build-only, nothing pushes' .github/workflows/ghcr.yml; then
   ok
 else
   bad "GHCR workflow lost its never-latest/build-only gate record (#184)"
@@ -244,8 +240,8 @@ fi
 # #184 scaffold + quota record stays explicit: the scaffold still floats
 # off the prebuilt digest until the first push, and GHCR quotas are
 # qualified on first push (this slice pushes nothing).
-if grep -q -F -e 'scaffold still references' .devcontainer/Dockerfile.prebuilt \
-  && grep -q -F -e 'GHCR quotas/retention are qualified on first push' .devcontainer/Dockerfile.prebuilt; then
+if grep -q -F -e 'scaffold still references' .devcontainer/Dockerfile.prebuilt &&
+  grep -q -F -e 'GHCR quotas/retention are qualified on first push' .devcontainer/Dockerfile.prebuilt; then
   ok
 else
   bad "Dockerfile.prebuilt lost its scaffold/quota record (#184)"
@@ -289,47 +285,47 @@ fi
 # verifier requires a Sigstore bundle plus identity/issuer, refuses
 # checksum-only, reports the TUF trust root, and fails before
 # install/exec; seed-host standalone packaging stays wired.
-if [[ -f "deploy/install/dx_verify.sh" ]] \
-  && grep -q -F -e 'checksum-only verification is not publisher-identity proof' deploy/install/dx_verify.sh \
-  && grep -q -F -e 'tuf-repo-cdn.sigstore.dev' deploy/install/dx_verify.sh \
-  && grep -q -F -e 'cosign verify-blob' deploy/install/dx_verify.sh; then
+if [[ -f "deploy/install/dx_verify.sh" ]] &&
+  grep -q -F -e 'checksum-only verification is not publisher-identity proof' deploy/install/dx_verify.sh &&
+  grep -q -F -e 'tuf-repo-cdn.sigstore.dev' deploy/install/dx_verify.sh &&
+  grep -q -F -e 'cosign verify-blob' deploy/install/dx_verify.sh; then
   ok
 else
   bad "install verifier lost its bundle-required / no-checksum-fallback / trust-root record (#26)"
 fi
 
-if grep -q -F -e 'never executed' deploy/install/dx_verify.sh \
-  && grep -q -F -e 'before any install' deploy/install/dx_verify.sh; then
+if grep -q -F -e 'never executed' deploy/install/dx_verify.sh &&
+  grep -q -F -e 'before any install' deploy/install/dx_verify.sh; then
   ok
 else
   bad "install verifier lost its fail-before-install/exec record (#26)"
 fi
 
-if grep -q -F -e 'dx_standalone' cli/cli/BUILD.bazel \
-  && grep -q -F -e 'archive_release(' cli/cli/BUILD.bazel; then
+if grep -q -F -e 'dx_standalone' cli/cli/BUILD.bazel &&
+  grep -q -F -e 'archive_release(' cli/cli/BUILD.bazel; then
   ok
 else
   bad "seed-host standalone archive missing (//cli/cli:dx_standalone, #26)"
 fi
 
-if grep -q -F -e '//deploy/install:dx_verify' docs/deploy/authoring.md \
-  && grep -q -F -e '//deploy/install:dx_verify' docs/environments/environment.md; then
+if grep -q -F -e '//deploy/install:dx_verify' docs/deploy/authoring.md &&
+  grep -q -F -e '//deploy/install:dx_verify' docs/environments/environment.md; then
   ok
 else
   bad "docs lost the install-verification owner record (#26)"
 fi
 
 # No-publish invariant: no tags claimed, no release outputs committed.
-if [[ -z "$(git tag --list 'v*' | head -1)" ]] \
-  && [[ -z "$(git ls-files 'dist/*' 'release/*' 2>/dev/null | head -1)" ]]; then
+if [[ -z "$(git tag --list 'v*' | head -1)" ]] &&
+  [[ -z "$(git ls-files 'dist/*' 'release/*' 2>/dev/null | head -1)" ]]; then
   ok
 else
   bad "a version tag or committed dist/release output appeared without owner approval"
 fi
 
 # No auto-publish workflow trigger smuggled in.
-if ! grep -rn -F -e 'tags:' .github/workflows/publish-dry-run.yml 2>/dev/null | grep -q . \
-  && ! grep -rn -F -e 'tags:' .github/workflows/ghcr.yml 2>/dev/null | grep -q .; then
+if ! grep -rn -F -e 'tags:' .github/workflows/publish-dry-run.yml 2>/dev/null | grep -q . &&
+  ! grep -rn -F -e 'tags:' .github/workflows/ghcr.yml 2>/dev/null | grep -q .; then
   ok
 else
   bad "a tag trigger appeared in publish/ghcr workflows without owner approval"
@@ -338,12 +334,12 @@ fi
 # #78/#311 seed exercised path stays explicit: standalone archive plus
 # draft dry-run plus SBOM plus signing dry-run plus BCR shape plus
 # verifier refusal staged under RUNNER_TEMP, publishing nothing either way.
-if grep -q -F -e 'dx-standalone.tar.gz' .github/workflows/publish-dry-run.yml \
-  && grep -q -F -e 'GH_RELEASE_DRY_RUN=1 bazel run //cli/cli:github_draft' .github/workflows/publish-dry-run.yml \
-  && grep -q -F -e 'bcr-shape.txt' .github/workflows/publish-dry-run.yml \
-  && grep -q -F -e 'verify-refusal.log' .github/workflows/publish-dry-run.yml \
-  && grep -q -F -e '//deploy/release:sbom_demo' .github/workflows/publish-dry-run.yml \
-  && grep -q -F -e 'RELEASE_SIGN_DRY_RUN=1 bazel run //deploy/release:signing_demo' .github/workflows/publish-dry-run.yml; then
+if grep -q -F -e 'dx-standalone.tar.gz' .github/workflows/publish-dry-run.yml &&
+  grep -q -F -e 'GH_RELEASE_DRY_RUN=1 bazel run //cli/cli:github_draft' .github/workflows/publish-dry-run.yml &&
+  grep -q -F -e 'bcr-shape.txt' .github/workflows/publish-dry-run.yml &&
+  grep -q -F -e 'verify-refusal.log' .github/workflows/publish-dry-run.yml &&
+  grep -q -F -e '//deploy/release:sbom_demo' .github/workflows/publish-dry-run.yml &&
+  grep -q -F -e 'RELEASE_SIGN_DRY_RUN=1 bazel run //deploy/release:signing_demo' .github/workflows/publish-dry-run.yml; then
   ok
 else
   bad "publish dry run lost its seed exercised path record (#78/#311 standalone + draft + SBOM + signing + BCR shape + verifier refusal)"
@@ -353,12 +349,12 @@ fi
 # carries the exercised seed steps plus draft/SBOM/signing/BCR/verify
 # detail with published False everywhere, so the nothing-publishes
 # ceiling cannot be narrowed.
-if grep -q -F -e '"exercised"' .github/workflows/publish-dry-run.yml \
-  && grep -q -F -e '"draft_dry_run"' .github/workflows/publish-dry-run.yml \
-  && grep -q -F -e '"bcr_shape"' .github/workflows/publish-dry-run.yml \
-  && grep -q -F -e '"verify_refusal"' .github/workflows/publish-dry-run.yml \
-  && grep -q -F -e '"sbom"' .github/workflows/publish-dry-run.yml \
-  && grep -q -F -e '"signing_dry_run"' .github/workflows/publish-dry-run.yml; then
+if grep -q -F -e '"exercised"' .github/workflows/publish-dry-run.yml &&
+  grep -q -F -e '"draft_dry_run"' .github/workflows/publish-dry-run.yml &&
+  grep -q -F -e '"bcr_shape"' .github/workflows/publish-dry-run.yml &&
+  grep -q -F -e '"verify_refusal"' .github/workflows/publish-dry-run.yml &&
+  grep -q -F -e '"sbom"' .github/workflows/publish-dry-run.yml &&
+  grep -q -F -e '"signing_dry_run"' .github/workflows/publish-dry-run.yml; then
   ok
 else
   bad "publish dry run lost its exercised report shape (#78/#311 exercised + draft/SBOM/signing/BCR/verify detail)"
@@ -366,12 +362,12 @@ fi
 
 # #311 full release path stays owned: matrix + SBOM + signing + BCR +
 # human-run driver wired with policy tests.
-if [[ -f "deploy/release/matrix.bzl" ]] \
-  && [[ -f "deploy/release/sbom.bzl" ]] \
-  && [[ -f "deploy/release/signing.bzl" ]] \
-  && [[ -f "deploy/release/bcr.bzl" ]] \
-  && [[ -f "deploy/release/release.sh" ]] \
-  && [[ -f "docs/deploy/release-runbook.md" ]]; then
+if [[ -f "deploy/release/matrix.bzl" ]] &&
+  [[ -f "deploy/release/sbom.bzl" ]] &&
+  [[ -f "deploy/release/signing.bzl" ]] &&
+  [[ -f "deploy/release/bcr.bzl" ]] &&
+  [[ -f "deploy/release/release.sh" ]] &&
+  [[ -f "docs/deploy/release-runbook.md" ]]; then
   ok
 else
   bad "full release path missing (deploy/release matrix/sbom/signing/bcr/release.sh + runbook, #311)"
@@ -384,5 +380,4 @@ else
   bad "publish dry run lost the release policy tests record (//deploy/release:all, #311)"
 fi
 
-echo "distribution closeout guards harness: $pass passed, $fail failed"
-[[ "$fail" == "0" ]]
+dx_test_summary "distribution closeout guards harness"
