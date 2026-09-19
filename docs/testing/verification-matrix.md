@@ -49,8 +49,12 @@ standard dogfood gates.
   renderer/site artifacts, cache and determinism measurements, guide prose with
   guide-step verification, and first-hour timing proof stay open under issue #310
   (see [Documentation](../documentation/README.md#contracts)); no working site claimed.
-- **Environment/codegen**: projection queries, replacement contracts,
-  boundary evidence (open work).
+- **Environment/codegen**: deferred/unsupported records plus fixture
+  evidence qualified seed-only under #309
+  (`bazel run //tools/ci:env_codegen_qualification`; public protocol,
+  Windows fallback, standalone, signing/trust, plus bootstrap/lock/roots/
+  collector/env-plan/node projection evidence with unproven tests as owned
+  gaps).
 
 ## Status
 
@@ -107,15 +111,17 @@ Accepted record of the as-built close-out battery. The full battery runs in
   laziness proofs, quality-cache aquery, depcheck contract, audit/update
   guards, wrapper sources, foundation maps, registry singularity, backlog
   contracts, GHCR hygiene and publish guards, perf/corpus verification,
-  widen-update loop, quality/execution/distribution/backlog guards, and
-  `:supported_evidence_gate`.
+  widen-update loop, quality/execution/distribution/backlog guards,
+  `:supported_evidence_gate`, `:quality_adapters_parity`, and
+  `:env_codegen_qualification`.
 - `dogfood-lint`, `dogfood-format`, `dogfood-typecheck`: corpus converge then
   `--check` no-op proof, plus lane-A trees `//python/... //javascript/...
   //rust/hello/...` where enforcing.
 - `devcontainer-check`, `docs-ci`, `consumer-ci` (build-only self-call).
 
 Green here (static guards on a clean tree, no full rebuild): `e2e_cases`
-3/3, `supported_evidence_gate` 20/20, `distribution_closeout_guards` 35/35.
+3/3, `supported_evidence_gate` 20/20, `distribution_closeout_guards` 35/35,
+`env_codegen_qualification` 23/23.
 Full `build`/`test` green is owned by CI on this tree; the last full-tree
 record is noted on the issue, not re-claimed here.
 
@@ -128,7 +134,12 @@ Remaining reds stay owned gaps, not green claims:
   Codecov opt-in, quotas, local-only remote evidence). First-party PR reporting is
   adopted under #254 (Codecov opt-in only). Non-seed cells stay platform-gated under #298.
 - Docs pipeline and environment/codegen stay open under #310 and #309 (see
-  [Documentation](../documentation/README.md#contracts)).
+  [Documentation](../documentation/README.md#contracts)). Environment/codegen
+  deferred records plus fixture evidence are qualified seed-only under #309
+  (`bazel run //tools/ci:env_codegen_qualification`; no junction/copy
+  fallback, no checksum-only fallback, no third-party plugin claim; bootstrap,
+  fidelity, spaces, stale-clean, IDE, atomic-commit, BEP, projection,
+  root-candidate, and cold/warm tests stay owned gaps).
 - Consumer-CI qualification stays open under #312; platform qualification
   beyond the seed host stays open under #298.
 - Non-dogfed paths stay open under #324.

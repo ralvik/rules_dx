@@ -117,4 +117,8 @@ broad traversal implementation to retain the adapter model's efficiency rational
   profile, registry, or global environment mutation occurs on any host.
 
 Environment configuration and public API conformance requirements are maintained in
-[Developer Environments](../environments/environment.md).
+[Developer Environments](../environments/environment.md). Deferred records
+(public contribution, Windows fallback, standalone, signing/trust) plus
+fixture evidence with owned gaps for the unproven required tests are
+qualified seed-only by `bazel run //tools/ci:env_codegen_qualification`
+(issue #309).
