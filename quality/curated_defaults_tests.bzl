@@ -1,15 +1,32 @@
-"""Unit tests for the frozen v1 curated defaults (issue #89 item 2).
+"""Unit tests for the versioned curated defaults (issue #89 item 2, issue #321).
 
 Pins the `quality/curated_defaults.bzl` manifest shape that the
 `//tools/ci:release_policy` shell harness diffs against the default
 lifecycle policy: every curated family keeps its exact default tool
 set, and the FORMAT_FROZEN formatter set never drifts without a major
-release. Additions to curated lint/audit membership arrive here with
-compat-qual + notes + prior-set override review, never silently.
+release. Additions to curated lint/audit membership arrive as registry
+data with compat-qual + notes + prior-set override review, never via a
+parallel allowlist: the frozen family pin is a subset check queried via
+`curated_families`, and `curated_schema_error` validates the versioned
+schema without pinning exact contents.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
-load(":curated_defaults.bzl", "CURATED_DEFAULTS", "FORMAT_FROZEN")
+load(":curated_defaults.bzl", "CURATED_DEFAULTS", "CURATED_SCHEMA_VERSION", "FORMAT_FROZEN", "curated_families", "curated_schema_error")
+
+# Frozen core families: every ID below must stay curated. Additions append
+# to the manifest data without editing this list; removals fail here plus
+# the release-policy harness.
+FROZEN_CURATED_FAMILIES = [
+    "javascript",
+    "json",
+    "markdown",
+    "python",
+    "rust",
+    "starlark",
+    "toml",
+    "typescript",
+]
 
 def curated_defaults_unit_tests(name):
     starlark_test(
@@ -17,18 +34,19 @@ def curated_defaults_unit_tests(name):
         mode = "unit",
         checks = [
             expect_equal(
-                "curated families stay frozen at eight",
-                sorted(CURATED_DEFAULTS.keys()),
-                [
-                    "javascript",
-                    "json",
-                    "markdown",
-                    "python",
-                    "rust",
-                    "starlark",
-                    "toml",
-                    "typescript",
-                ],
+                "curated schema version stays v1",
+                CURATED_SCHEMA_VERSION,
+                1,
+            ),
+            expect_equal(
+                "curated manifest schema validates",
+                curated_schema_error(),
+                "",
+            ),
+            expect_equal(
+                "frozen curated families stay curated (additions need no allowlist edit)",
+                [f for f in FROZEN_CURATED_FAMILIES if f not in curated_families()],
+                [],
             ),
             expect_equal(
                 "python curated defaults stay Ruff + Ty + pydoclint",
@@ -81,8 +99,8 @@ def curated_defaults_unit_tests(name):
                 },
             ),
             expect_equal(
-                "formatter set stays frozen (major-release gate)",
-                FORMAT_FROZEN,
+                "formatter set stays frozen for the core families (major-release gate)",
+                {f: FORMAT_FROZEN[f] for f in FROZEN_CURATED_FAMILIES},
                 {
                     "javascript": ["biome"],
                     "json": ["prettier"],

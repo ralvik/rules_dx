@@ -70,10 +70,14 @@ The ruleset owns one versioned registry of canonical lowercase IDs and each clas
 source shapes. Admissibility may use basename, extension, and authoritative provider semantics.
 It is not equivalent to comparing the class ID with a file extension. This supports cases such
 as extensionless scripts, Starlark `BUILD` files, and ambiguous C-family headers.
-Hardcoded inventories stay open under issue #321 (curated defaults, parity deferrals,
-adapter and class-to-family maps, codegen allowlists, tag charset allowlist, and
-license and exception structs move to registry query or discovery plus versioned schema
-validation so additions do not need allowlist edits).
+Inventories are versioned registry queries (issue #321): curated defaults, parity deferrals,
+adapter and class-to-family maps, codegen pairs, tag charset, and license/exception
+policy validate via versioned schemas (`quality/registry.bzl`,
+`SOURCES_REGISTRY_SCHEMA_VERSION`, `ADAPTER_REGISTRY_SCHEMA_VERSION`,
+`CURATED_SCHEMA_VERSION`, `PARITY_SCHEMA_VERSION`, `CODEGEN_SCHEMA_VERSION`,
+`TAG_SCHEMA_VERSION`, `LICENSE_POLICY_SCHEMA_VERSION`,
+`EXCEPTION_SCHEMA_VERSION`) and consumers query instead of duplicating
+allowlists, so additions edit registry data plus compat, never parallel lists.
 
 Once approved and exported, class IDs are public compatibility surface:
 

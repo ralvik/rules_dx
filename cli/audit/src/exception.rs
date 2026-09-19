@@ -16,6 +16,15 @@
 
 use chrono::{Datelike, NaiveDate};
 
+/// Versioned risk-exception schema (issue #321).
+///
+/// Exceptions are data validated via `validate_exception` / `check_expiry` /
+/// `check_applies` plus `version_in_scope`, never a hardcoded allowlist:
+/// adding an advisory, package, or version scope edits the policy file data
+/// only. This version marks the validated struct shape; bumps are explicit,
+/// never silent drift.
+pub const EXCEPTION_SCHEMA_VERSION: u32 = 1;
+
 /// One risk-acceptance exception: narrow, explained, version-scoped,
 /// and expiring. Field shapes mirror the committed policy file so the
 /// future TOML loader cannot reinterpret them.
@@ -336,5 +345,17 @@ mod tests {
     fn version_scopes_exclude_prereleases_from_bare_ranges() {
         assert!(!version_in_scope(">=1.0.0", "2.0.0-alpha"));
         assert!(version_in_scope(">=1.0.0-alpha, <2.0.0", "1.0.0-alpha"));
+    }
+
+    #[test]
+    fn exception_schema_stays_versioned_without_allowlist() {
+        assert_eq!(EXCEPTION_SCHEMA_VERSION, 1);
+        // New advisories/packages/scopes are data validated via the shared
+        // lifecycle, never struct edits.
+        let mut novel = sample();
+        novel.advisory = "GHSA-novel-0000-0001".to_owned();
+        novel.package = "brand-new-dep".to_owned();
+        novel.versions = ">=9.0.0, <10.0.0".to_owned();
+        validate_exception(&novel, "2026-09-14").expect("novel data validates");
     }
 }

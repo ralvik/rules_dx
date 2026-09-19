@@ -72,6 +72,12 @@ DX_CODEGEN_PLAN_OUTPUT_GROUP = "dx_codegen_plans"
 # missing, or duplicate artifacts and never scans `bazel-out`.
 DX_CODEGEN_SHARD_SUFFIX = ".dxcodegen.pb"
 
+# Versioned codegen-pair schema (issue #321). Consumers query via
+# `codegen_admitted_pairs` and `codegen_pair_error` instead of duplicating
+# the admitted list, so adding a generator/language pair edits this one
+# data tuple plus O33 qualification, never a parallel allowlist.
+CODEGEN_SCHEMA_VERSION = 1
+
 # Admitted first-release generator/language pairs, slice 1. Each entry is
 # a (schema kind, generated file class) tuple. Later M25 slices extend
 # this tuple only through the O33 qualification recorded above.
@@ -294,6 +300,40 @@ def codegen_plan_fingerprint(records):
         }
         for record in merged
     ])
+
+def codegen_admitted_pairs():
+    """Returns the admitted generator/language pairs via registry query.
+
+    Derived from `DX_CODEGEN_ADMITTED_PAIRS`, never duplicated, so adding
+    a pair edits the registry data only (issue #321).
+    """
+    return DX_CODEGEN_ADMITTED_PAIRS
+
+def codegen_schema_error():
+    """Validates the versioned codegen-pair schema (issue #321).
+
+    Checks data shape without pinning exact contents, so adding a pair
+    edits the admitted data only: version is v1, the list is non-empty
+    with unique canonical (schema_kind, language) tuples.
+
+    Returns:
+      "" when valid, else the failure reason.
+    """
+    if CODEGEN_SCHEMA_VERSION != 1:
+        return "codegen: unsupported schema v" + str(CODEGEN_SCHEMA_VERSION) + " (want v1)"
+    if type(DX_CODEGEN_ADMITTED_PAIRS) != "tuple" or len(DX_CODEGEN_ADMITTED_PAIRS) == 0:
+        return "codegen: want a non-empty admitted-pair tuple (schema v1)"
+    seen = {}
+    for pair in DX_CODEGEN_ADMITTED_PAIRS:
+        if type(pair) != "tuple" or len(pair) != 2:
+            return "codegen: bad admitted pair '" + str(pair) + "': want (schema_kind, language)"
+        for token in pair:
+            if type(token) != "string" or token == "":
+                return "codegen: bad admitted pair '" + str(pair) + "': tokens must be non-empty strings"
+        if pair in seen:
+            return "codegen: duplicate admitted pair '" + str(pair) + "'"
+        seen[pair] = True
+    return ""
 
 def codegen_pair_error(schema_kind, language):
     """Validates one generator/language pair against the O33 freeze.

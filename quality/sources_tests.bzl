@@ -1,15 +1,18 @@
-"""Load tests pinning the frozen semantic-class registry (M03 freeze for O15).
+"""Versioned semantic-class registry tests (M03 freeze for O15, issue #321).
 
-Class IDs are public compatibility surface: this test fails on any rename,
-removal, merge, narrowing, reorder, or unreviewed addition. Adding a class
-or broadening one requires adapter and policy compatibility tests first.
+Class IDs are public compatibility surface: removals, renames, merges, or
+narrowings fail via the frozen core pin plus adapter/parity compat. Additions
+edit the registry data only and never this allowlist: the frozen pin is a
+subset check (every frozen ID stays known) plus versioned schema validation,
+queried via `is_known_semantic_class` / `sources_schema_error`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
-load(":sources.bzl", "KNOWN_SEMANTIC_FILE_CLASSES", "RUST")
+load(":sources.bzl", "KNOWN_SEMANTIC_FILE_CLASSES", "RUST", "SOURCES_REGISTRY_SCHEMA_VERSION", "is_known_semantic_class", "sources_schema_error")
 
-# Frozen registry pin: mirrors KNOWN_SEMANTIC_FILE_CLASSES element for
-# element, so any registry edit fails this test until the pin is reviewed.
+# Frozen core pin: every ID below must stay known. Additions append to the
+# registry data without editing this list; removals/renames fail here plus
+# adapter/parity compat.
 FROZEN_SEMANTIC_FILE_CLASSES = [
     "text",
     "c",
@@ -66,9 +69,19 @@ def sources_registry_tests(name):
         mode = "load",
         checks = [
             expect_equal(
-                "registry matches the frozen pin",
-                KNOWN_SEMANTIC_FILE_CLASSES,
-                FROZEN_SEMANTIC_FILE_CLASSES,
+                "sources schema version stays v1",
+                SOURCES_REGISTRY_SCHEMA_VERSION,
+                1,
+            ),
+            expect_equal(
+                "sources registry schema validates",
+                sources_schema_error(),
+                "",
+            ),
+            expect_equal(
+                "frozen core IDs stay known (additions need no allowlist edit)",
+                [c for c in FROZEN_SEMANTIC_FILE_CLASSES if not is_known_semantic_class(c)],
+                [],
             ),
             expect_equal("RUST class ID", RUST, "rust"),
         ],

@@ -14,6 +14,13 @@ from convergence/interaction/performance fixtures, never from user list
 order; this lexical pick is flagged for review when real adapters land.
 """
 
+# Versioned registry schema for the adapter taxonomy (issue #321).
+# Consumers query via `real_supported_classes`, `is_known_adapter_tool`,
+# `is_classified`, and `adapter_registry_schema_error` instead of
+# duplicating the maps, so adding a language/tool edits this one data
+# registry plus parity/compat, never a parallel allowlist.
+ADAPTER_REGISTRY_SCHEMA_VERSION = 1
+
 # Synthetic tool ID to capability to supported semantic file classes.
 # Mirrors the `//quality:fixture_policy` shape: `lint-a` is selected by two
 # families (proves cross-family union into one stage), `lint-b` and `fmt-a`
@@ -247,3 +254,78 @@ def real_supported_classes(tool_id, capability):
         fail("adapters: unknown tool '" + tool_id +
              "': not in the real adapter registry")
     return sorted(REAL_ADAPTERS[tool_id].get(capability, []))
+
+def is_known_adapter_tool(tool_id):
+    """Reports whether a tool ID is in the versioned adapter registry.
+
+    Args:
+      tool_id: candidate stable built-in tool identifier.
+
+    Returns:
+      True when the tool is a known `REAL_ADAPTERS` key.
+    """
+    return tool_id in REAL_ADAPTERS
+
+def is_classified(class_id):
+    """Reports whether a class is in the versioned class-to-family map.
+
+    Args:
+      class_id: candidate semantic file-class ID.
+
+    Returns:
+      True when the class has exactly one owning family in
+      `REAL_CLASS_TO_FAMILY`.
+    """
+    return class_id in REAL_CLASS_TO_FAMILY
+
+def registry_families():
+    """Returns the sorted unique owning families in the registry."""
+    seen = {}
+    for class_id in REAL_CLASS_TO_FAMILY:
+        seen[REAL_CLASS_TO_FAMILY[class_id]] = True
+    return sorted(seen.keys())
+
+def registry_tools():
+    """Returns the sorted known real adapter tool IDs."""
+    return sorted(REAL_ADAPTERS.keys())
+
+def _is_canonical_token(text):
+    if text == "":
+        return False
+    for c in text.elems():
+        if c not in "abcdefghijklmnopqrstuvwxyz0123456789_":
+            return False
+    return True
+
+def adapter_registry_schema_error():
+    """Validates the versioned adapter-registry schema (issue #321).
+
+    Checks data shape without pinning exact contents, so adding a
+    language/tool edits the registry data only: version is v1, every
+    class and family spelling is canonical, every adapter capability
+    names a known capability with canonical classes, and every
+    adapter-backed class is classified.
+
+    Returns:
+      "" when valid, else the failure reason.
+    """
+    if ADAPTER_REGISTRY_SCHEMA_VERSION != 1:
+        return "adapter registry: unsupported schema v" + str(ADAPTER_REGISTRY_SCHEMA_VERSION) + " (want v1)"
+    for class_id in REAL_CLASS_TO_FAMILY:
+        if not _is_canonical_token(class_id):
+            return "adapter registry: non-canonical class '" + str(class_id) + "'"
+        family = REAL_CLASS_TO_FAMILY[class_id]
+        if not _is_canonical_token(family):
+            return "adapter registry: non-canonical family '" + str(family) + "' for class '" + class_id + "'"
+    for tool_id in REAL_ADAPTERS:
+        if not _is_canonical_token(tool_id):
+            return "adapter registry: non-canonical tool '" + str(tool_id) + "'"
+        for capability in REAL_ADAPTERS[tool_id]:
+            if capability not in ["audit", "format", "lint", "typecheck"]:
+                return "adapter registry: unknown capability '" + capability + "' for tool '" + tool_id + "'"
+            for class_id in REAL_ADAPTERS[tool_id][capability]:
+                if not _is_canonical_token(class_id):
+                    return "adapter registry: non-canonical class '" + str(class_id) + "' for tool '" + tool_id + "'"
+                if class_id not in REAL_CLASS_TO_FAMILY:
+                    return "adapter registry: tool '" + tool_id + "' names unclassified class '" + class_id + "'"
+    return ""
