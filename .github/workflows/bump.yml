@@ -1,0 +1,157 @@
+# Widen-one-requirement PR loop (issue #260): scheduled first-party
+# alternative to Renovate. One explicit widen operation per run
+# (`dx bump <set:package> <version>`), one dep per PR, never batch, with an
+# automerge on/off toggle only -- no grouping, schedule, or dashboard knobs.
+#
+# Loop (widen-one): discover outdated (stable only, prerelease follows
+# upstream resolver/project config) via upstream registry clients (BCR /
+# crates.io / npm / Go proxy / GitHub releases, never custom HTTP) → widen
+# one requirement with `dx bump` → run `dx update <that-set>` for
+# resolver-owned lock refresh (transitives stay resolver-governed, no forcing
+# newest) → run the bump-PR verification (regen evidence,
+# `preset.update --verify-only` flag-diff, `bazel build //...`,
+# `bazel test //...`, coverage/dogfood gates per
+# docs/contributing/local-workflows.md) → if green open one PR, if red
+# discard and record → reset to clean tree → next dep.
+#
+# Runner: scheduled weekly plus manual dispatch, `GITHUB_TOKEN` for PR
+# creation, concurrency control so N open PRs do not stampede CI; failures
+# never retry-until-green; fork-safety (fork runs plan only, never push or
+# open PRs with write credentials) and the human merge path from
+# docs/contributing/automation.md preserved.
+#
+# Hygiene (issue #80): Bazelisk installs go through the single
+# `.github/actions/setup-bazelisk` composite action; every third-party action
+# is pinned to a commit SHA with its tag in a trailing comment.
+
+name: bump
+
+on:
+  schedule:
+    # Weekly Monday before 5am, mirroring the retained Renovate fallback
+    # schedule until issue #3 decides its disposition.
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      selector:
+        description: "Single widen selector (set:package, e.g. cargo:anyhow). One dep per run, never batch."
+        required: false
+        default: ""
+      version:
+        description: "New version for the single selector (exact semver, or SHA for github-actions)."
+        required: false
+        default: ""
+      automerge:
+        description: "Automerge toggle (on/off only): when on, auto-merge solely on the full required-check set."
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bump-widen-one-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  widen-one:
+    name: widen-one-requirement loop (one dep per PR)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-seed-
+      - name: Plan single widen (dry-run, never batch)
+        env:
+          SELECTOR: ${{ inputs.selector }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SELECTOR:-}" || -z "${VERSION:-}" ]]; then
+            echo "No selector/version inputs: scheduled discovery proposes the next stable outdated dep via upstream clients (BCR/crates.io/npm/Go proxy/GitHub releases); this run plans the loop without widening."
+            echo "Discovery policy: stable only; prerelease follows upstream resolver/project config, never a private policy."
+            exit 0
+          fi
+          # Exactly one requirement per invocation, never batch.
+          bazel run --noshow_progress //cli/cli:dx -- bump "$SELECTOR" "$VERSION" --dry-run
+      - name: Widen one requirement plus resolver-owned refresh
+        if: inputs.selector != '' && inputs.version != ''
+        env:
+          SELECTOR: ${{ inputs.selector }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          # Explicit widen owns the single-requirement rewrite; dx update
+          # keeps its never-rewrites contract and refreshes locks only.
+          bazel run --noshow_progress //cli/cli:dx -- bump "$SELECTOR" "$VERSION"
+          set_name="${SELECTOR%%:*}"
+          case "$set_name" in
+            cargo|npm|go|gomod) bazel run --noshow_progress //cli/cli:dx -- update "$set_name" || exit 1 ;;
+            *) echo "File-only set ($set_name): no resolver refresh; preset flag-diff review plus build below." ;;
+          esac
+      - name: Bump-PR verification (regen, flag-diff, build, test)
+        if: inputs.selector != '' && inputs.version != ''
+        run: |
+          set -euo pipefail
+          bazel run --noshow_progress //cli/cli:dx -- generate --check //...
+          bazel run --noshow_progress //tools/bazelrc:preset.update -- --verify-only
+          bazel build --noshow_progress //...
+          bazel test --noshow_progress //...
+      - name: Open one PR if green (fork-safe, no retry-until-green)
+        if: inputs.selector != '' && inputs.version != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SELECTOR: ${{ inputs.selector }}
+          VERSION: ${{ inputs.version }}
+          AUTOMERGE: ${{ inputs.automerge }}
+        run: |
+          set -euo pipefail
+          head_repo="${{ github.event.pull_request.head.repo.full_name || github.repository }}"
+          base_repo="${{ github.repository }}"
+          if [[ "${GITHUB_EVENT_NAME:-}" == "pull_request" && "$head_repo" != "$base_repo" ]]; then
+            echo "Fork PR detected ($head_repo != $base_repo): plan only, never push or open PRs with write credentials (fork-safety)."
+            exit 0
+          fi
+          if [[ -z "$(git status --porcelain)" ]]; then
+            echo "Nothing widened: record and stop (failures never retry-until-green)."
+            exit 0
+          fi
+          branch="bump/${SELECTOR//[^A-Za-z0-9_.-]/-}-${VERSION//[^A-Za-z0-9_.-]/-}"
+          git checkout -b "$branch"
+          git add -A
+          git -c user.name="dx-bump" -c user.email="dx-bump@local" commit -m "bump $SELECTOR to $VERSION (widen-one, one dep per PR)"
+          git push --set-upstream origin "$branch"
+          # One dep per PR, never batch.
+          gh pr create --title "bump $SELECTOR to $VERSION" --body "Widen-one-requirement loop (issue #260): one dep per PR, never batch. Verification: regen, preset flag-diff, bazel build //..., bazel test //.... Automerge toggle: $AUTOMERGE (on merges solely on the full required-check set; off leaves the PR open). Human merge path preserved." --label dependencies
+          if [[ "$AUTOMERGE" == "true" ]]; then
+            # Automerge toggle only: auto-merge solely on the full
+            # required-check set; no other knobs.
+            gh pr merge --auto --squash "$branch"
+          else
+            echo "Automerge off: leaving the PR open for human merge."
+          fi
+      - name: Reset to clean tree (next dep starts clean)
+        if: always()
+        run: |
+          set -euo pipefail
+          git reset --hard HEAD || true
+          git clean -fd || true
+          git checkout main 2>/dev/null || git checkout - 2>/dev/null || true
+          echo "Tree reset: next dep starts from a clean tree; red runs are discarded and recorded above, never retried until green."
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### bump widen-one — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Loop: dx bump one requirement (never batch) then dx update for resolver-owned refresh, verified with regen + flag-diff + build + test; one dep per PR with automerge toggle only; concurrency + GITHUB_TOKEN + fork-safety + human merge path (issue #260)." >> "$GITHUB_STEP_SUMMARY"

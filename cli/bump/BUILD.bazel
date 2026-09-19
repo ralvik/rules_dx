@@ -1,0 +1,43 @@
+load("@rules_dx//quality:fixtures.bzl", "real_source_target")
+
+"""Explicit widen-one-requirement planning for `dx bump` (issue #260)."""
+
+load("//rust/rules:defs.bzl", "dx_rust_crate")
+
+package(default_visibility = [
+    "//cli:__pkg__",
+    "//cli:__subpackages__",
+])
+
+# M02 leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# `dx_bump` + `dx_bump_test` + fmt/clippy tests +
+# `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
+dx_rust_crate(
+    name = "dx_bump",
+    package_name = "cli/dx_bump",
+    srcs = [
+        "src/lib.rs",
+        "src/request.rs",
+        "src/sets.rs",
+        "src/version.rs",
+    ],
+    deps = [
+        "semver",
+        "serde",
+        "serde_json",
+        "thiserror",
+        "toml",
+    ],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = ["Cargo.toml"],
+)

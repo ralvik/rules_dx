@@ -286,6 +286,64 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
             }
         }
     }
+    if command == Command::Bump {
+        // Bump plans through `dx_bump` (issue #260): exactly one
+        // `set:package` selector plus one new version
+        // (`dx bump <selector> <version>`), mutating without confirmation.
+        // Thresholds, standard reports, and check mode do not apply on
+        // this path; never batch (one requirement per invocation).
+        if check {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--check".to_owned(),
+            });
+        }
+        if fail_on_name != "warning" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--fail-on".to_owned(),
+            });
+        }
+        // `bump` supports `--output=json` like `update` (dry-run planning
+        // emits `command_started`/`command_finished`; live execution adds
+        // the widen `notice`/`error`); `--output=diff` has no patch to
+        // emit so it fails fast here, with the shared `supports_diff`
+        // gate below as backup.
+        if output_name == "diff" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--output=diff".to_owned(),
+            });
+        }
+        if let Some(request) = reports.first() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: format!("--report={}={}", request.format, request.destination),
+            });
+        }
+        if pin.is_some() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--pin".to_owned(),
+            });
+        }
+        if !bazel_options.is_empty() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--".to_owned(),
+            });
+        }
+        if targets.len() != 2 {
+            return Err(ArgsError::MissingValue {
+                option: "<selector> <version>".to_owned(),
+            });
+        }
+        for scope in &targets {
+            if scope.is_empty() || scope.starts_with(':') {
+                return Err(scope_error(scope));
+            }
+        }
+    }
     if command.is_workflow() {
         // Workflow commands run Bazel verbs directly with Bazel-owned
         // status: finding thresholds and check-mode mutation previews do
@@ -1097,6 +1155,85 @@ mod tests {
     }
 
     #[test]
+    fn bump_needs_exactly_one_selector_plus_version() {
+        // `dx bump <selector> <version>` (issue #260): one requirement,
+        // never batch, mutating without confirmation.
+        let bump = parse(&args(&["bump", "cargo:anyhow", "1.2.3"])).expect("parse bump");
+        assert_eq!(bump.command, Command::Bump);
+        assert_eq!(bump.command.name(), "bump");
+        assert!(bump.command.is_audit_update());
+        assert!(!bump.command.is_workflow());
+        assert!(!bump.command.is_adoption());
+        assert!(!bump.command.is_managed());
+        assert_eq!(
+            bump.targets,
+            vec!["cargo:anyhow".to_owned(), "1.2.3".to_owned()]
+        );
+        assert_eq!(
+            parse(&args(&["bump"])),
+            Err(ArgsError::MissingValue {
+                option: "<selector> <version>".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["bump", "cargo:anyhow"])),
+            Err(ArgsError::MissingValue {
+                option: "<selector> <version>".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["bump", "cargo:anyhow", "1.2.3", "npm:react"])),
+            Err(ArgsError::MissingValue {
+                option: "<selector> <version>".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["bump", "cargo:anyhow", "1.2.3", "--check"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "bump",
+                option: "--check".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["bump", "cargo:anyhow", "1.2.3", "--fail-on=error"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "bump",
+                option: "--fail-on".to_owned(),
+            })
+        );
+        let got =
+            parse(&args(&["bump", "cargo:anyhow", "1.2.3", "--output=json"])).expect("bump json");
+        assert_eq!(got.command, Command::Bump);
+        assert_eq!(got.output, OutputMode::Json);
+        assert_eq!(
+            parse(&args(&["bump", "cargo:anyhow", "1.2.3", "--output=diff"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "bump",
+                option: "--output=diff".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&[
+                "bump",
+                "cargo:anyhow",
+                "1.2.3",
+                "--report=sarif=out.sarif"
+            ])),
+            Err(ArgsError::UnsupportedOption {
+                command: "bump",
+                option: "--report=sarif=out.sarif".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["bump", "cargo:anyhow", "1.2.3", "--", "--jobs=4"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "bump",
+                option: "--".to_owned(),
+            })
+        );
+    }
+
+    #[test]
     fn run_rejects_machine_output_and_reports() {
         assert_eq!(
             parse(&args(&["run", "//app:bin", "--output=json"])),
@@ -1150,6 +1287,12 @@ mod tests {
             assert_eq!(got.output, OutputMode::Json, "command: {command}");
             assert!(got.command.supports_json(), "command: {command}");
         }
+        // Bump is JSON-capable with its required positionals
+        // (`dx bump <selector> <version>` never runs bare).
+        let got =
+            parse(&args(&["bump", "cargo:anyhow", "1.2.3", "--output=json"])).expect("bump json");
+        assert_eq!(got.output, OutputMode::Json);
+        assert!(got.command.supports_json());
         let got = parse(&args(&["status", "--output=json"])).expect("status json");
         assert_eq!(got.output, OutputMode::Json);
         assert!(Command::Status.supports_json());
@@ -1196,6 +1339,7 @@ mod tests {
             vec!["audit", "--output=diff"],
             vec!["update", "--output=diff"],
             vec!["status", "--output=diff"],
+            vec!["bump", "cargo:anyhow", "1.2.3", "--output=diff"],
         ] {
             assert_eq!(
                 parse(&args(&words)),

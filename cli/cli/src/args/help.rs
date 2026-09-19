@@ -123,6 +123,8 @@ pub(crate) fn render_command_help(command: Command) -> String {
         Command::Version => {
             "Usage: dx [global-options] version [--check] [--pin <version>|--rollback]"
         }
+        Command::Update => "Usage: dx [global-options] update [selector ...]",
+        Command::Bump => "Usage: dx [global-options] bump <set:package> <version>",
         _ => "Usage: dx [global-options] <command> [scope ...] [-- bazel-options ...]",
     };
     let scopes = match command {
@@ -130,6 +132,8 @@ pub(crate) fn render_command_help(command: Command) -> String {
         Command::Bazel => "Scopes: none (raw Bazel forwarding; no dx scope resolution).",
         Command::Deploy => "Scopes: exactly one main-workspace label (//pkg:target); patterns (//...), multiple labels, and file/path scopes are usage failures.",
         Command::Run => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. No scope selects //....",
+        Command::Update => "Scopes: dependency-set/package/target selectors (cargo|npm|maven|nuget|go, set:package, labels/paths); bare run updates all sets.",
+        Command::Bump => "Scopes: exactly one `set:package` plus one new version (bazel|cargo|npm|go|github-actions); never batch.",
         _ => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. No scope selects //....",
     };
     let mut out = String::new();

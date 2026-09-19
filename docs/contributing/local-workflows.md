@@ -130,17 +130,21 @@ and the inventory in `bazel test //...`. Owned build profiles
 (`dx_debug`/`dx_dev`/`dx_release`) are reviewed the same way; see
 [ADR 0021](../decisions/0021-build-profiles.md).
 
-Version bumps flow through Renovate out of the box
-(open work): `dx init`
+Version bumps flow through the native widen-one-requirement loop
+(delivered, issue #260) with Renovate retained as fallback: `dx init`
 scaffolds `renovate.json` absent-only with the full manager set
 (`bazel` over `.bazelversion` plus Cargo, npm/pnpm, GitHub Actions,
-Go), grouped and scheduled weekly. Renovate proposes pins while
-`dx update` applies and verifies; bump PRs run the manual loop
-(regen, flag-diff review, test-pin updates, full verification) per
-the [automation policy](automation.md). Auto-merge stays off by
-default; when enabled it is update-only on green required checks.
+Go), grouped and scheduled weekly. `dx bump <set:package> <version>` widens
+one declared requirement (never batch), then `dx update <set>` applies the
+resolver-owned lock refresh; bump PRs run the loop (discover stable-only,
+widen one, update, regen, flag-diff review, test-pin updates,
+full verification) per the [automation policy](automation.md). Each iteration
+resets to a clean tree before the next dep. Auto-merge stays off by
+default; when enabled it is update-only on green required checks (one dep per
+PR, toggle only).
 Bazel-surface PR shape: version-bump only with regen evidence, flag-diff review,
-pin updates, and full verification.
+pin updates, and full verification (`bazel build //...`, `bazel test //...`,
+coverage/dogfood).
 
 ## Linux-First Bring-Up
 

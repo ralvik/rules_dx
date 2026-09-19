@@ -1,5 +1,5 @@
 {
-  "checksum": "b025f424f50267bf5174a122d63b299fe87ec407322c522fcc41f10c2f68cd24",
+  "checksum": "bb1555010e12343603d0fda3447b9d27eb945319d11c08e2c88bc43872bcd7ca",
   "conditions": {
     "aarch64-apple-darwin": [
       "aarch64-apple-darwin"
@@ -2348,6 +2348,45 @@
         {
           "Library": {
             "crate_name": "dx_bep",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "0.0.0"
+    },
+    "dx_bump 0.0.0": {
+      "common_attrs": {
+        "deps": [
+          {
+            "id": "semver 1.0.27",
+            "target": "semver"
+          },
+          {
+            "id": "serde 1.0.229",
+            "target": "serde"
+          },
+          {
+            "id": "serde_json 1.0.151",
+            "target": "serde_json"
+          },
+          {
+            "id": "thiserror 2.0.20",
+            "target": "thiserror"
+          },
+          {
+            "id": "toml 1.1.6+spec-1.1.0",
+            "target": "toml"
+          }
+        ],
+        "edition": "2021"
+      },
+      "library_target_name": "dx_bump",
+      "name": "dx_bump",
+      "repository": null,
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "dx_bump",
             "crate_root": "src/lib.rs"
           }
         }
@@ -10865,6 +10904,7 @@
     "dx_atomic_fs 0.0.0": "cli/dx_atomic_fs",
     "dx_audit 0.0.0": "cli/dx_audit",
     "dx_bep 0.0.0": "cli/dx_bep",
+    "dx_bump 0.0.0": "cli/dx_bump",
     "dx_ci 0.0.0": "cli/dx_ci",
     "dx_clean 0.0.0": "cli/dx_clean",
     "dx_cli 0.0.0": "cli/dx_cli",

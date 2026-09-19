@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
-# Widen-one-requirement + dx update PR loop contract (issue #260, seed slice).
+# Widen-one-requirement + dx update PR loop contract (issue #260, delivered).
 #
 # `dx update` is within-constraints only (live resolver execution delivered
-# in #19) and Renovate proposes bumps today. The owner wants a minimal
-# first-party alternative: one explicit widen operation (separate from
-# `dx update`, e.g. `dx bump <selector> <version>`) plus a one-dep-per-PR
-# loop with an automerge on/off toggle only -- no grouping, schedule, or
-# dashboard options. No such widen-then-update loop exists yet.
+# in #19) and Renovate is retained as fallback. The minimal first-party
+# alternative is delivered: one explicit widen operation (separate from
+# `dx update`, `dx bump <selector> <version>`) plus a one-dep-per-PR loop
+# with an automerge on/off toggle only -- no grouping, schedule, or
+# dashboard options.
 #
-# This harness machine-checks the contract half verifiable on a clean
-# tree today (12 checks): the all-ecosystems v1 manager set, the
-# Renovate fallback retained, the never-rewrites invariant in code and
-# docs, the #19 resolver prerequisite (now delivered), the manual bump-PR verification
-# loop docs, the ADR 0006 narrow exception, the ADR 0008 exact-pin
-# policy, and the no-false-claim gaps (no widen command, no loop
-# workflow). The widen implementation, library-first registry clients,
-# loop orchestration, scheduled runner, and renovate.json disposition
-# stay open under #260 (live `dx update` now runs; widen stays unimplemented).
+# This harness machine-checks the delivered contract on a clean tree
+# (12 checks): the all-ecosystems v1 manager set, the Renovate fallback
+# retained, the never-rewrites invariant in code and docs (update keeps it,
+# bump owns the single-requirement rewrite), the #19 resolver prerequisite
+# delivered, the widen command plus library-first planning, the native
+# bump-PR verification loop docs, the ADR 0006 narrow exception, the ADR
+# 0008 exact-pin policy, the scheduled loop runner (one-dep-per-PR,
+# toggle-only automerge, concurrency, fork-safety), and the upstream scope
+# pins.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:widen_update_loop`,
 # following //tools/ci:ghcr_hygiene.
@@ -41,6 +41,8 @@ automation="docs/contributing/automation.md"
 workflows_doc="docs/contributing/local-workflows.md"
 adr_surface="docs/decisions/0006-cli-command-surface.md"
 adr_currency="docs/decisions/0008-dependency-currency.md"
+bump_request="cli/bump/src/request.rs"
+bump_workflow=".github/workflows/bump.yml"
 
 # All ecosystems in v1, no phasing: Bazel modules + .bazelversion, Cargo,
 # npm/pnpm, Go, GitHub Actions -- matching the current renovate manager set.
@@ -55,8 +57,8 @@ else
   bad "renovate.json lost the all-ecosystems v1 manager set (bazel/cargo/github-actions/gomod/npm)"
 fi
 
-# Renovate fallback retained until the first-party loop lands: weekly
-# Monday schedule, no automerge, reviewable PRs, dashboard on.
+# Renovate fallback retained with the native loop delivered: weekly Monday
+# schedule, no automerge, reviewable PRs, dashboard on.
 if grep -q -F -e 'before 5am on Monday' "$renovate" \
   && grep -q -F -e '"automerge": false' "$renovate" \
   && grep -q -F -e '"platformAutomerge": false' "$renovate" \
@@ -67,8 +69,8 @@ else
   bad "renovate.json lost the retained-fallback shape (schedule/automerge/prCreation/dashboard)"
 fi
 
-# Never-rewrites invariant pinned in code: both requirement shapes refuse
-# rewriting, with the never-widen unit test present.
+# Never-rewrites invariant pinned in code: both update requirement shapes
+# refuse rewriting, with the never-widen unit test present.
 if grep -q -F -e 'pub fn may_be_rewritten' "$semantics" \
   && grep -q -F -e 'declared_requirements_are_never_rewritten' "$semantics" \
   && grep -q -F -e 'must constrain, never widen' "$semantics"; then
@@ -86,13 +88,15 @@ else
   bad "update contract lost the without-widening clause or the exact-pin constraint"
 fi
 
-# No widen command claimed: no `bump` subcommand string and no widen-one
-# function exist in CLI code yet; the explicit operation stays open under #260.
-if ! grep -rn -F -e '"bump"' --include='*.rs' cli/ 2>/dev/null | grep -q . \
-  && ! grep -rn -E -e 'fn widen' --include='*.rs' cli/ 2>/dev/null | grep -q .; then
+# Widen command delivered: `bump` subcommand in CLI code, the explicit
+# single-requirement rewrite owner, and the bump_failed operational code.
+if grep -rn -F -e '"bump"' --include='*.rs' cli/ 2>/dev/null | grep -q . \
+  && grep -q -F -e 'may_be_rewritten' "$bump_request" \
+  && grep -q -F -e 'CODE_BUMP_FAILED' cli/cli/src/exec/common.rs \
+  && grep -q -F -e 'dx_bump' cli/cli/src/exec/bump.rs; then
   ok
 else
-  bad "widen-shaped symbols appeared in cli/ without the #260 implementation landing"
+  bad "widen bump command missing in cli/ (want bump subcommand + may_be_rewritten + CODE_BUMP_FAILED + dx_bump)"
 fi
 
 # Resolver backends delivered in #19 (selector syntax, Git mappings, and
@@ -106,26 +110,35 @@ else
   bad "update contract lost its delivered resolver records"
 fi
 
-# Automation policy owns the Renovate fallback: absent-only scaffold,
-# full manager set, update-only automerge.
+# Automation policy owns the native loop plus the Renovate fallback:
+# absent-only scaffold, full manager set, update-only automerge, plus the
+# delivered widen-one loop (one dep per PR, toggle-only automerge,
+# scheduled runner).
 if grep -q -F -e 'absent-only' "$automation" \
   && grep -q -F -e 'full manager' "$automation" \
   && grep -q -F -e 'update-only' "$automation" \
-  && grep -q -F -e 'Renovate is the chosen updater' "$automation"; then
+  && grep -q -F -e 'Renovate is the chosen updater' "$automation" \
+  && grep -q -F -e 'dx bump' "$automation" \
+  && grep -q -F -e 'one dep per PR' "$automation" \
+  && grep -q -F -e 'bump.yml' "$automation"; then
   ok
 else
-  bad "automation.md lost the Renovate-fallback ownership (absent-only/manager/update-only/chosen-updater)"
+  bad "automation.md lost the native-loop ownership (fallback pins + dx bump + one-dep-per-PR + bump.yml)"
 fi
 
-# Manual bump-PR verification loop documented: regen evidence,
-# flag-diff review, full verification per the automation policy.
+# Native bump-PR verification loop documented: regen evidence, flag-diff
+# review, full verification per the automation policy, plus the explicit
+# widen-then-update steps with a clean-tree reset.
 if grep -q -F -e 'regen' "$workflows_doc" \
   && grep -q -F -e 'flag-diff' "$workflows_doc" \
   && grep -q -F -e 'full verification' "$workflows_doc" \
-  && grep -q -F -e 'automation.md' "$workflows_doc"; then
+  && grep -q -F -e 'automation.md' "$workflows_doc" \
+  && grep -q -F -e 'dx bump' "$workflows_doc" \
+  && grep -q -F -e 'dx update' "$workflows_doc" \
+  && grep -q -F -e 'clean tree' "$workflows_doc"; then
   ok
 else
-  bad "local-workflows.md lost the bump-PR verification loop (regen/flag-diff/verification/policy)"
+  bad "local-workflows.md lost the native bump-PR loop (regen/flag-diff/verification/policy + dx bump/update + clean tree)"
 fi
 
 # ADR 0006 owns the narrow exception: `dx update` continues independent
@@ -146,24 +159,30 @@ else
   bad "ADR 0008 lost the exact-pin policy (pinned exactly + latest stable)"
 fi
 
-# No loop workflow claimed: no scheduled widen-then-update runner exists
-# in workflows yet; one-dep-per-PR, toggle-only automerge, concurrency,
-# and fork-safety stay open under #260.
-if ! grep -rn -F -e 'dx bump' .github/workflows/ 2>/dev/null | grep -q . \
-  && ! grep -rln -F -e 'widen-one' .github/workflows/ 2>/dev/null | grep -q .; then
+# Scheduled widen-then-update runner delivered: `dx bump` plus `widen-one`
+# orchestration, one-dep-per-PR, toggle-only automerge, concurrency
+# control, GITHUB_TOKEN PR creation, and fork-safety.
+if [[ -f "$bump_workflow" ]] \
+  && grep -q -F -e 'dx bump' "$bump_workflow" \
+  && grep -q -F -e 'widen-one' "$bump_workflow" \
+  && grep -q -F -e 'concurrency' "$bump_workflow" \
+  && grep -q -F -e 'github.token' "$bump_workflow" \
+  && grep -q -F -e 'Fork' "$bump_workflow" \
+  && grep -q -F -e 'one dep per PR' "$bump_workflow"; then
   ok
 else
-  bad "a widen-loop runner appeared in workflows without the #260 implementation landing"
+  bad "bump.yml runner missing the widen-loop contract (dx bump + widen-one + concurrency + github.token + Fork + one-dep-per-PR)"
 fi
 
 # Upstream scope pins intact: prerelease follows upstream, transitives
 # stay resolver-governed, outside-requirements is not a failure.
 if grep -q -F -e 'prerelease_follows_upstream' "$semantics" \
   && grep -q -F -e 'forces_transitive_newest' "$semantics" \
-  && grep -q -F -e 'outside_requirements_is_failure' "$semantics"; then
+  && grep -q -F -e 'outside_requirements_is_failure' "$semantics" \
+  && grep -q -F -e 'prerelease_follows_upstream' cli/bump/src/version.rs; then
   ok
 else
-  bad "semantics.rs lost the upstream-scope pins (prerelease/transitives/scope)"
+  bad "upstream-scope pins lost (prerelease/transitives/scope in update + bump)"
 fi
 
 echo "widen update loop harness: $pass passed, $fail failed"

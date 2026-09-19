@@ -90,6 +90,12 @@ pub(crate) const CODE_AUDIT_FAILED: &str = "audit_failed";
 /// or terminated by signal. Planning (`--dry-run`) succeeds; live runs
 /// continue independent sets, preserve successes, and fail overall.
 pub(crate) const CODE_UPDATE_FAILED: &str = "update_failed";
+/// Stable operational error code for live bump widen failures:
+/// the single declared requirement was missing, ambiguous, in an
+/// unsupported manifest shape, needed upstream SHA resolution, or the
+/// manifest could not be read/written. Planning (`--dry-run`) succeeds;
+/// live runs widen exactly one requirement atomically (issue #260).
+pub(crate) const CODE_BUMP_FAILED: &str = "bump_failed";
 
 /// Execution environment: resolved workspace, process seams for the
 /// workflow and for ownership queries, temporary directory for the BEP
@@ -212,7 +218,7 @@ pub(crate) fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
     let _ = writeln!(err, "dx: {message}");
     let _ = writeln!(
         err,
-        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--verbose] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]"
+        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--verbose] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|bump|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]"
     );
     pre_exec_code()
 }

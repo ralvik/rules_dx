@@ -2,6 +2,25 @@
 
 Decided: Renovate is the chosen updater (reopened decision; Renovate allowed).
 Accepted: Renovate for dependency updates with update-only auto-merge under guardrails, no bot commits to `main` outside the merge path.
+Delivered: native widen-one-requirement loop (issue #260) as the minimal first-party alternative; Renovate retained as fallback until issue #3 decides its disposition.
+
+## Native Bump Loop (delivered)
+
+`dx bump <set:package> <version>` widens exactly one declared requirement
+(`dx_bump` planning, `dx bump` dispatch), then `dx update <set>` refreshes
+resolver-owned locks; Bazel and GitHub Actions verify file-only. The loop runs
+one dep per PR, never batch: discover outdated (stable only, prerelease
+follows upstream) → widen one → update → verify (regen evidence,
+`preset.update --verify-only` flag-diff, `bazel build //...`,
+`bazel test //...`, coverage/dogfood) → if green open one PR, if red discard
+and record → reset to clean tree → next dep.
+
+One dep per PR with an automerge on/off toggle only: when on, auto-merge
+solely on the full required-check set; when off, leave PRs open. No grouping,
+schedule, or dashboard knobs. The scheduled `bump.yml` runner uses
+`GITHUB_TOKEN` with concurrency control so N open PRs do not stampede CI;
+failures never retry-until-green; fork-safety and the human merge path below
+preserved.
 
 ## Allowed
 
