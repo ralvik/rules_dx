@@ -34,6 +34,7 @@ dx_rust_crate(
         "chrono",
         "semver",
         "serde",
+        "serde-sarif",
         "serde_json",
         "spdx",
         "thiserror",
