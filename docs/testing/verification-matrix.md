@@ -119,8 +119,8 @@ Accepted record of the as-built close-out battery. The full battery runs in
   contracts, GHCR hygiene and publish guards, perf/corpus verification,
   widen-update loop, quality/execution/distribution/backlog guards,
   `:supported_evidence_gate`, `:quality_adapters_parity`,
-  `:env_codegen_qualification`, `:docs_pipeline_qualification`, and
-  `:consumer_ci_qualification`.
+  `:env_codegen_qualification`, `:docs_pipeline_qualification`,
+  `:consumer_ci_qualification`, and `:file_family_qualification`.
 - `dogfood-lint`, `dogfood-format`, `dogfood-typecheck`: corpus converge then
   `--check` no-op proof, plus lane-A trees `//python/... //javascript/...
   //rust/hello/...` where enforcing.
@@ -129,7 +129,7 @@ Accepted record of the as-built close-out battery. The full battery runs in
 Green here (static guards on a clean tree, no full rebuild): `e2e_cases`
 3/3, `supported_evidence_gate` 20/20, `distribution_closeout_guards` 35/35,
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 26/26,
-`consumer_ci_qualification` 29/29.
+`consumer_ci_qualification` 29/29, `file_family_qualification` 24/24.
 Full `build`/`test` green is owned by CI on this tree; the last full-tree
 record is noted on the issue, not re-claimed here.
 
@@ -165,6 +165,13 @@ Remaining reds stay owned gaps, not green claims:
   sensitive, retries, Code-Scanning, sequential, tag/release, Renovate and
   native-bot, migrate-execution gaps stay owned gaps); platform qualification
   beyond the seed host stays open under #298.
+- File-family quality record with fixture evidence qualified seed-only under #313
+  (`bazel run //tools/ci:file_family_qualification`; provider-class
+  applicability with never-suffix inference, Starlark/Buildifier plus TOML/Taplo
+  adapter-backed evidence, parity-deferred CSS/djlint/buf/yaml/keep-sorted/shell
+  plus cue/jsonnet/pkl/qml/terraform routes with owner plus frozen acquisition;
+  deferred adapter execution, exact pins/digests/rule-sets/mappings, and platform
+  plus consumer plus release evidence stay owned gaps; no Supported claim).
 - Non-dogfed paths stay open under #324.
 
 The E2E-case convention lives in the
