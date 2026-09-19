@@ -15,18 +15,21 @@ load("//quality:fixtures.bzl", "real_source_target")
 package(default_visibility = ["//visibility:public"])
 
 javascript_env_plan(
+    testonly = True,
     name = "hello_lib_plan",
-    target = "//javascript/hello:hello_lib",
+    target = "//javascript/tests/fixtures/hello:hello_lib",
 )
 
 javascript_env_plan(
+    testonly = True,
     name = "helper_plan",
-    target = "//javascript/entries:helper",
+    target = "//javascript/tests/fixtures/entries:helper",
 )
 
 javascript_env_plan(
+    testonly = True,
     name = "main_plan",
-    target = "//javascript/entries:main",
+    target = "//javascript/tests/fixtures/entries:main",
 )
 
 env_plan_tests(

@@ -1,5 +1,5 @@
 {
-  "checksum": "ce2951430c0cfa79b666d1e74aae6b8f8bc951fa94f4b1615e0ced3f73f76e95",
+  "checksum": "46e4f05facb9d2e30c07054e56567f1c6a644aa7e009275e5fad4b5726ddbdf1",
   "conditions": {
     "aarch64-apple-darwin": [
       "aarch64-apple-darwin"
@@ -11135,7 +11135,7 @@
     "dx_update 0.0.0": "cli/dx_update",
     "env_shard 0.0.0": "env/env_shard",
     "generation_result 0.0.0": "generation/generation_result",
-    "hello 0.0.0": "rust/hello",
+    "hello 0.0.0": "rust/tests/fixtures/hello",
     "quality_adapter 0.0.0": "quality/quality_adapter",
     "quality_evaluator 0.0.0": "quality/quality_evaluator",
     "quality_markdown 0.0.0": "quality/quality_markdown",

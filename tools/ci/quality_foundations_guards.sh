@@ -248,7 +248,7 @@ fi
 # corpus (enforcing at --fail-on warning).
 if grep -q -F -e '//python/...' .github/workflows/ci.yml &&
   grep -q -F -e '//javascript/...' .github/workflows/ci.yml &&
-  grep -q -F -e '//rust/hello/...' .github/workflows/ci.yml; then
+  grep -q -F -e '//rust/tests/fixtures/hello/...' .github/workflows/ci.yml; then
   ok
 else
   bad "ci.yml lost its lane-A language-tree scope (#12)"

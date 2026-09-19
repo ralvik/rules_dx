@@ -151,9 +151,9 @@ fi
 # proof per language).
 hello_missing=""
 for lang in rust python javascript typescript go java kotlin scala csharp fsharp cc; do
-  if [[ ! -f "$lang/hello/BUILD.bazel" ]]; then
+  if [[ ! -f "$lang/tests/fixtures/hello/BUILD.bazel" ]]; then
     hello_missing="$hello_missing $lang:BUILD"
-  elif ! grep -q -F -e "$lang/rules:defs.bzl" "$lang/hello/BUILD.bazel" && ! grep -q -F -e "javascript/rules:defs.bzl" "$lang/hello/BUILD.bazel"; then
+  elif ! grep -q -F -e "$lang/rules:defs.bzl" "$lang/tests/fixtures/hello/BUILD.bazel" && ! grep -q -F -e "javascript/rules:defs.bzl" "$lang/tests/fixtures/hello/BUILD.bazel"; then
     hello_missing="$hello_missing $lang:wrapper"
   fi
 done
@@ -169,10 +169,10 @@ fi
 # Go hello is stdlib-only with no ecosystem lock; C/C++ has no ecosystem
 # lockfile (every http_archive carries sha256/integrity).
 locks_missing=""
-[[ -f "rust/hello/Cargo.lock" ]] || locks_missing="$locks_missing Cargo.lock"
+[[ -f "rust/tests/fixtures/hello/Cargo.lock" ]] || locks_missing="$locks_missing Cargo.lock"
 [[ -f "cargo-bazel-lock.json" ]] || locks_missing="$locks_missing cargo-bazel-lock"
 [[ -f "MODULE.bazel.lock" ]] || locks_missing="$locks_missing MODULE.bazel.lock"
-[[ -f "python/hello/uv.lock" ]] || locks_missing="$locks_missing uv.lock"
+[[ -f "python/tests/fixtures/hello/uv.lock" ]] || locks_missing="$locks_missing uv.lock"
 [[ -f "quality/tools/python/uv.lock" ]] || locks_missing="$locks_missing tools-uv.lock"
 [[ -f "pnpm-lock.yaml" ]] || locks_missing="$locks_missing pnpm-lock"
 [[ -f "quality/tools/javascript/pnpm-lock.yaml" ]] || locks_missing="$locks_missing tools-pnpm-lock"
@@ -307,11 +307,11 @@ for fw in vue svelte astro mdx; do
     astro) container="Hello.astro" ;;
     mdx) container="Hello.mdx" ;;
   esac
-  if [[ ! -f "$fw/hello/BUILD.bazel" || ! -f "$fw/hello/$container" || ! -f "$fw/hello/Hello.test.js" || ! -f "$fw/hello/helper.js" ]]; then
+  if [[ ! -f "$fw/tests/fixtures/hello/BUILD.bazel" || ! -f "$fw/tests/fixtures/hello/$container" || ! -f "$fw/tests/fixtures/hello/Hello.test.js" || ! -f "$fw/tests/fixtures/hello/helper.js" ]]; then
     fw_hello_missing="$fw_hello_missing $fw:files"
-  elif ! grep -q -F -e "${fw}/rules:defs.bzl" "$fw/hello/BUILD.bazel"; then
+  elif ! grep -q -F -e "${fw}/rules:defs.bzl" "$fw/tests/fixtures/hello/BUILD.bazel"; then
     fw_hello_missing="$fw_hello_missing $fw:wrapper"
-  elif ! grep -q -F -e 'javascript_test' "$fw/hello/BUILD.bazel"; then
+  elif ! grep -q -F -e 'javascript_test' "$fw/tests/fixtures/hello/BUILD.bazel"; then
     fw_hello_missing="$fw_hello_missing $fw:test-kind"
   fi
 done
@@ -325,24 +325,24 @@ fi
 # upstream parser/compiler with container plus compiler npm data; no
 # separate framework test wrapper; Hello.test.js exercises the regions).
 fw_test_fail=""
-grep -q -F -e '//:node_modules/@vue/compiler-sfc' vue/hello/BUILD.bazel || fw_test_fail="$fw_test_fail vue:compiler-data"
-grep -q -F -e '//:node_modules/svelte' svelte/hello/BUILD.bazel || fw_test_fail="$fw_test_fail svelte:compiler-data"
-grep -q -F -e '//:node_modules/@astrojs/compiler' astro/hello/BUILD.bazel || fw_test_fail="$fw_test_fail astro:compiler-data"
-grep -q -F -e '//:node_modules/@mdx-js/mdx' mdx/hello/BUILD.bazel || fw_test_fail="$fw_test_fail mdx:compiler-data"
-grep -q -F -e 'parse' vue/hello/Hello.test.js || fw_test_fail="$fw_test_fail vue:parse-test"
-grep -q -F -e 'parse' svelte/hello/Hello.test.js || fw_test_fail="$fw_test_fail svelte:parse-test"
-grep -q -F -e 'parse' astro/hello/Hello.test.js || fw_test_fail="$fw_test_fail astro:parse-test"
-grep -q -F -e 'compile' mdx/hello/Hello.test.js || fw_test_fail="$fw_test_fail mdx:compile-test"
-if grep -R -q -F -e 'vue_test' vue/hello/BUILD.bazel svelte/hello/BUILD.bazel astro/hello/BUILD.bazel mdx/hello/BUILD.bazel 2>/dev/null; then
+grep -q -F -e '//:node_modules/@vue/compiler-sfc' vue/tests/fixtures/hello/BUILD.bazel || fw_test_fail="$fw_test_fail vue:compiler-data"
+grep -q -F -e '//:node_modules/svelte' svelte/tests/fixtures/hello/BUILD.bazel || fw_test_fail="$fw_test_fail svelte:compiler-data"
+grep -q -F -e '//:node_modules/@astrojs/compiler' astro/tests/fixtures/hello/BUILD.bazel || fw_test_fail="$fw_test_fail astro:compiler-data"
+grep -q -F -e '//:node_modules/@mdx-js/mdx' mdx/tests/fixtures/hello/BUILD.bazel || fw_test_fail="$fw_test_fail mdx:compiler-data"
+grep -q -F -e 'parse' vue/tests/fixtures/hello/Hello.test.js || fw_test_fail="$fw_test_fail vue:parse-test"
+grep -q -F -e 'parse' svelte/tests/fixtures/hello/Hello.test.js || fw_test_fail="$fw_test_fail svelte:parse-test"
+grep -q -F -e 'parse' astro/tests/fixtures/hello/Hello.test.js || fw_test_fail="$fw_test_fail astro:parse-test"
+grep -q -F -e 'compile' mdx/tests/fixtures/hello/Hello.test.js || fw_test_fail="$fw_test_fail mdx:compile-test"
+if grep -R -q -F -e 'vue_test' vue/tests/fixtures/hello/BUILD.bazel svelte/tests/fixtures/hello/BUILD.bazel astro/tests/fixtures/hello/BUILD.bazel mdx/tests/fixtures/hello/BUILD.bazel 2>/dev/null; then
   fw_test_fail="$fw_test_fail unexpected-vue_test"
 fi
-if grep -R -q -F -e 'svelte_test' vue/hello/BUILD.bazel svelte/hello/BUILD.bazel astro/hello/BUILD.bazel mdx/hello/BUILD.bazel 2>/dev/null; then
+if grep -R -q -F -e 'svelte_test' vue/tests/fixtures/hello/BUILD.bazel svelte/tests/fixtures/hello/BUILD.bazel astro/tests/fixtures/hello/BUILD.bazel mdx/tests/fixtures/hello/BUILD.bazel 2>/dev/null; then
   fw_test_fail="$fw_test_fail unexpected-svelte_test"
 fi
-if grep -R -q -F -e 'astro_test' vue/hello/BUILD.bazel svelte/hello/BUILD.bazel astro/hello/BUILD.bazel mdx/hello/BUILD.bazel 2>/dev/null; then
+if grep -R -q -F -e 'astro_test' vue/tests/fixtures/hello/BUILD.bazel svelte/tests/fixtures/hello/BUILD.bazel astro/tests/fixtures/hello/BUILD.bazel mdx/tests/fixtures/hello/BUILD.bazel 2>/dev/null; then
   fw_test_fail="$fw_test_fail unexpected-astro_test"
 fi
-if grep -R -q -F -e 'mdx_test' vue/hello/BUILD.bazel svelte/hello/BUILD.bazel astro/hello/BUILD.bazel mdx/hello/BUILD.bazel 2>/dev/null; then
+if grep -R -q -F -e 'mdx_test' vue/tests/fixtures/hello/BUILD.bazel svelte/tests/fixtures/hello/BUILD.bazel astro/tests/fixtures/hello/BUILD.bazel mdx/tests/fixtures/hello/BUILD.bazel 2>/dev/null; then
   fw_test_fail="$fw_test_fail unexpected-mdx_test"
 fi
 if [[ -z "$fw_test_fail" ]]; then
@@ -462,27 +462,27 @@ fi
 # ScalaTest via the managed route, JUnit 4 seed for JVM, plain executables
 # for cc/csharp/fsharp with named upgrades open).
 runner_fail=""
-grep -q -F -e 'go_test' go/hello/BUILD.bazel || runner_fail="$runner_fail go:kind"
-grep -q -F -e 'embed' go/hello/BUILD.bazel || runner_fail="$runner_fail go:embed"
-grep -q -F -e 'cc_test' cc/hello/BUILD.bazel || runner_fail="$runner_fail cc:kind"
-grep -q -F -e 'assert' cc/hello/hello_test.cc || runner_fail="$runner_fail cc:plain"
+grep -q -F -e 'go_test' go/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail go:kind"
+grep -q -F -e 'embed' go/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail go:embed"
+grep -q -F -e 'cc_test' cc/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail cc:kind"
+grep -q -F -e 'assert' cc/tests/fixtures/hello/hello_test.cc || runner_fail="$runner_fail cc:plain"
 grep -q -F -e 'GoogleTest v1.18.0' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:gtest"
-grep -q -F -e 'java_test' java/hello/BUILD.bazel || runner_fail="$runner_fail java:kind"
-grep -q -F -e 'test_class' java/hello/BUILD.bazel || runner_fail="$runner_fail java:class"
-grep -q -F -e 'org.junit.Test' java/hello/HelloTest.java || runner_fail="$runner_fail java:junit4"
-grep -q -F -e 'kotlin_test' kotlin/hello/BUILD.bazel || runner_fail="$runner_fail kotlin:kind"
-grep -q -F -e '@maven//:junit_junit' kotlin/hello/BUILD.bazel || runner_fail="$runner_fail kotlin:maven"
-grep -q -F -e 'org.junit.Test' kotlin/hello/HelloTest.kt || runner_fail="$runner_fail kotlin:junit4"
+grep -q -F -e 'java_test' java/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail java:kind"
+grep -q -F -e 'test_class' java/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail java:class"
+grep -q -F -e 'org.junit.Test' java/tests/fixtures/hello/HelloTest.java || runner_fail="$runner_fail java:junit4"
+grep -q -F -e 'kotlin_test' kotlin/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail kotlin:kind"
+grep -q -F -e '@maven//:junit_junit' kotlin/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail kotlin:maven"
+grep -q -F -e 'org.junit.Test' kotlin/tests/fixtures/hello/HelloTest.kt || runner_fail="$runner_fail kotlin:junit4"
 grep -q -F -e 'junit:junit:4.13.2' MODULE.bazel || runner_fail="$runner_fail module:junit4"
 grep -q -F -e '6.1.3' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:junit6"
-grep -q -F -e 'scala_test' scala/hello/BUILD.bazel || runner_fail="$runner_fail scala:kind"
-grep -q -F -e 'AnyFlatSpec' scala/hello/HelloTest.scala || runner_fail="$runner_fail scala:scalatest"
+grep -q -F -e 'scala_test' scala/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail scala:kind"
+grep -q -F -e 'AnyFlatSpec' scala/tests/fixtures/hello/HelloTest.scala || runner_fail="$runner_fail scala:scalatest"
 grep -q -F -e 'ScalaTest 3.2.20' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:scalatest"
 grep -q -F -e 'scala_version = "2.13.18"' MODULE.bazel || runner_fail="$runner_fail module:scala-version"
-grep -q -F -e 'csharp_test' csharp/hello/BUILD.bazel || runner_fail="$runner_fail csharp:kind"
-grep -q -F -e 'static int Main' csharp/hello/HelloTest.cs || runner_fail="$runner_fail csharp:plain"
-grep -q -F -e 'fsharp_test' fsharp/hello/BUILD.bazel || runner_fail="$runner_fail fsharp:kind"
-grep -q -F -e 'EntryPoint' fsharp/hello/HelloTest.fs || runner_fail="$runner_fail fsharp:plain"
+grep -q -F -e 'csharp_test' csharp/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail csharp:kind"
+grep -q -F -e 'static int Main' csharp/tests/fixtures/hello/HelloTest.cs || runner_fail="$runner_fail csharp:plain"
+grep -q -F -e 'fsharp_test' fsharp/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail fsharp:kind"
+grep -q -F -e 'EntryPoint' fsharp/tests/fixtures/hello/HelloTest.fs || runner_fail="$runner_fail fsharp:plain"
 grep -q -F -e 'xUnit v3 4.0.0' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:xunit"
 grep -q -F -e 'xUnit' csharp/rules/defs.bzl || runner_fail="$runner_fail csharp:open"
 grep -q -F -e 'xUnit' fsharp/rules/defs.bzl || runner_fail="$runner_fail fsharp:open"
@@ -499,7 +499,7 @@ grep -q -F -e 'maven_install.json' docs/generation/README.md || lock304_fail="$l
 grep -q -F -e 'paket.lock' docs/generation/README.md || lock304_fail="$lock304_fail gen:paket"
 grep -q -F -e 'Go stdlib-only' docs/generation/README.md || lock304_fail="$lock304_fail gen:go"
 grep -q -F -e 'C/C++ none' docs/generation/README.md || lock304_fail="$lock304_fail gen:cc"
-grep -q -F -e '@paket.main//fsharp.core' fsharp/hello/BUILD.bazel || lock304_fail="$lock304_fail fsharp:paket"
+grep -q -F -e '@paket.main//fsharp.core' fsharp/tests/fixtures/hello/BUILD.bazel || lock304_fail="$lock304_fail fsharp:paket"
 grep -q -F -e 'paket.main' MODULE.bazel || lock304_fail="$lock304_fail module:paket"
 grep -q -F -e 'lock_file = "//third_party/jvm:maven_install.json"' MODULE.bazel || lock304_fail="$lock304_fail module:maven"
 if [[ -z "$lock304_fail" ]]; then
@@ -564,7 +564,7 @@ for d in ruby powershell swift; do
   [[ ! -d "gazelle/$d" ]] || abs305_fail="$abs305_fail $d:gazelle"
   [[ ! -f "$d/rules/defs.bzl" ]] || abs305_fail="$abs305_fail $d:wrapper"
   [[ ! -f "$d/env/plan.bzl" ]] || abs305_fail="$abs305_fail $d:env"
-  [[ ! -f "$d/hello/BUILD.bazel" ]] || abs305_fail="$abs305_fail $d:hello"
+  [[ ! -f "$d/tests/fixtures/hello/BUILD.bazel" ]] || abs305_fail="$abs305_fail $d:hello"
 done
 if grep -q -F -e 'rules_ruby' MODULE.bazel; then
   abs305_fail="$abs305_fail module:rules_ruby"

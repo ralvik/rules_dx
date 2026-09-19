@@ -18,7 +18,7 @@
 // type-checks a file.
 //
 // Identity normalization: every quoted include contributes its basename
-// (`cc/hello/hello.h` -> `hello.h`), which matches the owning library's
+// (`cc/tests/fixtures/hello/hello.h` -> `hello.h`), which matches the owning library's
 // indexed header basename. Two libraries owning the same header basename
 // are ambiguous and fail resolution; owners add an exact
 // `# gazelle:resolve` mapping or rename.

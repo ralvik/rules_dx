@@ -62,7 +62,7 @@ Vue, Svelte, Astro, and MDX are qualified by focused end-to-end fixtures:
 thin wrappers in `<fw>/rules/defs.bzl` preserving the upstream `JsInfo` provider and
 adding `QualitySourcesInfo`, Gazelle extensions in `gazelle/<fw>/` with
 parser/naming/lang fixtures plus focused tests and `testdata` generation goldens,
-hello builds in `<fw>/hello/` as wrapper consumers with upstream parser/compiler
+hello builds in `<fw>/tests/fixtures/hello/` as wrapper consumers with upstream parser/compiler
 tests, provider-derived environment plans in `<fw>/env/`, and mixed-framework
 composition in `examples/mixed/hello/` plus `gazelle/mixed/`.
 
@@ -99,7 +99,7 @@ references normalize to basename without extension, bare specifiers stay
 literal, and Node builtins filter via `IsStdLib`. `testdata` goldens prove
 grouping, local `deps`, merge, and stale cleanup.
 
-Test: each `<fw>/hello/` proves its regions through `javascript_test` over
+Test: each `<fw>/tests/fixtures/hello/` proves its regions through `javascript_test` over
 `Hello.test.js` with `data` on the container, the shared `helper_lib`, and the
 upstream compiler package. Vue asserts `parse` template/script/style regions
 plus the helper edge; Svelte asserts modern `parse` fragment/instance/css plus
@@ -110,7 +110,7 @@ with fenced-code imports excluded.
 Environment/IDE: each `<fw>/env/plan.bzl` contributes a provider-derived
 focused-target plan reading the preserved `JsInfo` transitive sources plus
 `QualitySourcesInfo` direct sources, pinned by `<fw>/env/plan_tests.bzl` and
-exercised by `<fw>/env:hello_lib_plan` over `//<fw>/hello:hello_lib`.
+exercised by `<fw>/env:hello_lib_plan` over `//<fw>/tests/fixtures/hello:hello_lib`.
 Binaries and tests share the same closure through `data`/runfiles;
 repository/root/exact-target orchestration remains M25.
 

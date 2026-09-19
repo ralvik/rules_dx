@@ -202,8 +202,8 @@ uv = use_extension("@aspect_rules_py//uv:extensions.bzl", "uv")
 uv.declare_hub(hub_name = "pypi")
 uv.project(
     hub_name = "pypi",
-    lock = "//python/hello:uv.lock",
-    pyproject = "//python/hello:pyproject.toml",
+    lock = "//python/tests/fixtures/hello:uv.lock",
+    pyproject = "//python/tests/fixtures/hello:pyproject.toml",
 )
 
 # M15 WP1: private wheel-only Python tool graph (pydoclint + flake8 cohort,
@@ -234,14 +234,14 @@ register_toolchains("@rust_toolchains//:all")
 
 # External-dependency fixture source of truth (WP2). The lockfile is
 # regenerated via crate_universe repin on the seed host:
-#   CARGO_BAZEL_REPIN=1 bazel build //rust/hello:hello
+#   CARGO_BAZEL_REPIN=1 bazel build //rust/tests/fixtures/hello:hello
 crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
 crate.from_cargo(
     name = "crates",
-    cargo_lockfile = "//rust/hello:Cargo.lock",
+    cargo_lockfile = "//rust/tests/fixtures/hello:Cargo.lock",
     lockfile = "//:cargo-bazel-lock.json",
     manifests = [
-        "//rust/hello:Cargo.toml",
+        "//rust/tests/fixtures/hello:Cargo.toml",
         "//generation/result:Cargo.toml",
         "//quality/adapter:Cargo.toml",
         "//quality/evaluator:Cargo.toml",

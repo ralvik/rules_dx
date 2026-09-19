@@ -283,6 +283,11 @@ func (l *pythonLang) generateRules(args language.GenerateArgs) language.Generate
 			result.Imports = append(result.Imports, targetImports{})
 		}
 	}
+	if isFixturePath(args.Rel) {
+		for _, r := range result.Gen {
+			r.SetAttr("testonly", true)
+		}
+	}
 	return mergeStale(args.File, result)
 }
 
@@ -343,6 +348,15 @@ func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) erro
 		}
 	}
 	return nil
+}
+
+
+// isFixturePath reports whether a Gazelle relative directory is a test-only
+// fixture path (issue #404): any path containing tests, fixtures, or
+// testdata as a segment generates testonly targets.
+func isFixturePath(rel string) bool {
+    padded := "/" + rel + "/"
+    return strings.Contains(padded, "/tests/") || strings.Contains(padded, "/fixtures/") || strings.Contains(padded, "/testdata/")
 }
 
 func mergeStale(file *rule.File, result language.GenerateResult) language.GenerateResult {

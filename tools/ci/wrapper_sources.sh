@@ -92,9 +92,9 @@ fi
 if [[ -f "ruff.toml" && -f "biome.json" && -f "rustfmt.toml" ]] &&
   grep -q -F -e 'ruff_config' BUILD.bazel &&
   grep -q -F -e 'biome_config' BUILD.bazel &&
-  grep -q -F -e 'aspect_hints = ["//:ruff_config"]' python/hello/BUILD.bazel &&
-  grep -q -F -e 'aspect_hints = ["//:biome_config"]' javascript/hello/BUILD.bazel &&
-  grep -q -F -e 'aspect_hints = ["//:rustfmt_config"]' rust/hello/BUILD.bazel; then
+  grep -q -F -e 'aspect_hints = ["//:ruff_config"]' python/tests/fixtures/hello/BUILD.bazel &&
+  grep -q -F -e 'aspect_hints = ["//:biome_config"]' javascript/tests/fixtures/hello/BUILD.bazel &&
+  grep -q -F -e 'aspect_hints = ["//:rustfmt_config"]' rust/tests/fixtures/hello/BUILD.bazel; then
   ok
 else
   bad "lane-A workspace-level native policy binding missing (root configs + proof aspect_hints)"

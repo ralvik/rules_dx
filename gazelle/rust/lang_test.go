@@ -897,7 +897,7 @@ func TestCrateUniversePackage(t *testing.T) {
 		path, pkg, want string
 	}{
 		{"dx/output", "dx_output", "dx/dx_output"},
-		{"rust/hello", "hello", "rust/hello"},
+		{"rust/tests/fixtures/hello", "hello", "rust/tests/fixtures/hello"},
 		{"crates/app", "cargo-app", "crates/cargo-app"},
 		{"root", "root", "root"},
 		{"dx/output", "", "dx/output"},

@@ -1161,7 +1161,7 @@ mod tests {
 
     fn clean_workspace(harness: &Harness) {
         harness.write_source(
-            "rust/hello/Cargo.lock",
+            "rust/tests/fixtures/hello/Cargo.lock",
             "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
         );
         harness.write_source(
@@ -1214,7 +1214,7 @@ mod tests {
         let runner = AuditRunner::clean();
         let (code, out, err) = run_with(&["audit", "security"], &runner, &|harness| {
             harness.write_source(
-                "rust/hello/Cargo.lock",
+                "rust/tests/fixtures/hello/Cargo.lock",
                 "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
             );
             harness.write_source("pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
@@ -1239,7 +1239,7 @@ mod tests {
         let runner = AuditRunner::with_sarif(Some(1), sarif);
         let (code, out, err) = run_with(&["audit", "security"], &runner, &|harness| {
             harness.write_source(
-                "rust/hello/Cargo.lock",
+                "rust/tests/fixtures/hello/Cargo.lock",
                 "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
             );
             harness.write_source("pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
@@ -1261,7 +1261,7 @@ mod tests {
         let runner = AuditRunner::clean();
         let (code, _out, err) = run_with(&["audit", "security"], &runner, &|harness| {
             harness.write_source(
-                "rust/hello/Cargo.lock",
+                "rust/tests/fixtures/hello/Cargo.lock",
                 "[[package]]\nname = \"git-dep\"\nversion = \"0.1.0\"\nsource = \"git+https://github.com/example/git-dep#abc123\"\n",
             );
             harness.write_source("pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
@@ -1293,11 +1293,11 @@ mod tests {
 
         let runner = AuditRunner::clean();
         let (code, out, err) = run_with(
-            &["audit", "license", "//rust/hello:hello"],
+            &["audit", "license", "//rust/tests/fixtures/hello:hello"],
             &runner,
             &|harness| {
                 harness.write_source(
-                "rust/hello/Cargo.lock",
+                "rust/tests/fixtures/hello/Cargo.lock",
                 "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
             );
                 harness.write_source(
@@ -1318,7 +1318,7 @@ mod tests {
     fn audit_live_target_scopes_to_owning_set_only() {
         let runner = AuditRunner::clean();
         let (code, out, err) = run_with(
-            &["audit", "license", "//go/hello:hello"],
+            &["audit", "license", "//go/tests/fixtures/hello:hello"],
             &runner,
             &|_harness| {},
         );
@@ -1330,7 +1330,7 @@ mod tests {
     #[test]
     fn audit_live_unowned_scope_fails_usage() {
         let harness = Harness::new("audit-unowned");
-        let (code, _out, err) = harness.run(&["audit", "python/hello/hello.py"]);
+        let (code, _out, err) = harness.run(&["audit", "python/tests/fixtures/hello/hello.py"]);
         assert_eq!(code, 2, "{err}");
     }
 
@@ -1342,7 +1342,7 @@ mod tests {
             &runner,
             &|harness| {
                 harness.write_source(
-                "rust/hello/Cargo.lock",
+                "rust/tests/fixtures/hello/Cargo.lock",
                 "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
             );
                 harness.write_source("pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
@@ -1378,7 +1378,7 @@ mod tests {
         let runner = AuditRunner::with_sarif(Some(1), sarif);
         let (code, out, err) = run_with(&["audit", "--output=json"], &runner, &|harness| {
             harness.write_source(
-                "rust/hello/Cargo.lock",
+                "rust/tests/fixtures/hello/Cargo.lock",
                 "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
             );
             harness.write_source("pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
@@ -1468,7 +1468,7 @@ mod tests {
         // clean_workspace uses UNKNOWN npm which fails distributed; use cargo-only scope for clean reports.
         let harness = Harness::new("audit-reports-cargo");
         harness.write_source(
-            "rust/hello/Cargo.lock",
+            "rust/tests/fixtures/hello/Cargo.lock",
             "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
         );
         harness.write_source(
@@ -1482,7 +1482,7 @@ mod tests {
         let invocation = parse(&[
             "audit".to_owned(),
             "license".to_owned(),
-            "//rust/hello:hello".to_owned(),
+            "//rust/tests/fixtures/hello:hello".to_owned(),
             "--report=sarif=out.sarif".to_owned(),
             "--report=spdx=out.spdx.json".to_owned(),
         ])

@@ -7,7 +7,7 @@
 # `--help` with status zero, which proves acquisition from the pinned
 # toolchain without invoking project-owned discovery, codegen, or
 # environment mutation. Focused exact-target projection is proven by the
-# `gen_rust_project //rust/hello:hello_lib` run recorded in the M12
+# `gen_rust_project //rust/tests/fixtures/hello:hello_lib` run recorded in the M12
 # completion report (one crate, `hello`).
 set -euo pipefail
 

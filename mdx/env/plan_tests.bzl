@@ -8,7 +8,7 @@ file hello_lib_plan.json
 field direct_sources=Hello.mdx
 field has_npm=False
 field npm_source_count=0
-field target=//mdx/hello:hello_lib
+field target=//mdx/tests/fixtures/hello:hello_lib
 field transitive_sources=Hello.mdx"""
 
 def env_plan_tests(name, subjects):

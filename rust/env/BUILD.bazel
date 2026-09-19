@@ -13,24 +13,27 @@ load("//rust/env:plan_tests.bzl", "env_plan_tests")
 package(default_visibility = ["//visibility:public"])
 
 rust_env_plan(
+    testonly = True,
     name = "hello_lib_plan",
-    target = "//rust/hello:hello_lib",
+    target = "//rust/tests/fixtures/hello:hello_lib",
 )
 
 rust_env_plan(
+    testonly = True,
     name = "hello_plan",
-    target = "//rust/hello",
+    target = "//rust/tests/fixtures/hello",
 )
 
 rust_env_plan(
     name = "hello_test_plan",
     testonly = True,
-    target = "//rust/hello:hello_test",
+    target = "//rust/tests/fixtures/hello:hello_test",
 )
 
 rust_env_plan(
+    testonly = True,
     name = "hello_cdylib_plan",
-    target = "//rust/hello:hello_cdylib",
+    target = "//rust/tests/fixtures/hello:hello_cdylib",
 )
 
 env_plan_tests(

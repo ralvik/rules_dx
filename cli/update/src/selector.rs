@@ -4,11 +4,11 @@
 //! - `cargo` | `npm` | `maven` | `nuget` | `go`: a dependency set (full update).
 //! - `set:package`: a package within a set through the upstream updater
 //!   (e.g. `npm:react`, `cargo:anyhow`, `maven:junit:junit`,
-//!   `nuget:FSharp.Core`, `go:rules_dx/go/hello`). Identity mappings are
+//!   `nuget:FSharp.Core`, `go:rules_dx/go/tests/fixtures/hello`). Identity mappings are
 //!   upstream-native, never a private solver.
-//! - Bazel labels/patterns (`//...`, `//rust/hello:hello`, `//go/...`),
-//!   files (`rust/hello/Cargo.toml`, `package.json`), and directories
-//!   (`go/hello`): resolved to owning sets via the prefix table below.
+//! - Bazel labels/patterns (`//...`, `//rust/tests/fixtures/hello:hello`, `//go/...`),
+//!   files (`rust/tests/fixtures/hello/Cargo.toml`, `package.json`), and directories
+//!   (`go/tests/fixtures/hello`): resolved to owning sets via the prefix table below.
 //!   Bare `//...` selects all sets; `MODULE.bazel` selects all sets because
 //!   it declares every ecosystem.
 //!
@@ -335,7 +335,7 @@ fn package_path(target: &str) -> String {
     if let Some(prefix) = path.strip_suffix("/...") {
         return prefix.to_owned();
     }
-    // For files, match on the full path so `rust/hello/Cargo.toml`
+    // For files, match on the full path so `rust/tests/fixtures/hello/Cargo.toml`
     // matches `rust` via prefix below.
     path
 }
@@ -433,12 +433,16 @@ mod tests {
             Ok(Selector::Package(SetId::Maven, "junit:junit".to_owned()))
         );
         assert_eq!(
-            parse_selector("//rust/hello:hello"),
-            Ok(Selector::Target("//rust/hello:hello".to_owned()))
+            parse_selector("//rust/tests/fixtures/hello:hello"),
+            Ok(Selector::Target(
+                "//rust/tests/fixtures/hello:hello".to_owned()
+            ))
         );
         assert_eq!(
-            parse_selector("rust/hello/Cargo.toml"),
-            Ok(Selector::Target("rust/hello/Cargo.toml".to_owned()))
+            parse_selector("rust/tests/fixtures/hello/Cargo.toml"),
+            Ok(Selector::Target(
+                "rust/tests/fixtures/hello/Cargo.toml".to_owned()
+            ))
         );
     }
 
@@ -447,7 +451,7 @@ mod tests {
         assert!(parse_selector("npm:@astrojs/compiler").is_ok());
         assert!(parse_selector("nuget:FSharp.Core").is_ok());
         assert!(parse_selector("cargo:anyhow").is_ok());
-        assert!(parse_selector("go:rules_dx/go/hello").is_ok());
+        assert!(parse_selector("go:rules_dx/go/tests/fixtures/hello").is_ok());
     }
 
     #[test]
@@ -506,23 +510,38 @@ mod tests {
     fn owning_sets_cover_the_five_families() {
         assert_eq!(owning_sets("//..."), SetId::ALL.to_vec());
         assert_eq!(owning_sets("MODULE.bazel"), SetId::ALL.to_vec());
-        assert_eq!(owning_sets("//rust/hello:hello"), vec![SetId::Cargo]);
-        assert_eq!(owning_sets("rust/hello/Cargo.toml"), vec![SetId::Cargo]);
+        assert_eq!(
+            owning_sets("//rust/tests/fixtures/hello:hello"),
+            vec![SetId::Cargo]
+        );
+        assert_eq!(
+            owning_sets("rust/tests/fixtures/hello/Cargo.toml"),
+            vec![SetId::Cargo]
+        );
         assert_eq!(owning_sets("cli/cli/src/exec.rs"), vec![SetId::Cargo]);
         assert_eq!(
             owning_sets("quality/tools/javascript/package.json"),
             vec![SetId::Npm]
         );
-        assert_eq!(owning_sets("//javascript/hello:hello"), vec![SetId::Npm]);
+        assert_eq!(
+            owning_sets("//javascript/tests/fixtures/hello:hello"),
+            vec![SetId::Npm]
+        );
         assert_eq!(owning_sets("package.json"), vec![SetId::Npm]);
         assert_eq!(
             owning_sets("//third_party/jvm:maven_install"),
             vec![SetId::Maven]
         );
-        assert_eq!(owning_sets("//csharp/hello:hello"), vec![SetId::NuGet]);
-        assert_eq!(owning_sets("//go/hello:hello"), vec![SetId::Go]);
-        assert_eq!(owning_sets("go/hello"), vec![SetId::Go]);
-        assert!(owning_sets("python/hello/hello.py").is_empty());
+        assert_eq!(
+            owning_sets("//csharp/tests/fixtures/hello:hello"),
+            vec![SetId::NuGet]
+        );
+        assert_eq!(
+            owning_sets("//go/tests/fixtures/hello:hello"),
+            vec![SetId::Go]
+        );
+        assert_eq!(owning_sets("go/tests/fixtures/hello"), vec![SetId::Go]);
+        assert!(owning_sets("python/tests/fixtures/hello/hello.py").is_empty());
         assert!(owning_sets("quality/tools/python/pyproject.toml").is_empty());
         assert!(owning_sets("docs/cli/README.md").is_empty());
         assert!(owning_sets("libs/starlark/defs.bzl").is_empty());
@@ -557,7 +576,7 @@ mod tests {
 
     #[test]
     fn targets_expand_to_owning_sets_full() {
-        let resolved = resolve(&strings(&["//go/hello:hello"])).expect("target");
+        let resolved = resolve(&strings(&["//go/tests/fixtures/hello:hello"])).expect("target");
         assert_eq!(resolved.get(&SetId::Go), Some(&SetRequest::Full));
         let resolved = resolve(&strings(&["//..."])).expect("repo");
         assert_eq!(resolved.len(), 5);
@@ -570,7 +589,7 @@ mod tests {
             Err(SelectorError::UnknownSelector { .. })
         ));
         assert!(matches!(
-            resolve(&strings(&["python/hello/hello.py"])),
+            resolve(&strings(&["python/tests/fixtures/hello/hello.py"])),
             Err(SelectorError::NoOwningSet { .. })
         ));
         assert!(matches!(

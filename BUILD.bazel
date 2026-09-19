@@ -117,7 +117,7 @@ rustfmt_config(
 # Own-tree Ruff policy (issue #12, lane A): workspace-level equivalent
 # for normal Python targets. Corpus targets carry configs via per-target
 # `aspect_hints`; normal targets bind this root config explicitly (see
-# `//python/hello` for the proof binding). Editors and language servers
+# `//python/tests/fixtures/hello` for the proof binding). Editors and language servers
 # resolve the same checked-in file.
 ruff_config(
     name = "ruff_config",

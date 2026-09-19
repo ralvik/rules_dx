@@ -67,7 +67,7 @@ Issue #239 close-out decisions (build hygiene):
 
 * Workspace `Cargo.toml`: rejected. `crate_universe` consumes the
   per-crate manifests listed in `MODULE.bazel` (`crate.from_cargo` with
-  `cargo_lockfile = //rust/hello:Cargo.lock` plus one `Cargo.toml` per
+  `cargo_lockfile = //rust/tests/fixtures/hello:Cargo.lock` plus one `Cargo.toml` per
   crate). A `[workspace]` root would force workspace-mode repins and a
   second lockfile authority for zero benefit: the edition is already
   single-sourced via `RUST_EDITION` here plus `rustfmt.toml`, and shared

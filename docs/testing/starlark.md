@@ -69,7 +69,7 @@ Test selection is by target label; the generated runner does not interpret
 `--test_filter` per check. Retries use the standard `flaky` attribute
 (passthrough, off by default); wrappers forward the full kwargs dict to
 the private upstream test, so `flaky` lands upstream and never on the
-public forwarding wrapper (fixture `//python/hello:flaky_passthrough_fixture`).
+public forwarding wrapper (fixture `//python/tests/fixtures/hello:flaky_passthrough_fixture`).
 CI pins this in `bazel run //tools/ci:target_tags`, which also proves
 `bazel coverage` skips `no-coverage` tests and the `no-lint` /
 `no-typecheck` fixtures stay wired. Caching, timeouts, and sharding follow

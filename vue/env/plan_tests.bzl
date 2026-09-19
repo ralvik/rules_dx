@@ -8,7 +8,7 @@ file hello_lib_plan.json
 field direct_sources=Hello.vue
 field has_npm=False
 field npm_source_count=0
-field target=//vue/hello:hello_lib
+field target=//vue/tests/fixtures/hello:hello_lib
 field transitive_sources=Hello.vue"""
 
 def env_plan_tests(name, subjects):

@@ -11,8 +11,8 @@ invocation, which would lose tsconfig/declaration context.
 
 Provenance (seed host, Linux x86_64, local execution only):
 `bazel run @npm_typescript//:tsc -- --version` reports `Version 5.9.3`;
-`bazel build //typescript/hello:hello_lib` emits `hello.js`;
-`bazel test //typescript/hello:hello_lib_upstream_typecheck_test`
+`bazel build //typescript/tests/fixtures/hello:hello_lib` emits `hello.js`;
+`bazel test //typescript/tests/fixtures/hello:hello_lib_upstream_typecheck_test`
 passes; `which node` finds no ambient Node.
 """
 

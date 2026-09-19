@@ -6,7 +6,7 @@ import (
 )
 
 func TestParseQuotedIncludesBasename(t *testing.T) {
-	got := ParseQuotedIncludes([]byte("#include <vector>\n#include \"cc/hello/hello.h\"\n"))
+	got := ParseQuotedIncludes([]byte("#include <vector>\n#include \"cc/tests/fixtures/hello/hello.h\"\n"))
 	want := []string{"hello.h"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("ParseQuotedIncludes = %v, want %v", got, want)

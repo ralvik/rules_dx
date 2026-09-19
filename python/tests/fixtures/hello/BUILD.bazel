@@ -1,0 +1,93 @@
+"""M14 seed Python binary and library; consumer of python_* wrappers."""
+
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//python/rules:defs.bzl", "python_binary", "python_library", "python_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_visibility = ["//:__subpackages__"],
+    default_testonly = True,
+)
+
+python_library(
+    name = "hello_lib",
+    srcs = ["hello.py"],
+    # Lane A proof binding (issue #12): normal Python targets carry the
+    # workspace-level Ruff policy via direct `aspect_hints`, mirroring how
+    # corpus targets carry Vale. Proves the forwarder plumbing in
+    # `//libs/starlark:wrapper.bzl` reaches the real aspect.
+    aspect_hints = ["//:ruff_config"],
+    imports = ["."],
+)
+
+python_binary(
+    name = "hello",
+    srcs = ["main.py"],
+    imports = ["."],
+    main = "main.py",
+    deps = [":hello_lib"],
+)
+
+python_test(
+    name = "hello_test",
+    srcs = ["hello_test.py"],
+    dep_group = "hello",
+    imports = ["."],
+    deps = [
+        ":hello_lib",
+        "@pypi//coverage",
+        "@pypi//pytest",
+    ],
+)
+
+# Retry-semantics fixture (issue #99 item 3): `flaky = True` must land
+# on the private `:flaky_passthrough_fixture_upstream` target through
+# unfiltered kwargs forwarding. The public target stays an ordinary
+# passing test; `//tools/ci:target_tags` asserts the upstream attribute.
+python_test(
+    name = "flaky_passthrough_fixture",
+    srcs = ["flaky_passthrough_test.py"],
+    dep_group = "hello",
+    flaky = True,
+    imports = ["."],
+    deps = [
+        "@pypi//coverage",
+        "@pypi//pytest",
+    ],
+)
+
+exports_files([
+    "pyproject.toml",
+    "uv.lock",
+])
+
+# Repository corpus: build and project metadata owned for
+# direct-Bazel dogfood under the canonical real_fixture_policy. Python
+# sources and the uv lock stay dx-owned/unclassified, never corpus sources.
+# The lock is a generated third-party manifest, excluded like other locks.
+# Hello smoke as a test target (#87, same pattern as
+# //rust/tests/fixtures/hello:hello_output_test): asserts the seed binary prints the
+# expected greeting. Tagged `no-coverage`: process-spawning tests stay
+# out of the coverage denominator per the repo coverage preset. No corpus
+# entry: shell sources have no `real_source_target` class.
+sh_test(
+    name = "hello_output_test",
+    srcs = ["hello_output_test.sh"],
+    args = ["$(rootpath :hello)"],
+    data = [":hello", "//tools/sh:lib"],
+    tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = ["pyproject.toml"],
+)

@@ -8,7 +8,7 @@
 //! never included merely because they share a repository.
 //!
 //! V1 coverage mirrors `dx_update::sets` (Cargo, npm, Maven, NuGet, Go):
-//! - Cargo (`rust/hello/Cargo.lock`, TOML): registry packages are
+//! - Cargo (`rust/tests/fixtures/hello/Cargo.lock`, TOML): registry packages are
 //!   assessable; `git+` sources are unsupported revisions (incomplete,
 //!   never clean); path-only workspace members (no `source`, version
 //!   `0.0.0`) are first-party and skipped, not assessed.

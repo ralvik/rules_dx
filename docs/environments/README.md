@@ -21,7 +21,7 @@ Accepted. Each foundation keeps its provisional upstream; no switch is approved 
 Every implemented foundation (`rust`, `python`, `javascript`, `typescript`, `go`,
 `java`, `kotlin`, `scala`, `csharp`, `fsharp`, `cc`) contributes a provider-derived
 plan via `<lang>/env/plan.bzl`, pinned by `<lang>/env/plan_tests.bzl` and exercised
-by `<lang>/hello/`. Rust, Node, and Python projections are further defined in
+by `<lang>/tests/fixtures/hello/`. Rust, Node, and Python projections are further defined in
 [Rust Environment](rust.md), [Node Environment](node.md), and
 [Python Environment](python-environment.md). Additional toolchains use the default
 upstream toolchain now; per-platform acquisition stays open under the native plan.

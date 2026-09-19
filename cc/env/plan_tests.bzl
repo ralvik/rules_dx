@@ -8,7 +8,7 @@ file hello_lib_plan.json
 field direct_sources=hello.cc,hello.h
 field has_sources=True
 field source_count=2
-field target=//cc/hello:hello_lib"""
+field target=//cc/tests/fixtures/hello:hello_lib"""
 
 def env_plan_tests(name, subjects):
     starlark_test(

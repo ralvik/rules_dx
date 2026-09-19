@@ -13,29 +13,33 @@ load("//quality:fixtures.bzl", "real_source_target")
 package(default_visibility = ["//visibility:public"])
 
 python_env_plan(
+    testonly = True,
     name = "hello_lib_plan",
-    target = "//python/hello:hello_lib",
+    target = "//python/tests/fixtures/hello:hello_lib",
 )
 
 python_env_plan(
+    testonly = True,
     name = "hello_plan",
-    target = "//python/hello",
+    target = "//python/tests/fixtures/hello",
 )
 
 python_env_plan(
     name = "hello_test_plan",
     testonly = True,
-    target = "//python/hello:hello_test",
+    target = "//python/tests/fixtures/hello:hello_test",
 )
 
 python_env_plan(
+    testonly = True,
     name = "main_plan",
-    target = "//python/entries:main",
+    target = "//python/tests/fixtures/entries:main",
 )
 
 python_env_plan(
+    testonly = True,
     name = "main_bin_plan",
-    target = "//python/entries:main_bin",
+    target = "//python/tests/fixtures/entries:main_bin",
 )
 
 env_plan_tests(

@@ -28,9 +28,9 @@ Core (Rust, Python, JavaScript, TypeScript) plus admitted additional foundations
 (Go, Java, Kotlin, Scala, C#, F#, C/C++) are qualified by focused fixtures:
 thin wrappers in `<lang>/rules/defs.bzl` preserving the upstream provider and
 adding `QualitySourcesInfo`, Gazelle extensions in `gazelle/<lang>/` with
-parser/naming/lang fixtures plus focused tests, hello builds in `<lang>/hello/`
-as wrapper consumers, and lock authority (`rust/hello/Cargo.lock` plus
-`cargo-bazel-lock.json` and `MODULE.bazel.lock`, `python/hello/uv.lock` plus
+parser/naming/lang fixtures plus focused tests, hello builds in `<lang>/tests/fixtures/hello/`
+as wrapper consumers, and lock authority (`rust/tests/fixtures/hello/Cargo.lock` plus
+`cargo-bazel-lock.json` and `MODULE.bazel.lock`, `python/tests/fixtures/hello/uv.lock` plus
 tools lock, `pnpm-lock.yaml` plus tools lock,
 `third_party/jvm/maven_install.json`, `third_party/dotnet/paket.lock` plus
 `paket.dependencies`). Go hello is stdlib-only with no ecosystem lock;

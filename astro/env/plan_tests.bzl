@@ -8,7 +8,7 @@ file hello_lib_plan.json
 field direct_sources=Hello.astro
 field has_npm=False
 field npm_source_count=0
-field target=//astro/hello:hello_lib
+field target=//astro/tests/fixtures/hello:hello_lib
 field transitive_sources=Hello.astro"""
 
 def env_plan_tests(name, subjects):

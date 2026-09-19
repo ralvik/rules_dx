@@ -391,7 +391,7 @@ mod tests {
     fn fix_applies_generate_mutation_after_clean_quality() {
         let mut harness = Harness::new("umbrella-fix");
         harness.write_source("src/a.py", "x = 1\n");
-        harness.write_source("rust/hello/BUILD.bazel", "xyz\n");
+        harness.write_source("rust/tests/fixtures/hello/BUILD.bazel", "xyz\n");
         harness.results.insert(
             "//test:corpus".to_owned(),
             harness.valid_result(vec![], vec![]),
@@ -399,12 +399,15 @@ mod tests {
         harness.intended = Some(intended_witness(
             "default",
             true,
-            &intended_modify("rust/hello/BUILD.bazel", b"abc\n", b"xyz\n"),
+            &intended_modify("rust/tests/fixtures/hello/BUILD.bazel", b"abc\n", b"xyz\n"),
             "",
         ));
         let (code, out, err) = harness.run(&["fix", "--output=text"]);
         assert_eq!(code, 0, "{out}{err}");
-        assert!(out.contains("Modified rust/hello/BUILD.bazel"), "{out}");
+        assert!(
+            out.contains("Modified rust/tests/fixtures/hello/BUILD.bazel"),
+            "{out}"
+        );
         assert_eq!(
             std::fs::read(harness.workspace.join("src/a.py")).expect("source"),
             b"x = 1\n"

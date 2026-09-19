@@ -445,16 +445,16 @@ pub(crate) fn coverage_harness(name: &str, tracefile: &[u8]) -> Harness {
     }
 }
 
-/// Default-mode witness for one `rust/hello/BUILD.bazel` modify
+/// Default-mode witness for one `rust/tests/fixtures/hello/BUILD.bazel` modify
 /// (`abc` to `xyz`); the workspace holds `workspace_text` so the
 /// caller selects the write outcome.
 pub(crate) fn generate_witness(workspace_text: &str, name: &str) -> Harness {
     let mut harness = Harness::new(name);
-    harness.write_source("rust/hello/BUILD.bazel", workspace_text);
+    harness.write_source("rust/tests/fixtures/hello/BUILD.bazel", workspace_text);
     harness.intended = Some(intended_witness(
         "default",
         true,
-        &intended_modify("rust/hello/BUILD.bazel", b"abc\n", b"xyz\n"),
+        &intended_modify("rust/tests/fixtures/hello/BUILD.bazel", b"abc\n", b"xyz\n"),
         "",
     ));
     harness

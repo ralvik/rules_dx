@@ -447,6 +447,13 @@ func (l *rustLang) attachNative(args language.GenerateArgs, result language.Gene
 	for range corpus.gen {
 		result.Imports = append(result.Imports, targetImports{})
 	}
+	// Auto-testonly for fixture paths (issue #404): generated rules under
+	// tests/fixtures/testdata carry testonly.
+	if isFixturePath(args.Rel) {
+		for _, r := range result.Gen {
+			r.SetAttr("testonly", true)
+		}
+	}
 	if err := checkExistingClaims(args.File, args.OtherGen, result.Gen); err != nil {
 		l.fail("%v", err)
 		return language.GenerateResult{}
@@ -1357,6 +1364,15 @@ func addImport(sets [2]map[string]bool, localModules map[string]bool, raw string
 		index = 1
 	}
 	sets[index][root] = true
+}
+
+
+// isFixturePath reports whether a Gazelle relative directory is a test-only
+// fixture path (issue #404): any path containing tests, fixtures, or
+// testdata as a segment generates testonly targets.
+func isFixturePath(rel string) bool {
+    padded := "/" + rel + "/"
+    return strings.Contains(padded, "/tests/") || strings.Contains(padded, "/fixtures/") || strings.Contains(padded, "/testdata/")
 }
 
 func mergeStale(file *rule.File, result language.GenerateResult) language.GenerateResult {

@@ -21,7 +21,7 @@
 //!   offline matching. No subprocess launches for V1 vuln: the matcher
 //!   reads lockfiles plus snapshot bytes supplied by the caller, so no
 //!   inventory ever leaves the workspace. Per-ecosystem lockfile
-//!   coverage is Cargo (`rust/hello/Cargo.lock`), npm
+//!   coverage is Cargo (`rust/tests/fixtures/hello/Cargo.lock`), npm
 //!   (`pnpm-lock.yaml`), Maven
 //!   (`third_party/jvm/maven_install.json`), NuGet
 //!   (`third_party/dotnet/paket.lock`), and Go (empty set, no `go.mod`:
@@ -125,7 +125,7 @@ pub fn plan_secrets(report_path: &str, config: Option<&str>) -> Result<BackendPl
 /// vulnerability matching. Go has none (empty set, no-op success).
 pub fn vuln_locks(set: &str) -> &'static [&'static str] {
     match set {
-        "cargo" => &["rust/hello/Cargo.lock"],
+        "cargo" => &["rust/tests/fixtures/hello/Cargo.lock"],
         "npm" => &["pnpm-lock.yaml"],
         "maven" => &["third_party/jvm/maven_install.json"],
         "nuget" => &["third_party/dotnet/paket.lock"],
@@ -190,7 +190,10 @@ mod tests {
 
     #[test]
     fn vuln_locks_pin_per_set_coverage_and_go_empty() {
-        assert_eq!(vuln_locks("cargo"), &["rust/hello/Cargo.lock"]);
+        assert_eq!(
+            vuln_locks("cargo"),
+            &["rust/tests/fixtures/hello/Cargo.lock"]
+        );
         assert_eq!(vuln_locks("npm"), &["pnpm-lock.yaml"]);
         assert_eq!(vuln_locks("maven"), &["third_party/jvm/maven_install.json"]);
         assert_eq!(vuln_locks("nuget"), &["third_party/dotnet/paket.lock"]);

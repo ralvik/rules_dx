@@ -1,0 +1,38 @@
+"""M21 seed MDX document; consumer of mdx_* wrappers."""
+
+load("//javascript/rules:defs.bzl", "javascript_library", "javascript_test")
+load("//mdx/rules:defs.bzl", "mdx_library")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_visibility = ["//:__subpackages__"],
+    default_testonly = True,
+)
+
+mdx_library(
+    name = "hello_lib",
+    srcs = ["Hello.mdx"],
+)
+
+javascript_library(
+    name = "helper_lib",
+    srcs = ["helper.js"],
+)
+
+javascript_test(
+    name = "hello_test",
+    srcs = ["Hello.test.js"],
+    data = [
+        ":Hello.mdx",
+        ":helper_lib",
+        "//:node_modules/@mdx-js/mdx",
+    ],
+    node_modules = "//:node_modules",
+    node_options = ["--experimental-vm-modules"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
