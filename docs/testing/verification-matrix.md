@@ -123,9 +123,10 @@ Remaining reds stay owned gaps, not green claims:
 
 - Full-tree `dx lint/format/typecheck/test --check //...` over fixtures and
   testdata stays open under #12 (lane A only) and #325 (consumer honesty).
-- Per-cell coverage beyond the seed cell and remote
-  cache/exec evidence stay open under #308. First-party PR reporting is
-  adopted under #254 (Codecov opt-in only).
+- Per-cell coverage is qualified seed-only under #308 (`tools/coverage/cells.txt`,
+  `bazel run //tools/ci:coverage_qualification`; no union, Starlark fallback,
+  Codecov opt-in, quotas, local-only remote evidence). First-party PR reporting is
+  adopted under #254 (Codecov opt-in only). Non-seed cells stay platform-gated under #298.
 - Docs pipeline and environment/codegen stay open under #310 and #309 (see
   [Documentation](../documentation/README.md#contracts)).
 - Consumer-CI qualification stays open under #312; platform qualification

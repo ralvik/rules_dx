@@ -256,6 +256,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:coverage_cell
       - name: Prove coverage spill containment (no profraw to checkout)
         run: bazel run --noshow_progress //tools/ci:coverage_spill
+      - name: Prove coverage qualification (per-cell, Starlark, Codecov, quotas, local-only remote)
+        run: bazel run --noshow_progress //tools/ci:coverage_qualification
       - name: Prove release hygiene (no publication inputs without approval)
         run: bazel run --noshow_progress //tools/ci:release_hygiene
       - name: Prove release policy (curated defaults + parity manifest gate)
@@ -268,7 +270,7 @@ jobs:
         if: always()
         run: |
           echo "### prove — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate, release hygiene (issue #5 no-publication inputs), release policy (issue #89 curated defaults + parity gate), publish trust (issues #78/#26/#5 draft-only sites + nothing published), shell contract (issue #299 bash-only Linux-only harness + portable forms)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate, coverage qualification (issue #308 per-cell plus Starlark plus Codecov plus quotas plus local-only remote), release hygiene (issue #5 no-publication inputs), release policy (issue #89 curated defaults + parity gate), publish trust (issues #78/#26/#5 draft-only sites + nothing published), shell contract (issue #299 bash-only Linux-only harness + portable forms)." >> "$GITHUB_STEP_SUMMARY"
           echo "Proved (follow-up): coverage spill containment (issues #252/#54, LLVM_PROFILE_FILE to scratch)." >> "$GITHUB_STEP_SUMMARY"
   e2e:
     name: e2e (Stage 4 CLI-contract suite, explicit invocation)

@@ -101,8 +101,12 @@ combined LCOV report through the `check` gate CLI against a versioned
 cell inventory (seed cell: `tools/coverage/seed-inventory.txt`): exact
 covered/eligible counts with zero uncovered lines, missing reports and
 uninventoried sources failing closed. CI pins this in
-`bazel run //tools/ci:coverage_cell`. New cells qualify per the platform
-policy; reports are never unioned across cells to hide gaps.
+`bazel run //tools/ci:coverage_cell`. The required-cell registry is
+`tools/coverage/cells.txt` (seed qualified, five v1 hosts unqualified per
+the platform policy); no cross-cell union, never unioned across cells to hide gaps.
+Per-cell enforcement plus the Starlark, Codecov, quota, and remote halves
+below is qualified by `bazel run //tools/ci:coverage_qualification`
+(issue #308).
 
 **Accepted mechanics:**
 
@@ -166,7 +170,9 @@ from measured line coverage.
 
 Codecov stays at most opt-in and is never required. No Codecov account
 activation or upload wiring is used here; the first-party comment is the
-adopted surface. Coverage mappings are resolved in the [coverage gate](#coverage).
+adopted surface. Codecov opt-in-only is qualified by
+`bazel run //tools/ci:coverage_qualification` (no action, token, or upload
+step). Coverage mappings are resolved in the [coverage gate](#coverage).
 Complete-report publication and failure cases (missing report, uncovered
 lines, partial LCOV, rerun dedup, fork PR) are proven by
 `bazel run //tools/ci:coverage_report_guards`. Workflows exist in
@@ -181,7 +187,11 @@ and service overages are not approved; any paid exception requires separate appr
 Qualify free-tier eligibility, host availability, quotas, and retention rather than
 assuming public-repository status makes every service free. Exhausted quotas or missing
 required hosts block affected work; they do not waive platform, coverage, artifact-trust,
-or release evidence requirements. Exact service mappings remain technical qualification work.
+or release evidence requirements. Qualified mappings (issue #308,
+`bazel run //tools/ci:coverage_qualification`): standard GitHub-hosted runners is free
+for public repositories (`ubuntu-latest`, `macos-14`; no self-hosted). Larger runners are always charged.
+`actions/cache` disk cache is 10 GB per repository; artifact storage is 500 MB.
+GHCR is free for public repositories with quotas recorded on first push; Pages is free.
 
 ## Remote Tests
 
@@ -189,10 +199,10 @@ Remote cache tests are required before claiming remote-cache correctness. Remote
 execution tests are required before declaring a toolchain remotely executable.
 If infrastructure is unavailable, documentation must state that hermeticity is
 designed and locally sandbox-tested but remote behavior remains unverified.
-Coverage per-cell enforcement and remote evidence stay open under
-issue #308 (seed cell only today, never union across cells; Starlark instrumentation
-decision, quota qualification, and remote-cache
-plus remote-execution tests remain qualification work). First-party PR
+That else branch is taken here: hermeticity is designed and locally
+sandbox-tested (aquery action shape plus execution-log cache hits) but remote
+behavior remains unverified, with no remote cache or executor wired
+(issue #308, `bazel run //tools/ci:coverage_qualification`). First-party PR
 reporting itself is adopted under #254; Codecov stays opt-in only.
 
 Byte-identical goldens stay brittle-check honest under issue #322 (parity tests, shell
