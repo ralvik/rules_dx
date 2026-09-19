@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Foundation-mapping guards (issues #7, #8; relates #6, #12).
+# Foundation-mapping guards (issues #7, #8, #303; relates #6, #12).
 #
 # Rust/Python/JS-TS foundations ship thin wrappers + Gazelle + env plans;
 # exact provider/import/lock/tool-graph proofs are pinned here for #7.
@@ -7,6 +7,9 @@
 # end-to-end fixture approach; exact parser/compiler, provider,
 # generated-region, dependency, test, env/IDE, quality-region mappings plus
 # composition evidence are pinned here for #8.
+# Required-core mappings (Rust providers/Gazelle/integration plus native gaps,
+# Python mappings plus Ty, JS/TS wrappers/Gazelle plus quality mappings,
+# framework adapter mappings plus composition) are pinned here for #303.
 # Class-to-family taxonomy stays open under #6; native config binding +
 # CI scope extension stay open under #12.
 #
@@ -14,7 +17,9 @@
 # boundaries, provider advertisement, fixture markers, upstream pins,
 # Gazelle fixtures, env plans, hello wrapper fixtures, lock authority, Ty
 # provenance, plus the framework parser/compiler, provider, region,
-# dependency, test, env/IDE, quality-region, and composition fixtures.
+# dependency, test, env/IDE, quality-region, and composition fixtures,
+# plus the #303 build-script hermetic defaults, Ty/quality adapter mappings,
+# and native-gap ownership.
 # Upstream choices are kept; no switch is approved here.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:foundation_maps`,
@@ -378,6 +383,72 @@ if [[ -f "tools/ci/wrapper_sources.sh" && -f "tools/ci/code_ownership.sh" ]]; th
   ok
 else
   bad "wrapper_sources/code_ownership harnesses missing"
+fi
+
+# #303: Rust build-script hermetic defaults stay pinned (generation contract
+# plus Gazelle emission plus focused Go fixtures).
+script_fail=""
+grep -q -F -e 'use_default_shell_env = False' docs/generation/rust.md || script_fail="$script_fail contract:shell-env"
+grep -q -F -e 'use_cc_toolchain = True' docs/generation/rust.md || script_fail="$script_fail contract:cc"
+grep -q -F -e 'emit_warnings = True' docs/generation/rust.md || script_fail="$script_fail contract:warnings"
+grep -q -F -e 'use_cc_toolchain", 1' gazelle/rust/lang.go || script_fail="$script_fail lang:cc"
+grep -q -F -e 'use_default_shell_env", 0' gazelle/rust/lang.go || script_fail="$script_fail lang:shell-env"
+grep -q -F -e 'emit_warnings", true' gazelle/rust/lang.go || script_fail="$script_fail lang:warnings"
+grep -q -F -e 'use_cc_toolchain' gazelle/rust/lang_test.go || script_fail="$script_fail test:cc"
+grep -q -F -e 'use_default_shell_env' gazelle/rust/lang_test.go || script_fail="$script_fail test:shell-env"
+grep -q -F -e 'emit_warnings' gazelle/rust/lang_test.go || script_fail="$script_fail test:warnings"
+if [[ -z "$script_fail" ]]; then
+  ok
+else
+  bad "build-script hermetic defaults drifted:$script_fail"
+fi
+
+# #303: required-core quality adapter mappings stay pinned (Ty plus
+# Ruff/pydoclint for Python; Biome/ESLint/Prettier/tsc for JS/TS).
+quality_fail=""
+grep -q -F -e '"ty": {"typecheck": ["python", "python_stub"]}' quality/adapters.bzl || quality_fail="$quality_fail ty:adapter"
+grep -q -F -e '"ruff": {"format": ["python", "python_stub"], "lint": ["python", "python_stub"]}' quality/adapters.bzl || quality_fail="$quality_fail ruff:adapter"
+grep -q -F -e '"pydoclint": {"lint": ["python", "python_stub"]}' quality/adapters.bzl || quality_fail="$quality_fail pydoclint:adapter"
+grep -q -F -e '"biome": {' quality/adapters.bzl || quality_fail="$quality_fail biome:adapter"
+grep -q -F -e '"eslint": {"lint": ["javascript", "jsx"]}' quality/adapters.bzl || quality_fail="$quality_fail eslint:adapter"
+grep -q -F -e '"prettier": {"format": ["javascript", "json", "jsx", "typescript", "tsx"]}' quality/adapters.bzl || quality_fail="$quality_fail prettier:adapter"
+grep -q -F -e '"tsc": {"typecheck": ["typescript", "tsx"]}' quality/adapters.bzl || quality_fail="$quality_fail tsc:adapter"
+[[ -f "quality/adapter/src/parsers/ty.rs" ]] || quality_fail="$quality_fail ty:parser"
+[[ -f "quality/adapter/src/parsers/ruff.rs" ]] || quality_fail="$quality_fail ruff:parser"
+[[ -f "quality/adapter/src/parsers/biome.rs" ]] || quality_fail="$quality_fail biome:parser"
+[[ -f "quality/adapter/src/parsers/eslint.rs" ]] || quality_fail="$quality_fail eslint:parser"
+[[ -f "quality/adapter/src/parsers/prettier.rs" ]] || quality_fail="$quality_fail prettier:parser"
+[[ -f "quality/adapter/src/parsers/tsc.rs" ]] || quality_fail="$quality_fail tsc:parser"
+grep -q -F -e 'parse_ty' quality/adapter/src/parsers/ty.rs || quality_fail="$quality_fail ty:parse"
+grep -q -F -e 'parse_biome' quality/adapter/src/parsers/biome.rs || quality_fail="$quality_fail biome:parse"
+grep -q -F -e 'parse_eslint' quality/adapter/src/parsers/eslint.rs || quality_fail="$quality_fail eslint:parse"
+if [[ -z "$quality_fail" ]]; then
+  ok
+else
+  bad "required-core quality mappings drifted:$quality_fail"
+fi
+
+# #303: required-core native gaps stay owned (no Supported claim; docs own
+# the five gaps; matrix tracks them under #303).
+gaps_fail=""
+grep -q -F -e 'kept CC opt-out linker' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:cc-optout"
+grep -q -F -e 'shell-env default' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:shell-env"
+grep -q -F -e 'bindgen LLVM-22-vs-23' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:bindgen"
+grep -q -F -e 'CXX graph identity' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:cxx"
+grep -q -F -e 'exact-target discovery' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:exact-target"
+grep -q -F -e 'issue #303' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:tracking"
+grep -q -F -e 'issue #303' docs/native-toolchains.md || gaps_fail="$gaps_fail native:tracking"
+grep -q -F -e 'Can the kept CC opt-out execute successfully?' docs/native-toolchains.md || gaps_fail="$gaps_fail native:cc-optout"
+grep -q -F -e 'Can third-party scripts retain a declared hermetic closure?' docs/native-toolchains.md || gaps_fail="$gaps_fail native:shell-env"
+grep -q -F -e 'Can bindgen/CXX use one upstream graph?' docs/native-toolchains.md || gaps_fail="$gaps_fail native:bindgen-cxx"
+grep -q -F -e 'Can IDE setup preserve exact context' docs/native-toolchains.md || gaps_fail="$gaps_fail native:exact-target"
+if grep -q -E -e '^\| .* \| Supported' docs/product/support-matrix.md; then
+  gaps_fail="$gaps_fail unexpected-supported"
+fi
+if [[ -z "$gaps_fail" ]]; then
+  ok
+else
+  bad "required-core native gaps unowned:$gaps_fail"
 fi
 
 echo "foundation maps harness: $pass passed, $fail failed"

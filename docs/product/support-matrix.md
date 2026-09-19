@@ -109,12 +109,12 @@ fixture evidence; provisional notes below do not select additional defaults or n
 
 | Foundation | Provisional upstream basis | Open mappings | Tracking |
 | --- | --- | --- | --- |
-| Rust application | `rules_rs` + pinned patched `rules_rust` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Providers, Gazelle, integration | open work |
-| Python application | `aspect_rules_py` 2.x ([ADR 0010](../decisions/0010-python-foundation.md)) | Mappings | open work |
-| JavaScript/TypeScript application | `aspect_rules_js`/`aspect_rules_ts`, `aspect_rules_jest` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Wrappers/Gazelle | open work |
-| JS/TS quality | Biome default; ESLint, Prettier available; `tsc` diagnostic-only | Mappings | open work |
-| Python quality | Ruff, Ty, pydoclint (Bandit excluded from v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md)) | Mappings, Ty | open work |
-| Vue / Svelte / Astro / MDX | Named upstream adapters per framework | Adapter mappings | open work |
+| Rust application | `rules_rs` + pinned patched `rules_rust` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Providers, Gazelle, integration; native gaps: kept CC opt-out linker, shell-env default, bindgen LLVM-22-vs-23, CXX graph identity, exact-target discovery | issue #303 |
+| Python application | `aspect_rules_py` 2.x ([ADR 0010](../decisions/0010-python-foundation.md)) | Mappings | issue #303 |
+| JavaScript/TypeScript application | `aspect_rules_js`/`aspect_rules_ts`, `aspect_rules_jest` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Wrappers/Gazelle | issue #303 |
+| JS/TS quality | Biome default; ESLint, Prettier available; `tsc` diagnostic-only | Mappings | issue #303 |
+| Python quality | Ruff, Ty, pydoclint (Bandit excluded from v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md)) | Mappings, Ty | issue #303 |
+| Vue / Svelte / Astro / MDX | Named upstream adapters per framework | Adapter mappings plus composition evidence | issue #303 |
 | Generation transport | Declared versioned manifest artifact (`GenerationManifest` in `generation/result.proto`, projected by `ProjectedManifest` in `cli/cli/src/generate.rs`) with explicit path/label/pattern scope | Implemented | Shipped |
 | Target resolution | All-direct-owners query strategy ([Target Resolution](../cli/target-resolution.md), pinned by resolver fixtures) | Implemented | Shipped |
 | Quality core/result contract | Internal Protobuf + NDJSON output | Core mappings | open work |
@@ -125,8 +125,22 @@ fixture evidence; provisional notes below do not select additional defaults or n
 
 Required core mappings stay open under issue #303 (Rust providers/Gazelle/integration,
 Python mappings plus Ty, JS/TS wrappers/Gazelle plus quality mappings, Vue/Svelte/Astro/MDX
-adapter mappings plus composition evidence). No `Supported` claim until platform plus
-consumer plus release evidence passes.
+adapter mappings plus composition evidence). Qualified mappings are pinned by
+`bazel run //tools/ci:foundation_maps` with owning qualification in
+[Generation](../generation/README.md#language-mapping-qualification),
+[Environments](../environments/README.md#language-mapping-qualification),
+[Tools](../tools/README.md#language-mapping-qualification), and
+[Framework adapters](../generation/framework-adapters.md#framework-mapping-qualification):
+build-script hermetic defaults (`use_cc_toolchain = True`, `use_default_shell_env = False`,
+`emit_warnings = True` in `gazelle/rust/lang.go`, proven by `gazelle/rust/lang_test.go`),
+Ty provenance plus `ty` typecheck adapter mapping (`quality/artifacts/ty.linux_x86_64.bzl`,
+`quality/adapters.bzl`, `quality/adapter/src/parsers/ty.rs`), JS/TS quality adapter mappings
+(`biome`/`eslint`/`prettier`/`tsc` in `quality/adapters.bzl` plus their parsers), and
+framework composition (`examples/mixed/hello/` plus `gazelle/mixed/`). Remaining native gaps
+(kept CC opt-out linker failure path, global shell-env False versus annotation extension,
+bindgen LLVM-22-vs-23 compatibility, CXX graph identity, exact-target discovery) stay owned
+under issue #303 per the [native plan](../native-toolchains.md#qualification-questions-and-delivery).
+No `Supported` claim until platform plus consumer plus release evidence passes.
 
 Required platforms and the quality-tool baseline (minus excluded Swift) frame
 delivery of this inventory. Admitted additional foundations are tracked in

@@ -125,6 +125,8 @@ shared core `helper_lib`, with `hello_test` proving the shared helper edge,
 per-container helper references, and no framework-to-framework imports.
 `gazelle/mixed/` proves the partition is disjoint and complete for the closed
 v1 set with case-sensitive extension matching, no fallback, and no eager work
-for unused adapters.
+for unused adapters. Required-core adapter mappings plus composition evidence
+stay owned under issue #303; no `Supported` claim until platform plus consumer
+plus release evidence passes.
 
 Pinned by `bazel run //tools/ci:foundation_maps`.

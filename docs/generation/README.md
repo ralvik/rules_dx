@@ -40,4 +40,11 @@ Ruby and PowerShell have no generation mapping: deferred beyond v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
 Swift has none: excluded from v1 by the same record.
 
+Required-core Rust build-script hermetic defaults are implemented
+(`use_cc_toolchain = True`, `use_default_shell_env = False`, `emit_warnings = True`
+in `gazelle/rust/lang.go`, proven by `gazelle/rust/lang_test.go`); remaining native gaps
+(kept CC opt-out linker, shell-env default, bindgen LLVM-22-vs-23, CXX graph identity,
+exact-target discovery) stay owned under issue #303 per the
+[native plan](../native-toolchains.md#qualification-questions-and-delivery).
+
 Pinned by `bazel run //tools/ci:foundation_maps`.
