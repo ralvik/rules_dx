@@ -642,6 +642,18 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Coverage/remote qualification harness (issue #308): proves per-cell
+# gating (seed qualified, rest unqualified, never unioned), the Starlark
+# instrumentation-vs-behavioral-matrix decision, Codecov opt-in-only,
+# free-tier quotas, and local-only remote evidence. Run by CI via
+# `bazel run //tools/ci:coverage_qualification`.
+sh_binary(
+    name = "coverage_qualification",
+    srcs = ["coverage_qualification.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],

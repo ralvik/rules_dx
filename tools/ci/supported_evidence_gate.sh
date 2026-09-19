@@ -7,9 +7,9 @@
 # Seed-host evidence is delivered (corpus dogfood, Layer-2 matrix for the
 # seed languages, generation freshness, adopt-* external-consumer proof,
 # CLI-contract E2E, required-core depcheck fixtures, `dx update` live execution,
-# perf report-not-gate);
-# audit live execution, docs-pipeline, env/codegen, per-cell coverage
-# beyond the seed cell, Codecov wiring, remote-cache/exec, admitted depcheck
+# perf report-not-gate, seed-only coverage/remote qualification under #308);
+# audit live execution, docs-pipeline, env/codegen, non-seed platform cells
+# (issue #298), admitted depcheck
 # expansion, and release evidence (SBOM/provenance, signing/attestations,
 # BCR submission, GHCR route, consumer verification) remain open gaps
 # tracked in their owning issues.
@@ -167,13 +167,16 @@ else
   bad "audit/update Delivered lost live codes or guards harness"
 fi
 
-# Coverage seed-only: cell gate + versioned inventory, no cross-cell union.
+# Coverage seed-only qualified (#308): cell gate + versioned inventory and
+# registry plus qualification harness, no cross-cell union.
 if [[ -f "tools/ci/coverage_cell.sh" ]] \
   && [[ -f "tools/coverage/seed-inventory.txt" ]] \
+  && [[ -f "tools/coverage/cells.txt" ]] \
+  && [[ -f "tools/ci/coverage_qualification.sh" ]] \
   && grep -q -F -e 'seed cell' tools/coverage/seed-inventory.txt; then
   ok
 else
-  bad "coverage seed-only lost its cell gate or seed inventory"
+  bad "coverage seed-only lost its cell gate, inventory, registry, or qualification harness"
 fi
 
 # Env/codegen + docs-pipeline Open: backlog contracts pin frozen halves.
