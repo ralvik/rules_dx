@@ -411,8 +411,9 @@ sh_binary(
 # GHCR prebuilt-image hygiene (issues #184, #311): separate workflow
 # from releases, PR-paths build, dispatch + default-closed approve gate,
 # digest-pinned base + Bazel delegation + no ambient toolchains,
-# cosign record on the #311 trust root, scaffold still on mcr until first
-# push. Run by CI via `bazel run //tools/ci:ghcr_hygiene`.
+# gated cosign sign/verify + attestation with pinned fetch,
+# version-tracked tags + keyless scope, qualified quota, scaffold still on
+# mcr until first push. Run by CI via `bazel run //tools/ci:ghcr_hygiene`.
 sh_binary(
     name = "ghcr_hygiene",
     srcs = ["ghcr_hygiene.sh"],
