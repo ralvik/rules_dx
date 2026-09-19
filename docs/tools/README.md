@@ -25,7 +25,8 @@ JS/TS classes per `quality/adapters.bzl` with parsers in `quality/adapter/src/pa
 (`ty.rs`, `ruff.rs`, `biome.rs`, `eslint.rs`, `prettier.rs`, `tsc.rs`); required-core
 quality mappings stay owned under issue #303.
 Additional-language adapters (Java, Kotlin, Scala, C#, F#, C/C++, Go) have no
-claimed adapter yet; per-tool qualification stays open under issue #307.
+claimed adapter yet; foundation-side classification stays owned under issue #304 and
+per-tool qualification stays open under issue #307.
 Ruby and PowerShell tool cohorts stay deferred beyond v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md);
 Swift is excluded from v1 by the same record.

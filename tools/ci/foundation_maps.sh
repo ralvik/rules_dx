@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Foundation-mapping guards (issues #7, #8, #303; relates #6, #12).
+# Foundation-mapping guards (issues #7, #8, #303, #304; relates #6, #12).
 #
 # Rust/Python/JS-TS foundations ship thin wrappers + Gazelle + env plans;
 # exact provider/import/lock/tool-graph proofs are pinned here for #7.
@@ -10,6 +10,10 @@
 # Required-core mappings (Rust providers/Gazelle/integration plus native gaps,
 # Python mappings plus Ty, JS/TS wrappers/Gazelle plus quality mappings,
 # framework adapter mappings plus composition) are pinned here for #303.
+# Admitted additional foundations (Go, C/C++, Java, Kotlin, Scala, C#, F#)
+# keep provisional upstreams with hello test runners, lock authority, and
+# classification-only quality families pinned here for #304; upgrades plus
+# quality adapters (under #307) plus the C/C++ MSVC block stay owned gaps.
 # Class-to-family taxonomy stays open under #6; native config binding +
 # CI scope extension stay open under #12.
 #
@@ -19,7 +23,8 @@
 # provenance, plus the framework parser/compiler, provider, region,
 # dependency, test, env/IDE, quality-region, and composition fixtures,
 # plus the #303 build-script hermetic defaults, Ty/quality adapter mappings,
-# and native-gap ownership.
+# and native-gap ownership, plus the #304 admitted test runners, lock wiring,
+# quality classification, and MSVC-block ownership.
 # Upstream choices are kept; no switch is approved here.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:foundation_maps`,
@@ -449,6 +454,103 @@ if [[ -z "$gaps_fail" ]]; then
   ok
 else
   bad "required-core native gaps unowned:$gaps_fail"
+fi
+
+# #304: admitted test runners stay pinned (go test with package embed,
+# ScalaTest via the managed route, JUnit 4 seed for JVM, plain executables
+# for cc/csharp/fsharp with named upgrades open).
+runner_fail=""
+grep -q -F -e 'go_test' go/hello/BUILD.bazel || runner_fail="$runner_fail go:kind"
+grep -q -F -e 'embed' go/hello/BUILD.bazel || runner_fail="$runner_fail go:embed"
+grep -q -F -e 'cc_test' cc/hello/BUILD.bazel || runner_fail="$runner_fail cc:kind"
+grep -q -F -e 'assert' cc/hello/hello_test.cc || runner_fail="$runner_fail cc:plain"
+grep -q -F -e 'GoogleTest v1.18.0' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:gtest"
+grep -q -F -e 'java_test' java/hello/BUILD.bazel || runner_fail="$runner_fail java:kind"
+grep -q -F -e 'test_class' java/hello/BUILD.bazel || runner_fail="$runner_fail java:class"
+grep -q -F -e 'org.junit.Test' java/hello/HelloTest.java || runner_fail="$runner_fail java:junit4"
+grep -q -F -e 'kotlin_test' kotlin/hello/BUILD.bazel || runner_fail="$runner_fail kotlin:kind"
+grep -q -F -e '@maven//:junit_junit' kotlin/hello/BUILD.bazel || runner_fail="$runner_fail kotlin:maven"
+grep -q -F -e 'org.junit.Test' kotlin/hello/HelloTest.kt || runner_fail="$runner_fail kotlin:junit4"
+grep -q -F -e 'junit:junit:4.13.2' MODULE.bazel || runner_fail="$runner_fail module:junit4"
+grep -q -F -e '6.1.3' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:junit6"
+grep -q -F -e 'scala_test' scala/hello/BUILD.bazel || runner_fail="$runner_fail scala:kind"
+grep -q -F -e 'AnyFlatSpec' scala/hello/HelloTest.scala || runner_fail="$runner_fail scala:scalatest"
+grep -q -F -e 'ScalaTest 3.2.20' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:scalatest"
+grep -q -F -e 'scala_version = "2.13.18"' MODULE.bazel || runner_fail="$runner_fail module:scala-version"
+grep -q -F -e 'csharp_test' csharp/hello/BUILD.bazel || runner_fail="$runner_fail csharp:kind"
+grep -q -F -e 'static int Main' csharp/hello/HelloTest.cs || runner_fail="$runner_fail csharp:plain"
+grep -q -F -e 'fsharp_test' fsharp/hello/BUILD.bazel || runner_fail="$runner_fail fsharp:kind"
+grep -q -F -e 'EntryPoint' fsharp/hello/HelloTest.fs || runner_fail="$runner_fail fsharp:plain"
+grep -q -F -e 'xUnit v3 4.0.0' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:xunit"
+grep -q -F -e 'xUnit' csharp/rules/defs.bzl || runner_fail="$runner_fail csharp:open"
+grep -q -F -e 'xUnit' fsharp/rules/defs.bzl || runner_fail="$runner_fail fsharp:open"
+if [[ -z "$runner_fail" ]]; then
+  ok
+else
+  bad "admitted test runners drifted:$runner_fail"
+fi
+
+# #304: admitted lock wiring stays pinned (JVM shares maven_install.json,
+# .NET shares paket.main, Go stdlib-only, C/C++ none).
+lock304_fail=""
+grep -q -F -e 'maven_install.json' docs/generation/README.md || lock304_fail="$lock304_fail gen:maven"
+grep -q -F -e 'paket.lock' docs/generation/README.md || lock304_fail="$lock304_fail gen:paket"
+grep -q -F -e 'Go stdlib-only' docs/generation/README.md || lock304_fail="$lock304_fail gen:go"
+grep -q -F -e 'C/C++ none' docs/generation/README.md || lock304_fail="$lock304_fail gen:cc"
+grep -q -F -e '@paket.main//fsharp.core' fsharp/hello/BUILD.bazel || lock304_fail="$lock304_fail fsharp:paket"
+grep -q -F -e 'paket.main' MODULE.bazel || lock304_fail="$lock304_fail module:paket"
+grep -q -F -e 'lock_file = "//third_party/jvm:maven_install.json"' MODULE.bazel || lock304_fail="$lock304_fail module:maven"
+if [[ -z "$lock304_fail" ]]; then
+  ok
+else
+  bad "admitted lock wiring drifted:$lock304_fail"
+fi
+
+# #304: admitted quality classification stays pinned (families exist,
+# no adapter claims admitted classes yet; adapter side stays under #307).
+class304_fail=""
+for cls in go c cpp java kotlin scala csharp fsharp; do
+  grep -q -F -e "\"$cls\":" quality/adapters.bzl || class304_fail="$class304_fail $cls:family"
+done
+grep -q -F -e 'no adapter claims go yet' quality/adapters.bzl || class304_fail="$class304_fail go:open"
+grep -q -F -e 'no adapter claims c/cpp yet' quality/adapters.bzl || class304_fail="$class304_fail cc:open"
+grep -q -F -e 'adapter claims java yet' quality/adapters.bzl || class304_fail="$class304_fail java:open"
+grep -q -F -e 'no adapter claims kotlin' quality/adapters.bzl || class304_fail="$class304_fail kotlin:open"
+grep -q -F -e 'no adapter claims scala yet' quality/adapters.bzl || class304_fail="$class304_fail scala:open"
+grep -q -F -e 'no adapter claims csharp yet' quality/adapters.bzl || class304_fail="$class304_fail csharp:open"
+grep -q -F -e 'no adapter claims fsharp yet' quality/adapters.bzl || class304_fail="$class304_fail fsharp:open"
+grep -q -F -e 'issue #304' docs/tools/README.md || class304_fail="$class304_fail tools:tracking"
+grep -q -F -e 'issue #307' docs/tools/README.md || class304_fail="$class304_fail tools:adapter-tracking"
+grep -q -F -e 'gofumpt' docs/product/support-matrix.md || class304_fail="$class304_fail matrix:gofumpt"
+grep -q -F -e 'clang-format' docs/product/support-matrix.md || class304_fail="$class304_fail matrix:clang-format"
+grep -q -F -e 'google-java-format' docs/product/support-matrix.md || class304_fail="$class304_fail matrix:gjf"
+grep -q -F -e 'ktfmt' docs/product/support-matrix.md || class304_fail="$class304_fail matrix:ktfmt"
+grep -q -F -e 'scalafmt' docs/product/support-matrix.md || class304_fail="$class304_fail matrix:scalafmt"
+grep -q -F -e 'CSharpier' docs/product/support-matrix.md || class304_fail="$class304_fail matrix:csharpier"
+grep -q -F -e 'Fantomas' docs/product/support-matrix.md || class304_fail="$class304_fail matrix:fantomas"
+if [[ -z "$class304_fail" ]]; then
+  ok
+else
+  bad "admitted quality classification drifted:$class304_fail"
+fi
+
+# #304: admitted foundations stay owned (docs track #304; C/C++ MSVC block
+# owned with no Supported claim).
+own304_fail=""
+grep -q -F -e 'issue #304' docs/product/support-matrix.md || own304_fail="$own304_fail matrix:tracking"
+grep -q -F -e 'issue #304' docs/generation/README.md || own304_fail="$own304_fail gen:tracking"
+grep -q -F -e 'issue #304' docs/environments/README.md || own304_fail="$own304_fail env:tracking"
+grep -q -F -e 'issue #304' docs/native-toolchains.md || own304_fail="$own304_fail native:tracking"
+grep -q -F -e 'MSVC interop' docs/product/support-matrix.md || own304_fail="$own304_fail matrix:msvc"
+grep -q -F -e 'MSVC interop' docs/native-toolchains.md || own304_fail="$own304_fail native:msvc"
+grep -q -F -e 'SDK licensing' docs/native-toolchains.md || own304_fail="$own304_fail native:sdk"
+if grep -q -E -e '^\| .* \| Supported' docs/product/support-matrix.md; then
+  own304_fail="$own304_fail unexpected-supported"
+fi
+if [[ -z "$own304_fail" ]]; then
+  ok
+else
+  bad "admitted foundations unowned:$own304_fail"
 fi
 
 echo "foundation maps harness: $pass passed, $fail failed"

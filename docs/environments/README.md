@@ -32,4 +32,8 @@ Required-core exact-target discovery stays owned under issue #303 per the
 [native plan](../native-toolchains.md#qualification-questions-and-delivery);
 current plans are provider-derived focused-target plans, not exact-target proof.
 
+Admitted additional-foundation env mappings stay owned under issue #304; current plans
+are provider-derived focused-target plans on default upstream toolchains, not
+per-platform acquisition proof.
+
 Pinned by `bazel run //tools/ci:foundation_maps`.
