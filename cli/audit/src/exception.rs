@@ -164,6 +164,11 @@ pub fn check_applies(
 /// parser's, not a private table. Year zero is rejected to preserve the
 /// previous validation (it would otherwise parse and always compare as
 /// expired, changing the failure variant).
+///
+/// Dependency evaluation (issue #315, adopted): calendar validation uses the
+/// upstream `chrono` crate (`NaiveDate::parse_from_str`, `Datelike`); the
+/// fixed-width `YYYY-MM-DD` shape gate stays hand-rolled so only zero-padded
+/// text reaches the parser and no `time`-family second date engine is added.
 fn parse_audit_date(value: &str) -> Result<NaiveDate, ExceptionProblem> {
     if !is_date_shape(value) {
         return Err(ExceptionProblem::InvalidDate {

@@ -8,6 +8,12 @@
 //! chains in `dx_cli`, `dx_env`, `dx_adopt`, and `dx_process` tests.
 //! `exec/test_support.rs` keeps its own helper: pid-suffixed persistent
 //! dirs have different lifetime semantics, not scratch cleanup.
+//!
+//! Dependency evaluation (issue #315, adopted): creation uses the upstream
+//! `tempfile` crate directly (`Builder::new().prefix(..).tempdir()` plus the
+//! `TempDir` handle); this crate stays a thin test-only discipline wrapper so
+//! call sites name one prefix-plus-auto-clean path instead of repeating the
+//! builder chain.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).

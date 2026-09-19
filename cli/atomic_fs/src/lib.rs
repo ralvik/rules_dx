@@ -27,7 +27,8 @@
 //! misreported as busy. Locks release when the holding `File` drops
 //! (fd close).
 //!
-//! Dependency evaluation (issue #229, rejected): no `fs2`/`fslock` — the
+//! Dependency evaluation (issue #229, rejected; qualified under issue #315:
+//! stays hand-rolled): no `fs2`/`fslock` — the
 //! stable `std::fs::File::try_lock` API is the upstreamed equivalent and
 //! already owns the flock here, so the crates would add supply-chain
 //! review, lockfile churn, and `MODULE.bazel` manifests for zero behavior

@@ -69,7 +69,8 @@ impl CollectedInventory {
 /// directory contributes nothing (first selection has no generations
 /// yet); any other listing failure reports through [`CleanError`].
 ///
-/// Implemented over [`walkdir::WalkDir`] at depth 1 (issue #223): the
+/// Implemented over [`walkdir::WalkDir`] at depth 1 (issue #223; qualified
+/// under issue #315: adopted): the
 /// managed `.dx` roots stay a direct-children listing with identical
 /// semantics to the historical `read_dir` loop (sorted names,
 /// non-UTF8 placeholder), while recursive and ignore-aware traversal
@@ -105,7 +106,7 @@ fn entry_names(dir: &Path) -> Result<Vec<String>, CleanError> {
 }
 
 /// Recursively walks `root` honoring `.gitignore` and related ignore
-/// files (issue #223), skipping hidden entries and git-ignored paths
+/// files (issue #223; qualified under issue #315: adopted), skipping hidden entries and git-ignored paths
 /// via the [`ignore`] crate (ripgrep family), with additional
 /// caller-supplied glob exclusions via [`globset`].
 ///
