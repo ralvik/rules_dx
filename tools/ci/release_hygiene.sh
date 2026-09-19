@@ -9,7 +9,7 @@
 # stays green by construction and nothing runs uninvited.
 #
 # This harness machine-checks the no-publication-inputs half that is
-# verifiable on a clean tree today (26 checks): dist/release
+# verifiable on a clean tree today (30 checks): dist/release
 # git-ignored and uncommitted, module at 0.0.0, no version tags,
 # SECURITY.md reporting link + enabled record, publish dry-run dispatch-only with a
 # default-closed approve gate, no-secrets minimal permissions plus no
@@ -20,8 +20,9 @@
 # least-privilege no-packages-write, no-secrets usage, and sole-tracker deletion plus
 # reporting-enabled record plus consumer/docs-caller SHA pins plus
 # both-callers policy plus no-tag/no-release/no-submission record plus
-# never-rebuild policy plus byte-identity fail-closed record. Platform,
-# packaging, provenance (SPDX/SLSA), registry submission, and
+# never-rebuild policy plus byte-identity fail-closed record plus seed
+# exercised path (standalone archive, draft dry-run, BCR shape check,
+# verifier refusal). Platform, provenance (SPDX/SLSA), registry submission, and
 # public-install smoke runs stay unqualified per #5 and are recorded
 # as gaps, not claimed here.
 #
@@ -271,6 +272,44 @@ if grep -q -F -e 'instead of silently recording new content' quality/artifacts/u
   ok
 else
   bad "byte-identity fail-closed record lost (update.py + dry-run sha256, issue #5)"
+fi
+
+# Seed standalone packaging stays exercised (issue #78 seed-qualified):
+# the dry run builds //cli/cli:dx_standalone and stages the tarball plus
+# checksum under RUNNER_TEMP, never committed; the wider matrix stays
+# unqualified per #5.
+if grep -q -F -e '//cli/cli:dx_standalone' .github/workflows/publish-dry-run.yml && grep -q -F -e 'dx-standalone.tar.gz' .github/workflows/publish-dry-run.yml && grep -q -F -e 'dx-standalone.tar.gz.sha256' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml lost the seed standalone exercise (dx_standalone + tarball + checksum, issue #78)"
+fi
+
+# Draft creation stays exercised without publishing (issue #78 draft-only):
+# the dry run runs //cli/cli:github_draft with GH_RELEASE_DRY_RUN=1 and
+# proves the placeholder plus draft-only flags, publishing nothing.
+if grep -q -F -e 'GH_RELEASE_DRY_RUN=1 bazel run //cli/cli:github_draft' .github/workflows/publish-dry-run.yml && grep -q -F -e 'v0.0.0-dryrun' .github/workflows/publish-dry-run.yml && grep -q -F -e '--draft --verify-tag' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml lost the draft dry-run exercise (github_draft + GH_RELEASE_DRY_RUN=1 + draft-only flags, issue #78)"
+fi
+
+# BCR shape stays checked-not-submitted (issue #78 dry-run sequence):
+# the dry run checks the rules_dx at 0.0.0 module shape and records
+# checked-not-submitted without running registry tooling (still
+# unselected per #26).
+if grep -q -F -e 'bcr-shape.txt' .github/workflows/publish-dry-run.yml && grep -q -F -e 'checked, not submitted' .github/workflows/publish-dry-run.yml && grep -q -F -e '"submitted": False' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml lost the BCR shape checked-not-submitted record (issue #78)"
+fi
+
+# Install-verifier refusal stays proved (issue #78 signing-first):
+# the dry run proves //deploy/install:dx_verify refuses checksum-only
+# inputs on the TUF trust root and installs nothing, without network.
+if grep -q -F -e 'dx_verify.sh --help' .github/workflows/publish-dry-run.yml && grep -q -F -e 'verify-refusal.log' .github/workflows/publish-dry-run.yml && grep -q -F -e 'checksum-only verification is not publisher-identity proof' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml lost the verifier-refusal exercise (dx_verify checksum-only refused, issue #78)"
 fi
 
 echo "release hygiene harness: $pass passed, $fail failed"

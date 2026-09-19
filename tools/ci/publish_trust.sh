@@ -17,7 +17,7 @@
 # exists.
 #
 # This harness machine-checks the static half verifiable on a clean
-# tree today (12 checks): module name + unpublishable version, no BCR
+# tree today (15 checks): module name + unpublishable version, no BCR
 # submission tooling in workflows, no `draft = False` site, both
 # validators wired to `fail()` in the macro, default placeholder tag
 # at every site, draft-only flags on the real `gh release create`
@@ -25,11 +25,13 @@
 # gate, the SECURITY.md no-release record, plus install-time
 # publisher-identity verification (#26 implemented via
 # //deploy/install:dx_verify: bundle-required, no checksum-only
-# fallback, TUF trust root, fail-before-install). Signing/attestation
-# generation (Sigstore keyless + GitHub attestations on the #26 trust
-# root), SBOM/provenance generation, BCR dry-run submission, and the
-# release matrix beyond the seed host stay unimplemented per #26/#78/#5
-# and are recorded as gaps, not claimed here.
+# fallback, TUF trust root, fail-before-install) plus seed exercised
+# path (standalone wired, draft dry-run with GH_RELEASE_DRY_RUN=1 still
+# publishing nothing, BCR shape checked-not-submitted, verifier refusal
+# proved in the workflow). Signing/attestation generation (Sigstore
+# keyless + GitHub attestations on the #26 trust root), SBOM/provenance
+# generation, BCR submission, and the release matrix beyond the seed host
+# stay unimplemented per #26/#78/#5 and are recorded as gaps, not claimed here.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:publish_trust`,
 # following //tools/ci:release_hygiene.
@@ -145,6 +147,33 @@ if grep -q -F -e 'dx_standalone' cli/cli/BUILD.bazel; then
   ok
 else
   bad "seed-host standalone archive missing (//cli/cli:dx_standalone, #26)"
+fi
+
+# Seed exercised path stays draft-only (issue #78): the workflow runs
+# //cli/cli:github_draft with GH_RELEASE_DRY_RUN=1 on the placeholder
+# tag with draft-only flags, and the report records published False.
+if grep -q -F -e 'GH_RELEASE_DRY_RUN=1 bazel run //cli/cli:github_draft' .github/workflows/publish-dry-run.yml && grep -q -F -e '"published": False' .github/workflows/publish-dry-run.yml && grep -q -F -e '--draft --verify-tag' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish dry run lost the draft-only exercised record (GH_RELEASE_DRY_RUN=1 + published False, issue #78)"
+fi
+
+# BCR shape stays checked-not-submitted (issue #78): the workflow checks
+# the module shape and records submitted False without running registry
+# tooling (still unselected per #26, proven above).
+if grep -q -F -e '"submitted": False' .github/workflows/publish-dry-run.yml && grep -q -F -e 'checked, not submitted' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish dry run lost the BCR checked-not-submitted record (issue #78)"
+fi
+
+# Verifier refusal stays exercised in the workflow (issue #78
+# signing-first): checksum-only refused on the TUF trust root with
+# nothing installed, without network.
+if grep -q -F -e 'verify-refusal.log' .github/workflows/publish-dry-run.yml && grep -q -F -e 'checksum-only verification is not publisher-identity proof' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish dry run lost the verifier-refusal exercised record (issue #78)"
 fi
 
 echo "publish trust audit: $pass passed, $fail failed"
