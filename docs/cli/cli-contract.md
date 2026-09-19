@@ -280,7 +280,13 @@ classifier, LCOV parser plus ignore scanner with inventory plus verdict, SPDX
 lattice plus date shape gate plus scratch discipline wrappers; upstream
 re-evaluation on new crate versions plus any future migration stays owned gap).
 
-Clap-as-tokenizer legacy error strings stay open under issue #316 (env, codegen shard,
-and markdown paths use clap derive only to map errors back to legacy hand-loop strings;
-decide whether to freeze legacy output as contract with snapshots or migrate to strict
-clap parsing with auto help).
+Clap-as-tokenizer legacy error strings qualified seed-only under issue #316
+(`bazel run //tools/ci:clap_tokenizer_qualification`; decision: freeze legacy
+output as contract with snapshots, not strict clap parsing with auto help;
+frozen with fixture evidence: env, codegen shard, env shard, evaluator,
+runner, markdown, plus the dx CLI tokenizer preserve legacy hand-loop strings
+via `disable_help_flag` plus `allow_hyphen_values` plus
+`invalid_token`/`parse_error` mapping for unknown-flag phrasing, hyphen-value
+consumption, attached `=value` whole-token echo, and value-parser rejections;
+migrate to strict clap parsing with auto help stays owned gap for any future
+migration).

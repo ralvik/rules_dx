@@ -731,6 +731,20 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Clap-as-tokenizer legacy-error qualification harness (issue #316): proves the
+# as-built freeze-legacy-output decision with fixture evidence and owned gaps —
+# disable_help_flag plus allow_hyphen_values plus invalid_token/parse_error
+# mapping across env, codegen shard, env shard, evaluator, runner, markdown,
+# plus dx CLI tokenizer; markdown snapshots pin unknown/missing/malformed plus
+# hyphen-value plus attached-echo shapes; strict clap migration stays owned gap.
+# Run by CI via `bazel run //tools/ci:clap_tokenizer_qualification`.
+sh_binary(
+    name = "clap_tokenizer_qualification",
+    srcs = ["clap_tokenizer_qualification.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],

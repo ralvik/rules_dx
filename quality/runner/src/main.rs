@@ -141,7 +141,8 @@ fn main() {
     }
 }
 
-/// `argv` tokenizer. Repeatable options append in argument order (stages
+/// `argv` tokenizer (qualified under issue #316: frozen legacy contract).
+/// Repeatable options append in argument order (stages
 /// run in that order); scalars keep last-wins repeats; every value option
 /// consumes the next token unconditionally (even a `--`-led token), matching
 /// the legacy hand loop. Only tokenizing moves to `clap`; all value-shape

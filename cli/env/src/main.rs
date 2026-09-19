@@ -46,7 +46,8 @@ fn usage_error(message: &str) -> i32 {
     2
 }
 
-/// `argv` tokenizer. Every option keeps the legacyshape: last-wins scalar
+/// `argv` tokenizer (qualified under issue #316: frozen legacy contract).
+/// Every option keeps the legacyshape: last-wins scalar
 /// repeats and unconditional next-token consumption (even a `--`-led token),
 /// so `--workspace --staged-bin DIR` still binds `--staged-bin` as the
 /// workspace. Only tokenizing moves to `clap`; all value validation below
