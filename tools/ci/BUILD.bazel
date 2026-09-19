@@ -144,13 +144,13 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Release-hygiene harness (issue #5): machine-checks the
+# Release-hygiene harness (issues #5, #311): machine-checks the
 # no-publication-inputs half verifiable on a clean tree — dist/release
 # git-ignored and uncommitted, module at 0.0.0, no version tags without
 # owner approval, SECURITY.md reporting link, publish dry-run
 # dispatch-only, policy docs present, never-rebuild plus byte-identity
-# fail-closed. Platform/packaging/provenance/
-# registry/install-smoke inputs stay unqualified gaps. Run by CI via
+# fail-closed. Full matrix/SBOM/signing/BCR/human-run implemented
+# owner-gated per #311 (//deploy/release:all + runbook). Run by CI via
 # `bazel run //tools/ci:release_hygiene`.
 sh_binary(
     name = "release_hygiene",
@@ -187,16 +187,16 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Publication-trust harness (issues #78, #26, #5): machine-checks
+# Publication-trust harness (issues #78, #26, #5, #311): machine-checks
 # the draft-only + nothing-published static invariants the
 # release-hygiene harness does not own — module name at the
-# unpublishable 0.0.0, no BCR submission tooling in workflows, no
+# unpublishable 0.0.0, no BCR auto-submit in workflows, no
 # draft-gate opt-out site, both github.bzl validators wired to analysis
 # failure, default placeholder tag everywhere, draft-only flags on the
 # real publisher path, the tag charset gate, and the SECURITY.md
-# no-release record. Signing/attestation, SBOM/provenance, BCR
-# submission, the wider release matrix, and install-time verification
-# stay unimplemented gaps. Run by CI via
+# no-release record. Signing/attestation, SBOM/provenance, BCR,
+# wider release matrix, and human-run path implemented owner-gated per
+# #311 plus install-time verification. Run by CI via
 # `bazel run //tools/ci:publish_trust`.
 sh_binary(
     name = "publish_trust",
@@ -386,10 +386,10 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# GHCR prebuilt-image hygiene (issue #184, seed slice): separate workflow
+# GHCR prebuilt-image hygiene (issues #184, #311): separate workflow
 # from releases, PR-paths build, dispatch + default-closed approve gate,
 # digest-pinned base + Bazel delegation + no ambient toolchains,
-# cosign/quota/scaffold deferrals, scaffold still on mcr until first
+# cosign record on the #311 trust root, scaffold still on mcr until first
 # push. Run by CI via `bazel run //tools/ci:ghcr_hygiene`.
 sh_binary(
     name = "ghcr_hygiene",
@@ -447,10 +447,11 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Distribution/closeout guards (issues #5, #26, #78, #184, #54): pins
+# Distribution/closeout guards (issues #5, #26, #78, #184, #54, #311): pins
 # the hygiene policy, workflow separation +
 # triggers + gates, scaffold state, security precondition, gitignored
-# outputs, and no-publish invariants. Functional checks only.
+# outputs, full release path (matrix/SBOM/signing/BCR/human-run), and
+# no-publish invariants. Functional checks only.
 # Run by CI via `bazel run //tools/ci:distribution_closeout_guards`.
 sh_binary(
     name = "distribution_closeout_guards",

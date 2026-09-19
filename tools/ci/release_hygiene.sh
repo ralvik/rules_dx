@@ -9,7 +9,7 @@
 # stays green by construction and nothing runs uninvited.
 #
 # This harness machine-checks the no-publication-inputs half that is
-# verifiable on a clean tree today (30 checks): dist/release
+# verifiable on a clean tree today (34 checks): dist/release
 # git-ignored and uncommitted, module at 0.0.0, no version tags,
 # SECURITY.md reporting link + enabled record, publish dry-run dispatch-only with a
 # default-closed approve gate, no-secrets minimal permissions plus no
@@ -120,31 +120,32 @@ else
   bad "CONTRIBUTING.md lost the no-tags/no-releases policy"
 fi
 
-# The dry-run report names the full release matrix explicitly (issue
-# #78): seed linux-x86_64 qualified-built-here, the other four
-# (linux-arm64, macos-x86_64/arm64, windows-x86_64) unqualified per #5.
-if grep -q -F -e 'dx-linux-arm64' .github/workflows/publish-dry-run.yml && grep -q -F -e 'dx-macos-arm64' .github/workflows/publish-dry-run.yml && grep -q -F -e 'dx-windows-x86_64' .github/workflows/publish-dry-run.yml && grep -q -F -e 'unqualified-per-issue-5' .github/workflows/publish-dry-run.yml; then
+# The dry-run report names the full release matrix explicitly (issues
+# #78/#311): seed linux-x86_64 qualified-built-here, the other four
+# (linux-arm64, macos-x86_64/arm64, windows-x86_64) unqualified per #311
+# (frozen in deploy/release/matrix.bzl).
+if grep -q -F -e 'dx-linux-arm64' .github/workflows/publish-dry-run.yml && grep -q -F -e 'dx-macos-arm64' .github/workflows/publish-dry-run.yml && grep -q -F -e 'dx-windows-x86_64' .github/workflows/publish-dry-run.yml && grep -q -F -e 'unqualified-per-issue-311' .github/workflows/publish-dry-run.yml; then
   ok
 else
   bad "publish-dry-run.yml lost the explicit release-matrix qualification table"
 fi
 
-# SBOM/provenance and BCR submission stay explicitly deferred to #26
-# tooling (issue #78 signing-first): the dry run must name the gap,
-# never claim the tooling.
-if grep -q -F -e 'SBOM/provenance generation (tooling unselected; issue #26)' .github/workflows/publish-dry-run.yml && grep -q -F -e 'BCR dry-run submission (registry tooling unselected; issue #26)' .github/workflows/publish-dry-run.yml; then
+# SBOM/provenance and BCR submission run owner-gated dry-run-first per
+# #311: the dry run exercises //deploy/release:sbom_demo and
+# //deploy/release:bcr_demo in dry-run mode, publishing nothing.
+if grep -q -F -e '//deploy/release:sbom_demo' .github/workflows/publish-dry-run.yml && grep -q -F -e 'BCR_DRY_RUN=1 bazel run //deploy/release:bcr_demo' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "publish-dry-run.yml lost the SBOM/BCR deferral to issue #26"
+  bad "publish-dry-run.yml lost the SBOM/BCR owner-gated exercise (issue #311)"
 fi
 
-# Signing-first order stays explicit (issue #78/#26): Sigstore keyless +
-# GitHub attestations on the #26 trust root, GHCR signs separately via
-# cosign <digest> under #184 — never claimed here, only deferred.
-if grep -q -F -e 'Signing/attestation (Sigstore keyless + GitHub attestations on the issue #26 trust root' .github/workflows/publish-dry-run.yml; then
+# Signing-first order stays explicit (issues #78/#311): Sigstore keyless +
+# GitHub attestations on the #311 trust root, GHCR signs separately via
+# cosign <digest> under #184 — dry-run here, never publishing.
+if grep -q -F -e 'Signing/attestation publishing (Sigstore keyless + GitHub attestations on the issue #311 trust root' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "publish-dry-run.yml lost the signing-first deferral to issue #26"
+  bad "publish-dry-run.yml lost the signing-first owner-gated record (issue #311)"
 fi
 
 # GHCR stays a separate workflow (owner decision, issue #184): the dry
@@ -276,8 +277,8 @@ fi
 
 # Seed standalone packaging stays exercised (issue #78 seed-qualified):
 # the dry run builds //cli/cli:dx_standalone and stages the tarball plus
-# checksum under RUNNER_TEMP, never committed; the wider matrix stays
-# unqualified per #5.
+# checksum under RUNNER_TEMP, never committed; the wider matrix is frozen
+# in deploy/release/matrix.bzl, unqualified per #311.
 if grep -q -F -e '//cli/cli:dx_standalone' .github/workflows/publish-dry-run.yml && grep -q -F -e 'dx-standalone.tar.gz' .github/workflows/publish-dry-run.yml && grep -q -F -e 'dx-standalone.tar.gz.sha256' .github/workflows/publish-dry-run.yml; then
   ok
 else
@@ -293,14 +294,13 @@ else
   bad "publish-dry-run.yml lost the draft dry-run exercise (github_draft + GH_RELEASE_DRY_RUN=1 + draft-only flags, issue #78)"
 fi
 
-# BCR shape stays checked-not-submitted (issue #78 dry-run sequence):
-# the dry run checks the rules_dx at 0.0.0 module shape and records
-# checked-not-submitted without running registry tooling (still
-# unselected per #26).
-if grep -q -F -e 'bcr-shape.txt' .github/workflows/publish-dry-run.yml && grep -q -F -e 'checked, not submitted' .github/workflows/publish-dry-run.yml && grep -q -F -e '"submitted": False' .github/workflows/publish-dry-run.yml; then
+# BCR shape stays checked-not-submitted (issue #311 owner-gated):
+# the dry run runs //deploy/release:bcr_demo in BCR_DRY_RUN=1 mode and
+# records checked-not-submitted without submitting.
+if grep -q -F -e 'bcr-shape.txt' .github/workflows/publish-dry-run.yml && grep -q -F -e 'BCR_DRY_RUN=1 bazel run //deploy/release:bcr_demo' .github/workflows/publish-dry-run.yml && grep -q -F -e '"submitted": False' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "publish-dry-run.yml lost the BCR shape checked-not-submitted record (issue #78)"
+  bad "publish-dry-run.yml lost the BCR owner-gated record (bcr_demo + BCR_DRY_RUN=1 + submitted False, issue #311)"
 fi
 
 # Install-verifier refusal stays proved (issue #78 signing-first):
@@ -310,6 +310,42 @@ if grep -q -F -e 'dx_verify.sh --help' .github/workflows/publish-dry-run.yml && 
   ok
 else
   bad "publish-dry-run.yml lost the verifier-refusal exercise (dx_verify checksum-only refused, issue #78)"
+fi
+
+# Release tests stay exercised (issue #311): the dry run runs
+# //deploy/release:all green, proving matrix + SBOM + signing + BCR +
+# human-run gates without publishing.
+if grep -q -F -e 'bazel test //deploy/release:all' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml lost the release-tests exercise (//deploy/release:all, issue #311)"
+fi
+
+# Signing dry-run stays exercised (issue #311 signing-first): the dry run
+# runs //deploy/release:signing_demo with RELEASE_SIGN_DRY_RUN=1 and
+# proves the trust root plus would-sign, publishing nothing.
+if grep -q -F -e 'RELEASE_SIGN_DRY_RUN=1 bazel run //deploy/release:signing_demo' .github/workflows/publish-dry-run.yml && grep -q -F -e 'tuf-repo-cdn.sigstore.dev' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml lost the signing dry-run exercise (signing_demo + RELEASE_SIGN_DRY_RUN=1, issue #311)"
+fi
+
+# Human-run driver stays exercised (issue #311): the dry run runs
+# deploy/release/release.sh in dry-run mode, proving the tag ceiling
+# plus owner-approval gate with nothing published.
+if grep -q -F -e 'deploy/release/release.sh' .github/workflows/publish-dry-run.yml && grep -q -F -e 'human-run-dry-run.log' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish-dry-run.yml lost the human-run driver exercise (release.sh dry run, issue #311)"
+fi
+
+# Release runbook stays owned (issue #311): the human-run path is
+# documented, not just workflow steps.
+if [[ -f "docs/deploy/release-runbook.md" ]] \
+  && grep -q -F -e 'never creates or pushes tags' docs/deploy/release-runbook.md; then
+  ok
+else
+  bad "release runbook missing (docs/deploy/release-runbook.md + tag ceiling, issue #311)"
 fi
 
 echo "release hygiene harness: $pass passed, $fail failed"

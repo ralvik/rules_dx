@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# GHCR prebuilt-image hygiene (issue #184, seed slice).
+# GHCR prebuilt-image hygiene (issues #184, #311).
 #
 # The prebuilt devcontainer image removes per-create feature-install cost,
 # but publication is gated: separate workflow from releases per owner
 # decision, build on PR, push only on workflow_dispatch + approve:true,
-# signing-second after #26/#78 (cosign <digest> on the #26 trust root).
-# Scaffold `image:` digest reference + quota/retention record follow the
-# first push; this build-only slice pushes nothing.
+# signing-second after #26/#78 and selected in #311 (cosign <digest> on
+# the #311 trust root, same as //deploy/release:signing_demo; dry-run
+# would-sign otherwise). Scaffold `image:` digest reference + quota/
+# retention record follow the first push; this build-only slice pushes
+# nothing.
 #
 # This harness machine-checks the gate half verifiable on a clean tree
 # today (16 checks): separate ghcr.yml route, PR-paths build, dispatch +
@@ -123,12 +125,20 @@ else
   bad "ghcr.yml lost no-secrets checkout or non-cancelling concurrency"
 fi
 
-# Signing-second deferred explicitly: cosign <digest> on the #26 trust
-# root after #26/#78, never claimed here.
+# Signing-second selected explicitly per #311: cosign <digest> on the
+# #311 trust root (same as //deploy/release:signing_demo), dry-run
+# would-sign without approval.
 if grep -q -F -e 'cosign sign <digest>' .github/workflows/ghcr.yml; then
   ok
 else
-  bad "ghcr.yml lost the cosign-sign deferral to the #26 trust root"
+  bad "ghcr.yml lost the cosign-sign record on the #311 trust root"
+fi
+
+# Signing trust root shared with releases per #311.
+if grep -q -F -e '#311 trust root' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "ghcr.yml lost the #311 trust-root record (shared with //deploy/release:signing_demo)"
 fi
 
 # Scaffold digest ref + quota record deferred to first push (never
