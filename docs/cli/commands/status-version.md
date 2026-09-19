@@ -32,7 +32,10 @@ Exit `0` when every check passes; exit `1` (operational) when any check is
 `dx version` prints the single version (`dx`, `rules_dx`, pin, all `0.0.0`
 today). `dx version --check` validates the checked-in `.dx/version` pin
 against the module version without mutating: prints `version ok` (exit `0`)
-or `version drift` on stderr (exit `1`). `dx version --pin <ver>` bumps from
+or `version drift` on stderr (exit `1`). The vendored preset fragment
+stamps the same single version in its header (no new pin file); freshness
+is gated by [`dx update --check`](audit-update-bazel.md#dx-update) plus
+this pin check and the skew gate below. `dx version --pin <ver>` bumps from
 verified release artifacts only; `dx version --rollback` re-pins the
 recorded previous release. `--pin` and `--rollback` are mutually exclusive,
 neither combines with `--check` (exit `2`), and both accept `--dry-run`

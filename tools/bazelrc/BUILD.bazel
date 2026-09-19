@@ -1,8 +1,10 @@
 """Vendored Bazel execution preset.
 
-`bazel run //tools/bazelrc:preset.update` regenerates the checked-in preset
-from the reviewed inventory in `preset.py`; `preset.update_test` pins the
-version-matched pin and the flag inventory hermetically.
+`bazel run //tools/bazelrc:preset.update` regenerates the checked-in
+fragment from the reviewed inventory in `preset.py`;
+`preset.update_test` pins the Bazel pin, the per-release dx stamp, and
+the flag inventory via file substring checks on the fragment. Consumers
+refresh via `dx update` and gate staleness via `dx update --check`.
 """
 
 load("@rules_python//python:defs.bzl", "py_binary")
@@ -18,7 +20,6 @@ py_binary(
 )
 
 exports_files([
-    "bazelrc-preset.bzl",
     "preset.bazelrc",
     "preset.py",
 ])
@@ -34,7 +35,6 @@ real_source_target(
     name = "corpus_starlark",
     starlark_srcs = [
         "BUILD.bazel",
-        "bazelrc-preset.bzl",
         "preset_tests.bzl",
     ],
     tags = ["corpus"],

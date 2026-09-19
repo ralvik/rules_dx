@@ -1,0 +1,5 @@
+# Dirty preset fragment for the stale-gate pin (issue #332) -- GENERATED
+# placeholder that must fail `dx update --check`. The driver asserts the
+# staged child starts dirty, then `dx update go` regenerates the reviewed
+# inventory and `--check` passes again.
+# dirty

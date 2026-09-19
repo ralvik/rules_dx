@@ -108,6 +108,32 @@ sh_test(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Parity fixture: `dx update go` output is a snapshot of the checked-in
+# `tools/bazelrc/preset.bazelrc`, so the fragment consumers regenerate is
+# the one dogfooded here (issue #332, snapshot workflow issue #322).
+# Schema plus snapshot: contract fields fail first, byte drift refreshes
+# via UPDATE_EXPECT. Also pins the check→update→recheck stale gate
+# hermetically (mirrors `//tools/ci:e2e_preset` without Bazel).
+sh_test(
+    name = "preset_parity_test",
+    srcs = ["preset_parity_test.sh"],
+    args = [
+        "$(rootpath //tools/bazelrc:preset.bazelrc)",
+        "$(rootpath //cli/cli:dx)",
+        "$(rootpath //tools/bazelrc:preset.py)",
+    ],
+    data = [
+        "//cli/cli:dx",
+        "//tools/bazelrc:preset.bazelrc",
+        "//tools/bazelrc:preset.py",
+        "//tools/sh:lib",
+        "//tools/sh:snapshot",
+    ],
+    tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 rustfmt_config(
     name = "rustfmt_config",
     src = "rustfmt.toml",

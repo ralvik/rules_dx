@@ -1,0 +1,21 @@
+"""Stage 4 E2E preset-stale scenario (issue #332): preset stale-gate pin.
+
+Dirty preset fragment must fail `dx update --check` (exit 1), pass after
+`dx update go` regenerates it, then pass `--check` again (exit 0).
+Standalone workspace: only `rules_dx` (local override, rewritten to an
+absolute path by the `//tools/ci:e2e_preset` harness at stage time) plus
+the vendored fragment. No Bazel launch is needed (`--check` is file I/O,
+`go` is a no-op backend), so the driver needs only the parent-built `dx`.
+"""
+
+module(name = "e2e_preset_stale")
+
+bazel_dep(name = "rules_dx", version = "0.0.0")
+
+# RULES_DX_ROOT is a placeholder: the harness rewrites it to the
+# absolute parent checkout path when staging (the staged copy lives
+# outside the parent, so no relative path survives).
+local_path_override(
+    module_name = "rules_dx",
+    path = "RULES_DX_ROOT",
+)

@@ -54,7 +54,8 @@ pub(crate) struct Cli {
     /// Required line-coverage percent (coverage only, 0-100).
     #[arg(long, allow_negative_numbers = true, overrides_with = "min_coverage")]
     pub(crate) min_coverage: Option<String>,
-    /// Check mode (quality/version only; no mutations).
+    /// Check mode (quality/version plus `update --check` preset gate;
+    /// no mutations in check mode).
     #[arg(long)]
     pub(crate) check: bool,
     /// Use dx_debug config (build/run/test/deploy only; conflicts with --release).

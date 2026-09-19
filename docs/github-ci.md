@@ -69,6 +69,14 @@ checks without disabling unrelated checks or presenting disabled checks as passe
 | Build | `dx build` | Every consumer-selected platform |
 | Coverage | `dx coverage` | Every consumer-selected platform |
 
+Accepted addition (issue #332): run a preset stale cell alongside the
+nine above — `dx update --check` on Linux once. It fails when the
+vendored `tools/bazelrc/preset.bazelrc` fragment drifts from the reviewed
+inventory, and `dx update` regenerates it. The cell stays
+review-required with no auto-merge (regen-and-review loop stays manual).
+See the [preset update loop](contributing/local-workflows.md#preset-update-loop)
+and [`dx update --check`](cli/commands/audit-update-bazel.md#dx-update).
+
 When tests, build, or coverage are selected, require an explicit nonempty supported platform
 selection. There is no implicit Linux, current-runner, or all-platforms default, including
 a silently active example value in the template. Missing, empty, or unsupported selections

@@ -33,6 +33,7 @@ pub mod hooks;
 pub mod inspect;
 pub mod migrate;
 pub mod policy;
+pub mod preset_fragment;
 pub mod scaffold;
 pub mod status;
 pub mod version;
@@ -47,6 +48,10 @@ pub use hooks::{
 pub use inspect::{inspect_scope_allowed, plan_inspect, plan_somepath, InspectPlan};
 pub use migrate::{migrate_is_major_bump, migrate_manifest_name, plan_migrate, MigratePlan};
 pub use policy::{devcontainer_is_admissible, diagnostics_command_allowed};
+pub use preset_fragment::{
+    check_preset, owned_collisions_in_content, preset_paths, render_preset_fragment, update_preset,
+    PresetError, PRESET_BAZEL_VERSION,
+};
 pub use scaffold::{
     absent_only_write_allowed, apply_init, init_must_refuse, plan_init_files, ScaffoldFile,
     DEVCONTAINER_JSON, RENOVATE_JSON,

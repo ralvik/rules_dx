@@ -1,20 +1,24 @@
 """Vendored Bazel execution preset generator.
 
-Source of truth for the repository `.bazelrc` execution policy. Renders two
-checked-in generated files (do not edit by hand):
+Source of truth for the repository `.bazelrc` execution policy. Renders one
+checked-in generated file (do not edit by hand):
 
-- `bazelrc-preset.bzl`: Starlark data (`PRESET_BAZEL_VERSION`, `PRESET_FLAGS`,
-  `EXTRA_PRESETS`, `BUILD_PROFILES`) pinned by `preset.update_test`.
 - `preset.bazelrc`: `.bazelrc` fragment imported by the root `.bazelrc`.
 
 Upstream flag recommendations enter only as reviewed inventory edits below;
-the generator never fetches. The preset is version-matched to the Bazel pin:
-`PRESET_BAZEL_VERSION` must equal `.bazelversion`, so a version bump without
-a reviewed regen fails `preset.update_test`. Regen command (writes files):
+the generator never fetches. The preset is version-matched to the Bazel pin
+(`PRESET_BAZEL_VERSION` must equal `.bazelversion`) and stamped with the
+per-release `dx`/`rules_dx` single version (`PRESET_DX_VERSION` must equal
+`DX_VERSION`/`MODULE_VERSION` in `cli/adopt/src/version.rs` and
+`MODULE.bazel`; no new pin file, reuse `dx version --check`, the startup
+skew gate, and `version_pin_matches_module`). Bump only in a reviewed
+update-loop pass (version-bump PR, regen, flag-diff review, full
+verification); dependency-update automation proposes the bump, the regen
+and review stay manual. Regen command (writes file):
 
     bazel run //tools/bazelrc:preset.update
 
-Verification command (rejects stale generated files and owned-line
+Verification command (rejects stale generated fragment and owned-line
 collisions with the root `.bazelrc`):
 
     bazel run //tools/bazelrc:preset.update -- --verify-only
@@ -32,6 +36,14 @@ import sys
 # verification); dependency-update automation proposes the bump, the regen
 # and review stay manual. `//tools/ci:pin_consistency_test` fails on drift.
 PRESET_BAZEL_VERSION = "9.2.0"
+
+# Per-release stamp: tracks the delivered `dx`/`rules_dx` single version
+# (`DX_VERSION`/`MODULE_VERSION`, both `0.0.0` until the first release).
+# No new pin file: `preset.update_test` pins the stamp in the fragment
+# header, `dx version --check` plus the startup skew gate own the pin, and
+# `version_pin_matches_module` owns equality. A preset-affecting change
+# ships only in minor/major with a release note (see `cli/ci/src/preset.rs`).
+PRESET_DX_VERSION = "0.0.0"
 
 # Reviewed upstream-derived execution flags: (rc line, review rationale).
 # Sources: seed `.bazelrc` lines reviewed against the pinned Bazel
@@ -105,51 +117,13 @@ def _source_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
 
-def _render_bzl():
-    lines = [
-        '"""Vendored Bazel execution preset -- GENERATED, do not edit.',
-        "",
-        "Version-matched to Bazel %s (`.bazelversion`). Upstream-derived flags, "
-        "owned `extra_presets` groups, and owned `BUILD_PROFILES`, each "
-        "reviewed in `tools/bazelrc/preset.py`." % PRESET_BAZEL_VERSION,
-        "Regenerate:",
-        "",
-        "    bazel run //tools/bazelrc:preset.update",
-        '"""',
-        "",
-        'PRESET_BAZEL_VERSION = "%s"' % PRESET_BAZEL_VERSION,
-        "",
-        "PRESET_FLAGS = [",
-    ]
-    lines += ['    "%s",' % line for line, _review in UPSTREAM_FLAGS]
-    lines += [
-        "]",
-        "",
-        "EXTRA_PRESETS = {",
-    ]
-    for group in sorted(EXTRA_PRESETS):
-        lines += ['    "%s": [' % group]
-        lines += ['        "%s",' % line for line, _review in EXTRA_PRESETS[group]]
-        lines += ["    ],"]
-    lines += [
-        "}",
-        "",
-        "BUILD_PROFILES = [",
-    ]
-    lines += ['    "%s",' % line for line, _review in BUILD_PROFILES]
-    lines += [
-        "]",
-        "",
-    ]
-    return "\n".join(lines)
-
-
 def _render_fragment():
     lines = [
         "# Vendored Bazel execution preset -- GENERATED, do not edit.",
-        "# Version-matched to Bazel %s (`.bazelversion`); reviewed inventory in "
-        "`tools/bazelrc/preset.py`." % PRESET_BAZEL_VERSION,
+        "# Version-matched to Bazel %s (`.bazelversion`) and dx %s (`MODULE.bazel`); reviewed inventory in "
+        "`tools/bazelrc/preset.py`." % (PRESET_BAZEL_VERSION, PRESET_DX_VERSION),
         "# Regenerate: `bazel run //tools/bazelrc:preset.update`.",
+        "# Consumer refresh: `dx update` regenerates the fragment, `dx update --check` fails when stale.",
         "# Upstream-derived flags (reviewed):",
     ]
     lines += [line for line, _review in UPSTREAM_FLAGS]
@@ -164,7 +138,6 @@ def _render_fragment():
 
 def _rendered_files(source_dir):
     return {
-        os.path.join(source_dir, "bazelrc-preset.bzl"): _render_bzl(),
         os.path.join(source_dir, "preset.bazelrc"): _render_fragment(),
     }
 

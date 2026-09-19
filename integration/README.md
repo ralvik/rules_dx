@@ -19,6 +19,11 @@ against it with a version-pinned Bazel first on `PATH`.
   //...` exits 1 on the dirty `x=1` source, `dx format //...` rewrites
   it to `x = 1` (exit 0), then `--check` exits 0. Proves the quality
   surface is not theater alongside the `dx test` pins.
+- `preset-stale/` — preset stale-gate round-trip (issue #332):
+  `dx update --check` exits 1 on the dirty fragment, `dx update go`
+  regenerates the reviewed inventory (exit 0, no Bazel launch), then
+  `--check` exits 0. Proves the preset surface is not theater alongside
+  `//:preset_parity_test`.
 
 ## Why `integration/` is invisible to Bazel
 
@@ -55,9 +60,9 @@ To add a scenario `integration/<name>/`:
    minimal sources proving one exit-contract pin. Keep it to one pin;
    the matrix lives in Layer-2, not here.
 2. Wire a driver: reuse `tools/ci/e2e.sh <name> <want-exit>` for exit-code
-   pins, or add a focused driver next to `e2e_format.sh` for multi-step
-   pins (check, mutate, re-check). The driver stages the scenario by
-   shell copy to scratch, never by label.
+   pins, or add a focused driver next to `e2e_format.sh`/`e2e_preset.sh`
+   for multi-step pins (check, mutate, re-check). The driver stages the
+   scenario by shell copy to scratch, never by label.
 3. Register one `manual` (+`exclusive`, `local`, `no-sandbox`) `sh_test`
    in `tools/ci/BUILD.bazel` plus membership in the `:e2e` suite, so the
    case runs in CI's `e2e` job and under the explicit suite label, never
