@@ -654,6 +654,20 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Environment/codegen qualification harness (issue #309): proves the
+# as-built deferred/unsupported records (public contribution, Windows
+# fallback, standalone, signing/trust) with fixture evidence
+# (bootstrap spaces/noop/unmanaged, lock units, roots freeze plus
+# incrementality, codegen collector contracts, per-foundation env plans,
+# node pnpm projection) and owned gaps for the unproven required tests.
+# Run by CI via `bazel run //tools/ci:env_codegen_qualification`.
+sh_binary(
+    name = "env_codegen_qualification",
+    srcs = ["env_codegen_qualification.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
