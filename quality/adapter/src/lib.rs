@@ -8,6 +8,7 @@
 //! the message describes it. Nothing here spawns processes; execution lives
 //! in `exec`, command shapes in `commands`, per-tool grammars in `parsers`.
 
+use line_index::{LineIndex, WideEncoding, WideLineCol};
 use quality_result::proto::{Diagnostic, Severity};
 
 pub mod commands;
@@ -79,9 +80,47 @@ pub enum PlaceError {
 }
 
 /// Converts a 1-based line/column position to a UTF-8 byte offset into
-/// `text`. A column one past the last character (the newline or end of
-/// file) is valid; anything further out returns [`None`].
+/// `text`. Columns count Unicode scalar values (UTF-32 code units), so
+/// `é` and `💖` each count as one column; lines split only on `'\n'`
+/// with `'\r'` as an ordinary character. A column one past the last
+/// character (the newline or end of file) is valid; anything further
+/// out returns [`None`]. An empty file has a single `(1, 1)` at offset
+/// 0 and a trailing `'\n'` opens an empty final line, matching SARIF
+/// byte-to-line round-trips.
+///
+/// Backed by rust-analyzer `line-index`: the 1-based UTF-32 position
+/// becomes a [`WideLineCol`], `to_utf8` maps it to UTF-8, and `offset`
+/// yields bytes. The line's scalar budget is checked first so columns
+/// past the newline or EOF stay [`None`]. Files at or above `u32::MAX`
+/// bytes use the legacy scan.
 pub fn line_col_to_byte(text: &str, line: u64, column: u64) -> Option<u64> {
+    if line == 0 || column == 0 {
+        return None;
+    }
+    if text.len() >= u32::MAX as usize {
+        return legacy_line_col_to_byte(text, line, column);
+    }
+    let line_index = u32::try_from(line - 1).ok()?;
+    let col_index = u32::try_from(column - 1).ok()?;
+    let index = LineIndex::new(text);
+    let range = index.line(line_index)?;
+    let start = u32::from(range.start()) as usize;
+    let end = u32::from(range.end()) as usize;
+    let line_text = text.get(start..end)?;
+    let body = line_text.strip_suffix('\n').unwrap_or(line_text);
+    if column - 1 > body.chars().count() as u64 {
+        return None;
+    }
+    let wide = WideLineCol {
+        line: line_index,
+        col: col_index,
+    };
+    let utf8 = index.to_utf8(WideEncoding::Utf32, wide)?;
+    let offset = index.offset(utf8)?;
+    Some(u32::from(offset) as u64)
+}
+
+fn legacy_line_col_to_byte(text: &str, line: u64, column: u64) -> Option<u64> {
     if line == 0 || column == 0 {
         return None;
     }
@@ -169,8 +208,35 @@ mod tests {
     fn line_col_rejects_zero_and_out_of_range() {
         assert_eq!(line_col_to_byte(CAFE, 0, 1), None);
         assert_eq!(line_col_to_byte(CAFE, 1, 0), None);
-        assert_eq!(line_col_to_byte(CAFE, 4, 1), None);
+        assert_eq!(line_col_to_byte(CAFE, 5, 1), None);
         assert_eq!(line_col_to_byte(CAFE, 2, 99), None);
+        assert_eq!(line_col_to_byte(CAFE, 4, 2), None);
+    }
+
+    #[test]
+    fn line_col_covers_empty_trailing_crlf_and_astral() {
+        assert_eq!(line_col_to_byte("", 1, 1), Some(0));
+        assert_eq!(line_col_to_byte("", 1, 2), None);
+        assert_eq!(line_col_to_byte("", 2, 1), None);
+        assert_eq!(line_col_to_byte("ab\n", 1, 1), Some(0));
+        assert_eq!(line_col_to_byte("ab\n", 1, 3), Some(2));
+        assert_eq!(line_col_to_byte("ab\n", 1, 4), None);
+        assert_eq!(line_col_to_byte("ab\n", 2, 1), Some(3));
+        assert_eq!(line_col_to_byte("ab\n", 2, 2), None);
+        assert_eq!(line_col_to_byte(CAFE, 4, 1), Some(CAFE.len() as u64));
+        let crlf = "a\r\nb";
+        assert_eq!(line_col_to_byte(crlf, 1, 1), Some(0));
+        assert_eq!(line_col_to_byte(crlf, 1, 2), Some(1));
+        assert_eq!(line_col_to_byte(crlf, 1, 3), Some(2));
+        assert_eq!(line_col_to_byte(crlf, 1, 4), None);
+        assert_eq!(line_col_to_byte(crlf, 2, 1), Some(3));
+        assert_eq!(line_col_to_byte(crlf, 2, 2), Some(4));
+        let astral = "a\u{1f496}b";
+        assert_eq!(line_col_to_byte(astral, 1, 1), Some(0));
+        assert_eq!(line_col_to_byte(astral, 1, 2), Some(1));
+        assert_eq!(line_col_to_byte(astral, 1, 3), Some(5));
+        assert_eq!(line_col_to_byte(astral, 1, 4), Some(6));
+        assert_eq!(line_col_to_byte(astral, 1, 5), None);
     }
 
     #[test]
