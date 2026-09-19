@@ -360,23 +360,34 @@ def dx_executable_forward_rule(kind, provides, required_providers, quality_specs
 def dx_wrap(name, upstream_rule, forward_rule, srcs, visibility = None, **kwargs):
     """Instantiates one private upstream target plus its public forwarder.
 
+    `aspect_hints` (typed native-config labels) ride the public forwarder
+    where quality aspects visit (issue #12, lane A): the forwarder is the
+    `QualitySourcesInfo` owner, so hints must reach it, not only the
+    private upstream. Remaining kwargs stay upstream-only.
+
     Args:
       name: public wrapper target name (upstream target is `name_upstream`).
       upstream_rule: the upstream rule to instantiate privately.
       forward_rule: the public forwarding rule sharing this wrapper's `srcs`.
       srcs: direct sources owned by the wrapper.
       visibility: visibility of the public forwarding target.
-      **kwargs: extra attributes forwarded to the upstream rule.
+      **kwargs: extra attributes forwarded to the upstream rule (`aspect_hints`
+        additionally forwards to the public target).
     """
+    hints = kwargs.get("aspect_hints", None)
     upstream_rule(
         name = name + "_upstream",
         srcs = srcs,
         visibility = ["//visibility:private"],
         **kwargs
     )
+    forward_kwargs = {}
+    if hints != None:
+        forward_kwargs["aspect_hints"] = hints
     forward_rule(
         name = name,
         upstream = name + "_upstream",
         srcs = srcs,
         visibility = visibility,
+        **forward_kwargs
     )

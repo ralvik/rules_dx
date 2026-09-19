@@ -1,6 +1,6 @@
 """Root package for the rules_dx seed."""
 
-load("@rules_dx//quality:native_config.bzl", "rustfmt_config")
+load("@rules_dx//quality:native_config.bzl", "biome_config", "ruff_config", "rustfmt_config")
 
 # First-party import mappings: every `# gazelle:resolve` here pins
 # one crate name the Rust sources reference to its authoritative Bazel target.
@@ -111,6 +111,27 @@ rustfmt_config(
     visibility = ["//:__subpackages__"],
 )
 
+# Own-tree Ruff policy (issue #12, lane A): workspace-level equivalent
+# for normal Python targets. Corpus targets carry configs via per-target
+# `aspect_hints`; normal targets bind this root config explicitly (see
+# `//python/hello` for the proof binding). Editors and language servers
+# resolve the same checked-in file.
+ruff_config(
+    name = "ruff_config",
+    src = "ruff.toml",
+    visibility = ["//:__subpackages__"],
+)
+
+# Own-tree Biome policy (issue #12, lane A): workspace-level equivalent
+# for normal JavaScript/TypeScript/JSON targets. Same binding shape as
+# `ruff_config` above; the config directory holds only this file, never
+# linted sources (Biome `--config-path` contract).
+biome_config(
+    name = "biome_config",
+    src = "biome.json",
+    visibility = ["//:__subpackages__"],
+)
+
 real_source_target(
     name = "corpus_markdown",
     aspect_hints = ["//quality:corpus_vale_config"],
@@ -151,6 +172,7 @@ real_source_target(
     tags = ["corpus"],
     toml_srcs = [
         "clippy.toml",
+        "ruff.toml",
         "rustfmt.toml",
     ],
 )

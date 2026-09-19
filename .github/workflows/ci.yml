@@ -12,13 +12,17 @@
 # quality runs converge the corpus, check runs prove the deterministic no-op.
 # The repository
 # corpus (`real_source_target(name = "corpus_*")` per content type per package,
-# issue #15, shared `tags = ["corpus"]`) is the dogfood
-# scope. CI installs no
-# quality tools: Buildifier, Taplo, Vale, rustfmt, and Clippy execute only
-# as Bazel-resolved pinned actions (actions run with an empty PATH,
-# unit-pinned in `quality_adapter::exec`). Corpus-local configs stay authoritative: aspect
-# runs resolve Vale/Clippy policy solely from the `aspect_hints` bound by
-# each corpus target, never from CI-local copies.
+# issue #15, shared `tags = ["corpus"]`) plus the lane-A language trees
+# (`//python/...`, `//javascript/...`, `//rust/hello/...`, issue #12) is the
+# dogfood scope. CI installs no
+# quality tools: Buildifier, Taplo, Vale, rustfmt, Ruff, Biome, and Clippy
+# execute only as Bazel-resolved pinned actions (actions run with an empty
+# PATH, unit-pinned in `quality_adapter::exec`). Corpus-local configs stay
+# authoritative: aspect runs resolve Vale/Clippy policy solely from the
+# `aspect_hints` bound by each corpus target, never from CI-local copies.
+# Own-tree runs resolve workspace-level native policy (`//:ruff_config`,
+# `//:biome_config`, `//:rustfmt_config`) through direct `aspect_hints`
+# on normal targets (issue #12, lane A).
 #
 # Hygiene (issue #80): Bazelisk installs go through the single
 # `.github/actions/setup-bazelisk` composite action; every third-party
@@ -321,11 +325,14 @@ jobs:
         run: |
           scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
           bazel run --noshow_progress //cli/cli:dx -- lint --check $scope
+      - name: Verify lane-A language trees lint clean (enforcing, --fail-on warning)
+        run: |
+          bazel run --noshow_progress //cli/cli:dx -- lint --check //python/... //javascript/... //rust/hello/...
       - name: Write job summary
         if: always()
         run: |
           echo "### dogfood-lint — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Ran: dx lint over corpus (default converge) then lint --check no-op proof." >> "$GITHUB_STEP_SUMMARY"
+          echo "Ran: dx lint over corpus (default converge) then lint --check no-op proof, plus lane-A language-tree lint --check (//python/... //javascript/... //rust/hello/..., enforcing at --fail-on warning, issue #12)." >> "$GITHUB_STEP_SUMMARY"
   dogfood-format:
     name: dogfood-format (dx format converge + check)
     needs: [dogfood-freshness]
@@ -354,11 +361,14 @@ jobs:
         run: |
           scope="$(tr '\n' ' ' < /tmp/corpus_targets.txt)"
           bazel run --noshow_progress //cli/cli:dx -- format --check $scope
+      - name: Verify lane-A language trees format clean (enforcing, --fail-on warning)
+        run: |
+          bazel run --noshow_progress //cli/cli:dx -- format --check //python/... //javascript/... //rust/hello/...
       - name: Write job summary
         if: always()
         run: |
           echo "### dogfood-format — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Ran: dx format over corpus (default converge) then format --check no-op proof." >> "$GITHUB_STEP_SUMMARY"
+          echo "Ran: dx format over corpus (default converge) then format --check no-op proof, plus lane-A language-tree format --check (//python/... //javascript/... //rust/hello/..., enforcing at --fail-on warning, issue #12)." >> "$GITHUB_STEP_SUMMARY"
   dogfood-typecheck:
     name: dogfood-typecheck (dx typecheck converge + check)
     needs: [dogfood-freshness]
