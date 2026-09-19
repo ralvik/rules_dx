@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Hand-rolled helpers qualification harness (issue #315).
+# Hand-rolled helpers qualification harness (issues #315, #398).
 #
 # Qualifies the as-built per-helper decisions with fixture evidence and owned
 # gaps, without claiming unreviewed migrations:
@@ -10,6 +10,9 @@
 #   std::fs::File::try_lock plus tempfile, path-ladder classifier, LCOV
 #   parser plus ignore scanner with inventory plus verdict, SPDX lattice plus
 #   date shape gate plus scratch discipline wrappers;
+# - date engine stays chrono under #398 (jiff 0.2 spike rejected: trivial
+#   day-granularity gates need no tzdb, heavier bundle/tree plus mechanical
+#   churn for a pre-1.0 single-owner crate; re-evaluate on jiff 1.0);
 # - open owned gap: upstream re-evaluation on new crate versions plus any
 #   future migration.
 #
@@ -186,6 +189,40 @@ else
   bad "audit exception lost its chrono adopted plus shape-gate evidence"
 fi
 
+# Date engine stays chrono under issue #398 (jiff 0.2 spike rejected with
+# wind-down plus urgency context).
+if grep -q -F -e 'issue #398' cli/audit/src/exception.rs &&
+  grep -q -F -e 'jiff' cli/audit/src/exception.rs &&
+  grep -q -F -e 'chronotope#1768' cli/audit/src/exception.rs &&
+  grep -q -F -e 'arrow-rs#9183' cli/audit/src/exception.rs &&
+  grep -q -F -e 'tzdb' cli/audit/src/exception.rs &&
+  grep -q -F -e 're-evaluate on `jiff 1.0`' cli/audit/src/exception.rs; then
+  ok
+else
+  bad "audit exception lost its #398 jiff-rejection record"
+fi
+
+# Advisory mirror plus CLI clock stay on chrono with a #398 record.
+if grep -q -F -e 'issue #398' cli/audit/src/advisory.rs &&
+  grep -q -F -e 'chrono' cli/audit/src/advisory.rs &&
+  grep -q -F -e 'issue #398' cli/cli/src/exec/audit.rs &&
+  grep -q -F -e 'chrono::Utc::now' cli/cli/src/exec/audit.rs; then
+  ok
+else
+  bad "advisory/cli clock lost its #398 chrono-keep record"
+fi
+
+# No jiff dependency: audit plus CLI Cargo/BUILD stay chrono-only.
+if grep -q -F -e 'chrono' cli/audit/Cargo.toml &&
+  grep -q -F -e '"chrono"' cli/audit/BUILD.bazel &&
+  grep -q -F -e 'chrono' cli/cli/Cargo.toml &&
+  grep -q -F -e '"chrono"' cli/cli/BUILD.bazel &&
+  ! grep -E -e 'jiff' cli/audit/Cargo.toml cli/cli/Cargo.toml cli/audit/BUILD.bazel cli/cli/BUILD.bazel | grep -q .; then
+  ok
+else
+  bad "audit/cli gained a jiff dependency or lost its chrono pin"
+fi
+
 # Scratch adopted: Cargo plus BUILD pin tempfile with direct Builder use.
 if grep -q -F -e 'tempfile = "3"' cli/test_scratch/Cargo.toml &&
   grep -q -F -e '"tempfile"' cli/test_scratch/BUILD.bazel &&
@@ -276,6 +313,17 @@ if grep -q -F -e 'helper_qualification' "$verify" &&
   ok
 else
   bad "verification-matrix lost its #315 helper qualification record"
+fi
+
+# Contract plus matrix own the #398 chrono-keep record.
+if grep -q -F -e '#398' "$contract" &&
+  grep -q -F -e 'jiff' "$contract" &&
+  grep -q -F -e 'helper_qualification' "$contract" &&
+  grep -q -F -e '#398' "$verify" &&
+  grep -q -F -e 'jiff' "$verify"; then
+  ok
+else
+  bad "contract/matrix lost its #398 jiff-rejection record"
 fi
 
 dx_test_summary "helper qualification harness"

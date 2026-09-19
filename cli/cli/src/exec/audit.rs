@@ -16,6 +16,11 @@ fn _live_wiring_pins() {
     let _ = CODE_AUDIT_FAILED;
 }
 
+/// Day-granularity audit clock (issue #398, keep): stays on
+/// `chrono::Utc::now` because the gates compare fixed-width `YYYY-MM-DD` UTC
+/// days with no `tzdb`/zone arithmetic, so the `jiff` `Timestamp::now` plus
+/// `tz::TimeZone::UTC` rewrite pays bundle plus churn for no gate gain;
+/// re-evaluate on `jiff 1.0`.
 fn today_utc() -> String {
     chrono::Utc::now().format("%Y-%m-%d").to_string()
 }
