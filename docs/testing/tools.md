@@ -205,9 +205,11 @@ CI shell dedup plus portable forms stay open under issue #323 (shared lib.sh, sh
 plus shfmt, replace non-portable realpath, bare sha256sum, sed `-i -e`, cp `-a`,
 EPOCHREALTIME).
 
-Runfiles and workspace-root probing stays consolidated-open under issue #319 (one shared
-workspace_root plus rlocation usage; remove repeated BUILD_WORKSPACE_DIRECTORY,
-RUNFILES_DIR, TEST_SRCDIR, and bazel-bin probing copies).
+Runfiles and workspace-root probing is consolidated under issue #319 (one shared
+`tools/sh/lib.sh` `dx_workspace_root`/`dx_e2e_workspace_root`/`dx_runfiles_root`/`dx_resolve_runfile`
+plus `rlocation` usage; shell drivers source it via a runfiles-first bootstrap with
+`data = ["//tools/sh:lib"]`; Rust binaries share `dx_process::workspace_start` and use
+standard `runfiles` `rlocation`, never `TEST_SRCDIR` in prod).
 
 Host-tool actions are hermetic under issue #318 (archive/SBOM/BCR
 genrules run toolchain-provided Python archiver/hasher/generators as

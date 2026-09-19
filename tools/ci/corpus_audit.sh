@@ -9,11 +9,11 @@
 # workflow YAML. Exits 0 when fully covered, 1 listing orphan files.
 set -euo pipefail
 
-if [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" ]]; then
-  workspace="$BUILD_WORKSPACE_DIRECTORY"
-else
-  workspace="$(git rev-parse --show-toplevel)"
-fi
+# Shared workspace + runfiles helpers (issue #319).
+# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
+
+workspace="$(dx_workspace_root)"
 cd "$workspace"
 
 scratch="$(mktemp -d)"

@@ -14,7 +14,7 @@
 
 // LCOV_EXCL_START - reason: thin binary shim; process wiring, signal forwarding, and stdio routing are operational behaviors verified by build and dogfood execution, not unit coverage.
 use std::io::{self, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -221,17 +221,9 @@ fn run() -> i32 {
             return pre_exec_code();
         }
     };
-    // `bazel run` executes with the working directory inside the runfiles
-    // tree under bazel-out, whose symlinks resolve into the execution root.
-    // Upward MODULE.bazel search from there would find the execution root
-    // instead of the source workspace, and nested Bazel would refuse to
-    // run. `BUILD_WORKSPACE_DIRECTORY` is set by `bazel run` to the source
-    // workspace root, so discovery starts there when available. An explicit
-    // `--workspace` override still wins inside discovery.
-    let start = std::env::var_os("BUILD_WORKSPACE_DIRECTORY")
-        .map(PathBuf::from)
-        .filter(|dir| dir.is_absolute())
-        .unwrap_or(cwd);
+    // Workspace start (issue #319): single-sourced via
+    // `dx_process::workspace_start` (shell: `tools/sh/lib.sh`).
+    let start = dx_process::workspace_start(&cwd);
     let workspace = match discover_real(&start, invocation.workspace.as_deref().map(Path::new)) {
         Ok(workspace) => workspace,
         Err(error) => {

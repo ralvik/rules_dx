@@ -25,15 +25,15 @@
 # workspace flag only changes which checkout the dx binary measures.
 set -euo pipefail
 
+# Shared workspace + runfiles helpers (issue #319).
+# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../tools/sh/lib.sh"
+
 # Under `bazel run` the process starts in the target's runfiles directory
 # inside bazel-out (where `git rev-parse --show-toplevel` resolves to the
 # execroot and nested bazel refuses to run), so the real checkout must come
 # from BUILD_WORKSPACE_DIRECTORY. Direct execution falls back to git.
-if [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" ]]; then
-  workspace="$BUILD_WORKSPACE_DIRECTORY"
-else
-  workspace="$(git rev-parse --show-toplevel)"
-fi
+workspace="$(dx_workspace_root)"
 user_workspace=""
 dx_override=""
 positional=()

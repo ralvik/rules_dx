@@ -8,6 +8,10 @@
 # under Bazel.
 set -euo pipefail
 
+# Shared workspace + runfiles helpers (issue #319).
+# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../../tools/sh/lib.sh"
+
 # Portable realpath (issue #299): GNU `realpath` is absent on macOS;
 # `readlink -f` covers some platforms, python3 covers the rest.
 portable_realpath() {
@@ -21,7 +25,7 @@ portable_realpath() {
 }
 
 env_bin="$(portable_realpath "$1")"
-runfiles="${RUNFILES_DIR:-$TEST_SRCDIR}"
+runfiles="$(dx_runfiles_root)"
 root="${TEST_TMPDIR}/work space"
 mkdir -p "$root"
 

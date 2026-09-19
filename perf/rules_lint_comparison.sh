@@ -16,6 +16,10 @@
 # so clean vs dirty runs are comparable across harnesses.
 set -euo pipefail
 
+# Shared workspace + runfiles helpers (issue #319).
+# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../tools/sh/lib.sh"
+
 files=200
 dirty_pct=10
 seed=86
@@ -36,11 +40,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" ]]; then
-  workspace="$BUILD_WORKSPACE_DIRECTORY"
-else
-  workspace="$(git rev-parse --show-toplevel 2>/dev/null || echo unknown)"
-fi
+workspace="$(dx_workspace_root 2>/dev/null || echo unknown)"
 if [[ -f "$workspace/.bazelversion" ]]; then
   bazel_version="$(cat "$workspace/.bazelversion")"
 else

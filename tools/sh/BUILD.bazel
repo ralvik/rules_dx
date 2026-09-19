@@ -1,0 +1,25 @@
+"""Shared shell helpers (issue #319).
+
+Single-sources the workspace-root probe plus runfiles `rlocation` usage
+repeated across every shell driver. Drivers source `lib.sh` via a
+runfiles-first bootstrap and depend on `:lib` so the file rides their
+runfiles forest under `bazel test` / `bazel run`.
+"""
+
+load("@rules_shell//shell:sh_library.bzl", "sh_library")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+sh_library(
+    name = "lib",
+    srcs = ["lib.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)

@@ -19,29 +19,16 @@
 # `manual`: wildcard suites never run them).
 set -euo pipefail
 
+# Shared workspace + runfiles helpers (issue #319).
+# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
+
 scenario="${1:?usage: e2e.sh <scenario> <want-exit> <dx-bin> <bazel-wrapper>}"
 want_exit="${2:?usage: e2e.sh <scenario> <want-exit> <dx-bin> <bazel-wrapper>}"
 dx_rel="${3:?usage: e2e.sh <scenario> <want-exit> <dx-bin> <bazel-wrapper>}"
 bazelw_rel="${4:?usage: e2e.sh <scenario> <want-exit> <dx-bin> <bazel-wrapper>}"
 
-if [[ -n "${E2E_WORKSPACE:-}" ]]; then
-  workspace="$E2E_WORKSPACE"
-elif [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" && -d "${BUILD_WORKSPACE_DIRECTORY}/integration" ]]; then
-  workspace="$BUILD_WORKSPACE_DIRECTORY"
-else
-  # `bazel run` from the checkout: git is available and cwd is the
-  # workspace. Under `bazel test` this fails (sandbox has no .git and
-  # BUILD_WORKSPACE_DIRECTORY is unset) — fall through to the
-  # actionable error below instead of exiting 128 with bare git noise.
-  if workspace="$(git rev-parse --show-toplevel 2>/dev/null)"; then
-    :
-  else
-    echo "FAIL: cannot locate parent workspace (no \$E2E_WORKSPACE, no usable \$BUILD_WORKSPACE_DIRECTORY, git rev-parse failed)" >&2
-    echo "Run explicitly as: E2E_WORKSPACE=\$PWD bazel test //tools/ci:e2e --test_env=E2E_WORKSPACE" >&2
-    echo "CI passes E2E_WORKSPACE=\$GITHUB_WORKSPACE with --test_env=E2E_WORKSPACE (issue #55)." >&2
-    exit 1
-  fi
-fi
+workspace="$(dx_e2e_workspace_root)"
 if [[ ! -d "$workspace/integration" ]]; then
   echo "FAIL: workspace $workspace has no integration/ (E2E_WORKSPACE mis-set?)" >&2
   exit 1
@@ -53,29 +40,6 @@ fail=0
 ok() { pass=$((pass + 1)); }
 bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
 
-resolve_runfile() { # rel -> absolute; runfiles layouts differ, so probe.
-  # `$(rootpath)` for main-workspace targets is `cli/cli/dx` but the
-  # runfiles tree nests it under `_main/` (`$TEST_SRCDIR/_main/cli/cli/dx`);
-  # external repos arrive as `../<repo>/<path>` (execroot-relative) but live
-  # at `$TEST_SRCDIR/<repo>/<path>`. Probe all layouts plus the
-  # workspace `bazel-bin/` fallback for `bazel run` invocations.
-  local rel="$1" stripped base candidates=()
-  stripped="$(printf '%s' "$rel" | sed -e 's|^\(\.\./\)*||')"
-  if [[ -n "${TEST_SRCDIR:-}" ]]; then
-    candidates+=("$TEST_SRCDIR/_main/$rel" "$TEST_SRCDIR/$rel" "$TEST_SRCDIR/$stripped")
-  fi
-  # `bazel run` fallback: cwd is the workspace after the cd above, and
-  # bazel-bin holds the built binaries.
-  candidates+=("$(pwd)/bazel-bin/$rel" "$(pwd)/bazel-bin/$stripped" "$(pwd)/$rel")
-  for base in "${candidates[@]}"; do
-    if [[ -e "$base" ]]; then
-      echo "$base"
-      return 0
-    fi
-  done
-  return 1
-}
-
 # Pin guard: the child Bazel must track //.bazelversion exactly (no
 # multi-version matrix, issue #55). The MODULE download pin and the
 # version file move together or this fails before staging anything.
@@ -84,8 +48,8 @@ pin_version="$(cat .bazelversion)"
 grep -q -F -e 'bazel_binaries.download(version = "9.2.0")' MODULE.bazel \
   || { bad "MODULE.bazel lost the 9.2.0 bazel_binaries pin"; }
 
-dx_bin="$(resolve_runfile "$dx_rel")" || { bad "dx binary not found: $dx_rel"; }
-bazel_wrapper="$(resolve_runfile "$bazelw_rel")" || { bad "bazel wrapper not found: $bazelw_rel"; }
+dx_bin="$(dx_resolve_runfile "$dx_rel")" || { bad "dx binary not found: $dx_rel"; }
+bazel_wrapper="$(dx_resolve_runfile "$bazelw_rel")" || { bad "bazel wrapper not found: $bazelw_rel"; }
 [[ -f "$workspace/integration/$scenario/MODULE.bazel" ]] \
   || { bad "scenario missing: integration/$scenario/MODULE.bazel"; }
 [[ "$fail" == "0" ]] || { echo "e2e $scenario: $pass passed, $fail failed"; exit 1; }
