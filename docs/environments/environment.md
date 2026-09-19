@@ -277,15 +277,18 @@ open work. Publication still requires explicit
 approval and qualified release artifacts.
 
 Publication dry-run: dispatch `.github/workflows/publish-dry-run.yml` manually from the
-Actions tab. It builds the seed-host Linux x86_64 `dx` binary, records its sha256, and
-reports what *would* publish (BCR module, GitHub Release binaries) without tagging,
-submitting, or creating anything; the report lands in the run summary and logs. The
-`approve` input (default false) runs the fuller qualification; nothing publishes either
-way. The workflow needs only `contents: read` and stores no secrets. The full release
-matrix, SBOM/provenance generation, and BCR dry-run submission arrive as follow-ups
-as platforms qualify
-and signing/attestation generation tooling lands via the human-run workflow;
-install-time verification itself is implemented in `//deploy/install:dx_verify`.
+Actions tab. It builds the seed-host Linux x86_64 `dx` binary plus the
+`//cli/cli:dx_standalone` archive, records sha256 digests, exercises
+`//cli/cli:github_draft` in `GH_RELEASE_DRY_RUN=1` mode, checks the `rules_dx`
+at `0.0.0` module shape without submitting, and proves
+`//deploy/install:dx_verify` refuses checksum-only inputs, all staged under
+`RUNNER_TEMP` without tagging, submitting, or creating anything; the report lands
+in the run summary and logs. The `approve` input (default false) runs the fuller
+qualification; nothing publishes either way. The workflow needs only `contents: read`
+and stores no secrets. The wider matrix, SBOM/provenance generation,
+signing/attestation generation, and BCR submission stay deferred as platforms qualify
+and signing tooling lands; install-time verification itself is implemented in
+`//deploy/install:dx_verify`.
 
 Draft-only publisher ceiling: the `github_release` rule (`deploy/rules/github.bzl`,
 for example `//cli/cli:github_draft`) defaults to `draft = True` with the

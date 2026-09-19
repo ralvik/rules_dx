@@ -10,10 +10,12 @@
 # battery on a clean tree.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (35 checks): hygiene policy, exact 0.0.0 module pin + consumer
+# today (37 checks): hygiene policy, exact 0.0.0 module pin + consumer
 # pin + reviewed-commit workflow pin + unqualified-matrix record,
 # workflow separation + triggers + default-closed approve gates +
-# never-publishes + dry-run report + clean-checkout record,
+# never-publishes + dry-run report + clean-checkout record + seed
+# exercised path (standalone + draft dry-run + BCR shape + verifier
+# refusal),
 # signing-first trust-root + attestation + SBOM detail, digest-pinned
 # prebuilt base + scaffold state + quota record + scaffold-update +
 # Bazelisk delegation + cosign deferral + admissibility gate +
@@ -329,6 +331,30 @@ if ! grep -rn -F -e 'tags:' .github/workflows/publish-dry-run.yml 2>/dev/null | 
   ok
 else
   bad "a tag trigger appeared in publish/ghcr workflows without owner approval"
+fi
+
+# #78 seed exercised path stays explicit: standalone archive plus draft
+# dry-run plus BCR shape plus verifier refusal staged under RUNNER_TEMP,
+# publishing nothing either way.
+if grep -q -F -e 'dx-standalone.tar.gz' .github/workflows/publish-dry-run.yml \
+  && grep -q -F -e 'GH_RELEASE_DRY_RUN=1 bazel run //cli/cli:github_draft' .github/workflows/publish-dry-run.yml \
+  && grep -q -F -e 'bcr-shape.txt' .github/workflows/publish-dry-run.yml \
+  && grep -q -F -e 'verify-refusal.log' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish dry run lost its seed exercised path record (#78 standalone + draft + BCR shape + verifier refusal)"
+fi
+
+# #78 exercised report shape stays explicit: the dry-run report carries
+# the exercised seed steps plus draft/BCR/verify detail with published
+# False everywhere, so the nothing-publishes ceiling cannot be narrowed.
+if grep -q -F -e '"exercised"' .github/workflows/publish-dry-run.yml \
+  && grep -q -F -e '"draft_dry_run"' .github/workflows/publish-dry-run.yml \
+  && grep -q -F -e '"bcr_shape"' .github/workflows/publish-dry-run.yml \
+  && grep -q -F -e '"verify_refusal"' .github/workflows/publish-dry-run.yml; then
+  ok
+else
+  bad "publish dry run lost its exercised report shape (#78 exercised + draft/BCR/verify detail)"
 fi
 
 echo "distribution closeout guards harness: $pass passed, $fail failed"

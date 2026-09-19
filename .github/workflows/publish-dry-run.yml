@@ -2,15 +2,19 @@
 # a release. `workflow_dispatch` only: no push, pull_request, tag, or schedule
 # trigger, so CI stays green by construction and nothing runs uninvited.
 #
-# Seed-host first: builds the Linux x86_64 `dx` binary, records its sha256,
-# and emits a dry-run report to the step summary and logs. The full release
-# matrix (Linux arm64, macOS x86_64/arm64, Windows x86_64), SBOM/provenance
-# generation, BCR dry-run submission, and draft-release creation arrive as
-# follow-ups as platforms qualify (issue #5) and signing/attestation tooling
-# is selected (issue #26). Nothing here tags, publishes, or pushes, with or
-# without approval: `dist/`/`release/` stay git-ignored, staging happens
-# under RUNNER_TEMP so the checkout is never left dirty, and the default run
-# only reports what *would* publish.
+# Seed-host first: builds the Linux x86_64 `dx` binary plus the seed
+# `dx_standalone` archive, records sha256 digests, exercises the draft-only
+# publisher in dry-run mode (GH_RELEASE_DRY_RUN=1, always with draft-only
+# flags), checks the Bazel Central Registry module shape without submitting,
+# and proves the install verifier refuses checksum-only inputs on the
+# Sigstore TUF trust root. Emits a dry-run report to the step summary and
+# logs. The full release matrix beyond the seed host, SBOM and provenance
+# generation, signing and attestation generation, BCR submission, and GHCR
+# images stay explicitly deferred as platforms qualify (issue #5) and
+# signing and attestation tooling is selected (issue #26). Nothing here tags,
+# publishes, or pushes, with or without approval: `dist/`/`release/` stay
+# git-ignored, staging happens under RUNNER_TEMP so the checkout is never
+# left dirty, and the default run only reports what *would* publish.
 #
 # Hygiene (issue #80): Bazelisk installs go through the single
 # `.github/actions/setup-bazelisk` composite action; the only third-party
@@ -44,8 +48,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
-      - name: Build seed-host release binary
-        run: bazel build //cli/cli:dx
+      - name: Build seed-host release binary and standalone archive
+        run: bazel build //cli/cli:dx //cli/cli:dx_standalone
       - name: Stage binary and emit dry-run report
         env:
           APPROVE: ${{ inputs.approve }}
@@ -57,12 +61,37 @@ jobs:
           bin="$(bazel cquery --output=files //cli/cli:dx)"
           cp "$bin" "$stage/dx-linux-x86_64"
           (cd "$stage" && sha256sum dx-linux-x86_64 > dx-linux-x86_64.sha256)
+          archive="$(bazel cquery --output=files //cli/cli:dx_standalone_archive)"
+          checksum="$(bazel cquery --output=files //cli/cli:dx_standalone_checksum)"
+          cp "$archive" "$stage/dx-standalone.tar.gz"
+          cp "$checksum" "$stage/dx-standalone.tar.gz.sha256"
+          GH_RELEASE_DRY_RUN=1 bazel run //cli/cli:github_draft > "$stage/draft-dry-run.log" 2>&1
+          grep -q "v0.0.0-dryrun" "$stage/draft-dry-run.log"
+          grep -q -- "--draft --verify-tag" "$stage/draft-dry-run.log"
+          {
+            echo "Bazel Central Registry module shape (checked, not submitted):"
+            grep -F 'name = "rules_dx"' MODULE.bazel
+            grep -F 'version = "0.0.0"' MODULE.bazel
+          } > "$stage/bcr-shape.txt"
+          {
+            echo "install verifier refusal proof (no network, publishes nothing):"
+            ./deploy/install/dx_verify.sh --help > "$stage/verify-help.txt"
+            grep -q "tuf-repo-cdn.sigstore.dev" deploy/install/dx_verify.sh
+            if ./deploy/install/dx_verify.sh --binary "$stage/dx-linux-x86_64" --sha256 deadbeef > "$stage/verify-refusal.log" 2>&1; then
+              echo "expected checksum-only refusal failed" >&2
+              exit 1
+            fi
+            grep -q "checksum-only verification is not publisher-identity proof" "$stage/verify-refusal.log"
+          }
           python3 - "$stage" "$APPROVE" <<'EOF'
           import hashlib
           import json
           import sys
           stage, approve = sys.argv[1], sys.argv[2] == "true"
           digest = hashlib.sha256(open(f"{stage}/dx-linux-x86_64", "rb").read()).hexdigest()
+          standalone_digest = hashlib.sha256(open(f"{stage}/dx-standalone.tar.gz", "rb").read()).hexdigest()
+          draft_log = open(f"{stage}/draft-dry-run.log", encoding="utf-8").read()
+          draft_ok = "v0.0.0-dryrun" in draft_log and "--draft --verify-tag" in draft_log
           report = {
               "schema": "publish-dry-run/v1",
               "approved": approve,
@@ -73,6 +102,11 @@ jobs:
                       "sha256": digest,
                       "note": "seed-host binary; release matrix follow-up under issue #5",
                   },
+                  {
+                      "name": "dx-standalone.tar.gz",
+                      "sha256": standalone_digest,
+                      "note": "seed-host standalone archive via //cli/cli:dx_standalone; wider matrix unqualified per issue #5",
+                  },
               ],
               "release_matrix": [
                   {"name": "dx-linux-x86_64", "status": "qualified-seed-built-here"},
@@ -81,6 +115,33 @@ jobs:
                   {"name": "dx-macos-arm64", "status": "unqualified-per-issue-5"},
                   {"name": "dx-windows-x86_64", "status": "unqualified-per-issue-5"},
               ],
+              "exercised": [
+                  "seed binary build //cli/cli:dx with sha256 staged under RUNNER_TEMP",
+                  "seed standalone archive //cli/cli:dx_standalone with sha256 staged under RUNNER_TEMP",
+                  "draft-only publisher //cli/cli:github_draft in GH_RELEASE_DRY_RUN=1 mode (placeholder v0.0.0-dryrun, draft-only flags, publishes nothing)",
+                  "Bazel Central Registry module shape check (rules_dx at 0.0.0, checked not submitted)",
+                  "install verifier //deploy/install:dx_verify refusal proof (checksum-only rejected, TUF trust root, fails before install)",
+              ],
+              "draft_dry_run": {
+                  "target": "//cli/cli:github_draft",
+                  "mode": "GH_RELEASE_DRY_RUN=1",
+                  "placeholder": "v0.0.0-dryrun",
+                  "flags": "--draft --verify-tag",
+                  "ok": draft_ok,
+                  "published": False,
+              },
+              "bcr_shape": {
+                  "module": "rules_dx",
+                  "version": "0.0.0",
+                  "checked": True,
+                  "submitted": False,
+              },
+              "verify_refusal": {
+                  "verifier": "//deploy/install:dx_verify",
+                  "trust_root": "https://tuf-repo-cdn.sigstore.dev",
+                  "checksum_only_refused": True,
+                  "installed": False,
+              },
               "would_publish": [
                   "Bazel Central Registry `rules_dx` module (dry-run submission pending issue #26 tooling)",
                   "GitHub Release with standalone `dx` binaries (draft only via //cli/cli:github_draft, issue #182; owner approval per issue #5)",
@@ -94,9 +155,12 @@ jobs:
                   "Any tag, registry submission, or release creation",
               ],
           }
+          assert draft_ok, "draft dry-run log missing placeholder or draft-only flags"
           with open(f"{stage}/dry-run-report.json", "w", encoding="utf-8") as fh:
               json.dump(report, fh, indent=2)
           print(f"seed binary sha256: {digest}")
+          print(f"standalone archive sha256: {standalone_digest}")
+          print(f"draft dry-run ok: {draft_ok}")
           print(f"approved: {approve}; published: False (dry run never publishes)")
           EOF
           {
@@ -104,6 +168,10 @@ jobs:
             echo ""
             echo "- approved: \`$APPROVE\`; published: **no** (dry run never publishes)"
             echo "- seed binary: \`dx-linux-x86_64\` \`$(cut -d' ' -f1 "$stage/dx-linux-x86_64.sha256")\`"
+            echo "- standalone: \`dx-standalone.tar.gz\` \`$(cut -d' ' -f1 "$stage/dx-standalone.tar.gz.sha256")\`"
+            echo "- draft dry-run: \`//cli/cli:github_draft\` \`GH_RELEASE_DRY_RUN=1\` ok (placeholder \`v0.0.0-dryrun\`, draft-only flags, publishes nothing)"
+            echo "- BCR shape: \`rules_dx\` at \`0.0.0\` checked, not submitted"
+            echo "- verifier: checksum-only refused, TUF trust root, nothing installed"
             echo "- full report: \`dry-run-report.json\` in the job logs"
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Prove checkout left clean

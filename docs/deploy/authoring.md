@@ -93,11 +93,13 @@ happens by editing the draft on GitHub.
 
 Our own release runbook is the publish dry-run workflow
 ([`publish-dry-run.yml`](../../.github/workflows/publish-dry-run.yml),
-open work): it builds
-the seed-host `dx` binary the `//cli/cli:github_draft` macro assembles,
+open work): it builds the seed-host `dx` binary plus the `dx_standalone` archive,
+exercises `//cli/cli:github_draft` in dry-run mode, checks the BCR module shape
+without submitting, and proves the install verifier refuses checksum-only inputs,
 so workflow and macro stay consistent instead of duplicating logic.
-The full release matrix, SBOM/provenance, and BCR submission arrive as
-follow-ups there as platforms qualify. Deploy and release gaps stay open under
+The wider matrix, SBOM/provenance generation, signing/attestation generation, and
+BCR submission stay deferred there as platforms qualify and signing tooling lands.
+Deploy and release gaps stay open under
 issue #311 (full release matrix as platforms qualify, SBOM and provenance generation,
 signing and attestation selection, BCR submission tooling, GHCR prebuilt-image route,
 and the human-run release path; draft-only ceiling enforced, owner approval required).
