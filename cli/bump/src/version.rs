@@ -3,7 +3,7 @@
 //! Library-first: version parsing and comparison delegate to the upstream
 //! `semver` crate, never to custom version code. Registry discovery (BCR,
 //! crates.io, npm, Go proxy, GitHub releases) and manifest parsing
-//! (`serde_json`, `toml`) are upstream-owned; this module only validates
+//! (`serde_json`, `toml`, `toml_edit`) are upstream-owned; this module only validates
 //! the operator-supplied new version shape and pins the stable-only
 //! discovery policy. Custom code is limited to the thin
 //! single-requirement edit in [`crate::request`].
@@ -274,11 +274,16 @@ mod tests {
     fn serde_json_and_toml_stay_upstream_owned() {
         // Manifest shapes parse through upstream libraries, never custom
         // parsers: pin the ownership here so a future edit cannot
-        // reimplement JSON/TOML.
+        // reimplement JSON/TOML. `toml_edit` owns format-preserving Cargo
+        // edits; `package.json` stays on `serde_json::Value`.
         let package: serde_json::Value =
             serde_json::from_str(r#"{"name":"react","version":"1.2.3"}"#).expect("json");
         assert_eq!(package["version"], serde_json::json!("1.2.3"));
         let manifest: toml::Table = toml::from_str("version = \"1.2.3\"\n").expect("toml");
         assert_eq!(manifest["version"].as_str(), Some("1.2.3"));
+        let doc = "version = \"1.2.3\"\n"
+            .parse::<toml_edit::DocumentMut>()
+            .expect("toml_edit");
+        assert_eq!(doc["version"].as_str(), Some("1.2.3"));
     }
 }

@@ -12,10 +12,10 @@
 //!
 //! Library-first (ADR 0008): registry discovery, version comparison, and
 //! manifest parsing use upstream libraries (BCR / crates.io / npm / Go
-//! proxy / GitHub releases clients plus `semver`, `serde_json`, `toml`),
-//! never custom HTTP/version/resolver code. Custom code here is limited
-//! to the thin widen-one-requirement edit, loop orchestration docs, and
-//! PR handling. All deps pin per ADR 0008 (latest stable, pinned
+//! proxy / GitHub releases clients plus `semver`, `serde_json`, `toml`,
+//! `toml_edit`), never custom HTTP/version/resolver code. Custom code here
+//! is limited to the thin widen-one-requirement edit, loop orchestration
+//! docs, and PR handling. All deps pin per ADR 0008 (latest stable, pinned
 //! exactly).
 //!
 //! Frozen command shape (`docs/cli/commands/audit-update-bazel.md`):
