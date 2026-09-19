@@ -104,6 +104,7 @@ rust_library(
     deps = crate_deps(
         [
             "base64",
+            "chrono",
             "clap",
             "clap_complete",
             "clap_mangen",

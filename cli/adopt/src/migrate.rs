@@ -63,8 +63,8 @@ pub struct MigratePlan {
 /// With no breaking-change manifests published yet (module at `0.0.0`,
 /// no releases cut), planning succeeds but execution fails closed
 /// until the first major-release manifest lands — the same
-/// fail-closed discipline as `audit_deferred` (`dx update` now
-/// executes live, issue #19).
+/// fail-closed discipline as `audit_failed` (`dx audit` plus `dx update`
+/// execute live, issues #18 and #19).
 pub fn plan_migrate(from: &str, to: &str) -> Result<MigratePlan, AdoptError> {
     if from.is_empty() || to.is_empty() {
         return Err(AdoptError::MigrateVersions {

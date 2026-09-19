@@ -96,15 +96,14 @@ else
 fi
 
 # Resolver backends delivered in #19 (selector syntax, Git mappings, and
-# upstream operation/report mappings decided in dx_update); audit open work
-# stays, never decided here.
+# upstream operation/report mappings decided in dx_update); audit live
+# execution delivered in #18.
 if grep -q -F -e 'dx_update::selector' "$contract" \
   && grep -q -F -e 'dx_update::backend' "$contract" \
-  && grep -q -F -e 'dx_update::semantics' "$contract" \
-  && [[ "$(grep -c -F -e 'open work' "$contract")" -ge 4 ]]; then
+  && grep -q -F -e 'dx_update::semantics' "$contract"; then
   ok
 else
-  bad "update contract lost its delivered resolver records or audit open-work references"
+  bad "update contract lost its delivered resolver records"
 fi
 
 # Automation policy owns the Renovate fallback: absent-only scaffold,

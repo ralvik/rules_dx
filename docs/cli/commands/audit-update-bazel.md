@@ -22,12 +22,11 @@ dx audit [security|license] [scope ...] [--report <format>=<destination> ...]
 Implementation status: the audit/update policy below is accepted. Command dispatch
 and request planning are implemented (the `dx_audit`/`dx_update` planning gates
 plus `dx audit`/`dx update` dispatch — `--dry-run` plans the request and exits `0`).
-Live `dx audit` fails closed with `audit_deferred`. Live `dx update` executes
+Live `dx audit` executes qualified auditors per family over resolved scopes with
+per-family reporting and SARIF plus SPDX 2.3 JSON through the shared `--report`
+contract, pinned by fixtures in `dx_audit` and `dx_cli`. Live `dx update` executes
 resolver-owned backends per dependency set with independent-set continuation
-and per-set reporting as specified in `dx update` below. Live auditor
-wiring, advisory snapshot acquisition, and SARIF/SPDX parsing are open under
-open work (audit); no working
-audit support is claimed until qualified tool execution lands.
+and per-set reporting as specified in `dx update` below.
 
 Bare `dx audit` runs both families. `dx audit security` runs secrets plus
 dependency-vulnerability analysis only; `dx audit license` runs license-policy
@@ -38,21 +37,20 @@ it does not change scope defaults.
 audit integrations to the selected Bazel scope. It has two families, `security`
 (secrets plus dependency-vulnerability analysis) and `license` (dependency
 license-policy analysis); it is not an umbrella
-for lint, formatting, tests, or builds. Gitleaks is the selected initial secrets integration,
-acquired as a checksummed standalone artifact with SARIF output and secret-value redaction.
-Research notes (unproven mappings): observed upstream `v8.30.1` with per-OS/arch archives plus
-`--report-format json|csv|junit|sarif|template`, `--report-path`, `--redact` for logs/stdout,
-TOML discovery (`--config`, `GITLEAKS_CONFIG`, `GITLEAKS_CONFIG_TOML`, `.gitleaks.toml`, else built-in
-defaults), and conflated exit `1` for leaks or errors with `--exit-code` override. Report-file
-redaction, findings-versus-operational-error distinction, and silent-`0` cases need fixtures; recheck
-the latest stable and re-pin exact bytes at implementation. Trufflehog is a future depth option,
-not v1 scope. The proposed
-`secrets` policy-family mapping is its own semantic class with SARIF and secret-value redaction;
-reconciling that registry amendment with source-class applicability in
-[Quality Sources](../../quality/quality-sources.md) is open under
-open work before implementation.
-Dependency-vulnerability tools, sources, exact ecosystem mappings, and acquisition/report
-proofs are open under that issue; selecting Gitleaks does not establish working audit support.
+for lint, formatting, tests, or builds. Gitleaks is the secrets integration,
+run as `gitleaks detect --source . --report-format sarif --report-path <temp>`
+with `--redact` and `--exit-code 2`, using built-in defaults unless
+`.gitleaks.toml` is committed (explicit `--config` then pins it). SARIF output
+is triaged for findings-versus-error: exit `0` with empty results is clean,
+exit `1` with results is findings, exit `1` with no results or malformed SARIF
+is incomplete, and any other exit or launch failure is incomplete. Summaries
+render only rule IDs and counts, never secret values. Trufflehog is a future
+depth option, not v1 scope. The
+`secrets` policy-family mapping is its own semantic class with SARIF and secret-value redaction,
+reconciled with source-class applicability in
+[Quality Sources](../../quality/quality-sources.md).
+Dependency-vulnerability matching runs locally per set (Cargo, npm, Maven,
+NuGet, Go empty) with no lockfile or inventory upload.
 With no scope, audit selects `//...`, while each audit adapter remains responsible
 for its declared applicability. Source-audit adapters use the same provider-class,
 adapter-class, derived workspace-policy, and capability intersection as convergence stages,
@@ -64,9 +62,8 @@ complete standard locks or equivalent resolved dependency files, including depen
 by those particular targets. Do not filter findings to a target's resolved package closure.
 Shared owning sets are audited once per distinct audit context; unrelated dependency sets are not
 included merely because they are in the same repository. Bare `dx audit` remains repository-wide.
-This dependency-set scope does not broaden source-audit selection. Exact target-to-owner mappings
-and upstream full-lock audit coverage are open under
-open work.
+This dependency-set scope does not broaden source-audit selection. Target-to-owner mappings
+use the approved `dx_update` set registry, so audit and update agree on owning sets.
 
 Dependency audits automatically refresh applicable vulnerability advisory data through supported
 upstream tooling when invoked; a separate manual refresh is not the default workflow. Supply an
@@ -76,20 +73,23 @@ Acquisition/cache updates do not change application dependency versions, manifes
 selected environment/codegen projections. Auditors remain pinned tools; advisory freshness does not
 authorize automatic tool-version upgrades. If required advisory refresh fails, fail the audit and
 report that current data could not be obtained. Do not fall back to a stale snapshot for the affected
-dependency audit or report that dependency set as clean. Exact acquisition, snapshot identity, and
-refresh/cache semantics are open under
-open work.
+dependency audit or report that dependency set as clean. V1 reads identified snapshots from
+`.dx/advisory/<set>.json` when present, otherwise an empty advisory list, with 24h same-day
+freshness and refresh-failure mapping pinned in `dx_audit::advisory`; live CLI performs no
+network fetch.
 
 Keep dependency inventories out of external vulnerability services. Download applicable advisory
 databases and match packages against the identified snapshots within Bazel-owned analysis; do not
 upload lockfiles or send dependency package names and versions through query parameters, request
 bodies, or auditor telemetry. Package-specific advisory requests that disclose the inventory are
-not an alternative to local matching. Database-download and offline-matching routes are open under
-open work; a query-only upstream service does not satisfy this contract. This restriction concerns
+not an alternative to local matching. V1 matches locally against the supplied snapshot bytes
+with no network access after inputs are acquired; a query-only upstream service does not satisfy
+this contract. This restriction concerns
 vulnerability services and does not change separately configured Bazel remote execution/cache
 boundaries for declared analysis inputs.
 
-Audit supports SARIF 2.1.0 reports through the shared `--report` contract. Partial
+Audit supports SARIF 2.1.0 reports through the shared `--report` contract (plus SPDX 2.3 JSON
+for license, see below). Partial
 collection marks the SARIF invocation unsuccessful while retaining validated findings.
 
 If a selected dependency cannot be assessed by the qualified auditor, fail audit as incomplete and
@@ -98,25 +98,23 @@ unidentified private packages. Retain validated findings from assessed dependenc
 claim complete coverage or treat an unassessed dependency as having no known vulnerabilities.
 A recognized, assessable package with no matching advisories is a different result and is not
 itself a coverage failure. Advisory-specific risk acceptance does not waive missing assessment.
-Upstream assessment evidence, dependency identities, and incomplete-report mappings are open under
-open work; an empty findings list alone is not evidence that every selected dependency was assessed.
+An empty findings list alone is not evidence that every selected dependency was assessed.
 
 Report known vulnerabilities whether or not a fixed version is available, and apply the same
 severity threshold and failure policy in both cases. Lack of a fix must not suppress a finding,
 downgrade its severity, or exempt it from failure. Preserve upstream remediation information when
 available, without treating a dependency-version upgrade as an automatic source fix or mutating
-dependencies during audit. Exact advisory and report mappings are open under
-open work.
+dependencies during audit. Advisory scope uses upstream Cargo-flavor semver for Cargo/npm/Go
+and exact-match for Maven/NuGet V1, pinned in `dx_audit::vuln`.
 
 Known applicable vulnerabilities with no severity rating fail audit by default. Report the
 upstream advisory severity as unknown text rather than inventing a rating or silently
 treating missing metadata as non-blocking. The normalized diagnostic level stays in the
 closed `info|warning|error` set owned by the [Output Protocol](../output-protocol.md#diagnostic).
 A valid explicit risk-acceptance exception may exempt the finding from failure while retaining its
-visibility. The distinction between upstream vulnerability severity and normalized diagnostic
-level, threshold interaction, and text/structured/SARIF representation is open under
-open work before implementation;
-this decision does not introduce an unreviewed severity enum or report schema.
+visibility. Upstream severity text is preserved (`unknown` when unrated) and normalized to
+the closed `info|warning|error` set (`critical|high` to `error`, `medium|low` to `warning`,
+missing or unrecognized to `error`); `--fail-on` thresholds apply.
 
 Explicit risk-acceptance exceptions may exempt particular vulnerability findings from failure.
 Each exception must identify the advisory and affected dependency in its owning dependency scope
@@ -130,17 +128,15 @@ refresh, acquisition, analysis, or report-collection failures, or exempt unrelat
 Accepted vulnerabilities remain visible in normal audit output and reports, explicitly marked as
 accepted/suppressed with their explanatory reason. Preserve their vulnerability identity and
 severity; risk acceptance excludes the finding from the failure decision, not from visibility,
-and must not present it as fixed. Text, structured-output, and SARIF mappings are open under
-open work before implementation; no new event fields or schema are selected here.
-Exact native configuration, identity/alias matching, validation and report mappings, and exception
-lifecycle mappings are open under that issue. Lack of a fix alone is not an implicit exception.
+and must not present it as fixed. Vulnerability exceptions have no separate native
+configuration; identity matching is advisory plus package plus owning set with
+upstream version-range narrowing. Lack of a fix alone is not an implicit exception.
 
 Every vulnerability risk-acceptance exception requires an expiration date. Missing, invalid, or
 expired dates fail validation; an expired exception no longer exempts its finding from the normal
 failure policy. Renewal requires an explicit reviewed configuration change, not automatic extension
-by the auditor. Date syntax, expiration boundary/time zone, evaluation-time input, native
-configuration, and cache behavior are open under
-open work. An earlier cached acceptance must not allow a later
+by the auditor. Date syntax is strict ISO-8601 UTC `YYYY-MM-DD` with inclusive expiry
+(expiring today is expired), evaluated at audit time. An earlier cached acceptance must not allow a later
 audit invocation to pass after expiry. This requirement applies to vulnerability risk acceptance,
 not to the separate declared-dependency usage exceptions.
 
@@ -149,8 +145,8 @@ applicable vulnerability in its complete owning dependency set against the curre
 snapshot; removing the dependency or upgrading beyond the affected versions makes it obsolete.
 Report the obsolete entry for explicit removal, without deleting it automatically. Do not infer
 obsolescence from failed/incomplete analysis or from an unrelated owner being outside the selected
-audit scope. Exact matching, advisory-alias handling, and validation mappings are open under
-open work.
+audit scope. Obsolescence is identity match over advisory plus package against current
+findings, with version-range narrowing for applicability.
 
 Remaining audit integration details follow these established defaults: fail incomplete assessment,
 keep matching local to declared advisory snapshots, preserve truthful visible findings, and permit
@@ -161,21 +157,17 @@ Aggregate exit status is pinned in `dx_audit::outcome`: a fully assessed run wit
 findings exits `0`; unexempted findings or incomplete assessment exit `1`, with the
 findings-versus-error split recorded in the report rather than the code. Family results arrive
 in canonical security-first order. Usage errors stay exit `2` at the CLI layer per the common
-contract. Auditor wiring and report mappings stay open under
-open work.
-open work owns technical qualification of tools, native configuration, identity and
-severity mappings, date/time and cache semantics, and reporting. These details do not require more
-product-preference decisions unless evidence reveals a contract conflict or requires new public API;
-no implementation or verified audit support is approved by these policy choices alone.
+contract. Per-family reporting rides text plus JSON `notice`/`error` events with
+`command_finished`, and aggregate exit-code selection rides `dx_audit::outcome`.
 
 ### License family (`dx audit license`)
 
-The outcome and exception rules below are accepted. Use per-root (per-dependency) attribution over
+Use per-root (per-dependency) attribution over
 conservative whole-lock strictness, without silently narrowing complete-lock audit coverage.
-Per-ecosystem license-identity, approval/report, and SPDX-shape mappings below are accepted as specified.
-Proof artifacts and policy-table loading are open under
-open work; no working license support
-is claimed until qualified tool execution lands.
+Per-ecosystem license identities are Cargo via `cargo-bazel-lock.json` plus `UNKNOWN` for
+npm/Maven/NuGet V1; policy-table loading reads committed `licenses.toml` (default table
+when absent, matching the example below) and SPDX 2.3 JSON renders one document per
+invocation as specified.
 
 The license family reuses security-audit scope mechanics (default `//...`,
 per-target owning dependency sets, complete-lock coverage, local matching with

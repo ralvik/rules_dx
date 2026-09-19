@@ -1,25 +1,24 @@
 #!/usr/bin/env bash
 # Execution/corpus/perf guards (issues #18, #19, #22, #15, #86).
 #
-# Live `dx audit` fails closed with audit_deferred; live `dx update` executes
+# Live `dx audit` executes qualified auditors per family with SARIF/SPDX mapping;
+# live `dx update` executes
 # resolver-owned backends per set with continuation and per-set reporting
-# (issue #19 delivered). Only family selection plus update selector planning,
-# aggregate exit-code mapping, and --dry-run planning execute for audit. No auditor wiring,
-# advisory acquisition, or SARIF/SPDX mapping is claimed. Required-core depcheck (issue #22) is delivered
+# (issues #18 and #19 delivered). Family selection plus update selector planning,
+# aggregate exit-code mapping, and --dry-run planning execute for both. Required-core depcheck (issue #22) is delivered
 # in tools/depcheck/; admitted expansion stays open. Corpus stays single `corpus` per directory until `dx generate` emits
 # the per-type split; perf tracks the frozen aspect_rules_lint v2.8.0
 # baseline as a report, never a gate.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (21 checks): audit deferred code plus update live execution, fail-closed/live unit pins, dry-run
+# today (21 checks): audit plus update live execution, fail-closed/live unit pins, dry-run
 # planning paths, audit families + policy modules, selector planning
 # + update API, aggregate verdict pins, exit mappings,
 # prior harnesses green, corpus single-name rule + Gazelle ownership +
 # generate --check wiring + carve-out record, perf report-not-gate
 # shape + v2.8.0 fairness pin + bench harness + comparison-test
-# presence, and no audit live-execution green claims. Update live execution
-# is delivered (#19); audit live execution,
-# per-type generation, and comparison numbers stay open under
+# presence. Update plus audit live execution
+# is delivered (#19 plus #18); per-type generation and comparison numbers stay open under
 # their issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:execution_corpus_perf_guards`,
@@ -38,12 +37,14 @@ fail=0
 ok() { pass=$((pass + 1)); }
 bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
 
-# #18 fail-closed audit code pinned in CLI.
-if grep -q -F -e 'audit_deferred' cli/cli/src/exec/audit.rs \
-  && grep -q -F -e 'CODE_AUDIT_DEFERRED' cli/cli/src/exec/common.rs; then
+# #18 live audit code pinned in CLI.
+if grep -q -F -e 'CODE_AUDIT_FAILED' cli/cli/src/exec/common.rs \
+  && grep -q -F -e 'dx_audit::backend::plan_secrets' cli/cli/src/exec/audit.rs \
+  && ! grep -q -F -e 'audit_deferred' cli/cli/src/exec/audit.rs \
+  && ! grep -q -F -e 'CODE_AUDIT_DEFERRED' cli/cli/src/exec/common.rs; then
   ok
 else
-  bad "live audit lost its audit_deferred fail-closed code"
+  bad "live audit lost its live-execution code (want CODE_AUDIT_FAILED, no audit_deferred)"
 fi
 
 # #19 live update execution pinned in CLI (no deferred code).
@@ -56,12 +57,12 @@ else
   bad "live update lost its live-execution code (want CODE_UPDATE_FAILED, no update_deferred)"
 fi
 
-# #18 fail-closed plus #19 live behavior pinned by unit tests, not just codes.
-if grep -q -F -e 'assert!(err.contains("audit_deferred")' cli/cli/src/exec/audit.rs \
+# #18 live plus #19 live behavior pinned by unit tests, not just codes.
+if grep -q -F -e 'assert!(err.contains("audit_failed")' cli/cli/src/exec/audit.rs \
   && grep -q -F -e 'assert!(err.contains("update_failed")' cli/cli/src/exec/update.rs; then
   ok
 else
-  bad "audit/update lost their deferred/live unit-test pins"
+  bad "audit/update lost their live unit-test pins"
 fi
 
 # #18/#19 dry-run planning paths execute without launching.
@@ -183,13 +184,18 @@ else
 fi
 
 # #18 audit family surface stays pinned: frozen security/license
-# spellings plus the exception/license-policy/secrets policy modules
-# (tool wiring and acquisition still open).
+# spellings plus the exception/license-policy/secrets plus advisory/vuln/spdx/backend/locks
+# modules with live execution.
 if grep -q -F -e 'SECURITY_FAMILY' cli/audit/src/lib.rs \
   && grep -q -F -e 'LICENSE_FAMILY' cli/audit/src/lib.rs \
   && [[ -f "cli/audit/src/exception.rs" ]] \
   && [[ -f "cli/audit/src/license_policy.rs" ]] \
-  && [[ -f "cli/audit/src/secrets.rs" ]]; then
+  && [[ -f "cli/audit/src/secrets.rs" ]] \
+  && [[ -f "cli/audit/src/advisory.rs" ]] \
+  && [[ -f "cli/audit/src/vuln.rs" ]] \
+  && [[ -f "cli/audit/src/spdx.rs" ]] \
+  && [[ -f "cli/audit/src/backend.rs" ]] \
+  && [[ -f "cli/audit/src/locks.rs" ]]; then
   ok
 else
   bad "audit crate lost its family constants or policy modules (#18)"
@@ -204,12 +210,7 @@ else
   bad "update crate lost its confirmation/mutation planning API (#19)"
 fi
 
-# No audit live-execution green claim (update live execution is delivered in #19).
-if ! grep -rln -F -e 'audit live execution green' tools/ci/ 2>/dev/null | grep -v -F -e 'execution_corpus_perf_guards.sh' | grep -q .; then
-  ok
-else
-  bad "an audit live-execution green claim appeared without #18 landing"
-fi
+# Audit live execution delivered in #18 (no green-claim gate needed).
 
 echo "execution corpus perf guards harness: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]

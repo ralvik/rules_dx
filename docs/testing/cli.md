@@ -124,8 +124,8 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
 - Verify no-scope lint, typecheck, format, audit, check, and fix resolve to `//...` independent
   of the current working directory and do not scan for source files. Verify bare
   `dx audit` runs both `security` and `license` families while each explicit
-  family runs alone; qualify the license family in
-  open work before asserting its mappings.
+  family runs alone, with license mappings pinned by fixtures in
+  `dx_audit::license_expr` plus `dx_audit::license_policy`.
 - Verify license expression math: `MIT OR GPL-3.0-only` passes in `distributed`
   while `MIT AND GPL-3.0-only` fails; a `WITH` exception passes only when listed
   verbatim; `UNKNOWN` fails in `distributed` but is inventoried in `internal`.
@@ -141,9 +141,8 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   `WITH` expression. Retain internal inventory-only behavior except blocked policy.
 - Verify a license exception survives an upgrade inside its bounded range while the finding
   still applies and the exception is unexpired. Out-of-range versions do not inherit approval;
-  expired exceptions and exceptions with no applicable finding fail validation. Do not freeze
-  shared-lock tier expectations until attribution is resolved in
-  open work.
+  expired exceptions and exceptions with no applicable finding fail validation. Per-root
+  attribution rides SPDX `DESCRIBES` relations from each audited root.
 - Verify target-scoped dependency audit checks complete owning dependency locks, including a
   vulnerable locked package unused by the selected target, without including unrelated dependency
   sets. Multiple targets sharing an owner must not duplicate the same audit context. Bare audit
@@ -153,8 +152,7 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   while retaining validated findings from assessed dependencies and marking SARIF unsuccessful.
   Contrast a recognized assessable package with no known advisories against unsupported Git revision
   and unidentified private-package fixtures. An empty findings list or advisory risk exception must
-  not hide incomplete assessment; qualify upstream evidence and report mappings in
-  open work.
+  not hide incomplete assessment.
 - Verify dependency audit automatically refreshes applicable upstream advisory data without a
   separate manual command and supplies an identified snapshot to Bazel-owned analysis. With unchanged
   dependency locks, a new advisory snapshot must invalidate the relevant cached analysis and expose
@@ -162,8 +160,8 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   database, and refresh leaves dependency requirements/locks, pinned auditors, and selected
   environment/codegen projections unchanged. A required refresh failure must fail the audit, report
   unavailable current data, and neither analyze a stale fallback snapshot nor claim the affected set
-  is clean. Exercise this with and without an existing cached snapshot. Qualify exact refresh/cache
-  mappings in open work before implementation.
+  is clean. Exercise this with and without an existing cached snapshot, with 24h same-day
+  freshness and refresh-failure mapping pinned in `dx_audit::advisory`.
 - Verify advisory acquisition downloads databases without sending dependency inventories to
   vulnerability services. Inspect request URLs, bodies, and telemetry using fixtures with distinct
   package identities; package-specific advisory queries and lockfile uploads must not occur. Run
@@ -177,14 +175,12 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
 - Verify a known applicable vulnerability with no severity rating fails audit by default and reports
   unknown severity without fabricating a rating. A valid explicit risk exception may exempt it while
   retaining its visible accepted status and reason. Missing severity must not silently suppress the
-  finding; qualify diagnostic-level, threshold, and report mappings in
-  open work.
+  finding, with severity normalization pinned in `dx_audit::vuln`.
 - Verify an explicit, explained advisory/dependency exception exempts only its intended finding
   from failure. Another advisory on the same dependency and unrelated affected dependencies must
   remain subject to the normal policy. Missing reasons or invalid exception identities must fail
-  validation; exceptions must not bypass refresh or analysis/collection failures. Qualify native
-  configuration and advisory-alias matching in
-  open work.
+  validation; exceptions must not bypass refresh or analysis/collection failures, with identity
+  matching pinned in `dx_audit::exception`.
 - Verify risk acceptance matches only its explicit version or bounded range, using upstream version
   semantics. A still-vulnerable upgrade outside that range must not inherit acceptance; a matching
   version may be accepted only while the exception is otherwise valid. Reject missing or invalid
@@ -194,20 +190,18 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
 - Verify accepted vulnerability findings remain visible in normal text output, structured output,
   and SARIF with accepted/suppressed status and their explanation. Preserve identity and severity,
   do not mark them fixed, and exclude them from failure evaluation without exempting unaccepted
-  findings or operational errors. Exact protocol/report mappings require qualification in
-  open work.
+  findings or operational errors, with text plus JSON `notice`/`error` plus SARIF/SPDX reports
+  pinned by fixtures.
 - Verify vulnerability risk exceptions require valid expiration dates: missing, malformed, and
   expired dates fail validation, and expired acceptance no longer exempts the finding. Exercise
   before/at/after-expiry boundaries and a later invocation reusing unchanged advisory and dependency
-  inputs, so cached acceptance cannot hide expiration. Verify renewal is not automatic; qualify
-  date/time inputs, native mappings, and cache behavior in
-  open work.
+  inputs, so cached acceptance cannot hide expiration. Verify renewal is not automatic, with
+  ISO-8601 UTC date validation pinned in `dx_audit::exception`.
 - Verify an unexpired risk exception fails as obsolete after dependency removal or upgrade beyond
   the affected versions, while an exception still matching an applicable vulnerability remains
   valid. Validate against the complete selected owning set and current advisory snapshot, not an
-  incomplete result or unrelated unselected owner. Report obsolete entries without deleting them;
-  qualify exact advisory identity/alias and applicability mappings in
-  open work.
+  incomplete result or unrelated unselected owner. Report obsolete entries without deleting them,
+  with identity matching pinned in `dx_audit::exception`.
 - Verify no-scope build invokes `bazel build //...` independent of the current
   working directory.
 - Verify no-scope test invokes `bazel test //...` independent of the current working

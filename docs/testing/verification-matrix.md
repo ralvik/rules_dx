@@ -41,8 +41,9 @@ standard dogfood gates.
   declared-dependency usage fixtures delivered in `tools/depcheck/`
   (issue #22); admitted foundations stay open under issue #304.
 - **Audit/update live execution**: `dx update` resolver backends per set with independent-set
-  continuation and per-set reporting delivered (issue #19); auditor wiring, advisory acquisition,
-  and SARIF/SPDX mapping stay open under open work (audit, issue #18).
+  continuation and per-set reporting delivered (issue #19); `dx audit` auditor wiring, advisory
+  acquisition with 24h cache semantics and offline matching, plus SARIF/SPDX mapping delivered
+  (issue #18).
 - **Docs pipeline**: per-language adapter runs, link/reference proofs,
   renderer/site artifacts, guide-step verification
   (open work).
@@ -55,23 +56,21 @@ standard dogfood gates.
 only (platform qualification open under issue #298). `Open` means open work with no implementation
 claimed here. `Planning only` means planning is implemented with live
 execution deferred. `Tracked` means measured report-only tracking with no gate.
-`Delivered (update) / Planning only (audit)` means `dx update` live execution is delivered
-while `dx audit` live execution stays planning-only.
 
 | Language | Corpus dogfood | Layer-2 matrix | Generation | Examples | E2E | Perf | Depcheck | Audit/update | Docs | Env/codegen |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Rust | Delivered | Delivered | Delivered | Delivered (`adopt-rust`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered (update) / Planning only (audit) | Open | Open |
-| Python | Delivered | Delivered | Delivered | Delivered (`adopt-python`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered (update) / Planning only (audit) | Open | Open |
-| JavaScript | Delivered | Delivered | Delivered | Delivered (`adopt-js-ts`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered (update) / Planning only (audit) | Open | Open |
-| TypeScript | Delivered | Delivered | Delivered | Delivered (`adopt-js-ts`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered (update) / Planning only (audit) | Open | Open |
-| Go | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-go`) | Delivered (contract) | Tracked | Open | Delivered (update) / Planning only (audit) | Open | Open |
-| Java | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-java`) | Delivered (contract) | Tracked | Open | Delivered (update) / Planning only (audit) | Open | Open |
-| Kotlin | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-kotlin`) | Delivered (contract) | Tracked | Open | Delivered (update) / Planning only (audit) | Open | Open |
-| Scala | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-scala`) | Delivered (contract) | Tracked | Open | Delivered (update) / Planning only (audit) | Open | Open |
-| C# | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-csharp`) | Delivered (contract) | Tracked | Open | Delivered (update) / Planning only (audit) | Open | Open |
-| F# | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-fsharp`) | Delivered (contract) | Tracked | Open | Delivered (update) / Planning only (audit) | Open | Open |
-| C++ | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-cpp`) | Delivered (contract) | Tracked | Open | Delivered (update) / Planning only (audit) | Open | Open |
-| Vue/Svelte/Astro/MDX | Delivered (code ownership) | Open (regions) | Delivered | Open (composition) | Delivered (contract) | Tracked | Open | Delivered (update) / Planning only (audit) | Open | Open |
+| Rust | Delivered | Delivered | Delivered | Delivered (`adopt-rust`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| Python | Delivered | Delivered | Delivered | Delivered (`adopt-python`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| JavaScript | Delivered | Delivered | Delivered | Delivered (`adopt-js-ts`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| TypeScript | Delivered | Delivered | Delivered | Delivered (`adopt-js-ts`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| Go | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-go`) | Delivered (contract) | Tracked | Open | Delivered | Open | Open |
+| Java | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-java`) | Delivered (contract) | Tracked | Open | Delivered | Open | Open |
+| Kotlin | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-kotlin`) | Delivered (contract) | Tracked | Open | Delivered | Open | Open |
+| Scala | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-scala`) | Delivered (contract) | Tracked | Open | Delivered | Open | Open |
+| C# | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-csharp`) | Delivered (contract) | Tracked | Open | Delivered | Open | Open |
+| F# | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-fsharp`) | Delivered (contract) | Tracked | Open | Delivered | Open | Open |
+| C++ | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-cpp`) | Delivered (contract) | Tracked | Open | Delivered | Open | Open |
+| Vue/Svelte/Astro/MDX | Delivered (code ownership) | Open (regions) | Delivered | Open (composition) | Delivered (contract) | Tracked | Open | Delivered | Open | Open |
 
 Framework composition evidence (exact parser/compiler, provider,
 generated-region, dependency, test, environment/IDE, quality-region

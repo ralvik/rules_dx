@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 base64 = "0.22"
+chrono = "0.4"
 clap = { version = "4", features = ["derive"] }
 clap_complete = "4"
 # Build-step only: the `dx_man` binary renders man/dx.1 from the clap

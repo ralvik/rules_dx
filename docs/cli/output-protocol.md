@@ -54,7 +54,8 @@ overhead vs text mode on large result sets.
 JSON-capable commands (accepted): lint, typecheck, format, generate, build, test,
 coverage, check, fix, audit, update, status. `update` JSON covers dry-run planning
 (`command_started` / `command_finished`) and live execution per-set `notice`/`error`
-events plus `command_finished`; `audit` still reports the deferred-live error.
+events plus `command_finished`; `audit` JSON covers dry-run planning plus live per-family
+`notice`/`error` events plus `command_finished`.
 Text-only commands (reject `--output=json` pre-exec, exit 2): clean, codegen, env, setup
 (prose collection lifecycle); `bazel`, `run` (the child owns the terminal); init, hooks,
 version, watch, owners, deps, why, completion (local helpers, thin query lines, or shell
@@ -557,7 +558,7 @@ Stable codes are:
 | `managed_commit_failed` | Managed-state commit failed |
 | `no_capability` | Exact setup scope provides neither environment nor codegen capability |
 | `coverage_below_minimum` | Coverage is below the configured minimum |
-| `audit_deferred` | Live audit execution is deferred |
+| `audit_failed` | Live audit per-family failure (unexempted findings, incomplete assessment, advisory refresh failure, or auditor launch failure) |
 | `update_failed` | Live update per-set failure (resolver reported failure, unsupported selection, launch failure, or signal) |
 | `unsupported_platform` | The selected workflow has no hermetic platform support |
 | `symlink_unavailable` | Required host symlink capability is unavailable |

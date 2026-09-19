@@ -82,14 +82,13 @@ else
 fi
 
 # Verification-matrix vocabulary stays Delivered/Open/Planning only/Tracked
-# (no silent new status that implies support). Update is Delivered while
-# audit stays Planning only.
+# (no silent new status that implies support). Audit plus update are Delivered.
 if grep -q -F -e '| Rust | Delivered' docs/testing/verification-matrix.md \
   && grep -q -F -e '| Go | Delivered (code ownership) | Open (adapter-less)' docs/testing/verification-matrix.md \
-  && grep -q -F -e 'Delivered (update) / Planning only (audit)' docs/testing/verification-matrix.md; then
+  && grep -q -F -e '| Delivered | Open | Open |' docs/testing/verification-matrix.md; then
   ok
 else
-  bad "verification-matrix status vocabulary drifted (want Delivered/Open/Planning only/Tracked with update Delivered)"
+  bad "verification-matrix status vocabulary drifted (want Delivered/Open/Planning only/Tracked with audit/update Delivered)"
 fi
 
 # Corpus dogfood Delivered has backing harnesses + CI wiring.
@@ -157,15 +156,15 @@ else
   bad "depcheck Delivered lost its contract, checker, or targets"
 fi
 
-# Audit Planning only plus update Delivered: audit fail-closed deferred code,
-# update live execution, plus guards harness.
-if grep -q -F -e 'audit_deferred' cli/cli/src/exec/audit.rs \
+# Audit plus update Delivered: audit live execution, update live execution, plus guards harness.
+if grep -q -F -e 'CODE_AUDIT_FAILED' cli/cli/src/exec/common.rs \
   && grep -q -F -e 'CODE_UPDATE_FAILED' cli/cli/src/exec/common.rs \
   && grep -q -F -e 'dx_update::backend::plan' cli/cli/src/exec/update.rs \
+  && grep -q -F -e 'dx_audit::backend::plan_secrets' cli/cli/src/exec/audit.rs \
   && [[ -f "tools/ci/audit_update_guards.sh" ]]; then
   ok
 else
-  bad "audit Planning only / update Delivered lost deferred/live codes or guards harness"
+  bad "audit/update Delivered lost live codes or guards harness"
 fi
 
 # Coverage seed-only: cell gate + versioned inventory, no cross-cell union.

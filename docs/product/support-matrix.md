@@ -121,7 +121,7 @@ fixture evidence; provisional notes below do not select additional defaults or n
 | Required platforms | [Required-platform table](../decisions/0014-tested-platform-release-stack.md#required-platforms) | Pins, hosts, floors | open work |
 | Coverage gate | Instrumentation-first; behavioral fallback only on proof | Resolved in [coverage](../testing/README.md#coverage) | Enforced by CI |
 | Consumer CI | Reusable workflow + caller template | Delivered; verification open | Shipped |
-| Repository workflows | Codegen/env/setup implemented; `dx update` live execution delivered, `dx audit` live execution open | Codegen pairs; audit/update | open |
+| Repository workflows | Codegen/env/setup implemented; `dx update` plus `dx audit` live execution delivered | Codegen pairs; audit/update | open |
 
 Required core mappings stay open under issue #303 (Rust providers/Gazelle/integration,
 Python mappings plus Ty, JS/TS wrappers/Gazelle plus quality mappings, Vue/Svelte/Astro/MDX
