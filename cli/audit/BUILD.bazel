@@ -39,6 +39,7 @@ dx_rust_crate(
         "thiserror",
         "toml",
         "url",
+        "yaml_serde",
     ],
 )
 

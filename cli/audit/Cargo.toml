@@ -12,6 +12,7 @@ spdx = "0.13"
 thiserror = "2"
 toml = { version = "1", default-features = false, features = ["parse", "serde"] }
 url = "2"
+yaml_serde = "0.10"
 
 [lib]
 name = "dx_audit"
