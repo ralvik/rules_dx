@@ -270,10 +270,15 @@ tests to pass.
 
 ## Implementation Hygiene
 
-Hand-rolled core helpers stay open under issue #315 (atomic write plus lock, path
-ladder, digest wrappers, LCOV parser plus ignore scanner, SPDX parser, date-shape gate,
-scratch wrapper, dir sizing; decide per helper whether to adopt the standard crate or
-record why the hand-rolled implementation stays).
+Hand-rolled core helpers qualified seed-only under issue #315
+(`bazel run //tools/ci:helper_qualification`; adopted with fixture evidence:
+digest via `hex`/`blake3`/`sha2`, diff via `similar`, SPDX parse via `spdx`,
+date calendar via `chrono`, scratch via `tempfile`, dir sizing and walks via
+`walkdir`/`ignore`/`globset`; stays hand-rolled with owned reasons: atomic
+write plus lock via `std::fs::File::try_lock` plus `tempfile`, path-ladder
+classifier, LCOV parser plus ignore scanner with inventory plus verdict, SPDX
+lattice plus date shape gate plus scratch discipline wrappers; upstream
+re-evaluation on new crate versions plus any future migration stays owned gap).
 
 Clap-as-tokenizer legacy error strings stay open under issue #316 (env, codegen shard,
 and markdown paths use clap derive only to map errors back to legacy hand-loop strings;

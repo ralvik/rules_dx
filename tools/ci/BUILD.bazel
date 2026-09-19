@@ -716,6 +716,21 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Hand-rolled helpers qualification harness (issue #315): proves the as-built
+# per-helper decisions with fixture evidence and owned gaps — adopted digest
+# via hex/blake3/sha2, diff via similar, SPDX parse via spdx, date calendar
+# via chrono, scratch via tempfile, dir sizing and walks via
+# walkdir/ignore/globset; stays hand-rolled with owned reasons for atomic
+# write plus lock, path ladder, LCOV parser plus ignore scanner; upstream
+# re-evaluation plus any future migration owned under #315.
+# Run by CI via `bazel run //tools/ci:helper_qualification`.
+sh_binary(
+    name = "helper_qualification",
+    srcs = ["helper_qualification.sh"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],

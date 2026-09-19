@@ -27,6 +27,12 @@
 //! text via the upstream `spdx` parser; per-ecosystem license-identity
 //! mappings, policy-table loading, tier attribution for shared locks,
 //! and proof evidence stay O58-gated for later slices.
+//!
+//! Dependency evaluation (issue #315, adopted): SPDX text parses via the
+//! upstream `spdx` crate in strict mode (fail-closed to [`LicenseExpr::Unknown`]);
+//! the allow/review/deny lattice plus `WITH` verbatim approval stays hand-rolled
+//! because it is the repo's license-policy contract, not an upstream type
+//! (`license-exprs` would duplicate the lattice at dependency cost).
 
 /// Distribution tier under evaluation. `distributed` release roots
 /// leave the company and face the strict table; `internal` roots are

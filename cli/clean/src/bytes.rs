@@ -79,8 +79,8 @@ impl PruneBytes {
 /// A missing directory measures zero (already pruned: idempotent); any
 /// other failure reports through [`CleanError`].
 ///
-/// Implemented over [`walkdir::WalkDir`] (issue #223): recursive
-/// traversal without following symlinks, matching the historical
+/// Implemented over [`walkdir::WalkDir`] (qualified under issue #315 as adopted):
+/// recursive traversal without following symlinks, matching the historical
 /// manual stack (directories contribute nothing, files contribute
 /// `symlink_metadata` length, saturating).
 fn dir_bytes(dir: &Path) -> Result<u64, CleanError> {

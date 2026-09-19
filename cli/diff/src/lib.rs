@@ -14,6 +14,12 @@
 //! `\ No newline at end of file` marker. An invocation with no changes
 //! writes no bytes. Paths containing a tab, carriage return, or line feed
 //! cannot be represented unambiguously and fail before any output.
+//!
+//! Dependency evaluation (issue #315, adopted): hunk grouping and line bodies
+//! delegate to the upstream `similar` crate (`TextDiff`, Myers, `CONTEXT`
+//! lines of context). Canonical `dx` headers with always-explicit
+//! `start,length` counts plus path ordering and validation stay hand-rolled
+//! because they are the frozen `dx` diff contract, not upstream GNU form.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).

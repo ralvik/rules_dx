@@ -7,6 +7,13 @@
 //! reports the machine-readable [`PathProblem`] only; callers keep their
 //! own error payloads and messages, so adopting it is behavior-preserving.
 //! Check order is pinned: the first problem in ladder order wins.
+//!
+//! Dependency evaluation (issue #315, stays hand-rolled): the ladder is a
+//! workspace-relative shape classifier with pinned order and machine-readable
+//! [`PathProblem`], not lexical normalization (`path-clean`) nor a UTF-8 path
+//! type (`camino`). Adopting those crates would add supply-chain review,
+//! lockfile churn, and `MODULE.bazel` manifests for zero behavior gain while
+//! changing classifier semantics, so the hand-rolled ladder stays.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).

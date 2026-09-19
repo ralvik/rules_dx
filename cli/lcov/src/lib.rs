@@ -34,6 +34,16 @@
 //! find_ignores, FileVerdict, GateVerdict, is_covered_language,
 //! evaluate, render, ELIGIBLE, SUPPORT, parse_inventory, run}` via the
 //! re-exports below.
+//!
+//! Dependency evaluation (issue #315, stays hand-rolled): the gate needs the
+//! combined-LCOV `SF`/`DA` union plus per-extension comment-syntax marker
+//! scanning outside string literals with the nearby `reason:` gate plus the
+//! repo inventory and the exact 100% eligible verdict. `cargo-llvm-cov` is a
+//! coverage-tool binary rather than a parser library, and generic LCOV crates
+//! provide none of the marker, inventory, or verdict semantics, so adopting
+//! one would add supply-chain review, lockfile churn, and `MODULE.bazel`
+//! manifests for zero behavior gain while risking byte-drift in the frozen
+//! gate diagnostics.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).

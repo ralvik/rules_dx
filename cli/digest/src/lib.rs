@@ -19,6 +19,13 @@
 //! Canonical algorithm is BLAKE3-256. The SHA-256 envelope bytes are a
 //! frozen contract and are kept byte-identical through this shim; see the
 //! migration note on [`sha256_hex`].
+//!
+//! Dependency evaluation (issue #315, adopted): hex spelling and parsing use
+//! the upstream `hex` crate (`hex::encode`/`hex::decode` plus the length and
+//! lowercase re-encode check, no manual digit loop), content identity uses
+//! upstream `blake3`, and the envelope shim uses upstream `sha2`. The
+//! `[u8; 32]` wrapper plus lowercase-only policy stays hand-rolled because it
+//! is the repo's digest-identity contract, not an upstream type.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
