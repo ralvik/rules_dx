@@ -105,9 +105,13 @@ pub fn plan_caller(
     }
 }
 
-/// Planned pin change: pins stay opaque strings here — workflow/pin
-/// representation, compatibility, and release mechanics freeze with workflow
-/// qualification, not in this crate.
+/// Planned pin change: pins are full-length commit SHAs here — the same
+/// `[0-9a-f]{40}` shape the shell harnesses enforce
+/// (`tools/ci/examples_pins_test.sh`, `tools/ci/consumer_pins_test.sh`).
+/// Workflow/pin representation, compatibility, and release mechanics freeze
+/// with workflow qualification, not in this crate. Cross-caller equality
+/// (both example callers sharing one reviewed SHA) is enforced by
+/// `examples_pins_test.sh`; this module enforces per-pin shape.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PinUpdate {
     /// Pin unchanged: idempotent, no review needed.
@@ -121,24 +125,39 @@ pub enum PinUpdate {
     },
 }
 
-/// Malformed pin change: missing pins or silent (unreviewed) upgrades fail
-/// closed — updates use reviewed version-pin changes, never silent upgrades.
+/// Malformed pin change: missing pins, malformed (non-SHA) pins, or silent
+/// (unreviewed) upgrades fail closed — updates use reviewed version-pin
+/// changes, never silent upgrades.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum PinError {
     /// Either pin identity is missing or empty (no implicit latest/default).
     #[error("explicit workflow pin identities are required")]
     MissingPin,
+    /// Either pin identity is not a full-length commit SHA: floating tags
+    /// (`vN`, `main`, `master`, `latest`) and short SHAs are rejected, matching
+    /// the shell pin harnesses.
+    #[error("workflow pins must be full 40-hex commit SHAs, got {value:?}")]
+    InvalidPin { value: String },
     /// Pin change without review.
     #[error("workflow pin changes require review, not silent upgrades")]
     UnreviewedChange,
 }
 
-/// Plan a workflow pin change over opaque pin identities.
+/// True for a full-length lowercase hex commit SHA (`[0-9a-f]{40}`).
+fn is_full_sha(pin: &str) -> bool {
+    pin.len() == 40
+        && pin
+            .bytes()
+            .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+}
+
+/// Plan a workflow pin change over full-SHA pin identities.
 ///
 /// Same pin is [`PinUpdate::NoChange`]; a change requires `reviewed` and
 /// yields [`PinUpdate::ReviewedUpdate`], otherwise [`PinError::UnreviewedChange`].
-/// Empty identities fail with [`PinError::MissingPin`]: there is no implicit
-/// latest or silently active example value.
+/// Empty identities fail with [`PinError::MissingPin`]; non-SHA identities
+/// (floating tags, short SHAs) fail with [`PinError::InvalidPin`]: there is
+/// no implicit latest or silently active example value.
 pub fn plan_pin_update(
     old_pin: &str,
     new_pin: &str,
@@ -146,6 +165,16 @@ pub fn plan_pin_update(
 ) -> Result<PinUpdate, PinError> {
     if old_pin.is_empty() || new_pin.is_empty() {
         return Err(PinError::MissingPin);
+    }
+    if !is_full_sha(old_pin) {
+        return Err(PinError::InvalidPin {
+            value: old_pin.to_owned(),
+        });
+    }
+    if !is_full_sha(new_pin) {
+        return Err(PinError::InvalidPin {
+            value: new_pin.to_owned(),
+        });
     }
     if old_pin == new_pin {
         return Ok(PinUpdate::NoChange);
@@ -285,20 +314,51 @@ mod tests {
 
     #[test]
     fn pin_changes_require_review_and_explicit_identities() {
-        assert_eq!(plan_pin_update("v1", "v1", false), Ok(PinUpdate::NoChange));
+        let sha_a = "3d3c42e5aac5ba805825da76410c181273ba90b1";
+        let sha_b = "55cc8345863c7cc4c66a329aec7e433d2d1c52a9";
         assert_eq!(
-            plan_pin_update("v1", "v2", false),
+            plan_pin_update(sha_a, sha_a, false),
+            Ok(PinUpdate::NoChange)
+        );
+        assert_eq!(
+            plan_pin_update(sha_a, sha_b, false),
             Err(PinError::UnreviewedChange)
         );
         assert_eq!(
-            plan_pin_update("v1", "v2", true),
+            plan_pin_update(sha_a, sha_b, true),
             Ok(PinUpdate::ReviewedUpdate {
-                from: "v1".to_owned(),
-                to: "v2".to_owned(),
+                from: sha_a.to_owned(),
+                to: sha_b.to_owned(),
             })
         );
-        assert_eq!(plan_pin_update("", "v2", true), Err(PinError::MissingPin));
-        assert_eq!(plan_pin_update("v1", "", true), Err(PinError::MissingPin));
+        assert_eq!(plan_pin_update("", sha_b, true), Err(PinError::MissingPin));
+        assert_eq!(plan_pin_update(sha_a, "", true), Err(PinError::MissingPin));
+    }
+
+    #[test]
+    fn pin_changes_reject_floating_tags_and_short_shas() {
+        let sha = "3d3c42e5aac5ba805825da76410c181273ba90b1";
+        for floating in ["v7", "main", "master", "latest", "3d3c42e5", ""] {
+            assert!(
+                matches!(
+                    plan_pin_update(floating, sha, true),
+                    Err(PinError::MissingPin) | Err(PinError::InvalidPin { .. })
+                ),
+                "floating {floating:?} must fail closed"
+            );
+            assert!(
+                matches!(
+                    plan_pin_update(sha, floating, true),
+                    Err(PinError::MissingPin) | Err(PinError::InvalidPin { .. })
+                ),
+                "floating {floating:?} must fail closed"
+            );
+        }
+        // Uppercase hex is not the canonical `[0-9a-f]{40}` shape.
+        assert!(matches!(
+            plan_pin_update("3D3C42E5AAC5BA805825DA76410C181273BA90B1", sha, true),
+            Err(PinError::InvalidPin { .. })
+        ));
     }
 
     #[test]
@@ -312,7 +372,12 @@ mod tests {
             true,
         )
         .expect("caller plans");
-        let update = plan_pin_update("v1", "v2", true).expect("reviewed update plans");
+        let update = plan_pin_update(
+            "3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+            true,
+        )
+        .expect("reviewed update plans");
         assert_eq!(apply_pin_update(&caller, &update), caller);
     }
 }

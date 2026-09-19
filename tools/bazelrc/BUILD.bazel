@@ -1,4 +1,4 @@
-"""M05 WP4: vendored Bazel execution preset (O62).
+"""Vendored Bazel execution preset.
 
 `bazel run //tools/bazelrc:preset.update` regenerates the checked-in preset
 from the reviewed inventory in `preset.py`; `preset.update_test` pins the
@@ -20,6 +20,7 @@ py_binary(
 exports_files([
     "bazelrc-preset.bzl",
     "preset.bazelrc",
+    "preset.py",
 ])
 
 preset_update_tests(name = "preset.update_test")

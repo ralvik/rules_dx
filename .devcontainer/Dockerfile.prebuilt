@@ -34,9 +34,11 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl git \
     && rm -rf /var/lib/apt/lists/*
 
-# Pinned Bazelisk launcher (linux amd64, sha256 from
-# docs/contributing/local-workflows.md): Bazelisk reads `.bazelversion`
-# (9.2.0), so container create skips feature-install Bazel fetch.
+# Pinned Bazelisk launcher (linux amd64, tracked from the canonical
+# `.github/actions/setup-bazelisk/action.yml` defaults): Bazelisk reads the
+# canonical `.bazelversion` (9.2.0), so container create skips feature-install
+# Bazel fetch. `//tools/ci:pin_consistency_test` fails when either pin
+# drifts from its canonical source.
 # arm64/macOS/Windows matrix follows platform qualification (#5).
 RUN curl -sL -o /tmp/bazelisk \
       "https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64" \

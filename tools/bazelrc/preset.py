@@ -1,4 +1,4 @@
-"""Vendored Bazel execution preset generator (M05 WP4, O62).
+"""Vendored Bazel execution preset generator.
 
 Source of truth for the repository `.bazelrc` execution policy. Renders two
 checked-in generated files (do not edit by hand):
@@ -27,14 +27,14 @@ import difflib
 import os
 import sys
 
-# Version-matched pin (M05 WP4): must equal `.bazelversion`. Bump only in a
+# Version-matched pin: tracks the canonical `.bazelversion`. Bump only in a
 # reviewed update-loop pass (version-bump PR, regen, flag-diff review, full
 # verification); dependency-update automation proposes the bump, the regen
-# and review stay manual per O53.
+# and review stay manual. `//tools/ci:pin_consistency_test` fails on drift.
 PRESET_BAZEL_VERSION = "9.2.0"
 
 # Reviewed upstream-derived execution flags: (rc line, review rationale).
-# Sources: M00 seed `.bazelrc` lines reviewed against the Bazel 9.2.0
+# Sources: seed `.bazelrc` lines reviewed against the pinned Bazel
 # documented flags. New upstream recommendations arrive as reviewed edits
 # here, never as fetched content.
 UPSTREAM_FLAGS = [
@@ -50,9 +50,9 @@ UPSTREAM_FLAGS = [
      "reviewable as the suite grows."),
 ]
 
-# Owned extra_presets groups (M05 WP4, O62): name to list of (rc line,
+# Owned extra_presets groups: name to list of (rc line,
 # review rationale). Project-owned from the start; consumer delivery is
-# M27 scope.
+# tracked in the roadmap.
 EXTRA_PRESETS = {
     "coverage": [
         ("coverage --test_env=GENERATE_LLVM_LCOV=1",
@@ -107,7 +107,7 @@ def _source_dir():
 
 def _render_bzl():
     lines = [
-        '"""Vendored Bazel execution preset (M05 WP4, O62) -- GENERATED, do not edit.',
+        '"""Vendored Bazel execution preset -- GENERATED, do not edit.',
         "",
         "Version-matched to Bazel %s (`.bazelversion`). Upstream-derived flags, "
         "owned `extra_presets` groups, and owned `BUILD_PROFILES`, each "

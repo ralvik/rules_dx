@@ -21,8 +21,8 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
 * Robustness and hygiene: repo reorg, CI hygiene, split exec.rs,
   warnings-as-errors, visibility hardening, cli-contract claims, human-run
   release path (signing-first), signing stack + distribution, GHCR prebuilt
-  images (separate workflow), Renovate out-of-the-box (native bot deferred),
-  automation policy (Renovate allowed).
+  images (separate workflow), Renovate plus native bump loop complementary
+  (decided, issue #326), automation policy (Renovate allowed).
 * V1 scope: `dx migrate` syntax + manifest selection, `dx run` multirun.
   No post-v1 bucket.
 * Rust library extraction.

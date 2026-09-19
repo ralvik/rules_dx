@@ -114,6 +114,37 @@ sh_test(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Pin single-source consistency (issue #326): `.bazelversion` is the Bazel
+# canonical source and `setup-bazelisk/action.yml` defaults are the Bazelisk
+# canonical source; every tracked copy must equal its canonical pin.
+sh_test(
+    name = "pin_consistency_test",
+    srcs = ["pin_consistency.sh"],
+    args = [
+        "$(rootpath //:.bazelversion)",
+        "$(rootpath //:MODULE.bazel)",
+        "$(rootpath //tools/bazelrc:preset.py)",
+        "$(rootpath //tools/bazelrc:bazelrc-preset.bzl)",
+        "$(rootpath //.devcontainer:Dockerfile.prebuilt)",
+        "$(rootpath //libs/testing:tested_stack.bzl)",
+        "$(rootpath //.github/actions/setup-bazelisk:action.yml)",
+        "$(rootpath //docs:contributing/local-workflows.md)",
+    ],
+    data = [
+        "//:.bazelversion",
+        "//:MODULE.bazel",
+        "//.devcontainer:Dockerfile.prebuilt",
+        "//.github/actions/setup-bazelisk:action.yml",
+        "//docs:contributing/local-workflows.md",
+        "//libs/testing:tested_stack.bzl",
+        "//tools/bazelrc:bazelrc-preset.bzl",
+        "//tools/bazelrc:preset.py",
+        "//tools/sh:lib",
+    ],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Seed-cell coverage gate harness (issue #89 item 1): runs the real
 # scoped `bazel coverage` report through the `check` gate CLI against the
 # versioned seed inventory, with mutated-input negatives proving it fails
@@ -464,7 +495,7 @@ sh_binary(
 )
 
 # Widen-one-requirement + dx update PR loop contract (issue #260,
-# delivered): all-ecosystems v1 manager set, retained Renovate fallback,
+# delivered): all-ecosystems v1 manager set, Renovate proposing alongside the native loop (complementary, issue #326),
 # never-rewrites invariant (update keeps it, bump owns the single rewrite),
 # #19 resolver delivery, widen command plus library-first planning, native
 # bump-PR verification loop, ADR 0006 narrow exception, ADR 0008 exact-pin
@@ -508,7 +539,7 @@ sh_binary(
 # Backlog/automation guards (issues #9, #10, #85, #254, #260): pins
 # examples ownership + laziness slices (readme/static/query/aquery/runtime),
 # Bazel-owned LCOV gate,
-# Renovate fallback + never-rewrites pins, and prior harnesses.
+# Renovate plus never-rewrites pins, and prior harnesses.
 # Functional checks only. Run by CI via
 # `bazel run //tools/ci:backlog_automation_guards`.
 sh_binary(
@@ -745,10 +776,11 @@ sh_binary(
 # with owned gaps, without claiming unqualified integration — nine checks,
 # explicit platforms, fail-closed sequential, stable dx-ci aggregate, hygiene,
 # concurrency, permissions, per-cell coverage with fork-safe comments, self-call
-# build-only smoke, native bump loop plus Renovate fallback, dx migrate planning
+# build-only smoke, native bump loop plus Renovate (complementary, issue #326),
+# dx migrate planning
 # plus dx run multirun, tag hygiene as-built; platform/runner/isolation/cache/
 # ordering, merge/diff/queue/cancellation/aggregate, thread identity/ordering/
-# limits, fork/untrusted/sensitive/retries/Code-Scanning, sequential rejected,
+# limits, fork/untrusted/sensitive/retries/Code-Scanning, sequential fail-closed,
 # tag/release, Renovate/native-bot, migrate-execution gaps owned under #312.
 # Run by CI via `bazel run //tools/ci:consumer_ci_qualification`.
 sh_binary(

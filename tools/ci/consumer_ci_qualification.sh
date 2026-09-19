@@ -8,12 +8,14 @@
 #   permissions, per-cell coverage with fork-safe comments), caller template
 #   with reviewed SHA pin, four consumer fixture harnesses
 #   (scheduling/aggregate/guards/pins), self-call build-only smoke in ci.yml,
-#   native widen-one loop plus Renovate fallback, dx migrate planning plus
+#   native widen-one loop plus Renovate (complementary, issue #326), dx migrate
+#   planning plus
 #   dx run multirun, tag hygiene as-built;
 # - open under #312 with honest records: platform/runner/isolation/cache/
 #   ordering evidence; merge/diff/queue/cancellation/aggregate binding;
 #   thread identity/ordering/limits; fork/untrusted/sensitive/retries/
-#   Code-Scanning qualification; sequential mode rejected; tag hygiene plus
+#   Code-Scanning qualification; sequential mode fail-closed pending
+#   qualification; tag hygiene plus
 #   release-input gaps; Renovate/native-bot follow-ups; dx migrate execution
 #   plus dx run wiring gaps.
 #
@@ -229,7 +231,7 @@ else
   bad "functional aggregate proof failed (all-ok/one-fail/disabled-skip)"
 fi
 
-# Renovate fallback plus native widen-one loop stays delivered with fallback.
+# Renovate plus native widen-one loop stays delivered as complementary roles.
 if grep -q -F -e '"bazel", "cargo", "github-actions", "gomod", "npm"' "$renovate" &&
   grep -q -F -e '"automerge": false' "$renovate" &&
   grep -q -F -e 'before 5am on Monday' "$renovate" &&
@@ -239,7 +241,7 @@ if grep -q -F -e '"bazel", "cargo", "github-actions", "gomod", "npm"' "$renovate
   [[ -f "tools/ci/widen_update_loop.sh" ]]; then
   ok
 else
-  bad "Renovate fallback plus native bump loop lost (manager set, schedule, bump command, runner)"
+  bad "Renovate plus native bump loop lost (manager set, schedule, bump command, runner)"
 fi
 
 # dx migrate planning delivered with fail-closed execution honesty.
@@ -335,10 +337,11 @@ else
   bad "tag hygiene plus release-input gap lost its owner"
 fi
 
-# Renovate/native-bot follow-ups stay owned open.
+# Renovate/native-bot follow-ups stay owned open (complementary roles decided
+# in issue #326).
 if grep -q -F -e 'Renovate and native-bot follow-ups' "$matrix" &&
-  grep -q -F -e 'Renovate retained as fallback until issue #3' "$automation" &&
-  grep -q -F -e 'Renovate out-of-the-box (native bot deferred)' "$roadmap"; then
+  grep -q -F -e 'are complementary' "$automation" &&
+  grep -q -F -e 'Renovate plus native bump loop complementary' "$roadmap"; then
   ok
 else
   bad "Renovate/native-bot follow-up gap lost its owner"

@@ -1,4 +1,4 @@
-"""Vendored Bazel execution preset (M05 WP4, O62) -- GENERATED, do not edit.
+"""Vendored Bazel execution preset -- GENERATED, do not edit.
 
 Version-matched to Bazel 9.2.0 (`.bazelversion`). Upstream-derived flags, owned `extra_presets` groups, and owned `BUILD_PROFILES`, each reviewed in `tools/bazelrc/preset.py`.
 Regenerate:

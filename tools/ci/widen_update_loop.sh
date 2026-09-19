@@ -2,15 +2,15 @@
 # Widen-one-requirement + dx update PR loop contract (issue #260, delivered).
 #
 # `dx update` is within-constraints only (live resolver execution delivered
-# in #19) and Renovate is retained as fallback. The minimal first-party
-# alternative is delivered: one explicit widen operation (separate from
+# in #19) and Renovate proposes alongside it (complementary roles decided in
+# issue #326). The first-party
+# apply path is delivered: one explicit widen operation (separate from
 # `dx update`, `dx bump <selector> <version>`) plus a one-dep-per-PR loop
 # with an automerge on/off toggle only -- no grouping, schedule, or
 # dashboard options.
 #
 # This harness machine-checks the delivered contract on a clean tree
-# (12 checks): the all-ecosystems v1 manager set, the Renovate fallback
-# retained, the never-rewrites invariant in code and docs (update keeps it,
+# (12 checks): the all-ecosystems v1 manager set, Renovate proposing
 # bump owns the single-requirement rewrite), the #19 resolver prerequisite
 # delivered, the widen command plus library-first planning, the native
 # bump-PR verification loop docs, the ADR 0006 narrow exception, the ADR
@@ -53,7 +53,7 @@ else
   bad "renovate.json lost the all-ecosystems v1 manager set (bazel/cargo/github-actions/gomod/npm)"
 fi
 
-# Renovate fallback retained with the native loop delivered: weekly Monday
+# Renovate proposing alongside the native loop delivered: weekly Monday
 # schedule, no automerge, reviewable PRs, dashboard on.
 if grep -q -F -e 'before 5am on Monday' "$renovate" &&
   grep -q -F -e '"automerge": false' "$renovate" &&
@@ -62,7 +62,7 @@ if grep -q -F -e 'before 5am on Monday' "$renovate" &&
   grep -q -F -e '"dependencyDashboard": true' "$renovate"; then
   ok
 else
-  bad "renovate.json lost the retained-fallback shape (schedule/automerge/prCreation/dashboard)"
+  bad "renovate.json lost the complementary shape (schedule/automerge/prCreation/dashboard)"
 fi
 
 # Never-rewrites invariant pinned in code: both update requirement shapes
@@ -106,20 +106,20 @@ else
   bad "update contract lost its delivered resolver records"
 fi
 
-# Automation policy owns the native loop plus the Renovate fallback:
-# absent-only scaffold, full manager set, update-only automerge, plus the
-# delivered widen-one loop (one dep per PR, toggle-only automerge,
+# Automation policy owns the native loop plus Renovate (complementary, issue
+# #326): absent-only scaffold, full manager set, update-only automerge, plus
+# the delivered widen-one loop (one dep per PR, toggle-only automerge,
 # scheduled runner).
 if grep -q -F -e 'absent-only' "$automation" &&
   grep -q -F -e 'full manager' "$automation" &&
   grep -q -F -e 'update-only' "$automation" &&
-  grep -q -F -e 'Renovate is the chosen updater' "$automation" &&
+  grep -q -F -e 'are complementary' "$automation" &&
   grep -q -F -e 'dx bump' "$automation" &&
   grep -q -F -e 'one dep per PR' "$automation" &&
   grep -q -F -e 'bump.yml' "$automation"; then
   ok
 else
-  bad "automation.md lost the native-loop ownership (fallback pins + dx bump + one-dep-per-PR + bump.yml)"
+  bad "automation.md lost the native-loop ownership (complementary roles + dx bump + one-dep-per-PR + bump.yml)"
 fi
 
 # Native bump-PR verification loop documented: regen evidence, flag-diff

@@ -1,9 +1,11 @@
 # Shared Bazelisk installer for every rules_dx workflow job.
 #
-# Single source for the pinned Bazelisk version, checksum, and install
-# steps (issue #80): previously duplicated per job across ci.yml,
-# reusable-consumer.yml, and reusable-docs.yml, so a version bump meant
-# N identical edits that could drift. Bump the defaults here once.
+# Canonical source for the pinned Bazelisk version and checksum (issue #326):
+# bump the defaults here once. `.devcontainer/Dockerfile.prebuilt` and the
+# `docs/contributing/local-workflows.md` bootstrap track these values;
+# `//tools/ci:pin_consistency_test` fails on drift. Previously duplicated per
+# job across ci.yml, reusable-consumer.yml, and reusable-docs.yml, so a
+# version bump meant N identical edits that could drift.
 #
 # Relative `uses: ./.github/actions/setup-bazelisk` inside the reusable
 # workflows resolves against this repository (the called repo), so
