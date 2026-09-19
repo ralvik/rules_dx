@@ -24,7 +24,7 @@ dx_rust_crate(
         "src/semantics.rs",
         "src/sets.rs",
     ],
-    deps = ["thiserror"],
+    deps = ["regex", "thiserror"],
 )
 
 real_source_target(

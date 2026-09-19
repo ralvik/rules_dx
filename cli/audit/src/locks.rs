@@ -29,6 +29,10 @@
 //! declared Bazel inputs lands later); `missing-notice-text` stays pinned
 //! by unit tests in `license_notice`.
 
+use std::sync::OnceLock;
+
+use regex::Regex;
+
 use crate::vuln::LockedPackage;
 
 /// Parse one `Cargo.lock` (TOML) into assessable locked packages for the
@@ -142,6 +146,40 @@ pub fn parse_pnpm_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
 
 /// Split one pnpm package key (`name@version` or `@scope/name@version`)
 /// into name and version, stripping peer suffixes (`1.0.0(peer)`).
+/// Declarative `regex` splits (issue #397) replace the `find`/`rfind`
+/// `@` heuristics; peer-suffix stripping stays a textual `split_once`
+/// because it is a single delimiter, not a character class.
+fn scoped_pnpm_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    // Last-`@` split (mirrors the historical `rfind`): scope has no `/`,
+    // name takes up to the final `@`, version carries no `@`.
+    match Regex::new(r"^@(?P<scope>[^/]+)/(?P<name>.+)@(?P<version>[^@]+)$") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
+fn unscoped_pnpm_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    // Last-`@` split for `name@version`.
+    match Regex::new(r"^(?P<name>.+)@(?P<version>[^@]+)$") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
 fn split_pnpm_key(key: &str) -> Option<(String, String)> {
     // Strip peer suffixes first: `jest@30.2.0(@types/node@22.20.2)` must
     // split on the version `@`, not the peer `@`.
@@ -153,21 +191,58 @@ fn split_pnpm_key(key: &str) -> Option<(String, String)> {
     if base.is_empty() {
         return None;
     }
-    // Scoped: `@scope/name@version`; unscoped: `name@version`.
-    let (name, version) = if base.starts_with('@') {
-        let slash = base.find('/')?;
-        let rest = &base[slash + 1..];
-        let at = rest.rfind('@')?;
-        let scope = &base[..slash];
-        let name_base = &rest[..at];
-        let version = &rest[at + 1..];
-        (format!("{scope}/{name_base}"), version.to_owned())
-    } else {
-        let at = base.rfind('@')?;
-        (base[..at].to_owned(), base[at + 1..].to_owned())
-    };
-    let name = name.trim().to_owned();
+    // Regex-first (issue #397): scoped `@scope/name@version` and unscoped
+    // `name@version` via declarative captures. Falls back to the
+    // `find`/`rfind` heuristics when a static pattern fails to compile.
+    if base.starts_with('@') {
+        if let Some(re) = scoped_pnpm_re() {
+            if let Some(caps) = re.captures(base) {
+                let name = format!("@{}/{}", &caps["scope"], &caps["name"])
+                    .trim()
+                    .to_owned();
+                let version = caps["version"].trim().to_owned();
+                if !name.is_empty() && !version.is_empty() {
+                    return Some((name, version));
+                }
+                return None;
+            }
+            return split_pnpm_scoped_fallback(base);
+        }
+        return split_pnpm_scoped_fallback(base);
+    }
+    if let Some(re) = unscoped_pnpm_re() {
+        if let Some(caps) = re.captures(base) {
+            let name = caps["name"].trim().to_owned();
+            let version = caps["version"].trim().to_owned();
+            if !name.is_empty() && !version.is_empty() {
+                return Some((name, version));
+            }
+            return None;
+        }
+        return None;
+    }
+    split_pnpm_unscoped_fallback(base)
+}
+
+fn split_pnpm_scoped_fallback(base: &str) -> Option<(String, String)> {
+    let slash = base.find('/')?;
+    let rest = &base[slash + 1..];
+    let at = rest.rfind('@')?;
+    let scope = &base[..slash];
+    let name_base = &rest[..at];
+    let version = &rest[at + 1..];
+    let name = format!("{scope}/{name_base}").trim().to_owned();
     let version = version.trim().to_owned();
+    if name.is_empty() || version.is_empty() {
+        return None;
+    }
+    Some((name, version))
+}
+
+fn split_pnpm_unscoped_fallback(base: &str) -> Option<(String, String)> {
+    let at = base.rfind('@')?;
+    let name = base[..at].trim().to_owned();
+    let version = base[at + 1..].trim().to_owned();
     if name.is_empty() || version.is_empty() {
         return None;
     }
@@ -250,7 +325,41 @@ pub fn parse_paket_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
     Ok(out)
 }
 
+fn paket_line_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    // Greedy name up to the last `(` (mirrors `rfind`), version with no
+    // parens, trailing bytes after `)` ignored like the historical slice.
+    match Regex::new(r"^(?P<name>.+)\((?P<version>[^()]+)\)") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
 fn split_paket_line(trimmed: &str) -> Option<(String, String)> {
+    if let Some(re) = paket_line_re() {
+        let caps = re.captures(trimmed)?;
+        let name = caps["name"].trim().to_owned();
+        let version = caps["version"].trim().to_owned();
+        if name.is_empty() || version.is_empty() {
+            return None;
+        }
+        // Historical guard: `remote:`-shaped names never count, even when
+        // the paren shape matches.
+        if name.contains("remote") {
+            return None;
+        }
+        return Some((name, version));
+    }
+    split_paket_line_fallback(trimmed)
+}
+
+fn split_paket_line_fallback(trimmed: &str) -> Option<(String, String)> {
     let open = trimmed.rfind('(')?;
     let close = trimmed.rfind(')')?;
     if close < open {
@@ -491,5 +600,45 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         }];
         let licensed = unknown_licenses(&packages, "npm");
         assert_eq!(licensed[0].license, "UNKNOWN");
+    }
+
+    #[test]
+    fn regex_pnpm_scoped_peer_and_dash_boundaries() {
+        // Scoped peer suffix strips to the base version.
+        assert_eq!(
+            split_pnpm_key("@babel/core@7.29.7(@babel/types@7.0.0)"),
+            Some(("@babel/core".to_owned(), "7.29.7".to_owned()))
+        );
+        // Dashes are literal: `my-jest` never collides with `jest`.
+        assert_eq!(
+            split_pnpm_key("my-jest@30.2.0"),
+            Some(("my-jest".to_owned(), "30.2.0".to_owned()))
+        );
+        assert_eq!(
+            split_pnpm_key("jest@30.2.0"),
+            Some(("jest".to_owned(), "30.2.0".to_owned()))
+        );
+        // `link:` versions stay skipped by the caller; the splitter itself
+        // still surfaces them so the filter owns the policy.
+        assert_eq!(
+            split_pnpm_key("some-pkg@link:../some-pkg"),
+            Some(("some-pkg".to_owned(), "link:../some-pkg".to_owned()))
+        );
+    }
+
+    #[test]
+    fn regex_paket_line_keeps_greedy_paren_and_remote_guard() {
+        assert_eq!(
+            split_paket_line("My.Pkg (1.2.3)"),
+            Some(("My.Pkg".to_owned(), "1.2.3".to_owned()))
+        );
+        // Trailing bytes after `)` are ignored like the historical slice.
+        assert_eq!(
+            split_paket_line("My.Pkg (1.2.3) extra"),
+            Some(("My.Pkg".to_owned(), "1.2.3".to_owned()))
+        );
+        // `remote:`-shaped names never count.
+        assert!(split_paket_line("remote: foo (1.2.3)").is_none());
+        assert!(split_paket_line("no-parens-here").is_none());
     }
 }

@@ -18,6 +18,10 @@
 //! ecosystem mapping in [`super::sets`]. Version shapes validate through
 //! upstream [`super::version`] (`semver`, never custom version code).
 
+use std::sync::OnceLock;
+
+use regex::Regex;
+
 use super::sets::BumpSet;
 use super::version::{self, VersionError, WidenVersion};
 
@@ -711,11 +715,76 @@ fn plan_go_mod(content: &str, package: &str, version: &WidenVersion) -> Result<S
     }
 }
 
+fn go_version_token_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    // `v` + digits/dots (at least one digit and one dot; trailing dots
+    // kept to match the historical byte loop) + optional `-`/`+` suffix
+    // running to whitespace. Last match wins (see below).
+    match Regex::new(r"v[0-9.]+(?:[-+][^\s]*)?") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
+fn has_version_shape(token: &str) -> bool {
+    let mut digits = false;
+    let mut dots = false;
+    for byte in token.bytes().skip(1) {
+        if byte.is_ascii_digit() {
+            digits = true;
+        } else if byte == b'.' {
+            dots = true;
+        } else {
+            break;
+        }
+    }
+    digits && dots
+}
+
 fn line_contains_module_token(line: &str, package: &str) -> bool {
-    line.split_whitespace().any(|token| token == package)
+    // Declarative whitespace-delimited token (`my-mod` never matches
+    // `mod`): `regex::escape` keeps dots/slashes literal. Falls back to
+    // the split check when the dynamic pattern fails to compile.
+    let pattern = format!(r"(?:^|\s){}(?:\s|$)", regex::escape(package));
+    match Regex::new(&pattern) {
+        Ok(re) => re.is_match(line),
+        Err(_) => line.split_whitespace().any(|token| token == package),
+    }
 }
 
 fn replace_go_version_token(line: &str, new: &str) -> Option<String> {
+    // Replace the last `v<digits...>` token (the version) with `new`.
+    // Keeps indentation, trailing comments, and newline style intact.
+    if let Some(re) = go_version_token_re() {
+        let mut last: Option<(usize, usize)> = None;
+        for matched in re.find_iter(line) {
+            if has_version_shape(matched.as_str()) {
+                last = Some((matched.start(), matched.end()));
+            }
+        }
+        if let Some((start, end)) = last {
+            let mut replaced = String::with_capacity(line.len());
+            replaced.push_str(&line[..start]);
+            replaced.push_str(new);
+            replaced.push_str(&line[end..]);
+            return Some(replaced);
+        }
+        if re.find_iter(line).next().is_some() {
+            return None;
+        }
+        // No candidate at all: fall through to the byte loop so a
+        // regex-shape drift still behaves like the historical scan.
+    }
+    replace_go_version_token_fallback(line, new)
+}
+
+fn replace_go_version_token_fallback(line: &str, new: &str) -> Option<String> {
     // Replace the last `v<digits...>` token (the version) with `new`.
     // Keeps indentation, trailing comments, and newline style intact.
     let mut last_start: Option<usize> = None;
@@ -837,7 +906,34 @@ fn replace_gha_sha(line: &str, needle: &str, sha: &str) -> Option<String> {
 /// Replaces the quoted value of the `version = "old"` attribute on one
 /// `bazel_dep(...)` line with `"new"`, preserving the `name` attr and all
 /// other bytes.
+fn version_attr_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r#"version(?P<eq>\s*=\s*)"(?P<old>[^"]*)""#) {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
 fn replace_version_attr(line: &str, new: &str) -> Option<String> {
+    if let Some(re) = version_attr_re() {
+        if re.is_match(line) {
+            let replaced = re.replacen(line, 1, |caps: &regex::Captures<'_>| {
+                format!("version{}\"{new}\"", &caps["eq"])
+            });
+            return Some(replaced.into_owned());
+        }
+        return None;
+    }
+    replace_version_attr_fallback(line, new)
+}
+
+fn replace_version_attr_fallback(line: &str, new: &str) -> Option<String> {
     let version_at = line.find("version")?;
     let after_version = &line[version_at + "version".len()..];
     let eq_rel = after_version.find('=')?;
@@ -855,7 +951,39 @@ fn replace_version_attr(line: &str, new: &str) -> Option<String> {
 
 /// Replaces the quoted version after the first `:` on a JSON line
 /// (`"package": "old"` -> `"package": "new"`), preserving spacing.
+fn json_version_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r#":(?P<gap>\s*)"(?P<old>[^"]*)""#) {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
 fn replace_first_quoted_version_after_colon(line: &str, new: &str) -> Option<String> {
+    if let Some(re) = json_version_re() {
+        let colon = line.find(':')?;
+        let (head, tail) = line.split_at(colon);
+        if re.is_match(tail) {
+            let replaced_tail = re.replacen(tail, 1, |caps: &regex::Captures<'_>| {
+                format!(":{}\"{new}\"", &caps["gap"])
+            });
+            let mut out = String::with_capacity(line.len());
+            out.push_str(head);
+            out.push_str(&replaced_tail);
+            return Some(out);
+        }
+        return None;
+    }
+    replace_first_quoted_version_after_colon_fallback(line, new)
+}
+
+fn replace_first_quoted_version_after_colon_fallback(line: &str, new: &str) -> Option<String> {
     let colon = line.find(':')?;
     let after = &line[colon + 1..];
     let start_rel = after.find('"')?;
@@ -870,11 +998,32 @@ fn replace_first_quoted_version_after_colon(line: &str, new: &str) -> Option<Str
 }
 
 /// True for Bazel labels/patterns and file/dir paths (never `set:package`).
+fn target_prefix_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r"^(//|@)") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
 fn is_target_shape(text: &str) -> bool {
     // `set:package` never starts with `/`/`@` and never contains `/`
     // except inside GitHub Actions `owner/repo` packages (which still
-    // start with `github-actions:`/`gha:`). Labels/paths do.
-    if text.starts_with("//") || text.starts_with('@') {
+    // start with `github-actions:`/`gha:`). Labels/paths do. The `//`/`@`
+    // prefix is a declarative `^(//|@)` (issue #397); the `/`-with/without
+    // known-set checks below stay textual because they branch on the set
+    // registry, not on character classes.
+    if let Some(re) = target_prefix_re() {
+        if re.is_match(text) {
+            return true;
+        }
+    } else if text.starts_with("//") || text.starts_with('@') {
         return true;
     }
     // Bare filenames/paths owned by bump manifests are still not
@@ -897,6 +1046,87 @@ fn is_target_shape(text: &str) -> bool {
 }
 
 /// Validates an ecosystem package identity (upstream-native, no versions).
+/// Character classes are declarative `regex` patterns (issue #397);
+/// structural checks (`:`/`/`/space placement, scope splits) stay textual.
+/// Each helper falls back to the historical char loop when its static
+/// pattern fails to compile (unreachable; keeps non-test builds
+/// `expect`/`unwrap`-free).
+fn dotted_name_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r"^[A-Za-z0-9_.-]+$") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
+fn cargo_name_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r"^[A-Za-z0-9_-]+$") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
+fn scoped_npm_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r"^@[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
+fn go_charset_re() -> Option<&'static Regex> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = RE.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r"^[A-Za-z0-9/._~+-]+$") {
+        Ok(compiled) => {
+            let _ = RE.set(compiled);
+            RE.get()
+        }
+        Err(_) => None,
+    }
+}
+
+fn is_dotted_name(text: &str) -> bool {
+    if let Some(re) = dotted_name_re() {
+        return re.is_match(text);
+    }
+    !text.is_empty()
+        && text
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
+}
+
+fn is_cargo_name(text: &str) -> bool {
+    if let Some(re) = cargo_name_re() {
+        return re.is_match(text);
+    }
+    !text.is_empty()
+        && text
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
 fn validate_package(set: BumpSet, package: &str) -> Result<(), BumpError> {
     let invalid = |reason: &'static str| BumpError::InvalidPackage {
         set: set.name(),
@@ -908,11 +1138,7 @@ fn validate_package(set: BumpSet, package: &str) -> Result<(), BumpError> {
             if package == ".bazelversion" {
                 return Ok(());
             }
-            if package.is_empty()
-                || !package
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
-            {
+            if !is_dotted_name(package) {
                 return Err(invalid(
                     "bazel modules use [A-Za-z0-9_.-] only (or .bazelversion)",
                 ));
@@ -920,11 +1146,7 @@ fn validate_package(set: BumpSet, package: &str) -> Result<(), BumpError> {
             Ok(())
         }
         BumpSet::Cargo => {
-            if package.is_empty()
-                || !package
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
-            {
+            if !is_cargo_name(package) {
                 return Err(invalid("cargo crate names use [A-Za-z0-9_-] only"));
             }
             Ok(())
@@ -934,6 +1156,23 @@ fn validate_package(set: BumpSet, package: &str) -> Result<(), BumpError> {
                 return Err(invalid("npm package names never contain ':' or spaces"));
             }
             if let Some(rest) = package.strip_prefix('@') {
+                if let Some(re) = scoped_npm_re() {
+                    if re.is_match(package) {
+                        return Ok(());
+                    }
+                    // Regex failed: mirror the historical split so the
+                    // payload stays byte-identical (`@a/b/c` reports the
+                    // charset reason because `b/c` is not dotted).
+                    let (scope, slash, name) = match rest.find('/') {
+                        Some(idx) => (&rest[..idx], true, &rest[idx + 1..]),
+                        None => ("", false, ""),
+                    };
+                    let _ = slash;
+                    if scope.is_empty() || name.is_empty() || !slash {
+                        return Err(invalid("scoped npm names are @scope/name"));
+                    }
+                    return Err(invalid("npm scope/name use [A-Za-z0-9_.-] only"));
+                }
                 let (scope, slash, name) = match rest.find('/') {
                     Some(idx) => (&rest[..idx], true, &rest[idx + 1..]),
                     None => ("", false, ""),
@@ -942,28 +1181,18 @@ fn validate_package(set: BumpSet, package: &str) -> Result<(), BumpError> {
                 if scope.is_empty() || name.is_empty() || !slash {
                     return Err(invalid("scoped npm names are @scope/name"));
                 }
-                if !scope
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
-                    || !name
-                        .chars()
-                        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
-                {
+                if !is_dotted_name(scope) || !is_dotted_name(name) {
                     return Err(invalid("npm scope/name use [A-Za-z0-9_.-] only"));
                 }
-                Ok(())
-            } else {
-                if package.contains('/') {
-                    return Err(invalid("unscoped npm names never contain '/'"));
-                }
-                if !package
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
-                {
-                    return Err(invalid("npm names use [A-Za-z0-9_.-] only"));
-                }
-                Ok(())
+                return Ok(());
             }
+            if package.contains('/') {
+                return Err(invalid("unscoped npm names never contain '/'"));
+            }
+            if !is_dotted_name(package) {
+                return Err(invalid("npm names use [A-Za-z0-9_.-] only"));
+            }
+            Ok(())
         }
         BumpSet::Go => {
             if package.is_empty()
@@ -975,9 +1204,14 @@ fn validate_package(set: BumpSet, package: &str) -> Result<(), BumpError> {
             {
                 return Err(invalid("go module paths never contain ':' or spaces"));
             }
-            if !package.chars().all(|c| {
-                c.is_ascii_alphanumeric() || matches!(c, '/' | '.' | '-' | '_' | '~' | '+')
-            }) {
+            let charset_ok = if let Some(re) = go_charset_re() {
+                re.is_match(package)
+            } else {
+                package.chars().all(|c| {
+                    c.is_ascii_alphanumeric() || matches!(c, '/' | '.' | '-' | '_' | '~' | '+')
+                })
+            };
+            if !charset_ok {
                 return Err(invalid("go module paths use [A-Za-z0-9/_.-~+] only"));
             }
             Ok(())
@@ -997,11 +1231,7 @@ fn validate_package(set: BumpSet, package: &str) -> Result<(), BumpError> {
             {
                 return Err(invalid("github-actions identities are owner/repo"));
             }
-            let valid = |text: &str| {
-                text.chars()
-                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
-            };
-            if !valid(owner) || !valid(repo) {
+            if !is_dotted_name(owner) || !is_dotted_name(repo) {
                 return Err(invalid("github-actions owner/repo use [A-Za-z0-9_.-] only"));
             }
             Ok(())
@@ -1261,5 +1491,69 @@ mod tests {
             tag.plan_edit(&workflow),
             Err(BumpError::NeedsSha { .. })
         ));
+    }
+
+    #[test]
+    fn regex_go_module_token_respects_boundaries() {
+        // `example.com/mod-extra` must not count as `example.com/mod`.
+        assert!(line_contains_module_token(
+            "require example.com/mod v1.2.3",
+            "example.com/mod"
+        ));
+        assert!(!line_contains_module_token(
+            "require example.com/mod-extra v1.2.3",
+            "example.com/mod"
+        ));
+        assert!(!line_contains_module_token(
+            "require example.com/modx v1.2.3",
+            "example.com/mod"
+        ));
+    }
+
+    #[test]
+    fn regex_go_version_token_replaces_last_and_keeps_suffix() {
+        // Last `v` token wins; prerelease suffix is replaced wholesale.
+        let line = "require example.com/mod v1.2.3 // keep\n";
+        let replaced = replace_go_version_token(line, "v1.3.0").expect("replace");
+        assert!(replaced.contains("v1.3.0"), "{replaced}");
+        assert!(replaced.contains("// keep"), "{replaced}");
+
+        let pre = "require example.com/mod v1.2.3-alpha+001\n";
+        let replaced = replace_go_version_token(pre, "v1.3.0").expect("pre");
+        assert!(replaced.contains("v1.3.0"), "{replaced}");
+        assert!(!replaced.contains("alpha"), "{replaced}");
+
+        // Bare `v1` (no dot) is not a version token.
+        assert!(replace_go_version_token("require example.com/mod v1\n", "v2.0.0").is_none());
+    }
+
+    #[test]
+    fn regex_cargo_boundary_prefers_exact_table_key() {
+        // `my-anyhow` must not widen when asking for `anyhow`.
+        let bump = BumpRequest::parse("cargo:anyhow", "1.2.3").expect("cargo");
+        let cargo = "[dependencies]\nmy-anyhow = \"1\"\n";
+        assert!(matches!(
+            bump.plan_edit(cargo),
+            Err(BumpError::NotFound { .. })
+        ));
+        let cargo = "[dependencies]\nmy-anyhow = \"1\"\nanyhow = \"1\"\n";
+        let widened = bump.plan_edit(cargo).expect("exact");
+        assert!(widened.contains("anyhow = \"1.2.3\""), "{widened}");
+        assert!(widened.contains("my-anyhow = \"1\""), "{widened}");
+    }
+
+    #[test]
+    fn regex_version_attr_and_json_keep_spacing() {
+        let tight = "bazel_dep(name = \"rules_rust\",version=\"0.74.0\")\n";
+        let replaced = replace_version_attr(tight, "0.75.0").expect("tight");
+        assert!(replaced.contains("version=\"0.75.0\""), "{replaced}");
+
+        let spaced = "bazel_dep(name = \"rules_rust\", version   =   \"0.74.0\")\n";
+        let replaced = replace_version_attr(spaced, "0.75.0").expect("spaced");
+        assert!(replaced.contains("version   =   \"0.75.0\""), "{replaced}");
+
+        let line = "    \"jest\": \"30.2.0\",";
+        let replaced = replace_first_quoted_version_after_colon(line, "30.3.0").expect("json");
+        assert!(replaced.contains("\"jest\": \"30.3.0\""), "{replaced}");
     }
 }

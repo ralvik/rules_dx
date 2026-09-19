@@ -22,6 +22,7 @@ dx_rust_crate(
         "src/version.rs",
     ],
     deps = [
+        "regex",
         "semver",
         "serde",
         "serde_json",

@@ -10,6 +10,9 @@
 //! evaluation), and the `inventory`/`run` modules (repo inventory and CLI).
 
 use std::collections::BTreeMap;
+use std::sync::OnceLock;
+
+use regex::Regex;
 
 use super::LcovError;
 
@@ -102,10 +105,96 @@ fn comment_style(path: &str) -> CommentStyle {
     }
 }
 
+/// Compiled comment scanners (issue #397): the leading alternatives skip
+/// `"`/`'` literals (with backslash escapes) so the trailing `marker`
+/// group only matches a comment opener outside literals. `OnceLock`
+/// caching keeps the per-line scan allocation-free after the first use;
+/// `None` (impossible for these static patterns) falls back to the
+/// byte-loop below so the crate stays infallible without `expect`/`unwrap`
+/// (crate denies both outside tests).
+fn slash_scan() -> Option<&'static Regex> {
+    static SCAN: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = SCAN.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r#""(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|(?P<marker>//)"#) {
+        Ok(compiled) => {
+            let _ = SCAN.set(compiled);
+            SCAN.get()
+        }
+        Err(_) => None,
+    }
+}
+
+fn hash_scan() -> Option<&'static Regex> {
+    static SCAN: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = SCAN.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r#""(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|(?P<marker>#)"#) {
+        Ok(compiled) => {
+            let _ = SCAN.set(compiled);
+            SCAN.get()
+        }
+        Err(_) => None,
+    }
+}
+
+/// Word-boundary check for directive suffixes (`_LINE`/`_START`/`_STOP`):
+/// `^_(LINE|START|STOP)\b` replaces the hand-rolled
+/// `strip_prefix` + `is_alphanumeric/_` test with declarative `\b`.
+fn directive_suffix() -> Option<&'static Regex> {
+    static SUFFIX: OnceLock<Regex> = OnceLock::new();
+    if let Some(compiled) = SUFFIX.get() {
+        return Some(compiled);
+    }
+    match Regex::new(r"^_(LINE|START|STOP)\b") {
+        Ok(compiled) => {
+            let _ = SUFFIX.set(compiled);
+            SUFFIX.get()
+        }
+        Err(_) => None,
+    }
+}
+
+/// Regex-first comment scan: first `marker` capture outside literals wins.
+/// Falls back to the byte loop when the static pattern fails to compile
+/// (unreachable; keeps the non-test build `expect`/`unwrap`-free).
+fn scan_with(line: &str, compiled: Option<&Regex>) -> Option<usize> {
+    let re = compiled?;
+    for captures in re.captures_iter(line) {
+        if let Some(marker) = captures.name("marker") {
+            return Some(marker.start() + marker.as_str().len());
+        }
+    }
+    None
+}
+
 /// Comment text after the `opener` comment start, honoring `"`/`'`
 /// literals and backslash escapes. Returns `None` when the line has no
 /// line comment.
 fn line_comment_with<'a>(line: &'a str, opener: &[u8]) -> Option<&'a str> {
+    if opener == b"//" {
+        if let Some(end) = scan_with(line, slash_scan()) {
+            return Some(&line[end..]);
+        }
+        if slash_scan().is_some() {
+            return None;
+        }
+    } else if opener == b"#" {
+        if let Some(end) = scan_with(line, hash_scan()) {
+            return Some(&line[end..]);
+        }
+        if hash_scan().is_some() {
+            return None;
+        }
+    }
+    line_comment_with_fallback(line, opener)
+}
+
+/// Byte-loop fallback for [`line_comment_with`] (unreachable unless the
+/// static `regex` patterns fail to compile).
+fn line_comment_with_fallback<'a>(line: &'a str, opener: &[u8]) -> Option<&'a str> {
     let bytes = line.as_bytes();
     let mut index = 0;
     let mut in_string = false;
@@ -193,8 +282,17 @@ fn comment_text(path: &str, line: &str) -> String {
 }
 
 /// Whether `rest` (text right after the common marker prefix) is `word`
-/// followed by a non-word character or end of text.
+/// followed by a non-word character or end of text. Declarative `\b`
+/// via [`directive_suffix`] (issue #397); the byte fallback preserves
+/// the historical `is_alphanumeric/_` semantics when the static pattern
+/// fails to compile.
 fn take_word(rest: &str, word: &str) -> bool {
+    if let Some(re) = directive_suffix() {
+        return match re.find(rest) {
+            Some(matched) => matched.as_str() == word,
+            None => false,
+        };
+    }
     if let Some(tail) = rest.strip_prefix(word) {
         !tail.starts_with(|c: char| c == '_' || c.is_alphanumeric())
     } else {
@@ -577,5 +675,60 @@ mod tests {
         let ignores = find_ignores("t.md", &source).unwrap();
         assert!(ignores.singles.is_empty());
         assert!(ignores.ranges.is_empty());
+    }
+
+    #[test]
+    fn regex_comment_scan_skips_string_then_finds_real_marker() {
+        // `"//"` inside the string must not win; the trailing `// MARK`
+        // outside the literal does.
+        let line = format!(
+            "let s = \"code with // {} inside\"; // {} - reason: real.",
+            marker("_LINE"),
+            marker("_LINE")
+        );
+        let source = file_lines(&[line]);
+        let ignores = find_ignores("t.rs", &source).unwrap();
+        assert!(ignores.singles.contains_key(&1));
+    }
+
+    #[test]
+    fn regex_hash_scan_skips_char_literal_hash() {
+        // `'#'` is a char literal; the later `# MARK` is the comment.
+        let line = format!("let c = '#'; # {} - reason: after char.", marker("_LINE"));
+        let source = file_lines(&[line]);
+        let ignores = find_ignores("t.py", &source).unwrap();
+        assert!(ignores.singles.contains_key(&1));
+    }
+
+    #[test]
+    fn regex_word_boundary_rejects_glued_suffixes() {
+        for suffix in ["_LINES", "_LINE2", "_LINE_", "_STARTX", "_STOPPED"] {
+            let source = file_lines(&[format!("// {} - reason: glued.", marker(suffix))]);
+            let err = find_ignores("t.rs", &source).unwrap_err();
+            assert!(err.to_string().contains("unrecognized"), "{suffix}: {err}");
+        }
+    }
+
+    #[test]
+    fn regex_word_boundary_accepts_punctuation_suffix() {
+        for suffix in ["_LINE", "_START", "_STOP"] {
+            let open = marker(suffix);
+            let source = if suffix == "_STOP" {
+                file_lines(&[
+                    format!("// {} - reason: opens.", marker("_START")),
+                    "code();".to_string(),
+                    format!("// {open} - reason: closes."),
+                ])
+            } else if suffix == "_START" {
+                file_lines(&[
+                    format!("// {open} - reason: opens."),
+                    "code();".to_string(),
+                    format!("// {} - reason: closes.", marker("_STOP")),
+                ])
+            } else {
+                file_lines(&[format!("// {open} - reason: ok.")])
+            };
+            assert!(find_ignores("t.rs", &source).is_ok(), "{suffix}");
+        }
     }
 }

@@ -33,6 +33,7 @@ dx_rust_crate(
     deps = [
         "chrono",
         "packageurl",
+        "regex",
         "semver",
         "serde",
         "serde-sarif",

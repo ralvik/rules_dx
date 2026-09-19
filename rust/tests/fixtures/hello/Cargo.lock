@@ -467,6 +467,7 @@ version = "0.0.0"
 dependencies = [
  "chrono",
  "packageurl",
+ "regex",
  "semver",
  "serde",
  "serde-sarif",
@@ -491,6 +492,7 @@ dependencies = [
 name = "dx_bump"
 version = "0.0.0"
 dependencies = [
+ "regex",
  "semver",
  "serde",
  "serde_json",
@@ -610,6 +612,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "lcov",
+ "regex",
  "thiserror",
 ]
 
@@ -672,6 +675,7 @@ dependencies = [
 name = "dx_update"
 version = "0.0.0"
 dependencies = [
+ "regex",
  "thiserror",
 ]
 
