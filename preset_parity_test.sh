@@ -100,8 +100,8 @@ snapshot_diff "$expected" "$actual" "tools/bazelrc/preset.bazelrc"
 echo "preset parity: Rust renderer output matches checked-in definition (snapshot)"
 
 # Stale gate: `dx update --check` passes on the fresh fragment, fails on a
-# dirty one without writing, and `dx update` fixes it (check→update→recheck,
-# mirroring `tools/ci/e2e_preset.sh` hermetically).
+# dirty one without writing, and `dx update` fixes it (check→update→recheck
+# hermetically under `bazel test //...`, issue #407; no nested Bazel).
 if "$dx_bin" --workspace "$scratch" update --check --quiet >/dev/null 2>&1; then
   ok
 else

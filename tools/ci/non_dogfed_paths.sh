@@ -1,17 +1,22 @@
 #!/usr/bin/env bash
-# Non-dogfed execution plan (issue #324).
+# Non-dogfed execution plan (issues #324, #407).
 #
-# Four cohorts never run under the standard dogfood/CI gates by design
+# Cohorts that never run under the standard dogfood/CI gates by design
 # (explicit suites, carve-outs, tag suppression). Each has an explicit
 # execution path, never a silent gap:
 #
-# - integration/ E2E drivers: .bazelignore'd out of the parent universe,
-#   carved out of both ownership audits, `manual` (+`exclusive`, `local`,
-#   `no-sandbox`) drivers in the explicit `:e2e` suite, orphan-guarded by
-#   `e2e_cases`, enumerated by the A9 manual-test query below, run only
-#   via the explicit `E2E_WORKSPACE=... bazel test //tools/ci:e2e` suite
-#   in CI's `e2e` job. Child POSIX fixtures (`pass.sh`/`fail.sh`) arrive
-#   by shell copy and execute as child `sh_test` inside the staged workspace.
+# - CLI contract (issue #407, replaces nested E2E): no `integration/`
+#   workspace, no second Bazel download, no `manual`/`local`/`exclusive`/
+#   `no-sandbox`, no `long` timeouts. Equivalents run hermetically under
+#   `bazel test //...`: `dx test`/`dx build` exit-code preservation via
+#   `cli/cli/src/exec` unit pins (including Bazel test-failure code 3),
+#   format rewrite `x=1` -> `x = 1` via `//quality/testdata:runner_matrix`
+#   goldens, aspect wiring via `DxSubjectInfo` pins
+#   (`//quality/testdata:real_aspect_*`), preset check→update→recheck via
+#   `//:preset_parity_test`; `local_path_override` plus `dx_dev` wiring via
+#   the adopt-rust smoke in normal CI. What is lost (real-daemon exit 3,
+#   real Buildifier rewrite, full consumer wiring now smoke-only) is
+#   recorded in `docs/testing/verification-matrix.md`.
 # - negative fixtures: the four `libs/starlark/tests/negative` demos plus
 #   the markdown-no-config subject are green hermetic proofs (issue #406):
 #   execution failures as passing `sh_test` goldens, analysis failures via
@@ -30,11 +35,9 @@
 #   but `real_source_target` owns no shell sources (no adapter), and both
 #   ownership audits intentionally exclude `.sh` (corpus covers only
 #   BUILD/MODULE/bzl/toml/md; code ownership covers only code languages).
-#   Every checked-in `.sh` rides `deps(//...)` except the two
-#   integration/ POSIX fixtures above; execution is `bazel test //...`
-#   for sh_test/sh_binary plus the explicit `:e2e` suite for manual
-#   drivers, portability via `shell_contract`. POSIX fixtures stay portable
-#   with no Linux constraint.
+#   Every checked-in `.sh` rides `deps(//...)`; execution is
+#   `bazel test //...` for sh_test/sh_binary, portability via
+#   `shell_contract`. POSIX fixtures stay portable with no Linux constraint.
 #
 # This harness machine-checks the plan statically on a clean tree (plus
 # one deps-closure query for shell ownership, mirroring the ownership
@@ -52,112 +55,113 @@ dx_test_init
 
 dx_mkscratch scratch
 
-# --- A. integration/ E2E explicit suite ---
+# --- A. CLI contract hermetic (issue #407, replaces nested E2E) ---
 
-# A1: integration/ stays out of the parent universe.
+# A1: no integration/ workspace, no carve-out, no E2E drivers.
+if [[ -d "integration" ]]; then
+  bad "integration/ workspace still present (issue #407: nested E2E deleted)"
+else
+  ok
+fi
 if grep -q -F -e 'integration/' .bazelignore; then
-  ok
+  bad ".bazelignore still carries the integration/ carve-out (issue #407: deleted)"
 else
-  bad ".bazelignore lost the integration/ carve-out (E2E scenarios must stay out of //...)"
+  ok
+fi
+if [[ -f "tools/ci/e2e.sh" ]] || [[ -f "tools/ci/e2e_format.sh" ]] || [[ -f "tools/ci/e2e_preset.sh" ]] || [[ -f "tools/ci/e2e_cases.sh" ]] || [[ -f "integration/README.md" ]]; then
+  bad "nested E2E driver files still present (e2e.sh/e2e_format.sh/e2e_preset.sh/e2e_cases.sh/integration/README.md, issue #407)"
+else
+  ok
+fi
+if bazel query '//tools/ci:e2e' 2>/dev/null | grep -q .; then
+  bad "//tools/ci:e2e suite still present (issue #407: deleted)"
+else
+  ok
 fi
 
-# A2: both ownership audits carve out integration/ with marker checks.
-if grep -q -F -e 'integration/' tools/ci/corpus_audit.sh &&
-  grep -q -F -e "grep -v -E '^integration/'" tools/ci/corpus_audit.sh; then
-  ok
+# A2: both ownership audits carry no integration/ carve-out filter.
+if grep -q -F -e "grep -v -E '^integration/'" tools/ci/corpus_audit.sh; then
+  bad "corpus_audit still carries the integration/ carve-out filter (issue #407)"
 else
-  bad "corpus_audit lost its integration/ carve-out"
+  ok
+fi
+if grep -q -F -e "grep -v -E '^integration/'" tools/ci/code_ownership.sh; then
+  bad "code_ownership still carries the integration/ carve-out filter (issue #407)"
+else
+  ok
 fi
 
-if grep -q -F -e 'integration/' tools/ci/code_ownership.sh &&
-  grep -q -F -e "grep -v -E '^integration/'" tools/ci/code_ownership.sh; then
-  ok
-else
-  bad "code_ownership lost its integration/ carve-out"
-fi
-
-# A3: E2E drivers are manual + exclusive + local + no-sandbox.
-for driver in e2e_clean e2e_dirty e2e_format_roundtrip; do
-  build="$(bazel query --output=build "//tools/ci:$driver" 2>/dev/null)"
-  if echo "$build" | grep -q -F -e '"manual"' &&
-    echo "$build" | grep -q -F -e '"exclusive"' &&
-    echo "$build" | grep -q -F -e '"local"' &&
-    echo "$build" | grep -q -F -e '"no-sandbox"'; then
+# A3: no manual/local/exclusive/no-sandbox tests; no long timeouts.
+# Manual red subjects stay manual only as non-tests (issue #406); kind(test)
+# must be empty for all four sandbox-escape tags.
+for tag in manual local exclusive no-sandbox; do
+  tagged="$(bazel query "attr(tags, $tag, kind(test, //...))" 2>/dev/null || true)"
+  if [[ -z "$tagged" ]]; then
     ok
   else
-    bad "driver //tools/ci:$driver lost its manual+exclusive+local+no-sandbox tags"
+    bad "manual/local/exclusive/no-sandbox test still present ($tag): $tagged (issue #407: 0x manual/local/exclusive/no-sandbox)"
   fi
 done
-
-# A4: explicit :e2e suite holds exactly the three drivers.
-suite_tests="$(bazel query 'tests(//tools/ci:e2e)' 2>/dev/null | LC_ALL=C sort -u)"
-if echo "$suite_tests" | grep -q -F -e '//tools/ci:e2e_clean' &&
-  echo "$suite_tests" | grep -q -F -e '//tools/ci:e2e_dirty' &&
-  echo "$suite_tests" | grep -q -F -e '//tools/ci:e2e_format_roundtrip' &&
-  [[ "$(echo "$suite_tests" | wc -l | tr -d ' ')" == "3" ]]; then
-  ok
+if bazel query 'attr(timeout, long, kind(test, //...))' 2>/dev/null | grep -q .; then
+  bad "a long-timeout test remains (issue #407: no long timeouts)"
 else
-  bad ":e2e suite lost a driver or gained an unreviewed member: $suite_tests"
+  ok
 fi
 
-# A5: every integration scenario is wired (no orphan silently never runs).
-orphan=0
-for mod in integration/*/MODULE.bazel; do
-  name="$(basename "$(dirname "$mod")")"
-  if grep -rq -F -e "$name" tools/ci/e2e.sh tools/ci/e2e_format.sh tools/ci/BUILD.bazel; then
-    ok
-  else
-    bad "integration/$name/ is orphaned: no reference in e2e.sh, e2e_format.sh, or BUILD.bazel"
-    orphan=1
-  fi
-done
-if [[ "$orphan" == "0" ]] && [[ ! -f integration/README.md ]]; then
-  bad "integration/README.md missing (E2E-case convention owner)"
-fi
-
-# A6: CI runs the convention guard plus the explicit suite (never //...).
-if grep -q -F -e 'bazel run --noshow_progress //tools/ci:e2e_cases' .github/workflows/ci.yml &&
-  grep -q -F -e 'bazel test --noshow_progress //tools/ci:e2e' .github/workflows/ci.yml &&
-  grep -q -F -e 'E2E_WORKSPACE=$GITHUB_WORKSPACE' .github/workflows/ci.yml; then
+# A4: hermetic equivalents run under `bazel test //...`.
+if [[ -f "cli/cli/src/exec/test_support.rs" ]] &&
+  grep -q -F -e 'code' cli/cli/src/exec/bazel.rs &&
+  grep -q -F -e 'Some(3)' cli/cli/src/exec/bazel.rs; then
   ok
 else
-  bad "ci.yml lost the e2e job explicit-suite wiring (e2e_cases + //tools/ci:e2e with E2E_WORKSPACE)"
+  bad "exec argv/code hermetic pins missing (test_support.rs + bazel.rs code 3, issue #407)"
 fi
-
-# A7: README documents explicit-only invocation.
-if grep -q -F -e 'E2E_WORKSPACE=$PWD bazel test //tools/ci:e2e' integration/README.md &&
-  grep -q -F -e 'manual' integration/README.md; then
+if bazel query '//quality/testdata:runner_matrix' 2>/dev/null | grep -q -F -e 'runner_matrix' &&
+  bazel query '//quality/testdata:real_aspect_presence' 2>/dev/null | grep -q -F -e 'real_aspect_presence' &&
+  grep -rq -F -e 'DxSubjectInfo' quality/testdata/ quality/ 2>/dev/null; then
   ok
 else
-  bad "integration/README.md lost the explicit-only invocation record"
+  bad "runner-matrix goldens / DxSubjectInfo analysis pins missing (issue #407)"
 fi
-
-# A8: child POSIX fixtures execute as child sh_test, staged by shell copy.
-if grep -q -F -e 'name = "pass"' integration/clean/BUILD.bazel &&
-  grep -q -F -e 'pass.sh' integration/clean/BUILD.bazel &&
-  grep -q -F -e 'name = "fail"' integration/dirty/BUILD.bazel &&
-  grep -q -F -e 'fail.sh' integration/dirty/BUILD.bazel; then
+if bazel query '//:preset_parity_test' 2>/dev/null | grep -q -F -e 'preset_parity_test'; then
   ok
 else
-  bad "integration child fixtures lost their pass/fail sh_test wiring"
+  bad "preset check→update→recheck pin missing (//:preset_parity_test, issue #407)"
 fi
 
-if grep -q -F -e 'cp -r "$workspace/integration/$scenario/." "$scratch/child/"' tools/ci/e2e.sh &&
-  grep -q -F -e 'RULES_DX_ROOT' tools/ci/e2e.sh; then
-  ok
+# A5: MODULE carries no second-Bazel download.
+if grep -q -F -e 'bazel_binaries.download' MODULE.bazel ||
+  grep -q -F -e 'rules_bazel_integration_test' MODULE.bazel; then
+  bad "MODULE.bazel still carries the second-Bazel pin (issue #407: single Bazel only)"
 else
-  bad "e2e.sh lost its shell-copy staging (scenario files must arrive by copy, never by label)"
+  ok
+fi
+if grep -q -F -e 'bazel_binaries' MODULE.bazel.lock; then
+  bad "MODULE.bazel.lock still carries bazel_binaries (issue #407: regenerate without the dev-dep)"
+else
+  ok
 fi
 
-# A9: manual tests are exactly the explicit E2E suite (issue #406:
-# green hermetic proofs replaced the manual_negatives enumeration; a new
-# manual test outside :e2e fails this guard).
-e2e_manual="$(bazel query 'attr(tags, manual, kind(test, //...))' 2>/dev/null | LC_ALL=C sort -u)"
-if echo "$e2e_manual" | grep -q -F -e '//tools/ci:e2e' &&
-  [[ "$(echo "$e2e_manual" | wc -l | tr -d ' ')" == "5" ]]; then
+# A6: CI runs the adopt-rust dx_dev smoke in normal CI, never a nested E2E job.
+if grep -q -F -e 'E2E_WORKSPACE' .github/workflows/ci.yml ||
+  grep -q -F -e '//tools/ci:e2e' .github/workflows/ci.yml; then
+  bad "ci.yml still wires the nested E2E suite (E2E_WORKSPACE / //tools/ci:e2e, issue #407)"
+else
+  ok
+fi
+if grep -q -F -e 'bazel build --noshow_progress //examples/adopt-rust/... --config=dx_dev' .github/workflows/ci.yml; then
   ok
 else
-  bad "manual tests are not exactly the 5 E2E suite members (want :e2e + 4 drivers, found: $e2e_manual)"
+  bad "ci.yml lost the adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)"
+fi
+
+# A7: loss record lives in the verification matrix.
+if grep -q -F -e 'real-daemon exit 3' docs/testing/verification-matrix.md &&
+  grep -q -F -e 'real Buildifier rewrite' docs/testing/verification-matrix.md &&
+  grep -q -F -e 'smoke-only' docs/testing/verification-matrix.md; then
+  ok
+else
+  bad "verification-matrix lost the #407 loss record (real-daemon exit 3, real Buildifier rewrite, smoke-only)"
 fi
 
 # --- B. negative fixtures (green hermetic proofs, issue #406) ---
@@ -172,7 +176,7 @@ if echo "$demos" | grep -q -F -e '//libs/starlark/tests/negative:failing_check_d
 else
   bad "starlark negative proofs missing: $demos"
 fi
-if bazel query 'attr(tags, manual, //libs/starlark/tests/negative/...)' 2>/dev/null | grep -q .; then
+if bazel query 'attr(tags, manual, kind(test, //libs/starlark/tests/negative/...))' 2>/dev/null | grep -q .; then
   bad "starlark negative proofs must not be manual (green hermetic, issue #406)"
 else
   ok
@@ -302,7 +306,8 @@ else
   bad "code_ownership filter broke (want code languages only, never .sh)"
 fi
 
-# D4: every checked-in .sh rides deps(//...) except the two integration POSIX fixtures.
+# D4: every checked-in .sh rides deps(//...) (issue #407: nested E2E
+# deleted, so the two integration POSIX fixtures are gone; zero unowned).
 git ls-files '*.sh' | LC_ALL=C sort -u >"$scratch/all_sh.txt"
 bazel query "kind('source file', deps(//...))" 2>/dev/null |
   grep -E '^(@@)?//' |
@@ -312,21 +317,19 @@ bazel query "kind('source file', deps(//...))" 2>/dev/null |
   LC_ALL=C sort -u >"$scratch/owned_sh_raw.txt"
 comm -23 "$scratch/all_sh.txt" "$scratch/owned_sh_raw.txt" >"$scratch/unowned_sh.txt" || true
 unowned_count="$(wc -l <"$scratch/unowned_sh.txt" | tr -d ' ')"
-if [[ "$unowned_count" == "2" ]] &&
-  grep -q -F -x -e 'integration/clean/pass.sh' "$scratch/unowned_sh.txt" &&
-  grep -q -F -x -e 'integration/dirty/fail.sh' "$scratch/unowned_sh.txt"; then
+if [[ "$unowned_count" == "0" ]]; then
   ok
 else
-  bad "shell ownership broke (want exactly the 2 integration POSIX fixtures unowned, found $unowned_count: $(tr '\n' ' ' <"$scratch/unowned_sh.txt"))"
+  bad "shell ownership broke (want 0 unowned .sh, found $unowned_count: $(tr '\n' ' ' <"$scratch/unowned_sh.txt"))"
 fi
 
-# D5: shell execution paths stay wired (test job for sh tests, explicit suite for manual drivers).
+# D5: shell execution paths stay wired (test job for sh tests, no nested suite).
 if grep -q -F -e 'bazel test --noshow_progress //...' .github/workflows/ci.yml &&
-  grep -q -F -e 'bazel test --noshow_progress //tools/ci:e2e' .github/workflows/ci.yml &&
+  ! grep -q -F -e 'bazel test --noshow_progress //tools/ci:e2e' .github/workflows/ci.yml &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:shell_contract' .github/workflows/ci.yml; then
   ok
 else
-  bad "CI lost a shell execution path (test //... + explicit :e2e + shell_contract)"
+  bad "CI lost a shell execution path (want test //... + shell_contract, no :e2e)"
 fi
 
 # D6: shell_contract owns portability (bash-only Linux harness, POSIX fixtures portable).

@@ -1,5 +1,0 @@
-# Stage 4 E2E preset-stale scenario (issue #332): no Bazel targets.
-# The pin is the preset fragment freshness gate (`dx update --check`
-# exit contract plus `dx update go` regeneration), so the child needs
-# only the workspace marker and the fragment files staged by the driver.
-package(default_visibility = ["//visibility:public"])

@@ -155,11 +155,11 @@ tracked in the roadmap).
 
 Non-dogfed paths never run under the standard dogfood gates by design;
 each has an explicit execution path pinned by
-`bazel run //tools/ci:non_dogfed_paths` (issue #324, see the
-[verification matrix](verification-matrix.md#layers)): integration/E2E
-drivers via the explicit `:e2e` suite, negative fixtures via explicit
+`bazel run //tools/ci:non_dogfed_paths` (issues #324/#407, see the
+[verification matrix](verification-matrix.md#layers)): CLI-contract via
+hermetic pins under `bazel test //...`, negative fixtures via explicit
 failure proofs, the no-coverage cohort via coverage-excluded runs, and
-shell sources via ownership plus test/explicit execution with no quality
+shell sources via ownership plus test execution with no quality
 class by design.
 
 ## GitHub Coverage Reporting

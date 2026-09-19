@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Distribution/closeout guards (issues #5, #26, #78, #184, #54, #311).
+# Distribution/closeout guards (issues #5, #26, #78, #184, #54, #311, #407).
 #
 # No release has been cut: no tags, GitHub releases, registry
 # submissions, or publication outputs without explicit owner approval.
@@ -20,8 +20,9 @@
 # prebuilt base + scaffold state + quota record + scaffold-update +
 # Bazelisk delegation + cosign deferral + admissibility gate +
 # never-latest gate, scaffold state, self-call consumer smoke, security
-# precondition, gitignored outputs, E2E driver/format slices +
-# E2E-case convention, install-time publisher-identity verification
+# precondition, gitignored outputs, hermetic CLI-contract pins (issue
+# #407 replaces #54 E2E driver/format slices + E2E-case convention),
+# install-time publisher-identity verification
 # (#26 implemented via //deploy/install:dx_verify + //cli/cli:dx_standalone),
 # and no-publish invariants. Full matrix/SBOM/signing/BCR/human-run are
 # implemented owner-gated per #311 (//deploy/release:all + runbook); the
@@ -144,11 +145,13 @@ else
   bad "consumer-ci caller lost its 0.0.0 unpublishable pin (#5)"
 fi
 
-# #54 E2E-case convention: every integration case wired to a driver.
-if [[ -f "tools/ci/e2e_cases.sh" ]]; then
-  ok
+# Issue #407 (replaces #54 E2E-case convention): nested E2E deleted, so
+# no e2e_cases harness and no integration/ cases remain; CLI-contract
+# coverage is hermetic under `bazel test //...`.
+if [[ -f "tools/ci/e2e_cases.sh" ]] || [[ -d "integration" ]]; then
+  bad "nested E2E remnants still present (e2e_cases.sh/integration/, issue #407)"
 else
-  bad "e2e_cases convention harness missing (#54)"
+  ok
 fi
 
 # #311 SBOM + signing-first detail stays recorded in the dry-run
@@ -185,13 +188,12 @@ else
   bad "publish dry run lost its dry-run report record (#78)"
 fi
 
-# #54 E2E driver + format slices stay present alongside the case
-# convention (full green battery still open).
-if [[ -f "tools/ci/e2e.sh" ]] &&
-  [[ -f "tools/ci/e2e_format.sh" ]]; then
-  ok
+# Issue #407 (replaces #54 E2E driver/format slices): nested drivers
+# deleted; hermetic CLI-contract pins live under `bazel test //...`.
+if [[ -f "tools/ci/e2e.sh" ]] || [[ -f "tools/ci/e2e_format.sh" ]] || [[ -f "tools/ci/e2e_preset.sh" ]]; then
+  bad "nested E2E drivers still present (e2e.sh/e2e_format.sh/e2e_preset.sh, issue #407)"
 else
-  bad "E2E driver/format slices missing (e2e.sh/e2e_format.sh, #54)"
+  ok
 fi
 
 # #184 GHCR gate messages stay explicit: digest-pinned FROM, never

@@ -23,8 +23,6 @@
 #
 # Provides:
 #   dx_workspace_root            prints the checkout root
-#   dx_e2e_workspace_root        prints the E2E parent workspace
-#                                (`E2E_WORKSPACE` override, else shared root)
 #   dx_runfiles_root             prints the Bazel runfiles root
 #                                (`RUNFILES_DIR` else `TEST_SRCDIR`)
 #   dx_resolve_runfile <rel>     prints the absolute path for a
@@ -102,29 +100,11 @@ dx_workspace_root() {
   git rev-parse --show-toplevel
 }
 
-# Prints the E2E parent workspace (issue #55): explicit `E2E_WORKSPACE`
-# wins, else `BUILD_WORKSPACE_DIRECTORY` when it holds `integration/`,
-# else the enclosing git top-level. Fails with the actionable
-# `E2E_WORKSPACE` hint instead of bare git noise.
-dx_e2e_workspace_root() {
-  if [[ -n "${E2E_WORKSPACE:-}" ]]; then
-    printf '%s\n' "$E2E_WORKSPACE"
-    return 0
-  fi
-  if [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" && -d "${BUILD_WORKSPACE_DIRECTORY}/integration" ]]; then
-    printf '%s\n' "$BUILD_WORKSPACE_DIRECTORY"
-    return 0
-  fi
-  local root
-  if root="$(git rev-parse --show-toplevel 2>/dev/null)"; then
-    printf '%s\n' "$root"
-    return 0
-  fi
-  echo "FAIL: cannot locate parent workspace (no \$E2E_WORKSPACE, no usable \$BUILD_WORKSPACE_DIRECTORY, git rev-parse failed)" >&2
-  echo "Run explicitly as: E2E_WORKSPACE=\$PWD bazel test //tools/ci:e2e --test_env=E2E_WORKSPACE" >&2
-  echo "CI passes E2E_WORKSPACE=\$GITHUB_WORKSPACE with --test_env=E2E_WORKSPACE (issue #55)." >&2
-  return 1
-}
+# Issue #407: nested E2E removed, so `dx_e2e_workspace_root` plus the
+# `E2E_WORKSPACE` override are deleted. Drivers use `dx_workspace_root`
+# (BUILD_WORKSPACE_DIRECTORY else git top-level) with runfiles plus
+# TEST_TMPDIR scratch under `bazel test //...`; no second Bazel download,
+# no manual/local/exclusive/no-sandbox.
 
 # Prints the Bazel runfiles root when running under `bazel test` / `bazel
 # run` (`RUNFILES_DIR` else `TEST_SRCDIR`). Fails outside Bazel. Replaces

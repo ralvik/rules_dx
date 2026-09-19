@@ -6,7 +6,8 @@
 # (Planned -> Seed-host-delivered -> Platform-qualified -> Supported).
 # Seed-host evidence is delivered (corpus dogfood, Layer-2 matrix for the
 # seed languages, generation freshness, adopt-* external-consumer proof,
-# CLI-contract E2E, required-core depcheck fixtures, `dx update` live execution,
+# hermetic CLI-contract pins (issue #407 replaces nested E2E),
+# required-core depcheck fixtures, `dx update` live execution,
 # perf report-not-gate, seed-only coverage/remote qualification under #308);
 # audit live execution, docs-pipeline, env/codegen, non-seed platform cells
 # (issue #298), admitted depcheck
@@ -125,14 +126,18 @@ else
   bad "examples Delivered lacks adopt-* workspaces or laziness proof harnesses"
 fi
 
-# E2E Delivered (contract) has drivers + case convention.
-if [[ -d "integration/clean" ]] &&
-  [[ -d "integration/dirty" ]] &&
-  [[ -f "tools/ci/e2e.sh" ]] &&
-  [[ -f "tools/ci/e2e_cases.sh" ]]; then
+# CLI-contract Delivered (issue #407, replaces nested E2E): hermetic pins
+# under `bazel test //...` plus the adopt-rust dx_dev smoke in normal CI.
+# What is lost (real-daemon exit 3, real Buildifier rewrite, full consumer
+# wiring now smoke-only) is recorded in docs/testing/verification-matrix.md.
+if [[ ! -d "integration" ]] &&
+  [[ ! -f "tools/ci/e2e.sh" ]] &&
+  [[ -f "cli/cli/src/exec/test_support.rs" ]] &&
+  grep -q -F -e 'bazel build --noshow_progress //examples/adopt-rust/... --config=dx_dev' .github/workflows/ci.yml &&
+  grep -q -F -e 'real-daemon exit 3' docs/testing/verification-matrix.md; then
   ok
 else
-  bad "E2E Delivered lacks integration drivers or case-convention harness"
+  bad "CLI-contract Delivered lacks hermetic pins + adopt-rust smoke + loss record (issue #407)"
 fi
 
 # Perf Tracked stays report-not-gate with fairness pin.

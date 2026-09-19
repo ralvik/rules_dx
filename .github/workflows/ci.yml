@@ -102,11 +102,13 @@ jobs:
             bazel-seed-
       - name: Build workspace
         run: bazel build --noshow_progress //...
+      - name: Adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)
+        run: bazel build --noshow_progress //examples/adopt-rust/... --config=dx_dev
       - name: Write job summary
         if: always()
         run: |
           echo "### build — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Command: bazel build //... (seed host, local-only)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: bazel build //... plus adopt-rust dx_dev smoke (seed host, local-only; hermetic CLI-contract, issue #407)." >> "$GITHUB_STEP_SUMMARY" >> "$GITHUB_STEP_SUMMARY"
   preset-stale:
     name: preset-stale (dx update --check, Linux once)
     # Consumer-CI stale cell (issue #332): Linux-once preset freshness
@@ -300,32 +302,6 @@ jobs:
           echo "### prove — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate, coverage qualification (issue #308 per-cell plus Starlark plus Codecov plus quotas plus local-only remote), release hygiene (issue #5 no-publication inputs), release policy (issue #89 curated defaults + parity gate), publish trust (issues #78/#26/#5 draft-only sites + nothing published), shell contract (issue #299 bash-only Linux-only harness + portable forms)." >> "$GITHUB_STEP_SUMMARY"
           echo "Proved (follow-up): coverage spill containment (issues #252/#54, LLVM_PROFILE_FILE to scratch)." >> "$GITHUB_STEP_SUMMARY"
-  e2e:
-    name: e2e (Stage 4 CLI-contract suite, explicit invocation)
-    needs: [build]
-    timeout-minutes: 30
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
-      - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: ~/.cache/bazel
-          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
-          restore-keys: |
-            bazel-seed-
-      - name: Prove every scenario is wired (E2E-case convention, issue #54)
-        run: bazel run --noshow_progress //tools/ci:e2e_cases
-      - name: Run explicit E2E suite (manual drivers, never under //...)
-        run: E2E_WORKSPACE=$GITHUB_WORKSPACE bazel test --noshow_progress //tools/ci:e2e --test_env=E2E_WORKSPACE
-      - name: Write job summary
-        if: always()
-        run: |
-          echo "### e2e — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Command: E2E_WORKSPACE=$GITHUB_WORKSPACE bazel test //tools/ci:e2e --test_env=E2E_WORKSPACE (explicit only; manual drivers skip //... under both bazel and dx, issue #55)." >> "$GITHUB_STEP_SUMMARY"
   dogfood-freshness:
     name: dogfood-freshness (tools, generate --check, corpus audit)
     needs: [build]

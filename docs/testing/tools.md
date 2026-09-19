@@ -185,8 +185,8 @@ under issue #299; no product behavior change). Every bash
 `sh_binary`/`sh_test` carries
 `target_compatible_with = ["@platforms//os:linux"]`, so non-Linux hosts
 skip honestly instead of failing obscurely; POSIX `#!/bin/sh` fixtures
-(`env/doctor.sh`, `env/tool.sh`, deploy fixtures, integration
-pass/fail subjects) stay portable with no constraint. macOS
+(`env/doctor.sh`, `env/tool.sh`, deploy fixtures) stay portable with no
+constraint. macOS
 best-effort hardening rides along with no Linux behavior change:
 `realpath` probe (`realpath` → `readlink -f` → python3),
 `sha256sum` → `shasum -a 256` fallback, portable `sed` tmpfile edits
@@ -216,7 +216,7 @@ plus shfmt, replace non-portable realpath, bare sha256sum, sed `-i -e`, cp `-a`,
 EPOCHREALTIME).
 
 Runfiles and workspace-root probing is consolidated under issue #319 (one shared
-`tools/sh/lib.sh` `dx_workspace_root`/`dx_e2e_workspace_root`/`dx_runfiles_root`/`dx_resolve_runfile`
+`tools/sh/lib.sh` `dx_workspace_root`/`dx_runfiles_root`/`dx_resolve_runfile`
 plus `rlocation` usage; shell drivers source it via a runfiles-first bootstrap with
 `data = ["//tools/sh:lib"]`; Rust binaries share `dx_process::workspace_start` and use
 standard `runfiles` `rlocation`, never `TEST_SRCDIR` in prod).
