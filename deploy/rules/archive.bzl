@@ -11,7 +11,10 @@ Contract: `docs/deploy/authoring.md`. Deploy targets live next to the
 app they release (for example `//rust/hello:release`).
 """
 
+load("@bazel_skylib//lib:shell.bzl", "shell")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load(":defs.bzl", "dx_deployment")
+load(":launcher.bzl", "RUNFILES_BASH_INIT", "rlocation_path")
 
 def _archive_stage_impl(ctx):
     """Stages one executable as a single file preserving its basename.
@@ -48,37 +51,25 @@ _archive_stage = rule(
     doc = "Stages one executable for archive_release (single file, basename preserved).",
 )
 
-def _archive_rlocation(ctx, f):
-    """Returns the runfiles rlocation for one file.
+def _archive_launcher_impl(ctx):
+    """Writes the `sh_binary` launcher script for one release.
 
-    Args:
-      ctx: rule context for the workspace name.
-      f: the File to locate.
-
-    Returns:
-      The `workspace/short_path` rlocation string.
-    """
-    sp = f.short_path
-    if sp.startswith("../"):
-        return sp[3:]
-    return ctx.workspace_name + "/" + sp
-
-def _archive_program_impl(ctx):
-    """Writes the executable deploy launcher for one release.
-
-    `sh_binary(args=...)` cannot carry the tarball/checksum paths through
-    `dx_deployment` (which symlinks only `files_to_run.executable`,
-    dropping the target's `args`). The launcher instead resolves its
-    three inputs from its own runfiles forest and execs
-    `archive_deploy.sh` with them plus any user args (`"$@"` selects the
-    output directory). Works under `bazel run`, `dx deploy`, and direct
-    `bazel-bin` execution via `RUNFILES_DIR` / `$0.runfiles` / manifest.
+    The script sources the standard `runfiles.bash` initialization (v3)
+    and resolves the staged app, tarball, checksum, and deploy script via
+    `rlocation`, then execs `archive_deploy.sh` with them plus user args
+    (`"$@"` selects the output directory). Rlocation strings are embedded
+    with `shell.quote` (single-quote), never manual double-quote
+    interpolation. The wrapping `sh_binary` (see `archive_release`)
+    carries the pinned inputs in `data` plus the runfiles library, so the
+    launcher works under `bazel run`, `dx deploy` (which symlinks the
+    `sh_binary` entrypoint and merges its runfiles), and direct
+    `bazel-bin` execution.
 
     Args:
       ctx: rule context with `app`, `archive`, `checksum`, `deploy_sh`.
 
     Returns:
-      `DefaultInfo` with the executable launcher and its runfiles.
+      `DefaultInfo` with the launcher script file.
     """
     app_files = ctx.attr.app[DefaultInfo].files.to_list()
     if len(app_files) != 1:
@@ -94,59 +85,32 @@ def _archive_program_impl(ctx):
     checksum_file = checksum_files[0]
     deploy_file = ctx.file.deploy_sh
 
-    app_rloc = _archive_rlocation(ctx, app_file)
-    archive_rloc = _archive_rlocation(ctx, archive_file)
-    checksum_rloc = _archive_rlocation(ctx, checksum_file)
-    deploy_rloc = _archive_rlocation(ctx, deploy_file)
+    app_rloc = rlocation_path(ctx, app_file)
+    archive_rloc = rlocation_path(ctx, archive_file)
+    checksum_rloc = rlocation_path(ctx, checksum_file)
+    deploy_rloc = rlocation_path(ctx, deploy_file)
 
-    launcher = ctx.actions.declare_file(ctx.label.name)
+    launcher = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.write(
         output = launcher,
         content = """#!/usr/bin/env bash
 # Deploy launcher for `archive_release` (issue #181). Generated. Do not edit.
-# Resolves the staged app, tarball, checksum, and deploy script from this
-# launcher's runfiles forest, then execs the deploy script with them plus
-# user args. `dx_deployment` symlinks only the executable, so `sh_binary`
-# `args` cannot survive; runfiles lookup keeps the paths intact.
+# Resolves the staged app, tarball, checksum, and deploy script via the
+# standard `runfiles.bash` `rlocation`, then execs the deploy script with
+# them plus user args. Wrapped as `sh_binary` (see `archive_release`).
 set -euo pipefail
-if [[ -n "${RUNFILES_DIR:-}" && -d "${RUNFILES_DIR}" ]]; then
-  RF="${RUNFILES_DIR}"
-  MANIFEST=0
-elif [[ -d "$0.runfiles" ]]; then
-  RF="$0.runfiles"
-  MANIFEST=0
-elif [[ -f "$0.runfiles_manifest" ]]; then
-  MANIFEST_FILE="$0.runfiles_manifest"
-  MANIFEST=1
-else
-  echo "archive: cannot locate runfiles (tried RUNFILES_DIR, $0.runfiles)" >&2
-  exit 1
-fi
-rloc() {
-  local p="$1"
-  if [[ "${MANIFEST}" == 1 ]]; then
-    grep -sm1 "^${p} " "${MANIFEST_FILE}" | cut -f2- -d' '
-  else
-    printf "%%s/%%s" "${RF}" "${p}"
-  fi
-}
-DEPLOY="$(rloc "%s")"
-APP="$(rloc "%s")"
-TARBALL="$(rloc "%s")"
-CHECKSUM="$(rloc "%s")"
+""" + RUNFILES_BASH_INIT + """DEPLOY="$(rlocation """ + shell.quote(deploy_rloc) + """)"
+APP="$(rlocation """ + shell.quote(app_rloc) + """)"
+TARBALL="$(rlocation """ + shell.quote(archive_rloc) + """)"
+CHECKSUM="$(rlocation """ + shell.quote(checksum_rloc) + """)"
 exec "${DEPLOY}" "${APP}" "${TARBALL}" "${CHECKSUM}" "$@"
-""" % (deploy_rloc, app_rloc, archive_rloc, checksum_rloc),
+""",
         is_executable = True,
     )
+    return [DefaultInfo(files = depset([launcher]))]
 
-    runfiles = ctx.runfiles(files = [app_file, archive_file, checksum_file, deploy_file])
-    for target in [ctx.attr.app, ctx.attr.archive, ctx.attr.checksum]:
-        runfiles = runfiles.merge(target[DefaultInfo].default_runfiles)
-    return [DefaultInfo(executable = launcher, runfiles = runfiles)]
-
-_archive_program = rule(
-    implementation = _archive_program_impl,
-    executable = True,
+_archive_launcher = rule(
+    implementation = _archive_launcher_impl,
     attrs = {
         "app": attr.label(mandatory = True),
         "archive": attr.label(mandatory = True),
@@ -156,7 +120,7 @@ _archive_program = rule(
             default = "//deploy/rules:archive_deploy.sh",
         ),
     },
-    doc = "Executable deploy launcher for archive_release (runfiles-resolved).",
+    doc = "Launcher script for archive_release (wrapped as sh_binary).",
 )
 
 def archive_filenames(name):
@@ -177,11 +141,14 @@ def archive_release(name, app, profile = "release"):
     Creates `<name>_stage` (single-file executable stage),
     `<name>_archive` (genrule tarball via host `tar`),
     `<name>_checksum` (genrule sha256 via host `sha256sum`/`shasum`),
-    `<name>_program` (runfiles-resolved deploy launcher), and `<name>`
-    (the `dx_deployment` returning `DxDeployInfo` with `app` and
-    `profile`). Run with `bazel run :<name>` or `dx deploy :<name>`;
-    pass an output directory after `--` to choose where the artifacts
-    land (default: `$BUILD_WORKSPACE_DIRECTORY`, else the cwd).
+    `<name>_program_launcher` (generated launcher script resolving
+    inputs via `runfiles.bash` `rlocation` with `shell.quote`),
+    `<name>_program` (`sh_binary` wrapping the launcher with pinned
+    `data` plus the runfiles library), and `<name>` (the `dx_deployment`
+    returning `DxDeployInfo` with `app` and `profile`). Run with
+    `bazel run :<name>` or `dx deploy :<name>`; pass an output directory
+    after `--` to choose where the artifacts land (default:
+    `$BUILD_WORKSPACE_DIRECTORY`, else the cwd).
 
     Args:
       name: instance name; also the deploy target name.
@@ -230,11 +197,29 @@ def archive_release(name, app, profile = "release"):
               "else shasum -a 256 \"$$src\" > \"$$out\"; fi",
     )
 
-    _archive_program(
-        name = program_target,
+    launcher_target = program_target + "_launcher"
+    _archive_launcher(
+        name = launcher_target,
         app = ":" + stage_target,
         archive = ":" + archive_target,
         checksum = ":" + checksum_target,
+    )
+
+    # `sh_binary` wrapper (issue #317): `srcs` is the generated launcher
+    # script, `data` pins the runfiles the launcher resolves via
+    # `rlocation` (location expansion: `data` labels expanded to runfiles
+    # paths at analysis time, resolved at runtime). `deps` carries the
+    # standard runfiles library, replacing the custom `rloc()` probe.
+    sh_binary(
+        name = program_target,
+        srcs = [":" + launcher_target],
+        data = [
+            ":" + stage_target,
+            ":" + archive_target,
+            ":" + checksum_target,
+            "//deploy/rules:archive_deploy.sh",
+        ],
+        deps = ["@rules_shell//shell/runfiles"],
     )
 
     dx_deployment(

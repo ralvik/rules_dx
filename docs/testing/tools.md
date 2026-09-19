@@ -213,5 +213,5 @@ Host-tool actions stay open under issue #318 (archive genrules on host tar and h
 extension chmod via ctx.execute, deploy runtime probes; move to toolchain-provided
 hasher/archiver or record the host-tool contract explicitly).
 
-Generated launchers stay open under issue #317 (Starlark string-interpolated bash
-launchers prefer sh_binary plus location expansion plus runfiles rlocation).
+Generated deploy launchers use `sh_binary` plus `runfiles.bash` `rlocation`
+with `shell.quote` (issue #317).
