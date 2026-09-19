@@ -33,16 +33,16 @@
 # prove dispatch + refusal policy without Rekor/TUF access.
 set -euo pipefail
 
-# Portable realpath (issue #299): GNU `realpath` is absent on macOS;
-# `readlink -f` covers some platforms, python3 covers the rest.
-portable_realpath() {
-  if command -v realpath >/dev/null 2>&1; then
-    realpath "$1"
-  elif command -v readlink >/dev/null 2>&1 && readlink -f "$1" >/dev/null 2>&1; then
-    readlink -f "$1"
-  else
-    python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
-  fi
+# Host-tool contract (issue #318): bash + python3 + POSIX coreutils plus
+# the publisher-identity verifiers (`cosign`/`gh`) only. Realpath and
+# sha256 go through python3 (no `realpath`, `readlink -f`, `sha256sum`,
+# or `shasum` probes); `cp`/`mkdir`/`basename`/`chmod` are POSIX coreutils.
+py_realpath() {
+  python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
+}
+
+py_sha256() {
+  python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$1"
 }
 
 TRUST_ROOT="https://tuf-repo-cdn.sigstore.dev"
@@ -128,8 +128,8 @@ if [[ ! -s "$bundle" ]]; then
   exit 1
 fi
 
-binary_abs="$(portable_realpath "$binary")"
-bundle_abs="$(portable_realpath "$bundle")"
+binary_abs="$(py_realpath "$binary")"
+bundle_abs="$(py_realpath "$bundle")"
 
 echo "dx_verify: trust root $TRUST_ROOT (Sigstore TUF public-good; verifiers bootstrapped from the trust root, never alongside the binary)"
 if command -v cosign >/dev/null 2>&1; then
@@ -176,8 +176,8 @@ fi
 # Optional SBOM bundle binds the same release bytes through the same
 # cosign path; a substituted SBOM fails here before install.
 if [[ -n "$sbom" ]]; then
-  sbom_abs="$(portable_realpath "$sbom")"
-  sbom_bundle_abs="$(portable_realpath "$sbom_bundle")"
+  sbom_abs="$(py_realpath "$sbom")"
+  sbom_bundle_abs="$(py_realpath "$sbom_bundle")"
   if ! command -v "$cosign_bin" >/dev/null 2>&1; then
     echo "dx_verify: SBOM verification needs $cosign_bin (unavailable)" >&2
     exit 1
@@ -196,11 +196,7 @@ fi
 if [[ -n "$install_dir" ]]; then
   mkdir -p "$install_dir"
   base="$(basename "$binary_abs")"
-  if command -v sha256sum >/dev/null 2>&1; then
-    digest="$(sha256sum "$binary_abs" | cut -d' ' -f1)"
-  else
-    digest="$(shasum -a 256 "$binary_abs" | cut -d' ' -f1)"
-  fi
+  digest="$(py_sha256 "$binary_abs")"
   cp -RPp "$binary_abs" "$install_dir/$base"
   chmod 0755 "$install_dir/$base"
   echo "dx_verify: installed $base to $install_dir (sha256 $digest, verified via $verified)"

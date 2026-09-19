@@ -5,27 +5,25 @@
 # provenance rootpath. Asserts the SPDX document is SPDX-2.3 with the
 # artifact sha256, and the provenance statement is in-toto v1 + SLSA v1
 # with the same digest as subject. Tagged `no-coverage`.
+#
+# Host-tool contract (issue #318): bash + python3 + POSIX coreutils
+# only. Realpath and sha256 go through python3 (no `realpath`,
+# `readlink -f`, `sha256sum`, or `shasum` probes).
 set -euo pipefail
 
-portable_realpath() {
-  if command -v realpath >/dev/null 2>&1; then
-    realpath "$1"
-  elif command -v readlink >/dev/null 2>&1 && readlink -f "$1" >/dev/null 2>&1; then
-    readlink -f "$1"
-  else
-    python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
-  fi
+py_realpath() {
+  python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
 }
 
-artifact="$(portable_realpath "$1")"
-spdx="$(portable_realpath "$2")"
-prov="$(portable_realpath "$3")"
+py_sha256() {
+  python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$1"
+}
 
-if command -v sha256sum >/dev/null 2>&1; then
-  digest="$(sha256sum "$artifact" | cut -d' ' -f1)"
-else
-  digest="$(shasum -a 256 "$artifact" | cut -d' ' -f1)"
-fi
+artifact="$(py_realpath "$1")"
+spdx="$(py_realpath "$2")"
+prov="$(py_realpath "$3")"
+
+digest="$(py_sha256 "$artifact")"
 
 grep -q -F -e '"spdxVersion": "SPDX-2.3"' "$spdx" || { echo "sbom spdxVersion not SPDX-2.3" >&2; exit 1; }
 grep -q -F -e "$digest" "$spdx" || { echo "sbom SPDX missing artifact digest $digest" >&2; exit 1; }

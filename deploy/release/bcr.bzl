@@ -154,16 +154,13 @@ def bcr_check(name, module_name = "rules_dx", version = "0.0.0", inputs = [], pr
 
     # BCR source template: archive `source.json` shape (URL + integrity
     # filled at release time by the human-run path; strip_url_prefix
-    # follows the BCR publish layout). Deterministic, no network.
+    # follows the BCR publish layout). Deterministic, no network, no
+    # host tools (managed Python toolchain via declared `tools`).
     native.genrule(
         name = name + "_source",
         outs = [name + ".source.json"],
-        cmd = "python3 - \"$(OUTS)\" \"" + module_name + "\" \"" + version + "\" <<'EOF'\n" +
-              "import json,sys\n" +
-              "out,mod,ver = sys.argv[1:4]\n" +
-              "src={\"url\":\"https://github.com/ralvik/rules_dx/releases/download/v\"+ver+\"/\"+mod+\"-\"+ver+\".tar.gz\",\"integrity\":\"<integrity-filled-at-release>\",\"strip_prefix\":mod+\"-\"+ver}\n" +
-              "open(out,\"w\",encoding=\"utf-8\").write(json.dumps(src,indent=2,sort_keys=True)+\"\\n\")\n" +
-              "EOF",
+        tools = ["//deploy/release:bcr_source_gen"],
+        cmd = "$(location //deploy/release:bcr_source_gen) $(OUTS) \"" + module_name + "\" \"" + version + "\"",
     )
 
     program_target = name + "_program"

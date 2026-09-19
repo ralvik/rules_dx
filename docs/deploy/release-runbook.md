@@ -37,7 +37,7 @@ SBOM and provenance. Unqualified cells fail closed; never claim them.
    //deploy/release:signing_demo`, and `BCR_DRY_RUN=1 bazel run
    //deploy/release:bcr_demo`.
 2. Archive plus checksum: `bazel run //cli/cli:dx_standalone -- <outdir>`
-   (host `tar` plus `sha256sum`, verified before copy).
+   (hermetic Python archiver plus hasher, verified before copy).
 3. SBOM plus provenance: `bazel build //deploy/release:sbom_demo`
    (SPDX 2.3 JSON plus SLSA v1 in-toto Statement v1, subject digest
    equals artifact sha256; Syft/CycloneDX output verifies through the

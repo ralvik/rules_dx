@@ -1,5 +1,6 @@
 """Full release path: matrix, SBOM/provenance, signing, BCR, human-run (issue #311)."""
 
+load("@rules_python//python:defs.bzl", "py_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
@@ -30,6 +31,27 @@ exports_files([
     "signing_tests.bzl",
     "signing_verify.sh",
 ])
+
+# Hermetic build tools for SBOM/provenance + BCR source (issue #318):
+# digest + JSON via the managed Python 3.12 toolchain, no host
+# `sha256sum`/`shasum`/`python3`. Declared as genrule `tools`.
+py_binary(
+    name = "sbom_spdx_gen",
+    srcs = ["sbom_spdx_gen.py"],
+    main = "sbom_spdx_gen.py",
+)
+
+py_binary(
+    name = "sbom_prov_gen",
+    srcs = ["sbom_prov_gen.py"],
+    main = "sbom_prov_gen.py",
+)
+
+py_binary(
+    name = "bcr_source_gen",
+    srcs = ["bcr_source_gen.py"],
+    main = "bcr_source_gen.py",
+)
 
 # Seed fixture: reuse the portable POSIX deploy program as the SBOM
 # subject (no new binary needed; SBOM binds exact artifact bytes).

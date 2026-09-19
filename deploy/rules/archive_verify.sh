@@ -6,25 +6,32 @@
 # member and the checksum file matches a fresh digest of the tarball.
 # Tagged `no-coverage`: process-spawning tests stay out of the coverage
 # denominator per the repo coverage preset.
+#
+# Host-tool contract (issue #318): bash + python3 + POSIX coreutils
+# only. Realpath, tar listing, and sha256 go through python3 (no
+# `realpath`, `readlink -f`, `tar`, `sha256sum`, or `shasum` probes).
 set -euo pipefail
 
-# Portable realpath (issue #299): GNU `realpath` is absent on macOS;
-# `readlink -f` covers some platforms, python3 covers the rest.
-portable_realpath() {
-  if command -v realpath >/dev/null 2>&1; then
-    realpath "$1"
-  elif command -v readlink >/dev/null 2>&1 && readlink -f "$1" >/dev/null 2>&1; then
-    readlink -f "$1"
-  else
-    python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
-  fi
+# Single-tool realpath via python3 (portable across Linux/macOS).
+py_realpath() {
+  python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
 }
 
-tarball="$(portable_realpath "$1")"
-checksum="$(portable_realpath "$2")"
+# sha256 of one file via python3 hashlib.
+py_sha256() {
+  python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$1"
+}
+
+# List top-level tar.gz members via python3 tarfile (no host `tar`).
+py_tar_list() {
+  python3 -c 'import sys,tarfile; print("\n".join(tarfile.open(sys.argv[1],"r:gz").getnames()))' "$1"
+}
+
+tarball="$(py_realpath "$1")"
+checksum="$(py_realpath "$2")"
 member="$3"
 
-members="$(tar -tzf "${tarball}")"
+members="$(py_tar_list "${tarball}")"
 echo "${members}" | grep -qx "${member}" || {
   echo "archive member '${member}' not found in ${tarball}" >&2
   echo "tarball contents:" >&2
@@ -32,13 +39,8 @@ echo "${members}" | grep -qx "${member}" || {
   exit 1
 }
 
-if command -v sha256sum >/dev/null 2>&1; then
-  expected="$(cut -d' ' -f1 "${checksum}")"
-  actual="$(sha256sum "${tarball}" | cut -d' ' -f1)"
-else
-  expected="$(cut -d' ' -f1 "${checksum}")"
-  actual="$(shasum -a 256 "${tarball}" | cut -d' ' -f1)"
-fi
+expected="$(cut -d' ' -f1 "${checksum}")"
+actual="$(py_sha256 "${tarball}")"
 [[ "${expected}" == "${actual}" ]] || {
   echo "checksum mismatch for ${tarball}" >&2
   echo "  expected: ${expected}" >&2

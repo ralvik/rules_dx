@@ -1,14 +1,22 @@
 """Credential-free release archives for `dx deploy` (issue #181).
 
 `archive_release` is the first deploy macro: it proves the `DxDeployInfo`
--> `dx deploy` pattern with zero new pins. Only native `genrule`, two
-small Starlark rules, and `dx_deployment` (`:defs.bzl`) participate. The
-archive and checksum are built with host shell tools only (`tar`,
-`sha256sum` with a `shasum -a 256` fallback for macOS); no registry, no
-credentials, no new module dependencies.
+-> `dx deploy` pattern with zero new pins. Only two small Starlark
+rules, hermetic Python build tools, and `dx_deployment` (`:defs.bzl`)
+participate. The archive and checksum are built with the managed Python
+3.12 toolchain only (`//deploy/rules:archiver` deterministic tar.gz,
+`//deploy/rules:hasher` sha256); no host `tar`/`sha256sum`/`shasum`,
+no registry, no credentials, no new module dependencies.
 
 Contract: `docs/deploy/authoring.md`. Deploy targets live next to the
 app they release (for example `//rust/hello:release`).
+
+Host-tool contract (issue #318): build actions are hermetic
+(toolchain-provided archiver/hasher, declared `tools`, deterministic
+bytes). Deploy runtime (`archive_deploy.sh`, `archive_verify.sh`)
+runs on the host via `bazel run`/`sh_test` and needs bash + python3 +
+POSIX coreutils only; hashing, realpath, and tar listing go through
+python3, never host `sha256sum`/`shasum`/`realpath`/`tar` probes.
 """
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
@@ -139,13 +147,14 @@ def archive_release(name, app, profile = "release"):
     """Packages one executable as a tarball + sha256 deployable target.
 
     Creates `<name>_stage` (single-file executable stage),
-    `<name>_archive` (genrule tarball via host `tar`),
-    `<name>_checksum` (genrule sha256 via host `sha256sum`/`shasum`),
-    `<name>_program_launcher` (generated launcher script resolving
-    inputs via `runfiles.bash` `rlocation` with `shell.quote`),
-    `<name>_program` (`sh_binary` wrapping the launcher with pinned
-    `data` plus the runfiles library), and `<name>` (the `dx_deployment`
-    returning `DxDeployInfo` with `app` and `profile`). Run with
+    `<name>_archive` (deterministic tarball via the hermetic
+    `//deploy/rules:archiver` tool), `<name>_checksum` (sha256 via the
+    hermetic `//deploy/rules:hasher` tool), `<name>_program_launcher`
+    (generated launcher script resolving inputs via `runfiles.bash`
+    `rlocation` with `shell.quote`), `<name>_program` (`sh_binary`
+    wrapping the launcher with pinned `data` plus the runfiles
+    library), and `<name>` (the `dx_deployment` returning
+    `DxDeployInfo` with `app` and `profile`). Run with
     `bazel run :<name>` or `dx deploy :<name>`; pass an output directory
     after `--` to choose where the artifacts land (default:
     `$BUILD_WORKSPACE_DIRECTORY`, else the cwd).
@@ -169,32 +178,26 @@ def archive_release(name, app, profile = "release"):
     # The stage is a single file (`<stage>/<exe basename>`), so
     # `$(location :stage)` is unambiguous for any executable kind
     # (`sh_binary` exposes two files and breaks `$(location :app)`).
-    # `tar -h` dereferences the stage symlink so the archive holds the
-    # binary bytes under the original basename, not a symlink.
-    # genrule `cmd` undergoes Make expansion: `$(location ...)` and
-    # `$(OUTS)` stay single-`$`, while shell `$` is escaped as `$$`.
+    # The hermetic archiver dereferences the stage symlink (like
+    # `tar -h`) and writes deterministic bytes (mtime 0, uid/gid 0,
+    # gzip mtime 0); the hermetic hasher writes a sha256sum-compatible
+    # line. Both run as declared genrule `tools` from the managed
+    # Python toolchain: no host `tar`/`sha256sum`/`shasum`, no
+    # `command -v` probing, no shell-`$` escaping.
     native.genrule(
         name = archive_target,
         srcs = [":" + stage_target],
         outs = [tarball],
-        cmd = "set -euo pipefail; " +
-              "app=\"$(location :" + stage_target + ")\"; " +
-              "out=\"$(OUTS)\"; " +
-              "case \"$$app\" in */*) d=\"$${app%/*}\";; *) d=\".\";; esac; " +
-              "b=\"$${app##*/}\"; " +
-              "tar -czhf \"$$out\" -C \"$$d\" \"$$b\"",
+        tools = ["//deploy/rules:archiver"],
+        cmd = "$(location //deploy/rules:archiver) $(location :" + stage_target + ") $(OUTS)",
     )
 
     native.genrule(
         name = checksum_target,
         srcs = [":" + archive_target],
         outs = [checksum],
-        cmd = "set -euo pipefail; " +
-              "src=\"$(location :" + archive_target + ")\"; " +
-              "out=\"$(OUTS)\"; " +
-              "if command -v sha256sum >/dev/null 2>&1; then " +
-              "sha256sum \"$$src\" > \"$$out\"; " +
-              "else shasum -a 256 \"$$src\" > \"$$out\"; fi",
+        tools = ["//deploy/rules:hasher"],
+        cmd = "$(location //deploy/rules:hasher) $(location :" + archive_target + ") $(OUTS)",
     )
 
     launcher_target = program_target + "_launcher"

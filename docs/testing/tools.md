@@ -209,9 +209,14 @@ Runfiles and workspace-root probing stays consolidated-open under issue #319 (on
 workspace_root plus rlocation usage; remove repeated BUILD_WORKSPACE_DIRECTORY,
 RUNFILES_DIR, TEST_SRCDIR, and bazel-bin probing copies).
 
-Host-tool actions stay open under issue #318 (archive genrules on host tar and hashers,
-extension chmod via ctx.execute, deploy runtime probes; move to toolchain-provided
-hasher/archiver or record the host-tool contract explicitly).
+Host-tool actions are hermetic under issue #318 (archive/SBOM/BCR
+genrules run toolchain-provided Python archiver/hasher/generators as
+declared `tools` with deterministic bytes and no host
+`tar`/`sha256sum`/`shasum`/`python3` probing; `extension.bzl` uses
+Bazel-native `ctx.download(executable=True)` plus archive-carried modes
+with no `ctx.execute chmod`; deploy runtime needs bash + python3 +
+POSIX coreutils only with hashing, realpath, and tar listing through
+python3).
 
 Generated deploy launchers use `sh_binary` plus `runfiles.bash` `rlocation`
 with `shell.quote` (issue #317).

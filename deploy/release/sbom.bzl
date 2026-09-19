@@ -2,8 +2,10 @@
 
 `sbom_release` is the SBOM/provenance macro: it derives deterministic
 SPDX 2.3 JSON plus SLSA Build Provenance v1 (in-toto Statement v1) from
-one release artifact with host tools only (`sha256sum`/`shasum`,
-`python3`), no new module dependencies, no registry, no credentials.
+one release artifact with the managed Python 3.12 toolchain only
+(`//deploy/release:sbom_spdx_gen`, `//deploy/release:sbom_prov_gen`
+via `hashlib`), no host `sha256sum`/`shasum`/`python3`, no new module
+dependencies, no registry, no credentials.
 
 Wire profile follows docs/tools/tool-acquisition.md (provisional
 candidates, now selected for releases): SPDX predicate
@@ -67,8 +69,8 @@ def sbom_release(name, artifact, package_name = "dx", supplier = "rules_dx", bui
     Creates `<name>.spdx.json` (SPDX 2.3 document describing the artifact
     bytes + sha256) and `<name>.provenance.json` (in-toto Statement v1
     with the SLSA v1 predicate, subject digest = artifact sha256). Both
-    are deterministic given the artifact bytes: the genrule records the
-    sha256 at build time with host tools only.
+    are deterministic given the artifact bytes: the hermetic generator
+    records the sha256 at build time with the managed Python toolchain.
 
     Args:
       name: instance name.
@@ -86,27 +88,16 @@ def sbom_release(name, artifact, package_name = "dx", supplier = "rules_dx", bui
     (spdx, provenance) = sbom_filenames(name)
     src_target = artifact
 
-    # SPDX: host sha256 + python3 emit deterministic JSON (no network,
-    # no Syft dependency; Syft/CycloneDX output remains compatible input
-    # to the same verify path when owners adopt it per the runbook).
-    # genrule `cmd` uses Make expansion: `$(location ...)` stays
-    # single-`$`, shell `$` is escaped as `$$`.
+    # SPDX: hermetic digest + deterministic JSON via the managed Python
+    # toolchain (no host sha256sum/shasum/python3, no network, no Syft
+    # dependency; Syft/CycloneDX output remains compatible input to the
+    # same verify path when owners adopt it per the runbook).
     native.genrule(
         name = name + "_spdx",
         srcs = [src_target],
         outs = [spdx],
-        cmd = "set -euo pipefail; " +
-              "src=\"$(location " + src_target + ")\"; " +
-              "out=\"$(OUTS)\"; " +
-              "if command -v sha256sum >/dev/null 2>&1; then d=\"$$(sha256sum \"$$src\" | cut -d' ' -f1)\"; " +
-              "else d=\"$$(shasum -a 256 \"$$src\" | cut -d' ' -f1)\"; fi; " +
-              "b=\"$$(basename \"$$src\")\"; " +
-              "python3 - \"$${src}\" \"$${out}\" \"$${d}\" \"$${b}\" \"" + package_name + "\" \"" + supplier + "\" <<'EOF'\n" +
-              "import json,sys\n" +
-              "src,out,digest,base,pkg,sup = sys.argv[1:7]\n" +
-              "doc={\"spdxVersion\":\"SPDX-2.3\",\"dataLicense\":\"CC0-1.0\",\"SPDXID\":\"SPDXRef-DOCUMENT\",\"name\":pkg+\"-\"+base,\"documentNamespace\":\"https://github.com/ralvik/rules_dx/releases/\"+base+\"-\"+digest,\"creationInfo\":{\"created\":\"1970-01-01T00:00:00Z\",\"creators\":[\"Tool: rules_dx-sbom-1.0\"]},\"packages\":[{\"SPDXID\":\"SPDXRef-Package\",\"name\":pkg,\"supplier\":\"Organization: \"+sup,\"downloadLocation\":\"NOASSERTION\",\"filesAnalyzed\":False,\"verificationCode\":{\"packageVerificationCodeValue\":digest},\"checksums\":[{\"algorithm\":\"SHA256\",\"checksumValue\":digest}],\"externalRefs\":[{\"referenceCategory\":\"PACKAGE-MANAGER\",\"referenceType\":\"purl\",\"referenceLocator\":\"pkg:generic/\"+pkg+\"@\"+digest}]}],\"files\":[{\"SPDXID\":\"SPDXRef-File\",\"fileName\":base,\"checksums\":[{\"algorithm\":\"SHA256\",\"checksumValue\":digest}]}]}\n" +
-              "open(out,\"w\",encoding=\"utf-8\").write(json.dumps(doc,indent=2,sort_keys=True)+\"\\n\")\n" +
-              "EOF",
+        tools = ["//deploy/release:sbom_spdx_gen"],
+        cmd = "$(location //deploy/release:sbom_spdx_gen) $(location " + src_target + ") $(OUTS) \"" + package_name + "\" \"" + supplier + "\"",
     )
 
     # Provenance: in-toto Statement v1 + SLSA v1 predicate, subject =
@@ -116,18 +107,8 @@ def sbom_release(name, artifact, package_name = "dx", supplier = "rules_dx", bui
         name = name + "_provenance",
         srcs = [src_target],
         outs = [provenance],
-        cmd = "set -euo pipefail; " +
-              "src=\"$(location " + src_target + ")\"; " +
-              "out=\"$(OUTS)\"; " +
-              "if command -v sha256sum >/dev/null 2>&1; then d=\"$$(sha256sum \"$$src\" | cut -d' ' -f1)\"; " +
-              "else d=\"$$(shasum -a 256 \"$$src\" | cut -d' ' -f1)\"; fi; " +
-              "b=\"$$(basename \"$$src\")\"; " +
-              "python3 - \"$${out}\" \"$${d}\" \"$${b}\" \"" + builder_id + "\" <<'EOF'\n" +
-              "import json,sys\n" +
-              "out,digest,base,builder = sys.argv[1:5]\n" +
-              "stmt={\"_type\":\"https://in-toto.io/Statement/v1\",\"subject\":[{\"name\":base,\"digest\":{\"sha256\":digest}}],\"predicateType\":\"https://slsa.dev/provenance/v1\",\"predicate\":{\"buildDefinition\":{\"buildType\":\"https://github.com/ralvik/rules_dx/release@v1\",\"externalParameters\":{\"artifact\":base}},\"runDetails\":{\"builder\":{\"id\":builder},\"metadata\":{\"invocationId\":\"dry-run\"}}}}\n" +
-              "open(out,\"w\",encoding=\"utf-8\").write(json.dumps(stmt,indent=2,sort_keys=True)+\"\\n\")\n" +
-              "EOF",
+        tools = ["//deploy/release:sbom_prov_gen"],
+        cmd = "$(location //deploy/release:sbom_prov_gen) $(location " + src_target + ") $(OUTS) \"" + builder_id + "\"",
     )
 
     native.filegroup(

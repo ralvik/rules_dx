@@ -4,8 +4,9 @@ Selected stack (signing-first per issue #26): Sigstore keyless
 (`cosign sign-blob --bundle`, Fulcio OIDC + Rekor public-good on the
 TUF trust root `https://tuf-repo-cdn.sigstore.dev`) plus GitHub Artifact
 Attestations (`gh attestation create` / `gh attestation verify`). The
-`cosign` and `gh` CLIs are host tools resolved at run time (like `tar`
-for `archive_release`); no registry, no new module dependencies.
+`cosign` and `gh` CLIs are host tools resolved at run time (deploy
+runtime needs them plus bash + python3 per the host-tool contract in
+issue #318); no registry, no new module dependencies.
 
 Safety (issue #5): signing never runs on CI push/PR. The deploy program
 `sign_deploy.sh` prints the would-run commands with
