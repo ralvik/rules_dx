@@ -26,9 +26,46 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "RUNFILES_BASH_INIT", "rlocation_path")
 
+# Versioned tag-charset schema (issue #321). Consumers query via
+# `tag_charset` and `github_tag_error` instead of duplicating the charset,
+# so any charset evolution edits this one data constant with schema review,
+# never a parallel allowlist.
+TAG_SCHEMA_VERSION = 1
+
 # Release tags embed directly in the generated launcher, so the charset
 # is restricted to what is safe inside double quotes.
 _VALID_TAG_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
+
+def tag_charset():
+    """Returns the launcher-safe tag charset via registry query.
+
+    Derived from `_VALID_TAG_CHARS`, never duplicated (issue #321).
+    """
+    return _VALID_TAG_CHARS
+
+def tag_schema_error():
+    """Validates the versioned tag-charset schema (issue #321).
+
+    Checks data shape without pinning exact contents: version is v1, the
+    charset is non-empty with unique shell-safe characters and never
+    admits double-quote, backslash, single-quote, space, or newline so
+    tags embed safely in the deploy launcher.
+
+    Returns:
+      "" when valid, else the failure reason.
+    """
+    if TAG_SCHEMA_VERSION != 1:
+        return "github tag: unsupported schema v" + str(TAG_SCHEMA_VERSION) + " (want v1)"
+    if type(_VALID_TAG_CHARS) != "string" or _VALID_TAG_CHARS == "":
+        return "github tag: want a non-empty charset (schema v1)"
+    seen = {}
+    for c in _VALID_TAG_CHARS.elems():
+        if c in seen:
+            return "github tag: duplicate charset char '" + c + "'"
+        seen[c] = True
+        if c in ["\"", "\\", "'", " ", "\n", "`", "$", "!", "#", "&", "|", ";", "<", ">", "(", ")", "[", "]", "{", "}", "*", "?", "~", "^", ":", ",", "/", "+"]:
+            return "github tag: unsafe charset char '" + c + "' (must stay launcher-safe)"
+    return ""
 
 def github_tag_error(tag):
     """Validates one release tag value.

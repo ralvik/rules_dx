@@ -12,6 +12,7 @@ load(":policy.bzl", "quality_family", "workspace_policy")
 load(":policy_subject.bzl", "policy_subject")
 load(":policy_tests.bzl", "policy_analysis_tests", "policy_unit_tests")
 load(":real_pipeline_tests.bzl", "real_pipeline_unit_tests")
+load(":registry_tests.bzl", "registry_unit_tests")
 load(":sources_tests.bzl", "sources_registry_tests")
 
 package(default_visibility = ["//visibility:public"])
@@ -37,6 +38,7 @@ exports_files([
     "pipeline.bzl",
     "policy.bzl",
     "real_aspects.bzl",
+    "registry.bzl",
     "result.proto",
     "sources.bzl",
 ])
@@ -190,6 +192,8 @@ pipeline_unit_tests(name = "pipeline_unit")
 
 parity_unit_tests(name = "parity_unit")
 
+registry_unit_tests(name = "registry_unit")
+
 real_pipeline_unit_tests(name = "real_pipeline_unit")
 
 native_config_unit_tests(name = "native_config_unit")
@@ -208,6 +212,7 @@ test_suite(
         ":policy_analysis",
         ":policy_unit",
         ":real_pipeline_unit",
+        ":registry_unit",
         ":sources_registry",
     ],
 )
@@ -242,6 +247,8 @@ real_source_target(
         "policy_tests.bzl",
         "real_aspects.bzl",
         "real_pipeline_tests.bzl",
+        "registry.bzl",
+        "registry_tests.bzl",
         "sources.bzl",
         "sources_tests.bzl",
     ],

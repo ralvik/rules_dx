@@ -37,6 +37,17 @@ use serde::Deserialize;
 use crate::exception::{check_expiry, ExceptionProblem};
 use crate::license_expr::Tier;
 
+/// Versioned license-policy schema (issue #321).
+///
+/// Consumers query the policy via `load_licenses_toml` plus
+/// `PolicyTables::validate` / `Distribution::validate` /
+/// `validate_license_exception` instead of duplicating license inventories,
+/// so adding a license identity or exception edits `licenses.toml` data
+/// only, never a parallel allowlist or struct. The TOML document carries an
+/// optional `schema_version` (default 1 for pre-versioned files); loaders
+/// reject any other version fail-closed.
+pub const LICENSE_POLICY_SCHEMA_VERSION: u32 = 1;
+
 /// Global license-policy table: each listed SPDX identity belongs in
 /// exactly one list. `blocked` is evaluated in both tiers
 /// (network-trigger and non-open licenses that are never silently
@@ -290,12 +301,23 @@ pub struct LicensePolicy {
 /// empty, which stays fail-closed because unlisted identities and
 /// distributables default to the strict side. Distribution roots and
 /// exceptions convert verbatim; their call-site validation (known
-/// labels, findings, audit date) is unchanged.
+/// labels, findings, audit date) is unchanged. The optional
+/// `schema_version` must be [`LICENSE_POLICY_SCHEMA_VERSION`] when present
+/// (absent means v1 for pre-versioned files); any other version fails
+/// as invalid TOML so schema evolution is explicit, never silent drift.
 pub fn load_licenses_toml(text: &str) -> Result<LicensePolicy, PolicyProblem> {
     let file: LicensesFile =
         toml::from_str(text).map_err(|error| PolicyProblem::InvalidLicensesToml {
             message: error.to_string(),
         })?;
+    let version = file.schema_version.unwrap_or(LICENSE_POLICY_SCHEMA_VERSION);
+    if version != LICENSE_POLICY_SCHEMA_VERSION {
+        return Err(PolicyProblem::InvalidLicensesToml {
+            message: format!(
+                "unsupported licenses.toml schema_version {version} (want {LICENSE_POLICY_SCHEMA_VERSION})"
+            ),
+        });
+    }
     let policy = LicensePolicy {
         tables: PolicyTables {
             blocked: file.policy.blocked.into_iter().collect(),
@@ -328,6 +350,10 @@ pub fn load_licenses_toml(text: &str) -> Result<LicensePolicy, PolicyProblem> {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct LicensesFile {
+    /// Versioned schema marker (issue #321). Optional for backward compat:
+    /// absent means v1; any other value fails in `load_licenses_toml`.
+    #[serde(default)]
+    schema_version: Option<u32>,
     /// Global table plus per-set adjustments.
     #[serde(default)]
     policy: PolicyFile,
@@ -721,5 +747,37 @@ expires = "2027-03-01"
         let policy = load_licenses_toml(doc_example()).expect("doc example loads");
         validate_license_exception(&policy.exceptions[0], "2026-09-14").expect("valid");
         assert!(validate_license_exception(&policy.exceptions[0], "2027-03-01").is_err());
+    }
+
+    #[test]
+    fn schema_version_accepts_v1_and_rejects_other_versions() {
+        assert_eq!(LICENSE_POLICY_SCHEMA_VERSION, 1);
+        // Absent version means v1 for pre-versioned files.
+        load_licenses_toml("").expect("empty document loads as v1");
+        load_licenses_toml("schema_version = 1\n").expect("explicit v1 loads");
+        for bad in [
+            "schema_version = 0\n",
+            "schema_version = 2\n",
+            "schema_version = 999\n",
+        ] {
+            assert!(
+                matches!(
+                    load_licenses_toml(bad),
+                    Err(PolicyProblem::InvalidLicensesToml { .. })
+                ),
+                "{bad:?} must fail as unsupported schema version"
+            );
+        }
+    }
+
+    #[test]
+    fn license_additions_need_no_struct_edits() {
+        // New identities are data in the versioned TOML lists, never struct
+        // edits: any string loads and validates as single-listed.
+        let policy =
+            load_licenses_toml("[policy.distributed]\nallow = [\"MIT\", \"New-Permissive-1.0\"]\n")
+                .expect("new allow identity loads");
+        assert!(policy.tables.allow.contains("New-Permissive-1.0"));
+        policy.tables.validate().expect("single listing passes");
     }
 }

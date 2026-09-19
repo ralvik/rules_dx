@@ -15,6 +15,13 @@ owns the inventory, not the adapters.
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":adapters.bzl", "REAL_ADAPTERS", "REAL_CLASS_TO_FAMILY")
 
+# Versioned parity-gate schema (issue #321). Consumers query via
+# `parity_schema_error`, `adapter_backed_classes`, and `deferred_classes`
+# instead of duplicating the deferral inventory, so adding a deferred
+# class edits this one data map plus its owning decision, never a parallel
+# allowlist.
+PARITY_SCHEMA_VERSION = 1
+
 # Class -> [owning decision, frozen acquisition route] for every classified
 # class no adapter claims yet. Owners are open-decision IDs (O32 owns the
 # deferred adapter backlog; O31 owns the frozen Ruby/PowerShell tool routes;
@@ -69,6 +76,55 @@ def _adapter_backed_classes():
                 backed[class_id] = True
     return backed
 
+def adapter_backed_classes():
+    """Returns the sorted adapter-backed classes via registry query.
+
+    Derived from `REAL_ADAPTERS` capabilities, never duplicated, so adding
+    an adapter claim edits the adapter registry data only (issue #321).
+    """
+    return sorted(_adapter_backed_classes().keys())
+
+def deferred_classes():
+    """Returns the sorted explicitly deferred classes via registry query.
+
+    Derived from `PARITY_DEFERRED` keys, never duplicated, so adding a
+    deferral edits this one data map only (issue #321).
+    """
+    return sorted(PARITY_DEFERRED.keys())
+
+def _is_canonical_token(text):
+    if text == "":
+        return False
+    for c in text.elems():
+        if c not in "abcdefghijklmnopqrstuvwxyz0123456789_":
+            return False
+    return True
+
+def parity_schema_error():
+    """Validates the versioned parity-gate schema (issue #321).
+
+    Checks data shape without pinning exact contents, so adding a deferred
+    class edits the deferral data only: version is v1, every deferred ID
+    is canonical, and every entry carries an owning decision plus a frozen
+    route. Disposition coverage (unclassified/undispositioned/double-claim)
+    stays checked by the registry queries below, not by an allowlist.
+
+    Returns:
+      "" when valid, else the failure reason.
+    """
+    if PARITY_SCHEMA_VERSION != 1:
+        return "parity gate: unsupported schema v" + str(PARITY_SCHEMA_VERSION) + " (want v1)"
+    for class_id in PARITY_DEFERRED:
+        if not _is_canonical_token(class_id):
+            return "parity gate: non-canonical deferred class '" + str(class_id) + "'"
+        entry = PARITY_DEFERRED[class_id]
+        if len(entry) != 2 or entry[0] == "" or entry[1] == "":
+            return "parity gate: deferred class '" + class_id + "' must name an owning decision and a frozen route"
+        owner = entry[0]
+        if not owner.startswith("O") and not owner.startswith("ADR"):
+            return "parity gate: deferred class '" + class_id + "' owner '" + owner + "' must start with O or ADR"
+    return ""
+
 def _unclassified_adapter_classes():
     backed = _adapter_backed_classes()
     return sorted([c for c in backed if c not in REAL_CLASS_TO_FAMILY])
@@ -94,11 +150,20 @@ def _malformed_deferrals():
     return bad
 
 def parity_unit_tests(name):
-    backed = _adapter_backed_classes()
     starlark_test(
         name = name,
         mode = "unit",
         checks = [
+            expect_equal(
+                "parity schema version stays v1",
+                PARITY_SCHEMA_VERSION,
+                1,
+            ),
+            expect_equal(
+                "parity deferral schema validates",
+                parity_schema_error(),
+                "",
+            ),
             expect_equal(
                 "no adapter class is unclassified",
                 _unclassified_adapter_classes(),
@@ -120,63 +185,14 @@ def parity_unit_tests(name):
                 [],
             ),
             expect_equal(
-                "adapter-backed classes",
-                sorted(backed.keys()),
-                [
-                    "javascript",
-                    "json",
-                    "jsx",
-                    "markdown",
-                    "python",
-                    "python_stub",
-                    "rust",
-                    "starlark",
-                    "toml",
-                    "tsx",
-                    "typescript",
-                ],
+                "adapter-backed query matches the registry derivation",
+                adapter_backed_classes(),
+                sorted(_adapter_backed_classes().keys()),
             ),
             expect_equal(
-                "deferred classes",
+                "deferred query matches the deferral registry",
+                deferred_classes(),
                 sorted(PARITY_DEFERRED.keys()),
-                [
-                    "astro",
-                    "c",
-                    "cpp",
-                    "csharp",
-                    "css",
-                    "cuda",
-                    "cue",
-                    "fsharp",
-                    "gherkin",
-                    "go",
-                    "go_module",
-                    "graphql",
-                    "html",
-                    "html_template",
-                    "java",
-                    "json5",
-                    "jsonc",
-                    "jsonnet",
-                    "kotlin",
-                    "less",
-                    "mdx",
-                    "pkl",
-                    "powershell",
-                    "protobuf",
-                    "qml",
-                    "ruby",
-                    "scala",
-                    "scss",
-                    "shell",
-                    "sql",
-                    "svelte",
-                    "terraform",
-                    "text",
-                    "vue",
-                    "xml",
-                    "yaml",
-                ],
             ),
         ],
     )

@@ -22,9 +22,11 @@ entry's EXEC_PATH suffix binding the generated artifact.
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(
     ":codegen.bzl",
+    "CODEGEN_SCHEMA_VERSION",
     "DX_CODEGEN_ADMITTED_PAIRS",
     "DX_CODEGEN_PLAN_OUTPUT_GROUP",
     "DX_CODEGEN_SHARD_SUFFIX",
+    "codegen_admitted_pairs",
     "codegen_conflict_error",
     "codegen_entry",
     "codegen_exec_error",
@@ -34,6 +36,7 @@ load(
     "codegen_plan_fingerprint",
     "codegen_record",
     "codegen_record_error",
+    "codegen_schema_error",
 )
 
 def _record_a():
@@ -56,13 +59,32 @@ def codegen_defs_unit_tests(name):
         mode = "unit",
         checks = [
             expect_equal(
-                "codegen freezes the private output group, shard suffix, and first pair",
+                "codegen schema version stays v1",
+                CODEGEN_SCHEMA_VERSION,
+                1,
+            ),
+            expect_equal(
+                "codegen admitted-pair schema validates",
+                codegen_schema_error(),
+                "",
+            ),
+            expect_equal(
+                "codegen freezes the private output group and shard suffix",
                 [
                     DX_CODEGEN_PLAN_OUTPUT_GROUP,
                     DX_CODEGEN_SHARD_SUFFIX,
-                    DX_CODEGEN_ADMITTED_PAIRS,
                 ],
-                ["dx_codegen_plans", ".dxcodegen.pb", (("protobuf", "rust"),)],
+                ["dx_codegen_plans", ".dxcodegen.pb"],
+            ),
+            expect_equal(
+                "codegen first pair stays admitted (additions need no allowlist edit)",
+                codegen_pair_error("protobuf", "rust"),
+                "",
+            ),
+            expect_equal(
+                "codegen admitted query matches the registry data",
+                codegen_admitted_pairs(),
+                DX_CODEGEN_ADMITTED_PAIRS,
             ),
             expect_equal(
                 "codegen_path_error accepts relative paths",
@@ -220,16 +242,16 @@ def codegen_defs_unit_tests(name):
                 "[{\"entries\":[{\"exec_path\":\"out/a.rs\",\"import_root\":\"b\",\"logical_path\":\"a\",\"namespace\":\"\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:a\"}]",
             ),
             expect_equal(
-                "codegen_pair_error admits only the protobuf->Rust first pair",
+                "codegen_pair_error defers non-admitted pairs (message lists the registry data)",
                 [
-                    codegen_pair_error("protobuf", "rust"),
-                    codegen_pair_error("graphql", "rust"),
-                    codegen_pair_error("protobuf", "python"),
+                    codegen_pair_error("protobuf", "rust") == "",
+                    codegen_pair_error("graphql", "rust") == "",
+                    codegen_pair_error("protobuf", "python") == "",
                 ],
                 [
-                    "",
-                    "unsupported codegen pair ('graphql', 'rust'): admitted first-release pairs are ((\"protobuf\", \"rust\"),)",
-                    "unsupported codegen pair ('protobuf', 'python'): admitted first-release pairs are ((\"protobuf\", \"rust\"),)",
+                    True,
+                    False,
+                    False,
                 ],
             ),
         ],
