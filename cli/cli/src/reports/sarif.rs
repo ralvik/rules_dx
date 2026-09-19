@@ -13,6 +13,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::ReportError;
 use dx_output::{sort_diagnostics, DiagnosticEvent, Severity};
+use line_index::{LineIndex, TextSize, WideEncoding};
 use serde_sarif::sarif::{
     ArtifactLocation, Invocation, Location, Message, PhysicalLocation, Region, ReportingDescriptor,
     Result as SarifResult, ResultLevel, Run, Sarif, Tool, ToolComponent,
@@ -20,21 +21,42 @@ use serde_sarif::sarif::{
 
 /// Converts a canonical UTF-8 byte offset into a 1-based
 /// `(line, column)` pair over the same source snapshot. Columns count
-/// Unicode scalar values from the line start. Offsets past the end of
-/// the snapshot or inside a character fail rather than misreport a
-/// scanner location.
+/// Unicode scalar values (UTF-32 code units) from the line start, so
+/// `é` and `💖` each count as one column. Lines split only on `'\n'`;
+/// `'\r'` is an ordinary character, so `"\r\n"` counts `'\r'` in the
+/// column. An empty file has a single line 1; a trailing `'\n'` opens
+/// an empty final line. Offsets past the end of the snapshot or inside
+/// a character fail rather than misreport a scanner location.
+///
+/// Backed by rust-analyzer `line-index`: `try_line_col` maps the byte
+/// offset to a UTF-8 line/column, then `to_wide` with [`WideEncoding::Utf32`]
+/// converts the column to scalar units. Files at or above `u32::MAX`
+/// bytes use the legacy scan to avoid `LineIndex`'s length assertion.
 pub fn byte_to_line(path: &str, text: &str, offset: u64) -> Result<(u64, u64), ReportError> {
-    let offset = offset as usize;
-    if offset > text.len() || !text.is_char_boundary(offset) {
-        return Err(ReportError::BadOffset {
-            path: path.to_owned(),
-            offset: offset as u64,
-        });
+    let bad = || ReportError::BadOffset {
+        path: path.to_owned(),
+        offset,
+    };
+    if offset > text.len() as u64 {
+        return Err(bad());
     }
-    let prefix = &text[..offset];
-    let line = prefix.as_bytes().iter().filter(|&&b| b == b'\n').count() as u64 + 1;
-    let column = prefix.rsplit('\n').next().unwrap_or("").chars().count() as u64 + 1;
-    Ok((line, column))
+    let offset_usize = offset as usize;
+    if !text.is_char_boundary(offset_usize) {
+        return Err(bad());
+    }
+    if text.len() >= u32::MAX as usize {
+        let prefix = &text[..offset_usize];
+        let line = prefix.as_bytes().iter().filter(|&&b| b == b'\n').count() as u64 + 1;
+        let column = prefix.rsplit('\n').next().unwrap_or("").chars().count() as u64 + 1;
+        return Ok((line, column));
+    }
+    let index = LineIndex::new(text);
+    let size = TextSize::from(offset as u32);
+    let line_col = index.try_line_col(size).ok_or_else(bad)?;
+    let wide = index
+        .to_wide(WideEncoding::Utf32, line_col)
+        .ok_or_else(bad)?;
+    Ok((wide.line as u64 + 1, wide.col as u64 + 1))
 }
 
 /// Validates the finding shape SARIF export requires, independent of
@@ -279,6 +301,26 @@ mod tests {
     }
 
     #[test]
+    fn byte_to_line_covers_empty_trailing_crlf_and_astral() {
+        assert_eq!(byte_to_line("f", "", 0), Ok((1, 1)));
+        let trailing = "ab\n";
+        assert_eq!(byte_to_line("f", trailing, 0), Ok((1, 1)));
+        assert_eq!(byte_to_line("f", trailing, 2), Ok((1, 3)));
+        assert_eq!(byte_to_line("f", trailing, 3), Ok((2, 1)));
+        let crlf = "a\r\nb";
+        assert_eq!(byte_to_line("f", crlf, 0), Ok((1, 1)));
+        assert_eq!(byte_to_line("f", crlf, 1), Ok((1, 2)));
+        assert_eq!(byte_to_line("f", crlf, 2), Ok((1, 3)));
+        assert_eq!(byte_to_line("f", crlf, 3), Ok((2, 1)));
+        assert_eq!(byte_to_line("f", crlf, 4), Ok((2, 2)));
+        let astral = "a\u{1f496}b";
+        assert_eq!(byte_to_line("f", astral, 0), Ok((1, 1)));
+        assert_eq!(byte_to_line("f", astral, 1), Ok((1, 2)));
+        assert_eq!(byte_to_line("f", astral, 5), Ok((1, 3)));
+        assert_eq!(byte_to_line("f", astral, 6), Ok((1, 4)));
+    }
+
+    #[test]
     fn byte_to_line_rejects_bad_offsets() {
         let text = "\u{e9}x";
         assert_eq!(
@@ -295,6 +337,16 @@ mod tests {
                 offset: 99,
             })
         );
+        let astral = "a\u{1f496}b";
+        for offset in [2, 3, 4] {
+            assert_eq!(
+                byte_to_line("f", astral, offset),
+                Err(ReportError::BadOffset {
+                    path: "f".to_owned(),
+                    offset,
+                })
+            );
+        }
     }
 
     #[test]

@@ -38,6 +38,7 @@ rust_library(
     edition = "2021",
     deps = crate_deps(
         [
+            "line-index",
             "normpath",
             "serde",
             "serde_json",
@@ -59,6 +60,7 @@ rust_test(
     crate = ":quality_adapter",
     deps = crate_deps(
         [
+            "line-index",
             "normpath",
             "serde",
             "serde_json",

@@ -24,6 +24,7 @@ quick-junit = "0.8"
 # libc paths in its signal-forwarding prelude, and crate_universe already
 # carries libc 0.2.189 for the workspace lockfile.
 libc = "0.2"
+line-index = "0.1"
 
 [lib]
 name = "dx_cli"

@@ -1,5 +1,5 @@
 {
-  "checksum": "a8e02e25b7323e1ec7557e5611d9b618c836382c6297f0c7754ff6bb4f6eac39",
+  "checksum": "3154e07d935f390edaa6d0965c0a107c0ed28225cc0e269b15fc356149e7ed22",
   "conditions": {
     "aarch64-apple-darwin": [
       "aarch64-apple-darwin"
@@ -2572,6 +2572,10 @@
           {
             "id": "libc 0.2.189",
             "target": "libc"
+          },
+          {
+            "id": "line-index 0.1.2",
+            "target": "line_index"
           },
           {
             "id": "quick-junit 0.8.0",
@@ -5157,6 +5161,44 @@
       ],
       "version": "0.3.0"
     },
+    "line-index 0.1.2": {
+      "common_attrs": {
+        "deps": [
+          {
+            "id": "nohash-hasher 0.2.0",
+            "target": "nohash_hasher"
+          },
+          {
+            "id": "text-size 1.1.1",
+            "target": "text_size"
+          }
+        ],
+        "edition": "2021"
+      },
+      "library_target_name": "line_index",
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "name": "line-index",
+      "package_url": "https://github.com/rust-lang/rust-analyzer/tree/master/lib/line-index",
+      "repository": {
+        "Http": {
+          "sha256": "3e27e0ed5a392a7f5ba0b3808a2afccff16c64933312c84b57618b49d1209bd2",
+          "url": "https://static.crates.io/crates/line-index/0.1.2/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "line_index",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "0.1.2"
+    },
     "linux-raw-sys 0.12.1": {
       "common_attrs": {
         "crate_features": [
@@ -5424,6 +5466,39 @@
         }
       ],
       "version": "1.4.0"
+    },
+    "nohash-hasher 0.2.0": {
+      "common_attrs": {
+        "crate_features": [
+          "default",
+          "std"
+        ],
+        "edition": "2018"
+      },
+      "library_target_name": "nohash_hasher",
+      "license": "Apache-2.0 OR MIT",
+      "license_file": "LICENSE-APACHE",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "name": "nohash-hasher",
+      "package_url": "https://github.com/paritytech/nohash-hasher",
+      "repository": {
+        "Http": {
+          "sha256": "2bf50223579dc7cdcfb3bfcacf7069ff68243f8c363f62ffa99cf000a6b9c451",
+          "url": "https://static.crates.io/crates/nohash-hasher/0.2.0/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "nohash_hasher",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "0.2.0"
     },
     "normalize-line-endings 0.3.0": {
       "common_attrs": {
@@ -6386,6 +6461,10 @@
     "quality_adapter 0.0.0": {
       "common_attrs": {
         "deps": [
+          {
+            "id": "line-index 0.1.2",
+            "target": "line_index"
+          },
           {
             "id": "normpath 1.5.2",
             "target": "normpath"
@@ -8775,6 +8854,35 @@
         }
       ],
       "version": "0.5.1"
+    },
+    "text-size 1.1.1": {
+      "common_attrs": {
+        "edition": "2018"
+      },
+      "library_target_name": "text_size",
+      "license": "MIT OR Apache-2.0",
+      "license_file": "LICENSE-APACHE",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "name": "text-size",
+      "package_url": "https://github.com/rust-analyzer/text-size",
+      "repository": {
+        "Http": {
+          "sha256": "f18aa187839b2bdb1ad2fa35ead8c4c2976b64e4363c386d45ac0f7ee85c9233",
+          "url": "https://static.crates.io/crates/text-size/1.1.1/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "text_size",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "1.1.1"
     },
     "thiserror 2.0.20": {
       "build_script_attrs": {},
@@ -12150,6 +12258,7 @@
     "hex 0.4.3",
     "ignore 0.4.33",
     "libc 0.2.189",
+    "line-index 0.1.2",
     "normpath 1.5.2",
     "notify 8.2.0",
     "notify-debouncer-mini 0.6.0",
