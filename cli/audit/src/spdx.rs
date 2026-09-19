@@ -16,6 +16,7 @@
 //! inputs in [`crate::license_notice`]; this module projects their
 //! assessed outputs into the shared `--report` document.
 
+use packageurl::PackageUrl;
 use serde::{Deserialize, Serialize};
 
 /// SPDX document version pinned by the license contract.
@@ -108,24 +109,79 @@ pub struct SpdxDocument {
     pub relationships: Vec<SpdxRelationship>,
 }
 
-/// Build one package-URL locator for a locked package: V1 shapes are
-/// `pkg:<ecosystem>/<name>@<version>` with ecosystem `cargo`, `npm`,
-/// `maven`, `nuget`, or `golang`. Names with scopes keep their spelling;
-/// Maven `group:artifact` maps to `pkg:maven/<group>/<artifact>`.
+/// Build one package-URL locator for a locked package via
+/// [`PackageUrl`]: V1 shapes are `pkg:<ecosystem>/<name>@<version>`
+/// with ecosystem `cargo`, `npm`, `maven`, `nuget`, or `golang`.
+/// Names with scopes keep their spelling; Maven `group:artifact`
+/// maps to `pkg:maven/<group>/<artifact>`. Encoding and
+/// canonicalization follow the purl spec (e.g. npm `@scope` encodes
+/// as `%40scope`, names/versions percent-encode); simple
+/// `cargo/npm/maven/nuget/go/generic` vectors stay byte-stable.
+/// Falls back to the legacy `format!` shape when the builder rejects
+/// an edge input so rendering stays infallible.
 pub fn package_url(set: &str, name: &str, version: &str) -> String {
+    // Split `a/b/c` into namespace `a/b` + name `c` so slashes stay
+    // separators instead of `%2F` (go paths, npm scopes, generic).
+    fn split_namespace(full: &str) -> (Option<&str>, &str) {
+        match full.rsplit_once('/') {
+            Some((ns, base)) if !ns.is_empty() && !base.is_empty() => (Some(ns), base),
+            _ => (None, full),
+        }
+    }
+
+    fn build(ty: &str, namespace: Option<&str>, name: &str, version: &str) -> Option<String> {
+        let mut purl = PackageUrl::new(ty, name).ok()?;
+        if let Some(ns) = namespace {
+            purl.with_namespace(ns).ok()?;
+        }
+        purl.with_version(version).ok()?;
+        Some(purl.to_string())
+    }
+
     match set {
         "maven" => {
             if let Some((group, artifact)) = name.split_once(':') {
+                if !group.is_empty() && !artifact.is_empty() && !artifact.contains('/') {
+                    if let Some(text) = build("maven", Some(group), artifact, version) {
+                        return text;
+                    }
+                } else if !artifact.is_empty() && artifact.contains('/') {
+                    // Unusual `group:a/b`: keep slashes as separators.
+                    let (ns_extra, base) = split_namespace(artifact);
+                    if !base.is_empty() {
+                        let ns = match ns_extra {
+                            Some(extra) => format!("{group}/{extra}"),
+                            None => group.to_owned(),
+                        };
+                        if let Some(text) = build("maven", Some(&ns), base, version) {
+                            return text;
+                        }
+                    }
+                }
                 format!("pkg:maven/{group}/{artifact}@{version}")
             } else {
-                format!("pkg:maven/{name}@{version}")
+                build("maven", None, name, version)
+                    .unwrap_or_else(|| format!("pkg:maven/{name}@{version}"))
             }
         }
-        "npm" => format!("pkg:npm/{name}@{version}"),
-        "cargo" => format!("pkg:cargo/{name}@{version}"),
-        "nuget" => format!("pkg:nuget/{name}@{version}"),
-        "go" => format!("pkg:golang/{name}@{version}"),
-        _ => format!("pkg:generic/{name}@{version}"),
+        "npm" => {
+            let (ns, base) = split_namespace(name);
+            build("npm", ns, base, version).unwrap_or_else(|| format!("pkg:npm/{name}@{version}"))
+        }
+        "cargo" => build("cargo", None, name, version)
+            .unwrap_or_else(|| format!("pkg:cargo/{name}@{version}")),
+        "nuget" => build("nuget", None, name, version)
+            .unwrap_or_else(|| format!("pkg:nuget/{name}@{version}")),
+        "go" => {
+            let (ns, base) = split_namespace(name);
+            build("golang", ns, base, version)
+                .unwrap_or_else(|| format!("pkg:golang/{name}@{version}"))
+        }
+        _ => {
+            let (ns, base) = split_namespace(name);
+            build("generic", ns, base, version)
+                .unwrap_or_else(|| format!("pkg:generic/{name}@{version}"))
+        }
     }
 }
 
@@ -226,6 +282,113 @@ mod tests {
             package_url("go", "example.com/hello", "1.0.0"),
             "pkg:golang/example.com/hello@1.0.0"
         );
+    }
+
+    #[test]
+    fn package_urls_round_trip_through_packageurl() {
+        use std::str::FromStr;
+        let vectors: &[(&str, &str, &str, &str, Option<&str>, &str, &str, &str)] = &[
+            (
+                "cargo",
+                "serde",
+                "1.0.100",
+                "cargo",
+                None,
+                "serde",
+                "1.0.100",
+                "pkg:cargo/serde@1.0.100",
+            ),
+            (
+                "npm",
+                "react",
+                "18.2.0",
+                "npm",
+                None,
+                "react",
+                "18.2.0",
+                "pkg:npm/react@18.2.0",
+            ),
+            (
+                "maven",
+                "junit:junit",
+                "4.13.2",
+                "maven",
+                Some("junit"),
+                "junit",
+                "4.13.2",
+                "pkg:maven/junit/junit@4.13.2",
+            ),
+            (
+                "nuget",
+                "FSharp.Core",
+                "8.0.0",
+                "nuget",
+                None,
+                "FSharp.Core",
+                "8.0.0",
+                "pkg:nuget/FSharp.Core@8.0.0",
+            ),
+            (
+                "go",
+                "example.com/hello",
+                "1.0.0",
+                "golang",
+                Some("example.com"),
+                "hello",
+                "1.0.0",
+                "pkg:golang/example.com/hello@1.0.0",
+            ),
+            (
+                "go",
+                "github.com/gorilla/mux",
+                "1.8.0",
+                "golang",
+                Some("github.com/gorilla"),
+                "mux",
+                "1.8.0",
+                "pkg:golang/github.com/gorilla/mux@1.8.0",
+            ),
+            (
+                "npm",
+                "@angular/animation",
+                "12.3.1",
+                "npm",
+                Some("@angular"),
+                "animation",
+                "12.3.1",
+                "pkg:npm/%40angular/animation@12.3.1",
+            ),
+            (
+                "maven",
+                "single",
+                "1.0.0",
+                "maven",
+                None,
+                "single",
+                "1.0.0",
+                "pkg:maven/single@1.0.0",
+            ),
+            (
+                "other",
+                "mytool",
+                "2.0.0",
+                "generic",
+                None,
+                "mytool",
+                "2.0.0",
+                "pkg:generic/mytool@2.0.0",
+            ),
+        ];
+        for (set, name, version, ty, ns, base, ver, expected) in vectors {
+            let text = package_url(set, name, version);
+            assert_eq!(&text, expected, "stable purl for {set}:{name}@{version}");
+            let parsed = PackageUrl::from_str(&text).expect("parse-back valid purl");
+            assert_eq!(parsed.ty(), *ty);
+            assert_eq!(parsed.namespace(), *ns);
+            assert_eq!(parsed.name(), *base);
+            assert_eq!(parsed.version(), Some(*ver));
+            assert_eq!(parsed.to_string(), text, "Display idempotent");
+        }
     }
 
     #[test]

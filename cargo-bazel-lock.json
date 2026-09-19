@@ -1,5 +1,5 @@
 {
-  "checksum": "5f80ee6ebe9a15d73ac3d28cef5b4f79230f787b2850482d343149a9128b2db7",
+  "checksum": "e029baecc651e14332fe9675eb4b78b68244385fec28ce9fa62050cbb109dd1c",
   "conditions": {
     "aarch64-apple-darwin": [
       "aarch64-apple-darwin"
@@ -2321,6 +2321,10 @@
           {
             "id": "chrono 0.4.45",
             "target": "chrono"
+          },
+          {
+            "id": "packageurl 0.7.0",
+            "target": "packageurl"
           },
           {
             "id": "semver 1.0.27",
@@ -5752,10 +5756,56 @@
       ],
       "version": "1.70.2"
     },
+    "packageurl 0.7.0": {
+      "common_attrs": {
+        "crate_features": [
+          "default",
+          "serde"
+        ],
+        "deps": [
+          {
+            "id": "percent-encoding 2.3.2",
+            "target": "percent_encoding"
+          },
+          {
+            "id": "serde 1.0.229",
+            "target": "serde"
+          },
+          {
+            "id": "thiserror 2.0.20",
+            "target": "thiserror"
+          }
+        ],
+        "edition": "2024"
+      },
+      "library_target_name": "packageurl",
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "name": "packageurl",
+      "package_url": "https://github.com/scm-rs/packageurl.rs",
+      "repository": {
+        "Http": {
+          "sha256": "d33fa1a190c3c9024f21b82e6b30f94137d9c1bf25071e2ab2ba13020135fbaf",
+          "url": "https://static.crates.io/crates/packageurl/0.7.0/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "packageurl",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "0.7.0"
+    },
     "percent-encoding 2.3.2": {
       "common_attrs": {
         "crate_features": [
           "alloc",
+          "default",
           "std"
         ],
         "edition": "2018"
@@ -11968,6 +12018,7 @@
     "libc 0.2.189",
     "notify 8.2.0",
     "notify-debouncer-mini 0.6.0",
+    "packageurl 0.7.0",
     "pulldown-cmark 0.13.4",
     "quick-junit 0.8.0",
     "quick-xml 0.41.0",

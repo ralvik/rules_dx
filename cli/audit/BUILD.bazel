@@ -32,6 +32,7 @@ dx_rust_crate(
     extra_deps = ["//cli/digest:dx_digest"],
     deps = [
         "chrono",
+        "packageurl",
         "semver",
         "serde",
         "serde-sarif",

@@ -460,6 +460,7 @@ name = "dx_audit"
 version = "0.0.0"
 dependencies = [
  "chrono",
+ "packageurl",
  "semver",
  "serde",
  "serde-sarif",
@@ -1218,6 +1219,17 @@ name = "once_cell_polyfill"
 version = "1.70.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
+
+[[package]]
+name = "packageurl"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d33fa1a190c3c9024f21b82e6b30f94137d9c1bf25071e2ab2ba13020135fbaf"
+dependencies = [
+ "percent-encoding",
+ "serde",
+ "thiserror",
+]
 
 [[package]]
 name = "percent-encoding"
