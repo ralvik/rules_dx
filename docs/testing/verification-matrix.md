@@ -153,7 +153,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `non_dogfed_paths`, `supported_evidence_gate`, `distribution_closeout_guards`,
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 26/26,
 `consumer_ci_qualification` 29/29, `file_family_qualification` 24/24,
-`helper_qualification` 23/23, `clap_tokenizer_qualification` 19/19.
+`helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19.
 Full `build`/`test` green is owned by CI on this tree; the last full-tree
 record is noted on the issue, not re-claimed here.
 
@@ -203,6 +203,10 @@ Remaining reds stay owned gaps, not green claims:
   chrono, scratch via tempfile, dir sizing and walks via walkdir/ignore/globset,
   LCOV `SF`/`DA` parsing via lcov with stays-hand-rolled atomic lock, path ladder,
   LCOV ignore scanner reasons; upstream re-evaluation plus any future migration stays owned gap).
+- Date engine stays `chrono` with fixture evidence qualified seed-only under #398
+  (`bazel run //tools/ci:helper_qualification`; `jiff 0.2` spike rejected:
+  trivial day-granularity gates need no `tzdb`, heavier bundle/tree plus
+  mechanical churn for a pre-`1.0` single-owner crate; re-evaluate on `jiff 1.0`).
 - Clap-as-tokenizer legacy errors with fixture evidence qualified seed-only under #316
   (`bazel run //tools/ci:clap_tokenizer_qualification`; frozen legacy output as
   contract with snapshots across env, codegen shard, env shard, evaluator,

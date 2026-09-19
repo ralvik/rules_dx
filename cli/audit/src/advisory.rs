@@ -205,6 +205,11 @@ pub fn may_analyze(outcome: &RefreshOutcome) -> bool {
 /// Strict `YYYY-MM-DD` calendar gate, mirroring the exception lifecycle
 /// shape plus upstream calendar validation. Kept local so advisory
 /// validation never depends on exception error variants.
+///
+/// Dependency evaluation (issue #398, keep): stays on `chrono`
+/// (`NaiveDate::parse_from_str`) per the exception-gate `jiff` rejection —
+/// day-granularity retrieval dates need no `tzdb`, same mechanical-churn
+/// cost; re-evaluate on `jiff 1.0`.
 fn is_audit_date(value: &str) -> bool {
     let bytes = value.as_bytes();
     if bytes.len() != 10 || bytes[4] != b'-' || bytes[7] != b'-' {

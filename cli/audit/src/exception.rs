@@ -178,6 +178,18 @@ pub fn check_applies(
 /// upstream `chrono` crate (`NaiveDate::parse_from_str`, `Datelike`); the
 /// fixed-width `YYYY-MM-DD` shape gate stays hand-rolled so only zero-padded
 /// text reaches the parser and no `time`-family second date engine is added.
+///
+/// Dependency evaluation (issue #398, keep): `jiff 0.2` spike rejected —
+/// trivial `NaiveDate` parse plus `Datelike::year` needs no `tzdb`/civil-time
+/// arithmetic, `jiff` default pulls the `tzdb` bundle plus `portable-atomic`
+/// tree (~23 locks vs `chrono alloc-only` 4) for mechanical churn
+/// (`Date::strptime` arg-order swap, `year()` `i16`, year-zero parses where
+/// this gate maps it to `InvalidDate`), pre-`1.0` single-owner churn; MSRV
+/// fits on both sides (`chrono 1.62`, `jiff 1.70` vs pinned `1.98`),
+/// `chrono 0.4.45` still releasing with no `unmaintained` banner, the
+/// `chronotope#1768` wind-down stays an open discretionary proposal and
+/// `arrow-rs#9183` is explicitly not urgent (wait for `jiff 1.0`, slipped
+/// with a 1-year grace); re-evaluate on `jiff 1.0`.
 fn parse_audit_date(value: &str) -> Result<NaiveDate, ExceptionProblem> {
     if !is_date_shape(value) {
         return Err(ExceptionProblem::InvalidDate {

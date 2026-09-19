@@ -281,6 +281,12 @@ LCOV ignore scanner with inventory plus verdict, SPDX lattice plus date shape ga
 plus scratch discipline wrappers; upstream re-evaluation on new crate versions
 plus any future migration stays owned gap).
 
+Date engine stays `chrono` under issue #398
+(`bazel run //tools/ci:helper_qualification`; `jiff 0.2` spike rejected:
+trivial day-granularity gates need no `tzdb`, heavier bundle/tree plus
+mechanical churn for a pre-`1.0` single-owner crate; `chronotope#1768`
+open/discretionary, `arrow-rs#9183` not urgent; re-evaluate on `jiff 1.0`).
+
 Clap-as-tokenizer legacy error strings qualified seed-only under issue #316
 (`bazel run //tools/ci:clap_tokenizer_qualification`; decision: freeze legacy
 output as contract with snapshots, not strict clap parsing with auto help;
