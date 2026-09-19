@@ -8,10 +8,12 @@ Open cells are recorded as gaps; docs describe as-built behavior only.
 No cell is `Supported`: missing test/release evidence blocks promotion until
 platform plus consumer plus release evidence passes per the support matrix,
 enforced by `bazel run //tools/ci:supported_evidence_gate`.
-Non-dogfed paths (integration E2E drivers, negative fixtures, the no-coverage cohort,
-shell sources with no quality class) stay open under issue #324: they run only under
-explicit suites, coverage-excluded runs, or ownership audits, never silently under the
-standard dogfood gates.
+Non-dogfed execution plan delivered under issue #324
+(`bazel run //tools/ci:non_dogfed_paths`): integration E2E drivers run only
+via the explicit `:e2e` suite, negative fixtures via explicit failure proofs,
+the no-coverage cohort via coverage-excluded runs, and shell sources via
+ownership plus test/explicit execution with no quality class by design —
+never silently under the standard dogfood gates.
 
 ## Layers
 
@@ -33,7 +35,9 @@ standard dogfood gates.
   #298/#308).
 - **Layer-4 E2E**: thin CLI-contract suite in `integration/` (clean,
   dirty, format-roundtrip), explicit invocation only
-  (open work).
+  (`E2E_WORKSPACE=$PWD bazel test //tools/ci:e2e --test_env=E2E_WORKSPACE`;
+  manual drivers never run under `//...`; orphan-guarded by
+  `bazel run //tools/ci:e2e_cases`).
 - **Perf tracking**: Bazel-owned harness with baselines regenerated from
   measured numbers, comparison against the frozen `aspect_rules_lint`
   v2.8.0 baseline as a report (not a gate)
@@ -61,6 +65,21 @@ standard dogfood gates.
   Windows fallback, standalone, signing/trust, plus bootstrap/lock/roots/
   collector/env-plan/node projection evidence with unproven tests as owned
   gaps).
+- **Non-dogfed execution plan**: the four cohorts that never run under the
+  standard dogfood gates each have an explicit path, pinned by
+  `bazel run //tools/ci:non_dogfed_paths` (issue #324): integration/E2E
+  drivers via the explicit `:e2e` suite (`.bazelignore` carve-out, manual
+  drivers, `e2e_cases` orphan guard, CI `e2e` job, shell-copy staging);
+  negative fixtures via `manual_negatives` explicit failure proofs (four
+  starlark demos plus markdown-no-config, enumeration guard, CI `prove`
+  job); the no-coverage cohort via coverage-excluded runs (preset
+  `test_tag_filters=-no-coverage`, `target_tags` skip proof,
+  `coverage_cell`/`coverage_qualification` gates, CI `test` execution);
+  shell sources with no quality class by design (`shell` known but no
+  `shell_srcs` owner, corpus/code-ownership filters exclude `.sh`, every
+  `.sh` in `deps(//...)` except the two integration POSIX fixtures,
+  execution via `bazel test //...` plus explicit `:e2e`, portability via
+  `shell_contract`).
 
 ## Status
 
@@ -113,7 +132,8 @@ Accepted record of the as-built close-out battery. The full battery runs in
   suite `E2E_WORKSPACE=$PWD bazel test //tools/ci:e2e
   --test_env=E2E_WORKSPACE`; manual drivers never run under `//...`.
 - `dogfood-freshness`: `bazel run //cli/cli:dx -- generate --check //...`,
-  `//tools/ci:corpus_audit`, `:code_ownership`, examples READMEs and
+  `//tools/ci:corpus_audit`, `:code_ownership`, `:non_dogfed_paths`,
+  examples READMEs and
   laziness proofs, quality-cache aquery, depcheck contract, audit/update
   guards, wrapper sources, foundation maps, registry singularity, backlog
   contracts, GHCR hygiene and publish guards, perf/corpus verification,
@@ -128,7 +148,7 @@ Accepted record of the as-built close-out battery. The full battery runs in
 - `devcontainer-check`, `docs-ci`, `consumer-ci` (build-only self-call).
 
 Green here (static guards on a clean tree, no full rebuild): `e2e_cases`
-3/3, `supported_evidence_gate` 20/20, `distribution_closeout_guards` 35/35,
+3/3, `non_dogfed_paths` 35/35, `supported_evidence_gate` 20/20, `distribution_closeout_guards` 35/35,
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 26/26,
 `consumer_ci_qualification` 29/29, `file_family_qualification` 24/24,
 `helper_qualification` 23/23, `clap_tokenizer_qualification` 19/19.
@@ -187,7 +207,10 @@ Remaining reds stay owned gaps, not green claims:
   allow_hyphen_values plus invalid_token/parse_error mapping for unknown,
   missing, malformed, hyphen-value, and attached-echo shapes; strict clap
   parsing with auto help stays owned gap).
-- Non-dogfed paths stay open under #324.
+- Non-dogfed execution plan delivered under #324
+  (`bazel run //tools/ci:non_dogfed_paths`; explicit `:e2e` suite,
+  `manual_negatives` failure proofs, coverage-excluded runs, shell ownership
+  plus test/explicit execution with no quality class by design).
 
 The E2E-case convention lives in the
 [integration README](../../integration/README.md#adding-a-case-convention)
