@@ -39,6 +39,8 @@ Upstream pins live in `MODULE.bazel`.
 Ruby and PowerShell have no generation mapping: deferred beyond v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
 Swift has none: excluded from v1 by the same record.
+Deferred/excluded generation record stays owned under issue #305; no `ruby/`, `powershell/`,
+or `swift/` Gazelle extension lands here.
 
 Required-core Rust build-script hermetic defaults are implemented
 (`use_cc_toolchain = True`, `use_default_shell_env = False`, `emit_warnings = True`

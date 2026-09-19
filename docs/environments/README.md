@@ -27,6 +27,8 @@ by `<lang>/hello/`. Rust, Node, and Python projections are further defined in
 upstream toolchain now; per-platform acquisition stays open under the native plan.
 Ruby and PowerShell have no environment mapping: deferred beyond v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
+Deferred/excluded env record stays owned under issue #305; no `ruby/`, `powershell/`, or
+`swift/` env plan lands here.
 
 Required-core exact-target discovery stays owned under issue #303 per the
 [native plan](../native-toolchains.md#qualification-questions-and-delivery);
