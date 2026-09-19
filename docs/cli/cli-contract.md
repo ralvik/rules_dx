@@ -270,15 +270,16 @@ tests to pass.
 
 ## Implementation Hygiene
 
-Hand-rolled core helpers qualified seed-only under issue #315
+Hand-rolled core helpers qualified seed-only under issues #315/#395
 (`bazel run //tools/ci:helper_qualification`; adopted with fixture evidence:
 digest via `hex`/`blake3`/`sha2`, diff via `similar`, SPDX parse via `spdx`,
 date calendar via `chrono`, scratch via `tempfile`, dir sizing and walks via
-`walkdir`/`ignore`/`globset`; stays hand-rolled with owned reasons: atomic
-write plus lock via `std::fs::File::try_lock` plus `tempfile`, path-ladder
-classifier, LCOV parser plus ignore scanner with inventory plus verdict, SPDX
-lattice plus date shape gate plus scratch discipline wrappers; upstream
-re-evaluation on new crate versions plus any future migration stays owned gap).
+`walkdir`/`ignore`/`globset`, LCOV `SF`/`DA` parsing via `lcov`; stays
+hand-rolled with owned reasons: atomic write plus lock via
+`std::fs::File::try_lock` plus `tempfile`, path-ladder classifier,
+LCOV ignore scanner with inventory plus verdict, SPDX lattice plus date shape gate
+plus scratch discipline wrappers; upstream re-evaluation on new crate versions
+plus any future migration stays owned gap).
 
 Clap-as-tokenizer legacy error strings qualified seed-only under issue #316
 (`bazel run //tools/ci:clap_tokenizer_qualification`; decision: freeze legacy

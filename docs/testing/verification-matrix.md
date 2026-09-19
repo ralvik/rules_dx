@@ -197,12 +197,12 @@ Remaining reds stay owned gaps, not green claims:
   plus cue/jsonnet/pkl/qml/terraform routes with owner plus frozen acquisition;
   deferred adapter execution, exact pins/digests/rule-sets/mappings, and platform
   plus consumer plus release evidence stay owned gaps; no Supported claim).
-- Hand-rolled helper decisions with fixture evidence qualified seed-only under #315
+- Hand-rolled helper decisions with fixture evidence qualified seed-only under #315/#395
   (`bazel run //tools/ci:helper_qualification`; adopted digest via
   hex/blake3/sha2, diff via similar, SPDX parse via spdx, date calendar via
-  chrono, scratch via tempfile, dir sizing and walks via walkdir/ignore/globset
-  with stays-hand-rolled atomic lock, path ladder, LCOV parser plus scanner
-  reasons; upstream re-evaluation plus any future migration stays owned gap).
+  chrono, scratch via tempfile, dir sizing and walks via walkdir/ignore/globset,
+  LCOV `SF`/`DA` parsing via lcov with stays-hand-rolled atomic lock, path ladder,
+  LCOV ignore scanner reasons; upstream re-evaluation plus any future migration stays owned gap).
 - Clap-as-tokenizer legacy errors with fixture evidence qualified seed-only under #316
   (`bazel run //tools/ci:clap_tokenizer_qualification`; frozen legacy output as
   contract with snapshots across env, codegen shard, env shard, evaluator,

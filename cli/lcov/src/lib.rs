@@ -23,27 +23,28 @@
 //! non-empty.
 //!
 //! Domain split (issue #236): combined-LCOV parsing (`FileHits`,
-//! `parse_lcov`) lives in the `parse` module, source-level exclusion
-//! markers (`Ignores`, `is_ignored`, `find_ignores`) live in the `ignores`
-//! module, gate evaluation (`FileVerdict`, `GateVerdict`,
-//! `is_covered_language`, `evaluate`, `render`) lives in the `verdict`
-//! module, repo inventory (`ELIGIBLE`, `SUPPORT`, `parse_inventory`)
-//! lives in the `inventory` module, and the gate CLI (`run`) lives in
-//! the `run` module. This facade keeps the shared error; the public
-//! paths stay `dx_lcov::{FileHits, parse_lcov, Ignores, is_ignored,
-//! find_ignores, FileVerdict, GateVerdict, is_covered_language,
-//! evaluate, render, ELIGIBLE, SUPPORT, parse_inventory, run}` via the
-//! re-exports below.
+//! `parse_lcov`, `validate_lcov_report`) lives in the `parse` module,
+//! source-level exclusion markers (`Ignores`, `is_ignored`, `find_ignores`)
+//! live in the `ignores` module, gate evaluation (`FileVerdict`,
+//! `GateVerdict`, `is_covered_language`, `evaluate`, `render`) lives in the
+//! `verdict` module, repo inventory (`ELIGIBLE`, `SUPPORT`,
+//! `parse_inventory`) lives in the `inventory` module, and the gate CLI
+//! (`run`) lives in the `run` module. This facade keeps the shared error;
+//! the public paths stay `dx_lcov::{FileHits, parse_lcov,
+//! validate_lcov_report, Ignores, is_ignored, find_ignores, FileVerdict,
+//! GateVerdict, is_covered_language, evaluate, render, ELIGIBLE, SUPPORT,
+//! parse_inventory, run}` via the re-exports below.
 //!
-//! Dependency evaluation (issue #315, stays hand-rolled): the gate needs the
-//! combined-LCOV `SF`/`DA` union plus per-extension comment-syntax marker
-//! scanning outside string literals with the nearby `reason:` gate plus the
-//! repo inventory and the exact 100% eligible verdict. `cargo-llvm-cov` is a
-//! coverage-tool binary rather than a parser library, and generic LCOV crates
-//! provide none of the marker, inventory, or verdict semantics, so adopting
-//! one would add supply-chain review, lockfile churn, and `MODULE.bazel`
-//! manifests for zero behavior gain while risking byte-drift in the frozen
-//! gate diagnostics.
+//! Dependency evaluation (issue #315, parser adopted under issue #395):
+//! the gate needs the combined-LCOV `SF`/`DA` union via the `lcov` crate
+//! plus per-extension comment-syntax marker scanning outside string literals
+//! with the nearby `reason:` gate plus the repo inventory and the exact 100%
+//! eligible verdict. `cargo-llvm-cov` is a coverage-tool binary rather than
+//! a parser library, and the `lcov` crate provides none of the marker,
+//! inventory, or verdict semantics, so each stays hand-rolled with owned
+//! reasons; `parse_lcov`/`validate_lcov_report` keep the maximum-hits union,
+//! ignore non-`DA` summaries, and preserve empty-report semantics over `lcov`
+//! records.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
@@ -57,7 +58,7 @@ pub mod verdict;
 
 pub use ignores::{find_ignores, is_ignored, Ignores};
 pub use inventory::{parse_inventory, ELIGIBLE, SUPPORT};
-pub use parse::{parse_lcov, FileHits};
+pub use parse::{parse_lcov, validate_lcov_report, FileHits};
 pub use run::run;
 pub use verdict::{evaluate, is_covered_language, render, FileVerdict, GateVerdict};
 
@@ -81,6 +82,18 @@ pub enum LcovError {
     /// `DA:` hit count is not an integer.
     #[error("malformed LCOV DA hit count in {path}: {line}")]
     MalformedHitCount { path: String, line: String },
+    /// `SF:` appears before the open section closes with `end_of_record`.
+    #[error("LCOV SF record before end_of_record")]
+    SfBeforeEndOfRecord,
+    /// `end_of_record` appears outside any `SF:` section.
+    #[error("LCOV end_of_record outside any SF record")]
+    EndOfRecordOutsideSf,
+    /// Report carries no `SF:` records.
+    #[error("LCOV has no SF records")]
+    NoSfRecords,
+    /// Open `SF:` section never closes with `end_of_record`.
+    #[error("LCOV SF record without end_of_record")]
+    SfWithoutEndOfRecord,
     /// Exclusion directive lacks a nearby non-empty `reason:`.
     #[error("coverage ignore without nearby reason at {path}:{lineno}: {directive} requires a reason: comment on the same or previous line")]
     MissingReason {

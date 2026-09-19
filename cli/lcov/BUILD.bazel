@@ -20,7 +20,7 @@ dx_rust_crate(
         "src/run.rs",
         "src/verdict.rs",
     ],
-    deps = ["thiserror"],
+    deps = ["lcov", "thiserror"],
 )
 
 real_source_target(
