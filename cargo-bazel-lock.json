@@ -1,5 +1,5 @@
 {
-  "checksum": "ae2eb7a21fce470fbfb21968ada5c1c13cf561b31574c536ce879b476a84fdd8",
+  "checksum": "1a7625180bea704a57b842febfd514e9fb866d81685b1669170c17c1364bb49a",
   "conditions": {
     "aarch64-apple-darwin": [
       "aarch64-apple-darwin"
@@ -2865,6 +2865,10 @@
     "dx_lcov 0.0.0": {
       "common_attrs": {
         "deps": [
+          {
+            "id": "clap 4.6.7",
+            "target": "clap"
+          },
           {
             "id": "lcov 0.8.2",
             "target": "lcov"
@@ -6624,6 +6628,10 @@
     "quality_result 0.0.0": {
       "common_attrs": {
         "deps": [
+          {
+            "id": "clap 4.6.7",
+            "target": "clap"
+          },
           {
             "id": "thiserror 2.0.20",
             "target": "thiserror"

@@ -116,6 +116,7 @@ mod tests {
     #[test]
     fn managed_generation_dir_guards_foreign_state() {
         let workspace = temp_dir("managed-gendir-ws");
+        let workspace = workspace.path();
         let hex = "ab".repeat(32);
         let first = ensure_generation_dir(&workspace, GENERATED_DIR_NAME, &hex).expect("create");
         assert!(first.is_dir());
@@ -147,6 +148,7 @@ mod tests {
     #[test]
     fn managed_generation_dir_create_failure_surfaces() {
         let workspace = temp_dir("managed-gendir-create-ws");
+        let workspace = workspace.path();
         // `.dx/generated` as a file makes directory creation fail.
         std::fs::create_dir_all(workspace.join(".dx")).expect("dx dir");
         std::fs::write(workspace.join(".dx").join(GENERATED_DIR_NAME), "file").expect("blocker");

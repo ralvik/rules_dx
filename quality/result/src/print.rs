@@ -5,6 +5,7 @@
 //! convergence, initial/terminal diagnostics, and replacements. Snapshots
 //! and digests are omitted (input-identity noise, not behavior).
 
+use clap::Parser;
 use quality_result::{decode_validated, proto};
 
 fn severity_name(value: i32) -> &'static str {
@@ -64,12 +65,39 @@ fn print_diagnostics(prefix: &str, diagnostics: &[proto::Diagnostic]) {
     }
 }
 
+/// `argv` tokenizer (issue #396: reuse pinned `clap`). One positional
+/// input; extra positionals are a usage error (exit 2), unlike the legacy
+/// `args().nth(1)` which silently ignored them.
+#[derive(Parser, Debug)]
+#[command(disable_help_flag = true, disable_version_flag = true)]
+struct Cli {
+    /// Validated result protobuf to decode.
+    #[arg(value_name = "OUT.pb")]
+    input: Option<String>,
+    /// Legacy `--help`/`-h` arm: prints usage (exit 2).
+    #[arg(long = "help", short = 'h', action = clap::ArgAction::SetTrue)]
+    help: bool,
+}
+
 fn main() {
     // Structured diagnostics (issue #232): init is idempotent and emits
     // nothing by default; `RUST_LOG` overrides the warn filter. Failures
     // report via `tracing::error!` with the legacy message text.
     dx_output::init_diagnostics(false);
-    let path = match std::env::args().nth(1) {
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(error) => {
+            let first = error.to_string().lines().next().unwrap_or("invalid arguments").to_owned();
+            tracing::error!("{first}");
+            tracing::error!("usage: print_result OUT.pb");
+            std::process::exit(2);
+        }
+    };
+    if cli.help {
+        tracing::error!("usage: print_result OUT.pb");
+        std::process::exit(2);
+    }
+    let path = match cli.input {
         Some(path) => path,
         None => {
             tracing::error!("usage: print_result OUT.pb");

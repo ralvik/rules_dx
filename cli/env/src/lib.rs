@@ -807,9 +807,11 @@ mod tests {
     #[test]
     fn host_name_table() {
         for valid in ["a", "doctor-2", "x.y", "my_tool"] {
-            let text = format!(
-                "{{\"schema_version\":1,\"tools\":[{{\"bin_name\":\"t\",\"owner\":\"o\",\"host_names\":[\"{valid}\"]}}]}}"
-            );
+            let text = serde_json::json!({
+                "schema_version": 1,
+                "tools": [{"bin_name": "t", "owner": "o", "host_names": [valid]}],
+            })
+            .to_string();
             assert!(
                 parse_staged(&text).is_ok(),
                 "valid host name rejected: {valid}"
@@ -819,13 +821,11 @@ mod tests {
             "", ".", "..", "a/b", "a\\b", "run.exe", "RUN.BAT", "x.cmd", "y.com", "con", "aux.txt",
             "COM1", "lpt9", "NUL",
         ] {
-            // The metadata travels as JSON text, so a literal backslash in
-            // the name must be JSON-escaped here to reach the validator as
-            // one; otherwise `\b` would arrive as a backspace control.
-            let json_name = invalid.replace('\\', "\\\\");
-            let text = format!(
-                "{{\"schema_version\":1,\"tools\":[{{\"bin_name\":\"t\",\"owner\":\"o\",\"host_names\":[\"{json_name}\"]}}]}}"
-            );
+            let text = serde_json::json!({
+                "schema_version": 1,
+                "tools": [{"bin_name": "t", "owner": "o", "host_names": [invalid]}],
+            })
+            .to_string();
             assert!(
                 matches!(parse_staged(&text), Err(Error::InvalidTool { .. })),
                 "invalid host name accepted: {invalid:?}"

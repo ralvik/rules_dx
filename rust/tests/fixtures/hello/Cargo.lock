@@ -608,6 +608,7 @@ dependencies = [
 name = "dx_lcov"
 version = "0.0.0"
 dependencies = [
+ "clap",
  "lcov",
  "thiserror",
 ]
@@ -1421,6 +1422,7 @@ dependencies = [
 name = "quality_result"
 version = "0.0.0"
 dependencies = [
+ "clap",
  "thiserror",
  "tracing",
 ]

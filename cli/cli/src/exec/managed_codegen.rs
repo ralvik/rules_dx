@@ -255,7 +255,10 @@ mod tests {
 
     #[test]
     fn managed_stage_codegen_mirrors_and_reuses_leaves() {
-        let (workspace, first, second) = managed_stage_fixture("managed-codegen-mirror");
+        let fixture = managed_stage_fixture("managed-codegen-mirror");
+        let workspace = fixture.workspace().to_path_buf();
+        let first = fixture.first.clone();
+        let second = fixture.second.clone();
         let id = empty_generated_id().expect("empty digest");
         let projection = vec![
             codegen_entry("gen/a.txt", &first),
@@ -306,7 +309,10 @@ mod tests {
 
     #[test]
     fn managed_stage_codegen_rejects_bad_plans() {
-        let (workspace, first, second) = managed_stage_fixture("managed-codegen-reject");
+        let fixture = managed_stage_fixture("managed-codegen-reject");
+        let workspace = fixture.workspace().to_path_buf();
+        let first = fixture.first.clone();
+        let second = fixture.second.clone();
         let id = empty_generated_id().expect("empty digest");
         for projection in [
             vec![codegen_entry("", &first)],
@@ -380,7 +386,10 @@ mod tests {
 
     #[test]
     fn managed_stage_codegen_filesystem_failures_fail_closed() {
-        let (workspace, first, second) = managed_stage_fixture("managed-codegen-fs");
+        let fixture = managed_stage_fixture("managed-codegen-fs");
+        let workspace = fixture.workspace().to_path_buf();
+        let first = fixture.first.clone();
+        let second = fixture.second.clone();
         let id = empty_generated_id().expect("empty digest");
         // Top-level leaves so the generation directory itself is the
         // leaf parent under test.

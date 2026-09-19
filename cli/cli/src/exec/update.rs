@@ -514,8 +514,8 @@ mod tests {
         let id = COUNTER.fetch_add(1, Ordering::SeqCst);
         let words: Vec<String> = argv.iter().map(|word| (*word).to_owned()).collect();
         let invocation = parse(&words).expect("parse");
-        let workspace = temp_dir(&format!("update-live-{id}"));
-        let temp = temp_dir(&format!("update-live-tmp-{id}"));
+        let workspace_guard = temp_dir(&format!("update-live-{id}"));
+        let temp_guard = temp_dir(&format!("update-live-tmp-{id}"));
         let query = ScriptQuery {
             calls: RefCell::new(Vec::new()),
             outputs: RefCell::new(Vec::new()),
@@ -525,10 +525,10 @@ mod tests {
         let code = execute(
             &invocation,
             Env {
-                workspace: &workspace,
+                workspace: workspace_guard.path(),
                 runner,
                 query_runner: &query,
-                temp_dir: &temp,
+                temp_dir: temp_guard.path(),
                 pid: std::process::id(),
                 nonce: 0,
                 out: &mut out,
