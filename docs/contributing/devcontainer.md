@@ -20,7 +20,8 @@ Ubuntu base digest resolves from a multi-arch index, but the prebuilt image
 stays a linux/amd64 seed slice (`.devcontainer/Dockerfile.prebuilt` pins
 the amd64 Bazelisk launcher), so arm64 container boot plus an arm64
 prebuilt variant stay open gaps (issue #410 qualifies `dx` and CI natively
-on arm64, not container boot).
+on arm64, not container boot; issue #411 qualifies static-musl target
+profiles, not musl container boot).
 
 ## Prebuilt images (GHCR)
 

@@ -625,6 +625,21 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Static-musl profile qualification harness (issue #411): proves the
+# as-built static-musl record with fixture evidence and owned gaps,
+# without claiming Supported or dynamic musl — Rust musl std, dx profile
+# list plus dynamic refusal, per-cell musl coverage with no union, musl CI
+# jobs with per-profile cache scopes, docs in support-matrix plus ADR 0014
+# plus native-toolchains. Run by CI via
+# `bazel run //tools/ci:musl_qualification`.
+sh_binary(
+    name = "musl_qualification",
+    srcs = ["musl_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Environment/codegen qualification harness (issue #309): proves the
 # as-built deferred/unsupported records (public contribution, Windows
 # fallback, standalone, signing/trust) with fixture evidence

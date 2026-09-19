@@ -3,11 +3,14 @@
 #
 # Every required configuration/platform cell gates its own combined LCOV
 # report: no cross-platform union, no averaged percentages, no rounding
-# up. The seed host plus Linux arm64 native qualify (issues #5/#410);
+# up. The seed host plus Linux arm64 native (issues #5/#410) plus the two
+# Linux static-musl profiles (issue #411) qualify;
 # this harness wires the seed cell end to end through the versioned
 # inventory at tools/coverage/seed-inventory.txt and the `coverage_bin`
 # gate CLI (the arm64 twin gates tools/coverage/arm64-inventory.txt in
-# the CI `coverage-arm64` job against the same scope):
+# the CI `coverage-arm64` job and the musl twins gate
+# tools/coverage/musl-*-inventory.txt in the CI `coverage-musl-*` jobs
+# against the same scope):
 # - the real scoped `bazel coverage` report passes the real gate,
 # - mutated inputs fail closed (missing report, uninventoried source,
 #   undeclared eligible source, uncovered line with location,
@@ -73,6 +76,29 @@ if [[ "$arm64_rc" == "0" ]] && echo "$arm64_out" | grep -q 'coverage gate: PASS'
   ok
 else
   bad "arm64 cell gate did not pass: rc=$arm64_rc out=$arm64_out"
+fi
+
+# The static-musl cells gate the same first-party scope (issue #411):
+# the same real report passes both musl inventories, so all four
+# versioned inventories stay functionally in sync (the CI
+# coverage-musl-x86_64 plus coverage-musl-arm64 jobs gate their own
+# runners' reports per-cell with no union; dynamic musl stays out of
+# scope and has no inventory).
+musl_x86_rc=0
+musl_x86_out="$("$check_bin" --report bazel-out/_coverage/_coverage_report.dat \
+  --inventory tools/coverage/musl-x86_64-inventory.txt --sources "$scratch/sources.txt" --root . 2>&1)" || musl_x86_rc=$?
+if [[ "$musl_x86_rc" == "0" ]] && echo "$musl_x86_out" | grep -q 'coverage gate: PASS'; then
+  ok
+else
+  bad "musl x86_64 cell gate did not pass: rc=$musl_x86_rc out=$musl_x86_out"
+fi
+musl_arm64_rc=0
+musl_arm64_out="$("$check_bin" --report bazel-out/_coverage/_coverage_report.dat \
+  --inventory tools/coverage/musl-arm64-inventory.txt --sources "$scratch/sources.txt" --root . 2>&1)" || musl_arm64_rc=$?
+if [[ "$musl_arm64_rc" == "0" ]] && echo "$musl_arm64_out" | grep -q 'coverage gate: PASS'; then
+  ok
+else
+  bad "musl arm64 cell gate did not pass: rc=$musl_arm64_rc out=$musl_arm64_out"
 fi
 
 # Missing report file fails the gate (exit 1), never a usage error.

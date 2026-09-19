@@ -8,10 +8,10 @@
 # seed languages, generation freshness, adopt-* external-consumer proof,
 # hermetic CLI-contract pins (issue #407 replaces nested E2E),
 # required-core depcheck fixtures, `dx update` live execution,
-# perf report-not-gate, seed plus arm64 coverage/remote qualification under
-# #308/#410); audit live execution, docs-pipeline, env/codegen, remaining
-# non-qualified platform cells (issue #298; Linux arm64 qualified under
-# #410), admitted depcheck
+# perf report-not-gate, seed plus arm64 plus static-musl coverage/remote
+# qualification under #308/#410/#411); audit live execution, docs-pipeline,
+# env/codegen, remaining non-qualified platform cells (issue #298; Linux
+# arm64 qualified under #410, static musl under #411), admitted depcheck
 # expansion, and release evidence (SBOM/provenance, signing/attestations,
 # BCR submission, GHCR route, consumer verification) remain open gaps
 # tracked in their owning issues.
@@ -71,6 +71,17 @@ if grep -E -e '^\| Linux arm64 glibc \|' docs/product/support-matrix.md | grep -
   ok
 else
   bad "support-matrix lost the Linux arm64 Platform-qualified record (issue #410, release evidence open)"
+fi
+
+# Linux static-musl profiles are Platform-qualified (issue #411), never
+# Supported without release evidence and never back to unqualified
+# refusal. Dynamic musl stays explicitly out of scope.
+if grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (issue #411' &&
+  grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open' &&
+  grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'dynamic musl explicitly out of scope'; then
+  ok
+else
+  bad "support-matrix lost the static-musl Platform-qualified record (issue #411, release evidence open, dynamic out of scope)"
 fi
 
 # No Supported status cell in support-matrix tables (promotion gate core).
@@ -178,17 +189,21 @@ else
   bad "audit/update Delivered lost live codes or guards harness"
 fi
 
-# Coverage seed plus arm64 qualified (#308/#410): cell gate + versioned
-# inventories and registry plus qualification harness, no cross-cell union.
+# Coverage seed plus arm64 plus static-musl qualified (#308/#410/#411):
+# cell gate + versioned inventories and registry plus qualification
+# harness, no cross-cell union.
 if [[ -f "tools/ci/coverage_cell.sh" ]] &&
   [[ -f "tools/coverage/seed-inventory.txt" ]] &&
   [[ -f "tools/coverage/arm64-inventory.txt" ]] &&
+  [[ -f "tools/coverage/musl-x86_64-inventory.txt" ]] &&
+  [[ -f "tools/coverage/musl-arm64-inventory.txt" ]] &&
   [[ -f "tools/coverage/cells.txt" ]] &&
   [[ -f "tools/ci/coverage_qualification.sh" ]] &&
+  [[ -f "tools/ci/musl_qualification.sh" ]] &&
   grep -q -F -e 'seed cell' tools/coverage/seed-inventory.txt; then
   ok
 else
-  bad "coverage seed plus arm64 lost its cell gate, inventories, registry, or qualification harness"
+  bad "coverage seed plus arm64 plus musl lost its cell gate, inventories, registry, or qualification harness"
 fi
 
 # Env/codegen + docs-pipeline Open: backlog contracts pin frozen halves.

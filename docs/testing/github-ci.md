@@ -70,8 +70,9 @@ Verify Bazelisk installation comes from the single reviewed
 every third-party action reference is pinned to a commit SHA (tag in a trailing comment).
 Verify the `platforms-gate` job rejects missing, empty, or unsupported platform selections
 before any per-platform job queues a runner, and the aggregate still fails when the gate
-does. Verify the seed plus arm64 jobs restore a Bazel disk cache (free-tier eligible per the
-infrastructure budget; arm64 jobs use the separate `bazel-arm64-` scope), pass `--noshow_progress` to Bazel invocations, run the corpus
+does. Verify the seed plus arm64 plus musl jobs restore a Bazel disk cache (free-tier eligible per the
+infrastructure budget; arm64 jobs use the separate `bazel-arm64-` scope; musl jobs use per-profile
+`bazel-musl-x86_64-` plus `bazel-musl-arm64-` scopes, issue #411), pass `--noshow_progress` to Bazel invocations, run the corpus
 ownership audit through `bazel run //tools/ci:corpus_audit`, and never rely on a local
 `user.bazelrc` override. Verify docs publishing stages its artifact outside the checkout
 and leaves the tree clean.

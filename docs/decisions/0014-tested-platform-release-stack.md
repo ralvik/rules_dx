@@ -29,7 +29,7 @@ nothing below pins a version.
 | --- | --- | --- |
 | Linux x86_64 glibc | Required, primary bootstrap | First host; release CI must cover it |
 | Linux arm64 glibc | Required | Native workflow, not cross-only; native glibc qualified under issue #410 (exact pins, hosts, floors, and SDK/CRT identities stay owned by O14/O37, not pinned here) |
-| Linux x86_64/arm64 static musl | Required profiles | Dynamic musl is not an initial requirement |
+| Linux x86_64/arm64 static musl | Required profiles | Dynamic musl is not an initial requirement; static musl qualified under issue #411 (exact pins, hosts, floors, and SDK/CRT identities stay owned by O14/O37, not pinned here) |
 | macOS arm64 | Required | Pinned acquired SDK; SDK version is not the deployment floor |
 | macOS x86_64 | Best-effort | Qualify when a host is available; record gaps without blocking required-host release |
 | Windows x86_64 MSVC-compatible | Required, backend blocked | Hermetic acquisition + MSVC compatibility gates unchanged |
@@ -77,7 +77,11 @@ payloads. The exact mechanism remains open; this setup step does not relax herme
 MSVC compatibility, or qualification requirements.
 
 Linux requires glibc and static-musl profiles on x86_64/arm64. Dynamic musl is not an initial
-requirement. Prioritize Linux cross-builds and admit additional routes where upstream integration
+requirement. Static-musl profiles are qualified under issue #411 on the
+current as-built stack (Rust musl std plus exec/target separation, per-cell
+coverage, CI cross-builds with per-profile cache scopes); exact pins,
+hosts, floors, and runtime-closure identities stay owned by O14/O37, not
+pinned here. Prioritize Linux cross-builds and admit additional routes where upstream integration
 keeps maintenance bounded, rather than requiring every host-to-target combination. Required native
 platform workflows remain unchanged; cross-building and target execution require separate evidence.
 The [feasibility review](../product/support-matrix.md#native-toolchain-alternatives) records the
