@@ -24,7 +24,7 @@ separate workflow (`.github/workflows/ghcr.yml`), never folded into the
 release workflow: image lifecycle is per-scaffold-change, not per-tag, so
 base-image rebuilds never block or couple a `dx` release.
 
-As built today (owner-gated push plus dry-run signing, no push claimed):
+As built today (owner-gated push with signing, no push claimed until dispatch):
 
 - CI builds the image on PRs touching the scaffold inputs
   (`.devcontainer/Dockerfile.prebuilt`, `ghcr.yml`,
@@ -33,17 +33,30 @@ As built today (owner-gated push plus dry-run signing, no push claimed):
   (explicit owner approval; default builds and reports only).
 - The base is digest-pinned (never `latest`), Bazel arrives via pinned
   Bazelisk delegation, and no language toolchains are baked in: tools
-  resolve via Bazel at container runtime. The checked-in scaffold still
-  references the public base image; the `ghcr.io` digest reference lands
-  with the first push.
-- Signing follows the release trust root: `cosign sign <digest>`
-  (Sigstore keyless) plus attestation on the same trust root as
+  resolve via Bazel at container runtime. Image tags track the
+  single-version `dx` == module pin (`0.0.0-sha-<sha>`); the digest pin
+  (`ghcr.io/...@sha256:<digest>`, never `latest`) is the scaffold
+  reference that lands with the first push. The checked-in scaffold still
+  references the public base image; switching it now would invent an
+  unpublished digest.
+- Signing follows the release trust root: `cosign sign --yes
+  <image>@<digest>` (Sigstore keyless, OIDC via `id-token: write`) plus
+  `cosign verify` and `gh attestation` on the same trust root as
   `//deploy/release:signing_demo` (`deploy/release/signing.bzl`); the
-  GHCR workflow exercises the would-sign commands in dry-run mode and
-  signs only on `workflow_dispatch` with `approve: true`. Nothing here is
-  signed yet.
-- GHCR quotas and retention are recorded on the first push (free for
-  public repos, qualified not assumed per the infrastructure budget).
-  Image publication is a publication output: no tags, pushes, or
+  GHCR workflow prints the would-sign commands in dry-run mode on PRs and
+  signs + verifies only on `workflow_dispatch` with `approve: true`.
+  Cosign arrives via pinned `curl` fetch (version-pinned, checksum-verified
+  against the published release checksums; no `sigstore/*` installer
+  action). Nothing here is signed until the gated push runs.
+- GHCR quotas and retention (qualified per the infrastructure budget in
+  [testing](../testing/README.md#infrastructure-budget)): container image
+  storage and bandwidth are currently free for public repos, with at least
+  one month notice before any pricing change (GitHub Packages billing);
+  the private-Packages quotas (500 MB storage, 1 GB transfer on Free) do
+  not apply to containers today. Retention is manual (untagged cleanup per
+  package settings); no retention policy deletes the version-tracked tag
+  without owner action. Build-only PRs push nothing, so no quota is
+  consumed; the first gated push records its exact image bytes in the job
+  summary. Image publication is a publication output: no tags, pushes, or
   retention claims without explicit owner approval per the release
   hygiene in [Contributing](../../CONTRIBUTING.md).

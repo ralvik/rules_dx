@@ -4,21 +4,22 @@
 # The prebuilt devcontainer image removes per-create feature-install cost,
 # but publication is gated: separate workflow from releases per owner
 # decision, build on PR, push only on workflow_dispatch + approve:true,
-# signing-second after #26/#78 and selected in #311 (cosign <digest> on
-# the #311 trust root, same as //deploy/release:signing_demo; dry-run
-# would-sign otherwise). Scaffold `image:` digest reference + quota/
-# retention record follow the first push; this build-only slice pushes
-# nothing.
+# signing owner-gated after push (cosign sign --yes <image>@<digest> keyless
+# on the #311 trust root, same as //deploy/release:signing_demo, plus
+# cosign verify / gh attestation; dry-run would-sign on PRs). Image tags
+# track the single-version dx == module pin (0.0.0-sha-<sha>); the scaffold
+# `image:` digest pin (never latest) lands with the first push, quota is
+# qualified in docs (container free for public, 1-month notice) and exact
+# bytes are recorded on push; build-only PRs push nothing.
 #
 # This harness machine-checks the gate half verifiable on a clean tree
-# today (16 checks): separate ghcr.yml route, PR-paths build, dispatch +
+# today (22 checks): separate ghcr.yml route, PR-paths build, dispatch +
 # default-closed approve gate, typed approve, push run-gate explicit, no push/tag/schedule trigger, digest-pinned
 # base + Bazelisk delegation + no ambient toolchains in Dockerfile.prebuilt,
-# no docker/* actions with checkout SHA-pinned, no-secrets checkout plus
-# non-cancelling concurrency, cosign/quota/scaffold
-# deferrals named, scaffold still on mcr (switch follows first push). First-push
-# signing + quota record stay open per #184 and are recorded as gaps, not
-# claimed here.
+# no docker/* or sigstore/* actions with checkout SHA-pinned, no-secrets checkout plus
+# non-cancelling concurrency, cosign sign/verify + attestation with pinned
+# fetch, version-tracked tags, id-token keyless scope, #311 trust root,
+# scaffold-digest procedure + qualified quota, scaffold still on mcr (switch follows first push).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:ghcr_hygiene`,
 # following //tools/ci:examples_laziness_aquery.
@@ -107,13 +108,14 @@ else
   bad "Dockerfile.prebuilt bakes in a language toolchain (must resolve via Bazel)"
 fi
 
-# No docker/* actions: plain `docker build`/`push` keeps the push gate
-# explicit in `run:` steps; the sole third-party action (checkout) stays
-# pinned to a commit SHA per #80.
-if ! grep -q -F -e 'uses: docker/' .github/workflows/ghcr.yml && grep -q -E -e 'uses: actions/checkout@[0-9a-f]{40}' .github/workflows/ghcr.yml; then
+# No docker/* or sigstore/* installer actions: plain `docker build`/`push`
+# plus a pinned `curl` cosign fetch keeps the push gate explicit in `run:`
+# steps; the sole third-party action (checkout) stays pinned to a commit
+# SHA per #80.
+if ! grep -q -F -e 'uses: docker/' .github/workflows/ghcr.yml && ! grep -q -F -e 'uses: sigstore/' .github/workflows/ghcr.yml && grep -q -E -e 'uses: actions/checkout@[0-9a-f]{40}' .github/workflows/ghcr.yml; then
   ok
 else
-  bad "ghcr.yml gained a docker/* action or lost the checkout SHA pin (plain build/push only)"
+  bad "ghcr.yml gained a docker/* or sigstore/* action or lost the checkout SHA pin (plain build/push + curl cosign only)"
 fi
 
 # No-secrets checkout plus non-cancelling concurrency: persist-credentials
@@ -134,6 +136,38 @@ else
   bad "ghcr.yml lost the cosign-sign record on the #311 trust root"
 fi
 
+# Gated push signs + verifies for real (not echo-only): cosign sign --yes
+# plus cosign verify and gh attestation on the same trust root.
+if grep -q -F -e 'cosign-bin sign --yes' .github/workflows/ghcr.yml && grep -q -F -e 'cosign-bin verify' .github/workflows/ghcr.yml && grep -q -F -e 'gh attestation' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "ghcr.yml lost the gated cosign sign --yes / verify / attestation (echo-only signs nothing)"
+fi
+
+# Pinned cosign fetch (no installer action): version-pinned curl plus
+# checksum verification against the published release checksums.
+if grep -q -F -e 'COSIGN_VERSION=' .github/workflows/ghcr.yml && grep -q -F -e 'cosign_checksums' .github/workflows/ghcr.yml && grep -q -F -e 'sha256sum -c' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "ghcr.yml lost the pinned cosign fetch (version + checksums + sha256sum -c)"
+fi
+
+# Single-version tag tracking (issue #184): push and PR tags carry dx ==
+# module (0.0.0) plus sha; digest pin (never latest) is the scaffold ref.
+if grep -q -F -e 'devcontainer:0.0.0-sha-' .github/workflows/ghcr.yml && grep -q -F -e 'devcontainer:0.0.0-ci-' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "ghcr.yml lost single-version tag tracking (want 0.0.0-sha- plus 0.0.0-ci-)"
+fi
+
+# Keyless OIDC scope (Sigstore keyless needs id-token): only the build job
+# carries `id-token: write`; top-level stays read-only like packages.
+if grep -q -F -e 'id-token: write' .github/workflows/ghcr.yml && ! grep -q -E -e '^  id-token: write' .github/workflows/ghcr.yml && grep -q -E -e '^      id-token: write' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "ghcr.yml lost job-scoped id-token:write (keyless needs it; top-level must stay read-only)"
+fi
+
 # Signing trust root shared with releases per #311.
 if grep -q -F -e '#311 trust root' .github/workflows/ghcr.yml; then
   ok
@@ -141,12 +175,20 @@ else
   bad "ghcr.yml lost the #311 trust-root record (shared with //deploy/release:signing_demo)"
 fi
 
-# Scaffold digest ref + quota record deferred to first push (never
-# claimed build-only; no quota consumed here).
+# Scaffold digest ref + qualified quota (never claimed build-only without
+# evidence; build-only PRs consume no quota, gated push records bytes).
 if grep -q -F -e 'scaffold' .github/workflows/ghcr.yml && grep -q -F -i -e 'quota' .github/workflows/ghcr.yml; then
   ok
 else
-  bad "ghcr.yml lost the scaffold-digest/quota first-push deferral"
+  bad "ghcr.yml lost the scaffold-digest/quota first-push record"
+fi
+
+# Quota qualified in docs (not assumed): container free for public with
+# 1-month notice; private-Packages quotas do not apply to containers.
+if grep -q -F -e 'currently free for public' docs/contributing/devcontainer.md && grep -q -F -e 'one month notice' docs/contributing/devcontainer.md && grep -q -F -e 'currently free for public' docs/testing/README.md; then
+  ok
+else
+  bad "quota record lost its qualification (want currently-free + 1-month notice in devcontainer.md + testing README)"
 fi
 
 # Scaffold still on mcr until the first push lands a digest (switching
