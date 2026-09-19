@@ -139,5 +139,30 @@ else
   bad "a Windows shell artifact appeared (stays out per ADR 0014 until the backend unblocks)"
 fi
 
+# Issue #320 portable route: perf harnesses record the actual host via
+# dx_perf_host instead of hard-coding the seed label; unknown OS/CPU
+# fails fast. The checked-in seed reports stay pinned to linux_x86_64
+# (proven by //perf:rules_lint_results_test), so only the harness
+# scripts are checked here.
+if grep -q -F -e 'dx_perf_host() {' tools/sh/lib.sh \
+  && grep -q -F -e 'host="$(dx_perf_host)"' perf/bench.sh \
+  && grep -q -F -e 'host="$(dx_perf_host)"' perf/rules_lint_comparison.sh \
+  && ! grep -rn -F -e 'host="linux_x86_64"' --include='bench.sh' --include='rules_lint_comparison.sh' perf/ | grep -q .; then
+  ok
+else
+  bad "perf harnesses must use dx_perf_host (issue #320), not a hard-coded linux_x86_64 pin"
+fi
+
+# Issue #320 portable route: release archives are hermetic Python
+# (archiver.py tarfile dereferences like tar -h, no host tar). No host
+# `tar` invocation may appear in deploy runtime or rules.
+if ! grep -rn -E -e '(^|[^a-z_])tar( |$| -)' --include='*.sh' deploy/rules/ | grep -v -F -e 'tarfile' | grep -v -e '^[^:]*:[0-9]*: *#' | grep -q . \
+  && grep -q -F -e 'No host `tar`' deploy/rules/archiver.py \
+  && grep -q -F -e 'no host `tar`' deploy/rules/archive.bzl; then
+  ok
+else
+  bad "deploy archive must stay hermetic Python with no host tar (issue #320)"
+fi
+
 echo "shell contract harness: $pass passed, $fail failed"
 [[ "$fail" == "0" ]]

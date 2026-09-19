@@ -67,6 +67,9 @@ pub fn write_atomic(path: &Path, content: &[u8]) -> io::Result<()> {
     // current directory for the same reason.
     let staging_dir: &Path = parent.unwrap_or(Path::new("."));
     let mut staging = tempfile::NamedTempFile::new_in(staging_dir)?;
+    // Issue #320 portable route: mode preservation is unix-only
+    // (Windows ACLs have no POSIX bits); non-unix keeps the staging
+    // default and still writes bytes atomically.
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt as _;
@@ -189,13 +192,16 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn preserves_existing_mode_on_overwrite() {
         // Apply-safety battery (issue #84): `quality-testing.md` requires
         // file modes preserved. Overwriting an executable must keep the
         // executable bit; overwriting a private mode must keep it
         // private; bytes still round-trip exactly (no newline
-        // normalization).
-        #[cfg(unix)]
+        // normalization). Issue #320 fail-fast policy: POSIX mode bits
+        // have no Windows equivalent, so this stays unix-gated; the
+        // non-unix companion below proves byte-exact round-trip without
+        // mode assertions.
         {
             use std::os::unix::fs::PermissionsExt as _;
             let scratch = dx_test_scratch::scratch("dx-atomic-fs-mode-");
@@ -237,6 +243,23 @@ mod tests {
             assert_eq!(std::fs::read(&crlf).expect("read back"), b"updated\r\n");
             scratch.close().expect("cleanup");
         }
+    }
+
+    #[test]
+    #[cfg(not(unix))]
+    fn non_unix_round_trips_bytes_without_mode_assertions() {
+        // Issue #320 portable companion to `preserves_existing_mode_on_
+        // overwrite` above: modes are POSIX-only, but byte-exactness
+        // (LF, CRLF, missing-final-newline) holds on every host.
+        let scratch = dx_test_scratch::scratch("dx-atomic-fs-bytes-");
+        let target = scratch.path().join("roundtrip.txt");
+        write_atomic(&target, b"hello\n").expect("write");
+        assert_eq!(std::fs::read(&target).expect("read back"), b"hello\n");
+        write_atomic(&target, b"updated\r\n").expect("overwrite crlf");
+        assert_eq!(std::fs::read(&target).expect("read back"), b"updated\r\n");
+        write_atomic(&target, b"no-newline").expect("overwrite bare");
+        assert_eq!(std::fs::read(&target).expect("read back"), b"no-newline");
+        scratch.close().expect("cleanup");
     }
 
     fn open_lock_file(path: &Path) -> File {

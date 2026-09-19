@@ -114,7 +114,8 @@ fn observe_process(dir: &Path, dx_dir: &Path, live: &mut LiveHexes) {
 ///
 /// Only numeric process directories are inspected; anything else under
 /// `proc_root` is ignored, so a missing `/proc` (non-Linux hosts)
-/// scans empty rather than failing. Over-retention is the only failure
+/// scans empty rather than failing (issue #320 portable route: fail
+/// open to over-retention, never abort the sweep). Over-retention is the only failure
 /// direction: a hex observed anywhere under the managed roots is
 /// preserved, whether or not it is still referenced. Deterministic:
 /// outputs sort ascending with duplicates removed.
@@ -222,15 +223,35 @@ mod tests {
         (workspace, stale_hex, current_hex)
     }
 
+    /// Portable symlink planter for the fake `/proc` tree (issue #320
+    /// portable route): the scan itself is portable (missing `/proc`
+    /// fails open to empty), so its fixtures must run everywhere instead
+    /// of unix-gating. Windows planting fails fast with the OS privilege
+    /// error rather than silently skipping cover.
+    #[cfg(windows)]
+    fn stage_symlink(target: &Path, link: &Path) {
+        // Fake proc entries address files/dirs that may not exist (e.g.
+        // the ` (deleted)` suffix case builds the link from display
+        // text); `symlink_file` creates the link without touching the
+        // target, matching the unix behavior below.
+        std::os::windows::fs::symlink_file(target, link).expect("stage test link");
+    }
+
+    /// Portable symlink planter for the fake `/proc` tree (issue #320
+    /// portable route): see the windows variant above.
+    #[cfg(not(windows))]
+    fn stage_symlink(target: &Path, link: &Path) {
+        std::os::unix::fs::symlink(target, link).expect("stage test link");
+    }
+
     fn stage_process(proc_root: &Path, pid: &str, cwd: Option<&Path>, fds: &[&Path]) {
         let dir = proc_root.join(pid);
         fs::create_dir_all(dir.join("fd")).expect("stage fd dir");
         if let Some(target) = cwd {
-            std::os::unix::fs::symlink(target, dir.join("cwd")).expect("stage cwd");
+            stage_symlink(target, &dir.join("cwd"));
         }
         for (index, target) in fds.iter().enumerate() {
-            std::os::unix::fs::symlink(target, dir.join("fd").join(index.to_string()))
-                .expect("stage fd");
+            stage_symlink(target, &dir.join("fd").join(index.to_string()));
         }
     }
 
@@ -247,7 +268,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(unix)]
     fn scan_ignores_non_numeric_entries() {
         let scratch = clean_root("scan-nonnumeric");
         let root = scratch.path().to_path_buf();
@@ -267,7 +287,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(unix)]
     fn scan_reports_cwd_and_fd_targets_under_managed_roots() {
         let scratch = clean_root("scan-live");
         let root = scratch.path().to_path_buf();
@@ -308,7 +327,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(unix)]
     fn scan_trims_deleted_suffix_and_ignores_unmanaged_paths() {
         let scratch = clean_root("scan-edge");
         let root = scratch.path().to_path_buf();
@@ -324,24 +342,21 @@ mod tests {
         let deleted_text = format!("{} (deleted)", deleted.display());
         let dir = proc_root.join("7");
         fs::create_dir_all(dir.join("fd")).expect("fd dir");
-        std::os::unix::fs::symlink(&deleted_text, dir.join("cwd")).expect("cwd");
+        stage_symlink(Path::new(&deleted_text), &dir.join("cwd"));
         // Unmanaged names, non-digest names, and foreign roots
         // contribute nothing even when observed.
-        std::os::unix::fs::symlink(
-            dx_dir.join("setups").join("latest"),
-            dir.join("fd").join("0"),
-        )
-        .expect("fd");
-        std::os::unix::fs::symlink(
-            dx_dir.join("notes").join(digest('9')),
-            dir.join("fd").join("1"),
-        )
-        .expect("fd");
-        std::os::unix::fs::symlink(
-            root.join("elsewhere").join(digest('8')),
-            dir.join("fd").join("2"),
-        )
-        .expect("fd");
+        stage_symlink(
+            &dx_dir.join("setups").join("latest"),
+            &dir.join("fd").join("0"),
+        );
+        stage_symlink(
+            &dx_dir.join("notes").join(digest('9')),
+            &dir.join("fd").join("1"),
+        );
+        stage_symlink(
+            &root.join("elsewhere").join(digest('8')),
+            &dir.join("fd").join("2"),
+        );
         let live = scan_live_hexes(&proc_root, &dx_dir);
         assert!(live.setup.is_empty());
         assert_eq!(
@@ -355,7 +370,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(unix)]
     fn scan_dedupes_and_sorts_across_processes() {
         let scratch = clean_root("scan-dedupe");
         let root = scratch.path().to_path_buf();

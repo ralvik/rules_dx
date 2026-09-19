@@ -272,6 +272,10 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn workflow_non_utf8_bep_is_operational() {
+        // Issue #320 fail-fast policy: byte-constructed non-UTF8 paths
+        // (`OsString::from_vec(vec![0xff])`) exist only on unix; Windows
+        // uses WTF-8 with different invalid encodings, so this stays
+        // gated instead of a portable fake.
         let mut harness = Harness::new("wf-nonutf8");
         harness.temp = PathBuf::from(OsString::from_vec(vec![0xff]));
         let (code, _, err) = harness.run(&["build", "--output=text"]);

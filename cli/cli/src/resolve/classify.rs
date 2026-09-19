@@ -534,6 +534,9 @@ mod tests {
         let workspace = scratch.path().to_path_buf();
         #[cfg(unix)]
         {
+            // Issue #320 fail-fast policy: unix-domain sockets exist
+            // only on unix, so this branch stays gated. The non-unix
+            // branch below proves regular files still classify as files.
             use std::os::unix::net::UnixListener;
             let path = workspace.join("sock");
             let _listener = UnixListener::bind(&path).expect("bind socket");
@@ -547,7 +550,18 @@ mod tests {
         }
         #[cfg(not(unix))]
         {
-            let _ = (&scratch, &workspace);
+            // Issue #320 portable companion: no socket primitive here,
+            // so prove a regular file is never `NotFileOrDir`.
+            write(&workspace, "pkg/BUILD.bazel", "");
+            write(&workspace, "pkg/regular.py", "x = 1\n");
+            let query = FakeQuery::new(vec![FakeQuery::ok("//pkg:regular.py\n")]);
+            let resolved = resolve(&scopes(&["pkg/regular.py"]), &workspace, &query)
+                .expect("regular file resolves");
+            assert!(
+                resolved.targets.contains(&"//pkg:regular.py".to_owned()),
+                "regular file owner: {:?}",
+                resolved.targets
+            );
         }
     }
 
@@ -653,13 +667,18 @@ mod tests {
 
     #[test]
     fn symlinks_are_neither_file_nor_dir() {
+        // Issue #320 portable route: symlink kind is rejected on every
+        // host; planting uses the OS primitive and fails fast without
+        // privilege instead of gating the test.
         let scratch = temp_workspace("symlink-kind");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "target.txt", "x\n");
-        #[cfg(unix)]
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_file(workspace.join("target.txt"), workspace.join("link"))
+            .expect("link");
+        #[cfg(not(windows))]
         std::os::unix::fs::symlink(workspace.join("target.txt"), workspace.join("link"))
             .expect("link");
-        #[cfg(unix)]
         {
             let query = NeverQuery;
             assert!(matches!(

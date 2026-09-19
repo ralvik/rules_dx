@@ -26,6 +26,11 @@
 #                                (`RUNFILES_DIR` else `TEST_SRCDIR`)
 #   dx_resolve_runfile <rel>     prints the absolute path for a
 #                                workspace-relative or `rootpath` rel
+#   dx_perf_host                 prints the perf host label
+#                                (`linux_x86_64`, `linux_arm64`,
+#                                `macos_arm64`, ...); fails fast on unknown
+#                                OS/CPU instead of silently recording the
+#                                seed host (issue #320 portable route).
 #
 # `dx_resolve_runfile` prefers the standard `runfiles.bash` `rlocation`
 # when available and falls back to manual `TEST_SRCDIR` / `RUNFILES_DIR` /
@@ -102,6 +107,28 @@ dx_runfiles_root() {
   fi
   echo "FAIL: no Bazel runfiles root (RUNFILES_DIR and TEST_SRCDIR are unset)" >&2
   return 1
+}
+
+# Prints the perf host label for benchmark fairness pins (issue #320
+# portable route): maps `uname -s`/`uname -m` to the repo platform
+# strings (`linux_x86_64`, `linux_arm64`, `macos_arm64`,
+# `macos_x86_64`, `windows_x86_64`, `windows_arm64`). Fails fast on
+# unknown OS/CPU instead of silently recording the seed host. Linux
+# behavior unchanged: the seed host still reports `linux_x86_64`.
+dx_perf_host() {
+  local os arch
+  case "$(uname -s)" in
+    Linux) os="linux" ;;
+    Darwin) os="macos" ;;
+    MINGW*|MSYS*|CYGWIN*|Windows_NT) os="windows" ;;
+    *) echo "FAIL: dx_perf_host: unsupported OS '$(uname -s)'" >&2; return 1 ;;
+  esac
+  case "$(uname -m)" in
+    x86_64|amd64) arch="x86_64" ;;
+    aarch64|arm64) arch="arm64" ;;
+    *) echo "FAIL: dx_perf_host: unsupported CPU '$(uname -m)'" >&2; return 1 ;;
+  esac
+  printf '%s_%s\n' "$os" "$arch"
 }
 
 # Resolves a workspace-relative or `$(rootpath)` rel to an absolute path.

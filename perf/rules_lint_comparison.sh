@@ -46,7 +46,9 @@ if [[ -f "$workspace/.bazelversion" ]]; then
 else
   bazel_version="unknown"
 fi
-host="linux_x86_64"
+# Issue #320 portable route: record the actual host instead of the
+# hard-coded seed label; unknown OS/CPU fails fast in dx_perf_host.
+host="$(dx_perf_host)"
 rules_lint_pin="v2.8.0"
 
 scratch=""

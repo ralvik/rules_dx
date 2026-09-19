@@ -718,6 +718,9 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn non_utf8_temp_path_is_operational() {
+        // Issue #320 fail-fast policy: byte-constructed non-UTF8 paths
+        // exist only on unix (Windows WTF-8 differs), so this stays
+        // gated instead of a portable fake.
         let harness = Harness::new("nonutf8-tmp");
         let mut raw = harness.temp.join("x").into_os_string().into_vec();
         raw.push(0xff);
