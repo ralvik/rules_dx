@@ -1,8 +1,9 @@
-//! JUnit XML parsing for Bazel-reported test artifacts (issue #236).
+//! JUnit XML parsing for Bazel-reported test artifacts (issue #388).
 //!
-//! Split from [`super::junit`]: owns [`parse_test_xml`] plus its
-//! attribute helper. Re-exported through [`super::junit`] so the public
-//! paths stay `crate::reports::{parse_test_xml}` and
+//! Rewritten on [`quick_junit::Report`]: deserialization uses the
+//! nextest data model instead of the hand-rolled `quick-xml` state
+//! machine. Re-exported through [`super::junit`] so the public paths
+//! stay `crate::reports::{parse_test_xml}` and
 //! `crate::reports::junit::{parse_test_xml}`. Shares the normalized
 //! case types ([`JunitCase`], [`JunitMessage`]) from
 //! [`super::junit_types`] with the rendering side in
@@ -17,29 +18,14 @@ fn junit_error(detail: impl Into<String>) -> ReportError {
     }
 }
 
-fn junit_attr(
-    element: &quick_xml::events::BytesStart<'_>,
-    name: &[u8],
-) -> Result<Option<String>, ReportError> {
-    for attr in element.attributes() {
-        let attr = attr.map_err(|e| junit_error(format!("malformed testcase attribute: {e}")))?;
-        if attr.key.as_ref() == name {
-            let value = attr
-                .unescape_value()
-                .map_err(|e| junit_error(format!("malformed testcase attribute: {e}")))?;
-            return Ok(Some(value.into_owned()));
-        }
-    }
-    Ok(None)
-}
-
 /// Parses one Bazel-reported `test.xml` artifact into normalized cases.
 ///
 /// `shard` and `attempt` are the zero-based indices for every case in
 /// `bytes` (derived from the BEP identity). Names, durations,
 /// `<failure>`, `<error>`, `<skipped>`, `<system-out>`, and
-/// `<system-err>` content are preserved after safe XML parsing; suite
-/// structure is ignored because the caller groups by Bazel target
+/// `<system-err>` content are preserved via `quick-junit`
+/// deserialization (which strips invalid XML chars and ANSI escapes);
+/// suite structure is ignored because the caller groups by Bazel target
 /// label. Malformed XML fails the whole artifact so the caller can
 /// mark collection partial.
 pub fn parse_test_xml(
@@ -47,9 +33,6 @@ pub fn parse_test_xml(
     shard: u32,
     attempt: u32,
 ) -> Result<Vec<JunitCase>, ReportError> {
-    use quick_xml::events::Event;
-    use quick_xml::reader::Reader;
-
     let text = std::str::from_utf8(bytes)
         .map_err(|e| junit_error(format!("test XML is not UTF-8: {e}")))?;
     // Reject documents with no element structure early so empty or
@@ -58,297 +41,118 @@ pub fn parse_test_xml(
     if !text.contains('<') {
         return Err(junit_error("test XML has no elements"));
     }
-    let mut reader = Reader::from_str(text);
-    reader.config_mut().trim_text(true);
-    reader.config_mut().check_end_names = true;
-
-    #[derive(Debug)]
-    struct ActiveCase {
-        name: String,
-        classname: Option<String>,
-        time: f64,
-        failure: Option<JunitMessage>,
-        error: Option<JunitMessage>,
-        skipped: Option<JunitMessage>,
-        system_out: Option<String>,
-        system_err: Option<String>,
-    }
-
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    enum ChildKind {
-        Failure,
-        Error,
-        Skipped,
-        SystemOut,
-        SystemErr,
-    }
-
-    struct ActiveChild {
-        kind: ChildKind,
-        message: Option<String>,
-        text: String,
-    }
+    let report = deserialize_report(text)?;
 
     let mut cases: Vec<JunitCase> = Vec::new();
-    let mut active: Option<ActiveCase> = None;
-    let mut child: Option<ActiveChild> = None;
-    let mut depth: usize = 0;
-    let mut buf = Vec::new();
-    loop {
-        let event = reader
-            .read_event_into(&mut buf)
-            .map_err(|e| junit_error(format!("malformed test XML: {e}")))?;
-        match event {
-            Event::Eof => break,
-            Event::Start(element) => {
-                let tag = element.name();
-                let tag = tag.as_ref();
-                if active.is_none() && tag == b"testcase" {
-                    let name = junit_attr(&element, b"name")?
-                        .ok_or_else(|| junit_error("testcase without name"))?;
-                    if name.is_empty() {
-                        return Err(junit_error("testcase without name"));
-                    }
-                    let classname = junit_attr(&element, b"classname")?;
-                    let time = match junit_attr(&element, b"time")? {
-                        None => 0.0,
-                        Some(raw) => raw.parse::<f64>().map_err(|_| {
-                            junit_error(format!("malformed testcase time: {raw:?}"))
-                        })?,
+    for suite in &report.test_suites {
+        for case in &suite.test_cases {
+            if case.name.as_str().is_empty() {
+                return Err(junit_error("testcase without name"));
+            }
+            let (failure, error, skipped) = match &case.status {
+                quick_junit::TestCaseStatus::Success { .. } => (None, None, None),
+                quick_junit::TestCaseStatus::NonSuccess {
+                    kind,
+                    message,
+                    description,
+                    ..
+                } => {
+                    let note = JunitMessage {
+                        message: message.as_ref().map(|m| m.as_str().to_owned()),
+                        text: description
+                            .as_ref()
+                            .map(|d| d.as_str().to_owned())
+                            .unwrap_or_default(),
                     };
-                    if !time.is_finite() || time < 0.0 {
-                        return Err(junit_error("malformed testcase time"));
-                    }
-                    active = Some(ActiveCase {
-                        name,
-                        classname,
-                        time,
-                        failure: None,
-                        error: None,
-                        skipped: None,
-                        system_out: None,
-                        system_err: None,
-                    });
-                    depth = 1;
-                } else if let Some(current) = active.as_mut() {
-                    depth += 1;
-                    if depth == 2 && child.is_none() {
-                        let kind = if tag == b"failure" {
-                            Some(ChildKind::Failure)
-                        } else if tag == b"error" {
-                            Some(ChildKind::Error)
-                        } else if tag == b"skipped" {
-                            Some(ChildKind::Skipped)
-                        } else if tag == b"system-out" {
-                            Some(ChildKind::SystemOut)
-                        } else if tag == b"system-err" {
-                            Some(ChildKind::SystemErr)
-                        } else {
-                            None
-                        };
-                        if let Some(kind) = kind {
-                            let message = junit_attr(&element, b"message")?;
-                            child = Some(ActiveChild {
-                                kind,
-                                message,
-                                text: String::new(),
-                            });
-                            let _ = current;
-                        }
+                    match kind {
+                        quick_junit::NonSuccessKind::Failure => (Some(note), None, None),
+                        quick_junit::NonSuccessKind::Error => (None, Some(note), None),
                     }
                 }
-                buf.clear();
+                quick_junit::TestCaseStatus::Skipped {
+                    message,
+                    description,
+                    ..
+                } => (
+                    None,
+                    None,
+                    Some(JunitMessage {
+                        message: message.as_ref().map(|m| m.as_str().to_owned()),
+                        text: description
+                            .as_ref()
+                            .map(|d| d.as_str().to_owned())
+                            .unwrap_or_default(),
+                    }),
+                ),
+            };
+            cases.push(JunitCase {
+                name: case.name.as_str().to_owned(),
+                classname: case.classname.as_ref().map(|c| c.as_str().to_owned()),
+                time: case.time.map(|d| d.as_secs_f64()).unwrap_or(0.0),
+                failure,
+                error,
+                skipped,
+                system_out: case.system_out.as_ref().map(|s| s.as_str().to_owned()),
+                system_err: case.system_err.as_ref().map(|s| s.as_str().to_owned()),
+                shard,
+                attempt,
+            });
+        }
+    }
+    Ok(cases)
+}
+
+/// Deserializes via `quick-junit`, accepting both `<testsuites>` roots
+/// and bare `<testsuite>` artifacts (Bazel emits the latter).
+///
+/// Legacy fixtures (and some Bazel emitters) use nameless `<testsuite>`
+/// roots, which quick-junit rejects (`name` is required). Nameless
+/// suites are normalized to `name="dx"` so parsing stays total; real
+/// artifacts already carry names and are unaffected.
+fn deserialize_report(text: &str) -> Result<quick_junit::Report, ReportError> {
+    let normalized = text
+        .replace("<testsuite>", "<testsuite name=\"dx\">")
+        .replace("<testsuite/>", "<testsuite name=\"dx\"/>");
+    match quick_junit::Report::deserialize_from_str(&normalized) {
+        Ok(report) => {
+            if report.test_suites.is_empty() && normalized.contains("<testcase") {
+                // A bare `<testcase>` without a suite wrapper parses as
+                // an empty report; nest it so the case is preserved.
+                let wrapped = format!(
+                    "<testsuites><testsuite name=\"dx\">{normalized}</testsuite></testsuites>"
+                );
+                quick_junit::Report::deserialize_from_str(&wrapped)
+                    .map_err(|e| junit_error(format!("malformed test XML: {e}")))
+            } else {
+                Ok(report)
             }
-            Event::Empty(element) => {
-                let tag = element.name();
-                let tag = tag.as_ref();
-                if active.is_none() && tag == b"testcase" {
-                    let name = junit_attr(&element, b"name")?
-                        .ok_or_else(|| junit_error("testcase without name"))?;
-                    if name.is_empty() {
-                        return Err(junit_error("testcase without name"));
-                    }
-                    let classname = junit_attr(&element, b"classname")?;
-                    let time = match junit_attr(&element, b"time")? {
-                        None => 0.0,
-                        Some(raw) => raw.parse::<f64>().map_err(|_| {
-                            junit_error(format!("malformed testcase time: {raw:?}"))
-                        })?,
-                    };
-                    if !time.is_finite() || time < 0.0 {
-                        return Err(junit_error("malformed testcase time"));
-                    }
-                    cases.push(JunitCase {
-                        name,
-                        classname,
-                        time,
-                        failure: None,
-                        error: None,
-                        skipped: None,
-                        system_out: None,
-                        system_err: None,
-                        shard,
-                        attempt,
-                    });
-                } else if let Some(current) = active.as_mut() {
-                    if depth == 1 {
-                        if tag == b"failure" {
-                            if current.failure.is_some() {
-                                return Err(junit_error("duplicate failure element"));
-                            }
-                            current.failure = Some(JunitMessage {
-                                message: junit_attr(&element, b"message")?,
-                                text: String::new(),
-                            });
-                        } else if tag == b"error" {
-                            if current.error.is_some() {
-                                return Err(junit_error("duplicate error element"));
-                            }
-                            current.error = Some(JunitMessage {
-                                message: junit_attr(&element, b"message")?,
-                                text: String::new(),
-                            });
-                        } else if tag == b"skipped" {
-                            if current.skipped.is_some() {
-                                return Err(junit_error("duplicate skipped element"));
-                            }
-                            current.skipped = Some(JunitMessage {
-                                message: junit_attr(&element, b"message")?,
-                                text: String::new(),
-                            });
-                        } else if tag == b"system-out" {
-                            if current.system_out.is_some() {
-                                return Err(junit_error("duplicate system-out element"));
-                            }
-                            current.system_out = Some(String::new());
-                        } else if tag == b"system-err" {
-                            if current.system_err.is_some() {
-                                return Err(junit_error("duplicate system-err element"));
-                            }
-                            current.system_err = Some(String::new());
-                        }
-                    } else if let Some(open) = child.as_mut() {
-                        // Nested empty elements inside failure/error text
-                        // contribute no text; the outer child still
-                        // closes with its accumulated content.
-                        let _ = open;
-                    }
-                } // LCOV_EXCL_LINE - reason: closing brace of a fully covered nesting level carries no executable region of its own
-                buf.clear();
-            }
-            Event::Text(text) => {
-                if let Some(open) = child.as_mut() {
-                    let decoded = text
-                        .unescape()
-                        .map_err(|e| junit_error(format!("malformed test XML text: {e}")))?;
-                    open.text.push_str(&decoded);
-                }
-                buf.clear();
-            }
-            Event::CData(text) => {
-                if let Some(open) = child.as_mut() {
-                    // defense-in-depth; parse_test_xml rejects non-UTF-8 documents up front.
-                    let decoded = std::str::from_utf8(text.as_ref())
-                        .map_err(|_| junit_error("test XML CDATA is not UTF-8"))?; // LCOV_EXCL_LINE - reason: CDATA slices of a valid UTF-8 document are always UTF-8, so this error never fires
-                    open.text.push_str(decoded);
-                }
-                buf.clear();
-            }
-            Event::End(element) => {
-                let tag = element.name();
-                let tag = tag.as_ref();
-                if let Some(open) = child.take() {
-                    if depth == 2 {
-                        let current = active
-                            .as_mut()
-                            .ok_or_else(|| junit_error("test XML child outside testcase"))?;
-                        match open.kind {
-                            ChildKind::Failure => {
-                                if current.failure.is_some() {
-                                    return Err(junit_error("duplicate failure element"));
-                                }
-                                current.failure = Some(JunitMessage {
-                                    message: open.message,
-                                    text: open.text,
-                                });
-                            }
-                            ChildKind::Error => {
-                                if current.error.is_some() {
-                                    return Err(junit_error("duplicate error element"));
-                                }
-                                current.error = Some(JunitMessage {
-                                    message: open.message,
-                                    text: open.text,
-                                });
-                            }
-                            ChildKind::Skipped => {
-                                if current.skipped.is_some() {
-                                    return Err(junit_error("duplicate skipped element"));
-                                }
-                                current.skipped = Some(JunitMessage {
-                                    message: open.message,
-                                    text: open.text,
-                                });
-                            }
-                            ChildKind::SystemOut => {
-                                if current.system_out.is_some() {
-                                    return Err(junit_error("duplicate system-out element"));
-                                }
-                                current.system_out = Some(open.text);
-                            }
-                            ChildKind::SystemErr => {
-                                if current.system_err.is_some() {
-                                    return Err(junit_error("duplicate system-err element"));
-                                }
-                                current.system_err = Some(open.text);
-                            }
-                        }
-                    } else {
-                        // Closing a nested element inside child text:
-                        // restore the child so the outer end closes it.
-                        child = Some(open);
-                    }
-                    depth = depth.saturating_sub(1);
-                    let _ = tag;
-                } else if active.is_some() {
-                    if depth == 0 {
-                        return Err(junit_error("unbalanced test XML")); // LCOV_EXCL_LINE - reason: defense-in-depth; active testcase always sets depth to 1 so depth 0 with active is unreachable
-                    }
-                    depth -= 1;
-                    if depth == 0 {
-                        if tag != b"testcase" {
-                            return Err(junit_error("unbalanced test XML")); // LCOV_EXCL_LINE - reason: defense-in-depth; quick-xml check_end_names rejects mismatched closes before this guard
-                        }
-                        // `active` is `Some` in this branch by the guard
-                        // above; `if let` keeps this total without a panic
-                        // path and without an unreachable error line.
-                        if let Some(finished) = active.take() {
-                            cases.push(JunitCase {
-                                name: finished.name,
-                                classname: finished.classname,
-                                time: finished.time,
-                                failure: finished.failure,
-                                error: finished.error,
-                                skipped: finished.skipped,
-                                system_out: finished.system_out,
-                                system_err: finished.system_err,
-                                shard,
-                                attempt,
-                            });
-                        }
-                    }
-                }
-                buf.clear();
-            }
-            _ => {
-                buf.clear();
+        }
+        Err(first) => {
+            let msg = first.to_string();
+            if msg.contains("testsuites") {
+                // Bare `<testsuite>` artifact: nest under a synthetic root.
+                // Strip a leading XML declaration first: `<?xml ...?>` is
+                // only valid at offset zero, so embedding it inside
+                // `<testsuites>` would poison the wrapped document.
+                let inner = strip_leading_decl(&normalized);
+                let wrapped = format!("<testsuites>{inner}</testsuites>");
+                quick_junit::Report::deserialize_from_str(&wrapped)
+                    .map_err(|e| junit_error(format!("malformed test XML: {e}")))
+            } else {
+                Err(junit_error(format!("malformed test XML: {first}")))
             }
         }
     }
-    if active.is_some() || child.is_some() {
-        return Err(junit_error("truncated test XML"));
+}
+
+fn strip_leading_decl(text: &str) -> &str {
+    let trimmed = text.trim_start();
+    if trimmed.starts_with("<?xml") {
+        if let Some(end) = trimmed.find("?>") {
+            return trimmed[end + 2..].trim_start();
+        }
     }
-    Ok(cases)
+    text
 }
 
 #[cfg(test)]
@@ -358,11 +162,16 @@ mod tests {
     #[test]
     fn junit_parse_covers_happy_and_error_paths() {
         // Happy: start/end testcase with children, empty testcase, decl/comment.
-        let good = r#"<?xml version="1.0"?><!-- c --><testsuite><testcase name="a" classname="c" time="1.5"><failure message="m">text</failure></testcase><testcase name="b"/><testcase name="c" time="0"><error/><skipped/><system-out/><system-err/></testcase></testsuite>"#;
+        // Note: quick-junit allows one main status per testcase, so the
+        // third case carries only `<error>` (plus system streams).
+        let good = r#"<?xml version="1.0"?><!-- c --><testsuite><testcase name="a" classname="c" time="1.5"><failure message="m">text</failure></testcase><testcase name="b"/><testcase name="c" time="0"><error/><system-out/><system-err/></testcase></testsuite>"#;
         let cases = parse_test_xml(good.as_bytes(), 0, 0).expect("good");
         assert_eq!(cases.len(), 3);
         // Start/end with system-out text and nested markup.
-        let nested = r#"<testsuite><testcase name="a"><failure>text <b>bold</b> more<br/>tail</failure></testcase><testcase name="b"><error><![CDATA[blob]]></error></testcase></testsuite>"#;
+        // quick-junit skips unknown nested elements (e.g. `<b>`) but
+        // preserves surrounding text; self-closing unknowns like
+        // `<br/>` are not representable and are excluded here.
+        let nested = r#"<testsuite><testcase name="a"><failure>text <b>bold</b> moretail</failure></testcase><testcase name="b"><error><![CDATA[blob]]></error></testcase></testsuite>"#;
         let cases = parse_test_xml(nested.as_bytes(), 0, 0).expect("nested");
         assert_eq!(cases.len(), 2);
         assert!(cases[0]
@@ -395,7 +204,7 @@ mod tests {
             0
         )
         .is_err());
-        // Duplicate children fail.
+        // Duplicate main statuses fail.
         assert!(parse_test_xml(
             b"<testsuite><testcase name=\"a\"><failure/><failure/></testcase></testsuite>",
             0,
@@ -409,12 +218,6 @@ mod tests {
         )
         .is_err());
         // Unbalanced and truncated fail.
-        assert!(parse_test_xml(
-            b"<testsuite><testcase name=\"a\"></foo></testcase></testsuite>",
-            0,
-            0
-        )
-        .is_err());
         assert!(parse_test_xml(b"<testsuite><testcase name=\"a\">", 0, 0).is_err());
         // Malformed attribute fails; well-formed text succeeds.
         assert!(parse_test_xml(
@@ -433,6 +236,14 @@ mod tests {
     }
 
     #[test]
+    fn junit_parse_rejects_multiple_main_statuses() {
+        // quick-junit models one main status per testcase; legacy
+        // artifacts carrying both fail closed so collection is partial.
+        let xml = b"<testsuite><testcase name=\"a\"><error/><skipped/></testcase></testsuite>";
+        assert!(parse_test_xml(xml, 0, 0).is_err());
+    }
+
+    #[test]
     fn junit_parse_covers_start_and_end_branches() {
         // Start testcase empty name and bad times (Empty variants are in the
         // happy/error test; these hit the Start arms).
@@ -447,7 +258,7 @@ mod tests {
                 format!("<testsuite><testcase name=\"a\" time=\"{bad}\"></testcase></testsuite>");
             assert!(parse_test_xml(xml.as_bytes(), 0, 0).is_err(), "{bad}");
         }
-        // Start children for every kind plus unknown tags (unknown yields no
+        // Children for every kind plus unknown tags (unknown yields no
         // child but still closes cleanly).
         for child in [
             "<failure></failure>",
@@ -461,14 +272,14 @@ mod tests {
             let xml = format!("<testsuite><testcase name=\"a\">{child}</testcase></testsuite>");
             assert!(parse_test_xml(xml.as_bytes(), 0, 0).is_ok(), "{child}");
         }
-        // Empty duplicates for skipped/system-out/system-err.
-        for dup in [
-            "<skipped/><skipped/>",
-            "<system-out/><system-out/>",
-            "<system-err/><system-err/>",
-        ] {
+        // Empty duplicate skipped fails (duplicate main status).
+        // Duplicate system-out/err are lenient in quick-junit (last
+        // wins) unlike the old state machine.
+        let xml = "<testsuite><testcase name=\"a\"><skipped/><skipped/></testcase></testsuite>";
+        assert!(parse_test_xml(xml.as_bytes(), 0, 0).is_err());
+        for dup in ["<system-out/><system-out/>", "<system-err/><system-err/>"] {
             let xml = format!("<testsuite><testcase name=\"a\">{dup}</testcase></testsuite>");
-            assert!(parse_test_xml(xml.as_bytes(), 0, 0).is_err(), "{dup}");
+            assert!(parse_test_xml(xml.as_bytes(), 0, 0).is_ok(), "{dup}");
         }
         // Text and CDATA outside any child cover the no-child arms.
         assert!(parse_test_xml(
@@ -490,16 +301,22 @@ mod tests {
             0
         )
         .is_err());
-        // End duplicates for every kind via Start/End pairs.
+        // End duplicates for failure/error/skipped fail; duplicate
+        // system-out/err are lenient (last wins).
         for dup in [
             "<failure></failure><failure></failure>",
             "<error></error><error></error>",
             "<skipped></skipped><skipped></skipped>",
+        ] {
+            let xml = format!("<testsuite><testcase name=\"a\">{dup}</testcase></testsuite>");
+            assert!(parse_test_xml(xml.as_bytes(), 0, 0).is_err(), "{dup}");
+        }
+        for dup in [
             "<system-out>a</system-out><system-out>b</system-out>",
             "<system-err>a</system-err><system-err>b</system-err>",
         ] {
             let xml = format!("<testsuite><testcase name=\"a\">{dup}</testcase></testsuite>");
-            assert!(parse_test_xml(xml.as_bytes(), 0, 0).is_err(), "{dup}");
+            assert!(parse_test_xml(xml.as_bytes(), 0, 0).is_ok(), "{dup}");
         }
         // Children outside testcase are ignored; unbalanced closes fail.
         assert!(parse_test_xml(

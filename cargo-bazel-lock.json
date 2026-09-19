@@ -1,5 +1,5 @@
 {
-  "checksum": "46e4f05facb9d2e30c07054e56567f1c6a644aa7e009275e5fad4b5726ddbdf1",
+  "checksum": "8826ee78c8baa0f94d98a7bf22ba1f9566b26c7b806598c42eba00ae9be30afc",
   "conditions": {
     "aarch64-apple-darwin": [
       "aarch64-apple-darwin"
@@ -1135,7 +1135,7 @@
       ],
       "version": "1.0.4"
     },
-    "chrono 0.4.42": {
+    "chrono 0.4.45": {
       "common_attrs": {
         "crate_features": [
           "alloc",
@@ -1214,8 +1214,8 @@
       "package_url": "https://github.com/chronotope/chrono",
       "repository": {
         "Http": {
-          "sha256": "145052bdd345b87320e369255277e3fb5152762ad123a901ef5c262dd38fe8d2",
-          "url": "https://static.crates.io/crates/chrono/0.4.42/download"
+          "sha256": "1aa79e62e7697b8e29b513a68abacf485adcd1fe8284a4316c5ae868e6633327",
+          "url": "https://static.crates.io/crates/chrono/0.4.45/download"
         }
       },
       "targets": [
@@ -1226,7 +1226,7 @@
           }
         }
       ],
-      "version": "0.4.42"
+      "version": "0.4.45"
     },
     "clap 4.6.7": {
       "common_attrs": {
@@ -2276,7 +2276,7 @@
       "common_attrs": {
         "deps": [
           {
-            "id": "chrono 0.4.42",
+            "id": "chrono 0.4.45",
             "target": "chrono"
           },
           {
@@ -2463,7 +2463,7 @@
             "target": "base64"
           },
           {
-            "id": "chrono 0.4.42",
+            "id": "chrono 0.4.45",
             "target": "chrono"
           },
           {
@@ -2483,7 +2483,11 @@
             "target": "libc"
           },
           {
-            "id": "quick-xml 0.36.2",
+            "id": "quick-junit 0.8.0",
+            "target": "quick_junit"
+          },
+          {
+            "id": "quick-xml 0.41.0",
             "target": "quick_xml"
           },
           {
@@ -5258,6 +5262,46 @@
       ],
       "version": "1.2.3"
     },
+    "newtype-uuid 1.4.0": {
+      "common_attrs": {
+        "crate_features": [
+          "alloc",
+          "default",
+          "std"
+        ],
+        "deps": [
+          {
+            "id": "uuid 1.26.1",
+            "target": "uuid"
+          }
+        ],
+        "edition": "2024"
+      },
+      "library_target_name": "newtype_uuid",
+      "license": "MIT OR Apache-2.0",
+      "license_file": "LICENSE-APACHE",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "name": "newtype-uuid",
+      "package_url": "https://github.com/oxidecomputer/newtype-uuid",
+      "repository": {
+        "Http": {
+          "sha256": "0fa56da58097c7ae893c4097bb6d91bb5f7fa330053e07e033349db4d5f83ba8",
+          "url": "https://static.crates.io/crates/newtype-uuid/1.4.0/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "newtype_uuid",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "1.4.0"
+    },
     "normalize-line-endings 0.3.0": {
       "common_attrs": {
         "edition": "2015"
@@ -6279,7 +6323,66 @@
       ],
       "version": "1.2.3"
     },
-    "quick-xml 0.36.2": {
+    "quick-junit 0.8.0": {
+      "common_attrs": {
+        "deps": [
+          {
+            "id": "chrono 0.4.45",
+            "target": "chrono"
+          },
+          {
+            "id": "indexmap 2.14.2",
+            "target": "indexmap"
+          },
+          {
+            "id": "newtype-uuid 1.4.0",
+            "target": "newtype_uuid"
+          },
+          {
+            "id": "quick-xml 0.41.0",
+            "target": "quick_xml"
+          },
+          {
+            "id": "strip-ansi-escapes 0.2.1",
+            "target": "strip_ansi_escapes"
+          },
+          {
+            "id": "thiserror 2.0.20",
+            "target": "thiserror"
+          },
+          {
+            "id": "uuid 1.26.1",
+            "target": "uuid"
+          }
+        ],
+        "edition": "2021"
+      },
+      "library_target_name": "quick_junit",
+      "license": "Apache-2.0 OR MIT",
+      "license_file": "LICENSE-APACHE",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "name": "quick-junit",
+      "package_url": "https://github.com/nextest-rs/quick-junit",
+      "repository": {
+        "Http": {
+          "sha256": "bae23b8e1a59a90f7bf98caa2f4c8c2eedf6df011c6c88ed633e85a87c84526e",
+          "url": "https://static.crates.io/crates/quick-junit/0.8.0/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "quick_junit",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "0.8.0"
+    },
+    "quick-xml 0.41.0": {
       "common_attrs": {
         "crate_features": [
           "default"
@@ -6302,8 +6405,8 @@
       "package_url": "https://github.com/tafia/quick-xml",
       "repository": {
         "Http": {
-          "sha256": "f7649a7b4df05aed9ea7ec6f628c67c9953a43869b8bc50929569b2999d443fe",
-          "url": "https://static.crates.io/crates/quick-xml/0.36.2/download"
+          "sha256": "e660451e55124f798a69a5af3f49ccfbefbd41910eefd25caf2393e1f3473ec1",
+          "url": "https://static.crates.io/crates/quick-xml/0.41.0/download"
         }
       },
       "targets": [
@@ -6314,7 +6417,7 @@
           }
         }
       ],
-      "version": "0.36.2"
+      "version": "0.41.0"
     },
     "quote 1.0.47": {
       "build_script_attrs": {},
@@ -7640,6 +7743,41 @@
       ],
       "version": "1.2.1"
     },
+    "strip-ansi-escapes 0.2.1": {
+      "common_attrs": {
+        "deps": [
+          {
+            "id": "vte 0.14.1",
+            "target": "vte"
+          }
+        ],
+        "edition": "2015"
+      },
+      "library_target_name": "strip_ansi_escapes",
+      "license": "Apache-2.0/MIT",
+      "license_file": "LICENSE-APACHE",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "name": "strip-ansi-escapes",
+      "package_url": "https://github.com/luser/strip-ansi-escapes",
+      "repository": {
+        "Http": {
+          "sha256": "2a8f8038e7e7969abb3f1b7c2a811225e9296da208539e0f79c5251d6cac0025",
+          "url": "https://static.crates.io/crates/strip-ansi-escapes/0.2.1/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "strip_ansi_escapes",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "0.2.1"
+    },
     "strsim 0.11.1": {
       "common_attrs": {
         "edition": "2015"
@@ -8865,6 +9003,39 @@
       ],
       "version": "0.2.2"
     },
+    "uuid 1.26.1": {
+      "common_attrs": {
+        "crate_features": [
+          "default",
+          "std"
+        ],
+        "edition": "2021"
+      },
+      "library_target_name": "uuid",
+      "license": "Apache-2.0 OR MIT",
+      "license_file": "LICENSE-APACHE",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "name": "uuid",
+      "package_url": "https://github.com/uuid-rs/uuid",
+      "repository": {
+        "Http": {
+          "sha256": "2ef6dac1e96601b4fb3acccccff2139741fcb757cb9a36089bf5be91cfb285ce",
+          "url": "https://static.crates.io/crates/uuid/1.26.1/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "uuid",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "1.26.1"
+    },
     "valuable 0.1.1": {
       "build_script_attrs": {},
       "common_attrs": {
@@ -8930,6 +9101,41 @@
         }
       ],
       "version": "0.9.5"
+    },
+    "vte 0.14.1": {
+      "common_attrs": {
+        "deps": [
+          {
+            "id": "memchr 2.8.3",
+            "target": "memchr"
+          }
+        ],
+        "edition": "2021"
+      },
+      "library_target_name": "vte",
+      "license": "Apache-2.0 OR MIT",
+      "license_file": "LICENSE-APACHE",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "name": "vte",
+      "package_url": "https://github.com/alacritty/vte",
+      "repository": {
+        "Http": {
+          "sha256": "231fdcd7ef3037e8330d8e17e61011a2c244126acc0a982f4040ac3f9f0bc077",
+          "url": "https://static.crates.io/crates/vte/0.14.1/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "vte",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "0.14.1"
     },
     "wait-timeout 0.2.1": {
       "common_attrs": {
@@ -11069,7 +11275,7 @@
     "anyhow 1.0.104",
     "base64 0.22.1",
     "blake3 1.8.7",
-    "chrono 0.4.42",
+    "chrono 0.4.45",
     "clap 4.6.7",
     "clap_complete 4.6.11",
     "clap_mangen 0.2.33",
@@ -11081,7 +11287,8 @@
     "notify 8.2.0",
     "notify-debouncer-mini 0.6.0",
     "pulldown-cmark 0.13.4",
-    "quick-xml 0.36.2",
+    "quick-junit 0.8.0",
+    "quick-xml 0.41.0",
     "semver 1.0.27",
     "serde 1.0.229",
     "serde_json 1.0.151",

@@ -17,7 +17,8 @@ strsim = "0.11"
 tempfile = "3"
 thiserror = "2"
 tracing = "0.1"
-quick-xml = "0.36"
+quick-xml = "0.41"
+quick-junit = "0.8"
 # Pinned to the same spec as dx/process: the `dx` binary shim references
 # libc paths in its signal-forwarding prelude, and crate_universe already
 # carries libc 0.2.189 for the workspace lockfile.
