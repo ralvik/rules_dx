@@ -3,7 +3,8 @@
 #
 # Closes the five qualification gaps named in #308 with machine-checked
 # evidence on a clean tree, without paid infrastructure:
-# - per-cell LCOV gating (seed qualified, rest unqualified, never unioned),
+# - per-cell LCOV gating (seed plus arm64 qualified, rest unqualified,
+#   never unioned),
 # - Starlark instrumentation-vs-behavioral-matrix decision with evidence,
 # - Codecov opt-in-only qualification (no activation, no upload wiring),
 # - free-tier quota qualification for the services actually used,
@@ -13,9 +14,9 @@
 # First-party Bazel-owned coverage stays the gate (issue #254 adopted);
 # Codecov stays opt-in only and is never required. Remote correctness is
 # not claimed: local aquery plus execution-log evidence proves cache
-# behavior locally, and docs state remote remains unverified. All required
-# non-seed cells stay unqualified per the platform policy (issues #5/#298)
-# with clean refusal, never silent substitution.
+# behavior locally, and docs state remote remains unverified. All remaining
+# non-qualified cells stay unqualified per the platform policy (issues #5/#298,
+# arm64 qualified under #410) with clean refusal, never silent substitution.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:coverage_qualification`,
 # following //tools/ci:coverage_cell.
@@ -32,25 +33,26 @@ dx_test_init
 cells="tools/coverage/cells.txt"
 seed_inventory="tools/coverage/seed-inventory.txt"
 
-# Per-cell registry exists with exactly one qualified seed row.
+# Per-cell registry exists with exactly two qualified rows (seed x86_64
+# plus arm64 native under issue #410).
 if [[ -f "$cells" ]] &&
-  [[ "$(grep -c -E -e '^qualified ' "$cells")" == "1" ]] &&
-  grep -q -F -e 'qualified seed-linux_x86_64 tools/coverage/seed-inventory.txt' "$cells"; then
+  [[ "$(grep -c -E -e '^qualified ' "$cells")" == "2" ]] &&
+  grep -q -F -e 'qualified seed-linux_x86_64 tools/coverage/seed-inventory.txt' "$cells" &&
+  grep -q -F -e 'qualified linux_arm64 tools/coverage/arm64-inventory.txt' "$cells"; then
   ok
 else
-  bad "cells registry missing or seed row wrong: $cells"
+  bad "cells registry missing or a qualified row wrong: $cells"
 fi
 
 # Unqualified rows cover the v1 required hosts that stay platform-gated.
-if grep -q -F -e 'unqualified linux_arm64 issue-298' "$cells" &&
-  grep -q -F -e 'unqualified linux_x86_64_musl issue-298' "$cells" &&
+if grep -q -F -e 'unqualified linux_x86_64_musl issue-298' "$cells" &&
   grep -q -F -e 'unqualified linux_arm64_musl issue-298' "$cells" &&
   grep -q -F -e 'unqualified macos_arm64 issue-298' "$cells" &&
   grep -q -F -e 'unqualified windows_x86_64 issue-298' "$cells" &&
-  [[ "$(grep -c -E -e '^unqualified ' "$cells")" == "5" ]]; then
+  [[ "$(grep -c -E -e '^unqualified ' "$cells")" == "4" ]]; then
   ok
 else
-  bad "cells registry lost an unqualified required host (want 5 issue-298 rows)"
+  bad "cells registry lost an unqualified required host (want 4 issue-298 rows)"
 fi
 
 # No duplicate cell names in the registry.
@@ -60,13 +62,17 @@ else
   bad "cells registry has a duplicate cell name"
 fi
 
-# Qualified inventory exists and stays Rust-only (no Starlark line data).
+# Qualified inventories exist and stay Rust-only (no Starlark line data).
+# Both cells gate the same first-party scope; only the header prose differs.
 if [[ -f "$seed_inventory" ]] &&
+  [[ -f "tools/coverage/arm64-inventory.txt" ]] &&
   ! grep -E -e '\.bzl$' "$seed_inventory" | grep -q . &&
-  grep -q -F -e 'eligible cli/lcov/src/lib.rs' "$seed_inventory"; then
+  ! grep -E -e '\.bzl$' tools/coverage/arm64-inventory.txt | grep -q . &&
+  grep -q -F -e 'eligible cli/lcov/src/lib.rs' "$seed_inventory" &&
+  cmp -s <(grep -E -e '^(eligible|support) ' "$seed_inventory") <(grep -E -e '^(eligible|support) ' tools/coverage/arm64-inventory.txt); then
   ok
 else
-  bad "seed inventory missing, empty, or gained non-Rust scope"
+  bad "seed/arm64 inventories missing, non-Rust scope, or out of sync"
 fi
 
 # No cross-cell union: renderer, workflows, and docs keep cells separate.
@@ -78,13 +84,15 @@ else
   bad "per-cell no-union record lost (renderer, consumer workflow, or testing README)"
 fi
 
-# Seed coverage job stays seed-cell scoped in CI.
+# Seed coverage job stays seed-cell scoped in CI, with a per-cell arm64 twin.
 if grep -q -F -e 'coverage (dx coverage gate, seed cell)' .github/workflows/ci.yml &&
+  grep -q -F -e 'coverage-arm64 (dx coverage gate, arm64 cell)' .github/workflows/ci.yml &&
   grep -q -F -e 'seed linux_x86_64' .github/workflows/ci.yml &&
+  grep -q -F -e 'arm64 linux_arm64' .github/workflows/ci.yml &&
   grep -q -F -e 'coverage --min-coverage' .github/workflows/ci.yml; then
   ok
 else
-  bad "ci.yml lost the seed-cell coverage gate scope"
+  bad "ci.yml lost the seed/arm64 per-cell coverage gate scope"
 fi
 
 # Consumer coverage stays per-cell with no union and Codecov opt-in only.

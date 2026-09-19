@@ -2,7 +2,7 @@
 
 ## Bootstrap
 
-Fresh clone to green build, copy-paste. Linux x86_64 seed host.
+Fresh clone to green build, copy-paste. Linux x86_64 seed host plus Linux arm64 native (issue #410).
 Pinned versions: Bazel `9.2.0` (canonical `.bazelversion`), Bazelisk
 `v1.29.0` (canonical `.github/actions/setup-bazelisk/action.yml`
 defaults), pnpm `10.34.5` (via `packageManager`, use corepack).
@@ -34,7 +34,7 @@ printf '%s\n' \
 
 ## Current Workflow
 
-Build, test, and coverage run through Bazel on Linux x86_64 with local-only
+Build, test, and coverage run through Bazel on Linux x86_64 (plus Linux arm64 native, issue #410) with local-only
 execution:
 
 ```sh

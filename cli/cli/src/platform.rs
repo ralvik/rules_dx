@@ -1,4 +1,4 @@
-//! Startup platform gate for the `dx` CLI (issue #298).
+//! Startup platform gate for the `dx` CLI (issues #298, #410).
 //!
 //! Only hosts with platform evidence stay on the execution path; every
 //! other host gets a clean refusal naming the host and the qualification
@@ -10,12 +10,13 @@
 
 /// Hosts with platform evidence: `(std::env::consts::OS, ARCH)` pairs.
 ///
-/// Today only the Linux x86_64 seed host is delivered. Provisional: extend
-/// this list as ADR 0014 required-platform evidence lands (tracked in
-/// issue #298); the startup refusal below reads the same list, so support
-/// flips on automatically with the evidence entry.
+/// The Linux x86_64 seed host plus Linux arm64 glibc native (issue #410)
+/// are delivered. Provisional: extend this list as remaining ADR 0014
+/// required-platform evidence lands (tracked in issue #298, closed, with
+/// per-host successors owning each host); the startup refusal below reads
+/// the same list, so support flips on automatically with the evidence entry.
 pub fn qualified_hosts() -> &'static [(&'static str, &'static str)] {
-    &[("linux", "x86_64")]
+    &[("linux", "x86_64"), ("linux", "aarch64")]
 }
 
 /// Clean-refusal diagnostic for an unqualified host, or `None` when the
@@ -26,7 +27,7 @@ pub fn refusal(os: &str, arch: &str) -> Option<String> {
         return None;
     }
     Some(format!(
-        "unsupported_platform: {os}/{arch} has no qualified platform evidence; dx is delivered on Linux x86_64 only (see docs/product/support-matrix.md and ADR 0014, tracked in issue #298)"
+        "unsupported_platform: {os}/{arch} has no qualified platform evidence; dx is delivered on Linux x86_64 and Linux arm64 (glibc) only (see docs/product/support-matrix.md and ADR 0014, tracked in issue #298 with per-host successors such as issue #410)"
     ))
 }
 
@@ -40,15 +41,19 @@ mod tests {
     }
 
     #[test]
+    fn arm64_host_is_qualified() {
+        assert_eq!(refusal("linux", "aarch64"), None);
+    }
+
+    #[test]
     fn unqualified_hosts_are_refused_with_pointer() {
         // Every remaining ADR 0014 host (required, best-effort, and
-        // out-of-v1) refuses cleanly until its #298 evidence lands:
-        // Linux arm64 glibc, static-musl profiles share the same
-        // OS/arch pairs, macOS arm64 (required) plus x86_64
+        // out-of-v1) refuses cleanly until its per-host evidence lands:
+        // static-musl profiles share the same OS/arch pairs as the now
+        // qualified Linux glibc hosts, macOS arm64 (required) plus x86_64
         // (best-effort), Windows x86_64 (required, backend blocked)
         // plus arm64 (out of v1).
         for (os, arch) in [
-            ("linux", "aarch64"),
             ("macos", "aarch64"),
             ("macos", "x86_64"),
             ("windows", "x86_64"),
@@ -62,7 +67,10 @@ mod tests {
     }
 
     #[test]
-    fn qualified_set_is_seed_only() {
-        assert_eq!(qualified_hosts(), &[("linux", "x86_64")]);
+    fn qualified_set_is_seed_plus_arm64() {
+        assert_eq!(
+            qualified_hosts(),
+            &[("linux", "x86_64"), ("linux", "aarch64")]
+        );
     }
 }

@@ -270,13 +270,15 @@ else
   bad "CI lost a no-coverage gate half (test execution + target_tags + coverage_cell + coverage_qualification)"
 fi
 
-# C7: cells registry stays seed-only with no cross-cell union.
+# C7: cells registry stays seed plus arm64 with no cross-cell union.
 if grep -q -F -e 'qualified seed-linux_x86_64' tools/coverage/cells.txt &&
+  grep -q -F -e 'qualified linux_arm64 tools/coverage/arm64-inventory.txt' tools/coverage/cells.txt &&
   grep -q -F -e 'tools/coverage/seed-inventory.txt' tools/coverage/cells.txt &&
-  [[ -f tools/coverage/seed-inventory.txt ]]; then
+  [[ -f tools/coverage/seed-inventory.txt ]] &&
+  [[ -f tools/coverage/arm64-inventory.txt ]]; then
   ok
 else
-  bad "coverage cells registry lost its seed-only qualified record"
+  bad "coverage cells registry lost its seed plus arm64 qualified record"
 fi
 
 # --- D. shell sources with no quality class ---

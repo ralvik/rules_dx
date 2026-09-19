@@ -7,8 +7,10 @@ tool repository only when an action needs its artifact, and `ctx.download`
 rejects bytes whose digest differs from the checked-in pin.
 
 Metadata schema version 1 is frozen by `metadata_tests.bzl`; only
-linux_x86_64 is recorded (seed host only per issue #298 and ADR 0014;
-other required hosts are unqualified gaps).
+linux_x86_64 is recorded (seed host plus Linux arm64 `dx`/CI qualified
+under issue #410; linux_arm64 tool artifacts stay an owned follow-up gap
+with the recorded no-artifact diagnostic, never a silent fallback; other
+required hosts are unqualified gaps).
 
 Host-tool contract (issue #318): repository fetching uses Bazel-native
 `ctx.download`/`ctx.extract` only. Direct downloads set

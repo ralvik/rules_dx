@@ -190,7 +190,7 @@ fn run() -> i32 {
         quiet = invocation.quiet,
         "dx invocation parsed"
     );
-    // Platform gate (issue #298): unqualified hosts refuse cleanly with a
+    // Platform gate (issues #298/#410): unqualified hosts refuse cleanly with a
     // qualification pointer before any Bazel work starts, never partial
     // execution presented as success. Usage errors above still surface so
     // typos stay diagnosable on every host.

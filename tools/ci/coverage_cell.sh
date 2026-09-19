@@ -3,9 +3,11 @@
 #
 # Every required configuration/platform cell gates its own combined LCOV
 # report: no cross-platform union, no averaged percentages, no rounding
-# up. Only the seed host qualifies today (issue #5); this harness wires
-# the seed cell end to end through the versioned inventory at
-# tools/coverage/seed-inventory.txt and the `coverage_bin` gate CLI:
+# up. The seed host plus Linux arm64 native qualify (issues #5/#410);
+# this harness wires the seed cell end to end through the versioned
+# inventory at tools/coverage/seed-inventory.txt and the `coverage_bin`
+# gate CLI (the arm64 twin gates tools/coverage/arm64-inventory.txt in
+# the CI `coverage-arm64` job against the same scope):
 # - the real scoped `bazel coverage` report passes the real gate,
 # - mutated inputs fail closed (missing report, uninventoried source,
 #   undeclared eligible source, uncovered line with location,
@@ -58,6 +60,19 @@ if [[ "$gate_rc" == "0" ]] && echo "$gate_out" | grep -q 'coverage gate: PASS'; 
   ok
 else
   bad "seed cell gate did not pass: rc=$gate_rc out=$gate_out"
+fi
+
+# The arm64 cell gates the same first-party scope (issue #410): the same
+# real report passes the arm64 inventory, so the two versioned
+# inventories stay functionally in sync (the CI coverage-arm64 job gates
+# the arm64 runner's own report per-cell with no union).
+arm64_rc=0
+arm64_out="$("$check_bin" --report bazel-out/_coverage/_coverage_report.dat \
+  --inventory tools/coverage/arm64-inventory.txt --sources "$scratch/sources.txt" --root . 2>&1)" || arm64_rc=$?
+if [[ "$arm64_rc" == "0" ]] && echo "$arm64_out" | grep -q 'coverage gate: PASS'; then
+  ok
+else
+  bad "arm64 cell gate did not pass: rc=$arm64_rc out=$arm64_out"
 fi
 
 # Missing report file fails the gate (exit 1), never a usage error.

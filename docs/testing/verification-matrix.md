@@ -87,7 +87,7 @@ class by design — never silently under the standard dogfood gates.
 ## Status
 
 `Delivered` means implemented and verified on the Linux x86_64 seed host
-only (platform qualification open under issue #298). `Open` means open work with no implementation
+plus Linux arm64 native (issue #410). `Open` means open work with no implementation
 claimed here. `Planning only` means planning is implemented with live
 execution deferred. `Tracked` means measured report-only tracking with no gate.
 
@@ -122,11 +122,18 @@ open work.
 ## Battery
 
 Accepted record of the as-built close-out battery. The full battery runs in
-`.github/workflows/ci.yml` on a clean tree on the Linux x86_64 seed host:
+`.github/workflows/ci.yml` on a clean tree on the Linux x86_64 seed host
+plus Linux arm64 native (issue #410, `ubuntu-24.04-arm` runners with a
+separate `bazel-arm64-` disk-cache scope):
 
 - `build`: `bazel build //...` plus the adopt-rust `dx_dev` smoke
   (`bazel build //examples/adopt-rust/... --config=dx_dev`) for
   `local_path_override` + `dx_dev` wiring (issue #407, normal CI, no nested Bazel).
+- `build-arm64`, `test-arm64`, `coverage-arm64`: the same build plus
+  `dx_dev` smoke, `bazel test //...`, and the arm64 per-cell coverage gate
+  (`dx coverage --min-coverage 97 //...` against
+  `tools/coverage/arm64-inventory.txt`, summary only, no cross-cell union)
+  natively on Linux arm64 (issue #410).
 - `test`: `bazel test //...` (no manual tests; hermetic CLI-contract pins run here).
 - `coverage`: `bazel run //cli/cli:dx -- coverage --min-coverage 97 //...`
   (seed cell only) plus `bazel run //tools/ci:coverage_report_guards`.
@@ -147,7 +154,8 @@ Accepted record of the as-built close-out battery. The full battery runs in
 - `dogfood-lint`, `dogfood-format`, `dogfood-typecheck`: corpus converge then
   `--check` no-op proof, plus lane-A trees `//python/... //javascript/...
   //rust/tests/fixtures/hello/...` where enforcing.
-- `devcontainer-check`, `docs-ci`, `consumer-ci` (build-only self-call).
+- `devcontainer-check`, `docs-ci`, `consumer-ci` (build-only self-call on
+  linux_x86_64 plus linux_arm64).
 
 Green here (static guards on a clean tree, no full rebuild):
 `non_dogfed_paths`, `supported_evidence_gate`, `distribution_closeout_guards`,
@@ -161,10 +169,12 @@ Remaining reds stay owned gaps, not green claims:
 
 - Full-tree `dx lint/format/typecheck/test --check //...` over fixtures and
   testdata stays open under #12 (lane A only) and #325 (consumer honesty).
-- Per-cell coverage is qualified seed-only under #308 (`tools/coverage/cells.txt`,
+- Per-cell coverage is qualified for the seed plus arm64 cells under
+  #308/#410 (`tools/coverage/cells.txt`,
   `bazel run //tools/ci:coverage_qualification`; no union, Starlark fallback,
   Codecov opt-in, quotas, local-only remote evidence). First-party PR reporting is
-  adopted under #254 (Codecov opt-in only). Non-seed cells stay platform-gated under #298.
+  adopted under #254 (Codecov opt-in only; the seed cell owns the PR comment,
+  the arm64 cell reports to its job summary). Remaining non-qualified cells stay platform-gated under #298.
 - Docs pipeline and environment/codegen stay open under #310 and #309 (see
   [Documentation](../documentation/README.md#contracts)). Environment/codegen
   deferred records plus fixture evidence are qualified seed-only under #309
@@ -184,12 +194,13 @@ Remaining reds stay owned gaps, not green claims:
   concurrency, permissions, per-cell coverage with fork-safe comments,
   build-only self-call smoke, native bump loop plus Renovate (complementary,
   issue #326),
-  dx migrate planning plus dx run multirun, tag hygiene as-built; platform,
-  runner, isolation, cache, ordering, merge, diff, queue, cancellation,
-  aggregate binding, thread identity, ordering, limits, fork, untrusted,
-  sensitive, retries, Code-Scanning, sequential, tag/release, Renovate and
-  native-bot, migrate-execution gaps stay owned gaps); platform qualification
-  beyond the seed host stays open under #298.
+   dx migrate planning plus dx run multirun, tag hygiene as-built; platform,
+   runner, isolation, cache, ordering, merge, diff, queue, cancellation,
+   aggregate binding, thread identity, ordering, limits, fork, untrusted,
+   sensitive, retries, Code-Scanning, sequential, tag/release, Renovate and
+   native-bot, migrate-execution gaps stay owned gaps); platform qualification
+   beyond the seed plus arm64 hosts stays open under #298 (arm64 qualified
+   under #410).
 - File-family quality record with fixture evidence qualified seed-only under #313
   (`bazel run //tools/ci:file_family_qualification`; provider-class
   applicability with never-suffix inference, Starlark/Buildifier plus TOML/Taplo

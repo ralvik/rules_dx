@@ -58,13 +58,22 @@ else
   bad "reusable-consumer lost its nine-check plus gate plus aggregate contract"
 fi
 
-# Platforms-gate pins the two supported platforms with explicit selection.
-if grep -q -F -e 'supported = {"linux_x86_64", "macos_arm64"}' "$workflow" &&
+# Platforms-gate pins the three supported platforms with explicit selection.
+if grep -q -F -e 'supported = {"linux_x86_64", "linux_arm64", "macos_arm64"}' "$workflow" &&
   grep -q -F -e 'no implicit default' "$workflow" &&
   grep -q -F -e 'must be a nonempty JSON array' "$workflow"; then
   ok
 else
   bad "platforms-gate lost its explicit plus supported-platform pin"
+fi
+
+# Per-platform jobs route each platform to its runner: seed Linux x86_64
+# to ubuntu-latest, Linux arm64 native (issue #410) to ubuntu-24.04-arm,
+# macOS arm64 to macos-14. Linux arm64 must never fall through to macOS.
+if [[ "$(grep -c -F -e "matrix.platform == 'linux_arm64' && 'ubuntu-24.04-arm'" "$workflow")" == "3" ]]; then
+  ok
+else
+  bad "per-platform jobs lost the linux_arm64 to ubuntu-24.04-arm runner mapping"
 fi
 
 # Sequential stays rejected fail-closed plus unknown-mode rejection.
@@ -183,10 +192,11 @@ else
   bad "fork-safe comment wiring lost (marker plus skip plus no-creds)"
 fi
 
-# Self-call smoke in ci.yml stays build-only with honest fixture limits.
+# Self-call smoke in ci.yml stays build-only with honest fixture limits,
+# on both qualified Linux hosts (seed plus arm64 native, issue #410).
 if grep -q -F -e 'consumer-ci (self-call reusable consumer workflow)' "$ci" &&
   grep -q -F -e 'disabled_checks: "lint,typecheck,format,generate,security-audit,license-audit,test,coverage"' "$ci" &&
-  grep -q -F -e "platforms: '[\"linux_x86_64\"]'" "$ci" &&
+  grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\"]'" "$ci" &&
   grep -q -F -e 'Only build is enabled' "$ci"; then
   ok
 else
