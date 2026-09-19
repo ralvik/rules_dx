@@ -353,7 +353,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Foundation-mapping guards (issues #7, #8, #303, #304; relates #6, #12): pins the
+# Foundation-mapping guards (issues #7, #8, #303, #304, #305; relates #6, #12): pins the
 # provider advertisement, upstream pins, Gazelle fixtures plus tests, env
 # plans, hello wrapper fixtures, lock authority, Ty provenance, framework
 # parser/compiler plus provider/region/dependency/test/env-quality mappings
@@ -361,7 +361,8 @@ sh_binary(
 # wrapper/ownership wiring, plus the #303 build-script hermetic defaults,
 # Ty/quality adapter mappings, and native-gap ownership, plus the #304
 # admitted test runners, lock wiring, quality classification, and MSVC-block
-# ownership. Functional checks
+# ownership, plus the #305 deferred foundation absence, retained cohorts,
+# exclusion evidence, and owned gaps. Functional checks
 # only. Run by CI via `bazel run //tools/ci:foundation_maps`.
 sh_binary(
     name = "foundation_maps",

@@ -207,6 +207,21 @@ StandardRB, PSScriptAnalyzer) stay in force; a foundation
 deferral removes no baseline tool. Reconsideration after v1 requires a new
 scope decision. The deferred/excluded record stays owned under issue #305 (Ruby plus
 PowerShell deferred, Swift plus Bandit excluded, host-toolchain fallback never approved).
+Qualified record is pinned by `bazel run //tools/ci:foundation_maps` with owning
+qualification in [Generation](../generation/README.md#language-mapping-qualification),
+[Environments](../environments/README.md#language-mapping-qualification),
+[Tools](../tools/README.md#language-mapping-qualification),
+[tool baseline](../tools/tool-baseline.md), [tool acquisition](../tools/tool-acquisition.md),
+and the [parity gate](../../quality/parity_tests.bzl): no `ruby/`, `powershell/`, or `swift/`
+foundation dirs, wrappers, Gazelle extensions, env plans, hello builds, or `MODULE.bazel` deps;
+`ruby`/`powershell` classes classified with no adapter claim (`quality/adapters.bzl` plus
+`PARITY_DEFERRED` with O31/O32 and ADR 0019); retained cohorts (RuboCop/StandardRB via
+release-assembled Ruby closure, PSScriptAnalyzer via exact-module plus portable PowerShell
+runtime); Swift/SwiftFormat plus Bandit exclusions with host-toolchain fallback never approved.
+Remaining gaps (bundle contents, lock inputs, module/runtime identities, console-parse versus
+library-API binding, and per-tool adapter mappings under issue #307; reconsideration requires
+a new scope decision) stay owned under issue #305. No `Supported` claim until platform plus
+consumer plus release evidence passes.
 
 | Language | Application foundation | Format | Lint, typecheck, or audit |
 | --- | --- | --- | --- |
@@ -681,3 +696,4 @@ excluded from v1 by [ADR 0019](../decisions/0019-first-release-additional-founda
 the `Not planned` Swift row above is an evidence-backed v1 exclusion, not a
 feasibility assessment. A host-toolchain
 fallback was never approved. Reconsidering Swift after v1 requires a new scope decision.
+Swift exclusion stays owned under issue #305.

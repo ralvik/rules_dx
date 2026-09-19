@@ -30,5 +30,11 @@ per-tool qualification stays open under issue #307.
 Ruby and PowerShell tool cohorts stay deferred beyond v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md);
 Swift is excluded from v1 by the same record.
+Deferred/excluded tool record stays owned under issue #305: retained RuboCop/StandardRB plus
+PSScriptAnalyzer cohorts keep their frozen routes in
+[Tool Acquisition](tool-acquisition.md#first-release-tool-routing) with `ruby`/`powershell`
+classes classified but no adapter claim (`quality/adapters.bzl` plus `quality/parity_tests.bzl`
+with O31/O32 and ADR 0019); Swift/SwiftFormat plus Bandit stay excluded with host-toolchain
+fallback never approved.
 
 Pinned by `bazel run //tools/ci:foundation_maps`.

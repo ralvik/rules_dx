@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Foundation-mapping guards (issues #7, #8, #303, #304; relates #6, #12).
+# Foundation-mapping guards (issues #7, #8, #303, #304, #305; relates #6, #12).
 #
 # Rust/Python/JS-TS foundations ship thin wrappers + Gazelle + env plans;
 # exact provider/import/lock/tool-graph proofs are pinned here for #7.
@@ -14,6 +14,10 @@
 # keep provisional upstreams with hello test runners, lock authority, and
 # classification-only quality families pinned here for #304; upgrades plus
 # quality adapters (under #307) plus the C/C++ MSVC block stay owned gaps.
+# Deferred/excluded record (Ruby plus PowerShell deferred, Swift plus Bandit
+# excluded, host-toolchain fallback never approved) is pinned here for #305;
+# retained cohorts plus exclusion evidence stay owned gaps with reconsideration
+# requiring a new scope decision.
 # Class-to-family taxonomy stays open under #6; native config binding +
 # CI scope extension stay open under #12.
 #
@@ -24,7 +28,8 @@
 # dependency, test, env/IDE, quality-region, and composition fixtures,
 # plus the #303 build-script hermetic defaults, Ty/quality adapter mappings,
 # and native-gap ownership, plus the #304 admitted test runners, lock wiring,
-# quality classification, and MSVC-block ownership.
+# quality classification, and MSVC-block ownership, plus the #305 deferred
+# foundation absence, retained cohorts, exclusion evidence, and owned gaps.
 # Upstream choices are kept; no switch is approved here.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:foundation_maps`,
@@ -551,6 +556,113 @@ if [[ -z "$own304_fail" ]]; then
   ok
 else
   bad "admitted foundations unowned:$own304_fail"
+fi
+
+# #305: deferred foundation absence stays pinned (no ruby/powershell/swift
+# dirs, wrappers, Gazelle extensions, env plans, hello builds, or MODULE deps).
+abs305_fail=""
+for d in ruby powershell swift; do
+  [[ ! -d "$d" ]] || abs305_fail="$abs305_fail $d:dir"
+  [[ ! -d "gazelle/$d" ]] || abs305_fail="$abs305_fail $d:gazelle"
+  [[ ! -f "$d/rules/defs.bzl" ]] || abs305_fail="$abs305_fail $d:wrapper"
+  [[ ! -f "$d/env/plan.bzl" ]] || abs305_fail="$abs305_fail $d:env"
+  [[ ! -f "$d/hello/BUILD.bazel" ]] || abs305_fail="$abs305_fail $d:hello"
+done
+if grep -q -F -e 'rules_ruby' MODULE.bazel; then
+  abs305_fail="$abs305_fail module:rules_ruby"
+fi
+if grep -q -F -e 'rules_powershell' MODULE.bazel; then
+  abs305_fail="$abs305_fail module:rules_powershell"
+fi
+if grep -q -i -F -e 'swift' MODULE.bazel; then
+  abs305_fail="$abs305_fail module:swift"
+fi
+grep -q -F -e 'no `ruby/`' docs/generation/README.md || abs305_fail="$abs305_fail gen:absence"
+grep -q -F -e 'no `ruby/`' docs/environments/README.md || abs305_fail="$abs305_fail env:absence"
+grep -q -F -e 'no `ruby/`, `powershell/`, or `swift/`' docs/product/support-matrix.md || abs305_fail="$abs305_fail matrix:absence"
+if [[ -z "$abs305_fail" ]]; then
+  ok
+else
+  bad "deferred foundation absence drifted:$abs305_fail"
+fi
+
+# #305: deferred quality classification stays pinned (families exist,
+# no adapter claims ruby/powershell yet; parity defers with O31/O32 + ADR 0019).
+class305_fail=""
+for cls in ruby powershell; do
+  grep -q -F -e "\"$cls\":" quality/adapters.bzl || class305_fail="$class305_fail $cls:family"
+done
+grep -q -F -e 'adapter claims ruby or powershell yet' quality/adapters.bzl || class305_fail="$class305_fail ruby-pw:open"
+grep -q -F -e 'beyond v1 per ADR 0019' quality/adapters.bzl || class305_fail="$class305_fail adapters:adr"
+grep -q -F -e '"ruby": ["O31/O32"' quality/parity_tests.bzl || class305_fail="$class305_fail ruby:parity"
+grep -q -F -e '"powershell": ["O31/O32"' quality/parity_tests.bzl || class305_fail="$class305_fail powershell:parity"
+grep -q -F -e 'foundation deferred by ADR 0019' quality/parity_tests.bzl || class305_fail="$class305_fail parity:adr"
+if grep -q -F -e '"rubocop":' quality/adapters.bzl; then
+  class305_fail="$class305_fail unexpected:rubocop"
+fi
+if grep -q -F -e '"standardrb":' quality/adapters.bzl; then
+  class305_fail="$class305_fail unexpected:standardrb"
+fi
+if grep -q -F -e '"psscriptanalyzer":' quality/adapters.bzl; then
+  class305_fail="$class305_fail unexpected:psscriptanalyzer"
+fi
+if grep -q -F -e '"swiftformat":' quality/adapters.bzl; then
+  class305_fail="$class305_fail unexpected:swiftformat"
+fi
+if grep -q -F -e '"bandit":' quality/adapters.bzl; then
+  class305_fail="$class305_fail unexpected:bandit"
+fi
+if [[ -z "$class305_fail" ]]; then
+  ok
+else
+  bad "deferred quality classification drifted:$class305_fail"
+fi
+
+# #305: retained cohorts plus exclusions stay pinned (Ruby closure,
+# PowerShell module+runtime, Swift/SwiftFormat plus Bandit exclusions,
+# host-toolchain fallback never approved).
+cohort305_fail=""
+grep -q -F -e 'Release-assembled Ruby closure' docs/tools/tool-acquisition.md || cohort305_fail="$cohort305_fail acquire:ruby-route"
+grep -q -F -e 'RuboCop, StandardRB' docs/tools/tool-acquisition.md || cohort305_fail="$cohort305_fail acquire:rubocop"
+grep -q -F -e 'Exact upstream module plus portable PowerShell runtime' docs/tools/tool-acquisition.md || cohort305_fail="$cohort305_fail acquire:pwsh-route"
+grep -q -F -e 'PSScriptAnalyzer' docs/tools/tool-acquisition.md || cohort305_fail="$cohort305_fail acquire:psscript"
+grep -q -F -e 'Decided route: RuboCop and StandardRB take the' docs/tools/tool-acquisition.md || cohort305_fail="$cohort305_fail acquire:ruby-decided"
+grep -q -F -e 'Decided route: PSScriptAnalyzer takes the' docs/tools/tool-acquisition.md || cohort305_fail="$cohort305_fail acquire:pwsh-decided"
+grep -q -F -e 'Swift, including SwiftFormat, is excluded from v1 by' docs/tools/tool-baseline.md || cohort305_fail="$cohort305_fail baseline:swift"
+grep -q -F -e 'that route is forbidden' docs/tools/tool-baseline.md || cohort305_fail="$cohort305_fail baseline:host-forbidden"
+grep -q -F -e 'Bandit excluded from v1 by' docs/tools/tool-baseline.md || cohort305_fail="$cohort305_fail baseline:bandit"
+grep -q -F -e 'Bandit excluded from v1 by' docs/product/support-matrix.md || cohort305_fail="$cohort305_fail matrix:bandit"
+grep -q -F -e 'host-toolchain fallback never approved' docs/product/support-matrix.md || cohort305_fail="$cohort305_fail matrix:host-fallback"
+grep -q -F -e 'retained RuboCop/StandardRB plus' docs/tools/README.md || cohort305_fail="$cohort305_fail tools:retained"
+grep -q -F -e 'Swift/SwiftFormat plus Bandit stay excluded' docs/tools/README.md || cohort305_fail="$cohort305_fail tools:excluded"
+if [[ -z "$cohort305_fail" ]]; then
+  ok
+else
+  bad "deferred retained cohorts drifted:$cohort305_fail"
+fi
+
+# #305: deferred/excluded record stays owned (docs track #305; remaining
+# gaps owned with no Supported claim; reconsideration needs a new decision).
+own305_fail=""
+grep -q -F -e 'issue #305' docs/product/support-matrix.md || own305_fail="$own305_fail matrix:tracking"
+grep -q -F -e 'issue #305' docs/generation/README.md || own305_fail="$own305_fail gen:tracking"
+grep -q -F -e 'issue #305' docs/environments/README.md || own305_fail="$own305_fail env:tracking"
+grep -q -F -e 'issue #305' docs/tools/README.md || own305_fail="$own305_fail tools:tracking"
+grep -q -F -e 'Swift exclusion stays owned under issue #305' docs/product/support-matrix.md || own305_fail="$own305_fail matrix:swift-tracking"
+grep -q -F -e 'Bundle contents, lock inputs' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:ruby-gaps"
+grep -q -F -e 'console-parse versus library-API' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:pwsh-gaps"
+grep -q -F -e 'no adapter claims `ruby` yet' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:ruby-open"
+grep -q -F -e 'no adapter claims `powershell` yet' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:pwsh-open"
+grep -q -F -e 'issue #307' docs/tools/README.md || own305_fail="$own305_fail tools:adapter-tracking"
+grep -q -F -e 'requires a new scope decision' docs/product/support-matrix.md || own305_fail="$own305_fail matrix:reconsider"
+grep -q -F -e 'No `Supported` claim until platform plus' docs/product/support-matrix.md || own305_fail="$own305_fail matrix:supported-gate"
+if grep -q -E -e '^\| .* \| Supported' docs/product/support-matrix.md; then
+  own305_fail="$own305_fail unexpected-supported"
+fi
+if [[ -z "$own305_fail" ]]; then
+  ok
+else
+  bad "deferred/excluded record unowned:$own305_fail"
 fi
 
 echo "foundation maps harness: $pass passed, $fail failed"
