@@ -1,5 +1,6 @@
 """Deploy rule fixtures and boundary tests (issues #178, #181, #182)."""
 
+load("@rules_python//python:defs.bzl", "py_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
@@ -25,6 +26,22 @@ exports_files([
     "github_verify.sh",
     "launcher.bzl",
 ])
+
+# Hermetic build tools for `archive_release` (issue #318): deterministic
+# tar.gz + sha256 via the managed Python 3.12 toolchain, no host
+# `tar`/`sha256sum`/`shasum`. Declared as genrule `tools` so action
+# keys cover the tool bytes and the sandbox runs no host PATH lookup.
+py_binary(
+    name = "archiver",
+    srcs = ["archiver.py"],
+    main = "archiver.py",
+)
+
+py_binary(
+    name = "hasher",
+    srcs = ["hasher.py"],
+    main = "hasher.py",
+)
 
 sh_binary(
     name = "deploy_program",

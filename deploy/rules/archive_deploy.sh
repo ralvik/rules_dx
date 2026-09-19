@@ -8,18 +8,22 @@
 # selects the output directory. Verifies the checksum, copies both
 # artifacts out, and reports the resolved profile from `$DX_PROFILE`
 # (forwarded by `dx deploy`; bare `bazel run` leaves it unset).
+#
+# Host-tool contract (issue #318): bash + python3 + POSIX coreutils
+# only. Realpath and sha256 go through python3 (no `realpath`,
+# `readlink -f`, `sha256sum`, or `shasum` probes); `cp`/`mkdir`/`basename`
+# are POSIX coreutils.
 set -euo pipefail
 
-# Portable realpath (issue #299): GNU `realpath` is absent on macOS;
-# `readlink -f` covers some platforms, python3 covers the rest.
-portable_realpath() {
-  if command -v realpath >/dev/null 2>&1; then
-    realpath "$1"
-  elif command -v readlink >/dev/null 2>&1 && readlink -f "$1" >/dev/null 2>&1; then
-    readlink -f "$1"
-  else
-    python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
-  fi
+# Single-tool realpath via python3 (portable across Linux/macOS; no
+# GNU `realpath` / `readlink -f` probing per issue #318).
+py_realpath() {
+  python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
+}
+
+# sha256 of one file via python3 hashlib (no sha256sum/shasum probe).
+py_sha256() {
+  python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$1"
 }
 
 app_rel="$1"
@@ -28,12 +32,12 @@ checksum_rel="$3"
 shift 3
 
 # Display the staged executable name (`hello`, `deploy_program`): do not
-# `realpath` the app — it is a symlink chain (`stage -> exe ->
+# realpath the app — it is a symlink chain (`stage -> exe ->
 # upstream`) and resolving would report the final target
 # (`hello_upstream`, `deploy_program.sh`) instead of the release member.
 app_name="$(basename "${app_rel}")"
-tarball="$(portable_realpath "${tarball_rel}")"
-checksum="$(portable_realpath "${checksum_rel}")"
+tarball="$(py_realpath "${tarball_rel}")"
+checksum="$(py_realpath "${checksum_rel}")"
 
 outdir=""
 if [ "$#" -ge 1 ]; then
@@ -45,13 +49,8 @@ else
 fi
 mkdir -p "${outdir}"
 
-if command -v sha256sum >/dev/null 2>&1; then
-  expected="$(cut -d' ' -f1 "${checksum}")"
-  actual="$(sha256sum "${tarball}" | cut -d' ' -f1)"
-else
-  expected="$(cut -d' ' -f1 "${checksum}")"
-  actual="$(shasum -a 256 "${tarball}" | cut -d' ' -f1)"
-fi
+expected="$(cut -d' ' -f1 "${checksum}")"
+actual="$(py_sha256 "${tarball}")"
 if [ "${expected}" != "${actual}" ]; then
   echo "archive_deploy: checksum mismatch for ${tarball}" >&2
   echo "  expected: ${expected}" >&2

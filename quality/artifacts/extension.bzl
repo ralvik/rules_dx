@@ -9,6 +9,13 @@ rejects bytes whose digest differs from the checked-in pin.
 Metadata schema version 1 is frozen by `metadata_tests.bzl`; only
 linux_x86_64 is recorded (seed host only per issue #298 and ADR 0014;
 other required hosts are unqualified gaps).
+
+Host-tool contract (issue #318): repository fetching uses Bazel-native
+`ctx.download`/`ctx.extract` only. Direct downloads set
+`executable = True` so no host `chmod` runs; archive members already
+carry `0o755` in their upstream tarballs (recorded as `mode`/`is_executable`
+in the metadata), so extraction preserves executability without
+`ctx.execute`. No host hasher/archiver runs in repository rules.
 """
 
 load("//quality/artifacts:biome.linux_x86_64.bzl", _biome_linux_x86_64 = "ARTIFACT")
@@ -37,6 +44,7 @@ def _standalone_tool_repo_impl(ctx):
             url = ctx.attr.url,
             output = ctx.attr.executable,
             sha256 = ctx.attr.sha256,
+            executable = True,
         )
     elif kind == "gzip":
         ctx.download(
@@ -46,7 +54,8 @@ def _standalone_tool_repo_impl(ctx):
         )
 
         # A bare single-file gzip extracts to the repo root under its
-        # recorded member name; no output directory is used.
+        # recorded member name; no output directory is used. The upstream
+        # member already carries the executable bit, so no host chmod runs.
         ctx.extract(ctx.attr.asset)
     elif kind == "tar.gz":
         ctx.download(
@@ -54,12 +63,13 @@ def _standalone_tool_repo_impl(ctx):
             output = ctx.attr.asset,
             sha256 = ctx.attr.sha256,
         )
+
+        # Upstream tar members already carry 0o755 (see the metadata
+        # `mode`/`is_executable` fields); extraction preserves the mode,
+        # so no host chmod runs.
         ctx.extract(ctx.attr.asset)
     else:
         fail("unsupported archive format: " + kind)
-    result = ctx.execute(["chmod", "0755", ctx.attr.executable])
-    if result.return_code != 0:
-        fail("chmod failed for " + ctx.attr.executable + ": " + result.stderr)
     ctx.file("BUILD.bazel", "\n".join([
         "filegroup(",
         '    name = "tool",',

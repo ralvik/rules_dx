@@ -16,19 +16,14 @@
 # repo coverage preset.
 set -euo pipefail
 
-# Portable realpath (issue #299): GNU `realpath` is absent on macOS;
-# `readlink -f` covers some platforms, python3 covers the rest.
-portable_realpath() {
-  if command -v realpath >/dev/null 2>&1; then
-    realpath "$1"
-  elif command -v readlink >/dev/null 2>&1 && readlink -f "$1" >/dev/null 2>&1; then
-    readlink -f "$1"
-  else
-    python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
-  fi
+# Host-tool contract (issue #318): bash + python3 + POSIX coreutils
+# only in this harness. Realpath and sha256 go through python3 (no
+# `realpath`, `readlink -f`, `sha256sum`, or `shasum` probes).
+py_realpath() {
+  python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
 }
 
-verifier="$(portable_realpath "$1")"
+verifier="$(py_realpath "$1")"
 
 scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
@@ -39,11 +34,7 @@ ok() { pass=$((pass + 1)); echo "ok: $1"; }
 bad() { echo "FAIL: $1" >&2; fail=$((fail + 1)); }
 
 sha_of() {
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$1" | cut -d' ' -f1
-  else
-    shasum -a 256 "$1" | cut -d' ' -f1
-  fi
+  python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$1"
 }
 
 # Stub cosign: binds the bundle to the exact binary bytes plus the
@@ -69,7 +60,7 @@ done
 [[ "$ident" == "${STUB_EXPECT_IDENTITY:-}" ]] || { echo "stub cosign: unapproved signer $ident" >&2; exit 1; }
 [[ "$issuer" == "${STUB_EXPECT_ISSUER:-}" ]] || { echo "stub cosign: unapproved issuer $issuer" >&2; exit 1; }
 [[ -f "$bundle" && -f "$bin" ]] || { echo "stub cosign: missing inputs" >&2; exit 1; }
-if command -v sha256sum >/dev/null 2>&1; then d="$(sha256sum "$bin" | cut -d' ' -f1)"; else d="$(shasum -a 256 "$bin" | cut -d' ' -f1)"; fi
+d="$(python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$bin")"
 want="bundle-for-$d"
 got="$(cat "$bundle")"
 [[ "$got" == "$want" ]] || { echo "stub cosign: bundle does not bind binary bytes (tampered or replaced)" >&2; exit 1; }
@@ -204,7 +195,7 @@ fi
 # bytes with a fresh checksum but the old bundle must still fail.
 cp "$scratch/dx-fake" "$scratch/dx-replaced"
 printf 'replaced' >> "$scratch/dx-replaced"
-if command -v sha256sum >/dev/null 2>&1; then sha256sum "$scratch/dx-replaced" > "$scratch/dx-replaced.sha256"; else shasum -a 256 "$scratch/dx-replaced" > "$scratch/dx-replaced.sha256"; fi
+python3 -c 'import hashlib,os,sys; p=sys.argv[1]; print(hashlib.sha256(open(p,"rb").read()).hexdigest()+"  "+os.path.basename(p))' "$scratch/dx-replaced" > "$scratch/dx-replaced.sha256"
 rm -rf "$scratch/install7"
 if out="$("$verifier" --binary "$scratch/dx-replaced" --bundle "$scratch/dx-fake.bundle" --identity "$IDENT" --issuer "$ISSUER" --install-dir "$scratch/install7" 2>&1)"; then
   bad "replaced binary/bundle pair unexpectedly passed"

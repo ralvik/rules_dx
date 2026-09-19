@@ -45,8 +45,10 @@ open work.
 
 The first deploy macro
 (open work) packages
-one executable as a tarball + sha256 checksum with host shell tools
-only (`tar`, `sha256sum`/`shasum`), no new module dependencies, no
+one executable as a tarball + sha256 checksum with the managed Python
+3.12 toolchain only (deterministic `archiver` tar.gz plus `hasher`
+sha256 as declared genrule `tools` in `deploy/rules/`), no host
+`tar`/`sha256sum`/`shasum`, no new module dependencies, no
 registry, no credentials:
 
 ```starlark
@@ -61,7 +63,10 @@ archive_release(
 `bazel run //rust/hello:release` (or `dx deploy //rust/hello:release`)
 verifies the checksum and copies `release.tar.gz` +
 `release.tar.gz.sha256` to the output directory (first arg after `--`,
-else `$BUILD_WORKSPACE_DIRECTORY`, else the cwd). Deploy targets live
+else `$BUILD_WORKSPACE_DIRECTORY`, else the cwd). Build actions are
+hermetic (toolchain archiver/hasher, deterministic bytes); deploy
+runtime needs bash + python3 + POSIX coreutils only (hashing, realpath,
+and tar listing via python3). Deploy targets live
 next to the app they release.
 
 ## Path D: `github_release` (accepted)
@@ -115,7 +120,8 @@ tooling in `deploy/release/` with policy tests `bazel test
   qualified-built-here, four follow-ups unqualified per ADR 0014 until
   host plus toolchain evidence lands.
 - SBOM/provenance (`sbom.bzl`): SPDX 2.3 JSON plus SLSA v1 in-toto
-  Statement v1 from host tools only, subject digest equals artifact
+  Statement v1 from the managed Python toolchain only (digest + JSON
+  via declared genrule `tools`), subject digest equals artifact
   sha256; verifies via `//deploy/install:dx_verify --sbom`.
 - Signing/attestation (`signing.bzl` plus `sign_deploy.sh`): Sigstore
   keyless (`cosign sign-blob --bundle`) plus GitHub attestations on the

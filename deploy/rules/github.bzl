@@ -3,8 +3,9 @@
 `github_release` is the second deploy macro: it wraps
 `gh release create --draft --verify-tag`, returning `DxDeployInfo` so the
 release target runs under `bazel run` and `dx deploy` like any other
-deployment. The `gh` CLI is a host tool resolved at run time (like `tar`
-for `archive_release`); no registry, no new module dependencies.
+deployment. The `gh` CLI is a host tool resolved at run time (deploy
+runtime needs it plus bash + python3 per the host-tool contract in
+issue #318); no registry, no new module dependencies.
 
 Safety (issue #5): the macro is draft-only by construction. `draft`
 must stay `True` (analysis fails otherwise), every invocation passes
