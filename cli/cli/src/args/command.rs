@@ -27,6 +27,7 @@ pub enum Command {
     Fix,
     Clean,
     Update,
+    Bump,
     Codegen,
     Env,
     Setup,
@@ -60,6 +61,7 @@ impl Command {
             Command::Fix => "fix",
             Command::Clean => "clean",
             Command::Update => "update",
+            Command::Bump => "bump",
             Command::Codegen => "codegen",
             Command::Env => "env",
             Command::Setup => "setup",
@@ -98,14 +100,15 @@ impl Command {
         matches!(self, Command::Check | Command::Fix)
     }
 
-    /// True for the delivered audit/update surfaces (`audit`, `update`):
-    /// they plan through the `dx_audit`/`dx_update` libraries over
-    /// family selectors and dependency-set selectors, never the quality
-    /// aspect pipeline. Audit is non-mutating; update is mutating
-    /// without confirmation. Audit tool backends stay deferred while
-    /// update resolver backends execute live (issue #19).
+    /// True for the delivered audit/update/bump surfaces (`audit`, `update`,
+    /// `bump`): they plan through the `dx_audit`/`dx_update`/`dx_bump`
+    /// libraries over family selectors and dependency-set selectors, never
+    /// the quality aspect pipeline. Audit is non-mutating; update and bump
+    /// are mutating without confirmation. Audit tool backends stay deferred
+    /// while update resolver backends execute live (issue #19) and bump
+    /// widens exactly one requirement explicitly (issue #260).
     pub fn is_audit_update(self) -> bool {
-        matches!(self, Command::Audit | Command::Update)
+        matches!(self, Command::Audit | Command::Update | Command::Bump)
     }
 
     /// True for the managed environment/codegen/setup surfaces
@@ -149,6 +152,9 @@ impl Command {
     /// `update` supports JSON: dry-run planning emits
     /// `command_started`/`command_finished`, while live execution adds
     /// per-set `notice`/`error` events with the same frame (issue #19).
+    /// `bump` supports JSON the same way: dry-run planning emits the
+    /// widen summary, live execution adds the widen `notice`/`error`
+    /// (issue #260).
     pub fn supports_json(self) -> bool {
         matches!(
             self,
@@ -161,6 +167,7 @@ impl Command {
                 | Command::Test
                 | Command::Coverage
                 | Command::Update
+                | Command::Bump
                 | Command::Check
                 | Command::Fix
                 | Command::Status
@@ -170,8 +177,8 @@ impl Command {
     /// True when `--output=diff` emits a unified patch (issue #200).
     /// Only patch-producing commands accept it (lint, typecheck, format,
     /// generate, check, fix per the output protocol). Every other command
-    /// rejects `--output=diff` pre-exec: workflow/audit/update/status have
-    /// no patch to emit (empty stdout would mislead), and text-only
+    /// rejects `--output=diff` pre-exec: workflow/audit/update/bump/status
+    /// have no patch to emit (empty stdout would mislead), and text-only
     /// commands have no machine patch surface at all.
     pub fn supports_diff(self) -> bool {
         matches!(
@@ -203,6 +210,7 @@ impl Command {
             Command::Fix => "apply format+lint+typecheck+generate fixes in order",
             Command::Clean => "prune unselected managed state (no scopes)",
             Command::Update => "update dependencies per set through qualified resolvers",
+            Command::Bump => "widen one declared requirement to a new version (explicit)",
             Command::Codegen => "collect codegen outputs with atomic commit",
             Command::Env => "collect the managed development environment",
             Command::Setup => "collect setup outputs with atomic commit",
@@ -228,6 +236,9 @@ mod tests {
     fn command_names_are_stable() {
         assert_eq!(Command::Audit.name(), "audit");
         assert_eq!(Command::Update.name(), "update");
+        assert_eq!(Command::Bump.name(), "bump");
+        assert!(Command::Bump.is_audit_update());
+        assert!(Command::Update.is_audit_update());
         assert_eq!(Command::Lint.name(), "lint");
         assert_eq!(Command::Typecheck.name(), "typecheck");
         assert_eq!(Command::Format.name(), "format");
@@ -277,6 +288,7 @@ mod tests {
             Command::Fix,
             Command::Clean,
             Command::Update,
+            Command::Bump,
             Command::Codegen,
             Command::Env,
             Command::Setup,

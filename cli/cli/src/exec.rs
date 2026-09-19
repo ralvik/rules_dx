@@ -8,7 +8,7 @@
 //! quality_apply (mutation and status projection) plus quality_patch
 //! (diff-patch rendering) plus quality_emit (finding/change/mutation
 //! emission) plus quality_reports (standard-report
-//! writing), audit, update,
+//! writing), audit, update, bump,
 //! run, and the check/fix umbrella. Shared plumbing (error codes,
 //! environment, source verification, mutation helpers) lives in
 //! [`common`]; BEP results collection and proto mapping live in
@@ -19,6 +19,7 @@
 
 mod audit;
 mod bazel;
+mod bump;
 mod clean;
 mod common;
 mod deploy;
@@ -94,6 +95,9 @@ pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
     if invocation.command == Command::Update {
         return update::execute_update(invocation, env);
     }
+    if invocation.command == Command::Bump {
+        return bump::execute_bump(invocation, env);
+    }
     quality::execute_quality(invocation, env)
 }
 
@@ -125,6 +129,8 @@ mod tests {
             "audit"
         } else if command == Command::Update {
             "update"
+        } else if command == Command::Bump {
+            "bump"
         } else {
             "quality"
         }
@@ -147,6 +153,7 @@ mod tests {
             (Command::Fix, "umbrella"),
             (Command::Clean, "clean"),
             (Command::Update, "update"),
+            (Command::Bump, "bump"),
             (Command::Codegen, "managed"),
             (Command::Env, "managed"),
             (Command::Setup, "managed"),
@@ -161,7 +168,7 @@ mod tests {
             (Command::Completion, "adoption"),
             (Command::Bazel, "bazel"),
         ];
-        assert_eq!(cases.len(), 27, "every Command variant pinned");
+        assert_eq!(cases.len(), 28, "every Command variant pinned");
         for (command, want) in cases {
             assert_eq!(family(command), want, "family for {}", command.name());
         }
@@ -173,6 +180,7 @@ mod tests {
             vec!["--dry-run", "bazel", "version"],
             vec!["audit", "--dry-run"],
             vec!["update", "--dry-run"],
+            vec!["bump", "cargo:anyhow", "1.2.3", "--dry-run"],
         ] {
             let name = format!("exec-dispatch-{}", argv[0].trim_start_matches('-'));
             let harness = Harness::new(&name);

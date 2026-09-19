@@ -338,3 +338,75 @@ with manifests/locks pinned there); selective-update syntax is `set:package` in
 silently widened); non-registry handling is upstream-owned (Git branches may advance, tags/commit
 pins stay, path dependencies are upstream no-ops); upstream operation/report mappings are pinned
 in `dx_update::backend` and unit-tested.
+
+## `dx bump`
+
+```text
+dx bump <set:package> <version>
+```
+
+Explicit widen-one-requirement operation (issue #260), separate from `dx update`.
+It rewrites exactly one declared requirement in the working copy, never a whole
+set and never a batch. `dx update` keeps its never-rewrites contract
+(`dx_update::semantics::may_be_rewritten` stays false for both requirement
+shapes); this command owns the single-requirement rewrite
+(`dx_bump::BumpRequest::may_be_rewritten` is true), including exact pins,
+bounded ranges, and Git tag/commit shapes per the ecosystem mapping in
+`dx_bump::sets`. An explicit operation keeps the contract honest: no
+`--widen` flag silently breaks the load-bearing invariant.
+
+All ecosystems in v1, no phasing, matching the retained `renovate.json`
+manager set: Bazel modules plus `.bazelversion`, Cargo, npm/pnpm (both lock
+graphs), Go (`gomod`), GitHub Actions. Selector syntax is `set:package`
+(`bazel:rules_rust`, `bazel:.bazelversion`, `cargo:anyhow`, `npm:react`,
+`go:example.com/mod`, `github-actions:actions/checkout` with `gha`/`gomod`
+aliases canonicalized); bare sets, labels, paths, and empty versions fail
+closed as usage errors (exit `2`), never as partial widens.
+
+Library-first (ADR 0008): registry discovery, version comparison, and manifest
+parsing use upstream libraries (BCR / crates.io / npm / Go proxy / GitHub
+releases clients plus `semver`, `serde_json`, `toml`), never custom
+HTTP/version/resolver code. Custom code is limited to the thin
+widen-one-requirement edit in `dx_bump::request`, loop orchestration, and PR
+handling. All deps pin exactly per ADR 0008 (latest stable). Version shapes
+validate through upstream `semver` (`dx_bump::version`): exact semver for
+Bazel/Cargo/npm/Go, tag or 40/64-char SHA for GitHub Actions (tags need SHA
+resolution via the upstream GitHub releases client before the file edit).
+Discovery proposes stable versions only; prerelease eligibility follows the
+upstream resolver and project configuration
+(`dx_bump::version::prerelease_follows_upstream`), never a private policy.
+Transitives stay resolver-governed (`dx_update::semantics`
+pins intact); bump never forces every transitive to newest.
+
+Manifests widened atomically (one file per invocation): `.bazelversion` or
+`MODULE.bazel` (Bazel, file-only), `rust/hello/Cargo.toml` (Cargo),
+`package.json` (npm), `go/go.mod` (Go), `.github/workflows/ci.yml`
+(GitHub Actions, SHA-plus-tag pins). Lock refresh stays resolver-owned
+through `dx update <set>` for Cargo/npm/Go
+(`dx_bump::BumpSet::needs_update_refresh`); Bazel and GitHub Actions verify
+file-only through `preset.update --verify-only` flag-diff review plus
+`bazel build //...`. Missing, ambiguous, or unsupported manifest shapes fail
+closed with nothing widened (exit `1`, `bump_failed`).
+
+Loop (one dep per PR, never batch): discover outdated (stable only) → widen
+one requirement via `dx bump` → run `dx update <that-set>` for
+resolver-owned lock refresh → run the bump-PR verification (regen evidence,
+`preset.update --verify-only` flag-diff, `bazel build //...`,
+`bazel test //...`, coverage/dogfood gates per
+[local workflows](../../contributing/local-workflows.md#preset-update-loop))
+→ if green open one PR, if red discard and record → reset to clean tree →
+next dep. One dep per PR with an automerge on/off toggle only: when on,
+auto-merge solely on the full required-check set; when off, leave PRs open.
+No grouping, schedule, or dashboard knobs. Runner is the scheduled
+`bump.yml` workflow with `GITHUB_TOKEN`, concurrency control so N open PRs do
+not stampede CI; failures never retry-until-green; fork-safety and the human
+merge path from the [automation policy](../../contributing/automation.md)
+preserved.
+
+`dx bump` is mutating without confirmation like `dx update`. `--dry-run`
+plans the widen and exits `0` without touching the tree; live execution
+rewrites exactly one requirement atomically. JSON supports the shared
+`command_started`/`command_finished` frame with widen `notice`/`error`
+events. Usage errors exit `2` pre-exec; widen failures exit `1` with
+`bump_failed`. `--check`, `--fail-on`, `--report`, `--output=diff`, and
+`-- <bazel-options>` do not apply on this path.

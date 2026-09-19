@@ -5,8 +5,8 @@
 # (#85) delivered across readme, static, query, aquery, and runtime slices;
 # first-party coverage PR comments (#254) landed with the Bazel-owned LCOV
 # gate as source of truth; the
-# widen-one-requirement + update PR loop (#260) stays planned behind
-# the #19 resolver prerequisite with Renovate retained as fallback.
+# widen-one-requirement + update PR loop (#260) is delivered with Renovate
+# retained as fallback (disposition vs #3 open).
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
 # today (22 checks): examples ownership + starter callers + laziness
@@ -14,8 +14,8 @@
 # mixed disposition, LCOV preset pin + inventory backing + comment landing,
 # Renovate fallback + full manager set + loop policy + Monday schedule
 # + schedule policy, never-rewrites pin, prior harnesses green,
-# and no-false-claim gaps. Reverse queries, adapter runs, and widen
-# implementation stay open under their
+# and the delivered widen implementation. Reverse queries and adapter runs
+# stay open under their
 # issues.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:backlog_automation_guards`,
@@ -200,18 +200,22 @@ else
 fi
 
 # #260 Monday schedule stays pinned: Renovate runs before 5am on Monday
-# with reviewable PRs and no automerge (widen loop still open).
+# with reviewable PRs and no automerge (native loop delivered alongside).
 if grep -q -F -e 'before 5am on Monday' renovate.json; then
   ok
 else
   bad "Renovate fallback lost its Monday schedule record (#260)"
 fi
 
-# No widen implementation falsely claimed.
-if ! grep -rn -F -e '"bump"' --include='*.rs' cli/ 2>/dev/null | grep -q .; then
+# Widen implementation delivered (#260): explicit bump command plus the
+# scheduled loop runner and native-loop automation docs.
+if grep -rn -F -e '"bump"' --include='*.rs' cli/ 2>/dev/null | grep -q . \
+  && [[ -f ".github/workflows/bump.yml" ]] \
+  && grep -q -F -e 'dx bump' docs/contributing/automation.md \
+  && grep -q -F -e 'dx bump' docs/cli/commands/audit-update-bazel.md; then
   ok
 else
-  bad "a widen bump command appeared in cli/ without #260 landing"
+  bad "widen bump implementation missing for #260 (want bump command + bump.yml + automation/contract docs)"
 fi
 
 # No third-party coverage service smuggled in (#254 first-party only).

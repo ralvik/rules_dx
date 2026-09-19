@@ -185,6 +185,16 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
+        // Explicit widen-one-requirement (issue #260): one declared
+        // requirement to a new version through `dx_bump`, never the
+        // quality aspect pipeline and no standard reports.
+        Command::Bump => CommandSpec {
+            command,
+            capability: "bump",
+            aspects: &[],
+            reports: &[],
+            settings: &[],
+        },
         // Raw launcher passthrough (M26 WP4 helper surface): no
         // aspects, no reports, no scope resolution; planned at
         // execution as launcher plus forwarded arguments.
@@ -280,6 +290,12 @@ mod tests {
         assert!(update.reports.is_empty());
         assert_eq!(WorkflowVerb::of(Command::Update), None);
         assert!(Command::Update.is_audit_update());
+        let bump = spec(Command::Bump);
+        assert_eq!(bump.capability, "bump");
+        assert!(bump.aspects.is_empty());
+        assert!(bump.reports.is_empty());
+        assert_eq!(WorkflowVerb::of(Command::Bump), None);
+        assert!(Command::Bump.is_audit_update());
         assert_eq!(WorkflowVerb::Run.name(), "run");
         assert!(!WorkflowVerb::Run.collects_reports());
     }
