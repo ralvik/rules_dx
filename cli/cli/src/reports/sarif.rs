@@ -1,18 +1,22 @@
-//! SARIF 2.1.0 projection for normalized findings (issue #236 split).
+//! SARIF 2.1.0 projection for normalized findings (issue #389).
 //!
 //! [`render_sarif`] projects normalized [`DiagnosticEvent`] findings onto
 //! the SARIF 2.1.0 document consumed through the shared `--report`
 //! contract (`docs/cli/standard-reports.md`,
 //! `docs/cli/commands/quality.md`); [`byte_to_line`] maps canonical
 //! UTF-8 byte offsets to 1-based line/column pairs over the same source
-//! snapshot. Re-exported through the `crate::reports` facade so the
-//! public path is unchanged.
+//! snapshot. Rendering uses the schema-typed [`serde_sarif::sarif`]
+//! builders instead of hand-rolled `serde_json`. Re-exported through
+//! the `crate::reports` facade so the public path is unchanged.
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::ReportError;
 use dx_output::{sort_diagnostics, DiagnosticEvent, Severity};
-use serde_json::{json, Value};
+use serde_sarif::sarif::{
+    ArtifactLocation, Invocation, Location, Message, PhysicalLocation, Region, ReportingDescriptor,
+    Result as SarifResult, ResultLevel, Run, Sarif, Tool, ToolComponent,
+};
 
 /// Converts a canonical UTF-8 byte offset into a 1-based
 /// `(line, column)` pair over the same source snapshot. Columns count
@@ -58,25 +62,25 @@ fn check_shape(finding: &DiagnosticEvent) -> Result<(), ReportError> {
     Ok(())
 }
 
-fn sarif_level(severity: Severity) -> &'static str {
+fn sarif_level(severity: Severity) -> ResultLevel {
     match severity {
-        Severity::Error => "error",
-        Severity::Warning => "warning",
-        Severity::Info => "note",
+        Severity::Error => ResultLevel::Error,
+        Severity::Warning => ResultLevel::Warning,
+        Severity::Info => ResultLevel::Note,
     }
 }
 
 fn location(
     finding: &DiagnosticEvent,
     snapshots: &BTreeMap<String, String>,
-) -> Result<Option<Value>, ReportError> {
+) -> Result<Option<Location>, ReportError> {
     let Some(path) = &finding.path else {
         if finding.range.is_some() {
             return Err(ReportError::RangeWithoutPath);
         }
         return Ok(None);
     };
-    let mut physical = BTreeMap::from([("artifactLocation".to_owned(), json!({"uri": path}))]);
+    let artifact = ArtifactLocation::builder().uri(path.clone()).build();
     if let Some((start, end)) = finding.range {
         if start > end {
             return Err(ReportError::InvertedRange);
@@ -86,30 +90,33 @@ fn location(
             .ok_or_else(|| ReportError::MissingSnapshot { path: path.clone() })?;
         let (start_line, start_column) = byte_to_line(path, text, start)?;
         let (end_line, end_column) = byte_to_line(path, text, end)?;
-        physical.insert(
-            "region".to_owned(),
-            json!({
-                "startLine": start_line,
-                "startColumn": start_column,
-                "endLine": end_line,
-                "endColumn": end_column,
-            }),
-        );
+        let region = Region::builder()
+            .start_line(start_line as i64)
+            .start_column(start_column as i64)
+            .end_line(end_line as i64)
+            .end_column(end_column as i64)
+            .build();
+        let physical = PhysicalLocation::builder()
+            .artifact_location(artifact)
+            .region(region)
+            .build();
+        Ok(Some(
+            Location::builder().physical_location(physical).build(),
+        ))
+    } else {
+        let physical = PhysicalLocation::builder()
+            .artifact_location(artifact)
+            .build();
+        Ok(Some(
+            Location::builder().physical_location(physical).build(),
+        ))
     }
-    Ok(Some(Value::Object(
-        [(
-            "physicalLocation".to_owned(),
-            Value::Object(physical.into_iter().collect()),
-        )]
-        .into_iter()
-        .collect(),
-    )))
 }
 
 fn result(
     finding: &DiagnosticEvent,
     snapshots: &BTreeMap<String, String>,
-) -> Result<Value, ReportError> {
+) -> Result<SarifResult, ReportError> {
     if finding.tool.is_empty() {
         return Err(ReportError::InvalidFinding {
             detail: "empty tool",
@@ -120,19 +127,28 @@ fn result(
             detail: "empty message",
         });
     }
-    let mut map = BTreeMap::new();
-    if let Some(rule) = &finding.rule {
-        map.insert("ruleId".to_owned(), Value::String(rule.clone()));
+    let message = Message::builder().text(finding.message.clone()).build();
+    let level = sarif_level(finding.severity);
+    let locations = location(finding, snapshots)?.map(|single| vec![single]);
+    match (&finding.rule, locations) {
+        (Some(rule), Some(locations)) => Ok(SarifResult::builder()
+            .message(message)
+            .level(level)
+            .rule_id(rule.clone())
+            .locations(locations)
+            .build()),
+        (Some(rule), None) => Ok(SarifResult::builder()
+            .message(message)
+            .level(level)
+            .rule_id(rule.clone())
+            .build()),
+        (None, Some(locations)) => Ok(SarifResult::builder()
+            .message(message)
+            .level(level)
+            .locations(locations)
+            .build()),
+        (None, None) => Ok(SarifResult::builder().message(message).level(level).build()),
     }
-    map.insert(
-        "level".to_owned(),
-        Value::String(sarif_level(finding.severity).to_owned()),
-    );
-    map.insert("message".to_owned(), json!({"text": finding.message}));
-    if let Some(location) = location(finding, snapshots)? {
-        map.insert("locations".to_owned(), Value::Array(vec![location]));
-    }
-    Ok(Value::Object(map.into_iter().collect()))
 }
 
 /// Renders normalized current findings as a SARIF 2.1.0 document.
@@ -183,32 +199,35 @@ pub fn render_sarif(
         for finding in tool_findings {
             results.push(result(finding, snapshots)?);
         }
-        let mut run = BTreeMap::from([
-            (
-                "tool".to_owned(),
-                json!({
-                    "driver": {
-                        "name": tool,
-                        "rules": rules.into_iter().map(|rule| json!({"id": rule})).collect::<Vec<_>>(),
-                    },
-                }),
-            ),
-            ("results".to_owned(), Value::Array(results)),
-        ]);
-        if !complete {
-            run.insert(
-                "invocations".to_owned(),
-                json!([{"executionSuccessful": false}]),
+        let descriptors = rules
+            .into_iter()
+            .map(|rule| ReportingDescriptor::builder().id(rule.to_owned()).build())
+            .collect::<Vec<_>>();
+        let driver = ToolComponent::builder()
+            .name(tool.to_owned())
+            .rules(descriptors)
+            .build();
+        let tool_value = Tool::builder().driver(driver).build();
+        if complete {
+            runs.push(Run::builder().tool(tool_value).results(results).build());
+        } else {
+            let invocation = Invocation::builder().execution_successful(false).build();
+            runs.push(
+                Run::builder()
+                    .tool(tool_value)
+                    .results(results)
+                    .invocations(vec![invocation])
+                    .build(),
             );
         }
-        runs.push(Value::Object(run.into_iter().collect()));
     }
-    let document = json!({
-        "version": "2.1.0",
-        "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
-        "runs": runs,
-    });
-    Ok(document.to_string())
+    let document = Sarif::builder()
+        .schema("https://json.schemastore.org/sarif-2.1.0.json".to_owned())
+        .runs(runs)
+        .version(serde_json::Value::String("2.1.0".to_owned()))
+        .build();
+    Ok(serde_json::to_string(&document)
+        .unwrap_or_else(|err| unreachable!("SARIF serialization is infallible: {err:?}")))
 }
 
 #[cfg(test)]
@@ -217,6 +236,7 @@ mod tests {
 
     use super::*;
     use dx_output::Snapshot;
+    use serde_json::{json, Value};
 
     fn finding(tool: &str, severity: Severity, path: Option<&str>) -> DiagnosticEvent {
         DiagnosticEvent {
@@ -495,5 +515,51 @@ mod tests {
                 detail: "empty message"
             })
         );
+    }
+
+    #[test]
+    fn sarif_output_parses_as_typed_sarif() {
+        let snapshots = BTreeMap::from([("src/a.py".to_owned(), "x = 1\n".to_owned())]);
+        let tools = ["lint-tool".to_owned(), "other-tool".to_owned()];
+        let findings = vec![
+            finding("other-tool", Severity::Error, None),
+            ranged("src/a.py", 0, 1),
+        ];
+        let text = render_sarif(&tools, &findings, &snapshots, false).expect("render");
+        let typed: Sarif = serde_json::from_str(&text).expect("typed SARIF");
+        assert_eq!(typed.version, serde_json::Value::String("2.1.0".to_owned()));
+        assert_eq!(typed.runs.len(), 2);
+        assert_eq!(typed.runs[0].tool.driver.name, "lint-tool");
+        assert_eq!(typed.runs[0].results.as_ref().expect("results").len(), 1);
+        assert!(typed.runs[0].invocations.is_some());
+    }
+
+    #[test]
+    fn sarif_empty_and_multi_run_fixtures_are_schema_valid() {
+        let empty = render_sarif(&["lint-tool".to_owned()], &[], &BTreeMap::new(), false)
+            .expect("empty render");
+        let typed_empty: Sarif = serde_json::from_str(&empty).expect("typed empty");
+        assert_eq!(typed_empty.runs.len(), 1);
+        assert!(typed_empty.runs[0]
+            .results
+            .as_ref()
+            .expect("results")
+            .is_empty());
+
+        let snapshots = BTreeMap::new();
+        let tools = ["b-tool".to_owned(), "a-tool".to_owned()];
+        let findings = vec![
+            finding("b-tool", Severity::Error, None),
+            finding("a-tool", Severity::Info, None),
+        ];
+        let multi = render_sarif(&tools, &findings, &snapshots, true).expect("multi render");
+        let typed_multi: Sarif = serde_json::from_str(&multi).expect("typed multi");
+        assert_eq!(typed_multi.runs.len(), 2);
+        assert_eq!(typed_multi.runs[0].tool.driver.name, "a-tool");
+        assert_eq!(typed_multi.runs[1].tool.driver.name, "b-tool");
+        for run in &typed_multi.runs {
+            assert_eq!(run.results.as_ref().expect("results").len(), 1);
+            assert!(run.invocations.is_none());
+        }
     }
 }

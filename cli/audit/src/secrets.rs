@@ -247,8 +247,9 @@ pub struct SecretFinding {
 
 /// Triage one Gitleaks SARIF report (JSON text) into secret findings.
 ///
-/// Counts `runs[].results[]` across all runs; each result becomes one
-/// finding with tool `gitleaks` downstream. Malformed JSON or a missing
+/// Counts typed `Sarif::runs[].results[]` via [`serde_sarif::sarif`]
+/// instead of hand-walked `Value`; each result becomes one finding
+/// with tool `gitleaks` downstream. Malformed JSON or a missing
 /// `runs` array fails closed with the document error (callers map this to
 /// incomplete, never clean). An empty results list is clean, not a
 /// coverage failure; silent-`0` semantics (exit `0` with no results)
@@ -261,42 +262,32 @@ pub struct SecretFinding {
 /// no `secret:` plaintext field. Live execution never logs secret values;
 /// summaries render only rule IDs and counts.
 pub fn triage_sarif(text: &str) -> Result<Vec<SecretFinding>, String> {
-    let value: serde_json::Value =
+    let document: serde_sarif::sarif::Sarif =
         serde_json::from_str(text).map_err(|error| format!("invalid gitleaks SARIF: {error}"))?;
-    let runs = value
-        .get("runs")
-        .and_then(|value| value.as_array())
-        .ok_or_else(|| "invalid gitleaks SARIF: missing runs".to_owned())?;
     let mut findings = Vec::new();
-    for run in runs {
-        let results = run
-            .get("results")
-            .and_then(|value| value.as_array())
-            .cloned()
-            .unwrap_or_default();
-        for result in results {
+    for run in &document.runs {
+        let results = run.results.as_ref().cloned().unwrap_or_default();
+        for result in &results {
             let rule = result
-                .get("ruleId")
-                .and_then(|value| value.as_str())
+                .rule_id
+                .as_deref()
                 .unwrap_or("gitleaks/secret")
                 .to_owned();
             let message = result
-                .get("message")
-                .and_then(|value| value.get("text"))
-                .and_then(|value| value.as_str())
+                .message
+                .text
+                .as_deref()
                 .unwrap_or("secret detected")
                 .to_owned();
             // Never surface secret values: messages are rule/location
             // text only; any `secret:` field in the report is ignored.
             let path = result
-                .get("locations")
-                .and_then(|value| value.as_array())
+                .locations
+                .as_ref()
                 .and_then(|locations| locations.first())
-                .and_then(|location| location.get("physicalLocation"))
-                .and_then(|physical| physical.get("artifactLocation"))
-                .and_then(|artifact| artifact.get("uri"))
-                .and_then(|uri| uri.as_str())
-                .map(str::to_owned);
+                .and_then(|location| location.physical_location.as_ref())
+                .and_then(|physical| physical.artifact_location.as_ref())
+                .and_then(|artifact| artifact.uri.clone());
             findings.push(SecretFinding {
                 rule,
                 message,
@@ -465,6 +456,24 @@ mod tests {
         }
         assert!(triage_sarif("not json").is_err());
         assert!(triage_sarif(r#"{"version": "2.1.0"}"#).is_err());
+    }
+
+    #[test]
+    fn sarif_triage_handles_empty_and_multi_run_fixtures() {
+        let empty_runs = r#"{"version": "2.1.0", "$schema": "https://json.schemastore.org/sarif-2.1.0.json", "runs": []}"#;
+        let typed: serde_sarif::sarif::Sarif =
+            serde_json::from_str(empty_runs).expect("schema-valid empty runs");
+        assert!(typed.runs.is_empty());
+        assert!(triage_sarif(empty_runs).expect("empty runs").is_empty());
+
+        let multi = r#"{"version": "2.1.0", "runs": [{"tool": {"driver": {"name": "gitleaks"}}, "results": [{"ruleId": "gitleaks/a", "message": {"text": "A"}}]}, {"tool": {"driver": {"name": "gitleaks"}}, "results": [{"ruleId": "gitleaks/b", "message": {"text": "B"}, "locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/b.py"}}}]}]}]}"#;
+        let typed_multi: serde_sarif::sarif::Sarif =
+            serde_json::from_str(multi).expect("schema-valid multi-run");
+        assert_eq!(typed_multi.runs.len(), 2);
+        let findings = triage_sarif(multi).expect("multi-run");
+        assert_eq!(findings.len(), 2);
+        assert_eq!(findings[0].rule, "gitleaks/a");
+        assert_eq!(findings[1].path, Some("src/b.py".to_owned()));
     }
 
     #[test]
