@@ -245,9 +245,9 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
       data: extra runtime deps (files under test, configs); `srcs`
         are always included.
       visibility: visibility of the public forwarding test target.
-      tags: extra tags for both targets; the upstream target is
-        additionally `manual` so `bazel test //...` exercises the
-        public wrapper only.
+      tags: extra tags for both targets (issue #406: no `manual`;
+        both the private upstream and the public wrapper run under
+        `bazel test //...`; double-execution is the cost of green suites).
       env_inherit: extra runtime-inherited env vars, mirrored to both
         the upstream jest_test and the rebuilt TestEnvironment.
       **kwargs: extra attributes forwarded to the upstream jest_test
@@ -259,6 +259,27 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
     if rejection != None:
         fail(rejection)
 
+    # The private upstream test stays an implementation detail via private
+    # visibility; both it and the public wrapper run under `bazel test //...`
+    # (issue #406: no manual; double-execution is the cost of green suites).
+    # `aspect_hints` rides the public forwarder only (quality aspects visit
+    # the forwarder); strip it from the upstream jest_test kwargs.
+    upstream_kwargs = dict(kwargs)
+    upstream_kwargs.pop("aspect_hints", None)
+    if tags != None:
+        kept = [t for t in tags if t != "manual"]
+        if len(kept) > 0:
+            upstream_kwargs["tags"] = kept
+        elif "tags" in upstream_kwargs:
+            upstream_kwargs.pop("tags")
+    elif "tags" in upstream_kwargs:
+        upstream_kwargs.pop("tags")
+    if "tags" in upstream_kwargs:
+        kept = [t for t in upstream_kwargs["tags"] if t != "manual"]
+        if len(kept) > 0:
+            upstream_kwargs["tags"] = kept
+        else:
+            upstream_kwargs.pop("tags")
     # Workspace ESM scope marker (see docstring): must resolve in runfiles
     # above every first-party test source. Referenced as the root
     # js_library: js rules reject cross-package source files in data.
@@ -270,8 +291,7 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
         data = upstream_data,
         env_inherit = effective_env,
         visibility = ["//visibility:private"],
-        tags = (list(tags) if tags != None else []) + ["manual"],
-        **kwargs
+        **upstream_kwargs
     )
     _javascript_test(
         name = name,
@@ -279,6 +299,6 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
         srcs = srcs,
         env_inherit = effective_env,
         visibility = visibility,
-        tags = tags,
+        tags = [t for t in tags if t != "manual"] if tags != None else None,
         **({"aspect_hints": kwargs["aspect_hints"]} if "aspect_hints" in kwargs else {})
     )

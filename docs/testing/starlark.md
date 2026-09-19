@@ -44,24 +44,19 @@ records serialize deterministically via `json.encode`.
 Mismatches accumulate within one target and report together in declaration
 order through the standard Bazel test protocol: non-zero exit status and
 `test.log` diagnostics. An assertion failure is always execution-phase, so
-Bazel reports `FAILED`, never a build breakage. Negative demonstrations
-live in `libs/starlark/tests/negative` with `tags = ["manual"]` and are
-excluded from wildcard suites; run them explicitly:
+Bazel reports `FAILED`, never a build breakage. Negative proofs live in
+`libs/starlark/tests/negative` as green hermetic tests (issue #406):
+execution failures as passing `sh_test` goldens, analysis failures via
+`failure_test` (`analysistest.expect_failure`); failure lives inside
+passing bodies, never as failing targets:
 
 ```sh
-bazel test //libs/starlark/tests/negative:failing_check_demo \
-  //libs/starlark/tests/negative:missing_observation_demo \
-  //libs/starlark/tests/negative:missing_fragment_demo \
-  --nocache_test_results
-bazel build //libs/starlark/tests/negative:wrong_phase_demo
+bazel test //libs/starlark/tests/negative/...
 ```
 
-The last command shows the analysis authoring error for a mode violation.
-
-CI pins these demonstrations: `bazel run //tools/ci:manual_negatives`
-asserts each still fails for its documented reason and that every
-`manual` test is either one of these demos or a private `*_upstream`
-test exercised via its public forwarding wrapper.
+CI pins these proofs via `bazel test //...` (no separate prove step):
+each red fixture has a passing test asserting the exact user-visible
+result, and the fixture stopping to fail fails the test.
 
 ## Selection, Retries, Logs, Suites
 

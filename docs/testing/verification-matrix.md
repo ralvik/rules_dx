@@ -70,9 +70,8 @@ never silently under the standard dogfood gates.
   `bazel run //tools/ci:non_dogfed_paths` (issue #324): integration/E2E
   drivers via the explicit `:e2e` suite (`.bazelignore` carve-out, manual
   drivers, `e2e_cases` orphan guard, CI `e2e` job, shell-copy staging);
-  negative fixtures via `manual_negatives` explicit failure proofs (four
-  starlark demos plus markdown-no-config, enumeration guard, CI `prove`
-  job); the no-coverage cohort via coverage-excluded runs (preset
+  negative fixtures via green hermetic proofs (issue #406: sh_test goldens +
+  failure_test, no manual, CI `test` job via `bazel test //...`); the no-coverage cohort via coverage-excluded runs (preset
   `test_tag_filters=-no-coverage`, `target_tags` skip proof,
   `coverage_cell`/`coverage_qualification` gates, CI `test` execution);
   shell sources with no quality class by design (`shell` known but no
@@ -125,7 +124,7 @@ Accepted record of the as-built close-out battery. The full battery runs in
 - `test`: `bazel test //...` (manual targets excluded by Bazel tag semantics).
 - `coverage`: `bazel run //cli/cli:dx -- coverage --min-coverage 97 //...`
   (seed cell only) plus `bazel run //tools/ci:coverage_report_guards`.
-- `prove`: `//tools/ci:manual_negatives`, `:target_tags`, `:coverage_cell`,
+- `prove`: `:target_tags`, `:coverage_cell`,
   `:coverage_spill`, `:release_hygiene`, `:release_policy`, `:publish_trust`,
   `:shell_contract`.
 - `e2e`: `bazel run //tools/ci:e2e_cases` convention guard plus the explicit
@@ -210,7 +209,7 @@ Remaining reds stay owned gaps, not green claims:
   parsing with auto help stays owned gap).
 - Non-dogfed execution plan delivered under #324
   (`bazel run //tools/ci:non_dogfed_paths`; explicit `:e2e` suite,
-  `manual_negatives` failure proofs, coverage-excluded runs, shell ownership
+  green hermetic failure proofs (issue #406), coverage-excluded runs, shell ownership
   plus test/explicit execution with no quality class by design).
 
 The E2E-case convention lives in the

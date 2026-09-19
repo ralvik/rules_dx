@@ -21,19 +21,10 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Manual negative-demo harness (issue #99 item 2): the expected-fail
-# demonstrations in libs/starlark/tests/negative plus the
-# markdown-no-config subject are `manual`, so wildcard suites never run
-# them. Run by CI via `bazel run //tools/ci:manual_negatives` to prove
-# each still fails for its documented reason and that no new manual
-# test appears without explicit classification.
-sh_binary(
-    name = "manual_negatives",
-    srcs = ["manual_negatives.sh"],
-    data = ["//tools/sh:lib"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
+# Green hermetic negative proofs (issue #406) replaced the manual
+# negative-demo harness: the four `libs/starlark/tests/negative` demos
+# plus the markdown-no-config subject are passing tests (sh_test goldens
+# + failure_test) under `bazel test //...`, no `manual`, no nested Bazel.
 
 # Consumer CI template harness (issue #99 item 1): each script executes
 # the REAL embedded contract out of workflows/reusable-consumer.yml
@@ -869,7 +860,7 @@ sh_binary(
 # Non-dogfed execution-plan harness (issue #324): proves the four cohorts
 # that never run under the standard dogfood gates each have an explicit
 # execution path — integration/E2E drivers via the explicit :e2e suite,
-# negative fixtures via manual_negatives explicit failure proofs,
+# negative fixtures via green hermetic proofs (issue #406, no manual),
 # no-coverage cohort via test execution plus coverage-excluded runs, shell
 # sources via deps ownership plus test/explicit execution with no quality
 # class by design. Run by CI via

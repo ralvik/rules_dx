@@ -2,21 +2,24 @@
 # Non-dogfed execution plan (issue #324).
 #
 # Four cohorts never run under the standard dogfood/CI gates by design
-# (manual tags, carve-outs, tag suppression). Each has an explicit
+# (explicit suites, carve-outs, tag suppression). Each has an explicit
 # execution path, never a silent gap:
 #
 # - integration/ E2E drivers: .bazelignore'd out of the parent universe,
 #   carved out of both ownership audits, `manual` (+`exclusive`, `local`,
 #   `no-sandbox`) drivers in the explicit `:e2e` suite, orphan-guarded by
-#   `e2e_cases`, enumerated by `manual_negatives`, run only via the
-#   explicit `E2E_WORKSPACE=... bazel test //tools/ci:e2e` suite in CI's
-#   `e2e` job. Child POSIX fixtures (`pass.sh`/`fail.sh`) arrive by shell
-#   copy and execute as child `sh_test` inside the staged workspace.
+#   `e2e_cases`, enumerated by the A9 manual-test query below, run only
+#   via the explicit `E2E_WORKSPACE=... bazel test //tools/ci:e2e` suite
+#   in CI's `e2e` job. Child POSIX fixtures (`pass.sh`/`fail.sh`) arrive
+#   by shell copy and execute as child `sh_test` inside the staged workspace.
 # - negative fixtures: the four `libs/starlark/tests/negative` demos plus
-#   the markdown-no-config subject carry `manual`, so wildcard suites skip
-#   them; `manual_negatives` runs each explicitly and asserts it still
-#   fails for its documented reason, with an enumeration guard so a new
-#   manual test forces classification. Run in CI's `prove` job.
+#   the markdown-no-config subject are green hermetic proofs (issue #406):
+#   execution failures as passing `sh_test` goldens, analysis failures via
+#   `failure_test` (`analysistest.expect_failure`). No `manual`, no nested
+#   Bazel; failure lives inside passing bodies. The red subjects stay
+#   `manual` (non-test, so wildcard builds skip them) where the
+#   analysistest contract requires it. Run in CI's `test` job via
+#   `bazel test //...` (no separate prove step).
 # - no-coverage cohort: `no-coverage` tests run under `bazel test //...`
 #   (never `manual`) and skip only under `bazel coverage` via the
 #   `test_tag_filters=-no-coverage` preset; `target_tags` proves the skip
@@ -146,27 +149,33 @@ else
   bad "e2e.sh lost its shell-copy staging (scenario files must arrive by copy, never by label)"
 fi
 
-# A9: manual_negatives enumerates the E2E drivers so a new manual test forces classification.
-if grep -q -F -e '//tools/ci:e2e_clean' tools/ci/manual_negatives.sh &&
-  grep -q -F -e '//tools/ci:e2e_dirty' tools/ci/manual_negatives.sh &&
-  grep -q -F -e '//tools/ci:e2e_format_roundtrip' tools/ci/manual_negatives.sh &&
-  grep -q -F -e "attr(tags, manual, kind(test, //...))" tools/ci/manual_negatives.sh; then
+# A9: manual tests are exactly the explicit E2E suite (issue #406:
+# green hermetic proofs replaced the manual_negatives enumeration; a new
+# manual test outside :e2e fails this guard).
+e2e_manual="$(bazel query 'attr(tags, manual, kind(test, //...))' 2>/dev/null | LC_ALL=C sort -u)"
+if echo "$e2e_manual" | grep -q -F -e '//tools/ci:e2e' &&
+  [[ "$(echo "$e2e_manual" | wc -l | tr -d ' ')" == "5" ]]; then
   ok
 else
-  bad "manual_negatives lost its E2E-driver enumeration guard"
+  bad "manual tests are not exactly the 5 E2E suite members (want :e2e + 4 drivers, found: $e2e_manual)"
 fi
 
-# --- B. negative fixtures (manual expected-fail demos) ---
+# --- B. negative fixtures (green hermetic proofs, issue #406) ---
 
-# B1: four starlark demos stay manual.
-demos="$(bazel query 'attr(tags, manual, //libs/starlark/tests/negative/...)' 2>/dev/null | LC_ALL=C sort -u)"
+# B1: four starlark demos are green (non-manual) passing tests.
+demos="$(bazel query '//libs/starlark/tests/negative/...' 2>/dev/null | LC_ALL=C sort -u)"
 if echo "$demos" | grep -q -F -e '//libs/starlark/tests/negative:failing_check_demo' &&
   echo "$demos" | grep -q -F -e '//libs/starlark/tests/negative:missing_observation_demo' &&
   echo "$demos" | grep -q -F -e '//libs/starlark/tests/negative:missing_fragment_demo' &&
   echo "$demos" | grep -q -F -e '//libs/starlark/tests/negative:wrong_phase_demo'; then
   ok
 else
-  bad "starlark negative demos lost manual tags: $demos"
+  bad "starlark negative proofs missing: $demos"
+fi
+if bazel query 'attr(tags, manual, //libs/starlark/tests/negative/...)' 2>/dev/null | grep -q .; then
+  bad "starlark negative proofs must not be manual (green hermetic, issue #406)"
+else
+  ok
 fi
 
 # B2: markdown-no-config subject stays manual.
@@ -176,30 +185,33 @@ else
   bad "markdown-no-config subject lost its manual tag (must never run under //...)"
 fi
 
-# B3: manual_negatives proves each demo still fails for its documented reason.
-if grep -q -F -e 'failing_check_demo' tools/ci/manual_negatives.sh &&
-  grep -q -F -e 'missing_observation_demo' tools/ci/manual_negatives.sh &&
-  grep -q -F -e 'missing_fragment_demo' tools/ci/manual_negatives.sh &&
-  grep -q -F -e 'wrong_phase_demo' tools/ci/manual_negatives.sh &&
-  grep -q -F -e 'fixture_real_markdown_no_config_subject' tools/ci/manual_negatives.sh; then
+# B3: green proofs replace the manual_negatives shell loop (deleted per
+# #406): execution failures via sh_test goldens, analysis via failure_test.
+if grep -q -F -e 'failure_test' libs/starlark/tests/negative/negative_tests.bzl &&
+  grep -q -F -e 'failing_check_test.sh' libs/starlark/tests/negative/negative_tests.bzl &&
+  grep -q -F -e 'missing_observation_test.sh' libs/starlark/tests/negative/negative_tests.bzl &&
+  grep -q -F -e 'missing_fragment_test.sh' libs/starlark/tests/negative/negative_tests.bzl &&
+  grep -q -F -e 'fixture_real_markdown_no_config_test' quality/testdata/BUILD.bazel; then
   ok
 else
-  bad "manual_negatives lost an expected-failure proof (four demos + markdown-no-config)"
+  bad "green hermetic negative proofs missing (failure_test + 3 sh harnesses + markdown-no-config test)"
 fi
 
-# B4: CI prove job runs the negative proof.
-if grep -q -F -e 'bazel run --noshow_progress //tools/ci:manual_negatives' .github/workflows/ci.yml; then
+# B4: CI test job runs the green proofs via `bazel test //...` (no separate
+# manual_negatives prove step per #406).
+if grep -q -F -e 'bazel test --noshow_progress //...' .github/workflows/ci.yml &&
+  ! grep -q -F -e 'bazel run --noshow_progress //tools/ci:manual_negatives' .github/workflows/ci.yml; then
   ok
 else
-  bad "ci.yml prove job lost its manual_negatives step"
+  bad "ci.yml must run green proofs via test //... with no manual_negatives step (issue #406)"
 fi
 
-# B5: starlark docs own the explicit-run record plus the CI pin.
-if grep -q -F -e 'tags = ["manual"]' docs/testing/starlark.md &&
-  grep -q -F -e 'bazel run //tools/ci:manual_negatives' docs/testing/starlark.md; then
+# B5: starlark docs own the green-proof record plus the CI pin.
+if grep -q -F -e 'failure_test' docs/testing/starlark.md &&
+  grep -q -F -e 'bazel test //libs/starlark/tests/negative' docs/testing/starlark.md; then
   ok
 else
-  bad "docs/testing/starlark.md lost the manual-demo explicit-run plus CI-pin record"
+  bad "docs/testing/starlark.md lost the green-proof plus CI-pin record (issue #406)"
 fi
 
 # --- C. no-coverage cohort (coverage-excluded runs) ---
