@@ -1036,6 +1036,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:update_events_qualification
       - name: Audit Starlark futures qualification (issue #588 filtering plus subjects plus BEP wont-fix/deferred plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:starlark_futures_qualification
+      - name: Audit CLI execution gaps qualification (issue #590 watch plus forwarding plus reports plus parallelism wont-fix plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:cli_execution_gaps_qualification
       - name: Audit shell-env qualification (issue #472 global False plus annotation opt-in plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:shell_env_qualification
       - name: Audit bindgen qualification (issue #473 LLVM-22-vs-23 pins plus fixture evidence, owned gaps)

@@ -16,22 +16,29 @@ The live-stream interaction, `report` NDJSON event, exit codes, and partial-resu
 are defined in [Output Protocol](output-protocol.md). `--dry-run` conflicts with every
 report request.
 
-The initial mapping is:
+The initial mapping is (wont-fix matrix, issue #590, pinned by fixtures in
+`cli/cli/tests/fixtures/cli_execution_gaps/` plus
+`bazel run //tools/ci:cli_execution_gaps_qualification`):
 
 | Commands | Format | Contract |
 | --- | --- | --- |
-| `lint`, `typecheck`, `audit` | SARIF 2.1.0 | Normalized findings |
+| `lint`, `typecheck`, `audit`, `check`, `fix` | SARIF 2.1.0 | Normalized findings (`check`/`fix` merge executed SARIF-capable phases) |
 | `test` | JUnit XML | Bazel-owned test cases and infrastructure failures |
 | `coverage` | LCOV | Validated Bazel combined tracefile |
+| `audit` | SPDX 2.3 JSON | License inventory (see license-family contract) |
 
 The license family's [SPDX 2.3 JSON report](commands/audit-update-bazel.md#license-family-dx-audit-license)
 is specified in the license-family contract. SPDX parsing, policy-table loading,
 and proof artifacts are open under
 open work under issue #511; this table is not an exhaustive prohibition of that report.
 
-`build`, `format`, `update`, `generate`, `codegen`, `env`, and `setup` have no initial
-standard report. `dx bazel` uses native Bazel options for BEP or other Bazel-owned output.
+`build`, `format`, `update`, `generate`, `codegen`, `env`, `setup`,
+`run`, `deploy`, `clean`, `bump`, `migrate`, and every adoption/inspect
+command have no initial standard report (issue #590 wont-fix; `format`
+included). `dx bazel` uses native Bazel options for BEP or other Bazel-owned output.
 New formats require an established standard or authoritative upstream output.
+Unsupported command/format combos fail fast with `UnsupportedFormat`;
+silent substitution across commands stays rejected.
 
 Multiple file report events are emitted bytewise by format and then normalized destination
 path, independent of option order. Report generation may preserve user option order

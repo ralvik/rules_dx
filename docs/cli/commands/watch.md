@@ -30,5 +30,32 @@ execution, or deployment mechanism.
 - Each iteration emits the wrapped command's normal stream starting with a
   fresh `command_started`. No cross-iteration state is exposed in machine output.
 - Signals forward to the active child per the [CLI contract](../cli-contract.md#exit-status).
-  `coverage`, `audit`, `generate`, `env`, `codegen`, `setup`, `update`,
-  `init`, `hooks`, and `bazel` are not watchable. CI use is not supported.
+  CI use is not supported (wont-fix, issue #590): `dx watch` refuses
+  `CI=true` as local-only, pinned by fixtures in
+  `cli/cli/tests/fixtures/cli_execution_gaps/` plus `dx_adopt::plan_watch`.
+
+## Execution Gaps
+
+Decided under issue #590 (pinned by fixtures in
+`cli/cli/tests/fixtures/cli_execution_gaps/` plus
+`bazel run //tools/ci:cli_execution_gaps_qualification`; CLI-only, no
+Bazel semantics change; seed only, no Supported claim):
+
+- Watchable stays exactly `build`, `test`, `run`, `lint`, `typecheck`,
+  `format`, `check`, and `fix` (8 commands). Every other registry command
+  stays not watchable with fail-closed `not watchable` errors: `audit`,
+  `bazel`, `bump`, `clean`, `codegen`, `completion`, `coverage`, `deps`,
+  `deploy`, `env`, `generate`, `hooks`, `init`, `migrate`, `owners`,
+  `setup`, `status`, `update`, `version`, `watch` (no nesting), and `why`
+  (21 commands). Silent substitution across commands stays rejected.
+- Managed-state selection (`env`, `codegen`, `setup`, `clean`), lockfile
+  mutation (`update`, `bump`, `migrate`), audit collection, BUILD-graph
+  mutation (`generate`), one-shot adoption helpers (`init`, `hooks`,
+  `status`, `version`, `owners`, `deps`, `why`, `completion`), the
+  transparent `bazel` passthrough (no `dx` scope to re-resolve), heavy
+  `coverage`, and single-deployable `deploy` have no re-resolvable
+  file-iteration loop to reuse verbatim, so watching them stays wont-fix.
+- CI refusal stays wont-fix: the loop never terminates, so CI must invoke
+  the wrapped command once instead.
+- Parallelism stays wont-fix: one iteration at a time with per-iteration
+  re-resolution; no parallel iterations, caching, scheduling, or daemon.

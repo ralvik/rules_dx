@@ -310,3 +310,29 @@ help plus `Command::is_mutating_by_default` identify the mutating default,
 umbrella stays the sequential `format` then `lint` then `typecheck` then
 `generate` phases with stop-on-first-failure and no parallel, caching,
 scheduling, or daemon behavior).
+
+Execution/reporting gaps pinned under issue #590
+(`bazel run //tools/ci:cli_execution_gaps_qualification`; fixtures in
+`cli/cli/tests/fixtures/cli_execution_gaps/` plus `dx_adopt::plan_watch`
+plus `dx_process::build_workflow_argv` plus `dx_cli::plan_reports` plus
+`dx_update::aggregate`; CLI-only, no Bazel semantics change; seed only, no
+Supported claim; silent substitution across commands stays rejected):
+
+- Watch stays 8 watchable (`build`, `test`, `run`, `lint`, `typecheck`,
+  `format`, `check`, `fix`) with 21 fail-closed not watchable plus CI
+  refusal (see [dx watch](commands/watch.md#execution-gaps)).
+- Arg-forwarding stays wont-fix: Bazel startup options (`bazelrc`,
+  `home_rc`/`nohome_rc`, `system_rc`/`nosystem_rc`, `output_base`,
+  `output_user_root`, `host_jvm_args`, `server_jvm_out`) and test-binary
+  args (`test_arg`) are rejected on workflow commands with guidance to use
+  `dx bazel`; only `dx bazel` forwards unchanged, while `dx run` forwards
+  after `--` to the application binary, not to Bazel.
+- Report matrix stays wont-fix: `lint`/`typecheck`/`check`/`fix` accept
+  `sarif`, `test` accepts `junit`, `coverage` accepts `lcov`,
+  `audit` accepts `sarif`/`spdx`, and every other command has no standard
+  report (`format` included); unsupported combos fail fast with
+  `UnsupportedFormat`, never silently substituted.
+- Parallelism stays wont-fix: `check`/`fix` run
+  `format`→`lint`→`typecheck`→`generate` sequentially, `watch` runs one
+  iteration at a time, `update` runs per-set sequentially with continuation,
+  and `run` multirun runs sequentially in scope order.

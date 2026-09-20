@@ -791,3 +791,14 @@ Protocol fixtures must verify:
 - Atomic file reports, exclusive stdout reports, and conformance with
   [Standard Reports](standard-reports.md).
 - Equivalent text, diff, NDJSON, and standard-report semantics over one normalized result set.
+- Execution/reporting gaps stay wont-fix with fail-closed contract matrices
+  (issue #590, pinned by fixtures in
+  `cli/cli/tests/fixtures/cli_execution_gaps/` plus
+  `bazel run //tools/ci:cli_execution_gaps_qualification`): the
+  per-command standard-report matrix (`lint`/`typecheck`/`check`/`fix`
+  `sarif`, `test` `junit`, `coverage` `lcov`, `audit` `sarif`/`spdx`,
+  every other command none including `format`) fails unsupported combos
+  with `UnsupportedFormat` instead of silent substitution; sequential
+  plans (`check`/`fix` phases, `watch` iterations, `update` per-set
+  continuation, `run` multirun) keep deterministic NDJSON ordering with no
+  parallel execution.

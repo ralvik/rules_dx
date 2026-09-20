@@ -999,6 +999,79 @@ mod tests {
     }
 
     #[test]
+    fn execution_gaps_forwarding_matrix_is_wont_fix() {
+        // Issue #590: every Bazel startup option plus test-binary args
+        // stays rejected on workflow commands with `dx bazel` guidance;
+        // only `dx bazel` forwards unchanged. Pinned with fixtures in
+        // `cli/cli/tests/fixtures/cli_execution_gaps/`.
+        for startup in [
+            "--bazelrc=/tmp/rc",
+            "--home_rc",
+            "--nohome_rc",
+            "--system_rc",
+            "--nosystem_rc",
+            "--output_base=/tmp/x",
+            "--output_user_root=/tmp/y",
+            "--host_jvm_args=-Xmx1g",
+            "--server_jvm_out=/tmp/jvm.out",
+        ] {
+            assert!(
+                is_startup_option(startup),
+                "{startup} must count as startup"
+            );
+            let err = build_workflow_argv(
+                "build",
+                &[startup.to_owned()],
+                &[],
+                &[],
+                &["//...".to_owned()],
+            )
+            .expect_err("startup must fail");
+            assert!(
+                matches!(err, ForwardError::StartupOption { .. }),
+                "{startup} produced {err:?}"
+            );
+            assert!(err.to_string().contains("dx bazel"), "{startup}: {err}");
+        }
+        for binary in ["--test_arg=fast", "--test_arg"] {
+            assert!(
+                is_test_binary_arg(binary),
+                "{binary} must count as test-binary"
+            );
+            let err = build_workflow_argv(
+                "test",
+                &[binary.to_owned()],
+                &[],
+                &[],
+                &["//...".to_owned()],
+            )
+            .expect_err("test-binary must fail");
+            assert!(
+                matches!(err, ForwardError::TestBinaryArgs { .. }),
+                "{binary} produced {err:?}"
+            );
+        }
+        // The transparent escape hatch forwards even startup options unchanged.
+        let passthrough = build_bazel_passthrough(
+            "bazel",
+            &[
+                "--output_base=/tmp/x".to_owned(),
+                "build".to_owned(),
+                "//...".to_owned(),
+            ],
+        );
+        assert_eq!(
+            passthrough,
+            vec![
+                "bazel".to_owned(),
+                "--output_base=/tmp/x".to_owned(),
+                "build".to_owned(),
+                "//...".to_owned()
+            ]
+        );
+    }
+
+    #[test]
     fn quality_workflows_reject_nokeep_going() {
         // Quality callers protect `nokeep_going` unconditionally so a
         // conflicting `--nokeep_going` weakens no result collection.
