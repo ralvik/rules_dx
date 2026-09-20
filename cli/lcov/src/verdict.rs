@@ -38,11 +38,13 @@ pub struct GateVerdict {
 }
 
 /// Whether LCOV `SF` records for `path` carry gated line data. Rust and Go
-/// use the pinned Bazel llvm-cov/go integrations; Python and
-/// JavaScript/TypeScript participate in `bazel coverage` through the
-/// repo's pytest/jest wrappers (see `docs/testing/generation.md`). Any
-/// other extension lands in `other_sources` and counts nowhere; Starlark
-/// line data stays a hard error until the measurement route exists.
+/// use the pinned Bazel llvm-cov/go integrations; C/C++ uses the pinned
+/// Bazel LLVM source coverage (rules_cc plus LLVM tools, issue #501);
+/// Python and JavaScript/TypeScript participate in `bazel coverage`
+/// through the repo's pytest/jest wrappers (see
+/// `docs/testing/generation.md`). Any other extension lands in
+/// `other_sources` and counts nowhere; Starlark line data stays a hard
+/// error until the measurement route exists.
 pub fn is_covered_language(path: &str) -> bool {
     path.ends_with(".rs")
         || path.ends_with(".go")
@@ -51,6 +53,14 @@ pub fn is_covered_language(path: &str) -> bool {
         || path.ends_with(".jsx")
         || path.ends_with(".ts")
         || path.ends_with(".tsx")
+        || path.ends_with(".c")
+        || path.ends_with(".cc")
+        || path.ends_with(".cpp")
+        || path.ends_with(".cxx")
+        || path.ends_with(".h")
+        || path.ends_with(".hh")
+        || path.ends_with(".hpp")
+        || path.ends_with(".hxx")
 }
 
 fn is_starlark(path: &str) -> bool {
@@ -595,16 +605,79 @@ mod tests {
         inventory.insert("tool.rs".to_string(), SUPPORT.to_string());
         let mut report = report_of("elf.rs", &[(1, 1)]);
         report.insert("tool.rs".to_string(), hits(&[(1, 0)]));
-        report.insert("notes.cc".to_string(), hits(&[(7, 1)]));
+        report.insert("notes.txt".to_string(), hits(&[(7, 1)]));
         let verdict = evaluate(&inventory, &["elf.rs".to_string()], &report, &loader(files));
         assert!(verdict.passed, "{verdict:?}");
         assert_eq!(verdict.covered, 1);
         assert_eq!(verdict.eligible, 1);
-        assert_eq!(verdict.other_sources, vec!["notes.cc".to_string()]);
+        assert_eq!(verdict.other_sources, vec!["notes.txt".to_string()]);
         let text = render(&verdict);
         assert!(
             text.contains("PASS") && text.contains("not counted"),
             "{text}"
+        );
+    }
+
+    #[test]
+    fn cc_routes_to_files_with_slash_markers() {
+        let source = file_lines(&[
+            "int Add(int a, int b) {".to_string(),
+            "  return a + b;".to_string(),
+            "}".to_string(),
+        ]);
+        let files = BTreeMap::from([("elf.cc", source)]);
+        let verdict = evaluate(
+            &eligible_inventory(&["elf.cc"]),
+            &["elf.cc".to_string()],
+            &report_of("elf.cc", &[(1, 1), (2, 1)]),
+            &loader(files),
+        );
+        assert!(verdict.passed, "{verdict:?}");
+        assert!(verdict.other_sources.is_empty());
+        assert_eq!(verdict.files.len(), 1);
+    }
+
+    #[test]
+    fn cc_uncovered_line_fails_with_location() {
+        let files = BTreeMap::from([("elf.cc", "int f() {\n  return 1;\n}\n".to_string())]);
+        let verdict = evaluate(
+            &eligible_inventory(&["elf.cc"]),
+            &["elf.cc".to_string()],
+            &report_of("elf.cc", &[(1, 1), (2, 0)]),
+            &loader(files),
+        );
+        assert!(!verdict.passed);
+        assert_eq!(verdict.files[0].uncovered, vec![2]);
+    }
+
+    #[test]
+    fn cc_header_routes_to_files() {
+        let files = BTreeMap::from([("elf.h", "int Add(int a, int b);\n".to_string())]);
+        let verdict = evaluate(
+            &eligible_inventory(&["elf.h"]),
+            &["elf.h".to_string()],
+            &report_of("elf.h", &[(1, 1)]),
+            &loader(files),
+        );
+        assert!(verdict.passed, "{verdict:?}");
+        assert!(verdict.other_sources.is_empty());
+    }
+
+    #[test]
+    fn uninventoried_cc_in_report_fails() {
+        let files = BTreeMap::from([("elf.cc", "int f() { return 1; }\n".to_string())]);
+        let mut report = report_of("elf.cc", &[(1, 1)]);
+        report.insert("rogue.cc".to_string(), hits(&[(1, 1)]));
+        let verdict = evaluate(
+            &eligible_inventory(&["elf.cc"]),
+            &["elf.cc".to_string()],
+            &report,
+            &loader(files),
+        );
+        assert!(!verdict.passed);
+        assert!(
+            verdict.errors.iter().any(|e| e.contains("rogue.cc")),
+            "{verdict:?}"
         );
     }
 

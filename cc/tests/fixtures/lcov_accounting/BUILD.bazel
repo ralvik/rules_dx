@@ -1,0 +1,33 @@
+"""LCOV accounting fixture (issue #501)."""
+
+load("//cc/rules:defs.bzl", "cc_library", "cc_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+cc_library(
+    name = "accounting",
+    srcs = ["accounting.cc"],
+    hdrs = ["accounting.h"],
+)
+
+cc_test(
+    name = "accounting_test",
+    srcs = ["accounting_test.cc"],
+    deps = [":accounting"],
+)
+
+exports_files(["pins.bzl"])
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = [
+        "BUILD.bazel",
+        "pins.bzl",
+    ],
+    tags = ["corpus"],
+)
