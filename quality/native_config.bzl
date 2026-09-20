@@ -17,11 +17,11 @@ DxNativeConfigInfo = provider(
 # analysis instead of silently changing behavior. Ruff recognizes only
 # the dedicated `ruff.toml`/`.ruff.toml` basenames (never `pyproject.toml`);
 # basename recognition is Gazelle's job, the `.toml` extension check here
-# matches the rustfmt precedent. Biome takes `biome.json` (or
-# `biome.jsonc`): the adapter passes the config's directory as
-# `--config-path`, so the directory must hold exactly one config file and
-# never linted sources; the `.json` extension check here pins the JSON
-# transport while `.jsonc` support stays future work. ESLint takes the
+# matches the rustfmt precedent. Biome takes `biome.json` only (issue
+# #589 wont-fix: `.jsonc` is rejected; the `.json` extension check here
+# pins the JSON transport with no hidden preset): the adapter passes the
+# config's directory as `--config-path`, so the directory must hold
+# exactly one `biome.json` and never linted sources. ESLint takes the
 # flat-config `eslint.config.js`: the adapter passes it as `-c`, so the
 # `.js` extension pins the JavaScript module transport.
 _NATIVE_CONFIG_EXTENSIONS = {
@@ -136,7 +136,7 @@ ruff_config = _make_native_config_rule(
 
 biome_config = _make_native_config_rule(
     "biome",
-    "Checked-in Biome JSON config (biome.json) for JavaScript/TypeScript/JSON lint/format. The adapter passes the config's directory as --config-path.",
+    "Checked-in Biome JSON config (biome.json only, issue #589 wont-fix rejects biome.jsonc) for JavaScript/TypeScript/JSON lint/format. The adapter passes the config's directory as --config-path.",
 )
 
 eslint_config = _make_native_config_rule(

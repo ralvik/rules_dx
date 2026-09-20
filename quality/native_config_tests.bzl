@@ -47,6 +47,16 @@ def native_config_unit_tests(name):
                 ".js",
             ),
             expect_equal(
+                "native_config_error rejects biome.jsonc (issue #589 wont-fix)",
+                native_config_error(
+                    "biome",
+                    "cfg/biome.jsonc",
+                    True,
+                    [],
+                ),
+                "native_config (biome): src must end in '.json', got cfg/biome.jsonc",
+            ),
+            expect_equal(
                 "native_config_error accepts a checked-in config",
                 native_config_error(
                     "buildifier",

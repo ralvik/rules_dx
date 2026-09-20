@@ -17,7 +17,8 @@
 //! HTML. A marker is honored only inside its language's comments and
 //! outside string or char literals (byte-level scan honoring `"`/`'`
 //! and backslash escapes). Markers inside block comments or raw strings
-//! are out of scope; no eligible source uses those shapes. The `reason:`
+//! stay wont-fix out of scope (issue #589, gate-owned: line-comment
+//! textual scan only; no eligible source uses those shapes). The `reason:`
 //! lookup itself is a textual per-line match on the marker line or the
 //! line directly above it, and the reason text after the colon must be
 //! non-empty.

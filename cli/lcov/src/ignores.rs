@@ -306,7 +306,10 @@ fn take_word(rest: &str, word: &str) -> bool {
 /// must open and close exactly once; any other spelling of the marker prefix
 /// is an unrecognized directive and fails. Markers are honored only inside
 /// the extension-selected comment style (see [`comment_style`]) outside
-/// literals.
+/// literals. Block comments (`/* ... */`) and raw strings (`r#"..."#`)
+/// stay wont-fix out of scope (issue #589): the scan is line-comment
+/// textual only and no eligible source uses those shapes, so markers there
+/// are inert.
 pub fn find_ignores(path: &str, source: &str) -> Result<Ignores, LcovError> {
     let lines: Vec<&str> = source.lines().collect();
     let mut ignores = Ignores::default();
@@ -730,5 +733,31 @@ mod tests {
             };
             assert!(find_ignores("t.rs", &source).is_ok(), "{suffix}");
         }
+    }
+
+    #[test]
+    fn block_comment_markers_are_inert_wontfix() {
+        // Issue #589 wont-fix: the line-comment textual scan never looks
+        // inside `/* ... */`, so a marker there is inert, not an ignore.
+        let source = file_lines(&[
+            "fn f() {".to_string(),
+            format!("    /* {} - reason: block. */", marker("_LINE")),
+            "    1".to_string(),
+            "}".to_string(),
+        ]);
+        let ignores = find_ignores("t.rs", &source).unwrap();
+        assert!(ignores.singles.is_empty());
+        assert!(ignores.ranges.is_empty());
+    }
+
+    #[test]
+    fn raw_string_markers_are_inert_wontfix() {
+        // Issue #589 wont-fix: raw strings (`r#"..."#`) are not decoded,
+        // so a marker inside one is inert, not an ignore.
+        let tricky = format!("let s = r#\"code with // {} inside\"#;", marker("_LINE"));
+        let source = file_lines(&[tricky, "real();".to_string()]);
+        let ignores = find_ignores("t.rs", &source).unwrap();
+        assert!(ignores.singles.is_empty());
+        assert!(ignores.ranges.is_empty());
     }
 }
