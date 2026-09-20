@@ -14,7 +14,7 @@ MODULE.bazel (`paket.main` hub); consumers depend on
 
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 exports_files([
     "paket.main.bzl",

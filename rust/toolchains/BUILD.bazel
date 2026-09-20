@@ -4,7 +4,7 @@ load("//quality:fixtures.bzl", "real_source_target")
 load(":identity_subject.bzl", "toolchain_identity_subject")
 load(":identity_tests.bzl", "toolchain_identity_tests")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 toolchain_identity_subject(
     name = "identity_under_test",

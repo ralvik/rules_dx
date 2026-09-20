@@ -11,7 +11,7 @@ load("@rules_python//python:defs.bzl", "py_binary")
 load("//quality:fixtures.bzl", "real_source_target")
 load(":preset_tests.bzl", "preset_update_tests")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 py_binary(
     name = "preset.update",

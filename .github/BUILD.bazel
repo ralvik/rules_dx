@@ -2,7 +2,7 @@
 
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 # Consumer CI template harness (issue #99); see //tools/ci:consumer_scheduling_test.
 # ci.yml stays out (no quality class); publish-dry-run.yml is a link sibling (issue #12).

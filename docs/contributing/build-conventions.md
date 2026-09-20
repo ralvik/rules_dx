@@ -40,6 +40,17 @@ snapshot versus grep policy under issue #450).
 
 Allowed ref: `Bash-only harness is Linux-only (issue #299 shell contract).`
 
+## Visibility
+
+Public (`//visibility:public`) is external API only: `//config`, `//dx`,
+`//env`, `//generation`, `//quality` roots, `//<lang>/rules` wrappers, and
+`//deploy/rules` macros. Everything else is repo-internal
+(`//:__subpackages__`) or narrower (`//cli`, `//quality`, `//env`,
+`//generation`, `//docs`, `//tools` scopes; `//visibility:private` for
+`<lang>/env` test plans with no cross-package consumers). No new public
+defaults or public target visibilities outside the allowlist. Guard:
+`//tools/ci:visibility_guards` (issue #456).
+
 ## Comment Rules
 
 Keep only what the target is plus non-obvious attributes

@@ -45,7 +45,7 @@ load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 # Workspace ESM scope marker. javascript_test adds it to every
 # test's runfiles so jest's ESM detection resolves first-party .js

@@ -11,7 +11,7 @@ ride their runfiles forest under `bazel test` / `bazel run`.
 load("@rules_shell//shell:sh_library.bzl", "sh_library")
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 sh_library(
     name = "lib",

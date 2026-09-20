@@ -3,7 +3,7 @@
 load("@rules_dx//fsharp/rules:defs.bzl", "fsharp_library", "fsharp_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 # Handwritten: the generator never emits fsharp_test; test-owned `*Test.fs`
 # stays out of the generated library and this rule survives regeneration.

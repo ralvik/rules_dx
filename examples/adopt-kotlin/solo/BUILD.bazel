@@ -3,7 +3,7 @@
 load("@rules_dx//kotlin/rules:defs.bzl", "kotlin_library", "kotlin_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 # Handwritten: the generator never emits kotlin_test; test-owned `*Test.kt`
 # stays out of the generated library and this rule survives regeneration.

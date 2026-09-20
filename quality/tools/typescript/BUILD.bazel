@@ -18,7 +18,7 @@ passes; `which node` finds no ambient Node.
 
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 real_source_target(
     name = "corpus_starlark",

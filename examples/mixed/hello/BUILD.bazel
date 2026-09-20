@@ -14,7 +14,7 @@ load("//quality:fixtures.bzl", "real_source_target")
 load("//svelte/rules:defs.bzl", "svelte_library")
 load("//vue/rules:defs.bzl", "vue_library")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 vue_library(
     name = "vue_lib",

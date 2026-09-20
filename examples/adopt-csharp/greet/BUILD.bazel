@@ -3,7 +3,7 @@
 load("@rules_dx//csharp/rules:defs.bzl", "csharp_library", "csharp_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 # Handwritten: the generator never emits csharp_test; test-owned `*Test.cs`
 # stays out of the generated library and this rule survives regeneration.

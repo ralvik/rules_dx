@@ -4,7 +4,12 @@ load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library", "rust_test", "rustfmt_test")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = [
+    "//cli:__pkg__",
+    "//cli:__subpackages__",
+    "//quality:__pkg__",
+    "//quality:__subpackages__",
+])
 
 rust_library(
     name = "quality_result",

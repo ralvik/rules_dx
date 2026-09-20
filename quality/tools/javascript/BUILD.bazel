@@ -10,7 +10,7 @@ lock/installer, no lifecycle scripts via allowBuilds: {}).
 load("@npm_tools//:defs.bzl", "npm_link_all_packages")
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 exports_files([
     "package.json",

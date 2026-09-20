@@ -14,7 +14,7 @@ python3+bash, no ecosystem toolchains).
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 filegroup(
     name = "checker",
