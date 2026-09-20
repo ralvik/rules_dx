@@ -779,6 +779,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Go from_file lock wiring harness (issue #483); see docs/product/support-matrix.md#provisional-default-dependency-locks.
+sh_binary(
+    name = "godeps_qualification",
+    srcs = ["godeps_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # C/C++ sha256-integrity plus no-system-package harness (issue #484); see docs/product/support-matrix.md#provisional-default-dependency-locks.
 sh_binary(
     name = "cc_hermetic_qualification",

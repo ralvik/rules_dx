@@ -1048,6 +1048,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:maven_lock_qualification
       - name: Audit Paket lock qualification (issue #482 Paket files plus sha512 plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:paket_qualification
+      - name: Audit Go from_file qualification (issue #483 go.mod plus go.sum plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:godeps_qualification
       - name: Audit C/C++ hermetic qualification (issue #484 sha256-integrity plus no-system-package pins plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:cc_hermetic_qualification
       - name: Write job summary

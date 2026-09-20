@@ -244,7 +244,7 @@ are pinned by `bazel run //tools/ci:foundation_maps` with owning qualification i
 wrappers preserving upstream providers plus `QualitySourcesInfo`, Gazelle extensions,
 env plans, hello builds, and lock authority (Maven `maven_install.json` plus fail-closed
 qualified seed-only under issue #481, Paket plus `paket.main` qualified seed-only
-under issue #482, Go stdlib-only, C/C++ none), with test runners (JUnit 6.1.3 plus 5.14.x fallback qualified seed-only under issue #476, xUnit v3 4.0.0
+under issue #482, Go `go.mod`/`go.sum` qualified seed-only under issue #483 with hello staying stdlib-only, C/C++ none), with test runners (JUnit 6.1.3 plus 5.14.x fallback qualified seed-only under issue #476, xUnit v3 4.0.0
 mapping via xunit fixtures qualified seed-only under issue #477, `go test`
 qualified seed-only under issue #478, GoogleTest v1.18.0 plus C++17 floor
 qualified seed-only under issue #479, ScalaTest qualified seed-only under issue
@@ -254,8 +254,7 @@ declared-dependency usage with category, exception, and obsolete checks) is qual
 all admitted languages in `tools/depcheck/` (issue #22; remaining opens under issue #510)
 with native authorities (go.sum,
 `maven_install.json`, `paket.lock`, per-archive sha256) and focused fixtures. Remaining gaps
-(Go `from_file` when
-non-stdlib deps land under issue #483, quality adapters qualified under issue #307 with
+(quality adapters qualified under issue #307 with
 deferred implementation
 owned by ADR 0019, C/C++ MSVC interop plus SDK licensing)
 stay owned under issues #476-#484 plus #485-#488 (JUnit 6.1.3 plus 5.14.x fallback
@@ -271,7 +270,9 @@ ScalaTest 3.2.20 qualified seed-only under issue #480 via
 Maven `maven_install.json` plus fail-closed repin qualified seed-only under issue #481 via
 `bazel run //tools/ci:maven_lock_qualification`;
 Paket files plus sha512 qualified seed-only under issue #482 via
-`bazel run //tools/ci:paket_qualification`).
+`bazel run //tools/ci:paket_qualification`;
+Go `go.mod`/`go.sum` qualified seed-only under issue #483 via
+`bazel run //tools/ci:godeps_qualification`).
 No `Supported` claim until platform plus consumer plus release
 evidence passes.
 
@@ -726,7 +727,8 @@ Upstream documentation observations; provisional defaults, not
 selections. Exact files and fail-closed wiring are tracked in
 open work under issues #481-#484, with the Maven lock qualified
 seed-only under issue #481, the Paket lock wiring qualified seed-only
-under issue #482, and the C/C++ hash wiring qualified seed-only under
+under issue #482, the Go lock wiring qualified seed-only under issue
+#483, and the C/C++ hash wiring qualified seed-only under
 issue #484 below.
 
 - Java, Kotlin, Scala: Maven maven_install.json qualified seed-only under issue #481
@@ -749,7 +751,15 @@ issue #484 below.
   (rules_dotnet issue 444).
 - Go: `go.mod`/`go.sum` via `go_deps.from_file` (`go.work` only for
   multi-module layouts); Gazelle documents `from_file` as preferred over
-  hand-written module tags.
+  hand-written module tags, qualified seed-only under issue #483
+  (`bazel run //tools/ci:godeps_qualification` with
+  `go/tests/fixtures/godeps/pins.bzl` plus the go-cmp fixture consumer over
+  `@com_github_google_go_cmp//cmp:cmp` and `third_party/go/go.mod` plus
+  `go.sum`; single shared lock, every entry carrying h1 so the Bazel
+  downloader verifies each artifact). The Go lock files are
+  maintainer-owned; generation consumes them and never writes them. Hand
+  `go_deps.module` tags rejected per Gazelle preferred; `go.work` only for
+  multi-module layouts.
 - C/C++ hash wiring qualified seed-only under issue #484: no ecosystem
   lockfile; every `http_archive` carries `sha256` or `integrity`, and system
   packages are excluded as non-hermetic (`bazel run

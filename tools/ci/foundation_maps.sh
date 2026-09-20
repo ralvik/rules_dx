@@ -170,8 +170,9 @@ else
 fi
 
 # #7: lock authority stays checked in (fail-closed wiring in MODULE.bazel).
-# Go hello is stdlib-only with no ecosystem lock; C/C++ has no ecosystem
-# lockfile (every http_archive carries sha256/integrity).
+# Go from_file lock is third_party/go/go.mod plus go.sum (issue #483;
+# hello stays stdlib-only, godeps fixture proves the external dep); C/C++
+# has no ecosystem lockfile (every http_archive carries sha256/integrity).
 locks_missing=""
 [[ -f "rust/tests/fixtures/hello/Cargo.lock" ]] || locks_missing="$locks_missing Cargo.lock"
 [[ -f "cargo-bazel-lock.json" ]] || locks_missing="$locks_missing cargo-bazel-lock"
@@ -183,7 +184,10 @@ locks_missing=""
 [[ -f "third_party/jvm/maven_install.json" ]] || locks_missing="$locks_missing maven_install"
 [[ -f "third_party/dotnet/paket.lock" ]] || locks_missing="$locks_missing paket.lock"
 [[ -f "third_party/dotnet/paket.dependencies" ]] || locks_missing="$locks_missing paket.dependencies"
+[[ -f "third_party/go/go.mod" ]] || locks_missing="$locks_missing go.mod"
+[[ -f "third_party/go/go.sum" ]] || locks_missing="$locks_missing go.sum"
 grep -q -F -e 'fail_if_repin_required' MODULE.bazel || locks_missing="$locks_missing fail-closed"
+grep -q -F -e 'gazelle_go_deps.from_file(go_mod = "//third_party/go:go.mod")' MODULE.bazel || locks_missing="$locks_missing go-from-file"
 if [[ -z "$locks_missing" ]]; then
   ok
 else
@@ -610,12 +614,12 @@ fi
 
 # #476-#484: admitted lock wiring stays pinned (JVM shares maven_install.json
 # fail-closed qualified seed-only under #481, .NET shares paket.main qualified
-# seed-only under #482, Go stdlib-only, C/C++ hash wiring qualified seed-only
-# under #484 with no ecosystem lockfile).
+# seed-only under #482, Go go.mod/go.sum qualified seed-only under #483,
+# C/C++ hash wiring qualified seed-only under #484 with no ecosystem lockfile).
 lock304_fail=""
 grep -q -F -e 'maven_install.json' docs/generation/README.md || lock304_fail="$lock304_fail gen:maven"
 grep -q -F -e 'paket.lock' docs/generation/README.md || lock304_fail="$lock304_fail gen:paket"
-grep -q -F -e 'Go stdlib-only' docs/generation/README.md || lock304_fail="$lock304_fail gen:go"
+grep -q -F -e 'go.mod' docs/generation/README.md || lock304_fail="$lock304_fail gen:go"
 grep -q -F -e 'C/C++ none' docs/generation/README.md || lock304_fail="$lock304_fail gen:cc"
 grep -q -F -e '@paket.main//fsharp.core' fsharp/tests/fixtures/hello/BUILD.bazel || lock304_fail="$lock304_fail fsharp:paket"
 grep -q -F -e 'paket.main' MODULE.bazel || lock304_fail="$lock304_fail module:paket"
@@ -632,6 +636,10 @@ grep -q -F -e 'CC_HASH_ATTR = "sha256"' cc/tests/fixtures/hermetic/pins.bzl || l
 grep -q -F -e 'system packages rejected' cc/tests/fixtures/hermetic/pins.bzl || lock304_fail="$lock304_fail cc:rejected"
 grep -q -F -e 'cc_hermetic_qualification' docs/product/support-matrix.md || lock304_fail="$lock304_fail matrix:cc-qual"
 grep -q -F -e 'cc_hermetic_qualification' docs/generation/README.md || lock304_fail="$lock304_fail gen:cc-qual"
+grep -q -F -e 'GO_CMP_VERSION = "v0.6.0"' go/tests/fixtures/godeps/pins.bzl || lock304_fail="$lock304_fail godeps:pin"
+grep -q -F -e 'hand module tags rejected' go/tests/fixtures/godeps/pins.bzl || lock304_fail="$lock304_fail godeps:rejected"
+grep -q -F -e 'godeps_qualification' docs/product/support-matrix.md || lock304_fail="$lock304_fail matrix:godeps-qual"
+grep -q -F -e 'godeps_qualification' docs/generation/README.md || lock304_fail="$lock304_fail gen:godeps-qual"
 if [[ -z "$lock304_fail" ]]; then
   ok
 else
