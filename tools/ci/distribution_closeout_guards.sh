@@ -4,7 +4,8 @@
 # No release has been cut: no tags, GitHub releases, registry
 # submissions, or publication outputs without explicit owner approval.
 # Standalone dx binaries + BCR publication + matrix/SBOM/signing (#311),
-# the human-run signing-first dry run (#78/#311), and prebuilt devcontainer
+# the human-run signing-first dry run (#78/#458, live successor to closed
+# #311 for the human-run path), and prebuilt devcontainer
 # images on GHCR (#184, separate workflow) stay owner-gated with SECURITY
 # reporting as the release precondition. Close-out battery (#54) runs the
 # full battery on a clean tree.
@@ -25,7 +26,9 @@
 # install-time publisher-identity verification
 # (#26 implemented via //deploy/install:dx_verify + //cli/cli:dx_standalone),
 # and no-publish invariants. Full matrix/SBOM/signing/BCR/human-run are
-# implemented owner-gated per #311 (//deploy/release:all + runbook); the
+# implemented owner-gated per #311 (//deploy/release:all + runbook;
+# human-run driver owned under #458, live successor to closed #311 for
+# the human-run path); the
 # full green battery stays open under its issue.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:distribution_closeout_guards`,
@@ -372,7 +375,7 @@ if [[ -f "deploy/release/matrix.bzl" ]] &&
   [[ -f "docs/deploy/release-runbook.md" ]]; then
   ok
 else
-  bad "full release path missing (deploy/release matrix/sbom/signing/bcr/release.sh + runbook, #311)"
+  bad "full release path missing (deploy/release matrix/sbom/signing/bcr/release.sh + runbook, #311 with human-run under #458)"
 fi
 
 # #311 release policy tests stay wired.

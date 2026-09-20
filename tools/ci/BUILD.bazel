@@ -155,7 +155,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Release-hygiene harness (issues #5, #311); see tools/ci/release_hygiene.sh.
+# Release-hygiene harness (issues #5, #311, #458); see tools/ci/release_hygiene.sh.
 sh_binary(
     name = "release_hygiene",
     srcs = ["release_hygiene.sh"],
@@ -227,7 +227,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Publication-trust harness (issues #78, #26, #5, #311); see tools/ci/publish_trust.sh.
+# Publication-trust harness (issues #78, #26, #5, #311, #458); see tools/ci/publish_trust.sh.
 sh_binary(
     name = "publish_trust",
     srcs = ["publish_trust.sh"],
@@ -425,7 +425,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Distribution/closeout guards (issues #5, #26, #78, #184, #54, #311); see tools/ci/distribution_closeout_guards.sh.
+# Distribution/closeout guards (issues #5, #26, #78, #184, #54, #311, #458); see tools/ci/distribution_closeout_guards.sh.
 sh_binary(
     name = "distribution_closeout_guards",
     srcs = ["distribution_closeout_guards.sh"],

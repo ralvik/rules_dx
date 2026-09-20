@@ -1,6 +1,7 @@
 # Release Runbook
 
-Owner-gated human-run release path (issue #311). No tag, GitHub
+Owner-gated human-run release path (issue #458, live successor to closed
+#311 for the human-run path). No tag, GitHub
 Release, registry submission, or image push happens without explicit
 owner approval per the release hygiene in
 [Contributing](../../CONTRIBUTING.md). The publish dry-run workflow
@@ -30,6 +31,10 @@ Build each qualified cell with `bazel build //cli/cli:dx
 SBOM and provenance. Unqualified cells fail closed; never claim them.
 
 ## Steps
+
+Signing-first: step 4 signs plus attests before step 5 opens the draft
+release, so nothing is drafted or published unsigned. Pinned by
+`bazel test //deploy/release:release_driver_verify`.
 
 1. Dry-run everything first: `RELEASE_DRY_RUN=1
    deploy/release/release.sh <tag>` plus `GH_RELEASE_DRY_RUN=1 bazel
