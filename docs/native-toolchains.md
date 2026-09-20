@@ -221,8 +221,10 @@ Windows-labelled lane builds remote GNULVM targets, not native MSVC tests/covera
 Use public upstream toolchains, `CcInfo`, Rust crate/dependency/build providers and existing
 execution transitions. `rules_rs` static/shared-library wrappers map Cargo `staticlib` and `cdylib`;
 they expose native linking providers rather than ordinary Rust-library providers. Exact public
-`rules_dx` wrapper/provider mappings remain open (tracked in
-open work under issue #470), not a re-export of every upstream API.
+`rules_dx` wrapper/provider mappings are pinned (issue #470,
+`bazel run //tools/ci:foundation_maps`): `rust/rules/defs.bzl` forwards `CrateInfo`/`DepInfo`
+plus `TestCrateInfo`/`CcInfo` for Cc-linking shapes with `QualitySourcesInfo`, proven by
+`rust/rules/wrapper_tests.bzl` conformance; not a re-export of every upstream API.
 
 The [build-script contract](generation/rust.md#build-scripts) remains authoritative: native compiler
 exposure defaults on with a kept opt-out; shell environment and nonhermetic-path discovery default

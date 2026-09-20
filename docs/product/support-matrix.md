@@ -136,7 +136,7 @@ fixture evidence; provisional notes below do not select additional defaults or n
 
 | Foundation | Provisional upstream basis | Open mappings | Tracking |
 | --- | --- | --- | --- |
-| Rust application | `rules_rs` + pinned patched `rules_rust` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Providers, Gazelle, integration; native gaps: kept CC opt-out linker, shell-env default, bindgen LLVM-22-vs-23, CXX graph identity, exact-target discovery | issues #470, #471, #472, #473, #474, #475 |
+| Rust application | `rules_rs` + pinned patched `rules_rust` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Providers/Gazelle/integration pinned; native gaps: kept CC opt-out linker, shell-env default, bindgen LLVM-22-vs-23, CXX graph identity, exact-target discovery | Pinned (`bazel run //tools/ci:foundation_maps`, issue #470); native gaps under issues #471, #472, #473, #474, #475 |
 | Python application | `aspect_rules_py` 2.x ([ADR 0010](../decisions/0010-python-foundation.md)) | Mappings | Pinned (`bazel run //tools/ci:foundation_maps`) |
 | JavaScript/TypeScript application | `aspect_rules_js`/`aspect_rules_ts`, `aspect_rules_jest` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Wrappers/Gazelle | Pinned (`bazel run //tools/ci:foundation_maps`) |
 | JS/TS quality | Biome default; ESLint, Prettier available; `tsc` diagnostic-only | Mappings | Pinned (`bazel run //tools/ci:foundation_maps`) |
@@ -150,8 +150,8 @@ fixture evidence; provisional notes below do not select additional defaults or n
 | Consumer CI | Reusable workflow + caller template | Delivered; verification open | Shipped |
 | Repository workflows | Codegen/env/setup implemented; `dx update` plus `dx audit` live execution delivered | Codegen pairs; audit/update | open work under issue #506 and issue #512 |
 
-Required-core Rust mappings stay open under issues #470, #471, #472, #473, #474, #475 (Rust
-providers/Gazelle/integration plus the five native gaps below); Vue/Svelte/Astro/MDX
+Required-core Rust providers/Gazelle/integration are pinned (issue #470); the five
+native gaps below stay owned under issues #471, #472, #473, #474, #475; Vue/Svelte/Astro/MDX
 adapter mappings plus composition evidence stay open under issue #510. Python mappings
 plus Ty and JS/TS wrappers/Gazelle plus quality mappings are pinned (see below).
 Qualified mappings are pinned by
@@ -160,6 +160,13 @@ Qualified mappings are pinned by
 [Environments](../environments/README.md#language-mapping-qualification),
 [Tools](../tools/README.md#language-mapping-qualification), and
 [Framework adapters](../generation/framework-adapters.md#framework-mapping-qualification):
+Rust provider plus Gazelle maps with fixtures (`rust/rules/defs.bzl` preserving
+`CrateInfo`/`DepInfo`/`TestCrateInfo`/`CcInfo` plus `QualitySourcesInfo`, proven by
+`rust/rules/wrapper_tests.bzl` conformance over `rust/tests/fixtures/hello/`; Gazelle
+kinds/loads in `gazelle/rust/lang.go` with cargo plus source-only plus merge plus
+native-config goldens; provider-derived env plan in `rust/env/plan.bzl` pinned by
+`rust/env/plan_tests.bzl`; hello plus `Cargo.lock` plus `cargo-bazel-lock.json` lock
+authority, issue #470),
 build-script hermetic defaults (`use_cc_toolchain = True`, `use_default_shell_env = False`,
 `emit_warnings = True` in `gazelle/rust/lang.go`, proven by `gazelle/rust/lang_test.go`),
 Ty provenance plus `ty` typecheck adapter mapping (`quality/artifacts/ty.linux_x86_64.bzl`,

@@ -7,6 +7,10 @@
 # end-to-end fixture approach; exact parser/compiler, provider,
 # generated-region, dependency, test, env/IDE, quality-region mappings plus
 # composition evidence are pinned here for #8.
+# Required-core Rust providers/Gazelle/integration are pinned here for #470
+# (wrappers preserve CrateInfo/DepInfo/TestCrateInfo/CcInfo plus
+# QualitySourcesInfo with conformance fixtures, Gazelle kinds/loads/goldens,
+# env plan plus hello plus locks); native gaps stay owned under #471-#475.
 # Required-core mappings (Rust providers/Gazelle/integration under #470 plus native gaps
 # under #471-#475, Python/JS mappings pinned, framework adapter mappings plus composition
 # under #510) are pinned here.
@@ -27,7 +31,7 @@
 # Gazelle fixtures, env plans, hello wrapper fixtures, lock authority, Ty
 # provenance, plus the framework parser/compiler, provider, region,
 # dependency, test, env/IDE, quality-region, and composition fixtures,
-# plus the #470-#475 build-script hermetic defaults, Ty/quality adapter mappings,
+# plus the #470 Rust provider/Gazelle/integration maps, the #470-#475 build-script hermetic defaults, Ty/quality adapter mappings,
 # and native-gap ownership, plus the #476-#484 admitted test runners, lock wiring,
 # quality classification, and MSVC-block ownership, plus the ADR 0019 deferred
 # foundation absence, retained cohorts, exclusion evidence, and owned gaps.
@@ -390,6 +394,91 @@ if [[ -f "tools/ci/wrapper_sources.sh" && -f "tools/ci/code_ownership.sh" ]]; th
   ok
 else
   bad "wrapper_sources/code_ownership harnesses missing"
+fi
+
+# #470: Rust provider plus Gazelle maps stay pinned (wrappers preserve
+# upstream CrateInfo/DepInfo/TestCrateInfo/CcInfo plus QualitySourcesInfo
+# with conformance fixtures, Gazelle kinds/loads/goldens, env plan plus
+# hello plus locks with owning docs).
+rust470_fail=""
+grep -q -F -e 'CrateInfo' rust/rules/defs.bzl || rust470_fail="$rust470_fail provider:CrateInfo"
+grep -q -F -e 'DepInfo' rust/rules/defs.bzl || rust470_fail="$rust470_fail provider:DepInfo"
+grep -q -F -e 'TestCrateInfo' rust/rules/defs.bzl || rust470_fail="$rust470_fail provider:TestCrateInfo"
+grep -q -F -e 'CcInfo' rust/rules/defs.bzl || rust470_fail="$rust470_fail provider:CcInfo"
+grep -q -F -e 'QualitySourcesInfo' rust/rules/defs.bzl || rust470_fail="$rust470_fail provider:QualitySources"
+grep -q -F -e '_DX_RUST_CRATE_PROVIDERS' rust/rules/defs.bzl || rust470_fail="$rust470_fail provider:crate-map"
+grep -q -F -e '_DX_FORWARD_PROVIDES' rust/rules/defs.bzl || rust470_fail="$rust470_fail provider:forward"
+grep -q -F -e '_DX_CC_FORWARD_PROVIDES' rust/rules/defs.bzl || rust470_fail="$rust470_fail provider:cc-forward"
+grep -q -F -e 'def rust_library' rust/rules/defs.bzl || rust470_fail="$rust470_fail wrapper:library"
+grep -q -F -e 'def rust_binary' rust/rules/defs.bzl || rust470_fail="$rust470_fail wrapper:binary"
+grep -q -F -e 'def rust_test' rust/rules/defs.bzl || rust470_fail="$rust470_fail wrapper:test"
+grep -q -F -e 'def rust_proc_macro' rust/rules/defs.bzl || rust470_fail="$rust470_fail wrapper:proc-macro"
+grep -q -F -e 'def rust_shared_library' rust/rules/defs.bzl || rust470_fail="$rust470_fail wrapper:shared"
+grep -q -F -e 'def rust_static_library' rust/rules/defs.bzl || rust470_fail="$rust470_fail wrapper:static"
+grep -q -F -e 'def dx_rust_crate' rust/rules/defs.bzl || rust470_fail="$rust470_fail wrapper:dx-crate"
+grep -q -F -e 'def rustfmt_test' rust/rules/defs.bzl || rust470_fail="$rust470_fail wrapper:rustfmt"
+grep -q -F -e 'def rust_clippy_test' rust/rules/defs.bzl || rust470_fail="$rust470_fail wrapper:clippy"
+grep -q -F -e '@rules_rust//rust:defs.bzl' rust/rules/defs.bzl || rust470_fail="$rust470_fail upstream:load"
+[[ -f "rust/rules/probe.bzl" ]] || rust470_fail="$rust470_fail fixture:probe"
+grep -q -F -e 'dx_wrapper_subject' rust/rules/probe.bzl || rust470_fail="$rust470_fail fixture:subject"
+grep -q -F -e 'dx_wrapper_cc_subject' rust/rules/probe.bzl || rust470_fail="$rust470_fail fixture:cc-subject"
+[[ -f "rust/rules/wrapper_tests.bzl" ]] || rust470_fail="$rust470_fail fixture:wrapper-tests"
+grep -q -F -e 'EXPECTED_OBSERVATIONS' rust/rules/wrapper_tests.bzl || rust470_fail="$rust470_fail fixture:observations"
+grep -q -F -e 'preserved_deps=True' rust/rules/wrapper_tests.bzl || rust470_fail="$rust470_fail fixture:preserved-deps"
+grep -q -F -e 'preserved_srcs=True' rust/rules/wrapper_tests.bzl || rust470_fail="$rust470_fail fixture:preserved-srcs"
+grep -q -F -e 'tools_pinned=True' rust/rules/wrapper_tests.bzl || rust470_fail="$rust470_fail fixture:tools-pinned"
+grep -q -F -e 'wrapper_has_quality_sources=True' rust/rules/wrapper_tests.bzl || rust470_fail="$rust470_fail fixture:quality-sources"
+grep -q -F -e 'dx_wrapper_conformance_tests' rust/tests/fixtures/hello/BUILD.bazel || rust470_fail="$rust470_fail hello:conformance"
+grep -q -F -e 'dx_wrapper_registry_tests' rust/tests/fixtures/hello/BUILD.bazel || rust470_fail="$rust470_fail hello:registry"
+grep -q -F -e 'hello_lib_subject' rust/tests/fixtures/hello/BUILD.bazel || rust470_fail="$rust470_fail hello:lib-subject"
+grep -q -F -e 'hello_cdylib_subject' rust/tests/fixtures/hello/BUILD.bazel || rust470_fail="$rust470_fail hello:cdylib-subject"
+grep -q -F -e 'hello_staticlib_subject' rust/tests/fixtures/hello/BUILD.bazel || rust470_fail="$rust470_fail hello:staticlib-subject"
+grep -q -F -e 'rust_library' gazelle/rust/lang.go || rust470_fail="$rust470_fail gazelle:library-kind"
+grep -q -F -e 'rust_binary' gazelle/rust/lang.go || rust470_fail="$rust470_fail gazelle:binary-kind"
+grep -q -F -e 'rust_test' gazelle/rust/lang.go || rust470_fail="$rust470_fail gazelle:test-kind"
+grep -q -F -e 'rust_proc_macro' gazelle/rust/lang.go || rust470_fail="$rust470_fail gazelle:proc-macro-kind"
+grep -q -F -e 'rust_shared_library' gazelle/rust/lang.go || rust470_fail="$rust470_fail gazelle:shared-kind"
+grep -q -F -e 'rust_static_library' gazelle/rust/lang.go || rust470_fail="$rust470_fail gazelle:static-kind"
+grep -q -F -e 'cargo_build_script' gazelle/rust/lang.go || rust470_fail="$rust470_fail gazelle:script-kind"
+grep -q -F -e 'dx_rust_crate' gazelle/rust/lang.go || rust470_fail="$rust470_fail gazelle:dx-crate-kind"
+grep -q -F -e '//rust/rules:defs.bzl' gazelle/rust/lang.go || rust470_fail="$rust470_fail gazelle:dx-load"
+grep -q -F -e '//cargo:defs.bzl' gazelle/rust/lang.go || rust470_fail="$rust470_fail gazelle:cargo-load"
+grep -q -F -e 'crate_deps' gazelle/rust/lang.go || rust470_fail="$rust470_fail gazelle:crate-deps"
+grep -q -F -e '"aliases"' gazelle/rust/lang.go || rust470_fail="$rust470_fail gazelle:aliases"
+[[ -f "gazelle/rust/parser.go" && -f "gazelle/rust/cargo.go" && -f "gazelle/rust/corpus.go" && -f "gazelle/rust/manifest.go" && -f "gazelle/rust/native_config.go" && -f "gazelle/rust/layout.go" ]] || rust470_fail="$rust470_fail gazelle:impl"
+[[ -f "gazelle/rust/parser_test.go" && -f "gazelle/rust/cargo_test.go" && -f "gazelle/rust/manifest_test.go" && -f "gazelle/rust/layout_test.go" && -f "gazelle/rust/native_config_test.go" ]] || rust470_fail="$rust470_fail gazelle:tests"
+[[ -f "gazelle/rust/testdata/cargo/crates/app/BUILD.out" ]] || rust470_fail="$rust470_fail gazelle:app-golden"
+[[ -f "gazelle/rust/testdata/cargo/crates/cdylib/BUILD.out" ]] || rust470_fail="$rust470_fail gazelle:cdylib-golden"
+[[ -f "gazelle/rust/testdata/cargo/crates/proc_macro/BUILD.out" ]] || rust470_fail="$rust470_fail gazelle:proc-macro-golden"
+[[ -f "gazelle/rust/testdata/cargo/crates/scripted/BUILD.out" ]] || rust470_fail="$rust470_fail gazelle:scripted-golden"
+[[ -f "gazelle/rust/testdata/cargo/crates/shapes/BUILD.out" ]] || rust470_fail="$rust470_fail gazelle:shapes-golden"
+[[ -f "gazelle/rust/testdata/cargo/crates/staticlib/BUILD.out" ]] || rust470_fail="$rust470_fail gazelle:staticlib-golden"
+[[ -f "gazelle/rust/testdata/source_only/crates/demo/BUILD.out" ]] || rust470_fail="$rust470_fail gazelle:source-only-golden"
+[[ -f "gazelle/rust/testdata/merge/crates/merge/BUILD.out" ]] || rust470_fail="$rust470_fail gazelle:merge-golden"
+[[ -f "gazelle/rust/testdata/native_config/crates/full/BUILD.out" ]] || rust470_fail="$rust470_fail gazelle:native-config-golden"
+grep -q -F -e 'RustEnvPlanInfo' rust/env/plan.bzl || rust470_fail="$rust470_fail env:plan-info"
+grep -q -F -e 'rust_env_plan' rust/env/plan.bzl || rust470_fail="$rust470_fail env:plan-rule"
+grep -q -F -e 'EXPECTED_ENV_PLAN_OBSERVATIONS' rust/env/plan_tests.bzl || rust470_fail="$rust470_fail env:observations"
+grep -q -F -e 'via_test_crate' rust/env/plan_tests.bzl || rust470_fail="$rust470_fail env:via-test-crate"
+grep -q -F -e 'hello_lib_plan' rust/env/BUILD.bazel || rust470_fail="$rust470_fail env:lib-plan"
+grep -q -F -e 'hello_cdylib_plan' rust/env/BUILD.bazel || rust470_fail="$rust470_fail env:cdylib-plan"
+grep -q -F -e 'env_plan_tests' rust/env/BUILD.bazel || rust470_fail="$rust470_fail env:tests"
+[[ -f "rust/tests/fixtures/hello/Cargo.toml" ]] || rust470_fail="$rust470_fail hello:manifest"
+[[ -f "rust/tests/fixtures/hello/Cargo.lock" ]] || rust470_fail="$rust470_fail hello:lock"
+[[ -f "rust/tests/fixtures/hello/src/lib.rs" && -f "rust/tests/fixtures/hello/src/main.rs" && -f "rust/tests/fixtures/hello/src/derive.rs" && -f "rust/tests/fixtures/hello/src/cdylib.rs" && -f "rust/tests/fixtures/hello/src/staticlib.rs" ]] || rust470_fail="$rust470_fail hello:sources"
+[[ -f "cargo-bazel-lock.json" ]] || rust470_fail="$rust470_fail lock:cargo-bazel"
+[[ -f "MODULE.bazel.lock" ]] || rust470_fail="$rust470_fail lock:module"
+grep -q -F -e 'bazel_dep(name = "rules_rust", version = "0.74.0")' MODULE.bazel || rust470_fail="$rust470_fail module:rules-rust"
+grep -q -F -e 'cargo_lockfile = "//rust/tests/fixtures/hello:Cargo.lock"' MODULE.bazel || rust470_fail="$rust470_fail module:cargo-lockfile"
+grep -q -F -e 'lockfile = "//:cargo-bazel-lock.json"' MODULE.bazel || rust470_fail="$rust470_fail module:crate-lockfile"
+grep -q -F -e 'Language Mapping Qualification' docs/generation/README.md || rust470_fail="$rust470_fail docs:generation"
+grep -q -F -e 'Language Mapping Qualification' docs/environments/README.md || rust470_fail="$rust470_fail docs:environments"
+grep -q -F -e '#470' docs/product/support-matrix.md || rust470_fail="$rust470_fail docs:matrix"
+grep -q -F -e '#470' docs/native-toolchains.md || rust470_fail="$rust470_fail docs:native"
+if [[ -z "$rust470_fail" ]]; then
+  ok
+else
+  bad "Rust provider/Gazelle/integration maps drifted:$rust470_fail"
 fi
 
 # #470-#475: Rust build-script hermetic defaults stay pinned (generation contract
