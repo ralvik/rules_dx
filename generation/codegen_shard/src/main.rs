@@ -17,6 +17,10 @@
 //! exec path, requiring no materialized artifact). The four-part form
 //! declares the BEP-matching exec-path suffix for the backing artifact.
 
+// Issue #591 (extends #238 rollout beyond cli/*): infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 // LCOV_EXCL_START - reason: thin binary shim; CLI parsing and file I/O failures are operational action failures verified by build and shard-emission execution, not unit coverage.
 use std::path::PathBuf;
 

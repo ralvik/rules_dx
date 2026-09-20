@@ -13,6 +13,10 @@
 //! and in the `dx` CLI collection; this crate only validates and encodes
 //! one contributor shard.
 
+// Issue #591 (extends #238 rollout beyond cli/*): infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 pub use codegen_proto::rules_dx::codegen as proto;
 use proto::DxCodegenShard;
 

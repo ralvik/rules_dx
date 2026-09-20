@@ -8,6 +8,10 @@
 //! UTF-8-boundary, digest-match, and end-to-end re-application checks run
 //! in the `dx` CLI, which owns the source bytes, in.
 
+// Issue #591 (extends #238 rollout beyond cli/*): infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 use proto::{
     Capability, Convergence, Diagnostic, Edit, FileEdits, FileSnapshot, QualityResult, Severity,
     Stage,

@@ -1,6 +1,10 @@
 //! Thin entry point over the gate library.
 //! All branching logic lives in the library and is unit-tested there.
 
+// Issue #591 (extends #238 rollout beyond cli/*): infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 // The explicit `use` keeps the gate dependency visible to the Gazelle Rust
 // scanner, which resolves imports from `use`/`extern crate` items only: the
 // `dx_lcov::run` call path alone yields no import, so generation would

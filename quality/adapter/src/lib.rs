@@ -8,6 +8,10 @@
 //! the message describes it. Nothing here spawns processes; execution lives
 //! in `exec`, command shapes in `commands`, per-tool grammars in `parsers`.
 
+// Issue #591 (extends #238 rollout beyond cli/*): infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 use line_index::{LineIndex, WideEncoding, WideLineCol};
 use quality_result::proto::{Diagnostic, Severity};
 

@@ -10,6 +10,10 @@
 //! deterministic validation marker; a failing one exits nonzero with reasons
 //! on stderr and writes no output.
 
+// Issue #591 (extends #238 rollout beyond cli/*): infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 // LCOV_EXCL_START - reason: thin binary shim; CLI parsing and file I/O failures are operational action failures verified by build and WP3 evaluator execution, not unit coverage.
 use clap::{
     error::{ContextKind, ContextValue, ErrorKind},
