@@ -326,3 +326,10 @@ also prove that lint and test do not duplicate `tsc` actions.
 - Verify `generate` does not scan ownership markers or skip files, preserves Gazelle's
   diagnostics and failure status for ownership conflicts, and adds no Rust-side BUILD
   interpretation.
+- Verify generation freshness determinism through the customer check flow only
+  (issue #644, successor to closed #503): `dogfood-freshness`
+  `dx generate --check //...` in `.github/workflows/ci.yml` plus consumer-CI
+  `generate --check` in `.github/workflows/reusable-consumer.yml` plus bump-PR
+  `generate --check` verify in `.github/workflows/bump.yml`. A clean checkout must
+  already be generator-stable; a custom freshness harness in CI is rejected. See the
+  [generate contract](../cli/commands/generate.md#modes).

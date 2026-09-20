@@ -32,7 +32,9 @@ class by design — never silently under the standard dogfood gates.
   ([quality/runner-matrix](../quality/runner-matrix.md)).
 - **Generation freshness**: `dx generate --check //...` must be a
   deterministic no-op on a clean checkout; BUILD/corpus sync is owned by
-  generation (open work under #644, successor to closed #503).
+  generation via the customer check flow under issue #644 (successor to closed #503):
+  `dogfood-freshness` `generate --check //...` plus consumer-CI `generate --check`
+  plus bump-PR `generate --check` verify; custom freshness harness rejected.
 - **Examples external-consumer**: per-foundation `adopt-*` workspaces
   proving generation as a consumer, plus acquisition/laziness proof
    (delivered on the seed host; platform/remote dimensions owned by
