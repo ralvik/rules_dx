@@ -90,7 +90,8 @@ Ty initially runs per compatible Python target, propagates over dependencies, an
 uses provider-derived transitive sources and import roots for resolution. Its
 `--fix` behavior produces cacheable proposed replacements. Suppression insertion,
 including Ty's `--add-ignore`, is not a normal fix and is excluded. Final Ty action
-granularity remains benchmark-gated.
+granularity follows [ADR 0003](../../decisions/0003-action-granularity.md) as amended by
+[ADR 0022](../../decisions/0022-no-benchmarking.md).
 
 `dx typecheck --check` is non-mutating and requests the same genuine proposed fixes as
 default mode. It shows all original findings and marks only guaranteed fixes as fixable. It

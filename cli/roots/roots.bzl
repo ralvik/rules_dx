@@ -7,7 +7,7 @@ REPOSITORY_PATTERN = "//..."
 
 # Every strategy, baseline first. Order mirrors
 # `RootStrategy::ALL` in `//cli/roots:dx_roots` and is the deterministic
-# tie-break order for benchmark selection: the baseline wins ties.
+# tie-break order for fiat selection (ADR 0022): the baseline wins ties.
 REPOSITORY_ROOT_STRATEGIES = [
     "recursive-pattern",
     "query-pattern-file",
@@ -57,6 +57,6 @@ def roots_aggregate(name, deps, **kwargs):
 
     The consuming `bazel build` must still request the plan-collection
     aspects and output groups; this wrapper only reserves the aggregate
-    identity so benchmarks can attribute discovery cost.
+    identity so selection can attribute discovery cost.
     """
     native.filegroup(name = name, srcs = deps, **kwargs)

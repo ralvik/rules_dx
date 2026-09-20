@@ -118,21 +118,19 @@ fi
 
 # Portable timing lives once in tools/sh/lib.sh (issue #323 dedup:
 # dx_now_secs + now_secs alias with EPOCHREALTIME/date fallbacks);
-# perf harnesses use it, no per-file copies.
+# no per-file copies.
 if grep -q -F -e 'dx_now_secs() {' tools/sh/lib.sh &&
   grep -q -F -e 'now_secs() {' tools/sh/lib.sh &&
   grep -q -F -e '${EPOCHREALTIME:-}' tools/sh/lib.sh &&
-  [[ "$(grep -rln -F -e 'now_secs() {' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | grep -v -F -e 'tools/sh/lib.sh' | grep -v -F -e 'tools/ci/shell_contract.sh' | wc -l)" == "0" ]] &&
-  grep -q -F -e 'now_secs' perf/bench.sh &&
-  grep -q -F -e 'now_secs' perf/rules_lint_comparison.sh; then
+  [[ "$(grep -rln -F -e 'now_secs() {' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | grep -v -F -e 'tools/sh/lib.sh' | grep -v -F -e 'tools/ci/shell_contract.sh' | wc -l)" == "0" ]]; then
   ok
 else
-  bad "portable timing must live once in tools/sh/lib.sh (dx_now_secs/now_secs) with perf using it (issue #323)"
+  bad "portable timing must live once in tools/sh/lib.sh (dx_now_secs/now_secs, issue #323)"
 fi
 
 # Portable hashing lives once in tools/sh/lib.sh (issue #323 dedup:
 # dx_sha256_* + dx_tree_sha256 with shasum/python fallbacks); deploy stays
-# hermetic python (issue #318), gazelle/perf use the lib helpers.
+# hermetic python (issue #318), gazelle/depcheck use the lib helpers.
 if grep -q -F -e 'dx_sha256_file() {' tools/sh/lib.sh &&
   grep -q -F -e 'dx_tree_sha256() {' tools/sh/lib.sh &&
   grep -q -F -e 'dx_sha256_check() {' tools/sh/lib.sh &&
@@ -140,10 +138,10 @@ if grep -q -F -e 'dx_sha256_file() {' tools/sh/lib.sh &&
   grep -q -F -e 'py_sha256() {' deploy/rules/archive_verify.sh &&
   grep -q -F -e 'dx_sha256_file' gazelle/rust/idempotent_test.sh &&
   grep -q -F -e 'dx_sha256_check' gazelle/rust/native_config_test.sh &&
-  grep -q -F -e 'dx_tree_sha256' perf/rules_lint_comparison.sh; then
+  grep -q -F -e 'dx_tree_sha256' tools/depcheck/usage_test.sh; then
   ok
 else
-  bad "portable hashing must live once in tools/sh/lib.sh with gazelle/perf using it and deploy hermetic python (issues #318, #323)"
+  bad "portable hashing must live once in tools/sh/lib.sh with gazelle/depcheck using it and deploy hermetic python (issues #318, #323)"
 fi
 
 # Issue #323 dedup: harness counters live once in tools/sh/lib.sh
@@ -214,20 +212,6 @@ if grep -q -F -e 'runs-on: windows-latest' .github/workflows/ci.yml &&
   ok
 else
   bad "windows-latest jobs must run shell bash with portable forms (issue #414 resolves the #323 Windows gap)"
-fi
-
-# Issue #320 portable route: perf harnesses record the actual host via
-# dx_perf_host instead of hard-coding the seed label; unknown OS/CPU
-# fails fast. The checked-in seed reports stay pinned to linux_x86_64
-# (proven by //perf:rules_lint_results_test), so only the harness
-# scripts are checked here.
-if grep -q -F -e 'dx_perf_host() {' tools/sh/lib.sh &&
-  grep -q -F -e 'host="$(dx_perf_host)"' perf/bench.sh &&
-  grep -q -F -e 'host="$(dx_perf_host)"' perf/rules_lint_comparison.sh &&
-  ! grep -rn -F -e 'host="linux_x86_64"' --include='bench.sh' --include='rules_lint_comparison.sh' perf/ | grep -q .; then
-  ok
-else
-  bad "perf harnesses must use dx_perf_host (issue #320), not a hard-coded linux_x86_64 pin"
 fi
 
 # Issue #320 portable route: release archives are hermetic Python

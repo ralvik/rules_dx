@@ -125,7 +125,7 @@ pub fn scope_targets(scope: &EnvScope) -> Vec<String> {
 
 /// Bazel labels to build for a WP4 root plan behind `//dx:env`: the
 /// baseline plan keeps the canonical selection identity while the
-/// benchmark runs; every other candidate passes its own roots through.
+/// fiat selection stands; every other candidate passes its own roots through.
 /// The query-pattern-file candidate carries no command-line patterns
 /// (Bazel reads them from `--target_pattern_file`).
 pub fn targets_for_root_plan(plan: &RepositoryRootPlan) -> Vec<String> {

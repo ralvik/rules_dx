@@ -40,7 +40,7 @@ pub fn plan_bazel(forwarded: &[String]) -> BuildPlan {
 /// private output groups, plus the canonical workspace policy and the
 /// BEP stream path the CLI collects with `dx_bep`. Root computation
 /// delegates to each command's own planning library so the WP4 (issue #506)
-/// root benchmark flows through unchanged; user options after `--`
+/// frozen //... root selection (ADR 0022 fiat) flows through unchanged; user options after `--`
 /// forward after the required policy. Fails before execution when user
 /// options conflict with required collection policy. The caller owns
 /// scope validation ([`dx_setup::resolve_scope`]); `command` must be

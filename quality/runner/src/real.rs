@@ -3541,11 +3541,11 @@ mod tests {
         );
     }
 
-    /// Biome/Prettier composition benchmark. Models the measured
+    /// Biome/Prettier composition fixture. Models the fixed
     /// direct-probe behavior: Biome formats with tabs, Prettier with two
     /// spaces (pinned defaults, no native config), so the same JS input
     /// has no common fixed point while JSON inputs agree. The lexical
-    /// ruleset order (biome, prettier) is the measured order: it is
+    /// ruleset order (biome, prettier) is the frozen order: it is
     /// deterministic and independent of user declaration order. Both
     /// orders converge stable with the last writer winning, so the order
     /// is material and stays frozen; genuine cycles and iteration limits
@@ -3575,7 +3575,7 @@ mod tests {
         ];
         let mut initial = BTreeMap::new();
         initial.insert("src/app.js".to_owned(), "compact\n".to_owned());
-        // Stateful normalizers modeling the measured probes: Biome leaves
+        // Stateful normalizers modeling the fixed probes: Biome leaves
         // tabs unchanged and converts anything else to tabs; Prettier
         // leaves spaces unchanged and converts anything else to spaces.
         // Lexical order converges stable with the last writer winning.

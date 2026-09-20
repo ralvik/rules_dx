@@ -44,9 +44,10 @@ The initial Ty model mirrors the v2.8.0 reference shape: visit wrapped
 `python_binary`, `python_library`, and `python_test` targets, propagate over `deps`,
 check each target's direct sources, and include transitive sources, stubs, and
 import roots exposed by verified `aspect_rules_py` providers. This is graph-native
-and incremental, but can duplicate analysis across small targets. Benchmarks
-compare action count, repeated inputs, wall time, cache reuse, and diagnostic
-quality against selected-root alternatives before the boundary becomes stable.
+and incremental, but can duplicate analysis across small targets. The boundary
+is decided by reasoning per [ADR 0022](../decisions/0022-no-benchmarking.md):
+action count, repeated inputs, cache reuse, and diagnostic quality are compared
+by fixture shape, not wall time.
 
 ## Action Inputs
 

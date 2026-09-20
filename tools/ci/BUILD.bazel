@@ -425,15 +425,6 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Execution/corpus/perf guards (issues #18, #19, #22, #15, #86); see tools/ci/execution_corpus_perf_guards.sh.
-sh_binary(
-    name = "execution_corpus_perf_guards",
-    srcs = ["execution_corpus_perf_guards.sh"],
-    data = ["//tools/sh:lib"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
 # Distribution/closeout guards (issues #5, #26, #78, #184, #54, #311); see tools/ci/distribution_closeout_guards.sh.
 sh_binary(
     name = "distribution_closeout_guards",
@@ -476,15 +467,6 @@ sh_binary(
 sh_binary(
     name = "coverage_spill",
     srcs = ["coverage_spill.sh"],
-    data = ["//tools/sh:lib"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-# Verification-foundations harness (issues #86, #15, #12); see tools/ci/verify_perf_corpus.sh.
-sh_binary(
-    name = "verify_perf_corpus",
-    srcs = ["verify_perf_corpus.sh"],
     data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],

@@ -504,7 +504,8 @@ configured target, action, module-extension package resolution, environment proj
 toolchain payload, compiler/runtime/package download, or application dependency fetch. An
 applicable action fetches only its selected execution-platform runtime/application closure.
 Module-resolution, lockfile, ruleset-source, and warm-start overhead from broad availability is
-benchmarked and reported for every added foundation.
+reasoned about for every added foundation; no timing is recorded per
+[ADR 0022](../decisions/0022-no-benchmarking.md).
 
 ## Release And Update Policy
 
@@ -525,7 +526,7 @@ publication, or explicit exclusion; building from source does not remove license
 ## Verification
 
 No delivery path becomes a default from documentation research alone. The authoritative
-acquisition, toolchain, platform, laziness, and performance evidence is defined by the
+acquisition, toolchain, platform, and laziness evidence is defined by the
 [Tool And Platform Test Matrix](../testing/tools.md). Capability-state definitions,
 support promotion, and completion-report evidence are defined by the
 [Testing Strategy](../testing/README.md#acceptance-evidence). Missing evidence delays the
