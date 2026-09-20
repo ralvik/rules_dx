@@ -3,7 +3,12 @@
 load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_crate")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = [
+    "//cli:__pkg__",
+    "//cli:__subpackages__",
+    "//env:__subpackages__",
+    "//quality:__subpackages__",
+])
 
 # Leaf-crate pattern via `dx_rust_crate` (issue #239): emits
 # `dx_atomic_fs` + `dx_atomic_fs_test` + fmt/clippy tests +

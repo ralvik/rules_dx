@@ -11,7 +11,7 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 sh_binary(
     name = "corpus_audit",
@@ -575,6 +575,15 @@ sh_binary(
 sh_binary(
     name = "non_dogfed_paths",
     srcs = ["non_dogfed_paths.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+# Visibility hardening guard (issue #456); see docs/contributing/build-conventions.md#visibility.
+sh_binary(
+    name = "visibility_guards",
+    srcs = ["visibility_guards.sh"],
     data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],

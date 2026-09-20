@@ -3,7 +3,7 @@
 load("@rules_dx//java/rules:defs.bzl", "java_library", "java_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 # Handwritten: the generator never emits java_test; test-owned `*Test.java`
 # stays out of the generated library and this rule survives regeneration.

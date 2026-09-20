@@ -3,7 +3,7 @@
 load("@rules_dx//scala/rules:defs.bzl", "scala_library", "scala_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 # Handwritten: the generator never emits scala_test; test-owned `*Test.scala`
 # stays out of the generated library and this rule survives regeneration.

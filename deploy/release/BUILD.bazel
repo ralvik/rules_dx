@@ -12,7 +12,7 @@ load(":sbom_tests.bzl", "sbom_unit_tests")
 load(":signing.bzl", "signed_release")
 load(":signing_tests.bzl", "signing_unit_tests")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 exports_files([
     "bcr.bzl",

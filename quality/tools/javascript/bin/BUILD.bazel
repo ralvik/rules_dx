@@ -10,7 +10,7 @@ load("@npm_tools//quality/tools/javascript:eslint/package_json.bzl", eslint_bin 
 load("@npm_tools//quality/tools/javascript:prettier/package_json.bzl", prettier_bin = "bin")
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 eslint_bin.eslint_binary(name = "eslint")
 

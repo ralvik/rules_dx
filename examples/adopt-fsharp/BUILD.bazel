@@ -2,7 +2,7 @@
 
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 # Arrival files; generator-owned BUILD files, regen must be no-op; see docs/generation/README.md.
 # Corpus: root arrival files only; see docs/contributing/build-conventions.md.
