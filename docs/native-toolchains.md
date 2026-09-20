@@ -342,6 +342,20 @@ composition is narrow; do not write a new toolchain just to combine the two. Its
 does not enforce the SDK EULA variable documented by hermetic-llvm; applicable terms and acknowledgement
 must be reviewed rather than inferred from setting a variable.
 
+Windows immutable-lazy acquisition is qualified seed-only under issue #495
+(`cc/tests/fixtures/windows_acquisition/pins.bzl` via `bazel run
+//tools/ci:windows_acquisition_qualification`): fixed-manifest plus
+package-index inputs pinned with the toolchains_msvc head plus windows_support
+`v0.4.1` package identities above; mutable fetch rejected (live channel
+re-resolution, minor-version selectors, checksums-only, pinned-commit-only);
+laziness proven (adding the module requires no acceptance and fetches no
+restricted payloads, unrelated seed workflows stay green without acceptance,
+deferred failure never proves laziness since extension evaluation already
+fetches manifests); project-owned downloader plus cross-host inference
+rejected. The backend stays provisional; rights plus transport plus interop
+plus corpus plus floors plus coverage stay owned under issues
+#496/#497/#498/#499/#500/#501; no `Supported` claim.
+
 Qualify independently compiled MSVC static/import libraries and DLLs, including STL values,
 exceptions, RTTI and allocation ownership. Match compiler/linker/redist requirements under
 [Microsoft's compatibility limits](https://learn.microsoft.com/en-us/cpp/porting/binary-compat-2015-2017?view=msvc-170)
@@ -438,7 +452,7 @@ acquisition, interoperability, coverage, and release evidence passes.
 | Question to close | Preferred next evidence or remedy | Tracking |
 | --- | --- | --- |
 | Does the exact current stable stack compose? | Freeze resolved Bzlmod identities; compare rules_rs's LLVM reference with the newer candidate; record checksums, source patches and compiler/profile compatibility. | open work under issue #494 |
-| Can Windows acquisition be immutable and lazy? | Reproduce clean re-resolution; qualify upstream fixed-manifest/package inputs and observed downloads, including missing acceptance and unrelated workflows. Windows x86_64 qualified (issue #414) on the as-built pinned upstream toolchains with the toolchains_msvc backend provisional plus immutable lazy fetch; merely adding the module requires no acceptance and fetches no restricted payloads. | open work under issue #495 |
+| Can Windows acquisition be immutable and lazy? | Qualified seed-only under issue #495: fixed-manifest plus package-index inputs pinned with the toolchains_msvc head plus windows_support `v0.4.1` package identities (`cc/tests/fixtures/windows_acquisition/pins.bzl` via `bazel run //tools/ci:windows_acquisition_qualification`); mutable fetch rejected; laziness proven (adding the module requires no acceptance and fetches no restricted payloads, unrelated workflows stay green without acceptance, deferred failure never proves laziness). Backend stays provisional; rights plus transport plus interop plus corpus plus floors plus coverage stay owned under issues #496/#497/#498/#499/#500/#501. | issue #495 |
 | Are Apple/Microsoft acquisition and cache rights adequate? | Review actual package terms, deliberate acceptance, extraction, mirrors, redistribution, internal caches and remote workers. Official download availability is not permission. Windows x86_64 qualified (issue #414) with explicit EULA never automatic plus usage vs redistribution reviewed separately (see issue #496). | open work under issue #496 |
 | Can the kept CC opt-out execute successfully? | Qualified seed-only under issue #471: kept opt-out succeeds for pure-Rust scripts on stock `rules_rust` 0.74.0 (sysroot `rust-lld` fallback plus `no_cc` stubs, `rust/tests/fixtures/cc_optout/` via `bazel run //tools/ci:cc_optout_qualification`); script compilation inputs stay distinct from execution inputs. | issue #471 |
 | Can third-party scripts retain a declared hermetic closure? | Decided hermetic under issue #472: global shell-env False in `.bazelrc` with narrow per-crate annotation opt-in (zero opt-ins); hostile PATH, tool discovery and additional declared tools pinned by `bazel run //tools/ci:shell_env_qualification` plus [Rust Generation](generation/rust.md#build-scripts). | issue #472 |

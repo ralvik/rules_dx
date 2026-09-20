@@ -236,6 +236,8 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   fixture evidence, issue #492),
   `:fsharplint_qualification` (FSharpLint console vs library-API binding
   pins plus fixture evidence, issue #493),
+  `:windows_acquisition_qualification` (Windows immutable lazy fetch pins
+  plus fixture evidence, issue #495),
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
   best-effort), `:windows_qualification`, `:ci_matrix_qualification`
   (host matrix, issue #415), and `:closeout_battery_qualification`
@@ -251,7 +253,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `musl_qualification` 12/12, `macos_qualification` 12/12,
-`windows_qualification` 13/13, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
+`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
 
@@ -556,6 +558,17 @@ Remaining reds stay owned gaps, not green claims:
   adapter claim; digests plus `fsharp` adapter stays owned under #417
   (`fsharplint_qualification` 13/13); platform plus consumer plus release
   evidence stays owned gap; no Supported claim).
+- Windows immutable-lazy acquisition with fixture evidence qualified seed-only under #495
+  (`bazel run //tools/ci:windows_acquisition_qualification`;
+  fixed-manifest plus package-index inputs pinned in
+  `cc/tests/fixtures/windows_acquisition/pins.bzl` with the toolchains_msvc
+  head plus windows_support `v0.4.1` package identities, mutable fetch
+  rejected, laziness proven with missing acceptance plus unrelated workflows
+  green and deferred failure never proving laziness; backend stays
+  provisional; rights plus transport plus interop plus corpus plus floors
+  plus coverage stay owned under issues #496/#497/#498/#499/#500/#501;
+  platform plus consumer plus release evidence stays owned gap; no Supported
+  claim (`windows_acquisition_qualification` 14/14)).
 - Non-dogfed execution plan delivered (see issue #508 for remaining gaps; hermetic
   CLI-contract pins under issue #407)
   (`bazel run //tools/ci:non_dogfed_paths`; hermetic CLI-contract pins,
