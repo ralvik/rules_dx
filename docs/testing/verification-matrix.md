@@ -8,7 +8,10 @@ Open cells are recorded as gaps; docs describe as-built behavior only.
 No cell is `Supported`: missing test/release evidence blocks promotion until
 platform plus consumer plus release evidence passes per the support matrix,
 enforced by `bazel run //tools/ci:supported_evidence_gate`.
-Non-dogfed execution plan delivered (see issue #508 for remaining execution gaps;
+Non-dogfed execution plan qualified seed-only under #508
+(`bazel run //tools/ci:non_dogfed_qualification`; e2e plus negatives plus
+no-coverage plus shell with fixture evidence pinned in
+`tools/ci/tests/fixtures/non_dogfed/pins.bzl` plus `non_dogfed.expected`;
 hermetic CLI-contract pins under issue #407)
 (`bazel run //tools/ci:non_dogfed_paths`): CLI-contract coverage runs
 hermetically under `bazel test //...` (no nested Bazel), negative fixtures
@@ -72,7 +75,10 @@ class by design — never silently under the standard dogfood gates.
   plus `roots_bep.txt`; platform plus consumer plus release evidence stays
   owned gap; no Supported claim).
 - **Non-dogfed execution plan**: the cohorts that never run under the
-  standard dogfood gates each have an explicit path, pinned by
+  standard dogfood gates each have an explicit path, qualified seed-only
+  under #508 (`bazel run //tools/ci:non_dogfed_qualification` with
+  `tools/ci/tests/fixtures/non_dogfed/pins.bzl` plus `non_dogfed.expected`;
+  `non_dogfed_qualification` 16/16; hermetic pins under issue #407) and pinned by
   `bazel run //tools/ci:non_dogfed_paths` (issue #508; hermetic pins under issue #407): CLI-contract
   via hermetic pins under `bazel test //...` (no nested Bazel, no manual;
   plus the adopt-rust `dx_dev` smoke in normal CI; loss recorded here);
@@ -202,6 +208,7 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   `:release_policy`, `:publish_trust`, `:shell_contract`.
 - `dogfood-freshness`: `bazel run //cli/cli:dx -- generate --check //...`,
   `//tools/ci:corpus_audit`, `:code_ownership`, `:non_dogfed_paths`,
+  `:non_dogfed_qualification` (e2e plus negatives pins plus fixture evidence, issue #508),
   examples READMEs and
   laziness proofs, quality-cache aquery, depcheck contract, audit/update
   guards, wrapper sources, foundation maps, registry singularity, backlog
@@ -270,7 +277,7 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   #408, verbatim `//...`).
 
 Green here (static guards on a clean tree, no full rebuild):
-`non_dogfed_paths`, `supported_evidence_gate`, `distribution_closeout_guards`,
+`non_dogfed_paths`, `non_dogfed_qualification` 16/16, `supported_evidence_gate`, `distribution_closeout_guards`,
 `env_codegen_qualification` 32/32, `docs_pipeline_qualification` 33/33,
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
@@ -788,8 +795,10 @@ Remaining reds stay owned gaps, not green claims:
   rejected, native only) with the candidate backend provisional
   (`stable_stack_qualification` 16/16); platform plus consumer plus release
   evidence stays owned gap; no Supported claim).
-- Non-dogfed execution plan delivered (see issue #508 for remaining gaps; hermetic
-  CLI-contract pins under issue #407)
+- Non-dogfed execution plan qualified seed-only under #508
+  (`bazel run //tools/ci:non_dogfed_qualification` with
+  `tools/ci/tests/fixtures/non_dogfed/pins.bzl` plus `non_dogfed.expected`;
+  `non_dogfed_qualification` 16/16; hermetic CLI-contract pins under issue #407)
   (`bazel run //tools/ci:non_dogfed_paths`; hermetic CLI-contract pins,
   green hermetic failure proofs (issue #406), coverage-excluded runs, shell ownership
   plus test execution with no quality class by design).

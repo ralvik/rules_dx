@@ -580,6 +580,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Non-dogfed qualification (issue #508); see tools/ci/non_dogfed_qualification.sh.
+sh_binary(
+    name = "non_dogfed_qualification",
+    srcs = ["non_dogfed_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Visibility hardening guard (issue #456); see docs/contributing/build-conventions.md#visibility.
 sh_binary(
     name = "visibility_guards",

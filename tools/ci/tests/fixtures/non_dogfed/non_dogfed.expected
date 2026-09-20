@@ -1,0 +1,30 @@
+Non-dogfed execution plan (issue #508; hermetic e2e pins under issue #407; negatives under issue #406).
+Term e2e throughout, never integration for drivers. Never silently under the standard dogfood gates.
+
+e2e drivers (deleted, hermetic equivalents under bazel test //...):
+- no integration/ workspace, no tools/ci/e2e.sh drivers, no //tools/ci:e2e suite
+- no second-Bazel download in MODULE.bazel
+- hermetic pins: cli/cli/src/exec code 3, //quality/testdata:runner_matrix, //quality/testdata:real_aspect_presence, //:preset_parity_test
+- adopt-rust dx_dev smoke in normal CI (local_path_override plus dx_dev wiring)
+- loss recorded: real-daemon exit 3, real Buildifier rewrite, smoke-only
+
+negatives (green hermetic proofs, issue #406):
+- four libs/starlark/tests/negative demos green (non-manual): failing_check, missing_observation, missing_fragment, wrong_phase
+- markdown-no-config subject stays manual (non-test)
+- execution failures as sh_test goldens, analysis failures via failure_test
+- CI test job via bazel test //... (no manual_negatives step)
+
+no-coverage cohort (coverage-excluded runs):
+- preset coverage --test_tag_filters=-no-coverage
+- cohort runs under bazel test //... (never manual), skips only under coverage
+- representative matrix_python_lint_fail stays no-coverage but executable
+- target_tags skip proof plus coverage_cell plus coverage_qualification gates
+- seven cells seed plus arm64 plus musl plus macos plus macos-x86_64 plus windows, no union
+
+shell sources (no quality class by design):
+- shell known class but no shell_srcs owner, corpus BUILD/MODULE/bzl/toml/md only, code ownership code languages only
+- every .sh in deps(//...), zero unowned
+- execution via bazel test //..., portability via shell_contract
+
+rejected: silent under dogfood gates, manual e2e drivers, integration term for drivers, manual negatives loop.
+no Supported claim; platform plus consumer plus release evidence stays owned gap.
