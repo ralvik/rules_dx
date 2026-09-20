@@ -259,6 +259,41 @@ mod tests {
     }
 
     #[test]
+    fn go_selective_reports_unsupported_never_full() {
+        // Issue #636: per-module `go:<module-path>` parses in the
+        // selector but the pinned `go_deps.from_file` module lock
+        // (`third_party/go/go.mod` plus `go.sum` tracking Gazelle) has
+        // no per-module update flag, so execution fails closed with the
+        // `dx bump gomod:<module> <version>` hint and never silently
+        // substitutes the full no-op; private `go get` plus `go mod tidy`
+        // stays rejected (resolver-owned backends only).
+        let error = plan(
+            SetId::Go,
+            &SetRequest::Packages(vec!["github.com/google/go-cmp/cmp".to_owned()]),
+        )
+        .expect_err("go selective is wont-fix");
+        assert!(
+            matches!(error, BackendError::Unsupported { .. }),
+            "{error:?}"
+        );
+        assert!(error.to_string().contains("go"));
+        assert!(error.to_string().contains("dx bump gomod"));
+    }
+
+    #[test]
+    fn go_full_is_pinned_noop_success() {
+        // Issue #636: the main workspace has no `go.mod` by design; the
+        // single-module `go_deps.from_file` lock tracks Gazelle, so the
+        // full update is an intentional no-op success with no launch.
+        // Real `go get -u` wiring stays rejected (would diverge the
+        // shared extension); explicit widening runs through `dx bump`.
+        assert_eq!(
+            plan(SetId::Go, &SetRequest::Full).expect("go full"),
+            BackendPlan::Noop
+        );
+    }
+
+    #[test]
     fn non_npm_selective_reports_unsupported_never_full() {
         for (set, packages) in [
             (

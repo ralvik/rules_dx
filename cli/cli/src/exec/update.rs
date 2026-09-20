@@ -660,6 +660,20 @@ mod tests {
     }
 
     #[test]
+    fn live_unsupported_go_selective_fails_without_launch() {
+        // Issue #636: `go:github.com/google/go-cmp/cmp` parses then fails
+        // closed as `BackendError::Unsupported` with no updater launch
+        // and never a silent full (no-op) substitution; widen via `dx bump`.
+        let runner = ScriptRunner::new(&[]);
+        let (code, out, err) = run_with(&["update", "go:github.com/google/go-cmp/cmp"], &runner);
+        assert_eq!(code, 1, "{out}{err}");
+        assert!(err.contains("update_failed"), "{err}");
+        assert!(err.contains("unsupported"), "{err}");
+        assert!(err.contains("dx bump gomod"), "{err}");
+        assert!(runner.calls.borrow().is_empty());
+    }
+
+    #[test]
     fn live_target_resolves_to_owning_set_only() {
         let runner = ScriptRunner::new(&[]);
         let (code, out, err) = run_with(&["update", "//go/tests/fixtures/hello:hello"], &runner);

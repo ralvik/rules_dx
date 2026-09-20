@@ -442,6 +442,16 @@ Maven per-artifact (`maven:group:artifact`, e.g. `maven:junit:junit` and
 `rules_jvm_external` offers no per-artifact pin target, so the whole-lock
 `REPIN=1 bazel run @maven//:pin` stays the only approved updater.
 
+Go per-module (`go:<module-path>`, e.g. `go:github.com/google/go-cmp/cmp`)
+is wont-fix (issue #636, fixtures in
+`cli/update/tests/fixtures/selective_go/`): the main workspace has no
+`go.mod` by design and the pinned `go_deps.from_file` module lock
+(`third_party/go/go.mod` plus `go.sum`) tracks Gazelle, so full stays an
+intentional no-op success with no launch and selective parses then fails
+closed as `unsupported` with the `dx bump gomod:<module> <version>` hint,
+never silently substituting the no-op; private `go get` plus `go mod tidy`
+stays rejected as a private resolver.
+
 `dx update` updates selected dependencies to the newest versions permitted by the project's
 declared requirements and authoritative ecosystem resolver, through approved Bazel integration.
 It refreshes standard locks or equivalent resolved dependency files without widening or replacing
