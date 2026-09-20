@@ -126,7 +126,11 @@ per-container helper references, and no framework-to-framework imports.
 `gazelle/mixed/` proves the partition is disjoint and complete for the closed
 v1 set with case-sensitive extension matching, no fallback, and no eager work
 for unused adapters. Required-core adapter mappings plus composition evidence
-stay owned under issue #510; no `Supported` claim until platform plus consumer
+stay open with fixture evidence qualified seed-only under issue #510
+(`quality/tests/fixtures/layer2_opens/pins.bzl` with `layer2_opens.expected`
+via `bazel run //tools/ci:layer2_opens_qualification`, adapter-less as pass
+rejected); no `Supported` claim until platform plus consumer
 plus release evidence passes.
 
-Pinned by `bazel run //tools/ci:foundation_maps`.
+Pinned by `bazel run //tools/ci:foundation_maps` plus
+`bazel run //tools/ci:layer2_opens_qualification`.

@@ -141,7 +141,7 @@ fixture evidence; provisional notes below do not select additional defaults or n
 | JavaScript/TypeScript application | `aspect_rules_js`/`aspect_rules_ts`, `aspect_rules_jest` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Wrappers/Gazelle | Pinned (`bazel run //tools/ci:foundation_maps`) |
 | JS/TS quality | Biome default; ESLint, Prettier available; `tsc` diagnostic-only | Mappings | Pinned (`bazel run //tools/ci:foundation_maps`) |
 | Python quality | Ruff, Ty, pydoclint (Bandit excluded from v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md)) | Mappings, Ty | Pinned (`bazel run //tools/ci:foundation_maps`) |
-| Vue / Svelte / Astro / MDX | Named upstream adapters per framework | Adapter mappings plus composition evidence | issue #510 |
+| Vue / Svelte / Astro / MDX | Named upstream adapters per framework | Adapter mappings plus composition evidence qualified seed-only under issue #510 | Qualified (`bazel run //tools/ci:layer2_opens_qualification`, `quality/tests/fixtures/layer2_opens/pins.bzl` with `layer2_opens.expected`, adapter-less as pass rejected) |
 | Generation transport | Declared versioned manifest artifact (`GenerationManifest` in `generation/result.proto`, projected by `ProjectedManifest` in `cli/cli/src/generate.rs`) with explicit path/label/pattern scope | Implemented | Shipped |
 | Target resolution | All-direct-owners query strategy ([Target Resolution](../cli/target-resolution.md), pinned by resolver fixtures) | Implemented | Shipped |
 | Quality core/result contract | Internal Protobuf + NDJSON output | Core mappings qualified seed-only under issue #511 | Qualified (`bazel run //tools/ci:result_contract_qualification`, `quality/tests/fixtures/result_contract/pins.bzl` with `result_contract.expected`, bare contract rejected) |
@@ -157,7 +157,11 @@ qualified seed-only (issue #473); CXX graph identity is pinned
 seed-only (issue #474); exact-target discovery is qualified seed-only
 (issue #475); the one remaining native
 gap below stays owned under issue #472; Vue/Svelte/Astro/MDX
-adapter mappings plus composition evidence stay open under issue #510. Python mappings
+adapter mappings plus composition evidence stay open with fixture evidence
+qualified seed-only under issue #510
+(`quality/tests/fixtures/layer2_opens/pins.bzl` with `layer2_opens.expected`
+via `bazel run //tools/ci:layer2_opens_qualification`, adapter-less as pass
+rejected, no Supported claim). Python mappings
 plus Ty and JS/TS wrappers/Gazelle plus quality mappings are pinned (see below).
 Qualified mappings are pinned by
 `bazel run //tools/ci:foundation_maps` with owning qualification in

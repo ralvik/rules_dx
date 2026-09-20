@@ -538,7 +538,9 @@ Accepted (issue #22; remaining opens under issue #510): required-core (Rust, Pyt
 fixtures with category checks, explained exceptions, and obsolete-exception errors are implemented
 in `tools/depcheck/` and pass in CI through both `bazel test //...` and bare `dx test` with no
 `manual` exclusion. Generation alone is not proof (focused passing/failing fixtures prove the
-checks).
+checks). Framework-composition depcheck stays with the JS/TS pnpm route with no separate
+framework fixtures (framework-composition depcheck stays with the JS/TS pnpm route); the open composition plus Layer-2 cells stay qualified seed-only under
+issue #510 via `bazel run //tools/ci:layer2_opens_qualification`.
 
 Every required entry in [First-Release Tool Baseline](../tools/tool-baseline.md), including mandatory
 curated expansion under [First-Release Admission](../product/scope.md#first-release-admission),

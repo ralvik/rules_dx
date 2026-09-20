@@ -1,0 +1,99 @@
+"""Layer-2 adapter-less plus composition plus depcheck opens pins (issue #510).
+
+Contract: `docs/testing/verification-matrix.md`,
+`docs/product/support-matrix.md#minimal-required-core`,
+`docs/generation/framework-adapters.md#framework-mapping-qualification`,
+`docs/quality/quality-testing.md`.
+Fixture: `quality/tests/fixtures/layer2_opens/` via
+`bazel run //tools/ci:layer2_opens_qualification`.
+
+Qualifies the as-built open record with fixture evidence, without claiming
+delivery or Supported: Layer-2 adapter-less cells stay open (no adapter
+claim, no runner-matrix cells, parity deferred), framework regions stay
+classification-only with composition evidence in `examples/mixed/hello/`
+plus `gazelle/mixed/`, and framework-composition depcheck stays with the
+JS/TS pnpm route. Closed #303 only (required core mappings); #416-420
+adapters partially (defaults qualified, digests plus adapters stay owned).
+Adapter-less as pass rejected per the issue alternatives. Test plus
+generation only per compatibility. Seed only: platform plus consumer plus
+release evidence stays owned gap; no Supported claim. Backends stay
+provisional.
+"""
+
+# Adapter-less inventory (verification-matrix Layer-2 Open adapter-less).
+# Seven admitted languages keep provider wrappers plus Gazelle plus hello
+# plus locks plus test runners (qualified under #476-#484) with defaults
+# qualified (under #485-#487) but no quality adapter claim and no
+# runner-matrix cells. Closed #303 only for required core; adapters
+# partially under #416-420 with digests plus adapters staying owned.
+ADAPTER_LESS_GO = "go"
+ADAPTER_LESS_JAVA = "java"
+ADAPTER_LESS_KOTLIN = "kotlin"
+ADAPTER_LESS_SCALA = "scala"
+ADAPTER_LESS_CSHARP = "csharp"
+ADAPTER_LESS_FSHARP = "fsharp"
+ADAPTER_LESS_C = "c"
+ADAPTER_LESS_CPP = "cpp"
+
+# Framework inventory (verification-matrix Layer-2 Open regions plus
+# Examples Open composition plus Depcheck Open).
+FRAMEWORK_VUE = "vue"
+FRAMEWORK_SVELTE = "svelte"
+FRAMEWORK_ASTRO = "astro"
+FRAMEWORK_MDX = "mdx"
+
+# Rejected and honesty lines (never pinned as pass here).
+REJECTED_ADAPTER_LESS_AS_PASS = "adapter-less as pass rejected"
+REJECTED_FRAMEWORK_FALLBACK = "generic container parser plus regex extraction plus implicit JS/TS fallback rejected"
+CLOSED_303_ONLY = "Closed #303 only"
+ADAPTERS_416_420_PARTIAL = "adapters partially under #416-420 with digests plus adapters staying owned"
+NO_SUPPORTED = "no Supported claim"
+SEED_ONLY = "qualified seed-only under issue #510"
+
+# Composition evidence (one wrapper per container plus shared helper, no
+# framework-to-framework imports, disjoint gazelle/mixed partition).
+COMPOSITION_FIXTURE = "examples/mixed/hello"
+COMPOSITION_VUE = "examples/mixed/hello/Hello.vue"
+COMPOSITION_SVELTE = "examples/mixed/hello/Hello.svelte"
+COMPOSITION_ASTRO = "examples/mixed/hello/Hello.astro"
+COMPOSITION_MDX = "examples/mixed/hello/Hello.mdx"
+COMPOSITION_HELPER = "examples/mixed/hello/helper.js"
+COMPOSITION_TEST = "examples/mixed/hello:hello_test"
+GAZELLE_MIXED = "gazelle/mixed"
+GAZELLE_MIXED_OWNER = "Owner"
+GAZELLE_MIXED_OWNERS = "Owners"
+
+# Depcheck route (required-core plus admitted fixtures delivered under #22;
+# framework-composition depcheck stays with the JS/TS pnpm route).
+DEPCHECK_FIXTURES = "tools/depcheck/testdata"
+DEPCHECK_PNPM_ROUTE = "framework-composition depcheck stays with the JS/TS pnpm route"
+DEPCHECK_LANGUAGES = [
+    "rust",
+    "python",
+    "js",
+    "ts",
+    "go",
+    "java",
+    "kotlin",
+    "scala",
+    "csharp",
+    "fsharp",
+    "cc",
+]
+
+# Owning qualifications (cross-linked, never double-claimed here).
+OWNING_JVM_COHORT = "digests plus adapters stay owned under #416"
+OWNING_SCALA_DOTNET_COHORT = "digests plus adapters stay owned under #417"
+OWNING_NATIVE_COHORT = "digests plus adapters stay owned under #418"
+OWNING_STRUCTURED_COHORT = "digests plus adapters stay owned under #419"
+OWNING_FILE_COHORT = "digests plus adapters stay owned under #420"
+OWNING_DEFAULTS_485 = "versions plus rule-sets qualified under #485"
+OWNING_DEFAULTS_486 = "versions plus rule-sets qualified under #486"
+OWNING_DEFAULTS_487 = "versions plus rule-sets qualified under #487"
+OWNING_FOUNDATIONS_476_484 = "wrappers plus runners plus locks qualified under #476-#484"
+
+# Live proof shape (no adapter-less or framework hello bazel quality test
+# exists for the open cells: the fixture triple plus grep contract checks
+# plus bazel build of the fixture plus bazel build of the mixed composition
+# is the live proof; quality adapters claim nothing yet under #416-420).
+LAYER2_OPENS_PROOF = "bazel build //quality/tests/fixtures/layer2_opens:corpus_starlark plus bazel build //examples/mixed/hello/..."
