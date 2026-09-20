@@ -95,9 +95,53 @@ stream, and must never be presented as source-line or branch coverage.
 
 ## Future (Not Implemented)
 
-Per-check filtering, richer matchers beyond `expect_equal`, aspect /
-toolchain / configuration / output-group / action subjects, per-function
-test targets, and Rust orchestration of fixture workspaces with BEP
-consumption are explicitly future work. They require concrete use cases and
-their own tracking issues; consult [ADR 0009](../decisions/0009-starlark-testing.md)
-before assuming any of them.
+Decided under issue #588 per [ADR 0009](../decisions/0009-starlark-testing.md)
+(provisional pending concrete use cases), pinned by fixtures in
+`../../libs/starlark/tests/fixtures/starlark_futures/` (`pins.bzl` plus
+`starlark_futures.expected`) and qualified by
+`bazel run //tools/ci:starlark_futures_qualification`. Test framework only;
+seed only, no Supported claim.
+
+- Per-check filtering stays wont-fix: target granularity is contract. One
+  macro call is one addressable Bazel test target with one Bazel result;
+  the generated runner does not interpret `--test_filter` per check, and
+  mismatches accumulate within that target. Per-check
+  `--test_filter` parsing is rejected; split checks into separate
+  `starlark_test` targets for finer filtering, caching, retries, and
+  diagnostics.
+- Richer matchers stay deferred: `expect_equal` only, pending a concrete
+  use case plus fixtures plus successor issue. Equality over
+  JSON-encodable values plus `file_checks` plus `expected_observations`
+  covers current internals; no larger matcher library is committed.
+- Aspect subjects stay deferred, pending a concrete use case plus fixtures
+  plus successor issue. Analysis observes `DxSubjectInfo` fields plus
+  `DefaultInfo` output basenames only; applying aspects to subjects is not
+  claimed.
+- Toolchain subjects stay deferred, pending a concrete use case plus
+  fixtures plus successor issue. Toolchain resolution needs platform and
+  toolchain context beyond provider-field observation.
+- Configuration subjects stay deferred, including transitions, pending a
+  concrete use case plus fixtures plus successor issue. Configurable
+  attributes, fragments, and transitions are not observed.
+- Output-group subjects stay deferred, pending a concrete use case plus
+  fixtures plus successor issue. Observation renders `DefaultInfo` files
+  only, not `OutputGroupInfo`; wrapper forwarding of output groups does
+  not imply observation.
+- Action subjects stay deferred, including registered-action, pending a
+  concrete use case plus fixtures plus successor issue. Actions are proven
+  via execution-mode `file_checks` or `aquery` evidence, not analysis
+  subjects.
+- Per-function targets stay wont-fix: explicit macro instantiation is contract.
+  BUILD instantiates the exported macro with a target name;
+  dynamic function discovery would hide the static `load()` constraint
+  with a second Starlark interpreter, which is rejected. One function per
+  macro call already gives per-function addressability.
+- Rust orchestration of fixture workspaces with BEP consumption stays
+  wont-fix: single invocation, no nested Bazel. Everything runs inside the
+  single Bazel command with the standard test protocol (`test.log`,
+  `test.xml`) suitable for Bazel, BEP, and CI collection; no Rust
+  orchestrator consumes BEP. Nested Bazel invocation is rejected.
+
+A second Starlark interpreter is rejected, and the behavioral matrix as
+line coverage is rejected: the matrix stays repository metadata, never
+source-line or branch coverage.

@@ -707,6 +707,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Starlark testing futures harness (issue #588); see docs/testing/starlark.md#future-not-implemented.
+sh_binary(
+    name = "starlark_futures_qualification",
+    srcs = ["starlark_futures_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # CC opt-out linker harness (issue #471); see docs/testing/verification-matrix.md.
 sh_binary(
     name = "cc_optout_qualification",

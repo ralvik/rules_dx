@@ -1,0 +1,15 @@
+Starlark testing futures qualified seed-only under issue #588
+per-check filtering wont-fix (target granularity is contract)
+richer matchers deferred (expect_equal only, needs concrete use case)
+aspect subjects deferred (needs concrete use case plus successor issue)
+toolchain subjects deferred (needs concrete use case plus successor issue)
+configuration subjects deferred (including transitions, needs concrete use case)
+output-group subjects deferred (needs concrete use case plus successor issue)
+action subjects deferred (including registered-action, needs concrete use case)
+per-function targets wont-fix (explicit macro instantiation is contract)
+Rust orchestration with BEP wont-fix (single invocation, no nested Bazel)
+second Starlark interpreter rejected
+per-check --test_filter parsing rejected
+nested Bazel invocation rejected
+behavioral matrix as line coverage rejected
+no Supported claim

@@ -87,8 +87,8 @@ a second interpreter.
 
 Rust may orchestrate real Bazel fixture workspaces and consume Bazel test/BEP
 results across platforms. It does not interpret Starlark or emulate loading,
-analysis, providers, aspects, toolchains, transitions, or actions. This record ships
-no Rust orchestration: all tests run inside the single Bazel invocation with
+analysis, providers, aspects, toolchains, transitions, or actions. This record ships no Rust orchestration:
+all tests run inside the single Bazel invocation with
 no nested Bazel.
 
 Tests use Bazel's standard test contract: process exit status, test logs, and
