@@ -33,7 +33,7 @@ as wrapper consumers, and lock authority (`rust/tests/fixtures/hello/Cargo.lock`
 `cargo-bazel-lock.json` and `MODULE.bazel.lock`, `python/tests/fixtures/hello/uv.lock` plus
 tools lock, `pnpm-lock.yaml` plus tools lock,
 `third_party/jvm/maven_install.json`, `third_party/dotnet/paket.lock` plus
-`paket.dependencies`). Go hello is stdlib-only with no ecosystem lock;
+`paket.dependencies` qualified seed-only under issue #482). Go hello is stdlib-only with no ecosystem lock;
 C/C++ has none (every `http_archive` carries `sha256`/`integrity`).
 Upstream pins live in `MODULE.bazel`.
 Ruby and PowerShell have no generation mapping: deferred beyond v1 by
@@ -91,7 +91,9 @@ upgrade with 5.14.x fallback (`execute --select-class` console-launcher fixtures
 `cc_test` assert executables plus the qualified GoogleTest v1.18.0 mapping
 below, plain `csharp_test`/`fsharp_test` hello executables)
 and lock authority (`third_party/jvm/maven_install.json`,
-`third_party/dotnet/paket.lock` plus `paket.dependencies`, Go stdlib-only, C/C++ none).
+`third_party/dotnet/paket.lock` plus `paket.dependencies` qualified seed-only
+under issue #482 via `bazel run //tools/ci:paket_qualification` with
+`csharp/tests/fixtures/paket/pins.bzl`, Go stdlib-only, C/C++ none).
 The xUnit v3 4.0.0 runner mapping is qualified under issue #477 (plain
 `csharp_test`/`fsharp_test` with `[Fact]`/`[Theory]` sources plus checked-in
 MTP entry-point shims over the pinned `@paket.main//xunit.v3` closure, proven by
@@ -110,7 +112,9 @@ under issue #477 via `bazel run //tools/ci:xunit_qualification`; `go test` quali
 seed-only under issue #478 via `bazel run //tools/ci:gotest_qualification`; GoogleTest
 v1.18.0 plus C++17 floor qualified seed-only under issue #479 via
 `bazel run //tools/ci:googletest_qualification`; ScalaTest 3.2.20 qualified
-seed-only under issue #480 via `bazel run //tools/ci:scalatest_qualification`);
+seed-only under issue #480 via `bazel run //tools/ci:scalatest_qualification`;
+Paket files plus sha512 qualified seed-only under issue #482 via
+`bazel run //tools/ci:paket_qualification`);
 no `Supported` claim
 until platform plus consumer plus release evidence passes.
 

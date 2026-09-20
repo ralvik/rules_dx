@@ -243,7 +243,7 @@ are pinned by `bazel run //tools/ci:foundation_maps` with owning qualification i
 [native plan](../native-toolchains.md#qualification-questions-and-delivery):
 wrappers preserving upstream providers plus `QualitySourcesInfo`, Gazelle extensions,
 env plans, hello builds, and lock authority (`maven_install.json` plus fail-closed,
-Paket plus `paket.main`, Go stdlib-only, C/C++ none), with test runners (JUnit
+Paket plus `paket.main` qualified seed-only under issue #482, Go stdlib-only, C/C++ none), with test runners (JUnit
 6.1.3 plus 5.14.x fallback qualified seed-only under issue #476, xUnit v3 4.0.0
 mapping via xunit fixtures qualified seed-only under issue #477, `go test`
 qualified seed-only under issue #478, GoogleTest v1.18.0 plus C++17 floor
@@ -267,7 +267,9 @@ xUnit v3 4.0.0 qualified seed-only under issue #477 via
 GoogleTest v1.18.0 plus C++17 floor qualified seed-only under issue #479 via
 `bazel run //tools/ci:googletest_qualification`;
 ScalaTest 3.2.20 qualified seed-only under issue #480 via
-`bazel run //tools/ci:scalatest_qualification`).
+`bazel run //tools/ci:scalatest_qualification`;
+Paket files plus sha512 qualified seed-only under issue #482 via
+`bazel run //tools/ci:paket_qualification`).
 No `Supported` claim until platform plus consumer plus release
 evidence passes.
 
@@ -720,14 +722,20 @@ this review selects neither a staticcheck rule set nor a Checkstyle/Scalafix pre
 
 Upstream documentation observations; provisional defaults, not
 selections. Exact files and fail-closed wiring are tracked in
-open work under issues #481-#484.
+open work under issues #481-#484, except the Paket lock wiring
+qualified seed-only under issue #482 below.
 
 - Java, Kotlin, Scala: `maven_install.json` via `rules_jvm_external`
   (`lock_file` plus `fail_if_repin_required`); Scala shares Java's Maven
   story. Coursier is the default resolver; the Maven and Gradle resolvers
   require a lock file by construction.
 - C#, F#: Paket (`paket.dependencies` plus `paket.lock`) via `paket2bazel`
-  into `nuget_repo` targets carrying per-package sha512. The Paket files are
+  into `nuget_repo` targets carrying per-package sha512, qualified seed-only
+  under issue #482 (`bazel run //tools/ci:paket_qualification` with
+  `csharp/tests/fixtures/paket/pins.bzl` plus the hello `fsharp.core`
+  consumer and the xUnit hub consumers over `@paket.main`; single shared
+  lock for C# plus F#, every entry carrying sha512 so the Bazel downloader
+  verifies each artifact). The Paket files are
   user-authored; generation consumes them and never writes them. NuGet's
   native `packages.lock.json` is unsuitable: one file per project instead of
   a central lock, and its hashes are incompatible with Bazel's downloader

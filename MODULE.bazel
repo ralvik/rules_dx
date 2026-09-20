@@ -94,9 +94,10 @@ scala_deps.scalatest()
 # acquisition through its `dotnet` toolchain extension. SDK 10.0.201 is the
 # upstream-CI toolchain version (matches rules_dotnet's own MODULE pin);
 # the default target framework is net10.0 (wrapper default, overridable per
-# target). Per-platform SDK acquisition and Paket/NuGet lock wiring stay open
+# target). Per-platform SDK acquisition stays open
 # under ADR 0019 per the provisional test-runner/lock tables; the xUnit v3
-# 4.0.0 runner is pinned (issue #477). Needs bazel_lib 3.7.0 (rules_dotnet dep; MVS
+# 4.0.0 runner is pinned (issue #477) and the Paket lock wiring is qualified
+# seed-only (issue #482). Needs bazel_lib 3.7.0 (rules_dotnet dep; MVS
 # keeps the executed tree on our other pins).
 bazel_dep(name = "rules_dotnet", version = "0.22.1")
 bazel_dep(name = "bazel_lib", version = "3.7.0")
@@ -108,7 +109,11 @@ use_repo(dotnet, "dotnet_toolchains")
 # Pinned NuGet resolver (ADR 0019). Single
 # shared Paket lock for the admitted .NET foundations (C#, F#) per the
 # support matrix: `paket.dependencies` plus `paket.lock` via `paket2bazel`
-# into the `paket.main` hub carrying per-package sha512. Members are
+# into the `paket.main` hub carrying per-package sha512 (qualified seed-only
+# under issue #482 via `bazel run //tools/ci:paket_qualification` with
+# `csharp/tests/fixtures/paket/pins.bzl` plus hello/xunit hub consumers;
+# generation consumes the Paket files and never writes them; NuGet native
+# `packages.lock.json` rejected per rules_dotnet issue 444). Members are
 # FSharp.Core 10.1.201 (F# assemblies need the runtime asset next to
 # the app) plus the xUnit v3 4.0.0 runner closure (issue #477:
 # xunit.v3 4.0.0 plus xunit.analyzers 2.0.0 with the MTP runner
