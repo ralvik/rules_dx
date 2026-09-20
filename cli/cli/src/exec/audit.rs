@@ -765,20 +765,17 @@ fn run_license(
         };
         let mut approved_hit = false;
         for exception in &policy.exceptions {
-            if exception.package != licensed.name || exception.set != licensed.set {
-                continue;
-            }
-            let names_match = exception.license == licensed.license;
-            if !names_match {
-                continue;
-            }
             if dx_audit::license_policy::validate_license_exception(exception, today).is_err() {
                 continue;
             }
-            if !dx_audit::vuln::version_affected(
-                &licensed.set,
-                &exception.versions,
-                &licensed.version,
+            if !dx_audit::license_policy::license_exception_covers(
+                exception,
+                &dx_audit::license_policy::LicenseFinding {
+                    package: licensed.name.clone(),
+                    set: licensed.set.clone(),
+                    license: licensed.license.clone(),
+                    version: licensed.version.clone(),
+                },
             ) {
                 continue;
             }
@@ -893,6 +890,7 @@ fn run_license(
             .iter()
             .map(|licensed| dx_audit::license_policy::LicenseFinding {
                 package: licensed.name.clone(),
+                set: licensed.set.clone(),
                 license: licensed.license.clone(),
                 version: licensed.version.clone(),
             })
