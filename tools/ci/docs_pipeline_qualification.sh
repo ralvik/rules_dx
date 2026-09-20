@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Docs-pipeline qualification harness (issue #421, live successor to closed #310).
+# Docs-pipeline qualification harness (issue #581, live successor to closed #421).
 #
 # Qualifies the as-built docs-pipeline record with fixture evidence and
 # owned gaps, without claiming a working site:
@@ -9,7 +9,7 @@
 #   library (version/identity/validation/mode/drift/guide/site planning
 #   with unit tests), frozen design contracts (IR + site), removed dx docs
 #   stub behind ADR 0020, no Supported claim;
-# - open under #421 with honest records: 13 per-language adapter runs with
+# - open under #581 with honest records: 13 per-language adapter runs with
 #   pins/mappings (Scala TASTy proof spike first, Astro/MDX prose-only),
 #   renderer/site execution as Bazel-cached extract→aggregate→render,
 #   site-level byte-identical rebuild proof (codec same-producer proof is
@@ -186,16 +186,16 @@ else
 fi
 
 # Per-language overload, join, and packaging details stay tracked under
-# #421, never claimed as delivered.
+# #581, never claimed as delivered.
 if grep -q -F -e 'tracked under' "$docir" &&
-  grep -q -F -e 'issue #421' "$docir" &&
+  grep -q -F -e 'issue #581' "$docir" &&
   grep -q -F -e 'The exact' "$docir" &&
   grep -q -F -e 'disambiguation scheme per language' "$docir" &&
   grep -q -F -e 'the adapter must' "$docir" &&
   grep -q -F -e 'join metadata with documentation' "$docir"; then
   ok
 else
-  bad "doc-ir lost its per-language overload/join/packaging #421 tracker"
+  bad "doc-ir lost its per-language overload/join/packaging #581 tracker"
 fi
 
 # Site build keeps the decided mdBook renderer with no replacement and an
@@ -203,7 +203,7 @@ fi
 if grep -q -F -e 'mdBook is the decided renderer' "$site" &&
   grep -q -F -e 'There is no planned replacement' "$site" &&
   grep -q -F -e 'No working site support is claimed until qualified execution lands' "$site" &&
-  grep -q -F -e 'Open under issue #421' "$site" &&
+  grep -q -F -e 'Open under issue #581' "$site" &&
   grep -q -F -e 'one DocsExtract action per (language, package) unit' "$site" &&
   grep -q -F -e 'one DocsAggregate action' "$site" &&
   grep -q -F -e 'one DocsRender action (pinned mdBook artifact)' "$site"; then
@@ -237,7 +237,7 @@ fi
 
 # Link/reference completeness at the pre-render boundary stays an owned gap.
 if grep -q -F -e 'Completeness of required link/reference checks' "$site" &&
-  grep -q -F -e 'at the pre-render boundary remains a gap (issue #421)' "$site" &&
+  grep -q -F -e 'at the pre-render boundary remains a gap (issue #581)' "$site" &&
   grep -q -F -e 'link/reference completeness' "$site"; then
   ok
 else
@@ -280,15 +280,15 @@ else
 fi
 
 # dx docs stub stays removed behind ADR 0020 with reintroduction open
-# under #421.
+# under #581.
 if grep -q -F -e 'Removed. The `dx docs` command was deleted per' "$stub" &&
-  grep -q -F -e 'open under issue #421' "$stub" &&
+  grep -q -F -e 'open under issue #581' "$stub" &&
   grep -q -F -e 'Delete the `dx docs` command surface' "$adr20" &&
   grep -q -F -e 'Reintroducing the command alongside real extraction/validation' "$adr20" &&
-  grep -q -F -e 'removed; reintroduction with real extraction/validation open under issue #421' "$scope"; then
+  grep -q -F -e 'removed; reintroduction with real extraction/validation open under issue #581' "$scope"; then
   ok
 else
-  bad "dx docs stub lost its removed-plus-ADR-0020-plus-#421 record"
+  bad "dx docs stub lost its removed-plus-ADR-0020-plus-#581 record"
 fi
 
 # CLI registry carries no Docs command: unknown-command surface never
@@ -312,8 +312,8 @@ else
   bad "a docs adapter implementation appeared or the no-execution record drifted"
 fi
 
-# Contracts keep the full #421 gap list with no working-site honesty.
-if grep -q -F -e 'Docs pipeline gaps stay open under issue #421' "$readme" &&
+# Contracts keep the full #581 gap list with no working-site honesty.
+if grep -q -F -e 'Docs pipeline gaps stay open under issue #581' "$readme" &&
   grep -q -F -e 'per-language adapter runs' "$readme" &&
   grep -q -F -e 'renderer and site execution' "$readme" &&
   grep -q -F -e 'byte-identical rebuild proof' "$readme" &&
@@ -323,22 +323,22 @@ if grep -q -F -e 'Docs pipeline gaps stay open under issue #421' "$readme" &&
   grep -q -F -e 'per-release pin-bump plus drift process' "$readme"; then
   ok
 else
-  bad "documentation README lost its full #421 gap list"
+  bad "documentation README lost its full #581 gap list"
 fi
 
-# Roadmap keeps the same #421 execution-gap list.
-if grep -q -F -e 'Docs-pipeline execution gaps stay open under issue #421' "$roadmap" &&
+# Roadmap keeps the same #581 execution-gap list.
+if grep -q -F -e 'Docs-pipeline execution gaps stay open under issue #581' "$roadmap" &&
   grep -q -F -e 'adapter runs with pins' "$roadmap" &&
   grep -q -F -e 'renderer and site execution' "$roadmap" &&
   grep -q -F -e 'no working site claimed' "$roadmap"; then
   ok
 else
-  bad "roadmap lost its #421 docs-pipeline execution-gap list"
+  bad "roadmap lost its #581 docs-pipeline execution-gap list"
 fi
 
 # Verification matrix keeps Docs Open with no Supported claim and no
 # working site.
-if grep -q -F -e 'stay open under issue #421' "$matrix" &&
+if grep -q -F -e 'stay open under issue #581' "$matrix" &&
   grep -q -F -e 'no working site claimed' "$matrix" &&
   ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$matrix" | grep -q . &&
   ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$support" | grep -q .; then
@@ -357,30 +357,30 @@ else
   bad "schema-major pins drifted across proto/codec/planning"
 fi
 
-# Backlog guards still track the #421 docs-pipeline gap.
-if grep -q -F -e '#421 docs-pipeline gaps stay tracked' "$backlog_guards" &&
-  grep -q -F -e "documentation README lost its #421 docs-pipeline tracker record" "$backlog_guards"; then
+# Backlog guards still track the #581 docs-pipeline gap.
+if grep -q -F -e '#581 docs-pipeline gaps stay tracked' "$backlog_guards" &&
+  grep -q -F -e "documentation README lost its #581 docs-pipeline tracker record" "$backlog_guards"; then
   ok
 else
-  bad "backlog automation guards lost their #421 tracker"
+  bad "backlog automation guards lost their #581 tracker"
 fi
 
-# Tracker lineage: the six stale #310 citations now own #421 as the live
-# successor to closed #310 (issue #445 owns closed-tracker hygiene;
-# #421 owns #310).
-if grep -q -F -e 'live successor to closed #310' "$readme" &&
-  grep -q -F -e 'live successor to closed #310' "$docir" &&
-  grep -q -F -e 'live successor to closed #310' "$site" &&
-  grep -q -F -e 'live successor to closed #310' "$stub" &&
-  grep -q -F -e 'live successor to closed #310' "$scope" &&
-  grep -q -F -e 'live successor to closed #310' "$roadmap"; then
+# Tracker lineage: the closed-#421 citations now own #581 as the live
+# successor to closed #421 (issue #445 owns closed-tracker hygiene;
+# #581 owns #421).
+if grep -q -F -e 'live successor to closed #421' "$readme" &&
+  grep -q -F -e 'live successor to closed #421' "$docir" &&
+  grep -q -F -e 'live successor to closed #421' "$site" &&
+  grep -q -F -e 'live successor to closed #421' "$stub" &&
+  grep -q -F -e 'live successor to closed #421' "$scope" &&
+  grep -q -F -e 'live successor to closed #421' "$roadmap"; then
   ok
 else
-  bad "docs pipeline tracker lost its #421 live-successor-to-closed-#310 lineage"
+  bad "docs pipeline tracker lost its #581 live-successor-to-closed-#421 lineage"
 fi
 
 # Scala spike plus Astro/MDX prose-only stay explicit with no execution
-# claim (issue #421 scope item 1: Scala proof first where the proof is
+# claim (issue #581 scope item 1: Scala proof first where the proof is
 # missing; Astro/MDX prose-only confirmation).
 if grep -q -F -e 'Scala 3 TASTy Inspector' "$docir" &&
   grep -q -F -e 'proof spike required' "$docir" &&
@@ -395,7 +395,7 @@ else
 fi
 
 # Site-level rebuild stays distinct from the delivered codec
-# same-producer proof (issue #421 scope item 3: codec proof exists,
+# same-producer proof (issue #581 scope item 3: codec proof exists,
 # site-level does not).
 if grep -q -F -e 'Same producer plus same inputs rebuild byte-identical' "$codec" &&
   grep -q -F -e 'same_producer_requires_byte_equality' "$planning" &&
@@ -408,7 +408,7 @@ else
 fi
 
 # ADR 0006 build-vs-validation split stays pinned for dx docs
-# reintroduction (issue #421 scope item 4: build/check/serve with
+# reintroduction (issue #581 scope item 4: build/check/serve with
 # --check non-mutating; exact mappings live in the issue, not the stub).
 if grep -q -F -e 'records build versus' "$readme" &&
   grep -q -F -e 'validation-only check' "$readme" &&
@@ -422,7 +422,7 @@ else
 fi
 
 # Generated-IR lifecycle stays Bazel-owned: shards live in Bazel outputs,
-# never beside sources or in Git (issue #421 scope item 2).
+# never beside sources or in Git (issue #581 scope item 2).
 if grep -q -F -e 'Generated IR stays in Bazel outputs' "$readme" &&
   grep -q -F -e 'not beside source files or in Git' "$readme" &&
   grep -q -F -e 'never write generated IR beside source' "$site" &&
@@ -434,12 +434,12 @@ fi
 
 # Reusable-docs plus caller stay product surface: check-only lint over the
 # caller scope, validated tree (not rendered site), reviewed SHA pin,
-# publish only on main (issue #421 scope item 5).
+# publish only on main (issue #581 scope item 5).
 if grep -q -F -e 'runs `dx lint --check`' "$reusable" &&
   grep -q -F -e 'validated docs tree' "$reusable" &&
   grep -q -F -e 'rendered mdBook site arrives' "$reusable" &&
   grep -q -F -e 'is pure check-only' "$reusable" &&
-  grep -q -F -e 'issue #421' "$reusable" &&
+  grep -q -F -e 'issue #581' "$reusable" &&
   grep -q -F -e 'reusable-docs.yml@' "$caller" &&
   grep -q -F -e 'docs_scope' "$caller" &&
   grep -q -F -e "github.event_name == 'push'" "$caller"; then
@@ -449,7 +449,7 @@ else
 fi
 
 # No Supported docs claim until platform plus consumer plus release
-# evidence passes (issue #421 scope item 6, via supported_evidence_gate).
+# evidence passes (issue #581 scope item 6, via supported_evidence_gate).
 if grep -q -F -e 'No cell below is `Supported`' "$support" &&
   grep -q -F -e 'supported_evidence_gate' "$support" &&
   grep -q -F -e 'No cell is `Supported`' "$matrix" &&

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Backlog/automation guards (issues #85, #254, #260, #421, #446).
+# Backlog/automation guards (issues #85, #254, #260, #581, #446).
 #
 # Per-foundation external-consumer examples + acquisition/laziness proof
 # (#85) delivered across readme, static, query, aquery, and runtime slices;
@@ -14,7 +14,7 @@
 # mixed disposition, LCOV preset pin + inventory backing + comment landing,
 # native set registry + sole-updater policy + Monday schedule
 # + native-only policy, never-rewrites pin, prior harnesses green,
-# delivered widen implementation, plus the #421 docs-pipeline tracker.
+# delivered widen implementation, plus the #581 docs-pipeline tracker.
 # Reverse queries and adapter runs stay open under their
 # issues.
 #
@@ -229,12 +229,12 @@ else
   bad "a third-party coverage action appeared in ci.yml against #254 policy"
 fi
 
-# #421 docs-pipeline gaps stay tracked in the documentation contract
-# (live successor to closed #310; #421 owns #310 per issue #445).
-if grep -q -F -e 'Docs pipeline gaps stay open under issue #421' docs/documentation/README.md; then
+# #581 docs-pipeline gaps stay tracked in the documentation contract
+# (live successor to closed #421; #581 owns #421 per issue #445).
+if grep -q -F -e 'Docs pipeline gaps stay open under issue #581' docs/documentation/README.md; then
   ok
 else
-  bad "documentation README lost its #421 docs-pipeline tracker record"
+  bad "documentation README lost its #581 docs-pipeline tracker record"
 fi
 
 # #422 Mxx/Oxx de-milestoning stays clean plus #448 Stage-N (cross-links issue #326 hygiene,

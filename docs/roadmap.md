@@ -13,7 +13,7 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
 
 * Tag hygiene and release-input gaps, no publication pressure.
 * Toolchain, provider, and adapter qualification backlogs: Rust providers plus Gazelle plus integration (issues #470-#475), runners plus locks plus defaults (issues #476-#489), adapter wiring (issues #490-#493), native qualification (issues #494-#505), env plus codegen (issue #506), coverage plus consumer plus quality (issues #507-#512).
-* Docs-pipeline execution gaps stay open under issue #421 (live successor to closed #310; adapter runs with pins
+* Docs-pipeline execution gaps stay open under issue #581 (live successor to closed #421; adapter runs with pins
   and mappings, renderer and site execution, byte-identical rebuild proof, link and
   reference completeness, guide prose with guide-step CI wiring, first-hour timing proof,
   and per-release pin-bump plus drift process; no working site claimed).
@@ -44,4 +44,4 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
   `dx run` multirun delivered (issue #463, sequential local-only multirun for explicit
   labels/patterns). No post-v1 bucket.
 * Rust library extraction decided internal-only under issue #469 (see ADR 0023; 34 internal crates, binaries-only boundary, no consumer migration).
-* CLI and deploy follow-ups: `--debug`/`--release` flags plus `DX_PROFILE` forwarding plus deploy provider/CLI (issues #457-#458); `dx docs` reintroduction with real extraction/validation (see ADR 0020).
+* CLI and deploy follow-ups: `--debug`/`--release` flags plus `DX_PROFILE` forwarding plus deploy provider/CLI (issues #457-#458); `dx docs` reintroduction with real extraction/validation (see ADR 0020; open under issue #581, live successor to closed #421).

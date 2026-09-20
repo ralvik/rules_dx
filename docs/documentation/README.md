@@ -34,11 +34,11 @@ fixtures remain open. Ordinary API changes require no IR snapshot update.
   rules, laziness, generated-artifact lifecycle, and the decided mdBook renderer.
   Authoritative for build facts.
 - Command surface removed;
-  reintroduction open, tracked under issue #421 (live successor to closed #310)
+  reintroduction open, tracked under issue #581 (live successor to closed #421)
   (see the [`dx docs` stub](../cli/commands/docs.md)).
   [ADR 0006](../decisions/0006-cli-command-surface.md) records build versus
   validation-only check; exact mappings are tracked under
-  issue #421. Docs pipeline gaps stay open under issue #421 (per-language adapter runs
+  issue #581. Docs pipeline gaps stay open under issue #581 (per-language adapter runs
   with pins and mappings, renderer and site execution, byte-identical rebuild proof,
   link and reference completeness, guide-step CI wiring, first-hour timing proof, and
   per-release pin-bump plus drift process; no working site claimed).
@@ -47,4 +47,4 @@ Rust uses pinned nightly `rustdoc --output-format json`; Scala needs a
 Scaladoc/TASTy proof spike; Astro/MDX are prose-only with no API surface.
 Accepted scope covers thirteen adapter scopes. Per-language input pins,
 mappings, adapter runs, renderer/site-build execution, and every other
-#421 item above remain open; no adapter execution exists today.
+#581 item above remain open; no adapter execution exists today.
