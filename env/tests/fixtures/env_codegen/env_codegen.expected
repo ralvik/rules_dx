@@ -1,0 +1,55 @@
+Env plus codegen gaps qualified seed-only under issue #506
+(`env/tests/fixtures/env_codegen/pins.bzl` via
+`bazel run //tools/ci:env_codegen_qualification`).
+
+Public protocol stays deferred PATH-tools-only: EnvironmentInfo stays
+PATH-tool-only, third-party language-integration plugins are deferred
+past v1, public API is environment_tool(name, executable, bin_name).
+
+Windows fallback stays unsupported: Windows keeps manual `PATH` guidance
+with failure before mutation and no junction or copy fallback; managed
+state has There is no launcher, junction, copy with missing capability
+fails before mutation; Developer Mode symlink capability required.
+
+Standalone stays Bazel-first: bazel run //dx:env is the supported path,
+dx_standalone staged until releases are cut, no checksum-only fallback.
+
+Signing plus trust stays implemented-verifier plus deferred generation:
+Sigstore keyless bundle on https://tuf-repo-cdn.sigstore.dev with cosign
+verify-blob and no checksum-only, draft-only ceiling with draft = True
+and v0.0.0-dryrun gated by draft != True, SBOM/provenance in
+`deploy/release/sbom.bzl` with BCR submission are implemented
+owner-gated.
+
+Bootstrap plus fidelity plus spaces plus stale plus atomic-commit:
+work space path with already current noop plus unmanaged refusal plus
+.rules_dx_managed marker plus installed 3 tool(s); Executable links
+preserve arguments, working directory, environment, exit status, and
+signal; bazel clean plus output-base change with only explicit `dx
+codegen` repairs and without implicit Bazel startup; lock_exclusive
+with file.try_lock() plus acquire_lock plus ten seconds deadline plus
+File::try_lock with one workspace commit lock that atomically replaces
+`.dx/setups/current`.
+
+IDE stays separate output base: Use a separate IDE output base with
+gen_rust_project plus flycheck plus GOPACKAGESDRIVER and do not mutate
+the selected environment.
+
+BEP plus projection: one BEP stream with dx_env_plans plus
+dx_codegen_plans and never implements a second remote-cache downloader;
+symlink-only read-only generated artifacts with never invokes `pnpm
+install` plus importer-local `node_modules` facades plus
+.dx/setups/current/generated mirror.
+
+Roots plus cold-warm: FROZEN_STRATEGY RecursivePattern on //... with
+FROZEN_EVIDENCE plus INCREMENTALITY_EVIDENCE plus exact-target bypass
+plus declared-BUILD-only; cold_ms + WARM_WEIGHT with WARM_WEIGHT and no
+timing claims are made per [ADR 0022] with baseline wins ties.
+
+WP slices: (protobuf, rust) plus (rust,) with dx_env_plans plus
+dx_codegen_plans; junction or copy fallback plus checksum-only fallback
+plus third-party plugin claim plus second remote-cache downloader plus
+timing claim rejected.
+
+Owned gaps: platform plus consumer plus release evidence stays owned
+gap; no Supported claim. Backends stay provisional.

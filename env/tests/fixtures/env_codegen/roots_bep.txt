@@ -1,0 +1,19 @@
+Roots plus BEP plus cold-warm evidence (issue #506).
+
+Frozen strategy: FROZEN_STRATEGY is RecursivePattern on the //...
+baseline with FROZEN_EVIDENCE plus INCREMENTALITY_EVIDENCE, exact-target
+bypass, and declared-BUILD-only behavior by fiat per ADR 0022.
+
+BEP: one BEP stream carries the private dx_env_plans plus dx_codegen_plans
+output groups with .dxenv.pb plus .dxcodegen.pb shard suffixes; the CLI
+never implements a second remote-cache downloader and never scans
+bazel-out.
+
+Cold-warm: cold_ms + WARM_WEIGHT with WARM_WEIGHT = 2, baseline wins
+ties, and no timing claims are made per [ADR 0022]; cold proportional to
+the selected graph, warm via the persistent server plus action cache by
+design.
+
+Provenance: cli/roots roots_pattern_fixture plus roots_monolith_fixture
+with repository_roots_file plus roots_aggregate wiring; generation plus
+env shard-emission fixtures with transitive aspect collection.

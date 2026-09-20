@@ -263,3 +263,9 @@ Cross-cutting fixture, platform, remote, and evidence requirements remain in
 [Testing Strategy](../testing/README.md). Shared identity, pointer, reuse, carry-forward,
 concurrency, ownership, and retention requirements remain in
 [Managed Environment State](managed-state.md#test-requirements).
+
+Codegen deferred records with fixture evidence qualified seed-only under issue #506
+(`env/tests/fixtures/env_codegen/pins.bzl` via `bazel run //tools/ci:env_codegen_qualification`;
+admitted pairs, collector contracts, BEP output groups, projection, roots, and cold-warm with
+`env_codegen.expected` plus `roots_bep.txt`; platform plus consumer plus release evidence stays
+owned gap; no Supported claim).

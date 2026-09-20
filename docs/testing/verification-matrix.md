@@ -66,9 +66,11 @@ class by design — never silently under the standard dogfood gates.
 - **Environment/codegen**: deferred/unsupported records plus fixture
   evidence qualified seed-only under #506
   (`bazel run //tools/ci:env_codegen_qualification`; public protocol,
-  Windows fallback, standalone, signing/trust, plus bootstrap/lock/roots/
-  collector/env-plan/node projection evidence with unproven tests as owned
-  gaps).
+  Windows fallback, standalone, signing/trust, plus bootstrap/fidelity/
+  stale/IDE/atomic-commit/BEP/projection/roots/cold-warm with WP1-WP5 plus
+  `env/tests/fixtures/env_codegen/pins.bzl` plus `env_codegen.expected`
+  plus `roots_bep.txt`; platform plus consumer plus release evidence stays
+  owned gap; no Supported claim).
 - **Non-dogfed execution plan**: the cohorts that never run under the
   standard dogfood gates each have an explicit path, pinned by
   `bazel run //tools/ci:non_dogfed_paths` (issue #508; hermetic pins under issue #407): CLI-contract
@@ -267,7 +269,7 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
 
 Green here (static guards on a clean tree, no full rebuild):
 `non_dogfed_paths`, `supported_evidence_gate`, `distribution_closeout_guards`,
-`env_codegen_qualification` 23/23, `docs_pipeline_qualification` 33/33,
+`env_codegen_qualification` 32/32, `docs_pipeline_qualification` 33/33,
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
@@ -288,10 +290,14 @@ Remaining reds stay owned gaps, not green claims:
 - Docs pipeline and environment/codegen stay open under #421 and #506 (see
   [Documentation](../documentation/README.md#contracts)). Environment/codegen
   deferred records plus fixture evidence are qualified seed-only under #506
-  (`bazel run //tools/ci:env_codegen_qualification`; no junction/copy
-  fallback, no checksum-only fallback, no third-party plugin claim; bootstrap,
-  fidelity, spaces, stale-clean, IDE, atomic-commit, BEP, projection,
-  root-candidate tests stay owned gaps). Docs-pipeline IR plus
+  (`bazel run //tools/ci:env_codegen_qualification` with
+  `env/tests/fixtures/env_codegen/pins.bzl` plus `env_codegen.expected`
+  plus `roots_bep.txt`; no junction/copy fallback, no checksum-only
+  fallback, no third-party plugin claim; bootstrap, fidelity, spaces,
+  stale-clean, IDE, atomic-commit, BEP, projection, root-candidate, and
+  cold-warm qualified with WP shard plus root plus collector evidence;
+  platform plus consumer plus release evidence stays owned gap; no Supported
+  claim). Docs-pipeline IR plus
   planning records with fixture evidence are qualified seed-only under #421
   (live successor to closed #310)
   (`bazel run //tools/ci:docs_pipeline_qualification`; versioned IR, codec,

@@ -38,6 +38,10 @@ managed="docs/environments/managed-state.md"
 codegen_doc="docs/environments/codegen.md"
 node_doc="docs/environments/node.md"
 matrix="docs/testing/verification-matrix.md"
+pins="env/tests/fixtures/env_codegen/pins.bzl"
+pins_build="env/tests/fixtures/env_codegen/BUILD.bazel"
+expected="env/tests/fixtures/env_codegen/env_codegen.expected"
+roots_bep="env/tests/fixtures/env_codegen/roots_bep.txt"
 
 # Public contribution stays deferred with a PATH-tools-only boundary.
 if grep -q -F -e 'PATH-tools-only' "$env_doc" &&
@@ -254,6 +258,108 @@ if grep -q -F -e '| Open | Open |' "$matrix" &&
   ok
 else
   bad "verification-matrix lost its Env/codegen Open plus no-Supported gate"
+fi
+
+# Fixture files stay present (issue #506).
+if [[ -f "$pins" && -f "$pins_build" && -f "$expected" && -f "$roots_bep" ]]; then
+  ok
+else
+  bad "env codegen fixture missing (want $pins plus $pins_build plus env_codegen.expected plus roots_bep.txt)"
+fi
+
+# Pins record protocol plus Windows fallback plus standalone plus signing/trust.
+if grep -q -F -e 'PROTOCOL_BOUNDARY = "PATH-tools-only"' "$pins" &&
+  grep -q -F -e 'WINDOWS_NO_FALLBACK = "no junction or copy fallback"' "$pins" &&
+  grep -q -F -e 'STANDALONE_TARGET = "dx_standalone"' "$pins" &&
+  grep -q -F -e 'SIGNING_TUF_ROOT = "https://tuf-repo-cdn.sigstore.dev"' "$pins" &&
+  grep -q -F -e 'SIGNING_COSIGN = "cosign verify-blob"' "$pins" &&
+  grep -q -F -e 'SIGNING_DRYRUN_TAG = "v0.0.0-dryrun"' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its protocol plus Windows plus standalone plus signing pins under issue #506"
+fi
+
+# Pins record bootstrap plus fidelity plus spaces plus stale plus atomic-commit.
+if grep -q -F -e 'BOOTSTRAP_SPACES = "work space"' "$pins" &&
+  grep -q -F -e 'BOOTSTRAP_NOOP = "already current"' "$pins" &&
+  grep -q -F -e 'BOOTSTRAP_MARKER = ".rules_dx_managed"' "$pins" &&
+  grep -q -F -e 'Executable links preserve arguments' "$pins" &&
+  grep -q -F -e 'STALE_BAZEL_CLEAN = "bazel clean"' "$pins" &&
+  grep -q -F -e 'LOCK_EXCLUSIVE = "lock_exclusive"' "$pins" &&
+  grep -q -F -e 'LOCK_ATOMIC_POINTER' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its bootstrap plus fidelity plus stale plus atomic pins under issue #506"
+fi
+
+# Pins record IDE plus BEP plus projection.
+if grep -q -F -e 'IDE_SEPARATE_BASE = "Use a separate IDE output base"' "$pins" &&
+  grep -q -F -e 'IDE_RUST_FLYCHECK = "flycheck"' "$pins" &&
+  grep -q -F -e 'IDE_GO_DRIVER = "GOPACKAGESDRIVER"' "$pins" &&
+  grep -q -F -e 'BEP_ONE_STREAM = "one BEP stream"' "$pins" &&
+  grep -q -F -e 'BEP_ENV_GROUP = "dx_env_plans"' "$pins" &&
+  grep -q -F -e 'BEP_CODEGEN_GROUP = "dx_codegen_plans"' "$pins" &&
+  grep -q -F -e 'PROJECTION_SYMLINK_ONLY = "symlink-only"' "$pins" &&
+  grep -q -F -e 'PROJECTION_NO_PNPM_INSTALL' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its IDE plus BEP plus projection pins under issue #506"
+fi
+
+# Pins record roots plus cold-warm plus WP slices plus rejected substitutes.
+if grep -q -F -e 'ROOTS_FROZEN_STRATEGY = "FROZEN_STRATEGY"' "$pins" &&
+  grep -q -F -e 'ROOTS_BASELINE = "//..."' "$pins" &&
+  grep -q -F -e 'COLD_WARM_SCORE = "cold_ms + WARM_WEIGHT"' "$pins" &&
+  grep -q -F -e 'COLD_WARM_NO_TIMING_CLAIM' "$pins" &&
+  grep -q -F -e 'WP1_ADMITTED_PAIRS = ("protobuf", "rust")' "$pins" &&
+  grep -q -F -e '"checksum-only fallback"' "$pins" &&
+  grep -q -F -e 'OWNED_GAPS_NOTE' "$pins" &&
+  grep -q -F -e 'NO_SUPPORTED_CLAIM' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its roots plus cold-warm plus WP plus rejected pins under issue #506"
+fi
+
+# Fixture expected texts cover gaps plus roots/BEP.
+if grep -q -F -e 'Public protocol stays deferred PATH-tools-only' "$expected" &&
+  grep -q -F -e 'Windows fallback stays unsupported' "$expected" &&
+  grep -q -F -e 'Standalone stays Bazel-first' "$expected" &&
+  grep -q -F -e 'Signing plus trust stays implemented-verifier' "$expected" &&
+  grep -q -F -e 'platform plus consumer plus release evidence stays owned' "$expected" &&
+  grep -q -F -e 'FROZEN_STRATEGY is RecursivePattern' "$roots_bep" &&
+  grep -q -F -e 'one BEP stream' "$roots_bep" &&
+  grep -q -F -e 'cold_ms + WARM_WEIGHT' "$roots_bep"; then
+  ok
+else
+  bad "env_codegen.expected plus roots_bep.txt lost gap coverage (want protocol plus Windows plus standalone plus signing plus roots/BEP, issue #506)"
+fi
+
+# Docs own the qualified seed-only record with the fixture proof.
+if grep -q -F -e 'env/tests/fixtures/env_codegen/pins.bzl' "$env_doc" &&
+  grep -q -F -e 'qualified seed-only under issue #506' "$env_doc" &&
+  grep -q -F -e 'env_codegen_qualification' "$env_doc" &&
+  grep -q -F -e 'env/tests/fixtures/env_codegen/pins.bzl' "$codegen_doc" &&
+  grep -q -F -e 'qualified seed-only under issue #506' "$codegen_doc"; then
+  ok
+else
+  bad "environment.md or codegen.md lost its qualified seed-only plus pins fixture record under issue #506"
+fi
+
+# Live proof: the fixture plus the WP shard and roots fixtures build green.
+if bazel build //env/tests/fixtures/env_codegen/... //env:env_shard_alpha //generation/codegen_shard:codegen_shard //cli/roots:roots_pattern_fixture --noshow_progress >/dev/null 2>&1; then
+  ok
+else
+  bad "env codegen fixture plus WP shard plus roots fixture build failed (want green on the seed host, issue #506)"
+fi
+
+# Verification matrix owns the qualified seed-only record under #506.
+if grep -q -F -e 'env_codegen_qualification' "$matrix" &&
+  grep -q -F -e 'qualified seed-only under #506' "$matrix" &&
+  grep -q -F -e 'bazel run //tools/ci:env_codegen_qualification' "$matrix" &&
+  grep -q -F -e '`env_codegen_qualification` 32/32' "$matrix"; then
+  ok
+else
+  bad "verification-matrix lost its #506 env codegen qualified record with 32/32"
 fi
 
 dx_test_summary "env/codegen qualification harness"
