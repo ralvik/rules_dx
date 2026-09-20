@@ -1,11 +1,19 @@
 # Shared Bazelisk installer for every rules_dx workflow job.
 #
-# Canonical source for the pinned Bazelisk version and checksum (issue #326):
-# bump the defaults here once. `.devcontainer/Dockerfile.prebuilt` and the
-# `docs/contributing/local-workflows.md` bootstrap track these values;
+# Canonical source for the pinned Bazelisk version and checksums (issue #326):
+# bump the defaults here once. `.devcontainer/Dockerfile.prebuilt` tracks the
+# linux-amd64 pair and `docs/contributing/local-workflows.md` documents the
+# portable bootstrap for all five qualified hosts (issue #617);
 # `//tools/ci:pin_consistency_test` fails on drift. Previously duplicated per
 # job across ci.yml, reusable-consumer.yml, and reusable-docs.yml, so a
 # version bump meant N identical edits that could drift.
+#
+# Portable bootstrap (issue #617): one action covers Linux x86_64 plus Linux
+# arm64 plus macOS arm64 plus macOS x86_64 plus Windows x86_64 with retry and
+# no sudo assumption. OS/arch resolve from RUNNER_OS/RUNNER_ARCH with a
+# uname fallback; download retries; checksum verifies via sha256sum with
+# shasum plus python3 fallbacks; install lands under RUNNER_TEMP without
+# sudo and joins GITHUB_PATH. Per-OS copy-paste is rejected.
 #
 # Relative `uses: ./.github/actions/setup-bazelisk` inside the reusable
 # workflows resolves against this repository (the called repo), so
@@ -19,10 +27,26 @@ inputs:
     description: "Bazelisk release version (e.g. 1.29.0)."
     required: false
     default: "1.29.0"
-  sha256:
+  sha256_linux_amd64:
     description: "Expected sha256 of the linux-amd64 Bazelisk binary."
     required: false
     default: "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992"
+  sha256_linux_arm64:
+    description: "Expected sha256 of the linux-arm64 Bazelisk binary."
+    required: false
+    default: "e20e8b0f4f240091b7a55bf17b9398bd4f40ee70ae0208dff95dd4c445fb4010"
+  sha256_darwin_amd64:
+    description: "Expected sha256 of the darwin-amd64 Bazelisk binary."
+    required: false
+    default: "16c3d7aa15323a9fb69f56c7ec5733ed18bedb786680d0ba13bb12a3c8083007"
+  sha256_darwin_arm64:
+    description: "Expected sha256 of the darwin-arm64 Bazelisk binary."
+    required: false
+    default: "cee851f726789227d5561004e9904a52be45c3efb56f8b38b6993d6adbaa0409"
+  sha256_windows_amd64:
+    description: "Expected sha256 of the windows-amd64 Bazelisk binary."
+    required: false
+    default: "092a8738d5b41aae7a85c42cc961b1034e3389aba43ffc20c0fabda7b43e095b"
 
 runs:
   using: composite
@@ -31,11 +55,78 @@ runs:
       shell: bash
       env:
         BAZELISK_VERSION: ${{ inputs.version }}
-        BAZELISK_SHA256: ${{ inputs.sha256 }}
+        BAZELISK_SHA_LINUX_AMD64: ${{ inputs.sha256_linux_amd64 }}
+        BAZELISK_SHA_LINUX_ARM64: ${{ inputs.sha256_linux_arm64 }}
+        BAZELISK_SHA_DARWIN_AMD64: ${{ inputs.sha256_darwin_amd64 }}
+        BAZELISK_SHA_DARWIN_ARM64: ${{ inputs.sha256_darwin_arm64 }}
+        BAZELISK_SHA_WINDOWS_AMD64: ${{ inputs.sha256_windows_amd64 }}
       run: |
         set -euo pipefail
-        curl -sL -o /tmp/bazelisk \
-          "https://github.com/bazelbuild/bazelisk/releases/download/v${BAZELISK_VERSION}/bazelisk-linux-amd64"
-        echo "${BAZELISK_SHA256}  /tmp/bazelisk" | sha256sum -c -
-        sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
-        bazel version
+        runner_os="${RUNNER_OS:-}"
+        runner_arch="${RUNNER_ARCH:-}"
+        if [[ -z "$runner_os" || -z "$runner_arch" ]]; then
+          uname_s="$(uname -s 2>/dev/null || echo unknown)"
+          uname_m="$(uname -m 2>/dev/null || echo unknown)"
+          case "$uname_s" in
+            Linux) runner_os="${runner_os:-Linux}" ;;
+            Darwin) runner_os="${runner_os:-macOS}" ;;
+            MINGW*|MSYS*|CYGWIN*|Windows*) runner_os="${runner_os:-Windows}" ;;
+          esac
+          case "$uname_m" in
+            x86_64|amd64) runner_arch="${runner_arch:-X64}" ;;
+            aarch64|arm64) runner_arch="${runner_arch:-ARM64}" ;;
+          esac
+        fi
+        case "${runner_os}/${runner_arch}" in
+          Linux/X64) asset="bazelisk-linux-amd64"; want="${BAZELISK_SHA_LINUX_AMD64}"; out_name="bazel" ;;
+          Linux/ARM64) asset="bazelisk-linux-arm64"; want="${BAZELISK_SHA_LINUX_ARM64}"; out_name="bazel" ;;
+          macOS/X64) asset="bazelisk-darwin-amd64"; want="${BAZELISK_SHA_DARWIN_AMD64}"; out_name="bazel" ;;
+          macOS/ARM64) asset="bazelisk-darwin-arm64"; want="${BAZELISK_SHA_DARWIN_ARM64}"; out_name="bazel" ;;
+          Windows/X64) asset="bazelisk-windows-amd64.exe"; want="${BAZELISK_SHA_WINDOWS_AMD64}"; out_name="bazel.exe" ;;
+          *) echo "setup-bazelisk: unsupported runner ${runner_os}/${runner_arch} (want Linux/macOS/Windows on X64, plus Linux/macOS on ARM64; Windows ARM64 is out of scope)" >&2; exit 1 ;;
+        esac
+        if [[ -z "$want" ]]; then
+          echo "setup-bazelisk: missing checksum for $asset" >&2
+          exit 1
+        fi
+        url="https://github.com/bazelbuild/bazelisk/releases/download/v${BAZELISK_VERSION}/${asset}"
+        tmp_dir="${RUNNER_TEMP:-/tmp}"
+        tmp_file="$tmp_dir/bazelisk-$asset.download"
+        rm -f "$tmp_file"
+        attempt=0
+        until [[ "$attempt" -ge 3 ]]; do
+          attempt=$((attempt + 1))
+          if curl -fsSL --retry 3 --retry-delay 2 -o "$tmp_file" "$url"; then
+            break
+          fi
+          echo "setup-bazelisk: download attempt $attempt/3 failed for $url" >&2
+          if [[ "$attempt" -ge 3 ]]; then
+            echo "setup-bazelisk: download failed after 3 attempts" >&2
+            exit 1
+          fi
+          sleep 2
+        done
+        sha_of() {
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum "$1" | cut -d' ' -f1
+          elif command -v shasum >/dev/null 2>&1; then
+            shasum -a 256 "$1" | cut -d' ' -f1
+          else
+            python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$1"
+          fi
+        }
+        got="$(sha_of "$tmp_file")"
+        if [[ "$got" != "$want" ]]; then
+          echo "setup-bazelisk: checksum mismatch for $asset: got $got, want $want" >&2
+          exit 1
+        fi
+        install_dir="${RUNNER_TEMP:-$tmp_dir}/bazelisk-bin"
+        mkdir -p "$install_dir"
+        cp -f "$tmp_file" "$install_dir/$out_name"
+        chmod +x "$install_dir/$out_name"
+        rm -f "$tmp_file"
+        if [[ -n "${GITHUB_PATH:-}" ]]; then
+          printf '%s\n' "$install_dir" >> "$GITHUB_PATH"
+        fi
+        export PATH="$install_dir:$PATH"
+        "$install_dir/$out_name" version

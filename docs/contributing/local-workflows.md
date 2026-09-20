@@ -5,16 +5,36 @@
 Fresh clone to green build, copy-paste. Linux x86_64 seed host plus Linux arm64 native (issue #410) plus Linux static-musl profiles (issue #411) plus macOS arm64 native (issue #412) plus macOS x86_64 best-effort native (issue #413) plus Windows x86_64 MSVC-compatible native (issue #414).
 Pinned versions: Bazel `9.2.0` (canonical `.bazelversion`), Bazelisk
 `v1.29.0` (canonical `.github/actions/setup-bazelisk/action.yml`
-defaults), pnpm `10.34.5` (via `packageManager`, use corepack).
-Tracked copies in `.devcontainer/Dockerfile.prebuilt` and below must equal
+defaults with per-OS sha256), pnpm `10.34.5` (via `packageManager`, use corepack).
+Tracked copies in `.devcontainer/Dockerfile.prebuilt` (linux-amd64 pair) and below must equal
 their canonical source; `//tools/ci:pin_consistency_test` fails on drift.
 
 ```sh
-# 1. Pinned Bazelisk launcher (sha256, linux-amd64):
-curl -sL -o /tmp/bazelisk \
-  "https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64"
-echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c -
-sudo install -m755 /tmp/bazelisk /usr/local/bin/bazel
+# 1. Pinned Bazelisk launcher (portable, retry, checksum, no sudo; issue #617):
+# Canonical pins live in `.github/actions/setup-bazelisk/action.yml` (v1.29.0):
+#   bazelisk-linux-amd64         5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992
+#   bazelisk-linux-arm64         e20e8b0f4f240091b7a55bf17b9398bd4f40ee70ae0208dff95dd4c445fb4010
+#   bazelisk-darwin-amd64        16c3d7aa15323a9fb69f56c7ec5733ed18bedb786680d0ba13bb12a3c8083007
+#   bazelisk-darwin-arm64        cee851f726789227d5561004e9904a52be45c3efb56f8b38b6993d6adbaa0409
+#   bazelisk-windows-amd64.exe   092a8738d5b41aae7a85c42cc961b1034e3389aba43ffc20c0fabda7b43e095b
+case "$(uname -s)-$(uname -m)" in
+  Linux-x86_64) asset=bazelisk-linux-amd64; want=5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992 ;;
+  Linux-aarch64|Linux-arm64) asset=bazelisk-linux-arm64; want=e20e8b0f4f240091b7a55bf17b9398bd4f40ee70ae0208dff95dd4c445fb4010 ;;
+  Darwin-x86_64) asset=bazelisk-darwin-amd64; want=16c3d7aa15323a9fb69f56c7ec5733ed18bedb786680d0ba13bb12a3c8083007 ;;
+  Darwin-arm64) asset=bazelisk-darwin-arm64; want=cee851f726789227d5561004e9904a52be45c3efb56f8b38b6993d6adbaa0409 ;;
+  MINGW*-x86_64|MSYS*-x86_64|CYGWIN*-x86_64) asset=bazelisk-windows-amd64.exe; want=092a8738d5b41aae7a85c42cc961b1034e3389aba43ffc20c0fabda7b43e095b ;;
+  *) echo "unsupported host $(uname -s)-$(uname -m)" >&2; exit 1 ;;
+esac
+for i in 1 2 3; do curl -fsSL --retry 3 --retry-delay 2 -o /tmp/bazelisk \
+  "https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/$asset" && break \
+  || { echo "download attempt $i/3 failed" >&2; [ "$i" -lt 3 ] || exit 1; sleep 2; }; done
+if command -v sha256sum >/dev/null 2>&1; then got=$(sha256sum /tmp/bazelisk | cut -d' ' -f1);
+elif command -v shasum >/dev/null 2>&1; then got=$(shasum -a 256 /tmp/bazelisk | cut -d' ' -f1);
+else got=$(python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' /tmp/bazelisk); fi
+[ "$got" = "$want" ] || { echo "checksum mismatch: got $got want $want" >&2; exit 1; }
+mkdir -p "$HOME/.local/bin" && cp -f /tmp/bazelisk "$HOME/.local/bin/bazel" \
+  && chmod +x "$HOME/.local/bin/bazel" && rm -f /tmp/bazelisk
+export PATH="$HOME/.local/bin:$PATH" && bazel version
 # 2. Node/pnpm (if you touch the JS graph):
 corepack enable && corepack prepare pnpm@10.34.5 --activate
 # 3. Build and test (Bazelisk reads .bazelversion, no manual Bazel install):

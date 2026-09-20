@@ -942,7 +942,7 @@ jobs:
           echo "### coverage-windows-x86_64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Command: dx coverage --min-coverage 97 //... (windows x86_64 cell only, per-cell no-union; toolchains_msvc backend provisional, explicit EULA never automatic, installed fallback never approved; issue #414)." >> "$GITHUB_STEP_SUMMARY"
   prove:
-    name: prove (manual negatives, target tags, coverage cell, release hygiene, release policy, publish trust, shell contract, ci matrix)
+    name: prove (manual negatives, target tags, coverage cell, release hygiene, release policy, publish trust, shell contract, ci matrix, bootstrap)
     needs: [build]
     timeout-minutes: 30
     runs-on: ubuntu-latest
@@ -974,6 +974,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:windows_qualification
       - name: Prove CI multi-platform host matrix (runners, caches, refusal, sharding, portable shell)
         run: bazel run --noshow_progress //tools/ci:ci_matrix_qualification
+      - name: Prove bootstrap portability (five hosts, retry, no sudo, portable hash)
+        run: bazel run --noshow_progress //tools/ci:bootstrap_portability
       - name: Prove release hygiene (no publication inputs without approval)
         run: bazel run --noshow_progress //tools/ci:release_hygiene
       - name: Prove release policy (curated defaults + parity manifest gate)
@@ -986,7 +988,7 @@ jobs:
         if: always()
         run: |
           echo "### prove — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate, coverage qualification (issue #308 per-cell plus Starlark plus Codecov plus quotas plus local-only remote; seed plus arm64 plus static musl plus macos arm64 plus macos x86_64 best-effort plus windows x86_64 under #410/#411/#412/#413/#414), static-musl qualification (issue #411 profiles plus exec/target plus per-cell plus dynamic out of scope), macOS arm64 plus x86_64 best-effort qualification (issues #412/#413 native plus per-cell plus portable-shell plus no host SDK fallback, best-effort non-blocking), Windows x86_64 qualification (issue #414 native MSVC-compatible plus per-cell plus portable-shell plus explicit EULA never automatic), CI multi-platform host matrix (issue #415 runners plus caches plus refusal plus sharding plus portable shell), release hygiene (issue #5 no-publication inputs), release policy (issue #89 curated defaults + parity gate), publish trust (issues #78/#26/#5 draft-only sites + nothing published), shell contract (issue #299 bash-only harness plus portable forms with windows shell bash, issue #414)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate, coverage qualification (issue #308 per-cell plus Starlark plus Codecov plus quotas plus local-only remote; seed plus arm64 plus static musl plus macos arm64 plus macos x86_64 best-effort plus windows x86_64 under #410/#411/#412/#413/#414), static-musl qualification (issue #411 profiles plus exec/target plus per-cell plus dynamic out of scope), macOS arm64 plus x86_64 best-effort qualification (issues #412/#413 native plus per-cell plus portable-shell plus no host SDK fallback, best-effort non-blocking), Windows x86_64 qualification (issue #414 native MSVC-compatible plus per-cell plus portable-shell plus explicit EULA never automatic), CI multi-platform host matrix (issue #415 runners plus caches plus refusal plus sharding plus portable shell), bootstrap portability (issue #617 five hosts plus retry plus no sudo plus portable hash), release hygiene (issue #5 no-publication inputs), release policy (issue #89 curated defaults + parity gate), publish trust (issues #78/#26/#5 draft-only sites + nothing published), shell contract (issue #299 bash-only harness plus portable forms with windows shell bash, issue #414)." >> "$GITHUB_STEP_SUMMARY"
           echo "Proved (follow-up): coverage spill containment (issues #252/#54, LLVM_PROFILE_FILE to scratch)." >> "$GITHUB_STEP_SUMMARY"
   dogfood-freshness:
     name: dogfood-freshness (tools, generate --check, corpus audit)

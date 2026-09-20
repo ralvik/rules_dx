@@ -4,8 +4,9 @@
 # Canonical sources:
 #   Bazel version: `.bazelversion` (Bazelisk reads it; every other Bazel pin
 #     tracks it).
-#   Bazelisk version + sha256: `.github/actions/setup-bazelisk/action.yml`
-#     defaults (the single installer; Dockerfile and docs bootstrap track it).
+#   Bazelisk version + per-OS sha256: `.github/actions/setup-bazelisk/action.yml`
+#     defaults (the single portable installer, issue #617; Dockerfile tracks
+#     the linux-amd64 pair and docs bootstrap tracks all five hosts).
 #
 # Every other pin below must equal its canonical source or this fails, so a
 # version bump means: bump the canonical file once, then update the tracked
@@ -62,12 +63,24 @@ check_bazel_pin "Dockerfile USE_BAZEL_VERSION" "$docker_bazel_pin"
 stack_pin="$(grep -A2 -F -e '"bazel_version": attr.string(' "$tested_stack" | grep -o -E -e 'default = "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
 check_bazel_pin "tested_stack.bzl bazel_version default" "$stack_pin"
 
-# --- Bazelisk canonical (action.yml defaults) ---
-# First default is the Bazelisk version, second is the sha256 (file order).
-action_version="$(grep -o -E -e 'default: "[^"]+"' "$action_yml" | head -1 | cut -d'"' -f2 || true)"
-action_sha="$(grep -o -E -e 'default: "[^"]+"' "$action_yml" | sed -n '2p' | cut -d'"' -f2 || true)"
-if [[ -z "$action_version" || -z "$action_sha" ]]; then
-  bad "setup-bazelisk action.yml missing version/sha defaults"
+# --- Bazelisk canonical (action.yml defaults, issue #617 portable) ---
+# Canonical: version plus per-OS sha256 inputs in setup-bazelisk/action.yml.
+# Dockerfile tracks the linux-amd64 pair; local-workflows.md documents all
+# five qualified hosts.
+action_version="$(grep -A3 -F -e 'version:' "$action_yml" | grep -o -E -e 'default: "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
+action_sha_linux_amd64="$(grep -A3 -F -e 'sha256_linux_amd64:' "$action_yml" | grep -o -E -e 'default: "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
+action_sha_linux_arm64="$(grep -A3 -F -e 'sha256_linux_arm64:' "$action_yml" | grep -o -E -e 'default: "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
+action_sha_darwin_amd64="$(grep -A3 -F -e 'sha256_darwin_amd64:' "$action_yml" | grep -o -E -e 'default: "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
+action_sha_darwin_arm64="$(grep -A3 -F -e 'sha256_darwin_arm64:' "$action_yml" | grep -o -E -e 'default: "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
+action_sha_windows_amd64="$(grep -A3 -F -e 'sha256_windows_amd64:' "$action_yml" | grep -o -E -e 'default: "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
+if [[ -z "$action_version" || -z "$action_sha_linux_amd64" || -z "$action_sha_linux_arm64" || -z "$action_sha_darwin_amd64" || -z "$action_sha_darwin_arm64" || -z "$action_sha_windows_amd64" ]]; then
+  bad "setup-bazelisk action.yml missing version/per-OS sha defaults (issue #617)"
+else
+  ok
+fi
+# Legacy single-sha input must stay absent: per-OS pins replace it (issue #617).
+if grep -A3 -E -e '^  sha256:' "$action_yml" | grep -q -F -e 'default:'; then
+  bad "setup-bazelisk action.yml still carries legacy single sha256 input (want per-OS sha256_* only, issue #617)"
 else
   ok
 fi
@@ -79,23 +92,32 @@ if [[ "$docker_bazelisk_version" == "$action_version" ]]; then
 else
   bad "Dockerfile Bazelisk v$docker_bazelisk_version drifts from canonical action.yml v$action_version"
 fi
-if [[ "$docker_bazelisk_sha" == "$action_sha" ]]; then
+if [[ "$docker_bazelisk_sha" == "$action_sha_linux_amd64" ]]; then
   ok
 else
-  bad "Dockerfile Bazelisk sha drifts from canonical action.yml sha"
+  bad "Dockerfile Bazelisk sha drifts from canonical action.yml linux-amd64 sha"
 fi
 
-docs_bazelisk_version="$(grep -o -E -e 'bazelisk/releases/download/v[0-9.]+/bazelisk-linux-amd64' "$local_workflows" | head -1 | sed -E 's|.*/v([0-9.]+)/.*|\1|' || true)"
-docs_bazelisk_sha="$(grep -o -E -e '[0-9a-f]{64}  /tmp/bazelisk' "$local_workflows" | head -1 | cut -d' ' -f1 || true)"
-if [[ "$docs_bazelisk_version" == "$action_version" ]]; then
+# Docs bootstrap tracks the canonical version plus all five per-OS shas
+# (issue #617 portable bootstrap).
+for sha in "$action_sha_linux_amd64" "$action_sha_linux_arm64" "$action_sha_darwin_amd64" "$action_sha_darwin_arm64" "$action_sha_windows_amd64"; do
+  if grep -q -F -e "$sha" "$local_workflows"; then
+    ok
+  else
+    bad "local-workflows.md missing canonical Bazelisk sha $sha (issue #617)"
+  fi
+done
+if grep -q -F -e "v$action_version" "$local_workflows"; then
   ok
 else
-  bad "local-workflows.md Bazelisk v$docs_bazelisk_version drifts from canonical action.yml v$action_version"
+  bad "local-workflows.md Bazelisk v drifts from canonical action.yml v$action_version"
 fi
-if [[ "$docs_bazelisk_sha" == "$action_sha" ]]; then
-  ok
-else
-  bad "local-workflows.md Bazelisk sha drifts from canonical action.yml sha"
-fi
+for asset in bazelisk-linux-amd64 bazelisk-linux-arm64 bazelisk-darwin-amd64 bazelisk-darwin-arm64 bazelisk-windows-amd64.exe; do
+  if grep -q -F -e "$asset" "$local_workflows"; then
+    ok
+  else
+    bad "local-workflows.md missing canonical Bazelisk asset $asset (issue #617)"
+  fi
+done
 
 dx_test_summary "pin consistency"
