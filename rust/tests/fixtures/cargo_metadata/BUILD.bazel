@@ -1,0 +1,41 @@
+"""Cargo metadata fixture (issue #502).
+
+Proves public Cargo metadata represents every generated target without
+private serialized dependency-graph access: `Cargo.toml` plus
+`cargo_metadata.expected` record the package/target names, paths,
+editions, features, crate kinds, build-script policy, and dependency
+scopes that the first-party extension parses; version pins live in
+`pins.bzl`. Ad-hoc metadata (private serialized graph, `Cargo.Bazel.lock`,
+`cargo-bazel.json`, private dependency maps) is rejected. Native only.
+See `docs/native-toolchains.md#qualification-questions-and-delivery`.
+"""
+
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+exports_files([
+    "Cargo.toml",
+    "cargo_metadata.expected",
+    "pins.bzl",
+])
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = [
+        "BUILD.bazel",
+        "pins.bzl",
+    ],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    testonly = True,
+    tags = ["corpus"],
+    toml_srcs = ["Cargo.toml"],
+)

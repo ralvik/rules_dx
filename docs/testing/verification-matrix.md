@@ -250,6 +250,8 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   plus fixture evidence, issue #499),
   `:lcov_accounting_qualification` (LCOV accounting pins
   plus fixture evidence, issue #501),
+  `:cargo_metadata_qualification` (Cargo metadata pins
+  plus fixture evidence, issue #502),
   `:strict_generation_qualification` (strict generation pins
   plus fixture evidence, issue #503),
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
@@ -267,7 +269,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
-<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `strict_generation_qualification` 16/16, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
+<<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
 
@@ -671,6 +673,16 @@ Remaining reds stay owned gaps, not green claims:
   collection failures rejected; backends stay provisional; floors qualified
   seed-only under #500; platform plus consumer plus release evidence stays
   owned gap; no Supported claim (`lcov_accounting_qualification` 16/16)).
+- Cargo metadata with fixture evidence qualified seed-only under #502
+  (`bazel run //tools/ci:cargo_metadata_qualification`;
+  features plus build-script metadata plus target kinds plus ownership without
+  private serialized dependency-graph access with narrow upstream exports where
+  missing, pinned in `rust/tests/fixtures/cargo_metadata/pins.bzl` with the
+  `Cargo.toml` plus `cargo_metadata.expected` pair plus hello plus cc_optout
+  plus cargo testdata shapes under `bazel test //...`; ad-hoc metadata rejected;
+  backends stay provisional; floors qualified seed-only under #500, coverage
+  qualified seed-only under #501; platform plus consumer plus release evidence
+  stays owned gap; no Supported claim (`cargo_metadata_qualification` 16/16)).
 - Strict generation with fixture evidence qualified seed-only under #503
   (`bazel run //tools/ci:strict_generation_qualification`;
   quoted basename identities resolving strictly or failing plus angle

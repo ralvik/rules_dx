@@ -75,7 +75,13 @@ seed-only under issue #474 (single crate_universe `crates` graph with
 `bazel run //tools/ci:cxx_identity_qualification`); exact-target discovery is
 qualified seed-only under issue #475 (resolver-owned exact labels to upstream
 `TARGETS` with hello exact-isolation plus `rust/tests/fixtures/discovery/pins.bzl` via
-`bazel run //tools/ci:exact_target_qualification`); remaining native gaps
+`bazel run //tools/ci:exact_target_qualification`); cargo metadata is
+qualified seed-only under issue #502 (features plus build-script metadata plus
+target kinds plus ownership without private serialized graph access with the
+`Cargo.toml` plus `cargo_metadata.expected` pair plus
+`rust/tests/fixtures/cargo_metadata/pins.bzl` via
+`bazel run //tools/ci:cargo_metadata_qualification`, ad-hoc metadata rejected);
+remaining native gaps
 (shell-env default)
 stay owned under issue #472 per the
 [native plan](../native-toolchains.md#qualification-questions-and-delivery).

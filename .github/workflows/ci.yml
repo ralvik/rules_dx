@@ -1086,6 +1086,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:deployment_floors_qualification
       - name: Audit LCOV accounting qualification (issue #501 Rust plus C/C++ plus mixed/DLL LCOV plus missed-line plus tool pairing plus ignores plus denominator, owned gaps)
         run: bazel run --noshow_progress //tools/ci:lcov_accounting_qualification
+      - name: Audit Cargo metadata qualification (issue #502 features plus build-script metadata plus target kinds plus ownership without private graph, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:cargo_metadata_qualification
       - name: Audit strict generation qualification (issue #503 quoted plus angle plus ambiguous plus macro plus authoritative metadata plus test grouping plus generated headers plus assembly plus module/PCH, owned gaps)
         run: bazel run --noshow_progress //tools/ci:strict_generation_qualification
       - name: Write job summary

@@ -1,0 +1,45 @@
+[package]
+name = "cargo-metadata"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[dependencies]
+anyhow = "1"
+
+[dev-dependencies]
+tempfile = "3"
+
+[build-dependencies]
+cc = "1"
+
+[lib]
+name = "cargo_metadata"
+path = "src/lib.rs"
+
+[[bin]]
+name = "cargo-metadata"
+path = "src/main.rs"
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"
+
+[[test]]
+name = "custom-harness"
+path = "tests/custom_harness.rs"
+harness = false
+
+[[example]]
+name = "demo"
+path = "examples/demo.rs"
+test = true
+
+[[example]]
+name = "plain"
+path = "examples/plain.rs"
+
+[[bench]]
+name = "criterion"
+path = "benches/criterion.rs"
+harness = false

@@ -191,7 +191,11 @@ qualified seed-only under issue #475 (resolver-owned exact labels to upstream
 `TARGETS`, `Path`/`Buildfile` widening plus project-owned graph plus
 `RustAnalyzerInfo` rejected, hello exact-isolation pair plus
 `rust/tests/fixtures/discovery/pins.bzl` via
-`bazel run //tools/ci:exact_target_qualification`). The remaining native gap
+`bazel run //tools/ci:exact_target_qualification`). Cargo metadata is
+qualified seed-only under issue #502 (`rust/tests/fixtures/cargo_metadata/pins.bzl`
+with the `Cargo.toml` plus `cargo_metadata.expected` pair via
+`bazel run //tools/ci:cargo_metadata_qualification`, ad-hoc metadata rejected).
+The remaining native gap
 (global shell-env False versus
 annotation extension decided hermetic under issue #472 with global `False`
 in `.bazelrc` and narrow per-crate opt-in at zero opt-ins) stays
