@@ -965,6 +965,18 @@ Remaining reds stay owned gaps, not green claims:
   run multirun) with daemon plus parallel umbrella plus inferred forwards plus
   invented reports rejected; CLI-only, no Bazel semantics change; platform
   plus consumer plus release evidence stays owned gap; no Supported claim).
+- Opt-in strict preset vs default loose with fixture evidence qualified seed-only under #615
+  (`bazel run //tools/ci:strict_preset_qualification` with
+  `quality/tests/fixtures/strict_preset/pins.bzl` plus loose vs strict
+  ruff/biome/tsconfig pairs plus illustrative sources;
+  `strict_preset_qualification` 16/16; default stays loose with curated
+  plus upstream built-in defaults and no hidden preset, strict is opt-in
+  via checked-in native configs with ruff E/F/W/I/N/UP/B/SIM plus Biome
+  recommended plus noExplicitAny/useConst/noUnusedVariables plus tsc
+  strict true plus Vale markers-only, forcing strict by default plus
+  selectable preset IDs plus workspace flags rejected; quality only, no
+  default change; platform plus consumer plus release evidence stays owned
+  gap; no Supported claim).
 
 The consumer aggregate `dx-ci`
 ([contract](../github-ci.md#aggregate-status)) is unchanged: stable identity,

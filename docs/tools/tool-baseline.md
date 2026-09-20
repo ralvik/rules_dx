@@ -71,6 +71,8 @@ curated defaults; supported alternatives remain explicit opt-ins. Enabled tools 
 behavioral defaults unless an applicable checked-in native config supplies policy, as defined in
 [Native Configuration](../quality/native-configuration.md#authority). Tool selection does not
 authorize hidden behavioral presets. Unselected opt-ins create no actions or tool/runtime fetches.
+Strict lint is an opt-in checked-in native config, not a default or hidden preset: see the
+[opt-in strict preset](../quality/strict-preset.md) (issue #615).
 
 The planned initial curated Python defaults are Ruff, Ty, and pydoclint. Ruff
 and pydoclint run under lint and Ty runs under typecheck; initial audit tool selection is

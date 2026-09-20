@@ -12,3 +12,4 @@ Quality workflow architecture, protocols, and evidence requirements:
   process.
 - [Quality Result Protocol](quality-result-protocol.md): internal result and edit contract.
 - [Quality Workflow Testing](quality-testing.md): protocol, cache, apply, and parity suites.
+- [Strict Preset](strict-preset.md): opt-in strict vs default loose (issue #615).
