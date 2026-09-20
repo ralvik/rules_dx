@@ -219,6 +219,11 @@ or release evidence requirements. Qualified mappings (issue #507,
 for public repositories (`ubuntu-latest`, `ubuntu-24.04-arm`, `macos-14`, `windows-latest`; no self-hosted). Larger runners are always charged.
 `actions/cache` disk cache is 10 GB per repository; artifact storage is 500 MB.
 GHCR container storage/bandwidth is currently free for public repos (at least one month notice before any pricing change per GitHub Packages billing; private-Packages quotas 500 MB/1 GB do not apply to containers today). Retention is manual; build-only PRs consume no quota and the first gated push records exact bytes (issue #460, `docs/contributing/devcontainer.md`); Pages is free.
+CI flakiness plus timeout tuning stays bounded and local-only (issue #619,
+`bazel run //tools/ci:flakiness_qualification`): direct `bazel test` carries
+`--flaky_test_attempts=3 --test_timeout=300`, GitHub timeouts stay tuned (seed test/coverage 45,
+per-host test/coverage 60, builds 30/60, no blanket 90), sharding stays per-host/per-stage
+with ordinary Bazel intra-job sharding and no `strategy.matrix`.
 
 ## Remote Tests
 

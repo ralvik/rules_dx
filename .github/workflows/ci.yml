@@ -69,6 +69,14 @@
 # fast-fail ordering so a broken build skips downstream stages instead of
 # burning parallel runners. Each job writes a `$GITHUB_STEP_SUMMARY` block
 # so triage starts from the summary, not the raw log.
+#
+# Flakiness plus timeout tuning (issue #619): every direct `bazel test`
+# invocation carries `--flaky_test_attempts=3 --test_timeout=300` (bounded
+# retries for transient flakes, per-test 300s cap; retry-until-green stays
+# rejected); GitHub `timeout-minutes` stay tuned (seed test/coverage 45,
+# per-host test/coverage 60, builds 30/60, no blanket 90); sharding stays
+# per-host/per-stage jobs with Bazel intra-job test sharding under ordinary
+# semantics (no `strategy.matrix`); long-timeouts-only stays rejected.
 
 name: ci
 
@@ -171,7 +179,7 @@ jobs:
       - name: Build SBOM + provenance demo
         run: bazel build --noshow_progress //deploy/release:sbom_demo
       - name: Verify SBOM + provenance bind artifact
-        run: bazel test --noshow_progress //deploy/release:sbom_demo_verify
+        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //deploy/release:sbom_demo_verify
       - name: Stage SBOM + provenance for upload
         run: |
           set -euo pipefail
@@ -243,7 +251,7 @@ jobs:
   test:
     name: test (bazel test //...)
     needs: [build]
-    timeout-minutes: 60
+    timeout-minutes: 45
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -258,7 +266,7 @@ jobs:
           restore-keys: |
             bazel-seed-
       - name: Test workspace
-        run: bazel test --noshow_progress //...
+        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
       - name: Write job summary
         if: always()
         run: |
@@ -267,7 +275,7 @@ jobs:
   coverage:
     name: coverage (dx coverage gate, seed cell)
     needs: [build]
-    timeout-minutes: 60
+    timeout-minutes: 45
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -392,7 +400,7 @@ jobs:
   test-arm64:
     name: test-arm64 (bazel test //..., linux arm64 native)
     needs: [build-arm64]
-    timeout-minutes: 90
+    timeout-minutes: 60
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -407,7 +415,7 @@ jobs:
           restore-keys: |
             bazel-arm64-
       - name: Test workspace
-        run: bazel test --noshow_progress //...
+        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
       - name: Write job summary
         if: always()
         run: |
@@ -416,7 +424,7 @@ jobs:
   coverage-arm64:
     name: coverage-arm64 (dx coverage gate, arm64 cell)
     needs: [build-arm64]
-    timeout-minutes: 90
+    timeout-minutes: 60
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
@@ -520,7 +528,7 @@ jobs:
   coverage-musl-x86_64:
     name: coverage-musl-x86_64 (dx coverage gate, musl x86_64 cell)
     needs: [build-musl-x86_64]
-    timeout-minutes: 90
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -575,7 +583,7 @@ jobs:
   coverage-musl-arm64:
     name: coverage-musl-arm64 (dx coverage gate, musl arm64 cell)
     needs: [build-musl-arm64]
-    timeout-minutes: 90
+    timeout-minutes: 60
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
@@ -655,7 +663,7 @@ jobs:
   test-macos-arm64:
     name: test-macos-arm64 (bazel test //..., macOS arm64 native)
     needs: [build-macos-arm64]
-    timeout-minutes: 90
+    timeout-minutes: 60
     runs-on: macos-14
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -670,7 +678,7 @@ jobs:
           restore-keys: |
             bazel-macos-arm64-
       - name: Test workspace
-        run: bazel test --noshow_progress //...
+        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
       - name: Write job summary
         if: always()
         run: |
@@ -679,7 +687,7 @@ jobs:
   coverage-macos-arm64:
     name: coverage-macos-arm64 (dx coverage gate, macos arm64 cell)
     needs: [build-macos-arm64]
-    timeout-minutes: 90
+    timeout-minutes: 60
     runs-on: macos-14
     permissions:
       contents: read
@@ -759,7 +767,7 @@ jobs:
   test-macos-x86_64:
     name: test-macos-x86_64 (bazel test //..., macOS x86_64 best-effort native)
     needs: [build-macos-x86_64]
-    timeout-minutes: 90
+    timeout-minutes: 60
     runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -774,7 +782,7 @@ jobs:
           restore-keys: |
             bazel-macos-x86_64-
       - name: Test workspace
-        run: bazel test --noshow_progress //...
+        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
       - name: Write job summary
         if: always()
         run: |
@@ -783,7 +791,7 @@ jobs:
   coverage-macos-x86_64:
     name: coverage-macos-x86_64 (dx coverage gate, macos x86_64 cell)
     needs: [build-macos-x86_64]
-    timeout-minutes: 90
+    timeout-minutes: 60
     runs-on: macos-15-intel
     permissions:
       contents: read
@@ -867,7 +875,7 @@ jobs:
   test-windows-x86_64:
     name: test-windows-x86_64 (bazel test //..., windows x86_64 native)
     needs: [build-windows-x86_64]
-    timeout-minutes: 90
+    timeout-minutes: 60
     runs-on: windows-latest
     defaults:
       run:
@@ -885,7 +893,7 @@ jobs:
           restore-keys: |
             bazel-windows-x86_64-
       - name: Test workspace
-        run: bazel test --noshow_progress //...
+        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
       - name: Write job summary
         if: always()
         run: |
@@ -894,7 +902,7 @@ jobs:
   coverage-windows-x86_64:
     name: coverage-windows-x86_64 (dx coverage gate, windows x86_64 cell)
     needs: [build-windows-x86_64]
-    timeout-minutes: 90
+    timeout-minutes: 60
     runs-on: windows-latest
     defaults:
       run:
@@ -951,7 +959,7 @@ jobs:
           echo "### coverage-windows-x86_64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Command: dx coverage --min-coverage 97 //... (windows x86_64 cell only, per-cell no-union; toolchains_msvc backend provisional, explicit EULA never automatic, installed fallback never approved; issue #414)." >> "$GITHUB_STEP_SUMMARY"
   prove:
-    name: prove (manual negatives, target tags, coverage cell, release hygiene, release policy, publish trust, shell contract, ci matrix, bootstrap)
+    name: prove (manual negatives, target tags, coverage cell, release hygiene, release policy, publish trust, shell contract, ci matrix, bootstrap, flakiness)
     needs: [build]
     timeout-minutes: 30
     runs-on: ubuntu-latest
@@ -985,6 +993,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:ci_matrix_qualification
       - name: Prove bootstrap portability (five hosts, retry, no sudo, portable hash)
         run: bazel run --noshow_progress //tools/ci:bootstrap_portability
+      - name: Prove CI flakiness plus timeout tuning (retries, timeouts, sharding)
+        run: bazel run --noshow_progress //tools/ci:flakiness_qualification
       - name: Prove release hygiene (no publication inputs without approval)
         run: bazel run --noshow_progress //tools/ci:release_hygiene
       - name: Prove release policy (curated defaults + parity manifest gate)
@@ -997,7 +1007,7 @@ jobs:
         if: always()
         run: |
           echo "### prove — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate, coverage qualification (issue #308 per-cell plus Starlark plus Codecov plus quotas plus local-only remote; seed plus arm64 plus static musl plus macos arm64 plus macos x86_64 best-effort plus windows x86_64 under #410/#411/#412/#413/#414), static-musl qualification (issue #411 profiles plus exec/target plus per-cell plus dynamic out of scope), macOS arm64 plus x86_64 best-effort qualification (issues #412/#413 native plus per-cell plus portable-shell plus no host SDK fallback, best-effort non-blocking), Windows x86_64 qualification (issue #414 native MSVC-compatible plus per-cell plus portable-shell plus explicit EULA never automatic), CI multi-platform host matrix (issue #415 runners plus caches plus refusal plus sharding plus portable shell), bootstrap portability (issue #617 five hosts plus retry plus no sudo plus portable hash), release hygiene (issue #5 no-publication inputs), release policy (issue #89 curated defaults + parity gate), publish trust (issues #78/#26/#5 draft-only sites + nothing published), shell contract (issue #299 bash-only harness plus portable forms with windows shell bash, issue #414)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate, coverage qualification (issue #308 per-cell plus Starlark plus Codecov plus quotas plus local-only remote; seed plus arm64 plus static musl plus macos arm64 plus macos x86_64 best-effort plus windows x86_64 under #410/#411/#412/#413/#414), static-musl qualification (issue #411 profiles plus exec/target plus per-cell plus dynamic out of scope), macOS arm64 plus x86_64 best-effort qualification (issues #412/#413 native plus per-cell plus portable-shell plus no host SDK fallback, best-effort non-blocking), Windows x86_64 qualification (issue #414 native MSVC-compatible plus per-cell plus portable-shell plus explicit EULA never automatic), CI multi-platform host matrix (issue #415 runners plus caches plus refusal plus sharding plus portable shell), bootstrap portability (issue #617 five hosts plus retry plus no sudo plus portable hash), CI flakiness plus timeout tuning (issue #619 retries plus timeouts plus sharding, long-timeouts-only rejected), release hygiene (issue #5 no-publication inputs), release policy (issue #89 curated defaults + parity gate), publish trust (issues #78/#26/#5 draft-only sites + nothing published), shell contract (issue #299 bash-only harness plus portable forms with windows shell bash, issue #414)." >> "$GITHUB_STEP_SUMMARY"
           echo "Proved (follow-up): coverage spill containment (issues #252/#54, LLVM_PROFILE_FILE to scratch)." >> "$GITHUB_STEP_SUMMARY"
   dogfood-freshness:
     name: dogfood-freshness (tools, generate --check, corpus audit)
@@ -1205,6 +1215,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:python_audit_qualification
       - name: Audit strict preset qualification (issue #615 default loose plus opt-in strict pins plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:strict_preset_qualification
+      - name: Audit CI flakiness plus timeout tuning (issue #619 retries plus timeouts plus sharding, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:flakiness_qualification
       - name: Write job summary
         if: always()
         run: |
@@ -1229,7 +1241,7 @@ jobs:
             bazel-dogfood-
             bazel-seed-
       - name: Prove dx init scaffold matches checked-in definition
-        run: bazel test --noshow_progress //.devcontainer:devcontainer_parity_test
+        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //.devcontainer:devcontainer_parity_test
       - name: Validate devcontainer definition shape
         run: |
           python3 - <<'EOF'

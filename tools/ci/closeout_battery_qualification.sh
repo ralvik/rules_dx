@@ -89,8 +89,9 @@ else
 fi
 
 # Test battery: full test with hermetic CLI-contract pins, no manual.
-if grep -q -F -e 'bazel test --noshow_progress //...' "$ci" &&
-  grep -q -F -e '- `test`: `bazel test //...`' "$verify"; then
+# Tuned under issue #619: bounded flaky retries plus per-test timeout cap.
+if grep -q -F -e 'bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...' "$ci" &&
+  grep -q -F -e '- `test`: `bazel test --flaky_test_attempts=3 --test_timeout=300 //...`' "$verify"; then
   ok
 else
   bad "test battery lost (want bazel test //... in ci.yml and Battery)"
