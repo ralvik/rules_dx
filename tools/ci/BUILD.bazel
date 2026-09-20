@@ -689,6 +689,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Update mutation-event wont-fix harness (issue #586); see docs/cli/output-protocol.md#mutation.
+sh_binary(
+    name = "update_events_qualification",
+    srcs = ["update_events_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # CC opt-out linker harness (issue #471); see docs/testing/verification-matrix.md.
 sh_binary(
     name = "cc_optout_qualification",
