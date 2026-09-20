@@ -405,19 +405,19 @@ summarized in [Candidate Disposition Status](#candidate-disposition-status).
 - Scala: [`rules_scala` 7.x](https://github.com/bazel-contrib/rules_scala)
   (bazel-contrib, Bazel 7/8 plus Bzlmod, Coursier-backed Scala
   toolchains) is the provisional route. Route decision (recorded
-  2026-09-13): managed route tracked in
-  open work. Coursier-fetched
+  2026-09-13): managed route tracked under
+  issue #417. Coursier-fetched
   toolchains share Java's Maven-lock story (`maven_install.json` plus
   `fail_if_repin_required`), Scalafix semantic rules need semanticdb plus
   classpath wiring per the adapter-input notes, and no source-built or
-  toolchain-coupled native advantage was evidenced. Mappings are tracked in
-  open work. Admitted to v1
+  toolchain-coupled native advantage was evidenced. Mappings are tracked under
+  issue #417. Admitted to v1
   by [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
 - C# and F#: [`rules_dotnet` 0.22.1](https://github.com/bazel-contrib/rules_dotnet)
   (Bzlmod, Bazel >= 8) covers both languages with `csharp_*`
    and `fsharp_*` targets plus SDK acquisition through its `dotnet` toolchain
    extension, so one upstream review covers both rows. Per-platform SDK
-   acquisition and test-runner versions remain open (open work); lock
+   acquisition and test-runner versions remain open under issue #417; lock
    authority is the Paket lock
    ([Provisional Default Dependency Locks](#provisional-default-dependency-locks)).
    C# and F# admitted to v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
@@ -444,9 +444,9 @@ cost drivers, open. Foundation deferred beyond v1 by [ADR 0019](../decisions/001
 | --- | --- | --- | --- |
 | Java | `rules_jvm_external` + `rules_java` | open work | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | Kotlin | `rules_kotlin` | open work | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
-| Scala | `rules_scala` | open work (managed route decided 2026-09-13) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
-| C# | `rules_dotnet` | open work | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
-| F# | `rules_dotnet` | open work | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
+| Scala | `rules_scala` | issue #417 (managed route decided 2026-09-13) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
+| C# | `rules_dotnet` | issue #417 | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
+| F# | `rules_dotnet` | issue #417 | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | Ruby | `rules_ruby` (bazel-contrib) | open work tool cohort; foundation post-v1 | Deferred beyond v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | PowerShell | `rules_powershell` | open work tool cohort; foundation post-v1 | Deferred beyond v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | Go, C/C++ | Source/documentation review | open work | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
@@ -533,11 +533,14 @@ Focused proofs (recorded 2026-09-13) select the delivery routes in
 JVM tools (google-java-format, Checkstyle, PMD, SpotBugs, ktfmt, ktlint)
 take the complete-upstream-artifact plus shared-JDK route (issue #416, live successor
 to closed #307 for the `java`/`kotlin` cohort); Scalafmt/Scalafix
-take the managed JVM route; CSharpier/Fantomas take the exact-package plus
-shared-.NET-runtime route; PSScriptAnalyzer takes the exact-module plus
+take the managed JVM route (issue #417, live successor to closed #307 for the
+`scala` cohort); CSharpier/Fantomas take the exact-package plus
+shared-.NET-runtime route (issue #417, live successor to closed #307 for the
+`csharp`/`fsharp` cohort); PSScriptAnalyzer takes the exact-module plus
 portable-PowerShell-runtime route; RuboCop/StandardRB take the
 release-assembled Ruby closure route. Exact JVM artifacts, versions, rule sets,
-and adapter mappings are tracked under issue #416; remaining cohorts stay in
+and adapter mappings are tracked under issue #416; exact Scala/.NET artifacts,
+versions, rule sets, and adapter mappings are tracked under issue #417; remaining cohorts stay in
 open work; no adapter claims any of these
 classes yet.
 
@@ -555,14 +558,14 @@ qualification inputs open, not approved presets or additions to curated membersh
 - detekt `buildUponDefaultConfig` (full default set, not `allRules`);
   ktlint standard rules (both provisional under issue #416).
 - Roslyn: SDK default analysis mode; StyleCop stays optional since its style
-  rules can contradict the built-in IDE rules.
+  rules can contradict the built-in IDE rules (both provisional under issue #417).
 - clang-tidy default checks; cppcheck default enablement.
 - Scalafix recommended built-ins plus OrganizeImports (import organization)
   and RemoveUnused (dead code): the existing suggestion remains provisional,
-  open. It is not an approved hidden preset;
+  open under issue #417. It is not an approved hidden preset;
   native-config and artifact qualification must resolve the conflict before implementation.
 - FSharpLint default ruleset with formatting rules off (Fantomas owns
-  formatting).
+  formatting) (provisional under issue #417).
 
 Beyond-default switches (detekt `allRules`, experimental Error Prone checks,
 `--enable=all`-style opt-in maxima) are not enabled by `rules_dx`. These
@@ -601,14 +604,15 @@ open work.
 
 Upstream documentation observations; provisional input, not
 selections. Adapter design and normalization for the JVM cohort is tracked under
-issue #416 (remaining cohorts stay in open work).
+issue #416; adapter design and normalization for the Scala + .NET cohort is tracked
+under issue #417 (remaining cohorts stay in open work).
 
 Diagnostic wire formats:
 
 - SARIF-native: PMD, Checkstyle (`-f sarif`), SpotBugs (`-sarif`),
   ktlint (`--reporter=sarif`), detekt (sarif report), staticcheck
   (`-f sarif`), Roslyn (`/errorlog`, SARIF 2.1). JVM shapes are unproven mappings
-  owned by issue #416.
+  owned by issue #416. Roslyn shapes are unproven mappings owned by issue #417.
 - JSON: staticcheck (`-f json`), PMD (json), ktlint (json).
 - Checkstyle XML: Checkstyle (`-f xml`), ktlint, detekt.
 - Tool-native XML: cppcheck (`--xml --xml-version=2`, on stderr).
@@ -616,8 +620,8 @@ Diagnostic wire formats:
   (javac diagnostics; structured output still open upstream, itemized under issue #416),
   FSharpLint
   console (the `FSharpLint.Core` library API is the structured
-  alternative), Scalafix console (no machine-readable CLI output; open
-  upstream issue).
+  alternative, itemized under issue #417), Scalafix console (no machine-readable CLI output; open
+  upstream issue, itemized under issue #417).
 - clang-tidy emits clang text diagnostics; fixes travel separately as
   `--export-fixes` YAML for `clang-apply-replacements`.
 
@@ -643,12 +647,12 @@ open work:
 
 - Scalafix: no machine-readable CLI output; semantic rules need semanticdb
   plus classpath wiring, and source rewriting sits uneasily with immutable
-  action outputs.
+  action outputs (issue #417).
 - Error Prone: no structured diagnostics; patch files need per-target
   declared outputs because `IN_PLACE` patching breaks under sandboxing (issue #416).
 - Roslyn `/errorlog` SARIF is per compiler invocation (per
-  configuration/TFM/RID pivot); aggregation work remains.
-- FSharpLint: console text parsing versus binding the .NET library API.
+  configuration/TFM/RID pivot); aggregation work remains (issue #417).
+- FSharpLint: console text parsing versus binding the .NET library API (issue #417).
 
 ### Open Work Tracking
 
@@ -669,9 +673,10 @@ candidates still require an explicit disposition in the issue tracker.
 ### Cohort Tracking
 
 Every candidate row above maps to an existing tracker: admitted Java and Kotlin
-(JVM cohort) to issue #416; admitted Go and
-C/C++ plus admitted C#, F#, and Scala (managed route decided
-2026-09-13) to
+(JVM cohort) to issue #416; admitted Scala plus C# and F# (Scala + .NET cohort,
+managed JVM plus exact-package shared-.NET-runtime routes decided
+2026-09-13) to issue #417; admitted Go and
+C/C++ to
 open work. Deferred foundations (Ruby,
 PowerShell) are out of v1 scope; their retained tool cohorts stay tracked in
 open work. If qualification

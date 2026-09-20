@@ -241,6 +241,27 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Scala + .NET-cohort qualification harness (issue #417, live successor to
+# closed #307 for the scala/csharp/fsharp cohort): proves the as-built
+# decided managed-JVM route (Scalafmt/Scalafix over the shared managed JDK
+# plus Maven-lock story with semanticdb/classpath wiring) plus the decided
+# exact-package plus shared-.NET-runtime route (CSharpier/Fantomas as declared
+# DLLs, no installer) with initial artifact research as observations not pins,
+# provisional adapter-input notes (Roslyn per-TFM/RID SARIF aggregation,
+# FSharpLint parse-vs-wire, Scalafix console limitation recorded not silent;
+# Roslyn SDK-default with StyleCop opt-in), provisional native-config inputs
+# with no hidden preset, parity-deferred scala/csharp/fsharp with owner plus
+# frozen route, classification-only taxonomy with no curated defaults and
+# no matrix cells yet. Run by CI via
+# `bazel run //tools/ci:scala_dotnet_cohort_qualification`.
+sh_binary(
+    name = "scala_dotnet_cohort_qualification",
+    srcs = ["scala_dotnet_cohort_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Publication-trust harness (issues #78, #26, #5, #311): machine-checks
 # the draft-only + nothing-published static invariants the
 # release-hygiene harness does not own — module name at the
