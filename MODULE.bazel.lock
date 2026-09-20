@@ -391,8 +391,8 @@
   "moduleExtensions": {
     "//quality/artifacts:extension.bzl%dx_tools": {
       "general": {
-        "bzlTransitiveDigest": "Res3nhAyAlQHMqMJvFfYeXARpZFgq6YIPYLsgskgTuc=",
-        "usagesDigest": "bUoLms1RzXZC9mAK2ZTkvN0H8GBlSKy3SN0S17wrT00=",
+        "bzlTransitiveDigest": "1kFf7O2lfA731RKcS/2cTnwsA4y4LTTtM6Y1x1A1BQg=",
+        "usagesDigest": "gFQzqitdJKL+sOU8Lib2o7Lz3uaDcnGnSUnqrb+uZys=",
         "recordedInputs": [
           "REPO_MAPPING:,platforms platforms"
         ],
@@ -407,6 +407,46 @@
               "executable": "biome-linux-x64"
             }
           },
+          "dx_biome_linux_arm64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/biomejs/biome/releases/download/@biomejs/biome@2.5.12/biome-linux-arm64",
+              "sha256": "4c1c9908e5cfd5d327e4ac3205baa13b1d3dfd24f184ed289a0c0ef1b2e0274f",
+              "asset": "biome-linux-arm64",
+              "archive_format": "none",
+              "executable": "biome-linux-arm64"
+            }
+          },
+          "dx_biome_macos_arm64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/biomejs/biome/releases/download/@biomejs/biome@2.5.12/biome-darwin-arm64",
+              "sha256": "0e8d513eb6c612236b47ccf0e218ac3917d863d41f853c65c38410774daa26ed",
+              "asset": "biome-darwin-arm64",
+              "archive_format": "none",
+              "executable": "biome-darwin-arm64"
+            }
+          },
+          "dx_biome_macos_x86_64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/biomejs/biome/releases/download/@biomejs/biome@2.5.12/biome-darwin-x64",
+              "sha256": "0680097ec839fadc82451634680e39b9b7e48cc4334ef920525850b4d8f54a8b",
+              "asset": "biome-darwin-x64",
+              "archive_format": "none",
+              "executable": "biome-darwin-x64"
+            }
+          },
+          "dx_biome_windows_x86_64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/biomejs/biome/releases/download/@biomejs/biome@2.5.12/biome-win32-x64.exe",
+              "sha256": "59f88d04ab25f8634639c337ef70a79927504b6379a1ec3ff4e87f7c15dd5dce",
+              "asset": "biome-win32-x64.exe",
+              "archive_format": "none",
+              "executable": "biome-win32-x64.exe"
+            }
+          },
           "dx_buildifier_linux_x86_64": {
             "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
             "attributes": {
@@ -415,6 +455,46 @@
               "asset": "buildifier-linux-amd64",
               "archive_format": "none",
               "executable": "buildifier-linux-amd64"
+            }
+          },
+          "dx_buildifier_linux_arm64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/bazel-contrib/buildtools/releases/download/v8.5.1/buildifier-linux-arm64",
+              "sha256": "947bf6700d708026b2057b09bea09abbc3cafc15d9ecea35bb3885c4b09ccd04",
+              "asset": "buildifier-linux-arm64",
+              "archive_format": "none",
+              "executable": "buildifier-linux-arm64"
+            }
+          },
+          "dx_buildifier_macos_arm64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/bazel-contrib/buildtools/releases/download/v8.5.1/buildifier-darwin-arm64",
+              "sha256": "62836a9667fa0db309b0d91e840f0a3f2813a9c8ea3e44b9cd58187c90bc88ba",
+              "asset": "buildifier-darwin-arm64",
+              "archive_format": "none",
+              "executable": "buildifier-darwin-arm64"
+            }
+          },
+          "dx_buildifier_macos_x86_64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/bazel-contrib/buildtools/releases/download/v8.5.1/buildifier-darwin-amd64",
+              "sha256": "31de189e1a3fe53aa9e8c8f74a0309c325274ad19793393919e1ca65163ca1a4",
+              "asset": "buildifier-darwin-amd64",
+              "archive_format": "none",
+              "executable": "buildifier-darwin-amd64"
+            }
+          },
+          "dx_buildifier_windows_x86_64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/bazel-contrib/buildtools/releases/download/v8.5.1/buildifier-windows-amd64.exe",
+              "sha256": "f4ecb9c73de2bc38b845d4ee27668f6248c4813a6647db4b4931a7556052e4e1",
+              "asset": "buildifier-windows-amd64.exe",
+              "archive_format": "none",
+              "executable": "buildifier-windows-amd64.exe"
             }
           },
           "dx_ruff_linux_x86_64": {
@@ -427,6 +507,46 @@
               "executable": "ruff-x86_64-unknown-linux-gnu/ruff"
             }
           },
+          "dx_ruff_linux_arm64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "1e06b11127c28387c8066da4ce6a617a84a359591be09dbf581fbb0c3e006239",
+              "asset": "ruff-aarch64-unknown-linux-gnu.tar.gz",
+              "archive_format": "tar.gz",
+              "executable": "ruff-aarch64-unknown-linux-gnu/ruff"
+            }
+          },
+          "dx_ruff_macos_arm64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-aarch64-apple-darwin.tar.gz",
+              "sha256": "80221a5e0b1ae29262a74496f2ad1380c1ab52b3edd8cee13ec76d8acff406ca",
+              "asset": "ruff-aarch64-apple-darwin.tar.gz",
+              "archive_format": "tar.gz",
+              "executable": "ruff-aarch64-apple-darwin/ruff"
+            }
+          },
+          "dx_ruff_macos_x86_64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-x86_64-apple-darwin.tar.gz",
+              "sha256": "6f3b98ec349f470b7efde5294d44e5171613ddaac3c251a918a7946b303d3ec2",
+              "asset": "ruff-x86_64-apple-darwin.tar.gz",
+              "archive_format": "tar.gz",
+              "executable": "ruff-x86_64-apple-darwin/ruff"
+            }
+          },
+          "dx_ruff_windows_x86_64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-x86_64-pc-windows-msvc.zip",
+              "sha256": "a099e761fb841fc33d44031aa37e16a3d154922fd3da284396e58ae687973e45",
+              "asset": "ruff-x86_64-pc-windows-msvc.zip",
+              "archive_format": "zip",
+              "executable": "ruff.exe"
+            }
+          },
           "dx_taplo_linux_x86_64": {
             "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
             "attributes": {
@@ -435,6 +555,46 @@
               "asset": "taplo-linux-x86_64.gz",
               "archive_format": "gzip",
               "executable": "taplo-x86_64"
+            }
+          },
+          "dx_taplo_linux_arm64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-linux-aarch64.gz",
+              "sha256": "033681d01eec8376c3fd38fa3703c79316f5e14bb013d859943b60a07bccdcc3",
+              "asset": "taplo-linux-aarch64.gz",
+              "archive_format": "gzip",
+              "executable": "taplo-aarch64"
+            }
+          },
+          "dx_taplo_macos_arm64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-darwin-aarch64.gz",
+              "sha256": "713734314c3e71894b9e77513c5349835eefbd52908445a0d73b0c7dc469347d",
+              "asset": "taplo-darwin-aarch64.gz",
+              "archive_format": "gzip",
+              "executable": "taplo"
+            }
+          },
+          "dx_taplo_macos_x86_64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-darwin-x86_64.gz",
+              "sha256": "898122cde3a0b1cd1cbc2d52d3624f23338218c91b5ddb71518236a4c2c10ef2",
+              "asset": "taplo-darwin-x86_64.gz",
+              "archive_format": "gzip",
+              "executable": "taplo"
+            }
+          },
+          "dx_taplo_windows_x86_64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-windows-x86_64.zip",
+              "sha256": "1615eed140039bd58e7089109883b1c434de5d6de8f64a993e6e8c80ca57bdf9",
+              "asset": "taplo-windows-x86_64.zip",
+              "archive_format": "zip",
+              "executable": "taplo.exe"
             }
           },
           "dx_ty_linux_x86_64": {
@@ -447,6 +607,46 @@
               "executable": "ty-x86_64-unknown-linux-gnu/ty"
             }
           },
+          "dx_ty_linux_arm64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/astral-sh/ty/releases/download/0.0.80/ty-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "c8a21f89ddea64bc6f79de733cdd005d02df0b98da55dc6376681f5d418af16e",
+              "asset": "ty-aarch64-unknown-linux-gnu.tar.gz",
+              "archive_format": "tar.gz",
+              "executable": "ty-aarch64-unknown-linux-gnu/ty"
+            }
+          },
+          "dx_ty_macos_arm64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/astral-sh/ty/releases/download/0.0.80/ty-aarch64-apple-darwin.tar.gz",
+              "sha256": "745ad7e6e7aa410c50216488cacd25e2612f123dec535ec5408ae0aad4c3544d",
+              "asset": "ty-aarch64-apple-darwin.tar.gz",
+              "archive_format": "tar.gz",
+              "executable": "ty-aarch64-apple-darwin/ty"
+            }
+          },
+          "dx_ty_macos_x86_64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/astral-sh/ty/releases/download/0.0.80/ty-x86_64-apple-darwin.tar.gz",
+              "sha256": "3718c4ab92202e98bcede7c07ecfea1734c3398b7726efb092de4a073ee45d2c",
+              "asset": "ty-x86_64-apple-darwin.tar.gz",
+              "archive_format": "tar.gz",
+              "executable": "ty-x86_64-apple-darwin/ty"
+            }
+          },
+          "dx_ty_windows_x86_64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/astral-sh/ty/releases/download/0.0.80/ty-x86_64-pc-windows-msvc.zip",
+              "sha256": "f1adb0237d61295bd14b2f9e9095301174246d48f6c2772f15d141b7d91946e2",
+              "asset": "ty-x86_64-pc-windows-msvc.zip",
+              "archive_format": "zip",
+              "executable": "ty.exe"
+            }
+          },
           "dx_vale_linux_x86_64": {
             "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
             "attributes": {
@@ -457,31 +657,98 @@
               "executable": "vale"
             }
           },
+          "dx_vale_linux_arm64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_Linux_arm64.tar.gz",
+              "sha256": "d49e89479a40dbe6a6fe44a2963abef0ee39d89453f3c7100bdd1c5dd0708961",
+              "asset": "vale_3.20.0_Linux_arm64.tar.gz",
+              "archive_format": "tar.gz",
+              "executable": "vale"
+            }
+          },
+          "dx_vale_macos_arm64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_macOS_arm64.tar.gz",
+              "sha256": "6b32df1a7d7b2ab01c07c1c4dd5fd84d775ac7a8f4101084cb5cc7df76bdc65e",
+              "asset": "vale_3.20.0_macOS_arm64.tar.gz",
+              "archive_format": "tar.gz",
+              "executable": "vale"
+            }
+          },
+          "dx_vale_macos_x86_64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_macOS_64-bit.tar.gz",
+              "sha256": "8d51cbe9ca6274fade890fc943b30dc564071dcb8fd8814abce2d0dca37fbba7",
+              "asset": "vale_3.20.0_macOS_64-bit.tar.gz",
+              "archive_format": "tar.gz",
+              "executable": "vale"
+            }
+          },
+          "dx_vale_windows_x86_64": {
+            "repoRuleId": "@@//quality/artifacts:extension.bzl%_standalone_tool_repo",
+            "attributes": {
+              "url": "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_Windows_64-bit.zip",
+              "sha256": "189b3511813a428f08a2be0d7692e50dd6e90dd81b2f8e04dbfbfe42cafd9980",
+              "asset": "vale_3.20.0_Windows_64-bit.zip",
+              "archive_format": "zip",
+              "executable": "vale.exe"
+            }
+          },
           "dx_tools": {
             "repoRuleId": "@@//quality/artifacts:extension.bzl%_hub_repo",
             "attributes": {
               "artifacts": {
                 "biome": [
-                  "dx_biome_linux_x86_64"
+                  "dx_biome_linux_x86_64",
+                  "dx_biome_linux_arm64",
+                  "dx_biome_macos_arm64",
+                  "dx_biome_macos_x86_64",
+                  "dx_biome_windows_x86_64"
                 ],
                 "buildifier": [
-                  "dx_buildifier_linux_x86_64"
+                  "dx_buildifier_linux_x86_64",
+                  "dx_buildifier_linux_arm64",
+                  "dx_buildifier_macos_arm64",
+                  "dx_buildifier_macos_x86_64",
+                  "dx_buildifier_windows_x86_64"
                 ],
                 "ruff": [
-                  "dx_ruff_linux_x86_64"
+                  "dx_ruff_linux_x86_64",
+                  "dx_ruff_linux_arm64",
+                  "dx_ruff_macos_arm64",
+                  "dx_ruff_macos_x86_64",
+                  "dx_ruff_windows_x86_64"
                 ],
                 "taplo": [
-                  "dx_taplo_linux_x86_64"
+                  "dx_taplo_linux_x86_64",
+                  "dx_taplo_linux_arm64",
+                  "dx_taplo_macos_arm64",
+                  "dx_taplo_macos_x86_64",
+                  "dx_taplo_windows_x86_64"
                 ],
                 "ty": [
-                  "dx_ty_linux_x86_64"
+                  "dx_ty_linux_x86_64",
+                  "dx_ty_linux_arm64",
+                  "dx_ty_macos_arm64",
+                  "dx_ty_macos_x86_64",
+                  "dx_ty_windows_x86_64"
                 ],
                 "vale": [
-                  "dx_vale_linux_x86_64"
+                  "dx_vale_linux_x86_64",
+                  "dx_vale_linux_arm64",
+                  "dx_vale_macos_arm64",
+                  "dx_vale_macos_x86_64",
+                  "dx_vale_windows_x86_64"
                 ]
               },
               "os_linux": "'@@platforms//os:linux'",
-              "cpu_x86_64": "'@@platforms//cpu:x86_64'"
+              "os_macos": "'@@platforms//os:macos'",
+              "os_windows": "'@@platforms//os:windows'",
+              "cpu_x86_64": "'@@platforms//cpu:x86_64'",
+              "cpu_arm64": "'@@platforms//cpu:arm64'"
             }
           }
         }

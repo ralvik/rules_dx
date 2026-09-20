@@ -14,6 +14,14 @@ bytes. Vale publishes a checksums file, which this generator verifies. Buildifie
 Taplo, and Biome publish no asset digests, so their checked-in digests are
 the maintainer-established byte identity: regeneration fails when upstream
 bytes change instead of silently recording new content.
+
+Platform bounds (issue #616): Linux artifacts record observed ELF linkage,
+interpreter, shared libraries, and GNU ABI floors via readelf/objdump.
+macOS/Windows artifacts record bounds only -- linkage is the observed
+delivery-class bound (buildifier static, all others dynamic), interpreter is
+None, shared libraries are empty, and ABI floors are None. The macOS
+deployment floor and Windows CRT identities stay owned gaps under issue #500
+and are not pinned here.
 """
 
 import gzip
@@ -25,6 +33,7 @@ import sys
 import tarfile
 import tempfile
 import urllib.request
+import zipfile
 
 SCHEMA_VERSION = 1
 
@@ -44,6 +53,38 @@ TOOLS = {
                 "url": "https://github.com/bazel-contrib/buildtools/releases/download/v8.5.1/buildifier-linux-amd64",
                 "kind": "raw",
                 "executable": "buildifier-linux-amd64",
+            },
+            "linux_arm64": {
+                "os": "linux",
+                "cpu": "arm64",
+                "asset": "buildifier-linux-arm64",
+                "url": "https://github.com/bazel-contrib/buildtools/releases/download/v8.5.1/buildifier-linux-arm64",
+                "kind": "raw",
+                "executable": "buildifier-linux-arm64",
+            },
+            "macos_arm64": {
+                "os": "macos",
+                "cpu": "arm64",
+                "asset": "buildifier-darwin-arm64",
+                "url": "https://github.com/bazel-contrib/buildtools/releases/download/v8.5.1/buildifier-darwin-arm64",
+                "kind": "raw",
+                "executable": "buildifier-darwin-arm64",
+            },
+            "macos_x86_64": {
+                "os": "macos",
+                "cpu": "x86_64",
+                "asset": "buildifier-darwin-amd64",
+                "url": "https://github.com/bazel-contrib/buildtools/releases/download/v8.5.1/buildifier-darwin-amd64",
+                "kind": "raw",
+                "executable": "buildifier-darwin-amd64",
+            },
+            "windows_x86_64": {
+                "os": "windows",
+                "cpu": "x86_64",
+                "asset": "buildifier-windows-amd64.exe",
+                "url": "https://github.com/bazel-contrib/buildtools/releases/download/v8.5.1/buildifier-windows-amd64.exe",
+                "kind": "raw",
+                "executable": "buildifier-windows-amd64.exe",
             },
         },
     },
@@ -66,6 +107,38 @@ TOOLS = {
                 "kind": "raw",
                 "executable": "biome-linux-x64",
             },
+            "linux_arm64": {
+                "os": "linux",
+                "cpu": "arm64",
+                "asset": "biome-linux-arm64",
+                "url": "https://github.com/biomejs/biome/releases/download/@biomejs/biome@2.5.12/biome-linux-arm64",
+                "kind": "raw",
+                "executable": "biome-linux-arm64",
+            },
+            "macos_arm64": {
+                "os": "macos",
+                "cpu": "arm64",
+                "asset": "biome-darwin-arm64",
+                "url": "https://github.com/biomejs/biome/releases/download/@biomejs/biome@2.5.12/biome-darwin-arm64",
+                "kind": "raw",
+                "executable": "biome-darwin-arm64",
+            },
+            "macos_x86_64": {
+                "os": "macos",
+                "cpu": "x86_64",
+                "asset": "biome-darwin-x64",
+                "url": "https://github.com/biomejs/biome/releases/download/@biomejs/biome@2.5.12/biome-darwin-x64",
+                "kind": "raw",
+                "executable": "biome-darwin-x64",
+            },
+            "windows_x86_64": {
+                "os": "windows",
+                "cpu": "x86_64",
+                "asset": "biome-win32-x64.exe",
+                "url": "https://github.com/biomejs/biome/releases/download/@biomejs/biome@2.5.12/biome-win32-x64.exe",
+                "kind": "raw",
+                "executable": "biome-win32-x64.exe",
+            },
         },
     },
     "taplo": {
@@ -84,6 +157,38 @@ TOOLS = {
                 "kind": "gzip",
                 "executable": "taplo-x86_64",
             },
+            "linux_arm64": {
+                "os": "linux",
+                "cpu": "arm64",
+                "asset": "taplo-linux-aarch64.gz",
+                "url": "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-linux-aarch64.gz",
+                "kind": "gzip",
+                "executable": "taplo-aarch64",
+            },
+            "macos_arm64": {
+                "os": "macos",
+                "cpu": "arm64",
+                "asset": "taplo-darwin-aarch64.gz",
+                "url": "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-darwin-aarch64.gz",
+                "kind": "gzip",
+                "executable": "taplo",
+            },
+            "macos_x86_64": {
+                "os": "macos",
+                "cpu": "x86_64",
+                "asset": "taplo-darwin-x86_64.gz",
+                "url": "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-darwin-x86_64.gz",
+                "kind": "gzip",
+                "executable": "taplo",
+            },
+            "windows_x86_64": {
+                "os": "windows",
+                "cpu": "x86_64",
+                "asset": "taplo-windows-x86_64.zip",
+                "url": "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-windows-x86_64.zip",
+                "kind": "zip",
+                "executable": "taplo.exe",
+            },
         },
     },
     "vale": {
@@ -101,6 +206,42 @@ TOOLS = {
                 "url": "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_Linux_64-bit.tar.gz",
                 "kind": "tar.gz",
                 "executable": "vale",
+                "checksums_url": "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_checksums.txt",
+            },
+            "linux_arm64": {
+                "os": "linux",
+                "cpu": "arm64",
+                "asset": "vale_3.20.0_Linux_arm64.tar.gz",
+                "url": "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_Linux_arm64.tar.gz",
+                "kind": "tar.gz",
+                "executable": "vale",
+                "checksums_url": "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_checksums.txt",
+            },
+            "macos_arm64": {
+                "os": "macos",
+                "cpu": "arm64",
+                "asset": "vale_3.20.0_macOS_arm64.tar.gz",
+                "url": "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_macOS_arm64.tar.gz",
+                "kind": "tar.gz",
+                "executable": "vale",
+                "checksums_url": "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_checksums.txt",
+            },
+            "macos_x86_64": {
+                "os": "macos",
+                "cpu": "x86_64",
+                "asset": "vale_3.20.0_macOS_64-bit.tar.gz",
+                "url": "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_macOS_64-bit.tar.gz",
+                "kind": "tar.gz",
+                "executable": "vale",
+                "checksums_url": "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_checksums.txt",
+            },
+            "windows_x86_64": {
+                "os": "windows",
+                "cpu": "x86_64",
+                "asset": "vale_3.20.0_Windows_64-bit.zip",
+                "url": "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_Windows_64-bit.zip",
+                "kind": "zip",
+                "executable": "vale.exe",
                 "checksums_url": "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_checksums.txt",
             },
         },
@@ -122,6 +263,42 @@ TOOLS = {
                 "executable": "ruff-x86_64-unknown-linux-gnu/ruff",
                 "checksums_url": "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-x86_64-unknown-linux-gnu.tar.gz.sha256",
             },
+            "linux_arm64": {
+                "os": "linux",
+                "cpu": "arm64",
+                "asset": "ruff-aarch64-unknown-linux-gnu.tar.gz",
+                "url": "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-aarch64-unknown-linux-gnu.tar.gz",
+                "kind": "tar.gz",
+                "executable": "ruff-aarch64-unknown-linux-gnu/ruff",
+                "checksums_url": "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-aarch64-unknown-linux-gnu.tar.gz.sha256",
+            },
+            "macos_arm64": {
+                "os": "macos",
+                "cpu": "arm64",
+                "asset": "ruff-aarch64-apple-darwin.tar.gz",
+                "url": "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-aarch64-apple-darwin.tar.gz",
+                "kind": "tar.gz",
+                "executable": "ruff-aarch64-apple-darwin/ruff",
+                "checksums_url": "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-aarch64-apple-darwin.tar.gz.sha256",
+            },
+            "macos_x86_64": {
+                "os": "macos",
+                "cpu": "x86_64",
+                "asset": "ruff-x86_64-apple-darwin.tar.gz",
+                "url": "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-x86_64-apple-darwin.tar.gz",
+                "kind": "tar.gz",
+                "executable": "ruff-x86_64-apple-darwin/ruff",
+                "checksums_url": "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-x86_64-apple-darwin.tar.gz.sha256",
+            },
+            "windows_x86_64": {
+                "os": "windows",
+                "cpu": "x86_64",
+                "asset": "ruff-x86_64-pc-windows-msvc.zip",
+                "url": "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-x86_64-pc-windows-msvc.zip",
+                "kind": "zip",
+                "executable": "ruff.exe",
+                "checksums_url": "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-x86_64-pc-windows-msvc.zip.sha256",
+            },
         },
     },
     "ty": {
@@ -139,6 +316,42 @@ TOOLS = {
                 "url": "https://github.com/astral-sh/ty/releases/download/0.0.80/ty-x86_64-unknown-linux-gnu.tar.gz",
                 "kind": "tar.gz",
                 "executable": "ty-x86_64-unknown-linux-gnu/ty",
+                "checksums_url": "https://github.com/astral-sh/ty/releases/download/0.0.80/sha256.sum",
+            },
+            "linux_arm64": {
+                "os": "linux",
+                "cpu": "arm64",
+                "asset": "ty-aarch64-unknown-linux-gnu.tar.gz",
+                "url": "https://github.com/astral-sh/ty/releases/download/0.0.80/ty-aarch64-unknown-linux-gnu.tar.gz",
+                "kind": "tar.gz",
+                "executable": "ty-aarch64-unknown-linux-gnu/ty",
+                "checksums_url": "https://github.com/astral-sh/ty/releases/download/0.0.80/sha256.sum",
+            },
+            "macos_arm64": {
+                "os": "macos",
+                "cpu": "arm64",
+                "asset": "ty-aarch64-apple-darwin.tar.gz",
+                "url": "https://github.com/astral-sh/ty/releases/download/0.0.80/ty-aarch64-apple-darwin.tar.gz",
+                "kind": "tar.gz",
+                "executable": "ty-aarch64-apple-darwin/ty",
+                "checksums_url": "https://github.com/astral-sh/ty/releases/download/0.0.80/sha256.sum",
+            },
+            "macos_x86_64": {
+                "os": "macos",
+                "cpu": "x86_64",
+                "asset": "ty-x86_64-apple-darwin.tar.gz",
+                "url": "https://github.com/astral-sh/ty/releases/download/0.0.80/ty-x86_64-apple-darwin.tar.gz",
+                "kind": "tar.gz",
+                "executable": "ty-x86_64-apple-darwin/ty",
+                "checksums_url": "https://github.com/astral-sh/ty/releases/download/0.0.80/sha256.sum",
+            },
+            "windows_x86_64": {
+                "os": "windows",
+                "cpu": "x86_64",
+                "asset": "ty-x86_64-pc-windows-msvc.zip",
+                "url": "https://github.com/astral-sh/ty/releases/download/0.0.80/ty-x86_64-pc-windows-msvc.zip",
+                "kind": "zip",
+                "executable": "ty.exe",
                 "checksums_url": "https://github.com/astral-sh/ty/releases/download/0.0.80/sha256.sum",
             },
         },
@@ -220,6 +433,23 @@ def _abi_floor(path):
     if match:
         floor["kernel"] = match.group(1)
     return floor
+
+
+def _native_bounds(tool, spec):
+    """Return bounded (linkage, interpreter, needed, abi_floor) for macOS/Windows.
+
+    Mach-O/PE binaries carry no ELF interpreter or GNU symbol floors, and the
+    seed host has no otool/llvm-otool qualification. Record the delivery-class
+    bound instead: buildifier stays static (Go static intent, matching its
+    Linux static record); all other tools are dynamic system-linked bounds.
+    macOS deployment floor plus Windows CRT identities stay owned gaps under
+    issue #500, never pinned here.
+    """
+    if tool == "buildifier":
+        linkage = "static"
+    else:
+        linkage = "dynamic"
+    return linkage, None, [], {"kernel": None, "libc": None, "libstdcxx": None}
 
 
 def _starlark(value, indent=4):
@@ -312,12 +542,35 @@ def _collect(tool, platform_key, spec, workdir):
         exe_path = os.path.join(workdir, spec["executable"])
         exe_digest = _sha256(exe_path)
         archive = {"format": "tar.gz", "members": members}
+    elif kind == "zip":
+        members = []
+        with zipfile.ZipFile(asset_path) as archive_file:
+            archive_file.extractall(workdir)
+            for info in archive_file.infolist():
+                mode = (info.external_attr >> 16) & 0o777
+                is_dir = info.is_dir()
+                is_exe = (not is_dir) and (
+                    info.filename.endswith(".exe") or bool(mode & 0o111)
+                )
+                members.append({
+                    "name": info.filename,
+                    "size": info.file_size,
+                    "mode": oct(mode),
+                    "is_executable": is_exe,
+                })
+        exe_path = os.path.join(workdir, spec["executable"])
+        exe_digest = _sha256(exe_path)
+        archive = {"format": "zip", "members": members}
     else:
         sys.exit("update: unknown asset kind %r" % kind)
 
-    linkage, interpreter, needed = _elf_linkage(exe_path)
-    if linkage == "pie":
-        linkage = "static-pie"
+    if spec["os"] == "linux":
+        linkage, interpreter, needed = _elf_linkage(exe_path)
+        if linkage == "pie":
+            linkage = "static-pie"
+        abi_floor = _abi_floor(exe_path)
+    else:
+        linkage, interpreter, needed, abi_floor = _native_bounds(tool, spec)
     return {
         "schema_version": SCHEMA_VERSION,
         "tool": tool,
@@ -335,7 +588,7 @@ def _collect(tool, platform_key, spec, workdir):
         "linkage": linkage,
         "interpreter": interpreter,
         "needed_shared_libraries": needed,
-        "abi_floor": _abi_floor(exe_path),
+        "abi_floor": abi_floor,
         "runtime_files": [],
         "licenses": TOOLS[tool]["licenses"],
     }

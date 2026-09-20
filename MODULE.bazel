@@ -347,25 +347,50 @@ use_repo(crate, "crates")
 # Standalone quality-tool acquisition. One lazy repository
 # per tool/platform from generated checked-in metadata, plus an
 # execution-platform hub. Registration fetches nothing; each repository
-# downloads only when an action needs its artifact. Seed host only
-# (issue #298): Linux x86_64 glibc per ADR 0014; remaining required
-# hosts stay unqualified gaps until their pins/hosts/floors plus
-# JDK/SDK/CRT, route, per-cell coverage, and consumer/release evidence
-# lands.
+# downloads only when an action needs its artifact. Five hosts
+# (issue #616): linux_x86_64, linux_arm64, macos_arm64, macos_x86_64,
+# windows_x86_64 per ADR 0014.
 dx_tools = use_extension("//quality/artifacts:extension.bzl", "dx_tools")
 dx_tools.platform(
+    cpu_arm64 = "@platforms//cpu:arm64",
     cpu_x86_64 = "@platforms//cpu:x86_64",
     os_linux = "@platforms//os:linux",
+    os_macos = "@platforms//os:macos",
+    os_windows = "@platforms//os:windows",
 )
 use_repo(
     dx_tools,
+    "dx_biome_linux_arm64",
     "dx_biome_linux_x86_64",
+    "dx_biome_macos_arm64",
+    "dx_biome_macos_x86_64",
+    "dx_biome_windows_x86_64",
+    "dx_buildifier_linux_arm64",
     "dx_buildifier_linux_x86_64",
+    "dx_buildifier_macos_arm64",
+    "dx_buildifier_macos_x86_64",
+    "dx_buildifier_windows_x86_64",
+    "dx_ruff_linux_arm64",
     "dx_ruff_linux_x86_64",
+    "dx_ruff_macos_arm64",
+    "dx_ruff_macos_x86_64",
+    "dx_ruff_windows_x86_64",
+    "dx_taplo_linux_arm64",
     "dx_taplo_linux_x86_64",
+    "dx_taplo_macos_arm64",
+    "dx_taplo_macos_x86_64",
+    "dx_taplo_windows_x86_64",
     "dx_tools",
+    "dx_ty_linux_arm64",
     "dx_ty_linux_x86_64",
+    "dx_ty_macos_arm64",
+    "dx_ty_macos_x86_64",
+    "dx_ty_windows_x86_64",
+    "dx_vale_linux_arm64",
     "dx_vale_linux_x86_64",
+    "dx_vale_macos_arm64",
+    "dx_vale_macos_x86_64",
+    "dx_vale_windows_x86_64",
 )
 
 # Issue #407: nested E2E removed. No second Bazel download; CI uses the

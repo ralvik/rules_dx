@@ -23,8 +23,8 @@ candidates, not the qualified backend. Exact pins, hosts, floors, and
 SDK/CRT identities stay owned by issues #410-#414 per
 [ADR 0014](decisions/0014-tested-platform-release-stack.md#decision) and
 are not pinned here. Per-host quality-tool (`dx_tools`) `linux_arm64`
-artifacts stay an owned follow-up gap: on arm64, quality-tool actions fail
-with the recorded no-artifact diagnostic, never a silent fallback.
+artifacts are delivered (issue #616) with observed ELF linkage plus GNU
+ABI floors in `quality/artifacts/*.linux_arm64.bzl`.
 
 Linux static-musl profiles are qualified (issue #411) on the current
 as-built stack: Rust `extra_target_triples` (`x86_64-unknown-linux-musl`,
@@ -54,9 +54,9 @@ no interactive acceptance. Exact pins, hosts, floors, and SDK/CRT
 identities stay owned by issues #410-#414 per
 [ADR 0014](decisions/0014-tested-platform-release-stack.md#decision) and
 are not pinned here. Per-host quality-tool (`dx_tools`) `macos_arm64`
-artifacts stay an owned follow-up gap like `linux_arm64`: on macOS,
-quality-tool actions fail with the recorded no-artifact diagnostic, never
-a silent fallback.
+artifacts are delivered (issue #616) as bounded delivery-class records in
+`quality/artifacts/*.macos_arm64.bzl`; the macOS deployment floor stays an
+owned gap under issue #500.
 
 macOS x86_64 best-effort native is qualified (issue #413) on the same
 as-built stack: CI builds, tests, and gates coverage natively on
@@ -72,9 +72,9 @@ Apple-SDK handling leaks no secrets and needs no interactive acceptance.
 Exact pins, hosts, floors, and SDK/CRT identities stay owned by issues #410-#414
 per [ADR 0014](decisions/0014-tested-platform-release-stack.md#decision)
 and are not pinned here. Per-host quality-tool (`dx_tools`)
-`macos_x86_64` artifacts stay an owned follow-up gap like `linux_arm64`
-plus `macos_arm64`: on macOS x86_64, quality-tool actions fail with the
-recorded no-artifact diagnostic, never a silent fallback.
+`macos_x86_64` artifacts are delivered (issue #616) as bounded
+delivery-class records in `quality/artifacts/*.macos_x86_64.bzl`; the
+macOS deployment floor stays an owned gap under issue #500.
 
 Windows x86_64 MSVC-compatible native is qualified (issue #414) on the
 current as-built stack: CI builds, tests, and gates coverage natively on
@@ -98,9 +98,9 @@ fixtures without host Visual Studio state. Exact pins, hosts, floors, and
 SDK/CRT identities stay owned by issues #410-#414 per
 [ADR 0014](decisions/0014-tested-platform-release-stack.md#decision) and
 are not pinned here. Per-host quality-tool (`dx_tools`) `windows_x86_64`
-artifacts stay an owned follow-up gap like `linux_arm64`/`macos_arm64` plus
-`macos_x86_64`: on Windows, quality-tool actions fail with the recorded
-no-artifact diagnostic, never a silent fallback.
+artifacts are delivered (issue #616) as bounded delivery-class records in
+`quality/artifacts/*.windows_x86_64.bzl`; Windows CRT identities stay an
+owned gap under issue #500.
 
 ## Selected Qualification Stack
 
