@@ -203,6 +203,20 @@ product runtime is Rust and shell-free except
 generated deploy launchers plus the managed doctor shim.
 `//tools/ci:shell_contract` machine-checks this contract.
 
+Bootstrap requires bash by design under issue #450 (`BASH_SOURCE`, `[[`,
+arrays, `printf -v` plus the 5-way runfiles fallback never run under POSIX
+`sh`): every `tools/sh/lib.sh` driver carries `#!/usr/bin/env bash` plus
+`set -euo pipefail` plus the runfiles-first bootstrap with
+`data = ["//tools/sh:lib"]` (source-tree depth varies by package:
+`tools/ci` uses `../sh/lib.sh`, hello fixtures use
+`../../tools/sh/lib.sh`, `.devcontainer` uses `../tools/sh/lib.sh`,
+repo-root parity tests use `tools/sh/lib.sh`). Floor is bash 3.2+ with
+Linux execution; macOS/Windows run the same bash with no behavior change.
+Intentional lib-free exceptions are POSIX `#!/bin/sh` fixtures (no
+bootstrap, no constraint) plus the deploy hermetic python-only runtime
+(bash + python3 + coreutils, no lib bootstrap per the host-tool contract
+below) plus standalone renderers needing no workspace/runfiles.
+
 Platform policy is decided under issue #320 (no silent cfg hacks):
 symlink copy fallback follows the portable route (`quality/adapter`
 copies unreadable-link closures, proven by the fallback test plus the
@@ -220,6 +234,15 @@ CI shell dedup plus portable forms are delivered (closed issue #323):
 shared `tools/sh/lib.sh`, shellcheck plus shfmt, portable realpath, hashing,
 sed, cp, and timing with no per-file copies. `//tools/ci:shell_contract`
 machine-checks this contract.
+
+Guard maintenance owns shared helpers plus snapshot versus grep policy under
+issue #450: shared shell logic lives once in `tools/sh/lib.sh`
+(`dx_expect_file`, `dx_expect_contains`, `dx_expect_absent`) plus
+`tools/sh/snapshot.sh` (`snapshot_diff`, canonical JSON with
+`UPDATE_EXPECT`); snapshot is for byte-identical golden outputs with
+refresh, `dx_expect_*` fixed-string pins are for doc/code contract
+sentences/symbols (fail-closed, no refresh). Drivers extend the shared
+files instead of copying; `//tools/ci:shell_contract` owns the rule.
 
 Runfiles and workspace-root probing is consolidated under issue #319 (one shared
 `tools/sh/lib.sh` `dx_workspace_root`/`dx_runfiles_root`/`dx_resolve_runfile`

@@ -32,8 +32,11 @@ Allowed ref: `No-coverage: process-spawning test; see this doc.`
 ## Shell
 
 Bash `sh_binary`/`sh_test` targets carry
-`target_compatible_with = ["@platforms//os:linux"]`. See the
-[shell contract](../testing/tools.md#shell-and-host-tool-contract).
+`target_compatible_with = ["@platforms//os:linux"]` plus
+`data = ["//tools/sh:lib"]` for the runfiles-first bootstrap. See the
+[shell contract](../testing/tools.md#shell-and-host-tool-contract) for the
+bash-only bootstrap floor plus guard maintenance (shared helpers plus
+snapshot versus grep policy under issue #450).
 
 Allowed ref: `Bash-only harness is Linux-only (issue #299 shell contract).`
 

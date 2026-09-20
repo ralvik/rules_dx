@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared workspace-root + runfiles + CI shell helpers (issues #319, #323).
+# Shared workspace-root + runfiles + CI shell helpers (issues #319, #323, #450).
 #
 # Single-sources the `BUILD_WORKSPACE_DIRECTORY || git rev-parse` workspace
 # probe plus the multi-candidate runfiles probing (`RUNFILES_DIR`,
@@ -14,9 +14,11 @@
 #   source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 #
 # (adjust the trailing `../` depth for the source-tree fallback:
-# `tools/ci/*.sh` and `tools/depcheck/*.sh` use `../sh/lib.sh`,
-# `cli/env/*.sh` use
-# `../../tools/sh/lib.sh`.)
+# `tools/ci/*.sh` and `tools/depcheck/*.sh` use `../sh/lib.sh`, language
+# hello fixtures plus `cli/env/*.sh` plus `gazelle/rust/*.sh` use
+# `../../tools/sh/lib.sh`, `.devcontainer/*.sh` use
+# `../tools/sh/lib.sh`, repo-root `*_parity_test.sh` use
+# `tools/sh/lib.sh`.)
 #
 # Rust binaries share `dx_process::workspace_start` plus standard `runfiles`
 # `rlocation` (never `TEST_SRCDIR` in prod); see `cli/process/src/lib.rs`.
@@ -55,20 +57,43 @@
 #                                as an alias)
 #   dx_replace <expr> <file>     portable in-place sed (tmpfile + mv, no
 #                                `sed -i`, issue #323)
+#   dx_expect_file <file>        guard pin: file exists (issue #450; one
+#                                ok/bad with file context)
+#   dx_expect_contains <file> <lit>...
+#                                guard pin: fixed-string literals present
+#                                (issue #450; snapshot stays for golden bytes)
+#   dx_expect_absent <file> <lit>...
+#                                guard pin: fixed-string literals absent
+#                                (issue #450)
 #
 # `dx_resolve_runfile` prefers the standard `runfiles.bash` `rlocation`
 # when available and falls back to manual `TEST_SRCDIR` / `RUNFILES_DIR` /
 # `bazel-bin` probing for `bazel run` invocations plus `git` / cwd for
 # direct execution. Drivers must not reimplement workspace, runfiles,
-# counter, scratch, realpath, hash, timing, or sed probing; extend this
-# file instead.
+# counter, scratch, realpath, hash, timing, sed, or guard-pin probing;
+# extend this file instead.
 #
-# Bash-only Linux harness (issue #299): sourced by `sh_binary` / `sh_test`
-# drivers carrying `target_compatible_with = ["@platforms//os:linux"]`.
+# Bash-only Linux harness (issues #299, #450): sourced by `sh_binary` /
+# `sh_test` drivers carrying `target_compatible_with =
+# ["@platforms//os:linux"]`. Bootstrap requires bash by design under issue
+# #450 (`BASH_SOURCE`, `[[`, arrays, `printf -v` plus the 5-way runfiles
+# fallback never run under POSIX `sh`); portable-shell means OS-portable
+# helper implementations (probes below), not a POSIX interpreter. Floor is
+# bash 3.2+ with Linux execution (macOS/Windows run the same bash via
+# `shell: bash` with no behavior change). Intentional lib-free exceptions:
+# POSIX `#!/bin/sh` fixtures (no bootstrap, no constraint) plus deploy
+# hermetic python-only runtime (bash + python3 + coreutils, no lib
+# bootstrap per issue #318) plus standalone renderers needing no
+# workspace/runfiles.
 # Portable forms (issue #323): no bare `realpath`, `sha256sum`, `sed -i`,
 # `cp -a`, or unguarded `$EPOCHREALTIME` here; every helper probes
-# portably with no Linux behavior change. Shellcheck/shfmt clean
-# (`shfmt -i 2 -ci`, `.shellcheckrc` bash + all checks).
+# portably with no Linux behavior change. Guard maintenance owns shared
+# helpers plus snapshot versus grep policy under issue #450: snapshot
+# (`tools/sh/snapshot.sh` with UPDATE_EXPECT) is for byte-identical golden
+# outputs, `dx_expect_*` fixed-string pins are for doc/code contract
+# sentences/symbols; `//tools/ci:shell_contract` owns the rule.
+# Shellcheck/shfmt clean (`shfmt -i 2 -ci`, `.shellcheckrc` bash + all
+# checks).
 set -euo pipefail
 
 # Bring `rlocation` into scope when running under Bazel. Non-fatal:
@@ -389,4 +414,63 @@ dx_replace() {
   local expr="$1" file="$2" tmp
   tmp="$file.tmp"
   sed -e "$expr" "$file" >"$tmp" && mv "$tmp" "$file"
+}
+
+# Guard-maintenance pins (issue #450): fixed-string contract checks so
+# `tools/ci` guards share one grep shape instead of brittle per-file
+# `grep -q -F` copies. Snapshot (`tools/sh/snapshot.sh` with UPDATE_EXPECT)
+# stays for byte-identical golden outputs; these helpers are for doc/code
+# sentence/symbol pins (fail-closed, no UPDATE_EXPECT). Each reports one
+# `ok`/`bad` with file:pattern context and always returns 0 so the harness
+# collects every failure before `dx_test_summary`.
+dx_expect_file() {
+  local file="$1"
+  if [[ -f "$file" ]]; then
+    ok
+  else
+    bad "missing file $file"
+  fi
+  return 0
+}
+
+dx_expect_contains() {
+  local file="$1"
+  shift
+  local missing="" lit
+  if [[ ! -f "$file" ]]; then
+    bad "missing file $file (want literals: $*)"
+    return 0
+  fi
+  for lit in "$@"; do
+    if ! grep -q -F -e "$lit" -- "$file"; then
+      missing="$missing [$lit]"
+    fi
+  done
+  if [[ -z "$missing" ]]; then
+    ok
+  else
+    bad "$file missing literals:$missing"
+  fi
+  return 0
+}
+
+dx_expect_absent() {
+  local file="$1"
+  shift
+  local present="" lit
+  if [[ ! -f "$file" ]]; then
+    bad "missing file $file (want absence of: $*)"
+    return 0
+  fi
+  for lit in "$@"; do
+    if grep -q -F -e "$lit" -- "$file"; then
+      present="$present [$lit]"
+    fi
+  done
+  if [[ -z "$present" ]]; then
+    ok
+  else
+    bad "$file must not contain:$present"
+  fi
+  return 0
 }
