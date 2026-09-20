@@ -1,0 +1,21 @@
+# Cache plus remote separation (issue #504).
+# Every claimed row carries its own cache scope plus remote evidence;
+# per-cell coverage never unions across cells. Required native workflows
+# are never weakened to obtain a larger cross-build table. Cross-host
+# Windows inference stays rejected; weakened native workflows for a
+# larger table stay rejected.
+
+separate cache scope for every claimed row
+separate cache and remote evidence for every claimed row
+bazel-seed-
+bazel-arm64-
+bazel-musl-x86_64-
+bazel-musl-arm64-
+bazel-macos-arm64-
+bazel-macos-x86_64-
+bazel-windows-x86_64-
+per-cell coverage with no union
+Do not weaken required native workflows to obtain a larger cross-build table
+weakened native workflows for a larger table rejected
+cross-host Windows inference rejected
+pinned upstream toolchains with provisional backends
