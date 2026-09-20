@@ -257,7 +257,7 @@ private or claim an unqualified generic redaction guarantee.
 SARIF publication to GitHub's Security > Code Scanning tab is optional and off by default.
 Consumers opt in on eligible repositories with documented permissions. Default reporting
 works without Code Scanning or paid GitHub security features. Preserve the
-[SARIF completeness contract](cli/standard-reports.md#sarif-2-1-0): complete scans remain
+[SARIF completeness contract](cli/standard-reports.md#sarif-210): complete scans remain
 eligible for authoritative upload even when findings fail the command; incomplete scans
 must not replace authoritative scans. Disabled publication is not a reporting failure.
 
