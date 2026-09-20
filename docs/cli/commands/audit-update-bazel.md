@@ -104,22 +104,24 @@ Per-ecosystem dispositions are wont-fix, pinned by fixtures in `dx_audit::vuln` 
 OSV version identity and SHA-to-version mapping needs a network resolver forbidden by the
 offline contract; `paket.lock` `GIT` entries report incomplete rather than dropping),
 unidentified private packages stay incomplete (auditor-owned; no upstream identity by
-definition, callers mark `is_private` explicitly), and NuGet range narrowing stays
-deferred to the `dx_update` resolver with V1 exact-match in the auditor (no qualified
-stable upstream Rust range library, so no custom solver). Maven range narrowing is
-implemented (issue #623, pinned in `dx_audit::vuln`).
+definition, callers mark `is_private` explicitly). Maven range narrowing is
+implemented (issue #623, pinned in `dx_audit::vuln`), as is NuGet range narrowing
+(issue #624, pinned in `dx_audit::vuln`).
 
 Report known vulnerabilities whether or not a fixed version is available, and apply the same
 severity threshold and failure policy in both cases. Lack of a fix must not suppress a finding,
 downgrade its severity, or exempt it from failure. Preserve upstream remediation information when
 available, without treating a dependency-version upgrade as an automatic source fix or mutating
 dependencies during audit. Advisory scope uses upstream Cargo-flavor semver for Cargo/npm/Go,
-Maven-native ordering plus intervals for Maven (issue #623), and exact-match for NuGet V1,
-pinned in `dx_audit::vuln` (NuGet issue #584 wont-fix: range scopes stay no-match and V1
-snapshots carry exact affected versions). Maven scopes accept bare versions (Maven
-equality, so `1.0` matches `1.0.0`) and bracketed intervals (`[1.0,2.0)`, `(,1.0]`,
+Maven-native ordering plus intervals for Maven (issue #623), and NuGet-native ordering plus
+intervals for NuGet (issue #624), pinned in `dx_audit::vuln`. Maven scopes accept bare versions
+(Maven equality, so `1.0` matches `1.0.0`) and bracketed intervals (`[1.0,2.0)`, `(,1.0]`,
 `[1.5,)`, `[1.0]`, unions like `(,1.0],[1.2,)`), with inclusive `[`/`]` versus exclusive
-`(`/`)` bounds; malformed scopes fail closed to no-match. Vulnerability exceptions use
+`(`/`)` bounds; malformed scopes fail closed to no-match. NuGet scopes accept bare versions
+(NuGet equality, so `1.0` matches `1.0.0` but not `1.5.0`; `[1.0,)` spells the `>=` minimum)
+and bracketed intervals (`[1.0,2.0)`, `(,1.0]`, `[1.5,)`, `[1.0]`), with inclusive `[`/`]`
+versus exclusive `(`/`)` bounds; floating `*`, unions, and `(1.0)` single-exclusive stay
+invalid and malformed scopes fail closed to no-match. Vulnerability exceptions use
 the same per-set narrowing.
 
 Known applicable vulnerabilities with no severity rating fail audit by default. Report the
