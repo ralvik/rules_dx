@@ -99,6 +99,15 @@ pub(crate) fn per_command_flags(command: Command) -> &'static str {
         Command::Migrate => {
             "Per-command flags: --from <version> --to <version> (migrate only; both Cargo semver, major-release-only gate)."
         }
+        Command::Audit => {
+            "Per-command flags: --fail-on info|warning|error, --report sarif|spdx (audit only; --check and `-- --bazel-options` do not apply; --output diff has no patch)."
+        }
+        Command::Update => {
+            "Per-command flags: --check (preset stale gate; selectors ignored) (update only; --fail-on/--report and `-- --bazel-options` do not apply; --output diff has no patch)."
+        }
+        Command::Bump => {
+            "Per-command flags: none (exactly one `set:package` plus version; --check/--fail-on/--report and `-- --bazel-options` do not apply; --output diff has no patch)."
+        }
         Command::Bazel => {
             "Per-command flags: none (raw Bazel forwarding; dx-owned options must precede the command word and most are rejected)."
         }
@@ -128,6 +137,7 @@ pub(crate) fn render_command_help(command: Command) -> String {
         }
         Command::Update => "Usage: dx [global-options] update [selector ...]",
         Command::Bump => "Usage: dx [global-options] bump <set:package> <version>",
+        Command::Audit => "Usage: dx [global-options] audit [security|license] [scope ...]",
         Command::Migrate => {
             "Usage: dx [global-options] migrate --from <version> --to <version> [scope ...]"
         }
@@ -140,6 +150,7 @@ pub(crate) fn render_command_help(command: Command) -> String {
         Command::Run => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. No scope selects //....",
         Command::Update => "Scopes: dependency-set/package/target selectors (cargo|npm|maven|nuget|go, set:package, labels/paths); bare run updates all sets.",
         Command::Bump => "Scopes: exactly one `set:package` plus one new version (bazel|cargo|github-actions|go|maven|npm|nuget); never batch.",
+        Command::Audit => "Scopes: optional `security|license` family plus dependency-set/package/target selectors; bare run audits //... (both families, security first).",
         Command::Migrate => "Scopes: explicit Bazel labels/patterns or workspace-relative files/dirs reusing generation scope resolution; external scopes rejected. No scope selects //....",
         _ => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. No scope selects //....",
     };
