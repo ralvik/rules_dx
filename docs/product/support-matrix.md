@@ -244,18 +244,21 @@ are pinned by `bazel run //tools/ci:foundation_maps` with owning qualification i
 wrappers preserving upstream providers plus `QualitySourcesInfo`, Gazelle extensions,
 env plans, hello builds, and lock authority (`maven_install.json` plus fail-closed,
 Paket plus `paket.main`, Go stdlib-only, C/C++ none), with test runners (`go test`,
-ScalaTest, JUnit 4 seed, plain `cc`/`csharp`/`fsharp` executables) and
+ScalaTest, JUnit 6.1.3 plus 5.14.x fallback qualified seed-only under issue #476,
+plain `cc`/`csharp`/`fsharp` executables) and
 classification-only quality families. Dependency hygiene (lockfile-consistency plus
 declared-dependency usage with category, exception, and obsolete checks) is qualified for
 all admitted languages in `tools/depcheck/` (issue #22; remaining opens under issue #510)
 with native authorities (go.sum,
 `maven_install.json`, `paket.lock`, per-archive sha256) and focused fixtures. Remaining gaps
-(GoogleTest v1.18.0 under issue #479, JUnit 6.1.3 plus 5.14.x fallback under issue #476,
+(GoogleTest v1.18.0 under issue #479,
 xUnit v3 4.0.0 under issue #477, Go `from_file` when
 non-stdlib deps land under issue #483, quality adapters qualified under issue #307 with
 deferred implementation
 owned by ADR 0019, C/C++ MSVC interop plus SDK licensing)
-stay owned under issues #476-#484 plus #485-#488. No `Supported` claim until platform plus consumer plus release
+stay owned under issues #476-#484 plus #485-#488 (JUnit 6.1.3 plus 5.14.x fallback
+qualified seed-only under issue #476 via `bazel run //tools/ci:junit_qualification`).
+No `Supported` claim until platform plus consumer plus release
 evidence passes.
 
 ### Deferred Beyond V1
@@ -521,8 +524,13 @@ selections. Exact versions, runner mappings, and
 fixture qualification are open.
 
 - Java and Kotlin: JUnit (≈62–79% JVM adoption, Spring Boot default; JUnit 6
-  adds native Kotlin `suspend` support). JUnit 5 versus 6 follows the qualified JDK
-  baseline (open); the provisional pin on the 6.x line is 6.1.3,
+  adds native Kotlin `suspend` support). JUnit 6.1.3 primary (JDK 17+ baseline,
+  remotejdk_21 on the seed host) plus 5.14.x fallback (Jupiter 5.14.4 plus
+  Platform 1.14.4 for JDK <17) qualified seed-only under issue #476
+  (`bazel run //tools/ci:junit_qualification` with `java/tests/fixtures/junit/pins.bzl`
+  plus Java/Kotlin Jupiter fixtures over the console-launcher `execute --select-class`
+  shape; JUnit 4.13.2 seed stays via Vintage, deprecated; unpinned runner rejected).
+  The provisional pin on the 6.x line is 6.1.3,
   with 5.14.x maintained as the fallback line.
 - C# and F#: xUnit v3 4.0.0 (greenfield default: isolation
   and parallelism by default; used by the ASP.NET Core team; Microsoft

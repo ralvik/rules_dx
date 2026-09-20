@@ -78,11 +78,17 @@ stay owned under issue #472 per the
 
 Admitted additional foundations keep their provisional upstreams with hello test runners
 pinned (`go_test` over `go test` with package-level `embed`, `scala_test` over ScalaTest,
-`java_test`/`kotlin_test` over the JUnit 4 seed, plain `cc_test`/`csharp_test`/`fsharp_test`
+`java_test`/`kotlin_test` over the JUnit 4 seed plus the qualified JUnit 6.1.3 Jupiter
+upgrade with 5.14.x fallback (`execute --select-class` console-launcher fixtures in
+`java/tests/fixtures/junit/` plus `kotlin/tests/fixtures/junit/` via
+`bazel run //tools/ci:junit_qualification` under issue #476), plain
+`cc_test`/`csharp_test`/`fsharp_test`
 executables) and lock authority (`third_party/jvm/maven_install.json`,
 `third_party/dotnet/paket.lock` plus `paket.dependencies`, Go stdlib-only, C/C++ none).
-Upgrades (GoogleTest v1.18.0, JUnit 6.1.3 plus 5.14.x fallback, xUnit v3 4.0.0, Go
-`from_file` when non-stdlib deps land) stay owned under issues #476-#484; no `Supported` claim
+Upgrades (GoogleTest v1.18.0, xUnit v3 4.0.0, Go
+`from_file` when non-stdlib deps land) stay owned under issues #476-#484 (JUnit 6.1.3
+plus 5.14.x fallback qualified seed-only under issue #476 via
+`bazel run //tools/ci:junit_qualification`); no `Supported` claim
 until platform plus consumer plus release evidence passes.
 
 Pinned by `bazel run //tools/ci:foundation_maps`.

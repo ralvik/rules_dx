@@ -716,6 +716,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# JUnit 6.1.3 plus 5.14.x fallback harness (issue #476); see docs/product/support-matrix.md#provisional-default-test-runners.
+sh_binary(
+    name = "junit_qualification",
+    srcs = ["junit_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "warnings_as_errors_testdata",
     srcs = glob(["testdata/warnings/**"]),
