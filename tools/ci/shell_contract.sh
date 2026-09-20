@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
-# Shell portability contract guard (issues #299, #414).
+# Shell portability contract guard (issues #299, #414, #450).
 #
 # The CI/test harness is bash-only: every bash `sh_binary`/`sh_test`
 # carries `target_compatible_with = ["@platforms//os:linux"]`, POSIX
 # `#!/bin/sh` fixtures stay portable with no constraint, and the known
 # non-portable forms carry macOS best-effort fallbacks with no Linux
 # behavior change (realpath probe, shasum fallback, portable sed/cp,
-# portable timing). Windows x86_64 MSVC-compatible is qualified for native
-# `dx`/CI execution under issue #414 via `windows-latest` runners with
-# shell `bash` plus portable forms only (no `.ps1`/`.bat`, no
-# `rules_powershell`); product runtime is Rust and shell-free except
-# generated deploy launchers plus the doctor shim.
+# portable timing). Bootstrap requires bash by design under issue #450
+# (`BASH_SOURCE` plus the 5-way runfiles fallback never run under POSIX
+# `sh`; floor is bash 3.2+ with Linux execution). Windows x86_64
+# MSVC-compatible is qualified for native `dx`/CI execution under issue
+# #414 via `windows-latest` runners with shell `bash` plus portable forms
+# only (no `.ps1`/`.bat`, no `rules_powershell`); product runtime is Rust
+# and shell-free except generated deploy launchers plus the doctor shim.
+# Guard maintenance owns shared helpers plus snapshot versus grep policy
+# under issue #450 (snapshot for golden bytes, `dx_expect_*` for
+# doc/code pins; this harness owns the rule).
 #
 # This harness machine-checks the contract statically on a clean tree.
 # Versioned here, run by CI via `bazel run //tools/ci:shell_contract`.
@@ -235,5 +240,73 @@ if grep -q -F -e 'closed issue #323' docs/testing/tools.md &&
 else
   bad "docs/testing/tools.md lost the closed-#323 plus shell_contract record (want closed issue #323 with //tools/ci:shell_contract, no stay-open claim, issue #424)"
 fi
+
+# Issue #450 bootstrap floor: every bash driver carries the bash shebang
+# plus `set -euo pipefail`; POSIX `#!/bin/sh` fixtures stay exempt with no
+# bootstrap.
+shebang_fail=""
+for f in $(grep -rln -F -e '#!/usr/bin/env bash' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' .); do
+  if ! grep -q -F -e 'set -euo pipefail' "$f"; then
+    shebang_fail="$shebang_fail $f"
+  fi
+done
+if [[ -z "$shebang_fail" ]]; then
+  ok
+else
+  bad "bash drivers missing set -euo pipefail:$shebang_fail (issue #450 bootstrap floor)"
+fi
+
+# Issue #450 bootstrap: every lib bootstrap uses the canonical 5-way
+# runfiles fallback (RUNFILES_DIR plus TEST_SRCDIR plus $0.runfiles plus
+# BASH_SOURCE); no bare `source tools/sh/lib.sh` without runfiles probing.
+bootstrap_fail=""
+for f in $(grep -rln -F -e 'tools/sh/lib.sh' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' .); do
+  if ! grep -q -F -e 'RUNFILES_DIR' "$f" || ! grep -q -F -e 'BASH_SOURCE' "$f"; then
+    bootstrap_fail="$bootstrap_fail $f"
+  fi
+done
+if [[ -z "$bootstrap_fail" ]]; then
+  ok
+else
+  bad "lib bootstrap lost the 5-way runfiles fallback:$bootstrap_fail (issue #450)"
+fi
+
+# Issue #450 lib-free exceptions stay explicit: POSIX fixtures keep
+# `#!/bin/sh` with no lib bootstrap; deploy hermetic runtime keeps
+# python-only probes with no lib bootstrap.
+if grep -q -F -e '#!/bin/sh' env/tool.sh &&
+  grep -q -F -e '#!/bin/sh' env/doctor.sh &&
+  grep -q -F -e '#!/bin/sh' deploy/rules/deploy_app.sh &&
+  grep -q -F -e '#!/bin/sh' deploy/rules/deploy_program.sh &&
+  ! grep -q -F -e 'tools/sh/lib.sh' env/tool.sh &&
+  ! grep -q -F -e 'tools/sh/lib.sh' env/doctor.sh &&
+  ! grep -q -F -e 'tools/sh/lib.sh' deploy/rules/deploy_app.sh &&
+  ! grep -q -F -e 'tools/sh/lib.sh' deploy/rules/deploy_program.sh &&
+  grep -q -F -e 'py_realpath' deploy/rules/archive_verify.sh &&
+  ! grep -q -F -e 'tools/sh/lib.sh' deploy/rules/archive_verify.sh; then
+  ok
+else
+  bad "lib-free exceptions drifted (want POSIX sh fixtures plus deploy python-only with no lib bootstrap, issue #450)"
+fi
+
+# Issue #450 docs record the bash-only bootstrap floor plus the guard
+# maintenance rule (shared helpers plus snapshot versus grep policy).
+dx_expect_contains docs/testing/tools.md 'Bootstrap requires bash by design under issue #450' 'data = ["//tools/sh:lib"]' 'Intentional lib-free exceptions'
+dx_expect_contains docs/testing/tools.md 'Guard maintenance owns shared helpers plus snapshot versus grep policy under' 'issue #450' 'dx_expect_contains' 'snapshot_diff'
+
+# Issue #450 guard helpers live once in tools/sh/lib.sh with no per-file
+# copies; snapshot owns golden bytes, dx_expect_* owns fixed-string pins.
+# (Self-excluded: this script names the helper definitions in its own
+# patterns below.)
+dx_expect_contains tools/sh/lib.sh 'dx_expect_file() {' 'dx_expect_contains() {' 'dx_expect_absent() {' 'Bootstrap requires bash by design under issue' 'Intentional lib-free exceptions' 'snapshot versus grep policy under issue #450'
+if [[ "$(grep -rln -F -e 'dx_expect_contains() {' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | grep -v -F -e 'tools/sh/lib.sh' | grep -v -F -e 'tools/ci/shell_contract.sh' | wc -l)" == "0" ]] &&
+  [[ "$(grep -rln -F -e 'dx_expect_absent() {' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | grep -v -F -e 'tools/sh/lib.sh' | grep -v -F -e 'tools/ci/shell_contract.sh' | wc -l)" == "0" ]] &&
+  [[ "$(grep -rln -F -e 'dx_expect_file() {' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | grep -v -F -e 'tools/sh/lib.sh' | grep -v -F -e 'tools/ci/shell_contract.sh' | wc -l)" == "0" ]]; then
+  ok
+else
+  bad "guard helpers must live once in tools/sh/lib.sh with no per-file copies (issue #450)"
+fi
+dx_expect_contains tools/sh/snapshot.sh 'snapshot versus grep policy' 'Bootstrap requires bash by design under issue'
+dx_expect_contains docs/contributing/build-conventions.md 'data = ["//tools/sh:lib"]' 'snapshot versus grep policy under issue #450'
 
 dx_test_summary "shell contract harness"

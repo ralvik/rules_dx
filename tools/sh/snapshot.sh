@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
-# Shared snapshot helper (issue #322).
+# Shared snapshot helper (issues #322, #450).
 #
 # Single-sources the snapshot-testing workflow for shell golden harnesses:
 # byte-identical snapshot comparison with an UPDATE_EXPECT refresh path,
 # plus canonical-JSON comparison and JSON-schema shape checks so brittle
 # equality becomes an explicit snapshot or a schema contract.
+#
+# Guard maintenance owns shared helpers plus snapshot versus grep policy
+# under issue #450: this file owns golden-byte asserts (UPDATE_EXPECT
+# refresh); `tools/sh/lib.sh` `dx_expect_*` owns fixed-string doc/code
+# contract pins (fail-closed, no refresh). Guards must not reimplement
+# either shape; `//tools/ci:shell_contract` owns the rule.
 #
 # Drivers source this file via a runfiles-first bootstrap so both direct
 # execution and Bazel `run`/`test` layouts work (`data =
@@ -12,8 +18,8 @@
 #
 #   source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/snapshot.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/snapshot.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/snapshot.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/snapshot.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/snapshot.sh"
 #
-# (adjust the trailing depth for the source-tree fallback:
-# `tools/ci/*.sh` use `../sh/snapshot.sh`, `perf/*.sh` use
+# (adjust the trailing depth for the source-tree fallback: repo-root
+# parity tests use `tools/sh/snapshot.sh`, `.devcontainer/*.sh` use
 # `../tools/sh/snapshot.sh`.)
 #
 # Workflow:
@@ -33,8 +39,11 @@
 #   snapshot_json_validates <file>
 #     fails unless the file parses as JSON (python3 stdlib only).
 #
-# Bash-only Linux harness (issue #299): sourced by `sh_binary` / `sh_test`
-# drivers carrying `target_compatible_with = ["@platforms//os:linux"]`.
+# Bash-only Linux harness (issues #299, #450): sourced by `sh_binary` /
+# `sh_test` drivers carrying `target_compatible_with =
+# ["@platforms//os:linux"]`. Bootstrap requires bash by design under issue
+# #450 (`BASH_SOURCE` plus the 5-way runfiles fallback never run under
+# POSIX `sh`).
 set -euo pipefail
 
 # Resolve the checkout root for UPDATE_EXPECT writes: BUILD_WORKSPACE_DIRECTORY
