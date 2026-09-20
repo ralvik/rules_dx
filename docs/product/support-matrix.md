@@ -358,8 +358,10 @@ open work under issue #505) before affected implementation:
   distribution. [hermetic-llvm v0.8.19](https://github.com/hermeticbuild/hermetic-llvm/tree/v0.8.19)
   is the inspected release of the preferred Linux/macOS backend. Its released Windows route uses
   MinGW-w64/UCRT, which does not satisfy the approved Windows baseline by itself. MSVC-compatible
-  interoperability and Windows coverage need qualification; Apple/Microsoft SDK acquisition and
-  license terms remain unresolved. No host-installed SDK fallback is approved.
+  interoperability and Windows coverage need qualification; Apple/Microsoft SDK acquisition rights
+  are qualified seed-only under issue #496 (`cc/tests/fixtures/acquisition_rights/pins.bzl` via
+  `bazel run //tools/ci:acquisition_rights_qualification`, usage vs redistribution reviewed separately).
+  No host-installed SDK fallback is approved.
 - [gazelle_cc v0.6.0](https://github.com/EngFlow/gazelle_cc/tree/v0.6.0) and
   [Hedron's compilation-command extractor](https://github.com/hedronvision/bazel-compile-commands-extractor)
   are candidate generation/IDE building blocks, not conforming integrations yet. Strict include
@@ -390,10 +392,12 @@ does not admit an additional foundation or approve implementation.
 
 The approved [Windows setup requirement](../decisions/0014-tested-platform-release-stack.md#decision)
 allows explicit Microsoft EULA acknowledgement, as required by the inspected toolchains_msvc and
-windows_support routes. This removes the prior setup-policy conflict, not the remaining acquisition,
-licensing, interoperability, or coverage qualification gaps. Automatic acceptance is not approved;
-the exact upstream mechanism and applicable usage/distribution rights are tracked in
-open work under issue #496.
+windows_support routes. This removes the prior setup-policy conflict, not the remaining transport,
+interoperability, or coverage qualification gaps. Automatic acceptance is not approved;
+acquisition rights are qualified seed-only under issue #496
+(`cc/tests/fixtures/acquisition_rights/pins.bzl` via
+`bazel run //tools/ci:acquisition_rights_qualification`, usage vs redistribution reviewed separately,
+official download not permission, assume rights rejected).
 
 ### Native Toolchain Alternatives
 
@@ -411,7 +415,7 @@ The following are source/documentation observations; no builds were executed:
 | [hermetic-llvm v0.8.19](https://github.com/hermeticbuild/hermetic-llvm/blob/v0.8.19/README.md) | Integrated Linux glibc and static-only musl targets on x86_64/arm64, Apple SDK acquisition, LLVM runtime and tool targets, and Linux/macOS coverage fixtures. | Strongest integrated primary candidate with the preferred Rust rules. Dynamic musl is not supported. Default libc++ does not imply compatibility with prebuilt libstdc++ libraries; its Linux-glibc libstdc++ route is dynamic-only. Released Windows support does not satisfy the approved baseline. Floor pinning stays owned under open work under issue #500; libstdc++ interop fixtures stay owned under open work under issue #498; profile completeness (PIE, ELF dependencies, glibc symbols, corpus) stays owned under open work under issue #499. |
 | [uber/hermetic_cc_toolchain v4.3.0](https://github.com/uber/hermetic_cc_toolchain/tree/v4.3.0) | Zig 0.15.2 supplies Linux glibc/musl cross-compilation and GNU/MinGW Windows targets. | Strong Linux alternative, but documented Apple SDK gaps, an external Zig runtime cache, and missing integrated Bazel coverage/Clang developer tools increase integration ownership. Shared-musl capability is not complete Rust/runtime-deployment evidence. Zig stays a comparison candidate only with the same evidence required, not a scope shortcut. |
 | [toolchains_llvm v1.9.0](https://github.com/bazel-contrib/toolchains_llvm/tree/v1.9.0) | Configurable LLVM distributions, Linux/macOS C/C++ toolchains, sysroot APIs, and coverage/tool paths. | Useful when consumers already manage SDK/sysroot artifacts. It does not supply the complete target runtime closure, and the inspected Windows distributions do not establish a Windows C/C++ backend. |
-| [toolchains_msvc prototype](https://github.com/Dragnalith/toolchains_msvc/tree/8e2aa4624bbb5a53a94f135e90995f307875d1ad) | No-install Microsoft compiler/SDK acquisition and real C/C++ toolchains, including clang-cl with Microsoft STL. | Candidate for Windows-hosted builds, not a qualified release: immutable lazy acquisition qualified seed-only under issue #495 (`cc/tests/fixtures/windows_acquisition/pins.bzl` via `bazel run //tools/ci:windows_acquisition_qualification`, mutable fetch rejected); Rust build-script paths, coverage, and licensing need review. Its current repository operations use Windows commands; do not infer cross-host support. |
+| [toolchains_msvc prototype](https://github.com/Dragnalith/toolchains_msvc/tree/8e2aa4624bbb5a53a94f135e90995f307875d1ad) | No-install Microsoft compiler/SDK acquisition and real C/C++ toolchains, including clang-cl with Microsoft STL. | Candidate for Windows-hosted builds, not a qualified release: immutable lazy acquisition qualified seed-only under issue #495 (`cc/tests/fixtures/windows_acquisition/pins.bzl` via `bazel run //tools/ci:windows_acquisition_qualification`, mutable fetch rejected); acquisition rights qualified seed-only under issue #496 (`cc/tests/fixtures/acquisition_rights/pins.bzl` via `bazel run //tools/ci:acquisition_rights_qualification`, usage vs redistribution reviewed separately); Rust build-script paths and coverage need review. Its current repository operations use Windows commands; do not infer cross-host support. |
 | [windows_support v0.4.1](https://github.com/hermeticbuild/windows_support/tree/v0.4.1) | Pinned acquisition APIs for Microsoft SDK, STL/runtime headers, libraries, and redistributables. | Reusable acquisition building block, not a compiler or C/C++ toolchain. It does not by itself change hermetic-llvm's libc++ selection or supply coverage. |
 | [Installed Microsoft Build Tools](https://bazel.build/configure/windows#build_cpp) | Established Bazel MSVC or clang-cl route with Microsoft SDK/STL. | Rejected for the current contract: external provisioning and host-state dependence do not meet the required hermetic acquisition. Coverage also remains unqualified. |
 

@@ -1072,6 +1072,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:stable_stack_qualification
       - name: Audit Windows acquisition qualification (issue #495 immutable lazy fetch pins plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:windows_acquisition_qualification
+      - name: Audit acquisition rights qualification (issue #496 Apple plus Microsoft rights pins plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:acquisition_rights_qualification
       - name: Write job summary
         if: always()
         run: |
