@@ -1,11 +1,10 @@
 # Automation Policy
 
-Accepted (issue #326): Renovate and the native bump loop are complementary,
-not alternatives. Renovate proposes version bumps (scaffold plus weekly
-grouped PRs); `dx bump`/`dx update` applies and verifies them locally with
-resolver-owned refresh. Neither replaces the other.
-Accepted: Renovate for dependency updates with update-only auto-merge under guardrails, no bot commits to `main` outside the merge path.
-Delivered: native widen-one-requirement loop (issue #260) as the first-party apply/verify path; Renovate retained alongside it with the roles above.
+Decided (issue #461): the native bump loop is the sole updater; no
+third-party updater is retained. `dx bump`/`dx update` discovers, applies,
+and verifies version bumps locally with resolver-owned refresh.
+Accepted: native-only updates with update-only auto-merge under guardrails, no bot commits to `main` outside the merge path.
+Delivered: native widen-one-requirement loop (issue #260) as the first-party apply/verify path with no third-party updater alongside it.
 
 ## Native Bump Loop (delivered)
 
@@ -31,17 +30,17 @@ CI checks, a labeler, a changelog-presence check, the caller pin-sync
 tests (delivered: `//tools/ci:examples_pins_test`,
 `//tools/ci:consumer_pins_test`),
 perf-baseline-bump PRs (open, tracked in the roadmap),
-and Renovate version-bump PRs (allowed, weekly grouped).
+and native widen-one bump PRs (weekly, one dep per PR).
 
 Automation may open pull requests. Update-only auto-merge is allowed for
-Renovate dependency-update PRs on green required checks (`bazel build //...`,
+native bump PRs on green required checks (`bazel build //...`,
 `bazel test //...`, corpus dogfood), patch/minor preferred. Otherwise it must
 never push to `main`, commit on a contributor's behalf, or merge.
 
 ## Excluded
 
-Dependabot-style version-bump bots are excluded by owner
-decision (Renovate is the chosen updater).
+Dependabot-style and third-party version-bump bots are excluded by owner
+decision (native-only per issue #461).
 Do not add per-automation exceptions without
 reopening that decision.
 
@@ -55,14 +54,10 @@ releases, or publication outputs without explicit owner approval.
 
 ## Scaffold
 
-`dx init` ships `renovate.json` absent-only
-(accepted): full manager
-set from the start (`bazel` plus Cargo, npm/pnpm, GitHub Actions, Go),
-grouped, scheduled weekly, reviewable PRs. Auto-merge off by default;
-when enabled it is update-only as gated above. The repository's own
-`renovate.json` is a snapshot of the scaffold held by
-`//:renovate_parity_test` (schema plus byte snapshot, UPDATE_EXPECT
-refreshes the golden).
+`dx init` ships no updater config absent-only:
+dependency updates flow through `dx bump`/`dx update` with the native
+widen-one loop above. Auto-merge stays off by default;
+when enabled it is update-only as gated above.
 
 ## Hygiene Sweep
 
@@ -70,6 +65,6 @@ Pin single-sourcing plus stale-docs wording completed under issue #326:
 Bazel pins track canonical `.bazelversion` and Bazelisk pins track canonical
 `.github/actions/setup-bazelisk/action.yml` defaults (enforced by
 `//tools/ci:pin_consistency_test`); caller-pin shape validation is symmetric
-between `dx_ci::plan_pin_update` and the shell pin harnesses; Renovate versus
-native is decided complementary above; sharding, Codecov, and sequential
+between `dx_ci::plan_pin_update` and the shell pin harnesses; native-only
+updater policy is decided above (issue #461); sharding, Codecov, and sequential
 wording tracks the as-built contract linked from each section.

@@ -2,10 +2,10 @@
 //!
 //! Split from `super` (`lib.rs`): owns `absent_only_write_allowed`,
 //! `init_must_refuse`, `ScaffoldFile`, `DEVCONTAINER_JSON`,
-//! `RENOVATE_JSON`, `plan_init_files`, and `apply_init`.
+//! `plan_init_files`, and `apply_init`.
 //! Re-exported through `super` so the public path stays
 //! `dx_adopt::{absent_only_write_allowed, init_must_refuse,
-//! ScaffoldFile, DEVCONTAINER_JSON, RENOVATE_JSON, plan_init_files,
+//! ScaffoldFile, DEVCONTAINER_JSON, plan_init_files,
 //! apply_init}`.
 
 use std::path::Path;
@@ -64,63 +64,6 @@ pub const DEVCONTAINER_JSON: &str = concat!(
     "}\n",
 );
 
-/// `dx init` Renovate definition (delivered, 22).
-///
-/// Single source for the scaffolded `renovate.json`: the repository's
-/// own `renovate.json` is a snapshot of this string held by
-/// `//:renovate_parity_test` (schema plus byte snapshot, UPDATE_EXPECT
-/// refreshes the golden), so the config we ship is the one we run.
-/// Full manager set from the start (owner-confirmed): `bazel` over the
-/// `.bazelversion` pin surface plus Cargo, npm/pnpm, GitHub Actions,
-/// and Go — grouped, scheduled weekly, reviewable PRs. Auto-merge is
-/// off by default (opt-in); when enabled it is update-only under the
-/// automation guardrails (`docs/contributing/automation.md`): green
-/// required checks, patch/minor preferred, no bot push to `main`
-/// outside the merge path, publication gate intact.
-/// Renovate proposes pins; `dx update`  applies/verifies
-/// with resolver-owned continuation/reporting — they complement,
-/// not replace.
-pub const RENOVATE_JSON: &str = concat!(
-    "{\n",
-    "  \"$schema\": \"https://docs.renovatebot.com/renovate-schema.json\",\n",
-    "  \"extends\": [\"config:recommended\"],\n",
-    "  \"schedule\": [\"before 5am on Monday\"],\n",
-    "  \"labels\": [\"dependencies\"],\n",
-    "  \"enabledManagers\": [\"bazel\", \"cargo\", \"github-actions\", \"gomod\", \"npm\"],\n",
-    "  \"packageRules\": [\n",
-    "    {\n",
-    "      \"description\": \"Bazel pin surface (.bazelversion + MODULE.bazel direct pins); regen + flag-diff review per preset loop\",\n",
-    "      \"matchManagers\": [\"bazel\"],\n",
-    "      \"groupName\": \"bazel surface\"\n",
-    "    },\n",
-    "    {\n",
-    "      \"description\": \"Rust dependencies\",\n",
-    "      \"matchManagers\": [\"cargo\"],\n",
-    "      \"groupName\": \"rust dependencies\"\n",
-    "    },\n",
-    "    {\n",
-    "      \"description\": \"JavaScript/TypeScript dependencies (npm/pnpm)\",\n",
-    "      \"matchManagers\": [\"npm\"],\n",
-    "      \"groupName\": \"js dependencies\"\n",
-    "    },\n",
-    "    {\n",
-    "      \"description\": \"GitHub Actions\",\n",
-    "      \"matchManagers\": [\"github-actions\"],\n",
-    "      \"groupName\": \"github actions\"\n",
-    "    },\n",
-    "    {\n",
-    "      \"description\": \"Go dependencies\",\n",
-    "      \"matchManagers\": [\"gomod\"],\n",
-    "      \"groupName\": \"go dependencies\"\n",
-    "    }\n",
-    "  ],\n",
-    "  \"automerge\": false,\n",
-    "  \"platformAutomerge\": false,\n",
-    "  \"prCreation\": \"not-pending\",\n",
-    "  \"dependencyDashboard\": true\n",
-    "}\n",
-);
-
 /// Plan the `dx init` scaffold for a module name.
 ///
 /// All writes are absent-only; the caller refuses existing paths even with
@@ -150,10 +93,6 @@ pub fn plan_init_files(module_name: &str) -> Vec<ScaffoldFile> {
         ScaffoldFile {
             path: ".devcontainer/devcontainer.json".to_owned(),
             content: DEVCONTAINER_JSON.to_owned(),
-        },
-        ScaffoldFile {
-            path: "renovate.json".to_owned(),
-            content: RENOVATE_JSON.to_owned(),
         },
         ScaffoldFile {
             path: ".vscode/settings.json".to_owned(),
@@ -216,15 +155,13 @@ pub fn apply_init(root: &Path, module_name: &str) -> Result<Vec<String>, AdoptEr
 #[cfg(test)]
 mod tests {
     use super::super::{
-        absent_only_write_allowed, apply_init, init_must_refuse, plan_init_files,
-        DEVCONTAINER_JSON, RENOVATE_JSON,
+        absent_only_write_allowed, apply_init, init_must_refuse, plan_init_files, DEVCONTAINER_JSON,
     };
-    use super::{DEVCONTAINER_JSON as LOCAL_DEVCONTAINER, RENOVATE_JSON as LOCAL_RENOVATE};
+    use super::DEVCONTAINER_JSON as LOCAL_DEVCONTAINER;
 
     #[test]
     fn scaffold_reexports_match_local_definitions() {
         assert_eq!(DEVCONTAINER_JSON, LOCAL_DEVCONTAINER);
-        assert_eq!(RENOVATE_JSON, LOCAL_RENOVATE);
     }
 
     #[test]
@@ -242,14 +179,13 @@ mod tests {
     }
 
     #[test]
-    fn init_plans_nine_absent_only_files() {
+    fn init_plans_eight_absent_only_files() {
         let files = plan_init_files("demo");
-        assert_eq!(files.len(), 9);
+        assert_eq!(files.len(), 8);
         assert!(files.iter().any(|f| f.path == ".dx/version"));
         assert!(files
             .iter()
             .any(|f| f.path == ".devcontainer/devcontainer.json"));
-        assert!(files.iter().any(|f| f.path == "renovate.json"));
         assert!(files.iter().any(|f| f.path == ".vscode/settings.json"));
     }
 
@@ -285,51 +221,6 @@ mod tests {
             "no full build on create: {post_create}"
         );
         assert!(super::super::devcontainer_is_admissible(true, true, false));
-    }
-
-    #[test]
-    fn renovate_scaffold_ships_full_manager_set_automerge_off() {
-        // Issue #3 (snapshot workflow #322): `dx init` ships `renovate.json`
-        // absent-only with the full manager set from the start, grouped,
-        // scheduled, reviewable. The snapshot with the checked-in definition
-        // lives in `//:renovate_parity_test`; this pins the contract fields
-        // here so scaffold drift fails at the source.
-        let files = plan_init_files("demo");
-        let scaffold = files
-            .iter()
-            .find(|f| f.path == "renovate.json")
-            .expect("renovate scaffold");
-        assert_eq!(scaffold.content, RENOVATE_JSON);
-        let parsed: serde_json::Value =
-            serde_json::from_str(&scaffold.content).expect("valid JSON");
-        // Full manager set: bazel over the .bazelversion pin surface plus
-        // Cargo, npm/pnpm, GitHub Actions, Go.
-        let managers = parsed["enabledManagers"]
-            .as_array()
-            .expect("enabledManagers array")
-            .iter()
-            .filter_map(|v| v.as_str())
-            .collect::<Vec<_>>();
-        for want in ["bazel", "cargo", "npm", "github-actions", "gomod"] {
-            assert!(
-                managers.contains(&want),
-                "missing manager {want}: {managers:?}"
-            );
-        }
-        // Grouped per manager.
-        let rules = parsed["packageRules"]
-            .as_array()
-            .expect("packageRules array");
-        assert!(rules
-            .iter()
-            .any(|r| r["matchManagers"] == serde_json::json!(["bazel"])));
-        // Scheduled weekly, reviewable PRs.
-        assert!(parsed["schedule"].as_array().is_some_and(|s| !s.is_empty()));
-        assert_eq!(parsed["dependencyDashboard"], serde_json::Value::from(true));
-        // Auto-merge off by default (opt-in); when enabled it is
-        // update-only per docs/contributing/automation.md.
-        assert_eq!(parsed["automerge"], serde_json::Value::from(false));
-        assert_eq!(parsed["platformAutomerge"], serde_json::Value::from(false));
     }
 
     #[test]

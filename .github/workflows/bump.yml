@@ -1,5 +1,5 @@
 # Widen-one-requirement PR loop (issue #260): scheduled first-party
-# apply/verify path alongside Renovate. One explicit widen operation per run
+# apply/verify path as the sole updater (native-only, issue #461). One explicit widen operation per run
 # (`dx bump <set:package> <version>`), one dep per PR, never batch, with an
 # automerge on/off toggle only -- no grouping, schedule, or dashboard knobs.
 #
@@ -28,8 +28,8 @@ name: bump
 
 on:
   schedule:
-    # Weekly Monday before 5am, alongside the Renovate schedule (complementary
-    # roles decided in issue #326: Renovate proposes, dx bump/update applies).
+    # Weekly Monday before 5am for the native widen-one loop
+    # (sole updater, native-only per issue #461).
     - cron: "0 4 * * 1"
   workflow_dispatch:
     inputs:

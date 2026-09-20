@@ -5,15 +5,15 @@
 # (#85) delivered across readme, static, query, aquery, and runtime slices;
 # first-party coverage PR comments (#254) landed with the Bazel-owned LCOV
 # gate as source of truth; the
-# widen-one-requirement + update PR loop (#260) is delivered with Renovate
-# proposing alongside it (complementary roles decided in issue #326).
+# widen-one-requirement + update PR loop (#260) is delivered as the sole
+# updater (native-only, issue #461).
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
 # today (25 checks): examples ownership + starter callers + laziness
 # slices + attribution + full index breadth + Scala/Polyglot entries +
 # mixed disposition, LCOV preset pin + inventory backing + comment landing,
-# Renovate plus full manager set + loop policy + Monday schedule
-# + schedule policy, never-rewrites pin, prior harnesses green,
+# native set registry + sole-updater policy + Monday schedule
+# + native-only policy, never-rewrites pin, prior harnesses green,
 # delivered widen implementation, plus the #421 docs-pipeline tracker.
 # Reverse queries and adapter runs stay open under their
 # issues.
@@ -89,19 +89,23 @@ else
   bad "coverage comment landing dishonest (harness/renderer/marker wiring missing)"
 fi
 
-# #260 all-ecosystems v1 manager set retained in the fallback.
-if grep -q -F -e '"bazel", "cargo", "github-actions", "gomod", "npm"' renovate.json; then
+# #260 all-ecosystems v1 set pinned in the native registry.
+if grep -q -F -e 'BumpSet::Bazel' cli/bump/src/sets.rs &&
+  grep -q -F -e 'BumpSet::Cargo' cli/bump/src/sets.rs &&
+  grep -q -F -e 'BumpSet::GithubActions' cli/bump/src/sets.rs &&
+  grep -q -F -e 'BumpSet::Go' cli/bump/src/sets.rs &&
+  grep -q -F -e 'BumpSet::Npm' cli/bump/src/sets.rs; then
   ok
 else
-  bad "Renovate lost its all-ecosystems v1 manager set (#260)"
+  bad "native set registry lost its all-ecosystems v1 set (#260)"
 fi
 
-# #260 Renovate retained with full manager set (complementary, issue #326).
-if grep -q -F -e 'npm' renovate.json &&
-  grep -q -F -e 'automerge' renovate.json; then
+# #260 sole updater ships an eight-file scaffold with no updater config (issue #461).
+if grep -q -F -e 'files.len(), 8' cli/adopt/src/scaffold.rs &&
+  grep -q -F -e 'ships no updater config' docs/contributing/automation.md; then
   ok
 else
-  bad "Renovate lost its manager set (#260)"
+  bad "native scaffold lost its sole-updater shape (#260/#461)"
 fi
 
 # #260 never-rewrites invariant intact.
@@ -147,9 +151,10 @@ else
 fi
 
 # #254/#260 schedule policy stays pinned together
-# (weekly Monday schedule, no automerge, reviewable PRs).
-if grep -q -F -e '"schedule"' renovate.json &&
-  grep -q -F -e '"automerge": false' renovate.json; then
+# (weekly Monday schedule, toggle-only automerge, reviewable PRs).
+if grep -q -F -e 'before 5am' .github/workflows/bump.yml &&
+  grep -q -F -e 'sole updater' .github/workflows/bump.yml &&
+  grep -q -F -e 'update-only' docs/contributing/automation.md; then
   ok
 else
   bad "automation lost its schedule-policy record (#254/#260)"
@@ -164,13 +169,14 @@ else
   bad "examples index lost its Scala/Polyglot entries (#85)"
 fi
 
-# #260 loop policy stays reviewable (no pending-stampede PRs, no
+# #260 loop policy stays reviewable (one dep per PR, toggle-only
 # automerge, human merge path preserved).
-if grep -q -F -e '"prCreation"' renovate.json &&
-  grep -q -F -e '"dependencyDashboard"' renovate.json; then
+if grep -q -F -e 'one dep per PR' docs/contributing/automation.md &&
+  grep -q -F -e 'sole updater' docs/contributing/automation.md &&
+  grep -q -F -e 'native-only' docs/contributing/automation.md; then
   ok
 else
-  bad "Renovate lost its reviewable-loop policy (#260)"
+  bad "native loop lost its reviewable-loop policy (#260)"
 fi
 
 # #85 acquisition attribution stays owned: static (prohibited-installer)
@@ -195,12 +201,14 @@ else
   bad "examples index lost its starter caller entries (#85)"
 fi
 
-# #260 Monday schedule stays pinned: Renovate runs before 5am on Monday
-# with reviewable PRs and no automerge (native loop delivered alongside).
-if grep -q -F -e 'before 5am on Monday' renovate.json; then
+# #260 Monday schedule stays pinned: native loop runs before 5am on Monday
+# with reviewable PRs and toggle-only automerge (sole updater, issue #461).
+if grep -q -F -e 'before 5am' .github/workflows/bump.yml &&
+  grep -q -F -e 'issue #461' .github/workflows/bump.yml &&
+  grep -q -F -e 'issue #461' docs/contributing/automation.md; then
   ok
 else
-  bad "Renovate lost its Monday schedule record (#260)"
+  bad "native loop lost its Monday schedule record (#260/#461)"
 fi
 
 # Widen implementation delivered (#260): explicit bump command plus the

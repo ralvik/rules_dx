@@ -376,8 +376,8 @@ bounded ranges, and Git tag/commit shapes per the ecosystem mapping in
 `dx_bump::sets`. An explicit operation keeps the contract honest: no
 `--widen` flag silently breaks the load-bearing invariant.
 
-All ecosystems in v1, no phasing, matching the retained `renovate.json`
-manager set: Bazel modules plus `.bazelversion`, Cargo, npm/pnpm (both lock
+All ecosystems in v1, no phasing, covering the native five-set scope:
+Bazel modules plus `.bazelversion`, Cargo, npm/pnpm (both lock
 graphs), Go (`gomod`), GitHub Actions. Selector syntax is `set:package`
 (`bazel:rules_rust`, `bazel:.bazelversion`, `cargo:anyhow`, `npm:react`,
 `go:example.com/mod`, `github-actions:actions/checkout` with `gha`/`gomod`

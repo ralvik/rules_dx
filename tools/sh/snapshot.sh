@@ -23,7 +23,7 @@
 # `../tools/sh/snapshot.sh`.)
 #
 # Workflow:
-#   UPDATE_EXPECT=1 bazel test //:renovate_parity_test --test_env=UPDATE_EXPECT
+#   UPDATE_EXPECT=1 bazel test //:preset_parity_test --test_env=UPDATE_EXPECT
 # refreshes the checked-in golden instead of failing; without the variable
 # the harness fails with a unified diff. Under `bazel run` the update writes
 # through BUILD_WORKSPACE_DIRECTORY; under `bazel test` it resolves the

@@ -12,9 +12,7 @@ execution lands.
 ## `dx init`
 
 `dx init` scaffolds a new repository: module and `//dx` target wiring, workspace config,
-CI caller template, hermetic hook installation, devcontainer, Renovate
-(`renovate.json` with the full manager set, grouped and scheduled weekly,
-auto-merge off by default), the single-version `dx`
+CI caller template, hermetic hook installation, devcontainer, the single-version `dx`
 pin (the `dx` version equals the pinned `rules_dx` module version), the committed direnv `.envrc` defined in
 [Direnv Integration](../../environments/environment.md#direnv-integration), and generated
 VSCode configuration. The VSCode output is

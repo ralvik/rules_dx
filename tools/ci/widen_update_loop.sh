@@ -2,16 +2,17 @@
 # Widen-one-requirement + dx update PR loop contract (issue #260, delivered).
 #
 # `dx update` is within-constraints only (live resolver execution delivered
-# in #19) and Renovate proposes alongside it (complementary roles decided in
-# issue #326). The first-party
-# apply path is delivered: one explicit widen operation (separate from
+# in #19). The first-party
+# apply path is delivered as the sole updater (native-only, issue #461):
+# one explicit widen operation (separate from
 # `dx update`, `dx bump <selector> <version>`) plus a one-dep-per-PR loop
 # with an automerge on/off toggle only -- no grouping, schedule, or
 # dashboard options.
 #
 # This harness machine-checks the delivered contract on a clean tree
-# (13 checks): the all-ecosystems v1 manager set, Renovate proposing
-# bump owns the single-requirement rewrite), the #19 resolver prerequisite
+# (13 checks): the all-ecosystems v1 set registry, sole-updater shape
+# (no third-party updater config, bump owns the single-requirement
+# rewrite), the #19 resolver prerequisite
 # delivered, the widen command plus library-first planning, the native
 # bump-PR verification loop docs, the ADR 0006 narrow exception, the ADR
 # 0008 exact-pin policy, the scheduled loop runner (one-dep-per-PR,
@@ -32,7 +33,7 @@ dx_test_init
 
 contract="docs/cli/commands/audit-update-bazel.md"
 semantics="cli/update/src/semantics.rs"
-renovate="renovate.json"
+sets="cli/bump/src/sets.rs"
 automation="docs/contributing/automation.md"
 workflows_doc="docs/contributing/local-workflows.md"
 adr_surface="docs/decisions/0006-cli-command-surface.md"
@@ -41,28 +42,29 @@ bump_request="cli/bump/src/request.rs"
 bump_workflow=".github/workflows/bump.yml"
 
 # All ecosystems in v1, no phasing: Bazel modules + .bazelversion, Cargo,
-# npm/pnpm, Go, GitHub Actions -- matching the current renovate manager set.
-if [[ -f "$renovate" ]] &&
-  grep -q -F -e '"bazel"' "$renovate" &&
-  grep -q -F -e '"cargo"' "$renovate" &&
-  grep -q -F -e '"github-actions"' "$renovate" &&
-  grep -q -F -e '"gomod"' "$renovate" &&
-  grep -q -F -e '"npm"' "$renovate"; then
+# npm/pnpm, Go, GitHub Actions -- pinned in the native set registry.
+if grep -q -F -e 'BumpSet::Bazel' "$sets" &&
+  grep -q -F -e 'BumpSet::Cargo' "$sets" &&
+  grep -q -F -e 'BumpSet::GithubActions' "$sets" &&
+  grep -q -F -e 'BumpSet::Go' "$sets" &&
+  grep -q -F -e 'BumpSet::Npm' "$sets" &&
+  grep -q -F -e 'BumpSet::ALL' "$sets"; then
   ok
 else
-  bad "renovate.json lost the all-ecosystems v1 manager set (bazel/cargo/github-actions/gomod/npm)"
+  bad "native set registry lost the all-ecosystems v1 set (bazel/cargo/github-actions/go/npm)"
 fi
 
-# Renovate proposing alongside the native loop delivered: weekly Monday
-# schedule, no automerge, reviewable PRs, dashboard on.
-if grep -q -F -e 'before 5am on Monday' "$renovate" &&
-  grep -q -F -e '"automerge": false' "$renovate" &&
-  grep -q -F -e '"platformAutomerge": false' "$renovate" &&
-  grep -q -F -e '"prCreation": "not-pending"' "$renovate" &&
-  grep -q -F -e '"dependencyDashboard": true' "$renovate"; then
+# Sole-updater shape: the native loop owns discovery plus widen plus
+# verify with one dep per PR; the scaffold plans eight files with no
+# updater config and the policy names the sole updater (issue #461).
+if grep -q -F -e 'files.len(), 8' cli/adopt/src/scaffold.rs &&
+  grep -q -F -e 'sole updater' "$automation" &&
+  grep -q -F -e 'one dep per PR' "$automation" &&
+  grep -q -F -e 'native-only' "$automation" &&
+  grep -q -F -e 'issue #461' "$automation"; then
   ok
 else
-  bad "renovate.json lost the complementary shape (schedule/automerge/prCreation/dashboard)"
+  bad "native loop lost its sole-updater shape (eight-file scaffold plus sole updater plus one-dep-per-PR plus native-only, issue #461)"
 fi
 
 # Never-rewrites invariant pinned in code: both update requirement shapes
@@ -106,20 +108,19 @@ else
   bad "update contract lost its delivered resolver records"
 fi
 
-# Automation policy owns the native loop plus Renovate (complementary, issue
-# #326): absent-only scaffold, full manager set, update-only automerge, plus
-# the delivered widen-one loop (one dep per PR, toggle-only automerge,
-# scheduled runner).
+# Automation policy owns the native-only loop (issue #461): absent-only
+# scaffold, update-only automerge, plus the delivered widen-one loop (one
+# dep per PR, toggle-only automerge, scheduled runner, sole updater).
 if grep -q -F -e 'absent-only' "$automation" &&
-  grep -q -F -e 'full manager' "$automation" &&
   grep -q -F -e 'update-only' "$automation" &&
-  grep -q -F -e 'are complementary' "$automation" &&
+  grep -q -F -e 'sole updater' "$automation" &&
+  grep -q -F -e 'native-only' "$automation" &&
   grep -q -F -e 'dx bump' "$automation" &&
   grep -q -F -e 'one dep per PR' "$automation" &&
   grep -q -F -e 'bump.yml' "$automation"; then
   ok
 else
-  bad "automation.md lost the native-loop ownership (complementary roles + dx bump + one-dep-per-PR + bump.yml)"
+  bad "automation.md lost the native-loop ownership (sole updater + native-only + dx bump + one-dep-per-PR + bump.yml)"
 fi
 
 # Native bump-PR verification loop documented: regen evidence, flag-diff
@@ -181,18 +182,16 @@ else
   bad "upstream-scope pins lost (prerelease/transitives/scope in update + bump)"
 fi
 
-# Stale Renovate-disposition hedge stays gone (issue #424): the
-# `until issue #3 decides` hedge was resolved as complementary roles under
-# issue #326, so no such hedge may reappear in the runner or the policy.
-# Remaining `issue #3` cites are intentional provenance for the delivered
-# Renovate scaffold (closed issue #3 delivered, held by parity).
+# Stale third-party-disposition hedge stays gone (issue #424): the
+# `until issue #3 decides` hedge was resolved as native-only under
+# issue #461, so no such hedge may reappear in the runner or the policy.
 if ! grep -rn -F -e 'until issue #3' "$bump_workflow" "$automation" 2>/dev/null | grep -q . &&
   ! grep -rn -F -e 'until issue #3 decides' .github/workflows/bump.yml docs/contributing/automation.md 2>/dev/null | grep -q . &&
-  grep -q -F -e 'are complementary' "$automation" &&
-  grep -q -F -e 'issue #326' "$bump_workflow"; then
+  grep -q -F -e 'sole updater' "$automation" &&
+  grep -q -F -e 'issue #461' "$bump_workflow"; then
   ok
 else
-  bad "stale Renovate hedge reappeared (want no until-issue-#3 hedge plus complementary roles under issue #326, issue #424)"
+  bad "stale third-party hedge reappeared (want no until-issue-#3 hedge plus native-only under issue #461, issue #424)"
 fi
 
 dx_test_summary "widen update loop harness"

@@ -23,8 +23,8 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
   warnings-as-errors, visibility hardening, cli-contract claims, human-run
   release path (signing-first, issue #458), signing stack + distribution
   (issue #459), GHCR prebuilt
-  images (separate workflow, issue #460), Renovate plus native bump loop complementary
-  (decided, issue #326), automation policy (Renovate allowed).
+  images (separate workflow, issue #460), native bump loop as sole updater
+  (decided, issue #461), automation policy (native-only).
 * V1 scope: `dx migrate` syntax + manifest selection (issue #462), `dx run` multirun (issue #463).
   No post-v1 bucket.
 * Rust library extraction.
