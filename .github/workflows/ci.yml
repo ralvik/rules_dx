@@ -1,6 +1,8 @@
 # Sharded CI: build, test, coverage, prove, and dogfood stages run as
 # separate jobs with per-job summaries (issue #210).
 #
+# Host matrix (issue #415, after portable-shell #323): per-host jobs
+# parameterized by runner plus cache scope plus qualified-host expectation.
 # Qualified hosts: Linux x86_64 glibc (ubuntu-latest) plus Linux arm64
 # glibc native (ubuntu-24.04-arm, issue #410) plus Linux static-musl
 # profiles (issue #411, cross-built from Linux runners with per-profile
@@ -8,6 +10,9 @@
 # x86_64 best-effort native (macos-15-intel, issue #413, non-blocking;
 # `macos-13` retired December 2025, `macos-15-intel` until August 2027),
 # local execution, no remote.
+# Windows x86_64 stays the remaining required host with clean
+# unsupported_platform refusal (issue #414, backend blocked); no
+# windows-latest runner is queued until its evidence lands.
 # Platform qualification for the remaining ADR 0014 required hosts stays
 # open under issue #298 (closed; per-host successors own each host):
 # they are unqualified gaps with clean dx refusal, not claimed here.
@@ -750,7 +755,7 @@ jobs:
           echo "### coverage-macos-x86_64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Command: dx coverage --min-coverage 97 //... (macos x86_64 cell only, per-cell no-union; host-installed SDK fallback never approved; best-effort gaps never block required-host release; issue #413)." >> "$GITHUB_STEP_SUMMARY"
   prove:
-    name: prove (manual negatives, target tags, coverage cell, release hygiene, release policy, publish trust, shell contract)
+    name: prove (manual negatives, target tags, coverage cell, release hygiene, release policy, publish trust, shell contract, ci matrix)
     needs: [build]
     timeout-minutes: 30
     runs-on: ubuntu-latest
@@ -778,6 +783,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:musl_qualification
       - name: Prove macOS arm64 plus x86_64 best-effort qualification (native, per-cell, portable-shell, no host SDK fallback)
         run: bazel run --noshow_progress //tools/ci:macos_qualification
+      - name: Prove CI multi-platform host matrix (runners, caches, refusal, sharding, portable shell)
+        run: bazel run --noshow_progress //tools/ci:ci_matrix_qualification
       - name: Prove release hygiene (no publication inputs without approval)
         run: bazel run --noshow_progress //tools/ci:release_hygiene
       - name: Prove release policy (curated defaults + parity manifest gate)
@@ -790,7 +797,7 @@ jobs:
         if: always()
         run: |
           echo "### prove — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate, coverage qualification (issue #308 per-cell plus Starlark plus Codecov plus quotas plus local-only remote; seed plus arm64 plus static musl plus macos arm64 plus macos x86_64 best-effort under #410/#411/#412/#413), static-musl qualification (issue #411 profiles plus exec/target plus per-cell plus dynamic out of scope), macOS arm64 plus x86_64 best-effort qualification (issues #412/#413 native plus per-cell plus portable-shell plus no host SDK fallback, best-effort non-blocking), release hygiene (issue #5 no-publication inputs), release policy (issue #89 curated defaults + parity gate), publish trust (issues #78/#26/#5 draft-only sites + nothing published), shell contract (issue #299 bash-only Linux-only harness + portable forms)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate, coverage qualification (issue #308 per-cell plus Starlark plus Codecov plus quotas plus local-only remote; seed plus arm64 plus static musl plus macos arm64 plus macos x86_64 best-effort under #410/#411/#412/#413), static-musl qualification (issue #411 profiles plus exec/target plus per-cell plus dynamic out of scope), macOS arm64 plus x86_64 best-effort qualification (issues #412/#413 native plus per-cell plus portable-shell plus no host SDK fallback, best-effort non-blocking), CI multi-platform host matrix (issue #415 runners plus caches plus Windows refusal plus sharding plus portable shell), release hygiene (issue #5 no-publication inputs), release policy (issue #89 curated defaults + parity gate), publish trust (issues #78/#26/#5 draft-only sites + nothing published), shell contract (issue #299 bash-only Linux-only harness + portable forms)." >> "$GITHUB_STEP_SUMMARY"
           echo "Proved (follow-up): coverage spill containment (issues #252/#54, LLVM_PROFILE_FILE to scratch)." >> "$GITHUB_STEP_SUMMARY"
   dogfood-freshness:
     name: dogfood-freshness (tools, generate --check, corpus audit)
@@ -882,11 +889,13 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:musl_qualification
       - name: Audit macOS arm64 plus x86_64 best-effort qualification (issues #412/#413 native plus per-cell plus portable-shell plus no host SDK fallback, best-effort non-blocking)
         run: bazel run --noshow_progress //tools/ci:macos_qualification
+      - name: Audit CI multi-platform host matrix (issue #415 runners plus caches plus Windows refusal plus sharding plus portable shell)
+        run: bazel run --noshow_progress //tools/ci:ci_matrix_qualification
       - name: Write job summary
         if: always()
         run: |
           echo "### dogfood-freshness — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Checked: Bazel-resolved tool execution, generate --check freshness, corpus ownership (carve-outs intact), code ownership (issue #12 lane A), non-dogfed execution plan (issue #324 explicit suites plus coverage-excluded runs plus shell ownership), examples READMEs (issue #85 commands + evidence), examples laziness (issue #85 no-install + isolation + deps-closure + action-graph + action-command zero-work), quality cache aquery (issue #84 action-key isolation seed), depcheck contract (issue #22 truth table + open routes), wrapper sources (issues #12/#7/#8 QualitySourcesInfo), registry singularity (issues #6/#84 single-sourced taxonomy), backlog contracts (issues #9/#10 frozen pins + gap labels), GHCR hygiene (issue #184 separate workflow + gated push), widen-update loop contract (issue #260 never-rewrites + manager set + bump command + runner, delivered), quality foundations (issues #6/#7/#8/#12 provider + registry + mapping owners + battery contracts), execution/corpus/perf guards (issues #18/#19/#22/#15/#86 audit live + update live + corpus split + report-not-gate), distribution/closeout guards (issues #5/#26/#78/#184/#54 hygiene + workflows + no-publish invariants), backlog/automation guards (issues #9/#10/#85/#254/#260/#310 contracts + examples + coverage/Renovate honesty), Supported-evidence gate (issue #301 no Supported without platform+consumer+release), quality adapters parity (issue #307 qualified, no false claims, provisional probes), env/codegen qualification (issue #309 deferred records plus fixture evidence, owned gaps), docs-pipeline qualification (issue #310 IR plus planning evidence, owned gaps, no working site), consumer-CI qualification (issue #312 contract plus fixture evidence, owned gaps), file-family qualification (issue #313 applicability plus fixture evidence, owned gaps), helper qualification (issue #315 per-helper decisions plus fixture evidence, owned gaps), clap-tokenizer qualification (issue #316 frozen legacy errors plus fixture evidence, owned gaps).">> "$GITHUB_STEP_SUMMARY"
+          echo "Checked: Bazel-resolved tool execution, generate --check freshness, corpus ownership (carve-outs intact), code ownership (issue #12 lane A), non-dogfed execution plan (issue #324 explicit suites plus coverage-excluded runs plus shell ownership), examples READMEs (issue #85 commands + evidence), examples laziness (issue #85 no-install + isolation + deps-closure + action-graph + action-command zero-work), quality cache aquery (issue #84 action-key isolation seed), depcheck contract (issue #22 truth table + open routes), wrapper sources (issues #12/#7/#8 QualitySourcesInfo), registry singularity (issues #6/#84 single-sourced taxonomy), backlog contracts (issues #9/#10 frozen pins + gap labels), GHCR hygiene (issue #184 separate workflow + gated push), widen-update loop contract (issue #260 never-rewrites + manager set + bump command + runner, delivered), quality foundations (issues #6/#7/#8/#12 provider + registry + mapping owners + battery contracts), execution/corpus/perf guards (issues #18/#19/#22/#15/#86 audit live + update live + corpus split + report-not-gate), distribution/closeout guards (issues #5/#26/#78/#184/#54 hygiene + workflows + no-publish invariants), backlog/automation guards (issues #9/#10/#85/#254/#260/#310 contracts + examples + coverage/Renovate honesty), Supported-evidence gate (issue #301 no Supported without platform+consumer+release), quality adapters parity (issue #307 qualified, no false claims, provisional probes), env/codegen qualification (issue #309 deferred records plus fixture evidence, owned gaps), docs-pipeline qualification (issue #310 IR plus planning evidence, owned gaps, no working site), consumer-CI qualification (issue #312 contract plus fixture evidence, owned gaps), file-family qualification (issue #313 applicability plus fixture evidence, owned gaps), helper qualification (issue #315 per-helper decisions plus fixture evidence, owned gaps), clap-tokenizer qualification (issue #316 frozen legacy errors plus fixture evidence, owned gaps), CI multi-platform host matrix (issue #415 runners plus caches plus Windows refusal plus sharding plus portable shell).">> "$GITHUB_STEP_SUMMARY"
   devcontainer-check:
     name: devcontainer-check (init parity, definition valid)
     needs: [build]

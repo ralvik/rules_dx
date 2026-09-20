@@ -133,7 +133,10 @@ macOS arm64 native (issue #412, `macos-14` runners with a separate
 (issue #413, `macos-15-intel` runners with a separate
 `bazel-macos-x86_64-` disk-cache scope; `macos-13` retired December 2025,
 `macos-15-intel` until August 2027; gaps never block required-host
-release):
+release). The host matrix across these hosts is pinned by
+`bazel run //tools/ci:ci_matrix_qualification` (issue #415, after
+portable-shell #323); Windows x86_64 stays refused with no runner
+(issue #414, backend blocked):
 
 - `build`: `bazel build //...` plus the adopt-rust `dx_dev` smoke
   (`bazel build //examples/adopt-rust/... --config=dx_dev`) for
@@ -169,7 +172,10 @@ release):
   (seed cell only) plus `bazel run //tools/ci:coverage_report_guards`.
 - `prove`: `:target_tags`, `:coverage_cell`,
   `:coverage_spill`, `:coverage_qualification`, `:musl_qualification`,
-  `:macos_qualification` (arm64 plus x86_64 best-effort), `:release_hygiene`,
+  `:macos_qualification` (arm64 plus x86_64 best-effort),
+  `:ci_matrix_qualification` (host matrix runners plus caches plus Windows
+  refusal plus sharding plus portable shell, issue #415),
+  `:release_hygiene`,
   `:release_policy`, `:publish_trust`, `:shell_contract`.
 - `dogfood-freshness`: `bazel run //cli/cli:dx -- generate --check //...`,
   `//tools/ci:corpus_audit`, `:code_ownership`, `:non_dogfed_paths`,
@@ -182,8 +188,8 @@ release):
   `:env_codegen_qualification`, `:docs_pipeline_qualification`,
   `:consumer_ci_qualification`, `:file_family_qualification`,
   `:helper_qualification`, `:clap_tokenizer_qualification`,
-  `:musl_qualification`, and `:macos_qualification` (arm64 plus x86_64
-  best-effort).
+  `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
+  best-effort), and `:ci_matrix_qualification` (host matrix, issue #415).
 - `devcontainer-check`, `docs-ci`, `consumer-ci` (all-enabled self-call on
   linux_x86_64 plus linux_arm64 plus macos_arm64 plus macos_x86_64, issue
   #408, verbatim `//...`).
@@ -193,7 +199,8 @@ Green here (static guards on a clean tree, no full rebuild):
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 26/26,
 `consumer_ci_qualification` 29/29, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
-`musl_qualification` 12/12, `macos_qualification` 12/12.
+`musl_qualification` 12/12, `macos_qualification` 12/12,
+`ci_matrix_qualification` 14/14.
 Full `build`/`test` green is owned by CI on this tree; the last full-tree
 record is noted on the issue, not re-claimed here.
 

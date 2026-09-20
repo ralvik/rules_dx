@@ -657,6 +657,20 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# CI multi-platform host-matrix harness (issue #415): proves the as-built
+# multi-host matrix after portable-shell #323 — per-host runner plus cache
+# scope plus qualified-host expectation for seed plus arm64 plus musl pair
+# plus macos pair, Windows x86_64 refusal-assertion (issue #414), portable
+# shell reuse, sharding policy (issue #210), no paid services, stale refs
+# updated. Run by CI via `bazel run //tools/ci:ci_matrix_qualification`.
+sh_binary(
+    name = "ci_matrix_qualification",
+    srcs = ["ci_matrix_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Environment/codegen qualification harness (issue #309): proves the
 # as-built deferred/unsupported records (public contribution, Windows
 # fallback, standalone, signing/trust) with fixture evidence
