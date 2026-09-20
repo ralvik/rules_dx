@@ -28,7 +28,11 @@ Windows x86_64 unqualified until their hosts qualify per
 [ADR 0014](../decisions/0014-tested-platform-release-stack.md#required-platforms)).
 Build each qualified cell with `bazel build //cli/cli:dx
 //cli/cli:dx_standalone`, then `bazel build //deploy/release:all` for
-SBOM and provenance. Unqualified cells fail closed; never claim them.
+SBOM and provenance. Unqualified cells fail closed; never claim them. What
+evidence promotes a cell to `Supported` (tag hygiene, versioning, platform
+plus consumer plus release evidence) is owned by the
+[promotion checklist](../product/promotion-checklist.md), qualified seed-only
+under issue #611.
 
 ## Steps
 

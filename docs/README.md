@@ -8,6 +8,7 @@ authoritative product, design, delivery, and governance documents.
 - [Product overview](product/README.md): entry point.
 - [Product scope](product/scope.md): audit, boundary, commands, risks.
 - [Support matrix](product/support-matrix.md): foundation and quality claims.
+- [Promotion checklist](product/promotion-checklist.md): tag hygiene, versioning, and per-cell evidence to `Supported` (issue #611).
 
 ## Architecture And Contracts
 

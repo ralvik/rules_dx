@@ -12,6 +12,11 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
 ## Improve
 
 * Tag hygiene and release-input gaps, no publication pressure.
+* Release promotion checklist to Supported owned under issue #611
+  (`docs/product/promotion-checklist.md` with fixture evidence via
+  `bazel run //tools/ci:promotion_checklist_qualification`; tag hygiene,
+  versioning, and platform plus consumer plus release evidence per cell;
+  ad-hoc release rejected; no Supported claim).
 * Toolchain, provider, and adapter qualification backlogs: Rust providers plus Gazelle plus integration (issues #470-#475), runners plus locks plus defaults (issues #476-#489), adapter wiring (issues #490-#493), native qualification (issues #494-#505), env plus codegen (issue #506), coverage plus consumer plus quality (issues #507-#512).
 * Docs-pipeline execution gaps stay open under issue #581 (live successor to closed #421; adapter runs with pins
   and mappings, renderer and site execution, byte-identical rebuild proof, link and
