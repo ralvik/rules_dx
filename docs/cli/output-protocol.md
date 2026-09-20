@@ -473,7 +473,7 @@ confirmation in text mode.
 The license family's [SPDX 2.3 JSON report](commands/audit-update-bazel.md#license-family-dx-audit-license)
 is specified in the license-family contract; its shared-report format identifier
 and event mapping add no new profile here. Live SPDX emission is open under
-open work.
+open work under issue #511.
 
 ```json
 {"schema":{"major":1,"minor":0},"event":"report","format":"sarif","path":"reports/lint.sarif","results_complete":true}
@@ -681,7 +681,7 @@ execution with `conflicting_option` naming `--report`.
 
 The report formats, SARIF/JUnit/LCOV profiles, SPDX mapping (specified in
 [Standard Reports](standard-reports.md); SPDX parsing/loading is open under
-open work), destination validation,
+open work under issue #511), destination validation,
 deterministic ordering, and partial-document behavior are defined in
 [Standard Reports](standard-reports.md). This document owns only report interaction with
 live streams and the NDJSON `report` event.

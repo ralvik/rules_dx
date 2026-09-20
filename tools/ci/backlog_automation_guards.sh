@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Backlog/automation guards (issues #85, #254, #260, #421).
+# Backlog/automation guards (issues #85, #254, #260, #421, #446).
 #
 # Per-foundation external-consumer examples + acquisition/laziness proof
 # (#85) delivered across readme, static, query, aquery, and runtime slices;
@@ -9,7 +9,7 @@
 # proposing alongside it (complementary roles decided in issue #326).
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (23 checks): examples ownership + starter callers + laziness
+# today (25 checks): examples ownership + starter callers + laziness
 # slices + attribution + full index breadth + Scala/Polyglot entries +
 # mixed disposition, LCOV preset pin + inventory backing + comment landing,
 # Renovate plus full manager set + loop policy + Monday schedule
@@ -235,6 +235,16 @@ fi
 # git history; see `git log --all --oneline` for the Mxx/Oxx entries).
 if git grep -n -E -e '\bM[0-9]{2}[a-z]?\b|\bO[0-9]{1,2}\b' -- ':!CHANGELOG.md' ':!pnpm-lock.yaml' ':!*.lock' 2>/dev/null | grep -q .; then
   bad "new Mxx/Oxx milestone references appeared (use ADR/contract/issue tracker; history lives in CHANGELOG.md plus git log)"
+else
+  ok
+fi
+
+# #446 bare open/planned work stays owned (same family as #422/#427 guards):
+# every `open work` or `planned work` line in docs/ must name its owner on the
+# same line via `issue(s) #` or `roadmap` (owner plus ADR/contract/issue link
+# or roadmap entry, per issue #446; no new Mxx/Oxx).
+if git grep -n -i -E -e 'open work|planned work' -- docs/ 2>/dev/null | grep -v -E -e 'issues? #' | grep -v -i -e 'roadmap' | grep -q .; then
+  bad "bare open/planned work appeared (name owner plus ADR/contract/issue link or roadmap entry on the same line, issue #446)"
 else
   ok
 fi

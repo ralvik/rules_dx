@@ -10,9 +10,9 @@ surface by [ADR 0020](0020-remove-dx-docs-placeholder.md). Remaining invocation,
 scope, output, and workflow-composition constraints stand.
 
 Historical note: `Oxx`/`Mxx` identifiers below predate the GitHub-issues work
-register and are not normative. Planned work lives in GitHub issues (see
-open work). Read `frozen Oxx`
-phrases as pointers to the linked live contracts, not as open work.
+register and are not normative. Planned work lives in GitHub issues and [roadmap](../roadmap.md) (see
+open work under issues #453-#512 and [roadmap](../roadmap.md)). Read `frozen Oxx`
+phrases as pointers to the linked live contracts, not as placeholders.
 
 ## Context
 
@@ -37,7 +37,7 @@ The command surface is:
 - `dx format` for mutating formatting, with non-mutating `--check`.
 - `dx build` for Bazel builds.
 - `dx docs` was removed by [ADR 0020](0020-remove-dx-docs-placeholder.md); see
-  that record and open work.
+  that record and open work under [roadmap](../roadmap.md).
   No `dx docs` surface is selected.
 - `dx update` for authoritative dependency-update workflows.
 - `dx generate` for the mutating repository-defined Gazelle workflow, with non-mutating
@@ -134,7 +134,7 @@ without a repository-wide rollback; the [update contract](../cli/commands/audit-
 owns set independence. Aggregate exit-code selection, backend mapping, and report
 qualification follow the [update contract](../cli/commands/audit-update-bazel.md#dx-update)
 (see Status note); live resolver-backend
-execution remains a gap (see open work). Ordinary plans, including
+execution remains a gap (see open work under issue #510). Ordinary plans, including
 the `dx check` and `dx fix` umbrellas, retain their first-failure behavior.
 
 Dry-run may execute read-only Bazel queries needed to resolve the plan but never

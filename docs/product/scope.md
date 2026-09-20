@@ -62,8 +62,8 @@ required set, provisional upstreams, owning trackers, and roles.
 Review the wider upstream ecosystem and record each named capability's
 rules/tools, acquisition route, public providers, dependency authority, applicable platforms,
 integration effort, contract compatibility, evidence, and delivery owner, tracked in
-open work (framework adapters in
-open work). Apply the same review to
+open work under issues #476-#484 and #510 (framework adapters in
+open work under issue #510). Apply the same review to
 existing feature exclusions, additional test runners, framework adapters, plugins, audit/update
 ecosystems, and codegen pairs. Apply the foundation admission rule above separately from tool and
 workflow obligations; an unreviewed entry is not an exclusion. Freeze a reviewed release inventory
@@ -72,9 +72,9 @@ unnamed tools. Newly identified candidates require an explicit disposition, not 
 
 Each candidate must become required v1 scope, a recorded additional-foundation deferral, or an
 evidence-backed recorded exclusion. No individual foundation is deferred by this policy alone.
-There is no post-v1 bucket for workflow scope: open work,
-open work, and
-open work are v1 scope per owner decision.
+There is no post-v1 bucket for workflow scope: open work under issue #462,
+open work under issue #463, and
+open work under issue #506 are v1 scope per the sole repository maintainer decision in [roadmap](../roadmap.md).
 Record missing upstream rules, non-hermetic acquisition, unsupported platform requirements, or
 substantial integration effort precisely, including concrete gaps and ongoing maintenance ownership.
 Scheduling preference and omission from the original plan are not feasibility failures.
@@ -145,7 +145,7 @@ active default configuration. A dependency used by a supported platform or optio
 as used without an exception merely for being inactive in the current run. Declaration as optional
 or platform-specific is not itself proof of usage. Qualify the authoritative configuration inputs
 and upstream analysis for each language, tracked in
-open work; this does not require executing every target
+open work under issue #510; this does not require executing every target
 platform's binaries on the checking host or weakening selected-target build isolation.
 
 The usage test also reports incorrect declaration categories as errors where the ecosystem
@@ -154,13 +154,13 @@ does not justify a production declaration. Evaluate categories across the declar
 configurations using qualified upstream semantics, not one universal category model. Legitimate
 multi-category usage must remain valid. Tests report miscategorization without moving declarations
 or rewriting locks; exact ecosystem category and checker mappings are tracked in
-open work.
+open work under issue #510.
 
 Generate both checks as normal Bazel test targets for the applicable dependency-owning scopes.
 They participate in `bazel test //...` and bare `dx test` by default, without a separate opt-in or
 default `manual` exclusion. They remain independently runnable through their generated labels.
 Exact naming, rules/providers, and generation mappings require qualification tracked in
-open work.
+open work under issue #510.
 
 Declared-dependency usage permits narrow, explicit exceptions for legitimate uses the checker
 cannot recognize, such as dynamic plugins or tools invoked by scripts. Prefer upstream-native

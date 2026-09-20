@@ -37,14 +37,14 @@ the need.
 Profile vocabulary follows [ADR 0021](../decisions/0021-build-profiles.md).
 Precedence (explicit flag over target `profile` over command default)
 and the `DX_PROFILE` name are accepted per
-open work; the
+open work under issue #457; the
 `dx deploy` command wiring them is delivered per
-open work.
+open work under issue #457.
 
 ## Path C: `archive_release` (accepted)
 
 The first deploy macro
-(open work) packages
+(open work under issue #459) packages
 one executable as a tarball + sha256 checksum with the managed Python
 3.12 toolchain only (deterministic `archiver` tar.gz plus `hasher`
 sha256 as declared genrule `tools` in `deploy/rules/`), no host
@@ -72,7 +72,7 @@ next to the app they release.
 ## Path D: `github_release` (accepted)
 
 The second deploy macro
-(open work) publishes
+(open work under issue #459) publishes
 pinned files as a draft-only GitHub Release via the host `gh` CLI, no
 new module dependencies:
 
@@ -88,7 +88,7 @@ github_release(
 `bazel run //cli/cli:github_draft` (or `dx deploy
 //cli/cli:github_draft`) execs `gh release create <tag> <assets...>
 --draft --verify-tag`. Draft-only by construction
-(open work): `draft`
+(open work under issue #458): `draft`
 must stay `True`, `--verify-tag` means the program never creates or
 pushes tags itself, and the default tag is the `v0.0.0-dryrun`
 placeholder. `GH_RELEASE_DRY_RUN=1` prints the would-run command and
