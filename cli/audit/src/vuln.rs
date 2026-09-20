@@ -45,10 +45,10 @@
 //! deterministic and unit-testable without network access or any
 //! auditor binary. Version-range narrowing uses upstream semantics
 //! through [`crate::exception::version_in_scope`] for semver
-//! ecosystems (Cargo/npm/Go); Maven/NuGet scopes stay exact-match in
-//! V1 (wont-fix, resolver-deferred to the `dx_update`
-//! resolver; no upstream-native Rust Maven/NuGet range library exists
-//! so ADR 0008 library-first forbids a custom solver, and the V1
+//! ecosystems (Cargo/npm/Go) and Maven-native ordering plus interval
+//! matching for Maven; NuGet scopes stay exact-match in V1 (wont-fix,
+//! resolver-deferred to the `dx_update` resolver; no qualified stable
+//! upstream Rust NuGet range library, so no custom solver, and the V1
 //! snapshot shape carries exact affected versions), exactly like the
 //! exception lifecycle deferral in [`crate::exception`].
 
@@ -89,7 +89,8 @@ pub struct Advisory {
     /// Affected package name.
     pub package: String,
     /// Affected version scope, upstream version semantics
-    /// (`>=1.2.0, <2.0.0` for semver sets; exact version for Maven/NuGet V1).
+    /// (`>=1.2.0, <2.0.0` for semver sets; Maven intervals such as
+    /// `[1.0,2.0)` or exact versions; exact version for NuGet V1).
     pub versions: String,
     /// Upstream severity text (`critical|high|medium|low`), or empty for
     /// unrated advisories (reported as unknown, fail by default).
@@ -176,15 +177,461 @@ pub fn canonical_severity(severity: &str) -> String {
 
 /// Whether one locked package version falls in one advisory's affected
 /// scope. Cargo/npm/Go use upstream Cargo-flavor semver via
-/// [`version_in_scope`]; Maven/NuGet V1 use exact version equality
-/// (wont-fix: range scopes such as Maven `[1.0,2.0)` or
-/// NuGet `(,1.0]` stay no-match, never a false positive; V1 snapshots
-/// carry exact affected versions). Unparseable scopes or versions fail
-/// closed to `false` for semver sets, and to exact-match only for
-/// Maven/NuGet.
+/// [`version_in_scope`]; Maven uses Maven-native ordering plus interval
+/// matching via [`maven_in_scope`]; NuGet V1 uses exact version equality
+/// (wont-fix: NuGet ranges stay no-match, never a false positive; V1
+/// snapshots carry exact affected versions). Unparseable scopes or
+/// versions fail closed to `false` for semver and Maven sets, and to
+/// exact-match only for NuGet and other sets.
 pub fn version_affected(set: &str, scope: &str, version: &str) -> bool {
     match set {
         "cargo" | "npm" | "go" => version_in_scope(scope, version),
+        "maven" => maven_in_scope(scope, version),
+        _ => scope.trim() == version.trim() && !scope.trim().is_empty(),
+    }
+}
+
+/// Maven version token after normalization: numeric tokens compare
+/// numerically (length then lexicographic, no overflow), qualifier
+/// tokens compare via Maven ordering (case-insensitive, `ga`/`final`/
+/// `release` as release, `cr` as `rc`, single-letter `a`/`b`/`m`
+/// followed by a digit as `alpha`/`beta`/`milestone`).
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum MavenToken {
+    Numeric(String),
+    Qualifier(String),
+}
+
+/// True for trailing-null tokens trimmed per hyphen segment: numeric
+/// zero plus release qualifiers (`""`, already covering `ga`/`final`/
+/// `release` via aliasing).
+fn is_maven_null_token(token: &MavenToken) -> bool {
+    match token {
+        MavenToken::Numeric(value) => value == "0",
+        MavenToken::Qualifier(value) => value.is_empty(),
+    }
+}
+
+/// Numeric comparison without overflow: stripped (no leading zeros
+/// unless `"0"`), longer digit runs are greater, ties break
+/// lexicographically.
+fn compare_maven_numeric(left: &str, right: &str) -> std::cmp::Ordering {
+    if left.len() != right.len() {
+        return left.len().cmp(&right.len());
+    }
+    left.cmp(right)
+}
+
+/// Maven qualifier ordering: `alpha < beta < milestone < rc < snapshot
+/// < "" < sp`, with unknown qualifiers after all known ones in lexical
+/// order (case-insensitive, inputs already lowercased). This matches
+/// `ComparableVersion` (`unknown after known`, `ga`/`final`/`release`
+/// as release).
+fn compare_maven_qualifier(left: &str, right: &str) -> std::cmp::Ordering {
+    const KNOWN: [&str; 7] = ["alpha", "beta", "milestone", "rc", "snapshot", "", "sp"];
+    let mut left_index: Option<usize> = None;
+    let mut right_index: Option<usize> = None;
+    for (index, known) in KNOWN.iter().enumerate() {
+        if *known == left {
+            left_index = Some(index);
+        }
+        if *known == right {
+            right_index = Some(index);
+        }
+    }
+    match (left_index, right_index) {
+        (Some(left_pos), Some(right_pos)) => left_pos.cmp(&right_pos),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => left.cmp(right),
+    }
+}
+
+/// One remaining token against null (exhausted peer): numeric zero and
+/// release qualifiers equal null, smaller qualifiers (e.g. `snapshot`)
+/// are less, larger ones (`sp`, unknowns) and non-zero numbers are
+/// greater.
+fn maven_token_vs_null(token: &MavenToken) -> std::cmp::Ordering {
+    match token {
+        MavenToken::Numeric(value) => {
+            if value == "0" {
+                std::cmp::Ordering::Equal
+            } else {
+                std::cmp::Ordering::Greater
+            }
+        }
+        MavenToken::Qualifier(value) => compare_maven_qualifier(value, ""),
+    }
+}
+
+/// Raw Maven tokenization: split between `.`/`-`/`_` plus digit to
+/// non-digit transitions (transitions and `_` normalize to `-`).
+/// Empty tokens become numeric `"0"`. No aliasing here; that lands in
+/// normalization with next-token lookahead.
+fn tokenize_maven_raw(version: &str) -> Vec<(char, String, bool)> {
+    let mut out: Vec<(char, String, bool)> = Vec::new();
+    let mut current = String::new();
+    let mut current_is_digit: Option<bool> = None;
+    let mut next_sep: char = ' ';
+    for c in version.chars() {
+        if c == '.' || c == '-' || c == '_' {
+            match current_is_digit {
+                None => {
+                    out.push((next_sep, "0".to_owned(), true));
+                }
+                Some(is_digit) => {
+                    out.push((next_sep, std::mem::take(&mut current), is_digit));
+                }
+            }
+            current_is_digit = None;
+            next_sep = if c == '.' { '.' } else { '-' };
+        } else if c.is_ascii_digit() {
+            match current_is_digit {
+                Some(false) => {
+                    out.push((next_sep, std::mem::take(&mut current), false));
+                    next_sep = '-';
+                    current.push(c);
+                    current_is_digit = Some(true);
+                }
+                _ => {
+                    current.push(c);
+                    current_is_digit = Some(true);
+                }
+            }
+        } else if current_is_digit == Some(true) {
+            out.push((next_sep, std::mem::take(&mut current), true));
+            next_sep = '-';
+            current.push(c);
+            current_is_digit = Some(false);
+        } else {
+            current.push(c);
+            current_is_digit = Some(false);
+        }
+    }
+    match current_is_digit {
+        None => {
+            if !out.is_empty() {
+                out.push((next_sep, "0".to_owned(), true));
+            }
+        }
+        Some(is_digit) => {
+            out.push((next_sep, current, is_digit));
+        }
+    }
+    out
+}
+
+/// Normalized Maven token list: lowercased qualifiers with aliases,
+/// numerics stripped, trailing nulls trimmed per hyphen segment with
+/// trailing empty segments dropped. Flat list keeps `-` for segment
+/// starts and `.` within segments (`_` already normalized).
+fn parse_maven_version(version: &str) -> Vec<(char, MavenToken)> {
+    let trimmed = version.trim();
+    if trimmed.is_empty() {
+        return Vec::new();
+    }
+    let raw = tokenize_maven_raw(trimmed);
+    if raw.is_empty() {
+        return Vec::new();
+    }
+    let mut mapped: Vec<(char, MavenToken)> = Vec::new();
+    for (index, (sep, text, is_digit)) in raw.iter().enumerate() {
+        if *is_digit {
+            let stripped = text.trim_start_matches('0');
+            let normalized = if stripped.is_empty() {
+                "0".to_owned()
+            } else {
+                stripped.to_owned()
+            };
+            mapped.push((*sep, MavenToken::Numeric(normalized)));
+        } else {
+            let lower = text.to_ascii_lowercase();
+            let aliased = if lower == "ga" || lower == "final" || lower == "release" {
+                String::new()
+            } else if lower == "cr" {
+                "rc".to_owned()
+            } else if (lower == "a" || lower == "b" || lower == "m")
+                && index + 1 < raw.len()
+                && raw[index + 1].2
+            {
+                if lower == "a" {
+                    "alpha".to_owned()
+                } else if lower == "b" {
+                    "beta".to_owned()
+                } else {
+                    "milestone".to_owned()
+                }
+            } else {
+                lower
+            };
+            mapped.push((*sep, MavenToken::Qualifier(aliased)));
+        }
+    }
+    let mut segments: Vec<Vec<(char, MavenToken)>> = Vec::new();
+    let mut current_seg: Vec<(char, MavenToken)> = Vec::new();
+    for (sep, token) in mapped {
+        if sep == '-' && !current_seg.is_empty() {
+            segments.push(std::mem::take(&mut current_seg));
+            current_seg.push(('-', token));
+        } else {
+            current_seg.push((sep, token));
+        }
+    }
+    if !current_seg.is_empty() {
+        segments.push(current_seg);
+    }
+    for segment in segments.iter_mut() {
+        while let Some((_, token)) = segment.last() {
+            if is_maven_null_token(token) {
+                segment.pop();
+            } else {
+                break;
+            }
+        }
+    }
+    segments.retain(|segment| !segment.is_empty());
+    let mut out: Vec<(char, MavenToken)> = Vec::new();
+    for (seg_index, segment) in segments.into_iter().enumerate() {
+        for (tok_index, (_, token)) in segment.into_iter().enumerate() {
+            if seg_index == 0 && tok_index == 0 {
+                out.push((' ', token));
+            } else if tok_index == 0 {
+                out.push(('-', token));
+            } else {
+                out.push(('.', token));
+            }
+        }
+    }
+    out
+}
+
+/// Maven-native version comparison following `ComparableVersion` for
+/// the audited subset: numeric numerically, qualifiers by Maven order
+/// (unknown after known, lexical), qualifier before numeric, and
+/// hyphen-number before dot-number regardless of value. Trailing
+/// nulls already trimmed, so exhaustion compares remainders against
+/// null.
+pub fn maven_compare(left: &str, right: &str) -> std::cmp::Ordering {
+    let left_tokens = parse_maven_version(left);
+    let right_tokens = parse_maven_version(right);
+    let common = left_tokens.len().min(right_tokens.len());
+    for index in 0..common {
+        let (sep_left, token_left) = &left_tokens[index];
+        let (sep_right, token_right) = &right_tokens[index];
+        match (token_left, token_right) {
+            (MavenToken::Numeric(left_num), MavenToken::Numeric(right_num)) => {
+                if sep_left == sep_right {
+                    match compare_maven_numeric(left_num, right_num) {
+                        std::cmp::Ordering::Equal => continue,
+                        other => return other,
+                    }
+                } else {
+                    // Hyphen-number sorts before dot-number even when
+                    // values differ (`1-2 < 1.1` per List vs Int).
+                    let left_rank = if *sep_left == '-' { 0 } else { 1 };
+                    let right_rank = if *sep_right == '-' { 0 } else { 1 };
+                    if left_rank != right_rank {
+                        if left_rank < right_rank {
+                            return std::cmp::Ordering::Less;
+                        }
+                        return std::cmp::Ordering::Greater;
+                    }
+                    match compare_maven_numeric(left_num, right_num) {
+                        std::cmp::Ordering::Equal => continue,
+                        other => return other,
+                    }
+                }
+            }
+            (MavenToken::Qualifier(left_q), MavenToken::Qualifier(right_q)) => {
+                match compare_maven_qualifier(left_q, right_q) {
+                    std::cmp::Ordering::Equal => continue,
+                    other => return other,
+                }
+            }
+            (MavenToken::Qualifier(_), MavenToken::Numeric(_)) => {
+                return std::cmp::Ordering::Less;
+            }
+            (MavenToken::Numeric(_), MavenToken::Qualifier(_)) => {
+                return std::cmp::Ordering::Greater;
+            }
+        }
+    }
+    if left_tokens.len() == right_tokens.len() {
+        return std::cmp::Ordering::Equal;
+    }
+    if left_tokens.len() > right_tokens.len() {
+        for (_, token) in left_tokens.iter().skip(common) {
+            match maven_token_vs_null(token) {
+                std::cmp::Ordering::Equal => continue,
+                other => return other,
+            }
+        }
+        return std::cmp::Ordering::Equal;
+    }
+    for (_, token) in right_tokens.iter().skip(common) {
+        match maven_token_vs_null(token) {
+            std::cmp::Ordering::Equal => continue,
+            std::cmp::Ordering::Less => return std::cmp::Ordering::Greater,
+            std::cmp::Ordering::Greater => return std::cmp::Ordering::Less,
+            // Equal handled above; no other variants exist, but keep
+            // exhaustive for clarity.
+        }
+    }
+    std::cmp::Ordering::Equal
+}
+
+/// Maven equality (normalized comparison): `1.0` equals `1.0.0`,
+/// `1.ga` equals `1`, `1-a1` equals `1-alpha-1`. Empty or overlong
+/// inputs never equal.
+pub fn maven_version_eq(left: &str, right: &str) -> bool {
+    let left_trimmed = left.trim();
+    let right_trimmed = right.trim();
+    if left_trimmed.is_empty() || right_trimmed.is_empty() {
+        return false;
+    }
+    if left_trimmed.len() > 256 || right_trimmed.len() > 256 {
+        return false;
+    }
+    maven_compare(left_trimmed, right_trimmed) == std::cmp::Ordering::Equal
+}
+
+/// Maven-native affected-scope matching: bare versions use
+/// Maven equality, bracketed intervals use Maven ordering with
+/// inclusive `[`/`]` versus exclusive `(`/`)` bounds, unions via
+/// comma-separated intervals such as `(,1.0],[1.2,)`, and empty bounds
+/// as unbounded. Malformed scopes, empty inputs, and overlong inputs
+/// fail closed to `false` (never a false positive). Note Maven
+/// includes pre-releases under exclusive upper bounds (e.g.
+/// `[1.0,2.0)` matches `2.0-rc1`), matching upstream ordering.
+pub fn maven_in_scope(scope: &str, version: &str) -> bool {
+    let scope_trimmed = scope.trim();
+    let version_trimmed = version.trim();
+    if scope_trimmed.is_empty() || version_trimmed.is_empty() {
+        return false;
+    }
+    if scope_trimmed.len() > 4096 || version_trimmed.len() > 256 {
+        return false;
+    }
+    let has_brackets = scope_trimmed.contains('[')
+        || scope_trimmed.contains('(')
+        || scope_trimmed.contains(']')
+        || scope_trimmed.contains(')');
+    if !has_brackets {
+        return maven_version_eq(scope_trimmed, version_trimmed);
+    }
+    let chars: Vec<char> = scope_trimmed.chars().collect();
+    let mut index: usize = 0;
+    let mut matched = false;
+    let mut found_interval = false;
+    while index < chars.len() {
+        let current = chars[index];
+        if current == '[' || current == '(' {
+            let start = current;
+            let mut close_index = index + 1;
+            while close_index < chars.len()
+                && chars[close_index] != ']'
+                && chars[close_index] != ')'
+            {
+                close_index += 1;
+            }
+            if close_index >= chars.len() {
+                return false;
+            }
+            let end = chars[close_index];
+            let content: String = chars[index + 1..close_index].iter().collect();
+            found_interval = true;
+            let parts: Vec<&str> = content.split(',').collect();
+            let (lower, upper, lower_inclusive, upper_inclusive, valid) = if parts.len() == 1 {
+                let bound = parts[0].trim();
+                if bound.is_empty() {
+                    (String::new(), String::new(), false, false, false)
+                } else {
+                    (
+                        bound.to_owned(),
+                        bound.to_owned(),
+                        start == '[',
+                        end == ']',
+                        true,
+                    )
+                }
+            } else if parts.len() == 2 {
+                let low = parts[0].trim().to_owned();
+                let high = parts[1].trim().to_owned();
+                if low.is_empty() && high.is_empty() {
+                    (String::new(), String::new(), false, false, false)
+                } else {
+                    (low, high, start == '[', end == ']', true)
+                }
+            } else {
+                (String::new(), String::new(), false, false, false)
+            };
+            if valid
+                && lower.len() <= 256
+                && upper.len() <= 256
+                && interval_matches(
+                    &lower,
+                    &upper,
+                    lower_inclusive,
+                    upper_inclusive,
+                    version_trimmed,
+                )
+            {
+                matched = true;
+            }
+            index = close_index + 1;
+        } else if current == ',' || current.is_whitespace() {
+            index += 1;
+        } else {
+            return false;
+        }
+    }
+    if !found_interval {
+        return false;
+    }
+    matched
+}
+
+/// One Maven interval against a locked version: empty bounds are
+/// unbounded, otherwise Maven ordering with inclusive/exclusive edges.
+fn interval_matches(
+    lower: &str,
+    upper: &str,
+    lower_inclusive: bool,
+    upper_inclusive: bool,
+    version: &str,
+) -> bool {
+    if !lower.is_empty() {
+        match maven_compare(version, lower) {
+            std::cmp::Ordering::Less => return false,
+            std::cmp::Ordering::Equal => {
+                if !lower_inclusive {
+                    return false;
+                }
+            }
+            std::cmp::Ordering::Greater => {}
+        }
+    }
+    if !upper.is_empty() {
+        match maven_compare(version, upper) {
+            std::cmp::Ordering::Greater => return false,
+            std::cmp::Ordering::Equal => {
+                if !upper_inclusive {
+                    return false;
+                }
+            }
+            std::cmp::Ordering::Less => {}
+        }
+    }
+    true
+}
+
+/// Set-aware exception version narrowing: semver sets use
+/// [`version_in_scope`], Maven uses [`maven_in_scope`], and remaining
+/// sets (NuGet V1) stay exact-match.
+fn exception_version_in_scope(set: &str, scope: &str, version: &str) -> bool {
+    match set {
+        "cargo" | "npm" | "go" => version_in_scope(scope, version),
+        "maven" => maven_in_scope(scope, version),
         _ => scope.trim() == version.trim() && !scope.trim().is_empty(),
     }
 }
@@ -286,7 +733,11 @@ pub fn apply_exceptions(
                 exception.advisory == finding.advisory
                     && exception.package == finding.package
                     && exception.set == finding.set
-                    && version_in_scope(&exception.versions, &finding.version)
+                    && exception_version_in_scope(
+                        &finding.set,
+                        &exception.versions,
+                        &finding.version,
+                    )
                     && check_expiry(&exception.expires, today).is_ok()
             })
         })
@@ -386,25 +837,177 @@ mod tests {
     }
 
     #[test]
-    fn version_matching_uses_semver_for_cargo_npm_go_and_exact_for_maven_nuget() {
+    fn version_matching_uses_semver_for_cargo_npm_go_ranges_for_maven_exact_for_nuget() {
         assert!(version_affected("cargo", ">=1.0.0, <2.0.0", "1.5.0"));
         assert!(!version_affected("cargo", ">=1.0.0, <2.0.0", "2.0.0"));
         assert!(version_affected("npm", "^18.0.0", "18.2.0"));
         assert!(version_affected("go", ">=1.0.0, <2.0.0", "1.5.0"));
-        // Wont-fix: Maven/NuGet stay exact-match in V1.
-        // Exact versions match; semver ranges and Maven/NuGet interval
-        // notations never match (no false positives; V1 snapshots carry
-        // exact affected versions).
+        // Maven uses Maven-native intervals; bare versions use Maven
+        // equality (so `1.0` matches `1.0.0`).
         assert!(version_affected("maven", "1.2.0", "1.2.0"));
+        assert!(version_affected("maven", "1.0", "1.0.0"));
+        assert!(version_affected("maven", "[1.0,2.0)", "1.5.0"));
+        assert!(!version_affected("maven", "[1.0,2.0)", "2.0.0"));
+        assert!(version_affected("maven", "(,1.0]", "1.0.0"));
+        assert!(!version_affected("maven", "(,1.0]", "1.0.1"));
+        assert!(version_affected("maven", "[1.0]", "1.0.0"));
         assert!(!version_affected("maven", ">=1.0.0", "1.2.0"));
-        assert!(!version_affected("maven", "[1.0,2.0)", "1.5.0"));
-        assert!(!version_affected("maven", "(,1.0]", "1.0.0"));
-        assert!(!version_affected("maven", "[1.0]", "1.0.0"));
+        // Wont-fix: NuGet stays exact-match in V1.
         assert!(version_affected("nuget", "1.2.3", "1.2.3"));
         assert!(!version_affected("nuget", "[1.0,2.0)", "1.5.0"));
         assert!(!version_affected("nuget", "(,1.0]", "1.0.0"));
         assert!(!version_affected("nuget", "[1.0]", "1.0.0"));
         assert!(!version_affected("nuget", "", "1.0.0"));
+    }
+
+    #[test]
+    fn maven_version_ordering_follows_upstream_subset() {
+        // Release equality plus trailing-null trimming.
+        assert_eq!(maven_compare("1.0", "1.0.0"), std::cmp::Ordering::Equal);
+        assert!(maven_version_eq("1.0", "1.0.0"));
+        assert!(maven_version_eq("1.ga", "1"));
+        assert!(maven_version_eq("1-final", "1"));
+        assert!(maven_version_eq("1.0.0-foo.0.0", "1-foo"));
+        assert!(maven_version_eq("1-a1", "1-alpha-1"));
+        // Qualifier ladder.
+        assert!(maven_compare("1-alpha", "1-beta") == std::cmp::Ordering::Less);
+        assert!(maven_compare("1-beta", "1-milestone") == std::cmp::Ordering::Less);
+        assert!(maven_compare("1-milestone", "1-rc") == std::cmp::Ordering::Less);
+        assert!(maven_compare("1-rc", "1-snapshot") == std::cmp::Ordering::Less);
+        assert!(maven_compare("1-snapshot", "1") == std::cmp::Ordering::Less);
+        assert!(maven_compare("1", "1-sp") == std::cmp::Ordering::Less);
+        // Unknown qualifiers sort after known ones, lexically.
+        assert!(maven_compare("1", "1-foo") == std::cmp::Ordering::Less);
+        assert!(maven_compare("5.aardvark", "5.zebra") == std::cmp::Ordering::Less);
+        // Numbers beat qualifiers; hyphen-numbers sort before dot-numbers.
+        assert!(maven_compare("1-K", "1.7") == std::cmp::Ordering::Less);
+        assert!(maven_compare("1-foo2", "1-foo10") == std::cmp::Ordering::Less);
+        assert_eq!(maven_compare("1.foo", "1-foo"), std::cmp::Ordering::Equal);
+        assert!(maven_compare("1-1", "1.1") == std::cmp::Ordering::Less);
+        assert!(maven_compare("1", "1.1") == std::cmp::Ordering::Less);
+        assert!(maven_compare("2.0-rc1", "2.0") == std::cmp::Ordering::Less);
+        assert!(maven_compare("1.10", "1.9") == std::cmp::Ordering::Greater);
+    }
+
+    #[test]
+    fn maven_ranges_cover_intervals_unions_and_edges() {
+        // Bounded intervals, inclusive versus exclusive.
+        assert!(maven_in_scope("[1.0,2.0]", "1.0"));
+        assert!(maven_in_scope("[1.0,2.0]", "2.0"));
+        assert!(!maven_in_scope("(1.0,2.0)", "1.0"));
+        assert!(!maven_in_scope("(1.0,2.0)", "2.0"));
+        assert!(maven_in_scope("[1.0,2.0)", "1.0"));
+        assert!(!maven_in_scope("[1.0,2.0)", "2.0"));
+        // Maven includes pre-releases under an exclusive upper bound.
+        assert!(maven_in_scope("[1.0,2.0)", "2.0-rc1"));
+        // Unbounded sides.
+        assert!(maven_in_scope("[1.5,)", "1.5"));
+        assert!(maven_in_scope("[1.5,)", "9.9"));
+        assert!(!maven_in_scope("[1.5,)", "1.4"));
+        assert!(maven_in_scope("(,1.0]", "1.0"));
+        assert!(!maven_in_scope("(,1.0]", "1.0.1"));
+        assert!(maven_in_scope("(,1.0)", "0.9"));
+        assert!(!maven_in_scope("(,1.0)", "1.0"));
+        // Single-version intervals and unions.
+        assert!(maven_in_scope("[1.0]", "1.0.0"));
+        assert!(!maven_in_scope("[1.0]", "1.0.1"));
+        assert!(!maven_in_scope("(1.0)", "1.0"));
+        assert!(maven_in_scope("(,1.0],[1.2,)", "1.0"));
+        assert!(maven_in_scope("(,1.0],[1.2,)", "1.2"));
+        assert!(!maven_in_scope("(,1.0],[1.2,)", "1.1"));
+        assert!(maven_in_scope("(,1.1),(1.1,)", "1.0"));
+        assert!(maven_in_scope("(,1.1),(1.1,)", "1.2"));
+        assert!(!maven_in_scope("(,1.1),(1.1,)", "1.1"));
+        // Bare versions are Maven equality, not semver ranges.
+        assert!(maven_in_scope("1.2.0", "1.2.0"));
+        assert!(maven_in_scope("1.0", "1.0.0"));
+        assert!(!maven_in_scope("1.2.0", "1.2.1"));
+        assert!(!maven_in_scope(">=1.0.0", "1.2.0"));
+        // Malformed and empty inputs fail closed, never a false positive.
+        assert!(!maven_in_scope("", "1.0"));
+        assert!(!maven_in_scope("[1.0,2.0)", ""));
+        assert!(!maven_in_scope("[1.0,2.0", "1.5"));
+        assert!(!maven_in_scope("[1.0,2.0,3.0]", "1.5"));
+        assert!(!maven_in_scope("(,)", "1.0"));
+        assert!(!maven_in_scope("[]", "1.0"));
+    }
+
+    #[test]
+    fn maven_range_advisories_report_findings() {
+        // Range advisories fire instead of looking clean.
+        let packages = vec![LockedPackage {
+            name: "com.google.guava:guava".to_owned(),
+            version: "32.0.0".to_owned(),
+            set: "maven".to_owned(),
+            is_git: false,
+            is_private: false,
+        }];
+        let advisories = vec![
+            Advisory {
+                id: "GHSA-maven-range".to_owned(),
+                package: "com.google.guava:guava".to_owned(),
+                versions: "[30.0,33.0)".to_owned(),
+                severity: "high".to_owned(),
+                fixed: vec!["33.0".to_owned()],
+                set: "maven".to_owned(),
+            },
+            Advisory {
+                id: "GHSA-maven-miss".to_owned(),
+                package: "com.google.guava:guava".to_owned(),
+                versions: "[33.0,34.0)".to_owned(),
+                severity: "high".to_owned(),
+                fixed: vec![],
+                set: "maven".to_owned(),
+            },
+        ];
+        let (findings, unassessed) = match_packages(&packages, &advisories);
+        assert!(unassessed.is_empty());
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].advisory, "GHSA-maven-range");
+        assert_eq!(findings[0].version, "32.0.0");
+    }
+
+    #[test]
+    fn maven_exceptions_narrow_with_maven_semantics() {
+        let packages = vec![LockedPackage {
+            name: "junit:junit".to_owned(),
+            version: "4.13.2".to_owned(),
+            set: "maven".to_owned(),
+            is_git: false,
+            is_private: false,
+        }];
+        let advisories = vec![Advisory {
+            id: "GHSA-maven-exception".to_owned(),
+            package: "junit:junit".to_owned(),
+            versions: "[4.0,5.0)".to_owned(),
+            severity: "medium".to_owned(),
+            fixed: vec![],
+            set: "maven".to_owned(),
+        }];
+        let (findings, _) = match_packages(&packages, &advisories);
+        assert_eq!(findings.len(), 1);
+        let covering = RiskException {
+            advisory: "GHSA-maven-exception".to_owned(),
+            package: "junit:junit".to_owned(),
+            set: "maven".to_owned(),
+            versions: "[4.0,5.0)".to_owned(),
+            reason: "Accepted for this release.".to_owned(),
+            expires: "2027-03-01".to_owned(),
+        };
+        let (unexempted, problems) = apply_exceptions(&findings, &[covering], "2026-09-18");
+        assert!(problems.is_empty());
+        assert!(unexempted.is_empty());
+        let missing = RiskException {
+            advisory: "GHSA-maven-exception".to_owned(),
+            package: "junit:junit".to_owned(),
+            set: "maven".to_owned(),
+            versions: "[5.0,6.0)".to_owned(),
+            reason: "Wrong range.".to_owned(),
+            expires: "2027-03-01".to_owned(),
+        };
+        let (unexempted, problems) = apply_exceptions(&findings, &[missing], "2026-09-18");
+        assert!(problems.is_empty());
+        assert_eq!(unexempted.len(), 1);
     }
 
     #[test]
