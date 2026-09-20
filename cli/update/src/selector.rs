@@ -832,6 +832,36 @@ mod tests {
     }
 
     #[test]
+    fn go_selective_parses_module_path_and_stays_selective() {
+        // Issue #636: per-module identities parse (pinned `go-cmp` plus
+        // hello importpath) and resolve to `Packages`; the backend owns
+        // the wont-fix `unsupported` call, never a silent full
+        // substitution. Bare `go:` stays a parse error.
+        assert_eq!(
+            parse_selector("go:github.com/google/go-cmp/cmp"),
+            Ok(Selector::Package(
+                SetId::Go,
+                "github.com/google/go-cmp/cmp".to_owned()
+            ))
+        );
+        let resolved = resolve(&strings(&[
+            "go:github.com/google/go-cmp/cmp",
+            "go:rules_dx/go/tests/fixtures/hello",
+        ]))
+        .expect("go packages");
+        assert_eq!(
+            resolved.get(&SetId::Go),
+            Some(&SetRequest::Packages(vec![
+                "github.com/google/go-cmp/cmp".to_owned(),
+                "rules_dx/go/tests/fixtures/hello".to_owned()
+            ]))
+        );
+        let resolved = resolve(&strings(&["go", "go:github.com/google/go-cmp/cmp"]))
+            .expect("go full wins");
+        assert_eq!(resolved.get(&SetId::Go), Some(&SetRequest::Full));
+    }
+
+    #[test]
     fn targets_expand_to_owning_sets_full() {
         let resolved = resolve(&strings(&["//go/tests/fixtures/hello:hello"])).expect("target");
         assert_eq!(resolved.get(&SetId::Go), Some(&SetRequest::Full));

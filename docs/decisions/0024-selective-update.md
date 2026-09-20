@@ -39,9 +39,13 @@ Selective support is per set, pinned by fixtures in
   `third_party/dotnet/deps` from `paket.dependencies`/`paket.lock`
   (exact pins stay). There is no per-id regeneration, so
   `nuget:<id>` fails closed with the `dx update nuget` hint.
-- Go `WONT-FIX` in V1: the main workspace has no `go.mod`, so the full
-  set is a no-op success with no launch. Selective has no owning package
-  (`go:<module-path>`), so it fails closed as unknown package.
+- Go `WONT-FIX` in V1: the main workspace has no `go.mod` by design
+  and the pinned `go_deps.from_file` module lock tracks Gazelle, so the
+  full set is an intentional no-op success with no launch. There is no
+  per-module update flag in the approved integration, so
+  `go:<module-path>` (e.g. `go:github.com/google/go-cmp/cmp`) fails
+  closed with `unsupported` plus the `dx bump gomod:<module> <version>`
+  hint (issue #636).
 
 A selective request for a wont-fix set never silently substitutes a full
 update; execution reports `unsupported` per set and the invocation exits
