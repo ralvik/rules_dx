@@ -29,6 +29,8 @@ boot).
 
 ## Prebuilt images (GHCR)
 
+Owner: issue #460 (live successor to closed #184 for the GHCR route).
+
 Per-create feature installation (Bazel fetch plus a cold postCreate) is
 removed by prebuilt images published to GHCR per the
 [release runbook](../deploy/release-runbook.md). The route is a

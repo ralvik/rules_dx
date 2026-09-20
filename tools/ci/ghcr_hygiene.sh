@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# GHCR prebuilt-image hygiene (issues #184, #311).
+# GHCR prebuilt-image hygiene (issue #460, live successor to closed #184
+# for the GHCR route; trust root shared with #311).
 #
 # The prebuilt devcontainer image removes per-create feature-install cost,
 # but publication is gated: separate workflow from releases per owner
@@ -56,7 +57,7 @@ else
   bad "ghcr.yml lost the dispatch + default-closed approve gate"
 fi
 
-# The approve gate stays typed (issue #184 parity with #78): boolean
+# The approve gate stays typed (issue #460 parity with #78): boolean
 # input type so overlapping dispatches queue via typed approval instead
 # of stringly-typed approval.
 if grep -q -F -e 'type: boolean' .github/workflows/ghcr.yml; then
@@ -148,7 +149,7 @@ else
   bad "ghcr.yml lost the pinned cosign fetch (version + checksums + sha256sum -c)"
 fi
 
-# Single-version tag tracking (issue #184): push and PR tags carry dx ==
+# Single-version tag tracking (issue #460): push and PR tags carry dx ==
 # module (0.0.0) plus sha; digest pin (never latest) is the scaffold ref.
 if grep -q -F -e 'devcontainer:0.0.0-sha-' .github/workflows/ghcr.yml && grep -q -F -e 'devcontainer:0.0.0-ci-' .github/workflows/ghcr.yml; then
   ok
@@ -197,7 +198,7 @@ else
   bad "devcontainer.json image drifted from mcr before the first GHCR push (digest ref follows push)"
 fi
 
-# Least-privilege split explicit (issue #184 parity with #78): only
+# Least-privilege split explicit (issue #460 parity with #78): only
 # ghcr.yml carries `packages: write` for image push; the dry run stays
 # read-only. Losing the push permission breaks gated publication, while
 # gaining it in publish-dry-run.yml is rejected there.
@@ -207,7 +208,7 @@ else
   bad "ghcr.yml lost packages:write (gated push needs it; dry run must stay read-only)"
 fi
 
-# Least-privilege default (issue #184): top-level permissions stay
+# Least-privilege default (issue #460): top-level permissions stay
 # read-only (`contents: read`); only the build job carries
 # `packages: write` for the gated push, so a future job without
 # explicit permissions never inherits push scope.

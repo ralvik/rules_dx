@@ -56,7 +56,7 @@ release, so nothing is drafted or published unsigned. Pinned by
 6. BCR: `bazel run //deploy/release:bcr_demo` without the dry-run env
    (opens the `source.json` plus integrity plus presubmit PR manually;
    this program never pushes itself).
-7. GHCR: dispatch `ghcr.yml` with `approve: true`, then `cosign sign
+7. GHCR (issue #460): dispatch `ghcr.yml` with `approve: true`, then `cosign sign
    <digest>` plus attestation on the same trust root; record quotas and
    update the scaffold digest reference.
 8. Verify before install: `deploy/install/dx_verify.sh --binary <dx>

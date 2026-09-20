@@ -185,8 +185,8 @@ jobs:
               ],
               "not_attempted": [
                   "SBOM/provenance publishing (generated owner-gated via //deploy/release:sbom_demo; issue #311)",
-                  "Signing/attestation publishing (Sigstore keyless + GitHub attestations on the issue #311 trust root, signing-first; GHCR images sign separately via cosign <digest> under issue #184)",
-                  "GHCR prebuilt images (separate workflow .github/workflows/ghcr.yml per owner decision; issue #184)",
+                  "Signing/attestation publishing (Sigstore keyless + GitHub attestations on the issue #311 trust root, signing-first; GHCR images sign separately via cosign <digest> under issue #460)",
+                  "GHCR prebuilt images (separate workflow .github/workflows/ghcr.yml per owner decision; issue #460)",
                   "Non-seed release matrix builds (platforms unqualified; issue #311)",
                   "BCR submission (owner-gated via //deploy/release:bcr_demo; issue #311)",
                   "Any tag, registry submission, or release creation",

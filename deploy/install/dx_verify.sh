@@ -14,7 +14,7 @@
 # PR review); signing covers GitHub Release binaries. SBOM (Syft/CycloneDX)
 # bundles verify through the same cosign path when passed as --sbom.
 # Order per #26: human-run signing workflow (#78) first, then GHCR
-# images (#184, separate workflow, `cosign sign <digest>`).
+# images (#460, live successor to closed #184, separate workflow, `cosign sign <digest>`).
 #
 # Usage:
 #   dx_verify.sh --binary PATH --bundle PATH --identity ID --issuer ISSUER \

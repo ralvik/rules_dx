@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Publication-group guards (issues #184, #78, #26, #5, #311).
+# Publication-group guards (issues #460, #78, #26, #5, #311).
 #
-# Prebuilt devcontainer images (#184) ship from a workflow kept separate
+# Prebuilt devcontainer images (#460, live successor to closed #184) ship from a workflow kept separate
 # from releases per owner decision, build on PR, and push only on
 # workflow_dispatch + approve:true; signing follows #26/#78
 # (cosign <digest> on the #26 trust root). The publishing dry run (#78)

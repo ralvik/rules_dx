@@ -1,4 +1,4 @@
-# Prebuilt devcontainer image (issue #184, seed slice).
+# Prebuilt devcontainer image (issue #460, live successor to closed #184, seed slice).
 #
 # Seed-host first (linux amd64): pinned Ubuntu base digest, pre-installed
 # Bazelisk (pinned sha256, Bazel 9.2.0 via USE_BAZEL_VERSION), no ambient

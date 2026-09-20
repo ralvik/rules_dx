@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Distribution/closeout guards (issues #5, #26, #78, #184, #54, #311, #407).
+# Distribution/closeout guards (issues #5, #26, #78, #460, #54, #311, #407).
 #
 # No release has been cut: no tags, GitHub releases, registry
 # submissions, or publication outputs without explicit owner approval.
 # Standalone dx binaries + BCR publication + matrix/SBOM/signing (#311),
 # the human-run signing-first dry run (#78/#458, live successor to closed
 # #311 for the human-run path), and prebuilt devcontainer
-# images on GHCR (#184, separate workflow) stay owner-gated with SECURITY
+# images on GHCR (#460, live successor to closed #184, separate workflow) stay owner-gated with SECURITY
 # reporting as the release precondition. Close-out battery (#54) runs the
 # full battery on a clean tree.
 #
@@ -81,7 +81,7 @@ else
   bad "publish dry run lost its dispatch-only / nothing-publishes shape"
 fi
 
-# #184 GHCR stays a separate workflow from releases, gated push.
+# #460 GHCR stays a separate workflow from releases, gated push.
 if [[ -f ".github/workflows/ghcr.yml" ]] &&
   grep -q -F -e 'workflow_dispatch' .github/workflows/ghcr.yml &&
   grep -q -F -e 'approve' .github/workflows/ghcr.yml; then
@@ -98,14 +98,14 @@ else
   bad "publish dry run lost its #311 signing-first trust-root record"
 fi
 
-# #184 prebuilt base stays digest-pinned, never floating.
+# #460 prebuilt base stays digest-pinned, never floating.
 if grep -q -E -e '^FROM [^ ]+@sha256:[0-9a-f]{64}' .devcontainer/Dockerfile.prebuilt; then
   ok
 else
   bad "Dockerfile.prebuilt lost its digest-pinned FROM"
 fi
 
-# #184 scaffold image field stays present.
+# #460 scaffold image field stays present.
 if grep -q -F -e 'image' .devcontainer/devcontainer.json; then
   ok
 else
@@ -122,22 +122,22 @@ else
   bad "prior publication harnesses missing (release_hygiene/publish_trust/ghcr*)"
 fi
 
-# #78/#184 approve gates stay default-closed (explicit owner approval
+# #78/#460 approve gates stay default-closed (explicit owner approval
 # until standing approval exists).
 if grep -q -F -e 'default: false' .github/workflows/publish-dry-run.yml &&
   grep -q -F -e 'default: false' .github/workflows/ghcr.yml; then
   ok
 else
-  bad "publish/ghcr workflows lost their default-closed approve gates (#78/#184)"
+  bad "publish/ghcr workflows lost their default-closed approve gates (#78/#460)"
 fi
 
-# #184 Bazelisk delegation stays pinned (launcher sha + 9.2.0 via
+# #460 Bazelisk delegation stays pinned (launcher sha + 9.2.0 via
 # USE_BAZEL_VERSION, no ambient toolchains).
 if grep -q -F -e 'Bazelisk' .devcontainer/Dockerfile.prebuilt &&
   grep -q -F -e 'USE_BAZEL_VERSION=9.2.0' .devcontainer/Dockerfile.prebuilt; then
   ok
 else
-  bad "Dockerfile.prebuilt lost its Bazelisk delegation pin (#184)"
+  bad "Dockerfile.prebuilt lost its Bazelisk delegation pin (#460)"
 fi
 
 # #5 consumer pin stays on the unpublishable 0.0.0 (reviewed commit
@@ -166,12 +166,12 @@ else
   bad "publish dry run lost its SBOM/signing-first detail (#311)"
 fi
 
-# #184/#311 cosign record stays explicit (signs <digest> on the #311
+# #460/#311 cosign record stays explicit (signs <digest> on the #311
 # trust root owner-gated after push, dry-run would-sign otherwise).
 if grep -q -F -e 'cosign' .github/workflows/ghcr.yml; then
   ok
 else
-  bad "GHCR workflow lost its cosign record (#184/#311)"
+  bad "GHCR workflow lost its cosign record (#460/#311)"
 fi
 
 # #5 self-call smoke stays wired: consumer-ci + docs-ci prove the
@@ -199,13 +199,13 @@ else
   ok
 fi
 
-# #184 GHCR gate messages stay explicit: digest-pinned FROM, never
+# #460 GHCR gate messages stay explicit: digest-pinned FROM, never
 # latest, build-only without approve (push/signing still gated).
 if grep -q -F -e 'never latest/bare tag' .github/workflows/ghcr.yml &&
   grep -q -F -e 'build-only, nothing pushes' .github/workflows/ghcr.yml; then
   ok
 else
-  bad "GHCR workflow lost its never-latest/build-only gate record (#184)"
+  bad "GHCR workflow lost its never-latest/build-only gate record (#460)"
 fi
 
 # #5 consumer caller pins the reusable workflow at a reviewed commit
@@ -224,13 +224,13 @@ else
   bad "publish dry run lost its attestation record (#311)"
 fi
 
-# #184 admissibility gate stays versioned: the scaffold image must
+# #460 admissibility gate stays versioned: the scaffold image must
 # pass devcontainer_is_admissible (pinned bootstrap, Bazel
 # delegation, no ambient tools).
 if grep -q -F -e 'devcontainer_is_admissible' cli/adopt/src/lib.rs; then
   ok
 else
-  bad "adopt crate lost its devcontainer admissibility gate (#184)"
+  bad "adopt crate lost its devcontainer admissibility gate (#460)"
 fi
 
 # #78 never-publishes stays machine-checked: the dry-run report stages
@@ -242,14 +242,14 @@ else
   bad "publish dry run lost its never-publishes record (#78)"
 fi
 
-# #184 scaffold + quota record stays explicit: the scaffold still floats
+# #460 scaffold + quota record stays explicit: the scaffold still floats
 # off the prebuilt digest until the first push, and GHCR quotas are
 # qualified on first push (this slice pushes nothing).
 if grep -q -F -e 'scaffold still references' .devcontainer/Dockerfile.prebuilt &&
   grep -q -F -e 'GHCR quotas/retention are qualified on first push' .devcontainer/Dockerfile.prebuilt; then
   ok
 else
-  bad "Dockerfile.prebuilt lost its scaffold/quota record (#184)"
+  bad "Dockerfile.prebuilt lost its scaffold/quota record (#460)"
 fi
 
 # #311 unqualified-matrix record stays explicit: non-seed release matrix
@@ -278,12 +278,12 @@ else
   bad "publish dry run lost its clean-checkout record (#78)"
 fi
 
-# #184/#311 scaffold-update record stays explicit: scaffold digest updates
+# #460/#311 scaffold-update record stays explicit: scaffold digest updates
 # plus cosign signing follow on the #311 trust root (push still gated).
 if grep -q -F -e 'scaffold update' .github/workflows/ghcr.yml; then
   ok
 else
-  bad "GHCR workflow lost its scaffold-update record (#184)"
+  bad "GHCR workflow lost its scaffold-update record (#460)"
 fi
 
 # #26 install-time publisher-identity verification stays owned: the
