@@ -17,6 +17,7 @@ rust_library(
         "src/lib.rs",
         "src/parsers/biome.rs",
         "src/parsers/buildifier.rs",
+        "src/parsers/error_prone.rs",
         "src/parsers/eslint.rs",
         "src/parsers/flake8.rs",
         "src/parsers/markdown.rs",

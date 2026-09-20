@@ -124,9 +124,20 @@
 //!   `file is not formatted`, warning). The `[warn] Code style issues`
 //!   summary and `Checking formatting...` stdout are skipped. Clean is
 //!   exit 0 with no warn lines; findings exit 1.
+//! * Error Prone (javac log on stderr, stdout empty): stderr lines
+//!   `<path>:<line>: error|warning: [Check] <message>` (unbracketed
+//!   javac headers report under rule `javac`, never silently dropped).
+//!   Indented continuations (source echo, `^` caret, `(see ...)` link,
+//!   `Did you mean ...?`, `symbol:`/`location:` detail), `Note:` lines,
+//!   and `N error(s)/warning(s)` summaries are skipped. Column forms,
+//!   `-Werror` summaries, and pathless global warnings are grammar
+//!   mismatches until observed upstream. Check-only: findings never
+//!   carry suggestions; fixes travel as declared `error-prone.patch`
+//!   outputs (see `commands::error_prone_patch`), never `IN_PLACE`.
 
 pub mod biome;
 pub mod buildifier;
+pub mod error_prone;
 pub mod eslint;
 pub mod flake8;
 pub mod markdown;
@@ -143,6 +154,7 @@ pub mod vale;
 
 pub use biome::{parse_biome_format, parse_biome_lint};
 pub use buildifier::parse_buildifier;
+pub use error_prone::parse_error_prone;
 pub use eslint::parse_eslint;
 pub use flake8::parse_flake8;
 pub use markdown::parse_markdown_findings;

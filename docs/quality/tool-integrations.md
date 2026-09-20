@@ -223,10 +223,17 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   SpotBugs, ktfmt, ktlint, with detekt pending and Error Prone as itemized open work under issue #416.
   Research notes (unproven mappings): PMD and Checkstyle emit SARIF via `-f sarif`, SpotBugs
   via `-sarif`, ktlint via `--reporter=sarif`, detekt via its SARIF report; Checkstyle XML
-  (`-f xml`) plus ktlint/detekt Checkstyle XML stay fallback shapes; Error Prone has no
-  structured diagnostics upstream, so javac-diagnostic parsing plus per-target declared
-  patch-file outputs (`-XepPatchChecks` location; `IN_PLACE` patching breaks under sandboxing)
-  remain open work under issue #416 itemized here, not silently dropped. Formatters (google-java-format, ktfmt
+   (`-f xml`) plus ktlint/detekt Checkstyle XML stay fallback shapes; Error Prone has no
+   structured diagnostics upstream, so the adapter parses the javac log
+   (`<path>:<line>: error|warning: [Check] <message>` with indented caret, `(see ...)`
+   link, `Did you mean ...?`, and count-summary continuations skipped; unbracketed javac
+   headers report under rule `javac`, never silently dropped) and emits fixes as per-target
+   declared `error-prone.patch` unified diffs (`-XepPatchChecks:<checks>` plus
+   `-XepPatchLocation:<declared-dir>`; `IN_PLACE` rejected: it mutates inputs and breaks
+   sandboxing), decided with fixtures under issue #491
+   (`quality/adapter/src/parsers/error_prone.rs` plus `commands::error_prone_check` and
+   `commands::error_prone_patch`; no adapter claim yet, dispatch still owned under issue
+   #416) itemized here, not silently dropped. Formatters (google-java-format, ktfmt
   with `--google-style`/`--kotlinlang-style`, ktlint `--format`) are whole-file rewrite with
   check/diff mode; PMD, Checkstyle, SpotBugs, and detekt are check-only with the provisional
    sandbox-apply-and-diff fix flow. Versions qualified seed-only under issue #485
