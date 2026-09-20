@@ -224,10 +224,13 @@ contract. Per-family reporting rides text plus JSON `notice`/`error` events with
 
 Use per-root (per-dependency) attribution over
 conservative whole-lock strictness, without silently narrowing complete-lock audit coverage.
-Per-ecosystem license identities are Cargo via `cargo-bazel-lock.json` plus `UNKNOWN` for
-npm/Maven/NuGet/Go V1; policy-table loading reads committed `licenses.toml` (default table
-when absent, matching the example below) and SPDX 2.3 JSON renders one document per
-invocation as specified.
+Per-ecosystem license identities are Cargo via `cargo-bazel-lock.json`, npm via
+`package-lock.json` `license` fields (both `packages:` and legacy `dependencies:` shapes;
+`pnpm-lock.yaml`/`yarn.lock` carry no license), and Maven/NuGet/Go via the committed
+`[[inventory]]` table in `licenses.toml` (also the notice-text source for all sets, and the
+override for Cargo/npm where it matches); uninventoried packages stay `UNKNOWN`.
+Policy-table loading reads committed `licenses.toml` (default table when absent, matching
+the example below) and SPDX 2.3 JSON renders one document per invocation as specified.
 
 The license family reuses security-audit scope mechanics (default `//...`,
 per-target owning dependency sets, complete-lock coverage, local matching with
@@ -293,6 +296,39 @@ license = "GPL-3.0-only"
 versions = ">=1.2.0, <2.0.0"
 reason = "Legal approved for internal fork; re-review on major bump."
 expires = "2027-03-01"
+
+# Per-ecosystem identities plus per-package notice texts: the first entry
+# matching package plus set with an in-scope version (upstream semantics
+# per set, like exceptions) supplies the SPDX identity; `text_present`
+# records whether the package archive delivered LICENSE*/NOTICE* words
+# (absent means no words, fail closed). Missing entries stay UNKNOWN.
+[[inventory]]
+package = "react"
+set = "npm"
+license = "MIT"
+versions = "18.2.0"
+text_present = true
+
+[[inventory]]
+package = "junit:junit"
+set = "maven"
+license = "EPL-1.0"
+versions = "4.13.2"
+text_present = true
+
+[[inventory]]
+package = "FSharp.Core"
+set = "nuget"
+license = "MIT"
+versions = "10.1.201"
+text_present = true
+
+[[inventory]]
+package = "github.com/google/go-cmp"
+set = "go"
+license = "BSD-3-Clause"
+versions = "v0.6.0"
+text_present = true
 ```
 
 SPDX expression evaluation follows boolean math over the allow/review/deny
@@ -312,14 +348,15 @@ lattice, with `blocked` acting as deny in both tiers:
 
 Why license texts are separate inputs: lock metadata says *which* license a
 package claims; MIT/BSD/Apache-2.0 legally require reproducing *the words*
-(copyright notice plus text). Those words come from each package archive's
-`LICENSE*`/`NOTICE*` files, delivered as declared Bazel inputs per package so
-future NOTICE aggregation is hermetic and cached. A package whose license requires
-reproduction but ships no text reports `missing-notice-text`, which fails in
-`distributed` unless excepted. Collecting the texts now keeps the data ready;
-assembling and bundling an aggregated NOTICE artifact into releases is out of
-scope until the deferred packaging/publishing pipeline exists, at which point
-it consumes these already-validated inputs.
+(copyright notice plus text, including compounds like `MIT OR Apache-2.0` where any
+member requires). Those words ride per-package `text_present` in `[[inventory]]`
+(committed curator data; the future declared-Bazel-inputs delivery keeps the same
+per-package shape so NOTICE aggregation stays hermetic and cached). A package whose
+license requires reproduction but ships no text reports `missing-notice-text`, which
+fails in `distributed` unless excepted and is inventoried in `internal`. Collecting
+the texts now keeps the data ready; assembling and bundling an aggregated NOTICE
+artifact into releases is out of scope until the deferred packaging/publishing
+pipeline exists, at which point it consumes these already-validated inputs.
 
 Validation (all fail the audit, none auto-repair):
 
@@ -328,6 +365,10 @@ Validation (all fail the audit, none auto-repair):
 - An exception with no applicable finding fails as obsolete, like vuln
   exceptions; missing, invalid, or expired dates fail; out-of-range versions
   do not inherit acceptance.
+- An inventory entry with an empty package, set, license, or versions fails;
+  unknown inventory keys fail as invalid TOML. Out-of-range versions never
+  inherit the entry (missing entries stay `UNKNOWN`, fail closed in
+  `distributed`).
 
 ## `dx update`
 

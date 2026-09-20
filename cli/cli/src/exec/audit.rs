@@ -256,6 +256,7 @@ fn default_license_policy() -> dx_audit::license_policy::LicensePolicy {
         sets: Vec::new(),
         distribution: dx_audit::license_policy::Distribution::default(),
         exceptions: Vec::new(),
+        inventory: Vec::new(),
     }
 }
 
@@ -639,12 +640,29 @@ fn run_license(
             };
         }
     }
+    for entry in &policy.inventory {
+        if let Err(error) = dx_audit::license_policy::validate_license_inventory(entry) {
+            let detail = format!("invalid license policy: {error}");
+            return LicenseResult {
+                status: dx_audit::outcome::FamilyStatus::Incomplete,
+                packages: Vec::new(),
+                diagnostics: Vec::new(),
+                detail: detail.clone(),
+            };
+        }
+    }
     let tier = tier_for_roots(&policy, roots);
     let mut finding_count: usize = 0;
     let mut diagnostics: Vec<DiagnosticEvent> = Vec::new();
     let mut packages_all: Vec<dx_audit::spdx::SpdxPackage> = Vec::new();
     let mut incomplete: Option<String> = None;
     let mut licensed_all: Vec<dx_audit::locks::LicensedPackage> = Vec::new();
+    // Per-package notice-text presence from the committed inventory,
+    // keyed by `set/name@version` for the notice evaluation below.
+    // Absent entries mean no words (fail closed in `distributed` when
+    // the license requires reproduction).
+    let mut notice_present: std::collections::BTreeMap<(String, String, String), bool> =
+        std::collections::BTreeMap::new();
     for set in sets {
         if dx_audit::backend::is_empty_set(set.name()) {
             continue;
@@ -667,14 +685,57 @@ fn run_license(
             }
             Ok(locked) => locked,
         };
-        let licensed = match *set {
+        let mut licensed = match *set {
             dx_update::sets::SetId::Cargo => {
                 let bazel_text =
                     read_workspace_text(workspace, "cargo-bazel-lock.json").unwrap_or_default();
                 dx_audit::locks::cargo_licenses(&bazel_text, &locked)
             }
-            _ => dx_audit::locks::unknown_licenses(&locked, set.name()),
+            dx_update::sets::SetId::Npm => {
+                if let Some((_, package_lock_text)) =
+                    locks.iter().find(|(rel, _)| rel == "package-lock.json")
+                {
+                    dx_audit::locks::npm_licenses(package_lock_text, &locked)
+                } else {
+                    dx_audit::locks::unknown_licenses(&locked, set.name())
+                }
+            }
+            _ => dx_audit::locks::inventory_licenses(&locked, &policy.inventory, set.name()),
         };
+        // Committed inventory overrides automatic identities where it
+        // matches (explicit curator data wins); for Maven/NuGet/Go the
+        // inventory is the only source, already resolved above.
+        if *set == dx_update::sets::SetId::Cargo || *set == dx_update::sets::SetId::Npm {
+            let inventoried =
+                dx_audit::locks::inventory_licenses(&locked, &policy.inventory, set.name());
+            let by_key: std::collections::BTreeMap<(String, String), String> = inventoried
+                .into_iter()
+                .map(|entry| ((entry.name, entry.version), entry.license))
+                .collect();
+            for entry in &mut licensed {
+                if let Some(license) =
+                    by_key.get(&(entry.name.clone(), entry.version.clone()))
+                {
+                    if license != "UNKNOWN" {
+                        entry.license = license.clone();
+                    }
+                }
+            }
+        }
+        for entry in &licensed {
+            let probe = dx_audit::vuln::LockedPackage {
+                name: entry.name.clone(),
+                version: entry.version.clone(),
+                set: entry.set.clone(),
+                is_git: false,
+                is_private: false,
+            };
+            let present = dx_audit::locks::inventory_text_present(&probe, &policy.inventory);
+            notice_present.insert(
+                (entry.set.clone(), entry.name.clone(), entry.version.clone()),
+                present,
+            );
+        }
         licensed_all.extend(licensed);
     }
     licensed_all.sort_by(|a, b| (&a.set, &a.name, &a.version).cmp(&(&b.set, &b.name, &b.version)));
@@ -733,6 +794,26 @@ fn run_license(
         let outcome = dx_audit::license_expr::evaluate(&expr, tier, &lookup, &approved);
         let fails = dx_audit::license_expr::fails_in_tier(outcome, tier);
         let level = if fails { "error" } else { "info" };
+        // Per-package notice-text evaluation: the words come from the
+        // committed inventory (`text_present`), absent means no words.
+        // `missing-notice-text` fails in `distributed` unless the same
+        // exception that approves the license approves it.
+        let text_present = notice_present
+            .get(&(
+                licensed.set.clone(),
+                licensed.name.clone(),
+                licensed.version.clone(),
+            ))
+            .copied()
+            .unwrap_or(false);
+        let notice_input = dx_audit::license_notice::NoticeInput {
+            package: licensed.name.clone(),
+            license: licensed.license.clone(),
+            text_present,
+        };
+        let notice_outcome =
+            dx_audit::license_notice::evaluate_notice(&notice_input, tier, &approved);
+        let notice_fails = dx_audit::license_notice::notice_fails(notice_outcome, tier);
         let spdx_license = if licensed.license.trim().is_empty() {
             "NOASSERTION".to_owned()
         } else {
@@ -766,6 +847,33 @@ fn run_license(
                     }
                 ),
                 rule: Some(format!("license/{}", licensed.license)),
+                path: Some(lock_path.to_owned()),
+                range: None,
+                snapshot: Snapshot::Terminal,
+                fixable: false,
+                resolution: None,
+            });
+        }
+        if notice_fails && meets_audit_threshold("error", fail_on) {
+            let lock_path = dx_audit::backend::vuln_locks(&licensed.set)
+                .first()
+                .copied()
+                .unwrap_or("unknown lockfile");
+            finding_count += 1;
+            diagnostics.push(DiagnosticEvent {
+                severity: Severity::Error,
+                tool: "license".to_owned(),
+                message: format!(
+                    "{}@{} license {} missing-notice-text in {}",
+                    licensed.name,
+                    licensed.version,
+                    licensed.license,
+                    match tier {
+                        dx_audit::license_expr::Tier::Distributed => "distributed",
+                        dx_audit::license_expr::Tier::Internal => "internal",
+                    }
+                ),
+                rule: Some("license/missing-notice-text".to_owned()),
                 path: Some(lock_path.to_owned()),
                 range: None,
                 snapshot: Snapshot::Terminal,
@@ -1643,7 +1751,7 @@ mod tests {
         let (code, out, err) = run_with(&["audit", "license"], &runner, &clean_workspace);
         assert_eq!(
             code, 1,
-            "{out}{err} clean cargo but UNKNOWN npm must fail distributed"
+            "{out}{err} clean cargo license but missing notice plus UNKNOWN npm must fail distributed"
         );
         assert!(err.contains("audit_failed"), "{err}");
 
@@ -1662,12 +1770,136 @@ mod tests {
                 );
                 harness.write_source(
                     "licenses.toml",
-                    "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n",
+                    "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"serde\"\nset = \"cargo\"\nlicense = \"MIT\"\nversions = \"1.0.100\"\ntext_present = true\n",
                 );
             },
         );
         assert_eq!(code, 0, "{out}{err}");
         assert!(out.contains("audit license: clean"), "{out}");
+    }
+
+    #[test]
+    fn audit_live_license_per_ecosystem_ids_and_notice_texts() {
+        // npm via `package-lock.json` license plus inventory words: clean
+        // when both identify, missing-notice-text fails distributed when
+        // words are absent.
+        let runner = AuditRunner::clean();
+        let (code, out, err) = run_with(
+            &["audit", "license", "//javascript/tests/fixtures/hello:hello"],
+            &runner,
+            &|harness| {
+                harness.write_source(
+                    "package-lock.json",
+                    r#"{"name":"root","lockfileVersion":3,"packages":{"":{"name":"root"},"node_modules/react":{"version":"18.2.0","license":"MIT"}}}"#,
+                );
+                harness.write_source(
+                    "licenses.toml",
+                    "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"react\"\nset = \"npm\"\nlicense = \"MIT\"\nversions = \"18.2.0\"\ntext_present = true\n",
+                );
+            },
+        );
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(out.contains("audit license: clean"), "{out}");
+
+        // Same npm package without words fails (MIT is allow-listed, so
+        // the failure is the notice check firing, not the license table).
+        let runner = AuditRunner::clean();
+        let (code, _out, err) = run_with(
+            &["audit", "license", "//javascript/tests/fixtures/hello:hello"],
+            &runner,
+            &|harness| {
+                harness.write_source(
+                    "package-lock.json",
+                    r#"{"name":"root","lockfileVersion":3,"packages":{"":{"name":"root"},"node_modules/react":{"version":"18.2.0","license":"MIT"}}}"#,
+                );
+                harness.write_source(
+                    "licenses.toml",
+                    "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n",
+                );
+            },
+        );
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("audit_failed"), "{err}");
+
+        // Maven via inventory: clean with words, denied UNKNOWN without.
+        let runner = AuditRunner::clean();
+        let (code, out, err) = run_with(
+            &["audit", "license", "//third_party/jvm:maven_install"],
+            &runner,
+            &|harness| {
+                harness.write_source(
+                    "third_party/jvm/maven_install.json",
+                    r#"{"artifacts": {"junit:junit": {"version": "4.13.2"}}}"#,
+                );
+                harness.write_source(
+                    "licenses.toml",
+                    "[policy.distributed]\nallow = [\"MIT\"]\nreview = [\"EPL-1.0\"]\ndeny = []\n\n[[exception]]\npackage = \"junit:junit\"\nset = \"maven\"\nlicense = \"EPL-1.0\"\nversions = \"4.13.2\"\nreason = \"Test approval.\"\nexpires = \"2027-03-01\"\n\n[[inventory]]\npackage = \"junit:junit\"\nset = \"maven\"\nlicense = \"EPL-1.0\"\nversions = \"4.13.2\"\ntext_present = true\n",
+                );
+            },
+        );
+        // Review still fails distributed without approval; with the
+        // exception above plus words it passes via approval.
+        assert_eq!(code, 0, "{out}{err} {code}");
+        assert!(out.contains("audit license: clean"), "{out}");
+
+        // NuGet via inventory with words: clean.
+        let runner = AuditRunner::clean();
+        let (code, out, err) = run_with(
+            &["audit", "license", "//csharp/tests/fixtures/hello:hello"],
+            &runner,
+            &|harness| {
+                harness.write_source(
+                    "third_party/dotnet/paket.lock",
+                    "NUGET\n  remote: https://api.nuget.org/v3/index.json\n    FSharp.Core (10.1.201)\n",
+                );
+                harness.write_source(
+                    "licenses.toml",
+                    "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"FSharp.Core\"\nset = \"nuget\"\nlicense = \"MIT\"\nversions = \"10.1.201\"\ntext_present = true\n",
+                );
+            },
+        );
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(out.contains("audit license: clean"), "{out}");
+
+        // Go via inventory with words: clean; without words the BSD
+        // notice fails distributed, inventoried internal stays clean.
+        let runner = AuditRunner::clean();
+        let (code, out, err) = run_with(
+            &["audit", "license", "//go/tests/fixtures/hello:hello"],
+            &runner,
+            &|harness| {
+                harness.write_source(
+                    "third_party/go/go.mod",
+                    "module example.com/root\n\ngo 1.24.12\n\nrequire example.com/hello v1.0.0\n",
+                );
+                harness.write_source(
+                    "licenses.toml",
+                    "[policy.distributed]\nallow = [\"BSD-3-Clause\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"example.com/hello\"\nset = \"go\"\nlicense = \"BSD-3-Clause\"\nversions = \"v1.0.0\"\ntext_present = true\n",
+                );
+            },
+        );
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(out.contains("audit license: clean"), "{out}");
+
+        // Same Go package without words fails (BSD is allow-listed, so
+        // the failure is the notice check firing).
+        let runner = AuditRunner::clean();
+        let (code, _out, err) = run_with(
+            &["audit", "license", "//go/tests/fixtures/hello:hello"],
+            &runner,
+            &|harness| {
+                harness.write_source(
+                    "third_party/go/go.mod",
+                    "module example.com/root\n\ngo 1.24.12\n\nrequire example.com/hello v1.0.0\n",
+                );
+                harness.write_source(
+                    "licenses.toml",
+                    "[policy.distributed]\nallow = [\"BSD-3-Clause\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"example.com/hello\"\nset = \"go\"\nlicense = \"BSD-3-Clause\"\nversions = \"v1.0.0\"\n",
+                );
+            },
+        );
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("audit_failed"), "{err}");
     }
 
     #[test]
@@ -1678,10 +1910,10 @@ mod tests {
             &runner,
             &|harness| {
                 write_go_mod(harness);
-                // The Go set reports `UNKNOWN` licenses (V1, pending
-                // per-ecosystem qualification): scope the root internal so
-                // the inventory stays clean, like `clean_workspace` does
-                // for cargo plus MIT.
+                // Uninventoried Go licenses stay `UNKNOWN` (fail closed in
+                // `distributed`): scope the root internal so the inventory
+                // stays clean, like `clean_workspace` does for cargo plus
+                // MIT with words.
                 harness.write_source(
                     "licenses.toml",
                     "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[distribution]\ninternal = [\"//go/tests/fixtures/hello:hello\"]\n",
@@ -1847,7 +2079,7 @@ mod tests {
         );
         harness.write_source(
             "licenses.toml",
-            "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n",
+            "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"serde\"\nset = \"cargo\"\nlicense = \"MIT\"\nversions = \"1.0.100\"\ntext_present = true\n",
         );
         let invocation = parse(&[
             "audit".to_owned(),

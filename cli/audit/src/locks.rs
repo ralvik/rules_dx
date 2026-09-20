@@ -43,13 +43,18 @@
 //! `is_private` explicitly and matching fails those as incomplete,
 //! never clean.
 //!
-//! License identities for V1: Cargo reads `cargo-bazel-lock.json`
-//! (`license` per crate, fallback `UNKNOWN`); npm/Maven/NuGet/Go report
-//! `UNKNOWN` (denied in `distributed`, inventoried in `internal` per the
-//! expression lattice) pending per-ecosystem qualification. Notice texts
-//! are treated as present for known licenses in V1 (collection via
-//! declared Bazel inputs lands later); `missing-notice-text` stays pinned
-//! by unit tests in `license_notice`.
+//! License identities per ecosystem: Cargo reads
+//! `cargo-bazel-lock.json` (`license` per crate, fallback `UNKNOWN`);
+//! npm reads `package-lock.json` `license` fields where present (both
+//! `packages:` and legacy `dependencies:` shapes, fallback `UNKNOWN` for
+//! pnpm/yarn-only workspaces whose locks carry no license); Maven,
+//! NuGet, and Go resolve via the committed `[[inventory]]` table in
+//! `licenses.toml` (see [`crate::license_policy::LicenseInventory`]),
+//! fallback `UNKNOWN` when uninventoried (denied in `distributed`,
+//! inventoried in `internal` per the expression lattice). Notice texts
+//! ride per-package `text_present` from the same inventory (absent means
+//! no words, fail closed); `missing-notice-text` evaluation lives in
+//! [`crate::license_notice`] and is wired into live audit.
 
 use std::sync::OnceLock;
 
@@ -1170,9 +1175,12 @@ pub fn cargo_licenses(cargo_bazel_text: &str, packages: &[LockedPackage]) -> Vec
         .collect()
 }
 
-/// License identities for non-Cargo sets in V1: `UNKNOWN` (denied in
-/// `distributed`, inventoried in `internal`), pending per-ecosystem
-/// qualification.
+/// License identities for non-Cargo sets without a qualified source:
+/// `UNKNOWN` (denied in `distributed`, inventoried in `internal`).
+/// Prefer [`npm_licenses`] for npm (reads `package-lock.json` where
+/// present) and [`inventory_licenses`] for Maven/NuGet/Go plus npm
+/// fallback (reads the committed `[[inventory]]` table); this stays as
+/// the fail-closed fallback when neither source identifies a package.
 pub fn unknown_licenses(packages: &[LockedPackage], set: &str) -> Vec<LicensedPackage> {
     packages
         .iter()
@@ -1184,6 +1192,167 @@ pub fn unknown_licenses(packages: &[LockedPackage], set: &str) -> Vec<LicensedPa
             license: "UNKNOWN".to_owned(),
         })
         .collect()
+}
+
+/// Extract npm license identities from one `package-lock.json` document
+/// (JSON with per-package `license`). Both the `packages:`
+/// (`node_modules/<name>` with `version` plus `license`) and the legacy
+/// `dependencies:` (`<name>` with `version` plus `license`) shapes are
+/// read; entries without a non-empty string `license` fall back to
+/// `UNKNOWN`. Only packages present in `packages` (the assessable lock
+/// contents) are returned. `pnpm-lock.yaml` and `yarn.lock` carry no
+/// license field, so pnpm/yarn-only workspaces without a sibling
+/// `package-lock.json` stay `UNKNOWN` (fail closed) unless the
+/// `[[inventory]]` table identifies them via [`inventory_licenses`].
+pub fn npm_licenses(
+    package_lock_text: &str,
+    packages: &[LockedPackage],
+) -> Vec<LicensedPackage> {
+    let mut by_name_version = std::collections::BTreeMap::new();
+    if let Ok(value) = serde_json::from_str::<serde_json::Value>(package_lock_text) {
+        if let Some(object) = value.as_object() {
+            if let Some(detail_map) = object.get("packages").and_then(|v| v.as_object()) {
+                for (path, detail) in detail_map {
+                    let Some(name) = package_lock_name(path) else {
+                        continue;
+                    };
+                    let detail = match detail.as_object() {
+                        Some(detail) => detail,
+                        None => continue,
+                    };
+                    let version = detail
+                        .get("version")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .trim();
+                    if version.is_empty()
+                        || version.starts_with("file:")
+                        || version.starts_with("link:")
+                    {
+                        continue;
+                    }
+                    let license = detail
+                        .get("license")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("UNKNOWN")
+                        .trim();
+                    let license = if license.is_empty() {
+                        "UNKNOWN"
+                    } else {
+                        license
+                    };
+                    by_name_version
+                        .insert((name, version.to_owned()), license.to_owned());
+                }
+            }
+            if let Some(detail_map) = object.get("dependencies").and_then(|v| v.as_object()) {
+                for (name, detail) in detail_map {
+                    let name = name.trim();
+                    if name.is_empty() {
+                        continue;
+                    }
+                    let detail = match detail.as_object() {
+                        Some(detail) => detail,
+                        None => continue,
+                    };
+                    let version = detail
+                        .get("version")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .trim();
+                    if version.is_empty() {
+                        continue;
+                    }
+                    let license = detail
+                        .get("license")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("UNKNOWN")
+                        .trim();
+                    let license = if license.is_empty() {
+                        "UNKNOWN"
+                    } else {
+                        license
+                    };
+                    by_name_version
+                        .entry((name.to_owned(), version.to_owned()))
+                        .or_insert_with(|| license.to_owned());
+                }
+            }
+        }
+    }
+    packages
+        .iter()
+        .filter(|package| package.set == "npm")
+        .map(|package| {
+            let license = by_name_version
+                .get(&(package.name.clone(), package.version.clone()))
+                .cloned()
+                .unwrap_or_else(|| "UNKNOWN".to_owned());
+            LicensedPackage {
+                name: package.name.clone(),
+                version: package.version.clone(),
+                set: package.set.clone(),
+                license,
+            }
+        })
+        .collect()
+}
+
+/// Resolve license identities via the committed `[[inventory]]` table
+/// (see [`crate::license_policy::LicenseInventory`]): the first entry
+/// matching package plus set whose `versions` scope contains the locked
+/// version (via [`crate::vuln::version_affected`], upstream semantics per
+/// set) supplies the license; unmatched packages fall back to `UNKNOWN`
+/// (fail closed). Out-of-range versions never inherit an entry. Callers
+/// pass the full inventory and the owning set; only that set's entries
+/// are considered.
+pub fn inventory_licenses(
+    packages: &[LockedPackage],
+    inventory: &[crate::license_policy::LicenseInventory],
+    set: &str,
+) -> Vec<LicensedPackage> {
+    packages
+        .iter()
+        .filter(|package| package.set == set)
+        .map(|package| {
+            let mut license = "UNKNOWN".to_owned();
+            for entry in inventory {
+                if entry.set != set || entry.package != package.name {
+                    continue;
+                }
+                if crate::vuln::version_affected(set, &entry.versions, &package.version) {
+                    license = entry.license.clone();
+                    break;
+                }
+            }
+            LicensedPackage {
+                name: package.name.clone(),
+                version: package.version.clone(),
+                set: package.set.clone(),
+                license,
+            }
+        })
+        .collect()
+}
+
+/// Whether the committed inventory records `LICENSE*`/`NOTICE*` words
+/// for one locked package: true only when an entry matches package plus
+/// set with an in-scope version and `text_present`. Absent or
+/// out-of-range entries mean no words (fail closed in `distributed` when
+/// the license requires reproduction).
+pub fn inventory_text_present(
+    package: &LockedPackage,
+    inventory: &[crate::license_policy::LicenseInventory],
+) -> bool {
+    for entry in inventory {
+        if entry.set != package.set || entry.package != package.name {
+            continue;
+        }
+        if crate::vuln::version_affected(&package.set, &entry.versions, &package.version) {
+            return entry.text_present;
+        }
+    }
+    false
 }
 
 #[cfg(test)]
@@ -1573,6 +1742,140 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         }];
         let licensed = unknown_licenses(&packages, "npm");
         assert_eq!(licensed[0].license, "UNKNOWN");
+    }
+
+    #[test]
+    fn npm_licenses_read_package_lock_fields_or_unknown() {
+        let text = r#"{"name":"root","lockfileVersion":3,"packages":{"":{"name":"root"},"node_modules/react":{"version":"18.2.0","license":"MIT"},"node_modules/@scope/pkg":{"version":"1.0.0","license":"Apache-2.0"},"node_modules/nolicense":{"version":"2.0.0"}}}"#;
+        let packages = parse_package_lock(text).expect("locks");
+        let licensed = npm_licenses(text, &packages);
+        let react = licensed
+            .iter()
+            .find(|entry| entry.name == "react")
+            .expect("react");
+        assert_eq!(react.license, "MIT");
+        let scoped = licensed
+            .iter()
+            .find(|entry| entry.name == "@scope/pkg")
+            .expect("scoped");
+        assert_eq!(scoped.license, "Apache-2.0");
+        let missing = licensed
+            .iter()
+            .find(|entry| entry.name == "nolicense")
+            .expect("unlicensed");
+        assert_eq!(missing.license, "UNKNOWN");
+    }
+
+    #[test]
+    fn npm_licenses_read_legacy_dependencies_shape() {
+        let text = r#"{"name":"root","lockfileVersion":1,"dependencies":{"react":{"version":"18.2.0","license":"MIT"},"nolicense":{"version":"2.0.0"}}}"#;
+        let packages = parse_package_lock(text).expect("locks");
+        let licensed = npm_licenses(text, &packages);
+        assert_eq!(
+            licensed
+                .iter()
+                .find(|entry| entry.name == "react")
+                .expect("react")
+                .license,
+            "MIT"
+        );
+        assert_eq!(
+            licensed
+                .iter()
+                .find(|entry| entry.name == "nolicense")
+                .expect("nolicense")
+                .license,
+            "UNKNOWN"
+        );
+        // Invalid JSON stays fail-closed to UNKNOWN for every package.
+        let fallback = npm_licenses("not json", &packages);
+        assert!(fallback.iter().all(|entry| entry.license == "UNKNOWN"));
+    }
+
+    #[test]
+    fn inventory_licenses_resolve_per_ecosystem_with_version_scope() {
+        use crate::license_policy::LicenseInventory;
+        let inventory = vec![
+            LicenseInventory {
+                package: "react".to_owned(),
+                set: "npm".to_owned(),
+                license: "MIT".to_owned(),
+                versions: "18.2.0".to_owned(),
+                text_present: true,
+            },
+            LicenseInventory {
+                package: "junit:junit".to_owned(),
+                set: "maven".to_owned(),
+                license: "EPL-1.0".to_owned(),
+                versions: "[4.0,5.0)".to_owned(),
+                text_present: false,
+            },
+            LicenseInventory {
+                package: "FSharp.Core".to_owned(),
+                set: "nuget".to_owned(),
+                license: "MIT".to_owned(),
+                versions: "10.1.201".to_owned(),
+                text_present: true,
+            },
+            LicenseInventory {
+                package: "github.com/google/go-cmp".to_owned(),
+                set: "go".to_owned(),
+                license: "BSD-3-Clause".to_owned(),
+                versions: "v0.6.0".to_owned(),
+                text_present: false,
+            },
+        ];
+        let npm_pkgs = vec![LockedPackage {
+            name: "react".to_owned(),
+            version: "18.2.0".to_owned(),
+            set: "npm".to_owned(),
+            is_git: false,
+            is_private: false,
+        }];
+        let licensed = inventory_licenses(&npm_pkgs, &inventory, "npm");
+        assert_eq!(licensed[0].license, "MIT");
+        assert!(inventory_text_present(&npm_pkgs[0], &inventory));
+        // Out-of-range versions never inherit: same package, new major.
+        let upgraded = LockedPackage {
+            version: "19.0.0".to_owned(),
+            ..npm_pkgs[0].clone()
+        };
+        let licensed = inventory_licenses(std::slice::from_ref(&upgraded), &inventory, "npm");
+        assert_eq!(licensed[0].license, "UNKNOWN");
+        assert!(!inventory_text_present(&upgraded, &inventory));
+        // Maven interval scope matches inside, not outside.
+        let maven = LockedPackage {
+            name: "junit:junit".to_owned(),
+            version: "4.13.2".to_owned(),
+            set: "maven".to_owned(),
+            is_git: false,
+            is_private: false,
+        };
+        assert_eq!(
+            inventory_licenses(std::slice::from_ref(&maven), &inventory, "maven")[0].license,
+            "EPL-1.0"
+        );
+        let maven_out = LockedPackage {
+            version: "5.0.0".to_owned(),
+            ..maven.clone()
+        };
+        assert_eq!(
+            inventory_licenses(std::slice::from_ref(&maven_out), &inventory, "maven")[0].license,
+            "UNKNOWN"
+        );
+        // Uninventoried packages stay UNKNOWN with no words.
+        let unknown = LockedPackage {
+            name: "other".to_owned(),
+            version: "1.0.0".to_owned(),
+            set: "go".to_owned(),
+            is_git: false,
+            is_private: false,
+        };
+        assert_eq!(
+            inventory_licenses(std::slice::from_ref(&unknown), &inventory, "go")[0].license,
+            "UNKNOWN"
+        );
+        assert!(!inventory_text_present(&unknown, &inventory));
     }
 
     #[test]

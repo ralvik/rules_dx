@@ -20,8 +20,11 @@
 //! This module plans over injected notice records only. The shared
 //! `--report` format identifier and event mapping for SPDX remain
 //! pending under per the output protocol; no identifier string or
-//! event schema is invented here. Full per-ecosystem
-//! license-identity mappings and proof evidence stay gated.
+//! event schema is invented here. Per-ecosystem license identities ride
+//! the committed `[[inventory]]` table (see
+//! [`crate::license_policy::LicenseInventory`]) plus Cargo
+//! `cargo-bazel-lock.json` and npm `package-lock.json` readers in
+//! [`crate::locks`]; proof evidence stays gated.
 
 use crate::license_expr::{Tier, TierOutcome};
 
@@ -52,9 +55,8 @@ pub fn aggregates_notice_artifact() -> bool {
 }
 
 /// SPDX identities the contract names as legally requiring notice-text
-/// reproduction (copyright notice plus text). Full per-ecosystem
-/// license-identity mappings stay gated; this seed covers exactly
-/// the contract-named MIT/BSD/Apache-2.0 families and nothing else.
+/// reproduction (copyright notice plus text). This covers exactly the
+/// contract-named MIT/BSD/Apache-2.0 families and nothing else.
 pub const NOTICE_REQUIRED_IDS: &[&str] = &["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause"];
 
 /// Whether the named SPDX identity requires reproduction of the
@@ -63,6 +65,34 @@ pub const NOTICE_REQUIRED_IDS: &[&str] = &["MIT", "Apache-2.0", "BSD-2-Clause", 
 /// whether *known listed* identities need their words collected.
 pub fn requires_notice_text(identity: &str) -> bool {
     NOTICE_REQUIRED_IDS.contains(&identity)
+}
+
+/// Whether one parsed SPDX expression requires notice-text
+/// reproduction: true when any contained identity needs its words
+/// (fail closed for dual `OR`/`AND` expressions — the distributor has
+/// not yet chosen, so missing words for any requiring member fail).
+/// `WITH` checks its base; [`crate::license_expr::LicenseExpr::Unknown`]
+/// never requires here (the expression lattice already denies it in
+/// `distributed`).
+pub fn expression_requires_notice(expr: &crate::license_expr::LicenseExpr) -> bool {
+    use crate::license_expr::LicenseExpr;
+    match expr {
+        LicenseExpr::Ident(id) => requires_notice_text(id),
+        LicenseExpr::Or(items) | LicenseExpr::And(items) => {
+            items.iter().any(expression_requires_notice)
+        }
+        LicenseExpr::With { base, .. } => expression_requires_notice(base),
+        LicenseExpr::Unknown => false,
+    }
+}
+
+/// Whether one license text (single identity or compound SPDX
+/// expression) requires notice-text reproduction. Parses via
+/// [`crate::license_expr::parse_license`] so `MIT OR Apache-2.0` and
+/// similar compounds containing a requiring member need their words;
+/// unparseable text is handled by the expression lattice, never here.
+pub fn license_requires_notice_text(license: &str) -> bool {
+    expression_requires_notice(&crate::license_expr::parse_license(license))
 }
 
 /// One package's declared notice-text input: the words delivered as a
@@ -82,13 +112,18 @@ pub struct NoticeInput {
 /// in `distributed` unless a matching exception approves it, and is
 /// inventoried in `internal`. `approved` names licenses covered by a
 /// matching, reasoned, version-scoped, unexpired exception, mirroring
-/// the expression-lattice approval hook.
+/// the expression-lattice approval hook. Compound expressions (e.g.
+/// `MIT OR Apache-2.0`) require words when any member does, so the
+/// check fires for dual-licensed packages, not just bare identities.
 pub fn evaluate_notice(
     input: &NoticeInput,
     tier: Tier,
     approved: &dyn Fn(&str) -> bool,
 ) -> TierOutcome {
-    if !requires_notice_text(&input.license) || input.text_present || approved(&input.license) {
+    if !license_requires_notice_text(&input.license)
+        || input.text_present
+        || approved(&input.license)
+    {
         return TierOutcome::Allow;
     }
     match tier {
@@ -184,5 +219,35 @@ mod tests {
                 TierOutcome::Allow
             );
         }
+    }
+
+    #[test]
+    fn compound_expressions_with_requiring_member_need_words() {
+        // Dual-licensed compounds containing MIT/Apache/BSD require
+        // words (fail closed — the distributor has not yet chosen).
+        for license in [
+            "MIT OR Apache-2.0",
+            "MIT AND GPL-3.0-only",
+            "Apache-2.0 WITH LLVM-exception",
+        ] {
+            assert!(
+                license_requires_notice_text(license),
+                "{license} needs words"
+            );
+            assert_eq!(
+                evaluate_notice(&input(license, false), Tier::Distributed, &none_approved()),
+                TierOutcome::Deny
+            );
+            assert_eq!(
+                evaluate_notice(&input(license, true), Tier::Distributed, &none_approved()),
+                TierOutcome::Allow
+            );
+        }
+        // Compounds without a requiring member need no words.
+        assert!(!license_requires_notice_text("MPL-2.0 OR GPL-3.0-only"));
+        // Unparseable text is handled by the expression lattice, never
+        // by notice evaluation.
+        assert!(!license_requires_notice_text("not a license !!!"));
+        assert!(!license_requires_notice_text("UNKNOWN"));
     }
 }
