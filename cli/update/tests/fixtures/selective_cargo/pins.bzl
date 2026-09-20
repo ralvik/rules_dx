@@ -19,7 +19,7 @@ SELECTIVE_CARGO_SELECTOR_LABEL = "cargo:<crate>"
 # Fail-closed hint (selective never widens to full silently).
 SELECTIVE_CARGO_HINT = "use `dx update cargo` for the set"
 
-# Bump follow-up stays manual and resolver-owned.
+# Bump follow-up chains automatically resolver-owned (issue #638).
 BUMP_FOLLOWUP_CARGO = "dx update cargo"
 
 # Rejected routes (never pinned as supported here).

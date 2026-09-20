@@ -589,20 +589,22 @@ Manifests widened atomically (one file per invocation): `.bazelversion` or
 (GitHub Actions, SHA-plus-tag pins), `MODULE.bazel` `maven.install`
 artifacts (Maven, e.g. `"junit:junit:4.13.2"`),
 `third_party/dotnet/paket.dependencies` (NuGet, e.g. `nuget FSharp.Core 10.1.201`).
-Lock refresh stays manual and resolver-owned
-through `dx update <set>` for Cargo/npm/Go/Maven/NuGet
-(`dx_bump::BumpSet::needs_update_refresh`): `dx update cargo` (full; Cargo
-selective is wont-fix), `dx update npm:<pkg>` or `dx update npm` (selective
-permitted), `dx update go`, `dx update maven` (whole-lock `REPIN=1` pin),
-`dx update nuget` (whole-folder `paket2bazel` regen); Bazel and GitHub Actions verify
-file-only through `preset.update --verify-only` flag-diff review plus
+Lock refresh chains automatically and resolver-owned (issue #638, fixtures in
+`cli/bump/tests/fixtures/bump_chain/`) for Cargo/npm/Go/Maven/NuGet
+(`dx_bump::BumpRequest::refresh_selector`): `dx update cargo` (full; Cargo
+selective is wont-fix), `dx update npm:<pkg>` (selective for the widened
+package), `dx update go` (noop; pinned module lock tracks Gazelle, no
+launch), `dx update maven` (whole-lock `REPIN=1` pin),
+`dx update nuget` (whole-folder `paket2bazel` regen); Bazel and GitHub Actions
+verify file-only through `preset.update --verify-only` flag-diff review plus
 `bazel build //...`. Per-set selective support is decided in
 [ADR 0024](../../decisions/0024-selective-update.md). Missing, ambiguous, or unsupported manifest shapes fail
-closed with nothing widened (exit `1`, `bump_failed`).
+closed with nothing widened (exit `1`, `bump_failed`). Refresh failures keep
+the widen with no rollback and exit `1` with `update_failed`.
 
 Loop (one dep per PR, never batch): discover outdated (stable only) → widen
-one requirement via `dx bump` → run `dx update <that-set>` for
-resolver-owned lock refresh → run the bump-PR verification (regen evidence,
+one requirement via `dx bump` (which chains its refresh automatically) →
+run the bump-PR verification (regen evidence,
 `preset.update --verify-only` flag-diff, `bazel build //...`,
 `bazel test //...`, coverage/dogfood gates per
 [local workflows](../../contributing/local-workflows.md#preset-update-loop))
@@ -616,9 +618,11 @@ merge path from the [automation policy](../../contributing/automation.md)
 preserved.
 
 `dx bump` is mutating without confirmation like `dx update`. `--dry-run`
-plans the widen and exits `0` without touching the tree; live execution
-rewrites exactly one requirement atomically. JSON supports the shared
-`command_started`/`command_finished` frame with widen `notice`/`error`
-events. Usage errors exit `2` pre-exec; widen failures exit `1` with
-`bump_failed`. `--check`, `--fail-on`, `--report`, `--output=diff`, and
+plans the widen plus the automatic refresh and exits `0` without touching
+the tree or launching; live execution rewrites exactly one requirement
+atomically then chains the refresh. JSON supports the shared
+`command_started`/`command_finished` frame with widen `notice` plus refresh
+`notice`/`error` events. Usage errors exit `2` pre-exec; widen failures exit
+`1` with `bump_failed`; refresh failures exit `1` with `update_failed`.
+`--check`, `--fail-on`, `--report`, `--output=diff`, and
 `-- <bazel-options>` do not apply on this path.

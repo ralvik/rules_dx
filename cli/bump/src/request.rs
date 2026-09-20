@@ -175,12 +175,27 @@ impl BumpRequest {
         true
     }
 
-    /// Whether lock refresh runs resolver-owned after this widen edit
-    /// (`dx update <set>` for Cargo/npm/Go/Maven/NuGet) or the set is
-    /// file-only (Bazel, GitHub Actions: preset flag-diff review plus
-    /// build).
+    /// Whether lock refresh chains automatically resolver-owned after this
+    /// widen edit (issue #638: Cargo full, npm selective, Go noop, Maven
+    /// full, NuGet full) or the set is file-only (Bazel, GitHub Actions:
+    /// preset flag-diff review plus build, no launch).
     pub fn needs_update_refresh(&self) -> bool {
         self.set.needs_update_refresh()
+    }
+
+    /// Refresh selector chained automatically after the widen (issue #638):
+    /// `cargo` full, `npm:<package>` selective, `go` noop, `maven` full,
+    /// `nuget` full. File-only sets have no refresh selector (verification
+    /// stays flag-diff plus build).
+    pub fn refresh_selector(&self) -> String {
+        match self.set {
+            BumpSet::Cargo => "cargo".to_owned(),
+            BumpSet::Npm => format!("npm:{}", self.package),
+            BumpSet::Go => "go".to_owned(),
+            BumpSet::Maven => "maven".to_owned(),
+            BumpSet::NuGet => "nuget".to_owned(),
+            BumpSet::Bazel | BumpSet::GithubActions => String::new(),
+        }
     }
 
     /// Workspace-relative manifest owning the declared requirement.
@@ -204,9 +219,14 @@ impl BumpRequest {
     }
 
     /// Human planning summary for `--dry-run` (never argv).
+    /// Resolver sets chain automatically (issue #638); file-only sets
+    /// still need the flag-diff review plus build.
     pub fn summary(&self) -> String {
         let through = if self.needs_update_refresh() {
-            format!("then `dx update {}`", self.set.name())
+            format!(
+                "then refresh via `dx update {}` automatically",
+                self.refresh_selector()
+            )
         } else {
             "then preset flag-diff review plus `bazel build //...`".to_owned()
         };
@@ -1568,12 +1588,44 @@ mod tests {
         assert!(summary.contains("cargo:anyhow"), "{summary}");
         assert!(summary.contains("1.2.3"), "{summary}");
         assert!(summary.contains("dx update cargo"), "{summary}");
+        assert!(summary.contains("automatically"), "{summary}");
         let bump = BumpRequest::parse("bazel:rules_rust", "0.74.0").expect("bazel");
         assert!(bump.summary().contains("flag-diff"), "{summary}");
         let bump = BumpRequest::parse("maven:junit:junit", "4.13.3").expect("maven");
         assert!(bump.summary().contains("dx update maven"), "{summary}");
+        assert!(bump.summary().contains("automatically"), "{summary}");
         let bump = BumpRequest::parse("nuget:FSharp.Core", "10.1.202").expect("nuget");
         assert!(bump.summary().contains("dx update nuget"), "{summary}");
+    }
+
+    #[test]
+    fn refresh_selector_chains_automatically_per_set() {
+        // Issue #638: Cargo full, npm selective, Go noop, Maven full, NuGet
+        // full; file-only empty.
+        let bump = BumpRequest::parse("cargo:anyhow", "1.2.3").expect("cargo");
+        assert_eq!(bump.refresh_selector(), "cargo");
+        assert!(bump.needs_update_refresh());
+        let bump = BumpRequest::parse("npm:jest", "30.3.0").expect("npm");
+        assert_eq!(bump.refresh_selector(), "npm:jest");
+        assert!(bump.needs_update_refresh());
+        let bump = BumpRequest::parse("npm:@astrojs/compiler", "1.2.3").expect("scoped");
+        assert_eq!(bump.refresh_selector(), "npm:@astrojs/compiler");
+        let bump = BumpRequest::parse("go:example.com/mod", "1.2.3").expect("go");
+        assert_eq!(bump.refresh_selector(), "go");
+        assert!(bump.needs_update_refresh());
+        let bump = BumpRequest::parse("maven:junit:junit", "4.13.2").expect("maven");
+        assert_eq!(bump.refresh_selector(), "maven");
+        assert!(bump.needs_update_refresh());
+        let bump = BumpRequest::parse("nuget:FSharp.Core", "10.1.201").expect("nuget");
+        assert_eq!(bump.refresh_selector(), "nuget");
+        assert!(bump.needs_update_refresh());
+        let bump = BumpRequest::parse("bazel:rules_rust", "0.74.0").expect("bazel");
+        assert_eq!(bump.refresh_selector(), "");
+        assert!(!bump.needs_update_refresh());
+        let sha = "3d3c42e5aac5ba805825da76410c181273ba90b1";
+        let bump = BumpRequest::parse("github-actions:actions/checkout", sha).expect("gha");
+        assert_eq!(bump.refresh_selector(), "");
+        assert!(!bump.needs_update_refresh());
     }
 
     #[test]

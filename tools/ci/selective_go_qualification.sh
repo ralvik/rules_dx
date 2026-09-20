@@ -163,13 +163,15 @@ else
   bad "ADR 0024 lost its Go wont-fix plus from_file plus go-get record"
 fi
 
-# Bump follow-up stays manual and resolver-owned for Go.
+# Bump follow-up chains automatically resolver-owned for Go (issue #638).
 if grep -q -F -e 'dx update go' "$command_doc" &&
-  grep -q -F -e 'then run `dx update {}` for resolver-owned lock refresh' "$bump_exec" &&
-  grep -q -F -e 'needs_update_refresh' "$bump_exec"; then
+  grep -q -F -e 'and refreshed' "$bump_exec" &&
+  grep -q -F -e 'automatically' "$bump_exec" &&
+  grep -q -F -e 'needs_update_refresh' "$bump_exec" &&
+  grep -q -F -e 'BackendPlan::Noop' "$bump_exec"; then
   ok
 else
-  bad "bump follow-up lost its manual resolver-owned dx update go record"
+  bad "bump follow-up lost its automatic resolver-owned dx update go record (issue #638)"
 fi
 
 # Set registry plus module lock keep the Go from_file wiring.

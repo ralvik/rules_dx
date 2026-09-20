@@ -20,12 +20,15 @@
 //!
 //! Frozen command shape (`docs/cli/commands/audit-update-bazel.md`):
 //! `dx bump <set:package> <version>`. One invocation widens one
-//! requirement (never batch). Discovery proposes stable versions only;
-//! prerelease eligibility follows the upstream resolver and project
-//! configuration, never a private policy. Transitive versions stay
-//! resolver-governed; lock refresh runs resolver-owned through
-//! `dx update <set>` for Cargo/npm/Go/Maven/NuGet, while Bazel and GitHub
-//! Actions verify file-only through `preset.update --verify-only` plus
+//! requirement (never batch) then chains the refresh automatically
+//! (issue #638). Discovery proposes stable versions only; prerelease
+//! eligibility follows the upstream resolver and project configuration,
+//! never a private policy. Transitive versions stay resolver-governed;
+//! lock refresh chains automatically resolver-owned (`dx update cargo`
+//! full, `dx update npm:<package>` selective, `dx update go` noop,
+//! `dx update maven` full, `dx update nuget` full for
+//! Cargo/npm/Go/Maven/NuGet), while Bazel and GitHub Actions verify
+//! file-only through `preset.update --verify-only` plus
 //! `bazel build //...`.
 
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]

@@ -6,6 +6,6 @@ nuget selective wont-fix (whole-folder paket2bazel regen; use `dx update nuget`)
 go selective wont-fix (pinned module lock tracks Gazelle; widen via `dx bump`)
 silent full-update substitution rejected
 private per-package emulation rejected
-bump follow-up manual (dx update cargo, dx update npm:<pkg> or npm, dx update go)
+bump follow-up automatic (dx update cargo, dx update npm:<pkg> or npm, dx update go)
 qualified seed-only under issue #583
 no Supported claim

@@ -26,7 +26,7 @@ SELECTIVE_MAVEN_HINT = "use `dx update maven` for the set"
 SELECTIVE_NUGET_HINT = "use `dx update nuget` for the set"
 SELECTIVE_GO_HINT = "go pins track Gazelle for the shared go_deps extension; widen explicitly via `dx bump gomod:<module> <version>`"
 
-# Bump follow-up stays manual and resolver-owned.
+# Bump follow-up chains automatically resolver-owned (issue #638).
 BUMP_FOLLOWUP_CARGO = "dx update cargo"
 BUMP_FOLLOWUP_NPM = "dx update npm:<pkg> or dx update npm"
 BUMP_FOLLOWUP_GO = "dx update go"

@@ -156,13 +156,15 @@ else
   bad "ADR 0024 lost its Cargo wont-fix plus crate_universe plus cargo-update-p record"
 fi
 
-# Bump follow-up stays manual and resolver-owned for Cargo.
+# Bump follow-up chains automatically resolver-owned for Cargo (issue #638).
 if grep -q -F -e 'dx update cargo' "$command_doc" &&
-  grep -q -F -e 'then run `dx update {}` for resolver-owned lock refresh' "$bump_exec" &&
-  grep -q -F -e 'needs_update_refresh' "$bump_exec"; then
+  grep -q -F -e 'and refreshed' "$bump_exec" &&
+  grep -q -F -e 'automatically' "$bump_exec" &&
+  grep -q -F -e 'needs_update_refresh' "$bump_exec" &&
+  grep -q -F -e 'runner.run' "$bump_exec"; then
   ok
 else
-  bad "bump follow-up lost its manual resolver-owned dx update cargo record"
+  bad "bump follow-up lost its automatic resolver-owned dx update cargo record (issue #638)"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.

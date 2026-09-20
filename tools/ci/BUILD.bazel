@@ -779,6 +779,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Bump then update chaining harness (issue #638); see docs/cli/commands/audit-update-bazel.md#dx-bump.
+sh_binary(
+    name = "bump_chain_qualification",
+    srcs = ["bump_chain_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Update mutation-event wont-fix harness; see docs/cli/output-protocol.md#mutation.
 sh_binary(
     name = "update_events_qualification",

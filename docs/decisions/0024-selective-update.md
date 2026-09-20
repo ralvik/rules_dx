@@ -11,10 +11,9 @@ integrations ([Update command](../cli/commands/audit-update-bazel.md#dx-update))
 `cli/update/src/backend.rs` reports selective (`set:package`) updates as
 `Unsupported` for Cargo, Maven, NuGet, and Go in V1 (whole-lock repin
 only), while npm delegates package lists to the Bazel-pinned pnpm.
-`cli/cli/src/exec/bump.rs` widens exactly one declared requirement and
-leaves the resolver-owned follow-up (`dx update <set>` for Cargo/npm/Go)
-manual. No open tracker owned the per-set selective-versus-full decision;
-see issue #583.
+`cli/cli/src/exec/bump.rs` widens exactly one declared requirement then
+chains the resolver-owned refresh automatically (issue #638). No open
+tracker owned the per-set selective-versus-full decision; see issue #583.
 
 ## Decision
 
@@ -51,12 +50,15 @@ A selective request for a wont-fix set never silently substitutes a full
 update; execution reports `unsupported` per set and the invocation exits
 `1` with `update_failed` while independent sets still continue. When a
 set is both fully and package selected, the full update wins (it includes
-the packages). The `dx bump` follow-up stays manual and resolver-owned:
-`dx update cargo` (full) after a Cargo widen, `dx update npm:<pkg>` or
-`dx update npm` (selective permitted) after an npm widen,
-`dx update go` after a Go widen, `dx update maven` (whole-lock pin) after
-a Maven widen, and `dx update nuget` (whole-folder regen) after a NuGet
-widen. Update-only; no lock format change.
+the packages). The `dx bump` follow-up chains automatically and
+resolver-owned (issue #638, fixtures in
+`cli/bump/tests/fixtures/bump_chain/`): `dx update cargo` (full) after a
+Cargo widen, `dx update npm:<pkg>` (selective for the widened package)
+after an npm widen, `dx update go` (noop) after a Go widen,
+`dx update maven` (whole-lock pin) after a Maven widen, and
+`dx update nuget` (whole-folder regen) after a NuGet widen.
+Refresh failures keep the widen with no rollback (`update_failed`).
+Update-only; no lock format change.
 
 ## Consequences
 
