@@ -377,3 +377,11 @@ under issue #506 (public env contribution protocol, Windows .envrc and junction
 fallback, standalone-without-Bazel path, signing and trust selection, plus the
 required bootstrap, fidelity, spaces, stale-clean, IDE, atomic-commit, BEP,
 projection, and root-candidate tests).
+
+Env plus codegen deferred records with fixture evidence qualified seed-only under issue #506
+(`env/tests/fixtures/env_codegen/pins.bzl` via `bazel run //tools/ci:env_codegen_qualification`;
+public protocol, Windows fallback, standalone, signing/trust, plus
+bootstrap/fidelity/spaces/stale/IDE/atomic-commit/BEP/projection/roots/cold-warm with
+WP1-WP5 shard plus root plus clean plus plan evidence and `env_codegen.expected` plus
+`roots_bep.txt`; platform plus consumer plus release evidence stays owned gap; no Supported
+claim; backends stay provisional).
