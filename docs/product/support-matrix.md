@@ -962,8 +962,11 @@ Diagnostic wire formats:
    (javac-diagnostic parsing plus per-target declared `error-prone.patch` outputs decided
    with fixtures under issue #491; `IN_PLACE` rejected; adapter dispatch itemized under issue #416),
   FSharpLint
-  console (the `FSharpLint.Core` library API is the structured
-  alternative, itemized under issue #417), Scalafix console (no machine-readable CLI output; console-parse is rejected and wire via ScalafixMainCallback is required, decided under issue #490 with scala/tests/fixtures/scalafix/ evidence, open upstream scalacenter/scalafix#2459, cohort stays owned under issue #417).
+  console (console-parse is rejected both shapes and wire via `FSharpLint.Application.Lint`
+  with `ReceivedWarning` is required, decided under issue #493 with fsharp/tests/fixtures/fsharplint/
+  evidence: standard blocks carry start-only locations with rule IDs inside the URL plus shared-stream
+  info lines, `-f msbuild` lines carry full ranges but drop fix plus typecheck context; adapter dispatch
+  itemized under issue #417), Scalafix console (no machine-readable CLI output; console-parse is rejected and wire via ScalafixMainCallback is required, decided under issue #490 with scala/tests/fixtures/scalafix/ evidence, open upstream scalacenter/scalafix#2459, cohort stays owned under issue #417).
 - clang-tidy emits clang text diagnostics; fixes travel separately as
   `--export-fixes` YAML for `clang-apply-replacements`. Target-coupled wiring
   versus check-only stays open under issue #418.
@@ -982,7 +985,7 @@ Fix modes:
    formatters (RuboCop plus `standardrb --fix`, cue `fmt`, jsonnetfmt, pkl, modfmt,
    `terraform fmt`, yamlfmt) are itemized under issue #420.
 - Check-only: PMD, Checkstyle, SpotBugs, staticcheck, govet, errcheck,
-  cppcheck, detekt, FSharpLint console. Native check-only tools (staticcheck,
+  cppcheck, detekt, FSharpLint (wire via `FSharpLint.Application.Lint` with `ReceivedWarning`; console-parse is rejected both shapes, decided under issue #493 with fsharp/tests/fixtures/fsharplint/ evidence; no adapter claims `fsharp` yet, cohort stays owned under issue #417). Native check-only tools (staticcheck,
   `govet`, errcheck, cppcheck) are itemized under issue #418. Structured
   check-only tools (`buf lint`, qmllint) are itemized under issue #419.
   Interpreted/file-family check-only tools (PSScriptAnalyzer, djlint, Stylelint,
@@ -1006,7 +1009,7 @@ open work under issues #416-#420 and #490-#493:
   mutates inputs and breaks sandboxing); adapter dispatch stays owned (issue #416).
 - Roslyn `/errorlog` SARIF is per compiler invocation (per
   configuration/TFM/RID pivot); aggregation is decided under issue #492 with `csharp/tests/fixtures/roslyn/` evidence (concatenate per-pivot runs into one SARIF log with a single schema plus version in deterministic pivot order, union of results with per-pivot provenance; single-SARIF assumption is rejected and merged-single-run is rejected, collection is declared inputs with fail-closed; no adapter claims `csharp` yet, cohort stays owned under issue #417).
-- FSharpLint: console text parsing versus binding the .NET library API (issue #417).
+- FSharpLint (issue #417): console-parse is rejected both shapes and wire via `FSharpLint.Application.Lint` with `ReceivedWarning` is required with target-coupled `.fsproj`/`.sln` plus `fsharplint.json` wiring from the authoritative target and sandbox-apply-and-diff with declared outputs (never `IN_PLACE`), decided under issue #493 with fsharp/tests/fixtures/fsharplint/ evidence; no adapter claims `fsharp` yet (cohort stays owned under issue #417; standard blocks carry start-only locations with URL-only rule IDs, `-f msbuild` lines drop fix plus typecheck context, and single-file runs warn project context detects more issues).
 - clang-tidy: compile-commands context couples the adapter to target wiring;
   target-coupled wiring versus check-only stays open (issue #418).
 - staticcheck: default checks versus `SA`-only stays an unresolved conflict;

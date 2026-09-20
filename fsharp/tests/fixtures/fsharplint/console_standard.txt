@@ -1,0 +1,15 @@
+Running FSharpLint with 95 rules (93 enabled, 2 disabled)...
+WARNING: Going to analyze single .fs file, but not recommended. Using a project (slnx/sln/fsproj) can detect more issues.
+Consider changing `ExampleInterface` to be prefixed with `I`.
+Error in file Sample.fs on line 3 starting at column 6
+type ExampleInterface =
+     ^
+See https://fsprojects.github.io/FSharpLint/how-tos/rules/FL0036.html
+--------------------------------------------------------------------------------
+If `( + )` has no mutable arguments partially applied then the lambda can be removed.
+Error in file Sample.fs on line 6 starting at column 23
+    let total = List.fold (fun x y -> x + y) 0 [1; 2; 3]
+                       ^
+See https://fsprojects.github.io/FSharpLint/how-tos/rules/FL0034.html
+--------------------------------------------------------------------------------
+========== Finished: 2 warnings ==========

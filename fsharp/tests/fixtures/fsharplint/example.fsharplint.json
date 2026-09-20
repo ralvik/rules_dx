@@ -1,0 +1,12 @@
+{
+  "_comment": "Example checked-in FSharpLint native config (issue #493). Sole-policy example: without a checked-in fsharplint.json the pinned tool uses upstream built-in defaults; with this file it interprets natively. Formatting-adjacent rules stay disabled because Fantomas owns formatting; adapters add only transport settings.",
+  "ignoreFiles": ["assemblyinfo.*"],
+  "global": {"numIndentationSpaces": 4},
+  "indentation": {"enabled": false},
+  "maxCharactersOnLine": {"enabled": false, "config": {"maxCharactersOnLine": 120}},
+  "trailingWhitespaceOnLine": {"enabled": false, "config": {"numberOfSpacesAllowed": 1, "oneSpaceAllowedAfterOperator": true, "ignoreBlankLines": true}},
+  "trailingNewLineInFile": {"enabled": false},
+  "noTabCharacters": {"enabled": true},
+  "interfaceNames": {"enabled": true, "config": {"naming": "PascalCase", "underscores": "None", "prefix": "I"}},
+  "memberNames": {"enabled": true, "config": {"naming": "PascalCase", "underscores": "AllowPrefix"}}
+}
