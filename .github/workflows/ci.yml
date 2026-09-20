@@ -1068,6 +1068,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:roslyn_qualification
       - name: Audit FSharpLint qualification (issue #493 console vs library-API binding pins plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:fsharplint_qualification
+      - name: Audit stable-stack qualification (issue #494 exact stable compose pins plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:stable_stack_qualification
       - name: Audit Windows acquisition qualification (issue #495 immutable lazy fetch pins plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:windows_acquisition_qualification
       - name: Write job summary
