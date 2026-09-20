@@ -1,6 +1,7 @@
-"""Signing + attestation selection for releases (issue #311).
+"""Signing + attestation selection for releases (issue #459, live successor to closed #311/#26 for the signing stack).
 
 Contract: `docs/deploy/release-runbook.md`.
+Decision (issue #459): keep Sigstore keyless `cosign sign-blob --bundle` + GitHub attestations on the TUF trust root; no stack change.
 """
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
@@ -11,6 +12,28 @@ load("//deploy/rules:launcher.bzl", "RUNFILES_BASH_INIT", "rlocation_path")
 # Trust root is documented, not self-hosted.
 SIGNING_TRUST_ROOT = "https://tuf-repo-cdn.sigstore.dev"
 SIGNING_ISSUER = "https://token.actions.githubusercontent.com"
+
+# Selected signing-stack pins (issue #459): cosign CLI version fetched
+# checksum-verified in `.github/workflows/ghcr.yml` plus the Sigstore
+# bundle media type produced by `cosign sign-blob --bundle`. Host tools
+# resolve at run time with no new module dependencies; the pins keep the
+# human-run path, GHCR route, and verifier on one stack.
+SIGNING_COSIGN_VERSION = "v2.4.1"
+SIGNING_BUNDLE_MEDIA_TYPE = "application/vnd.dev.sigstore.bundle.v0.3+json"
+
+def signing_cosign_error(version):
+    """Validates the expected cosign CLI version pin."""
+    if version != SIGNING_COSIGN_VERSION:
+        return ("signing: invalid cosign version '" + str(version) +
+                "': want '" + SIGNING_COSIGN_VERSION + "' (pinned per issue #459)")
+    return ""
+
+def signing_bundle_media_error(media_type):
+    """Validates the expected Sigstore bundle media type."""
+    if media_type != SIGNING_BUNDLE_MEDIA_TYPE:
+        return ("signing: invalid bundle media type '" + str(media_type) +
+                "': want '" + SIGNING_BUNDLE_MEDIA_TYPE + "' (Sigstore bundle v0.3; 0.1/0.2 only if declared)")
+    return ""
 
 def signing_identity_error(identity, issuer):
     """Validates the expected certificate identity + issuer."""
@@ -48,7 +71,7 @@ def _signing_launcher_impl(ctx):
     ctx.actions.write(
         output = launcher,
         content = """#!/usr/bin/env bash
-# Deploy launcher for `signed_release` (issue #311). Generated. Do not edit.
+# Deploy launcher for `signed_release` (issue #459). Generated. Do not edit.
 # Resolves inputs via the standard `runfiles.bash` `rlocation`; wrapped
 # as `sh_binary` (see `signed_release`).
 set -euo pipefail

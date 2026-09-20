@@ -1,8 +1,8 @@
-"""Unit tests for signing selection (issue #311).
+"""Unit tests for signing selection (issue #459, live successor to closed #311/#26).
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
-load(":signing.bzl", "SIGNING_ISSUER", "SIGNING_TRUST_ROOT", "signing_bundle_names", "signing_identity_error")
+load(":signing.bzl", "SIGNING_BUNDLE_MEDIA_TYPE", "SIGNING_COSIGN_VERSION", "SIGNING_ISSUER", "SIGNING_TRUST_ROOT", "signing_bundle_media_error", "signing_bundle_names", "signing_cosign_error", "signing_identity_error")
 
 def signing_unit_tests(name):
     starlark_test(
@@ -18,6 +18,36 @@ def signing_unit_tests(name):
                 "signing issuer is GitHub OIDC",
                 SIGNING_ISSUER,
                 "https://token.actions.githubusercontent.com",
+            ),
+            expect_equal(
+                "signing cosign version is pinned v2.4.1",
+                SIGNING_COSIGN_VERSION,
+                "v2.4.1",
+            ),
+            expect_equal(
+                "signing bundle media type is Sigstore bundle v0.3",
+                SIGNING_BUNDLE_MEDIA_TYPE,
+                "application/vnd.dev.sigstore.bundle.v0.3+json",
+            ),
+            expect_equal(
+                "signing cosign pin accepts v2.4.1",
+                signing_cosign_error("v2.4.1"),
+                "",
+            ),
+            expect_equal(
+                "signing cosign pin rejects a floating version",
+                signing_cosign_error("v2.4.0"),
+                "signing: invalid cosign version 'v2.4.0': want 'v2.4.1' (pinned per issue #459)",
+            ),
+            expect_equal(
+                "signing bundle media accepts v0.3",
+                signing_bundle_media_error("application/vnd.dev.sigstore.bundle.v0.3+json"),
+                "",
+            ),
+            expect_equal(
+                "signing bundle media rejects an undeclared version",
+                signing_bundle_media_error("application/vnd.dev.sigstore.bundle.v0.2+json"),
+                "signing: invalid bundle media type 'application/vnd.dev.sigstore.bundle.v0.2+json': want 'application/vnd.dev.sigstore.bundle.v0.3+json' (Sigstore bundle v0.3; 0.1/0.2 only if declared)",
             ),
             expect_equal(
                 "signing bundle names derive per instance",

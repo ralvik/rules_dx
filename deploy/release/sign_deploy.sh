@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
-# Signing program for `signed_release` (issue #311).
+# Signing program for `signed_release` (issue #459, live successor to
+# closed #311/#26 for the signing stack).
 #
 # Invoked via `bazel run :<name>` with pinned artifact paths as `$@`.
-# Selected stack: Sigstore keyless (`cosign sign-blob --bundle`, Fulcio
-# OIDC + Rekor public-good on the TUF trust root) plus GitHub Artifact
-# Attestations (`gh attestation create`). Host tools resolved at run
-# time; no new module dependencies.
+# Selected stack (issue #459 decision, no stack change): Sigstore keyless
+# (`cosign sign-blob --bundle` v2.4.1 pinned per
+# `deploy/release/signing.bzl` SIGNING_COSIGN_VERSION, Fulcio OIDC + Rekor
+# public-good on the TUF trust root) plus GitHub Artifact Attestations
+# (`gh attestation create`). Bundle media type
+# `application/vnd.dev.sigstore.bundle.v0.3+json` (0.1/0.2 only if
+# declared). Host tools resolved at run time; no new module dependencies.
 #
 # Safety (issue #5): never runs on CI push/PR. With
 # `RELEASE_SIGN_DRY_RUN=1` prints the would-run commands and publishes
@@ -32,6 +36,8 @@ if [[ "${RELEASE_SIGN_DRY_RUN:-}" == "1" ]]; then
   echo "  trust root: ${trust_root}"
   echo "  identity: ${identity}"
   echo "  issuer: ${issuer}"
+  echo "  cosign: v2.4.1 (pinned per deploy/release/signing.bzl SIGNING_COSIGN_VERSION; checksum-verified fetch per .github/workflows/ghcr.yml)"
+  echo "  bundle media type: application/vnd.dev.sigstore.bundle.v0.3+json (Sigstore bundle v0.3; 0.1/0.2 only if declared)"
   for asset in "$@"; do
     echo "  asset: $(basename "${asset}") (${asset})"
     echo "  command: cosign sign-blob --bundle $(basename "${asset}").bundle --certificate-identity ${identity} --certificate-issuer ${issuer} ${asset}"

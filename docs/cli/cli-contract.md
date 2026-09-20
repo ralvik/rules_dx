@@ -145,8 +145,8 @@ Failure reports every marker considered and suggests `--workspace`.
 The primary installation path is `bazel run //dx:env`. The project-owned
 cross-platform environment rule exposes the `dx` executable from the consumer's
 pinned `rules_dx` module together with configured development tools. No prebuilt
-binaries are published yet (see
-open work under issue #459). When published, v1
+binaries are published yet (distribution qualified under issue #459; no
+binaries published yet). When published, v1
 destinations are the Bazel Central Registry for the `rules_dx` module and GitHub
 Releases for standalone binaries, with install-time publisher-identity verification
 (no checksum-only fallback). The CLI and rules module share

@@ -459,9 +459,13 @@ This separation avoids digest self-reference and is settled policy, not proof of
 pipeline. Single correct path: payload-only embedded manifest plus detached final-archive attestation over exact
 published bytes, with a completeness check proving no payload file is silently omitted.
 Manifest self-entry treatment must still freeze without self-referential digest/size
-requirements or silently omitting payload files. Exact profiles, trust identities, verification
-inputs, and publication mechanics are tracked in
-open work under issue #459.
+requirements or silently omitting payload files. Selected-stack profiles, trust identities,
+verification inputs, and publication mechanics are qualified under issue #459
+(cosign v2.4.1 `sign-blob --bundle` + attestations on the TUF trust root, SPDX 2.3
+plus SLSA v1 via `//deploy/release:sbom_demo`, bundle v0.3; see the
+[release runbook](../deploy/release-runbook.md)); deeper wire-profile details
+(Rekor v2 versus TSA, offline roots, rotation, negatives, L2/L3) stay provisional
+per [Provenance Profile Research](#provenance-profile-research).
 
 Private ecosystem locks are repository inputs and part of the tool identity. Their exact
 wheel/package archives and runtime identity participate in Bazel action keys. A ruleset
@@ -472,7 +476,7 @@ actions without mutable CLI state.
 
 Read-only research recommends qualifying SPDX 2.3 JSON and SLSA Build
 Provenance v1, each in an in-toto Statement v1, signed with the accepted Cosign keyless route
-(see open work under issue #459).
+(selected stack qualified under issue #459; wire profiles stay provisional).
 This is a provisional wire-profile recommendation, not a dependency pin, assurance-level claim,
 trusted-builder selection, or installer API. SPDX 3.0.1 is published; the 2.3 candidate aligns with
 the existing license report and avoids an unneeded JSON-LD profile change, subject to qualification.
@@ -504,10 +508,11 @@ signer/`builder.id` mismatch, multi-signature DSSE, expired certificates without
 tampered time claims, and roots bundled where they must not appear. Self-attested provenance is L0/L1
 at best and must not self-assert L2/L3 `builder.id`.
 
-First-install verifier/trust bootstrap and exact verification inputs are tracked in
-open work under issue #459, as are
-required assurance level, trusted builders, complete inventory rules, reproducibility thresholds,
-upstream-evidence exceptions, and manifest self-entry rules. Signing JSON alone proves neither
+First-install verifier/trust bootstrap and exact verification inputs are qualified
+under issue #459 via `//deploy/install:dx_verify` (bundle-required, no
+checksum-only fallback, TUF trust root, fail-before-install); required
+assurance level, trusted builders, complete inventory rules, reproducibility thresholds,
+upstream-evidence exceptions, and manifest self-entry rules stay provisional. Signing JSON alone proves neither
 complete dependencies, hermeticity, reproducibility, redistribution permission, nor SLSA Build L2/L3.
 
 ## Platform And Laziness
