@@ -128,7 +128,10 @@ use_repo(dotnet_nuget, "paket.main")
 # latest stable in the Bazel Central Registry (Bazel >=7.0.0; verified
 # against Bazel 9.2.0 on the seed host). Single shared lock for the admitted
 # JVM foundations (Java, Kotlin, Scala managed route) per the support
-# matrix: `maven_install.json` plus fail-closed repin checking. JUnit 4.13.2
+# matrix: `maven_install.json` plus fail-closed repin checking (qualified
+# seed-only under issue #481 via `bazel run //tools/ci:maven_lock_qualification`
+# with `third_party/jvm/pins.bzl` plus the Java/Kotlin `@maven` fixtures;
+# non-fail-closed rejected). JUnit 4.13.2
 # seed (latest 4.x; hamcrest-core 1.3 arrives transitively) plus JUnit 6.1.3
 # Jupiter/Platform/Vintage line (qualified seed-only under issue #476; JDK 17+
 # per the JUnit 6 baseline, remotejdk_21 on the seed host); the 5.14.x fallback

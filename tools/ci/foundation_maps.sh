@@ -608,8 +608,9 @@ else
   bad "admitted test runners drifted:$runner_fail"
 fi
 
-# #476-#484: admitted lock wiring stays pinned (JVM shares maven_install.json,
-# .NET shares paket.main qualified seed-only under #482, Go stdlib-only, C/C++ none).
+# #476-#484: admitted lock wiring stays pinned (JVM shares maven_install.json
+# fail-closed qualified seed-only under #481, .NET shares paket.main qualified
+# seed-only under #482, Go stdlib-only, C/C++ none).
 lock304_fail=""
 grep -q -F -e 'maven_install.json' docs/generation/README.md || lock304_fail="$lock304_fail gen:maven"
 grep -q -F -e 'paket.lock' docs/generation/README.md || lock304_fail="$lock304_fail gen:paket"
@@ -622,6 +623,10 @@ grep -q -F -e 'FSHARP_CORE_VERSION = "10.1.201"' csharp/tests/fixtures/paket/pin
 grep -q -F -e 'packages.lock.json rejected' csharp/tests/fixtures/paket/pins.bzl || lock304_fail="$lock304_fail paket:rejected"
 grep -q -F -e 'paket_qualification' docs/product/support-matrix.md || lock304_fail="$lock304_fail matrix:paket-qual"
 grep -q -F -e 'paket_qualification' docs/generation/README.md || lock304_fail="$lock304_fail gen:paket-qual"
+grep -q -F -e 'RULES_JVM_EXTERNAL_VERSION = "7.1"' third_party/jvm/pins.bzl || lock304_fail="$lock304_fail maven:pin"
+grep -q -F -e 'fail_if_repin_required = True' MODULE.bazel || lock304_fail="$lock304_fail maven:fail-closed"
+grep -q -F -e 'maven_lock_qualification' docs/product/support-matrix.md || lock304_fail="$lock304_fail maven:matrix"
+grep -q -F -e 'maven_lock_qualification' docs/generation/README.md || lock304_fail="$lock304_fail maven:gen"
 if [[ -z "$lock304_fail" ]]; then
   ok
 else

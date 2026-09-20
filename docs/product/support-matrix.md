@@ -242,9 +242,9 @@ are pinned by `bazel run //tools/ci:foundation_maps` with owning qualification i
 [Tools](../tools/README.md#language-mapping-qualification), and the
 [native plan](../native-toolchains.md#qualification-questions-and-delivery):
 wrappers preserving upstream providers plus `QualitySourcesInfo`, Gazelle extensions,
-env plans, hello builds, and lock authority (`maven_install.json` plus fail-closed,
-Paket plus `paket.main` qualified seed-only under issue #482, Go stdlib-only, C/C++ none), with test runners (JUnit
-6.1.3 plus 5.14.x fallback qualified seed-only under issue #476, xUnit v3 4.0.0
+env plans, hello builds, and lock authority (Maven `maven_install.json` plus fail-closed
+qualified seed-only under issue #481, Paket plus `paket.main` qualified seed-only
+under issue #482, Go stdlib-only, C/C++ none), with test runners (JUnit 6.1.3 plus 5.14.x fallback qualified seed-only under issue #476, xUnit v3 4.0.0
 mapping via xunit fixtures qualified seed-only under issue #477, `go test`
 qualified seed-only under issue #478, GoogleTest v1.18.0 plus C++17 floor
 qualified seed-only under issue #479, ScalaTest qualified seed-only under issue
@@ -268,6 +268,8 @@ GoogleTest v1.18.0 plus C++17 floor qualified seed-only under issue #479 via
 `bazel run //tools/ci:googletest_qualification`;
 ScalaTest 3.2.20 qualified seed-only under issue #480 via
 `bazel run //tools/ci:scalatest_qualification`;
+Maven `maven_install.json` plus fail-closed repin qualified seed-only under issue #481 via
+`bazel run //tools/ci:maven_lock_qualification`;
 Paket files plus sha512 qualified seed-only under issue #482 via
 `bazel run //tools/ci:paket_qualification`).
 No `Supported` claim until platform plus consumer plus release
@@ -722,10 +724,14 @@ this review selects neither a staticcheck rule set nor a Checkstyle/Scalafix pre
 
 Upstream documentation observations; provisional defaults, not
 selections. Exact files and fail-closed wiring are tracked in
-open work under issues #481-#484, except the Paket lock wiring
-qualified seed-only under issue #482 below.
+open work under issues #481-#484, with the Maven lock qualified
+seed-only under issue #481 and the Paket lock wiring qualified seed-only
+under issue #482 below.
 
-- Java, Kotlin, Scala: `maven_install.json` via `rules_jvm_external`
+- Java, Kotlin, Scala: Maven maven_install.json qualified seed-only under issue #481
+  (`bazel run //tools/ci:maven_lock_qualification` with `third_party/jvm/pins.bzl`
+  plus `lock_file` plus `fail_if_repin_required` over the shared `@maven` hub;
+  non-fail-closed rejected) via `rules_jvm_external`
   (`lock_file` plus `fail_if_repin_required`); Scala shares Java's Maven
   story. Coursier is the default resolver; the Maven and Gradle resolvers
   require a lock file by construction.

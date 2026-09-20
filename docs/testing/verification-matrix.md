@@ -398,9 +398,17 @@ Remaining reds stay owned gaps, not green claims:
   2.13.18 plus ScalaTest 3.2.20 pinned in `scala/tests/fixtures/scalatest/pins.bzl`
   with the hello `scala_test` `AnyFlatSpec` fixture over the `scala_test` wrapper
   (upstream providers plus `QualitySourcesInfo`), managed Coursier route with no
-   Maven lock members, unpinned runner rejected; `scala_junit_test` plus
-   `scala_specs2_junit_test` stay rules-supported choices, not defaults;
-   platform plus consumer plus release evidence stays owned gap; no Supported claim).
+  Maven lock members, unpinned runner rejected; `scala_junit_test` plus
+  `scala_specs2_junit_test` stay rules-supported choices, not defaults;
+  platform plus consumer plus release evidence stays owned gap; no Supported claim).
+- Maven `maven_install.json` plus fail-closed repin with fixture evidence qualified seed-only under #481
+  (`bazel run //tools/ci:maven_lock_qualification`; rules_jvm_external 7.1 plus
+  `lock_file` plus `fail_if_repin_required` pinned in `third_party/jvm/pins.bzl` with
+  the single shared lock over the `@maven` hub (JUnit 6.1.3 line plus 4.13.2 seed,
+  per-artifact sha256, `REPIN=1 bazel run @maven//:pin` never hand-edited), proven by
+  the Java/Kotlin Jupiter plus seed fixtures; non-fail-closed rejected
+  (`maven_lock_qualification` 16/16); platform plus consumer plus release evidence stays
+  owned gap; no Supported claim).
 - Paket files plus sha512 with fixture evidence qualified seed-only under #482
   (`bazel run //tools/ci:paket_qualification`; `paket.dependencies` plus
   `paket.lock` via `paket2bazel` into the `paket.main` hub carrying
