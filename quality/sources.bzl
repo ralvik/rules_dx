@@ -13,7 +13,7 @@ QualitySourcesInfo = provider(
     },
 )
 
-# Versioned registry schema for the semantic file-class inventory (issue #321).
+# Versioned registry schema for the semantic file-class inventory.
 # Consumers query via `is_known_semantic_class` / `sources_schema_error`
 # instead of duplicating the class list, so adding a class edits this one
 # data list plus adapter/parity compat, never a parallel allowlist.

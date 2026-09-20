@@ -1,12 +1,6 @@
-//! `dx` binary: thin CLI shim over the quality command library.
+//! Thin `dx` process shim over the CLI library.
 //!
-//! All command semantics live in the library and are unit-tested there.
-//! This shim owns process concerns only: argument parsing, workspace
-//! discovery, temporary-directory lifetime, subprocess stdio routing per
-//! the output protocol (text preserves subprocess stdout; every other
-//! mode moves it to stderr so stdout stays machine-owned), SIGINT/SIGTERM
-//! forwarding to the active Bazel process with shell signal semantics,
-//! and exit-code propagation.
+//! Contract: `docs/cli/README.md`.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
@@ -24,10 +18,7 @@ use dx_cli::{execute, Env, ProcessQueryRunner};
 use dx_output::{command_finished, error_event, write_event, FinishedCounts, OutputMode};
 use dx_process::{discover_real, operational_code, pre_exec_code, ChildStatus, Runner};
 
-/// Pid of the active Bazel child, if any. Stored before waiting and
-/// cleared after; the signal handler forwards to it. `SeqCst` keeps the
-/// store/load pair obviously ordered across the handler thread; signals
-/// are rare so the fence cost is irrelevant.
+/// Active Bazel child for signal forwarding; see `forward_to_child`.
 static CHILD_PID: AtomicU32 = AtomicU32::new(0);
 
 /// Signal-forwarding contract:
