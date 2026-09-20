@@ -1,20 +1,76 @@
 """Standalone quality-tool acquisition (WP1).
 """
 
+load("//quality/artifacts:biome.linux_arm64.bzl", _biome_linux_arm64 = "ARTIFACT")
 load("//quality/artifacts:biome.linux_x86_64.bzl", _biome_linux_x86_64 = "ARTIFACT")
+load("//quality/artifacts:biome.macos_arm64.bzl", _biome_macos_arm64 = "ARTIFACT")
+load("//quality/artifacts:biome.macos_x86_64.bzl", _biome_macos_x86_64 = "ARTIFACT")
+load("//quality/artifacts:biome.windows_x86_64.bzl", _biome_windows_x86_64 = "ARTIFACT")
+load("//quality/artifacts:buildifier.linux_arm64.bzl", _buildifier_linux_arm64 = "ARTIFACT")
 load("//quality/artifacts:buildifier.linux_x86_64.bzl", _buildifier_linux_x86_64 = "ARTIFACT")
+load("//quality/artifacts:buildifier.macos_arm64.bzl", _buildifier_macos_arm64 = "ARTIFACT")
+load("//quality/artifacts:buildifier.macos_x86_64.bzl", _buildifier_macos_x86_64 = "ARTIFACT")
+load("//quality/artifacts:buildifier.windows_x86_64.bzl", _buildifier_windows_x86_64 = "ARTIFACT")
+load("//quality/artifacts:ruff.linux_arm64.bzl", _ruff_linux_arm64 = "ARTIFACT")
 load("//quality/artifacts:ruff.linux_x86_64.bzl", _ruff_linux_x86_64 = "ARTIFACT")
+load("//quality/artifacts:ruff.macos_arm64.bzl", _ruff_macos_arm64 = "ARTIFACT")
+load("//quality/artifacts:ruff.macos_x86_64.bzl", _ruff_macos_x86_64 = "ARTIFACT")
+load("//quality/artifacts:ruff.windows_x86_64.bzl", _ruff_windows_x86_64 = "ARTIFACT")
+load("//quality/artifacts:taplo.linux_arm64.bzl", _taplo_linux_arm64 = "ARTIFACT")
 load("//quality/artifacts:taplo.linux_x86_64.bzl", _taplo_linux_x86_64 = "ARTIFACT")
+load("//quality/artifacts:taplo.macos_arm64.bzl", _taplo_macos_arm64 = "ARTIFACT")
+load("//quality/artifacts:taplo.macos_x86_64.bzl", _taplo_macos_x86_64 = "ARTIFACT")
+load("//quality/artifacts:taplo.windows_x86_64.bzl", _taplo_windows_x86_64 = "ARTIFACT")
+load("//quality/artifacts:ty.linux_arm64.bzl", _ty_linux_arm64 = "ARTIFACT")
 load("//quality/artifacts:ty.linux_x86_64.bzl", _ty_linux_x86_64 = "ARTIFACT")
+load("//quality/artifacts:ty.macos_arm64.bzl", _ty_macos_arm64 = "ARTIFACT")
+load("//quality/artifacts:ty.macos_x86_64.bzl", _ty_macos_x86_64 = "ARTIFACT")
+load("//quality/artifacts:ty.windows_x86_64.bzl", _ty_windows_x86_64 = "ARTIFACT")
+load("//quality/artifacts:vale.linux_arm64.bzl", _vale_linux_arm64 = "ARTIFACT")
 load("//quality/artifacts:vale.linux_x86_64.bzl", _vale_linux_x86_64 = "ARTIFACT")
+load("//quality/artifacts:vale.macos_arm64.bzl", _vale_macos_arm64 = "ARTIFACT")
+load("//quality/artifacts:vale.macos_x86_64.bzl", _vale_macos_x86_64 = "ARTIFACT")
+load("//quality/artifacts:vale.windows_x86_64.bzl", _vale_windows_x86_64 = "ARTIFACT")
 
 _ARTIFACTS = [
     _biome_linux_x86_64,
+    _biome_linux_arm64,
+    _biome_macos_arm64,
+    _biome_macos_x86_64,
+    _biome_windows_x86_64,
     _buildifier_linux_x86_64,
+    _buildifier_linux_arm64,
+    _buildifier_macos_arm64,
+    _buildifier_macos_x86_64,
+    _buildifier_windows_x86_64,
     _ruff_linux_x86_64,
+    _ruff_linux_arm64,
+    _ruff_macos_arm64,
+    _ruff_macos_x86_64,
+    _ruff_windows_x86_64,
     _taplo_linux_x86_64,
+    _taplo_linux_arm64,
+    _taplo_macos_arm64,
+    _taplo_macos_x86_64,
+    _taplo_windows_x86_64,
     _ty_linux_x86_64,
+    _ty_linux_arm64,
+    _ty_macos_arm64,
+    _ty_macos_x86_64,
+    _ty_windows_x86_64,
     _vale_linux_x86_64,
+    _vale_linux_arm64,
+    _vale_macos_arm64,
+    _vale_macos_x86_64,
+    _vale_windows_x86_64,
+]
+
+_PLATFORMS = [
+    "linux_x86_64",
+    "linux_arm64",
+    "macos_arm64",
+    "macos_x86_64",
+    "windows_x86_64",
 ]
 
 def _repo_name(artifact):
@@ -53,6 +109,18 @@ def _standalone_tool_repo_impl(ctx):
         # `mode`/`is_executable` fields); extraction preserves the mode,
         # so no host chmod runs.
         ctx.extract(ctx.attr.asset)
+    elif kind == "zip":
+        ctx.download(
+            url = ctx.attr.url,
+            output = ctx.attr.asset,
+            sha256 = ctx.attr.sha256,
+        )
+
+        # Zip members carry no reliable unix mode (windows zips record
+        # 0o0; see the metadata `mode` field). Windows execution needs
+        # no chmod, and windows artifacts are never selected on unix,
+        # so extraction alone suffices with no host chmod runs.
+        ctx.extract(ctx.attr.asset)
     else:
         fail("unsupported archive format: " + kind)
     ctx.file("BUILD.bazel", "\n".join([
@@ -82,18 +150,50 @@ _HUB_BUILD = """config_setting(
         "{cpu_x86_64}",
     ],
 )
+config_setting(
+    name = "linux_arm64",
+    constraint_values = [
+        "{os_linux}",
+        "{cpu_arm64}",
+    ],
+)
+config_setting(
+    name = "macos_arm64",
+    constraint_values = [
+        "{os_macos}",
+        "{cpu_arm64}",
+    ],
+)
+config_setting(
+    name = "macos_x86_64",
+    constraint_values = [
+        "{os_macos}",
+        "{cpu_x86_64}",
+    ],
+)
+config_setting(
+    name = "windows_x86_64",
+    constraint_values = [
+        "{os_windows}",
+        "{cpu_x86_64}",
+    ],
+)
 """
 
 _HUB_ALIAS = """alias(
     name = "{tool}",
     actual = select(
         {{
-            ":linux_x86_64": "@{repo}//:tool",
+            ":linux_x86_64": "@{repo_linux_x86_64}//:tool",
+            ":linux_arm64": "@{repo_linux_arm64}//:tool",
+            ":macos_arm64": "@{repo_macos_arm64}//:tool",
+            ":macos_x86_64": "@{repo_macos_x86_64}//:tool",
+            ":windows_x86_64": "@{repo_windows_x86_64}//:tool",
         }},
         no_match_error = (
             "rules_dx: no {tool} artifact for this execution platform; " +
-            "only linux_x86_64 is recorded (see //quality/artifacts). " +
-            "Other platforms are unimplemented gaps, not silent fallbacks."
+            "want one of linux_x86_64, linux_arm64, macos_arm64, " +
+            "macos_x86_64, windows_x86_64 (see //quality/artifacts)."
         ),
     ),
     visibility = ["//visibility:public"],
@@ -103,33 +203,53 @@ _HUB_ALIAS = """alias(
 def _hub_repo_impl(ctx):
     lines = [_HUB_BUILD.format(
         os_linux = ctx.attr.os_linux,
+        os_macos = ctx.attr.os_macos,
+        os_windows = ctx.attr.os_windows,
         cpu_x86_64 = ctx.attr.cpu_x86_64,
+        cpu_arm64 = ctx.attr.cpu_arm64,
     )]
-    for tool, repos in ctx.attr.artifacts.items():
-        lines.append(_HUB_ALIAS.format(tool = tool, repo = repos[0]))
+    for tool in sorted(ctx.attr.artifacts.keys()):
+        repos = {}
+        for platform, repo in zip(_PLATFORMS, ctx.attr.artifacts[tool]):
+            repos[platform] = repo
+        lines.append(_HUB_ALIAS.format(
+            tool = tool,
+            repo_linux_x86_64 = repos["linux_x86_64"],
+            repo_linux_arm64 = repos["linux_arm64"],
+            repo_macos_arm64 = repos["macos_arm64"],
+            repo_macos_x86_64 = repos["macos_x86_64"],
+            repo_windows_x86_64 = repos["windows_x86_64"],
+        ))
     ctx.file("BUILD.bazel", "\n".join(lines))
 
 _hub_repo = repository_rule(
     implementation = _hub_repo_impl,
     attrs = {
         "artifacts": attr.string_list_dict(mandatory = True),
+        "cpu_arm64": attr.string(mandatory = True),
         "cpu_x86_64": attr.string(mandatory = True),
         # Canonical platform labels supplied by the MODULE.bazel tag, so the
         # generated BUILD references repositories visible from the hub.
         "os_linux": attr.string(mandatory = True),
+        "os_macos": attr.string(mandatory = True),
+        "os_windows": attr.string(mandatory = True),
     },
 )
 
 def _dx_tools_impl(ctx):
-    os_linux, cpu_x86_64 = None, None
+    os_linux, os_macos, os_windows, cpu_x86_64, cpu_arm64 = None, None, None, None, None
     for module in ctx.modules:
         for tag in module.tags.platform:
             if os_linux != None:
                 fail("dx_tools.platform may be declared at most once")
-            os_linux, cpu_x86_64 = str(tag.os_linux), str(tag.cpu_x86_64)
+            os_linux = str(tag.os_linux)
+            os_macos = str(tag.os_macos)
+            os_windows = str(tag.os_windows)
+            cpu_x86_64 = str(tag.cpu_x86_64)
+            cpu_arm64 = str(tag.cpu_arm64)
     if os_linux == None:
-        fail("dx_tools.platform(os_linux, cpu_x86_64) is required in MODULE.bazel")
-    hub_entries = {}
+        fail("dx_tools.platform(os_linux, os_macos, os_windows, cpu_x86_64, cpu_arm64) is required in MODULE.bazel")
+    by_tool = {}
     for artifact in _ARTIFACTS:
         name = _repo_name(artifact)
         _standalone_tool_repo(
@@ -140,17 +260,27 @@ def _dx_tools_impl(ctx):
             archive_format = artifact["archive"]["format"],
             executable = artifact["executable"],
         )
-        hub_entries[artifact["tool"]] = [name]
+        platform = artifact["os"] + "_" + artifact["cpu"]
+        by_tool.setdefault(artifact["tool"], {})[platform] = name
+    hub_entries = {}
+    for tool in sorted(by_tool.keys()):
+        hub_entries[tool] = [by_tool[tool][platform] for platform in _PLATFORMS]
     _hub_repo(
         name = "dx_tools",
         artifacts = hub_entries,
         os_linux = os_linux,
+        os_macos = os_macos,
+        os_windows = os_windows,
         cpu_x86_64 = cpu_x86_64,
+        cpu_arm64 = cpu_arm64,
     )
 
 _platform = tag_class(attrs = {
+    "cpu_arm64": attr.label(mandatory = True),
     "cpu_x86_64": attr.label(mandatory = True),
     "os_linux": attr.label(mandatory = True),
+    "os_macos": attr.label(mandatory = True),
+    "os_windows": attr.label(mandatory = True),
 })
 
 dx_tools = module_extension(

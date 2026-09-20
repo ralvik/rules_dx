@@ -15,11 +15,13 @@ Verification is defined by the [Tool And Platform Test Matrix](../testing/tools.
 Accepted. Each foundation keeps its provisional upstream; no switch is approved here.
 
 Core tool-graph: `rustfmt` and Clippy via the pinned Rust toolchain;
-Ruff and Ty via checksummed standalone artifacts
-(`quality/artifacts/ruff.linux_x86_64.bzl`, `quality/artifacts/ty.linux_x86_64.bzl`);
-Biome, Buildifier, Taplo, and Vale via their standalone artifacts.
+Ruff and Ty via checksummed standalone artifacts across five hosts
+(`quality/artifacts/ruff.*.bzl`, `quality/artifacts/ty.*.bzl`: `linux_x86_64`,
+`linux_arm64`, `macos_arm64`, `macos_x86_64`, `windows_x86_64` under issue
+#616); Biome, Buildifier, Taplo, and Vale via their standalone artifacts
+across the same five hosts.
 Ty provenance is pinned: upstream `0.0.80` with URL, sha256, and licenses in
-`quality/artifacts/ty.linux_x86_64.bzl`. Ty maps to `typecheck` over `python`/`python_stub`,
+`quality/artifacts/ty.linux_x86_64.bzl` plus per-host siblings. Ty maps to `typecheck` over `python`/`python_stub`,
 Ruff maps to `format`/`lint` over the same classes, and Biome/ESLint/Prettier/`tsc` map
 JS/TS classes per `quality/adapters.bzl` with parsers in `quality/adapter/src/parsers/`
 (`ty.rs`, `ruff.rs`, `biome.rs`, `eslint.rs`, `prettier.rs`, `tsc.rs`); required-core Rust
