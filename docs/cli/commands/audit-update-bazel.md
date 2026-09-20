@@ -286,6 +286,19 @@ unit tests: `cargo`/`npm`/`maven`/`nuget`/`go` select sets, `set:package` select
 (`maven:group:artifact` for Maven), and Bazel labels/patterns/files/dirs resolve to owning
 sets via the approved prefix table (bare `//...` and `MODULE.bazel` select all sets).
 
+Per-set selective support is decided in [ADR 0024](../../decisions/0024-selective-update.md)
+with fixtures in `cli/update/tests/fixtures/selective_update/`:
+
+| Set | Selective (`set:package`) | Full (`set`) |
+| --- | --- | --- |
+| npm | Supported (`bazel run @pnpm//:pnpm -- update [<pkg>...]`) | Supported |
+| cargo | Wont-fix (`unsupported`; use `dx update cargo`) | Supported (`CARGO_BAZEL_REPIN=1` repin) |
+| maven | Wont-fix (`unsupported`; use `dx update maven`) | Supported (`REPIN=1` pin) |
+| nuget | Wont-fix (`unsupported`; use `dx update nuget`) | Supported (`paket2bazel` regen) |
+| go | Wont-fix (`unsupported`; empty set, no `go.mod`) | No-op success |
+
+When a set is both fully and package selected, the full update wins.
+
 `dx update` updates selected dependencies to the newest versions permitted by the project's
 declared requirements and authoritative ecosystem resolver, through approved Bazel integration.
 It refreshes standard locks or equivalent resolved dependency files without widening or replacing
@@ -334,8 +347,9 @@ Every changed file and invoked operation must be attributable to the
 underlying updater. Ordinary builds and editor activity do not initiate dependency-version upgrades.
 Supported ecosystem mappings are the five sets in `dx_update::sets` (Cargo, npm, Maven, NuGet, Go
 with manifests/locks pinned there); selective-update syntax is `set:package` in
-`dx_update::selector` (executed for npm, reported `unsupported` for other sets rather than
-silently widened); non-registry handling is upstream-owned (Git branches may advance, tags/commit
+`dx_update::selector` (supported for npm, reported `unsupported` for Cargo/Maven/NuGet/Go rather than
+silently widened, decided in [ADR 0024](../../decisions/0024-selective-update.md) with fixtures in
+`cli/update/tests/fixtures/selective_update/`); non-registry handling is upstream-owned (Git branches may advance, tags/commit
 pins stay, path dependencies are upstream no-ops); upstream operation/report mappings are pinned
 in `dx_update::backend` and unit-tested.
 
@@ -404,11 +418,14 @@ pins intact); bump never forces every transitive to newest.
 Manifests widened atomically (one file per invocation): `.bazelversion` or
 `MODULE.bazel` (Bazel, file-only), `rust/tests/fixtures/hello/Cargo.toml` (Cargo),
 `package.json` (npm), `go/go.mod` (Go), `.github/workflows/ci.yml`
-(GitHub Actions, SHA-plus-tag pins). Lock refresh stays resolver-owned
+(GitHub Actions, SHA-plus-tag pins). Lock refresh stays manual and resolver-owned
 through `dx update <set>` for Cargo/npm/Go
-(`dx_bump::BumpSet::needs_update_refresh`); Bazel and GitHub Actions verify
+(`dx_bump::BumpSet::needs_update_refresh`): `dx update cargo` (full; Cargo
+selective is wont-fix), `dx update npm:<pkg>` or `dx update npm` (selective
+permitted), `dx update go`; Bazel and GitHub Actions verify
 file-only through `preset.update --verify-only` flag-diff review plus
-`bazel build //...`. Missing, ambiguous, or unsupported manifest shapes fail
+`bazel build //...`. Per-set selective support is decided in
+[ADR 0024](../../decisions/0024-selective-update.md). Missing, ambiguous, or unsupported manifest shapes fail
 closed with nothing widened (exit `1`, `bump_failed`).
 
 Loop (one dep per PR, never batch): discover outdated (stable only) → widen
