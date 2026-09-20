@@ -18,9 +18,20 @@
 //!   OSV-format advisory matching inside `dx_audit` (see
 //!   [`crate::vuln`] and [`crate::advisory`]), with identified snapshots
 //!   as inputs, 24h cache semantics, refresh-failure behavior, and
-//!   offline matching. No subprocess launches for V1 vuln: the matcher
-//!   reads lockfiles plus snapshot bytes supplied by the caller, so no
-//!   inventory ever leaves the workspace. Per-ecosystem lockfile
+//!   offline matching. No subprocess launches for V1 vuln matching: the
+//!   matcher reads lockfiles plus snapshot bytes plus snapshot identity
+//!   supplied by the caller, so no inventory ever leaves the workspace.
+//!   Snapshots refresh automatically on every invocation through
+//!   supported upstream database-download tooling: the per-set OSV GCS
+//!   sources in [`crate::advisory::advisory_source`] fetched by HTTPS GET
+//!   with no query parameters, request body, or telemetry carrying package
+//!   names or versions; the derived V1 snapshot bytes
+//!   (`.dx/advisory/<set>.json`) plus identity
+//!   (`.dx/advisory/<set>.meta.json` with `url`, `sha256`, `retrieved_at`)
+//!   are the audited inputs. A missing, invalid, or stale snapshot fails
+//!   with `advisory_refresh_failed`, never clean and never a stale
+//!   fallback. Package-specific advisory queries and lockfile uploads
+//!   never satisfy this contract. Per-ecosystem lockfile
 //!   coverage is Cargo (`rust/tests/fixtures/hello/Cargo.lock`), npm
 //!   (`pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`), Maven
 //!   (`third_party/jvm/maven_install.json`), NuGet

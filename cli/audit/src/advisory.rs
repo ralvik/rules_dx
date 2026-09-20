@@ -30,6 +30,19 @@
 //! the snapshot bytes themselves arrive as Bazel inputs in aspect
 //! execution and as cache files in CLI execution, both pinned by
 //! fixtures.
+//!
+//! Supported upstream database-download sources (issue #628, no
+//! inventory upload): per-set OSV GCS bucket zips fetched by HTTPS GET
+//! with no query parameters, request body, or telemetry carrying package
+//! names or versions. The OSV API query route (`https://api.osv.dev/v1/query`
+//! with package/version in the body) discloses the inventory and never
+//! satisfies this contract. V1 snapshots (OSV-format records in the
+//! [`crate::vuln::Advisory`] subset) are derived from these databases via
+//! upstream tooling (such as `osv-scanner --offline` with a local DB, which
+//! sends no project information); the derived bytes plus their identity
+//! (`url`, `sha256`, `retrieved_at`) are the audited inputs. A missing,
+//! invalid, or stale snapshot fails with [`CODE_ADVISORY_REFRESH_FAILED`],
+//! never clean and never a stale fallback.
 
 use serde::{Deserialize, Serialize};
 
@@ -107,6 +120,55 @@ pub const CODE_ADVISORY_REFRESH_FAILED: &str = "advisory_refresh_failed";
 /// hour is stale today), so an earlier cached snapshot never lets a
 /// later audit pass on stale data.
 pub const CACHE_DAYS: u32 = 0;
+
+/// Supported upstream database-download source per dependency set
+/// (issue #628): OSV GCS bucket zips fetched by HTTPS GET with no
+/// inventory in the request. The URL carries no package names, versions,
+/// query parameters, or body; matching runs offline after download, so
+/// no lockfile or inventory ever leaves the workspace. The OSV query API
+/// (package/version in the request) never satisfies this contract.
+pub fn advisory_source(set: &str) -> Option<&'static str> {
+    match set {
+        "cargo" => Some("https://osv-vulnerabilities.storage.googleapis.com/crates.io/all.zip"),
+        "npm" => Some("https://osv-vulnerabilities.storage.googleapis.com/npm/all.zip"),
+        "maven" => Some("https://osv-vulnerabilities.storage.googleapis.com/Maven/all.zip"),
+        "nuget" => Some("https://osv-vulnerabilities.storage.googleapis.com/NuGet/all.zip"),
+        "go" => Some("https://osv-vulnerabilities.storage.googleapis.com/Go/all.zip"),
+        _ => None,
+    }
+}
+
+/// Workspace-relative snapshot bytes for one set: the identified advisory
+/// snapshot supplied as analysis input (Bazel input in aspect execution,
+/// cache file in CLI execution). A missing file means current data could
+/// not be obtained and fails with [`CODE_ADVISORY_REFRESH_FAILED`],
+/// never clean.
+pub fn snapshot_rel(set: &str) -> String {
+    format!(".dx/advisory/{set}.json")
+}
+
+/// Workspace-relative snapshot identity for one set: the
+/// [`AdvisorySnapshot`] record (`url`, `sha256`, `retrieved_at`) for the
+/// bytes at [`snapshot_rel`]. A missing or invalid identity fails like a
+/// missing snapshot; a `retrieved_at` older than today is stale and fails
+/// without analyzing the stale bytes.
+pub fn identity_rel(set: &str) -> String {
+    format!(".dx/advisory/{set}.meta.json")
+}
+
+/// Parse one snapshot identity document (JSON [`AdvisorySnapshot`]).
+/// Malformed JSON fails closed with the document error, never a default
+/// identity that could pass as fresh.
+pub fn parse_identity(text: &str) -> Result<AdvisorySnapshot, String> {
+    serde_json::from_str(text).map_err(|error| format!("invalid advisory identity: {error}"))
+}
+
+/// Whether one identity matches its snapshot bytes: the recorded
+/// `sha256` equals the lowercase hex SHA-256 of the exact bytes.
+/// Mismatches fail closed (stale or tampered snapshot, never analyzed).
+pub fn identity_matches_bytes(snapshot: &AdvisorySnapshot, bytes: &[u8]) -> bool {
+    dx_digest::sha256_hex(bytes) == snapshot.sha256.trim()
+}
 
 /// Validate one snapshot identity without fetching anything: set, URL,
 /// digest, date, and path must be present; the URL must be `https://`;
@@ -376,5 +438,65 @@ mod tests {
     fn cache_window_and_code_are_pinned() {
         assert_eq!(CACHE_DAYS, 0);
         assert_eq!(CODE_ADVISORY_REFRESH_FAILED, "advisory_refresh_failed");
+    }
+
+    #[test]
+    fn advisory_sources_are_https_database_downloads_without_inventory() {
+        // Every registry set owns an OSV GCS database-download source;
+        // unknown sets have none (fail closed, never empty clean).
+        for (set, ecosystem) in [
+            ("cargo", "crates.io"),
+            ("npm", "npm"),
+            ("maven", "Maven"),
+            ("nuget", "NuGet"),
+            ("go", "Go"),
+        ] {
+            let url = advisory_source(set).unwrap_or_else(|| panic!("{set} needs a source"));
+            assert!(url.starts_with("https://"), "{set} must be https");
+            assert!(
+                url.contains(ecosystem) && url.ends_with("/all.zip"),
+                "{set} must name its OSV ecosystem bucket"
+            );
+            // No inventory in the request: the URL carries no package
+            // names, versions, query parameters, or body. Matching runs
+            // offline after download.
+            assert!(!url.contains('?'), "{set} must carry no query");
+            assert!(
+                !url.contains("api.osv.dev"),
+                "{set} must not use the query API"
+            );
+        }
+        assert_eq!(advisory_source("unknown-set"), None);
+        assert_eq!(advisory_source(""), None);
+    }
+
+    #[test]
+    fn snapshot_and_identity_rels_are_pinned() {
+        assert_eq!(snapshot_rel("cargo"), ".dx/advisory/cargo.json");
+        assert_eq!(identity_rel("cargo"), ".dx/advisory/cargo.meta.json");
+        assert_eq!(snapshot_rel("go"), ".dx/advisory/go.json");
+        assert_eq!(identity_rel("go"), ".dx/advisory/go.meta.json");
+    }
+
+    #[test]
+    fn identity_round_trips_and_rejects_malformed() {
+        let snap = snapshot();
+        let text = serde_json::to_string(&snap).expect("serialize");
+        assert_eq!(parse_identity(&text).expect("parse"), snap);
+        assert!(parse_identity("not json").is_err());
+        // Missing required identity fields fail closed at parse time,
+        // never a default identity that could pass as fresh.
+        assert!(parse_identity("{}").is_err());
+    }
+
+    #[test]
+    fn identity_must_match_bytes() {
+        let bytes = b"[]";
+        let digest = dx_digest::sha256_hex(bytes);
+        let mut snap = snapshot();
+        snap.sha256 = digest.clone();
+        assert!(identity_matches_bytes(&snap, bytes));
+        snap.sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".to_owned();
+        assert!(!identity_matches_bytes(&snap, b"tampered"));
     }
 }

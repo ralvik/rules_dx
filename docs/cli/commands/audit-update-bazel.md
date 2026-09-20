@@ -79,9 +79,13 @@ selected environment/codegen projections. Auditors remain pinned tools; advisory
 authorize automatic tool-version upgrades. If required advisory refresh fails, fail the audit and
 report that current data could not be obtained. Do not fall back to a stale snapshot for the affected
 dependency audit or report that dependency set as clean. V1 reads identified snapshots from
-`.dx/advisory/<set>.json` when present, otherwise an empty advisory list, with 24h same-day
-freshness and refresh-failure mapping pinned in `dx_audit::advisory`; live CLI performs no
-network fetch.
+`.dx/advisory/<set>.json` plus identity `.dx/advisory/<set>.meta.json` (`url`, `sha256`,
+`retrieved_at`), derived via supported upstream database-download tooling (per-set OSV GCS
+`all.zip` fetched by HTTPS GET with no inventory in the request, such as `osv-scanner --offline`
+with a local DB; the OSV query API discloses the inventory and never satisfies this contract),
+with 24h same-day freshness and refresh-failure mapping pinned in `dx_audit::advisory`; a missing,
+invalid, or stale snapshot fails with `advisory_refresh_failed`, never clean and never a stale
+fallback; live CLI performs no network fetch.
 
 Keep dependency inventories out of external vulnerability services. Download applicable advisory
 databases and match packages against the identified snapshots within Bazel-owned analysis; do not
