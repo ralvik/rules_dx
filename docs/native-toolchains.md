@@ -619,3 +619,7 @@ If fixes require a replacement acquisition engine, compiler backend, Cargo graph
 stop that slice and revisit alternatives under the maintenance policy. Do not defer required Rust
 Windows support, admit complete C/C++ prematurely, or weaken hermeticity to make the table green.
 Do not implement missing infra merely to fill cross-product. The bound is qualified seed-only under issue #505 (`cc/tests/fixtures/remediation_bounds/pins.bzl` via `bazel run //tools/ci:remediation_bounds_qualification`, unbounded fork rejected); backends stay provisional with no `Supported` claim.
+
+## Runner Plus SDK Rotation
+
+SDK plus floor pin review follows the [Runner Plus SDK Rotation](github-ci.md#runner-plus-sdk-rotation) contract (issue #642): quarterly review plus on retirement notice plus on hermetic-llvm release, with `cc/tests/fixtures/deployment_floors/pins.bzl` as the floor-identity source and customer-flows-only qualification, no new CI job.

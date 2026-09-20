@@ -303,6 +303,12 @@ Review-thread limit plus accounting frozen at 50 open threads seed-only under is
 failure-first check/file/line/rule ordering, no rotation, bot-only frees with resolved history
 outside the open count, full reports with summary-distinguished truncation, no overwrite;
 CI-only, no Supported claim).
+Runner Plus SDK Rotation qualified seed-only under issue #642
+(`tools/ci/tests/fixtures/runner_rotation/pins.bzl` plus `runner_rotation.expected` via
+`bazel run //tools/ci:runner_rotation_qualification`; quarterly plus on retirement notice
+plus on hermetic-llvm release, sole-maintainer owner, retirement handling in one reviewed PR,
+customer-flows-only build/test/coverage with no new CI job, permanent rotation job rejected;
+infra only, no Supported claim).
 Consumer CI, devcontainer, and perf honesty
 is delivered for the self-call path with owned gaps elsewhere: self-call test-disabled
 per #408 plus Phase 1 #607 coverage superset (verbatim `//...`, qualified seed-only under #509 via
