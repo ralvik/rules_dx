@@ -92,14 +92,16 @@ BUILD.bazel           # root package (exports, workspace-level aliases)
 config/               # public workspace policy provider (@rules_dx//config)
 quality/              # aspects, QualitySourcesInfo, result protocol, runners
 generation/           # first-party Gazelle extensions + manifest transport
-env/ codegen/         # environment and codegen projections (//dx:env etc.)
-rust/ python/ js/     # language foundations (wrappers, toolchains, providers)
+env/                  # environment projections (//dx:env etc.; codegen collector lives in generation/ plus cli/codegen behind //dx:codegen)
+cc/ go/ java/ javascript/ typescript/ python/ rust/ kotlin/ scala/ csharp/ fsharp/ astro/ mdx/ svelte/ vue/  # language and file-family foundations (wrappers, toolchains, providers)
 cli/                  # dx CLI Rust implementation (libs visible to //cli only; tools //cli/cli:dx, //cli/env:env)
 dx/                   # consumer facade, Starlark-only (//dx:generate, //dx:env, //dx:codegen, //dx:config)
 tools/                # internal acquisition, adapters, metadata (not public)
-tests/                # focused contract + fixture suites per domain
+libs/                 # shared internal Starlark and test libraries (not public)
+gazelle/              # first-party Gazelle extension hosts per language
+deploy/               # deploy provider surface
+third_party/          # upstream pins and vendored metadata
 examples/             # consumer-facing minimal workspaces
-private/              # internal glue with no public load labels
 docs/                 # authoritative contracts (this tree)
 ```
 
@@ -131,12 +133,16 @@ into it. See [Quality Sources and Applicability](../quality/quality-sources.md).
 
 ### Facade Twins (Post-Reorg Mapping)
 
-`cli/` holds the Rust implementation (24 crates, `dx_*` crate names stable) and
+`cli/` holds the Rust implementation (27 crates, `dx_*` crate names stable) and
 `dx/` is the Starlark-only consumer-policy facade (`//dx:config`, `//dx:env`,
-`//dx:codegen`, `//dx:generate`), landed as the facade reorganization with visibility
+`//dx:codegen`, `//dx:generate`), landed as the facade reorganization under issue #76 with visibility
 decisions recorded alongside. The move
 fixed the two true collisions (`dx/qual` → `cli/qualification`,
 `dx/docs` → `cli/docgen`); the facade labels below are unchanged.
+The reorganization is complete with no successor: `dx/` Rust to `cli/`, documentation IR to
+`docs/ir`, and the mixed/hello fixture to `examples/mixed` all landed under issue #76
+(recorded in ADR 0004); remaining structural moves stay separately owned (e2e suite under issue #466,
+Rust library extraction under issue #469).
 
 | Facade label | Actual owner | Status |
 | --- | --- | --- |
