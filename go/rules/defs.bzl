@@ -1,6 +1,7 @@
 """Experimental minimal Go wrappers (ADR 0019).
 
 Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
+Upstream: rules_go 0.63.0 plus Go SDK 1.26.6 (MODULE.bazel).
 """
 
 load("@rules_go//go:def.bzl", _GoArchive = "GoArchive", _GoInfo = "GoInfo", _go_binary = "go_binary", _go_library = "go_library", _go_test = "go_test")

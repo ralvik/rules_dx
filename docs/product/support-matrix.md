@@ -243,8 +243,9 @@ are pinned by `bazel run //tools/ci:foundation_maps` with owning qualification i
 [native plan](../native-toolchains.md#qualification-questions-and-delivery):
 wrappers preserving upstream providers plus `QualitySourcesInfo`, Gazelle extensions,
 env plans, hello builds, and lock authority (`maven_install.json` plus fail-closed,
-Paket plus `paket.main`, Go stdlib-only, C/C++ none), with test runners (`go test`,
-ScalaTest, JUnit 6.1.3 plus 5.14.x fallback qualified seed-only under issue #476,
+Paket plus `paket.main`, Go stdlib-only, C/C++ none), with test runners (`go test`
+qualified seed-only under issue #478, ScalaTest,
+JUnit 6.1.3 plus 5.14.x fallback qualified seed-only under issue #476,
 plain `cc` executables, plain `csharp`/`fsharp` hello executables plus the
 qualified xUnit v3 4.0.0 mapping via xunit fixtures under issue #477) and
 classification-only quality families. Dependency hygiene (lockfile-consistency plus
@@ -259,7 +260,9 @@ owned by ADR 0019, C/C++ MSVC interop plus SDK licensing)
 stay owned under issues #476-#484 plus #485-#488 (JUnit 6.1.3 plus 5.14.x fallback
 qualified seed-only under issue #476 via `bazel run //tools/ci:junit_qualification`;
 xUnit v3 4.0.0 qualified seed-only under issue #477 via
-`bazel run //tools/ci:xunit_qualification`).
+`bazel run //tools/ci:xunit_qualification`;
+`go test` qualified seed-only under issue #478 via
+`bazel run //tools/ci:gotest_qualification`).
 No `Supported` claim until platform plus consumer plus release
 evidence passes.
 
@@ -555,7 +558,11 @@ qualified under issue #477 below.
   No `Supported` claim until platform plus consumer plus release evidence
   passes.
 - Go: `go test` through `rules_go` (`go_test`); no alternative exists. The
-  runner follows the Go toolchain pin, so no separate version is named here.
+  runner follows the Go toolchain pin (rules_go 0.63.0 plus Go SDK 1.26.6),
+  so no separate version is named here. Qualified seed-only under issue #478
+  (`bazel run //tools/ci:gotest_qualification` with
+  `go/tests/fixtures/gotest/pins.bzl` plus the hello `go_test` package-level
+  `embed` fixture; implicit runner rejected).
 - C/C++: GoogleTest v1.18.0 (industry default with native mocking
   and death tests; first-class Bazel support via the Central Registry module
   and `cc_test` integration). The 1.18.x branch requires C++17 or newer,

@@ -77,7 +77,10 @@ stay owned under issue #472 per the
 [native plan](../native-toolchains.md#qualification-questions-and-delivery).
 
 Admitted additional foundations keep their provisional upstreams with hello test runners
-pinned (`go_test` over `go test` with package-level `embed`, `scala_test` over ScalaTest,
+pinned (`go_test` over `go test` with package-level `embed`, qualified seed-only under issue #478
+(`go/tests/fixtures/gotest/pins.bzl` plus the hello fixture via
+`bazel run //tools/ci:gotest_qualification`; implicit runner rejected),
+`scala_test` over ScalaTest,
 `java_test`/`kotlin_test` over the JUnit 4 seed plus the qualified JUnit 6.1.3 Jupiter
 upgrade with 5.14.x fallback (`execute --select-class` console-launcher fixtures in
 `java/tests/fixtures/junit/` plus `kotlin/tests/fixtures/junit/` via
@@ -94,7 +97,8 @@ Upgrades (GoogleTest v1.18.0, Go
 `from_file` when non-stdlib deps land) stay owned under issues #476-#484 (JUnit 6.1.3
 plus 5.14.x fallback qualified seed-only under issue #476 via
 `bazel run //tools/ci:junit_qualification`; xUnit v3 4.0.0 qualified seed-only
-under issue #477 via `bazel run //tools/ci:xunit_qualification`); no `Supported` claim
+under issue #477 via `bazel run //tools/ci:xunit_qualification`; `go test` qualified
+seed-only under issue #478 via `bazel run //tools/ci:gotest_qualification`); no `Supported` claim
 until platform plus consumer plus release evidence passes.
 
 Pinned by `bazel run //tools/ci:foundation_maps`.
