@@ -544,6 +544,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# CI flakiness plus timeout tuning harness (issue #619); see tools/ci/flakiness_qualification.sh.
+sh_binary(
+    name = "flakiness_qualification",
+    srcs = ["flakiness_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Env/codegen harness (issue #506); see tools/ci/env_codegen_qualification.sh.
 sh_binary(
     name = "env_codegen_qualification",

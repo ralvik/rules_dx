@@ -96,6 +96,20 @@ ownership audit through `bazel run //tools/ci:corpus_audit`, and never rely on a
 `user.bazelrc` override. Verify docs publishing stages its artifact outside the checkout
 and leaves the tree clean.
 
+Verify CI flakiness plus timeout tuning (issue #619, qualified seed-only via
+`bazel run //tools/ci:flakiness_qualification`; CI only, no Supported claim):
+every direct `bazel test` invocation carries `--flaky_test_attempts=3` plus
+`--test_timeout=300` for bounded transient-flake retries with a per-test 300s
+cap; GitHub `timeout-minutes` stay tuned (seed test/coverage 45, per-host
+test/coverage 60, builds 30/60, no blanket 90); sharding stays per-host/per-stage
+jobs with Bazel intra-job test sharding under ordinary semantics (no
+`strategy.matrix`, per the issue #415 policy). Long timeouts only is rejected:
+timeouts without bounded retries stay a failure mode, and retry-until-green
+analyzer behavior stays rejected — reruns use GitHub's native rerun controls
+with unchanged selection plus revision identity. See the
+[testing strategy](README.md#infrastructure-budget) for the free-tier budget
+that keeps this local-only.
+
 ### Repository Scope And Reruns
 
 Verify documentation-only and mixed changes still invoke all selected checks at their
