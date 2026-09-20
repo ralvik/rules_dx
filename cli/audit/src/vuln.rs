@@ -43,18 +43,19 @@
 //! This module matches over injected records only, so severity,
 //! fix-preservation, unknown handling, and incomplete mapping stay
 //! deterministic and unit-testable without network access or any
-//! auditor binary. Version-range narrowing uses upstream semantics
-//! through [`crate::exception::version_in_scope`] for semver
-//! ecosystems (Cargo/npm, plus Go via [`go_in_scope`] which normalizes
-//! `go.mod` `v` prefixes first), Maven-native ordering plus interval
-//! matching for Maven (issue #623), and NuGet-native ordering plus
-//! interval matching for NuGet (issue #624), exactly like the
-//! exception lifecycle deferral in [`crate::exception`].
+//! auditor binary. Version-range narrowing uses upstream semantics:
+//! Cargo-flavor semver through [`crate::exception::version_in_scope`]
+//! for Cargo, Go via [`go_in_scope`] which normalizes `go.mod` `v`
+//! prefixes first, npm-native ranges through
+//! [`crate::exception::npm_in_scope`] for npm, Maven-native ordering
+//! plus interval matching for Maven, and NuGet-native ordering plus
+//! interval matching for NuGet, exactly like the exception lifecycle
+//! deferral in [`crate::exception`].
 
 use serde::{Deserialize, Serialize};
 
 use crate::exception::{
-    check_expiry, version_in_scope, ExceptionProblem, FindingRef, RiskException,
+    check_expiry, npm_in_scope, version_in_scope, ExceptionProblem, FindingRef, RiskException,
 };
 
 /// One locked package extracted from a standard lockfile or equivalent
@@ -88,8 +89,10 @@ pub struct Advisory {
     /// Affected package name.
     pub package: String,
     /// Affected version scope, upstream version semantics
-    /// (`>=1.2.0, <2.0.0` for semver sets; Maven intervals such as
-    /// `[1.0,2.0)` or exact versions; NuGet intervals such as
+    /// (`>=1.2.0, <2.0.0` for Cargo semver sets, Go same plus `v`-prefix
+    /// normalization; npm ranges such as `>=1.2.7 <1.3.0`,
+    /// `1.2.7 || >=1.2.9 <2.0.0`, or `1.2.3 - 2.3.4`; Maven intervals
+    /// such as `[1.0,2.0)` or exact versions; NuGet intervals such as
     /// `[1.0,2.0)` or exact versions).
     pub versions: String,
     /// Upstream severity text (`critical|high|medium|low`), or empty for
@@ -176,17 +179,18 @@ pub fn canonical_severity(severity: &str) -> String {
 }
 
 /// Whether one locked package version falls in one advisory's affected
-/// scope. Cargo/npm use upstream Cargo-flavor semver via
+/// scope. Cargo uses upstream Cargo-flavor semver via
 /// [`version_in_scope`]; Go uses the same semantics via [`go_in_scope`]
-/// (which normalizes `go.mod` `v` prefixes first); Maven uses
-/// Maven-native ordering plus interval matching via [`maven_in_scope`];
-/// NuGet uses NuGet-native ordering plus interval matching via
-/// [`nuget_in_scope`]. Unparseable scopes or versions fail closed to
-/// `false` for semver, Maven, and NuGet sets, and to exact-match only
-/// for other sets.
+/// (which normalizes `go.mod` `v` prefixes first); npm uses npm-native
+/// ranges via [`npm_in_scope`]; Maven uses Maven-native ordering plus
+/// interval matching via [`maven_in_scope`]; NuGet uses NuGet-native
+/// ordering plus interval matching via [`nuget_in_scope`]. Unparseable
+/// scopes or versions fail closed to `false` for semver, npm, Maven,
+/// and NuGet sets, and to exact-match only for other sets.
 pub fn version_affected(set: &str, scope: &str, version: &str) -> bool {
     match set {
-        "cargo" | "npm" => version_in_scope(scope, version),
+        "cargo" => version_in_scope(scope, version),
+        "npm" => npm_in_scope(scope, version),
         "go" => go_in_scope(scope, version),
         "maven" => maven_in_scope(scope, version),
         "nuget" => nuget_in_scope(scope, version),
@@ -995,13 +999,15 @@ fn nuget_interval_matches(
     true
 }
 
-/// Set-aware exception version narrowing: semver sets use
+/// Set-aware exception version narrowing: Cargo uses
 /// [`version_in_scope`], Go uses [`go_in_scope`] (`v`-prefix
-/// normalization, same semver), Maven uses [`maven_in_scope`], NuGet uses
-/// [`nuget_in_scope`], and remaining sets stay exact-match.
+/// normalization, same semver), npm uses [`npm_in_scope`], Maven uses
+/// [`maven_in_scope`], NuGet uses [`nuget_in_scope`], and remaining
+/// sets stay exact-match.
 fn exception_version_in_scope(set: &str, scope: &str, version: &str) -> bool {
     match set {
-        "cargo" | "npm" => version_in_scope(scope, version),
+        "cargo" => version_in_scope(scope, version),
+        "npm" => npm_in_scope(scope, version),
         "go" => go_in_scope(scope, version),
         "maven" => maven_in_scope(scope, version),
         "nuget" => nuget_in_scope(scope, version),
@@ -1270,6 +1276,115 @@ mod tests {
         assert!(!go_in_scope(">=v1.0.0", "banana"));
         assert!(!go_in_scope("", "v1.0.0"));
         assert!(!go_in_scope(">=v1.0.0", ""));
+    }
+
+    #[test]
+    fn npm_ranges_cover_star_or_hyphen_and_prerelease() {
+        // Star, `||` unions, hyphen ranges, and prereleases fire through
+        // `version_affected` instead of looking clean.
+        assert!(version_affected("npm", "*", "18.2.0"));
+        assert!(version_affected("npm", "1.2.7 || >=1.2.9 <2.0.0", "1.2.7"));
+        assert!(version_affected("npm", "1.2.7 || >=1.2.9 <2.0.0", "1.2.9"));
+        assert!(!version_affected("npm", "1.2.7 || >=1.2.9 <2.0.0", "1.2.8"));
+        assert!(version_affected("npm", "1.2.3 - 2.3.4", "2.0.0"));
+        assert!(!version_affected("npm", "1.2.3 - 2.3.4", "2.3.5"));
+        assert!(version_affected("npm", ">=1.2.7 <1.3.0", "1.2.9"));
+        assert!(!version_affected("npm", ">=1.2.7 <1.3.0", "1.3.0"));
+        assert!(version_affected("npm", "1.2.3", "1.2.3"));
+        assert!(!version_affected("npm", "1.2.3", "1.2.4"));
+        assert!(!version_affected("npm", ">=1.0.0", "2.0.0-alpha"));
+        assert!(version_affected(
+            "npm",
+            ">=1.0.0-alpha, <2.0.0",
+            "1.0.0-alpha"
+        ));
+        // Cargo keeps Cargo-flavor semantics: bare versions are caret
+        // shorthand, `||` and hyphen stay invalid and fail closed.
+        assert!(version_affected("cargo", "1.2.0", "1.2.1"));
+        assert!(!version_affected("cargo", "1.0.0 || 2.0.0", "1.0.0"));
+        assert!(!version_affected("cargo", "1.2.3 - 2.3.4", "1.5.0"));
+        // Malformed npm scopes fail closed, never a false positive.
+        assert!(!version_affected("npm", "", "1.2.3"));
+        assert!(!version_affected("npm", "not a range", "1.2.3"));
+        assert!(!version_affected("npm", ">=1.2.7 <1.3.0", "banana"));
+    }
+
+    #[test]
+    fn npm_range_advisories_report_findings() {
+        // Range advisories fire instead of looking clean.
+        let packages = vec![LockedPackage {
+            name: "react".to_owned(),
+            version: "18.2.0".to_owned(),
+            set: "npm".to_owned(),
+            is_git: false,
+            is_private: false,
+        }];
+        let advisories = vec![
+            Advisory {
+                id: "GHSA-npm-range".to_owned(),
+                package: "react".to_owned(),
+                versions: ">=18.0.0 <18.3.0".to_owned(),
+                severity: "high".to_owned(),
+                fixed: vec!["18.3.0".to_owned()],
+                set: "npm".to_owned(),
+            },
+            Advisory {
+                id: "GHSA-npm-miss".to_owned(),
+                package: "react".to_owned(),
+                versions: ">=18.3.0 <19.0.0".to_owned(),
+                severity: "high".to_owned(),
+                fixed: vec![],
+                set: "npm".to_owned(),
+            },
+        ];
+        let (findings, unassessed) = match_packages(&packages, &advisories);
+        assert!(unassessed.is_empty());
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].advisory, "GHSA-npm-range");
+        assert_eq!(findings[0].version, "18.2.0");
+    }
+
+    #[test]
+    fn npm_exceptions_narrow_with_npm_semantics() {
+        let packages = vec![LockedPackage {
+            name: "react".to_owned(),
+            version: "18.2.0".to_owned(),
+            set: "npm".to_owned(),
+            is_git: false,
+            is_private: false,
+        }];
+        let advisories = vec![Advisory {
+            id: "GHSA-npm-exception".to_owned(),
+            package: "react".to_owned(),
+            versions: ">=18.0.0 <18.3.0".to_owned(),
+            severity: "medium".to_owned(),
+            fixed: vec![],
+            set: "npm".to_owned(),
+        }];
+        let (findings, _) = match_packages(&packages, &advisories);
+        assert_eq!(findings.len(), 1);
+        let covering = RiskException {
+            advisory: "GHSA-npm-exception".to_owned(),
+            package: "react".to_owned(),
+            set: "npm".to_owned(),
+            versions: ">=18.0.0 <18.3.0".to_owned(),
+            reason: "Accepted for this release.".to_owned(),
+            expires: "2027-03-01".to_owned(),
+        };
+        let (unexempted, problems) = apply_exceptions(&findings, &[covering], "2026-09-18");
+        assert!(problems.is_empty());
+        assert!(unexempted.is_empty());
+        let missing = RiskException {
+            advisory: "GHSA-npm-exception".to_owned(),
+            package: "react".to_owned(),
+            set: "npm".to_owned(),
+            versions: ">=18.3.0 <19.0.0".to_owned(),
+            reason: "Wrong range.".to_owned(),
+            expires: "2027-03-01".to_owned(),
+        };
+        let (unexempted, problems) = apply_exceptions(&findings, &[missing], "2026-09-18");
+        assert!(problems.is_empty());
+        assert_eq!(unexempted.len(), 1);
     }
 
     #[test]
