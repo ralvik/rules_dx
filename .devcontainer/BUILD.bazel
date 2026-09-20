@@ -20,6 +20,7 @@ sh_test(
     data = [
         ":devcontainer.json",
         "//cli/cli:dx",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
         "//tools/sh:snapshot",
     ],

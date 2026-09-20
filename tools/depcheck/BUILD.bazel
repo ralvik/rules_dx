@@ -87,6 +87,7 @@ sh_test(
     data = [
         ":checker",
         ":rust_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -104,6 +105,7 @@ sh_test(
     data = [
         ":checker",
         ":rust_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -121,6 +123,7 @@ sh_test(
     data = [
         ":checker",
         ":python_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -138,6 +141,7 @@ sh_test(
     data = [
         ":checker",
         ":python_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -155,6 +159,7 @@ sh_test(
     data = [
         ":checker",
         ":js_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -172,6 +177,7 @@ sh_test(
     data = [
         ":checker",
         ":js_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -189,6 +195,7 @@ sh_test(
     data = [
         ":checker",
         ":ts_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -206,6 +213,7 @@ sh_test(
     data = [
         ":checker",
         ":ts_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -223,6 +231,7 @@ sh_test(
     data = [
         ":checker",
         ":go_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -240,6 +249,7 @@ sh_test(
     data = [
         ":checker",
         ":go_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -257,6 +267,7 @@ sh_test(
     data = [
         ":checker",
         ":java_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -274,6 +285,7 @@ sh_test(
     data = [
         ":checker",
         ":java_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -291,6 +303,7 @@ sh_test(
     data = [
         ":checker",
         ":kotlin_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -308,6 +321,7 @@ sh_test(
     data = [
         ":checker",
         ":kotlin_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -325,6 +339,7 @@ sh_test(
     data = [
         ":checker",
         ":scala_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -342,6 +357,7 @@ sh_test(
     data = [
         ":checker",
         ":scala_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -359,6 +375,7 @@ sh_test(
     data = [
         ":checker",
         ":csharp_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -376,6 +393,7 @@ sh_test(
     data = [
         ":checker",
         ":csharp_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -393,6 +411,7 @@ sh_test(
     data = [
         ":checker",
         ":fsharp_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -410,6 +429,7 @@ sh_test(
     data = [
         ":checker",
         ":fsharp_testdata",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -427,6 +447,7 @@ sh_test(
     data = [
         ":cc_testdata",
         ":checker",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).
@@ -444,6 +465,7 @@ sh_test(
     data = [
         ":cc_testdata",
         ":checker",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     # Bash-only harness is Linux-only (shell contract).

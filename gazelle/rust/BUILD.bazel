@@ -62,6 +62,7 @@ sh_test(
     args = ["$(rootpath :gazelle)"],
     data = [
         ":gazelle",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     tags = ["no-coverage"],
@@ -75,6 +76,7 @@ sh_test(
     args = ["$(rootpath :gazelle)"],
     data = [
         ":gazelle",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     tags = ["no-coverage"],
@@ -88,6 +90,7 @@ sh_test(
     args = ["$(rootpath :gazelle)"],
     data = [
         ":gazelle",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     tags = ["no-coverage"],

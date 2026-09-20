@@ -35,6 +35,7 @@ sh_test(
     args = ["$(rootpath :hello)"],
     data = [
         ":hello",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     tags = ["no-coverage"],

@@ -204,18 +204,17 @@ generated deploy launchers plus the managed doctor shim.
 `//tools/ci:shell_contract` machine-checks this contract.
 
 Bootstrap requires bash by design under issue #450 (`BASH_SOURCE`, `[[`,
-arrays, `printf -v` plus the 5-way runfiles fallback never run under POSIX
+arrays, `printf -v` plus the runfiles fallback never run under POSIX
 `sh`): every `tools/sh/lib.sh` driver carries `#!/usr/bin/env bash` plus
-`set -euo pipefail` plus the runfiles-first bootstrap with
-`data = ["//tools/sh:lib"]` (source-tree depth varies by package:
-`tools/ci` uses `../sh/lib.sh`, hello fixtures use
-`../../tools/sh/lib.sh`, `.devcontainer` uses `../tools/sh/lib.sh`,
-repo-root parity tests use `tools/sh/lib.sh`). Floor is bash 3.2+ with
-Linux execution; macOS/Windows run the same bash with no behavior change.
-Intentional lib-free exceptions are POSIX `#!/bin/sh` fixtures (no
-bootstrap, no constraint) plus the deploy hermetic python-only runtime
-(bash + python3 + coreutils, no lib bootstrap per the host-tool contract
-below) plus standalone renderers needing no workspace/runfiles.
+`set -euo pipefail` plus one identical `tools/sh/bootstrap.sh` loader plus
+`dx_bootstrap` lines with `data = ["//tools/sh:lib"]` (single-sourced
+bootstrap with no per-file depth adjustment under issue #654). Floor is
+bash 3.2+ with Linux execution; macOS/Windows run the same bash with no
+behavior change. Intentional lib-free exceptions are POSIX `#!/bin/sh`
+fixtures (no bootstrap, no constraint) plus the deploy hermetic
+python-only runtime (bash + python3 + coreutils, no lib bootstrap per the
+host-tool contract below) plus standalone renderers needing no
+workspace/runfiles.
 
 Platform policy is decided under issue #320 (no silent cfg hacks):
 symlink copy fallback follows the portable route (`quality/adapter`
@@ -260,9 +259,10 @@ otherwise.
 
 Runfiles and workspace-root probing is consolidated under issue #319 (one shared
 `tools/sh/lib.sh` `dx_workspace_root`/`dx_runfiles_root`/`dx_resolve_runfile`
-plus `rlocation` usage; shell drivers source it via a runfiles-first bootstrap with
-`data = ["//tools/sh:lib"]`; Rust binaries share `dx_process::workspace_start` and use
-standard `runfiles` `rlocation`, never `TEST_SRCDIR` in prod).
+plus `rlocation` usage; shell drivers load it via `tools/sh/bootstrap.sh`
+`dx_bootstrap` with `data = ["//tools/sh:lib"]`; Rust binaries share
+`dx_process::workspace_start` and use standard `runfiles` `rlocation`,
+never `TEST_SRCDIR` in prod).
 
 Host-tool actions are hermetic under issue #318 (archive/SBOM/BCR
 genrules run toolchain-provided Python archiver/hasher/generators as

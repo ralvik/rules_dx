@@ -22,9 +22,10 @@
 set -euo pipefail
 
 # Shared workspace + runfiles helpers.
-# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib", "//tools/sh:guards"]`), then source tree.
-source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
-source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/guards.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/guards.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/guards.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/guards.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/guards.sh"
+# Bootstrap via tools/sh/bootstrap.sh (issue #654): runfiles forest first, then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$(git rev-parse --show-toplevel 2>/dev/null)/tools/sh/bootstrap.sh"
+dx_bootstrap "tools/sh/lib.sh"
+dx_bootstrap "tools/sh/guards.sh"
 
 dx_cd_workspace
 
@@ -257,19 +258,56 @@ else
   bad "bash drivers missing set -euo pipefail:$shebang_fail (issue #450 bootstrap floor)"
 fi
 
-# Bootstrap: every lib bootstrap uses the canonical 5-way
-# runfiles fallback (RUNFILES_DIR plus TEST_SRCDIR plus $0.runfiles plus
-# BASH_SOURCE); no bare `source tools/sh/lib.sh` without runfiles probing.
+# Bootstrap is single-sourced (issue #654): `dx_bootstrap` lives once in
+# `tools/sh/bootstrap.sh` (runfiles-first plus `BUILD_WORKSPACE_DIRECTORY`
+# plus git top-level plus source-tree walk); drivers share one identical
+# loader plus `dx_bootstrap` lines with no depth-adjusted `../` variants.
+# (Self-excluded: this script names the helper definition in its own
+# pattern below.)
+if grep -q -F -e 'dx_bootstrap() {' tools/sh/bootstrap.sh &&
+  grep -q -F -e 'git rev-parse --show-toplevel' tools/sh/bootstrap.sh &&
+  grep -q -F -e 'BUILD_WORKSPACE_DIRECTORY' tools/sh/bootstrap.sh &&
+  grep -q -F -e 'dx_bootstrap "tools/sh/lib.sh"' tools/sh/lib.sh &&
+  [[ "$(grep -rln -F -e 'dx_bootstrap() {' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | grep -v -F -e 'tools/sh/bootstrap.sh' | grep -v -F -e 'tools/ci/shell_contract.sh' | wc -l)" == "0" ]]; then
+  ok
+else
+  bad "bootstrap must live once in tools/sh/bootstrap.sh (dx_bootstrap with git plus walk fallbacks, issue #654)"
+fi
+
+# No direct tools/sh library source chains survive outside the bootstrap
+# loader docs: every library load goes through `dx_bootstrap`.
+# (Self-excluded: this script names the retired forms in its own patterns.)
+if [[ "$(grep -rn -F -e '_main/tools/sh/lib.sh' --include='*.sh' --exclude='shell_contract.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | wc -l)" == "0" ]] &&
+  [[ "$(grep -rn -F -e '_main/tools/sh/guards.sh' --include='*.sh' --exclude='shell_contract.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | wc -l)" == "0" ]] &&
+  [[ "$(grep -rn -F -e '_main/tools/sh/snapshot.sh' --include='*.sh' --exclude='shell_contract.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | wc -l)" == "0" ]]; then
+  ok
+else
+  bad "direct tools/sh library source chains survive; load via tools/sh/bootstrap.sh dx_bootstrap (issue #654)"
+fi
+
+# No depth-adjusted `dirname BASH_SOURCE` source-tree fallbacks for
+# tools/sh libraries: the fallback lives once in `dx_bootstrap`.
+# (Self-excluded: this script names the retired forms in its own patterns.)
+if [[ "$(grep -rn -F -e 'dirname "${BASH_SOURCE[0]}")/../sh/' --include='*.sh' --exclude='shell_contract.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | wc -l)" == "0" ]] &&
+  [[ "$(grep -rn -F -e 'dirname "${BASH_SOURCE[0]}")/../../tools/sh/' --include='*.sh' --exclude='shell_contract.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | wc -l)" == "0" ]] &&
+  [[ "$(grep -rn -F -e 'dirname "${BASH_SOURCE[0]}")/../tools/sh/' --include='*.sh' --exclude='shell_contract.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | wc -l)" == "0" ]] &&
+  [[ "$(grep -rn -F -e 'dirname "${BASH_SOURCE[0]}")/tools/sh/' --include='*.sh' --exclude='shell_contract.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | wc -l)" == "0" ]]; then
+  ok
+else
+  bad "depth-adjusted dirname BASH_SOURCE fallbacks survive; share the tools/sh/bootstrap.sh loader (issue #654)"
+fi
+
+# Every `dx_bootstrap` call site carries the canonical bootstrap loader.
 bootstrap_fail=""
-for f in $(grep -rln -F -e 'tools/sh/lib.sh' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' .); do
-  if ! grep -q -F -e 'RUNFILES_DIR' "$f" || ! grep -q -F -e 'BASH_SOURCE' "$f"; then
+for f in $(grep -rln -F -e 'dx_bootstrap "tools/sh/' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' .); do
+  if ! grep -q -F -e 'tools/sh/bootstrap.sh' "$f"; then
     bootstrap_fail="$bootstrap_fail $f"
   fi
 done
 if [[ -z "$bootstrap_fail" ]]; then
   ok
 else
-  bad "lib bootstrap lost the 5-way runfiles fallback:$bootstrap_fail (issue #450)"
+  bad "dx_bootstrap call site missing the tools/sh/bootstrap.sh loader:$bootstrap_fail (issue #654)"
 fi
 
 # Lib-free exceptions stay explicit: POSIX fixtures keep
@@ -308,10 +346,11 @@ else
   bad "guard helpers must live once in tools/sh/lib.sh with no per-file copies"
 fi
 dx_expect_contains tools/sh/snapshot.sh 'snapshot versus grep policy' 'Bootstrap requires bash by design under issue'
-dx_expect_contains docs/contributing/build-conventions.md 'data = ["//tools/sh:lib"]' 'snapshot versus grep policy under issue #450'
+dx_expect_contains docs/contributing/build-conventions.md 'data = ["//tools/sh:bootstrap", "//tools/sh:lib"]' 'snapshot versus grep policy under issue #450' 'single-sourced bootstrap under issue #654'
 
-# Bootstrap: every guards bootstrap uses the canonical 5-way
-# runfiles fallback, like the lib bootstrap above.
+# Bootstrap loader still carries the runfiles probes (RUNFILES_DIR plus
+# BASH_SOURCE) for every guards call site, via the single-sourced
+# `tools/sh/bootstrap.sh` loader (issue #654).
 guards_bootstrap_fail=""
 for f in $(grep -rln -F -e 'tools/sh/guards.sh' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' .); do
   if ! grep -q -F -e 'RUNFILES_DIR' "$f" || ! grep -q -F -e 'BASH_SOURCE' "$f"; then

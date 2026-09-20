@@ -140,6 +140,7 @@ sh_test(
     args = ["$(rootpath :env)"],
     data = [
         ":env",
+        "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
     tags = ["no-coverage"],
