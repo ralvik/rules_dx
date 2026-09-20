@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Foundation-mapping guards (issues #7, #8, #303, #304, #305; relates #6, #12).
+# Foundation-mapping guards (issues #7, #8, #470-#475, #476-#484, ADR 0019 deferred record; relates #6, #12).
 #
 # Rust/Python/JS-TS foundations ship thin wrappers + Gazelle + env plans;
 # exact provider/import/lock/tool-graph proofs are pinned here for #7.
@@ -7,16 +7,16 @@
 # end-to-end fixture approach; exact parser/compiler, provider,
 # generated-region, dependency, test, env/IDE, quality-region mappings plus
 # composition evidence are pinned here for #8.
-# Required-core mappings (Rust providers/Gazelle/integration plus native gaps,
-# Python mappings plus Ty, JS/TS wrappers/Gazelle plus quality mappings,
-# framework adapter mappings plus composition) are pinned here for #303.
+# Required-core mappings (Rust providers/Gazelle/integration under #470 plus native gaps
+# under #471-#475, Python/JS mappings pinned, framework adapter mappings plus composition
+# under #510) are pinned here.
 # Admitted additional foundations (Go, C/C++, Java, Kotlin, Scala, C#, F#)
 # keep provisional upstreams with hello test runners, lock authority, and
-# classification-only quality families pinned here for #304; upgrades plus
+# classification-only quality families pinned here for #476-#484; upgrades plus
 # quality adapters (qualified under #307 with deferred ADR 0019 routes) plus
 # the C/C++ MSVC block stay owned gaps.
 # Deferred/excluded record (Ruby plus PowerShell deferred, Swift plus Bandit
-# excluded, host-toolchain fallback never approved) is pinned here for #305;
+# excluded, host-toolchain fallback never approved) is pinned here per ADR 0019;
 # retained cohorts plus exclusion evidence stay owned gaps with reconsideration
 # requiring a new scope decision.
 # Class-to-family taxonomy stays open under #6; native config binding +
@@ -27,9 +27,9 @@
 # Gazelle fixtures, env plans, hello wrapper fixtures, lock authority, Ty
 # provenance, plus the framework parser/compiler, provider, region,
 # dependency, test, env/IDE, quality-region, and composition fixtures,
-# plus the #303 build-script hermetic defaults, Ty/quality adapter mappings,
-# and native-gap ownership, plus the #304 admitted test runners, lock wiring,
-# quality classification, and MSVC-block ownership, plus the #305 deferred
+# plus the #470-#475 build-script hermetic defaults, Ty/quality adapter mappings,
+# and native-gap ownership, plus the #476-#484 admitted test runners, lock wiring,
+# quality classification, and MSVC-block ownership, plus the ADR 0019 deferred
 # foundation absence, retained cohorts, exclusion evidence, and owned gaps.
 # Upstream choices are kept; no switch is approved here.
 #
@@ -392,7 +392,7 @@ else
   bad "wrapper_sources/code_ownership harnesses missing"
 fi
 
-# #303: Rust build-script hermetic defaults stay pinned (generation contract
+# #470-#475: Rust build-script hermetic defaults stay pinned (generation contract
 # plus Gazelle emission plus focused Go fixtures).
 script_fail=""
 grep -q -F -e 'use_default_shell_env = False' docs/generation/rust.md || script_fail="$script_fail contract:shell-env"
@@ -410,7 +410,7 @@ else
   bad "build-script hermetic defaults drifted:$script_fail"
 fi
 
-# #303: required-core quality adapter mappings stay pinned (Ty plus
+# #470-#475: required-core quality adapter mappings stay pinned (Ty plus
 # Ruff/pydoclint for Python; Biome/ESLint/Prettier/tsc for JS/TS).
 quality_fail=""
 grep -q -F -e '"ty": {"typecheck": ["python", "python_stub"]}' quality/adapters.bzl || quality_fail="$quality_fail ty:adapter"
@@ -435,16 +435,16 @@ else
   bad "required-core quality mappings drifted:$quality_fail"
 fi
 
-# #303: required-core native gaps stay owned (no Supported claim; docs own
-# the five gaps; matrix tracks them under #303).
+# #470-#475: required-core native gaps stay owned (no Supported claim; docs own
+# the five gaps; matrix tracks them under #470-#475 plus #510).
 gaps_fail=""
 grep -q -F -e 'kept CC opt-out linker' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:cc-optout"
 grep -q -F -e 'shell-env default' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:shell-env"
 grep -q -F -e 'bindgen LLVM-22-vs-23' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:bindgen"
 grep -q -F -e 'CXX graph identity' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:cxx"
 grep -q -F -e 'exact-target discovery' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:exact-target"
-grep -q -F -e 'issue #303' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:tracking"
-grep -q -F -e 'issue #303' docs/native-toolchains.md || gaps_fail="$gaps_fail native:tracking"
+grep -q -F -e '#470' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:tracking"
+grep -q -F -e '#471' docs/native-toolchains.md || gaps_fail="$gaps_fail native:tracking"
 grep -q -F -e 'Can the kept CC opt-out execute successfully?' docs/native-toolchains.md || gaps_fail="$gaps_fail native:cc-optout"
 grep -q -F -e 'Can third-party scripts retain a declared hermetic closure?' docs/native-toolchains.md || gaps_fail="$gaps_fail native:shell-env"
 grep -q -F -e 'Can bindgen/CXX use one upstream graph?' docs/native-toolchains.md || gaps_fail="$gaps_fail native:bindgen-cxx"
@@ -458,7 +458,7 @@ else
   bad "required-core native gaps unowned:$gaps_fail"
 fi
 
-# #304: admitted test runners stay pinned (go test with package embed,
+# #476-#484: admitted test runners stay pinned (go test with package embed,
 # ScalaTest via the managed route, JUnit 4 seed for JVM, plain executables
 # for cc/csharp/fsharp with named upgrades open).
 runner_fail=""
@@ -492,7 +492,7 @@ else
   bad "admitted test runners drifted:$runner_fail"
 fi
 
-# #304: admitted lock wiring stays pinned (JVM shares maven_install.json,
+# #476-#484: admitted lock wiring stays pinned (JVM shares maven_install.json,
 # .NET shares paket.main, Go stdlib-only, C/C++ none).
 lock304_fail=""
 grep -q -F -e 'maven_install.json' docs/generation/README.md || lock304_fail="$lock304_fail gen:maven"
@@ -508,7 +508,7 @@ else
   bad "admitted lock wiring drifted:$lock304_fail"
 fi
 
-# #304: admitted quality classification stays pinned (families exist,
+# #476-#484: admitted quality classification stays pinned (families exist,
 # no adapter claims admitted classes yet; adapter side qualified under #307
 # with deferred ADR 0019 routes).
 class304_fail=""
@@ -522,7 +522,7 @@ grep -q -F -e 'no adapter claims kotlin' quality/adapters.bzl || class304_fail="
 grep -q -F -e 'no adapter claims scala yet' quality/adapters.bzl || class304_fail="$class304_fail scala:open"
 grep -q -F -e 'no adapter claims csharp yet' quality/adapters.bzl || class304_fail="$class304_fail csharp:open"
 grep -q -F -e 'no adapter claims fsharp yet' quality/adapters.bzl || class304_fail="$class304_fail fsharp:open"
-grep -q -F -e 'issue #304' docs/tools/README.md || class304_fail="$class304_fail tools:tracking"
+grep -q -F -e '#476-#484' docs/tools/README.md || class304_fail="$class304_fail tools:tracking"
 grep -q -F -e 'issue #307' docs/tools/README.md || class304_fail="$class304_fail tools:adapter-tracking"
 grep -q -F -e 'gofumpt' docs/product/support-matrix.md || class304_fail="$class304_fail matrix:gofumpt"
 grep -q -F -e 'clang-format' docs/product/support-matrix.md || class304_fail="$class304_fail matrix:clang-format"
@@ -537,13 +537,13 @@ else
   bad "admitted quality classification drifted:$class304_fail"
 fi
 
-# #304: admitted foundations stay owned (docs track #304; C/C++ MSVC block
+# #476-#484: admitted foundations stay owned (docs track #476-#484; C/C++ MSVC block
 # owned with no Supported claim).
 own304_fail=""
-grep -q -F -e 'issue #304' docs/product/support-matrix.md || own304_fail="$own304_fail matrix:tracking"
-grep -q -F -e 'issue #304' docs/generation/README.md || own304_fail="$own304_fail gen:tracking"
-grep -q -F -e 'issue #304' docs/environments/README.md || own304_fail="$own304_fail env:tracking"
-grep -q -F -e 'issue #304' docs/native-toolchains.md || own304_fail="$own304_fail native:tracking"
+grep -q -F -e '#476-#484' docs/product/support-matrix.md || own304_fail="$own304_fail matrix:tracking"
+grep -q -F -e '#476-#484' docs/generation/README.md || own304_fail="$own304_fail gen:tracking"
+grep -q -F -e '#476-#484' docs/environments/README.md || own304_fail="$own304_fail env:tracking"
+grep -q -F -e '#476-#484' docs/native-toolchains.md || own304_fail="$own304_fail native:tracking"
 grep -q -F -e 'MSVC interop' docs/product/support-matrix.md || own304_fail="$own304_fail matrix:msvc"
 grep -q -F -e 'MSVC interop' docs/native-toolchains.md || own304_fail="$own304_fail native:msvc"
 grep -q -F -e 'SDK licensing' docs/native-toolchains.md || own304_fail="$own304_fail native:sdk"
@@ -556,7 +556,7 @@ else
   bad "admitted foundations unowned:$own304_fail"
 fi
 
-# #305: deferred foundation absence stays pinned (no ruby/powershell/swift
+# ADR 0019: deferred foundation absence stays pinned (no ruby/powershell/swift
 # dirs, wrappers, Gazelle extensions, env plans, hello builds, or MODULE deps).
 abs305_fail=""
 for d in ruby powershell swift; do
@@ -584,7 +584,7 @@ else
   bad "deferred foundation absence drifted:$abs305_fail"
 fi
 
-# #305: deferred quality classification stays pinned (families exist,
+# ADR 0019: deferred quality classification stays pinned (families exist,
 # no adapter claims ruby/powershell yet; parity defers with ADR 0019 + ADR 0019).
 class305_fail=""
 for cls in ruby powershell; do
@@ -616,7 +616,7 @@ else
   bad "deferred quality classification drifted:$class305_fail"
 fi
 
-# #305: retained cohorts plus exclusions stay pinned (Ruby closure,
+# ADR 0019: retained cohorts plus exclusions stay pinned (Ruby closure,
 # PowerShell module+runtime, Swift/SwiftFormat plus Bandit exclusions,
 # host-toolchain fallback never approved).
 cohort305_fail=""
@@ -639,14 +639,14 @@ else
   bad "deferred retained cohorts drifted:$cohort305_fail"
 fi
 
-# #305: deferred/excluded record stays owned (docs track #305; remaining
+# ADR 0019: deferred/excluded record stays owned (docs cite ADR 0019; remaining
 # gaps owned with no Supported claim; reconsideration needs a new decision).
 own305_fail=""
-grep -q -F -e 'issue #305' docs/product/support-matrix.md || own305_fail="$own305_fail matrix:tracking"
-grep -q -F -e 'issue #305' docs/generation/README.md || own305_fail="$own305_fail gen:tracking"
-grep -q -F -e 'issue #305' docs/environments/README.md || own305_fail="$own305_fail env:tracking"
-grep -q -F -e 'issue #305' docs/tools/README.md || own305_fail="$own305_fail tools:tracking"
-grep -q -F -e 'Swift exclusion stays owned under issue #305' docs/product/support-matrix.md || own305_fail="$own305_fail matrix:swift-tracking"
+grep -q -F -e 'decided by' docs/product/support-matrix.md || own305_fail="$own305_fail matrix:tracking"
+grep -q -F -e 'decided by [ADR 0019]' docs/generation/README.md || own305_fail="$own305_fail gen:tracking"
+grep -q -F -e 'decided by [ADR 0019]' docs/environments/README.md || own305_fail="$own305_fail env:tracking"
+grep -q -F -e 'decided by [ADR 0019]' docs/tools/README.md || own305_fail="$own305_fail tools:tracking"
+grep -q -F -e 'decided by ADR 0019 with no open tracker' docs/product/support-matrix.md || own305_fail="$own305_fail matrix:swift-tracking"
 grep -q -F -e 'Bundle contents, lock inputs' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:ruby-gaps"
 grep -q -F -e 'console-parse versus library-API' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:pwsh-gaps"
 grep -q -F -e 'no adapter claims `ruby` yet' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:ruby-open"

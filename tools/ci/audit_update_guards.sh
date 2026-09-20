@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Audit/update/depcheck execution guards (issues #18, #19, #22, #306).
+# Audit/update/depcheck execution guards (issues #18, #19, #22; opens under #510).
 #
 # Live `dx audit` executes qualified auditors per family over resolved scopes
 # with per-family reporting (issue #18 delivered: Gitleaks subprocess planning
@@ -13,9 +13,9 @@
 # in `dx_update::backend`, continuation in `dx_update::outcome`, exit selection
 # in `dx_update::report`; `--dry-run` exits 0).
 # Required-core plus admitted lockfile-consistency and usage checks are
-# delivered in tools/depcheck/ (issues #22, #306); remaining adapter
+# delivered in tools/depcheck/ (issue #22; remaining opens under #510); remaining adapter
 # implementation stays owned by ADR 0019 (qualified under
-# #307), foundation mappings under #304.
+# #307), foundation mappings under #476-#484.
 #
 # This harness machine-checks the verifiable halves on a clean
 # tree today: audit live execution, update live execution, exit-code mappings,
@@ -84,14 +84,14 @@ else
   bad "update report lost its overall_failure exit-code mapping"
 fi
 
-# #22/#306: depcheck contract harness stays green (truth table + delivered routes).
+# #22 plus #510: depcheck contract harness stays green (truth table + delivered routes).
 if [[ -f "tools/ci/depcheck_contract.sh" ]]; then
   ok
 else
   bad "depcheck contract harness missing"
 fi
 
-# #22/#306: required-core plus admitted checker is implemented with fixtures (no false claim).
+# #22 plus #510: required-core plus admitted checker is implemented with fixtures (no false claim).
 if [[ -f "tools/depcheck/depcheck.py" ]] &&
   [[ -f "tools/depcheck/BUILD.bazel" ]] &&
   [[ -d "tools/depcheck/testdata/rust/ok_used" ]] &&
@@ -107,7 +107,7 @@ if [[ -f "tools/depcheck/depcheck.py" ]] &&
   [[ -d "tools/depcheck/testdata/cc/ok_used" ]]; then
   ok
 else
-  bad "depcheck implementation or fixtures missing for #22/#306"
+  bad "depcheck implementation or fixtures missing for #22 plus #510"
 fi
 
 dx_test_summary "audit update guards harness"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# File-family quality qualification harness (issue #313).
+# File-family quality qualification harness (issue #489).
 #
 # Qualifies the as-built file-family quality record with fixture evidence
 # and owned gaps, without claiming Supported:
@@ -11,7 +11,7 @@
 #   YAML yamlfmt/yamllint, text keep-sorted, Shell shfmt/ShellCheck,
 #   CUE/Jsonnet/Pkl/QML/Terraform feasibility), tool-baseline plus
 #   acquisition routing, registry singularity;
-# - open under #313 with honest records: adapter execution for the
+# - open under #489 with honest records: adapter execution for the
 #   deferred families, platform plus consumer plus release evidence,
 #   exact pins/digests/rule-sets/adapter mappings per family.
 #
@@ -44,13 +44,13 @@ aspects="quality/real_aspects.bzl"
 verify="docs/testing/verification-matrix.md"
 
 # Support matrix owns the Quality And File Families section with the
-# qualified seed-only record under #313.
+# qualified seed-only record under #489.
 if grep -q -F -e '## Quality And File Families' "$support" &&
-  grep -q -F -e 'qualified seed-only under issue #313' "$support" &&
+  grep -q -F -e 'qualified seed-only under issue #489' "$support" &&
   grep -q -F -e 'bazel run //tools/ci:file_family_qualification' "$support"; then
   ok
 else
-  bad "support-matrix lost its Quality And File Families qualified record under #313"
+  bad "support-matrix lost its Quality And File Families qualified record under #489"
 fi
 
 # Support matrix keeps every file-family row from the issue scope.
@@ -290,11 +290,11 @@ fi
 
 # Verification matrix keeps the qualified record with no Supported claim.
 if grep -q -F -e 'file_family_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #313' "$verify" &&
+  grep -q -F -e 'qualified seed-only under #489' "$verify" &&
   ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$verify" | grep -q .; then
   ok
 else
-  bad "verification-matrix lost its #313 qualified record or gained Supported"
+  bad "verification-matrix lost its #489 qualified record or gained Supported"
 fi
 
 # Owned gaps stay explicit: adapter execution plus pins plus platform/consumer/release.

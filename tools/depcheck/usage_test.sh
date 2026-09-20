@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Declared-dependency usage test driver (issues #22, #306).
+# Declared-dependency usage test driver (issue #22; opens under #510).
 # Usage: usage_test.sh <ecosystem> <depcheck.py> <testdata-root>
 # Verifies usage truth table, transitive/shared, non-import exceptions
 # with reasons, obsolete, platform/optional, category, non-mutating,

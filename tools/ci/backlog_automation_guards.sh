@@ -176,7 +176,7 @@ fi
 # #85 acquisition attribution stays owned: static (prohibited-installer)
 # plus runtime (aquery action-command) attribution prove the private tool
 # graph never shells out to installers; remote/empty-cache attribution
-# stays owned by #298/#308.
+# stays owned by #298/#507.
 if grep -q -F -e 'Runtime attribution' tools/ci/examples_laziness.sh &&
   grep -q -F -e 'No-install attribution' tools/ci/examples_laziness.sh &&
   grep -q -F -e 'No-install attribution' tools/ci/examples_laziness_runtime.sh; then

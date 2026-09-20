@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Lockfile-consistency test driver (issues #22, #306).
+# Lockfile-consistency test driver (issue #22; opens under #510).
 # Usage: consistency_test.sh <ecosystem> <depcheck.py> <testdata-root>
 # Verifies the stale-vs-consistent truth table, transitive/shared,
 # non-mutating, offline, no-registry-query halves for one language.

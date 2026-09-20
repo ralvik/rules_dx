@@ -1,4 +1,4 @@
-# Linux x86_64 static-musl cell exact-gate inventory (issue #411; registry issue #308).
+# Linux x86_64 static-musl cell exact-gate inventory (issue #411; registry issue #507).
 #
 # Same first-party code as the seed cell, so the exact-gate scope matches
 # `tools/coverage/seed-inventory.txt` line for line: the musl CI jobs gate

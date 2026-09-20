@@ -259,18 +259,18 @@ routes and does not install an all-open-PR rerun bot or modify repository settin
 Qualification requirements are retained with the cases above. See the
 [GitHub CI contract](../github-ci.md) and open decisions
 for unresolved qualification work. Consumer CI qualification plus automation policy
-stays open under issue #312 (platform, runner, isolation, cache, ordering evidence;
+stays open under issue #509 (platform, runner, isolation, cache, ordering evidence;
 merge, diff, queue, cancellation, aggregate binding; thread identity, ordering, limits;
 fork, untrusted, sensitive, retries, Code-Scanning qualification; sequential mode
 fail-closed pending qualification; tag hygiene plus release-input gaps;
 Renovate and native-bot follow-ups with complementary roles decided in issue
 #326; dx migrate syntax plus dx run multirun). Reusable-workflow contract plus caller
-plus gate/aggregate fixture evidence qualified seed-only under #312
+plus gate/aggregate fixture evidence qualified seed-only under #509
 (`bazel run //tools/ci:consumer_ci_qualification`; nine checks, explicit
 platforms, fail-closed sequential, stable aggregate, hygiene, concurrency,
 permissions, per-cell coverage with fork-safe comments, all-enabled self-call
 (issue #408, verbatim `//...`), native bump loop plus Renovate (complementary, issue #326), migrate planning
-plus run multirun, tag hygiene as-built, with the open gaps above owned under #312).
+plus run multirun, tag hygiene as-built, with the open gaps above owned under #509).
 Consumer CI, devcontainer, and perf honesty
 stays open under issue #325 (self-call all-enabled per #408,
 devcontainer parity-checked but never booted, perf report-not-gate; qualify and enable

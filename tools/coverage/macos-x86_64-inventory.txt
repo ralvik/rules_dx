@@ -1,4 +1,4 @@
-# macOS x86_64 best-effort cell exact-gate inventory (issue #413; registry issue #308).
+# macOS x86_64 best-effort cell exact-gate inventory (issue #413; registry issue #507).
 #
 # Same first-party code as the seed cell, so the exact-gate scope matches
 # `tools/coverage/seed-inventory.txt` line for line: the macOS x86_64

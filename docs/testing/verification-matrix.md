@@ -8,7 +8,8 @@ Open cells are recorded as gaps; docs describe as-built behavior only.
 No cell is `Supported`: missing test/release evidence blocks promotion until
 platform plus consumer plus release evidence passes per the support matrix,
 enforced by `bazel run //tools/ci:supported_evidence_gate`.
-Non-dogfed execution plan delivered under issues #324/#407
+Non-dogfed execution plan delivered (see issue #508 for remaining execution gaps;
+hermetic CLI-contract pins under issue #407)
 (`bazel run //tools/ci:non_dogfed_paths`): CLI-contract coverage runs
 hermetically under `bazel test //...` (no nested Bazel), negative fixtures
 via explicit failure proofs, the no-coverage cohort via coverage-excluded
@@ -32,7 +33,7 @@ class by design — never silently under the standard dogfood gates.
 - **Examples external-consumer**: per-foundation `adopt-*` workspaces
   proving generation as a consumer, plus acquisition/laziness proof
   (delivered on the seed host; platform/remote dimensions owned by
-  #298/#308).
+  #298/#507).
 - **Layer-4 CLI-contract (issue #407, hermetic, replaces nested E2E)**:
   `dx test`/`dx build` exit-code preservation via `cli/cli/src/exec` unit
   pins (including Bazel test-failure code 3), format rewrite `x=1` →
@@ -45,7 +46,7 @@ class by design — never silently under the standard dogfood gates.
   wiring now smoke-only.
 - **Dependency checks**: required-core plus admitted lockfile-consistency and
   declared-dependency usage fixtures delivered in `tools/depcheck/`
-  (issues #22, #306); framework-composition depcheck stays with the JS/TS pnpm route.
+  (issue #22; remaining opens under issue #510); framework-composition depcheck stays with the JS/TS pnpm route.
 - **Audit/update live execution**: `dx update` resolver backends per set with independent-set
   continuation and per-set reporting delivered (issue #19); `dx audit` auditor wiring, advisory
   acquisition with 24h cache semantics and offline matching, plus SARIF/SPDX mapping delivered
@@ -62,14 +63,14 @@ class by design — never silently under the standard dogfood gates.
   execution, rebuild proof, link completeness, guide-step wiring, timing proof,
   and pin-bump/drift as owned gaps).
 - **Environment/codegen**: deferred/unsupported records plus fixture
-  evidence qualified seed-only under #309
+  evidence qualified seed-only under #506
   (`bazel run //tools/ci:env_codegen_qualification`; public protocol,
   Windows fallback, standalone, signing/trust, plus bootstrap/lock/roots/
   collector/env-plan/node projection evidence with unproven tests as owned
   gaps).
 - **Non-dogfed execution plan**: the cohorts that never run under the
   standard dogfood gates each have an explicit path, pinned by
-  `bazel run //tools/ci:non_dogfed_paths` (issues #324/#407): CLI-contract
+  `bazel run //tools/ci:non_dogfed_paths` (issue #508; hermetic pins under issue #407): CLI-contract
   via hermetic pins under `bazel test //...` (no nested Bazel, no manual;
   plus the adopt-rust `dx_dev` smoke in normal CI; loss recorded here);
   negative fixtures via green hermetic proofs (issue #406: sh_test goldens +
@@ -219,14 +220,14 @@ Remaining reds stay owned gaps, not green claims:
 - Full-tree `dx lint/format/typecheck/test --check //...` over fixtures and
   testdata stays open under #12 (lane A only) and #325 (consumer honesty).
 - Per-cell coverage is qualified for the seed plus arm64 plus two static-musl plus macos arm64 plus macos x86_64 best-effort plus windows x86_64 cells under
-  #308/#410/#411/#412/#413/#414 (`tools/coverage/cells.txt`,
+  #507/#410/#411/#412/#413/#414 (`tools/coverage/cells.txt`,
   `bazel run //tools/ci:coverage_qualification`; no union, Starlark fallback,
   Codecov opt-in, quotas, local-only remote evidence). First-party PR reporting is
   adopted under #254 (Codecov opt-in only; the seed cell owns the PR comment,
   the arm64 plus musl plus macos plus macos-x86_64 plus windows cells report to their job summaries; the macos x86_64 best-effort cell reports without blocking required-host release). All required plus best-effort cells are qualified; out-of-v1 hosts stay platform-gated under #298.
-- Docs pipeline and environment/codegen stay open under #421 and #309 (see
+- Docs pipeline and environment/codegen stay open under #421 and #506 (see
   [Documentation](../documentation/README.md#contracts)). Environment/codegen
-  deferred records plus fixture evidence are qualified seed-only under #309
+  deferred records plus fixture evidence are qualified seed-only under #506
   (`bazel run //tools/ci:env_codegen_qualification`; no junction/copy
   fallback, no checksum-only fallback, no third-party plugin claim; bootstrap,
   fidelity, spaces, stale-clean, IDE, atomic-commit, BEP, projection,
@@ -238,7 +239,7 @@ Remaining reds stay owned gaps, not green claims:
   execution, rebuild proof, link completeness, guide-step wiring, timing proof,
   and pin-bump/drift stay owned gaps; no working site claimed).
 - Consumer-CI contract plus caller plus gate/aggregate fixture evidence
-  qualified seed-only under #312
+  qualified seed-only under #509
   (`bazel run //tools/ci:consumer_ci_qualification`; nine checks, explicit
   platforms, fail-closed sequential, stable dx-ci aggregate, hygiene,
   concurrency, permissions, per-cell coverage with fork-safe comments,
@@ -253,7 +254,7 @@ Remaining reds stay owned gaps, not green claims:
    windows hosts stays open under #298 (arm64 qualified under #410, static
    musl under #411, macos arm64 under #412, macos x86_64 best-effort under
    #413, windows x86_64 under #414).
-- File-family quality record with fixture evidence qualified seed-only under #313
+- File-family quality record with fixture evidence qualified seed-only under #489
   (`bazel run //tools/ci:file_family_qualification`; provider-class
   applicability with never-suffix inference, Starlark/Buildifier plus TOML/Taplo
   adapter-backed evidence, parity-deferred CSS/djlint/buf/yaml/keep-sorted/shell
@@ -277,7 +278,8 @@ Remaining reds stay owned gaps, not green claims:
   allow_hyphen_values plus invalid_token/parse_error mapping for unknown,
   missing, malformed, hyphen-value, and attached-echo shapes; strict clap
   parsing with auto help stays owned gap).
-- Non-dogfed execution plan delivered under #324/#407
+- Non-dogfed execution plan delivered (see issue #508 for remaining gaps; hermetic
+  CLI-contract pins under issue #407)
   (`bazel run //tools/ci:non_dogfed_paths`; hermetic CLI-contract pins,
   green hermetic failure proofs (issue #406), coverage-excluded runs, shell ownership
   plus test execution with no quality class by design).

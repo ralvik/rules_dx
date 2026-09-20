@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Dependency-check contract harness (issues #22, #306, delivered).
+# Dependency-check contract harness (issue #22, delivered; opens under #510).
 #
 # Required-core (Rust/Python/JavaScript/TypeScript) plus admitted (Go,
 # Java/Kotlin/Scala, C#/F#, C/C++) lockfile-consistency and
@@ -8,12 +8,12 @@
 # transitive/shared, exception, obsolete, platform, and category
 # fixtures as normal test targets). Remaining admitted quality-adapter
 # implementation stays owned by ADR 0019 (qualified under
-# issue #307); foundation mappings under #304.
+# issue #307); foundation mappings under #476-#484.
 #
 # This harness machine-checks the delivered half on a clean tree:
 # the truth table, offline, non-mutating, independently-runnable,
 # non-import/exception, category, and obsolete clauses are present in
-# docs/quality/quality-testing.md and recorded as accepted for #22/#306,
+# docs/quality/quality-testing.md and recorded as accepted for #22 (opens under #510),
 # the checker exists with no network imports, per-language fixtures and
 # targets exist with no `manual` exclusion, and docs describe only what
 # runs. Run by CI via `bazel run //tools/ci:depcheck_contract`,
@@ -47,14 +47,14 @@ else
   bad "contract lost the stale-vs-consistent truth table"
 fi
 
-# Offline routes qualified for #22/#306 (no open-work placeholder).
+# Offline routes qualified for #22 (no open-work placeholder).
 if grep -q -F -e 'with network access denied' "$contract" &&
   grep -q -F -e 'does not query live registries' "$contract" &&
-  grep -q -F -e 'Accepted (issues #22, #306)' "$contract" &&
+  grep -q -F -e 'Accepted (issue #22' "$contract" &&
   grep -q -F -e 'bazel test //tools/depcheck/...' "$contract"; then
   ok
 else
-  bad "contract lost the qualified offline-routes record for #22/#306"
+  bad "contract lost the qualified offline-routes record for #22"
 fi
 
 # Non-mutating requirement.
@@ -144,13 +144,13 @@ else
 fi
 
 # Docs describe only what runs: required-core plus admitted accepted for
-# #22/#306, qualified adapter work under #307 plus foundation under #304.
-if grep -q -F -e 'Accepted (issues #22, #306)' "$contract" &&
+# #22 (opens under #510), qualified adapter work under #307 plus foundation under #476-#484.
+if grep -q -F -e 'Accepted (issue #22' "$contract" &&
   grep -q -F -e 'issue #307' "$contract" &&
-  grep -q -F -e 'issue #304' "$contract"; then
+  grep -q -F -e '#476-#484' "$contract"; then
   ok
 else
-  bad "contract lost its accepted-vs-open record for #22/#306"
+  bad "contract lost its accepted-vs-open record for #22 plus #510"
 fi
 
 dx_test_summary "depcheck contract harness"

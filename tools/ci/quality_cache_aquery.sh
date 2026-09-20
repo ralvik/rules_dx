@@ -56,7 +56,7 @@
 #
 # Still open per #84 (recorded as gap, not claimed): full per-adapter
 # table remainder (Go/Java/etc. adapters have no implementation yet;
-# equivalent rows land with each adapter under #303/#304, enforced by the
+# equivalent rows land with each adapter under #470-#475/#476-#484, enforced by the
 # parity manifest + release_policy gate), transitive rows (quality actions
 # take only direct sources by construction per QualitySourcesInfo
 # validation, so transitive deps never enter inputs unless direct —
@@ -66,7 +66,7 @@
 # (stage-order/runner policy changes beyond canonical order), plus
 # controlled remote-cache / separate-machine proof (requires remote
 # infrastructure unavailable per docs/testing/README.md Remote Tests;
-# tracked under #308, never claimed here). The execution-log half below
+# tracked under #507, never claimed here). The execution-log half below
 # distinguishes executed actions from cache hits locally; this harness is
 # action-graph plus local execution-log, no remote execution.
 #
@@ -733,7 +733,7 @@ if [[ "$no_typecheck_actions" == *"tsc"* ]]; then bad "no-typecheck: forbidden [
 # execution log (must execute with source+tool+runner in the log), then
 # rebuild unchanged (log must be empty: cache hit, nothing executed).
 # Controlled remote-cache / separate-machine proof stays tracked under
-# #308 per docs/testing/README.md (infrastructure unavailable here).
+# #507 per docs/testing/README.md (infrastructure unavailable here).
 exec_first="$(mktemp /tmp/quality_cache_exec_first.XXXXXX.json)"
 exec_second="$(mktemp /tmp/quality_cache_exec_second.XXXXXX.json)"
 lint_pb="bazel-bin/quality/testdata/fixture_real_python-real-lint.pb"

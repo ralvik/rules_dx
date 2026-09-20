@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Consumer-CI qualification harness (issue #312).
+# Consumer-CI qualification harness (issue #509).
 #
 # Qualifies the as-built consumer-CI record with fixture evidence and
 # owned gaps, without claiming unqualified integration:
@@ -12,7 +12,7 @@
 #   native widen-one loop plus Renovate (complementary, issue #326), dx migrate
 #   planning plus
 #   dx run multirun, tag hygiene as-built;
-# - open under #312 with honest records: platform/runner/isolation/cache/
+# - open under #509 with honest records: platform/runner/isolation/cache/
 #   ordering evidence; merge/diff/queue/cancellation/aggregate binding;
 #   thread identity/ordering/limits; fork/untrusted/sensitive/retries/
 #   Code-Scanning qualification; sequential mode fail-closed pending
@@ -344,12 +344,12 @@ else
   bad "fork/untrusted/sensitive/retries/Code-Scanning gap lost its owner"
 fi
 
-# Contract plus matrix keep the #312 qualification tracker.
-if grep -q -F -e 'issue #312' "$contract" &&
-  grep -q -F -e 'issue #312' "$matrix"; then
+# Contract plus matrix keep the #509 qualification tracker.
+if grep -q -F -e 'issue #509' "$contract" &&
+  grep -q -F -e 'issue #509' "$matrix"; then
   ok
 else
-  bad "github-ci contract/matrix lost its #312 qualification tracker record"
+  bad "github-ci contract/matrix lost its #509 qualification tracker record"
 fi
 
 # Tag hygiene plus release-input gaps stay owned open.

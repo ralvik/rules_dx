@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Non-dogfed execution plan (issues #324, #407).
+# Non-dogfed execution plan (issue #508; hermetic pins under #407).
 #
 # Cohorts that never run under the standard dogfood/CI gates by design
 # (explicit suites, carve-outs, tag suppression). Each has an explicit
@@ -361,7 +361,7 @@ if grep -q -F -e 'Non-dogfed execution plan' docs/testing/verification-matrix.md
   grep -q -F -e 'bazel run //tools/ci:non_dogfed_paths' docs/testing/verification-matrix.md; then
   ok
 else
-  bad "verification-matrix lost its #324 delivered execution-plan record"
+  bad "verification-matrix lost its #508 delivered execution-plan record"
 fi
 
 # E2: this harness is wired in CI's dogfood-freshness job alongside the ownership audits.

@@ -1,4 +1,4 @@
-# Linux arm64 cell exact-gate inventory (issue #410; registry issue #308).
+# Linux arm64 cell exact-gate inventory (issue #410; registry issue #507).
 #
 # Same first-party code as the seed cell, so the exact-gate scope matches
 # `tools/coverage/seed-inventory.txt` line for line: the arm64 runner gates

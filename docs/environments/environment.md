@@ -367,7 +367,7 @@ Shared state, pointer, reuse, concurrency, symlink, ownership, and retention tes
 [Managed Environment State](managed-state.md#test-requirements).
 Cross-cutting fixture, platform, and evidence rules remain in
 [Testing Strategy](../testing/README.md). Environment and codegen gaps stay open
-under issue #309 (public env contribution protocol, Windows .envrc and junction
+under issue #506 (public env contribution protocol, Windows .envrc and junction
 fallback, standalone-without-Bazel path, signing and trust selection, plus the
 required bootstrap, fidelity, spaces, stale-clean, IDE, atomic-commit, BEP,
 projection, and root-candidate tests).

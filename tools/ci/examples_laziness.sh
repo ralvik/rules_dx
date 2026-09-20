@@ -8,7 +8,7 @@
 # (docs/testing/tools.md) requires unused foundations to contribute zero
 # targets/actions. Runtime attribution (aquery action-command proof over
 # adopt-* consumers) closes the proof in examples_laziness_runtime.sh;
-# remote/empty-cache attribution stays owned by #298/#308, not claimed here.
+# remote/empty-cache attribution stays owned by #298/#507, not claimed here.
 #
 # This harness machine-checks the static half:
 #  - no prohibited installer command appears in tool-implementation code

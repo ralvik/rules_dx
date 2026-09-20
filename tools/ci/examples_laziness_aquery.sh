@@ -27,7 +27,7 @@
 # Delivered per #85 together with the runtime action-command proof
 # (examples_laziness_runtime.sh): dependency closure plus action graph
 # plus action commands complete the seed-host proof. Network-denied
-# execution plus empty-cache remote-cache proof stay owned by #308
+# execution plus empty-cache remote-cache proof stay owned by #507
 # and platform evidence by #298. This harness is
 # action-graph only, no execution.
 #
