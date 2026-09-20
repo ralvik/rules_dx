@@ -273,12 +273,17 @@ The approved v1 destinations are the Bazel Central Registry for the `rules_dx` m
 and GitHub Releases for standalone `dx` binaries. Publication mechanics are
 implemented owner-gated dry-run-first in `deploy/release/` per the
 [release runbook](../deploy/release-runbook.md): full matrix in
-`deploy/release/matrix.bzl`, SBOM/provenance in `deploy/release/sbom.bzl`,
-signing/attestation selection (Sigstore keyless plus GitHub attestations)
-in `deploy/release/signing.bzl`, BCR shape tooling in
-`deploy/release/bcr.bzl`, GHCR via the separate `ghcr.yml` route, and the
-human-run driver in `deploy/release/release.sh`. Publication still requires explicit
-approval and qualified release artifacts.
+`deploy/release/matrix.bzl`, SBOM/provenance in `deploy/release/sbom.bzl`
+(SPDX 2.3 plus SLSA v1, subject digest equals artifact sha256),
+signing/attestation selection (Sigstore keyless cosign v2.4.1
+`sign-blob --bundle` plus GitHub attestations, bundle v0.3) in
+`deploy/release/signing.bzl` qualified under issue #459 (live successor
+to closed #311/#26/#78 for signing + distribution; no stack change),
+BCR shape tooling in `deploy/release/bcr.bzl`, GHCR via the separate
+`ghcr.yml` route, and the human-run driver in `deploy/release/release.sh`
+(issue #458). Publication still requires explicit approval and qualified
+release artifacts. Pinned by `bazel run
+//tools/ci:signing_distribution_qualification`.
 
 Publication dry-run: dispatch `.github/workflows/publish-dry-run.yml` manually from the
 Actions tab. It builds the seed-host Linux x86_64 `dx` binary plus the
@@ -304,7 +309,8 @@ never creates or pushes tags itself. The invariants are machine-checked by
 `bazel run //tools/ci:publish_trust`; install-time verification on the #26 trust
 root is implemented in `//deploy/install:dx_verify`, while signing and attestation
 generation is implemented owner-gated in `//deploy/release:signing_demo`
-with the human-run path in `docs/deploy/release-runbook.md`.
+qualified under issue #459 with the human-run path in
+`docs/deploy/release-runbook.md`.
 
 Release hosting, signing, and verification services must satisfy the
 [free-infrastructure constraint](../testing/README.md#infrastructure-budget) without

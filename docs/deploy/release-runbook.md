@@ -36,6 +36,20 @@ Signing-first: step 4 signs plus attests before step 5 opens the draft
 release, so nothing is drafted or published unsigned. Pinned by
 `bazel test //deploy/release:release_driver_verify`.
 
+Signing stack + distribution qualified under issue #459 (live successor
+to closed #311/#26/#78 for signing + distribution; decision: keep
+Sigstore keyless `cosign sign-blob --bundle` + GitHub attestations, no
+stack change): cosign v2.4.1 pinned per `deploy/release/signing.bzl`
+`SIGNING_COSIGN_VERSION` (checksum-verified fetch per `ghcr.yml`),
+bundle media type `application/vnd.dev.sigstore.bundle.v0.3+json` per
+`SIGNING_BUNDLE_MEDIA_TYPE`, TUF trust root
+`https://tuf-repo-cdn.sigstore.dev` plus GitHub OIDC issuer, SPDX 2.3
+plus SLSA v1 provenance via `//deploy/release:sbom_demo` with subject
+digest equal to artifact sha256, distribution to BCR (`rules_dx` module)
+plus GitHub Releases (`dx` binaries) with GHCR via the separate
+`ghcr.yml` route. Pinned by `bazel test //deploy/release:all` plus
+`bazel run //tools/ci:signing_distribution_qualification`.
+
 1. Dry-run everything first: `RELEASE_DRY_RUN=1
    deploy/release/release.sh <tag>` plus `GH_RELEASE_DRY_RUN=1 bazel
    run //cli/cli:github_draft`, `RELEASE_SIGN_DRY_RUN=1 bazel run

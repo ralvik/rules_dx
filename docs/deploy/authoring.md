@@ -44,7 +44,7 @@ open work under issue #457.
 ## Path C: `archive_release` (accepted)
 
 The first deploy macro
-(open work under issue #459) packages
+(distribution artifact qualified under issue #459) packages
 one executable as a tarball + sha256 checksum with the managed Python
 3.12 toolchain only (deterministic `archiver` tar.gz plus `hasher`
 sha256 as declared genrule `tools` in `deploy/rules/`), no host
@@ -72,7 +72,7 @@ next to the app they release.
 ## Path D: `github_release` (accepted)
 
 The second deploy macro
-(open work under issue #459) publishes
+(distribution artifact qualified under issue #459) publishes
 pinned files as a draft-only GitHub Release via the host `gh` CLI, no
 new module dependencies:
 
@@ -113,10 +113,12 @@ qualify). Draft-only ceiling enforced, owner approval required.
 ## Path F: release matrix, SBOM/provenance, signing, BCR, human-run (accepted)
 
 The full release path (issue #311; human-run driver owned under issue
-#458, live successor to closed #311 for the human-run path) is
-owner-gated dry-run-first
+#458, live successor to closed #311 for the human-run path; signing stack
++ distribution qualified under issue #459, live successor to closed
+#311/#26/#78 for signing + distribution) is owner-gated dry-run-first
 tooling in `deploy/release/` with policy tests `bazel test
-//deploy/release:all`:
+//deploy/release:all` plus `bazel run
+//tools/ci:signing_distribution_qualification`:
 
 - Matrix (`matrix.bzl`): five cells, seed `dx-linux-x86_64`
   qualified-built-here, four follow-ups unqualified per ADR 0014 until
@@ -125,10 +127,12 @@ tooling in `deploy/release/` with policy tests `bazel test
   Statement v1 from the managed Python toolchain only (digest + JSON
   via declared genrule `tools`), subject digest equals artifact
   sha256; verifies via `//deploy/install:dx_verify --sbom`.
-- Signing/attestation (`signing.bzl` plus `sign_deploy.sh`): Sigstore
-  keyless (`cosign sign-blob --bundle`) plus GitHub attestations on the
-  TUF trust root; `RELEASE_SIGN_DRY_RUN=1` prints would-sign,
-  publishes nothing.
+- Signing/attestation (`signing.bzl` plus `sign_deploy.sh`, qualified
+  under issue #459): Sigstore keyless (`cosign sign-blob --bundle`
+  v2.4.1 pinned, bundle media type
+  `application/vnd.dev.sigstore.bundle.v0.3+json`) plus GitHub
+  attestations on the TUF trust root; `RELEASE_SIGN_DRY_RUN=1` prints
+  would-sign, publishes nothing.
 - BCR (`bcr.bzl` plus `bcr_deploy.sh`): `source.json` plus integrity
   shape check; `BCR_DRY_RUN=1` prints would-submit, submits nothing;
   `0.0.0` never submits.
@@ -156,7 +160,9 @@ passed as `--sbom`. BCR needs no signing (archive `source.json` +
 integrity hash + `presubmit.yml` + PR review). Seed-host standalone
 packaging is `//cli/cli:dx_standalone`; the wider matrix stays
 unqualified per the [distribution policy](../environments/environment.md#distribution).
-Policy tests are `bazel test //deploy/install:all`.
+Distribution verification qualified under issue #459. Policy tests are
+`bazel test //deploy/install:all` plus `bazel run
+//tools/ci:signing_distribution_qualification`.
 
 ## Custom deployers (accepted)
 

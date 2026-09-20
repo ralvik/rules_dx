@@ -21,7 +21,8 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
   integration test, close-out battery + docs, rustfmt with crate edition.
 * Robustness and hygiene: CI hygiene,
   warnings-as-errors, visibility hardening, cli-contract claims, human-run
-  release path (signing-first, issue #458), signing stack + distribution, GHCR prebuilt
+  release path (signing-first, issue #458), signing stack + distribution
+  (issue #459), GHCR prebuilt
   images (separate workflow, issue #460), Renovate plus native bump loop complementary
   (decided, issue #326), automation policy (Renovate allowed).
 * V1 scope: `dx migrate` syntax + manifest selection (issue #462), `dx run` multirun (issue #463).
