@@ -1,15 +1,4 @@
 """Fail-closed v1 parity gate (M24 WP1/WP3, O32).
-
-Reconciles the three parity dimensions in one machine-checked place: every
-class named by any `REAL_ADAPTERS` capability must be classified in
-`REAL_CLASS_TO_FAMILY`, and every classified class must have exactly one
-disposition — adapter-backed (named by at least one tool capability) or
-explicitly deferred in `PARITY_DEFERRED` with an owning decision and a
-frozen acquisition route. A new class without a disposition, a new adapter
-claim on a deferred class, a silently dropped adapter claim, or a
-deferral without an owner/route fails here instead of weakening v1
-silently. Deferred adapter implementation stays owned by O32; this gate
-owns the inventory, not the adapters.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
@@ -107,11 +96,7 @@ def parity_schema_error():
     class edits the deferral data only: version is v1, every deferred ID
     is canonical, and every entry carries an owning decision plus a frozen
     route. Disposition coverage (unclassified/undispositioned/double-claim)
-    stays checked by the registry queries below, not by an allowlist.
-
-    Returns:
-      "" when valid, else the failure reason.
-    """
+    stays checked by the registry queries below, not by an allowlist."""
     if PARITY_SCHEMA_VERSION != 1:
         return "parity gate: unsupported schema v" + str(PARITY_SCHEMA_VERSION) + " (want v1)"
     for class_id in PARITY_DEFERRED:

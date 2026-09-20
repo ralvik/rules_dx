@@ -1,4 +1,4 @@
-//! Quality mutation and status projection (issue #236): verified
+//! Quality mutation and status projection: verified
 //! source reads plus check/complete-gated atomic apply, and
 //! check-mode vs default-mode status with the fail-closed flag.
 //!
@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn check_mode_writes_nothing() {
-        // Apply-safety battery (issue #84): check mode never mutates,
+        // Apply-safety battery: check mode never mutates,
         // so a valid stable candidate leaves the workspace untouched
         // and reports no applied paths.
         let workspace = write_workspace("apply-check", &[("src/a.rs", b"BAD\n")]);
@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn incomplete_collection_writes_nothing() {
-        // Apply-safety battery (issue #84): an incomplete result
+        // Apply-safety battery: an incomplete result
         // collection marks every change not-applied with
         // `incomplete_collection` before any mutation runs.
         let workspace = write_workspace("apply-incomplete", &[("src/a.rs", b"BAD\n")]);
@@ -198,7 +198,7 @@ mod tests {
 
     #[test]
     fn stale_source_untouched_while_valid_file_applies() {
-        // Apply-safety battery (issue #84): one rejected path never
+        // Apply-safety battery: one rejected path never
         // blocks the others, and the stale file keeps its live bytes.
         let workspace = write_workspace(
             "apply-mixed",
@@ -229,7 +229,7 @@ mod tests {
 
     #[test]
     fn invalid_edits_rejected_without_write() {
-        // Apply-safety battery (issue #84): a malformed envelope
+        // Apply-safety battery: a malformed envelope
         // (inverted range) is rejected with `invalid_edits` and the
         // file keeps its live bytes.
         let workspace = write_workspace("apply-invalid", &[("src/a.rs", b"BAD\n")]);

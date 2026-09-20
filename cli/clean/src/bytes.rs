@@ -1,4 +1,4 @@
-//! Reclaimable-bytes measurement and dry-run rendering for `dx clean` (issue #236).
+//! Reclaimable-bytes measurement and dry-run rendering for `dx clean`.
 //!
 //! Split from `super` (`lib.rs`): owns [`PruneBytes`] (per-entry
 //! on-disk sizes plus [`PruneBytes::total`] and

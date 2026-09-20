@@ -1,9 +1,4 @@
 """Unit tests for pipeline construction (M03 WP2a).
-
-Pins the synthetic cross-family union, exact source subsets, stable tool
-order, and no-empty-stage rules. Analysis evidence (exact direct-source
-subsets, no generic fallback, no empty actions) lands in WP2c; these unit
-checks prove the pure shapes that evidence rests on.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

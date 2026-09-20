@@ -1,4 +1,4 @@
-//! Local watch loop for wrapped commands (issue #236).
+//! Local watch loop for wrapped commands.
 //!
 //! Split from `super` (`lib.rs`): owns `WATCH_DEBOUNCE_MS`,
 //! `WATCHABLE_COMMANDS`, `watch_iteration_accepts`, `plan_watch`,
@@ -56,7 +56,7 @@ pub fn plan_watch(command: &str, ci: bool) -> Result<String, AdoptError> {
 }
 
 /// Coalesces debounced watcher paths into a single deterministic
-/// rebuild trigger (issue #223): rapid create/modify/delete bursts
+/// rebuild trigger: rapid create/modify/delete bursts
 /// for one path collapse to one entry; outputs sort ascending with
 /// duplicates removed so repeated runs render identically.
 pub fn coalesce_watch_paths(mut paths: Vec<PathBuf>) -> Vec<PathBuf> {
@@ -66,7 +66,7 @@ pub fn coalesce_watch_paths(mut paths: Vec<PathBuf>) -> Vec<PathBuf> {
 }
 
 /// Blocks up to `timeout` for one debounced filesystem change under
-/// `watch_root` (issue #223), returning the coalesced trigger paths.
+/// `watch_root` , returning the coalesced trigger paths.
 ///
 /// Implemented over [`notify`] 8.x plus `notify-debouncer-mini`
 /// (200 ms debounce per [`WATCH_DEBOUNCE_MS`]): create, modify, and

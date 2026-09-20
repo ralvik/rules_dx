@@ -38,7 +38,7 @@ fn usage() -> String {
 /// last-wins repeats; every value option consumes the next token
 /// unconditionally (even a `--`-led token), matching the legacy hand loop.
 /// `--entry` values validate through [`parse_entry_value`] at tokenize time
-/// (issue #233); shape failures map back onto the legacy `bad --entry …`
+///; shape failures map back onto the legacy `bad --entry …`
 /// text via [`parse_error`].
 #[derive(Parser)]
 #[command(disable_help_flag = true)]
@@ -133,7 +133,7 @@ fn parse_args(args: &[String]) -> Result<Cli, String> {
     .map_err(|error| parse_error(error, args))
 }
 
-/// `clap` value parser for `--entry` (issue #233): the single source for
+/// `clap` value parser for `--entry`: the single source for
 /// `LOGICAL|ROOT|NAMESPACE[|EXEC]` shape, so tokenizing accepts exactly 3-4
 /// `|`-separated parts and rejections already carry the legacy
 /// `bad --entry …` text that [`parse_error`] recovers from the error context.
@@ -176,7 +176,7 @@ fn run(args: &[String]) -> Result<(), String> {
 }
 
 fn main() {
-    // Structured diagnostics (issue #232): init is idempotent and emits
+    // Structured diagnostics: init is idempotent and emits
     // nothing by default; `RUST_LOG` overrides the warn filter. Failures
     // report via `tracing::error!` with the legacy message text, so action
     // diagnostics keep their content while gaining filter control.

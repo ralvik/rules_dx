@@ -1,9 +1,9 @@
-//! `dx_man` build step (issue #225): renders the `dx` manual page from
+//! `dx_man` build step: renders the `dx` manual page from
 //! the clap grammar so it can never drift from `--help`.
 //!
 //! Usage: `dx_man <output-file>`. The `man_pages` genrule wires this
 //! into the build (`bazel build //cli/cli:man_pages` emits `man/dx.1`);
-//! release packaging (issue #26) consumes that target. The CLI is a
+//! release packaging  consumes that target. The CLI is a
 //! single clap command with a command-word value enum rather than
 //! subcommands, so the grammar yields one page; per-command pages arrive
 //! if the grammar ever gains subcommands.
@@ -17,7 +17,7 @@ use std::path::PathBuf;
 
 // LCOV_EXCL_START - reason: thin build-step binary; man-page rendering is verified by the man_pages genrule build, not unit coverage.
 fn main() {
-    // Structured diagnostics (issue #232): build-step failures report via
+    // Structured diagnostics: build-step failures report via
     // `tracing::error!` with the legacy message text; init is idempotent
     // and emits nothing by default.
     dx_output::init_diagnostics(false);

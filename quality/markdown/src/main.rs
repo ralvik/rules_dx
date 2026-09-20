@@ -12,7 +12,7 @@
 
 // LCOV_EXCL_START - reason: thin binary shim; CLI file I/O is covered by library run_cli unit tests with injected readers, not host I/O.
 fn main() {
-    // Structured diagnostics (issue #232): init is idempotent and emits
+    // Structured diagnostics: init is idempotent and emits
     // nothing by default; `RUST_LOG` overrides the warn filter. Library
     // error lines route through `tracing::error!` with identical text.
     dx_output::init_diagnostics(false);

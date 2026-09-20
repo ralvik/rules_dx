@@ -1,4 +1,4 @@
-//! Memoized Bazel package-marker probes (issue #236).
+//! Memoized Bazel package-marker probes.
 //!
 //! Split from [`super::classify`] (`classify.rs`): owns the
 //! memoized [`PackageCache`] plus its [`PACKAGE_FILES`] marker table.

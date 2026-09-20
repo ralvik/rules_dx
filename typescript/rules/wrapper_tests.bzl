@@ -1,12 +1,4 @@
 """Wrapper-contract tests for the TypeScript wrappers (#87 item 2).
-
-Pins the tsc-pipeline-only enforcement: `typescript_project` takes
-real sources only, so declaration files (`.d.ts`, `.d.mts`, `.d.cts`)
-are rejected with a contract diagnostic instead of being silently
-dropped. Real sources (`.ts`, `.tsx`, `.mts`, `.cts`) and empty srcs
-stay clean. The `fail()` in the wrapper macro is load-time, so the
-rejection is proven here through the pure `typescript_srcs_rejection`
-helper: a `None` return means "no rejection".
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

@@ -1,4 +1,4 @@
-//! Adoption status execution (`status`, issue #236).
+//! Adoption status execution (`status`).
 //!
 //! Split from `super` (`adopt.rs`): owns [`execute_status`], the result
 //! document that always prints even under `--quiet` (quiet suppresses

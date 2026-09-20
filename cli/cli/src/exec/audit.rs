@@ -1,4 +1,4 @@
-//! Audit command execution: live auditor backends with per-family reporting (issue #18).
+//! Audit command execution: live auditor backends with per-family reporting.
 
 use super::common::*;
 use crate::args::{Command, Invocation};
@@ -16,7 +16,7 @@ fn _live_wiring_pins() {
     let _ = CODE_AUDIT_FAILED;
 }
 
-/// Day-granularity audit clock (issue #398, keep): stays on
+/// Day-granularity audit clock (keep): stays on
 /// `chrono::Utc::now` because the gates compare fixed-width `YYYY-MM-DD` UTC
 /// days with no `tzdb`/zone arithmetic, so the `jiff` `Timestamp::now` plus
 /// `tz::TimeZone::UTC` rewrite pays bundle plus churn for no gate gain;
@@ -708,7 +708,7 @@ fn run_license(
     }
 }
 
-/// Runs `dx audit` live (issue #18): family selection and scope defaults
+/// Runs `dx audit` live: family selection and scope defaults
 /// through `dx_audit`, dependency-set resolution through the approved
 /// `dx_update` registry, then qualified auditors per family over resolved
 /// scopes with per-family reporting. `--dry-run` prints the planned

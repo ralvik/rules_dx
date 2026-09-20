@@ -1,4 +1,4 @@
-//! BEP results collection and proto mapping (issue #236).
+//! BEP results collection and proto mapping.
 //!
 //! Split from [`super::common`]: owns the `dx_results` collection
 //! domain — [`Collected`], [`map_severity`], [`map_diagnostic`],

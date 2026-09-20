@@ -1,4 +1,4 @@
-//! Live output modes and stdout ownership (issue #236).
+//! Live output modes and stdout ownership.
 //!
 //! Split from `super` (`lib.rs`): owns `OutputMode`, `OutputModeName`,
 //! `StdoutOwner`, `stdout_owner`, `dx_text_visible`, and

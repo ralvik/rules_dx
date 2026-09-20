@@ -1,4 +1,4 @@
-//! SPDX 2.3 JSON reporting for `dx audit license` (issue #18).
+//! SPDX 2.3 JSON reporting for `dx audit license`.
 //!
 //! Pure rendering of the license-family report shape pinned in
 //! [`crate::license_notice`]: one SPDX 2.3 JSON document per

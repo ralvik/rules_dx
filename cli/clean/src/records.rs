@@ -1,4 +1,4 @@
-//! Setup-record validation for `dx clean` (issue #236).
+//! Setup-record validation for `dx clean`.
 //!
 //! Split from `super` (`lib.rs`): owns [`GenerationKind`],
 //! [`SetupRecordView`], [`RecordProblem`], and [`validate_record`]

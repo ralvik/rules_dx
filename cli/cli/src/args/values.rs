@@ -1,4 +1,4 @@
-//! Small value helpers for invocation parsing (issue #236): scope-shape
+//! Small value helpers for invocation parsing: scope-shape
 //! errors plus `--report` and `--min-coverage` value parsing.
 //!
 //! Extracted from [`super::parser`] without behavior change: the

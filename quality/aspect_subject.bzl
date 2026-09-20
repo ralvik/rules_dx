@@ -1,10 +1,4 @@
 """Analysis subject observing aspect-produced dx_results (M03 WP2c).
-
-`aspect_subject` depends on one fixture target with all four capability
-aspects applied and republishes the merged `dx_results` file set as
-`DxSubjectInfo` fields. `starlark_test` analysis mode pins the rendering,
-proving exact capability presence/absence: no generic fallback, no empty
-actions, capability tags honored.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")

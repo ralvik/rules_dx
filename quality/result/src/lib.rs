@@ -30,7 +30,7 @@ pub fn digest(bytes: &[u8]) -> [u8; 32] {
     dx_digest::blake3(bytes)
 }
 
-/// Validation or codec failure (issue #211 slice).
+/// Validation or codec failure (slice).
 ///
 /// Every variant renders human-readable via `Display` for CLI
 /// operational diagnostics; binaries render via `to_string()`, never

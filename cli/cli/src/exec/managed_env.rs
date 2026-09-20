@@ -1,4 +1,4 @@
-//! Managed environment collection and staging (issue #236).
+//! Managed environment collection and staging.
 //!
 //! Split from [`super::managed`]: owns the env side of managed
 //! generation ([`collect_managed_env`], [`empty_env_id`],

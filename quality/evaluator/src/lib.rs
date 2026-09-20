@@ -241,7 +241,7 @@ mod tests {
 
     #[test]
     fn formatter_replacement_without_diagnostics_fails_like_check_mode() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // check mode to fail on any proposed change independently of
         // severity and direct Bazel evaluators to enforce the same rule.
         // Mirror the runner formatter case (fmt-a trims trailing spaces

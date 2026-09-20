@@ -1,10 +1,4 @@
 """Unit and analysis tests for the deploy boundary (issue #178).
-
-Unit checks run while this file loads, proving the pure profile helper
-executes there. Analysis tests pin the frozen observation rendering for
-the fixture deployments: the default release profile, an explicit debug
-profile, and a distinct app label. Invalid profiles fail analysis with
-the helper message; the negative is a manual demo, never in suites.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

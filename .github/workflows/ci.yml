@@ -982,6 +982,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:widen_update_loop
       - name: Audit BUILD hygiene (comment density + boilerplate + GENERATED headers, issue #427)
         run: bazel run --noshow_progress //tools/ci:build_hygiene
+      - name: Audit source hygiene (.bzl headers + Args/Returns + Rust breadcrumbs, issue #428)
+        run: bazel run --noshow_progress //tools/ci:source_hygiene
       - name: Audit quality foundations (provider + registry + mapping owners + battery contracts)
         run: bazel run --noshow_progress //tools/ci:quality_foundations_guards
       - name: Audit execution/corpus/perf guards (audit live + update live + corpus split + report-not-gate)

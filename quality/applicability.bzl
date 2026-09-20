@@ -1,22 +1,6 @@
 """Quality applicability helpers (M03 freeze).
 
-Pure functions implementing the effective-class formula from
-`docs/quality/quality-sources.md#adapter-applicability`:
-
-```text
-effective classes =
-    target provider classes
-    intersect adapter-supported classes for the capability
-    intersect classes allowed by workspace policy
-```
-
-All inputs and outputs are plain string values so `starlark_test` unit
-mode can pin them. Consuming aspects (WP2) flatten providers into these
-shapes, then union the target's direct sources over the effective classes
-themselves. Unknown selected tool IDs fail here during analysis, which the
-tool-integrations contract accepts as "during configuration or analysis".
-The class-to-policy-family assignment table is not frozen here; WP2
-fixtures declare their own.
+Contract: `docs/quality/quality-sources.md#adapter-applicability`.
 """
 
 load(":policy.bzl", "CAPABILITIES")
@@ -36,15 +20,7 @@ def selected_adapters(selection, adapters):
     """Resolves a policy-ordered tool-ID selection against adapter metadata.
 
     `adapters` maps known tool ID to its support record. Returns the
-    selection in policy order, deduplicated. Fails on an unknown tool ID.
-
-    Args:
-      selection: tool-ID list in workspace policy order.
-      adapters: maps known tool ID to its support record.
-
-    Returns:
-      The selection in policy order, deduplicated.
-    """
+    selection in policy order, deduplicated. Fails on an unknown tool ID."""
     ordered = []
     seen = {}
     for tool_id in selection:
@@ -57,16 +33,7 @@ def selected_adapters(selection, adapters):
     return ordered
 
 def effective_classes(target_classes, adapter_classes, policy_classes):
-    """Returns the sorted three-way class intersection for one tool stage.
-
-    Args:
-      target_classes: provider classes of the target under audit.
-      adapter_classes: classes the adapter supports for the capability.
-      policy_classes: classes allowed by workspace policy.
-
-    Returns:
-      Sorted intersection of the three class lists.
-    """
+    """Returns the sorted three-way class intersection for one tool stage."""
     adapter_set = {c: True for c in adapter_classes}
     policy_set = {c: True for c in policy_classes}
     effective = {}

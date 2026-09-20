@@ -1,4 +1,4 @@
-//! Invocation error vocabulary (issue #236).
+//! Invocation error vocabulary.
 //!
 //! Split from `super` (`args.rs`): owns [`ArgsError`] and the additive
 //! typo-hint renderer. The parser ([`super::parser`]) constructs these;

@@ -1,4 +1,4 @@
-//! Prune planning for `dx clean` (issue #236).
+//! Prune planning for `dx clean`.
 //!
 //! Split from `super` (`lib.rs`): owns [`GenerationView`],
 //! [`PruneInputs`], [`CleanPlan`], and [`plan_prune`] (pure selection of

@@ -1,4 +1,4 @@
-//! Typed adoption failure (issue #221 pilot, split issue #236).
+//! Typed adoption failure (pilot, split).
 //!
 //! Split from `super` (`lib.rs`): owns [`AdoptError`]. Re-exported
 //! through `super` so the public path stays
@@ -9,7 +9,7 @@
 //! gain matchable structure instead of `format!` string plumbing.
 //! Binary edges (`dx` mains) keep rendering via `Display` (`to_string()`).
 
-/// Typed adoption failure (issue #221 pilot).
+/// Typed adoption failure (pilot).
 ///
 /// Every variant renders byte-identical to the historical `String` error
 /// it replaces, so CLI operational diagnostics stay stable while callers

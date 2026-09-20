@@ -1,24 +1,4 @@
 """Conformance subject for the minimal Rust wrappers (M02).
-
-`dx_wrapper_subject` observes one `rust_*` wrapper next to its private
-`<name>_upstream` target and exposes the comparison as `DxSubjectInfo`
-string fields for `starlark_test` analysis mode. It proves three things the
-M02 milestone evidence requires:
-
-- Provider preservation: the wrapper's `CrateInfo` matches the upstream's
-  field by field (`preserved_*`), and both carry `InstrumentedFilesInfo`.
-- Single source owner: the wrapper reports `QualitySourcesInfo` while the
-  private upstream reports none (`upstream_has_quality_sources`).
-- No ambient tool discovery: lint markers come from the pinned-toolchain
-  `rustfmt_test`/`rust_clippy_test` targets over the wrappers, and the
-  resolved `rules_rust` toolchain binaries live under the pinned external
-  repository, never on the host `PATH`.
-
-`dx_wrapper_cc_subject` is the same probe for the Cc-linking shapes
-(`rust_shared_library`, `rust_static_library`), whose upstream
-provides no `CrateInfo`: crate facts are read from the
-`TestCrateInfo`-wrapped crate and the `CcInfo` linking surface is pinned
-by linker-input count (`cc_linker_inputs`, `preserved_cc_inputs`).
 """
 
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")

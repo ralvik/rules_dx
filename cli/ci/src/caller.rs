@@ -1,5 +1,5 @@
 //! Caller-template composition and reviewed pin updates for consumer CI
-//! (issue #236, M27 WP2 slice 9).
+//! (M27 WP2 slice 9).
 //!
 //! Split from `super` (`lib.rs`): owns [`CALLER_OWNED_INPUTS`],
 //! [`WORKFLOW_OWNED`], [`uses_generated_setup_command`], [`PlannedCaller`],

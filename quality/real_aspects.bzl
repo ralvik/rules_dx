@@ -1,45 +1,6 @@
 """Target-scoped real capability aspects over real adapters (M04 WP2, M15 Python, M17 Biome/ESLint/Prettier).
 
-Each aspect visits targets carrying `QualitySourcesInfo` and registers one
-exact-input pipeline action for its capability when the real fixture policy
-selects a nonempty real stage with effective sources. The action runs
-`//quality/runner:quality_runner` with `--real` over the exact
-direct-source subset plus the resolved native configs and emits one
-versioned `QualityResult` protobuf in the stable `dx_results` output group.
-No invocation-wide aggregation exists.
-
-Native configuration: source targets opt in through `aspect_hints`
-carrying `DxNativeConfigInfo`. Without a hint the adapter runs pinned
-upstream defaults, except Vale and ESLint, which have no usable default
-and fail analysis with guidance to supply and bind native policy.
-
-rustfmt crate context (#49): the aspect passes the authoritative crate
-edition via `--tool-edition` (read from `CrateInfo`, or the test crate's
-inner `CrateInfo` exactly as upstream `_get_rustfmt_ready_crate_info`;
-provider-less fixture targets fall back to `RUST_EDITION`, the single
-source of truth from `//rust/rules:edition.bzl`). The runner never guesses
-an edition: a missing value fails the action. Generated files never
-reach the tool (upstream formats `is_source` files only); `no-format`
-skips the stage via the tag check below.
-
-Hermeticity: actions declare exactly the direct sources, the hinted config
-closures, the Markdown link-resolution siblings, and the stage tool
-binaries as inputs. The runner materializes
-exact bytes into a fresh scratch tree, never observes VCS state, and
-launches tools with an empty `PATH` (see `quality_adapter::exec`).
-Python venv launchers (pydoclint, flake8, pylint) additionally resolve
-their runtime
-through the runner's runfiles forest via `RUNFILES_DIR`; the Node
-js_binary wrappers (eslint, prettier) resolve theirs through `$0.runfiles`
-and run from the scratch tree via `JS_BINARY__NO_CD_BINDIR=1`. The forests
-are action-local and never enter findings. Siblings (`markdown_siblings`
-on the visited rule) resolve Markdown link targets only: they are never
-linted and never enter findings or snapshots.
-
-Contract: `docs/quality/tool-integrations.md`,
-`docs/quality/native-configuration.md`,
-`docs/quality/quality-sources.md#adapter-applicability`,
-`docs/quality/quality-result-protocol.md#transport`.
+Contract: `docs/quality/tool-integrations.md`, `docs/quality/native-configuration.md`, `docs/quality/quality-sources.md#adapter-applicability`, `docs/quality/quality-result-protocol.md#transport`.
 """
 
 load("@aspect_rules_py//py:defs.bzl", _PyInfo = "PyInfo")

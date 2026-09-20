@@ -1,24 +1,6 @@
 """Draft-only GitHub Release publisher for `dx deploy` (issue #182).
 
-`github_release` is the second deploy macro: it wraps
-`gh release create --draft --verify-tag`, returning `DxDeployInfo` so the
-release target runs under `bazel run` and `dx deploy` like any other
-deployment. The `gh` CLI is a host tool resolved at run time (deploy
-runtime needs it plus bash + python3 per the host-tool contract in
-issue #318); no registry, no new module dependencies.
-
-Safety (issue #5): the macro is draft-only by construction. `draft`
-must stay `True` (analysis fails otherwise), every invocation passes
-`--verify-tag` so the program never creates or pushes tags itself, and
-the default tag is the `v0.0.0-dryrun` placeholder so an accidental run
-cannot touch a real release. CI proves the program reports its command
-via `GH_RELEASE_DRY_RUN=1` without network access; nothing runs the
-publisher on push/PR. A real draft needs the tag pushed beforehand and
-explicit owner approval, then publishing happens by editing the draft
-on GitHub.
-
-Contract: `docs/deploy/authoring.md`. Deploy targets live next to the
-app they release (for example `//cli/cli:github_draft`).
+Contract: `docs/deploy/authoring.md`.
 """
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
@@ -49,11 +31,7 @@ def tag_schema_error():
     Checks data shape without pinning exact contents: version is v1, the
     charset is non-empty with unique shell-safe characters and never
     admits double-quote, backslash, single-quote, space, or newline so
-    tags embed safely in the deploy launcher.
-
-    Returns:
-      "" when valid, else the failure reason.
-    """
+    tags embed safely in the deploy launcher."""
     if TAG_SCHEMA_VERSION != 1:
         return "github tag: unsupported schema v" + str(TAG_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_TAG_CHARS) != "string" or _VALID_TAG_CHARS == "":
@@ -68,14 +46,7 @@ def tag_schema_error():
     return ""
 
 def github_tag_error(tag):
-    """Validates one release tag value.
-
-    Args:
-      tag: candidate tag string.
-
-    Returns:
-      "" when valid, else the failure reason naming the bad value.
-    """
+    """Validates one release tag value."""
     if type(tag) != "string" or tag == "":
         return ("github_release: invalid tag '" + str(tag) +
                 "': want a non-empty tag (for example 'v0.0.0-dryrun')")
@@ -87,14 +58,7 @@ def github_tag_error(tag):
     return ""
 
 def github_draft_error(draft):
-    """Validates the draft gate.
-
-    Args:
-      draft: candidate draft flag; only True is accepted.
-
-    Returns:
-      "" when valid, else the failure reason.
-    """
+    """Validates the draft gate."""
     if draft != True:
         return ("github_release: draft=False requires explicit owner " +
                 "approval per issue #5; keep the draft gate and publish " +
@@ -115,14 +79,7 @@ def _github_launcher_impl(ctx):
     interpolation. The wrapping `sh_binary` (see `github_release`)
     carries the pinned inputs in `data` plus the runfiles library.
     Extra user args after `--` are rejected: a release takes exactly
-    the artifacts pinned at analysis time.
-
-    Args:
-      ctx: rule context with `artifacts`, `tag`, `deploy_sh`.
-
-    Returns:
-      `DefaultInfo` with the launcher script file.
-    """
+    the artifacts pinned at analysis time."""
     asset_files = []
     asset_rlocs = []
     for target in ctx.attr.artifacts:
@@ -197,15 +154,7 @@ def github_release(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile
     `bazel run :<name>` or `dx deploy :<name>`; the program execs
     `gh release create <tag> <assets...> --draft --verify-tag`. With
     `GH_RELEASE_DRY_RUN=1` it prints the command and publishes nothing
-    (this is what CI exercises).
-
-    Args:
-      name: instance name; also the deploy target name.
-      artifacts: labels of the release asset files.
-      tag: release tag; defaults to the dry-run placeholder.
-      draft: must stay True (issue #5); False fails analysis.
-      profile: default profile (`debug`, `dev`, or `release`).
-    """
+    (this is what CI exercises)."""
     tag_error = github_tag_error(tag)
     if tag_error != "":
         fail(tag_error + " (in " + native.package_name() + ":" + name + ")")

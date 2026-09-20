@@ -1,17 +1,6 @@
 """Deterministic synthetic adapter registry (M03 WP2 fixtures).
 
-Provisional M03-only registry proving target/capability pipeline
-construction without real tools. Tool IDs are synthetic; the real family
-taxonomy and curated defaults belong to the tool baseline (M04+).
-
-Contract: `docs/quality/tool-integrations.md`, `docs/quality/quality-sources.md`
-(adapter applicability), `docs/decisions/0003-action-granularity.md`
-(provisional stage order).
-
-Stage order note (O19): WP2 uses lexical tool-ID order as the stable
-ruleset order for the synthetic set. Real capability orders are selected
-from convergence/interaction/performance fixtures, never from user list
-order; this lexical pick is flagged for review when real adapters land.
+Contract: `docs/quality/tool-integrations.md`, `docs/quality/quality-sources.md`, `docs/decisions/0003-action-granularity.md`.
 """
 
 # Versioned registry schema for the adapter taxonomy (issue #321).
@@ -51,38 +40,9 @@ def adapter_supported_classes(tool_id, capability):
              "': not in the synthetic adapter registry")
     return sorted(SYNTHETIC_ADAPTERS[tool_id].get(capability, []))
 
-# Real initial-adapter capability manifests (M04 WP2-WP3, O20; M12 WP3 adds
-# the rustc typecheck stage; M15 WP2 adds the curated Python adapters
-# ruff/ty/pydoclint; M15 WP3 adds the flake8/pylint lint opt-ins; M17 WP2
-# adds the curated JavaScript/TypeScript/JSON adapters biome/eslint/prettier
-# and the target-coupled tsc typecheck adapter).
-#
-# Tool IDs are the stable built-in identifiers users select in policy
-# families. Every class has exactly one tool per capability except
-# Markdown lint, where the repo-owned `markdown_check` (link/structure)
-# and Vale (prose style) run as two ordered stages over the same files;
-# no virtual convergence across tools runs yet. The pipeline formula
-# orders stages by sorted tool ID (the provisional O19 rule) when several
-# apply to one target. Rust typechecking is the toolchain `rustc` itself,
-# upstream-delegated: findings parse from the `rustc_output` diagnostics
-# file the upstream rule emits, never from a dx-spawned invocation; it is
-# check-only and never applies suggestions.
-# Python lint runs flake8, pydoclint, pylint, then ruff in lexical stage
-# order when selected; ruff is also the default and only active Python
-# formatter and ty the typechecker, per the tool-baseline curated
-# defaults. flake8 and pylint are baseline opt-ins: selectable in policy
-# families but absent from the curated defaults, always pinned upstream
-# defaults with no native-config rule, check-only, never rewriting.
-# JavaScript/TypeScript/JSON (M17 WP2): biome is the default linter and
-# formatter for the javascript, jsx, typescript, and tsx classes and the
-# default linter for json; prettier is the default json formatter and the
-# formatter alternative for javascript/jsx/typescript/tsx (selecting both
-# formatters runs them in stable pipeline order per the tool baseline);
-# eslint is a lint opt-in for javascript/jsx only (no TypeScript parser is
-# installed, so typescript/tsx files match no eslint configuration and stay
-# out of eslint stages). tsc typechecks typescript/tsx but is
-# target-coupled: it never applies from the class alone and requires the
-# authoritative typescript_project context (TsConfigInfo).
+# Real adapters: stable tool IDs users select in policy families.
+# Stages order by sorted tool ID (O19); rustc is upstream-delegated and
+# tsc is target-coupled. See `docs/quality/tool-integrations.md`.
 REAL_ADAPTERS = {
     "biome": {
         "format": ["javascript", "json", "jsx", "typescript", "tsx"],
@@ -105,94 +65,9 @@ REAL_ADAPTERS = {
     "vale": {"lint": ["markdown"]},
 }
 
-# Frozen class-to-family taxonomy (issue #6, closed). This is the
-# single-sourced registry map: every frozen semantic file-class ID has
-# exactly one owning policy family here. Grouping follows the
-# quality-sources rule (group only when classes always share tool
-# selection). Curated defaults stay owned by the tool baseline; families
-# without curated defaults are classification-only with deferred adapters
-# owned by the parity gate. M15 WP2 adds the python/python_stub classes to the python
-# family for the curated Ruff/Ty/pydoclint adapters. M17 WP2 adds the
-# javascript/jsx classes to the javascript family, typescript/tsx to the
-# typescript family, and json to the json family, per the frozen
-# class-to-policy-family assignment (JavaScript owns javascript/jsx,
-# TypeScript owns typescript/tsx, JSON owns the JSON classes). M18 WP2
-# adds the vue class to the vue family: the `.vue` container stays one
-# physical owner (vue_library) with virtual script/template/style
-# regions handed to execution-time integrations; no lint/format/typecheck
-# adapter claims vue yet, so the family selects no stages (classification
-# only, no supported claim). M19 WP2 adds the svelte class to the svelte
-# family on the same terms: the `.svelte` container stays one physical
-# owner (svelte_library) with virtual instance/module-script, markup,
-# and style regions handed to execution-time integrations; no adapter
-# claims svelte yet (classification only, no supported claim). M20 WP2 adds
-# the astro class to the astro family on the same terms: the `.astro`
-# container stays one physical owner (astro_library) with virtual
-# frontmatter/server-script, template, client-script, and style regions
-# handed to execution-time integrations; no adapter claims astro yet
-# (classification only, no supported claim). M21 WP2 adds the mdx class
-# to the mdx family on the same terms: the `.mdx` container stays one
-# physical owner (mdx_library) with virtual ESM/prose/JSX regions
-# handed to execution-time integrations; no adapter claims mdx yet
-# (classification only, no supported claim). M22 WP1 adds the go class
-# to the go family on the same terms: each `.go` source has one
-# physical owner (go_library, go_binary, go_test) with
-# package-level test semantics preserved per the generation contract Go
-# exception; no adapter claims go yet (classification only, no
-# supported claim). M22 WP1 adds the c and cpp classes to the cc family
-# on the same terms: each `.c`/`.h`/`.cc`/`.cpp`/`.cxx` source has one
-# physical owner (cc_library, cc_binary, cc_test) with header
-# ownership per extension; no adapter claims c/cpp yet (classification
-# only, no supported claim). M22 WP3 adds the remaining native/toolchain
-# standalone classes, one family per class, on the same terms: each source
-# family keeps its existing ownership (foundation wrappers where admitted,
-# otherwise the file itself); no lint/format/typecheck adapter claims any
-# of these classes yet (classification only, no supported claim). O30
-# qualifies exact adapters later; Qt stays last in M22. M23 WP2 adds the
-# java class to the java family on the same terms: each `.java` source has
-# one physical owner (java_library, java_binary, java_test); no
-# adapter claims java yet (classification only, no supported claim). O31
-# qualifies exact adapters later. M23 WP2 adds the kotlin class to the
-# kotlin family on the same terms: each `.kt` source has one physical
-# owner (kotlin_library, kotlin_binary, kotlin_test) over the
-# pinned rules_kotlin kt_jvm_* rules, with same-compilation-unit `.java`
-# sources owned alongside and classified java; no adapter claims kotlin
-# yet (classification only, no supported claim). O31 qualifies exact
-# adapters later. M23 WP2 adds the scala class to the scala family on the
-# same terms: each `.scala` source has one physical owner
-# (scala_library, scala_binary, scala_test) over the pinned
-# rules_scala scala_* rules on the managed route (M22 O30 decision), with
-# same-compilation-unit `.java` sources owned alongside and classified
-# java; no adapter claims scala yet (classification only, no supported
-# claim). O31 qualifies exact adapters later. M23 WP2 adds the csharp class
-# to the csharp family on the same terms: each `.cs` source has one physical
-# owner (csharp_library, csharp_binary, csharp_test) over the
-# pinned rules_dotnet csharp_* rules; no adapter claims csharp yet
-# (classification only, no supported claim). O31 qualifies exact adapters
-# later. M23 WP2 adds the fsharp class to the fsharp family on the same
-# terms: each `.fs`/`.fsi` source has one physical owner
-# (fsharp_library, fsharp_binary, fsharp_test) over the pinned
-# rules_dotnet fsharp_* rules with the shared Paket `paket.main` lock
-# (FSharp.Core runtime); no adapter claims fsharp yet (classification only,
-# no supported claim). O31 qualifies exact adapters later. M23 WP2 adds the
-# ruby class to the ruby family and the powershell class to the powershell
-# family on the same terms: both application foundations stay deferred
-# beyond v1 per ADR 0019, so each source keeps its existing ownership (the
-# file itself; no foundation wrapper lands here) while the retained
-# RuboCop/StandardRB and PSScriptAnalyzer tool cohorts stay in force; no
-# adapter claims ruby or powershell yet (classification only, no supported
-# claim). O31 qualifies exact adapters later. Issue #6 closes the
-# registry: the 12 remaining frozen IDs join the taxonomy on the same
-# classification-only terms (no adapter claim yet; O32 qualifies exact
-# adapters). The `css` family owns `css`, `less`, and `scss` because the
-# tool baseline pairs Prettier plus Stylelint across all three, so they
-# always share tool selection; the `json` family owns `json`, `json5`,
-# and `jsonc` because the baseline pairs Prettier across the JSON
-# classes. `graphql`, `html`, `html_template`, `xml`, `gherkin`, `sql`,
-# and `text` each own their own family because their baseline tools
-# differ (Prettier core versus djlint versus per-format Prettier
-# plugins versus keep-sorted), so grouping them would couple
-# independent selections.
+# Frozen taxonomy: one owning family per class (single-sourced here).
+# Grouping and deferred adapters live in `docs/quality/quality-sources.md`
+# and the parity gate; history lives in git log.
 REAL_CLASS_TO_FAMILY = {
     "astro": "astro",
     "c": "cc",
@@ -256,34 +131,15 @@ def real_supported_classes(tool_id, capability):
     return sorted(REAL_ADAPTERS[tool_id].get(capability, []))
 
 def is_known_adapter_tool(tool_id):
-    """Reports whether a tool ID is in the versioned adapter registry.
-
-    Args:
-      tool_id: candidate stable built-in tool identifier.
-
-    Returns:
-      True when the tool is a known `REAL_ADAPTERS` key.
-    """
+    """Reports whether a tool ID is in the versioned adapter registry."""
     return tool_id in REAL_ADAPTERS
 
 def is_classified(class_id):
-    """Reports whether a class is in the versioned class-to-family map.
-
-    Args:
-      class_id: candidate semantic file-class ID.
-
-    Returns:
-      True when the class has exactly one owning family in
-      `REAL_CLASS_TO_FAMILY`.
-    """
+    """Reports whether a class is in the versioned class-to-family map."""
     return class_id in REAL_CLASS_TO_FAMILY
 
 def registry_families():
-    """Returns the sorted unique owning families in the registry.
-
-    Returns:
-      Sorted list of owning family names.
-    """
+    """Returns the sorted unique owning families in the registry."""
     seen = {}
     for class_id in REAL_CLASS_TO_FAMILY:
         seen[REAL_CLASS_TO_FAMILY[class_id]] = True
@@ -308,11 +164,7 @@ def adapter_registry_schema_error():
     language/tool edits the registry data only: version is v1, every
     class and family spelling is canonical, every adapter capability
     names a known capability with canonical classes, and every
-    adapter-backed class is classified.
-
-    Returns:
-      "" when valid, else the failure reason.
-    """
+    adapter-backed class is classified."""
     if ADAPTER_REGISTRY_SCHEMA_VERSION != 1:
         return "adapter registry: unsupported schema v" + str(ADAPTER_REGISTRY_SCHEMA_VERSION) + " (want v1)"
     for class_id in REAL_CLASS_TO_FAMILY:

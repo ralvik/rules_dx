@@ -1,4 +1,4 @@
-//! Adoption admissibility policy (issue #236).
+//! Adoption admissibility policy.
 //!
 //! Split from `super` (`lib.rs`): owns `devcontainer_is_admissible`
 //! and `diagnostics_command_allowed`. Re-exported through `super` so

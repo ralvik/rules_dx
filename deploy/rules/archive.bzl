@@ -1,22 +1,6 @@
 """Credential-free release archives for `dx deploy` (issue #181).
 
-`archive_release` is the first deploy macro: it proves the `DxDeployInfo`
--> `dx deploy` pattern with zero new pins. Only two small Starlark
-rules, hermetic Python build tools, and `dx_deployment` (`:defs.bzl`)
-participate. The archive and checksum are built with the managed Python
-3.12 toolchain only (`//deploy/rules:archiver` deterministic tar.gz,
-`//deploy/rules:hasher` sha256); no host `tar`/`sha256sum`/`shasum`,
-no registry, no credentials, no new module dependencies.
-
-Contract: `docs/deploy/authoring.md`. Deploy targets live next to the
-app they release (for example `//rust/tests/fixtures/hello:release`).
-
-Host-tool contract (issue #318): build actions are hermetic
-(toolchain-provided archiver/hasher, declared `tools`, deterministic
-bytes). Deploy runtime (`archive_deploy.sh`, `archive_verify.sh`)
-runs on the host via `bazel run`/`sh_test` and needs bash + python3 +
-POSIX coreutils only; hashing, realpath, and tar listing go through
-python3, never host `sha256sum`/`shasum`/`realpath`/`tar` probes.
+Contract: `docs/deploy/authoring.md`.
 """
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
@@ -32,14 +16,7 @@ def _archive_stage_impl(ctx):
     more than one file". The stage resolves `files_to_run.executable`
     once and symlinks it to `<stage>/<basename>`: the basename stays the
     original executable name (the tar member), while the parent directory
-    keeps each `archive_release` instance distinct.
-
-    Args:
-      ctx: rule context with `app`.
-
-    Returns:
-      `DefaultInfo` with the single staged file.
-    """
+    keeps each `archive_release` instance distinct."""
     exe = ctx.attr.app[DefaultInfo].files_to_run.executable
     if exe == None:
         fail("archive_release " + str(ctx.label) + ": app " +
@@ -71,14 +48,7 @@ def _archive_launcher_impl(ctx):
     carries the pinned inputs in `data` plus the runfiles library, so the
     launcher works under `bazel run`, `dx deploy` (which symlinks the
     `sh_binary` entrypoint and merges its runfiles), and direct
-    `bazel-bin` execution.
-
-    Args:
-      ctx: rule context with `app`, `archive`, `checksum`, `deploy_sh`.
-
-    Returns:
-      `DefaultInfo` with the launcher script file.
-    """
+    `bazel-bin` execution."""
     app_files = ctx.attr.app[DefaultInfo].files.to_list()
     if len(app_files) != 1:
         fail("archive_release " + str(ctx.label) + ": stage must provide exactly one file")
@@ -132,15 +102,7 @@ _archive_launcher = rule(
 )
 
 def archive_filenames(name):
-    """Returns the deterministic (tarball, checksum) output names.
-
-    Args:
-      name: the `archive_release` instance name.
-
-    Returns:
-      A `(tarball, checksum)` string tuple, for example
-      `("release.tar.gz", "release.tar.gz.sha256")`.
-    """
+    """Returns the deterministic (tarball, checksum) output names."""
     return (name + ".tar.gz", name + ".tar.gz.sha256")
 
 def archive_release(name, app, profile = "release"):
@@ -157,13 +119,7 @@ def archive_release(name, app, profile = "release"):
     `DxDeployInfo` with `app` and `profile`). Run with
     `bazel run :<name>` or `dx deploy :<name>`; pass an output directory
     after `--` to choose where the artifacts land (default:
-    `$BUILD_WORKSPACE_DIRECTORY`, else the cwd).
-
-    Args:
-      name: instance name; also the deploy target name.
-      app: label of the executable to release.
-      profile: default profile (`debug`, `dev`, or `release`).
-    """
+    `$BUILD_WORKSPACE_DIRECTORY`, else the cwd)."""
     (tarball, checksum) = archive_filenames(name)
     archive_target = name + "_archive"
     checksum_target = name + "_checksum"

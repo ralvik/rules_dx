@@ -1,8 +1,4 @@
 """Unit tests for the release matrix (issue #311).
-
-Pins the frozen five-cell shape: seed Linux x86_64 qualified, the
-other four unqualified with owner-approval qualification. The dry-run
-workflow mirrors this shape instead of duplicating it.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

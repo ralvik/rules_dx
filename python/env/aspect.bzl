@@ -1,20 +1,4 @@
 """Wheel-closure aspect for focused Python environment plans (M14 WP3).
-
-Upstream exec targets (`py_binary` / `py_pytest_test`) surface the sibling
-venv's imports and sources via `PyInfo` but carry no `PyWheelsInfo` — the
-sibling venv is a terminal artifact that consumes wheel records at
-assembly without re-emitting them. The records themselves live on the
-`py_library`-shaped dep closure (`PyWheelsInfo.wheels`, aggregated
-postorder).
-
-`dx_python_env_wheels_aspect` walks the existing edges from a `python_*`
-wrapper — `upstream` into the private upstream target, `venv` into the
-sibling venv lib, `deps` into the library-shaped closure — and merges
-each node's `PyWheelsInfo.wheels` with upstream's postorder merge. It
-never scans the checkout, never re-resolves uv metadata, and adds no
-dependency edges: every traversed edge already exists in the analyzed
-graph, so no toolchain transition or visibility change is involved.
-Focused-target only.
 """
 
 load("@aspect_rules_py//py:defs.bzl", _PyWheelsInfo = "PyWheelsInfo")

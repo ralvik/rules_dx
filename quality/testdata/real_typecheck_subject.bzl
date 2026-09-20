@@ -1,14 +1,4 @@
 """Analysis subject observing the real typecheck dx_results (M12 WP3).
-
-`real_typecheck_subject` depends on one real fixture target with only the
-real typecheck aspect applied and republishes the merged `dx_results` file
-set as `DxSubjectInfo` fields. `starlark_test` analysis mode pins the
-rendering, proving exact typecheck presence/absence: rust fixtures gain
-one `-real-typecheck.pb` action, other classes and `no-typecheck` tags
-gain none. Findings normalization and failure status rest on the
-`quality_runner`/`quality_adapter` unit tests plus executed `dx_results`
-(see the M12 completion report); these analysis pins prove the
-capability-level shape.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")

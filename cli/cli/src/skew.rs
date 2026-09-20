@@ -1,4 +1,4 @@
-//! Startup version-skew gate for the `dx` CLI (issue #214).
+//! Startup version-skew gate for the `dx` CLI.
 //!
 //! Skew detection used to be opt-in only (`dx version --check`): a drifted
 //! tree (checked-in `.dx/version` pin disagreeing with the module version)

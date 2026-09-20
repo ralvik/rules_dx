@@ -1,11 +1,6 @@
 """Authoritative Rust toolchain bindings for quality adapters (M04 WP1, M12 WP3).
 
-rustfmt, Clippy, and rustc typechecking always follow the selected Rust
-toolchain: no independent quality-tool copy exists. rustfmt resolves from
-the registered `rustfmt_toolchain` for the selected version; Clippy and
-rustc resolve from the main Rust toolchain's `clippy_driver` and `rustc`.
-Changing the toolchain version changes all action inputs and keys with no
-adapter edit.
+Contract: `docs/quality/tool-integrations.md`.
 """
 
 RUST_TOOLCHAIN_TYPE = "@rules_rust//rust:toolchain_type"

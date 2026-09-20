@@ -1,4 +1,4 @@
-//! Managed side preparation and commit-error mapping (issue #236).
+//! Managed side preparation and commit-error mapping.
 //!
 //! Split from [`super::managed`] (`managed.rs`): owns
 //! [`prepare_managed_sides`] plus [`map_commit_error`]. Re-exported

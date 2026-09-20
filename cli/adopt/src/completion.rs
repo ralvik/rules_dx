@@ -1,4 +1,4 @@
-//! Single-source completion vocabulary for `dx completion` (issue #236).
+//! Single-source completion vocabulary for `dx completion`.
 //!
 //! Split from `super` (`lib.rs`): owns `ALL_COMMANDS`,
 //! `SUPPORTED_SHELLS`, and `completion_source_is_single`.
@@ -6,9 +6,9 @@
 //! `dx_adopt::{ALL_COMMANDS, SUPPORTED_SHELLS, completion_source_is_single}`.
 //!
 //! Production `dx completion` renders from the `Cli` grammar via
-//! `clap_complete` (issue #202, `cli/cli/src/args.rs::render_completion`),
+//! `clap_complete` (`cli/cli/src/args.rs::render_completion`),
 //! so the grammar feeding parsing and `--help` is the single completion
-//! source (issue #235). The `ALL_COMMANDS`/`SUPPORTED_SHELLS` tables here
+//! source. The `ALL_COMMANDS`/`SUPPORTED_SHELLS` tables here
 //! remain as the O61 frozen vocabulary reference only; they render nothing.
 
 /// Single command-definition source (O61 freeze).

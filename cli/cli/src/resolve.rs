@@ -15,8 +15,7 @@
 //!
 //! Run/deploy resolution (`resolve_run`, `resolve_deploy`,
 //! `check_deployable`) lives in the [`run_deploy`](self::run_deploy)
-//! domain submodule (issue #236 resolve/plan/run/deploy unscramble,
-//! handoff from issue #237); the public path stays
+//! domain submodule; the public path stays
 //! `crate::resolve::{...}` via the re-exports below. See the matching
 //! note in `plan.rs` for the planning carve.
 

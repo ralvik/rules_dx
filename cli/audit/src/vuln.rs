@@ -1,4 +1,4 @@
-//! Dependency-vulnerability matching for `dx audit` (issue #18).
+//! Dependency-vulnerability matching for `dx audit`.
 //!
 //! Pure local matching over injected lockfile packages and OSV-format
 //! advisory records, per the audit contract

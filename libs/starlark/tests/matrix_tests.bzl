@@ -1,10 +1,4 @@
 """Behavioral-matrix mapping validation (M01 WP3).
-
-Every inventory item in `behavioral_matrix.md` must be present there (via
-its `matrix-item:` anchor) and must name a proof source file that mentions
-the item. A removed anchor or a renamed proof file fails this test, so
-missing mappings cannot pass silently. Assertion quality beyond presence is
-review-based; see the matrix file.
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")

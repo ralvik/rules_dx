@@ -1,9 +1,4 @@
 """Analysis subject exposing an aggregate workspace policy (M03 WP1).
-
-Renders every family section as `family.<id>.<capability>` fields with
-comma-joined tool IDs in policy order, so `starlark_test` analysis mode
-pins the frozen aggregate shape. Empty selections render as empty fields,
-which is the explicit-disable encoding.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")

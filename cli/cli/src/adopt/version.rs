@@ -1,4 +1,4 @@
-//! Adoption version execution (`version`, issue #236).
+//! Adoption version execution (`version`).
 //!
 //! Split from `super` (`adopt.rs`): owns [`execute_version`] — pin,
 //! rollback, check, and report. Re-exported through `super` so the

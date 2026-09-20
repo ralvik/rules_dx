@@ -416,6 +416,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Source comment hygiene (issue #428); see tools/ci/source_hygiene.sh.
+sh_binary(
+    name = "source_hygiene",
+    srcs = ["source_hygiene.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Execution/corpus/perf guards (issues #18, #19, #22, #15, #86); see tools/ci/execution_corpus_perf_guards.sh.
 sh_binary(
     name = "execution_corpus_perf_guards",

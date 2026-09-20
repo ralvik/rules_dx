@@ -1,4 +1,4 @@
-//! Check-selection planning for consumer CI (issue #236, M27 WP1 slice 1).
+//! Check-selection planning for consumer CI (M27 WP1 slice 1).
 //!
 //! Split from `super` (`lib.rs`): owns the frozen check table
 //! ([`LINT_CHECK`] through [`COVERAGE_CHECK`], [`CHECK_COUNT`],

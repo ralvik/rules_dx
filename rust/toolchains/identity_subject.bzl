@@ -1,8 +1,4 @@
 """Analysis subject proving rustfmt/Clippy/rustc bind to the toolchain (M04 WP1, M12 WP3).
-
-Renders the owning repository and exec path of each bound executable, so the
-identity test pins that all three resolve inside the authoritative toolchain
-repositories selected for Rust 1.98.0 rather than a `rules_dx`-owned copy.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")

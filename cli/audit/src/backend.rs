@@ -1,4 +1,4 @@
-//! Auditor backend planning for `dx audit` (issue #18).
+//! Auditor backend planning for `dx audit`.
 //!
 //! Pure argv planning over audit families and dependency sets, mirroring
 //! the resolver-owned backend pattern in `dx_update::backend`: every

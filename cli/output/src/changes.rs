@@ -1,4 +1,4 @@
-//! Change and mutation NDJSON events for the `dx` CLI (issue #236).
+//! Change and mutation NDJSON events for the `dx` CLI.
 //!
 //! Split from `super` (`lib.rs`): owns `ChangeKind`, `ChangeEvent`,
 //! `change_event`, `MutationOutcome`, and `mutation_event`. Re-exported

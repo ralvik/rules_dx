@@ -1,4 +1,4 @@
-//! Diagnostic and notice NDJSON events for the `dx` CLI (issue #236).
+//! Diagnostic and notice NDJSON events for the `dx` CLI.
 //!
 //! Split from `super` (`lib.rs`): owns `Snapshot`, `Resolution`,
 //! `DiagnosticEvent`, `diagnostic_event`, `sort_diagnostics`, `NoticeEvent`,

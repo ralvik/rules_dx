@@ -1,4 +1,4 @@
-//! Major-release migration planning for `dx migrate` (issue #236).
+//! Major-release migration planning for `dx migrate`.
 //!
 //! Split from `super` (`lib.rs`): owns `migrate_is_major_bump`,
 //! `migrate_manifest_name`, `MigratePlan`, and `plan_migrate`.
@@ -8,7 +8,7 @@
 
 use super::AdoptError;
 
-/// Whether a `dx migrate` version pair is a major-release bump (issue #4).
+/// Whether a `dx migrate` version pair is a major-release bump.
 ///
 /// The migrator is major-release-only breaking-change rewrites over the
 /// generation edit-manifest pattern: both versions must parse as
@@ -30,7 +30,7 @@ pub fn migrate_is_major_bump(from: &str, to: &str) -> bool {
     to_v.major > from_v.major
 }
 
-/// Manifest selection for `dx migrate` (issue #4).
+/// Manifest selection for `dx migrate`.
 ///
 /// One manifest per major-release hop, named after the major versions
 /// so selection is mechanical: `migrate-v<from_major>-to-v<to_major>.json`.
@@ -42,7 +42,7 @@ pub fn migrate_manifest_name(from_major: u64, to_major: u64) -> String {
     format!("migrate-v{from_major}-to-v{to_major}.json")
 }
 
-/// One planned migration (issue #4): the validated version pair plus
+/// One planned migration: the validated version pair plus
 /// the selected manifest name.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MigratePlan {
@@ -54,7 +54,7 @@ pub struct MigratePlan {
     pub manifest: String,
 }
 
-/// Plan one `dx migrate` invocation (issue #4).
+/// Plan one `dx migrate` invocation.
 ///
 /// Syntax (designed during implementation, no up-front spec required):
 /// `dx migrate --from <version> --to <version>`. Scope selection

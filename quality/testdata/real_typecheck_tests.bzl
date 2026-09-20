@@ -1,10 +1,4 @@
 """Real typecheck aspect evidence tests (M12 WP3).
-
-Pins merged real typecheck dx_results presence per fixture: rust
-fixtures gain exactly one typecheck action, the `no-typecheck` tag
-opts out, and non-rust fixtures gain none. Per-stage exact source
-inputs are proven via aquery action inputs; these analysis pins prove
-the capability-level shape resting on the real pipeline unit tests.
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")

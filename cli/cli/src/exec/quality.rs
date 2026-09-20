@@ -2,7 +2,7 @@
 //!
 //! Mutation (verified-source collection plus check/incomplete/apply
 //! handling) and status projection live in [`super::quality_apply`]
-//! (issue #236); diff-patch rendering lives in
+//!; diff-patch rendering lives in
 //! [`super::quality_patch`]; finding/change/mutation emission lives in
 //! [`super::quality_emit`]; standard-report writing lives in
 //! [`super::quality_reports`]; this module keeps the dispatch and
@@ -161,7 +161,7 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
     );
 
     // Projection: text lines, unified patch, or NDJSON events.
-    // Diff-patch rendering lives in `quality_patch` (issue #236).
+    // Diff-patch rendering lives in `quality_patch`.
     let mut patch = String::new();
     if invocation.output == OutputMode::Diff {
         match render_diff_patch(&sources, &collected.changes) {
@@ -173,7 +173,7 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
     }
 
     // Human and machine emission of findings, changes, and mutations
-    // lives in `quality_emit` (issue #236).
+    // lives in `quality_emit`.
     let emit_counts = match emit_findings(
         EmitInputs {
             invocation,
@@ -194,7 +194,7 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
     let not_applied_count = emit_counts.not_applied_count;
     let change_count = collected.changes.len() as u64;
 
-    // Standard reports live in `quality_reports` (issue #236): SARIF
+    // Standard reports live in `quality_reports`: SARIF
     // over current findings with snapshot line regions, written
     // atomically after validation.
     let reports_ok = write_standard_reports(
@@ -296,7 +296,7 @@ mod tests {
 
     #[test]
     fn check_mode_fails_on_replacement_without_diagnostics() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // check mode to fail on any proposed change independently of
         // diagnostic severity, and direct Bazel evaluators to enforce the
         // same replacement-presence rule. Mirror the evaluator formatter
@@ -346,7 +346,7 @@ mod tests {
 
     #[test]
     fn default_mode_applies_without_rerunning_bazel() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // no Bazel rerun after lint/typecheck/format application; terminal
         // pipeline findings plus per-file apply failures determine the
         // current invocation status. Default apply with one fixable finding
@@ -399,7 +399,7 @@ mod tests {
 
     #[test]
     fn typecheck_and_format_apply_without_rerunning_bazel() {
-        // Apply-safety battery (issue #84): `quality-testing.md` no-rerun
+        // Apply-safety battery: `quality-testing.md` no-rerun
         // clause covers lint, typecheck, and format; the prior test proves
         // lint only. Typecheck and format share `execute_quality` dispatch
         // but deserve explicit parity: each default apply must launch Bazel
@@ -614,7 +614,7 @@ mod tests {
 
     #[test]
     fn undecodable_sibling_blocks_valid_mutation() {
-        // Apply-safety battery (issue #84): `quality-testing.md`
+        // Apply-safety battery: `quality-testing.md`
         // requires rejecting incomplete collection before any path
         // mutation begins. A valid stable candidate alongside an
         // undecodable artifact in the same target marks the collection
@@ -894,7 +894,7 @@ mod tests {
 
     #[test]
     fn mixed_applied_and_not_applied_fail_together() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // mixed per-file results to emit applied and not_applied together
         // and fail when any path is rejected.
         let mut harness = Harness::new("mixed-apply");
@@ -962,7 +962,7 @@ mod tests {
 
     #[test]
     fn json_mixed_applied_and_not_applied_fail_together() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // mixed per-file results to emit applied and not_applied together
         // and fail when any path is rejected, with one deterministic exact
         // `change` event per valid candidate path in JSON default mode.
@@ -1104,7 +1104,7 @@ mod tests {
 
     #[test]
     fn json_changes_emit_in_sorted_path_order_despite_reversed_arrival() {
-        // Determinism + apply-safety battery (issue #84):
+        // Determinism + apply-safety battery:
         // `quality-testing.md` requires deterministic path-order commits
         // (interruption leaves only complete earlier paths in path order)
         // and randomized report/replacement ordering to yield identical
@@ -1230,7 +1230,7 @@ mod tests {
 
     #[test]
     fn multibyte_split_edit_is_invalid() {
-        // Apply-safety battery (issue #84): `quality-testing.md`
+        // Apply-safety battery: `quality-testing.md`
         // requires rejecting edits that split multibyte boundaries and
         // invalid UTF-8 source bytes. The 1..2 edit splits the two-byte
         // é (bytes 1..3 of "héllo"), so proto validation passes (ordered
@@ -1268,7 +1268,7 @@ mod tests {
 
     #[test]
     fn non_utf8_source_is_invalid_in_default_mode() {
-        // Apply-safety battery (issue #84): `quality-testing.md`
+        // Apply-safety battery: `quality-testing.md`
         // requires rejecting invalid UTF-8 source bytes. The 0..1 edit
         // over b"\xff\xfe" passes proto validation (ordered UTF-8
         // replacement, correct digest) while `apply_to_bytes` fails the
@@ -1451,7 +1451,7 @@ mod tests {
 
     #[test]
     fn diff_stale_source_fails_render() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // source digests validated before writing and stale outputs
         // rejected. In diff mode the patch renders from verified sources,
         // so a stale source fails closed with diff_failed instead of
@@ -1476,7 +1476,7 @@ mod tests {
 
     #[test]
     fn diff_stale_source_fails_render_in_default_mode() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // source digests validated before writing and stale outputs
         // rejected, plus a rejected default-mode mutation to remain in the
         // intended patch while stderr/exit report rejection. A stale source
@@ -1797,7 +1797,7 @@ mod tests {
 
     #[test]
     fn json_check_and_default_emit_identical_change_with_byte_equality() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // JSON check and default modes to emit one deterministic exact
         // `change` event per valid candidate path, with check performing
         // no writes and default emitting the change before its terminal
@@ -1881,7 +1881,7 @@ mod tests {
 
     #[test]
     fn diff_check_and_default_emit_identical_patch_with_byte_equality() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // complete deterministic diff-mode patches from the same edit set
         // in check and default modes without rerunning tools or truncating
         // replacement content. Both modes must emit byte-identical patches;
@@ -1950,7 +1950,7 @@ mod tests {
 
     #[test]
     fn default_mode_applies_in_sorted_path_order_despite_reversed_arrival() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // each selected file to apply atomically and independently after
         // complete envelope validation, with interruption leaving no
         // partially written file and only complete earlier path commits
@@ -2101,7 +2101,7 @@ mod tests {
 
     #[test]
     fn default_apply_depends_on_bytes_not_git_status() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // mutation fixtures with tracked, modified, staged, and untracked
         // inputs to depend on current bytes and source digests rather than
         // Git status. The CLI reads verified source bytes only; git
@@ -2185,7 +2185,7 @@ mod tests {
 
     #[test]
     fn invalid_edits_in_one_file_do_not_block_valid_sibling() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // each selected file to apply atomically and independently after
         // complete envelope validation; one rejected path must not block
         // valid unrelated paths. The mixed stale_source sibling is already

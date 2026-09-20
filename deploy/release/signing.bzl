@@ -1,21 +1,5 @@
 """Signing + attestation selection for releases (issue #311).
 
-Selected stack (signing-first per issue #26): Sigstore keyless
-(`cosign sign-blob --bundle`, Fulcio OIDC + Rekor public-good on the
-TUF trust root `https://tuf-repo-cdn.sigstore.dev`) plus GitHub Artifact
-Attestations (`gh attestation create` / `gh attestation verify`). The
-`cosign` and `gh` CLIs are host tools resolved at run time (deploy
-runtime needs them plus bash + python3 per the host-tool contract in
-issue #318); no registry, no new module dependencies.
-
-Safety (issue #5): signing never runs on CI push/PR. The deploy program
-`sign_deploy.sh` prints the would-run commands with
-`RELEASE_SIGN_DRY_RUN=1` (what CI exercises, publishes nothing) and
-requires explicit owner approval plus OIDC identity for real signing
-(see `docs/deploy/release-runbook.md`). Verification of the produced
-bundles stays in `//deploy/install:dx_verify` (bundle-required, no
-checksum-only fallback, fail-before-install).
-
 Contract: `docs/deploy/release-runbook.md`.
 """
 
@@ -29,15 +13,7 @@ SIGNING_TRUST_ROOT = "https://tuf-repo-cdn.sigstore.dev"
 SIGNING_ISSUER = "https://token.actions.githubusercontent.com"
 
 def signing_identity_error(identity, issuer):
-    """Validates the expected certificate identity + issuer.
-
-    Args:
-      identity: candidate certificate identity (workflow identity).
-      issuer: candidate OIDC issuer.
-
-    Returns:
-      "" when valid, else the failure reason.
-    """
+    """Validates the expected certificate identity + issuer."""
     if type(identity) != "string" or identity == "":
         return ("signing: invalid identity '" + str(identity) +
                 "': want the owner-approved release workflow identity")
@@ -47,16 +23,7 @@ def signing_identity_error(identity, issuer):
     return ""
 
 def signing_bundle_names(name):
-    """Returns the deterministic bundle output names.
-
-    Args:
-      name: the signing instance name.
-
-    Returns:
-      A `(bundle, attestation-note)` tuple; bundles land next to the
-      artifact as `<artifact>.bundle` at sign time (human-run), so this
-      returns the launcher name only.
-    """
+    """Returns the deterministic bundle output names."""
     return (name + ".bundle", name + ".attestation")
 
 def _signing_launcher_impl(ctx):
@@ -125,15 +92,7 @@ def signed_release(name, artifacts, identity, issuer = "https://token.actions.gi
     Run with `RELEASE_SIGN_DRY_RUN=1 bazel run :<name>` to print the
     would-run `cosign sign-blob` + `gh attestation` commands (what CI
     exercises, publishes nothing). Real signing needs the tag pushed
-    beforehand, explicit owner approval, and OIDC identity per the runbook.
-
-    Args:
-      name: instance name; also the deploy target name.
-      artifacts: labels of the files to sign.
-      identity: expected certificate identity (release workflow id).
-      issuer: OIDC issuer (default Sigstore keyless via GitHub OIDC).
-      profile: default profile.
-    """
+    beforehand, explicit owner approval, and OIDC identity per the runbook."""
     err = signing_identity_error(identity, issuer)
     if err != "":
         fail(err + " (in " + native.package_name() + ":" + name + ")")

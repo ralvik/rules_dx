@@ -67,7 +67,7 @@ fn print_diagnostics(prefix: &str, diagnostics: &[proto::Diagnostic]) {
     }
 }
 
-/// `argv` tokenizer (issue #396: reuse pinned `clap`). One positional
+/// `argv` tokenizer (: reuse pinned `clap`). One positional
 /// input; extra positionals are a usage error (exit 2), unlike the legacy
 /// `args().nth(1)` which silently ignored them.
 #[derive(Parser, Debug)]
@@ -82,7 +82,7 @@ struct Cli {
 }
 
 fn main() {
-    // Structured diagnostics (issue #232): init is idempotent and emits
+    // Structured diagnostics: init is idempotent and emits
     // nothing by default; `RUST_LOG` overrides the warn filter. Failures
     // report via `tracing::error!` with the legacy message text.
     dx_output::init_diagnostics(false);

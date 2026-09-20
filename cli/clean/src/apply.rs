@@ -1,4 +1,4 @@
-//! Locked apply for `dx clean` (issue #236).
+//! Locked apply for `dx clean`.
 //!
 //! Split from `super` (`lib.rs`): owns [`CLEAN_LOCK_TIMEOUT`],
 //! [`CleanOutcome`], [`apply_plan`], and [`apply_plan_with_timeout`]

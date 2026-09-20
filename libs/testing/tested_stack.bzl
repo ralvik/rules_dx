@@ -1,10 +1,6 @@
 """Tested-stack manifest generator (ADR 0014).
 
-Emits a JSON manifest of the pinned tested stack. Version attribute
-defaults mirror `.bazelversion` and `MODULE.bazel`; the `stack_contract`
-test cross-checks every value against those ground-truth files, and
-`//tools/ci:pin_consistency_test` covers the Bazel pin, so drift
-between the manifest and the real pins fails the test.
+Contract: `docs/decisions/0014-tested-platform-release-stack.md`.
 """
 
 def _tested_stack_impl(ctx):

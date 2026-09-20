@@ -7,7 +7,7 @@
 //! pipeline. Exit codes follow the CLI contract: `0` success, `1`
 //! operational failure, `2` pre-execution usage failure.
 //!
-//! Domain split (issue #236): each execution domain lives in its own
+//! Domain split: each execution domain lives in its own
 //! module — [`inspect`] (`owners`/`deps`/`why`), [`status`], [`version`],
 //! [`watch`], [`completion`], [`init`], [`hooks`]; this facade keeps
 //! dispatch plus shared helpers. The public path stays
@@ -47,7 +47,7 @@ fn operational(out: &mut dyn Write, err: &mut dyn Write, message: &str) -> i32 {
     operational_code()
 }
 
-/// True when stdout prose summaries should be suppressed (issue #200).
+/// True when stdout prose summaries should be suppressed.
 /// `--quiet` (and its `Text { quiet: true }` encoding) suppresses `dx`
 /// lifecycle summaries but never result documents: `status` / `version`
 /// (except `version` dry-run plans, which are summaries) / inspect labels

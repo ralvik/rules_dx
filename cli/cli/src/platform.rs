@@ -10,7 +10,7 @@
 
 /// Hosts with platform evidence: `(std::env::consts::OS, ARCH)` pairs.
 ///
-/// The Linux x86_64 seed host plus Linux arm64 glibc native (issue #410)
+/// The Linux x86_64 seed host plus Linux arm64 glibc native 
 /// plus macOS arm64 native (issue #412) plus macOS x86_64 best-effort
 /// native (issue #413) plus Windows x86_64 MSVC-compatible native (issue
 /// #414) are delivered. Provisional: extend this list as remaining ADR

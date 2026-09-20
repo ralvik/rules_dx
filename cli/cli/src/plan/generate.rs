@@ -1,4 +1,4 @@
-//! `dx generate` Bazel planning (issue #236 resolve/plan/run/deploy unscramble).
+//! `dx generate` Bazel planning (resolve/plan/run/deploy unscramble).
 //!
 //! Split from `super` (`plan.rs`): owns the canonical Gazelle runner
 //! targets, the private-protocol environment names, [`GenerateScopeElement`]

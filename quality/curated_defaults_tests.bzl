@@ -1,14 +1,4 @@
 """Unit tests for the versioned curated defaults (issue #89 item 2, issue #321).
-
-Pins the `quality/curated_defaults.bzl` manifest shape that the
-`//tools/ci:release_policy` shell harness diffs against the default
-lifecycle policy: every curated family keeps its exact default tool
-set, and the FORMAT_FROZEN formatter set never drifts without a major
-release. Additions to curated lint/audit membership arrive as registry
-data with compat-qual + notes + prior-set override review, never via a
-parallel allowlist: the frozen family pin is a subset check queried via
-`curated_families`, and `curated_schema_error` validates the versioned
-schema without pinning exact contents.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

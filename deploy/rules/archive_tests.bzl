@@ -1,11 +1,4 @@
 """Unit and analysis tests for the archive releaser (issue #181).
-
-Unit checks run while this file loads, pinning the deterministic output
-naming. Analysis tests pin the frozen observation rendering for the
-fixture releases: the default release profile and an explicit debug
-profile, both carrying the distinct app label. Tarball contents and
-checksum validity are proven by the `archive_verify` sh_tests in BUILD,
-not here.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

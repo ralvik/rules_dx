@@ -1,4 +1,4 @@
-//! JUnit normalized case types (issue #236 split).
+//! JUnit normalized case types (split).
 //!
 //! Split from [`super::junit`]: owns [`JunitCase`] and [`JunitMessage`],
 //! the normalized Bazel-reported test-case shape shared by the parsing

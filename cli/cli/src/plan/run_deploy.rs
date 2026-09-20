@@ -1,5 +1,4 @@
-//! `dx run` / `dx deploy` Bazel planning (issue #236 resolve/plan/run/deploy
-//! unscramble, handoff from #237).
+//! `dx run` / `dx deploy` Bazel planning.
 //!
 //! Split from `super` (`plan.rs`): owns [`plan_run_targets`], [`plan_run`],
 //! [`plan_deploy_build`], and [`plan_deploy_run`]. Re-exported through

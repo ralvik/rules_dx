@@ -11,17 +11,6 @@
 //! watch iterations, thin `query`/`cquery` forwarding, and completion
 //! scripts generated from the single command table. Helpers operate on
 //! injected paths only and touch no network.
-//!
-//! Domain split (issue #236): single-source completion vocabulary lives in
-//! the `completion` module, major-release migration planning lives in
-//! the `migrate` module, the single-version pin lives in the `version`
-//! module, thin inspect forwarding lives in the `inspect` module, the
-//! local watch loop lives in the `watch` module, absent-only `dx init`
-//! scaffolding lives in the `scaffold` module, the hermetic hook
-//! runner lives in the `hooks` module, the typed failure vocabulary
-//! lives in the `error` module, and the admissibility policy lives in
-//! the `policy` module. This facade keeps
-//! the re-exports; the public path stays stable via the re-exports below.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
@@ -65,52 +54,3 @@ pub use watch::{
     coalesce_watch_paths, plan_watch, watch_for_change, watch_iteration_accepts,
     WATCHABLE_COMMANDS, WATCH_DEBOUNCE_MS,
 };
-
-// Hook per-check budget seconds (O49 freeze: blocking timeout) lives in
-// the `hooks` module (issue #236); the re-exports above keep
-// `HOOK_BUDGET_SECS` on the `dx_adopt` facade.
-
-// Typed adoption failure lives in the `error` module (issue #236);
-// the re-export above keeps `AdoptError` on the `dx_adopt` facade.
-
-// Admissibility policy lives in the `policy` module (issue #236);
-// the re-exports above keep `devcontainer_is_admissible` and
-// `diagnostics_command_allowed` on the `dx_adopt` facade.
-
-// Commands watchable under ADR 0017/0018 live in the `watch` module
-// (issue #236); the re-exports above keep `WATCHABLE_COMMANDS` and
-// `WATCH_DEBOUNCE_MS` on the `dx_adopt` facade.
-
-// Absent-only `dx init` scaffolding lives in the `scaffold` module
-// (issue #236); the re-exports above keep `absent_only_write_allowed`,
-// `init_must_refuse`, `ScaffoldFile`, `DEVCONTAINER_JSON`,
-// `RENOVATE_JSON`, `plan_init_files`, and `apply_init` on the
-// `dx_adopt` facade.
-
-// Hermetic hook runner (`hook_git_is_hermetic`,
-// `hook_shim_overwrite_allowed`, `hook_status_shows_merged`) lives in the
-// `hooks` module (issue #236); the re-exports above keep those paths on
-// the `dx_adopt` facade.
-
-// ---------------------------------------------------------------------------
-// Delivered I/O (M30b WPs 2-4, 6-7 + O61).
-// ---------------------------------------------------------------------------
-
-// Absent-only `dx init` scaffolding (`ScaffoldFile`, `DEVCONTAINER_JSON`,
-// `RENOVATE_JSON`, `plan_init_files`, `apply_init`) lives in the
-// `scaffold` module (issue #236); the re-exports above keep those paths
-// on the `dx_adopt` facade.
-
-// Hermetic hook I/O (`HOOK_MANAGED_MARKER`, `render_hook_shim`,
-// `install_hooks`, `uninstall_hooks`, `render_hooks_status`) lives in the
-// `hooks` module (issue #236); the re-exports above keep those paths on
-// the `dx_adopt` facade.
-
-// The consolidated `dx status` surface lives in the `status` module
-// (issue #236); the re-exports above keep `StatusCheck`,
-// `render_status_text`, `render_status_json`, and
-// `default_status_checks` on the `dx_adopt` facade.
-
-// Completion vocabulary lives in the `completion` module (issue #236):
-// production rendering uses the `Cli` grammar, the tables there remain
-// the O61 frozen vocabulary reference only.

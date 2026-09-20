@@ -1,4 +1,4 @@
-//! Typo-suggestion helpers for the `dx` CLI (issue #236).
+//! Typo-suggestion helpers for the `dx` CLI.
 //!
 //! Split from `super` (`args.rs`): owns [`best_match`],
 //! [`suggest_command`], [`suggest_option`], [`clap_suggestion`], and

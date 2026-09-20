@@ -1,4 +1,4 @@
-//! Within-constraint and Git update semantics (issue #19).
+//! Within-constraint and Git update semantics.
 //!
 //! Pure policy pins for the accepted update semantics in the update
 //! contract (`docs/cli/commands/audit-update-bazel.md`): selected

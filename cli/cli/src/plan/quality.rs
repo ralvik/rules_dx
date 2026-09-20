@@ -1,4 +1,4 @@
-//! Quality Bazel planning (issue #236).
+//! Quality Bazel planning.
 //!
 //! Split from `super` (`plan.rs`): owns the quality required/protected
 //! option helpers, [`plan_build`], and the shared scope-label helper
@@ -337,7 +337,7 @@ mod tests {
 
     #[test]
     fn shuffled_query_orders_yield_identical_build_argv() {
-        // Determinism battery (issue #84): `quality-testing.md` requires
+        // Determinism battery: `quality-testing.md` requires
         // randomized query result order to yield identical Bazel argv.
         // Resolve the same file scope twice with reversed owner lines;
         // ownership canonicalization (sort + dedup) must converge both to

@@ -1,12 +1,4 @@
 """Unit and analysis tests for the GitHub Release publisher (issue #182).
-
-Unit checks run while this file loads, pinning the tag and draft-gate
-helpers. Analysis tests pin the frozen observation rendering for the
-fixture draft releases: the default release profile and an explicit
-debug profile, both with no app (a release publishes a set of assets,
-not one app). The would-run command and draft-only flags are proven by
-the `github_verify` sh_tests in BUILD (via `GH_RELEASE_DRY_RUN=1`,
-without network access), not here.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

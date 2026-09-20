@@ -1,19 +1,5 @@
 """BCR submission tooling for `rules_dx` (issue #311).
 
-The approved v1 destinations (docs/environments/environment.md) are the
-Bazel Central Registry for the module plus GitHub Releases for
-standalone binaries. This macro implements the BCR half as an
-owner-gated, dry-run-first check: it validates the module shape
-(`rules_dx` name, SemVer version, no unpublishable `0.0.0` on real
-submissions) and stages the `source.json` + integrity-hash + presubmit
-inputs a BCR PR needs, without submitting anything.
-
-Safety (issue #5): the deploy program `bcr_deploy.sh` prints the
-would-submit PR with `BCR_DRY_RUN=1` (what CI exercises, submits
-nothing) and requires explicit owner approval plus a real version for
-any submission. The module stays at `0.0.0` until owners approve the
-first release; `0.0.0` submissions fail analysis by construction.
-
 Contract: `docs/deploy/release-runbook.md`.
 """
 
@@ -23,16 +9,7 @@ load("//deploy/rules:defs.bzl", "dx_deployment")
 load("//deploy/rules:launcher.bzl", "RUNFILES_BASH_INIT", "rlocation_path")
 
 def bcr_source_error(module_name, version):
-    """Validates the BCR module name + version pair.
-
-    Args:
-      module_name: candidate module name.
-      version: candidate version string.
-
-    Returns:
-      "" when valid for a dry-run shape check, else the failure reason.
-      `0.0.0` is valid for shape checks only (never submitted).
-    """
+    """Validates the BCR module name + version pair."""
     if module_name != "rules_dx":
         return ("bcr: invalid module '" + str(module_name) +
                 "': want 'rules_dx'")
@@ -50,16 +27,7 @@ def bcr_source_error(module_name, version):
     return ""
 
 def bcr_submit_error(version, approve):
-    """Validates whether a BCR submission may proceed.
-
-    Args:
-      version: candidate version string.
-      approve: owner approval flag (must be True for real submission).
-
-    Returns:
-      "" when submission may proceed, else the failure reason. `0.0.0`
-      and unapproved submissions never proceed.
-    """
+    """Validates whether a BCR submission may proceed."""
     if version == "0.0.0":
         return ("bcr: version 0.0.0 is unpublishable (shape check only); " +
                 "a real submission needs an owner-approved SemVer release version")
@@ -139,15 +107,7 @@ def bcr_check(name, module_name = "rules_dx", version = "0.0.0", inputs = [], pr
     :<name>` to print the would-submit PR (what CI exercises, submits
     nothing). A real submission needs an owner-approved SemVer version
     plus explicit approval per the runbook; `0.0.0` fails submission by
-    construction.
-
-    Args:
-      name: instance name; also the deploy target name.
-      module_name: must be `rules_dx`.
-      version: SemVer version (`0.0.0` = shape check only).
-      inputs: extra pinned input files (integrity hash, presubmit).
-      profile: default profile.
-    """
+    construction."""
     src_err = bcr_source_error(module_name, version)
     if src_err != "":
         fail(src_err + " (in " + native.package_name() + ":" + name + ")")

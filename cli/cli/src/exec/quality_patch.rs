@@ -1,4 +1,4 @@
-//! Quality diff-patch rendering (issue #236): unified patch over
+//! Quality diff-patch rendering: unified patch over
 //! verified sources for `--output=diff`.
 //!
 //! Extracted from [`super::quality`] without behavior change: the
@@ -74,7 +74,7 @@ mod tests {
 
     #[test]
     fn diff_patch_is_deterministic_and_untruncated() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // complete deterministic diff-mode patches from the same edit set
         // without rerunning tools or truncating replacement content.
         let original = b"line one\nline two\n";

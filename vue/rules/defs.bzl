@@ -1,33 +1,6 @@
 """Experimental minimal Vue wrappers (M18, O29).
 
-Thin conventional boundary over the pinned `aspect_rules_js 3.4.1`
-ruleset with the Vue 3.5.42 runtime/compiler (see root package.json).
-Each `vue_library` macro creates one private `<name>_upstream`
-`js_library` plus one public forwarding rule. The forwarder preserves
-the upstream providers (`JsInfo`, `DefaultInfo`,
-`InstrumentedFilesInfo`) unchanged and adds `QualitySourcesInfo`
-normalized from the wrapper's direct `.vue` srcs.
-
-Physical/virtual ownership (framework contract): each checked-in `.vue`
-single-file component has one physical source owner (this wrapper).
-Embedded script, template, and style regions do not become independent
-physical sources or core JS/TS targets. The pinned
-`@vue/compiler-sfc` hands virtual-region semantics to build, test, IDE,
-and quality integrations at execution time; generation never compiles a
-container, never regex-extracts code, and never assigns a region to the
-core JS/TS extensions (`.vue` is inert to them).
-
-Used upstream symbols (`@aspect_rules_js//js:defs.bzl`): `js_library`;
-(`@aspect_rules_js//js:providers.bzl`): `JsInfo`. No other upstream
-surface is used. Consumers needing more load the upstream module
-directly. Vue execution and tests reuse the JavaScript binary/test
-wrappers over compiled or parsed outputs; there is no separate
-`vue_binary`/`vue_test` wrapper.
-
-Normalization is deliberately narrow: the only new fact is
-`QualitySourcesInfo(direct_sources = {"vue": <direct .vue>})`.
-Transitive sources and npm closures stay readable from the preserved
-`JsInfo`; no second provider duplicates them.
+Contract: `libs/starlark/wrapper.bzl`.
 """
 
 load("@aspect_rules_js//js:defs.bzl", _js_library = "js_library")

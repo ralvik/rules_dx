@@ -1,8 +1,4 @@
 """Unit and analysis tests for workspace policy and applicability (M03 WP1).
-
-Unit checks run while this file loads, proving the pure helpers execute
-there. The analysis test pins the frozen aggregate observation rendering
-for the fixture workspace policy.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

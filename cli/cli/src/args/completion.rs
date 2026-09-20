@@ -1,4 +1,4 @@
-//! Shell-completion rendering for the `dx` CLI (issue #236).
+//! Shell-completion rendering for the `dx` CLI.
 //!
 //! Split from `super` (`args.rs`): owns [`COMPLETION_SHELLS`] and
 //! [`render_completion`]. Re-exported through `super` so the public path
@@ -12,7 +12,7 @@ use super::ArgsError;
 pub const COMPLETION_SHELLS: &[&str] = &["bash", "zsh", "fish", "powershell"];
 
 /// Renders one completion script from the [`Cli`] grammar definition
-/// (issue #202): commands, flags, and fixed value sets come from the
+///: commands, flags, and fixed value sets come from the
 /// same source that feeds parsing and `--help`, so generated scripts
 /// cannot drift from the command reference. Generation is an explicit
 /// `dx completion` cost only, never per-invocation. Unknown shells fail
@@ -40,7 +40,7 @@ pub fn render_completion(shell: &str) -> Result<String, ArgsError> {
     // commands would be missing there while bash/zsh list them. Append
     // command completions derived from [`Command`] (same source as
     // parsing), never hand-maintained, so every shell completes every
-    // command (issue #202).
+    // command.
     match shell {
         "fish" => {
             use clap::ValueEnum;

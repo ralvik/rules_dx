@@ -1,14 +1,4 @@
 """Wrapper conformance tests (M02).
-
-`dx_wrapper_registry_tests` pins the `QualitySourcesInfo` registry facts the
-wrappers rely on. `dx_wrapper_conformance_tests` observes one wrapper subject
-per `rust_*` shape (library, binary, `crate =` test, proc macro, shared
-library, static library) and pins the full rendering: provider preservation,
-single source owner, lint markers from the pinned toolchain, and pinned tool
-identities. The Cc-linking shapes (shared/static) are observed through
-`dx_wrapper_cc_subject`: upstream provides no `CrateInfo` there, so crate
-facts come from the `TestCrateInfo`-wrapped crate and the linking surface is
-pinned by `CcInfo` linker-input count.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

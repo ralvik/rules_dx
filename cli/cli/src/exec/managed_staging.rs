@@ -1,4 +1,4 @@
-//! Managed staging primitives (issue #236).
+//! Managed staging primitives.
 //!
 //! Split from [`super::managed`]: owns the shared staging primitives
 //! both generation sides build on ([`collect_managed_group`],

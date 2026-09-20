@@ -1,4 +1,4 @@
-//! Consumer `.bazelrc` preset fragment rendering (issue #332).
+//! Consumer `.bazelrc` preset fragment rendering.
 //!
 //! Single source for the vendored execution preset consumed via
 //! `dx update` (regenerate) and `dx update --check` (stale gate).
@@ -41,7 +41,7 @@ const COVERAGE_FLAGS: [&str; 5] = [
     "coverage --instrumentation_filter=^//",
 ];
 
-/// Owned build profiles (mirrors `BUILD_PROFILES`, issue #177).
+/// Owned build profiles (mirrors `BUILD_PROFILES`).
 const BUILD_PROFILES: [&str; 3] = [
     "build:dx_debug --compilation_mode=dbg",
     "build:dx_dev --compilation_mode=fastbuild",

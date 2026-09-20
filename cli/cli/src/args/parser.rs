@@ -1,4 +1,4 @@
-//! Invocation parsing for the `dx` CLI (issue #236).
+//! Invocation parsing for the `dx` CLI.
 //!
 //! Split from `super` (`args.rs`): owns the full `parse` validation
 //! (scope shapes, per-command option ownership, output-contract gates,
@@ -233,8 +233,8 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         }
     }
     if command == Command::Update {
-        // Update plans through `dx_update` (issue #19) plus the vendored
-        // preset fragment (issue #332): dependency-set / package/target
+        // Update plans through `dx_update`  plus the vendored
+        // preset fragment: dependency-set / package/target
         // selectors with exact syntax in `dx_update::selector`, mutating
         // without confirmation. `dx update --check` is the preset stale
         // gate (non-mutating, exit 0 clean / 1 stale, copying the
@@ -522,7 +522,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
             });
         }
     }
-    // Uniform `--output` contract (issue #200): shared `supports_json` /
+    // Uniform `--output` contract: shared `supports_json` /
     // `supports_diff` gate so no command silently ignores a machine-output
     // request. Commands with their own output arm above (clean, managed,
     // update, `bazel`, `run`) already returned the same error; this gate
@@ -1090,7 +1090,7 @@ mod tests {
                 option: "--check".to_owned(),
             })
         );
-        // `dx update --check` is the preset stale gate (issue #332):
+        // `dx update --check` is the preset stale gate:
         // non-mutating, exit 0 clean / 1 stale, ignoring selectors.
         let check = parse(&args(&["update", "--check"])).expect("parse update check");
         assert_eq!(check.command, Command::Update);
@@ -1103,7 +1103,7 @@ mod tests {
                 option: "--fail-on".to_owned(),
             })
         );
-        // `update` supports `--output=json` (issue #200, #19): dry-run
+        // `update` supports `--output=json` (#19): dry-run
         // planning plus live per-set reporting.
         let got = parse(&args(&["update", "--output=json"])).expect("update json");
         assert_eq!(got.command, Command::Update);

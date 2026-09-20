@@ -10,8 +10,7 @@
 //!
 //! Run/deploy planning (`plan_run`, `plan_run_targets`,
 //! `plan_deploy_build`, `plan_deploy_run`) lives in the
-//! [`run_deploy`](self::run_deploy) domain submodule (issue #236
-//! resolve/plan/run/deploy unscramble, handoff from issue #237); the
+//! [`run_deploy`](self::run_deploy) domain submodule; the
 //! public path stays `crate::plan::{...}` via the re-exports below.
 //! Scope resolution for these plans lives in
 //! [`crate::resolve::run_deploy`], carved in the same unscramble.

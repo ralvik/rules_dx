@@ -1,4 +1,4 @@
-//! Command vocabulary for the `dx` CLI (issue #236).
+//! Command vocabulary for the `dx` CLI.
 //!
 //! Split from `super` (`args.rs`): owns [`Command`] and its
 //! classification helpers (`name`, `parse`, `is_*`, `supports_*`,
@@ -105,7 +105,7 @@ impl Command {
     /// libraries over family selectors and dependency-set selectors, never
     /// the quality aspect pipeline. Audit is non-mutating; update and bump
     /// are mutating without confirmation. Audit tool backends stay deferred
-    /// while update resolver backends execute live (issue #19) and bump
+    /// while update resolver backends execute live  and bump
     /// widens exactly one requirement explicitly (issue #260).
     pub fn is_audit_update(self) -> bool {
         matches!(self, Command::Audit | Command::Update | Command::Bump)
@@ -142,7 +142,7 @@ impl Command {
         )
     }
 
-    /// True when `--output=json` (NDJSON) is supported (issue #200).
+    /// True when `--output=json` (NDJSON) is supported.
     /// JSON-capable commands stream one object per line via `write_event`
     /// (never buffer-then-dump). Text-only commands reject `--output=json`
     /// pre-exec with `UnsupportedOption` instead of silently ignoring it:
@@ -151,7 +151,7 @@ impl Command {
     /// `status`) print local-helper prose or thin query lines.
     /// `update` supports JSON: dry-run planning emits
     /// `command_started`/`command_finished`, while live execution adds
-    /// per-set `notice`/`error` events with the same frame (issue #19).
+    /// per-set `notice`/`error` events with the same frame.
     /// `bump` supports JSON the same way: dry-run planning emits the
     /// widen summary, live execution adds the widen `notice`/`error`
     /// (issue #260).
@@ -174,7 +174,7 @@ impl Command {
         )
     }
 
-    /// True when `--output=diff` emits a unified patch (issue #200).
+    /// True when `--output=diff` emits a unified patch.
     /// Only patch-producing commands accept it (lint, typecheck, format,
     /// generate, check, fix per the output protocol). Every other command
     /// rejects `--output=diff` pre-exec: workflow/audit/update/bump/status

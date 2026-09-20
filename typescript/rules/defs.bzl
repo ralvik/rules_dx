@@ -1,31 +1,6 @@
 """Experimental minimal TypeScript wrappers (M16, ADR 0013).
 
-Thin conventional boundary over the pinned `aspect_rules_ts 3.10.0`
-ruleset with the TypeScript 5.9.3 toolchain (see MODULE.bazel). Each
-`typescript_*` macro creates one private `<name>_upstream` target with the
-passed attributes and one public `<name>` forwarding target. The forwarder
-preserves the upstream providers (`JsInfo`, `TsConfigInfo`, `DefaultInfo`,
-`InstrumentedFilesInfo`) unchanged and adds `QualitySourcesInfo`
-normalized from the wrapper's direct `srcs`.
-
-Used upstream symbols (`@aspect_rules_ts//ts:defs.bzl`): `ts_project`,
-`TsConfigInfo`; (`@aspect_rules_js//js:providers.bzl`): `JsInfo`. No other
-upstream surface is used; consumers needing more load the upstream
-module directly. TypeScript execution reuses the JavaScript binary/test
-wrappers (`//javascript/rules`) over compiled outputs; there is no
-separate `typescript_binary`/`typescript_test` wrapper.
-
-Normalization is deliberately narrow: the only new fact is
-`QualitySourcesInfo(direct_sources = {"typescript": <direct .ts/.mts/.cts>,
-"tsx": <direct .tsx>})`. Declaration files (`.d.ts`, `.d.mts`, `.d.cts`)
-are inert per the generation contract and must not be passed as `srcs`.
-Transitive sources/types and npm closures stay readable from the preserved
-`JsInfo`; no second provider duplicates them.
-
-TypeScript version selection follows ADR 0012 via the pinned toolchain
-(`@npm_typescript`, release-default 5.9.3). Wrappers accept no version
-fields; unknown versions fail in upstream toolchain resolution, never here.
-Source-only local graphs build without package-manager invocation.
+Contract: `docs/decisions/0013-rust-javascript-typescript-foundations.md`, `docs/decisions/0012-language-toolchain-versions.md`.
 """
 
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")
@@ -79,14 +54,7 @@ def typescript_srcs_rejection(srcs):
     and configuration come from `typescript_project` over real sources,
     and no wrapper independently enumerates sources or invokes a second
     compiler. Silently dropping them from `QualitySourcesInfo` would mask
-    the authoring error, so they fail here instead.
-
-    Args:
-      srcs: the direct sources the caller passed to `typescript_project`.
-
-    Returns:
-      The rejection diagnostic string, or `None` when the srcs are clean.
-    """
+    the authoring error, so they fail here instead."""
     bad = [src for src in srcs or [] if _is_declaration(src)]
     if bad:
         return ("typescript_project takes real sources only; declaration " +

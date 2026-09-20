@@ -1,4 +1,4 @@
-//! Single-version pin and rollback for `dx version` (issue #236).
+//! Single-version pin and rollback for `dx version`.
 //!
 //! Split from `super` (`lib.rs`): owns `DX_VERSION`, `MODULE_VERSION`,
 //! `PREVIOUS_VERSION`, `version_pin_matches_module`,

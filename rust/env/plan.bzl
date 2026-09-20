@@ -1,15 +1,6 @@
 """Focused Rust environment plan (M12 WP3).
 
-`RustEnvPlanInfo` is the provider-derived focused-target plan contribution:
-crate identity, edition, root, direct sources, and direct dependency count
-read from the analyzed authoritative providers of one `rust_*` wrapper
-target. It never scans the checkout, never re-resolves Cargo metadata, and
-never mutates environment or codegen selection.
-
-`rust_env_plan` materializes that plan as a deterministic JSON file plus a
-`DxSubjectInfo` observation surface for `starlark_test` analysis mode.
-Repository/root/exact-target orchestration, collection, atomic selection,
-and `dx env`/`dx setup` remain M25.
+Contract: `docs/environments/environment.md`.
 """
 
 load("@rules_rust//rust:defs.bzl", _rust_common = "rust_common")

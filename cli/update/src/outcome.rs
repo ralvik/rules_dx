@@ -1,4 +1,4 @@
-//! Per-set update outcome aggregation (issue #19).
+//! Per-set update outcome aggregation.
 //!
 //! Pure planning for the accepted continuation policy in the update
 //! contract (`docs/cli/commands/audit-update-bazel.md`): failure in one

@@ -2063,7 +2063,7 @@ mod tests {
     /// materialized bytes contain the `BROKEN` marker, keyed by workspace
     /// path exactly like the real binary.
     ///
-    /// The `argv` scan below stays hand-rolled (issue #233 fallback): this
+    /// The `argv` scan below stays hand-rolled (fallback): this
     /// is a test double inspecting the invocation it received, not
     /// user-facing parsing, so a parsing library would couple the fake to
     /// grammar internals for no fidelity gain.
@@ -2345,7 +2345,7 @@ mod tests {
     /// at least one `--sibling` mapping reaches the invocation, proving
     /// the backend threads siblings through to the checker.
     ///
-    /// The `argv` scan below stays hand-rolled (issue #233 fallback): like
+    /// The `argv` scan below stays hand-rolled (fallback): like
     /// [`markdown_links`], this test double inspects its invocation rather
     /// than parsing user input.
     fn markdown_sibling_links(

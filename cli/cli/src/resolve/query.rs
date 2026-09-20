@@ -1,4 +1,4 @@
-//! Query plumbing for scope resolution (issue #236).
+//! Query plumbing for scope resolution.
 //!
 //! Split from `super` (`resolve.rs`): owns the query argv builder,
 //! the label/expression quoting helpers, and [`run_label_query`].
@@ -140,7 +140,7 @@ mod tests {
 
     #[test]
     fn randomized_query_order_yields_identical_argv() {
-        // Determinism battery (issue #84): `quality-testing.md` requires
+        // Determinism battery: `quality-testing.md` requires
         // randomized query result order to yield identical Bazel argv.
         // `quote_set` sorts scope labels so shuffled scope orders emit the
         // same ownership expression, and `parse_owners` sorts and dedups

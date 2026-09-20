@@ -1,17 +1,4 @@
 """Unit tests for real-adapter pipeline construction (M04 WP2, M12 WP3, M15 WP3).
-
-Pins the initial-adapter capability manifests (O20) through the same pure
-pipeline formula the synthetic fixtures use: exact class-to-tool mapping,
-sorted tool order across mixed-class targets, exact per-stage source
-subsets, and omission of unsupported classes/capabilities (no empty
-actions). Cross-toolchain quality evidence (exact-input, no-config, edit,
-cache, empty-PATH) lands in later WP2 commits; these checks prove the
-pure shapes that evidence rests on. M12 WP3 adds the rustc typecheck
-stage over the rust class. M15 WP3 adds the flake8/pylint Python lint
-opt-ins and their lexical stage order. M17 WP2 adds the curated
-JavaScript/TypeScript/JSON adapters (biome default lint/format,
-eslint lint opt-in, prettier format default for JSON and alternative for
-JS/TS, target-coupled tsc typecheck) and their lexical stage order.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

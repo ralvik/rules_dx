@@ -1,4 +1,4 @@
-//! Consolidated `dx status` surface (issue #236).
+//! Consolidated `dx status` surface.
 //!
 //! Split from `super` (`lib.rs`): owns `StatusCheck`,
 //! `render_status_text`, `render_status_json`, and
@@ -93,7 +93,7 @@ mod tests {
         let text = render_status_text(&checks);
         assert!(text.contains("pin: ok"));
         let json = render_status_json(&checks);
-        // Golden pilot (issue #225): full-payload insta snapshot replaces
+        // Golden pilot: full-payload insta snapshot replaces
         // the contains-asserts; a MODULE_VERSION bump intentionally
         // updates this snapshot alongside the pin contract.
         insta::assert_snapshot!(json, @r#"{"checks":[{"name":"toolchain","status":"ok","detail":"rust 1.98.0 via rules_rust","hint":"bazel build //..."},{"name":"platform","status":"ok","detail":"linux_x86_64 + linux_arm64 glibc plus static musl plus macos_arm64 plus macos_x86_64 best-effort plus windows_x86_64 qualified","hint":"see support-matrix for out-of-v1"},{"name":"tools","status":"ok","detail":"bazel-resolved pinned tools","hint":"no ambient tools required"},{"name":"pin","status":"ok","detail":"dx 0.0.0 vs module 0.0.0","hint":"dx version --pin 0.0.0"}]}"#);

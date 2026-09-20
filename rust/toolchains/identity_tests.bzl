@@ -1,8 +1,4 @@
 """Identity tests pinning the authoritative toolchain binding (M04 WP1, M12 WP3).
-
-All executables must resolve inside the selected Rust toolchain
-repositories. Any owner or path change (toolchain update, rules_rust layout
-change, accidental vendored copy) fails this test until re-pinned by review.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

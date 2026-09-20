@@ -1,4 +1,4 @@
-//! JUnit XML parsing for Bazel-reported test artifacts (issue #388).
+//! JUnit XML parsing for Bazel-reported test artifacts.
 //!
 //! Rewritten on [`quick_junit::Report`]: deserialization uses the
 //! nextest data model instead of the hand-rolled `quick-xml` state

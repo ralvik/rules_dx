@@ -1,10 +1,4 @@
 """Analysis subject observing real-aspect dx_results (M04 WP2).
-
-`real_aspect_subject` depends on one real fixture target with the real
-lint/format aspects applied and republishes the merged `dx_results` file
-set as `DxSubjectInfo` fields. `starlark_test` analysis mode pins the
-rendering, proving exact capability presence/absence: no generic fallback,
-no empty actions, capability tags honored, Vale config-required.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")

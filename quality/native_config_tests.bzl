@@ -1,11 +1,4 @@
 """Unit tests for typed native-config validation (M04 WP2).
-
-Pins the per-tool config extensions, every `native_config_error` branch
-(unknown tool, missing/generated/mis-suffixed config, generated data),
-and `collect_native_configs` hint resolution (selection by stage tool,
-default-on-missing omission, stage-tool order). Rule constructors fail
-analysis with the returned message; analysis-mode subjects proving the
-positive provider shape land with the aspect-wiring commit.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

@@ -1,4 +1,4 @@
-//! Shared types for scope resolution (issue #236).
+//! Shared types for scope resolution.
 //!
 //! Split from `super` (`resolve.rs`): owns the query result/runner
 //! seam ([`QueryResult`], [`QueryRunner`], [`ProcessQueryRunner`]),

@@ -185,7 +185,7 @@ pub fn canonical_identity_bytes(tools: &[ToolPlan]) -> Vec<u8> {
 
 /// BLAKE3-256 over the canonical identity bytes: the snapshot identity,
 /// with no algorithm negotiation. Routed through `dx_digest` so the digest
-/// algorithm has one owner (issue #73).
+/// algorithm has one owner.
 fn identity_digest(canonical: &[u8]) -> [u8; 32] {
     dx_digest::blake3(canonical)
 }

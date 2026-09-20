@@ -1,4 +1,4 @@
-//! JUnit report rendering on `quick-junit` (issue #388).
+//! JUnit report rendering on `quick-junit`.
 //!
 //! Replaces the hand-rolled `quick-xml` writer (`sanitize_xml`,
 //! `format_junit_time`, `emit_junit`, `finish_junit`,
@@ -257,7 +257,7 @@ mod tests {
             ),
         ];
         let doc = render_junit(&suites);
-        // Golden pilot (issue #225): full-document insta snapshot replaces
+        // Golden pilot: full-document insta snapshot replaces
         // the contains-asserts so render changes review as one diff.
         // Under Bazel snapshots never self-update (read-only sources):
         // paste the actual document from the failure diff when the
@@ -287,7 +287,7 @@ mod tests {
     #[test]
     fn junit_writer_escapes_specials_and_strips_controls() {
         // Golden: `&<>"'` plus control bytes must round-trip through the
-        // quick-junit writer as well-formed XML (issue #219).
+        // quick-junit writer as well-formed XML.
         // quick-junit strips invalid XML chars (plus ANSI escapes) rather
         // than replacing with U+FFFD.
         let tricky = "a&<>\"'\u{0}\u{1}\u{8}\u{b}\u{c}\u{e}b";

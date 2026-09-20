@@ -1,4 +1,4 @@
-//! Unified digest identities for `rules_dx` (issue #73).
+//! Unified digest identities for `rules_dx`.
 //!
 //! Split history: `quality/result` + `generation/result` + `cli/env`
 //! (`identity_digest`) + `cli/setup` hashed with BLAKE3-256 while
@@ -162,7 +162,7 @@ mod tests {
     use proptest::prelude::*;
 
     proptest! {
-        /// Property pilot (issue #225): hex encoding round-trips every
+        /// Property pilot: hex encoding round-trips every
         /// 32-byte input, and the wrapper agrees with the free functions.
         /// Fixed official vectors stay as plain asserts above; properties
         /// own the shape (`is_hex`, length, round-trip).

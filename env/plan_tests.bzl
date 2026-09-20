@@ -1,22 +1,4 @@
 """Unit tests for the normalized environment plans (M25 WP2).
-
-Unit checks pin every `env_plan_key_error` branch (empty, separators,
-pipe), `env_plan_value_error` (empty, pipe), `env_plan_exec_error`
-(empty logical-only, relative suffixes, shard-suffix refusal),
-`env_plan_record_error` (bad producer, bad integration, empty entries,
-bad entry key/value/exec, within-record duplicates),
-`env_plan_integration_error` (admitted Rust versus deferred
-Python/Node), `env_plan_conflict_error` (clean merge, silent identical
-duplicates, cross-producer collisions, same-producer divergent values,
-divergent exec paths), and the deterministic merge/fingerprint
- rendering (owner grouping, entry sorting over the full (key, value,
- exec) triple, duplicate collapse, exec-bound identity).
-
- Analysis checks pin the slice-2 collection evidence: the chained leaf
- shards merge transitively through `dx_env_plan_aspect`, and the Rust
- adapter fixture carries its shard plus the verified upstream crate
- source in the private output group, with its entry's EXEC_PATH suffix
- binding the crate source.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

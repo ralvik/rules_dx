@@ -1,7 +1,7 @@
-//! Adoption completion execution (`completion`, issue #236).
+//! Adoption completion execution (`completion`).
 //!
 //! Split from `super` (`adopt.rs`): owns [`execute_completion`], the
-//! runtime rendering from the single `Cli` grammar (issue #202).
+//! runtime rendering from the single `Cli` grammar.
 //! Re-exported through `super` so the dispatch path stays
 //! `crate::adopt::execute_adoption`.
 
@@ -19,7 +19,7 @@ pub(crate) fn execute_completion(
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> i32 {
-    // Scripts render at runtime from the `Cli` grammar (issue #202):
+    // Scripts render at runtime from the `Cli` grammar:
     // the same definition feeds parsing, `--help`, and completions, so
     // output cannot drift from the command reference.
     let shell = invocation.targets.first().map(String::as_str).unwrap_or("");
@@ -67,7 +67,7 @@ mod tests {
     fn completion_renders_from_single_source() {
         use clap::ValueEnum;
         // Every supported shell renders every command and key flag from
-        // the single Cli grammar (issue #202); no hand-maintained list.
+        // the single Cli grammar; no hand-maintained list.
         for &shell in crate::args::COMPLETION_SHELLS {
             let inv = invocation(&["completion", shell]);
             let scratch = temp_root("renders");
