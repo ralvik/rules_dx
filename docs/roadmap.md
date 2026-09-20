@@ -36,5 +36,5 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
   plus major-release-only gate plus one manifest per major hop with fail-closed execution).
   `dx run` multirun delivered (issue #463, sequential local-only multirun for explicit
   labels/patterns). No post-v1 bucket.
-* Rust library extraction.
+* Rust library extraction decided internal-only under issue #469 (see ADR 0023; 34 internal crates, binaries-only boundary, no consumer migration).
 * CLI and deploy follow-ups: `--debug`/`--release` flags plus `DX_PROFILE` forwarding plus deploy provider/CLI (issues #457-#458); `dx docs` reintroduction with real extraction/validation (see ADR 0020).
