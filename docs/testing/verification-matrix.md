@@ -32,11 +32,11 @@ class by design — never silently under the standard dogfood gates.
   ([quality/runner-matrix](../quality/runner-matrix.md)).
 - **Generation freshness**: `dx generate --check //...` must be a
   deterministic no-op on a clean checkout; BUILD/corpus sync is owned by
-  generation (open work under issue #503).
+  generation (open work under #644, successor to closed #503).
 - **Examples external-consumer**: per-foundation `adopt-*` workspaces
   proving generation as a consumer, plus acquisition/laziness proof
-  (delivered on the seed host; platform/remote dimensions owned by
-  #298/#507).
+   (delivered on the seed host; platform/remote dimensions owned by
+   #803-#807, successors to closed #298).
 - **Layer-4 CLI-contract (issue #407, hermetic, replaces nested E2E)**:
   `dx test`/`dx build` exit-code preservation via `cli/cli/src/exec` unit
   pins (including Bazel test-failure code 3), format rewrite `x=1` →
@@ -49,25 +49,26 @@ class by design — never silently under the standard dogfood gates.
   wiring now smoke-only.
 - **Dependency checks**: required-core plus admitted lockfile-consistency and
   declared-dependency usage fixtures delivered in `tools/depcheck/`
-  (issue #22; remaining opens under issue #510); framework-composition depcheck stays with the JS/TS pnpm route.
+   (issue #22; remaining opens under #754 and #796-#800, successors to closed
+   #510); framework-composition depcheck stays with the JS/TS pnpm route.
 - **Audit/update live execution**: `dx update` resolver backends per set with independent-set
   continuation and per-set reporting delivered (issue #19); `dx audit` auditor wiring, advisory
   acquisition with 24h cache semantics and offline matching, plus SARIF/SPDX mapping delivered
   (issue #18). `Audit/update` here records repo-wide ecosystem live execution, distinct from
   per-language source audit in the [support matrix](../product/support-matrix.md#application-foundations).
 - **Docs pipeline**: per-language adapter runs, link/reference proofs,
-  renderer/site artifacts, cache and determinism measurements, guide prose with
-  guide-step verification, and first-hour timing proof stay open under issue #581
-  (live successor to closed #421)
-  (see [Documentation](../documentation/README.md#contracts)); no working site claimed.
-  IR plus planning records with fixture evidence qualified seed-only under #581
-  (`bazel run //tools/ci:docs_pipeline_qualification`; versioned IR schema,
-  codec roundtrip/parity/ordering/compat, dx_docs planning units, frozen
-  contracts, removed stub behind ADR 0020, with adapter runs, renderer/site
-  execution, rebuild proof, link completeness, guide-step wiring, timing proof,
-  and pin-bump/drift as owned gaps).
+   renderer/site artifacts, cache and determinism measurements, guide prose with
+   guide-step verification, and first-hour timing proof stay open under #779-#785
+   (successors to closed #581, live successor to closed #421)
+   (see [Documentation](../documentation/README.md#contracts)); no working site claimed.
+   IR plus planning records with fixture evidence qualified seed-only under closed #581
+   (`bazel run //tools/ci:docs_pipeline_qualification`; versioned IR schema,
+   codec roundtrip/parity/ordering/compat, dx_docs planning units, frozen
+   contracts, removed stub behind ADR 0020, with adapter runs, renderer/site
+   execution, rebuild proof, link completeness, guide-step wiring, timing proof,
+   and pin-bump/drift as owned gaps under #779-#785).
 - **Environment/codegen**: deferred/unsupported records plus fixture
-  evidence qualified seed-only under #506
+   evidence qualified seed-only under closed #506
   (`bazel run //tools/ci:env_codegen_qualification`; public protocol,
   Windows fallback, standalone, signing/trust, plus bootstrap/fidelity/
   stale/IDE/atomic-commit/BEP/projection/roots/cold-warm with WP1-WP5 plus
@@ -97,7 +98,8 @@ class by design — never silently under the standard dogfood gates.
 plus Linux arm64 native (issue #410) plus the two Linux static-musl
 profiles (issue #411) plus macOS arm64 native (issue #412) plus macOS
 x86_64 best-effort native (issue #413) plus Windows x86_64 MSVC-compatible
-native (issue #414). `Open` means open work under issues #506-#512 with no implementation
+ native (issue #414). `Open` means open work under #787, #788 and #796-#802
+ (successors to closed #506-#512) with no implementation
 claimed here. `Planning only` means planning is implemented with live
 execution deferred. No report-only status remains per ADR 0022 (no standing benchmarking).
 
@@ -118,7 +120,8 @@ execution deferred. No report-only status remains per ADR 0022 (no standing benc
 
 `Audit/update Delivered` above is ecosystem live execution delivered repo-wide; it stays
 consistent with per-language source-`Audit` scope in the support matrix (`Not planned` for
-Rust, JavaScript, TypeScript, Vue, Svelte, Astro, MDX; open tooling work for Python under issue #613).
+Rust, JavaScript, TypeScript, Vue, Svelte, Astro, MDX; Python source-audit tooling qualified
+seed-only under closed #613 with future selection open under #801).
 `Support-matrix Planned` cells claim accepted scope only; where this matrix shows `Open`,
 the corresponding `Planned` cell is scope with open implementation.
 
@@ -131,23 +134,23 @@ provider/import/lock/tool-graph proofs are pinned by
 `bazel run //tools/ci:foundation_maps`, with owning qualification in
 [Generation](../generation/README.md#language-mapping-qualification),
 [Environments](../environments/README.md#language-mapping-qualification), and
-[Tools](../tools/README.md#language-mapping-qualification). Quality
-family taxonomy execution with fixture evidence qualified seed-only under #512
+ [Tools](../tools/README.md#language-mapping-qualification). Quality
+ family taxonomy execution with fixture evidence qualified seed-only under closed #512
 (`bazel run //tools/ci:quality_taxonomy_qualification` with
 `quality/tests/fixtures/quality_taxonomy/pins.bzl` plus
 `quality_taxonomy.expected`; `quality_taxonomy_qualification` 17/17;
-taxonomy doc only plus report-not-gate shape only rejected; deferred
-adapters plus digests plus platform plus consumer plus release stay owned
-gaps; no Supported claim; issue #512 stays taxonomy-only). Python
-source-audit tooling with fixture evidence qualified seed-only under #613
+   taxonomy doc only plus report-not-gate shape only rejected; deferred
+   adapters plus digests plus platform plus consumer plus release stay owned
+   gaps under #802 (successor to closed #512); no Supported claim; closed #512 stays taxonomy-only). Python
+   source-audit tooling with fixture evidence qualified seed-only under closed #613
 (`bazel run //tools/ci:python_audit_qualification` with
 `python/tests/fixtures/python_audit/pins.bzl` plus
 `python_audit.expected`; `python_audit_qualification` 16/16; curated
 audit empty with Bandit excluded plus secrets via Gitleaks, lint
 Ruff plus pydoclint plus format Ruff plus typecheck Ty unaffected, no
-audit adapter claim, leaving under taxonomy rejected; future selection
-plus platform plus consumer plus release stay owned gaps; no Supported
-claim).
+   audit adapter claim, leaving under taxonomy rejected; future selection (#801) plus
+   platform plus consumer plus release (#808) stay owned gaps; no Supported
+   claim).
 
 ## Battery
 
@@ -237,8 +240,9 @@ CI only, no Supported claim).
   contracts, GHCR hygiene and publish guards,
   widen-update loop, quality/distribution/backlog guards,
   `:supported_evidence_gate`, `:quality_adapters_parity`,
-  `:env_codegen_qualification`, `:env_plugins_cgo_qualification` (deferred plugin design plus cgo
-  boundary pins plus fixture evidence, issue #587), `:docs_pipeline_qualification`,
+   `:env_codegen_qualification`, `:env_plugins_cgo_qualification` (cgo
+   boundary pins plus fixture evidence, closed #587; plugin model not planned,
+   cgo completion #789), `:docs_pipeline_qualification`,
   `:consumer_ci_qualification`, `:review_threads_qualification` (frozen 50 plus accounting
   pins plus fixture evidence, issue #592), `:file_family_qualification`,
   `:helper_qualification`, `:clap_tokenizer_qualification`,
@@ -291,12 +295,12 @@ CI only, no Supported claim).
   plus fixture evidence, issue #504),
   `:remediation_bounds_qualification` (bounded remediation pins
   plus fixture evidence, issue #505),
-  `:layer2_opens_qualification` (Layer-2 adapter-less plus composition plus
-  depcheck pins plus fixture evidence, issue #510),
-  `:quality_taxonomy_qualification` (taxonomy execution pins plus
-  fixture evidence, issue #512),
-  `:python_audit_qualification` (Python source-audit split pins plus
-  fixture evidence, issue #613),
+   `:layer2_opens_qualification` (Layer-2 adapter-less plus composition plus
+   depcheck pins plus fixture evidence, closed #510; delivery now #754, #796-#800),
+   `:quality_taxonomy_qualification` (taxonomy execution pins plus
+   fixture evidence, closed #512; promotion gaps #802),
+   `:python_audit_qualification` (Python source-audit split pins plus
+   fixture evidence, closed #613; future selection #801),
   `:selective_update_qualification` (per-set selective vs wont-fix pins plus
   fixture evidence, issue #583),
   `:selective_cargo_qualification` (Cargo per-crate wont-fix pins plus
@@ -313,17 +317,17 @@ CI only, no Supported claim).
   fixture evidence, issue #639),
   `:update_events_qualification` (update mutation wont-fix plus completeness pins plus
   fixture evidence, issue #586),
-  `:starlark_futures_qualification` (Starlark filtering plus subjects plus BEP wont-fix/deferred pins plus
-  fixture evidence, issue #588),
+   `:starlark_futures_qualification` (Starlark filtering plus subjects plus BEP wont-fix/deferred pins plus
+   fixture evidence, closed #588; successors #790-#795),
   `:cli_execution_gaps_qualification` (watch plus forwarding plus reports
   plus parallelism wont-fix pins plus fixture evidence, issue #590),
-  `:promotion_checklist_qualification` (promotion checklist pins plus
-  fixture evidence, issue #611),
-  `:sbom_upload_qualification` (SBOM plus provenance CI upload pins plus
-  fixture evidence, issue #612),
-  `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
-  best-effort), `:windows_qualification`, `:ci_matrix_qualification`
-  (host matrix, issue #415), `:flakiness_qualification`
+   `:promotion_checklist_qualification` (promotion checklist pins plus
+   fixture evidence, closed #611; process now #808),
+   `:sbom_upload_qualification` (SBOM plus provenance CI upload pins plus
+   fixture evidence, closed #612; per-host release evidence #803-#807),
+   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
+   best-effort), `:windows_qualification`, `:ci_matrix_qualification`
+   (host matrix, closed #415), `:flakiness_qualification`
   (flaky retries plus tuned timeouts plus sharding, issue #619), and `:closeout_battery_qualification`
   (battery commands plus docs gate, issue #467).
 - `devcontainer-check`, `docs-ci`, `dogfood (test-disabled self-call on
@@ -354,26 +358,26 @@ Remaining reds stay owned gaps, not green claims:
   `per_cell.expected` plus `codecov_remote.expected` via
   `bazel run //tools/ci:coverage_qualification`; seven cells, same
   scope, no union, Starlark fallback, Codecov opt-in, quotas, local-only
-  remote evidence). First-party PR reporting is
-  adopted under #254 (Codecov opt-in only; the seed cell owns the PR comment,
-  the arm64 plus musl plus macos plus macos-x86_64 plus windows cells report to their job summaries; the macos x86_64 best-effort cell reports without blocking required-host release). All required plus best-effort cells are qualified; out-of-v1 hosts stay platform-gated under #298.
-- Docs pipeline and environment/codegen stay open under #581 and #506 (see
-  [Documentation](../documentation/README.md#contracts)). Environment/codegen
-  deferred records plus fixture evidence are qualified seed-only under #506
+   remote evidence). First-party PR reporting is
+   adopted under #254 (Codecov opt-in only; the seed cell owns the PR comment,
+   the arm64 plus musl plus macos plus macos-x86_64 plus windows cells report to their job summaries; the macos x86_64 best-effort cell reports without blocking required-host release). All required plus best-effort cells are qualified; out-of-v1 hosts stay platform-gated under closed #298.
+- Docs pipeline and environment/codegen stay open under #779-#785 and #787 (see
+   [Documentation](../documentation/README.md#contracts); successors to closed #581 and #506). Environment/codegen
+   deferred records plus fixture evidence are qualified seed-only under closed #506
   (`bazel run //tools/ci:env_codegen_qualification` with
   `env/tests/fixtures/env_codegen/pins.bzl` plus `env_codegen.expected`
   plus `roots_bep.txt`; no junction/copy fallback, no checksum-only
   fallback, no third-party plugin claim; bootstrap, fidelity, spaces,
   stale-clean, IDE, atomic-commit, BEP, projection, root-candidate, and
   cold-warm qualified with WP shard plus root plus collector evidence;
-  platform plus consumer plus release evidence stays owned gap; no Supported
+  platform plus consumer plus release evidence stays owned gap under #808; no Supported
   claim). Docs-pipeline IR plus
-  planning records with fixture evidence are qualified seed-only under #581
+  planning records with fixture evidence are qualified seed-only under closed #581
   (live successor to closed #421)
   (`bazel run //tools/ci:docs_pipeline_qualification`; versioned IR, codec,
   planning, frozen contracts, removed stub; adapter runs, renderer/site
   execution, rebuild proof, link completeness, guide-step wiring, timing proof,
-  and pin-bump/drift stay owned gaps; no working site claimed).
+  and pin-bump/drift stay owned gaps under #779-#785; no working site claimed).
 - Consumer-CI contract plus caller plus gate/aggregate plus per-gap decisions
   with fixture evidence qualified seed-only under #509
   (`tools/ci/tests/fixtures/consumer_ci/pins.bzl` plus `platforms.expected`
@@ -407,16 +411,16 @@ Remaining reds stay owned gaps, not green claims:
   `review_threads_qualification` 16/16);
    platform qualification
    beyond the seed plus arm64 plus musl plus macos plus macos-x86_64 plus
-   windows hosts stays open under #298 (arm64 qualified under #410, static
-   musl under #411, macos arm64 under #412, macos x86_64 best-effort under
-   #413, windows x86_64 under #414).
+   windows hosts stays open under #803-#807 (successors to closed #298; native
+   qualification delivered seed-only under closed #410-#414).
 - File-family quality record with fixture evidence qualified seed-only under #489
   (`bazel run //tools/ci:file_family_qualification`; provider-class
   applicability with never-suffix inference, Starlark/Buildifier plus TOML/Taplo
   adapter-backed evidence, parity-deferred CSS/djlint/buf/yaml/keep-sorted/shell
   plus cue/jsonnet/pkl/qml/terraform routes with owner plus frozen acquisition;
   deferred adapter execution, exact pins/digests/rule-sets/mappings, and platform
-  plus consumer plus release evidence stay owned gaps; no Supported claim).
+  plus consumer plus release evidence stay owned gaps under #796-#800 (successors
+  to closed #416-#420); no Supported claim).
 - Hand-rolled helper decisions with fixture evidence qualified seed-only under #315/#395
   (`bazel run //tools/ci:helper_qualification`; adopted digest via
   hex/blake3/sha2, diff via similar, SPDX parse via spdx, date calendar via
@@ -432,8 +436,8 @@ Remaining reds stay owned gaps, not green claims:
   contract with snapshots across env, codegen shard, env shard, evaluator,
   runner, markdown, plus dx CLI tokenizer via disable_help_flag plus
   allow_hyphen_values plus invalid_token/parse_error mapping for unknown,
-  missing, malformed, hyphen-value, and attached-echo shapes; strict clap
-  parsing with auto help stays owned gap).
+   missing, malformed, hyphen-value, and attached-echo shapes; strict clap
+   parsing with auto help stays owned gap under #810).
 - Hello smoke as test with fixture evidence qualified seed-only under #464
   (`bazel run //tools/ci:hello_smoke_qualification`; 11 binary hellos with
   `hello_output_test` under `bazel test //...`, no-coverage Linux-only runfiles
@@ -577,7 +581,7 @@ Remaining reds stay owned gaps, not green claims:
   with no hidden preset, Checkstyle Google checks never auto-supplied, detekt
   `buildUponDefaultConfig` not `allRules`, beyond-default switches rejected,
   proven by the java/kotlin hello fixtures with no adapter claim; digests plus
-  adapters stay owned under #416
+  adapters stay owned under #796 (successor to closed #416)
   (`jvm_quality_qualification` 16/16); platform plus consumer plus release
   evidence stays owned gap; no Supported claim).
 - Scala + .NET quality defaults with fixture evidence qualified seed-only under #486
@@ -589,7 +593,7 @@ Remaining reds stay owned gaps, not green claims:
   RemoveUnused preset, Roslyn SDK default analysis mode with StyleCop opt-in,
   FSharpLint default ruleset with formatting rules off, auto preset rejected,
   proven by the scala/csharp/fsharp hello fixtures with no adapter claim;
-  digests plus adapters stay owned under #417
+  digests plus adapters stay owned under #797 (successor to closed #417)
   (`scala_dotnet_defaults_qualification` 17/17); platform plus consumer plus
   release evidence stays owned gap; no Supported claim).
 - Native quality defaults with fixture evidence qualified seed-only under #487
@@ -601,7 +605,7 @@ Remaining reds stay owned gaps, not green claims:
   checks with the `SA`-only shortcut rejected, `govet` default analyzers with
   errcheck complementary, clang-tidy default checks, cppcheck default enablement,
   beyond-default switches rejected, proven by the cc/go hello fixtures with no
-  adapter claim; digests plus adapters stay owned under #418
+  adapter claim; digests plus adapters stay owned under #798 (successor to closed #418)
   (`native_quality_qualification` 17/17); platform plus consumer plus release
   evidence stays owned gap; no Supported claim).
 - Structured quality defaults with fixture evidence qualified seed-only under #488
@@ -614,7 +618,7 @@ Remaining reds stay owned gaps, not green claims:
   auto-supplied buf.yaml or ini preset, beyond-default `COMMENTS` plus
   `UNARY_RPC` opt-in maxima rejected, proven by the fixture pair with no
   adapter claim; digests (including Qt distribution identity, licensing,
-  and platform artifacts) plus adapters stay owned under #419
+  and platform artifacts) plus adapters stay owned under #799 (successor to closed #419)
   (`structured_defaults_qualification` 17/17); platform plus consumer plus
   release evidence stays owned gap; no Supported claim).
 - File-family quality defaults with fixture evidence qualified seed-only under #489
@@ -628,8 +632,8 @@ Remaining reds stay owned gaps, not green claims:
   built-in defaults with no hidden preset, whole-file rewrite versus check-only
   per tool with no auto-supplied preset, suffix inference rejected with
   registry-owned applicability, beyond-default switches rejected, proven by the
-  fixture pair with no adapter claim; digests plus adapters stay owned under #420;
-  `protobuf`/`qml` stay owned by issue #419, never double-claimed
+  fixture pair with no adapter claim; digests plus adapters stay owned under #800 (successor to closed #420);
+  `protobuf`/`qml` stay owned by #799 (successor to closed #419), never double-claimed
   (`file_family_defaults_qualification` 17/17); platform plus consumer plus release
   evidence stays owned gap; no Supported claim).
 - Scalafix console plus semanticdb-classpath wiring with fixture evidence
@@ -641,7 +645,7 @@ Remaining reds stay owned gaps, not green claims:
   outputs, silent console parse rejected, pinned in
   `scala/tests/fixtures/scalafix/pins.bzl` with `console_lint.txt` plus
   `console_rewrite.txt` lossiness proof, proven by the scala hello fixture
-  with no adapter claim; digests plus `scala` adapter stays owned under #417
+  with no adapter claim; digests plus `scala` adapter stays owned under #797 (successor to closed #417)
   (`scalafix_qualification` 12/12); platform plus consumer plus release
   evidence stays owned gap; no Supported claim).
 - Roslyn per-TFM-RID SARIF aggregation with fixture evidence qualified
@@ -654,7 +658,7 @@ Remaining reds stay owned gaps, not green claims:
   `csharp/tests/fixtures/roslyn/pins.bzl` with `net8.sarif` plus
   `net10.sarif` union proof (shared CA1822 in both, TFM-specific CA1303
   only in net10) plus `aggregated.sarif`, proven by the csharp hello fixture
-  with no adapter claim; digests plus `csharp` adapter stays owned under #417
+  with no adapter claim; digests plus `csharp` adapter stays owned under #797 (successor to closed #417)
   (`roslyn_qualification` 13/13); platform plus consumer plus release
   evidence stays owned gap; no Supported claim).
 - FSharpLint console vs library-API binding with fixture evidence
@@ -670,7 +674,7 @@ Remaining reds stay owned gaps, not green claims:
   lines, `-f msbuild` lines carry full ranges but drop fix plus typecheck
   context) plus `example.fsharplint.json` (formatting-adjacent rules off,
   Fantomas owns formatting), proven by the fsharp hello fixture with no
-  adapter claim; digests plus `fsharp` adapter stays owned under #417
+  adapter claim; digests plus `fsharp` adapter stays owned under #797 (successor to closed #417)
   (`fsharplint_qualification` 13/13); platform plus consumer plus release
   evidence stays owned gap; no Supported claim).
 - Windows immutable-lazy acquisition with fixture evidence qualified seed-only under #495
@@ -843,8 +847,8 @@ Remaining reds stay owned gaps, not green claims:
   release evidence stays owned gap; no Supported claim
   (`remediation_bounds_qualification` 16/16)).
 - Layer-2 adapter-less plus composition plus depcheck with fixture evidence
-  qualified seed-only under issue #510
-  (`bazel run //tools/ci:layer2_opens_qualification`;
+   qualified seed-only under closed #510
+   (`bazel run //tools/ci:layer2_opens_qualification`;
   Go plus Java plus Kotlin plus Scala plus C# plus F# plus C++ Layer-2
   Open adapter-less with no adapter claim plus no runner-matrix cells plus
   parity deferred, Vue plus Svelte plus Astro plus MDX regions
@@ -856,8 +860,8 @@ Remaining reds stay owned gaps, not green claims:
   pnpm route, required-core plus admitted fixtures delivered in
   `tools/depcheck/` under #22, pinned in
   `quality/tests/fixtures/layer2_opens/pins.bzl` with
-  `layer2_opens.expected`; Closed #303 only, #416-420 adapters partially
-  with digests plus adapters staying owned, adapter-less as pass rejected;
+   `layer2_opens.expected`; Closed #303 only, #796-#800 adapters (successors to
+   closed #416-#420) with digests plus adapters staying owned, adapter-less as pass rejected;
   backends stay provisional; platform plus consumer plus release evidence
   stays owned gap; no Supported claim
   (`layer2_opens_qualification` 16/16)).
@@ -900,7 +904,7 @@ Remaining reds stay owned gaps, not green claims:
   (`bazel run //tools/ci:non_dogfed_paths`; hermetic CLI-contract pins,
   green hermetic failure proofs (issue #406), coverage-excluded runs, shell ownership
   plus test execution with no quality class by design).
-- Quality family taxonomy execution with fixture evidence qualified seed-only under #512
+- Quality family taxonomy execution with fixture evidence qualified seed-only under closed #512
   (`bazel run //tools/ci:quality_taxonomy_qualification` with
   `quality/tests/fixtures/quality_taxonomy/pins.bzl` plus
   `quality_taxonomy.expected`; `quality_taxonomy_qualification` 17/17;
@@ -911,12 +915,12 @@ Remaining reds stay owned gaps, not green claims:
   with ADR 0019 owner plus frozen route, curated audit empty with Bandit
   excluded plus secrets via Gitleaks, suffix rejected with cross-family
    union plus lazy plus no hidden preset; taxonomy doc only plus
-   report-not-gate shape only rejected; deferred adapters owned under
-   416-420 plus 307, digests plus rule-sets owned by cohorts, platform plus
-   consumer plus release evidence stays owned gap; backends provisional; no
-   Supported claim; issue #512 stays taxonomy-only).
+    report-not-gate shape only rejected; deferred adapters owned under
+    #796-#800 (successors to closed #416-#420) plus closed #307, digests plus rule-sets owned by cohorts, platform plus
+    consumer plus release evidence stays owned gap under #802 and #808; backends provisional; no
+    Supported claim; closed #512 stays taxonomy-only).
 - Python source-audit split with fixture evidence qualified seed-only
-   under #613
+    under closed #613
    (`bazel run //tools/ci:python_audit_qualification` with
    `python/tests/fixtures/python_audit/pins.bzl` plus
    `python_audit.expected`; `python_audit_qualification` 16/16;
@@ -924,9 +928,9 @@ Remaining reds stay owned gaps, not green claims:
    lint Ruff plus pydoclint plus format Ruff plus typecheck Ty
    unaffected with flake8 plus pylint opt-ins, no audit adapter claim,
    source audit distinct from ecosystem audit/update delivered, leaving
-   under taxonomy rejected with mismatched scope; future selection plus
-   platform plus consumer plus release evidence stays owned gap;
-   backends provisional; no Supported claim).
+    under taxonomy rejected with mismatched scope; future selection (#801) plus
+    platform plus consumer plus release (#808) evidence stays owned gap;
+    backends provisional; no Supported claim).
 - Selective `dx update` per-set support with fixture evidence qualified
   seed-only under #583
   (`bazel run //tools/ci:selective_update_qualification` with
@@ -1026,27 +1030,28 @@ Remaining reds stay owned gaps, not green claims:
   rejected, interrupted runs keep preceding per-set events true with no rollback and nothing
   for unattempted sets; protocol-only, no workflow change; platform plus consumer plus release
   evidence stays owned gap; no Supported claim).
-- Third-party env plugin-model design plus Go cgo exception boundary with fixture evidence
-  qualified seed-only under #587
-  (`bazel run //tools/ci:env_plugins_cgo_qualification` with
-  `env/tests/fixtures/env_plugins_cgo/pins.bzl` plus
-  `env_plugins_cgo.expected`; `env_plugins_cgo_qualification` 16/16;
-  deferred third-party plugin model with design owner plus acceptance criteria and no private
-  path, `EnvironmentInfo` repurpose wont-fix, pure-Go `GOPACKAGESDRIVER` boundary on rules_go
-  0.63.0 with explicit cgo out-of-scope exception and upstream non-guarantee, static snapshot
-  plus replacement graph plus ambient fallback plus generic parity plus cgo completion claim
-  rejected; env only, no PATH-tool collision rule change; platform plus consumer plus release
-  evidence stays owned gap; no Supported claim).
-- Starlark testing futures with fixture evidence qualified seed-only under #588
+- Third-party env plugin-model (not planned) plus Go cgo exception boundary with fixture evidence
+   qualified seed-only under closed #587
+   (`bazel run //tools/ci:env_plugins_cgo_qualification` with
+   `env/tests/fixtures/env_plugins_cgo/pins.bzl` plus
+   `env_plugins_cgo.expected`; `env_plugins_cgo_qualification` 16/16;
+   no third-party plugin model and no private path (`EnvironmentInfo` repurpose
+   wont-fix), pure-Go `GOPACKAGESDRIVER` boundary on rules_go
+   0.63.0 with explicit cgo out-of-scope exception and upstream non-guarantee (cgo
+   completion #789), static snapshot
+   plus replacement graph plus ambient fallback plus generic parity plus cgo completion claim
+   rejected; env only, no PATH-tool collision rule change; platform plus consumer plus release
+   evidence stays owned gap under #808; no Supported claim).
+- Starlark testing futures with fixture evidence qualified seed-only under closed #588
   (`bazel run //tools/ci:starlark_futures_qualification` with
   `libs/starlark/tests/fixtures/starlark_futures/pins.bzl` plus
   `starlark_futures.expected`; `starlark_futures_qualification` 16/16;
   per-check filtering plus per-function targets plus Rust orchestration with BEP
   wont-fix on target granularity plus explicit macro instantiation plus single
-  invocation with no nested Bazel, richer matchers plus aspect plus toolchain
-  plus configuration (including transitions) plus output-group plus action
-  (including registered-action) subjects deferred pending a concrete use case
-  plus fixtures plus successor issue, second Starlark interpreter plus per-check
+   invocation with no nested Bazel, richer matchers (#790) plus aspect (#791) plus toolchain
+   (#792) plus configuration including transitions (#793) plus output-group (#794) plus action
+   including registered-action (#795) subjects deferred pending a concrete use case
+   plus fixtures plus successor issue, second Starlark interpreter plus per-check
   `--test_filter` parsing plus nested Bazel plus behavioral matrix as line
   coverage rejected; test framework only, no Bazel semantics change; platform
   plus consumer plus release evidence stays owned gap; no Supported claim).

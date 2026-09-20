@@ -12,18 +12,19 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
 ## Improve
 
 * Tag hygiene and release-input gaps, no publication pressure.
-* Release promotion checklist to Supported owned under issue #611
-  (`docs/product/promotion-checklist.md` with fixture evidence via
+* Release promotion checklist to Supported owned under #808 (successor to closed #611;
+  `docs/product/promotion-checklist.md` with fixture evidence via
   `bazel run //tools/ci:promotion_checklist_qualification`; tag hygiene,
   versioning, and platform plus consumer plus release evidence per cell;
   ad-hoc release rejected; no Supported claim).
-* SBOM plus provenance upload on CI owned under issue #612
+* SBOM plus provenance upload on CI owned under closed #612
   (`sbom` job in `.github/workflows/ci.yml` plus fixture evidence via
   `bazel run //tools/ci:sbom_upload_qualification`; SPDX-2.3 plus SLSA v1
   build plus verify plus `sbom-provenance` upload on every push/PR, attestation
-  stays owner-gated human-run; dry-run-only rejected; no Supported claim).
-* Toolchain, provider, and adapter qualification backlogs: Rust providers plus Gazelle plus integration (issues #470-#475), runners plus locks plus defaults (issues #476-#489), adapter wiring (issues #490-#493), native qualification (issues #494-#505), env plus codegen (issue #506), coverage plus consumer plus quality (issues #507-#512).
-* Docs-pipeline execution gaps stay open under issue #581 (live successor to closed #421; adapter runs with pins
+  stays owner-gated human-run; dry-run-only rejected; no Supported claim;
+  per-host release evidence #803-#807).
+* Toolchain, provider, and adapter qualification backlogs: Rust providers plus Gazelle plus integration (issues #470-#475), runners plus locks plus defaults (issues #476-#489), adapter wiring (issues #490-#493), native qualification (issues #494-#505), env plus codegen (#787, #788; successors to closed #506), coverage plus consumer plus quality (#802; successor to closed #512).
+* Docs-pipeline execution gaps stay open under #779-#785 (successors to closed #581, live successor to closed #421; adapter runs with pins
   and mappings, renderer and site execution, byte-identical rebuild proof, link and
   reference completeness, guide prose with guide-step CI wiring, first-hour timing proof,
   and per-release pin-bump plus drift process; no working site claimed).
@@ -54,4 +55,4 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
   `dx run` multirun delivered (issue #463, sequential local-only multirun for explicit
   labels/patterns). No post-v1 bucket.
 * Rust library extraction decided internal-only under issue #469 (see ADR 0023; 34 internal crates, binaries-only boundary, no consumer migration).
-* CLI and deploy follow-ups: `--debug`/`--release` flags plus `DX_PROFILE` forwarding plus deploy provider/CLI (issues #457-#458); `dx docs` reintroduction with real extraction/validation (see ADR 0020; open under issue #581, live successor to closed #421).
+* CLI and deploy follow-ups: `--debug`/`--release` flags plus `DX_PROFILE` forwarding plus deploy provider/CLI (#814; successor to closed #457-#458); `dx docs` reintroduction with real extraction/validation (see ADR 0020; open under #786, successor to closed #581, live successor to closed #421).

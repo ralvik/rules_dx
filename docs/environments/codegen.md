@@ -42,9 +42,9 @@ empty so no central eager dependency is built).
 The physical root-selection mechanism is frozen to the `//...` baseline
 (see `FROZEN_STRATEGY` in `cli/roots/src/lib.rs`) by fiat per
 [ADR 0022](../decisions/0022-no-benchmarking.md). The admitted
-generator/language pairs stay frozen under issue #506
-(`generation/codegen.bzl:DX_CODEGEN_ADMITTED_PAIRS`). Concurrency,
-interruption, remote materialization, and reuse certification stay open per
+generator/language pairs stay frozen under closed #506
+(`generation/codegen.bzl:DX_CODEGEN_ADMITTED_PAIRS`; evolution #788). Concurrency,
+interruption, remote materialization, and reuse certification stay open under #753 per
 that crate's docs.
 
 Repository-wide selection includes every registered production, test, example, and
@@ -61,7 +61,7 @@ transitive closure. No reverse-dependency expansion runs: `plan_managed`
 passes the single label to one Bazel build with the codegen aspect, and an
 empty shard set selects an empty exact projection.
 
-Open: bare-schema expansion to every registered generated-language
+Open: bare-schema expansion (#751) to every registered generated-language
 projection consuming that schema. An aspect cannot traverse reverse
 dependencies, so this needs a Bazel query for registered projection reverse
 dependents passed back to analysis. Not implemented; no query step exists
@@ -264,8 +264,8 @@ Cross-cutting fixture, platform, remote, and evidence requirements remain in
 concurrency, ownership, and retention requirements remain in
 [Managed Environment State](managed-state.md#test-requirements).
 
-Codegen deferred records with fixture evidence qualified seed-only under issue #506
+Codegen deferred records with fixture evidence qualified seed-only under closed #506
 (`env/tests/fixtures/env_codegen/pins.bzl` via `bazel run //tools/ci:env_codegen_qualification`;
 admitted pairs, collector contracts, BEP output groups, projection, roots, and cold-warm with
 `env_codegen.expected` plus `roots_bep.txt`; platform plus consumer plus release evidence stays
-owned gap; no Supported claim).
+owned gap under #808; no Supported claim).
