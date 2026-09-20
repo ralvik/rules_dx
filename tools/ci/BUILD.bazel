@@ -640,6 +640,21 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# macOS arm64 qualification harness (issue #412): proves the as-built
+# macOS arm64 record with fixture evidence and owned gaps, without
+# claiming Supported or macOS x86_64 — dx qualified host plus no-fallback
+# refusal, per-cell macos coverage with no union, macOS CI jobs natively
+# on macos-14 with a per-host cache scope under the portable-shell
+# contract, docs in support-matrix plus ADR 0014 plus native-toolchains.
+# Run by CI via `bazel run //tools/ci:macos_qualification`.
+sh_binary(
+    name = "macos_qualification",
+    srcs = ["macos_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Environment/codegen qualification harness (issue #309): proves the
 # as-built deferred/unsupported records (public contribution, Windows
 # fallback, standalone, signing/trust) with fixture evidence

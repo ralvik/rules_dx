@@ -1,4 +1,4 @@
-//! Startup platform gate for the `dx` CLI (issues #298, #410, #411).
+//! Startup platform gate for the `dx` CLI (issues #298, #410, #411, #412).
 //!
 //! Only hosts with platform evidence stay on the execution path; every
 //! other host gets a clean refusal naming the host and the qualification
@@ -11,17 +11,28 @@
 /// Hosts with platform evidence: `(std::env::consts::OS, ARCH)` pairs.
 ///
 /// The Linux x86_64 seed host plus Linux arm64 glibc native (issue #410)
-/// are delivered. Provisional: extend this list as remaining ADR 0014
-/// required-platform evidence lands (tracked in issue #298, closed, with
-/// per-host successors owning each host); the startup refusal below reads
-/// the same list, so support flips on automatically with the evidence entry.
+/// plus macOS arm64 native (issue #412) are delivered. Provisional: extend
+/// this list as remaining ADR 0014 required-platform evidence lands
+/// (tracked in issue #298, closed, with per-host successors owning each
+/// host); the startup refusal below reads the same list, so support flips
+/// on automatically with the evidence entry.
 ///
 /// Static-musl profiles (issue #411) share these OS/arch pairs: the two
 /// Linux hosts above run static-musl closures natively, so no new host
 /// entry is needed for them. See [`qualified_static_musl_profiles`] for
 /// the target-profile list that flips independently.
+///
+/// macOS arm64 (issue #412) runs natively on `macos-14` (arm64) runners
+/// through the pinned upstream toolchains; the hermetic-llvm Apple-SDK
+/// backend stays provisional with immutable lazy fetch and no
+/// host-installed SDK fallback (never approved). Exact pins, hosts,
+/// floors, and SDK/CRT identities stay owned by O14/O37 per ADR 0014.
 pub fn qualified_hosts() -> &'static [(&'static str, &'static str)] {
-    &[("linux", "x86_64"), ("linux", "aarch64")]
+    &[
+        ("linux", "x86_64"),
+        ("linux", "aarch64"),
+        ("macos", "aarch64"),
+    ]
 }
 
 /// Static-musl target profiles with platform evidence (issue #411).
@@ -45,7 +56,7 @@ pub fn refusal(os: &str, arch: &str) -> Option<String> {
         return None;
     }
     Some(format!(
-        "unsupported_platform: {os}/{arch} has no qualified platform evidence; dx is delivered on Linux x86_64 and Linux arm64 (glibc plus static musl, issue #411; dynamic musl explicitly out of scope) only (see docs/product/support-matrix.md and ADR 0014, tracked in issue #298 with per-host successors such as issues #410/#411)"
+        "unsupported_platform: {os}/{arch} has no qualified platform evidence; dx is delivered on Linux x86_64 and Linux arm64 (glibc plus static musl, issue #411; dynamic musl explicitly out of scope) plus macOS arm64 (issue #412; host-installed SDK fallback never approved) only (see docs/product/support-matrix.md and ADR 0014, tracked in issue #298 with per-host successors such as issues #410/#411/#412)"
     ))
 }
 
@@ -85,12 +96,10 @@ mod tests {
     fn unqualified_hosts_are_refused_with_pointer() {
         // Every remaining ADR 0014 host (required, best-effort, and
         // out-of-v1) refuses cleanly until its per-host evidence lands:
-        // static-musl profiles share the same OS/arch pairs as the now
-        // qualified Linux glibc hosts, macOS arm64 (required) plus x86_64
+        // macOS arm64 is qualified under issue #412, so only macOS x86_64
         // (best-effort), Windows x86_64 (required, backend blocked)
-        // plus arm64 (out of v1).
+        // plus arm64 (out of v1) remain here.
         for (os, arch) in [
-            ("macos", "aarch64"),
             ("macos", "x86_64"),
             ("windows", "x86_64"),
             ("windows", "aarch64"),
@@ -103,11 +112,20 @@ mod tests {
     }
 
     #[test]
-    fn qualified_set_is_seed_plus_arm64() {
+    fn qualified_set_is_seed_plus_arm64_plus_macos() {
         assert_eq!(
             qualified_hosts(),
-            &[("linux", "x86_64"), ("linux", "aarch64")]
+            &[
+                ("linux", "x86_64"),
+                ("linux", "aarch64"),
+                ("macos", "aarch64")
+            ]
         );
+    }
+
+    #[test]
+    fn macos_arm64_host_is_qualified() {
+        assert_eq!(refusal("macos", "aarch64"), None);
     }
 
     #[test]
@@ -131,8 +149,7 @@ mod tests {
             "linux_x86_64_musl_dynamic",
             "linux_x86_64_musl",
         ] {
-            let message =
-                musl_profile_refusal(profile).expect("dynamic musl must be refused");
+            let message = musl_profile_refusal(profile).expect("dynamic musl must be refused");
             assert!(message.starts_with("unsupported_platform"), "{message}");
             assert!(message.contains(profile), "{message}");
             assert!(message.contains("dynamic musl"), "{message}");

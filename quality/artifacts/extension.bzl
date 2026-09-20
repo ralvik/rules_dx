@@ -9,7 +9,8 @@ rejects bytes whose digest differs from the checked-in pin.
 Metadata schema version 1 is frozen by `metadata_tests.bzl`; only
 linux_x86_64 is recorded (seed host plus Linux arm64 `dx`/CI qualified
 under issue #410 plus static-musl target profiles qualified under issue
-#411; linux_arm64 tool artifacts stay an owned follow-up gap
+#411 plus macOS arm64 `dx`/CI qualified under issue #412; linux_arm64
+plus macos_arm64 tool artifacts stay owned follow-up gaps
 with the recorded no-artifact diagnostic, never a silent fallback; musl
 target closures run quality tools on the glibc exec platform, so no musl
 tool artifact is recorded; other

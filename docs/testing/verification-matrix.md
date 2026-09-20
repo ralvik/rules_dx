@@ -88,7 +88,7 @@ class by design — never silently under the standard dogfood gates.
 
 `Delivered` means implemented and verified on the Linux x86_64 seed host
 plus Linux arm64 native (issue #410) plus the two Linux static-musl
-profiles (issue #411). `Open` means open work with no implementation
+profiles (issue #411) plus macOS arm64 native (issue #412). `Open` means open work with no implementation
 claimed here. `Planning only` means planning is implemented with live
 execution deferred. `Tracked` means measured report-only tracking with no gate.
 
@@ -126,7 +126,9 @@ Accepted record of the as-built close-out battery. The full battery runs in
 `.github/workflows/ci.yml` on a clean tree on the Linux x86_64 seed host
 plus Linux arm64 native (issue #410, `ubuntu-24.04-arm` runners with a
 separate `bazel-arm64-` disk-cache scope) plus the two static-musl profiles
-(issue #411, Linux runners with per-profile `bazel-musl-*` scopes):
+(issue #411, Linux runners with per-profile `bazel-musl-*` scopes) plus
+macOS arm64 native (issue #412, `macos-14` runners with a separate
+`bazel-macos-arm64-` disk-cache scope):
 
 - `build`: `bazel build //...` plus the adopt-rust `dx_dev` smoke
   (`bazel build //examples/adopt-rust/... --config=dx_dev`) for
@@ -144,13 +146,19 @@ separate `bazel-arm64-` disk-cache scope) plus the two static-musl profiles
   gates (`dx coverage --min-coverage 97 //...` against
   `tools/coverage/musl-*-inventory.txt`, summary only, no cross-cell union)
   on their Linux runners (issue #411).
+- `build-macos-arm64`, `test-macos-arm64`, `coverage-macos-arm64`: the same
+  build plus `dx_dev` smoke, `bazel test //...`, and the macos arm64
+  per-cell coverage gate (`dx coverage --min-coverage 97 //...` against
+  `tools/coverage/macos-arm64-inventory.txt`, summary only, no cross-cell
+  union) natively on macOS arm64 (`macos-14`, issue #412; host-installed
+  SDK fallback never approved, no secrets, no interactive acceptance).
 - `test`: `bazel test //...` (no manual tests; hermetic CLI-contract pins run here).
 - `coverage`: `bazel run //cli/cli:dx -- coverage --min-coverage 97 //...`
   (seed cell only) plus `bazel run //tools/ci:coverage_report_guards`.
 - `prove`: `:target_tags`, `:coverage_cell`,
   `:coverage_spill`, `:coverage_qualification`, `:musl_qualification`,
-  `:release_hygiene`, `:release_policy`, `:publish_trust`,
-  `:shell_contract`.
+  `:macos_qualification`, `:release_hygiene`, `:release_policy`,
+  `:publish_trust`, `:shell_contract`.
 - `dogfood-freshness`: `bazel run //cli/cli:dx -- generate --check //...`,
   `//tools/ci:corpus_audit`, `:code_ownership`, `:non_dogfed_paths`,
   examples READMEs and
@@ -161,20 +169,20 @@ separate `bazel-arm64-` disk-cache scope) plus the two static-musl profiles
   `:supported_evidence_gate`, `:quality_adapters_parity`,
   `:env_codegen_qualification`, `:docs_pipeline_qualification`,
   `:consumer_ci_qualification`, `:file_family_qualification`,
-  `:helper_qualification`, `:clap_tokenizer_qualification`, and
-  `:musl_qualification`.
+  `:helper_qualification`, `:clap_tokenizer_qualification`,
+  `:musl_qualification`, and `:macos_qualification`.
 - `dogfood-lint`, `dogfood-format`, `dogfood-typecheck`: corpus converge then
   `--check` no-op proof, plus lane-A trees `//python/... //javascript/...
   //rust/tests/fixtures/hello/...` where enforcing.
 - `devcontainer-check`, `docs-ci`, `consumer-ci` (build-only self-call on
-  linux_x86_64 plus linux_arm64).
+  linux_x86_64 plus linux_arm64 plus macos_arm64).
 
 Green here (static guards on a clean tree, no full rebuild):
 `non_dogfed_paths`, `supported_evidence_gate`, `distribution_closeout_guards`,
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 26/26,
 `consumer_ci_qualification` 29/29, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
-`musl_qualification` 12/12.
+`musl_qualification` 12/12, `macos_qualification` 12/12.
 Full `build`/`test` green is owned by CI on this tree; the last full-tree
 record is noted on the issue, not re-claimed here.
 
@@ -182,12 +190,12 @@ Remaining reds stay owned gaps, not green claims:
 
 - Full-tree `dx lint/format/typecheck/test --check //...` over fixtures and
   testdata stays open under #12 (lane A only) and #325 (consumer honesty).
-- Per-cell coverage is qualified for the seed plus arm64 plus two static-musl cells under
-  #308/#410/#411 (`tools/coverage/cells.txt`,
+- Per-cell coverage is qualified for the seed plus arm64 plus two static-musl plus macos arm64 cells under
+  #308/#410/#411/#412 (`tools/coverage/cells.txt`,
   `bazel run //tools/ci:coverage_qualification`; no union, Starlark fallback,
   Codecov opt-in, quotas, local-only remote evidence). First-party PR reporting is
   adopted under #254 (Codecov opt-in only; the seed cell owns the PR comment,
-  the arm64 plus musl cells report to their job summaries). Remaining non-qualified cells stay platform-gated under #298.
+  the arm64 plus musl plus macos cells report to their job summaries). Remaining non-qualified cells stay platform-gated under #298.
 - Docs pipeline and environment/codegen stay open under #310 and #309 (see
   [Documentation](../documentation/README.md#contracts)). Environment/codegen
   deferred records plus fixture evidence are qualified seed-only under #309
@@ -212,8 +220,9 @@ Remaining reds stay owned gaps, not green claims:
    aggregate binding, thread identity, ordering, limits, fork, untrusted,
    sensitive, retries, Code-Scanning, sequential, tag/release, Renovate and
    native-bot, migrate-execution gaps stay owned gaps); platform qualification
-   beyond the seed plus arm64 hosts stays open under #298 (arm64 qualified
-   under #410).
+   beyond the seed plus arm64 plus musl plus macos hosts stays open under
+   #298 (arm64 qualified under #410, static musl under #411, macos arm64
+   under #412).
 - File-family quality record with fixture evidence qualified seed-only under #313
   (`bazel run //tools/ci:file_family_qualification`; provider-class
   applicability with never-suffix inference, Starlark/Buildifier plus TOML/Taplo

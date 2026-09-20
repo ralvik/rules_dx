@@ -4,7 +4,8 @@
 # Qualified hosts: Linux x86_64 glibc (ubuntu-latest) plus Linux arm64
 # glibc native (ubuntu-24.04-arm, issue #410) plus Linux static-musl
 # profiles (issue #411, cross-built from Linux runners with per-profile
-# cache scopes), local execution, no remote.
+# cache scopes) plus macOS arm64 native (macos-14, issue #412),
+# local execution, no remote.
 # Platform qualification for the remaining ADR 0014 required hosts stays
 # open under issue #298 (closed; per-host successors own each host):
 # they are unqualified gaps with clean dx refusal, not claimed here.
@@ -43,7 +44,9 @@
 # (issue #410) stay on ubuntu-24.04-arm with the separate `bazel-arm64-`
 # scope; static-musl profile jobs (issue #411) cross-build from Linux
 # runners with per-profile `bazel-musl-x86_64-` plus `bazel-musl-arm64-`
-# scopes (free-tier eligible, no paid services). `needs:` chains enforce
+# scopes; macOS arm64 native jobs (issue #412) stay on macos-14 with the
+# separate `bazel-macos-arm64-` scope (free-tier eligible, no paid
+# services). `needs:` chains enforce
 # fast-fail ordering so a broken build skips downstream stages instead of
 # burning parallel runners. Each job writes a `$GITHUB_STEP_SUMMARY` block
 # so triage starts from the summary, not the raw log.
@@ -82,11 +85,12 @@ jobs:
     # fail on this repo's fixtures/testdata (#12), generate reports
     # pre-existing freshness drift (#15), and both audits fail closed
     # (#18). Re-enable each check here as its owner lands. Build runs on
-    # both qualified Linux hosts (seed plus arm64 native, issue #410).
+    # all qualified hosts (seed plus arm64 native plus macOS arm64,
+    # issues #410/#412).
     uses: ./.github/workflows/reusable-consumer.yml
     with:
       rules_dx_version: "0.0.0"
-      platforms: '["linux_x86_64", "linux_arm64"]'
+      platforms: '["linux_x86_64", "linux_arm64", "macos_arm64"]'
       disabled_checks: "lint,typecheck,format,generate,security-audit,license-audit,test,coverage"
     permissions:
       contents: read
@@ -534,6 +538,110 @@ jobs:
         run: |
           echo "### coverage-musl-arm64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Command: dx coverage --min-coverage 97 //... (musl arm64 cell only, per-cell no-union; static musl only, dynamic out of scope; issue #411)." >> "$GITHUB_STEP_SUMMARY"
+  build-macos-arm64:
+    name: build-macos-arm64 (bazel build //..., macOS arm64 native)
+    timeout-minutes: 60
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-macos-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-macos-arm64-
+      - name: Build workspace
+        run: bazel build --noshow_progress //...
+      - name: Adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)
+        run: bazel build --noshow_progress //examples/adopt-rust/... --config=dx_dev
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### build-macos-arm64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: bazel build //... plus adopt-rust dx_dev smoke (macOS arm64 native on macos-14, local-only; pinned upstream toolchains, hermetic-llvm Apple-SDK backend provisional with no host-installed SDK fallback, no secrets, no interactive acceptance; issue #412)." >> "$GITHUB_STEP_SUMMARY"
+  test-macos-arm64:
+    name: test-macos-arm64 (bazel test //..., macOS arm64 native)
+    needs: [build-macos-arm64]
+    timeout-minutes: 90
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-macos-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-macos-arm64-
+      - name: Test workspace
+        run: bazel test --noshow_progress //...
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### test-macos-arm64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: bazel test //... (macOS arm64 native on macos-14, local-only; manual targets excluded by Bazel tag semantics; issue #412)." >> "$GITHUB_STEP_SUMMARY"
+  coverage-macos-arm64:
+    name: coverage-macos-arm64 (dx coverage gate, macos arm64 cell)
+    needs: [build-macos-arm64]
+    timeout-minutes: 90
+    runs-on: macos-14
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-macos-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-macos-arm64-
+      - name: Enforce macos arm64 coverage cell
+        run: |
+          set +e
+          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee /tmp/dx_coverage_macos_arm64.log
+          rc=${PIPESTATUS[0]}
+          echo "$rc" > /tmp/dx_coverage_macos_arm64.rc
+          exit $rc
+      - name: Render macos arm64 per-cell summary (same scope, no union)
+        # Per-cell evidence without a cross-cell union (issue #412): the
+        # macos-14 runner gates its own combined LCOV through the macos
+        # arm64 cell inventory; the verdict lands in the step summary only,
+        # never merged with other cells. Codecov stays opt-in only.
+        # Host-installed SDK fallback is never approved.
+        if: always()
+        run: |
+          set -euo pipefail
+          dx_rc="$(cat /tmp/dx_coverage_macos_arm64.rc 2>/dev/null || echo unknown)"
+          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' /tmp/dx_coverage_macos_arm64.log 2>/dev/null | head -n 1 || true)"
+          if [[ "$dx_rc" == "0" ]]; then status="PASS"; else status="FAIL"; fi
+          {
+            echo "<!-- dx-coverage-summary: macos-arm64 macos_arm64 -->"
+            echo "## Coverage summary — macos-arm64 macos_arm64 — $status"
+            echo ""
+            echo "Analyzed revision: \`${GITHUB_SHA}\` | Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} | Cell: \`macos-arm64 macos_arm64\`."
+            echo ""
+            if [[ -n "$dx_line" ]]; then echo "$dx_line"; echo ""; fi
+            echo "Gate exit: $dx_rc (summary never changes this outcome)."
+            echo ""
+            echo "Scope: per-cell exact counts only; no cross-cell union, no averaged percentages, no rounding up. Codecov stays opt-in only, never required."
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/dx_coverage_macos_arm64.log >> "$GITHUB_STEP_SUMMARY"
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### coverage-macos-arm64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: dx coverage --min-coverage 97 //... (macos arm64 cell only, per-cell no-union; host-installed SDK fallback never approved; issue #412)." >> "$GITHUB_STEP_SUMMARY"
   prove:
     name: prove (manual negatives, target tags, coverage cell, release hygiene, release policy, publish trust, shell contract)
     needs: [build]
@@ -561,6 +669,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:coverage_qualification
       - name: Prove static-musl qualification (profiles, exec/target, per-cell, dynamic out of scope)
         run: bazel run --noshow_progress //tools/ci:musl_qualification
+      - name: Prove macOS arm64 qualification (native, per-cell, portable-shell, no host SDK fallback)
+        run: bazel run --noshow_progress //tools/ci:macos_qualification
       - name: Prove release hygiene (no publication inputs without approval)
         run: bazel run --noshow_progress //tools/ci:release_hygiene
       - name: Prove release policy (curated defaults + parity manifest gate)
@@ -573,7 +683,7 @@ jobs:
         if: always()
         run: |
           echo "### prove — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate, coverage qualification (issue #308 per-cell plus Starlark plus Codecov plus quotas plus local-only remote; seed plus arm64 plus static musl under #410/#411), static-musl qualification (issue #411 profiles plus exec/target plus per-cell plus dynamic out of scope), release hygiene (issue #5 no-publication inputs), release policy (issue #89 curated defaults + parity gate), publish trust (issues #78/#26/#5 draft-only sites + nothing published), shell contract (issue #299 bash-only Linux-only harness + portable forms)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate, coverage qualification (issue #308 per-cell plus Starlark plus Codecov plus quotas plus local-only remote; seed plus arm64 plus static musl plus macos arm64 under #410/#411/#412), static-musl qualification (issue #411 profiles plus exec/target plus per-cell plus dynamic out of scope), macOS arm64 qualification (issue #412 native plus per-cell plus portable-shell plus no host SDK fallback), release hygiene (issue #5 no-publication inputs), release policy (issue #89 curated defaults + parity gate), publish trust (issues #78/#26/#5 draft-only sites + nothing published), shell contract (issue #299 bash-only Linux-only harness + portable forms)." >> "$GITHUB_STEP_SUMMARY"
           echo "Proved (follow-up): coverage spill containment (issues #252/#54, LLVM_PROFILE_FILE to scratch)." >> "$GITHUB_STEP_SUMMARY"
   dogfood-freshness:
     name: dogfood-freshness (tools, generate --check, corpus audit)
@@ -663,6 +773,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:clap_tokenizer_qualification
       - name: Audit static-musl qualification (issue #411 profiles plus exec/target plus per-cell plus dynamic out of scope)
         run: bazel run --noshow_progress //tools/ci:musl_qualification
+      - name: Audit macOS arm64 qualification (issue #412 native plus per-cell plus portable-shell plus no host SDK fallback)
+        run: bazel run --noshow_progress //tools/ci:macos_qualification
       - name: Write job summary
         if: always()
         run: |

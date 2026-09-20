@@ -49,6 +49,22 @@ ring C/assembly with target libs, bindgen execution libclang closure,
 and CXX generator identity stay owned gaps under issue #303 pending the
 provisional hermetic-llvm backend.
 
+macOS arm64 native is qualified (issue #412) on the current as-built
+stack: CI builds, tests, and gates coverage natively on `macos-14`
+(arm64) runners through the pinned upstream toolchains (`rules_rust`,
+`aspect_rules_py`, `aspect_rules_js`/`aspect_rules_ts`, plus the admitted
+foundations' rulesets), which already resolve `macos/arm64` acquisition.
+The `rules_rs`/`hermetic-llvm` Apple-SDK backend stays provisional with
+immutable lazy fetch, not the qualified backend; no host-installed SDK fallback
+(never approved). Apple-SDK handling leaks no secrets and needs
+no interactive acceptance. Exact pins, hosts, floors, and SDK/CRT
+identities stay owned by O14/O37 per
+[ADR 0014](decisions/0014-tested-platform-release-stack.md#decision) and
+are not pinned here. Per-host quality-tool (`dx_tools`) `macos_arm64`
+artifacts stay an owned follow-up gap like `linux_arm64`: on macOS,
+quality-tool actions fail with the recorded no-artifact diagnostic, never
+a silent fallback.
+
 ## Selected Qualification Stack
 
 | Layer | First choice | Why and boundary |
@@ -121,7 +137,7 @@ qualification configurations, not new public profile names or accepted minimum-O
 | --- | --- | --- |
 | Linux x86_64/arm64 glibc | Upstream glibc `2.28` symbol floor; libc++; ordinary dynamic glibc linkage | Application glibc implementations come from deployment systems, not the link stubs. Inspect ELF dependencies, kernel requirements and execution-tool floors separately. Native x86_64 (seed) plus native arm64 (issue #410, CI `ubuntu-24.04-arm`) are qualified; cross-build and floor evidence beyond that stays in the cohort below. |
 | Linux x86_64/arm64 static musl | Upstream musl `1.2.6`; static native closure; non-PIE first for Rust compatibility | Static musl qualified (issue #411): Rust musl std via `extra_target_triples`, exec-platform tools for build scripts/proc macros with target musl libs for apps, prebuilt glibc libs never musl-compatible by linker change alone; CI cross-builds from Linux runners with per-profile cache scopes plus per-cell coverage for both musl cells. Hermetic-llvm static-only musl targets stay provisional. Use existing upstream PIE constraints. Verify test linkage as well as binaries; this is not dynamic-musl or musl `cdylib` support. |
-| macOS x86_64/arm64 | Pinned acquired Apple SDK, SDK libc++ headers/system dynamic libc++; upstream deployment default `14.0` as the starting point | SDK version is not deployment floor. Oldest-OS execution, framework completeness and licensing remain gates. |
+| macOS x86_64/arm64 | Pinned acquired Apple SDK, SDK libc++ headers/system dynamic libc++; upstream deployment default `14.0` as the starting point | SDK version is not deployment floor. Native arm64 qualified (issue #412, CI `macos-14` with `bazel-macos-arm64-` scope, pinned upstream toolchains; hermetic-llvm Apple-SDK backend provisional with immutable lazy fetch, no host-installed SDK fallback, no secrets, no interactive acceptance). Oldest-OS execution, framework completeness and licensing remain gates. |
 | Windows x86_64 MSVC | clang-cl, Microsoft STL/UCRT/VCRuntime, retail dynamic CRT `/MD` as the starting point | Align Rust CRT mode, iterator-debug settings, system libraries and redistributable deployment. `/MT` and debug CRT are not assumed interchangeable. |
 | Linux GNU C++ prebuilt compatibility | Explicit dynamic libstdc++ alternative, not default libc++ substitution | Upstream supports it only on Linux glibc. Patched Rust runtime selection and actual GCC ABI/library fixtures must pass before claiming it. |
 
@@ -138,7 +154,7 @@ alone is not interoperability evidence.
 | Linux x86_64 | Linux x86_64 and arm64, each glibc and static musl | First Linux cross-build cohort; x86_64 static musl qualified (issue #411, CI `ubuntu-latest` with `bazel-musl-x86_64-` scope) |
 | Linux arm64 | Linux arm64 and x86_64, each glibc and static musl | Native arm64 glibc qualified (issue #410); arm64 static musl qualified (issue #411, CI `ubuntu-24.04-arm` with `bazel-musl-arm64-` scope); arm64-to-x86_64 cross stays in the first Linux cross-build cohort |
 | macOS x86_64 | Native macOS x86_64 | Best-effort when a host is available; gaps do not block required-host release per [ADR 0014](decisions/0014-tested-platform-release-stack.md#required-platforms) |
-| macOS arm64 | Native macOS arm64 | Required native workflow |
+| macOS arm64 | Native macOS arm64 | Required native workflow; native arm64 qualified (issue #412, CI `macos-14` with `bazel-macos-arm64-` scope) |
 | Windows x86_64 | Native Windows x86_64 MSVC | Required native workflow; backend independently blocked |
 | macOS arm64 | Linux x86_64/arm64 profiles, then macOS x86_64 | Optional first expansion if bounded upstream configuration suffices |
 
@@ -311,7 +327,7 @@ claim until acquisition, interoperability, coverage, and release evidence passes
 | Does Windows native transport preserve all inputs and ABI selection? | Fix ABI constraints and path rebasing upstream; test batch wrappers, response files, cc-rs assembly/discovery, SDK libraries and proc-macro DLLs. | open work |
 | Which prebuilt native libraries interoperate? | Independent MSVC fixtures and Linux libstdc++ comparison; verify STL/CRT modes, unwinding, ownership and runtime deployment. | open work |
 | Are both Linux profiles complete? | Native arm64 glibc builds/tests plus per-cell coverage landed (issue #410); static-musl closures plus per-cell coverage for both musl profiles landed (issue #411, Rust musl std plus exec/target separation, CI cross-builds with per-profile cache scopes, no union; dynamic musl explicitly out of scope). Remaining: cross builds/tests, ELF dependencies, glibc symbols, hermetic-llvm backend plus OpenSSL/ring/bindgen/CXX corpus gaps. | open work |
-| Which deployment and execution floors are supportable? | Run oldest-target and current-host fixtures separately; inspect compiler, clangd and bindgen loader dependencies. Check Apple's extracted SDK framework subset. | open work |
+| Which deployment and execution floors are supportable? | Run oldest-target and current-host fixtures separately; inspect compiler, clangd and bindgen loader dependencies. Check Apple's extracted SDK framework subset. macOS arm64 native is qualified (issue #412) with SDK version not the deployment floor; oldest-OS execution plus framework completeness plus licensing remain gates. | open work |
 | Can every executable first-party line be accounted for? | Rust-only, C/C++-only and mixed/DLL LCOV, missed-line tests, coverage-tool version pairing, native ignores and denominator validation. No ignored collection failures. | open work |
 | Can bindgen/CXX use one upstream graph? | Separate standalone/build-script bindgen fixtures; execution libclang closure, target flags and identical CXX crate/generator versions. | issue #303 |
 | Can public Cargo metadata represent every generated target? | Prove features, build-script metadata, target kinds and ownership without private serialized dependency-graph access; seek narrow upstream metadata exports where missing. | open work |
