@@ -98,6 +98,7 @@ real_source_target(
         "product/support-matrix.md",
         "quality/README.md",
         "quality/action-model.md",
+        "quality/strict-preset.md",
         "quality/warnings-as-errors.md",
         "quality/native-configuration.md",
         "quality/quality-result-protocol.md",

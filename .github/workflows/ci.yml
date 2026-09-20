@@ -1192,6 +1192,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:quality_taxonomy_qualification
       - name: Audit Python source-audit split qualification (issue #613 Python audit empty plus Bandit excluded plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:python_audit_qualification
+      - name: Audit strict preset qualification (issue #615 default loose plus opt-in strict pins plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:strict_preset_qualification
       - name: Write job summary
         if: always()
         run: |

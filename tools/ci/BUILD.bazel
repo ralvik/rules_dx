@@ -1094,6 +1094,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Strict preset harness (issue #615); see docs/quality/strict-preset.md.
+sh_binary(
+    name = "strict_preset_qualification",
+    srcs = ["strict_preset_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "warnings_as_errors_testdata",
     srcs = glob(["testdata/warnings/**"]),

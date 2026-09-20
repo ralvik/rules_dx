@@ -1,0 +1,52 @@
+"""Strict preset decision fixture (issue #615)."""
+
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+exports_files([
+    "pins.bzl",
+    "ruff_loose.toml",
+    "ruff_strict.toml",
+    "biome_loose.json",
+    "biome_strict.json",
+    "tsconfig_loose.json",
+    "tsconfig_strict.json",
+    "loose_pass_strict_fail.py",
+    "loose_pass_strict_fail.ts",
+])
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = [
+        "BUILD.bazel",
+        "pins.bzl",
+    ],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    testonly = True,
+    toml_srcs = [
+        "ruff_loose.toml",
+        "ruff_strict.toml",
+    ],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "strict_example_python",
+    testonly = True,
+    python_srcs = ["loose_pass_strict_fail.py"],
+)
+
+real_source_target(
+    name = "strict_example_typescript",
+    testonly = True,
+    typescript_srcs = ["loose_pass_strict_fail.ts"],
+)
