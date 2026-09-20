@@ -18,8 +18,8 @@ consumer setting and with no fresh allowance per job/rerun. Failure
 contributing findings win with deterministic ordering, not job completion
 order. Full reports retain every finding; the summary distinguishes
 findings omitted due to the limit from those without a valid diff
-location. The numeric limit and thread-accounting mechanics are not yet
-frozen.
+location. The limit plus accounting are frozen at 50 open integration-owned
+threads under issue #592.
 
 Fork runs use the native all_external_contributors approval policy, not
 first-time-only approval or a custom bot; outside authors cannot

@@ -196,7 +196,10 @@ expanding into a full finding list or hiding failures.
 
 ### Review-Thread Limit
 
-Exercise finding sets below, at, and above the qualified fixed per-PR review-thread limit
+Exercise finding sets below, at, and above the frozen per-PR review-thread limit of 50
+open integration-owned threads
+(`tools/ci/tests/fixtures/review_threads/pins.bzl` plus `review_threads.expected`
+via `bazel run //tools/ci:review_threads_qualification`, issue #592)
 across multiple checks and platforms. Verify deterministic priority for failure-contributing
 findings, no consumer limit setting, and no fresh allowance from retries, reruns, or parallel
 job completion. Preserve existing threads and human discussions under the cleanup policy;
@@ -204,7 +207,10 @@ do not rotate still-present findings through comments. Verify full reports retai
 finding and the summary distinguishes limit-omitted findings from unmappable locations.
 Intentional truncation must not change analysis completeness or CI outcomes, while actual
 publication failures still fail reporting. Qualify accounting as findings clear and new
-findings appear, including retained resolved discussions and concurrent runs.
+findings appear, including retained resolved discussions outside the open count, bot-only
+deletion freeing a slot, skipped/disabled/cancelled/incomplete/missing/outside-diff never
+proving gone, and concurrent runs with late callbacks never overwriting current threads
+or summaries.
 
 ### Optional Code Scanning
 
@@ -270,6 +276,12 @@ manifest selection (delivered CLI with fail-closed execution, issue #462) plus r
 (issue #463 delivered), tag hygiene as-built, with the per-gap decisions above pinned in
 `tools/ci/tests/fixtures/consumer_ci/pins.bzl`; build-only self-call forever
 rejected per #408; platform plus release evidence stays owned gap; no Supported claim).
+Review-thread limit plus accounting frozen at 50 open threads seed-only under issue #592
+(`tools/ci/tests/fixtures/review_threads/pins.bzl` plus `review_threads.expected` via
+`bazel run //tools/ci:review_threads_qualification`; no consumer setting, no fresh allowance,
+failure-first check/file/line/rule ordering, no rotation, bot-only frees with resolved history
+outside the open count, full reports with summary-distinguished truncation, no overwrite;
+CI-only, no Supported claim).
 Consumer CI, devcontainer, and perf honesty
 stays open under issue #325 (self-call all-enabled per #408,
 devcontainer parity-checked but never booted, perf report-not-gate; qualify and enable

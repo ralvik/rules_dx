@@ -1002,6 +1002,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:docs_pipeline_qualification
       - name: Audit consumer-CI qualification (issue #312 contract plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:consumer_ci_qualification
+      - name: Audit review-threads qualification (issue #592 frozen 50 plus accounting plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:review_threads_qualification
       - name: Audit file-family qualification (issue #313 applicability plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:file_family_qualification
       - name: Audit helper qualification (issue #315 per-helper decisions plus fixture evidence, owned gaps)
