@@ -141,8 +141,10 @@ fixed the two true collisions (`dx/qual` → `cli/qualification`,
 `dx/docs` → `cli/docgen`); the facade labels below are unchanged.
 The reorganization is complete with no successor: `dx/` Rust to `cli/`, documentation IR to
 `docs/ir`, and the mixed/hello fixture to `examples/mixed` all landed under issue #76
-(recorded in ADR 0004); remaining structural moves stay separately owned (e2e suite under issue #466,
-Rust library extraction under issue #469).
+(recorded in ADR 0004); remaining structural moves stay separately owned
+(Rust library extraction under issue #469). The e2e suite naming resolved
+hermetically under issue #466: no `e2e/` tree, CLI-contract pins run under
+`bazel test //...` (see the [verification matrix](../testing/verification-matrix.md)).
 
 | Facade label | Actual owner | Status |
 | --- | --- | --- |

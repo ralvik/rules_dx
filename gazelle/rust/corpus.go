@@ -17,8 +17,7 @@
 // Corpus stays for target-less files only (docs, BUILD files, configs);
 // code rides normal targets. Only markdown, starlark (BUILD.bazel,
 // MODULE.bazel, *.bzl), toml, and json are collected. Rust/Python/JS and
-// other code classes never enter the corpus. Lockfiles (`*.lock`),
-// `integration/` scenario workspaces (`.bazelignore` carve-out), and the
+// other code classes never enter the corpus. Lockfiles (`*.lock`) and the
 // paket2bazel hub outputs (generator-owned, never sources) are excluded.
 // Files already owned by same-package fixture `real_source_target`s (for
 // example `quality/testdata:real_clean.bzl`) stay excluded so fixture
@@ -137,17 +136,11 @@ type corpusPlan struct {
 func planCorpus(args language.GenerateArgs, hasOtherGen bool) *corpusPlan {
 	plan := &corpusPlan{}
 	rel := args.Rel
-	// integration/ scenario workspaces are .bazelignore'd out of the
-	// parent universe and owned outside the audit; they never carry
-	// parent corpus owners.
-	if rel == "integration" || strings.HasPrefix(rel, "integration/") {
-		return plan
-	}
 	// Tool-local and third-party closures never carry corpus owners:
 	// `.opencode/` (agent-local tool state with its own node_modules),
 	// any `node_modules/` (pnpm/npm closures, gitignored), and the
 	// depcheck truth-table fixtures (intentionally unresolved imports,
-	// issue #22) are excluded like the integration carve-out above.
+	// issue #22) are excluded.
 	if rel == ".opencode" || strings.HasPrefix(rel, ".opencode/") {
 		return plan
 	}
@@ -234,8 +227,8 @@ func planCorpus(args language.GenerateArgs, hasOtherGen bool) *corpusPlan {
 	}
 	// Recursive walk: subdirectories with their own BUILD.bazel/BUILD
 	// are separate Bazel packages and never enter the parent corpus.
-	// Hidden dirs, bazel-* output trees, node_modules closures, and the
-	// integration carve-out are skipped like the Rust source walk.
+	// Hidden dirs, bazel-* output trees, and node_modules closures are
+	// skipped like the Rust source walk.
 	root := args.Dir
 	_ = filepath.WalkDir(root, func(name string, entry os.DirEntry, err error) error {
 		if err != nil {
@@ -254,13 +247,6 @@ func planCorpus(args language.GenerateArgs, hasOtherGen bool) *corpusPlan {
 			}
 			if _, statErr := os.Stat(filepath.Join(name, "BUILD")); statErr == nil {
 				return filepath.SkipDir
-			}
-			// Never descend into integration scenario workspaces.
-			if relSub, relErr := filepath.Rel(root, name); relErr == nil {
-				wsSub := path.Join(rel, filepath.ToSlash(relSub))
-				if wsSub == "integration" || strings.HasPrefix(wsSub, "integration/") {
-					return filepath.SkipDir
-				}
 			}
 			return nil
 		}
