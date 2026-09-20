@@ -50,7 +50,8 @@ class by design — never silently under the standard dogfood gates.
 - **Audit/update live execution**: `dx update` resolver backends per set with independent-set
   continuation and per-set reporting delivered (issue #19); `dx audit` auditor wiring, advisory
   acquisition with 24h cache semantics and offline matching, plus SARIF/SPDX mapping delivered
-  (issue #18).
+  (issue #18). `Audit/update` here records repo-wide ecosystem live execution, distinct from
+  per-language source audit in the [support matrix](../product/support-matrix.md#application-foundations).
 - **Docs pipeline**: per-language adapter runs, link/reference proofs,
   renderer/site artifacts, cache and determinism measurements, guide prose with
   guide-step verification, and first-hour timing proof stay open under issue #421
@@ -106,6 +107,12 @@ execution deferred. No report-only status remains per ADR 0022 (no standing benc
 | F# | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-fsharp`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
 | C++ | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-cpp`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
 | Vue/Svelte/Astro/MDX | Delivered (code ownership) | Open (regions) | Delivered | Open (composition) | Delivered (contract) | Open | Delivered | Open | Open |
+
+`Audit/update Delivered` above is ecosystem live execution delivered repo-wide; it stays
+consistent with per-language source-`Audit` scope in the support matrix (`Not planned` for
+Rust, JavaScript, TypeScript, Vue, Svelte, Astro, MDX; open tooling work for Python).
+`Support-matrix Planned` cells claim accepted scope only; where this matrix shows `Open`,
+the corresponding `Planned` cell is scope with open implementation.
 
 Framework composition evidence (exact parser/compiler, provider,
 generated-region, dependency, test, environment/IDE, quality-region
