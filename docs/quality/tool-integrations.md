@@ -283,8 +283,31 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   with `.qmlformat.ini` upward settings and `--ignore-settings` (including `--sort-imports`
   and semicolon-rule behavior as open work); qmllint verifies syntax plus anti-patterns
   with `--json <file>` (`-` for stdout) JSON carrying messages plus file/line/severity
-  plus `.qmllint.ini` and `//qmllint enable/disable` scoping as open work. Versions are
-  observations, not pins; recheck latest stable at implementation (see the Structured rows in
+   plus `.qmllint.ini` and `//qmllint enable/disable` scoping as open work. Versions are
+   observations, not pins; recheck latest stable at implementation (see the Structured rows in
+   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
+- **Interpreted/file-family cohort (issue #420, provisional — no adapter claims `ruby`,
+  `powershell`, `cue`, `jsonnet`, `pkl`, `css`, `html_template`, `gherkin`, `sql`, `xml`,
+  `go_module`, `terraform`, `yaml`, or `text` yet):** release-assembled Ruby closure route
+  for RuboCop and StandardRB (the exceptional bundle within the approved packaging-effort
+  boundary; consumer path is download-verify-extract-execute only; bundle-vs-adapter
+  qualification split recorded here, not silent) plus exact-module plus portable-`pwsh`-runtime
+  route for PSScriptAnalyzer (explicit-path module import; console-parse versus library-API
+  binding stays open) plus frozen delivery-class routes for the file-family remainder
+  (cue, jsonnetfmt, pkl, modfmt, terraform fmt, yamlfmt, keep-sorted as checksummed
+  standalone artifacts; djlint and yamllint as private wheel-only Python graph members;
+  Stylelint plus prettier-plugin-gherkin/sql/xml as private pure-JavaScript graph members;
+  `protobuf`/`qml` stay owned by issue #419 and are cross-linked here, never double-claimed).
+  Research notes (unproven mappings): RuboCop `--format json` versus text-parse plus
+  `standardrb --fix` whole-file rewrite; PSScriptAnalyzer `Invoke-ScriptAnalyzer` console
+  text versus binding the `System.Management.Automation` language-parser/library API per
+  the adapter-input notes; cue `fmt`, jsonnetfmt, pkl, modfmt, `terraform fmt -check -diff`,
+  yamlfmt `-lint`, and keep-sorted as whole-file rewrite with check/diff mode; djlint
+  `--lint`/`--reformat`, Stylelint `--formatter json`, Prettier `--plugin` closures, and
+  yamllint text diagnostics as check-only with the provisional sandbox-apply-and-diff fix
+  flow; Buildifier/Taplo/Vale probes stay provisional (promotion only with fixture
+  evidence). Versions are observations, not pins; recheck latest stable at implementation
+  (see the Interpreted/file-family rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
 
 Candidate native filenames are `.buildifier.json`, `.taplo.toml`/`taplo.toml`, and `.vale.ini`.

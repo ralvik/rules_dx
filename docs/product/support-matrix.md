@@ -236,7 +236,7 @@ foundation dirs, wrappers, Gazelle extensions, env plans, hello builds, or `MODU
 release-assembled Ruby closure, PSScriptAnalyzer via exact-module plus portable PowerShell
 runtime); Swift/SwiftFormat plus Bandit exclusions with host-toolchain fallback never approved.
 Remaining gaps (bundle contents, lock inputs, module/runtime identities, console-parse versus
-library-API binding, and per-tool adapter mappings qualified under issue #307 with deferred
+library-API binding, and per-tool adapter mappings qualified under issue #420 with deferred
 implementation owned by O32/O31 plus ADR 0019; reconsideration requires
 a new scope decision) stay owned under issue #305. No `Supported` claim until platform plus
 consumer plus release evidence passes.
@@ -427,7 +427,7 @@ summarized in [Candidate Disposition Status](#candidate-disposition-status).
   several forks) and canonical maintenance ownership is the thinnest of this
 cohort. Gem/bundler integration and the packaging-effort boundary stay the
 cost drivers, open. Foundation deferred beyond v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md);
-  the RuboCop/StandardRB tool cohort is open.
+   the RuboCop/StandardRB tool cohort is open under issue #420.
 - PowerShell: [`rules_powershell` 0.2.0](https://github.com/periareon/rules_powershell)
   (in the Bazel Central Registry, built over `rules_shell`) is the only known
   upstream execution route and the youngest of this cohort. Generation,
@@ -435,8 +435,8 @@ cost drivers, open. Foundation deferred beyond v1 by [ADR 0019](../decisions/001
   are unproven, and PSScriptAnalyzer integration is unassessed; this row
   carries the highest deferral risk if qualification shows substantial missing
   infrastructure. All mappings are open. Foundation deferred
-  beyond v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md); the PSScriptAnalyzer tool cohort
-  is open.
+   beyond v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md); the PSScriptAnalyzer tool cohort
+   is open under issue #420.
 
 ### Candidate Disposition Status
 
@@ -447,8 +447,8 @@ cost drivers, open. Foundation deferred beyond v1 by [ADR 0019](../decisions/001
 | Scala | `rules_scala` | issue #417 (managed route decided 2026-09-13) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | C# | `rules_dotnet` | issue #417 | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | F# | `rules_dotnet` | issue #417 | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
-| Ruby | `rules_ruby` (bazel-contrib) | open work tool cohort; foundation post-v1 | Deferred beyond v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
-| PowerShell | `rules_powershell` | open work tool cohort; foundation post-v1 | Deferred beyond v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
+| Ruby | `rules_ruby` (bazel-contrib) | issue #420 tool cohort; foundation post-v1 | Deferred beyond v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
+| PowerShell | `rules_powershell` | issue #420 tool cohort; foundation post-v1 | Deferred beyond v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | Go, C/C++ | Source/documentation review | issue #418 (native cohort, routes decided 2026-09-13) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | Swift, Bandit | Excluded from v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) | N/A | Evidence-backed v1 exclusion |
 
@@ -551,13 +551,19 @@ compiler context, execution-platform lazy); qmlformat and qmllint take the
 authoritative-toolchain route from the Qt distribution (issue #419, live
 successor to closed #307 for the `qml` class; Qt last);
 PSScriptAnalyzer takes the exact-module plus
-portable-PowerShell-runtime route; RuboCop/StandardRB take the
-release-assembled Ruby closure route. Exact JVM artifacts, versions, rule sets,
+portable-PowerShell-runtime route (issue #420, live successor to closed #307 for the
+`powershell` class); RuboCop/StandardRB take the
+release-assembled Ruby closure route (issue #420, live successor to closed #307 for the
+`ruby` class; the exceptional bundle within the approved packaging-effort boundary).
+Exact JVM artifacts, versions, rule sets,
 and adapter mappings are tracked under issue #416; exact Scala/.NET artifacts,
 versions, rule sets, and adapter mappings are tracked under issue #417; exact
 native artifacts, versions, rule sets, and adapter mappings are tracked under
 issue #418; exact structured (`buf`/Qt) artifacts, versions, rule sets, and
-adapter mappings are tracked under issue #419; remaining cohorts stay in
+adapter mappings are tracked under issue #419; exact interpreted/file-family
+(`ruby`/`powershell` plus cue/jsonnet/pkl/css/html_template/gherkin/sql/xml/go_module/
+terraform/yaml/text) artifacts, versions, rule sets, and adapter mappings are tracked
+under issue #420; remaining cohorts stay in
 open work; no adapter claims any of these
 classes yet.
 
@@ -586,6 +592,10 @@ qualification inputs open, not approved presets or additions to curated membersh
   formatting) (provisional under issue #417).
 - `buf` `STANDARD` lint rules; qmlformat/qmllint `.qmlformat.ini`/`.qmllint.ini`
   discovery versus explicit flags (both provisional under issue #419).
+- RuboCop `.rubocop.yml` versus the StandardRB unconfigurable ruleset; PSScriptAnalyzer
+  settings-file versus explicit-rule selection; djlint, Stylelint, prettier-plugin, and
+  yamllint rule selection; yamlfmt and keep-sorted config discovery (all provisional
+  under issue #420).
 
 Beyond-default switches (detekt `allRules`, experimental Error Prone checks,
 `--enable=all`-style opt-in maxima) are not enabled by `rules_dx`. These
@@ -627,7 +637,8 @@ selections. Adapter design and normalization for the JVM cohort is tracked under
 issue #416; adapter design and normalization for the Scala + .NET cohort is tracked
 under issue #417; adapter design and normalization for the Native cohort is tracked
 under issue #418; adapter design and normalization for the Structured cohort is tracked
-under issue #419 (remaining cohorts stay in open work).
+under issue #419; adapter design and normalization for the Interpreted/file-family
+cohort is tracked under issue #420 (remaining cohorts stay in open work).
 
 Diagnostic wire formats:
 
@@ -641,13 +652,18 @@ Diagnostic wire formats:
   `buf lint --error-format=json` JSONL (`path,start_line,start_column,end_line,
   end_column,type,message`; no SARIF in 1.71.0) is an unproven mapping owned by
   issue #419; qmllint `--json` (messages plus file/line/severity) is an unproven
-  mapping owned by issue #419.
+  mapping owned by issue #419. RuboCop `--format json` plus Stylelint
+  `--formatter json` are unproven mappings owned by issue #420.
 - Checkstyle XML: Checkstyle (`-f xml`), ktlint, detekt.
 - Tool-native XML: cppcheck (`--xml --xml-version=2`, on stderr).
   Unproven mapping owned by issue #418.
 - Text-parse: govet and errcheck (`file:line[:col]: message`, unproven mappings
   owned by issue #418), `buf` text (`file:line:column:message`, unproven mapping
-  owned by issue #419), Error Prone
+  owned by issue #419), yamllint and djlint text diagnostics plus `terraform fmt
+  -check -diff` plus keep-sorted output (unproven mappings owned by issue #420),
+  RuboCop text plus PSScriptAnalyzer `Invoke-ScriptAnalyzer` console
+  (`System.Management.Automation` library-API binding is the structured
+  alternative, itemized under issue #420), Error Prone
   (javac diagnostics; structured output still open upstream, itemized under issue #416),
   FSharpLint
   console (the `FSharpLint.Core` library API is the structured
@@ -666,12 +682,16 @@ Fix modes:
   clang-tidy (`--fix` or `--export-fixes`), Error Prone
   (`-XepPatchChecks` with a patch-file location). Native formatters
   (clang-format, gofumpt) plus clang-tidy modes are itemized under issue #418.
-  Structured formatters (`buf format --diff --exit-code` plus `--write`,
-  qmlformat stdout plus `-i`) are itemized under issue #419.
+   Structured formatters (`buf format --diff --exit-code` plus `--write`,
+   qmlformat stdout plus `-i`) are itemized under issue #419. Interpreted/file-family
+   formatters (RuboCop plus `standardrb --fix`, cue `fmt`, jsonnetfmt, pkl, modfmt,
+   `terraform fmt`, yamlfmt) are itemized under issue #420.
 - Check-only: PMD, Checkstyle, SpotBugs, staticcheck, govet, errcheck,
   cppcheck, detekt, FSharpLint console. Native check-only tools (staticcheck,
   `govet`, errcheck, cppcheck) are itemized under issue #418. Structured
   check-only tools (`buf lint`, qmllint) are itemized under issue #419.
+  Interpreted/file-family check-only tools (PSScriptAnalyzer, djlint, Stylelint,
+  Prettier plugin closures, yamllint, keep-sorted) are itemized under issue #420.
 - Provisional fix flow: tools run check-only for diagnostics; fixes are
   produced by applying in a sandbox and diffing, rendered as unified
   patches (precedent: aspect `rules_lint`).
@@ -704,6 +724,16 @@ open work:
 - qmlformat/qmllint: Qt distribution identity plus licensing plus platform artifacts,
   `.qmlformat.ini`/`.qmllint.ini` discovery versus explicit flags, and `--json`
   shape normalization stay open (issue #419).
+- RuboCop/StandardRB: release-assembled closure contents plus lock inputs plus
+  manifest/SBOM/licenses/provenance, with the bundle-vs-adapter qualification split
+  (closure qualification versus parser plus runner-matrix plus native-config adapter
+  qualification), stay open (issue #420).
+- PSScriptAnalyzer: exact module version plus portable `pwsh` runtime identity plus
+  console-parse versus library-API binding stay open (issue #420).
+- File-family remainder (cue, jsonnetfmt, pkl, djlint, Stylelint, prettier-plugin
+  closures, modfmt, terraform fmt, yamlfmt, yamllint, keep-sorted): exact pins/digests
+  plus parser shapes plus Buildifier/Taplo/Vale probe promotion stay open (issue #420;
+  `protobuf`/`qml` stay owned by issue #419).
 
 ### Open Work Tracking
 
@@ -730,9 +760,16 @@ managed JVM plus exact-package shared-.NET-runtime routes decided
 C/C++ (Native cohort, split native plus split Go routes decided
 2026-09-13) to issue #418; structured `protobuf`/`qml` (Structured cohort,
 checksummed `buf` artifact plus authoritative Qt distribution routes decided
-2026-09-13, Qt last) to issue #419. Deferred foundations (Ruby,
-PowerShell) are out of v1 scope; their retained tool cohorts stay tracked in
-open work. If qualification
+2026-09-13, Qt last) to issue #419. Interpreted `ruby`/`powershell` plus the
+file-family remainder (cue, jsonnet, pkl, css, html_template, gherkin, sql, xml,
+go_module, terraform, yaml, text; Interpreted/file-family cohort with the
+release-assembled Ruby closure plus exact-module portable-`pwsh` routes;
+`protobuf`/`qml` cross-linked to issue #419, never double-claimed) map to issue
+#420 (live successor to closed #307 for this cohort). Deferred foundations (Ruby,
+PowerShell) are out of v1 scope; their retained tool cohorts (RuboCop/StandardRB via
+the release-assembled Ruby closure, PSScriptAnalyzer via the exact-module plus
+portable `pwsh` runtime) plus the file-family remainder stay tracked under issue
+#420. If qualification
 shows a cohort exceeds reviewable work-package size, it is split into
 follow-up issues under the owning tracker before implementation.
 
