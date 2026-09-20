@@ -1034,6 +1034,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:cxx_identity_qualification
       - name: Audit exact-target qualification (issue #475 resolver-owned exact labels plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:exact_target_qualification
+      - name: Audit JUnit qualification (issue #476 JUnit 6.1.3 plus 5.14.x fallback pins plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:junit_qualification
       - name: Write job summary
         if: always()
         run: |

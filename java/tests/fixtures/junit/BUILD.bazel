@@ -1,0 +1,51 @@
+"""JUnit 6.1.3 plus 5.14.x fallback runner fixture (issue #476).
+
+Maps the qualified runner: default Bazel runner stays the JUnit 4 seed
+(`//java/tests/fixtures/hello:hello_test`); the Jupiter upgrade is the
+console-launcher `java_test` shape pinned here (primary 6.1.3, fallback
+5.14.x on JDK <17 via the same coordinates in `pins.bzl`). Vintage runs
+JUnit 4 on the Platform (deprecated). Unpinned runner is rejected.
+"""
+
+load("@rules_java//java:defs.bzl", "java_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+java_test(
+    name = "hello_jupiter_test",
+    srcs = ["HelloJupiterTest.java"],
+    args = [
+        "execute",
+        "--select-class",
+        "hello.HelloJupiterTest",
+    ],
+    main_class = "org.junit.platform.console.ConsoleLauncher",
+    use_testrunner = False,
+    deps = [
+        "//java/tests/fixtures/hello:hello_lib",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+    ],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_console",
+        "@maven//:org_junit_platform_junit_platform_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+    ],
+)
+
+exports_files(["pins.bzl"])
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = [
+        "BUILD.bazel",
+        "pins.bzl",
+    ],
+    tags = ["corpus"],
+)

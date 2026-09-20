@@ -7,6 +7,14 @@
     "com.google.guava:guava": 1943808618,
     "com.google.j2objc:j2objc-annotations": 2003271689,
     "junit:junit": -744267592,
+    "org.junit.jupiter:junit-jupiter-api": -1418253236,
+    "org.junit.jupiter:junit-jupiter-engine": 549538408,
+    "org.junit.jupiter:junit-jupiter-params": 1138766508,
+    "org.junit.platform:junit-platform-commons": 737884398,
+    "org.junit.platform:junit-platform-console": -957450337,
+    "org.junit.platform:junit-platform-engine": 315805044,
+    "org.junit.platform:junit-platform-launcher": 1718633558,
+    "org.junit.vintage:junit-vintage-engine": -1212812984,
     "repositories": 736830508
   },
   "__RESOLVED_ARTIFACTS_HASH": {
@@ -18,8 +26,21 @@
     "com.google.guava:listenablefuture": 1079558157,
     "com.google.j2objc:j2objc-annotations": 248818742,
     "junit:junit": -1256429642,
+    "org.apiguardian:apiguardian-api": 1279798469,
     "org.checkerframework:checker-qual": -1533199059,
-    "org.hamcrest:hamcrest-core": 649657847
+    "org.hamcrest:hamcrest-core": 649657847,
+    "org.jspecify:jspecify": 117231129,
+    "org.junit.jupiter:junit-jupiter-api": -1170819288,
+    "org.junit.jupiter:junit-jupiter-engine": -362818027,
+    "org.junit.jupiter:junit-jupiter-params": -1666494068,
+    "org.junit.platform:junit-platform-commons": 585098661,
+    "org.junit.platform:junit-platform-console": 1350866550,
+    "org.junit.platform:junit-platform-engine": 1716273321,
+    "org.junit.platform:junit-platform-launcher": -1197157553,
+    "org.junit.platform:junit-platform-reporting": -668997287,
+    "org.junit.vintage:junit-vintage-engine": 1629613315,
+    "org.opentest4j.reporting:open-test-reporting-tooling-spi": -1725000643,
+    "org.opentest4j:opentest4j": -1711174392
   },
   "conflict_resolution": {
     "com.google.errorprone:error_prone_annotations:2.5.1": "com.google.errorprone:error_prone_annotations:2.18.0"
@@ -73,6 +94,12 @@
       },
       "version": "4.13.2"
     },
+    "org.apiguardian:apiguardian-api": {
+      "shasums": {
+        "jar": "b509448ac506d607319f182537f0b35d71007582ec741832a1f111e5b5b70b38"
+      },
+      "version": "1.1.2"
+    },
     "org.checkerframework:checker-qual": {
       "shasums": {
         "jar": "e316255bbfcd9fe50d165314b85abb2b33cb2a66a93c491db648e498a82c2de1"
@@ -84,6 +111,78 @@
         "jar": "66fdef91e9739348df7a096aa384a5685f4e875584cce89386a7a47251c4d8e9"
       },
       "version": "1.3"
+    },
+    "org.jspecify:jspecify": {
+      "shasums": {
+        "jar": "1fad6e6be7557781e4d33729d49ae1cdc8fdda6fe477bb0cc68ce351eafdfbab"
+      },
+      "version": "1.0.0"
+    },
+    "org.junit.jupiter:junit-jupiter-api": {
+      "shasums": {
+        "jar": "555d6cf20fa1710884dd01b86cc5785397ba73e21ada2d4b784f5f1a14dcafc4"
+      },
+      "version": "6.1.3"
+    },
+    "org.junit.jupiter:junit-jupiter-engine": {
+      "shasums": {
+        "jar": "414559e78bbfa3bdb2eab009ac3ab1e22369ac31117c270a0bd666da115c5c6c"
+      },
+      "version": "6.1.3"
+    },
+    "org.junit.jupiter:junit-jupiter-params": {
+      "shasums": {
+        "jar": "05c51cedba2c06a9770707391e006cee825876937dea580b94a265ce145d4939"
+      },
+      "version": "6.1.3"
+    },
+    "org.junit.platform:junit-platform-commons": {
+      "shasums": {
+        "jar": "a4774ae923c109544034aeae7c762cf017fbcdd1342403ba90e0921984b608c3"
+      },
+      "version": "6.1.3"
+    },
+    "org.junit.platform:junit-platform-console": {
+      "shasums": {
+        "jar": "913554ad65b9420936822889a7268a6793a942e5f77ad8b653b8ec05068fa3be"
+      },
+      "version": "6.1.3"
+    },
+    "org.junit.platform:junit-platform-engine": {
+      "shasums": {
+        "jar": "21ad7ad3a35beda16387979317be1833a72a71d812f9a66ee4b9a7bafb56334c"
+      },
+      "version": "6.1.3"
+    },
+    "org.junit.platform:junit-platform-launcher": {
+      "shasums": {
+        "jar": "1dec64b1fc0b7c47a11302aa5b4d37d8160c041b396e27067709ce775601a7b6"
+      },
+      "version": "6.1.3"
+    },
+    "org.junit.platform:junit-platform-reporting": {
+      "shasums": {
+        "jar": "d584a16cd87da5609af5e35428ed4f40b192681a2487dc59d02ecb62f6c417c2"
+      },
+      "version": "6.1.3"
+    },
+    "org.junit.vintage:junit-vintage-engine": {
+      "shasums": {
+        "jar": "37a1e6ade75c09c5385c2830b7cda21c4b1f24a5f36ed7cd7397bc40f7dc71bc"
+      },
+      "version": "6.1.3"
+    },
+    "org.opentest4j.reporting:open-test-reporting-tooling-spi": {
+      "shasums": {
+        "jar": "df237b68847637747f0bfdb88fa9cdd9c72cc85550fad0c41ddb33869a5ca516"
+      },
+      "version": "0.2.5"
+    },
+    "org.opentest4j:opentest4j": {
+      "shasums": {
+        "jar": "48e2df636cab6563ced64dcdff8abb2355627cb236ef0bf37598682ddf742f1b"
+      },
+      "version": "1.3.0"
     }
   },
   "dependencies": {
@@ -97,6 +196,58 @@
     ],
     "junit:junit": [
       "org.hamcrest:hamcrest-core"
+    ],
+    "org.junit.jupiter:junit-jupiter-api": [
+      "org.apiguardian:apiguardian-api",
+      "org.jspecify:jspecify",
+      "org.junit.platform:junit-platform-commons",
+      "org.opentest4j:opentest4j"
+    ],
+    "org.junit.jupiter:junit-jupiter-engine": [
+      "org.apiguardian:apiguardian-api",
+      "org.jspecify:jspecify",
+      "org.junit.jupiter:junit-jupiter-api",
+      "org.junit.platform:junit-platform-engine"
+    ],
+    "org.junit.jupiter:junit-jupiter-params": [
+      "org.apiguardian:apiguardian-api",
+      "org.jspecify:jspecify",
+      "org.junit.jupiter:junit-jupiter-api"
+    ],
+    "org.junit.platform:junit-platform-commons": [
+      "org.apiguardian:apiguardian-api",
+      "org.jspecify:jspecify"
+    ],
+    "org.junit.platform:junit-platform-console": [
+      "org.apiguardian:apiguardian-api",
+      "org.jspecify:jspecify",
+      "org.junit.platform:junit-platform-reporting"
+    ],
+    "org.junit.platform:junit-platform-engine": [
+      "org.apiguardian:apiguardian-api",
+      "org.jspecify:jspecify",
+      "org.junit.platform:junit-platform-commons",
+      "org.opentest4j:opentest4j"
+    ],
+    "org.junit.platform:junit-platform-launcher": [
+      "org.apiguardian:apiguardian-api",
+      "org.jspecify:jspecify",
+      "org.junit.platform:junit-platform-engine"
+    ],
+    "org.junit.platform:junit-platform-reporting": [
+      "org.apiguardian:apiguardian-api",
+      "org.jspecify:jspecify",
+      "org.junit.platform:junit-platform-launcher",
+      "org.opentest4j.reporting:open-test-reporting-tooling-spi"
+    ],
+    "org.junit.vintage:junit-vintage-engine": [
+      "junit:junit",
+      "org.apiguardian:apiguardian-api",
+      "org.jspecify:jspecify",
+      "org.junit.platform:junit-platform-engine"
+    ],
+    "org.opentest4j.reporting:open-test-reporting-tooling-spi": [
+      "org.apiguardian:apiguardian-api"
     ]
   },
   "packages": {
@@ -180,6 +331,9 @@
       "org.junit.runners.parameterized",
       "org.junit.validator"
     ],
+    "org.apiguardian:apiguardian-api": [
+      "org.apiguardian.api"
+    ],
     "org.checkerframework:checker-qual": [
       "org.checkerframework.checker.builder.qual",
       "org.checkerframework.checker.calledmethods.qual",
@@ -216,6 +370,101 @@
       "org.hamcrest",
       "org.hamcrest.core",
       "org.hamcrest.internal"
+    ],
+    "org.jspecify:jspecify": [
+      "org.jspecify.annotations"
+    ],
+    "org.junit.jupiter:junit-jupiter-api": [
+      "org.junit.jupiter.api",
+      "org.junit.jupiter.api.condition",
+      "org.junit.jupiter.api.extension",
+      "org.junit.jupiter.api.extension.support",
+      "org.junit.jupiter.api.function",
+      "org.junit.jupiter.api.io",
+      "org.junit.jupiter.api.parallel",
+      "org.junit.jupiter.api.timeout",
+      "org.junit.jupiter.api.util"
+    ],
+    "org.junit.jupiter:junit-jupiter-engine": [
+      "org.junit.jupiter.engine",
+      "org.junit.jupiter.engine.config",
+      "org.junit.jupiter.engine.descriptor",
+      "org.junit.jupiter.engine.discovery",
+      "org.junit.jupiter.engine.discovery.predicates",
+      "org.junit.jupiter.engine.execution",
+      "org.junit.jupiter.engine.extension",
+      "org.junit.jupiter.engine.support"
+    ],
+    "org.junit.jupiter:junit-jupiter-params": [
+      "org.junit.jupiter.params",
+      "org.junit.jupiter.params.aggregator",
+      "org.junit.jupiter.params.converter",
+      "org.junit.jupiter.params.provider",
+      "org.junit.jupiter.params.shadow.de.siegmar.fastcsv.reader",
+      "org.junit.jupiter.params.shadow.de.siegmar.fastcsv.util",
+      "org.junit.jupiter.params.shadow.de.siegmar.fastcsv.writer",
+      "org.junit.jupiter.params.support"
+    ],
+    "org.junit.platform:junit-platform-commons": [
+      "org.junit.platform.commons",
+      "org.junit.platform.commons.annotation",
+      "org.junit.platform.commons.function",
+      "org.junit.platform.commons.io",
+      "org.junit.platform.commons.logging",
+      "org.junit.platform.commons.support",
+      "org.junit.platform.commons.support.conversion",
+      "org.junit.platform.commons.support.scanning",
+      "org.junit.platform.commons.util"
+    ],
+    "org.junit.platform:junit-platform-console": [
+      "org.junit.platform.console",
+      "org.junit.platform.console.command",
+      "org.junit.platform.console.options",
+      "org.junit.platform.console.output",
+      "org.junit.platform.console.shadow.picocli"
+    ],
+    "org.junit.platform:junit-platform-engine": [
+      "org.junit.platform.engine",
+      "org.junit.platform.engine.discovery",
+      "org.junit.platform.engine.reporting",
+      "org.junit.platform.engine.support.config",
+      "org.junit.platform.engine.support.descriptor",
+      "org.junit.platform.engine.support.discovery",
+      "org.junit.platform.engine.support.hierarchical",
+      "org.junit.platform.engine.support.store"
+    ],
+    "org.junit.platform:junit-platform-launcher": [
+      "org.junit.platform.launcher",
+      "org.junit.platform.launcher.core",
+      "org.junit.platform.launcher.jfr",
+      "org.junit.platform.launcher.listeners",
+      "org.junit.platform.launcher.listeners.discovery",
+      "org.junit.platform.launcher.listeners.session",
+      "org.junit.platform.launcher.tagexpression"
+    ],
+    "org.junit.platform:junit-platform-reporting": [
+      "org.junit.platform.reporting.legacy",
+      "org.junit.platform.reporting.legacy.xml",
+      "org.junit.platform.reporting.open.xml",
+      "org.junit.platform.reporting.shadow.org.opentest4j.reporting.events.api",
+      "org.junit.platform.reporting.shadow.org.opentest4j.reporting.events.core",
+      "org.junit.platform.reporting.shadow.org.opentest4j.reporting.events.git",
+      "org.junit.platform.reporting.shadow.org.opentest4j.reporting.events.java",
+      "org.junit.platform.reporting.shadow.org.opentest4j.reporting.events.root",
+      "org.junit.platform.reporting.shadow.org.opentest4j.reporting.schema"
+    ],
+    "org.junit.vintage:junit-vintage-engine": [
+      "org.junit.vintage.engine",
+      "org.junit.vintage.engine.descriptor",
+      "org.junit.vintage.engine.discovery",
+      "org.junit.vintage.engine.execution",
+      "org.junit.vintage.engine.support"
+    ],
+    "org.opentest4j.reporting:open-test-reporting-tooling-spi": [
+      "org.opentest4j.reporting.tooling.spi.htmlreport"
+    ],
+    "org.opentest4j:opentest4j": [
+      "org.opentest4j"
     ]
   },
   "repositories": {
@@ -228,8 +477,21 @@
       "com.google.guava:listenablefuture",
       "com.google.j2objc:j2objc-annotations",
       "junit:junit",
+      "org.apiguardian:apiguardian-api",
       "org.checkerframework:checker-qual",
-      "org.hamcrest:hamcrest-core"
+      "org.hamcrest:hamcrest-core",
+      "org.jspecify:jspecify",
+      "org.junit.jupiter:junit-jupiter-api",
+      "org.junit.jupiter:junit-jupiter-engine",
+      "org.junit.jupiter:junit-jupiter-params",
+      "org.junit.platform:junit-platform-commons",
+      "org.junit.platform:junit-platform-console",
+      "org.junit.platform:junit-platform-engine",
+      "org.junit.platform:junit-platform-launcher",
+      "org.junit.platform:junit-platform-reporting",
+      "org.junit.vintage:junit-vintage-engine",
+      "org.opentest4j.reporting:open-test-reporting-tooling-spi",
+      "org.opentest4j:opentest4j"
     ],
     "https://repo1.maven.org/maven2/": [
       "com.google.code.findbugs:jsr305",
@@ -240,10 +502,69 @@
       "com.google.guava:listenablefuture",
       "com.google.j2objc:j2objc-annotations",
       "junit:junit",
+      "org.apiguardian:apiguardian-api",
       "org.checkerframework:checker-qual",
-      "org.hamcrest:hamcrest-core"
+      "org.hamcrest:hamcrest-core",
+      "org.jspecify:jspecify",
+      "org.junit.jupiter:junit-jupiter-api",
+      "org.junit.jupiter:junit-jupiter-engine",
+      "org.junit.jupiter:junit-jupiter-params",
+      "org.junit.platform:junit-platform-commons",
+      "org.junit.platform:junit-platform-console",
+      "org.junit.platform:junit-platform-engine",
+      "org.junit.platform:junit-platform-launcher",
+      "org.junit.platform:junit-platform-reporting",
+      "org.junit.vintage:junit-vintage-engine",
+      "org.opentest4j.reporting:open-test-reporting-tooling-spi",
+      "org.opentest4j:opentest4j"
     ]
   },
-  "services": {},
+  "services": {
+    "org.junit.jupiter:junit-jupiter-engine": {
+      "org.junit.platform.engine.TestEngine": [
+        "org.junit.jupiter.engine.JupiterTestEngine"
+      ]
+    },
+    "org.junit.platform:junit-platform-console": {
+      "java.util.spi.ToolProvider": [
+        "org.junit.platform.console.ConsoleLauncherToolProvider"
+      ]
+    },
+    "org.junit.platform:junit-platform-engine": {
+      "org.junit.platform.engine.discovery.DiscoverySelectorIdentifierParser": [
+        "org.junit.platform.engine.discovery.ClassSelector$IdentifierParser",
+        "org.junit.platform.engine.discovery.ClasspathResourceSelector$IdentifierParser",
+        "org.junit.platform.engine.discovery.ClasspathRootSelector$IdentifierParser",
+        "org.junit.platform.engine.discovery.DirectorySelector$IdentifierParser",
+        "org.junit.platform.engine.discovery.FileSelector$IdentifierParser",
+        "org.junit.platform.engine.discovery.IterationSelector$IdentifierParser",
+        "org.junit.platform.engine.discovery.MethodSelector$IdentifierParser",
+        "org.junit.platform.engine.discovery.ModuleSelector$IdentifierParser",
+        "org.junit.platform.engine.discovery.NestedClassSelector$IdentifierParser",
+        "org.junit.platform.engine.discovery.NestedMethodSelector$IdentifierParser",
+        "org.junit.platform.engine.discovery.PackageSelector$IdentifierParser",
+        "org.junit.platform.engine.discovery.UniqueIdSelector$IdentifierParser",
+        "org.junit.platform.engine.discovery.UriSelector$IdentifierParser"
+      ]
+    },
+    "org.junit.platform:junit-platform-launcher": {
+      "org.junit.platform.launcher.TestExecutionListener": [
+        "org.junit.platform.launcher.listeners.UniqueIdTrackingListener"
+      ]
+    },
+    "org.junit.platform:junit-platform-reporting": {
+      "org.junit.platform.launcher.TestExecutionListener": [
+        "org.junit.platform.reporting.open.xml.OpenTestReportGeneratingListener"
+      ],
+      "org.opentest4j.reporting.tooling.spi.htmlreport.Contributor": [
+        "org.junit.platform.reporting.open.xml.JUnitContributor"
+      ]
+    },
+    "org.junit.vintage:junit-vintage-engine": {
+      "org.junit.platform.engine.TestEngine": [
+        "org.junit.vintage.engine.VintageTestEngine"
+      ]
+    }
+  },
   "version": "3"
 }
