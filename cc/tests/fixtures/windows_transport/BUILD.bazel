@@ -1,0 +1,25 @@
+"""Windows transport plus ABI fixture (issue #497)."""
+
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+exports_files([
+    "batch_wrapper.txt",
+    "pins.bzl",
+    "response.rsp",
+    "transport.expected",
+])
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = [
+        "BUILD.bazel",
+        "pins.bzl",
+    ],
+    tags = ["corpus"],
+)
