@@ -78,6 +78,9 @@ open work), not qualified
 pins or platform support. Recheck latest stable and verify actual bytes when adding each adapter.
 The JVM cohort rows below are owned by issue #416 (live successor to closed
 #307 for the `java`/`kotlin` classes); versions are observations, not pins.
+The Scala + .NET cohort rows below are owned by issue #417 (live successor
+to closed #307 for the `scala`/`csharp`/`fsharp` classes); versions are
+observations, not pins.
 
 | Tool | Upstream evidence | Candidate acquisition and remaining risk |
 | --- | --- | --- |
@@ -92,6 +95,11 @@ The JVM cohort rows below are owned by issue #416 (live successor to closed
 | ktlint | [1.8.0 release](https://github.com/ktlint/ktlint/releases/tag/1.8.0) (Nov 2025 stable; 2.0.0 alphas are not stable) | Complete upstream executable JAR (`ktlint` release asset, runnable as `java -jar ktlint`) over the one managed JDK cohort; SARIF via `--reporter=sarif`. Standard rules stay a provisional native-config input until qualified. Maintainer acquisition must establish and record byte identity. |
 | detekt | [v1.23.8 stable](https://github.com/detekt/detekt/releases) (Feb 2025; 2.0.0 alphas target JDK 25 and are not stable) | Complete upstream CLI (`detekt-cli-*-all.jar`) over the one managed JDK cohort; SARIF report plus Checkstyle XML. `buildUponDefaultConfig` (not `allRules`) stays a provisional native-config input until qualified; type resolution is optional. Maintainer acquisition must establish and record byte identity. |
 | Error Prone | [v2.50.0 release](https://github.com/google/error-prone/releases/tag/v2.50.0) (Jun 2026) | Javac plugin following the qualified JDK baseline (version coupled to the JDK, open under #416); no structured diagnostics upstream, so javac-diagnostic parsing is open work itemized here, not silently dropped. Patch files need per-target declared outputs because `IN_PLACE` patching breaks under sandboxing. |
+| Scalafmt | [releases](https://github.com/scalameta/scalafmt/releases) (v3.11.4 observed Jul 2026) | Compatible JVM artifact over the one managed JDK cohort plus the Scala Maven-lock story (`maven_install.json` plus `fail_if_repin_required`); no source-built or toolchain-coupled route. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
+| Scalafix | [v0.14.7 release](https://github.com/scalacenter/scalafix/releases/tag/v0.14.7) (Jun 2026) | Semantic-rule artifacts over the one managed JDK cohort plus the Scala Maven-lock story; semantic rules additionally need semanticdb plus classpath wiring per the adapter-input notes. No machine-readable CLI output upstream, so console-parse versus wire decision is open work itemized here, not silently dropped. Maintainer acquisition must establish and record byte identity. |
+| CSharpier | [1.3.0 release](https://github.com/belav/csharpier/releases/tag/1.3.0) (Jun 2026; [NuGet](https://www.nuget.org/packages/CSharpier)) | Exact official tool package executed as declared DLLs over the one managed .NET runtime cohort (1.3.0 targets .NET 8.0); no consumer runs `dotnet tool install` or any equivalent installer. Runtime compatibility bounds stay open until qualified. Maintainer acquisition must establish and record byte identity. |
+| Fantomas | [releases](https://github.com/fsprojects/fantomas/releases) (v7.x stable line; 8.0.0 alphas target the next FSharp.Core/.NET and are not stable) | Exact official tool package executed as declared DLLs over the one managed .NET runtime cohort; no consumer runs `dotnet tool install` or any equivalent installer. Runtime compatibility bounds stay open until qualified. Maintainer acquisition must establish and record byte identity. |
+| FSharpLint | [0.27.0 release](https://github.com/fsprojects/FSharpLint/releases) (Jun 2026; targets .NET 8.0) | Exact official tool package over the one managed .NET runtime cohort; console text parsing versus binding the `FSharpLint.Core` library API is open work itemized here, not silently dropped. Default ruleset with formatting rules off (Fantomas owns formatting) stays a provisional native-config input until qualified. Maintainer acquisition must establish and record byte identity. |
 
 Record compressed artifact identity separately from extracted executable identity. A versioned
 release URL does not guarantee immutable bytes; checked-in digests must reject changed content.
@@ -293,16 +301,20 @@ same shared managed JDK and Maven-lock story as the Scala foundation
 rules additionally need semanticdb plus classpath wiring per the
 adapter-input notes. Exact artifacts, rule-set/config qualification
 (native-configuration review of the provisional Scalafix preset stays
-required), and adapter qualification remain pending and no adapter claims
-`scala` yet (open).
+required under issue #417), and adapter qualification remain pending
+under issue #417 (live successor to closed #307 for this cohort) and no
+adapter claims `scala` yet (open under issue #417).
 
 Decided route: CSharpier and Fantomas take the
 exact-upstream-package plus shared-.NET-runtime route. Each tool resolves to
 its exact official tool package executed as declared DLLs over the one
 managed .NET runtime cohort; no consumer runs `dotnet tool install` or any
-equivalent installer. Exact package versions, runtime compatibility bounds,
-and adapter qualification remain pending and no adapter claims `csharp` or
-`fsharp` yet (open).
+equivalent installer. Exact package versions, runtime compatibility bounds
+(Roslyn SDK analyzers stay SDK-default mode with StyleCop opt-in; FSharpLint
+default ruleset with formatting rules off stays provisional), and adapter
+qualification remain pending under issue #417 (live successor to closed #307
+for this cohort) and no adapter claims `csharp` or
+`fsharp` yet (open under issue #417).
 
 Decided route: PSScriptAnalyzer takes the
 exact-module plus portable-PowerShell-runtime route. The analyzer resolves

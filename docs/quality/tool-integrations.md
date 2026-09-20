@@ -229,8 +229,23 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   remain open work itemized here, not silently dropped. Formatters (google-java-format, ktfmt
   with `--google-style`/`--kotlinlang-style`, ktlint `--format`) are whole-file rewrite with
   check/diff mode; PMD, Checkstyle, SpotBugs, and detekt are check-only with the provisional
-  sandbox-apply-and-diff fix flow. Versions are observations, not pins; recheck latest stable
+   sandbox-apply-and-diff fix flow. Versions are observations, not pins; recheck latest stable
   at implementation (see the JVM rows in
+  [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
+- **Scala + .NET cohort (issue #417, provisional — no adapter claims `scala`, `csharp`, or
+  `fsharp` yet):** managed JVM route for Scalafmt (compatible JVM artifact over the shared
+  managed JDK plus the Scala Maven-lock story, `maven_install.json` plus `fail_if_repin_required`)
+  and Scalafix (semantic-rule artifacts over the same JDK with semanticdb plus classpath wiring
+  for semantic rules); exact-package plus shared-.NET-runtime route for CSharpier and Fantomas
+  (official tool packages as declared DLLs over one managed .NET cohort, no `dotnet tool install`).
+  Research notes (unproven mappings): Roslyn SDK analyzers stay SDK-default mode (StyleCop remains
+  an opt-in candidate, not a default) with `/errorlog` SARIF 2.1 per compiler invocation
+  (per-TFM/RID aggregation work remains); FSharpLint console text parsing versus binding the
+  `FSharpLint.Core` library API stays open; Scalafix has no machine-readable CLI output upstream,
+  so the console-parse versus wire decision is recorded here, not silent. Formatters (Scalafmt,
+  CSharpier, Fantomas) are whole-file rewrite with check/diff mode; Scalafix, Roslyn, and FSharpLint
+  are check-only with the provisional sandbox-apply-and-diff fix flow. Versions are observations,
+  not pins; recheck latest stable at implementation (see the Scala + .NET rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
 
 Candidate native filenames are `.buildifier.json`, `.taplo.toml`/`taplo.toml`, and `.vale.ini`.
