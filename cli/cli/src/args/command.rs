@@ -192,30 +192,61 @@ impl Command {
         )
     }
 
+    /// True for commands that mutate by default (issue #457).
+    ///
+    /// Mirrors `docs/testing/cli.md#command-registry-and-behavior` plus
+    /// `docs/decisions/0005-mutating-operations.md`: lint,
+    /// typecheck, format, update, bump, generate, codegen, env, setup,
+    /// init, fix, and hooks apply workspace or managed-state writes
+    /// unless a non-mutating mode (`--check`, `--dry-run`) is selected.
+    /// `check` stays non-mutating, `clean` mutates managed state only
+    /// under its own contract, and workflow/audit/inspect/version
+    /// surfaces never mutate workspace sources by default.
+    pub fn is_mutating_by_default(self) -> bool {
+        matches!(
+            self,
+            Command::Lint
+                | Command::Typecheck
+                | Command::Format
+                | Command::Update
+                | Command::Bump
+                | Command::Generate
+                | Command::Codegen
+                | Command::Env
+                | Command::Setup
+                | Command::Init
+                | Command::Fix
+                | Command::Hooks
+        )
+    }
+
     /// One-line summary for `--help` (single source with [`Command::name`];
     /// longer behavior lives in docs/cli/commands/, not duplicated here).
+    /// Mutating commands name their default so `--help` plus
+    /// [`Command::is_mutating_by_default`] satisfy the
+    /// `docs/testing/cli.md` mutating-identification fixture.
     pub fn describe(self) -> &'static str {
         match self {
             Command::Audit => "plan a security/license audit (tool backends land later)",
-            Command::Lint => "run lint analysis over resolved scopes",
-            Command::Typecheck => "run typecheck analysis over resolved scopes",
-            Command::Format => "check or rewrite formatting over resolved scopes",
-            Command::Generate => "emit/sync BUILD files (Gazelle pipeline)",
+            Command::Lint => "run lint analysis over resolved scopes (mutating by default; --check is non-mutating)",
+            Command::Typecheck => "run typecheck analysis over resolved scopes (mutating by default; --check is non-mutating)",
+            Command::Format => "check or rewrite formatting over resolved scopes (mutating by default; --check is non-mutating)",
+            Command::Generate => "emit/sync BUILD files (Gazelle pipeline; mutating by default; --check validates without writes)",
             Command::Build => "run Bazel build over resolved targets",
             Command::Test => "run Bazel test over resolved targets",
             Command::Coverage => "collect LCOV coverage with optional threshold",
             Command::Run => "build and run a single runnable target",
             Command::Deploy => "build and run a single deployable target",
-            Command::Check => "run format+lint+typecheck+generate checks in order",
-            Command::Fix => "apply format+lint+typecheck+generate fixes in order",
+            Command::Check => "run format+lint+typecheck+generate checks in order (non-mutating)",
+            Command::Fix => "apply format+lint+typecheck+generate fixes in order (mutating by default)",
             Command::Clean => "prune unselected managed state (no scopes)",
-            Command::Update => "update dependencies per set through qualified resolvers",
-            Command::Bump => "widen one declared requirement to a new version (explicit)",
-            Command::Codegen => "collect codegen outputs with atomic commit",
-            Command::Env => "collect the managed development environment",
-            Command::Setup => "collect setup outputs with atomic commit",
-            Command::Init => "scaffold dx into a foreign tree (absent-only)",
-            Command::Hooks => "manage Git hooks via hermetic Git",
+            Command::Update => "update dependencies per set through qualified resolvers (mutating without confirmation; --check is the preset stale gate)",
+            Command::Bump => "widen one declared requirement to a new version (explicit; mutating without confirmation)",
+            Command::Codegen => "collect codegen outputs with atomic commit (mutating managed state)",
+            Command::Env => "collect the managed development environment (mutating managed state)",
+            Command::Setup => "collect setup outputs with atomic commit (mutating managed state)",
+            Command::Init => "scaffold dx into a foreign tree (absent-only; mutating by default)",
+            Command::Hooks => "manage Git hooks via hermetic Git (mutating by default)",
             Command::Status => "report workspace and target status",
             Command::Version => "report version and pin drift",
             Command::Watch => "watch for changes and rebuild (local only)",
@@ -314,5 +345,134 @@ mod tests {
         assert_eq!(Command::parse("Lint"), None);
         assert_eq!(Command::parse("type-check"), None);
         assert_eq!(Command::parse("dx"), None);
+    }
+
+    #[test]
+    fn final_registry_is_exact_and_rejects_excluded_commands() {
+        // Issue #457: the final CLI registry holds exactly the 28
+        // implemented commands (including `deploy` plus `bump`;
+        // `migrate` stays planning-only under #462). `doctor`,
+        // `configure`, `docs`, and `new` stay rejected as unknown.
+        use clap::ValueEnum;
+        let mut got: Vec<&str> = Command::value_variants()
+            .iter()
+            .map(|command| command.name())
+            .collect();
+        got.sort_unstable();
+        let mut want = vec![
+            "audit",
+            "bazel",
+            "build",
+            "bump",
+            "check",
+            "clean",
+            "codegen",
+            "completion",
+            "coverage",
+            "deps",
+            "deploy",
+            "env",
+            "fix",
+            "format",
+            "generate",
+            "hooks",
+            "init",
+            "lint",
+            "owners",
+            "run",
+            "setup",
+            "status",
+            "test",
+            "typecheck",
+            "update",
+            "version",
+            "watch",
+            "why",
+        ];
+        want.sort_unstable();
+        assert_eq!(got, want, "Command registry drifted from the final 28");
+        assert_eq!(Command::value_variants().len(), 28);
+        for excluded in ["doctor", "configure", "docs", "migrate", "new", "bogus"] {
+            assert_eq!(
+                Command::parse(excluded),
+                None,
+                "{excluded} must stay rejected as unknown"
+            );
+        }
+    }
+
+    #[test]
+    fn mutating_by_default_matches_contract_and_help() {
+        // Issue #457: `docs/testing/cli.md` mutating identification plus
+        // ADR 0005 plus ADR 0018. `check` stays non-mutating; `clean`
+        // mutates managed state only under its own contract.
+        for command in [
+            Command::Lint,
+            Command::Typecheck,
+            Command::Format,
+            Command::Update,
+            Command::Bump,
+            Command::Generate,
+            Command::Codegen,
+            Command::Env,
+            Command::Setup,
+            Command::Init,
+            Command::Fix,
+            Command::Hooks,
+        ] {
+            assert!(
+                command.is_mutating_by_default(),
+                "{command:?} must be mutating by default"
+            );
+            assert!(
+                command.describe().contains("mutating"),
+                "{command:?} help must name its mutating default: {}",
+                command.describe()
+            );
+        }
+        for command in [
+            Command::Audit,
+            Command::Build,
+            Command::Test,
+            Command::Coverage,
+            Command::Run,
+            Command::Deploy,
+            Command::Check,
+            Command::Clean,
+            Command::Status,
+            Command::Version,
+            Command::Watch,
+            Command::Owners,
+            Command::Deps,
+            Command::Why,
+            Command::Completion,
+            Command::Bazel,
+        ] {
+            assert!(
+                !command.is_mutating_by_default(),
+                "{command:?} must stay non-mutating by default"
+            );
+        }
+        assert!(
+            Command::Check.describe().contains("non-mutating"),
+            "check help must name its non-mutating mode"
+        );
+        // Diff-capable patch producers stay exactly the six check/fix
+        // umbrella members per `docs/testing/cli.md`.
+        for command in [
+            Command::Lint,
+            Command::Typecheck,
+            Command::Format,
+            Command::Generate,
+            Command::Check,
+            Command::Fix,
+        ] {
+            assert!(
+                command.supports_diff(),
+                "{command:?} must support --output=diff"
+            );
+        }
+        assert!(!Command::Update.supports_diff());
+        assert!(!Command::Bump.supports_diff());
     }
 }

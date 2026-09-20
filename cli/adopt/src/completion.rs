@@ -25,10 +25,12 @@ pub const ALL_COMMANDS: &[&str] = &[
     "test",
     "coverage",
     "run",
+    "deploy",
     "check",
     "fix",
     "clean",
     "update",
+    "bump",
     "codegen",
     "env",
     "setup",
@@ -81,5 +83,57 @@ mod tests {
         }
         assert!(ALL_COMMANDS.contains(&"completion"));
         assert!(completion_source_is_single(true, false));
+    }
+
+    #[test]
+    fn completion_vocabulary_is_the_final_registry() {
+        // Issue #457: the frozen vocabulary reference pins the final
+        // CLI registry exactly (28 commands including `deploy` plus
+        // `bump`; `migrate` stays planning-only under #462, `doctor`
+        // plus `configure` stay rejected as unknown).
+        let mut got = ALL_COMMANDS.to_vec();
+        got.sort_unstable();
+        let mut want = vec![
+            "audit",
+            "bazel",
+            "build",
+            "bump",
+            "check",
+            "clean",
+            "codegen",
+            "completion",
+            "coverage",
+            "deps",
+            "deploy",
+            "env",
+            "fix",
+            "format",
+            "generate",
+            "hooks",
+            "init",
+            "lint",
+            "owners",
+            "run",
+            "setup",
+            "status",
+            "test",
+            "typecheck",
+            "update",
+            "version",
+            "watch",
+            "why",
+        ];
+        want.sort_unstable();
+        assert_eq!(got, want, "ALL_COMMANDS drifted from the final registry");
+        assert_eq!(ALL_COMMANDS.len(), 28, "final registry holds 28 commands");
+        let mut dedup = got.clone();
+        dedup.dedup();
+        assert_eq!(got.len(), dedup.len(), "registry spellings must be unique");
+        for excluded in ["doctor", "configure", "docs", "migrate", "new"] {
+            assert!(
+                !ALL_COMMANDS.contains(&excluded),
+                "{excluded} must stay outside the final registry"
+            );
+        }
     }
 }

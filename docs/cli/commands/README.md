@@ -39,7 +39,7 @@ tests from inactive configurable branches.
 - [`dx generate`](generate.md); BUILD semantics are defined by the
   [generation contracts](../../generation/README.md)
 - [Environment, codegen, and setup commands](environment-codegen-setup.md)
-- [`dx audit`, `dx update`, and `dx bazel`](audit-update-bazel.md)
+- [`dx audit`, `dx update`, `dx bump`, and `dx bazel`](audit-update-bazel.md): audit/update policy plus the widen-one-requirement edit plus unchanged forwarding
 - [`dx init` and `dx hooks`](hooks.md): scaffolding and the custom hermetic git-hook runner
 - [`dx status` and `dx version`](status-version.md): the consolidated diagnostics surface and single-version
   pin/launcher with rollback
@@ -48,7 +48,9 @@ tests from inactive configurable branches.
   a custom graph engine.
 - [`dx completion`](completion.md): generated static shell scripts.
 - [`dx migrate`](migrate.md): major-release-only breaking-change rewrites
-  over the generation edit-manifest pattern.
+  over the generation edit-manifest pattern (planning library delivered;
+  CLI execution fails closed until the first major-release manifest lands
+  under issue #462, outside the parsed final registry pinned under issue #457).
 
 ## Excluded Commands
 

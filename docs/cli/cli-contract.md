@@ -297,3 +297,13 @@ via `disable_help_flag` plus `allow_hyphen_values` plus
 consumption, attached `=value` whole-token echo, and value-parser rejections;
 migrate to strict clap parsing with auto help stays owned gap for any future
 migration).
+
+Final command registry plus mutating-vs-check semantics pinned under issue #457
+(`bazel run //tools/ci:cli_contract_qualification`; final registry holds
+exactly the 28 parsed commands including `deploy` plus `bump`, with `doctor`
+plus `configure` rejected as unknown and `migrate` planning-only under #462;
+help plus `Command::is_mutating_by_default` identify the mutating default,
+`--output=diff` stays exactly the six patch producers, and the `check`/`fix`
+umbrella stays the sequential `format` then `lint` then `typecheck` then
+`generate` phases with stop-on-first-failure and no parallel, caching,
+scheduling, or daemon behavior).
