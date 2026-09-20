@@ -609,7 +609,7 @@ else
 fi
 
 # #476-#484: admitted lock wiring stays pinned (JVM shares maven_install.json,
-# .NET shares paket.main, Go stdlib-only, C/C++ none).
+# .NET shares paket.main qualified seed-only under #482, Go stdlib-only, C/C++ none).
 lock304_fail=""
 grep -q -F -e 'maven_install.json' docs/generation/README.md || lock304_fail="$lock304_fail gen:maven"
 grep -q -F -e 'paket.lock' docs/generation/README.md || lock304_fail="$lock304_fail gen:paket"
@@ -618,6 +618,10 @@ grep -q -F -e 'C/C++ none' docs/generation/README.md || lock304_fail="$lock304_f
 grep -q -F -e '@paket.main//fsharp.core' fsharp/tests/fixtures/hello/BUILD.bazel || lock304_fail="$lock304_fail fsharp:paket"
 grep -q -F -e 'paket.main' MODULE.bazel || lock304_fail="$lock304_fail module:paket"
 grep -q -F -e 'lock_file = "//third_party/jvm:maven_install.json"' MODULE.bazel || lock304_fail="$lock304_fail module:maven"
+grep -q -F -e 'FSHARP_CORE_VERSION = "10.1.201"' csharp/tests/fixtures/paket/pins.bzl || lock304_fail="$lock304_fail paket:pin"
+grep -q -F -e 'packages.lock.json rejected' csharp/tests/fixtures/paket/pins.bzl || lock304_fail="$lock304_fail paket:rejected"
+grep -q -F -e 'paket_qualification' docs/product/support-matrix.md || lock304_fail="$lock304_fail matrix:paket-qual"
+grep -q -F -e 'paket_qualification' docs/generation/README.md || lock304_fail="$lock304_fail gen:paket-qual"
 if [[ -z "$lock304_fail" ]]; then
   ok
 else

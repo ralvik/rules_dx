@@ -761,6 +761,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Paket lock wiring harness (issue #482); see docs/product/support-matrix.md#provisional-default-dependency-locks.
+sh_binary(
+    name = "paket_qualification",
+    srcs = ["paket_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "warnings_as_errors_testdata",
     srcs = glob(["testdata/warnings/**"]),
