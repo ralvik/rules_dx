@@ -236,13 +236,27 @@ sed, cp, and timing with no per-file copies. `//tools/ci:shell_contract`
 machine-checks this contract.
 
 Guard maintenance owns shared helpers plus snapshot versus grep policy under
-issue #450: shared shell logic lives once in `tools/sh/lib.sh`
+issue #450, extended with the table-driven guard rows under issue #653:
+shared shell logic lives once in `tools/sh/lib.sh`
 (`dx_expect_file`, `dx_expect_contains`, `dx_expect_absent`) plus
+`tools/sh/guards.sh` (`dx_guard_*`/`dx_guards_*` table rows with
+reason/issue, single-file plus tree plus regex forms) plus
 `tools/sh/snapshot.sh` (`snapshot_diff`, canonical JSON with
 `UPDATE_EXPECT`); snapshot is for byte-identical golden outputs with
-refresh, `dx_expect_*` fixed-string pins are for doc/code contract
-sentences/symbols (fail-closed, no refresh). Drivers extend the shared
-files instead of copying; `//tools/ci:shell_contract` owns the rule.
+refresh, `dx_expect_*`/`dx_guard_*` fixed-string pins are for doc/code
+contract sentences/symbols (fail-closed, no refresh). Drivers extend the
+shared files instead of copying; `//tools/ci:shell_contract` owns the rule.
+
+Snapshot versus grep policy: use snapshot (`snapshot_diff` with
+`UPDATE_EXPECT`) when whole-file byte identity matters (renderer output,
+generated fragments, canonical JSON: the reviewer sees the diff and
+refreshes explicitly). Use literal grep table rows (`dx_guard_*` with
+`grep -F -e`, one row per file plus reason) when a few contract
+sentences/symbols must hold in a known file. Use regex rows
+(`dx_guard_re_*` with `grep -E -e`) only for shapes (SHA pins, version
+alternatives, anchors). Use tree rows only when the location is unknown
+(repo-wide absence with an `--include` glob); prefer single-file pins
+otherwise.
 
 Runfiles and workspace-root probing is consolidated under issue #319 (one shared
 `tools/sh/lib.sh` `dx_workspace_root`/`dx_runfiles_root`/`dx_resolve_runfile`

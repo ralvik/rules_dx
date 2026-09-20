@@ -41,8 +41,9 @@ def adapter_supported_classes(tool_id, capability):
     return sorted(SYNTHETIC_ADAPTERS[tool_id].get(capability, []))
 
 # Real adapters: stable tool IDs users select in policy families.
-# Stages order by sorted tool ID; rustc is upstream-delegated and
-# tsc is target-coupled. See `docs/quality/tool-integrations.md`.
+# Stages order by sorted tool ID; rustc is upstream-delegated,
+# tsc is target-coupled, and lint-only adapters stay check-only by design.
+# See `docs/quality/tool-integrations.md`.
 REAL_ADAPTERS = {
     "biome": {
         "format": ["javascript", "json", "jsx", "typescript", "tsx"],

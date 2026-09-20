@@ -90,7 +90,8 @@
 # portably with no Linux behavior change. Guard maintenance owns shared
 # helpers plus snapshot versus grep policy snapshot
 # (`tools/sh/snapshot.sh` with UPDATE_EXPECT) is for byte-identical golden
-# outputs, `dx_expect_*` fixed-string pins are for doc/code contract
+# outputs, `dx_expect_*` fixed-string pins plus `tools/sh/guards.sh`
+# `dx_guard_*` table rows are for doc/code contract
 # sentences/symbols; `//tools/ci:shell_contract` owns the rule.
 # Shellcheck/shfmt clean (`shfmt -i 2 -ci`, `.shellcheckrc` bash + all
 # checks).

@@ -1,10 +1,12 @@
-"""Shared shell helpers (snapshot workflow).
+"""Shared shell helpers (snapshot workflow plus guard tables).
 
 Single-sources the workspace-root probe plus runfiles `rlocation` usage
 repeated across every shell driver, plus the snapshot-testing workflow
 (`snapshot.sh`: byte-identical and canonical-JSON asserts with
-UPDATE_EXPECT refresh). Drivers source `lib.sh` / `snapshot.sh` via a
-runfiles-first bootstrap and depend on `:lib` / `:snapshot` so the files
+UPDATE_EXPECT refresh) plus the table-driven guard rows (`guards.sh`:
+`{file, must-contain|must-not-contain, reason/issue}` pins). Drivers
+source `lib.sh` / `snapshot.sh` / `guards.sh` via a runfiles-first
+bootstrap and depend on `:lib` / `:snapshot` / `:guards` so the files
 ride their runfiles forest under `bazel test` / `bazel run`.
 """
 
@@ -23,6 +25,14 @@ sh_library(
 sh_library(
     name = "snapshot",
     srcs = ["snapshot.sh"],
+    # Bash-only harness is Linux-only (shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_library(
+    name = "guards",
+    srcs = ["guards.sh"],
+    deps = [":lib"],
     # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
