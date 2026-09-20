@@ -137,19 +137,19 @@ fi
 
 # Signing-first order stays explicit (issues #78/#311): Sigstore keyless +
 # GitHub attestations on the #311 trust root, GHCR signs separately via
-# cosign <digest> under #184 — dry-run here, never publishing.
+# cosign <digest> under #460 — dry-run here, never publishing.
 if grep -q -F -e 'Signing/attestation publishing (Sigstore keyless + GitHub attestations on the issue #311 trust root' .github/workflows/publish-dry-run.yml; then
   ok
 else
   bad "publish-dry-run.yml lost the signing-first owner-gated record (issue #311)"
 fi
 
-# GHCR stays a separate workflow (owner decision, issue #184): the dry
+# GHCR stays a separate workflow (owner decision, issue #460): the dry
 # run must name the separate ghcr.yml route, never fold images here.
 if grep -q -F -e 'GHCR prebuilt images (separate workflow .github/workflows/ghcr.yml' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "publish-dry-run.yml lost the GHCR-separate note (issue #184)"
+  bad "publish-dry-run.yml lost the GHCR-separate note (issue #460)"
 fi
 
 # Third-party actions stay SHA-pinned (issue #80): the sole third-party
@@ -179,7 +179,7 @@ else
 fi
 
 # The dry-run uses no secrets at all (issue #78): no `secrets.`
-# reference (the gated GHCR push alone uses GITHUB_TOKEN under #184;
+# reference (the gated GHCR push alone uses GITHUB_TOKEN under #460;
 # the dry run only builds locally and reports, so any secret reference
 # would be an unreviewed publication input).
 if ! grep -q -F -e 'secrets.' .github/workflows/publish-dry-run.yml; then

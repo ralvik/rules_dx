@@ -135,8 +135,8 @@ tooling in `deploy/release/` with policy tests `bazel test
 - Human-run driver (`release.sh`, issue #458): dry-run by default, requires
   `RELEASE_APPROVE=1` plus a pre-pushed tag plus clean tree; never
   creates tags, never runs on CI.
-- GHCR stays the separate `.github/workflows/ghcr.yml` route (image
-  lifecycle per-scaffold-change); push plus `cosign sign <digest>`
+- GHCR stays the separate `.github/workflows/ghcr.yml` route (issue #460,
+  image lifecycle per-scaffold-change); push plus `cosign sign <digest>`
   stay owner-gated with dry-run first.
 
 ## Path E: standalone `dx` install verification (accepted)

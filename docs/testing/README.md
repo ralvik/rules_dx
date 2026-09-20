@@ -215,7 +215,7 @@ or release evidence requirements. Qualified mappings (issue #507,
 `bazel run //tools/ci:coverage_qualification`): standard GitHub-hosted runners is free
 for public repositories (`ubuntu-latest`, `ubuntu-24.04-arm`, `macos-14`, `windows-latest`; no self-hosted). Larger runners are always charged.
 `actions/cache` disk cache is 10 GB per repository; artifact storage is 500 MB.
-GHCR container storage/bandwidth is currently free for public repos (at least one month notice before any pricing change per GitHub Packages billing; private-Packages quotas 500 MB/1 GB do not apply to containers today). Retention is manual; build-only PRs consume no quota and the first gated push records exact bytes (issue #184, `docs/contributing/devcontainer.md`); Pages is free.
+GHCR container storage/bandwidth is currently free for public repos (at least one month notice before any pricing change per GitHub Packages billing; private-Packages quotas 500 MB/1 GB do not apply to containers today). Retention is manual; build-only PRs consume no quota and the first gated push records exact bytes (issue #460, `docs/contributing/devcontainer.md`); Pages is free.
 
 ## Remote Tests
 

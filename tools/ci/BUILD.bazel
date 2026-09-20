@@ -371,7 +371,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# GHCR prebuilt-image hygiene (issues #184, #311); see tools/ci/ghcr_hygiene.sh.
+# GHCR prebuilt-image hygiene (issue #460, live successor to closed #184); see tools/ci/ghcr_hygiene.sh.
 sh_binary(
     name = "ghcr_hygiene",
     srcs = ["ghcr_hygiene.sh"],
@@ -380,7 +380,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Publication-group guards (issues #184, #78, #26, #5); see tools/ci/ghcr_publish_guards.sh.
+# Publication-group guards (issues #460, #78, #26, #5); see tools/ci/ghcr_publish_guards.sh.
 sh_binary(
     name = "ghcr_publish_guards",
     srcs = ["ghcr_publish_guards.sh"],
@@ -425,7 +425,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Distribution/closeout guards (issues #5, #26, #78, #184, #54, #311, #458); see tools/ci/distribution_closeout_guards.sh.
+# Distribution/closeout guards (issues #5, #26, #78, #460, #54, #311, #458); see tools/ci/distribution_closeout_guards.sh.
 sh_binary(
     name = "distribution_closeout_guards",
     srcs = ["distribution_closeout_guards.sh"],

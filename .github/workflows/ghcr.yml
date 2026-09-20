@@ -1,4 +1,5 @@
-# Prebuilt devcontainer images on GHCR (issues #184, #311).
+# Prebuilt devcontainer images on GHCR (issue #460, live successor to closed
+# #184 for the GHCR route; trust root shared with #311).
 #
 # Separate workflow from releases per owner decision (different lifecycle:
 # per-scaffold-change, not per-tag; base-image rebuilds never block/couple
@@ -65,7 +66,8 @@ jobs:
       - name: Build prebuilt image (no push on PR)
         run: |
           set -euo pipefail
-          # Single-version pin (issue #184): tag tracks dx == module
+          # Single-version pin (issue #460, live successor to closed #184):
+          # tag tracks dx == module
           # (cli/adopt/src/version.rs DX_VERSION == MODULE_VERSION == 0.0.0).
           docker build \
             -f .devcontainer/Dockerfile.prebuilt \
@@ -149,7 +151,7 @@ jobs:
             echo "- tag: \`0.0.0-sha-<sha>\` tracks single-version dx == module (0.0.0); digest pin \`ghcr.io/...@sha256:<digest>\` never latest."
             echo "- push: only on workflow_dispatch + approve:true (explicit owner approval); PRs build only."
             echo "- signing: dry-run would-sign \`cosign sign <digest>\` on the #311 trust root plus attestation (same as //deploy/release:signing_demo); gated push signs + verifies (\`cosign sign --yes\` / \`cosign verify\` / \`gh attestation\`) with id-token OIDC."
-            echo "- follow-ups on first push (issue #184): scaffold digest ref, signed digest verify, quota bytes record."
+            echo "- follow-ups on first push (issue #460): scaffold digest ref, signed digest verify, quota bytes record."
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Prove checkout left clean
         run: test -z "$(git status --porcelain)"
