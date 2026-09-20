@@ -361,20 +361,25 @@ compatible JVM artifact and Scalafix to its semantic-rule artifacts over the
 same shared managed JDK and Maven-lock story as the Scala foundation
 (`maven_install.json` plus `fail_if_repin_required`); Scalafix semantic
 rules additionally need semanticdb plus classpath wiring per the
-adapter-input notes. Exact artifacts, rule-set/config qualification
-(native-configuration review of the provisional Scalafix preset stays
-required under issue #417), and adapter qualification remain pending
-under issue #417 (live successor to closed #307 for this cohort) and no
+adapter-input notes. Exact versions plus rule-sets qualified seed-only under issue #486
+(`bazel run //tools/ci:scala_dotnet_defaults_qualification` with
+`scala/tests/fixtures/scala_dotnet_quality/pins.bzl` over upstream built-in defaults
+with no hidden preset; no auto-supplied OrganizeImports plus RemoveUnused preset);
+digests plus adapter mappings stay owned under issue #417
+(live successor to closed #307 for this cohort) and no
 adapter claims `scala` yet (open under issue #417).
 
 Decided route: CSharpier and Fantomas take the
 exact-upstream-package plus shared-.NET-runtime route. Each tool resolves to
 its exact official tool package executed as declared DLLs over the one
 managed .NET runtime cohort; no consumer runs `dotnet tool install` or any
-equivalent installer. Exact package versions, runtime compatibility bounds
-(Roslyn SDK analyzers stay SDK-default mode with StyleCop opt-in; FSharpLint
-default ruleset with formatting rules off stays provisional), and adapter
-qualification remain pending under issue #417 (live successor to closed #307
+equivalent installer. Exact versions plus rule-sets qualified seed-only under issue #486
+(`bazel run //tools/ci:scala_dotnet_defaults_qualification` with
+`scala/tests/fixtures/scala_dotnet_quality/pins.bzl` over upstream built-in defaults
+with no hidden preset; Roslyn SDK default analysis mode is the upstream built-in
+default with StyleCop opt-in, FSharpLint default ruleset with formatting rules off);
+runtime compatibility bounds plus adapter mappings stay owned under issue #417
+(live successor to closed #307
 for this cohort) and no adapter claims `csharp` or
 `fsharp` yet (open under issue #417).
 

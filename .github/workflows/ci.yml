@@ -1054,6 +1054,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:cc_hermetic_qualification
       - name: Audit JVM quality qualification (issue #485 versions plus rule-sets pins plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:jvm_quality_qualification
+      - name: Audit Scala plus .NET quality qualification (issue #486 versions plus rule-sets pins plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:scala_dotnet_defaults_qualification
       - name: Write job summary
         if: always()
         run: |

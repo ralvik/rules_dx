@@ -11,16 +11,18 @@
 #   exact-package plus shared-.NET-runtime route for CSharpier/Fantomas
 #   (official tool packages as declared DLLs over one managed .NET cohort;
 #   no `dotnet tool install` on the consumer path), initial artifact
-#   research rows as observations not pins, provisional adapter-input notes
-#   (Roslyn per-TFM/RID SARIF aggregation, FSharpLint console-parse versus
-#   library-API binding, Scalafix console-output limitation recorded as a
-#   parse-vs-wire decision, never silently dropped; Roslyn SDK-default mode
-#   with StyleCop opt-in), provisional native-config inputs (Scalafix
+#   research rows as observations for digests (versions qualified seed-only
+#   under issue #486), adapter-input notes with Roslyn per-TFM/RID SARIF
+#   aggregation, FSharpLint console-parse versus library-API binding,
+#   Scalafix console-output limitation recorded as a parse-vs-wire decision
+#   (never silently dropped; Roslyn SDK-default mode with StyleCop opt-in),
+#   native-config defaults qualified seed-only under issue #486 (Scalafix
 #   OrganizeImports plus RemoveUnused, FSharpLint default ruleset with
-#   formatting off) explicitly not approved presets, parity-deferred
-#   scala/csharp/fsharp with owner plus frozen route, classification-only
-#   taxonomy with no curated defaults and no native-config binding;
-# - open under #417 with honest records: exact artifact versions/digests
+#   formatting off as upstream built-in defaults with no hidden preset),
+#   parity-deferred scala/csharp/fsharp with owner plus frozen route,
+#   classification-only taxonomy with no curated defaults and no
+#   native-config binding;
+# - open under #417 with honest records: exact artifact digests
 #   plus shared-JDK/.NET cohort qualification, parser plus runner-matrix
 #   pass/fail plus fix/format evidence per adapter-backed class,
 #   native-config qualification against the native-config contract,
@@ -171,11 +173,11 @@ else
   bad "tool-acquisition lost a Scala + .NET research row or its observations-not-pins honesty:$cohort_research"
 fi
 
-# Tool integrations keep the provisional Scala + .NET adapter-input notes:
+# Tool integrations keep the Scala + .NET adapter-input notes:
 # Roslyn SDK-default plus StyleCop opt-in with per-TFM/RID SARIF aggregation,
 # FSharpLint console-parse versus library-API binding, Scalafix console-output
 # limitation as a recorded parse-vs-wire decision (never silently dropped),
-# versions as observations not pins, no adapter claim.
+# versions qualified under #486 with digests as observations, no adapter claim.
 if grep -q -F -e '**Scala + .NET cohort (issue #417' "$integrations" &&
   grep -q -F -e 'unproven mappings' "$integrations" &&
   grep -q -F -e 'observations,' "$integrations" &&
@@ -190,20 +192,22 @@ else
   bad "tool-integrations lost its provisional Scala + .NET adapter-input notes or open-work honesty"
 fi
 
-# Support matrix keeps the Scala + .NET routes plus provisional native-config
-# inputs plus adapter-input notes plus cohort tracking, all citing #417
-# without approving hidden presets or claiming support.
+# Support matrix keeps the Scala + .NET routes plus qualified native-config
+# defaults (issue #486) plus adapter-input notes plus cohort tracking, all
+# citing #417 for adapters/digests without approving hidden presets or
+# claiming support.
 if grep -q -F -e 'take the managed JVM route (issue #417' "$support" &&
   grep -q -F -e 'shared-.NET-runtime route (issue #417' "$support" &&
-  grep -q -F -e 'tracked under issue #417' "$support" &&
-  grep -q -F -e 'open under issue #417' "$support" &&
-  grep -q -F -e 'provisional under issue #417' "$support" &&
+  grep -q -F -e 'qualified seed-only under issue #486' "$support" &&
+  grep -q -F -e 'no auto-supplied OrganizeImports' "$support" &&
+  grep -q -F -e 'upstream built-in defaults' "$support" &&
+  grep -q -F -e 'owned by issue #417.' "$support" &&
   grep -q -F -e 'itemized under issue #417' "$support" &&
   grep -q -F -e '(issue #417)' "$support" &&
   grep -q -F -e 'to issue #417;' "$support"; then
   ok
 else
-  bad "support-matrix lost its Scala + .NET routes, provisional inputs, adapter notes, or #417 cohort tracking"
+  bad "support-matrix lost its Scala + .NET routes, qualified defaults, adapter notes, or #417 cohort tracking"
 fi
 
 # Tool baseline keeps the Scala/C#/F# coverage rows (integration inventory,

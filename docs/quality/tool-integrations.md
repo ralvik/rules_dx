@@ -247,8 +247,11 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   `FSharpLint.Core` library API stays open; Scalafix has no machine-readable CLI output upstream,
   so the console-parse versus wire decision is recorded here, not silent. Formatters (Scalafmt,
   CSharpier, Fantomas) are whole-file rewrite with check/diff mode; Scalafix, Roslyn, and FSharpLint
-  are check-only with the provisional sandbox-apply-and-diff fix flow. Versions are observations,
-  not pins; recheck latest stable at implementation (see the Scala + .NET rows in
+  are check-only with the provisional sandbox-apply-and-diff fix flow. Versions qualified seed-only under issue #486
+  (`scala/tests/fixtures/scala_dotnet_quality/pins.bzl` via `bazel run //tools/ci:scala_dotnet_defaults_qualification`
+  over upstream built-in defaults with no hidden preset); digests stay observations, not pins,
+  recheck latest stable at implementation; adapters stay owned under issue #417
+  (see the Scala + .NET rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
 - **Native cohort (issue #418, provisional — no adapter claims `c`, `cpp`, or `go` yet):**
   split native route for clang-format/clang-tidy via the qualified hermetic-llvm LLVM tool
