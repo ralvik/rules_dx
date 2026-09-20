@@ -9,10 +9,12 @@
 # hermetic CLI-contract pins (issue #407 replaces nested E2E),
 # required-core depcheck fixtures, `dx update` live execution,
 # perf report-not-gate, seed plus arm64 plus static-musl plus macos arm64
-# coverage/remote qualification under #308/#410/#411/#412); audit live
+# plus macos x86_64 best-effort coverage/remote qualification under
+# #308/#410/#411/#412/#413); audit live
 # execution, docs-pipeline, env/codegen, remaining non-qualified platform
 # cells (issue #298; Linux arm64 qualified under #410, static musl under
-# #411, macos arm64 under #412), admitted depcheck
+# #411, macos arm64 under #412, macos x86_64 best-effort under #413),
+# admitted depcheck
 # expansion, and release evidence (SBOM/provenance, signing/attestations,
 # BCR submission, GHCR route, consumer verification) remain open gaps
 # tracked in their owning issues.
@@ -94,6 +96,20 @@ if grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -
   ok
 else
   bad "support-matrix lost the macOS arm64 Platform-qualified record (issue #412, release evidence open, no host fallback)"
+fi
+
+# macOS x86_64 best-effort native is Platform-qualified (issue #413),
+# never Supported without release evidence and never back to unqualified
+# refusal. Best-effort by ADR 0014 definition: gaps recorded without
+# blocking required-host release. Host-installed SDK fallback stays never
+# approved.
+if grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (issue #413' &&
+  grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Best-effort' &&
+  grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open' &&
+  grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'host-installed SDK fallback never approved'; then
+  ok
+else
+  bad "support-matrix lost the macOS x86_64 best-effort Platform-qualified record (issue #413, release evidence open, no host fallback, non-blocking)"
 fi
 
 # No Supported status cell in support-matrix tables (promotion gate core).
@@ -201,15 +217,17 @@ else
   bad "audit/update Delivered lost live codes or guards harness"
 fi
 
-# Coverage seed plus arm64 plus static-musl plus macos arm64 qualified
-# (#308/#410/#411/#412): cell gate + versioned inventories and registry
-# plus qualification harnesses, no cross-cell union.
+# Coverage seed plus arm64 plus static-musl plus macos arm64 plus macos
+# x86_64 best-effort qualified (#308/#410/#411/#412/#413): cell gate +
+# versioned inventories and registry plus qualification harnesses, no
+# cross-cell union.
 if [[ -f "tools/ci/coverage_cell.sh" ]] &&
   [[ -f "tools/coverage/seed-inventory.txt" ]] &&
   [[ -f "tools/coverage/arm64-inventory.txt" ]] &&
   [[ -f "tools/coverage/musl-x86_64-inventory.txt" ]] &&
   [[ -f "tools/coverage/musl-arm64-inventory.txt" ]] &&
   [[ -f "tools/coverage/macos-arm64-inventory.txt" ]] &&
+  [[ -f "tools/coverage/macos-x86_64-inventory.txt" ]] &&
   [[ -f "tools/coverage/cells.txt" ]] &&
   [[ -f "tools/ci/coverage_qualification.sh" ]] &&
   [[ -f "tools/ci/musl_qualification.sh" ]] &&
@@ -217,7 +235,7 @@ if [[ -f "tools/ci/coverage_cell.sh" ]] &&
   grep -q -F -e 'seed cell' tools/coverage/seed-inventory.txt; then
   ok
 else
-  bad "coverage seed plus arm64 plus musl plus macos lost its cell gate, inventories, registry, or qualification harnesses"
+  bad "coverage seed plus arm64 plus musl plus macos (plus x86_64 best-effort) lost its cell gate, inventories, registry, or qualification harnesses"
 fi
 
 # Env/codegen + docs-pipeline Open: backlog contracts pin frozen halves.

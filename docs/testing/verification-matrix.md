@@ -88,7 +88,8 @@ class by design — never silently under the standard dogfood gates.
 
 `Delivered` means implemented and verified on the Linux x86_64 seed host
 plus Linux arm64 native (issue #410) plus the two Linux static-musl
-profiles (issue #411) plus macOS arm64 native (issue #412). `Open` means open work with no implementation
+profiles (issue #411) plus macOS arm64 native (issue #412) plus macOS
+x86_64 best-effort native (issue #413). `Open` means open work with no implementation
 claimed here. `Planning only` means planning is implemented with live
 execution deferred. `Tracked` means measured report-only tracking with no gate.
 
@@ -128,7 +129,11 @@ plus Linux arm64 native (issue #410, `ubuntu-24.04-arm` runners with a
 separate `bazel-arm64-` disk-cache scope) plus the two static-musl profiles
 (issue #411, Linux runners with per-profile `bazel-musl-*` scopes) plus
 macOS arm64 native (issue #412, `macos-14` runners with a separate
-`bazel-macos-arm64-` disk-cache scope):
+`bazel-macos-arm64-` disk-cache scope) plus macOS x86_64 best-effort native
+(issue #413, `macos-15-intel` runners with a separate
+`bazel-macos-x86_64-` disk-cache scope; `macos-13` retired December 2025,
+`macos-15-intel` until August 2027; gaps never block required-host
+release):
 
 - `build`: `bazel build //...` plus the adopt-rust `dx_dev` smoke
   (`bazel build //examples/adopt-rust/... --config=dx_dev`) for
@@ -152,13 +157,20 @@ macOS arm64 native (issue #412, `macos-14` runners with a separate
   `tools/coverage/macos-arm64-inventory.txt`, summary only, no cross-cell
   union) natively on macOS arm64 (`macos-14`, issue #412; host-installed
   SDK fallback never approved, no secrets, no interactive acceptance).
+- `build-macos-x86_64`, `test-macos-x86_64`, `coverage-macos-x86_64`: the same
+  build plus `dx_dev` smoke, `bazel test //...`, and the macos x86_64
+  best-effort per-cell coverage gate (`dx coverage --min-coverage 97 //...`
+  against `tools/coverage/macos-x86_64-inventory.txt`, summary only, no
+  cross-cell union) natively on macOS x86_64 best-effort (`macos-15-intel`,
+  issue #413; host-installed SDK fallback never approved, no secrets, no
+  interactive acceptance; gaps never block required-host release).
 - `test`: `bazel test //...` (no manual tests; hermetic CLI-contract pins run here).
 - `coverage`: `bazel run //cli/cli:dx -- coverage --min-coverage 97 //...`
   (seed cell only) plus `bazel run //tools/ci:coverage_report_guards`.
 - `prove`: `:target_tags`, `:coverage_cell`,
   `:coverage_spill`, `:coverage_qualification`, `:musl_qualification`,
-  `:macos_qualification`, `:release_hygiene`, `:release_policy`,
-  `:publish_trust`, `:shell_contract`.
+  `:macos_qualification` (arm64 plus x86_64 best-effort), `:release_hygiene`,
+  `:release_policy`, `:publish_trust`, `:shell_contract`.
 - `dogfood-freshness`: `bazel run //cli/cli:dx -- generate --check //...`,
   `//tools/ci:corpus_audit`, `:code_ownership`, `:non_dogfed_paths`,
   examples READMEs and
@@ -170,9 +182,11 @@ macOS arm64 native (issue #412, `macos-14` runners with a separate
   `:env_codegen_qualification`, `:docs_pipeline_qualification`,
   `:consumer_ci_qualification`, `:file_family_qualification`,
   `:helper_qualification`, `:clap_tokenizer_qualification`,
-  `:musl_qualification`, and `:macos_qualification`.
+  `:musl_qualification`, and `:macos_qualification` (arm64 plus x86_64
+  best-effort).
 - `devcontainer-check`, `docs-ci`, `consumer-ci` (all-enabled self-call on
-  linux_x86_64 plus linux_arm64 plus macos_arm64, issue #408, verbatim `//...`).
+  linux_x86_64 plus linux_arm64 plus macos_arm64 plus macos_x86_64, issue
+  #408, verbatim `//...`).
 
 Green here (static guards on a clean tree, no full rebuild):
 `non_dogfed_paths`, `supported_evidence_gate`, `distribution_closeout_guards`,
@@ -187,12 +201,12 @@ Remaining reds stay owned gaps, not green claims:
 
 - Full-tree `dx lint/format/typecheck/test --check //...` over fixtures and
   testdata stays open under #12 (lane A only) and #325 (consumer honesty).
-- Per-cell coverage is qualified for the seed plus arm64 plus two static-musl plus macos arm64 cells under
-  #308/#410/#411/#412 (`tools/coverage/cells.txt`,
+- Per-cell coverage is qualified for the seed plus arm64 plus two static-musl plus macos arm64 plus macos x86_64 best-effort cells under
+  #308/#410/#411/#412/#413 (`tools/coverage/cells.txt`,
   `bazel run //tools/ci:coverage_qualification`; no union, Starlark fallback,
   Codecov opt-in, quotas, local-only remote evidence). First-party PR reporting is
   adopted under #254 (Codecov opt-in only; the seed cell owns the PR comment,
-  the arm64 plus musl plus macos cells report to their job summaries). Remaining non-qualified cells stay platform-gated under #298.
+  the arm64 plus musl plus macos cells report to their job summaries; the macos x86_64 best-effort cell reports to its job summary without blocking required-host release). Remaining non-qualified cells stay platform-gated under #298.
 - Docs pipeline and environment/codegen stay open under #310 and #309 (see
   [Documentation](../documentation/README.md#contracts)). Environment/codegen
   deferred records plus fixture evidence are qualified seed-only under #309
@@ -219,7 +233,7 @@ Remaining reds stay owned gaps, not green claims:
    native-bot, migrate-execution gaps stay owned gaps); platform qualification
    beyond the seed plus arm64 plus musl plus macos hosts stays open under
    #298 (arm64 qualified under #410, static musl under #411, macos arm64
-   under #412).
+   under #412, macos x86_64 best-effort under #413).
 - File-family quality record with fixture evidence qualified seed-only under #313
   (`bazel run //tools/ci:file_family_qualification`; provider-class
   applicability with never-suffix inference, Starlark/Buildifier plus TOML/Taplo

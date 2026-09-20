@@ -1,6 +1,6 @@
 # rules_dx
 
-Status: pre-release development on the Linux x86_64 seed host plus Linux arm64 native (issue #410) plus Linux static-musl profiles (issue #411) plus macOS arm64 native (issue #412); no `Supported` cells yet, no release cut. No tags, GitHub releases, or registry submissions without explicit owner approval.
+Status: pre-release development on the Linux x86_64 seed host plus Linux arm64 native (issue #410) plus Linux static-musl profiles (issue #411) plus macOS arm64 native (issue #412) plus macOS x86_64 best-effort native (issue #413); no `Supported` cells yet, no release cut. No tags, GitHub releases, or registry submissions without explicit owner approval.
 
 `rules_dx` is an opinionated Bazel developer platform designed to provide a tested release stack,
 lazy application foundations, Bazel-owned quality workflows, and a thin `dx` CLI. The product aims
@@ -12,7 +12,7 @@ required platforms, with a broad quality-tool baseline and additional low-cost c
 Upstream patches and packaging support the out-of-the-box experience without rebuilding stacks. See the
 [scope and feasibility gate](docs/product/scope.md#first-release-admission) and
 [mandatory 100% project coverage requirement](docs/testing/README.md#coverage).
-Implementation exists on the Linux x86_64 seed host plus Linux arm64 native (issue #410) plus Linux static-musl profiles (issue #411) plus macOS arm64 native (issue #412); release qualification beyond those hosts is not claimed here.
+Implementation exists on the Linux x86_64 seed host plus Linux arm64 native (issue #410) plus Linux static-musl profiles (issue #411) plus macOS arm64 native (issue #412) plus macOS x86_64 best-effort native (issue #413); release qualification beyond those hosts is not claimed here.
 
 ## Product
 

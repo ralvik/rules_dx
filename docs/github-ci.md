@@ -84,17 +84,23 @@ produce actionable configuration failures, not skipped validation or platform su
 Linux execution for shared quality checks does not add Linux to the validation matrix.
 
 Supported platform identifiers are `linux_x86_64`, `linux_arm64` (native,
-issue #410), and `macos_arm64` (native, issue #412). The reusable
-workflow routes `linux_x86_64` to `ubuntu-latest`, `linux_arm64` to
-`ubuntu-24.04-arm`, and `macos_arm64` to `macos-14`; every other spelling
-fails closed in `platforms-gate` before any per-platform job queues a
-runner. Static-musl target profiles (`linux_x86_64_static_musl`,
-`linux_arm64_static_musl`, issue #411) are target closures qualified in
-`ci.yml` musl jobs, not reusable-consumer host platforms; dynamic musl
-stays explicitly out of scope. macOS arm64 native (issue #412) runs on
-`macos-14` through the pinned upstream toolchains with the hermetic-llvm
-Apple-SDK backend provisional (immutable lazy fetch, no host-installed
-SDK fallback, no secrets, no interactive acceptance).
+issue #410), `macos_arm64` (native, issue #412), and `macos_x86_64`
+(best-effort native, issue #413). The reusable workflow routes
+`linux_x86_64` to `ubuntu-latest`, `linux_arm64` to `ubuntu-24.04-arm`,
+`macos_arm64` to `macos-14`, and `macos_x86_64` to `macos-15-intel`; every
+other spelling fails closed in `platforms-gate` before any per-platform
+job queues a runner. Static-musl target profiles
+(`linux_x86_64_static_musl`, `linux_arm64_static_musl`, issue #411) are
+target closures qualified in `ci.yml` musl jobs, not reusable-consumer
+host platforms; dynamic musl stays explicitly out of scope. macOS arm64
+native (issue #412) runs on `macos-14` through the pinned upstream
+toolchains with the hermetic-llvm Apple-SDK backend provisional (immutable
+lazy fetch, no host-installed SDK fallback, no secrets, no interactive
+acceptance). macOS x86_64 best-effort native (issue #413) runs on
+`macos-15-intel` through the same pinned upstream toolchains with the same
+provisional backend plus no fallback plus no secrets plus no interactive
+acceptance (`macos-13` retired December 2025, `macos-15-intel` until August
+2027; best-effort gaps never block required-host release).
 
 Selection does not change language activation, analyzer applicability, configured no-op
 behavior, or dormant-foundation laziness. Run selected checks at their normal repository

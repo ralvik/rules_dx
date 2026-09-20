@@ -1,11 +1,12 @@
-# Required coverage cells (issues #308, #410, #411, #412).
+# Required coverage cells (issues #308, #410, #411, #412, #413).
 #
 # Each required configuration/platform cell gates its own combined LCOV
 # report separately: no cross-cell union, no averaged percentages, no
 # rounding up (docs/testing/README.md#coverage). The Linux x86_64 seed
 # host plus Linux arm64 glibc native (issue #410) plus the two Linux
 # static-musl profiles (issue #411) plus macOS arm64 native (issue #412)
-# qualify today
+# plus macOS x86_64 best-effort native (issue #413, non-blocking;
+# gaps never block required-host release) qualify today
 # (issues #5/#298); the rest are unqualified gaps with
 # clean refusal, never silent substitution.
 #
@@ -19,4 +20,5 @@ qualified linux_arm64 tools/coverage/arm64-inventory.txt
 qualified linux_x86_64_musl tools/coverage/musl-x86_64-inventory.txt
 qualified linux_arm64_musl tools/coverage/musl-arm64-inventory.txt
 qualified macos_arm64 tools/coverage/macos-arm64-inventory.txt
+qualified macos_x86_64 tools/coverage/macos-x86_64-inventory.txt
 unqualified windows_x86_64 issue-298

@@ -640,12 +640,14 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# macOS arm64 qualification harness (issue #412): proves the as-built
-# macOS arm64 record with fixture evidence and owned gaps, without
-# claiming Supported or macOS x86_64 — dx qualified host plus no-fallback
-# refusal, per-cell macos coverage with no union, macOS CI jobs natively
-# on macos-14 with a per-host cache scope under the portable-shell
-# contract, docs in support-matrix plus ADR 0014 plus native-toolchains.
+# macOS arm64 plus x86_64 best-effort qualification harness (issues
+# #412/#413): proves the as-built macOS arm64 (required) plus x86_64
+# best-effort (non-blocking) records with fixture evidence and owned gaps,
+# without claiming Supported — dx qualified hosts plus no-fallback refusal,
+# per-cell macos coverage with no union, macOS CI jobs natively on
+# macos-14 (arm64) plus macos-15-intel (x86_64 Intel) with per-host cache
+# scopes under the portable-shell contract, docs in support-matrix plus
+# ADR 0014 plus native-toolchains.
 # Run by CI via `bazel run //tools/ci:macos_qualification`.
 sh_binary(
     name = "macos_qualification",
