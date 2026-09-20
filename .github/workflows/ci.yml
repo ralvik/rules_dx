@@ -1074,6 +1074,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:windows_acquisition_qualification
       - name: Audit acquisition rights qualification (issue #496 Apple plus Microsoft rights pins plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:acquisition_rights_qualification
+      - name: Audit prebuilt interop qualification (issue #498 explicit STL/CRT/linker combos plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:prebuilt_interop_qualification
       - name: Write job summary
         if: always()
         run: |

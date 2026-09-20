@@ -1,0 +1,35 @@
+"""Prebuilt interop fixture (issue #498)."""
+
+load("//cc/rules:defs.bzl", "cc_library", "cc_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+cc_library(
+    name = "interop",
+    srcs = ["interop.cc"],
+    hdrs = ["interop.h"],
+    copts = ["-std=c++17"],
+)
+
+cc_test(
+    name = "interop_test",
+    srcs = ["interop_test.cc"],
+    copts = ["-std=c++17"],
+    deps = [":interop"],
+)
+
+exports_files(["pins.bzl"])
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = [
+        "BUILD.bazel",
+        "pins.bzl",
+    ],
+    tags = ["corpus"],
+)
