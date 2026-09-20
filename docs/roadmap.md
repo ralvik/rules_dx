@@ -12,7 +12,7 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
 
 * Tag hygiene and release-input gaps, no publication pressure.
 * Toolchain, provider, and adapter qualification backlogs.
-* Docs-pipeline execution gaps stay open under issue #310 (adapter runs with pins
+* Docs-pipeline execution gaps stay open under issue #421 (live successor to closed #310; adapter runs with pins
   and mappings, renderer and site execution, byte-identical rebuild proof, link and
   reference completeness, guide prose with guide-step CI wiring, first-hour timing proof,
   and per-release pin-bump plus drift process; no working site claimed).

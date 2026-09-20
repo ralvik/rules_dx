@@ -6,7 +6,7 @@ Removed. The `dx docs` command was deleted per
 overpromised in front of the docs-publish deploy gate.
 
 Reintroduction with real extraction/validation behind the invocation is
-open under issue #310.
+open under issue #421 (live successor to closed #310).
 The design contracts it will implement are unchanged:
 
 - [Documentation IR](../../documentation/doc-ir.md): common symbol model,

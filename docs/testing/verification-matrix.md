@@ -56,9 +56,10 @@ class by design — never silently under the standard dogfood gates.
   (issue #18).
 - **Docs pipeline**: per-language adapter runs, link/reference proofs,
   renderer/site artifacts, cache and determinism measurements, guide prose with
-  guide-step verification, and first-hour timing proof stay open under issue #310
+  guide-step verification, and first-hour timing proof stay open under issue #421
+  (live successor to closed #310)
   (see [Documentation](../documentation/README.md#contracts)); no working site claimed.
-  IR plus planning records with fixture evidence qualified seed-only under #310
+  IR plus planning records with fixture evidence qualified seed-only under #421
   (`bazel run //tools/ci:docs_pipeline_qualification`; versioned IR schema,
   codec roundtrip/parity/ordering/compat, dx_docs planning units, frozen
   contracts, removed stub behind ADR 0020, with adapter runs, renderer/site
@@ -209,7 +210,7 @@ scope). The host matrix across these hosts is pinned by `bazel run
 
 Green here (static guards on a clean tree, no full rebuild):
 `non_dogfed_paths`, `supported_evidence_gate`, `distribution_closeout_guards`,
-`env_codegen_qualification` 23/23, `docs_pipeline_qualification` 26/26,
+`env_codegen_qualification` 23/23, `docs_pipeline_qualification` 33/33,
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `musl_qualification` 12/12, `macos_qualification` 12/12,
@@ -227,14 +228,15 @@ Remaining reds stay owned gaps, not green claims:
   Codecov opt-in, quotas, local-only remote evidence). First-party PR reporting is
   adopted under #254 (Codecov opt-in only; the seed cell owns the PR comment,
   the arm64 plus musl plus macos plus macos-x86_64 plus windows cells report to their job summaries; the macos x86_64 best-effort cell reports without blocking required-host release). All required plus best-effort cells are qualified; out-of-v1 hosts stay platform-gated under #298.
-- Docs pipeline and environment/codegen stay open under #310 and #309 (see
+- Docs pipeline and environment/codegen stay open under #421 and #309 (see
   [Documentation](../documentation/README.md#contracts)). Environment/codegen
   deferred records plus fixture evidence are qualified seed-only under #309
   (`bazel run //tools/ci:env_codegen_qualification`; no junction/copy
   fallback, no checksum-only fallback, no third-party plugin claim; bootstrap,
   fidelity, spaces, stale-clean, IDE, atomic-commit, BEP, projection,
   root-candidate, and cold/warm tests stay owned gaps). Docs-pipeline IR plus
-  planning records with fixture evidence are qualified seed-only under #310
+  planning records with fixture evidence are qualified seed-only under #421
+  (live successor to closed #310)
   (`bazel run //tools/ci:docs_pipeline_qualification`; versioned IR, codec,
   planning, frozen contracts, removed stub; adapter runs, renderer/site
   execution, rebuild proof, link completeness, guide-step wiring, timing proof,
