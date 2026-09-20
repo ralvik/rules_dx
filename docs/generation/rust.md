@@ -40,6 +40,11 @@ extension never reads `Cargo.Bazel.lock`, `cargo-bazel.json`, or crate_universe'
 maps. Production imports must be declared in `[dependencies]`; test imports may additionally use
 `[dev-dependencies]`.
 
+Public Cargo metadata is qualified seed-only under issue #502
+(`rust/tests/fixtures/cargo_metadata/pins.bzl` with the `Cargo.toml` plus
+`cargo_metadata.expected` pair via
+`bazel run //tools/ci:cargo_metadata_qualification`, ad-hoc metadata rejected).
+
 The `crate_deps` call and `aliases` heads are fully managed and rewritten on every generate.
 Hand-maintained labels in a plain-list `+` tail (for example toolchain labels no import resolves)
 are preserved across regenerations and never removed by generate; delete them manually when stale.
