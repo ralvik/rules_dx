@@ -28,9 +28,10 @@ The initial mapping is (wont-fix matrix, issue #590, pinned by fixtures in
 | `audit` | SPDX 2.3 JSON | License inventory (see license-family contract) |
 
 The license family's [SPDX 2.3 JSON report](commands/audit-update-bazel.md#license-family-dx-audit-license)
-is specified in the license-family contract. SPDX parsing, policy-table loading,
-and proof artifacts are open under
-open work under issue #511; this table is not an exhaustive prohibition of that report.
+is specified in the license-family contract. Audit SARIF run shape plus live SPDX emission are
+pinned under issue #632 (pairs with #511); SPDX parsing, policy-table loading,
+and proof artifacts stay owned under issue #511. This table is not an exhaustive prohibition
+of that report.
 
 `build`, `format`, `update`, `generate`, `codegen`, `env`, `setup`,
 `run`, `deploy`, `clean`, `bump`, `migrate`, and every adoption/inspect

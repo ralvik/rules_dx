@@ -74,7 +74,11 @@ pub const DEFAULT_SCOPE: &str = "//...";
 
 /// One audit family: secrets plus dependency-vulnerability analysis
 /// (`security`), or dependency license-policy analysis (`license`).
-/// Tool selection and report mappings stay pending qualification.
+/// Tool selection (Gitleaks-only secrets, local vuln matching, license
+/// policy) plus SARIF run shape and SPDX 2.3 document mapping are pinned
+/// under issues #629/#628 plus #632 (see [`crate::secrets`],
+/// [`crate::vuln`], [`crate::spdx`]); live emission goldens live in
+/// `dx_cli::exec::audit`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AuditFamily {
     Security,

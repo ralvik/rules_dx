@@ -15,6 +15,16 @@
 //! expression evaluation in [`crate::license_expr`], and notice-text
 //! inputs in [`crate::license_notice`]; this module projects their
 //! assessed outputs into the shared `--report` document.
+//!
+//! Shape pinned under issue #632: exactly one document per invocation
+//! (`SPDX-2.3`, `CC0-1.0`, `SPDXRef-DOCUMENT`, name `dx-audit-license`),
+//! packages sorted by ID with `licenseConcluded`/`licenseDeclared`,
+//! `NOASSERTION` copyright, single purl `externalRefs`, plus
+//! `DESCRIBES` from each audited root first (sorted) then `CONTAINS`
+//! (V1 emits none: no lock-graph edges projected yet). Live emission
+//! goldens live in `dx_cli::exec::audit`; partial documents stay
+//! non-authoritative (gated on `results_complete`, never uploaded as a
+//! replacement scan).
 
 use packageurl::PackageUrl;
 use serde::{Deserialize, Serialize};
@@ -449,5 +459,104 @@ mod tests {
         assert_eq!(DATA_LICENSE, "CC0-1.0");
         assert_eq!(DESCRIBES, "DESCRIBES");
         assert_eq!(CONTAINS, "CONTAINS");
+    }
+
+    #[test]
+    fn spdx_golden_pins_full_document_shape() {
+        // Issue #632: one document per invocation with the frozen
+        // envelope, per-package purl identities, and ordered
+        // DESCRIBES-then-CONTAINS relations. V1 live emission carries
+        // no CONTAINS edges (no lock-graph projection yet); the golden
+        // below pins the empty-CONTAINS live shape plus one explicit
+        // CONTAINS edge for the unit projection.
+        let roots = vec!["//b:two".to_owned(), "//a:one".to_owned()];
+        let packages = vec![
+            spdx_package("maven", "junit:junit", "4.13.2", "EPL-1.0", 2),
+            spdx_package("cargo", "serde", "1.0.100", "MIT", 1),
+            spdx_package("go", "example.com/hello", "1.0.0", "NOASSERTION", 3),
+        ];
+        let text = render_spdx(&roots, &packages, &[], "https://example.com/dx-audit-1");
+        let value: serde_json::Value = serde_json::from_str(&text).expect("valid JSON");
+        // Envelope: exactly one document per invocation, never per
+        // package/set/root.
+        assert_eq!(value["spdxVersion"], serde_json::json!("SPDX-2.3"));
+        assert_eq!(value["dataLicense"], serde_json::json!("CC0-1.0"));
+        assert_eq!(value["SPDXID"], serde_json::json!("SPDXRef-DOCUMENT"));
+        assert_eq!(value["name"], serde_json::json!("dx-audit-license"));
+        assert_eq!(
+            value["documentNamespace"],
+            serde_json::json!("https://example.com/dx-audit-1")
+        );
+        // Packages sorted by ID for determinism with the full V1 field
+        // set: concluded/declared, NOASSERTION copyright, single purl ref.
+        let pkgs = value["packages"].as_array().expect("packages");
+        assert_eq!(pkgs.len(), 3);
+        assert_eq!(pkgs[0]["SPDXID"], serde_json::json!("SPDXRef-Package-1"));
+        assert_eq!(pkgs[0]["name"], serde_json::json!("serde"));
+        assert_eq!(pkgs[0]["versionInfo"], serde_json::json!("1.0.100"));
+        assert_eq!(pkgs[0]["licenseConcluded"], serde_json::json!("MIT"));
+        assert_eq!(pkgs[0]["licenseDeclared"], serde_json::json!("MIT"));
+        assert_eq!(pkgs[0]["copyrightText"], serde_json::json!("NOASSERTION"));
+        assert_eq!(
+            pkgs[0]["externalRefs"],
+            serde_json::json!([{
+                "referenceCategory": "PACKAGE-MANAGER",
+                "referenceType": "purl",
+                "referenceLocator": "pkg:cargo/serde@1.0.100",
+            }])
+        );
+        assert_eq!(
+            pkgs[1]["externalRefs"][0]["referenceLocator"],
+            serde_json::json!("pkg:maven/junit/junit@4.13.2")
+        );
+        assert_eq!(
+            pkgs[2]["externalRefs"][0]["referenceLocator"],
+            serde_json::json!("pkg:golang/example.com/hello@1.0.0")
+        );
+        // Relationships: DESCRIBES from each audited root first
+        // (sorted), then CONTAINS (empty in V1 live emission).
+        let rels = value["relationships"].as_array().expect("relationships");
+        assert_eq!(rels.len(), 2);
+        assert_eq!(
+            rels[0],
+            serde_json::json!({
+                "spdxElementId": "//a:one",
+                "relationshipType": "DESCRIBES",
+                "relatedSpdxElement": "SPDXRef-DOCUMENT",
+            })
+        );
+        assert_eq!(
+            rels[1],
+            serde_json::json!({
+                "spdxElementId": "//b:two",
+                "relationshipType": "DESCRIBES",
+                "relatedSpdxElement": "SPDXRef-DOCUMENT",
+            })
+        );
+        // Explicit CONTAINS projection stays ordered after DESCRIBES.
+        let with_contains = render_spdx(
+            &["//a:one".to_owned()],
+            &packages[..2],
+            &[(
+                "SPDXRef-Package-2".to_owned(),
+                "SPDXRef-Package-1".to_owned(),
+            )],
+            "ns",
+        );
+        let with_value: serde_json::Value =
+            serde_json::from_str(&with_contains).expect("valid JSON");
+        let with_rels = with_value["relationships"].as_array().expect("rels");
+        assert_eq!(with_rels.len(), 2);
+        assert_eq!(
+            with_rels[0]["relationshipType"],
+            serde_json::json!("DESCRIBES")
+        );
+        assert_eq!(
+            with_rels[1]["relationshipType"],
+            serde_json::json!("CONTAINS")
+        );
+        // Partial documents stay non-authoritative: the shape carries no
+        // completeness flag itself; callers gate authoritative upload on
+        // `results_complete` (see `dx_cli::exec::audit`).
     }
 }

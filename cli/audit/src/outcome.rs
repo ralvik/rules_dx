@@ -14,11 +14,13 @@
 //!
 //! The findings-versus-operational-error split lives in the report,
 //! not the code: both fail the command, and the SARIF/event detail
-//! says which. Family-result production (auditor wiring, advisory
-//! acquisition, SARIF parsing, license evaluation) stays pending qualification
-//! qualification; this module aggregates over injected family outcomes
-//! only, so the selection stays deterministic and unit-testable
-//! without any auditor.
+//! says which. Family-result production runs live (auditor wiring in
+//! [`crate::backend`], advisory acquisition in [`crate::advisory`],
+//! SARIF triage in [`crate::secrets`], matching in [`crate::vuln`],
+//! license evaluation in [`crate::license_expr`], SARIF/SPDX mapping
+//! pinned under issue #632); this module aggregates over injected
+//! family outcomes only, so the selection stays deterministic and
+//! unit-testable without any auditor.
 
 use super::AuditFamily;
 

@@ -102,8 +102,15 @@ vulnerability services and does not change separately configured Bazel remote ex
 boundaries for declared analysis inputs.
 
 Audit supports SARIF 2.1.0 reports through the shared `--report` contract (plus SPDX 2.3 JSON
-for license, see below). Partial
-collection marks the SARIF invocation unsuccessful while retaining validated findings.
+for license, see below). SARIF run shape is pinned under issue #632: one deterministically
+ordered run per executed tool (`gitleaks`, `vuln` for security; `license` for license) with
+stable driver/rule IDs and workspace-relative artifact URIs, severity mapped to
+`note`/`warning`/`error`, locations path-only (no byte ranges, hence no regions), empty runs
+kept, and deterministic ordering independent of finding order. Partial
+collection marks every run's invocation unsuccessful (`executionSuccessful=false`) while
+retaining validated findings. Partial reports stay non-authoritative: they are marked for
+archival and debugging and must not be uploaded as a replacement scan; authoritative upload
+is gated on `results_complete=true`.
 
 If a selected dependency cannot be assessed by the qualified auditor, fail audit as incomplete and
 identify the dependency and assessment limitation. Examples include unsupported Git revisions or
@@ -246,9 +253,17 @@ audit time, obsolete only when no applicable finding remains, always visible). A
 within an exception's bounded version range retains acceptance while the exception still
 matches the finding and remains otherwise valid; upgrading alone does not invalidate it.
 Its report format is SPDX 2.3
-JSON via the shared `--report` contract: one
-document per invocation, package IDs as package URLs, `DESCRIBES` relations
-from each audited root, `CONTAINS` relations where the lock graph is known.
+JSON via the shared `--report` contract, pinned under issue #632: one
+document per invocation (never per package, set, or root) with `SPDX-2.3`,
+`CC0-1.0`, `SPDXRef-DOCUMENT`, name `dx-audit-license`, and an
+invocation-unique namespace; packages sorted by ID with `licenseConcluded`/
+`licenseDeclared`, `NOASSERTION` copyright, and single purl `externalRefs`
+(package URLs via the purl spec); `DESCRIBES` relations
+from each audited root first (sorted), then `CONTAINS` where the lock graph is
+known (V1 emits none: no lock-graph edges projected yet). Live emission is
+pinned by goldens in `dx_audit::spdx` plus `dx_cli::exec::audit` and stays
+deterministic over input order; partial SPDX stays non-authoritative like
+SARIF above, gated on `results_complete`.
 
 Two distribution tiers only:
 
