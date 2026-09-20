@@ -9,7 +9,7 @@
 # stays green by construction and nothing runs uninvited.
 #
 # This harness machine-checks the no-publication-inputs half that is
-# verifiable on a clean tree today (34 checks): dist/release
+# verifiable on a clean tree today (35 checks): dist/release
 # git-ignored and uncommitted, module at 0.0.0, no version tags,
 # SECURITY.md reporting link + enabled record, publish dry-run dispatch-only with a
 # default-closed approve gate, no-secrets minimal permissions plus no
@@ -342,6 +342,20 @@ if [[ -f "docs/deploy/release-runbook.md" ]] &&
   ok
 else
   bad "release runbook missing (docs/deploy/release-runbook.md + tag ceiling, issue #311)"
+fi
+
+# Review routing stays owned (issue #424): CODEOWNERS exists with the sole
+# maintainer owning every row per the support-matrix core section, and the
+# consumer-CI contract records that this repo's own routing is owned while
+# the integration prescribes no consumer CODEOWNERS policy.
+if [[ -f "CODEOWNERS" ]] &&
+  grep -q -F -e '@ralvik' CODEOWNERS &&
+  grep -q -F -e 'sole maintainer' CODEOWNERS &&
+  grep -q -F -e 'CODEOWNERS' docs/github-ci.md &&
+  grep -q -F -e 'sole maintainer' docs/github-ci.md; then
+  ok
+else
+  bad "CODEOWNERS missing or lost the sole-maintainer record (want CODEOWNERS with @ralvik plus docs/github-ci.md sole-maintainer note, issue #424)"
 fi
 
 dx_test_summary "release hygiene harness"

@@ -216,9 +216,10 @@ on unknown OS/CPU (checked-in seed reports stay `linux_x86_64`, proven
 by `//perf:rules_lint_results_test`). `//tools/ci:shell_contract`
 machine-checks the perf-host and no-host-tar pins.
 
-CI shell dedup plus portable forms stay open under issue #323 (shared lib.sh, shellcheck
-plus shfmt, replace non-portable realpath, bare sha256sum, sed `-i -e`, cp `-a`,
-EPOCHREALTIME).
+CI shell dedup plus portable forms are delivered (closed issue #323):
+shared `tools/sh/lib.sh`, shellcheck plus shfmt, portable realpath, hashing,
+sed, cp, and timing with no per-file copies. `//tools/ci:shell_contract`
+machine-checks this contract.
 
 Runfiles and workspace-root probing is consolidated under issue #319 (one shared
 `tools/sh/lib.sh` `dx_workspace_root`/`dx_runfiles_root`/`dx_resolve_runfile`

@@ -1,0 +1,3 @@
+# Code ownership (issue #424): sole maintainer owns every row
+# per docs/product/support-matrix.md#minimal-required-core until delegation.
+* @ralvik

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Renovate parity fixture (issue #3, snapshot workflow issue #322): the
+# Renovate parity fixture (closed issue #3 delivered, snapshot workflow issue #322): the
 # repository's own `renovate.json` is a snapshot of the `dx init` scaffold
 # output, so the config we ship is the one we run. A drifting hand copy is
 # worse than none.

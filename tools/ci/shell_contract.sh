@@ -241,4 +241,15 @@ else
   bad "deploy archive must stay hermetic Python with no host tar (issue #320)"
 fi
 
+# Issue #323 stays closed with the contract guard owned (issue #424):
+# docs must record delivered (closed issue #323) with the
+# //tools/ci:shell_contract pin, never a stay-open tracker.
+if grep -q -F -e 'closed issue #323' docs/testing/tools.md &&
+  grep -q -F -e '//tools/ci:shell_contract' docs/testing/tools.md &&
+  ! grep -q -F -e 'stay open under issue #323' docs/testing/tools.md; then
+  ok
+else
+  bad "docs/testing/tools.md lost the closed-#323 plus shell_contract record (want closed issue #323 with //tools/ci:shell_contract, no stay-open claim, issue #424)"
+fi
+
 dx_test_summary "shell contract harness"

@@ -24,7 +24,7 @@
 #   vacuous classification-only families (Go/Java/Kotlin/Scala/C#/...).
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
-# today (11 checks) and records the gaps instead of claiming them.
+# today (12 checks) and records the gaps instead of claiming them.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:verify_perf_corpus`,
 # following //tools/ci:coverage_spill.
@@ -134,6 +134,18 @@ if grep -q -F -e 'manual' tools/ci/BUILD.bazel; then
   ok
 else
   bad "tools/ci BUILD lost the manual-tag E2E battery record"
+fi
+
+# Perf gate scope stays honest (issue #424): the single dx_startup gate is
+# sufficient; cold/warm plus zero-unused-work per ADR 0014 consequences stay
+# advisory with only dx_startup carrying gate:true.
+if grep -q -F -e 'single `dx_startup` gate is sufficient' perf/README.md &&
+  grep -q -F -e 'ADR 0014' perf/README.md &&
+  grep -q -F -e 'gate:true' perf/baseline.json &&
+  python3 -c "import json; d=json.load(open('perf/baseline.json'))['benchmarks']; gates=[k for k,v in d.items() if v.get('gate') is True]; assert gates==['dx_startup'], gates"; then
+  ok
+else
+  bad "perf lost its single-gate scope record (want perf/README single dx_startup sufficient plus ADR 0014 plus baseline gate:true only dx_startup, issue #424)"
 fi
 
 dx_test_summary "verify perf corpus harness"

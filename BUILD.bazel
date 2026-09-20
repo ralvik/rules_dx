@@ -88,7 +88,7 @@ exports_files([
 # siblings, never checked sources.
 # Parity fixture: `dx init` scaffold output is a snapshot of the
 # checked-in `renovate.json`, so the config we ship is the one we
-# run (issue #3, snapshot workflow issue #322). Schema plus snapshot:
+# run (closed issue #3 delivered, snapshot workflow issue #322). Schema plus snapshot:
 # contract fields fail first, byte drift refreshes via UPDATE_EXPECT.
 sh_test(
     name = "renovate_parity_test",
