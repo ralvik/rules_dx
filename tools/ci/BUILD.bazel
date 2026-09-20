@@ -851,6 +851,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Roslyn per-TFM-RID SARIF aggregation harness (issue #492); see docs/product/support-matrix.md#provisional-adapter-input-notes.
+sh_binary(
+    name = "roslyn_qualification",
+    srcs = ["roslyn_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "warnings_as_errors_testdata",
     srcs = glob(["testdata/warnings/**"]),

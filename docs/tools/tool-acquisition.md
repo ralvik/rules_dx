@@ -386,7 +386,9 @@ equivalent installer. Exact versions plus rule-sets qualified seed-only under is
 (`bazel run //tools/ci:scala_dotnet_defaults_qualification` with
 `scala/tests/fixtures/scala_dotnet_quality/pins.bzl` over upstream built-in defaults
 with no hidden preset; Roslyn SDK default analysis mode is the upstream built-in
-default with StyleCop opt-in, FSharpLint default ruleset with formatting rules off);
+default with StyleCop opt-in, FSharpLint default ruleset with formatting rules off, Roslyn
+per-TFM/RID runs aggregation decided under issue #492 with `csharp/tests/fixtures/roslyn/`
+evidence (concatenate per-pivot runs, single-SARIF assumption is rejected, recorded here, not silent));
 runtime compatibility bounds plus adapter mappings stay owned under issue #417
 (live successor to closed #307
 for this cohort) and no adapter claims `csharp` or

@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "csc",
+          "fullName": "Microsoft (R) Visual C# Compiler",
+          "version": "SDK-coupled",
+          "rules": [
+            {
+              "id": "CA1822",
+              "shortDescription": {
+                "text": "Mark members as static"
+              }
+            }
+          ]
+        }
+      },
+      "automationDetails": {
+        "id": "csharp-roslyn/net8.0-linux-x64/Debug"
+      },
+      "properties": {
+        "configuration": "Debug",
+        "tfm": "net8.0",
+        "rid": "linux-x64"
+      },
+      "results": [
+        {
+          "ruleId": "CA1822",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "Member 'Greet' does not access instance data and can be marked as static"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "csharp/tests/fixtures/roslyn/Sample.cs"
+                },
+                "region": {
+                  "startLine": 7,
+                  "startColumn": 19,
+                  "endLine": 7,
+                  "endColumn": 24
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tool": {
+        "driver": {
+          "name": "csc",
+          "fullName": "Microsoft (R) Visual C# Compiler",
+          "version": "SDK-coupled",
+          "rules": [
+            {
+              "id": "CA1822",
+              "shortDescription": {
+                "text": "Mark members as static"
+              }
+            },
+            {
+              "id": "CA1303",
+              "shortDescription": {
+                "text": "Do not pass literals as localized parameters"
+              }
+            }
+          ]
+        }
+      },
+      "automationDetails": {
+        "id": "csharp-roslyn/net10.0-win-x64/Debug"
+      },
+      "properties": {
+        "configuration": "Debug",
+        "tfm": "net10.0",
+        "rid": "win-x64"
+      },
+      "results": [
+        {
+          "ruleId": "CA1822",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "Member 'Greet' does not access instance data and can be marked as static"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "csharp/tests/fixtures/roslyn/Sample.cs"
+                },
+                "region": {
+                  "startLine": 7,
+                  "startColumn": 19,
+                  "endLine": 7,
+                  "endColumn": 24
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CA1303",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "Method 'Log' passes a literal string as parameter 'value' of a call to 'Console.WriteLine'. Use a resource table instead"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "csharp/tests/fixtures/roslyn/Sample.cs"
+                },
+                "region": {
+                  "startLine": 19,
+                  "startColumn": 9,
+                  "endLine": 19,
+                  "endColumn": 41
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

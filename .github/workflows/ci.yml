@@ -1064,6 +1064,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:file_family_defaults_qualification
       - name: Audit Scalafix qualification (issue #490 console plus semanticdb-classpath wiring pins plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:scalafix_qualification
+      - name: Audit Roslyn qualification (issue #492 per-TFM-RID SARIF aggregation pins plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:roslyn_qualification
       - name: Write job summary
         if: always()
         run: |
