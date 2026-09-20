@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# File-family quality defaults qualification harness (issue #489).
+# File-family quality defaults qualification harness (issues #489 plus #582).
 #
 # Qualifies the provisional file-family format plus lint defaults against the
 # native-configuration contract with no hidden presets. Issue #420 covers
@@ -7,11 +7,12 @@
 # rule-sets.
 # - pinned: cue v0.17.1, jsonnetfmt v0.22.0 (go-jsonnet; C++ v0.21.0 observed
 #   not pinned), pkl 0.32.1, terraform v1.16.1, djlint v1.45.0, stylelint
-#   17.14.1, prettier 3.9.6 with prettier-plugin-sql 0.15.1 (gherkin/xml
-#   observed, not separately pinned), yamlfmt v0.21.0, yamllint 1.38.0,
-#   keep-sorted v0.10.0 in
+#   17.14.1, prettier 3.9.6 with prettier-plugin-sql 0.15.1 plus
+#   prettier-plugin-gherkin 4.0.0 plus @prettier/plugin-xml 3.4.2 plus modfmt
+#   v0.4.0 from github.com/joshdk/modfmt in
 #   `quality/tests/fixtures/file_family_quality/pins.bzl` (modfmt upstream
-#   identity pending under #420, not pinned here; living at head rejected);
+#   identity resolved seed-only under #582, gherkin/xml rechecked latest
+#   stable at implementation under #582; living at head rejected);
 #   frozen delivery-class identities recorded (standalone checksummed
 #   artifacts for cue/jsonnetfmt/pkl/terraform/yamlfmt/keep-sorted/modfmt,
 #   private wheel-only Python graph for djlint/yamllint, private
@@ -67,14 +68,15 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture pair plus pins stay present (issue #489).
+# Fixture pair plus pins stay present (issues #489 plus #582).
 if [[ -f "$pins" && -f "$pins_build" ]]; then
   ok
 else
   bad "file-family quality fixture missing (want $pins plus $pins_build)"
 fi
 
-# Pins record the qualified upstream versions.
+# Pins record the qualified upstream versions (issue #489 with modfmt plus
+# gherkin/xml resolved seed-only under #582).
 if grep -q -F -e 'CUE_VERSION = "v0.17.1"' "$pins" &&
   grep -q -F -e 'JSONNETFMT_VERSION = "v0.22.0"' "$pins" &&
   grep -q -F -e 'PKL_VERSION = "0.32.1"' "$pins" &&
@@ -82,25 +84,31 @@ if grep -q -F -e 'CUE_VERSION = "v0.17.1"' "$pins" &&
   grep -q -F -e 'DJLINT_VERSION = "v1.45.0"' "$pins" &&
   grep -q -F -e 'STYLELINT_VERSION = "17.14.1"' "$pins" &&
   grep -q -F -e 'PRETTIER_VERSION = "3.9.6"' "$pins" &&
+  grep -q -F -e 'PRETTIER_PLUGIN_GHERKIN_VERSION = "4.0.0"' "$pins" &&
+  grep -q -F -e 'PRETTIER_PLUGIN_SQL_VERSION = "0.15.1"' "$pins" &&
+  grep -q -F -e 'PRETTIER_PLUGIN_XML_VERSION = "3.4.2"' "$pins" &&
+  grep -q -F -e 'MODFMT_VERSION = "v0.4.0"' "$pins" &&
   grep -q -F -e 'YAMLFMT_VERSION = "v0.21.0"' "$pins" &&
   grep -q -F -e 'YAMLLINT_VERSION = "1.38.0"' "$pins" &&
   grep -q -F -e 'KEEP_SORTED_VERSION = "v0.10.0"' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its qualified file-family versions under issue #489"
+  bad "pins.bzl lost its qualified file-family versions under issues #489 plus #582"
 fi
 
-# Pins record the frozen delivery-class identities plus rejected and pending lines.
+# Pins record the frozen delivery-class identities plus #582 resolutions.
 if grep -q -F -e 'standalone checksummed release artifact' "$pins" &&
   grep -q -F -e 'private wheel-only Python graph member' "$pins" &&
   grep -q -F -e 'private pure-JavaScript graph member' "$pins" &&
   grep -q -F -e 'C++ jsonnet v0.21.0 observed, not pinned' "$pins" &&
-  grep -q -F -e 'modfmt upstream identity pending under issue #420' "$pins" &&
+  grep -q -F -e 'modfmt upstream identity resolved seed-only under issue #582' "$pins" &&
+  grep -q -F -e 'github.com/joshdk/modfmt v0.4.0' "$pins" &&
+  grep -q -F -e 'prettier-plugin-gherkin 4.0.0 plus @prettier/plugin-xml 3.4.2 pinned seed-only under issue #582' "$pins" &&
   grep -q -F -e 'living at head rejected' "$pins" &&
   grep -q -F -e 'protobuf plus qml stay owned by issue #488' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its delivery-class identities plus rejected/pending lines under issue #489"
+  bad "pins.bzl lost its delivery-class identities plus #582 resolutions"
 fi
 
 # Pins record the sole-policy plus qualified rule-set resolutions plus rejections.
@@ -168,15 +176,16 @@ else
 fi
 
 # Support matrix keeps the qualified file-family versions plus rule-sets
-# with fixtures and harness (issue #489); digests plus adapters stay under #420.
+# with fixtures and harness (issues #489 plus #582); digests plus adapters stay under #420.
 if grep -q -F -e 'qualified seed-only under issue #489' "$support" &&
+  grep -q -F -e 'resolved seed-only under issue #582' "$support" &&
   grep -q -F -e 'file_family_defaults_qualification' "$support" &&
   grep -q -F -e 'quality/tests/fixtures/file_family_quality/pins.bzl' "$support" &&
   grep -q -F -e 'no hidden preset' "$support" &&
   grep -q -F -e 'digests plus adapter mappings stay owned under issue #420' "$support"; then
   ok
 else
-  bad "support-matrix lost its #489 qualified file-family versions plus rule-sets record with fixtures"
+  bad "support-matrix lost its #489 plus #582 qualified file-family versions plus rule-sets record with fixtures"
 fi
 
 # Support matrix resolves the rule-selection plus config-discovery plus
@@ -185,41 +194,49 @@ fi
 if grep -q -F -e 'suffix inference rejected' "$support" &&
   grep -q -F -e 'upstream built-in defaults' "$support" &&
   grep -q -F -e 'no auto-supplied' "$support" &&
-  grep -q -F -e 'qualified seed-only under issue #489' "$support"; then
+  grep -q -F -e 'qualified seed-only under issue #489' "$support" &&
+  grep -q -F -e 'resolved seed-only under issue #582' "$support"; then
   ok
 else
-  bad "support-matrix lost its #489 rule-selection plus suffix-inference conflict resolution"
+  bad "support-matrix lost its #489 plus #582 rule-selection plus suffix-inference conflict resolution"
 fi
 
 # Tool acquisition keeps the frozen standalone route with no separate
-# ambient resolution and no false claim; versions qualified under #489,
-# digests plus adapters stay pending under #420.
+# ambient resolution and no false claim; versions qualified under #489 with
+# modfmt resolved under #582, digests plus adapters stay pending under #420.
 if grep -q -F -e 'Decided route: cue, jsonnetfmt, pkl, terraform, yamlfmt, keep-sorted, and modfmt take the' "$acquisition" &&
   grep -q -F -e 'standalone checksummed' "$acquisition" &&
   grep -q -F -e 'qualified seed-only under issue #489' "$acquisition" &&
+  grep -q -F -e 'modfmt v0.4.0' "$acquisition" &&
+  grep -q -F -e 'resolved seed-only under issue #582' "$acquisition" &&
   grep -q -F -e 'digests plus adapter mappings stay owned under issue #420' "$acquisition" &&
   grep -q -F -e 'no adapter claims `cue`' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its frozen standalone route with #489 versions plus #420 digests/adapters split"
+  bad "tool-acquisition lost its frozen standalone route with #489 plus #582 versions plus #420 digests/adapters split"
 fi
 
 # Tool acquisition keeps the frozen Python plus Node graph routes with the
-# private-closure discipline and no false claim; versions qualified under #489.
+# private-closure discipline and no false claim; versions qualified under #489
+# with gherkin/xml resolved under #582.
 if grep -q -F -e 'Decided route: djlint and yamllint take the' "$acquisition" &&
   grep -q -F -e 'private wheel-only Python graph' "$acquisition" &&
   grep -q -F -e 'Decided route: Stylelint plus prettier-plugin' "$acquisition" &&
   grep -q -F -e 'private pure-JavaScript graph' "$acquisition" &&
   grep -q -F -e 'qualified seed-only under issue #489' "$acquisition" &&
+  grep -q -F -e 'prettier-plugin-gherkin 4.0.0' "$acquisition" &&
+  grep -q -F -e '@prettier/plugin-xml 3.4.2' "$acquisition" &&
+  grep -q -F -e 'resolved seed-only under issue #582' "$acquisition" &&
   grep -q -F -e 'digests plus adapter mappings stay owned under issue #420' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its frozen Python/Node routes with #489 versions plus #420 digests/adapters split"
+  bad "tool-acquisition lost its frozen Python/Node routes with #489 plus #582 versions plus #420 digests/adapters split"
 fi
 
-# Tool acquisition keeps the file-family research rows with byte-identity risk.
+# Tool acquisition keeps the file-family research rows with byte-identity risk
+# (modfmt plus gherkin/xml resolved seed-only under #582).
 family_research=""
-for tool in '| cue |' '| jsonnetfmt |' '| pkl |' '| djlint |' '| Stylelint |' '| prettier-plugin-sql |' '| modfmt |' '| terraform |' '| yamlfmt |' '| yamllint |' '| keep-sorted |'; do
+for tool in '| cue |' '| jsonnetfmt |' '| pkl |' '| djlint |' '| Stylelint |' '| prettier-plugin-gherkin |' '| prettier-plugin-sql |' '| prettier-plugin-xml |' '| modfmt |' '| terraform |' '| yamlfmt |' '| yamllint |' '| keep-sorted |'; do
   grep -q -F -e "$tool" "$acquisition" || family_research="$family_research $tool:missing"
 done
 if [[ -z "$family_research" ]] &&
@@ -230,15 +247,16 @@ else
 fi
 
 # Tool integrations keep the file-family adapter-input notes with #489 pinned
-# versions (adapters still open under #420; protobuf/qml cross-linked to #419).
+# versions plus #582 resolutions (adapters still open under #420; protobuf/qml cross-linked to #419).
 if grep -q -F -e 'Interpreted/file-family cohort (issue #420' "$integrations" &&
   grep -q -F -e 'no adapter claims `ruby`,' "$integrations" &&
   grep -q -F -e 'qualified seed-only under issue #489' "$integrations" &&
+  grep -q -F -e 'resolved seed-only under issue #582' "$integrations" &&
   grep -q -F -e 'adapters stay owned under issue #420' "$integrations" &&
   grep -q -F -e 'cross-linked here, never double-claimed' "$integrations"; then
   ok
 else
-  bad "tool-integrations lost its file-family notes with #489 versions plus #420 adapters split"
+  bad "tool-integrations lost its file-family notes with #489 plus #582 versions plus #420 adapters split"
 fi
 
 # Native-configuration sole policy stands (no hidden presets authorized).
@@ -249,14 +267,15 @@ else
   bad "native-configuration lost its sole-policy plus no-hidden-preset honesty"
 fi
 
-# Verification matrix owns the qualified seed-only record under #489.
+# Verification matrix owns the qualified seed-only record under #489 plus #582.
 if grep -q -F -e 'file_family_defaults_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #489' "$verify" &&
+  grep -q -F -e 'resolved seed-only under #582' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:file_family_defaults_qualification' "$verify" &&
   grep -q -F -e '`file_family_defaults_qualification` 17/17' "$verify"; then
   ok
 else
-  bad "verification-matrix lost its #489 file-family quality qualified record"
+  bad "verification-matrix lost its #489 plus #582 file-family quality qualified record"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.

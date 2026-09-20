@@ -151,6 +151,17 @@ fixture evidence; provisional notes below do not select additional defaults or n
 | Consumer CI | Reusable workflow + caller template | Delivered; verification open | Shipped |
 | Repository workflows | Codegen/env/setup implemented; `dx update` plus `dx audit` live execution delivered | Codegen pairs; audit/update | open work under issue #506 and issue #512 |
 
+File-family quality defaults are qualified seed-only under issue #489 with modfmt plus gherkin/xml
+resolved seed-only under issue #582 (`bazel run //tools/ci:file_family_defaults_qualification` with
+`quality/tests/fixtures/file_family_quality/pins.bzl` over upstream built-in defaults with no hidden preset;
+cue v0.17.1 plus jsonnetfmt v0.22.0 plus pkl 0.32.1 plus terraform v1.16.1 plus djlint v1.45.0 plus Stylelint
+17.14.1 plus Prettier 3.9.6 with prettier-plugin-sql 0.15.1 plus prettier-plugin-gherkin 4.0.0 plus
+@prettier/plugin-xml 3.4.2 plus modfmt v0.4.0 from github.com/joshdk/modfmt plus yamlfmt v0.21.0 plus yamllint
+1.38.0 plus keep-sorted v0.10.0; whole-file rewrite versus check-only per tool with no auto-supplied preset,
+suffix inference rejected with registry-owned applicability, beyond-default switches rejected;
+digests plus adapter mappings stay owned under issue #420; `protobuf`/`qml` stay owned by issue #419,
+never double-claimed; no adapter claims `cue` yet; platform plus consumer plus release evidence stays owned gap; no Supported claim).
+
 Required-core Rust providers/Gazelle/integration are pinned (issue #470); kept CC
 opt-out linker is pinned seed-only (issue #471); bindgen LLVM-22-vs-23 compat is
 qualified seed-only (issue #473); CXX graph identity is pinned

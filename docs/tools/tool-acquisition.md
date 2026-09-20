@@ -130,10 +130,10 @@ double-claimed); versions are observations, not pins.
 | pkl | [releases](https://github.com/apple/pkl/releases) (0.32.1 observed Jul 2026) | Checksummed standalone release artifact (per-platform binaries with published checksums). Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
 | djlint | [releases](https://github.com/djlint/djLint/releases) (v1.45.0 observed Sep 2026; [PyPI](https://pypi.org/project/djlint)) | Private wheel-only Python graph member over the shared managed Python runtime (no sdist fallback, no pip subprocess on the consumer path). `--lint` versus `--reformat` wiring stays open under issue #420. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
 | Stylelint | [releases](https://github.com/stylelint/stylelint/releases) (17.14.1 observed Jul 2026; [npm](https://www.npmjs.com/package/stylelint)) | Private pure-JavaScript graph member over the shared managed Node runtime (standalone-artifact alternative stays open under issue #420). `--formatter json` shape stays an unproven mapping owned by issue #420. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
-| prettier-plugin-gherkin | [npm](https://www.npmjs.com/package/prettier-plugin-gherkin) (observed; recheck latest stable when adding the adapter) | Private pure-JavaScript graph member (named plugin closure with Prettier over the shared managed Node runtime). Maintainer acquisition must establish and record byte identity. |
+| prettier-plugin-gherkin | [npm](https://www.npmjs.com/package/prettier-plugin-gherkin) (prettier-plugin-gherkin 4.0.0 observed May 2026; [releases](https://github.com/mapado/prettier-plugin-gherkin/releases/tag/v4.0.0), Prettier 3 compatible) | Private pure-JavaScript graph member (named plugin closure with Prettier over the shared managed Node runtime). Maintainer acquisition must establish and record byte identity; pinned seed-only under #582 with rechecked latest stable at implementation. |
 | prettier-plugin-sql | [npm](https://www.npmjs.com/package/prettier-plugin-sql) (0.15.1 observed) | Private pure-JavaScript graph member (named plugin closure with Prettier over the shared managed Node runtime). Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
-| prettier-plugin-xml | [npm](https://www.npmjs.com/package/prettier-plugin-xml) (observed; recheck latest stable when adding the adapter) | Private pure-JavaScript graph member (named plugin closure with Prettier over the shared managed Node runtime). Maintainer acquisition must establish and record byte identity. |
-| modfmt | Upstream identity pending (recheck at implementation under issue #420) | Checksummed standalone release-artifact candidate for `go.mod` formatting; whole-file rewrite with check/diff mode. Maintainer acquisition must establish the exact upstream identity plus byte identity before adapter qualification. |
+| prettier-plugin-xml | [npm](https://www.npmjs.com/package/@prettier/plugin-xml) (@prettier/plugin-xml 3.4.2 observed Jul 2025; [releases](https://github.com/prettier/plugin-xml/blob/main/CHANGELOG.md)) | Private pure-JavaScript graph member (named plugin closure with Prettier over the shared managed Node runtime). Maintainer acquisition must establish and record byte identity; pinned seed-only under #582 with rechecked latest stable at implementation. |
+| modfmt | [releases](https://github.com/joshdk/modfmt/releases/tag/v0.4.0) (modfmt v0.4.0 observed Sep 2025; formatter for `go.mod` plus `go.work`, MIT) | Checksummed standalone release artifact for `go.mod` formatting; whole-file rewrite with check/diff mode. Maintainer acquisition must establish and record byte identity; upstream identity resolved seed-only under issue #582 to github.com/joshdk/modfmt v0.4.0, digests stay owned under issue #420. |
 | terraform | [releases](https://github.com/hashicorp/terraform/releases) (v1.16.1 observed Sep 2026) | Checksummed standalone release artifact; `terraform fmt` whole-file rewrite with check/diff mode (fmt ships with the CLI). BUSL-1.1 license review stays pending under issue #420. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
 | yamlfmt | [releases](https://github.com/google/yamlfmt/releases) (v0.21.0 observed Jan 2026) | Checksummed standalone release artifact (single binary, cosign-signed checksums from v0.14.0 on); `-lint` check mode. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
 | yamllint | [releases](https://github.com/adrienverge/yamllint/releases) (1.38.0 observed Mar 2026) | Private wheel-only Python graph member over the shared managed Python runtime (no sdist fallback, no pip subprocess on the consumer path). Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
@@ -461,12 +461,12 @@ Decided route: cue, jsonnetfmt, pkl, terraform, yamlfmt, keep-sorted, and modfmt
 frozen standalone checksummed-artifact route. Each resolves to its upstream
 release artifact (cue fmt, go-jsonnet, pkl, terraform fmt, yamlfmt, keep-sorted
 as whole-file rewrite with check/diff mode except keep-sorted check-only;
-modfmt identity pending); no consumer runs an installer or ambient fallback.
+modfmt v0.4.0 from github.com/joshdk/modfmt); no consumer runs an installer or ambient fallback.
 Exact versions plus rule-sets qualified seed-only under issue #489
 (`bazel run //tools/ci:file_family_defaults_qualification` with
 `quality/tests/fixtures/file_family_quality/pins.bzl` over upstream built-in
 defaults with no hidden preset; C++ jsonnet v0.21.0 observed not pinned,
-modfmt identity pending, living at head rejected);
+modfmt v0.4.0 resolved seed-only under issue #582, living at head rejected);
 digests plus adapter mappings stay owned under issue #420 (live successor to closed #307 for the `cue`/`jsonnet`/`pkl`/`terraform`/`yaml`/`text`/`go_module` classes) and no adapter claims `cue` yet (open under issue #420). `protobuf`/`qml` stay owned by issue
 #419, never double-claimed here.
 
@@ -491,7 +491,7 @@ closures are whole-file rewrite with check/diff mode. Exact versions plus
 rule-sets qualified seed-only under issue #489
 (`bazel run //tools/ci:file_family_defaults_qualification` with
 `quality/tests/fixtures/file_family_quality/pins.bzl` over upstream built-in
-defaults with no hidden preset; gherkin/xml plugins observed without a stable line, recheck latest stable at implementation);
+defaults with no hidden preset; prettier-plugin-gherkin 4.0.0 plus @prettier/plugin-xml 3.4.2 resolved seed-only under issue #582, rechecked latest stable at implementation);
 digests plus adapter mappings stay owned under issue #420 (live successor to closed #307 for the `css`/`gherkin`/`sql`/`xml` classes) and no adapter claims `css` yet (open under issue #420).
 
 No listed private graph accepts arbitrary consumer packages or plugins in v1. The curated

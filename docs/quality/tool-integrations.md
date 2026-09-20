@@ -333,7 +333,9 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   evidence). File-family versions plus rule-sets qualified seed-only under issue #489
   (`quality/tests/fixtures/file_family_quality/pins.bzl` via `bazel run //tools/ci:file_family_defaults_qualification`
   over upstream built-in defaults with no hidden preset; suffix inference rejected,
-  registry owns applicability); digests stay observations, not pins, recheck latest
+  registry owns applicability) with modfmt plus gherkin/xml resolved seed-only under issue #582
+  (modfmt v0.4.0 from github.com/joshdk/modfmt plus prettier-plugin-gherkin 4.0.0 plus @prettier/plugin-xml 3.4.2,
+  rechecked latest stable at implementation); digests stay observations, not pins, recheck latest
   stable at implementation; adapters stay owned under issue #420
   (see the Interpreted/file-family rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
