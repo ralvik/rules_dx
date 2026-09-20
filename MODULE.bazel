@@ -37,8 +37,15 @@ bazel_dep(name = "gazelle", version = "0.52.2")
 bazel_dep(name = "rules_shell", version = "0.6.1")
 
 gazelle_go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
-gazelle_go_deps.from_file(go_work = "@gazelle//:go.work")
-use_repo(gazelle_go_deps, "com_github_bazelbuild_buildtools", "com_github_bmatcuk_doublestar_v4", "com_github_fsnotify_fsnotify", "com_github_golang_protobuf", "com_github_google_go_cmp", "com_github_pmezard_go_difflib", "org_golang_google_protobuf", "org_golang_x_mod", "org_golang_x_sync", "org_golang_x_tools_go_vcs")
+# Pinned Go module deps (ADR 0019). Single-module go.mod via from_file
+# (qualified seed-only under issue #483 via
+# `bazel run //tools/ci:godeps_qualification` with
+# `go/tests/fixtures/godeps/pins.bzl` plus the go-cmp fixture consumer;
+# hand module tags rejected per Gazelle preferred; go.work only for
+# multi-module layouts). Versions match gazelle 0.52.2 go.mod so the shared
+# go_deps extension sees no version conflict.
+gazelle_go_deps.from_file(go_mod = "//third_party/go:go.mod")
+use_repo(gazelle_go_deps, "com_github_bazelbuild_buildtools", "com_github_google_go_cmp", "com_github_pmezard_go_difflib")
 
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
 go_sdk.download(version = "1.26.6")

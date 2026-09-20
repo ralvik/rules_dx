@@ -218,7 +218,8 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   v1.18.0 pins plus C++17 floor plus fixture evidence, issue #479),
   `:scalatest_qualification` (ScalaTest 3.2.20 pins plus fixture evidence,
   issue #480), `:paket_qualification` (Paket files plus sha512 pins plus
-  fixture evidence, issue #482),
+  fixture evidence, issue #482), `:godeps_qualification` (Go `go.mod`/`go.sum`
+  via `from_file` pins plus fixture evidence, issue #483),
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
   best-effort), `:windows_qualification`, `:ci_matrix_qualification`
   (host matrix, issue #415), and `:closeout_battery_qualification`
@@ -233,7 +234,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 33/33,
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
-`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
+`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
 `windows_qualification` 13/13, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
@@ -383,7 +384,7 @@ Remaining reds stay owned gaps, not green claims:
   pinned in `go/tests/fixtures/gotest/pins.bzl` with the hello `go_test`
   package-level `embed` fixture over the `go_test` wrapper (upstream providers plus
   `QualitySourcesInfo`), Gazelle package-level `go_test` plus `embed` emission,
-  implicit runner rejected; Go `from_file` stays owned under issue #483;
+  implicit runner rejected; Go `from_file` qualified seed-only under #483;
   platform plus consumer plus release evidence stays owned gap; no Supported claim).
 - GoogleTest v1.18.0 plus C++17 floor with fixture evidence qualified seed-only under #479
   (`bazel run //tools/ci:googletest_qualification`; GoogleTest 1.18.0 pinned in
@@ -418,6 +419,15 @@ Remaining reds stay owned gaps, not green claims:
   NuGet native `packages.lock.json` rejected per rules_dotnet issue 444;
   per-platform SDK acquisition plus platform plus consumer plus release
   evidence stays owned gap; no Supported claim).
+- Go `go.mod`/`go.sum` via `go_deps.from_file` with fixture evidence qualified seed-only under #483
+  (`bazel run //tools/ci:godeps_qualification`; `third_party/go/go.mod` plus `go.sum`
+  via `go_deps.from_file(go_mod = ...)` into `@com_github_*` repos carrying go.sum
+  verification, pinned in `go/tests/fixtures/godeps/pins.bzl` with the go-cmp fixture
+  consumer over `@com_github_google_go_cmp//cmp:cmp` plus the exact `# gazelle:resolve`
+  mapping; single-module layout with no `go.work`, hand `go_deps.module` tags rejected
+  per Gazelle preferred; generation consumes the lock and never writes it;
+  per-platform SDK acquisition plus platform plus consumer plus release evidence stays
+  owned gap; no Supported claim (`godeps_qualification` 16/16)).
 - C/C++ sha256-integrity plus no-system-package wiring with fixture evidence
   qualified seed-only under #484
   (`bazel run //tools/ci:cc_hermetic_qualification`; no ecosystem lockfile,

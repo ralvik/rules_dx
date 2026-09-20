@@ -33,7 +33,9 @@ as wrapper consumers, and lock authority (`rust/tests/fixtures/hello/Cargo.lock`
 `cargo-bazel-lock.json` and `MODULE.bazel.lock`, `python/tests/fixtures/hello/uv.lock` plus
 tools lock, `pnpm-lock.yaml` plus tools lock,
 `third_party/jvm/maven_install.json`, `third_party/dotnet/paket.lock` plus
-`paket.dependencies` qualified seed-only under issue #482). Go hello is stdlib-only with no ecosystem lock;
+`paket.dependencies` qualified seed-only under issue #482,
+`third_party/go/go.mod` plus `go.sum` qualified seed-only under issue #483
+with hello staying stdlib-only).
 C/C++ has none (every `http_archive` carries `sha256`/`integrity`).
 C/C++ hash wiring qualified seed-only under issue #484 via
 `bazel run //tools/ci:cc_hermetic_qualification` with `cc/tests/fixtures/hermetic/`.
@@ -95,7 +97,9 @@ below, plain `csharp_test`/`fsharp_test` hello executables)
 and lock authority (`third_party/jvm/maven_install.json`,
 `third_party/dotnet/paket.lock` plus `paket.dependencies` qualified seed-only
 under issue #482 via `bazel run //tools/ci:paket_qualification` with
-`csharp/tests/fixtures/paket/pins.bzl`, Go stdlib-only, C/C++ none qualified
+`csharp/tests/fixtures/paket/pins.bzl`, Go `go.mod` plus `go.sum` qualified
+seed-only under issue #483 via `bazel run //tools/ci:godeps_qualification` with
+`go/tests/fixtures/godeps/pins.bzl`, C/C++ none qualified
 seed-only under issue #484 via `bazel run //tools/ci:cc_hermetic_qualification`
 with `cc/tests/fixtures/hermetic/`).
 The qualified Maven maven_install.json plus fail-closed repin is pinned under issue #481
@@ -112,8 +116,7 @@ The qualified GoogleTest v1.18.0 mapping is pinned under issue #479 (plain
 `@googletest//:gtest_main` with an explicit `-std=c++17` floor, proven by
 `cc/tests/fixtures/googletest/` via
 `bazel run //tools/ci:googletest_qualification`; living at head rejected).
-Upgrades (Go
-`from_file` when non-stdlib deps land) stay owned under issues #476-#484 (JUnit 6.1.3
+Upgrades stay owned under issues #476-#484 (JUnit 6.1.3
 plus 5.14.x fallback qualified seed-only under issue #476 via
 `bazel run //tools/ci:junit_qualification`; xUnit v3 4.0.0 qualified seed-only
 under issue #477 via `bazel run //tools/ci:xunit_qualification`; `go test` qualified
@@ -124,7 +127,8 @@ seed-only under issue #480 via `bazel run //tools/ci:scalatest_qualification`;
 Maven `maven_install.json` plus fail-closed repin qualified seed-only under issue #481 via
 `bazel run //tools/ci:maven_lock_qualification`;
 Paket files plus sha512 qualified seed-only under issue #482 via
-`bazel run //tools/ci:paket_qualification`;
+`bazel run //tools/ci:paket_qualification`; Go `go.mod` plus `go.sum` qualified
+seed-only under issue #483 via `bazel run //tools/ci:godeps_qualification`;
 C/C++ sha256-integrity qualified seed-only under issue #484 via
 `bazel run //tools/ci:cc_hermetic_qualification`);
 no `Supported` claim
