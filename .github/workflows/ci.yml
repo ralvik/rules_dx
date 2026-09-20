@@ -1090,6 +1090,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:cargo_metadata_qualification
       - name: Audit strict generation qualification (issue #503 quoted plus angle plus ambiguous plus macro plus authoritative metadata plus test grouping plus generated headers plus assembly plus module/PCH, owned gaps)
         run: bazel run --noshow_progress //tools/ci:strict_generation_qualification
+      - name: Audit cross routes qualification (issue #504 Linux first cohort plus natives plus musl plus execution plus cache/remote pins plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:cross_routes_qualification
       - name: Write job summary
         if: always()
         run: |

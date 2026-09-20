@@ -959,6 +959,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Cross routes harness (issue #504); see docs/native-toolchains.md#qualification-questions-and-delivery.
+sh_binary(
+    name = "cross_routes_qualification",
+    srcs = ["cross_routes_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "warnings_as_errors_testdata",
     srcs = glob(["testdata/warnings/**"]),

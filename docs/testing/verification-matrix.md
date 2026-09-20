@@ -254,6 +254,8 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   plus fixture evidence, issue #502),
   `:strict_generation_qualification` (strict generation pins
   plus fixture evidence, issue #503),
+  `:cross_routes_qualification` (cross routes pins
+  plus fixture evidence, issue #504),
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
   best-effort), `:windows_qualification`, `:ci_matrix_qualification`
   (host matrix, issue #415), and `:closeout_battery_qualification`
@@ -269,7 +271,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
-<<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
+<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
 
@@ -702,6 +704,26 @@ Remaining reds stay owned gaps, not green claims:
   under #500, coverage qualified seed-only under #501, linux corpus qualified
   seed-only under #499; platform plus consumer plus release evidence stays
   owned gap; no Supported claim (`strict_generation_qualification` 16/16)).
+- Cross routes with fixture evidence qualified seed-only under #504
+  (`bazel run //tools/ci:cross_routes_qualification`;
+  Linux x86_64 plus Linux arm64 execution each covering Linux x86_64 and
+  arm64 glibc plus static musl as the first cohort, not a mandate to build
+  every target from every host, with native rows qualified under #410-#414
+  and same-arch musl closures qualified under #411 plus Linux cross-arch
+  staying in the cohort with matching native target execution plus separate
+  cache and remote evidence plus macOS arm64 to Linux plus macOS x86_64 as
+  optional expansion only if bounded upstream configuration suffices plus
+  Linux/macOS-to-Windows plus Linux/Windows-to-macOS plus Windows-to-Linux
+  plus Windows arm64 excluded without weakening required native workflows,
+  pinned in `cc/tests/fixtures/cross_routes/pins.bzl` with
+  `routes.expected` plus `execution.txt` plus `cache_remote.txt`;
+  all-cross mandate plus cross-building alone plus emulation plus Rosetta
+  plus remote as execution plus compiler-target availability plus cross-host
+  Windows inference rejected; backends stay provisional; floors qualified
+  seed-only under #500, coverage qualified seed-only under #501, linux
+  corpus qualified seed-only under #499; platform plus consumer plus release
+  evidence stays owned gap; no Supported claim
+  (`cross_routes_qualification` 17/17)).
 - Stable-stack compose with fixture evidence qualified seed-only under issue #494
   (`bazel run //tools/ci:stable_stack_qualification`; as-built Bzlmod
   identities Bazel 9.2.0 plus rules_rust 0.74.0 plus rules_cc 0.2.22 plus
