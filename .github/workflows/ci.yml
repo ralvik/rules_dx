@@ -1128,6 +1128,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:ci_matrix_qualification
       - name: Audit runner plus SDK rotation (issue #642 cadence plus retirement plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:runner_rotation_qualification
+      - name: Audit GHCR rebuild plus signing rotation (issue #647 manual rebuild plus rotation plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:ghcr_rebuild_rotation_qualification
       - name: Audit close-out battery plus docs gate (issue #467 battery commands plus docs-ci gate, owned gaps)
         run: bazel run --noshow_progress //tools/ci:closeout_battery_qualification
       - name: Audit Rust library extraction (issue #469 internal-only plus binaries-only boundary, owned gaps)

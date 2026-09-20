@@ -74,3 +74,35 @@ As built today (owner-gated push with signing, no push claimed until dispatch):
   summary. Image publication is a publication output: no tags, pushes, or
   retention claims without explicit owner approval per the release
   hygiene in [Contributing](../../CONTRIBUTING.md).
+
+## GHCR Rebuild Plus Signing Rotation
+
+Manual on-demand rebuild plus rotation for the four pins with no rebuild
+owner (issue #647): Ubuntu base digest, Bazelisk launcher, Cosign CLI,
+TUF trust root. Exact pins stay single-sourced in
+`Dockerfile.prebuilt` plus `.github/actions/setup-bazelisk/action.yml`
+plus `deploy/release/signing.bzl` plus `.github/workflows/ghcr.yml`;
+this section owns only cadence plus handling plus rejection.
+
+As built today: base `ubuntu:24.04@sha256:69cecf4b...` (resolved
+2026-09-17, re-pin deliberately, never `latest`), Bazelisk `v1.29.0`
+(per-OS shas in the setup action, `Dockerfile.prebuilt` tracks the
+linux-amd64 pair, Bazel `9.2.0` via `USE_BAZEL_VERSION`), Cosign
+`v2.4.1` (checksum-verified fetch in `ghcr.yml`, single-sourced with
+`SIGNING_COSIGN_VERSION`), trust root
+`https://tuf-repo-cdn.sigstore.dev` plus issuer
+`https://token.actions.githubusercontent.com` plus bundle media
+`application/vnd.dev.sigstore.bundle.v0.3+json` (documented, not
+self-hosted).
+
+Rebuild is manual on-demand only: `docker build -f
+.devcontainer/Dockerfile.prebuilt -t dx-devcontainer:local .` locally,
+then re-pin deliberately with evidence in one reviewed PR (`Dockerfile`
+plus action pins plus signing pins plus docs plus fixtures). Triggers
+are upstream release notice (Bazelisk, Cosign), base-image refresh or
+CVE, plus before any gated push; the sole maintainer owns every row
+until delegation (see `CODEOWNERS`).
+
+Qualify locally or on demand with customer flows only: `bazel run //tools/ci:ghcr_rebuild_rotation_qualification` (static pins, builds nothing, pushes nothing) plus on-demand local `docker build`; the gated push itself stays owner-approved `workflow_dispatch` plus `approve: true` with `cosign sign` plus `verify` on the same trust root.
+
+Scheduled CI rebuild rejected; `ghcr.yml` carries no `push` or `schedule` trigger and no extra CI job exists; keep CI customer-only. Fixture evidence is pinned in `tools/ci/tests/fixtures/ghcr_rebuild_rotation/pins.bzl` plus `ghcr_rebuild_rotation.expected` via `bazel run //tools/ci:ghcr_rebuild_rotation_qualification` (issue #647; infra only, no Supported claim).
