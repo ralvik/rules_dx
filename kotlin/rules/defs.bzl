@@ -73,11 +73,16 @@ _kotlin_forward_test = dx_executable_forward_rule(
     optional_providers = [JavaInfo],
 )
 
+def _kotlin_with_werror(kwargs):
+    upstream_kwargs = dict(kwargs)
+    upstream_kwargs.setdefault("kotlinc_opts", "//kotlin/rules:warnings_as_errors")
+    return upstream_kwargs
+
 def _kotlin_wrap_library(name, srcs, visibility = None, **kwargs):
-    dx_wrap(name, _kt_jvm_library, _kotlin_library_forward, srcs, visibility = visibility, **kwargs)
+    dx_wrap(name, _kt_jvm_library, _kotlin_library_forward, srcs, visibility = visibility, **_kotlin_with_werror(kwargs))
 
 def _kotlin_wrap_binary(name, srcs, visibility = None, **kwargs):
-    upstream_kwargs = dict(kwargs)
+    upstream_kwargs = _kotlin_with_werror(kwargs)
     if len(srcs) > 0:
         upstream_kwargs["srcs"] = srcs
     _kt_jvm_binary(
@@ -119,7 +124,7 @@ def kotlin_test(name, srcs, visibility = None, **kwargs):
     `deps`; test sources are never the library's sources. Uses Bazel's
     standard test and coverage protocols."""
     test_srcs = srcs if srcs != None else []
-    upstream_kwargs = dict(kwargs)
+    upstream_kwargs = _kotlin_with_werror(kwargs)
 
     # The private upstream test stays an implementation detail via private
     # visibility; both it and the public wrapper run under `bazel test //...`

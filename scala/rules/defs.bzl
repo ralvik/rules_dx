@@ -73,11 +73,19 @@ _scala_forward_test = dx_executable_forward_rule(
     optional_providers = [JavaInfo],
 )
 
+def _scala_with_werror(kwargs):
+    upstream_kwargs = dict(kwargs)
+    scalacopts = list(upstream_kwargs.get("scalacopts", []))
+    if "-Xfatal-warnings" not in scalacopts:
+        scalacopts = scalacopts + ["-Xfatal-warnings"]
+    upstream_kwargs["scalacopts"] = scalacopts
+    return upstream_kwargs
+
 def _scala_wrap_library(name, srcs, visibility = None, **kwargs):
-    dx_wrap(name, _scala_library, _scala_library_forward, srcs, visibility = visibility, **kwargs)
+    dx_wrap(name, _scala_library, _scala_library_forward, srcs, visibility = visibility, **_scala_with_werror(kwargs))
 
 def _scala_wrap_binary(name, srcs, visibility = None, **kwargs):
-    upstream_kwargs = dict(kwargs)
+    upstream_kwargs = _scala_with_werror(kwargs)
     if len(srcs) > 0:
         upstream_kwargs["srcs"] = srcs
     _scala_binary(
@@ -120,7 +128,7 @@ def scala_test(name, srcs, visibility = None, **kwargs):
     standard test and coverage protocols over the bundled ScalaTest
     toolchain (no Maven lock members needed for the hello closure)."""
     test_srcs = srcs if srcs != None else []
-    upstream_kwargs = dict(kwargs)
+    upstream_kwargs = _scala_with_werror(kwargs)
 
     # The private upstream test stays an implementation detail via private
     # visibility; both it and the public wrapper run under `bazel test //...`

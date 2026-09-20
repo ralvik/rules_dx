@@ -97,6 +97,7 @@ real_source_target(
         "product/support-matrix.md",
         "quality/README.md",
         "quality/action-model.md",
+        "quality/warnings-as-errors.md",
         "quality/native-configuration.md",
         "quality/quality-result-protocol.md",
         "quality/quality-sources.md",

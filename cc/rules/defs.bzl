@@ -87,13 +87,21 @@ _cc_forward_test = dx_executable_forward_rule(
     optional_providers = [CcInfo],
 )
 
+def _cc_with_werror(kwargs):
+    upstream_kwargs = dict(kwargs)
+    copts = list(upstream_kwargs.get("copts", []))
+    if "-Werror" not in copts:
+        copts = copts + ["-Werror"]
+    upstream_kwargs["copts"] = copts
+    return upstream_kwargs
+
 def _cc_wrap_library(name, srcs, hdrs, visibility = None, **kwargs):
     _cc_library(
         name = name + "_upstream",
         srcs = srcs,
         hdrs = hdrs,
         visibility = ["//visibility:private"],
-        **kwargs
+        **_cc_with_werror(kwargs)
     )
     _cc_library_forward(
         name = name,
@@ -104,7 +112,7 @@ def _cc_wrap_library(name, srcs, hdrs, visibility = None, **kwargs):
     )
 
 def _cc_wrap_binary(name, srcs, visibility = None, **kwargs):
-    dx_wrap(name, _cc_binary, _cc_binary_forward, srcs, visibility = visibility, **kwargs)
+    dx_wrap(name, _cc_binary, _cc_binary_forward, srcs, visibility = visibility, **_cc_with_werror(kwargs))
 
 def cc_library(name, srcs = None, hdrs = None, visibility = None, **kwargs):
     """Experimental minimal wrapper over `cc_library`."""
@@ -127,7 +135,7 @@ def cc_test(name, srcs, visibility = None, **kwargs):
     via `deps`; tested sources are never this test's direct sources. Uses
     Bazel's standard test and coverage protocols."""
     test_srcs = srcs if srcs != None else []
-    upstream_kwargs = dict(kwargs)
+    upstream_kwargs = _cc_with_werror(kwargs)
 
     # The private upstream test stays an implementation detail via private
     # visibility; both it and the public wrapper run under `bazel test //...`
