@@ -126,7 +126,10 @@ tooling in `deploy/release/` with policy tests `bazel test
 - SBOM/provenance (`sbom.bzl`): SPDX 2.3 JSON plus SLSA v1 in-toto
   Statement v1 from the managed Python toolchain only (digest + JSON
   via declared genrule `tools`), subject digest equals artifact
-  sha256; verifies via `//deploy/install:dx_verify --sbom`.
+  sha256; verifies via `//deploy/install:dx_verify --sbom`. On every
+  push/PR the `sbom` job in `.github/workflows/ci.yml` (issue #612) builds
+  plus verifies `//deploy/release:sbom_demo` and uploads the
+  `sbom-provenance` artifact (publishes nothing).
 - Signing/attestation (`signing.bzl` plus `sign_deploy.sh`, qualified
   under issue #459): Sigstore keyless (`cosign sign-blob --bundle`
   v2.4.1 pinned, bundle media type

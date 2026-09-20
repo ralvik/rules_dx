@@ -71,7 +71,9 @@ A cell promotes only with its required-host evidence landed:
 ## Release evidence per cell
 
 - SBOM plus provenance: SPDX 2.3 JSON plus SLSA v1 via
-  `//deploy/release:sbom_demo` with subject digest equal to artifact sha256.
+  `//deploy/release:sbom_demo` with subject digest equal to artifact sha256,
+  built plus verified plus uploaded as `sbom-provenance` on every push/PR via
+  the `sbom` job in `.github/workflows/ci.yml` (issue #612).
 - Signing-first: Sigstore keyless `cosign sign-blob --bundle` plus GitHub
   attestations on the issue #311 trust root via
   `//deploy/release:signing_demo`; nothing is drafted or published unsigned.

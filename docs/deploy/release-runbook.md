@@ -83,6 +83,19 @@ plus GitHub Releases (`dx` binaries) with GHCR via the separate
    --sbom-bundle <sbom-bundle>]`; checksum-only is rejected and failure
    happens before install or exec.
 
+## CI SBOM Upload
+
+CI builds plus verifies SBOM plus provenance on every push/PR via the
+`sbom` job in `.github/workflows/ci.yml` (issue #612): `bazel build
+//deploy/release:sbom_demo` plus `bazel test
+//deploy/release:sbom_demo_verify`, staged under `RUNNER_TEMP/sbom` and
+uploaded as the `sbom-provenance` artifact (SPDX-2.3 plus SLSA v1, publishes
+nothing). Attestation stays owner-gated human-run via
+`//deploy/release:signing_demo` (Sigstore keyless plus GitHub attestations);
+CI never signs PR code. Pinned by `bazel run
+//tools/ci:sbom_upload_qualification` with fixture evidence in
+`tools/ci/tests/fixtures/sbom_upload/`.
+
 All release outputs stay under `RUNNER_TEMP` or the chosen outdir until
 published; `dist/` and `release/` stay git-ignored and the checkout is
 left clean.

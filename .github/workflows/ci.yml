@@ -132,6 +132,75 @@ jobs:
         run: |
           echo "### build — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Command: bazel build //... plus adopt-rust dx_dev smoke (seed host, local-only; hermetic CLI-contract, issue #407)." >> "$GITHUB_STEP_SUMMARY" >> "$GITHUB_STEP_SUMMARY"
+  sbom:
+    name: sbom (SBOM + provenance build/verify/upload, seed host)
+    # SBOM plus provenance on CI (issue #612): sbom_demo only ran on
+    # workflow_dispatch dry-run, never built or verified on push, with no
+    # attestation. This job builds //deploy/release:sbom_demo plus verifies
+    # via //deploy/release:sbom_demo_verify on every push/PR (seed host),
+    # stages SPDX-2.3 + SLSA v1 under RUNNER_TEMP, and uploads as a CI
+    # artifact for inspection. Real Sigstore plus GitHub attestation stays
+    # owner-gated human-run via //deploy/release:signing_demo (fork-safe:
+    # CI never signs PR code, publishes nothing).
+    needs: [build]
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Restore Bazel disk cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/bazel
+          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          restore-keys: |
+            bazel-seed-
+      - name: Build SBOM + provenance demo
+        run: bazel build --noshow_progress //deploy/release:sbom_demo
+      - name: Verify SBOM + provenance bind artifact
+        run: bazel test --noshow_progress //deploy/release:sbom_demo_verify
+      - name: Stage SBOM + provenance for upload
+        run: |
+          set -euo pipefail
+          stage="$RUNNER_TEMP/sbom"
+          rm -rf "$stage"
+          mkdir -p "$stage"
+          spdx="$(bazel cquery --output=files //deploy/release:sbom_demo_spdx)"
+          prov="$(bazel cquery --output=files //deploy/release:sbom_demo_provenance)"
+          cp "$spdx" "$stage/sbom_demo.spdx.json"
+          cp "$prov" "$stage/sbom_demo.provenance.json"
+          grep -q -F '"spdxVersion": "SPDX-2.3"' "$stage/sbom_demo.spdx.json"
+          grep -q -F '"predicateType": "https://slsa.dev/provenance/v1"' "$stage/sbom_demo.provenance.json"
+          grep -q -F '"_type": "https://in-toto.io/Statement/v1"' "$stage/sbom_demo.provenance.json"
+          python3 - "$stage" <<'EOF'
+          import hashlib
+          import pathlib
+          import sys
+          stage = pathlib.Path(sys.argv[1])
+          lines = []
+          for name in ("sbom_demo.spdx.json", "sbom_demo.provenance.json"):
+              digest = hashlib.sha256((stage / name).read_bytes()).hexdigest()
+              lines.append(f"{digest}  {name}\n")
+              print(f"{name}: {digest}")
+          (stage / "digests.txt").write_text("".join(lines), encoding="utf-8")
+          EOF
+          cat "$stage/digests.txt"
+      - name: Upload SBOM + provenance artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sbom-provenance
+          path: ${{ runner.temp }}/sbom
+          if-no-files-found: error
+          retention-days: 7
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### sbom — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commands: bazel build //deploy/release:sbom_demo; bazel test //deploy/release:sbom_demo_verify; stage SPDX-2.3 + SLSA v1 under RUNNER_TEMP/sbom and upload as sbom-provenance (seed host, publishes nothing; attestation stays owner-gated human-run via //deploy/release:signing_demo, issue #612)." >> "$GITHUB_STEP_SUMMARY"
   preset-stale:
     name: preset-stale (dx update --check, Linux once)
     # Consumer-CI stale cell (issue #332): Linux-once preset freshness
@@ -997,6 +1066,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:supported_evidence_gate
       - name: Audit promotion-checklist qualification (issue #611 checklist plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:promotion_checklist_qualification
+      - name: Audit SBOM-upload qualification (issue #612 SBOM plus provenance CI upload plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:sbom_upload_qualification
       - name: Audit quality adapters parity (issue #307 qualified, no false claims, provisional probes)
         run: bazel run --noshow_progress //tools/ci:quality_adapters_parity
       - name: Audit env/codegen qualification (issue #309 deferred records plus fixture evidence, owned gaps)

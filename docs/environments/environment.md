@@ -314,7 +314,11 @@ qualification; nothing publishes either way. The workflow needs only `contents: 
 and stores no secrets. The full matrix, SBOM/provenance generation,
 signing/attestation generation, and BCR submission are implemented
 owner-gated in `//deploy/release:all`; install-time verification itself is implemented in
-`//deploy/install:dx_verify`.
+`//deploy/install:dx_verify`. On every push/PR the `sbom` job in
+`.github/workflows/ci.yml` (issue #612) additionally builds plus verifies
+`//deploy/release:sbom_demo` and uploads the `sbom-provenance` artifact
+(SPDX-2.3 plus SLSA v1, publishes nothing); attestation stays owner-gated
+human-run.
 
 Draft-only publisher ceiling: the `github_release` rule (`deploy/rules/github.bzl`,
 for example `//cli/cli:github_draft`) defaults to `draft = True` with the
