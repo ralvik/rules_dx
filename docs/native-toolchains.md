@@ -271,13 +271,29 @@ One source-level blocker still needs narrow upstream remediation
   First-party generator attributes alone do not enforce the third-party
   dependency closure.
 
-For explicit binding generation, start with
-[rules_rs rust_bindgen](https://github.com/hermeticbuild/rules_rs/blob/v0.0.109/rs/rules_rust_bindgen.bzl).
-It acquires self-contained bindgen executables, derives target compiler context and disables include
-discovery. Its LLVM-22-based parser still needs compatibility tests against LLVM-23 headers/flags,
-and the Rust consumer must separately link the native library. Build-script bindgen needs an explicit
-execution-platform libclang closure and target parsing flags; the minimal compiler archive is not
-proof that a loadable libclang exists. Compatibility stays owned under issue #473.
+For explicit binding generation, use
+[rules_rs rust_bindgen](https://github.com/hermeticbuild/rules_rs/blob/v0.0.109/rs/rules_rust_bindgen.bzl)
+at the pinned versions in `rust/tests/fixtures/bindgen/pins.bzl` (issue #473;
+unpinned LLVM rejected). The parser baseline is LLVM-22 (`rules_rs` v0.0.109,
+commit `b55b132af0c9951807c926768e40222330348632`, declaring LLVM rules
+`0.8.18`/LLVM `22.1.8`); the qualified header/flag target is LLVM-23
+(`hermetic-llvm` v0.8.19, commit `6314688712edf3a95f78642d80393868256b4ef2`,
+LLVM `23.1.0`). Self-contained bindgen `0.72.1` prebuilts (`v0.0.2`, six
+platform sha256s in `pins.bzl`) link libclang statically and take no
+separate sysroot. The standalone route derives the target compiler context,
+passes `--no-include-path-detection --formatter=none` plus explicit
+`bindgen_flags`/`clang_flags`, and the Rust consumer separately links the
+native library; the build-script route needs an explicit
+execution-platform libclang closure and target parsing flags (the minimal
+compiler archive alone is not proof that a loadable libclang exists).
+Compat is proven by the `rust/tests/fixtures/bindgen/bindgen.h` plus
+`bindgen.expected` fixture pair (C11-only stable constructs: macro
+constant, enum, struct, anonymous-union tagged struct, function pointer,
+opaque struct plus extern functions; C23-only spellings excluded) which
+must yield the identical expected symbol set under both LLVM identities,
+with `gcc -fsyntax-only -std=c11 -Wall -Werror` proving the header
+well-formed on the seed host. Pinned by `bazel run
+//tools/ci:bindgen_qualification`; see [Rust Generation](generation/rust.md#binding-generation).
 
 Use [CXX's upstream generation pattern](https://github.com/dtolnay/cxx/blob/1.0.200/tools/bazel/rust_cxx_bridge.bzl)
 with identical `cxx`/`cxxbridge-cmd` versions. Its Bazel module registers direct rules_rust toolchains;
@@ -378,13 +394,17 @@ the as-built stock `rules_rust` 0.74.0 stack (sysroot `rust-lld` fallback plus
 `no_cc` stubs, proven by `rust/tests/fixtures/cc_optout/` via `bazel run
 //tools/ci:cc_optout_qualification`). Third-party shell-env is decided hermetic
 under issue #472 (global `False` in `.bazelrc` with narrow per-crate opt-in,
-zero opt-ins). Remaining native gaps stay owned under issues #472, #473, #474,
-#475: global shell-env annotation extension, bindgen LLVM-22-vs-23
-compatibility, CXX graph identity, and exact-target discovery. Build-script hermetic defaults are
+zero opt-ins). Bindgen LLVM-22-vs-23 compatibility is qualified under issue #473:
+LLVM-22 parser baseline vs LLVM-23 target pinned in
+`rust/tests/fixtures/bindgen/pins.bzl` with the `bindgen.h` plus
+`bindgen.expected` fixture pair (unpinned LLVM rejected). Remaining native gaps
+stay owned under issues #472, #474, #475: global shell-env annotation
+extension, CXX graph identity, and exact-target discovery. Build-script hermetic defaults are
 implemented (`use_cc_toolchain = True`, `use_default_shell_env = False`, `emit_warnings = True`
 in `gazelle/rust/lang.go`, proven by `gazelle/rust/lang_test.go`) and pinned by
 `bazel run //tools/ci:foundation_maps`; third-party shell-env is pinned by
-`bazel run //tools/ci:shell_env_qualification`; no `Supported`
+`bazel run //tools/ci:shell_env_qualification`; bindgen compat is pinned by
+`bazel run //tools/ci:bindgen_qualification`; no `Supported`
 claim.
 
 Admitted C/C++ foundation stays owned under issues #476-#484: MSVC interop plus SDK licensing
@@ -407,7 +427,7 @@ acquisition, interoperability, coverage, and release evidence passes.
 | Are both Linux profiles complete? | Native arm64 glibc builds/tests plus per-cell coverage landed (issue #410); static-musl closures plus per-cell coverage for both musl profiles landed (issue #411, Rust musl std plus exec/target separation, CI cross-builds with per-profile cache scopes, no union; dynamic musl explicitly out of scope). Remaining: cross builds/tests, PIE plus ELF dependencies, glibc symbols, hermetic-llvm backend plus OpenSSL/ring/bindgen/CXX corpus gaps. | open work under issue #499 |
 | Which deployment and execution floors are supportable? | Pin the glibc `2.28` floor plus SDK/CRT identities with oldest-target and current-host fixtures run separately; inspect compiler, clangd and bindgen loader dependencies. Check Apple's extracted SDK framework subset. macOS arm64 native is qualified (issue #412) plus macOS x86_64 best-effort native is qualified (issue #413) with SDK version not the deployment floor; oldest-OS execution plus framework completeness plus licensing remain gates; best-effort gaps never block required-host release. Windows x86_64 native is qualified (issue #414) with `/MD` retail dynamic CRT as the starting point; `/MT` plus debug CRT plus floors stay owned by issues #410-#414. | open work under issue #500 |
 | Can every executable first-party line be accounted for? | Rust-only, C/C++-only and mixed/DLL LCOV, missed-line tests, coverage-tool version pairing, native ignores and denominator validation. No ignored collection failures. | open work under issue #501 |
-| Can bindgen/CXX use one upstream graph? | Separate standalone/build-script bindgen fixtures; execution libclang closure, target flags and identical CXX crate/generator versions. | issues #473, #474 |
+| Can bindgen/CXX use one upstream graph? | Qualified under issue #473 for bindgen (LLVM-22 parser baseline vs LLVM-23 target pinned with the standalone/build-script fixture pair, execution libclang closure, target flags, `bindgen.h` plus `bindgen.expected` identical-set proof via `bazel run //tools/ci:bindgen_qualification`); CXX identical crate/generator versions stay owned under issue #474. | issues #473, #474 |
 | Can public Cargo metadata represent every generated target? | Prove features, build-script metadata, target kinds and ownership without private serialized dependency-graph access; seek narrow upstream metadata exports where missing. | open work under issue #502 |
 | Can generation satisfy strict ownership and resolution cheaply? | Quoted/angle/ambiguous/macro include fixtures, authoritative dependency metadata, test grouping, generated headers, assembly dialects and explicit module/PCH disposition. | open work under issue #503 |
 | Can IDE setup preserve exact context and projection contracts? | Upstream exact-target Rust discovery and action-derived C++ snapshot proof, generated sources, multi-context headers, managed host tools and Bazel-9 compatibility. | issue #475 |

@@ -1,0 +1,40 @@
+"""Bindgen LLVM-22-vs-23 compat fixture (issue #473).
+
+Exposes `bindgen.h` as a `cc_library` header so both bindgen routes share
+one declared native input: the standalone `rust_bindgen` route takes this
+`cc_lib` plus `header` plus target `clang_flags`/`bindgen_flags`, and the
+build-script route takes the same header with an explicit
+execution-platform libclang closure plus target parsing flags. The Rust
+consumer links the native library separately in both routes. Expected
+bindings live in `bindgen.expected`; version pins live in `pins.bzl`.
+Unpinned LLVM is rejected (see `docs/native-toolchains.md`).
+"""
+
+load("//cc/rules:defs.bzl", "cc_library")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+cc_library(
+    name = "bindgen_headers",
+    hdrs = ["bindgen.h"],
+)
+
+exports_files([
+    "bindgen.h",
+    "bindgen.expected",
+    "pins.bzl",
+])
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = [
+        "BUILD.bazel",
+        "pins.bzl",
+    ],
+    tags = ["corpus"],
+)

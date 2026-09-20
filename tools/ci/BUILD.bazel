@@ -689,6 +689,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Bindgen LLVM-22-vs-23 compat harness (issue #473); see docs/generation/rust.md#binding-generation.
+sh_binary(
+    name = "bindgen_qualification",
+    srcs = ["bindgen_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "warnings_as_errors_testdata",
     srcs = glob(["testdata/warnings/**"]),
