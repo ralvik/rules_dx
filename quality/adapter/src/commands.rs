@@ -323,10 +323,12 @@ pub fn ruff_format_fix(binary: &Path, files: &[&Path], config: Option<&Path>) ->
 }
 
 /// Ty typecheck invocation: `check --output-format concise --no-progress
-/// --no-respect-ignore-files` over the whole stage file list. Exit 1 with
-/// concise diagnostics is findings; `All checks passed!` exit 0 is clean.
-/// Check-only: the runner never passes `--fix` or `--add-ignore`.
-pub fn ty_check(binary: &Path, files: &[&Path]) -> Invocation {
+/// --no-respect-ignore-files` plus one `--extra-search-path DIR` per import
+/// search dir (ty dep context, #408) over the whole stage file list.
+/// Exit 1 with concise diagnostics is findings; `All checks passed!`
+/// exit 0 is clean. Check-only: the runner never passes `--fix` or
+/// `--add-ignore`.
+pub fn ty_check(binary: &Path, files: &[&Path], search_paths: &[&Path]) -> Invocation {
     let mut argv = vec![
         binary.as_os_str().to_owned(),
         OsString::from("check"),
@@ -335,6 +337,10 @@ pub fn ty_check(binary: &Path, files: &[&Path]) -> Invocation {
         OsString::from("--no-progress"),
         OsString::from("--no-respect-ignore-files"),
     ];
+    for dir in search_paths {
+        argv.push(OsString::from("--extra-search-path"));
+        argv.push(dir.as_os_str().to_owned());
+    }
     argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
     Invocation {
         argv,
@@ -823,7 +829,7 @@ mod tests {
     #[test]
     fn ty_check_is_concise_and_hermetic() {
         let file = Path::new("/scratch/a.py");
-        let invocation = ty_check(Path::new(BIN), &[file]);
+        let invocation = ty_check(Path::new(BIN), &[file], &[]);
         assert_eq!(
             argv_strings(&invocation),
             vec![
@@ -839,6 +845,11 @@ mod tests {
         assert_eq!(invocation.cwd_rel, "");
         assert!(!argv_strings(&invocation).contains(&"--fix".to_owned()));
         assert!(!argv_strings(&invocation).contains(&"--add-ignore".to_owned()));
+        let search = Path::new("/scratch/pkg");
+        let with_search = ty_check(Path::new(BIN), &[file], &[search]);
+        let argv = argv_strings(&with_search);
+        assert!(argv.contains(&"--extra-search-path".to_owned()));
+        assert!(argv.contains(&"/scratch/pkg".to_owned()));
     }
 
     #[test]

@@ -117,7 +117,15 @@ fn deserialize_report(text: &str) -> Result<quick_junit::Report, ReportError> {
     // deserializing. Restricted to `<testsuite*` start tags so failure
     // text containing `timestamp="..."` is preserved.
     let without_ts = strip_timestamp_attrs(text);
-    let normalized = without_ts
+    // Bazel emitters occasionally write negative testcase durations
+    // (e.g. `time="-2"` from clock skew); quick-junit rejects negatives as
+    // malformed durations. Duration is informational (pass/fail rides the
+    // failure/error tags), so clamp negatives to zero before
+    // deserializing. Non-numeric times ("bogus", "inf") still fail.
+    // Restricted to `<testsuite*`/`<testcase*` start tags so failure text
+    // containing `time="-..."` is preserved.
+    let without_negative = clamp_negative_times(&without_ts);
+    let normalized = without_negative
         .replace("<testsuite>", "<testsuite name=\"dx\">")
         .replace("<testsuite/>", "<testsuite name=\"dx\"/>");
     match quick_junit::Report::deserialize_from_str(&normalized) {
@@ -222,6 +230,80 @@ fn strip_timestamp_attrs(text: &str) -> String {
     out
 }
 
+/// Replaces negative `time="..."` values with `time="0"` in
+/// `<testsuite*`/`<testcase*` start tags (see `deserialize_report`).
+fn clamp_negative_times(text: &str) -> String {
+    fn clamp_one(tag: &mut String) -> bool {
+        let mut search_from = 0;
+        while let Some(rel) = tag[search_from..].find("time") {
+            let pos = search_from + rel;
+            if pos > 0 && !tag.as_bytes()[pos - 1].is_ascii_whitespace() {
+                search_from = pos + 1;
+                continue;
+            }
+            let mut j = pos + "time".len();
+            while j < tag.len() && tag.as_bytes()[j].is_ascii_whitespace() {
+                j += 1;
+            }
+            if j >= tag.len() || tag.as_bytes()[j] != b'=' {
+                search_from = pos + 1;
+                continue;
+            }
+            j += 1;
+            while j < tag.len() && tag.as_bytes()[j].is_ascii_whitespace() {
+                j += 1;
+            }
+            if j >= tag.len() || tag.as_bytes()[j] != b'"' {
+                search_from = pos + 1;
+                continue;
+            }
+            j += 1;
+            if j < tag.len() && tag.as_bytes()[j] == b'-' {
+                let value_start = j;
+                while j < tag.len() && tag.as_bytes()[j] != b'"' {
+                    j += 1;
+                }
+                if j >= tag.len() {
+                    return false;
+                }
+                tag.replace_range(value_start..j, "0");
+                return true;
+            }
+            search_from = pos + 1;
+        }
+        false
+    }
+
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    loop {
+        let suite_pos = rest.find("<testsuite");
+        let case_pos = rest.find("<testcase");
+        let tag_start = match (suite_pos, case_pos) {
+            (Some(s), Some(c)) => Some(s.min(c)),
+            (Some(s), None) => Some(s),
+            (None, Some(c)) => Some(c),
+            (None, None) => None,
+        };
+        let Some(tag_start) = tag_start else {
+            out.push_str(rest);
+            break;
+        };
+        out.push_str(&rest[..tag_start]);
+        let tag_rest = &rest[tag_start..];
+        let Some(tag_end_rel) = tag_rest.find('>') else {
+            out.push_str(tag_rest);
+            break;
+        };
+        let tag_end = tag_end_rel + 1;
+        let mut tag = tag_rest[..tag_end].to_owned();
+        while clamp_one(&mut tag) {}
+        out.push_str(&tag);
+        rest = &rest[tag_start + tag_end..];
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -259,12 +341,17 @@ mod tests {
             0
         )
         .is_err());
-        assert!(parse_test_xml(
+        // Bazel clock skew writes negative durations; they clamp to zero
+        // instead of failing (duration is informational, status rides the
+        // failure/error tags).
+        let negative = parse_test_xml(
             b"<testsuite><testcase name=\"a\" time=\"-1\"/></testsuite>",
             0,
-            0
+            0,
         )
-        .is_err());
+        .expect("negative time clamps");
+        assert_eq!(negative.len(), 1);
+        assert_eq!(negative[0].time, 0.0);
         assert!(parse_test_xml(
             b"<testsuite><testcase name=\"a\" time=\"inf\"/></testsuite>",
             0,
@@ -320,11 +407,16 @@ mod tests {
             0
         )
         .is_err());
-        for bad in ["bogus", "-1", "inf", "NaN"] {
+        for bad in ["bogus", "inf", "NaN"] {
             let xml =
                 format!("<testsuite><testcase name=\"a\" time=\"{bad}\"></testcase></testsuite>");
             assert!(parse_test_xml(xml.as_bytes(), 0, 0).is_err(), "{bad}");
         }
+        // Negative durations clamp to zero (clock skew, see above).
+        let xml = "<testsuite><testcase name=\"a\" time=\"-1\"></testcase></testsuite>";
+        let clamped = parse_test_xml(xml.as_bytes(), 0, 0).expect("negative time clamps");
+        assert_eq!(clamped.len(), 1);
+        assert_eq!(clamped[0].time, 0.0);
         // Children for every kind plus unknown tags (unknown yields no
         // child but still closes cleanly).
         for child in [

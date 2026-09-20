@@ -127,6 +127,16 @@ pub type SpawnFn = fn(&[OsString], &Path, &[(String, String)]) -> io::Result<Chi
 /// One staged file: workspace path plus its scratch-absolute path.
 type StagedPair = (String, PathBuf);
 
+/// One staged scratch tree: the scratch plus checked, sibling, and
+/// resolve pairs. Resolve pairs (ty dep context, #408) are staged for
+/// import resolution but never checked.
+struct StagedScratch {
+    scratch: Scratch,
+    pairs: Vec<StagedPair>,
+    sibling_pairs: Vec<StagedPair>,
+    resolve_pairs: Vec<StagedPair>,
+}
+
 /// Executable backend over resolved real tools. `spawn` is injected so
 /// unit tests prove the materialize/parse/place chain against canned
 /// tool outputs; production uses [`real_spawn`].
@@ -291,17 +301,22 @@ impl RealBackend {
     /// workspace path in sorted order. Siblings mirror alongside the
     /// sources so link-resolution siblings exist on disk, but they stay
     /// out of `pairs`: they are never linted and findings can never
-    /// address them.
+    /// address them. Resolve files (ty dep context, #408) mirror alongside
+    /// for import resolution but stay out of `pairs`: they are never
+    /// checked and their findings are filtered by the ty branch, never
+    /// reported (their own targets' actions own them).
     fn stage_scratch(
         &self,
         tool_id: &str,
         tool: &RealTool,
         files: &BTreeMap<String, String>,
         siblings: &BTreeMap<String, String>,
-    ) -> Result<(Scratch, Vec<StagedPair>, Vec<StagedPair>), RunnerError> {
+        resolve: &BTreeMap<String, String>,
+    ) -> Result<StagedScratch, RunnerError> {
         let scratch = fresh_scratch(&self.scratch_parent, tool_id)?;
-        let mut mirrors =
-            Vec::with_capacity(files.len() + siblings.len() + tool.tool_files.len() + 1);
+        let mut mirrors = Vec::with_capacity(
+            files.len() + siblings.len() + resolve.len() + tool.tool_files.len() + 1,
+        );
         let mut pairs = Vec::with_capacity(files.len());
         for (path, text) in files {
             let absolute = scratch
@@ -324,9 +339,25 @@ impl RealBackend {
             });
             sibling_pairs.push((path.clone(), absolute));
         }
+        let mut resolve_pairs = Vec::with_capacity(resolve.len());
+        for (path, text) in resolve {
+            let absolute = scratch
+                .resolve(Path::new(path))
+                .map_err(|err| execution(tool_id, format!("scratch resolve: {err}")))?;
+            mirrors.push(MirrorFile {
+                mirror_rel: PathBuf::from(path),
+                contents: MirrorContents::Bytes(text.as_bytes().to_vec()),
+            });
+            resolve_pairs.push((path.clone(), absolute));
+        }
         mirrors.extend(Self::mirror_tool_files(tool_id, tool));
         write_all(&scratch, tool_id, &mirrors)?;
-        Ok((scratch, pairs, sibling_pairs))
+        Ok(StagedScratch {
+            scratch,
+            pairs,
+            sibling_pairs,
+            resolve_pairs,
+        })
     }
 
     /// Resolves the tool config to an absolute scratch path. rustfmt
@@ -477,10 +508,12 @@ impl RealBackend {
         tool_id: &str,
         tool: &RealTool,
         capability: &str,
-        pairs: &[(String, PathBuf)],
-        sibling_pairs: &[(String, PathBuf)],
-        scratch: &Scratch,
+        staged: &StagedScratch,
     ) -> Result<Vec<FileFinding>, RunnerError> {
+        let pairs = &staged.pairs;
+        let sibling_pairs = &staged.sibling_pairs;
+        let resolve_pairs = &staged.resolve_pairs;
+        let scratch = &staged.scratch;
         let refs: Vec<&Path> = pairs
             .iter()
             .map(|(_, absolute)| absolute.as_path())
@@ -581,7 +614,22 @@ impl RealBackend {
                 }
             }
             "ty" => {
-                let invocation = commands::ty_check(&tool.binary, &refs);
+                // Ty import context (#408): resolve files are staged for
+                // import resolution but never checked. Derive search dirs
+                // from staged Python files (checked plus resolve) so
+                // same-package top-level imports resolve. Findings in
+                // resolve files are filtered below (their own targets'
+                // actions own them); only checked-file findings report.
+                let mut dirs: Vec<PathBuf> = Vec::new();
+                for (_, absolute) in pairs.iter().chain(resolve_pairs.iter()) {
+                    if let Some(parent) = absolute.parent() {
+                        if !dirs.contains(&parent.to_path_buf()) {
+                            dirs.push(parent.to_path_buf());
+                        }
+                    }
+                }
+                let dir_refs: Vec<&Path> = dirs.iter().map(|dir| dir.as_path()).collect();
+                let invocation = commands::ty_check(&tool.binary, &refs, &dir_refs);
                 let out = self.run(tool_id, tool, &invocation, scratch)?;
                 // Ty prints concise paths relative to its working
                 // directory even for absolute arguments, so attribute
@@ -590,12 +638,18 @@ impl RealBackend {
                 // the caller contract stays absolute-addressed.
                 let workspaces: Vec<&str> = pairs
                     .iter()
+                    .chain(resolve_pairs.iter())
                     .map(|(workspace, _)| workspace.as_str())
                     .collect();
                 let mut findings = parsed(
                     tool_id,
                     parsers::parse_ty(&out.stdout, out.code, &workspaces),
                 )?;
+                let checked: std::collections::BTreeSet<&str> = pairs
+                    .iter()
+                    .map(|(workspace, _)| workspace.as_str())
+                    .collect();
+                findings.retain(|found| checked.contains(found.file.as_str()));
                 for found in &mut findings {
                     let absolute = reanchor(tool_id, pairs, &found.file)?;
                     found.file = absolute.to_string_lossy().into_owned();
@@ -754,10 +808,32 @@ impl RealBackend {
         files: &BTreeMap<String, String>,
         siblings: &BTreeMap<String, String>,
     ) -> Result<Vec<Diagnostic>, RunnerError> {
+        self.diagnose_with_resolve(tool_id, capability, files, siblings, &BTreeMap::new())
+    }
+
+    /// Resolve-aware [`Self::diagnose_with_siblings`]: resolve files (ty
+    /// dep context, #408) mirror into the scratch tree for import
+    /// resolution but stay out of findings, snapshots, and fixes. Findings
+    /// addressing resolve files are filtered by the ty branch (their own
+    /// targets' actions own them); findings addressing truly unstaged files
+    /// still fail as tool-output errors.
+    pub fn diagnose_with_resolve(
+        &self,
+        tool_id: &str,
+        capability: &str,
+        files: &BTreeMap<String, String>,
+        siblings: &BTreeMap<String, String>,
+        resolve: &BTreeMap<String, String>,
+    ) -> Result<Vec<Diagnostic>, RunnerError> {
         let tool = self.tool(tool_id)?;
-        let (scratch, pairs, sibling_pairs) = self.stage_scratch(tool_id, tool, files, siblings)?;
-        let collected =
-            self.run_check(tool_id, tool, capability, &pairs, &sibling_pairs, &scratch)?;
+        let staged = self.stage_scratch(tool_id, tool, files, siblings, resolve)?;
+        let collected = self.run_check(tool_id, tool, capability, &staged)?;
+        let StagedScratch {
+            scratch,
+            pairs,
+            sibling_pairs: _,
+            resolve_pairs: _,
+        } = staged;
         let mut diagnostics = Vec::with_capacity(collected.len());
         for found in &collected {
             let workspace = pairs
@@ -1032,6 +1108,24 @@ pub fn run_real_pipeline_with_siblings(
     siblings: &[FileInput],
     backend: &RealBackend,
 ) -> Result<QualityResult, RunnerError> {
+    run_real_pipeline_with_resolve(producer, capability, stages, files, siblings, &[], backend)
+}
+
+/// Resolve-aware [`run_real_pipeline_with_siblings`]: resolve files are ty
+/// dep-context bytes (#408). They must be UTF-8, must not collide with a
+/// checked, sibling, or fellow resolve path, and never enter snapshots,
+/// stages, or fixes, so a stage naming a resolve path still fails
+/// `MissingFile`. Findings addressing resolve files are filtered (their
+/// own targets' actions own them).
+pub fn run_real_pipeline_with_resolve(
+    producer: &str,
+    capability: &str,
+    stages: &[StageSpec],
+    files: &[FileInput],
+    siblings: &[FileInput],
+    resolve: &[FileInput],
+    backend: &RealBackend,
+) -> Result<QualityResult, RunnerError> {
     let (capability_value, initial) =
         validate_request(producer, capability, stages, files, |tool| {
             backend.supports(tool)
@@ -1048,14 +1142,30 @@ pub fn run_real_pipeline_with_siblings(
         })?;
         sibling_texts.insert(sibling.path.clone(), text.to_owned());
     }
+    let mut resolve_texts = BTreeMap::new();
+    for item in resolve {
+        if initial.contains_key(&item.path)
+            || sibling_texts.contains_key(&item.path)
+            || resolve_texts.contains_key(&item.path)
+        {
+            return Err(RunnerError::DuplicateFile {
+                path: item.path.clone(),
+            });
+        }
+        let text = std::str::from_utf8(&item.bytes).map_err(|_| RunnerError::InvalidUtf8 {
+            path: item.path.clone(),
+        })?;
+        resolve_texts.insert(item.path.clone(), text.to_owned());
+    }
     let mut initial_diagnostics = Vec::new();
     for stage in stages {
         let subset = stage_subset(stage, &initial)?;
-        initial_diagnostics.extend(backend.diagnose_with_siblings(
+        initial_diagnostics.extend(backend.diagnose_with_resolve(
             &stage.tool_id,
             capability,
             &subset,
             &sibling_texts,
+            &resolve_texts,
         )?);
     }
     let (terminal, completed_rounds, convergence) = run_convergence(
@@ -1067,11 +1177,12 @@ pub fn run_real_pipeline_with_siblings(
     let mut terminal_diagnostics = Vec::new();
     for stage in stages {
         let subset = stage_subset(stage, &terminal)?;
-        terminal_diagnostics.extend(backend.diagnose_with_siblings(
+        terminal_diagnostics.extend(backend.diagnose_with_resolve(
             &stage.tool_id,
             capability,
             &subset,
             &sibling_texts,
+            &resolve_texts,
         )?);
     }
     assemble(
