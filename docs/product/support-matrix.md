@@ -356,7 +356,7 @@ open work under issue #496.
 The review prioritizes existing upstream capability and minimal project-owned integration over a
 universal compiler distribution. Linux cross-builds are the first priority, not a mandate to build
 every target from every host. The [approved stack](../decisions/0014-tested-platform-release-stack.md#decision)
-requires glibc and static-musl Linux profiles; runtime floors and qualified routes remain under review.
+requires glibc and static-musl Linux profiles; runtime floors (open work under issue #500) and qualified routes (open work under issues #499 and #504) remain under review.
 Broader cross-builds are desirable when upstream configuration keeps maintenance bounded.
 Windows hermeticity is not relaxed to reduce setup or integration effort.
 
@@ -364,8 +364,8 @@ The following are source/documentation observations; no builds were executed:
 
 | Candidate | Upstream capability | Tradeoff for general developer workflows |
 | --- | --- | --- |
-| [hermetic-llvm v0.8.19](https://github.com/hermeticbuild/hermetic-llvm/blob/v0.8.19/README.md) | Integrated Linux glibc and static-only musl targets on x86_64/arm64, Apple SDK acquisition, LLVM runtime and tool targets, and Linux/macOS coverage fixtures. | Strongest integrated primary candidate with the preferred Rust rules. Dynamic musl is not supported. Default libc++ does not imply compatibility with prebuilt libstdc++ libraries; its Linux-glibc libstdc++ route is dynamic-only. Released Windows support does not satisfy the approved baseline. |
-| [uber/hermetic_cc_toolchain v4.3.0](https://github.com/uber/hermetic_cc_toolchain/tree/v4.3.0) | Zig 0.15.2 supplies Linux glibc/musl cross-compilation and GNU/MinGW Windows targets. | Strong Linux alternative, but documented Apple SDK gaps, an external Zig runtime cache, and missing integrated Bazel coverage/Clang developer tools increase integration ownership. Shared-musl capability is not complete Rust/runtime-deployment evidence. |
+| [hermetic-llvm v0.8.19](https://github.com/hermeticbuild/hermetic-llvm/blob/v0.8.19/README.md) | Integrated Linux glibc and static-only musl targets on x86_64/arm64, Apple SDK acquisition, LLVM runtime and tool targets, and Linux/macOS coverage fixtures. | Strongest integrated primary candidate with the preferred Rust rules. Dynamic musl is not supported. Default libc++ does not imply compatibility with prebuilt libstdc++ libraries; its Linux-glibc libstdc++ route is dynamic-only. Released Windows support does not satisfy the approved baseline. Floor pinning stays owned under open work under issue #500; libstdc++ interop fixtures stay owned under open work under issue #498; profile completeness (PIE, ELF dependencies, glibc symbols, corpus) stays owned under open work under issue #499. |
+| [uber/hermetic_cc_toolchain v4.3.0](https://github.com/uber/hermetic_cc_toolchain/tree/v4.3.0) | Zig 0.15.2 supplies Linux glibc/musl cross-compilation and GNU/MinGW Windows targets. | Strong Linux alternative, but documented Apple SDK gaps, an external Zig runtime cache, and missing integrated Bazel coverage/Clang developer tools increase integration ownership. Shared-musl capability is not complete Rust/runtime-deployment evidence. Zig stays a comparison candidate only with the same evidence required, not a scope shortcut. |
 | [toolchains_llvm v1.9.0](https://github.com/bazel-contrib/toolchains_llvm/tree/v1.9.0) | Configurable LLVM distributions, Linux/macOS C/C++ toolchains, sysroot APIs, and coverage/tool paths. | Useful when consumers already manage SDK/sysroot artifacts. It does not supply the complete target runtime closure, and the inspected Windows distributions do not establish a Windows C/C++ backend. |
 | [toolchains_msvc prototype](https://github.com/Dragnalith/toolchains_msvc/tree/8e2aa4624bbb5a53a94f135e90995f307875d1ad) | No-install Microsoft compiler/SDK acquisition and real C/C++ toolchains, including clang-cl with Microsoft STL. | Candidate for Windows-hosted builds, not a qualified release: immutable acquisition, Rust build-script paths, coverage, and licensing need review. Its current repository operations use Windows commands; do not infer cross-host support. |
 | [windows_support v0.4.1](https://github.com/hermeticbuild/windows_support/tree/v0.4.1) | Pinned acquisition APIs for Microsoft SDK, STL/runtime headers, libraries, and redistributables. | Reusable acquisition building block, not a compiler or C/C++ toolchain. It does not by itself change hermetic-llvm's libc++ selection or supply coverage. |
@@ -387,7 +387,7 @@ while applications need target-platform libraries. The current
 [build-script contract](../generation/rust.md#build-scripts) enables the selected hermetic C/C++
 toolchain by default with an explicit kept opt-out. Additional native inputs remain declared;
 fixture-proven upstream mappings are still required (tracked in
-open work under issue #499), not automatic compatibility with every crate.
+open work under issue #499; PIE plus ELF-dependency plus glibc-symbol evidence stays under issue #499, floor pinning stays under issue #500, bindgen compatibility stays under issue #473, CXX identity stays under issue #474; mixed Rust/C/C++ prebuilt-MSVC combos stay owned with issue #414, not double-claimed here), not automatic compatibility with every crate.
 
 The approved direction is to qualify rules_cc and rules_rs with hermetic-llvm for Linux glibc,
 static-musl, and macOS. Windows first qualifies the toolchains_msvc clang-cl/Microsoft-STL route;
