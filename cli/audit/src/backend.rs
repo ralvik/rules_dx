@@ -22,7 +22,7 @@
 //!   reads lockfiles plus snapshot bytes supplied by the caller, so no
 //!   inventory ever leaves the workspace. Per-ecosystem lockfile
 //!   coverage is Cargo (`rust/tests/fixtures/hello/Cargo.lock`), npm
-//!   (`pnpm-lock.yaml`), Maven
+//!   (`pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`), Maven
 //!   (`third_party/jvm/maven_install.json`), NuGet
 //!   (`third_party/dotnet/paket.lock`), and Go
 //!   (`third_party/go/go.mod` via `go_deps.from_file`, parsed by
@@ -122,13 +122,16 @@ pub fn plan_secrets(report_path: &str, config: Option<&str>) -> Result<BackendPl
 }
 
 /// Workspace-relative lockfiles audited per dependency set for V1
-/// vulnerability matching. Go reads the `go_deps.from_file` module lock
+/// vulnerability matching. Npm audits every present lock shape
+/// (`pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`); absent shapes
+/// are skipped, so a pnpm-only workspace never fails for a missing
+/// sibling lock. Go reads the `go_deps.from_file` module lock
 /// (`third_party/go/go.mod`); `go.sum` carries hashes only and is never
 /// an audit input.
 pub fn vuln_locks(set: &str) -> &'static [&'static str] {
     match set {
         "cargo" => &["rust/tests/fixtures/hello/Cargo.lock"],
-        "npm" => &["pnpm-lock.yaml"],
+        "npm" => &["pnpm-lock.yaml", "package-lock.json", "yarn.lock"],
         "maven" => &["third_party/jvm/maven_install.json"],
         "nuget" => &["third_party/dotnet/paket.lock"],
         "go" => &["third_party/go/go.mod"],
@@ -196,7 +199,10 @@ mod tests {
             vuln_locks("cargo"),
             &["rust/tests/fixtures/hello/Cargo.lock"]
         );
-        assert_eq!(vuln_locks("npm"), &["pnpm-lock.yaml"]);
+        assert_eq!(
+            vuln_locks("npm"),
+            &["pnpm-lock.yaml", "package-lock.json", "yarn.lock"]
+        );
         assert_eq!(vuln_locks("maven"), &["third_party/jvm/maven_install.json"]);
         assert_eq!(vuln_locks("nuget"), &["third_party/dotnet/paket.lock"]);
         assert_eq!(vuln_locks("go"), &["third_party/go/go.mod"]);

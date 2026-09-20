@@ -50,7 +50,10 @@ depth option, not v1 scope. The
 reconciled with source-class applicability in
 [Quality Sources](../../quality/quality-sources.md).
 Dependency-vulnerability matching runs locally per set (Cargo, npm, Maven,
-NuGet, Go) with no lockfile or inventory upload. Go reads the
+NuGet, Go) with no lockfile or inventory upload. Npm audits every
+present lock shape (`pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`);
+absent shapes are skipped, so a pnpm-only workspace never fails for a
+missing sibling lock. Go reads the
 `go_deps.from_file` module lock (`third_party/go/go.mod`); `go.sum`
 carries hashes only and is never an audit input.
 With no scope, audit selects `//...`, while each audit adapter remains responsible
@@ -106,7 +109,20 @@ Per-ecosystem dispositions are wont-fix, pinned by fixtures in `dx_audit::vuln` 
 OSV version identity and SHA-to-version mapping needs a network resolver forbidden by the
 offline contract; `paket.lock` `GIT` entries report incomplete rather than dropping),
 unidentified private packages stay incomplete (auditor-owned; no upstream identity by
-definition, callers mark `is_private` explicitly). Maven range narrowing is
+definition, callers mark `is_private` explicitly). Npm lock shapes plus
+git plus private handling is implemented (issue #627, pinned in
+`dx_audit::locks` plus `dx_audit::vuln` plus `dx_cli::exec::audit`):
+`pnpm-lock.yaml` (multi-document env plus project graphs merged,
+`link:`/`file:` workspace members skipped, git `resolution: {type:
+git}` with `repo`/`commit`, host-archive tarballs, and git-shaped
+keys/versions flagged incomplete), `package-lock.json` (v1/v2/v3
+`packages:` plus legacy `dependencies:`, `link`/`file:` members
+skipped, git-shaped `version`/`resolved`/`from` flagged incomplete),
+and `yarn.lock` v1 (`file:`/`link:`/`portal:` skipped, git-shaped
+headers/versions/`resolved` flagged incomplete); private entries are
+byte-identical to public ones in every npm lock shape, so callers mark
+`is_private` explicitly and matching fails those as incomplete, never
+clean. Maven range narrowing is
 implemented (issue #623, pinned in `dx_audit::vuln`), as is NuGet range narrowing
 (issue #624, pinned in `dx_audit::vuln`), as is Go `go.mod` wiring plus
 `v`-prefix range narrowing (issue #626, pinned in `dx_audit::locks` plus
