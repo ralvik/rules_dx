@@ -13,7 +13,7 @@
 #   release evidence per the support-matrix lifecycle (release evidence
 #   open), docs in support-matrix plus ADR 0014 plus native-toolchains;
 # - Apple-SDK handling: pinned acquired SDK identity plus deployment floor
-#   stay owned by O14/O37 per ADR 0014 (SDK version is not the deployment
+#   stay owned by issues #410-#414 per ADR 0014 (SDK version is not the deployment
 #   floor); hermetic-llvm Apple-SDK backend stays provisional with
 #   immutable lazy fetch; host-installed SDK fallback is never approved;
 #   CI handling leaks no secrets and requires no interactive acceptance;
@@ -86,7 +86,7 @@ fi
 
 # ADR 0014 keeps macOS arm64 required plus x86_64 best-effort and records
 # both qualifications. Exact pins, hosts, floors, and SDK/CRT identities
-# stay owned by O14/O37.
+# stay owned by issues #410-#414.
 if grep -q -F -e '| macOS arm64 | Required' docs/decisions/0014-tested-platform-release-stack.md &&
   grep -q -F -e 'macOS arm64 qualified under issue #412' docs/decisions/0014-tested-platform-release-stack.md &&
   grep -q -F -e '| macOS x86_64 | Best-effort' docs/decisions/0014-tested-platform-release-stack.md &&

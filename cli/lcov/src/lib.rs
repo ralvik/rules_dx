@@ -1,6 +1,6 @@
-//! M00 implementation-coverage gate.
+//! Implementation-coverage gate.
 //!
-//! Bazel-owned enforcement for the resolved coverage policy over the M00
+//! Bazel-owned enforcement for the resolved coverage policy over the
 //! eligible scope. The gate parses the combined LCOV report from
 //! `bazel coverage --combined_report=lcov`, validates source-level exclusion
 //! markers carrying nearby `reason:` comments, reconciles the

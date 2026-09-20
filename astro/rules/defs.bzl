@@ -1,4 +1,4 @@
-"""Experimental minimal Astro wrappers (M20, O41).
+"""Experimental minimal Astro wrappers.
 
 Contract: `libs/starlark/wrapper.bzl`.
 """
@@ -33,5 +33,5 @@ def _astro_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _js_library, _astro_library_forward, srcs, visibility = visibility, **kwargs)
 
 def astro_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `js_library` for Astro components (M20)."""
+    """Experimental minimal wrapper over `js_library` for Astro components."""
     _astro_wrap_library(name, srcs, visibility = visibility, **kwargs)

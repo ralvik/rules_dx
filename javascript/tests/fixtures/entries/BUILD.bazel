@@ -1,4 +1,4 @@
-"""M16 thin entry fixture: library owns main.js, binary carries entry only."""
+"""Library owns main.js, binary carries entry only."""
 
 load("//javascript/rules:defs.bzl", "javascript_binary", "javascript_library", "javascript_test")
 load("//quality:fixtures.bzl", "real_source_target")

@@ -1,5 +1,5 @@
 // Stdlib lists the Node.js builtin module identities treated as standard
-// library by the MDX Gazelle extension (M21, O42). MDX ESM regions
+// library by the MDX Gazelle extension. MDX ESM regions
 // execute as JavaScript/TypeScript modules,
 // so the same Node builtin set applies: generation treats these imports
 // as standard library without an edge, a manifest, or a lockfile. Both

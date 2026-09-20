@@ -105,7 +105,7 @@ func ModuleName(name string) string {
 }
 
 // IsEntryFile reports whether a directory-relative source path is a
-// recognized executable entry in the narrow M16 slice: exactly `main.js`,
+// recognized executable entry in the narrow slice: exactly `main.js`,
 // `main.jsx`, `main.mjs`, or `main.cjs` (non-test). Manifest-declared names
 // win only for exact mappings; other layouts remain out of scope.
 func IsEntryFile(name string) bool {

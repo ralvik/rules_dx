@@ -1,4 +1,4 @@
-// M22 seed C++ library header; consumer of cc_library.
+// Seed C++ library header; consumer of cc_library.
 #pragma once
 
 // Add returns the sum of a and b.

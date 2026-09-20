@@ -1,4 +1,4 @@
-"""Analysis tests for the example subject rule (M01 WP1)."""
+"""Analysis tests for the example subject rule (WP1)."""
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 

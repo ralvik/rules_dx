@@ -1,4 +1,4 @@
-"""M30a slices 1-4: pure documentation-delivery planning (IR version/identity, validation gate, check-vs-build modes, drift upgrade gate; guides/examples corpus shape; site-build action planning; dx docs invocation planning)."""
+"""Pure documentation-delivery planning (IR version/identity, validation gate, check-vs-build modes, drift upgrade gate; guides/examples corpus shape; site-build action planning; dx docs invocation planning)."""
 
 load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_crate")
@@ -8,7 +8,7 @@ package(default_visibility = [
     "//cli:__subpackages__",
 ])
 
-# M02 leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# Leaf-crate pattern via `dx_rust_crate` (issue #239): emits
 # `dx_docs` + `dx_docs_test` + fmt/clippy tests +
 # `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
 dx_rust_crate(

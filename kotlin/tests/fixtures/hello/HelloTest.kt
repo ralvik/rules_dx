@@ -1,4 +1,4 @@
-// M23 seed Kotlin test; consumer of kotlin_test.
+// Seed Kotlin test; consumer of kotlin_test.
 package hello
 
 import org.junit.Assert.assertEquals

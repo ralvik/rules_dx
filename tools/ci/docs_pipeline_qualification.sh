@@ -155,7 +155,7 @@ else
   bad "dx_docs planning lost its compat/validation/mode/drift/guide/site unit tests"
 fi
 
-# Planning crate keeps its M30a BUILD wiring.
+# Planning crate keeps its BUILD wiring.
 if grep -q -F -e 'name = "dx_docs"' "$planning_build" &&
   grep -q -F -e 'package_name = "cli/dx_docs"' "$planning_build"; then
   ok

@@ -1,4 +1,4 @@
-//! M04 WP3 Markdown check binary: thin CLI shim over the checker library.
+//! Thin CLI shim over the checker library.
 //! Check semantics, JSON output, and exit codes live in the library and are
 //! unit-tested there.
 //!

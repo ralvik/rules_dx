@@ -1,4 +1,4 @@
-"""M15 WP1/WP3: private wheel-only Python tool graph (pydoclint + flake8 + pylint).
+"""Private wheel-only Python tool graph (pydoclint + flake8 + pylint).
 
 Ruleset-owned ecosystem graph per tool-acquisition: rules_dx owns the
 pyproject/uv.lock, exposes stable entry-point targets through authoritative

@@ -1,4 +1,4 @@
-//! Quality command planning (M07 WP1+WP3, M08 WP1+WP4).
+//! Quality command planning (WP1+WP3, WP1+WP4).
 //!
 //! Contract: `docs/cli/cli-contract.md` (protected flags, canonical
 //! workspace policy, operation display) and

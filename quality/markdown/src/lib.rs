@@ -1,6 +1,6 @@
-//! M04 WP3 repository-owned Markdown link/structure checker.
+//! WP3 repository-owned Markdown link/structure checker.
 //!
-//! Boundary (frozen in `docs/quality/tool-integrations.md`, O20): this crate
+//! Boundary (frozen in `docs/quality/tool-integrations.md`): this crate
 //! parses one Markdown source plus its declared sibling-file closure and
 //! reports structured findings. It is distinct from Vale: Vale owns prose
 //! policy, this checker owns repository structure (relative link targets,
@@ -916,7 +916,7 @@ fn parse_sibling_mapping(raw: &str) -> Result<Mapping, String> {
     parse_mapping("--sibling", raw)
 }
 
-/// Check workspace sources against a sibling closure (M04 WP3 binary
+/// Check workspace sources against a sibling closure (WP3 binary
 /// contract). Returns the process exit code: `0` when every source was
 /// checked, `2` on bad arguments, unreadable files, or non-UTF-8 input.
 pub fn run_cli(
@@ -1543,7 +1543,7 @@ mod tests {
     #[test]
     fn span_closer_misread_as_opener_is_fixed_across_lines() {
         // The closing backtick of a multi-line span must not reopen one
-        // (M01 report shape): `<short_path>` stays span content.
+        // (report shape): `<short_path>` stays span content.
         let text = "# T\n\nUnset under `bazel\ntest`. Resolve `$WS/<short_path>` here.\n";
         let outcome = check_markdown("a.md", text, &siblings(&[]));
         assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);

@@ -1,4 +1,4 @@
-"""Experimental minimal Astro wrappers (M20, O41)."""
+"""Experimental minimal Astro wrappers."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

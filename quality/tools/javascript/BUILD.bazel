@@ -1,4 +1,4 @@
-"""M17 WP1 slice 3: private pure-JavaScript tool graph (ESLint + Prettier).
+"""Private pure-JavaScript tool graph (ESLint + Prettier).
 
 Ruleset-owned ecosystem graph per tool-acquisition: rules_dx owns the
 package.json/pnpm-lock.yaml, exposes stable js_binary entry points through

@@ -1,8 +1,8 @@
-"""Focused Astro environment-plan tests (M20 WP2)."""
+"""Focused Astro environment-plan tests (WP2)."""
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 
-# Pinned from `bazel build //astro/env:*_plan` JSON outputs (M20 WP2).
+# Pinned from `bazel build //astro/env:*_plan` JSON outputs (WP2).
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //astro/env:hello_lib_plan
 file hello_lib_plan.json
 field direct_sources=Hello.astro

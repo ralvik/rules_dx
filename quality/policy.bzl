@@ -1,4 +1,4 @@
-"""Workspace quality-policy providers (M03 freeze for O17).
+"""Workspace quality-policy providers (freeze for).
 
 Contract: `docs/quality/tool-integrations.md`, `docs/decisions/0011-configuration-composition.md`.
 """

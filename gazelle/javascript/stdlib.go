@@ -1,5 +1,5 @@
 // Stdlib lists the Node.js builtin module identities treated as standard
-// library by the JavaScript Gazelle extension (M16, ADR 0012/0013).
+// library by the JavaScript Gazelle extension (ADR 0012/0013).
 // Generation treats these imports as standard library: they resolve without
 // an edge, a manifest, or a lockfile. Both bare (`fs`) and `node:`-prefixed
 // (`node:fs`) forms are recognized; the list follows the Node release

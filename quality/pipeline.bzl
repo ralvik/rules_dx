@@ -1,4 +1,4 @@
-"""Pure pipeline-construction helpers (M03 WP2).
+"""Pure pipeline-construction helpers (WP2).
 
 Contract: `docs/quality/quality-sources.md#adapter-applicability`.
 """

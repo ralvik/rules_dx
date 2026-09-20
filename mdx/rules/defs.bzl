@@ -1,4 +1,4 @@
-"""Experimental minimal MDX wrappers (M21, O42).
+"""Experimental minimal MDX wrappers.
 
 Contract: `libs/starlark/wrapper.bzl`.
 """
@@ -33,5 +33,5 @@ def _mdx_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _js_library, _mdx_library_forward, srcs, visibility = visibility, **kwargs)
 
 def mdx_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `js_library` for MDX documents (M21)."""
+    """Experimental minimal wrapper over `js_library` for MDX documents."""
     _mdx_wrap_library(name, srcs, visibility = visibility, **kwargs)

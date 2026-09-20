@@ -37,7 +37,7 @@ First-party generation names each per-source Python, JavaScript, and TypeScript 
 source basename without its final language extension, normalizing non-alphanumeric separators to
 underscores. The durable constraint is basename-only naming with fail-on-collision and no
 invented language affixes. The exact character mapping that follows is provisional detail
-pending fixture evidence under O22, O25, and O27; do not treat it as
+pending fixture evidence under the issue tracker, the issue tracker, and the issue tracker; do not treat it as
 frozen API through this record. For example, `app/models/user.py` generates `//app/models:user`, while
 `app/models/user-profile.ts` generates `//app/models:user_profile`. The name does not include a
 language prefix or extension suffix. Multiple supported sources in one Bazel package that normalize

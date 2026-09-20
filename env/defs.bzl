@@ -1,4 +1,4 @@
-"""Bootstrap environment tool registry (M11 WP1).
+"""Bootstrap environment tool registry (WP1).
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
@@ -169,7 +169,7 @@ environment_tool = rule(
             doc = "Host executable backing every claimed host name.",
         ),
     },
-    doc = "Validates one bootstrap environment tool record (M11 WP1).",
+    doc = "Validates one bootstrap environment tool record (WP1).",
 )
 
 def _environment_config_impl(ctx):
@@ -214,7 +214,7 @@ environment_config = rule(
             providers = [DefaultInfo, EnvironmentInfo],
         ),
     },
-    doc = "Composes environment tool records transitively, failing closed on collisions (M11 WP1).",
+    doc = "Composes environment tool records transitively, failing closed on collisions (WP1).",
 )
 
 def _environment_tree_impl(ctx):
@@ -267,5 +267,5 @@ environment_tree = rule(
             providers = [DefaultInfo, EnvironmentInfo],
         ),
     },
-    doc = "Stages the complete symlink-only tool tree plus versioned management metadata (M11 WP2).",
+    doc = "Stages the complete symlink-only tool tree plus versioned management metadata (WP2).",
 )

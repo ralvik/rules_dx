@@ -1,4 +1,4 @@
-"""M16 thin entry fixture: library owns main.ts (execution reuses the JS wrappers over compiled outputs)."""
+"""Library owns main.ts (execution reuses the JS wrappers over compiled outputs)."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 load("//typescript/rules:defs.bzl", "typescript_project")

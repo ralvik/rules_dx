@@ -1,4 +1,4 @@
-"""Experimental minimal Python wrappers (M14, ADR 0010).
+"""Experimental minimal Python wrappers (ADR 0010).
 
 Contract: `docs/decisions/0010-python-foundation.md`, `docs/decisions/0012-language-toolchain-versions.md`.
 """
@@ -83,11 +83,11 @@ def _python_wrap_binary(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _py_binary, _python_binary_forward, srcs, visibility = visibility, **kwargs)
 
 def python_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `py_library` (M14)."""
+    """Experimental minimal wrapper over `py_library`."""
     _python_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
 def python_binary(name, srcs = None, main = None, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `py_binary` (M14).
+    """Experimental minimal wrapper over `py_binary`.
 
     Two shapes: an ordinary binary owns its `srcs` (like the handwritten
     seed), while a thin entry binary generated for a recognized
@@ -117,7 +117,7 @@ def python_test_rejection(kwargs):
     return None
 
 def python_test(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `py_pytest_test` (M14).
+    """Experimental minimal wrapper over `py_pytest_test`.
 
     With `srcs`, those test sources are this test's direct sources for
     QualitySourcesInfo. Imported non-test modules retain their ordinary

@@ -1,4 +1,4 @@
-// Quality Result Protocol schema (M03 freeze for O18).
+// Quality Result Protocol schema (freeze for).
 //
 // Internal binary contract between quality pipeline actions, Bazel
 // evaluators, and the `dx` CLI. Distinct from the public NDJSON output

@@ -1,4 +1,4 @@
-//! Supersession and queue-revision planning for consumer CI (M27 WP1 slice 4).
+//! Supersession and queue-revision planning for consumer CI (WP1 slice 4).
 //!
 //! Split from `super` (`lib.rs`): owns [`RunScope`], [`TrackedRun`],
 //! [`supersedes`] (only a newer run for the same PR integration scope

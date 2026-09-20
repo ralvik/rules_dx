@@ -1,5 +1,5 @@
 //! Starter triggers, platform qualification mechanics, no-op semantics,
-//! and latest-target revalidation for consumer CI (M27 WP2 slice 8).
+//! and latest-target revalidation for consumer CI (WP2 slice 8).
 //!
 //! Split from `super` (`lib.rs`): owns [`starter_triggers`] (PRs, default
 //! pushes, manual dispatches, and merge-queue runs trigger; ordinary

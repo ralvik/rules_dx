@@ -1,4 +1,4 @@
-"""Unit tests for typed native-config validation (M04 WP2).
+"""Unit tests for typed native-config validation (WP2).
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

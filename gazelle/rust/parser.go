@@ -1,7 +1,7 @@
 // Parser extracts the narrow recognized source facts the Rust Gazelle
 // extension needs for crate ownership and strict dependency resolution.
 //
-// Recognized syntax (M09 narrow scope; additional forms require parser
+// Recognized syntax (narrow scope; additional forms require parser
 // fixtures before they become recognized):
 //
 //   - `mod name;` and `pub mod name;` file modules, including explicit

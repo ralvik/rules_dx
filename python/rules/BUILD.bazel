@@ -1,4 +1,4 @@
-"""Experimental minimal Python wrappers (M14, ADR 0010)."""
+"""Experimental minimal Python wrappers (ADR 0010)."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 load(":wrapper_tests.bzl", "python_wrapper_contract_tests")

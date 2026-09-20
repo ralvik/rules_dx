@@ -1,4 +1,4 @@
-// Managed environment marker schema (M11 WP2 freeze).
+// Managed environment marker schema (WP2 freeze).
 //
 // Binary contract between the staged `environment_tree` outputs and the
 // `//dx:env` bootstrap installer. The marker is the installed tree's proof

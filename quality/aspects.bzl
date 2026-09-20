@@ -1,4 +1,4 @@
-"""Target-scoped capability aspects over synthetic adapters (M03 WP2c+WP3).
+"""Target-scoped capability aspects over synthetic adapters (WP2c+WP3).
 
 Contract: `docs/quality/action-model.md`, `docs/quality/tool-integrations.md`, `docs/quality/quality-sources.md#adapter-applicability`, `docs/quality/quality-result-protocol.md#transport`, `docs/quality/quality-result-protocol.md#execution-and-policy`, `docs/cli/cli-contract.md`.
 """

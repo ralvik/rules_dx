@@ -1,4 +1,4 @@
-// M23 seed C# binary; consumer of csharp_binary.
+// Seed C# binary; consumer of csharp_binary.
 using System;
 
 public static class Program

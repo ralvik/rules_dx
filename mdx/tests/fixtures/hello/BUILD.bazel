@@ -1,4 +1,4 @@
-"""M21 seed MDX document; consumer of mdx_* wrappers."""
+"""Seed MDX document; consumer of mdx_* wrappers."""
 
 load("//javascript/rules:defs.bzl", "javascript_library", "javascript_test")
 load("//mdx/rules:defs.bzl", "mdx_library")

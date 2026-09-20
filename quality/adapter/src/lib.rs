@@ -1,4 +1,4 @@
-//! Real-tool finding model shared by the M04 initial adapters.
+//! Real-tool finding model shared by the initial adapters.
 //!
 //! Each adapter parses its tool's check output into [`Finding`] values over
 //! tool-native 1-based line/column positions, then [`place_finding`]

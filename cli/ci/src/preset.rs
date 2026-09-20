@@ -1,4 +1,4 @@
-//! Consumer `.bazelrc` preset onboarding planning (M27 WP6 slice 12).
+//! Consumer `.bazelrc` preset onboarding planning (WP6 slice 12).
 //!
 //! Split from `super` (`lib.rs`): owns [`PRESET_RUNBOOK_STEPS`],
 //! [`PresetLabelError`], [`validate_preset_label`],
@@ -14,10 +14,10 @@
 //! fork/aggregate, rerun, trigger, caller/pin, audit, and untrusted
 //! modules.
 
-/// Setup runbook steps in canonical order (`M27 WP6`): the consumer setup
+/// Setup runbook steps in canonical order (` WP6`): the consumer setup
 /// path is the dependency snippet, the generation target, the `.bazelrc`
 /// import block, the regen-and-review update loop, and the bot configuration
-/// sample. `dx init` template emission stays M30 scope (see
+/// sample. `dx init` template emission stays scope (see
 /// [`dx_init_emits_preset_template`]).
 pub const PRESET_RUNBOOK_STEPS: [&str; 5] = [
     "dependency_snippet",
@@ -48,7 +48,7 @@ pub fn validate_preset_label(label: &str) -> Result<String, PresetLabelError> {
     Ok(label.to_owned())
 }
 
-/// Stability discipline (`M27 WP6`): preset-affecting changes ship only in
+/// Stability discipline (` WP6`): preset-affecting changes ship only in
 /// minor or major releases, never in a patch. Non-preset-affecting changes
 /// carry no such restriction.
 pub fn preset_affecting_requires_minor_or_major(preset_affecting: bool) -> bool {
@@ -68,13 +68,13 @@ pub fn preset_change_needs_release_note(preset_affecting: bool) -> bool {
 }
 
 /// `dx init` does not emit the preset caller template: template emission
-/// stays M30 scope.
+/// stays scope.
 pub fn dx_init_emits_preset_template() -> bool {
     false
 }
 
 /// The preset regen-and-review loop stays manual with review enforcement
-/// (O53): no auto-merge, whether bot-owned or human-driven.
+/// (issue #332): no auto-merge, whether bot-owned or human-driven.
 pub fn preset_bot_auto_merge_allowed() -> bool {
     false
 }

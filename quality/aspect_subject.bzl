@@ -1,4 +1,4 @@
-"""Analysis subject observing aspect-produced dx_results (M03 WP2c).
+"""Analysis subject observing aspect-produced dx_results (WP2c).
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")

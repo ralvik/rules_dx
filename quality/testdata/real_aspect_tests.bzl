@@ -1,4 +1,4 @@
-"""Real aspect evidence tests (M04 WP2).
+"""Real aspect evidence tests (WP2).
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")

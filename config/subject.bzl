@@ -1,4 +1,4 @@
-"""Analysis subject exposing the canonical quality settings (M03 WP1).
+"""Analysis subject exposing the canonical quality settings (WP1).
 """
 
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")

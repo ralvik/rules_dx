@@ -1,6 +1,6 @@
-// M23 seed F# test; consumer of fsharp_test (plain executable: exit
+// Seed F# test; consumer of fsharp_test (plain executable: exit
 // code is the verdict; the xUnit/NUnit runner selection stays open under
-// O31).
+// ADR 0019).
 module HelloTest
 
 [<EntryPoint>]

@@ -1,4 +1,4 @@
-"""M14 seed binary: thin wrapper over the hello library."""
+"""Thin wrapper over the hello library."""
 
 from hello import greet
 

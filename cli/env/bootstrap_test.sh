@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# M11 WP2 end-to-end bootstrap proof through the real `env` binary:
+# WP2 end-to-end bootstrap proof through the real `env` binary:
 # fresh install into a workspace whose path contains spaces, second-run
 # noop, replacement with stale-entry removal, unmanaged-tree refusal,
 # marker presence, and doctor execution via the installed link. Swap

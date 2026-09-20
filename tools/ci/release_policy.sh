@@ -107,7 +107,7 @@ fi
 # class names an owner + route (mirrors the parity_tests.bzl unit gate
 # so CI fails here too if the manifest rots).
 if grep -q -F -e 'PARITY_DEFERRED = {' "$parity" &&
-  grep -q -F -e '"go": ["O32"' "$parity" &&
+  grep -q -F -e '"go": ["ADR 0019"' "$parity" &&
   grep -q -F -e 'REAL_CLASS_TO_FAMILY = {' "$adapters" &&
   grep -q -F -e 'REAL_ADAPTERS = {' "$adapters"; then
   ok
@@ -175,7 +175,7 @@ fi
 
 # Negative: a deferral without owner/route fails the parity shape check.
 printf 'PARITY_DEFERRED = {\n    "go": ["", ""],\n}\n' >"$scratch/bad-parity.bzl"
-if grep -q -F -e '"go": ["O32"' "$scratch/bad-parity.bzl"; then
+if grep -q -F -e '"go": ["ADR 0019"' "$scratch/bad-parity.bzl"; then
   bad "malformed-deferral negative did not fail"
 else
   ok

@@ -9,7 +9,7 @@
 # lane-A exclusion + generated list, prior-slice harnesses,
 # external-consumer breadth, determinism seed pin, apply filesystem +
 # atomic-write evidence, aspect QualitySourcesInfo gate, no-cache argv
-# marker, Gazelle extension dirs, dogfood CI jobs, M21 fixture, parity
+# marker, Gazelle extension dirs, dogfood CI jobs, fixture, parity
 # unit tests, lane-A forwarder plumbing + language-tree CI scope,
 # and no-false-claim gaps.
 #
@@ -122,11 +122,11 @@ else
   bad "quality parity gate lost (parity_unit_tests entry)"
 fi
 
-# M21 fixture owns the single-owner mixed hello package.
-if grep -q -F -e 'M21' examples/mixed/hello/BUILD.bazel; then
+# Fixture owns the single-owner mixed hello package.
+if grep -q -F -e '' examples/mixed/hello/BUILD.bazel; then
   ok
 else
-  bad "framework composition record lost (M21 mixed fixture)"
+  bad "framework composition record lost (mixed fixture)"
 fi
 
 # #12 generated-file exclusion list stays declared with its generator

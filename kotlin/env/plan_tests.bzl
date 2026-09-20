@@ -1,8 +1,8 @@
-"""Focused Kotlin environment-plan tests (M23 WP2)."""
+"""Focused Kotlin environment-plan tests (WP2)."""
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 
-# Pinned from `bazel build //kotlin/env:*_plan` JSON outputs (M23 WP2).
+# Pinned from `bazel build //kotlin/env:*_plan` JSON outputs (WP2).
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //kotlin/env:hello_lib_plan
 file hello_lib_plan.json
 field direct_sources=Hello.kt

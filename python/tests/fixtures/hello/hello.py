@@ -1,4 +1,4 @@
-"""M14 seed library: greeting helper with no dependencies."""
+"""Greeting helper with no dependencies."""
 
 
 def greet(name):

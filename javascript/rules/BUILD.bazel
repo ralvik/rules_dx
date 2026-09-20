@@ -1,4 +1,4 @@
-"""Experimental minimal JavaScript wrappers (M16, ADR 0013)."""
+"""Experimental minimal JavaScript wrappers (ADR 0013)."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 load(":wrapper_tests.bzl", "javascript_wrapper_contract_tests")

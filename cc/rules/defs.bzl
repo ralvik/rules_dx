@@ -1,4 +1,4 @@
-"""Experimental minimal C/C++ wrappers (M22, O30, ADR 0019).
+"""Experimental minimal C/C++ wrappers (ADR 0019).
 
 Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
@@ -23,7 +23,7 @@ _DX_CC_LIBRARY_PROVIDES = [
 # at runtime when present, but advertise only `DefaultInfo` plus
 # `QualitySourcesInfo`: neither shape is depended on as a C++ library,
 # so no consumer matches on the forwarded providers. `QualitySourcesInfo`
-# is advertised so M22+ quality aspects can gate on it. Coverage reads
+# is advertised so quality aspects can gate on it. Coverage reads
 # `InstrumentedFilesInfo` from the test target, not via `provides`
 # (same shape as the `go_*` test forwarder).
 _DX_CC_EXEC_PROVIDES = [
@@ -107,20 +107,20 @@ def _cc_wrap_binary(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _cc_binary, _cc_binary_forward, srcs, visibility = visibility, **kwargs)
 
 def cc_library(name, srcs = None, hdrs = None, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `cc_library` (M22)."""
+    """Experimental minimal wrapper over `cc_library`."""
     effective_srcs = srcs if srcs != None else []
     effective_hdrs = hdrs if hdrs != None else []
     _cc_wrap_library(name, effective_srcs, effective_hdrs, visibility = visibility, **kwargs)
 
 def cc_binary(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `cc_binary` (M22).
+    """Experimental minimal wrapper over `cc_binary`.
 
     An ordinary binary owns its `srcs` plus `deps` on a wrapper library.
     Headers arrive via the library `deps`, never as binary `hdrs`."""
     _cc_wrap_binary(name, srcs, visibility = visibility, **kwargs)
 
 def cc_test(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `cc_test` (M22).
+    """Experimental minimal wrapper over `cc_test`.
 
     With `srcs`, those test sources are this test's direct sources for
     QualitySourcesInfo. The library under test stays its ordinary owner

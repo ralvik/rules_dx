@@ -1,4 +1,4 @@
-"""Source fixtures for aspects (M03 synthetic, M04 real).
+"""Source fixtures for aspects (synthetic, real).
 """
 
 load("//quality:sources.bzl", "QualitySourcesInfo", "check_direct_sources")

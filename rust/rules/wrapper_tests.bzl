@@ -1,4 +1,4 @@
-"""Wrapper conformance tests (M02).
+"""Wrapper conformance tests.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

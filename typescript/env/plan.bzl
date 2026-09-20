@@ -1,4 +1,4 @@
-"""Focused TypeScript environment plan (M16 WP3).
+"""Focused TypeScript environment plan (WP3).
 
 Contract: `docs/environments/environment.md`.
 """
@@ -75,5 +75,5 @@ typescript_env_plan = rule(
             doc = "One typescript_project wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused TypeScript environment plan for one wrapper target (M16 WP3).",
+    doc = "Emits the provider-derived focused TypeScript environment plan for one wrapper target (WP3).",
 )

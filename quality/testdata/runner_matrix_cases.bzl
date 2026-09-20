@@ -203,7 +203,7 @@ terminal 2
 terminal ERROR pydoclint DOC103 quality/testdata/real_dirty.py 48 48 fixable=false "Function `add`: Docstring arguments are different from function arguments. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the function signature but not in the docstring: [second: int]."
 terminal ERROR pydoclint DOC101 quality/testdata/real_dirty.py 48 48 fixable=false "Function `add`: Docstring contains fewer arguments than in function signature."
 replacements 1
-replacement quality/testdata/real_dirty.py 0 304 "\\"\\"\\"Real-pipeline dirty fixture (M15 WP2).\\"\\"\\"\\n\\n\\n\\ndef add(first: int, second: int) -> int:\\n    \\"\\"\\"Add two integers.\\n\\n    Parameters\\n    ----------\\n    first : int\\n        First operand.\\n\\n    Returns\\n    -------\\n    int\\n        The sum.\\n    \\"\\"\\"\\n    return first + second\\n\\n\\nTOTAL:int=add(1, \\"two\\")\\n"
+replacement quality/testdata/real_dirty.py 0 304 "\\"\\"\\"Real-pipeline dirty fixture (WP2).\\"\\"\\"\\n\\n\\n\\ndef add(first: int, second: int) -> int:\\n    \\"\\"\\"Add two integers.\\n\\n    Parameters\\n    ----------\\n    first : int\\n        First operand.\\n\\n    Returns\\n    -------\\n    int\\n        The sum.\\n    \\"\\"\\"\\n    return first + second\\n\\n\\nTOTAL:int=add(1, \\"two\\")\\n"
 """,
     },
     {
@@ -241,7 +241,7 @@ initial 1
 initial ERROR ruff unformatted quality/testdata/real_dirty.py 286 290 fixable=true "File would be reformatted"
 terminal 0
 replacements 1
-replacement quality/testdata/real_dirty.py 0 304 "\\"\\"\\"Real-pipeline dirty fixture (M15 WP2).\\"\\"\\"\\n\\nimport os\\n\\n\\ndef add(first: int, second: int) -> int:\\n    \\"\\"\\"Add two integers.\\n\\n    Parameters\\n    ----------\\n    first : int\\n        First operand.\\n\\n    Returns\\n    -------\\n    int\\n        The sum.\\n    \\"\\"\\"\\n    return first + second\\n\\n\\nTOTAL: int = add(1, \\"two\\")\\n"
+replacement quality/testdata/real_dirty.py 0 304 "\\"\\"\\"Real-pipeline dirty fixture (WP2).\\"\\"\\"\\n\\nimport os\\n\\n\\ndef add(first: int, second: int) -> int:\\n    \\"\\"\\"Add two integers.\\n\\n    Parameters\\n    ----------\\n    first : int\\n        First operand.\\n\\n    Returns\\n    -------\\n    int\\n        The sum.\\n    \\"\\"\\"\\n    return first + second\\n\\n\\nTOTAL: int = add(1, \\"two\\")\\n"
 """,
     },
     {

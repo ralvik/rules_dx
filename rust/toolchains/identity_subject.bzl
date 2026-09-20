@@ -1,4 +1,4 @@
-"""Analysis subject proving rustfmt/Clippy/rustc bind to the toolchain (M04 WP1, M12 WP3).
+"""Analysis subject proving rustfmt/Clippy/rustc bind to the toolchain (WP1, WP3).
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")

@@ -1,4 +1,4 @@
-"""Focused Python environment plan (M14 WP3).
+"""Focused Python environment plan (WP3).
 
 Contract: `docs/environments/environment.md`.
 """
@@ -83,5 +83,5 @@ python_env_plan = rule(
             doc = "One python_* wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused Python environment plan for one wrapper target (M14 WP3).",
+    doc = "Emits the provider-derived focused Python environment plan for one wrapper target (WP3).",
 )

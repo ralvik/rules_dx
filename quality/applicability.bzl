@@ -1,4 +1,4 @@
-"""Quality applicability helpers (M03 freeze).
+"""Quality applicability helpers (freeze).
 
 Contract: `docs/quality/quality-sources.md#adapter-applicability`.
 """

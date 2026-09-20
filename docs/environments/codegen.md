@@ -44,7 +44,7 @@ The physical root-selection mechanism is frozen to the `//...` baseline
 incrementality dimensions (source/BUILD edits, target add/remove, actions,
 materialized bytes, projection time, retained memory) are measured in
 `FROZEN_EVIDENCE` and `INCREMENTALITY_EVIDENCE` there. The admitted
-generator/language pairs stay frozen under O33
+generator/language pairs stay frozen under issue #506
 (`generation/codegen.bzl:DX_CODEGEN_ADMITTED_PAIRS`). Concurrency,
 interruption, remote materialization, and reuse certification stay open per
 that crate's docs.

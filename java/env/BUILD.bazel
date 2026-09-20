@@ -3,7 +3,7 @@
 Each `java_env_plan` reads the analyzed authoritative providers of one
 `java_*` wrapper: `QualitySourcesInfo` for direct sources plus the
 preserved `JavaInfo` toolchain closure by reference.
-Focused-target only; repository/root/exact-target orchestration remains M25.
+Focused-target only; repository/root/exact-target orchestration remains issue #506.
 """
 
 load("//java/env:plan.bzl", "java_env_plan")

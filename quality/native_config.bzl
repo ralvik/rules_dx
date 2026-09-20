@@ -1,4 +1,4 @@
-"""Typed native-configuration targets for M04 adapters plus M15 Ruff and M17 Biome/ESLint.
+"""Typed native-configuration targets for adapters plus Ruff and Biome/ESLint.
 
 Contract: `docs/quality/native-configuration.md`.
 """

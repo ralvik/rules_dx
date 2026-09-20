@@ -1,4 +1,4 @@
-//! Delivered adoption behavior (M30b: `dx init` scaffolding, hermetic hook
+//! Delivered adoption behavior (: `dx init` scaffolding, hermetic hook
 //! runner, devcontainer admission, `dx status` diagnostics, single-version
 //! `dx version` with rollback, local watch loop, thin inspect forwarding,
 //! and single-source completion generation).

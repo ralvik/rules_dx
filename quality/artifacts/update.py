@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Regenerate checked-in standalone quality-tool artifact metadata.
 
-M04 WP1 acquisition proof (O20): one generated file per tool/platform under
+One generated file per tool/platform under
 this directory records the exact immutable URL, digest, size, archive member,
 upstream version, execution platform, ABI floor, runtime files, and licenses.
 

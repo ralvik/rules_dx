@@ -20,7 +20,7 @@ use super::{
     first_line, ownership_set_expression, quote_set, run_label_query, QueryRunner, ResolveError,
 };
 
-/// Batched runnable file-owner expression (O52): depth-1 reverse
+/// Batched runnable file-owner expression: depth-1 reverse
 /// dependencies constrained to rules whose kind ends in `_binary`, with
 /// every file label quoted into one deterministic set. Aliases are not
 /// followed for file scopes: only direct `_binary` owners qualify.
@@ -31,7 +31,7 @@ fn runnable_set_expression(labels: &[String]) -> String {
     )
 }
 
-/// Runnable directory expression (O52): every `_binary` rule under the
+/// Runnable directory expression: every `_binary` rule under the
 /// recursive pattern. Recursion is performed by Bazel, never by
 /// filesystem traversal.
 fn dir_runnable_expression(pattern: &str) -> String {
@@ -47,7 +47,7 @@ fn is_run_pattern(label: &str) -> bool {
     label.contains("...") || label.contains('*')
 }
 
-/// Resolves `dx run` scope to exact Bazel targets (O52, multirun #186).
+/// Resolves `dx run` scope to exact Bazel targets (multirun #186).
 ///
 /// Explicit labels pass through unchanged in order (Bazel owns alias
 /// and executability) without any query. Explicit target patterns

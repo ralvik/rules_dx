@@ -14,7 +14,7 @@ use std::path::Path;
 
 use super::AdoptError;
 
-/// Hook per-check budget seconds (O49 freeze: blocking timeout).
+/// Hook per-check budget seconds (frozen: blocking timeout).
 pub const HOOK_BUDGET_SECS: u64 = 120;
 
 /// Whether hook Git sourcing is hermetic.

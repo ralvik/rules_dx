@@ -1,4 +1,4 @@
-"""M04 real-tool adapter crate: check/fix execution and output parsing."""
+"""Check/fix execution and output parsing."""
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("//quality:fixtures.bzl", "real_source_target")
@@ -71,7 +71,7 @@ rust_test(
     ),
 )
 
-# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# Authoritative quality identities (pattern): rustfmt and Clippy
 # resolve from the pinned toolchain, never from ambient host tools.
 rustfmt_test(
     name = "quality_adapter_fmt_test",

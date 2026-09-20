@@ -7,7 +7,7 @@
 # tools/depcheck/ (hermetic checker plus per-language truth-table,
 # transitive/shared, exception, obsolete, platform, and category
 # fixtures as normal test targets). Remaining admitted quality-adapter
-# implementation stays owned by O32/O31 plus ADR 0019 (qualified under
+# implementation stays owned by ADR 0019 (qualified under
 # issue #307); foundation mappings under #304.
 #
 # This harness machine-checks the delivered half on a clean tree:

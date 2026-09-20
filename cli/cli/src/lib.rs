@@ -1,9 +1,9 @@
 // LCOV_EXCL_START - reason: module root holds only mod declarations and re-exports with no executable statements; every item is covered in its own module.
 //! `dx_cli`: quality command planning for the `dx` CLI.
 //!
-//! M07 WP1 owns invocation parsing ([`args`]) and Bazel workflow planning
+//! WP1 owns invocation parsing ([`args`]) and Bazel workflow planning
 //! with canonical workspace policy selection ([`plan`]). Result projection
-//! (WP2) and repository dogfood wiring (WP3) build on these plans. M08 WP1
+//! (WP2) and repository dogfood wiring (WP3) build on these plans. WP1
 //! adds scope resolution ([`resolve`]): labels pass through while files
 //! resolve to owning targets through Bazel query.
 

@@ -1,4 +1,4 @@
-"""Unit tests for real-adapter pipeline construction (M04 WP2, M12 WP3, M15 WP3).
+"""Unit tests for real-adapter pipeline construction (WP2, WP3, WP3).
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

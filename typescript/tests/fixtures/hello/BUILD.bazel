@@ -1,4 +1,4 @@
-"""M16 seed TypeScript project; consumer of typescript_* wrappers."""
+"""Seed TypeScript project; consumer of typescript_* wrappers."""
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//javascript/rules:defs.bzl", "javascript_binary", "javascript_test")
@@ -21,7 +21,7 @@ typescript_project(
     tsconfig = "tsconfig.json",
 )
 
-# M16 thin entry over the compiled output: the library owns the sources,
+# The library owns the sources,
 # the binary carries the entry point only (same shape as
 # //javascript/tests/fixtures/hello:hello; see //typescript/rules:defs.bzl — execution
 # reuses the JavaScript wrappers, there is no typescript_binary).

@@ -13,10 +13,10 @@ use std::time::Duration;
 
 use super::AdoptError;
 
-/// Watch debounce milliseconds (O55 freeze).
+/// Watch debounce milliseconds (frozen).
 pub const WATCH_DEBOUNCE_MS: u64 = 200;
 
-/// Commands watchable under ADR 0017/0018 (O55 freeze).
+/// Commands watchable under ADR 0017/0018 (frozen).
 pub const WATCHABLE_COMMANDS: &[&str] = &[
     "build",
     "test",
@@ -42,7 +42,7 @@ pub fn watch_iteration_accepts(
     scope_reresolved && local_only && single_runnable_held
 }
 
-/// Validate one watch invocation (O55 freeze).
+/// Validate one watch invocation (frozen).
 pub fn plan_watch(command: &str, ci: bool) -> Result<String, AdoptError> {
     if ci {
         return Err(AdoptError::WatchRefusesCi);
@@ -66,7 +66,7 @@ pub fn coalesce_watch_paths(mut paths: Vec<PathBuf>) -> Vec<PathBuf> {
 }
 
 /// Blocks up to `timeout` for one debounced filesystem change under
-/// `watch_root` , returning the coalesced trigger paths.
+/// `watch_root` returning the coalesced trigger paths.
 ///
 /// Implemented over [`notify`] 8.x plus `notify-debouncer-mini`
 /// (200 ms debounce per [`WATCH_DEBOUNCE_MS`]): create, modify, and

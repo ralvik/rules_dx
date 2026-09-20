@@ -1,4 +1,4 @@
-// M23 seed Scala binary; consumer of scala_binary.
+// Seed Scala binary; consumer of scala_binary.
 package hello
 
 object Main {

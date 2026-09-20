@@ -1,4 +1,4 @@
-"""Focused Go environment plan (M22 WP2).
+"""Focused Go environment plan (WP2).
 
 Contract: `docs/environments/environment.md`.
 """
@@ -60,5 +60,5 @@ go_env_plan = rule(
             doc = "One go_* wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused Go environment plan for one wrapper target (M22 WP2).",
+    doc = "Emits the provider-derived focused Go environment plan for one wrapper target (WP2).",
 )

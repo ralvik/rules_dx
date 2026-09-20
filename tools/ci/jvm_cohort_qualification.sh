@@ -66,8 +66,8 @@ fi
 
 # Parity deferrals own java/kotlin with owner plus frozen route plus the
 # #416 live-successor record (closed #307 owns nothing here).
-if grep -q -F -e '"java": ["O32"' "$parity" &&
-  grep -q -F -e '"kotlin": ["O32"' "$parity" &&
+if grep -q -F -e '"java": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"kotlin": ["ADR 0019"' "$parity" &&
   grep -q -F -e 'complete upstream artifact plus shared JDK (google-java-format, Checkstyle, PMD, SpotBugs)' "$parity" &&
   grep -q -F -e 'complete upstream artifact plus shared JDK (ktfmt, ktlint); detekt pending' "$parity" &&
   grep -q -F -e 'issue #416' "$parity"; then

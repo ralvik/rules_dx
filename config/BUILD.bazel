@@ -1,4 +1,4 @@
-"""M03 WP1: canonical quality configuration settings (O17).
+"""Canonical quality configuration settings.
 
 External aspects select the workspace policy through `@rules_dx//config:workspace`
 instead of hardcoding a consumer-repository label, per ADR 0011. Quality commands

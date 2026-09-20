@@ -1,4 +1,4 @@
-"""M14 seed Python binary and library; consumer of python_* wrappers."""
+"""Seed Python binary and library; consumer of python_* wrappers."""
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//python/rules:defs.bzl", "python_binary", "python_library", "python_test")

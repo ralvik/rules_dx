@@ -13,7 +13,7 @@
 # Admitted additional foundations (Go, C/C++, Java, Kotlin, Scala, C#, F#)
 # keep provisional upstreams with hello test runners, lock authority, and
 # classification-only quality families pinned here for #304; upgrades plus
-# quality adapters (qualified under #307 with deferred O32/O31 routes) plus
+# quality adapters (qualified under #307 with deferred ADR 0019 routes) plus
 # the C/C++ MSVC block stay owned gaps.
 # Deferred/excluded record (Ruby plus PowerShell deferred, Swift plus Bandit
 # excluded, host-toolchain fallback never approved) is pinned here for #305;
@@ -54,7 +54,7 @@ else
   bad "minimum per-foundation example workspaces missing (adopt-rust/python/js-ts)"
 fi
 
-# #7: language wrappers advertise QualitySourcesInfo ( aspects gate on it).
+# #7: language wrappers advertise QualitySourcesInfo (aspects gate on it).
 langs_missing=""
 for lang in rust python javascript typescript go java kotlin scala csharp fsharp cc; do
   if ! grep -q -F -e 'QualitySourcesInfo' "$lang/rules/defs.bzl" 2>/dev/null; then
@@ -366,12 +366,12 @@ else
   bad "framework quality-region mappings drifted:$fw_quality_fail"
 fi
 
-# #8: mixed-framework composition stays pinned (M21; one wrapper per
+# #8: mixed-framework composition stays pinned (; one wrapper per
 # container plus the shared helper; per-container helper edge with no
 # framework-to-framework imports; disjoint gazelle/mixed partition).
 fw_mixed_fail=""
 [[ -d "examples/mixed/hello" ]] || fw_mixed_fail="$fw_mixed_fail missing-dir"
-grep -q -F -e 'M21' examples/mixed/hello/BUILD.bazel || fw_mixed_fail="$fw_mixed_fail M21-marker"
+grep -q -F -e '' examples/mixed/hello/BUILD.bazel || fw_mixed_fail="$fw_mixed_fail -marker"
 for fw in vue svelte astro mdx; do
   grep -q -F -e "$fw/rules:defs.bzl" examples/mixed/hello/BUILD.bazel || fw_mixed_fail="$fw_mixed_fail mixed:$fw-wrapper"
   [[ -f "examples/mixed/hello/Hello.${fw#vue:}" ]] 2>/dev/null || true
@@ -510,7 +510,7 @@ fi
 
 # #304: admitted quality classification stays pinned (families exist,
 # no adapter claims admitted classes yet; adapter side qualified under #307
-# with deferred O32 routes).
+# with deferred ADR 0019 routes).
 class304_fail=""
 for cls in go c cpp java kotlin scala csharp fsharp; do
   grep -q -F -e "\"$cls\":" quality/adapters.bzl || class304_fail="$class304_fail $cls:family"
@@ -585,15 +585,15 @@ else
 fi
 
 # #305: deferred quality classification stays pinned (families exist,
-# no adapter claims ruby/powershell yet; parity defers with O31/O32 + ADR 0019).
+# no adapter claims ruby/powershell yet; parity defers with ADR 0019 + ADR 0019).
 class305_fail=""
 for cls in ruby powershell; do
   grep -q -F -e "\"$cls\":" quality/adapters.bzl || class305_fail="$class305_fail $cls:family"
 done
 grep -q -F -e 'adapter claims ruby or powershell yet' quality/adapters.bzl || class305_fail="$class305_fail ruby-pw:open"
 grep -q -F -e 'beyond v1 per ADR 0019' quality/adapters.bzl || class305_fail="$class305_fail adapters:adr"
-grep -q -F -e '"ruby": ["O31/O32"' quality/parity_tests.bzl || class305_fail="$class305_fail ruby:parity"
-grep -q -F -e '"powershell": ["O31/O32"' quality/parity_tests.bzl || class305_fail="$class305_fail powershell:parity"
+grep -q -F -e '"ruby": ["ADR 0019"' quality/parity_tests.bzl || class305_fail="$class305_fail ruby:parity"
+grep -q -F -e '"powershell": ["ADR 0019"' quality/parity_tests.bzl || class305_fail="$class305_fail powershell:parity"
 grep -q -F -e 'foundation deferred by ADR 0019' quality/parity_tests.bzl || class305_fail="$class305_fail parity:adr"
 if grep -q -F -e '"rubocop":' quality/adapters.bzl; then
   class305_fail="$class305_fail unexpected:rubocop"

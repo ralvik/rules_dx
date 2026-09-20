@@ -1,4 +1,4 @@
-"""M23 seed F# binary and library; consumer of fsharp_* wrappers."""
+"""Seed F# binary and library; consumer of fsharp_* wrappers."""
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//fsharp/rules:defs.bzl", "fsharp_binary", "fsharp_library", "fsharp_test")

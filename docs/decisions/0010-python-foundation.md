@@ -33,7 +33,7 @@ compiler, or runtime.
 
 Using a 2.x prerelease is an explicit exception to
 [ADR 0008](0008-dependency-currency.md) until a compatible stable 2.x release exists. The exact
-prerelease identity is not pinned by this record; it is pending O25 qualification and the
+prerelease identity is not pinned by this record; it is pending qualification and the
 required consumer and platform evidence. The selected
 release must pass the required consumer and platform evidence before shipping. A compatible stable
 release replaces the prerelease after passing the same evidence. Upstream gaps require remediation
@@ -105,7 +105,7 @@ The curated Python quality direction is Ruff for formatting and lint, pydoclint 
 lint, and Ty for type checking. Ruff is the sole default Python
 formatter. Bandit was excluded from v1 by
 [ADR 0019](0019-first-release-additional-foundations.md); initial
-source-audit tool selection is owned by O11. Capability ownership, source selection, action behavior, fix semantics, and default or
+source-audit tool selection is owned by the issue tracker. Capability ownership, source selection, action behavior, fix semantics, and default or
 opt-in policy are authoritative under [Quality](../quality/); acquisition and the complete tool
 baseline are authoritative under [Tools](../tools/).
 

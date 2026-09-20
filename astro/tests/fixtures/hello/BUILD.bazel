@@ -1,4 +1,4 @@
-"""M20 seed Astro component; consumer of astro_* wrappers."""
+"""Seed Astro component; consumer of astro_* wrappers."""
 
 load("//astro/rules:defs.bzl", "astro_library")
 load("//javascript/rules:defs.bzl", "javascript_library", "javascript_test")

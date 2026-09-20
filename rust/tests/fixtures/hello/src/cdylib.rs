@@ -1,4 +1,4 @@
-//! M12 conformance fixture: minimal cdylib crate for the
+//! Minimal cdylib crate for the
 //! rust_shared_library wrapper subject.
 
 /// C-compatible greeting entry point proving the shared-library wrapper

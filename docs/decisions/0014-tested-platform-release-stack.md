@@ -22,21 +22,21 @@ dependency cannot force one global graph on its consumers.
 
 This table is the single source for the v1 required-host set. All other
 documents link here instead of restating it. Exact pins, hosts, floors, SDK/CRT
-identities, and qualified routes remain owned by O14 and O37;
+identities, and qualified routes remain owned by issues #410-#414 and issues #410-#414;
 nothing below pins a version.
 
 | Platform | V1 status | Notes |
 | --- | --- | --- |
 | Linux x86_64 glibc | Required, primary bootstrap | First host; release CI must cover it |
-| Linux arm64 glibc | Required | Native workflow, not cross-only; native glibc qualified under issue #410 (exact pins, hosts, floors, and SDK/CRT identities stay owned by O14/O37, not pinned here) |
-| Linux x86_64/arm64 static musl | Required profiles | Dynamic musl is not an initial requirement; static musl qualified under issue #411 (exact pins, hosts, floors, and SDK/CRT identities stay owned by O14/O37, not pinned here) |
-| macOS arm64 | Required | Pinned acquired SDK; SDK version is not the deployment floor; native macOS arm64 qualified under issue #412 (exact pins, hosts, floors, and SDK/CRT identities stay owned by O14/O37, not pinned here) |
-| macOS x86_64 | Best-effort | Pinned acquired SDK; SDK version is not the deployment floor; native macOS x86_64 best-effort qualified under issue #413 (exact pins, hosts, floors, and SDK/CRT identities stay owned by O14/O37, not pinned here; `macos-13` retired December 2025, `macos-15-intel` until August 2027; gaps recorded without blocking required-host release) |
-| Windows x86_64 MSVC-compatible | Required | Hermetic acquisition + MSVC compatibility; native Windows x86_64 MSVC qualified under issue #414 (exact pins, hosts, floors, and SDK/CRT identities stay owned by O14/O37, not pinned here) |
+| Linux arm64 glibc | Required | Native workflow, not cross-only; native glibc qualified under issue #410 (exact pins, hosts, floors, and SDK/CRT identities stay owned by issues #410-#414, not pinned here) |
+| Linux x86_64/arm64 static musl | Required profiles | Dynamic musl is not an initial requirement; static musl qualified under issue #411 (exact pins, hosts, floors, and SDK/CRT identities stay owned by issues #410-#414, not pinned here) |
+| macOS arm64 | Required | Pinned acquired SDK; SDK version is not the deployment floor; native macOS arm64 qualified under issue #412 (exact pins, hosts, floors, and SDK/CRT identities stay owned by issues #410-#414, not pinned here) |
+| macOS x86_64 | Best-effort | Pinned acquired SDK; SDK version is not the deployment floor; native macOS x86_64 best-effort qualified under issue #413 (exact pins, hosts, floors, and SDK/CRT identities stay owned by issues #410-#414, not pinned here; `macos-13` retired December 2025, `macos-15-intel` until August 2027; gaps recorded without blocking required-host release) |
+| Windows x86_64 MSVC-compatible | Required | Hermetic acquisition + MSVC compatibility; native Windows x86_64 MSVC qualified under issue #414 (exact pins, hosts, floors, and SDK/CRT identities stay owned by issues #410-#414, not pinned here) |
 | Windows arm64 | Out of v1 scope | Not a claim of impossibility |
 | Other cross-build routes | Optional expansion | Only after the initial cohort passes; see the provisional [native plan](../native-toolchains.md) |
 
-Linux-first means incremental host bring-up order (M00 starts Linux-first,
+Linux-first means incremental host bring-up order (starts Linux-first,
 local-only), not a scope reduction: v1 retains full required-host coverage.
 
 Each `rules_dx` release defines one tested default platform stack. The release pins the exact
@@ -64,7 +64,7 @@ identities, licensing, and public mappings remain gated by
 Open Decisions. If no existing route satisfies these requirements with
 bounded integration, report the blocker rather than silently relaxing acquisition or compatibility.
 No pin, host, floor, or acquisition identity in the provisional native plan is normative
-through this record; O14/O37 own those values.
+through this record; issues #410-#414 own those values.
 Prefer a published stable Windows-backend release; a necessary qualified upstream commit pin is
 permitted under the narrow exception in [ADR 0008](0008-dependency-currency.md#decision).
 
@@ -80,7 +80,7 @@ Linux requires glibc and static-musl profiles on x86_64/arm64. Dynamic musl is n
 requirement. Static-musl profiles are qualified under issue #411 on the
 current as-built stack (Rust musl std plus exec/target separation, per-cell
 coverage, CI cross-builds with per-profile cache scopes); exact pins,
-hosts, floors, and runtime-closure identities stay owned by O14/O37, not
+hosts, floors, and runtime-closure identities stay owned by issues #410-#414, not
 pinned here. macOS arm64 is qualified under issue #412 on the current
 as-built stack (native macos-14 runners through the pinned upstream
 toolchains, per-cell coverage with no union, consumer self-call on all
@@ -88,7 +88,7 @@ qualified hosts; the hermetic-llvm Apple-SDK backend stays provisional
 with immutable lazy fetch and no host-installed SDK fallback, never
 approved; Apple-SDK handling leaks no secrets and needs no interactive
 acceptance); exact pins, hosts, floors, and SDK/CRT identities stay owned
-by O14/O37, not pinned here. macOS x86_64 best-effort is qualified under
+by issues #410-#414, not pinned here. macOS x86_64 best-effort is qualified under
 issue #413 on the same as-built stack (native macos-15-intel runners
 through the pinned upstream toolchains, per-cell coverage with no union,
 consumer self-call on all qualified hosts including the best-effort cell;
@@ -97,7 +97,7 @@ fetch and no host-installed SDK fallback, never approved; Apple-SDK
 handling leaks no secrets and needs no interactive acceptance;
 `macos-13` retired December 2025, `macos-15-intel` until August 2027;
 best-effort gaps never block required-host release); exact pins, hosts,
-floors, and SDK/CRT identities stay owned by O14/O37, not pinned here.
+floors, and SDK/CRT identities stay owned by issues #410-#414, not pinned here.
 Windows x86_64 MSVC-compatible is qualified under issue #414 on the
 current as-built stack (native windows-latest runners through the pinned
 upstream toolchains, per-cell coverage with no union, consumer self-call
@@ -108,7 +108,7 @@ the module requires no acceptance and fetches no restricted payloads;
 installed Build Tools fallback never approved; prebuilt-MSVC interop plus
 manifest/path/ABI fixtures qualify host-to-target plus target execution
 separately); exact pins, hosts, floors, and SDK/CRT identities stay owned
-by O14/O37, not pinned here.
+by issues #410-#414, not pinned here.
 Prioritize Linux cross-builds and admit additional routes where upstream integration
 keeps maintenance bounded, rather than requiring every host-to-target combination. Required native
 platform workflows remain unchanged; cross-building and target execution require separate evidence.

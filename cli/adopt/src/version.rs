@@ -12,7 +12,7 @@ use std::path::Path;
 
 use super::AdoptError;
 
-/// Delivered `dx` / `rules_dx` single version (O51 freeze).
+/// Delivered `dx` / `rules_dx` single version (frozen).
 pub const DX_VERSION: &str = "0.0.0";
 /// Pinned `rules_dx` module version; `dx version` must equal this.
 pub const MODULE_VERSION: &str = "0.0.0";
@@ -21,7 +21,7 @@ pub const PREVIOUS_VERSION: &str = "0.0.0";
 
 /// Whether the single-version pin holds.
 ///
-/// Per O51 direction the `dx` version equals the pinned `rules_dx` module
+/// Per direction the `dx` version equals the pinned `rules_dx` module
 /// version: both must parse as Cargo-flavor semver (via the `semver`
 /// crate, issue #224) and compare exactly equal. Self-update bumps
 /// that pin from verified release artifacts; anything else is rejected here.

@@ -1,4 +1,4 @@
-// M23 seed Scala library; consumer of scala_library.
+// Seed Scala library; consumer of scala_library.
 package hello
 
 object Hello {

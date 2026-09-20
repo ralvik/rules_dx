@@ -1,4 +1,4 @@
-//! Aggregate audit outcome and exit-status selection (M26 WP1 slice 4).
+//! Aggregate audit outcome and exit-status selection (WP1 slice 4).
 //!
 //! Pure dx-level aggregation over injected per-family results, per the
 //! accepted audit failure policy
@@ -15,7 +15,7 @@
 //! The findings-versus-operational-error split lives in the report,
 //! not the code: both fail the command, and the SARIF/event detail
 //! says which. Family-result production (auditor wiring, advisory
-//! acquisition, SARIF parsing, license evaluation) stays O11/O58
+//! acquisition, SARIF parsing, license evaluation) stays pending qualification
 //! qualification; this module aggregates over injected family outcomes
 //! only, so the selection stays deterministic and unit-testable
 //! without any auditor.

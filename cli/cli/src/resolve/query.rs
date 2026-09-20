@@ -27,7 +27,7 @@ pub(crate) fn quote_set(items: &[String]) -> String {
         .join(" ")
 }
 
-/// Batched ownership expression (O44): depth-1 reverse dependencies
+/// Batched ownership expression: depth-1 reverse dependencies
 /// constrained to rules over the main-workspace universe, with every file
 /// label quoted into one deterministic set. One bounded query per
 /// resolver call no matter how many files share the scope; an empty

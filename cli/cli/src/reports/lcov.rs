@@ -20,7 +20,7 @@ use super::ReportError;
 /// checks UTF-8 via [`std::str::from_utf8`] and delegates the structural
 /// `SF`/`DA`/`end_of_record` checks to `dx_lcov::validate_lcov_report`
 /// (the shared `lcov`-crate parser, issue #395). Unknown
-/// `FN`/`BRDA`/summary lines are ignored like the M00 gate parser.
+/// `FN`/`BRDA`/summary lines are ignored like the gate parser.
 /// Failures return [`ReportError::InvalidLcov`] so callers emit no LCOV
 /// report.
 pub fn validate_lcov(bytes: &[u8]) -> Result<(), ReportError> {
@@ -37,7 +37,7 @@ pub fn validate_lcov(bytes: &[u8]) -> Result<(), ReportError> {
 /// per `SF` path with maximum hits winning; source-level exclusion markers
 /// are honored for the covered languages (`.rs`, `.go`, `.py`, `.js`,
 /// `.jsx`, `.ts`, `.tsx`) through the shared `dx_lcov` scanner (a
-/// `reason:` comment stays required exactly as under the retired M00 gate;
+/// `reason:` comment stays required exactly as under the retired gate;
 /// see the marker syntax in `docs/testing/README.md`). Sources that fail to load count raw: Bazel may
 /// instrument generated or external files outside the workspace.
 /// Records outside the covered languages have no marker language and count

@@ -1,4 +1,4 @@
-"""M25 WP5 slice 1: explicit `dx clean` pruning of unselected managed generations (O60)."""
+"""issue #506 WP5 slice 1: explicit `dx clean` pruning of unselected managed generations."""
 
 load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 
@@ -10,7 +10,7 @@ package(default_visibility = [
     "//cli:__subpackages__",
 ])
 
-# M02 leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# Leaf-crate pattern via `dx_rust_crate` (issue #239): emits
 # `dx_clean` + `dx_clean_test` + fmt/clippy tests +
 # `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
 dx_rust_crate(

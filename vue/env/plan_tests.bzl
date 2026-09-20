@@ -1,8 +1,8 @@
-"""Focused Vue environment-plan tests (M18 WP2)."""
+"""Focused Vue environment-plan tests (WP2)."""
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 
-# Pinned from `bazel build //vue/env:*_plan` JSON outputs (M18 WP2).
+# Pinned from `bazel build //vue/env:*_plan` JSON outputs (WP2).
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //vue/env:hello_lib_plan
 file hello_lib_plan.json
 field direct_sources=Hello.vue

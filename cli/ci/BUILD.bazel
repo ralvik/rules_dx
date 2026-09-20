@@ -1,4 +1,4 @@
-"""M27 WP1 slices 1-7 + WP2 slices 8-9 + WP4 slices 10-11 + WP6 slice 12: pure consumer-CI planning (selection, revision, scheduling, supersession, reporting, fork/aggregate, rerun/scope/retry/scanning, triggers/platforms/no-op/revalidation, caller composition/pins, audit rendering, untrusted validation/thread deltas, preset onboarding)."""
+"""Pure consumer-CI planning (selection, revision, scheduling, supersession, reporting, fork/aggregate, rerun/scope/retry/scanning, triggers/platforms/no-op/revalidation, caller composition/pins, audit rendering, untrusted validation/thread deltas, preset onboarding)."""
 
 load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_crate")
@@ -8,7 +8,7 @@ package(default_visibility = [
     "//cli:__subpackages__",
 ])
 
-# M02 leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# Leaf-crate pattern via `dx_rust_crate` (issue #239): emits
 # `dx_ci` + `dx_ci_test` + fmt/clippy tests +
 # `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
 dx_rust_crate(

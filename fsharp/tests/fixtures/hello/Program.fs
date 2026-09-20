@@ -1,4 +1,4 @@
-// M23 seed F# binary; consumer of fsharp_binary.
+// Seed F# binary; consumer of fsharp_binary.
 module Program
 
 [<EntryPoint>]

@@ -1,4 +1,4 @@
-"""M23 seed C# binary and library; consumer of csharp_* wrappers."""
+"""Seed C# binary and library; consumer of csharp_* wrappers."""
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//csharp/rules:defs.bzl", "csharp_binary", "csharp_library", "csharp_test")

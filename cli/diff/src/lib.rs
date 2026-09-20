@@ -1,4 +1,4 @@
-//! Complete unified-diff renderer for validated workspace changes (M06 WP2).
+//! Complete unified-diff renderer for validated workspace changes (WP2).
 //!
 //! Contract: `docs/cli/output-protocol.md`, Diff Output section. The
 //! renderer takes validated file changes with exact original and candidate

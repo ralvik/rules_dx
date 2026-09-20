@@ -1,4 +1,4 @@
-"""Real-pipeline clean fixture (M15 WP2)."""
+"""Real-pipeline clean fixture (WP2)."""
 
 
 def add(first: int, second: int) -> int:

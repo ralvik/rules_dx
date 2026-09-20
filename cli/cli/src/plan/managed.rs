@@ -35,11 +35,11 @@ pub fn plan_bazel(forwarded: &[String]) -> BuildPlan {
 }
 
 /// Builds the exact `bazel build` argv for a managed
-/// environment/codegen/setup selection (M25 WP5) over a validated setup
+/// environment/codegen/setup selection (issue #506 WP5) over a validated setup
 /// scope: the command's collection roots with its collecting aspects and
 /// private output groups, plus the canonical workspace policy and the
 /// BEP stream path the CLI collects with `dx_bep`. Root computation
-/// delegates to each command's own planning library so the WP4 (O34)
+/// delegates to each command's own planning library so the WP4 (issue #506)
 /// root benchmark flows through unchanged; user options after `--`
 /// forward after the required policy. Fails before execution when user
 /// options conflict with required collection policy. The caller owns

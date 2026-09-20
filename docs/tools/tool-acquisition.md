@@ -41,7 +41,7 @@ fixtures pass; a plausible design or an entry in the tool matrix is not implemen
 No adapter claims protobuf, qml, java, kotlin, scala, csharp, fsharp, powershell, ruby, or
 c/cpp yet; required-core plus Buildifier/Taplo/Vale probes are qualified under issue #307
 with parity manifest plus regeneration plus packaging evidence (deferred implementation owned
-by O32/O31 plus ADR 0019; Buildifier/Taplo/Vale probes stay provisional).
+by ADR 0019; Buildifier/Taplo/Vale probes stay provisional).
 
 ## Bootstrap Maintenance And Promotion
 

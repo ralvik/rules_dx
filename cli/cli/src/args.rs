@@ -1,6 +1,6 @@
 //! Invocation parsing for the `dx` quality, workflow, run, clean, and
-//! managed environment/codegen/setup commands (M07 WP1+WP3, M08 WP1+WP4,
-//! M25 WP5).
+//! managed environment/codegen/setup commands (WP1+WP3, WP1+WP4,
+//! issue #506 WP5).
 //!
 //! Contract: `docs/cli/cli-contract.md#invocation-shape`. Scope positionals
 //! accept explicit Bazel labels and patterns (`//...`, `//pkg:target`,

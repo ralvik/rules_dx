@@ -1,6 +1,6 @@
 """Validation and codec helpers for the generation result manifest."""
 
-# M13: this package's `proto` alias re-exports generation's schema
+# This package's `proto` alias re-exports generation's schema
 # (`pub use result_proto::dx::generation::v1 as proto`), not quality's, so
 # the package-scoped resolves override both spellings the scanner sees: the
 # `use proto::{...}` alias and the `pub use result_proto::...` re-export. The

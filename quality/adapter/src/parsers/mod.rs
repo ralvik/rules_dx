@@ -1,4 +1,4 @@
-//! Per-tool output grammars for the pinned M04 binaries plus M15 Python.
+//! Per-tool output grammars for the pinned binaries plus Python.
 //!
 //! Each parser maps one tool's check output onto [`FileFinding`] values
 //! addressed by the scratch-absolute path the tool reported; the caller
@@ -7,8 +7,8 @@
 //! pinned grammar is a [`ParseError`], which the runner surfaces as an
 //! action failure.
 //!
-//! Pinned shapes (probed against the M04 binaries, M15 Python probes in
-//! the M15 evidence):
+//! Pinned shapes (probed against the binaries, Python probes in
+//! the evidence):
 //!
 //! * Buildifier `--mode=check --format=json --lint=warn`: stdout JSON
 //!   `{success, files:[{filename, formatted, valid, warnings:[...]}]}`.

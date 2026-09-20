@@ -1,4 +1,4 @@
-"""Experimental minimal TypeScript wrappers (M16, ADR 0013).
+"""Experimental minimal TypeScript wrappers (ADR 0013).
 
 Contract: `docs/decisions/0013-rust-javascript-typescript-foundations.md`, `docs/decisions/0012-language-toolchain-versions.md`.
 """
@@ -70,5 +70,5 @@ def _typescript_wrap_project(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _ts_project, _typescript_project_forward, srcs, visibility = visibility, **kwargs)
 
 def typescript_project(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `ts_project` (M16)."""
+    """Experimental minimal wrapper over `ts_project`."""
     _typescript_wrap_project(name, srcs, visibility = visibility, **kwargs)

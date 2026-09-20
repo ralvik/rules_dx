@@ -52,14 +52,14 @@ The command surface is:
    version pin. It may bootstrap without an existing `MODULE.bazel` and writes only
    absent files, without Git-based tracked-file inspection. Bootstrap destination
    mechanics and force syntax/managed-replacement behavior follow the
-   [hooks contract](../cli/commands/hooks.md) (historical O49, see Status note);
+   [hooks contract](../cli/commands/hooks.md) (see Status note);
    unqualified force behavior is blocked.
 - `dx hooks` for managing the custom hermetic git-hook runner in an existing repository
   (`install`, `uninstall`, `status`). Hook management and staged-file selection are narrow
   Git exceptions: all product Git operations for hooks use hermetic managed Git, never
   ambient Git. Refuse unmanaged existing hooks; force cannot authorize arbitrary hook
    overwrite. Exact installation and snapshot mechanics follow the
-   [hooks contract](../cli/commands/hooks.md) (historical O49, see Status note).
+   [hooks contract](../cli/commands/hooks.md) (see Status note).
 
 The approved bootstrap/hook exception allows module creation and staged-path hook selection without
 general Git status inspection, clean-worktree requirements, or weakening ordinary workspace
@@ -110,7 +110,7 @@ typecheck, and audit, JUnit XML for test, and LCOV for coverage, with file and s
 destinations. The event schema, error codes, ordering, and stream interaction are defined
 in [Output Protocol](../cli/output-protocol.md); exact format profiles and partial-document
 rules are defined in [Standard Reports](../cli/standard-reports.md). Exact event schemas and
-report profiles are provisional in those contracts (historical M06/M10, see Status note);
+report profiles are provisional in those contracts (see Status note);
 this record freezes only the durable surface (verbs, modes, stream ownership, additive evolution).
 
 `--quiet` and `--dry-run` are stable global option names. A non-Gazelle `generate`
@@ -133,7 +133,7 @@ preserve successful changes, and return overall failure. This preserves independ
 without a repository-wide rollback; the [update contract](../cli/commands/audit-update-bazel.md#dx-update)
 owns set independence. Aggregate exit-code selection, backend mapping, and report
 qualification follow the [update contract](../cli/commands/audit-update-bazel.md#dx-update)
-(historical O12, see Status note); live resolver-backend
+(see Status note); live resolver-backend
 execution remains a gap (see open work). Ordinary plans, including
 the `dx check` and `dx fix` umbrellas, retain their first-failure behavior.
 
@@ -146,7 +146,7 @@ command options placed before canonical `//dx:generate`, never Gazelle arguments
 users may invoke the Bazel target or Gazelle directly outside the `dx generate` contract.
 Exact scoped-selection syntax, empty-scope handling, and freshness semantics for scoped
 `--check` follow the [generate contract](../cli/commands/generate.md)
-(historical O48, see Status note).
+(see Status note).
 The command does not require a recognized manifest or existing application target: Gazelle
 discovers supported sources and creates initial target declarations. Manifests remain
 authoritative for project and dependency metadata, and generation does not analyze or execute the
@@ -246,7 +246,7 @@ absent side uses a versioned managed empty generation.
 - Combining lint and type checking into one command.
 - A `dx new` app/service/component template generator: out of v1 (rejected 2026-09-09); new-repository
   scaffolding stays in `dx init`, BUILD maintenance stays in `dx generate`, and breaking-change
-  rewrites remain unselected (historical O57, see Status note). No `dx new` command is selected.
+  rewrites remain unselected (see Status note). No `dx new` command is selected.
 - Language/profile selectors, path/pattern scope, or an interactive shell under
   `dx env`.
 - Making `env` or `codegen` implicitly run the other instead of using explicit

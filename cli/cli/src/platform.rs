@@ -10,7 +10,7 @@
 
 /// Hosts with platform evidence: `(std::env::consts::OS, ARCH)` pairs.
 ///
-/// The Linux x86_64 seed host plus Linux arm64 glibc native 
+/// The Linux x86_64 seed host plus Linux arm64 glibc native
 /// plus macOS arm64 native (issue #412) plus macOS x86_64 best-effort
 /// native (issue #413) plus Windows x86_64 MSVC-compatible native (issue
 /// #414) are delivered. Provisional: extend this list as remaining ADR
@@ -28,7 +28,7 @@
 /// through the pinned upstream toolchains; the hermetic-llvm Apple-SDK
 /// backend stays provisional with immutable lazy fetch and no
 /// host-installed SDK fallback (never approved). Exact pins, hosts,
-/// floors, and SDK/CRT identities stay owned by O14/O37 per ADR 0014.
+/// floors, and SDK/CRT identities stay owned by issues #410-#414 per ADR 0014.
 ///
 /// macOS x86_64 (issue #413) runs natively on `macos-15-intel` (Intel)
 /// runners through the same pinned upstream toolchains with the same
@@ -37,13 +37,13 @@
 /// host is available (`macos-15-intel` until its August 2027 retirement;
 /// `macos-13` retired December 2025), record gaps without blocking
 /// required-host release. Exact pins, hosts, floors, and SDK/CRT
-/// identities stay owned by O14/O37 per ADR 0014.
+/// identities stay owned by issues #410-#414 per ADR 0014.
 ///
 /// Windows x86_64 MSVC-compatible (issue #414) runs natively on
 /// `windows-latest` runners through the pinned upstream toolchains; the
 /// toolchains_msvc clang-cl/Microsoft-STL backend stays provisional with
 /// immutable lazy fetch and explicit EULA acceptance (never automatic).
-/// Exact pins, hosts, floors, and SDK/CRT identities stay owned by O14/O37
+/// Exact pins, hosts, floors, and SDK/CRT identities stay owned by issues #410-#414
 /// per ADR 0014.
 pub fn qualified_hosts() -> &'static [(&'static str, &'static str)] {
     &[
@@ -62,7 +62,7 @@ pub fn qualified_hosts() -> &'static [(&'static str, &'static str)] {
 /// macros keep execution-platform tools while applications link target
 /// musl libraries (docs/generation/rust.md#build-scripts); prebuilt glibc
 /// libraries never become musl-compatible by linker change alone.
-/// Exact pins, hosts, floors, and SDK/CRT identities stay owned by O14/O37
+/// Exact pins, hosts, floors, and SDK/CRT identities stay owned by issues #410-#414
 /// per ADR 0014 and are not pinned here.
 pub fn qualified_static_musl_profiles() -> &'static [&'static str] {
     &["linux_x86_64_static_musl", "linux_arm64_static_musl"]

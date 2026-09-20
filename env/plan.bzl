@@ -1,4 +1,4 @@
-"""Normalized environment plan records (M25 WP2).
+"""Normalized environment plan records (issue #506 WP2).
 
 Contract: `docs/environments/environment.md`, `docs/environments/managed-state.md`.
 """
@@ -32,7 +32,7 @@ DX_ENV_PLAN_OUTPUT_GROUP = "dx_env_plans"
 # missing, or duplicate artifacts and never scans `bazel-out`.
 DX_ENV_SHARD_SUFFIX = ".dxenv.pb"
 
-# Admitted first-release language integrations, slice 1. Later M25
+# Admitted first-release language integrations, slice 1. Later issue #506
 # slices extend this tuple only through recorded qualification: Rust
 # first, then the deferred Python/Node/future integrations.
 DX_ENV_ADMITTED_INTEGRATIONS = (
@@ -286,7 +286,7 @@ dx_env_shard = rule(
             doc = "Shard writer emitting the validated binary DxEnvShard protobuf.",
         ),
     },
-    doc = "Emits one contributor's normalized binary environment plan shard (M25 WP2).",
+    doc = "Emits one contributor's normalized binary environment plan shard (issue #506 WP2).",
 )
 
 def _edge_targets(rule_attr, name):
@@ -420,7 +420,7 @@ rust_env_shard = rule(
             doc = "Shard writer emitting the validated binary DxEnvShard protobuf.",
         ),
     },
-    doc = "Narrow Rust adapter: verifies the rust_* wrapper edge and emits one normalized shard (M25 WP2).",
+    doc = "Narrow Rust adapter: verifies the rust_* wrapper edge and emits one normalized shard (issue #506 WP2).",
 )
 
 def _env_plan_subject_impl(ctx):

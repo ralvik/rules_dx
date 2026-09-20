@@ -74,9 +74,9 @@ fi
 
 # Parity deferrals own c/cpp/go with owner plus frozen route plus the
 # #418 live-successor record (closed #307 owns nothing here).
-if grep -q -F -e '"c": ["O32"' "$parity" &&
-  grep -q -F -e '"cpp": ["O32"' "$parity" &&
-  grep -q -F -e '"go": ["O32"' "$parity" &&
+if grep -q -F -e '"c": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"cpp": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"go": ["ADR 0019"' "$parity" &&
   grep -q -F -e 'authoritative hermetic-llvm toolchain (clang-format, clang-tidy); cppcheck standalone artifact' "$parity" &&
   grep -q -F -e 'authoritative Go toolchain (gofmt/gofumpt); staticcheck/govet standalone artifacts' "$parity" &&
   grep -q -F -e 'issue #418' "$parity"; then

@@ -1,4 +1,4 @@
-//! M06 WP1 process boundary for the `dx` CLI.
+//! WP1 process boundary for the `dx` CLI.
 //!
 //! Contract: `docs/cli/cli-contract.md`. This crate owns workspace
 //! discovery, launcher selection, safe operation summaries, exact `dx

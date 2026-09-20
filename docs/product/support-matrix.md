@@ -36,7 +36,7 @@ per-host successor. The CI host matrix across these hosts is pinned by
 
 Per-required-host qualification state (V1 status from ADR 0014; evidence
 dimensions per issue #298; exact pins, hosts, floors, and SDK/CRT identities
-remain owned by O14/O37 and are not pinned here):
+remain owned by issues #410-#414 and are not pinned here):
 
 | Host | V1 status | Qualification evidence | Current state |
 | --- | --- | --- | --- |
@@ -207,7 +207,7 @@ all admitted languages in `tools/depcheck/` (issue #306) with native authorities
 `maven_install.json`, `paket.lock`, per-archive sha256) and focused fixtures. Remaining gaps
 (GoogleTest v1.18.0, JUnit 6.1.3 plus 5.14.x fallback, xUnit v3 4.0.0, Go `from_file` when
 non-stdlib deps land, quality adapters qualified under issue #307 with deferred implementation
-owned by O32/O31 plus ADR 0019, C/C++ MSVC interop plus SDK licensing)
+owned by ADR 0019, C/C++ MSVC interop plus SDK licensing)
 stay owned under issue #304. No `Supported` claim until platform plus consumer plus release
 evidence passes.
 
@@ -232,12 +232,12 @@ qualification in [Generation](../generation/README.md#language-mapping-qualifica
 and the parity gate (`quality/parity_tests.bzl`): no `ruby/`, `powershell/`, or `swift/`
 foundation dirs, wrappers, Gazelle extensions, env plans, hello builds, or `MODULE.bazel` deps;
 `ruby`/`powershell` classes classified with no adapter claim (`quality/adapters.bzl` plus
-`PARITY_DEFERRED` with O31/O32 and ADR 0019); retained cohorts (RuboCop/StandardRB via
+`PARITY_DEFERRED` with ADR 0019); retained cohorts (RuboCop/StandardRB via
 release-assembled Ruby closure, PSScriptAnalyzer via exact-module plus portable PowerShell
 runtime); Swift/SwiftFormat plus Bandit exclusions with host-toolchain fallback never approved.
 Remaining gaps (bundle contents, lock inputs, module/runtime identities, console-parse versus
 library-API binding, and per-tool adapter mappings qualified under issue #420 with deferred
-implementation owned by O32/O31 plus ADR 0019; reconsideration requires
+implementation owned by ADR 0019; reconsideration requires
 a new scope decision) stay owned under issue #305. No `Supported` claim until platform plus
 consumer plus release evidence passes.
 

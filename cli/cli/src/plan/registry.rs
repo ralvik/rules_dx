@@ -18,7 +18,7 @@ use crate::args::Command;
 /// require as workflow mechanism (never user policy): `dx` always sets
 /// them and rejects every user override, mirroring the workspace and
 /// validate flags.
-/// `typecheck` selects the real typecheck aspect (M12 WP3 wires the rustc
+/// `typecheck` selects the real typecheck aspect (WP3 wires the rustc
 /// stage over the rust class); families without a typecheck selection
 /// resolve to no stages, so the command stays a silent no-op there per
 /// `docs/cli/commands/quality.md`. Lint and typecheck export normalized
@@ -40,7 +40,7 @@ pub struct CommandSpec {
 /// `coverage` normalizes `coverage.dat` artifacts into one LCOV document;
 /// `build` and `run` have no standard report. `generate` runs the
 /// canonical `//dx:generate` Gazelle runner with no aspects and no
-/// standard report: per-command result transport is pending O13, so
+/// standard report: per-command result transport is pending so
 /// machine-readable changes and mutations stay absent.
 pub fn spec(command: Command) -> CommandSpec {
     match command {
@@ -107,7 +107,7 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Sequential umbrellas (M10 WP4, O59) never build Bazel
+        // Sequential umbrellas (WP4) never build Bazel
         // invocations of their own; phases reuse their registries
         // verbatim. The umbrella routes SARIF requests to the
         // SARIF-capable phases (lint, typecheck) and merges runs.
@@ -125,7 +125,7 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &["sarif"],
             settings: &[],
         },
-        // Explicit managed-state cleanup (M25 WP5, O60): no Bazel
+        // Explicit managed-state cleanup (issue #506 WP5): no Bazel
         // invocation of its own for the prune itself (filesystem
         // inventory plus the shared commit lock in `dx_clean`); the
         // optional `bazel clean` forward is planned at execution.
@@ -136,7 +136,7 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Managed environment/codegen/setup selections (M25 WP5): one
+        // Managed environment/codegen/setup selections (issue #506 WP5): one
         // Bazel collection request behind a canonical selection plus
         // generation commit, never the quality aspect pipeline and no
         // standard reports. The capability names the selecting command.
@@ -147,7 +147,7 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Delivered adoption/inspect surfaces (M30b): local helpers or
+        // Delivered adoption/inspect surfaces: local helpers or
         // thin query forwarding, never the quality aspect pipeline.
         Command::Init
         | Command::Hooks
@@ -195,7 +195,7 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Raw launcher passthrough (M26 WP4 helper surface): no
+        // Raw launcher passthrough (WP4 helper surface): no
         // aspects, no reports, no scope resolution; planned at
         // execution as launcher plus forwarded arguments.
         Command::Bazel => CommandSpec {

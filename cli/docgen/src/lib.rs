@@ -1,4 +1,4 @@
-//! Pure documentation-delivery planning (M30a slices 1-4: doc-IR version,
+//! Pure documentation-delivery planning (slices 1-4: doc-IR version,
 //! identity, validation, mode shape; guides/examples corpus shape;
 //! site-build action planning; `dx docs` invocation planning).
 //!
@@ -12,7 +12,7 @@
 //! only, so the rules stay deterministic and unit-testable without
 //! extractors, toolchains, a Bazel server, or any renderer.
 //!
-//! Out of scope here (O54 qualification): exact `.proto` field/enum numbers
+//! Out of scope here (qualification): exact `.proto` field/enum numbers
 //! and reserved ranges, per-language input pins and adapter mappings,
 //! per-language overload-disambiguation schemes, link/reference completeness
 //! proofs, renderer behavior, exact guide-step/CI wiring, rule labels,
@@ -95,7 +95,7 @@ pub enum SymbolError {
 ///
 /// IDs are stable across rebuilds; source paths stay workspace-relative
 /// (callers must not pass absolute paths). Per-language overload
-/// disambiguation schemes freeze under O54; use [`plan_overload_id`] for
+/// disambiguation schemes freeze under; use [`plan_overload_id`] for
 /// the explicit normalized parameter-type suffix.
 pub fn plan_symbol_id(
     language: &str,
@@ -118,7 +118,7 @@ pub fn plan_symbol_id(
 /// parameter-type list (`Base(T1,T2)`).
 ///
 /// Normalization here is only whitespace trimming with empty entries
-/// dropped; per-language type normalization freezes under O54. Types pass
+/// dropped; per-language type normalization freezes under. Types pass
 /// through verbatim otherwise.
 pub fn plan_overload_id(base: &str, param_types: &[String]) -> String {
     let normalized: Vec<&str> = param_types
@@ -260,13 +260,13 @@ pub fn drift_reaches_users_without_release() -> bool {
 }
 
 // ---------------------------------------------------------------------------
-// Guides/examples corpus shape (M30a slice 2).
+// Guides/examples corpus shape (slice 2).
 // ---------------------------------------------------------------------------
 
 /// Frozen release-blocking guide identities: quickstart, tutorial, and
 /// migration (from existing Bazel setups). Spellings pass through verbatim;
 /// no extra guide is claimed and no implicit default is substituted. Exact
-/// guide-step text and CI wiring freeze under O54.
+/// guide-step text and CI wiring freeze under.
 pub fn is_known_guide(name: &str) -> bool {
     matches!(name, "quickstart" | "tutorial" | "migration")
 }
@@ -311,7 +311,7 @@ pub fn is_under_examples(path: &str) -> bool {
 }
 
 // ---------------------------------------------------------------------------
-// Site-build action planning (M30a slice 3).
+// Site-build action planning (slice 3).
 // ---------------------------------------------------------------------------
 
 /// Planned site-build action in the extract → aggregate → render chain.
@@ -405,7 +405,7 @@ pub fn bare_docs_scope_selects_repository() -> bool {
 }
 
 // ---------------------------------------------------------------------------
-// `dx docs` invocation planning (M30a slice 4).
+// `dx docs` invocation planning (slice 4).
 // ---------------------------------------------------------------------------
 
 /// Scope follows the same label/pattern/path resolution as the other
@@ -415,7 +415,7 @@ pub fn docs_scope_reuses_workflow_resolution() -> bool {
 }
 
 /// Check and build select the shared Bazel extraction/aggregation graph,
-/// never separate checker implementations. O54 must prove the pre-render
+/// never separate checker implementations. must prove the pre-render
 /// checks are complete; if a required check depended on rendered output,
 /// that conflict is reported before any weaker check mode lands.
 pub fn check_uses_separate_graph() -> bool {

@@ -9,9 +9,9 @@
 //! `clap_complete` (`cli/cli/src/args.rs::render_completion`),
 //! so the grammar feeding parsing and `--help` is the single completion
 //! source. The `ALL_COMMANDS`/`SUPPORTED_SHELLS` tables here
-//! remain as the O61 frozen vocabulary reference only; they render nothing.
+//! remain as the frozen vocabulary reference only; they render nothing.
 
-/// Single command-definition source (O61 freeze).
+/// Single command-definition source (frozen).
 ///
 /// Every `dx completion <shell>` script renders from this table so new
 /// commands cannot drift from the command reference.
@@ -44,14 +44,14 @@ pub const ALL_COMMANDS: &[&str] = &[
     "bazel",
 ];
 
-/// Shells covered by `dx completion` (O61 freeze).
+/// Shells covered by `dx completion` (frozen).
 pub const SUPPORTED_SHELLS: &[&str] = &["bash", "zsh", "fish", "powershell"];
 
 /// Whether a completion script source is admissible.
 ///
 /// Completion scripts ship as generated output from the single CLI
 /// command-definition source: handwritten per-shell scripts are rejected so
-/// new commands and flags cannot drift from the command reference. O61 owns
+/// new commands and flags cannot drift from the command reference. The single source owns
 /// the shell list, mechanics, and drift fixtures.
 pub fn completion_source_is_single(generated_from_single_source: bool, handwritten: bool) -> bool {
     generated_from_single_source && !handwritten
@@ -71,7 +71,7 @@ mod tests {
     #[test]
     fn completion_vocabulary_matches_supported_shells() {
         // Issue #235: scripts render from the `Cli` grammar via
-        // `clap_complete`, so this gate pins the O61 vocabulary reference
+        // `clap_complete`, so this gate pins the vocabulary reference
         // only — every command stays listed, every shell stays supported.
         for shell in SUPPORTED_SHELLS {
             assert!(!shell.is_empty(), "shell name must not be empty");

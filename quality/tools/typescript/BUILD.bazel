@@ -1,4 +1,4 @@
-"""M17 WP1 slice 4: authoritative `tsc` mapping (no separate tool graph).
+"""Authoritative `tsc` mapping (no separate tool graph).
 
 `tsc` 5.9.3 resolves from the pinned `aspect_rules_ts` toolchain
 (`typescript.deps` -> `@npm_typescript`, MODULE.bazel) on the shared

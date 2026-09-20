@@ -1,4 +1,4 @@
-"""Deterministic synthetic adapter registry (M03 WP2 fixtures).
+"""Deterministic synthetic adapter registry (WP2 fixtures).
 
 Contract: `docs/quality/tool-integrations.md`, `docs/quality/quality-sources.md`, `docs/decisions/0003-action-granularity.md`.
 """
@@ -41,7 +41,7 @@ def adapter_supported_classes(tool_id, capability):
     return sorted(SYNTHETIC_ADAPTERS[tool_id].get(capability, []))
 
 # Real adapters: stable tool IDs users select in policy families.
-# Stages order by sorted tool ID (O19); rustc is upstream-delegated and
+# Stages order by sorted tool ID; rustc is upstream-delegated and
 # tsc is target-coupled. See `docs/quality/tool-integrations.md`.
 REAL_ADAPTERS = {
     "biome": {

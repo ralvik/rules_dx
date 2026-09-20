@@ -16,9 +16,9 @@ a workflow automatic.
 
 Upstream `ibazel` (`bazelbuild/bazel-watcher`) covers `build`/`test`/`run` on
 explicit labels only. It cannot reuse `dx` file-to-owner resolution
-(O44), all-direct-owners quality selection
+(the issue tracker), all-direct-owners quality selection
 ([Target Resolution](../cli/target-resolution.md)), single-runnable enforcement
-(O52), or `lint`/`typecheck`/`format` converge-and-apply
+(the issue tracker), or `lint`/`typecheck`/`format` converge-and-apply
 semantics ([Output Protocol](../cli/output-protocol.md)). Users requested an
 inner loop for `build`, `test`, `run`, `lint`, `typecheck`, and `format`
 including file scope.
@@ -44,7 +44,7 @@ graph, cache, resolver, daemon, remote execution, or deployment mechanism.
   Interruption terminates the active child before the watcher.
 - Filesystem observation covers workspace source inputs only and ignores
   `bazel-*` outputs, `.dx` managed state, and ignored local overlays. Exact
-  debounce, ignore set, and restart policy are qualified under O55.
+  debounce, ignore set, and restart policy are qualified under the issue tracker.
 
 ## Consequences
 
@@ -54,9 +54,9 @@ graph, cache, resolver, daemon, remote execution, or deployment mechanism.
 - `dx run` under `watch` re-enforces single-runnable selection per iteration.
 - Quality iterations reuse convergence, atomic apply, and `--fail-on` without
   new mutation semantics.
-- `O44` target resolution must land before `watch` implementation.
+- `the issue tracker` target resolution must land before `watch` implementation.
 - Tests cover scope kinds, pass-to-fail-to-recover cycles, ambiguous runnables,
-  signal forwarding, and debounce behavior per O55.
+  signal forwarding, and debounce behavior per the issue tracker.
 
 ## Rejected Alternatives
 

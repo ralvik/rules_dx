@@ -1,4 +1,4 @@
-"""Quality source-ownership boundary (M03 freeze for O15, ADR 0013).
+"""Quality source-ownership boundary (freeze for ADR 0013).
 
 Contract: `docs/quality/quality-sources.md`, `docs/decisions/0013-rust-javascript-typescript-foundations.md`.
 """
@@ -20,7 +20,7 @@ QualitySourcesInfo = provider(
 SOURCES_REGISTRY_SCHEMA_VERSION = 1
 
 # Candidate canonical semantic file-class IDs from
-# docs/quality/quality-sources.md. Provisional pending O15; adding a class
+# docs/quality/quality-sources.md. Provisional pending; adding a class
 # or broadening one requires adapter and policy compatibility tests.
 KNOWN_SEMANTIC_FILE_CLASSES = [
     "text",
@@ -72,7 +72,7 @@ KNOWN_SEMANTIC_FILE_CLASSES = [
     "go_module",
 ]
 
-# Semantic file class for Rust sources (M02 proves this one).
+# Semantic file class for Rust sources (proves this one).
 RUST = "rust"
 
 def is_known_semantic_class(class_id):

@@ -1,4 +1,4 @@
-"""M16 seed JavaScript binary and library; consumer of javascript_* wrappers."""
+"""Seed JavaScript binary and library; consumer of javascript_* wrappers."""
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//javascript/rules:defs.bzl", "javascript_binary", "javascript_library", "javascript_test")

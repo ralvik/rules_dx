@@ -1,4 +1,4 @@
-"""M11 WP2 managed `.dx/bin` bootstrap installer crate."""
+"""WP2 managed `.dx/bin` bootstrap installer crate."""
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
@@ -106,7 +106,7 @@ rust_test(
     ],
 )
 
-# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# Authoritative quality identities (pattern): rustfmt and Clippy
 # resolve from the pinned toolchain, never from ambient host tools.
 rustfmt_test(
     name = "dx_env_fmt_test",

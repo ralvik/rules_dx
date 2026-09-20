@@ -1,4 +1,4 @@
-// M22 seed C++ binary; consumer of cc_binary.
+// Seed C++ binary; consumer of cc_binary.
 #include <iostream>
 
 #include "cc/tests/fixtures/hello/hello.h"

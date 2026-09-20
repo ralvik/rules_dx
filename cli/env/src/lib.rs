@@ -1,4 +1,4 @@
-//! Managed `.dx/bin` bootstrap core (M11 WP2).
+//! Managed `.dx/bin` bootstrap core (WP2).
 //!
 //! Refresh semantics for the runnable environment: adopt nothing, install
 //! the staged `environment_tree` output set atomically, and prove
@@ -968,7 +968,7 @@ mod tests {
 
     #[test]
     fn workspace_path_with_spaces_installs() {
-        // M11 evidence: the installer never shells out, so workspace roots
+        // The installer never shells out, so workspace roots
         // containing spaces install and resolve exactly like plain paths.
         let scratch = test_root("with space");
         let root = scratch.path().to_path_buf();

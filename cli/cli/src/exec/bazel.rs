@@ -5,7 +5,7 @@ use crate::args::Invocation;
 use crate::plan::plan_bazel;
 use dx_output::OutputMode;
 
-/// Executes `dx bazel`: raw launcher passthrough for the M26 WP4
+/// Executes `dx bazel`: raw launcher passthrough for the WP4
 /// helper surface (`dx bazel version`, `dx bazel audit`/
 /// `dx bazel update` when those helpers exist).
 ///

@@ -1,4 +1,4 @@
-"""First-party JavaScript Gazelle extension (M16, ADR 0013)."""
+"""First-party JavaScript Gazelle extension (ADR 0013)."""
 
 load("@gazelle//:def.bzl", "gazelle_binary", "gazelle_generation_test")
 load("@rules_go//go:def.bzl", "go_library", "go_test")

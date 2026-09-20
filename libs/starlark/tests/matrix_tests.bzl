@@ -1,4 +1,4 @@
-"""Behavioral-matrix mapping validation (M01 WP3).
+"""Behavioral-matrix mapping validation (WP3).
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")

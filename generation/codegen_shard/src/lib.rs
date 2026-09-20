@@ -1,5 +1,5 @@
 //! Validation and codec helpers for the normalized codegen plan shard
-//! (M25 WP1, O33).
+//! (issue #506 WP1, issue #506).
 //!
 //! Contract: `docs/environments/codegen.md` (provider contract), schema
 //! `//generation:codegen.proto`. This crate enforces the checks that mirror

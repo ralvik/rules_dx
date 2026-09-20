@@ -1,4 +1,4 @@
-"""M25 WP4 slice 3: repository-root strategy planning plus query/aggregate wiring, with the cold/warm freeze."""
+"""issue #506 WP4 slice 3: repository-root strategy planning plus query/aggregate wiring, with the cold/warm freeze."""
 
 load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_crate")
@@ -9,7 +9,7 @@ package(default_visibility = [
     "//cli:__subpackages__",
 ])
 
-# M02 leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# Leaf-crate pattern via `dx_rust_crate` (issue #239): emits
 # `dx_roots` + `dx_roots_test` + fmt/clippy tests + `Cargo.toml` export,
 # identical to the hand-written stanzas. Corpus splits (`corpus_starlark`
 # owning `BUILD.bazel` + `roots.bzl`, `corpus_toml` owning `Cargo.toml`)
@@ -22,7 +22,7 @@ dx_rust_crate(
 
 exports_files(["roots.bzl"])
 
-# Query/aggregate wiring fixtures (M25 WP4 slice 2): the pattern file
+# Query/aggregate wiring fixtures (issue #506 WP4 slice 2): the pattern file
 # proves the `repository_roots_file` rule writes one label per line for
 # `--target_pattern_file`, while the monolithic aggregate reserves the
 # one-aggregate identity over the canonical repository-wide selections.

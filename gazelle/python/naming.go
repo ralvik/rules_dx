@@ -89,9 +89,9 @@ func ModuleName(name string) string {
 }
 
 // IsEntryFile reports whether a directory-relative source path is a
-// recognized executable entry in the narrow M14 slice: exactly
+// recognized executable entry in the narrow slice: exactly
 // `main.py` (non-test). `__main__.py`, `if __name__ == "__main__"`
-// guards, and manifest console scripts remain O25 qualification, not
+// guards, and manifest console scripts remain qualification, not
 // automatic recognition.
 func IsEntryFile(name string) bool {
 	if IsTestFile(name) {

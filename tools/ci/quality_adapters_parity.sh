@@ -3,7 +3,7 @@
 #
 # Required-core adapters plus Buildifier/Taplo/Vale probes are qualified
 # with fixture evidence; the ten missing families keep frozen routes owned
-# by O32/O31 plus ADR 0019 with no false adapter claim. Buildifier, Taplo,
+# by ADR 0019 with no false adapter claim. Buildifier, Taplo,
 # and Vale probes stay provisional: research notes are unproven mappings,
 # versions are observations not pins.
 #
@@ -67,17 +67,17 @@ deferred_fail=""
 for cls in protobuf qml java kotlin scala csharp fsharp powershell ruby c cpp; do
   grep -q -F -e "\"$cls\":" "$parity" || deferred_fail="$deferred_fail $cls:missing"
 done
-grep -q -F -e '"protobuf": ["O32"' "$parity" || deferred_fail="$deferred_fail protobuf:owner"
-grep -q -F -e '"qml": ["O32"' "$parity" || deferred_fail="$deferred_fail qml:owner"
-grep -q -F -e '"java": ["O32"' "$parity" || deferred_fail="$deferred_fail java:owner"
-grep -q -F -e '"kotlin": ["O32"' "$parity" || deferred_fail="$deferred_fail kotlin:owner"
-grep -q -F -e '"scala": ["O32"' "$parity" || deferred_fail="$deferred_fail scala:owner"
-grep -q -F -e '"csharp": ["O32"' "$parity" || deferred_fail="$deferred_fail csharp:owner"
-grep -q -F -e '"fsharp": ["O32"' "$parity" || deferred_fail="$deferred_fail fsharp:owner"
-grep -q -F -e '"powershell": ["O31/O32"' "$parity" || deferred_fail="$deferred_fail powershell:owner"
-grep -q -F -e '"ruby": ["O31/O32"' "$parity" || deferred_fail="$deferred_fail ruby:owner"
-grep -q -F -e '"c": ["O32"' "$parity" || deferred_fail="$deferred_fail c:owner"
-grep -q -F -e '"cpp": ["O32"' "$parity" || deferred_fail="$deferred_fail cpp:owner"
+grep -q -F -e '"protobuf": ["ADR 0019"' "$parity" || deferred_fail="$deferred_fail protobuf:owner"
+grep -q -F -e '"qml": ["ADR 0019"' "$parity" || deferred_fail="$deferred_fail qml:owner"
+grep -q -F -e '"java": ["ADR 0019"' "$parity" || deferred_fail="$deferred_fail java:owner"
+grep -q -F -e '"kotlin": ["ADR 0019"' "$parity" || deferred_fail="$deferred_fail kotlin:owner"
+grep -q -F -e '"scala": ["ADR 0019"' "$parity" || deferred_fail="$deferred_fail scala:owner"
+grep -q -F -e '"csharp": ["ADR 0019"' "$parity" || deferred_fail="$deferred_fail csharp:owner"
+grep -q -F -e '"fsharp": ["ADR 0019"' "$parity" || deferred_fail="$deferred_fail fsharp:owner"
+grep -q -F -e '"powershell": ["ADR 0019"' "$parity" || deferred_fail="$deferred_fail powershell:owner"
+grep -q -F -e '"ruby": ["ADR 0019"' "$parity" || deferred_fail="$deferred_fail ruby:owner"
+grep -q -F -e '"c": ["ADR 0019"' "$parity" || deferred_fail="$deferred_fail c:owner"
+grep -q -F -e '"cpp": ["ADR 0019"' "$parity" || deferred_fail="$deferred_fail cpp:owner"
 grep -q -F -e 'PARITY_DEFERRED = {' "$parity" || deferred_fail="$deferred_fail shape:missing"
 grep -q -F -e 'REAL_ADAPTERS = {' "$adapters" || deferred_fail="$deferred_fail adapters:missing"
 grep -q -F -e 'REAL_CLASS_TO_FAMILY = {' "$adapters" || deferred_fail="$deferred_fail taxonomy:missing"
@@ -182,7 +182,7 @@ fi
 
 # Packaging single-correct-path plus manifest completeness plus candidate
 # wire profile URIs plus verification binding (qualification planning,
-# O38/O39 own execution; this crate never signs or publishes).
+# the issue tracker own execution; this crate never signs or publishes).
 packaging_fail=""
 grep -q -F -e 'packaging_uses_single_correct_path' "$qual" || packaging_fail="$packaging_fail packaging:fn"
 grep -q -F -e 'manifest_covers_payload' "$qual" || packaging_fail="$packaging_fail manifest:fn"

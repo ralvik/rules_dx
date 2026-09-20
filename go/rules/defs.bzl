@@ -1,4 +1,4 @@
-"""Experimental minimal Go wrappers (M22, O30, ADR 0019).
+"""Experimental minimal Go wrappers (ADR 0019).
 
 Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
@@ -21,7 +21,7 @@ _DX_GO_LIBRARY_PROVIDES = [
 # `GoArchive`), but advertise only `DefaultInfo` plus
 # `QualitySourcesInfo`: neither shape is depended on as a Go library,
 # so no consumer matches on the forwarded providers. `QualitySourcesInfo`
-# is advertised so M22+ quality aspects can gate on it. Coverage reads
+# is advertised so quality aspects can gate on it. Coverage reads
 # `InstrumentedFilesInfo` from the test target, not via `provides`
 # (same shape as the `javascript_*` test forwarder).
 _DX_GO_EXEC_PROVIDES = [
@@ -95,11 +95,11 @@ def _go_wrap_binary(name, srcs, visibility = None, **kwargs):
     )
 
 def go_library(name, srcs, importpath, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `go_library` (M22)."""
+    """Experimental minimal wrapper over `go_library`."""
     _go_wrap_library(name, srcs, visibility = visibility, importpath = importpath, **kwargs)
 
 def go_binary(name, srcs = None, importpath = None, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `go_binary` (M22).
+    """Experimental minimal wrapper over `go_binary`.
 
     Two shapes: an ordinary binary owns its `srcs` (package main plus
     `deps` on a wrapper library), while a thin entry binary generated
@@ -115,7 +115,7 @@ def go_binary(name, srcs = None, importpath = None, visibility = None, **kwargs)
         _go_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
 
 def go_test(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `go_test` (M22).
+    """Experimental minimal wrapper over `go_test`.
 
     With `srcs`, those test sources are this test's direct sources for
     QualitySourcesInfo. The library under test stays its ordinary

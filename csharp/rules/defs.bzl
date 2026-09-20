@@ -1,4 +1,4 @@
-"""Experimental minimal C# wrappers (M23, O31, ADR 0019).
+"""Experimental minimal C# wrappers (ADR 0019).
 
 Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
@@ -20,7 +20,7 @@ _DX_CSHARP_LIBRARY_PROVIDES = [
 # at runtime when present, but advertise only `DefaultInfo` plus
 # `QualitySourcesInfo`: neither shape is depended on as a C# library,
 # so no consumer matches on the forwarded providers. `QualitySourcesInfo`
-# is advertised so M23+ quality aspects can gate on it. Coverage reads
+# is advertised so quality aspects can gate on it. Coverage reads
 # `InstrumentedFilesInfo` from the test target, not via `provides`
 # (same shape as the `java_*` test forwarder).
 _DX_CSHARP_EXEC_PROVIDES = [
@@ -112,11 +112,11 @@ def _csharp_wrap_binary(name, srcs, visibility = None, **kwargs):
     )
 
 def csharp_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `csharp_library` (M23)."""
+    """Experimental minimal wrapper over `csharp_library`."""
     _csharp_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
 def csharp_binary(name, srcs = None, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `csharp_binary` (M23).
+    """Experimental minimal wrapper over `csharp_binary`.
 
     An ordinary binary owns its `srcs` plus `deps` on a wrapper library;
     the entry point follows the C# `Main` convention (no main_class
@@ -126,13 +126,13 @@ def csharp_binary(name, srcs = None, visibility = None, **kwargs):
     _csharp_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
 
 def csharp_test(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `csharp_test` (M23).
+    """Experimental minimal wrapper over `csharp_test`.
 
     With `srcs`, those test sources are this test's direct sources for
     QualitySourcesInfo. The library under test stays its ordinary owner via
     `deps`; test sources are never the library's sources. The test is a
     plain executable (exit code is the verdict); the xUnit/NUnit runner
-    selection stays open under O31. Uses Bazel's standard test and coverage
+    selection stays open under ADR 0019. Uses Bazel's standard test and coverage
     protocols."""
     test_srcs = srcs if srcs != None else []
     upstream_kwargs = _csharp_with_tfm(kwargs)

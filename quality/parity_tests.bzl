@@ -1,4 +1,4 @@
-"""Fail-closed v1 parity gate (M24 WP1/WP3, O32).
+"""Fail-closed v1 parity gate (WP1/WP3, ADR 0019).
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
@@ -12,49 +12,49 @@ load(":adapters.bzl", "REAL_ADAPTERS", "REAL_CLASS_TO_FAMILY")
 PARITY_SCHEMA_VERSION = 1
 
 # Class -> [owning decision, frozen acquisition route] for every classified
-# class no adapter claims yet. Owners are open-decision IDs (O32 owns the
-# deferred adapter backlog; O31 owns the frozen Ruby/PowerShell tool routes;
-# O29/O40/O41/O42 own the framework quality regions) or ADR 0019 for
+# class no adapter claims yet. Owners are open-decision IDs (ADR 0019 owns the
+# deferred adapter backlog; ADR 0019 owns the frozen Ruby/PowerShell tool routes;
+# /// own the framework quality regions) or ADR 0019 for
 # exclusions. Routes name the frozen delivery class from tool acquisition;
 # exact versions, digests, rule sets, and adapter mappings stay pending
 # under the owning decision.
 PARITY_DEFERRED = {
-    "astro": ["O42/O32", "framework adapter region; Prettier/ESLint plugin closure pending"],
-    "c": ["O32", "authoritative hermetic-llvm toolchain (clang-format, clang-tidy); cppcheck standalone artifact -- Native cohort owned by issue #418"],
-    "cpp": ["O32", "authoritative hermetic-llvm toolchain (clang-format, clang-tidy); cppcheck standalone artifact -- Native cohort owned by issue #418"],
-    "csharp": ["O32", "exact upstream package plus shared .NET runtime (CSharpier); Roslyn CA analyzers SDK-coupled -- Scala/.NET cohort owned by issue #417"],
-    "css": ["O32", "private Node graph (Prettier); standalone artifact (Stylelint) -- Interpreted/file-family cohort owned by issue #420"],
-    "cuda": ["O32", "authoritative toolchain (clang-format); CUDA scope fails closed until qualified"],
-    "cue": ["O32", "checksummed standalone artifact (cue fmt) -- Interpreted/file-family cohort owned by issue #420"],
-    "fsharp": ["O32", "exact upstream package plus shared .NET runtime (Fantomas); FSharpLint pending -- Scala/.NET cohort owned by issue #417"],
-    "gherkin": ["O32", "private Node graph (Prettier prettier-plugin-gherkin closure) -- Interpreted/file-family cohort owned by issue #420"],
-    "go": ["O32", "authoritative Go toolchain (gofmt/gofumpt); staticcheck/govet standalone artifacts -- Native cohort owned by issue #418"],
-    "go_module": ["O32", "checksummed standalone artifact (modfmt) -- Interpreted/file-family cohort owned by issue #420"],
-    "graphql": ["O32", "private Node graph (Prettier GraphQL parser)"],
-    "html": ["O32", "private Node graph (Prettier HTML parser)"],
-    "html_template": ["O32", "checksummed standalone artifact (djlint); shared managed Python runtime -- Interpreted/file-family cohort owned by issue #420"],
-    "java": ["O32", "complete upstream artifact plus shared JDK (google-java-format, Checkstyle, PMD, SpotBugs) -- JVM cohort owned by issue #416"],
-    "json5": ["O32", "private Node graph (Prettier JSON5 parser); Biome JSON-family extension pending"],
-    "jsonc": ["O32", "private Node graph (Prettier JSONC parser); Biome JSON-family extension pending"],
-    "jsonnet": ["O32", "checksummed standalone artifact (jsonnetfmt) -- Interpreted/file-family cohort owned by issue #420"],
-    "kotlin": ["O32", "complete upstream artifact plus shared JDK (ktfmt, ktlint); detekt pending -- JVM cohort owned by issue #416"],
-    "less": ["O32", "private Node graph (Prettier); standalone artifact (Stylelint)"],
-    "mdx": ["O32", "framework adapter region; prose-is-not-dependency boundary per O42 composition"],
-    "pkl": ["O32", "checksummed standalone artifact (pkl) -- Interpreted/file-family cohort owned by issue #420"],
-    "powershell": ["O31/O32", "exact module plus portable PowerShell runtime (PSScriptAnalyzer); foundation deferred by ADR 0019 -- Interpreted/file-family cohort owned by issue #420"],
-    "protobuf": ["O32", "checksummed standalone artifact (buf format+lint) -- Structured cohort owned by issue #419"],
-    "qml": ["O32", "authoritative Qt distribution toolchain (qmlformat, qmllint) -- Structured cohort owned by issue #419"],
-    "ruby": ["O31/O32", "release-assembled Ruby closure (RuboCop, StandardRB); foundation deferred by ADR 0019 -- Interpreted/file-family cohort owned by issue #420"],
-    "scala": ["O32", "managed JVM route: compatible JVM artifact (scalafmt); semantic-rule artifacts over shared JDK (Scalafix) -- Scala/.NET cohort owned by issue #417"],
-    "scss": ["O32", "private Node graph (Prettier); standalone artifact (Stylelint)"],
-    "shell": ["O32", "checksummed standalone artifacts (shfmt, ShellCheck)"],
-    "sql": ["O32", "private Node graph (Prettier prettier-plugin-sql closure) -- Interpreted/file-family cohort owned by issue #420"],
-    "svelte": ["O40/O32", "framework adapter region; Prettier/ESLint plugin closure pending"],
-    "terraform": ["O32", "checksummed standalone artifact (terraform fmt) -- Interpreted/file-family cohort owned by issue #420"],
-    "text": ["O32", "checksummed standalone artifact (keep-sorted) -- Interpreted/file-family cohort owned by issue #420"],
-    "vue": ["O29/O32", "framework adapter region; Prettier/ESLint plugin closure pending"],
-    "xml": ["O32", "private Node graph (Prettier prettier-plugin-xml closure) -- Interpreted/file-family cohort owned by issue #420"],
-    "yaml": ["O32", "checksummed standalone artifacts (yamlfmt, yamllint); shared managed Python runtime for yamllint -- Interpreted/file-family cohort owned by issue #420"],
+    "astro": ["/ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
+    "c": ["ADR 0019", "authoritative hermetic-llvm toolchain (clang-format, clang-tidy); cppcheck standalone artifact -- Native cohort owned by issue #418"],
+    "cpp": ["ADR 0019", "authoritative hermetic-llvm toolchain (clang-format, clang-tidy); cppcheck standalone artifact -- Native cohort owned by issue #418"],
+    "csharp": ["ADR 0019", "exact upstream package plus shared .NET runtime (CSharpier); Roslyn CA analyzers SDK-coupled -- Scala/.NET cohort owned by issue #417"],
+    "css": ["ADR 0019", "private Node graph (Prettier); standalone artifact (Stylelint) -- Interpreted/file-family cohort owned by issue #420"],
+    "cuda": ["ADR 0019", "authoritative toolchain (clang-format); CUDA scope fails closed until qualified"],
+    "cue": ["ADR 0019", "checksummed standalone artifact (cue fmt) -- Interpreted/file-family cohort owned by issue #420"],
+    "fsharp": ["ADR 0019", "exact upstream package plus shared .NET runtime (Fantomas); FSharpLint pending -- Scala/.NET cohort owned by issue #417"],
+    "gherkin": ["ADR 0019", "private Node graph (Prettier prettier-plugin-gherkin closure) -- Interpreted/file-family cohort owned by issue #420"],
+    "go": ["ADR 0019", "authoritative Go toolchain (gofmt/gofumpt); staticcheck/govet standalone artifacts -- Native cohort owned by issue #418"],
+    "go_module": ["ADR 0019", "checksummed standalone artifact (modfmt) -- Interpreted/file-family cohort owned by issue #420"],
+    "graphql": ["ADR 0019", "private Node graph (Prettier GraphQL parser)"],
+    "html": ["ADR 0019", "private Node graph (Prettier HTML parser)"],
+    "html_template": ["ADR 0019", "checksummed standalone artifact (djlint); shared managed Python runtime -- Interpreted/file-family cohort owned by issue #420"],
+    "java": ["ADR 0019", "complete upstream artifact plus shared JDK (google-java-format, Checkstyle, PMD, SpotBugs) -- JVM cohort owned by issue #416"],
+    "json5": ["ADR 0019", "private Node graph (Prettier JSON5 parser); Biome JSON-family extension pending"],
+    "jsonc": ["ADR 0019", "private Node graph (Prettier JSONC parser); Biome JSON-family extension pending"],
+    "jsonnet": ["ADR 0019", "checksummed standalone artifact (jsonnetfmt) -- Interpreted/file-family cohort owned by issue #420"],
+    "kotlin": ["ADR 0019", "complete upstream artifact plus shared JDK (ktfmt, ktlint); detekt pending -- JVM cohort owned by issue #416"],
+    "less": ["ADR 0019", "private Node graph (Prettier); standalone artifact (Stylelint)"],
+    "mdx": ["ADR 0019", "framework adapter region; prose-is-not-dependency boundary per composition"],
+    "pkl": ["ADR 0019", "checksummed standalone artifact (pkl) -- Interpreted/file-family cohort owned by issue #420"],
+    "powershell": ["ADR 0019", "exact module plus portable PowerShell runtime (PSScriptAnalyzer); foundation deferred by ADR 0019 -- Interpreted/file-family cohort owned by issue #420"],
+    "protobuf": ["ADR 0019", "checksummed standalone artifact (buf format+lint) -- Structured cohort owned by issue #419"],
+    "qml": ["ADR 0019", "authoritative Qt distribution toolchain (qmlformat, qmllint) -- Structured cohort owned by issue #419"],
+    "ruby": ["ADR 0019", "release-assembled Ruby closure (RuboCop, StandardRB); foundation deferred by ADR 0019 -- Interpreted/file-family cohort owned by issue #420"],
+    "scala": ["ADR 0019", "managed JVM route: compatible JVM artifact (scalafmt); semantic-rule artifacts over shared JDK (Scalafix) -- Scala/.NET cohort owned by issue #417"],
+    "scss": ["ADR 0019", "private Node graph (Prettier); standalone artifact (Stylelint)"],
+    "shell": ["ADR 0019", "checksummed standalone artifacts (shfmt, ShellCheck)"],
+    "sql": ["ADR 0019", "private Node graph (Prettier prettier-plugin-sql closure) -- Interpreted/file-family cohort owned by issue #420"],
+    "svelte": ["/ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
+    "terraform": ["ADR 0019", "checksummed standalone artifact (terraform fmt) -- Interpreted/file-family cohort owned by issue #420"],
+    "text": ["ADR 0019", "checksummed standalone artifact (keep-sorted) -- Interpreted/file-family cohort owned by issue #420"],
+    "vue": ["/ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
+    "xml": ["ADR 0019", "private Node graph (Prettier prettier-plugin-xml closure) -- Interpreted/file-family cohort owned by issue #420"],
+    "yaml": ["ADR 0019", "checksummed standalone artifacts (yamlfmt, yamllint); shared managed Python runtime for yamllint -- Interpreted/file-family cohort owned by issue #420"],
 }
 
 def _adapter_backed_classes():

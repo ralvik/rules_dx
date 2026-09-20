@@ -1,5 +1,5 @@
 // Stdlib lists the Node.js builtin module identities treated as standard
-// library by the Astro Gazelle extension (M20, O41). Astro frontmatter
+// library by the Astro Gazelle extension. Astro frontmatter
 // and client `<script>` blocks execute as JavaScript/TypeScript modules,
 // so the same Node builtin set applies: generation treats these imports
 // as standard library without an edge, a manifest, or a lockfile. Both

@@ -1,4 +1,4 @@
-"""Focused Svelte environment plan (M19 WP2).
+"""Focused Svelte environment plan (WP2).
 
 Contract: `docs/environments/environment.md`.
 """
@@ -70,5 +70,5 @@ svelte_env_plan = rule(
             doc = "One svelte_* wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused Svelte environment plan for one wrapper target (M19 WP2).",
+    doc = "Emits the provider-derived focused Svelte environment plan for one wrapper target (WP2).",
 )

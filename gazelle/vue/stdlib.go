@@ -1,5 +1,5 @@
 // Stdlib lists the Node.js builtin module identities treated as standard
-// library by the Vue Gazelle extension (M18, O29). Vue `<script>` blocks
+// library by the Vue Gazelle extension. Vue `<script>` blocks
 // execute as JavaScript/TypeScript modules, so the same Node builtin set
 // applies: generation treats these imports as standard library without an
 // edge, a manifest, or a lockfile. Both bare (`fs`) and `node:`-prefixed

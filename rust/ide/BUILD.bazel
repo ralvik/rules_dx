@@ -2,7 +2,7 @@
 
 The environment contract reuses the pinned patched rules_rust discovery
 and flycheck binaries; this package pins their acquisition. Focused
-exact-target projection evidence lives in the M12 completion report.
+exact-target projection evidence lives in the completion report.
 """
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")

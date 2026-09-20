@@ -1,4 +1,4 @@
-"""Unit tests for the normalized environment plans (M25 WP2).
+"""Unit tests for the normalized environment plans (issue #506 WP2).
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

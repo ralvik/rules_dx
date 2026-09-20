@@ -1,4 +1,4 @@
-//! Combined setup request planning for the `dx` CLI (M25 WP3 slice 1).
+//! Combined setup request planning for the `dx` CLI (issue #506 WP3 slice 1).
 //!
 //! Contract: `docs/cli/commands/environment-codegen-setup.md` (`dx setup`
 //! scope: no argument prepares repository-wide codegen and environment
@@ -10,7 +10,7 @@
 //!
 //! This crate owns scope resolution, the combined request plan, pair
 //! resolution (slice 2), and the commit layer (slice 3): re-reading
-//! `.dx/setups/current` under the O36 commit lock and atomically
+//! `.dx/setups/current` under the commit lock and atomically
 //! replacing the current pointer. Staging, validation, and generation
 //! materialization land in later WP3 slices; the setup record links may
 //! dangle until generations exist (ordinary host missing-target behavior,
@@ -52,7 +52,7 @@ pub const ENV_OUTPUT_GROUP: &str = "dx_env_plans";
 
 /// Canonical repository-wide codegen selection built by bare `dx setup`.
 /// Matches `REPOSITORY_TARGET` in `dx_codegen`. The effective Bazel roots
-/// behind this label stay provisional pending the WP4 (O34) root
+/// behind this label stay provisional pending the WP4 (issue #506) root
 /// benchmark; this crate only owns the selection identity.
 pub const CODEGEN_REPOSITORY_TARGET: &str = "//dx:codegen";
 
@@ -200,7 +200,7 @@ pub struct SetupRequest {
 }
 
 /// Plans the single combined Bazel request for `scope`. The repository
-/// arm composes the WP4 (O34) [`dx_roots::repository_plan`] (still the
+/// arm composes the WP4 (issue #506) [`dx_roots::repository_plan`] (still the
 /// `//...` baseline) behind both canonical selections; exact scopes
 /// bypass root selection.
 pub fn plan_request(scope: &SetupScope) -> SetupRequest {
@@ -341,7 +341,7 @@ pub const ENVIRONMENT_LINK_NAME: &str = "environment";
 pub const GENERATED_LINK_NAME: &str = "generated";
 
 /// How long a setup commit contends for the workspace commit lock before
-/// failing with a busy diagnostic. Mirrors `dx_env::LOCK_TIMEOUT` (O36
+/// failing with a busy diagnostic. Mirrors `dx_env::LOCK_TIMEOUT` (
 /// ten-second deadline); pinned equal by test, never drifted silently.
 pub const COMMIT_LOCK_TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -470,7 +470,7 @@ fn map_lock_error(error: Error) -> CommitError {
     }
 }
 
-/// Acquires the shared workspace commit lock. This is the O36 route owned
+/// Acquires the shared workspace commit lock. This is the route owned
 /// by `dx_env::acquire_lock` over `dx_atomic_fs::lock_exclusive` (#74:
 /// dedicated lock file, `File::try_lock`, contention-only retry until the
 /// deadline): setup introduces no new lock file, mechanism, or deadline.
@@ -1319,7 +1319,7 @@ mod tests {
         let scratch = commit_root("concurrent");
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
-        // Eight racing commits over four distinct pairs: the O36 commit
+        // Eight racing commits over four distinct pairs: the commit
         // lock must serialize them so every commit succeeds, every record
         // installs, and duplicate pairs reuse the installed record
         // (`AlreadyCurrent` or a same-pair replacement, never a failure

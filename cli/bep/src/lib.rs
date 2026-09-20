@@ -1,5 +1,5 @@
 //! Streaming Bazel Build Event Protocol collector for the `dx` CLI
-//! (M06 WP2).
+//! (WP2).
 //!
 //! Contract: `docs/quality/quality-result-protocol.md` (transport and
 //! collection) and `docs/testing/environments.md` (BEP and projection

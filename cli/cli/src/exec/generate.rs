@@ -38,7 +38,7 @@ fn finish_incomplete_generate(invocation: &Invocation, out: &mut dyn Write, code
 }
 
 /// Runs `dx generate` through the canonical `//dx:generate` Gazelle
-/// runner, or `//dx:generate_check` for `--check` (M10 WP1, O13
+/// runner, or `//dx:generate_check` for `--check` (WP1,
 /// dispatch). Contract: `docs/cli/commands/generate.md` for the
 /// target surface. Scope positionals resolve through the canonical
 /// target resolution and narrow the runner traversal to the resolved

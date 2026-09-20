@@ -18,7 +18,7 @@ pub fn inspect_scope_allowed(scope: &str, external: bool) -> bool {
     !scope.is_empty() && !external
 }
 
-/// Planned thin inspect forwarding (O56 freeze): the Bazel verb plus
+/// Planned thin inspect forwarding (frozen): the Bazel verb plus
 /// the single query expression, executed as `bazel <verb> <expr>` with
 /// bytewise-sorted deduplicated canonical labels and no custom graph
 /// engine. The verb and expression stay separate so the caller cannot
@@ -31,7 +31,7 @@ pub struct InspectPlan {
     pub expr: String,
 }
 
-/// Plan one inspect query (O56 freeze).
+/// Plan one inspect query (frozen).
 pub fn plan_inspect(kind: &str, scope: &str, configured: bool) -> Result<InspectPlan, AdoptError> {
     if !inspect_scope_allowed(scope, scope.starts_with('@')) {
         return Err(AdoptError::RejectedScope {
@@ -57,7 +57,7 @@ pub fn plan_inspect(kind: &str, scope: &str, configured: bool) -> Result<Inspect
     })
 }
 
-/// Plan the `somepath` leg of `dx why <file> <label>` (O56 freeze).
+/// Plan the `somepath` leg of `dx why <file> <label>` (frozen).
 ///
 /// `from` is the resolved file owner (a depth-1 owner label, never the
 /// raw file path) and `to` is the target label, both passed through

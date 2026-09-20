@@ -1,5 +1,5 @@
-//! Repository-root strategy planning for `dx codegen`, `dx env`, and `dx setup` (M25 WP4,
-//! O34).
+//! Repository-root strategy planning for `dx codegen`, `dx env`, and `dx setup` (issue #506 WP4,
+//! issue #506).
 //!
 //! Contract: `docs/environments/codegen.md` (repository root selection and
 //! performance model) and `docs/environments/environment.md` (repository and
@@ -47,14 +47,14 @@ pub const REPOSITORY_PATTERN: &str = "//...";
 /// central eager `label_list` dependency node is created.
 pub const PATTERN_FILE_FLAG: &str = "--target_pattern_file";
 
-/// Warm weight in the O34 decision score (`cold_ms + WARM_WEIGHT *
-/// warm_ms`). PROVISIONAL (O34, flagged for review): warm runs dominate
+/// Warm weight in the issue #506 decision score (`cold_ms + WARM_WEIGHT *
+/// warm_ms`). PROVISIONAL (issue #506, flagged for review): warm runs dominate
 /// developer-iteration latency on internal paths, so warm counts double;
 /// the measured WP4 benchmarks may adjust this weight before the strategy
 /// freeze.
 pub const WARM_WEIGHT: u64 = 2;
 
-/// Frozen O34 repository-root strategy (M25 WP4 slice 3): the `//...`
+/// Frozen issue #506 repository-root strategy (issue #506 WP4 slice 3): the `//...`
 /// correctness baseline.
 ///
 /// Measured evidence (2026-09-14, Linux x86_64, Bazel 9.2.0 via Bazelisk
@@ -108,7 +108,7 @@ pub const FROZEN_EVIDENCE: [(RootStrategy, bool, u64, u64); 4] = [
     (RootStrategy::PackageShards, false, 2000, 300),
 ];
 
-/// Measured incrementality evidence for the frozen baseline (M25 WP4 slice
+/// Measured incrementality evidence for the frozen baseline (issue #506 WP4 slice
 /// 4, issue #25): steady-state warm-server wall times and executed actions
 /// per edit/churn [`BenchmarkDimension`], as `(dimension,
 /// baseline_wall_ms, queryfile_wall_ms, actions_executed)`.
@@ -179,7 +179,7 @@ pub const DEFAULT_OUTPUTS_WARM_MS: u64 = 502;
 /// actions).
 pub const SERVER_PEAK_RSS_KB: u64 = 2628812;
 
-/// Repository-root strategy candidates under O34.
+/// Repository-root strategy candidates under issue #506.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum RootStrategy {
     /// Correctness baseline: apply the collecting aspects to `//...`.
@@ -456,7 +456,7 @@ impl BenchmarkDimension {
     }
 }
 
-/// One candidate's headline benchmark sample for the O34 decision. Full
+/// One candidate's headline benchmark sample for the issue #506 decision. Full
 /// per-dimension rows land with the measurement harness; the freeze rule
 /// compares cold against warm only.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -470,11 +470,11 @@ pub struct BenchmarkSample {
     /// Cold Bazel time in milliseconds.
     pub cold_ms: u64,
     /// Warm Bazel time in milliseconds (persistent server, warm action
-    /// cache), weighted above cold per O34.
+    /// cache), weighted above cold per issue #506.
     pub warm_ms: u64,
 }
 
-/// O34 decision score: `cold_ms + WARM_WEIGHT * warm_ms`, saturating. Warm
+/// issue #506 decision score: `cold_ms + WARM_WEIGHT * warm_ms`, saturating. Warm
 /// dominates, so a candidate trading slower cold for much faster warm can
 /// win.
 pub fn weighted_score(sample: &BenchmarkSample) -> u128 {

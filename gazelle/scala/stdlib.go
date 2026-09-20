@@ -1,8 +1,8 @@
 // Stdlib lists the Scala/JDK import roots treated as standard library by the
-// Scala Gazelle extension (M23, O31). Generation treats these imports as
+// Scala Gazelle extension (ADR 0019). Generation treats these imports as
 // Scala/JDK-provided without an edge, a manifest, or a lockfile. The set covers
 // the Scala `scala.*` plus the stable `java.*`, `javax.*`, `javafx.*`, `jdk.*`, plus the JDK-bundled
-// `org.w3c.*`/`org.xml.*` packages; it is revisited when O31 freezes the
+// `org.w3c.*`/`org.xml.*` packages; it is revisited when ADR 0019 freezes the
 // JDK baseline.
 package scala
 

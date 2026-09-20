@@ -5,9 +5,9 @@
 # `//dx:codegen` facade labels so the tree cannot silently drift: both stay
 # empty filegroups (Accepted selection identity/default, not provisional),
 # while the real typed sections and plan collection live in their frozen
-# owners (`//quality:policy.bzl` for O17, `//quality:sources.bzl` for O15,
-# `//generation:codegen.bzl` plus `//cli/codegen` for O33, `//cli/roots`
-# for the O34 `//...` baseline). Docs assert the same Accepted state.
+# owners (`//quality:policy.bzl` for `//quality:sources.bzl` for
+# `//generation:codegen.bzl` plus `//cli/codegen` for issue #506, `//cli/roots`
+# for the issue #506 `//...` baseline). Docs assert the same Accepted state.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:dx_facade_qualification`,
 # following //tools/ci:backlog_contracts.
@@ -41,7 +41,7 @@ else
 fi
 
 # No PROVISIONAL open-decision marker may remain on the facade labels.
-if ! grep -E -e 'PROVISIONAL \(open decision' dx/BUILD.bazel | grep -q -E -e 'O17|O33|O34'; then
+if ! grep -E -e 'PROVISIONAL \(open decision' dx/BUILD.bazel | grep -q -E -e '|issue #506|issue #506'; then
   ok
 else
   bad "dx/BUILD.bazel still marks //dx:config or //dx:codegen PROVISIONAL"
@@ -62,7 +62,7 @@ else
   bad "CLI REPOSITORY_TARGET drifted from //dx:codegen"
 fi
 
-# Rust and Starlark codegen constants still agree (O33 freeze).
+# Rust and Starlark codegen constants still agree (frozen).
 rust_group="$(grep -F -e 'pub const OUTPUT_GROUP' cli/codegen/src/lib.rs | sed 's/.*= "//; s/";.*//')"
 bzl_group="$(grep -F -e 'DX_CODEGEN_PLAN_OUTPUT_GROUP = ' generation/codegen.bzl | head -n 1 | sed 's/.*= "//; s/".*//')"
 rust_suffix="$(grep -F -e 'pub const SHARD_SUFFIX' cli/codegen/src/lib.rs | sed 's/.*= "//; s/";.*//')"
@@ -73,39 +73,39 @@ else
   bad "codegen Rust/Starlark constants drifted (group=$rust_group/$bzl_group suffix=$rust_suffix/$bzl_suffix)"
 fi
 
-# Typed policy sections stay frozen in their owner (O17): fail closed if
+# Typed policy sections stay frozen in their owner: fail closed if
 # the constructor moves without this harness moving with it.
 if grep -q -F -e 'quality_family = rule(' quality/policy.bzl &&
   grep -q -F -e 'workspace_policy = rule(' quality/policy.bzl &&
   grep -q -F -e 'QualityPolicyInfo' quality/policy.bzl; then
   ok
 else
-  bad "quality/policy.bzl lost its frozen typed sections (O17)"
+  bad "quality/policy.bzl lost its frozen typed sections"
 fi
 
-# Source-ownership boundary stays frozen in its owner (O15).
+# Source-ownership boundary stays frozen in its owner.
 if grep -q -F -e 'QualitySourcesInfo = provider(' quality/sources.bzl &&
   grep -q -F -e 'KNOWN_SEMANTIC_FILE_CLASSES = [' quality/sources.bzl; then
   ok
 else
-  bad "quality/sources.bzl lost its frozen ownership boundary (O15)"
+  bad "quality/sources.bzl lost its frozen ownership boundary"
 fi
 
 # Admitted generator/language pairs stay frozen with at least the first
-# pair (O33): an empty registry would silently admit nothing.
+# pair (issue #506): an empty registry would silently admit nothing.
 if grep -q -F -e 'DX_CODEGEN_ADMITTED_PAIRS = (' generation/codegen.bzl &&
   grep -q -F -e '("protobuf", "rust")' generation/codegen.bzl; then
   ok
 else
-  bad "generation/codegen.bzl lost its O33 admitted-pair freeze"
+  bad "generation/codegen.bzl lost its issue #506 admitted-pair freeze"
 fi
 
-# O34 effective roots stay on the frozen baseline.
+# issue #506 effective roots stay on the frozen baseline.
 if grep -q -F -e 'pub const FROZEN_STRATEGY' cli/roots/src/lib.rs &&
   grep -q -F -e 'RecursivePattern' cli/roots/src/lib.rs; then
   ok
 else
-  bad "cli/roots lost its frozen O34 baseline"
+  bad "cli/roots lost its frozen issue #506 baseline"
 fi
 
 # Architecture facade twins read Accepted with the owning guard.
@@ -117,21 +117,21 @@ else
   bad "docs/architecture/README.md facade rows must read Accepted (issue #423)"
 fi
 
-# ADR 0011 keeps the O17/O15 ownership record with the #423 resolution.
-if grep -q -F -e 'open decision O17' docs/decisions/0011-configuration-composition.md &&
-  grep -q -F -e 'open decision O15' docs/decisions/0011-configuration-composition.md &&
+# ADR 0011 keeps the / ownership record with the #423 resolution.
+if grep -q -F -e 'open decision ' docs/decisions/0011-configuration-composition.md &&
+  grep -q -F -e 'open decision ' docs/decisions/0011-configuration-composition.md &&
   grep -q -F -e 'issue #423' docs/decisions/0011-configuration-composition.md; then
   ok
 else
-  bad "docs/decisions/0011 lost its O17/O15 plus issue #423 record"
+  bad "docs/decisions/0011 lost its / plus issue #423 record"
 fi
 
-# Generation contracts reference the O33 freeze behind the facade identity.
-if grep -q -F -e 'O33' docs/environments/codegen.md &&
+# Generation contracts reference the frozen behind the facade identity.
+if grep -q -F -e 'issue #506' docs/environments/codegen.md &&
   grep -q -F -e '//dx:codegen' docs/environments/codegen.md; then
   ok
 else
-  bad "docs/environments/codegen.md lost its O33 plus //dx:codegen record"
+  bad "docs/environments/codegen.md lost its issue #506 plus //dx:codegen record"
 fi
 
 dx_test_summary "dx facade qualification harness"

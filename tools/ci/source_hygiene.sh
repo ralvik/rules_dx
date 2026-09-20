@@ -60,7 +60,7 @@ fi
 
 # Banned duplicated prose stays out (issue #428): the ownership/history
 # essays moved to owning docs, leaving one-line refs only.
-if ! grep -rn -F -e 'O33 freeze (slice' --include='*.bzl' . 2>/dev/null | grep -q . &&
+if ! grep -rn -F -e 'frozen (slice' --include='*.bzl' . 2>/dev/null | grep -q . &&
   ! grep -rn -F -e 'Conflict rule' --include='*.bzl' . 2>/dev/null | grep -q . &&
   ! grep -rn -F -e 'Slice 4 adds' --include='*.bzl' . 2>/dev/null | grep -q . &&
   ! grep -rn -F -e 'Slice 2 (this file)' --include='*.bzl' . 2>/dev/null | grep -q . &&
@@ -68,11 +68,11 @@ if ! grep -rn -F -e 'O33 freeze (slice' --include='*.bzl' . 2>/dev/null | grep -
   ! grep -rn -F -e 'Rust \`pub\` surface' --include='*.bzl' . 2>/dev/null | grep -q . &&
   ! grep -rn -F -e 'Crate-level \`deny' --include='*.bzl' . 2>/dev/null | grep -q . &&
   ! grep -rn -F -e 'Physical/virtual ownership' --include='*.bzl' . 2>/dev/null | grep -q . &&
-  ! grep -rn -F -e 'M22 WP1 adds' --include='*.bzl' . 2>/dev/null | grep -q . &&
-  ! grep -rn -F -e 'M23 WP2 adds' --include='*.bzl' . 2>/dev/null | grep -q .; then
+  ! grep -rn -F -e ' WP1 adds' --include='*.bzl' . 2>/dev/null | grep -q . &&
+  ! grep -rn -F -e ' WP2 adds' --include='*.bzl' . 2>/dev/null | grep -q .; then
   ok
 else
-  bad "banned .bzl duplicated prose reappeared (want no O33-freeze/Conflict-rule/Slice-essays/Cargo-workspace/pub-surface/deny-warnings/physical-virtual/M22-M23 history in *.bzl, issue #428)"
+  bad "banned .bzl duplicated prose reappeared (want no issue #506-freeze/Conflict-rule/Slice-essays/Cargo-workspace/pub-surface/deny-warnings/physical-virtual/- history in *.bzl, issue #428)"
 fi
 
 # Function docs stay trimmed (issue #428): no Args/Returns restating

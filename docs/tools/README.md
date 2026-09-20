@@ -29,10 +29,10 @@ fixture evidence (`quality/testdata/runner_matrix_cases.bzl` pass/fail plus fix/
 `quality/native_config.bzl` bindings or explicit config-free/delegated status,
 `quality/artifacts/metadata_tests.bzl` plus `update.py --verify-only`, `cli/qualification`
 single-correct-path plus SPDX/SLSA wire profiles; Buildifier/Taplo/Vale probes stay
-provisional) with deferred implementation owned by O32/O31 plus ADR 0019.
+provisional) with deferred implementation owned by ADR 0019.
 Additional-language adapters (Java, Kotlin, Scala, C#, F#, C/C++, Go) have no
 claimed adapter yet; foundation-side classification stays owned under issue #304 and
-per-tool qualification is qualified under issue #307 with deferred routes owned by O32.
+per-tool qualification is qualified under issue #307 with deferred routes owned by ADR 0019.
 Ruby and PowerShell tool cohorts stay deferred beyond v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md);
 Swift is excluded from v1 by the same record.
@@ -40,7 +40,7 @@ Deferred/excluded tool record stays owned under issue #305: retained RuboCop/Sta
 PSScriptAnalyzer cohorts keep their frozen routes in
 [Tool Acquisition](tool-acquisition.md#first-release-tool-routing) with `ruby`/`powershell`
 classes classified but no adapter claim (`quality/adapters.bzl` plus `quality/parity_tests.bzl`
-with O31/O32 and ADR 0019); Swift/SwiftFormat plus Bandit stay excluded with host-toolchain
+with ADR 0019); Swift/SwiftFormat plus Bandit stay excluded with host-toolchain
 fallback never approved.
 
 Pinned by `bazel run //tools/ci:foundation_maps`.

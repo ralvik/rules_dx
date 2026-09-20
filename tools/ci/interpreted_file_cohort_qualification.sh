@@ -85,8 +85,8 @@ for cls in ruby powershell cue jsonnet pkl css html_template gherkin sql xml go_
   grep -q -F -e "\"$cls\":" "$parity" || cohort_deferred="$cohort_deferred $cls:missing"
 done
 if [[ -z "$cohort_deferred" ]] &&
-  grep -q -F -e '"ruby": ["O31/O32"' "$parity" &&
-  grep -q -F -e '"powershell": ["O31/O32"' "$parity" &&
+  grep -q -F -e '"ruby": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"powershell": ["ADR 0019"' "$parity" &&
   grep -q -F -e 'foundation deferred by ADR 0019' "$parity" &&
   grep -q -F -e 'Interpreted/file-family cohort owned by issue #420' "$parity"; then
   ok

@@ -416,7 +416,7 @@ mod tests {
         assert!(parse_clippy(bad.as_bytes(), Some(0), &["/s/x.rs"]).is_err());
     }
 
-    // Exact outputs probed from the pinned M15 Python binaries (ruff
+    // Exact outputs probed from the pinned Python binaries (ruff
     // 0.16.7, ty 0.0.80, pydoclint 0.9.1); the fixtures pin the
     // grammars above, so a tool upgrade that changes its output fails
     // here instead of silently shifting findings.

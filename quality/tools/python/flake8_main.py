@@ -1,4 +1,4 @@
-"""Flake8 entry point with exit-code propagation (M15 WP3).
+"""Flake8 entry point with exit-code propagation (WP3).
 
 Upstream `py_console_script_binary` expands to `{fn}()` without `sys.exit`,
 so flake8's integer return (1 findings, 2 usage error) is dropped and every
