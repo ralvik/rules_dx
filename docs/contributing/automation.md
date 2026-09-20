@@ -11,11 +11,14 @@ Delivered: native widen-one-requirement loop (issue #260) as the first-party app
 `dx bump <set:package> <version>` widens exactly one declared requirement
 (`dx_bump` planning, `dx bump` dispatch), then `dx update <set>` refreshes
 resolver-owned locks; Bazel and GitHub Actions verify file-only. The loop runs
-one dep per PR, never batch: discover outdated (stable only, prerelease
-follows upstream) → widen one → update → verify (regen evidence,
+one dep per PR, never batch: discover outdated via the upstream registry
+clients (stable only, prerelease follows upstream, transitives stay
+resolver-governed; planned in `dx_bump::discovery`, issue #639, fixtures in
+`cli/bump/tests/fixtures/bump_discovery/`) → widen one → update → verify (regen evidence,
 `preset.update --verify-only` flag-diff, `bazel build //...`,
 `bazel test //...`, coverage/dogfood) → if green open one PR, if red discard
-and record → reset to clean tree → next dep.
+and record → reset to clean tree → next dep. Scheduled runs without inputs
+enumerate outdated (manual selector only rejected).
 
 One dep per PR with an automerge on/off toggle only: when on, auto-merge
 solely on the full required-check set; when off, leave PRs open. No grouping,

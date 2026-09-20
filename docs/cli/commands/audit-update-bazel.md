@@ -602,7 +602,12 @@ verify file-only through `preset.update --verify-only` flag-diff review plus
 closed with nothing widened (exit `1`, `bump_failed`). Refresh failures keep
 the widen with no rollback and exit `1` with `update_failed`.
 
-Loop (one dep per PR, never batch): discover outdated (stable only) → widen
+Loop (one dep per PR, never batch): discover outdated (stable only,
+prerelease follows upstream, transitives stay resolver-governed) via the
+upstream registry clients (BCR / crates.io / npm registry / Go proxy /
+Maven Central / NuGet / GitHub releases, never custom HTTP; planned in
+`dx_bump::discovery`, issue #639, fixtures in
+`cli/bump/tests/fixtures/bump_discovery/`) → widen
 one requirement via `dx bump` (which chains its refresh automatically) →
 run the bump-PR verification (regen evidence,
 `preset.update --verify-only` flag-diff, `bazel build //...`,
@@ -613,7 +618,9 @@ next dep. One dep per PR with an automerge on/off toggle only: when on,
 auto-merge solely on the full required-check set; when off, leave PRs open.
 No grouping, schedule, or dashboard knobs. Runner is the scheduled
 `bump.yml` workflow with `GITHUB_TOKEN`, concurrency control so N open PRs do
-not stampede CI; failures never retry-until-green; fork-safety and the human
+not stampede CI; scheduled runs without inputs enumerate outdated via the
+upstream clients above (manual selector only rejected, issue #639);
+failures never retry-until-green; fork-safety and the human
 merge path from the [automation policy](../../contributing/automation.md)
 preserved.
 
