@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Consumer-CI qualification harness (issue #509).
 #
-# Qualifies the as-built consumer-CI record with fixture evidence and
-# owned gaps, without claiming unqualified integration:
+# Qualifies the as-built consumer-CI record with fixture evidence pinned in
+# `tools/ci/tests/fixtures/consumer_ci/pins.bzl` (plus `platforms.expected`
+# plus `revisions.expected` plus `reporting.expected`), without claiming
+# unqualified integration:
 # - delivered: reusable workflow contract (nine checks, explicit platforms,
 #   platforms-gate fail-closed, stable dx-ci aggregate, hygiene, concurrency,
 #   permissions, per-cell coverage with fork-safe comments), caller template
@@ -12,14 +14,16 @@
 #   native widen-one loop (sole updater, issue #461), dx migrate syntax
 #   plus manifest selection (delivered CLI with fail-closed execution, issue
 #   #462) plus dx run multirun (issue #463 delivered), tag hygiene as-built;
-# - open under #509 with honest records: platform/runner/isolation/cache/
+# - per-gap decisions with fixtures: platform/runner/isolation/cache/
 #   ordering evidence; merge/diff/queue/cancellation/aggregate binding;
 #   thread identity/ordering/limits; fork/untrusted/sensitive/retries/
 #   Code-Scanning qualification; sequential mode fail-closed pending
 #   qualification; tag hygiene plus
 #   release-input gaps; native-bot follow-ups; dx migrate manifest gap
 #   (syntax plus selection delivered under #462, run multirun delivered
-#   under #463).
+#   under #463); build-only self-call forever rejected per #408.
+# Seed only for platform plus consumer plus release evidence; no
+# Supported claim.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:consumer_ci_qualification`,
 # following //tools/ci:docs_pipeline_qualification.
@@ -47,6 +51,11 @@ migrate_rs="cli/adopt/src/migrate.rs"
 migrate_doc="docs/cli/commands/migrate.md"
 run_rs="cli/cli/src/exec/run.rs"
 run_doc="docs/cli/commands/build-test-coverage.md"
+pins="tools/ci/tests/fixtures/consumer_ci/pins.bzl"
+pins_build="tools/ci/tests/fixtures/consumer_ci/BUILD.bazel"
+platforms_expected="tools/ci/tests/fixtures/consumer_ci/platforms.expected"
+revisions_expected="tools/ci/tests/fixtures/consumer_ci/revisions.expected"
+reporting_expected="tools/ci/tests/fixtures/consumer_ci/reporting.expected"
 
 # Reusable workflow declares the nine-check contract with gate plus aggregate.
 if [[ -f "$workflow" ]] &&
@@ -394,6 +403,190 @@ if ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$verify" | grep -q . &&
   ok
 else
   bad "verification matrix lost its no-Supported plus consumer-honesty gate"
+fi
+
+# Fixture files stay present (issue #509).
+if [[ -f "$pins" && -f "$pins_build" && -f "$platforms_expected" && -f "$revisions_expected" && -f "$reporting_expected" ]]; then
+  ok
+else
+  bad "consumer-CI fixture missing (want $pins plus $pins_build plus platforms.expected plus revisions.expected plus reporting.expected)"
+fi
+
+# Pins record platform plus runner decisions with no implicit default.
+if grep -q -F -e 'PLATFORM_IDS' "$pins" &&
+  grep -q -F -e 'supported = {"linux_x86_64", "linux_arm64", "macos_arm64", "macos_x86_64", "windows_x86_64"}' "$pins" &&
+  grep -q -F -e 'no implicit default' "$pins" &&
+  grep -q -F -e 'must be a nonempty JSON array' "$pins" &&
+  grep -q -F -e "matrix.platform == 'linux_arm64' && 'ubuntu-24.04-arm'" "$pins" &&
+  grep -q -F -e "macos_x86_64' && 'macos-15-intel'" "$pins" &&
+  grep -q -F -e "macos_arm64' && 'macos-14'" "$pins" &&
+  grep -q -F -e 'windows-latest' "$pins" &&
+  grep -q -F -e 'never fall through' "$pins" &&
+  grep -q -F -e 'shell: bash' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its platform plus runner pins under issue #509"
+fi
+
+# Pins record isolation plus cache plus ordering decisions.
+if grep -q -F -e 'persist-credentials: false' "$pins" &&
+  grep -q -F -e 'needs: [platforms-gate]' "$pins" &&
+  grep -q -F -e 'Linux-once jobs never do' "$pins" &&
+  grep -q -F -e 'do not advertise parallelism while jobs serialize on one shared Bazel output-base lock' "$pins" &&
+  grep -q -F -e 'fail-fast: false' "$pins" &&
+  grep -q -F -e 'no actions/cache in reusable-consumer' "$pins" &&
+  grep -q -F -e 'bazel-windows-x86_64-' "$pins" &&
+  grep -q -F -e 'free-tier eligible' "$pins" &&
+  grep -q -F -e 'scheduling_mode: "parallel"' "$pins" &&
+  grep -q -F -e "scheduling_mode 'sequential' is qualification-open" "$pins" &&
+  grep -q -F -e 'unsupported scheduling_mode' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its isolation plus cache plus ordering pins under issue #509"
+fi
+
+# Pins record merge plus diff plus queue decisions.
+if grep -q -F -e 'Validate the proposed merge, not the contributor branch alone' "$pins" &&
+  grep -q -F -e 'All selected checks in a run use the same test-merge snapshot' "$pins" &&
+  grep -q -F -e 'report validation as blocked without head-only fallback or aggregate success' "$pins" &&
+  grep -q -F -e 'diff-based review placement does not narrow analysis scope' "$pins" &&
+  grep -q -F -e 'never on invented lines' "$pins" &&
+  grep -q -F -e 'Consumers enable and configure their queue' "$pins" &&
+  grep -q -F -e 'bound to the queue revision rather than an individual PR head' "$pins" &&
+  grep -q -F -e 'Queue runs never create, update, or clean up PR comments/threads' "$pins" &&
+  grep -q -F -e 'Queue membership does not grant fork code secrets or write credentials' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its merge plus diff plus queue pins under issue #509"
+fi
+
+# Pins record cancellation plus aggregate decisions.
+if grep -q -F -e 'group: dx-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}' "$pins" &&
+  grep -q -F -e 'cancel-in-progress: true' "$pins" &&
+  grep -q -F -e "Scope PR supersession to that PR's integration runs" "$pins" &&
+  grep -q -F -e 'Late callbacks must not overwrite current summaries' "$pins" &&
+  grep -q -F -e 'needs: [platforms-gate, lint, typecheck, format, generate, security-audit, license-audit, test, build, coverage]' "$pins" &&
+  grep -q -F -e 'if: ${{ always() }}' "$pins" &&
+  grep -q -F -e 'Disabled checks report skipped and stay green' "$pins" &&
+  grep -q -F -e 'cannot produce success' "$pins" &&
+  grep -q -F -e 'require in branch protection' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its cancellation plus aggregate pins under issue #509"
+fi
+
+# Pins record thread plus limit decisions with unfrozen numeric.
+if grep -q -F -e 'replyable/resolvable PR review threads' "$pins" &&
+  grep -q -F -e 'There is no review-comment opt-out or annotation-only mode' "$pins" &&
+  grep -q -F -e 'Preserve human comments, replies, and unrelated threads' "$pins" &&
+  grep -q -F -e 'delete bot-only threads without replies' "$pins" &&
+  grep -q -F -e 'resolve threads with human replies instead' "$pins" &&
+  grep -q -F -e 'one fixed, documented per-PR review-thread limit' "$pins" &&
+  grep -q -F -e 'without a consumer setting' "$pins" &&
+  grep -q -F -e 'deterministic ordering, not job completion order' "$pins" &&
+  grep -q -F -e 'Full reports retain every finding' "$pins" &&
+  grep -q -F -e 'The numeric limit and thread-accounting mechanics are not yet frozen' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its thread plus limit pins under issue #509"
+fi
+
+# Pins record fork plus untrusted plus sensitive decisions.
+if grep -q -F -e 'all_external_contributors' "$pins" &&
+  grep -q -F -e 'outside authors cannot self-approve' "$pins" &&
+  grep -q -F -e 'does not give fork code secrets or write credentials' "$pins" &&
+  grep -q -F -e 'dx-coverage-summary: coverage' "$pins" &&
+  grep -q -F -e 'Fork PR detected' "$pins" &&
+  grep -q -F -e 'Privileged reporting stays separate and never executes fork-controlled code' "$pins" &&
+  grep -q -F -e 'Treat artifacts and PR metadata as untrusted' "$pins" &&
+  grep -q -F -e 'contents: read' "$pins" &&
+  grep -q -F -e 'does not authorize exposing credentials, secret values' "$pins" &&
+  grep -q -F -e 'public CI reporting is not confidential' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its fork plus untrusted plus sensitive pins under issue #509"
+fi
+
+# Pins record retries plus Code-Scanning plus sequential decisions.
+if grep -q -F -e "Use GitHub's native rerun controls, not bot comment commands" "$pins" &&
+  grep -q -F -e 'Bounded transient reporting-transport retries may reuse the same identified results' "$pins" &&
+  grep -q -F -e 'exhausted retries retain reporting failure' "$pins" &&
+  grep -q -F -e 'code_scanning_opt_in' "$pins" &&
+  grep -q -F -e 'Off by default' "$pins" &&
+  grep -q -F -e 'upload-sarif' "$pins" &&
+  grep -q -F -e 'Disabled publication is not a reporting failure' "$pins" &&
+  grep -q -F -e 'Sequential ordering is [qualification-open]' "$pins" &&
+  grep -q -F -e 'fails closed on `scheduling_mode: sequential`' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its retries plus Code-Scanning plus sequential pins under issue #509"
+fi
+
+# Pins record tag plus release plus native-bot plus rejected decisions.
+if grep -q -F -e 'version = "0.0.0"' "$pins" &&
+  grep -q -F -e 'no v* tags' "$pins" &&
+  grep -q -F -e '/dist/' "$pins" &&
+  grep -q -F -e 'no silent upgrades' "$pins" &&
+  grep -q -F -e 'Must match the consumer MODULE.bazel pin' "$pins" &&
+  grep -q -F -e 'Tag hygiene and release-input gaps' "$pins" &&
+  grep -q -F -e 'sole updater' "$pins" &&
+  grep -q -F -e 'native-only' "$pins" &&
+  grep -q -F -e '"build-only self-call forever"' "$pins" &&
+  grep -q -F -e 'platform plus consumer plus release evidence stays owned gap' "$pins" &&
+  grep -q -F -e 'no Supported claim' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its tag plus release plus native-bot plus rejected pins under issue #509"
+fi
+
+# Fixture expected texts cover platform plus revision plus reporting gaps.
+if grep -q -F -e 'Five explicit platform identifiers with no implicit default' "$platforms_expected" &&
+  grep -q -F -e 'never falls through' "$platforms_expected" &&
+  grep -q -F -e 'absent in the reusable workflow' "$platforms_expected" &&
+  grep -q -F -e 'parallel only' "$platforms_expected" &&
+  grep -q -F -e 'Validate the proposed merge' "$revisions_expected" &&
+  grep -q -F -e 'never narrows scope' "$revisions_expected" &&
+  grep -q -F -e 'consumer-native' "$revisions_expected" &&
+  grep -q -F -e 'concurrency-scoped' "$revisions_expected" &&
+  grep -q -F -e 'single stable dx-ci' "$revisions_expected" &&
+  grep -q -F -e 'replyable/resolvable' "$reporting_expected" &&
+  grep -q -F -e 'one fixed, documented per-PR' "$reporting_expected" &&
+  grep -q -F -e 'all_external_contributors' "$reporting_expected" &&
+  grep -q -F -e 'least-privilege' "$reporting_expected" &&
+  grep -q -F -e 'native rerun' "$reporting_expected" &&
+  grep -q -F -e 'opt-in via code_scanning_opt_in' "$reporting_expected" &&
+  grep -q -F -e 'qualification-open' "$reporting_expected" &&
+  grep -q -F -e 'version 0.0.0' "$reporting_expected"; then
+  ok
+else
+  bad "platforms/revisions/reporting.expected lost gap coverage (want platform plus merge plus thread plus fork plus sequential plus tag, issue #509)"
+fi
+
+# Docs own the qualified record with the fixture proof.
+if grep -q -F -e 'tools/ci/tests/fixtures/consumer_ci/pins.bzl' "$contract" &&
+  grep -q -F -e 'tools/ci/tests/fixtures/consumer_ci/pins.bzl' "$matrix" &&
+  grep -q -F -e 'qualified by `bazel run //tools/ci:consumer_ci_qualification`' "$matrix"; then
+  ok
+else
+  bad "github-ci contract or matrix lost its #509 pins fixture record"
+fi
+
+# Live proof: the fixture package builds green on the seed host.
+if bazel build //tools/ci/tests/fixtures/consumer_ci/... --noshow_progress >/dev/null 2>&1; then
+  ok
+else
+  bad "consumer-CI fixture failed to build (want green on the seed host, issue #509)"
+fi
+
+# Verification matrix owns the qualified record under #509.
+if grep -q -F -e 'Consumer-CI per-gap decisions with fixture evidence' "$verify" &&
+  grep -q -F -e 'qualified seed-only under #509' "$verify" &&
+  grep -q -F -e 'tools/ci/tests/fixtures/consumer_ci/pins.bzl' "$verify" &&
+  grep -q -F -e 'bazel run //tools/ci:consumer_ci_qualification' "$verify" &&
+  grep -q -F -e '`consumer_ci_qualification` 43/43' "$verify"; then
+  ok
+else
+  bad "verification-matrix lost its #509 per-gap qualified record with 43/43"
 fi
 
 dx_test_summary "consumer CI qualification harness"

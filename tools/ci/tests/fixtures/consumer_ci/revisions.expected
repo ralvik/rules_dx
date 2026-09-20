@@ -1,0 +1,49 @@
+Consumer merge plus diff plus queue plus cancellation plus aggregate stay
+qualified with fixture evidence (issue #509).
+
+Merge validates the proposed merge, not the contributor branch alone.
+Validate the proposed merge with the same test-merge snapshot.
+All selected checks in a run use the same test-merge snapshot with its
+PR-head and target-branch revisions recorded. Map findings back to valid
+PR-diff source locations. If conflicts prevent test-merge creation,
+report validation as blocked without head-only fallback or aggregate
+success. The blocked-status path is qualified without executing fork
+code with reporting privileges.
+
+Diff placement never narrows scope: documentation-only and mixed changes
+still invoke all selected checks at normal scope, and diff-based review
+placement does not narrow analysis scope. Unmappable findings stay in
+reports and summary counts, never on invented lines, with no invented
+review locations.
+
+Queue is consumer-native: consumers enable and configure their queue.
+Queue checks use the same selected checks and stable aggregate identity,
+bound to the queue revision rather than an individual PR head. Queue runs
+never create, update, or clean up PR comments/threads. Obsolete queue
+results cannot satisfy a newer queue revision. Queue membership does not
+grant fork code secrets or write credentials.
+
+Cancellation is concurrency-scoped: group
+dx-ci-${{ github.workflow }}-${{ github.event.pull_request.number ||
+github.ref }} with cancel-in-progress true. New PR commits automatically
+cancel superseded integration runs for that PR in either scheduling mode.
+Scope PR supersession to that PR's integration runs, not other PRs or
+queue runs. Retain prior run history under normal retention; unfinished
+or cancelled checks are not passed. Late callbacks must not overwrite
+current summaries or modify current threads, even when cancellation races
+completion.
+
+Aggregate is the single stable dx-ci check: needs platforms-gate, lint,
+typecheck, format, generate, security-audit, license-audit, test, build,
+coverage with if always(). Disabled checks report skipped and stay green;
+every other non-success names its failing checks and fails the aggregate
+so the stable required check never hides a failing selection. Missing,
+blocked, unexpectedly skipped, cancelled, or incomplete selected results
+cannot produce success. Consumers require the aggregate in branch
+protection with latest-target validation; the integration never modifies
+those settings itself.
+
+Seed only for platform plus consumer plus release evidence; no
+Supported claim. Live merge-queue runs plus required-check bindings
+beyond static wiring stay owned under issue #509 tracker with native
+GitHub semantics.
