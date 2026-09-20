@@ -761,6 +761,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Selective Maven per-artifact wont-fix harness (issue #634); see docs/decisions/0024-selective-update.md.
+sh_binary(
+    name = "selective_maven_qualification",
+    srcs = ["selective_maven_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Update mutation-event wont-fix harness; see docs/cli/output-protocol.md#mutation.
 sh_binary(
     name = "update_events_qualification",
