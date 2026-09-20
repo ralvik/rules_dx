@@ -23,7 +23,9 @@
 //! requirement (never batch) then chains the refresh automatically
 //! (issue #638). Discovery enumerates outdated via the upstream registry
 //! clients and proposes stable versions only (issue #639, planned in
-//! [`discovery`]); prerelease
+//! [`discovery`]); GitHub Actions tags auto-resolve to SHA via the upstream
+//! GitHub releases client before the file edit (issue #640, planned in
+//! [`gha`]); prerelease
 //! eligibility follows the upstream resolver and project configuration,
 //! never a private policy. Transitive versions stay resolver-governed;
 //! lock refresh chains automatically resolver-owned (`dx update cargo`
@@ -36,6 +38,7 @@
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 pub mod discovery;
+pub mod gha;
 pub mod request;
 pub mod sets;
 pub mod version;
