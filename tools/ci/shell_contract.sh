@@ -14,7 +14,7 @@
 # only (no `.ps1`/`.bat`, no `rules_powershell`); product runtime is Rust
 # and shell-free except generated deploy launchers plus the doctor shim.
 # Guard maintenance owns shared helpers plus snapshot versus grep policy
-# (snapshot for golden bytes, `dx_expect_*` for
+# (snapshot for golden bytes, `dx_expect_*`/`dx_guard_*` table rows for
 # doc/code pins; this harness owns the rule).
 #
 # This harness machine-checks the contract statically on a clean tree.
@@ -22,8 +22,9 @@
 set -euo pipefail
 
 # Shared workspace + runfiles helpers.
-# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
+# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib", "//tools/sh:guards"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/guards.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/guards.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/guards.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/guards.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/guards.sh"
 
 dx_cd_workspace
 
@@ -308,5 +309,77 @@ else
 fi
 dx_expect_contains tools/sh/snapshot.sh 'snapshot versus grep policy' 'Bootstrap requires bash by design under issue'
 dx_expect_contains docs/contributing/build-conventions.md 'data = ["//tools/sh:lib"]' 'snapshot versus grep policy under issue #450'
+
+# Bootstrap: every guards bootstrap uses the canonical 5-way
+# runfiles fallback, like the lib bootstrap above.
+guards_bootstrap_fail=""
+for f in $(grep -rln -F -e 'tools/sh/guards.sh' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' .); do
+  if ! grep -q -F -e 'RUNFILES_DIR' "$f" || ! grep -q -F -e 'BASH_SOURCE' "$f"; then
+    guards_bootstrap_fail="$guards_bootstrap_fail $f"
+  fi
+done
+if [[ -z "$guards_bootstrap_fail" ]]; then
+  ok
+else
+  bad "guards bootstrap lost the 5-way runfiles fallback:$guards_bootstrap_fail (issue #653)"
+fi
+
+# Guard table rows live once in tools/sh/guards.sh with no per-file
+# copies; guards own fixed-string/regex plus single-file/tree pins with
+# reason context, snapshot owns golden bytes.
+# (Self-excluded: this script names the helper definitions in its own
+# patterns below.)
+dx_guards_contains tools/sh/guards.sh "guard table rows must live once in tools/sh/guards.sh (issue #653)" \
+  'dx_guard_contains() {' \
+  'dx_guards_contains() {' \
+  'dx_guard_tree_absent_re() {' \
+  'dx_guards_tree_absent_re() {' \
+  'snapshot versus grep policy' \
+  'Bootstrap requires bash by design under issue' \
+  'Prefer fixed-string'
+if [[ "$(grep -rln -F -e 'dx_guard_contains() {' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | grep -v -F -e 'tools/sh/guards.sh' | grep -v -F -e 'tools/ci/shell_contract.sh' | wc -l)" == "0" ]] &&
+  [[ "$(grep -rln -F -e 'dx_guards_contains() {' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | grep -v -F -e 'tools/sh/guards.sh' | grep -v -F -e 'tools/ci/shell_contract.sh' | wc -l)" == "0" ]] &&
+  [[ "$(grep -rln -F -e 'dx_guard_tree_absent_re() {' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | grep -v -F -e 'tools/sh/guards.sh' | grep -v -F -e 'tools/ci/shell_contract.sh' | wc -l)" == "0" ]] &&
+  [[ "$(grep -rln -F -e 'dx_guards_tree_absent_re() {' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | grep -v -F -e 'tools/sh/guards.sh' | grep -v -F -e 'tools/ci/shell_contract.sh' | wc -l)" == "0" ]]; then
+  ok
+else
+  bad "guard table rows must live once in tools/sh/guards.sh with no per-file copies (issue #653)"
+fi
+
+# Snapshot versus grep policy stays documented with the when-rules
+# (snapshot for byte identity, literal rows for known files, regex only
+# for shapes, tree only when the location is unknown).
+dx_guards_contains docs/testing/tools.md "snapshot versus grep policy lost its when-rules (want snapshot vs literal vs regex vs tree, issue #653)" \
+  'issue #653' \
+  'dx_guard_' \
+  'when whole-file byte identity matters' \
+  'when a few contract' \
+  'only for shapes' \
+  'prefer single-file pins'
+dx_guards_contains tools/sh/guards.sh "guards.sh lost its snapshot versus grep policy (want when-rules, issue #653)" \
+  'snapshot versus grep policy' \
+  'Prefer fixed-string' \
+  'only for shapes' \
+  'Prefer single-file pins'
+dx_guard_contains docs/contributing/build-conventions.md 'issue #653' "build-conventions lost its guard-rows record (want issue #653)"
+
+# First-wave migration stays table-driven: hygiene plus parity guards
+# source guards.sh and use its rows instead of ad-hoc grep chains.
+dx_guards_contains tools/ci/build_hygiene.sh "build_hygiene lost its guard-rows migration (want guards.sh plus table rows, issue #653)" \
+  'tools/sh/guards.sh' \
+  'dx_guards_contains' \
+  'dx_guard_contains'
+dx_guards_contains tools/ci/warnings_as_errors.sh "warnings_as_errors lost its guard-rows migration (want guards.sh plus table rows, issue #653)" \
+  'tools/sh/guards.sh' \
+  'dx_guards_contains' \
+  'dx_guard_contains'
+dx_guards_contains tools/ci/release_hygiene.sh "release_hygiene lost its guard-rows migration (want guards.sh plus table rows, issue #653)" \
+  'tools/sh/guards.sh' \
+  'dx_guards_contains' \
+  'dx_guard_contains'
+dx_guards_contains tools/ci/quality_adapters_parity.sh "quality_adapters_parity lost its guard-rows migration (want guards.sh plus table rows, issue #653)" \
+  'tools/sh/guards.sh' \
+  'dx_guards_contains' \
+  'dx_guard_file'
 
 dx_test_summary "shell contract harness"

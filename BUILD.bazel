@@ -91,6 +91,7 @@ sh_test(
         "//cli/cli:dx",
         "//tools/bazelrc:preset.bazelrc",
         "//tools/bazelrc:preset.py",
+        "//tools/sh:guards",
         "//tools/sh:lib",
         "//tools/sh:snapshot",
     ],

@@ -9,8 +9,8 @@
 # Snapshot testing, not brittle equality: `snapshot_diff` fails with a
 # unified diff, while `UPDATE_EXPECT=1` refreshes the golden instead of
 # failing (bazel test --test_env=UPDATE_EXPECT). Schema validation below
-# pins the contract fields so inventory drift fails at the source even when
-# the snapshot is refreshed.
+# pins the contract fields via the table-driven guard rows so inventory
+# drift fails at the source even when the snapshot is refreshed.
 #
 # Shell sources have no corpus class. Process-spawning tests stay out of
 # the coverage denominator per the repo coverage preset.
@@ -21,8 +21,9 @@ set -euo pipefail
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/snapshot.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/snapshot.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/snapshot.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/snapshot.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/tools/sh/snapshot.sh"
 
 # Shared CI helpers.
-# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
+# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib", "//tools/sh:guards"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/tools/sh/lib.sh"
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/guards.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/guards.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/guards.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/guards.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/tools/sh/guards.sh"
 
 # Portable helpers via tools/sh/lib.sh dx_realpath/dx_mkscratch.
 
@@ -36,40 +37,33 @@ dx_test_init
 # mirroring `tools/bazelrc/preset_tests.bzl` and
 # `cli/adopt/src/preset_fragment.rs::fragment_matches_python_inventory`.
 # Exact bytes stay in the snapshot below; this fails first on shape drift.
-for needle in \
-  "GENERATED, do not edit" \
-  "Version-matched to Bazel 9.2.0" \
-  "and dx 0.0.0" \
-  "Consumer refresh: \`dx update\`" \
-  "common --enable_bzlmod" \
-  "build --verbose_failures" \
-  "test --test_output=errors" \
-  "# Owned extra_presets group: coverage." \
-  "coverage --test_env=GENERATE_LLVM_LCOV=1" \
-  "coverage --combined_report=lcov" \
-  "coverage --test_tag_filters=-no-coverage" \
-  "coverage --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov" \
-  "coverage --instrumentation_filter=^//" \
-  "# Owned build profiles (issue #177)." \
-  "build:dx_debug --compilation_mode=dbg" \
-  "build:dx_dev --compilation_mode=fastbuild" \
-  "build:dx_release --compilation_mode=opt"; do
-  if grep -q -F -e "$needle" "$expected"; then
-    ok
-  else
-    bad "preset.bazelrc missing contract line: $needle"
-  fi
-done
+# Fixed-string guard table (fail-closed, no refresh): snapshot owns the
+# byte-identity golden, this table owns the contract sentences.
+dx_guards_contains "$expected" "preset.bazelrc missing contract lines" \
+  'GENERATED, do not edit' \
+  'Version-matched to Bazel 9.2.0' \
+  'and dx 0.0.0' \
+  'Consumer refresh: `dx update`' \
+  'common --enable_bzlmod' \
+  'build --verbose_failures' \
+  'test --test_output=errors' \
+  '# Owned extra_presets group: coverage.' \
+  'coverage --test_env=GENERATE_LLVM_LCOV=1' \
+  'coverage --combined_report=lcov' \
+  'coverage --test_tag_filters=-no-coverage' \
+  'coverage --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov' \
+  'coverage --instrumentation_filter=^//' \
+  '# Owned build profiles (issue #177).' \
+  'build:dx_debug --compilation_mode=dbg' \
+  'build:dx_dev --compilation_mode=fastbuild' \
+  'build:dx_release --compilation_mode=opt'
 echo "preset schema: checked-in fragment carries the pinned contract"
 
 # Python inventory pins (mirrors //tools/ci:pin_consistency_test for the
 # Bazel pin, plus the per-release dx stamp).
-if grep -q -F -e 'PRESET_BAZEL_VERSION = "9.2.0"' "$preset_py" &&
-  grep -q -F -e 'PRESET_DX_VERSION = "0.0.0"' "$preset_py"; then
-  ok
-else
-  bad "preset.py lost its Bazel/dx version pins"
-fi
+dx_guards_contains "$preset_py" "preset.py lost its Bazel/dx version pins" \
+  'PRESET_BAZEL_VERSION = "9.2.0"' \
+  'PRESET_DX_VERSION = "0.0.0"'
 
 dx_mkscratch scratch
 
