@@ -297,6 +297,32 @@ add a bot that reruns all open PRs on target-branch pushes. Without a queue, con
 may need to update branches and wait for CI again. Historical success remains truthful
 for its tested snapshot but cannot satisfy the configured gate for an untested combination.
 
+## Runner Plus SDK Rotation
+
+Floating runners age out and SDK/floor pins go stale with no review owner.
+This section owns the review cadence plus retirement handling (issue #642).
+
+Qualified runners are `ubuntu-latest` plus `ubuntu-24.04-arm` plus `macos-14`
+plus `macos-15-intel` plus `windows-latest` with per-profile cache scopes.
+macos-13 retired December 2025, macos-15-intel until August 2027;
+`ubuntu-latest` plus `windows-latest` float and age out. SDK plus floor scope
+is glibc `2.28` plus musl `1.2.6` plus MacOSX26.5 via hermetic-llvm `v0.8.19`
+plus MSVC `14.50.35717` plus redist `14.50.35710` plus SDK package
+`10.0.26100.7705`; exact pins, hosts, floors, and SDK/CRT identities stay
+owned by issues #410-#414 plus #500, not pinned here.
+
+Review is quarterly review plus on retirement notice plus on hermetic-llvm release;
+the sole maintainer owns every row until delegation (see `CODEOWNERS`).
+Retirement handling updates `ci.yml` plus docs plus pins in one reviewed PR.
+Qualify locally/on-demand with customer flows only: `bazel build //...` plus
+`bazel test //...` plus `dx coverage --min-coverage 97 //...` (seed gate plus
+on-demand per-host, no new non-customer CI jobs).
+
+Permanent rotation job in CI rejected; keep CI customer-only. Fixture evidence
+is pinned in `tools/ci/tests/fixtures/runner_rotation/pins.bzl` plus
+`runner_rotation.expected` via `bazel run //tools/ci:runner_rotation_qualification`
+(issue #642; infra only, no Supported claim).
+
 ## Qualification
 
 These are unresolved engineering and public-interface qualifications, not invitations to

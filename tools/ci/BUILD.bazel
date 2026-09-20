@@ -553,6 +553,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Runner plus SDK rotation harness (issue #642); see docs/github-ci.md#runner-plus-sdk-rotation.
+sh_binary(
+    name = "runner_rotation_qualification",
+    srcs = ["runner_rotation_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Env/codegen harness; see tools/ci/env_codegen_qualification.sh.
 sh_binary(
     name = "env_codegen_qualification",

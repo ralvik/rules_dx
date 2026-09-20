@@ -1125,6 +1125,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:windows_qualification
       - name: Audit CI multi-platform host matrix (issue #415 runners plus caches plus refusal plus sharding plus portable shell)
         run: bazel run --noshow_progress //tools/ci:ci_matrix_qualification
+      - name: Audit runner plus SDK rotation (issue #642 cadence plus retirement plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:runner_rotation_qualification
       - name: Audit close-out battery plus docs gate (issue #467 battery commands plus docs-ci gate, owned gaps)
         run: bazel run --noshow_progress //tools/ci:closeout_battery_qualification
       - name: Audit Rust library extraction (issue #469 internal-only plus binaries-only boundary, owned gaps)
