@@ -94,6 +94,10 @@ and lock authority (`third_party/jvm/maven_install.json`,
 `third_party/dotnet/paket.lock` plus `paket.dependencies` qualified seed-only
 under issue #482 via `bazel run //tools/ci:paket_qualification` with
 `csharp/tests/fixtures/paket/pins.bzl`, Go stdlib-only, C/C++ none).
+The qualified Maven maven_install.json plus fail-closed repin is pinned under issue #481
+(single shared lock via `lock_file` plus `fail_if_repin_required` in `third_party/jvm/pins.bzl`
+over the shared `@maven` hub, proven by the Java/Kotlin Jupiter plus seed fixtures via
+`bazel run //tools/ci:maven_lock_qualification`; non-fail-closed rejected).
 The xUnit v3 4.0.0 runner mapping is qualified under issue #477 (plain
 `csharp_test`/`fsharp_test` with `[Fact]`/`[Theory]` sources plus checked-in
 MTP entry-point shims over the pinned `@paket.main//xunit.v3` closure, proven by
@@ -113,6 +117,8 @@ seed-only under issue #478 via `bazel run //tools/ci:gotest_qualification`; Goog
 v1.18.0 plus C++17 floor qualified seed-only under issue #479 via
 `bazel run //tools/ci:googletest_qualification`; ScalaTest 3.2.20 qualified
 seed-only under issue #480 via `bazel run //tools/ci:scalatest_qualification`;
+Maven `maven_install.json` plus fail-closed repin qualified seed-only under issue #481 via
+`bazel run //tools/ci:maven_lock_qualification`;
 Paket files plus sha512 qualified seed-only under issue #482 via
 `bazel run //tools/ci:paket_qualification`);
 no `Supported` claim
