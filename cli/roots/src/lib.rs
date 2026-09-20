@@ -1,34 +1,6 @@
-//! Repository-root strategy planning for `dx codegen`, `dx env`, and `dx setup` (issue #506 WP4,
-//! issue #506).
+//! Repository-root strategy planning for `dx codegen`, `dx env`, and `dx setup`.
 //!
-//! Contract: `docs/environments/codegen.md` (repository root selection) and
-//! `docs/environments/environment.md` (repository and
-//! target roots) plus [ADR 0022](../../../docs/decisions/0022-no-benchmarking.md)
-//! (no standing benchmarking: selection by fiat). The correctness baseline applies
-//! the plan-collection
-//! aspects to `//...`. The rejected alternatives are a Bazel-query-produced
-//! target-pattern file, one monolithic aggregate, and package-local
-//! aggregate shards, every candidate keeping identical effective target,
-//! aspect, output-group, and configuration semantics. The `//...` baseline
-//! remains by fiat.
-//!
-//! This crate freezes the pure planning layer only: candidate identities,
-//! the repository root plans behind the canonical `//dx:codegen` and
-//! `//dx:env` selections, the designated-root coverage rule (no candidate
-//! may reduce roots based only on an unconfigured query graph, since
-//! transitions, toolchains, and `select()` can diverge from it), and the
-//! fiat selection rule with its dimensions. Slice 2 adds the
-//! pure composition of these plans into the codegen/env/setup Bazel
-//! invocations (`repository_plan`, `invocation_targets`, `build_argv`);
-//! the query/aggregate Starlark wiring lives in `//cli/roots:roots.bzl`.
-//! Slice 3 freezes the fiat winner (the `//...` baseline;
-//! see [`frozen_strategy`] and [`FROZEN_EVIDENCE`]). Slice 4 records the
-//! reference dimensions for the frozen baseline (source/BUILD edits,
-//! target churn, actions, materialized bytes, projection time, retained
-//! memory; see [`INCREMENTALITY_EVIDENCE`] and the `PLAN_*`/`SERVER_*`
-//! consts). Concurrency, interruption, remote materialization, and reuse
-//! certification land in later WP4 slices; the effective roots stay on the
-//! frozen baseline until then.
+//! Contract: `docs/environments/codegen.md` and `docs/environments/environment.md`; selection by fiat per ADR 0022.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
@@ -48,15 +20,11 @@ pub const REPOSITORY_PATTERN: &str = "//...";
 /// central eager `label_list` dependency node is created.
 pub const PATTERN_FILE_FLAG: &str = "--target_pattern_file";
 
-/// Warm weight in the issue #506 decision score (`cold_ms + WARM_WEIGHT *
-/// warm_ms`). PROVISIONAL (issue #506, flagged for review): warm runs dominate
-/// developer-iteration latency on internal paths, so warm counts double;
-/// per ADR 0022 there are no standing benchmarks, so this weight is frozen
-/// by fiat.
+/// Warm weight in the fiat decision score (`cold_ms + WARM_WEIGHT *
+/// warm_ms`); frozen by fiat per ADR 0022.
 pub const WARM_WEIGHT: u64 = 2;
 
-/// Frozen issue #506 repository-root strategy (issue #506 WP4 slice 3): the `//...`
-/// correctness baseline.
+/// Frozen repository-root strategy: the `//...` correctness baseline.
 ///
 /// Historical reference (pre-ADR-0022, 2026-09-14, Linux x86_64, Bazel 9.2.0 via Bazelisk
 /// v1.29.0, warm persistent server unless noted), codegen plan aspect
@@ -91,7 +59,6 @@ pub const WARM_WEIGHT: u64 = 2;
 /// and no new measurements are taken.
 pub const FROZEN_STRATEGY: RootStrategy = RootStrategy::RecursivePattern;
 
-/// Returns the frozen repository-root strategy (see [`FROZEN_STRATEGY`]).
 pub fn frozen_strategy() -> RootStrategy {
     FROZEN_STRATEGY
 }
@@ -109,8 +76,7 @@ pub const FROZEN_EVIDENCE: [(RootStrategy, bool, u64, u64); 4] = [
     (RootStrategy::PackageShards, false, 2000, 300),
 ];
 
-/// Historical incrementality reference for the frozen baseline (issue #506 WP4 slice
-/// 4, issue #25): steady-state warm-server wall times and executed actions
+/// Historical incrementality reference for the frozen baseline: steady-state warm-server wall times and executed actions
 /// per edit/churn selection dimension, as `(dimension,
 /// baseline_wall_ms, queryfile_wall_ms, actions_executed)`.
 ///
@@ -180,7 +146,7 @@ pub const DEFAULT_OUTPUTS_WARM_MS: u64 = 502;
 /// actions).
 pub const SERVER_PEAK_RSS_KB: u64 = 2628812;
 
-/// Repository-root strategy candidates under issue #506.
+/// Repository-root strategy candidates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum RootStrategy {
     /// Correctness baseline: apply the collecting aspects to `//...`.
@@ -457,9 +423,7 @@ impl BenchmarkDimension {
     }
 }
 
-/// One candidate's historical headline sample for the issue #506 decision. Full
-/// per-dimension rows land with the measurement harness; the freeze rule
-/// compares cold against warm only.
+/// One candidate's historical headline sample.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BenchmarkSample {
     /// Candidate strategy this sample measures.
@@ -470,12 +434,11 @@ pub struct BenchmarkSample {
     pub equivalent: bool,
     /// Cold Bazel time in milliseconds.
     pub cold_ms: u64,
-    /// Warm Bazel time in milliseconds (persistent server, warm action
-    /// cache), weighted above cold per issue #506.
+    /// Warm Bazel time in milliseconds (persistent server, warm action cache).
     pub warm_ms: u64,
 }
 
-/// issue #506 decision score: `cold_ms + WARM_WEIGHT * warm_ms`, saturating. Warm
+/// Fiat decision score: `cold_ms + WARM_WEIGHT * warm_ms`, saturating. Warm
 /// dominates, so a candidate trading slower cold for much faster warm can
 /// win.
 pub fn weighted_score(sample: &BenchmarkSample) -> u128 {

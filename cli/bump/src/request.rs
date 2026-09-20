@@ -1,22 +1,6 @@
-//! Single-requirement widen planning for `dx bump` (issue #260).
+//! Single-requirement widen planning for `dx bump`.
 //!
-//! Pure planning over injected selector/version strings only, so widening
-//! stays deterministic and unit-testable without a workspace, a Bazel
-//! server, registries, or any upstream updater. The explicit operation
-//! rewrites exactly one declared requirement in the working copy:
-//! `dx bump <selector> <version>` where `<selector>` is `set:package`
-//! (e.g. `cargo:anyhow`, `npm:react`, `bazel:rules_rust`,
-//! `github-actions:actions/checkout`) and `<version>` is the new exact
-//! version (semver for Bazel/Cargo/npm/Go, tag/SHA for GitHub Actions).
-//!
-//! Never batch: one invocation widens one requirement. Multiple selectors,
-//! bare sets, Bazel labels/paths, and empty versions fail closed as usage
-//! errors (exit 2), never as partial widens. `dx update` keeps its
-//! never-rewrites contract (`dx_update::semantics::may_be_rewritten` stays
-//! false); this operation owns the single-requirement rewrite, including
-//! exact pins, bounded ranges, and Git tag/commit shapes per the
-//! ecosystem mapping in [`super::sets`]. Version shapes validate through
-//! upstream [`super::version`] (`semver`, never custom version code).
+//! Contract: `docs/cli/commands/audit-update-bazel.md`.
 
 use std::sync::OnceLock;
 
@@ -30,16 +14,10 @@ use super::version::{self, VersionError, WidenVersion};
 /// verbatim for planning summaries.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BumpRequest {
-    /// Owning widen set.
     pub set: BumpSet,
-    /// Package identity within the set (e.g. `anyhow`, `react`,
-    /// `rules_rust`, `actions/checkout`). Verbatim.
     pub package: String,
-    /// Validated new version (exact semver or Git tag/commit).
     pub version: WidenVersion,
-    /// Raw selector spelling (`set:package`), verbatim.
     pub selector: String,
-    /// Raw version spelling, verbatim.
     pub raw_version: String,
 }
 

@@ -1,9 +1,9 @@
-"""Frozen v1 curated quality defaults (issue #89 item 2).
+"""Frozen v1 curated quality defaults.
 
 Contract: `docs/tools/tool-baseline.md#curated-differences`, `docs/tools/tool-baseline.md#default-lifecycle-direction`, `docs/quality/quality-testing.md`.
 """
 
-# Versioned curated-defaults schema (issue #321). Consumers query via
+# Versioned curated-defaults schema. Consumers query via
 # `curated_families`, `curated_tools`, and `curated_schema_error` instead
 # of duplicating the manifest, so adding a curated family edits this one
 # data manifest plus compat evidence, never a parallel allowlist.

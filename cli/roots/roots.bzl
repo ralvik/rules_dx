@@ -1,4 +1,4 @@
-"""Repository-root candidates for `dx codegen`, `dx env`, and `dx setup` (issue #506 WP4, issue #506).
+"""Repository-root candidates for `dx codegen`, `dx env`, and `dx setup`.
 
 Contract: `docs/environments/codegen.md`.
 """
@@ -16,7 +16,6 @@ REPOSITORY_ROOT_STRATEGIES = [
 ]
 
 def repository_roots(strategy, monolith = None, shards = [], pattern_file = None):
-    """Returns the Bazel command-line patterns for `strategy`."""
     if strategy == "recursive-pattern":
         return [REPOSITORY_PATTERN]
     if strategy == "query-pattern-file":
@@ -49,7 +48,7 @@ repository_roots_file = rule(
             doc = "Label file Bazel reads through `--target_pattern_file`.",
         ),
     },
-    doc = "Writes a query-produced repository-root label file (issue #506 query-pattern-file candidate).",
+    doc = "Writes a query-produced repository-root label file.",
 )
 
 def roots_aggregate(name, deps, **kwargs):

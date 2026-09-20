@@ -22,17 +22,11 @@
 /// One workspace-relative path shape violation, in pinned check order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PathProblem {
-    /// The path is empty.
     Empty,
-    /// The path is absolute (`/x`); only workspace-relative paths qualify.
     Absolute,
-    /// The path contains a backslash; only forward slashes qualify.
     Backslash,
-    /// The path has an empty `/`-separated component (`a//b`, trailing `/`).
     EmptyComponent,
-    /// The path has a `.` component.
     Dot,
-    /// The path has a `..` component and could escape the workspace.
     DotDot,
 }
 

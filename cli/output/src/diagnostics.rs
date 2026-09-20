@@ -1,15 +1,8 @@
 //! Structured diagnostics and human status emission.
 //!
-//! Split from `super` (`lib.rs`): owns `DEFAULT_LOG_FILTER`,
-//! `VERBOSE_LOG_FILTER`, `init_diagnostics`, `colors_allowed`,
-//! `color_enabled`, `styled_status_for`, `styled_status`, `format_status`,
-//! and `emit_status`. Re-exported through `super` so the public path stays
-//! `dx_output::{...}`.
+//! Contract: `docs/cli/output-protocol.md`.
 
-/// Default tracing filter without `--verbose`: warnings and errors only, so
-/// default human output stays byte-identical (info/debug stay silent).
 pub const DEFAULT_LOG_FILTER: &str = "warn";
-/// Tracing filter under `--verbose`: info and above.
 pub const VERBOSE_LOG_FILTER: &str = "info";
 
 /// Initialises structured diagnostics via `tracing-subscriber`.
@@ -95,15 +88,12 @@ mod tests {
 
     #[test]
     fn diagnostics_filters_have_expected_spelling() {
-        // Issue #222: default stays quiet (byte-identical), verbose opens info.
         assert_eq!(DEFAULT_LOG_FILTER, "warn");
         assert_eq!(VERBOSE_LOG_FILTER, "info");
     }
 
     #[test]
     fn diagnostics_init_is_idempotent_and_tracing_macros_do_not_panic() {
-        // Issue #222: tracing-subscriber init never panics on repeat; new
-        // code routes through tracing macros.
         init_diagnostics(false);
         init_diagnostics(true);
         init_diagnostics(false);
@@ -115,7 +105,6 @@ mod tests {
 
     #[test]
     fn diagnostics_color_gate_is_tty_and_no_color_aware() {
-        // Issue #222: pure gate keeps logic testable without env mutation.
         assert!(!colors_allowed(true, true), "NO_COLOR always wins");
         assert!(!colors_allowed(true, false), "NO_COLOR always wins");
         assert!(!colors_allowed(false, false), "no TTY means plain");
@@ -127,7 +116,6 @@ mod tests {
 
     #[test]
     fn diagnostics_styled_status_stays_plain_when_disabled() {
-        // Issue #222: default (disabled) rendering is byte-identical plain.
         assert_eq!(styled_status_for("ok", false), "ok");
         assert_eq!(
             styled_status_for("warning", false),
@@ -143,7 +131,6 @@ mod tests {
 
     #[test]
     fn diagnostics_no_color_env_disables_color() {
-        // Issue #222: NO_COLOR respected even when set to an empty value.
         let prior = std::env::var_os("NO_COLOR");
         unsafe {
             std::env::set_var("NO_COLOR", "");
@@ -170,7 +157,6 @@ mod tests {
 
     #[test]
     fn diagnostics_format_status_is_byte_identical_when_plain() {
-        // Issue #222: anstream passthrough keeps default bytes identical.
         // Force the plain path via the pure helper to avoid TTY flakiness.
         let plain = format!("{} {}", styled_status_for("ok", false), "done");
         assert_eq!(plain, "ok done");

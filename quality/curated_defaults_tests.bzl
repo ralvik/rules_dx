@@ -1,4 +1,4 @@
-"""Unit tests for the versioned curated defaults (issue #89 item 2, issue #321).
+"""Unit tests for the versioned curated defaults.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
