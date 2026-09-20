@@ -4,10 +4,11 @@
 
 `Planned` → `Seed-host-delivered` → `Platform-qualified` → `Supported`.
 
-`Planned` is accepted scope. `Seed-host-delivered` is implemented and
-verified on the Linux x86_64 seed host only (what `Planned` cells and
-`Implementation status: implemented` / `Status: implemented` notes mean
-today). `Platform-qualified` adds required-platform evidence per
+`Planned` is accepted scope only and claims no delivery. `Seed-host-delivered` is implemented and
+verified on the Linux x86_64 seed host only. No `Planned` cell is `Seed-host-delivered`:
+as-built delivery is owned by the [verification matrix](../testing/verification-matrix.md),
+not by this matrix. `Implementation status: implemented` / `Status: implemented` notes elsewhere
+describe their owning contract's scope, not promotion under this lifecycle. `Platform-qualified` adds required-platform evidence per
 [ADR 0014](../decisions/0014-tested-platform-release-stack.md). `Supported`
 adds release evidence and is owned by this matrix; no cell is currently
 `Supported`.
@@ -54,11 +55,18 @@ enforced by `bazel run //tools/ci:supported_evidence_gate`.
 
 ## Application Foundations
 
-`Planned` below means accepted scope delivered on the Linux x86_64 seed host
-plus Linux arm64 native (issue #410) plus the two static-musl profiles
-(issue #411) plus macOS arm64 native (issue #412) plus macOS x86_64
-best-effort native (issue #413) plus Windows x86_64 MSVC-compatible native
-(issue #414) without
+`Planned` below means accepted scope only with no delivery claimed; as-built delivery
+per capability is owned by the [verification matrix](../testing/verification-matrix.md).
+A `Planned` cell whose capability maps to an `Open` verification cell is scope with open
+implementation: `Environment` maps to `Env/codegen` (`Open` for every language);
+`Format`/`Lint`/`Typecheck` for adapter-less or region-only rows map to `Layer-2 matrix`
+(`Open (adapter-less)` for Go, Java, Kotlin, Scala, C#, F#, C++ and `Open (regions)` for
+Vue, Svelte, Astro, MDX); `Dependencies` and framework `Build`/`Test` composition for Vue,
+Svelte, Astro, MDX map to `Depcheck` (`Open`) and `Examples` (`Open (composition)`). Rust,
+Python, JavaScript, and TypeScript `Build`/`Test`/`Dependencies`/`Generate`/`Coverage`/
+`Format`/`Lint`/`Typecheck` delivery follows the `Delivered` verification cells for corpus
+dogfood, Layer-2, generation, examples, E2E contract, and depcheck; their `Environment`/`IDE`
+cells stay scope-only while `Env/codegen` stays `Open`. No `Planned` cell implies
 remaining-required-platform,
 external-consumer, or trusted-builder release evidence; see
 `../../CHANGELOG.md`. `Planned: feasibility` means evaluation
@@ -75,7 +83,14 @@ capability does not apply to that source family. The repository [README](../../R
 current project status; no cell is currently `Supported`. Status cells are owned by
 this matrix, and promotion to `Supported` requires release evidence.
 
-`Audit` means source audit over declared source owners. Ecosystem dependency-vulnerability audit
+`Audit` means per-language source audit over declared source owners, distinct from the
+verification-matrix `Audit/update` column which records repo-wide `dx audit`/`dx update`
+live execution (ecosystem resolvers, advisory matching, secrets wiring). A source-`Audit`
+cell of `Not planned` or `Planned: audit tools (open work)` is consistent with a `Delivered`
+ecosystem `Audit/update` cell: Rust, JavaScript, TypeScript, Vue, Svelte, Astro, and MDX
+source audit is `Not planned` while ecosystem audit/update is delivered repo-wide, and Python
+source-audit tooling is open work while ecosystem audit/update wiring is delivered.
+Ecosystem dependency-vulnerability audit
 coverage is separate; see the [audit contract](../cli/commands/audit-update-bazel.md). This matrix makes no
 ecosystem audit-tool or dependency-source claim beyond that contract.
 
@@ -261,6 +276,14 @@ consumer plus release evidence passes.
 | Ruby | Deferred beyond v1 | Planned: feasibility | Planned: RuboCop, StandardRB |
 | PowerShell | Deferred beyond v1 | Planned: feasibility | Planned: PSScriptAnalyzer |
 | Swift | Not planned | Not planned | Not planned |
+
+`Planned` in the table above means scope admitted to v1 by ADR 0019 with no delivery
+claimed; delivery follows the [verification matrix](../testing/verification-matrix.md).
+Admitted `Format`/`Lint` cells map to `Layer-2 matrix Open (adapter-less)` (no adapter
+claims them yet; open under issue #418 for the Native cohort and issues #416/#417 for the
+JVM and Scala + .NET cohorts), `Environment`/`IDE` dimensions map to `Env/codegen Open`,
+and per-language source audit lumped in the third column is distinct from ecosystem
+`Audit/update Delivered`.
 
 ### Initial Feasibility Review
 
