@@ -469,6 +469,21 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Dx facade qualification harness (issue #423): machine-checks the
+# placeholder-vs-real state for `//dx:config` plus `//dx:codegen` — both
+# stay empty filegroups (Accepted selection identity/default) while the
+# real typed sections and plan collection stay frozen in their owners
+# (quality policy/sources, generation codegen, cli roots). Functional
+# checks only. Run by CI via
+# `bazel run //tools/ci:dx_facade_qualification`.
+sh_binary(
+    name = "dx_facade_qualification",
+    srcs = ["dx_facade_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Quality cache aquery proof (issue #84): action-graph half
 # — Python vs Rust real pipelines mention only their own sources/tools
 # with distinct ActionKeys, so one direct source misses only its owning

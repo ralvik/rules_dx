@@ -970,6 +970,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:registry_singularity
       - name: Audit backlog contracts (env/codegen + docs-pipeline pins)
         run: bazel run --noshow_progress //tools/ci:backlog_contracts
+      - name: Audit dx facade qualification (issue #423 placeholder-vs-real pins)
+        run: bazel run --noshow_progress //tools/ci:dx_facade_qualification
       - name: Audit GHCR hygiene (separate workflow, gated push, pinned base)
         run: bazel run --noshow_progress //tools/ci:ghcr_hygiene
       - name: Audit publication guards (group triggers + gates + policy)

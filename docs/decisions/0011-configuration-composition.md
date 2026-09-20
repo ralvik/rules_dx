@@ -33,7 +33,12 @@ explicit label setting rather than embedding a consumer-repository label.
 
 The exact aggregate provider constructor, fields, exports, and label-setting binding remain governed
 by open decision O17. This ADR accepts typed composition and one canonical
-workspace policy, not a provisional Starlark API shape.
+workspace policy, not a provisional Starlark API shape. The M03 freeze
+implements the schema and validation in `quality/policy.bzl`
+(`quality_family`, `workspace_policy`) and `quality/sources.bzl`
+(`QualitySourcesInfo`); the in-repo `//dx:config` default stays an empty
+filegroup that fails fast until a consumer binds its typed policy, per
+issue #423 (guard `//tools/ci:dx_facade_qualification`).
 
 Supported application foundations and quality policy families are available by default but remain
 lazy. Declared target providers and semantic source classes activate applicable behavior. Typed
@@ -89,7 +94,10 @@ supported adapters publish equivalent canonical source facts.
 The provider's exact constructor, load label, field representation, class registry, and validation
 surface remain governed by open decision O15. The durable contract and current
 candidate details live in
-[Quality Sources and Applicability](../quality/quality-sources.md).
+[Quality Sources and Applicability](../quality/quality-sources.md). The M03
+freeze implements the construction shape and known-ID validation in
+`quality/sources.bzl`, with ownership and admissibility validated by
+the consuming aspect; see issue #423.
 
 Quality applicability is the intersection of declared direct-source classes, adapter support,
 workspace policy, and capability. Native configuration can narrow tool behavior within that declared
