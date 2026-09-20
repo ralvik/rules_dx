@@ -12,4 +12,9 @@ No `dx perf` command by design; benchmarks are Bazel targets plus docs.
 - `bazel run //perf:regenerate` — rewrite `docs/performance.md` from
   `perf/baseline.json` (numbers are regenerated, never hand-written).
 
+Gate scope (issue #424): the single `dx_startup` gate is sufficient. Cold/warm
+module overhead and zero-unused-work proofs per ADR 0014 consequences stay
+advisory in `perf/baseline.json` (only `dx_startup` carries `gate:true`);
+no separate perf-expansion tracker is needed at this size.
+
 Baselines update via human-merged PRs only; see [Performance](../docs/performance.md).

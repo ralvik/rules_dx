@@ -64,7 +64,7 @@ pub const DEVCONTAINER_JSON: &str = concat!(
     "}\n",
 );
 
-/// `dx init` Renovate definition (issue #3, snapshot workflow issue #322).
+/// `dx init` Renovate definition (closed issue #3 delivered, snapshot workflow issue #322).
 ///
 /// Single source for the scaffolded `renovate.json`: the repository's
 /// own `renovate.json` is a snapshot of this string held by

@@ -10,7 +10,7 @@
 # dashboard options.
 #
 # This harness machine-checks the delivered contract on a clean tree
-# (12 checks): the all-ecosystems v1 manager set, Renovate proposing
+# (13 checks): the all-ecosystems v1 manager set, Renovate proposing
 # bump owns the single-requirement rewrite), the #19 resolver prerequisite
 # delivered, the widen command plus library-first planning, the native
 # bump-PR verification loop docs, the ADR 0006 narrow exception, the ADR
@@ -179,6 +179,20 @@ if grep -q -F -e 'prerelease_follows_upstream' "$semantics" &&
   ok
 else
   bad "upstream-scope pins lost (prerelease/transitives/scope in update + bump)"
+fi
+
+# Stale Renovate-disposition hedge stays gone (issue #424): the
+# `until issue #3 decides` hedge was resolved as complementary roles under
+# issue #326, so no such hedge may reappear in the runner or the policy.
+# Remaining `issue #3` cites are intentional provenance for the delivered
+# Renovate scaffold (closed issue #3 delivered, held by parity).
+if ! grep -rn -F -e 'until issue #3' "$bump_workflow" "$automation" 2>/dev/null | grep -q . &&
+  ! grep -rn -F -e 'until issue #3 decides' .github/workflows/bump.yml docs/contributing/automation.md 2>/dev/null | grep -q . &&
+  grep -q -F -e 'are complementary' "$automation" &&
+  grep -q -F -e 'issue #326' "$bump_workflow"; then
+  ok
+else
+  bad "stale Renovate hedge reappeared (want no until-issue-#3 hedge plus complementary roles under issue #326, issue #424)"
 fi
 
 dx_test_summary "widen update loop harness"
