@@ -355,9 +355,31 @@ laziness proven (adding the module requires no acceptance and fetches no
 restricted payloads, unrelated seed workflows stay green without acceptance,
 deferred failure never proves laziness since extension evaluation already
 fetches manifests); project-owned downloader plus cross-host inference
-rejected. The backend stays provisional; rights plus transport plus interop
+rejected. The backend stays provisional; transport plus interop
 plus corpus plus floors plus coverage stay owned under issues
-#496/#497/#498/#499/#500/#501; no `Supported` claim.
+#497/#498/#499/#500/#501; acquisition rights are qualified seed-only
+under issue #496 below; no `Supported` claim.
+
+Apple plus Microsoft acquisition and cache rights are qualified seed-only under issue #496
+(`cc/tests/fixtures/acquisition_rights/pins.bzl` via `bazel run
+//tools/ci:acquisition_rights_qualification`): hermetic-llvm `v0.8.19`
+pinned MacOSX26.5 SDK extraction reviewed against the
+[Apple SDK agreement](https://www.apple.com/legal/sla/docs/xcode.pdf);
+Apple-hosted execution does not by itself authorize separate extraction
+or unrestricted caching; toolchains_msvc head plus windows_support
+`v0.4.1` package identities (MSVC `14.50.35717`, redist `14.50.35710`,
+SDK package `10.0.26100.7705`) with deliberate EULA repository-env never
+automatic plus README mismatch, and windows_support not enforcing the
+SDK EULA variable documented by hermetic-llvm (terms reviewed rather
+than inferred); usage vs redistribution reviewed separately (acceptance
+is not permission to redistribute; direct downloads, permission to use,
+and permission to redistribute are separate checks); mirrors,
+redistribution, internal caches, and remote workers need
+license-approved boundaries separately from technical download success;
+official download availability is not permission; assume rights rejected.
+Backends stay provisional; transport plus interop plus corpus plus
+floors plus coverage stay owned under issues #497/#498/#499/#500/#501;
+no `Supported` claim.
 
 Qualify independently compiled MSVC static/import libraries and DLLs, including STL values,
 exceptions, RTTI and allocation ownership. Match compiler/linker/redist requirements under
@@ -460,8 +482,8 @@ acquisition, interoperability, coverage, and release evidence passes.
 | Question to close | Preferred next evidence or remedy | Tracking |
 | --- | --- | --- |
 <| Does the exact current stable stack compose? | Frozen seed-only under issue #494: as-built Bzlmod identities (Bazel 9.2.0 plus rules_rust 0.74.0 plus rules_cc 0.2.22 plus Rust 1.98.0) with `MODULE.bazel.lock` integrity, rules_rs LLVM `0.8.18`/LLVM `22.1.8` baseline vs hermetic-llvm `0.8.19`/LLVM `23.1.0` candidate comparison, checksums plus source patches plus compiler/profile compatibility, ad-hoc compose rejected; pinned in `rust/tests/fixtures/stable_stack/pins.bzl` via `bazel run //tools/ci:stable_stack_qualification` (qualified seed-only under issue #494). | issue #494 |
-| Can Windows acquisition be immutable and lazy? | Qualified seed-only under issue #495: fixed-manifest plus package-index inputs pinned with the toolchains_msvc head plus windows_support `v0.4.1` package identities (`cc/tests/fixtures/windows_acquisition/pins.bzl` via `bazel run //tools/ci:windows_acquisition_qualification`); mutable fetch rejected; laziness proven (adding the module requires no acceptance and fetches no restricted payloads, unrelated workflows stay green without acceptance, deferred failure never proves laziness). Backend stays provisional; rights plus transport plus interop plus corpus plus floors plus coverage stay owned under issues #496/#497/#498/#499/#500/#501. | issue #495 |
-| Are Apple/Microsoft acquisition and cache rights adequate? | Review actual package terms, deliberate acceptance, extraction, mirrors, redistribution, internal caches and remote workers. Official download availability is not permission. Windows x86_64 qualified (issue #414) with explicit EULA never automatic plus usage vs redistribution reviewed separately (see issue #496). | open work under issue #496 |
+| Can Windows acquisition be immutable and lazy? | Qualified seed-only under issue #495: fixed-manifest plus package-index inputs pinned with the toolchains_msvc head plus windows_support `v0.4.1` package identities (`cc/tests/fixtures/windows_acquisition/pins.bzl` via `bazel run //tools/ci:windows_acquisition_qualification`); mutable fetch rejected; laziness proven (adding the module requires no acceptance and fetches no restricted payloads, unrelated workflows stay green without acceptance, deferred failure never proves laziness). Backend stays provisional; acquisition rights qualified seed-only under issue #496, transport plus interop plus corpus plus floors plus coverage stay owned under issues #497/#498/#499/#500/#501. | issue #495 |
+| Are Apple/Microsoft acquisition and cache rights adequate? | Qualified seed-only under issue #496: hermetic-llvm `v0.8.19` MacOSX26.5 extraction vs [Apple SDK agreement](https://www.apple.com/legal/sla/docs/xcode.pdf) with hosted execution not authorizing separate extraction or unrestricted caching, toolchains_msvc plus windows_support `v0.4.1` identities with deliberate EULA repository-env never automatic plus SDK EULA gap reviewed not inferred, usage vs redistribution reviewed separately (acceptance is not redistribution permission), mirrors plus redistribution plus internal caches plus remote workers as license-approved boundaries separately from download success, official download not permission, assume rights rejected; pinned in `cc/tests/fixtures/acquisition_rights/pins.bzl` via `bazel run //tools/ci:acquisition_rights_qualification`. Backend stays provisional; transport plus interop plus corpus plus floors plus coverage stay owned under issues #497/#498/#499/#500/#501. | issue #496 |
 | Can the kept CC opt-out execute successfully? | Qualified seed-only under issue #471: kept opt-out succeeds for pure-Rust scripts on stock `rules_rust` 0.74.0 (sysroot `rust-lld` fallback plus `no_cc` stubs, `rust/tests/fixtures/cc_optout/` via `bazel run //tools/ci:cc_optout_qualification`); script compilation inputs stay distinct from execution inputs. | issue #471 |
 | Can third-party scripts retain a declared hermetic closure? | Decided hermetic under issue #472: global shell-env False in `.bazelrc` with narrow per-crate annotation opt-in (zero opt-ins); hostile PATH, tool discovery and additional declared tools pinned by `bazel run //tools/ci:shell_env_qualification` plus [Rust Generation](generation/rust.md#build-scripts). | issue #472 |
 | Does Windows native transport preserve all inputs and ABI selection? | Fix ABI constraints and path rebasing upstream; test batch wrappers, response files, cc-rs assembly/discovery, SDK libraries and proc-macro DLLs. Windows x86_64 qualified (issue #414) with declared-input fixtures without host Visual Studio state; remaining upstream fixes stay owned under issue #497. | open work under issue #497 |
@@ -479,7 +501,10 @@ acquisition, interoperability, coverage, and release evidence passes.
 The Apple starting point is hermetic-llvm's pinned MacOSX26.5 SDK extraction. Review the terms
 accompanying that exact package against the
 [Apple SDK agreement](https://www.apple.com/legal/sla/docs/xcode.pdf); Apple-hosted execution does not
-by itself authorize separate extraction or unrestricted caching.
+by itself authorize separate extraction or unrestricted caching. Rights are qualified seed-only
+under issue #496 (`cc/tests/fixtures/acquisition_rights/pins.bzl` via `bazel run
+//tools/ci:acquisition_rights_qualification`, usage vs redistribution reviewed separately,
+assume rights rejected).
 
 Admission records a light inventory entry — minimal required core/framework inventory plus
 dispositions only, with effort evidence recorded as each tracked item lands. Remaining
