@@ -6,7 +6,7 @@
 # Standalone dx binaries + BCR publication + matrix/SBOM/signing (#311),
 # the human-run signing-first dry run (#78/#311), and prebuilt devcontainer
 # images on GHCR (#184, separate workflow) stay owner-gated with SECURITY
-# reporting as the release precondition. Stage 5 close-out (#54) runs the
+# reporting as the release precondition. Close-out battery (#54) runs the
 # full battery on a clean tree.
 #
 # This harness machine-checks the frozen half verifiable on a clean tree

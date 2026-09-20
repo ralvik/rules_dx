@@ -22,7 +22,8 @@ Prefer upstream-supported automatic workflows per the cross-language policy in
 [Automatic Workflows](../product/scope.md#automatic-workflows); this record adds no separate
 automation rule.
 
-The user also requires 100% coverage of non-ignored executable first-party lines per the
+The user also requires the pinned coverage gates (`dx coverage --min-coverage 97` over `//...`
+plus exact-gate cell inventories) per the
 authoritative policy in [Testing](../testing/README.md#coverage); this record adds no separate
 coverage rule.
 

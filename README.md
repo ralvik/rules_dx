@@ -11,7 +11,7 @@ V1 prioritizes complete Rust, Python, JavaScript/TypeScript, and required framew
 required platforms, with a broad quality-tool baseline and additional low-cost complete foundations.
 Upstream patches and packaging support the out-of-the-box experience without rebuilding stacks. See the
 [scope and feasibility gate](docs/product/scope.md#first-release-admission) and
-[mandatory 100% project coverage requirement](docs/testing/README.md#coverage).
+[mandatory coverage gates](docs/testing/README.md#coverage).
 Implementation exists on the Linux x86_64 seed host plus Linux arm64 native (issue #410) plus Linux static-musl profiles (issue #411) plus macOS arm64 native (issue #412) plus macOS x86_64 best-effort native (issue #413) plus Windows x86_64 MSVC-compatible native (issue #414); release qualification beyond those hosts is not claimed here.
 
 ## Product

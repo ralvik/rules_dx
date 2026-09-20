@@ -110,7 +110,9 @@ Exact upstream switches and new public APIs remain unapproved until their
 domain contracts and work packages are accepted. General permission for these maintenance routes
 does not prove any candidate feasible or authorize an unbounded fork.
 
-The project also requires [100% first-party implementation coverage](../testing/README.md#coverage).
+The project also requires first-party implementation coverage per [testing](../testing/README.md#coverage):
+the pinned `dx coverage --min-coverage 97` rate gate over `//...` in every required cell
+plus the exact-gate cell inventories with zero uncovered lines.
 That gate is separate from consumer language-coverage support and feature-matrix completeness.
 
 ## Unused Dependencies

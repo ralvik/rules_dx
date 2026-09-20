@@ -1,6 +1,6 @@
 # Verification matrix (language x layer)
 
-Stage 5 close-out status page:
+Close-out status page:
 which verification layer covers which language, with as-built evidence only.
 No cell here is a `Supported` claim; promotion to `Supported` requires
 release evidence per the [support matrix](../product/support-matrix.md).
