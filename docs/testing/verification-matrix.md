@@ -72,7 +72,8 @@ class by design — never silently under the standard dogfood gates.
    codec roundtrip/parity/ordering/compat, dx_docs planning units, frozen
    contracts, removed stub behind ADR 0020, with adapter runs, renderer/site
    execution, rebuild proof, link completeness, guide-step wiring, timing proof,
-   and pin-bump/drift as owned gaps under #779-#785).
+   and pin-bump/drift as owned gaps under #779-#785). That qualification is
+   planning-only green, not pipeline-green.
 - **Environment/codegen**: deferred/unsupported records plus fixture
    evidence qualified seed-only under closed #506
   (`bazel run //tools/ci:env_codegen_qualification`; public protocol,
@@ -104,7 +105,9 @@ class by design — never silently under the standard dogfood gates.
 plus Linux arm64 native (issue #410) plus the two Linux static-musl
 profiles (issue #411) plus macOS arm64 native (issue #412) plus macOS
 x86_64 best-effort native (issue #413) plus Windows x86_64 MSVC-compatible
- native (issue #414). `Open` means open work under #787, #788 and #796-#802
+ native (issue #414). `Delivered` here is verification-layer evidence only, not
+support-matrix promotion: it never promotes a support-matrix `Planned` cell to
+`Seed-host-delivered`, `Platform-qualified`, or `Supported`. `Open` means open work under #787, #788 and #796-#802
  (successors to closed #506-#512) with no implementation
 claimed here. `Planning only` means planning is implemented with live
 execution deferred. No report-only status remains per ADR 0022 (no standing benchmarking).
@@ -129,7 +132,9 @@ consistent with per-language source-`Audit` scope in the support matrix (`Not pl
 Rust, JavaScript, TypeScript, Vue, Svelte, Astro, MDX; Python source-audit tooling qualified
 seed-only under closed #613 with future selection open under #801).
 `Support-matrix Planned` cells claim accepted scope only; where this matrix shows `Open`,
-the corresponding `Planned` cell is scope with open implementation.
+the corresponding `Planned` cell is scope with open implementation, and where this
+matrix shows `Delivered`, the corresponding `Planned` cell is scope with seed-host
+layer evidence, still not promoted under the support-matrix lifecycle.
 
 Framework composition evidence (exact parser/compiler, provider,
 generated-region, dependency, test, environment/IDE, quality-region
@@ -353,7 +358,7 @@ CI only, no Supported claim).
 
 Green here (static guards on a clean tree, no full rebuild):
 `non_dogfed_paths`, `non_dogfed_qualification` 16/16, `supported_evidence_gate`, `distribution_closeout_guards`,
-`env_codegen_qualification` 32/32, `env_plugins_cgo_qualification` 16/16, `docs_pipeline_qualification` 33/33,
+`env_codegen_qualification` 32/32, `env_plugins_cgo_qualification` 16/16, `docs_pipeline_qualification` 33/33 (planning-only green: IR plus planning records only; adapter runs, renderer/site execution, rebuild proof, link completeness, guide-step wiring, timing proof, and pin-bump/drift stay open under #779-#785 with no working site claimed),
 `consumer_ci_qualification` 43/43, `review_threads_qualification` 16/16, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
