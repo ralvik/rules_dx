@@ -186,15 +186,11 @@ mod tests {
         }
     }
 
-    fn temp_root(name: &str) -> dx_test_scratch::TempDir {
-        dx_test_scratch::scratch(&format!("dx-adopt-inspect-{name}-"))
-    }
-
     #[test]
     fn inspect_forwards_single_unwrapped_query() {
         let runner = ScriptedQuery::with(&["//z:two\n//a:one\n//z:two\n"]);
         let inv = invocation(&["owners", "//a:one"]);
-        let scratch = temp_root("single");
+        let scratch = dx_test_scratch::scratch("dx-adopt-inspect-single-");
         let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
@@ -229,7 +225,7 @@ mod tests {
     fn inspect_configured_uses_cquery() {
         let runner = ScriptedQuery::with(&["//a:one\n"]);
         let inv = invocation(&["deps", "--configured", "//a:one"]);
-        let scratch = temp_root("configured");
+        let scratch = dx_test_scratch::scratch("dx-adopt-inspect-configured-");
         let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
@@ -253,7 +249,7 @@ mod tests {
     fn why_resolves_owner_then_somepath() {
         let runner = ScriptedQuery::with(&["//owner:lib\n", "//owner:lib\n//app:server\n"]);
         let inv = invocation(&["why", "src/lib.rs", "//app:server"]);
-        let scratch = temp_root("why");
+        let scratch = dx_test_scratch::scratch("dx-adopt-inspect-why-");
         let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
@@ -289,7 +285,7 @@ mod tests {
     fn why_without_owner_is_operational() {
         let runner = ScriptedQuery::with(&[""]);
         let inv = invocation(&["why", "src/orphan.rs", "//app:server"]);
-        let scratch = temp_root("why-orphan");
+        let scratch = dx_test_scratch::scratch("dx-adopt-inspect-why-orphan-");
         let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();

@@ -397,12 +397,6 @@ mod tests {
         }
     }
 
-    fn clean_root(name: &str) -> dx_test_scratch::TempDir {
-        let scratch = dx_test_scratch::scratch(&format!("dx-clean-test-{name}-"));
-        fs::create_dir_all(scratch.path().join("ws")).expect("create workspace");
-        scratch
-    }
-
     fn workspace_of(root: &Path) -> PathBuf {
         root.join("ws")
     }
@@ -433,7 +427,11 @@ mod tests {
 
     #[test]
     fn inventory_validates_records_and_flags_unmanaged() {
-        let scratch = clean_root("inventory");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-clean-test-inventory-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let (workspace, stale_hex, current_hex) = two_record_workspace(&root);
         let dx_dir = workspace.join(".dx");

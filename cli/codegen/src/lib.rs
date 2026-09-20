@@ -37,7 +37,10 @@ use std::path::Path;
 use codegen_shard::{decode_validated, Error};
 use dx_bep::TargetOutput;
 use dx_digest::blake3 as digest;
-use dx_roots::{build_argv, invocation_targets, repository_plan, RepositoryRootPlan};
+use dx_roots::{
+    build_argv, invocation_targets, repository_plan, resolve_exact_target, ExactScopeError,
+    RepositoryRootPlan,
+};
 use serde::Serialize;
 
 /// Private output group carrying collected shards plus every generated
@@ -87,25 +90,21 @@ pub enum ScopeError {
 /// configured closure, and anything else fails before execution. A
 /// compatible target whose closure contributes no shards selects an
 /// empty exact projection downstream, never a failure here.
+///
+/// Single-source scope validation for `#651`: the `...`/`*`/`?` and
+/// `//`/`@` checks live in [`dx_roots::resolve_exact_target`]; this keeps
+/// the noun-specific `CodegenScope`/`ScopeError` while sharing the logic
+/// with `dx_setup` and `dx_env_plan` (intentional divergence: distinct
+/// scope types and canonical targets per command).
 pub fn resolve_scope(targets: &[String]) -> Result<CodegenScope, ScopeError> {
-    match targets {
-        [] => Ok(CodegenScope::Repository),
-        [single] => {
-            if single.contains("...") || single.contains('*') || single.contains('?') {
-                Err(ScopeError::TargetPattern {
-                    value: single.clone(),
-                })
-            } else if single.starts_with("//") || single.starts_with('@') {
-                Ok(CodegenScope::Exact(single.clone()))
-            } else {
-                Err(ScopeError::NotTargetLabel {
-                    value: single.clone(),
-                })
-            }
+    match resolve_exact_target(targets) {
+        Ok(None) => Ok(CodegenScope::Repository),
+        Ok(Some(label)) => Ok(CodegenScope::Exact(label)),
+        Err(ExactScopeError::MultipleTargets { count }) => {
+            Err(ScopeError::MultipleTargets { count })
         }
-        _ => Err(ScopeError::MultipleTargets {
-            count: targets.len(),
-        }),
+        Err(ExactScopeError::TargetPattern { value }) => Err(ScopeError::TargetPattern { value }),
+        Err(ExactScopeError::NotTargetLabel { value }) => Err(ScopeError::NotTargetLabel { value }),
     }
 }
 
@@ -125,6 +124,9 @@ pub fn scope_targets(scope: &CodegenScope) -> Vec<String> {
 /// fiat selection stands; every other candidate passes its own roots through.
 /// The query-pattern-file candidate carries no command-line patterns
 /// (Bazel reads them from `--target_pattern_file`).
+///
+/// Single-source plan helper for `#651`: shares the baseline/pattern-file
+/// policy with `dx_env_plan` and `dx_setup` via [`dx_roots::invocation_targets`].
 pub fn targets_for_root_plan(plan: &RepositoryRootPlan) -> Vec<String> {
     invocation_targets(plan, REPOSITORY_TARGET)
 }
@@ -132,6 +134,9 @@ pub fn targets_for_root_plan(plan: &RepositoryRootPlan) -> Vec<String> {
 /// Full `bazel build` command line for a WP4 root plan: `build` plus the
 /// plan roots, the collecting aspect, and the private output group (plus
 /// `--target_pattern_file` when the plan carries a pattern file).
+///
+/// Single-source argv helper for `#651`: shares assembly with `dx_env_plan`
+/// and `dx_setup` via [`dx_roots::build_argv`].
 pub fn build_argv_for_plan(plan: &RepositoryRootPlan) -> Vec<String> {
     build_argv(
         plan,

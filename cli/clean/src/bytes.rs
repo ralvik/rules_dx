@@ -237,12 +237,6 @@ mod tests {
         }
     }
 
-    fn clean_root(name: &str) -> dx_test_scratch::TempDir {
-        let scratch = dx_test_scratch::scratch(&format!("dx-clean-test-{name}-"));
-        fs::create_dir_all(scratch.path().join("ws")).expect("create workspace");
-        scratch
-    }
-
     fn workspace_of(root: &Path) -> PathBuf {
         root.join("ws")
     }
@@ -327,7 +321,11 @@ mod tests {
         // Portable route: sizing is symlink-aware without
         // following links on every host, so this runs everywhere instead
         // of unix-gating.
-        let scratch = clean_root("measure");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-clean-test-measure-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let (workspace, stale_hex, _) = two_record_workspace(&root);
         let plan = collect_inventory(&workspace, &[], &[])
@@ -371,7 +369,11 @@ mod tests {
 
     #[test]
     fn measure_never_follows_symlinks() {
-        let scratch = clean_root("measure-nofollow");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-clean-test-measure-nofollow-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         dx_setup::commit_pair(&workspace, &setup_pair('1', '2')).expect("commit");
@@ -403,7 +405,11 @@ mod tests {
 
     #[test]
     fn measure_missing_workspace_fails() {
-        let scratch = clean_root("measure-missing");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-clean-test-measure-missing-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let plan = CleanPlan {
             prune_setup_records: Vec::new(),

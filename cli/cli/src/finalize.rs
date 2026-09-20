@@ -378,12 +378,8 @@ mod tests {
         .into_bytes()
     }
 
-    fn test_tempdir() -> dx_test_scratch::TempDir {
-        dx_test_scratch::scratch("dx-finalize-test-")
-    }
-
     fn workspace_with(contents: &[u8]) -> dx_test_scratch::TempDir {
-        let dir = test_tempdir();
+        let dir = dx_test_scratch::scratch("dx-finalize-test-");
         let target = dir.path().join("rust/tests/fixtures/hello/BUILD.bazel");
         std::fs::create_dir_all(target.parent().unwrap()).unwrap();
         std::fs::write(&target, contents).unwrap();
@@ -440,7 +436,7 @@ mod tests {
         assert_eq!(mismatched.outcome, WriteOutcome::NotApplied as i32);
         assert_eq!(mismatched.failure_code, FAILURE_WRITE_MISMATCH);
 
-        let missing_dir = test_tempdir();
+        let missing_dir = dx_test_scratch::scratch("dx-finalize-test-");
         let missing = run(missing_dir.path());
         assert_eq!(missing.outcome, WriteOutcome::NotApplied as i32);
         assert_eq!(missing.failure_code, FAILURE_MISSING_FILE);
@@ -462,7 +458,7 @@ mod tests {
 
     #[test]
     fn check_mode_reads_no_files_and_marks_unspecified() {
-        let dir = test_tempdir();
+        let dir = dx_test_scratch::scratch("dx-finalize-test-");
         // No workspace files exist at all: check mode must still succeed.
         let manifest = finalize(&FinalizeInput {
             intended_json: &payload("check", true),
@@ -484,7 +480,7 @@ mod tests {
         // witness carries changes, after `AfterResolvingDeps` wrote it:
         // a complete check witness is trustworthy despite the failure,
         // and check mode still reads no workspace files.
-        let dir = test_tempdir();
+        let dir = dx_test_scratch::scratch("dx-finalize-test-");
         // No workspace files exist at all: the manifest still succeeds.
         let manifest = finalize(&FinalizeInput {
             intended_json: &payload("check", true),
@@ -505,7 +501,7 @@ mod tests {
     fn check_mode_rejects_incomplete_scope() {
         // A check run that did not finish a scope must not produce a manifest
         // claiming otherwise: crate validation fails the whole artifact.
-        let dir = test_tempdir();
+        let dir = dx_test_scratch::scratch("dx-finalize-test-");
         let err = finalize(&FinalizeInput {
             intended_json: &payload("check", false),
             workspace: dir.path(),
@@ -544,7 +540,7 @@ mod tests {
 
     #[test]
     fn rejects_garbage_schema_mode_and_shape() {
-        let dir = test_tempdir();
+        let dir = dx_test_scratch::scratch("dx-finalize-test-");
         let run = |json: &[u8], check: bool, gazelle_ok: bool| {
             finalize(&FinalizeInput {
                 intended_json: json,
@@ -630,7 +626,7 @@ mod tests {
 
     #[test]
     fn rejects_unsafe_paths_before_filesystem_access() {
-        let dir = test_tempdir();
+        let dir = dx_test_scratch::scratch("dx-finalize-test-");
         // Even a workspace containing a matching file must not satisfy an
         // escaping path: rejection happens before any join.
         std::fs::create_dir_all(dir.path().join("etc")).unwrap();
@@ -665,7 +661,7 @@ mod tests {
             r#""files":[{"path":"a","scope_index":7,"create_content":"eA=="}],"#,
             r#""ignored_imports":[]}"#,
         );
-        let dir = test_tempdir();
+        let dir = dx_test_scratch::scratch("dx-finalize-test-");
         let err = finalize(&FinalizeInput {
             intended_json: json.as_bytes(),
             workspace: dir.path(),
@@ -680,7 +676,7 @@ mod tests {
 
     #[test]
     fn error_display_and_incomplete_results_complete() {
-        let dir = test_tempdir();
+        let dir = dx_test_scratch::scratch("dx-finalize-test-");
         let err = finalize(&FinalizeInput {
             intended_json: &payload("check", false),
             workspace: dir.path(),
@@ -732,7 +728,7 @@ mod tests {
             r#""scopes":[{"value":"//rust/...","results_complete":true}],"#,
             r#""files":[],"ignored_imports":[]}"#,
         );
-        let dir = test_tempdir();
+        let dir = dx_test_scratch::scratch("dx-finalize-test-");
         let manifest = finalize(&FinalizeInput {
             intended_json: json.as_bytes(),
             workspace: dir.path(),

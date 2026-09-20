@@ -10,7 +10,7 @@
 //!   `--config-path` (real or empty-defaults) for rustfmt, `-c` or
 //!   `--no-auto-config` for Taplo, and `--config` for Vale.
 //!   Upstream-owned tools need no builder here: Clippy findings arrive
-//! via the `rust_clippy_aspect` diagnostics file, never via a
+//!   via the `rust_clippy_aspect` diagnostics file, never via a
 //!   spawned invocation.
 //! * `rustc` compiles one file per invocation (it accepts a single
 //!   input root); every other tool takes the whole stage file list.

@@ -136,13 +136,9 @@ mod tests {
         words.iter().map(ToString::to_string).collect()
     }
 
-    fn temp_workspace(name: &str) -> dx_test_scratch::TempDir {
-        dx_test_scratch::scratch(&format!("dx-resolve-test-{name}-"))
-    }
-
     #[test]
     fn test_mapping_queries_transitive_test_owners() {
-        let scratch = temp_workspace("test-map");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-test-map-");
         let workspace = scratch.path().to_path_buf();
         let query = FakeQuery::new(vec![FakeQuery::ok("//pkg:unit\n//pkg:e2e\n//pkg:unit\n")]);
         let got = map_owners_to_tests(&scopes(&["//pkg:lib"]), &workspace, &query).expect("map");
@@ -165,7 +161,7 @@ mod tests {
 
     #[test]
     fn test_mapping_sorts_owners_in_set_expression() {
-        let scratch = temp_workspace("test-map-order");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-test-map-order-");
         let workspace = scratch.path().to_path_buf();
         let query = FakeQuery::new(vec![FakeQuery::ok("//t:t\n")]);
         map_owners_to_tests(&scopes(&["//z:lib", "//a:lib"]), &workspace, &query).expect("map");
@@ -179,7 +175,7 @@ mod tests {
 
     #[test]
     fn empty_test_mapping_suggests_explicit_label() {
-        let scratch = temp_workspace("test-map-empty");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-test-map-empty-");
         let workspace = scratch.path().to_path_buf();
         let query = FakeQuery::new(vec![FakeQuery::ok("\n")]);
         let err = map_owners_to_tests(&scopes(&["//pkg:lib"]), &workspace, &query)
@@ -198,7 +194,7 @@ mod tests {
 
     #[test]
     fn test_mapping_failures_report_the_first_bazel_line() {
-        let scratch = temp_workspace("test-map-fail");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-test-map-fail-");
         let workspace = scratch.path().to_path_buf();
         let query = FakeQuery::new(vec![FakeQuery::failed("\n  query failed: blah  \nmore\n")]);
         let err =
@@ -214,7 +210,7 @@ mod tests {
 
     #[test]
     fn empty_owners_map_to_no_tests_without_query() {
-        let scratch = temp_workspace("test-map-no-query");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-test-map-no-query-");
         let workspace = scratch.path().to_path_buf();
         let query = NeverQuery;
         let got = map_owners_to_tests(&[], &workspace, &query).expect("map");

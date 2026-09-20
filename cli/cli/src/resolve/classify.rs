@@ -265,10 +265,6 @@ mod tests {
         words.iter().map(ToString::to_string).collect()
     }
 
-    fn temp_workspace(name: &str) -> dx_test_scratch::TempDir {
-        dx_test_scratch::scratch(&format!("dx-resolve-test-{name}-"))
-    }
-
     fn write(workspace: &Path, rel: &str, text: &str) {
         let full = workspace.join(rel);
         std::fs::create_dir_all(full.parent().expect("parent")).expect("parent dir");
@@ -283,7 +279,7 @@ mod tests {
     #[test]
     fn empty_scope_selects_repository() {
         let query = NeverQuery;
-        let scratch = temp_workspace("empty");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-empty-");
         let workspace = scratch.path().to_path_buf();
         let got = resolve(&[], &workspace, &query).expect("resolve");
         assert_eq!(got.scope, Scope::Repository);
@@ -293,7 +289,7 @@ mod tests {
     #[test]
     fn label_only_scopes_pass_through_in_order() {
         let query = NeverQuery;
-        let scratch = temp_workspace("labels");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-labels-");
         let workspace = scratch.path().to_path_buf();
         let input = scopes(&["//b/...", "//a:one", "@repo//c/..."]);
         let err = resolve(&input, &workspace, &query).expect_err("external must fail");
@@ -312,7 +308,7 @@ mod tests {
     #[test]
     fn relative_labels_fail_with_guidance() {
         let query = NeverQuery;
-        let scratch = temp_workspace("relative");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-relative-");
         let workspace = scratch.path().to_path_buf();
         let err = resolve(&scopes(&[":corpus"]), &workspace, &query).expect_err("relative");
         assert_eq!(
@@ -326,7 +322,7 @@ mod tests {
 
     #[test]
     fn file_resolves_through_single_rule_constrained_query() {
-        let scratch = temp_workspace("file");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-file-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "pkg/BUILD.bazel", "");
         write(&workspace, "pkg/a.py", "x = 1\n");
@@ -359,7 +355,7 @@ mod tests {
 
     #[test]
     fn file_argv_quotes_spaces_and_special_characters() {
-        let scratch = temp_workspace("quoting");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-quoting-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "pkg/BUILD.bazel", "");
         write(&workspace, "pkg/my file.py", "x = 1\n");
@@ -376,7 +372,7 @@ mod tests {
 
     #[test]
     fn multiple_files_share_one_bounded_query() {
-        let scratch = temp_workspace("batch");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-batch-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "pkg/BUILD.bazel", "");
         write(&workspace, "pkg/a.py", "x = 1\n");
@@ -394,7 +390,7 @@ mod tests {
 
     #[test]
     fn empty_batch_mapping_names_the_first_file() {
-        let scratch = temp_workspace("batch-empty");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-batch-empty-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "pkg/BUILD.bazel", "");
         write(&workspace, "pkg/a.py", "x = 1\n");
@@ -414,7 +410,7 @@ mod tests {
 
     #[test]
     fn file_after_a_packaged_file_without_package_fails_before_query() {
-        let scratch = temp_workspace("batch-no-package");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-batch-no-package-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "pkg/BUILD.bazel", "");
         write(&workspace, "pkg/a.py", "x = 1\n");
@@ -432,7 +428,7 @@ mod tests {
 
     #[test]
     fn root_file_maps_to_root_package_label() {
-        let scratch = temp_workspace("root-file");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-root-file-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "BUILD.bazel", "");
         write(&workspace, "top.py", "x = 1\n");
@@ -452,7 +448,7 @@ mod tests {
         // The BUILD file names no target textually: `srcs` hide behind a
         // glob and a comment points at a decoy owner. Resolution still
         // succeeds because ownership comes only from query stdout.
-        let scratch = temp_workspace("build-text");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-build-text-");
         let workspace = scratch.path().to_path_buf();
         write(
             &workspace,
@@ -467,7 +463,7 @@ mod tests {
 
     #[test]
     fn directory_becomes_recursive_pattern_without_query_or_listing() {
-        let scratch = temp_workspace("dir");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-dir-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "src/nested/deep.py", "x = 1\n");
         write(&workspace, "src/top.py", "x = 1\n");
@@ -479,7 +475,7 @@ mod tests {
 
     #[test]
     fn workspace_root_directory_maps_to_repository_pattern() {
-        let scratch = temp_workspace("root-dir");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-root-dir-");
         let workspace = scratch.path().to_path_buf();
         let query = NeverQuery;
         for root in [".", "./"] {
@@ -490,7 +486,7 @@ mod tests {
 
     #[test]
     fn mixed_labels_and_paths_merge_sorted_and_deduplicated() {
-        let scratch = temp_workspace("mixed");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-mixed-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "pkg/BUILD.bazel", "");
         write(&workspace, "pkg/a.py", "x = 1\n");
@@ -506,7 +502,7 @@ mod tests {
     #[test]
     fn missing_and_escaping_paths_fail() {
         let query = NeverQuery;
-        let scratch = temp_workspace("missing");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-missing-");
         let workspace = scratch.path().to_path_buf();
         assert_eq!(
             resolve(&scopes(&["nope.py"]), &workspace, &query).expect_err("missing"),
@@ -530,7 +526,7 @@ mod tests {
 
     #[test]
     fn non_file_entries_fail() {
-        let scratch = temp_workspace("special");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-special-");
         let workspace = scratch.path().to_path_buf();
         #[cfg(unix)]
         {
@@ -567,7 +563,7 @@ mod tests {
 
     #[test]
     fn control_characters_in_names_fail_before_query() {
-        let scratch = temp_workspace("control");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-control-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "a\nb.py", "x = 1\n");
         let query = NeverQuery;
@@ -581,7 +577,7 @@ mod tests {
 
     #[test]
     fn ownerless_files_suggest_explicit_labels() {
-        let scratch = temp_workspace("no-owner");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-no-owner-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "pkg/BUILD.bazel", "");
         write(&workspace, "pkg/orphan.py", "x = 1\n");
@@ -599,7 +595,7 @@ mod tests {
 
     #[test]
     fn file_labels_use_the_nearest_enclosing_package() {
-        let scratch = temp_workspace("pkg-labels");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-pkg-labels-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "pkg/BUILD.bazel", "");
         write(&workspace, "pkg/a.py", "x = 1\n");
@@ -626,7 +622,7 @@ mod tests {
 
     #[test]
     fn bare_build_marker_and_nearest_package_win() {
-        let scratch = temp_workspace("pkg-markers");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-pkg-markers-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "legacy/BUILD", "");
         write(&workspace, "legacy/a.py", "x = 1\n");
@@ -650,7 +646,7 @@ mod tests {
 
     #[test]
     fn files_without_any_enclosing_package_fail() {
-        let scratch = temp_workspace("no-package");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-no-package-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "docs/guide.md", "# guide\n");
         write(&workspace, "other/BUILD.bazel", "");
@@ -670,7 +666,7 @@ mod tests {
         // Portable route: symlink kind is rejected on every
         // host; planting uses the OS primitive and fails fast without
         // privilege instead of gating the test.
-        let scratch = temp_workspace("symlink-kind");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-symlink-kind-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "target.txt", "x\n");
         #[cfg(windows)]

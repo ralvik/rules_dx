@@ -47,7 +47,10 @@ pub fn run_nonce() -> u64 {
 /// the caller must forward as [`crate::exec::Env::nonce`] so BEP and
 /// intended-manifest paths share the run's uniqueness.
 ///
-/// Uses [`tempfile::Builder`] with prefix `dx-run-`: exclusive create plus
+/// Single prod run-temp policy for `#651` (distinct from the hermetic
+/// `quality_adapter::exec::Scratch` mirror and the test-only
+/// `dx_test_scratch::scratch`): uses [`tempfile::Builder`] with prefix
+/// `dx-run-`: exclusive create plus
 /// internal retry closes the PID-recycle collision window that hand-rolled
 /// `create_dir` loops used to cover. The returned [`tempfile::TempDir`]
 /// auto-cleans on drop; callers that need a removal warning should call

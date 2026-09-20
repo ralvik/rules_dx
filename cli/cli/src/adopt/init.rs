@@ -77,14 +77,10 @@ mod tests {
         }
     }
 
-    fn temp_root(name: &str) -> dx_test_scratch::TempDir {
-        dx_test_scratch::scratch(&format!("dx-adopt-init-{name}-"))
-    }
-
     #[test]
     fn init_dry_run_lists_without_writing() {
         let inv = invocation(&["init", "--dry-run", "demo"]);
-        let scratch = temp_root("dry");
+        let scratch = dx_test_scratch::scratch("dx-adopt-init-dry-");
         let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
@@ -105,7 +101,7 @@ mod tests {
     #[test]
     fn init_applies_absent_only() {
         let inv = invocation(&["init"]);
-        let scratch = temp_root("apply");
+        let scratch = dx_test_scratch::scratch("dx-adopt-init-apply-");
         let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();

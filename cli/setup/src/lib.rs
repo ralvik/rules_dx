@@ -27,7 +27,10 @@ use std::time::Duration;
 
 use dx_digest::blake3 as digest;
 use dx_env::{acquire_lock, Error};
-use dx_roots::{repository_plan, RepositoryRootPlan};
+use dx_roots::{
+    build_argv_union, invocation_targets_union, repository_plan, resolve_exact_target,
+    ExactScopeError, RepositoryRootPlan,
+};
 
 /// Codegen collecting aspect applied in the combined request. Matches
 /// `dx_codegen_plan_aspect` in `//generation:codegen.bzl` and
@@ -88,25 +91,21 @@ pub enum ScopeError {
 /// execution. A compatible target whose closure contributes no shards
 /// selects empty sides downstream (with carry-forward or managed empty
 /// generations), never a failure here.
+///
+/// Single-source scope validation for `#651`: the `...`/`*`/`?` and
+/// `//`/`@` checks live in [`dx_roots::resolve_exact_target`]; this keeps
+/// the noun-specific `SetupScope`/`ScopeError` while sharing the logic with
+/// `dx_codegen` and `dx_env_plan` (intentional divergence: distinct scope
+/// types and the two-target union below).
 pub fn resolve_scope(targets: &[String]) -> Result<SetupScope, ScopeError> {
-    match targets {
-        [] => Ok(SetupScope::Repository),
-        [single] => {
-            if single.contains("...") || single.contains('*') || single.contains('?') {
-                Err(ScopeError::TargetPattern {
-                    value: single.clone(),
-                })
-            } else if single.starts_with("//") || single.starts_with('@') {
-                Ok(SetupScope::Exact(single.clone()))
-            } else {
-                Err(ScopeError::NotTargetLabel {
-                    value: single.clone(),
-                })
-            }
+    match resolve_exact_target(targets) {
+        Ok(None) => Ok(SetupScope::Repository),
+        Ok(Some(label)) => Ok(SetupScope::Exact(label)),
+        Err(ExactScopeError::MultipleTargets { count }) => {
+            Err(ScopeError::MultipleTargets { count })
         }
-        _ => Err(ScopeError::MultipleTargets {
-            count: targets.len(),
-        }),
+        Err(ExactScopeError::TargetPattern { value }) => Err(ScopeError::TargetPattern { value }),
+        Err(ExactScopeError::NotTargetLabel { value }) => Err(ScopeError::NotTargetLabel { value }),
     }
 }
 
@@ -138,14 +137,13 @@ pub fn request_aspects() -> Vec<String> {
 /// every other candidate passes its single union root set through. The
 /// query-pattern-file candidate carries no command-line patterns (Bazel
 /// reads them from `--target_pattern_file`).
+///
+/// Single-source union helper for `#651`: shares the baseline/pattern-file
+/// policy with [`dx_roots::invocation_targets`] via
+/// [`invocation_targets_union`]; the two-target union is the intentional
+/// divergence from the single-target codegen/env helpers.
 pub fn targets_for_root_plan(plan: &RepositoryRootPlan) -> Vec<String> {
-    if plan.pattern_file.is_some() {
-        return Vec::new();
-    }
-    if *plan == repository_plan() {
-        return scope_targets(&SetupScope::Repository);
-    }
-    plan.roots.clone()
+    invocation_targets_union(plan, &[CODEGEN_REPOSITORY_TARGET, ENV_REPOSITORY_TARGET])
 }
 
 /// Plans the single combined Bazel request for a WP4 root plan: the
@@ -163,20 +161,16 @@ pub fn plan_request_for_root_plan(plan: &RepositoryRootPlan) -> SetupRequest {
 /// Full `bazel build` command line for a WP4 root plan: `build` plus the
 /// union roots, both collecting aspects, and both output groups (plus
 /// `--target_pattern_file` when the plan carries a pattern file).
+///
+/// Single-source union argv for `#651`: shares assembly with
+/// [`dx_roots::build_argv`] via [`build_argv_union`].
 pub fn build_argv_for_plan(plan: &RepositoryRootPlan) -> Vec<String> {
-    let request = plan_request_for_root_plan(plan);
-    let mut argv = vec!["build".to_owned()];
-    argv.extend(request.roots);
-    for aspect in &request.aspects {
-        argv.push(format!("--aspects={aspect}"));
-    }
-    for group in &request.output_groups {
-        argv.push(format!("--output_groups={group}"));
-    }
-    if let Some(pattern_arg) = plan.pattern_file_arg() {
-        argv.push(pattern_arg);
-    }
-    argv
+    build_argv_union(
+        plan,
+        &[CODEGEN_REPOSITORY_TARGET, ENV_REPOSITORY_TARGET],
+        &request_aspects(),
+        &request_output_groups(),
+    )
 }
 
 /// Output groups requested together in the single setup request: the
@@ -999,12 +993,6 @@ mod tests {
         }
     }
 
-    fn commit_root(name: &str) -> dx_test_scratch::TempDir {
-        let scratch = dx_test_scratch::scratch(&format!("dx-setup-test-{name}-"));
-        fs::create_dir_all(scratch.path().join("ws")).expect("create workspace");
-        scratch
-    }
-
     fn workspace_of(root: &Path) -> PathBuf {
         root.join("ws")
     }
@@ -1040,7 +1028,11 @@ mod tests {
 
     #[test]
     fn fresh_install_noop_and_replacement() {
-        let scratch = commit_root("lifecycle");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-setup-test-lifecycle-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         assert_eq!(read_current_pair(&workspace).expect("read"), None);
@@ -1079,7 +1071,11 @@ mod tests {
 
     #[test]
     fn workspace_path_with_spaces_commits() {
-        let scratch = commit_root("with space");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-setup-test-with space-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         assert_eq!(
@@ -1095,7 +1091,11 @@ mod tests {
 
     #[test]
     fn prepared_commits_carry_forward_under_one_lock() {
-        let scratch = commit_root("carry-commit");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-setup-test-carry-commit-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let sides = |env: Option<char>, gen: Option<char>| PreparedSides {
@@ -1119,7 +1119,11 @@ mod tests {
 
     #[test]
     fn prepared_without_capability_fails_before_mutation() {
-        let scratch = commit_root("no-capability");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-setup-test-no-capability-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let error = commit_prepared(
@@ -1139,7 +1143,11 @@ mod tests {
 
     #[test]
     fn record_mismatch_preserves_current() {
-        let scratch = commit_root("mismatch");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-setup-test-mismatch-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         assert_eq!(
@@ -1173,7 +1181,11 @@ mod tests {
 
     #[test]
     fn unmanaged_current_states_fail_closed() {
-        let scratch = commit_root("unmanaged");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-setup-test-unmanaged-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         assert_eq!(
@@ -1219,7 +1231,11 @@ mod tests {
 
     #[test]
     fn digest_spoofed_pointer_fails_closed() {
-        let scratch = commit_root("spoof");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-setup-test-spoof-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         assert_eq!(
@@ -1253,7 +1269,11 @@ mod tests {
 
     #[test]
     fn stale_staged_pointer_is_reclaimed() {
-        let scratch = commit_root("stale-next");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-setup-test-stale-next-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let setups = workspace.join(".dx").join("setups");
@@ -1269,7 +1289,11 @@ mod tests {
 
     #[test]
     fn workspace_missing_fails() {
-        let scratch = commit_root("ws-missing");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-setup-test-ws-missing-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let missing = root.join("no-such-dir");
         assert!(matches!(
@@ -1285,7 +1309,11 @@ mod tests {
 
     #[test]
     fn busy_lock_fails_after_deadline() {
-        let scratch = commit_root("busy");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-setup-test-busy-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let dx_dir = workspace.join(".dx");
@@ -1301,7 +1329,11 @@ mod tests {
 
     #[test]
     fn lock_open_failure_aborts() {
-        let scratch = commit_root("lock-open");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-setup-test-lock-open-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let dx_dir = workspace.join(".dx");
@@ -1316,7 +1348,11 @@ mod tests {
 
     #[test]
     fn concurrent_commits_serialize_with_idempotent_reuse() {
-        let scratch = commit_root("concurrent");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-setup-test-concurrent-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         // Eight racing commits over four distinct pairs: the commit
@@ -1360,7 +1396,11 @@ mod tests {
 
     #[test]
     fn staged_directory_preserves_current() {
-        let scratch = commit_root("staged-dir");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-setup-test-staged-dir-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         assert_eq!(

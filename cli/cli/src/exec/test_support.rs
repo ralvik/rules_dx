@@ -26,10 +26,10 @@ pub(crate) fn invocation(words: &[&str]) -> Invocation {
 }
 
 pub(crate) fn temp_dir(prefix: &str) -> tempfile::TempDir {
-    tempfile::Builder::new()
-        .prefix(&format!("dx-exec-test-{prefix}-"))
-        .tempdir()
-        .expect("temp dir")
+    // Thin wrapper over the single test scratch policy
+    // (`dx_test_scratch::scratch`, #651): same prefix discipline plus
+    // auto-clean on drop, not a third scratch implementation.
+    dx_test_scratch::scratch(&format!("dx-exec-test-{prefix}-"))
 }
 
 pub(crate) struct Harness {

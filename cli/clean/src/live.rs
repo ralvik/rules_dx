@@ -188,12 +188,6 @@ mod tests {
         }
     }
 
-    fn clean_root(name: &str) -> dx_test_scratch::TempDir {
-        let scratch = dx_test_scratch::scratch(&format!("dx-clean-test-{name}-"));
-        fs::create_dir_all(scratch.path().join("ws")).expect("create workspace");
-        scratch
-    }
-
     fn workspace_of(root: &Path) -> PathBuf {
         root.join("ws")
     }
@@ -257,7 +251,11 @@ mod tests {
 
     #[test]
     fn scan_missing_proc_root_scans_empty() {
-        let scratch = clean_root("scan-missing");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-clean-test-scan-missing-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let dx_dir = workspace_of(&root).join(".dx");
         assert_eq!(
@@ -269,7 +267,11 @@ mod tests {
 
     #[test]
     fn scan_ignores_non_numeric_entries() {
-        let scratch = clean_root("scan-nonnumeric");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-clean-test-scan-nonnumeric-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let dx_dir = workspace.join(".dx");
@@ -288,7 +290,11 @@ mod tests {
 
     #[test]
     fn scan_reports_cwd_and_fd_targets_under_managed_roots() {
-        let scratch = clean_root("scan-live");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-clean-test-scan-live-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let dx_dir = workspace.join(".dx");
@@ -328,7 +334,11 @@ mod tests {
 
     #[test]
     fn scan_trims_deleted_suffix_and_ignores_unmanaged_paths() {
-        let scratch = clean_root("scan-edge");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-clean-test-scan-edge-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let dx_dir = workspace.join(".dx");
@@ -371,7 +381,11 @@ mod tests {
 
     #[test]
     fn scan_dedupes_and_sorts_across_processes() {
-        let scratch = clean_root("scan-dedupe");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-clean-test-scan-dedupe-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let dx_dir = workspace.join(".dx");
@@ -411,7 +425,11 @@ mod tests {
 
     #[test]
     fn with_scan_matches_plain_inventory_without_live_processes() {
-        let scratch = clean_root("with-scan");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-clean-test-with-scan-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let (workspace, stale_hex, _) = two_record_workspace(&root);
         let scanned = collect_inventory_with_scan(&workspace).expect("scan collect");
