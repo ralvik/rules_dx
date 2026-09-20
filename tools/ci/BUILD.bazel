@@ -752,6 +752,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Selective NuGet per-package wont-fix harness; see docs/cli/commands/audit-update-bazel.md#dx-update.
+sh_binary(
+    name = "selective_nuget_qualification",
+    srcs = ["selective_nuget_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Update mutation-event wont-fix harness; see docs/cli/output-protocol.md#mutation.
 sh_binary(
     name = "update_events_qualification",

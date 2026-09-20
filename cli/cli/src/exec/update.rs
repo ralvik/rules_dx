@@ -646,6 +646,20 @@ mod tests {
     }
 
     #[test]
+    fn live_unsupported_nuget_selective_fails_without_launch() {
+        // Issue #635: `nuget:FSharp.Core` parses then fails closed as
+        // `BackendError::Unsupported` with no updater launch and never a
+        // silent full substitution.
+        let runner = ScriptRunner::new(&[]);
+        let (code, out, err) = run_with(&["update", "nuget:FSharp.Core"], &runner);
+        assert_eq!(code, 1, "{out}{err}");
+        assert!(err.contains("update_failed"), "{err}");
+        assert!(err.contains("unsupported"), "{err}");
+        assert!(err.contains("dx update nuget"), "{err}");
+        assert!(runner.calls.borrow().is_empty());
+    }
+
+    #[test]
     fn live_target_resolves_to_owning_set_only() {
         let runner = ScriptRunner::new(&[]);
         let (code, out, err) = run_with(&["update", "//go/tests/fixtures/hello:hello"], &runner);

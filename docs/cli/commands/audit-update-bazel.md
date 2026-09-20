@@ -429,6 +429,13 @@ selector parses the crate name then fails closed as `unsupported` with
 the `dx update cargo` hint and never silently substitutes a full
 update; private `cargo update -p` stays rejected as a private resolver.
 
+NuGet per-package (`nuget:<id>`, e.g. `nuget:FSharp.Core`) is wont-fix
+(issue #635, fixtures in `cli/update/tests/fixtures/selective_nuget/`):
+the approved `paket2bazel` regen has no per-id flag, so the selector
+parses the id then fails closed as `unsupported` with the
+`dx update nuget` hint and never silently substitutes a full update;
+private `paket.lock` surgery stays rejected as a private resolver.
+
 `dx update` updates selected dependencies to the newest versions permitted by the project's
 declared requirements and authoritative ecosystem resolver, through approved Bazel integration.
 It refreshes standard locks or equivalent resolved dependency files without widening or replacing

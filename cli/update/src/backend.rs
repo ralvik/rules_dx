@@ -237,6 +237,28 @@ mod tests {
     }
 
     #[test]
+    fn nuget_selective_reports_unsupported_never_full() {
+        // Issue #635: per-package `nuget:<id>` parses in the selector
+        // but the approved `paket2bazel` regen has no per-id flag, so
+        // execution fails closed with the full-set hint and never
+        // substitutes a full update; private `paket.lock` surgery stays
+        // rejected (resolver-owned backends only).
+        let error = plan(
+            SetId::NuGet,
+            &SetRequest::Packages(vec!["FSharp.Core".to_owned()]),
+        )
+        .expect_err("nuget selective is wont-fix");
+        assert!(
+            matches!(error, BackendError::Unsupported { .. }),
+            "{error:?}"
+        );
+        assert!(error.to_string().contains("nuget"));
+        assert!(error
+            .to_string()
+            .contains("use `dx update nuget` for the set"));
+    }
+
+    #[test]
     fn non_npm_selective_reports_unsupported_never_full() {
         for (set, packages) in [
             (
