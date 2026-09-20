@@ -26,8 +26,13 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
   battery commands plus docs gate with `closeout_battery_qualification`),
   rustfmt with crate edition delivered (issue #468, crate edition flows to
   rustfmt with fixtures plus `rustfmt_edition_qualification`),
-  CC opt-out linker delivered (issue #471, kept opt-out executes for
-  pure-Rust scripts with fixtures plus `cc_optout_qualification`).
+   CC opt-out linker delivered (issue #471, kept opt-out executes for
+   pure-Rust scripts with fixtures plus `cc_optout_qualification`).
+   Shell-env default vs annotation extension delivered (issue #472, global
+   `False` with zero per-crate opt-ins plus `shell_env_qualification`).
+   CXX graph identity decided (issue #474, single `crates` graph with
+   `cxx == cxxbridge-cmd == 1.0.200` plus fixtures plus
+   `cxx_identity_qualification`).
 * Robustness and hygiene: CI hygiene,
   warnings-as-errors, visibility hardening, cli-contract claims, human-run
   release path (signing-first, issue #458), signing stack + distribution

@@ -1030,6 +1030,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:shell_env_qualification
       - name: Audit bindgen qualification (issue #473 LLVM-22-vs-23 pins plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:bindgen_qualification
+      - name: Audit CXX identity qualification (issue #474 single crates graph plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:cxx_identity_qualification
       - name: Audit exact-target qualification (issue #475 resolver-owned exact labels plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:exact_target_qualification
       - name: Write job summary

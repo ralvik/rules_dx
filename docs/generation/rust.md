@@ -231,6 +231,29 @@ on the seed host. Pinned by `bazel run //tools/ci:bindgen_qualification`
 with no `Supported` claim until platform plus consumer plus release
 evidence passes.
 
+## CXX Bridges
+
+CXX graph identity (decided under issue #474; ad-hoc identity rejected):
+the `cxx` library crate and the `cxxbridge-cmd` codegen binary resolve from
+the single crate_universe `crates` graph at identical versions
+(`cxx == cxxbridge-cmd == 1.0.200`, the inspected CXX release). The generator
+tool is `@crates//:cxxbridge-cmd` on the execution platform, never `@cxx.rs//:codegen`:
+CXX's Bazel module registers direct `rules_rust`
+toolchains plus its own `crates.io`/`vendor` repos, which would be a second
+Rust graph beside the pinned `rules_rust` 0.74.0 graph, so no `cxx.rs` module
+lands in `MODULE.bazel`. The Rust side keeps `CrateInfo`/`DepInfo` through the
+`rust_library` wrapper and the C++ side keeps `CcInfo` through the
+`cc_library` wrapper, composed as upstream `rust_cxx_bridge` composes them
+(`cc_library` over the generated `.cc` plus an include library over the
+generated `.h`). Proven by `rust/tests/fixtures/cxx_identity/`
+(`cxx_identity` lib plus `cxx_identity_test` plus `bridge` plus `bridge_test`
+under `bazel test //...`, `bazel run
+//tools/ci:cxx_identity_qualification`); mixed `cxx`/`cxxbridge-cmd` versions
+stay rejected. Scope is graph identity on the seed host; the version pin lives
+under `[package.metadata]` until the manifest joins crate_universe, and full
+`cxxbridge-cmd` execution plus corpus wiring stays owned under issue #499
+with no `Supported` claim.
+
 ## Versions
 
 Rust omits per-target toolchain-version selection under
