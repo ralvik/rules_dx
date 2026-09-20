@@ -996,6 +996,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:quality_adapters_parity
       - name: Audit env/codegen qualification (issue #309 deferred records plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:env_codegen_qualification
+      - name: Audit env plugin-model plus cgo qualification (issue #587 deferred plugin design plus cgo boundary plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:env_plugins_cgo_qualification
       - name: Audit docs-pipeline qualification (issue #581 IR plus planning evidence, owned gaps, no working site)
         run: bazel run --noshow_progress //tools/ci:docs_pipeline_qualification
       - name: Audit consumer-CI qualification (issue #312 contract plus fixture evidence, owned gaps)

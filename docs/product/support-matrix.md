@@ -372,7 +372,9 @@ choices are owned by the [native qualification plan](../native-toolchains.md). B
   [environment refresh](../environments/environment.md#ownership-and-refresh), following the
   cross-language automatic-first policy rather than building a static snapshot alternative.
   Exact-target isolation, failure propagation, cgo IDE behavior, and every host workflow still need
-  qualification; upstream explicitly does not guarantee cgo completion.
+  qualification; upstream explicitly does not guarantee cgo completion (pure-Go boundary plus
+  explicit cgo exception pinned by `env/tests/fixtures/env_plugins_cgo/` via
+  `bazel run //tools/ci:env_plugins_cgo_qualification`, issue #587).
 - [rules_cc](https://github.com/bazelbuild/rules_cc) supplies build rules, not a hermetic compiler
   distribution. [hermetic-llvm v0.8.19](https://github.com/hermeticbuild/hermetic-llvm/tree/v0.8.19)
   is the inspected release of the preferred Linux/macOS backend. Its released Windows route uses
