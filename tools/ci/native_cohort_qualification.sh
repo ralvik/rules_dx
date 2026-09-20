@@ -13,19 +13,23 @@
 #   route for gofumpt (strict gofmt superset, standalone artifact) plus
 #   `govet` from the authoritative Go toolchain (no separate acquisition)
 #   plus staticcheck/errcheck as standalone artifacts (staticcheck default
-#   checks versus `SA`-only stays an unresolved conflict, neither selected;
+#   checks with the `SA`-only shortcut rejected, neither provisional;
+#   versions plus rule-sets qualified seed-only under issue #487),
 #   `govet`/errcheck text-parse `file:line[:col]: message`), whole-file
 #   rewrite versus check-only fix modes with the provisional
 #   sandbox-apply-and-diff flow, initial artifact research rows as
-#   observations not pins, provisional adapter-input notes (clang-tidy
+#   observations for digests (versions qualified seed-only under issue
+#   #487), provisional adapter-input notes (clang-tidy
 #   `--export-fixes` YAML, staticcheck SARIF/JSON shapes, C/C++
 #   MSVC-interop plus SDK licensing staying with the Windows platform
-#   issue), provisional native-config inputs (clang-tidy default checks,
-#   cppcheck default enablement, staticcheck rule-set conflict) explicitly
-#   not approved presets, parity-deferred c/cpp/go with owner plus frozen
+#   issue), native-config defaults qualified seed-only under issue #487
+#   (staticcheck default checks, govet default analyzers with errcheck
+#   complementary, clang-tidy default checks, cppcheck default enablement
+#   as upstream built-in defaults with no hidden preset),
+#   parity-deferred c/cpp/go with owner plus frozen
 #   route, classification-only taxonomy with no curated defaults and no
 #   native-config binding;
-# - open under #418 with honest records: exact artifact versions/digests
+# - open under #418 with honest records: exact artifact digests
 #   plus toolchain qualification, parser plus runner-matrix pass/fail plus
 #   fix/format evidence per adapter-backed class, native-config
 #   qualification against the native-config contract, platform plus
@@ -140,8 +144,9 @@ fi
 
 # Tool acquisition keeps the decided split native route for
 # clang-format/clang-tidy/cppcheck with the compile-commands decision
-# recorded explicitly plus MSVC-interop scoping and no false claim,
-# owned by #418 (live successor to closed #307 for the c/cpp classes).
+# recorded explicitly plus MSVC-interop scoping and no false claim;
+# versions qualified under #487, digests plus adapters stay pending
+# under #418 (live successor to closed #307 for the c/cpp classes).
 if grep -q -F -e 'Decided route: clang-format, clang-tidy, and cppcheck take the' "$acquisition" &&
   grep -q -F -e 'no separate acquisition' "$acquisition" &&
   grep -q -F -e 'compile-commands' "$acquisition" &&
@@ -149,29 +154,35 @@ if grep -q -F -e 'Decided route: clang-format, clang-tidy, and cppcheck take the
   grep -q -F -e '--xml --xml-version=2' "$acquisition" &&
   grep -q -F -e 'no adapter claims `c` or `cpp` yet' "$acquisition" &&
   grep -q -F -e '(open under issue #418)' "$acquisition" &&
-  grep -q -F -e 'MSVC-interop and SDK licensing stay with' "$acquisition"; then
+  grep -q -F -e 'MSVC-interop and SDK licensing stay with' "$acquisition" &&
+  grep -q -F -e 'qualified seed-only under issue #487' "$acquisition" &&
+  grep -q -F -e 'digests plus adapter mappings stay owned under issue #418' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its decided native route, compile-commands decision, or #418 ownership or no-claim honesty"
+  bad "tool-acquisition lost its decided native route with #487 versions plus #418 digests/adapters split"
 fi
 
 # Tool acquisition keeps the decided split Go route for
-# gofumpt/staticcheck/govet/errcheck with the SA-only conflict recorded
-# as unresolved (neither selected) and no false claim, owned by #418.
+# gofumpt/staticcheck/govet/errcheck with the SA-only conflict resolved
+# (default checks qualified, SA-only shortcut rejected) and no false claim;
+# versions qualified under #487, digests plus adapters stay pending under #418.
 if grep -q -F -e 'Decided route: gofumpt, staticcheck, govet, and errcheck take the' "$acquisition" &&
   grep -q -F -e 'strict superset of gofmt' "$acquisition" &&
-  grep -q -F -e 'neither is selected' "$acquisition" &&
+  grep -q -F -e 'SA`-only shortcut is rejected without qualification' "$acquisition" &&
+  grep -q -F -e 'qualified seed-only under issue #487' "$acquisition" &&
+  grep -q -F -e 'digests plus adapter mappings stay owned under issue #418' "$acquisition" &&
   grep -q -F -e 'sandbox-apply-and-diff' "$acquisition" &&
   grep -q -F -e 'file:line[:col]: message' "$acquisition" &&
   grep -q -F -e 'no adapter claims `go`' "$acquisition" &&
   grep -q -F -e '(open under issue #418)' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its decided Go route, SA-only honesty, or #418 ownership or no-claim honesty"
+  bad "tool-acquisition lost its decided Go route with #487 versions plus #418 digests/adapters split"
 fi
 
 # Tool acquisition keeps initial artifact research rows for the cohort as
-# observations, not pins, with byte-identity risk explicit.
+# observations for digests (versions qualified seed-only under issue #487),
+# with byte-identity risk explicit.
 cohort_research=""
 for tool in '| clang-format |' '| clang-tidy |' '| cppcheck |' '| gofumpt |' '| staticcheck |' '| govet |' '| errcheck |'; do
   grep -q -F -e "$tool" "$acquisition" || cohort_research="$cohort_research $tool:missing"
@@ -185,39 +196,38 @@ else
   bad "tool-acquisition lost a native research row or its observations-not-pins honesty:$cohort_research"
 fi
 
-# Tool integrations keep the provisional native adapter-input notes:
+# Tool integrations keep the native adapter-input notes:
 # clang-tidy target-coupled versus check-only recorded not silent, cppcheck
-# XML on stderr, staticcheck SA-only conflict neither selected, govet/errcheck
-# text-parse, MSVC-interop scoping, versions as observations not pins, no
-# adapter claim.
+# XML on stderr, staticcheck default checks qualified with the SA-only
+# shortcut rejected, govet/errcheck text-parse, MSVC-interop scoping,
+# versions qualified under #487 with digests as observations, no adapter claim.
 if grep -q -F -e '**Native cohort (issue #418' "$integrations" &&
   grep -q -F -e 'no adapter claims `c`, `cpp`, or `go` yet' "$integrations" &&
   grep -q -F -e 'target-coupled wiring versus check-only decision is recorded here, not silent' "$integrations" &&
   grep -q -F -e '--xml --xml-version=2' "$integrations" &&
-  grep -q -F -e 'neither is selected here, qualify before freezing' "$integrations" &&
+  grep -q -F -e 'shortcut is rejected without qualification' "$integrations" &&
+  grep -q -F -e 'qualified seed-only under issue #487' "$integrations" &&
+  grep -q -F -e 'adapters stay owned under issue #418' "$integrations" &&
   grep -q -F -e 'file:line[:col]: message' "$integrations" &&
   grep -q -F -e 'MSVC-interop and SDK licensing stay with the Windows' "$integrations" &&
   grep -q -F -e 'observations,' "$integrations" &&
   grep -q -F -e 'not pins' "$integrations"; then
   ok
 else
-  bad "tool-integrations lost its provisional native adapter-input notes or open-work honesty"
+  bad "tool-integrations lost its native adapter-input notes with #487 versions plus #418 adapters split"
 fi
 
-# Support matrix keeps the native routes plus provisional native-config
-# inputs plus adapter-input notes plus cohort tracking, all citing #418
-# without approving hidden presets or claiming support. Terminal-cohort
-# phrasing stays forward-compatible: issue #419 is the live successor for
-# the structured cohort, so the `remaining cohorts` parenthetical now closes
-# under #419 while native tracking still cites #418.
+# Support matrix keeps the native routes plus qualified native-config defaults
+# (issue #487) plus adapter-input notes plus cohort tracking, all citing #418 for
+# adapters/digests without approving hidden presets or claiming support.
 if grep -q -F -e 'split native route (issue #418' "$support" &&
   grep -q -F -e 'Go route (issue #418' "$support" &&
-  grep -q -F -e 'native artifacts, versions, rule sets, and adapter mappings are tracked under' "$support" &&
+  grep -q -F -e 'qualified seed-only under issue #487' "$support" &&
+  grep -q -F -e 'cc/tests/fixtures/native_quality/pins.bzl' "$support" &&
+  grep -q -F -e 'no hidden preset' "$support" &&
   grep -q -F -e 'issue #418' "$support" &&
   grep -q -F -e 'remaining cohorts stay in' "$support" &&
   grep -q -F -e '(open under issue #418)' "$support" &&
-  grep -q -F -e '(both provisional under issue #418)' "$support" &&
-  grep -q -F -e '(all provisional under issue #418)' "$support" &&
   grep -q -F -e 'under issue #418' "$support" &&
   grep -q -F -e 'owned by issue #418' "$support" &&
   grep -q -F -e 'itemized under issue #418' "$support" &&
@@ -225,7 +235,7 @@ if grep -q -F -e 'split native route (issue #418' "$support" &&
   grep -q -F -e 'to issue #418' "$support"; then
   ok
 else
-  bad "support-matrix lost its native routes, provisional inputs, adapter notes, or #418 cohort tracking"
+  bad "support-matrix lost its native routes, qualified defaults, adapter notes, or #418 cohort tracking"
 fi
 
 # Tool baseline keeps the Go/C/C++ coverage rows (integration inventory,

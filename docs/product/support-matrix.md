@@ -616,25 +616,33 @@ Upstream documentation observations; provisional defaults, not
 selections. Exact versions, rule sets, and adapter mappings are tracked in
 open work under issues #485-#489, except the JVM versions plus rule-sets
 qualified seed-only under issue #485 below (digests plus adapter mappings
-stay owned under issue #416) and the Scala + .NET versions plus rule-sets
+stay owned under issue #416), the Scala + .NET versions plus rule-sets
 qualified seed-only under issue #486 below (digests plus adapter mappings
-stay owned under issue #417).
+stay owned under issue #417), and the native versions plus rule-sets
+qualified seed-only under issue #487 below (digests plus adapter mappings
+stay owned under issue #418).
 
 - Go: gofumpt (strict superset of gofmt) for format; staticcheck plus `govet`
-  for lint, since neither subsumes the other. The existing `SA`-only suggestion
-  conflicts with the default-check suggestion below; both remain provisional,
-  not an approved native rule selection. Route decision (recorded 2026-09-13):
+  for lint, since neither subsumes the other. Route decision (recorded 2026-09-13):
   gofumpt, staticcheck, and errcheck stay standalone checksummed-artifact
   candidates while `govet` ships with the authoritative Go toolchain (no
-  separate acquisition); the `SA`-only versus default-checks conflict stays
-  unresolved under issue #418 — neither is selected here. No adapter claims
-  `go` yet (open under issue #418).
+  separate acquisition). Versions plus rule-sets qualified seed-only
+  under issue #487 (`bazel run //tools/ci:native_quality_qualification` with
+  `cc/tests/fixtures/native_quality/pins.bzl` over upstream built-in defaults
+  with no hidden preset; staticcheck default checks, not the `SA`-only shortcut;
+  `govet` default analyzers with errcheck complementary for unhandled errors;
+  exact digests plus adapter mappings stay owned under issue #418).
+  No adapter claims `go` yet (open under issue #418).
 - C/C++: clang-format, clang-tidy, and cppcheck as already named;
   compiler-integrated and standalone analysis are complementary. Route
   decision (recorded 2026-09-13): clang-format and clang-tidy resolve from
   the qualified hermetic-llvm LLVM distribution's tool targets
   (authoritative-toolchain class, no separate acquisition); cppcheck stays a
-  standalone checksummed-artifact candidate pending adapter qualification.
+  standalone checksummed-artifact candidate. Versions plus rule-sets qualified
+  seed-only under issue #487 (`bazel run //tools/ci:native_quality_qualification`
+  with `cc/tests/fixtures/native_quality/pins.bzl` over upstream built-in defaults
+  with no hidden preset; clang-tidy default checks, cppcheck default enablement;
+  exact digests plus adapter mappings stay owned under issue #418).
   No adapter claims c/cpp yet (open under issue #418).
 - Java: google-java-format; PMD, Checkstyle, SpotBugs, plus Error Prone, which
   works out of the box with Bazel. The Error Prone version follows the
@@ -711,9 +719,12 @@ issue #416); exact Scala + .NET versions plus rule-sets qualified seed-only
 under issue #486 (`bazel run //tools/ci:scala_dotnet_defaults_qualification`
 with `scala/tests/fixtures/scala_dotnet_quality/pins.bzl` over upstream
 built-in defaults with no hidden preset;
-exact digests plus adapter mappings stay owned under issue #417); exact
-native artifacts, versions, rule sets, and adapter mappings are tracked under
-issue #418; exact structured (`buf`/Qt) artifacts, versions, rule sets, and
+exact digests plus adapter mappings stay owned under issue #417); exact native
+versions plus rule-sets qualified seed-only under issue #487
+(`bazel run //tools/ci:native_quality_qualification` with
+`cc/tests/fixtures/native_quality/pins.bzl` over upstream built-in defaults
+with no hidden preset; exact digests plus adapter mappings stay owned under
+issue #418); exact structured (`buf`/Qt) artifacts, versions, rule sets, and
 adapter mappings are tracked under issue #419; exact interpreted/file-family
 (`ruby`/`powershell` plus cue/jsonnet/pkl/css/html_template/gherkin/sql/xml/go_module/
 terraform/yaml/text) artifacts, versions, rule sets, and adapter mappings are tracked
@@ -726,10 +737,19 @@ enabled tools. Qualify these suggestions against [native configuration](../quali
 before freezing them; curated membership does not authorize hidden presets. The following existing native-configuration suggestions remain provisional
 qualification inputs open, not approved presets or additions to curated membership:
 
-- staticcheck default checks versus the `SA`-only suggestion above remain an
-  unresolved conflict; neither is selected here. `govet` and errcheck for unhandled errors
-  remain the existing complementary-tool suggestions, not new default selections
-  (all provisional under issue #418).
+- staticcheck default checks, qualified seed-only under issue #487 as the pinned
+  upstream built-in default checks with no hidden preset
+  (`cc/tests/fixtures/native_quality/pins.bzl` via
+  `bazel run //tools/ci:native_quality_qualification`).
+  The `SA`-only versus default-checks conflict is resolved against the
+  native-config contract (qualified seed-only under issue #487): the `SA`-only
+  shortcut is rejected without qualification; without an applicable checked-in
+  config the pinned tool uses upstream built-in defaults, with a config it
+  interprets natively; adapters add only transport settings.
+  `govet` default analyzers with errcheck complementary for unhandled errors
+  are qualified seed-only under issue #487 as pinned upstream built-in defaults
+  with no hidden preset, not new default selections beyond the existing
+  complementary-tool suggestion.
 - SpotBugs at default effort; PMD default ruleset; Error Prone at its default severities,
   qualified seed-only under issue #485 as pinned upstream built-in defaults with
   no hidden preset (`java/tests/fixtures/jvm_quality/pins.bzl` via
@@ -749,7 +769,9 @@ qualification inputs open, not approved presets or additions to curated membersh
   Without an applicable checked-in config the pinned tool uses upstream
   built-in defaults, with a config it interprets natively; adapters add only
   transport settings.
-- clang-tidy default checks; cppcheck default enablement (both provisional under issue #418).
+- clang-tidy default checks; cppcheck default enablement (both qualified
+  seed-only under issue #487 as pinned upstream built-in defaults with
+  no hidden preset).
 - Scalafix recommended built-ins plus OrganizeImports (import organization)
   and RemoveUnused (dead code), qualified seed-only under issue #486 as
   pinned upstream built-in defaults with no hidden preset
@@ -771,11 +793,12 @@ qualification inputs open, not approved presets or additions to curated membersh
   under issue #420).
 
 Beyond-default switches (detekt `allRules`, experimental Error Prone checks,
-`--enable=all`-style opt-in maxima) are not enabled by `rules_dx`. These
-suggestions must be qualified against pinned native behavior and checked-in
-configuration ownership (tracked in
+staticcheck `SA`-only preset plus `-all`, `govet` all analyzers, clang-tidy
+`--checks=*`, cppcheck `--enable=all`-style opt-in maxima) are not enabled by
+`rules_dx`. These suggestions must be qualified against pinned native behavior
+and checked-in configuration ownership (tracked in
 open work under issues #485-#487);
-this review selects neither a staticcheck rule set nor a Checkstyle/Scalafix preset.
+this review selects no preset beyond the qualified upstream defaults.
 
 ### Provisional Default Dependency Locks
 
