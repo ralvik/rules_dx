@@ -260,16 +260,24 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   superset) plus staticcheck/govet with errcheck complementary for unhandled errors.
   Research notes (unproven mappings): clang-tidy needs compile-commands context, so the
   target-coupled wiring versus check-only decision is recorded here, not silent; cppcheck
-  parses `--xml --xml-version=2` on stderr; staticcheck default checks versus the `SA`-only
-  suggestion stay an unresolved conflict — neither is selected here, qualify before freezing;
-  `govet` and errcheck parse `file:line[:col]: message` text; clang-tidy fixes travel
-  separately as `--export-fixes` YAML for `clang-apply-replacements`. Formatters (clang-format,
+  parses `--xml --xml-version=2` on stderr; staticcheck default checks are qualified
+  seed-only under issue #487 as the upstream built-in default checks (the `SA`-only
+  shortcut is rejected without qualification);
+  `govet` default analyzers with errcheck complementary for unhandled errors are qualified
+  seed-only under issue #487; `govet` and errcheck parse `file:line[:col]: message` text;
+  clang-tidy fixes travel separately as `--export-fixes` YAML for
+  `clang-apply-replacements`. Formatters (clang-format,
   gofumpt) are whole-file rewrite with check/diff mode; clang-tidy is whole-file rewrite
   (`--fix` or `--export-fixes`) versus check-only per the target-coupling decision above;
   staticcheck, `govet`, errcheck, and cppcheck are check-only with the provisional
   sandbox-apply-and-diff fix flow. C/C++ MSVC-interop and SDK licensing stay with the Windows
   platform issue — this cohort covers adapter behavior given a qualified toolchain. Versions
-  are observations, not pins; recheck latest stable at implementation (see the Native rows in
+  plus rule-sets qualified seed-only under issue #487
+  (`cc/tests/fixtures/native_quality/pins.bzl` via
+  `bazel run //tools/ci:native_quality_qualification` over upstream built-in defaults
+  with no hidden preset); digests stay observations, not pins, recheck latest stable at
+  implementation; adapters stay owned under issue #418
+  (see the Native rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
 - **Structured cohort (issue #419, provisional — no adapter claims `protobuf` or `qml` yet):**
   checksummed native/self-contained artifact route for `buf` (self-contained per-platform

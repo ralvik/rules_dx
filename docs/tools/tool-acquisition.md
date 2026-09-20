@@ -415,11 +415,12 @@ record; clang-tidy needs compile-commands context — target-coupled
 wiring versus check-only stays open under issue #418 and is recorded
 explicitly here, never silent. cppcheck stays a standalone
 checksummed-artifact candidate (`--xml --xml-version=2` on stderr).
-Exact artifact version, digest, default-check/enablement qualification
-(native-configuration review of the provisional clang-tidy/cppcheck
-inputs stays required under issue #418), and adapter qualification
-remain pending under issue #418 (live successor to closed #307 for the
-`c`/`cpp` classes) and no adapter claims `c` or `cpp` yet
+Exact versions plus rule-sets qualified seed-only under issue #487
+(`bazel run //tools/ci:native_quality_qualification` with
+`cc/tests/fixtures/native_quality/pins.bzl` over upstream built-in defaults
+with no hidden preset; clang-tidy default checks, cppcheck default enablement);
+digests plus adapter mappings stay owned under issue #418 (live successor to
+closed #307 for the `c`/`cpp` classes) and no adapter claims `c` or `cpp` yet
 (open under issue #418). C/C++ MSVC-interop and SDK licensing stay with
 the Windows platform issue — this route covers adapter behavior given a
 qualified toolchain.
@@ -429,15 +430,17 @@ split Go route. gofumpt (strict superset of gofmt) stays a standalone
 checksummed-artifact candidate with whole-file rewrite plus check/diff
 mode; `govet` ships with the authoritative Go toolchain (no separate
 acquisition); staticcheck and errcheck stay standalone
-checksummed-artifact candidates. staticcheck default checks versus the
-`SA`-only suggestion stay an unresolved conflict — neither is selected
-here; qualify before freezing. `govet` and errcheck stay complementary
-for unhandled errors (text-parse `file:line[:col]: message`), check-only
-with the provisional sandbox-apply-and-diff fix flow. Exact artifact
-versions, digests, rule-set qualification (native-configuration review
-of the provisional staticcheck inputs stays required under issue #418),
-and adapter qualification remain pending under issue #418 (live
-successor to closed #307 for the `go` class) and no adapter claims `go`
+checksummed-artifact candidates. staticcheck default checks are qualified
+seed-only under issue #487 as the upstream built-in default checks — the
+`SA`-only shortcut is rejected without qualification. `govet` default
+analyzers with errcheck complementary for unhandled errors are qualified
+seed-only under issue #487 (text-parse `file:line[:col]: message`), check-only
+with the provisional sandbox-apply-and-diff fix flow. Exact versions plus
+rule-sets qualified seed-only under issue #487
+(`bazel run //tools/ci:native_quality_qualification` with
+`cc/tests/fixtures/native_quality/pins.bzl` over upstream built-in defaults
+with no hidden preset); digests plus adapter mappings stay owned under issue #418
+(live successor to closed #307 for the `go` class) and no adapter claims `go`
 yet (open under issue #418).
 
 No listed private graph accepts arbitrary consumer packages or plugins in v1. The curated
