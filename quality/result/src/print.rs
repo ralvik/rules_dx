@@ -67,7 +67,7 @@ fn print_diagnostics(prefix: &str, diagnostics: &[proto::Diagnostic]) {
     }
 }
 
-/// `argv` tokenizer (: reuse pinned `clap`). One positional
+/// `argv` tokenizer (reuse pinned `clap`). One positional
 /// input; extra positionals are a usage error (exit 2), unlike the legacy
 /// `args().nth(1)` which silently ignored them.
 #[derive(Parser, Debug)]
