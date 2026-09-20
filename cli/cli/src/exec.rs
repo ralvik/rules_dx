@@ -1,15 +1,17 @@
-//! Quality command execution (WP3): dispatch root across command
-//! families. Each family lives in its own module under `exec/`:
-//! quality, workflow (dispatch) plus test_reports (test/coverage
+//! Command execution dispatch root (kept, issue #454): this file holds
+//! only `execute` plus the dispatch-table test. The `exec.rs` plus
+//! `exec/` pairing is the idiomatic parent module with child modules,
+//! not duplication. Each family lives in its own module under `exec/`:
+//! quality plus quality_apply (mutation and status projection) plus
+//! quality_patch (diff-patch rendering) plus quality_emit
+//! (finding/change/mutation emission) plus quality_reports
+//! (standard-report writing), workflow (dispatch) plus run/deploy
+//! (workflow sub-families) plus test_reports (test/coverage
 //! collection), bazel, generate, clean, managed (dispatch) plus
 //! managed_codegen/managed_env (generation sides) plus
 //! managed_staging (shared staging primitives) plus managed_prepare
-//! (side preparation and commit-error mapping), quality plus
-//! quality_apply (mutation and status projection) plus quality_patch
-//! (diff-patch rendering) plus quality_emit (finding/change/mutation
-//! emission) plus quality_reports (standard-report
-//! writing), audit, update, bump,
-//! run, and the check/fix umbrella. Shared plumbing (error codes,
+//! (side preparation and commit-error mapping), audit, update, bump,
+//! and the check/fix umbrella. Shared plumbing (error codes,
 //! environment, source verification, mutation helpers) lives in
 //! [`common`]; BEP results collection and proto mapping live in
 //! [`results`]; unit-test fakes live in `test_support`.

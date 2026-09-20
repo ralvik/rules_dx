@@ -18,7 +18,7 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
   and per-release pin-bump plus drift process; no working site claimed).
 * Verification stages: hello smoke as test, parser-sample backfill, E2E via
   integration test, close-out battery + docs, rustfmt with crate edition.
-* Robustness and hygiene: repo reorg, CI hygiene, split exec.rs,
+* Robustness and hygiene: repo reorg, CI hygiene,
   warnings-as-errors, visibility hardening, cli-contract claims, human-run
   release path (signing-first), signing stack + distribution, GHCR prebuilt
   images (separate workflow), Renovate plus native bump loop complementary
