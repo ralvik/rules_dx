@@ -94,7 +94,10 @@ live execution (ecosystem resolvers, advisory matching, secrets wiring). A sourc
 cell of `Not planned` or `Planned: audit tools (open work)` is consistent with a `Delivered`
 ecosystem `Audit/update` cell: Rust, JavaScript, TypeScript, Vue, Svelte, Astro, and MDX
 source audit is `Not planned` while ecosystem audit/update is delivered repo-wide, and Python
-source-audit tooling is open work while ecosystem audit/update wiring is delivered.
+source-audit tooling is open work under issue #613 while ecosystem audit/update wiring is delivered.
+Python source-audit tooling is tracked under issue #613 with fixture evidence in
+`python/tests/fixtures/python_audit/pins.bzl` via `bazel run //tools/ci:python_audit_qualification`;
+issue #512 stays taxonomy-only and owns no Python audit tool.
 Ecosystem dependency-vulnerability audit
 coverage is separate; see the [audit contract](../cli/commands/audit-update-bazel.md). This matrix makes no
 ecosystem audit-tool or dependency-source claim beyond that contract.
@@ -106,7 +109,7 @@ They are not eligible for the additional-foundation deferral policy.
 | Language | Build | Test | Dependencies | Generate | Environment | IDE | Coverage | Format | Lint | Typecheck | Audit |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Rust | Planned | Planned | Planned: Cargo lock | Planned | Planned: native tools | Planned: rust-analyzer/flycheck | Planned | Planned: rustfmt | Planned: Clippy | Planned: compiler diagnostics | Not planned |
-| Python | Planned | Planned: pytest | Planned: uv lock | Planned | Planned: `.venv` | Planned: interpreter/imports | Planned | Planned: Ruff | Planned: Ruff, pydoclint; flake8/pylint opt-in | Planned: Ty | Planned: audit tools (qualified seed-only under issue #512 with empty curated audit, Bandit excluded; platform plus consumer plus release owned gap) |
+| Python | Planned | Planned: pytest | Planned: uv lock | Planned | Planned: `.venv` | Planned: interpreter/imports | Planned | Planned: Ruff | Planned: Ruff, pydoclint; flake8/pylint opt-in | Planned: Ty | Planned: audit tools (qualified seed-only under issue #613 with empty curated audit, Bandit excluded via `python/tests/fixtures/python_audit/pins.bzl` with `python_audit.expected` via `bazel run //tools/ci:python_audit_qualification`; platform plus consumer plus release owned gap) |
 | JavaScript | Planned | Planned: Jest | Planned: pnpm lock | Planned | Planned: `node_modules` | Planned: Node/modules | Planned | Planned: Biome default, Prettier available | Planned: Biome default, ESLint available | N/A | Not planned |
 | TypeScript | Planned | Planned: Jest | Planned: pnpm lock | Planned | Planned: `node_modules` | Planned: TypeScript/Node | Planned | Planned: Biome default, Prettier available | Planned: Biome default, ESLint available | Planned: `tsc` | Not planned |
 | Vue | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Not planned |

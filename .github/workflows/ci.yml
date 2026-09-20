@@ -1119,6 +1119,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:result_contract_qualification
       - name: Audit quality taxonomy qualification (issue #512 family taxonomy execution plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:quality_taxonomy_qualification
+      - name: Audit Python source-audit split qualification (issue #613 Python audit empty plus Bandit excluded plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:python_audit_qualification
       - name: Write job summary
         if: always()
         run: |

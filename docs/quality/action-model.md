@@ -149,10 +149,12 @@ applies valid replacements once and does not automatically rerun any selected ty
 not resolved by an applied guaranteed fix at or above `--fail-on`, or apply failures, determine a
 nonzero result. Suppression insertion is excluded from normal fixing. Security analyzers belong
 to `dx audit` and are not selected by lint or typecheck; initial v1 audit tool selection is
-qualified seed-only under issue #512 (`quality/tests/fixtures/quality_taxonomy/pins.bzl` with
-`quality_taxonomy.expected` via `bazel run //tools/ci:quality_taxonomy_qualification` with empty
+qualified seed-only under issue #613 (`python/tests/fixtures/python_audit/pins.bzl` with
+`python_audit.expected` via `bazel run //tools/ci:python_audit_qualification` with empty
 curated audit plus explicit disablement; Bandit excluded from v1 by
-[ADR 0019](../decisions/0019-first-release-additional-foundations.md)).
+[ADR 0019](../decisions/0019-first-release-additional-foundations.md); family taxonomy execution
+qualified seed-only under issue #512 via `bazel run //tools/ci:quality_taxonomy_qualification`,
+issue #512 stays taxonomy-only).
 
 Several active formatter implementations may claim the same file. They run as stable ordered stages
 in one target format pipeline, each over its fixed effective subset. A complete round succeeds only
