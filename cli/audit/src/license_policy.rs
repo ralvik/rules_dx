@@ -23,12 +23,18 @@
 //! resolver-owned slices, exactly like the vulnerability deferral
 //! in [`crate::exception`].
 //!
-//! This module plans over injected table/root/exception records only,
-//! so policy validation stays deterministic and unit-testable without
-//! any lockfile or Bazel integration. [`load_licenses_toml`] parses the
-//! committed `licenses.toml` root file into those records with `toml`
-//! plus `serde`; per-ecosystem license-identity mappings, shared-lock
-//! tier attribution, and proof evidence stay gated for later slices.
+//! Per-ecosystem license identities plus per-package notice texts ride
+//! the committed `[[inventory]]` table: each entry names its owning set,
+//! package, SPDX license text, upstream version scope, and whether the
+//! package archive delivered `LICENSE*`/`NOTICE*` words. Missing entries
+//! stay `UNKNOWN` with no words (fail closed in `distributed`).
+//!
+//! This module plans over injected table/root/exception/inventory records
+//! only, so policy validation stays deterministic and unit-testable
+//! without any lockfile or Bazel integration. [`load_licenses_toml`]
+//! parses the committed `licenses.toml` root file into those records with
+//! `toml` plus `serde`; shared-lock tier attribution and proof evidence
+//! stay gated for later slices.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -273,6 +279,30 @@ pub fn check_applies(
     Ok(())
 }
 
+/// One per-package license identity plus notice-text presence: the
+/// factual inventory the auditor joins against locked packages. Entries
+/// are version-scoped with upstream version semantics (see
+/// [`crate::vuln::version_affected`]); out-of-range versions never
+/// inherit the entry. Missing entries stay `UNKNOWN` with no words (fail
+/// closed in `distributed`).
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LicenseInventory {
+    /// Affected package name (npm `@scope/name` keeps its spelling;
+    /// Maven `group:artifact` keeps its verbatim key).
+    pub package: String,
+    /// Owning dependency set (`cargo`, `npm`, `maven`, `nuget`, `go`).
+    pub set: String,
+    /// Claimed SPDX expression text, or `UNKNOWN` when unidentified.
+    pub license: String,
+    /// Accepted versions or bounded range, upstream version semantics.
+    pub versions: String,
+    /// Whether the package archive delivered `LICENSE*`/`NOTICE*` words
+    /// as a declared input. Defaults to false (fail closed) when absent.
+    #[serde(default)]
+    pub text_present: bool,
+}
+
 /// License policy loaded from one `licenses.toml` document: the
 /// converted domain records, ready for the injected-label validation
 /// the call sites own (distribution roots against Bazel-known labels,
@@ -288,23 +318,53 @@ pub struct LicensePolicy {
     /// License exceptions. Validated against findings and the audit date
     /// by the caller.
     pub exceptions: Vec<LicenseException>,
+    /// Per-package license identities plus notice-text presence.
+    pub inventory: Vec<LicenseInventory>,
+}
+
+/// Validate one inventory entry's required fields: package, set,
+/// license, and versions must be non-empty. Empty fields fail so a
+/// typo'd empty entry never becomes a silent `UNKNOWN`.
+pub fn validate_license_inventory(entry: &LicenseInventory) -> Result<(), PolicyProblem> {
+    if entry.package.trim().is_empty() {
+        return Err(PolicyProblem::ExceptionMissingField {
+            field: "inventory.package",
+        });
+    }
+    if entry.set.trim().is_empty() {
+        return Err(PolicyProblem::ExceptionMissingField {
+            field: "inventory.set",
+        });
+    }
+    if entry.license.trim().is_empty() {
+        return Err(PolicyProblem::ExceptionMissingField {
+            field: "inventory.license",
+        });
+    }
+    if entry.versions.trim().is_empty() {
+        return Err(PolicyProblem::ExceptionMissingField {
+            field: "inventory.versions",
+        });
+    }
+    Ok(())
 }
 
 /// Load and validate one `licenses.toml` document into domain records.
 ///
 /// Parses with `toml` plus `serde`, converts the file shape, then
-/// validates the global table and every per-set adjustment, so a
-/// loaded policy never carries multi-listed identities or set
-/// conflicts. Unknown fields fail as [`PolicyProblem::InvalidLicensesToml`]:
-/// a typo'd key (`alow`) must never silently become an empty list —
-/// least of all an empty `blocked` list. Missing sections default to
-/// empty, which stays fail-closed because unlisted identities and
-/// distributables default to the strict side. Distribution roots and
-/// exceptions convert verbatim; their call-site validation (known
-/// labels, findings, audit date) is unchanged. The optional
-/// `schema_version` must be [`LICENSE_POLICY_SCHEMA_VERSION`] when present
-/// (absent means v1 for pre-versioned files); any other version fails
-/// as invalid TOML so schema evolution is explicit, never silent drift.
+/// validates the global table, every per-set adjustment, and every
+/// inventory entry, so a loaded policy never carries multi-listed
+/// identities, set conflicts, or empty inventory fields. Unknown fields
+/// fail as [`PolicyProblem::InvalidLicensesToml`]: a typo'd key (`alow`)
+/// must never silently become an empty list — least of all an empty
+/// `blocked` list. Missing sections default to empty, which stays
+/// fail-closed because unlisted identities and distributables default to
+/// the strict side. Distribution roots, exceptions, and inventory convert
+/// verbatim; call-site validation (known labels, findings, audit date,
+/// version-scope matching) is unchanged. The optional `schema_version`
+/// must be [`LICENSE_POLICY_SCHEMA_VERSION`] when present (absent means
+/// v1 for pre-versioned files); any other version fails as invalid TOML
+/// so schema evolution is explicit, never silent drift.
 pub fn load_licenses_toml(text: &str) -> Result<LicensePolicy, PolicyProblem> {
     let file: LicensesFile =
         toml::from_str(text).map_err(|error| PolicyProblem::InvalidLicensesToml {
@@ -336,10 +396,14 @@ pub fn load_licenses_toml(text: &str) -> Result<LicensePolicy, PolicyProblem> {
             .collect(),
         distribution: file.distribution,
         exceptions: file.exception,
+        inventory: file.inventory,
     };
     policy.tables.validate()?;
     for adjustment in &policy.sets {
         policy.tables.validate_set(adjustment)?;
+    }
+    for entry in &policy.inventory {
+        validate_license_inventory(entry)?;
     }
     Ok(policy)
 }
@@ -363,6 +427,9 @@ struct LicensesFile {
     /// License exceptions.
     #[serde(default)]
     exception: Vec<LicenseException>,
+    /// Per-package license identities plus notice-text presence.
+    #[serde(default)]
+    inventory: Vec<LicenseInventory>,
 }
 
 /// `[policy]` shape: the global `blocked` list plus the
@@ -691,6 +758,7 @@ expires = "2027-03-01"
                 sets: Vec::new(),
                 distribution: Distribution::default(),
                 exceptions: Vec::new(),
+                inventory: Vec::new(),
             }
         );
         // Fail closed: unlisted identities and labels land on the strict side.
@@ -779,5 +847,90 @@ expires = "2027-03-01"
                 .expect("new allow identity loads");
         assert!(policy.tables.allow.contains("New-Permissive-1.0"));
         policy.tables.validate().expect("single listing passes");
+    }
+
+    #[test]
+    fn loader_converts_inventory_entries_per_ecosystem() {
+        let text = r#"
+[[inventory]]
+package = "react"
+set = "npm"
+license = "MIT"
+versions = "18.2.0"
+text_present = true
+
+[[inventory]]
+package = "junit:junit"
+set = "maven"
+license = "EPL-1.0"
+versions = "4.13.2"
+
+[[inventory]]
+package = "FSharp.Core"
+set = "nuget"
+license = "MIT"
+versions = "10.1.201"
+text_present = true
+
+[[inventory]]
+package = "github.com/google/go-cmp"
+set = "go"
+license = "BSD-3-Clause"
+versions = "v0.6.0"
+text_present = false
+
+[[inventory]]
+package = "serde"
+set = "cargo"
+license = "MIT OR Apache-2.0"
+versions = "1.0.100"
+text_present = true
+"#;
+        let policy = load_licenses_toml(text).expect("inventory loads");
+        assert_eq!(policy.inventory.len(), 5);
+        let npm = policy
+            .inventory
+            .iter()
+            .find(|entry| entry.set == "npm")
+            .expect("npm entry");
+        assert_eq!(npm.package, "react");
+        assert_eq!(npm.license, "MIT");
+        assert!(npm.text_present);
+        let maven = policy
+            .inventory
+            .iter()
+            .find(|entry| entry.set == "maven")
+            .expect("maven entry");
+        assert_eq!(maven.package, "junit:junit");
+        // Absent `text_present` defaults to false (fail closed).
+        assert!(!maven.text_present);
+        validate_license_inventory(npm).expect("valid entry passes");
+    }
+
+    #[test]
+    fn loader_rejects_empty_inventory_fields_and_unknown_keys() {
+        for bad in [
+            "[[inventory]]\npackage = \"\"\nset = \"npm\"\nlicense = \"MIT\"\nversions = \"1.0.0\"\n",
+            "[[inventory]]\npackage = \"react\"\nset = \"\"\nlicense = \"MIT\"\nversions = \"1.0.0\"\n",
+            "[[inventory]]\npackage = \"react\"\nset = \"npm\"\nlicense = \"\"\nversions = \"1.0.0\"\n",
+            "[[inventory]]\npackage = \"react\"\nset = \"npm\"\nlicense = \"MIT\"\nversions = \"\"\n",
+        ] {
+            assert!(
+                matches!(
+                    load_licenses_toml(bad),
+                    Err(PolicyProblem::ExceptionMissingField { .. })
+                ),
+                "{bad:?} must fail on empty inventory field"
+            );
+        }
+        // Unknown inventory keys fail as invalid TOML, never silent drift.
+        let typo = "[[inventory]]\npackage = \"react\"\nset = \"npm\"\nlicense = \"MIT\"\nversions = \"1.0.0\"\nlicence = \"x\"\n";
+        assert!(
+            matches!(
+                load_licenses_toml(typo),
+                Err(PolicyProblem::InvalidLicensesToml { .. })
+            ),
+            "typo'd inventory key must fail as invalid TOML"
+        );
     }
 }
