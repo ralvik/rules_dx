@@ -17,8 +17,20 @@ load("//quality:fixtures.bzl", "real_source_target")
 package(default_visibility = ["//:__subpackages__"])
 
 filegroup(
-    name = "checker",
+    name = "checker_main",
     srcs = ["depcheck.py"],
+)
+
+filegroup(
+    name = "checker",
+    srcs = [
+        "depcheck.py",
+        "depcheck_base.py",
+        "depcheck_commands.py",
+        "depcheck_parsers_core.py",
+        "depcheck_parsers_extra.py",
+        "depcheck_usages.py",
+    ],
 )
 
 filegroup(
@@ -81,11 +93,12 @@ sh_test(
     srcs = ["consistency_test.sh"],
     args = [
         "rust",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/rust",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":rust_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -99,11 +112,12 @@ sh_test(
     srcs = ["usage_test.sh"],
     args = [
         "rust",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/rust",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":rust_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -117,11 +131,12 @@ sh_test(
     srcs = ["consistency_test.sh"],
     args = [
         "python",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/python",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":python_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -135,11 +150,12 @@ sh_test(
     srcs = ["usage_test.sh"],
     args = [
         "python",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/python",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":python_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -153,11 +169,12 @@ sh_test(
     srcs = ["consistency_test.sh"],
     args = [
         "js",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/js",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":js_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -171,11 +188,12 @@ sh_test(
     srcs = ["usage_test.sh"],
     args = [
         "js",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/js",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":js_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -189,11 +207,12 @@ sh_test(
     srcs = ["consistency_test.sh"],
     args = [
         "ts",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/ts",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":ts_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -207,11 +226,12 @@ sh_test(
     srcs = ["usage_test.sh"],
     args = [
         "ts",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/ts",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":ts_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -225,11 +245,12 @@ sh_test(
     srcs = ["consistency_test.sh"],
     args = [
         "go",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/go",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":go_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -243,11 +264,12 @@ sh_test(
     srcs = ["usage_test.sh"],
     args = [
         "go",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/go",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":go_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -261,11 +283,12 @@ sh_test(
     srcs = ["consistency_test.sh"],
     args = [
         "java",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/java",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":java_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -279,11 +302,12 @@ sh_test(
     srcs = ["usage_test.sh"],
     args = [
         "java",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/java",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":java_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -297,11 +321,12 @@ sh_test(
     srcs = ["consistency_test.sh"],
     args = [
         "kotlin",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/kotlin",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":kotlin_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -315,11 +340,12 @@ sh_test(
     srcs = ["usage_test.sh"],
     args = [
         "kotlin",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/kotlin",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":kotlin_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -333,11 +359,12 @@ sh_test(
     srcs = ["consistency_test.sh"],
     args = [
         "scala",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/scala",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":scala_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -351,11 +378,12 @@ sh_test(
     srcs = ["usage_test.sh"],
     args = [
         "scala",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/scala",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":scala_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -369,11 +397,12 @@ sh_test(
     srcs = ["consistency_test.sh"],
     args = [
         "csharp",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/csharp",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":csharp_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -387,11 +416,12 @@ sh_test(
     srcs = ["usage_test.sh"],
     args = [
         "csharp",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/csharp",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":csharp_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -405,11 +435,12 @@ sh_test(
     srcs = ["consistency_test.sh"],
     args = [
         "fsharp",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/fsharp",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":fsharp_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -423,11 +454,12 @@ sh_test(
     srcs = ["usage_test.sh"],
     args = [
         "fsharp",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/fsharp",
     ],
     data = [
         ":checker",
+        ":checker_main",
         ":fsharp_testdata",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
@@ -441,12 +473,13 @@ sh_test(
     srcs = ["consistency_test.sh"],
     args = [
         "cc",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/cc",
     ],
     data = [
         ":cc_testdata",
         ":checker",
+        ":checker_main",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
@@ -459,12 +492,13 @@ sh_test(
     srcs = ["usage_test.sh"],
     args = [
         "cc",
-        "$(rootpath :checker)",
+        "$(rootpath :checker_main)",
         "tools/depcheck/testdata/cc",
     ],
     data = [
         ":cc_testdata",
         ":checker",
+        ":checker_main",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],

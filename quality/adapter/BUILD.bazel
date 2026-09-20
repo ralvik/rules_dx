@@ -13,6 +13,7 @@ rust_library(
     name = "quality_adapter",
     srcs = [
         "src/commands.rs",
+        "src/commands_tests.rs",
         "src/exec.rs",
         "src/lib.rs",
         "src/parsers/biome.rs",

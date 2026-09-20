@@ -13,7 +13,14 @@ rust_library(
     name = "quality_runner_lib",
     srcs = [
         "src/lib.rs",
+        "src/lib_tests_a.rs",
+        "src/lib_tests_b.rs",
+        "src/lib_tests_c.rs",
         "src/real.rs",
+        "src/real_fix.rs",
+        "src/real_tests_a.rs",
+        "src/real_tests_b.rs",
+        "src/real_tests_c.rs",
     ],
     aliases = aliases(
         package_name = "quality/quality_runner",

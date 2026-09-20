@@ -1,0 +1,643 @@
+//! Split from `audit.rs`. No behavior change.
+//! Originally the inline `mod tests`.
+#![allow(unused_imports)]
+
+use super::*;
+
+use super::super::test_support::*;
+use dx_process::{ChildStatus, Runner};
+use std::cell::RefCell;
+use std::io;
+use std::path::Path;
+use std::rc::Rc;
+
+pub(super) struct AuditRunner {
+    pub(super) calls: Rc<RefCell<Vec<Vec<String>>>>,
+    pub(super) code: Option<i32>,
+    pub(super) sarif: Option<String>,
+}
+
+impl AuditRunner {
+    pub(super) fn clean() -> Self {
+        AuditRunner {
+            calls: Rc::new(RefCell::new(Vec::new())),
+            code: Some(0),
+            sarif: None,
+        }
+    }
+
+    pub(super) fn with_sarif(code: Option<i32>, sarif: &str) -> Self {
+        AuditRunner {
+            calls: Rc::new(RefCell::new(Vec::new())),
+            code,
+            sarif: Some(sarif.to_owned()),
+        }
+    }
+}
+
+impl Runner for AuditRunner {
+    fn run(&self, argv: &[String], _cwd: &Path, _env: &[(&str, &str)]) -> io::Result<ChildStatus> {
+        self.calls.borrow_mut().push(argv.to_vec());
+        if let Some(sarif) = &self.sarif {
+            for (index, arg) in argv.iter().enumerate() {
+                if arg == "--report-path" {
+                    if let Some(path) = argv.get(index + 1) {
+                        let _ = std::fs::write(path, sarif.as_bytes());
+                    }
+                }
+            }
+        }
+        Ok(ChildStatus { code: self.code })
+    }
+}
+
+pub(super) fn run_with(
+    argv: &[&str],
+    runner: &AuditRunner,
+    setup: &dyn Fn(&Harness),
+) -> (i32, String, String) {
+    use crate::args::parse;
+    use crate::exec::{execute, Env};
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let id = COUNTER.fetch_add(1, Ordering::SeqCst);
+    let words: Vec<String> = argv.iter().map(|word| (*word).to_owned()).collect();
+    let invocation = parse(&words).expect("parse");
+    let harness = Harness::new(&format!(
+        "audit-live-{}-{}-{}",
+        std::thread::current()
+            .name()
+            .unwrap_or("test")
+            .replace(':', "_"),
+        argv.join("-").replace('/', "_"),
+        id
+    ));
+    setup(&harness);
+    let mut out = Vec::new();
+    let mut err = Vec::new();
+    let code = execute(
+        &invocation,
+        Env {
+            workspace: &harness.workspace,
+            runner,
+            query_runner: &harness.query,
+            temp_dir: &harness.temp,
+            pid: std::process::id(),
+            nonce: 0,
+            out: &mut out,
+            err: &mut err,
+            ci: false,
+        },
+    );
+    (
+        code,
+        String::from_utf8(out).expect("stdout"),
+        String::from_utf8(err).expect("stderr"),
+    )
+}
+
+pub(super) fn clean_workspace(harness: &Harness) {
+    harness.write_source(
+        "rust/tests/fixtures/hello/Cargo.lock",
+        "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+    );
+    harness.write_source(
+        "cargo-bazel-lock.json",
+        r#"{"packages": {"serde 1.0.100": {"license": "MIT"}}}"#,
+    );
+    harness.write_source(
+        "pnpm-lock.yaml",
+        "lockfileVersion: '9.0'\n\npackages:\n\n  'react@18.2.0':\n    resolution: {integrity: sha512-abc}\n",
+    );
+    harness.write_source("third_party/jvm/maven_install.json", r#"{"artifacts": {}}"#);
+    harness.write_source(
+        "third_party/dotnet/paket.lock",
+        "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
+    );
+    write_go_mod(harness);
+    harness.write_source(
+        "licenses.toml",
+        "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n",
+    );
+}
+
+/// Minimal `go_deps.from_file` module lock for live-audit harnesses:
+/// the Go set is always assessed (never an empty clean), so every
+/// repository-wide audit fixture must carry it.
+pub(super) fn write_go_mod(harness: &Harness) {
+    harness.write_source(
+        "third_party/go/go.mod",
+        "module rules_dx/third_party/go\n\ngo 1.24.12\n\nrequire (\n\tgithub.com/bazelbuild/buildtools v0.0.0-20250930140053-2eb4fccefb52 // indirect\n\tgithub.com/google/go-cmp v0.6.0\n\tgithub.com/pmezard/go-difflib v1.0.0\n)\n",
+    );
+}
+
+/// Fresh identified advisory snapshot for one set (issue #628): the
+/// derived bytes plus identity (`url`, `sha256`, `retrieved_at`) are
+/// the audited inputs. Snapshots refresh via supported upstream
+/// database-download tooling (per-set OSV GCS zips, no inventory
+/// upload); live CLI performs no network fetch.
+pub(super) fn write_advisory(harness: &Harness, set: &str, json: &str) {
+    let today = super::today_utc();
+    let url = dx_audit::advisory::advisory_source(set)
+        .expect("supported set needs a source")
+        .to_owned();
+    let sha = dx_digest::sha256_hex(json.as_bytes());
+    harness.write_source(&format!(".dx/advisory/{set}.json"), json);
+    let meta = serde_json::json!({
+        "set": set,
+        "url": url,
+        "sha256": sha,
+        "retrieved_at": today,
+        "path": format!(".dx/advisory/{set}.json"),
+    });
+    harness.write_source(&format!(".dx/advisory/{set}.meta.json"), &meta.to_string());
+}
+
+pub(super) fn write_all_empty_advisories(harness: &Harness) {
+    for set in ["cargo", "npm", "maven", "nuget", "go"] {
+        write_advisory(harness, set, "[]");
+    }
+}
+
+#[test]
+pub(super) fn audit_dry_run_plans_families_without_launching() {
+    let harness = Harness::new("audit-dryrun");
+    let (code, out, err) = harness.run(&["audit", "--dry-run"]);
+    assert_eq!(code, 0, "{out}{err}");
+    assert!(
+        out.contains("Running audit security+license for //..."),
+        "{out}"
+    );
+    assert_eq!(err, "", "{err}");
+    assert!(
+        harness.seen_env.borrow().is_empty(),
+        "dry-run launches nothing"
+    );
+
+    let harness = Harness::new("audit-dryrun-family");
+    let (code, out, err) = harness.run(&["audit", "security", "--dry-run"]);
+    assert_eq!(code, 0, "{out}{err}");
+    assert!(out.contains("Running audit security for //..."), "{out}");
+    assert_eq!(err, "", "{err}");
+    assert!(
+        harness.seen_env.borrow().is_empty(),
+        "dry-run launches nothing"
+    );
+}
+
+#[test]
+pub(super) fn audit_live_clean_runs_gitleaks_and_exits_zero() {
+    let runner = AuditRunner::clean();
+    let (code, out, err) = run_with(&["audit", "security"], &runner, &|harness| {
+        harness.write_source(
+            "rust/tests/fixtures/hello/Cargo.lock",
+            "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+        );
+        harness.write_source("pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+        harness.write_source("third_party/jvm/maven_install.json", r#"{"artifacts": {}}"#);
+        harness.write_source(
+            "third_party/dotnet/paket.lock",
+            "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
+        );
+        write_go_mod(harness);
+        write_all_empty_advisories(harness);
+    });
+    assert_eq!(code, 0, "{out}{err}");
+    assert!(out.contains("Running audit security for //..."), "{out}");
+    assert!(out.contains("audit security: clean"), "{out}");
+    assert_eq!(err, "", "{err}");
+    assert_eq!(runner.calls.borrow().len(), 1);
+    assert!(runner.calls.borrow()[0].contains(&"gitleaks".to_owned()));
+    assert!(runner.calls.borrow()[0].contains(&"--redact".to_owned()));
+}
+
+#[test]
+pub(super) fn audit_live_secrets_findings_fail_with_redacted_summary() {
+    // Issue #629: an unredacted SARIF (secrets in message.text,
+    // fingerprints, snippets, and properties) still yields a
+    // redacted summary: rule IDs and counts only, never values.
+    // Sentinels are assembled at runtime so the file never stores
+    // a push-protected token shape verbatim.
+    let github = format!("{}{}", "ghp_", "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8");
+    let generic = format!("{}{}", "sk-live-", "51H7x9yQ2wE4rT6yU8iO0p");
+    let sarif = format!(
+        "{{\"version\": \"2.1.0\", \"runs\": [{{\"tool\": {{\"driver\": {{\"name\": \"gitleaks\"}}}}, \"results\": [{{\"ruleId\": \"gitleaks/aws-key\", \"message\": {{\"text\": \"leaked AKIAIOSFODNN7EXAMPLE in src/app.py\"}}, \"fingerprints\": {{\"secret\": \"AKIAIOSFODNN7EXAMPLE\"}}, \"partialFingerprints\": {{\"secret/v1\": \"{github}\"}}, \"properties\": {{\"secret\": \"{generic}\"}}, \"locations\": [{{\"physicalLocation\": {{\"artifactLocation\": {{\"uri\": \"src/app.py\"}}, \"region\": {{\"snippet\": {{\"text\": \"key = 'AKIAIOSFODNN7EXAMPLE'\"}}}}}}}}]}}]}}]}}"
+    );
+    let runner = AuditRunner::with_sarif(Some(1), &sarif);
+    let (code, out, err) = run_with(&["audit", "security"], &runner, &|harness| {
+        harness.write_source(
+            "rust/tests/fixtures/hello/Cargo.lock",
+            "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+        );
+        harness.write_source("pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+        harness.write_source("third_party/jvm/maven_install.json", r#"{"artifacts": {}}"#);
+        harness.write_source(
+            "third_party/dotnet/paket.lock",
+            "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
+        );
+        write_go_mod(harness);
+        write_all_empty_advisories(harness);
+    });
+    assert_eq!(code, 1, "{out}{err}");
+    assert!(err.contains("audit_failed"), "{err}");
+    assert!(err.contains("audit security"), "{err}");
+    // Findings fail the audit, but secret values never reach output.
+    for secret in ["AKIAIOSFODNN7EXAMPLE", github.as_str(), generic.as_str()] {
+        assert!(!out.contains(secret), "{out}");
+        assert!(!err.contains(secret), "{err}");
+    }
+    // The invocation still pins redaction on the auditor argv.
+    assert!(runner.calls.borrow()[0].contains(&"--redact".to_owned()));
+}
+
+#[test]
+pub(super) fn audit_live_vuln_findings_fail_and_git_is_incomplete() {
+    let runner = AuditRunner::clean();
+    let (code, _out, err) = run_with(&["audit", "security"], &runner, &|harness| {
+        harness.write_source(
+            "rust/tests/fixtures/hello/Cargo.lock",
+            "[[package]]\nname = \"git-dep\"\nversion = \"0.1.0\"\nsource = \"git+https://github.com/example/git-dep#abc123\"\n",
+        );
+        harness.write_source("pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+        harness.write_source("third_party/jvm/maven_install.json", r#"{"artifacts": {}}"#);
+        harness.write_source(
+            "third_party/dotnet/paket.lock",
+            "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
+        );
+        write_go_mod(harness);
+        write_all_empty_advisories(harness);
+    });
+    assert_eq!(code, 1, "{err}");
+    assert!(err.contains("audit_failed"), "{err}");
+    assert!(err.contains("incomplete"), "{err}");
+}
+
+#[test]
+pub(super) fn audit_live_npm_git_and_sibling_locks_are_incomplete() {
+    // `package-lock.json` git entries fail as incomplete while
+    // absent `yarn.lock` siblings are skipped, never required.
+    let runner = AuditRunner::clean();
+    let (code, _out, err) = run_with(&["audit", "security"], &runner, &|harness| {
+        harness.write_source(
+            "rust/tests/fixtures/hello/Cargo.lock",
+            "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+        );
+        harness.write_source("pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+        harness.write_source(
+            "package-lock.json",
+            r#"{"name":"root","lockfileVersion":3,"packages":{"":{"name":"root"},"node_modules/git-dep":{"version":"github:user/repo#abc123"}}}"#,
+        );
+        harness.write_source("third_party/jvm/maven_install.json", r#"{"artifacts": {}}"#);
+        harness.write_source(
+            "third_party/dotnet/paket.lock",
+            "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
+        );
+        write_go_mod(harness);
+        write_all_empty_advisories(harness);
+    });
+    assert_eq!(code, 1, "{err}");
+    assert!(err.contains("audit_failed"), "{err}");
+    assert!(err.contains("incomplete"), "{err}");
+    assert!(err.contains("git-dep"), "{err}");
+}
+
+#[test]
+pub(super) fn audit_live_npm_pnpm_git_resolution_is_incomplete() {
+    // Pnpm `resolution: {type: git}` entries fail as incomplete,
+    // never dropped and never clean.
+    let runner = AuditRunner::clean();
+    let (code, _out, err) = run_with(&["audit", "security"], &runner, &|harness| {
+        harness.write_source(
+            "rust/tests/fixtures/hello/Cargo.lock",
+            "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+        );
+        harness.write_source(
+            "pnpm-lock.yaml",
+            "lockfileVersion: '9.0'\npackages:\n  'git-dep@github:user/repo#abc123':\n    resolution: {repo: 'https://github.com/user/repo.git', commit: abc123}\n",
+        );
+        harness.write_source("third_party/jvm/maven_install.json", r#"{"artifacts": {}}"#);
+        harness.write_source(
+            "third_party/dotnet/paket.lock",
+            "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
+        );
+        write_go_mod(harness);
+        write_all_empty_advisories(harness);
+    });
+    assert_eq!(code, 1, "{err}");
+    assert!(err.contains("audit_failed"), "{err}");
+    assert!(err.contains("incomplete"), "{err}");
+    assert!(err.contains("git-dep"), "{err}");
+}
+
+#[test]
+pub(super) fn audit_live_go_advisory_findings_fail_instead_of_empty_clean() {
+    let runner = AuditRunner::clean();
+    let (code, _out, err) = run_with(
+        &["audit", "security", "//go/tests/fixtures/hello:hello"],
+        &runner,
+        &|harness| {
+            write_go_mod(harness);
+            write_advisory(
+                harness,
+                "go",
+                r#"[{"id":"GHSA-go-test-0001","package":"github.com/google/go-cmp","versions":">=v0.5.0, <v0.7.0","severity":"high","fixed":["v0.7.0"],"set":"go"}]"#,
+            );
+        },
+    );
+    assert_eq!(code, 1, "{err}");
+    assert!(err.contains("audit_failed"), "{err}");
+    assert!(err.contains("1 vulnerability findings"), "{err}");
+}
+
+#[test]
+pub(super) fn audit_live_missing_advisory_fails_never_empty_clean() {
+    // Issue #628: a missing snapshot means current data could not be
+    // obtained, never clean and never a lockfile upload.
+    let runner = AuditRunner::clean();
+    let (code, out, err) = run_with(
+        &["audit", "security", "//rust/tests/fixtures/hello:hello"],
+        &runner,
+        &|harness| {
+            harness.write_source(
+                "rust/tests/fixtures/hello/Cargo.lock",
+                "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+            );
+        },
+    );
+    assert_eq!(code, 1, "{out}{err}");
+    assert!(err.contains("audit_failed"), "{err}");
+    assert!(
+        err.contains(dx_audit::advisory::CODE_ADVISORY_REFRESH_FAILED),
+        "{err}"
+    );
+    assert!(!out.contains("audit security: clean"), "{out}");
+}
+
+#[test]
+pub(super) fn audit_live_stale_advisory_fails_without_stale_fallback() {
+    // A `retrieved_at` older than today is stale and fails without
+    // analyzing the stale bytes.
+    let runner = AuditRunner::clean();
+    let (code, out, err) = run_with(
+        &["audit", "security", "//rust/tests/fixtures/hello:hello"],
+        &runner,
+        &|harness| {
+            harness.write_source(
+                "rust/tests/fixtures/hello/Cargo.lock",
+                "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+            );
+            let json = "[]";
+            let url = dx_audit::advisory::advisory_source("cargo")
+                .expect("source")
+                .to_owned();
+            let sha = dx_digest::sha256_hex(json.as_bytes());
+            harness.write_source(".dx/advisory/cargo.json", json);
+            let meta = serde_json::json!({
+                "set": "cargo",
+                "url": url,
+                "sha256": sha,
+                "retrieved_at": "2000-01-01",
+                "path": ".dx/advisory/cargo.json",
+            });
+            harness.write_source(".dx/advisory/cargo.meta.json", &meta.to_string());
+        },
+    );
+    assert_eq!(code, 1, "{out}{err}");
+    assert!(err.contains("audit_failed"), "{err}");
+    assert!(
+        err.contains(dx_audit::advisory::CODE_ADVISORY_REFRESH_FAILED),
+        "{err}"
+    );
+    assert!(err.contains("stale"), "{err}");
+    assert!(!out.contains("audit security: clean"), "{out}");
+}
+
+#[test]
+pub(super) fn audit_live_tampered_advisory_fails_on_sha_mismatch() {
+    // Identity `sha256` must match the exact snapshot bytes; a
+    // mismatch fails closed, never analyzed.
+    let runner = AuditRunner::clean();
+    let (code, out, err) = run_with(
+        &["audit", "security", "//rust/tests/fixtures/hello:hello"],
+        &runner,
+        &|harness| {
+            harness.write_source(
+                "rust/tests/fixtures/hello/Cargo.lock",
+                "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+            );
+            harness.write_source(".dx/advisory/cargo.json", "[]");
+            let today = super::today_utc();
+            let url = dx_audit::advisory::advisory_source("cargo")
+                .expect("source")
+                .to_owned();
+            let meta = serde_json::json!({
+                "set": "cargo",
+                "url": url,
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "retrieved_at": today,
+                "path": ".dx/advisory/cargo.json",
+            });
+            harness.write_source(".dx/advisory/cargo.meta.json", &meta.to_string());
+        },
+    );
+    assert_eq!(code, 1, "{out}{err}");
+    assert!(err.contains("audit_failed"), "{err}");
+    assert!(
+        err.contains(dx_audit::advisory::CODE_ADVISORY_REFRESH_FAILED),
+        "{err}"
+    );
+    assert!(!out.contains("audit security: clean"), "{out}");
+}
+
+#[test]
+pub(super) fn audit_live_license_clean_and_denied() {
+    let runner = AuditRunner::clean();
+    let (code, out, err) = run_with(&["audit", "license"], &runner, &|_harness| {
+        // Placeholder replaced below by clean_workspace setup.
+    });
+    let _ = (code, out, err);
+    let runner = AuditRunner::clean();
+    let (code, out, err) = run_with(&["audit", "license"], &runner, &clean_workspace);
+    assert_eq!(
+        code, 1,
+        "{out}{err} clean cargo license but missing notice plus UNKNOWN npm must fail distributed"
+    );
+    assert!(err.contains("audit_failed"), "{err}");
+
+    let runner = AuditRunner::clean();
+    let (code, out, err) = run_with(
+        &["audit", "license", "//rust/tests/fixtures/hello:hello"],
+        &runner,
+        &|harness| {
+            harness.write_source(
+            "rust/tests/fixtures/hello/Cargo.lock",
+            "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+        );
+            harness.write_source(
+                "cargo-bazel-lock.json",
+                r#"{"packages": {"serde 1.0.100": {"license": "MIT"}}}"#,
+            );
+            harness.write_source(
+                "licenses.toml",
+                "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"serde\"\nset = \"cargo\"\nlicense = \"MIT\"\nversions = \"1.0.100\"\ntext_present = true\n",
+            );
+        },
+    );
+    assert_eq!(code, 0, "{out}{err}");
+    assert!(out.contains("audit license: clean"), "{out}");
+}
+
+#[test]
+pub(super) fn audit_live_license_per_ecosystem_ids_and_notice_texts() {
+    // npm via `package-lock.json` license plus inventory words: clean
+    // when both identify, missing-notice-text fails distributed when
+    // words are absent.
+    let runner = AuditRunner::clean();
+    let (code, out, err) = run_with(
+        &[
+            "audit",
+            "license",
+            "//javascript/tests/fixtures/hello:hello",
+        ],
+        &runner,
+        &|harness| {
+            harness.write_source(
+                "package-lock.json",
+                r#"{"name":"root","lockfileVersion":3,"packages":{"":{"name":"root"},"node_modules/react":{"version":"18.2.0","license":"MIT"}}}"#,
+            );
+            harness.write_source(
+                "licenses.toml",
+                "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"react\"\nset = \"npm\"\nlicense = \"MIT\"\nversions = \"18.2.0\"\ntext_present = true\n",
+            );
+        },
+    );
+    assert_eq!(code, 0, "{out}{err}");
+    assert!(out.contains("audit license: clean"), "{out}");
+
+    // Same npm package without words fails (MIT is allow-listed, so
+    // the failure is the notice check firing, not the license table).
+    let runner = AuditRunner::clean();
+    let (code, _out, err) = run_with(
+        &[
+            "audit",
+            "license",
+            "//javascript/tests/fixtures/hello:hello",
+        ],
+        &runner,
+        &|harness| {
+            harness.write_source(
+                "package-lock.json",
+                r#"{"name":"root","lockfileVersion":3,"packages":{"":{"name":"root"},"node_modules/react":{"version":"18.2.0","license":"MIT"}}}"#,
+            );
+            harness.write_source(
+                "licenses.toml",
+                "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n",
+            );
+        },
+    );
+    assert_eq!(code, 1, "{err}");
+    assert!(err.contains("audit_failed"), "{err}");
+
+    // Maven via inventory: clean with words, denied UNKNOWN without.
+    let runner = AuditRunner::clean();
+    let (code, out, err) = run_with(
+        &["audit", "license", "//third_party/jvm:maven_install"],
+        &runner,
+        &|harness| {
+            harness.write_source(
+                "third_party/jvm/maven_install.json",
+                r#"{"artifacts": {"junit:junit": {"version": "4.13.2"}}}"#,
+            );
+            harness.write_source(
+                "licenses.toml",
+                "[policy.distributed]\nallow = [\"MIT\"]\nreview = [\"EPL-1.0\"]\ndeny = []\n\n[[exception]]\npackage = \"junit:junit\"\nset = \"maven\"\nlicense = \"EPL-1.0\"\nversions = \"4.13.2\"\nreason = \"Test approval.\"\nexpires = \"2027-03-01\"\n\n[[inventory]]\npackage = \"junit:junit\"\nset = \"maven\"\nlicense = \"EPL-1.0\"\nversions = \"4.13.2\"\ntext_present = true\n",
+            );
+        },
+    );
+    // Review still fails distributed without approval; with the
+    // exception above plus words it passes via approval.
+    assert_eq!(code, 0, "{out}{err} {code}");
+    assert!(out.contains("audit license: clean"), "{out}");
+
+    // NuGet via inventory with words: clean.
+    let runner = AuditRunner::clean();
+    let (code, out, err) = run_with(
+        &["audit", "license", "//csharp/tests/fixtures/hello:hello"],
+        &runner,
+        &|harness| {
+            harness.write_source(
+                "third_party/dotnet/paket.lock",
+                "NUGET\n  remote: https://api.nuget.org/v3/index.json\n    FSharp.Core (10.1.201)\n",
+            );
+            harness.write_source(
+                "licenses.toml",
+                "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"FSharp.Core\"\nset = \"nuget\"\nlicense = \"MIT\"\nversions = \"10.1.201\"\ntext_present = true\n",
+            );
+        },
+    );
+    assert_eq!(code, 0, "{out}{err}");
+    assert!(out.contains("audit license: clean"), "{out}");
+
+    // Go via inventory with words: clean; without words the BSD
+    // notice fails distributed, inventoried internal stays clean.
+    let runner = AuditRunner::clean();
+    let (code, out, err) = run_with(
+        &["audit", "license", "//go/tests/fixtures/hello:hello"],
+        &runner,
+        &|harness| {
+            harness.write_source(
+                "third_party/go/go.mod",
+                "module example.com/root\n\ngo 1.24.12\n\nrequire example.com/hello v1.0.0\n",
+            );
+            harness.write_source(
+                "licenses.toml",
+                "[policy.distributed]\nallow = [\"BSD-3-Clause\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"example.com/hello\"\nset = \"go\"\nlicense = \"BSD-3-Clause\"\nversions = \"v1.0.0\"\ntext_present = true\n",
+            );
+        },
+    );
+    assert_eq!(code, 0, "{out}{err}");
+    assert!(out.contains("audit license: clean"), "{out}");
+
+    // Same Go package without words fails (BSD is allow-listed, so
+    // the failure is the notice check firing).
+    let runner = AuditRunner::clean();
+    let (code, _out, err) = run_with(
+        &["audit", "license", "//go/tests/fixtures/hello:hello"],
+        &runner,
+        &|harness| {
+            harness.write_source(
+                "third_party/go/go.mod",
+                "module example.com/root\n\ngo 1.24.12\n\nrequire example.com/hello v1.0.0\n",
+            );
+            harness.write_source(
+                "licenses.toml",
+                "[policy.distributed]\nallow = [\"BSD-3-Clause\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"example.com/hello\"\nset = \"go\"\nlicense = \"BSD-3-Clause\"\nversions = \"v1.0.0\"\n",
+            );
+        },
+    );
+    assert_eq!(code, 1, "{err}");
+    assert!(err.contains("audit_failed"), "{err}");
+}
+
+#[test]
+pub(super) fn audit_live_target_scopes_to_owning_set_only() {
+    let runner = AuditRunner::clean();
+    let (code, out, err) = run_with(
+        &["audit", "license", "//go/tests/fixtures/hello:hello"],
+        &runner,
+        &|harness| {
+            write_go_mod(harness);
+            // Uninventoried Go licenses stay `UNKNOWN` (fail closed in
+            // `distributed`): scope the root internal so the inventory
+            // stays clean, like `clean_workspace` does for cargo plus
+            // MIT with words.
+            harness.write_source(
+                "licenses.toml",
+                "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[distribution]\ninternal = [\"//go/tests/fixtures/hello:hello\"]\n",
+            );
+        },
+    );
+    assert_eq!(code, 0, "{out}{err}");
+    assert!(out.contains("audit license: clean"), "{out}");
+    assert_eq!(runner.calls.borrow().len(), 0);
+}

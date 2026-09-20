@@ -12,7 +12,13 @@ package(default_visibility = [
 
 rust_library(
     name = "quality_markdown_lib",
-    srcs = ["src/lib.rs"],
+    srcs = [
+        "src/check.rs",
+        "src/frontmatter.rs",
+        "src/lib.rs",
+        "src/lib_tests.rs",
+        "src/links.rs",
+    ],
     aliases = aliases(
         package_name = "quality/quality_markdown",
         normal = True,
