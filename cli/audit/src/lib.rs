@@ -24,8 +24,9 @@
 //!
 //! The risk-acceptance exception lifecycle (version-scoped, reasoned,
 //! expiring, obsolete) lives in [`exception`]. Secrets-integration
-//! qualification planning (Gitleaks artifact identity, SARIF/redact
-//! wiring, exit classification) lives in [`secrets`]. License-expression
+//! qualification planning (Gitleaks-only V1 with Trufflehog wont-fix,
+//! SARIF/redact wiring with redaction-by-construction, exit
+//! classification) lives in [`secrets`]. License-expression
 //! evaluation over the allow/review/deny lattice lives in
 //! [`license_expr`]. Tier policy, distribution roots, and the license
 //! exception lifecycle live in [`license_policy`]. Notice-text inputs
@@ -36,7 +37,7 @@
 //! its exit code are pinned here.
 //!
 //! Live execution  adds auditor backend planning in
-//! [`backend`] (Gitleaks subprocess wiring plus per-set vuln/license
+//! [`backend`] (Gitleaks-only subprocess wiring plus per-set vuln/license
 //! boundaries), advisory snapshot acquisition with 24h cache semantics
 //! in [`advisory`], local vulnerability matching with severity and
 //! incomplete mapping in [`vuln`], and SPDX 2.3 JSON rendering in

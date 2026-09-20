@@ -37,15 +37,19 @@ it does not change scope defaults.
 audit integrations to the selected Bazel scope. It has two families, `security`
 (secrets plus dependency-vulnerability analysis) and `license` (dependency
 license-policy analysis); it is not an umbrella
-for lint, formatting, tests, or builds. Gitleaks is the secrets integration,
+for lint, formatting, tests, or builds. Gitleaks is the V1 secrets integration
+(Trufflehog wont-fix, issue #629: one pinned tool, silent swap rejected),
 run as `gitleaks detect --source . --report-format sarif --report-path <temp>`
 with `--redact` and `--exit-code 2`, using built-in defaults unless
 `.gitleaks.toml` is committed (explicit `--config` then pins it). SARIF output
 is triaged for findings-versus-error: exit `0` with empty results is clean,
 exit `1` with results is findings, exit `1` with no results or malformed SARIF
 is incomplete, and any other exit or launch failure is incomplete. Summaries
-render only rule IDs and counts, never secret values. Trufflehog is a future
-depth option, not v1 scope. The
+render only rule IDs and counts, never secret values: triage rebuilds each
+finding message from the rule ID plus the artifact path only and ignores
+SARIF `message.text`, fingerprints, snippets, fixes, and properties, so even
+an unredacted report cannot leak values (issue #629, pinned in
+`dx_audit::secrets` plus `dx_cli::exec::audit`). The
 `secrets` policy-family mapping is its own semantic class with SARIF and secret-value redaction,
 reconciled with source-class applicability in
 [Quality Sources](../../quality/quality-sources.md).
