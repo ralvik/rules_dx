@@ -381,9 +381,11 @@ JavaScript/TypeScript policy tests require Biome as the default linter and
 formatter, with Prettier formatter and ESLint linter support available by override.
 Biome/Prettier composition tests cover identical output, compatible non-overlapping edits,
 one formatter enabling a later formatter change, convergence to a common fixed point, direct
-and longer oscillations, iteration limits, and deterministic measured ruleset stage order
-independent of user declaration or result arrival order. Permutation benchmarks select order
-from terminal correctness/convergence first, then rounds, process starts, and wall time.
+and longer oscillations, iteration limits, and deterministic ruleset stage order
+independent of user declaration or result arrival order. Per
+[ADR 0022](../decisions/0022-no-benchmarking.md) order is selected from
+terminal correctness and convergence first, then rounds and process starts;
+wall time is not measured.
 Fixtures prove the fixed ten-round cross-tool bound, no eleventh round after a changing tenth,
 and earlier repeated-state termination.
 

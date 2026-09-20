@@ -8,7 +8,7 @@
 # seed languages, generation freshness, adopt-* external-consumer proof,
 # hermetic CLI-contract pins (issue #407 replaces nested E2E),
 # required-core depcheck fixtures, `dx update` live execution,
-# perf report-not-gate, seed plus arm64 plus static-musl plus macos arm64
+# seed plus arm64 plus static-musl plus macos arm64
 # plus macos x86_64 best-effort plus windows x86_64 coverage/remote
 # qualification under #308/#410/#411/#412/#413/#414); audit live execution,
 # docs-pipeline, env/codegen, remaining out-of-v1 platform cells (issue
@@ -139,14 +139,16 @@ else
   bad "a Supported status cell appeared in verification-matrix tables without evidence"
 fi
 
-# Verification-matrix vocabulary stays Delivered/Open/Planning only/Tracked
-# (no silent new status that implies support). Audit plus update are Delivered.
+# Verification-matrix vocabulary stays Delivered/Open/Planning only
+# (no silent new status that implies support; no Perf Tracked per ADR 0022).
+# Audit plus update are Delivered.
 if grep -q -F -e '| Rust | Delivered' docs/testing/verification-matrix.md &&
   grep -q -F -e '| Go | Delivered (code ownership) | Open (adapter-less)' docs/testing/verification-matrix.md &&
-  grep -q -F -e '| Delivered | Open | Open |' docs/testing/verification-matrix.md; then
+  grep -q -F -e '| Delivered | Open | Open |' docs/testing/verification-matrix.md &&
+  ! grep -q -F -e 'Tracked' docs/testing/verification-matrix.md; then
   ok
 else
-  bad "verification-matrix status vocabulary drifted (want Delivered/Open/Planning only/Tracked with audit/update Delivered)"
+  bad "verification-matrix status vocabulary drifted (want Delivered/Open/Planning only with audit/update Delivered, no Tracked per ADR 0022)"
 fi
 
 # Corpus dogfood Delivered has backing harnesses + CI wiring.
@@ -201,14 +203,8 @@ else
   bad "CLI-contract Delivered lacks hermetic pins + adopt-rust smoke + loss record (issue #407)"
 fi
 
-# Perf Tracked stays report-not-gate with fairness pin.
-if [[ -f "perf/compare.py" ]] &&
-  grep -q -F -e '"rules_lint_pin": "v2.8.0"' perf/rules_lint_results.json; then
-  ok
-else
-  bad "perf Tracked lost its comparator or v2.8.0 fairness pin"
-fi
-
+# No standing benchmarks per ADR 0022; the Perf column is removed from
+# the verification matrix.
 # Depcheck Delivered for required core: contract plus fixtures plus targets.
 if [[ -f "tools/ci/depcheck_contract.sh" ]] &&
   [[ -f "tools/depcheck/depcheck.py" ]] &&

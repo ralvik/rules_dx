@@ -1,7 +1,7 @@
 # Tool And Platform Test Matrix
 
 This matrix covers managed acquisition, authoritative toolchains, release pins,
-platform execution, performance, and laziness. Quality adapter behavior remains in
+platform execution, and laziness. Quality adapter behavior remains in
 [Quality Workflow Testing](../quality/quality-testing.md).
 
 ## Managed Tool Acquisition
@@ -86,7 +86,7 @@ completeness via `manifest_covers_payload` in `cli/qualification`); remaining tr
 policy (trusted builders, rotation, offline roots, rebuild thresholds) stays owned by the issue tracker
 before asserting those additional outcomes.
 
-## Laziness And Performance
+## Laziness
 
 Unused-foundation tests begin with an empty repository cache and observable downloader logs.
 Adding `rules_dx` while leaving each supported foundation unused must create no configured
@@ -95,12 +95,13 @@ usable toolchain payload, compiler/runtime/package download, or application depe
 An applicable action may fetch only its selected execution-platform artifact, compatible
 runtime, and declared application closure.
 
-Performance fixtures compare standalone artifacts, private Python/Node graphs, complete
-JVM distributions, and assembled bundles. Record repository-evaluation time, cold bytes
-and file count, extraction, runfiles construction, Windows behavior, remote upload, first
-action wall time, warm no-change behavior, and one-source invalidation. A consolidated
-release archive replaces a private package graph only when measurements show a material
-benefit and the full capability suite remains equivalent.
+Laziness fixtures compare standalone artifacts, private Python/Node graphs, complete
+JVM distributions, and assembled bundles by declared inputs and outputs: cold bytes
+and file count, extraction, runfiles construction, Windows behavior, remote upload,
+warm no-change behavior, and one-source invalidation by action graph, not wall time.
+A consolidated release archive replaces a private package graph only when reasoning
+shows a material benefit and the full capability suite remains equivalent, per
+[ADR 0022](../decisions/0022-no-benchmarking.md).
 
 Configuration tests prove all supported foundations are automatically available from one
 `rules_dx` dependency. Explicit generation creates relevant initial target declarations from
@@ -210,11 +211,10 @@ resolve-symlink fixtures run portably via OS-selected planters, while
 unix-socket, POSIX-mode, permission-bit, and byte-path fixtures stay
 unix-gated with fail-fast reasons; release archives stay hermetic
 Python (`archiver.py` tarfile dereferences like `tar -h`, no host
-`tar`, proven by `archive_verify` plus `//tools/ci:shell_contract`);
-perf harnesses record the actual host via `dx_perf_host` and fail fast
-on unknown OS/CPU (checked-in seed reports stay `linux_x86_64`, proven
-by `//perf:rules_lint_results_test`). `//tools/ci:shell_contract`
-machine-checks the perf-host and no-host-tar pins.
+`tar`, proven by `archive_verify` plus `//tools/ci:shell_contract`).
+`//tools/ci:shell_contract` machine-checks the no-host-tar pin. There
+are no standing benchmarks per
+[ADR 0022](../decisions/0022-no-benchmarking.md).
 
 CI shell dedup plus portable forms are delivered (closed issue #323):
 shared `tools/sh/lib.sh`, shellcheck plus shfmt, portable realpath, hashing,

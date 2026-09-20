@@ -15,9 +15,9 @@
 #   generation (Sigstore keyless bundle on the TUF trust root,
 #   draft-only publisher ceiling; SBOM/provenance/BCR deferred),
 # - required bootstrap/fidelity/spaces/stale/IDE/atomic/BEP/projection/
-#   root-candidate/cold-warm tests stay open under #309 with delivered
+#   root-candidate tests stay open under #309 with delivered
 #   fixtures (bootstrap_test spaces+noop+unmanaged, cli/env lock units,
-#   cli/roots frozen baseline plus incrementality, codegen collector
+#   cli/roots frozen baseline plus reference, codegen collector
 #   frozen contracts, per-foundation env plans, node pnpm projection)
 #   and no false green claim.
 #
@@ -149,12 +149,12 @@ else
   bad "draft-only publisher ceiling lost (github.bzl gate, docs, dry-run)"
 fi
 
-# SBOM/provenance/BCR generation stays deferred.
-if grep -q -F -e 'stay deferred as platforms qualify' "$env_doc" &&
-  grep -q -F -e 'BCR submission stay deferred' "$env_doc"; then
+# SBOM/provenance/BCR generation stays owner-gated.
+if grep -q -F -e 'SBOM/provenance in `deploy/release/sbom.bzl`' "$env_doc" &&
+  grep -q -F -e 'BCR submission are implemented' "$env_doc"; then
   ok
 else
-  bad "environment.md lost its SBOM/provenance/BCR deferred record"
+  bad "environment.md lost its SBOM/provenance/BCR owner-gated record"
 fi
 
 # Bootstrap fixture evidence: spaces path, noop, unmanaged refusal, marker.
@@ -178,14 +178,14 @@ else
   bad "cli/env lock evidence lost (try_lock plus ten-second deadline)"
 fi
 
-# Roots frozen baseline plus measured evidence stays pinned.
+# Roots frozen baseline plus reference evidence stays pinned.
 if grep -q -F -e 'FROZEN_STRATEGY' cli/roots/src/lib.rs &&
   grep -q -F -e 'RecursivePattern' cli/roots/src/lib.rs &&
   grep -q -F -e 'FROZEN_EVIDENCE' cli/roots/src/lib.rs &&
   grep -q -F -e 'INCREMENTALITY_EVIDENCE' cli/roots/src/lib.rs; then
   ok
 else
-  bad "cli/roots lost its frozen baseline plus incrementality evidence"
+  bad "cli/roots lost its frozen baseline plus reference evidence"
 fi
 
 # Codegen collector frozen contracts stay pinned on both sides.
@@ -242,7 +242,7 @@ fi
 # Owned gaps stay listed under #309 with no premature COMPLETED.
 if grep -q -F -e 'under issue #309' "$env_doc" &&
   grep -q -F -e 'public env contribution protocol' "$env_doc" &&
-  grep -q -F -e 'cold/warm benchmark' "$env_doc"; then
+  grep -q -F -e 'root-candidate tests' "$env_doc"; then
   ok
 else
   bad "environment.md lost its owned-gap list under #309"

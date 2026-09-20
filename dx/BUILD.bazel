@@ -52,9 +52,8 @@ alias(
 
 # Canonical repository-wide codegen selection identity: bare
 # `dx codegen` invokes `//dx:codegen`. Accepted (issue #423): this empty
-# filegroup reserves the label so the CLI selection identity resolves
-# before the WP4 root benchmark selects the effective Bazel roots
-# (`//...` baseline versus query-produced pattern file). It contributes
+# filegroup reserves the label so the CLI selection identity resolves.
+# It contributes
 # no plan records itself; the real plan collector is the
 # `dx_codegen_plan_aspect` plus the `dx_codegen_plans` output group
 # (frozen in `//generation:codegen.bzl`, mirrored in

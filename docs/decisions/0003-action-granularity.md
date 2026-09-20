@@ -27,7 +27,7 @@ for resolution. Do not create repository-wide or per-file actions by default.
 
 Within one target/capability pipeline, tools run in a stable ruleset-defined order that is
 independent of user list order. The order is selected for each capability and selected stage
-set from correctness, interaction, and performance fixtures rather than lexical tool IDs or
+set from correctness, interaction, and convergence reasoning rather than lexical tool IDs or
 unmeasured preference. Each tool sees the virtual bytes produced by preceding stages. Complete rounds
 repeat until every nonempty stage performs a no-change pass over its fixed source subset.
 Repetition of a prior changed
@@ -36,11 +36,10 @@ is fixed ruleset policy, not workspace or target configuration, and contributes 
 key. Only the original and stable final state
 leave the action; no intermediate state writes the workspace.
 
-Before prototype implementation, record representative workloads
-and comparison criteria. After the cache and performance tests in
-[Testing Strategy](../testing/), the milestone reports an explicit
-accept, revise, or reject recommendation against the measured alternatives. This
-decision becomes Accepted only with recorded benchmark evidence for that result.
+Per [ADR 0022](./0022-no-benchmarking.md) there are no standing benchmarks:
+this decision is validated by correctness and convergence fixtures plus
+cache-behavior tests in [Testing Strategy](../testing/), not by measured
+alternatives. Promotion to Accepted is by reasoning and fiat.
 
 ## Consequences
 
@@ -54,7 +53,7 @@ decision becomes Accepted only with recorded benchmark evidence for that result.
   runner version contributes to its action key.
 - Order selection rejects permutations with incorrect, divergent, or unjustifiably different
   terminal semantics. Among equivalent correct orders, it minimizes non-convergence, rounds,
-  process starts, and measured wall time in that priority.
+  and process starts in that priority.
 - Multiple owner/configuration pipelines that include one source must produce identical final
   bytes for that path; disagreement rejects that file rather than merging independently
   validated candidates.
@@ -64,7 +63,10 @@ decision becomes Accepted only with recorded benchmark evidence for that result.
 - A mixed-class target still has one action per mutating capability; disjoint and overlapping
   adapter subsets coexist in that pipeline.
 
-## Alternatives to Measure
+## Rejected Alternatives
+
+Per [ADR 0022](./0022-no-benchmarking.md) these are rejected by fiat,
+not pending measurement:
 
 - Package-level batches of several small source targets.
 - Repository-wide actions for very small repositories.

@@ -1,28 +1,29 @@
 //! Repository-root strategy planning for `dx codegen`, `dx env`, and `dx setup` (issue #506 WP4,
 //! issue #506).
 //!
-//! Contract: `docs/environments/codegen.md` (repository root selection and
-//! performance model) and `docs/environments/environment.md` (repository and
-//! target roots). The correctness baseline applies the plan-collection
-//! aspects to `//...`. The candidates are a Bazel-query-produced
+//! Contract: `docs/environments/codegen.md` (repository root selection) and
+//! `docs/environments/environment.md` (repository and
+//! target roots) plus [ADR 0022](../../../docs/decisions/0022-no-benchmarking.md)
+//! (no standing benchmarking: selection by fiat). The correctness baseline applies
+//! the plan-collection
+//! aspects to `//...`. The rejected alternatives are a Bazel-query-produced
 //! target-pattern file, one monolithic aggregate, and package-local
 //! aggregate shards, every candidate keeping identical effective target,
-//! aspect, output-group, and configuration semantics. Among
-//! equivalent-semantics candidates the fastest wins on cold and warm with
-//! warm weighted above cold; otherwise the `//...` baseline remains.
+//! aspect, output-group, and configuration semantics. The `//...` baseline
+//! remains by fiat.
 //!
 //! This crate freezes the pure planning layer only: candidate identities,
 //! the repository root plans behind the canonical `//dx:codegen` and
 //! `//dx:env` selections, the designated-root coverage rule (no candidate
 //! may reduce roots based only on an unconfigured query graph, since
 //! transitions, toolchains, and `select()` can diverge from it), and the
-//! benchmark decision rule with its measured dimensions. Slice 2 adds the
+//! fiat selection rule with its dimensions. Slice 2 adds the
 //! pure composition of these plans into the codegen/env/setup Bazel
 //! invocations (`repository_plan`, `invocation_targets`, `build_argv`);
 //! the query/aggregate Starlark wiring lives in `//cli/roots:roots.bzl`.
-//! Slice 3 freezes the measured cold/warm winner (the `//...` baseline;
-//! see [`frozen_strategy`] and [`FROZEN_EVIDENCE`]). Slice 4 lands the
-//! incrementality dimensions for the frozen baseline (source/BUILD edits,
+//! Slice 3 freezes the fiat winner (the `//...` baseline;
+//! see [`frozen_strategy`] and [`FROZEN_EVIDENCE`]). Slice 4 records the
+//! reference dimensions for the frozen baseline (source/BUILD edits,
 //! target churn, actions, materialized bytes, projection time, retained
 //! memory; see [`INCREMENTALITY_EVIDENCE`] and the `PLAN_*`/`SERVER_*`
 //! consts). Concurrency, interruption, remote materialization, and reuse
@@ -50,14 +51,14 @@ pub const PATTERN_FILE_FLAG: &str = "--target_pattern_file";
 /// Warm weight in the issue #506 decision score (`cold_ms + WARM_WEIGHT *
 /// warm_ms`). PROVISIONAL (issue #506, flagged for review): warm runs dominate
 /// developer-iteration latency on internal paths, so warm counts double;
-/// the measured WP4 benchmarks may adjust this weight before the strategy
-/// freeze.
+/// per ADR 0022 there are no standing benchmarks, so this weight is frozen
+/// by fiat.
 pub const WARM_WEIGHT: u64 = 2;
 
 /// Frozen issue #506 repository-root strategy (issue #506 WP4 slice 3): the `//...`
 /// correctness baseline.
 ///
-/// Measured evidence (2026-09-14, Linux x86_64, Bazel 9.2.0 via Bazelisk
+/// Historical reference (pre-ADR-0022, 2026-09-14, Linux x86_64, Bazel 9.2.0 via Bazelisk
 /// v1.29.0, warm persistent server unless noted), codegen plan aspect
 /// (`//generation:codegen.bzl%dx_codegen_plan_aspect`) with the
 /// `dx_codegen_plans` output group throughout:
@@ -86,8 +87,8 @@ pub const WARM_WEIGHT: u64 = 2;
 /// (#25 slice) and confirm the freeze: the query-file control matches the
 /// baseline on every dimension within noise. Concurrency, interruption,
 /// remote materialization, and reuse certification land in later WP4 slices
-/// and no row here can displace this freeze without new measured evidence
-/// plus a freeze change here.
+/// and no row here can displace this freeze; per ADR 0022 the freeze stands by fiat
+/// and no new measurements are taken.
 pub const FROZEN_STRATEGY: RootStrategy = RootStrategy::RecursivePattern;
 
 /// Returns the frozen repository-root strategy (see [`FROZEN_STRATEGY`]).
@@ -95,8 +96,8 @@ pub fn frozen_strategy() -> RootStrategy {
     FROZEN_STRATEGY
 }
 
-/// Headline benchmark samples behind the freeze, in [`RootStrategy::ALL`]
-/// order: measured cold/warm wall times in milliseconds with the
+/// Historical headline samples behind the freeze, in [`RootStrategy::ALL`]
+/// order: historical cold/warm wall times in milliseconds with the
 /// equivalence flags from the evidence above. [`select_strategy`] over
 /// these samples returns [`frozen_strategy`]; the test
 /// `frozen_evidence_selects_the_frozen_strategy` pins that implication so
@@ -108,9 +109,9 @@ pub const FROZEN_EVIDENCE: [(RootStrategy, bool, u64, u64); 4] = [
     (RootStrategy::PackageShards, false, 2000, 300),
 ];
 
-/// Measured incrementality evidence for the frozen baseline (issue #506 WP4 slice
+/// Historical incrementality reference for the frozen baseline (issue #506 WP4 slice
 /// 4, issue #25): steady-state warm-server wall times and executed actions
-/// per edit/churn [`BenchmarkDimension`], as `(dimension,
+/// per edit/churn selection dimension, as `(dimension,
 /// baseline_wall_ms, queryfile_wall_ms, actions_executed)`.
 ///
 /// Methodology (2026-09-15, Linux x86_64, Bazel 9.2.0 via Bazelisk
@@ -125,7 +126,7 @@ pub const FROZEN_EVIDENCE: [(RootStrategy, bool, u64, u64); 4] = [
 /// a trivial `filegroup`; each rep carries a unique comment tag so no rep
 /// action-cache-hits a previous one, and a throwaway warm-up probe per
 /// dimension absorbs the first-probe package-reload artifact (see below).
-/// Reported walls are medians over 3 measured reps. The query-file
+/// Reported walls are historical medians over 3 pre-ADR-0022 reps. The query-file
 /// candidate reads the `roots_pattern_fixture` shape (holding `//...`)
 /// via `--target_pattern_file`, so it is an equivalent-semantics control:
 /// it matches the baseline on every row within noise and cannot displace
@@ -172,7 +173,7 @@ pub const PLAN_GROUP_WARM_MS: u64 = 413;
 /// implemented yet and stays open.
 pub const DEFAULT_OUTPUTS_WARM_MS: u64 = 502;
 
-/// Bazel server peak resident set (VmHWM KiB) after the full benchmark
+/// Bazel server peak resident set (VmHWM KiB) after the historical reference run
 /// matrix plus one full default-outputs build: ~2.5 GiB retained for the
 /// `//...` analysis graph. An upper bound for plan-only iteration, which
 /// never approaches it (warm plan builds sit near 0.4 s with 0 executed
@@ -189,12 +190,12 @@ pub enum RootStrategy {
     /// closure, preserving top-level treatment of private, test-only, and
     /// incompatible targets.
     QueryPatternFile,
-    /// Benchmark candidate: one monolithic aggregate rule. Must explicitly
+    /// Rejected alternative (ADR 0022): one monolithic aggregate rule. Must explicitly
     /// propagate aspect providers and expose artifacts through a requested
     /// output group; central-dependency visibility, test-only, platform,
     /// cycle, and fan-out concerns apply.
     MonolithicAggregate,
-    /// Benchmark candidate: package-local aggregate shards. Same
+    /// Rejected alternative (ADR 0022): package-local aggregate shards. Same
     /// propagation and output-group obligations as the monolithic
     /// aggregate, scoped per package.
     PackageShards,
@@ -202,7 +203,7 @@ pub enum RootStrategy {
 
 impl RootStrategy {
     /// Every candidate, baseline first. Iteration order is the deterministic
-    /// tie-break order for benchmark selection: the baseline wins ties.
+    /// tie-break order for fiat selection: the baseline wins ties.
     pub const ALL: [RootStrategy; 4] = [
         RootStrategy::RecursivePattern,
         RootStrategy::QueryPatternFile,
@@ -210,13 +211,13 @@ impl RootStrategy {
         RootStrategy::PackageShards,
     ];
 
-    /// The correctness baseline, and the selected strategy until measured
+    /// The correctness baseline, and the selected strategy by fiat per ADR 0022
     /// WP4 evidence freezes a winner.
     pub fn baseline() -> RootStrategy {
         RootStrategy::RecursivePattern
     }
 
-    /// Stable machine-readable identity for reports and benchmark rows.
+    /// Stable machine-readable identity for reports and selection rows.
     pub fn name(&self) -> &'static str {
         match self {
             RootStrategy::RecursivePattern => "recursive-pattern",
@@ -310,7 +311,7 @@ pub fn repository_plan() -> RepositoryRootPlan {
 /// Composes a root plan into the Bazel command-line patterns behind one
 /// canonical repository-wide selection: the baseline plan keeps the
 /// canonical selection identity (so `//dx:codegen` keeps resolving while
-/// the benchmark runs); every other candidate passes its own roots
+/// the fiat selection stands); every other candidate passes its own roots
 /// through. The query-pattern-file candidate carries no command-line
 /// patterns: Bazel reads the labels from [`PATTERN_FILE_FLAG`] (see
 /// [`RepositoryRootPlan::pattern_file_arg`]).
@@ -362,7 +363,7 @@ pub struct CoverageReport {
     pub missing: Vec<String>,
     /// Candidate roots outside the designated set. Tolerated: aspects stay
     /// provider-selective, so irrelevant targets contribute no plan records;
-    /// reported so benchmarks can attribute discovery cost.
+    /// reported so selection can attribute discovery cost.
     pub extra: Vec<String>,
 }
 
@@ -409,7 +410,7 @@ pub fn check_semantic_coverage(
     Ok(CoverageReport { missing, extra })
 }
 
-/// Benchmark dimensions every root candidate must report, per the codegen
+/// Selection dimensions every root candidate reports, per the codegen
 /// performance model: cold and warm loading/analysis, source and BUILD
 /// edits, target add/remove, generator actions, materialized bytes,
 /// projection time, and retained memory.
@@ -427,7 +428,7 @@ pub enum BenchmarkDimension {
 }
 
 impl BenchmarkDimension {
-    /// Every measured dimension, in stable report order.
+    /// Every selection dimension, in stable report order (historical reference, no new measurements).
     pub const ALL: [BenchmarkDimension; 9] = [
         BenchmarkDimension::ColdBuild,
         BenchmarkDimension::WarmBuild,
@@ -440,7 +441,7 @@ impl BenchmarkDimension {
         BenchmarkDimension::RetainedMemory,
     ];
 
-    /// Stable machine-readable identity for benchmark rows.
+    /// Stable machine-readable identity for selection rows.
     pub fn name(&self) -> &'static str {
         match self {
             BenchmarkDimension::ColdBuild => "cold-build",
@@ -456,7 +457,7 @@ impl BenchmarkDimension {
     }
 }
 
-/// One candidate's headline benchmark sample for the issue #506 decision. Full
+/// One candidate's historical headline sample for the issue #506 decision. Full
 /// per-dimension rows land with the measurement harness; the freeze rule
 /// compares cold against warm only.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -688,7 +689,7 @@ mod tests {
     }
 
     #[test]
-    fn benchmark_dimensions_are_named() {
+    fn selection_dimensions_are_named() {
         let names: Vec<&str> = BenchmarkDimension::ALL
             .iter()
             .map(BenchmarkDimension::name)
@@ -743,7 +744,7 @@ mod tests {
     }
 
     #[test]
-    fn incrementality_evidence_covers_the_measured_dimensions_once() {
+    fn incrementality_evidence_covers_the_reference_dimensions_once() {
         let dims: Vec<BenchmarkDimension> =
             INCREMENTALITY_EVIDENCE.iter().map(|row| row.0).collect();
         assert_eq!(
@@ -767,7 +768,7 @@ mod tests {
             );
             assert!(
                 actions <= 2,
-                "{dimension:?}: {actions} executed actions exceed the measured maximum"
+                "{dimension:?}: {actions} executed actions exceed the reference maximum"
             );
         }
         assert_eq!(

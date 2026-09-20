@@ -95,9 +95,10 @@ and unmanaged-path policy are defined once in [Managed Environment State](manage
 No-argument `dx env` runs canonical `//dx:env`. Gazelle maintains that rule's private
 tool bootstrap, while repository-wide language roots are collected from the current
 declared BUILD graph through the same
-provisional root-selection strategy as codegen. The correctness baseline applies
-language-specific plan aspects to `//...`; the leading optimization candidate passes a
-temporary Bazel-query-produced target-pattern file back to Bazel. Each contributing
+frozen `//...` root-selection baseline as codegen (fiat per
+[ADR 0022](../decisions/0022-no-benchmarking.md)). The correctness baseline applies
+language-specific plan aspects to `//...`; the query-produced target-pattern file
+is a rejected alternative, not a pending optimization. Each contributing
 configured target emits one normalized binary Protobuf environment-plan shard. A private
 environment provider collects shards and required artifacts in transitive depsets, and
 one private environment output group exposes both through BEP. Shards use a reserved
@@ -120,12 +121,11 @@ correctness therefore does not depend on a recent Gazelle run.
 
 Setup includes only targets currently declared in BUILD files. Unowned files or missing
 wrappers are ignored without a freshness error; users run `dx generate` separately when
-they want Gazelle to update that graph. A query-produced target list is expected to
-reduce discovery only; it does not avoid loading and analyzing selected roots.
-Repository-wide candidates and warm behavior require the benchmark evidence in
-[Generated Code](codegen.md) before one becomes normative. Among equivalent-semantics
-candidates the fastest wins on both cold and warm, with warm weighted above cold for
-internal paths.
+they want Gazelle to update that graph. A query-produced target list does not avoid
+loading and analyzing selected roots.
+Repository-wide root selection stays on the frozen `//...` baseline by fiat per
+[ADR 0022](../decisions/0022-no-benchmarking.md); see
+[Generated Code](codegen.md).
 
 ## Tool Exposure
 
@@ -355,7 +355,8 @@ Environment tests must cover:
 - Stable managed importer-local `node_modules` facades backed by rules_js-generated
   importer targets and one shared package store.
 - Equivalent `//...` and query-produced repository-root candidates, exact-target
-  bypass, declared-BUILD-only behavior, and measured cold/warm incrementality.
+  bypass, and declared-BUILD-only behavior by fiat per
+  [ADR 0022](../decisions/0022-no-benchmarking.md).
 
 Language-specific environment tests live with each language environment contract.
 Rust is the first language-native integration; see the
@@ -369,4 +370,4 @@ Cross-cutting fixture, platform, and evidence rules remain in
 under issue #309 (public env contribution protocol, Windows .envrc and junction
 fallback, standalone-without-Bazel path, signing and trust selection, plus the
 required bootstrap, fidelity, spaces, stale-clean, IDE, atomic-commit, BEP,
-projection, root-candidate, and cold/warm benchmark tests).
+projection, and root-candidate tests).

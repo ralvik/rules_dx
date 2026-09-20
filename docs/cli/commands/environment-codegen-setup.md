@@ -4,7 +4,7 @@
 
 With no argument, `dx codegen` invokes canonical `//dx:codegen` and atomically selects
 the repository-wide generated-source projection, including registered production,
-test, example, and development generators. The workflow uses the benchmark-selected
+test, example, and development generators. The workflow uses the frozen `//...`
 Bazel root mechanism documented in [Generated Code](../../environments/codegen.md).
 
 `dx codegen <target>` accepts exactly one explicit target label and selects generated
@@ -18,8 +18,7 @@ than retaining unrelated generated imports.
 
 `dx codegen` neither invokes `dx generate` nor prepares language environments. It may
 warn when the selected environment has a different scope. See
-[Generated Code](../../environments/codegen.md) for providers, projections, root selection, and
-performance.
+[Generated Code](../../environments/codegen.md) for providers, projections, and root selection.
 
 ## `dx env`
 

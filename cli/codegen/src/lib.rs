@@ -56,7 +56,7 @@ pub const CODEGEN_ASPECT: &str = "//generation:codegen.bzl%dx_codegen_plan_aspec
 
 /// Canonical repository-wide codegen selection invoked by bare
 /// `dx codegen`. The effective Bazel roots behind this label stay
-/// provisional pending the WP4 (issue #506) root benchmark; this crate only
+/// frozen to the //... baseline by fiat per ADR 0022 (no standing benchmarks); this crate only
 /// owns the selection identity.
 pub const REPOSITORY_TARGET: &str = "//dx:codegen";
 
@@ -122,7 +122,7 @@ pub fn scope_targets(scope: &CodegenScope) -> Vec<String> {
 
 /// Bazel labels to build for a WP4 root plan behind `//dx:codegen`: the
 /// baseline plan keeps the canonical selection identity while the
-/// benchmark runs; every other candidate passes its own roots through.
+/// fiat selection stands; every other candidate passes its own roots through.
 /// The query-pattern-file candidate carries no command-line patterns
 /// (Bazel reads them from `--target_pattern_file`).
 pub fn targets_for_root_plan(plan: &RepositoryRootPlan) -> Vec<String> {

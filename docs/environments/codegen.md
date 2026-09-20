@@ -40,10 +40,8 @@ exist. The canonical selection identity is the empty `//dx:codegen` filegroup
 (Accepted per issue #423; it contributes no plan records itself, and stays
 empty so no central eager dependency is built).
 The physical root-selection mechanism is frozen to the `//...` baseline
-(see `FROZEN_STRATEGY` in `cli/roots/src/lib.rs`); cold/warm behavior and the
-incrementality dimensions (source/BUILD edits, target add/remove, actions,
-materialized bytes, projection time, retained memory) are measured in
-`FROZEN_EVIDENCE` and `INCREMENTALITY_EVIDENCE` there. The admitted
+(see `FROZEN_STRATEGY` in `cli/roots/src/lib.rs`) by fiat per
+[ADR 0022](../decisions/0022-no-benchmarking.md). The admitted
 generator/language pairs stay frozen under issue #506
 (`generation/codegen.bzl:DX_CODEGEN_ADMITTED_PAIRS`). Concurrency,
 interruption, remote materialization, and reuse certification stay open per
@@ -106,8 +104,9 @@ configured dependency closure. This avoids a central eager `label_list` dependen
 and preserves top-level treatment of private, test-only, and incompatible targets.
 Command-length limits do not apply because Bazel reads the file.
 
-A monolithic aggregate rule and package-local aggregate shards remain benchmark
-candidates, not accepted architecture. Bazel eagerly analyzes `label_list` dependencies;
+A monolithic aggregate rule and package-local aggregate shards are rejected
+alternatives per [ADR 0022](../decisions/0022-no-benchmarking.md), not accepted
+architecture and not pending measurement. Bazel eagerly analyzes `label_list` dependencies;
 an aggregate does not make the selected graph lazy or automatically execute dependency
 actions. It must explicitly propagate aspect providers and expose generated artifacts
 through a requested output group. Central dependencies also introduce visibility,
@@ -202,15 +201,14 @@ Generated paths are read-only quality context. Format, lint-fix, and other repla
 workflows never mutate them. `bazel clean` or an output-base change can make links stale;
 only explicit `dx codegen` repairs the projection.
 
-## Performance Model
+## Scaling Model
 
 The repository-wide cold run is proportional to the selected graph and must execute
-uncached generator actions. A query-produced target-pattern file is expected to reduce
-target-pattern discovery and unrelated loading compared with `//...`, but it still loads
+uncached generator actions. A query-produced target-pattern file still loads
 packages containing indexed labels and analyzes every selected configured closure.
-Bazel's persistent server and action cache are expected to improve unchanged warm runs;
-the measured evidence lives in `FROZEN_EVIDENCE` and `INCREMENTALITY_EVIDENCE`
-in `cli/roots/src/lib.rs`. Concurrency, interruption, remote materialization,
+Bazel's persistent server and action cache improve unchanged warm runs by design;
+no timing claims are made per [ADR 0022](../decisions/0022-no-benchmarking.md).
+Concurrency, interruption, remote materialization,
 and reuse certification remain unverified claims tracked as later WP4 slices
 in that crate.
 
@@ -220,19 +218,17 @@ while validating and rebuilding a repository-wide link projection may still be l
 in all selected artifacts. `dx` maintains no independent generator cache or persistent
 semantic graph.
 
-Milestone benchmarks compare `//...`, a query-produced target-pattern file, one aggregate,
-and package-local shards with identical effective target, aspect, output-group, and
-configuration semantics. They measure cold and warm loading/analysis, source and BUILD
-edits, target add/remove, actions, materialized bytes, projection time, and retained
-memory. Among equivalent-semantics candidates the fastest wins on both cold and warm,
-with warm weighted above cold for internal paths; otherwise the `//...` correctness
-baseline remains.
+Root selection is by fiat per [ADR 0022](../decisions/0022-no-benchmarking.md):
+the `//...` correctness baseline remains; the query-produced target-pattern
+file, aggregate, and package-local shards are rejected alternatives with
+identical effective target, aspect, output-group, and configuration semantics
+where applicable.
 
 ## Test Requirements
 
 Codegen tests must cover:
 
-- Repository-wide `//...`, query-produced target-pattern file, aggregate candidates, and exact-target
+- Repository-wide `//...` and exact-target
   closure selection with equivalent effective roots and outputs.
 - Inclusion of production, test, example, and development projections in repository-
   wide mode without performance-motivated omission.
@@ -255,8 +251,9 @@ Codegen tests must cover:
   outputs, and no root or source-directory overlay facade.
 - Read-only generated artifacts and exclusion from formatting or replacement.
 - Stale links after `bazel clean` and output-base changes without implicit refresh.
-- Cold/warm, source/BUILD edit, target churn, memory, materialization, and projection
-  evidence comparing every repository-root candidate.
+- Deterministic root-candidate coverage: every repository-root candidate keeps
+  identical effective target, aspect, output-group, and configuration semantics
+  where applicable; selection stays on the frozen `//...` baseline by fiat.
 - Scope-mismatch warnings between codegen and environment selections without implicit
   cross-command execution.
 - Immediate LSP visibility after current-pointer replacement without environment

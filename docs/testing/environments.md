@@ -71,8 +71,9 @@ execution paths.
 Ruleset fixtures prove that authoritative transitive providers or narrow adapters retain
 required semantic dependencies without traversing unrelated `data`, tool, or other
 dependency-like edges. Unsupported rule kinds fail closed instead of silently producing
-partial plans. Analysis benchmarks compare configured-aspect counts and memory against a
-broad traversal implementation to retain the adapter model's efficiency rationale.
+partial plans. Analysis fixtures compare configured-aspect counts against a
+broad traversal implementation to retain the adapter model's efficiency rationale,
+without wall-time measurement per [ADR 0022](../decisions/0022-no-benchmarking.md).
 
 ## Command Tests
 

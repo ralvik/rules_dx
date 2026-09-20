@@ -53,7 +53,7 @@ pub const ENV_OUTPUT_GROUP: &str = "dx_env_plans";
 /// Canonical repository-wide codegen selection built by bare `dx setup`.
 /// Matches `REPOSITORY_TARGET` in `dx_codegen`. The effective Bazel roots
 /// behind this label stay provisional pending the WP4 (issue #506) root
-/// benchmark; this crate only owns the selection identity.
+/// fiat selection per ADR 0022; this crate only owns the selection identity.
 pub const CODEGEN_REPOSITORY_TARGET: &str = "//dx:codegen";
 
 /// Canonical repository-wide env selection built by bare `dx setup`.
@@ -134,7 +134,7 @@ pub fn request_aspects() -> Vec<String> {
 
 /// Bazel labels to build for a WP4 root plan behind the canonical
 /// repository-wide selections: the baseline plan keeps both selection
-/// identities (`//dx:codegen` plus `//dx:env`) while the benchmark runs;
+/// identities (`//dx:codegen` plus `//dx:env`) while the fiat selection stands;
 /// every other candidate passes its single union root set through. The
 /// query-pattern-file candidate carries no command-line patterns (Bazel
 /// reads them from `--target_pattern_file`).

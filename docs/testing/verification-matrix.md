@@ -43,10 +43,6 @@ class by design — never silently under the standard dogfood gates.
   (`bazel build //examples/adopt-rust/... --config=dx_dev` in the build job).
   What is lost: real-daemon exit 3, real Buildifier rewrite, full consumer
   wiring now smoke-only.
-- **Perf tracking**: Bazel-owned harness with baselines regenerated from
-  measured numbers, comparison against the frozen `aspect_rules_lint`
-  v2.8.0 baseline as a report (not a gate)
-  (open work).
 - **Dependency checks**: required-core plus admitted lockfile-consistency and
   declared-dependency usage fixtures delivered in `tools/depcheck/`
   (issues #22, #306); framework-composition depcheck stays with the JS/TS pnpm route.
@@ -93,22 +89,22 @@ profiles (issue #411) plus macOS arm64 native (issue #412) plus macOS
 x86_64 best-effort native (issue #413) plus Windows x86_64 MSVC-compatible
 native (issue #414). `Open` means open work with no implementation
 claimed here. `Planning only` means planning is implemented with live
-execution deferred. `Tracked` means measured report-only tracking with no gate.
+execution deferred. No report-only status remains per ADR 0022 (no standing benchmarking).
 
-| Language | Corpus dogfood | Layer-2 matrix | Generation | Examples | E2E | Perf | Depcheck | Audit/update | Docs | Env/codegen |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Rust | Delivered | Delivered | Delivered | Delivered (`adopt-rust`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
-| Python | Delivered | Delivered | Delivered | Delivered (`adopt-python`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
-| JavaScript | Delivered | Delivered | Delivered | Delivered (`adopt-js-ts`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
-| TypeScript | Delivered | Delivered | Delivered | Delivered (`adopt-js-ts`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
-| Go | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-go`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
-| Java | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-java`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
-| Kotlin | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-kotlin`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
-| Scala | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-scala`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
-| C# | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-csharp`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
-| F# | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-fsharp`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
-| C++ | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-cpp`) | Delivered (contract) | Tracked | Delivered (`tools/depcheck`) | Delivered | Open | Open |
-| Vue/Svelte/Astro/MDX | Delivered (code ownership) | Open (regions) | Delivered | Open (composition) | Delivered (contract) | Tracked | Open | Delivered | Open | Open |
+| Language | Corpus dogfood | Layer-2 matrix | Generation | Examples | E2E | Depcheck | Audit/update | Docs | Env/codegen |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Rust | Delivered | Delivered | Delivered | Delivered (`adopt-rust`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| Python | Delivered | Delivered | Delivered | Delivered (`adopt-python`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| JavaScript | Delivered | Delivered | Delivered | Delivered (`adopt-js-ts`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| TypeScript | Delivered | Delivered | Delivered | Delivered (`adopt-js-ts`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| Go | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-go`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| Java | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-java`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| Kotlin | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-kotlin`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| Scala | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-scala`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| C# | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-csharp`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| F# | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-fsharp`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| C++ | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-cpp`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| Vue/Svelte/Astro/MDX | Delivered (code ownership) | Open (regions) | Delivered | Open (composition) | Delivered (contract) | Open | Delivered | Open | Open |
 
 Framework composition evidence (exact parser/compiler, provider,
 generated-region, dependency, test, environment/IDE, quality-region
@@ -194,8 +190,8 @@ scope). The host matrix across these hosts is pinned by `bazel run
   examples READMEs and
   laziness proofs, quality-cache aquery, depcheck contract, audit/update
   guards, wrapper sources, foundation maps, registry singularity, backlog
-  contracts, GHCR hygiene and publish guards, perf/corpus verification,
-  widen-update loop, quality/execution/distribution/backlog guards,
+  contracts, GHCR hygiene and publish guards,
+  widen-update loop, quality/distribution/backlog guards,
   `:supported_evidence_gate`, `:quality_adapters_parity`,
   `:env_codegen_qualification`, `:docs_pipeline_qualification`,
   `:consumer_ci_qualification`, `:file_family_qualification`,
@@ -234,7 +230,7 @@ Remaining reds stay owned gaps, not green claims:
   (`bazel run //tools/ci:env_codegen_qualification`; no junction/copy
   fallback, no checksum-only fallback, no third-party plugin claim; bootstrap,
   fidelity, spaces, stale-clean, IDE, atomic-commit, BEP, projection,
-  root-candidate, and cold/warm tests stay owned gaps). Docs-pipeline IR plus
+  root-candidate tests stay owned gaps). Docs-pipeline IR plus
   planning records with fixture evidence are qualified seed-only under #421
   (live successor to closed #310)
   (`bazel run //tools/ci:docs_pipeline_qualification`; versioned IR, codec,
