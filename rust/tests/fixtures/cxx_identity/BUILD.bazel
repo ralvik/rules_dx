@@ -1,4 +1,4 @@
-"""CXX graph identity fixture (issue #474): single-graph Rust/C++ composition."""
+"""CXX graph identity fixture: single-graph Rust/C++ composition."""
 
 load("@crates//:crates.bzl", "aliases")
 load("//cc/rules:defs.bzl", "cc_library", "cc_test")

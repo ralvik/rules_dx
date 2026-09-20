@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Example caller pin-sync harness (issue #209).
+# Example caller pin-sync harness.
 #
 # Both example callers (consumer-ci, docs-ci) pin their reusable workflow
 # at one shared reviewed commit: drift between them fails the gate, so a
@@ -10,7 +10,7 @@
 # floating tag, and a placeholder branch must each fail.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issues #319, #323).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 

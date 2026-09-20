@@ -1,4 +1,4 @@
-"""Deployment plus execution floors fixture (issue #500)."""
+"""Deployment plus execution floors fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

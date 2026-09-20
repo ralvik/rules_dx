@@ -17,7 +17,7 @@
 //! exec path, requiring no materialized artifact). The four-part form
 //! declares the BEP-matching exec-path suffix for the backing artifact.
 
-// Issue #591 (extends #238 rollout beyond cli/*): infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -37,7 +37,7 @@ fn usage() -> String {
     "usage: codegen_shard_writer --producer LABEL --language LANG --entry LOGICAL|ROOT|NAMESPACE[|EXEC] [--entry ...] --output OUT".into()
 }
 
-/// `argv` tokenizer (qualified under issue #316: frozen legacy contract).
+/// `argv` tokenizer (frozen legacy contract).
 /// `--entry` appends in argument order; scalars keep
 /// last-wins repeats; every value option consumes the next token
 /// unconditionally (even a `--`-led token), matching the legacy hand loop.

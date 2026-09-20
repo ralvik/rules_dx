@@ -25,7 +25,7 @@
 //! and artifacts sort by path bytes, so consensus never depends on BEP
 //! arrival order.
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -112,7 +112,7 @@ pub enum BepError {
 }
 
 /// JSON-path-annotated shape failure for one BEP stream line (issue
-/// #231). `path` is a JSON-pointer-style location such as
+///). `path` is a JSON-pointer-style location such as
 /// `id.testResult.label` or `testResult.testActionOutput[2].uri`, so
 /// malformed-line diagnostics name the offending field. `detail` keeps
 /// the legacy human-readable wording, so existing reason-text

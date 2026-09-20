@@ -1,4 +1,4 @@
-"""C/C++ sha256-integrity plus no-system-package pins (issue #484).
+"""C/C++ sha256-integrity plus no-system-package pins.
 
 Contract: `docs/product/support-matrix.md#provisional-default-dependency-locks`.
 No ecosystem lockfile; every http_archive carries sha256/integrity, system pkgs rejected.

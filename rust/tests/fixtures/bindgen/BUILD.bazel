@@ -1,4 +1,4 @@
-"""Bindgen LLVM-22-vs-23 compat fixture (issue #473).
+"""Bindgen LLVM-22-vs-23 compat fixture.
 
 Exposes `bindgen.h` as a `cc_library` header so both bindgen routes share
 one declared native input: the standalone `rust_bindgen` route takes this

@@ -18,7 +18,7 @@ bazel_dep(name = "rules_cc", version = "0.2.22")
 # latest stable in the Bazel Central Registry (verified against Bazel 9.2.0
 # on the seed host); the 1.18.x line requires C++17 or newer per the
 # upstream release notes, and the qualified toolchain floor covers it
-# (qualified seed-only under issue #479 via
+# (qualified seed-only via
 # `bazel run //tools/ci:googletest_qualification` with
 # `cc/tests/fixtures/googletest/` over `@googletest//:gtest_main`;
 # living at head rejected per the dx pin policy). MSVC interop plus SDK
@@ -38,7 +38,7 @@ bazel_dep(name = "rules_shell", version = "0.6.1")
 
 gazelle_go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 # Pinned Go module deps (ADR 0019). Single-module go.mod via from_file
-# (qualified seed-only under issue #483 via
+# (qualified seed-only via
 # `bazel run //tools/ci:godeps_qualification` with
 # `go/tests/fixtures/godeps/pins.bzl` plus the go-cmp fixture consumer;
 # hand module tags rejected per Gazelle preferred; go.work only for
@@ -103,8 +103,8 @@ scala_deps.scalatest()
 # the default target framework is net10.0 (wrapper default, overridable per
 # target). Per-platform SDK acquisition stays open
 # under ADR 0019 per the provisional test-runner/lock tables; the xUnit v3
-# 4.0.0 runner is pinned (issue #477) and the Paket lock wiring is qualified
-# seed-only (issue #482). Needs bazel_lib 3.7.0 (rules_dotnet dep; MVS
+# 4.0.0 runner is pinned and the Paket lock wiring is qualified
+# seed-only. Needs bazel_lib 3.7.0 (rules_dotnet dep; MVS
 # keeps the executed tree on our other pins).
 bazel_dep(name = "rules_dotnet", version = "0.22.1")
 bazel_dep(name = "bazel_lib", version = "3.7.0")
@@ -117,12 +117,12 @@ use_repo(dotnet, "dotnet_toolchains")
 # shared Paket lock for the admitted .NET foundations (C#, F#) per the
 # support matrix: `paket.dependencies` plus `paket.lock` via `paket2bazel`
 # into the `paket.main` hub carrying per-package sha512 (qualified seed-only
-# under issue #482 via `bazel run //tools/ci:paket_qualification` with
+# via `bazel run //tools/ci:paket_qualification` with
 # `csharp/tests/fixtures/paket/pins.bzl` plus hello/xunit hub consumers;
 # generation consumes the Paket files and never writes them; NuGet native
 # `packages.lock.json` rejected per rules_dotnet issue 444). Members are
 # FSharp.Core 10.1.201 (F# assemblies need the runtime asset next to
-# the app) plus the xUnit v3 4.0.0 runner closure (issue #477:
+# the app) plus the xUnit v3 4.0.0 runner closure
 # xunit.v3 4.0.0 plus xunit.analyzers 2.0.0 with the MTP runner
 # transitive). Regenerate with:
 #   bazel run @rules_dotnet//tools/paket2bazel -- --dependencies-file
@@ -136,11 +136,11 @@ use_repo(dotnet_nuget, "paket.main")
 # against Bazel 9.2.0 on the seed host). Single shared lock for the admitted
 # JVM foundations (Java, Kotlin, Scala managed route) per the support
 # matrix: `maven_install.json` plus fail-closed repin checking (qualified
-# seed-only under issue #481 via `bazel run //tools/ci:maven_lock_qualification`
+# seed-only via `bazel run //tools/ci:maven_lock_qualification`
 # with `third_party/jvm/pins.bzl` plus the Java/Kotlin `@maven` fixtures;
 # non-fail-closed rejected). JUnit 4.13.2
 # seed (latest 4.x; hamcrest-core 1.3 arrives transitively) plus JUnit 6.1.3
-# Jupiter/Platform/Vintage line (qualified seed-only under issue #476; JDK 17+
+# Jupiter/Platform/Vintage line (qualified seed-only; JDK 17+
 # per the JUnit 6 baseline, remotejdk_21 on the seed host); the 5.14.x fallback
 # line (Jupiter 5.14.4 plus Platform 1.14.4 for JDK <17) stays pinned in
 # `java/tests/fixtures/junit/pins.bzl` and is selected by swapping the same
@@ -269,7 +269,7 @@ rust.toolchain(
     # Pinned default of rules_rust 0.74.0 (rust/private/common.bzl),
     # verified from the executed 0.74.0 module tree.
     versions = ["1.98.0"],
-    # Issue #411: static-musl Rust std for both Linux profiles. The
+    # Static-musl Rust std for both Linux profiles. The
     # hermetic-llvm static-only musl targets (native-toolchains.md) are
     # the provisional C/C++ backend; Rust needs its own musl std here so
     # static native closures resolve. Build scripts/proc macros keep
@@ -290,7 +290,7 @@ register_toolchains("@rust_toolchains//:all")
 # regenerated via crate_universe repin on the seed host:
 #   CARGO_BAZEL_REPIN=1 bazel build //rust/tests/fixtures/hello:hello
 #
-# Shell-env contract (issue #472): third-party `cargo_build_script` targets
+# Shell-env contract: third-party `cargo_build_script` targets
 # render without an explicit `use_default_shell_env` and defer to the global
 # `@rules_rust//cargo/settings:use_default_shell_env` flag, pinned `False`
 # in `.bazelrc`. A crate that genuinely needs host `PATH` probing opts back
@@ -348,7 +348,7 @@ use_repo(crate, "crates")
 # per tool/platform from generated checked-in metadata, plus an
 # execution-platform hub. Registration fetches nothing; each repository
 # downloads only when an action needs its artifact. Five hosts
-# (issue #616): linux_x86_64, linux_arm64, macos_arm64, macos_x86_64,
+# linux_x86_64, linux_arm64, macos_arm64, macos_x86_64,
 # windows_x86_64 per ADR 0014.
 dx_tools = use_extension("//quality/artifacts:extension.bzl", "dx_tools")
 dx_tools.platform(
@@ -393,7 +393,7 @@ use_repo(
     "dx_vale_windows_x86_64",
 )
 
-# Issue #407: nested E2E removed. No second Bazel download; CI uses the
+# Nested E2E removed. No second Bazel download; CI uses the
 # single canonical `.bazelversion` Bazel via Bazelisk only. Former
 # `integration/` CLI-contract coverage lives hermetically under
 # `bazel test //...` (exec argv/code unit pins, runner-matrix goldens,

@@ -1,23 +1,10 @@
-"""Deployment plus execution floors pins (issue #500).
+"""Deployment plus execution floors pins.
 
 Contract: `docs/native-toolchains.md#profiles-and-cross-builds`,
 `docs/native-toolchains.md#qualification-questions-and-delivery`,
 `docs/decisions/0014-tested-platform-release-stack.md#decision`.
 Fixture: `cc/tests/fixtures/deployment_floors/` via
 `bazel run //tools/ci:deployment_floors_qualification`.
-
-Decides the floors slice of the native baseline: the glibc plus musl
-plus Apple-SDK plus Windows-CRT floors below are pinned with fixture
-evidence recorded here and in the owning docs. Oldest-target and
-current-host fixtures run separately, never as one merged proof.
-Compiler, clangd and bindgen loader dependencies are inspected
-separately from the link floors. SDK version is not the deployment
-floor. Unpinned floors stay rejected per the issue alternatives.
-Backends stay provisional; linux corpus qualified seed-only under
-issue #499, windows transport qualified seed-only under issue #497,
-rights qualified seed-only under issue #496, interop qualified
-seed-only under issue #498, coverage qualified seed-only under issue #501,
-never double-claimed here.
 """
 
 # Linux glibc floor: upstream glibc 2.28 symbol floor with libc++ and

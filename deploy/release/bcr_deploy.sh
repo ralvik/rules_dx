@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# BCR publisher for `bcr_check` (issue #311).
+# BCR publisher for `bcr_check`.
 #
 # Invoked via `bazel run :<name>` with module + version + pinned input
 # paths. Owner-gated, dry-run-first: with `BCR_DRY_RUN=1` prints the

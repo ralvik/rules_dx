@@ -1,4 +1,4 @@
-"""SBOM + provenance generation for releases (issue #311).
+"""SBOM + provenance generation for releases.
 
 Contract: `docs/tools/tool-acquisition.md`, `docs/deploy/release-runbook.md`.
 """

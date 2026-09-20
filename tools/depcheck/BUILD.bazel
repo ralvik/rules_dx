@@ -1,4 +1,4 @@
-"""Cross-language dependency checks (issue #22; remaining opens under issue #510).
+"""Cross-language dependency checks (; remaining opens).
 
 Hermetic lockfile-consistency and declared-dependency usage fixtures
 for the required core (Rust/Cargo, Python/uv, JavaScript+TypeScript/pnpm)
@@ -89,7 +89,7 @@ sh_test(
         ":rust_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -106,7 +106,7 @@ sh_test(
         ":rust_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -123,7 +123,7 @@ sh_test(
         ":python_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -140,7 +140,7 @@ sh_test(
         ":python_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -157,7 +157,7 @@ sh_test(
         ":js_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -174,7 +174,7 @@ sh_test(
         ":js_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -191,7 +191,7 @@ sh_test(
         ":ts_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -208,7 +208,7 @@ sh_test(
         ":ts_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -225,7 +225,7 @@ sh_test(
         ":go_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -242,7 +242,7 @@ sh_test(
         ":go_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -259,7 +259,7 @@ sh_test(
         ":java_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -276,7 +276,7 @@ sh_test(
         ":java_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -293,7 +293,7 @@ sh_test(
         ":kotlin_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -310,7 +310,7 @@ sh_test(
         ":kotlin_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -327,7 +327,7 @@ sh_test(
         ":scala_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -344,7 +344,7 @@ sh_test(
         ":scala_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -361,7 +361,7 @@ sh_test(
         ":csharp_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -378,7 +378,7 @@ sh_test(
         ":csharp_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -395,7 +395,7 @@ sh_test(
         ":fsharp_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -412,7 +412,7 @@ sh_test(
         ":fsharp_testdata",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -429,7 +429,7 @@ sh_test(
         ":checker",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -446,7 +446,7 @@ sh_test(
         ":checker",
         "//tools/sh:lib",
     ],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 

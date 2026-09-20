@@ -86,7 +86,7 @@ pub fn install_hooks(root: &Path) -> Result<Vec<String>, AdoptError> {
                 detail: e.to_string(),
             }
         })?;
-        // Issue #320 portable route: hook shims need the executable bit
+        // Portable route: hook shims need the executable bit
         // only on unix; Windows runs them through the shell association,
         // so non-unix skips chmod instead of failing.
         #[cfg(unix)]

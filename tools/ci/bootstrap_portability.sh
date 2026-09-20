@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CI bootstrap portability harness (issue #617).
+# CI bootstrap portability harness.
 #
 # Machine-checks the as-built portable Bazelisk bootstrap with fixture
 # evidence and owned gaps, without claiming Supported or Windows arm64:
@@ -22,7 +22,7 @@
 # following //tools/ci:ci_matrix_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issues #319, #323).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 

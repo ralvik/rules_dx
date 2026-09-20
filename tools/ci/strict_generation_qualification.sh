@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Strict generation qualification harness (issue #503).
+# Strict generation qualification harness.
 #
 # Defines plus proves the strict-generation slice of the native baseline with
 # fixture evidence, without claiming a qualified hermetic-llvm backend,
@@ -27,14 +27,14 @@
 #   mapping-plus-ignore plus kind-mismatch plus main failures; log parsing
 #   plus a replacement preprocessor stay rejected. Loose generation rejected.
 # - open with honest records: backends stay provisional, floors qualified
-#   seed-only under issue #500, coverage qualified seed-only under issue
-#   #501, linux corpus qualified seed-only under issue #499.
+# seed-only, coverage qualified seed-only under issue
+# , linux corpus qualified seed-only.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:strict_generation_qualification`,
 # following //tools/ci:lcov_accounting_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -55,7 +55,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture files stay present (issue #503).
+# Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$strict_h" && -f "$strict_cc" && -f "$strict_test" && -f "$includes_expected" && -f "$resolution" && -f "$disposition" ]]; then
   ok
 else
@@ -189,7 +189,7 @@ else
   bad "docs/native-toolchains.md lost its qualified strict-generation record with fixtures under issue #503"
 fi
 
-# Verification matrix owns the qualified seed-only record under #503.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'strict_generation_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #503' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:strict_generation_qualification' "$verify" &&

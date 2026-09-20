@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rust library extraction qualification harness (issue #469).
+# Rust library extraction qualification harness.
 #
 # docs/roadmap.md carried the bare line `Rust library extraction` with no
 # owner, while cli/* crates plus quality/runner plus libs/ boundaries stayed
@@ -18,7 +18,7 @@
 # following //tools/ci:closeout_battery_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -33,7 +33,7 @@ arch="docs/architecture/README.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 
-# Roadmap owns the decided internal-only record under #469.
+# Roadmap owns the decided internal-only record under.
 if grep -q -F -e 'Rust library extraction decided internal-only under issue #469' "$roadmap" &&
   grep -q -F -e 'ADR 0023' "$roadmap"; then
   ok
@@ -61,7 +61,7 @@ else
   bad "decisions README lost its ADR 0023 index entry"
 fi
 
-# Architecture owns the boundary section linking ADR 0023 under #469.
+# Architecture owns the boundary section linking ADR 0023 under.
 if grep -q -F -e '### Rust Library Boundary (Issue #469)' "$arch" &&
   grep -q -F -e '0023-rust-libraries-internal.md' "$arch" &&
   grep -q -F -e 'rust_library_qualification' "$arch" &&

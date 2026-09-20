@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Coverage-report guards (issue #254; relates #54, #252, #5).
+# Coverage-report guards (; relates,,).
 #
 # First-party coverage PR reporting is adopted here (no service
 # dependency) so Codecov stays at most opt-in. Source of truth stays
@@ -19,7 +19,7 @@
 # following //tools/ci:coverage_spill.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 

@@ -180,15 +180,15 @@ jobs:
                   "installed": False,
               },
               "would_publish": [
-                  "Bazel Central Registry `rules_dx` module (owner-gated via //deploy/release:bcr_demo; owner approval per issue #5)",
-                  "GitHub Release with standalone `dx` binaries (draft only via //cli/cli:github_draft, issue #182; owner approval per issue #5)",
+                  "Bazel Central Registry `rules_dx` module (owner-gated via //deploy/release:bcr_demo; owner approval required)",
+                  "GitHub Release with standalone `dx` binaries (draft only via //cli/cli:github_draft; owner approval required)",
               ],
               "not_attempted": [
-                  "SBOM/provenance publishing (generated owner-gated via //deploy/release:sbom_demo; issue #311)",
-                  "Signing/attestation publishing (Sigstore keyless + GitHub attestations on the issue #311 trust root, signing-first; GHCR images sign separately via cosign <digest> under issue #460)",
-                  "GHCR prebuilt images (separate workflow .github/workflows/ghcr.yml per owner decision; issue #460)",
-                  "Non-seed release matrix builds (platforms unqualified; issue #311)",
-                  "BCR submission (owner-gated via //deploy/release:bcr_demo; issue #311)",
+                  "SBOM/provenance publishing (generated owner-gated via //deploy/release:sbom_demo)",
+                  "Signing/attestation publishing (Sigstore keyless + GitHub attestations on the trust root, signing-first; GHCR images sign separately via cosign <digest>)",
+                  "GHCR prebuilt images (separate workflow .github/workflows/ghcr.yml per owner decision)",
+                  "Non-seed release matrix builds (platforms unqualified)",
+                  "BCR submission (owner-gated via //deploy/release:bcr_demo)",
                   "Any tag, registry submission, or release creation",
               ],
           }

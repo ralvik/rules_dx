@@ -39,7 +39,7 @@ pub struct ScaffoldFile {
     pub content: String,
 }
 
-/// `dx init` devcontainer definition (snapshot workflow issue #322).
+/// `dx init` devcontainer definition (snapshot workflow).
 ///
 /// Single source for the scaffolded `.devcontainer/devcontainer.json`:
 /// the repository's own `.devcontainer/devcontainer.json` is a snapshot of
@@ -191,7 +191,7 @@ mod tests {
 
     #[test]
     fn devcontainer_scaffold_runs_bootstrap_not_full_build() {
-        // Issue #183 (snapshot workflow #322): the scaffolded definition
+        // (snapshot workflow): the scaffolded definition
         // must stay admissible and bootstrap-shaped. The snapshot with the
         // checked-in definition lives in
         // //.devcontainer:devcontainer_parity_test; this pins the

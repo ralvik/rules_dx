@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# CXX graph identity qualification harness (issue #474).
+# CXX graph identity qualification harness.
 #
-# The CXX generator had no owner after #303 closed: the native plan recorded
+# The CXX generator had no owner after closed: the native plan recorded
 # that CXX's Bazel module registers direct rules_rust toolchains, risking a
 # second Rust graph beside the single crate_universe `crates` graph.
 # This harness pins the decided outcome on the as-built stack (stock
@@ -22,14 +22,14 @@
 # - scope: graph only. The pin lives under `[package.metadata]` until
 #   MODULE.bazel wires the manifest into crate_universe (an unwired
 #   `crate_deps(["cxx"])` fails analysis); full `cxxbridge-cmd` execution
-#   plus corpus wiring stays under #499; platform plus consumer plus release
+# plus corpus wiring stays under; platform plus consumer plus release
 #   evidence stays open; no Supported claim.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:cxx_identity_qualification`,
 # following //tools/ci:cc_optout_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -51,14 +51,14 @@ fixture_bridge="rust/tests/fixtures/cxx_identity/cxx_bridge.bzl"
 fixture_manifest="rust/tests/fixtures/cxx_identity/Cargo.toml"
 fixture_lib="rust/tests/fixtures/cxx_identity/src/lib.rs"
 
-# Roadmap owns the delivered record under #474.
+# Roadmap owns the delivered record under.
 if grep -q -F -e 'CXX graph identity decided (issue #474' "$roadmap"; then
   ok
 else
   bad "roadmap lost its CXX graph identity decided record under #474"
 fi
 
-# Verification matrix owns the qualified seed-only record under #474.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'cxx_identity_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #474' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:cxx_identity_qualification' "$verify"; then
@@ -114,7 +114,7 @@ else
   bad "cxx_bridge.bzl lost its single-graph identity (want identical 1.0.200 pins plus @crates//:cxxbridge-cmd with recorded rejection)"
 fi
 
-# Cargo manifest pins the same identical versions under metadata (unwired until #499).
+# Cargo manifest pins the same identical versions under metadata (unwired until).
 if grep -q -F -e '[package.metadata.cxx-identity]' "$fixture_manifest" &&
   grep -q -F -e 'cxx = "=1.0.200"' "$fixture_manifest" &&
   grep -q -F -e 'cxxbridge-cmd = "=1.0.200"' "$fixture_manifest"; then
@@ -142,7 +142,7 @@ else
   bad "MODULE.bazel gained a second Rust graph (want no cxx.rs plus exactly one rust_toolchains repo)"
 fi
 
-# Generation contract owns the CXX identity decision under #474.
+# Generation contract owns the CXX identity decision under.
 if grep -q -F -e 'CXX graph identity (decided under issue #474' "$gen_rust" &&
   grep -q -F -e '@crates//:cxxbridge-cmd' "$gen_rust" &&
   grep -q -F -e 'never `@cxx.rs//:codegen`' "$gen_rust"; then
@@ -159,7 +159,7 @@ else
   bad "generation README lost its #474 CXX identity pinned record"
 fi
 
-# Native plan owns the #474 qualification (identity decided, corpus cites fixture).
+# Native plan owns the qualification (identity decided, corpus cites fixture).
 if grep -q -F -e '#474' "$native" &&
   grep -q -F -e 'CXX graph identity' "$native" &&
   grep -q -F -e 'cxx_identity_qualification' "$native"; then
@@ -168,7 +168,7 @@ else
   bad "native-toolchains lost its #474 CXX identity qualification with cxx_identity fixture"
 fi
 
-# Support matrix keeps the CXX identity line decided under #474 with no Supported claim.
+# Support matrix keeps the CXX identity line decided under with no Supported claim.
 if grep -q -F -e 'CXX graph identity decided' "$matrix" &&
   grep -q -F -e '#474' "$matrix" &&
   ! grep -q -E -e '^\| .* \| Supported' "$matrix"; then

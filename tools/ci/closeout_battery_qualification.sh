@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Close-out battery plus docs-gate qualification harness (issue #467).
+# Close-out battery plus docs-gate qualification harness.
 #
 # Qualifies the as-built close-out battery plus docs gate with fixture
 # evidence and owned gaps, without claiming Supported or full-tree green
@@ -20,7 +20,7 @@
 # following //tools/ci:ci_matrix_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -35,14 +35,14 @@ ci=".github/workflows/ci.yml"
 build="tools/ci/BUILD.bazel"
 reusable=".github/workflows/reusable-docs.yml"
 
-# Roadmap owns the delivered record under #467.
+# Roadmap owns the delivered record under.
 if grep -q -F -e 'close-out battery + docs delivered (issue #467' "$roadmap"; then
   ok
 else
   bad "roadmap lost its close-out battery delivered record under #467"
 fi
 
-# Verification matrix owns the qualified seed-only record under #467.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'closeout_battery_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #467' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:closeout_battery_qualification' "$verify"; then
@@ -89,7 +89,7 @@ else
 fi
 
 # Test battery: full test with hermetic CLI-contract pins, no manual.
-# Tuned under issue #619: bounded flaky retries plus per-test timeout cap.
+# Tuned bounded flaky retries plus per-test timeout cap.
 if grep -q -F -e 'bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...' "$ci" &&
   grep -q -F -e '- `test`: `bazel test --flaky_test_attempts=3 --test_timeout=300 //...`' "$verify"; then
   ok
@@ -180,7 +180,7 @@ else
   bad "ci.yml lost a per-host job (arm64 triple plus musl pairs plus macos triples plus windows triple)"
 fi
 
-# Host matrix stays pinned by ci_matrix_qualification (issue #415).
+# Host matrix stays pinned by ci_matrix_qualification.
 if grep -q -F -e 'ci_matrix_qualification' "$verify" &&
   grep -q -F -e 'issue #415' "$verify" &&
   grep -q -F -e 'runs-on: ubuntu-latest' "$ci" &&
@@ -218,7 +218,7 @@ else
 fi
 
 # Reusable-docs contract: check-only lint over the caller scope, validated
-# tree, staged publish, clean checkout, no rendered site until #581.
+# tree, staged publish, clean checkout, no rendered site until.
 if grep -q -F -e 'lint --check' "$reusable" &&
   grep -q -F -e 'validated docs tree' "$reusable" &&
   grep -q -F -e 'is pure check-only' "$reusable" &&
@@ -231,7 +231,7 @@ else
 fi
 
 # Dogfood gate: test-disabled self-call on the five host platforms
-# (Phase 1 issue #607 coverage superset; starter stays all-nine).
+# (Phase 1 coverage superset; starter stays all-nine).
 if grep -q -F -e 'platforms:' "$ci" &&
   grep -q -F -e 'linux_x86_64' "$ci" &&
   grep -q -F -e 'linux_arm64' "$ci" &&

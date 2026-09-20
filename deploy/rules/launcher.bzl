@@ -1,4 +1,4 @@
-"""Shared deploy-launcher helpers (issue #317).
+"""Shared deploy-launcher helpers.
 """
 
 # Standard `runfiles.bash` initialization v3, copy-pasted from the Bazel

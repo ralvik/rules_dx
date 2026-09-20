@@ -1,6 +1,6 @@
-//! Validation and codec helpers for the Documentation IR (#10).
+//! Validation and codec helpers for the Documentation IR.
 
-// Issue #591 (extends #238 rollout beyond cli/*): infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -46,7 +46,7 @@ pub fn validate_shard(shard: &DocIr) -> Result<(), Error> {
     for (index, symbol) in shard.symbols.iter().enumerate() {
         validate_symbol(symbol, index)?;
         // Shared sorted-unique control flow lives in `dx_proto_validate`;
-        // only the crate-local `Error` payloads stay here (#72 slice).
+        // only the crate-local `Error` payloads stay here (slice).
         // Equal IDs report Duplicate; smaller IDs report Unsorted, matching
         // the previous explicit order-then-duplicate checks.
         match check_sorted_next(previous_id, &symbol.id) {
@@ -75,7 +75,7 @@ fn validate_symbol(symbol: &Symbol, index: usize) -> Result<(), Error> {
         // Uses `classify` for ladder order; only Absolute is
         // rejected to preserve current behavior (empty means no source and
         // stays valid; backslash/empty-component/dot segments remain allowed
-        // until a future tightening) (#72 slice 7).
+        // until a future tightening) (slice 7).
         let is_absolute = matches!(classify(&source.file), Some(PathProblem::Absolute));
         if is_absolute {
             return Err(Error::AbsoluteSourcePath {
@@ -87,7 +87,7 @@ fn validate_symbol(symbol: &Symbol, index: usize) -> Result<(), Error> {
     let mut previous: Option<&String> = None;
     for extension in symbol.extensions.iter() {
         // Shared sorted-unique control flow lives in `dx_proto_validate`;
-        // only the crate-local `Error` payloads stay here (#72 slice).
+        // only the crate-local `Error` payloads stay here (slice).
         match check_sorted_next(previous, &extension.key) {
             Ok(()) => {}
             Err(OrderViolation::Duplicate) => {

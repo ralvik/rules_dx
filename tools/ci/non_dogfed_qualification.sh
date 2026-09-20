@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Non-dogfed e2e plus negatives qualification harness (issue #508).
+# Non-dogfed e2e plus negatives qualification harness.
 #
 # Qualifies the non-dogfed execution slice with fixture evidence pinned in
 # `tools/ci/tests/fixtures/non_dogfed/pins.bzl` (plus `non_dogfed.expected`),
 # without claiming qualified backends, floors, coverage, or Supported:
-# - e2e drivers deleted per issue #407 with hermetic equivalents under
+# - e2e drivers deleted with hermetic equivalents under
 #   `bazel test //...` (term e2e throughout, never integration for drivers),
-# - negatives as green hermetic proofs per issue #406 (no manual loop),
+# - negatives as green hermetic proofs (no manual loop),
 # - no-coverage cohort via coverage-excluded runs with ownership gates,
 # - shell sources with no quality class by design via ownership plus execution.
 # Silent coverage under the standard dogfood gates stays rejected.
@@ -15,7 +15,7 @@
 # following //tools/ci:non_dogfed_paths.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -32,14 +32,14 @@ ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 testing_readme="docs/testing/README.md"
 
-# Fixture files stay present (issue #508).
+# Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$expected" ]]; then
   ok
 else
   bad "non-dogfed fixture missing (want $pins plus $pins_build plus non_dogfed.expected)"
 fi
 
-# Pins record the deleted e2e drivers plus the e2e term (issue #407).
+# Pins record the deleted e2e drivers plus the e2e term.
 if grep -q -F -e 'E2E_NO_WORKSPACE = "no integration/ workspace"' "$pins" &&
   grep -q -F -e 'tools/ci/e2e.sh' "$pins" &&
   grep -q -F -e 'E2E_NO_SUITE = "//tools/ci:e2e"' "$pins" &&
@@ -64,7 +64,7 @@ else
   bad "pins.bzl lost its hermetic e2e equivalents plus loss record under issue #508"
 fi
 
-# Pins record the green negative proofs plus the rejected manual loop (issue #406).
+# Pins record the green negative proofs plus the rejected manual loop.
 if grep -q -F -e '//libs/starlark/tests/negative:failing_check_demo' "$pins" &&
   grep -q -F -e '//libs/starlark/tests/negative:missing_observation_demo' "$pins" &&
   grep -q -F -e 'fixture_real_markdown_no_config_subject' "$pins" &&
@@ -122,7 +122,7 @@ else
   bad "tools/ci/non_dogfed_paths.sh lost its four-cohort plan record under issue #508"
 fi
 
-# Verification matrix owns the qualified seed-only record under #508.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'qualified seed-only under #508' "$verify" &&
   grep -q -F -e 'non_dogfed_qualification' "$verify" &&
   grep -q -F -e 'tools/ci/tests/fixtures/non_dogfed/pins.bzl' "$verify" &&

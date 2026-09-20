@@ -74,7 +74,7 @@ pub fn dx_init_emits_preset_template() -> bool {
 }
 
 /// The preset regen-and-review loop stays manual with review enforcement
-/// (issue #332): no auto-merge, whether bot-owned or human-driven.
+///: no auto-merge, whether bot-owned or human-driven.
 pub fn preset_bot_auto_merge_allowed() -> bool {
     false
 }

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# GoogleTest v1.18.0 plus C++17 floor qualification harness (issue #479).
+# GoogleTest v1.18.0 plus C++17 floor qualification harness.
 #
-# Qualifies the owned gap from closed #304: provisional GoogleTest v1.18.0,
-# closed #304 owner only. #418 covers adapters not the runner version.
+# Qualifies the owned gap from closed: provisional GoogleTest v1.18.0,
+# closed owner only. covers adapters not the runner version.
 # - pinned: GoogleTest 1.18.0 (Bazel Central Registry module `googletest`
 #   1.18.0, verified against Bazel 9.2.0 on the seed host) in MODULE.bazel
 #   plus `cc/tests/fixtures/googletest/pins.bzl`; the 1.18.x line requires
@@ -23,7 +23,7 @@
 # following //tools/ci:exact_target_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -44,7 +44,7 @@ ci=".github/workflows/ci.yml"
 tools_build="tools/ci/BUILD.bazel"
 defs="cc/rules/defs.bzl"
 
-# Fixture quad plus pins stay present (issue #479).
+# Fixture quad plus pins stay present.
 if [[ -f "$pins" && -f "$build" && -f "$header" && -f "$lib" && -f "$test" ]]; then
   ok
 else
@@ -156,7 +156,7 @@ else
   bad "docs/generation/README.md lost its qualified GoogleTest record under issue #479"
 fi
 
-# Verification matrix owns the qualified seed-only record under #479.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'googletest_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #479' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:googletest_qualification' "$verify" &&

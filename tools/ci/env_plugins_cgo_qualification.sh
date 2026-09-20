@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Third-party env plugin model plus Go cgo exception qualification (issue #587).
+# Third-party env plugin model plus Go cgo exception qualification.
 #
-# Qualifies the two #587 slices that issue #506 explicitly does not cover:
+# Qualifies the two slices that explicitly does not cover:
 # - plugin model: third-party language-integration (persistent-environment)
 #   plugins stay deferred past v1 with an explicit design owner plus
 #   acceptance criteria instead of an owner-less deferral;
@@ -25,7 +25,7 @@
 # following //tools/ci:env_codegen_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -43,7 +43,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Plugin model stays deferred past v1 with an explicit design owner under #587.
+# Plugin model stays deferred past v1 with an explicit design owner under.
 if grep -q -F -e 'third-party language-integration plugins are deferred past v1' "$env_doc" &&
   grep -q -F -e 'issue #587' "$env_doc" &&
   grep -q -F -e '//env' "$env_doc" &&
@@ -126,7 +126,7 @@ else
   bad "environment.md lost its explicit cgo exception boundary under #587"
 fi
 
-# Test requirements carry the cgo gap plus the #587 fixture wiring.
+# Test requirements carry the cgo gap plus the fixture wiring.
 if grep -q -F -e 'record cgo and platform gaps' "$env_doc" &&
   grep -q -F -e 'env/tests/fixtures/env_plugins_cgo/' "$env_doc" &&
   grep -q -F -e 'env_plugins_cgo_qualification' "$env_doc"; then
@@ -135,7 +135,7 @@ else
   bad "environment.md Test Requirements lost its cgo plus #587 fixture wiring"
 fi
 
-# Testing matrix wires the explicit cgo exception boundary under #587.
+# Testing matrix wires the explicit cgo exception boundary under.
 if grep -q -F -e 'explicit cgo exception boundary' "$testing_doc" &&
   grep -q -F -e 'env/tests/fixtures/env_plugins_cgo/' "$testing_doc" &&
   grep -q -F -e 'does not guarantee cgo completion' "$testing_doc" &&
@@ -145,7 +145,7 @@ else
   bad "testing/environments.md lost its explicit cgo boundary wiring under #587"
 fi
 
-# Support matrix wires the pure-Go boundary plus cgo exception under #587.
+# Support matrix wires the pure-Go boundary plus cgo exception under.
 if grep -q -F -e 'explicit cgo exception' "$matrix_support" &&
   grep -q -F -e 'env/tests/fixtures/env_plugins_cgo/' "$matrix_support" &&
   grep -q -F -e 'does not guarantee cgo completion' "$matrix_support" &&
@@ -188,7 +188,7 @@ else
   bad "env_plugins_cgo.expected lost its decision plus boundary plus honesty lines under #587"
 fi
 
-# Docs plus build plus CI plus matrix own the qualified seed-only record under #587.
+# Docs plus build plus CI plus matrix own the qualified seed-only record under.
 if grep -q -F -e 'env/tests/fixtures/env_plugins_cgo/pins.bzl' "$env_doc" &&
   grep -q -F -e 'qualified seed-only' "$env_doc" &&
   grep -q -F -e 'issue #587' "$env_doc" &&

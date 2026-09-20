@@ -1,4 +1,4 @@
-// ring-style C/assembly shape stub (issue #499).
+// ring-style C/assembly shape stub.
 #pragma once
 
 // C plus assembly with target-platform libraries. Build scripts keep

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Coverage/remote qualification harness (issue #507).
+# Coverage/remote qualification harness.
 #
 # Qualifies the per-cell non-seed coverage plus Codecov opt-in plus
 # remote evidence slice with fixture evidence pinned in
@@ -15,21 +15,21 @@
 # - remote-cache plus remote-execution local-only evidence (else branch:
 #   hermeticity designed and locally sandbox-tested, remote unverified).
 #
-# First-party Bazel-owned coverage stays the gate (issue #254 adopted);
+# First-party Bazel-owned coverage stays the gate (adopted);
 # Codecov stays opt-in only and is never required. Remote correctness is
 # not claimed: local aquery plus execution-log evidence proves cache
 # behavior locally, and docs state remote remains unverified. All required
 # plus best-effort cells are qualified per the platform policy (issues
-# #5/#298, arm64 qualified under #410, static musl under #411, macos arm64
-# under #412, macos x86_64 best-effort under #413, windows x86_64 under
-# #414) with clean refusal for the remaining out-of-v1 host, never silent
+# /, arm64 qualified under, static musl under, macos arm64
+# under, macos x86_64 best-effort under, windows x86_64 under
+# with clean refusal for the remaining out-of-v1 host, never silent
 # substitution.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:coverage_qualification`,
 # following //tools/ci:coverage_cell.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -49,10 +49,10 @@ build_coverage_doc="docs/cli/commands/build-test-coverage.md"
 verify="docs/testing/verification-matrix.md"
 
 # Per-cell registry exists with exactly seven qualified rows (seed x86_64
-# plus arm64 native under issue #410 plus two static-musl profiles under
-# issue #411 plus macos arm64 native under issue #412 plus macos x86_64
-# best-effort native under issue #413 plus windows x86_64 MSVC-compatible
-# native under issue #414).
+# plus arm64 native plus two static-musl profiles under
+# plus macos arm64 native plus macos x86_64
+# best-effort native plus windows x86_64 MSVC-compatible
+# native).
 if [[ -f "$cells" ]] &&
   [[ "$(grep -c -E -e '^qualified ' "$cells")" == "7" ]] &&
   grep -q -F -e 'qualified seed-linux_x86_64 tools/coverage/seed-inventory.txt' "$cells" &&
@@ -68,8 +68,8 @@ else
 fi
 
 # All required plus best-effort hosts are qualified (macos x86_64
-# best-effort flipped qualified under #413, windows x86_64 flipped qualified
-# under #414); no unqualified coverage row remains. Out-of-v1 Windows arm64
+# best-effort flipped qualified under, windows x86_64 flipped qualified
+# under); no unqualified coverage row remains. Out-of-v1 Windows arm64
 # carries no coverage cell.
 if [[ "$(grep -c -E -e '^unqualified ' "$cells" || true)" == "0" ]] &&
   ! grep -q -F -e 'unqualified windows_x86_64' "$cells"; then
@@ -124,10 +124,10 @@ fi
 
 # Seed coverage job stays seed-cell scoped in CI, with per-cell arm64 plus
 # musl plus macos plus macos-x86_64 plus windows twins (static musl only,
-# issue #411; dynamic musl has no cell; macos arm64 native on macos-14,
-# issue #412; macos x86_64 best-effort native on macos-15-intel, issue
-# #413, non-blocking; windows x86_64 MSVC-compatible native on
-# windows-latest, issue #414).
+# ; dynamic musl has no cell; macos arm64 native on macos-14,
+# ; macos x86_64 best-effort native on macos-15-intel, issue
+# , non-blocking; windows x86_64 MSVC-compatible native on
+# windows-latest,).
 if grep -q -F -e 'coverage (dx coverage gate, seed cell)' .github/workflows/ci.yml &&
   grep -q -F -e 'coverage-arm64 (dx coverage gate, arm64 cell)' .github/workflows/ci.yml &&
   grep -q -F -e 'coverage-musl-x86_64 (dx coverage gate, musl x86_64 cell)' .github/workflows/ci.yml &&
@@ -221,7 +221,7 @@ fi
 
 # Codecov stays opt-in only: no activation, no upload wiring anywhere.
 # (Self-excluded: this script names the banned forms in its own patterns;
-# the #507 pins fixture records the same banned forms as pins, so its
+# the pins fixture records the same banned forms as pins, so its
 # path is filtered out and only real wiring can fail this check.)
 if ! grep -rn -F -e 'codecov-action' .github/workflows/ 2>/dev/null | grep -q . &&
   ! grep -rn -F -e 'CODECOV_TOKEN' --exclude='coverage_qualification.sh' .github/workflows/ tools/ cli/ 2>/dev/null | grep -v -F -e 'tools/coverage/tests/fixtures/per_cell/' | grep -q . &&
@@ -241,7 +241,7 @@ else
 fi
 
 # Free-tier qualification: only standard runners, no paid services.
-# windows-latest is qualified under issue #414 (standard free runner with
+# windows-latest is qualified (standard free runner with
 # a per-host cache scope); macos-latest stays banned (unpinned), as do
 # self-hosted/larger (paid).
 if ! grep -rn -E -e 'runs-on:.*(self-hosted|larger|macos-latest)' .github/workflows/ 2>/dev/null | grep -q . &&
@@ -305,7 +305,7 @@ else
   bad "local cache evidence harnesses missing (aquery plus exec-log)"
 fi
 
-# Fixture files stay present (issue #507).
+# Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$per_cell_expected" && -f "$codecov_remote_expected" ]]; then
   ok
 else
@@ -433,7 +433,7 @@ else
   bad "per-cell coverage fixture failed to build (want green on the seed host, issue #507)"
 fi
 
-# Verification matrix owns the qualified record under #507.
+# Verification matrix owns the qualified record under.
 if grep -q -F -e 'Per-cell non-seed coverage plus Codecov opt-in plus remote evidence' "$verify" &&
   grep -q -F -e 'qualified under #507' "$verify" &&
   grep -q -F -e 'tools/coverage/tests/fixtures/per_cell/pins.bzl' "$verify" &&

@@ -1,4 +1,4 @@
-"""CLI execution/reporting gaps fixture (issue #590)."""
+"""CLI execution/reporting gaps fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

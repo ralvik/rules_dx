@@ -79,7 +79,7 @@ impl PruneBytes {
 /// A missing directory measures zero (already pruned: idempotent); any
 /// other failure reports through [`CleanError`].
 ///
-/// Implemented over [`walkdir::WalkDir`] (qualified under issue #315 as adopted):
+/// Implemented over [`walkdir::WalkDir`] (qualified as adopted):
 /// recursive traversal without following symlinks, matching the historical
 /// manual stack (directories contribute nothing, files contribute
 /// `symlink_metadata` length, saturating).
@@ -247,7 +247,7 @@ mod tests {
         root.join("ws")
     }
 
-    /// Portable symlink planter for the no-follow fixture (issue #320
+    /// Portable symlink planter for the no-follow fixture
     /// portable route): sizing never follows links on any host, so the
     /// fixture must run everywhere. Windows planting fails fast with the
     /// OS privilege error rather than silently skipping cover.
@@ -256,7 +256,7 @@ mod tests {
         std::os::windows::fs::symlink_file(target, link).expect("link");
     }
 
-    /// Portable symlink planter for the no-follow fixture (issue #320
+    /// Portable symlink planter for the no-follow fixture
     /// portable route): see the windows variant above.
     #[cfg(not(windows))]
     fn test_symlink(target: &Path, link: &Path) {
@@ -324,7 +324,7 @@ mod tests {
 
     #[test]
     fn measure_sums_prune_entries_and_skips_missing() {
-        // Issue #320 portable route: sizing is symlink-aware without
+        // Portable route: sizing is symlink-aware without
         // following links on every host, so this runs everywhere instead
         // of unix-gating.
         let scratch = clean_root("measure");

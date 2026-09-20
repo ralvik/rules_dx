@@ -1,4 +1,4 @@
-// LCOV accounting fixture library; consumer of cc_library (issue #501).
+// LCOV accounting fixture library; consumer of cc_library.
 #include "cc/tests/fixtures/lcov_accounting/accounting.h"
 
 int Add(int a, int b) {

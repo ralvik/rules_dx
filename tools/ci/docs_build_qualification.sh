@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Docs build check serve harness (issue #620).
+# Docs build check serve harness.
 #
 # Machine-checks the as-built docs build/check/serve workflow with docs in
 # place, using existing tools only with no custom linter:
@@ -12,13 +12,13 @@
 # - CI gate stays the existing `docs-ci` self-call over `//docs/...`
 #   (check-only on pull requests, validated tree publish only on main);
 # - docs only: no rendered mdBook site claimed here (stays open under issue
-#   #581), no `Supported` claim.
+# , no `Supported` claim.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:docs_build_qualification`,
 # following //tools/ci:docs_pipeline_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -35,7 +35,7 @@ ci=".github/workflows/ci.yml"
 checker="quality/markdown/src/lib.rs"
 checker_build="quality/markdown/BUILD.bazel"
 
-# Build-check-serve doc exists with the accepted issue #620 workflow.
+# Build-check-serve doc exists with the accepted workflow.
 if [[ -f "$doc" ]] &&
   grep -q -F -e '# Documentation Build Check Serve' "$doc" &&
   grep -q -F -e 'Accepted workflow (issue #620)' "$doc"; then
@@ -85,7 +85,7 @@ else
   bad "build-check-serve doc lost its never-fetched remote record"
 fi
 
-# Rendered mdBook site stays owned under issue #581, never claimed here.
+# Rendered mdBook site stays owned, never claimed here.
 if grep -q -F -e 'issue #581' "$doc" &&
   grep -q -F -e 'No rendered mdBook site is claimed here' "$doc"; then
   ok

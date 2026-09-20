@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prebuilt interop qualification harness (issue #498).
+# Prebuilt interop qualification harness.
 #
 # Defines plus proves the prebuilt interop slice of the native baseline
 # with fixture evidence, without claiming a qualified hermetic-llvm
@@ -20,20 +20,20 @@
 #   initially; shared-runtime deployment, exceptions, RTTI, allocation
 #   ownership plus ABI boundaries proven by the interop lib plus test.
 # - mixed Rust/C/C++: decided single-graph CXX identity (`cxx ==
-#   cxxbridge-cmd == 1.0.200` from the single `crates` graph, issue #474)
+# cxxbridge-cmd == 1.0.200` from the single `crates` graph,)
 #   with host-to-target plus target execution qualifying separately;
 #   compiler-target availability alone plus LLVM ancestry alone rejected;
 #   single-combo proof rejected. Path transport stays owned under issue
-#   #497, corpus wiring under issue #499, never double-claimed here.
-# - open with honest records: full backends, transport (issue #497),
-#   corpus plus floors plus coverage (issues #499/#500/#501), release
+# , corpus wiring, never double-claimed here.
+# - open with honest records: full backends, transport,
+# corpus plus floors plus coverage, release
 #   evidence. Backends stay provisional.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:prebuilt_interop_qualification`,
 # following //tools/ci:acquisition_rights_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -52,7 +52,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture files stay present (issue #498).
+# Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$interop_h" && -f "$interop_cc" && -f "$interop_test" ]]; then
   ok
 else
@@ -176,7 +176,7 @@ else
   bad "tools/ci/BUILD.bazel or ci.yml lost the prebuilt_interop_qualification wiring (want target plus dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified seed-only record under #498.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'prebuilt_interop_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #498' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:prebuilt_interop_qualification' "$verify" &&

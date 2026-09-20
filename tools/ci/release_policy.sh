@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Release-policy gate harness (issue #89 item 2).
+# Release-policy gate harness (item 2).
 #
 # `docs/quality/quality-testing.md:390-398` requires release tests that
 # diff curated policy manifests against the default lifecycle policy in
@@ -31,7 +31,7 @@
 #
 # Minor-addition compat-qual/notes/override evidence lives with the
 # proposing change (CHANGELOG + prior-set override fixture); with no
-# release cut (CHANGELOG: no release has been cut, issue #5) there are
+# release cut (CHANGELOG: no release has been cut,) there are
 # no pending minor additions to qualify, so the harness pins the
 # no-removal/no-formatter-change half plus the parity-evidence half.
 #
@@ -39,7 +39,7 @@
 # following //tools/ci:coverage_cell.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -153,7 +153,7 @@ fi
 # Simulate by dropping the python ruff formatter from a scratch copy
 # and requiring the frozen-formatter grep to reject it.
 cp "$manifest" "$scratch/removed.bzl"
-# Portable in-place edit via dx_replace (issues #299, #323): GNU `sed -i -e`
+# Portable in-place edit via dx_replace: GNU `sed -i -e`
 # breaks on macOS BSD sed; the tmpfile form works on both.
 dx_replace 's/"python": \["ruff"\]/"python": []/' "$scratch/removed.bzl"
 if grep -q -F -e '"python": ["ruff"]' "$scratch/removed.bzl"; then
@@ -165,7 +165,7 @@ fi
 # Negative: a formatter-set change (biome -> prettier for typescript)
 # fails the frozen check.
 cp "$manifest" "$scratch/reformatted.bzl"
-# Portable in-place edit via dx_replace (issues #299, #323): see above.
+# Portable in-place edit via dx_replace: see above.
 dx_replace 's/"typescript": \["biome"\]/"typescript": ["prettier"]/' "$scratch/reformatted.bzl"
 if grep -q -F -e '"typescript": ["biome"]' "$scratch/reformatted.bzl"; then
   bad "formatter-change negative did not fail: scratch still matches frozen typescript formatter"

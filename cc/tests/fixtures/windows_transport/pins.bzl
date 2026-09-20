@@ -1,4 +1,4 @@
-"""Windows transport plus ABI pins (issue #497).
+"""Windows transport plus ABI pins.
 Contract: `docs/native-toolchains.md#windows-acquisition-and-compatibility`.
 Fixture: `cc/tests/fixtures/windows_transport/` via `bazel run //tools/ci:windows_transport_qualification`.
 """
@@ -52,7 +52,7 @@ REJECTED_ALTERNATIVES = [
 ]
 
 # Backend stays provisional; rights plus interop plus corpus plus floors
-# plus coverage stay owned under issues #496/#498/#499/#500/#501.
+# plus coverage stay owned.
 BACKEND_NOTE = "Backend stays provisional"
 OWNED_GAPS = ["#496", "#498", "#499", "#500", "#501"]
 

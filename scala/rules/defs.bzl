@@ -127,14 +127,14 @@ def scala_test(name, srcs, visibility = None, **kwargs):
     QualitySourcesInfo. The library under test stays its ordinary owner via
     `deps`; test sources are never the library's sources. Uses Bazel's
     standard test and coverage protocols over the bundled ScalaTest
-    toolchain (ScalaTest 3.2.20 via the managed Coursier route, issue #480;
+ toolchain (ScalaTest 3.2.20 via the managed Coursier route,;
     no Maven lock members needed for the hello closure)."""
     test_srcs = srcs if srcs != None else []
     upstream_kwargs = _scala_with_werror(kwargs)
 
     # The private upstream test stays an implementation detail via private
     # visibility; both it and the public wrapper run under `bazel test //...`
-    # (issue #406: no manual; double-execution is the cost of green suites).
+    # (no manual; double-execution is the cost of green suites).
     if "tags" in kwargs:
         upstream_kwargs["tags"] = list(kwargs["tags"])
     elif "tags" in upstream_kwargs:

@@ -1,4 +1,4 @@
-"""Adopted foreign C# tree (#196): handwritten owners preserved through generation."""
+"""Adopted foreign C# tree: handwritten owners preserved through generation."""
 
 load("@rules_dx//csharp/rules:defs.bzl", "csharp_library", "csharp_test")
 load("//quality:fixtures.bzl", "real_source_target")

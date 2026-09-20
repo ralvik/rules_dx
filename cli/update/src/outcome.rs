@@ -17,7 +17,7 @@
 //! per-set results and an injected depends-on relation only, so outcome
 //! combination stays deterministic and unit-testable without any updater.
 //!
-//! Out of scope here: parallel-execution scheduling (issue #590
+//! Out of scope here: parallel-execution scheduling
 //! wont-fix, sequential per-set with continuation is contract).
 //! Aggregate exit-status selection over these reports lives in
 //! [`super::report`]. Continued updates imply no parallelism and no
@@ -375,7 +375,7 @@ mod tests {
 
     #[test]
     fn execution_gaps_parallelism_stays_sequential() {
-        // Issue #590: continued updates imply no parallelism and no new
+        // Continued updates imply no parallelism and no new
         // mutation-event API; aggregation is deterministic sorted order
         // over injected results with no scheduling. Pinned with fixtures
         // in `cli/cli/tests/fixtures/cli_execution_gaps/`.

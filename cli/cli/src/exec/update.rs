@@ -829,7 +829,7 @@ mod tests {
 
     #[test]
     fn update_json_never_emits_change_or_mutation() {
-        // Issue #586 wont-fix: backends provide no committed-change
+        // Wont-fix: backends provide no committed-change
         // manifest and Git/BUILD inference is forbidden, so update JSON
         // never emits change/mutation events in any mode.
         let runner = ScriptRunner::new(&[]);
@@ -870,7 +870,7 @@ mod tests {
 
     #[test]
     fn update_json_completeness_is_per_set_plus_finished() {
-        // Issue #586 event-completeness contract: exactly one terminal
+        // Event-completeness contract: exactly one terminal
         // per-set event per selected set in sorted order, then exactly
         // one command_finished. Preceding per-set events stay true with
         // no rollback; nothing is inferred for unattempted sets.
@@ -896,7 +896,7 @@ mod tests {
             .map(|event| {
                 let kind = event["event"].as_str().expect("event");
                 if kind == "error" {
-                    // Issue #586: per-set failures ride `update_failed`
+                    // Per-set failures ride `update_failed`
                     // errors without a scope; the message names the set.
                     assert_eq!(
                         event["code"].as_str().expect("code"),
@@ -932,7 +932,7 @@ mod tests {
 
     #[test]
     fn update_json_check_and_dryrun_emit_no_file_events_or_counts() {
-        // Issue #586: the wont-fix holds for --check and --dry-run too;
+        // The wont-fix holds for --check and --dry-run too;
         // neither emits file-level events nor counts.
         let harness = Harness::new("update-586-check-json");
         harness.write_source(

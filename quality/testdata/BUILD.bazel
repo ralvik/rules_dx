@@ -27,7 +27,7 @@ quality_source_target(
 )
 
 # Dirty synthetic sources (dirty.py/dirty.rs) were live aspect subjects
-# breaking `dx <check> --check //...` (issue #406 scope 2). Removed:
+# breaking `dx <check> --check //...` (scope 2). Removed:
 # dirty coverage lives in the Layer-2 matrix as provider-less
 # `generated` bytes with `print_result` goldens (both `*_pass`/`*_fail`
 # green), following `tools/depcheck/testdata/` (no live dirty targets).
@@ -88,7 +88,7 @@ aspect_fixture_tests(
 )
 
 # Hinted Vale policy for the real-pipeline fixture (strict per issue
-# #614): Dx.Markers enforced, same style as the workspace corpus.
+# Dx.Markers enforced, same style as the workspace corpus.
 vale_config(
     name = "vale_cfg",
     src = "vale_test.ini",
@@ -106,7 +106,7 @@ ruff_config(
 )
 
 # Hinted Biome policy for the real-pipeline fixture (strict per issue
-# #614, same selection as the workspace `biome.json`): `recommended`
+# , same selection as the workspace `biome.json`): `recommended`
 # plus `style/useTemplate` as error with tab formatting, so the hinted
 # run proves the config closure reaches the tool as --config-path
 # instead of the materialized defaults directory. The config lives in
@@ -200,7 +200,7 @@ real_aspect_subject(
 # Generated-shape binding: the default `<tool>_config` name with
 # a direct aspect_hint, exactly as Gazelle emits it. Proves the generated
 # single-tool binding analyzes and binds through the real aspects.
-# (Clippy bindings are gone with #47: Rust lint is upstream-delegated
+# (Clippy bindings are gone with: Rust lint is upstream-delegated
 # and takes no dx-side config.)
 real_source_target(
     name = "fixture_real_rust_generated_shape",
@@ -366,7 +366,7 @@ real_aspect_subject(
     target = ":fixture_real_markdown_no_config",
 )
 
-# Green hermetic proof (issue #406) that Vale-no-config fails analysis
+# Green hermetic proof that Vale-no-config fails analysis
 # with the actionable diagnostic. Passes by asserting the failure; the
 # subject stopping to fail fails this test.
 failure_test(
@@ -449,7 +449,7 @@ real_typecheck_fixture_tests(
     ],
 )
 
-# Layer-2 full-matrix runner tests (#59): real runner over provider-less
+# Layer-2 full-matrix runner tests: real runner over provider-less
 # data; goldens live in runner_matrix_cases.bzl.
 runner_matrix_cases(name = "runner_matrix")
 

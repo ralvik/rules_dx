@@ -1,21 +1,10 @@
-"""Strict generation pins (issue #503).
+"""Strict generation pins.
 
 Contract: `docs/native-toolchains.md#coverage-generation-and-ide-gaps`,
 `docs/native-toolchains.md#qualification-questions-and-delivery`,
-`docs/generation/common.md#resolution`,
-`docs/generation/common.md#ownership-and-naming`.
+`docs/generation/common.md#resolution`, `docs/generation/common.md#ownership-and-naming`.
 Fixture: `cc/tests/fixtures/strict_generation/` via
 `bazel run //tools/ci:strict_generation_qualification`.
-
-Decides the strict-generation slice of the native baseline: the first-party
-C/C++ Gazelle extension resolves every literal quoted include strictly or
-fails, with fixture evidence recorded here and in the owning docs. Loose
-generation stays rejected per the issue alternatives. The inspected
-gazelle_cc v0.6.0 capability is reused only with bounded strictness and
-output adaptation, never by configuration alone, log parsing, or a
-replacement C++ preprocessor. Backends stay provisional; floors qualified
-seed-only under issue #500, coverage qualified seed-only under issue #501,
-linux corpus qualified seed-only under issue #499, never double-claimed here.
 """
 
 # Inspected generation identity: gazelle_cc v0.6.0 at the pinned commit is

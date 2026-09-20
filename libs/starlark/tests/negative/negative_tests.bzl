@@ -1,4 +1,4 @@
-"""Negative demonstrations (WP4, WP5) as green hermetic proofs (issue #406).
+"""Negative demonstrations (WP4, WP5) as green hermetic proofs.
 """
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")

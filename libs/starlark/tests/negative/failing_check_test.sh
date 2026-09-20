@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Failing-check negative proof (issue #406): the deliberately wrong
+# Failing-check negative proof: the deliberately wrong
 # unit checks below must fail with the exact user-visible diagnostics,
 # while this harness itself passes (exit 0). If the fixtures stop
 # failing (wrong values fixed), this test fails.
@@ -10,7 +10,7 @@
 # scratch, offline, no nested Bazel.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
 dx_test_init

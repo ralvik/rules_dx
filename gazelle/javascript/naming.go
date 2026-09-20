@@ -109,7 +109,7 @@ func ModuleName(name string) string {
 // `main.jsx`, `main.mjs`, or `main.cjs` (non-test). Only the exact `main`
 // basename is recognized, in any directory; other layouts (`index.*`,
 // `app.*`, `cli.*`, `bin/` scripts, `package.json` `main`/`bin` fields,
-// nested conventions) are an explicit wont-fix per issue #585: generation
+// nested conventions) are an explicit wont-fix: generation
 // never infers manifest-declared names, guesses a default entry, or drops
 // one. Manifest-declared names win only for exact mappings; other layouts
 // remain out of scope.

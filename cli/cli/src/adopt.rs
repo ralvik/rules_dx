@@ -120,7 +120,7 @@ mod tests {
 
     #[test]
     fn quiet_suppresses_summaries_but_not_results() {
-        // Issue #200: `--quiet` silences `dx` prose summaries while result
+        // `--quiet` silences `dx` prose summaries while result
         // documents still print. Init dry-run plans are summaries;
         // `status` output is the answer.
         let inv = invocation(&["init", "--dry-run", "--quiet", "demo"]);

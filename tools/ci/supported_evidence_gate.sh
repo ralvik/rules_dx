@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# Supported-evidence promotion gate (issue #301).
+# Supported-evidence promotion gate.
 #
 # No cell is Supported: promotion requires platform plus consumer plus
 # release evidence per the support-matrix status lifecycle
 # (Planned -> Seed-host-delivered -> Platform-qualified -> Supported).
 # Seed-host evidence is delivered (corpus dogfood, Layer-2 matrix for the
 # seed languages, generation freshness, adopt-* external-consumer proof,
-# hermetic CLI-contract pins (issue #407 replaces nested E2E),
+# hermetic CLI-contract pins (replaces nested E2E),
 # required-core depcheck fixtures, `dx update` live execution,
 # seed plus arm64 plus static-musl plus macos arm64
 # plus macos x86_64 best-effort plus windows x86_64 coverage/remote
-# qualification under #507/#410/#411/#412/#413/#414); audit live execution,
+# qualification under /////); audit live execution,
 # docs-pipeline, env/codegen, remaining out-of-v1 platform cells (issue
-# #298; Linux arm64 qualified under #410, static musl under #411, macos
-# arm64 under #412, macos x86_64 best-effort under #413, windows x86_64
-# under #414), admitted depcheck
+# ; Linux arm64 qualified under, static musl under, macos
+# arm64 under, macos x86_64 best-effort under, windows x86_64
+# under), admitted depcheck
 # expansion, and release evidence (SBOM/provenance, signing/attestations,
 # BCR submission, GHCR route, consumer verification) remain open gaps
 # tracked in their owning issues.
@@ -27,7 +27,7 @@
 # Versioned here, run by CI via `bazel run //tools/ci:supported_evidence_gate`.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -67,7 +67,7 @@ else
   bad "support-matrix lost its seed-delivered vs unqualified platform record"
 fi
 
-# Linux arm64 native is Platform-qualified (issue #410), never Supported
+# Linux arm64 native is Platform-qualified, never Supported
 # without release evidence and never back to unqualified refusal.
 if grep -E -e '^\| Linux arm64 glibc \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (issue #410' &&
   grep -E -e '^\| Linux arm64 glibc \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open'; then
@@ -76,7 +76,7 @@ else
   bad "support-matrix lost the Linux arm64 Platform-qualified record (issue #410, release evidence open)"
 fi
 
-# Linux static-musl profiles are Platform-qualified (issue #411), never
+# Linux static-musl profiles are Platform-qualified, never
 # Supported without release evidence and never back to unqualified
 # refusal. Dynamic musl stays explicitly out of scope.
 if grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (issue #411' &&
@@ -87,7 +87,7 @@ else
   bad "support-matrix lost the static-musl Platform-qualified record (issue #411, release evidence open, dynamic out of scope)"
 fi
 
-# macOS arm64 native is Platform-qualified (issue #412), never Supported
+# macOS arm64 native is Platform-qualified, never Supported
 # without release evidence and never back to unqualified refusal.
 # Host-installed SDK fallback stays never approved.
 if grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (issue #412' &&
@@ -98,7 +98,7 @@ else
   bad "support-matrix lost the macOS arm64 Platform-qualified record (issue #412, release evidence open, no host fallback)"
 fi
 
-# macOS x86_64 best-effort native is Platform-qualified (issue #413),
+# macOS x86_64 best-effort native is Platform-qualified,
 # never Supported without release evidence and never back to unqualified
 # refusal. Best-effort by ADR 0014 definition: gaps recorded without
 # blocking required-host release. Host-installed SDK fallback stays never
@@ -112,7 +112,7 @@ else
   bad "support-matrix lost the macOS x86_64 best-effort Platform-qualified record (issue #413, release evidence open, no host fallback, non-blocking)"
 fi
 
-# Windows x86_64 MSVC-compatible native is Platform-qualified (issue #414),
+# Windows x86_64 MSVC-compatible native is Platform-qualified,
 # never Supported without release evidence and never back to unqualified
 # refusal. Installed Build Tools fallback stays never approved; explicit
 # EULA acceptance stays never automatic.
@@ -189,7 +189,7 @@ else
   bad "examples Delivered lacks adopt-* workspaces or laziness proof harnesses"
 fi
 
-# CLI-contract Delivered (issue #407, replaces nested E2E): hermetic pins
+# CLI-contract Delivered (replaces nested E2E): hermetic pins
 # under `bazel test //...` plus the adopt-rust dx_dev smoke in normal CI.
 # What is lost (real-daemon exit 3, real Buildifier rewrite, full consumer
 # wiring now smoke-only) is recorded in docs/testing/verification-matrix.md.
@@ -227,7 +227,7 @@ fi
 
 # Coverage seed plus arm64 plus static-musl plus macos arm64 plus macos
 # x86_64 best-effort plus windows x86_64 qualified
-# (#507/#410/#411/#412/#413/#414): cell gate + versioned inventories and
+# cell gate + versioned inventories and
 # registry plus qualification harnesses, no cross-cell union.
 if [[ -f "tools/ci/coverage_cell.sh" ]] &&
   [[ -f "tools/coverage/seed-inventory.txt" ]] &&
@@ -264,8 +264,8 @@ else
   bad "release Open lost trust/closeout harnesses or gained BCR tooling"
 fi
 
-# Consumer verification Open but self-call present (test-disabled per #607,
-# coverage superset; starter stays all-nine per #408).
+# Consumer verification Open but self-call present (test-disabled per,
+# coverage superset; starter stays all-nine per).
 if [[ -f ".github/workflows/reusable-consumer.yml" ]] &&
   grep -q -F -e 'rules_dx_version: "0.0.0"' examples/consumer-ci/caller.yml; then
   ok

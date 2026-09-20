@@ -1,4 +1,4 @@
-"""Adopted foreign Java tree (#197): corpus ownership for arrival files."""
+"""Adopted foreign Java tree: corpus ownership for arrival files."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

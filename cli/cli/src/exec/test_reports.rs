@@ -695,7 +695,7 @@ mod tests {
 
     #[test]
     fn test_rejects_diff_output_at_parse() {
-        // Issue #200: `test` emits no patch, so `--output=diff` fails
+        // `test` emits no patch, so `--output=diff` fails
         // fast at parse (exit 2, usage error) instead of running Bazel
         // and silently printing text. The report is never written
         // because execution never starts.

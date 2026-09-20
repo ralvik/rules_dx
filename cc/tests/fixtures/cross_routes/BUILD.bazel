@@ -1,4 +1,4 @@
-"""Cross routes fixture (issue #504)."""
+"""Cross routes fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

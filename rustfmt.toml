@@ -1,4 +1,4 @@
-# Rust formatting single source of truth (issue #239).
+# Rust formatting single source of truth.
 #
 # `rustfmt_test` / `rustfmt_aspect` from the pinned toolchain resolve this
 # file from the workspace root. `edition` matches `RUST_EDITION` in

@@ -7,7 +7,7 @@
 //! It never renders subprocess argument vectors, option values,
 //! environment values, or reconstructed shell commands.
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -120,7 +120,7 @@ pub fn discover_real(start: &Path, override_dir: Option<&Path>) -> Result<PathBu
     discover(start, override_dir, &RealFs)
 }
 
-/// Workspace start directory for `bazel run` (issue #319).
+/// Workspace start directory for `bazel run`.
 ///
 /// `bazel run` executes with the working directory inside the runfiles tree
 /// under `bazel-out`, whose symlinks resolve into the execution root (nested
@@ -1000,7 +1000,7 @@ mod tests {
 
     #[test]
     fn execution_gaps_forwarding_matrix_is_wont_fix() {
-        // Issue #590: every Bazel startup option plus test-binary args
+        // Every Bazel startup option plus test-binary args
         // stays rejected on workflow commands with `dx bazel` guidance;
         // only `dx bazel` forwards unchanged. Pinned with fixtures in
         // `cli/cli/tests/fixtures/cli_execution_gaps/`.

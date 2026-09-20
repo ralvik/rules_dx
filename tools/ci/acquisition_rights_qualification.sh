@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apple plus Microsoft acquisition rights qualification (issue #496).
+# Apple plus Microsoft acquisition rights qualification.
 #
 # Records the rights-review slice of the native baseline with fixture
 # evidence, without claiming a qualified hermetic-llvm Apple-SDK backend,
@@ -25,14 +25,14 @@
 #   from technical download success. Official download availability is
 #   not permission. Assume rights stays rejected.
 # - open with honest records: full backends, transport plus ABI (issue
-#   #497), prebuilt interop (issue #498), corpus plus floors plus coverage
-#   (issues #499/#500/#501), release evidence. Backends stay provisional.
+# , prebuilt interop, corpus plus floors plus coverage
+# , release evidence. Backends stay provisional.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:acquisition_rights_qualification`,
 # following //tools/ci:windows_acquisition_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -50,7 +50,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture pair stays present (issue #496).
+# Fixture pair stays present.
 if [[ -f "$pins" && -f "$pins_build" ]]; then
   ok
 else
@@ -176,7 +176,7 @@ else
   bad "tools/ci/BUILD.bazel or ci.yml lost the acquisition_rights_qualification wiring (want target plus dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified seed-only record under #496.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'acquisition_rights_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #496' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:acquisition_rights_qualification' "$verify" &&

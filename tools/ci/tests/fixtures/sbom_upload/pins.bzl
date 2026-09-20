@@ -1,4 +1,4 @@
-"""SBOM plus provenance upload pins (issue #612).
+"""SBOM plus provenance upload pins.
 Contract: `docs/deploy/release-runbook.md`.
 Fixture: `tools/ci/tests/fixtures/sbom_upload/` via
 `bazel run //tools/ci:sbom_upload_qualification`.

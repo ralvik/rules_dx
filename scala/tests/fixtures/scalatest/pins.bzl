@@ -1,15 +1,7 @@
-"""ScalaTest 3.2.20 version pins (issue #480).
+"""ScalaTest 3.2.20 version pins.
 
 Contract: `docs/product/support-matrix.md#provisional-default-test-runners`,
 `docs/generation/README.md#language-mapping-qualification`.
-
-Provisional default is ScalaTest 3.2.20 (covers Scala 2.10-2.13 and 3.x;
-Scalactic 3.2.20 is the recommended companion). The runner resolves via the
-managed rules_scala Coursier route (`scala_deps.scalatest()` in MODULE.bazel,
-no `maven_install.json` members, no separate ecosystem lock -- same shape as
-the Go stdlib-only closure). `scala_junit_test` and `scala_specs2_junit_test`
-are rules-supported choices, not defaults. Unpinned runner (floating version,
-living at head, implicit) is rejected.
 """
 
 # Upstream ruleset pin (MODULE.bazel plus MODULE.bazel.lock).

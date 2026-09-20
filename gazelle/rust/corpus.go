@@ -1,6 +1,6 @@
 // Corpus split generation owned by the first-party Rust Gazelle extension.
 //
-// Issue #15: each Bazel package's single `corpus` real_source_target mixes
+// Each Bazel package's single `corpus` real_source_target mixes
 // markdown/starlark/toml under one config binding. The split emits one
 // target per populated content type (`corpus_markdown`, `corpus_starlark`,
 // `corpus_toml`, `corpus_json`), each carrying exactly its own tool's
@@ -140,7 +140,7 @@ func planCorpus(args language.GenerateArgs, hasOtherGen bool) *corpusPlan {
 	// `.opencode/` (agent-local tool state with its own node_modules),
 	// any `node_modules/` (pnpm/npm closures, gitignored), and the
 	// depcheck truth-table fixtures (intentionally unresolved imports,
-	// issue #22) are excluded.
+	// are excluded.
 	if rel == ".opencode" || strings.HasPrefix(rel, ".opencode/") {
 		return plan
 	}
@@ -285,7 +285,7 @@ func planCorpus(args language.GenerateArgs, hasOtherGen bool) *corpusPlan {
 		case strings.HasSuffix(base, ".toml"):
 			add("toml", slash)
 		case strings.HasSuffix(base, ".json"):
-			// JSON is preserve-only (issue #15 split dimensions are
+			// JSON is preserve-only
 			// markdown/starlark/toml): existing package.json/tsconfig
 			// ownership carries forward, but new JSON files (locks,
 			// tool manifests, scaffold outputs) never auto-enter the

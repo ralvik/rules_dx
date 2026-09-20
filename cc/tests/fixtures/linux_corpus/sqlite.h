@@ -1,4 +1,4 @@
-// Source-built SQLite shape stub (issue #499).
+// Source-built SQLite shape stub.
 #pragma once
 
 // Opaque handle stands in for sqlite3*; the shape proves source-built C

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Coverage-spill containment harness (issues #252, #54).
+# Coverage-spill containment harness.
 #
-# Issue #252: `tools/ci/coverage_cell.sh` runs `bazel coverage`, which
+# `tools/ci/coverage_cell.sh` runs `bazel coverage`, which
 # leaves `bazel-bin/tools/coverage/coverage_bin` instrumented
 # (`-C instrument-coverage`), then executes it directly from the workspace
 # root with `LLVM_PROFILE_FILE` unset. Rust defaults to
 # `default_%m_%p.profraw` in CWD, spilling one file per invocation.
-# `.gitignore` (#89) only hides the spill; this harness pins the root fix.
+# `.gitignore` only hides the spill; this harness pins the root fix.
 #
 # This harness machine-checks the containment half verifiable on a clean
 # tree today: the LLVM_PROFILE_FILE export targets the
@@ -15,13 +15,13 @@
 # fake containment), the gitignore defense-in-depth stays, and the
 # seed inventory still exists. It proves
 # containment statically; the full `coverage_cell` run remains the
-# end-to-end proof under #54.
+# end-to-end proof under.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:coverage_spill`,
 # following //tools/ci:coverage_cell.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -56,7 +56,7 @@ else
 fi
 
 # Scratch is still auto-cleaned so redirected profiles never accumulate.
-# Issue #323 dedup: coverage_cell.sh uses tools/sh/lib.sh dx_mkscratch
+# Dedup: coverage_cell.sh uses tools/sh/lib.sh dx_mkscratch
 # (EXIT auto-cleanup) instead of a per-file mktemp+trap copy.
 if grep -q -F -e 'dx_mkscratch scratch' "$cell"; then
   ok

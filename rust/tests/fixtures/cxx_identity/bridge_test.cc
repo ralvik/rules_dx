@@ -1,4 +1,4 @@
-// CXX identity bridge test (issue #474).
+// CXX identity bridge test.
 #include "rust/tests/fixtures/cxx_identity/bridge.h"
 
 #include <cassert>

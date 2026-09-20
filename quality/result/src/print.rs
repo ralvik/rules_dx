@@ -1,11 +1,11 @@
-//! Layer-2 matrix harness printer (#59): decodes one validated
+//! Layer-2 matrix harness printer: decodes one validated
 //! `QualityResult` protobuf into deterministic text for golden diffing.
 //!
 //! Test-only tooling: prints the producer, capability, stages,
 //! convergence, initial/terminal diagnostics, and replacements. Snapshots
 //! and digests are omitted (input-identity noise, not behavior).
 
-// Issue #591 (extends #238 rollout beyond cli/*): infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 

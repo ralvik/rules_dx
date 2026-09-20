@@ -1,4 +1,4 @@
-"""Standalone `dx` install-time publisher-identity verification (issue #26)."""
+"""Standalone `dx` install-time publisher-identity verification."""
 
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
@@ -15,7 +15,7 @@ package(default_visibility = ["//:__subpackages__"])
 sh_binary(
     name = "dx_verify",
     srcs = ["dx_verify.sh"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -29,7 +29,7 @@ sh_test(
     args = ["$(rootpath :dx_verify)"],
     data = [":dx_verify"],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 

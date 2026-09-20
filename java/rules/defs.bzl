@@ -132,7 +132,7 @@ def java_test(name, srcs, visibility = None, **kwargs):
 
     # The private upstream test stays an implementation detail via private
     # visibility; both it and the public wrapper run under `bazel test //...`
-    # (issue #406: no manual; double-execution is the cost of green suites).
+    # (no manual; double-execution is the cost of green suites).
     if "tags" in upstream_kwargs:
         kept = [t for t in upstream_kwargs["tags"] if t != "manual"]
         if len(kept) > 0:

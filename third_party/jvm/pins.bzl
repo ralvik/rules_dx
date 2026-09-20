@@ -1,13 +1,7 @@
-"""Maven lock wiring pins (issue #481).
+"""Maven lock wiring pins.
 
 Contract: `docs/product/support-matrix.md#provisional-default-dependency-locks`,
 `docs/generation/README.md#language-mapping-qualification`.
-
-Single shared lock for the admitted JVM foundations (Java, Kotlin, Scala
-managed route) via `rules_jvm_external`: `lock_file` plus fail-closed repin
-checking. Scala shares Java's Maven story, so no second lock lands here.
-Non-fail-closed (committed lock without `fail_if_repin_required`, floating
-coordinates, hand-edited lock) is rejected.
 """
 
 # Upstream resolver pin (MODULE.bazel plus MODULE.bazel.lock).

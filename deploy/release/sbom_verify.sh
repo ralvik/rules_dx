@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Verifies one `sbom_release` output pair (issue #311).
+# Verifies one `sbom_release` output pair.
 #
 # `$1` is the artifact rootpath, `$2` the SPDX rootpath, `$3` the
 # provenance rootpath. Asserts the SPDX document is SPDX-2.3 with the
 # artifact sha256, and the provenance statement is in-toto v1 + SLSA v1
 # with the same digest as subject. Tagged `no-coverage`.
 #
-# Host-tool contract (issue #318): bash + python3 + POSIX coreutils
+# Host-tool contract: bash + python3 + POSIX coreutils
 # only. Realpath and sha256 go through python3 (no `realpath`,
 # `readlink -f`, `sha256sum`, or `shasum` probes).
 set -euo pipefail

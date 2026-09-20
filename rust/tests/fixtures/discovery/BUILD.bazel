@@ -1,4 +1,4 @@
-"""Exact-target discovery fixture (issue #475).
+"""Exact-target discovery fixture.
 
 Pins the upstream discovery identities plus the resolver-owned exact
 labels that flow to the upstream target interfaces. The live

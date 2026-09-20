@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Parser-sample backfill qualification harness (issue #465).
+# Parser-sample backfill qualification harness.
 #
 # Qualifies the as-built parser-sample backfill with fixture evidence and
 # owned gaps, without claiming Supported:
@@ -21,7 +21,7 @@
 # following //tools/ci:hello_smoke_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -37,14 +37,14 @@ build="tools/ci/BUILD.bazel"
 matrix="quality/testdata/runner_matrix_cases.bzl"
 real_rs="quality/runner/src/real.rs"
 
-# Roadmap owns the delivered record under #465.
+# Roadmap owns the delivered record under.
 if grep -q -F -e 'parser-sample backfill delivered (issue #465' "$roadmap"; then
   ok
 else
   bad "roadmap lost its parser-sample delivered record under #465"
 fi
 
-# Verification matrix owns the qualified seed-only record under #465.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'parser_sample_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #465' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:parser_sample_qualification' "$verify"; then

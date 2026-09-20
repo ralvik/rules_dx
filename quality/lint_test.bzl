@@ -1,4 +1,4 @@
-"""Aspect-lint golden harness (issue #406).
+"""Aspect-lint golden harness.
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")

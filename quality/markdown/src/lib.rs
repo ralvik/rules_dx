@@ -17,7 +17,7 @@
 //! a directory resolves to its declared `README.md` index (`docs/cli/`
 //! reads `docs/cli/README.md`); an undeclared index fails closed like any
 //! undeclared target. Email autolinks (`<a@b.c>`) are wont-fix out of scope
-//! (issue #589, checker-owned: structure only, never prose/identity) and
+//! (checker-owned: structure only, never prose/identity) and
 //! ignored. Explicit references with no definition fail closed, keeping the
 //! author's label spelling; bare `[text]` with no definition is literal
 //! text. Code spans suppress link detection natively, including multi-line
@@ -40,7 +40,7 @@
 //! stderr. Skipped remote targets are reported once each on stderr and never
 //! fetched. Duplicate source workspace paths keep the first mapping.
 
-// Issue #591 (extends #238 rollout beyond cli/*): infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -181,7 +181,7 @@ pub fn check_markdown(
                     dest_url,
                     ..
                 }) => {
-                    // Email autolinks are wont-fix out of scope (issue #589):
+                    // Email autolinks are wont-fix out of scope:
                     // structure only, so ignored, never findings or remotes.
                     if link_type == LinkType::Email {
                         continue;
@@ -610,7 +610,7 @@ fn is_closed_fence(source_lines: &[&str], region: &CodeRegion) -> bool {
 }
 
 /// Anchor slug via `slug::slugify` over `deunicode` transliteration (issue
-/// #393): ASCII `a-z`/`0-9`/`-` only, collapsed and trimmed; non-ASCII
+///): ASCII `a-z`/`0-9`/`-` only, collapsed and trimmed; non-ASCII
 /// headings transliterate instead of stripping.
 pub fn slug(text: &str) -> String {
     slug::slugify(deunicode::deunicode(text))
@@ -633,7 +633,7 @@ fn has_scheme(target: &str) -> bool {
 /// Resolve `target` against the parent directory of `source`, lexically
 /// normalizing `.`/`..`. A leading `/` resolves from the sibling root.
 ///
-/// Dependency evaluation (issue #391, stays hand-rolled for this call
+/// Dependency evaluation (stays hand-rolled for this call
 /// site): repo-relative sibling targets are virtual forward-slash strings
 /// with clamped `..` (excessive `..` stays at the root, never errors) and
 /// no filesystem access. `normpath::BasePathBuf` cannot represent relative
@@ -644,7 +644,7 @@ fn has_scheme(target: &str) -> bool {
 /// would add lockfile churn plus `MODULE.bazel` manifests for zero behavior
 /// gain while breaking portable `/` output and clamped semantics. The small
 /// string walk below owns those semantics explicitly, mirroring `dx_path`
-/// staying hand-rolled per #315; `normpath` is adopted in `quality/adapter`
+/// staying hand-rolled per; `normpath` is adopted in `quality/adapter`
 /// where absolute scratch roots (with prefix) benefit from its OS-correct
 /// `Prefix`/verbatim handling.
 pub fn resolve_target(source: &str, target: &str) -> String {
@@ -714,7 +714,7 @@ struct Mapping {
     exec: String,
 }
 
-/// `argv` tokenizer (qualified under issue #316: frozen legacy contract). `--source`/`--sibling` append in argument
+/// `argv` tokenizer (frozen legacy contract). `--source`/`--sibling` append in argument
 /// order; every value option consumes the next token unconditionally (even
 /// a `--`-led token), matching the legacy hand loop. Mapping values validate
 /// through [`parse_source_mapping`]/[`parse_sibling_mapping`] at tokenize
@@ -1287,7 +1287,7 @@ mod tests {
 
     #[test]
     fn email_autolink_is_out_of_scope() {
-        // Issue #589 wont-fix: email autolinks are structure-out-of-scope,
+        // Wont-fix: email autolinks are structure-out-of-scope,
         // so ignored with no finding and no skipped remote.
         let text = "# T\n\nWrite <dev@example.com>.\n";
         let outcome = check_markdown("a.md", text, &siblings(&[]));
@@ -1427,7 +1427,7 @@ mod tests {
 
     #[test]
     fn resolve_target_normalizes_dot_segments_and_clamps_excessive_dotdot() {
-        // Issue #391 fixtures: `a/b/../c`, `./`, trailing-slash,
+        // Fixtures: `a/b/../c`, `./`, trailing-slash,
         // excessive-`..` (clamped to the sibling root, never errors).
         assert_eq!(resolve_target("docs/a.md", "a/b/../c.md"), "docs/a/c.md");
         assert_eq!(resolve_target("docs/a.md", "./c.md"), "docs/c.md");
@@ -1594,7 +1594,7 @@ mod tests {
 
     #[test]
     fn slug_collapses_dashes_and_underscores() {
-        // Issue #393 (`slug::slugify`): `_` becomes `-`, runs collapse.
+        // (`slug::slugify`): `_` becomes `-`, runs collapse.
         let text = "# T\n\n## well-known_name\n\nSee [s](#well-known-name).\n";
         let outcome = check_markdown("a.md", text, &siblings(&[]));
         assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
@@ -1602,7 +1602,7 @@ mod tests {
 
     #[test]
     fn slug_transliterates_unicode_fixtures() {
-        // Issue #393 fixtures: transliteration via `deunicode`, collapsed.
+        // Fixtures: transliteration via `deunicode`, collapsed.
         assert_eq!(slug("Привет"), "privet");
         assert_eq!(slug("你好"), "ni-hao");
         assert_eq!(slug("😄 emoji"), "smile-emoji");

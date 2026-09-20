@@ -1,14 +1,14 @@
 //! Build profile vocabulary.
 //!
 //! Split from `super` (`args.rs`): owns [`Profile`], [`DX_PROFILE_ENV`],
-//! and [`resolve_profile`] (issue #179, ADR 0021). The parser
+//! and [`resolve_profile`] (ADR 0021). The parser
 //! ([`super::parser`]) and invocation ([`super::Invocation`]) build on
 //! these; `super` re-exports them so `crate::args::{...}` paths are
 //! unchanged.
 
 use super::Command;
 
-/// Build profile vocabulary (issue #179, ADR 0021): `--debug` selects
+/// Build profile vocabulary (ADR 0021): `--debug` selects
 /// `dx_debug` (`dbg`), the bare invocation selects `dx_dev`
 /// (`fastbuild`), and `--release` selects `dx_release` (`opt`). There
 /// is no `--dev` flag: the bare invocation already means the middle
@@ -67,10 +67,10 @@ impl Profile {
 }
 
 /// Environment variable forwarding the resolved profile to the deploy
-/// program (issue #179 item 3).
+/// program (item 3).
 pub const DX_PROFILE_ENV: &str = "DX_PROFILE";
 
-/// Precedence for the effective profile (issue #179 item 2): the
+/// Precedence for the effective profile (item 2): the
 /// explicit `--debug`/`--release` flag wins over the deploy target
 /// `profile` attribute, which wins over the command default. Build,
 /// run, and test have no target attribute, so they resolve flag over

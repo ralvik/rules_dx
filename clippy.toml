@@ -1,12 +1,12 @@
-# Clippy single source of truth (issues #239, #238, #591).
+# Clippy single source of truth.
 #
 # Warnings are already errors via
 # `--@rules_rust//rust/settings:extra_rustc_flags=--deny=warnings` in
-# `.bazelrc` (issue #82); third-party `crate_universe` targets stay green
+# `.bazelrc`; third-party `crate_universe` targets stay green
 # via per-target `--cap-lints=allow`. This file documents lint intent, it
 # does not yet enforce new lints globally: `clippy::unwrap_used` /
 # `clippy::expect_used` deny outside `#[cfg(test)]` rolls out per crate in
-# #238/#591 as each crate's non-test code goes `expect`/`unwrap`-free, via
+# / as each crate's non-test code goes `expect`/`unwrap`-free, via
 # `#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]`
 # at the crate root (`cfg_attr(not(test))` keeps `rust_test` bodies
 # ergonomic). All `cli/*` crates now carry the deny (verified zero
@@ -18,7 +18,7 @@
 # `dx_clean`, `dx_cli` (+ `dx`/`dx_man` binaries), `dx_codegen`, `dx_env`
 # (+ `env` binary), `dx_env_plan`, `dx_lcov`, `dx_output`, `dx_process`,
 # `dx_roots`, `dx_setup`, `dx_update`, and test-only `dx_test_scratch`.
-# Beyond `cli/*` (issue #591 backfill checklist, same `rg` proof):
+# Beyond `cli/*` (backfill checklist, same `rg` proof):
 # `quality_adapter`, `quality_evaluator` (+ binary), `quality_markdown`
 # (+ binary; sole non-test `.expect` on `FindingLine` serialization now
 # `unreachable!`), `quality_result` (+ `print_result` binary),

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Selective `dx update` per-set qualification harness (issue #583).
+# Selective `dx update` per-set qualification harness.
 #
 # Qualifies the per-set selective-versus-full decision with fixtures plus
 # decision record:
@@ -20,7 +20,7 @@
 # following //tools/ci:rust_library_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -42,7 +42,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# ADR 0024 exists and stays Accepted under #583.
+# ADR 0024 exists and stays Accepted under.
 if [[ -f "$adr" ]] &&
   grep -q -F -e '# ADR 0024: Selective `dx update` Per-Set Support' "$adr" &&
   grep -q -F -e 'Accepted.' "$adr" &&
@@ -80,7 +80,7 @@ else
   bad "decisions README lost its ADR 0024 index entry"
 fi
 
-# Fixture pins stay present with per-set dispositions (issue #583).
+# Fixture pins stay present with per-set dispositions.
 if [[ -f "$pins" && -f "$expected" && -f "$fixture_build" ]] &&
   grep -q -F -e 'SELECTIVE_NPM = "supported"' "$pins" &&
   grep -q -F -e 'SELECTIVE_CARGO = "wont-fix"' "$pins" &&

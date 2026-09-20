@@ -14,6 +14,6 @@ sha2 = "0.10"
 thiserror = "2"
 
 [dev-dependencies]
-# Property pilot (issue #225): hex/digest round-trips as proptest
+# Property pilot: hex/digest round-trips as proptest
 # properties alongside the fixed official vectors.
 proptest = "1"

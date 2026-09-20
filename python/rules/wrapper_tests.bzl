@@ -1,4 +1,4 @@
-"""Wrapper-contract tests for the Python wrappers (#87 item 2).
+"""Wrapper-contract tests for the Python wrappers (item 2).
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

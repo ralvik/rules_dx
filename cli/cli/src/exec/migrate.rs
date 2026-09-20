@@ -1,5 +1,5 @@
 //! Migrate command execution: major-release-only planning plus
-//! fail-closed execution (issue #462).
+//! fail-closed execution.
 
 use super::common::*;
 use crate::args::{Command, Invocation};
@@ -10,7 +10,7 @@ use dx_output::{
 };
 
 /// Runs `dx migrate --from <version> --to <version> [scope ...]`
-/// (issue #462): validates the version pair through
+///: validates the version pair through
 /// `dx_adopt::plan_migrate` (Cargo-flavor semver, major-release-only
 /// gate, one manifest per major hop
 /// `migrate-v<from_major>-to-v<to_major>.json`), then fails closed

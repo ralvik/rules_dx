@@ -39,7 +39,7 @@ const nativeToolsDirective = "dx_native_tools"
 // whether owned Rust rules bind to it through aspect_hints. Only tools
 // whose configs a Rust rule can consume (rustfmt) bind; the rest
 // are recognized and targeted uniformly for future language owners.
-// Clippy is intentionally absent (#47): Rust lint is upstream-delegated
+// Clippy is intentionally absent: Rust lint is upstream-delegated
 // and takes no dx-side config, so a clippy.toml is unmanaged and
 // `clippy` is not a valid dx_native_tools id.
 type nativeTool struct {
@@ -281,7 +281,7 @@ func nativeVisibility(rel string) string {
 // managed entries drop, and resolved additions append in canonical-label
 // order. An empty outcome stays absent so the merger deletes a fully
 // stale attribute instead of rendering an empty list. Corpus splits
-// (issue #15) never bind Rust hints: they already carry exactly their own
+// never bind Rust hints: they already carry exactly their own
 // tool's native config (markdown binds Vale, others run pinned defaults).
 func applyNativeHints(rel string, r *rule.Rule, plan *nativePlan) {
 	if _, owned := rustKinds[r.Kind()]; !owned || isNativeConfigKind(r.Kind()) || r.Kind() == corpusKind {

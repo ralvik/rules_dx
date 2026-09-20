@@ -44,7 +44,7 @@
 //! registry via `dx_update` at the CLI layer, so audit and update agree
 //! on owning sets without a second registry.
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -104,7 +104,7 @@ impl AuditFamily {
 /// Planned audit request: which families run over which scope spellings.
 /// Scope spellings are preserved verbatim here; the CLI layer resolves
 /// them to owning dependency sets via `dx_update::selector::owning_sets`
-/// (issue #584), so audit and update agree on owning sets without a
+///, so audit and update agree on owning sets without a
 /// second registry.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AuditRequest {

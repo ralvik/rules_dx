@@ -1,4 +1,4 @@
-"""Paket lock wiring pins (issue #482)."""
+"""Paket lock wiring pins."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

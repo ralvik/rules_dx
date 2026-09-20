@@ -8,7 +8,7 @@
 //! UTF-8-boundary, digest-match, and end-to-end re-application checks run
 //! in the `dx` CLI, which owns the source bytes, in.
 
-// Issue #591 (extends #238 rollout beyond cli/*): infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -105,7 +105,7 @@ pub enum Error {
 
 fn check_path(at: &str, path: &str) -> Result<(), Error> {
     // Ladder order and messages mirror `dx_path::classify` one-to-one;
-    // only the error payload stays crate-local (#72 slice 1).
+    // only the error payload stays crate-local (slice 1).
     let reason = match dx_path::classify(path) {
         None => None,
         Some(dx_path::PathProblem::Empty) => Some("path must be non-empty"),
@@ -144,7 +144,7 @@ fn check_unique_paths(
     duplicate: impl Fn(String) -> Error,
 ) -> Result<(), Error> {
     // Shared uniqueness control flow lives in `dx_proto_validate`; only the
-    // crate-local `Error` payload stays here (#72 proto-validate slice).
+    // crate-local `Error` payload stays here (proto-validate slice).
     let mut seen = std::collections::BTreeSet::new();
     for path in paths {
         dx_proto_validate::check_unique_insert(&mut seen, path, |existing| {

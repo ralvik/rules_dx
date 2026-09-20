@@ -168,7 +168,7 @@ pub(crate) fn stage_env_generation(
     }
     // `seen` is already a `BTreeMap`, so serializing the key/value
     // projection preserves sorted keys; `serde_json` owns string
-    // escaping and `dx_atomic_fs` owns crash-safe publishing (#227).
+    // escaping and `dx_atomic_fs` owns crash-safe publishing.
     let values: BTreeMap<&str, &str> = seen
         .iter()
         .map(|(key, (value, _))| (*key, *value))
@@ -346,7 +346,7 @@ mod tests {
                 .expect_err("artifacts creation");
         assert_eq!(code, CODE_MANAGED_COMMIT_FAILED);
         assert!(message.contains("cannot create"), "{message}");
-        // A stale `values.json.next` directory (pre-#227 staging
+        // A stale `values.json.next` directory (pre- staging
         // leftover) no longer blocks: atomic staging uses OS-random
         // sibling names, so the legacy path is ignored.
         let staging_id = dx_setup::GenerationId::new(&"6".repeat(64)).expect("fixture id");

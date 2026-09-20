@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Consumer-CI qualification harness (issue #509).
+# Consumer-CI qualification harness.
 #
 # Qualifies the as-built consumer-CI record with fixture evidence pinned in
 # `tools/ci/tests/fixtures/consumer_ci/pins.bzl` (plus `platforms.expected`
@@ -10,19 +10,19 @@
 #   permissions, per-cell coverage with fork-safe comments), caller template
 #   with reviewed SHA pin, four consumer fixture harnesses
 #   (scheduling/aggregate/guards/pins), self-call test-disabled dogfood in
-#   ci.yml (issue #408 plus Phase 1 issue #607, verbatim `//...`; `test`
+# ci.yml
 #   disabled as coverage superset via `resolve_for_test` plus `bazel coverage`),
-#   native widen-one loop (sole updater, issue #461), dx migrate syntax
+# native widen-one loop (sole updater,), dx migrate syntax
 #   plus manifest selection (delivered CLI with fail-closed execution, issue
-#   #462) plus dx run multirun (issue #463 delivered), tag hygiene as-built;
+# plus dx run multirun (delivered), tag hygiene as-built;
 # - per-gap decisions with fixtures: platform/runner/isolation/cache/
 #   ordering evidence; merge/diff/queue/cancellation/aggregate binding;
 #   thread identity/ordering/limits; fork/untrusted/sensitive/retries/
 #   Code-Scanning qualification; sequential mode fail-closed pending
 #   qualification; tag hygiene plus
 #   release-input gaps; native-bot follow-ups; dx migrate manifest gap
-#   (syntax plus selection delivered under #462, run multirun delivered
-#   under #463); build-only self-call forever rejected per #408.
+# (syntax plus selection delivered under, run multirun delivered
+# under); build-only self-call forever rejected per.
 # Seed only for platform plus consumer plus release evidence; no
 # Supported claim.
 #
@@ -30,7 +30,7 @@
 # following //tools/ci:docs_pipeline_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -79,9 +79,9 @@ else
 fi
 
 # Per-platform jobs route each platform to its runner: seed Linux x86_64
-# to ubuntu-latest, Linux arm64 native (issue #410) to ubuntu-24.04-arm,
-# macOS arm64 (issue #412) to macos-14, macOS x86_64 best-effort (issue
-# #413) to macos-15-intel, Windows x86_64 MSVC-compatible (issue #414) to
+# to ubuntu-latest, Linux arm64 native to ubuntu-24.04-arm,
+# macOS arm64 to macos-14, macOS x86_64 best-effort (issue
+# to macos-15-intel, Windows x86_64 MSVC-compatible to
 # windows-latest. Linux arm64 must never fall through to macOS; macOS
 # x86_64 must never fall through to the arm64 runner; Windows must never
 # fall through to macOS.
@@ -211,10 +211,10 @@ else
   bad "fork-safe comment wiring lost (marker plus skip plus no-creds)"
 fi
 
-# Self-call in ci.yml runs eight checks with `test` disabled (issue #408
-# dogfood-like consumer plus Phase 1 issue #607 coverage superset) on all
+# Self-call in ci.yml runs eight checks with `test` disabled
+# dogfood-like consumer plus Phase 1 coverage superset) on all
 # qualified hosts (seed plus arm64 native plus macOS arm64 plus macOS x86_64
-# best-effort plus Windows x86_64, issues #410/#412/#413/#414). `dx coverage`
+# best-effort plus Windows x86_64,). `dx coverage`
 # resolves scope via `resolve_for_test` (same as `dx test`) and runs `bazel
 # coverage`, which executes the tests. No bespoke corpus scope remains in
 # ci.yml: dogfood is verbatim `//...` via the reusable workflow.
@@ -266,7 +266,7 @@ else
   bad "functional aggregate proof failed (all-ok/one-fail/disabled-skip)"
 fi
 
-# Native widen-one loop stays delivered as the sole updater (issue #461).
+# Native widen-one loop stays delivered as the sole updater.
 if grep -q -F -e 'BumpSet::Bazel' cli/bump/src/sets.rs &&
   grep -q -F -e 'sole updater' "$automation" &&
   grep -q -F -e 'native-only' "$automation" &&
@@ -279,7 +279,7 @@ else
   bad "native bump loop lost (set registry, sole updater, bump command, runner)"
 fi
 
-# dx migrate syntax plus manifest selection delivered with fail-closed execution honesty (issue #462).
+# dx migrate syntax plus manifest selection delivered with fail-closed execution honesty.
 if grep -q -F -e 'pub fn migrate_is_major_bump' "$migrate_rs" &&
   grep -q -F -e 'pub fn migrate_manifest_name' "$migrate_rs" &&
   grep -q -F -e 'pub fn plan_migrate' "$migrate_rs" &&
@@ -296,9 +296,9 @@ else
   bad "dx migrate syntax plus manifest selection lost (major-bump plus manifest plus CLI plus fail-closed doc)"
 fi
 
-# dx run multirun delivered (issue #463): sequential, local-only, single plus multi.
+# dx run multirun delivered: sequential, local-only, single plus multi.
 if grep -q -F -e 'execute_run_multi' "$run_rs" &&
-  grep -q -F -e 'multirun #186' "$run_rs" &&
+  grep -q -F -e 'explicit-label multirun' "$run_rs" &&
   grep -q -F -e 'dx run refuses when CI=true: local-only command' "$run_rs" &&
   grep -q -F -e 'Multiple explicit labels run sequentially' "$run_doc" &&
   grep -q -F -e 'Strict single-target execution applies to file/directory' "$run_doc" &&
@@ -339,7 +339,7 @@ else
   bad "merge/diff/queue/cancellation/aggregate gap lost its owner"
 fi
 
-# Thread identity/ordering stays owned open with limit plus accounting frozen under #592.
+# Thread identity/ordering stays owned open with limit plus accounting frozen under.
 if grep -q -F -e 'Freeze finding/thread identity, deterministic ordering' "$contract" &&
   grep -q -F -e 'numeric limit plus thread-accounting frozen at 50 open threads under issue #592' "$contract" &&
   grep -q -F -e 'thread identity, ordering, limits' "$matrix" &&
@@ -362,7 +362,7 @@ else
   bad "fork/untrusted/sensitive/retries/Code-Scanning gap lost its owner"
 fi
 
-# Contract plus matrix keep the #509 qualification tracker.
+# Contract plus matrix keep the qualification tracker.
 if grep -q -F -e 'issue #509' "$contract" &&
   grep -q -F -e 'issue #509' "$matrix"; then
   ok
@@ -378,7 +378,7 @@ else
   bad "tag hygiene plus release-input gap lost its owner"
 fi
 
-# Native-bot follow-ups stay owned open (native-only updater, issue #461).
+# Native-bot follow-ups stay owned open (native-only updater,).
 if grep -q -F -e 'native-bot follow-ups' "$matrix" &&
   grep -q -F -e 'sole updater' "$automation" &&
   grep -q -F -e 'sole updater' "$roadmap"; then
@@ -388,7 +388,7 @@ else
 fi
 
 # dx migrate syntax plus manifest selection plus dx run multirun stay
-# delivered in the matrix and roadmap (issues #462/#463); neither may
+# delivered in the matrix and roadmap; neither may
 # regress to the combined open record.
 if grep -q -F -e 'migrate syntax plus' "$matrix" &&
   grep -q -F -e 'issue #462' "$matrix" &&
@@ -401,7 +401,7 @@ else
 fi
 
 # Verification matrix keeps no Supported claim with consumer honesty.
-# The dogfood self-call stays test-disabled per Phase 1 issue #607
+# The dogfood self-call stays test-disabled per Phase 1 
 # (coverage superset); the starter caller stays all-nine.
 if ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$verify" | grep -q . &&
   grep -q -F -e 'self-call test-disabled' "$matrix"; then
@@ -410,7 +410,7 @@ else
   bad "verification matrix lost its no-Supported plus consumer-honesty gate"
 fi
 
-# Fixture files stay present (issue #509).
+# Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$platforms_expected" && -f "$revisions_expected" && -f "$reporting_expected" ]]; then
   ok
 else
@@ -480,7 +480,7 @@ else
   bad "pins.bzl lost its cancellation plus aggregate pins under issue #509"
 fi
 
-# Pins record thread plus limit decisions with frozen numeric under #592.
+# Pins record thread plus limit decisions with frozen numeric under.
 if grep -q -F -e 'replyable/resolvable PR review threads' "$pins" &&
   grep -q -F -e 'There is no review-comment opt-out or annotation-only mode' "$pins" &&
   grep -q -F -e 'Preserve human comments, replies, and unrelated threads' "$pins" &&
@@ -584,7 +584,7 @@ else
   bad "consumer-CI fixture failed to build (want green on the seed host, issue #509)"
 fi
 
-# Verification matrix owns the qualified record under #509.
+# Verification matrix owns the qualified record under.
 if grep -q -F -e 'Consumer-CI per-gap decisions with fixture evidence' "$verify" &&
   grep -q -F -e 'qualified seed-only under #509' "$verify" &&
   grep -q -F -e 'tools/ci/tests/fixtures/consumer_ci/pins.bzl' "$verify" &&

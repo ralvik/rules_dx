@@ -1,4 +1,4 @@
-"""Adopted foreign Go tree (#190): corpus ownership for arrival files."""
+"""Adopted foreign Go tree: corpus ownership for arrival files."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

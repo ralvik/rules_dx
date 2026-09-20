@@ -20,12 +20,12 @@
 //! - NuGet (`third_party/dotnet/paket.lock`, text): `Name (version)`
 //!   lines under the `NUGET` remote section are assessable; `Name
 //!   (version)` lines under the `GIT` section are unsupported revisions
-//!   (issue #584 wont-fix, auditor-owned: SHA carries no OSV version
+//!
 //!   identity), reported as `is_git` incomplete, never dropped and never
 //!   clean; `HTTP`/`GITHUB` sections and group headers are skipped.
 //! - Go: empty set (no `go.mod`), no-op success.
 //!
-//! Private packages have no lockfile auto-detection in V1 (issue #584
+//! Private packages have no lockfile auto-detection in V1
 //! wont-fix, auditor-owned): a private registry entry is
 //! indistinguishable from a public one in lock bytes, so callers mark
 //! `is_private` explicitly and matching fails those as incomplete,
@@ -156,7 +156,7 @@ pub fn parse_pnpm_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
 
 /// Split one pnpm package key (`name@version` or `@scope/name@version`)
 /// into name and version, stripping peer suffixes (`1.0.0(peer)`).
-/// Declarative `regex` splits (issue #397) replace the `find`/`rfind`
+/// Declarative `regex` splits replace the `find`/`rfind`
 /// `@` heuristics; peer-suffix stripping stays a textual `split_once`
 /// because it is a single delimiter, not a character class.
 fn scoped_pnpm_re() -> Option<&'static Regex> {
@@ -201,7 +201,7 @@ fn split_pnpm_key(key: &str) -> Option<(String, String)> {
     if base.is_empty() {
         return None;
     }
-    // Regex-first (issue #397): scoped `@scope/name@version` and unscoped
+    // Regex-first: scoped `@scope/name@version` and unscoped
     // `name@version` via declarative captures. Falls back to the
     // `find`/`rfind` heuristics when a static pattern fails to compile.
     if base.starts_with('@') {
@@ -297,7 +297,7 @@ pub fn parse_maven_install(text: &str) -> Result<Vec<LockedPackage>, String> {
 /// Only `Name (version)` lines under the `NUGET` remote section count as
 /// assessable; `Name (version)` lines under the `GIT` section count as
 /// unsupported git revisions (`is_git` incomplete, never clean, issue
-/// #584 wont-fix); `HTTP`/`GITHUB` sections and group headers are
+/// wont-fix); `HTTP`/`GITHUB` sections and group headers are
 /// skipped.
 pub fn parse_paket_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
     let mut out = Vec::new();
@@ -600,7 +600,7 @@ version = "0.0.0"
 
     #[test]
     fn paket_lock_git_section_is_incomplete_never_dropped() {
-        // Issue #584: GIT entries are unsupported revisions, never
+        // GIT entries are unsupported revisions, never
         // silently dropped and never clean.
         let text = "NUGET\n  remote: https://api.nuget.org/v3/index.json\n    FSharp.Core (10.1.201)\nGIT\n  remote: https://github.com/example/lib.git\n    Git.Lib (1.0.0)\nHTTP\n  remote: https://example.com\n    Other (9.9.9)\n";
         let packages = parse_paket_lock(text).expect("parses");

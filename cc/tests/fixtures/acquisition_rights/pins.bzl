@@ -1,24 +1,10 @@
-"""Apple plus Microsoft acquisition rights pins (issue #496).
+"""Apple plus Microsoft acquisition rights pins.
 
 Contract: `docs/native-toolchains.md#windows-acquisition-and-compatibility`,
 `docs/native-toolchains.md#qualification-questions-and-delivery`,
 `docs/decisions/0014-tested-platform-release-stack.md#decision`.
 Fixture: `cc/tests/fixtures/acquisition_rights/` via
 `bazel run //tools/ci:acquisition_rights_qualification`.
-
-Decides the rights slice of the native baseline: the hermetic-llvm
-Apple-SDK backend plus the toolchains_msvc backend stay provisional, but
-their acquisition-plus-cache rights are reviewed with fixture evidence
-recorded here and in the owning docs. Assume rights stays rejected per
-the issue alternatives. Usage vs redistribution stay distinct; acceptance
-is never permission to redistribute. Mirrors, redistribution, internal
-caches, and remote workers need license-approved boundaries recorded
-separately from technical download success. Official download
-availability is not permission.
-
-Acquisition mechanics stay qualified under issue #495, transport plus
-ABI under issue #497, interop under issue #498, corpus plus floors plus
-coverage under issues #499/#500/#501, never double-claimed here.
 """
 
 # Apple starting point: hermetic-llvm pinned MacOSX SDK extraction.
@@ -38,7 +24,7 @@ APPLE_EXTRACTION_RESTRICTION = "separate extraction needs terms review"
 APPLE_CACHING_RESTRICTION = "unrestricted caching needs terms review"
 
 # Microsoft prototype identity for the rights scope (acquisition mechanics
-# qualified under issue #495; rights decided here).
+# qualified; rights decided here).
 TOOLCHAINS_MSVC_COMMIT = "8e2aa4624bbb5a53a94f135e90995f307875d1ad"
 TOOLCHAINS_MSVC_MODULE = "0.0.0"
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Release-hygiene harness (issue #5).
+# Release-hygiene harness.
 #
 # No release has been cut. Tags, GitHub releases, registry submissions, and
 # publication outputs require explicit owner approval (see CONTRIBUTING.md):
@@ -14,8 +14,8 @@
 # SECURITY.md reporting link + enabled record, publish dry-run dispatch-only with a
 # default-closed approve gate, no-secrets minimal permissions plus no
 # secrets usage, RUNNER_TEMP staging plus a clean-checkout proof, explicit release
-# matrix (seed qualified, rest unqualified per #5), SBOM/BCR
-# deferrals to #26 tooling, signing-first + GHCR-separate notes,
+# matrix (seed qualified, rest unqualified per), SBOM/BCR
+# deferrals to tooling, signing-first + GHCR-separate notes,
 # checkout SHA pin, typed approve plus non-cancelling concurrency,
 # least-privilege no-packages-write, no-secrets usage, and sole-tracker deletion plus
 # reporting-enabled record plus consumer/docs-caller SHA pins plus
@@ -23,14 +23,14 @@
 # never-rebuild policy plus byte-identity fail-closed record plus seed
 # exercised path (standalone archive, draft dry-run, BCR shape check,
 # verifier refusal). Platform, provenance (SPDX/SLSA), registry submission, and
-# public-install smoke runs stay unqualified per #5 and are recorded
+# public-install smoke runs stay unqualified per and are recorded
 # as gaps, not claimed here.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:release_hygiene`,
 # following //tools/ci:corpus_audit.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -68,7 +68,7 @@ else
 fi
 
 # SECURITY.md private-vulnerability-report link points at this repo, not
-# the upstream-copy leftover (small verification slice, issue #5).
+# the upstream-copy leftover (small verification slice,).
 if grep -q -F -e 'github.com/ralvik/rules_dx/security/advisories/new' SECURITY.md && ! grep -q -F -e 'TrapsterDK/rules_dx/security/advisories' SECURITY.md; then
   ok
 else
@@ -84,7 +84,7 @@ else
 fi
 
 # The dry-run approval gate stays explicit and default-closed (issue
-# #78): an `approve` input defaulting to false, with nothing publishing
+# an `approve` input defaulting to false, with nothing publishing
 # either way.
 if grep -q -F -e 'approve:' .github/workflows/publish-dry-run.yml && grep -q -F -e 'default: false' .github/workflows/publish-dry-run.yml; then
   ok
@@ -93,14 +93,14 @@ else
 fi
 
 # The dry-run stores no secrets and keeps minimal permissions (issue
-# #78): checkout with persist-credentials false, contents read-only.
+# checkout with persist-credentials false, contents read-only.
 if grep -q -F -e 'persist-credentials: false' .github/workflows/publish-dry-run.yml && grep -q -F -e 'contents: read' .github/workflows/publish-dry-run.yml; then
   ok
 else
   bad "publish-dry-run.yml drifted from no-secrets minimal permissions"
 fi
 
-# The dry-run never dirties the checkout (issue #78): staging under
+# The dry-run never dirties the checkout: staging under
 # RUNNER_TEMP plus a clean-checkout proof step.
 if grep -q -F -e 'RUNNER_TEMP/publish-dry-run' .github/workflows/publish-dry-run.yml && grep -q -F -e 'test -z "$(git status --porcelain)"' .github/workflows/publish-dry-run.yml; then
   ok
@@ -117,8 +117,8 @@ else
 fi
 
 # The dry-run report names the full release matrix explicitly (issues
-# #78/#311): seed linux-x86_64 qualified-built-here, the other four
-# (linux-arm64, macos-x86_64/arm64, windows-x86_64) unqualified per #311
+# /): seed linux-x86_64 qualified-built-here, the other four
+# (linux-arm64, macos-x86_64/arm64, windows-x86_64) unqualified per 
 # (frozen in deploy/release/matrix.bzl).
 if grep -q -F -e 'dx-linux-arm64' .github/workflows/publish-dry-run.yml && grep -q -F -e 'dx-macos-arm64' .github/workflows/publish-dry-run.yml && grep -q -F -e 'dx-windows-x86_64' .github/workflows/publish-dry-run.yml && grep -q -F -e 'unqualified-per-issue-311' .github/workflows/publish-dry-run.yml; then
   ok
@@ -127,7 +127,7 @@ else
 fi
 
 # SBOM/provenance and BCR submission run owner-gated dry-run-first per
-# #311: the dry run exercises //deploy/release:sbom_demo and
+# the dry run exercises //deploy/release:sbom_demo and
 # //deploy/release:bcr_demo in dry-run mode, publishing nothing.
 if grep -q -F -e '//deploy/release:sbom_demo' .github/workflows/publish-dry-run.yml && grep -q -F -e 'BCR_DRY_RUN=1 bazel run //deploy/release:bcr_demo' .github/workflows/publish-dry-run.yml; then
   ok
@@ -135,16 +135,16 @@ else
   bad "publish-dry-run.yml lost the SBOM/BCR owner-gated exercise (issue #311)"
 fi
 
-# Signing-first order stays explicit (issues #78/#311): Sigstore keyless +
-# GitHub attestations on the #311 trust root, GHCR signs separately via
-# cosign <digest> under #460 — dry-run here, never publishing.
-if grep -q -F -e 'Signing/attestation publishing (Sigstore keyless + GitHub attestations on the issue #311 trust root' .github/workflows/publish-dry-run.yml; then
+# Signing-first order stays explicit: Sigstore keyless +
+# GitHub attestations on the trust root, GHCR signs separately via
+# cosign <digest> under — dry-run here, never publishing.
+if grep -q -F -e 'Signing/attestation publishing (Sigstore keyless + GitHub attestations on the trust root' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "publish-dry-run.yml lost the signing-first owner-gated record (issue #311)"
+  bad "publish-dry-run.yml lost the signing-first owner-gated record"
 fi
 
-# GHCR stays a separate workflow (owner decision, issue #460): the dry
+# GHCR stays a separate workflow (owner decision,): the dry
 # run must name the separate ghcr.yml route, never fold images here.
 if grep -q -F -e 'GHCR prebuilt images (separate workflow .github/workflows/ghcr.yml' .github/workflows/publish-dry-run.yml; then
   ok
@@ -152,7 +152,7 @@ else
   bad "publish-dry-run.yml lost the GHCR-separate note (issue #460)"
 fi
 
-# Third-party actions stay SHA-pinned (issue #80): the sole third-party
+# Third-party actions stay SHA-pinned: the sole third-party
 # action (checkout) must pin to a commit SHA, never float a tag.
 if grep -q -E -e 'uses: actions/checkout@[0-9a-f]{40}' .github/workflows/publish-dry-run.yml && ! grep -q -F -e 'uses: docker/' .github/workflows/publish-dry-run.yml; then
   ok
@@ -160,7 +160,7 @@ else
   bad "publish-dry-run.yml lost the checkout SHA pin or gained a docker/* action"
 fi
 
-# The approve gate stays typed and non-cancelling (issue #78): boolean
+# The approve gate stays typed and non-cancelling: boolean
 # input type plus concurrency cancel-in-progress false so overlapping
 # dispatches queue instead of cancelling the qualification run.
 if grep -q -F -e 'type: boolean' .github/workflows/publish-dry-run.yml && grep -q -F -e 'cancel-in-progress: false' .github/workflows/publish-dry-run.yml; then
@@ -169,7 +169,7 @@ else
   bad "publish-dry-run.yml lost the typed approve gate or non-cancelling concurrency"
 fi
 
-# The dry-run stays least-privilege (issue #78): no packages:write
+# The dry-run stays least-privilege: no packages:write
 # (only ghcr.yml needs packages:write for image push; the dry run
 # never publishes, so contents:read is sufficient).
 if ! grep -q -F -e 'packages: write' .github/workflows/publish-dry-run.yml; then
@@ -178,8 +178,8 @@ else
   bad "publish-dry-run.yml gained packages:write (dry run must stay read-only; push lives in ghcr.yml)"
 fi
 
-# The dry-run uses no secrets at all (issue #78): no `secrets.`
-# reference (the gated GHCR push alone uses GITHUB_TOKEN under #460;
+# The dry-run uses no secrets at all: no `secrets.`
+# reference (the gated GHCR push alone uses GITHUB_TOKEN under;
 # the dry run only builds locally and reports, so any secret reference
 # would be an unreviewed publication input).
 if ! grep -q -F -e 'secrets.' .github/workflows/publish-dry-run.yml; then
@@ -188,7 +188,7 @@ else
   bad "publish-dry-run.yml gained a secrets reference (dry run must use no secrets)"
 fi
 
-# Sole tracker stays sole (issue #5): the local `issues/` mirror and
+# Sole tracker stays sole: the local `issues/` mirror and
 # `archive/delivery-v0.1/` were deleted; delivery history lives in git
 # history. Neither may reappear on disk nor committed.
 if [[ ! -e "issues" ]] && [[ ! -e "archive/delivery-v0.1" ]] && [[ -z "$(git ls-files | grep -E '^(issues|archive/delivery-v0\.1)/' || true)" ]]; then
@@ -197,7 +197,7 @@ else
   bad "issues/ mirror or archive/delivery-v0.1/ reappeared (sole tracker is issue #5)"
 fi
 
-# SECURITY.md reporting stays enabled (issue #5 precondition for any
+# SECURITY.md reporting stays enabled
 # public release): the static half records that private vulnerability
 # reporting is enabled; live API verification remains a manual gap
 # recorded in the issue, never claimed here.
@@ -208,7 +208,7 @@ else
 fi
 
 # Consumer-CI caller template pins the reusable workflow at a reviewed
-# commit SHA (issue #5 context): never a tag or floating ref, so
+# commit SHA (context): never a tag or floating ref, so
 # consumers track qualified commits while MODULE stays at 0.0.0.
 if grep -q -E -e 'reusable-consumer\.yml@[0-9a-f]{40}' examples/consumer-ci/caller.yml; then
   ok
@@ -217,7 +217,7 @@ else
 fi
 
 # Docs-CI caller template pins the reusable docs workflow at a reviewed
-# commit SHA (issue #5 context, CONTRIBUTING.md both-callers policy):
+# commit SHA (context, CONTRIBUTING.md both-callers policy):
 # never a tag or floating ref, so docs consumers track the same
 # qualified commit as consumer-ci (sync enforced by
 # //tools/ci:examples_pins_test; this guard keeps the release-hygiene
@@ -228,7 +228,7 @@ else
   bad "examples/docs-ci/caller.yml lost its reviewed-commit SHA pin (issue #5)"
 fi
 
-# CONTRIBUTING both-callers pin policy stays documented (issue #5
+# CONTRIBUTING both-callers pin policy stays documented
 # context): caller pins stay frozen at the last qualified commit, stay
 # in sync across both example callers, and move only together — so the
 # SHA-pin guards above cannot be silently redefined as floating tags.
@@ -238,7 +238,7 @@ else
   bad "CONTRIBUTING.md lost the both-callers pin policy (issue #5)"
 fi
 
-# The dry-run report stays explicit that it creates nothing (issue #5
+# The dry-run report stays explicit that it creates nothing
 # policy: no tags, GitHub releases, or registry submissions without
 # explicit owner approval): the not_attempted list must name that any
 # tag, registry submission, or release creation is out of scope, so the
@@ -250,7 +250,7 @@ else
   bad "publish-dry-run.yml lost the no-tag/no-release/no-submission record (issue #5)"
 fi
 
-# Published bytes are never rebuilt or substituted silently (issue #5
+# Published bytes are never rebuilt or substituted silently
 # next-steps): the policy stays recorded in CONTRIBUTING.md plus
 # CHANGELOG.md, so the approval gate cannot be read as allowing a quiet
 # byte swap after approval.
@@ -260,7 +260,7 @@ else
   bad "CONTRIBUTING.md/CHANGELOG.md lost the never-rebuild-or-substitute record (issue #5)"
 fi
 
-# Byte identity stays fail-closed (issue #5 never-rebuild mechanism):
+# Byte identity stays fail-closed (never-rebuild mechanism):
 # the artifact generator rejects changed upstream bytes instead of
 # silently recording new content, and the dry run records the seed
 # binary sha256 digest, so a substituted byte cannot pass as the same
@@ -271,17 +271,17 @@ else
   bad "byte-identity fail-closed record lost (update.py + dry-run sha256, issue #5)"
 fi
 
-# Seed standalone packaging stays exercised (issue #78 seed-qualified):
+# Seed standalone packaging stays exercised (seed-qualified):
 # the dry run builds //cli/cli:dx_standalone and stages the tarball plus
 # checksum under RUNNER_TEMP, never committed; the wider matrix is frozen
-# in deploy/release/matrix.bzl, unqualified per #311.
+# in deploy/release/matrix.bzl, unqualified per.
 if grep -q -F -e '//cli/cli:dx_standalone' .github/workflows/publish-dry-run.yml && grep -q -F -e 'dx-standalone.tar.gz' .github/workflows/publish-dry-run.yml && grep -q -F -e 'dx-standalone.tar.gz.sha256' .github/workflows/publish-dry-run.yml; then
   ok
 else
   bad "publish-dry-run.yml lost the seed standalone exercise (dx_standalone + tarball + checksum, issue #78)"
 fi
 
-# Draft creation stays exercised without publishing (issue #78 draft-only):
+# Draft creation stays exercised without publishing (draft-only):
 # the dry run runs //cli/cli:github_draft with GH_RELEASE_DRY_RUN=1 and
 # proves the placeholder plus draft-only flags, publishing nothing.
 if grep -q -F -e 'GH_RELEASE_DRY_RUN=1 bazel run //cli/cli:github_draft' .github/workflows/publish-dry-run.yml && grep -q -F -e 'v0.0.0-dryrun' .github/workflows/publish-dry-run.yml && grep -q -F -e '--draft --verify-tag' .github/workflows/publish-dry-run.yml; then
@@ -290,7 +290,7 @@ else
   bad "publish-dry-run.yml lost the draft dry-run exercise (github_draft + GH_RELEASE_DRY_RUN=1 + draft-only flags, issue #78)"
 fi
 
-# BCR shape stays checked-not-submitted (issue #311 owner-gated):
+# BCR shape stays checked-not-submitted (owner-gated):
 # the dry run runs //deploy/release:bcr_demo in BCR_DRY_RUN=1 mode and
 # records checked-not-submitted without submitting.
 if grep -q -F -e 'bcr-shape.txt' .github/workflows/publish-dry-run.yml && grep -q -F -e 'BCR_DRY_RUN=1 bazel run //deploy/release:bcr_demo' .github/workflows/publish-dry-run.yml && grep -q -F -e '"submitted": False' .github/workflows/publish-dry-run.yml; then
@@ -299,7 +299,7 @@ else
   bad "publish-dry-run.yml lost the BCR owner-gated record (bcr_demo + BCR_DRY_RUN=1 + submitted False, issue #311)"
 fi
 
-# Install-verifier refusal stays proved (issue #78 signing-first):
+# Install-verifier refusal stays proved (signing-first):
 # the dry run proves //deploy/install:dx_verify refuses checksum-only
 # inputs on the TUF trust root and installs nothing, without network.
 if grep -q -F -e 'dx_verify.sh --help' .github/workflows/publish-dry-run.yml && grep -q -F -e 'verify-refusal.log' .github/workflows/publish-dry-run.yml && grep -q -F -e 'checksum-only verification is not publisher-identity proof' .github/workflows/publish-dry-run.yml; then
@@ -308,7 +308,7 @@ else
   bad "publish-dry-run.yml lost the verifier-refusal exercise (dx_verify checksum-only refused, issue #78)"
 fi
 
-# Release tests stay exercised (issue #311): the dry run runs
+# Release tests stay exercised: the dry run runs
 # //deploy/release:all green, proving matrix + SBOM + signing + BCR +
 # human-run gates without publishing.
 if grep -q -F -e 'bazel test //deploy/release:all' .github/workflows/publish-dry-run.yml; then
@@ -317,8 +317,8 @@ else
   bad "publish-dry-run.yml lost the release-tests exercise (//deploy/release:all, issue #311)"
 fi
 
-# Signing dry-run stays exercised (issues #311, #458 signing-first, live
-# successor to closed #311 for the human-run path): the dry run
+# Signing dry-run stays exercised
+# successor to closed for the human-run path): the dry run
 # runs //deploy/release:signing_demo with RELEASE_SIGN_DRY_RUN=1 and
 # proves the trust root plus would-sign, publishing nothing.
 if grep -q -F -e 'RELEASE_SIGN_DRY_RUN=1 bazel run //deploy/release:signing_demo' .github/workflows/publish-dry-run.yml && grep -q -F -e 'tuf-repo-cdn.sigstore.dev' .github/workflows/publish-dry-run.yml; then
@@ -327,8 +327,8 @@ else
   bad "publish-dry-run.yml lost the signing dry-run exercise (signing_demo + RELEASE_SIGN_DRY_RUN=1, issue #311)"
 fi
 
-# Human-run driver stays exercised (issue #458, live successor to closed
-# #311 for the human-run path): the dry run runs
+# Human-run driver stays exercised (live successor to closed
+# for the human-run path): the dry run runs
 # deploy/release/release.sh in dry-run mode, proving the tag ceiling
 # plus owner-approval gate with nothing published.
 if grep -q -F -e 'deploy/release/release.sh' .github/workflows/publish-dry-run.yml && grep -q -F -e 'human-run-dry-run.log' .github/workflows/publish-dry-run.yml; then
@@ -337,7 +337,7 @@ else
   bad "publish-dry-run.yml lost the human-run driver exercise (release.sh dry run, issue #458)"
 fi
 
-# Release runbook stays owned (issue #458, live successor to closed #311
+# Release runbook stays owned (live successor to closed 
 # for the human-run path): the human-run path is
 # documented, not just workflow steps.
 if [[ -f "docs/deploy/release-runbook.md" ]] &&
@@ -347,7 +347,7 @@ else
   bad "release runbook missing (docs/deploy/release-runbook.md + tag ceiling, issue #458)"
 fi
 
-# Review routing stays owned (issue #424): CODEOWNERS exists with the sole
+# Review routing stays owned: CODEOWNERS exists with the sole
 # maintainer owning every row per the support-matrix core section, and the
 # consumer-CI contract records that this repo's own routing is owned while
 # the integration prescribes no consumer CODEOWNERS policy.

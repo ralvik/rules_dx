@@ -105,7 +105,7 @@ fn comment_style(path: &str) -> CommentStyle {
     }
 }
 
-/// Compiled comment scanners (issue #397): the leading alternatives skip
+/// Compiled comment scanners: the leading alternatives skip
 /// `"`/`'` literals (with backslash escapes) so the trailing `marker`
 /// group only matches a comment opener outside literals. `OnceLock`
 /// caching keeps the per-line scan allocation-free after the first use;
@@ -283,7 +283,7 @@ fn comment_text(path: &str, line: &str) -> String {
 
 /// Whether `rest` (text right after the common marker prefix) is `word`
 /// followed by a non-word character or end of text. Declarative `\b`
-/// via [`directive_suffix`] (issue #397); the byte fallback preserves
+/// via [`directive_suffix`]; the byte fallback preserves
 /// the historical `is_alphanumeric/_` semantics when the static pattern
 /// fails to compile.
 fn take_word(rest: &str, word: &str) -> bool {
@@ -307,7 +307,7 @@ fn take_word(rest: &str, word: &str) -> bool {
 /// is an unrecognized directive and fails. Markers are honored only inside
 /// the extension-selected comment style (see [`comment_style`]) outside
 /// literals. Block comments (`/* ... */`) and raw strings (`r#"..."#`)
-/// stay wont-fix out of scope (issue #589): the scan is line-comment
+/// stay wont-fix out of scope: the scan is line-comment
 /// textual only and no eligible source uses those shapes, so markers there
 /// are inert.
 pub fn find_ignores(path: &str, source: &str) -> Result<Ignores, LcovError> {
@@ -737,7 +737,7 @@ mod tests {
 
     #[test]
     fn block_comment_markers_are_inert_wontfix() {
-        // Issue #589 wont-fix: the line-comment textual scan never looks
+        // Wont-fix: the line-comment textual scan never looks
         // inside `/* ... */`, so a marker there is inert, not an ignore.
         let source = file_lines(&[
             "fn f() {".to_string(),
@@ -752,7 +752,7 @@ mod tests {
 
     #[test]
     fn raw_string_markers_are_inert_wontfix() {
-        // Issue #589 wont-fix: raw strings (`r#"..."#`) are not decoded,
+        // Wont-fix: raw strings (`r#"..."#`) are not decoded,
         // so a marker inside one is inert, not an ignore.
         let tricky = format!("let s = r#\"code with // {} inside\"#;", marker("_LINE"));
         let source = file_lines(&[tricky, "real();".to_string()]);

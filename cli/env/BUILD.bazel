@@ -10,7 +10,7 @@ package(default_visibility = [
     "//cli:__subpackages__",
 ])
 
-# Hand-written binary crate (issue #239); see docs/generation/rust.md.
+# Hand-written binary crate; see docs/generation/rust.md.
 
 # Crate aliases match lockfile; tails hand-maintained, see docs/generation/rust.md.
 rust_library(
@@ -143,7 +143,7 @@ sh_test(
         "//tools/sh:lib",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 

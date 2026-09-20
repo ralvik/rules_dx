@@ -1,14 +1,8 @@
-"""Quality family taxonomy execution pins (issue #512).
+"""Quality family taxonomy execution pins.
 
 Contract: `docs/quality/quality-sources.md`,
 `docs/quality/tool-integrations.md`, `docs/quality/quality-testing.md`,
 `docs/quality/action-model.md`, `docs/product/support-matrix.md`.
-
-Executes the frozen family taxonomy beyond the bare open work in
-`docs/testing/verification-matrix.md`: every semantic class executes
-through exactly one owning family with fixture evidence. Docs stay in
-place; this harness pins execution. Seed only: no platform plus consumer
-plus release claim, no Supported claim. Backends stay provisional.
 """
 
 # Taxonomy shape: 47 classes each with exactly one owning family;

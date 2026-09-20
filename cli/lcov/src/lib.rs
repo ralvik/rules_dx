@@ -17,7 +17,7 @@
 //! HTML. A marker is honored only inside its language's comments and
 //! outside string or char literals (byte-level scan honoring `"`/`'`
 //! and backslash escapes). Markers inside block comments or raw strings
-//! stay wont-fix out of scope (issue #589, gate-owned: line-comment
+//! stay wont-fix out of scope (gate-owned: line-comment
 //! textual scan only; no eligible source uses those shapes). The `reason:`
 //! lookup itself is a textual per-line match on the marker line or the
 //! line directly above it, and the reason text after the colon must be
@@ -36,7 +36,7 @@
 //! GateVerdict, is_covered_language, evaluate, render, ELIGIBLE, SUPPORT,
 //! parse_inventory, run}` via the re-exports below.
 //!
-//! Dependency evaluation (issue #315, parser adopted under issue #395):
+//! Dependency evaluation (parser adopted):
 //! the gate needs the combined-LCOV `SF`/`DA` union via the `lcov` crate
 //! plus per-extension comment-syntax marker scanning outside string literals
 //! with the nearby `reason:` gate plus the repo inventory and the exact 100%
@@ -47,7 +47,7 @@
 //! ignore non-`DA` summaries, and preserve empty-report semantics over `lcov`
 //! records.
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 

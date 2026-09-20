@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Lockfile-consistency test driver (issue #22; opens under #510).
+# Lockfile-consistency test driver (; opens under).
 # Usage: consistency_test.sh <ecosystem> <depcheck.py> <testdata-root>
 # Verifies the stale-vs-consistent truth table, transitive/shared,
 # non-mutating, offline, no-registry-query halves for one language.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -13,7 +13,7 @@ eco="$1"
 checker_in="$2"
 root_in="$3"
 
-# `resolve` removed (issue #319): use dx_resolve_runfile from tools/sh/lib.sh.
+# `resolve` removed: use dx_resolve_runfile from tools/sh/lib.sh.
 checker="$(dx_resolve_runfile "$checker_in")" || {
   echo "FAIL: cannot resolve $checker_in" >&2
   exit 1
@@ -109,7 +109,7 @@ if run_chk "$root/ok_used/$man" "$root/ok_used/MISSING.lock" >/dev/null 2>&1; th
 fi
 
 # non-mutating: hashes unchanged across both outcomes.
-# Portable file hashes via dx_sha256_file (issues #299, #323).
+# Portable file hashes via dx_sha256_file.
 for case in ok_used stale; do
   before_m="$(dx_sha256_file "$root/$case/$man")"
   before_l="$(dx_sha256_file "$root/$case/$lock")"

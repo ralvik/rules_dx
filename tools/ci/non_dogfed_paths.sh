@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Non-dogfed execution plan (issue #508; hermetic pins under #407).
+# Non-dogfed execution plan (; hermetic pins under).
 #
 # Cohorts that never run under the standard dogfood/CI gates by design
 # (explicit suites, carve-outs, tag suppression). Each has an explicit
 # execution path, never a silent gap:
 #
-# - CLI contract (issue #407, replaces nested E2E): no `integration/`
+# - CLI contract (replaces nested E2E): no `integration/`
 #   workspace, no second Bazel download, no `manual`/`local`/`exclusive`/
 #   `no-sandbox`, no `long` timeouts. Equivalents run hermetically under
 #   `bazel test //...`: `dx test`/`dx build` exit-code preservation via
@@ -18,7 +18,7 @@
 #   real Buildifier rewrite, full consumer wiring now smoke-only) is
 #   recorded in `docs/testing/verification-matrix.md`.
 # - negative fixtures: the four `libs/starlark/tests/negative` demos plus
-#   the markdown-no-config subject are green hermetic proofs (issue #406):
+# the markdown-no-config subject are green hermetic proofs:
 #   execution failures as passing `sh_test` goldens, analysis failures via
 #   `failure_test` (`analysistest.expect_failure`). No `manual`, no nested
 #   Bazel; failure lives inside passing bodies. The red subjects stay
@@ -45,7 +45,7 @@
 # `bazel run //tools/ci:non_dogfed_paths`, following //tools/ci:code_ownership.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -55,7 +55,7 @@ dx_test_init
 
 dx_mkscratch scratch
 
-# --- A. CLI contract hermetic (issue #407, replaces nested E2E) ---
+# --- A. CLI contract hermetic (replaces nested E2E) ---
 
 # A1: no integration/ workspace, no carve-out, no E2E drivers.
 if [[ -d "integration" ]]; then
@@ -92,7 +92,7 @@ else
 fi
 
 # A3: no manual/local/exclusive/no-sandbox tests; no long timeouts.
-# Manual red subjects stay manual only as non-tests (issue #406); kind(test)
+# Manual red subjects stay manual only as non-tests; kind(test)
 # must be empty for all four sandbox-escape tags.
 for tag in manual local exclusive no-sandbox; do
   tagged="$(bazel query "attr(tags, $tag, kind(test, //...))" 2>/dev/null || true)"
@@ -164,7 +164,7 @@ else
   bad "verification-matrix lost the #407 loss record (real-daemon exit 3, real Buildifier rewrite, smoke-only)"
 fi
 
-# --- B. negative fixtures (green hermetic proofs, issue #406) ---
+# --- B. negative fixtures (green hermetic proofs,) ---
 
 # B1: four starlark demos are green (non-manual) passing tests.
 demos="$(bazel query '//libs/starlark/tests/negative/...' 2>/dev/null | LC_ALL=C sort -u)"
@@ -190,7 +190,7 @@ else
 fi
 
 # B3: green proofs replace the manual_negatives shell loop (deleted per
-# #406): execution failures via sh_test goldens, analysis via failure_test.
+# execution failures via sh_test goldens, analysis via failure_test.
 if grep -q -F -e 'failure_test' libs/starlark/tests/negative/negative_tests.bzl &&
   grep -q -F -e 'failing_check_test.sh' libs/starlark/tests/negative/negative_tests.bzl &&
   grep -q -F -e 'missing_observation_test.sh' libs/starlark/tests/negative/negative_tests.bzl &&
@@ -202,7 +202,7 @@ else
 fi
 
 # B4: CI test job runs the green proofs via `bazel test //...` (no separate
-# manual_negatives prove step per #406).
+# manual_negatives prove step per).
 if grep -q -F -e 'bazel test --noshow_progress //...' .github/workflows/ci.yml &&
   ! grep -q -F -e 'bazel run --noshow_progress //tools/ci:manual_negatives' .github/workflows/ci.yml; then
   ok
@@ -318,7 +318,7 @@ else
   bad "code_ownership filter broke (want code languages only, never .sh)"
 fi
 
-# D4: every checked-in .sh rides deps(//...) (issue #407: nested E2E
+# D4: every checked-in.sh rides deps(//...) (nested E2E
 # deleted, so the two integration POSIX fixtures are gone; zero unowned).
 git ls-files '*.sh' | LC_ALL=C sort -u >"$scratch/all_sh.txt"
 bazel query "kind('source file', deps(//...))" 2>/dev/null |
@@ -345,7 +345,7 @@ else
 fi
 
 # D6: shell_contract owns portability (bash-only harness with Windows shell
-# bash under issue #414, POSIX fixtures portable).
+# bash, POSIX fixtures portable).
 if grep -q -F -e '//tools/ci:shell_contract' docs/testing/tools.md &&
   grep -q -F -e 'is bash-only (decided' docs/testing/tools.md &&
   grep -q -F -e 'Windows native execution via shell bash under issue' docs/testing/tools.md; then

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CLI-contract registry plus behavior qualification harness (issues #457/#462).
+# CLI-contract registry plus behavior qualification harness.
 #
 # docs/roadmap.md lists cli-contract claims with only helper guards at
 # tools/ci/helper_qualification.sh (seed-only record, adopted crates,
@@ -12,7 +12,7 @@
 #   plus `bump` plus `migrate` (`Command` grammar plus `dx_adopt::ALL_COMMANDS`
 #   plus the qualified command reference); `doctor` plus `configure` stay
 #   rejected as unknown; `migrate` syntax plus manifest selection delivered
-#   under #462;
+# under;
 # - help plus `Command::is_mutating_by_default` identify the mutating
 #   default; `--output=diff` stays exactly the six patch producers
 #   (lint, typecheck, format, generate, check, fix);
@@ -24,7 +24,7 @@
 # following //tools/ci:helper_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -36,7 +36,7 @@ contract="docs/cli/cli-contract.md"
 testing="docs/testing/cli.md"
 reference="docs/cli/commands/README.md"
 
-# Contract owns the #457/#462 pinned record.
+# Contract owns the / pinned record.
 if grep -q -F -e 'pinned under issue' "$contract" &&
   grep -q -F -e 'bazel run //tools/ci:cli_contract_qualification' "$contract" &&
   grep -q -F -e 'exactly the 29 parsed commands' "$contract" &&
@@ -100,7 +100,7 @@ else
   bad "testing/cli.md lost its mutating-identification pin with bump plus migrate"
 fi
 
-# Command reference lists bump plus deploy plus migrate under #462.
+# Command reference lists bump plus deploy plus migrate under.
 if grep -q -F -e 'dx bump' "$reference" &&
   grep -q -F -e 'dx deploy' "$reference" &&
   grep -q -F -e 'dx migrate' "$reference" &&

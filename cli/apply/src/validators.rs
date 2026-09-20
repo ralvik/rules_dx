@@ -65,7 +65,7 @@ pub enum ValidationError {
 /// does not exist). Path checks precede content checks; digest/existence
 /// checks run last.
 pub fn validate(op: &FileOperation, existing: Option<&[u8]>) -> Result<(), ValidationError> {
-    // Canonical workspace-relative ladder via `dx_path::classify` (#72
+    // Canonical workspace-relative ladder via `dx_path::classify`
     // slice 6). Tightens historical checks to also reject backslashes and
     // single-dot segments as malformed; `..` still maps to EscapesWorkspace.
     match dx_path::classify(&op.path) {
@@ -195,7 +195,7 @@ mod tests {
 
     #[test]
     fn backslash_and_dot_segment_rejected() {
-        // Tightened to the canonical dx_path ladder (#72 slice 6).
+        // Tightened to the canonical dx_path ladder (slice 6).
         assert_eq!(
             validate(&create("a\\b", "hi\n"), None),
             Err(ValidationError::MalformedPath)

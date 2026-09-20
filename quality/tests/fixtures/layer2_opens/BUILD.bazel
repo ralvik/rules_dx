@@ -1,4 +1,4 @@
-"""Layer-2 adapter-less plus composition plus depcheck fixture (issue #510)."""
+"""Layer-2 adapter-less plus composition plus depcheck fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

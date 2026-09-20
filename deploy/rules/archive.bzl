@@ -1,4 +1,4 @@
-"""Credential-free release archives for `dx deploy` (issue #181).
+"""Credential-free release archives for `dx deploy`.
 
 Contract: `docs/deploy/authoring.md`.
 """
@@ -72,7 +72,7 @@ def _archive_launcher_impl(ctx):
     ctx.actions.write(
         output = launcher,
         content = """#!/usr/bin/env bash
-# Deploy launcher for `archive_release` (issue #181). Generated. Do not edit.
+# Deploy launcher for `archive_release`. Generated. Do not edit.
 # Resolves the staged app, tarball, checksum, and deploy script via the
 # standard `runfiles.bash` `rlocation`, then execs the deploy script with
 # them plus user args. Wrapped as `sh_binary` (see `archive_release`).
@@ -164,7 +164,7 @@ def archive_release(name, app, profile = "release"):
         checksum = ":" + checksum_target,
     )
 
-    # `sh_binary` wrapper (issue #317): `srcs` is the generated launcher
+    # `sh_binary` wrapper: `srcs` is the generated launcher
     # script, `data` pins the runfiles the launcher resolves via
     # `rlocation` (location expansion: `data` labels expanded to runfiles
     # paths at analysis time, resolved at runtime). `deps` carries the

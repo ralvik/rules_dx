@@ -1,4 +1,4 @@
-"""Promotion checklist pins (issue #611).
+"""Promotion checklist pins.
 Contract: `docs/product/promotion-checklist.md`.
 Fixture: `tools/ci/tests/fixtures/promotion_checklist/` via
 `bazel run //tools/ci:promotion_checklist_qualification`.

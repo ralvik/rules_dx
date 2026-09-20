@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CLI execution/reporting gaps qualification harness (issue #590).
+# CLI execution/reporting gaps qualification harness.
 #
 # Qualifies the four wont-fix contract matrices with fixture evidence:
 # - watch: exactly 8 watchable (build/test/run/lint/typecheck/format/
@@ -27,7 +27,7 @@
 # following //tools/ci:starlark_futures_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -52,7 +52,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Contract owns the #590 pinned record with fixtures plus qualification.
+# Contract owns the pinned record with fixtures plus qualification.
 if grep -q -F -e 'pinned under issue #590' "$contract" &&
   grep -q -F -e 'bazel run //tools/ci:cli_execution_gaps_qualification' "$contract" &&
   grep -q -F -e 'cli/cli/tests/fixtures/cli_execution_gaps/' "$contract" &&
@@ -84,7 +84,7 @@ else
   bad "watch.md lost its #590 execution-gaps section with 8 plus 21 plus CI plus sequential"
 fi
 
-# Protocol owns the #590 compatibility bullet with matrix plus sequential ordering.
+# Protocol owns the compatibility bullet with matrix plus sequential ordering.
 if grep -q -F -e 'issue #590' "$protocol" &&
   grep -q -F -e 'cli/cli/tests/fixtures/cli_execution_gaps/' "$protocol" &&
   grep -q -F -e 'bazel run //tools/ci:cli_execution_gaps_qualification' "$protocol" &&
@@ -146,7 +146,7 @@ else
   bad "cli_execution_gaps BUILD.bazel lost its pins plus expected exports with corpus under #590"
 fi
 
-# Adopt watch keeps the full 8 plus 21 matrix with CI refusal under #590.
+# Adopt watch keeps the full 8 plus 21 matrix with CI refusal under.
 if grep -q -F -e 'watch_execution_gaps_matrix_is_wont_fix' "$adopt_watch" &&
   grep -q -F -e 'Issue #590' "$adopt_watch" &&
   grep -q -F -e 'WATCHABLE_COMMANDS.len(), 8' "$adopt_watch" &&
@@ -156,7 +156,7 @@ else
   bad "adopt/watch.rs lost its #590 8-plus-21 watch matrix fixture"
 fi
 
-# Process keeps the startup plus test-binary forwarding matrix under #590.
+# Process keeps the startup plus test-binary forwarding matrix under.
 if grep -q -F -e 'execution_gaps_forwarding_matrix_is_wont_fix' "$process_lib" &&
   grep -q -F -e 'Issue #590' "$process_lib" &&
   grep -q -F -e 'is_startup_option' "$process_lib" &&
@@ -167,7 +167,7 @@ else
   bad "process/lib.rs lost its #590 startup plus test-binary forwarding fixture"
 fi
 
-# Planning keeps the per-command report matrix under #590.
+# Planning keeps the per-command report matrix under.
 if grep -q -F -e 'execution_gaps_report_matrix_is_wont_fix' "$planning" &&
   grep -q -F -e 'Issue #590' "$planning" &&
   grep -q -F -e 'spec(Command::Format).reports.is_empty()' "$planning"; then
@@ -176,7 +176,7 @@ else
   bad "reports/planning.rs lost its #590 per-command report matrix fixture"
 fi
 
-# Outcome keeps the sequential parallelism pin under #590.
+# Outcome keeps the sequential parallelism pin under.
 if grep -q -F -e 'execution_gaps_parallelism_stays_sequential' "$outcome" &&
   grep -q -F -e 'Issue #590' "$outcome" &&
   grep -q -F -e 'wont-fix, sequential per-set' "$outcome"; then
@@ -185,7 +185,7 @@ else
   bad "update/outcome.rs lost its #590 sequential parallelism fixture"
 fi
 
-# Reports facade owns the wont-fix UnsupportedFormat record under #590.
+# Reports facade owns the wont-fix UnsupportedFormat record under.
 if grep -q -F -e 'issue #590' "$reports_facade" &&
   grep -q -F -e 'never silently' "$reports_facade"; then
   ok
@@ -193,7 +193,7 @@ else
   bad "reports.rs lost its #590 wont-fix UnsupportedFormat record"
 fi
 
-# Testing matrix pins watch plus forwarding plus reports plus parallelism under #590.
+# Testing matrix pins watch plus forwarding plus reports plus parallelism under.
 if grep -q -F -e 'bazel run //tools/ci:cli_execution_gaps_qualification' "$testing" &&
   grep -q -F -e 'issue #590' "$testing" &&
   grep -q -F -e 'dx_adopt::plan_watch' "$testing" &&

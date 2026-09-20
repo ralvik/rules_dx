@@ -1,17 +1,10 @@
-"""CLI execution/reporting gaps fixture (issue #590).
+"""CLI execution/reporting gaps fixture.
 
 Contract: `docs/cli/cli-contract.md#execution-reporting-gaps`,
 `docs/cli/commands/watch.md`, `docs/cli/output-protocol.md`,
 `docs/cli/standard-reports.md`.
 Fixture: `cli/cli/tests/fixtures/cli_execution_gaps/` via
 `bazel run //tools/ci:cli_execution_gaps_qualification`.
-
-Decides the four CLI-only gaps that previously had no owning tracker:
-watch coverage plus CI, Bazel startup plus test-binary arg-forwarding,
-standard-report command/format matrix, and parallel-execution scope.
-All four stay wont-fix with fail-closed contract matrices; silent
-substitution across commands stays rejected. CLI-only; no Bazel
-semantics change. Seed only: no Supported claim.
 """
 
 # Watch: exactly the 8 thin-loop commands stay watchable (ADR 0017/0018).
@@ -125,7 +118,7 @@ PARALLEL_UPDATE = "sequential per-set with continuation, no parallel"
 PARALLEL_RUN = "sequential multirun in scope order"
 PARALLEL_DISPOSITION = "wont-fix"
 
-# Rejected substitutes (never accepted as the #590 resolution).
+# Rejected substitutes (never accepted as the resolution).
 REJECTED_SILENT_SUBSTITUTION = "silent substitution across commands rejected"
 REJECTED_WATCH_DAEMON = "watch daemon rejected"
 REJECTED_PARALLEL_UMBRELLA = "parallel umbrella rejected"

@@ -139,7 +139,7 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
         .sort_by(|a, b| a.path.as_bytes().cmp(b.path.as_bytes()));
 
     // Mutation plus status projection live in `quality_apply` (issue
-    // #236): verified-source collection and check/incomplete/apply
+    // verified-source collection and check/incomplete/apply
     // handling, then check-mode vs default-mode status with the
     // fail-closed `failed` flag.
     let applied_outcome = apply_collected_changes(
@@ -718,7 +718,7 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn non_utf8_temp_path_is_operational() {
-        // Issue #320 fail-fast policy: byte-constructed non-UTF8 paths
+        // Fail-fast policy: byte-constructed non-UTF8 paths
         // exist only on unix (Windows WTF-8 differs), so this stays
         // gated instead of a portable fake.
         let harness = Harness::new("nonutf8-tmp");
@@ -1318,7 +1318,7 @@ mod tests {
                 vec![harness.replacement(b"y")],
             ),
         );
-        // Legacy fixed staging path from before the race-free write (#74):
+        // Legacy fixed staging path from before the race-free write:
         // `write_atomic` now stages via an OS-random `NamedTempFile`, so a
         // leftover `.dx-apply-tmp` directory must not block the apply.
         std::fs::create_dir_all(harness.workspace.join("src/.a.py.dx-apply-tmp"))

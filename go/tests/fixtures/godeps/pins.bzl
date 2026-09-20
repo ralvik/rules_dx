@@ -1,4 +1,4 @@
-"""Go from_file lock wiring pins (issue #483).
+"""Go from_file lock wiring pins.
 
 Contract: `docs/product/support-matrix.md#provisional-default-dependency-locks`.
 """

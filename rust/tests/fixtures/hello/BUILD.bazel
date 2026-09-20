@@ -123,7 +123,7 @@ rust_clippy_test(
     ],
 )
 
-# Crate-edition fixture (issue #468): 2015-only syntax over the
+# Crate-edition fixture: 2015-only syntax over the
 # 2021 rustfmt config proves the per-crate `--edition` flag wins.
 rust_library(
     name = "edition_2015_lib",
@@ -232,7 +232,7 @@ rust_test(
     ),
 )
 
-# Hello smoke test (#87); no-coverage process-spawning, see build-conventions.
+# Hello smoke test; no-coverage process-spawning, see build-conventions.
 sh_test(
     name = "hello_output_test",
     srcs = ["hello_output_test.sh"],
@@ -242,11 +242,11 @@ sh_test(
         "//tools/sh:lib",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Documented deploy pattern (issue #181): deploy targets live next to the
+# Documented deploy pattern: deploy targets live next to the
 # app they release. `bazel run //rust/tests/fixtures/hello:release` (or
 # `dx deploy //rust/tests/fixtures/hello:release`) verifies the checksum and copies
 # `release.tar.gz` + `release.tar.gz.sha256` to the output directory.
@@ -269,7 +269,7 @@ sh_test(
         ":release_checksum",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 

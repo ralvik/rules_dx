@@ -1,58 +1,10 @@
-"""Cargo metadata pins (issue #502).
+"""Cargo metadata pins.
 
 Contract: `docs/native-toolchains.md#qualification-questions-and-delivery`,
 `docs/generation/rust.md#crates-and-cargo`,
 `docs/testing/generation.md`.
 Fixture: `rust/tests/fixtures/cargo_metadata/` via
 `bazel run //tools/ci:cargo_metadata_qualification`.
-
-Proves public Cargo metadata represents every generated target on the
-seed host without private serialized dependency-graph access, native only:
-
-- features: a nonempty Cargo target `required-features` list stays
-  unsupported until upstream exposes exact first-party target
-  admissibility; generation reports the target, features, and manifest
-  and points to a kept handwritten `testonly` target with explicit
-  `crate_features`; it does not enable features or emit the target
-  unconditionally; no private `rules_rs` data dependency and no
-  project-owned Cargo feature resolver.
-- build-script metadata: conventional `build.rs`, explicit
-  `package.build` path, and `package.build = false` are authoritative;
-  `[package] version` feeds the generated build-script `version`
-  attribute and single-version path-dependency checks; the script sees
-  only `[build-dependencies]`; generated rules carry hermetic defaults
-  (`use_cc_toolchain = True`, `use_default_shell_env = False`,
-  `emit_warnings = True`); the script runs later as a Bazel execution
-  action, never during generation; generation does not recreate Cargo's
-  protocol.
-- target kinds: ordinary libraries, binaries, tests, proc macros, sole
-  `cdylib`, and sole `staticlib` generate only through the stable
-  fixture-proven public upstream mapping; `dylib` plus multiple crate
-  types for one source owner plus unknown kinds fail with manifest
-  context and a user-owned kept-target route; generation does not coerce
-  kinds or duplicate the crate root; examples plus benches generate only
-  as explicitly declared ordinary-binary targets with affixed names.
-- ownership: the authoritative crate root owns its root and every
-  recursively loaded module; integration-test roots separately own
-  their trees; one source may have only one owner; bins plus tests plus
-  examples plus benches link the same-package library automatically;
-  declared first-party path dependencies mirror without detection
-  evidence; emitted library flavors stay `//visibility:public` while
-  bins plus tests plus scripts stay private.
-- public shape: checked-in Cargo declarations parsed in the first-party
-  extension, path crates resolved through Gazelle's local rule index,
-  exact imported external names emitted through the public
-  `@crates//:crates.bzl` `crate_deps` and `aliases` macros; the macro
-  `package_name` is the parent Bazel directory joined with the Cargo
-  package name; the extension never reads `Cargo.Bazel.lock`,
-  `cargo-bazel.json`, or crate_universe's private dependency maps.
-- narrow upstream exports where missing: `required-features`
-  admissibility plus `BuildScriptInfo` outputs stay narrow upstream
-  metadata exports, never ad-hoc private graph reads.
-
-Ad-hoc metadata rejected per the issue alternatives. Backends stay
-provisional; floors qualified seed-only under issue #500, coverage qualified
-seed-only under issue #501; no `Supported` claim.
 """
 
 # Features: nonempty required-features stays opt-in with a kept testonly route.

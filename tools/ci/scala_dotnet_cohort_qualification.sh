@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Scala + .NET-cohort qualification harness (issue #417).
+# Scala +.NET-cohort qualification harness.
 #
 # Qualifies the as-built Scala + .NET quality-cohort record with fixture
 # evidence and owned gaps, without claiming Supported and without a false
@@ -12,17 +12,17 @@
 #   (official tool packages as declared DLLs over one managed .NET cohort;
 #   no `dotnet tool install` on the consumer path), initial artifact
 #   research rows as observations for digests (versions qualified seed-only
-#   under issue #486), adapter-input notes with Roslyn per-TFM/RID SARIF
+# , adapter-input notes with Roslyn per-TFM/RID SARIF
 #   aggregation, FSharpLint console-parse versus library-API binding,
 #   Scalafix console-output limitation recorded as a parse-vs-wire decision
 #   (never silently dropped; Roslyn SDK-default mode with StyleCop opt-in),
-#   native-config defaults qualified seed-only under issue #486 (Scalafix
+# native-config defaults qualified seed-only (Scalafix
 #   OrganizeImports plus RemoveUnused, FSharpLint default ruleset with
 #   formatting off as upstream built-in defaults with no hidden preset),
 #   parity-deferred scala/csharp/fsharp with owner plus frozen route,
 #   classification-only taxonomy with no curated defaults and no
 #   native-config binding;
-# - open under #417 with honest records: exact artifact digests
+# - open under with honest records: exact artifact digests
 #   plus shared-JDK/.NET cohort qualification, parser plus runner-matrix
 #   pass/fail plus fix/format evidence per adapter-backed class,
 #   native-config qualification against the native-config contract,
@@ -33,7 +33,7 @@
 # following //tools/ci:jvm_cohort_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -70,7 +70,7 @@ else
 fi
 
 # Parity deferrals own scala/csharp/fsharp with owner plus frozen route plus
-# the #417 live-successor record (closed #307 owns nothing here).
+# the live-successor record (closed owns nothing here).
 if grep -q -F -e '"scala": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"csharp": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"fsharp": ["ADR 0019"' "$parity" &&
@@ -108,7 +108,7 @@ fi
 
 # No hidden Scala + .NET native-config preset: no cohort binding exists in
 # the typed native-config rules (adapters run pinned upstream defaults until
-# #417 qualifies checked-in policy against the native-config contract; the
+# qualifies checked-in policy against the native-config contract; the
 # provisional Scalafix OrganizeImports plus RemoveUnused suggestion stays a
 # review input, never a supplied config).
 cohort_config=""
@@ -136,7 +136,7 @@ fi
 
 # Tool acquisition keeps the decided managed-JVM route for Scalafmt/Scalafix
 # with the Maven-lock story plus semanticdb/classpath wiring and no false
-# claim, owned by #417 (live successor to closed #307 for this cohort).
+# claim, owned by (live successor to closed for this cohort).
 if grep -q -F -e 'Decided route: Scalafmt and Scalafix take the' "$acquisition" &&
   grep -q -F -e 'same shared managed JDK and Maven-lock story' "$acquisition" &&
   grep -q -F -e 'adapter claims `scala` yet' "$acquisition" &&
@@ -148,7 +148,7 @@ fi
 
 # Tool acquisition keeps the decided exact-package plus shared-.NET-runtime
 # route for CSharpier/Fantomas with no installer on the consumer path and no
-# false claim, owned by #417.
+# false claim, owned by.
 if grep -q -F -e 'Decided route: CSharpier and Fantomas take the' "$acquisition" &&
   grep -q -F -e 'no consumer runs `dotnet tool install`' "$acquisition" &&
   grep -q -F -e 'no adapter claims `csharp` or' "$acquisition" &&
@@ -177,7 +177,7 @@ fi
 # Roslyn SDK-default plus StyleCop opt-in with per-TFM/RID SARIF aggregation,
 # FSharpLint console-parse versus library-API binding, Scalafix console-output
 # limitation as a recorded parse-vs-wire decision (never silently dropped),
-# versions qualified under #486 with digests as observations, no adapter claim.
+# versions qualified under with digests as observations, no adapter claim.
 if grep -q -F -e '**Scala + .NET cohort (issue #417' "$integrations" &&
   grep -q -F -e 'unproven mappings' "$integrations" &&
   grep -q -F -e 'observations,' "$integrations" &&
@@ -193,8 +193,8 @@ else
 fi
 
 # Support matrix keeps the Scala + .NET routes plus qualified native-config
-# defaults (issue #486) plus adapter-input notes plus cohort tracking, all
-# citing #417 for adapters/digests without approving hidden presets or
+# defaults plus adapter-input notes plus cohort tracking, all
+# citing for adapters/digests without approving hidden presets or
 # claiming support.
 if grep -q -F -e 'take the managed JVM route (issue #417' "$support" &&
   grep -q -F -e 'shared-.NET-runtime route (issue #417' "$support" &&

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Bindgen LLVM-22-vs-23 compat qualification harness (issue #473).
+# Bindgen LLVM-22-vs-23 compat qualification harness.
 #
-# Qualifies the owned gap from closed #303: unpinned LLVM rejected, both
+# Qualifies the owned gap from closed: unpinned LLVM rejected, both
 # LLVM identities pinned with a fixture proof of identical bindings.
 # - pinned: the parser baseline is LLVM-22 (`rules_rs` v0.0.109 declaring
 #   LLVM rules `0.8.18`/LLVM `22.1.8`); the qualified header/flag target is
@@ -26,7 +26,7 @@
 # following //tools/ci:shell_env_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -46,7 +46,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture pair plus pins plus fixture BUILD stay present (issue #473).
+# Fixture pair plus pins plus fixture BUILD stay present.
 if [[ -f "$header" && -f "$expected" && -f "$pins" && -f "$fixture_build" ]]; then
   ok
 else
@@ -197,7 +197,7 @@ else
   bad "ci.yml lost the bindgen_qualification step (want dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified seed-only record under #473.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'bindgen_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #473' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:bindgen_qualification' "$verify" &&

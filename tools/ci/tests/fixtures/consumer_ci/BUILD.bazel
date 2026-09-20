@@ -1,4 +1,4 @@
-"""Consumer-CI fixture (issue #509)."""
+"""Consumer-CI fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

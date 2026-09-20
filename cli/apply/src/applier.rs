@@ -34,7 +34,7 @@ impl FileSystem for RealFileSystem {
     }
 
     fn write_atomic(&self, path: &Path, content: &[u8]) -> io::Result<()> {
-        // Single write path owned by `dx_atomic_fs` (#74): OS-random
+        // Single write path owned by `dx_atomic_fs`: OS-random
         // `O_EXCL`-claimed staging file in the target directory with
         // drop-cleanup and atomic same-filesystem persist.
         dx_atomic_fs::write_atomic(path, content)

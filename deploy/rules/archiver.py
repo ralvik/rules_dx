@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic tar.gz archiver for `archive_release` (issue #318).
+"""Deterministic tar.gz archiver for `archive_release`.
 
 Hermetic replacement for `tar -czhf`: reads one staged executable file
 (dereferencing symlinks like `tar -h`), writes a single-member gzip

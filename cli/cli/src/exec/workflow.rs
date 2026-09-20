@@ -95,7 +95,7 @@ pub(crate) fn execute_workflow(invocation: &Invocation, env: Env<'_>) -> i32 {
     } else {
         None
     };
-    // Build-profile pin (issue #179): `build`/`test` always carry an
+    // Build-profile pin: `build`/`test` always carry an
     // explicit `--config=dx_*` (bare means `dx_dev`); `coverage` has no
     // profile flags so its argv is unchanged (`None` injects nothing).
     // `run` returns earlier and never reaches this plan call.
@@ -202,7 +202,7 @@ mod tests {
         use crate::exec::{execute, Env};
         use std::cell::RefCell;
         use std::rc::Rc;
-        // End-to-end pin of the issue #179 mapping: parse selects the
+        // End-to-end pin of the mapping: parse selects the
         // profile and execution injects the matching `--config=dx_*`
         // (bare means `dx_dev`).
         for (words, flag) in [
@@ -272,7 +272,7 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn workflow_non_utf8_bep_is_operational() {
-        // Issue #320 fail-fast policy: byte-constructed non-UTF8 paths
+        // Fail-fast policy: byte-constructed non-UTF8 paths
         // (`OsString::from_vec(vec![0xff])`) exist only on unix; Windows
         // uses WTF-8 with different invalid encodings, so this stays
         // gated instead of a portable fake.

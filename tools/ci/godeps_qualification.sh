@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Go from_file lock wiring qualification harness (issue #483).
+# Go from_file lock wiring qualification harness.
 #
 # Qualifies the owned gap from support-matrix provisional dependency locks:
-# `go.mod`/`go.sum` via `go_deps.from_file`, closed #304 owner only. #478
+# `go.mod`/`go.sum` via `go_deps.from_file`, closed owner only. 
 # pinned the `go test` runner mapping, not the lock wiring itself.
 # - wired: `third_party/go/go.mod` (buildtools pseudo-20250930 plus go-cmp
 #   v0.6.0 plus difflib v1.0.0, matching gazelle 0.52.2 go.mod so the shared
@@ -28,7 +28,7 @@
 # following //tools/ci:paket_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -53,7 +53,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 checker="tools/depcheck/depcheck.py"
 
-# Pins fixture stays present as the single owner (issue #483).
+# Pins fixture stays present as the single owner.
 if [[ -f "$pins" && -f "$pins_build" && -f "$lib" && -f "$test" ]]; then
   ok
 else
@@ -92,7 +92,7 @@ else
   bad "pins.bzl lost its direct pins plus repos plus fixture labels plus rejected under issue #483"
 fi
 
-# go.mod pins the direct entries exactly (issue #483).
+# go.mod pins the direct entries exactly.
 if grep -q -F -e 'module rules_dx/third_party/go' "$gomod" &&
   grep -q -F -e 'github.com/bazelbuild/buildtools v0.0.0-20250930140053-2eb4fccefb52' "$gomod" &&
   grep -q -F -e 'github.com/google/go-cmp v0.6.0' "$gomod" &&
@@ -169,7 +169,7 @@ else
   bad "generation README lost its #483 qualified Go from_file lock record"
 fi
 
-# Verification matrix owns the qualified seed-only record under #483.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'godeps_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #483' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:godeps_qualification' "$verify" &&

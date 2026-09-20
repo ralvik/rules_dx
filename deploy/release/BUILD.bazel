@@ -1,4 +1,4 @@
-"""Full release path: matrix, SBOM/provenance, signing, BCR (issue #311), human-run signing-first (issue #458, live successor to closed #311 for the human-run path), signing stack + distribution qualified (issue #459, live successor to closed #311/#26/#78 for signing + distribution)."""
+"""Full release path: matrix, SBOM/provenance, signing, BCR, human-run signing-first (live successor to closed for the human-run path), signing stack + distribution qualified (live successor to closed // for signing + distribution)."""
 
 load("@rules_python//python:defs.bzl", "py_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
@@ -32,7 +32,7 @@ exports_files([
     "signing_verify.sh",
 ])
 
-# Hermetic build tools for SBOM/provenance + BCR source (issue #318):
+# Hermetic build tools for SBOM/provenance + BCR source:
 # digest + JSON via the managed Python 3.12 toolchain, no host
 # `sha256sum`/`shasum`/`python3`. Declared as genrule `tools`.
 py_binary(

@@ -1,38 +1,38 @@
 #!/usr/bin/env bash
-# Foundation-mapping guards (issues #7, #8, #470-#475, #476-#484, ADR 0019 deferred record; relates #6, #12).
+# Foundation-mapping guards (ADR 0019 deferred record; relates,).
 #
 # Rust/Python/JS-TS foundations ship thin wrappers + Gazelle + env plans;
-# exact provider/import/lock/tool-graph proofs are pinned here for #7.
+# exact provider/import/lock/tool-graph proofs are pinned here.
 # Vue/Svelte/Astro/MDX ship named adapters over upstream parsers with an
 # end-to-end fixture approach; exact parser/compiler, provider,
 # generated-region, dependency, test, env/IDE, quality-region mappings plus
-# composition evidence are pinned here for #8.
-# Required-core Rust providers/Gazelle/integration are pinned here for #470
+# composition evidence are pinned here.
+# Required-core Rust providers/Gazelle/integration are pinned here
 # (wrappers preserve CrateInfo/DepInfo/TestCrateInfo/CcInfo plus
 # QualitySourcesInfo with conformance fixtures, Gazelle kinds/loads/goldens,
-# env plan plus hello plus locks); native gaps stay owned under #471-#475.
-# Required-core mappings (Rust providers/Gazelle/integration under #470 plus native gaps
-# under #471-#475, Python/JS mappings pinned, framework adapter mappings plus composition
-# under #510) are pinned here.
+# env plan plus hello plus locks); native gaps stay owned under -.
+# Required-core mappings (Rust providers/Gazelle/integration under plus native gaps
+# under -, Python/JS mappings pinned, framework adapter mappings plus composition
+# under) are pinned here.
 # Admitted additional foundations (Go, C/C++, Java, Kotlin, Scala, C#, F#)
 # keep provisional upstreams with hello test runners, lock authority, and
-# classification-only quality families pinned here for #476-#484; upgrades plus
-# quality adapters (qualified under #307 with deferred ADR 0019 routes) plus
+# classification-only quality families pinned here-; upgrades plus
+# quality adapters (qualified under with deferred ADR 0019 routes) plus
 # the C/C++ MSVC block stay owned gaps.
 # Deferred/excluded record (Ruby plus PowerShell deferred, Swift plus Bandit
 # excluded, host-toolchain fallback never approved) is pinned here per ADR 0019;
 # retained cohorts plus exclusion evidence stay owned gaps with reconsideration
 # requiring a new scope decision.
-# Class-to-family taxonomy stays open under #6; native config binding +
-# CI scope extension stay open under #12.
+# Class-to-family taxonomy stays open under; native config binding +
+# CI scope extension stay open under.
 #
 # This harness machine-checks the qualified mappings: owner links, adapter
 # boundaries, provider advertisement, fixture markers, upstream pins,
 # Gazelle fixtures, env plans, hello wrapper fixtures, lock authority, Ty
 # provenance, plus the framework parser/compiler, provider, region,
 # dependency, test, env/IDE, quality-region, and composition fixtures,
-# plus the #470 Rust provider/Gazelle/integration maps, the #470-#475 build-script hermetic defaults, Ty/quality adapter mappings,
-# and native-gap ownership, plus the #476-#484 admitted test runners, lock wiring,
+# plus the Rust provider/Gazelle/integration maps, the - build-script hermetic defaults, Ty/quality adapter mappings,
+# and native-gap ownership, plus the - admitted test runners, lock wiring,
 # quality classification, and MSVC-block ownership, plus the ADR 0019 deferred
 # foundation absence, retained cohorts, exclusion evidence, and owned gaps.
 # Upstream choices are kept; no switch is approved here.
@@ -41,7 +41,7 @@
 # following //tools/ci:wrapper_sources.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -49,8 +49,8 @@ dx_cd_workspace
 
 dx_test_init
 
-# #7: minimum external-consumer example workspaces exist (Rust, Python,
-# JS/TS); the rest of #85's per-foundation set builds on these.
+# minimum external-consumer example workspaces exist (Rust, Python,
+# JS/TS); the rest of 's per-foundation set builds on these.
 if [[ -d "examples/adopt-rust" && -d "examples/adopt-python" &&
   -d "examples/adopt-js-ts" ]]; then
   ok
@@ -58,7 +58,7 @@ else
   bad "minimum per-foundation example workspaces missing (adopt-rust/python/js-ts)"
 fi
 
-# #7: language wrappers advertise QualitySourcesInfo (aspects gate on it).
+# language wrappers advertise QualitySourcesInfo (aspects gate on it).
 langs_missing=""
 for lang in rust python javascript typescript go java kotlin scala csharp fsharp cc; do
   if ! grep -q -F -e 'QualitySourcesInfo' "$lang/rules/defs.bzl" 2>/dev/null; then
@@ -71,7 +71,7 @@ else
   bad "language wrappers lost QualitySourcesInfo:$langs_missing"
 fi
 
-# #7: exact provider mappings stay pinned in each wrapper.
+# exact provider mappings stay pinned in each wrapper.
 provider_fail=""
 grep -q -F -e 'CrateInfo' rust/rules/defs.bzl || provider_fail="$provider_fail rust:CrateInfo"
 grep -q -F -e 'PyInfo' python/rules/defs.bzl || provider_fail="$provider_fail python:PyInfo"
@@ -90,7 +90,7 @@ else
   bad "language provider mappings drifted:$provider_fail"
 fi
 
-# #7: upstream choices stay pinned; wrappers match MODULE.bazel pins.
+# upstream choices stay pinned; wrappers match MODULE.bazel pins.
 upstream_fail=""
 grep -q -F -e 'rules_rust 0.74.0' rust/rules/defs.bzl || upstream_fail="$upstream_fail rust"
 grep -q -F -e 'aspect_rules_py 2.0.0-alpha.6' python/rules/defs.bzl || upstream_fail="$upstream_fail python"
@@ -121,7 +121,7 @@ else
   bad "upstream choices drifted:$upstream_fail"
 fi
 
-# #7: Gazelle recognizer fixtures stay present (parser/lang/naming plus
+# Gazelle recognizer fixtures stay present (parser/lang/naming plus
 # focused tests per language).
 gazelle_missing=""
 for lang in rust python javascript typescript go java kotlin scala csharp fsharp cc; do
@@ -138,7 +138,7 @@ else
   bad "Gazelle language fixtures missing:$gazelle_missing"
 fi
 
-# #7: environment plans stay present (plan + focused fixtures per language).
+# environment plans stay present (plan + focused fixtures per language).
 env_missing=""
 for lang in rust python javascript typescript go java kotlin scala csharp fsharp cc; do
   if [[ ! -f "$lang/env/plan.bzl" || ! -f "$lang/env/plan_tests.bzl" ]]; then
@@ -151,7 +151,7 @@ else
   bad "environment plans missing:$env_missing"
 fi
 
-# #7: hello builds stay present as wrapper consumers (import/search-path
+# hello builds stay present as wrapper consumers (import/search-path
 # proof per language).
 hello_missing=""
 for lang in rust python javascript typescript go java kotlin scala csharp fsharp cc; do
@@ -169,8 +169,8 @@ else
   bad "hello wrapper fixtures missing:$hello_missing"
 fi
 
-# #7: lock authority stays checked in (fail-closed wiring in MODULE.bazel).
-# Go from_file lock is third_party/go/go.mod plus go.sum (issue #483;
+# lock authority stays checked in (fail-closed wiring in MODULE.bazel).
+# Go from_file lock is third_party/go/go.mod plus go.sum
 # hello stays stdlib-only, godeps fixture proves the external dep); C/C++
 # has no ecosystem lockfile (every http_archive carries sha256/integrity).
 locks_missing=""
@@ -194,7 +194,7 @@ else
   bad "lock authority missing:$locks_missing"
 fi
 
-# #7: Ty artifact provenance stays pinned (plus core tool artifacts).
+# Ty artifact provenance stays pinned (plus core tool artifacts).
 tools_missing=""
 grep -q -F -e '"tool": "ty"' quality/artifacts/ty.linux_x86_64.bzl || tools_missing="$tools_missing ty:tool"
 grep -q -F -e '"upstream_version": "0.0.80"' quality/artifacts/ty.linux_x86_64.bzl || tools_missing="$tools_missing ty:version"
@@ -212,7 +212,7 @@ else
   bad "tool-graph provenance missing:$tools_missing"
 fi
 
-# #8: framework provider mappings stay pinned in each wrapper (JsInfo
+# framework provider mappings stay pinned in each wrapper (JsInfo
 # preserved plus QualitySourcesInfo; only js_library/JsInfo used upstream;
 # no separate binary/test wrapper).
 fw_provider_fail=""
@@ -233,7 +233,7 @@ else
   bad "framework provider mappings drifted:$fw_provider_fail"
 fi
 
-# #8: framework upstream parser/compiler choices stay pinned; wrappers match
+# framework upstream parser/compiler choices stay pinned; wrappers match
 # package.json and the JS toolchain pins in MODULE.bazel.
 fw_upstream_fail=""
 grep -q -F -e 'aspect_rules_js 3.4.1' vue/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail vue:ruleset"
@@ -257,7 +257,7 @@ else
   bad "framework upstream choices drifted:$fw_upstream_fail"
 fi
 
-# #8: framework Gazelle fixtures stay present (parser/lang/naming plus
+# framework Gazelle fixtures stay present (parser/lang/naming plus
 # focused tests, stdlib, and testdata generation goldens per adapter; mixed
 # ownership partition stays present).
 fw_gazelle_missing=""
@@ -285,7 +285,7 @@ else
   bad "framework Gazelle fixtures missing:$fw_gazelle_missing"
 fi
 
-# #8: framework environment plans stay present (plan + focused fixtures plus
+# framework environment plans stay present (plan + focused fixtures plus
 # hello plan target per adapter).
 fw_env_missing=""
 for fw in vue svelte astro mdx; do
@@ -305,7 +305,7 @@ else
   bad "framework environment plans missing:$fw_env_missing"
 fi
 
-# #8: framework hello builds stay present as wrapper consumers (container +
+# framework hello builds stay present as wrapper consumers (container +
 # shared helper + upstream parser/compiler test per adapter).
 fw_hello_missing=""
 for fw in vue svelte astro mdx; do
@@ -329,7 +329,7 @@ else
   bad "framework hello fixtures missing:$fw_hello_missing"
 fi
 
-# #8: framework test semantics stay pinned (javascript_test over the
+# framework test semantics stay pinned (javascript_test over the
 # upstream parser/compiler with container plus compiler npm data; no
 # separate framework test wrapper; Hello.test.js exercises the regions).
 fw_test_fail=""
@@ -359,7 +359,7 @@ else
   bad "framework test mappings drifted:$fw_test_fail"
 fi
 
-# #8: framework quality-region mappings stay pinned (frozen semantic classes
+# framework quality-region mappings stay pinned (frozen semantic classes
 # plus one classification-only policy family per container; wrappers carry
 # the matching quality_specs).
 fw_quality_fail=""
@@ -374,7 +374,7 @@ else
   bad "framework quality-region mappings drifted:$fw_quality_fail"
 fi
 
-# #8: mixed-framework composition stays pinned (; one wrapper per
+# mixed-framework composition stays pinned (; one wrapper per
 # container plus the shared helper; per-container helper edge with no
 # framework-to-framework imports; disjoint gazelle/mixed partition).
 fw_mixed_fail=""
@@ -393,14 +393,14 @@ else
   bad "mixed composition fixtures missing:$fw_mixed_fail"
 fi
 
-# #12: wrapper-sources pin + ownership audits stay versioned.
+# wrapper-sources pin + ownership audits stay versioned.
 if [[ -f "tools/ci/wrapper_sources.sh" && -f "tools/ci/code_ownership.sh" ]]; then
   ok
 else
   bad "wrapper_sources/code_ownership harnesses missing"
 fi
 
-# #470: Rust provider plus Gazelle maps stay pinned (wrappers preserve
+# Rust provider plus Gazelle maps stay pinned (wrappers preserve
 # upstream CrateInfo/DepInfo/TestCrateInfo/CcInfo plus QualitySourcesInfo
 # with conformance fixtures, Gazelle kinds/loads/goldens, env plan plus
 # hello plus locks with owning docs).
@@ -485,7 +485,7 @@ else
   bad "Rust provider/Gazelle/integration maps drifted:$rust470_fail"
 fi
 
-# #470-#475: Rust build-script hermetic defaults stay pinned (generation contract
+# -: Rust build-script hermetic defaults stay pinned (generation contract
 # plus Gazelle emission plus focused Go fixtures).
 script_fail=""
 grep -q -F -e 'use_default_shell_env = False' docs/generation/rust.md || script_fail="$script_fail contract:shell-env"
@@ -503,7 +503,7 @@ else
   bad "build-script hermetic defaults drifted:$script_fail"
 fi
 
-# #470-#475: required-core quality adapter mappings stay pinned (Ty plus
+# -: required-core quality adapter mappings stay pinned (Ty plus
 # Ruff/pydoclint for Python; Biome/ESLint/Prettier/tsc for JS/TS).
 quality_fail=""
 grep -q -F -e '"ty": {"typecheck": ["python", "python_stub"]}' quality/adapters.bzl || quality_fail="$quality_fail ty:adapter"
@@ -528,8 +528,8 @@ else
   bad "required-core quality mappings drifted:$quality_fail"
 fi
 
-# #470-#475: required-core native gaps stay owned (no Supported claim; docs own
-# the five gaps; matrix tracks them under #470-#475 plus #510).
+# -: required-core native gaps stay owned (no Supported claim; docs own
+# the five gaps; matrix tracks them under - plus).
 gaps_fail=""
 grep -q -F -e 'kept CC opt-out linker' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:cc-optout"
 grep -q -F -e 'shell-env default' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:shell-env"
@@ -551,11 +551,11 @@ else
   bad "required-core native gaps unowned:$gaps_fail"
 fi
 
-# #476-#484: admitted test runners stay pinned (go test with package embed,
+# -: admitted test runners stay pinned (go test with package embed,
 # ScalaTest via the managed route, JUnit 4 seed for JVM, plain assert seed
 # for cc plus hello smoke for csharp/fsharp, with the xUnit v3 4.0.0 mapping
-# qualified under #477 plus the GoogleTest v1.18.0 mapping qualified under
-# #479 plus the ScalaTest 3.2.20 mapping qualified under #480).
+# qualified under plus the GoogleTest v1.18.0 mapping qualified under
+# plus the ScalaTest 3.2.20 mapping qualified under).
 runner_fail=""
 grep -q -F -e 'go_test' go/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail go:kind"
 grep -q -F -e 'embed' go/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail go:embed"
@@ -612,10 +612,10 @@ else
   bad "admitted test runners drifted:$runner_fail"
 fi
 
-# #476-#484: admitted lock wiring stays pinned (JVM shares maven_install.json
-# fail-closed qualified seed-only under #481, .NET shares paket.main qualified
-# seed-only under #482, Go go.mod/go.sum qualified seed-only under #483,
-# C/C++ hash wiring qualified seed-only under #484 with no ecosystem lockfile).
+# -: admitted lock wiring stays pinned (JVM shares maven_install.json
+# fail-closed qualified seed-only under,.NET shares paket.main qualified
+# seed-only under, Go go.mod/go.sum qualified seed-only under,
+# C/C++ hash wiring qualified seed-only under with no ecosystem lockfile).
 lock304_fail=""
 grep -q -F -e 'maven_install.json' docs/generation/README.md || lock304_fail="$lock304_fail gen:maven"
 grep -q -F -e 'paket.lock' docs/generation/README.md || lock304_fail="$lock304_fail gen:paket"
@@ -646,8 +646,8 @@ else
   bad "admitted lock wiring drifted:$lock304_fail"
 fi
 
-# #476-#484: admitted quality classification stays pinned (families exist,
-# no adapter claims admitted classes yet; adapter side qualified under #307
+# -: admitted quality classification stays pinned (families exist,
+# no adapter claims admitted classes yet; adapter side qualified under 
 # with deferred ADR 0019 routes).
 class304_fail=""
 for cls in go c cpp java kotlin scala csharp fsharp; do
@@ -675,7 +675,7 @@ else
   bad "admitted quality classification drifted:$class304_fail"
 fi
 
-# #476-#484: admitted foundations stay owned (docs track #476-#484; C/C++ MSVC block
+# -: admitted foundations stay owned (docs track -; C/C++ MSVC block
 # owned with no Supported claim).
 own304_fail=""
 grep -q -F -e '#476-#484' docs/product/support-matrix.md || own304_fail="$own304_fail matrix:tracking"

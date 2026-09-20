@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy program for `archive_release` (issue #181).
+# Deploy program for `archive_release`.
 #
 # Invoked via `bazel run :<name>` or `dx deploy :<name>`. The generated
 # launcher resolves the staged app, tarball, and checksum from its
@@ -9,14 +9,14 @@
 # artifacts out, and reports the resolved profile from `$DX_PROFILE`
 # (forwarded by `dx deploy`; bare `bazel run` leaves it unset).
 #
-# Host-tool contract (issue #318): bash + python3 + POSIX coreutils
+# Host-tool contract: bash + python3 + POSIX coreutils
 # only. Realpath and sha256 go through python3 (no `realpath`,
 # `readlink -f`, `sha256sum`, or `shasum` probes); `cp`/`mkdir`/`basename`
 # are POSIX coreutils.
 set -euo pipefail
 
 # Single-tool realpath via python3 (portable across Linux/macOS; no
-# GNU `realpath` / `readlink -f` probing per issue #318).
+# GNU `realpath` / `readlink -f` probing).
 py_realpath() {
   python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
 }

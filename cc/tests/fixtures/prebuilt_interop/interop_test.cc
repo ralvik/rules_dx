@@ -1,4 +1,4 @@
-// Prebuilt interop fixture test; STL plus exceptions plus RTTI plus ownership (issue #498).
+// Prebuilt interop fixture test; STL plus exceptions plus RTTI plus ownership.
 #include <cassert>
 #include <memory>
 #include <stdexcept>

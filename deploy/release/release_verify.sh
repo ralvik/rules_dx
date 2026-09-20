@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Verifies the human-run release driver dry-run gate (issue #458, live
-# successor to closed #311 for the human-run path).
+# Verifies the human-run release driver dry-run gate (live
+# successor to closed for the human-run path).
 #
 # `$1` is the release.sh rootpath. Asserts the default dry run prints
 # the seven-step plan, names the never-creates-tags ceiling, keeps the

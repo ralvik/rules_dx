@@ -23,7 +23,7 @@ pub const PREVIOUS_VERSION: &str = "0.0.0";
 ///
 /// Per direction the `dx` version equals the pinned `rules_dx` module
 /// version: both must parse as Cargo-flavor semver (via the `semver`
-/// crate, issue #224) and compare exactly equal. Self-update bumps
+/// crate,) and compare exactly equal. Self-update bumps
 /// that pin from verified release artifacts; anything else is rejected here.
 /// Empty strings and non-semver text never match, even when equal.
 pub fn version_pin_matches_module(dx_version: &str, module_version: &str) -> bool {
@@ -87,7 +87,7 @@ mod tests {
         assert!(!version_pin_matches_module("1.2.3", "1.2.4"));
         assert!(!version_pin_matches_module("", ""));
         assert!(!version_pin_matches_module("1.2.3", ""));
-        // Issue #224 (semver pilot): pins must be valid semver; equal
+        // (semver pilot): pins must be valid semver; equal
         // non-semver text never matches, even when verbatim equal.
         assert!(!version_pin_matches_module("abc", "abc"));
         assert!(!version_pin_matches_module("v1.2.3", "v1.2.3"));

@@ -2,7 +2,7 @@
 //!
 //! Contract: `docs/environments/codegen.md` and `docs/environments/environment.md`; selection by fiat per ADR 0022.
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -52,7 +52,7 @@ pub const WARM_WEIGHT: u64 = 2;
 /// vs 350): baseline 8457 + 2*372 = 9201 beats query-file 8983 + 2*350 =
 /// 9683 outright; the baseline also wins every tie by [`RootStrategy::ALL`]
 /// order. The incrementality rows now land in [`INCREMENTALITY_EVIDENCE`]
-/// (#25 slice) and confirm the freeze: the query-file control matches the
+/// and confirm the freeze: the query-file control matches the
 /// baseline on every dimension within noise. Concurrency, interruption,
 /// remote materialization, and reuse certification land in later WP4 slices
 /// and no row here can displace this freeze; per ADR 0022 the freeze stands by fiat

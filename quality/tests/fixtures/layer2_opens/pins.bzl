@@ -1,31 +1,17 @@
-"""Layer-2 adapter-less plus composition plus depcheck opens pins (issue #510).
+"""Layer-2 adapter-less plus composition plus depcheck opens pins.
 
-Contract: `docs/testing/verification-matrix.md`,
-`docs/product/support-matrix.md#minimal-required-core`,
-`docs/generation/framework-adapters.md#framework-mapping-qualification`,
-`docs/quality/quality-testing.md`.
+Contract: `docs/testing/verification-matrix.md`, `docs/product/support-matrix.md#minimal-required-core`,
+`docs/generation/framework-adapters.md#framework-mapping-qualification`, `docs/quality/quality-testing.md`.
 Fixture: `quality/tests/fixtures/layer2_opens/` via
 `bazel run //tools/ci:layer2_opens_qualification`.
-
-Qualifies the as-built open record with fixture evidence, without claiming
-delivery or Supported: Layer-2 adapter-less cells stay open (no adapter
-claim, no runner-matrix cells, parity deferred), framework regions stay
-classification-only with composition evidence in `examples/mixed/hello/`
-plus `gazelle/mixed/`, and framework-composition depcheck stays with the
-JS/TS pnpm route. Closed #303 only (required core mappings); #416-420
-adapters partially (defaults qualified, digests plus adapters stay owned).
-Adapter-less as pass rejected per the issue alternatives. Test plus
-generation only per compatibility. Seed only: platform plus consumer plus
-release evidence stays owned gap; no Supported claim. Backends stay
-provisional.
 """
 
 # Adapter-less inventory (verification-matrix Layer-2 Open adapter-less).
 # Seven admitted languages keep provider wrappers plus Gazelle plus hello
-# plus locks plus test runners (qualified under #476-#484) with defaults
-# qualified (under #485-#487) but no quality adapter claim and no
-# runner-matrix cells. Closed #303 only for required core; adapters
-# partially under #416-420 with digests plus adapters staying owned.
+# plus locks plus test runners (qualified under -) with defaults
+# qualified (under -) but no quality adapter claim and no
+# runner-matrix cells. Closed only for required core; adapters
+# partially under -420 with digests plus adapters staying owned.
 ADAPTER_LESS_GO = "go"
 ADAPTER_LESS_JAVA = "java"
 ADAPTER_LESS_KOTLIN = "kotlin"
@@ -63,7 +49,7 @@ GAZELLE_MIXED = "gazelle/mixed"
 GAZELLE_MIXED_OWNER = "Owner"
 GAZELLE_MIXED_OWNERS = "Owners"
 
-# Depcheck route (required-core plus admitted fixtures delivered under #22;
+# Depcheck route (required-core plus admitted fixtures delivered under;
 # framework-composition depcheck stays with the JS/TS pnpm route).
 DEPCHECK_FIXTURES = "tools/depcheck/testdata"
 DEPCHECK_PNPM_ROUTE = "framework-composition depcheck stays with the JS/TS pnpm route"
@@ -95,5 +81,5 @@ OWNING_FOUNDATIONS_476_484 = "wrappers plus runners plus locks qualified under #
 # Live proof shape (no adapter-less or framework hello bazel quality test
 # exists for the open cells: the fixture triple plus grep contract checks
 # plus bazel build of the fixture plus bazel build of the mixed composition
-# is the live proof; quality adapters claim nothing yet under #416-420).
+# is the live proof; quality adapters claim nothing yet under -420).
 LAYER2_OPENS_PROOF = "bazel build //quality/tests/fixtures/layer2_opens:corpus_starlark plus bazel build //examples/mixed/hello/..."

@@ -73,7 +73,7 @@ pub(crate) fn render_top_help() -> String {
 /// with `docs/cli/cli-contract.md`, then the full grammar help so the
 /// flag list can never drift.
 ///
-/// Issue #211 reconciliation: `--bazel` (clean only, forwards
+/// reconciliation: `--bazel` (clean only, forwards
 /// `bazel clean`) and `--configured` (owners/deps/why only, selects
 /// `cquery`) keep their names because they mean different things, and
 /// both stay distinct from the `dx bazel` passthrough command. The

@@ -1,4 +1,4 @@
-// Prebuilt interop fixture header; STL values plus exceptions plus RTTI plus ownership (issue #498).
+// Prebuilt interop fixture header; STL values plus exceptions plus RTTI plus ownership.
 #pragma once
 
 #include <memory>

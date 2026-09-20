@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verifies one `bcr_check` deploy program (issue #311).
+# Verifies one `bcr_check` deploy program.
 #
 # `$1` is the program rootpath, `$2` the expected module, `$3` the
 # expected version. Runs with BCR_DRY_RUN=1 and asserts the would-submit

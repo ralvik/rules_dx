@@ -1,4 +1,4 @@
-"""Unit and analysis tests for the archive releaser (issue #181).
+"""Unit and analysis tests for the archive releaser.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

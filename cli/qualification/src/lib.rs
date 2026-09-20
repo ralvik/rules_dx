@@ -25,7 +25,7 @@
 //! any tag/registry/release publication (gated). Those stay deferred;
 //! this crate never claims `Supported`, never signs, and never publishes.
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 

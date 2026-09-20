@@ -1,4 +1,4 @@
-"""Unit and analysis tests for the deploy boundary (issue #178).
+"""Unit and analysis tests for the deploy boundary.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

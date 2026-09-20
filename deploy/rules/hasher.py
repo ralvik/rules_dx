@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""sha256 checksum writer for `archive_release` (issue #318).
+"""sha256 checksum writer for `archive_release`.
 
 Hermetic replacement for `sha256sum src > out`: computes the file
 digest with `hashlib` via the managed Python 3.12 toolchain and writes

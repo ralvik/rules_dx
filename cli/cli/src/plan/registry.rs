@@ -137,7 +137,7 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &["sarif"],
             settings: &[],
         },
-        // Explicit managed-state cleanup (issue #506 WP5): no Bazel
+        // Explicit managed-state cleanup: no Bazel
         // invocation of its own for the prune itself (filesystem
         // inventory plus the shared commit lock in `dx_clean`); the
         // optional `bazel clean` forward is planned at execution.
@@ -148,7 +148,7 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Managed environment/codegen/setup selections (issue #506 WP5): one
+        // Managed environment/codegen/setup selections: one
         // Bazel collection request behind a canonical selection plus
         // generation commit, never the quality aspect pipeline and no
         // standard reports. The capability names the selecting command.
@@ -182,7 +182,7 @@ pub fn spec(command: Command) -> CommandSpec {
         // findings) and SPDX 2.3 JSON (license inventory) through the
         // shared report contract; update reports per-set
         // through live output (text plus `notice`/`error` in JSON, issue
-        // #19) with no `--report` standard report.
+        // with no `--report` standard report.
         Command::Audit => CommandSpec {
             command,
             capability: "audit",
@@ -197,7 +197,7 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Explicit widen-one-requirement (issue #260): one declared
+        // Explicit widen-one-requirement: one declared
         // requirement to a new version through `dx_bump`, never the
         // quality aspect pipeline and no standard reports.
         Command::Bump => CommandSpec {
@@ -207,7 +207,7 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Major-release migration (issue #462): `--from`/`--to`
+        // Major-release migration: `--from`/`--to`
         // versions through `dx_adopt::plan_migrate`, never the quality
         // aspect pipeline and no standard reports. Live execution
         // fails closed until the first manifest lands.

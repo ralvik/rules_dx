@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Missing-observation negative proof (issue #406): the deliberately wrong
+# Missing-observation negative proof: the deliberately wrong
 # expected_observations (field sum=43 vs actual sum=0) must fail with the
 # exact observation diff, while this harness passes. If the fixture stops
 # failing (sum fixed to 0), this test fails.
@@ -9,7 +9,7 @@
 # Hermetic: sandbox-only, TEST_TMPDIR scratch, offline, no nested Bazel.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
 dx_test_init

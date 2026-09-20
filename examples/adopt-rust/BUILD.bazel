@@ -1,4 +1,4 @@
-"""Adopted foreign Rust workspace (#188): corpus ownership for arrival files."""
+"""Adopted foreign Rust workspace: corpus ownership for arrival files."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

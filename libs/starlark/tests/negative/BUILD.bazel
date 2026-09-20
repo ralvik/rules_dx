@@ -1,4 +1,4 @@
-"""Green hermetic negative proofs for (issue #406; see .bzl doc)."""
+"""Green hermetic negative proofs for (; see.bzl doc)."""
 
 load("//libs/starlark/tests:subject.bzl", "example_subject")
 load("//quality:fixtures.bzl", "real_source_target")

@@ -5,9 +5,9 @@
 //! render it as JSON. That shape cannot fail to serialize (no maps with
 //! non-string keys, no non-finite floats), so this crate owns the single
 //! infallible call site instead of repeating `.expect(...)` at every
-//! fingerprint function (see also issue #238).
+//! fingerprint function (see also).
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 

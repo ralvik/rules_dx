@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Registry-singularity harness (issue #6 closed): machine-checks that the
+# Registry-singularity harness (closed): machine-checks that the
 # semantic file-class registry stays single-sourced.
 #
 # `quality/adapters.bzl` owns the
@@ -21,13 +21,13 @@
 # has exactly one family), curated-defaults stay within the taxonomy
 # (no parallel family or tool), and the admissibility table covers every
 # frozen ID. Cache-execution plus determinism-permutation proofs stay
-# open per #84.
+# open per.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:registry_singularity`,
 # following //tools/ci:release_policy.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -120,7 +120,7 @@ else
   bad "synthetic adapter maps lost their fixture/provisional labeling"
 fi
 
-# Registry completeness (issue #6 closed): every frozen ID has exactly
+# Registry completeness (closed): every frozen ID has exactly
 # one family, so no silent gap can rot into an undocumented assignment.
 if
   missing="$(comm -23 "$scratch/frozen.txt" "$scratch/keys.txt")"
@@ -182,7 +182,7 @@ else
   bad "admissibility table misses frozen IDs: $(echo "$missing_adm" | tr '\n' ' ')"
 fi
 
-# Versioned registry schemas (issue #321): every inventory carries a v1
+# Versioned registry schemas: every inventory carries a v1
 # schema marker with query helpers, so additions edit registry data plus
 # compat, never a parallel allowlist.
 version_clean=1

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# File-family quality qualification harness (issue #489).
+# File-family quality qualification harness.
 #
 # Qualifies the as-built file-family quality record with fixture evidence
 # and owned gaps, without claiming Supported:
@@ -11,7 +11,7 @@
 #   YAML yamlfmt/yamllint, text keep-sorted, Shell shfmt/ShellCheck,
 #   CUE/Jsonnet/Pkl/QML/Terraform feasibility), tool-baseline plus
 #   acquisition routing, registry singularity;
-# - open under #489 with honest records: adapter execution for the
+# - open under with honest records: adapter execution for the
 #   deferred families, platform plus consumer plus release evidence,
 #   exact pins/digests/rule-sets/adapter mappings per family.
 #
@@ -19,7 +19,7 @@
 # following //tools/ci:consumer_ci_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -44,7 +44,7 @@ aspects="quality/real_aspects.bzl"
 verify="docs/testing/verification-matrix.md"
 
 # Support matrix owns the Quality And File Families section with the
-# qualified seed-only record under #489.
+# qualified seed-only record under.
 if grep -q -F -e '## Quality And File Families' "$support" &&
   grep -q -F -e 'qualified seed-only under issue #489' "$support" &&
   grep -q -F -e 'bazel run //tools/ci:file_family_qualification' "$support"; then

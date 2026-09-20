@@ -1,4 +1,4 @@
-"""JUnit 6.1.3 plus 5.14.x fallback runner fixture (issue #476).
+"""JUnit 6.1.3 plus 5.14.x fallback runner fixture.
 
 Maps the qualified runner: default Bazel runner stays the JUnit 4 seed
 (`//java/tests/fixtures/hello:hello_test`); the Jupiter upgrade is the

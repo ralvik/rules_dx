@@ -56,7 +56,7 @@ pub enum ReportError {
     /// A report was requested together with `--dry-run`.
     #[error("--dry-run conflicts with every --report request")]
     DryRunConflict,
-    /// The format is not supported by the command (issue #590
+    /// The format is not supported by the command
     /// wont-fix: per-command matrix stays fail-closed, never silently
     /// substituted).
     #[error(

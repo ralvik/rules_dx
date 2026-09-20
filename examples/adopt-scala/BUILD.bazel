@@ -1,4 +1,4 @@
-"""Adopted foreign Scala tree (#192): corpus ownership for arrival files."""
+"""Adopted foreign Scala tree: corpus ownership for arrival files."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

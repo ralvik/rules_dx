@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# JUnit 6.1.3 plus 5.14.x fallback qualification harness (issue #476).
+# JUnit 6.1.3 plus 5.14.x fallback qualification harness.
 #
-# Qualifies the owned gap from closed #304: provisional JUnit 6.1.3 with
-# 5.14.x fallback, closed #304 owner only. #416 covers adapters not runners.
+# Qualifies the owned gap from closed: provisional JUnit 6.1.3 with
+# 5.14.x fallback, closed owner only. covers adapters not runners.
 # - pinned: primary JUnit 6.1.3 (Platform 6.1.3 plus Jupiter 6.1.3 plus
 #   Vintage 6.1.3, single BOM version; JDK 17+ baseline, remotejdk_21 on the
 #   seed host) plus fallback Jupiter 5.14.4 plus Platform 1.14.4 (latest
@@ -27,7 +27,7 @@
 # following //tools/ci:exact_target_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -48,7 +48,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture pair plus pins stay present (issue #476).
+# Fixture pair plus pins stay present.
 if [[ -f "$pins" && -f "$java_build" && -f "$java_test" && -f "$kotlin_build" && -f "$kotlin_test" ]]; then
   ok
 else
@@ -177,7 +177,7 @@ else
   bad "docs/generation/README.md lost its qualified JUnit record under issue #476"
 fi
 
-# Verification matrix owns the qualified seed-only record under #476.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'junit_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #476' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:junit_qualification' "$verify" &&

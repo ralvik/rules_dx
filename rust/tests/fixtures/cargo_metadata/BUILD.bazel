@@ -1,4 +1,4 @@
-"""Cargo metadata fixture (issue #502).
+"""Cargo metadata fixture.
 
 Proves public Cargo metadata represents every generated target without
 private serialized dependency-graph access: `Cargo.toml` plus

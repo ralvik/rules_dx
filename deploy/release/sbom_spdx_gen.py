@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SPDX 2.3 generator for `sbom_release` (issue #318).
+"""SPDX 2.3 generator for `sbom_release`.
 
 Hermetic replacement for the host `sha256sum` + `python3` heredoc:
 computes the artifact digest with `hashlib` via the managed Python

@@ -4,7 +4,7 @@
 //! exact input bytes plus native-closure files into a fresh scratch
 //! directory, then spawns the tool with an empty-derived environment
 //! (no `PATH`, no inherited config variables) and a pinned working
-//! directory. Native-closure entries follow the issue #320 portable
+//! directory. Native-closure entries follow the portable
 //! route: symlinked where the platform allows and copied otherwise, so
 //! Windows works without privileges. The copy fallback is intentional
 //! (tools only read these entries); `materialize_copies_closure_entry_
@@ -14,7 +14,7 @@
 //! owners call [`Scratch::close`] on success paths so cleanup failures
 //! surface as action errors instead of vanishing.
 //!
-//! Dependency evaluation (issue #392, rejected): no `strict-path` — the
+//! Dependency evaluation (rejected): no `strict-path` — the
 //! scratch threat model stays TempDir-internal (fresh OS-random `TempDir`
 //! plus internal `mirror_rel` from Bazel action inputs, never untrusted
 //! archives/HTTP/LLM paths), so the lexical `Component` walk plus
@@ -26,7 +26,7 @@
 //! supply-chain review, lockfile churn, and `MODULE.bazel` manifests for
 //! zero behavior gain today; `soft-canonicalize` alone carries no
 //! boundary policy. `normpath` is adopted for lexical accumulation only
-//! (issue #391: `BasePathBuf` owns Windows `Prefix`/verbatim edge semantics
+//! (`BasePathBuf` owns Windows `Prefix`/verbatim edge semantics
 //! instead of the former hand `PathBuf`); on-disk symlink escapes stay owned
 //! by the symlink-prefix guard below, not by normalization. Re-evaluate with
 //! `VirtualRoot`-style boundary plus safe-I/O only if adapters ever accept
@@ -86,7 +86,7 @@ impl Scratch {
 
     /// Resolves a scratch-relative path, rejecting escapes.
     ///
-    /// Lexical boundary (issue #391: `normpath::BasePathBuf` accumulation
+    /// Lexical boundary (`normpath::BasePathBuf` accumulation
     /// owns Windows `Prefix`/verbatim edge semantics instead of hand
     /// `PathBuf`) plus explicit shape guards (empty, null byte, backslash
     /// for portable Unix/Windows behavior) plus a final containment check.
@@ -279,7 +279,7 @@ fn ensure_no_symlink_prefix(root: &Path, path: &Path, rel: &Path) -> io::Result<
 
 /// Links `target` at `link`, copying the file when symlinks are
 /// unavailable (non-Unix platforms, or missing privileges): tools only
-/// ever read these native-closure entries. Issue #320 portable route:
+/// ever read these native-closure entries. portable route:
 /// the copy fallback is intentional, not a silent privilege-gap hide;
 /// directory targets fail fast via the `copy` error instead of a
 /// half-materialized tree. Non-unix always copies; unix prefers a
@@ -294,7 +294,7 @@ fn link_or_copy(target: &Path, link: &Path) -> io::Result<()> {
 
 /// Links `target` at `link`, copying the file when symlinks are
 /// unavailable (non-Unix platforms, or missing privileges): tools only
-/// ever read these native-closure entries. Issue #320 portable route:
+/// ever read these native-closure entries. portable route:
 /// the copy fallback is intentional, not a silent privilege-gap hide;
 /// directory targets fail fast via the `copy` error instead of a
 /// half-materialized tree. Non-unix always copies; unix prefers a
@@ -396,7 +396,7 @@ mod tests {
             std::fs::read_link(root.join("taplo.toml")).expect("symlink preferred on unix"),
             source,
         );
-        // Issue #320 portable route: non-unix always copies, so no
+        // Portable route: non-unix always copies, so no
         // symlink must remain; content equality above already proves
         // the copy branch.
         #[cfg(not(unix))]
@@ -475,7 +475,7 @@ mod tests {
 
     #[test]
     fn resolve_normalizes_dot_segments_via_normpath() {
-        // Issue #391 fixtures: `a/b/../c`, `./`, trailing-slash,
+        // Fixtures: `a/b/../c`, `./`, trailing-slash,
         // excessive-`..` (escapes fail closed here, unlike markdown's
         // clamped sibling-root semantics).
         let scratch = Scratch::create(&std::env::temp_dir()).expect("scratch");
@@ -497,7 +497,7 @@ mod tests {
 
     #[test]
     fn resolve_rejects_empty_null_and_backslash() {
-        // Issue #392: explicit shape guards for the TempDir-internal
+        // Explicit shape guards for the TempDir-internal
         // lexical boundary — portable across Unix/Windows, fail closed
         // without on-disk canonicalization.
         let scratch = Scratch::create(&std::env::temp_dir()).expect("scratch");
@@ -522,14 +522,14 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn materialize_rejects_symlink_directory_escape() {
-        // Issue #392 traversal fixture, issue #320 fail-fast policy:
+        // Traversal fixture, fail-fast policy:
         // the symlink-prefix guard only fires when the platform can
         // plant a symlink. Non-unix `Link` entries always copy, so no
         // symlink prefix can arise from `Link` there; the copy branch
         // is proven by `materialize_copies_closure_entry_when_link_path_
         // exists` plus the non-unix assertion in
         // `scratch_materializes_and_cleans_up`.
-        // Issue #392 traversal fixture: a symlink directory prefix from
+        // Traversal fixture: a symlink directory prefix from
         // an earlier entry must not let a later lexically inside path
         // land outside on disk.
         let parent_tmp = tempfile::Builder::new()
@@ -568,11 +568,11 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn materialize_rejects_symlink_file_overwrite() {
-        // Issue #392 traversal fixture, issue #320 fail-fast policy:
+        // Traversal fixture, fail-fast policy:
         // planting a file symlink needs symlink privilege, unavailable
         // on non-unix `Link` paths (always copy). See the directory
         // escape test above for the non-unix cover.
-        // Issue #392 traversal fixture: an existing symlink at the
+        // Traversal fixture: an existing symlink at the
         // target must not be followed by a byte write or fallback copy.
         let parent_tmp = tempfile::Builder::new()
             .prefix("dx-symlink-file-")

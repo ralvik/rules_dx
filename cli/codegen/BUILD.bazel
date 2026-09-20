@@ -1,4 +1,4 @@
-"""issue #506 WP1 slice 3: normalized codegen plan collection for the `dx` CLI."""
+""" WP1 slice 3: normalized codegen plan collection for the `dx` CLI."""
 
 load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 
@@ -10,7 +10,7 @@ package(default_visibility = [
     "//cli:__subpackages__",
 ])
 
-# Leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# Leaf-crate pattern via `dx_rust_crate`: emits
 # `dx_codegen` + `dx_codegen_test` + fmt/clippy tests +
 # `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
 dx_rust_crate(

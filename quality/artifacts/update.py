@@ -15,12 +15,12 @@ Taplo, and Biome publish no asset digests, so their checked-in digests are
 the maintainer-established byte identity: regeneration fails when upstream
 bytes change instead of silently recording new content.
 
-Platform bounds (issue #616): Linux artifacts record observed ELF linkage,
+Platform bounds: Linux artifacts record observed ELF linkage,
 interpreter, shared libraries, and GNU ABI floors via readelf/objdump.
 macOS/Windows artifacts record bounds only -- linkage is the observed
 delivery-class bound (buildifier static, all others dynamic), interpreter is
 None, shared libraries are empty, and ABI floors are None. The macOS
-deployment floor and Windows CRT identities stay owned gaps under issue #500
+deployment floor and Windows CRT identities stay owned gaps
 and are not pinned here.
 """
 
@@ -443,7 +443,7 @@ def _native_bounds(tool, spec):
     bound instead: buildifier stays static (Go static intent, matching its
     Linux static record); all other tools are dynamic system-linked bounds.
     macOS deployment floor plus Windows CRT identities stay owned gaps under
-    issue #500, never pinned here.
+, never pinned here.
     """
     if tool == "buildifier":
         linkage = "static"

@@ -88,7 +88,7 @@ def _is_canonical_id(text):
     return True
 
 def sources_schema_error(classes = None):
-    """Validates the versioned class-registry schema (issue #321).
+    """Validates the versioned class-registry schema.
 
     Checks the data shape without pinning exact contents, so adding a
     class edits the registry data only and never a parallel allowlist:

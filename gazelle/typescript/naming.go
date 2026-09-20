@@ -123,7 +123,7 @@ func ModuleName(name string) string {
 // Only the exact `main` basename is recognized, in any directory; other
 // layouts (`index.*`, `app.*`, `cli.*`, `bin/` scripts, `package.json`
 // `main`/`bin` fields, nested conventions) are an explicit wont-fix per
-// issue #585: generation never infers manifest-declared names, guesses a
+// generation never infers manifest-declared names, guesses a
 // default entry, or drops one. Manifest-declared names win only for exact
 // mappings; other layouts remain out of scope. A recognized entry owns one
 // reusable project library plus one thin `javascript_binary` (execution

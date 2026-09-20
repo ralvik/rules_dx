@@ -1,22 +1,12 @@
-"""File-family quality defaults pins (issue #489, modfmt plus gherkin/xml resolved under #582).
+"""File-family quality defaults pins (modfmt plus gherkin/xml resolved under).
 
 Contract: `docs/product/support-matrix.md#provisional-default-quality-tools`,
 `docs/quality/native-configuration.md#authority`.
-
-Qualifies the provisional file-family format plus lint defaults against the
-native-configuration contract with no hidden presets. Versions below are the
-pinned upstream releases from the initial artifact research; rule-sets are
-upstream built-in defaults unless an applicable checked-in native config
-supplies policy. Adapters add only transport/hermetic settings. Exact
-artifact digests plus adapter mappings stay owned under issue #420.
-`protobuf`/`qml` stay owned by issue #488/#419 and are cross-linked here,
-never double-claimed. Applicability is provider-class owned by the registry,
-never inferred from a file suffix.
 """
 
 # Pinned upstream versions (initial artifact research observations, now
-# qualified seed-only under #489 with modfmt plus gherkin/xml resolved
-# seed-only under #582; living at head rejected).
+# qualified seed-only under with modfmt plus gherkin/xml resolved
+# seed-only under; living at head rejected).
 CUE_VERSION = "v0.17.1"
 JSONNETFMT_VERSION = "v0.22.0"
 PKL_VERSION = "0.32.1"
@@ -33,7 +23,7 @@ YAMLLINT_VERSION = "1.38.0"
 KEEP_SORTED_VERSION = "v0.10.0"
 
 # Upstream distribution identities (frozen delivery-class routes; digests
-# stay owned under issue #420, never reconstructed or ambient-resolved).
+# stay owned, never reconstructed or ambient-resolved).
 CUE_ARTIFACT = "standalone checksummed release artifact; cue fmt whole-file rewrite with check/diff mode"
 JSONNETFMT_ARTIFACT = "standalone checksummed release artifact; go-jsonnet whole-file rewrite with check/diff mode"
 PKL_ARTIFACT = "standalone checksummed release artifact with published checksums"
@@ -48,7 +38,7 @@ YAMLFMT_ARTIFACT = "standalone checksummed release artifact with cosign-signed c
 YAMLLINT_ARTIFACT = "private wheel-only Python graph member over the shared managed Python runtime, no sdist fallback"
 KEEP_SORTED_ARTIFACT = "standalone checksummed release artifact; check-only with sandbox-apply-and-diff"
 
-# Rejected and pending lines (never pinned here) plus #582 resolutions.
+# Rejected and pending lines (never pinned here) plus resolutions.
 REJECTED_JSONNET_CPP = "C++ jsonnet v0.21.0 observed, not pinned; go-jsonnet v0.22.0 is the pinned line; living at head rejected"
 REJECTED_MODFMT_PENDING = "modfmt upstream identity resolved seed-only under issue #582 to github.com/joshdk/modfmt v0.4.0; digests stay owned under issue #420, living at head rejected"
 REJECTED_GHERKIN_XML_VERSION = "prettier-plugin-gherkin 4.0.0 plus @prettier/plugin-xml 3.4.2 pinned seed-only under issue #582; they ride Prettier 3.9.6 in the private graph, rechecked latest stable at implementation under #582"
@@ -81,7 +71,7 @@ STRUCTURED_CROSSLINK = "protobuf plus qml stay owned by issue #488 plus issue #4
 # families: cue/jsonnet/pkl/css/html_template/gherkin/sql/xml/go_module/
 # terraform/yaml/text foundations are feasibility or N/A, so the fixture pair
 # plus grep contract checks plus bazel build of the fixture is the live proof;
-# quality adapters claim nothing yet under issue #420).
+# quality adapters claim nothing yet).
 FILE_FAMILY_PROOF = "bazel build //quality/tests/fixtures/file_family_quality:corpus_starlark"
 
 # Rejected: hidden presets plus unpinned versions plus suffix inference.

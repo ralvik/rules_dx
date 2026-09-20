@@ -106,7 +106,7 @@ func TestNativeConfigRecognition(t *testing.T) {
 		"buildifier_config": ".buildifier.json",
 	}
 	// Lib plus configs plus corpus splits owning BUILD.bazel and the TOML
-	// sources (rustfmt/clippy/taplo/custom, issue #15). Dotfiles
+	// sources (rustfmt/clippy/taplo/custom,). Dotfiles
 	// (.vale.ini, .buildifier.json) never enter the corpus.
 	if len(result.Gen) != len(want)+3 {
 		names := []string{}
@@ -136,7 +136,7 @@ func TestNativeConfigRecognition(t *testing.T) {
 			t.Errorf("%s visibility = %q, want package-scoped", name, got)
 		}
 	}
-	// Clippy is unmanaged since #47: its config file is ignored and no
+	// Clippy is unmanaged since: its config file is ignored and no
 	// clippy_config target appears, alongside the other unrecognized files.
 	if findGenerated(result, "clippy_config", "clippy_config") != nil {
 		t.Error("unmanaged clippy.toml produced a config target")
@@ -435,7 +435,7 @@ func TestNativeConfigOnlyDir(t *testing.T) {
 		"site/taplo.toml": "[formatting]\n",
 	}, "")
 	// Config-only dirs gain the taplo_config plus corpus splits owning
-	// BUILD.bazel and taplo.toml (issue #15).
+	// BUILD.bazel and taplo.toml.
 	if len(result.Gen) != 3 {
 		t.Fatalf("generated %d rules, want taplo_config plus corpus splits", len(result.Gen))
 	}

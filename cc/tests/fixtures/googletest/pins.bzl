@@ -1,15 +1,7 @@
-"""GoogleTest v1.18.0 plus C++17 floor version pins (issue #479).
+"""GoogleTest v1.18.0 plus C++17 floor version pins.
 
 Contract: `docs/product/support-matrix.md#provisional-default-test-runners`,
 `docs/generation/README.md#language-mapping-qualification`.
-
-Pinned line is GoogleTest v1.18.0 (Bazel Central Registry module
-`googletest` 1.18.0, verified against Bazel 9.2.0 on the seed host). The
-1.18.x branch requires C++17 or newer per the upstream v1.18.0 release
-notes; the qualified toolchain floor is `-std=c++17` on the seed host
-(gcc 13 defaults to gnu++17, the fixture pins the floor explicitly so the
-proof never relies on the compiler default). Living at head (unpinned or
-floating runner) is rejected per the dx pin policy.
 """
 
 # Pinned line: GoogleTest 1.18.0 (BCR module `googletest` 1.18.0).

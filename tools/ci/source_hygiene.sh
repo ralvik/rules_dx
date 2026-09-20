@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Source comment hygiene guard (issue #428).
+# Source comment hygiene guard.
 #
 # `.bzl` module/function docstrings and Rust comments link to owning
 # contracts instead of duplicating them, per `docs/AGENTS.md`
@@ -15,10 +15,10 @@
 # flagship contract links still present.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:source_hygiene`,
-# following //tools/ci:build_hygiene (issue #427).
+# following //tools/ci:build_hygiene.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -26,7 +26,7 @@ dx_cd_workspace
 
 dx_test_init
 
-# Clarified rule owns code comments too (issue #428).
+# Clarified rule owns code comments too.
 if grep -q -F -e 'Link-don'"'"'t-copy applies to code comments' docs/AGENTS.md &&
   grep -q -F -e '.bzl` headers carry one-line purpose' docs/AGENTS.md; then
   ok
@@ -34,7 +34,7 @@ else
   bad "docs/AGENTS.md lost the code-comment rule (want link-don't-copy applies to code comments with .bzl header plus function plus Rust guidance, issue #428)"
 fi
 
-# Module headers stay short (issue #428): no `.bzl` header exceeds 8 lines
+# Module headers stay short: no `.bzl` header exceeds 8 lines
 # (was 42 in generation/codegen.bzl and 97 in rust/rules/defs.bzl).
 if python3 -c "
 import pathlib
@@ -58,7 +58,7 @@ else
   bad ".bzl module header exceeds 8 lines (want one-line purpose plus owning-contract link, issue #428)"
 fi
 
-# Banned duplicated prose stays out (issue #428): the ownership/history
+# Banned duplicated prose stays out: the ownership/history
 # essays moved to owning docs, leaving one-line refs only.
 if ! grep -rn -F -e 'frozen (slice' --include='*.bzl' . 2>/dev/null | grep -q . &&
   ! grep -rn -F -e 'Conflict rule' --include='*.bzl' . 2>/dev/null | grep -q . &&
@@ -75,7 +75,7 @@ else
   bad "banned .bzl duplicated prose reappeared (want no issue #506-freeze/Conflict-rule/Slice-essays/Cargo-workspace/pub-surface/deny-warnings/physical-virtual/- history in *.bzl, issue #428)"
 fi
 
-# Function docs stay trimmed (issue #428): no Args/Returns restating
+# Function docs stay trimmed: no Args/Returns restating
 # types/contracts (was 202 blocks), and no function docstring exceeds
 # 24 lines (was 39 in wrapper forwarders).
 if python3 -c "
@@ -104,8 +104,8 @@ else
   bad "function docs regressed (want no Args/Returns restating plus no func docstring over 24 lines, issue #428)"
 fi
 
-# Rust domain-split/battery provenance stays out (issue #428): the
-# `(issue #236)` facade essays and `(issue #84)` battery tags were
+# Rust domain-split/battery provenance stays out: the
+# `` facade essays and `` battery tags were
 # provenance for self-evident code; frozen/qualified notes stay.
 if ! grep -rn -F -e '(issue #236' --include='*.rs' . 2>/dev/null | grep -q . &&
   ! grep -rn -F -e '(issue #84' --include='*.rs' . 2>/dev/null | grep -q . &&
@@ -117,7 +117,7 @@ else
   bad "Rust self-evident breadcrumbs reappeared (want no (issue #236/(issue #84 in *.rs plus no lives-in-the facade essays in cli/adopt/src/lib.rs, issue #428)"
 fi
 
-# Rust breadcrumb density stays trimmed (issue #428): total issue refs
+# Rust breadcrumb density stays trimmed: total issue refs
 # under 150 (was 403 before the sweep; frozen/qualified notes stay).
 if python3 -c "
 import pathlib, re
@@ -130,7 +130,7 @@ else
   bad "Rust issue breadcrumbs >= 150 (want trimmed self-evident refs with only why-not-obvious notes kept, issue #428)"
 fi
 
-# Non-obvious invariants survive the trim (issue #428 is comment-only):
+# Non-obvious invariants survive the trim (is comment-only):
 # the Bazel provided-twice workaround, the coverage lcov merger, the
 # frozen legacy tokenizer, and the versioned schemas stay.
 if grep -q -F -e 'provided twice' generation/codegen.bzl &&
@@ -145,7 +145,7 @@ else
   bad "trim dropped non-obvious invariants (want provided-twice plus lcov-merger plus frozen-legacy plus schema plus edition, issue #428)"
 fi
 
-# Flagship contract links survive (issue #428): one-line purpose plus
+# Flagship contract links survive: one-line purpose plus
 # owning-contract link, not copied prose.
 if grep -q -F -e 'docs/environments/codegen.md' generation/codegen.bzl &&
   grep -q -F -e 'docs/product/scope.md' generation/codegen.bzl &&

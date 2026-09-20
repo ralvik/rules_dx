@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn completion_vocabulary_matches_supported_shells() {
-        // Issue #235: scripts render from the `Cli` grammar via
+        // Scripts render from the `Cli` grammar via
         // `clap_complete`, so this gate pins the vocabulary reference
         // only — every command stays listed, every shell stays supported.
         for shell in SUPPORTED_SHELLS {
@@ -88,7 +88,7 @@ mod tests {
 
     #[test]
     fn completion_vocabulary_is_the_final_registry() {
-        // Issue #457 plus issue #462: the frozen vocabulary reference
+        // The frozen vocabulary reference
         // pins the final CLI registry exactly (29 commands including
         // `deploy` plus `bump` plus `migrate`; `doctor` plus
         // `configure` stay rejected as unknown).

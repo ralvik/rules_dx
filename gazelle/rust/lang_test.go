@@ -51,7 +51,7 @@ func TestGenerateSourceOnlyCrate(t *testing.T) {
 		"crates/demo/tests/helper/mod.rs": "use ignored_nested_root::Nope;\n",
 	})
 	// Three Rust rules plus the corpus_starlark split owning BUILD.bazel
-	// (issue #15); the synthetic fixture has no BUILD file yet, but the
+	// ; the synthetic fixture has no BUILD file yet, but the
 	// generated BUILD will exist so the split stays for idempotency.
 	if len(result.Gen) != 4 || len(result.Imports) != 4 {
 		t.Fatalf("generated %d rules and %d import sets, want 4 each", len(result.Gen), len(result.Imports))
@@ -88,7 +88,7 @@ func TestGenerateSourceOnlyBinaryUnitTest(t *testing.T) {
 	result := generateFixture(t, map[string]string{
 		"crates/demo/src/main.rs": "#[test]\nfn works() {}\n",
 	})
-	// Binary plus wrapper plus corpus_starlark (issue #15).
+	// Binary plus wrapper plus corpus_starlark.
 	if len(result.Gen) != 3 || result.Gen[0].Kind() != binaryKind || result.Gen[1].AttrString("crate") != ":demo" {
 		t.Errorf("binary unit-test generation = %+v", result.Gen)
 	}
@@ -334,7 +334,7 @@ func TestGenerateCargoAPIAndFailures(t *testing.T) {
 		RegularFiles: []string{"Cargo.toml"},
 	})
 	// Cargo packages gain corpus splits owning BUILD.bazel and Cargo.toml
-	// (issue #15) alongside the lib and its unit-test wrapper.
+	// alongside the lib and its unit-test wrapper.
 	if len(l.errors) != 0 || len(result.Gen) != 4 {
 		t.Fatalf("cargo generation errors=%v result=%+v", l.errors, result)
 	}
@@ -438,7 +438,7 @@ func TestGenerateCargoCustomHarness(t *testing.T) {
 	l := &rustLang{}
 	result := l.GenerateRules(language.GenerateArgs{Config: &config.Config{RepoRoot: root}, Dir: root, RegularFiles: []string{"Cargo.toml"}})
 	// Custom-harness test plus corpus splits (BUILD.bazel self plus
-	// Cargo.toml, issue #15).
+	// Cargo.toml,).
 	if len(l.errors) != 0 || len(result.Gen) != 3 || result.Gen[0].Attr("use_libtest_harness") == nil {
 		t.Errorf("custom harness generation errors=%v result=%+v", l.errors, result.Gen)
 	}

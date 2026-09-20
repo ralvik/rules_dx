@@ -1,4 +1,4 @@
-"""Rust implementation root for the `dx` CLI (issue #76).
+"""Rust implementation root for the `dx` CLI.
 
 No Bazel API lives here: `//dx` (`dx/BUILD.bazel`) is the Starlark-only
 consumer facade, and every `cli/*` library serves that implementation.

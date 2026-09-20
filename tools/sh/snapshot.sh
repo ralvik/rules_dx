@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared snapshot helper (issues #322, #450).
+# Shared snapshot helper.
 #
 # Single-sources the snapshot-testing workflow for shell golden harnesses:
 # byte-identical snapshot comparison with an UPDATE_EXPECT refresh path,
@@ -7,7 +7,7 @@
 # equality becomes an explicit snapshot or a schema contract.
 #
 # Guard maintenance owns shared helpers plus snapshot versus grep policy
-# under issue #450: this file owns golden-byte asserts (UPDATE_EXPECT
+# this file owns golden-byte asserts (UPDATE_EXPECT
 # refresh); `tools/sh/lib.sh` `dx_expect_*` owns fixed-string doc/code
 # contract pins (fail-closed, no refresh). Guards must not reimplement
 # either shape; `//tools/ci:shell_contract` owns the rule.
@@ -39,10 +39,10 @@
 #   snapshot_json_validates <file>
 #     fails unless the file parses as JSON (python3 stdlib only).
 #
-# Bash-only Linux harness (issues #299, #450): sourced by `sh_binary` /
+# Bash-only Linux harness: sourced by `sh_binary` /
 # `sh_test` drivers carrying `target_compatible_with =
 # ["@platforms//os:linux"]`. Bootstrap requires bash by design under issue
-# #450 (`BASH_SOURCE` plus the 5-way runfiles fallback never run under
+# (`BASH_SOURCE` plus the 5-way runfiles fallback never run under
 # POSIX `sh`).
 set -euo pipefail
 

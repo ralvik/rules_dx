@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# C/C++ sha256-integrity plus no-system-package qualification harness (issue #484).
+# C/C++ sha256-integrity plus no-system-package qualification harness.
 #
-# Qualifies the owned gap from closed #304: provisional C/C++ hash authority,
-# closed #304 owner only. #479 pinned the GoogleTest runner, not the hash wiring.
+# Qualifies the owned gap from closed: provisional C/C++ hash authority,
+# closed owner only. pinned the GoogleTest runner, not the hash wiring.
 # - pinned: no ecosystem lockfile; every `http_archive` carries `sha256` or
 #   `integrity`, recorded in `cc/tests/fixtures/hermetic/pins.bzl`; the
 #   committed `MODULE.bazel.lock` carries the BCR `integrity` for the pinned
@@ -24,7 +24,7 @@
 # following //tools/ci:paket_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -47,7 +47,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Pins fixture stays present as the single hash-authority owner (issue #484).
+# Pins fixture stays present as the single hash-authority owner.
 if [[ -f "$pins" && -f "$pins_build" ]]; then
   ok
 else
@@ -180,7 +180,7 @@ else
   bad "generation README lost its #484 qualified C/C++ hash record"
 fi
 
-# Verification matrix owns the qualified seed-only record under #484.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'cc_hermetic_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #484' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:cc_hermetic_qualification' "$verify" &&

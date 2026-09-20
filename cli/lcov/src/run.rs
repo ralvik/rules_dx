@@ -18,8 +18,8 @@ fn print_usage(print: &mut dyn FnMut(&str)) {
     print("usage: check --report <combined.lcov> --inventory <inventory.txt> --sources <sources.txt> [--root <dir>]");
 }
 
-/// `argv` tokenizer (issue #396: reuse pinned `clap`, qualified under
-/// issue #316 frozen legacy contract). Every value option consumes the
+/// `argv` tokenizer (reuse pinned `clap`, qualified under
+/// frozen legacy contract). Every value option consumes the
 /// next token unconditionally (even a `--`-led token) via
 /// `allow_hyphen_values`, matching the legacy hand loop; repeats are
 /// last-wins via `overrides_with`. A dangling value (including `--root`

@@ -39,7 +39,7 @@ fn dir_runnable_expression(pattern: &str) -> String {
 }
 
 /// True for explicit `dx run` target patterns needing Bazel-owned
-/// expansion (multirun #186): labels containing `...` or `*` such as
+/// expansion (multirun): labels containing `...` or `*` such as
 /// `//demo/...` or `//demo:*`. Plain labels (`//demo:frontend`)
 /// pass through without a query; Bazel owns their alias and
 /// executability.
@@ -47,7 +47,7 @@ fn is_run_pattern(label: &str) -> bool {
     label.contains("...") || label.contains('*')
 }
 
-/// Resolves `dx run` scope to exact Bazel targets (multirun #186).
+/// Resolves `dx run` scope to exact Bazel targets (multirun).
 ///
 /// Explicit labels pass through unchanged in order (Bazel owns alias
 /// and executability) without any query. Explicit target patterns
@@ -75,7 +75,7 @@ pub fn resolve_run(
     let mut cache = PackageCache::default();
     let classified = classify_scopes(scopes, workspace, &mut cache)?;
     if classified.files.is_empty() && classified.patterns.is_empty() {
-        // Explicit-label multirun (#186): plain labels pass through in
+        // Explicit-label multirun: plain labels pass through in
         // input order with no query; patterns containing `...` or `*`
         // expand inline through the same Bazel-owned `_binary` kind
         // query as directory scopes. File/directory inference below is

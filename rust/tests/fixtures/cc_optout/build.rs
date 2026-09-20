@@ -1,4 +1,4 @@
-//! Pure-Rust build script for the CC opt-out fixture (issue #471).
+//! Pure-Rust build script for the CC opt-out fixture.
 //!
 //! Emits a cfg without touching any C/C++ tool. Must succeed with
 //! `use_cc_toolchain = 0` (kept opt-out): the script execution action

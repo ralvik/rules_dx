@@ -1,5 +1,5 @@
-"""Single source of truth for the repository Rust edition (issue #82).
+"""Single source of truth for the repository Rust edition.
 """
 
-# Leaf module with no loads so consumer aspects stay crate-free (issue #55).
+# Leaf module with no loads so consumer aspects stay crate-free.
 RUST_EDITION = "2021"

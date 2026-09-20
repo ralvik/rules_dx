@@ -1,4 +1,4 @@
-"""Non-dogfed fixture (issue #508)."""
+"""Non-dogfed fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

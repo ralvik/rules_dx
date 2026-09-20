@@ -1,18 +1,10 @@
-"""LCOV accounting pins (issue #501).
+"""LCOV accounting pins.
 
 Contract: `docs/native-toolchains.md#coverage-generation-and-ide-gaps`,
 `docs/native-toolchains.md#qualification-questions-and-delivery`,
 `docs/testing/README.md#coverage`.
 Fixture: `cc/tests/fixtures/lcov_accounting/` via
 `bazel run //tools/ci:lcov_accounting_qualification`.
-
-Decides the accounting slice of the native baseline: every executable
-first-party line is accounted as covered or validly ignored with fixture
-evidence recorded here and in the owning docs. Unaccounted lines stay
-rejected per the issue alternatives. Collection failures are never
-ignored: missing reports plus incomplete instrumentation plus absent
-eligible sources fail the gate. Backends stay provisional; floors stay
-owned under issue #500, never double-claimed here.
 """
 
 # Accounted shapes: Rust-only plus C/C++-only plus mixed/DLL LCOV.

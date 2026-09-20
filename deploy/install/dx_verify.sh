@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Standalone `dx` install-time publisher-identity verifier (issue #26).
+# Standalone `dx` install-time publisher-identity verifier.
 #
 # Verifies a downloaded standalone `dx` binary against its Sigstore
 # keyless bundle (Fulcio OIDC + Rekor public-good, `cosign sign-blob
@@ -13,8 +13,8 @@
 # signing (archive `source.json` + integrity hash + `presubmit.yml` +
 # PR review); signing covers GitHub Release binaries. SBOM (Syft/CycloneDX)
 # bundles verify through the same cosign path when passed as --sbom.
-# Order per #26: human-run signing workflow (#78) first, then GHCR
-# images (#460, live successor to closed #184, separate workflow, `cosign sign <digest>`).
+# Order per: human-run signing workflow first, then GHCR
+# images (live successor to closed, separate workflow, `cosign sign <digest>`).
 #
 # Usage:
 #   dx_verify.sh --binary PATH --bundle PATH --identity ID --issuer ISSUER \
@@ -33,7 +33,7 @@
 # prove dispatch + refusal policy without Rekor/TUF access.
 set -euo pipefail
 
-# Host-tool contract (issue #318): bash + python3 + POSIX coreutils plus
+# Host-tool contract: bash + python3 + POSIX coreutils plus
 # the publisher-identity verifiers (`cosign`/`gh`) only. Realpath and
 # sha256 go through python3 (no `realpath`, `readlink -f`, `sha256sum`,
 # or `shasum` probes); `cp`/`mkdir`/`basename`/`chmod` are POSIX coreutils.
@@ -143,7 +143,7 @@ cosign_bin="${DX_VERIFY_COSIGN:-cosign}"
 gh_bin="${DX_VERIFY_GH:-gh}"
 
 verified=""
-# Prefer the Sigstore bundle path (signing-first per #26). The bundle
+# Prefer the Sigstore bundle path (signing-first per). The bundle
 # must bind the exact binary bytes: the verifier checks the bundle
 # before anything is installed or executed.
 if command -v "$cosign_bin" >/dev/null 2>&1; then

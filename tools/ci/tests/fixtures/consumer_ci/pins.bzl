@@ -1,25 +1,8 @@
-"""Consumer-CI per-gap pins (issue #509).
+"""Consumer-CI per-gap pins.
 
-Contract: `docs/github-ci.md#scope-and-status`,
-`docs/github-ci.md#check-selection`,
-`docs/github-ci.md#execution`,
-`docs/github-ci.md#events-and-revisions`,
-`docs/github-ci.md#reporting`,
-`docs/github-ci.md#fork-security`,
-`docs/github-ci.md#merge-gating`,
-`docs/github-ci.md#qualification`,
-`docs/testing/github-ci.md#qualification`.
+Contract: `docs/github-ci.md`, `docs/testing/github-ci.md#qualification`.
 Fixture: `tools/ci/tests/fixtures/consumer_ci/` via
 `bazel run //tools/ci:consumer_ci_qualification`.
-
-Decides the consumer-CI slice beyond the reusable-workflow contract
-(closed #312) plus the test-disabled dogfood self-call (closed #408 plus
-Phase 1 #607 coverage superset) plus the
-host matrix (closed #415): each gap below records its as-built static
-contract with seed-only fixture evidence, without claiming live
-multi-host execution, live queue/thread/fork runs, or Supported.
-Platform plus release evidence stays owned gap under issues #298/#325;
-no Supported claim. Backends stay provisional where pinned upstream.
 """
 
 # Platform selection stays explicit with no implicit default.
@@ -122,7 +105,7 @@ THREAD_KEEP_WHILE_PRESENT = "Keep a thread while its finding remains"
 THREAD_BOT_ONLY_DELETE = "delete bot-only threads without replies"
 THREAD_WITH_REPLIES_RESOLVE = "resolve threads with human replies instead"
 
-# Limits stay fixed with deterministic priority plus no fresh allowance (frozen at 50 under #592).
+# Limits stay fixed with deterministic priority plus no fresh allowance (frozen at 50 under).
 LIMIT_FIXED = "one fixed, documented per-PR review-thread limit"
 LIMIT_NO_CONSUMER_SETTING = "without a consumer setting"
 LIMIT_DETERMINISTIC = "deterministic ordering, not job completion order"

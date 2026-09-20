@@ -1,4 +1,4 @@
-"""Apple plus Microsoft acquisition rights fixture (issue #496)."""
+"""Apple plus Microsoft acquisition rights fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

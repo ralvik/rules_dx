@@ -1,7 +1,7 @@
-"""Signing + attestation selection for releases (issue #459, live successor to closed #311/#26 for the signing stack).
+"""Signing + attestation selection for releases (live successor to closed / for the signing stack).
 
 Contract: `docs/deploy/release-runbook.md`.
-Decision (issue #459): keep Sigstore keyless `cosign sign-blob --bundle` + GitHub attestations on the TUF trust root; no stack change.
+Decision: keep Sigstore keyless `cosign sign-blob --bundle` + GitHub attestations on the TUF trust root; no stack change.
 """
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
@@ -13,7 +13,7 @@ load("//deploy/rules:launcher.bzl", "RUNFILES_BASH_INIT", "rlocation_path")
 SIGNING_TRUST_ROOT = "https://tuf-repo-cdn.sigstore.dev"
 SIGNING_ISSUER = "https://token.actions.githubusercontent.com"
 
-# Selected signing-stack pins (issue #459): cosign CLI version fetched
+# Selected signing-stack pins: cosign CLI version fetched
 # checksum-verified in `.github/workflows/ghcr.yml` plus the Sigstore
 # bundle media type produced by `cosign sign-blob --bundle`. Host tools
 # resolve at run time with no new module dependencies; the pins keep the
@@ -71,7 +71,7 @@ def _signing_launcher_impl(ctx):
     ctx.actions.write(
         output = launcher,
         content = """#!/usr/bin/env bash
-# Deploy launcher for `signed_release` (issue #459). Generated. Do not edit.
+# Deploy launcher for `signed_release`. Generated. Do not edit.
 # Resolves inputs via the standard `runfiles.bash` `rlocation`; wrapped
 # as `sh_binary` (see `signed_release`).
 set -euo pipefail

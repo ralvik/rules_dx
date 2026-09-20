@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# CC opt-out linker qualification harness (issue #471).
+# CC opt-out linker qualification harness.
 #
-# The kept `use_cc_toolchain = False` opt-out had no owner after #303
+# The kept `use_cc_toolchain = False` opt-out had no owner after 
 # closed: the native plan recorded a source-derived no-linker failure path
 # from the rules_rs pinned patched toolchain with no standalone linker.
 # This harness pins the decided outcome on the as-built stack (stock
@@ -16,7 +16,7 @@
 #   a cfg, `cc_optout` lib plus `cc_optout_test` under `bazel test //...`,
 #   kept `use_cc_toolchain = 0  # keep` surviving `dx generate --check`).
 # - scope: pure-Rust scripts only. Scripts needing CC still fail clearly
-#   when opted out; bindgen/CXX/exact-target stay owned under #473-#475;
+# when opted out; bindgen/CXX/exact-target stay owned under -;
 #   platform plus consumer plus release evidence stays open; no Supported
 #   claim. Silent kept opt-out stays rejected: the opt-out is explicit,
 #   kept, and fixture-proven here.
@@ -25,7 +25,7 @@
 # following //tools/ci:rustfmt_edition_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -46,14 +46,14 @@ fixture_script="rust/tests/fixtures/cc_optout/build.rs"
 fixture_lib="rust/tests/fixtures/cc_optout/src/lib.rs"
 fixture_manifest="rust/tests/fixtures/cc_optout/Cargo.toml"
 
-# Roadmap owns the delivered record under #471.
+# Roadmap owns the delivered record under.
 if grep -q -F -e 'CC opt-out linker delivered (issue #471' "$roadmap"; then
   ok
 else
   bad "roadmap lost its CC opt-out delivered record under #471"
 fi
 
-# Verification matrix owns the qualified seed-only record under #471.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'cc_optout_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #471' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:cc_optout_qualification' "$verify"; then
@@ -114,7 +114,7 @@ else
   bad "cc_optout build.rs lost its pure-Rust stamp (want rustc-cfg without cc::)"
 fi
 
-# Generation contract owns the opt-out failure-path decision under #471.
+# Generation contract owns the opt-out failure-path decision under.
 if grep -q -F -e 'issue #471' "$gen_rust" &&
   grep -q -F -e 'script execution action' "$gen_rust" &&
   grep -q -F -e 'no_cc' "$gen_rust"; then
@@ -131,7 +131,7 @@ else
   bad "generation README lost its #471 CC opt-out pinned record"
 fi
 
-# Native plan owns the #471 qualification (failure path closed, corpus cites fixture).
+# Native plan owns the qualification (failure path closed, corpus cites fixture).
 if grep -q -F -e '#471' "$native" &&
   grep -q -F -e 'Can the kept CC opt-out execute successfully?' "$native" &&
   grep -q -F -e 'cc_optout' "$native"; then
@@ -140,7 +140,7 @@ else
   bad "native-toolchains lost its #471 opt-out qualification with cc_optout fixture"
 fi
 
-# Support matrix keeps the CC opt-out line owned under #471 with no Supported claim.
+# Support matrix keeps the CC opt-out line owned under with no Supported claim.
 if grep -q -F -e 'kept CC opt-out linker' "$matrix" &&
   grep -q -F -e '#471' "$matrix" &&
   ! grep -q -E -e '^\| .* \| Supported' "$matrix"; then

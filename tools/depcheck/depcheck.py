@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Hermetic lockfile-consistency and declared-dependency usage checker.
 
-Issue #22 (required core plus admitted foundations; remaining opens under issue #510):
+(required core plus admitted foundations; remaining opens):
 separate non-mutating Bazel-owned checks per language.
 Offline, no network, no registry queries, no manifest/lock writes.
 Only reads declared inputs; missing inputs fail actionably (exit 2).
@@ -17,7 +17,7 @@ Ecosystems (required core):
            (prod), devDependencies (dev), optionalDependencies
            (optional/platform). Covers JavaScript and TypeScript sources.
 
-Ecosystems (admitted, issue #22):
+Ecosystems (admitted,):
   go     - go.mod + go.sum, categories: require (prod) plus
            `// depcheck:test` marker (dev) for fixture scope;
            `// depcheck:optional` / `// depcheck:platform` markers.

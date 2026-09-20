@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Examples laziness audit (issue #85, slice 2): managed-acquisition and
+# Examples laziness audit (slice 2): managed-acquisition and
 # unused-foundation zero-work, static half verifiable on a clean tree.
 #
 # The consumer contract (docs/tools/tool-acquisition.md) forbids ecosystem
@@ -8,7 +8,7 @@
 # (docs/testing/tools.md) requires unused foundations to contribute zero
 # targets/actions. Runtime attribution (aquery action-command proof over
 # adopt-* consumers) closes the proof in examples_laziness_runtime.sh;
-# remote/empty-cache attribution stays owned by #298/#507, not claimed here.
+# remote/empty-cache attribution stays owned by /, not claimed here.
 #
 # This harness machine-checks the static half:
 #  - no prohibited installer command appears in tool-implementation code
@@ -21,7 +21,7 @@
 # following //tools/ci:examples_readme.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -54,7 +54,7 @@ dx_test_init
 # `pnpm update`, `Update-Script`, `Save-Script`, `bundle exec`,
 # `bundle pristine`) are
 # covered as the contract's "or equivalent installer" clause per issue
-# #85 and the laziness matrix (pip, uv, npm, pnpm, Cargo, Maven, NuGet,
+# and the laziness matrix (pip, uv, npm, pnpm, Cargo, Maven, NuGet,
 # Bundler, PowerShell Gallery).
 hits="$(grep -rn -F -e 'pip install' -e 'npm install' -e 'cargo install' -e 'dotnet tool install' -e 'pnpm install' -e 'pnpm add' -e 'uv pip install' -e 'go install' -e 'dotnet add' -e 'bundle install' -e 'nuget install' -e 'Install-Module' -e 'mvn install' -e 'uv add' -e 'cargo add' -e 'gem install' -e 'dotnet restore' -e 'nuget restore' -e 'npm ci' -e 'yarn install' -e 'yarn add' -e 'pipx install' -e 'go get' -e 'dotnet tool restore' -e 'poetry install' -e 'poetry add' -e 'pipenv install' -e 'bun install' -e 'Install-Script' -e 'pip3 install' -e 'uv tool install' -e 'npm add' -e 'bun add' -e 'bundle add' -e 'Install-Package' -e 'pipenv sync' -e 'poetry sync' -e 'uv sync' -e 'uv pip sync' -e 'dotnet tool update' -e 'Install-PSResource' -e 'pnpm dlx' -e 'npx' -e 'cargo update' -e 'npm update' -e 'uv lock' -e 'poetry lock' -e 'pipenv lock' -e 'poetry update' -e 'uv pip compile' -e 'pip compile' -e 'bundle update' -e 'gem update' -e 'pipenv update' -e 'poetry export' -e 'yarn upgrade' -e 'pnpm upgrade' -e 'bun update' -e 'uv export' -e 'yarn dlx' -e 'bunx' -e 'uvx' -e 'go mod download' -e 'cargo fetch' -e 'Update-Module' -e 'pip download' -e 'npm exec' -e 'yarn exec' -e 'pnpm exec' -e 'bun x' -e 'cargo binstall' -e 'mvnw install' -e 'bundler install' -e 'Save-Module' -e 'go mod tidy' -e 'bundle lock' -e 'pip wheel' -e 'cargo upgrade' -e 'pnpm update' -e 'Update-Script' -e 'Save-Script' -e 'bundle exec' -e 'bundle pristine' --include='*.bzl' --include='*.py' --include='*.rs' --include='*.sh' --include='*.js' --include='*.ts' quality/ tools/ rust/ python/ javascript/ typescript/ go/ java/ kotlin/ scala/ csharp/ fsharp/ cc/ dx/ cli/ 2>/dev/null | grep -v -F -e 'tools/ci/examples_laziness.sh' | grep -v -F -e 'tools/ci/examples_laziness_runtime.sh' | grep -v -F -e 'tools/ci/ghcr_hygiene.sh' || true)"
 if [[ -z "$hits" ]]; then

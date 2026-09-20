@@ -1,4 +1,4 @@
-"""Seed F# xUnit fixture (issue #477): fsharp_test over pinned xunit.v3 4.0.0."""
+"""Seed F# xUnit fixture: fsharp_test over pinned xunit.v3 4.0.0."""
 
 load("//fsharp/rules:defs.bzl", "fsharp_library", "fsharp_test")
 load("//quality:fixtures.bzl", "real_source_target")
@@ -20,7 +20,7 @@ fsharp_library(
 # MSBuild output because rules_dotnet compiles with fsc). F# compile order
 # matters: the entry point sorts last. Deps name the pinned Paket hub labels
 # directly: xunit.v3 4.0.0 plus xunit.analyzers 2.0.0 with the MTP runner
-# closure. Unpinned runner: rejected per #477.
+# closure. Unpinned runner: rejected per.
 fsharp_test(
     name = "greeter_test",
     srcs = [

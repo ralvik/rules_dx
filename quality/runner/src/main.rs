@@ -18,7 +18,7 @@
 //! to the action-local file holding its bytes. Each `--sibling` maps one
 //! unclassified link-resolution file (Markdown `--sibling` inputs): sibling
 //! bytes are never linted and never enter snapshots. Each `--resolve` maps
-//! one resolution-only file (ty dep sources, #408): resolve bytes are
+//! one resolution-only file (ty dep sources,): resolve bytes are
 //! staged for import resolution, never checked, and never enter findings
 //! or snapshots. Without `--real` the
 //! synthetic pipeline runs. With `--real` the real backend runs
@@ -28,13 +28,13 @@
 //! `--tool-edition` (rustfmt only: the aspect passes the `CrateInfo`
 //! edition, `RUST_EDITION` for provider-less targets; the runner itself
 //! never guesses), and extra hermetic env entries arrive
-//! via `--tool-env`. Delegated tools (Clippy, #47) take no binary:
+//! via `--tool-env`. Delegated tools (Clippy,) take no binary:
 //! each `--upstream-diagnostics` maps one authoritative upstream
 //! diagnostics file the backend parses without spawning. Scratch trees
 //! default under `TMPDIR`. Failures exit
 //! nonzero with a message on stderr and write no output.
 
-// Issue #591 (extends #238 rollout beyond cli/*): infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -155,7 +155,7 @@ fn main() {
     }
 }
 
-/// `argv` tokenizer (qualified under issue #316: frozen legacy contract).
+/// `argv` tokenizer (frozen legacy contract).
 /// Repeatable options append in argument order (stages
 /// run in that order); scalars keep last-wins repeats; every value option
 /// consumes the next token unconditionally (even a `--`-led token), matching

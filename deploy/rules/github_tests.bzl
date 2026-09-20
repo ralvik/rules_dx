@@ -1,4 +1,4 @@
-"""Unit and analysis tests for the GitHub Release publisher (issue #182).
+"""Unit and analysis tests for the GitHub Release publisher.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# JVM quality defaults qualification harness (issue #485).
+# JVM quality defaults qualification harness.
 #
 # Qualifies the provisional JVM format plus lint defaults against the
-# native-configuration contract with no hidden presets. Issue #416 covers
+# native-configuration contract with no hidden presets. covers
 # adapters (plus digests), not versions: this harness owns versions plus
 # rule-sets.
 # - pinned: google-java-format 1.35.0, Checkstyle 14.1.0, PMD 7.27.0,
@@ -10,7 +10,7 @@
 #   2.50.0 in `java/tests/fixtures/jvm_quality/pins.bzl` (v1.36.x plus v0.64
 #   head plus 2.0.0 alphas rejected; Error Prone follows the qualified JDK
 #   baseline); complete-artifact plus shared-JDK identities recorded, digests
-#   stay owned under issue #416.
+# stay owned.
 # - rule-sets: native-configuration sole policy, no hidden presets. Without
 #   an applicable checked-in native config the pinned tool uses upstream
 #   built-in defaults; with a config it interprets natively; adapters add
@@ -22,14 +22,14 @@
 # - fixtures: `java/tests/fixtures/jvm_quality/` pins plus BUILD; no JVM
 #   native-config preset, no adapter claim, no curated defaults, no matrix
 #   cells; java/kotlin hello fixtures stay green.
-# - open owned gaps: digests plus adapters under #416, platform plus consumer
+# - open owned gaps: digests plus adapters under, platform plus consumer
 #   plus release evidence, no `Supported` claim. Compatibility is defaults only.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:jvm_quality_qualification`,
 # following //tools/ci:cc_hermetic_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -53,7 +53,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture pair plus pins stay present (issue #485).
+# Fixture pair plus pins stay present.
 if [[ -f "$pins" && -f "$pins_build" ]]; then
   ok
 else
@@ -121,7 +121,7 @@ fi
 
 # No false adapter claim for the JVM cohort: none of the cohort tool IDs
 # appear in REAL_ADAPTERS. Classification exists; adapter claim does not
-# (owned under issue #416).
+# (owned).
 jvm_claim=""
 for tool in google-java-format checkstyle pmd spotbugs ktfmt ktlint detekt error-prone error_prone; do
   if grep -q -F -e "\"$tool\":" "$adapters"; then
@@ -136,7 +136,7 @@ fi
 
 # Classification-only today: java/kotlin families carry no curated defaults,
 # no runner-matrix cells (claims land only with green adapter evidence
-# under issue #416).
+#
 jvm_curated=""
 for family in '"java": {' '"kotlin": {'; do
   if grep -q -F -e "$family" "$curated"; then
@@ -152,7 +152,7 @@ else
 fi
 
 # Support matrix keeps the qualified JVM versions plus rule-sets with
-# fixtures and harness (issue #485); digests plus adapters stay under #416.
+# fixtures and harness; digests plus adapters stay under.
 if grep -q -F -e 'qualified seed-only under issue #485' "$support" &&
   grep -q -F -e 'jvm_quality_qualification' "$support" &&
   grep -q -F -e 'java/tests/fixtures/jvm_quality/pins.bzl' "$support" &&
@@ -174,8 +174,8 @@ else
 fi
 
 # Tool acquisition keeps the decided shared-JDK route with no Maven
-# reconstruction and no false claim; versions qualified under #485, digests
-# plus adapters stay pending under #416.
+# reconstruction and no false claim; versions qualified under, digests
+# plus adapters stay pending under.
 if grep -q -F -e 'Decided route: google-java-format, Checkstyle,' "$acquisition" &&
   grep -q -F -e 'sharing the one managed JDK cohort runtime' "$acquisition" &&
   grep -q -F -e 'no adapter claims `java` or `kotlin` yet' "$acquisition" &&
@@ -199,7 +199,7 @@ else
 fi
 
 # Tool integrations keep the JVM adapter-input notes with Error Prone open
-# work plus #485 pinned versions (adapters still open under #416).
+# work plus pinned versions (adapters still open under).
 if grep -q -F -e 'JVM cohort' "$integrations" &&
   grep -q -F -e 'no adapter claims `java` or `kotlin` yet' "$integrations" &&
   grep -q -F -e 'Error Prone has no' "$integrations" &&
@@ -218,7 +218,7 @@ else
   bad "native-configuration lost its sole-policy plus no-hidden-preset honesty"
 fi
 
-# Verification matrix owns the qualified seed-only record under #485.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'jvm_quality_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #485' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:jvm_quality_qualification' "$verify" &&

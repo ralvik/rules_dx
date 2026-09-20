@@ -37,7 +37,7 @@ load("@rules_dx//quality:native_config.bzl", "biome_config", "ruff_config", "rus
 # package opts out like the fixtures above.
 # gazelle:exclude tools/coverage
 # tools/depcheck/testdata holds depcheck fixtures with intentionally
-# unresolved imports (issue #22 truth table); Gazelle never owns them.
+# unresolved imports (truth table); Gazelle never owns them.
 # gazelle:exclude tools/depcheck/testdata
 
 load("@aspect_rules_js//js:defs.bzl", "js_library")
@@ -78,7 +78,7 @@ exports_files([
 ])
 
 # Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
-# Preset parity fixture (issues #332, #322, #407); see preset_parity_test.sh.
+# Preset parity fixture; see preset_parity_test.sh.
 sh_test(
     name = "preset_parity_test",
     srcs = ["preset_parity_test.sh"],
@@ -95,7 +95,7 @@ sh_test(
         "//tools/sh:snapshot",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 

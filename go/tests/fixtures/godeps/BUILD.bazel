@@ -1,4 +1,4 @@
-"""Go from_file fixture with an external dep (issue #483).
+"""Go from_file fixture with an external dep.
 
 External imports resolve strictly via the handwritten dep below plus the
 exact resolve mapping (never guessed):

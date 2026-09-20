@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Examples laziness query proof (issue #85, slice 3): unused-foundation
+# Examples laziness query proof (slice 3): unused-foundation
 # zero-work via `bazel query deps` over single-foundation adopt-* examples.
 #
 # The static harness (examples_laziness.sh) proves no installer commands
@@ -9,7 +9,7 @@
 # other foundations' ecosystem repos, so unused foundations contribute
 # no targets/repos to that consumer's build.
 #
-# Covered here (minimum per #85 plus Go + C# + Kotlin + Scala + F# + C++/Java
+# Covered here (minimum per plus Go + C# + Kotlin + Scala + F# + C++/Java
 # follow-ups): Rust, Python, JS/TS, Go, C#, Kotlin, Scala, F# (F# shares
 # rules_dotnet with C#), plus C++ and Java negative-only isolation (none of
 # the seven tracked ecosystem repos leak into their closures; no positive
@@ -24,17 +24,17 @@
 # are intentionally not asserted here; rules_cc likewise spans C++/Kotlin
 # query closures and is not asserted as an ownership marker).
 #
-# Still delivered per #85 together with the runtime action-command proof
+# Still delivered per together with the runtime action-command proof
 # (examples_laziness_runtime.sh): query-closure plus action-graph plus
 # action-command attribution complete the seed-host proof. Remote-cache /
-# empty-cache download attribution stays owned by #507 and platform
-# evidence by #298. This harness is query-closure only.
+# empty-cache download attribution stays owned by and platform
+# evidence by. This harness is query-closure only.
 #
 # Run by CI via `bazel run //tools/ci:examples_laziness_query`,
 # after //tools/ci:examples_laziness.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 

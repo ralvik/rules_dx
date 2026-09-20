@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CI flakiness plus timeout tuning harness (issue #619).
+# CI flakiness plus timeout tuning harness.
 #
 # Machine-checks the as-built flaky-retry plus timeout plus sharding tuning
 # with docs in place, without claiming Supported or platform evidence:
@@ -10,19 +10,19 @@
 #   at 60 minutes, no blanket 90-minute timeouts remain; builds stay 30/60;
 #   long-timeouts-only stays rejected;
 # - sharding proof: per-host/per-stage job sharding stays pinned (seed plus
-#   arm64 plus musl pair plus macos pair plus windows, issue #415) with
+# arm64 plus musl pair plus macos pair plus windows,) with
 #   fast-fail needs chains plus per-job summaries, no `strategy.matrix`;
 #   Bazel intra-job test sharding follows ordinary semantics
 #   (docs/testing/starlark.md);
 # - docs in place: `docs/testing/github-ci.md` workflow hygiene plus
-#   `docs/testing/README.md` battery timeout record carry issue #619;
+# `docs/testing/README.md` battery timeout record carry;
 # - CI only: no product runtime change.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:flakiness_qualification`,
 # following //tools/ci:bootstrap_portability.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issues #319, #323).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -37,7 +37,7 @@ verify="docs/testing/verification-matrix.md"
 build="tools/ci/BUILD.bazel"
 starlark="docs/testing/starlark.md"
 
-# Header records the flakiness plus timeout tuning under issue #619 with the
+# Header records the flakiness plus timeout tuning with the
 # rejected long-timeouts-only alternative.
 if grep -q -F -e 'Flakiness plus timeout tuning (issue #619' "$ci" &&
   grep -q -F -e '--flaky_test_attempts=3 --test_timeout=300' "$ci" &&
@@ -113,7 +113,7 @@ else
   bad "build timeouts drifted (want seed/prove/dogfood 30 plus per-host builds 60, issue #619)"
 fi
 
-# Sharding proof reuses the per-host matrix (issue #415): seed plus arm64
+# Sharding proof reuses the per-host matrix: seed plus arm64
 # plus musl pair plus macos pair plus windows test/coverage jobs stay queued.
 if grep -q -F -e 'test-arm64 (bazel test' "$ci" &&
   grep -q -F -e 'coverage-arm64 (dx coverage gate, arm64 cell)' "$ci" &&
@@ -131,7 +131,7 @@ else
 fi
 
 # No strategy.matrix: per-host/per-stage jobs stay the sharding shape
-# (issue #415 policy, reused under #619).
+# (policy, reused under).
 if ! grep -q -F -e 'strategy:' "$ci" &&
   ! grep -q -F -e 'matrix:' "$ci"; then
   ok
@@ -148,7 +148,7 @@ else
 fi
 
 # Docs in place: workflow hygiene records bounded retries plus tuned
-# timeouts plus per-host sharding under issue #619.
+# timeouts plus per-host sharding.
 if grep -q -F -e 'issue #619' "$test_matrix" &&
   grep -q -F -e '--flaky_test_attempts=3' "$test_matrix" &&
   grep -q -F -e '--test_timeout=300' "$test_matrix" &&
@@ -159,7 +159,7 @@ else
   bad "docs/testing/github-ci.md lost the issue #619 flakiness plus timeout plus sharding record"
 fi
 
-# Testing README keeps the tuned-timeout battery pointer under #619.
+# Testing README keeps the tuned-timeout battery pointer under.
 if grep -q -F -e 'issue #619' "$testing_readme" &&
   grep -q -F -e 'seed test/coverage 45' "$testing_readme"; then
   ok
@@ -167,7 +167,7 @@ else
   bad "docs/testing/README.md lost its issue #619 tuned-timeout record"
 fi
 
-# Verification matrix owns the qualified seed-only record under #619.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'flakiness_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #619' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:flakiness_qualification' "$verify" &&

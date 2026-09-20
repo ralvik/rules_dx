@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""BCR source template generator for `bcr_check` (issue #318).
+"""BCR source template generator for `bcr_check`.
 
 Hermetic replacement for the host `python3` heredoc: emits the
 deterministic BCR `source.json` shape via the managed Python 3.12

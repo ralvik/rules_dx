@@ -1,4 +1,4 @@
-"""Remediation bounds fixture (issue #505)."""
+"""Remediation bounds fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

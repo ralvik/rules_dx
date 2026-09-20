@@ -1,4 +1,4 @@
-"""Deploy rule fixtures and boundary tests (issues #178, #181, #182)."""
+"""Deploy rule fixtures and boundary tests."""
 
 load("@rules_python//python:defs.bzl", "py_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
@@ -27,7 +27,7 @@ exports_files([
     "launcher.bzl",
 ])
 
-# Hermetic build tools for `archive_release` (issue #318): deterministic
+# Hermetic build tools for `archive_release`: deterministic
 # tar.gz + sha256 via the managed Python 3.12 toolchain, no host
 # `tar`/`sha256sum`/`shasum`. Declared as genrule `tools` so action
 # keys cover the tool bytes and the sandbox runs no host PATH lookup.
@@ -88,7 +88,7 @@ deploy_debug_analysis_tests(name = "deploy_debug_analysis")
 
 deploy_app_analysis_tests(name = "deploy_app_analysis")
 
-# First deploy macro (issue #181): credential-free archive releases over
+# First deploy macro: credential-free archive releases over
 # the fixture deploy program. The debug variant pins profile passthrough.
 archive_release(
     name = "release_demo",
@@ -122,7 +122,7 @@ sh_test(
         ":release_demo_checksum",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     # POSIX deploy fixtures (:deploy_program, :deploy_app) stay portable.
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -140,7 +140,7 @@ sh_test(
         ":release_demo_debug_checksum",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -163,7 +163,7 @@ test_suite(
     ],
 )
 
-# Second deploy macro (issue #182): draft-only GitHub Releases over the
+# Second deploy macro: draft-only GitHub Releases over the
 # archive fixtures, proving macro composition (archive outputs become
 # release assets). The debug variant pins profile passthrough. Draft
 # verification runs with GH_RELEASE_DRY_RUN=1: no network, no mutation.
@@ -203,7 +203,7 @@ sh_test(
     ],
     data = [":github_demo_program"],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 

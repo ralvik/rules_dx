@@ -1,4 +1,4 @@
-//! Normalized codegen plan collection for the `dx` CLI (issue #506 WP1 slice 4).
+//! Normalized codegen plan collection for the `dx` CLI.
 //!
 //! Contract: `docs/environments/codegen.md` (provider contract, private
 //! `dx_codegen_plans` output group, reserved shard suffix) and
@@ -27,7 +27,7 @@
 //! resolves the merged plan to deterministic mirror leaves
 //! (`logical_path` to full BEP artifact path) for setup to commit.
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -41,12 +41,12 @@ use dx_roots::{build_argv, invocation_targets, repository_plan, RepositoryRootPl
 use serde::Serialize;
 
 /// Private output group carrying collected shards plus every generated
-/// artifact referenced by them. Frozen under issue #506; matches
+/// artifact referenced by them. Frozen; matches
 /// `DX_CODEGEN_PLAN_OUTPUT_GROUP` in `//generation:codegen.bzl`.
 pub const OUTPUT_GROUP: &str = "dx_codegen_plans";
 
 /// Reserved controlled filename suffix recognizing shards among
-/// BEP-reported files. Frozen under issue #506; matches
+/// BEP-reported files. Frozen; matches
 /// `DX_CODEGEN_SHARD_SUFFIX` in `//generation:codegen.bzl`.
 pub const SHARD_SUFFIX: &str = ".dxcodegen.pb";
 
@@ -110,7 +110,7 @@ pub fn resolve_scope(targets: &[String]) -> Result<CodegenScope, ScopeError> {
 }
 
 /// Bazel labels to build for `scope`: the canonical repository target or
-/// the one exact label. The repository arm composes the WP4 (issue #506)
+/// the one exact label. The repository arm composes the WP4
 /// [`dx_roots::repository_plan`] (still the `//...` baseline) behind the
 /// `//dx:codegen` selection identity; exact scopes bypass root selection.
 pub fn scope_targets(scope: &CodegenScope) -> Vec<String> {

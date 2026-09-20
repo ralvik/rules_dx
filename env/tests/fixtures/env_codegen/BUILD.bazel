@@ -1,4 +1,4 @@
-"""Env plus codegen fixture (issue #506)."""
+"""Env plus codegen fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

@@ -11,7 +11,7 @@ package(default_visibility = [
     "//quality:__subpackages__",
 ])
 
-# Leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# Leaf-crate pattern via `dx_rust_crate`: emits
 # `dx_output` + `dx_output_test` + fmt/clippy tests +
 # `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
 dx_rust_crate(

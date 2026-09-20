@@ -13,7 +13,7 @@
 //! workspace discovery, staged-input location, and exit codes. Everything
 //! here is unit-tested.
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -309,7 +309,7 @@ fn validate_host_name(bin_name: &str, name: &str) -> Result<(), Error> {
 /// Opens (creating) the commit-lock file and contends for an exclusive
 /// flock until `timeout`. Only contention retries; any other flock failure
 /// aborts immediately so platform errors are never misreported as busy.
-/// The contention loop is owned by `dx_atomic_fs::lock_exclusive` (#74);
+/// The contention loop is owned by `dx_atomic_fs::lock_exclusive`;
 /// this function owns only the lock-file open.
 pub fn acquire_lock(dx_dir: &Path, timeout: Duration) -> Result<File, Error> {
     let path = dx_dir.join(LOCK_FILE_NAME);
@@ -1059,7 +1059,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn stale_prev_undeletable_reports_install() {
-        // Issue #320 fail-fast policy: POSIX read-only bits (0555) have
+        // Fail-fast policy: POSIX read-only bits (0555) have
         // no Windows ACL equivalent; the generic `Install` error path is
         // proven portably elsewhere, so this permission fixture stays
         // unix-gated.
@@ -1092,7 +1092,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn stale_stage_undeletable_reports_install() {
-        // Issue #320 fail-fast policy: POSIX read-only bits (0555) have
+        // Fail-fast policy: POSIX read-only bits (0555) have
         // no Windows ACL equivalent; see the stale-prev test above.
         use std::os::unix::fs::PermissionsExt;
         let scratch = test_root("stale-stage-perms");

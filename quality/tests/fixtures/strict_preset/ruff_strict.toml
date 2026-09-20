@@ -1,4 +1,4 @@
-# Strict Ruff preset example (issue #615 opt-in).
+# Strict Ruff preset example (opt-in).
 #
 # Copy into the owning package and rerun generation. Strict superset of
 # the loose selection: E covers E4 plus E7 plus E9, F is retained, and

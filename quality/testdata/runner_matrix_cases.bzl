@@ -1,4 +1,4 @@
-"""Layer-2 matrix cases (#59, snapshot workflow issue #322): every supported language x capability cell.
+"""Layer-2 matrix cases (snapshot workflow): every supported language x capability cell.
 
 Contract: `docs/quality/runner-matrix.md`.
 """
@@ -17,7 +17,7 @@ _RUSTC_TYPE_ERROR = """{"$message_type":"diagnostic","message":"mismatched types
 # Rust cells: rustfmt format over real bytes from the pinned toolchain,
 # Clippy lint and rustc typecheck delegated over recorded upstream
 # diagnostics (the upstream aspect/rule owns the invocation; dx never
-# spawns them, per #47/#48 and the real_aspects.bzl contract).
+# spawns them, per / and the real_aspects.bzl contract).
 _RUST_CASES = [
     {
         "name": "matrix_rust_format_pass",
@@ -70,7 +70,7 @@ replacement matrix/rustfmt_dirty.rs 0 41 "pub fn add(a: i32, b: i32) -> i32 {\\n
         "generated": {
             # 2015-only syntax (`async` as a plain identifier): clean under
             # `--edition 2015`, a syntax error under 2021. Proves the
-            # aspect edition reaches the real toolchain rustfmt (issue #468;
+            # aspect edition reaches the real toolchain rustfmt
             # single-edition rustfmt rejected).
             "matrix/rustfmt_edition_2015.rs": "pub fn edition_gate() -> i32 {\n    let async = 1;\n    async\n}\n",
         },
@@ -95,7 +95,7 @@ replacements 0
         "generated": {
             # Same 2015-only bytes as matrix_rust_format_edition_2015 but
             # checked with the wrong edition: the syntax error finding
-            # proves the edition flag decides parsing (issue #468).
+            # proves the edition flag decides parsing.
             "matrix/rustfmt_edition_mismatch.rs": "pub fn edition_gate() -> i32 {\n    let async = 1;\n    async\n}\n",
         },
         "capability": "format",
@@ -1217,7 +1217,7 @@ replacement matrix/toml_dirty.toml 0 4 "a = 1\\n"
 ]
 
 # Markdown cells: fixture-policy lint defaults (markdown_check link/structure
-# plus strict Dx.Markers Vale per issue #614) with the vale_test.ini closure,
+# plus strict Dx.Markers Vale) with the vale_test.ini closure,
 # over the real clean file, generated broken-link bytes, and the sibling
 # link-resolution pair. Clean files carry no TODO markers so Vale stays
 # clean; the dirty link case fails via markdown_check only.

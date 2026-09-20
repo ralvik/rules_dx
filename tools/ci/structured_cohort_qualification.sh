@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Structured-cohort qualification harness (issue #419).
+# Structured-cohort qualification harness.
 #
 # Qualifies the as-built structured quality-cohort record with fixture
 # evidence and owned gaps, without claiming Supported and without a false
@@ -11,7 +11,7 @@
 #   distribution (Qt-last ordering decided; exact Qt distribution identity,
 #   licensing, and platform artifact qualification remain pending), initial
 #   artifact research rows as observations for digests (versions qualified
-#   seed-only under issue #488), adapter-input notes (buf
+# seed-only), adapter-input notes (buf
 #   `--error-format=json` JSONL as the faithful shape with no SARIF in
 #   1.71.0, `STANDARD` rule selection plus module-root-sensitive
 #   `PACKAGE_DIRECTORY_MATCH` plus `--path` scoping; qmlformat stdout plus
@@ -19,12 +19,12 @@
 #   `.qmllint.ini` plus `//qmllint enable/disable`; whole-file rewrite versus
 #   check-only fix modes with the provisional sandbox-apply-and-diff flow,
 #   never silently dropped), native-config defaults qualified seed-only
-#   under issue #488 (`buf` `STANDARD` as the upstream built-in default lint
+# (`buf` `STANDARD` as the upstream built-in default lint
 #   set, qmlformat/qmllint ini discovery as native interpretation, no
 #   auto-supplied preset), parity-deferred protobuf/qml with owner plus frozen
 #   route, classification-only taxonomy with no curated defaults and no
 #   native-config binding;
-# - open under #419 with honest records: exact artifact digests
+# - open under with honest records: exact artifact digests
 #   plus Qt distribution qualification, parser plus runner-matrix pass/fail
 #   plus fix/format evidence per adapter-backed class, native-config
 #   qualification against the native-config contract, platform plus
@@ -35,7 +35,7 @@
 # following //tools/ci:native_cohort_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -72,7 +72,7 @@ else
 fi
 
 # Parity deferrals own protobuf/qml with owner plus frozen route plus the
-# #419 live-successor record (closed #307 owns nothing here).
+# live-successor record (closed owns nothing here).
 if grep -q -F -e '"protobuf": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"qml": ["ADR 0019"' "$parity" &&
   grep -q -F -e 'checksummed standalone artifact (buf format+lint)' "$parity" &&
@@ -107,7 +107,7 @@ fi
 
 # No hidden structured native-config preset: no cohort binding exists in the
 # typed native-config rules (adapters run pinned upstream defaults until
-# #419 qualifies checked-in policy against the native-config contract; the
+# qualifies checked-in policy against the native-config contract; the
 # provisional buf STANDARD plus qmlformat/qmllint ini suggestions stay review
 # inputs, never supplied configs).
 cohort_config=""
@@ -134,7 +134,7 @@ fi
 
 # Tool acquisition keeps the decided checksummed buf route with no
 # target-compiler context plus execution-platform laziness and no false
-# claim, owned by #419 (live successor to closed #307 for the protobuf class).
+# claim, owned by (live successor to closed for the protobuf class).
 if grep -q -F -e 'Decided route: `buf` takes the checksummed' "$acquisition" &&
   grep -q -F -e 'needs no target compiler context' "$acquisition" &&
   grep -q -F -e 'execution-platform lazy' "$acquisition" &&
@@ -147,7 +147,7 @@ fi
 
 # Tool acquisition keeps the decided Qt-last authoritative-toolchain route for
 # qmlformat/qmllint with distribution identity plus licensing plus platform
-# artifacts pending and no false claim, owned by #419.
+# artifacts pending and no false claim, owned by.
 if grep -q -F -e 'Decided route (Qt last)' "$acquisition" &&
   grep -q -F -e 'qmlformat and qmllint take the authoritative-toolchain route' "$acquisition" &&
   grep -q -F -e 'exact Qt distribution identity, licensing, and platform' "$acquisition" &&
@@ -179,7 +179,7 @@ fi
 # module-root-sensitive scoping recorded not silent, qmlformat stdout plus
 # `-i` with ini settings, qmllint `--json` with ini plus comment scoping,
 # whole-file rewrite versus check-only fix modes, Qt-last ordering,
-# versions qualified under #488 with digests as observations, no adapter claim.
+# versions qualified under with digests as observations, no adapter claim.
 if grep -q -F -e '**Structured cohort (issue #419' "$integrations" &&
   grep -q -F -e 'no adapter claims `protobuf` or `qml` yet' "$integrations" &&
   grep -q -F -e 'no SARIF in 1.71.0' "$integrations" &&
@@ -195,8 +195,8 @@ else
 fi
 
 # Support matrix keeps the structured routes plus qualified native-config
-# defaults (issue #488) plus adapter-input notes plus cohort tracking, all
-# citing #419 for adapters/digests without approving hidden presets or
+# defaults plus adapter-input notes plus cohort tracking, all
+# citing for adapters/digests without approving hidden presets or
 # claiming support.
 if grep -q -F -e 'checksummed native/self-contained artifact route (issue #419' "$support" &&
   grep -q -F -e 'authoritative-toolchain route from the Qt distribution (issue #419' "$support" &&

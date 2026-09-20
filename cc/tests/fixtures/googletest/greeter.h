@@ -1,4 +1,4 @@
-// Seed C++ greeter header; consumer of the qualified GoogleTest v1.18.0 runner (issue #479).
+// Seed C++ greeter header; consumer of the qualified GoogleTest v1.18.0 runner.
 #pragma once
 
 #include <optional>

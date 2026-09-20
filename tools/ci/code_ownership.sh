@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Code ownership audit (issue #12, lane A slice 1): every checked-in code
+# Code ownership audit (lane A slice 1): every checked-in code
 # source must ride its normal Bazel target (not a parallel corpus list),
 # so no production file is silently skipped by `bazel build //...` and
 # `bazel test //...`. Corpus stays for target-less files only (docs,
 # BUILD files, configs); code rides normal targets.
 #
 # This is the code-extension counterpart to the corpus audit
-# (`corpus_audit.sh`, issue #80): corpus_audit proves every
+# (`corpus_audit.sh`,): corpus_audit proves every
 # BUILD/MODULE/*.bzl/*.toml/*.md has a `real_source_target` owner;
 # this harness proves every code source (rs/py/js/ts/jsx/tsx/go/java/
 # kotlin/scala/csharp/fsharp/c/cxx/vue/svelte/astro/mdx) is in
@@ -14,19 +14,19 @@
 # here instead of being silently skipped.
 #
 # Declared generated-file exclusion list (each entry names its
-# generator, per #12): foreign-tree arrival files under
+# generator, per): foreign-tree arrival files under
 # examples/adopt-js-ts/ that the Gazelle JS/TS extensions correctly
 # classify as inert (no targets, see examples/adopt-js-ts/README.md).
 # Framework SFC and sourcemap/typings arrivals stay inert until the
-# framework quality regions land (#8) and TS declaration handling is
-# qualified (#7). If an excluded file gains a target, this harness
+# framework quality regions land and TS declaration handling is
+# qualified. If an excluded file gains a target, this harness
 # fails asking to drop the exclusion (stale exclusions never linger).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:code_ownership`,
 # following //tools/ci:corpus_audit.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -34,7 +34,7 @@ dx_cd_workspace
 
 dx_mkscratch scratch
 
-# Issue #407: nested E2E removed, so no `integration/` carve-out. Every
+# Nested E2E removed, so no `integration/` carve-out. Every
 # checked-in code source must ride a normal `//...` target; the former
 # `.bazelignore` exclusion plus shell-copy staging are deleted.
 
@@ -43,8 +43,8 @@ dx_mkscratch scratch
 # //gazelle/typescript:gazelle emit no targets for these classes
 # (inert by design per examples/adopt-js-ts/README.md); the .js.map
 # bytes are tsc sourcemap arrivals, the .vue file is a framework SFC
-# arrival pending the #8 composition regions, and the .d.ts files are
-# typings arrivals pending qualified TS declaration handling (#7).
+# arrival pending the composition regions, and the.d.ts files are
+# typings arrivals pending qualified TS declaration handling.
 cat >"$scratch/excluded.txt" <<'EOF'
 examples/adopt-js-ts/app/greet.js.map
 examples/adopt-js-ts/app/types.d.ts

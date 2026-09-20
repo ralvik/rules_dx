@@ -90,7 +90,7 @@ rust_prost_library(
 
 env_plan_defs_unit_tests(name = "env_plan_defs_unit")
 
-# Shard-emission and collection fixtures (issue #506 WP2 slice 2): two disjoint
+# Shard-emission and collection fixtures: two disjoint
 # leaf shards chained through `deps` prove transitive aspect collection,
 # while the Rust adapter fixture proves the narrow rust_library edge
 # through the verified crate source bound by its EXEC_PATH suffix.

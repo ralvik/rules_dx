@@ -465,7 +465,7 @@ pub(crate) fn generate_witness(workspace_text: &str, name: &str) -> Harness {
 }
 
 /// Managed-state fixture for the `dx clean` exec tests (issue
-/// #20): commits `pair` through the real `dx_setup` commit path and
+///): commits `pair` through the real `dx_setup` commit path and
 /// materializes both generation directories, returning the setup
 /// record hex. Digest tags mirror the `dx_clean` fixtures (one
 /// lowercase-hex character repeated to 64).

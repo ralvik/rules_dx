@@ -1,4 +1,4 @@
-"""Shared schema-version helpers (#72)."""
+"""Shared schema-version helpers."""
 
 load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_crate")
@@ -11,7 +11,7 @@ package(default_visibility = [
     "//quality:__subpackages__",
 ])
 
-# Leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# Leaf-crate pattern via `dx_rust_crate`: emits
 # `dx_schema` + `dx_schema_test` + fmt/clippy tests +
 # `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
 dx_rust_crate(

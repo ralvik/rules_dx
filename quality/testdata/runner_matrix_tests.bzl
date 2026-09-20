@@ -1,4 +1,4 @@
-"""Layer-2 full-matrix runner tests (#59, snapshot workflow issue #322).
+"""Layer-2 full-matrix runner tests (snapshot workflow).
 """
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
@@ -6,7 +6,7 @@ load("//deploy/rules:launcher.bzl", "RUNFILES_BASH_INIT", "rlocation_path")
 load("//rust/toolchains:bindings.bzl", "rust_toolchain_toolchains", "rust_toolchain_tools")
 
 def _file_ref(ctx, f):
-    """Returns a double-quoted `$(rlocation ...)` ref for one file (issue #317).
+    """Returns a double-quoted `$(rlocation...)` ref for one file.
 
     Uses the standard `runfiles.bash` `rlocation` with the rlocation
     single-quoted via `shell.quote`, wrapped in double quotes so paths
@@ -191,7 +191,7 @@ def _runner_matrix_test_impl(ctx):
         " > " + _var_ref("$ACTUAL") + ' || fail "printer failed"',
     )
 
-    # Schema validation (issue #322): the decoded print_result shape fails
+    # Schema validation: the decoded print_result shape fails
     # first, so tool-message churn surfaces as a contract error, not a silent
     # byte drift. Checks required headers plus stage/initial/terminal/
     # replacement count consistency via python3 stdlib only.
@@ -232,7 +232,7 @@ def _runner_matrix_test_impl(ctx):
         "PYEOF",
     )
     lines.append(
-        # Snapshot assert with UPDATE_EXPECT refresh (issue #322): byte drift
+        # Snapshot assert with UPDATE_EXPECT refresh: byte drift
         # fails with a unified diff; UPDATE_EXPECT=1 stages the fresh actual
         # plus the replacement `expected` block for runner_matrix_cases.bzl.
         "if [[ \"${UPDATE_EXPECT:-0}\" == \"1\" ]]; then\n" +

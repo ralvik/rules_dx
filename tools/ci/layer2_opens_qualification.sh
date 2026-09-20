@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Layer-2 adapter-less plus composition plus depcheck qualification harness (issue #510).
+# Layer-2 adapter-less plus composition plus depcheck qualification harness.
 #
 # Qualifies the as-built open record with fixture evidence pinned in
 # `quality/tests/fixtures/layer2_opens/pins.bzl` (plus
@@ -7,8 +7,8 @@
 # - Layer-2 adapter-less cells stay open for Go plus Java plus Kotlin plus
 #   Scala plus C# plus F# plus C/C++ (no adapter claim, no runner-matrix
 #   cells, parity deferred with owner plus frozen route; defaults qualified
-#   under #485-#487, digests plus adapters stay owned under #416-#418;
-#   Closed #303 only for required core).
+# under -, digests plus adapters stay owned under -;
+# Closed only for required core).
 # - Framework regions stay classification-only for Vue plus Svelte plus Astro
 #   plus MDX (frozen taxonomy plus quality-region mappings, no adapter claim,
 #   no matrix cells, no curated defaults; Prettier/ESLint plugin closure
@@ -19,7 +19,7 @@
 #   work for unused adapters).
 # - Framework-composition depcheck stays with the JS/TS pnpm route (no
 #   separate framework fixtures; required-core plus admitted fixtures
-#   delivered in `tools/depcheck/` under #22).
+# delivered in `tools/depcheck/` under).
 # - Adapter-less as pass rejected per the issue alternatives; test plus
 #   generation only per compatibility. Platform plus consumer plus release
 #   evidence stays owned gap; no Supported claim. Backends stay provisional.
@@ -28,7 +28,7 @@
 # following //tools/ci:remediation_bounds_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -52,7 +52,7 @@ depcheck_build="tools/depcheck/BUILD.bazel"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 
-# Fixture triple stays present (issue #510).
+# Fixture triple stays present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$expected" ]]; then
   ok
 else
@@ -98,7 +98,7 @@ fi
 
 # No false adapter claim for the adapter-less cohorts: none of the cohort
 # tool IDs appear in REAL_ADAPTERS. Classification exists; adapter claim
-# does not (digests plus adapters stay owned under #416-#418).
+# does not (digests plus adapters stay owned under -).
 opens_claim=""
 for tool in gofumpt staticcheck govet errcheck clang-format clang-tidy cppcheck google-java-format checkstyle pmd spotbugs ktfmt ktlint detekt scalafmt scalafix csharpier fantomas; do
   if grep -q -F -e "\"$tool\":" "$adapters"; then
@@ -202,7 +202,7 @@ else
 fi
 
 # Depcheck fixtures stay delivered for required-core plus admitted langs
-# (issue #22); framework-composition depcheck stays with the JS/TS pnpm
+# ; framework-composition depcheck stays with the JS/TS pnpm
 # route with no separate framework fixtures.
 depcheck_missing=""
 for lang in rust python js ts go java kotlin scala csharp fsharp cc; do
@@ -234,7 +234,7 @@ else
   bad "layer2_opens.expected lost its open-cells plus rejected plus route record under issue #510"
 fi
 
-# Support matrix owns the qualified seed-only record under #510.
+# Support matrix owns the qualified seed-only record under.
 if grep -q -F -e 'qualified seed-only under issue #510' "$support" &&
   grep -q -F -e 'quality/tests/fixtures/layer2_opens/pins.bzl' "$support" &&
   grep -q -F -e 'layer2_opens_qualification' "$support" &&
@@ -244,7 +244,7 @@ else
   bad "support-matrix lost its #510 qualified seed-only record with fixtures plus harness"
 fi
 
-# Framework adapters plus quality-testing docs own their #510 records.
+# Framework adapters plus quality-testing docs own their records.
 if grep -q -F -e 'qualified seed-only under issue #510' "$framework" &&
   grep -q -F -e 'layer2_opens_qualification' "$framework" &&
   grep -q -F -e 'examples/mixed/hello/' "$framework" &&
@@ -255,7 +255,7 @@ else
   bad "framework-adapters or quality-testing lost its #510 qualified plus route record"
 fi
 
-# Verification matrix owns the qualified seed-only record under #510.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'layer2_opens_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under issue #510' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:layer2_opens_qualification' "$verify" &&

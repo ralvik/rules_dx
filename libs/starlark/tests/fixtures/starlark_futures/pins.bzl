@@ -1,18 +1,9 @@
-"""Starlark testing futures pins (issue #588).
+"""Starlark testing futures pins.
 
 Contract: `docs/testing/starlark.md#future-not-implemented`,
 `docs/decisions/0009-starlark-testing.md`.
 Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via
 `bazel run //tools/ci:starlark_futures_qualification`.
-
-Decides the nine futures listed in `docs/testing/starlark.md` per ADR
-0009 provisional-pending-concrete-use-cases rule: per-check filtering
-plus per-function targets plus Rust orchestration stay wont-fix on the
-current contract, while richer matchers plus aspect plus toolchain plus
-configuration (including transitions) plus output-group plus action
-(including registered-action) subjects stay deferred pending a concrete
-use case with its own successor issue and fixtures. Test framework
-only; no Bazel semantics change. Seed only: no Supported claim.
 """
 
 # Per-future dispositions (two wont-fix filtering/targets, one wont-fix

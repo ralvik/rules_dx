@@ -1,4 +1,4 @@
-"""GoogleTest v1.18.0 plus C++17 floor runner fixture (issue #479).
+"""GoogleTest v1.18.0 plus C++17 floor runner fixture.
 
 Maps the qualified runner: default `cc_test` wrapper stays the plain
 assert seed (`//cc/tests/fixtures/hello:hello_test`); the GoogleTest

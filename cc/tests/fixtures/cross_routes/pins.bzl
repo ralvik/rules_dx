@@ -1,25 +1,10 @@
-"""Cross routes pins (issue #504).
+"""Cross routes pins.
 
 Contract: `docs/native-toolchains.md#profiles-and-cross-builds`,
 `docs/native-toolchains.md#qualification-questions-and-delivery`,
 `docs/decisions/0014-tested-platform-release-stack.md#decision`.
 Fixture: `cc/tests/fixtures/cross_routes/` via
 `bazel run //tools/ci:cross_routes_qualification`.
-
-Decides the cross-routes slice of the native baseline: Linux cross is
-the first priority, not a mandate to build every target from every
-host, with fixture evidence recorded here and in the owning docs.
-Native rows stay qualified under issues #410-#414; Linux same-arch
-musl profile closures stay qualified under issue #411; Linux
-cross-arch rows stay in the first cohort with separate native target
-execution plus separate cache and remote evidence required before any
-claim. Optional macOS expansion and excluded routes are pinned below.
-All-cross mandate stays rejected per the issue alternatives. Native
-only: glibc plus static musl on Linux x86_64/arm64; no
-Windows/macOS cross-host claim. Backends stay provisional; floors
-qualified seed-only under issue #500, coverage qualified seed-only
-under issue #501, corpus qualified seed-only under issue #499, never
-double-claimed here.
 """
 
 # First Linux cross-build cohort: execution platforms plus targets.
@@ -38,7 +23,7 @@ FIRST_COHORT_TARGETS = [
 FIRST_COHORT_NOTE = "First Linux cross-build cohort"
 ALL_CROSS_NOTE = "not a mandate to build every target from every host"
 
-# Linux same-arch musl closures qualified under issue #411: Rust musl
+# Linux same-arch musl closures Rust musl
 # std via extra_target_triples with exec-platform tools for build
 # scripts and proc macros and target musl libs for apps; CI
 # cross-builds from Linux runners with per-profile cache scopes plus
@@ -48,7 +33,7 @@ MUSL_CI_RUNNER_X86_64 = "ubuntu-latest with bazel-musl-x86_64- scope"
 MUSL_CI_RUNNER_ARM64 = "ubuntu-24.04-arm with bazel-musl-arm64- scope"
 MUSL_EXEC_SEPARATION = "exec-platform tools for build scripts and proc macros with target musl libs for apps"
 
-# Native rows qualified under issues #410-#414, each with its CI
+# Native rows qualified, each with its CI
 # runner plus cache scope on the pinned upstream toolchains.
 NATIVE_ROWS = [
     "Native x86_64 glibc qualified under issue #410 on ubuntu-latest seed",

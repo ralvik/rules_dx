@@ -1,4 +1,4 @@
-// Prebuilt interop fixture library; consumer of cc_library (issue #498).
+// Prebuilt interop fixture library; consumer of cc_library.
 #include "cc/tests/fixtures/prebuilt_interop/interop.h"
 
 #include <memory>

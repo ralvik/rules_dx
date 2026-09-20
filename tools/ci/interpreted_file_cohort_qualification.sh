@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Interpreted/file-family-cohort qualification harness (issue #420).
+# Interpreted/file-family-cohort qualification harness.
 #
 # Qualifies the as-built interpreted/file-family quality-cohort record with
 # fixture evidence and owned gaps, without claiming Supported and without a
@@ -14,23 +14,23 @@
 #   (cue/jsonnetfmt/pkl/modfmt/terraform/yamlfmt/keep-sorted as checksummed
 #   standalone artifacts, djlint/yamllint as private wheel-only Python graph
 #   members, Stylelint plus prettier-plugin-gherkin/sql/xml as private
-#   pure-JavaScript graph members; `protobuf`/`qml` stay owned by issue #419
+# pure-JavaScript graph members; `protobuf`/`qml` stay owned
 #   and are cross-linked here, never double-claimed; versions plus rule-sets
-#   qualified seed-only under issue #489), initial artifact research rows as
-#   observations for digests (versions qualified seed-only under issue #489),
+# qualified seed-only), initial artifact research rows as
+# observations for digests (versions qualified seed-only),
 #   adapter-input notes (RuboCop `--format json` versus text-parse,
 #   `standardrb --fix`,
 #   PSScriptAnalyzer console versus library API, whole-file rewrite versus
 #   check-only fix modes with the provisional sandbox-apply-and-diff flow,
 #   Buildifier/Taplo/Vale probes staying provisional), native-config defaults
-#   qualified seed-only under issue #489 (whole-file rewrite versus check-only
+# qualified seed-only (whole-file rewrite versus check-only
 #   per tool with no auto-supplied preset, suffix inference rejected),
 #   parity-deferred
 #   ruby/powershell/cue/jsonnet/pkl/css/html_template/gherkin/sql/xml/
 #   go_module/terraform/yaml/text with owner plus frozen route,
 #   classification-only taxonomy with no curated defaults and no
 #   native-config binding;
-# - open under #420 with honest records: exact bundle contents/lock inputs
+# - open under with honest records: exact bundle contents/lock inputs
 #   plus module/runtime digests plus parser plus runner-matrix pass/fail
 #   plus fix/format evidence per adapter-backed class, native-config
 #   qualification against the native-config contract, platform plus
@@ -41,7 +41,7 @@
 # following //tools/ci:structured_cohort_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -67,7 +67,7 @@ aspects="quality/real_aspects.bzl"
 # REAL_CLASS_TO_FAMILY; adapter claim does not. (The `"tool": {` shape
 # matches adapter entries only: class==tool taxonomy rows like
 # `"cue": "cue"` carry a family string, never a capability map, so they
-# cannot match here. `protobuf`/`qml` tools stay owned by issue #419 and
+# cannot match here. `protobuf`/`qml` tools stay owned and
 # are never claimed here either.)
 cohort_claim=""
 for tool in rubocop standardrb standard psscriptanalyzer cue jsonnetfmt pkl djlint stylelint modfmt terraform yamlfmt yamllint keep-sorted keep_sorted buf qmlformat qmllint; do
@@ -82,8 +82,8 @@ else
 fi
 
 # Parity deferrals own the cohort classes with owner plus frozen route plus
-# the #420 live-successor record (closed #307 owns nothing here; `protobuf`/
-# `qml` stay owned by issue #419 and are not re-owned here).
+# the live-successor record (closed owns nothing here; `protobuf`/
+# `qml` stay owned and are not re-owned here).
 cohort_deferred=""
 for cls in ruby powershell cue jsonnet pkl css html_template gherkin sql xml go_module terraform yaml text; do
   grep -q -F -e "\"$cls\":" "$parity" || cohort_deferred="$cohort_deferred $cls:missing"
@@ -125,7 +125,7 @@ fi
 
 # No hidden cohort native-config preset: no cohort binding exists in the
 # typed native-config rules (adapters run pinned upstream defaults until
-# #420 qualifies checked-in policy against the native-config contract; the
+# qualifies checked-in policy against the native-config contract; the
 # provisional RuboCop/StandardRB plus PSScriptAnalyzer plus file-family
 # suggestions stay review inputs, never supplied configs).
 cohort_config=""
@@ -158,8 +158,8 @@ fi
 # Tool acquisition keeps the decided release-assembled Ruby closure route
 # (exceptional bundle within the approved packaging-effort boundary) with
 # bundle contents plus lock inputs pending, the bundle-vs-adapter split
-# recorded, and no false claim, owned by #420 (live successor to closed
-# #307 for the ruby class).
+# recorded, and no false claim, owned by (live successor to closed
+# for the ruby class).
 if grep -q -F -e 'Decided route: RuboCop and StandardRB take the' "$acquisition" &&
   grep -q -F -e 'release-assembled Ruby closure route (the exceptional bundle' "$acquisition" &&
   grep -q -F -e 'Bundle contents, lock inputs, and' "$acquisition" &&
@@ -173,7 +173,7 @@ fi
 
 # Tool acquisition keeps the decided exact-module plus portable-pwsh route
 # for PSScriptAnalyzer with the console-parse versus library-API decision
-# open and no false claim, owned by #420.
+# open and no false claim, owned by.
 if grep -q -F -e 'Decided route: PSScriptAnalyzer takes the' "$acquisition" &&
   grep -q -F -e 'exact-module plus portable-PowerShell-runtime route' "$acquisition" &&
   grep -q -F -e 'console-parse versus library-API binding choice' "$acquisition" &&
@@ -186,8 +186,8 @@ fi
 
 # Tool acquisition keeps initial artifact research rows for the cohort with
 # byte-identity risk explicit; file-family versions qualified seed-only under
-# issue #489 with digests as observations, Ruby/PowerShell bundle/module
-# identities stay pending under #420.
+# with digests as observations, Ruby/PowerShell bundle/module
+# identities stay pending under.
 cohort_research=""
 for tool in '| RuboCop |' '| StandardRB |' '| PSScriptAnalyzer |' '| pwsh |' '| cue |' '| jsonnetfmt |' '| pkl |' '| djlint |' '| Stylelint |' '| prettier-plugin-gherkin |' '| prettier-plugin-sql |' '| prettier-plugin-xml |' '| modfmt |' '| terraform |' '| yamlfmt |' '| yamllint |' '| keep-sorted |'; do
   grep -q -F -e "$tool" "$acquisition" || cohort_research="$cohort_research $tool:missing"
@@ -203,11 +203,11 @@ else
 fi
 
 # Tool integrations keep the cohort adapter-input notes with file-family
-# versions qualified under #489 and digests as observations:
+# versions qualified under and digests as observations:
 # release-assembled closure with download-verify-extract-execute plus the
 # bundle-vs-adapter split, PSScriptAnalyzer console versus library API,
 # frozen file-family delivery classes with `protobuf`/`qml` cross-linked to
-# #419 (never double-claimed), whole-file rewrite versus check-only fix
+# (never double-claimed), whole-file rewrite versus check-only fix
 # modes, Buildifier/Taplo/Vale probes staying provisional, file-family
 # versions qualified with no adapter claim.
 if grep -q -F -e '**Interpreted/file-family cohort (issue #420' "$integrations" &&
@@ -226,7 +226,7 @@ else
 fi
 
 # Support matrix keeps the cohort routes plus qualified file-family defaults
-# (issue #489) plus adapter-input notes plus cohort tracking, all citing #420
+# plus adapter-input notes plus cohort tracking, all citing 
 # for adapters/digests without approving hidden presets or claiming support.
 if grep -q -F -e 'release-assembled Ruby closure route (issue #420' "$support" &&
   grep -q -F -e 'portable-PowerShell-runtime route (issue #420' "$support" &&

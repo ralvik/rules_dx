@@ -1,4 +1,4 @@
-"""Deploy package surface (issue #178)."""
+"""Deploy package surface."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

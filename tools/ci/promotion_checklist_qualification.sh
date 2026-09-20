@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Promotion-checklist qualification harness (issue #611).
+# Promotion-checklist qualification harness.
 #
 # Owns tag hygiene, versioning, and what evidence promotes a cell to
 # `Supported`, with fixture evidence pinned in
@@ -10,10 +10,10 @@
 # - versioning: SemVer bump in a reviewed PR, tag pre-pushed with approval,
 #   --verify-tag never creates tags, single-version dx == module, callers on
 #   reviewed commits, never rebuilt with byte-identity fail-closed;
-# - platform evidence per cell under #410/#411/#412/#413/#414 with floors
-#   (#500), routes (#504), per-cell coverage (#507), clean refusal;
+# - platform evidence per cell under //// with floors
+# , routes, per-cell coverage, clean refusal;
 # - consumer evidence: nine checks plus explicit platforms plus all-enabled
-#   self-call verbatim //... (#408) via #509, sole updater native-only;
+# self-call verbatim //... via, sole updater native-only;
 # - release evidence: sbom_demo plus signing-first signing_demo plus
 #   checked-not-submitted bcr_demo plus separate GHCR plus human-run
 #   release.sh plus verifier refusal plus dry-run-first, pinned by
@@ -28,7 +28,7 @@
 # following //tools/ci:consumer_ci_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -45,7 +45,7 @@ ci=".github/workflows/ci.yml"
 support="docs/product/support-matrix.md"
 verify="docs/testing/verification-matrix.md"
 
-# Checklist doc owns tag hygiene, versioning, and promotion evidence under #611.
+# Checklist doc owns tag hygiene, versioning, and promotion evidence under.
 if [[ -f "$checklist" ]] &&
   grep -q -F -e 'owned under issue #611' "$checklist" &&
   grep -q -F -e 'Tag hygiene, versioning, and what' "$checklist" &&

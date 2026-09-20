@@ -400,7 +400,7 @@ mod tests {
 
     #[test]
     fn execution_gaps_report_matrix_is_wont_fix() {
-        // Issue #590: the per-command standard-report matrix stays
+        // The per-command standard-report matrix stays
         // wont-fix with fail-closed `UnsupportedFormat`; silent
         // substitution is rejected. Pinned with fixtures in
         // `cli/cli/tests/fixtures/cli_execution_gaps/`.

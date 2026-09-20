@@ -1,11 +1,11 @@
-"""Consumer-facing `//dx` facade (issue #76).
+"""Consumer-facing `//dx` facade.
 
 Starlark-only: no `Cargo.toml` / `src/` lives under `dx/`. The Rust
 implementation moved to `cli/*`; this package reserves the canonical
 consumer labels so external workspaces keep mirroring `//dx`.
 Consumer policy defaults to ADR 0011.
 
-Accepted (issue #423): `config` stays an empty filegroup as the
+Accepted: `config` stays an empty filegroup as the
 resolvable default for the `@rules_dx//config:workspace` label flag.
 It is not a policy: aspects require the aggregate `QualityPolicyInfo`
 provider, so selecting this default fails fast at analysis until a
@@ -51,14 +51,14 @@ alias(
 )
 
 # Canonical repository-wide codegen selection identity: bare
-# `dx codegen` invokes `//dx:codegen`. Accepted (issue #423): this empty
+# `dx codegen` invokes `//dx:codegen`. Accepted: this empty
 # filegroup reserves the label so the CLI selection identity resolves.
 # It contributes
 # no plan records itself; the real plan collector is the
 # `dx_codegen_plan_aspect` plus the `dx_codegen_plans` output group
 # (frozen in `//generation:codegen.bzl`, mirrored in
 # `//cli/codegen`), and the effective roots stay on the frozen `//...`
-# baseline per `//cli/roots` (issue #506). Adding `srcs` would build a central
+# baseline per `//cli/roots`. Adding `srcs` would build a central
 # eager dependency, which `docs/environments/codegen.md` rejects. Guard:
 # `//tools/ci:dx_facade_qualification`.
 filegroup(
@@ -66,7 +66,7 @@ filegroup(
     srcs = [],
 )
 
-# Accepted (issue #423): empty `//dx:config` default, see the package
+# Accepted: empty `//dx:config` default, see the package
 # docstring. Guard: `//tools/ci:dx_facade_qualification`.
 filegroup(
     name = "config",

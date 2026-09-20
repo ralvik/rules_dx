@@ -1,4 +1,4 @@
-"""Adopted foreign C++ tree (#189): handwritten owners preserved through generation."""
+"""Adopted foreign C++ tree: handwritten owners preserved through generation."""
 
 load("@rules_dx//cc/rules:defs.bzl", "cc_library", "cc_test")
 load("//quality:fixtures.bzl", "real_source_target")

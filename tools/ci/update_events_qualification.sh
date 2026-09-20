@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Update mutation-event wont-fix qualification harness (issue #586).
+# Update mutation-event wont-fix qualification harness.
 #
 # Qualifies the explicit wont-fix plus event-completeness contract:
 # - wont-fix: update emits no v1 `change` or `mutation` events and no
@@ -26,7 +26,7 @@
 # following //tools/ci:selective_update_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -44,7 +44,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Protocol owns the wont-fix under #586 with resolver-owned backends.
+# Protocol owns the wont-fix under with resolver-owned backends.
 if grep -q -F -e 'wont-fix, issue #586' "$protocol" &&
   grep -q -F -e 'resolver-owned by' "$protocol" &&
   grep -q -F -e '`dx_update::backend`' "$protocol"; then

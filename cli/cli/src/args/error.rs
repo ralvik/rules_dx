@@ -17,7 +17,7 @@ fn suggestion_hint(suggestion: &Option<String>) -> String {
 /// Invocation parsing failure or help request. Usage errors are
 /// CLI-detected pre-execution failures (exit code 2); [`ArgsError::Help`]
 /// is the `--help`/`-h` early exit (exit code 0, human text on stdout,
-/// deliberately outside machine-output guarantees per issue #203).
+/// deliberately outside machine-output guarantees).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ArgsError {
     /// Rendered help text (`dx --help` or `dx <cmd> --help`).

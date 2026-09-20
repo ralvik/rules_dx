@@ -1,24 +1,8 @@
-"""Per-cell coverage plus Codecov plus remote pins (issue #507).
+"""Per-cell coverage plus Codecov plus remote pins.
 
-Contract: `docs/testing/README.md#coverage`,
-`docs/testing/README.md#github-coverage-reporting`,
-`docs/testing/README.md#infrastructure-budget`,
-`docs/testing/README.md#remote-tests`,
-`docs/github-ci.md#scope-and-status`,
-`docs/cli/commands/build-test-coverage.md#dx-coverage`.
+Contract: `docs/testing/README.md#coverage`, `docs/github-ci.md#scope-and-status`.
 Fixture: `tools/coverage/tests/fixtures/per_cell/` via
 `bazel run //tools/ci:coverage_qualification`.
-
-Decides the per-cell coverage slice beyond the seed-only gate (closed
-#308) and the platform-gated non-seed cells (closed #298): all seven
-required plus best-effort cells gate their own combined LCOV report
-separately with no cross-cell union, Codecov stays opt-in only and is
-never required, free-tier quotas stay pinned to the services actually
-used, and remote stays local-only with locally sandbox-tested evidence
-and remote behavior explicitly unverified. Seed only for platform plus
-consumer plus release evidence; no Supported claim. Floors stay owned
-under issue #500, LCOV accounting stays owned under issue #501, never
-double-claimed here.
 """
 
 # Per-cell registry: seven qualified cells, same first-party scope.
@@ -79,7 +63,7 @@ CODECOV_OPT_IN_CI = "Codecov stays opt-in only"
 
 # Free-tier quotas: only standard runners plus the services actually
 # used. Windows plus macOS runners below are the qualified standard
-# free runners (issues #412/#413/#414); macos-latest stays unpinned and
+# free runners; macos-latest stays unpinned and
 # self-hosted/larger stay paid and banned.
 QUOTA_RUNNERS_FREE = "standard GitHub-hosted runners is free"
 QUOTA_UBUNTU = "runs-on: ubuntu-latest"

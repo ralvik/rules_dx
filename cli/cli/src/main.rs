@@ -2,7 +2,7 @@
 //!
 //! Contract: `docs/cli/README.md`.
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -55,7 +55,7 @@ extern "C" fn forward_to_child(signo: libc::c_int) {
 /// latency to the forward-to-child kill and re-implementation of the
 /// pid-0 swallow above, while the `kill` itself stays `unsafe libc`
 /// either way — no safety win for a new dependency, lockfile churn,
-/// and supply-chain review on the #93-hardened forwarding path.
+/// and supply-chain review on the -hardened forwarding path.
 fn install_forwarding() {
     unsafe {
         libc::signal(
@@ -120,7 +120,7 @@ impl Runner for BinaryRunner {
             let _ = pump.join();
         }
         let status = status?;
-        // Issue #320 fail-fast policy: signal re-raise exists only on
+        // Fail-fast policy: signal re-raise exists only on
         // unix (`ExitStatusExt::signal`); Windows reports codes only, so
         // this stays gated instead of a portable fake.
         #[cfg(unix)]
@@ -181,7 +181,7 @@ fn run() -> i32 {
         quiet = invocation.quiet,
         "dx invocation parsed"
     );
-    // Platform gate (issues #298/#410/#411/#412/#413/#414): unqualified hosts refuse cleanly with a
+    // Platform gate: unqualified hosts refuse cleanly with a
     // qualification pointer before any Bazel work starts, never partial
     // execution presented as success. Usage errors above still surface so
     // typos stay diagnosable on every host.
@@ -215,7 +215,7 @@ fn run() -> i32 {
             return pre_exec_code();
         }
     };
-    // Workspace start (issue #319): single-sourced via
+    // Workspace start: single-sourced via
     // `dx_process::workspace_start` (shell: `tools/sh/lib.sh`).
     let start = dx_process::workspace_start(&cwd);
     let workspace = match discover_real(&start, invocation.workspace.as_deref().map(Path::new)) {

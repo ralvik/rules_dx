@@ -1,4 +1,4 @@
-"""Unit tests for the release matrix (issue #311).
+"""Unit tests for the release matrix.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

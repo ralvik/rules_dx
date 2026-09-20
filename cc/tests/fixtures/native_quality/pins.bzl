@@ -1,18 +1,11 @@
-"""Native quality defaults pins (issue #487).
+"""Native quality defaults pins.
 
 Contract: `docs/product/support-matrix.md#provisional-default-quality-tools`,
 `docs/quality/native-configuration.md#authority`.
-
-Qualifies the provisional native format plus lint defaults against the
-native-configuration contract with no hidden presets. Versions below are the
-pinned upstream releases from the initial artifact research; rule-sets are
-upstream built-in defaults unless an applicable checked-in native config
-supplies policy. Adapters add only transport/hermetic settings. Exact
-artifact digests plus adapter mappings stay owned under issue #418.
 """
 
 # Pinned upstream versions (initial artifact research observations, now
-# qualified seed-only under #487; living at head rejected).
+# qualified seed-only under; living at head rejected).
 CLANG_TOOLCHAIN_VERSION = "hermetic-llvm v0.8.19"
 LLVM_VERSION = "23.1.0"
 CPPCHECK_VERSION = "2.21.0"
@@ -22,7 +15,7 @@ GOVET_TOOLCHAIN_VERSION = "1.26.6"
 ERRCHECK_VERSION = "v1.20.0"
 
 # Upstream distribution identities (split native route; digests stay owned
-# under issue #418, never reconstructed or ambient-resolved).
+# , never reconstructed or ambient-resolved).
 CLANG_TOOLCHAIN_ROUTE = "authoritative hermetic-llvm LLVM tool targets (clang-format, clang-tidy), no separate acquisition"
 CPPCHECK_ARTIFACT = "standalone checksummed release artifact; --xml --xml-version=2 on stderr"
 GOFUMPT_ARTIFACT = "standalone checksummed release artifact; strict superset of gofmt"
@@ -51,7 +44,7 @@ CLANG_FORMAT_POLICY = "authoritative-toolchain formatter; deterministic format, 
 BEYOND_DEFAULT_REJECTED = "beyond-default switches rejected: staticcheck SA-only preset plus -all, govet all analyzers, clang-tidy --checks=*, cppcheck --enable=all"
 
 # Live proof labels (foundation consumers stay green; quality adapters claim
-# nothing yet under issue #418).
+# nothing yet).
 NATIVE_FIXTURE_CC_HELLO = "//cc/tests/fixtures/hello:hello_test"
 NATIVE_FIXTURE_GO_HELLO = "//go/tests/fixtures/hello:hello_test"
 

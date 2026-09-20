@@ -88,12 +88,12 @@ EXTRA_PRESETS = {
 }
 
 
-# Owned build profiles (issue #177): stable `dx_*` config names over
+# Owned build profiles: stable `dx_*` config names over
 # Bazel-native `compilation_mode`. `dx_dev` equals the Bazel default
 # `fastbuild` for the inner loop; `dx_release` (`opt`) is the deploy
 # default; `dx_debug` (`dbg`) is diagnostics. Defined as `build:` lines
 # so `--config=` applies to build, test, run, and coverage through Bazel
-# config inheritance. No CLI flags in this scope; flags land in #179.
+# config inheritance. No CLI flags in this scope; flags land in.
 BUILD_PROFILES = [
     ("build:dx_debug --compilation_mode=dbg",
      "Debug diagnostics: unoptimized with debug info."),

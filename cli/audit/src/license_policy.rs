@@ -37,7 +37,7 @@ use serde::Deserialize;
 use crate::exception::{check_expiry, ExceptionProblem};
 use crate::license_expr::Tier;
 
-/// Versioned license-policy schema (issue #321).
+/// Versioned license-policy schema.
 ///
 /// Consumers query the policy via `load_licenses_toml` plus
 /// `PolicyTables::validate` / `Distribution::validate` /
@@ -350,7 +350,7 @@ pub fn load_licenses_toml(text: &str) -> Result<LicensePolicy, PolicyProblem> {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct LicensesFile {
-    /// Versioned schema marker (issue #321). Optional for backward compat:
+    /// Versioned schema marker. Optional for backward compat:
     /// absent means v1; any other value fails in `load_licenses_toml`.
     #[serde(default)]
     schema_version: Option<u32>,

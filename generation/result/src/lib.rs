@@ -1,6 +1,6 @@
 //! Validation and codec helpers for the Generation Result Protocol.
 
-// Issue #591 (extends #238 rollout beyond cli/*): infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -92,7 +92,7 @@ pub fn digest(bytes: &[u8]) -> [u8; DIGEST_LEN] {
 fn check_path(at: &str, path: &str) -> Result<(), Error> {
     // Ladder order mirrors `dx_path::classify`; Dot/DotDot share the
     // historical "dot component" message, so adoption is behavior-preserving
-    // (#72 slice 2).
+    // (slice 2).
     let reason = match dx_path::classify(path) {
         None => None,
         Some(dx_path::PathProblem::Empty) => Some("path must be non-empty"),
@@ -128,7 +128,7 @@ fn validate_scopes(scopes: &[Scope]) -> Result<(), Error> {
         return Err(Error::EmptyScopes);
     }
     // Shared uniqueness control flow lives in `dx_proto_validate`; only the
-    // crate-local `Error` payload stays here (#72 proto-validate slice).
+    // crate-local `Error` payload stays here (proto-validate slice).
     let mut seen = std::collections::BTreeSet::new();
     for (index, scope) in scopes.iter().enumerate() {
         if scope.value.is_empty() {
@@ -320,7 +320,7 @@ fn validate_ignored(ignored: &[IgnoredImport], scope_count: usize) -> Result<(),
             item.import.as_str(),
         );
         // Shared sorted-unique control flow lives in `dx_proto_validate`;
-        // only the crate-local `Error` payloads stay here (#72 slice).
+        // only the crate-local `Error` payloads stay here (slice).
         match dx_proto_validate::check_sorted_next(previous.as_ref(), &key) {
             Ok(()) => {}
             Err(dx_proto_validate::OrderViolation::Duplicate) => {

@@ -1,4 +1,4 @@
-"""ScalaTest 3.2.20 runner pins (issue #480)."""
+"""ScalaTest 3.2.20 runner pins."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

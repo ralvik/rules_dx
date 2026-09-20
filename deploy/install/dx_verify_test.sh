@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install-verification policy tests (issue #26).
+# Install-verification policy tests.
 #
 # Proves the mandatory authenticity-verification policy from
 # docs/testing/tools.md: accept a valid artifact from the approved
@@ -16,7 +16,7 @@
 # repo coverage preset.
 set -euo pipefail
 
-# Host-tool contract (issue #318): bash + python3 + POSIX coreutils
+# Host-tool contract: bash + python3 + POSIX coreutils
 # only in this harness. Realpath and sha256 go through python3 (no
 # `realpath`, `readlink -f`, `sha256sum`, or `shasum` probes).
 py_realpath() {

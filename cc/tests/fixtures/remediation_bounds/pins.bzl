@@ -1,24 +1,10 @@
-"""Bounded remediation pins (issue #505).
+"""Bounded remediation pins.
 
 Contract: `docs/native-toolchains.md#qualification-questions-and-delivery`,
 `docs/decisions/0013-rust-javascript-typescript-foundations.md#core-language-completion-and-remediation`,
-`docs/decisions/0014-tested-platform-release-stack.md#decision`,
-`docs/decisions/0008-dependency-currency.md#decision`.
+`docs/decisions/0014-tested-platform-release-stack.md#decision`, `docs/decisions/0008-dependency-currency.md#decision`.
 Fixture: `cc/tests/fixtures/remediation_bounds/` via
 `bazel run //tools/ci:remediation_bounds_qualification`.
-
-Decides the bounded-remediation slice of the native baseline: every
-native defect is reproduced, each upstream fix is estimated, actual
-owners are named, and patch plus upstream-issue plus upgrade tracking
-with complete-workflow evidence is recorded here and in the owning
-docs. Missing infra is never implemented merely to fill the
-cross-product; Linux cross stays the first priority, not a mandate to
-build every target from every host. Unbounded fork stays rejected per
-the issue alternatives. Scope only: docs-only bounds with no backend,
-coverage, or Supported claim. Backends stay provisional; floors
-qualified seed-only under issue #500, coverage qualified seed-only
-under issue #501, corpus qualified seed-only under issue #499, routes
-qualified seed-only under issue #504, never double-claimed here.
 """
 
 # Bounded-remediation definition: reproduce each defect, estimate the
@@ -134,7 +120,7 @@ REJECTED_ALTERNATIVES = [
 ]
 
 # Backend stays provisional; floors plus coverage plus corpus plus
-# routes stay owned under issues #500/#501/#499/#504.
+# routes stay owned.
 BACKEND_NOTE = "Backends stay provisional"
 OWNED_GAPS = ["#499", "#500", "#501", "#504"]
 

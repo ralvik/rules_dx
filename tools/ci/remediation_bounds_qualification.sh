@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Bounded remediation qualification harness (issue #505).
+# Bounded remediation qualification harness.
 #
 # Defines plus proves the bounded-remediation slice of the native baseline
 # with fixture evidence, without claiming a qualified hermetic-llvm backend,
-# qualified coverage beyond issue #501, qualified floors beyond issue #500,
-# qualified routes beyond issue #504, or Supported:
+# qualified coverage beyond, qualified floors beyond,
+# qualified routes beyond, or Supported:
 # - bounded definition: reproduce each defect, estimate the upstream fix,
 #   name the actual owner, record patch plus upstream-issue plus upgrade
 #   tracking with complete-workflow evidence; scope only.
@@ -32,15 +32,15 @@
 #   plus substitutions plus fallbacks plus cross-product infra fill plus
 #   weakened natives.
 # - open with honest records: backends stay provisional, floors qualified
-#   seed-only under issue #500, coverage qualified seed-only under issue
-#   #501, corpus qualified seed-only under issue #499, routes qualified
-#   seed-only under issue #504.
+# seed-only, coverage qualified seed-only under issue
+# , corpus qualified seed-only, routes qualified
+# seed-only.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:remediation_bounds_qualification`,
 # following //tools/ci:cross_routes_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -59,7 +59,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture files stay present (issue #505).
+# Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$bounds" && -f "$defects" && -f "$owners" ]]; then
   ok
 else
@@ -209,7 +209,7 @@ else
   bad "tools/ci/BUILD.bazel or ci.yml lost the remediation_bounds_qualification wiring (want target plus dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified seed-only record under #505.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'remediation_bounds_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #505' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:remediation_bounds_qualification' "$verify" &&

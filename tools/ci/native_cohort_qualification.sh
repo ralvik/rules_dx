@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Native-cohort qualification harness (issue #418).
+# Native-cohort qualification harness.
 #
 # Qualifies the as-built native quality-cohort record with fixture
 # evidence and owned gaps, without claiming Supported and without a false
@@ -14,22 +14,22 @@
 #   `govet` from the authoritative Go toolchain (no separate acquisition)
 #   plus staticcheck/errcheck as standalone artifacts (staticcheck default
 #   checks with the `SA`-only shortcut rejected, neither provisional;
-#   versions plus rule-sets qualified seed-only under issue #487),
+# versions plus rule-sets qualified seed-only),
 #   `govet`/errcheck text-parse `file:line[:col]: message`), whole-file
 #   rewrite versus check-only fix modes with the provisional
 #   sandbox-apply-and-diff flow, initial artifact research rows as
 #   observations for digests (versions qualified seed-only under issue
-#   #487), provisional adapter-input notes (clang-tidy
+# , provisional adapter-input notes (clang-tidy
 #   `--export-fixes` YAML, staticcheck SARIF/JSON shapes, C/C++
 #   MSVC-interop plus SDK licensing staying with the Windows platform
-#   issue), native-config defaults qualified seed-only under issue #487
+# issue), native-config defaults qualified seed-only
 #   (staticcheck default checks, govet default analyzers with errcheck
 #   complementary, clang-tidy default checks, cppcheck default enablement
 #   as upstream built-in defaults with no hidden preset),
 #   parity-deferred c/cpp/go with owner plus frozen
 #   route, classification-only taxonomy with no curated defaults and no
 #   native-config binding;
-# - open under #418 with honest records: exact artifact digests
+# - open under with honest records: exact artifact digests
 #   plus toolchain qualification, parser plus runner-matrix pass/fail plus
 #   fix/format evidence per adapter-backed class, native-config
 #   qualification against the native-config contract, platform plus
@@ -40,7 +40,7 @@
 # following //tools/ci:scala_dotnet_cohort_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -77,7 +77,7 @@ else
 fi
 
 # Parity deferrals own c/cpp/go with owner plus frozen route plus the
-# #418 live-successor record (closed #307 owns nothing here).
+# live-successor record (closed owns nothing here).
 if grep -q -F -e '"c": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"cpp": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"go": ["ADR 0019"' "$parity" &&
@@ -114,7 +114,7 @@ fi
 
 # No hidden native native-config preset: no cohort binding exists in the
 # typed native-config rules (adapters run pinned upstream defaults until
-# #418 qualifies checked-in policy against the native-config contract; the
+# qualifies checked-in policy against the native-config contract; the
 # provisional clang-tidy/cppcheck/staticcheck suggestions stay review
 # inputs, never supplied configs).
 cohort_config=""
@@ -133,7 +133,7 @@ fi
 # REAL_ADAPTERS cannot claim c/cpp/go (claims land only with green
 # pass/fail plus fix/format evidence per adapter-backed class). The
 # `matrix_go_` prefix also covers a future `matrix_go_module_` cell:
-# modfmt stays out of #418 scope, so such a cell re-scopes this guard.
+# modfmt stays out of scope, so such a cell re-scopes this guard.
 if ! grep -q -F -e 'matrix_c_' "$matrix" &&
   ! grep -q -F -e 'matrix_cpp_' "$matrix" &&
   ! grep -q -F -e 'matrix_go_' "$matrix"; then
@@ -145,8 +145,8 @@ fi
 # Tool acquisition keeps the decided split native route for
 # clang-format/clang-tidy/cppcheck with the compile-commands decision
 # recorded explicitly plus MSVC-interop scoping and no false claim;
-# versions qualified under #487, digests plus adapters stay pending
-# under #418 (live successor to closed #307 for the c/cpp classes).
+# versions qualified under, digests plus adapters stay pending
+# under (live successor to closed for the c/cpp classes).
 if grep -q -F -e 'Decided route: clang-format, clang-tidy, and cppcheck take the' "$acquisition" &&
   grep -q -F -e 'no separate acquisition' "$acquisition" &&
   grep -q -F -e 'compile-commands' "$acquisition" &&
@@ -165,7 +165,7 @@ fi
 # Tool acquisition keeps the decided split Go route for
 # gofumpt/staticcheck/govet/errcheck with the SA-only conflict resolved
 # (default checks qualified, SA-only shortcut rejected) and no false claim;
-# versions qualified under #487, digests plus adapters stay pending under #418.
+# versions qualified under, digests plus adapters stay pending under.
 if grep -q -F -e 'Decided route: gofumpt, staticcheck, govet, and errcheck take the' "$acquisition" &&
   grep -q -F -e 'strict superset of gofmt' "$acquisition" &&
   grep -q -F -e 'SA`-only shortcut is rejected without qualification' "$acquisition" &&
@@ -181,7 +181,7 @@ else
 fi
 
 # Tool acquisition keeps initial artifact research rows for the cohort as
-# observations for digests (versions qualified seed-only under issue #487),
+# observations for digests (versions qualified seed-only),
 # with byte-identity risk explicit.
 cohort_research=""
 for tool in '| clang-format |' '| clang-tidy |' '| cppcheck |' '| gofumpt |' '| staticcheck |' '| govet |' '| errcheck |'; do
@@ -200,7 +200,7 @@ fi
 # clang-tidy target-coupled versus check-only recorded not silent, cppcheck
 # XML on stderr, staticcheck default checks qualified with the SA-only
 # shortcut rejected, govet/errcheck text-parse, MSVC-interop scoping,
-# versions qualified under #487 with digests as observations, no adapter claim.
+# versions qualified under with digests as observations, no adapter claim.
 if grep -q -F -e '**Native cohort (issue #418' "$integrations" &&
   grep -q -F -e 'no adapter claims `c`, `cpp`, or `go` yet' "$integrations" &&
   grep -q -F -e 'target-coupled wiring versus check-only decision is recorded here, not silent' "$integrations" &&
@@ -218,7 +218,7 @@ else
 fi
 
 # Support matrix keeps the native routes plus qualified native-config defaults
-# (issue #487) plus adapter-input notes plus cohort tracking, all citing #418 for
+# plus adapter-input notes plus cohort tracking, all citing for
 # adapters/digests without approving hidden presets or claiming support.
 if grep -q -F -e 'split native route (issue #418' "$support" &&
   grep -q -F -e 'Go route (issue #418' "$support" &&

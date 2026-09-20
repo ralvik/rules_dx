@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Native quality defaults qualification harness (issue #487).
+# Native quality defaults qualification harness.
 #
 # Qualifies the provisional native format plus lint defaults against the
-# native-configuration contract with no hidden presets. Issue #418 covers
+# native-configuration contract with no hidden presets. covers
 # adapters (plus digests), not selections: this harness owns versions plus
 # rule-sets.
 # - pinned: hermetic-llvm v0.8.19 (LLVM 23.1.0) toolchain for clang-format
@@ -10,7 +10,7 @@
 #   govet following the qualified Go SDK 1.26.6 pin, errcheck v1.20.0 in
 #   `cc/tests/fixtures/native_quality/pins.bzl` (prior LLVM line plus Go
 #   1.27.1 observation plus living at head rejected); split-native identities
-#   recorded, digests stay owned under issue #418.
+# recorded, digests stay owned.
 # - rule-sets: native-configuration sole policy, no hidden presets. Without
 #   an applicable checked-in native config the pinned tool uses upstream
 #   built-in defaults; with a config it interprets natively; adapters add
@@ -23,14 +23,14 @@
 # - fixtures: `cc/tests/fixtures/native_quality/` pins plus BUILD; no native
 #   native-config preset, no adapter claim, no curated defaults, no matrix
 #   cells; cc/go hello fixtures stay green.
-# - open owned gaps: digests plus adapters under #418, platform plus consumer
+# - open owned gaps: digests plus adapters under, platform plus consumer
 #   plus release evidence, no `Supported` claim. Compatibility is defaults only.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:native_quality_qualification`,
 # following //tools/ci:jvm_quality_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -54,7 +54,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture pair plus pins stay present (issue #487).
+# Fixture pair plus pins stay present.
 if [[ -f "$pins" && -f "$pins_build" ]]; then
   ok
 else
@@ -120,7 +120,7 @@ fi
 
 # No false adapter claim for the native cohort: none of the cohort tool IDs
 # appear in REAL_ADAPTERS. Classification exists; adapter claim does not
-# (owned under issue #418).
+# (owned).
 native_claim=""
 for tool in clang-format clang-tidy cppcheck gofmt gofumpt staticcheck govet errcheck; do
   if grep -q -F -e "\"$tool\":" "$adapters"; then
@@ -135,7 +135,7 @@ fi
 
 # Classification-only today: cc/go families carry no curated defaults,
 # no runner-matrix cells (claims land only with green adapter evidence
-# under issue #418).
+#
 native_curated=""
 for family in '"cc": {' '"go": {'; do
   if grep -q -F -e "$family" "$curated"; then
@@ -152,7 +152,7 @@ else
 fi
 
 # Support matrix keeps the qualified native versions plus rule-sets with
-# fixtures and harness (issue #487); digests plus adapters stay under #418.
+# fixtures and harness; digests plus adapters stay under.
 if grep -q -F -e 'qualified seed-only under issue #487' "$support" &&
   grep -q -F -e 'native_quality_qualification' "$support" &&
   grep -q -F -e 'cc/tests/fixtures/native_quality/pins.bzl' "$support" &&
@@ -174,8 +174,8 @@ else
 fi
 
 # Tool acquisition keeps the decided split native route with no separate
-# acquisition and no false claim; versions qualified under #487, digests
-# plus adapters stay pending under #418.
+# acquisition and no false claim; versions qualified under, digests
+# plus adapters stay pending under.
 if grep -q -F -e 'Decided route: clang-format, clang-tidy, and cppcheck take the' "$acquisition" &&
   grep -q -F -e 'no separate acquisition' "$acquisition" &&
   grep -q -F -e 'no adapter claims `c` or `cpp` yet' "$acquisition" &&
@@ -187,7 +187,7 @@ else
 fi
 
 # Tool acquisition keeps the decided split Go route with the SA-only
-# conflict resolved (neither provisional); versions qualified under #487.
+# conflict resolved (neither provisional); versions qualified under.
 if grep -q -F -e 'Decided route: gofumpt, staticcheck, govet, and errcheck take the' "$acquisition" &&
   grep -q -F -e 'strict superset of gofmt' "$acquisition" &&
   grep -q -F -e 'qualified seed-only under issue #487' "$acquisition" &&
@@ -210,8 +210,8 @@ else
   bad "tool-acquisition lost a native research row or byte-identity honesty:$native_research"
 fi
 
-# Tool integrations keep the native adapter-input notes with #487 pinned
-# versions (adapters still open under #418).
+# Tool integrations keep the native adapter-input notes with pinned
+# versions (adapters still open under).
 if grep -q -F -e 'Native cohort' "$integrations" &&
   grep -q -F -e 'no adapter claims `c`, `cpp`, or `go` yet' "$integrations" &&
   grep -q -F -e 'qualified seed-only under issue #487' "$integrations" &&
@@ -229,7 +229,7 @@ else
   bad "native-configuration lost its sole-policy plus no-hidden-preset honesty"
 fi
 
-# Verification matrix owns the qualified seed-only record under #487.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'native_quality_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #487' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:native_quality_qualification' "$verify" &&

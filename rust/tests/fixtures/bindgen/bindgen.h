@@ -1,4 +1,4 @@
-// Bindgen LLVM-22-vs-23 compat fixture header (issue #473).
+// Bindgen LLVM-22-vs-23 compat fixture header.
 //
 // Minimal C11 header exercising only constructs whose bindings are stable
 // across the pinned LLVM-22 parser baseline (hermetic-llvm 0.8.18,

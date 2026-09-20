@@ -39,7 +39,7 @@ pub struct GateVerdict {
 
 /// Whether LCOV `SF` records for `path` carry gated line data. Rust and Go
 /// use the pinned Bazel llvm-cov/go integrations; C/C++ uses the pinned
-/// Bazel LLVM source coverage (rules_cc plus LLVM tools, issue #501);
+/// Bazel LLVM source coverage (rules_cc plus LLVM tools,);
 /// Python and JavaScript/TypeScript participate in `bazel coverage`
 /// through the repo's pytest/jest wrappers (see
 /// `docs/testing/generation.md`). Any other extension lands in

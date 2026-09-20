@@ -1,4 +1,4 @@
-"""Adopted foreign JS/TS tree (#198): corpus ownership for arrival files."""
+"""Adopted foreign JS/TS tree: corpus ownership for arrival files."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

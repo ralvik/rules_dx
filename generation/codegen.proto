@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package rules_dx.codegen;
 
-// Normalized per-contributor codegen plan shard (issue #506 WP1, issue #506).
+// Normalized per-contributor codegen plan shard.
 //
 // Each contributing configured target emits one shard carrying its direct
 // projection records; collectors merge shards transitively and the CLI

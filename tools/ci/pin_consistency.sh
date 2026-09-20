@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Pin single-source consistency (issue #326).
+# Pin single-source consistency.
 #
 # Canonical sources:
 #   Bazel version: `.bazelversion` (Bazelisk reads it; every other Bazel pin
 #     tracks it).
 #   Bazelisk version + per-OS sha256: `.github/actions/setup-bazelisk/action.yml`
-#     defaults (the single portable installer, issue #617; Dockerfile tracks
+# defaults (the single portable installer,; Dockerfile tracks
 #     the linux-amd64 pair and docs bootstrap tracks all five hosts).
 #
 # Every other pin below must equal its canonical source or this fails, so a
@@ -16,7 +16,7 @@
 #   <dockerfile> <tested_stack> <action_yml> <local_workflows>
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issues #319, #323).
+# Shared workspace + runfiles helpers.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
 dx_test_init
@@ -45,7 +45,7 @@ check_bazel_pin() { # description, actual
   fi
 }
 
-# Issue #407: nested E2E removed, so MODULE.bazel carries no second-Bazel
+# Nested E2E removed, so MODULE.bazel carries no second-Bazel
 # `bazel_binaries.download` pin. CI uses the single canonical `.bazelversion`
 # Bazel via Bazelisk only; the pin must stay absent.
 if grep -q -F -e 'bazel_binaries.download' "$module"; then
@@ -63,7 +63,7 @@ check_bazel_pin "Dockerfile USE_BAZEL_VERSION" "$docker_bazel_pin"
 stack_pin="$(grep -A2 -F -e '"bazel_version": attr.string(' "$tested_stack" | grep -o -E -e 'default = "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
 check_bazel_pin "tested_stack.bzl bazel_version default" "$stack_pin"
 
-# --- Bazelisk canonical (action.yml defaults, issue #617 portable) ---
+# --- Bazelisk canonical (action.yml defaults, portable) ---
 # Canonical: version plus per-OS sha256 inputs in setup-bazelisk/action.yml.
 # Dockerfile tracks the linux-amd64 pair; local-workflows.md documents all
 # five qualified hosts.
@@ -78,7 +78,7 @@ if [[ -z "$action_version" || -z "$action_sha_linux_amd64" || -z "$action_sha_li
 else
   ok
 fi
-# Legacy single-sha input must stay absent: per-OS pins replace it (issue #617).
+# Legacy single-sha input must stay absent: per-OS pins replace it.
 if grep -A3 -E -e '^  sha256:' "$action_yml" | grep -q -F -e 'default:'; then
   bad "setup-bazelisk action.yml still carries legacy single sha256 input (want per-OS sha256_* only, issue #617)"
 else
@@ -99,7 +99,7 @@ else
 fi
 
 # Docs bootstrap tracks the canonical version plus all five per-OS shas
-# (issue #617 portable bootstrap).
+# (portable bootstrap).
 for sha in "$action_sha_linux_amd64" "$action_sha_linux_arm64" "$action_sha_darwin_amd64" "$action_sha_darwin_arm64" "$action_sha_windows_amd64"; do
   if grep -q -F -e "$sha" "$local_workflows"; then
     ok

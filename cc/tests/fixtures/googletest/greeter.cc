@@ -1,4 +1,4 @@
-// Seed C++ greeter library; consumer of cc_library with the C++17 floor (issue #479).
+// Seed C++ greeter library; consumer of cc_library with the C++17 floor.
 #include "cc/tests/fixtures/googletest/greeter.h"
 
 #include <optional>

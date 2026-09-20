@@ -1,4 +1,4 @@
-"""Versioned semantic-class registry tests (freeze for issue #321).
+"""Versioned semantic-class registry tests (freeze for).
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

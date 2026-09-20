@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Hello-smoke-as-test qualification harness (issue #464).
+# Hello-smoke-as-test qualification harness.
 #
 # Qualifies the as-built hello smoke promotion with fixture evidence and
 # owned gaps, without claiming Supported:
@@ -20,7 +20,7 @@
 # following //tools/ci:cli_contract_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -33,14 +33,14 @@ verify="docs/testing/verification-matrix.md"
 ci=".github/workflows/ci.yml"
 build="tools/ci/BUILD.bazel"
 
-# Roadmap owns the delivered record under #464.
+# Roadmap owns the delivered record under.
 if grep -q -F -e 'hello smoke as test delivered (issue #464' "$roadmap"; then
   ok
 else
   bad "roadmap lost its hello smoke delivered record under #464"
 fi
 
-# Verification matrix owns the qualified seed-only record under #464.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'hello_smoke_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #464' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:hello_smoke_qualification' "$verify"; then
