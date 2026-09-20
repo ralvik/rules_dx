@@ -105,10 +105,10 @@ impl Command {
     /// True for the delivered audit/update/bump surfaces (`audit`, `update`,
     /// `bump`): they plan through the `dx_audit`/`dx_update`/`dx_bump`
     /// libraries over family selectors and dependency-set selectors, never
-    /// the quality aspect pipeline. Audit is non-mutating; update and bump
-    /// are mutating without confirmation. Audit tool backends stay deferred
-    /// while update resolver backends execute live  and bump
-    /// widens exactly one requirement explicitly.
+    /// the quality aspect pipeline. Audit is non-mutating with live backends
+    /// (Gitleaks secrets, 24h advisory, local vuln matching, SPDX 2.3);
+    /// update and bump are mutating without confirmation with live resolver
+    /// backends, and bump widens exactly one requirement explicitly.
     /// `migrate` is not audit/update: it plans major-release rewrites
     /// through `dx_adopt::plan_migrate` over `--from`/`--to` versions
     /// with its own fail-closed execution.
@@ -237,7 +237,7 @@ impl Command {
     /// `docs/testing/cli.md` mutating-identification fixture.
     pub fn describe(self) -> &'static str {
         match self {
-            Command::Audit => "plan a security/license audit (tool backends land later)",
+            Command::Audit => "run security/license audit over resolved scopes (non-mutating; live Gitleaks plus advisory/vuln/SPDX backends)",
             Command::Lint => "run lint analysis over resolved scopes (mutating by default; --check is non-mutating)",
             Command::Typecheck => "run typecheck analysis over resolved scopes (mutating by default; --check is non-mutating)",
             Command::Format => "check or rewrite formatting over resolved scopes (mutating by default; --check is non-mutating)",

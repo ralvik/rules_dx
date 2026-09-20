@@ -209,11 +209,13 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         }
     }
     if command == Command::Audit {
-        // Audit plans through `dx_audit` (WP1): family selection
-        // plus scope spellings, non-mutating, with SARIF reports and
+        // Audit plans through `dx_audit`: family selection
+        // plus scope spellings, non-mutating, with live Gitleaks plus
+        // advisory/vuln/SPDX backends, SARIF/SPDX reports and
         // `--fail-on` thresholds. `--check` is meaningless (audit never
-        // mutates), Bazel forwards do not apply (no collection build
-        // yet), and version/clean-only flags do not apply.
+        // mutates), Bazel forwards do not apply (no Bazel collection
+        // build; live auditors run directly), and version/clean-only
+        // flags do not apply.
         // Family parsing itself stays in `dx_audit::plan_audit`; args
         // only preserve positionals verbatim (family or scopes).
         if check {
