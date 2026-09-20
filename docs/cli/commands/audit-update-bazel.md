@@ -126,16 +126,26 @@ clean. Maven range narrowing is
 implemented (issue #623, pinned in `dx_audit::vuln`), as is NuGet range narrowing
 (issue #624, pinned in `dx_audit::vuln`), as is Go `go.mod` wiring plus
 `v`-prefix range narrowing (issue #626, pinned in `dx_audit::locks` plus
-`dx_audit::vuln`).
+`dx_audit::vuln`), as are Cargo/npm semver edges
+(issue #625, pinned in `dx_audit::exception` plus `dx_audit::vuln`).
 
 Report known vulnerabilities whether or not a fixed version is available, and apply the same
 severity threshold and failure policy in both cases. Lack of a fix must not suppress a finding,
 downgrade its severity, or exempt it from failure. Preserve upstream remediation information when
 available, without treating a dependency-version upgrade as an automatic source fix or mutating
-dependencies during audit. Advisory scope uses upstream Cargo-flavor semver for Cargo/npm,
-Go via `v`-prefix normalization (issue #626), Maven-native ordering plus intervals
+dependencies during audit. Advisory scope uses upstream Cargo-flavor semver for Cargo,
+npm-native ranges for npm (issue #625), Go via `v`-prefix normalization (issue #626),
+Maven-native ordering plus intervals
 for Maven (issue #623), and NuGet-native ordering plus
-intervals for NuGet (issue #624), pinned in `dx_audit::vuln`. Go scopes normalize
+intervals for NuGet (issue #624), pinned in `dx_audit::vuln`. Cargo scopes accept
+ranges (`>=1.2.0, <2.0.0`), carets, tildes, and `*`; bare versions are caret
+shorthand (so `1.2.0` matches `1.2.1`) and `||` plus hyphen stay invalid,
+failing closed to no-match. Npm scopes accept `||` unions, hyphen ranges
+(`1.2.3 - 2.3.4`, partial ends narrow below the next line), space- or
+comma-separated sets (`>=1.2.7 <1.3.0`), `v` prefixes, `x`/`*` wildcards and
+partials, carets, tildes, and bare versions (full bares are exact, partial
+bares are bounded); prereleases match only beside a same-tuple prerelease
+comparator and malformed scopes fail closed to no-match. Go scopes normalize
 one leading `v` on version tokens in both the advisory scope and the locked version
 (`>=v1.0.0, <v2.0.0` matches `v1.5.0`), then Cargo-flavor semver; pseudo-versions
 plus `+incompatible` suffixes stay assessable and malformed scopes fail closed
