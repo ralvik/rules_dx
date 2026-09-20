@@ -7,6 +7,9 @@
 # root with `LLVM_PROFILE_FILE` unset. Rust defaults to
 # `default_%m_%p.profraw` in CWD, spilling one file per invocation.
 # `.gitignore` only hides the spill; this harness pins the root fix.
+# `tools/ci/coverage_qualification.sh` plus
+# `tools/ci/lcov_accounting_qualification.sh` execute the same instrumented
+# helper directly (2x plus 4x); they need the same containment (issue #656).
 #
 # This harness machine-checks the containment half verifiable on a clean
 # tree today: the LLVM_PROFILE_FILE export targets the
@@ -31,6 +34,8 @@ dx_cd_workspace
 dx_test_init
 
 cell="tools/ci/coverage_cell.sh"
+qual="tools/ci/coverage_qualification.sh"
+accounting="tools/ci/lcov_accounting_qualification.sh"
 
 # The harness script exists.
 if [[ -f "$cell" ]]; then
@@ -89,6 +94,86 @@ if grep -q -F -e '*.profraw' .gitignore && grep -q -F -e '*.profdata' .gitignore
   ok
 else
   bad ".gitignore lost the *.profraw/*.profdata defense-in-depth"
+fi
+
+# Sibling wrappers need the same containment: coverage_qualification.sh
+# executes the instrumented helper 2x from the workspace root (issue #656).
+if [[ -f "$qual" ]]; then
+  ok
+else
+  bad "coverage qualification harness missing: $qual"
+fi
+
+if grep -q -F -e 'export LLVM_PROFILE_FILE="$scratch/profraw_%m_%p.profraw"' "$qual"; then
+  ok
+else
+  bad "coverage_qualification.sh lost the LLVM_PROFILE_FILE scratch export (issue #656)"
+fi
+
+qual_export_line="$(grep -n -F -e 'export LLVM_PROFILE_FILE=' "$qual" | head -n 1 | cut -d: -f1)"
+qual_first_run_line="$(grep -n -F -e '"$check_bin" --report' "$qual" | head -n 1 | cut -d: -f1)"
+if [[ -n "$qual_export_line" && -n "$qual_first_run_line" && "$qual_export_line" -lt "$qual_first_run_line" ]]; then
+  ok
+else
+  bad "coverage_qualification.sh LLVM_PROFILE_FILE export is not ordered before the first \$check_bin run"
+fi
+
+if grep -q -F -e 'dx_mkscratch scratch' "$qual"; then
+  ok
+else
+  bad "coverage_qualification.sh lost the auto-cleaned scratch dir (want dx_mkscratch, issue #323)"
+fi
+
+qual_runs="$(grep -c -F -e '"$check_bin" --report' "$qual" || true)"
+if [[ "$qual_runs" -ge 2 ]]; then
+  ok
+else
+  bad "coverage_qualification.sh lost helper invocations (found $qual_runs, want >= 2)"
+fi
+
+# Sibling wrappers need the same containment:
+# lcov_accounting_qualification.sh executes the instrumented helper 4x
+# from the workspace root (issue #656).
+if [[ -f "$accounting" ]]; then
+  ok
+else
+  bad "lcov accounting harness missing: $accounting"
+fi
+
+if grep -q -F -e 'export LLVM_PROFILE_FILE="$scratch/profraw_%m_%p.profraw"' "$accounting"; then
+  ok
+else
+  bad "lcov_accounting_qualification.sh lost the LLVM_PROFILE_FILE scratch export (issue #656)"
+fi
+
+accounting_export_line="$(grep -n -F -e 'export LLVM_PROFILE_FILE=' "$accounting" | head -n 1 | cut -d: -f1)"
+accounting_first_run_line="$(grep -n -F -e '"$check_bin" --report' "$accounting" | head -n 1 | cut -d: -f1)"
+if [[ -n "$accounting_export_line" && -n "$accounting_first_run_line" && "$accounting_export_line" -lt "$accounting_first_run_line" ]]; then
+  ok
+else
+  bad "lcov_accounting_qualification.sh LLVM_PROFILE_FILE export is not ordered before the first \$check_bin run"
+fi
+
+if grep -q -F -e 'dx_mkscratch scratch' "$accounting"; then
+  ok
+else
+  bad "lcov_accounting_qualification.sh lost the auto-cleaned scratch dir (want dx_mkscratch, issue #323)"
+fi
+
+accounting_runs="$(grep -c -F -e '"$check_bin" --report' "$accounting" || true)"
+if [[ "$accounting_runs" -ge 4 ]]; then
+  ok
+else
+  bad "lcov_accounting_qualification.sh lost helper invocations (found $accounting_runs, want >= 4)"
+fi
+
+# Live containment: no profraw/profdata spill in the checkout root.
+# Generation is contained via LLVM_PROFILE_FILE above; any file here is a
+# regression even though .gitignore hides it from `git status` (issue #656).
+if compgen -G "*.profraw" >/dev/null || compgen -G "*.profdata" >/dev/null; then
+  bad "profraw/profdata spill present in checkout root (want LLVM_PROFILE_FILE containment, issue #656)"
+else
+  ok
 fi
 
 # The seed inventory the cell gates still exists.

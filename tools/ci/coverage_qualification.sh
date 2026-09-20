@@ -162,6 +162,12 @@ fi
 # pass the covered cell and fail the uncovered cell with its location, so
 # per-cell gating (not unioning) is what decides.
 dx_mkscratch scratch
+# `bazel coverage` elsewhere leaves `coverage_bin` instrumented
+# (`-C instrument-coverage`), and this harness executes it directly 2x from
+# the workspace root. With `LLVM_PROFILE_FILE` unset, Rust writes
+# `default_%m_%p.profraw` to CWD per invocation. Redirect profiles into the
+# auto-cleaned scratch dir so harness runs spill nothing to the checkout.
+export LLVM_PROFILE_FILE="$scratch/profraw_%m_%p.profraw"
 check_bin="bazel-bin/tools/coverage/coverage_bin"
 if [[ ! -x "$check_bin" ]]; then
   bazel build --noshow_progress //tools/coverage:coverage_bin >/dev/null 2>&1
