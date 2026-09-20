@@ -1,0 +1,19 @@
+# Authoritative dependency metadata (issue #503).
+#
+# For C/C++ there is no ecosystem lockfile. Resolution order is exact
+# `# gazelle:resolve` mapping, then the local rule index, then the exact
+# `# gazelle:dx_ignore_import` exception, else fail with actionable context.
+# Its module index is not the consumer's resolved graph: the gazelle_cc
+# module index never substitutes for local plus mapping resolution.
+# Generated headers have no checked-in owner and require an exact resolve
+# mapping; generation never infers a generated producer.
+
+order: exact # gazelle:resolve mapping
+order: local rule index
+order: exact # gazelle:dx_ignore_import exception
+order: else fail with actionable context
+its module index is not the consumer's resolved graph
+authoritative metadata is the local rule index plus exact mappings, never the module index
+generated headers have no checked-in owner and require an exact resolve mapping
+inferred generated producer rejected
+every unknown or ambiguous literal reference fails with actionable context

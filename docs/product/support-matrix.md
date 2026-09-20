@@ -365,7 +365,10 @@ open work under issue #505) before affected implementation:
 - [gazelle_cc v0.6.0](https://github.com/EngFlow/gazelle_cc/tree/v0.6.0) and
   [Hedron's compilation-command extractor](https://github.com/hedronvision/bazel-compile-commands-extractor)
   are candidate generation/IDE building blocks, not conforming integrations yet. Strict include
-  resolution, C++ module scope, managed clangd/toolchain projections, and selected-target context
+  resolution plus C++ module and PCH disposition qualified seed-only under issue #503
+  (`cc/tests/fixtures/strict_generation/pins.bzl` via
+  `bazel run //tools/ci:strict_generation_qualification`, loose generation rejected);
+  managed clangd/toolchain projections and selected-target context
   remain work to assess under the existing contracts.
 
 The [approved Windows baseline](../decisions/0014-tested-platform-release-stack.md#decision)
