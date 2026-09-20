@@ -22,8 +22,10 @@ execution, or deployment mechanism.
   command. Scope is re-resolved each iteration.
 - `--check`, `--output`, `--report`, `--fail-on`, `--quiet`, and `--dry-run`
   pass through to the wrapped command.
-- `dx run` under `watch` enforces single-runnable selection per iteration
-  (`ambiguous_runnable`/`no_runnable` are errors; see
+- `dx run` under `watch` reuses wrapped `run` semantics verbatim each
+  iteration: file/directory scopes still enforce single-runnable selection
+  (`ambiguous_runnable`/`no_runnable` are errors), while explicit labels and
+  patterns run sequentially in scope order (see
   [dx run](build-test-coverage.md#dx-run)).
 - Each iteration emits the wrapped command's normal stream starting with a
   fresh `command_started`. No cross-iteration state is exposed in machine output.

@@ -232,8 +232,20 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
 - Verify file- and directory-scoped `dx run` resolves owners like `dx build` but
   requires exactly one runnable target: zero runnables fail with `no_runnable`
   and multiple runnables fail with `ambiguous_runnable` without choosing by label
-  order. Verify labels and patterns pass through, `--` args reach the binary,
-  and execution stays local-only. Qualify remaining run mappings before asserting them.
+  order. Any file or directory scope forces this single-target path even when
+  explicit labels are also present. Verify explicit labels pass through in scope
+  order with no query and run as sequential `bazel run`s, each with the same
+  `--` args forwarded verbatim; explicit patterns containing `...` or `*` expand
+  Bazel-owned through one `kind('.*_binary rule', <pattern>)` query each (each
+  expansion sorted, concatenated in input order with first-seen dedup) then run
+  sequentially, with an empty expansion failing as `no_runnable`. Verify sequential
+  multirun stops on the first required failure and returns that code verbatim,
+  emits one prose lifecycle line per target on stderr, inherits stdio with
+  SIGINT/SIGTERM forwarded to the active child only (never more than one live
+  child, no supervisor table), accepts only `--output=text`, takes no `--report`,
+  refuses when `CI=true`, and lists each target plan under `--dry-run`. Pinned by
+  `dx_cli` run plus `resolve_run` fixtures and
+  `bazel run //tools/ci:consumer_ci_qualification` under issue #463.
 - Verify `dx watch` only wraps `build`, `test`, `run`, `lint`, `typecheck`, `format`,
   `check`, and `fix` per [ADR 0018](../decisions/0018-umbrella-check-fix-cleanup-clean.md);
   every other command is rejected. Verify scope is re-resolved each

@@ -19,13 +19,16 @@ additional standard report format.
 ## `dx run`
 
 Status: implemented as specified in this
-section (pinned by `dx_cli` run fixtures). Strict single-target execution applies to file/directory
+section (pinned by `dx_cli` run plus `resolve_run` fixtures, delivered under
+issue #463). Strict single-target execution applies to file/directory
 resolution scopes only. Multiple explicit labels run sequentially in
 scope order (`dx run //demo:frontend //demo:backend`), each as its own
 `bazel run` with the same arguments after `--` forwarded to every
 target; explicit target patterns containing `...` or `*`
 (`dx run //demo/...`) expand Bazel-owned through one
-`kind('.*_binary rule', <pattern>)` query each, then run sequentially
+`kind('.*_binary rule', <pattern>)` query each (each expansion sorted,
+concatenated in input order with first-seen dedup across labels and
+patterns), then run sequentially
 in input order. A file or
 directory scope resolves through the same ownership query as `dx build`,
 then requires exactly one runnable owner, where runnable means a

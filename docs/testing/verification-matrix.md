@@ -252,11 +252,12 @@ Remaining reds stay owned gaps, not green claims:
   concurrency, permissions, per-cell coverage with fork-safe comments,
   all-enabled self-call (issue #408, verbatim `//...`), native bump loop
   (sole updater, issue #461),
-   dx migrate planning plus dx run multirun, tag hygiene as-built; platform,
+   dx migrate planning (issue #462 open) plus dx run multirun (issue #463
+   delivered), tag hygiene as-built; platform,
    runner, isolation, cache, ordering, merge, diff, queue, cancellation,
    aggregate binding, thread identity, ordering, limits, fork, untrusted,
    sensitive, retries, Code-Scanning, sequential, tag/release, native-bot,
-   migrate-execution gaps stay owned gaps); platform qualification
+   migrate-syntax gaps stay owned gaps); platform qualification
    beyond the seed plus arm64 plus musl plus macos plus macos-x86_64 plus
    windows hosts stays open under #298 (arm64 qualified under #410, static
    musl under #411, macos arm64 under #412, macos x86_64 best-effort under

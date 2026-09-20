@@ -57,7 +57,8 @@ coverage, check, fix, audit, update, status. `update` JSON covers dry-run planni
 events plus `command_finished`; `audit` JSON covers dry-run planning plus live per-family
 `notice`/`error` events plus `command_finished`.
 Text-only commands (reject `--output=json` pre-exec, exit 2): clean, codegen, env, setup
-(prose collection lifecycle); `bazel`, `run` (the child owns the terminal); init, hooks,
+(prose collection lifecycle); `bazel`, `run` (each sequential child owns the terminal in turn,
+see [dx run](commands/build-test-coverage.md#dx-run)); init, hooks,
 version, watch, owners, deps, why, completion (local helpers, thin query lines, or shell
 scripts — automation uses `generate --check`, Bazel query, or `status --output=json`).
 Silent ignore is never allowed: unsupported modes fail fast with `UnsupportedOption`.

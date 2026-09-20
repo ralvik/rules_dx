@@ -25,7 +25,8 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
   (issue #459), GHCR prebuilt
   images (separate workflow, issue #460), native bump loop as sole updater
   (decided, issue #461), automation policy (native-only).
-* V1 scope: `dx migrate` syntax + manifest selection (issue #462), `dx run` multirun (issue #463).
+* V1 scope: `dx migrate` syntax + manifest selection (issue #462). `dx run` multirun
+  delivered (issue #463, sequential local-only multirun for explicit labels/patterns).
   No post-v1 bucket.
 * Rust library extraction.
 * CLI and deploy follow-ups: `--debug`/`--release` flags plus `DX_PROFILE` forwarding plus deploy provider/CLI (issues #457-#458); `dx docs` reintroduction with real extraction/validation (see ADR 0020).

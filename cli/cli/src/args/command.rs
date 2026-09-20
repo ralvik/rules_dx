@@ -235,7 +235,7 @@ impl Command {
             Command::Build => "run Bazel build over resolved targets",
             Command::Test => "run Bazel test over resolved targets",
             Command::Coverage => "collect LCOV coverage with optional threshold",
-            Command::Run => "build and run a single runnable target",
+            Command::Run => "build and run runnable targets sequentially (explicit labels/patterns; file/dir scopes need exactly one runnable)",
             Command::Deploy => "build and run a single deployable target",
             Command::Check => "run format+lint+typecheck+generate checks in order (non-mutating)",
             Command::Fix => "apply format+lint+typecheck+generate fixes in order (mutating by default)",

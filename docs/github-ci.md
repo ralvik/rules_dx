@@ -312,5 +312,5 @@ platforms, fail-closed sequential, stable aggregate, hygiene, concurrency,
 permissions, per-cell coverage with fork-safe comments, all-enabled self-call
 (issue #408, verbatim `//...`),
 native bump loop (sole updater, issue #461), migrate planning
-plus run multirun, tag hygiene as-built, with platform, merge, thread, fork,
-sequential, tag/release, native-bot, and migrate-execution gaps owned under #509).
+plus run multirun (issue #463 delivered), tag hygiene as-built, with platform, merge, thread, fork,
+sequential, tag/release, native-bot, and migrate-syntax gaps owned under #509).
