@@ -238,14 +238,14 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
 - **Scala + .NET cohort (issue #417, provisional — no adapter claims `scala`, `csharp`, or
   `fsharp` yet):** managed JVM route for Scalafmt (compatible JVM artifact over the shared
   managed JDK plus the Scala Maven-lock story, `maven_install.json` plus `fail_if_repin_required`)
-  and Scalafix (semantic-rule artifacts over the same JDK with semanticdb plus classpath wiring
-  for semantic rules); exact-package plus shared-.NET-runtime route for CSharpier and Fantomas
+  and Scalafix (semantic-rule artifacts over the same JDK with target-coupled semanticdb plus classpath wiring
+  for semantic rules, decided under issue #490); exact-package plus shared-.NET-runtime route for CSharpier and Fantomas
   (official tool packages as declared DLLs over one managed .NET cohort, no `dotnet tool install`).
   Research notes (unproven mappings): Roslyn SDK analyzers stay SDK-default mode (StyleCop remains
   an opt-in candidate, not a default) with `/errorlog` SARIF 2.1 per compiler invocation
   (per-TFM/RID aggregation work remains); FSharpLint console text parsing versus binding the
   `FSharpLint.Core` library API stays open; Scalafix has no machine-readable CLI output upstream,
-  so the console-parse versus wire decision is recorded here, not silent. Formatters (Scalafmt,
+  so console-parse is rejected and wire via `scalafix.interfaces.ScalafixMainCallback` is required, decided under issue #490 with `scala/tests/fixtures/scalafix/` evidence (lint-only console lines carry rule IDs but rewritable rules emit patch-only diff with no rule attribution; target-coupled `--classpath` plus `--sourceroot` plus `--semanticdb-targetroots` from the authoritative target with sandbox-apply-and-diff and declared outputs, never `IN_PLACE`), recorded here, not silent. Formatters (Scalafmt,
   CSharpier, Fantomas) are whole-file rewrite with check/diff mode; Scalafix, Roslyn, and FSharpLint
   are check-only with the provisional sandbox-apply-and-diff fix flow. Versions qualified seed-only under issue #486
   (`scala/tests/fixtures/scala_dotnet_quality/pins.bzl` via `bazel run //tools/ci:scala_dotnet_defaults_qualification`
