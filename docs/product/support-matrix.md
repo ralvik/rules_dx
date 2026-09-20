@@ -939,7 +939,8 @@ Diagnostic wire formats:
 - SARIF-native: PMD, Checkstyle (`-f sarif`), SpotBugs (`-sarif`),
   ktlint (`--reporter=sarif`), detekt (sarif report), staticcheck
   (`-f sarif`), Roslyn (`/errorlog`, SARIF 2.1). JVM shapes are unproven mappings
-  owned by issue #416. Roslyn shapes are unproven mappings owned by issue #417.
+  owned by issue #416. Roslyn per-result shapes are unproven mappings
+  owned by issue #417. Per-TFM/RID runs aggregation is decided under issue #492 with `csharp/tests/fixtures/roslyn/` evidence (concatenate per-pivot runs into one SARIF log, single-SARIF assumption is rejected, cohort stays owned under issue #417).
   staticcheck shapes are unproven mappings owned by issue #418.
 - JSON: staticcheck (`-f json`), PMD (json), ktlint (json).
   staticcheck JSON shapes are unproven mappings owned by issue #418.
@@ -1004,7 +1005,7 @@ open work under issues #416-#420 and #490-#493:
   (`-XepPatchChecks` plus `-XepPatchLocation:<declared-dir>`; `IN_PLACE` rejected as it
   mutates inputs and breaks sandboxing); adapter dispatch stays owned (issue #416).
 - Roslyn `/errorlog` SARIF is per compiler invocation (per
-  configuration/TFM/RID pivot); aggregation work remains (issue #417).
+  configuration/TFM/RID pivot); aggregation is decided under issue #492 with `csharp/tests/fixtures/roslyn/` evidence (concatenate per-pivot runs into one SARIF log with a single schema plus version in deterministic pivot order, union of results with per-pivot provenance; single-SARIF assumption is rejected and merged-single-run is rejected, collection is declared inputs with fail-closed; no adapter claims `csharp` yet, cohort stays owned under issue #417).
 - FSharpLint: console text parsing versus binding the .NET library API (issue #417).
 - clang-tidy: compile-commands context couples the adapter to target wiring;
   target-coupled wiring versus check-only stays open (issue #418).

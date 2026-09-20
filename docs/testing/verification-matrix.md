@@ -232,6 +232,8 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   pins plus fixture evidence, issue #489),
   `:scalafix_qualification` (Scalafix console plus semanticdb-classpath wiring
   pins plus fixture evidence, issue #490),
+  `:roslyn_qualification` (Roslyn per-TFM-RID SARIF aggregation pins plus
+  fixture evidence, issue #492),
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
   best-effort), `:windows_qualification`, `:ci_matrix_qualification`
   (host matrix, issue #415), and `:closeout_battery_qualification`
@@ -246,7 +248,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 33/33,
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
-`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `musl_qualification` 12/12, `macos_qualification` 12/12,
+`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `musl_qualification` 12/12, `macos_qualification` 12/12,
 `windows_qualification` 13/13, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
@@ -522,6 +524,19 @@ Remaining reds stay owned gaps, not green claims:
   `console_rewrite.txt` lossiness proof, proven by the scala hello fixture
   with no adapter claim; digests plus `scala` adapter stays owned under #417
   (`scalafix_qualification` 12/12); platform plus consumer plus release
+  evidence stays owned gap; no Supported claim).
+- Roslyn per-TFM-RID SARIF aggregation with fixture evidence qualified
+  seed-only under issue #492
+  (`bazel run //tools/ci:roslyn_qualification`; per-pivot `/errorlog`
+  SARIF 2.1 runs concatenate into one log with a single schema plus version
+  in deterministic pivot order, union of results with
+  per-pivot provenance, single-SARIF assumption plus merged-single-run
+  rejected, declared inputs with fail-closed, pinned in
+  `csharp/tests/fixtures/roslyn/pins.bzl` with `net8.sarif` plus
+  `net10.sarif` union proof (shared CA1822 in both, TFM-specific CA1303
+  only in net10) plus `aggregated.sarif`, proven by the csharp hello fixture
+  with no adapter claim; digests plus `csharp` adapter stays owned under #417
+  (`roslyn_qualification` 13/13); platform plus consumer plus release
   evidence stays owned gap; no Supported claim).
 - Non-dogfed execution plan delivered (see issue #508 for remaining gaps; hermetic
   CLI-contract pins under issue #407)

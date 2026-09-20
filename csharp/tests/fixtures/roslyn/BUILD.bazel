@@ -1,0 +1,26 @@
+"""Roslyn per-TFM-RID SARIF aggregation fixture (issue #492)."""
+
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+exports_files([
+    "pins.bzl",
+    "Sample.cs",
+    "net8.sarif",
+    "net10.sarif",
+    "aggregated.sarif",
+])
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = [
+        "BUILD.bazel",
+        "pins.bzl",
+    ],
+    tags = ["corpus"],
+)

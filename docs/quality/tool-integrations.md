@@ -250,7 +250,7 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   (official tool packages as declared DLLs over one managed .NET cohort, no `dotnet tool install`).
   Research notes (unproven mappings): Roslyn SDK analyzers stay SDK-default mode (StyleCop remains
   an opt-in candidate, not a default) with `/errorlog` SARIF 2.1 per compiler invocation
-  (per-TFM/RID aggregation work remains); FSharpLint console text parsing versus binding the
+  (per-TFM/RID aggregation decided under issue #492 with `csharp/tests/fixtures/roslyn/` evidence: concatenate per-pivot runs into one SARIF log with a single schema plus version in deterministic pivot order (ascending TFM version, then RID, then configuration over `automationDetails.id` provenance), union of results with per-pivot provenance; single-SARIF assumption is rejected and merged-single-run is rejected, collection is declared inputs with fail-closed, recorded here, not silent); FSharpLint console text parsing versus binding the
   `FSharpLint.Core` library API stays open; Scalafix has no machine-readable CLI output upstream,
   so console-parse is rejected and wire via `scalafix.interfaces.ScalafixMainCallback` is required, decided under issue #490 with `scala/tests/fixtures/scalafix/` evidence (lint-only console lines carry rule IDs but rewritable rules emit patch-only diff with no rule attribution; target-coupled `--classpath` plus `--sourceroot` plus `--semanticdb-targetroots` from the authoritative target with sandbox-apply-and-diff and declared outputs, never `IN_PLACE`), recorded here, not silent. Formatters (Scalafmt,
   CSharpier, Fantomas) are whole-file rewrite with check/diff mode; Scalafix, Roslyn, and FSharpLint
