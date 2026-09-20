@@ -1018,6 +1018,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:windows_qualification
       - name: Audit CI multi-platform host matrix (issue #415 runners plus caches plus refusal plus sharding plus portable shell)
         run: bazel run --noshow_progress //tools/ci:ci_matrix_qualification
+      - name: Audit close-out battery plus docs gate (issue #467 battery commands plus docs-ci gate, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:closeout_battery_qualification
       - name: Write job summary
         if: always()
         run: |
