@@ -81,6 +81,9 @@ The JVM cohort rows below are owned by issue #416 (live successor to closed
 The Scala + .NET cohort rows below are owned by issue #417 (live successor
 to closed #307 for the `scala`/`csharp`/`fsharp` classes); versions are
 observations, not pins.
+The Native cohort rows below are owned by issue #418 (live successor
+to closed #307 for the `c`/`cpp`/`go` classes); versions are
+observations, not pins.
 
 | Tool | Upstream evidence | Candidate acquisition and remaining risk |
 | --- | --- | --- |
@@ -100,6 +103,13 @@ observations, not pins.
 | CSharpier | [1.3.0 release](https://github.com/belav/csharpier/releases/tag/1.3.0) (Jun 2026; [NuGet](https://www.nuget.org/packages/CSharpier)) | Exact official tool package executed as declared DLLs over the one managed .NET runtime cohort (1.3.0 targets .NET 8.0); no consumer runs `dotnet tool install` or any equivalent installer. Runtime compatibility bounds stay open until qualified. Maintainer acquisition must establish and record byte identity. |
 | Fantomas | [releases](https://github.com/fsprojects/fantomas/releases) (v7.x stable line; 8.0.0 alphas target the next FSharp.Core/.NET and are not stable) | Exact official tool package executed as declared DLLs over the one managed .NET runtime cohort; no consumer runs `dotnet tool install` or any equivalent installer. Runtime compatibility bounds stay open until qualified. Maintainer acquisition must establish and record byte identity. |
 | FSharpLint | [0.27.0 release](https://github.com/fsprojects/FSharpLint/releases) (Jun 2026; targets .NET 8.0) | Exact official tool package over the one managed .NET runtime cohort; console text parsing versus binding the `FSharpLint.Core` library API is open work itemized here, not silently dropped. Default ruleset with formatting rules off (Fantomas owns formatting) stays a provisional native-config input until qualified. Maintainer acquisition must establish and record byte identity. |
+| clang-format | [hermetic-llvm v0.8.19](https://github.com/hermeticbuild/hermetic-llvm/blob/v0.8.19/README.md) (inspected release; LLVM tool targets) | Authoritative-toolchain class: resolves from the qualified hermetic-llvm LLVM distribution's tool targets, no separate acquisition. Version follows the qualified toolchain pin; recheck the qualified LLVM distribution when adding the adapter. |
+| clang-tidy | [hermetic-llvm v0.8.19](https://github.com/hermeticbuild/hermetic-llvm/blob/v0.8.19/README.md) (inspected release; LLVM tool targets) | Authoritative-toolchain class: resolves from the qualified hermetic-llvm LLVM distribution's tool targets, no separate acquisition. clang-tidy needs compile-commands context — target-coupled wiring versus check-only stays open work itemized here, not silently dropped. Version follows the qualified toolchain pin. |
+| cppcheck | [2.21.0 release](https://github.com/cppcheck-opensource/cppcheck/releases) (Jun 2026; [2.21 sources](https://sourceforge.net/projects/cppcheck/files/cppcheck/2.21/)) | Checksummed standalone release artifact; `--xml --xml-version=2` on stderr is the machine-readable shape. Default enablement stays a provisional native-config input until qualified. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
+| gofumpt | [v0.11.0](https://github.com/mvdan/gofumpt/releases) (observed Jul 2026; strict superset of gofmt) | Checksummed standalone release artifact; whole-file rewrite with check/diff mode. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
+| staticcheck | [2026.2 release notes](https://staticcheck.dev/changes/2026.2) (Aug 2026; v0.8.1 observed) | Checksummed standalone release artifact; SARIF via `-f sarif`, JSON via `-f json`. Default checks versus the `SA`-only suggestion stay an unresolved conflict — neither is selected here; qualify before freezing. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
+| govet | [Go 1.27.1](https://go.dev/doc/devel/release) (Sep 2026; ships with the Go toolchain) | Authoritative Go toolchain class: `govet` ships with the toolchain, no separate acquisition. Text-parse shape (`file:line[:col]: message`); check-only with the provisional sandbox-apply-and-diff fix flow. Version follows the qualified Go toolchain pin. |
+| errcheck | [v1.20.0 release](https://github.com/kisielk/errcheck/releases) (May 2026) | Checksummed standalone release artifact; text-parse shape (`file:line[:col]: message`); check-only with the provisional sandbox-apply-and-diff fix flow. Complementary to `govet` for unhandled errors, not a default selection. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
 
 Record compressed artifact identity separately from extracted executable identity. A versioned
 release URL does not guarantee immutable bytes; checked-in digests must reject changed content.
@@ -337,6 +347,39 @@ adapter qualification remain pending and no adapter claims `ruby` yet
 (open). This
 closes that order (Python, Node, JVM including Scala/Scalafix managed
 route, .NET, PowerShell, Ruby).
+
+Decided route: clang-format, clang-tidy, and cppcheck take the
+split native route. clang-format and clang-tidy resolve from the
+qualified hermetic-llvm LLVM distribution's tool targets
+(authoritative-toolchain class, no separate acquisition) per the Qt
+record; clang-tidy needs compile-commands context — target-coupled
+wiring versus check-only stays open under issue #418 and is recorded
+explicitly here, never silent. cppcheck stays a standalone
+checksummed-artifact candidate (`--xml --xml-version=2` on stderr).
+Exact artifact version, digest, default-check/enablement qualification
+(native-configuration review of the provisional clang-tidy/cppcheck
+inputs stays required under issue #418), and adapter qualification
+remain pending under issue #418 (live successor to closed #307 for the
+`c`/`cpp` classes) and no adapter claims `c` or `cpp` yet
+(open under issue #418). C/C++ MSVC-interop and SDK licensing stay with
+the Windows platform issue — this route covers adapter behavior given a
+qualified toolchain.
+
+Decided route: gofumpt, staticcheck, govet, and errcheck take the
+split Go route. gofumpt (strict superset of gofmt) stays a standalone
+checksummed-artifact candidate with whole-file rewrite plus check/diff
+mode; `govet` ships with the authoritative Go toolchain (no separate
+acquisition); staticcheck and errcheck stay standalone
+checksummed-artifact candidates. staticcheck default checks versus the
+`SA`-only suggestion stay an unresolved conflict — neither is selected
+here; qualify before freezing. `govet` and errcheck stay complementary
+for unhandled errors (text-parse `file:line[:col]: message`), check-only
+with the provisional sandbox-apply-and-diff fix flow. Exact artifact
+versions, digests, rule-set qualification (native-configuration review
+of the provisional staticcheck inputs stays required under issue #418),
+and adapter qualification remain pending under issue #418 (live
+successor to closed #307 for the `go` class) and no adapter claims `go`
+yet (open under issue #418).
 
 No listed private graph accepts arbitrary consumer packages or plugins in v1. The curated
 lock and configuration are part of the `rules_dx` release. A tool whose required standard

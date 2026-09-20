@@ -247,6 +247,24 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   are check-only with the provisional sandbox-apply-and-diff fix flow. Versions are observations,
   not pins; recheck latest stable at implementation (see the Scala + .NET rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
+- **Native cohort (issue #418, provisional — no adapter claims `c`, `cpp`, or `go` yet):**
+  split native route for clang-format/clang-tidy via the qualified hermetic-llvm LLVM tool
+  targets (authoritative-toolchain class, no separate acquisition) plus cppcheck as a
+  standalone checksummed-artifact candidate, and split Go route for gofumpt (strict gofmt
+  superset) plus staticcheck/govet with errcheck complementary for unhandled errors.
+  Research notes (unproven mappings): clang-tidy needs compile-commands context, so the
+  target-coupled wiring versus check-only decision is recorded here, not silent; cppcheck
+  parses `--xml --xml-version=2` on stderr; staticcheck default checks versus the `SA`-only
+  suggestion stay an unresolved conflict — neither is selected here, qualify before freezing;
+  `govet` and errcheck parse `file:line[:col]: message` text; clang-tidy fixes travel
+  separately as `--export-fixes` YAML for `clang-apply-replacements`. Formatters (clang-format,
+  gofumpt) are whole-file rewrite with check/diff mode; clang-tidy is whole-file rewrite
+  (`--fix` or `--export-fixes`) versus check-only per the target-coupling decision above;
+  staticcheck, `govet`, errcheck, and cppcheck are check-only with the provisional
+  sandbox-apply-and-diff fix flow. C/C++ MSVC-interop and SDK licensing stay with the Windows
+  platform issue — this cohort covers adapter behavior given a qualified toolchain. Versions
+  are observations, not pins; recheck latest stable at implementation (see the Native rows in
+  [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
 
 Candidate native filenames are `.buildifier.json`, `.taplo.toml`/`taplo.toml`, and `.vale.ini`.
 Freeze them in [Native Configuration](native-configuration.md#discovery) only with exact binding,
