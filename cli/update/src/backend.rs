@@ -215,6 +215,28 @@ mod tests {
     }
 
     #[test]
+    fn cargo_selective_reports_unsupported_never_full() {
+        // Issue #633: per-crate `cargo:<crate>` parses in the selector
+        // but the approved `crate_universe` repin has no per-crate flag,
+        // so execution fails closed with the full-set hint and never
+        // substitutes a full update; private `cargo update -p` stays
+        // rejected (resolver-owned backends only).
+        let error = plan(
+            SetId::Cargo,
+            &SetRequest::Packages(vec!["anyhow".to_owned()]),
+        )
+        .expect_err("cargo selective is wont-fix");
+        assert!(
+            matches!(error, BackendError::Unsupported { .. }),
+            "{error:?}"
+        );
+        assert!(error.to_string().contains("cargo"));
+        assert!(error
+            .to_string()
+            .contains("use `dx update cargo` for the set"));
+    }
+
+    #[test]
     fn non_npm_selective_reports_unsupported_never_full() {
         for (set, packages) in [
             (

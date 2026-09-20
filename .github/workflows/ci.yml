@@ -1131,6 +1131,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:rust_library_qualification
       - name: Audit selective update qualification (issue #583 per-set selective vs wont-fix plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:selective_update_qualification
+      - name: Audit selective Cargo qualification (issue #633 per-crate wont-fix plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:selective_cargo_qualification
       - name: Audit update events qualification (issue #586 mutation wont-fix plus completeness plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:update_events_qualification
       - name: Audit Starlark futures qualification (issue #588 filtering plus subjects plus BEP wont-fix/deferred plus fixture evidence, owned gaps)
