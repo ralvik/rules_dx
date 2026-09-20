@@ -94,7 +94,9 @@ if grep -q -F -e 'BumpSet::Bazel' cli/bump/src/sets.rs &&
   grep -q -F -e 'BumpSet::Cargo' cli/bump/src/sets.rs &&
   grep -q -F -e 'BumpSet::GithubActions' cli/bump/src/sets.rs &&
   grep -q -F -e 'BumpSet::Go' cli/bump/src/sets.rs &&
-  grep -q -F -e 'BumpSet::Npm' cli/bump/src/sets.rs; then
+  grep -q -F -e 'BumpSet::Maven' cli/bump/src/sets.rs &&
+  grep -q -F -e 'BumpSet::Npm' cli/bump/src/sets.rs &&
+  grep -q -F -e 'BumpSet::NuGet' cli/bump/src/sets.rs; then
   ok
 else
   bad "native set registry lost its all-ecosystems v1 set (#260)"

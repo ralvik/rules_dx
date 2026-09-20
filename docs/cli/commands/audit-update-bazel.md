@@ -554,24 +554,28 @@ bounded ranges, and Git tag/commit shapes per the ecosystem mapping in
 `dx_bump::sets`. An explicit operation keeps the contract honest: no
 `--widen` flag silently breaks the load-bearing invariant.
 
-All ecosystems in v1, no phasing, covering the native five-set scope:
+All ecosystems in v1, no phasing, covering the native seven-set scope:
 Bazel modules plus `.bazelversion`, Cargo, npm/pnpm (both lock
-graphs), Go (`gomod`), GitHub Actions. Selector syntax is `set:package`
+graphs), Go (`gomod`), GitHub Actions, Maven, NuGet (issue #637).
+Selector syntax is `set:package`
 (`bazel:rules_rust`, `bazel:.bazelversion`, `cargo:anyhow`, `npm:react`,
-`go:example.com/mod`, `github-actions:actions/checkout` with `gha`/`gomod`
+`go:example.com/mod`, `github-actions:actions/checkout`,
+`maven:junit:junit` plus `maven:org.junit.jupiter:junit-jupiter-api`,
+`nuget:FSharp.Core` with `gha`/`gomod`
 aliases canonicalized); bare sets, labels, paths, and empty versions fail
 closed as usage errors (exit `2`), never as partial widens.
 
 Library-first (ADR 0008): registry discovery, version comparison, and manifest
-parsing use upstream libraries (BCR / crates.io / npm / Go proxy / GitHub
-releases clients plus `semver`, `serde_json`, `toml`, `toml_edit`), never
+parsing use upstream libraries (BCR / crates.io / npm / Go proxy / Maven
+Central / NuGet / GitHub releases clients plus `semver`, `serde_json`,
+`toml`, `toml_edit`), never
 custom HTTP/version/resolver code. Cargo edits preserve comments,
 whitespace, and order through `toml_edit::DocumentMut`; `package.json`
 stays on `serde_json::Value`. Custom code is limited to the thin
 widen-one-requirement edit in `dx_bump::request`, loop orchestration, and PR
 handling. All deps pin exactly per ADR 0008 (latest stable). Version shapes
 validate through upstream `semver` (`dx_bump::version`): exact semver for
-Bazel/Cargo/npm/Go, tag or 40/64-char SHA for GitHub Actions (tags need SHA
+Bazel/Cargo/npm/Go/Maven/NuGet, tag or 40/64-char SHA for GitHub Actions (tags need SHA
 resolution via the upstream GitHub releases client before the file edit).
 Discovery proposes stable versions only; prerelease eligibility follows the
 upstream resolver and project configuration
@@ -582,11 +586,15 @@ pins intact); bump never forces every transitive to newest.
 Manifests widened atomically (one file per invocation): `.bazelversion` or
 `MODULE.bazel` (Bazel, file-only), `rust/tests/fixtures/hello/Cargo.toml` (Cargo),
 `package.json` (npm), `third_party/go/go.mod` (Go), `.github/workflows/ci.yml`
-(GitHub Actions, SHA-plus-tag pins). Lock refresh stays manual and resolver-owned
-through `dx update <set>` for Cargo/npm/Go
+(GitHub Actions, SHA-plus-tag pins), `MODULE.bazel` `maven.install`
+artifacts (Maven, e.g. `"junit:junit:4.13.2"`),
+`third_party/dotnet/paket.dependencies` (NuGet, e.g. `nuget FSharp.Core 10.1.201`).
+Lock refresh stays manual and resolver-owned
+through `dx update <set>` for Cargo/npm/Go/Maven/NuGet
 (`dx_bump::BumpSet::needs_update_refresh`): `dx update cargo` (full; Cargo
 selective is wont-fix), `dx update npm:<pkg>` or `dx update npm` (selective
-permitted), `dx update go`; Bazel and GitHub Actions verify
+permitted), `dx update go`, `dx update maven` (whole-lock `REPIN=1` pin),
+`dx update nuget` (whole-folder `paket2bazel` regen); Bazel and GitHub Actions verify
 file-only through `preset.update --verify-only` flag-diff review plus
 `bazel build //...`. Per-set selective support is decided in
 [ADR 0024](../../decisions/0024-selective-update.md). Missing, ambiguous, or unsupported manifest shapes fail

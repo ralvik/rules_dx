@@ -42,16 +42,19 @@ bump_request="cli/bump/src/request.rs"
 bump_workflow=".github/workflows/bump.yml"
 
 # All ecosystems in v1, no phasing: Bazel modules + .bazelversion, Cargo,
-# npm/pnpm, Go, GitHub Actions -- pinned in the native set registry.
+# npm/pnpm, Go, GitHub Actions, Maven, NuGet -- pinned in the native set
+# registry.
 if grep -q -F -e 'BumpSet::Bazel' "$sets" &&
   grep -q -F -e 'BumpSet::Cargo' "$sets" &&
   grep -q -F -e 'BumpSet::GithubActions' "$sets" &&
   grep -q -F -e 'BumpSet::Go' "$sets" &&
+  grep -q -F -e 'BumpSet::Maven' "$sets" &&
   grep -q -F -e 'BumpSet::Npm' "$sets" &&
+  grep -q -F -e 'BumpSet::NuGet' "$sets" &&
   grep -q -F -e 'BumpSet::ALL' "$sets"; then
   ok
 else
-  bad "native set registry lost the all-ecosystems v1 set (bazel/cargo/github-actions/go/npm)"
+  bad "native set registry lost the all-ecosystems v1 set (bazel/cargo/github-actions/go/maven/npm/nuget)"
 fi
 
 # Sole-updater shape: the native loop owns discovery plus widen plus

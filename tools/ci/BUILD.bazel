@@ -761,7 +761,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-<# Selective Maven per-artifact wont-fix harness (issue #634); see docs/decisions/0024-selective-update.md.
+# Selective Maven per-artifact wont-fix harness (issue #634); see docs/decisions/0024-selective-update.md.
 sh_binary(
     name = "selective_maven_qualification",
     srcs = ["selective_maven_qualification.sh"],

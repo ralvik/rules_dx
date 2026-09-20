@@ -53,8 +53,10 @@ update; execution reports `unsupported` per set and the invocation exits
 set is both fully and package selected, the full update wins (it includes
 the packages). The `dx bump` follow-up stays manual and resolver-owned:
 `dx update cargo` (full) after a Cargo widen, `dx update npm:<pkg>` or
-`dx update npm` (selective permitted) after an npm widen, and
-`dx update go` after a Go widen. Update-only; no lock format change.
+`dx update npm` (selective permitted) after an npm widen,
+`dx update go` after a Go widen, `dx update maven` (whole-lock pin) after
+a Maven widen, and `dx update nuget` (whole-folder regen) after a NuGet
+widen. Update-only; no lock format change.
 
 ## Consequences
 

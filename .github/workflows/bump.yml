@@ -5,7 +5,8 @@
 #
 # Loop (widen-one): discover outdated (stable only, prerelease follows
 # upstream resolver/project config) via upstream registry clients (BCR /
-# crates.io / npm / Go proxy / GitHub releases, never custom HTTP) → widen
+# crates.io / npm / Go proxy / Maven Central / NuGet / GitHub releases,
+# never custom HTTP) → widen
 # one requirement with `dx bump` → run `dx update <that-set>` for
 # resolver-owned lock refresh (transitives stay resolver-governed, no forcing
 # newest) → run the bump-PR verification (regen evidence,
@@ -98,7 +99,7 @@ jobs:
           bazel run --noshow_progress //cli/cli:dx -- bump "$SELECTOR" "$VERSION"
           set_name="${SELECTOR%%:*}"
           case "$set_name" in
-            cargo|npm|go|gomod) bazel run --noshow_progress //cli/cli:dx -- update "$set_name" || exit 1 ;;
+            cargo|npm|go|gomod|maven|nuget) bazel run --noshow_progress //cli/cli:dx -- update "$set_name" || exit 1 ;;
             *) echo "File-only set ($set_name): no resolver refresh; preset flag-diff review plus build below." ;;
           esac
       - name: Bump-PR verification (regen, flag-diff, build, test)
