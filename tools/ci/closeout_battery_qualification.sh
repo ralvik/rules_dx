@@ -217,16 +217,16 @@ else
 fi
 
 # Reusable-docs contract: check-only lint over the caller scope, validated
-# tree, staged publish, clean checkout, no rendered site until #421.
+# tree, staged publish, clean checkout, no rendered site until #581.
 if grep -q -F -e 'lint --check' "$reusable" &&
   grep -q -F -e 'validated docs tree' "$reusable" &&
   grep -q -F -e 'is pure check-only' "$reusable" &&
   grep -q -F -e 'RUNNER_TEMP' "$reusable" &&
   grep -q -F -e 'git status --porcelain' "$reusable" &&
-  grep -q -F -e 'issue #421' "$reusable"; then
+  grep -q -F -e 'issue #581' "$reusable"; then
   ok
 else
-  bad "reusable-docs lost its check-only plus validated-tree plus clean-checkout contract (issue #421)"
+  bad "reusable-docs lost its check-only plus validated-tree plus clean-checkout contract (issue #581)"
 fi
 
 # Consumer gate: all-enabled self-call on the five host platforms.

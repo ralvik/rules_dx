@@ -236,7 +236,7 @@ public APIs. The approved Rust and Go editor behavior is defined in
 | `dx fix` | retain, mutating by default | Same sequence in default mutating mode with per-file atomic apply; no post-apply rerun |
 | `dx clean` | retain, mutating managed state only | Prune validated unselected `.dx` generations; explicit `--bazel` also forwards `bazel clean` |
 | `dx bazel` | retain | Exact-forwarding escape hatch through the selected repository launcher |
-| `dx docs` | removed; reintroduction with real extraction/validation open under issue #421 (live successor to closed #310) | Build, check, and serve the unified documentation site; `--check` is non-mutating |
+| `dx docs` | removed; reintroduction with real extraction/validation open under issue #581 (live successor to closed #421) | Build, check, and serve the unified documentation site; `--check` is non-mutating |
 
 `dx doctor` and `dx configure` are not commands. `dx check` and `dx fix`
 are thin sequential umbrellas, not a general CI scheduler. `generate`

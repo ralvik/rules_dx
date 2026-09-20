@@ -526,7 +526,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Docs-pipeline harness (issue #421); see tools/ci/docs_pipeline_qualification.sh.
+# Docs-pipeline harness (issue #581); see tools/ci/docs_pipeline_qualification.sh.
 sh_binary(
     name = "docs_pipeline_qualification",
     srcs = ["docs_pipeline_qualification.sh"],

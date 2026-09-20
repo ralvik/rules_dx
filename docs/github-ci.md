@@ -51,7 +51,7 @@ The same caller-pin pattern covers documentation: `.github/workflows/reusable-do
 is a reusable workflow running `dx lint --check` over a
 caller-selected docs scope, with an opt-in `publish` input that deploys the validated
 docs tree to GitHub Pages. The deployed content is the validated tree, not a rendered
-site; the renderer arrives via the docs-pipeline track (open, issue #421, live successor to closed #310).
+site; the renderer arrives via the docs-pipeline track (open, issue #581, live successor to closed #421).
 Third-party reuse is templated in `examples/docs-ci/`; this repository self-calls the
 workflow from `.github/workflows/ci.yml` (check-only on pull requests, publishing on
 `main`). Pages needs source GitHub Actions enabled in repository settings before the
