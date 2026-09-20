@@ -204,6 +204,7 @@ scope). The host matrix across these hosts is pinned by `bazel run
   `:env_codegen_qualification`, `:docs_pipeline_qualification`,
   `:consumer_ci_qualification`, `:file_family_qualification`,
   `:helper_qualification`, `:clap_tokenizer_qualification`,
+  `:hello_smoke_qualification`,
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
   best-effort), `:windows_qualification`, and `:ci_matrix_qualification`
   (host matrix, issue #415).
@@ -217,7 +218,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 33/33,
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
-`musl_qualification` 12/12, `macos_qualification` 12/12,
+`hello_smoke_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
 `windows_qualification` 13/13, `ci_matrix_qualification` 14/14.
 Full `build`/`test` green is owned by CI on this tree; the last full-tree
 record is noted on the issue, not re-claimed here.
@@ -286,6 +287,11 @@ Remaining reds stay owned gaps, not green claims:
   allow_hyphen_values plus invalid_token/parse_error mapping for unknown,
   missing, malformed, hyphen-value, and attached-echo shapes; strict clap
   parsing with auto help stays owned gap).
+- Hello smoke as test with fixture evidence qualified seed-only under #464
+  (`bazel run //tools/ci:hello_smoke_qualification`; 11 binary hellos with
+  `hello_output_test` under `bazel test //...`, no-coverage Linux-only runfiles
+  wiring with `dx_realpath`, component-only fixtures with no binary by design;
+  platform plus consumer plus release evidence stays owned gap; no Supported claim).
 - Non-dogfed execution plan delivered (see issue #508 for remaining gaps; hermetic
   CLI-contract pins under issue #407)
   (`bazel run //tools/ci:non_dogfed_paths`; hermetic CLI-contract pins,
