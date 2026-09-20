@@ -188,7 +188,10 @@ fn lock_texts_for_set(
     if out.is_empty() && set == dx_update::sets::SetId::Npm {
         return Err(format!(
             "could not read {}: no such file",
-            missing.first().cloned().unwrap_or_else(|| "pnpm-lock.yaml".to_owned())
+            missing
+                .first()
+                .cloned()
+                .unwrap_or_else(|| "pnpm-lock.yaml".to_owned())
         ));
     }
     Ok(out)
@@ -1393,8 +1396,17 @@ mod tests {
 
     #[test]
     fn audit_live_secrets_findings_fail_with_redacted_summary() {
-        let sarif = r#"{"version": "2.1.0", "runs": [{"tool": {"driver": {"name": "gitleaks"}}, "results": [{"ruleId": "gitleaks/generic-api-key", "message": {"text": "Generic API Key"}, "locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/app.py"}}}]}]}]}"#;
-        let runner = AuditRunner::with_sarif(Some(1), sarif);
+        // Issue #629: an unredacted SARIF (secrets in message.text,
+        // fingerprints, snippets, and properties) still yields a
+        // redacted summary: rule IDs and counts only, never values.
+        // Sentinels are assembled at runtime so the file never stores
+        // a push-protected token shape verbatim.
+        let github = format!("{}{}", "ghp_", "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8");
+        let generic = format!("{}{}", "sk-live-", "51H7x9yQ2wE4rT6yU8iO0p");
+        let sarif = format!(
+            "{{\"version\": \"2.1.0\", \"runs\": [{{\"tool\": {{\"driver\": {{\"name\": \"gitleaks\"}}}}, \"results\": [{{\"ruleId\": \"gitleaks/aws-key\", \"message\": {{\"text\": \"leaked AKIAIOSFODNN7EXAMPLE in src/app.py\"}}, \"fingerprints\": {{\"secret\": \"AKIAIOSFODNN7EXAMPLE\"}}, \"partialFingerprints\": {{\"secret/v1\": \"{github}\"}}, \"properties\": {{\"secret\": \"{generic}\"}}, \"locations\": [{{\"physicalLocation\": {{\"artifactLocation\": {{\"uri\": \"src/app.py\"}}, \"region\": {{\"snippet\": {{\"text\": \"key = 'AKIAIOSFODNN7EXAMPLE'\"}}}}}}}}]}}]}}]}}"
+        );
+        let runner = AuditRunner::with_sarif(Some(1), &sarif);
         let (code, out, err) = run_with(&["audit", "security"], &runner, &|harness| {
             harness.write_source(
                 "rust/tests/fixtures/hello/Cargo.lock",
@@ -1412,8 +1424,13 @@ mod tests {
         assert_eq!(code, 1, "{out}{err}");
         assert!(err.contains("audit_failed"), "{err}");
         assert!(err.contains("audit security"), "{err}");
-        assert!(!out.contains("AKIA"), "{out}");
-        assert!(!err.contains("AKIA"), "{err}");
+        // Findings fail the audit, but secret values never reach output.
+        for secret in ["AKIAIOSFODNN7EXAMPLE", github.as_str(), generic.as_str()] {
+            assert!(!out.contains(secret), "{out}");
+            assert!(!err.contains(secret), "{err}");
+        }
+        // The invocation still pins redaction on the auditor argv.
+        assert!(runner.calls.borrow()[0].contains(&"--redact".to_owned()));
     }
 
     #[test]

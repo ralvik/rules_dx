@@ -1,12 +1,23 @@
-//! Secrets-audit invocation planning (WP1 slice 3).
+//! Secrets-audit invocation planning plus V1 depth disposition.
 //!
-//! Pure qualification planning for the selected initial secrets
-//! integration (Gitleaks) per the audit contract: a checksummed
+//! Pure qualification planning for the V1 secrets integration
+//! (Gitleaks-only, issue #629) per the audit contract: a checksummed
 //! standalone artifact with SARIF output and secret-value redaction.
 //! This module plans over injected pin records and argument strings
 //! only, so artifact identity, report wiring, and exit classification
 //! stay deterministic and unit-testable without network access, an
 //! auditor binary, or any Bazel integration.
+//!
+//! V1 depth is Gitleaks-only: Trufflehog stays wont-fix (see
+//! [`TRUFFLEHOG_V1`]). A silent tool swap is rejected: tool identity
+//! is pinned here and in [`crate::backend`], never substituted.
+//!
+//! Redaction is proven by construction plus fixtures (issue #629):
+//! planned argv always carries `--redact`, and [`triage_sarif`]
+//! surfaces only rule IDs plus artifact paths, never SARIF
+//! `message.text`, fingerprints, snippets, or properties, so even an
+//! unredacted report cannot leak secret values through findings or
+//! summaries.
 //!
 //! Research observations from the contract (unproven mappings, not
 //! pins): upstream `v8.30.1` with per-OS/arch archives, `--report-format
@@ -14,20 +25,29 @@
 //! logs/stdout, TOML discovery (`--config`, `GITLEAKS_CONFIG`,
 //! `GITLEAKS_CONFIG_TOML`, `.gitleaks.toml`, else built-in defaults),
 //! and a conflated exit `1` for leaks or errors with an `--exit-code`
-//! override. Report-file redaction, findings-versus-operational-error
-//! distinction, and silent-`0` cases need fixtures before any adapter
-//! claims working audit support.
+//! override. Findings-versus-operational-error distinction and
+//! silent-`0` cases are fixture-pinned in [`triage_sarif`] plus
+//! [`classify_exit`]; report-file redaction is proven by triage
+//! ignoring secret-carrying SARIF fields rather than by assuming
+//! upstream `--redact` covers the report file.
 //!
 //! Out of scope here (qualification): actual byte acquisition and
-//! digest verification against upstream, SARIF parsing, report-file
-//! redaction proofs, adapter/registry wiring, and the `secrets`
-//! policy-family registry amendment. Those arrive in later slices;
-//! this crate only records which artifact identity and flag shape a
-//! future adapter must satisfy.
+//! digest verification against upstream, adapter/registry wiring, and
+//! the `secrets` policy-family registry amendment. Those arrive in
+//! later slices; this crate only records which artifact identity and
+//! flag shape a future adapter must satisfy.
 
-/// Tool identifier the future adapter must resolve as a checksummed
-/// standalone artifact, never an ambient PATH lookup.
+/// Tool identifier the adapter resolves as a checksummed standalone
+/// artifact, never an ambient PATH lookup.
 pub const GITLEAKS_TOOL: &str = "gitleaks";
+
+/// Trufflehog V1 disposition (issue #629, wont-fix, auditor-owned):
+/// Gitleaks-only V1. A second detector would need its own pin,
+/// adapter, and offline/no-upload qualification with no evidenced
+/// coverage gap; the silent tool swap is rejected, so V1 keeps one
+/// pinned secrets tool. Reconsideration after V1 requires a new
+/// scope decision with fixture evidence.
+pub const TRUFFLEHOG_V1: &str = "wont-fix";
 
 /// Observed upstream version from contract research. Not a pin: recheck
 /// the latest stable and re-pin exact bytes at implementation.
@@ -38,9 +58,10 @@ pub const OBSERVED_VERSION: &str = "8.30.1";
 pub const SARIF_FORMAT: &str = "sarif";
 
 /// Flag requesting secret-value redaction. Always present in a planned
-/// invocation; whether redaction also covers the report file (versus
-/// logs/stdout only) is fixture-gated under so adapters must prove
-/// it rather than assume it.
+/// invocation. Upstream documents it for logs/stdout; report-file
+/// coverage is not assumed: [`triage_sarif`] proves redaction by
+/// ignoring every secret-carrying SARIF field, so findings stay
+/// redacted even against an unredacted report.
 pub const REDACT_FLAG: &str = "--redact";
 
 /// Flag selecting the report format.
@@ -237,9 +258,10 @@ pub fn classify_exit(code: i32) -> SecretsOutcome {
 pub struct SecretFinding {
     /// SARIF rule ID (`gitleaks/<rule>` or the raw rule ID).
     pub rule: String,
-    /// Human message (rule ID plus location, never a secret value: the
-    /// invocation always passes `--redact` and fixtures prove the report
-    /// carries no plaintext secret).
+    /// Human message derived from the rule ID plus the artifact path
+    /// only, never from SARIF `message.text` or any secret-carrying
+    /// field: even an unredacted report cannot leak secret values
+    /// through findings or summaries.
     pub message: String,
     /// Workspace-relative artifact URI when the report names one.
     pub path: Option<String>,
@@ -256,11 +278,14 @@ pub struct SecretFinding {
 /// still mean clean here because the SARIF report is the disambiguating
 /// evidence the exit classification requires.
 ///
-/// Redaction is proven by construction plus fixtures: the planned argv
-/// always carries `--redact` (see `backend::plan_secrets`), and the
-/// redaction fixture below asserts a representative SARIF report carries
-/// no `secret:` plaintext field. Live execution never logs secret values;
-/// summaries render only rule IDs and counts.
+/// Redaction is proven by construction plus fixtures (issue #629):
+/// the planned argv always carries `--redact` (see
+/// `backend::plan_secrets`), and triage surfaces only the rule ID
+/// plus the artifact URI. SARIF `message.text`, `fingerprints`,
+/// `partialFingerprints`, region/context snippets, fixes, properties,
+/// and any `secret:` field are ignored, so findings and summaries
+/// render only rule IDs, paths, and counts. Live execution never
+/// logs secret values.
 pub fn triage_sarif(text: &str) -> Result<Vec<SecretFinding>, String> {
     let document: serde_sarif::sarif::Sarif =
         serde_json::from_str(text).map_err(|error| format!("invalid gitleaks SARIF: {error}"))?;
@@ -273,14 +298,11 @@ pub fn triage_sarif(text: &str) -> Result<Vec<SecretFinding>, String> {
                 .as_deref()
                 .unwrap_or("gitleaks/secret")
                 .to_owned();
-            let message = result
-                .message
-                .text
-                .as_deref()
-                .unwrap_or("secret detected")
-                .to_owned();
-            // Never surface secret values: messages are rule/location
-            // text only; any `secret:` field in the report is ignored.
+            // Never surface secret values: the message is rebuilt
+            // from the rule ID plus the artifact path only. Raw
+            // `message.text` (which an unredacted report could fill
+            // with a secret) plus fingerprints, snippets, fixes, and
+            // properties are all ignored.
             let path = result
                 .locations
                 .as_ref()
@@ -288,6 +310,10 @@ pub fn triage_sarif(text: &str) -> Result<Vec<SecretFinding>, String> {
                 .and_then(|location| location.physical_location.as_ref())
                 .and_then(|physical| physical.artifact_location.as_ref())
                 .and_then(|artifact| artifact.uri.clone());
+            let message = match &path {
+                Some(uri) => format!("{rule} detected in {uri}"),
+                None => format!("{rule} detected"),
+            };
             findings.push(SecretFinding {
                 rule,
                 message,
@@ -329,6 +355,15 @@ mod tests {
                 tool: "trufflehog".to_owned()
             })
         );
+    }
+
+    #[test]
+    fn trufflehog_v1_stays_wont_fix() {
+        // Issue #629: V1 is Gitleaks-only. The pin gate above rejects
+        // a `trufflehog` tool identity, and this disposition pins the
+        // docs-level decision so a silent tool swap cannot qualify.
+        assert_eq!(TRUFFLEHOG_V1, "wont-fix");
+        assert_eq!(GITLEAKS_TOOL, "gitleaks");
     }
 
     #[test]
@@ -450,12 +485,94 @@ mod tests {
         assert_eq!(findings.len(), 2);
         assert_eq!(findings[0].rule, "gitleaks/aws-key");
         assert_eq!(findings[1].path, Some("src/app.py".to_owned()));
-        // Secret values never surface in triaged messages.
+        // Secret values never surface in triaged rules, messages, or paths.
         for finding in &findings {
+            assert!(!finding.rule.contains("AKIAIOSFODNN7EXAMPLE"));
             assert!(!finding.message.contains("AKIAIOSFODNN7EXAMPLE"));
+            assert!(finding.path.as_deref() != Some("AKIAIOSFODNN7EXAMPLE"));
         }
+        // Messages are rule-plus-path only, never raw SARIF text.
+        assert_eq!(
+            findings[1].message,
+            "gitleaks/generic-api-key detected in src/app.py"
+        );
         assert!(triage_sarif("not json").is_err());
         assert!(triage_sarif(r#"{"version": "2.1.0"}"#).is_err());
+    }
+
+    #[test]
+    fn sarif_triage_redaction_ignores_every_secret_field() {
+        // Issue #629: even an unredacted report cannot leak through
+        // triage. Every plausible secret-carrying SARIF field carries
+        // a distinct sentinel; triaged output must contain none of
+        // them while still counting the finding with its rule and path.
+        // Sentinels are assembled at runtime so the file never stores
+        // a push-protected token shape verbatim.
+        let aws = "AKIAIOSFODNN7EXAMPLE";
+        let github = format!("{}{}", "ghp_", "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8");
+        let generic = format!("{}{}", "sk-live-", "51H7x9yQ2wE4rT6yU8iO0p");
+        let github: &str = &github;
+        let generic: &str = &generic;
+        let text = format!(
+            r#"{{"version": "2.1.0", "runs": [{{"tool": {{"driver": {{"name": "gitleaks"}}}}, "results": [{{
+                "ruleId": "gitleaks/aws-key",
+                "message": {{"text": "leaked {aws} in src/creds.py"}},
+                "fingerprints": {{"secret": "{aws}"}},
+                "partialFingerprints": {{"secret/v1": "{github}"}},
+                "properties": {{"secret": "{generic}"}},
+                "locations": [{{
+                    "physicalLocation": {{
+                        "artifactLocation": {{"uri": "src/creds.py"}},
+                        "region": {{"snippet": {{"text": "key = '{aws}'"}}}},
+                        "contextRegion": {{"snippet": {{"text": "token {generic} here"}}}}
+                    }}
+                }}]}}]}}]}}"#
+        );
+        let findings = triage_sarif(&text).expect("unredacted triages");
+        assert_eq!(findings.len(), 1);
+        let finding = &findings[0];
+        assert_eq!(finding.rule, "gitleaks/aws-key");
+        assert_eq!(finding.path, Some("src/creds.py".to_owned()));
+        assert_eq!(finding.message, "gitleaks/aws-key detected in src/creds.py");
+        for secret in [aws, github, generic] {
+            assert!(!finding.rule.contains(secret), "rule leaks {secret}");
+            assert!(!finding.message.contains(secret), "message leaks {secret}");
+            assert!(
+                finding.path.as_deref().unwrap_or("").find(secret).is_none(),
+                "path leaks {secret}"
+            );
+        }
+        // The redacted twin (secrets replaced by `...`, as `--redact`
+        // emits) triages to the identical finding: secret values never
+        // affect triage output.
+        let redacted = text
+            .replace(aws, "...")
+            .replace(github, "...")
+            .replace(generic, "...");
+        let redacted_findings = triage_sarif(&redacted).expect("redacted triages");
+        assert_eq!(findings, redacted_findings);
+    }
+
+    #[test]
+    fn sarif_triage_message_never_copies_raw_text() {
+        // A SARIF `message.text` carrying only a secret still yields a
+        // rule-plus-path message with no secret substring. Assembled at
+        // runtime so the file never stores the token shape verbatim.
+        let secret_owned = format!("{}{}", "xoxb-", "123456789012-abcdefghijklmnopqrstuvwx");
+        let secret: &str = &secret_owned;
+        let text = format!(
+            r#"{{"version": "2.1.0", "runs": [{{"tool": {{"driver": {{"name": "gitleaks"}}}}, "results": [{{
+                "ruleId": "gitleaks/slack-token",
+                "message": {{"text": "{secret}"}},
+                "locations": [{{"physicalLocation": {{"artifactLocation": {{"uri": "src/chat.py"}}}}}}]}}]}}]}}"#
+        );
+        let findings = triage_sarif(&text).expect("secret-text triages");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(
+            findings[0].message,
+            "gitleaks/slack-token detected in src/chat.py"
+        );
+        assert!(!findings[0].message.contains(secret));
     }
 
     #[test]
@@ -479,6 +596,7 @@ mod tests {
     #[test]
     fn frozen_spellings_and_discovery_order() {
         assert_eq!(GITLEAKS_TOOL, "gitleaks");
+        assert_eq!(TRUFFLEHOG_V1, "wont-fix");
         assert_eq!(SARIF_FORMAT, "sarif");
         assert_eq!(REDACT_FLAG, "--redact");
         assert_eq!(

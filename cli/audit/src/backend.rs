@@ -8,12 +8,14 @@
 //! values, or environment values.
 //!
 //! V1 backends (all offline, no lockfile/inventory upload):
-//! - Secrets (security family, once per invocation): Gitleaks as a
-//!   checksummed standalone artifact (`gitleaks detect --source .` with
-//!   SARIF output, `--redact`, and `--exit-code 2`), using the flag
-//!   shapes pinned in [`crate::secrets`]. Findings-versus-error
-//!   distinction consults the SARIF report (see [`crate::secrets`]
-//!   exit classification); report-file redaction is fixture-gated.
+//! - Secrets (security family, once per invocation): Gitleaks-only
+//!   (Trufflehog wont-fix, issue #629) as a checksummed standalone
+//!   artifact (`gitleaks detect --source .` with SARIF output,
+//!   `--redact`, and `--exit-code 2`), using the flag shapes pinned
+//!   in [`crate::secrets`]. Findings-versus-error distinction consults
+//!   the SARIF report (see [`crate::secrets`] exit classification);
+//!   report redaction is proven by triage surfacing only rule IDs
+//!   plus paths (issue #629), never secret values.
 //! - Vulnerability (security family, per dependency set): local
 //!   OSV-format advisory matching inside `dx_audit` (see
 //!   [`crate::vuln`] and [`crate::advisory`]), with identified snapshots
