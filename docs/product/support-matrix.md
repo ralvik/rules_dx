@@ -618,9 +618,11 @@ open work under issues #485-#489, except the JVM versions plus rule-sets
 qualified seed-only under issue #485 below (digests plus adapter mappings
 stay owned under issue #416), the Scala + .NET versions plus rule-sets
 qualified seed-only under issue #486 below (digests plus adapter mappings
-stay owned under issue #417), and the native versions plus rule-sets
+<stay owned under issue #417), the native versions plus rule-sets
 qualified seed-only under issue #487 below (digests plus adapter mappings
-stay owned under issue #418).
+stay owned under issue #418), and the structured versions plus rule-sets
+qualified seed-only under issue #488 below (digests plus adapter mappings
+stay owned under issue #419).
 
 - Go: gofumpt (strict superset of gofmt) for format; staticcheck plus `govet`
   for lint, since neither subsumes the other. Route decision (recorded 2026-09-13):
@@ -684,6 +686,18 @@ stay owned under issue #418).
   built-in defaults with no hidden preset; FSharpLint default ruleset with
   formatting rules off, Fantomas owns formatting);
   exact digests plus adapter mappings stay owned under issue #417).
+- Protocol Buffer/QML: `buf` for format plus lint; qmlformat for format with
+  qmllint for lint. The `buf` route is checksummed native/self-contained
+  (no target compiler context, execution-platform lazy); qmlformat/qmllint
+  ride the authoritative Qt distribution (Qt last). Versions plus rule-sets
+  qualified seed-only under issue #488
+  (`bazel run //tools/ci:structured_defaults_qualification` with
+  `quality/tests/fixtures/structured_quality/pins.bzl` over upstream
+  built-in defaults with no hidden preset; `buf` `STANDARD` is the upstream
+  built-in default lint set, qmlformat/qmllint follow the qualified Qt
+  distribution pin with native ini interpretation);
+  exact digests (including Qt distribution identity, licensing, and platform
+  artifacts) plus adapter mappings stay owned under issue #419).
 
 Typechecking for every admitted language is compiler-owned (javac, kotlinc,
 Roslyn, `go`, clang/gcc, scalac); no separate typechecker is selected, unlike
@@ -724,8 +738,11 @@ versions plus rule-sets qualified seed-only under issue #487
 (`bazel run //tools/ci:native_quality_qualification` with
 `cc/tests/fixtures/native_quality/pins.bzl` over upstream built-in defaults
 with no hidden preset; exact digests plus adapter mappings stay owned under
-issue #418); exact structured (`buf`/Qt) artifacts, versions, rule sets, and
-adapter mappings are tracked under issue #419; exact interpreted/file-family
+issue #418); exact structured (`buf`/Qt) versions plus rule-sets qualified
+seed-only under issue #488
+(`bazel run //tools/ci:structured_defaults_qualification` with
+`quality/tests/fixtures/structured_quality/pins.bzl` over upstream built-in
+defaults with no hidden preset; exact digests plus adapter mappings stay owned under issue #419); exact interpreted/file-family
 (`ruby`/`powershell` plus cue/jsonnet/pkl/css/html_template/gherkin/sql/xml/go_module/
 terraform/yaml/text) artifacts, versions, rule sets, and adapter mappings are tracked
 under issue #420; remaining cohorts stay in
@@ -785,8 +802,19 @@ qualification inputs open, not approved presets or additions to curated membersh
 - FSharpLint default ruleset with formatting rules off (Fantomas owns
   formatting), qualified seed-only under issue #486 as pinned upstream
   built-in defaults with no hidden preset.
-- `buf` `STANDARD` lint rules; qmlformat/qmllint `.qmlformat.ini`/`.qmllint.ini`
-  discovery versus explicit flags (both provisional under issue #419).
+- `buf` `STANDARD` lint rules as the upstream built-in default lint set;
+  qmlformat/qmllint `.qmlformat.ini`/`.qmllint.ini` native ini interpretation
+  (without a checked-in ini upstream built-in defaults, with an ini native
+  interpretation), qualified seed-only under issue #488 as pinned upstream
+  built-in defaults with no hidden preset
+  (`quality/tests/fixtures/structured_quality/pins.bzl` via
+  `bazel run //tools/ci:structured_defaults_qualification`).
+  The `STANDARD`-selection plus ini-discovery suggestion is resolved against
+  the native-config contract (qualified seed-only under issue #488): no
+  auto-supplied buf.yaml or ini preset; without an applicable checked-in
+  config the pinned tool uses upstream built-in defaults, with a config it
+  interprets natively; adapters add only transport settings. Beyond-default
+  `COMMENTS` plus `UNARY_RPC` opt-in maxima stay rejected.
 - RuboCop `.rubocop.yml` versus the StandardRB unconfigurable ruleset; PSScriptAnalyzer
   settings-file versus explicit-rule selection; djlint, Stylelint, prettier-plugin, and
   yamllint rule selection; yamlfmt and keep-sorted config discovery (all provisional
@@ -797,7 +825,7 @@ staticcheck `SA`-only preset plus `-all`, `govet` all analyzers, clang-tidy
 `--checks=*`, cppcheck `--enable=all`-style opt-in maxima) are not enabled by
 `rules_dx`. These suggestions must be qualified against pinned native behavior
 and checked-in configuration ownership (tracked in
-open work under issues #485-#487);
+open work under issues #485-#488);
 this review selects no preset beyond the qualified upstream defaults.
 
 ### Provisional Default Dependency Locks

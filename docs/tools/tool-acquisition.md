@@ -324,8 +324,12 @@ Decided route: `buf` takes the checksummed
 native/self-contained artifact route. `buf` ships self-contained per-platform
 release binaries with published checksums, needs no target compiler context
 (unlike clang-tidy, which needs compile commands), and stays
-execution-platform lazy; exact assets, digests, and adapter qualification
-remain pending under issue #419 (live successor to closed #307 for the
+execution-platform lazy; exact versions plus rule-sets qualified seed-only under issue #488
+(`bazel run //tools/ci:structured_defaults_qualification` with
+`quality/tests/fixtures/structured_quality/pins.bzl` over upstream built-in
+defaults with no hidden preset; `STANDARD` is the upstream built-in
+default lint set); digests plus adapter mappings stay owned under issue #419
+(live successor to closed #307 for the
 `protobuf` class) and no adapter claims `protobuf` yet
 (open under issue #419).
 
@@ -333,8 +337,13 @@ Decided route (Qt last): clang-format and
 clang-tidy take the authoritative-toolchain route from the qualified
 hermetic-llvm LLVM distribution's tool targets (no separate acquisition);
 qmlformat and qmllint take the authoritative-toolchain route from the Qt
-distribution, with exact Qt distribution identity, licensing, and platform
-artifact qualification remaining pending under issue #419 (live successor
+distribution, with exact versions plus rule-sets qualified seed-only under issue #488
+(`bazel run //tools/ci:structured_defaults_qualification` with
+`quality/tests/fixtures/structured_quality/pins.bzl` over upstream built-in
+defaults with no hidden preset; qmlformat/qmllint follow the qualified Qt
+distribution pin with native ini interpretation); exact Qt distribution
+identity, licensing, and platform artifact qualification plus digests plus
+adapter mappings stay owned under issue #419 (live successor
 to closed #307 for the `qml` class) and no adapter claiming `qml` yet
 (open under issue #419).
 Qt closed that order (clang-format/clang-tidy, Buf, Scalafix routed to
