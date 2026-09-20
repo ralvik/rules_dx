@@ -246,6 +246,8 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   plus fixture evidence, issue #497),
   `:prebuilt_interop_qualification` (prebuilt interop pins
   plus fixture evidence, issue #498),
+  `:linux_corpus_qualification` (linux corpus pins
+  plus fixture evidence, issue #499),
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
   best-effort), `:windows_qualification`, `:ci_matrix_qualification`
   (host matrix, issue #415), and `:closeout_battery_qualification`
@@ -261,7 +263,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
-`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
+<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
 
@@ -386,9 +388,10 @@ Remaining reds stay owned gaps, not green claims:
   `@crates//:cxxbridge-cmd`, never a `cxx.rs` second graph, the
   `rust/tests/fixtures/cxx_identity/` Rust plus C++ composition under
   `bazel test //...`, and `dx generate --check` stability; mixed versions
-  stay rejected; full `cxxbridge-cmd` execution plus corpus wiring stays
-  owned under issue #499; platform plus consumer plus release evidence stays
-  owned gap; no Supported claim).
+  stay rejected; full `cxxbridge-cmd` execution plus corpus wiring qualified
+  seed-only under issue #499 (`cc/tests/fixtures/linux_corpus/pins.bzl` via
+  `bazel run //tools/ci:linux_corpus_qualification`); platform plus consumer
+  plus release evidence stays owned gap; no Supported claim).
 - Exact-target discovery with fixture evidence qualified seed-only under #475
   (`bazel run //tools/ci:exact_target_qualification`; resolver-owned exact labels
   to upstream `gen_rust_project`/`flycheck` `TARGETS` with the hello exact-isolation
@@ -574,9 +577,9 @@ Remaining reds stay owned gaps, not green claims:
   rejected, laziness proven with missing acceptance plus unrelated workflows
   green and deferred failure never proving laziness; backend stays
   provisional; acquisition rights qualified seed-only under #496, prebuilt interop
-  qualified seed-only under #498, transport
-  plus corpus plus floors plus coverage stay owned under
-  issues #497/#499/#500/#501;
+  qualified seed-only under #498, linux corpus qualified seed-only under #499,
+  transport plus floors plus coverage stay owned under
+  issues #497/#500/#501;
   platform plus consumer plus release evidence stays owned gap; no Supported
   claim (`windows_acquisition_qualification` 14/14)).
 - Apple plus Microsoft acquisition rights with fixture evidence qualified seed-only under #496
@@ -590,9 +593,9 @@ Remaining reds stay owned gaps, not green claims:
   as license-approved boundaries separately from download success, official download
   not permission, assume rights rejected, pinned in
   `cc/tests/fixtures/acquisition_rights/pins.bzl`; backends stay provisional;
-  prebuilt interop qualified seed-only under #498, transport plus corpus plus
-  floors plus coverage stay owned under
-  issues #497/#499/#500/#501; platform plus consumer plus release evidence
+  prebuilt interop qualified seed-only under #498, linux corpus qualified
+  seed-only under #499, transport plus floors plus coverage stay owned under
+  issues #497/#500/#501; platform plus consumer plus release evidence
   stays owned gap; no Supported claim (`acquisition_rights_qualification` 15/15)).
 - Windows transport plus ABI with fixture evidence qualified seed-only under #497
   (`bazel run //tools/ci:windows_transport_qualification`;
@@ -604,8 +607,9 @@ Remaining reds stay owned gaps, not green claims:
   plus spaces plus SDK libraries plus cc-rs discovery/assembly plus
   proc-macro DLLs on declared-input fixtures without host Visual Studio
   state, compiler-target availability alone is not proof; backend stays
-  provisional; rights plus interop plus corpus plus floors plus coverage
-  stay owned under issues #496/#498/#499/#500/#501;
+  provisional; rights plus interop qualified seed-only under #496/#498,
+  linux corpus qualified seed-only under #499, floors plus coverage stay
+  owned under issues #500/#501;
   platform plus consumer plus release evidence stays owned gap; no Supported
   claim (`windows_transport_qualification` 16/16)).
 - Prebuilt interop with fixture evidence qualified seed-only under #498
@@ -619,10 +623,22 @@ Remaining reds stay owned gaps, not green claims:
   separately with mixed Rust/C/C++ composition, compiler-target availability alone
   plus LLVM ancestry alone plus single-combo proof rejected, pinned in
   `cc/tests/fixtures/prebuilt_interop/pins.bzl` with the interop lib plus test
-  under `bazel test //...`; backends stay provisional; transport plus corpus plus
-  floors plus coverage stay owned under issues #497/#499/#500/#501; platform plus
+  under `bazel test //...`; backends stay provisional; linux corpus qualified
+  seed-only under #499, transport plus floors plus coverage stay owned under
+  issues #497/#500/#501; platform plus
   consumer plus release evidence stays owned gap; no Supported claim
-   (`prebuilt_interop_qualification` 16/16)).
+  (`prebuilt_interop_qualification` 16/16)).
+- Linux corpus with fixture evidence qualified seed-only under #499
+  (`bazel run //tools/ci:linux_corpus_qualification`;
+  source-built SQLite plus OpenSSL with declared build tools plus ring-style
+  C/assembly with target libs plus bindgen standalone plus build-script routes
+  with execution libclang closure plus CXX single-graph execution, native only
+  with single-crate proof rejected, pinned in
+  `cc/tests/fixtures/linux_corpus/pins.bzl` with the corpus lib plus test
+  under `bazel test //...`; backends stay provisional; transport plus floors
+  plus coverage stay owned under issues #497/#500/#501; platform plus
+  consumer plus release evidence stays owned gap; no Supported claim
+  (`linux_corpus_qualification` 16/16)).
 - Stable-stack compose with fixture evidence qualified seed-only under issue #494
   (`bazel run //tools/ci:stable_stack_qualification`; as-built Bzlmod
   identities Bazel 9.2.0 plus rules_rust 0.74.0 plus rules_cc 0.2.22 plus
@@ -631,8 +647,10 @@ Remaining reds stay owned gaps, not green claims:
   comparison, checksums plus source patches plus compiler/profile
   compatibility, ad-hoc compose rejected, pinned in
   `rust/tests/fixtures/stable_stack/pins.bzl`, proven by the Rust plus C++
-  hello fixtures with no adapter claim; candidate backend plus corpus wiring
-  stays owned under #499
+  hello fixtures with no adapter claim; linux corpus qualified seed-only under
+  #499 (`cc/tests/fixtures/linux_corpus/pins.bzl` via
+  `bazel run //tools/ci:linux_corpus_qualification`, single-crate proof
+  rejected, native only) with the candidate backend provisional
   (`stable_stack_qualification` 16/16); platform plus consumer plus release
   evidence stays owned gap; no Supported claim).
 - Non-dogfed execution plan delivered (see issue #508 for remaining gaps; hermetic
