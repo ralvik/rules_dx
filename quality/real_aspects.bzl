@@ -42,7 +42,7 @@ Contract: `docs/quality/tool-integrations.md`,
 `docs/quality/quality-result-protocol.md#transport`.
 """
 
-load("@aspect_rules_ts//ts:defs.bzl", _TsConfigInfo = "TsConfigInfo")
+load("@aspect_rules_py//py:defs.bzl", _PyInfo = "PyInfo")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_aspect", _rust_common = "rust_common")
 load(
     "//quality:adapters.bzl",
@@ -99,22 +99,22 @@ def _real_pipeline_action(target, ctx, capability):
     if len(resolved) == 0:
         return []
 
-    # Target-coupled tsc (#84): tsc never applies from the class alone;
+    # Target-coupled tsc (#84, #408): tsc never applies from the class alone;
     # it requires the authoritative typescript_project context
     # (TsConfigInfo). Fixture QualitySourcesInfo-only targets carry no
     # TsConfigInfo, so drop tsc stages there (unfetched, keys unchanged
-    # per the target-coupled laziness row). Authoritative wiring
-    # (upstream diagnostics, never a bare tsc invocation per
-    # quality/tools/typescript/BUILD.bazel) remains pending per the tsc
-    # target-coupled rows; fail clearly there rather than KeyError on the
-    # missing tool binary so the gap stays visible.
+    # per the target-coupled laziness row). Authoritative targets delegate
+    # tsc to the upstream build and test: `transpiler = "tsc"` fails the
+    # `bazel build //...` (and `dx build //...`) compilation on type errors,
+    # and `<name>_upstream_typecheck_test` runs under `bazel test //...`
+    # (and `dx test //...`); see quality/tools/typescript/BUILD.bazel (never
+    # a bare tsc file invocation, which would lose tsconfig/declaration
+    # context). Drop tsc here so `dx typecheck --check //...` stays green
+    # while TS type safety is proven by the build plus test checks.
     if "tsc" in [stage["tool"] for stage in resolved]:
-        if _TsConfigInfo not in target:
-            resolved = [stage for stage in resolved if stage["tool"] != "tsc"]
-            if len(resolved) == 0:
-                return []
-        else:
-            fail("real_aspect (" + str(target.label) + "): target-coupled tsc typecheck wiring pending (authoritative TsConfigInfo present but upstream diagnostics not yet consumed)")
+        resolved = [stage for stage in resolved if stage["tool"] != "tsc"]
+        if len(resolved) == 0:
+            return []
 
     # rustfmt crate context (#49): the edition comes from the
     # authoritative `CrateInfo` (or the test crate's inner `CrateInfo`,
@@ -257,6 +257,33 @@ def _real_pipeline_action(target, ctx, capability):
     for ws_path in sorted(sibling_pairs.keys()):
         f = sibling_pairs[ws_path]
         args.add("--sibling", ws_path + "=" + f.path)
+        inputs.append(f)
+
+    # Ty import context (#408): ty resolves same-package imports through the
+    # filesystem, but actions stage only direct sources, so `import handlers`
+    # in a direct source fails when `handlers.py` comes from `deps`. The
+    # Python forwarders preserve upstream `PyInfo`, whose transitive sources
+    # cover deps; stage transitive-minus-direct Python sources as
+    # resolution-only inputs (never checked, never reported; their own
+    # targets' actions own their findings). The runner derives ty search
+    # dirs from staged files. Transitive (not just direct) deps are covered
+    # via `PyInfo`; non-Python targets without `PyInfo` simply stage nothing.
+    resolve_pairs = {}
+    if "ty" in stage_tools and _PyInfo in target:
+        transitive = getattr(target[_PyInfo], "transitive_sources", None)
+        if transitive != None:
+            for f in transitive.to_list():
+                ws_path = f.short_path
+                if ws_path in path_to_file or ws_path in sibling_pairs or ws_path in resolve_pairs:
+                    continue
+                if not ws_path.endswith(".py") and not ws_path.endswith(".pyi"):
+                    continue
+                if ws_path.startswith("../"):
+                    continue
+                resolve_pairs[ws_path] = f
+    for ws_path in sorted(resolve_pairs.keys()):
+        f = resolve_pairs[ws_path]
+        args.add("--resolve", ws_path + "=" + f.path)
         inputs.append(f)
     args.add("--real")
     for tool in stage_tools:

@@ -258,10 +258,10 @@ Renovate and native-bot follow-ups with complementary roles decided in issue
 plus gate/aggregate fixture evidence qualified seed-only under #312
 (`bazel run //tools/ci:consumer_ci_qualification`; nine checks, explicit
 platforms, fail-closed sequential, stable aggregate, hygiene, concurrency,
-permissions, per-cell coverage with fork-safe comments, build-only self-call,
-native bump loop plus Renovate (complementary, issue #326), migrate planning
+permissions, per-cell coverage with fork-safe comments, all-enabled self-call
+(issue #408, verbatim `//...`), native bump loop plus Renovate (complementary, issue #326), migrate planning
 plus run multirun, tag hygiene as-built, with the open gaps above owned under #312).
 Consumer CI, devcontainer, and perf honesty
-stays open under issue #325 (self-call build-only with 8 of 9 checks disabled,
+stays open under issue #325 (self-call all-enabled per #408,
 devcontainer parity-checked but never booted, perf report-not-gate; qualify and enable
 each path or keep the limitation explicit).

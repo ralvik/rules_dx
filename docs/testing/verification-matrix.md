@@ -171,11 +171,8 @@ macOS arm64 native (issue #412, `macos-14` runners with a separate
   `:consumer_ci_qualification`, `:file_family_qualification`,
   `:helper_qualification`, `:clap_tokenizer_qualification`,
   `:musl_qualification`, and `:macos_qualification`.
-- `dogfood-lint`, `dogfood-format`, `dogfood-typecheck`: corpus converge then
-  `--check` no-op proof, plus lane-A trees `//python/... //javascript/...
-  //rust/tests/fixtures/hello/...` where enforcing.
-- `devcontainer-check`, `docs-ci`, `consumer-ci` (build-only self-call on
-  linux_x86_64 plus linux_arm64 plus macos_arm64).
+- `devcontainer-check`, `docs-ci`, `consumer-ci` (all-enabled self-call on
+  linux_x86_64 plus linux_arm64 plus macos_arm64, issue #408, verbatim `//...`).
 
 Green here (static guards on a clean tree, no full rebuild):
 `non_dogfed_paths`, `supported_evidence_gate`, `distribution_closeout_guards`,
@@ -213,7 +210,7 @@ Remaining reds stay owned gaps, not green claims:
   (`bazel run //tools/ci:consumer_ci_qualification`; nine checks, explicit
   platforms, fail-closed sequential, stable dx-ci aggregate, hygiene,
   concurrency, permissions, per-cell coverage with fork-safe comments,
-  build-only self-call smoke, native bump loop plus Renovate (complementary,
+  all-enabled self-call (issue #408, verbatim `//...`), native bump loop plus Renovate (complementary,
   issue #326),
    dx migrate planning plus dx run multirun, tag hygiene as-built; platform,
    runner, isolation, cache, ordering, merge, diff, queue, cancellation,

@@ -7,6 +7,7 @@
 //!   --stage TOOL;class,class;path,path [--stage ...] \
 //!   --source WORKSPACE_PATH=EXEC_PATH [--source ...] \
 //!   [--sibling WORKSPACE_PATH=EXEC_PATH [--sibling ...]] \
+//!   [--resolve WORKSPACE_PATH=EXEC_PATH [--resolve ...]] \
 //!   [--real --tool-binary TOOL=ABS_PATH [--tool-binary ...] \
 //!    [--tool-config TOOL=MIRROR_REL] [--tool-edition TOOL=EDITION] \
 //!    [--tool-file TOOL=MIRROR_REL=EXEC_PATH] \
@@ -16,7 +17,10 @@
 //! Stages run in argument order. Each `--source` maps one workspace path
 //! to the action-local file holding its bytes. Each `--sibling` maps one
 //! unclassified link-resolution file (Markdown `--sibling` inputs): sibling
-//! bytes are never linted and never enter snapshots. Without `--real` the
+//! bytes are never linted and never enter snapshots. Each `--resolve` maps
+//! one resolution-only file (ty dep sources, #408): resolve bytes are
+//! staged for import resolution, never checked, and never enter findings
+//! or snapshots. Without `--real` the
 //! synthetic M03 pipeline runs. With `--real` the M04 real backend runs
 //! `run_real_pipeline` over the resolved tools: each stage tool needs one
 //! `--tool-binary`, configs are mirror-relative `--tool-config` paths whose
@@ -84,12 +88,18 @@ pub enum RunnerError {
     /// `--sibling` mapping without `WS_PATH=EXEC` shape.
     #[error("malformed --sibling {mapping:?}, want WS_PATH=EXEC")]
     BadSibling { mapping: String },
+    /// `--resolve` mapping without `WS_PATH=EXEC` shape.
+    #[error("malformed --resolve {mapping:?}, want WS_PATH=EXEC")]
+    BadResolve { mapping: String },
     /// Source bytes unreadable.
     #[error("cannot read {workspace:?}: {detail}")]
     UnreadableSource { workspace: String, detail: String },
     /// Sibling bytes unreadable.
     #[error("cannot read sibling {workspace:?}: {detail}")]
     UnreadableSibling { workspace: String, detail: String },
+    /// Resolve bytes unreadable.
+    #[error("cannot read resolve {workspace:?}: {detail}")]
+    UnreadableResolve { workspace: String, detail: String },
     /// Pipeline execution failed.
     #[error("pipeline failed: {detail}")]
     PipelineFailed { detail: String },
@@ -166,6 +176,8 @@ struct Cli {
     source: Vec<String>,
     #[arg(long, allow_hyphen_values = true)]
     sibling: Vec<String>,
+    #[arg(long, allow_hyphen_values = true)]
+    resolve: Vec<String>,
     #[arg(long)]
     real: bool,
     #[arg(long, allow_hyphen_values = true, overrides_with = "scratch_parent")]
@@ -377,6 +389,15 @@ fn run() -> Result<(), RunnerError> {
             })?;
         siblings.push((workspace.to_owned(), exec.to_owned()));
     }
+    let mut resolves: Vec<(String, String)> = Vec::with_capacity(cli.resolve.len());
+    for mapping in &cli.resolve {
+        let (workspace, exec) = mapping
+            .split_once('=')
+            .ok_or_else(|| RunnerError::BadResolve {
+                mapping: mapping.clone(),
+            })?;
+        resolves.push((workspace.to_owned(), exec.to_owned()));
+    }
     let real = cli.real;
     let scratch_parent = cli.scratch_parent;
     let mut binaries: Vec<(String, PathBuf)> = Vec::with_capacity(cli.tool_binary.len());
@@ -421,6 +442,17 @@ fn run() -> Result<(), RunnerError> {
             detail: e.to_string(),
         })?;
         sibling_files.push(FileInput {
+            path: workspace.clone(),
+            bytes,
+        });
+    }
+    let mut resolve_files = Vec::with_capacity(resolves.len());
+    for (workspace, exec) in &resolves {
+        let bytes = std::fs::read(exec).map_err(|e| RunnerError::UnreadableResolve {
+            workspace: workspace.clone(),
+            detail: e.to_string(),
+        })?;
+        resolve_files.push(FileInput {
             path: workspace.clone(),
             bytes,
         });
@@ -543,12 +575,13 @@ fn run() -> Result<(), RunnerError> {
         .map(PathBuf::from)
         .unwrap_or_else(std::env::temp_dir);
     let backend = RealBackend::new(tools, scratch_parent);
-    let result = quality_runner::real::run_real_pipeline_with_siblings(
+    let result = quality_runner::real::run_real_pipeline_with_resolve(
         &producer,
         &capability,
         &stages,
         &files,
         &sibling_files,
+        &resolve_files,
         &backend,
     )
     .map_err(|e| RunnerError::PipelineFailed {

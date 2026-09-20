@@ -699,15 +699,16 @@ if [[ "$mixed_typecheck_inputs" == *"eslint"* || "$mixed_typecheck_inputs" == *"
 if [[ "$no_lint_typecheck_inputs" == *"eslint"* || "$no_lint_typecheck_inputs" == *"flake8"* || "$no_lint_typecheck_inputs" == *"pylint"* ]]; then bad "no-lint typecheck: forbidden [eslint/flake8/pylint] (opt-in change must not invalidate typecheck)"; else ok; fi
 if [[ "$no_format_typecheck_inputs" == *"eslint"* || "$no_format_typecheck_inputs" == *"flake8"* || "$no_format_typecheck_inputs" == *"pylint"* ]]; then bad "no-format typecheck: forbidden [eslint/flake8/pylint] (opt-in change must not invalidate typecheck)"; else ok; fi
 
-# Target-coupled tsc laziness: tsc requires the authoritative
-# typescript_project context (TsConfigInfo) and never applies from the
-# class alone, so default QualitySourcesInfo-only pipelines must never
-# mention it (tsc change leaves default keys unchanged per the
-# unselected-adapter + target-coupled rows; `tsc` never collides with
-# the `typescript` class name as a substring). Authoritative TsConfigInfo
-# wiring (upstream diagnostics, never a bare tsc invocation) remains
-# pending per quality/tools/typescript/BUILD.bazel and fails clearly in
-# the aspect when present; fixtures prove the unfetched half here.
+# Target-coupled tsc laziness (#408): tsc never applies from the class
+# alone and never spawns a bare invocation (which would lose
+# tsconfig/declaration context per quality/tools/typescript/BUILD.bazel).
+# The aspect drops tsc stages: TS type safety is delegated to the upstream
+# build (`transpiler = "tsc"` fails `bazel build //...` on type errors) plus
+# `<name>_upstream_typecheck_test` under `bazel test //...`. Default
+# QualitySourcesInfo-only pipelines must never mention tsc (tsc change
+# leaves default keys unchanged per the unselected-adapter +
+# target-coupled rows; `tsc` never collides with the `typescript` class
+# name as a substring); fixtures prove the unfetched half here.
 if [[ "$python_actions" == *"tsc"* ]]; then bad "python: forbidden [tsc] (target-coupled tsc must not invalidate default Python)"; else ok; fi
 if [[ "$rust_actions" == *"tsc"* ]]; then bad "rust: forbidden [tsc] (target-coupled tsc must not invalidate Rust)"; else ok; fi
 if [[ "$js_actions" == *"tsc"* ]]; then bad "js: forbidden [tsc] (target-coupled tsc must not invalidate JS)"; else ok; fi
