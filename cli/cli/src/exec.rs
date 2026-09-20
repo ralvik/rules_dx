@@ -11,7 +11,7 @@
 //! managed_codegen/managed_env (generation sides) plus
 //! managed_staging (shared staging primitives) plus managed_prepare
 //! (side preparation and commit-error mapping), audit, update, bump,
-//! and the check/fix umbrella. Shared plumbing (error codes,
+//! migrate, and the check/fix umbrella. Shared plumbing (error codes,
 //! environment, source verification, mutation helpers) lives in
 //! [`common`]; BEP results collection and proto mapping live in
 //! [`results`]; unit-test fakes live in `test_support`.
@@ -31,6 +31,7 @@ mod managed_codegen;
 mod managed_env;
 mod managed_prepare;
 mod managed_staging;
+mod migrate;
 mod quality;
 mod quality_apply;
 mod quality_emit;
@@ -100,6 +101,9 @@ pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
     if invocation.command == Command::Bump {
         return bump::execute_bump(invocation, env);
     }
+    if invocation.command == Command::Migrate {
+        return migrate::execute_migrate(invocation, env);
+    }
     quality::execute_quality(invocation, env)
 }
 
@@ -133,6 +137,8 @@ mod tests {
             "update"
         } else if command == Command::Bump {
             "bump"
+        } else if command == Command::Migrate {
+            "migrate"
         } else {
             "quality"
         }
@@ -156,6 +162,7 @@ mod tests {
             (Command::Clean, "clean"),
             (Command::Update, "update"),
             (Command::Bump, "bump"),
+            (Command::Migrate, "migrate"),
             (Command::Codegen, "managed"),
             (Command::Env, "managed"),
             (Command::Setup, "managed"),
@@ -170,7 +177,7 @@ mod tests {
             (Command::Completion, "adoption"),
             (Command::Bazel, "bazel"),
         ];
-        assert_eq!(cases.len(), 28, "every Command variant pinned");
+        assert_eq!(cases.len(), 29, "every Command variant pinned");
         for (command, want) in cases {
             assert_eq!(family(command), want, "family for {}", command.name());
         }
@@ -183,6 +190,7 @@ mod tests {
             vec!["audit", "--dry-run"],
             vec!["update", "--dry-run"],
             vec!["bump", "cargo:anyhow", "1.2.3", "--dry-run"],
+            vec!["migrate", "--from=1.2.3", "--to=2.0.0", "--dry-run"],
         ] {
             let name = format!("exec-dispatch-{}", argv[0].trim_start_matches('-'));
             let harness = Harness::new(&name);

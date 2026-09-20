@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CLI-contract registry plus behavior qualification harness (issue #457).
+# CLI-contract registry plus behavior qualification harness (issues #457/#462).
 #
 # docs/roadmap.md lists cli-contract claims with only helper guards at
 # tools/ci/helper_qualification.sh (seed-only record, adopted crates,
@@ -8,10 +8,11 @@
 #
 # Qualifies the as-built final registry plus mutating-vs-check semantics
 # with fixture evidence (see docs/testing/cli.md#command-registry-and-behavior):
-# - final registry holds exactly the 28 parsed commands including `deploy`
-#   plus `bump` (`Command` grammar plus `dx_adopt::ALL_COMMANDS` plus the
-#   qualified command reference); `doctor` plus `configure` stay rejected
-#   as unknown; `migrate` stays planning-only under #462;
+# - final registry holds exactly the 29 parsed commands including `deploy`
+#   plus `bump` plus `migrate` (`Command` grammar plus `dx_adopt::ALL_COMMANDS`
+#   plus the qualified command reference); `doctor` plus `configure` stay
+#   rejected as unknown; `migrate` syntax plus manifest selection delivered
+#   under #462;
 # - help plus `Command::is_mutating_by_default` identify the mutating
 #   default; `--output=diff` stays exactly the six patch producers
 #   (lint, typecheck, format, generate, check, fix);
@@ -35,44 +36,47 @@ contract="docs/cli/cli-contract.md"
 testing="docs/testing/cli.md"
 reference="docs/cli/commands/README.md"
 
-# Contract owns the #457 pinned record.
-if grep -q -F -e 'pinned under issue #457' "$contract" &&
+# Contract owns the #457/#462 pinned record.
+if grep -q -F -e 'pinned under issue' "$contract" &&
   grep -q -F -e 'bazel run //tools/ci:cli_contract_qualification' "$contract" &&
-  grep -q -F -e 'exactly the 28 parsed commands' "$contract" &&
-  grep -q -F -e 'including `deploy` plus `bump`' "$contract"; then
+  grep -q -F -e 'exactly the 29 parsed commands' "$contract" &&
+  grep -q -F -e 'including `deploy` plus `bump` plus' "$contract" &&
+  grep -q -F -e '`migrate`' "$contract"; then
   ok
 else
-  bad "cli-contract lost its pinned #457 registry plus behavior record"
+  bad "cli-contract lost its pinned #457/#462 registry plus behavior record"
 fi
 
-# The `Command` grammar holds exactly the final 28 (deploy plus bump present).
+# The `Command` grammar holds exactly the final 29 (deploy plus bump plus migrate).
 if grep -q -F -e 'Deploy,' cli/cli/src/args/command.rs &&
   grep -q -F -e 'Bump,' cli/cli/src/args/command.rs &&
+  grep -q -F -e 'Migrate,' cli/cli/src/args/command.rs &&
   grep -q -F -e 'is_mutating_by_default' cli/cli/src/args/command.rs &&
   grep -q -F -e 'final_registry_is_exact' cli/cli/src/args/command.rs; then
   ok
 else
-  bad "Command grammar lost its #457 deploy/bump plus mutating plus registry fixtures"
+  bad "Command grammar lost its deploy/bump/migrate plus mutating plus registry fixtures"
 fi
 
-# The frozen vocabulary reference matches the final 28 (deploy plus bump present).
+# The frozen vocabulary reference matches the final 29 (deploy plus bump plus migrate).
 if grep -q -F -e '"deploy",' cli/adopt/src/completion.rs &&
   grep -q -F -e '"bump",' cli/adopt/src/completion.rs &&
+  grep -q -F -e '"migrate",' cli/adopt/src/completion.rs &&
   grep -q -F -e 'completion_vocabulary_is_the_final_registry' cli/adopt/src/completion.rs; then
   ok
 else
-  bad "ALL_COMMANDS lost its #457 deploy/bump plus final-registry fixture"
+  bad "ALL_COMMANDS lost its deploy/bump/migrate plus final-registry fixture"
 fi
 
-# Testing matrix pins the final registry with deploy plus bump and the #457 owner.
+# Testing matrix pins the final registry with deploy plus bump plus migrate.
 if grep -q -F -e '`deploy`' "$testing" &&
   grep -q -F -e '`bump`' "$testing" &&
+  grep -q -F -e '`migrate`' "$testing" &&
   grep -q -F -e 'cli_contract_qualification' "$testing" &&
-  grep -q -F -e 'issue #457' "$testing" &&
-  grep -q -F -e 'planning-only' "$testing"; then
+  grep -q -F -e 'issue #457' "$testing"; then
   ok
 else
-  bad "testing/cli.md lost its #457 final-registry record with deploy plus bump"
+  bad "testing/cli.md lost its final-registry record with deploy plus bump plus migrate"
 fi
 
 # Testing matrix keeps the excluded-command plus umbrella behavior pins.
@@ -86,24 +90,25 @@ else
   bad "testing/cli.md lost its excluded-command plus umbrella behavior pins"
 fi
 
-# Testing matrix keeps the mutating-identification pin with bump.
+# Testing matrix keeps the mutating-identification pin with bump plus migrate.
 if grep -q -F -e '`bump`' "$testing" &&
+  grep -q -F -e '`migrate`' "$testing" &&
   grep -q -F -e 'as mutating by default' "$testing" &&
   grep -q -F -e 'is_mutating_by_default' "$testing"; then
   ok
 else
-  bad "testing/cli.md lost its #457 mutating-identification pin with bump"
+  bad "testing/cli.md lost its mutating-identification pin with bump plus migrate"
 fi
 
-# Command reference lists bump and marks migrate planning-only under #462.
+# Command reference lists bump plus deploy plus migrate under #462.
 if grep -q -F -e 'dx bump' "$reference" &&
   grep -q -F -e 'dx deploy' "$reference" &&
+  grep -q -F -e 'dx migrate' "$reference" &&
   grep -q -F -e 'issue #462' "$reference" &&
-  grep -q -F -e 'issue #457' "$reference" &&
   grep -q -F -e 'There is no `dx doctor`' "$reference"; then
   ok
 else
-  bad "commands/README.md lost its bump plus deploy plus migrate-planning plus excluded record"
+  bad "commands/README.md lost its bump plus deploy plus migrate plus excluded record"
 fi
 
 # Umbrella phases stay sequential format, lint, typecheck, then generate.

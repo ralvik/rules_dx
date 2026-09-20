@@ -160,6 +160,7 @@ mod tests {
             Command::Clean,
             Command::Update,
             Command::Bump,
+            Command::Migrate,
             Command::Codegen,
             Command::Env,
             Command::Setup,

@@ -47,8 +47,9 @@ impl WorkflowVerb {
             // ([`super::managed::plan_managed`]), never a fixed workflow verb.
             Command::Codegen | Command::Env | Command::Setup => None,
             // Audit/update/bump plan through `dx_audit`/`dx_update`/`dx_bump`,
-            // never a fixed workflow verb.
-            Command::Audit | Command::Update | Command::Bump => None,
+            // never a fixed workflow verb. Migrate plans through
+            // `dx_adopt::plan_migrate` (issue #462), never a workflow verb.
+            Command::Audit | Command::Update | Command::Bump | Command::Migrate => None,
             // Raw launcher passthrough plans its own argv (launcher
             // plus forwarded arguments), never a fixed workflow verb.
             Command::Bazel => None,

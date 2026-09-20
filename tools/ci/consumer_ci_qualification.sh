@@ -9,16 +9,17 @@
 #   with reviewed SHA pin, four consumer fixture harnesses
 #   (scheduling/aggregate/guards/pins), self-call all-enabled dogfood in
 #   ci.yml (issue #408, verbatim `//...`),
-#   native widen-one loop (sole updater, issue #461), dx migrate
-#   planning plus
-#   dx run multirun (issue #463 delivered), tag hygiene as-built;
+#   native widen-one loop (sole updater, issue #461), dx migrate syntax
+#   plus manifest selection (delivered CLI with fail-closed execution, issue
+#   #462) plus dx run multirun (issue #463 delivered), tag hygiene as-built;
 # - open under #509 with honest records: platform/runner/isolation/cache/
 #   ordering evidence; merge/diff/queue/cancellation/aggregate binding;
 #   thread identity/ordering/limits; fork/untrusted/sensitive/retries/
 #   Code-Scanning qualification; sequential mode fail-closed pending
 #   qualification; tag hygiene plus
-#   release-input gaps; native-bot follow-ups; dx migrate syntax gap
-#   (run multirun delivered under #463).
+#   release-input gaps; native-bot follow-ups; dx migrate manifest gap
+#   (syntax plus selection delivered under #462, run multirun delivered
+#   under #463).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:consumer_ci_qualification`,
 # following //tools/ci:docs_pipeline_qualification.
@@ -266,16 +267,21 @@ else
   bad "native bump loop lost (set registry, sole updater, bump command, runner)"
 fi
 
-# dx migrate planning delivered with fail-closed execution honesty.
+# dx migrate syntax plus manifest selection delivered with fail-closed execution honesty (issue #462).
 if grep -q -F -e 'pub fn migrate_is_major_bump' "$migrate_rs" &&
   grep -q -F -e 'pub fn migrate_manifest_name' "$migrate_rs" &&
   grep -q -F -e 'pub fn plan_migrate' "$migrate_rs" &&
   grep -q -F -e 'migrate_is_major_release_only' "$migrate_rs" &&
-  grep -q -F -e 'planning library delivered' "$migrate_doc" &&
-  grep -q -F -e 'No manifests exist yet' "$migrate_doc"; then
+  grep -q -F -e 'migrate_manifest_selection_is_mechanical' "$migrate_rs" &&
+  grep -q -F -e 'Migrate,' cli/cli/src/args/command.rs &&
+  grep -q -F -e 'execute_migrate' cli/cli/src/exec/migrate.rs &&
+  grep -q -F -e 'migrate_failed' cli/cli/src/exec/migrate.rs &&
+  grep -q -F -e 'delivered CLI' "$migrate_doc" &&
+  grep -q -F -e 'No manifests exist yet' "$migrate_doc" &&
+  grep -q -F -e 'migrate-v<from_major>-to-v<to_major>.json' "$migrate_doc"; then
   ok
 else
-  bad "dx migrate planning lost (major-bump plus manifest plus fail-closed doc)"
+  bad "dx migrate syntax plus manifest selection lost (major-bump plus manifest plus CLI plus fail-closed doc)"
 fi
 
 # dx run multirun delivered (issue #463): sequential, local-only, single plus multi.
@@ -369,15 +375,17 @@ else
   bad "native-bot follow-up gap lost its owner"
 fi
 
-# dx migrate syntax stays owned open in the matrix; dx run multirun is
-# delivered under #463 and must not regress to the combined open record.
-if grep -q -F -e 'dx migrate syntax)' "$matrix" &&
-  ! grep -q -F -e 'dx migrate syntax plus dx run multirun' "$matrix" &&
-  grep -q -F -e 'V1 scope: `dx migrate` syntax + manifest selection (issue #462).' "$roadmap" &&
+# dx migrate syntax plus manifest selection plus dx run multirun stay
+# delivered in the matrix and roadmap (issues #462/#463); neither may
+# regress to the combined open record.
+if grep -q -F -e 'migrate syntax plus' "$matrix" &&
+  grep -q -F -e 'issue #462' "$matrix" &&
+  grep -q -F -e 'issue #463' "$matrix" &&
+  grep -q -F -e 'V1 scope: `dx migrate` syntax + manifest selection delivered' "$roadmap" &&
   grep -q -F -e 'delivered (issue #463' "$roadmap"; then
   ok
 else
-  bad "dx migrate gap lost its owner or dx run multirun regressed to open"
+  bad "dx migrate plus dx run gap lost its delivered owner"
 fi
 
 # Verification matrix keeps no Supported claim with consumer honesty.

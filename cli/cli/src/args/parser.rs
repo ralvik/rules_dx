@@ -54,6 +54,8 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         pin,
         rollback,
         configured,
+        from,
+        to,
         command: command_name,
         targets,
         ..
@@ -66,6 +68,16 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     if pin.as_deref().is_some_and(str::is_empty) {
         return Err(ArgsError::MissingValue {
             option: "--pin".to_owned(),
+        });
+    }
+    if from.as_deref().is_some_and(str::is_empty) {
+        return Err(ArgsError::MissingValue {
+            option: "--from".to_owned(),
+        });
+    }
+    if to.as_deref().is_some_and(str::is_empty) {
+        return Err(ArgsError::MissingValue {
+            option: "--to".to_owned(),
         });
     }
     let output_name = output.unwrap_or_else(|| "text".to_owned());
@@ -341,6 +353,80 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
             }
         }
     }
+    if command == Command::Migrate {
+        // Migrate plans through `dx_adopt::plan_migrate` (issue #462):
+        // `dx migrate --from <version> --to <version> [scope ...]`,
+        // both Cargo-flavor semver with a major-release-only gate plus
+        // one manifest per major hop. Scope selection reuses generation
+        // scope resolution verbatim; external scopes are rejected like
+        // workflow commands during execution. Thresholds, standard
+        // reports, and check mode do not apply on this path; live
+        // execution fails closed until the first major-release manifest
+        // lands (module at `0.0.0`, no releases cut).
+        if check {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--check".to_owned(),
+            });
+        }
+        if fail_on_name != "warning" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--fail-on".to_owned(),
+            });
+        }
+        // `migrate` supports `--output=json` like `update`/`bump`
+        // (dry-run planning emits `command_started`/`command_finished`;
+        // live execution fails closed with `migrate_failed`);
+        // `--output=diff` has no patch to emit so it fails fast here,
+        // with the shared `supports_diff` gate below as backup.
+        if output_name == "diff" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--output=diff".to_owned(),
+            });
+        }
+        if let Some(request) = reports.first() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: format!("--report={}={}", request.format, request.destination),
+            });
+        }
+        if pin.is_some() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--pin".to_owned(),
+            });
+        }
+        if !bazel_options.is_empty() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--".to_owned(),
+            });
+        }
+        if from.is_none() || to.is_none() {
+            return Err(ArgsError::MissingValue {
+                option: "--from <version> --to <version>".to_owned(),
+            });
+        }
+        for scope in &targets {
+            if scope.is_empty() || scope.starts_with(':') {
+                return Err(scope_error(scope));
+            }
+        }
+    }
+    // `--from`/`--to` belong to `migrate` only: every other command
+    // fails fast instead of silently ignoring the versions.
+    if command != Command::Migrate && (from.is_some() || to.is_some()) {
+        return Err(ArgsError::UnsupportedOption {
+            command: command.name(),
+            option: if from.is_some() {
+                "--from".to_owned()
+            } else {
+                "--to".to_owned()
+            },
+        });
+    }
     if command.is_workflow() {
         // Workflow commands run Bazel verbs directly with Bazel-owned
         // status: finding thresholds and check-mode mutation previews do
@@ -605,6 +691,8 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         pin,
         rollback,
         configured,
+        from,
+        to,
     })
 }
 
@@ -1230,6 +1318,108 @@ mod tests {
     }
 
     #[test]
+    fn migrate_needs_from_and_to_versions() {
+        // `dx migrate --from <version> --to <version>` (issue #462):
+        // both Cargo semver, major-release-only gate, one manifest per
+        // major hop, mutating by default with fail-closed execution.
+        let migrate =
+            parse(&args(&["migrate", "--from=1.2.3", "--to=2.0.0"])).expect("parse migrate");
+        assert_eq!(migrate.command, Command::Migrate);
+        assert_eq!(migrate.command.name(), "migrate");
+        assert!(!migrate.command.is_audit_update());
+        assert!(!migrate.command.is_workflow());
+        assert!(!migrate.command.is_adoption());
+        assert!(!migrate.command.is_managed());
+        assert!(migrate.command.is_mutating_by_default());
+        assert_eq!(migrate.from, Some("1.2.3".to_owned()));
+        assert_eq!(migrate.to, Some("2.0.0".to_owned()));
+        let spaced =
+            parse(&args(&["migrate", "--from", "1.2.3", "--to", "2.0.0"])).expect("spaced parse");
+        assert_eq!(spaced.from, Some("1.2.3".to_owned()));
+        assert_eq!(spaced.to, Some("2.0.0".to_owned()));
+        let scoped = parse(&args(&["migrate", "--from=1.2.3", "--to=2.0.0", "//a:one"]))
+            .expect("scoped parse");
+        assert_eq!(scoped.targets, vec!["//a:one".to_owned()]);
+        assert_eq!(
+            parse(&args(&["migrate", "--from=1.2.3"])),
+            Err(ArgsError::MissingValue {
+                option: "--from <version> --to <version>".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["migrate"])),
+            Err(ArgsError::MissingValue {
+                option: "--from <version> --to <version>".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["migrate", "--from", "--to=2.0.0"])),
+            Err(ArgsError::MissingValue {
+                option: "--from".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["migrate", "--from=1.2.3", "--to=2.0.0", "--check"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "migrate",
+                option: "--check".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&[
+                "migrate",
+                "--from=1.2.3",
+                "--to=2.0.0",
+                "--fail-on=error"
+            ])),
+            Err(ArgsError::UnsupportedOption {
+                command: "migrate",
+                option: "--fail-on".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&[
+                "migrate",
+                "--from=1.2.3",
+                "--to=2.0.0",
+                "--report=sarif=out.sarif"
+            ])),
+            Err(ArgsError::UnsupportedOption {
+                command: "migrate",
+                option: "--report=sarif=out.sarif".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&[
+                "migrate",
+                "--from=1.2.3",
+                "--to=2.0.0",
+                "--",
+                "--jobs=4"
+            ])),
+            Err(ArgsError::UnsupportedOption {
+                command: "migrate",
+                option: "--".to_owned(),
+            })
+        );
+        // `--from`/`--to` belong to migrate only.
+        assert_eq!(
+            parse(&args(&["lint", "--from=1.0.0"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "lint",
+                option: "--from".to_owned(),
+            })
+        );
+        assert_eq!(
+            parse(&args(&["build", "//a:one", "--to=2.0.0"])),
+            Err(ArgsError::UnsupportedOption {
+                command: "build",
+                option: "--to".to_owned(),
+            })
+        );
+    }
+
+    #[test]
     fn run_rejects_machine_output_and_reports() {
         assert_eq!(
             parse(&args(&["run", "//app:bin", "--output=json"])),
@@ -1289,6 +1479,17 @@ mod tests {
             parse(&args(&["bump", "cargo:anyhow", "1.2.3", "--output=json"])).expect("bump json");
         assert_eq!(got.output, OutputMode::Json);
         assert!(got.command.supports_json());
+        // Migrate is JSON-capable with its required versions
+        // (`dx migrate --from/--to` never runs bare).
+        let got = parse(&args(&[
+            "migrate",
+            "--from=1.2.3",
+            "--to=2.0.0",
+            "--output=json",
+        ]))
+        .expect("migrate json");
+        assert_eq!(got.output, OutputMode::Json);
+        assert!(got.command.supports_json());
         let got = parse(&args(&["status", "--output=json"])).expect("status json");
         assert_eq!(got.output, OutputMode::Json);
         assert!(Command::Status.supports_json());
@@ -1336,6 +1537,7 @@ mod tests {
             vec!["update", "--output=diff"],
             vec!["status", "--output=diff"],
             vec!["bump", "cargo:anyhow", "1.2.3", "--output=diff"],
+            vec!["migrate", "--from=1.2.3", "--to=2.0.0", "--output=diff"],
         ] {
             assert_eq!(
                 parse(&args(&words)),

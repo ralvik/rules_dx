@@ -96,6 +96,12 @@ pub(crate) const CODE_UPDATE_FAILED: &str = "update_failed";
 /// manifest could not be read/written. Planning (`--dry-run`) succeeds;
 /// live runs widen exactly one requirement atomically (issue #260).
 pub(crate) const CODE_BUMP_FAILED: &str = "bump_failed";
+/// Stable operational error code for live migrate failures:
+/// no migrate manifest exists yet (module at `0.0.0`, no major releases
+/// cut), so every live run fails closed with no writes. Planning
+/// (`--dry-run`) succeeds; live runs select one manifest per major hop
+/// (`migrate-v<from>-to-v<to>.json`) once published (issue #462).
+pub(crate) const CODE_MIGRATE_FAILED: &str = "migrate_failed";
 
 /// Execution environment: resolved workspace, process seams for the
 /// workflow and for ownership queries, temporary directory for the BEP
@@ -218,7 +224,7 @@ pub(crate) fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
     let _ = writeln!(err, "dx: {message}");
     let _ = writeln!(
         err,
-        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--verbose] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|bump|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]"
+        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--verbose] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|bump|migrate|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]"
     );
     pre_exec_code()
 }

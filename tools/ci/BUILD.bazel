@@ -589,10 +589,19 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# CLI-contract registry plus behavior harness (issue #457); see docs/cli/cli-contract.md.
+# CLI-contract registry plus behavior harness (issues #457/#462); see docs/cli/cli-contract.md.
 sh_binary(
     name = "cli_contract_qualification",
     srcs = ["cli_contract_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+# Migrate syntax plus manifest-selection harness (issue #462); see docs/cli/commands/migrate.md.
+sh_binary(
+    name = "migrate_qualification",
+    srcs = ["migrate_qualification.sh"],
     data = ["//tools/sh:lib"],
     # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],

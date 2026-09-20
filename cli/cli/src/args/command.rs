@@ -28,6 +28,7 @@ pub enum Command {
     Clean,
     Update,
     Bump,
+    Migrate,
     Codegen,
     Env,
     Setup,
@@ -62,6 +63,7 @@ impl Command {
             Command::Clean => "clean",
             Command::Update => "update",
             Command::Bump => "bump",
+            Command::Migrate => "migrate",
             Command::Codegen => "codegen",
             Command::Env => "env",
             Command::Setup => "setup",
@@ -107,6 +109,9 @@ impl Command {
     /// are mutating without confirmation. Audit tool backends stay deferred
     /// while update resolver backends execute live  and bump
     /// widens exactly one requirement explicitly (issue #260).
+    /// `migrate` is not audit/update: it plans major-release rewrites
+    /// through `dx_adopt::plan_migrate` over `--from`/`--to` versions
+    /// (issue #462) with its own fail-closed execution.
     pub fn is_audit_update(self) -> bool {
         matches!(self, Command::Audit | Command::Update | Command::Bump)
     }
@@ -154,7 +159,9 @@ impl Command {
     /// per-set `notice`/`error` events with the same frame.
     /// `bump` supports JSON the same way: dry-run planning emits the
     /// widen summary, live execution adds the widen `notice`/`error`
-    /// (issue #260).
+    /// (issue #260). `migrate` supports JSON the same way: dry-run
+    /// planning emits the manifest plan, live execution fails closed
+    /// with `migrate_failed` (issue #462, no manifests yet).
     pub fn supports_json(self) -> bool {
         matches!(
             self,
@@ -168,6 +175,7 @@ impl Command {
                 | Command::Coverage
                 | Command::Update
                 | Command::Bump
+                | Command::Migrate
                 | Command::Check
                 | Command::Fix
                 | Command::Status
@@ -192,11 +200,12 @@ impl Command {
         )
     }
 
-    /// True for commands that mutate by default (issue #457).
+    /// True for commands that mutate by default (issue #457, extended by
+    /// issue #462 for `migrate`).
     ///
     /// Mirrors `docs/testing/cli.md#command-registry-and-behavior` plus
     /// `docs/decisions/0005-mutating-operations.md`: lint,
-    /// typecheck, format, update, bump, generate, codegen, env, setup,
+    /// typecheck, format, update, bump, migrate, generate, codegen, env, setup,
     /// init, fix, and hooks apply workspace or managed-state writes
     /// unless a non-mutating mode (`--check`, `--dry-run`) is selected.
     /// `check` stays non-mutating, `clean` mutates managed state only
@@ -210,6 +219,7 @@ impl Command {
                 | Command::Format
                 | Command::Update
                 | Command::Bump
+                | Command::Migrate
                 | Command::Generate
                 | Command::Codegen
                 | Command::Env
@@ -242,6 +252,7 @@ impl Command {
             Command::Clean => "prune unselected managed state (no scopes)",
             Command::Update => "update dependencies per set through qualified resolvers (mutating without confirmation; --check is the preset stale gate)",
             Command::Bump => "widen one declared requirement to a new version (explicit; mutating without confirmation)",
+            Command::Migrate => "rewrite breaking changes across major releases (major-release-only; mutating by default; --dry-run plans without writes)",
             Command::Codegen => "collect codegen outputs with atomic commit (mutating managed state)",
             Command::Env => "collect the managed development environment (mutating managed state)",
             Command::Setup => "collect setup outputs with atomic commit (mutating managed state)",
@@ -268,8 +279,17 @@ mod tests {
         assert_eq!(Command::Audit.name(), "audit");
         assert_eq!(Command::Update.name(), "update");
         assert_eq!(Command::Bump.name(), "bump");
+        assert_eq!(Command::Migrate.name(), "migrate");
         assert!(Command::Bump.is_audit_update());
         assert!(Command::Update.is_audit_update());
+        assert!(!Command::Migrate.is_audit_update());
+        assert!(!Command::Migrate.is_workflow());
+        assert!(!Command::Migrate.is_adoption());
+        assert!(!Command::Migrate.is_managed());
+        assert!(!Command::Migrate.is_umbrella());
+        assert!(Command::Migrate.is_mutating_by_default());
+        assert!(Command::Migrate.supports_json());
+        assert!(!Command::Migrate.supports_diff());
         assert_eq!(Command::Lint.name(), "lint");
         assert_eq!(Command::Typecheck.name(), "typecheck");
         assert_eq!(Command::Format.name(), "format");
@@ -320,6 +340,7 @@ mod tests {
             Command::Clean,
             Command::Update,
             Command::Bump,
+            Command::Migrate,
             Command::Codegen,
             Command::Env,
             Command::Setup,
@@ -349,10 +370,10 @@ mod tests {
 
     #[test]
     fn final_registry_is_exact_and_rejects_excluded_commands() {
-        // Issue #457: the final CLI registry holds exactly the 28
-        // implemented commands (including `deploy` plus `bump`;
-        // `migrate` stays planning-only under #462). `doctor`,
-        // `configure`, `docs`, and `new` stay rejected as unknown.
+        // Issue #457 plus issue #462: the final CLI registry holds
+        // exactly the 29 implemented commands (including `deploy` plus
+        // `bump` plus `migrate`). `doctor`, `configure`, `docs`, and
+        // `new` stay rejected as unknown.
         use clap::ValueEnum;
         let mut got: Vec<&str> = Command::value_variants()
             .iter()
@@ -378,6 +399,7 @@ mod tests {
             "hooks",
             "init",
             "lint",
+            "migrate",
             "owners",
             "run",
             "setup",
@@ -390,9 +412,9 @@ mod tests {
             "why",
         ];
         want.sort_unstable();
-        assert_eq!(got, want, "Command registry drifted from the final 28");
-        assert_eq!(Command::value_variants().len(), 28);
-        for excluded in ["doctor", "configure", "docs", "migrate", "new", "bogus"] {
+        assert_eq!(got, want, "Command registry drifted from the final 29");
+        assert_eq!(Command::value_variants().len(), 29);
+        for excluded in ["doctor", "configure", "docs", "new", "bogus"] {
             assert_eq!(
                 Command::parse(excluded),
                 None,
@@ -403,15 +425,17 @@ mod tests {
 
     #[test]
     fn mutating_by_default_matches_contract_and_help() {
-        // Issue #457: `docs/testing/cli.md` mutating identification plus
-        // ADR 0005 plus ADR 0018. `check` stays non-mutating; `clean`
-        // mutates managed state only under its own contract.
+        // Issue #457 plus issue #462: `docs/testing/cli.md` mutating
+        // identification plus ADR 0005 plus ADR 0018. `check` stays
+        // non-mutating; `clean` mutates managed state only under its own
+        // contract.
         for command in [
             Command::Lint,
             Command::Typecheck,
             Command::Format,
             Command::Update,
             Command::Bump,
+            Command::Migrate,
             Command::Generate,
             Command::Codegen,
             Command::Env,
@@ -474,5 +498,6 @@ mod tests {
         }
         assert!(!Command::Update.supports_diff());
         assert!(!Command::Bump.supports_diff());
+        assert!(!Command::Migrate.supports_diff());
     }
 }
