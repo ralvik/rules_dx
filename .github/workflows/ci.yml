@@ -1066,6 +1066,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:scalafix_qualification
       - name: Audit Roslyn qualification (issue #492 per-TFM-RID SARIF aggregation pins plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:roslyn_qualification
+      - name: Audit FSharpLint qualification (issue #493 console vs library-API binding pins plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:fsharplint_qualification
       - name: Write job summary
         if: always()
         run: |
