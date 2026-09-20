@@ -9,14 +9,13 @@
 # reads as the guard table instead of copying `grep -q` chains.
 #
 # Requires `tools/sh/lib.sh` counters first (`dx_test_init`, `ok`/`bad`/
-# `dx_test_summary`); source lib before this file:
+# `dx_test_summary`); load both via the single-sourced bootstrap
+# (`tools/sh/bootstrap.sh` `dx_bootstrap`, issue #654) with no per-file
+# depth adjustment:
 #
-#   source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
-#   source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/guards.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/guards.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/guards.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/guards.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/guards.sh"
-#
-# (adjust the trailing `../` depth for the source-tree fallback;
-# `tools/ci/*.sh` use `../sh/guards.sh`, repo-root parity tests use
-# `tools/sh/guards.sh`.)
+#   source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$(git rev-parse --show-toplevel 2>/dev/null)/tools/sh/bootstrap.sh"
+#   dx_bootstrap "tools/sh/lib.sh"
+#   dx_bootstrap "tools/sh/guards.sh"
 #
 # Guard maintenance owns shared helpers plus snapshot versus grep policy
 # (successor to issue #450, owned here under issue #653;

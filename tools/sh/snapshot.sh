@@ -12,15 +12,14 @@
 # contract pins (fail-closed, no refresh). Guards must not reimplement
 # either shape; `//tools/ci:shell_contract` owns the rule.
 #
-# Drivers source this file via a runfiles-first bootstrap so both direct
-# execution and Bazel `run`/`test` layouts work (`data =
-# ["//tools/sh:snapshot"]` carries it in the runfiles forest):
+# Drivers load this file via the single-sourced bootstrap
+# (`tools/sh/bootstrap.sh` `dx_bootstrap`, issue #654) so both direct
+# execution and Bazel `run`/`test` layouts work with no per-file depth
+# adjustment (`data = ["//tools/sh:snapshot"]` carries it in the runfiles
+# forest):
 #
-#   source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/snapshot.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/snapshot.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/snapshot.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/snapshot.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/snapshot.sh"
-#
-# (adjust the trailing depth for the source-tree fallback: repo-root
-# parity tests use `tools/sh/snapshot.sh`, `.devcontainer/*.sh` use
-# `../tools/sh/snapshot.sh`.)
+#   source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$(git rev-parse --show-toplevel 2>/dev/null)/tools/sh/bootstrap.sh"
+#   dx_bootstrap "tools/sh/snapshot.sh"
 #
 # Workflow:
 #   UPDATE_EXPECT=1 bazel test //:preset_parity_test --test_env=UPDATE_EXPECT

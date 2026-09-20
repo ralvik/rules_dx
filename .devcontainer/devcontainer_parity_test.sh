@@ -15,12 +15,13 @@
 set -euo pipefail
 
 # Shared snapshot helper (issue #322).
-# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:snapshot"]`), then source tree.
-source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/snapshot.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/snapshot.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/snapshot.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/snapshot.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../tools/sh/snapshot.sh"
+# Bootstrap via tools/sh/bootstrap.sh (issue #654): runfiles forest first, then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$(git rev-parse --show-toplevel 2>/dev/null)/tools/sh/bootstrap.sh"
+dx_bootstrap "tools/sh/snapshot.sh"
 
 # Shared CI helpers (issues #319, #323).
-# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
-source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../tools/sh/lib.sh"
+# Bootstrap via tools/sh/bootstrap.sh (issue #654): runfiles forest first, then source tree.
+dx_bootstrap "tools/sh/lib.sh"
 
 # Portable helpers via tools/sh/lib.sh dx_realpath/dx_mkscratch (issues #299, #323).
 

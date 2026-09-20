@@ -1,12 +1,15 @@
-"""Shared shell helpers (snapshot workflow plus guard tables).
+"""Shared shell helpers (bootstrap plus snapshot workflow plus guard tables).
 
-Single-sources the workspace-root probe plus runfiles `rlocation` usage
+Single-sources the shell bootstrap (`bootstrap.sh`: runfiles-first
+`dx_bootstrap` with no per-file depth adjustment, issue #654) plus the
+workspace-root probe plus runfiles `rlocation` usage
 repeated across every shell driver, plus the snapshot-testing workflow
 (`snapshot.sh`: byte-identical and canonical-JSON asserts with
 UPDATE_EXPECT refresh) plus the table-driven guard rows (`guards.sh`:
 `{file, must-contain|must-not-contain, reason/issue}` pins). Drivers
-source `lib.sh` / `snapshot.sh` / `guards.sh` via a runfiles-first
-bootstrap and depend on `:lib` / `:snapshot` / `:guards` so the files
+source `bootstrap.sh` once via a runfiles-first loader then call
+`dx_bootstrap` for `lib.sh` / `snapshot.sh` / `guards.sh`, and depend on
+`:bootstrap` plus `:lib` / `:snapshot` / `:guards` so the files
 ride their runfiles forest under `bazel test` / `bazel run`.
 """
 
@@ -16,8 +19,16 @@ load("//quality:fixtures.bzl", "real_source_target")
 package(default_visibility = ["//:__subpackages__"])
 
 sh_library(
+    name = "bootstrap",
+    srcs = ["bootstrap.sh"],
+    # Bash-only harness is Linux-only (shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_library(
     name = "lib",
     srcs = ["lib.sh"],
+    deps = [":bootstrap"],
     # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -25,6 +36,7 @@ sh_library(
 sh_library(
     name = "snapshot",
     srcs = ["snapshot.sh"],
+    deps = [":bootstrap"],
     # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -32,7 +44,10 @@ sh_library(
 sh_library(
     name = "guards",
     srcs = ["guards.sh"],
-    deps = [":lib"],
+    deps = [
+        ":bootstrap",
+        ":lib",
+    ],
     # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )

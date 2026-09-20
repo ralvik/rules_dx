@@ -6,19 +6,14 @@
 # `TEST_SRCDIR` layouts, `bazel-bin` fallbacks) repeated across every shell
 # driver, plus the CI harness header (`set -euo pipefail` is per-file;
 # pass/fail counters, scratch cleanup, portable realpath/hash/timing/sed)
-# repeated across `tools/ci` drivers. Drivers source this file
-# via a runfiles-first bootstrap so both direct execution and Bazel
-# `run`/`test` layouts work (`data = ["//tools/sh:lib"]` carries it in the
-# runfiles forest):
+# repeated across `tools/ci` drivers. Drivers load this file via the
+# single-sourced bootstrap (`tools/sh/bootstrap.sh` `dx_bootstrap`, issue
+# #654) so both direct execution and Bazel `run`/`test` layouts work with
+# no per-file depth adjustment (`data = ["//tools/sh:lib"]` carries the
+# bootstrap in the runfiles forest):
 #
-#   source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
-#
-# (adjust the trailing `../` depth for the source-tree fallback:
-# `tools/ci/*.sh` and `tools/depcheck/*.sh` use `../sh/lib.sh`, language
-# hello fixtures plus `cli/env/*.sh` plus `gazelle/rust/*.sh` use
-# `../../tools/sh/lib.sh`, `.devcontainer/*.sh` use
-# `../tools/sh/lib.sh`, repo-root `*_parity_test.sh` use
-# `tools/sh/lib.sh`.)
+#   source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$(git rev-parse --show-toplevel 2>/dev/null)/tools/sh/bootstrap.sh"
+#   dx_bootstrap "tools/sh/lib.sh"
 #
 # Rust binaries share `dx_process::workspace_start` plus standard `runfiles`
 # `rlocation` (never `TEST_SRCDIR` in prod); see `cli/process/src/lib.rs`.
