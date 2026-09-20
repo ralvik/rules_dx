@@ -1139,6 +1139,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:selective_maven_qualification
       - name: Audit selective Go qualification (issue #636 per-module wont-fix plus full no-op plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:selective_go_qualification
+      - name: Audit bump chain qualification (issue #638 widen plus automatic refresh plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:bump_chain_qualification
       - name: Audit update events qualification (issue #586 mutation wont-fix plus completeness plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:update_events_qualification
       - name: Audit Starlark futures qualification (issue #588 filtering plus subjects plus BEP wont-fix/deferred plus fixture evidence, owned gaps)

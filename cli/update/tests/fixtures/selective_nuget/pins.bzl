@@ -19,7 +19,7 @@ SELECTIVE_NUGET_SELECTOR_LABEL = "nuget:<id>"
 # Fail-closed hint (selective never widens to full silently).
 SELECTIVE_NUGET_HINT = "use `dx update nuget` for the set"
 
-# Bump follow-up stays manual and resolver-owned.
+# Bump follow-up chains automatically resolver-owned (issue #638).
 BUMP_FOLLOWUP_NUGET = "dx update nuget"
 
 # Rejected routes (never pinned as supported here).

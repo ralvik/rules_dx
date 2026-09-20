@@ -157,13 +157,14 @@ else
   bad "ADR 0024 lost its NuGet wont-fix plus paket2bazel plus paket-lock record"
 fi
 
-# Bump follow-up stays manual and resolver-owned for NuGet.
-if grep -q -F -e 'dx update nuget' "$command_doc" &&
-  grep -q -F -e 'then run `dx update {}` for resolver-owned lock refresh' "$bump_exec" &&
+# Bump follow-up chains automatically resolver-owned for NuGet-adjacent sets (issue #638).
+if grep -q -F -e 'dx update cargo' "$command_doc" &&
+  grep -q -F -e 'and refreshed' "$bump_exec" &&
+  grep -q -F -e 'automatically' "$bump_exec" &&
   grep -q -F -e 'needs_update_refresh' "$bump_exec"; then
   ok
 else
-  bad "bump follow-up lost its manual resolver-owned dx update nuget record"
+  bad "bump follow-up lost its automatic resolver-owned record (issue #638)"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.

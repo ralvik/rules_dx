@@ -13,7 +13,7 @@
 #   plus `selective_update.expected`) pins dispositions, approved argv,
 #   hints, bump follow-ups, and rejected routes;
 # - record: ADR 0024 owns the rationale; the command docs carry the
-#   per-set table plus the manual bump follow-up;
+#   per-set table plus the automatic bump follow-up (issue #638);
 # - scope: update-only, no lock format change. Seed only: platform plus
 #   consumer plus release evidence stays owned gap; no Supported claim.
 #
@@ -190,22 +190,24 @@ else
   bad "audit-update-bazel.md lost its per-set selective table with ADR plus fixture links under #583"
 fi
 
-# Command docs keep the manual bump follow-up with selective-permitted npm.
-if grep -q -F -e 'Lock refresh stays manual and resolver-owned' "$command_doc" &&
+# Command docs keep the automatic bump follow-up with selective-permitted npm (issue #638).
+if grep -q -F -e 'Lock refresh chains automatically' "$command_doc" &&
   grep -q -F -e 'dx update cargo' "$command_doc" &&
   grep -q -F -e 'dx update npm:<pkg>' "$command_doc" &&
   grep -q -F -e 'Selective' "$command_doc"; then
   ok
 else
-  bad "audit-update-bazel.md lost its manual bump follow-up with selective-permitted npm under #583"
+  bad "audit-update-bazel.md lost its automatic bump follow-up with selective-permitted npm (issue #638)"
 fi
 
-# Bump execution still leaves the resolver-owned follow-up manual (widen-only).
-if grep -q -F -e 'then run `dx update {}` for resolver-owned lock refresh' "$bump_exec" &&
-  grep -q -F -e 'needs_update_refresh' "$bump_exec"; then
+# Bump execution chains the resolver-owned refresh automatically (issue #638).
+if grep -q -F -e 'and refreshed' "$bump_exec" &&
+  grep -q -F -e 'automatically' "$bump_exec" &&
+  grep -q -F -e 'needs_update_refresh' "$bump_exec" &&
+  grep -q -F -e 'runner.run' "$bump_exec"; then
   ok
 else
-  bad "exec/bump.rs lost its manual resolver-owned follow-up record"
+  bad "exec/bump.rs lost its automatic resolver-owned follow-up record (issue #638)"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.
