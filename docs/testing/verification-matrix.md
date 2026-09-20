@@ -118,7 +118,7 @@ execution deferred. No report-only status remains per ADR 0022 (no standing benc
 
 `Audit/update Delivered` above is ecosystem live execution delivered repo-wide; it stays
 consistent with per-language source-`Audit` scope in the support matrix (`Not planned` for
-Rust, JavaScript, TypeScript, Vue, Svelte, Astro, MDX; open tooling work for Python).
+Rust, JavaScript, TypeScript, Vue, Svelte, Astro, MDX; open tooling work for Python under issue #613).
 `Support-matrix Planned` cells claim accepted scope only; where this matrix shows `Open`,
 the corresponding `Planned` cell is scope with open implementation.
 
@@ -138,7 +138,16 @@ family taxonomy execution with fixture evidence qualified seed-only under #512
 `quality_taxonomy.expected`; `quality_taxonomy_qualification` 17/17;
 taxonomy doc only plus report-not-gate shape only rejected; deferred
 adapters plus digests plus platform plus consumer plus release stay owned
-gaps; no Supported claim).
+gaps; no Supported claim; issue #512 stays taxonomy-only). Python
+source-audit tooling with fixture evidence qualified seed-only under #613
+(`bazel run //tools/ci:python_audit_qualification` with
+`python/tests/fixtures/python_audit/pins.bzl` plus
+`python_audit.expected`; `python_audit_qualification` 16/16; curated
+audit empty with Bandit excluded plus secrets via Gitleaks, lint
+Ruff plus pydoclint plus format Ruff plus typecheck Ty unaffected, no
+audit adapter claim, leaving under taxonomy rejected; future selection
+plus platform plus consumer plus release stay owned gaps; no Supported
+claim).
 
 ## Battery
 
@@ -278,6 +287,8 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   depcheck pins plus fixture evidence, issue #510),
   `:quality_taxonomy_qualification` (taxonomy execution pins plus
   fixture evidence, issue #512),
+  `:python_audit_qualification` (Python source-audit split pins plus
+  fixture evidence, issue #613),
   `:selective_update_qualification` (per-set selective vs wont-fix pins plus
   fixture evidence, issue #583),
   `:update_events_qualification` (update mutation wont-fix plus completeness pins plus
@@ -303,7 +314,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `consumer_ci_qualification` 43/43, `review_threads_qualification` 16/16, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
-<<<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `remediation_bounds_qualification` 16/16, `layer2_opens_qualification` 16/16, `quality_taxonomy_qualification` 17/17, `selective_update_qualification` 16/16, `update_events_qualification` 16/16, `env_plugins_cgo_qualification` 16/16, `starlark_futures_qualification` 16/16, `cli_execution_gaps_qualification` 16/16, `promotion_checklist_qualification` 16/16, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24, `coverage_qualification` 33/33.
+<<<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `remediation_bounds_qualification` 16/16, `layer2_opens_qualification` 16/16, `quality_taxonomy_qualification` 17/17, `python_audit_qualification` 16/16, `selective_update_qualification` 16/16, `update_events_qualification` 16/16, `env_plugins_cgo_qualification` 16/16, `starlark_futures_qualification` 16/16, `cli_execution_gaps_qualification` 16/16, `promotion_checklist_qualification` 16/16, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24, `coverage_qualification` 33/33.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
 Full-tree `dx lint/format/typecheck/test --check //...` over fixtures and
@@ -876,11 +887,23 @@ Remaining reds stay owned gaps, not green claims:
   plus parser plus native plus aspect plus policy execution, 36 deferred
   with ADR 0019 owner plus frozen route, curated audit empty with Bandit
   excluded plus secrets via Gitleaks, suffix rejected with cross-family
-  union plus lazy plus no hidden preset; taxonomy doc only plus
-  report-not-gate shape only rejected; deferred adapters owned under
-  416-420 plus 307, digests plus rule-sets owned by cohorts, platform plus
-  consumer plus release evidence stays owned gap; backends provisional; no
-  Supported claim).
+   union plus lazy plus no hidden preset; taxonomy doc only plus
+   report-not-gate shape only rejected; deferred adapters owned under
+   416-420 plus 307, digests plus rule-sets owned by cohorts, platform plus
+   consumer plus release evidence stays owned gap; backends provisional; no
+   Supported claim; issue #512 stays taxonomy-only).
+- Python source-audit split with fixture evidence qualified seed-only
+   under #613
+   (`bazel run //tools/ci:python_audit_qualification` with
+   `python/tests/fixtures/python_audit/pins.bzl` plus
+   `python_audit.expected`; `python_audit_qualification` 16/16;
+   curated audit empty with Bandit excluded plus secrets via Gitleaks,
+   lint Ruff plus pydoclint plus format Ruff plus typecheck Ty
+   unaffected with flake8 plus pylint opt-ins, no audit adapter claim,
+   source audit distinct from ecosystem audit/update delivered, leaving
+   under taxonomy rejected with mismatched scope; future selection plus
+   platform plus consumer plus release evidence stays owned gap;
+   backends provisional; no Supported claim).
 - Selective `dx update` per-set support with fixture evidence qualified
   seed-only under #583
   (`bazel run //tools/ci:selective_update_qualification` with

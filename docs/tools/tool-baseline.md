@@ -74,8 +74,9 @@ authorize hidden behavioral presets. Unselected opt-ins create no actions or too
 
 The planned initial curated Python defaults are Ruff, Ty, and pydoclint. Ruff
 and pydoclint run under lint and Ty runs under typecheck; initial audit tool selection is
-open (Bandit excluded from v1 by
-[ADR 0019](../decisions/0019-first-release-additional-foundations.md)).
+open under issue #613 (Bandit excluded from v1 by
+[ADR 0019](../decisions/0019-first-release-additional-foundations.md), with fixture evidence in
+`python/tests/fixtures/python_audit/pins.bzl` via `bazel run //tools/ci:python_audit_qualification`).
 Ruff is planned as the default and only active Python formatter. Flake8 and pylint remain
 baseline opt-ins.
 
