@@ -172,17 +172,18 @@ else
   bad "quality apply applier lost its atomic-write evidence (#84)"
 fi
 
-# #12 lane-A CI scope stays dogfood-like (issue #408): the consumer
-# self-call runs all checks over verbatim `//...` (covering lane-A trees
-# plus fixtures), with dogfood-freshness for generate freshness plus
-# audits. No bespoke corpus converge remains.
+# #12 lane-A CI scope stays dogfood-like (issue #408 plus Phase 1 #607):
+# the dogfood self-call runs eight checks with `test` disabled (coverage
+# superset via `resolve_for_test` plus `bazel coverage`) over verbatim
+# `//...` (covering lane-A trees plus fixtures), with dogfood-freshness
+# for generate freshness plus audits. No bespoke corpus converge remains.
 if grep -q -F -e 'dogfood-freshness' .github/workflows/ci.yml &&
-  grep -q -F -e 'consumer-ci (self-call reusable consumer workflow)' .github/workflows/ci.yml &&
-  grep -q -F -e 'disabled_checks: ""' .github/workflows/ci.yml &&
+  grep -q -F -e 'dogfood (self-call reusable consumer workflow)' .github/workflows/ci.yml &&
+  grep -q -F -e 'disabled_checks: "test"' .github/workflows/ci.yml &&
   ! grep -q -F -e 'attr(tags, corpus' .github/workflows/ci.yml; then
   ok
 else
-  bad "ci.yml lost its dogfood-like consumer scope (#12/#408)"
+  bad "ci.yml lost its dogfood-like consumer scope (#12/#408 plus Phase 1 #607 test-disabled)"
 fi
 
 # #7 Gazelle language extensions stay present: one extension directory

@@ -325,7 +325,7 @@ plus gate/aggregate plus per-gap decisions with fixture evidence qualified
 seed-only under #509 (`bazel run //tools/ci:consumer_ci_qualification`;
 nine checks, explicit platforms, fail-closed sequential, stable aggregate,
 hygiene, concurrency, permissions, per-cell coverage with fork-safe comments,
-all-enabled self-call (issue #408, verbatim `//...`),
+test-disabled self-call (issue #408 plus Phase 1 #607 coverage superset, verbatim `//...`),
 native bump loop (sole updater, issue #461), migrate syntax plus manifest
 selection (delivered CLI with fail-closed execution, issue #462) plus run
 multirun (issue #463 delivered), tag hygiene as-built, with platform, runner,

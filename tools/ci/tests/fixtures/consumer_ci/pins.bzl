@@ -13,7 +13,8 @@ Fixture: `tools/ci/tests/fixtures/consumer_ci/` via
 `bazel run //tools/ci:consumer_ci_qualification`.
 
 Decides the consumer-CI slice beyond the reusable-workflow contract
-(closed #312) plus the all-enabled self-call (closed #408) plus the
+(closed #312) plus the test-disabled dogfood self-call (closed #408 plus
+Phase 1 #607 coverage superset) plus the
 host matrix (closed #415): each gap below records its as-built static
 contract with seed-only fixture evidence, without claiming live
 multi-host execution, live queue/thread/fork runs, or Supported.
