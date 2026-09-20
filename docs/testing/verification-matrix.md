@@ -48,7 +48,11 @@ class by design — never silently under the standard dogfood gates.
   `dx_dev` wiring via the adopt-rust smoke in normal CI
   (`bazel build //examples/adopt-rust/... --config=dx_dev` in the build job).
   What is lost: real-daemon exit 3, real Buildifier rewrite, full consumer
-  wiring now smoke-only.
+  wiring now smoke-only. Per-loss dispositions qualified seed-only under #645
+  (`bazel run //tools/ci:layer4_loss_qualification` with
+  `cli/cli/tests/fixtures/layer4_loss/pins.bzl` plus `layer4_loss.expected`;
+  all three wont-fix with hermetic pins staying the customer path and the
+  nested-Bazel plus non-customer harness rejected; no Supported claim).
 - **Dependency checks**: required-core plus admitted lockfile-consistency and
   declared-dependency usage fixtures delivered in `tools/depcheck/`
    (issue #22; remaining opens under #754 and #796-#800, successors to closed
@@ -329,6 +333,8 @@ CI only, no Supported claim).
    fixture evidence, closed #588; successors #790-#795),
   `:cli_execution_gaps_qualification` (watch plus forwarding plus reports
   plus parallelism wont-fix pins plus fixture evidence, issue #590),
+  `:layer4_loss_qualification` (real-daemon plus Buildifier plus wiring
+  wont-fix pins plus fixture evidence, issue #645),
    `:promotion_checklist_qualification` (promotion checklist pins plus
    fixture evidence, closed #611; process now #808),
    `:sbom_upload_qualification` (SBOM plus provenance CI upload pins plus
@@ -349,7 +355,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `consumer_ci_qualification` 43/43, `review_threads_qualification` 16/16, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
-<<<<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `remediation_bounds_qualification` 16/16, `layer2_opens_qualification` 16/16, `quality_taxonomy_qualification` 17/17, `python_audit_qualification` 16/16, `selective_update_qualification` 16/16, `selective_cargo_qualification` 16/16, `selective_nuget_qualification` 16/16, `selective_maven_qualification` 16/16, `selective_go_qualification` 16/16, `bump_chain_qualification` 16/16, `bump_discovery_qualification` 16/16, `bump_gha_qualification` 16/16, `runner_rotation_qualification` 16/16, `ghcr_rebuild_rotation_qualification` 16/16, `update_events_qualification` 16/16, `env_plugins_cgo_qualification` 16/16, `starlark_futures_qualification` 16/16, `cli_execution_gaps_qualification` 16/16, `promotion_checklist_qualification` 16/16, `sbom_upload_qualification` 17/17, `ci_matrix_qualification` 14/14, `flakiness_qualification` 16/16, `closeout_battery_qualification` 24/24, `coverage_qualification` 33/33.
+<<<<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `remediation_bounds_qualification` 16/16, `layer2_opens_qualification` 16/16, `quality_taxonomy_qualification` 17/17, `python_audit_qualification` 16/16, `selective_update_qualification` 16/16, `selective_cargo_qualification` 16/16, `selective_nuget_qualification` 16/16, `selective_maven_qualification` 16/16, `selective_go_qualification` 16/16, `bump_chain_qualification` 16/16, `bump_discovery_qualification` 16/16, `bump_gha_qualification` 16/16, `runner_rotation_qualification` 16/16, `ghcr_rebuild_rotation_qualification` 16/16, `update_events_qualification` 16/16, `env_plugins_cgo_qualification` 16/16, `starlark_futures_qualification` 16/16, `cli_execution_gaps_qualification` 16/16, `layer4_loss_qualification` 16/16, `promotion_checklist_qualification` 16/16, `sbom_upload_qualification` 17/17, `ci_matrix_qualification` 14/14, `flakiness_qualification` 16/16, `closeout_battery_qualification` 24/24, `coverage_qualification` 33/33.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
 Full-tree `dx lint/format/typecheck/test --check //...` over fixtures and
@@ -1110,6 +1116,17 @@ Remaining reds stay owned gaps, not green claims:
   run multirun) with daemon plus parallel umbrella plus inferred forwards plus
   invented reports rejected; CLI-only, no Bazel semantics change; platform
   plus consumer plus release evidence stays owned gap; no Supported claim).
+- Layer-4 loss restore-or-wont-fix with fixture evidence qualified seed-only under #645
+  (`bazel run //tools/ci:layer4_loss_qualification` with
+  `cli/cli/tests/fixtures/layer4_loss/pins.bzl` plus
+  `layer4_loss.expected`; `layer4_loss_qualification` 16/16;
+  real-daemon exit 3 plus real Buildifier rewrite plus full consumer wiring
+  wont-fix (smoke-only for wiring) with hermetic exec code 3 plus
+  runner-matrix `x=1` to `x = 1` plus `real_aspect_presence` plus
+  `preset_parity_test` plus adopt-rust `dx_dev` smoke staying the customer
+  path, nested-Bazel plus non-customer harness plus second Bazel rejected;
+  test only, no Bazel semantics change; platform plus consumer plus release
+  evidence stays owned gap; no Supported claim).
 - Opt-in strict preset vs default loose with fixture evidence qualified seed-only under #615
   (`bazel run //tools/ci:strict_preset_qualification` with
   `quality/tests/fixtures/strict_preset/pins.bzl` plus loose vs strict

@@ -19,6 +19,14 @@ label/path selection, workflow selection, mutation/check-mode
 separation, failures, logs, dry run, and direct `dx bazel` forwarding. Include
 paths with spaces where supported.
 
+Layer-4 losses stay wont-fix with hermetic pins as the customer path, pinned by
+`cli/cli/tests/fixtures/layer4_loss/` via
+`bazel run //tools/ci:layer4_loss_qualification` under issue #645: real-daemon
+exit 3 (hermetic `cli/cli/src/exec` code 3), real Buildifier rewrite (hermetic
+`//quality/testdata:runner_matrix` `x=1` to `x = 1`), full consumer wiring
+smoke-only (adopt-rust `dx_dev` smoke with `real_aspect_presence` plus
+`preset_parity_test`). A nested-Bazel CI harness stays rejected.
+
 Public stream and standard-report tests conform to
 [Output Protocol](../cli/output-protocol.md) and [Standard Reports](../cli/standard-reports.md).
 Internal analyzer-result tests conform to
