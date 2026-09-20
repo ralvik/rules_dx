@@ -121,14 +121,14 @@ THREAD_KEEP_WHILE_PRESENT = "Keep a thread while its finding remains"
 THREAD_BOT_ONLY_DELETE = "delete bot-only threads without replies"
 THREAD_WITH_REPLIES_RESOLVE = "resolve threads with human replies instead"
 
-# Limits stay fixed with deterministic priority plus no fresh allowance.
+# Limits stay fixed with deterministic priority plus no fresh allowance (frozen at 50 under #592).
 LIMIT_FIXED = "one fixed, documented per-PR review-thread limit"
 LIMIT_NO_CONSUMER_SETTING = "without a consumer setting"
 LIMIT_DETERMINISTIC = "deterministic ordering, not job completion order"
 LIMIT_NO_FRESH_ALLOWANCE = "no fresh allowance per job/rerun"
 LIMIT_FULL_REPORTS = "Full reports retain every finding"
 LIMIT_SUMMARY_DISTINGUISHES = "summary distinguishes findings omitted due to the limit"
-LIMIT_NOT_FROZEN = "The numeric limit and thread-accounting mechanics are not yet frozen"
+LIMIT_FROZEN = "frozen at 50 open integration-owned threads under issue #592"
 
 # Fork security stays native approval with fork-safe comments.
 FORK_POLICY = "all_external_contributors"

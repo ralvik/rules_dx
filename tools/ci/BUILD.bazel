@@ -553,6 +553,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Review-thread limit plus accounting harness (issue #592); see docs/github-ci.md#thread-lifecycle-and-limits.
+sh_binary(
+    name = "review_threads_qualification",
+    srcs = ["review_threads_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # File-family harness (issue #489); see tools/ci/file_family_qualification.sh.
 sh_binary(
     name = "file_family_qualification",

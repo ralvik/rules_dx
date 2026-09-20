@@ -1,0 +1,17 @@
+Review-thread limit plus accounting frozen at 50 open threads (issue #592).
+One fixed per-PR limit across checks and platforms without a consumer
+setting and with no fresh allowance per job/rerun/retry/parallel
+completion. Failure-contributing findings win with check/file/line/rule
+ordering, not job completion order. Existing threads preserved
+without rotation of still-present findings. Bot-only deletion frees a slot;
+resolved-with-replies history stays retained outside the open count.
+Skipped, disabled, cancelled, or incomplete checks, missing reports, and
+locations moving outside the diff never prove a finding is gone. Full
+reports retain every finding; the summary distinguishes findings omitted
+due to the limit from those without a valid diff location. Intentional
+truncation is not incomplete analysis or publication failure and never
+changes CI outcomes; actual publication failures still fail reporting.
+Late callbacks never overwrite current threads or summaries.
+Leaving unfrozen rejected; consumer setting, fresh allowance, completion
+order, and rotation rejected.
+Qualified seed-only under issue #592; CI-only; no Supported claim.

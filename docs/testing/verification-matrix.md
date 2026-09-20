@@ -222,7 +222,8 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   `:supported_evidence_gate`, `:quality_adapters_parity`,
   `:env_codegen_qualification`, `:env_plugins_cgo_qualification` (deferred plugin design plus cgo
   boundary pins plus fixture evidence, issue #587), `:docs_pipeline_qualification`,
-  `:consumer_ci_qualification`, `:file_family_qualification`,
+  `:consumer_ci_qualification`, `:review_threads_qualification` (frozen 50 plus accounting
+  pins plus fixture evidence, issue #592), `:file_family_qualification`,
   `:helper_qualification`, `:clap_tokenizer_qualification`,
   `:hello_smoke_qualification`, `:parser_sample_qualification`,
   `:rustfmt_edition_qualification`, `:cc_optout_qualification`,
@@ -297,7 +298,7 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
 Green here (static guards on a clean tree, no full rebuild):
 `non_dogfed_paths`, `non_dogfed_qualification` 16/16, `supported_evidence_gate`, `distribution_closeout_guards`,
 `env_codegen_qualification` 32/32, `env_plugins_cgo_qualification` 16/16, `docs_pipeline_qualification` 33/33,
-`consumer_ci_qualification` 43/43, `file_family_qualification` 24/24,
+`consumer_ci_qualification` 43/43, `review_threads_qualification` 16/16, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
 <<<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `remediation_bounds_qualification` 16/16, `layer2_opens_qualification` 16/16, `quality_taxonomy_qualification` 17/17, `selective_update_qualification` 16/16, `update_events_qualification` 16/16, `env_plugins_cgo_qualification` 16/16, `starlark_futures_qualification` 16/16, `cli_execution_gaps_qualification` 16/16, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24, `coverage_qualification` 33/33.
@@ -347,11 +348,22 @@ Remaining reds stay owned gaps, not green claims:
    hygiene as-built; Consumer-CI per-gap decisions with fixture evidence:
    platform, runner, isolation, cache, ordering, merge,
    diff, queue, cancellation, aggregate binding, thread identity, ordering,
-   limits, fork, untrusted, sensitive, retries, Code-Scanning, sequential,
+   limits (frozen at 50 under issue #592), fork, untrusted, sensitive, retries,
+   Code-Scanning, sequential,
    tag/release, native-bot, migrate-manifest decisions pinned with
    build-only self-call forever rejected per #408; platform plus release
    evidence stays owned gap; no Supported claim;
    `consumer_ci_qualification` 43/43);
+- Review-thread limit plus accounting frozen at 50 open threads with fixture
+  evidence qualified seed-only under issue #592
+  (`tools/ci/tests/fixtures/review_threads/pins.bzl` plus
+  `review_threads.expected` via `bazel run //tools/ci:review_threads_qualification`;
+  no consumer setting, no fresh allowance, failure-first check/file/line/rule
+  ordering, no rotation, bot-only frees with resolved history outside the open
+  count, full reports with summary-distinguished truncation, no overwrite;
+  leaving unfrozen plus consumer setting plus fresh allowance plus completion
+  order plus rotation rejected; CI-only, no Supported claim;
+  `review_threads_qualification` 16/16);
    platform qualification
    beyond the seed plus arm64 plus musl plus macos plus macos-x86_64 plus
    windows hosts stays open under #298 (arm64 qualified under #410, static

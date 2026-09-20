@@ -233,8 +233,17 @@ for new threads using deterministic ordering, not job completion order. Preserve
 threads under the lifecycle policy; do not delete or resolve still-present findings to rotate
 others into view. Full reports retain every finding. The summary distinguishes findings
 omitted due to the limit from those without a valid diff location. Intentional truncation
-is not incomplete analysis or publication failure and never changes CI outcomes. The numeric
-limit and thread-accounting mechanics are not yet frozen.
+is not incomplete analysis or publication failure and never changes CI outcomes. The per-PR
+review-thread limit is frozen at 50 open integration-owned threads with deterministic
+failure-first accounting qualified under issue #592
+(`tools/ci/tests/fixtures/review_threads/pins.bzl` plus `review_threads.expected`
+via `bazel run //tools/ci:review_threads_qualification`; no consumer setting, no fresh
+allowance per job/rerun/retry/parallel completion, failure-contributing first with
+check/file/line/rule ordering, existing threads preserved without rotation, bot-only
+deletion frees a slot while resolved-with-replies history stays retained outside the open
+count, skipped/disabled/cancelled/incomplete/missing/outside-diff never prove gone, full
+reports retain every finding with summary-distinguished truncation, late callbacks never
+overwrite current threads/summaries; CI-only, seed-only, no Supported claim).
 
 ### Audit And Code Scanning
 
@@ -298,8 +307,10 @@ reopen the accepted policies above. Resolve them before affected implementation:
   scope, scheduling isolation, cache/resource use, sequential ordering, and coverage/test reuse.
 - Qualify event/ref delivery, merge snapshots and diff mapping, conflicting-PR blocked reporting,
   queue lifecycle, base advancement, cancellation races, and aggregate required-check bindings.
-- Freeze finding/thread identity, deterministic ordering, numeric limit and accounting, safe
-  deletion/resolution with concurrent human replies, outdated locations, and GitHub API limits.
+- Freeze finding/thread identity, deterministic ordering, safe
+  deletion/resolution with concurrent human replies, outdated locations, and GitHub API limits
+  (numeric limit plus thread-accounting frozen at 50 open threads under issue #592; remainder
+  stays open).
 - Qualify fork roles/settings, untrusted artifact and metadata validation, privileged reporting,
   sensitive-content handling, bounded transport retries, and opt-in Code Scanning publication.
 
@@ -307,7 +318,9 @@ Consumer-CI qualification, release qualification, and publication of qualified
 identities remain open tracks. Track unresolved work in
 [roadmap](roadmap.md) and open work under issue #509 and prove the contract
 through the [consumer CI test matrix](testing/github-ci.md). The open qualification
-track stays owned under issue #509. Reusable-workflow contract plus caller
+track stays owned under issue #509. Review-thread limit plus accounting frozen at 50 open
+threads under issue #592 (`tools/ci/tests/fixtures/review_threads/pins.bzl` plus
+`review_threads.expected` via `bazel run //tools/ci:review_threads_qualification`). Reusable-workflow contract plus caller
 plus gate/aggregate plus per-gap decisions with fixture evidence qualified
 seed-only under #509 (`bazel run //tools/ci:consumer_ci_qualification`;
 nine checks, explicit platforms, fail-closed sequential, stable aggregate,

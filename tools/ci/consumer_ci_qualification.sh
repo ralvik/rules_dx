@@ -336,12 +336,12 @@ else
   bad "merge/diff/queue/cancellation/aggregate gap lost its owner"
 fi
 
-# Thread identity/ordering/limits stays owned open with unfrozen limit.
+# Thread identity/ordering stays owned open with limit plus accounting frozen under #592.
 if grep -q -F -e 'Freeze finding/thread identity, deterministic ordering' "$contract" &&
-  grep -q -F -e 'numeric limit and accounting' "$contract" &&
+  grep -q -F -e 'numeric limit plus thread-accounting frozen at 50 open threads under issue #592' "$contract" &&
   grep -q -F -e 'thread identity, ordering, limits' "$matrix" &&
-  grep -q -F -e 'The numeric' "$contract" &&
-  grep -q -F -e 'not yet frozen' "$contract"; then
+  grep -q -F -e 'frozen at 50 open integration-owned threads' "$contract" &&
+  grep -q -F -e 'issue #592' "$contract"; then
   ok
 else
   bad "thread identity/ordering/limits gap lost its owner"
@@ -475,7 +475,7 @@ else
   bad "pins.bzl lost its cancellation plus aggregate pins under issue #509"
 fi
 
-# Pins record thread plus limit decisions with unfrozen numeric.
+# Pins record thread plus limit decisions with frozen numeric under #592.
 if grep -q -F -e 'replyable/resolvable PR review threads' "$pins" &&
   grep -q -F -e 'There is no review-comment opt-out or annotation-only mode' "$pins" &&
   grep -q -F -e 'Preserve human comments, replies, and unrelated threads' "$pins" &&
@@ -485,7 +485,7 @@ if grep -q -F -e 'replyable/resolvable PR review threads' "$pins" &&
   grep -q -F -e 'without a consumer setting' "$pins" &&
   grep -q -F -e 'deterministic ordering, not job completion order' "$pins" &&
   grep -q -F -e 'Full reports retain every finding' "$pins" &&
-  grep -q -F -e 'The numeric limit and thread-accounting mechanics are not yet frozen' "$pins"; then
+  grep -q -F -e 'frozen at 50 open integration-owned threads under issue #592' "$pins"; then
   ok
 else
   bad "pins.bzl lost its thread plus limit pins under issue #509"
@@ -551,6 +551,7 @@ if grep -q -F -e 'Five explicit platform identifiers with no implicit default' "
   grep -q -F -e 'single stable dx-ci' "$revisions_expected" &&
   grep -q -F -e 'replyable/resolvable' "$reporting_expected" &&
   grep -q -F -e 'one fixed, documented per-PR' "$reporting_expected" &&
+  grep -q -F -e 'frozen at 50 open integration-owned' "$reporting_expected" &&
   grep -q -F -e 'all_external_contributors' "$reporting_expected" &&
   grep -q -F -e 'least-privilege' "$reporting_expected" &&
   grep -q -F -e 'native rerun' "$reporting_expected" &&
