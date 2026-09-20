@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Coverage/remote qualification harness (issue #507).
 #
-# Closes the five qualification gaps named in #507 with machine-checked
-# evidence on a clean tree, without paid infrastructure:
+# Qualifies the per-cell non-seed coverage plus Codecov opt-in plus
+# remote evidence slice with fixture evidence pinned in
+# `tools/coverage/tests/fixtures/per_cell/pins.bzl` (plus
+# `per_cell.expected` plus `codecov_remote.expected`), without claiming
+# qualified floors, qualified accounting, or Supported:
 # - per-cell LCOV gating (seed plus arm64 plus two static-musl plus macos
 #   arm64 plus macos x86_64 best-effort plus windows x86_64 qualified, all
 #   required plus best-effort qualified, never unioned),
@@ -36,6 +39,14 @@ dx_test_init
 
 cells="tools/coverage/cells.txt"
 seed_inventory="tools/coverage/seed-inventory.txt"
+pins="tools/coverage/tests/fixtures/per_cell/pins.bzl"
+pins_build="tools/coverage/tests/fixtures/per_cell/BUILD.bazel"
+per_cell_expected="tools/coverage/tests/fixtures/per_cell/per_cell.expected"
+codecov_remote_expected="tools/coverage/tests/fixtures/per_cell/codecov_remote.expected"
+testing_readme="docs/testing/README.md"
+github_ci="docs/github-ci.md"
+build_coverage_doc="docs/cli/commands/build-test-coverage.md"
+verify="docs/testing/verification-matrix.md"
 
 # Per-cell registry exists with exactly seven qualified rows (seed x86_64
 # plus arm64 native under issue #410 plus two static-musl profiles under
@@ -209,10 +220,12 @@ else
 fi
 
 # Codecov stays opt-in only: no activation, no upload wiring anywhere.
-# (Self-excluded: this script names the banned forms in its own patterns.)
+# (Self-excluded: this script names the banned forms in its own patterns;
+# the #507 pins fixture records the same banned forms as pins, so its
+# path is filtered out and only real wiring can fail this check.)
 if ! grep -rn -F -e 'codecov-action' .github/workflows/ 2>/dev/null | grep -q . &&
-  ! grep -rn -F -e 'CODECOV_TOKEN' --exclude='coverage_qualification.sh' .github/workflows/ tools/ cli/ 2>/dev/null | grep -q . &&
-  ! grep -rn -F -e 'codecov upload' --exclude='coverage_qualification.sh' .github/workflows/ tools/ 2>/dev/null | grep -q .; then
+  ! grep -rn -F -e 'CODECOV_TOKEN' --exclude='coverage_qualification.sh' .github/workflows/ tools/ cli/ 2>/dev/null | grep -v -F -e 'tools/coverage/tests/fixtures/per_cell/' | grep -q . &&
+  ! grep -rn -F -e 'codecov upload' --exclude='coverage_qualification.sh' .github/workflows/ tools/ 2>/dev/null | grep -v -F -e 'tools/coverage/tests/fixtures/per_cell/' | grep -q .; then
   ok
 else
   bad "Codecov upload wiring appeared (action, token, or upload step)"
@@ -290,6 +303,145 @@ if [[ -f "tools/ci/quality_cache_aquery.sh" ]] &&
   ok
 else
   bad "local cache evidence harnesses missing (aquery plus exec-log)"
+fi
+
+# Fixture files stay present (issue #507).
+if [[ -f "$pins" && -f "$pins_build" && -f "$per_cell_expected" && -f "$codecov_remote_expected" ]]; then
+  ok
+else
+  bad "per-cell coverage fixture missing (want $pins plus $pins_build plus per_cell.expected plus codecov_remote.expected)"
+fi
+
+# Pins record the per-cell registry with seven qualified cells and no union.
+if grep -q -F -e 'PER_CELL_COUNT = 7' "$pins" &&
+  grep -q -F -e 'qualified seed-linux_x86_64 tools/coverage/seed-inventory.txt' "$pins" &&
+  grep -q -F -e 'qualified linux_arm64 tools/coverage/arm64-inventory.txt' "$pins" &&
+  grep -q -F -e 'qualified linux_x86_64_musl tools/coverage/musl-x86_64-inventory.txt' "$pins" &&
+  grep -q -F -e 'qualified linux_arm64_musl tools/coverage/musl-arm64-inventory.txt' "$pins" &&
+  grep -q -F -e 'qualified macos_arm64 tools/coverage/macos-arm64-inventory.txt' "$pins" &&
+  grep -q -F -e 'qualified macos_x86_64 tools/coverage/macos-x86_64-inventory.txt' "$pins" &&
+  grep -q -F -e 'qualified windows_x86_64 tools/coverage/windows-x86_64-inventory.txt' "$pins" &&
+  grep -q -F -e 'no cross-cell union' "$pins" &&
+  grep -q -F -e 'coverage --min-coverage 97 //...' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its seven-cell registry plus no-union plus rate-gate pins under issue #507"
+fi
+
+# Pins record the accepted decision: repo exact gate plus configurable
+# per-cell requirement plus Codecov opt-in plus seed inventory plus no union.
+if grep -q -F -e 'zero uncovered lines' "$pins" &&
+  grep -q -F -e 'configurable requirement for users per-cell' "$pins" &&
+  grep -q -F -e 'Codecov stays opt-in only' "$pins" &&
+  grep -q -F -e 'never required' "$pins" &&
+  grep -q -F -e 'tools/coverage/seed-inventory.txt' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its accepted-decision pins (exact gate plus configurable per-cell plus Codecov opt-in, issue #507)"
+fi
+
+# Pins record the Starlark infeasibility plus behavioral fallback decision.
+if grep -q -F -e '0-byte `coverage.dat`' "$pins" &&
+  grep -q -F -e 'bazelbuild/bazel#15594' "$pins" &&
+  grep -q -F -e '9.2.0' "$pins" &&
+  grep -q -F -e 'behavioral matrix' "$pins" &&
+  grep -q -F -e 'matrix_validation' "$pins" &&
+  grep -q -F -e 'never be presented as source-line' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its Starlark probe plus fallback pins under issue #507"
+fi
+
+# Pins record Codecov opt-in-only with no activation or upload wiring.
+if grep -q -F -e 'CODECOV_TOKEN' "$pins" &&
+  grep -q -F -e 'codecov upload' "$pins" &&
+  grep -q -F -e 'first-party' "$pins" &&
+  grep -q -F -e 'Codecov stays at most opt-in' "$pins" &&
+  grep -q -F -e 'No Codecov account' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its Codecov opt-in-only pins under issue #507"
+fi
+
+# Pins record the free-tier quota scope with banned paid routes.
+if grep -q -F -e 'standard GitHub-hosted runners is free' "$pins" &&
+  grep -q -F -e 'runs-on: ubuntu-latest' "$pins" &&
+  grep -q -F -e 'runs-on: windows-latest' "$pins" &&
+  grep -q -F -e 'actions/cache' "$pins" &&
+  grep -q -F -e '10 GB' "$pins" &&
+  grep -q -F -e '500 MB' "$pins" &&
+  grep -q -F -e 'Larger runners are always charged' "$pins" &&
+  grep -q -F -e 'self-hosted' "$pins" &&
+  grep -q -F -e 'macos-latest' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its free-tier quota pins under issue #507"
+fi
+
+# Pins record local-only remote with the else branch and no correctness claim.
+if grep -q -F -e '--remote_cache' "$pins" &&
+  grep -q -F -e '--remote_executor' "$pins" &&
+  grep -q -F -e '--bes_backend' "$pins" &&
+  grep -q -F -e 'local execution, no remote' "$pins" &&
+  grep -q -F -e 'locally sandbox-tested but remote behavior remains unverified' "$pins" &&
+  grep -q -F -e 'remote-cache correctness' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its local-only remote pins under issue #507"
+fi
+
+# Pins record the rejected substitutes (seed-only forever stays rejected).
+if grep -q -F -e '"seed-only forever"' "$pins" &&
+  grep -q -F -e '"cross-cell union"' "$pins" &&
+  grep -q -F -e '"averaged percentages"' "$pins" &&
+  grep -q -F -e '"rounding up"' "$pins" &&
+  grep -q -F -e '"required Codecov"' "$pins" &&
+  grep -q -F -e '"remote-cache correctness"' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its rejected-alternative pins under issue #507"
+fi
+
+# Fixture expected texts cover per-cell plus Codecov plus remote gaps.
+if grep -q -F -e 'Seven required plus best-effort cells' "$per_cell_expected" &&
+  grep -q -F -e 'configurable --min-coverage requirement for users per-cell' "$per_cell_expected" &&
+  grep -q -F -e 'behavioral matrix' "$per_cell_expected" &&
+  grep -q -F -e 'Codecov stays at most opt-in' "$codecov_remote_expected" &&
+  grep -q -F -e 'standard GitHub-hosted runners are free' "$codecov_remote_expected" &&
+  grep -q -F -e 'remains unverified' "$codecov_remote_expected" &&
+  grep -q -F -e 'platform plus consumer plus release evidence' "$per_cell_expected"; then
+  ok
+else
+  bad "per_cell.expected plus codecov_remote.expected lost gap coverage (want cells plus decision plus Codecov plus quotas plus remote, issue #507)"
+fi
+
+# Docs own the qualified record with the fixture proof.
+if grep -q -F -e 'tools/coverage/tests/fixtures/per_cell/pins.bzl' "$testing_readme" &&
+  grep -q -F -e 'qualified by `bazel run //tools/ci:coverage_qualification`' "$testing_readme" &&
+  grep -q -F -e 'tools/coverage/tests/fixtures/per_cell/pins.bzl' "$github_ci" &&
+  grep -q -F -e 'configurable requirement for users per-cell' "$build_coverage_doc" &&
+  grep -q -F -e 'tools/coverage/tests/fixtures/per_cell/pins.bzl' "$build_coverage_doc"; then
+  ok
+else
+  bad "testing README, github-ci, or build-test-coverage lost its #507 pins fixture record"
+fi
+
+# Live proof: the fixture package builds green on the seed host.
+if bazel build //tools/coverage/tests/fixtures/per_cell/... --noshow_progress >/dev/null 2>&1; then
+  ok
+else
+  bad "per-cell coverage fixture failed to build (want green on the seed host, issue #507)"
+fi
+
+# Verification matrix owns the qualified record under #507.
+if grep -q -F -e 'Per-cell non-seed coverage plus Codecov opt-in plus remote evidence' "$verify" &&
+  grep -q -F -e 'qualified under #507' "$verify" &&
+  grep -q -F -e 'tools/coverage/tests/fixtures/per_cell/pins.bzl' "$verify" &&
+  grep -q -F -e 'bazel run //tools/ci:coverage_qualification' "$verify" &&
+  grep -q -F -e '`coverage_qualification` 33/33' "$verify"; then
+  ok
+else
+  bad "verification-matrix lost its #507 per-cell coverage qualified record with 33/33"
 fi
 
 dx_test_summary "coverage qualification harness"

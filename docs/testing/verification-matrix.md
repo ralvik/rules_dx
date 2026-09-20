@@ -273,7 +273,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
-<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
+<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24, `coverage_qualification` 33/33.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
 
@@ -281,10 +281,12 @@ Remaining reds stay owned gaps, not green claims:
 
 - Full-tree `dx lint/format/typecheck/test --check //...` over fixtures and
   testdata stays open under #12 (lane A only) and #325 (consumer honesty).
-- Per-cell coverage is qualified for the seed plus arm64 plus two static-musl plus macos arm64 plus macos x86_64 best-effort plus windows x86_64 cells under
-  #507/#410/#411/#412/#413/#414 (`tools/coverage/cells.txt`,
-  `bazel run //tools/ci:coverage_qualification`; no union, Starlark fallback,
-  Codecov opt-in, quotas, local-only remote evidence). First-party PR reporting is
+- Per-cell coverage is qualified for the seed plus arm64 plus two static-musl plus macos arm64 plus macos x86_64 best-effort plus windows x86_64 cells with fixture evidence under
+  #507 (`tools/coverage/tests/fixtures/per_cell/pins.bzl` plus
+  `per_cell.expected` plus `codecov_remote.expected` via
+  `bazel run //tools/ci:coverage_qualification`; seven cells, same
+  scope, no union, Starlark fallback, Codecov opt-in, quotas, local-only
+  remote evidence). First-party PR reporting is
   adopted under #254 (Codecov opt-in only; the seed cell owns the PR comment,
   the arm64 plus musl plus macos plus macos-x86_64 plus windows cells report to their job summaries; the macos x86_64 best-effort cell reports without blocking required-host release). All required plus best-effort cells are qualified; out-of-v1 hosts stay platform-gated under #298.
 - Docs pipeline and environment/codegen stay open under #421 and #506 (see
@@ -727,9 +729,27 @@ Remaining reds stay owned gaps, not green claims:
   plus remote as execution plus compiler-target availability plus cross-host
   Windows inference rejected; backends stay provisional; floors qualified
   seed-only under #500, coverage qualified seed-only under #501, linux
-  corpus qualified seed-only under #499; platform plus consumer plus release
+   corpus qualified seed-only under #499; platform plus consumer plus release
   evidence stays owned gap; no Supported claim
   (`cross_routes_qualification` 17/17)).
+- Per-cell non-seed coverage plus Codecov opt-in plus remote evidence
+  with fixture evidence qualified under #507
+  (`bazel run //tools/ci:coverage_qualification`;
+  seven required plus best-effort cells gating their own combined LCOV
+  report separately with the same first-party scope and no cross-cell
+  union, 100% non-ignored exact gate in this repo with a configurable
+  `--min-coverage` requirement for users per-cell, Codecov opt-in only
+  never required with no activation or upload wiring, standard-runner
+  free-tier quotas with paid routes banned, local-only remote with
+  locally sandbox-tested hermeticity and remote behavior unverified,
+  pinned in `tools/coverage/tests/fixtures/per_cell/pins.bzl` with
+  `per_cell.expected` plus `codecov_remote.expected`;
+  seed-only-forever plus cross-cell union plus averaged percentages plus
+  rounding up plus required Codecov plus remote-correctness claims
+  rejected; floors qualified seed-only under #500, LCOV accounting
+  qualified seed-only under #501; platform plus consumer plus release
+  evidence stays owned gap; no Supported claim
+  (`coverage_qualification` 33/33)).
 - Stable-stack compose with fixture evidence qualified seed-only under issue #494
   (`bazel run //tools/ci:stable_stack_qualification`; as-built Bzlmod
   identities Bazel 9.2.0 plus rules_rust 0.74.0 plus rules_cc 0.2.22 plus

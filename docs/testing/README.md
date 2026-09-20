@@ -121,7 +121,9 @@ macos arm64 plus macos x86_64 best-effort plus windows x86_64 qualified,
 all required plus best-effort qualified per the platform policy); no cross-cell union, never unioned across cells to hide gaps.
 Per-cell enforcement plus the Starlark, Codecov, quota, and remote halves
 below is qualified by `bazel run //tools/ci:coverage_qualification`
-(issue #507).
+(issue #507) with fixture evidence pinned in
+`tools/coverage/tests/fixtures/per_cell/pins.bzl` (plus
+`per_cell.expected` plus `codecov_remote.expected`).
 
 **Accepted mechanics:**
 

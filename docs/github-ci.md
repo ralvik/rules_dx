@@ -41,7 +41,9 @@ prescribe consumer CODEOWNERS/reviewer policies.
 This repository's [first-party coverage selection](testing/README.md#github-coverage-reporting) does not
 require consumers to use Codecov. Codecov stays opt-in only and is never
 required; consumers get the same first-party per-cell summary through the
-reusable coverage path.
+reusable coverage path. Codecov opt-in-only is qualified with fixture
+evidence pinned in `tools/coverage/tests/fixtures/per_cell/pins.bzl`
+via `bazel run //tools/ci:coverage_qualification` (issue #507).
 
 ## Docs CI
 
