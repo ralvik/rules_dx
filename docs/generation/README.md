@@ -64,9 +64,12 @@ under issue #471 (pure-Rust `rust/tests/fixtures/cc_optout/` with kept
 is qualified under issue #473 with the LLVM-22 parser baseline vs LLVM-23
 target pinned plus the standalone/build-script `bindgen.h` plus
 `bindgen.expected` fixture pair
-(`bazel run //tools/ci:bindgen_qualification`); remaining native gaps
-(shell-env default, CXX graph identity,
-exact-target discovery) stay owned under issues #472, #474, #475 per the
+(`bazel run //tools/ci:bindgen_qualification`); exact-target discovery is
+qualified seed-only under issue #475 (resolver-owned exact labels to upstream
+`TARGETS` with hello exact-isolation plus `rust/tests/fixtures/discovery/pins.bzl` via
+`bazel run //tools/ci:exact_target_qualification`); remaining native gaps
+(shell-env default, CXX graph identity)
+stay owned under issues #472, #474 per the
 [native plan](../native-toolchains.md#qualification-questions-and-delivery).
 
 Admitted additional foundations keep their provisional upstreams with hello test runners

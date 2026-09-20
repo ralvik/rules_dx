@@ -31,6 +31,10 @@ generated-source visibility, version selection, required platforms, and exact-ta
 focused environment plan is the provider-derived `rust_env_plan` rule over one `rust_*` wrapper
 (`rust/env/plan.bzl`, pinned by `//rust/env:env_plan_tests`); IDE reuse is pinned by upstream
 `gen_rust_project` + `flycheck` acquisition (`//rust/ide:ide_acquisition_test`), including
-focused exact-target projection.
+focused exact-target projection. Exact-target discovery is qualified seed-only under issue #475
+(resolver-owned exact labels to upstream `TARGETS`, `Path`/`Buildfile` widening plus project-owned
+graph plus `RustAnalyzerInfo` rejected, hello exact-isolation pair plus
+`rust/tests/fixtures/discovery/pins.bzl` via `bazel run //tools/ci:exact_target_qualification`;
+resolution only, no `Supported` claim).
 The public `dx env` repository/root/exact-target orchestration and atomic selection are implemented in
 `cli/env`.

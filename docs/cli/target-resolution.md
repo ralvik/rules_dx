@@ -136,6 +136,36 @@ shell. Large scope sets use one bounded query per resolver call, with
 file labels batched into a deterministic set; the expression stays a
 plain inspectable query string.
 
+## Exact-Target Discovery
+
+Qualified seed-only under issue #475 (`bazel run //tools/ci:exact_target_qualification`;
+resolution only, no `Supported` claim). Resolver-owned exact labels are the
+discovery input to IDE tooling, preserving exact context end to end.
+
+Files resolve to all direct owners through the unconfigured query above, with
+nearest-enclosing-package file labels and deterministic sorting. Directories
+become recursive `//path/...` patterns and explicit labels pass through with
+no query. Those exact owners flow to the upstream `gen_rust_project` and
+`flycheck` `TARGETS` interfaces (pinned by `//rust/ide:ide_acquisition_test`),
+never as raw paths to dynamic discovery alone.
+
+Upstream dynamic discovery accepts `Path`/`Buildfile` (`RustAnalyzerArg` in
+`tools/rust_analyzer/rust_project.rs` at pinned `rules_rs` v0.0.109) and widens
+through `buildfile_to_targets` to `//pkg:all` (root `//...`). That widening
+loses exact context: `rust/tests/fixtures/hello` `src/lib.rs` resolves to
+`hello_lib` only while `src/main.rs` resolves to `hello` only, but the
+package-wide shape would merge both. Path-only widening therefore stays
+rejected as the sole route, as does query-only without contract (this section).
+
+A project-owned crate graph stays rejected; discovery never synthesizes a
+static graph beside Bazel. Internal `RustAnalyzerInfo` stays rejected as a
+public discovery API. Upstream exact-target extension is preferred over either
+substitute. Identities plus rejected forms are pinned in
+`rust/tests/fixtures/discovery/pins.bzl`; resolver shape is pinned by the
+`FakeQuery` fixtures in `cli/cli/src/resolve/`; focused `rust_env_plan`
+fixtures stay provider-derived plans, not exact-target proof. C++ snapshot
+derivation stays open proof and is not claimed here.
+
 ## Acceptance Cases
 
 - Resolve a file with exactly one direct Python owner.

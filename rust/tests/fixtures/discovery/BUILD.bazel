@@ -1,0 +1,30 @@
+"""Exact-target discovery fixture (issue #475).
+
+Pins the upstream discovery identities plus the resolver-owned exact
+labels that flow to the upstream target interfaces. The live
+isolation proof runs `bazel query` over
+`rust/tests/fixtures/hello` (`src/lib.rs` to `hello_lib` only,
+`src/main.rs` to `hello` only); package-wide `//...:all` widening
+stays rejected. See `docs/cli/target-resolution.md#exact-target-discovery`.
+"""
+
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+exports_files([
+    "pins.bzl",
+])
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = [
+        "BUILD.bazel",
+        "pins.bzl",
+    ],
+    tags = ["corpus"],
+)
