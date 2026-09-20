@@ -1,0 +1,33 @@
+# Ownership, dialect, and lifecycle dispositions (issue #503).
+#
+# Test grouping: test-owned sources never enter the generated library.
+# `*_test.*` files are test-owned; library imports index only non-test
+# headers and sources contribute no identity.
+# Assembly: assembly sources are undiscovered and stay handwritten
+# (`.s`, `.S`, `.asm` outside `.c`/`.cc`/`.cpp`/`.cxx` plus
+# `.h`/`.hh`/`.hpp`/`.hxx`).
+# Modules and PCH: named C++ modules, header units and PCH have no complete
+# generation route and stay handwritten; compiler flags as complete support
+# stays rejected.
+# Union: preprocessor-derived platform selections are not the approved
+# Go-only generation exception; literal references under `#ifdef` still
+# contribute the deduplicated union with no `select()`.
+# Names: basename-derived names normalize deterministically and collisions
+# fail with every claimant; no affix is invented.
+# Lifecycle: stale generated targets clean through normal merge with keep
+# protection; deleting a BUILD file stays rejected.
+
+test-owned sources never enter the generated library
+assembly sources are undiscovered and stay handwritten
+named C++ modules, header units and PCH have no complete generation route and stay handwritten
+compiler flags as complete support rejected
+preprocessor-derived platform selections rejected
+basename-derived names normalize deterministically and collisions fail with every claimant
+stale generated targets clean through normal merge with keep protection
+deleting a BUILD file rejected
+loose generation rejected
+log parsing rejected
+a replacement C++ preprocessor rejected
+unknown angle includes may disappear rejected
+missing module mappings can warn and omit edges rejected
+ambiguity can select a first candidate rejected

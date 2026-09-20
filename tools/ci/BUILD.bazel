@@ -941,6 +941,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Strict generation harness (issue #503); see docs/native-toolchains.md#qualification-questions-and-delivery.
+sh_binary(
+    name = "strict_generation_qualification",
+    srcs = ["strict_generation_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "warnings_as_errors_testdata",
     srcs = glob(["testdata/warnings/**"]),
