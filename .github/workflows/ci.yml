@@ -1143,6 +1143,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:bump_chain_qualification
       - name: Audit bump discovery qualification (issue #639 outdated enumeration plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:bump_discovery_qualification
+      - name: Audit bump GHA qualification (issue #640 tag-to-SHA auto plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:bump_gha_qualification
       - name: Audit update events qualification (issue #586 mutation wont-fix plus completeness plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:update_events_qualification
       - name: Audit Starlark futures qualification (issue #588 filtering plus subjects plus BEP wont-fix/deferred plus fixture evidence, owned gaps)

@@ -575,8 +575,10 @@ stays on `serde_json::Value`. Custom code is limited to the thin
 widen-one-requirement edit in `dx_bump::request`, loop orchestration, and PR
 handling. All deps pin exactly per ADR 0008 (latest stable). Version shapes
 validate through upstream `semver` (`dx_bump::version`): exact semver for
-Bazel/Cargo/npm/Go/Maven/NuGet, tag or 40/64-char SHA for GitHub Actions (tags need SHA
-resolution via the upstream GitHub releases client before the file edit).
+Bazel/Cargo/npm/Go/Maven/NuGet, tag or 40/64-char SHA for GitHub Actions (tags auto-resolve
+to SHA via the upstream GitHub releases client before the file edit, planned in
+`dx_bump::gha`, issue #640, fixtures in `cli/bump/tests/fixtures/bump_gha/`; manual SHA
+only rejected, unknown tags fail closed with never an invented SHA).
 Discovery proposes stable versions only; prerelease eligibility follows the
 upstream resolver and project configuration
 (`dx_bump::version::prerelease_follows_upstream`), never a private policy.
@@ -607,7 +609,10 @@ prerelease follows upstream, transitives stay resolver-governed) via the
 upstream registry clients (BCR / crates.io / npm registry / Go proxy /
 Maven Central / NuGet / GitHub releases, never custom HTTP; planned in
 `dx_bump::discovery`, issue #639, fixtures in
-`cli/bump/tests/fixtures/bump_discovery/`) → widen
+`cli/bump/tests/fixtures/bump_discovery/`) → auto-resolve GitHub Actions tags
+to SHA via the upstream GitHub releases client (`gh api`, never custom HTTP;
+planned in `dx_bump::gha`, issue #640, fixtures in
+`cli/bump/tests/fixtures/bump_gha/`) → widen
 one requirement via `dx bump` (which chains its refresh automatically) →
 run the bump-PR verification (regen evidence,
 `preset.update --verify-only` flag-diff, `bazel build //...`,

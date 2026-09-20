@@ -16,6 +16,7 @@ dx_rust_crate(
     package_name = "cli/dx_bump",
     srcs = [
         "src/discovery.rs",
+        "src/gha.rs",
         "src/lib.rs",
         "src/request.rs",
         "src/sets.rs",
