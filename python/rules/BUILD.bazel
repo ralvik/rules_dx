@@ -10,10 +10,7 @@ exports_files([
     "wrapper_tests.bzl",
 ])
 
-# Repository corpus: wrapper Starlark owned for direct-Bazel
-# dogfood under the canonical real_fixture_policy. Python sources stay
-# dx-owned (M14 wrappers), never corpus sources.
-# Wrapper-contract negatives (#87 item 2): pytest-driver enforcement.
+# Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
 python_wrapper_contract_tests(name = "wrapper_contract_tests")
 
 real_source_target(

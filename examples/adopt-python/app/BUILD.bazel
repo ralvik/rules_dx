@@ -17,9 +17,7 @@ python_library(
 python_test(
     name = "handlers_test",
     srcs = ["handlers_test.py"],
-    # User-owned runtime edges: the pytest runner needs the pytest package
-    # from the shared hello uv graph (entries precedent: no separate lock).
-    # `# keep` preserves them across regeneration (see README).
+    # User-owned deps (# keep); see docs/contributing/build-conventions.md.
     dep_group = "hello",
     imports = ["."],
     deps = [

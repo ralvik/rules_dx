@@ -21,16 +21,9 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Green hermetic negative proofs (issue #406) replaced the manual
-# negative-demo harness: the four `libs/starlark/tests/negative` demos
-# plus the markdown-no-config subject are passing tests (sh_test goldens
-# + failure_test) under `bazel test //...`, no `manual`, no nested Bazel.
+# Green hermetic negative proofs (issue #406); see docs/testing/verification-matrix.md.
 
-# Consumer CI template harness (issue #99 item 1): each script executes
-# the REAL embedded contract out of workflows/reusable-consumer.yml
-# (platforms-gate, dx-ci aggregation, check guards, pins/threshold)
-# over positive, boundary, and mutated-negative matrices, so template
-# drift fails `bazel test //tools/ci/...` instead of failing consumers.
+# Consumer CI template harness (issue #99 item 1); see tools/ci/consumer_scheduling_test.sh.
 sh_test(
     name = "consumer_scheduling_test",
     srcs = ["consumer_scheduling_test.sh"],
@@ -89,10 +82,7 @@ sh_test(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Example caller pin-sync harness (issue #209): both example callers
-# (consumer-ci, docs-ci) share one reviewed reusable-workflow pin; drift
-# between them fails the gate, so a deliberate bump moves both in one
-# reviewed change.
+# Example caller pin-sync harness (issue #209); see tools/ci/examples_pins_test.sh.
 sh_test(
     name = "examples_pins_test",
     srcs = ["examples_pins_test.sh"],
@@ -111,9 +101,7 @@ sh_test(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Pin single-source consistency (issue #326): `.bazelversion` is the Bazel
-# canonical source and `setup-bazelisk/action.yml` defaults are the Bazelisk
-# canonical source; every tracked copy must equal its canonical pin.
+# Pin single-source consistency (issue #326); see tools/ci/pin_consistency.sh.
 sh_test(
     name = "pin_consistency_test",
     srcs = ["pin_consistency.sh"],
@@ -140,10 +128,7 @@ sh_test(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Seed-cell coverage gate harness (issue #89 item 1): runs the real
-# scoped `bazel coverage` report through the `check` gate CLI against the
-# versioned seed inventory, with mutated-input negatives proving it fails
-# closed. Run by CI via `bazel run //tools/ci:coverage_cell`.
+# Seed-cell coverage gate harness (issue #89 item 1); see tools/ci/coverage_cell.sh.
 sh_binary(
     name = "coverage_cell",
     srcs = ["coverage_cell.sh"],
@@ -152,10 +137,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Coverage-report guards (issue #254; relates #54, #252, #5): pins the
-# Bazel-owned gate as source of truth, the consumer coverage path, and
-# the no-third-party-action policy. Run by CI via
-# `bazel run //tools/ci:coverage_report_guards`.
+# Coverage-report guards (issue #254); see tools/ci/coverage_report_guards.sh.
 sh_binary(
     name = "coverage_report_guards",
     srcs = ["coverage_report_guards.sh"],
@@ -164,12 +146,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Target-tag semantics harness (issue #99 item 3): proves `flaky`
-# forwards to private upstream tests (off by default), `bazel coverage`
-# skips `no-coverage` tests while running untagged ones, and the
-# `no-lint` / `no-typecheck` opt-out fixtures stay wired to the
-# capability presence suites. Run by CI via
-# `bazel run //tools/ci:target_tags`.
+# Target-tag semantics harness (issue #99 item 3); see tools/ci/target_tags.sh.
 sh_binary(
     name = "target_tags",
     srcs = ["target_tags.sh"],
@@ -178,14 +155,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Release-hygiene harness (issues #5, #311): machine-checks the
-# no-publication-inputs half verifiable on a clean tree — dist/release
-# git-ignored and uncommitted, module at 0.0.0, no version tags without
-# owner approval, SECURITY.md reporting link, publish dry-run
-# dispatch-only, policy docs present, never-rebuild plus byte-identity
-# fail-closed. Full matrix/SBOM/signing/BCR/human-run implemented
-# owner-gated per #311 (//deploy/release:all + runbook). Run by CI via
-# `bazel run //tools/ci:release_hygiene`.
+# Release-hygiene harness (issues #5, #311); see tools/ci/release_hygiene.sh.
 sh_binary(
     name = "release_hygiene",
     srcs = ["release_hygiene.sh"],
@@ -194,12 +164,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Release-policy gate harness (issue #89 item 2): diffs the frozen
-# curated defaults manifest against the default-lifecycle policy (no
-# removals/formatter-set changes in a minor) and gates the parity
-# manifest (every adapter-backed class has real_* + native-config
-# evidence; every deferral names owner + route), with mutated-input
-# negatives. Run by CI via `bazel run //tools/ci:release_policy`.
+# Release-policy gate harness (issue #89 item 2); see tools/ci/release_policy.sh.
 sh_binary(
     name = "release_policy",
     srcs = ["release_policy.sh"],
@@ -208,14 +173,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Quality-adapter parity/provenance harness (issue #307, qualified):
-# required-core adapters plus Buildifier/Taplo/Vale probes with fixture
-# evidence (parsers, matrix pass/fail plus fix/format, native-config or
-# explicit config-free/delegated status, artifact metadata plus
-# regeneration, packaging single-correct-path plus wire profiles); the ten
-# missing families keep frozen routes owned by O32/O31 plus ADR 0019 with
-# no false adapter claim; Buildifier/Taplo/Vale stay provisional. Run by
-# CI via `bazel run //tools/ci:quality_adapters_parity`.
+# Quality-adapter parity harness (issue #307); see tools/ci/quality_adapters_parity.sh.
 sh_binary(
     name = "quality_adapters_parity",
     srcs = ["quality_adapters_parity.sh"],
@@ -224,15 +182,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# JVM-cohort qualification harness (issue #416, live successor to closed
-# #307 for the java/kotlin cohort): proves the as-built decided
-# complete-upstream-artifact plus shared-JDK route with initial artifact
-# research as observations not pins, provisional SARIF adapter-input notes
-# with Error Prone open work itemized, provisional native-config inputs
-# with no hidden preset, parity-deferred java/kotlin with owner plus
-# frozen route, classification-only taxonomy with no curated defaults and
-# no matrix cells yet. Run by CI via
-# `bazel run //tools/ci:jvm_cohort_qualification`.
+# JVM-cohort qualification harness (issue #416); see tools/ci/jvm_cohort_qualification.sh.
 sh_binary(
     name = "jvm_cohort_qualification",
     srcs = ["jvm_cohort_qualification.sh"],
@@ -241,19 +191,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Scala + .NET-cohort qualification harness (issue #417, live successor to
-# closed #307 for the scala/csharp/fsharp cohort): proves the as-built
-# decided managed-JVM route (Scalafmt/Scalafix over the shared managed JDK
-# plus Maven-lock story with semanticdb/classpath wiring) plus the decided
-# exact-package plus shared-.NET-runtime route (CSharpier/Fantomas as declared
-# DLLs, no installer) with initial artifact research as observations not pins,
-# provisional adapter-input notes (Roslyn per-TFM/RID SARIF aggregation,
-# FSharpLint parse-vs-wire, Scalafix console limitation recorded not silent;
-# Roslyn SDK-default with StyleCop opt-in), provisional native-config inputs
-# with no hidden preset, parity-deferred scala/csharp/fsharp with owner plus
-# frozen route, classification-only taxonomy with no curated defaults and
-# no matrix cells yet. Run by CI via
-# `bazel run //tools/ci:scala_dotnet_cohort_qualification`.
+# Scala/.NET-cohort qualification harness (issue #417); see tools/ci/scala_dotnet_cohort_qualification.sh.
 sh_binary(
     name = "scala_dotnet_cohort_qualification",
     srcs = ["scala_dotnet_cohort_qualification.sh"],
@@ -262,22 +200,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Native-cohort qualification harness (issue #418, live successor to
-# closed #307 for the c/cpp/go classes): proves the as-built decided
-# split native route (clang-format/clang-tidy via the qualified
-# hermetic-llvm LLVM tool targets with the clang-tidy compile-commands
-# target-coupled-vs-check-only decision recorded, cppcheck as a standalone
-# checksummed-artifact candidate with `--xml --xml-version=2` on stderr)
-# plus the decided split Go route (gofumpt strict gofmt superset, `govet`
-# from the authoritative Go toolchain, staticcheck/errcheck standalone
-# with the SA-only-vs-default conflict unresolved and neither selected,
-# govet/errcheck text-parse) with initial artifact research as
-# observations not pins, provisional adapter-input notes (MSVC-interop
-# plus SDK licensing stay with the Windows platform issue), provisional
-# native-config inputs with no hidden preset, parity-deferred c/cpp/go
-# with owner plus frozen route, classification-only taxonomy with no
-# curated defaults and no matrix cells yet. Run by CI via
-# `bazel run //tools/ci:native_cohort_qualification`.
+# Native-cohort qualification harness (issue #418); see tools/ci/native_cohort_qualification.sh.
 sh_binary(
     name = "native_cohort_qualification",
     srcs = ["native_cohort_qualification.sh"],
@@ -286,23 +209,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Structured-cohort qualification harness (issue #419, live successor to
-# closed #307 for the protobuf/qml classes): proves the as-built decided
-# checksummed native/self-contained artifact route for `buf`
-# (self-contained per-platform binaries with published checksums, no target
-# compiler context, execution-platform lazy) plus the decided
-# authoritative-toolchain route for qmlformat/qmllint from the Qt
-# distribution (Qt-last ordering decided; exact Qt distribution identity,
-# licensing, and platform artifact qualification remain pending) with
-# initial artifact research as observations not pins, provisional
-# adapter-input notes (buf JSONL as the faithful shape with no SARIF,
-# STANDARD plus module-root-sensitive scoping; qmlformat stdout plus `-i`
-# with ini settings; qmllint `--json` with ini plus comment scoping;
-# whole-file rewrite versus check-only fix modes), provisional
-# native-config inputs with no hidden preset, parity-deferred protobuf/qml
-# with owner plus frozen route, classification-only taxonomy with no
-# curated defaults and no matrix cells yet. Run by CI via
-# `bazel run //tools/ci:structured_cohort_qualification`.
+# Structured-cohort qualification harness (issue #419); see tools/ci/structured_cohort_qualification.sh.
 sh_binary(
     name = "structured_cohort_qualification",
     srcs = ["structured_cohort_qualification.sh"],
@@ -311,20 +218,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Interpreted/file-family-cohort qualification harness (issue #420, live
-# successor to closed #307 for the ruby/powershell/file-family classes):
-# proves the as-built decided release-assembled Ruby closure route for
-# RuboCop/StandardRB (exceptional bundle, download-verify-extract-execute,
-# bundle-vs-adapter split recorded) plus the decided exact-module plus
-# portable-pwsh-runtime route for PSScriptAnalyzer (console-parse versus
-# library-API binding open) plus frozen delivery-class routes for the
-# file-family remainder (protobuf/qml cross-linked to issue #419, never
-# double-claimed) with initial artifact research as observations not pins,
-# provisional adapter-input notes, provisional native-config inputs with no
-# hidden preset, parity-deferred cohort classes with owner plus frozen
-# route, classification-only taxonomy with no curated defaults and no
-# matrix cells yet. Run by CI via
-# `bazel run //tools/ci:interpreted_file_cohort_qualification`.
+# Interpreted/file-family qualification harness (issue #420); see tools/ci/interpreted_file_cohort_qualification.sh.
 sh_binary(
     name = "interpreted_file_cohort_qualification",
     srcs = ["interpreted_file_cohort_qualification.sh"],
@@ -333,17 +227,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Publication-trust harness (issues #78, #26, #5, #311): machine-checks
-# the draft-only + nothing-published static invariants the
-# release-hygiene harness does not own — module name at the
-# unpublishable 0.0.0, no BCR auto-submit in workflows, no
-# draft-gate opt-out site, both github.bzl validators wired to analysis
-# failure, default placeholder tag everywhere, draft-only flags on the
-# real publisher path, the tag charset gate, and the SECURITY.md
-# no-release record. Signing/attestation, SBOM/provenance, BCR,
-# wider release matrix, and human-run path implemented owner-gated per
-# #311 plus install-time verification. Run by CI via
-# `bazel run //tools/ci:publish_trust`.
+# Publication-trust harness (issues #78, #26, #5, #311); see tools/ci/publish_trust.sh.
 sh_binary(
     name = "publish_trust",
     srcs = ["publish_trust.sh"],
@@ -352,13 +236,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Code-ownership harness (issue #12, lane A slice 1): every checked-in
-# code source must ride its normal target so no production file is
-# silently skipped by `bazel build //...` / `bazel test //...`. Corpus
-# stays for target-less files only. Foreign-tree inert arrivals
-# (adopt-js-ts typings/sourcemaps/Vue SFC) stay explicitly excluded
-# with their generators named. Run by CI via
-# `bazel run //tools/ci:code_ownership`.
+# Code-ownership harness (issue #12); see tools/ci/code_ownership.sh.
 sh_binary(
     name = "code_ownership",
     srcs = ["code_ownership.sh"],
@@ -367,11 +245,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Examples README harness (issue #85, slice 1): every per-foundation
-# external-consumer example workspace records exact commands plus
-# expected evidence in its own README. Delivered with the slice-5
-# runtime close-out. Run by CI via
-# `bazel run //tools/ci:examples_readme`.
+# Examples README harness (issue #85, slice 1); see tools/ci/examples_readme.sh.
 sh_binary(
     name = "examples_readme",
     srcs = ["examples_readme.sh"],
@@ -380,13 +254,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Examples laziness harness (issue #85, slice 2): static half of the
-# acquisition/laziness proof — no prohibited installer commands in
-# tool-implementation code, plus per-foundation wrapper isolation over
-# adopt-* examples (unused foundations contribute no targets).
-# Action-command attribution closes the proof in slice 5
-# (//tools/ci:examples_laziness_runtime). Run by CI via
-# `bazel run //tools/ci:examples_laziness`.
+# Examples laziness harness (issue #85, slice 2); see tools/ci/examples_laziness.sh.
 sh_binary(
     name = "examples_laziness",
     srcs = ["examples_laziness.sh"],
@@ -395,12 +263,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Examples laziness query proof (issue #85, slice 3): dependency-closure
-# half — each single-foundation example (Rust, Python, JS/TS minimum)
-# contains its own ecosystem repo and none of the others' repos in
-# `bazel query deps`, so unused foundations contribute no targets/repos.
-# Delivered with the slice-5 runtime close-out.
-# Run by CI via `bazel run //tools/ci:examples_laziness_query`.
+# Examples laziness query proof (issue #85, slice 3); see tools/ci/examples_laziness_query.sh.
 sh_binary(
     name = "examples_laziness_query",
     srcs = ["examples_laziness_query.sh"],
@@ -409,12 +272,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Examples laziness aquery proof (issue #85, slice 4): action-graph half
-# — each single-foundation example (Rust, Python, JS/TS minimum) mentions
-# its own ecosystem repo and none of the others' repos in `bazel aquery`,
-# so unused foundations contribute zero actions. Delivered with the
-# slice-5 runtime close-out. Run by CI via
-# `bazel run //tools/ci:examples_laziness_aquery`.
+# Examples laziness aquery proof (issue #85, slice 4); see tools/ci/examples_laziness_aquery.sh.
 sh_binary(
     name = "examples_laziness_aquery",
     srcs = ["examples_laziness_aquery.sh"],
@@ -423,13 +281,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Examples laziness runtime proof (issue #85, slice 5, final):
-# action-command attribution half — no prohibited installer command in
-# declared `bazel aquery` actions over every adopt-* consumer, so the
-# action graph never shells out to an ecosystem installer. With slices
-# 1-4 this completes the acquisition/laziness proof on the seed host;
-# remote/empty-cache attribution stays owned by issues #298/#308.
-# Run by CI via `bazel run //tools/ci:examples_laziness_runtime`.
+# Examples laziness runtime proof (issue #85, slice 5); see tools/ci/examples_laziness_runtime.sh.
 sh_binary(
     name = "examples_laziness_runtime",
     srcs = ["examples_laziness_runtime.sh"],
@@ -438,15 +290,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Registry-singularity harness (issue #6 closed): machine-checks
-# that the semantic file-class registry stays single-sourced —
-# adapter manifests consume canonical IDs, map keys are frozen IDs,
-# each class maps to exactly one family with canonical spelling, the
-# frozen assignments agree with the map, fixture maps stay labeled,
-# every frozen ID has a family (no gap), curated defaults stay within
-# the taxonomy (no parallel family/tool), and admissibility covers
-# every frozen ID. Functional code checks only. Run by CI
-# via `bazel run //tools/ci:registry_singularity`.
+# Registry-singularity harness (issue #6); see tools/ci/registry_singularity.sh.
 sh_binary(
     name = "registry_singularity",
     srcs = ["registry_singularity.sh"],
@@ -455,12 +299,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Backlog-contracts harness (issues #9, #10): machine-checks the
-# frozen cross-file contracts — codegen
-# output-group/shard-suffix/aspect/selection parity between Rust and
-# Starlark plus the stable proto IR identity. Functional checks only.
-# Run by CI via
-# `bazel run //tools/ci:backlog_contracts`.
+# Backlog-contracts harness (issues #9, #10); see tools/ci/backlog_contracts.sh.
 sh_binary(
     name = "backlog_contracts",
     srcs = ["backlog_contracts.sh"],
@@ -469,13 +308,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Dx facade qualification harness (issue #423): machine-checks the
-# placeholder-vs-real state for `//dx:config` plus `//dx:codegen` — both
-# stay empty filegroups (Accepted selection identity/default) while the
-# real typed sections and plan collection stay frozen in their owners
-# (quality policy/sources, generation codegen, cli roots). Functional
-# checks only. Run by CI via
-# `bazel run //tools/ci:dx_facade_qualification`.
+# Dx facade harness (issue #423); see tools/ci/dx_facade_qualification.sh.
 sh_binary(
     name = "dx_facade_qualification",
     srcs = ["dx_facade_qualification.sh"],
@@ -484,14 +317,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Quality cache aquery proof (issue #84): action-graph half
-# — Python vs Rust real pipelines mention only their own sources/tools
-# with distinct ActionKeys, so one direct source misses only its owning
-# pipeline while unrelated files cause no miss — plus the local
-# execution-log half distinguishing executed actions from cache hits.
-# Future adapters add equivalent rows under #303/#304; remote-cache proof
-# stays tracked under #308. Run by CI via
-# `bazel run //tools/ci:quality_cache_aquery`.
+# Quality cache proof (issue #84); see tools/ci/quality_cache_aquery.sh.
 sh_binary(
     name = "quality_cache_aquery",
     srcs = ["quality_cache_aquery.sh"],
@@ -500,13 +326,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Dependency-check contract harness (issues #22, #306, delivered): the
-# stale-vs-consistent truth table, offline, non-mutating,
-# independently-runnable, non-import/exception, category, and obsolete
-# clauses are present and recorded as accepted for #22/#306, with the hermetic
-# checker plus per-language fixtures and targets in tools/depcheck/.
-# Qualified adapter work under #307 plus foundation under #304. Run by CI via
-# `bazel run //tools/ci:depcheck_contract`.
+# Dependency-check contract harness (issues #22, #306); see tools/ci/depcheck_contract.sh.
 sh_binary(
     name = "depcheck_contract",
     srcs = ["depcheck_contract.sh"],
@@ -515,11 +335,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Audit/update/depcheck execution guards (issues #18, #19, #22): pins the
-# audit fail-closed deferred code plus update live execution, the aggregate
-# exit-code mappings, dry-run planning, and prior harnesses. Functional checks
-# only. Run by CI via
-# `bazel run //tools/ci:audit_update_guards`.
+# Audit/update/depcheck guards (issues #18, #19, #22); see tools/ci/audit_update_guards.sh.
 sh_binary(
     name = "audit_update_guards",
     srcs = ["audit_update_guards.sh"],
@@ -528,12 +344,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Wrapper QualitySourcesInfo harness (issues #12 lane A, #7, #8; relates
-# #6): all language/framework wrappers advertise QualitySourcesInfo
-# from direct srcs via the shared forwarder, wrapper tests pin
-# precision, and the corpus/code-ownership split stays honest.
-# Functional checks only. Run by CI via
-# `bazel run //tools/ci:wrapper_sources`.
+# Wrapper sources harness (issues #12, #7, #8); see tools/ci/wrapper_sources.sh.
 sh_binary(
     name = "wrapper_sources",
     srcs = ["wrapper_sources.sh"],
@@ -542,17 +353,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Foundation-mapping guards (issues #7, #8, #303, #304, #305; relates #6, #12): pins the
-# provider advertisement, upstream pins, Gazelle fixtures plus tests, env
-# plans, hello wrapper fixtures, lock authority, Ty provenance, framework
-# parser/compiler plus provider/region/dependency/test/env-quality mappings
-# and mixed composition, fixture markers, example workspaces, and
-# wrapper/ownership wiring, plus the #303 build-script hermetic defaults,
-# Ty/quality adapter mappings, and native-gap ownership, plus the #304
-# admitted test runners, lock wiring, quality classification, and MSVC-block
-# ownership, plus the #305 deferred foundation absence, retained cohorts,
-# exclusion evidence, and owned gaps. Functional checks
-# only. Run by CI via `bazel run //tools/ci:foundation_maps`.
+# Foundation-mapping guards (issues #7, #8, #303, #304, #305); see tools/ci/foundation_maps.sh.
 sh_binary(
     name = "foundation_maps",
     srcs = ["foundation_maps.sh"],
@@ -561,11 +362,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Test-only fixture layout guards (issue #404): pins the
-# <lang>/tests/fixtures/hello plus entries move, repo-only visibility with
-# testonly, product-rules never depending on tests, env plans testonly over
-# testonly fixtures, and Gazelle auto-testonly for fixture paths.
-# Functional checks only. Run by CI via `bazel run //tools/ci:fixture_layout`.
+# Test-only fixture layout guards (issue #404); see tools/ci/fixture_layout.sh.
 sh_binary(
     name = "fixture_layout",
     srcs = ["fixture_layout.sh"],
@@ -574,12 +371,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# GHCR prebuilt-image hygiene (issues #184, #311): separate workflow
-# from releases, PR-paths build, dispatch + default-closed approve gate,
-# digest-pinned base + Bazel delegation + no ambient toolchains,
-# gated cosign sign/verify + attestation with pinned fetch,
-# version-tracked tags + keyless scope, qualified quota, scaffold still on
-# mcr until first push. Run by CI via `bazel run //tools/ci:ghcr_hygiene`.
+# GHCR prebuilt-image hygiene (issues #184, #311); see tools/ci/ghcr_hygiene.sh.
 sh_binary(
     name = "ghcr_hygiene",
     srcs = ["ghcr_hygiene.sh"],
@@ -588,10 +380,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Publication-group guards (issues #184, #78, #26, #5): pins the
-# cross-workflow separation/triggers/gates, scaffold state,
-# security precondition, and no-publish policy. Functional checks only.
-# Run by CI via `bazel run //tools/ci:ghcr_publish_guards`.
+# Publication-group guards (issues #184, #78, #26, #5); see tools/ci/ghcr_publish_guards.sh.
 sh_binary(
     name = "ghcr_publish_guards",
     srcs = ["ghcr_publish_guards.sh"],
@@ -600,11 +389,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Quality-foundations guards (issues #6, #7, #8, #12; relates #84): pins
-# the provider definition, single-sourced registry map, curated/native
-# evidence files + test backing, wrapper/Gazelle/dogfood wiring, and
-# determinism/apply evidence. Functional checks only. Run by CI
-# via `bazel run //tools/ci:quality_foundations_guards`.
+# Quality-foundations guards (issues #6, #7, #8, #12); see tools/ci/quality_foundations_guards.sh.
 sh_binary(
     name = "quality_foundations_guards",
     srcs = ["quality_foundations_guards.sh"],
@@ -613,13 +398,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Widen-one-requirement + dx update PR loop contract (issue #260,
-# delivered): all-ecosystems v1 manager set, Renovate proposing alongside the native loop (complementary, issue #326),
-# never-rewrites invariant (update keeps it, bump owns the single rewrite),
-# #19 resolver delivery, widen command plus library-first planning, native
-# bump-PR verification loop, ADR 0006 narrow exception, ADR 0008 exact-pin
-# policy, and the scheduled runner. Run
-# by CI via `bazel run //tools/ci:widen_update_loop`.
+# Widen/update loop contract (issue #260); see tools/ci/widen_update_loop.sh.
 sh_binary(
     name = "widen_update_loop",
     srcs = ["widen_update_loop.sh"],
@@ -628,11 +407,16 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Execution/corpus/perf guards (issues #18, #19, #22, #15, #86): pins
-# the audit fail-closed code plus update live execution, exit mappings, prior
-# harnesses, corpus split rule + Gazelle ownership, and perf
-# report-not-gate shape. Functional checks only. Run by CI via
-# `bazel run //tools/ci:execution_corpus_perf_guards`.
+# BUILD comment hygiene (issue #427); see tools/ci/build_hygiene.sh.
+sh_binary(
+    name = "build_hygiene",
+    srcs = ["build_hygiene.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+# Execution/corpus/perf guards (issues #18, #19, #22, #15, #86); see tools/ci/execution_corpus_perf_guards.sh.
 sh_binary(
     name = "execution_corpus_perf_guards",
     srcs = ["execution_corpus_perf_guards.sh"],
@@ -641,12 +425,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Distribution/closeout guards (issues #5, #26, #78, #184, #54, #311): pins
-# the hygiene policy, workflow separation +
-# triggers + gates, scaffold state, security precondition, gitignored
-# outputs, full release path (matrix/SBOM/signing/BCR/human-run), and
-# no-publish invariants. Functional checks only.
-# Run by CI via `bazel run //tools/ci:distribution_closeout_guards`.
+# Distribution/closeout guards (issues #5, #26, #78, #184, #54, #311); see tools/ci/distribution_closeout_guards.sh.
 sh_binary(
     name = "distribution_closeout_guards",
     srcs = ["distribution_closeout_guards.sh"],
@@ -655,12 +434,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Backlog/automation guards (issues #9, #10, #85, #254, #260): pins
-# examples ownership + laziness slices (readme/static/query/aquery/runtime),
-# Bazel-owned LCOV gate,
-# Renovate plus never-rewrites pins, and prior harnesses.
-# Functional checks only. Run by CI via
-# `bazel run //tools/ci:backlog_automation_guards`.
+# Backlog/automation guards (issues #9, #10, #85, #254, #260); see tools/ci/backlog_automation_guards.sh.
 sh_binary(
     name = "backlog_automation_guards",
     srcs = ["backlog_automation_guards.sh"],
@@ -669,11 +443,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Shell portability contract guard (issue #299): machine-checks the
-# decided bash-only Linux-only harness — Linux labels on all bash
-# targets, portable POSIX fixtures, portable realpath/shasum/sed/cp/
-# timing forms, and Windows staying out per ADR 0014. Run by CI via
-# `bazel run //tools/ci:shell_contract`.
+# Shell contract guard (issue #299); see tools/ci/shell_contract.sh.
 sh_binary(
     name = "shell_contract",
     srcs = ["shell_contract.sh"],
@@ -682,12 +452,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Supported-evidence promotion gate (issue #301): machine-checks that no
-# matrix claims Supported without platform plus consumer plus release
-# evidence — no Supported status cell in either matrix, every Delivered
-# claim backed by harnesses/workspaces, every Open gap with no false
-# landed claim. Functional checks only. Run by CI via
-# `bazel run //tools/ci:supported_evidence_gate`.
+# Supported-evidence gate (issue #301); see tools/ci/supported_evidence_gate.sh.
 sh_binary(
     name = "supported_evidence_gate",
     srcs = ["supported_evidence_gate.sh"],
@@ -696,26 +461,9 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Hermetic CLI-contract coverage (issue #407, replaces issue #55 nested E2E):
-# former `integration/` clean/dirty/format-roundtrip/preset-stale drivers
-# (manual+exclusive+local+no-sandbox, second Bazel download via
-# `rules_bazel_integration_test`) are deleted. Equivalents run under
-# `bazel test //...` with no nested Bazel, no manual/local tags:
-# `dx test`/`dx build` exit-code preservation via `cli/cli/src/exec`
-# unit pins (`test_support.rs` harness + `bazel.rs`/`workflow.rs`/`test_reports.rs`
-# argv/code asserts, including Bazel test-failure code 3); format rewrite
-# `x=1` -> `x = 1` via `//quality/testdata:runner_matrix` goldens;
-# aspect wiring via `DxSubjectInfo` pins (`//quality/testdata:real_aspect_*`);
-# preset check→update→recheck via `//:preset_parity_test`;
-# `local_path_override` + `dx_dev` wiring via the adopt-rust smoke in normal
-# CI (`bazel build //examples/adopt-rust/... --config=dx_dev` in the build job).
-# What is lost: real-daemon exit 3, real Buildifier rewrite.
-# See `docs/testing/verification-matrix.md` for the loss record.
+# Hermetic CLI-contract coverage (issue #407); see docs/testing/verification-matrix.md.
 
-# Coverage-spill containment harness (issues #252, #54): pins the
-# LLVM_PROFILE_FILE scratch redirect in coverage_cell.sh so the
-# coverage-instrumented helper no longer spills default_*.profraw to the
-# checkout. Run by CI via `bazel run //tools/ci:coverage_spill`.
+# Coverage-spill containment harness (issues #252, #54); see tools/ci/coverage_spill.sh.
 sh_binary(
     name = "coverage_spill",
     srcs = ["coverage_spill.sh"],
@@ -724,10 +472,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Verification-foundations harness (issues #86, #15, #12; relates #54):
-# pins the perf fairness/report-not-gate half, the corpus-split +
-# generate-owned rule, and the lane-A ownership scope.
-# Functional checks only. Run by CI via `bazel run //tools/ci:verify_perf_corpus`.
+# Verification-foundations harness (issues #86, #15, #12); see tools/ci/verify_perf_corpus.sh.
 sh_binary(
     name = "verify_perf_corpus",
     srcs = ["verify_perf_corpus.sh"],
@@ -736,11 +481,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Coverage/remote qualification harness (issue #308): proves per-cell
-# gating (seed qualified, rest unqualified, never unioned), the Starlark
-# instrumentation-vs-behavioral-matrix decision, Codecov opt-in-only,
-# free-tier quotas, and local-only remote evidence. Run by CI via
-# `bazel run //tools/ci:coverage_qualification`.
+# Coverage/remote harness (issue #308); see tools/ci/coverage_qualification.sh.
 sh_binary(
     name = "coverage_qualification",
     srcs = ["coverage_qualification.sh"],
@@ -749,13 +490,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Static-musl profile qualification harness (issue #411): proves the
-# as-built static-musl record with fixture evidence and owned gaps,
-# without claiming Supported or dynamic musl — Rust musl std, dx profile
-# list plus dynamic refusal, per-cell musl coverage with no union, musl CI
-# jobs with per-profile cache scopes, docs in support-matrix plus ADR 0014
-# plus native-toolchains. Run by CI via
-# `bazel run //tools/ci:musl_qualification`.
+# Musl harness (issue #411); see tools/ci/musl_qualification.sh.
 sh_binary(
     name = "musl_qualification",
     srcs = ["musl_qualification.sh"],
@@ -764,15 +499,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# macOS arm64 plus x86_64 best-effort qualification harness (issues
-# #412/#413): proves the as-built macOS arm64 (required) plus x86_64
-# best-effort (non-blocking) records with fixture evidence and owned gaps,
-# without claiming Supported — dx qualified hosts plus no-fallback refusal,
-# per-cell macos coverage with no union, macOS CI jobs natively on
-# macos-14 (arm64) plus macos-15-intel (x86_64 Intel) with per-host cache
-# scopes under the portable-shell contract, docs in support-matrix plus
-# ADR 0014 plus native-toolchains.
-# Run by CI via `bazel run //tools/ci:macos_qualification`.
+# macOS qualification harness (issues #412, #413); see tools/ci/macos_qualification.sh.
 sh_binary(
     name = "macos_qualification",
     srcs = ["macos_qualification.sh"],
@@ -781,32 +508,16 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Windows x86_64 MSVC-compatible qualification harness (issue #414): proves
-# the as-built Windows x86_64 record with fixture evidence and owned gaps,
-# without claiming Supported, Windows arm64, or a qualified toolchains_msvc
-# backend — dx qualified host plus explicit-EULA refusal, per-cell windows
-# coverage with no union, Windows CI jobs natively on windows-latest with
-# shell bash plus a per-host cache scope under the portable-shell contract
-# (issue #323 Windows gap resolved here), docs in support-matrix plus ADR
-# 0014 plus native-toolchains. Run by CI via
-# `bazel run //tools/ci:windows_qualification`.
+# Windows qualification harness (issue #414); see tools/ci/windows_qualification.sh.
 sh_binary(
     name = "windows_qualification",
     srcs = ["windows_qualification.sh"],
     data = ["//tools/sh:lib"],
-    # Bash-only harness is Linux-only (issues #299/#414 shell contract:
-    # Windows execution goes through shell bash in CI jobs, harness itself
-    # stays Linux-only).
+    # Bash-only harness is Linux-only (issues #299/#414 shell contract: See tools/ci/ci_matrix_qualification.sh.
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# CI multi-platform host-matrix harness (issue #415): proves the as-built
-# multi-host matrix after portable-shell #323 — per-host runner plus cache
-# scope plus qualified-host expectation for seed plus arm64 plus musl pair
-# plus macos pair plus windows x86_64 (issue #414 qualified, no refusal),
-# portable shell reuse, sharding policy (issue #210), no paid services,
-# stale refs updated. Run by CI via `bazel run
-# //tools/ci:ci_matrix_qualification`.
+# Host-matrix harness (issue #415); see tools/ci/ci_matrix_qualification.sh.
 sh_binary(
     name = "ci_matrix_qualification",
     srcs = ["ci_matrix_qualification.sh"],
@@ -815,13 +526,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Environment/codegen qualification harness (issue #309): proves the
-# as-built deferred/unsupported records (public contribution, Windows
-# fallback, standalone, signing/trust) with fixture evidence
-# (bootstrap spaces/noop/unmanaged, lock units, roots freeze plus
-# incrementality, codegen collector contracts, per-foundation env plans,
-# node pnpm projection) and owned gaps for the unproven required tests.
-# Run by CI via `bazel run //tools/ci:env_codegen_qualification`.
+# Env/codegen harness (issue #309); see tools/ci/env_codegen_qualification.sh.
 sh_binary(
     name = "env_codegen_qualification",
     srcs = ["env_codegen_qualification.sh"],
@@ -830,15 +535,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Docs-pipeline qualification harness (issue #421, live successor to closed
-# #310): proves the as-built docs-pipeline record with fixture evidence and
-# owned gaps, without claiming a working site — versioned IR schema plus
-# codec plus dx_docs planning with unit tests, frozen design contracts,
-# removed dx docs stub behind ADR 0020, thirteen adapter scopes (Scala spike
-# plus Astro/MDX prose-only) plus renderer/site plus site-vs-codec rebuild
-# plus link plus guide plus timing plus pin-bump/drift plus dx docs
-# reintroduction plus reusable product surface plus no-Supported gaps owned
-# under #421. Run by CI via `bazel run //tools/ci:docs_pipeline_qualification`.
+# Docs-pipeline harness (issue #421); see tools/ci/docs_pipeline_qualification.sh.
 sh_binary(
     name = "docs_pipeline_qualification",
     srcs = ["docs_pipeline_qualification.sh"],
@@ -847,18 +544,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Consumer-CI qualification harness (issue #312): proves the as-built
-# reusable-workflow contract plus caller plus gate/aggregate fixture evidence
-# with owned gaps, without claiming unqualified integration — nine checks,
-# explicit platforms, fail-closed sequential, stable dx-ci aggregate, hygiene,
-# concurrency, permissions, per-cell coverage with fork-safe comments, self-call
-# build-only smoke, native bump loop plus Renovate (complementary, issue #326),
-# dx migrate planning
-# plus dx run multirun, tag hygiene as-built; platform/runner/isolation/cache/
-# ordering, merge/diff/queue/cancellation/aggregate, thread identity/ordering/
-# limits, fork/untrusted/sensitive/retries/Code-Scanning, sequential fail-closed,
-# tag/release, Renovate/native-bot, migrate-execution gaps owned under #312.
-# Run by CI via `bazel run //tools/ci:consumer_ci_qualification`.
+# Consumer-CI harness (issue #312); see tools/ci/consumer_ci_qualification.sh.
 sh_binary(
     name = "consumer_ci_qualification",
     srcs = ["consumer_ci_qualification.sh"],
@@ -867,14 +553,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# File-family quality qualification harness (issue #313): proves the as-built
-# file-family record with fixture evidence and owned gaps, without claiming
-# Supported — provider-class applicability with never-suffix inference,
-# Starlark/Buildifier plus TOML/Taplo adapter-backed evidence, parity-deferred
-# CSS/djlint/buf/yaml/keep-sorted/shell plus cue/jsonnet/pkl/qml/terraform
-# routes with owner plus frozen acquisition; deferred execution, exact pins,
-# and platform/consumer/release gaps owned under #313.
-# Run by CI via `bazel run //tools/ci:file_family_qualification`.
+# File-family harness (issue #313); see tools/ci/file_family_qualification.sh.
 sh_binary(
     name = "file_family_qualification",
     srcs = ["file_family_qualification.sh"],
@@ -883,14 +562,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Hand-rolled helpers qualification harness (issue #315): proves the as-built
-# per-helper decisions with fixture evidence and owned gaps — adopted digest
-# via hex/blake3/sha2, diff via similar, SPDX parse via spdx, date calendar
-# via chrono, scratch via tempfile, dir sizing and walks via
-# walkdir/ignore/globset; stays hand-rolled with owned reasons for atomic
-# write plus lock, path ladder, LCOV parser plus ignore scanner; upstream
-# re-evaluation plus any future migration owned under #315.
-# Run by CI via `bazel run //tools/ci:helper_qualification`.
+# Helpers harness (issue #315); see tools/ci/helper_qualification.sh.
 sh_binary(
     name = "helper_qualification",
     srcs = ["helper_qualification.sh"],
@@ -899,13 +571,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Clap-as-tokenizer legacy-error qualification harness (issue #316): proves the
-# as-built freeze-legacy-output decision with fixture evidence and owned gaps —
-# disable_help_flag plus allow_hyphen_values plus invalid_token/parse_error
-# mapping across env, codegen shard, env shard, evaluator, runner, markdown,
-# plus dx CLI tokenizer; markdown snapshots pin unknown/missing/malformed plus
-# hyphen-value plus attached-echo shapes; strict clap migration stays owned gap.
-# Run by CI via `bazel run //tools/ci:clap_tokenizer_qualification`.
+# Clap tokenizer harness (issue #316); see tools/ci/clap_tokenizer_qualification.sh.
 sh_binary(
     name = "clap_tokenizer_qualification",
     srcs = ["clap_tokenizer_qualification.sh"],
@@ -914,15 +580,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Non-dogfed execution-plan harness (issue #324, updated #407): proves the cohorts
-# that never run under the standard dogfood gates each have an explicit
-# execution path — CLI-contract via hermetic pins under `bazel test //...`
-# (no nested Bazel, no manual; see hermetic coverage comment above),
-# negative fixtures via green hermetic proofs (issue #406, no manual),
-# no-coverage cohort via test execution plus coverage-excluded runs, shell
-# sources via deps ownership plus test execution with no quality
-# class by design. Run by CI via
-# `bazel run //tools/ci:non_dogfed_paths`.
+# Non-dogfed harness (issues #324, #407); see tools/ci/non_dogfed_paths.sh.
 sh_binary(
     name = "non_dogfed_paths",
     srcs = ["non_dogfed_paths.sh"],

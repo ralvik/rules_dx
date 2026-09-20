@@ -4,13 +4,8 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
-# Arrival files (the foreign tree ships no MODULE.bazel and no BUILD
-# files) plus the generator-owned BUILD files the JS/TS Gazelle
-# extensions emit for them. Generated files stay checked in:
-# regeneration must be a no-op. Each generated subpackage carries its
-# own `corpus` rule: handwritten unknown-kind rules survive
-# regeneration, while cross-package file labels cannot reach into a
-# subpackage. This root rule owns only the root arrival files.
+# Arrival files; generator-owned BUILD files, regen must be no-op; see docs/generation/README.md.
+# Corpus: root arrival files only; see docs/contributing/build-conventions.md.
 real_source_target(
     name = "corpus_markdown",
     aspect_hints = ["//quality:corpus_vale_config"],

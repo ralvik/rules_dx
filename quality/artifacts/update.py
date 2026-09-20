@@ -348,12 +348,11 @@ def _emit(artifact, tool, platform_key):
         '"""%s standalone artifact metadata (%s) -- GENERATED, do not edit.\n'
         "\n"
         "Regenerate with: bazel run //quality/artifacts:update\n"
-        "Release: %s\n"
         '"""\n'
         "\n"
         "# buildifier: disable=attr-licenses  # ARTIFACT licenses key is SPDX data, not a rule attr\n"
         "ARTIFACT = %s\n"
-        % (tool, platform_key, TOOLS[tool]["release_page"],
+        % (tool, platform_key,
            _starlark(artifact)))
     return path, content
 

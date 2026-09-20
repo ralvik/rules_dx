@@ -44,6 +44,7 @@ real_source_target(
         "cli/target-resolution.md",
         "contributing/README.md",
         "contributing/automation.md",
+        "contributing/build-conventions.md",
         "contributing/devcontainer.md",
         "contributing/diagnostics-versioning.md",
         "contributing/local-workflows.md",

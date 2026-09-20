@@ -107,10 +107,8 @@ archive_analysis_tests(name = "archive_analysis")
 
 archive_debug_analysis_tests(name = "archive_debug_analysis")
 
-# Tarball contents + checksum validity per release fixture. Tagged
-# `no-coverage`: process-spawning tests stay out of the coverage
-# denominator per the repo coverage preset. No corpus entry: shell
-# sources have no `real_source_target` class.
+# Tarball contents + checksum validity per release fixture
+# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 sh_test(
     name = "release_demo_verify",
     srcs = ["archive_verify.sh"],
@@ -192,10 +190,8 @@ github_analysis_tests(name = "github_analysis")
 
 github_debug_analysis_tests(name = "github_debug_analysis")
 
-# Would-run command + draft-only flags per release fixture. Tagged
-# `no-coverage`: process-spawning tests stay out of the coverage
-# denominator per the repo coverage preset. No corpus entry: shell
-# sources have no `real_source_target` class.
+# Would-run command + draft-only flags per release fixture
+# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 sh_test(
     name = "github_demo_verify",
     srcs = ["github_verify.sh"],

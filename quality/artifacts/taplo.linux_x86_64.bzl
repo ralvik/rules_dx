@@ -1,7 +1,6 @@
 """taplo standalone artifact metadata (linux_x86_64) -- GENERATED, do not edit.
 
 Regenerate with: bazel run //quality/artifacts:update
-Release: https://github.com/tamasfe/taplo/releases/tag/0.10.0
 """
 
 # buildifier: disable=attr-licenses  # ARTIFACT licenses key is SPDX data, not a rule attr
