@@ -1,16 +1,16 @@
 # Documentation IR
 
 Implementation status: accepted v1 direction with provisional inputs;
-execution open (issue #581, live successor to closed #421). Accepted: the `dx_docs` planning library
+execution open (#779-#785, successors to closed #581, live successor to closed #421). Accepted: the `dx_docs` planning library
 (command dispatch removed per [ADR 0020](../decisions/0020-remove-dx-docs-placeholder.md);
-reintroduction tracked under issue #581) —
+reintroduction tracked under #786) —
 `--check` validates without rendering, normal build validates then renders.
 Accepted: the checked-in [`docs/ir/doc_ir.proto`](../ir/doc_ir.proto)
 (`dx.documentation.v1`, `schema_major: 1`) and the
 [`documentation_ir` codec crate](../ir/ir/src/lib.rs)
 (`//docs/ir/ir:documentation_ir`: validate/encode/decode with
 roundtrip, rejection-parity, extension- and symbol-ordering, and minor-forward-compat tests).
-Open under issue #581 (see [Documentation](README.md#contracts) for the full list):
+Open under #779, #781 and #785 (successors to closed #581; see [Documentation](README.md#contracts) for the full list):
 per-language adapter runs with pins and mappings, symbol-count inventory and
 native-output comparison fixtures, same-producer byte-identical rebuild proof,
 and per-release pin-bump plus drift process. No working docs support is claimed until
@@ -29,13 +29,13 @@ binary Protobuf with deterministic serialization, and human-readable review
 uses textproto against the same schema. Exact field and enum numbers and
 reserved ranges live in that file, validated by the
 `documentation_ir` codec crate; compatibility fixtures are tracked under
-issue #581, following the
+#785 (successor to closed #581), following the
 [Quality Result Protocol](../quality/quality-result-protocol.md) precedent.
 
 IR shards are generated and cached by Bazel like other action outputs. They are not
 committed, written beside source files, or copied into a source-tree projection.
 The checked-in schema and `documentation_ir` codec tests define the format and expected
-behavior; adapter golden fixtures remain open under issue #581. They are not snapshots that consumers must refresh when their APIs change.
+behavior; adapter golden fixtures remain open under #779 (successor to closed #581). They are not snapshots that consumers must refresh when their APIs change.
 
 Determinism requires reproducible bytes for the same pinned producer and declared inputs, not
 canonical bytes across different serializers or upgrades. Follow the

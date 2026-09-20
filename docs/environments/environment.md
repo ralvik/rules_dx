@@ -161,14 +161,10 @@ repositories use the same validated constructors and `EnvironmentInfo`
 collection provider; there is no private first-party contribution path. Pinned by
 `env/defs_tests.bzl` and the `//cli/env:bootstrap_test` install test.
 
-Open: third-party language-integration plugins are deferred past v1 (issue #587, design owner:
-environment maintainers `//env` plus `//cli/env`). There is no v1 persistent-environment plugin
+Not planned: third-party language-integration plugins. There is no v1 persistent-environment plugin
 model and no `EnvironmentInfo` extension point: `EnvironmentInfo` stays PATH-tool-only and
-is not a persistent-environment plugin API (wont-fix in v1 to repurpose it), and the private
-first-party contribution path stays rejected. Any post-v1 plugin proposal must preserve
-provider-derived symlink-only plans, managed identity/commit/reuse selection, the PATH-tools-only
-boundary, no private path, and fixture-pinned qualification with no `Supported` claim until
-platform plus consumer plus release evidence lands. Pinned by fixtures in
+is not a persistent-environment plugin API (wont-fix to repurpose it), and the private
+first-party contribution path stays rejected. Pinned by fixtures in
 `env/tests/fixtures/env_plugins_cgo/` via `bazel run //tools/ci:env_plugins_cgo_qualification`.
 
 `EnvironmentInfo` carries zero or more PATH-tool records and composes transitively.
@@ -394,22 +390,23 @@ Shared state, pointer, reuse, concurrency, symlink, ownership, and retention tes
 [Managed Environment State](managed-state.md#test-requirements).
 Cross-cutting fixture, platform, and evidence rules remain in
 [Testing Strategy](../testing/README.md). Environment and codegen gaps stay open
-under issue #506 (public env contribution protocol, Windows .envrc and junction
+under #787 and #788 (successors to closed #506; admitted-pairs evolution, Windows .envrc and junction
 fallback, standalone-without-Bazel path, signing and trust selection, plus the
 required bootstrap, fidelity, spaces, stale-clean, IDE, atomic-commit, BEP,
 projection, and root-candidate tests).
 
-Env plus codegen deferred records with fixture evidence qualified seed-only under issue #506
+Env plus codegen deferred records with fixture evidence qualified seed-only under closed #506
 (`env/tests/fixtures/env_codegen/pins.bzl` via `bazel run //tools/ci:env_codegen_qualification`;
 public protocol, Windows fallback, standalone, signing/trust, plus
 bootstrap/fidelity/spaces/stale/IDE/atomic-commit/BEP/projection/roots/cold-warm with
 WP1-WP5 shard plus root plus clean plus plan evidence and `env_codegen.expected` plus
-`roots_bep.txt`; platform plus consumer plus release evidence stays owned gap; no Supported
+`roots_bep.txt`; platform plus consumer plus release evidence stays owned gap under #808; no Supported
 claim; backends stay provisional).
 
-Plugin-model design plus Go cgo exception boundary with fixture evidence qualified seed-only
-under issue #587 (`env/tests/fixtures/env_plugins_cgo/pins.bzl` via
-`bazel run //tools/ci:env_plugins_cgo_qualification`; deferred third-party plugin model with
-design owner plus acceptance criteria and no private path, plus pure-Go `GOPACKAGESDRIVER`
-boundary with explicit cgo out-of-scope exception and `env_plugins_cgo.expected`; platform plus
-consumer plus release evidence stays owned gap; no Supported claim).
+Go cgo exception boundary with fixture evidence qualified seed-only
+under closed #587 (`env/tests/fixtures/env_plugins_cgo/pins.bzl` via
+`bazel run //tools/ci:env_plugins_cgo_qualification`; no third-party plugin model,
+plus pure-Go `GOPACKAGESDRIVER`
+boundary with explicit cgo out-of-scope exception and `env_plugins_cgo.expected` (cgo
+completion #789); platform plus
+consumer plus release evidence stays owned gap under #808; no Supported claim).

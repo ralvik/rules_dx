@@ -95,7 +95,7 @@ stream, and must never be presented as source-line or branch coverage.
 
 ## Future (Not Implemented)
 
-Decided under issue #588 per [ADR 0009](../decisions/0009-starlark-testing.md)
+Decided under closed #588 per [ADR 0009](../decisions/0009-starlark-testing.md)
 (provisional pending concrete use cases), pinned by fixtures in
 `../../libs/starlark/tests/fixtures/starlark_futures/` (`pins.bzl` plus
 `starlark_futures.expected`) and qualified by
@@ -109,25 +109,25 @@ seed only, no Supported claim.
   `--test_filter` parsing is rejected; split checks into separate
   `starlark_test` targets for finer filtering, caching, retries, and
   diagnostics.
-- Richer matchers stay deferred: `expect_equal` only, pending a concrete
+- Richer matchers stay deferred (#790): `expect_equal` only, pending a concrete
   use case plus fixtures plus successor issue. Equality over
   JSON-encodable values plus `file_checks` plus `expected_observations`
   covers current internals; no larger matcher library is committed.
-- Aspect subjects stay deferred, pending a concrete use case plus fixtures
+- Aspect subjects stay deferred (#791), pending a concrete use case plus fixtures
   plus successor issue. Analysis observes `DxSubjectInfo` fields plus
   `DefaultInfo` output basenames only; applying aspects to subjects is not
   claimed.
-- Toolchain subjects stay deferred, pending a concrete use case plus
+- Toolchain subjects stay deferred (#792), pending a concrete use case plus
   fixtures plus successor issue. Toolchain resolution needs platform and
   toolchain context beyond provider-field observation.
-- Configuration subjects stay deferred, including transitions, pending a
+- Configuration subjects stay deferred (#793), including transitions, pending a
   concrete use case plus fixtures plus successor issue. Configurable
   attributes, fragments, and transitions are not observed.
-- Output-group subjects stay deferred, pending a concrete use case plus
+- Output-group subjects stay deferred (#794), pending a concrete use case plus
   fixtures plus successor issue. Observation renders `DefaultInfo` files
   only, not `OutputGroupInfo`; wrapper forwarding of output groups does
   not imply observation.
-- Action subjects stay deferred, including registered-action, pending a
+- Action subjects stay deferred (#795), including registered-action, pending a
   concrete use case plus fixtures plus successor issue. Actions are proven
   via execution-mode `file_checks` or `aquery` evidence, not analysis
   subjects.

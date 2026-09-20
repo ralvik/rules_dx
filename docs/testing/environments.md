@@ -41,9 +41,9 @@ extra `dx setup` refresh while the managed launcher remains usable.
   requests may acquire only their declared graph/tool closure and never bypass license acceptance.
 - Exercise pure Go, generated-source, build-constraint, and cgo fixtures on every claimed platform.
   Record unsupported cgo completion and diagnostic behavior as gaps rather than treating pure-Go
-  success as full IDE qualification (explicit cgo exception boundary pinned by
-  `env/tests/fixtures/env_plugins_cgo/` via `bazel run //tools/ci:env_plugins_cgo_qualification`,
-  issue #587; upstream rules_go 0.63.0 does not guarantee cgo completion).
+   success as full IDE qualification (explicit cgo exception boundary pinned by
+   `env/tests/fixtures/env_plugins_cgo/` via `bazel run //tools/ci:env_plugins_cgo_qualification`,
+   closed #587 (cgo completion #789); upstream rules_go 0.63.0 does not guarantee cgo completion).
 - Verify missing launchers/dangling projections retain documented explicit recovery, while normal
   metadata refresh does not require a manual setup step. For other explicit-only integrations,
   document the upstream limitation or additional complexity justifying that choice under the
@@ -121,7 +121,7 @@ without wall-time measurement per [ADR 0022](../decisions/0022-no-benchmarking.m
 
 Environment configuration and public API conformance requirements are maintained in
 [Developer Environments](../environments/environment.md). Deferred records
-(public contribution, Windows fallback, standalone, signing/trust) plus
+(Windows fallback, standalone, signing/trust; no third-party plugin model) plus
 fixture evidence with owned gaps for the unproven required tests are
 qualified seed-only by `bazel run //tools/ci:env_codegen_qualification`
-(issue #506).
+(closed #506; successors #787, #788).
