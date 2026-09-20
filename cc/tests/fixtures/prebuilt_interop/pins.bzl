@@ -1,19 +1,10 @@
-"""Prebuilt interop pins (issue #498).
+"""Prebuilt interop pins.
 
 Contract: `docs/native-toolchains.md#windows-acquisition-and-compatibility`,
 `docs/native-toolchains.md#profiles-and-cross-builds`,
 `docs/native-toolchains.md#qualification-questions-and-delivery`.
 Fixture: `cc/tests/fixtures/prebuilt_interop/` via
 `bazel run //tools/ci:prebuilt_interop_qualification`.
-
-Decides the interop slice of the native baseline: explicit STL plus CRT
-plus linker plus library combos are defined with fixture evidence recorded
-here and in the owning docs. Compiler-target availability alone plus LLVM
-ancestry alone stay rejected per the issue alternatives. Single-combo
-proof stays rejected: at least the Windows retail plus Linux comparison
-combos below must pass. Backends stay provisional; transport plus corpus
-plus floors plus coverage stay owned under issues #497/#499/#500/#501,
-never double-claimed here.
 """
 
 # Windows starting point: retail dynamic CRT `/MD` with Microsoft STL
@@ -66,12 +57,12 @@ ABI_PROOF = [
 # Mixed Rust plus C/C++ wiring: the decided single-graph CXX identity
 # (`cxx == cxxbridge-cmd == 1.0.200` from the single `crates` graph with
 # `@crates//:cxxbridge-cmd`, never a `cxx.rs` second graph, decided under
-# issue #474) is the Rust/C++ bridge shape; full `cxxbridge-cmd`
-# execution plus corpus wiring stays owned under issue #499, never
+# is the Rust/C++ bridge shape; full `cxxbridge-cmd`
+# execution plus corpus wiring stays owned, never
 # double-claimed here. Path transport (batch wrappers, response files,
 # `/external:I` vs `/imsvc`, `.lib`/`.obj` bare paths, spaces, SDK
 # libraries, cc-rs discovery/assembly, proc-macro DLLs) stays owned under
-# issue #497 without host Visual Studio state.
+# without host Visual Studio state.
 CXX_IDENTITY_VERSION = "1.0.200"
 CXXBRIDGE_CMD_LABEL = "@crates//:cxxbridge-cmd"
 MIXED_NOTE = "mixed Rust/C/C++ host-to-target plus target execution qualify separately"

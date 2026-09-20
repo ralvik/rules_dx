@@ -114,7 +114,7 @@ fn observe_process(dir: &Path, dx_dir: &Path, live: &mut LiveHexes) {
 ///
 /// Only numeric process directories are inspected; anything else under
 /// `proc_root` is ignored, so a missing `/proc` (non-Linux hosts)
-/// scans empty rather than failing (issue #320 portable route: fail
+/// scans empty rather than failing
 /// open to over-retention, never abort the sweep). Over-retention is the only failure
 /// direction: a hex observed anywhere under the managed roots is
 /// preserved, whether or not it is still referenced. Deterministic:
@@ -223,7 +223,7 @@ mod tests {
         (workspace, stale_hex, current_hex)
     }
 
-    /// Portable symlink planter for the fake `/proc` tree (issue #320
+    /// Portable symlink planter for the fake `/proc` tree
     /// portable route): the scan itself is portable (missing `/proc`
     /// fails open to empty), so its fixtures must run everywhere instead
     /// of unix-gating. Windows planting fails fast with the OS privilege
@@ -237,7 +237,7 @@ mod tests {
         std::os::windows::fs::symlink_file(target, link).expect("stage test link");
     }
 
-    /// Portable symlink planter for the fake `/proc` tree (issue #320
+    /// Portable symlink planter for the fake `/proc` tree
     /// portable route): see the windows variant above.
     #[cfg(not(windows))]
     fn stage_symlink(target: &Path, link: &Path) {

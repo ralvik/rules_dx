@@ -1,4 +1,4 @@
-//! Pure `dx bump` widen-one-requirement planning (issue #260).
+//! Pure `dx bump` widen-one-requirement planning.
 //!
 //! This crate owns the explicit widen operation, separate from `dx
 //! update`: `dx bump <selector> <version>` rewrites exactly one declared

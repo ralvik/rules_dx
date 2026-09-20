@@ -1,4 +1,4 @@
-"""Draft-only GitHub Release publisher for `dx deploy` (issue #182).
+"""Draft-only GitHub Release publisher for `dx deploy`.
 
 Contract: `docs/deploy/authoring.md`.
 """
@@ -8,7 +8,7 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "RUNFILES_BASH_INIT", "rlocation_path")
 
-# Versioned tag-charset schema (issue #321). Consumers query via
+# Versioned tag-charset schema. Consumers query via
 # `tag_charset` and `github_tag_error` instead of duplicating the charset,
 # so any charset evolution edits this one data constant with schema review,
 # never a parallel allowlist.
@@ -21,12 +21,12 @@ _VALID_TAG_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz01234567
 def tag_charset():
     """Returns the launcher-safe tag charset via registry query.
 
-    Derived from `_VALID_TAG_CHARS`, never duplicated (issue #321).
+ Derived from `_VALID_TAG_CHARS`, never duplicated.
     """
     return _VALID_TAG_CHARS
 
 def tag_schema_error():
-    """Validates the versioned tag-charset schema (issue #321).
+    """Validates the versioned tag-charset schema.
 
     Checks data shape without pinning exact contents: version is v1, the
     charset is non-empty with unique shell-safe characters and never
@@ -105,7 +105,7 @@ def _github_launcher_impl(ctx):
     ctx.actions.write(
         output = launcher,
         content = """#!/usr/bin/env bash
-# Deploy launcher for `github_release` (issue #182). Generated. Do not edit.
+# Deploy launcher for `github_release`. Generated. Do not edit.
 # Resolves the deploy script and every pinned asset via the standard
 # `runfiles.bash` `rlocation`, then execs the deploy script with the tag
 # plus the asset paths. Wrapped as `sh_binary` (see `github_release`).
@@ -173,7 +173,7 @@ def github_release(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile
         tag = tag,
     )
 
-    # `sh_binary` wrapper (issue #317): `srcs` is the generated launcher,
+    # `sh_binary` wrapper: `srcs` is the generated launcher,
     # `data` pins the runfiles the launcher resolves via `rlocation`
     # (location expansion), `deps` carries the standard runfiles library.
     sh_binary(

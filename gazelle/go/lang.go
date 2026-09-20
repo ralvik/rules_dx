@@ -369,7 +369,7 @@ func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) erro
 
 
 // isFixturePath reports whether a Gazelle relative directory is a test-only
-// fixture path (issue #404): any path containing tests, fixtures, or
+// fixture path: any path containing tests, fixtures, or
 // testdata as a segment generates testonly targets.
 func isFixturePath(rel string) bool {
     padded := "/" + rel + "/"

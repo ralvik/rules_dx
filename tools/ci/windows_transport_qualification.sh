@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Windows transport plus ABI qualification (issue #497).
+# Windows transport plus ABI qualification.
 #
 # Qualifies the transport-plus-ABI slice of the Windows baseline with
 # fixture evidence, without claiming a qualified toolchains_msvc backend,
@@ -18,15 +18,15 @@
 #   `response.rsp` plus `batch_wrapper.txt`); compiler-target availability alone
 #   is not proof of host-to-target routes or target execution.
 # - open with honest records: full toolchains_msvc backend, Microsoft
-#   rights (issue #496), prebuilt interop (issue #498), corpus plus floors
-#   plus coverage (issues #499/#500/#501), release evidence. Backend stays
+# rights, prebuilt interop, corpus plus floors
+# plus coverage, release evidence. Backend stays
 #   provisional.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:windows_transport_qualification`,
 # following //tools/ci:windows_acquisition_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -45,7 +45,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture set stays present (issue #497).
+# Fixture set stays present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$expected" && -f "$rsp" && -f "$wrapper" ]]; then
   ok
 else
@@ -155,7 +155,7 @@ else
   bad "tools/ci/BUILD.bazel or ci.yml lost the windows_transport_qualification wiring (want target plus dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified seed-only record under #497.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'windows_transport_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #497' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:windows_transport_qualification' "$verify" &&

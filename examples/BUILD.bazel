@@ -5,9 +5,9 @@ load("//quality:fixtures.bzl", "real_source_target")
 package(default_visibility = ["//:__subpackages__"])
 
 # The consumer CI template harness (//tools/ci:consumer_*_test, issue
-# #99) pins the starter caller contract, so caller.yml is exported for
+# pins the starter caller contract, so caller.yml is exported for
 # hermetic test data. The pin-sync harness
-# (//tools/ci:examples_pins_test, issue #209) reads both example
+# (//tools/ci:examples_pins_test,) reads both example
 # callers, so both are exported.
 exports_files([
     "consumer-ci/caller.yml",

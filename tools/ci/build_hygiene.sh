@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# BUILD comment hygiene guard (issue #427).
+# BUILD comment hygiene guard.
 #
 # BUILD.bazel files carry only what the target is plus non-obvious attrs;
 # essays live in docs/contributing/build-conventions.md with one-line refs.
@@ -14,7 +14,7 @@
 # following //tools/ci:widen_update_loop.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -36,7 +36,7 @@ else
   bad "canonical BUILD conventions doc missing or lost sections (want docs/contributing/build-conventions.md with Lane A/Corpus/No-Coverage/Shell plus owner links, issue #427)"
 fi
 
-# Banned boilerplate stays out of BUILD comments (issue #427): the essays
+# Banned boilerplate stays out of BUILD comments: the essays
 # moved to the canonical doc, leaving one-line refs only.
 if ! grep -rn --include='BUILD.bazel' -e '^[[:space:]]*#[^!]*Proves the forwarder plumbing' . 2>/dev/null | grep -q . &&
   ! grep -rn --include='BUILD.bazel' -e '^[[:space:]]*#[^!]*out of the coverage denominator per the repo coverage preset' . 2>/dev/null | grep -q . &&
@@ -50,7 +50,7 @@ else
   bad "banned BUILD boilerplate reappeared (want no forwarder-plumbing/coverage-denominator/no-corpus-entry/dogfood-policy/real_fixture_policy/expected-greeting-tagged/keep-regeneration essays in BUILD.bazel, issue #427)"
 fi
 
-# Comment density stays trimmed (issue #427): total comment-only lines
+# Comment density stays trimmed: total comment-only lines
 # under 8% of all BUILD.bazel lines (was ~11% before the sweep).
 if python3 -c "
 import pathlib
@@ -66,7 +66,7 @@ else
   bad "BUILD comment density >= 8% (want trimmed one-line refs per docs/contributing/build-conventions.md, issue #427)"
 fi
 
-# GENERATED artifact headers stay minimal (issue #427): GENERATED plus one
+# GENERATED artifact headers stay minimal: GENERATED plus one
 # regenerate command, no Release provenance (provenance lives in
 # update.py inputs plus ARTIFACT url/sha256 fields).
 if grep -q -F -e 'GENERATED, do not edit' quality/artifacts/ruff.linux_x86_64.bzl &&
@@ -79,7 +79,7 @@ else
   bad "quality/artifacts GENERATED header lost minimal shape (want GENERATED plus regenerate only, no Release line in files or generator, issue #427)"
 fi
 
-# Vendored preset header stays minimal (issue #427): GENERATED plus one
+# Vendored preset header stays minimal: GENERATED plus one
 # regenerate command (version and consumer provenance lives in preset.py
 # pins plus preset_tests.bzl file_checks).
 if grep -q -F -e 'GENERATED, do not edit' tools/bazelrc/preset.bazelrc &&
@@ -94,7 +94,7 @@ else
   bad "preset.bazelrc lost minimal GENERATED header (want GENERATED plus regenerate only, no Version-matched/Consumer-refresh/Upstream-derived prose, issue #427)"
 fi
 
-# Gazelle boundary stays hand-free (issue #427): no hand prose mixed into
+# Gazelle boundary stays hand-free: no hand prose mixed into
 # regen stanzas; bare # keep only where the generator requires it.
 if ! grep -rn --include='BUILD.bazel' -e '# `# keep` preserves them across regeneration' . 2>/dev/null | grep -q . &&
   grep -q -F -e '# keep' examples/adopt-python/app/BUILD.bazel &&
@@ -104,7 +104,7 @@ else
   bad "Gazelle keep boundary regressed (want no keep-regeneration essay plus bare # keep with one-line User-owned ref in examples/adopt-python/app/BUILD.bazel, issue #427)"
 fi
 
-# Non-obvious attrs survive the trim (issue #427 is comment-only): the
+# Non-obvious attrs survive the trim (is comment-only): the
 # proof bindings still carry aspect_hints, bash harnesses still carry
 # Linux-only labels, and process-spawning tests still carry no-coverage.
 labels="$(grep -r -F -e 'target_compatible_with' --include='BUILD.bazel' . | wc -l)"
@@ -117,7 +117,7 @@ else
   bad "trim dropped non-obvious attrs (want aspect_hints proof bindings plus no-coverage tags plus >= 69 Linux-only labels, found $labels, issue #427)"
 fi
 
-# New doc stays in the docs corpus (issue #15 audit shape).
+# New doc stays in the docs corpus (audit shape).
 if grep -q -F -e 'contributing/build-conventions.md' docs/BUILD.bazel; then
   ok
 else

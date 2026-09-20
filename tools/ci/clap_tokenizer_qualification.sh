@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Clap-as-tokenizer legacy-error qualification harness (issue #316).
+# Clap-as-tokenizer legacy-error qualification harness.
 #
 # Decision: freeze legacy output as contract with snapshots (not strict clap
 # parsing with auto help). Thin shims are Bazel action entrypoints with
@@ -27,7 +27,7 @@
 # following //tools/ci:helper_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -38,7 +38,7 @@ dx_test_init
 contract="docs/cli/cli-contract.md"
 verify="docs/testing/verification-matrix.md"
 
-# Contract owns the qualified seed-only record under #316.
+# Contract owns the qualified seed-only record under.
 if grep -q -F -e 'qualified seed-only under issue #316' "$contract" &&
   grep -q -F -e 'bazel run //tools/ci:clap_tokenizer_qualification' "$contract" &&
   grep -q -F -e 'frozen' "$contract" &&
@@ -72,7 +72,7 @@ else
   bad "cli-contract lost a frozen tokenizer site name"
 fi
 
-# Every tokenizer site carries a #316 frozen-contract decision record.
+# Every tokenizer site carries a frozen-contract decision record.
 missing=""
 for f in cli/env/src/main.rs generation/codegen_shard/src/main.rs env/env_shard/src/main.rs quality/evaluator/src/main.rs quality/runner/src/main.rs quality/markdown/src/lib.rs cli/cli/src/args/tokenizer.rs; do
   if ! grep -q -F -e '#316' "$f"; then
@@ -254,7 +254,7 @@ else
   bad "shard writers/evaluator lost a usage-routing or value-parser pin"
 fi
 
-# Verification matrix keeps the #316 qualified record with owned gaps.
+# Verification matrix keeps the qualified record with owned gaps.
 if grep -q -F -e 'clap_tokenizer_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #316' "$verify" &&
   grep -q -F -e 'strict clap' "$verify"; then

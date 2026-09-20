@@ -1,16 +1,7 @@
-"""JUnit 6.1.3 plus 5.14.x fallback version pins (issue #476).
+"""JUnit 6.1.3 plus 5.14.x fallback version pins.
 
 Contract: `docs/product/support-matrix.md#provisional-default-test-runners`,
 `docs/generation/README.md#language-mapping-qualification`.
-
-Primary line is JUnit 6.1.3 (Platform 6.1.3 plus Jupiter 6.1.3 plus Vintage
-6.1.3, single version per the JUnit 6 BOM; JDK 17+ baseline, remotejdk_21 on
-the seed host; native Kotlin `suspend` support). Fallback line is JUnit
-5.14.x (Jupiter 5.14.4 plus Platform 1.14.4, JDK 8 baseline for hosts below
-the JUnit 6 floor); it is selected by swapping the same coordinates, never
-by floating the runner. JUnit 4.13.2 seed stays via Vintage (deprecated,
-temporary migration only). Unpinned runner (floating version, living at head,
-implicit runner) is rejected.
 """
 
 # Primary line: JUnit 6.1.3 (single BOM version for Platform/Jupiter/Vintage).

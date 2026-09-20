@@ -1,4 +1,4 @@
-"""Unit tests for signing selection (issue #459, live successor to closed #311/#26).
+"""Unit tests for signing selection (live successor to closed /).
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

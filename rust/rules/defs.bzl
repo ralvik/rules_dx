@@ -9,8 +9,8 @@ load("@rules_rust//rust:defs.bzl", _rust_binary = "rust_binary", _rust_clippy_te
 load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap")
 load("//quality:sources.bzl", "QualitySourcesInfo", "RUST")
 
-# RUST_EDITION is the single source of truth (issue #82), defined in
-# `:edition.bzl` so consumer aspects stay crate-free (issue #55).
+# RUST_EDITION is the single source of truth, defined in
+# `:edition.bzl` so consumer aspects stay crate-free.
 load(":edition.bzl", "RUST_EDITION")
 
 # Advertised providers: Bazel matches aspects on `provides`, not returned
@@ -157,7 +157,7 @@ def rust_test(
 
     # The private upstream test stays an implementation detail via private
     # visibility; both it and the public wrapper run under `bazel test //...`
-    # (issue #406: no manual; double-execution is the cost of green suites).
+    # (no manual; double-execution is the cost of green suites).
     if "tags" in upstream_kwargs:
         kept = [t for t in upstream_kwargs["tags"] if t != "manual"]
         if len(kept) > 0:
@@ -173,7 +173,7 @@ def rust_test(
     )
     forward_kwargs = {}
     if "aspect_hints" in kwargs:
-        # Lane A (issue #12): hints ride the QualitySourcesInfo owner
+        # Lane A: hints ride the QualitySourcesInfo owner
         # where aspects visit, not only the private upstream.
         forward_kwargs["aspect_hints"] = kwargs["aspect_hints"]
     _rust_forward_test(
@@ -257,7 +257,7 @@ def rust_static_library(
     )
 
 def rustfmt_test(name, targets, size = "small", **kwargs):
-    """Thin wrapper over upstream `rustfmt_test` (issue #239).
+    """Thin wrapper over upstream `rustfmt_test`.
 
     Forwards unchanged to the pinned toolchain test. Consumers load this
     symbol from `//rust/rules:defs.bzl` so lint entry points stay
@@ -272,7 +272,7 @@ def rustfmt_test(name, targets, size = "small", **kwargs):
     )
 
 def rust_clippy_test(name, targets, size = "small", **kwargs):
-    """Thin wrapper over upstream `rust_clippy_test` (issue #239).
+    """Thin wrapper over upstream `rust_clippy_test`.
 
     Same single-source rationale as `rustfmt_test`: consumers load lints
     from this module, never from `@rules_rust` directly.
@@ -295,7 +295,7 @@ def dx_rust_crate(
         srcs = None,
         size = "small",
         visibility = None):
-    """Single-crate boilerplate: lib + test + lint tests + manifest (issue #239).
+    """Single-crate boilerplate: lib + test + lint tests + manifest.
 
     Emits the leaf-crate pattern with names identical to the
     hand-written stanzas it replaces, so migration is a pure BUILD-text
@@ -305,7 +305,7 @@ def dx_rust_crate(
     crate_universe reads the manifest from the `@crates` repo). Corpus
     splits (`corpus_starlark` owning `BUILD.bazel` plus any `*.bzl` like
     `roots.bzl`, `corpus_toml` owning `Cargo.toml`) are owned by `dx
-    generate` (issue #15), never by this macro, so dogfood stays
+ generate`, never by this macro, so dogfood stays
     generator-stable. Dependency labels resolve through
     crate_universe exactly like the hand-written calls: `deps` /
     `dev_deps` are crate names, `extra_deps` / `extra_test_deps` are

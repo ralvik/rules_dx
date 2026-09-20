@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Static-musl profile qualification harness (issue #411).
+# Static-musl profile qualification harness.
 #
 # Machine-checks the as-built static-musl record with fixture evidence
 # and owned gaps, without claiming Supported or dynamic musl:
@@ -19,7 +19,7 @@
 # following //tools/ci:coverage_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -31,11 +31,10 @@ dx_test_init
 # Bounded upstream maintenance: rules_rust ships musl std, no new backend.
 if grep -q -F -e 'extra_target_triples' MODULE.bazel &&
   grep -q -F -e '"x86_64-unknown-linux-musl"' MODULE.bazel &&
-  grep -q -F -e '"aarch64-unknown-linux-musl"' MODULE.bazel &&
-  grep -q -F -e 'Issue #411' MODULE.bazel; then
+  grep -q -F -e '"aarch64-unknown-linux-musl"' MODULE.bazel; then
   ok
 else
-  bad "MODULE.bazel lost the issue #411 static-musl extra_target_triples"
+  bad "MODULE.bazel lost the static-musl extra_target_triples"
 fi
 
 # dx qualified static-musl profiles: two static entries, dynamic refused.
@@ -60,7 +59,7 @@ else
 fi
 
 # dx status names the static-musl qualification (macOS arm64 may append
-# `plus macos_arm64` under issue #412; the static-musl fragment stays).
+# `plus macos_arm64`; the static-musl fragment stays).
 if grep -q -F -e 'glibc plus static musl' cli/adopt/src/status.rs &&
   grep -q -F -e 'qualified' cli/adopt/src/status.rs; then
   ok
@@ -99,7 +98,7 @@ else
 fi
 
 # Per-cell coverage registry: musl pair qualified (seven qualified, zero
-# unqualified after issues #413/#414), no union.
+# unqualified after), no union.
 if [[ -f "tools/coverage/musl-x86_64-inventory.txt" ]] &&
   [[ -f "tools/coverage/musl-arm64-inventory.txt" ]] &&
   grep -q -F -e 'qualified linux_x86_64_musl tools/coverage/musl-x86_64-inventory.txt' tools/coverage/cells.txt &&

@@ -1,7 +1,7 @@
-//! CXX graph identity fixture library (issue #474).
+//! CXX graph identity fixture library.
 //!
 //! The `#[cxx::bridge]` lives here once the corpus wires `cxx = "=1.0.200"`
-//! from the single `crates` graph (full wiring under #499); until then this
+//! from the single `crates` graph (full wiring under); until then this
 //! crate stays buildable with no external deps so the composition shape
 //! (Rust `CrateInfo` plus C++ `CcInfo`) is proven without a second graph.
 

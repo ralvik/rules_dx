@@ -1,4 +1,4 @@
-"""SBOM upload fixture (issue #612)."""
+"""SBOM upload fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

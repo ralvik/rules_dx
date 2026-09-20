@@ -94,13 +94,13 @@ pub(crate) const CODE_UPDATE_FAILED: &str = "update_failed";
 /// the single declared requirement was missing, ambiguous, in an
 /// unsupported manifest shape, needed upstream SHA resolution, or the
 /// manifest could not be read/written. Planning (`--dry-run`) succeeds;
-/// live runs widen exactly one requirement atomically (issue #260).
+/// live runs widen exactly one requirement atomically.
 pub(crate) const CODE_BUMP_FAILED: &str = "bump_failed";
 /// Stable operational error code for live migrate failures:
 /// no migrate manifest exists yet (module at `0.0.0`, no major releases
 /// cut), so every live run fails closed with no writes. Planning
 /// (`--dry-run`) succeeds; live runs select one manifest per major hop
-/// (`migrate-v<from>-to-v<to>.json`) once published (issue #462).
+/// (`migrate-v<from>-to-v<to>.json`) once published.
 pub(crate) const CODE_MIGRATE_FAILED: &str = "migrate_failed";
 
 /// Execution environment: resolved workspace, process seams for the

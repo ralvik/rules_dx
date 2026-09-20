@@ -1,4 +1,4 @@
-// Source-built SQLite shape stub (issue #499).
+// Source-built SQLite shape stub.
 #include "cc/tests/fixtures/linux_corpus/sqlite.h"
 
 #include <stddef.h>

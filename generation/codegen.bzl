@@ -1,4 +1,4 @@
-"""Normalized codegen plan records (issue #506 WP1, issue #506).
+"""Normalized codegen plan records.
 
 Contract: `docs/environments/codegen.md`, `docs/product/scope.md`.
 """
@@ -23,13 +23,13 @@ DxCodegenPlanCollectedInfo = provider(
 )
 
 # Private output group for collected shards and referenced artifacts.
-# Frozen under issue #506; see `docs/environments/codegen.md`.
+# Frozen; see `docs/environments/codegen.md`.
 DX_CODEGEN_PLAN_OUTPUT_GROUP = "dx_codegen_plans"
 
 # Reserved shard suffix for BEP-reported files. See `docs/environments/codegen.md`.
 DX_CODEGEN_SHARD_SUFFIX = ".dxcodegen.pb"
 
-# Versioned codegen-pair schema (issue #321). Add pairs via this tuple only.
+# Versioned codegen-pair schema. Add pairs via this tuple only.
 CODEGEN_SCHEMA_VERSION = 1
 
 # Admitted first-release pairs (slice 1). See `docs/environments/codegen.md`.
@@ -163,7 +163,7 @@ def codegen_merge_records(records):
     return merged
 
 def codegen_merge_schema_error(records, merged):
-    """Validates merged is the normalized form of records (issue #322).
+    """Validates merged is the normalized form of records.
 
     Checks shape without pinning exact contents, so adding owners or entries
     edits test data only: owners sorted and unique, entries sorted and unique
@@ -235,7 +235,7 @@ def codegen_plan_fingerprint(records):
     ])
 
 def codegen_fingerprint_schema_error(fingerprint):
-    """Validates a plan fingerprint JSON shape (issue #322).
+    """Validates a plan fingerprint JSON shape.
 
     Checks structure without pinning exact bytes, so entry additions edit
     test data only: a list of {producer, language, entries} sorted by
@@ -293,12 +293,12 @@ def codegen_admitted_pairs():
     """Returns the admitted generator/language pairs via registry query.
 
     Derived from `DX_CODEGEN_ADMITTED_PAIRS`, never duplicated, so adding
-    a pair edits the registry data only (issue #321).
+ a pair edits the registry data only.
     """
     return DX_CODEGEN_ADMITTED_PAIRS
 
 def codegen_schema_error():
-    """Validates the versioned codegen-pair schema (issue #321).
+    """Validates the versioned codegen-pair schema.
 
     Checks data shape without pinning exact contents, so adding a pair
     edits the admitted data only: version is v1, the list is non-empty

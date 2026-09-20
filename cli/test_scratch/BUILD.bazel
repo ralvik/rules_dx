@@ -1,4 +1,4 @@
-"""Test-only scratch directories for dx crate tests (#237)."""
+"""Test-only scratch directories for dx crate tests."""
 
 load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_crate")
@@ -8,7 +8,7 @@ package(default_visibility = [
     "//cli:__subpackages__",
 ])
 
-# Leaf-crate pattern via `dx_rust_crate` (issue #239).
+# Leaf-crate pattern via `dx_rust_crate`.
 dx_rust_crate(
     name = "dx_test_scratch",
     package_name = "cli/dx_test_scratch",

@@ -22,7 +22,7 @@
 //! diagnostic and notice NDJSON events live in the `findings` module. This
 //! facade only re-exports; the public path stays `dx_output::{...}`.
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 

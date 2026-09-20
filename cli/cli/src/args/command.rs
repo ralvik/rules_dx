@@ -108,10 +108,10 @@ impl Command {
     /// the quality aspect pipeline. Audit is non-mutating; update and bump
     /// are mutating without confirmation. Audit tool backends stay deferred
     /// while update resolver backends execute live  and bump
-    /// widens exactly one requirement explicitly (issue #260).
+    /// widens exactly one requirement explicitly.
     /// `migrate` is not audit/update: it plans major-release rewrites
     /// through `dx_adopt::plan_migrate` over `--from`/`--to` versions
-    /// (issue #462) with its own fail-closed execution.
+    /// with its own fail-closed execution.
     pub fn is_audit_update(self) -> bool {
         matches!(self, Command::Audit | Command::Update | Command::Bump)
     }
@@ -159,9 +159,9 @@ impl Command {
     /// per-set `notice`/`error` events with the same frame.
     /// `bump` supports JSON the same way: dry-run planning emits the
     /// widen summary, live execution adds the widen `notice`/`error`
-    /// (issue #260). `migrate` supports JSON the same way: dry-run
+    ///. `migrate` supports JSON the same way: dry-run
     /// planning emits the manifest plan, live execution fails closed
-    /// with `migrate_failed` (issue #462, no manifests yet).
+    /// with `migrate_failed` (no manifests yet).
     pub fn supports_json(self) -> bool {
         matches!(
             self,
@@ -200,8 +200,8 @@ impl Command {
         )
     }
 
-    /// True for commands that mutate by default (issue #457, extended by
-    /// issue #462 for `migrate`).
+    /// True for commands that mutate by default (extended by
+    /// for `migrate`).
     ///
     /// Mirrors `docs/testing/cli.md#command-registry-and-behavior` plus
     /// `docs/decisions/0005-mutating-operations.md`: lint,
@@ -370,7 +370,7 @@ mod tests {
 
     #[test]
     fn final_registry_is_exact_and_rejects_excluded_commands() {
-        // Issue #457 plus issue #462: the final CLI registry holds
+        // The final CLI registry holds
         // exactly the 29 implemented commands (including `deploy` plus
         // `bump` plus `migrate`). `doctor`, `configure`, `docs`, and
         // `new` stay rejected as unknown.
@@ -425,7 +425,7 @@ mod tests {
 
     #[test]
     fn mutating_by_default_matches_contract_and_help() {
-        // Issue #457 plus issue #462: `docs/testing/cli.md` mutating
+        // `docs/testing/cli.md` mutating
         // identification plus ADR 0005 plus ADR 0018. `check` stays
         // non-mutating; `clean` mutates managed state only under its own
         // contract.

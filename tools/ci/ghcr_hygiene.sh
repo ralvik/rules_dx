@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# GHCR prebuilt-image hygiene (issue #460, live successor to closed #184
-# for the GHCR route; trust root shared with #311).
+# GHCR prebuilt-image hygiene (live successor to closed 
+# for the GHCR route; trust root shared with).
 #
 # The prebuilt devcontainer image removes per-create feature-install cost,
 # but publication is gated: separate workflow from releases per owner
 # decision, build on PR, push only on workflow_dispatch + approve:true,
 # signing owner-gated after push (cosign sign --yes <image>@<digest> keyless
-# on the #311 trust root, same as //deploy/release:signing_demo, plus
+# on the trust root, same as //deploy/release:signing_demo, plus
 # cosign verify / gh attestation; dry-run would-sign on PRs). Image tags
 # track the single-version dx == module pin (0.0.0-sha-<sha>); the scaffold
 # `image:` digest pin (never latest) lands with the first push, quota is
@@ -19,14 +19,14 @@
 # base + Bazelisk delegation + no ambient toolchains in Dockerfile.prebuilt,
 # no docker/* or sigstore/* actions with checkout SHA-pinned, no-secrets checkout plus
 # non-cancelling concurrency, cosign sign/verify + attestation with pinned
-# fetch, version-tracked tags, id-token keyless scope, #311 trust root,
+# fetch, version-tracked tags, id-token keyless scope, trust root,
 # scaffold-digest procedure + qualified quota, scaffold still on mcr (switch follows first push).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:ghcr_hygiene`,
 # following //tools/ci:examples_laziness_aquery.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -57,7 +57,7 @@ else
   bad "ghcr.yml lost the dispatch + default-closed approve gate"
 fi
 
-# The approve gate stays typed (issue #460 parity with #78): boolean
+# The approve gate stays typed (parity with): boolean
 # input type so overlapping dispatches queue via typed approval instead
 # of stringly-typed approval.
 if grep -q -F -e 'type: boolean' .github/workflows/ghcr.yml; then
@@ -108,7 +108,7 @@ fi
 # No docker/* or sigstore/* installer actions: plain `docker build`/`push`
 # plus a pinned `curl` cosign fetch keeps the push gate explicit in `run:`
 # steps; the sole third-party action (checkout) stays pinned to a commit
-# SHA per #80.
+# SHA per.
 if ! grep -q -F -e 'uses: docker/' .github/workflows/ghcr.yml && ! grep -q -F -e 'uses: sigstore/' .github/workflows/ghcr.yml && grep -q -E -e 'uses: actions/checkout@[0-9a-f]{40}' .github/workflows/ghcr.yml; then
   ok
 else
@@ -124,8 +124,8 @@ else
   bad "ghcr.yml lost no-secrets checkout or non-cancelling concurrency"
 fi
 
-# Signing-second selected explicitly per #311: cosign <digest> on the
-# #311 trust root (same as //deploy/release:signing_demo), dry-run
+# Signing-second selected explicitly per: cosign <digest> on the
+# trust root (same as //deploy/release:signing_demo), dry-run
 # would-sign without approval.
 if grep -q -F -e 'cosign sign <digest>' .github/workflows/ghcr.yml; then
   ok
@@ -149,7 +149,7 @@ else
   bad "ghcr.yml lost the pinned cosign fetch (version + checksums + sha256sum -c)"
 fi
 
-# Single-version tag tracking (issue #460): push and PR tags carry dx ==
+# Single-version tag tracking: push and PR tags carry dx ==
 # module (0.0.0) plus sha; digest pin (never latest) is the scaffold ref.
 if grep -q -F -e 'devcontainer:0.0.0-sha-' .github/workflows/ghcr.yml && grep -q -F -e 'devcontainer:0.0.0-ci-' .github/workflows/ghcr.yml; then
   ok
@@ -165,7 +165,7 @@ else
   bad "ghcr.yml lost job-scoped id-token:write (keyless needs it; top-level must stay read-only)"
 fi
 
-# Signing trust root shared with releases per #311.
+# Signing trust root shared with releases per.
 if grep -q -F -e '#311 trust root' .github/workflows/ghcr.yml; then
   ok
 else
@@ -198,7 +198,7 @@ else
   bad "devcontainer.json image drifted from mcr before the first GHCR push (digest ref follows push)"
 fi
 
-# Least-privilege split explicit (issue #460 parity with #78): only
+# Least-privilege split explicit (parity with): only
 # ghcr.yml carries `packages: write` for image push; the dry run stays
 # read-only. Losing the push permission breaks gated publication, while
 # gaining it in publish-dry-run.yml is rejected there.
@@ -208,7 +208,7 @@ else
   bad "ghcr.yml lost packages:write (gated push needs it; dry run must stay read-only)"
 fi
 
-# Least-privilege default (issue #460): top-level permissions stay
+# Least-privilege default: top-level permissions stay
 # read-only (`contents: read`); only the build job carries
 # `packages: write` for the gated push, so a future job without
 # explicit permissions never inherits push scope.

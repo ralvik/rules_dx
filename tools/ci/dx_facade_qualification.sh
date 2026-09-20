@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# Dx facade qualification harness (issue #423).
+# Dx facade qualification harness.
 #
 # Machine-checks the placeholder-vs-real state for the `//dx:config` and
 # `//dx:codegen` facade labels so the tree cannot silently drift: both stay
 # empty filegroups (Accepted selection identity/default, not provisional),
 # while the real typed sections and plan collection live in their frozen
 # owners (`//quality:policy.bzl` for `//quality:sources.bzl` for
-# `//generation:codegen.bzl` plus `//cli/codegen` for issue #506, `//cli/roots`
-# for the issue #506 `//...` baseline). Docs assert the same Accepted state.
+# `//generation:codegen.bzl` plus `//cli/codegen` for, `//cli/roots`
+# for the `//...` baseline). Docs assert the same Accepted state.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:dx_facade_qualification`,
 # following //tools/ci:backlog_contracts.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -33,11 +33,11 @@ fi
 
 # The facade docstring records the Accepted hygiene decision, not a
 # provisional placeholder awaiting typed sections.
-if grep -q -F -e 'Accepted (issue #423)' dx/BUILD.bazel &&
+if grep -q -F -e 'Accepted' dx/BUILD.bazel &&
   grep -q -F -e '//tools/ci:dx_facade_qualification' dx/BUILD.bazel; then
   ok
 else
-  bad "dx/BUILD.bazel lost its Accepted (issue #423) facade record"
+  bad "dx/BUILD.bazel lost its Accepted facade record"
 fi
 
 # No PROVISIONAL open-decision marker may remain on the facade labels.
@@ -92,7 +92,7 @@ else
 fi
 
 # Admitted generator/language pairs stay frozen with at least the first
-# pair (issue #506): an empty registry would silently admit nothing.
+# pair: an empty registry would silently admit nothing.
 if grep -q -F -e 'DX_CODEGEN_ADMITTED_PAIRS = (' generation/codegen.bzl &&
   grep -q -F -e '("protobuf", "rust")' generation/codegen.bzl; then
   ok
@@ -100,7 +100,7 @@ else
   bad "generation/codegen.bzl lost its issue #506 admitted-pair freeze"
 fi
 
-# issue #506 effective roots stay on the frozen baseline.
+# effective roots stay on the frozen baseline.
 if grep -q -F -e 'pub const FROZEN_STRATEGY' cli/roots/src/lib.rs &&
   grep -q -F -e 'RecursivePattern' cli/roots/src/lib.rs; then
   ok
@@ -117,9 +117,8 @@ else
   bad "docs/architecture/README.md facade rows must read Accepted (issue #423)"
 fi
 
-# ADR 0011 keeps the / ownership record with the #423 resolution.
-if grep -q -F -e 'open decision ' docs/decisions/0011-configuration-composition.md &&
-  grep -q -F -e 'open decision ' docs/decisions/0011-configuration-composition.md &&
+# ADR 0011 keeps the / ownership record with the resolution.
+if grep -q -F -e 'open decisions' docs/decisions/0011-configuration-composition.md &&
   grep -q -F -e 'issue #423' docs/decisions/0011-configuration-composition.md; then
   ok
 else

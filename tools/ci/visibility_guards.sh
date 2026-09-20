@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Visibility hardening guard (issue #456).
+# Visibility hardening guard.
 #
 # docs/roadmap.md lists visibility hardening with no open owner, only
 # scattered default_visibility. Public is external API only; everything
@@ -14,7 +14,7 @@
 # Versioned here, run by CI via `bazel run //tools/ci:visibility_guards`.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
 dx_cd_workspace

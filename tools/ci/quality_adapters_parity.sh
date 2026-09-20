@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quality-adapter parity/provenance guards (issue #307, qualified).
+# Quality-adapter parity/provenance guards (qualified).
 #
 # Required-core adapters plus Buildifier/Taplo/Vale probes are qualified
 # with fixture evidence; the ten missing families keep frozen routes owned
@@ -16,15 +16,15 @@
 # standalone artifact metadata plus regeneration policy, and packaging
 # single-correct-path plus manifest completeness plus candidate wire
 # profile URIs plus verification binding. Platform gaps beyond the seed
-# Linux x86_64 host stay owned under issue #298 with clean refusal, never
+# Linux x86_64 host stay owned with clean refusal, never
 # a silent pass; no Supported claim without platform plus consumer plus
-# release evidence (issue #301 gate).
+# release evidence (gate).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:quality_adapters_parity`,
 # following //tools/ci:release_policy.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 

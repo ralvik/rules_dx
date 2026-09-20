@@ -1,4 +1,4 @@
-"""BCR submission tooling for `rules_dx` (issue #311).
+"""BCR submission tooling for `rules_dx`.
 
 Contract: `docs/deploy/release-runbook.md`.
 """
@@ -64,7 +64,7 @@ def _bcr_launcher_impl(ctx):
     ctx.actions.write(
         output = launcher,
         content = """#!/usr/bin/env bash
-# Deploy launcher for `bcr_check` (issue #311). Generated. Do not edit.
+# Deploy launcher for `bcr_check`. Generated. Do not edit.
 # Resolves inputs via the standard `runfiles.bash` `rlocation`; wrapped
 # as `sh_binary` (see `bcr_check`).
 set -euo pipefail

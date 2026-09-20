@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared workspace-root + runfiles + CI shell helpers (issues #319, #323, #450).
+# Shared workspace-root + runfiles + CI shell helpers.
 #
 # Single-sources the `BUILD_WORKSPACE_DIRECTORY || git rev-parse` workspace
 # probe plus the multi-candidate runfiles probing (`RUNFILES_DIR`,
@@ -30,7 +30,7 @@
 #   dx_resolve_runfile <rel>     prints the absolute path for a
 #                                workspace-relative or `rootpath` rel
 #   dx_test_init                 resets the shared pass/fail counters
-#   ok [<msg>] / bad <msg>       shared harness counters (issue #323:
+# ok [<msg>] / bad <msg> shared harness counters
 #                                replaces per-file copies; `ok` echoes
 #                                `ok: <msg>` when given a message for
 #                                depcheck-style verbosity, silent otherwise)
@@ -39,32 +39,32 @@
 #   dx_cd_workspace              cds to `dx_workspace_root` and sets
 #                                `$workspace`
 #   dx_mkscratch <var> [template]   portable `mktemp -d` with auto-cleanup on
-#                                EXIT (issue #323: replaces per-file
+# EXIT (replaces per-file
 #                                `scratch=...; trap ...` copies)
 #   dx_realpath <path>           portable realpath (`realpath` ->
-#                                `readlink -f` -> python3, issue #323;
+# `readlink -f` -> python3,;
 #                                `portable_realpath` stays as an alias)
 #   dx_sha256_file <file>        portable sha256 hex (`sha256sum` ->
-#                                `shasum -a 256` -> python3, issue #323)
+# `shasum -a 256` -> python3,)
 #   dx_sha256_stdin              portable sha256 hex of stdin
 #   dx_tree_sha256 <dir>         deterministic tree digest (sorted find +
-#                                sha pipeline, issue #323)
+# sha pipeline,)
 #   dx_sha256_check <sums>       portable `sha256sum -c` /
 #                                `shasum -a 256 -c` check
 #   dx_now_secs                  portable monotonic stamp
 #                                (`$EPOCHREALTIME` -> `date +%s.%N` ->
-#                                `date +%s`, issue #323; `now_secs` stays
+# `date +%s`,; `now_secs` stays
 #                                as an alias)
 #   dx_replace <expr> <file>     portable in-place sed (tmpfile + mv, no
-#                                `sed -i`, issue #323)
-#   dx_expect_file <file>        guard pin: file exists (issue #450; one
+# `sed -i`,)
+# dx_expect_file <file> guard pin: file exists
 #                                ok/bad with file context)
 #   dx_expect_contains <file> <lit>...
 #                                guard pin: fixed-string literals present
-#                                (issue #450; snapshot stays for golden bytes)
+# (; snapshot stays for golden bytes)
 #   dx_expect_absent <file> <lit>...
 #                                guard pin: fixed-string literals absent
-#                                (issue #450)
+#
 #
 # `dx_resolve_runfile` prefers the standard `runfiles.bash` `rlocation`
 # when available and falls back to manual `TEST_SRCDIR` / `RUNFILES_DIR` /
@@ -73,22 +73,22 @@
 # counter, scratch, realpath, hash, timing, sed, or guard-pin probing;
 # extend this file instead.
 #
-# Bash-only Linux harness (issues #299, #450): sourced by `sh_binary` /
+# Bash-only Linux harness: sourced by `sh_binary` /
 # `sh_test` drivers carrying `target_compatible_with =
 # ["@platforms//os:linux"]`. Bootstrap requires bash by design under issue
-# #450 (`BASH_SOURCE`, `[[`, arrays, `printf -v` plus the 5-way runfiles
+# (`BASH_SOURCE`, `[[`, arrays, `printf -v` plus the 5-way runfiles
 # fallback never run under POSIX `sh`); portable-shell means OS-portable
 # helper implementations (probes below), not a POSIX interpreter. Floor is
 # bash 3.2+ with Linux execution (macOS/Windows run the same bash via
 # `shell: bash` with no behavior change). Intentional lib-free exceptions:
 # POSIX `#!/bin/sh` fixtures (no bootstrap, no constraint) plus deploy
 # hermetic python-only runtime (bash + python3 + coreutils, no lib
-# bootstrap per issue #318) plus standalone renderers needing no
+# bootstrap) plus standalone renderers needing no
 # workspace/runfiles.
-# Portable forms (issue #323): no bare `realpath`, `sha256sum`, `sed -i`,
+# Portable forms: no bare `realpath`, `sha256sum`, `sed -i`,
 # `cp -a`, or unguarded `$EPOCHREALTIME` here; every helper probes
 # portably with no Linux behavior change. Guard maintenance owns shared
-# helpers plus snapshot versus grep policy under issue #450: snapshot
+# helpers plus snapshot versus grep policy snapshot
 # (`tools/sh/snapshot.sh` with UPDATE_EXPECT) is for byte-identical golden
 # outputs, `dx_expect_*` fixed-string pins are for doc/code contract
 # sentences/symbols; `//tools/ci:shell_contract` owns the rule.
@@ -120,7 +120,7 @@ dx_workspace_root() {
   git rev-parse --show-toplevel
 }
 
-# Issue #407: nested E2E removed, so `dx_e2e_workspace_root` plus the
+# Nested E2E removed, so `dx_e2e_workspace_root` plus the
 # `E2E_WORKSPACE` override are deleted. Drivers use `dx_workspace_root`
 # (BUILD_WORKSPACE_DIRECTORY else git top-level) with runfiles plus
 # TEST_TMPDIR scratch under `bazel test //...`; no second Bazel download,
@@ -226,7 +226,7 @@ dx_resolve_runfile() {
   return 1
 }
 
-# Shared harness counters (issue #323): replaces the per-file
+# Shared harness counters: replaces the per-file
 # `pass=0; fail=0; ok() ...; bad() ...` copies. `ok` echoes `ok: <msg>`
 # when given a message (depcheck verbosity) and stays silent otherwise.
 dx_test_init() {
@@ -253,13 +253,13 @@ dx_test_summary() {
   [[ "$fail" == "0" ]]
 }
 
-# Cds to the checkout root and sets `$workspace` (issue #323).
+# Cds to the checkout root and sets `$workspace`.
 dx_cd_workspace() {
   workspace="$(dx_workspace_root)"
   cd "$workspace"
 }
 
-# Portable scratch dirs with EXIT auto-cleanup (issue #323): replaces the
+# Portable scratch dirs with EXIT auto-cleanup: replaces the
 # per-file `scratch="$(mktemp -d)"; trap 'rm -rf "$scratch"' EXIT` copies.
 # Usage (no command substitution so the EXIT trap lands in the caller):
 #   dx_mkscratch scratch
@@ -292,7 +292,7 @@ dx_mkscratch() {
   printf -v "$var" '%s' "$dir"
 }
 
-# Portable realpath (issue #323): GNU `realpath` is absent on macOS;
+# Portable realpath: GNU `realpath` is absent on macOS;
 # `readlink -f` covers some platforms, python3 covers the rest.
 dx_realpath() {
   if command -v realpath >/dev/null 2>&1; then
@@ -308,7 +308,7 @@ portable_realpath() {
   dx_realpath "$@"
 }
 
-# Portable sha256 hex (issue #323): GNU `sha256sum` is absent on macOS;
+# Portable sha256 hex: GNU `sha256sum` is absent on macOS;
 # `shasum -a 256` is the portable fallback, python3 covers the rest.
 dx_sha256_file() {
   local file="$1"
@@ -331,7 +331,7 @@ dx_sha256_stdin() {
   fi
 }
 
-# Deterministic tree digest (issue #323): sorted find plus sha pipeline,
+# Deterministic tree digest: sorted find plus sha pipeline,
 # matching the historical `find | sort | xargs sha256sum | sha256sum`
 # bytes on Linux with a macOS `shasum` fallback and a python3 fallback
 # that reproduces the same line format.
@@ -360,7 +360,7 @@ print(hashlib.sha256(("\n".join(lines) + "\n").encode()).hexdigest())
   fi
 }
 
-# Portable `sha256sum -c` check (issue #323).
+# Portable `sha256sum -c` check.
 dx_sha256_check() {
   local sums="$1"
   if command -v sha256sum >/dev/null 2>&1; then
@@ -392,7 +392,7 @@ sys.exit(0 if ok else 1)
   fi
 }
 
-# Portable monotonic stamp (issue #323): `$EPOCHREALTIME` needs bash 5
+# Portable monotonic stamp: `$EPOCHREALTIME` needs bash 5
 # (macOS ships bash 3); fall back to `date +%s.%N`, then whole seconds.
 dx_now_secs() {
   if [[ -n "${EPOCHREALTIME:-}" ]]; then
@@ -408,7 +408,7 @@ now_secs() {
   dx_now_secs
 }
 
-# Portable in-place sed (issue #323): GNU `sed -i -e` breaks on macOS BSD
+# Portable in-place sed: GNU `sed -i -e` breaks on macOS BSD
 # sed; the tmpfile form works on both.
 dx_replace() {
   local expr="$1" file="$2" tmp
@@ -416,7 +416,7 @@ dx_replace() {
   sed -e "$expr" "$file" >"$tmp" && mv "$tmp" "$file"
 }
 
-# Guard-maintenance pins (issue #450): fixed-string contract checks so
+# Guard-maintenance pins: fixed-string contract checks so
 # `tools/ci` guards share one grep shape instead of brittle per-file
 # `grep -q -F` copies. Snapshot (`tools/sh/snapshot.sh` with UPDATE_EXPECT)
 # stays for byte-identical golden outputs; these helpers are for doc/code

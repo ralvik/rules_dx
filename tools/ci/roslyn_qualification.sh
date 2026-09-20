@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Roslyn per-TFM-RID SARIF aggregation qualification (issue #492).
+# Roslyn per-TFM-RID SARIF aggregation qualification.
 #
 # Decides the open Roslyn adapter-input risk with fixture evidence,
 # recorded explicitly here and in the owning docs, never silently dropped
@@ -26,13 +26,13 @@
 # - collection REQUIRED: every declared per-pivot SARIF is a declared
 #   action input from the authoritative `csharp_*` target context (never
 #   ambient scan); missing or malformed fails closed, never empty success.
-# Adapter-only: no adapter claims `csharp` yet (cohort stays owned by #417;
-# decision recorded under #492 with fixtures).
+# Adapter-only: no adapter claims `csharp` yet (cohort stays owned by;
+# decision recorded under with fixtures).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:roslyn_qualification`.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -60,7 +60,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture set stays present (issue #492).
+# Fixture set stays present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$sample_src" && -f "$pivot_net8" && -f "$pivot_net10" && -f "$aggregated" ]]; then
   ok
 else
@@ -68,7 +68,7 @@ else
 fi
 
 # Pins record the SDK coupling plus SARIF wire shape (versions qualified
-# seed-only under #486; digests stay owned under #417).
+# seed-only under; digests stay owned under).
 if grep -q -F -e 'ROSLYN_COUPLING = "SDK-built-in' "$pins" &&
   grep -q -F -e 'ROSLYN_SARIF_VERSION = "2.1.0"' "$pins" &&
   grep -q -F -e 'ROSLYN_DRIVER = "csc"' "$pins" &&
@@ -169,7 +169,7 @@ fi
 
 # No false adapter claim: roslyn stays out of REAL_ADAPTERS and the runner
 # matrix carries no csharp cells (claims land only with green adapter
-# evidence; cohort classification stays, owned under #417).
+# evidence; cohort classification stays, owned under).
 if ! grep -q -F -e '"roslyn":' "$adapters" &&
   ! grep -q -F -e 'matrix_csharp_' "$matrix" &&
   grep -q -F -e '"csharp": "csharp"' "$adapters"; then
@@ -178,7 +178,7 @@ else
   bad "false roslyn adapter claim (want no roslyn in REAL_ADAPTERS, no matrix_csharp_ cells, csharp stays classified)"
 fi
 
-# Tool integrations record the explicit #492 decision (aggregation required,
+# Tool integrations record the explicit decision (aggregation required,
 # single-SARIF rejected, runs concatenation with provenance), never silent,
 # with no adapter claim.
 if grep -q -F -e 'decided under issue #492' "$integrations" &&
@@ -193,7 +193,7 @@ else
   bad "tool-integrations lost its explicit Roslyn aggregation decision under issue #492"
 fi
 
-# Tool acquisition keeps the decided .NET route with the #492 aggregation
+# Tool acquisition keeps the decided.NET route with the aggregation
 # decision and no false claim.
 if grep -q -F -e 'decided under issue #492' "$acquisition" &&
   grep -q -F -e 'Decided route: CSharpier and Fantomas take the' "$acquisition" &&
@@ -205,7 +205,7 @@ else
   bad "tool-acquisition lost its .NET route with #492 aggregation decision and no-claim honesty"
 fi
 
-# Support matrix records the #492 decision in adapter-input notes plus wire
+# Support matrix records the decision in adapter-input notes plus wire
 # formats plus open risks, with fixtures and no Supported claim.
 if grep -q -F -e 'decided under issue #492' "$support" &&
   grep -q -F -e 'csharp/tests/fixtures/roslyn/' "$support" &&
@@ -225,7 +225,7 @@ else
   bad "tools/ci/BUILD.bazel or ci.yml lost the roslyn_qualification wiring (want target plus dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified record under #492.
+# Verification matrix owns the qualified record under.
 if grep -q -F -e 'roslyn_qualification' "$verify" &&
   grep -q -F -e 'issue #492' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:roslyn_qualification' "$verify"; then

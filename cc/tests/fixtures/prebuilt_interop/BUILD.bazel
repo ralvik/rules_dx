@@ -1,4 +1,4 @@
-"""Prebuilt interop fixture (issue #498)."""
+"""Prebuilt interop fixture."""
 
 load("//cc/rules:defs.bzl", "cc_library", "cc_test")
 load("//quality:fixtures.bzl", "real_source_target")

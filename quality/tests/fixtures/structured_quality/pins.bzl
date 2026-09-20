@@ -1,18 +1,11 @@
-"""Structured quality defaults pins (issue #488).
+"""Structured quality defaults pins.
 
 Contract: `docs/product/support-matrix.md#provisional-default-quality-tools`,
 `docs/quality/native-configuration.md#authority`.
-
-Qualifies the provisional structured format plus lint defaults against the
-native-configuration contract with no hidden presets. Versions below are the
-pinned upstream releases from the initial artifact research; rule-sets are
-upstream built-in defaults unless an applicable checked-in native config
-supplies policy. Adapters add only transport/hermetic settings. Exact
-artifact digests plus adapter mappings stay owned under issue #419.
 """
 
 # Pinned upstream versions (initial artifact research observations, now
-# qualified seed-only under #488; living at head rejected).
+# qualified seed-only under; living at head rejected).
 BUF_VERSION = "1.72.0"
 QMLFORMAT_QT_OBSERVED = "Qt 6.11.2"
 QMLLINT_QT_OBSERVED = "Qt 6.11.1"
@@ -23,7 +16,7 @@ QMLLINT_QT_OBSERVED = "Qt 6.11.1"
 # authoritative-toolchain route for qmlformat/qmllint from the qualified Qt
 # distribution, Qt-last ordering decided; exact Qt distribution identity,
 # licensing, and platform artifact qualification plus all digests stay owned
-# under issue #419, never reconstructed from modules).
+# , never reconstructed from modules).
 BUF_ARTIFACT = "self-contained per-platform binaries with published checksums"
 QMLFORMAT_ARTIFACT = "qualified Qt distribution tool targets"
 QMLLINT_ARTIFACT = "qualified Qt distribution tool targets"
@@ -46,7 +39,7 @@ BEYOND_DEFAULT_REJECTED = "beyond-default switches rejected: COMMENTS plus UNARY
 # Live proof shape (no protobuf/qml hello bazel test exists: Protocol Buffer
 # plus QML foundations are not admitted as build/test targets, so the fixture
 # pair plus grep contract checks plus bazel build of the fixture is the live
-# proof; quality adapters claim nothing yet under issue #419).
+# proof; quality adapters claim nothing yet).
 STRUCTURED_PROOF = "bazel build //quality/tests/fixtures/structured_quality:corpus_starlark"
 
 # Rejected: hidden presets plus unpinned versions.

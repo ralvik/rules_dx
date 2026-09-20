@@ -17,7 +17,7 @@ load(":sources_tests.bzl", "sources_registry_tests")
 
 package(default_visibility = ["//visibility:public"])
 
-# Visibility policy (issue #239): leaf packages whose consumers are all
+# Visibility policy: leaf packages whose consumers are all
 # inside //quality scope their default to ["//quality:__pkg__",
 # "//quality:__subpackages__"] (precedent: //cli/*, e.g. dx_fingerprint;
 # scoped here: artifacts, testdata, evaluator). Cross-group leaves stay
@@ -219,10 +219,10 @@ test_suite(
 )
 
 # Corpus Vale configuration: every Markdown corpus target binds
-# this hint. The style stays narrow (`Dx.Markers` only; issue #589
+# this hint. The style stays narrow (`Dx.Markers` only; 
 # wont-fix, pinned by `corpus_vale.ini` plus `corpus_styles/Dx/Markers.yml`):
 # prose rules are out of scope, native-config owns policy with no hidden preset.
-# Strict per issue #614: the ini carries `[*] BasedOnStyles = Dx` so markers
+# Strict: the ini carries `[*] BasedOnStyles = Dx` so markers
 # enforce (without it Vale reports {}).
 vale_config(
     name = "corpus_vale_config",

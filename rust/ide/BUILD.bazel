@@ -23,7 +23,7 @@ sh_test(
         "@rules_rust//tools/rust_analyzer:gen_rust_project",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 

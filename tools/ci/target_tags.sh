@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Target-tag semantics harness (issue #99 item 3).
+# Target-tag semantics harness (item 3).
 #
 # Four tags change what CI runs, and none of their semantics was proven
 # end to end:
@@ -9,7 +9,7 @@
 #   still running untagged ones (tools/bazelrc/preset.bazelrc).
 # - `no-lint` / `no-typecheck`: the quality pipelines must suppress
 #   only the named capability for tagged owners.
-# - `manual`: no manual tests remain (issues #406/#407: green hermetic
+# - `manual`: no manual tests remain
 #   proofs replaced manual_negatives, nested E2E deleted; `bazel query
 #   'attr(tags, manual, kind(test, //...))'` must be empty; red subjects
 #   stay manual only as non-tests).
@@ -18,7 +18,7 @@
 # following //tools/ci:corpus_audit.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -49,7 +49,7 @@ else
   ok
 fi
 
-# No wrapper family strips test kwargs except the #406 green-suite pops:
+# No wrapper family strips test kwargs except the green-suite pops:
 # `manual` is stripped from upstream `tags` (both run under //...,
 # double-execution) and `aspect_hints` rides the public forwarder only.
 # `flaky` (and size/timeout) must still forward untouched.
@@ -63,7 +63,7 @@ fi
 
 # no-coverage is behavioral: under `bazel coverage` the tagged
 # process-spawning hello_output_test is skipped while untagged tests
-# run and emit coverage data. (Upstream tests are green too per #406:
+# run and emit coverage data. (Upstream tests are green too per:
 # both wrapper and upstream run under //..., double-execution.)
 cov_out="$(bazel coverage --noshow_progress --nocache_test_results //python/tests/fixtures/hello/... 2>&1)"
 if echo "$cov_out" | grep -q -E '//python/tests/fixtures/hello:hello_test +PASSED'; then
@@ -76,7 +76,7 @@ if echo "$cov_out" | grep -q -F -e 'hello_output_test'; then
 else
   ok
 fi
-# No assertion on hello_test_upstream under coverage: per #406 it is
+# No assertion on hello_test_upstream under coverage: per it is
 # green (non-manual) and runs alongside its wrapper; presence or absence
 # here is toolchain-dependent, not a tag-semantics proof.
 ok

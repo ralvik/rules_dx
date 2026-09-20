@@ -1,4 +1,4 @@
-// Seed Kotlin Jupiter test; consumer of the qualified JUnit 6.1.3 runner (issue #476).
+// Seed Kotlin Jupiter test; consumer of the qualified JUnit 6.1.3 runner.
 // JUnit 6 adds native Kotlin `suspend` support; the `suspend` shape needs
 // kotlinx-coroutines-core plus kotlin-reflect on the classpath and stays a
 // documented capability (see pins.bzl), not fixture-proven here.

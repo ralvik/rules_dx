@@ -32,7 +32,7 @@ kotlin_test(
 )
 
 # Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
-# Hello smoke test (#87); no-coverage process-spawning, see build-conventions.
+# Hello smoke test; no-coverage process-spawning, see build-conventions.
 sh_test(
     name = "hello_output_test",
     srcs = ["hello_output_test.sh"],
@@ -42,7 +42,7 @@ sh_test(
         "//tools/sh:lib",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 

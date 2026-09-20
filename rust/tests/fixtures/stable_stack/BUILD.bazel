@@ -1,11 +1,11 @@
-"""Stable-stack compose fixture (issue #494).
+"""Stable-stack compose fixture.
 
 Freezes the exact current stable Bzlmod identities plus the LLVM
 baseline-vs-target comparison with fixture evidence. The as-built stack
 (Bazel 9.2.0 plus rules_rust 0.74.0 plus rules_cc 0.2.22 plus Rust 1.98.0)
 composes on the seed host, proven by the Rust plus C++ hello fixtures;
 the hermetic-llvm v0.8.19 candidate backend plus corpus wiring stays
-provisional under issue #499. Ad-hoc compose stays rejected.
+provisional. Ad-hoc compose stays rejected.
 See `docs/native-toolchains.md#qualification-questions-and-delivery`.
 """
 

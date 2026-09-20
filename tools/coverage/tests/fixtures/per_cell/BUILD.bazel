@@ -1,4 +1,4 @@
-"""Per-cell coverage plus Codecov plus remote fixture (issue #507)."""
+"""Per-cell coverage plus Codecov plus remote fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

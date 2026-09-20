@@ -34,10 +34,10 @@ const (
 	// from @rules_rust//cargo), not a dx wrapper: the macro already owns
 	// the script-binary/runfiles split and stays self-describing.
 	scriptKind = "cargo_build_script"
-	// dxCrateKind is the leaf-crate boilerplate macro (issue #239): it
+	// dxCrateKind is the leaf-crate boilerplate macro: it
 	// expands to `<name>` rust_library + `<name>_test` rust_test + lint
 	// tests + manifest export. Corpus splits are owned by generation
-	// (issue #15), never by this macro. BUILD files hand-maintain it;
+	// , never by this macro. BUILD files hand-maintain it;
 	// generation must recognize it as covering the lib + unit-test it
 	// emits instead of proposing duplicate rust_library/rust_test rules.
 	dxCrateKind = "dx_rust_crate"
@@ -86,7 +86,7 @@ func shouldSetVisibility(args language.GenerateArgs) bool {
 func init() {
 	// Managed native-config targets merge through the same file the
 	// Rust rules live in, so their kinds register alongside. Corpus
-	// splits (`real_source_target` per content type, issue #15) merge
+	// splits (`real_source_target` per content type,) merge
 	// through the same file as well: every corpus block is written and
 	// maintained by this workflow (`dx generate`).
 	for kind, info := range nativeConfigKinds() {
@@ -422,7 +422,7 @@ func (l *rustLang) generateRules(args language.GenerateArgs) language.GenerateRe
 }
 
 // attachNative folds the native-config plan and the corpus split plan
-// (issue #15) into a generation result: planned config rules join the
+// into a generation result: planned config rules join the
 // generated set before claim validation, Rust rules bind their
 // aspect_hints, corpus splits join as fully owned targets, and planned
 // removals join the generic stale sweep. Claim collisions stay
@@ -447,7 +447,7 @@ func (l *rustLang) attachNative(args language.GenerateArgs, result language.Gene
 	for range corpus.gen {
 		result.Imports = append(result.Imports, targetImports{})
 	}
-	// Auto-testonly for fixture paths (issue #404): generated rules under
+	// Auto-testonly for fixture paths: generated rules under
 	// tests/fixtures/testdata carry testonly.
 	if isFixturePath(args.Rel) {
 		for _, r := range result.Gen {
@@ -778,7 +778,7 @@ func checkExistingClaims(file *rule.File, other, generated []*rule.Rule) error {
 	for _, proposed := range generated {
 		if kind, ok := claims[proposed.Name()]; ok && kind != proposed.Kind() {
 			// A hand-maintained dx_rust_crate macro owns the ordinary
-			// rust_library it expands to (issue #239): the macro stays
+			// rust_library it expands to: the macro stays
 			// the single owner and generation filters the covered lib
 			// before this check, so an unfiltered residue must not fail
 			// the run. Flavored libraries (proc-macro/cdylib/staticlib)
@@ -1368,7 +1368,7 @@ func addImport(sets [2]map[string]bool, localModules map[string]bool, raw string
 
 
 // isFixturePath reports whether a Gazelle relative directory is a test-only
-// fixture path (issue #404): any path containing tests, fixtures, or
+// fixture path: any path containing tests, fixtures, or
 // testdata as a segment generates testonly targets.
 func isFixturePath(rel string) bool {
     padded := "/" + rel + "/"

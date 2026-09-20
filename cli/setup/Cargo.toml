@@ -11,5 +11,5 @@ path = "src/lib.rs"
 thiserror = "2"
 
 [dev-dependencies]
-# Golden pilot (issue #225): setup fingerprint golden as an insta snapshot.
+# Golden pilot: setup fingerprint golden as an insta snapshot.
 insta = "1"

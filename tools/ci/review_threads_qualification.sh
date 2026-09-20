@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Review-thread limit plus accounting qualification harness (issue #592).
+# Review-thread limit plus accounting qualification harness.
 #
 # Freezes the per-PR review-thread limit plus deterministic accounting
-# left unfrozen under #509:
+# left unfrozen under:
 # - frozen: exactly 50 open integration-owned threads per PR across
 #   checks and platforms, no consumer setting, no fresh allowance per
 #   job/rerun/retry/parallel completion;
@@ -26,7 +26,7 @@
 # following //tools/ci:consumer_ci_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -61,7 +61,7 @@ else
   bad "github-ci.md qualification lost its frozen-limit plus remainder-open record under #592"
 fi
 
-# Contract footer owns the #592 freeze tracker with fixture proof.
+# Contract footer owns the freeze tracker with fixture proof.
 if grep -q -F -e 'Review-thread limit plus accounting frozen at 50 open' "$contract" &&
   grep -q -F -e 'tools/ci/tests/fixtures/review_threads/pins.bzl' "$contract" &&
   grep -q -F -e 'issue #592' "$contract"; then
@@ -81,7 +81,7 @@ else
   bad "testing/github-ci.md lost its frozen-50 review-thread limit case with accounting proof under #592"
 fi
 
-# Matrix qualification footer owns the #592 frozen record with honesty.
+# Matrix qualification footer owns the frozen record with honesty.
 if grep -q -F -e 'Review-thread limit plus accounting frozen at 50 open threads seed-only under issue #592' "$matrix" &&
   grep -q -F -e 'tools/ci/tests/fixtures/review_threads/pins.bzl' "$matrix" &&
   grep -q -F -e 'bazel run //tools/ci:review_threads_qualification' "$matrix" &&

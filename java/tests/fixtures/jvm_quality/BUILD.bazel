@@ -1,4 +1,4 @@
-"""JVM quality defaults fixture (issue #485)."""
+"""JVM quality defaults fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

@@ -1,4 +1,4 @@
-// Documentation IR schema (#10).
+// Documentation IR schema.
 //
 // Binary contract between per-language doc extractors, aggregation, and the
 // site renderer. Field and enum numbers are the v1 compatibility surface:

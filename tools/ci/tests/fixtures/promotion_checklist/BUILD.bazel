@@ -1,4 +1,4 @@
-"""Promotion checklist fixture (issue #611)."""
+"""Promotion checklist fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

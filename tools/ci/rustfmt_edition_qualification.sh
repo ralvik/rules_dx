@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rustfmt crate-edition qualification harness (issue #468).
+# Rustfmt crate-edition qualification harness.
 #
 # Qualifies the as-built edition-aware formatting gate with fixture evidence
 # and owned gaps, without claiming Supported:
@@ -21,7 +21,7 @@
 # following //tools/ci:parser_sample_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -39,14 +39,14 @@ matrix="quality/testdata/runner_matrix_cases.bzl"
 fixture_build="rust/tests/fixtures/hello/BUILD.bazel"
 fixture_src="rust/tests/fixtures/hello/edition_2015.rs"
 
-# Roadmap owns the delivered record under #468.
+# Roadmap owns the delivered record under.
 if grep -q -F -e 'rustfmt with crate edition delivered (issue #468' "$roadmap"; then
   ok
 else
   bad "roadmap lost its rustfmt delivered record under #468"
 fi
 
-# Verification matrix owns the qualified seed-only record under #468.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'rustfmt_edition_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #468' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:rustfmt_edition_qualification' "$verify"; then

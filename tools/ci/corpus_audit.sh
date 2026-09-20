@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Corpus ownership audit (issue #80): every applicable checked-in file must
+# Corpus ownership audit: every applicable checked-in file must
 # have a corpus owner (`real_source_target`), so the dx quality commands
 # actually cover the repository they claim to dogfood.
 #
@@ -9,7 +9,7 @@
 # workflow YAML. Exits 0 when fully covered, 1 listing orphan files.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -24,7 +24,7 @@ dx_mkscratch scratch
 head -1 third_party/dotnet/deps/paket.main.bzl | grep -q GENERATED
 head -1 third_party/dotnet/deps/paket.main_extension.bzl | grep -qi GENERATED
 
-# Issue #407: nested E2E removed, so no `integration/` carve-out. Every
+# Nested E2E removed, so no `integration/` carve-out. Every
 # checked-in applicable file must have a corpus owner; `bazel test //...`
 # covers the CLI contract hermetically with no nested workspace.
 

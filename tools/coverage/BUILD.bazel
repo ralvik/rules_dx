@@ -1,4 +1,4 @@
-"""Thin entry point over the promoted `dx_lcov` library (#74)."""
+"""Thin entry point over the promoted `dx_lcov` library."""
 
 # Source-only package (no Cargo manifest). The gate library now lives
 # at `//cli/lcov:dx_lcov`; this package owns only the `coverage_bin` entry
@@ -24,12 +24,12 @@ rust_binary(
     deps = ["//cli/lcov:dx_lcov"],
 )
 
-# First-party coverage PR summary renderer (issue #254): presents the
+# First-party coverage PR summary renderer: presents the
 # Bazel-owned gate verdict as the adopted compact summary comment.
 # Run by CI via `bazel run //tools/coverage:coverage_comment -- ...`.
 sh_binary(
     name = "coverage_comment",
     srcs = ["coverage_comment.sh"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )

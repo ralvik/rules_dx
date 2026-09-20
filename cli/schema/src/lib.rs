@@ -1,4 +1,4 @@
-//! Shared schema-version helpers for versioned shard protocols (#72).
+//! Shared schema-version helpers for versioned shard protocols.
 //!
 //! `quality/result`, `generation/result`, `docs/ir`, and `cli/output`
 //! all version their wire form with `schema_major = 1` / `schema_minor = 0`.
@@ -8,7 +8,7 @@
 //! [`check_major`] enforces the breaking axis only, so callers keep their own
 //! `UnsupportedMajor`-style payloads and messages.
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 

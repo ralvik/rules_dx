@@ -1,5 +1,5 @@
 //! Validation and codec helpers for the normalized codegen plan shard
-//! (issue #506 WP1, issue #506).
+//!.
 //!
 //! Contract: `docs/environments/codegen.md` (provider contract), schema
 //! `//generation:codegen.proto`. This crate enforces the checks that mirror
@@ -13,7 +13,7 @@
 //! and in the `dx` CLI collection; this crate only validates and encodes
 //! one contributor shard.
 
-// Issue #591 (extends #238 rollout beyond cli/*): infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -55,7 +55,7 @@ fn check_path(producer: &str, path: &str) -> Result<(), Error> {
     // Uses `dx_path::classify` for ladder order; EmptyComponent is
     // intentionally allowed to preserve parity with Starlark
     // `codegen_path_error`, which only rejects empty/absolute/backslash/dot
-    // segments (#72 slice 3).
+    // segments (slice 3).
     let reason = match dx_path::classify(path) {
         None => None,
         Some(dx_path::PathProblem::Empty) => Some("must be a non-empty workspace-relative path"),
@@ -137,7 +137,7 @@ pub fn validate(shard: &DxCodegenShard) -> Result<(), Error> {
             });
         }
         // Shared uniqueness control flow lives in `dx_proto_validate`; only
-        // the crate-local `Error` payload stays here (#72 slice).
+        // the crate-local `Error` payload stays here (slice).
         dx_proto_validate::check_unique_insert(&mut seen, &entry.logical_path, |existing| {
             Error::DuplicateLogicalPath {
                 producer: shard.producer.clone(),

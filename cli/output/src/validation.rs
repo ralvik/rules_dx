@@ -59,7 +59,7 @@ pub enum OutputError {
 /// failures surface before diff output or mutation planning.
 pub fn check_path(path: &str) -> Result<(), OutputError> {
     // Ladder order and messages mirror `dx_path::classify` one-to-one;
-    // only the error payload stays crate-local (#72 slice 5).
+    // only the error payload stays crate-local (slice 5).
     let reason = match dx_path::classify(path) {
         None => None,
         Some(dx_path::PathProblem::Empty) => Some("path must be non-empty"),

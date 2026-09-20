@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Signing program for `signed_release` (issue #459, live successor to
-# closed #311/#26 for the signing stack).
+# Signing program for `signed_release` (live successor to
+# closed / for the signing stack).
 #
 # Invoked via `bazel run :<name>` with pinned artifact paths as `$@`.
-# Selected stack (issue #459 decision, no stack change): Sigstore keyless
+# Selected stack (decision, no stack change): Sigstore keyless
 # (`cosign sign-blob --bundle` v2.4.1 pinned per
 # `deploy/release/signing.bzl` SIGNING_COSIGN_VERSION, Fulcio OIDC + Rekor
 # public-good on the TUF trust root) plus GitHub Artifact Attestations
@@ -11,7 +11,7 @@
 # `application/vnd.dev.sigstore.bundle.v0.3+json` (0.1/0.2 only if
 # declared). Host tools resolved at run time; no new module dependencies.
 #
-# Safety (issue #5): never runs on CI push/PR. With
+# Safety: never runs on CI push/PR. With
 # `RELEASE_SIGN_DRY_RUN=1` prints the would-run commands and publishes
 # nothing (what CI exercises). Real signing needs the tag pushed
 # beforehand, explicit owner approval, and OIDC identity per

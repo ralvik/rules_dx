@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Shell-env default vs annotation extension qualification harness (issue #472).
+# Shell-env default vs annotation extension qualification harness.
 #
-# Decides the owned gap from closed #303: ambiguous default rejected, global
+# Decides the owned gap from closed: ambiguous default rejected, global
 # hermetic False with a narrow per-crate opt-in.
 # - decided: every build script runs without the host shell environment.
 #   First-party `cargo_build_script` rules emit `use_default_shell_env = 0`
@@ -25,7 +25,7 @@
 # following //tools/ci:rustfmt_edition_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -47,7 +47,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Global hermetic default stays pinned False in .bazelrc (issue #472).
+# Global hermetic default stays pinned False in.bazelrc.
 if grep -q -F -e 'build --@rules_rust//cargo/settings:use_default_shell_env=False' "$bazelrc" &&
   grep -q -F -e 'issue #472' "$bazelrc"; then
   ok
@@ -167,7 +167,7 @@ else
   bad "ci.yml lost the shell_env_qualification step (want dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified seed-only record under #472.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'shell_env_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #472' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:shell_env_qualification' "$verify"; then

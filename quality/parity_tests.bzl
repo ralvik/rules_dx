@@ -69,7 +69,7 @@ def adapter_backed_classes():
     """Returns the sorted adapter-backed classes via registry query.
 
     Derived from `REAL_ADAPTERS` capabilities, never duplicated, so adding
-    an adapter claim edits the adapter registry data only (issue #321).
+ an adapter claim edits the adapter registry data only.
     """
     return sorted(_adapter_backed_classes().keys())
 
@@ -77,7 +77,7 @@ def deferred_classes():
     """Returns the sorted explicitly deferred classes via registry query.
 
     Derived from `PARITY_DEFERRED` keys, never duplicated, so adding a
-    deferral edits this one data map only (issue #321).
+ deferral edits this one data map only.
     """
     return sorted(PARITY_DEFERRED.keys())
 
@@ -90,7 +90,7 @@ def _is_canonical_token(text):
     return True
 
 def parity_schema_error():
-    """Validates the versioned parity-gate schema (issue #321).
+    """Validates the versioned parity-gate schema.
 
     Checks data shape without pinning exact contents, so adding a deferred
     class edits the deferral data only: version is v1, every deferred ID

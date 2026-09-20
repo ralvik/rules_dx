@@ -34,7 +34,7 @@ pub const WATCHABLE_COMMANDS: &[&str] = &[
 /// daemon, cache, graph, or remote): each iteration re-resolves its scope,
 /// holds the `run` selection rule for that scope (single-runnable for
 /// file/directory scopes, sequential multirun for explicit labels and
-/// patterns per issue #463), and refuses when running under
+/// patterns), and refuses when running under
 /// CI. Any violation blocks the iteration.
 pub fn watch_iteration_accepts(
     scope_reresolved: bool,
@@ -127,7 +127,7 @@ mod tests {
 
     #[test]
     fn watch_execution_gaps_matrix_is_wont_fix() {
-        // Issue #590: the 8 thin-loop commands stay watchable; the
+        // The 8 thin-loop commands stay watchable; the
         // remaining 21 registry commands stay fail-closed not watchable
         // and CI stays refused. Pinned with fixtures in
         // `cli/cli/tests/fixtures/cli_execution_gaps/`.
@@ -188,7 +188,7 @@ mod tests {
 
     #[test]
     fn watch_coalesces_bursts_into_a_single_trigger() {
-        // Issue #223: rapid create/modify/delete bursts collapse to one
+        // Rapid create/modify/delete bursts collapse to one
         // deterministic rebuild trigger per path.
         let first = PathBuf::from("/tmp/ws/src/main.rs");
         let second = PathBuf::from("/tmp/ws/src/lib.rs");
@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn watch_reports_created_files_and_times_out_when_idle() {
-        // Issue #223: a real `notify` watcher emits a debounced trigger
+        // A real `notify` watcher emits a debounced trigger
         // for a created file, and reports empty when nothing changes.
         let scratch = dx_test_scratch::scratch("dx-adopt-watch-");
         let root = scratch.path().to_path_buf();

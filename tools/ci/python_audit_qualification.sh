@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Python source-audit split qualification harness (issue #613).
+# Python source-audit split qualification harness.
 #
 # Splits Python source-audit tooling out of the quality family taxonomy
-# (issue #512 stays taxonomy-only) with fixture evidence:
+# (stays taxonomy-only) with fixture evidence:
 # - disposition: no selected audit tool in v1; curated audit stays empty
 #   with explicit disablement for the python family, Bandit excluded from
 #   v1 by ADR 0019, secrets ride the separate Gitleaks family;
@@ -21,7 +21,7 @@
 # following //tools/ci:quality_taxonomy_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -42,7 +42,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture files stay present (issue #613).
+# Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$expected" ]]; then
   ok
 else
@@ -93,7 +93,7 @@ else
   bad "adapters.bzl must carry no audit capability under issue #613 (python audit has no adapter claim)"
 fi
 
-# Support matrix owns the split Python audit record under #613.
+# Support matrix owns the split Python audit record under.
 if grep -q -F -e 'qualified seed-only under issue #613' "$support" &&
   grep -q -F -e 'python_audit_qualification' "$support" &&
   grep -q -F -e 'python/tests/fixtures/python_audit/pins.bzl' "$support" &&
@@ -104,7 +104,7 @@ else
   bad "docs/product/support-matrix.md lost its #613 Python audit record with fixtures plus qualification"
 fi
 
-# Support matrix keeps #512 taxonomy-only with no Python audit ownership.
+# Support matrix keeps taxonomy-only with no Python audit ownership.
 if grep -q -F -e 'issue #512 stays taxonomy-only' "$support" &&
   grep -q -F -e 'qualified seed-only under issue #512' "$support" &&
   grep -q -F -e 'quality_taxonomy_qualification' "$support"; then
@@ -113,7 +113,7 @@ else
   bad "docs/product/support-matrix.md lost its #512 taxonomy-only split record"
 fi
 
-# Tool baseline owns the #613 audit-open record with Bandit honesty.
+# Tool baseline owns the audit-open record with Bandit honesty.
 if grep -q -F -e 'issue #613' "$baseline" &&
   grep -q -F -e 'python/tests/fixtures/python_audit/pins.bzl' "$baseline" &&
   grep -q -F -e 'bazel run //tools/ci:python_audit_qualification' "$baseline" &&
@@ -123,7 +123,7 @@ else
   bad "docs/tools/tool-baseline.md lost its #613 audit-open record with fixtures plus qualification"
 fi
 
-# Action model owns the #613 audit-selection record with empty audit plus Bandit.
+# Action model owns the audit-selection record with empty audit plus Bandit.
 if grep -q -F -e 'qualified seed-only under issue #613' "$action_doc" &&
   grep -q -F -e 'python/tests/fixtures/python_audit/pins.bzl' "$action_doc" &&
   grep -q -F -e 'python_audit.expected' "$action_doc" &&
@@ -134,7 +134,7 @@ else
   bad "docs/quality/action-model.md lost its #613 audit-selection record with fixtures plus qualification"
 fi
 
-# Python foundation ADR owns the #613 source-audit selection.
+# Python foundation ADR owns the source-audit selection.
 if grep -q -F -e 'issue #613' "$python_adr" &&
   grep -q -F -e 'python/tests/fixtures/python_audit/pins.bzl' "$python_adr" &&
   grep -q -F -e 'bazel run //tools/ci:python_audit_qualification' "$python_adr"; then
@@ -143,7 +143,7 @@ else
   bad "docs/decisions/0010-python-foundation.md lost its #613 source-audit selection record"
 fi
 
-# Verification matrix owns the qualified seed-only record under #613.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'python_audit_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #613' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:python_audit_qualification' "$verify" &&

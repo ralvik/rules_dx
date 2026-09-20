@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Publication-trust harness (issues #78, #26, #5, #311): machine-checks
+# Publication-trust harness: machine-checks
 # the draft-only + nothing-published invariants that the release-hygiene
 # harness does not own.
 #
@@ -10,7 +10,7 @@
 # `deploy/rules/github.bzl`, tags validate against the launcher-safe
 # charset with the `v0.0.0-dryrun` placeholder default, and the deploy
 # program always passes `--draft --verify-tag` so it never creates or
-# pushes tags. BCR runs owner-gated dry-run-first per #311
+# pushes tags. BCR runs owner-gated dry-run-first per 
 # (`BCR_DRY_RUN=1` prints would-submit, submits nothing; no
 # auto-submit in workflows). The module stays `rules_dx` at `0.0.0`, an
 # unpublishable shape, and SECURITY.md still records that no release
@@ -23,12 +23,12 @@
 # at every site, draft-only flags on the real `gh release create`
 # path, no unflagged executable release-create lines, the tag charset
 # gate, the SECURITY.md no-release record, plus install-time
-# publisher-identity verification (#26 implemented via
+# publisher-identity verification
 # //deploy/install:dx_verify: bundle-required, no checksum-only
 # fallback, TUF trust root, fail-before-install) plus seed exercised
 # path (standalone wired, draft dry-run with GH_RELEASE_DRY_RUN=1 still
 # publishing nothing, BCR shape checked-not-submitted, verifier refusal
-# proved in the workflow) plus the full #311 release path (matrix
+# proved in the workflow) plus the full release path (matrix
 # frozen with seed qualified, SBOM SPDX-2.3 + SLSA v1 wired, signing
 # Sigstore keyless + attestation selected with dry-run gate, BCR
 # owner-gated with dry-run gate, human-run driver with tag ceiling,
@@ -39,7 +39,7 @@
 # following //tools/ci:release_hygiene.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -60,7 +60,7 @@ else
   bad "MODULE.bazel drifted from the unpublishable version 0.0.0"
 fi
 
-# BCR runs owner-gated dry-run-first per #311: no auto-submit tooling
+# BCR runs owner-gated dry-run-first per: no auto-submit tooling
 # runs in any workflow (no publish-to-bcr, no BCR_APPROVE=1); the
 # dry-run prints would-submit via //deploy/release:bcr_demo.
 if grep -rn -E -e 'publish-to-bcr|bcr publish|bazel-central-registry' .github/ | grep -v -E -e '^\s*#' | head -n 5 | grep -q .; then
@@ -133,9 +133,9 @@ else
   bad "SECURITY.md lost the no-release-exists record"
 fi
 
-# Install-time publisher-identity verification is implemented per #26:
+# Install-time publisher-identity verification is implemented per:
 # the verifier requires a bundle plus identity/issuer, refuses
-# checksum-only, and fails before install/exec on the #26 trust root.
+# checksum-only, and fails before install/exec on the trust root.
 if [[ -f "deploy/install/dx_verify.sh" ]] &&
   grep -q -F -e 'checksum-only verification is not publisher-identity proof' deploy/install/dx_verify.sh &&
   grep -q -F -e 'tuf-repo-cdn.sigstore.dev' deploy/install/dx_verify.sh; then
@@ -153,7 +153,7 @@ else
   bad "seed-host standalone archive missing (//cli/cli:dx_standalone, #26)"
 fi
 
-# Seed exercised path stays draft-only (issue #78): the workflow runs
+# Seed exercised path stays draft-only: the workflow runs
 # //cli/cli:github_draft with GH_RELEASE_DRY_RUN=1 on the placeholder
 # tag with draft-only flags, and the report records published False.
 if grep -q -F -e 'GH_RELEASE_DRY_RUN=1 bazel run //cli/cli:github_draft' .github/workflows/publish-dry-run.yml && grep -q -F -e '"published": False' .github/workflows/publish-dry-run.yml && grep -q -F -e '--draft --verify-tag' .github/workflows/publish-dry-run.yml; then
@@ -162,7 +162,7 @@ else
   bad "publish dry run lost the draft-only exercised record (GH_RELEASE_DRY_RUN=1 + published False, issue #78)"
 fi
 
-# BCR shape stays checked-not-submitted (issue #311): the workflow runs
+# BCR shape stays checked-not-submitted: the workflow runs
 # //deploy/release:bcr_demo in BCR_DRY_RUN=1 mode and records submitted
 # False without auto-submitting.
 if grep -q -F -e '"submitted": False' .github/workflows/publish-dry-run.yml && grep -q -F -e 'BCR_DRY_RUN=1 bazel run //deploy/release:bcr_demo' .github/workflows/publish-dry-run.yml; then
@@ -171,7 +171,7 @@ else
   bad "publish dry run lost the BCR owner-gated record (BCR_DRY_RUN=1 + submitted False, issue #311)"
 fi
 
-# Verifier refusal stays exercised in the workflow (issue #78
+# Verifier refusal stays exercised in the workflow
 # signing-first): checksum-only refused on the TUF trust root with
 # nothing installed, without network.
 if grep -q -F -e 'verify-refusal.log' .github/workflows/publish-dry-run.yml && grep -q -F -e 'checksum-only verification is not publisher-identity proof' .github/workflows/publish-dry-run.yml; then
@@ -180,7 +180,7 @@ else
   bad "publish dry run lost the verifier-refusal exercised record (issue #78)"
 fi
 
-# Full matrix frozen per #311: five cells, seed qualified, four
+# Full matrix frozen per: five cells, seed qualified, four
 # follow-ups unqualified with owner-approval qualification.
 if [[ -f "deploy/release/matrix.bzl" ]] &&
   grep -q -F -e 'dx-linux-x86_64' deploy/release/matrix.bzl &&
@@ -191,7 +191,7 @@ else
   bad "release matrix missing frozen five-cell shape (deploy/release/matrix.bzl + workflow, #311)"
 fi
 
-# SBOM/provenance selected per #311: SPDX-2.3 + SLSA v1 wired in the
+# SBOM/provenance selected per: SPDX-2.3 + SLSA v1 wired in the
 # macro and exercised in the workflow, publishing nothing.
 if grep -q -F -e 'SPDX-2.3' deploy/release/sbom.bzl &&
   grep -q -F -e 'https://slsa.dev/provenance/v1' deploy/release/sbom.bzl &&
@@ -201,7 +201,7 @@ else
   bad "SBOM/provenance selection missing (SPDX-2.3 + SLSA v1 via //deploy/release:sbom_demo, #311)"
 fi
 
-# Signing/attestation selected per #311: Sigstore keyless + GitHub
+# Signing/attestation selected per: Sigstore keyless + GitHub
 # attestations on the TUF trust root, dry-run gate in workflow.
 if grep -q -F -e 'tuf-repo-cdn.sigstore.dev' deploy/release/signing.bzl &&
   grep -q -F -e 'RELEASE_SIGN_DRY_RUN=1 bazel run //deploy/release:signing_demo' .github/workflows/publish-dry-run.yml; then
@@ -210,7 +210,7 @@ else
   bad "signing selection missing (Sigstore keyless + attestation dry-run via //deploy/release:signing_demo, #311)"
 fi
 
-# BCR owner-gated tooling per #311: macro plus dry-run gate in workflow.
+# BCR owner-gated tooling per: macro plus dry-run gate in workflow.
 if [[ -f "deploy/release/bcr.bzl" ]] &&
   grep -q -F -e 'BCR_DRY_RUN=1' deploy/release/bcr_deploy.sh &&
   grep -q -F -e 'BCR_DRY_RUN=1 bazel run //deploy/release:bcr_demo' .github/workflows/publish-dry-run.yml; then
@@ -219,7 +219,7 @@ else
   bad "BCR owner-gated tooling missing (deploy/release/bcr.bzl + BCR_DRY_RUN=1, #311)"
 fi
 
-# Human-run driver per #458 (live successor to closed #311 for the
+# Human-run driver per (live successor to closed for the
 # human-run path): dry-run by default, tag ceiling, owner
 # approval gate, exercised in the workflow.
 if [[ -f "deploy/release/release.sh" ]] &&

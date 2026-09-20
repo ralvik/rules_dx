@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Exact-target discovery qualification harness (issue #475).
+# Exact-target discovery qualification harness.
 #
 # Qualifies the owned gap from support-matrix 133-142: target resolution
 # is the all-direct-owners query strategy but the exact-target path was
@@ -32,7 +32,7 @@
 # following //tools/ci:bindgen_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -56,7 +56,7 @@ query="cli/cli/src/resolve/query.rs"
 entry="cli/cli/src/resolve/entry.rs"
 ide_test="rust/ide/ide_acquisition_test.sh"
 
-# Fixture pair plus pins stay present (issue #475).
+# Fixture pair plus pins stay present.
 if [[ -f "$pins" && -f "$fixture_build" ]]; then
   ok
 else
@@ -189,7 +189,7 @@ else
   bad "ci.yml lost the exact_target_qualification step (want dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified seed-only record under #475.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'exact_target_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #475' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:exact_target_qualification' "$verify" &&

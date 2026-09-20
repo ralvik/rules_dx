@@ -1,4 +1,4 @@
-"""Native quality defaults fixture (issue #487)."""
+"""Native quality defaults fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

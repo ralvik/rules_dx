@@ -1,4 +1,4 @@
-"""Adopted foreign Kotlin tree (#195): handwritten owners preserved through generation."""
+"""Adopted foreign Kotlin tree: handwritten owners preserved through generation."""
 
 load("@rules_dx//kotlin/rules:defs.bzl", "kotlin_library", "kotlin_test")
 load("//quality:fixtures.bzl", "real_source_target")

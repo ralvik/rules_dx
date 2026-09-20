@@ -1,4 +1,4 @@
-# Loose Ruff policy example (issue #615 default).
+# Loose Ruff policy example (default).
 #
 # Mirrors the repository loose pin (E4, E7, E9, F): the default-equivalent
 # selection used without a strict opt-in. Pinned upstream defaults stay

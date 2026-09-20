@@ -1,15 +1,8 @@
-"""Strict preset decision pins (issue #615).
+"""Strict preset decision pins.
 
 Contract: `docs/quality/strict-preset.md`,
 `docs/quality/native-configuration.md#authority`,
 `docs/tools/tool-baseline.md#curated-differences`.
-
-Decides default-loose vs strict-opt-in for users: the default stays
-loose (curated defaults plus pinned upstream built-in defaults, no
-hidden presets), strict is opt-in via checked-in native configs copied
-from the documented examples. Forcing strict by default is rejected
-(upgrade break, needs a major release). Quality only; no behavior
-change for existing consumers.
 """
 
 # Decision: default stays loose, strict is opt-in.
@@ -32,7 +25,7 @@ BIOME_STRICT_NO_UNUSED_VARIABLES = '"noUnusedVariables": "error"'
 # TypeScript strict (tsc reads the user tsconfig; strict true is the opt-in).
 TSC_STRICT = '"strict": true'
 
-# Vale strict stays markers-only (prose wont-fix per issue #589).
+# Vale strict stays markers-only (prose wont-fix).
 VALE_STRICT = "markers-only Dx.Markers with MinAlertLevel suggestion, prose wont-fix per issue #589"
 
 # Live proof labels (defaults unchanged; no adapter or default change).

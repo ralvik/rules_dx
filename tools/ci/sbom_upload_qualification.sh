@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SBOM plus provenance upload qualification harness (issue #612).
+# SBOM plus provenance upload qualification harness.
 #
 # Owns SBOM plus provenance build plus verify plus upload on CI with fixture
 # evidence pinned in `tools/ci/tests/fixtures/sbom_upload/pins.bzl` (plus
@@ -22,7 +22,7 @@
 # following //tools/ci:promotion_checklist_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -115,7 +115,7 @@ else
   bad "publish-dry-run.yml lost its sbom_demo plus release-tests exercise (#612)"
 fi
 
-# Runbook records CI upload plus owner-gated attestation under #612.
+# Runbook records CI upload plus owner-gated attestation under.
 if grep -q -F -e 'issue #612' "$runbook" &&
   grep -q -F -e 'sbom-provenance' "$runbook" &&
   grep -q -F -e 'owner-gated human-run' "$runbook" &&

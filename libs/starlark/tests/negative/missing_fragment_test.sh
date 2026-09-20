@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Missing-fragment negative proof (issue #406): the absent substring
+# Missing-fragment negative proof: the absent substring
 # must be reported as missing with the exact user-visible diagnostic,
 # while this harness passes. If the fixture stops failing (substring
 # added), this test fails.
@@ -8,7 +8,7 @@
 # substring). Hermetic: sandbox-only, TEST_TMPDIR scratch, offline.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
 dx_test_init

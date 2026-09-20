@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Scala + .NET quality defaults qualification harness (issue #486).
+# Scala +.NET quality defaults qualification harness.
 #
 # Qualifies the provisional Scala + .NET format plus lint defaults against the
-# native-configuration contract with no hidden presets. Issue #417 covers
+# native-configuration contract with no hidden presets. covers
 # adapters (plus digests), not versions: this harness owns versions plus
 # rule-sets.
 # - pinned: Scalafmt 3.11.4, Scalafix 0.14.7, CSharpier 1.3.0 (targets
@@ -11,7 +11,7 @@
 #   follows the qualified .NET SDK) in
 #   `scala/tests/fixtures/scala_dotnet_quality/pins.bzl` (living at head
 #   rejected); managed-JVM plus exact-package identities recorded, digests
-#   stay owned under issue #417.
+# stay owned.
 # - rule-sets: native-configuration sole policy, no hidden presets. Without
 #   an applicable checked-in native config the pinned tool uses upstream
 #   built-in defaults; with a config it interprets natively; adapters add
@@ -24,14 +24,14 @@
 # - fixtures: `scala/tests/fixtures/scala_dotnet_quality/` pins plus BUILD;
 #   no Scala + .NET native-config preset, no adapter claim, no curated
 #   defaults, no matrix cells; scala/csharp/fsharp hello fixtures stay green.
-# - open owned gaps: digests plus adapters under #417, platform plus consumer
+# - open owned gaps: digests plus adapters under, platform plus consumer
 #   plus release evidence, no `Supported` claim. Compatibility is defaults only.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:scala_dotnet_defaults_qualification`,
 # following //tools/ci:jvm_quality_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -55,7 +55,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture pair plus pins stay present (issue #486).
+# Fixture pair plus pins stay present.
 if [[ -f "$pins" && -f "$pins_build" ]]; then
   ok
 else
@@ -118,7 +118,7 @@ fi
 
 # No false adapter claim for the Scala + .NET cohort: none of the cohort
 # tool IDs appear in REAL_ADAPTERS. Classification exists; adapter claim
-# does not (owned under issue #417).
+# does not (owned).
 cohort_claim=""
 for tool in scalafmt scalafix csharpier fantomas fsharplint roslyn; do
   if grep -q -F -e "\"$tool\":" "$adapters"; then
@@ -133,7 +133,7 @@ fi
 
 # Classification-only today: scala/csharp/fsharp families carry no curated
 # defaults, no runner-matrix cells (claims land only with green adapter
-# evidence under issue #417; StyleCop stays opt-in, never default).
+# evidence; StyleCop stays opt-in, never default).
 cohort_curated=""
 for family in '"scala": {' '"csharp": {' '"fsharp": {'; do
   if grep -q -F -e "$family" "$curated"; then
@@ -150,7 +150,7 @@ else
 fi
 
 # Support matrix keeps the qualified Scala + .NET versions plus rule-sets
-# with fixtures and harness (issue #486); digests plus adapters stay under #417.
+# with fixtures and harness; digests plus adapters stay under.
 if grep -q -F -e 'qualified seed-only under issue #486' "$support" &&
   grep -q -F -e 'scala_dotnet_defaults_qualification' "$support" &&
   grep -q -F -e 'scala/tests/fixtures/scala_dotnet_quality/pins.bzl' "$support" &&
@@ -174,7 +174,7 @@ fi
 
 # Tool acquisition keeps the decided managed-JVM route for Scalafmt/Scalafix
 # with no source-built route and no false claim; versions qualified under
-# #486, digests plus adapters stay pending under #417.
+# , digests plus adapters stay pending under.
 if grep -q -F -e 'Decided route: Scalafmt and Scalafix take the' "$acquisition" &&
   grep -q -F -e 'same shared managed JDK and Maven-lock story' "$acquisition" &&
   grep -q -F -e 'adapter claims `scala` yet' "$acquisition" &&
@@ -187,8 +187,8 @@ fi
 
 # Tool acquisition keeps the decided exact-package plus shared-.NET-runtime
 # route for CSharpier/Fantomas with no installer on the consumer path and
-# no false claim; versions qualified under #486, bounds plus adapters stay
-# pending under #417.
+# no false claim; versions qualified under, bounds plus adapters stay
+# pending under.
 if grep -q -F -e 'Decided route: CSharpier and Fantomas take the' "$acquisition" &&
   grep -q -F -e 'no consumer runs `dotnet tool install`' "$acquisition" &&
   grep -q -F -e 'no adapter claims `csharp` or' "$acquisition" &&
@@ -212,7 +212,7 @@ else
 fi
 
 # Tool integrations keep the Scala + .NET adapter-input notes with open
-# parser work plus #486 pinned versions (adapters still open under #417).
+# parser work plus pinned versions (adapters still open under).
 if grep -q -F -e 'Scala + .NET cohort' "$integrations" &&
   grep -q -F -e 'no adapter claims `scala`, `csharp`, or' "$integrations" &&
   grep -q -F -e 'no machine-readable CLI output' "$integrations" &&
@@ -231,7 +231,7 @@ else
   bad "native-configuration lost its sole-policy plus no-hidden-preset honesty"
 fi
 
-# Verification matrix owns the qualified seed-only record under #486.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'scala_dotnet_defaults_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #486' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:scala_dotnet_defaults_qualification' "$verify" &&

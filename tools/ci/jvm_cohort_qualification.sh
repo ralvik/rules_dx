@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# JVM-cohort qualification harness (issue #416).
+# JVM-cohort qualification harness.
 #
 # Qualifies the as-built JVM quality-cohort record with fixture evidence
 # and owned gaps, without claiming Supported and without a false adapter
@@ -10,16 +10,16 @@
 #   one managed JDK cohort; no Maven-module reconstruction, no
 #   installer/solver/compiler on the consumer path), initial artifact
 #   research rows as observations for digests (versions qualified seed-only
-#   under issue #485), provisional SARIF-native
+# , provisional SARIF-native
 #   adapter-input notes with Error Prone javac-diagnostic parsing itemized
 #   as open work (never silently dropped), native-config defaults qualified
-#   seed-only under issue #485 (SpotBugs default effort, PMD default ruleset,
+# seed-only (SpotBugs default effort, PMD default ruleset,
 #   Error Prone default severities, detekt buildUponDefaultConfig, ktlint
 #   standard as upstream built-in defaults with no hidden preset),
 #   parity-deferred java/kotlin
 #   with owner plus frozen route, classification-only taxonomy with no
 #   curated defaults and no native-config binding;
-# - open under #416 with honest records: exact artifact digests
+# - open under with honest records: exact artifact digests
 #   plus shared-JDK cohort qualification, SARIF parser plus runner-matrix
 #   pass/fail plus fix/format evidence per adapter-backed class,
 #   native-config qualification against the native-config contract,
@@ -30,7 +30,7 @@
 # following //tools/ci:file_family_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -67,7 +67,7 @@ else
 fi
 
 # Parity deferrals own java/kotlin with owner plus frozen route plus the
-# #416 live-successor record (closed #307 owns nothing here).
+# live-successor record (closed owns nothing here).
 if grep -q -F -e '"java": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"kotlin": ["ADR 0019"' "$parity" &&
   grep -q -F -e 'complete upstream artifact plus shared JDK (google-java-format, Checkstyle, PMD, SpotBugs)' "$parity" &&
@@ -101,7 +101,7 @@ else
 fi
 
 # No hidden JVM native-config preset: no JVM binding exists in the typed
-# native-config rules (adapters run pinned upstream defaults until #416
+# native-config rules (adapters run pinned upstream defaults until 
 # qualifies checked-in policy against the native-config contract).
 jvm_config=""
 for tool in google-java-format checkstyle pmd spotbugs ktfmt ktlint detekt; do
@@ -129,7 +129,7 @@ fi
 
 # Tool acquisition keeps the decided complete-upstream-artifact plus
 # shared-JDK route with no Maven reconstruction and no false claim,
-# owned by #416 (live successor to closed #307 for this cohort).
+# owned by (live successor to closed for this cohort).
 if grep -q -F -e 'Decided route: google-java-format, Checkstyle,' "$acquisition" &&
   grep -q -F -e 'ktlint executable JAR) sharing the one managed JDK cohort runtime' "$acquisition" &&
   grep -q -F -e 'no adapter claims `java` or `kotlin` yet' "$acquisition" &&
@@ -158,7 +158,7 @@ fi
 # Tool integrations keep the JVM adapter-input notes: SARIF
 # shapes as unproven mappings, Error Prone javac-diagnostic parsing
 # itemized as open work (never silently dropped), versions qualified under
-# #485 with digests as observations, no adapter claim.
+# with digests as observations, no adapter claim.
 if grep -q -F -e '**JVM cohort (issue #416' "$integrations" &&
   grep -q -F -e 'unproven mappings' "$integrations" &&
   grep -q -F -e 'observations, not pins' "$integrations" &&
@@ -171,7 +171,7 @@ else
 fi
 
 # Support matrix keeps the JVM route plus qualified native-config defaults
-# (issue #485) plus SARIF notes plus cohort tracking, all citing #416 for
+# plus SARIF notes plus cohort tracking, all citing for
 # adapters/digests without approving hidden presets or claiming support.
 if grep -q -F -e 'take the complete-upstream-artifact plus shared-JDK route (issue #416' "$support" &&
   grep -q -F -e 'qualified seed-only under issue #485' "$support" &&

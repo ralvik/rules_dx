@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starlark testing futures qualification harness (issue #588).
+# Starlark testing futures qualification harness.
 #
 # Qualifies the nine per-future decisions under ADR 0009
 # (provisional pending concrete use cases):
@@ -22,7 +22,7 @@
 # following //tools/ci:update_events_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -40,7 +40,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Docs decide the nine futures under #588 with ADR plus fixtures plus qualification.
+# Docs decide the nine futures under with ADR plus fixtures plus qualification.
 if grep -q -F -e 'Decided under issue #588' "$doc" &&
   grep -q -F -e 'provisional pending concrete use cases' "$doc" &&
   grep -q -F -e 'libs/starlark/tests/fixtures/starlark_futures/' "$doc" &&

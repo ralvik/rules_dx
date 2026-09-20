@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Seed-cell coverage gate harness (issue #89 item 1).
+# Seed-cell coverage gate harness (item 1).
 #
 # Every required configuration/platform cell gates its own combined LCOV
 # report: no cross-platform union, no averaged percentages, no rounding
-# up. The seed host plus Linux arm64 native (issues #5/#410) plus the two
-# Linux static-musl profiles (issue #411) plus macOS arm64 native (issue
-# #412) plus macOS x86_64 best-effort native (issue #413, non-blocking)
-# plus Windows x86_64 MSVC-compatible native (issue #414) qualify;
+# up. The seed host plus Linux arm64 native plus the two
+# Linux static-musl profiles plus macOS arm64 native (issue
+# plus macOS x86_64 best-effort native (non-blocking)
+# plus Windows x86_64 MSVC-compatible native qualify;
 # this harness wires the seed cell end to end through the versioned
 # inventory at tools/coverage/seed-inventory.txt and the `coverage_bin`
 # gate CLI (the arm64 twin gates tools/coverage/arm64-inventory.txt in
@@ -29,7 +29,7 @@
 # following //tools/ci:target_tags.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -41,7 +41,7 @@ check_bin="bazel-bin/tools/coverage/coverage_bin"
 inventory="tools/coverage/seed-inventory.txt"
 dx_mkscratch scratch
 
-# Issue #252: `bazel coverage` above leaves `coverage_bin` instrumented
+# `bazel coverage` above leaves `coverage_bin` instrumented
 # (`-C instrument-coverage`), and the harness executes it directly 7x from
 # the workspace root. With `LLVM_PROFILE_FILE` unset, Rust writes
 # `default_%m_%p.profraw` to CWD per invocation. Redirect profiles into the
@@ -54,7 +54,7 @@ if [[ ! -x "$check_bin" ]]; then
 fi
 
 # Real scoped coverage for the seed inventory scope, then the real gate.
-# The gate library lives at //cli/lcov:dx_lcov since the #74 promotion;
+# The gate library lives at //cli/lcov:dx_lcov since the promotion;
 # the thin binary shim stays at //tools/coverage:coverage_bin. Both scopes
 # are covered together so the inventory (library + shim) matches Bazel.
 bazel coverage --noshow_progress //cli/lcov/... //tools/coverage/... \
@@ -73,7 +73,7 @@ else
   bad "seed cell gate did not pass: rc=$gate_rc out=$gate_out"
 fi
 
-# The arm64 cell gates the same first-party scope (issue #410): the same
+# The arm64 cell gates the same first-party scope: the same
 # real report passes the arm64 inventory, so all seven versioned
 # inventories stay functionally in sync (the CI coverage-arm64 job gates
 # the arm64 runner's own report per-cell with no union).
@@ -86,7 +86,7 @@ else
   bad "arm64 cell gate did not pass: rc=$arm64_rc out=$arm64_out"
 fi
 
-# The static-musl cells gate the same first-party scope (issue #411):
+# The static-musl cells gate the same first-party scope:
 # the same real report passes both musl inventories, so all seven
 # versioned inventories stay functionally in sync (the CI
 # coverage-musl-x86_64 plus coverage-musl-arm64 jobs gate their own
@@ -109,7 +109,7 @@ else
   bad "musl arm64 cell gate did not pass: rc=$musl_arm64_rc out=$musl_arm64_out"
 fi
 
-# The macOS arm64 cell gates the same first-party scope (issue #412):
+# The macOS arm64 cell gates the same first-party scope:
 # the same real report passes the macos-arm64 inventory, so all seven
 # versioned inventories stay functionally in sync (the CI
 # coverage-macos-arm64 job gates its own macos-14 runner report per-cell
@@ -124,7 +124,7 @@ else
 fi
 
 # The macOS x86_64 best-effort cell gates the same first-party scope
-# (issue #413, non-blocking): the same real report passes the
+# (non-blocking): the same real report passes the
 # macos-x86_64 inventory, so all seven versioned inventories stay
 # functionally in sync (the CI coverage-macos-x86_64 job gates its own
 # macos-15-intel runner report per-cell with no union; gaps never block
@@ -138,7 +138,7 @@ else
   bad "macos x86_64 cell gate did not pass: rc=$macos_x86_64_rc out=$macos_x86_64_out"
 fi
 
-# The Windows x86_64 cell gates the same first-party scope (issue #414):
+# The Windows x86_64 cell gates the same first-party scope:
 # the same real report passes the windows-x86_64 inventory, so all seven
 # versioned inventories stay functionally in sync (the CI
 # coverage-windows-x86_64 job gates its own windows-latest runner report

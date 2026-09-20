@@ -3,7 +3,7 @@
 Each `vue_env_plan` reads the analyzed authoritative providers of one
 `vue_library` wrapper: the preserved `JsInfo` plus `QualitySourcesInfo`.
 Focused-target only. Binaries/tests share the same closure through
-`data`/runfiles. Repository/root/exact-target orchestration remains issue #506.
+`data`/runfiles. Repository/root/exact-target orchestration remains.
 """
 
 load("//quality:fixtures.bzl", "real_source_target")

@@ -1,4 +1,4 @@
-"""Scalafix console + semanticdb-classpath wiring fixture (issue #490)."""
+"""Scalafix console + semanticdb-classpath wiring fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

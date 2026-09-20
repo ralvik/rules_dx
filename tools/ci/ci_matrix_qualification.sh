@@ -1,32 +1,32 @@
 #!/usr/bin/env bash
-# CI multi-platform host-matrix qualification harness (issue #415).
+# CI multi-platform host-matrix qualification harness.
 #
 # Machine-checks the as-built multi-host CI matrix delivered after the
-# portable-shell contract (issue #323, closed) with fixture evidence and
-# owned gaps, with Windows x86_64 qualified under issue #414:
+# portable-shell contract (closed) with fixture evidence and
+# owned gaps, with Windows x86_64 
 # - delivered: per-host jobs parameterized by runner plus cache scope plus
 #   qualified-host expectation for the seed Linux x86_64 glibc host plus
-#   Linux arm64 native (issue #410) plus the two Linux static-musl
-#   profiles (issue #411) plus macOS arm64 native (issue #412) plus macOS
-#   x86_64 best-effort native (issue #413, non-blocking) plus Windows
-#   x86_64 MSVC-compatible native (issue #414), consumer
-#   self-call test-disabled on the five host platforms (issue #408 plus
-#   Phase 1 issue #607 coverage superset), docs in
+# Linux arm64 native plus the two Linux static-musl
+# profiles plus macOS arm64 native plus macOS
+# x86_64 best-effort native (non-blocking) plus Windows
+# x86_64 MSVC-compatible native, consumer
+# self-call test-disabled on the five host platforms
+# Phase 1 coverage superset), docs in
 #   support-matrix plus ADR 0014 plus github-ci plus testing matrix;
 # - qualification-assertion: Windows x86_64 joins Platform-qualified with
-#   explicit EULA never automatic (issue #414); a windows-latest runner
+# explicit EULA never automatic; a windows-latest runner
 #   with shell bash is queued; out-of-v1 Windows arm64 stays the
 #   unqualified gap with clean refusal;
 # - portable-shell reuse: shared tools/sh/lib.sh helpers plus
 #   shellcheck/shfmt pins with no non-portable workflow forms;
-# - sharding policy (issue #210): one logical stage per job, fast-fail
+# - sharding policy: one logical stage per job, fast-fail
 #   needs chains, per-job step summaries, no paid services.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:ci_matrix_qualification`,
 # following //tools/ci:macos_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -44,9 +44,9 @@ test_matrix="docs/testing/github-ci.md"
 verify="docs/testing/verification-matrix.md"
 testing_readme="docs/testing/README.md"
 
-# ci.yml header records the host matrix under issue #415 with the closed
-# #298 pointer plus per-host successors and the Windows qualification
-# (issue #414 joins Platform-qualified, Windows arm64 stays the remainder).
+# ci.yml header records the host matrix with the closed
+# pointer plus per-host successors and the Windows qualification
+# (joins Platform-qualified, Windows arm64 stays the remainder).
 if grep -q -F -e 'Host matrix (issue #415' "$ci" &&
   grep -q -F -e 'issue #298 (closed; per-host successors own each host)' "$ci" &&
   grep -q -F -e 'Windows x86_64 MSVC-compatible native (windows-latest with shell bash,' "$ci" &&
@@ -59,7 +59,7 @@ fi
 # Per-host runners: seed plus musl x86_64 on ubuntu-latest, arm64 pair on
 # ubuntu-24.04-arm, macos arm64 on macos-14, macos x86_64 best-effort on
 # macos-15-intel, windows x86_64 on windows-latest
-# (issues #410/#411/#412/#413/#414).
+#
 if grep -q -F -e 'runs-on: ubuntu-latest' "$ci" &&
   grep -q -F -e 'runs-on: ubuntu-24.04-arm' "$ci" &&
   grep -q -F -e 'runs-on: macos-14' "$ci" &&
@@ -72,7 +72,7 @@ fi
 
 # Per-host cache scopes: seed plus arm64 plus per-profile musl plus
 # per-host macos plus windows, all free-tier actions/cache
-# (issues #410/#411/#412/#413/#414).
+#
 if grep -q -F -e 'bazel-seed-' "$ci" &&
   grep -q -F -e 'bazel-arm64-' "$ci" &&
   grep -q -F -e 'bazel-musl-x86_64-' "$ci" &&
@@ -111,9 +111,9 @@ else
 fi
 
 # Consumer self-call runs test-disabled on the five host platforms
-# (issue #408 dogfood-like consumer plus Phase 1 issue #607 coverage
+#
 # superset: `dx coverage` via `resolve_for_test` plus `bazel coverage`
-# executes the tests; Windows x86_64 joins under issue #414).
+# executes the tests; Windows x86_64 joins).
 if grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"macos_x86_64\", \"windows_x86_64\"]'" "$ci" &&
   grep -q -F -e 'disabled_checks: "test"' "$ci" &&
   grep -q -F -e 'supported = {"linux_x86_64", "linux_arm64", "macos_arm64", "macos_x86_64", "windows_x86_64"}' "$consumer"; then
@@ -123,7 +123,7 @@ else
 fi
 
 # Qualified-host expectation: five hosts qualified (Windows joins under
-# issue #414, no refusal).
+# , no refusal).
 if grep -q -F -e '("linux", "x86_64")' "$platform" &&
   grep -q -F -e '("linux", "aarch64")' "$platform" &&
   grep -q -F -e '("macos", "aarch64")' "$platform" &&
@@ -142,7 +142,7 @@ else
   bad "qualified-host expectation lost (platform.rs five qualified, cells seven qualified under #414)"
 fi
 
-# Windows qualification-assertion (issue #414): support-matrix keeps Windows
+# Windows qualification-assertion: support-matrix keeps Windows
 # x86_64 Platform-qualified with explicit EULA never automatic; a
 # windows-latest runner with shell bash is queued; no paid runner appears.
 if grep -E -e '^\| Windows x86_64 MSVC-compatible \|' "$matrix" | grep -q -F -e 'Platform-qualified (issue #414' &&
@@ -154,7 +154,7 @@ else
   bad "Windows qualification-assertion lost (support-matrix Platform-qualified plus windows-latest shell bash plus no paid runner, issue #414)"
 fi
 
-# Portable-shell reuse (issue #323): shared lib helpers plus
+# Portable-shell reuse: shared lib helpers plus
 # shellcheck/shfmt pins, and the prove shell_contract step stays wired.
 # Note: the timing pattern below is split to avoid the literal definition
 # form (shell_contract requires it lives once in tools/sh/lib.sh).
@@ -185,7 +185,7 @@ else
   bad "ci.yml introduced a non-portable shell form (issue #323)"
 fi
 
-# Sharding policy (issue #210): fast-fail needs chains per host family
+# Sharding policy: fast-fail needs chains per host family
 # plus prove/dogfood on the seed build.
 if grep -A3 -e '^  test:' "$ci" | grep -q -F -e 'needs: [build]' &&
   grep -A3 -e '^  coverage:' "$ci" | grep -q -F -e 'needs: [build]' &&
@@ -218,7 +218,7 @@ fi
 
 # No paid services: standard runners plus actions/cache only, with the
 # free-tier budget recorded in the testing README. windows-latest is a
-# standard free runner qualified under issue #414; macos-latest stays
+# standard free runner qualified; macos-latest stays
 # banned (unpinned), as do self-hosted/larger (paid).
 if ! grep -rn -E -e 'runs-on:.*(self-hosted|larger|macos-latest)' .github/workflows/ 2>/dev/null | grep -q . &&
   grep -q -F -e 'runs-on: windows-latest' "$ci" &&
@@ -230,7 +230,7 @@ fi
 
 # Stale references updated in place: contract plus test matrix plus
 # verification matrix plus support-matrix consumer note name the matrix
-# (Windows joins under issue #414).
+# (Windows joins).
 if grep -q -F -e 'issue #415' "$contract" &&
   grep -q -F -e 'issue #415' "$test_matrix" &&
   grep -q -F -e 'issue #415' "$verify" &&
@@ -241,7 +241,7 @@ else
 fi
 
 # No Supported claim for the matrix: Platform-qualified only (Windows joins
-# qualified under issue #414), release evidence open.
+# qualified), release evidence open.
 if grep -E -e '^\| Linux arm64 glibc \|' "$matrix" | grep -q -F -e 'Platform-qualified' &&
   grep -E -e '^\| macOS x86_64 \|' "$matrix" | grep -q -F -e 'Platform-qualified' &&
   grep -E -e '^\| Windows x86_64 MSVC-compatible \|' "$matrix" | grep -q -F -e 'Platform-qualified' &&

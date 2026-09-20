@@ -1,4 +1,4 @@
-# License policy for `dx audit license` dogfood (issue #408).
+# License policy for `dx audit license` dogfood.
 # This repository cuts no releases (version 0.0.0, unpublishable module,
 # no tags); all audited roots are internal-only, inventoried in the SBOM
 # and never failing on the allow/review/deny table except blocked.

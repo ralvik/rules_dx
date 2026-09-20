@@ -1,18 +1,11 @@
-"""Scala + .NET quality defaults pins (issue #486).
+"""Scala +.NET quality defaults pins.
 
 Contract: `docs/product/support-matrix.md#provisional-default-quality-tools`,
 `docs/quality/native-configuration.md#authority`.
-
-Qualifies the provisional Scala + .NET format plus lint defaults against the
-native-configuration contract with no hidden presets. Versions below are the
-pinned upstream releases from the initial artifact research; rule-sets are
-upstream built-in defaults unless an applicable checked-in native config
-supplies policy. Adapters add only transport/hermetic settings. Exact
-artifact digests plus adapter mappings stay owned under issue #417.
 """
 
 # Pinned upstream versions (initial artifact research observations, now
-# qualified seed-only under #486; living at head plus alphas rejected).
+# qualified seed-only under; living at head plus alphas rejected).
 SCALAFMT_VERSION = "3.11.4"
 SCALAFIX_VERSION = "0.14.7"
 CSHARPIER_VERSION = "1.3.0"
@@ -23,7 +16,7 @@ FSHARPLINT_VERSION = "0.27.0"
 # over the shared managed JDK plus the Scala Maven-lock story; exact-package
 # plus shared-.NET-runtime route for CSharpier/Fantomas/FSharpLint as
 # declared DLLs over one managed .NET cohort; Roslyn is SDK-coupled with no
-# separate artifact; digests stay owned under issue #417, never reconstructed
+# separate artifact; digests stay owned, never reconstructed
 # from modules and never installed via `dotnet tool install`).
 SCALAFMT_ARTIFACT = "compatible JVM artifact over the shared managed JDK"
 SCALAFIX_ARTIFACT = "semantic-rule artifacts over the shared managed JDK"
@@ -50,7 +43,7 @@ BEYOND_DEFAULT_REJECTED = "beyond-default switches rejected: auto preset, --enab
 AUTO_PRESET_REJECTED = "auto preset rejected: provisional inputs only, never an automatically supplied config"
 
 # Live proof labels (foundation consumers stay green; quality adapters claim
-# nothing yet under issue #417).
+# nothing yet).
 SCALA_FIXTURE_HELLO = "//scala/tests/fixtures/hello:hello_test"
 CSHARP_FIXTURE_HELLO = "//csharp/tests/fixtures/hello:hello_test"
 FSHARP_FIXTURE_HELLO = "//fsharp/tests/fixtures/hello:hello_lib"

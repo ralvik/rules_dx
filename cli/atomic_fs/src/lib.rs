@@ -1,6 +1,6 @@
 //! Race-free atomic filesystem writes shared by every apply/commit path.
 //!
-//! Extracted for #74: `dx_apply::RealFileSystem::write_atomic`
+//! `dx_apply::RealFileSystem::write_atomic`
 //! (sibling+rename) duplicated the staging discipline that
 //! `quality_adapter::exec::Scratch`, `dx_process::Fs`, and
 //! `dx_env::acquire_lock` each reimplement around `tempfile`.
@@ -27,7 +27,7 @@
 //! misreported as busy. Locks release when the holding `File` drops
 //! (fd close).
 //!
-//! Dependency evaluation (issue #229, rejected; qualified under issue #315:
+//! Dependency evaluation (rejected; 
 //! stays hand-rolled): no `fs2`/`fslock` — the
 //! stable `std::fs::File::try_lock` API is the upstreamed equivalent and
 //! already owns the flock here, so the crates would add supply-chain
@@ -38,7 +38,7 @@
 //! runtime path-wrapping would duplicate the existing discipline at the
 //! same dependency cost. This crate owns only the timeout loop.
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -67,7 +67,7 @@ pub fn write_atomic(path: &Path, content: &[u8]) -> io::Result<()> {
     // current directory for the same reason.
     let staging_dir: &Path = parent.unwrap_or(Path::new("."));
     let mut staging = tempfile::NamedTempFile::new_in(staging_dir)?;
-    // Issue #320 portable route: mode preservation is unix-only
+    // Portable route: mode preservation is unix-only
     // (Windows ACLs have no POSIX bits); non-unix keeps the staging
     // default and still writes bytes atomically.
     #[cfg(unix)]
@@ -197,7 +197,7 @@ mod tests {
         // file modes preserved. Overwriting an executable must keep the
         // executable bit; overwriting a private mode must keep it
         // private; bytes still round-trip exactly (no newline
-        // normalization). Issue #320 fail-fast policy: POSIX mode bits
+        // normalization). fail-fast policy: POSIX mode bits
         // have no Windows equivalent, so this stays unix-gated; the
         // non-unix companion below proves byte-exact round-trip without
         // mode assertions.
@@ -247,7 +247,7 @@ mod tests {
     #[test]
     #[cfg(not(unix))]
     fn non_unix_round_trips_bytes_without_mode_assertions() {
-        // Issue #320 portable companion to `preserves_existing_mode_on_
+        // Portable companion to `preserves_existing_mode_on_
         // overwrite` above: modes are POSIX-only, but byte-exactness
         // (LF, CRLF, missing-final-newline) holds on every host.
         let scratch = dx_test_scratch::scratch("dx-atomic-fs-bytes-");

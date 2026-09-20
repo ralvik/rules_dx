@@ -1,4 +1,4 @@
-"""Unit tests for SBOM + provenance generation (issue #311).
+"""Unit tests for SBOM + provenance generation.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

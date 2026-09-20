@@ -1,4 +1,4 @@
-//! Bump command execution: explicit widen-one-requirement (issue #260).
+//! Bump command execution: explicit widen-one-requirement.
 
 use super::common::*;
 use crate::args::{Command, Invocation};
@@ -8,7 +8,7 @@ use dx_output::{
     OutputMode,
 };
 
-/// Runs `dx bump <selector> <version>` (issue #260): validates the single
+/// Runs `dx bump <selector> <version>`: validates the single
 /// `set:package` selector plus new version through `dx_bump`, mutating
 /// without confirmation. `--dry-run` prints the planned widen and exits
 /// `0` without touching the tree; live execution rewrites exactly one

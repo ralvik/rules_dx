@@ -534,7 +534,7 @@ mod tests {
         let workspace = scratch.path().to_path_buf();
         #[cfg(unix)]
         {
-            // Issue #320 fail-fast policy: unix-domain sockets exist
+            // Fail-fast policy: unix-domain sockets exist
             // only on unix, so this branch stays gated. The non-unix
             // branch below proves regular files still classify as files.
             use std::os::unix::net::UnixListener;
@@ -550,7 +550,7 @@ mod tests {
         }
         #[cfg(not(unix))]
         {
-            // Issue #320 portable companion: no socket primitive here,
+            // Portable companion: no socket primitive here,
             // so prove a regular file is never `NotFileOrDir`.
             write(&workspace, "pkg/BUILD.bazel", "");
             write(&workspace, "pkg/regular.py", "x = 1\n");
@@ -667,7 +667,7 @@ mod tests {
 
     #[test]
     fn symlinks_are_neither_file_nor_dir() {
-        // Issue #320 portable route: symlink kind is rejected on every
+        // Portable route: symlink kind is rejected on every
         // host; planting uses the OS primitive and fails fast without
         // privilege instead of gating the test.
         let scratch = temp_workspace("symlink-kind");

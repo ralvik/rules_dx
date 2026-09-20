@@ -1,19 +1,9 @@
-"""Python source-audit split pins (issue #613).
+"""Python source-audit split pins.
 
-Contract: `docs/product/support-matrix.md`,
-`docs/tools/tool-baseline.md#curated-differences`,
-`docs/quality/action-model.md#capability-semantics`,
-`docs/decisions/0010-python-foundation.md`,
-`docs/testing/verification-matrix.md`.
-
+Contract: `docs/product/support-matrix.md`, `docs/tools/tool-baseline.md#curated-differences`,
+`docs/quality/action-model.md#capability-semantics`, `docs/decisions/0010-python-foundation.md`.
 Fixture: `python/tests/fixtures/python_audit/` via
 `bazel run //tools/ci:python_audit_qualification`.
-
-Splits Python source-audit tooling out of the quality family taxonomy
-(issue #512 stays taxonomy-only): Python source audit carries no
-selected tool in v1 with fixture evidence. Docs stay in place; this
-harness pins execution. Seed only: no platform plus consumer plus
-release claim, no Supported claim. Backends stay provisional.
 """
 
 # Source-audit disposition: no selected tool in v1; curated audit stays
@@ -45,7 +35,7 @@ SOURCE_VS_ECOSYSTEM = "per-language source audit distinct from ecosystem dx audi
 REJECTED_TAXONOMY_UNDER = "leaving under taxonomy rejected with mismatched scope"
 
 # Owned gaps stay explicit: future tool selection stays owned under
-# issue #613; platform plus consumer plus release evidence stays owned
+# ; platform plus consumer plus release evidence stays owned
 # gap; no Supported claim.
 OWNED_SELECTION_613 = "future tool selection stays owned under issue #613"
 OWNED_GAPS_NOTE = "platform plus consumer plus release evidence stays owned gap"

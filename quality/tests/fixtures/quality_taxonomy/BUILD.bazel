@@ -1,4 +1,4 @@
-"""Quality family taxonomy execution fixture (issue #512)."""
+"""Quality family taxonomy execution fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

@@ -56,7 +56,7 @@ pub struct MigratePlan {
 
 /// Plan one `dx migrate` invocation.
 ///
-/// Syntax (issue #462, live successor to closed #4):
+/// Syntax (live successor to closed):
 /// `dx migrate --from <version> --to <version> [scope ...]`. Both
 /// versions are Cargo-flavor semver; the pair must be a major-release
 /// bump (see [`migrate_is_major_bump`]). Scope selection reuses
@@ -66,7 +66,7 @@ pub struct MigratePlan {
 /// no releases cut), planning succeeds but execution fails closed
 /// (`migrate_failed`) until the first major-release manifest lands —
 /// the same fail-closed discipline as `audit_failed` (`dx audit` plus
-/// `dx update` execute live, issues #18 and #19).
+/// `dx update` execute live, and).
 pub fn plan_migrate(from: &str, to: &str) -> Result<MigratePlan, AdoptError> {
     if from.is_empty() || to.is_empty() {
         return Err(AdoptError::MigrateVersions {
@@ -98,7 +98,7 @@ mod tests {
 
     #[test]
     fn migrate_is_major_release_only() {
-        // Issue #462 (live successor to closed #4): major-release-only
+        // (live successor to closed): major-release-only
         // gate. Minor/patch bumps, downgrades, equal versions, and
         // non-semver never qualify — they run through `dx generate`,
         // not `migrate`.
@@ -126,7 +126,7 @@ mod tests {
 
     #[test]
     fn migrate_manifest_selection_is_mechanical_per_major_hop() {
-        // Issue #462: one manifest per major hop, named after the major
+        // One manifest per major hop, named after the major
         // versions so selection is mechanical.
         assert_eq!(migrate_manifest_name(0, 1), "migrate-v0-to-v1.json");
         assert_eq!(migrate_manifest_name(1, 2), "migrate-v1-to-v2.json");
@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn migrate_syntax_pins_semver_prerelease_and_errors() {
-        // Issue #462: `dx migrate --from <version> --to <version>` takes
+        // `dx migrate --from <version> --to <version>` takes
         // Cargo-flavor semver only; prerelease/build metadata ride the
         // same major gate, and every rejection renders stably for CLI
         // usage diagnostics (exit 2).

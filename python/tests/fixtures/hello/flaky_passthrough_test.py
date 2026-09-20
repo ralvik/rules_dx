@@ -1,4 +1,4 @@
-"""Retry-semantics fixture (issue #99 item 3): never fails.
+"""Retry-semantics fixture (item 3): never fails.
 
 `flaky = True` must reach the private upstream test target through the
 wrapper's kwargs without changing this test's outcome: a stable test

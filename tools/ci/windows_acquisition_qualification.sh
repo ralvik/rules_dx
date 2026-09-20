@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Windows immutable-lazy acquisition qualification (issue #495).
+# Windows immutable-lazy acquisition qualification.
 #
 # Qualifies the acquisition-mechanism slice of the Windows baseline with
 # fixture evidence, without claiming a qualified toolchains_msvc backend,
@@ -16,15 +16,15 @@
 #   and stay green without acceptance. Deferred acceptance failure does not
 #   prove laziness: extension evaluation already fetches manifests.
 # - open with honest records: full toolchains_msvc backend, Microsoft
-#   acquisition/cache rights (issue #496), transport plus ABI (issue #497),
-#   prebuilt interop (issue #498), corpus plus floors plus coverage (issues
-#   #499/#500/#501), release evidence. Backend stays provisional.
+# acquisition/cache rights, transport plus ABI,
+# prebuilt interop, corpus plus floors plus coverage (issues
+# //), release evidence. Backend stays provisional.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:windows_acquisition_qualification`,
 # following //tools/ci:fsharplint_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -42,7 +42,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture pair stays present (issue #495).
+# Fixture pair stays present.
 if [[ -f "$pins" && -f "$pins_build" ]]; then
   ok
 else
@@ -161,7 +161,7 @@ else
   bad "tools/ci/BUILD.bazel or ci.yml lost the windows_acquisition_qualification wiring (want target plus dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified seed-only record under #495.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'windows_acquisition_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #495' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:windows_acquisition_qualification' "$verify" &&

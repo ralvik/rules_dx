@@ -127,7 +127,7 @@ pub fn parse_selector(text: &str) -> Result<Selector, SelectorError> {
 
 /// True for Bazel labels/patterns and file/dir paths. The `//`/`@`
 /// prefix plus `/`/`.` containment is a declarative
-/// `^(//|@)|[/.]` (issue #397); `...` is subsumed by the `.` branch but
+/// `^(//|@)|[/.]`; `...` is subsumed by the `.` branch but
 /// kept explicit so the intent stays readable.
 fn target_shape_re() -> Option<&'static Regex> {
     static RE: OnceLock<Regex> = OnceLock::new();
@@ -155,7 +155,7 @@ fn is_target_shape(text: &str) -> bool {
 }
 
 /// Validates an ecosystem package identity (upstream-native, no versions).
-/// Character classes are declarative `regex` (issue #397); structural
+/// Character classes are declarative `regex`; structural
 /// splits (`:`/`/` scope handling) stay textual. Falls back to the
 /// historical char loops when a static pattern fails to compile.
 fn dotted_name_re() -> Option<&'static Regex> {
@@ -412,7 +412,7 @@ pub fn owning_sets(target: &str) -> Vec<SetId> {
 /// files/dirs use their normalized path. Recursive `/...` and trailing
 /// `/` stripping is declarative (`/...$`, `/+$`, `(./)+`); the `//`
 /// label split and `:` cut stay textual because they branch on syntax,
-/// not character classes (issue #397).
+/// not character classes.
 fn recursive_suffix_re() -> Option<&'static Regex> {
     static RE: OnceLock<Regex> = OnceLock::new();
     if let Some(compiled) = RE.get() {
@@ -518,7 +518,7 @@ fn package_path(target: &str) -> String {
 
 /// Root (`""` package) owning sets by filename/target spelling.
 /// Case-insensitive `package.json | pnpm-lock.yaml | ...` alternatives
-/// replace the `to_lowercase` + `contains` chain (issue #397).
+/// replace the `to_lowercase` + `contains` chain.
 fn root_npm_re() -> Option<&'static Regex> {
     static RE: OnceLock<Regex> = OnceLock::new();
     if let Some(compiled) = RE.get() {
@@ -579,7 +579,7 @@ fn root_owning_sets(target: &str) -> Vec<SetId> {
 }
 
 fn has_prefix(package: &str, prefix: &str) -> bool {
-    // `^prefix(?:/|$)` with an escaped prefix (issue #397): `go` matches
+    // `^prefix(?:/|$)` with an escaped prefix: `go` matches
     // `go` and `go/...` but never `gold`. Falls back to the equality +
     // `starts_with("{prefix}/")` check when the dynamic pattern fails.
     let pattern = format!(r"^{}(?:/|$)", regex::escape(prefix));

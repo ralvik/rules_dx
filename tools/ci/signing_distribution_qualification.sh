@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Signing stack + distribution qualification harness (issue #459, live
-# successor to closed #311/#26/#78 for signing + distribution).
+# Signing stack + distribution qualification harness (live
+# successor to closed // for signing + distribution).
 #
-# docs/roadmap.md lists signing stack + distribution with owners #311/#26/#78
-# all closed and no open qualification. Decision (issue #459): keep Sigstore
+# docs/roadmap.md lists signing stack + distribution with owners //
+# all closed and no open qualification. Decision: keep Sigstore
 # keyless `cosign sign-blob --bundle` + GitHub attestations as in
 # deploy/release/signing.bzl; no stack change.
 #
@@ -20,7 +20,7 @@
 # following //tools/ci:publish_trust.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -28,8 +28,8 @@ dx_cd_workspace
 
 dx_test_init
 
-# Signing header owns the #459 live-successor plus no-stack-change decision.
-if grep -q -F -e 'issue #459, live successor to closed #311/#26' deploy/release/signing.bzl &&
+# Signing header owns the live-successor plus no-stack-change decision.
+if grep -q -F -e 'live successor' deploy/release/signing.bzl &&
   grep -q -F -e 'no stack change' deploy/release/signing.bzl; then
   ok
 else
@@ -74,8 +74,7 @@ fi
 
 # Signing program keeps the selected stack: sign-blob --bundle plus attestation.
 if grep -q -F -e 'cosign sign-blob --bundle' deploy/release/sign_deploy.sh &&
-  grep -q -F -e 'gh attestation create' deploy/release/sign_deploy.sh &&
-  grep -q -F -e 'issue #459' deploy/release/sign_deploy.sh; then
+  grep -q -F -e 'gh attestation create' deploy/release/sign_deploy.sh; then
   ok
 else
   bad "sign_deploy.sh lost its selected sign-blob plus attestation stack (#459)"
@@ -191,7 +190,7 @@ else
   bad "authoring.md lost its cosign-version plus bundle-media signing pins (#459)"
 fi
 
-# Release runbook qualifies the stack: #459 plus pins plus harness.
+# Release runbook qualifies the stack: plus pins plus harness.
 if grep -q -F -e 'qualified under issue #459' docs/deploy/release-runbook.md &&
   grep -q -F -e 'SIGNING_COSIGN_VERSION' docs/deploy/release-runbook.md &&
   grep -q -F -e 'SIGNING_BUNDLE_MEDIA_TYPE' docs/deploy/release-runbook.md &&
@@ -239,7 +238,7 @@ else
   bad "tool-acquisition.md lost its selected-qualified plus provisional record (#459)"
 fi
 
-# Roadmap owns the title: signing stack plus distribution under #459.
+# Roadmap owns the title: signing stack plus distribution under.
 if grep -q -F -e 'signing stack + distribution' docs/roadmap.md &&
   grep -q -F -e '(issue #459)' docs/roadmap.md; then
   ok

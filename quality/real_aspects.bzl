@@ -27,7 +27,7 @@ def _family_selections(policy, capability):
         selections[family_id] = getattr(policy.families[family_id], capability)
     return selections
 
-# Cold-server laziness (#432): the shared aspect no longer resolves every
+# Cold-server laziness: the shared aspect no longer resolves every
 # ecosystem on every visit. Each aspect declares only its own tool labels
 # and filters the resolved pipeline to `allowed_tools`; `select()` and
 # toolchain indirection cannot do this (all branches resolve), only separate
@@ -79,7 +79,7 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
     if len(resolved) == 0:
         return []
 
-    # Target-coupled tsc (#84, #408): tsc never applies from the class alone;
+    # Target-coupled tsc: tsc never applies from the class alone;
     # it requires the authoritative typescript_project context
     # (TsConfigInfo). Fixture QualitySourcesInfo-only targets carry no
     # TsConfigInfo, so drop tsc stages there (unfetched, keys unchanged
@@ -96,12 +96,12 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         if len(resolved) == 0:
             return []
 
-    # rustfmt crate context (#49): the edition comes from the
+    # rustfmt crate context: the edition comes from the
     # authoritative `CrateInfo` (or the test crate's inner `CrateInfo`,
     # exactly as upstream `_get_rustfmt_ready_crate_info`), and generated
     # files never reach the tool (upstream formats `is_source` files
     # only). Provider-less fixture targets carry no crate context, so
-    # they fall back to `RUST_EDITION` (#82 single source of truth).
+    # they fall back to `RUST_EDITION` (single source of truth).
     # `no-format` skips the stage via `_capability_tags` above.
     rustfmt_edition = None
     if "rustfmt" in [stage["tool"] for stage in resolved]:
@@ -131,7 +131,7 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
                     kept.append(stage)
             resolved = kept
 
-    # Delegated Clippy (#47): this aspect requires the upstream
+    # Delegated Clippy: this aspect requires the upstream
     # `rust_clippy_aspect`, which emits the authoritative
     # `.clippy.diagnostics` file into the `clippy_output` output group
     # when `--@rules_rust//rust/settings:clippy_output_diagnostics` is
@@ -149,7 +149,7 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
             clippy_diagnostics = target[OutputGroupInfo]["clippy_output"].to_list()
     clippy_delegated = len(clippy_diagnostics) > 0
 
-    # Delegated rustc (#48): every Rust rule emits the authoritative
+    # Delegated rustc: every Rust rule emits the authoritative
     # `.rustc-output` JSON file into the `rustc_output` output group
     # when `--@rules_rust//rust/settings:rustc_output_diagnostics` is
     # set (`dx typecheck` sets it; see `cli/cli/src/plan.rs`). The
@@ -260,7 +260,7 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         args.add("--sibling", ws_path + "=" + f.path)
         inputs.append(f)
 
-    # Ty import context (#408): ty resolves same-package imports through the
+    # Ty import context: ty resolves same-package imports through the
     # filesystem, but actions stage only direct sources, so `import handlers`
     # in a direct source fails when `handlers.py` comes from `deps`. The
     # Python forwarders preserve upstream `PyInfo`, whose transitive sources

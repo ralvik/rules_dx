@@ -1,4 +1,4 @@
-// Seed C# Roslyn aggregation fixture (issue #492).
+// Seed C# Roslyn aggregation fixture.
 namespace Fixtures.Roslyn;
 
 public class Sample

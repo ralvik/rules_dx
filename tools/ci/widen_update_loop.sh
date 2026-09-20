@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Widen-one-requirement + dx update PR loop contract (issue #260, delivered).
+# Widen-one-requirement + dx update PR loop contract (delivered).
 #
 # `dx update` is within-constraints only (live resolver execution delivered
-# in #19). The first-party
-# apply path is delivered as the sole updater (native-only, issue #461):
+# in). The first-party
+# apply path is delivered as the sole updater (native-only,):
 # one explicit widen operation (separate from
 # `dx update`, `dx bump <selector> <version>`) plus a one-dep-per-PR loop
 # with an automerge on/off toggle only -- no grouping, schedule, or
@@ -12,7 +12,7 @@
 # This harness machine-checks the delivered contract on a clean tree
 # (13 checks): the all-ecosystems v1 set registry, sole-updater shape
 # (no third-party updater config, bump owns the single-requirement
-# rewrite), the #19 resolver prerequisite
+# rewrite), the resolver prerequisite
 # delivered, the widen command plus library-first planning, the native
 # bump-PR verification loop docs, the ADR 0006 narrow exception, the ADR
 # 0008 exact-pin policy, the scheduled loop runner (one-dep-per-PR,
@@ -23,7 +23,7 @@
 # following //tools/ci:ghcr_hygiene.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -56,7 +56,7 @@ fi
 
 # Sole-updater shape: the native loop owns discovery plus widen plus
 # verify with one dep per PR; the scaffold plans eight files with no
-# updater config and the policy names the sole updater (issue #461).
+# updater config and the policy names the sole updater.
 if grep -q -F -e 'files.len(), 8' cli/adopt/src/scaffold.rs &&
   grep -q -F -e 'sole updater' "$automation" &&
   grep -q -F -e 'one dep per PR' "$automation" &&
@@ -97,9 +97,9 @@ else
   bad "widen bump command missing in cli/ (want bump subcommand + may_be_rewritten + CODE_BUMP_FAILED + dx_bump)"
 fi
 
-# Resolver backends delivered in #19 (selector syntax, Git mappings, and
+# Resolver backends delivered in (selector syntax, Git mappings, and
 # upstream operation/report mappings decided in dx_update); audit live
-# execution delivered in #18.
+# execution delivered in.
 if grep -q -F -e 'dx_update::selector' "$contract" &&
   grep -q -F -e 'dx_update::backend' "$contract" &&
   grep -q -F -e 'dx_update::semantics' "$contract"; then
@@ -108,7 +108,7 @@ else
   bad "update contract lost its delivered resolver records"
 fi
 
-# Automation policy owns the native-only loop (issue #461): absent-only
+# Automation policy owns the native-only loop: absent-only
 # scaffold, update-only automerge, plus the delivered widen-one loop (one
 # dep per PR, toggle-only automerge, scheduled runner, sole updater).
 if grep -q -F -e 'absent-only' "$automation" &&
@@ -182,9 +182,9 @@ else
   bad "upstream-scope pins lost (prerelease/transitives/scope in update + bump)"
 fi
 
-# Stale third-party-disposition hedge stays gone (issue #424): the
-# `until issue #3 decides` hedge was resolved as native-only under
-# issue #461, so no such hedge may reappear in the runner or the policy.
+# Stale third-party-disposition hedge stays gone: the
+# `until decides` hedge was resolved as native-only under
+# , so no such hedge may reappear in the runner or the policy.
 if ! grep -rn -F -e 'until issue #3' "$bump_workflow" "$automation" 2>/dev/null | grep -q . &&
   ! grep -rn -F -e 'until issue #3 decides' .github/workflows/bump.yml docs/contributing/automation.md 2>/dev/null | grep -q . &&
   grep -q -F -e 'sole updater' "$automation" &&

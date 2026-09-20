@@ -1,13 +1,6 @@
-"""Bindgen LLVM-22-vs-23 version pins (issue #473).
+"""Bindgen LLVM-22-vs-23 version pins.
 
 Contract: `docs/native-toolchains.md`, `docs/generation/rust.md#binding-generation`.
-Fixture pair: `rust/tests/fixtures/bindgen/bindgen.h` plus `bindgen.expected`.
-
-The standalone `rust_bindgen` parser baseline is LLVM-22 (rules_rs v0.0.109
-declares `llvm 0.8.18`); the qualified header/flag target is LLVM-23
-(hermetic-llvm v0.8.19). Upgrading across that line is a real stack change,
-so both identities stay pinned here and in the native plan. Unpinned LLVM
-(floating `llvm.version(...)` or an untracked hermetic-llvm) is rejected.
 """
 
 RULES_RS_VERSION = "v0.0.109"

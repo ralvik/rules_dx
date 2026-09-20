@@ -1,4 +1,4 @@
-//! Argument tokenizer and `clap`-error mapping (qualified under issue #316: frozen legacy contract).
+//! Argument tokenizer and `clap`-error mapping (frozen legacy contract).
 //!
 //! Split from [`super::parser`]: owns the Bazel-verbatim tokenizer
 //! (`split_bazel_verbatim`, `tokenize`, `parse_tokens`) and the

@@ -1,14 +1,8 @@
-"""Windows immutable-lazy acquisition pins (issue #495).
+"""Windows immutable-lazy acquisition pins.
 
 Contract: `docs/native-toolchains.md#windows-acquisition-and-compatibility`.
 Fixture: `cc/tests/fixtures/windows_acquisition/` via
 `bazel run //tools/ci:windows_acquisition_qualification`.
-
-Decides the acquisition-mechanism slice of the Windows baseline: the
-toolchains_msvc backend stays provisional, but its fetch contract is
-immutable plus lazy. Mutable fetch stays rejected per the issue
-alternatives. Rights plus transport plus interop stay owned under
-issues #496/#497/#498, never double-claimed here.
 """
 
 # Prototype identity: head observed, prototype, no published release.

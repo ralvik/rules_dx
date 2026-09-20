@@ -1,4 +1,4 @@
-"""Full release matrix for `dx` standalone binaries (issue #311).
+"""Full release matrix for `dx` standalone binaries.
 
 Contract: `docs/deploy/release-runbook.md`.
 """

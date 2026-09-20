@@ -1,4 +1,4 @@
-// Loose passes, strict fails example (issue #615).
+// Loose passes, strict fails example.
 //
 // Implicit-any `name` passes tsc with strict false and fails with
 // strict true (noImplicitAny); explicit `any` is the Biome strict

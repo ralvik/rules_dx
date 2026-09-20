@@ -96,7 +96,7 @@ pub fn emit_envelope(envelope: &Envelope) -> Result<String, EnvelopeError> {
     // LCOV_EXCL_STOP - reason: end of unreachable serialization-failure exclusion.
 }
 
-/// Lowercase hex SHA-256 of `bytes` (frozen envelope contract, issue #73:
+/// Lowercase hex SHA-256 of `bytes` (frozen envelope contract:
 /// bytes owned by `dx_digest` compat shim).
 pub fn sha256_hex(bytes: &[u8]) -> String {
     dx_digest::sha256_hex(bytes)

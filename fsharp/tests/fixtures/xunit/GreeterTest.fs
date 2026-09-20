@@ -1,4 +1,4 @@
-// Seed F# xUnit test (issue #477): runs via fsharp_test over the pinned
+// Seed F# xUnit test: runs via fsharp_test over the pinned
 // xunit.v3 4.0.0 plus xunit.analyzers 2.0.0 Paket lock.
 module GreeterTests
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quality core plus result contract qualification harness (issue #511).
+# Quality core plus result contract qualification harness.
 #
 # Qualifies the quality core plus result contract mappings with fixture
 # evidence pinned in `quality/tests/fixtures/result_contract/pins.bzl`
@@ -42,7 +42,7 @@
 #   severity.
 # - rejected: bare contract with no owned mappings.
 # - owned with honest records: SPDX parsing plus emission plus update
-#   aggregate stay owned under issue #511; platform plus consumer plus
+# aggregate stay owned; platform plus consumer plus
 #   release evidence stays owned gap; backends provisional; no Supported
 #   claim.
 #
@@ -50,7 +50,7 @@
 # following //tools/ci:remediation_bounds_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -79,7 +79,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture files stay present (issue #511).
+# Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$expected" ]]; then
   ok
 else

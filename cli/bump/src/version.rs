@@ -1,4 +1,4 @@
-//! Version validation for `dx bump` (issue #260).
+//! Version validation for `dx bump`.
 //!
 //! Library-first: version parsing and comparison delegate to the upstream
 //! `semver` crate, never to custom version code. Registry discovery (BCR,

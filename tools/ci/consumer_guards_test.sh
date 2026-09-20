@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Consumer CI check-selection harness (#99 item 1).
+# Consumer CI check-selection harness (item 1).
 #
 # Pins the disabled-checks contract statically: every one of the nine
 # check jobs carries the exact opt-out guard naming its own check ID,
@@ -8,7 +8,7 @@
 # run against a mutated workflow copy missing one guard must fail.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issues #319, #323).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 

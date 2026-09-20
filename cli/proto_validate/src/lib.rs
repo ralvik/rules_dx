@@ -1,11 +1,11 @@
-//! Shared validated-codec helpers for proto shards (#72).
+//! Shared validated-codec helpers for proto shards.
 //!
 //! Five crates repeat the same three patterns: validate-then-encode,
 //! decode-then-validate, and sorted-unique key checks over a `BTreeSet` or a
 //! `previous` cursor. The per-crate `Error` types stay local; this crate only
 //! provides the control flow so every shard keeps its own messages.
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 

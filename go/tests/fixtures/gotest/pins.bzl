@@ -1,4 +1,4 @@
-"""Go test runner pins (issue #478).
+"""Go test runner pins.
 
 Contract: `docs/product/support-matrix.md#provisional-default-test-runners`.
 """

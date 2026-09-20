@@ -1,4 +1,4 @@
-// FSharpLint parse-vs-wire sample (issue #493).
+// FSharpLint parse-vs-wire sample.
 //
 // Triggers two documented rules from the FSharpLint overview so the console
 // fixtures below carry stable rule IDs:

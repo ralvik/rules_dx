@@ -1,4 +1,4 @@
-"""Shared shell helpers (issue #319, snapshot workflow issue #322).
+"""Shared shell helpers (snapshot workflow).
 
 Single-sources the workspace-root probe plus runfiles `rlocation` usage
 repeated across every shell driver, plus the snapshot-testing workflow
@@ -16,14 +16,14 @@ package(default_visibility = ["//:__subpackages__"])
 sh_library(
     name = "lib",
     srcs = ["lib.sh"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
 sh_library(
     name = "snapshot",
     srcs = ["snapshot.sh"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
+    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 

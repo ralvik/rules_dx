@@ -3,7 +3,7 @@
 Each `rust_env_plan` reads the analyzed authoritative providers of one
 `rust_*` wrapper: library/binary/test through CrateInfo, Cc-linking
 shapes through TestCrateInfo. Focused-target only; repository/root/exact-target
-orchestration remains issue #506.
+orchestration remains.
 """
 
 load("//quality:fixtures.bzl", "real_source_target")

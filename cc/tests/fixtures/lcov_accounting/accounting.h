@@ -1,4 +1,4 @@
-// LCOV accounting fixture header; inline plus declarations (issue #501).
+// LCOV accounting fixture header; inline plus declarations.
 #pragma once
 
 // Add returns the sum of a and b.

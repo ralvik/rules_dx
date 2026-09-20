@@ -1,4 +1,4 @@
-"""Windows transport plus ABI fixture (issue #497)."""
+"""Windows transport plus ABI fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

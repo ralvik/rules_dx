@@ -1,4 +1,4 @@
-"""Shared wrapper-forwarder plumbing for language rules (issue #97).
+"""Shared wrapper-forwarder plumbing for language rules.
 
 Contract: `docs/quality/quality-sources.md`.
 """
@@ -217,7 +217,7 @@ def dx_wrap(name, upstream_rule, forward_rule, srcs, visibility = None, **kwargs
     """Instantiates one private upstream target plus its public forwarder.
 
     `aspect_hints` (typed native-config labels) ride the public forwarder
-    where quality aspects visit (issue #12, lane A): the forwarder is the
+ where quality aspects visit (lane A): the forwarder is the
     `QualitySourcesInfo` owner, so hints must reach it, not only the
     private upstream. Remaining kwargs stay upstream-only."""
     hints = kwargs.get("aspect_hints", None)

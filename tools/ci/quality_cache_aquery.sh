@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quality cache aquery proof (issue #84, slices 1-14): per-adapter and
+# Quality cache aquery proof (slices 1-14): per-adapter and
 # per-capability action-key isolation via `bazel aquery` over real
 # quality pipelines. All queries request lint+format+typecheck aspects
 # explicitly so typecheck presence (python/rust/mixed) and absence
@@ -54,9 +54,9 @@
 # (python/rust 1 typecheck; JS/TS/JSX/TSX/JSON/Starlark/TOML lint+format
 # only with exact 1+1 counts; markdown lint-only with exact 1 lint).
 #
-# Still open per #84 (recorded as gap, not claimed): full per-adapter
+# Still open per (recorded as gap, not claimed): full per-adapter
 # table remainder (Go/Java/etc. adapters have no implementation yet;
-# equivalent rows land with each adapter under #470-#475/#476-#484, enforced by the
+# equivalent rows land with each adapter under -/-, enforced by the
 # parity manifest + release_policy gate), transitive rows (quality actions
 # take only direct sources by construction per QualitySourcesInfo
 # validation, so transitive deps never enter inputs unless direct —
@@ -66,7 +66,7 @@
 # (stage-order/runner policy changes beyond canonical order), plus
 # controlled remote-cache / separate-machine proof (requires remote
 # infrastructure unavailable per docs/testing/README.md Remote Tests;
-# tracked under #507, never claimed here). The execution-log half below
+# tracked under, never claimed here). The execution-log half below
 # distinguishes executed actions from cache hits locally; this harness is
 # action-graph plus local execution-log, no remote execution.
 #
@@ -74,7 +74,7 @@
 # after //tools/ci:examples_laziness_aquery.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -699,7 +699,7 @@ if [[ "$mixed_typecheck_inputs" == *"eslint"* || "$mixed_typecheck_inputs" == *"
 if [[ "$no_lint_typecheck_inputs" == *"eslint"* || "$no_lint_typecheck_inputs" == *"flake8"* || "$no_lint_typecheck_inputs" == *"pylint"* ]]; then bad "no-lint typecheck: forbidden [eslint/flake8/pylint] (opt-in change must not invalidate typecheck)"; else ok; fi
 if [[ "$no_format_typecheck_inputs" == *"eslint"* || "$no_format_typecheck_inputs" == *"flake8"* || "$no_format_typecheck_inputs" == *"pylint"* ]]; then bad "no-format typecheck: forbidden [eslint/flake8/pylint] (opt-in change must not invalidate typecheck)"; else ok; fi
 
-# Target-coupled tsc laziness (#408): tsc never applies from the class
+# Target-coupled tsc laziness: tsc never applies from the class
 # alone and never spawns a bare invocation (which would lose
 # tsconfig/declaration context per quality/tools/typescript/BUILD.bazel).
 # The aspect drops tsc stages: TS type safety is delegated to the upstream
@@ -725,7 +725,7 @@ if [[ "$no_lint_actions" == *"tsc"* ]]; then bad "no-lint: forbidden [tsc] (targ
 if [[ "$no_format_actions" == *"tsc"* ]]; then bad "no-format: forbidden [tsc] (target-coupled tsc must not invalidate no-format)"; else ok; fi
 if [[ "$no_typecheck_actions" == *"tsc"* ]]; then bad "no-typecheck: forbidden [tsc] (target-coupled tsc must not invalidate no-typecheck)"; else ok; fi
 
-# Execution-log proof (issue #84 close-out): aquery proves action shape;
+# Execution-log proof (close-out): aquery proves action shape;
 # execution logs distinguish executed actions from cache hits locally. A
 # warm local no-op alone is not a cache test per the contract, so force
 # one re-execution by removing a single build output (gitignored
@@ -733,7 +733,7 @@ if [[ "$no_typecheck_actions" == *"tsc"* ]]; then bad "no-typecheck: forbidden [
 # execution log (must execute with source+tool+runner in the log), then
 # rebuild unchanged (log must be empty: cache hit, nothing executed).
 # Controlled remote-cache / separate-machine proof stays tracked under
-# #507 per docs/testing/README.md (infrastructure unavailable here).
+# per docs/testing/README.md (infrastructure unavailable here).
 exec_first="$(mktemp /tmp/quality_cache_exec_first.XXXXXX.json)"
 exec_second="$(mktemp /tmp/quality_cache_exec_second.XXXXXX.json)"
 lint_pb="bazel-bin/quality/testdata/fixture_real_python-real-lint.pb"

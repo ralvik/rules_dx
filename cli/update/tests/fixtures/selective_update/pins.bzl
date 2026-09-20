@@ -1,14 +1,9 @@
-"""Selective `dx update` per-set pins (issue #583).
+"""Selective `dx update` per-set pins.
 
 Contract: `docs/decisions/0024-selective-update.md`,
 `docs/cli/commands/audit-update-bazel.md#dx-update`.
 Fixture: `cli/update/tests/fixtures/selective_update/` via
 `bazel run //tools/ci:selective_update_qualification`.
-
-Exactly one set supports selective in V1 (npm via the Bazel-pinned
-pnpm); the other four fail closed as wont-fix with no silent full-update
-substitution. Update-only; no lock format change. Seed only: platform
-plus consumer plus release evidence stays owned gap; no Supported claim.
 """
 
 # Per-set selective dispositions (one supported, four wont-fix).

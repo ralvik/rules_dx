@@ -1,4 +1,4 @@
-"""Starlark testing futures fixture (issue #588)."""
+"""Starlark testing futures fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

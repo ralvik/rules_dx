@@ -1,4 +1,4 @@
-// Linux corpus test; SQLite plus OpenSSL plus ring shapes (issue #499).
+// Linux corpus test; SQLite plus OpenSSL plus ring shapes.
 #include <cassert>
 #include <string>
 

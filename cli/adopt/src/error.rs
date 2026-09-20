@@ -128,7 +128,7 @@ mod tests {
 
     #[test]
     fn adopt_errors_render_byte_identical_to_legacy_strings() {
-        // Pilot gate for #221: typed errors must preserve the historical
+        // Pilot gate: typed errors must preserve the historical
         // user-facing strings so CLI operational diagnostics stay stable.
         assert_eq!(
             AdoptError::WatchRefusesCi.to_string(),

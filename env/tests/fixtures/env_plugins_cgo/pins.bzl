@@ -1,17 +1,10 @@
-"""Third-party env plugin model plus Go cgo exception pins (issue #587).
+"""Third-party env plugin model plus Go cgo exception pins.
 
 Contract: `docs/environments/environment.md#public-tool-api`,
 `docs/environments/environment.md#ownership-and-refresh`,
 `docs/environments/environment.md#test-requirements`.
 Fixture: `env/tests/fixtures/env_plugins_cgo/` via
 `bazel run //tools/ci:env_plugins_cgo_qualification`.
-
-Decides the two #587 slices that issue #506 explicitly does not cover:
-third-party language-integration (persistent-environment) plugins get a
-deferred-past-v1 design decision with owner plus acceptance criteria
-instead of an owner-less deferral, and Go cgo completion gets an explicit
-exception boundary instead of a bare out-of-scope line. Env only; no
-PATH-tool collision rule change. Seed only: no Supported claim.
 """
 
 # Plugin model stays deferred past v1 with an explicit design owner.
@@ -51,7 +44,7 @@ CGO_EXCEPTION_NOTE = "this exception does not admit the complete Go foundation"
 CGO_UPSTREAM_NON_GUARANTEE = "upstream does not guarantee cgo completion"
 CGO_RECORD_GAPS = "record cgo and platform gaps rather than claiming generic IDE parity"
 
-# Rejected substitutes (never accepted as the #587 resolution).
+# Rejected substitutes (never accepted as the resolution).
 REJECTED_PLUGIN_CLAIM = "third-party plugin claim"
 REJECTED_PRIVATE_PATH = "private first-party contribution path"
 REJECTED_STATIC_SNAPSHOT = "static package snapshot"

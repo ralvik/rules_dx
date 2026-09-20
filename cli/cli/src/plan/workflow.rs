@@ -48,7 +48,7 @@ impl WorkflowVerb {
             Command::Codegen | Command::Env | Command::Setup => None,
             // Audit/update/bump plan through `dx_audit`/`dx_update`/`dx_bump`,
             // never a fixed workflow verb. Migrate plans through
-            // `dx_adopt::plan_migrate` (issue #462), never a workflow verb.
+            // `dx_adopt::plan_migrate`, never a workflow verb.
             Command::Audit | Command::Update | Command::Bump | Command::Migrate => None,
             // Raw launcher passthrough plans its own argv (launcher
             // plus forwarded arguments), never a fixed workflow verb.
@@ -93,7 +93,7 @@ impl WorkflowVerb {
 ///
 /// `profile` is `Some` for `build`/`test` (always an explicit
 /// `--config=dx_*`, including the `dx_dev` default) and `None` for
-/// `coverage`, which has no profile flags in issue #179 scope: its argv
+/// `coverage`, which has no profile flags in scope: its argv
 /// is unchanged and bare Bazel behavior already equals `fastbuild`.
 pub const COVERAGE_COMBINED_REPORT_FLAG: &str = "--combined_report=lcov";
 
@@ -117,7 +117,7 @@ pub fn workflow_options(
 
 /// Protected workflow flags: workspace and BEP reject every user
 /// override; coverage `combined_report` accepts repetition of the
-/// required value only. The build-profile `--config=dx_*` (issue #179)
+/// required value only. The build-profile `--config=dx_*`
 /// accepts repetition of the required value only, so an explicit user
 /// `--config` that conflicts with the resolved profile fails before
 /// execution instead of silently overriding it.
@@ -292,7 +292,7 @@ mod tests {
 
     #[test]
     fn workflow_profile_pins_config_flag_in_order() {
-        // Fixture pinning the issue #179 mapping: flag profiles select
+        // Fixture pinning the mapping: flag profiles select
         // their `--config=dx_*` right after the workspace policy; the
         // bare default is the explicit `dx_dev`.
         for (profile, flag) in [
@@ -322,7 +322,7 @@ mod tests {
                 "{profile:?}: {plan:?}"
             );
         }
-        // Coverage carries no profile pin (no flags in #179 scope).
+        // Coverage carries no profile pin (no flags in scope).
         let plan =
             plan_workflow(WorkflowVerb::Coverage, &resolved(&[]), &[], None, None).expect("plan");
         assert!(

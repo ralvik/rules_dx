@@ -1,4 +1,4 @@
-//! Combined setup request planning for the `dx` CLI (issue #506 WP3 slice 1).
+//! Combined setup request planning for the `dx` CLI.
 //!
 //! Contract: `docs/cli/commands/environment-codegen-setup.md` (`dx setup`
 //! scope: no argument prepares repository-wide codegen and environment
@@ -16,7 +16,7 @@
 //! dangle until generations exist (ordinary host missing-target behavior,
 //! never auto-repair).
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -52,7 +52,7 @@ pub const ENV_OUTPUT_GROUP: &str = "dx_env_plans";
 
 /// Canonical repository-wide codegen selection built by bare `dx setup`.
 /// Matches `REPOSITORY_TARGET` in `dx_codegen`. The effective Bazel roots
-/// behind this label stay provisional pending the WP4 (issue #506) root
+/// behind this label stay provisional pending the WP4 root
 /// fiat selection per ADR 0022; this crate only owns the selection identity.
 pub const CODEGEN_REPOSITORY_TARGET: &str = "//dx:codegen";
 
@@ -200,7 +200,7 @@ pub struct SetupRequest {
 }
 
 /// Plans the single combined Bazel request for `scope`. The repository
-/// arm composes the WP4 (issue #506) [`dx_roots::repository_plan`] (still the
+/// arm composes the WP4 [`dx_roots::repository_plan`] (still the
 /// `//...` baseline) behind both canonical selections; exact scopes
 /// bypass root selection.
 pub fn plan_request(scope: &SetupScope) -> SetupRequest {
@@ -471,7 +471,7 @@ fn map_lock_error(error: Error) -> CommitError {
 }
 
 /// Acquires the shared workspace commit lock. This is the route owned
-/// by `dx_env::acquire_lock` over `dx_atomic_fs::lock_exclusive` (#74:
+/// by `dx_env::acquire_lock` over `dx_atomic_fs::lock_exclusive`
 /// dedicated lock file, `File::try_lock`, contention-only retry until the
 /// deadline): setup introduces no new lock file, mechanism, or deadline.
 fn acquire_commit_lock(dx_dir: &Path, timeout: Duration) -> Result<std::fs::File, CommitError> {

@@ -1,4 +1,4 @@
-"""Unit tests for BCR submission tooling (issue #311).
+"""Unit tests for BCR submission tooling.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

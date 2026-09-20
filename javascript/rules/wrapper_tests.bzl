@@ -1,4 +1,4 @@
-"""Wrapper-contract tests for the JavaScript wrappers (#87 item 2).
+"""Wrapper-contract tests for the JavaScript wrappers (item 2).
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

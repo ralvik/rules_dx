@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Dependency-check contract harness (issue #22, delivered; opens under #510).
+# Dependency-check contract harness (delivered; opens under).
 #
 # Required-core (Rust/Python/JavaScript/TypeScript) plus admitted (Go,
 # Java/Kotlin/Scala, C#/F#, C/C++) lockfile-consistency and
@@ -8,19 +8,19 @@
 # transitive/shared, exception, obsolete, platform, and category
 # fixtures as normal test targets). Remaining admitted quality-adapter
 # implementation stays owned by ADR 0019 (qualified under
-# issue #307); foundation mappings under #476-#484.
+# ; foundation mappings under -.
 #
 # This harness machine-checks the delivered half on a clean tree:
 # the truth table, offline, non-mutating, independently-runnable,
 # non-import/exception, category, and obsolete clauses are present in
-# docs/quality/quality-testing.md and recorded as accepted for #22 (opens under #510),
+# docs/quality/quality-testing.md and recorded as accepted (opens under),
 # the checker exists with no network imports, per-language fixtures and
 # targets exist with no `manual` exclusion, and docs describe only what
 # runs. Run by CI via `bazel run //tools/ci:depcheck_contract`,
 # following //tools/ci:quality_cache_aquery.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -47,7 +47,7 @@ else
   bad "contract lost the stale-vs-consistent truth table"
 fi
 
-# Offline routes qualified for #22 (no open-work placeholder).
+# Offline routes qualified (no open-work placeholder).
 if grep -q -F -e 'with network access denied' "$contract" &&
   grep -q -F -e 'does not query live registries' "$contract" &&
   grep -q -F -e 'Accepted (issue #22' "$contract" &&
@@ -144,7 +144,7 @@ else
 fi
 
 # Docs describe only what runs: required-core plus admitted accepted for
-# #22 (opens under #510), qualified adapter work under #307 plus foundation under #476-#484.
+# (opens under), qualified adapter work under plus foundation under -.
 if grep -q -F -e 'Accepted (issue #22' "$contract" &&
   grep -q -F -e 'issue #307' "$contract" &&
   grep -q -F -e '#476-#484' "$contract"; then

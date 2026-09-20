@@ -1,4 +1,4 @@
-"""Hermetic expected-failure proofs (issue #406).
+"""Hermetic expected-failure proofs.
 """
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")

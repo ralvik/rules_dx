@@ -10,7 +10,7 @@
 //!   `--config-path` (real or empty-defaults) for rustfmt, `-c` or
 //!   `--no-auto-config` for Taplo, and `--config` for Vale.
 //!   Upstream-owned tools need no builder here: Clippy findings arrive
-//!   via the `rust_clippy_aspect` diagnostics file (#47), never via a
+//! via the `rust_clippy_aspect` diagnostics file, never via a
 //!   spawned invocation.
 //! * `rustc` compiles one file per invocation (it accepts a single
 //!   input root); every other tool takes the whole stage file list.
@@ -338,7 +338,7 @@ pub fn ruff_format_fix(binary: &Path, files: &[&Path], config: Option<&Path>) ->
 
 /// Ty typecheck invocation: `check --output-format concise --no-progress
 /// --no-respect-ignore-files` plus one `--extra-search-path DIR` per import
-/// search dir (ty dep context, #408) over the whole stage file list.
+/// search dir (ty dep context,) over the whole stage file list.
 /// Exit 1 with concise diagnostics is findings; `All checks passed!`
 /// exit 0 is clean. Check-only: the runner never passes `--fix` or
 /// `--add-ignore`.

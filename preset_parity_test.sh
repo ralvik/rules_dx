@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Preset parity fixture (issue #332, snapshot workflow issue #322): the
+# Preset parity fixture (snapshot workflow): the
 # repository's own `tools/bazelrc/preset.bazelrc` is a snapshot of both the
 # Python inventory (`tools/bazelrc/preset.py`) and the Rust renderer
 # (`cli/adopt/src/preset_fragment.rs` via `dx update`), so the fragment
@@ -16,15 +16,15 @@
 # the coverage denominator per the repo coverage preset.
 set -euo pipefail
 
-# Shared snapshot helper (issue #322).
+# Shared snapshot helper.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:snapshot"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/snapshot.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/snapshot.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/snapshot.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/snapshot.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/tools/sh/snapshot.sh"
 
-# Shared CI helpers (issues #319, #323).
+# Shared CI helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/tools/sh/lib.sh"
 
-# Portable helpers via tools/sh/lib.sh dx_realpath/dx_mkscratch (issues #299, #323).
+# Portable helpers via tools/sh/lib.sh dx_realpath/dx_mkscratch.
 
 expected="$(dx_realpath "$1")"
 dx_bin="$(dx_realpath "$2")"
@@ -101,7 +101,7 @@ echo "preset parity: Rust renderer output matches checked-in definition (snapsho
 
 # Stale gate: `dx update --check` passes on the fresh fragment, fails on a
 # dirty one without writing, and `dx update` fixes it (check→update→recheck
-# hermetically under `bazel test //...`, issue #407; no nested Bazel).
+# hermetically under `bazel test //...`,; no nested Bazel).
 if "$dx_bin" --workspace "$scratch" update --check --quiet >/dev/null 2>&1; then
   ok
 else

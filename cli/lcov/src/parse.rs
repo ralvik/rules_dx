@@ -22,7 +22,7 @@ pub struct FileHits {
 
 /// Parse combined LCOV text into `SF` path to [`FileHits`].
 ///
-/// Implemented on `lcov` records (issue #395): duplicate `SF` records for
+/// Implemented on `lcov` records: duplicate `SF` records for
 /// the same path are unioned per line (the maximum hit count wins,
 /// preserving covered-ness). Only `DA` records define executable lines;
 /// `FN`/`FNDA`/`BRDA`/`LH`/`LF` summaries are informational and ignored.
@@ -121,7 +121,7 @@ pub fn parse_lcov(report: &str) -> Result<BTreeMap<String, FileHits>, LcovError>
 
 /// Strict structural validation for combined LCOV tracefiles.
 ///
-/// Implemented on `lcov` records (issue #395) for the `dx coverage`
+/// Implemented on `lcov` records for the `dx coverage`
 /// validator: requires at least one `SF` record, well-formed
 /// `DA:<line>,<hits>` counters with `line >= 1`, no `DA` outside an `SF`
 /// section, and that every `SF` section closes with `end_of_record`.

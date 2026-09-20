@@ -1,4 +1,4 @@
-//! CC opt-out fixture library (issue #471).
+//! CC opt-out fixture library.
 //!
 //! Proves the kept `use_cc_toolchain = False` execution path: the build
 //! script above stamps the crate without any C/C++ toolchain input.

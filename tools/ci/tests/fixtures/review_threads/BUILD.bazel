@@ -1,4 +1,4 @@
-"""Review-thread limit plus accounting fixture (issue #592)."""
+"""Review-thread limit plus accounting fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

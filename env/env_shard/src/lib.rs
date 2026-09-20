@@ -1,5 +1,5 @@
 //! Validation and codec helpers for the normalized environment plan shard
-//! (issue #506 WP2).
+//!.
 //!
 //! Contract: `docs/environments/environment.md` (plan collection,
 //! provider-selective aspects, private output group), schema
@@ -13,7 +13,7 @@
 //! the `dx` CLI collection; this crate only validates and encodes one
 //! contributor shard.
 
-// Issue #591 (extends #238 rollout beyond cli/*): infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -100,7 +100,7 @@ fn check_exec_path(producer: &str, path: &str) -> Result<(), Error> {
     // reserved shard suffix so a shard can never back another shard.
     // Uses `dx_path::classify` for ladder order; Empty/EmptyComponent are
     // intentionally allowed here (empty returns Ok above; empty-component
-    // preserves parity with Starlark `env_plan_exec_error`) (#72 slice 4).
+    // preserves parity with Starlark `env_plan_exec_error`) (slice 4).
     if path.is_empty() {
         return Ok(());
     }
@@ -157,7 +157,7 @@ pub fn validate(shard: &DxEnvShard) -> Result<(), Error> {
         check_value(&shard.producer, &entry.key, &entry.value)?;
         check_exec_path(&shard.producer, &entry.exec_path)?;
         // Shared uniqueness control flow lives in `dx_proto_validate`; only
-        // the crate-local `Error` payload stays here (#72 slice).
+        // the crate-local `Error` payload stays here (slice).
         dx_proto_validate::check_unique_insert(&mut seen, &entry.key, |existing| {
             Error::DuplicateKey {
                 producer: shard.producer.clone(),

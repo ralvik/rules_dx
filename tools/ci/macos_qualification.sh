@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# macOS arm64 plus x86_64 best-effort qualification harness (issues #412, #413).
+# macOS arm64 plus x86_64 best-effort qualification harness.
 #
 # Machine-checks the as-built macOS arm64 (required) plus x86_64
 # best-effort records with fixture evidence and owned gaps, without
@@ -13,7 +13,7 @@
 #   release evidence per the support-matrix lifecycle (release evidence
 #   open), docs in support-matrix plus ADR 0014 plus native-toolchains;
 # - Apple-SDK handling: pinned acquired SDK identity plus deployment floor
-#   stay owned by issues #410-#414 per ADR 0014 (SDK version is not the deployment
+# stay owned per ADR 0014 (SDK version is not the deployment
 #   floor); hermetic-llvm Apple-SDK backend stays provisional with
 #   immutable lazy fetch; host-installed SDK fallback is never approved;
 #   CI handling leaks no secrets and requires no interactive acceptance;
@@ -26,7 +26,7 @@
 # following //tools/ci:musl_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -34,9 +34,9 @@ dx_cd_workspace
 
 dx_test_init
 
-# dx qualified hosts: macos/aarch64 (issue #412) plus macos/x86_64
-# best-effort (issue #413) join the Linux pair; Windows x86_64 joins under
-# issue #414, Windows arm64 stays refused.
+# dx qualified hosts: macos/aarch64 plus macos/x86_64
+# best-effort join the Linux pair; Windows x86_64 joins under
+# , Windows arm64 stays refused.
 if grep -q -F -e '("macos", "aarch64")' cli/cli/src/platform.rs &&
   grep -q -F -e '("macos", "x86_64")' cli/cli/src/platform.rs &&
   grep -q -F -e 'qualified_hosts' cli/cli/src/platform.rs &&
@@ -60,7 +60,7 @@ else
 fi
 
 # dx status names the macOS arm64 plus x86_64 best-effort qualification
-# (Windows x86_64 may append `plus windows_x86_64` under issue #414; the
+# (Windows x86_64 may append `plus windows_x86_64`; the
 # macos fragments stay).
 if grep -q -F -e 'plus macos_arm64' cli/adopt/src/status.rs &&
   grep -q -F -e 'plus macos_x86_64 best-effort' cli/adopt/src/status.rs &&
@@ -71,7 +71,7 @@ else
 fi
 
 # Support matrix keeps macOS arm64 (required) plus x86_64 best-effort
-# Platform-qualified; Windows x86_64 flips qualified under issue #414.
+# Platform-qualified; Windows x86_64 flips qualified.
 if grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (issue #412' &&
   grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'host-installed SDK fallback never approved' &&
   grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open' &&
@@ -86,7 +86,7 @@ fi
 
 # ADR 0014 keeps macOS arm64 required plus x86_64 best-effort and records
 # both qualifications. Exact pins, hosts, floors, and SDK/CRT identities
-# stay owned by issues #410-#414.
+# stay owned.
 if grep -q -F -e '| macOS arm64 | Required' docs/decisions/0014-tested-platform-release-stack.md &&
   grep -q -F -e 'macOS arm64 qualified under issue #412' docs/decisions/0014-tested-platform-release-stack.md &&
   grep -q -F -e '| macOS x86_64 | Best-effort' docs/decisions/0014-tested-platform-release-stack.md &&
@@ -110,7 +110,7 @@ else
 fi
 
 # Per-cell coverage registry: both macos cells qualified with no union
-# (seven qualified, zero unqualified after issues #413/#414).
+# (seven qualified, zero unqualified after).
 if [[ -f "tools/coverage/macos-arm64-inventory.txt" ]] &&
   [[ -f "tools/coverage/macos-x86_64-inventory.txt" ]] &&
   grep -q -F -e 'qualified macos_arm64 tools/coverage/macos-arm64-inventory.txt' tools/coverage/cells.txt &&

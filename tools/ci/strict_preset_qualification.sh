@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Strict preset qualification harness (issue #615).
+# Strict preset qualification harness.
 #
 # Decides default-loose vs strict-opt-in for users with fixture plus docs
 # evidence:
@@ -20,7 +20,7 @@
 # following //tools/ci:quality_taxonomy_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -50,7 +50,7 @@ verify="docs/testing/verification-matrix.md"
 root_ruff="ruff.toml"
 root_biome="biome.json"
 
-# Fixture set stays present (issue #615).
+# Fixture set stays present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$ruff_loose" && -f "$ruff_strict" && -f "$biome_loose" && -f "$biome_strict" && -f "$ts_loose" && -f "$ts_strict" && -f "$ex_py" && -f "$ex_ts" ]]; then
   ok
 else
@@ -188,7 +188,7 @@ else
   bad "root ruff.toml or biome.json drifted (want loose E4/E7/E9/F plus {} unchanged, issue #615)"
 fi
 
-# Verification matrix owns the qualified seed-only record under #615.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'strict_preset_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #615' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:strict_preset_qualification' "$verify" &&

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Docs-pipeline qualification harness (issue #581, live successor to closed #421).
+# Docs-pipeline qualification harness (live successor to closed).
 #
 # Qualifies the as-built docs-pipeline record with fixture evidence and
 # owned gaps, without claiming a working site:
@@ -9,7 +9,7 @@
 #   library (version/identity/validation/mode/drift/guide/site planning
 #   with unit tests), frozen design contracts (IR + site), removed dx docs
 #   stub behind ADR 0020, no Supported claim;
-# - open under #581 with honest records: 13 per-language adapter runs with
+# - open under with honest records: 13 per-language adapter runs with
 #   pins/mappings (Scala TASTy proof spike first, Astro/MDX prose-only),
 #   renderer/site execution as Bazel-cached extract→aggregate→render,
 #   site-level byte-identical rebuild proof (codec same-producer proof is
@@ -23,7 +23,7 @@
 # following //tools/ci:env_codegen_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -186,7 +186,7 @@ else
 fi
 
 # Per-language overload, join, and packaging details stay tracked under
-# #581, never claimed as delivered.
+# , never claimed as delivered.
 if grep -q -F -e 'tracked under' "$docir" &&
   grep -q -F -e 'issue #581' "$docir" &&
   grep -q -F -e 'The exact' "$docir" &&
@@ -280,7 +280,7 @@ else
 fi
 
 # dx docs stub stays removed behind ADR 0020 with reintroduction open
-# under #581.
+# under.
 if grep -q -F -e 'Removed. The `dx docs` command was deleted per' "$stub" &&
   grep -q -F -e 'open under issue #581' "$stub" &&
   grep -q -F -e 'Delete the `dx docs` command surface' "$adr20" &&
@@ -312,7 +312,7 @@ else
   bad "a docs adapter implementation appeared or the no-execution record drifted"
 fi
 
-# Contracts keep the full #581 gap list with no working-site honesty.
+# Contracts keep the full gap list with no working-site honesty.
 if grep -q -F -e 'Docs pipeline gaps stay open under issue #581' "$readme" &&
   grep -q -F -e 'per-language adapter runs' "$readme" &&
   grep -q -F -e 'renderer and site execution' "$readme" &&
@@ -326,7 +326,7 @@ else
   bad "documentation README lost its full #581 gap list"
 fi
 
-# Roadmap keeps the same #581 execution-gap list.
+# Roadmap keeps the same execution-gap list.
 if grep -q -F -e 'Docs-pipeline execution gaps stay open under issue #581' "$roadmap" &&
   grep -q -F -e 'adapter runs with pins' "$roadmap" &&
   grep -q -F -e 'renderer and site execution' "$roadmap" &&
@@ -357,7 +357,7 @@ else
   bad "schema-major pins drifted across proto/codec/planning"
 fi
 
-# Backlog guards still track the #581 docs-pipeline gap.
+# Backlog guards still track the docs-pipeline gap.
 if grep -q -F -e '#581 docs-pipeline gaps stay tracked' "$backlog_guards" &&
   grep -q -F -e "documentation README lost its #581 docs-pipeline tracker record" "$backlog_guards"; then
   ok
@@ -365,9 +365,9 @@ else
   bad "backlog automation guards lost their #581 tracker"
 fi
 
-# Tracker lineage: the closed-#421 citations now own #581 as the live
-# successor to closed #421 (issue #445 owns closed-tracker hygiene;
-# #581 owns #421).
+# Tracker lineage: the closed- citations now own as the live
+# successor to closed 
+# owns).
 if grep -q -F -e 'live successor to closed #421' "$readme" &&
   grep -q -F -e 'live successor to closed #421' "$docir" &&
   grep -q -F -e 'live successor to closed #421' "$site" &&
@@ -380,7 +380,7 @@ else
 fi
 
 # Scala spike plus Astro/MDX prose-only stay explicit with no execution
-# claim (issue #581 scope item 1: Scala proof first where the proof is
+# claim
 # missing; Astro/MDX prose-only confirmation).
 if grep -q -F -e 'Scala 3 TASTy Inspector' "$docir" &&
   grep -q -F -e 'proof spike required' "$docir" &&
@@ -395,7 +395,7 @@ else
 fi
 
 # Site-level rebuild stays distinct from the delivered codec
-# same-producer proof (issue #581 scope item 3: codec proof exists,
+# same-producer proof
 # site-level does not).
 if grep -q -F -e 'Same producer plus same inputs rebuild byte-identical' "$codec" &&
   grep -q -F -e 'same_producer_requires_byte_equality' "$planning" &&
@@ -408,7 +408,7 @@ else
 fi
 
 # ADR 0006 build-vs-validation split stays pinned for dx docs
-# reintroduction (issue #581 scope item 4: build/check/serve with
+# reintroduction
 # --check non-mutating; exact mappings live in the issue, not the stub).
 if grep -q -F -e 'records build versus' "$readme" &&
   grep -q -F -e 'validation-only check' "$readme" &&
@@ -422,7 +422,7 @@ else
 fi
 
 # Generated-IR lifecycle stays Bazel-owned: shards live in Bazel outputs,
-# never beside sources or in Git (issue #581 scope item 2).
+# never beside sources or in Git (scope item 2).
 if grep -q -F -e 'Generated IR stays in Bazel outputs' "$readme" &&
   grep -q -F -e 'not beside source files or in Git' "$readme" &&
   grep -q -F -e 'never write generated IR beside source' "$site" &&
@@ -434,7 +434,7 @@ fi
 
 # Reusable-docs plus caller stay product surface: check-only lint over the
 # caller scope, validated tree (not rendered site), reviewed SHA pin,
-# publish only on main (issue #581 scope item 5).
+# publish only on main (scope item 5).
 if grep -q -F -e 'runs `dx lint --check`' "$reusable" &&
   grep -q -F -e 'validated docs tree' "$reusable" &&
   grep -q -F -e 'rendered mdBook site arrives' "$reusable" &&
@@ -449,7 +449,7 @@ else
 fi
 
 # No Supported docs claim until platform plus consumer plus release
-# evidence passes (issue #581 scope item 6, via supported_evidence_gate).
+# evidence passes (scope item 6, via supported_evidence_gate).
 if grep -q -F -e 'No cell below is `Supported`' "$support" &&
   grep -q -F -e 'supported_evidence_gate' "$support" &&
   grep -q -F -e 'No cell is `Supported`' "$matrix" &&

@@ -1,4 +1,4 @@
-// OpenSSL shape stub with declared build tools (issue #499).
+// OpenSSL shape stub with declared build tools.
 #pragma once
 
 // The canonical upstream build needs perl plus declared tools; ambient

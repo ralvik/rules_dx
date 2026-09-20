@@ -1,4 +1,4 @@
-"""Review-thread limit pins (issue #592).
+"""Review-thread limit pins.
 Contract: `docs/github-ci.md#thread-lifecycle-and-limits`.
 Fixture: `tools/ci/tests/fixtures/review_threads/` via
 `bazel run //tools/ci:review_threads_qualification`.

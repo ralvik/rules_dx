@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Environment/codegen qualification harness (issue #506).
+# Environment/codegen qualification harness.
 #
 # Qualifies the as-built environment/codegen record with fixture evidence
 # and owned gaps, without claiming the unproven required tests:
@@ -15,7 +15,7 @@
 #   generation (Sigstore keyless bundle on the TUF trust root,
 #   draft-only publisher ceiling; SBOM/provenance/BCR deferred),
 # - required bootstrap/fidelity/spaces/stale/IDE/atomic/BEP/projection/
-#   root-candidate tests stay open under #506 with delivered
+# root-candidate tests stay open under with delivered
 #   fixtures (bootstrap_test spaces+noop+unmanaged, cli/env lock units,
 #   cli/roots frozen baseline plus reference, codegen collector
 #   frozen contracts, per-foundation env plans, node pnpm projection)
@@ -25,7 +25,7 @@
 # following //tools/ci:quality_adapters_parity.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -243,7 +243,7 @@ else
   bad "codegen.md lost its no-second-downloader record"
 fi
 
-# Owned gaps stay listed under #506 with no premature COMPLETED.
+# Owned gaps stay listed under with no premature COMPLETED.
 if grep -q -F -e 'under issue #506' "$env_doc" &&
   grep -q -F -e 'public env contribution protocol' "$env_doc" &&
   grep -q -F -e 'root-candidate tests' "$env_doc"; then
@@ -260,7 +260,7 @@ else
   bad "verification-matrix lost its Env/codegen Open plus no-Supported gate"
 fi
 
-# Fixture files stay present (issue #506).
+# Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$expected" && -f "$roots_bep" ]]; then
   ok
 else
@@ -352,7 +352,7 @@ else
   bad "env codegen fixture plus WP shard plus roots fixture build failed (want green on the seed host, issue #506)"
 fi
 
-# Verification matrix owns the qualified seed-only record under #506.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'env_codegen_qualification' "$matrix" &&
   grep -q -F -e 'qualified seed-only under #506' "$matrix" &&
   grep -q -F -e 'bazel run //tools/ci:env_codegen_qualification' "$matrix" &&

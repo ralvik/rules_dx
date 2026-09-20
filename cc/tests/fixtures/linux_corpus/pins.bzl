@@ -1,26 +1,15 @@
-"""Linux corpus pins (issue #499).
+"""Linux corpus pins.
 
 Contract: `docs/native-toolchains.md#profiles-and-cross-builds`,
 `docs/native-toolchains.md#rust-and-native-integration`,
 `docs/native-toolchains.md#qualification-questions-and-delivery`.
 Fixture: `cc/tests/fixtures/linux_corpus/` via
 `bazel run //tools/ci:linux_corpus_qualification`.
-
-Decides the corpus slice of the Linux profiles: source-built SQLite,
-OpenSSL with declared build tools, ring-style C/assembly with target
-libs, bindgen both routes with execution libclang closure, and CXX
-single-graph execution prove both Linux profiles complete on the seed
-host with fixture evidence recorded here and in the owning docs.
-Single-crate proof stays rejected: the SQLite plus OpenSSL plus ring
-plus bindgen plus CXX shapes below must all pass. Native only: glibc
-plus static musl on Linux x86_64/arm64; no Windows/macOS cross-host
-claim. Backends stay provisional; transport plus floors plus coverage
-stay owned under issues #497/#500/#501, never double-claimed here.
 """
 
 # Linux profiles proved complete by this corpus (native only).
 # Glibc plus static musl on Linux x86_64/arm64; dynamic musl explicitly
-# out of scope with no cell. Hosts stay owned by issues #410/#411.
+# out of scope with no cell. Hosts stay owned.
 LINUX_GLIBC_PROFILE = "linux_x86_64/arm64 glibc"
 LINUX_MUSL_PROFILE = "linux_x86_64/arm64 static musl"
 LINUX_MUSL_VERSION = "1.2.6"
@@ -62,7 +51,7 @@ RING_SHAPE = "ring-style C/assembly with target libs"
 RING_NOTE = "ring-style C plus assembly with target-platform libraries, exec-platform tools for scripts"
 
 # Bindgen shapes: standalone rust_bindgen plus build-script routes.
-# Parser baseline LLVM-22 vs target LLVM-23 pinned under issue #473.
+# Parser baseline LLVM-22 vs target LLVM-23 pinned.
 # Standalone derives the target compiler context with
 # --no-include-path-detection --formatter=none plus explicit flags and
 # the Rust consumer separately links the native library; the
@@ -79,13 +68,13 @@ BINDGEN_NOTE = "bindgen standalone plus build-script routes with execution libcl
 # CXX shape: decided single-graph identity plus corpus execution.
 # cxx plus cxxbridge-cmd at 1.0.200 from the single crate_universe
 # crates graph with generator tool @crates//:cxxbridge-cmd, never a
-# cxx.rs second graph (decided under issue #474).
+# cxx.rs second graph (decided).
 CXX_IDENTITY_VERSION = "1.0.200"
 CXXBRIDGE_CMD_LABEL = "@crates//:cxxbridge-cmd"
 CXX_NOTE = "CXX single-graph execution with @crates//:cxxbridge-cmd"
 
 # Rejected substitutes per the issue alternatives: single-crate proof,
-# plus availability/ancestry-style shortcuts carried from #498.
+# plus availability/ancestry-style shortcuts carried from.
 REJECTED_ALTERNATIVES = [
     "single-crate proof",
     "prebuilt glibc as musl-compatible",

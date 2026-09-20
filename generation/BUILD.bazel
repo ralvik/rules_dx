@@ -20,7 +20,7 @@ rust_prost_library(
     proto = ":result_proto",
 )
 
-# Normalized codegen plan shard schema (issue #506 WP1, issue #506): field numbers
+# Normalized codegen plan shard schema: field numbers
 # are the compatibility surface; see `codegen.proto` and `codegen.bzl`.
 proto_library(
     name = "codegen_proto",
@@ -34,7 +34,7 @@ rust_prost_library(
 
 codegen_defs_unit_tests(name = "codegen_defs_unit")
 
-# Shard-emission and collection fixtures (issue #506 WP1 slice 2): two disjoint
+# Shard-emission and collection fixtures: two disjoint
 # leaf shards chained through `deps` prove transitive aspect collection,
 # while the prost adapter fixture proves the narrow rust_prost_library
 # edge through the verified `rust_generated_srcs` output group.

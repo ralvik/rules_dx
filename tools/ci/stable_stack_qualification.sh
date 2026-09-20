@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stable-stack compose qualification harness (issue #494).
+# Stable-stack compose qualification harness.
 #
 # Freezes the exact current stable stack that composes on the seed host,
 # with fixture evidence recorded explicitly here and in the owning docs,
@@ -30,7 +30,7 @@
 #   llvm dep, no second Bazel.
 # - live proof: the as-built stack composes on the seed host (Rust plus
 #   C++ hello fixtures build and test green); the hermetic-llvm candidate
-#   backend plus corpus wiring stays provisional under issue #499.
+# backend plus corpus wiring stays provisional.
 #   Platform plus consumer plus release evidence stays open; no Supported
 #   claim. Compatibility is compose only.
 #
@@ -38,7 +38,7 @@
 # following //tools/ci:roslyn_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -58,7 +58,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture pair stays present (issue #494).
+# Fixture pair stays present.
 if [[ -f "$pins" && -f "$fixture_build" ]]; then
   ok
 else
@@ -194,7 +194,7 @@ else
   bad "tools/ci/BUILD.bazel or ci.yml lost the stable_stack_qualification wiring (want target plus dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified seed-only record under #494.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'stable_stack_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under issue #494' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:stable_stack_qualification' "$verify" &&

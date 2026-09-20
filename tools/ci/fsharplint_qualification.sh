@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# FSharpLint console vs library-API binding qualification (issue #493).
+# FSharpLint console vs library-API binding qualification.
 #
 # Decides the open FSharpLint adapter-input risk with fixture evidence,
 # recorded explicitly here and in the owning docs, never silently dropped
@@ -29,13 +29,13 @@
 # - native config is sole policy: checked-in `fsharplint.json` required to
 #   change policy (see `example.fsharplint.json` with formatting-adjacent
 #   rules off because Fantomas owns formatting).
-# Adapter-only: no adapter claims `fsharp` yet (cohort stays owned by #417;
-# decision recorded under #493 with fixtures).
+# Adapter-only: no adapter claims `fsharp` yet (cohort stays owned by;
+# decision recorded under with fixtures).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:fsharplint_qualification`.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -63,7 +63,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture set stays present (issue #493).
+# Fixture set stays present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$sample_src" && -f "$standard_sample" && -f "$msbuild_sample" && -f "$sample_conf" ]]; then
   ok
 else
@@ -72,7 +72,7 @@ fi
 
 # Pins record the reference version plus exact-package artifact plus the
 # upstream wrapper-vs-library shapes (versions qualified seed-only under
-# #486; digests stay owned under #417).
+# ; digests stay owned under).
 if grep -q -F -e 'FSHARPLINT_VERSION = "0.27.0"' "$pins" &&
   grep -q -F -e 'exact official tool package over the managed .NET cohort' "$pins" &&
   grep -q -F -e 'no dotnet tool install' "$pins" &&
@@ -147,7 +147,7 @@ fi
 
 # No false adapter claim: fsharplint stays out of REAL_ADAPTERS and the runner
 # matrix carries no fsharp cells (claims land only with green adapter
-# evidence; cohort classification stays, owned under #417).
+# evidence; cohort classification stays, owned under).
 if ! grep -q -F -e '"fsharplint":' "$adapters" &&
   ! grep -q -F -e 'matrix_fsharp_' "$matrix" &&
   grep -q -F -e '"fsharp": "fsharp"' "$adapters"; then
@@ -156,7 +156,7 @@ else
   bad "false fsharplint adapter claim (want no fsharplint in REAL_ADAPTERS, no matrix_fsharp_ cells, fsharp stays classified)"
 fi
 
-# Tool integrations record the explicit #493 decision (wire required,
+# Tool integrations record the explicit decision (wire required,
 # console-parse rejected both shapes, target-coupled project context,
 # sandbox fix flow), never silent, with no adapter claim.
 if grep -q -F -e 'decided under issue #493' "$integrations" &&
@@ -174,7 +174,7 @@ else
 fi
 
 # Tool acquisition keeps the FSharpLint research row plus the decided
-# exact-package route with the #493 decision and no false claim.
+# exact-package route with the decision and no false claim.
 if grep -q -F -e '| FSharpLint |' "$acquisition" &&
   grep -q -F -e 'decided under issue #493' "$acquisition" &&
   grep -q -F -e 'Decided route: CSharpier and Fantomas take the' "$acquisition" &&
@@ -186,7 +186,7 @@ else
   bad "tool-acquisition lost its FSharpLint row plus decided route with #493 decision and no-claim honesty"
 fi
 
-# Support matrix records the #493 decision in adapter-input notes plus wire
+# Support matrix records the decision in adapter-input notes plus wire
 # formats plus fix modes plus open risks, with fixtures and no Supported claim.
 if grep -q -F -e 'decided under issue #493' "$support" &&
   grep -q -F -e 'fsharp/tests/fixtures/fsharplint/' "$support" &&
@@ -206,7 +206,7 @@ else
   bad "tools/ci/BUILD.bazel or ci.yml lost the fsharplint_qualification wiring (want target plus dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified record under #493.
+# Verification matrix owns the qualified record under.
 if grep -q -F -e 'fsharplint_qualification' "$verify" &&
   grep -q -F -e 'issue #493' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:fsharplint_qualification' "$verify"; then

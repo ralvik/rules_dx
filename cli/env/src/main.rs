@@ -14,7 +14,7 @@
 //! With no staged-input flags the default `environment_tree` travels in
 //! this binary's runfiles; pass both flags to install any other tree.
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -28,7 +28,7 @@ use clap::{
 };
 use dx_env::{identity_hex, parse_staged, probe_symlink, refresh, RefreshOptions, RefreshOutcome};
 
-/// Default tree metadata rlocation candidates, in order (issue #319).
+/// Default tree metadata rlocation candidates, in order.
 /// Single source for the default-tree lookup: the metadata file has a
 /// stable name while tool link names vary, so one lookup locates the
 /// staged tree (parent plus `bin`). Uses the standard `runfiles` library
@@ -49,7 +49,7 @@ fn usage_error(message: &str) -> i32 {
     2
 }
 
-/// `argv` tokenizer (qualified under issue #316: frozen legacy contract).
+/// `argv` tokenizer (frozen legacy contract).
 /// Every option keeps the legacyshape: last-wins scalar
 /// repeats and unconditional next-token consumption (even a `--`-led token),
 /// so `--workspace --staged-bin DIR` still binds `--staged-bin` as the
@@ -145,7 +145,7 @@ fn run() -> i32 {
             Err(_) => return usage_error("--lock-timeout-ms must be a non-negative integer"),
         },
     };
-    // Workspace start (issue #319): single-sourced via
+    // Workspace start: single-sourced via
     // `dx_process::workspace_start` (shell: `tools/sh/lib.sh`).
     // An explicit `--workspace` still wins.
     let start = match workspace {

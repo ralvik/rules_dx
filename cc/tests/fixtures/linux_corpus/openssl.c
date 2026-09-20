@@ -1,4 +1,4 @@
-// OpenSSL shape stub with declared build tools (issue #499).
+// OpenSSL shape stub with declared build tools.
 #include "cc/tests/fixtures/linux_corpus/openssl.h"
 
 #include <stddef.h>

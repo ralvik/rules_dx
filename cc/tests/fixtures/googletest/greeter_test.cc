@@ -1,4 +1,4 @@
-// Seed C++ GoogleTest test; consumer of the qualified GoogleTest v1.18.0 runner (issue #479).
+// Seed C++ GoogleTest test; consumer of the qualified GoogleTest v1.18.0 runner.
 #include <gtest/gtest.h>
 
 #include <optional>

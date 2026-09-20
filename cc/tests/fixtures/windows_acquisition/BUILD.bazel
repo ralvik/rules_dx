@@ -1,4 +1,4 @@
-"""Windows immutable-lazy acquisition fixture (issue #495)."""
+"""Windows immutable-lazy acquisition fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

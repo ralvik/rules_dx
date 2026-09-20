@@ -1,4 +1,4 @@
-# Loose passes, strict fails example (issue #615).
+# Loose passes, strict fails example.
 #
 # Unsorted imports pass the loose selection (E4, E7, E9, F has no I001)
 # and fail the strict preset (I). Illustrative only; not executed by the

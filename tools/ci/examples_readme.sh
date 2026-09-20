@@ -15,13 +15,13 @@
 # lose its disposition note. Acquisition and laziness fixtures
 # (no-install attribution, unused-foundation zero-work) are delivered
 # across the readme, static, query, aquery, and runtime harnesses,
-# with platform/remote dimensions owned by #298/#507.
+# with platform/remote dimensions owned by /.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:examples_readme`,
 # following //tools/ci:code_ownership.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 

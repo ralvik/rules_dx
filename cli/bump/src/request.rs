@@ -994,7 +994,7 @@ fn is_target_shape(text: &str) -> bool {
     // `set:package` never starts with `/`/`@` and never contains `/`
     // except inside GitHub Actions `owner/repo` packages (which still
     // start with `github-actions:`/`gha:`). Labels/paths do. The `//`/`@`
-    // prefix is a declarative `^(//|@)` (issue #397); the `/`-with/without
+    // prefix is a declarative `^(//|@)`; the `/`-with/without
     // known-set checks below stay textual because they branch on the set
     // registry, not on character classes.
     if let Some(re) = target_prefix_re() {
@@ -1024,7 +1024,7 @@ fn is_target_shape(text: &str) -> bool {
 }
 
 /// Validates an ecosystem package identity (upstream-native, no versions).
-/// Character classes are declarative `regex` patterns (issue #397);
+/// Character classes are declarative `regex` patterns;
 /// structural checks (`:`/`/`/space placement, scope splits) stay textual.
 /// Each helper falls back to the historical char loop when its static
 /// pattern fails to compile (unreachable; keeps non-test builds

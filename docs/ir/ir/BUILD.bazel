@@ -1,4 +1,4 @@
-"""Validation and codec helpers for the Documentation IR (#10)."""
+"""Validation and codec helpers for the Documentation IR."""
 
 load("@crates//:crates.bzl", "aliases")
 

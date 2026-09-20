@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# LCOV accounting qualification harness (issue #501).
+# LCOV accounting qualification harness.
 #
 # Defines plus proves the accounting slice of the native baseline with
 # fixture evidence, without claiming qualified floors, qualified cross
@@ -26,13 +26,13 @@
 # - no ignored collection failures: missing reports plus incomplete
 #   instrumentation plus absent eligible sources fail the gate.
 # - open with honest records: backends stay provisional, floors stay
-#   owned under issue #500.
+# owned.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:lcov_accounting_qualification`,
 # following //tools/ci:linux_corpus_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -51,7 +51,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture files stay present (issue #501).
+# Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$accounting_h" && -f "$accounting_cc" && -f "$accounting_test" ]]; then
   ok
 else
@@ -167,7 +167,7 @@ else
   bad "tools/ci/BUILD.bazel or ci.yml lost the lcov_accounting_qualification wiring (want target plus dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified seed-only record under #501.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'lcov_accounting_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #501' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:lcov_accounting_qualification' "$verify" &&

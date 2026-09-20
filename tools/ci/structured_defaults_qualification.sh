@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Structured quality defaults qualification harness (issue #488).
+# Structured quality defaults qualification harness.
 #
 # Qualifies the provisional structured format plus lint defaults against the
-# native-configuration contract with no hidden presets. Issue #419 covers
+# native-configuration contract with no hidden presets. covers
 # adapters (plus digests), not versions: this harness owns versions plus
 # rule-sets.
 # - pinned: buf 1.72.0 in `quality/tests/fixtures/structured_quality/pins.bzl`
@@ -10,9 +10,9 @@
 #   (Qt 6.11.1 observed) follow the qualified Qt distribution pin
 #   (authoritative-toolchain class, no separate acquisition; Qt-last ordering
 #   decided; exact Qt distribution identity, licensing, and platform artifact
-#   qualification stay owned under issue #419); checksummed
+# qualification stay owned); checksummed
 #   native/self-contained buf identity recorded, digests stay owned under
-#   issue #419.
+#
 # - rule-sets: native-configuration sole policy, no hidden presets. Without
 #   an applicable checked-in native config the pinned tool uses upstream
 #   built-in defaults; with a config it interprets natively; adapters add
@@ -28,14 +28,14 @@
 #   build/test targets, so the fixture pair plus `bazel build` of the fixture
 #   is the live proof (no hello bazel test exists here).
 # - open owned gaps: digests (including Qt distribution identity, licensing,
-#   platform artifacts) plus adapters under #419, platform plus consumer plus
+# platform artifacts) plus adapters under, platform plus consumer plus
 #   release evidence, no `Supported` claim. Compatibility is defaults only.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:structured_defaults_qualification`,
 # following //tools/ci:scala_dotnet_defaults_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -59,7 +59,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture pair plus pins stay present (issue #488).
+# Fixture pair plus pins stay present.
 if [[ -f "$pins" && -f "$pins_build" ]]; then
   ok
 else
@@ -116,7 +116,7 @@ fi
 
 # No false adapter claim for the structured cohort: none of the cohort
 # tool IDs appear in REAL_ADAPTERS. Classification exists; adapter claim
-# does not (owned under issue #419).
+# does not (owned).
 cohort_claim=""
 for tool in buf qmlformat qmllint; do
   if grep -q -F -e "\"$tool\":" "$adapters"; then
@@ -131,7 +131,7 @@ fi
 
 # Classification-only today: protobuf/qml families carry no curated defaults,
 # no runner-matrix cells (claims land only with green adapter evidence
-# under issue #419).
+#
 cohort_curated=""
 for family in '"protobuf": {' '"qml": {'; do
   if grep -q -F -e "$family" "$curated"; then
@@ -147,7 +147,7 @@ else
 fi
 
 # Support matrix keeps the qualified structured versions plus rule-sets
-# with fixtures and harness (issue #488); digests plus adapters stay under #419.
+# with fixtures and harness; digests plus adapters stay under.
 if grep -q -F -e 'qualified seed-only under issue #488' "$support" &&
   grep -q -F -e 'structured_defaults_qualification' "$support" &&
   grep -q -F -e 'quality/tests/fixtures/structured_quality/pins.bzl' "$support" &&
@@ -171,8 +171,8 @@ fi
 
 # Tool acquisition keeps the decided checksummed buf route with no
 # target-compiler context plus execution-platform laziness and no false
-# claim; versions qualified under #488, digests plus adapters stay pending
-# under #419.
+# claim; versions qualified under, digests plus adapters stay pending
+# under.
 if grep -q -F -e 'Decided route: `buf` takes the checksummed' "$acquisition" &&
   grep -q -F -e 'needs no target compiler context' "$acquisition" &&
   grep -q -F -e 'no adapter claims `protobuf` yet' "$acquisition" &&
@@ -186,7 +186,7 @@ fi
 # Tool acquisition keeps the decided Qt-last authoritative-toolchain route
 # for qmlformat/qmllint with distribution identity plus licensing plus
 # platform artifacts pending and no false claim; versions qualified under
-# #488, digests plus adapters stay pending under #419.
+# , digests plus adapters stay pending under.
 if grep -q -F -e 'Decided route (Qt last)' "$acquisition" &&
   grep -q -F -e 'qmlformat and qmllint take the authoritative-toolchain route' "$acquisition" &&
   grep -q -F -e 'exact Qt distribution identity, licensing, and platform' "$acquisition" &&
@@ -211,7 +211,7 @@ else
 fi
 
 # Tool integrations keep the structured adapter-input notes with open
-# parser work plus #488 pinned versions (adapters still open under #419).
+# parser work plus pinned versions (adapters still open under).
 if grep -q -F -e '**Structured cohort (issue #419' "$integrations" &&
   grep -q -F -e 'no adapter claims `protobuf` or `qml` yet' "$integrations" &&
   grep -q -F -e 'qualified seed-only under issue #488' "$integrations" &&
@@ -229,7 +229,7 @@ else
   bad "native-configuration lost its sole-policy plus no-hidden-preset honesty"
 fi
 
-# Verification matrix owns the qualified seed-only record under #488.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'structured_defaults_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #488' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:structured_defaults_qualification' "$verify" &&

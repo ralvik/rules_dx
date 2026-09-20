@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Gazelle idempotence check (snapshot workflow issue #322): compares two
+# Gazelle idempotence check (snapshot workflow): compares two
 # fresh generation runs, not a checked-in golden, so UPDATE_EXPECT does not
 # apply. The `diff -u` below is an idempotence assertion (run-to-run
 # equality), not a snapshot refresh path.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issues #319, #323).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../../tools/sh/lib.sh"
 
-# Portable helpers via tools/sh/lib.sh dx_realpath/dx_sha256 (issues #299, #323).
+# Portable helpers via tools/sh/lib.sh dx_realpath/dx_sha256.
 
 gazelle="$(dx_realpath "$1")"
 root="${TEST_TMPDIR}/workspace"

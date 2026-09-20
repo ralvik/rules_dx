@@ -3,7 +3,7 @@
 Contract: `docs/quality/tool-integrations.md`, `docs/quality/quality-sources.md`, `docs/decisions/0003-action-granularity.md`.
 """
 
-# Versioned registry schema for the adapter taxonomy (issue #321).
+# Versioned registry schema for the adapter taxonomy.
 # Consumers query via `real_supported_classes`, `is_known_adapter_tool`,
 # `is_classified`, and `adapter_registry_schema_error` instead of
 # duplicating the maps, so adding a language/tool edits this one data
@@ -158,7 +158,7 @@ def _is_canonical_token(text):
     return True
 
 def adapter_registry_schema_error():
-    """Validates the versioned adapter-registry schema (issue #321).
+    """Validates the versioned adapter-registry schema.
 
     Checks data shape without pinning exact contents, so adding a
     language/tool edits the registry data only: version is v1, every

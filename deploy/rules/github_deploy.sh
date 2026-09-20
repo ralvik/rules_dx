@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Deploy program for `github_release` (issue #182).
+# Deploy program for `github_release`.
 #
 # Invoked via `bazel run :<name>` or `dx deploy :<name>`. The generated
 # launcher resolves the tag's asset files from its runfiles forest and
 # execs this script with the tag as `$1` and the asset paths after it.
-# Draft-only by construction (issue #5): the real path always passes
+# Draft-only by construction: the real path always passes
 # `--draft --verify-tag`, so the program never creates or pushes tags
 # itself — the tag must already exist in the remote, pushed beforehand
 # with explicit owner approval. With `GH_RELEASE_DRY_RUN=1` the script

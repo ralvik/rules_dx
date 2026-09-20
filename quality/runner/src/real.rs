@@ -37,7 +37,7 @@
 //! backend re-reads the bytes on exit 0 or 1 and keeps its input only on
 //! any other exit. Spawn, materialization, and re-read failures still
 //! fail the action.
-//! Clippy (#47) has no fix command and is check-only: its suggestions
+//! Clippy has no fix command and is check-only: its suggestions
 //! ride the frozen authoritative upstream diagnostics and never
 //! rewrite. Vale, the Markdown checker, rustc typecheck, Ty,
 //! pydoclint, flake8, pylint, and Biome lint are check-only and never
@@ -108,7 +108,7 @@ const BIOME_DEFAULTS_BYTES: &[u8] = b"{}";
 /// CLI `--edition` flag matches what the crate compiles as), and extra
 /// mirrored files (hinted configs, Vale styles). The action maps its
 /// inputs to the mirror paths through the CLI. Delegated tools (Clippy,
-/// #47) carry authoritative upstream diagnostics files instead of a
+///) carry authoritative upstream diagnostics files instead of a
 /// spawned binary: the aspect declares the files as action inputs and
 /// maps them here, and the backend parses them without spawning.
 pub struct RealTool {
@@ -128,7 +128,7 @@ pub type SpawnFn = fn(&[OsString], &Path, &[(String, String)]) -> io::Result<Chi
 type StagedPair = (String, PathBuf);
 
 /// One staged scratch tree: the scratch plus checked, sibling, and
-/// resolve pairs. Resolve pairs (ty dep context, #408) are staged for
+/// resolve pairs. Resolve pairs (ty dep context,) are staged for
 /// import resolution but never checked.
 struct StagedScratch {
     scratch: Scratch,
@@ -301,7 +301,7 @@ impl RealBackend {
     /// workspace path in sorted order. Siblings mirror alongside the
     /// sources so link-resolution siblings exist on disk, but they stay
     /// out of `pairs`: they are never linted and findings can never
-    /// address them. Resolve files (ty dep context, #408) mirror alongside
+    /// address them. Resolve files (ty dep context,) mirror alongside
     /// for import resolution but stay out of `pairs`: they are never
     /// checked and their findings are filtered by the ty branch, never
     /// reported (their own targets' actions own them).
@@ -392,7 +392,7 @@ impl RealBackend {
     /// the aspect (`CrateInfo.edition`), never guessed here. Defaulting
     /// would silently reformat e.g. Edition 2015/2024 crates with the
     /// wrong rules, and the adapter must not reconstruct rustc/edition
-    /// state (#49). A missing edition fails the action so the wiring
+    /// state. A missing edition fails the action so the wiring
     /// gap surfaces instead of producing wrong diffs.
     fn rustfmt_edition(tool: &RealTool) -> Result<&str, RunnerError> {
         const TOOL_ID: &str = "rustfmt";
@@ -437,7 +437,7 @@ impl RealBackend {
         }
     }
 
-    /// Clippy check (#47): parses the authoritative upstream
+    /// Clippy check: parses the authoritative upstream
     /// diagnostics files the aspect declared as action inputs. Upstream
     /// spans already address workspace paths, so findings are
     /// re-addressed to the staged scratch-absolute paths the
@@ -468,7 +468,7 @@ impl RealBackend {
         Ok(findings)
     }
 
-    /// rustc check (#48): parses the authoritative upstream
+    /// rustc check: parses the authoritative upstream
     /// diagnostics files the aspect declared as action inputs. Upstream
     /// spans already address workspace paths, so findings are
     /// re-addressed to the staged scratch-absolute paths the
@@ -614,7 +614,7 @@ impl RealBackend {
                 }
             }
             "ty" => {
-                // Ty import context (#408): resolve files are staged for
+                // Ty import context: resolve files are staged for
                 // import resolution but never checked. Derive search dirs
                 // from staged Python files (checked plus resolve) so
                 // same-package top-level imports resolve. Findings in
@@ -812,7 +812,7 @@ impl RealBackend {
     }
 
     /// Resolve-aware [`Self::diagnose_with_siblings`]: resolve files (ty
-    /// dep context, #408) mirror into the scratch tree for import
+    /// dep context,) mirror into the scratch tree for import
     /// resolution but stay out of findings, snapshots, and fixes. Findings
     /// addressing resolve files are filtered by the ty branch (their own
     /// targets' actions own them); findings addressing truly unstaged files
@@ -1112,7 +1112,7 @@ pub fn run_real_pipeline_with_siblings(
 }
 
 /// Resolve-aware [`run_real_pipeline_with_siblings`]: resolve files are ty
-/// dep-context bytes (#408). They must be UTF-8, must not collide with a
+/// dep-context bytes. They must be UTF-8, must not collide with a
 /// checked, sibling, or fellow resolve path, and never enter snapshots,
 /// stages, or fixes, so a stage naming a resolve path still fails
 /// `MissingFile`. Findings addressing resolve files are filtered (their

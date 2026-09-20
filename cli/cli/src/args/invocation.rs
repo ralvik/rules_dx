@@ -86,7 +86,7 @@ impl Invocation {
         }
     }
 
-    /// Effective profile under issue #179 precedence: explicit flag over
+    /// Effective profile precedence: explicit flag over
     /// the command default. Deploy resolves flag over the target
     /// `profile` attribute over the release default; the
     /// target attribute is read during execution via cquery, so this

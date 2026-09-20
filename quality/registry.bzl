@@ -1,4 +1,4 @@
-"""Single-sourced versioned registry queries (issue #321).
+"""Single-sourced versioned registry queries.
 
 Contract: `docs/quality/quality-sources.md`.
 """
@@ -48,7 +48,7 @@ def is_curated_family(family):
     return family in CURATED_DEFAULTS
 
 def registry_schema_error():
-    """Validates the aggregated versioned registry schemas (issue #321).
+    """Validates the aggregated versioned registry schemas.
 
     Combines the per-registry schema checks without pinning exact contents:
     versions are v1, class spellings are canonical, adapter-backed classes

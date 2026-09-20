@@ -1,4 +1,4 @@
-"""Shared workspace-relative path shape checks (#72)."""
+"""Shared workspace-relative path shape checks."""
 
 load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_crate")
@@ -12,7 +12,7 @@ package(default_visibility = [
     "//quality:__subpackages__",
 ])
 
-# Leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# Leaf-crate pattern via `dx_rust_crate`: emits
 # `dx_path` + `dx_path_test` + fmt/clippy tests +
 # `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
 dx_rust_crate(

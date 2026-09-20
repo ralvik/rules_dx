@@ -1,4 +1,4 @@
-"""Update mutation-event wont-fix fixture (issue #586)."""
+"""Update mutation-event wont-fix fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

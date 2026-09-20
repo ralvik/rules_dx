@@ -12,7 +12,7 @@ Consumers never load this package directly; they depend on
 `@paket.main//<package>` labels. Members are FSharp.Core 10.1.201 (F#
 assemblies need the FSharp.Core runtime asset next to the app; plain
 fsc output alone throws FileNotFoundException at startup) plus the xUnit
-v3 4.0.0 runner closure pinned under issue #477 (xunit.v3 4.0.0 plus
+v3 4.0.0 runner closure pinned (xunit.v3 4.0.0 plus
 xunit.analyzers 2.0.0 with the MTP runner transitive).
 """
 

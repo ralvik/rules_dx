@@ -155,7 +155,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         });
     }
     if command.is_managed() {
-        // Managed environment/codegen/setup commands (issue #506 WP5) run one
+        // Managed environment/codegen/setup commands run one
         // Bazel collection request behind a canonical selection with
         // text prose only: no check mode, no finding thresholds, no
         // standard reports, and no version/clean-only flags.
@@ -296,7 +296,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         }
     }
     if command == Command::Bump {
-        // Bump plans through `dx_bump` (issue #260): exactly one
+        // Bump plans through `dx_bump`: exactly one
         // `set:package` selector plus one new version
         // (`dx bump <selector> <version>`), mutating without confirmation.
         // Thresholds, standard reports, and check mode do not apply on
@@ -354,7 +354,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         }
     }
     if command == Command::Migrate {
-        // Migrate plans through `dx_adopt::plan_migrate` (issue #462):
+        // Migrate plans through `dx_adopt::plan_migrate`:
         // `dx migrate --from <version> --to <version> [scope ...]`,
         // both Cargo-flavor semver with a major-release-only gate plus
         // one manifest per major hop. Scope selection reuses generation
@@ -628,7 +628,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
             option: "--output=diff".to_owned(),
         });
     }
-    // Profile flags (issue #179): `--debug`/`--release` are mutually
+    // Profile flags: `--debug`/`--release` are mutually
     // exclusive and belong to `build`, `run`, `test`, and `deploy`
     // only (every other command fails fast instead of silently
     // ignoring the profile).
@@ -827,7 +827,7 @@ mod tests {
 
     #[test]
     fn verbose_parses_before_and_after_command_and_stays_orthogonal_to_quiet() {
-        // Issue #222: `--verbose` enables tracing diagnostics without
+        // `--verbose` enables tracing diagnostics without
         // changing the machine-output contract; `--quiet` still controls
         // summaries independently.
         let bare = parse(&args(&["lint", "--verbose"])).expect("parse");
@@ -1191,7 +1191,7 @@ mod tests {
                 option: "--fail-on".to_owned(),
             })
         );
-        // `update` supports `--output=json` (#19): dry-run
+        // `update` supports `--output=json`: dry-run
         // planning plus live per-set reporting.
         let got = parse(&args(&["update", "--output=json"])).expect("update json");
         assert_eq!(got.command, Command::Update);
@@ -1240,7 +1240,7 @@ mod tests {
 
     #[test]
     fn bump_needs_exactly_one_selector_plus_version() {
-        // `dx bump <selector> <version>` (issue #260): one requirement,
+        // `dx bump <selector> <version>`: one requirement,
         // never batch, mutating without confirmation.
         let bump = parse(&args(&["bump", "cargo:anyhow", "1.2.3"])).expect("parse bump");
         assert_eq!(bump.command, Command::Bump);
@@ -1319,7 +1319,7 @@ mod tests {
 
     #[test]
     fn migrate_needs_from_and_to_versions() {
-        // `dx migrate --from <version> --to <version>` (issue #462):
+        // `dx migrate --from <version> --to <version>`:
         // both Cargo semver, major-release-only gate, one manifest per
         // major hop, mutating by default with fail-closed execution.
         let migrate =
@@ -1450,7 +1450,7 @@ mod tests {
 
     #[test]
     fn output_contract_has_no_silent_ignore() {
-        // Issue #200: every command either supports a machine-output mode or
+        // Every command either supports a machine-output mode or
         // rejects it pre-exec with `UnsupportedOption`. Silent ignore (accept
         // the flag, print text anyway) is never allowed.
         //

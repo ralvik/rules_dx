@@ -1,4 +1,4 @@
-// Seed Java Jupiter test; consumer of the qualified JUnit 6.1.3 runner (issue #476).
+// Seed Java Jupiter test; consumer of the qualified JUnit 6.1.3 runner.
 package hello;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

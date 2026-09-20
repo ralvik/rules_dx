@@ -1,4 +1,4 @@
-//! Normalized env plan collection for the `dx` CLI (issue #506 WP2 slice 4).
+//! Normalized env plan collection for the `dx` CLI.
 //!
 //! Contract: `docs/environments/environment.md` (plan collection,
 //! provider-selective aspects, private output group) and
@@ -31,7 +31,7 @@
 //! key-sorted backing leaves (`key`/`value` to full BEP artifact path)
 //! for setup to commit.
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
@@ -113,7 +113,7 @@ pub fn resolve_scope(targets: &[String]) -> Result<EnvScope, ScopeError> {
 }
 
 /// Bazel labels to build for `scope`: the canonical repository target or
-/// the one exact label. The repository arm composes the WP4 (issue #506)
+/// the one exact label. The repository arm composes the WP4
 /// [`dx_roots::repository_plan`] (still the `//...` baseline) behind the
 /// `//dx:env` selection identity; exact scopes bypass root selection.
 pub fn scope_targets(scope: &EnvScope) -> Vec<String> {

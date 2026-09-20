@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# Cross routes qualification harness (issue #504).
+# Cross routes qualification harness.
 #
 # Defines plus proves the cross-routes slice of the native baseline with
 # fixture evidence, without claiming a qualified hermetic-llvm backend,
-# qualified floors beyond issue #500, qualified coverage beyond issue
-# #501, or Supported:
+# qualified floors beyond, qualified coverage beyond issue
+# , or Supported:
 # - first cohort: Linux x86_64 plus Linux arm64 execution each building
 #   Linux x86_64 and arm64 glibc plus static musl; Linux cross is the
 #   first priority, not a mandate to build every target from every host.
 # - native rows: five native workflows qualified under issues
-#   #410/#411/#412/#413/#414 with per-host runners plus cache scopes on
+# //// with per-host runners plus cache scopes on
 #   the pinned upstream toolchains; backends stay provisional.
 # - musl closures: Linux same-arch static musl qualified under issue
-#   #411 with exec-platform tools for scripts and target musl libs for
+# with exec-platform tools for scripts and target musl libs for
 #   apps, cross-built from Linux runners with per-profile cache scopes
 #   plus per-cell coverage with no union.
 # - cross-arch: x86_64-to-arm64 plus arm64-to-x86_64 glibc plus musl
@@ -34,14 +34,14 @@
 #   claimed row; required native workflows never weakened for a larger
 #   table; cross-host Windows inference rejected.
 # - open with honest records: backends stay provisional, floors
-#   qualified seed-only under issue #500, coverage qualified seed-only
-#   under issue #501, corpus qualified seed-only under issue #499.
+# qualified seed-only, coverage qualified seed-only
+# , corpus qualified seed-only.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:cross_routes_qualification`,
 # following //tools/ci:strict_generation_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -60,7 +60,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture files stay present (issue #504).
+# Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$routes" && -f "$execution" && -f "$cache_remote" ]]; then
   ok
 else
@@ -221,7 +221,7 @@ else
   bad "tools/ci/BUILD.bazel or ci.yml lost the cross_routes_qualification wiring (want target plus dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified seed-only record under #504.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'cross_routes_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #504' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:cross_routes_qualification' "$verify" &&

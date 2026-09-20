@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Migrate syntax plus manifest-selection qualification harness (issue #462).
+# Migrate syntax plus manifest-selection qualification harness.
 #
 # Qualifies the as-built `dx migrate` V1 scope with fixture evidence
 # (see docs/cli/commands/migrate.md plus docs/testing/cli.md):
@@ -22,7 +22,7 @@
 # following //tools/ci:cli_contract_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -133,7 +133,7 @@ else
   bad "migrate doc lost its syntax plus manifest plus fail-closed record"
 fi
 
-# Testing matrix pins the migrate fixtures with the #462 owner.
+# Testing matrix pins the migrate fixtures with the owner.
 if grep -q -F -e '`migrate`' "$testing" &&
   grep -q -F -e 'migrate_qualification' "$testing" &&
   grep -q -F -e 'migrate_failed' "$testing" &&

@@ -1,4 +1,4 @@
-"""Strict preset decision fixture (issue #615)."""
+"""Strict preset decision fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

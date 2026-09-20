@@ -197,7 +197,7 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
 
     # The private upstream test stays an implementation detail via private
     # visibility; both it and the public wrapper run under `bazel test //...`
-    # (issue #406: no manual; double-execution is the cost of green suites).
+    # (no manual; double-execution is the cost of green suites).
     # `aspect_hints` rides the public forwarder only (quality aspects visit
     # the forwarder); strip it from the upstream jest_test kwargs.
     upstream_kwargs = dict(kwargs)

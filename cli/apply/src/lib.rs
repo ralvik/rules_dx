@@ -5,7 +5,7 @@
 //! [`consensus`] before anything applies; every operation passes
 //! [`validators`] and is written atomically by the [`applier`].
 
-// Issue #238: infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 

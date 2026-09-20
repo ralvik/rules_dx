@@ -15,7 +15,7 @@ use crate::plan::{bep_path, plan_managed};
 use dx_output::OutputMode;
 use dx_process::ForwardError;
 
-/// Runs `dx codegen`, `dx env`, and `dx setup` (issue #506 WP3/WP5):
+/// Runs `dx codegen`, `dx env`, and `dx setup`:
 /// validates the label-only scope through the shared setup scope rules,
 /// plans the Bazel collection request with [`plan_managed`], and either
 /// renders the `--dry-run` summary (planning nothing else, launching

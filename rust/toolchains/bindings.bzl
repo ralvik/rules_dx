@@ -20,7 +20,7 @@ def rust_toolchain_tools(ctx):
 def rust_toolchain_rustc(ctx):
     """Return the `rustc` File for the selected toolchain.
 
-    Declared for rust stages; the delegated typecheck pipeline (#48)
+ Declared for rust stages; the delegated typecheck pipeline
     never spawns it — findings parse from the upstream `rustc_output`
     diagnostics file, so the compiler follows the selected toolchain
     with no adapter edit.

@@ -29,7 +29,7 @@ typescript_project(
 # Thin binary over the reusable owner: the library alone owns `main.ts`;
 # the binary carries only the compiled entry point (`main.js`) plus
 # `data = [":main"]`, the same shape `dx generate` emits for a recognized
-# `main.ts` entry (issue #585).
+# `main.ts` entry.
 javascript_binary(
     name = "main_bin",
     data = [":main"],

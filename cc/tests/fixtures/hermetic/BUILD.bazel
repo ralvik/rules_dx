@@ -1,4 +1,4 @@
-"""C/C++ sha256-integrity plus no-system-package fixture (issue #484)."""
+"""C/C++ sha256-integrity plus no-system-package fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

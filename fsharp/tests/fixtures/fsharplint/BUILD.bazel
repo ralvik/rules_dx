@@ -1,4 +1,4 @@
-"""FSharpLint console vs library-API binding fixture (issue #493)."""
+"""FSharpLint console vs library-API binding fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

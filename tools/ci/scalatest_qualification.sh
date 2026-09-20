@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# ScalaTest 3.2.20 qualification harness (issue #480).
+# ScalaTest 3.2.20 qualification harness.
 #
-# Qualifies the owned gap from closed #304: provisional ScalaTest 3.2.20,
-# closed #304 owner only. #417 covers adapters not the runner.
+# Qualifies the owned gap from closed: provisional ScalaTest 3.2.20,
+# closed owner only. covers adapters not the runner.
 # - pinned: rules_scala 7.3.0 plus Scala 2.13.18 plus ScalaTest 3.2.20
 #   (Scalactic 3.2.20 companion) in `scala/tests/fixtures/scalatest/pins.bzl`;
 #   MODULE.bazel pins the ruleset plus toolchain plus `scala_deps.scalatest()`
@@ -24,7 +24,7 @@
 # following //tools/ci:gotest_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -44,7 +44,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture pins plus hello consumer stay present (issue #480).
+# Fixture pins plus hello consumer stay present.
 if [[ -f "$pins" && -f "$scalatest_build" && -f "$hello_build" && -f "$hello_test" ]]; then
   ok
 else
@@ -156,7 +156,7 @@ else
   bad "docs/generation/README.md lost its qualified ScalaTest record under issue #480"
 fi
 
-# Verification matrix owns the qualified seed-only record under #480.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'scalatest_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #480' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:scalatest_qualification' "$verify" &&

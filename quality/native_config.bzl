@@ -18,7 +18,7 @@ DxNativeConfigInfo = provider(
 # the dedicated `ruff.toml`/`.ruff.toml` basenames (never `pyproject.toml`);
 # basename recognition is Gazelle's job, the `.toml` extension check here
 # matches the rustfmt precedent. Biome takes `biome.json` only (issue
-# #589 wont-fix: `.jsonc` is rejected; the `.json` extension check here
+# wont-fix: `.jsonc` is rejected; the `.json` extension check here
 # pins the JSON transport with no hidden preset): the adapter passes the
 # config's directory as `--config-path`, so the directory must hold
 # exactly one `biome.json` and never linted sources. ESLint takes the

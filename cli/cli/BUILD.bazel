@@ -11,7 +11,7 @@ package(default_visibility = [
     "//cli:__subpackages__",
 ])
 
-# Hand-written binary crate (issue #239); see docs/generation/rust.md.
+# Hand-written binary crate; see docs/generation/rust.md.
 
 rust_library(
     name = "dx_cli",
@@ -179,22 +179,22 @@ rust_binary(
     ],
 )
 
-# Dogfood draft release of the standalone `dx` binary (issue #182): the
+# Dogfood draft release of the standalone `dx` binary: the
 # macro assembles the seed-host binary the publish dry-run workflow
 # qualifies, so workflow and macro stay consistent instead of duplicating
 # logic. Draft-only with the dry-run placeholder tag: publishing a real
 # draft needs the tag pushed beforehand and explicit owner approval
-# per issue #5.
+#
 github_release(
     name = "github_draft",
     artifacts = [":dx"],
 )
 
-# Seed-host standalone archive (issue #26): credential-free tarball +
+# Seed-host standalone archive: credential-free tarball +
 # sha256 of the `dx` binary proving standalone packaging without Bazel
 # or Rust at install time. Seed Linux x86_64 is qualified-built-here;
 # the wider matrix (Linux arm64, macOS x86_64/arm64, Windows x86_64)
-# stays unqualified per #5. Publisher-identity verification of the
+# stays unqualified per. Publisher-identity verification of the
 # release bytes is `//deploy/install:dx_verify` (Sigstore bundle +
 # identity/issuer, no checksum-only fallback); the bundle itself arrives
 # with the owner-approved release via the human-run signing workflow.
@@ -203,9 +203,9 @@ archive_release(
     app = ":dx",
 )
 
-# Manual-page build step (issue #225): renders man/dx.1 from the clap
+# Manual-page build step: renders man/dx.1 from the clap
 # grammar at build time so the page tracks parsing, `--help`, and
-# completions. Release packaging (issue #26) consumes `:man_pages`.
+# completions. Release packaging consumes `:man_pages`.
 rust_binary(
     name = "dx_man",
     srcs = ["src/bin_man.rs"],

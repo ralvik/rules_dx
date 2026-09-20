@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Publication-group guards (issues #460, #78, #26, #5, #311).
+# Publication-group guards.
 #
-# Prebuilt devcontainer images (#460, live successor to closed #184) ship from a workflow kept separate
+# Prebuilt devcontainer images (live successor to closed) ship from a workflow kept separate
 # from releases per owner decision, build on PR, and push only on
-# workflow_dispatch + approve:true; signing follows #26/#78
-# (cosign <digest> on the #26 trust root). The publishing dry run (#78)
+# workflow_dispatch + approve:true; signing follows /
+# (cosign <digest> on the trust root). The publishing dry run
 # is workflow_dispatch-only and publishes nothing either way. Standalone
-# dx distribution + install verification (#26) and release hygiene (#5:
+# dx distribution + install verification and release hygiene
 # no tags/releases/submissions without explicit owner approval) stay
 # owner-gated with SECURITY reporting as the release precondition.
 #
@@ -20,7 +20,7 @@
 # following //tools/ci:ghcr_hygiene.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -68,7 +68,7 @@ else
   bad "devcontainer.json image drifted before the first GHCR push"
 fi
 
-# Release precondition: private vulnerability reporting enabled (#5).
+# Release precondition: private vulnerability reporting enabled.
 if grep -q -F -e 'private vulnerability' SECURITY.md; then
   ok
 else

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Consumer CI gate harness, scheduling half (#99 item 1).
+# Consumer CI gate harness, scheduling half (item 1).
 #
 # Executes the REAL platforms-gate python extracted from
 # .github/workflows/reusable-consumer.yml (first `python3 - <<'EOF'`
@@ -11,7 +11,7 @@
 # copy with the mode validation removed must stop failing.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issues #319, #323).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 

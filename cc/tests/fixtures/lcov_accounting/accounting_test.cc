@@ -1,4 +1,4 @@
-// LCOV accounting fixture test; covered plus defensive-ignore shapes (issue #501).
+// LCOV accounting fixture test; covered plus defensive-ignore shapes.
 #include <cassert>
 
 #include "cc/tests/fixtures/lcov_accounting/accounting.h"

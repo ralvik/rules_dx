@@ -1,16 +1,9 @@
-"""Quality core plus result contract pins (issue #511).
+"""Quality core plus result contract pins.
 
 Contract: `docs/quality/quality-result-protocol.md`,
 `docs/cli/output-protocol.md`, `docs/cli/standard-reports.md`.
 Fixture: `quality/tests/fixtures/result_contract/` via
 `bazel run //tools/ci:result_contract_qualification`.
-
-Decides the quality core plus result contract slice beyond the bare
-open work in `docs/product/support-matrix.md:120`: the internal
-Protobuf plus NDJSON output core exists and its mappings are qualified
-here with fixture evidence. Docs stay in place; this harness pins the
-mappings. Seed only: no platform plus consumer plus release claim, no
-Supported claim. Backends stay provisional.
 """
 
 # Severity mapping: proto INFO plus WARNING plus ERROR map to NDJSON
@@ -157,7 +150,7 @@ REJECTED_ALTERNATIVES = [
 
 # Owned gaps stay explicit: SPDX parsing plus policy-table loading plus
 # live SPDX emission plus update aggregate exit codes stay owned under
-# issue #511; platform plus consumer plus release evidence stays owned
+# ; platform plus consumer plus release evidence stays owned
 # gap; no Supported claim.
 OWNED_SPDP_PARSE = "SPDX parsing plus policy-table loading stays owned under issue #511"
 OWNED_SPDP_EMISSION = "live SPDX emission stays owned under issue #511"

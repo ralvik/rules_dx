@@ -1,4 +1,4 @@
-//! `dx run` single-target launcher with explicit-label multirun (#186).
+//! `dx run` single-target launcher with explicit-label multirun.
 
 use super::common::*;
 use crate::args::Invocation;
@@ -25,7 +25,7 @@ fn resolve_code(error: &ResolveError) -> &'static str {
 
 /// Executes `dx run`: local-only launcher with verbatim application
 /// exit codes. One resolved target runs one `bazel run`; multiple
-/// explicit labels/patterns (multirun #186) run sequential `bazel run`s
+/// explicit labels/patterns (multirun) run sequential `bazel run`s
 /// in scope order with the same `--` args forwarded to each. Lifecycle
 /// prose goes to stderr prefixed per target; each application keeps
 /// stdio through the process runner (which forwards SIGINT/SIGTERM to
@@ -106,7 +106,7 @@ fn execute_run_single(
     run_plan(invocation, out, err, workspace, runner, &plan.argv)
 }
 
-/// Multi-target sequential `bazel run`s (multirun #186): Bazel-owned
+/// Multi-target sequential `bazel run`s (multirun): Bazel-owned
 /// execution with no supervisor. Each target gets its own `bazel run`
 /// plan with identical app args; lifecycle lines prefix per target so
 /// sequential output stays attributable while each child owns the
@@ -303,7 +303,7 @@ mod tests {
 
     #[test]
     fn run_multi_target_runs_sequential_single_plans() {
-        // Multirun #186: each explicit label gets its own `bazel run`
+        // Multirun: each explicit label gets its own `bazel run`
         // lifecycle line; the same `--` args forward to each.
         let harness = Harness::new("run-multi");
         let (code, _, err) = harness.run(&["run", "//a:bin", "//b:bin"]);
@@ -522,7 +522,7 @@ mod tests {
     fn run_profile_flags_reach_bazel_argv() {
         use std::cell::RefCell;
         use std::rc::Rc;
-        // End-to-end pin of the issue #179 mapping on the `run` path:
+        // End-to-end pin of the mapping on the `run` path:
         // parse selects the profile and execution injects the matching
         // `--config=dx_*` (bare means `dx_dev`).
         for (words, flag) in [

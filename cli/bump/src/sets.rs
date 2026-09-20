@@ -1,4 +1,4 @@
-//! V1 widen-one-requirement set registry for `dx bump` (issue #260).
+//! V1 widen-one-requirement set registry for `dx bump`.
 //!
 //! Pure registry over the five v1 manager sets named in the issue,
 //! covering the native updater scope: Bazel modules plus

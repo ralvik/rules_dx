@@ -1,22 +1,9 @@
-"""Env plus codegen pins (issue #506).
+"""Env plus codegen pins.
 
-Contract: `docs/environments/environment.md#test-requirements`,
-`docs/environments/codegen.md#test-requirements`,
-`docs/environments/managed-state.md#test-requirements`,
-`docs/environments/node.md#importer-projection`.
+Contract: `docs/environments/environment.md#test-requirements`, `docs/environments/codegen.md#test-requirements`,
+`docs/environments/managed-state.md#test-requirements`, `docs/environments/node.md#importer-projection`.
 Fixture: `env/tests/fixtures/env_codegen/` via
 `bazel run //tools/ci:env_codegen_qualification`.
-
-Decides the env plus codegen slice beyond the dx facade placeholders
-(issue #423 covers `//dx:config` plus `//dx:codegen` narrowly): public
-protocol stays deferred PATH-tools-only, Windows fallback stays
-unsupported symlink-only, standalone stays Bazel-first, signing plus
-trust stays implemented-verifier plus deferred generation, with
-bootstrap plus fidelity plus spaces plus stale plus IDE plus
-atomic-commit plus BEP plus projection plus roots plus cold-warm
-evidence recorded here and in the owning docs. Seed only: no
-platform plus consumer plus release claim, no Supported claim.
-Backends stay provisional.
 """
 
 # Public env contribution protocol stays deferred PATH-tools-only.

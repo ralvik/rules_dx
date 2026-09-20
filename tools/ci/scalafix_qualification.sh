@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Scalafix console + semanticdb-classpath wiring qualification (issue #490).
+# Scalafix console + semanticdb-classpath wiring qualification.
 #
 # Decides the open Scalafix adapter-input risk with fixture evidence,
 # recorded explicitly here and in the owning docs, never silently dropped
@@ -9,7 +9,7 @@
 #   attribution plus interleaved patch/diagnostic sections, so fail-closed
 #   parsing is unprovable (fixtures `console_lint.txt` plus
 #   `console_rewrite.txt` modeled on DisableSyntax.var plus ProcedureSyntax;
-#   open upstream scalacenter/scalafix#2459, report-API scalacenter/scalafix#951).
+# open upstream scalacenter/scalafix, report-API scalacenter/scalafix).
 # - wire REQUIRED: structured diagnostics plus patches via a custom Java
 #   entrypoint binding `scalafix.interfaces.ScalafixMainCallback` over the
 #   semantic-rule artifacts on the shared managed JDK plus the Scala
@@ -23,13 +23,13 @@
 #   unified patches (never `IN_PLACE` mutation of immutable inputs).
 # - native config is sole policy: checked-in `.scalafix.conf` required for
 #   OrganizeImports plus RemoveUnused (see `example.scalafix.conf`).
-# Adapter-only: no adapter claims `scala` yet (cohort stays owned by #417;
-# decision recorded under #490 with fixtures).
+# Adapter-only: no adapter claims `scala` yet (cohort stays owned by;
+# decision recorded under with fixtures).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:scalafix_qualification`.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -57,7 +57,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture set stays present (issue #490).
+# Fixture set stays present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$lint_sample" && -f "$rewrite_sample" && -f "$sample_src" && -f "$sample_conf" ]]; then
   ok
 else
@@ -65,7 +65,7 @@ else
 fi
 
 # Pins record the reference version plus managed-JVM artifact (versions
-# qualified seed-only under #486; digests stay owned under #417).
+# qualified seed-only under; digests stay owned under).
 if grep -q -F -e 'SCALAFIX_VERSION = "0.14.7"' "$pins" &&
   grep -q -F -e 'semantic-rule artifacts over the shared managed JDK' "$pins"; then
   ok
@@ -110,7 +110,7 @@ fi
 
 # No false adapter claim: scalafix stays out of REAL_ADAPTERS and the runner
 # matrix carries no scala cells (claims land only with green adapter
-# evidence; cohort classification stays, owned under #417).
+# evidence; cohort classification stays, owned under).
 if ! grep -q -F -e '"scalafix":' "$adapters" &&
   ! grep -q -F -e 'matrix_scala_' "$matrix" &&
   grep -q -F -e '"scala": "scala"' "$adapters"; then
@@ -119,7 +119,7 @@ else
   bad "false scalafix adapter claim (want no scalafix in REAL_ADAPTERS, no matrix_scala_ cells, scala stays classified)"
 fi
 
-# Tool integrations record the explicit #490 decision (wire required,
+# Tool integrations record the explicit decision (wire required,
 # console-parse rejected, target-coupled wiring, sandbox fix flow), never
 # silent, with no adapter claim.
 if grep -q -F -e 'decided under issue #490' "$integrations" &&
@@ -136,7 +136,7 @@ else
 fi
 
 # Tool acquisition keeps the Scalafix research row plus the decided
-# managed-JVM route with the #490 decision and no false claim.
+# managed-JVM route with the decision and no false claim.
 if grep -q -F -e '| Scalafix |' "$acquisition" &&
   grep -q -F -e 'decided under issue #490' "$acquisition" &&
   grep -q -F -e 'Decided route: Scalafmt and Scalafix take the' "$acquisition" &&
@@ -148,7 +148,7 @@ else
   bad "tool-acquisition lost its Scalafix row plus decided route with #490 decision and no-claim honesty"
 fi
 
-# Support matrix records the #490 decision in adapter-input notes plus fix
+# Support matrix records the decision in adapter-input notes plus fix
 # modes plus open risks, with fixtures and no Supported claim.
 if grep -q -F -e 'decided under issue #490' "$support" &&
   grep -q -F -e 'scala/tests/fixtures/scalafix/' "$support" &&
@@ -169,7 +169,7 @@ else
   bad "tools/ci/BUILD.bazel or ci.yml lost the scalafix_qualification wiring (want target plus dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified record under #490.
+# Verification matrix owns the qualified record under.
 if grep -q -F -e 'scalafix_qualification' "$verify" &&
   grep -q -F -e 'issue #490' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:scalafix_qualification' "$verify"; then

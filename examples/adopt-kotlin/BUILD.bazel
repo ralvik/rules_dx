@@ -1,4 +1,4 @@
-"""Adopted foreign Kotlin tree (#195): corpus ownership for arrival files."""
+"""Adopted foreign Kotlin tree: corpus ownership for arrival files."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

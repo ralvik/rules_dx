@@ -1,4 +1,4 @@
-"""Structured quality defaults fixture (issue #488)."""
+"""Structured quality defaults fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

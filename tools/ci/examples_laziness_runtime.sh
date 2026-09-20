@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Examples laziness runtime proof (issue #85, slice 5, final): managed-acquisition
+# Examples laziness runtime proof (slice 5, final): managed-acquisition
 # action-command attribution via `bazel aquery` over per-foundation adopt-*
 # examples.
 #
@@ -22,9 +22,9 @@
 # and does not apply to the multi-foundation consumer).
 #
 # Seed-host scope: Delivered means implemented and verified on the Linux x86_64
-# seed host only (platform qualification open under issue #298). Remote-cache /
+# seed host only (platform qualification open). Remote-cache /
 # remote-execution and empty-cache download attribution stay owned by issue
-# #507 and platform evidence by issue #298; they are not claimed here. A warm
+# and platform evidence; they are not claimed here. A warm
 # local execution log alone is not a cache test, so this harness asserts over
 # declared actions (cache-independent), not over executed-vs-cached logs.
 #
@@ -32,7 +32,7 @@
 # after //tools/ci:examples_laziness_aquery.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -41,7 +41,7 @@ dx_cd_workspace
 dx_test_init
 
 # Same prohibited-installer set as the static half (examples_laziness.sh):
-# the contract's "or equivalent installer" clause per issue #85 and the
+# the contract's "or equivalent installer" clause and the
 # laziness matrix (pip, uv, npm, pnpm, Cargo, Maven, NuGet, Bundler,
 # PowerShell Gallery).
 check_no_installers() { # example

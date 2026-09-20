@@ -1,4 +1,4 @@
-"""Deploy boundary for `dx deploy` (issue #178).
+"""Deploy boundary for `dx deploy`.
 
 Contract: `docs/deploy/authoring.md`, `docs/decisions/0021-build-profiles.md`.
 """

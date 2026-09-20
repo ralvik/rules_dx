@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deployment plus execution floors qualification harness (issue #500).
+# Deployment plus execution floors qualification harness.
 #
 # Defines plus proves the floors slice of the native baseline with fixture
 # evidence, without claiming a qualified hermetic-llvm backend, qualified
@@ -27,14 +27,14 @@
 #   loadable libclang exists; Apple extracted SDK framework subset
 #   checked for completeness.
 # - unpinned floors rejected. Backends stay provisional; linux corpus
-#   qualified seed-only under issue #499, coverage qualified seed-only
-#   under issue #501.
+# qualified seed-only, coverage qualified seed-only
+#
 #
 # Versioned here, run by CI via `bazel run //tools/ci:deployment_floors_qualification`,
 # following //tools/ci:linux_corpus_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -55,7 +55,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture files stay present (issue #500).
+# Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$floors_expected" && -f "$oldest" && -f "$current" && -f "$loaders" && -f "$frameworks" ]]; then
   ok
 else
@@ -175,7 +175,7 @@ else
   bad "tools/ci/BUILD.bazel or ci.yml lost the deployment_floors_qualification wiring (want target plus dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified seed-only record under #500.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'deployment_floors_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #500' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:deployment_floors_qualification' "$verify" &&

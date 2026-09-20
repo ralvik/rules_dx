@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Linux corpus qualification harness (issue #499).
+# Linux corpus qualification harness.
 #
 # Defines plus proves the corpus slice of the Linux profiles with fixture
 # evidence, without claiming a qualified hermetic-llvm backend, qualified
 # floors, qualified cross routes, or Supported:
 # - profiles: Linux x86_64/arm64 glibc plus static musl, native only
-#   (hosts stay owned by issues #410/#411; dynamic musl explicitly out
+# (hosts stay owned; dynamic musl explicitly out
 #   of scope with no cell; no Windows/macOS cross-host claim).
 # - SQLite: source-built C amalgamation through declared Bazel native
 #   inputs, never a prebuilt glibc binary (prebuilt glibc never
@@ -18,23 +18,23 @@
 # - bindgen: standalone rust_bindgen plus build-script routes with the
 #   LLVM-22 baseline vs LLVM-23 target, explicit execution-platform
 #   libclang closure, target parsing flags, and separate native link
-#   (compat pinned under issue #473, never unpinned LLVM).
+# (compat pinned, never unpinned LLVM).
 # - CXX: decided single-graph identity (`cxx == cxxbridge-cmd == 1.0.200`
 #   from the single `crates` graph with `@crates//:cxxbridge-cmd`, never
-#   a `cxx.rs` second graph, decided under issue #474) with corpus
+# a `cxx.rs` second graph, decided) with corpus
 #   execution proven here.
 # - single-crate proof rejected: SQLite plus OpenSSL plus ring plus
 #   bindgen plus CXX must all pass. Native only.
 # - open with honest records: hermetic-llvm backend, PIE plus ELF plus
-#   glibc-symbol plus cross-build completeness, floors (issue #500),
-#   transport (issue #497), coverage (issue #501). Backends stay
+# glibc-symbol plus cross-build completeness, floors,
+# transport, coverage. Backends stay
 #   provisional.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:linux_corpus_qualification`,
 # following //tools/ci:prebuilt_interop_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -57,7 +57,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture files stay present (issue #499).
+# Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$sqlite_h" && -f "$sqlite_c" && -f "$openssl_h" && -f "$openssl_c" && -f "$ring_h" && -f "$ring_c" && -f "$corpus_test" ]]; then
   ok
 else
@@ -175,7 +175,7 @@ else
   bad "tools/ci/BUILD.bazel or ci.yml lost the linux_corpus_qualification wiring (want target plus dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified seed-only record under #499.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'linux_corpus_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #499' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:linux_corpus_qualification' "$verify" &&

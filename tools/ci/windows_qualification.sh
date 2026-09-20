@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Windows x86_64 MSVC-compatible qualification harness (issue #414).
+# Windows x86_64 MSVC-compatible qualification harness.
 #
 # Machine-checks the as-built Windows x86_64 record with fixture evidence
 # and owned gaps, without claiming Supported, Windows arm64, or a qualified
@@ -16,7 +16,7 @@
 #   never automatic (upstream repository-env mechanism, README variable
 #   mismatch recorded); merely adding the module requires no acceptance and
 #   fetches no restricted payloads; usage vs redistribution reviewed
-#   separately (see issue #496); installed Build Tools fallback never
+# separately (see); installed Build Tools fallback never
 #   approved; CI handling leaks no secrets and sets no EULA variable;
 # - interop/transport: representative prebuilt-MSVC fixtures with explicit
 #   STL/CRT/linker/library combos incl mixed Rust/C/C++ qualify
@@ -34,7 +34,7 @@
 # following //tools/ci:macos_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -43,7 +43,7 @@ dx_cd_workspace
 dx_test_init
 
 # dx qualified hosts: windows/x86_64 joins the seed plus arm64 plus macos
-# pair; macos x86_64 plus windows arm64 stay refused (issue #414 flips
+# pair; macos x86_64 plus windows arm64 stay refused
 # windows_x86_64 only).
 if grep -q -F -e '("windows", "x86_64")' cli/cli/src/platform.rs &&
   grep -q -F -e 'qualified_hosts' cli/cli/src/platform.rs &&
@@ -84,7 +84,7 @@ else
 fi
 
 # ADR 0014 keeps Windows x86_64 required and records the qualification.
-# Exact pins, hosts, floors, and SDK/CRT identities stay owned by issues #410-#414.
+# Exact pins, hosts, floors, and SDK/CRT identities stay owned.
 if grep -q -F -e '| Windows x86_64 MSVC-compatible | Required' docs/decisions/0014-tested-platform-release-stack.md &&
   grep -q -F -e 'Windows x86_64 MSVC-compatible is qualified' docs/decisions/0014-tested-platform-release-stack.md; then
   ok

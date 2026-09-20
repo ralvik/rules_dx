@@ -1,4 +1,4 @@
-// ring-style C/assembly shape stub (issue #499).
+// ring-style C/assembly shape stub.
 #include "cc/tests/fixtures/linux_corpus/ring.h"
 
 #include <stddef.h>

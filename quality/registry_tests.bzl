@@ -1,4 +1,4 @@
-"""Unit tests for the single-sourced versioned registry (issue #321).
+"""Unit tests for the single-sourced versioned registry.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

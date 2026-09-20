@@ -28,7 +28,7 @@
 //! mappings, policy-table loading, tier attribution for shared locks,
 //! and proof evidence stay gated for later slices.
 //!
-//! Dependency evaluation (issue #315, adopted): SPDX text parses via the
+//! Dependency evaluation (adopted): SPDX text parses via the
 //! upstream `spdx` crate in strict mode (fail-closed to [`LicenseExpr::Unknown`]);
 //! the allow/review/deny lattice plus `WITH` verbatim approval stays hand-rolled
 //! because it is the repo's license-policy contract, not an upstream type

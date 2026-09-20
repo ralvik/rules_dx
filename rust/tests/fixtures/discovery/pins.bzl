@@ -1,15 +1,7 @@
-"""Exact-target discovery pins (issue #475).
+"""Exact-target discovery pins.
 
 Contract: `docs/cli/target-resolution.md#exact-target-discovery`,
 `docs/native-toolchains.md`, `docs/environments/rust.md`.
-
-Upstream dynamic discovery accepts paths/buildfiles rather than exact
-target labels, although generation/flycheck have target interfaces.
-The resolver-owned exact labels flow to those target interfaces,
-preserving exact context; path-only widening stays rejected.
-
-Pinned here so the qualification harness can machine-check the
-identities without re-resolving the upstream source on every run.
 """
 
 # Upstream discovery source: patched rules_rust discovery library.
@@ -34,7 +26,7 @@ EXACT_TARGET_BINARIES = ["gen_rust_project", "flycheck"]
 
 # Resolver-owned exact-target expression: unconfigured `bazel query`
 # only, depth-1 direct owners over //..., deterministic sorted set.
-# Query-only without this contract stays rejected (issue #475).
+# Query-only without this contract stays rejected.
 RESOLVER_EXPRESSION_SHAPE = "kind('rule', rdeps(//..., set(<file-labels>), 1))"
 
 # Project-owned crate graph and internal RustAnalyzerInfo stay rejected:

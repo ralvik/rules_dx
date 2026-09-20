@@ -1,4 +1,4 @@
-"""Adopted foreign F# tree (#193): handwritten owners preserved through generation."""
+"""Adopted foreign F# tree: handwritten owners preserved through generation."""
 
 load("@rules_dx//fsharp/rules:defs.bzl", "fsharp_library", "fsharp_test")
 load("//quality:fixtures.bzl", "real_source_target")

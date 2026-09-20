@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# First-party coverage PR summary renderer (issue #254).
+# First-party coverage PR summary renderer.
 #
 # Renders the compact Codecov-style summary comment from the Bazel-owned
 # gate verdict, never as a substitute for the gate. Source of truth stays

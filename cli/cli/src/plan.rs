@@ -53,7 +53,7 @@ pub fn workspace_flag() -> String {
 /// `dx_results` instead of failing the build action.
 pub const VALIDATE_FLAG: &str = "--@rules_dx//config:validate=false";
 
-/// Upstream Clippy diagnostics capture (#47): the real lint aspect
+/// Upstream Clippy diagnostics capture: the real lint aspect
 /// requires `rust_clippy_aspect`, which writes the authoritative
 /// `.clippy.diagnostics` file only when this setting is set. `dx lint`
 /// always sets it; the runner parses the file instead of spawning
@@ -63,7 +63,7 @@ pub const VALIDATE_FLAG: &str = "--@rules_dx//config:validate=false";
 pub const CLIPPY_DIAGNOSTICS_FLAG: &str =
     "--@rules_rust//rust/settings:clippy_output_diagnostics=true";
 
-/// Upstream rustc diagnostics capture (#48): the real typecheck aspect
+/// Upstream rustc diagnostics capture: the real typecheck aspect
 /// reads the authoritative `.rustc-output` file from the `rustc_output`
 /// output group, which every Rust rule emits only when this setting is
 /// set. `dx typecheck` always sets it; the runner parses the file

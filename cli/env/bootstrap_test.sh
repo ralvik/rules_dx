@@ -8,11 +8,11 @@
 # under Bazel.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issues #319, #323).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../../tools/sh/lib.sh"
 
-# Portable realpath via tools/sh/lib.sh dx_realpath (issues #299, #323).
+# Portable realpath via tools/sh/lib.sh dx_realpath.
 
 env_bin="$(dx_realpath "$1")"
 runfiles="$(dx_runfiles_root)"
@@ -61,7 +61,7 @@ staged="$(find "${runfiles}" -name default_tree.metadata.json -print -quit)"
 }
 alt="${TEST_TMPDIR}/staged-alt"
 mkdir -p "${alt}"
-# Portable recursive copy (issue #299): `cp -a` is GNU-only; `cp -RPp`
+# Portable recursive copy: `cp -a` is GNU-only; `cp -RPp`
 # preserves symlinks, modes, and timestamps on GNU and BSD/macOS.
 cp -RPp "$(dirname "${staged}")/bin" "${alt}/bin"
 command -v python3 >/dev/null || {

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cargo metadata qualification harness (issue #502).
+# Cargo metadata qualification harness.
 #
 # Defines plus proves the Cargo-metadata slice of the native baseline with
 # fixture evidence, without claiming qualified floors, qualified cross
@@ -42,13 +42,13 @@
 #   never reads `Cargo.Bazel.lock`, `cargo-bazel.json`, or crate_universe's
 #   private dependency maps.
 # - ad-hoc metadata rejected. Backends stay provisional; floors qualified
-#   seed-only under issue #500, coverage qualified seed-only under issue #501.
+# seed-only, coverage qualified seed-only.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:cargo_metadata_qualification`,
 # following //tools/ci:lcov_accounting_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -70,7 +70,7 @@ verify="docs/testing/verification-matrix.md"
 cargo_go="gazelle/rust/cargo.go"
 lang_go="gazelle/rust/lang.go"
 
-# Fixture files stay present (issue #502).
+# Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$pins_manifest" && -f "$pins_expected" ]]; then
   ok
 else
@@ -194,7 +194,7 @@ else
   bad "tools/ci/BUILD.bazel or ci.yml lost the cargo_metadata_qualification wiring (want target plus dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified seed-only record under #502.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'cargo_metadata_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #502' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:cargo_metadata_qualification' "$verify" &&

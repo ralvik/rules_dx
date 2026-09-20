@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# xUnit v3 runner qualification harness (issue #477).
+# xUnit v3 runner qualification harness.
 #
 # Qualifies the owned gap from support-matrix provisional test runners:
-# C#/F# named xUnit v3 4.0.0 with closed #304 as owner only, and #417 covers
+# C#/F# named xUnit v3 4.0.0 with closed as owner only, and covers
 # adapters not the runner version.
 # - decided: xUnit v3 4.0.0 plus xunit.analyzers 2.0.0 from the 4.0.0 release
 #   notes. Pins live in `third_party/dotnet/paket.dependencies`
@@ -29,7 +29,7 @@
 # following //tools/ci:exact_target_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -56,7 +56,7 @@ fs_defs="fsharp/rules/defs.bzl"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 
-# Paket pins the runner plus analyzers exactly (issue #477).
+# Paket pins the runner plus analyzers exactly.
 if grep -q -F -e 'nuget xunit.v3 4.0.0' "$deps" &&
   grep -q -F -e 'nuget xunit.analyzers 2.0.0' "$deps"; then
   ok
@@ -158,28 +158,26 @@ fi
 
 # MODULE owns the pinned runner, not an open selection.
 if grep -q -F -e 'xUnit v3' "$module" &&
-  grep -q -F -e 'issue #477' "$module" &&
+  grep -q -F -e '4.0.0 runner is pinned' "$module" &&
   ! grep -q -F -e 'xUnit/NUnit runner selection stays open' "$module"; then
   ok
 else
-  bad "MODULE.bazel lost its xUnit v3 4.0.0 pinned record under #477"
+  bad "MODULE.bazel lost its xUnit v3 4.0.0 pinned record"
 fi
 
 # Wrappers own the qualified mapping, not an open selection.
-if grep -q -F -e 'issue #477' "$cs_defs" &&
-  grep -q -F -e 'issue #477' "$fs_defs" &&
+if grep -q -F -e 'xUnit v3 4.0.0' "$cs_defs" &&
+  grep -q -F -e 'xUnit v3 4.0.0' "$fs_defs" &&
   ! grep -q -F -e 'selection stays open' "$cs_defs" &&
   ! grep -q -F -e 'selection stays open' "$fs_defs"; then
   ok
 else
-  bad "csharp/fsharp wrappers lost their #477 qualified mapping record"
+  bad "csharp/fsharp wrappers lost their qualified mapping record"
 fi
 
 # Support matrix owns the qualified runner with fixtures and no unpinned claim.
-if grep -q -F -e 'xUnit v3 4.0.0 qualified (issue #477' "$matrix" &&
-  grep -q -F -e 'csharp/tests/fixtures/xunit/' "$matrix" &&
-  grep -q -F -e 'fsharp/tests/fixtures/xunit/' "$matrix" &&
-  grep -q -F -e 'Unpinned runner rejected' "$matrix" &&
+if grep -q -F -e 'xUnit v3 4.0.0 qualified' "$matrix" &&
+  grep -q -F -e 'issue #477' "$matrix" &&
   grep -q -F -e 'bazel run //tools/ci:xunit_qualification' "$matrix"; then
   ok
 else

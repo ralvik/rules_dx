@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Paket lock wiring qualification harness (issue #482).
+# Paket lock wiring qualification harness.
 #
 # Qualifies the owned gap from support-matrix provisional dependency locks:
 # Paket (`paket.dependencies` plus `paket.lock`) via `paket2bazel`, closed
-# #304 owner only. #477 pinned the xUnit v3 runner closure, not the lock
+# owner only. pinned the xUnit v3 runner closure, not the lock
 # wiring itself.
 # - wired: `third_party/dotnet/paket.dependencies` (FSharp.Core 10.1.201 plus
 #   xunit.v3 4.0.0 plus xunit.analyzers 2.0.0, source nuget.org, framework
@@ -29,7 +29,7 @@
 # following //tools/ci:scalatest_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -57,7 +57,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 checker="tools/depcheck/depcheck.py"
 
-# Pins fixture stays present as the single shared owner (issue #482).
+# Pins fixture stays present as the single shared owner.
 if [[ -f "$pins" && -f "$pins_build" ]]; then
   ok
 else
@@ -78,7 +78,7 @@ else
   bad "pins.bzl lost its Paket direct pins plus source plus framework plus hub plus rejected under issue #482"
 fi
 
-# paket.dependencies pins the direct entries exactly (issue #482).
+# paket.dependencies pins the direct entries exactly.
 if grep -q -F -e 'nuget FSharp.Core 10.1.201' "$deps" &&
   grep -q -F -e 'nuget xunit.v3 4.0.0' "$deps" &&
   grep -q -F -e 'nuget xunit.analyzers 2.0.0' "$deps" &&
@@ -179,7 +179,7 @@ else
   bad "generation README lost its #482 qualified Paket lock record"
 fi
 
-# Verification matrix owns the qualified seed-only record under #482.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'paket_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #482' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:paket_qualification' "$verify" &&

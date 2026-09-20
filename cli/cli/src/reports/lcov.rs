@@ -3,7 +3,7 @@
 //! Split from `super` (`reports.rs`): owns `validate_lcov` and
 //! `coverage_line_rate`. Re-exported through `super` so the public path
 //! stays `crate::reports::{validate_lcov, coverage_line_rate}`. Both are
-//! thin projections over `dx_lcov` (issue #395): validation delegates to
+//! thin projections over `dx_lcov`: validation delegates to
 //! `dx_lcov::validate_lcov_report` and rate computation merges via
 //! `dx_lcov::parse_lcov`, so the `lcov`-crate `SF`/`DA`/`end_of_record`
 //! acceptance lives once in `//cli/lcov`.
@@ -19,7 +19,7 @@ use super::ReportError;
 /// The exact bytes are preserved for the report; validation only
 /// checks UTF-8 via [`std::str::from_utf8`] and delegates the structural
 /// `SF`/`DA`/`end_of_record` checks to `dx_lcov::validate_lcov_report`
-/// (the shared `lcov`-crate parser, issue #395). Unknown
+/// (the shared `lcov`-crate parser,). Unknown
 /// `FN`/`BRDA`/summary lines are ignored like the gate parser.
 /// Failures return [`ReportError::InvalidLcov`] so callers emit no LCOV
 /// report.
@@ -37,7 +37,7 @@ pub fn validate_lcov(bytes: &[u8]) -> Result<(), ReportError> {
 /// per `SF` path with maximum hits winning; source-level exclusion markers
 /// are honored for the covered languages (`.rs`, `.go`, `.py`, `.js`,
 /// `.jsx`, `.ts`, `.tsx`, plus C/C++ `.c`/`.cc`/`.cpp`/`.cxx`/`.h`/`.hh`/`.hpp`/`.hxx`
-/// under issue #501) through the shared `dx_lcov` scanner (a
+///) through the shared `dx_lcov` scanner (a
 /// `reason:` comment stays required exactly as under the retired gate;
 /// see the marker syntax in `docs/testing/README.md`). Sources that fail to load count raw: Bazel may
 /// instrument generated or external files outside the workspace.

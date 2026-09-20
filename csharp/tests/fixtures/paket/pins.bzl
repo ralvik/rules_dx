@@ -1,22 +1,7 @@
-"""Paket lock wiring pins (issue #482).
+"""Paket lock wiring pins.
 
 Contract: `docs/product/support-matrix.md#provisional-default-dependency-locks`,
 `docs/generation/README.md#language-mapping-qualification`.
-
-Single shared Paket lock for the admitted .NET foundations (C#, F#) per the
-support matrix: `paket.dependencies` plus `paket.lock` via `paket2bazel`
-into the `paket.main` hub carrying per-package sha512. F# references this
-file (same shape as Kotlin referencing `//java/tests/fixtures/junit:pins.bzl`
-under issue #476); no `fsharp/tests/fixtures/paket/pins.bzl` duplicate lands.
-
-Direct pins are FSharp.Core 10.1.201 (F# assemblies need the runtime asset
-next to the app) plus xunit.v3 4.0.0 plus xunit.analyzers 2.0.0 (qualified
-runner closure under issue #477 with the MTP transitive). Source is
-`https://api.nuget.org/v3/index.json`, framework is net10.0. The lock files
-are user-authored; generation consumes them and never writes them (common
-generation contract). NuGet's native `packages.lock.json` is rejected: one
-file per project instead of a central lock, hashes incompatible with Bazel's
-downloader (rules_dotnet issue 444).
 """
 
 # Upstream ruleset pin (MODULE.bazel plus MODULE.bazel.lock).

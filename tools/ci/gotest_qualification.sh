@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Go test wiring qualification harness (issue #478).
+# Go test wiring qualification harness.
 #
-# Qualifies the owned gap from closed #304: provisional go test via
-# rules_go, closed #304 owner only. #483 covers from_file, not the runner.
+# Qualifies the owned gap from closed: provisional go test via
+# rules_go, closed owner only. covers from_file, not the runner.
 # - pinned: rules_go 0.63.0 plus Go SDK 1.26.6 in MODULE.bazel (runner
 #   follows the toolchain pin, no separate version) recorded in
 #   `go/tests/fixtures/gotest/pins.bzl`; Go hello is stdlib-only with no
@@ -23,7 +23,7 @@
 # following //tools/ci:junit_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -45,7 +45,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Fixture pins plus hello consumer stay present (issue #478).
+# Fixture pins plus hello consumer stay present.
 if [[ -f "$pins" && -f "$gotest_build" && -f "$hello_build" && -f "$hello_test" ]]; then
   ok
 else
@@ -160,7 +160,7 @@ else
   bad "docs/generation/README.md lost its qualified Go test record under issue #478"
 fi
 
-# Verification matrix owns the qualified seed-only record under #478.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'gotest_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #478' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:gotest_qualification' "$verify" &&

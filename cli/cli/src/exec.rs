@@ -1,4 +1,4 @@
-//! Command execution dispatch root (kept, issue #454): this file holds
+//! Command execution dispatch root (kept,): this file holds
 //! only `execute` plus the dispatch-table test. The `exec.rs` plus
 //! `exec/` pairing is the idiomatic parent module with child modules,
 //! not duplication. Each family lives in its own module under `exec/`:
@@ -112,7 +112,7 @@ mod tests {
     use super::test_support::Harness;
     use crate::args::Command;
 
-    /// Dispatch-table pin (issue #238): every `Command` variant must map
+    /// Dispatch-table pin: every `Command` variant must map
     /// to exactly one execution family in the same order as `execute`
     /// above. Adding a variant without wiring it here fails loudly
     /// instead of silently falling to the quality pipeline.

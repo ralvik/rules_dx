@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Human-run release driver (issue #458, live successor to closed #311 for
+# Human-run release driver (live successor to closed for
 # the human-run path).
 #
 # The single owner-gated entry point for cutting a `rules_dx` release.

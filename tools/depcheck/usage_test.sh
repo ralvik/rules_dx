@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Declared-dependency usage test driver (issue #22; opens under #510).
+# Declared-dependency usage test driver (; opens under).
 # Usage: usage_test.sh <ecosystem> <depcheck.py> <testdata-root>
 # Verifies usage truth table, transitive/shared, non-import exceptions
 # with reasons, obsolete, platform/optional, category, non-mutating,
 # offline halves for one language.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -14,7 +14,7 @@ eco="$1"
 checker_in="$2"
 root_in="$3"
 
-# `resolve` removed (issue #319): use dx_resolve_runfile from tools/sh/lib.sh.
+# `resolve` removed: use dx_resolve_runfile from tools/sh/lib.sh.
 checker="$(dx_resolve_runfile "$checker_in")" || {
   echo "FAIL: cannot resolve $checker_in" >&2
   exit 1
@@ -225,7 +225,7 @@ fi
 if run_use "$root/category_ok/$man" "$(srcdir category_ok)" >/dev/null; then ok "$eco correctly categorized + multi passes"; else bad "$eco category_ok should pass"; fi
 
 # diagnostics do not mutate manifests/locks/sources.
-# Portable tree digest via dx_tree_sha256 (issues #299, #323).
+# Portable tree digest via dx_tree_sha256.
 for case in ok_used unused category; do
   before="$(dx_tree_sha256 "$root/$case")"
   run_use "$root/$case/$man" "$(srcdir "$case")" >/dev/null 2>&1 || true

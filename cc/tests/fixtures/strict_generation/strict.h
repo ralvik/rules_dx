@@ -1,4 +1,4 @@
-// Strict generation fixture header; self-owned quoted identity (issue #503).
+// Strict generation fixture header; self-owned quoted identity.
 #pragma once
 
 #include <string>

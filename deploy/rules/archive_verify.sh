@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verifies one `archive_release` output pair (issue #181).
+# Verifies one `archive_release` output pair.
 #
 # `$1` is the tarball rootpath, `$2` the checksum rootpath, `$3` the
 # expected top-level member basename. Asserts the tarball lists the
@@ -7,7 +7,7 @@
 # Tagged `no-coverage`: process-spawning tests stay out of the coverage
 # denominator per the repo coverage preset.
 #
-# Host-tool contract (issue #318): bash + python3 + POSIX coreutils
+# Host-tool contract: bash + python3 + POSIX coreutils
 # only. Realpath, tar listing, and sha256 go through python3 (no
 # `realpath`, `readlink -f`, `tar`, `sha256sum`, or `shasum` probes).
 set -euo pipefail

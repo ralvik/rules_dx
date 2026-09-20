@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Maven maven_install.json plus fail_if_repin_required qualification harness (issue #481).
+# Maven maven_install.json plus fail_if_repin_required qualification harness.
 #
-# Qualifies the owned gap from closed #304/#306: provisional Maven lock via
-# rules_jvm_external, closed #304/#306 owners only.
+# Qualifies the owned gap from closed /: provisional Maven lock via
+# rules_jvm_external, closed / owners only.
 # - pinned: rules_jvm_external 7.1 in MODULE.bazel (Bazel >=7.0.0; verified
 #   against Bazel 9.2.0 on the seed host) recorded in
 #   `third_party/jvm/pins.bzl`; single shared lock for the admitted JVM
@@ -29,7 +29,7 @@
 # following //tools/ci:googletest_qualification.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers (issue #319).
+# Shared workspace + runfiles helpers.
 # Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
 
@@ -51,7 +51,7 @@ build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
 
-# Lock authority plus pins stay present (issue #481).
+# Lock authority plus pins stay present.
 if [[ -f "$pins" && -f "$jvm_build" && -f "$lock" && -f "$module" ]]; then
   ok
 else
@@ -190,7 +190,7 @@ else
   bad "docs/generation/README.md lost its qualified Maven lock record under issue #481"
 fi
 
-# Verification matrix owns the qualified seed-only record under #481.
+# Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'maven_lock_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #481' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:maven_lock_qualification' "$verify" &&

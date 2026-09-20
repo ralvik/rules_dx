@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Verifies one `signed_release` deploy program (issue #459, live successor
-# to closed #311/#26 for the signing stack).
+# Verifies one `signed_release` deploy program (live successor
+# to closed / for the signing stack).
 #
 # `$1` is the program rootpath. Runs with RELEASE_SIGN_DRY_RUN=1 (no
 # network, no mutation) and asserts the trust root, identity, issuer,
