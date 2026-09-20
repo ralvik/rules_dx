@@ -43,6 +43,16 @@ Deferred/excluded generation record is decided by [ADR 0019](../decisions/0019-f
 no `ruby/`, `powershell/`,
 or `swift/` Gazelle extension lands here.
 
+Required-core Rust provider plus Gazelle maps are pinned (issue #470):
+`rust/rules/defs.bzl` wrappers preserve `CrateInfo`/`DepInfo`/`TestCrateInfo`/`CcInfo`
+plus `QualitySourcesInfo`, proven by `rust/rules/wrapper_tests.bzl` conformance over the
+six `rust/tests/fixtures/hello/` subjects; Gazelle kinds/loads in `gazelle/rust/lang.go`
+(`rust_library`, `rust_binary`, `rust_test`, `rust_proc_macro`, `rust_shared_library`,
+`rust_static_library`, `cargo_build_script`, `dx_rust_crate` with `rust/rules:defs.bzl`,
+`cargo:defs.bzl`, `crates.bzl` loads) with cargo plus source-only plus merge plus
+native-config goldens and focused tests; hello plus `Cargo.lock` plus
+`cargo-bazel-lock.json` lock authority with `MODULE.bazel` pins.
+
 Required-core Rust build-script hermetic defaults are implemented
 (`use_cc_toolchain = True`, `use_default_shell_env = False`, `emit_warnings = True`
 in `gazelle/rust/lang.go`, proven by `gazelle/rust/lang_test.go`); remaining native gaps

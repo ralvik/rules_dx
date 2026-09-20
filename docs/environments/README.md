@@ -31,6 +31,12 @@ Deferred/excluded env record is decided by [ADR 0019](../decisions/0019-first-re
 no `ruby/`, `powershell/`, or
 `swift/` env plan lands here.
 
+Required-core Rust integration is pinned (issue #470): the provider-derived focused-target
+`rust_env_plan` in `rust/env/plan.bzl` (`RustEnvPlanInfo` from authoritative
+`CrateInfo`/`TestCrateInfo` plus `QualitySourcesInfo`), pinned by
+`rust/env/plan_tests.bzl` over the four `rust/env` hello plans exercised by
+`rust/tests/fixtures/hello/`.
+
 Required-core exact-target discovery stays owned under issue #475 per the
 [native plan](../native-toolchains.md#qualification-questions-and-delivery);
 current plans are provider-derived focused-target plans, not exact-target proof.

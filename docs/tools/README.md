@@ -22,8 +22,9 @@ Ty provenance is pinned: upstream `0.0.80` with URL, sha256, and licenses in
 `quality/artifacts/ty.linux_x86_64.bzl`. Ty maps to `typecheck` over `python`/`python_stub`,
 Ruff maps to `format`/`lint` over the same classes, and Biome/ESLint/Prettier/`tsc` map
 JS/TS classes per `quality/adapters.bzl` with parsers in `quality/adapter/src/parsers/`
-(`ty.rs`, `ruff.rs`, `biome.rs`, `eslint.rs`, `prettier.rs`, `tsc.rs`); required-core
-quality mappings stay owned under issues #470, #471, #472, #473, #474, #475.
+(`ty.rs`, `ruff.rs`, `biome.rs`, `eslint.rs`, `prettier.rs`, `tsc.rs`); required-core Rust
+integration stays pinned under issue #470 with remaining native gaps owned under issues
+#471, #472, #473, #474, #475.
 Quality adapters plus parity plus packaging are qualified under issue #307 with
 fixture evidence (`quality/testdata/runner_matrix_cases.bzl` pass/fail plus fix/format,
 `quality/native_config.bzl` bindings or explicit config-free/delegated status,
