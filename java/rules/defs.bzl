@@ -73,11 +73,20 @@ _java_forward_test = dx_executable_forward_rule(
     optional_providers = [JavaInfo],
 )
 
+def _java_with_werror(kwargs):
+    upstream_kwargs = dict(kwargs)
+    javacopts = list(upstream_kwargs.get("javacopts", []))
+    for flag in ["-Werror", "-Xlint:all"]:
+        if flag not in javacopts:
+            javacopts = javacopts + [flag]
+    upstream_kwargs["javacopts"] = javacopts
+    return upstream_kwargs
+
 def _java_wrap_library(name, srcs, visibility = None, **kwargs):
-    dx_wrap(name, _java_library, _java_library_forward, srcs, visibility = visibility, **kwargs)
+    dx_wrap(name, _java_library, _java_library_forward, srcs, visibility = visibility, **_java_with_werror(kwargs))
 
 def _java_wrap_binary(name, srcs, visibility = None, **kwargs):
-    upstream_kwargs = dict(kwargs)
+    upstream_kwargs = _java_with_werror(kwargs)
     if len(srcs) > 0:
         upstream_kwargs["srcs"] = srcs
     _java_binary(
@@ -119,7 +128,7 @@ def java_test(name, srcs, visibility = None, **kwargs):
     `deps`; test sources are never the library's sources. Uses Bazel's
     standard test and coverage protocols."""
     test_srcs = srcs if srcs != None else []
-    upstream_kwargs = dict(kwargs)
+    upstream_kwargs = _java_with_werror(kwargs)
 
     # The private upstream test stays an implementation detail via private
     # visibility; both it and the public wrapper run under `bazel test //...`

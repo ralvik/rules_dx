@@ -2,6 +2,7 @@
 
 Quality workflow architecture, protocols, and evidence requirements:
 
+- [Warnings as Errors](warnings-as-errors.md): per-toolchain pins.
 - [Quality Sources and Applicability](quality-sources.md): source classes and adapter applicability.
 - [Quality Action Model](action-model.md): action selection, granularity, pipelines, caching, and
   aggregation.

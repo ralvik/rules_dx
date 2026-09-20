@@ -589,6 +589,20 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Warnings-as-errors harness (issue #455); see tools/ci/warnings_as_errors.sh.
+sh_binary(
+    name = "warnings_as_errors",
+    srcs = ["warnings_as_errors.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+filegroup(
+    name = "warnings_as_errors_testdata",
+    srcs = glob(["testdata/warnings/**"]),
+)
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],

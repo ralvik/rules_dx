@@ -78,6 +78,7 @@ _fsharp_forward_test = dx_executable_forward_rule(
 def _fsharp_with_tfm(kwargs):
     upstream_kwargs = dict(kwargs)
     upstream_kwargs.setdefault("target_frameworks", ["net10.0"])
+    upstream_kwargs.setdefault("treat_warnings_as_errors", True)
     return upstream_kwargs
 
 def _fsharp_wrap_library(name, srcs, visibility = None, **kwargs):

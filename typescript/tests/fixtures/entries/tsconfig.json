@@ -1,1 +1,1 @@
-{"compilerOptions": {"declaration": true}}
+{"compilerOptions": {"declaration": true, "strict": true}}
