@@ -35,7 +35,8 @@ dx_cd_workspace
 dx_test_init
 
 # dx qualified hosts: macos/aarch64 (issue #412) plus macos/x86_64
-# best-effort (issue #413) join the Linux pair; windows stays refused.
+# best-effort (issue #413) join the Linux pair; Windows x86_64 joins under
+# issue #414, Windows arm64 stays refused.
 if grep -q -F -e '("macos", "aarch64")' cli/cli/src/platform.rs &&
   grep -q -F -e '("macos", "x86_64")' cli/cli/src/platform.rs &&
   grep -q -F -e 'qualified_hosts' cli/cli/src/platform.rs &&
@@ -44,7 +45,7 @@ if grep -q -F -e '("macos", "aarch64")' cli/cli/src/platform.rs &&
   grep -q -F -e '("windows", "x86_64")' cli/cli/src/platform.rs; then
   ok
 else
-  bad "platform.rs lost the macos/aarch64 plus macos/x86_64 qualified-host entries (issues #412/#413, windows stays refused)"
+  bad "platform.rs lost the macos/aarch64 plus macos/x86_64 qualified-host entries (issues #412/#413; windows x86_64 qualified under #414, windows arm64 stays refused)"
 fi
 
 # dx host refusal names macOS arm64 plus x86_64 best-effort as delivered
@@ -58,16 +59,19 @@ else
   bad "platform.rs refusal lost the macOS arm64 plus x86_64 best-effort delivered plus no-host-fallback record"
 fi
 
-# dx status names the macOS arm64 plus x86_64 best-effort qualification.
+# dx status names the macOS arm64 plus x86_64 best-effort qualification
+# (Windows x86_64 may append `plus windows_x86_64` under issue #414; the
+# macos fragments stay).
 if grep -q -F -e 'plus macos_arm64' cli/adopt/src/status.rs &&
-  grep -q -F -e 'plus macos_x86_64 best-effort qualified' cli/adopt/src/status.rs; then
+  grep -q -F -e 'plus macos_x86_64 best-effort' cli/adopt/src/status.rs &&
+  grep -q -F -e 'qualified' cli/adopt/src/status.rs; then
   ok
 else
-  bad "adopt status lost the macos_arm64 plus macos_x86_64 best-effort qualified detail (issues #412/#413)"
+  bad "adopt status lost the macos_arm64 plus macos_x86_64 best-effort qualified detail (issues #412/#413; windows_x86_64 may append under #414)"
 fi
 
-# Support matrix flips macOS arm64 (required) plus x86_64 best-effort;
-# windows stays unqualified with clean refusal.
+# Support matrix keeps macOS arm64 (required) plus x86_64 best-effort
+# Platform-qualified; Windows x86_64 flips qualified under issue #414.
 if grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (issue #412' &&
   grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'host-installed SDK fallback never approved' &&
   grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open' &&
@@ -105,7 +109,8 @@ else
   bad "native-toolchains lost the macOS arm64 plus x86_64 closures plus provisional backend plus no-fallback record (issues #412/#413)"
 fi
 
-# Per-cell coverage registry: six qualified, one unqualified, no union.
+# Per-cell coverage registry: both macos cells qualified with no union
+# (seven qualified, zero unqualified after issues #413/#414).
 if [[ -f "tools/coverage/macos-arm64-inventory.txt" ]] &&
   [[ -f "tools/coverage/macos-x86_64-inventory.txt" ]] &&
   grep -q -F -e 'qualified macos_arm64 tools/coverage/macos-arm64-inventory.txt' tools/coverage/cells.txt &&

@@ -43,12 +43,14 @@ or unsupported selections must fail clearly rather than produce skipped or subst
 validation. Exercise single- and multi-platform selections, including one without Linux,
 one with `linux_arm64` (which must queue an `ubuntu-24.04-arm` runner, never
 the macOS runner), one with `macos_arm64` (which must queue a
-`macos-14` runner, never a Linux runner; issue #412), and one with
+`macos-14` runner, never a Linux runner; issue #412), one with
 `macos_x86_64` (which must queue a `macos-15-intel` runner, never a Linux
-or arm64 runner; issue #413 best-effort). Windows x86_64 stays refused with
-no runner queued (issue #414, backend blocked); the host matrix across the
-four qualified platforms is pinned by
-`bazel run //tools/ci:ci_matrix_qualification` (issue #415). Selected test/build/coverage checks must run for every selected platform, while selected
+or arm64 runner; issue #413 best-effort), and one with `windows_x86_64`
+(which must queue a `windows-latest` runner with shell `bash`, never a
+Linux runner; issue #414). The host matrix across the five qualified
+platforms is pinned by `bazel run //tools/ci:ci_matrix_qualification`
+(issue #415). Selected test/build/coverage checks must run for every
+selected platform, while selected
 quality checks run once on Linux without silently narrowing declared source/dependency scope.
 Verify platform identities remain visible and one failed or missing required platform cell
 prevents aggregate success. Coverage aggregation must not hide platform-specific gaps;
@@ -76,13 +78,13 @@ Verify Bazelisk installation comes from the single reviewed
 every third-party action reference is pinned to a commit SHA (tag in a trailing comment).
 Verify the `platforms-gate` job rejects missing, empty, or unsupported platform selections
 before any per-platform job queues a runner, and the aggregate still fails when the gate
-does. Verify the seed plus arm64 plus musl plus macos jobs restore a Bazel disk cache (free-tier eligible per the
+does. Verify the seed plus arm64 plus musl plus macos plus macos-x86_64 plus windows jobs restore a Bazel disk cache (free-tier eligible per the
 infrastructure budget; arm64 jobs use the separate `bazel-arm64-` scope; musl jobs use per-profile
 `bazel-musl-x86_64-` plus `bazel-musl-arm64-` scopes, issue #411; macos arm64 jobs use the separate
 `bazel-macos-arm64-` scope on `macos-14`, issue #412; macos x86_64 best-effort jobs use the separate
-`bazel-macos-x86_64-` scope on `macos-15-intel`, issue #413; host matrix pinned by
-`bazel run //tools/ci:ci_matrix_qualification`, issue #415; Windows stays refused with no runner,
-issue #414), pass `--noshow_progress` to Bazel invocations, run the corpus
+`bazel-macos-x86_64-` scope on `macos-15-intel`, issue #413; windows x86_64 jobs use the separate
+`bazel-windows-x86_64-` scope on `windows-latest` with shell `bash`, issue #414; host matrix pinned by
+`bazel run //tools/ci:ci_matrix_qualification`, issue #415), pass `--noshow_progress` to Bazel invocations, run the corpus
 ownership audit through `bazel run //tools/ci:corpus_audit`, and never rely on a local
 `user.bazelrc` override. Verify docs publishing stages its artifact outside the checkout
 and leaves the tree clean.

@@ -98,8 +98,8 @@ else
   bad "native-toolchains lost the static-musl closure plus exec/target plus corpus record (issue #411)"
 fi
 
-# Per-cell coverage registry: musl pair qualified (six qualified plus one
-# unqualified after issues #412/#413), no union.
+# Per-cell coverage registry: musl pair qualified (seven qualified, zero
+# unqualified after issues #413/#414), no union.
 if [[ -f "tools/coverage/musl-x86_64-inventory.txt" ]] &&
   [[ -f "tools/coverage/musl-arm64-inventory.txt" ]] &&
   grep -q -F -e 'qualified linux_x86_64_musl tools/coverage/musl-x86_64-inventory.txt' tools/coverage/cells.txt &&

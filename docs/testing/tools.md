@@ -180,8 +180,9 @@ Environment platform requirements are maintained in
 
 ## Shell And Host-Tool Contract
 
-CI and test harness shell is bash-only on the Linux seed host (decided
-under issue #299; no product behavior change). Every bash
+CI and test harness shell is bash-only (decided
+under issue #299; Windows native execution via shell bash under issue
+#414; no product behavior change). Every bash
 `sh_binary`/`sh_test` carries
 `target_compatible_with = ["@platforms//os:linux"]`, so non-Linux hosts
 skip honestly instead of failing obscurely; POSIX `#!/bin/sh` fixtures
@@ -191,9 +192,13 @@ best-effort hardening rides along with no Linux behavior change:
 `realpath` probe (`realpath` → `readlink -f` → python3),
 `sha256sum` → `shasum -a 256` fallback, portable `sed` tmpfile edits
 (no `sed -i -e`), `cp -RPp` (no `cp -a`), and portable timing
-(`$EPOCHREALTIME` → `date` fallback). Windows stays out per
-[ADR 0014](../decisions/0014-tested-platform-release-stack.md#required-platforms)
-(backend-blocked); product runtime is Rust and shell-free except
+(`$EPOCHREALTIME` → `date` fallback). Windows x86_64 MSVC-compatible is
+qualified for native `dx`/CI execution under issue #414
+(`windows-latest` runners with shell `bash`, per-host cache scope,
+portable forms only); Windows shell stays bash-only with no `.ps1`/`.bat`
+plus no `rules_powershell` per
+[ADR 0014](../decisions/0014-tested-platform-release-stack.md#required-platforms);
+product runtime is Rust and shell-free except
 generated deploy launchers plus the managed doctor shim.
 `//tools/ci:shell_contract` machine-checks this contract.
 

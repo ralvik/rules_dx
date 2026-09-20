@@ -23,7 +23,9 @@ prebuilt variant stay open gaps (issue #410 qualifies `dx` and CI natively
 on arm64, not container boot; issue #411 qualifies static-musl target
 profiles, not musl container boot; issue #412 qualifies `dx` and CI
 natively on macOS arm64, not container boot; issue #413 qualifies `dx`
-and CI natively on macOS x86_64 best-effort, not container boot).
+and CI natively on macOS x86_64 best-effort, not container boot; issue
+#414 qualifies `dx` and CI natively on Windows x86_64, not container
+boot).
 
 ## Prebuilt images (GHCR)
 

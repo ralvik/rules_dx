@@ -83,6 +83,32 @@ and are not pinned here. Per-host quality-tool (`dx_tools`)
 plus `macos_arm64`: on macOS x86_64, quality-tool actions fail with the
 recorded no-artifact diagnostic, never a silent fallback.
 
+Windows x86_64 MSVC-compatible native is qualified (issue #414) on the
+current as-built stack: CI builds, tests, and gates coverage natively on
+`windows-latest` runners through the pinned upstream toolchains
+(`rules_rust`, `aspect_rules_py`, `aspect_rules_js`/`aspect_rules_ts`,
+plus the admitted foundations' rulesets), which already resolve
+`windows/x86_64` acquisition. The `toolchains_msvc` clang-cl/Microsoft-STL
+backend stays provisional with immutable lazy fetch, not the qualified
+backend; no installed Build Tools or host SDK prerequisite or fallback
+(never approved). Explicit Microsoft EULA acceptance stays deliberate
+through the upstream repository-env mechanism, never automatic; merely
+adding the module requires no acceptance and fetches no restricted
+payloads; usage vs redistribution rights are reviewed separately.
+Prebuilt-MSVC interop fixtures with explicit STL/CRT/linker/library combos
+incl mixed Rust/C/C++ qualify host-to-target build routes plus target
+execution separately; compiler-target availability alone is not proof.
+Manifest/path/ABI gaps (batch wrappers, response files, `/external:I`
+vs `/imsvc` rebasing, `.lib`/`.obj` bare paths, spaces, SDK libraries,
+cc-rs discovery/assembly, proc-macro DLLs) are closed with declared-input
+fixtures without host Visual Studio state. Exact pins, hosts, floors, and
+SDK/CRT identities stay owned by O14/O37 per
+[ADR 0014](decisions/0014-tested-platform-release-stack.md#decision) and
+are not pinned here. Per-host quality-tool (`dx_tools`) `windows_x86_64`
+artifacts stay an owned follow-up gap like `linux_arm64`/`macos_arm64` plus
+`macos_x86_64`: on Windows, quality-tool actions fail with the recorded
+no-artifact diagnostic, never a silent fallback.
+
 ## Selected Qualification Stack
 
 | Layer | First choice | Why and boundary |
@@ -156,7 +182,7 @@ qualification configurations, not new public profile names or accepted minimum-O
 | Linux x86_64/arm64 glibc | Upstream glibc `2.28` symbol floor; libc++; ordinary dynamic glibc linkage | Application glibc implementations come from deployment systems, not the link stubs. Inspect ELF dependencies, kernel requirements and execution-tool floors separately. Native x86_64 (seed) plus native arm64 (issue #410, CI `ubuntu-24.04-arm`) are qualified; cross-build and floor evidence beyond that stays in the cohort below. |
 | Linux x86_64/arm64 static musl | Upstream musl `1.2.6`; static native closure; non-PIE first for Rust compatibility | Static musl qualified (issue #411): Rust musl std via `extra_target_triples`, exec-platform tools for build scripts/proc macros with target musl libs for apps, prebuilt glibc libs never musl-compatible by linker change alone; CI cross-builds from Linux runners with per-profile cache scopes plus per-cell coverage for both musl cells. Hermetic-llvm static-only musl targets stay provisional. Use existing upstream PIE constraints. Verify test linkage as well as binaries; this is not dynamic-musl or musl `cdylib` support. |
 | macOS x86_64/arm64 | Pinned acquired Apple SDK, SDK libc++ headers/system dynamic libc++; upstream deployment default `14.0` as the starting point | SDK version is not deployment floor. Native arm64 qualified (issue #412, CI `macos-14` with `bazel-macos-arm64-` scope, pinned upstream toolchains; hermetic-llvm Apple-SDK backend provisional with immutable lazy fetch, no host-installed SDK fallback, no secrets, no interactive acceptance). Native x86_64 best-effort qualified (issue #413, CI `macos-15-intel` with `bazel-macos-x86_64-` scope, same provisional backend plus no fallback plus no secrets plus no interactive acceptance; `macos-13` retired December 2025, `macos-15-intel` until August 2027; gaps never block required-host release). Oldest-OS execution, framework completeness and licensing remain gates. |
-| Windows x86_64 MSVC | clang-cl, Microsoft STL/UCRT/VCRuntime, retail dynamic CRT `/MD` as the starting point | Align Rust CRT mode, iterator-debug settings, system libraries and redistributable deployment. `/MT` and debug CRT are not assumed interchangeable. |
+| Windows x86_64 MSVC | clang-cl, Microsoft STL/UCRT/VCRuntime, retail dynamic CRT `/MD` as the starting point | Align Rust CRT mode, iterator-debug settings, system libraries and redistributable deployment. `/MT` and debug CRT are not assumed interchangeable. Native Windows x86_64 qualified (issue #414, CI `windows-latest` with `bazel-windows-x86_64-` scope, pinned upstream toolchains; toolchains_msvc clang-cl/Microsoft-STL backend provisional with immutable lazy fetch plus explicit EULA never automatic, no installed fallback; prebuilt-MSVC interop plus manifest/path/ABI fixtures qualify host-to-target plus target execution separately). |
 | Linux GNU C++ prebuilt compatibility | Explicit dynamic libstdc++ alternative, not default libc++ substitution | Upstream supports it only on Linux glibc. Patched Rust runtime selection and actual GCC ABI/library fixtures must pass before claiming it. |
 
 Sources: [LLVM profiles](https://github.com/hermeticbuild/hermetic-llvm/blob/v0.8.19/README.md),
@@ -173,7 +199,7 @@ alone is not interoperability evidence.
 | Linux arm64 | Linux arm64 and x86_64, each glibc and static musl | Native arm64 glibc qualified (issue #410); arm64 static musl qualified (issue #411, CI `ubuntu-24.04-arm` with `bazel-musl-arm64-` scope); arm64-to-x86_64 cross stays in the first Linux cross-build cohort |
 | macOS x86_64 | Native macOS x86_64 | Best-effort native workflow; native x86_64 best-effort qualified (issue #413, CI `macos-15-intel` with `bazel-macos-x86_64-` scope; gaps do not block required-host release per [ADR 0014](decisions/0014-tested-platform-release-stack.md#required-platforms)) |
 | macOS arm64 | Native macOS arm64 | Required native workflow; native arm64 qualified (issue #412, CI `macos-14` with `bazel-macos-arm64-` scope) |
-| Windows x86_64 | Native Windows x86_64 MSVC | Required native workflow; backend independently blocked |
+| Windows x86_64 | Native Windows x86_64 MSVC | Required native workflow; native Windows x86_64 qualified (issue #414, CI `windows-latest` with `bazel-windows-x86_64-` scope, pinned upstream toolchains; toolchains_msvc backend provisional) |
 | macOS arm64 | Linux x86_64/arm64 profiles, then macOS x86_64 | Optional first expansion if bounded upstream configuration suffices |
 
 Other routes are outside the initial qualification cohort, not claims of impossibility or permanent
@@ -331,21 +357,24 @@ in `gazelle/rust/lang.go`, proven by `gazelle/rust/lang_test.go`) and pinned by
 claim.
 
 Admitted C/C++ foundation stays owned under issue #304: MSVC interop plus SDK licensing
-blocks Windows qualification per the [support matrix](product/support-matrix.md#initial-feasibility-review)
-and [Windows acquisition](#windows-acquisition-and-compatibility) above; no `Supported`
-claim until acquisition, interoperability, coverage, and release evidence passes.
+is qualified for the Windows x86_64 host under issue #414 per the [support
+matrix](product/support-matrix.md#initial-feasibility-review) and [Windows
+acquisition](#windows-acquisition-and-compatibility) above (provisional
+toolchains_msvc backend, explicit EULA never automatic, interop plus
+manifest/path/ABI fixtures, per-cell coverage); no `Supported` claim until
+acquisition, interoperability, coverage, and release evidence passes.
 
 | Question to close | Preferred next evidence or remedy | Tracking |
 | --- | --- | --- |
 | Does the exact current stable stack compose? | Freeze resolved Bzlmod identities; compare rules_rs's LLVM reference with the newer candidate; record checksums, source patches and compiler/profile compatibility. | open work |
-| Can Windows acquisition be immutable and lazy? | Reproduce clean re-resolution; qualify upstream fixed-manifest/package inputs and observed downloads, including missing acceptance and unrelated workflows. | open work |
-| Are Apple/Microsoft acquisition and cache rights adequate? | Review actual package terms, deliberate acceptance, extraction, mirrors, redistribution, internal caches and remote workers. Official download availability is not permission. | open work |
+| Can Windows acquisition be immutable and lazy? | Reproduce clean re-resolution; qualify upstream fixed-manifest/package inputs and observed downloads, including missing acceptance and unrelated workflows. Windows x86_64 qualified (issue #414) on the as-built pinned upstream toolchains with the toolchains_msvc backend provisional plus immutable lazy fetch; merely adding the module requires no acceptance and fetches no restricted payloads. | open work |
+| Are Apple/Microsoft acquisition and cache rights adequate? | Review actual package terms, deliberate acceptance, extraction, mirrors, redistribution, internal caches and remote workers. Official download availability is not permission. Windows x86_64 qualified (issue #414) with explicit EULA never automatic plus usage vs redistribution reviewed separately (see issue #496). | open work |
 | Can the kept CC opt-out execute successfully? | Reproduce no-linker analysis path; narrow upstream runner fix; distinguish script compilation inputs from execution inputs. | issue #303 |
 | Can third-party scripts retain a declared hermetic closure? | Qualify global shell-env False or upstream annotation extension; test hostile PATH, tool discovery and additional declared tools. | issue #303 |
-| Does Windows native transport preserve all inputs and ABI selection? | Fix ABI constraints and path rebasing upstream; test batch wrappers, response files, cc-rs assembly/discovery, SDK libraries and proc-macro DLLs. | open work |
-| Which prebuilt native libraries interoperate? | Independent MSVC fixtures and Linux libstdc++ comparison; verify STL/CRT modes, unwinding, ownership and runtime deployment. | open work |
+| Does Windows native transport preserve all inputs and ABI selection? | Fix ABI constraints and path rebasing upstream; test batch wrappers, response files, cc-rs assembly/discovery, SDK libraries and proc-macro DLLs. Windows x86_64 qualified (issue #414) with declared-input fixtures without host Visual Studio state; remaining upstream fixes stay owned under issue #303. | open work |
+| Which prebuilt native libraries interoperate? | Independent MSVC fixtures and Linux libstdc++ comparison; verify STL/CRT modes, unwinding, ownership and runtime deployment. Windows x86_64 qualified (issue #414) with representative prebuilt-MSVC fixtures incl mixed Rust/C/C++ qualifying host-to-target plus target execution separately. | open work |
 | Are both Linux profiles complete? | Native arm64 glibc builds/tests plus per-cell coverage landed (issue #410); static-musl closures plus per-cell coverage for both musl profiles landed (issue #411, Rust musl std plus exec/target separation, CI cross-builds with per-profile cache scopes, no union; dynamic musl explicitly out of scope). Remaining: cross builds/tests, ELF dependencies, glibc symbols, hermetic-llvm backend plus OpenSSL/ring/bindgen/CXX corpus gaps. | open work |
-| Which deployment and execution floors are supportable? | Run oldest-target and current-host fixtures separately; inspect compiler, clangd and bindgen loader dependencies. Check Apple's extracted SDK framework subset. macOS arm64 native is qualified (issue #412) plus macOS x86_64 best-effort native is qualified (issue #413) with SDK version not the deployment floor; oldest-OS execution plus framework completeness plus licensing remain gates; best-effort gaps never block required-host release. | open work |
+| Which deployment and execution floors are supportable? | Run oldest-target and current-host fixtures separately; inspect compiler, clangd and bindgen loader dependencies. Check Apple's extracted SDK framework subset. macOS arm64 native is qualified (issue #412) plus macOS x86_64 best-effort native is qualified (issue #413) with SDK version not the deployment floor; oldest-OS execution plus framework completeness plus licensing remain gates; best-effort gaps never block required-host release. Windows x86_64 native is qualified (issue #414) with `/MD` retail dynamic CRT as the starting point; `/MT` plus debug CRT plus floors stay owned by O14/O37. | open work |
 | Can every executable first-party line be accounted for? | Rust-only, C/C++-only and mixed/DLL LCOV, missed-line tests, coverage-tool version pairing, native ignores and denominator validation. No ignored collection failures. | open work |
 | Can bindgen/CXX use one upstream graph? | Separate standalone/build-script bindgen fixtures; execution libclang closure, target flags and identical CXX crate/generator versions. | issue #303 |
 | Can public Cargo metadata represent every generated target? | Prove features, build-script metadata, target kinds and ownership without private serialized dependency-graph access; seek narrow upstream metadata exports where missing. | open work |

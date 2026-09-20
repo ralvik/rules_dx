@@ -1,4 +1,4 @@
-//! Startup platform gate for the `dx` CLI (issues #298, #410, #411, #412, #413).
+//! Startup platform gate for the `dx` CLI (issues #298, #410, #411, #412, #413, #414).
 //!
 //! Only hosts with platform evidence stay on the execution path; every
 //! other host gets a clean refusal naming the host and the qualification
@@ -12,11 +12,12 @@
 ///
 /// The Linux x86_64 seed host plus Linux arm64 glibc native (issue #410)
 /// plus macOS arm64 native (issue #412) plus macOS x86_64 best-effort
-/// native (issue #413) are delivered. Provisional: extend
-/// this list as remaining ADR 0014 required-platform evidence lands
-/// (tracked in issue #298, closed, with per-host successors owning each
-/// host); the startup refusal below reads the same list, so support flips
-/// on automatically with the evidence entry.
+/// native (issue #413) plus Windows x86_64 MSVC-compatible native (issue
+/// #414) are delivered. Provisional: extend this list as remaining ADR
+/// 0014 required-platform evidence lands (tracked in issue #298, closed,
+/// with per-host successors owning each host); the startup refusal below
+/// reads the same list, so support flips on automatically with the
+/// evidence entry.
 ///
 /// Static-musl profiles (issue #411) share these OS/arch pairs: the two
 /// Linux hosts above run static-musl closures natively, so no new host
@@ -37,12 +38,20 @@
 /// `macos-13` retired December 2025), record gaps without blocking
 /// required-host release. Exact pins, hosts, floors, and SDK/CRT
 /// identities stay owned by O14/O37 per ADR 0014.
+///
+/// Windows x86_64 MSVC-compatible (issue #414) runs natively on
+/// `windows-latest` runners through the pinned upstream toolchains; the
+/// toolchains_msvc clang-cl/Microsoft-STL backend stays provisional with
+/// immutable lazy fetch and explicit EULA acceptance (never automatic).
+/// Exact pins, hosts, floors, and SDK/CRT identities stay owned by O14/O37
+/// per ADR 0014.
 pub fn qualified_hosts() -> &'static [(&'static str, &'static str)] {
     &[
         ("linux", "x86_64"),
         ("linux", "aarch64"),
         ("macos", "aarch64"),
         ("macos", "x86_64"),
+        ("windows", "x86_64"),
     ]
 }
 
@@ -67,7 +76,7 @@ pub fn refusal(os: &str, arch: &str) -> Option<String> {
         return None;
     }
     Some(format!(
-        "unsupported_platform: {os}/{arch} has no qualified platform evidence; dx is delivered on Linux x86_64 and Linux arm64 (glibc plus static musl, issue #411; dynamic musl explicitly out of scope) plus macOS arm64 (issue #412; host-installed SDK fallback never approved) plus macOS x86_64 best-effort (issue #413; macos-15-intel, host-installed SDK fallback never approved, gaps never block required-host release) only (see docs/product/support-matrix.md and ADR 0014, tracked in issue #298 with per-host successors such as issues #410/#411/#412/#413)"
+        "unsupported_platform: {os}/{arch} has no qualified platform evidence; dx is delivered on Linux x86_64 and Linux arm64 (glibc plus static musl, issue #411; dynamic musl explicitly out of scope) plus macOS arm64 (issue #412; host-installed SDK fallback never approved) plus macOS x86_64 best-effort (issue #413; macos-15-intel, host-installed SDK fallback never approved, gaps never block required-host release) plus Windows x86_64 MSVC-compatible (issue #414; toolchains_msvc clang-cl/Microsoft-STL provisional, explicit EULA acceptance never automatic) only (see docs/product/support-matrix.md and ADR 0014, tracked in issue #298 with per-host successors such as issues #410/#411/#412/#413/#414)"
     ))
 }
 
@@ -105,12 +114,12 @@ mod tests {
 
     #[test]
     fn unqualified_hosts_are_refused_with_pointer() {
-        // Every remaining ADR 0014 host (required and out-of-v1) refuses
-        // cleanly until its per-host evidence lands: macOS arm64 is
-        // qualified under issue #412 and macOS x86_64 best-effort under
-        // issue #413, so only Windows x86_64 (required, backend blocked)
-        // plus arm64 (out of v1) remain here.
-        for (os, arch) in [("windows", "x86_64"), ("windows", "aarch64")] {
+        // Every remaining ADR 0014 host (out-of-v1) refuses cleanly until
+        // its per-host evidence lands: Linux plus macOS arm64 plus macOS
+        // x86_64 best-effort plus Windows x86_64 MSVC-compatible are
+        // qualified (issues #410/#412/#413/#414), so only Windows arm64
+        // (out of v1) remains here.
+        for (os, arch) in [("windows", "aarch64")] {
             let message = refusal(os, arch).expect("unqualified host must be refused");
             assert!(message.starts_with("unsupported_platform"), "{message}");
             assert!(message.contains(&format!("{os}/{arch}")), "{message}");
@@ -119,14 +128,15 @@ mod tests {
     }
 
     #[test]
-    fn qualified_set_is_seed_plus_arm64_plus_macos() {
+    fn qualified_set_is_seed_plus_arm64_plus_macos_plus_macos_x86_64_plus_windows() {
         assert_eq!(
             qualified_hosts(),
             &[
                 ("linux", "x86_64"),
                 ("linux", "aarch64"),
                 ("macos", "aarch64"),
-                ("macos", "x86_64")
+                ("macos", "x86_64"),
+                ("windows", "x86_64")
             ]
         );
     }
@@ -142,6 +152,11 @@ mod tests {
         // available (`macos-15-intel`); gaps never block required-host
         // release per ADR 0014.
         assert_eq!(refusal("macos", "x86_64"), None);
+    }
+
+    #[test]
+    fn windows_x86_64_host_is_qualified() {
+        assert_eq!(refusal("windows", "x86_64"), None);
     }
 
     #[test]
