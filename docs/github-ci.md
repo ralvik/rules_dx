@@ -311,6 +311,6 @@ plus gate/aggregate fixture evidence qualified seed-only under #509
 platforms, fail-closed sequential, stable aggregate, hygiene, concurrency,
 permissions, per-cell coverage with fork-safe comments, all-enabled self-call
 (issue #408, verbatim `//...`),
-native bump loop plus Renovate (complementary, issue #326), migrate planning
+native bump loop (sole updater, issue #461), migrate planning
 plus run multirun, tag hygiene as-built, with platform, merge, thread, fork,
-sequential, tag/release, Renovate, and migrate-execution gaps owned under #509).
+sequential, tag/release, native-bot, and migrate-execution gaps owned under #509).

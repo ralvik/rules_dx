@@ -142,11 +142,8 @@ Owned build profiles (`dx_debug`/`dx_dev`/`dx_release`) are reviewed the
 same way; see [ADR 0021](../decisions/0021-build-profiles.md).
 
 Version bumps flow through the native widen-one-requirement loop
-(delivered, issue #260) alongside Renovate (complementary roles decided in
-issue #326: Renovate proposes, `dx bump`/`dx update` applies): `dx init`
-scaffolds `renovate.json` absent-only with the full manager set
-(`bazel` over `.bazelversion` plus Cargo, npm/pnpm, GitHub Actions,
-Go), grouped and scheduled weekly. `dx bump <set:package> <version>` widens
+(delivered, issue #260) as the sole updater (native-only, issue #461):
+`dx bump <set:package> <version>` widens
 one declared requirement (never batch), then `dx update <set>` applies the
 resolver-owned lock refresh; bump PRs run the loop (discover stable-only,
 widen one, update, regen, flag-diff review, test-pin updates,

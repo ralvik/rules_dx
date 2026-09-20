@@ -10,7 +10,7 @@ adds no new semantics.
   not a commitment to working container support.
 - [Diagnostics and versioning](diagnostics-versioning.md): implemented `dx status`/`dx version`
   surface and `dx` pinning.
-- [Automation](automation.md): allowed bots and bot-opened PRs; Renovate
-  for dependency updates with update-only automerge under guardrails.
+- [Automation](automation.md): allowed bots and bot-opened PRs; native bump
+  loop as sole updater with update-only automerge under guardrails.
 - [BUILD conventions](build-conventions.md): one-line refs for repeated
   `BUILD.bazel` patterns.

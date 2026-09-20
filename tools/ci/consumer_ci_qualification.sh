@@ -9,7 +9,7 @@
 #   with reviewed SHA pin, four consumer fixture harnesses
 #   (scheduling/aggregate/guards/pins), self-call all-enabled dogfood in
 #   ci.yml (issue #408, verbatim `//...`),
-#   native widen-one loop plus Renovate (complementary, issue #326), dx migrate
+#   native widen-one loop (sole updater, issue #461), dx migrate
 #   planning plus
 #   dx run multirun, tag hygiene as-built;
 # - open under #509 with honest records: platform/runner/isolation/cache/
@@ -17,7 +17,7 @@
 #   thread identity/ordering/limits; fork/untrusted/sensitive/retries/
 #   Code-Scanning qualification; sequential mode fail-closed pending
 #   qualification; tag hygiene plus
-#   release-input gaps; Renovate/native-bot follow-ups; dx migrate execution
+#   release-input gaps; native-bot follow-ups; dx migrate execution
 #   plus dx run wiring gaps.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:consumer_ci_qualification`,
@@ -41,7 +41,6 @@ matrix="docs/testing/github-ci.md"
 verify="docs/testing/verification-matrix.md"
 automation="docs/contributing/automation.md"
 roadmap="docs/roadmap.md"
-renovate="renovate.json"
 bump_workflow=".github/workflows/bump.yml"
 migrate_rs="cli/adopt/src/migrate.rs"
 migrate_doc="docs/cli/commands/migrate.md"
@@ -254,17 +253,17 @@ else
   bad "functional aggregate proof failed (all-ok/one-fail/disabled-skip)"
 fi
 
-# Renovate plus native widen-one loop stays delivered as complementary roles.
-if grep -q -F -e '"bazel", "cargo", "github-actions", "gomod", "npm"' "$renovate" &&
-  grep -q -F -e '"automerge": false' "$renovate" &&
-  grep -q -F -e 'before 5am on Monday' "$renovate" &&
+# Native widen-one loop stays delivered as the sole updater (issue #461).
+if grep -q -F -e 'BumpSet::Bazel' cli/bump/src/sets.rs &&
+  grep -q -F -e 'sole updater' "$automation" &&
+  grep -q -F -e 'native-only' "$automation" &&
   [[ -f "$bump_workflow" ]] &&
   grep -rn -F -e '"bump"' --include='*.rs' cli/ 2>/dev/null | grep -q . &&
   grep -q -F -e 'dx bump' "$automation" &&
   [[ -f "tools/ci/widen_update_loop.sh" ]]; then
   ok
 else
-  bad "Renovate plus native bump loop lost (manager set, schedule, bump command, runner)"
+  bad "native bump loop lost (set registry, sole updater, bump command, runner)"
 fi
 
 # dx migrate planning delivered with fail-closed execution honesty.
@@ -360,14 +359,13 @@ else
   bad "tag hygiene plus release-input gap lost its owner"
 fi
 
-# Renovate/native-bot follow-ups stay owned open (complementary roles decided
-# in issue #326).
-if grep -q -F -e 'Renovate and native-bot follow-ups' "$matrix" &&
-  grep -q -F -e 'are complementary' "$automation" &&
-  grep -q -F -e 'Renovate plus native bump loop complementary' "$roadmap"; then
+# Native-bot follow-ups stay owned open (native-only updater, issue #461).
+if grep -q -F -e 'native-bot follow-ups' "$matrix" &&
+  grep -q -F -e 'sole updater' "$automation" &&
+  grep -q -F -e 'sole updater' "$roadmap"; then
   ok
 else
-  bad "Renovate/native-bot follow-up gap lost its owner"
+  bad "native-bot follow-up gap lost its owner"
 fi
 
 # dx migrate syntax plus dx run multirun stays owned open in the matrix.

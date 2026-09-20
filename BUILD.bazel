@@ -78,25 +78,6 @@ exports_files([
 ])
 
 # Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
-# Renovate parity fixture (issues #3, #322); see renovate_parity_test.sh.
-sh_test(
-    name = "renovate_parity_test",
-    srcs = ["renovate_parity_test.sh"],
-    args = [
-        "$(rootpath :renovate.json)",
-        "$(rootpath //cli/cli:dx)",
-    ],
-    data = [
-        ":renovate.json",
-        "//cli/cli:dx",
-        "//tools/sh:lib",
-        "//tools/sh:snapshot",
-    ],
-    tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
 # Preset parity fixture (issues #332, #322, #407); see preset_parity_test.sh.
 sh_test(
     name = "preset_parity_test",

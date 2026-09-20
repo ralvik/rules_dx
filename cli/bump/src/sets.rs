@@ -1,7 +1,7 @@
 //! V1 widen-one-requirement set registry for `dx bump` (issue #260).
 //!
 //! Pure registry over the five v1 manager sets named in the issue,
-//! matching the retained `renovate.json` manager set: Bazel modules plus
+//! covering the native updater scope: Bazel modules plus
 //! `.bazelversion`, Cargo, npm/pnpm (both lock graphs), Go (`gomod`), and
 //! GitHub Actions. Each set owns its declared-requirement manifests; lock
 //! refresh stays resolver-owned through `dx update` (`dx_update::backend`)
@@ -48,8 +48,8 @@ impl BumpSet {
         BumpSet::Npm,
     ];
 
-    /// Stable selector spelling for this set (matches `renovate.json`
-    /// manager names, with `go` covering the `gomod` manager).
+    /// Stable selector spelling for this set (with `go` covering the
+    /// `gomod` spelling).
     pub fn name(self) -> &'static str {
         match self {
             BumpSet::Bazel => "bazel",
@@ -61,7 +61,7 @@ impl BumpSet {
     }
 
     /// Parses a set selector spelling. Case-sensitive; no aliases except
-    /// `gomod` for `go` (renovate manager spelling) and `gha` for
+    /// `gomod` for `go` and `gha` for
     /// `github-actions` (workflow shorthand).
     pub fn parse(text: &str) -> Option<BumpSet> {
         match text {
