@@ -1,0 +1,9 @@
+# Loader dependency inspection (issue #500).
+# Compiler, clangd and bindgen loader dependencies inspected separately from link floors.
+# The minimal compiler archive alone is not proof that a loadable libclang exists.
+
+compiler loader dependencies inspected separately from link floors
+clangd loader dependencies inspected separately from link floors
+bindgen loader dependencies with explicit execution-platform libclang closure
+the minimal compiler archive alone is not proof that a loadable libclang exists
+inspect compiler, clangd and bindgen loader dependencies

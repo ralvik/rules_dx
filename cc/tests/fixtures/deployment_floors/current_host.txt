@@ -1,0 +1,8 @@
+# Current-host floor fixture (issue #500).
+# Records the seed-host plus CI-runner execution floors, run separately from oldest-target.
+# Cross-building alone is insufficient without matching native target execution.
+
+seed-host plus CI-runner execution floors
+matching native target execution, cross-building alone is insufficient
+oldest-target and current-host fixtures run separately
+current-host success never proves oldest-target support

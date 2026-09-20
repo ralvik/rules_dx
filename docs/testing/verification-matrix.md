@@ -580,8 +580,8 @@ Remaining reds stay owned gaps, not green claims:
   green and deferred failure never proving laziness; backend stays
   provisional; acquisition rights qualified seed-only under #496, prebuilt interop
   qualified seed-only under #498, linux corpus qualified seed-only under #499,
-  transport qualified seed-only under #497, floors stay owned under #500,
-  coverage qualified seed-only under #501;
+  windows transport qualified seed-only under #497, floors qualified seed-only
+  under #500, coverage qualified seed-only under #501;
   platform plus consumer plus release evidence stays owned gap; no Supported
   claim (`windows_acquisition_qualification` 14/14)).
 - Apple plus Microsoft acquisition rights with fixture evidence qualified seed-only under #496
@@ -596,9 +596,9 @@ Remaining reds stay owned gaps, not green claims:
   not permission, assume rights rejected, pinned in
   `cc/tests/fixtures/acquisition_rights/pins.bzl`; backends stay provisional;
   prebuilt interop qualified seed-only under #498, linux corpus qualified
-  seed-only under #499, transport qualified seed-only under #497, floors
-  stay owned under #500, coverage qualified seed-only under #501; platform
-  plus consumer plus release evidence
+  seed-only under #499, windows transport qualified seed-only under #497,
+  floors qualified seed-only under #500, coverage qualified seed-only under
+  #501; platform plus consumer plus release evidence
   stays owned gap; no Supported claim (`acquisition_rights_qualification` 15/15)).
 - Windows transport plus ABI with fixture evidence qualified seed-only under #497
   (`bazel run //tools/ci:windows_transport_qualification`;
@@ -611,8 +611,8 @@ Remaining reds stay owned gaps, not green claims:
   proc-macro DLLs on declared-input fixtures without host Visual Studio
   state, compiler-target availability alone is not proof; backend stays
   provisional; rights plus interop qualified seed-only under #496/#498,
-  linux corpus qualified seed-only under #499, floors stay owned under
-  #500, coverage qualified seed-only under #501;
+  linux corpus qualified seed-only under #499, floors qualified seed-only
+  under #500, coverage qualified seed-only under #501;
   platform plus consumer plus release evidence stays owned gap; no Supported
   claim (`windows_transport_qualification` 16/16)).
 - Prebuilt interop with fixture evidence qualified seed-only under #498
@@ -627,8 +627,9 @@ Remaining reds stay owned gaps, not green claims:
   plus LLVM ancestry alone plus single-combo proof rejected, pinned in
   `cc/tests/fixtures/prebuilt_interop/pins.bzl` with the interop lib plus test
   under `bazel test //...`; backends stay provisional; linux corpus qualified
-  seed-only under #499, transport qualified seed-only under #497, floors
-  stay owned under #500, coverage qualified seed-only under #501; platform plus
+  seed-only under #499, windows transport qualified seed-only under #497,
+  floors qualified seed-only under #500, coverage qualified seed-only under
+  #501; platform plus
   consumer plus release evidence stays owned gap; no Supported claim
   (`prebuilt_interop_qualification` 16/16)).
 - Linux corpus with fixture evidence qualified seed-only under #499
@@ -638,20 +639,36 @@ Remaining reds stay owned gaps, not green claims:
   with execution libclang closure plus CXX single-graph execution, native only
   with single-crate proof rejected, pinned in
   `cc/tests/fixtures/linux_corpus/pins.bzl` with the corpus lib plus test
-  under `bazel test //...`; backends stay provisional; transport qualified
-  seed-only under #497, floors stay owned under #500, coverage qualified
-  seed-only under #501; platform plus
+  under `bazel test //...`; backends stay provisional; windows transport
+  qualified seed-only under #497, floors qualified seed-only under #500,
+  coverage qualified seed-only under #501; platform plus
   consumer plus release evidence stays owned gap; no Supported claim
   (`linux_corpus_qualification` 16/16)).
+- Deployment plus execution floors with fixture evidence qualified seed-only under #500
+  (`bazel run //tools/ci:deployment_floors_qualification`;
+  glibc `2.28` symbol floor plus musl `1.2.6` static closure plus macOS
+  deployment `14.0` plus MacOSX26.5 SDK identity plus Windows retail `/MD`
+  CRT with Microsoft STL/UCRT/VCRuntime plus MSVC `14.50.35717` plus redist
+  `14.50.35710` plus SDK package `10.0.26100.7705` identities, oldest-target
+  and current-host fixtures run separately with matching native target
+  execution, compiler plus clangd plus bindgen loader dependencies inspected
+  separately, Apple extracted SDK framework subset checked, SDK version is not
+  deployment floor, `/MT` plus debug CRT not interchangeable, unpinned floors
+  rejected, pinned in `cc/tests/fixtures/deployment_floors/pins.bzl` with
+  `floors.expected` plus `oldest_target.txt` plus `current_host.txt` plus
+  `loader_deps.txt` plus `apple_frameworks.txt`; backends stay provisional;
+  linux corpus qualified seed-only under #499, coverage qualified seed-only
+  under #501; platform plus consumer plus release evidence stays owned gap;
+  no Supported claim (`deployment_floors_qualification` 16/16)).
 - LCOV accounting with fixture evidence qualified seed-only under #501
   (`bazel run //tools/ci:lcov_accounting_qualification`;
   Rust-only plus C/C++-only plus mixed/DLL LCOV with missed-line tests,
   coverage-tool version pairing, native ignores and denominator validation,
   pinned in `cc/tests/fixtures/lcov_accounting/pins.bzl` with the accounting
   lib plus test under `bazel test //...`; unaccounted lines plus ignored
-  collection failures rejected; backends stay provisional; floors stay owned
-  under #500; platform plus consumer plus release evidence stays owned gap;
-  no Supported claim (`lcov_accounting_qualification` 16/16)).
+  collection failures rejected; backends stay provisional; floors qualified
+  seed-only under #500; platform plus consumer plus release evidence stays
+  owned gap; no Supported claim (`lcov_accounting_qualification` 16/16)).
 - Stable-stack compose with fixture evidence qualified seed-only under issue #494
   (`bazel run //tools/ci:stable_stack_qualification`; as-built Bzlmod
   identities Bazel 9.2.0 plus rules_rust 0.74.0 plus rules_cc 0.2.22 plus
