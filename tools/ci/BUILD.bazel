@@ -842,6 +842,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Scalafix console + semanticdb-classpath wiring harness (issue #490); see docs/product/support-matrix.md#provisional-adapter-input-notes.
+sh_binary(
+    name = "scalafix_qualification",
+    srcs = ["scalafix_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "warnings_as_errors_testdata",
     srcs = glob(["testdata/warnings/**"]),

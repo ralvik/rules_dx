@@ -961,8 +961,7 @@ Diagnostic wire formats:
   (javac diagnostics; structured output still open upstream, itemized under issue #416),
   FSharpLint
   console (the `FSharpLint.Core` library API is the structured
-  alternative, itemized under issue #417), Scalafix console (no machine-readable CLI output; open
-  upstream issue, itemized under issue #417).
+  alternative, itemized under issue #417), Scalafix console (no machine-readable CLI output; console-parse is rejected and wire via ScalafixMainCallback is required, decided under issue #490 with scala/tests/fixtures/scalafix/ evidence, open upstream scalacenter/scalafix#2459, cohort stays owned under issue #417).
 - clang-tidy emits clang text diagnostics; fixes travel separately as
   `--export-fixes` YAML for `clang-apply-replacements`. Target-coupled wiring
   versus check-only stays open under issue #418.
@@ -972,7 +971,7 @@ Diagnostic wire formats:
 Fix modes:
 
 - Whole-file rewrite with check/diff mode: all seven formatters,
-  ktlint (`--format`), Scalafix (`--check` unified diff),
+  ktlint (`--format`), Scalafix (`--check` unified diff for sandbox-apply-and-diff only, never the diagnostic source; console-parse is rejected, diagnostics via ScalafixMainCallback wire decided under issue #490),
   clang-tidy (`--fix` or `--export-fixes`), Error Prone
   (`-XepPatchChecks` with a patch-file location). Native formatters
   (clang-format, gofumpt) plus clang-tidy modes are itemized under issue #418.
@@ -998,9 +997,7 @@ open work under issue #511.
 Open adapter risks tracked in
 open work under issues #416-#420 and #490-#493:
 
-- Scalafix: no machine-readable CLI output; semantic rules need semanticdb
-  plus classpath wiring, and source rewriting sits uneasily with immutable
-  action outputs (issue #417).
+- Scalafix: no machine-readable CLI output; console-parse is rejected and wire via ScalafixMainCallback is required with target-coupled semanticdb plus classpath wiring (`--classpath` plus `--sourceroot` plus `--semanticdb-targetroots` from the authoritative target) and sandbox-apply-and-diff with declared outputs (never `IN_PLACE`), decided under issue #490 with scala/tests/fixtures/scalafix/ evidence; no adapter claims `scala` yet (cohort stays owned under issue #417; semantic rules need semanticdb plus classpath wiring, and source rewriting sits uneasily with immutable action outputs).
 - Error Prone: no structured diagnostics; patch files need per-target
   declared outputs because `IN_PLACE` patching breaks under sandboxing (issue #416).
 - Roslyn `/errorlog` SARIF is per compiler invocation (per

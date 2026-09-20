@@ -1,0 +1,26 @@
+"""Scalafix console + semanticdb-classpath wiring fixture (issue #490)."""
+
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+exports_files([
+    "pins.bzl",
+    "console_lint.txt",
+    "console_rewrite.txt",
+    "Sample.scala",
+    "example.scalafix.conf",
+])
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = [
+        "BUILD.bazel",
+        "pins.bzl",
+    ],
+    tags = ["corpus"],
+)
