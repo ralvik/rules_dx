@@ -304,11 +304,15 @@ Green here (static guards on a clean tree, no full rebuild):
 <<<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `remediation_bounds_qualification` 16/16, `layer2_opens_qualification` 16/16, `quality_taxonomy_qualification` 17/17, `selective_update_qualification` 16/16, `update_events_qualification` 16/16, `env_plugins_cgo_qualification` 16/16, `starlark_futures_qualification` 16/16, `cli_execution_gaps_qualification` 16/16, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24, `coverage_qualification` 33/33.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
+Full-tree `dx lint/format/typecheck/test --check //...` over fixtures and
+testdata is green via the consumer-ci all-enabled self-call (issue #408,
+verbatim `//...` in Battery above) with fixtures/testdata expected failures
+owned by #508 (`bazel run //tools/ci:non_dogfed_qualification` with
+`tools/ci/tests/fixtures/non_dogfed/pins.bzl` plus `non_dogfed.expected`;
+negatives per issue #406, hermetic CLI-contract per issue #407; closed #12
+lane A and closed #325 carry no open scope).
 
 Remaining reds stay owned gaps, not green claims:
-
-- Full-tree `dx lint/format/typecheck/test --check //...` over fixtures and
-  testdata stays open under #12 (lane A only) and #325 (consumer honesty).
 - Per-cell coverage is qualified for the seed plus arm64 plus two static-musl plus macos arm64 plus macos x86_64 best-effort plus windows x86_64 cells with fixture evidence under
   #507 (`tools/coverage/tests/fixtures/per_cell/pins.bzl` plus
   `per_cell.expected` plus `codecov_remote.expected` via
