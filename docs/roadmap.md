@@ -11,7 +11,7 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
 ## Improve
 
 * Tag hygiene and release-input gaps, no publication pressure.
-* Toolchain, provider, and adapter qualification backlogs.
+* Toolchain, provider, and adapter qualification backlogs: Rust providers plus Gazelle plus integration (issues #470-#475), runners plus locks plus defaults (issues #476-#489), adapter wiring (issues #490-#493), native qualification (issues #494-#505), env plus codegen (issue #506), coverage plus consumer plus quality (issues #507-#512).
 * Docs-pipeline execution gaps stay open under issue #421 (live successor to closed #310; adapter runs with pins
   and mappings, renderer and site execution, byte-identical rebuild proof, link and
   reference completeness, guide prose with guide-step CI wiring, first-hour timing proof,
@@ -23,6 +23,7 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
   release path (signing-first), signing stack + distribution, GHCR prebuilt
   images (separate workflow), Renovate plus native bump loop complementary
   (decided, issue #326), automation policy (Renovate allowed).
-* V1 scope: `dx migrate` syntax + manifest selection, `dx run` multirun.
+* V1 scope: `dx migrate` syntax + manifest selection (issue #462), `dx run` multirun (issue #463).
   No post-v1 bucket.
 * Rust library extraction.
+* CLI and deploy follow-ups: `--debug`/`--release` flags plus `DX_PROFILE` forwarding plus deploy provider/CLI (issues #457-#458); `dx docs` reintroduction with real extraction/validation (see ADR 0020).

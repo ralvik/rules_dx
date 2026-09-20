@@ -74,7 +74,7 @@ JavaScript And TypeScript Quality.
 ### Initial Artifact Research
 
 Read-only upstream research supports the following candidates (see
-open work), not qualified
+open work under issues #416-#420), not qualified
 pins or platform support. Recheck latest stable and verify actual bytes when adding each adapter.
 The JVM cohort rows below are owned by issue #416 (live successor to closed
 #307 for the `java`/`kotlin` classes); versions are observations, not pins.
@@ -105,14 +105,14 @@ double-claimed); versions are observations, not pins.
 | ktfmt | [v0.63 release](https://github.com/facebook/ktfmt/releases/tag/v0.63) (May 2026; v0.64 observed on Maven Central) | Complete upstream with-dependencies JAR (`ktfmt-*-with-dependencies.jar`) over the one managed JDK cohort. Maintainer acquisition must establish and record byte identity; recheck latest stable when adding the adapter. |
 | ktlint | [1.8.0 release](https://github.com/ktlint/ktlint/releases/tag/1.8.0) (Nov 2025 stable; 2.0.0 alphas are not stable) | Complete upstream executable JAR (`ktlint` release asset, runnable as `java -jar ktlint`) over the one managed JDK cohort; SARIF via `--reporter=sarif`. Standard rules stay a provisional native-config input until qualified. Maintainer acquisition must establish and record byte identity. |
 | detekt | [v1.23.8 stable](https://github.com/detekt/detekt/releases) (Feb 2025; 2.0.0 alphas target JDK 25 and are not stable) | Complete upstream CLI (`detekt-cli-*-all.jar`) over the one managed JDK cohort; SARIF report plus Checkstyle XML. `buildUponDefaultConfig` (not `allRules`) stays a provisional native-config input until qualified; type resolution is optional. Maintainer acquisition must establish and record byte identity. |
-| Error Prone | [v2.50.0 release](https://github.com/google/error-prone/releases/tag/v2.50.0) (Jun 2026) | Javac plugin following the qualified JDK baseline (version coupled to the JDK, open under #416); no structured diagnostics upstream, so javac-diagnostic parsing is open work itemized here, not silently dropped. Patch files need per-target declared outputs because `IN_PLACE` patching breaks under sandboxing. |
+| Error Prone | [v2.50.0 release](https://github.com/google/error-prone/releases/tag/v2.50.0) (Jun 2026) | Javac plugin following the qualified JDK baseline (version coupled to the JDK, open under #416); no structured diagnostics upstream, so javac-diagnostic parsing is open work under issue #416 itemized here, not silently dropped. Patch files need per-target declared outputs because `IN_PLACE` patching breaks under sandboxing. |
 | Scalafmt | [releases](https://github.com/scalameta/scalafmt/releases) (v3.11.4 observed Jul 2026) | Compatible JVM artifact over the one managed JDK cohort plus the Scala Maven-lock story (`maven_install.json` plus `fail_if_repin_required`); no source-built or toolchain-coupled route. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
-| Scalafix | [v0.14.7 release](https://github.com/scalacenter/scalafix/releases/tag/v0.14.7) (Jun 2026) | Semantic-rule artifacts over the one managed JDK cohort plus the Scala Maven-lock story; semantic rules additionally need semanticdb plus classpath wiring per the adapter-input notes. No machine-readable CLI output upstream, so console-parse versus wire decision is open work itemized here, not silently dropped. Maintainer acquisition must establish and record byte identity. |
+| Scalafix | [v0.14.7 release](https://github.com/scalacenter/scalafix/releases/tag/v0.14.7) (Jun 2026) | Semantic-rule artifacts over the one managed JDK cohort plus the Scala Maven-lock story; semantic rules additionally need semanticdb plus classpath wiring per the adapter-input notes. No machine-readable CLI output upstream, so console-parse versus wire decision is open work under issue #417 itemized here, not silently dropped. Maintainer acquisition must establish and record byte identity. |
 | CSharpier | [1.3.0 release](https://github.com/belav/csharpier/releases/tag/1.3.0) (Jun 2026; [NuGet](https://www.nuget.org/packages/CSharpier)) | Exact official tool package executed as declared DLLs over the one managed .NET runtime cohort (1.3.0 targets .NET 8.0); no consumer runs `dotnet tool install` or any equivalent installer. Runtime compatibility bounds stay open until qualified. Maintainer acquisition must establish and record byte identity. |
 | Fantomas | [releases](https://github.com/fsprojects/fantomas/releases) (v7.x stable line; 8.0.0 alphas target the next FSharp.Core/.NET and are not stable) | Exact official tool package executed as declared DLLs over the one managed .NET runtime cohort; no consumer runs `dotnet tool install` or any equivalent installer. Runtime compatibility bounds stay open until qualified. Maintainer acquisition must establish and record byte identity. |
-| FSharpLint | [0.27.0 release](https://github.com/fsprojects/FSharpLint/releases) (Jun 2026; targets .NET 8.0) | Exact official tool package over the one managed .NET runtime cohort; console text parsing versus binding the `FSharpLint.Core` library API is open work itemized here, not silently dropped. Default ruleset with formatting rules off (Fantomas owns formatting) stays a provisional native-config input until qualified. Maintainer acquisition must establish and record byte identity. |
+| FSharpLint | [0.27.0 release](https://github.com/fsprojects/FSharpLint/releases) (Jun 2026; targets .NET 8.0) | Exact official tool package over the one managed .NET runtime cohort; console text parsing versus binding the `FSharpLint.Core` library API is open work under issue #417 itemized here, not silently dropped. Default ruleset with formatting rules off (Fantomas owns formatting) stays a provisional native-config input until qualified. Maintainer acquisition must establish and record byte identity. |
 | clang-format | [hermetic-llvm v0.8.19](https://github.com/hermeticbuild/hermetic-llvm/blob/v0.8.19/README.md) (inspected release; LLVM tool targets) | Authoritative-toolchain class: resolves from the qualified hermetic-llvm LLVM distribution's tool targets, no separate acquisition. Version follows the qualified toolchain pin; recheck the qualified LLVM distribution when adding the adapter. |
-| clang-tidy | [hermetic-llvm v0.8.19](https://github.com/hermeticbuild/hermetic-llvm/blob/v0.8.19/README.md) (inspected release; LLVM tool targets) | Authoritative-toolchain class: resolves from the qualified hermetic-llvm LLVM distribution's tool targets, no separate acquisition. clang-tidy needs compile-commands context — target-coupled wiring versus check-only stays open work itemized here, not silently dropped. Version follows the qualified toolchain pin. |
+| clang-tidy | [hermetic-llvm v0.8.19](https://github.com/hermeticbuild/hermetic-llvm/blob/v0.8.19/README.md) (inspected release; LLVM tool targets) | Authoritative-toolchain class: resolves from the qualified hermetic-llvm LLVM distribution's tool targets, no separate acquisition. clang-tidy needs compile-commands context — target-coupled wiring versus check-only stays open work under issue #418 itemized here, not silently dropped. Version follows the qualified toolchain pin. |
 | cppcheck | [2.21.0 release](https://github.com/cppcheck-opensource/cppcheck/releases) (Jun 2026; [2.21 sources](https://sourceforge.net/projects/cppcheck/files/cppcheck/2.21/)) | Checksummed standalone release artifact; `--xml --xml-version=2` on stderr is the machine-readable shape. Default enablement stays a provisional native-config input until qualified. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
 | gofumpt | [v0.11.0](https://github.com/mvdan/gofumpt/releases) (observed Jul 2026; strict superset of gofmt) | Checksummed standalone release artifact; whole-file rewrite with check/diff mode. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
 | staticcheck | [2026.2 release notes](https://staticcheck.dev/changes/2026.2) (Aug 2026; v0.8.1 observed) | Checksummed standalone release artifact; SARIF via `-f sarif`, JSON via `-f json`. Default checks versus the `SA`-only suggestion stay an unresolved conflict — neither is selected here; qualify before freezing. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
@@ -144,7 +144,7 @@ release URL does not guarantee immutable bytes; checked-in digests must reject c
 If an upstream asset cannot satisfy a required platform, the existing reviewed release-CI source-build
 route is the alternative, not consumer compilation or ambient libraries. Exact assets, checksums,
 archive members, ABI floors, licenses, metadata schema, and regeneration command are tracked in
-open work.
+open work under issues #416-#420.
 Adapter-specific issues are tracked in [initial adapter qualification](../quality/tool-integrations.md#initial-adapter-qualification).
 
 ## Delivery Classes
@@ -154,7 +154,7 @@ package-management, or framework stacks. Approved language maintenance includes 
 packaging, and necessary reproducible upstream source builds under
 [Product Scope](../product/scope.md#language-integration-maintenance). Candidate-specific effort,
 maintenance ownership, and qualification evidence still require review
-(open work) before implementation;
+(open work under issue #505) before implementation;
 general route permission does not prove a candidate feasible or admit an unbounded fork.
 
 ### Authoritative Toolchain Components
@@ -183,7 +183,7 @@ runtime.
 One generated checked-in metadata file per tool/platform records the exact immutable
 URL, digest, size, archive member, upstream version, execution platform, ABI floor,
 runtime files, and licenses, with a regeneration command (see `quality/artifacts/update.py`;
-remaining asset qualification in open work).
+remaining asset qualification in open work under issues #416-#420).
 One implementation repository exists per tool/platform, and an exec-configured dependency
 or private toolchain selects by Bazel execution platform. Registration must not fetch
 every artifact.
@@ -442,7 +442,7 @@ published bytes, with a completeness check proving no payload file is silently o
 Manifest self-entry treatment must still freeze without self-referential digest/size
 requirements or silently omitting payload files. Exact profiles, trust identities, verification
 inputs, and publication mechanics are tracked in
-open work.
+open work under issue #459.
 
 Private ecosystem locks are repository inputs and part of the tool identity. Their exact
 wheel/package archives and runtime identity participate in Bazel action keys. A ruleset
@@ -453,7 +453,7 @@ actions without mutable CLI state.
 
 Read-only research recommends qualifying SPDX 2.3 JSON and SLSA Build
 Provenance v1, each in an in-toto Statement v1, signed with the accepted Cosign keyless route
-(see open work).
+(see open work under issue #459).
 This is a provisional wire-profile recommendation, not a dependency pin, assurance-level claim,
 trusted-builder selection, or installer API. SPDX 3.0.1 is published; the 2.3 candidate aligns with
 the existing license report and avoids an unneeded JSON-LD profile change, subject to qualification.
@@ -486,7 +486,7 @@ tampered time claims, and roots bundled where they must not appear. Self-atteste
 at best and must not self-assert L2/L3 `builder.id`.
 
 First-install verifier/trust bootstrap and exact verification inputs are tracked in
-open work, as are
+open work under issue #459, as are
 required assurance level, trusted builders, complete inventory rules, reproducibility thresholds,
 upstream-evidence exceptions, and manifest self-entry rules. Signing JSON alone proves neither
 complete dependencies, hermeticity, reproducibility, redistribution permission, nor SLSA Build L2/L3.

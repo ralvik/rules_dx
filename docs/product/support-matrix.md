@@ -25,7 +25,7 @@ is unqualified: `dx` refuses cleanly with `unsupported_platform`, naming the
 host and pointing here and at ADR 0014, before any Bazel work starts. It
 never presents partial execution on an unqualified host as success. The
 refusal reads the same qualified-host list that platform evidence extends,
-so a host flips on exactly when its evidence lands. This remains open work.
+so a host flips on exactly when its evidence lands. This remains open work under issues #410-#414 and #415.
 Platform qualification was tracked under issue #298 (closed): the Linux
 x86_64 seed host plus Linux arm64 native plus the two static-musl profiles
 plus macOS arm64 native plus macOS x86_64 best-effort native plus Windows
@@ -73,7 +73,7 @@ external-consumer, or trusted-builder release evidence; see
 under [first-release admission](scope.md#first-release-admission):
 admit qualifying capabilities, or record an approved disposition. Additional foundations may be
 deferred when completion needs substantial infrastructure; required quality tools are independent.
-Remaining upstream mappings are tracked in planned work.
+Remaining upstream mappings are tracked in open work under issues #416-#420 and #476-#489.
 `Not planned` records an existing capability gap reassessed during delivery, not permission to defer a
 qualifying integration. `Deferred beyond v1` records an evidence-backed deferral of an additional
 foundation under [first-release admission](scope.md#first-release-admission); the row's quality-tool
@@ -101,7 +101,7 @@ They are not eligible for the additional-foundation deferral policy.
 | Language | Build | Test | Dependencies | Generate | Environment | IDE | Coverage | Format | Lint | Typecheck | Audit |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Rust | Planned | Planned | Planned: Cargo lock | Planned | Planned: native tools | Planned: rust-analyzer/flycheck | Planned | Planned: rustfmt | Planned: Clippy | Planned: compiler diagnostics | Not planned |
-| Python | Planned | Planned: pytest | Planned: uv lock | Planned | Planned: `.venv` | Planned: interpreter/imports | Planned | Planned: Ruff | Planned: Ruff, pydoclint; flake8/pylint opt-in | Planned: Ty | Planned: audit tools (open work) |
+| Python | Planned | Planned: pytest | Planned: uv lock | Planned | Planned: `.venv` | Planned: interpreter/imports | Planned | Planned: Ruff | Planned: Ruff, pydoclint; flake8/pylint opt-in | Planned: Ty | Planned: audit tools (open work under issue #512) |
 | JavaScript | Planned | Planned: Jest | Planned: pnpm lock | Planned | Planned: `node_modules` | Planned: Node/modules | Planned | Planned: Biome default, Prettier available | Planned: Biome default, ESLint available | N/A | Not planned |
 | TypeScript | Planned | Planned: Jest | Planned: pnpm lock | Planned | Planned: `node_modules` | Planned: TypeScript/Node | Planned | Planned: Biome default, Prettier available | Planned: Biome default, ESLint available | Planned: `tsc` | Not planned |
 | Vue | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Not planned |
@@ -114,7 +114,7 @@ IDE, coverage, platform, and external-consumer evidence passes. Quality is indep
 and lazy before foundation completion, but `Supported` promotion occurs only during release
 qualification. Generic framework cells intentionally do not select exact tools,
 providers, or region mappings; those choices are tracked in
-open work.
+open work under issue #510 and issues #416-#420.
 
 ## Minimal Required Core
 
@@ -144,11 +144,11 @@ fixture evidence; provisional notes below do not select additional defaults or n
 | Vue / Svelte / Astro / MDX | Named upstream adapters per framework | Adapter mappings plus composition evidence | issue #510 |
 | Generation transport | Declared versioned manifest artifact (`GenerationManifest` in `generation/result.proto`, projected by `ProjectedManifest` in `cli/cli/src/generate.rs`) with explicit path/label/pattern scope | Implemented | Shipped |
 | Target resolution | All-direct-owners query strategy ([Target Resolution](../cli/target-resolution.md), pinned by resolver fixtures) | Implemented | Shipped |
-| Quality core/result contract | Internal Protobuf + NDJSON output | Core mappings | open work |
-| Required platforms | [Required-platform table](../decisions/0014-tested-platform-release-stack.md#required-platforms) | Pins, hosts, floors | open work |
+| Quality core/result contract | Internal Protobuf + NDJSON output | Core mappings | open work under issue #511 |
+| Required platforms | [Required-platform table](../decisions/0014-tested-platform-release-stack.md#required-platforms) | Pins, hosts, floors | open work under issues #410-#414 and #500 |
 | Coverage gate | Instrumentation-first; behavioral fallback only on proof | Resolved in [coverage](../testing/README.md#coverage) | Enforced by CI |
 | Consumer CI | Reusable workflow + caller template | Delivered; verification open | Shipped |
-| Repository workflows | Codegen/env/setup implemented; `dx update` plus `dx audit` live execution delivered | Codegen pairs; audit/update | open |
+| Repository workflows | Codegen/env/setup implemented; `dx update` plus `dx audit` live execution delivered | Codegen pairs; audit/update | open work under issue #506 and issue #512 |
 
 Required-core Rust mappings stay open under issues #470, #471, #472, #473, #474, #475 (Rust
 providers/Gazelle/integration plus the five native gaps below); Vue/Svelte/Astro/MDX
@@ -174,7 +174,7 @@ No `Supported` claim until platform plus consumer plus release evidence passes.
 
 Required platforms and the quality-tool baseline (minus excluded Swift) frame
 delivery of this inventory. Admitted additional foundations are tracked in
-open work;
+open work under issues #416-#420 and #476-#489;
 remaining feasibility detail stays in the
 [feasibility review](#additional-v1-foundations) for qualification.
 Swift is an evidence-backed v1 exclusion, not a pending assessment. Effort
@@ -202,7 +202,7 @@ an active Bzlmod-published upstream ruleset with a concrete dependency-lock
 and toolchain story. Their quality integration is v1 scope with the defaults in
 [Provisional Default Quality Tools](#provisional-default-quality-tools);
 exact versions, rule sets, and adapter mappings are tracked in
-open work. The managed Scala
+open work under issues #485-#489. The managed Scala
 route decision was recorded 2026-09-13.
 Unresolved cells block qualification; moving an admitted foundation out later
 requires a new evidence-backed decision.
@@ -294,16 +294,16 @@ This prioritization admits or defers no foundation and changes no tracking depen
 The following are upstream documentation/source observations, not executed qualification evidence.
 Status cells are owned by this matrix; provisional toolchain and backend
 choices are owned by the [native qualification plan](../native-toolchains.md). Identified contract conflicts must be resolved (tracked in
-open work) before affected implementation:
+open work under issue #505) before affected implementation:
 
 - [rules_go](https://github.com/bazel-contrib/rules_go) and
   [Gazelle](https://github.com/bazel-contrib/bazel-gazelle) offer SDK acquisition, package build/test,
   module dependencies, and generation. The approved narrow Go exception preserves package-level
   tests and declared platform/build constraints under the
   [generation contract](../generation/common.md#ownership-and-naming); exact mappings remain open
-  (open work).
+  (open work under issue #510).
   Source-only module identity, strict dependency resolution, and cgo/race scope remain unresolved;
-  remains open.
+  remains open under issue #510.
 - The documented [Go editor driver](https://github.com/bazel-contrib/rules_go/blob/v0.63.0/docs/editors.md)
   invokes Bazel. That automatic integration is approved under
   [environment refresh](../environments/environment.md#ownership-and-refresh), following the
@@ -349,7 +349,7 @@ allows explicit Microsoft EULA acknowledgement, as required by the inspected too
 windows_support routes. This removes the prior setup-policy conflict, not the remaining acquisition,
 licensing, interoperability, or coverage qualification gaps. Automatic acceptance is not approved;
 the exact upstream mechanism and applicable usage/distribution rights are tracked in
-open work.
+open work under issue #496.
 
 ### Native Toolchain Alternatives
 
@@ -387,7 +387,7 @@ while applications need target-platform libraries. The current
 [build-script contract](../generation/rust.md#build-scripts) enables the selected hermetic C/C++
 toolchain by default with an explicit kept opt-out. Additional native inputs remain declared;
 fixture-proven upstream mappings are still required (tracked in
-open work), not automatic compatibility with every crate.
+open work under issue #499), not automatic compatibility with every crate.
 
 The approved direction is to qualify rules_cc and rules_rs with hermetic-llvm for Linux glibc,
 static-musl, and macOS. Windows first qualifies the toolchains_msvc clang-cl/Microsoft-STL route;
@@ -397,7 +397,7 @@ dynamic-musl, coverage, SDK, or compiler-stack infrastructure merely to fill the
 Apple/Microsoft acquisition rights and the existing managed-tool packaging/laziness contracts remain
 gates even when upstream technically supports a route. The evidence and any
 required contract changes must be resolved (tracked in
-open work) before implementation; no exact pins or support claims are established.
+open work under issue #505) before implementation; no exact pins or support claims are established.
 
 The [native qualification plan](../native-toolchains.md) owns the detailed provisional choices,
 execution-to-target cohort, source-derived defects, alternatives, and remaining questions. Findings
@@ -413,7 +413,7 @@ additional-foundation language candidates. These are upstream
 documentation/source observations, not executed qualification evidence.
 Status cells are owned by the matrices above;
 provisional ruleset choices below are candidates for qualification tracked in
-open work,
+open work under issues #416-#420,
 not selections. This review itself admits, defers, or excludes nothing;
 outcomes are decided by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md) and
@@ -424,14 +424,14 @@ summarized in [Candidate Disposition Status](#candidate-disposition-status).
   checksum lockfile) is the provisional Maven-dependency route over the bundled
    `rules_java` toolchain. Bazel documents a hermetic compile route via
    `remote_java_repository` and `--java_runtime_version` flags; per-platform JDK
-   acquisition and coverage integration remain open (open work); lock
+   acquisition and coverage integration remain open (open work under issues #500 and #507); lock
    authority is `maven_install.json`
    ([Provisional Default Dependency Locks](#provisional-default-dependency-locks)).
    Admitted to v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
 - Kotlin: [`rules_kotlin` 2.4.10](https://registry.bazel.build/modules/rules_kotlin)
   (Bzlmod) is the provisional build/test route on the same
   JVM toolchain and Maven-lock story as Java. Kotlin compiler acquisition,
-  worker behavior, and IDE projection remain open (open work). Admitted to
+  worker behavior, and IDE projection remain open (open work under issues #500 and #506). Admitted to
   v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
 - Scala: [`rules_scala` 7.x](https://github.com/bazel-contrib/rules_scala)
   (bazel-contrib, Bazel 7/8 plus Bzlmod, Coursier-backed Scala
@@ -473,8 +473,8 @@ cost drivers, open. Foundation deferred beyond v1 by [ADR 0019](../decisions/001
 
 | Candidate | Provisional basis | Tracking | Disposition |
 | --- | --- | --- | --- |
-| Java | `rules_jvm_external` + `rules_java` | open work | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
-| Kotlin | `rules_kotlin` | open work | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
+| Java | `rules_jvm_external` + `rules_java` | open work under issue #416 | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
+| Kotlin | `rules_kotlin` | open work under issue #416 | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | Scala | `rules_scala` | issue #417 (managed route decided 2026-09-13) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | C# | `rules_dotnet` | issue #417 | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | F# | `rules_dotnet` | issue #417 | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
@@ -508,7 +508,7 @@ fixture qualification are open.
   and death tests; first-class Bazel support via the Central Registry module
   and `cc_test` integration). The 1.18.x branch requires C++17 or newer,
   which the qualified toolchain floor must cover (tracked in
-  open work). Upstream recommends living at
+  open work under issues #479 and #500). Upstream recommends living at
   head; dx pins the release.
 - Scala: ScalaTest 3.2.20 (covers Scala 2.10–2.13 and 3.x),
   per the rules' own preference (`scala_test` runs suites written using the
@@ -528,7 +528,7 @@ v1 commitments.
 
 Upstream documentation observations; provisional defaults, not
 selections. Exact versions, rule sets, and adapter mappings are tracked in
-open work.
+open work under issues #485-#489.
 
 - Go: gofumpt (strict superset of gofmt) for format; staticcheck plus `govet`
   for lint, since neither subsumes the other. The existing `SA`-only suggestion
@@ -595,7 +595,7 @@ adapter mappings are tracked under issue #419; exact interpreted/file-family
 (`ruby`/`powershell` plus cue/jsonnet/pkl/css/html_template/gherkin/sql/xml/go_module/
 terraform/yaml/text) artifacts, versions, rule sets, and adapter mappings are tracked
 under issue #420; remaining cohorts stay in
-open work; no adapter claims any of these
+open work under issue #510; no adapter claims any of these
 classes yet.
 
 The [doc-wide defaults posture](#minimal-required-core) applies to
@@ -632,14 +632,14 @@ Beyond-default switches (detekt `allRules`, experimental Error Prone checks,
 `--enable=all`-style opt-in maxima) are not enabled by `rules_dx`. These
 suggestions must be qualified against pinned native behavior and checked-in
 configuration ownership (tracked in
-open work);
+open work under issues #485-#487);
 this review selects neither a staticcheck rule set nor a Checkstyle/Scalafix preset.
 
 ### Provisional Default Dependency Locks
 
 Upstream documentation observations; provisional defaults, not
 selections. Exact files and fail-closed wiring are tracked in
-open work.
+open work under issues #481-#484.
 
 - Java, Kotlin, Scala: `maven_install.json` via `rules_jvm_external`
   (`lock_file` plus `fail_if_repin_required`); Scala shares Java's Maven
@@ -669,7 +669,7 @@ issue #416; adapter design and normalization for the Scala + .NET cohort is trac
 under issue #417; adapter design and normalization for the Native cohort is tracked
 under issue #418; adapter design and normalization for the Structured cohort is tracked
 under issue #419; adapter design and normalization for the Interpreted/file-family
-cohort is tracked under issue #420 (remaining cohorts stay in open work).
+cohort is tracked under issue #420 (remaining cohorts stay in open work under issue #510).
 
 Diagnostic wire formats:
 
@@ -730,10 +730,10 @@ Fix modes:
 Test result formats: JUnit XML (surefire/Gradle), xUnit XML,
 `go test -json`, GoogleTest `--gtest_output=json|xml`, ScalaTest `-u`
 JUnit XML. Normalization into the result contract is tracked in
-open work.
+open work under issue #511.
 
 Open adapter risks tracked in
-open work:
+open work under issues #416-#420 and #490-#493:
 
 - Scalafix: no machine-readable CLI output; semantic rules need semanticdb
   plus classpath wiring, and source rewriting sits uneasily with immutable
@@ -766,20 +766,18 @@ open work:
   plus parser shapes plus Buildifier/Taplo/Vale probe promotion stay open (issue #420;
   `protobuf`/`qml` stay owned by issue #419).
 
-### Open Work Tracking
+### Remaining Work Tracking
 
 The remaining review dimensions from
 [first-release admission](scope.md#first-release-admission) are owned by their
-existing trackers, not duplicated here: additional test runners and
-foundation mappings by
-open work, framework adapters
-by open work, quality-tool
-registry and policy by
-open work, audit/update
-ecosystems by open work and
-open work, and codegen pairs
-by open work and
-open work. Newly identified
+existing trackers, not duplicated here: additional test runners (issues #476-#480) and
+foundation mappings (issues #481-#484),
+framework adapters by open work under issue #510, quality-tool
+registry and policy by open work under issues #485-#489 and #512, audit
+ecosystems by open work under issue #512 and update
+ecosystems by open work under issue #510, and codegen pairs
+by open work under issue #506 and
+open work under issue #510. Newly identified
 candidates still require an explicit disposition in the issue tracker.
 
 ### Cohort Tracking

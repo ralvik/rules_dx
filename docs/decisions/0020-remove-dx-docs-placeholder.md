@@ -4,7 +4,7 @@
 
 Accepted. Supersedes the `dx docs` bullet in
 [ADR 0006](./0006-cli-command-surface.md). Reintroduction with real
-extraction/validation remains open work;
+extraction/validation remains open work under [roadmap](../roadmap.md);
 removal is complete.
 
 ## Context
@@ -39,6 +39,6 @@ reintroduction, not a delivered invocation. The docs-content gate in CI is
 - `dx docs` fails as `unknown command`; the command registry, usage
   strings, and shell completions no longer list it.
 - The [docs command reference](../cli/commands/docs.md) is a stub pointing
-  at open work.
+  at open work under [roadmap](../roadmap.md).
 - Reintroducing the command alongside real extraction/validation behind
-  the invocation remains open work.
+  the invocation remains open work under [roadmap](../roadmap.md).

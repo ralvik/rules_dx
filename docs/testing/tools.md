@@ -30,7 +30,7 @@ execution-platform behavior.
 The Python proof uses one private `rules_dx` lock to export pydoclint and another eligible
 [baseline Python tool](../tools/tool-baseline.md#curated-differences) in a compatible
 [managed runtime cohort](../tools/tool-acquisition.md#shared-runtimes), qualified in
-open work.
+open work under issue #510.
 Fixture membership selects no new tool or product default and does not depend on the audit
 qualification open. The [private-graph requirements](../tools/tool-acquisition.md#ruleset-owned-ecosystem-graphs)
 require wheel-only selection, no sdist action, no wheel compilation, no ambient Python,

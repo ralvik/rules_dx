@@ -29,7 +29,7 @@ class by design — never silently under the standard dogfood gates.
   ([quality/runner-matrix](../quality/runner-matrix.md)).
 - **Generation freshness**: `dx generate --check //...` must be a
   deterministic no-op on a clean checkout; BUILD/corpus sync is owned by
-  generation (open work).
+  generation (open work under issue #503).
 - **Examples external-consumer**: per-foundation `adopt-*` workspaces
   proving generation as a consumer, plus acquisition/laziness proof
   (delivered on the seed host; platform/remote dimensions owned by
@@ -89,7 +89,7 @@ class by design — never silently under the standard dogfood gates.
 plus Linux arm64 native (issue #410) plus the two Linux static-musl
 profiles (issue #411) plus macOS arm64 native (issue #412) plus macOS
 x86_64 best-effort native (issue #413) plus Windows x86_64 MSVC-compatible
-native (issue #414). `Open` means open work with no implementation
+native (issue #414). `Open` means open work under issues #506-#512 with no implementation
 claimed here. `Planning only` means planning is implemented with live
 execution deferred. No report-only status remains per ADR 0022 (no standing benchmarking).
 
@@ -125,7 +125,7 @@ provider/import/lock/tool-graph proofs are pinned by
 [Environments](../environments/README.md#language-mapping-qualification), and
 [Tools](../tools/README.md#language-mapping-qualification). Quality
 family taxonomy stays open under
-open work.
+open work under issue #512.
 
 ## Battery
 

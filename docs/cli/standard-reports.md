@@ -27,7 +27,7 @@ The initial mapping is:
 The license family's [SPDX 2.3 JSON report](commands/audit-update-bazel.md#license-family-dx-audit-license)
 is specified in the license-family contract. SPDX parsing, policy-table loading,
 and proof artifacts are open under
-open work; this table is not an exhaustive prohibition of that report.
+open work under issue #511; this table is not an exhaustive prohibition of that report.
 
 `build`, `format`, `update`, `generate`, `codegen`, `env`, and `setup` have no initial
 standard report. `dx bazel` uses native Bazel options for BEP or other Bazel-owned output.

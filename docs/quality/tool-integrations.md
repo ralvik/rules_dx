@@ -220,13 +220,13 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   context. Upstream mapping evidence is the `typescript_project` typecheck test target.
 - **JVM cohort (issue #416, provisional — no adapter claims `java` or `kotlin` yet):**
   complete-upstream-artifact plus shared-JDK route for google-java-format, Checkstyle, PMD,
-  SpotBugs, ktfmt, ktlint, with detekt pending and Error Prone as itemized open work.
+  SpotBugs, ktfmt, ktlint, with detekt pending and Error Prone as itemized open work under issue #416.
   Research notes (unproven mappings): PMD and Checkstyle emit SARIF via `-f sarif`, SpotBugs
   via `-sarif`, ktlint via `--reporter=sarif`, detekt via its SARIF report; Checkstyle XML
   (`-f xml`) plus ktlint/detekt Checkstyle XML stay fallback shapes; Error Prone has no
   structured diagnostics upstream, so javac-diagnostic parsing plus per-target declared
   patch-file outputs (`-XepPatchChecks` location; `IN_PLACE` patching breaks under sandboxing)
-  remain open work itemized here, not silently dropped. Formatters (google-java-format, ktfmt
+  remain open work under issue #416 itemized here, not silently dropped. Formatters (google-java-format, ktfmt
   with `--google-style`/`--kotlinlang-style`, ktlint `--format`) are whole-file rewrite with
   check/diff mode; PMD, Checkstyle, SpotBugs, and detekt are check-only with the provisional
    sandbox-apply-and-diff fix flow. Versions are observations, not pins; recheck latest stable
@@ -276,14 +276,14 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   build errors; no SARIF in 1.71.0, so the native JSON parser is the faithful shape, never
   SARIF ingestion) plus text `file:line:column:message`, with lint `STANDARD` versus
   `MINIMAL`/`BASIC`/`COMMENTS`/`UNARY_RPC` rule selection and module-root-sensitive
-  `PACKAGE_DIRECTORY_MATCH` plus `--path`/`--exclude-path` scoping as open work itemized
+  `PACKAGE_DIRECTORY_MATCH` plus `--path`/`--exclude-path` scoping as open work under issue #419 itemized
   here, not silently dropped; `buf format --diff --exit-code` unified diff plus `--write`
   is whole-file rewrite with check/diff mode while `buf lint` is check-only with the
   provisional sandbox-apply-and-diff fix flow; qmlformat writes stdout plus `-i` inplace
   with `.qmlformat.ini` upward settings and `--ignore-settings` (including `--sort-imports`
-  and semicolon-rule behavior as open work); qmllint verifies syntax plus anti-patterns
+  and semicolon-rule behavior as open work under issue #419); qmllint verifies syntax plus anti-patterns
   with `--json <file>` (`-` for stdout) JSON carrying messages plus file/line/severity
-   plus `.qmllint.ini` and `//qmllint enable/disable` scoping as open work. Versions are
+   plus `.qmllint.ini` and `//qmllint enable/disable` scoping as open work under issue #419. Versions are
    observations, not pins; recheck latest stable at implementation (see the Structured rows in
    [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
 - **Interpreted/file-family cohort (issue #420, provisional — no adapter claims `ruby`,
@@ -327,7 +327,7 @@ path is check-only. There is no dx-side Clippy config: policy rides the
 dogfood proof is `dx lint --check //cli/qualification:dx_qual`, whose result carries
 `clippy::too_many_arguments` where `//rust/tests/fixtures/hello:hello_lib` stays silent.
 Dependency context (`--extern`) stays open under
-open work.
+open work under issue #470.
 
 Rust typechecking is upstream-delegated: `dx typecheck` stages the
 `real_rust_typecheck_aspect`, which reads the authoritative `.rustc-output`
@@ -345,9 +345,9 @@ ordinary upstream compile action, so steady-state `dx typecheck` runs hit
 the Bazel action cache exactly like `bazel build` and only recompile what
 changed. The dogfood proof is `dx typecheck --check //rust/...`, fully
 clean where the pre-delegation self-run failed on dependency context
-under open work.
+under open work under issue #470.
 
-Rust formatting is crate-contextual (open work):
+Rust formatting is crate-contextual (open work under issue #468):
 `dx format` spawns the pinned-toolchain rustfmt binary with an explicit
 `--edition` read from the authoritative `CrateInfo` (test targets use the
 inner crate, exactly as upstream `_get_rustfmt_ready_crate_info`;

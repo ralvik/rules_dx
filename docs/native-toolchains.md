@@ -131,7 +131,7 @@ Use the exact current stable Bazel and Rust compilers when qualification begins 
 [dependency currency](decisions/0008-dependency-currency.md). Bazel 9 is a provisional
 initial coverage baseline because the inspected hermetic-llvm coverage fixture requires
 it, not a release pin: the release default follows ADR 0008 and the exact seed pin is tracked
-in open work. Do not silently inherit rules_rs's
+in open work under issue #494. Do not silently inherit rules_rs's
 older compiler default or turn a research version into a release pin.
 
 ### Inspected Identities
@@ -221,7 +221,7 @@ Use public upstream toolchains, `CcInfo`, Rust crate/dependency/build providers 
 execution transitions. `rules_rs` static/shared-library wrappers map Cargo `staticlib` and `cdylib`;
 they expose native linking providers rather than ordinary Rust-library providers. Exact public
 `rules_dx` wrapper/provider mappings remain open (tracked in
-open work), not a re-export of every upstream API.
+open work under issue #470), not a re-export of every upstream API.
 
 The [build-script contract](generation/rust.md#build-scripts) remains authoritative: native compiler
 exposure defaults on with a kept opt-out; shell environment and nonhermetic-path discovery default
@@ -367,22 +367,22 @@ acquisition, interoperability, coverage, and release evidence passes.
 
 | Question to close | Preferred next evidence or remedy | Tracking |
 | --- | --- | --- |
-| Does the exact current stable stack compose? | Freeze resolved Bzlmod identities; compare rules_rs's LLVM reference with the newer candidate; record checksums, source patches and compiler/profile compatibility. | open work |
-| Can Windows acquisition be immutable and lazy? | Reproduce clean re-resolution; qualify upstream fixed-manifest/package inputs and observed downloads, including missing acceptance and unrelated workflows. Windows x86_64 qualified (issue #414) on the as-built pinned upstream toolchains with the toolchains_msvc backend provisional plus immutable lazy fetch; merely adding the module requires no acceptance and fetches no restricted payloads. | open work |
-| Are Apple/Microsoft acquisition and cache rights adequate? | Review actual package terms, deliberate acceptance, extraction, mirrors, redistribution, internal caches and remote workers. Official download availability is not permission. Windows x86_64 qualified (issue #414) with explicit EULA never automatic plus usage vs redistribution reviewed separately (see issue #496). | open work |
+| Does the exact current stable stack compose? | Freeze resolved Bzlmod identities; compare rules_rs's LLVM reference with the newer candidate; record checksums, source patches and compiler/profile compatibility. | open work under issue #494 |
+| Can Windows acquisition be immutable and lazy? | Reproduce clean re-resolution; qualify upstream fixed-manifest/package inputs and observed downloads, including missing acceptance and unrelated workflows. Windows x86_64 qualified (issue #414) on the as-built pinned upstream toolchains with the toolchains_msvc backend provisional plus immutable lazy fetch; merely adding the module requires no acceptance and fetches no restricted payloads. | open work under issue #495 |
+| Are Apple/Microsoft acquisition and cache rights adequate? | Review actual package terms, deliberate acceptance, extraction, mirrors, redistribution, internal caches and remote workers. Official download availability is not permission. Windows x86_64 qualified (issue #414) with explicit EULA never automatic plus usage vs redistribution reviewed separately (see issue #496). | open work under issue #496 |
 | Can the kept CC opt-out execute successfully? | Reproduce no-linker analysis path; narrow upstream runner fix; distinguish script compilation inputs from execution inputs. | issue #471 |
 | Can third-party scripts retain a declared hermetic closure? | Qualify global shell-env False or upstream annotation extension; test hostile PATH, tool discovery and additional declared tools. | issue #472 |
-| Does Windows native transport preserve all inputs and ABI selection? | Fix ABI constraints and path rebasing upstream; test batch wrappers, response files, cc-rs assembly/discovery, SDK libraries and proc-macro DLLs. Windows x86_64 qualified (issue #414) with declared-input fixtures without host Visual Studio state; remaining upstream fixes stay owned under issue #497. | open work |
-| Which prebuilt native libraries interoperate? | Independent MSVC fixtures and Linux libstdc++ comparison; verify STL/CRT modes, unwinding, ownership and runtime deployment. Windows x86_64 qualified (issue #414) with representative prebuilt-MSVC fixtures incl mixed Rust/C/C++ qualifying host-to-target plus target execution separately. | open work |
-| Are both Linux profiles complete? | Native arm64 glibc builds/tests plus per-cell coverage landed (issue #410); static-musl closures plus per-cell coverage for both musl profiles landed (issue #411, Rust musl std plus exec/target separation, CI cross-builds with per-profile cache scopes, no union; dynamic musl explicitly out of scope). Remaining: cross builds/tests, ELF dependencies, glibc symbols, hermetic-llvm backend plus OpenSSL/ring/bindgen/CXX corpus gaps. | open work |
-| Which deployment and execution floors are supportable? | Run oldest-target and current-host fixtures separately; inspect compiler, clangd and bindgen loader dependencies. Check Apple's extracted SDK framework subset. macOS arm64 native is qualified (issue #412) plus macOS x86_64 best-effort native is qualified (issue #413) with SDK version not the deployment floor; oldest-OS execution plus framework completeness plus licensing remain gates; best-effort gaps never block required-host release. Windows x86_64 native is qualified (issue #414) with `/MD` retail dynamic CRT as the starting point; `/MT` plus debug CRT plus floors stay owned by issues #410-#414. | open work |
-| Can every executable first-party line be accounted for? | Rust-only, C/C++-only and mixed/DLL LCOV, missed-line tests, coverage-tool version pairing, native ignores and denominator validation. No ignored collection failures. | open work |
+| Does Windows native transport preserve all inputs and ABI selection? | Fix ABI constraints and path rebasing upstream; test batch wrappers, response files, cc-rs assembly/discovery, SDK libraries and proc-macro DLLs. Windows x86_64 qualified (issue #414) with declared-input fixtures without host Visual Studio state; remaining upstream fixes stay owned under issue #497. | open work under issue #497 |
+| Which prebuilt native libraries interoperate? | Independent MSVC fixtures and Linux libstdc++ comparison; verify STL/CRT modes, unwinding, ownership and runtime deployment. Windows x86_64 qualified (issue #414) with representative prebuilt-MSVC fixtures incl mixed Rust/C/C++ qualifying host-to-target plus target execution separately. | open work under issue #498 |
+| Are both Linux profiles complete? | Native arm64 glibc builds/tests plus per-cell coverage landed (issue #410); static-musl closures plus per-cell coverage for both musl profiles landed (issue #411, Rust musl std plus exec/target separation, CI cross-builds with per-profile cache scopes, no union; dynamic musl explicitly out of scope). Remaining: cross builds/tests, ELF dependencies, glibc symbols, hermetic-llvm backend plus OpenSSL/ring/bindgen/CXX corpus gaps. | open work under issue #499 |
+| Which deployment and execution floors are supportable? | Run oldest-target and current-host fixtures separately; inspect compiler, clangd and bindgen loader dependencies. Check Apple's extracted SDK framework subset. macOS arm64 native is qualified (issue #412) plus macOS x86_64 best-effort native is qualified (issue #413) with SDK version not the deployment floor; oldest-OS execution plus framework completeness plus licensing remain gates; best-effort gaps never block required-host release. Windows x86_64 native is qualified (issue #414) with `/MD` retail dynamic CRT as the starting point; `/MT` plus debug CRT plus floors stay owned by issues #410-#414. | open work under issue #500 |
+| Can every executable first-party line be accounted for? | Rust-only, C/C++-only and mixed/DLL LCOV, missed-line tests, coverage-tool version pairing, native ignores and denominator validation. No ignored collection failures. | open work under issue #501 |
 | Can bindgen/CXX use one upstream graph? | Separate standalone/build-script bindgen fixtures; execution libclang closure, target flags and identical CXX crate/generator versions. | issues #473, #474 |
-| Can public Cargo metadata represent every generated target? | Prove features, build-script metadata, target kinds and ownership without private serialized dependency-graph access; seek narrow upstream metadata exports where missing. | open work |
-| Can generation satisfy strict ownership and resolution cheaply? | Quoted/angle/ambiguous/macro include fixtures, authoritative dependency metadata, test grouping, generated headers, assembly dialects and explicit module/PCH disposition. | open work |
+| Can public Cargo metadata represent every generated target? | Prove features, build-script metadata, target kinds and ownership without private serialized dependency-graph access; seek narrow upstream metadata exports where missing. | open work under issue #502 |
+| Can generation satisfy strict ownership and resolution cheaply? | Quoted/angle/ambiguous/macro include fixtures, authoritative dependency metadata, test grouping, generated headers, assembly dialects and explicit module/PCH disposition. | open work under issue #503 |
 | Can IDE setup preserve exact context and projection contracts? | Upstream exact-target Rust discovery and action-derived C++ snapshot proof, generated sources, multi-context headers, managed host tools and Bazel-9 compatibility. | issue #475 |
-| Which cross routes actually work and execute? | Capture compiler execution platform, native target execution and separate cache/remote evidence for every claimed row. Expand only after the initial cohort passes. | open work |
-| Is the remediation bounded enough for admission? | Reproduce defects, estimate each upstream fix, name actual owners, record patch/upstream issue/upgrade tracking and complete-workflow evidence. | open work |
+| Which cross routes actually work and execute? | Capture compiler execution platform, native target execution and separate cache/remote evidence for every claimed row. Expand only after the initial cohort passes. | open work under issue #504 |
+| Is the remediation bounded enough for admission? | Reproduce defects, estimate each upstream fix, name actual owners, record patch/upstream issue/upgrade tracking and complete-workflow evidence. | open work under issue #505 |
 
 The Apple starting point is hermetic-llvm's pinned MacOSX26.5 SDK extraction. Review the terms
 accompanying that exact package against the
@@ -393,7 +393,7 @@ Admission records a light inventory entry — minimal required core/framework in
 dispositions only, with effort evidence recorded as each tracked item lands. Remaining
 per-candidate mappings stay pending
 [additional-foundation qualification](product/support-matrix.md#additional-v1-foundations) under
-open work. Ownership: the sole repository
+open work under issues #416-#420. Ownership: the sole repository
 maintainer owns every row until maintenance is explicitly delegated.
 
 The fixture corpus starts with pure-Rust scripts/default and opt-out, cc-rs C/C++, SQLite, OpenSSL

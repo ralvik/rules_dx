@@ -209,7 +209,7 @@ implementations demonstrate real reuse. This sequence preserves the accepted fou
 while avoiding speculative cross-language APIs.
 
 The delivery order is tracked in [roadmap](../roadmap.md) and
-planned work. Foundation constraints are recorded in
+open work under issues #470-#505. Foundation constraints are recorded in
 [ADR 0010](../decisions/0010-python-foundation.md),
 [ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md), and
 [ADR 0015](../decisions/0015-first-party-gazelle-extensions.md).
@@ -221,5 +221,4 @@ Bazel selection, declared actions, normalized results, and optional mutation,
 without exposing unstable subprocess command lines as API. CI checks run
 directly through Bazel; ownership is inspectable through query interfaces.
 Command, output, and report behavior is authoritative under [CLI](../cli/);
-quality evidence under [Quality](../quality/). Open work lives in
-planned work.
+quality evidence under [Quality](../quality/). Open work lives in [roadmap](../roadmap.md) and open work under issues #470-#512.
