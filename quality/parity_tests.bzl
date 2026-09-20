@@ -19,7 +19,7 @@ PARITY_SCHEMA_VERSION = 1
 # exact versions, digests, rule sets, and adapter mappings stay pending
 # under the owning decision.
 PARITY_DEFERRED = {
-    "astro": ["/ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
+    "astro": ["ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
     "c": ["ADR 0019", "authoritative hermetic-llvm toolchain (clang-format, clang-tidy); cppcheck standalone artifact -- Native cohort owned by issue #418"],
     "cpp": ["ADR 0019", "authoritative hermetic-llvm toolchain (clang-format, clang-tidy); cppcheck standalone artifact -- Native cohort owned by issue #418"],
     "csharp": ["ADR 0019", "exact upstream package plus shared .NET runtime (CSharpier); Roslyn CA analyzers SDK-coupled -- Scala/.NET cohort owned by issue #417"],
@@ -49,10 +49,10 @@ PARITY_DEFERRED = {
     "scss": ["ADR 0019", "private Node graph (Prettier); standalone artifact (Stylelint)"],
     "shell": ["ADR 0019", "checksummed standalone artifacts (shfmt, ShellCheck)"],
     "sql": ["ADR 0019", "private Node graph (Prettier prettier-plugin-sql closure) -- Interpreted/file-family cohort owned by issue #420"],
-    "svelte": ["/ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
+    "svelte": ["ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
     "terraform": ["ADR 0019", "checksummed standalone artifact (terraform fmt) -- Interpreted/file-family cohort owned by issue #420"],
     "text": ["ADR 0019", "checksummed standalone artifact (keep-sorted) -- Interpreted/file-family cohort owned by issue #420"],
-    "vue": ["/ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
+    "vue": ["ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
     "xml": ["ADR 0019", "private Node graph (Prettier prettier-plugin-xml closure) -- Interpreted/file-family cohort owned by issue #420"],
     "yaml": ["ADR 0019", "checksummed standalone artifacts (yamlfmt, yamllint); shared managed Python runtime for yamllint -- Interpreted/file-family cohort owned by issue #420"],
 }

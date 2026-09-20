@@ -1098,6 +1098,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:remediation_bounds_qualification
       - name: Audit result contract qualification (issue #511 core mappings plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:result_contract_qualification
+      - name: Audit quality taxonomy qualification (issue #512 family taxonomy execution plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:quality_taxonomy_qualification
       - name: Write job summary
         if: always()
         run: |

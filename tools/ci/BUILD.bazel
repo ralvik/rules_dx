@@ -995,6 +995,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Quality family taxonomy harness (issue #512); see docs/quality/quality-sources.md.
+sh_binary(
+    name = "quality_taxonomy_qualification",
+    srcs = ["quality_taxonomy_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "warnings_as_errors_testdata",
     srcs = glob(["testdata/warnings/**"]),
