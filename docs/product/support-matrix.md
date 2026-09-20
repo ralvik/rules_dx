@@ -957,8 +957,9 @@ Diagnostic wire formats:
   -check -diff` plus keep-sorted output (unproven mappings owned by issue #420),
   RuboCop text plus PSScriptAnalyzer `Invoke-ScriptAnalyzer` console
   (`System.Management.Automation` library-API binding is the structured
-  alternative, itemized under issue #420), Error Prone
-  (javac diagnostics; structured output still open upstream, itemized under issue #416),
+   alternative, itemized under issue #420), Error Prone
+   (javac-diagnostic parsing plus per-target declared `error-prone.patch` outputs decided
+   with fixtures under issue #491; `IN_PLACE` rejected; adapter dispatch itemized under issue #416),
   FSharpLint
   console (the `FSharpLint.Core` library API is the structured
   alternative, itemized under issue #417), Scalafix console (no machine-readable CLI output; console-parse is rejected and wire via ScalafixMainCallback is required, decided under issue #490 with scala/tests/fixtures/scalafix/ evidence, open upstream scalacenter/scalafix#2459, cohort stays owned under issue #417).
@@ -997,9 +998,11 @@ open work under issue #511.
 Open adapter risks tracked in
 open work under issues #416-#420 and #490-#493:
 
-- Scalafix: no machine-readable CLI output; console-parse is rejected and wire via ScalafixMainCallback is required with target-coupled semanticdb plus classpath wiring (`--classpath` plus `--sourceroot` plus `--semanticdb-targetroots` from the authoritative target) and sandbox-apply-and-diff with declared outputs (never `IN_PLACE`), decided under issue #490 with scala/tests/fixtures/scalafix/ evidence; no adapter claims `scala` yet (cohort stays owned under issue #417; semantic rules need semanticdb plus classpath wiring, and source rewriting sits uneasily with immutable action outputs).
-- Error Prone: no structured diagnostics; patch files need per-target
-  declared outputs because `IN_PLACE` patching breaks under sandboxing (issue #416).
+<- Scalafix: no machine-readable CLI output; console-parse is rejected and wire via ScalafixMainCallback is required with target-coupled semanticdb plus classpath wiring (`--classpath` plus `--sourceroot` plus `--semanticdb-targetroots` from the authoritative target) and sandbox-apply-and-diff with declared outputs (never `IN_PLACE`), decided under issue #490 with scala/tests/fixtures/scalafix/ evidence; no adapter claims `scala` yet (cohort stays owned under issue #417; semantic rules need semanticdb plus classpath wiring, and source rewriting sits uneasily with immutable action outputs).
+- Error Prone: no structured diagnostics upstream; javac-diagnostic parsing plus per-target
+  declared `error-prone.patch` outputs decided with fixtures under issue #491
+  (`-XepPatchChecks` plus `-XepPatchLocation:<declared-dir>`; `IN_PLACE` rejected as it
+  mutates inputs and breaks sandboxing); adapter dispatch stays owned (issue #416).
 - Roslyn `/errorlog` SARIF is per compiler invocation (per
   configuration/TFM/RID pivot); aggregation work remains (issue #417).
 - FSharpLint: console text parsing versus binding the .NET library API (issue #417).

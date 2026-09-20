@@ -80,6 +80,20 @@
 //!   package is absent from the runfiles forest, so `.editorconfig` files
 //!   are currently inert; the flag freezes that behavior against future
 //!   dependency additions.
+//! * Error Prone check takes the whole stage file list as `javac
+//!   -Xplugin:ErrorProne <files>` (diagnostics on stderr in the pinned
+//!   javac shape, stdout empty; default severities with no `-Werror`,
+//!   no `-verbose`, and no patch flags). Check-only: no files written,
+//!   scratch-root cwd.
+//! * Error Prone patch takes the same compile plus
+//!   `-XepPatchChecks:<checks> -XepPatchLocation:<declared-dir>` over
+//!   the whole stage file list. The declared dir is the per-target Bazel
+//!   output directory holding `error-prone.patch` (unified diff relative
+//!   to the source root, applied with `patch -p0 -u`); the runner
+//!   validates the declared file and normalizes hunks to the edit
+//!   contract. The `IN_PLACE` location is rejected: it mutates inputs in
+//!   place, breaking sandbox immutability, action caching, and remote
+//!   execution (and is experimental upstream).
 
 use std::ffi::OsString;
 use std::path::Path;
@@ -569,6 +583,50 @@ pub fn markdown_check(
     }
 }
 
+/// Declared Error Prone patch-file name: the patch invocation writes
+/// exactly this file into the declared output directory as a unified
+/// diff relative to the source root.
+pub const ERROR_PRONE_PATCH_FILE: &str = "error-prone.patch";
+
+/// Error Prone check invocation: `javac -Xplugin:ErrorProne` over the
+/// whole stage file list. Diagnostics print to stderr in the pinned
+/// javac shape (`parsers::parse_error_prone`); stdout stays empty.
+/// Default severities with no `-Werror`, no `-verbose`, and no patch
+/// flags: check-only, no files written, scratch-root cwd.
+pub fn error_prone_check(javac: &Path, files: &[&Path]) -> Invocation {
+    invocation(javac, &["-Xplugin:ErrorProne"], files, "")
+}
+
+/// Error Prone patch invocation: the check compile plus
+/// `-XepPatchChecks:<checks>` with `-XepPatchLocation:<patch_dir>`.
+/// `patch_dir` is the per-target declared output directory that will
+/// hold `error-prone.patch`; the runner validates the declared file
+/// and normalizes hunks to the edit contract. The `IN_PLACE` location
+/// is rejected: it mutates inputs in place, breaking sandbox
+/// immutability, action caching, and remote execution (and is
+/// experimental upstream). `checks` is the comma-separated Error Prone
+/// check list (for example `MissingOverride,DefaultCharset`);
+/// `patch_dir` renders verbatim, so callers pass the declared dir,
+/// never the `IN_PLACE` literal.
+pub fn error_prone_patch(
+    javac: &Path,
+    files: &[&Path],
+    patch_dir: &Path,
+    checks: &str,
+) -> Invocation {
+    let mut argv = vec![
+        javac.as_os_str().to_owned(),
+        OsString::from("-Xplugin:ErrorProne"),
+        OsString::from(format!("-XepPatchChecks:{checks}")),
+        OsString::from(format!("-XepPatchLocation:{}", patch_dir.to_string_lossy())),
+    ];
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1018,5 +1076,45 @@ mod tests {
             ]
         );
         assert_eq!(fix.cwd_rel, "");
+    }
+
+    #[test]
+    fn error_prone_check_is_plugin_only() {
+        let file = Path::new("/scratch/src/Hello.java");
+        let invocation = error_prone_check(Path::new(BIN), &[file]);
+        assert_eq!(
+            argv_strings(&invocation),
+            vec![BIN, "-Xplugin:ErrorProne", "/scratch/src/Hello.java"]
+        );
+        assert_eq!(invocation.cwd_rel, "");
+    }
+
+    #[test]
+    fn error_prone_patch_declares_a_directory_never_in_place() {
+        let file = Path::new("/scratch/src/Hello.java");
+        let dir = Path::new("/scratch/patch-out");
+        let invocation = error_prone_patch(
+            Path::new(BIN),
+            &[file],
+            dir,
+            "MissingOverride,DefaultCharset",
+        );
+        let argv = argv_strings(&invocation);
+        assert_eq!(
+            argv,
+            vec![
+                BIN,
+                "-Xplugin:ErrorProne",
+                "-XepPatchChecks:MissingOverride,DefaultCharset",
+                "-XepPatchLocation:/scratch/patch-out",
+                "/scratch/src/Hello.java"
+            ]
+        );
+        assert_eq!(invocation.cwd_rel, "");
+        assert!(
+            !argv.iter().any(|arg| arg.contains("IN_PLACE")),
+            "patch location is a declared dir, never IN_PLACE",
+        );
+        assert_eq!(ERROR_PRONE_PATCH_FILE, "error-prone.patch");
     }
 }
