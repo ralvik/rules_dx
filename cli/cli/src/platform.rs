@@ -1,4 +1,4 @@
-//! Startup platform gate for the `dx` CLI (issues #298, #410, #411, #412).
+//! Startup platform gate for the `dx` CLI (issues #298, #410, #411, #412, #413).
 //!
 //! Only hosts with platform evidence stay on the execution path; every
 //! other host gets a clean refusal naming the host and the qualification
@@ -11,7 +11,8 @@
 /// Hosts with platform evidence: `(std::env::consts::OS, ARCH)` pairs.
 ///
 /// The Linux x86_64 seed host plus Linux arm64 glibc native (issue #410)
-/// plus macOS arm64 native (issue #412) are delivered. Provisional: extend
+/// plus macOS arm64 native (issue #412) plus macOS x86_64 best-effort
+/// native (issue #413) are delivered. Provisional: extend
 /// this list as remaining ADR 0014 required-platform evidence lands
 /// (tracked in issue #298, closed, with per-host successors owning each
 /// host); the startup refusal below reads the same list, so support flips
@@ -27,11 +28,21 @@
 /// backend stays provisional with immutable lazy fetch and no
 /// host-installed SDK fallback (never approved). Exact pins, hosts,
 /// floors, and SDK/CRT identities stay owned by O14/O37 per ADR 0014.
+///
+/// macOS x86_64 (issue #413) runs natively on `macos-15-intel` (Intel)
+/// runners through the same pinned upstream toolchains with the same
+/// provisional Apple-SDK backend and no host-installed SDK fallback
+/// (never approved). Best-effort by ADR 0014 definition: qualify when a
+/// host is available (`macos-15-intel` until its August 2027 retirement;
+/// `macos-13` retired December 2025), record gaps without blocking
+/// required-host release. Exact pins, hosts, floors, and SDK/CRT
+/// identities stay owned by O14/O37 per ADR 0014.
 pub fn qualified_hosts() -> &'static [(&'static str, &'static str)] {
     &[
         ("linux", "x86_64"),
         ("linux", "aarch64"),
         ("macos", "aarch64"),
+        ("macos", "x86_64"),
     ]
 }
 
@@ -56,7 +67,7 @@ pub fn refusal(os: &str, arch: &str) -> Option<String> {
         return None;
     }
     Some(format!(
-        "unsupported_platform: {os}/{arch} has no qualified platform evidence; dx is delivered on Linux x86_64 and Linux arm64 (glibc plus static musl, issue #411; dynamic musl explicitly out of scope) plus macOS arm64 (issue #412; host-installed SDK fallback never approved) only (see docs/product/support-matrix.md and ADR 0014, tracked in issue #298 with per-host successors such as issues #410/#411/#412)"
+        "unsupported_platform: {os}/{arch} has no qualified platform evidence; dx is delivered on Linux x86_64 and Linux arm64 (glibc plus static musl, issue #411; dynamic musl explicitly out of scope) plus macOS arm64 (issue #412; host-installed SDK fallback never approved) plus macOS x86_64 best-effort (issue #413; macos-15-intel, host-installed SDK fallback never approved, gaps never block required-host release) only (see docs/product/support-matrix.md and ADR 0014, tracked in issue #298 with per-host successors such as issues #410/#411/#412/#413)"
     ))
 }
 
@@ -94,16 +105,12 @@ mod tests {
 
     #[test]
     fn unqualified_hosts_are_refused_with_pointer() {
-        // Every remaining ADR 0014 host (required, best-effort, and
-        // out-of-v1) refuses cleanly until its per-host evidence lands:
-        // macOS arm64 is qualified under issue #412, so only macOS x86_64
-        // (best-effort), Windows x86_64 (required, backend blocked)
+        // Every remaining ADR 0014 host (required and out-of-v1) refuses
+        // cleanly until its per-host evidence lands: macOS arm64 is
+        // qualified under issue #412 and macOS x86_64 best-effort under
+        // issue #413, so only Windows x86_64 (required, backend blocked)
         // plus arm64 (out of v1) remain here.
-        for (os, arch) in [
-            ("macos", "x86_64"),
-            ("windows", "x86_64"),
-            ("windows", "aarch64"),
-        ] {
+        for (os, arch) in [("windows", "x86_64"), ("windows", "aarch64")] {
             let message = refusal(os, arch).expect("unqualified host must be refused");
             assert!(message.starts_with("unsupported_platform"), "{message}");
             assert!(message.contains(&format!("{os}/{arch}")), "{message}");
@@ -118,7 +125,8 @@ mod tests {
             &[
                 ("linux", "x86_64"),
                 ("linux", "aarch64"),
-                ("macos", "aarch64")
+                ("macos", "aarch64"),
+                ("macos", "x86_64")
             ]
         );
     }
@@ -126,6 +134,14 @@ mod tests {
     #[test]
     fn macos_arm64_host_is_qualified() {
         assert_eq!(refusal("macos", "aarch64"), None);
+    }
+
+    #[test]
+    fn macos_x86_64_best_effort_host_is_qualified() {
+        // Best-effort (issue #413): qualified when the Intel host is
+        // available (`macos-15-intel`); gaps never block required-host
+        // release per ADR 0014.
+        assert_eq!(refusal("macos", "x86_64"), None);
     }
 
     #[test]

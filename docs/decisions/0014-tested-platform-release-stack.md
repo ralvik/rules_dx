@@ -31,7 +31,7 @@ nothing below pins a version.
 | Linux arm64 glibc | Required | Native workflow, not cross-only; native glibc qualified under issue #410 (exact pins, hosts, floors, and SDK/CRT identities stay owned by O14/O37, not pinned here) |
 | Linux x86_64/arm64 static musl | Required profiles | Dynamic musl is not an initial requirement; static musl qualified under issue #411 (exact pins, hosts, floors, and SDK/CRT identities stay owned by O14/O37, not pinned here) |
 | macOS arm64 | Required | Pinned acquired SDK; SDK version is not the deployment floor; native macOS arm64 qualified under issue #412 (exact pins, hosts, floors, and SDK/CRT identities stay owned by O14/O37, not pinned here) |
-| macOS x86_64 | Best-effort | Qualify when a host is available; record gaps without blocking required-host release |
+| macOS x86_64 | Best-effort | Pinned acquired SDK; SDK version is not the deployment floor; native macOS x86_64 best-effort qualified under issue #413 (exact pins, hosts, floors, and SDK/CRT identities stay owned by O14/O37, not pinned here; `macos-13` retired December 2025, `macos-15-intel` until August 2027; gaps recorded without blocking required-host release) |
 | Windows x86_64 MSVC-compatible | Required, backend blocked | Hermetic acquisition + MSVC compatibility gates unchanged |
 | Windows arm64 | Out of v1 scope | Not a claim of impossibility |
 | Other cross-build routes | Optional expansion | Only after the initial cohort passes; see the provisional [native plan](../native-toolchains.md) |
@@ -88,7 +88,17 @@ qualified hosts; the hermetic-llvm Apple-SDK backend stays provisional
 with immutable lazy fetch and no host-installed SDK fallback, never
 approved; Apple-SDK handling leaks no secrets and needs no interactive
 acceptance); exact pins, hosts, floors, and SDK/CRT identities stay owned
-by O14/O37, not pinned here. Prioritize Linux cross-builds and admit additional routes where upstream integration
+by O14/O37, not pinned here. macOS x86_64 best-effort is qualified under
+issue #413 on the same as-built stack (native macos-15-intel runners
+through the pinned upstream toolchains, per-cell coverage with no union,
+consumer self-call on all qualified hosts including the best-effort cell;
+the hermetic-llvm Apple-SDK backend stays provisional with immutable lazy
+fetch and no host-installed SDK fallback, never approved; Apple-SDK
+handling leaks no secrets and needs no interactive acceptance;
+`macos-13` retired December 2025, `macos-15-intel` until August 2027;
+best-effort gaps never block required-host release); exact pins, hosts,
+floors, and SDK/CRT identities stay owned by O14/O37, not pinned here.
+Prioritize Linux cross-builds and admit additional routes where upstream integration
 keeps maintenance bounded, rather than requiring every host-to-target combination. Required native
 platform workflows remain unchanged; cross-building and target execution require separate evidence.
 The [feasibility review](../product/support-matrix.md#native-toolchain-alternatives) records the

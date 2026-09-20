@@ -42,8 +42,10 @@ or coverage, without an implicit Linux/current-runner/all-platforms default. Mis
 or unsupported selections must fail clearly rather than produce skipped or substituted
 validation. Exercise single- and multi-platform selections, including one without Linux,
 one with `linux_arm64` (which must queue an `ubuntu-24.04-arm` runner, never
-the macOS runner), and one with `macos_arm64` (which must queue a
-`macos-14` runner, never a Linux runner; issue #412). Selected test/build/coverage checks must run for every selected platform, while selected
+the macOS runner), one with `macos_arm64` (which must queue a
+`macos-14` runner, never a Linux runner; issue #412), and one with
+`macos_x86_64` (which must queue a `macos-15-intel` runner, never a Linux
+or arm64 runner; issue #413 best-effort). Selected test/build/coverage checks must run for every selected platform, while selected
 quality checks run once on Linux without silently narrowing declared source/dependency scope.
 Verify platform identities remain visible and one failed or missing required platform cell
 prevents aggregate success. Coverage aggregation must not hide platform-specific gaps;
@@ -74,7 +76,8 @@ before any per-platform job queues a runner, and the aggregate still fails when 
 does. Verify the seed plus arm64 plus musl plus macos jobs restore a Bazel disk cache (free-tier eligible per the
 infrastructure budget; arm64 jobs use the separate `bazel-arm64-` scope; musl jobs use per-profile
 `bazel-musl-x86_64-` plus `bazel-musl-arm64-` scopes, issue #411; macos arm64 jobs use the separate
-`bazel-macos-arm64-` scope on `macos-14`, issue #412), pass `--noshow_progress` to Bazel invocations, run the corpus
+`bazel-macos-arm64-` scope on `macos-14`, issue #412; macos x86_64 best-effort jobs use the separate
+`bazel-macos-x86_64-` scope on `macos-15-intel`, issue #413), pass `--noshow_progress` to Bazel invocations, run the corpus
 ownership audit through `bazel run //tools/ci:corpus_audit`, and never rely on a local
 `user.bazelrc` override. Verify docs publishing stages its artifact outside the checkout
 and leaves the tree clean.

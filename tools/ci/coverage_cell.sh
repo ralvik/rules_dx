@@ -5,14 +5,17 @@
 # report: no cross-platform union, no averaged percentages, no rounding
 # up. The seed host plus Linux arm64 native (issues #5/#410) plus the two
 # Linux static-musl profiles (issue #411) plus macOS arm64 native (issue
-# #412) qualify;
+# #412) plus macOS x86_64 best-effort native (issue #413, non-blocking)
+# qualify;
 # this harness wires the seed cell end to end through the versioned
 # inventory at tools/coverage/seed-inventory.txt and the `coverage_bin`
 # gate CLI (the arm64 twin gates tools/coverage/arm64-inventory.txt in
 # the CI `coverage-arm64` job, the musl twins gate
 # tools/coverage/musl-*-inventory.txt in the CI `coverage-musl-*` jobs,
-# and the macOS arm64 twin gates tools/coverage/macos-arm64-inventory.txt
-# in the CI `coverage-macos-arm64` job on `macos-14`
+# the macOS arm64 twin gates tools/coverage/macos-arm64-inventory.txt
+# in the CI `coverage-macos-arm64` job on `macos-14`, and the macOS
+# x86_64 best-effort twin gates tools/coverage/macos-x86_64-inventory.txt
+# in the CI `coverage-macos-x86_64` job on `macos-15-intel`
 # against the same scope):
 # - the real scoped `bazel coverage` report passes the real gate,
 # - mutated inputs fail closed (missing report, uninventoried source,
@@ -69,7 +72,7 @@ else
 fi
 
 # The arm64 cell gates the same first-party scope (issue #410): the same
-# real report passes the arm64 inventory, so all five versioned
+# real report passes the arm64 inventory, so all six versioned
 # inventories stay functionally in sync (the CI coverage-arm64 job gates
 # the arm64 runner's own report per-cell with no union).
 arm64_rc=0
@@ -82,7 +85,7 @@ else
 fi
 
 # The static-musl cells gate the same first-party scope (issue #411):
-# the same real report passes both musl inventories, so all five
+# the same real report passes both musl inventories, so all six
 # versioned inventories stay functionally in sync (the CI
 # coverage-musl-x86_64 plus coverage-musl-arm64 jobs gate their own
 # runners' reports per-cell with no union; dynamic musl stays out of
@@ -105,7 +108,7 @@ else
 fi
 
 # The macOS arm64 cell gates the same first-party scope (issue #412):
-# the same real report passes the macos-arm64 inventory, so all five
+# the same real report passes the macos-arm64 inventory, so all six
 # versioned inventories stay functionally in sync (the CI
 # coverage-macos-arm64 job gates its own macos-14 runner report per-cell
 # with no union; host-installed SDK fallback is never approved).
@@ -116,6 +119,21 @@ if [[ "$macos_arm64_rc" == "0" ]] && echo "$macos_arm64_out" | grep -q 'coverage
   ok
 else
   bad "macos arm64 cell gate did not pass: rc=$macos_arm64_rc out=$macos_arm64_out"
+fi
+
+# The macOS x86_64 best-effort cell gates the same first-party scope
+# (issue #413, non-blocking): the same real report passes the
+# macos-x86_64 inventory, so all six versioned inventories stay
+# functionally in sync (the CI coverage-macos-x86_64 job gates its own
+# macos-15-intel runner report per-cell with no union; gaps never block
+# required-host release; host-installed SDK fallback is never approved).
+macos_x86_64_rc=0
+macos_x86_64_out="$("$check_bin" --report bazel-out/_coverage/_coverage_report.dat \
+  --inventory tools/coverage/macos-x86_64-inventory.txt --sources "$scratch/sources.txt" --root . 2>&1)" || macos_x86_64_rc=$?
+if [[ "$macos_x86_64_rc" == "0" ]] && echo "$macos_x86_64_out" | grep -q 'coverage gate: PASS'; then
+  ok
+else
+  bad "macos x86_64 cell gate did not pass: rc=$macos_x86_64_rc out=$macos_x86_64_out"
 fi
 
 # Missing report file fails the gate (exit 1), never a usage error.
