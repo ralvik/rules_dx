@@ -1,0 +1,30 @@
+Quality family taxonomy execution qualified seed-only under issue #512.
+
+47 classes each with exactly one owning family; 39 owning families
+single-sourced in quality/adapters.bzl REAL_CLASS_TO_FAMILY.
+Grouped: css plus less plus scss in css; json plus json5 plus jsonc in
+json; python plus python_stub in python; typescript plus tsx in
+typescript; javascript plus jsx in javascript; c plus cpp in cc.
+8 curated families execute with lazy defaults: javascript (biome),
+json (biome lint plus prettier format), markdown (markdown_check plus
+vale), python (pydoclint plus ruff plus ty), rust (clippy plus rustfmt
+plus rustc), starlark (buildifier), toml (taplo), typescript (biome
+plus tsc). 11 adapter-backed classes ride 16 real adapters with runner
+matrix pass plus fail plus parser plus native plus aspect evidence.
+36 deferred classes carry ADR 0019 owner plus frozen route with no
+double-claim and no undispositioned class.
+Curated audit stays empty with explicit disablement; Bandit excluded
+from v1 by ADR 0019; secrets ride Gitleaks detect with redact plus SARIF.
+Effective classes intersect provider plus adapter plus policy; suffix
+inference rejected; cross-family union into one stage; lazy with no
+fetch on empty subset; no hidden preset.
+Admissibility stays owner-contextual: BUILD by basename, dot-h needs
+owner semantics, extensionless needs shell evidence, template needs
+provider, text never fallback.
+Single-sourced registry with versioned v1 schemas; consumers query.
+Real fixture policy plus matrix plus parsers plus native plus aspects
+plus parity gate prove execution.
+taxonomy doc only plus report-not-gate shape only rejected.
+Deferred adapters owned under 416 through 420 plus 307; digests plus
+rule-sets owned by cohorts; platform plus consumer plus release owned gap;
+backends provisional; no Supported claim.

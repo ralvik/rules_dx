@@ -458,3 +458,11 @@ include:
 
 Tool-specific architecture documents are unnecessary unless an adapter cannot fit
 the common contract or needs a new public API.
+
+## Qualification
+
+Family taxonomy execution with fixture evidence qualified seed-only under issue #512
+(`quality/tests/fixtures/quality_taxonomy/pins.bzl` with `quality_taxonomy.expected` via
+`bazel run //tools/ci:quality_taxonomy_qualification`, taxonomy doc only rejected).
+Seed only: no platform, consumer, or release claim and no `Supported` claim; backends stay
+provisional. Deferred adapters stay owned under issues 416-420 plus 307.

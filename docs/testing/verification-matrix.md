@@ -132,8 +132,13 @@ provider/import/lock/tool-graph proofs are pinned by
 [Generation](../generation/README.md#language-mapping-qualification),
 [Environments](../environments/README.md#language-mapping-qualification), and
 [Tools](../tools/README.md#language-mapping-qualification). Quality
-family taxonomy stays open under
-open work under issue #512.
+family taxonomy execution with fixture evidence qualified seed-only under #512
+(`bazel run //tools/ci:quality_taxonomy_qualification` with
+`quality/tests/fixtures/quality_taxonomy/pins.bzl` plus
+`quality_taxonomy.expected`; `quality_taxonomy_qualification` 17/17;
+taxonomy doc only plus report-not-gate shape only rejected; deferred
+adapters plus digests plus platform plus consumer plus release stay owned
+gaps; no Supported claim).
 
 ## Battery
 
@@ -267,6 +272,8 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   plus fixture evidence, issue #504),
   `:remediation_bounds_qualification` (bounded remediation pins
   plus fixture evidence, issue #505),
+  `:quality_taxonomy_qualification` (taxonomy execution pins plus
+  fixture evidence, issue #512),
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
   best-effort), `:windows_qualification`, `:ci_matrix_qualification`
   (host matrix, issue #415), and `:closeout_battery_qualification`
@@ -282,7 +289,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `consumer_ci_qualification` 43/43, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
-<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `remediation_bounds_qualification` 16/16, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24, `coverage_qualification` 33/33.
+<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `remediation_bounds_qualification` 16/16, `quality_taxonomy_qualification` 17/17, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24, `coverage_qualification` 33/33.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
 
@@ -808,6 +815,21 @@ Remaining reds stay owned gaps, not green claims:
   (`bazel run //tools/ci:non_dogfed_paths`; hermetic CLI-contract pins,
   green hermetic failure proofs (issue #406), coverage-excluded runs, shell ownership
   plus test execution with no quality class by design).
+- Quality family taxonomy execution with fixture evidence qualified seed-only under #512
+  (`bazel run //tools/ci:quality_taxonomy_qualification` with
+  `quality/tests/fixtures/quality_taxonomy/pins.bzl` plus
+  `quality_taxonomy.expected`; `quality_taxonomy_qualification` 17/17;
+  47 classes each with exactly one owning family across 39 families with
+  css/json/python/typescript/javascript/cc groupings, 8 curated families
+  with lazy defaults plus 11 backed classes over 16 adapters with matrix
+  plus parser plus native plus aspect plus policy execution, 36 deferred
+  with ADR 0019 owner plus frozen route, curated audit empty with Bandit
+  excluded plus secrets via Gitleaks, suffix rejected with cross-family
+  union plus lazy plus no hidden preset; taxonomy doc only plus
+  report-not-gate shape only rejected; deferred adapters owned under
+  416-420 plus 307, digests plus rule-sets owned by cohorts, platform plus
+  consumer plus release evidence stays owned gap; backends provisional; no
+  Supported claim).
 
 The consumer aggregate `dx-ci`
 ([contract](../github-ci.md#aggregate-status)) is unchanged: stable identity,

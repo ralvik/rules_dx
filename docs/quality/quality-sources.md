@@ -318,3 +318,11 @@ source ownership or native-config bindings. There is no combined opt-out tag.
 Tags such as `lint-python` or `format-javascript` have no `rules_dx` meaning. They neither add nor
 remove classes, select tools, or change applicability; unrelated Bazel tags remain available to
 other systems.
+
+## Qualification
+
+Family taxonomy execution with fixture evidence qualified seed-only under issue #512
+(`quality/tests/fixtures/quality_taxonomy/pins.bzl` with `quality_taxonomy.expected` via
+`bazel run //tools/ci:quality_taxonomy_qualification`, taxonomy doc only rejected).
+Seed only: no platform, consumer, or release claim and no `Supported` claim; backends stay
+provisional. Deferred adapters stay owned under issues 416-420 plus 307.
