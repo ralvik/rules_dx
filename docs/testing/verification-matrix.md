@@ -556,10 +556,12 @@ Remaining reds stay owned gaps, not green claims:
   (`structured_defaults_qualification` 17/17); platform plus consumer plus
   release evidence stays owned gap; no Supported claim).
 - File-family quality defaults with fixture evidence qualified seed-only under #489
+  with modfmt plus gherkin/xml resolved seed-only under #582
   (`bazel run //tools/ci:file_family_defaults_qualification`; cue v0.17.1
   plus jsonnetfmt v0.22.0 plus pkl 0.32.1 plus terraform v1.16.1 plus djlint
   v1.45.0 plus Stylelint 17.14.1 plus Prettier 3.9.6 with prettier-plugin-sql
-  0.15.1 plus yamlfmt v0.21.0 plus yamllint 1.38.0 plus keep-sorted v0.10.0
+  0.15.1 plus prettier-plugin-gherkin 4.0.0 plus @prettier/plugin-xml 3.4.2 plus modfmt v0.4.0
+  plus yamlfmt v0.21.0 plus yamllint 1.38.0 plus keep-sorted v0.10.0
   pinned in `quality/tests/fixtures/file_family_quality/pins.bzl` over upstream
   built-in defaults with no hidden preset, whole-file rewrite versus check-only
   per tool with no auto-supplied preset, suffix inference rejected with
