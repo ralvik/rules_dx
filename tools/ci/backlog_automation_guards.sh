@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Backlog/automation guards (issues #85, #254, #260, #310).
+# Backlog/automation guards (issues #85, #254, #260, #421).
 #
 # Per-foundation external-consumer examples + acquisition/laziness proof
 # (#85) delivered across readme, static, query, aquery, and runtime slices;
@@ -14,7 +14,7 @@
 # mixed disposition, LCOV preset pin + inventory backing + comment landing,
 # Renovate plus full manager set + loop policy + Monday schedule
 # + schedule policy, never-rewrites pin, prior harnesses green,
-# delivered widen implementation, plus the #310 docs-pipeline tracker.
+# delivered widen implementation, plus the #421 docs-pipeline tracker.
 # Reverse queries and adapter runs stay open under their
 # issues.
 #
@@ -221,11 +221,12 @@ else
   bad "a third-party coverage action appeared in ci.yml against #254 policy"
 fi
 
-# #310 docs-pipeline gaps stay tracked in the documentation contract.
-if grep -q -F -e 'Docs pipeline gaps stay open under issue #310' docs/documentation/README.md; then
+# #421 docs-pipeline gaps stay tracked in the documentation contract
+# (live successor to closed #310; #421 owns #310 per issue #445).
+if grep -q -F -e 'Docs pipeline gaps stay open under issue #421' docs/documentation/README.md; then
   ok
 else
-  bad "documentation README lost its #310 docs-pipeline tracker record"
+  bad "documentation README lost its #421 docs-pipeline tracker record"
 fi
 
 dx_test_summary "backlog automation guards harness"

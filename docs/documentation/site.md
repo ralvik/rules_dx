@@ -1,13 +1,13 @@
 # Documentation Site Build
 
 Implementation status: accepted v1 direction with provisional inputs;
-execution open. Accepted: the `dx_docs` site-build action planning over the
+execution open (issue #421, live successor to closed #310). Accepted: the `dx_docs` site-build action planning over the
 Bazel-cached extract→aggregate→render graph (no committed IR). Command dispatch was
 removed per [ADR 0020](../decisions/0020-remove-dx-docs-placeholder.md); reintroduction
-is open under issue #310. mdBook is the decided
+is open under issue #421. mdBook is the decided
 renderer with no planned replacement. Cache and hermeticity properties
 below are design requirements, not verified claims; verification follows
-[Testing](../testing/) before any support statement. Open under issue #310
+[Testing](../testing/) before any support statement. Open under issue #421
 (see [Documentation](README.md#contracts) for the full list):
 renderer/site execution, byte-identical rebuild proof, link/reference completeness,
 cache reuse and invalidation fixtures, guide-step CI wiring, and first-hour timing proof.
@@ -47,7 +47,7 @@ unaffected units can reuse cached outputs. Shared headers or imported types can 
   not across serializer or tool upgrades; cache correctness still requires execution evidence.
 - Byte-identical rebuild evidence (two builds, diffed) is required, not an assumed
   property; the evidence is tracked under
-  issue #310.
+  issue #421.
 
 ## Laziness And Scope
 
@@ -66,7 +66,7 @@ documentation cache is introduced.
 
 The planned [`dx docs --check`](../cli/commands/docs.md) selects extraction and shared validation but not
 rendering; normal build validates and renders. Completeness of required link/reference checks
-at the pre-render boundary remains a gap (issue #310). Neither mode compares against committed IR. Build and check
+at the pre-render boundary remains a gap (issue #421). Neither mode compares against committed IR. Build and check
 may write Bazel outputs and cache entries but never write generated IR beside source
 files. The planned `--serve` previews the built output locally and is not a build action.
 

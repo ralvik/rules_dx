@@ -8,12 +8,14 @@
 # over the caller-selected docs scope; the lint
 # pass is the repository-owned Markdown link/structure audit, so broken
 # relative targets fail before deploy. (`dx docs --check` was removed in
-# issue #31: it validated flag shape, not docs content. #10 tracks its
+# issue #31: it validated flag shape, not docs content. Issue #421 (live
+# successor to closed #310; formerly #10) tracks its
 # reintroduction with real extraction/validation.) `docs-publish` runs only when
 # `publish` is true: it uploads `docs_dir` as the Pages artifact and
 # deploys it to the `environment` Pages environment. `publish: false`
 # is pure check-only. The deployed content is the validated docs tree;
-# the rendered mdBook site arrives via issue #10 without changing this
+# the rendered mdBook site arrives via issue #421 (live successor to closed
+# #310; formerly #10) without changing this
 # vehicle.
 #
 # Hygiene (issue #80): Bazelisk installs go through the single
@@ -93,10 +95,10 @@ jobs:
           persist-credentials: false
       - name: Stage stopgap Pages entry point in a temp dir
         # The artifact is the raw docs tree (Markdown, no index.html) until
-        # the #10 renderer lands. Without an entry point every deployment
+        # the #421 renderer lands. Without an entry point every deployment
         # 404s (issue #30). Stage a copy plus the generated entry point
         # under RUNNER_TEMP so the repo tree stays renderer-clean and the
-        # checkout is never left dirty; #10 replaces this with the
+        # checkout is never left dirty; #421 replaces this with the
         # rendered site.
         env:
           DOCS_DIR: ${{ inputs.docs_dir }}
@@ -111,7 +113,7 @@ jobs:
             '<head><meta charset="utf-8"><title>rules_dx docs (preview)</title></head>' \
             '<body>' \
             '<h1>rules_dx docs</h1>' \
-            '<p>Rendered site pending <a href="https://github.com/ralvik/rules_dx/issues/10">issue #10</a>.' \
+            '<p>Rendered site pending <a href="https://github.com/ralvik/rules_dx/issues/421">issue #421</a>.' \
             'Meanwhile the validated docs tree is browsable in the' \
             '<a href="https://github.com/ralvik/rules_dx/tree/main/docs">repository</a>.</p>' \
             '</body>' \

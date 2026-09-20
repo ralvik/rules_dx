@@ -815,13 +815,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Docs-pipeline qualification harness (issue #310): proves the as-built
-# docs-pipeline record with fixture evidence and owned gaps, without
-# claiming a working site — versioned IR schema plus codec plus dx_docs
-# planning with unit tests, frozen design contracts, removed dx docs stub
-# behind ADR 0020, thirteen adapter scopes plus renderer/site plus rebuild
-# plus link plus guide-step plus timing plus pin-bump gaps owned under
-# #310. Run by CI via `bazel run //tools/ci:docs_pipeline_qualification`.
+# Docs-pipeline qualification harness (issue #421, live successor to closed
+# #310): proves the as-built docs-pipeline record with fixture evidence and
+# owned gaps, without claiming a working site — versioned IR schema plus
+# codec plus dx_docs planning with unit tests, frozen design contracts,
+# removed dx docs stub behind ADR 0020, thirteen adapter scopes (Scala spike
+# plus Astro/MDX prose-only) plus renderer/site plus site-vs-codec rebuild
+# plus link plus guide plus timing plus pin-bump/drift plus dx docs
+# reintroduction plus reusable product surface plus no-Supported gaps owned
+# under #421. Run by CI via `bazel run //tools/ci:docs_pipeline_qualification`.
 sh_binary(
     name = "docs_pipeline_qualification",
     srcs = ["docs_pipeline_qualification.sh"],
