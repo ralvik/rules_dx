@@ -618,11 +618,13 @@ open work under issues #485-#489, except the JVM versions plus rule-sets
 qualified seed-only under issue #485 below (digests plus adapter mappings
 stay owned under issue #416), the Scala + .NET versions plus rule-sets
 qualified seed-only under issue #486 below (digests plus adapter mappings
-<stay owned under issue #417), the native versions plus rule-sets
+stay owned under issue #417), the native versions plus rule-sets
 qualified seed-only under issue #487 below (digests plus adapter mappings
-stay owned under issue #418), and the structured versions plus rule-sets
+stay owned under issue #418), the structured versions plus rule-sets
 qualified seed-only under issue #488 below (digests plus adapter mappings
-stay owned under issue #419).
+stay owned under issue #419), and the file-family versions plus rule-sets
+qualified seed-only under issue #489 below (digests plus adapter mappings
+stay owned under issue #420).
 
 - Go: gofumpt (strict superset of gofmt) for format; staticcheck plus `govet`
   for lint, since neither subsumes the other. Route decision (recorded 2026-09-13):
@@ -698,6 +700,28 @@ stay owned under issue #419).
   distribution pin with native ini interpretation);
   exact digests (including Qt distribution identity, licensing, and platform
   artifacts) plus adapter mappings stay owned under issue #419).
+- File-family: cue fmt, jsonnetfmt, pkl, `terraform fmt`, djlint, Stylelint,
+  prettier-plugin-gherkin/sql/xml closures, modfmt, yamlfmt/yamllint, and
+  keep-sorted. Frozen delivery-class routes (recorded 2026-09-13): cue,
+  jsonnetfmt, pkl, terraform, yamlfmt, keep-sorted, and modfmt stay
+  standalone checksummed-artifact candidates; djlint and yamllint stay private
+  wheel-only Python graph members; Stylelint plus prettier-plugin closures
+  stay private pure-JavaScript graph members. Versions plus rule-sets
+  qualified seed-only under issue #489
+  (`bazel run //tools/ci:file_family_defaults_qualification` with
+  `quality/tests/fixtures/file_family_quality/pins.bzl` over upstream
+  built-in defaults with no hidden preset; cue v0.17.1, jsonnetfmt v0.22.0
+  with C++ v0.21.0 observed not pinned, pkl 0.32.1, terraform v1.16.1, djlint
+  v1.45.0, Stylelint 17.14.1, Prettier 3.9.6 with prettier-plugin-sql 0.15.1,
+  yamlfmt v0.21.0, yamllint 1.38.0, keep-sorted v0.10.0 with modfmt identity
+  pending; whole-file rewrite versus check-only per tool with no auto-supplied
+  preset, suffix inference rejected with registry-owned applicability;
+  exact digests plus adapter mappings stay owned under issue #420;
+  `protobuf`/`qml` stay owned by issue #419, cross-linked here never
+  double-claimed).
+  No adapter claims `cue`, `jsonnet`, `pkl`, `css`, `html_template`,
+  `gherkin`, `sql`, `xml`, `go_module`, `terraform`, `yaml`, or `text` yet
+  (open under issue #420).
 
 Typechecking for every admitted language is compiler-owned (javac, kotlinc,
 Roslyn, `go`, clang/gcc, scalac); no separate typechecker is selected, unlike
@@ -742,10 +766,13 @@ issue #418); exact structured (`buf`/Qt) versions plus rule-sets qualified
 seed-only under issue #488
 (`bazel run //tools/ci:structured_defaults_qualification` with
 `quality/tests/fixtures/structured_quality/pins.bzl` over upstream built-in
-defaults with no hidden preset; exact digests plus adapter mappings stay owned under issue #419); exact interpreted/file-family
-(`ruby`/`powershell` plus cue/jsonnet/pkl/css/html_template/gherkin/sql/xml/go_module/
-terraform/yaml/text) artifacts, versions, rule sets, and adapter mappings are tracked
-under issue #420; remaining cohorts stay in
+defaults with no hidden preset; exact digests plus adapter mappings stay owned under issue #419); exact file-family versions
+plus rule-sets qualified seed-only under issue #489
+(`bazel run //tools/ci:file_family_defaults_qualification` with
+`quality/tests/fixtures/file_family_quality/pins.bzl` over upstream built-in
+defaults with no hidden preset; exact digests plus adapter mappings stay owned
+under issue #420 for `ruby`/`powershell` plus cue/jsonnet/pkl/css/html_template/
+gherkin/sql/xml/go_module/terraform/yaml/text); remaining cohorts stay in
 open work under issue #510; no adapter claims any of these
 classes yet.
 
@@ -815,9 +842,27 @@ qualification inputs open, not approved presets or additions to curated membersh
   config the pinned tool uses upstream built-in defaults, with a config it
   interprets natively; adapters add only transport settings. Beyond-default
   `COMMENTS` plus `UNARY_RPC` opt-in maxima stay rejected.
+- File-family rule-sets qualified seed-only under issue #489 as pinned
+  upstream built-in defaults with no hidden preset
+  (`quality/tests/fixtures/file_family_quality/pins.bzl` via
+  `bazel run //tools/ci:file_family_defaults_qualification`):
+  cue fmt, jsonnetfmt, pkl, `terraform fmt`, and modfmt as whole-file rewrite
+  with check/diff mode and no rule-set selection; djlint `--lint` versus
+  `--reformat` as upstream modes with no auto-supplied preset; Stylelint plus
+  yamllint default rulesets as upstream built-in defaults with no auto-supplied
+  config preset; yamlfmt `-lint` as the upstream built-in check mode with
+  native config discovery; keep-sorted as check-only; prettier-plugin closures
+  over Prettier 3.9.6 as whole-file rewrite.
+  The rule-selection plus config-discovery plus suffix-inference suggestion is
+  resolved against the native-config contract (qualified seed-only under issue
+  #489): no auto-supplied preset; without an applicable checked-in config the
+  pinned tool uses upstream built-in defaults, with a config it interprets
+  natively; adapters add only transport settings; suffix inference rejected,
+  registry owns applicability. Beyond-default auto presets plus
+  `--enable=all`-style opt-in maxima stay rejected. `protobuf`/`qml` stay
+  owned by issue #419, never double-claimed here.
 - RuboCop `.rubocop.yml` versus the StandardRB unconfigurable ruleset; PSScriptAnalyzer
-  settings-file versus explicit-rule selection; djlint, Stylelint, prettier-plugin, and
-  yamllint rule selection; yamlfmt and keep-sorted config discovery (all provisional
+  settings-file versus explicit-rule selection (all provisional
   under issue #420).
 
 Beyond-default switches (detekt `allRules`, experimental Error Prone checks,
@@ -825,7 +870,7 @@ staticcheck `SA`-only preset plus `-all`, `govet` all analyzers, clang-tidy
 `--checks=*`, cppcheck `--enable=all`-style opt-in maxima) are not enabled by
 `rules_dx`. These suggestions must be qualified against pinned native behavior
 and checked-in configuration ownership (tracked in
-open work under issues #485-#488);
+open work under issues #485-#489);
 this review selects no preset beyond the qualified upstream defaults.
 
 ### Provisional Default Dependency Locks

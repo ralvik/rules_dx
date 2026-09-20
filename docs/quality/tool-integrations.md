@@ -324,7 +324,11 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   `--lint`/`--reformat`, Stylelint `--formatter json`, Prettier `--plugin` closures, and
   yamllint text diagnostics as check-only with the provisional sandbox-apply-and-diff fix
   flow; Buildifier/Taplo/Vale probes stay provisional (promotion only with fixture
-  evidence). Versions are observations, not pins; recheck latest stable at implementation
+  evidence). File-family versions plus rule-sets qualified seed-only under issue #489
+  (`quality/tests/fixtures/file_family_quality/pins.bzl` via `bazel run //tools/ci:file_family_defaults_qualification`
+  over upstream built-in defaults with no hidden preset; suffix inference rejected,
+  registry owns applicability); digests stay observations, not pins, recheck latest
+  stable at implementation; adapters stay owned under issue #420
   (see the Interpreted/file-family rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
 

@@ -15,19 +15,23 @@
 #   standalone artifacts, djlint/yamllint as private wheel-only Python graph
 #   members, Stylelint plus prettier-plugin-gherkin/sql/xml as private
 #   pure-JavaScript graph members; `protobuf`/`qml` stay owned by issue #419
-#   and are cross-linked here, never double-claimed), initial artifact
-#   research rows as observations not pins, provisional adapter-input notes
-#   (RuboCop `--format json` versus text-parse, `standardrb --fix`,
+#   and are cross-linked here, never double-claimed; versions plus rule-sets
+#   qualified seed-only under issue #489), initial artifact research rows as
+#   observations for digests (versions qualified seed-only under issue #489),
+#   adapter-input notes (RuboCop `--format json` versus text-parse,
+#   `standardrb --fix`,
 #   PSScriptAnalyzer console versus library API, whole-file rewrite versus
 #   check-only fix modes with the provisional sandbox-apply-and-diff flow,
-#   Buildifier/Taplo/Vale probes staying provisional), provisional
-#   native-config inputs explicitly not approved presets, parity-deferred
+#   Buildifier/Taplo/Vale probes staying provisional), native-config defaults
+#   qualified seed-only under issue #489 (whole-file rewrite versus check-only
+#   per tool with no auto-supplied preset, suffix inference rejected),
+#   parity-deferred
 #   ruby/powershell/cue/jsonnet/pkl/css/html_template/gherkin/sql/xml/
 #   go_module/terraform/yaml/text with owner plus frozen route,
 #   classification-only taxonomy with no curated defaults and no
 #   native-config binding;
 # - open under #420 with honest records: exact bundle contents/lock inputs
-#   plus module/runtime identities plus parser plus runner-matrix pass/fail
+#   plus module/runtime digests plus parser plus runner-matrix pass/fail
 #   plus fix/format evidence per adapter-backed class, native-config
 #   qualification against the native-config contract, platform plus
 #   consumer plus release evidence. REAL_ADAPTERS claims a cohort class only
@@ -180,28 +184,32 @@ else
   bad "tool-acquisition lost its decided PSScriptAnalyzer route, binding-decision honesty, or #420 ownership or no-claim honesty"
 fi
 
-# Tool acquisition keeps initial artifact research rows for the cohort as
-# observations, not pins, with byte-identity risk explicit.
+# Tool acquisition keeps initial artifact research rows for the cohort with
+# byte-identity risk explicit; file-family versions qualified seed-only under
+# issue #489 with digests as observations, Ruby/PowerShell bundle/module
+# identities stay pending under #420.
 cohort_research=""
 for tool in '| RuboCop |' '| StandardRB |' '| PSScriptAnalyzer |' '| pwsh |' '| cue |' '| jsonnetfmt |' '| pkl |' '| djlint |' '| Stylelint |' '| prettier-plugin-gherkin |' '| prettier-plugin-sql |' '| prettier-plugin-xml |' '| modfmt |' '| terraform |' '| yamlfmt |' '| yamllint |' '| keep-sorted |'; do
   grep -q -F -e "$tool" "$acquisition" || cohort_research="$cohort_research $tool:missing"
 done
 if [[ -z "$cohort_research" ]] &&
   grep -q -F -e 'owned by issue #420' "$acquisition" &&
-  grep -q -F -e 'observations, not pins' "$acquisition" &&
+  grep -q -F -e 'qualified seed-only under issue #489' "$acquisition" &&
+  grep -q -F -e 'digests plus adapter mappings stay owned under issue #420' "$acquisition" &&
   grep -q -F -e 'must establish and record' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost an interpreted/file-family research row or its observations-not-pins honesty:$cohort_research"
+  bad "tool-acquisition lost an interpreted/file-family research row or its #489 versions plus #420 digests honesty:$cohort_research"
 fi
 
-# Tool integrations keep the provisional cohort adapter-input notes:
+# Tool integrations keep the cohort adapter-input notes with file-family
+# versions qualified under #489 and digests as observations:
 # release-assembled closure with download-verify-extract-execute plus the
 # bundle-vs-adapter split, PSScriptAnalyzer console versus library API,
 # frozen file-family delivery classes with `protobuf`/`qml` cross-linked to
 # #419 (never double-claimed), whole-file rewrite versus check-only fix
-# modes, Buildifier/Taplo/Vale probes staying provisional, versions as
-# observations not pins, no adapter claim.
+# modes, Buildifier/Taplo/Vale probes staying provisional, file-family
+# versions qualified with no adapter claim.
 if grep -q -F -e '**Interpreted/file-family cohort (issue #420' "$integrations" &&
   grep -q -F -e 'no adapter claims `ruby`,' "$integrations" &&
   grep -q -F -e 'download-verify-extract-execute' "$integrations" &&
@@ -210,20 +218,22 @@ if grep -q -F -e '**Interpreted/file-family cohort (issue #420' "$integrations" 
   grep -q -F -e 'cross-linked here, never double-claimed' "$integrations" &&
   grep -q -F -e 'sandbox-apply-and-diff' "$integrations" &&
   grep -q -F -e 'Buildifier/Taplo/Vale probes stay provisional' "$integrations" &&
-  grep -q -F -e 'observations, not pins' "$integrations"; then
+  grep -q -F -e 'qualified seed-only under issue #489' "$integrations" &&
+  grep -q -F -e 'adapters stay owned under issue #420' "$integrations"; then
   ok
 else
-  bad "tool-integrations lost its provisional interpreted/file-family adapter-input notes or open-work honesty"
+  bad "tool-integrations lost its interpreted/file-family notes with #489 versions plus #420 adapters split"
 fi
 
-# Support matrix keeps the cohort routes plus provisional native-config
-# inputs plus adapter-input notes plus cohort tracking, all citing #420
-# without approving hidden presets or claiming support.
+# Support matrix keeps the cohort routes plus qualified file-family defaults
+# (issue #489) plus adapter-input notes plus cohort tracking, all citing #420
+# for adapters/digests without approving hidden presets or claiming support.
 if grep -q -F -e 'release-assembled Ruby closure route (issue #420' "$support" &&
   grep -q -F -e 'portable-PowerShell-runtime route (issue #420' "$support" &&
+  grep -q -F -e 'qualified seed-only under issue #489' "$support" &&
+  grep -q -F -e 'quality/tests/fixtures/file_family_quality/pins.bzl' "$support" &&
   grep -q -F -e 'tracked' "$support" &&
   grep -q -F -e 'under issue #420' "$support" &&
-  grep -q -F -e '(all provisional' "$support" &&
   grep -q -F -e 'owned by issue #420' "$support" &&
   grep -q -F -e 'itemized under issue #420' "$support" &&
   grep -q -F -e 'stay open' "$support" &&
@@ -232,7 +242,7 @@ if grep -q -F -e 'release-assembled Ruby closure route (issue #420' "$support" &
   grep -q -F -e '#420' "$support"; then
   ok
 else
-  bad "support-matrix lost its interpreted/file-family routes, provisional inputs, adapter notes, or #420 cohort tracking"
+  bad "support-matrix lost its interpreted/file-family routes, qualified defaults, adapter notes, or #420 cohort tracking"
 fi
 
 # Tool baseline keeps the Ruby/PowerShell/file-family coverage rows

@@ -452,6 +452,43 @@ with no hidden preset); digests plus adapter mappings stay owned under issue #41
 (live successor to closed #307 for the `go` class) and no adapter claims `go`
 yet (open under issue #418).
 
+Decided route: cue, jsonnetfmt, pkl, terraform, yamlfmt, keep-sorted, and modfmt take the
+frozen standalone checksummed-artifact route. Each resolves to its upstream
+release artifact (cue fmt, go-jsonnet, pkl, terraform fmt, yamlfmt, keep-sorted
+as whole-file rewrite with check/diff mode except keep-sorted check-only;
+modfmt identity pending); no consumer runs an installer or ambient fallback.
+Exact versions plus rule-sets qualified seed-only under issue #489
+(`bazel run //tools/ci:file_family_defaults_qualification` with
+`quality/tests/fixtures/file_family_quality/pins.bzl` over upstream built-in
+defaults with no hidden preset; C++ jsonnet v0.21.0 observed not pinned,
+modfmt identity pending, living at head rejected);
+digests plus adapter mappings stay owned under issue #420 (live successor to closed #307 for the `cue`/`jsonnet`/`pkl`/`terraform`/`yaml`/`text`/`go_module` classes) and no adapter claims `cue` yet (open under issue #420). `protobuf`/`qml` stay owned by issue
+#419, never double-claimed here.
+
+Decided route: djlint and yamllint take the
+private wheel-only Python graph plus shared managed Python runtime route. Each
+resolves to its exact wheel closure over the one managed Python cohort with no
+sdist fallback and no pip subprocess on the consumer path; djlint `--lint`
+versus `--reformat` are upstream modes. Exact versions plus rule-sets qualified
+seed-only under issue #489
+(`bazel run //tools/ci:file_family_defaults_qualification` with
+`quality/tests/fixtures/file_family_quality/pins.bzl` over upstream built-in
+defaults with no hidden preset; default rulesets with no auto-supplied preset);
+digests plus adapter mappings stay owned under issue #420 (live successor to
+closed #307 for the `html_template`/`yaml` classes) and no adapter claims
+`html_template` or `yaml` yet (open under issue #420).
+
+Decided route: Stylelint plus prettier-plugin-gherkin/sql/xml take the
+private pure-JavaScript graph plus shared managed Node runtime route. Each
+resolves to its exact package closure with Prettier 3.9.6 over the one managed
+Node cohort; Stylelint `--formatter json` is transport and prettier-plugin
+closures are whole-file rewrite with check/diff mode. Exact versions plus
+rule-sets qualified seed-only under issue #489
+(`bazel run //tools/ci:file_family_defaults_qualification` with
+`quality/tests/fixtures/file_family_quality/pins.bzl` over upstream built-in
+defaults with no hidden preset; gherkin/xml plugins observed without a stable line, recheck latest stable at implementation);
+digests plus adapter mappings stay owned under issue #420 (live successor to closed #307 for the `css`/`gherkin`/`sql`/`xml` classes) and no adapter claims `css` yet (open under issue #420).
+
 No listed private graph accepts arbitrary consumer packages or plugins in v1. The curated
 lock and configuration are part of the `rules_dx` release. A tool whose required standard
 behavior cannot fit that fixed closure must move to a proven complete artifact/assembled
