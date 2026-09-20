@@ -972,9 +972,20 @@ Remaining reds stay owned gaps, not green claims:
   design, pinned `go_deps.from_file` lock tracks Gazelle, no launch),
   `go:<module-path>` parses then fails closed as `unsupported` with the
   `dx bump gomod:<module> <version>` hint, silent full-update substitution
-  plus private `go get` plus `go mod tidy` rejected, bump follow-up manual
-  and resolver-owned; update-only, no lock format change; platform plus
-  consumer plus release evidence stays owned gap; no Supported claim).
+   plus private `go get` plus `go mod tidy` rejected, bump follow-up manual
+   and resolver-owned; update-only, no lock format change; platform plus
+   consumer plus release evidence stays owned gap; no Supported claim).
+- Bump Maven plus NuGet widen-one with unit evidence qualified seed-only
+   under #637
+   (`bazel test //cli/bump:dx_bump_test //cli/cli:dx_cli_test` bump filter;
+   `maven:group:artifact` widens one `maven.install` artifact in
+   `MODULE.bazel` then `dx update maven` whole-lock pin,
+   `nuget:<id>` widens one `nuget <id> <version>` line in
+   `third_party/dotnet/paket.dependencies` then `dx update nuget`
+   whole-folder regen, missing/ambiguous shapes fail closed with nothing
+   widened, silent batch substitution rejected; update-only, no lock format
+   change; platform plus consumer plus release evidence stays owned gap; no
+   Supported claim).
 - Update mutation-event wont-fix plus event-completeness with fixture evidence qualified
   seed-only under #586
   (`bazel run //tools/ci:update_events_qualification` with

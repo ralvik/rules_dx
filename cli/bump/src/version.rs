@@ -14,8 +14,9 @@
 //!   private `dx` policy.
 //! - The explicit `dx bump <selector> <version>` operation accepts the
 //!   operator-supplied version verbatim after shape validation: exact
-//!   semver for Bazel/Cargo/npm/Go (pinned exactly per ADR 0008), Git
-//!   tag/commit shapes for GitHub Actions and Git-backed requirements.
+//!   semver for Bazel/Cargo/npm/Go/Maven/NuGet (pinned exactly per ADR
+//!   0008), Git tag/commit shapes for GitHub Actions and Git-backed
+//!   requirements.
 //! - Transitive versions stay resolver-governed; bump never forces every
 //!   transitive package to newest.
 
@@ -25,8 +26,8 @@ use super::sets::BumpSet;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum WidenVersion {
     /// Exact stable semver (Bazel modules, `.bazelversion`, Cargo, npm,
-    /// Go). Pinned exactly per ADR 0008; comparison uses upstream
-    /// `semver`, never custom ordering.
+    /// Go, Maven, NuGet). Pinned exactly per ADR 0008; comparison uses
+    /// upstream `semver`, never custom ordering.
     Semver(semver::Version),
     /// Git tag shape (GitHub Actions pins, Git-backed requirements).
     /// SHA resolution runs through the upstream GitHub releases / Git
@@ -109,19 +110,22 @@ pub fn compare(left: &semver::Version, right: &semver::Version) -> std::cmp::Ord
 }
 
 /// Parses the operator-supplied new version for one set. Bazel, Cargo,
-/// npm, and Go require exact stable semver (leading `v`/`=` stripped for
-/// ergonomics, e.g. `v1.2.3` means `1.2.3`); GitHub Actions accepts a Git
-/// tag or commit SHA. Prereleases parse but callers treat them as
-/// upstream-governed (see [`prerelease_follows_upstream`]).
+/// npm, Go, Maven, and NuGet require exact stable semver (leading `v`/`=`
+/// stripped for ergonomics, e.g. `v1.2.3` means `1.2.3`); GitHub Actions
+/// accepts a Git tag or commit SHA. Prereleases parse but callers treat
+/// them as upstream-governed (see [`prerelease_follows_upstream`]).
 pub fn parse(set: BumpSet, text: &str) -> Result<WidenVersion, VersionError> {
     let trimmed = text.trim();
     if trimmed.is_empty() {
         return Err(VersionError::Empty);
     }
     match set {
-        BumpSet::Bazel | BumpSet::Cargo | BumpSet::Npm | BumpSet::Go => {
-            parse_semver(set.name(), trimmed)
-        }
+        BumpSet::Bazel
+        | BumpSet::Cargo
+        | BumpSet::Npm
+        | BumpSet::Go
+        | BumpSet::Maven
+        | BumpSet::NuGet => parse_semver(set.name(), trimmed),
         BumpSet::GithubActions => parse_git(set.name(), trimmed),
     }
 }
@@ -188,7 +192,14 @@ mod tests {
 
     #[test]
     fn semver_sets_require_exact_stable_shapes() {
-        for set in [BumpSet::Bazel, BumpSet::Cargo, BumpSet::Npm, BumpSet::Go] {
+        for set in [
+            BumpSet::Bazel,
+            BumpSet::Cargo,
+            BumpSet::Npm,
+            BumpSet::Go,
+            BumpSet::Maven,
+            BumpSet::NuGet,
+        ] {
             let parsed = parse(set, "1.2.3").expect("semver");
             assert!(parsed.is_semver());
             assert_eq!(parsed.display(), "1.2.3");

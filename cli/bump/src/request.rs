@@ -28,7 +28,7 @@ pub enum BumpError {
     #[error("empty bump selector or version; expected `dx bump <set:package> <version>`")]
     Empty,
     /// Unknown set or malformed `set:package` shape.
-    #[error("unknown bump selector {selector:?}; expected bazel|cargo|npm|go|github-actions as `set:package` (e.g. cargo:anyhow)")]
+    #[error("unknown bump selector {selector:?}; expected bazel|cargo|github-actions|go|maven|npm|nuget as `set:package` (e.g. cargo:anyhow, maven:junit:junit)")]
     UnknownSelector {
         /// Offending spelling.
         selector: String,
@@ -147,8 +147,9 @@ impl BumpRequest {
         // GitHub Actions `owner/repo:tag` never appears here: the colon
         // separates `set:package`, so `github-actions:actions/checkout`
         // carries the slash inside the package. A second colon inside the
-        // package (e.g. Maven `group:artifact`) is out of v1 bump scope.
-        if tail.contains(':') {
+        // package is Maven-only (`group:artifact` in
+        // `maven:group:artifact`); every other set rejects it.
+        if set != BumpSet::Maven && tail.contains(':') {
             return Err(BumpError::InvalidPackage {
                 set: set.name(),
                 package: tail.to_owned(),
@@ -175,8 +176,9 @@ impl BumpRequest {
     }
 
     /// Whether lock refresh runs resolver-owned after this widen edit
-    /// (`dx update <set>` for Cargo/npm/Go) or the set is file-only
-    /// (Bazel, GitHub Actions: preset flag-diff review plus build).
+    /// (`dx update <set>` for Cargo/npm/Go/Maven/NuGet) or the set is
+    /// file-only (Bazel, GitHub Actions: preset flag-diff review plus
+    /// build).
     pub fn needs_update_refresh(&self) -> bool {
         self.set.needs_update_refresh()
     }
@@ -195,7 +197,9 @@ impl BumpRequest {
             BumpSet::Cargo => "rust/tests/fixtures/hello/Cargo.toml",
             BumpSet::GithubActions => ".github/workflows/ci.yml",
             BumpSet::Go => "third_party/go/go.mod",
+            BumpSet::Maven => "MODULE.bazel",
             BumpSet::Npm => "package.json",
+            BumpSet::NuGet => "third_party/dotnet/paket.dependencies",
         }
     }
 
@@ -230,6 +234,8 @@ impl BumpRequest {
             BumpSet::Cargo => plan_cargo_toml(content, &self.package, &self.version),
             BumpSet::Npm => plan_package_json(content, &self.package, &self.version),
             BumpSet::Go => plan_go_mod(content, &self.package, &self.version),
+            BumpSet::Maven => plan_maven_module_bazel(content, &self.package, &self.version),
+            BumpSet::NuGet => plan_paket_dependencies(content, &self.package, &self.version),
             BumpSet::GithubActions => plan_github_workflow(content, &self.package, &self.version),
         }
     }
@@ -814,6 +820,167 @@ fn replace_go_version_token_fallback(line: &str, new: &str) -> Option<String> {
     }
 }
 
+fn plan_maven_module_bazel(
+    content: &str,
+    package: &str,
+    version: &WidenVersion,
+) -> Result<String, BumpError> {
+    let new = match version {
+        WidenVersion::Semver(version) => version.to_string(),
+        _ => {
+            return Err(BumpError::UnsupportedManifest {
+                manifest: "MODULE.bazel".to_owned(),
+                reason: "expected exact semver".to_owned(),
+            });
+        }
+    };
+    // Declared requirement shape: `"group:artifact:old"` inside
+    // `maven.install(artifacts = [...])`. The quoted `group:artifact:`
+    // prefix keeps `junit:junit` from matching `junit:junit-jupiter`.
+    let needle = format!("\"{package}:");
+    let mut matches = 0usize;
+    let mut out = String::with_capacity(content.len());
+    for line in content.split_inclusive('\n') {
+        if line.contains(&needle) {
+            match replace_maven_artifact_version(line, &needle, &new) {
+                Some(replaced) => {
+                    matches += 1;
+                    out.push_str(&replaced);
+                    continue;
+                }
+                None => {
+                    return Err(BumpError::UnsupportedManifest {
+                        manifest: "MODULE.bazel".to_owned(),
+                        reason: format!("{package:?} has no replaceable quoted version"),
+                    });
+                }
+            }
+        }
+        out.push_str(line);
+    }
+    match matches {
+        1 => Ok(out),
+        0 => Err(BumpError::NotFound {
+            manifest: "MODULE.bazel".to_owned(),
+            package: package.to_owned(),
+        }),
+        count => Err(BumpError::Ambiguous {
+            manifest: "MODULE.bazel".to_owned(),
+            package: package.to_owned(),
+            count,
+        }),
+    }
+}
+
+fn replace_maven_artifact_version(line: &str, needle: &str, new: &str) -> Option<String> {
+    let start = line.find(needle)? + needle.len();
+    let rest = &line[start..];
+    let end_rel = rest.find('"')?;
+    if end_rel == 0 {
+        return None;
+    }
+    let mut replaced = String::with_capacity(line.len());
+    replaced.push_str(&line[..start]);
+    replaced.push_str(new);
+    replaced.push_str(&rest[end_rel..]);
+    Some(replaced)
+}
+
+fn plan_paket_dependencies(
+    content: &str,
+    package: &str,
+    version: &WidenVersion,
+) -> Result<String, BumpError> {
+    let new = match version {
+        WidenVersion::Semver(version) => version.to_string(),
+        _ => {
+            return Err(BumpError::UnsupportedManifest {
+                manifest: "third_party/dotnet/paket.dependencies".to_owned(),
+                reason: "expected exact semver".to_owned(),
+            });
+        }
+    };
+    // Declared requirement shape: `nuget <id> <old>` (one per line).
+    // Match the id as a whitespace-delimited token so `xunit.v3` never
+    // matches `xunit.v3.assert`.
+    let mut matches = 0usize;
+    let mut out = String::with_capacity(content.len());
+    for line in content.split_inclusive('\n') {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with('#') || trimmed.starts_with("//") {
+            out.push_str(line);
+            continue;
+        }
+        if paket_line_targets_package(line, package) {
+            match replace_paket_version_token(line, &new) {
+                Some(replaced) => {
+                    matches += 1;
+                    out.push_str(&replaced);
+                    continue;
+                }
+                None => {
+                    return Err(BumpError::UnsupportedManifest {
+                        manifest: "third_party/dotnet/paket.dependencies".to_owned(),
+                        reason: format!("{package:?} has no replaceable version token"),
+                    });
+                }
+            }
+        }
+        out.push_str(line);
+    }
+    match matches {
+        1 => Ok(out),
+        0 => Err(BumpError::NotFound {
+            manifest: "third_party/dotnet/paket.dependencies".to_owned(),
+            package: package.to_owned(),
+        }),
+        count => Err(BumpError::Ambiguous {
+            manifest: "third_party/dotnet/paket.dependencies".to_owned(),
+            package: package.to_owned(),
+            count,
+        }),
+    }
+}
+
+fn paket_line_targets_package(line: &str, package: &str) -> bool {
+    let mut tokens = line.split_whitespace();
+    match (tokens.next(), tokens.next()) {
+        (Some(kind), Some(id)) => kind == "nuget" && id == package,
+        _ => false,
+    }
+}
+
+fn replace_paket_version_token(line: &str, new: &str) -> Option<String> {
+    // Replace the last whitespace-delimited token (the version),
+    // preserving leading spacing, trailing comments, and newline style.
+    // `nuget <id> <old>` carries exactly three tokens before any `#`
+    // comment; the version is the third.
+    let newline = line
+        .strip_suffix("\r\n")
+        .or_else(|| line.strip_suffix('\n'));
+    let (body, ending) = match newline {
+        Some(stripped) => (stripped, &line[stripped.len()..]),
+        None => (line, ""),
+    };
+    let (head, comment) = match body.find('#') {
+        Some(at) => (&body[..at], &body[at..]),
+        None => (body, ""),
+    };
+    let parts: Vec<&str> = head.split_whitespace().collect();
+    if parts.len() < 3 || parts[0] != "nuget" {
+        return None;
+    }
+    let old = parts[2];
+    let old_at = head.rfind(old)?;
+    let mut replaced = String::with_capacity(line.len());
+    replaced.push_str(&head[..old_at]);
+    replaced.push_str(new);
+    replaced.push_str(&head[old_at + old.len()..]);
+    replaced.push_str(comment);
+    replaced.push_str(ending);
+    Some(replaced)
+}
+
 fn plan_github_workflow(
     content: &str,
     package: &str,
@@ -1214,6 +1381,32 @@ fn validate_package(set: BumpSet, package: &str) -> Result<(), BumpError> {
             }
             Ok(())
         }
+        BumpSet::Maven => {
+            let (group, artifact) = match package.split_once(':') {
+                Some((group, artifact)) => (group, artifact),
+                None => {
+                    return Err(invalid("maven identities are group:artifact"));
+                }
+            };
+            if group.is_empty()
+                || artifact.is_empty()
+                || artifact.contains(':')
+                || group.contains(' ')
+                || artifact.contains(' ')
+            {
+                return Err(invalid("maven identities are group:artifact"));
+            }
+            if !is_dotted_name(group) || !is_dotted_name(artifact) {
+                return Err(invalid("maven group/artifact use [A-Za-z0-9_.-] only"));
+            }
+            Ok(())
+        }
+        BumpSet::NuGet => {
+            if !is_dotted_name(package) {
+                return Err(invalid("nuget ids use [A-Za-z0-9_.-] only"));
+            }
+            Ok(())
+        }
     }
 }
 
@@ -1251,6 +1444,24 @@ mod tests {
 
         let bump = BumpRequest::parse("go:example.com/mod", "1.2.3").expect("go");
         assert_eq!(bump.target_manifest(), "third_party/go/go.mod");
+
+        let bump = BumpRequest::parse("maven:junit:junit", "4.13.2").expect("maven");
+        assert_eq!(bump.set, BumpSet::Maven);
+        assert_eq!(bump.package, "junit:junit");
+        assert_eq!(bump.target_manifest(), "MODULE.bazel");
+        assert!(bump.needs_update_refresh());
+
+        let bump = BumpRequest::parse("maven:org.junit.jupiter:junit-jupiter-api", "6.1.3")
+            .expect("maven jupiter");
+        assert_eq!(bump.package, "org.junit.jupiter:junit-jupiter-api");
+
+        let bump = BumpRequest::parse("nuget:FSharp.Core", "10.1.201").expect("nuget");
+        assert_eq!(bump.set, BumpSet::NuGet);
+        assert_eq!(
+            bump.target_manifest(),
+            "third_party/dotnet/paket.dependencies"
+        );
+        assert!(bump.needs_update_refresh());
     }
 
     #[test]
@@ -1301,8 +1512,32 @@ mod tests {
             Err(BumpError::InvalidPackage { .. })
         ));
         assert!(matches!(
-            BumpRequest::parse("maven:junit:junit", "1.2.3"),
-            Err(BumpError::UnknownSelector { .. })
+            BumpRequest::parse("maven", "1.2.3"),
+            Err(BumpError::BareSet { .. })
+        ));
+        assert!(matches!(
+            BumpRequest::parse("nuget", "10.1.201"),
+            Err(BumpError::BareSet { .. })
+        ));
+        assert!(matches!(
+            BumpRequest::parse("maven:junit", "1.2.3"),
+            Err(BumpError::InvalidPackage { .. })
+        ));
+        assert!(matches!(
+            BumpRequest::parse("maven::artifact", "1.2.3"),
+            Err(BumpError::InvalidPackage { .. })
+        ));
+        assert!(matches!(
+            BumpRequest::parse("maven:junit:junit:extra", "1.2.3"),
+            Err(BumpError::InvalidPackage { .. })
+        ));
+        assert!(matches!(
+            BumpRequest::parse("nuget:", "10.1.201"),
+            Err(BumpError::InvalidPackage { .. })
+        ));
+        assert!(matches!(
+            BumpRequest::parse("cargo:anyhow:extra", "1.2.3"),
+            Err(BumpError::InvalidPackage { .. })
         ));
     }
 
@@ -1316,6 +1551,14 @@ mod tests {
             BumpRequest::parse("github-actions:actions/checkout", "bad tag"),
             Err(BumpError::Version(_))
         ));
+        assert!(matches!(
+            BumpRequest::parse("maven:junit:junit", "not-a-version!!!"),
+            Err(BumpError::Version(_))
+        ));
+        assert!(matches!(
+            BumpRequest::parse("nuget:FSharp.Core", "not-a-version!!!"),
+            Err(BumpError::Version(_))
+        ));
     }
 
     #[test]
@@ -1327,6 +1570,10 @@ mod tests {
         assert!(summary.contains("dx update cargo"), "{summary}");
         let bump = BumpRequest::parse("bazel:rules_rust", "0.74.0").expect("bazel");
         assert!(bump.summary().contains("flag-diff"), "{summary}");
+        let bump = BumpRequest::parse("maven:junit:junit", "4.13.3").expect("maven");
+        assert!(bump.summary().contains("dx update maven"), "{summary}");
+        let bump = BumpRequest::parse("nuget:FSharp.Core", "10.1.202").expect("nuget");
+        assert!(bump.summary().contains("dx update nuget"), "{summary}");
     }
 
     #[test]
@@ -1381,6 +1628,63 @@ mod tests {
         let bump = BumpRequest::parse("go:example.com/mod", "1.3.0").expect("go");
         let widened = bump.plan_edit(gomod).expect("edit");
         assert!(widened.contains("example.com/mod v1.3.0"), "{widened}");
+
+        // `MODULE.bazel` Maven artifacts: one `group:artifact:version`
+        // rewrites, others preserved.
+        let module = "maven.install(\n    artifacts = [\n        \"junit:junit:4.13.2\",\n        \"org.junit.jupiter:junit-jupiter-api:6.1.3\",\n    ],\n)\n";
+        let bump = BumpRequest::parse("maven:junit:junit", "4.13.3").expect("maven");
+        let widened = bump.plan_edit(module).expect("edit");
+        assert!(widened.contains("\"junit:junit:4.13.3\""), "{widened}");
+        assert!(
+            widened.contains("\"org.junit.jupiter:junit-jupiter-api:6.1.3\""),
+            "{widened}"
+        );
+        assert!(matches!(
+            bump.plan_edit("maven.install(\n    artifacts = [\n    ],\n)\n"),
+            Err(BumpError::NotFound { .. })
+        ));
+
+        // `paket.dependencies`: one `nuget <id> <version>` rewrites.
+        let paket = "source https://api.nuget.org/v3/index.json\nframework: net10.0\n\nnuget FSharp.Core 10.1.201\nnuget xunit.v3 4.0.0\n";
+        let bump = BumpRequest::parse("nuget:FSharp.Core", "10.1.202").expect("nuget");
+        let widened = bump.plan_edit(paket).expect("edit");
+        assert!(widened.contains("nuget FSharp.Core 10.1.202"), "{widened}");
+        assert!(widened.contains("nuget xunit.v3 4.0.0"), "{widened}");
+        assert!(matches!(
+            bump.plan_edit("source https://api.nuget.org/v3/index.json\n"),
+            Err(BumpError::NotFound { .. })
+        ));
+    }
+
+    #[test]
+    fn maven_and_nuget_edits_fail_closed_on_ambiguous_and_prefixes() {
+        // Duplicate Maven artifact lines are ambiguous (never batch).
+        let module = "        \"junit:junit:4.13.2\",\n        \"junit:junit:4.13.2\",\n";
+        let bump = BumpRequest::parse("maven:junit:junit", "4.13.3").expect("maven");
+        assert!(matches!(
+            bump.plan_edit(module),
+            Err(BumpError::Ambiguous { count: 2, .. })
+        ));
+        // `junit:junit` never matches `junit:junit-jupiter` prefixes.
+        let module = "        \"junit:junit-jupiter:1.0.0\",\n";
+        assert!(matches!(
+            bump.plan_edit(module),
+            Err(BumpError::NotFound { .. })
+        ));
+        // Duplicate paket lines are ambiguous (never batch).
+        let paket = "nuget FSharp.Core 10.1.201\nnuget FSharp.Core 10.1.201\n";
+        let bump = BumpRequest::parse("nuget:FSharp.Core", "10.1.202").expect("nuget");
+        assert!(matches!(
+            bump.plan_edit(paket),
+            Err(BumpError::Ambiguous { count: 2, .. })
+        ));
+        // `xunit.v3` never matches `xunit.v3.assert` prefixes.
+        let paket = "nuget xunit.v3.assert 4.0.0\n";
+        let bump = BumpRequest::parse("nuget:xunit.v3", "4.0.1").expect("nuget prefix");
+        assert!(matches!(
+            bump.plan_edit(paket),
+            Err(BumpError::NotFound { .. })
+        ));
     }
 
     #[test]

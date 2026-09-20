@@ -12,11 +12,11 @@
 //!
 //! Library-first (ADR 0008): registry discovery, version comparison, and
 //! manifest parsing use upstream libraries (BCR / crates.io / npm / Go
-//! proxy / GitHub releases clients plus `semver`, `serde_json`, `toml`,
-//! `toml_edit`), never custom HTTP/version/resolver code. Custom code here
-//! is limited to the thin widen-one-requirement edit, loop orchestration
-//! docs, and PR handling. All deps pin per ADR 0008 (latest stable, pinned
-//! exactly).
+//! proxy / Maven Central / NuGet / GitHub releases clients plus `semver`,
+//! `serde_json`, `toml`, `toml_edit`), never custom HTTP/version/resolver
+//! code. Custom code here is limited to the thin widen-one-requirement
+//! edit, loop orchestration docs, and PR handling. All deps pin per ADR
+//! 0008 (latest stable, pinned exactly).
 //!
 //! Frozen command shape (`docs/cli/commands/audit-update-bazel.md`):
 //! `dx bump <set:package> <version>`. One invocation widens one
@@ -24,8 +24,8 @@
 //! prerelease eligibility follows the upstream resolver and project
 //! configuration, never a private policy. Transitive versions stay
 //! resolver-governed; lock refresh runs resolver-owned through
-//! `dx update <set>` for Cargo/npm/Go, while Bazel and GitHub Actions
-//! verify file-only through `preset.update --verify-only` plus
+//! `dx update <set>` for Cargo/npm/Go/Maven/NuGet, while Bazel and GitHub
+//! Actions verify file-only through `preset.update --verify-only` plus
 //! `bazel build //...`.
 
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]

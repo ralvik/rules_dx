@@ -13,8 +13,8 @@ use dx_output::{
 /// without confirmation. `--dry-run` prints the planned widen and exits
 /// `0` without touching the tree; live execution rewrites exactly one
 /// declared requirement atomically (never batch) and reports the
-/// resolver-owned follow-up (`dx update <set>` for Cargo/npm/Go, preset
-/// flag-diff review plus build for Bazel/GitHub Actions). Usage errors
+/// resolver-owned follow-up (`dx update <set>` for Cargo/npm/Go/Maven/NuGet,
+/// preset flag-diff review plus build for Bazel/GitHub Actions). Usage errors
 /// exit `2` before any write; widen failures exit `1` with `bump_failed`.
 pub(crate) fn execute_bump(invocation: &Invocation, env: Env<'_>) -> i32 {
     debug_assert!(
@@ -269,6 +269,52 @@ mod tests {
         assert_eq!(code, 1, "{err}");
         assert!(err.contains("bump_failed"), "{err}");
         assert!(err.contains("needs SHA resolution"), "{err}");
+    }
+
+    #[test]
+    fn live_widens_one_maven_artifact_atomically() {
+        let harness = Harness::new("bump-live-maven");
+        harness.write_source(
+            "MODULE.bazel",
+            "maven.install(\n    artifacts = [\n        \"junit:junit:4.13.2\",\n        \"org.junit.jupiter:junit-jupiter-api:6.1.3\",\n    ],\n)\n",
+        );
+        let (code, out, err) = harness.run(&["bump", "maven:junit:junit", "4.13.3"]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(out.contains("widened maven:junit:junit to 4.13.3"), "{out}");
+        assert!(out.contains("dx update maven"), "{out}");
+        assert!(err.is_empty(), "{err}");
+        let widened =
+            std::fs::read_to_string(harness.workspace.join("MODULE.bazel")).expect("read");
+        assert!(widened.contains("\"junit:junit:4.13.3\""), "{widened}");
+        assert!(
+            widened.contains("\"org.junit.jupiter:junit-jupiter-api:6.1.3\""),
+            "{widened}"
+        );
+    }
+
+    #[test]
+    fn live_widens_one_nuget_requirement_atomically() {
+        let harness = Harness::new("bump-live-nuget");
+        harness.write_source(
+            "third_party/dotnet/paket.dependencies",
+            "source https://api.nuget.org/v3/index.json\nframework: net10.0\n\nnuget FSharp.Core 10.1.201\nnuget xunit.v3 4.0.0\n",
+        );
+        let (code, out, err) = harness.run(&["bump", "nuget:FSharp.Core", "10.1.202"]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(
+            out.contains("widened nuget:FSharp.Core to 10.1.202"),
+            "{out}"
+        );
+        assert!(out.contains("dx update nuget"), "{out}");
+        assert!(err.is_empty(), "{err}");
+        let widened = std::fs::read_to_string(
+            harness
+                .workspace
+                .join("third_party/dotnet/paket.dependencies"),
+        )
+        .expect("read");
+        assert!(widened.contains("nuget FSharp.Core 10.1.202"), "{widened}");
+        assert!(widened.contains("nuget xunit.v3 4.0.0"), "{widened}");
     }
 
     #[test]

@@ -1,12 +1,14 @@
 //! V1 widen-one-requirement set registry for `dx bump`.
 //!
-//! Pure registry over the five v1 manager sets named in the issue,
+//! Pure registry over the seven v1 manager sets named in the issue,
 //! covering the native updater scope: Bazel modules plus
-//! `.bazelversion`, Cargo, npm/pnpm (both lock graphs), Go (`gomod`), and
-//! GitHub Actions. Each set owns its declared-requirement manifests; lock
-//! refresh stays resolver-owned through `dx update` (`dx_update::backend`)
-//! for Cargo/npm/Go, while Bazel and GitHub Actions are file-only (verified
-//! through `preset.update --verify-only` plus `bazel build //...`).
+//! `.bazelversion`, Cargo, npm/pnpm (both lock graphs), Go (`gomod`),
+//! GitHub Actions, Maven (`group:artifact` in `MODULE.bazel`), and NuGet
+//! (`paket.dependencies`). Each set owns its declared-requirement
+//! manifests; lock refresh stays resolver-owned through `dx update`
+//! (`dx_update::backend`) for Cargo/npm/Go/Maven/NuGet, while Bazel and
+//! GitHub Actions are file-only (verified through
+//! `preset.update --verify-only` plus `bazel build //...`).
 //!
 //! Set identity, manifests, and locks are pinned here so selector
 //! resolution, widen-edit planning, and per-set reporting agree on one
@@ -34,18 +36,24 @@ pub enum BumpSet {
     GithubActions,
     /// Go (`third_party/go/go.mod` via `go_deps.from_file`).
     Go,
+    /// JVM/Maven (`MODULE.bazel` `maven.install` artifacts).
+    Maven,
     /// JS/TS/npm (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`).
     Npm,
+    /// .NET/NuGet (`third_party/dotnet/paket.dependencies`).
+    NuGet,
 }
 
 impl BumpSet {
-    /// All five v1 sets, in deterministic alphabetical order.
-    pub const ALL: [BumpSet; 5] = [
+    /// All seven v1 sets, in deterministic alphabetical order.
+    pub const ALL: [BumpSet; 7] = [
         BumpSet::Bazel,
         BumpSet::Cargo,
         BumpSet::GithubActions,
         BumpSet::Go,
+        BumpSet::Maven,
         BumpSet::Npm,
+        BumpSet::NuGet,
     ];
 
     /// Stable selector spelling for this set (with `go` covering the
@@ -56,7 +64,9 @@ impl BumpSet {
             BumpSet::Cargo => "cargo",
             BumpSet::GithubActions => "github-actions",
             BumpSet::Go => "go",
+            BumpSet::Maven => "maven",
             BumpSet::Npm => "npm",
+            BumpSet::NuGet => "nuget",
         }
     }
 
@@ -69,7 +79,9 @@ impl BumpSet {
             "cargo" => Some(BumpSet::Cargo),
             "github-actions" | "gha" => Some(BumpSet::GithubActions),
             "go" | "gomod" => Some(BumpSet::Go),
+            "maven" => Some(BumpSet::Maven),
             "npm" => Some(BumpSet::Npm),
+            "nuget" => Some(BumpSet::NuGet),
             _ => None,
         }
     }
@@ -89,7 +101,9 @@ impl BumpSet {
             BumpSet::Cargo => &["rust/tests/fixtures/hello/Cargo.toml"],
             BumpSet::GithubActions => &[".github/workflows/ci.yml"],
             BumpSet::Go => &["third_party/go/go.mod"],
+            BumpSet::Maven => &["MODULE.bazel"],
             BumpSet::Npm => &["package.json"],
+            BumpSet::NuGet => &["third_party/dotnet/paket.dependencies"],
         }
     }
 
@@ -106,12 +120,15 @@ impl BumpSet {
             ],
             BumpSet::GithubActions => &[],
             BumpSet::Go => &["third_party/go/go.mod", "third_party/go/go.sum"],
+            BumpSet::Maven => &["third_party/jvm/maven_install.json"],
             BumpSet::Npm => &["pnpm-lock.yaml"],
+            BumpSet::NuGet => &["third_party/dotnet/paket.lock", "third_party/dotnet/deps"],
         }
     }
 
     /// Whether lock refresh runs resolver-owned after widening (Cargo,
-    /// npm, Go) or the set is file-only (Bazel, GitHub Actions).
+    /// npm, Go, Maven, NuGet) or the set is file-only (Bazel, GitHub
+    /// Actions).
     pub fn needs_update_refresh(self) -> bool {
         !self.locks().is_empty()
     }
@@ -133,7 +150,11 @@ impl BumpSet {
             BumpSet::Go => {
                 "pinned go_deps.from_file module lock (pins track Gazelle; explicit widen via `dx bump` plus the pinned SDK tidy)"
             }
+            BumpSet::Maven => "rules_jvm_external pin (REPIN=1 bazel run @maven//:pin)",
             BumpSet::Npm => "Bazel-pinned pnpm update (bazel run @pnpm//:pnpm -- update)",
+            BumpSet::NuGet => {
+                "paket2bazel regeneration (bazel run @rules_dotnet//tools/paket2bazel -- ...)"
+            }
         }
     }
 }
@@ -150,7 +171,7 @@ mod tests {
             assert!(seen.insert(set.name()), "duplicate set name");
             assert_eq!(BumpSet::parse(set.name()), Some(set));
         }
-        assert_eq!(seen.len(), 5);
+        assert_eq!(seen.len(), 7);
         assert_eq!(BumpSet::parse("Cargo"), None);
         assert_eq!(BumpSet::parse("cargo-lock"), None);
         assert_eq!(BumpSet::parse(""), None);
@@ -169,7 +190,18 @@ mod tests {
     #[test]
     fn order_is_alphabetical_and_deterministic() {
         let names: Vec<&str> = BumpSet::ALL.iter().map(|set| set.name()).collect();
-        assert_eq!(names, vec!["bazel", "cargo", "github-actions", "go", "npm"]);
+        assert_eq!(
+            names,
+            vec![
+                "bazel",
+                "cargo",
+                "github-actions",
+                "go",
+                "maven",
+                "npm",
+                "nuget"
+            ]
+        );
         let mut sorted = names.clone();
         sorted.sort();
         assert_eq!(names, sorted);
@@ -194,9 +226,13 @@ mod tests {
         assert!(BumpSet::Cargo.needs_update_refresh());
         assert!(BumpSet::Npm.needs_update_refresh());
         assert!(BumpSet::Go.needs_update_refresh());
+        assert!(BumpSet::Maven.needs_update_refresh());
+        assert!(BumpSet::NuGet.needs_update_refresh());
         assert!(BumpSet::Bazel.locks().is_empty());
         assert!(BumpSet::GithubActions.locks().is_empty());
         assert!(!BumpSet::Cargo.locks().is_empty());
+        assert!(!BumpSet::Maven.locks().is_empty());
+        assert!(!BumpSet::NuGet.locks().is_empty());
     }
 
     #[test]
@@ -212,5 +248,16 @@ mod tests {
             .manifests()
             .iter()
             .any(|p| p.contains(".github")));
+        assert_eq!(BumpSet::Maven.manifests(), &["MODULE.bazel"]);
+        assert_eq!(
+            BumpSet::NuGet.manifests(),
+            &["third_party/dotnet/paket.dependencies"]
+        );
+        assert!(BumpSet::Maven
+            .locks()
+            .contains(&"third_party/jvm/maven_install.json"));
+        assert!(BumpSet::NuGet
+            .locks()
+            .contains(&"third_party/dotnet/paket.lock"));
     }
 }
