@@ -58,27 +58,109 @@ fn read_workspace_text(workspace: &Path, rel: &str) -> Result<String, String> {
 }
 
 fn advisory_path(set: dx_update::sets::SetId) -> String {
-    format!(".dx/advisory/{}.json", set.name())
+    dx_audit::advisory::snapshot_rel(set.name())
+}
+
+fn advisory_identity_path(set: dx_update::sets::SetId) -> String {
+    dx_audit::advisory::identity_rel(set.name())
 }
 
 fn load_advisories(
     workspace: &Path,
     set: dx_update::sets::SetId,
+    today: &str,
 ) -> Result<Vec<dx_audit::vuln::Advisory>, String> {
+    // Issue #628: never empty clean. A missing, empty, invalid, or stale
+    // snapshot fails with `advisory_refresh_failed`, never a clean result
+    // and never a stale fallback. Snapshots refresh automatically via
+    // supported upstream database-download tooling (per-set OSV GCS zips
+    // fetched by HTTPS GET with no inventory in the request); the derived
+    // bytes plus identity are the audited inputs. Live CLI performs no
+    // network fetch and no lockfile upload.
+    let code = dx_audit::advisory::CODE_ADVISORY_REFRESH_FAILED;
+    let source = dx_audit::advisory::advisory_source(set.name()).ok_or_else(|| {
+        format!(
+            "{code}: could not obtain current advisory data for {}: unsupported set",
+            set.name()
+        )
+    })?;
     let rel = advisory_path(set);
     let full = workspace.join(&rel);
     if !full.is_file() {
-        return Ok(Vec::new());
+        return Err(format!(
+            "{code}: could not obtain current advisory data for {}: missing {rel} (refresh via {source})",
+            set.name()
+        ));
     }
-    match read_workspace_text(workspace, &rel) {
-        Err(detail) => Err(detail),
-        Ok(text) => {
-            if text.trim().is_empty() {
-                return Ok(Vec::new());
-            }
-            dx_audit::vuln::parse_snapshot(&text)
-        }
+    let bytes = std::fs::read(&full).map_err(|error| {
+        format!(
+            "{code}: could not obtain current advisory data for {}: could not read {rel}: {error}",
+            set.name()
+        )
+    })?;
+    let text = String::from_utf8(bytes.clone()).map_err(|_| {
+        format!(
+            "{code}: could not obtain current advisory data for {}: {rel} is not valid UTF-8",
+            set.name()
+        )
+    })?;
+    if text.trim().is_empty() {
+        return Err(format!(
+            "{code}: could not obtain current advisory data for {}: empty {rel}",
+            set.name()
+        ));
     }
+    let meta_rel = advisory_identity_path(set);
+    if !workspace.join(&meta_rel).is_file() {
+        return Err(format!(
+            "{code}: could not obtain current advisory data for {}: missing {meta_rel}",
+            set.name()
+        ));
+    }
+    let meta_text = read_workspace_text(workspace, &meta_rel).map_err(|detail| {
+        format!(
+            "{code}: could not obtain current advisory data for {}: {detail}",
+            set.name()
+        )
+    })?;
+    let snapshot = dx_audit::advisory::parse_identity(&meta_text).map_err(|detail| {
+        format!(
+            "{code}: could not obtain current advisory data for {}: {detail}",
+            set.name()
+        )
+    })?;
+    dx_audit::advisory::validate_snapshot(&snapshot).map_err(|error| {
+        format!(
+            "{code}: could not obtain current advisory data for {}: invalid advisory identity: {error}",
+            set.name()
+        )
+    })?;
+    if snapshot.set != set.name() {
+        return Err(format!(
+            "{code}: could not obtain current advisory data for {}: identity set {:?} does not match",
+            set.name(),
+            snapshot.set
+        ));
+    }
+    if dx_audit::advisory::freshness(&snapshot, today) != dx_audit::advisory::Freshness::Fresh {
+        return Err(format!(
+            "{code}: could not obtain current advisory data for {}: stale snapshot {} (want {today})",
+            set.name(),
+            snapshot.retrieved_at
+        ));
+    }
+    if !dx_audit::advisory::identity_matches_bytes(&snapshot, &bytes) {
+        return Err(format!(
+            "{code}: could not obtain current advisory data for {}: identity sha256 does not match {rel}",
+            set.name()
+        ));
+    }
+    dx_audit::vuln::parse_snapshot(&text).map_err(|detail| {
+        format!(
+            "{code}: could not obtain current advisory data for {}: {detail}",
+            set.name()
+        )
+    })
 }
 
 fn lock_texts_for_set(
@@ -421,7 +503,7 @@ fn run_security(inputs: SecurityInputs<'_>) -> SecurityResult {
             }
             Ok(packages) => packages,
         };
-        let advisories = match load_advisories(workspace, *set) {
+        let advisories = match load_advisories(workspace, *set, today) {
             Err(detail) => {
                 if incomplete.is_none() {
                     incomplete = Some(format!("failed to assess {}: {detail}", set.name()));
@@ -1229,6 +1311,34 @@ mod tests {
         );
     }
 
+    /// Fresh identified advisory snapshot for one set (issue #628): the
+    /// derived bytes plus identity (`url`, `sha256`, `retrieved_at`) are
+    /// the audited inputs. Snapshots refresh via supported upstream
+    /// database-download tooling (per-set OSV GCS zips, no inventory
+    /// upload); live CLI performs no network fetch.
+    fn write_advisory(harness: &Harness, set: &str, json: &str) {
+        let today = super::today_utc();
+        let url = dx_audit::advisory::advisory_source(set)
+            .expect("supported set needs a source")
+            .to_owned();
+        let sha = dx_digest::sha256_hex(json.as_bytes());
+        harness.write_source(&format!(".dx/advisory/{set}.json"), json);
+        let meta = serde_json::json!({
+            "set": set,
+            "url": url,
+            "sha256": sha,
+            "retrieved_at": today,
+            "path": format!(".dx/advisory/{set}.json"),
+        });
+        harness.write_source(&format!(".dx/advisory/{set}.meta.json"), &meta.to_string());
+    }
+
+    fn write_all_empty_advisories(harness: &Harness) {
+        for set in ["cargo", "npm", "maven", "nuget", "go"] {
+            write_advisory(harness, set, "[]");
+        }
+    }
+
     #[test]
     fn audit_dry_run_plans_families_without_launching() {
         let harness = Harness::new("audit-dryrun");
@@ -1270,6 +1380,7 @@ mod tests {
                 "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
             );
             write_go_mod(harness);
+            write_all_empty_advisories(harness);
         });
         assert_eq!(code, 0, "{out}{err}");
         assert!(out.contains("Running audit security for //..."), "{out}");
@@ -1296,6 +1407,7 @@ mod tests {
                 "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
             );
             write_go_mod(harness);
+            write_all_empty_advisories(harness);
         });
         assert_eq!(code, 1, "{out}{err}");
         assert!(err.contains("audit_failed"), "{err}");
@@ -1319,6 +1431,7 @@ mod tests {
                 "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
             );
             write_go_mod(harness);
+            write_all_empty_advisories(harness);
         });
         assert_eq!(code, 1, "{err}");
         assert!(err.contains("audit_failed"), "{err}");
@@ -1346,6 +1459,7 @@ mod tests {
                 "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
             );
             write_go_mod(harness);
+            write_all_empty_advisories(harness);
         });
         assert_eq!(code, 1, "{err}");
         assert!(err.contains("audit_failed"), "{err}");
@@ -1373,6 +1487,7 @@ mod tests {
                 "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
             );
             write_go_mod(harness);
+            write_all_empty_advisories(harness);
         });
         assert_eq!(code, 1, "{err}");
         assert!(err.contains("audit_failed"), "{err}");
@@ -1388,8 +1503,9 @@ mod tests {
             &runner,
             &|harness| {
                 write_go_mod(harness);
-                harness.write_source(
-                    ".dx/advisory/go.json",
+                write_advisory(
+                    harness,
+                    "go",
                     r#"[{"id":"GHSA-go-test-0001","package":"github.com/google/go-cmp","versions":">=v0.5.0, <v0.7.0","severity":"high","fixed":["v0.7.0"],"set":"go"}]"#,
                 );
             },
@@ -1397,6 +1513,106 @@ mod tests {
         assert_eq!(code, 1, "{err}");
         assert!(err.contains("audit_failed"), "{err}");
         assert!(err.contains("1 vulnerability findings"), "{err}");
+    }
+
+    #[test]
+    fn audit_live_missing_advisory_fails_never_empty_clean() {
+        // Issue #628: a missing snapshot means current data could not be
+        // obtained, never clean and never a lockfile upload.
+        let runner = AuditRunner::clean();
+        let (code, out, err) = run_with(
+            &["audit", "security", "//rust/tests/fixtures/hello:hello"],
+            &runner,
+            &|harness| {
+                harness.write_source(
+                    "rust/tests/fixtures/hello/Cargo.lock",
+                    "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+                );
+            },
+        );
+        assert_eq!(code, 1, "{out}{err}");
+        assert!(err.contains("audit_failed"), "{err}");
+        assert!(
+            err.contains(dx_audit::advisory::CODE_ADVISORY_REFRESH_FAILED),
+            "{err}"
+        );
+        assert!(!out.contains("audit security: clean"), "{out}");
+    }
+
+    #[test]
+    fn audit_live_stale_advisory_fails_without_stale_fallback() {
+        // A `retrieved_at` older than today is stale and fails without
+        // analyzing the stale bytes.
+        let runner = AuditRunner::clean();
+        let (code, out, err) = run_with(
+            &["audit", "security", "//rust/tests/fixtures/hello:hello"],
+            &runner,
+            &|harness| {
+                harness.write_source(
+                    "rust/tests/fixtures/hello/Cargo.lock",
+                    "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+                );
+                let json = "[]";
+                let url = dx_audit::advisory::advisory_source("cargo")
+                    .expect("source")
+                    .to_owned();
+                let sha = dx_digest::sha256_hex(json.as_bytes());
+                harness.write_source(".dx/advisory/cargo.json", json);
+                let meta = serde_json::json!({
+                    "set": "cargo",
+                    "url": url,
+                    "sha256": sha,
+                    "retrieved_at": "2000-01-01",
+                    "path": ".dx/advisory/cargo.json",
+                });
+                harness.write_source(".dx/advisory/cargo.meta.json", &meta.to_string());
+            },
+        );
+        assert_eq!(code, 1, "{out}{err}");
+        assert!(err.contains("audit_failed"), "{err}");
+        assert!(
+            err.contains(dx_audit::advisory::CODE_ADVISORY_REFRESH_FAILED),
+            "{err}"
+        );
+        assert!(err.contains("stale"), "{err}");
+        assert!(!out.contains("audit security: clean"), "{out}");
+    }
+
+    #[test]
+    fn audit_live_tampered_advisory_fails_on_sha_mismatch() {
+        // Identity `sha256` must match the exact snapshot bytes; a
+        // mismatch fails closed, never analyzed.
+        let runner = AuditRunner::clean();
+        let (code, out, err) = run_with(
+            &["audit", "security", "//rust/tests/fixtures/hello:hello"],
+            &runner,
+            &|harness| {
+                harness.write_source(
+                    "rust/tests/fixtures/hello/Cargo.lock",
+                    "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+                );
+                harness.write_source(".dx/advisory/cargo.json", "[]");
+                let today = super::today_utc();
+                let url = dx_audit::advisory::advisory_source("cargo")
+                    .expect("source")
+                    .to_owned();
+                let meta = serde_json::json!({
+                    "set": "cargo",
+                    "url": url,
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "retrieved_at": today,
+                    "path": ".dx/advisory/cargo.json",
+                });
+                harness.write_source(".dx/advisory/cargo.meta.json", &meta.to_string());
+            },
+        );
+        assert_eq!(code, 1, "{out}{err}");
+        assert!(err.contains("audit_failed"), "{err}");
+        assert!(
+            err.contains(dx_audit::advisory::CODE_ADVISORY_REFRESH_FAILED),
+            "{err}"
+        );
+        assert!(!out.contains("audit security: clean"), "{out}");
     }
 
     #[test]
@@ -1485,6 +1701,7 @@ mod tests {
                     "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
                 );
                 write_go_mod(harness);
+                write_all_empty_advisories(harness);
             },
         );
         assert_eq!(code, 0, "{out}{err}");
@@ -1522,6 +1739,7 @@ mod tests {
                 "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
             );
             write_go_mod(harness);
+            write_all_empty_advisories(harness);
             harness.write_source(
                 "cargo-bazel-lock.json",
                 r#"{"packages": {"serde 1.0.100": {"license": "MIT"}}}"#,
