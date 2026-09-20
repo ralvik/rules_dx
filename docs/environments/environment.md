@@ -161,7 +161,15 @@ repositories use the same validated constructors and `EnvironmentInfo`
 collection provider; there is no private first-party contribution path. Pinned by
 `env/defs_tests.bzl` and the `//cli/env:bootstrap_test` install test.
 
-Open: third-party language-integration plugins are deferred past v1.
+Open: third-party language-integration plugins are deferred past v1 (issue #587, design owner:
+environment maintainers `//env` plus `//cli/env`). There is no v1 persistent-environment plugin
+model and no `EnvironmentInfo` extension point: `EnvironmentInfo` stays PATH-tool-only and
+is not a persistent-environment plugin API (wont-fix in v1 to repurpose it), and the private
+first-party contribution path stays rejected. Any post-v1 plugin proposal must preserve
+provider-derived symlink-only plans, managed identity/commit/reuse selection, the PATH-tools-only
+boundary, no private path, and fixture-pinned qualification with no `Supported` claim until
+platform plus consumer plus release evidence lands. Pinned by fixtures in
+`env/tests/fixtures/env_plugins_cgo/` via `bazel run //tools/ci:env_plugins_cgo_qualification`.
 
 `EnvironmentInfo` carries zero or more PATH-tool records and composes transitively.
 Each record contains:
@@ -225,7 +233,14 @@ acquisition of their declared dependencies. Document that latency and work, prop
 than reporting a successful incomplete package graph, and qualify cancellation/concurrency and target
 isolation. Exact mappings and required-platform behavior are implemented in the Go Gazelle
 extension and pinned by its fixtures; cgo completion is out of scope, and this
-exception does not admit the complete Go foundation.
+exception does not admit the complete Go foundation. The supported boundary is pure-Go packages
+(including declared build constraints and platform source selection) through the pinned upstream
+driver (rules_go 0.63.0, [Go editor driver](https://github.com/bazel-contrib/rules_go/blob/v0.63.0/docs/editors.md));
+cgo completion and cgo diagnostics are the explicit exception: upstream does not guarantee cgo
+completion, so cgo fixtures record gaps rather than claiming generic IDE parity, with failure
+propagation, separate IDE output base, exact-target isolation, and no environment/codegen selection
+or tracked-file mutation. Pinned by fixtures in `env/tests/fixtures/env_plugins_cgo/` via
+`bazel run //tools/ci:env_plugins_cgo_qualification` (issue #587).
 
 `bazel clean`, output-base changes, or removed outputs can invalidate links. An automatic editor
 request can run only while its managed executable remains usable; a dangling symlink cannot repair
@@ -347,7 +362,9 @@ Environment tests must cover:
   codegen selection mutation.
 - Go upstream package-driver Bazel startup on editor requests, separate IDE output-base/configuration
   isolation, exact-target constraints, failure propagation, and no environment/codegen selection or
-  tracked-file mutation; record cgo and platform gaps rather than claiming generic IDE parity.
+  tracked-file mutation; record cgo and platform gaps rather than claiming generic IDE parity
+  (pure-Go boundary plus explicit cgo exception pinned by `env/tests/fixtures/env_plugins_cgo/`
+  via `bazel run //tools/ci:env_plugins_cgo_qualification`, issue #587).
 - Configured tool inclusion, inactive/private tool exclusion, transitive provider
   composition, aliases, runfiles, and collision diagnostics.
 - First-party and consumer-repository tool contributions with identical behavior.
@@ -385,3 +402,10 @@ bootstrap/fidelity/spaces/stale/IDE/atomic-commit/BEP/projection/roots/cold-warm
 WP1-WP5 shard plus root plus clean plus plan evidence and `env_codegen.expected` plus
 `roots_bep.txt`; platform plus consumer plus release evidence stays owned gap; no Supported
 claim; backends stay provisional).
+
+Plugin-model design plus Go cgo exception boundary with fixture evidence qualified seed-only
+under issue #587 (`env/tests/fixtures/env_plugins_cgo/pins.bzl` via
+`bazel run //tools/ci:env_plugins_cgo_qualification`; deferred third-party plugin model with
+design owner plus acceptance criteria and no private path, plus pure-Go `GOPACKAGESDRIVER`
+boundary with explicit cgo out-of-scope exception and `env_plugins_cgo.expected`; platform plus
+consumer plus release evidence stays owned gap; no Supported claim).

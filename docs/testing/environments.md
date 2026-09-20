@@ -41,7 +41,9 @@ extra `dx setup` refresh while the managed launcher remains usable.
   requests may acquire only their declared graph/tool closure and never bypass license acceptance.
 - Exercise pure Go, generated-source, build-constraint, and cgo fixtures on every claimed platform.
   Record unsupported cgo completion and diagnostic behavior as gaps rather than treating pure-Go
-  success as full IDE qualification.
+  success as full IDE qualification (explicit cgo exception boundary pinned by
+  `env/tests/fixtures/env_plugins_cgo/` via `bazel run //tools/ci:env_plugins_cgo_qualification`,
+  issue #587; upstream rules_go 0.63.0 does not guarantee cgo completion).
 - Verify missing launchers/dangling projections retain documented explicit recovery, while normal
   metadata refresh does not require a manual setup step. For other explicit-only integrations,
   document the upstream limitation or additional complexity justifying that choice under the
