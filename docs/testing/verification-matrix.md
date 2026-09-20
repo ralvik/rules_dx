@@ -258,6 +258,8 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   plus fixture evidence, issue #503),
   `:cross_routes_qualification` (cross routes pins
   plus fixture evidence, issue #504),
+  `:remediation_bounds_qualification` (bounded remediation pins
+  plus fixture evidence, issue #505),
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
   best-effort), `:windows_qualification`, `:ci_matrix_qualification`
   (host matrix, issue #415), and `:closeout_battery_qualification`
@@ -273,7 +275,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
-<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24, `coverage_qualification` 33/33.
+<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `remediation_bounds_qualification` 16/16, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24, `coverage_qualification` 33/33.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
 
@@ -732,6 +734,28 @@ Remaining reds stay owned gaps, not green claims:
    corpus qualified seed-only under #499; platform plus consumer plus release
   evidence stays owned gap; no Supported claim
   (`cross_routes_qualification` 17/17)).
+- Bounded remediation with fixture evidence qualified seed-only under #505
+  (`bazel run //tools/ci:remediation_bounds_qualification`;
+  every native defect reproduced with estimate plus actual owner plus patch
+  plus upstream-issue plus upgrade tracking plus complete-workflow evidence
+  with focused tested pinned patches plus bounded integration plus small
+  missing pieces with clearly bounded scope plus upstreaming preferred plus
+  established-alternative comparison with explicit contract plus API review
+  plus PIE plus ELF-dependency plus glibc-symbol via existing upstream
+  constraints plus cross-product expansion only after the cohort passes plus
+  stop-slice on replacement acquisition engine plus compiler backend plus
+  Cargo graph plus coverage engine with no deferred Rust Windows support plus
+  no premature C/C++ admission plus no weakened hermeticity, pinned in
+  `cc/tests/fixtures/remediation_bounds/pins.bzl` with `bounds.expected`
+  plus `defects.txt` plus `owners.txt`; Do not implement missing infra
+  merely to fill cross-product; unbounded fork plus whole rewrite plus
+  replacement engine plus owned backend plus cargo-zigbuild plus installed
+  fallback plus cross-product infra fill plus weakened natives rejected;
+  backends stay provisional; floors qualified seed-only under #500, coverage
+  qualified seed-only under #501, linux corpus qualified seed-only under
+  #499, routes qualified seed-only under #504; platform plus consumer plus
+  release evidence stays owned gap; no Supported claim
+  (`remediation_bounds_qualification` 16/16)).
 - Per-cell non-seed coverage plus Codecov opt-in plus remote evidence
   with fixture evidence qualified under #507
   (`bazel run //tools/ci:coverage_qualification`;
