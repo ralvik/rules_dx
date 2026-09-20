@@ -1,0 +1,22 @@
+Devcontainer boot manual plus wont-fix (issue #648).
+Seed-host boot only on linux/amd64: devcontainer CLI build plus
+postCreateCommand execution asserting the managed environment
+materializes (bazel run //dx:env then dx setup, no full build on
+create); devcontainer-check stays parity plus definition shape.
+Manual verify locally: docker build -f
+.devcontainer/Dockerfile.prebuilt -t dx-devcontainer:local . plus
+devcontainer up --workspace-folder . on every change to
+.devcontainer/Dockerfile.prebuilt or .devcontainer/devcontainer.json
+plus before any gated GHCR push, with evidence in the same reviewed PR;
+sole maintainer owns every row until delegation.
+Non-Linux runs wont-fix plus linux/arm64 boot wont-fix plus arm64
+prebuilt variant wont-fix: scaffold devcontainer.json arch-independent,
+amd64-only seed slice pins the amd64 Bazelisk launcher, natively
+qualified per #410 plus #411 plus #412 plus #413 plus #414 not container
+boot; no multi-platform container support claimed.
+Qualified locally or on demand with customer flows only: bazel run
+//tools/ci:devcontainer_boot_qualification (static pins builds nothing
+boots nothing) plus on-demand local docker build plus devcontainer up.
+Boot job in CI rejected non-customer; no extra CI job; keep CI
+customer-only.
+Qualified seed-only under issue #648; infra only; no Supported claim.
