@@ -16,7 +16,7 @@
 //! changes ship only in minor/major with a release note (see
 //! `dx_ci::preset_*`).
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeSet;
 use std::path::Path;
 
 use super::version::DX_VERSION;
@@ -131,14 +131,6 @@ pub enum PresetError {
     #[error("preset stale: {detail}")]
     Stale {
         /// Human detail plus unified diff.
-        detail: String,
-    },
-    /// Workspace file cannot be read.
-    #[error("cannot read {path}: {detail}")]
-    Unreadable {
-        /// Workspace-relative path.
-        path: String,
-        /// I/O detail.
         detail: String,
     },
     /// Fragment cannot be written.
@@ -265,25 +257,6 @@ pub fn update_preset(workspace: &Path) -> Result<(), PresetError> {
         }
     })?;
     Ok(())
-}
-
-/// Reads a file for error reporting (maps I/O errors to `Unreadable`).
-#[allow(dead_code)]
-fn read_file(workspace: &Path, rel: &str) -> Result<String, PresetError> {
-    std::fs::read_to_string(workspace.join(rel)).map_err(|e| PresetError::Unreadable {
-        path: rel.to_owned(),
-        detail: e.to_string(),
-    })
-}
-
-/// Renders the expected fragment for tests (exposes inventory sizes).
-#[allow(dead_code)]
-fn inventory_sizes() -> HashMap<&'static str, usize> {
-    let mut m = HashMap::new();
-    m.insert("upstream", UPSTREAM_FLAGS.len());
-    m.insert("coverage", COVERAGE_FLAGS.len());
-    m.insert("profiles", BUILD_PROFILES.len());
-    m
 }
 
 #[cfg(test)]
