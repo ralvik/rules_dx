@@ -153,7 +153,9 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   `WITH` expression. Retain internal inventory-only behavior except blocked policy.
 - Verify a license exception survives an upgrade inside its bounded range while the finding
   still applies and the exception is unexpired. Out-of-range versions do not inherit approval;
-  expired exceptions and exceptions with no applicable finding fail validation. Per-root
+  expired exceptions and exceptions with no applicable finding fail validation. Narrowing uses
+  the owning set's upstream version semantics like vulnerability exceptions, pinned by
+  fixtures in `dx_audit::license_policy`. Per-root
   attribution rides SPDX `DESCRIBES` relations from each audited root.
 - Verify target-scoped dependency audit checks complete owning dependency locks, including a
   vulnerable locked package unused by the selected target, without including unrelated dependency

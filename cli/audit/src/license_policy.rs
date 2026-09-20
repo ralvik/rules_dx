@@ -15,13 +15,14 @@
 //! (version-scoped with upstream version semantics, reasoned, expiring
 //! with ISO-8601 UTC dates evaluated at audit time, obsolete only when
 //! no applicable finding remains, always visible): expiry shares
-//! [`crate::exception::check_expiry`], and obsolescence is identity
-//! match over package plus license. An upgrade within an exception's
-//! bounded version range retains acceptance while the exception still
-//! matches the finding and remains otherwise valid; version-range
-//! narrowing itself calls [`crate::exception::version_in_scope`] in the
+//! [`crate::exception::check_expiry`], obsolescence is identity
+//! match over package plus set plus license, and version-range
+//! narrowing calls [`crate::vuln::version_affected`] in the
 //! resolver-owned slices, exactly like the vulnerability deferral
-//! in [`crate::exception`].
+//! in [`crate::exception`]. An upgrade within an exception's
+//! bounded version range retains acceptance while the exception still
+//! matches the finding and remains otherwise valid; out-of-range
+//! versions do not inherit acceptance.
 //!
 //! Per-ecosystem license identities plus per-package notice texts ride
 //! the committed `[[inventory]]` table: each entry names its owning set,
@@ -207,10 +208,11 @@ pub struct LicenseException {
     pub set: String,
     /// Approved SPDX identity or complete `WITH` expression verbatim.
     pub license: String,
-    /// Accepted versions or bounded range, upstream version semantics.
-    /// Cargo-flavor scopes evaluate with
-    /// [`crate::exception::version_in_scope`]; non-semver ecosystem
-    /// scopes stay opaque for the resolver-owned ecosystem integration.
+    /// Accepted versions or bounded range, upstream version semantics
+    /// per owning set via [`crate::vuln::version_affected`] (Cargo
+    /// semver, npm ranges, Go `v`-prefix normalization, Maven and NuGet
+    /// intervals, exact-match elsewhere); malformed scopes fail closed
+    /// to no-match, never acceptance.
     pub versions: String,
     /// Explanatory reason. Empty reasons fail validation.
     pub reason: String,
@@ -218,24 +220,27 @@ pub struct LicenseException {
     pub expires: String,
 }
 
-/// One assessed license finding an exception may apply to. The version
-/// is carried for the future upstream-semantics range matcher;
-/// applicability today is identity match over package plus license, and
-/// an upgrade alone never invalidates an otherwise valid exception.
+/// One assessed license finding an exception may apply to. Identity
+/// is package plus set plus license; the version narrows coverage via
+/// [`license_exception_covers`] using the owning set's upstream
+/// semantics, exactly like vulnerability exception narrowing.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LicenseFinding {
     /// Affected package name.
     pub package: String,
+    /// Owning dependency set.
+    pub set: String,
     /// Found SPDX identity or `WITH` expression text.
     pub license: String,
-    /// Found package version, reserved for range evaluation.
+    /// Found package version, evaluated against the exception scope.
     pub version: String,
 }
 
 /// Validate one license exception against the injected audit date:
 /// field presence plus the shared expiry lifecycle. Out-of-range
-/// versions do not inherit acceptance; that narrowing arrives with the
-/// upstream-semantics matcher.
+/// versions do not inherit acceptance; that narrowing is
+/// [`license_exception_covers`] with the owning set's upstream
+/// semantics.
 pub fn validate_license_exception(
     exception: &LicenseException,
     today: &str,
@@ -255,12 +260,34 @@ pub fn validate_license_exception(
     Ok(())
 }
 
-/// True when no finding shares the exception's package and license
-/// identity. Never infers obsolescence from failed/incomplete analysis.
+/// True when one license exception covers one finding: package plus
+/// set plus license identity match, and the finding version falls
+/// inside the exception's accepted scope under the owning set's
+/// upstream semantics via [`crate::vuln::version_affected`]. Malformed
+/// scopes or versions fail closed to `false`: an exception never
+/// covers a version the matcher cannot attribute. Out-of-range
+/// findings do not inherit acceptance even when identity matches.
+pub fn license_exception_covers(exception: &LicenseException, finding: &LicenseFinding) -> bool {
+    if exception.package != finding.package
+        || exception.set != finding.set
+        || exception.license != finding.license
+    {
+        return false;
+    }
+    crate::vuln::version_affected(&exception.set, &exception.versions, &finding.version)
+}
+
+/// True when no finding shares the exception's package, set, and
+/// license identity. Version-range narrowing calls
+/// [`license_exception_covers`] in the resolver-owned slices; until
+/// then identity match is the conservative applicability gate (never
+/// infers obsolescence from failed analysis).
 pub fn is_obsolete(exception: &LicenseException, findings: &[LicenseFinding]) -> bool {
-    !findings
-        .iter()
-        .any(|finding| finding.package == exception.package && finding.license == exception.license)
+    !findings.iter().any(|finding| {
+        finding.package == exception.package
+            && finding.set == exception.set
+            && finding.license == exception.license
+    })
 }
 
 /// Check an exception for obsolescence after validation: an exception
@@ -496,7 +523,7 @@ mod tests {
     fn exception() -> LicenseException {
         LicenseException {
             package: "some-copyleft-lib".to_owned(),
-            set: "cargo-lock".to_owned(),
+            set: "cargo".to_owned(),
             license: "GPL-3.0-only".to_owned(),
             versions: ">=1.2.0, <2.0.0".to_owned(),
             reason: "Legal approved for internal fork; re-review on major bump.".to_owned(),
@@ -507,6 +534,7 @@ mod tests {
     fn finding() -> LicenseFinding {
         LicenseFinding {
             package: "some-copyleft-lib".to_owned(),
+            set: "cargo".to_owned(),
             license: "GPL-3.0-only".to_owned(),
             version: "1.2.0".to_owned(),
         }
@@ -661,19 +689,216 @@ mod tests {
         assert!(is_obsolete(&exception(), &[]));
         assert!(check_applies(&exception(), &[]).is_err());
         assert!(!is_obsolete(&exception(), &[finding()]));
+        // Wrong owning set shares no finding: obsolete, never silently
+        // applied across sets.
+        let other_set = LicenseFinding {
+            set: "npm".to_owned(),
+            ..finding()
+        };
+        assert!(is_obsolete(&exception(), &[other_set]));
+        // Wrong license shares no finding either.
+        let other_license = LicenseFinding {
+            license: "MIT".to_owned(),
+            ..finding()
+        };
+        assert!(is_obsolete(&exception(), &[other_license]));
     }
 
     #[test]
     fn upgrade_within_range_retains_acceptance_at_identity_match() {
-        // Version-range narrowing calls version_in_scope in the
+        // Version-range narrowing calls license_exception_covers in the
         // resolver-owned slices; an upgrade alone never invalidates: the
-        // finding still carries the same package and license identity.
+        // finding still carries the same package, set, and license
+        // identity, and an in-range upgrade stays covered.
         let upgraded = LicenseFinding {
             version: "1.9.0".to_owned(),
             ..finding()
         };
         assert!(!is_obsolete(&exception(), &[upgraded.clone()]));
-        check_applies(&exception(), &[upgraded]).expect("upgrade retains acceptance");
+        check_applies(&exception(), &[upgraded.clone()]).expect("upgrade retains acceptance");
+        assert!(license_exception_covers(&exception(), &upgraded));
+    }
+
+    #[test]
+    fn out_of_range_versions_do_not_inherit_acceptance() {
+        // Identity match keeps the exception applicable (not obsolete),
+        // but coverage narrows by version: an out-of-range finding is
+        // not covered, exactly like vulnerability exceptions.
+        let out_of_range = LicenseFinding {
+            version: "2.0.0".to_owned(),
+            ..finding()
+        };
+        assert!(!is_obsolete(&exception(), &[out_of_range.clone()]));
+        check_applies(&exception(), &[out_of_range.clone()]).expect("identity still applies");
+        assert!(!license_exception_covers(&exception(), &out_of_range));
+        // Malformed scopes and versions fail closed to uncovered.
+        let bad_scope = LicenseException {
+            versions: "not a range".to_owned(),
+            ..exception()
+        };
+        assert!(!license_exception_covers(&bad_scope, &finding()));
+        let bad_version = LicenseFinding {
+            version: "banana".to_owned(),
+            ..finding()
+        };
+        assert!(!license_exception_covers(&exception(), &bad_version));
+    }
+
+    #[test]
+    fn license_exceptions_narrow_per_set_like_vuln() {
+        // Cargo: ranges, carets, tildes, star; bare versions are caret
+        // shorthand, `||` and hyphen stay invalid and fail closed.
+        let cargo_exception = |versions: &str| LicenseException {
+            package: "serde".to_owned(),
+            set: "cargo".to_owned(),
+            license: "GPL-3.0-only".to_owned(),
+            versions: versions.to_owned(),
+            reason: "Legal approved.".to_owned(),
+            expires: "2027-03-01".to_owned(),
+        };
+        let cargo_finding = |version: &str| LicenseFinding {
+            package: "serde".to_owned(),
+            set: "cargo".to_owned(),
+            license: "GPL-3.0-only".to_owned(),
+            version: version.to_owned(),
+        };
+        assert!(license_exception_covers(
+            &cargo_exception(">=1.2.0, <2.0.0"),
+            &cargo_finding("1.9.0")
+        ));
+        assert!(!license_exception_covers(
+            &cargo_exception(">=1.2.0, <2.0.0"),
+            &cargo_finding("2.0.0")
+        ));
+        assert!(license_exception_covers(
+            &cargo_exception("*"),
+            &cargo_finding("9.9.9")
+        ));
+        assert!(!license_exception_covers(
+            &cargo_exception("1.0.0 || 2.0.0"),
+            &cargo_finding("1.0.0")
+        ));
+        // npm: `||` unions, hyphen ranges, carets, tildes, bare exact.
+        let npm_exception = |versions: &str| LicenseException {
+            package: "react".to_owned(),
+            set: "npm".to_owned(),
+            license: "GPL-3.0-only".to_owned(),
+            versions: versions.to_owned(),
+            reason: "Legal approved.".to_owned(),
+            expires: "2027-03-01".to_owned(),
+        };
+        let npm_finding = |version: &str| LicenseFinding {
+            package: "react".to_owned(),
+            set: "npm".to_owned(),
+            license: "GPL-3.0-only".to_owned(),
+            version: version.to_owned(),
+        };
+        assert!(license_exception_covers(
+            &npm_exception("1.2.7 || >=1.2.9 <2.0.0"),
+            &npm_finding("1.2.9")
+        ));
+        assert!(!license_exception_covers(
+            &npm_exception("1.2.7 || >=1.2.9 <2.0.0"),
+            &npm_finding("1.2.8")
+        ));
+        assert!(license_exception_covers(
+            &npm_exception("1.2.3 - 2.3.4"),
+            &npm_finding("2.0.0")
+        ));
+        assert!(!license_exception_covers(
+            &npm_exception("1.2.3 - 2.3.4"),
+            &npm_finding("2.3.5")
+        ));
+        // Go: `v`-prefix normalization on scope and version.
+        let go_exception = LicenseException {
+            package: "example.com/mod".to_owned(),
+            set: "go".to_owned(),
+            license: "GPL-3.0-only".to_owned(),
+            versions: ">=v1.0.0, <v2.0.0".to_owned(),
+            reason: "Legal approved.".to_owned(),
+            expires: "2027-03-01".to_owned(),
+        };
+        let go_covered = LicenseFinding {
+            package: "example.com/mod".to_owned(),
+            set: "go".to_owned(),
+            license: "GPL-3.0-only".to_owned(),
+            version: "v1.5.0".to_owned(),
+        };
+        let go_missed = LicenseFinding {
+            version: "v2.0.0".to_owned(),
+            ..go_covered.clone()
+        };
+        assert!(license_exception_covers(&go_exception, &go_covered));
+        assert!(!license_exception_covers(&go_exception, &go_missed));
+        // Maven: bare versions use Maven equality, intervals use Maven
+        // ordering with inclusive/exclusive bounds.
+        let maven_exception = |versions: &str| LicenseException {
+            package: "junit:junit".to_owned(),
+            set: "maven".to_owned(),
+            license: "GPL-3.0-only".to_owned(),
+            versions: versions.to_owned(),
+            reason: "Legal approved.".to_owned(),
+            expires: "2027-03-01".to_owned(),
+        };
+        let maven_finding = |version: &str| LicenseFinding {
+            package: "junit:junit".to_owned(),
+            set: "maven".to_owned(),
+            license: "GPL-3.0-only".to_owned(),
+            version: version.to_owned(),
+        };
+        assert!(license_exception_covers(
+            &maven_exception("[4.0,5.0)"),
+            &maven_finding("4.13.2")
+        ));
+        assert!(!license_exception_covers(
+            &maven_exception("[5.0,6.0)"),
+            &maven_finding("4.13.2")
+        ));
+        assert!(license_exception_covers(
+            &maven_exception("1.0"),
+            &maven_finding("1.0.0")
+        ));
+        assert!(!license_exception_covers(
+            &maven_exception(">=1.0.0"),
+            &maven_finding("1.2.0")
+        ));
+        // NuGet: bare versions use NuGet equality, intervals use NuGet
+        // ordering; floating `*` stays invalid and fails closed.
+        let nuget_exception = |versions: &str| LicenseException {
+            package: "Newtonsoft.Json".to_owned(),
+            set: "nuget".to_owned(),
+            license: "GPL-3.0-only".to_owned(),
+            versions: versions.to_owned(),
+            reason: "Legal approved.".to_owned(),
+            expires: "2027-03-01".to_owned(),
+        };
+        let nuget_finding = |version: &str| LicenseFinding {
+            package: "Newtonsoft.Json".to_owned(),
+            set: "nuget".to_owned(),
+            license: "GPL-3.0-only".to_owned(),
+            version: version.to_owned(),
+        };
+        assert!(license_exception_covers(
+            &nuget_exception("[12.0,13.0.2)"),
+            &nuget_finding("13.0.1")
+        ));
+        assert!(!license_exception_covers(
+            &nuget_exception("[13.0.2,14.0)"),
+            &nuget_finding("13.0.1")
+        ));
+        assert!(license_exception_covers(
+            &nuget_exception("1.0"),
+            &nuget_finding("1.0.0")
+        ));
+        assert!(!license_exception_covers(
+            &nuget_exception("1.*"),
+            &nuget_finding("1.5.0")
+        ));
+        // Identity mismatch never covers, even in range.
+        assert!(!license_exception_covers(
+            &cargo_exception(">=1.0.0, <2.0.0"),
+            &npm_finding("1.5.0")
+        ));
     }
 
     fn doc_example() -> &'static str {
@@ -695,7 +920,7 @@ internal = ["//tools/internal-admin:binary"]
 
 [[exception]]
 package = "some-copyleft-lib"
-set = "cargo-lock"
+set = "cargo"
 license = "GPL-3.0-only"
 versions = ">=1.2.0, <2.0.0"
 reason = "Legal approved for internal fork."
@@ -739,7 +964,7 @@ expires = "2027-03-01"
             policy.exceptions,
             vec![LicenseException {
                 package: "some-copyleft-lib".to_owned(),
-                set: "cargo-lock".to_owned(),
+                set: "cargo".to_owned(),
                 license: "GPL-3.0-only".to_owned(),
                 versions: ">=1.2.0, <2.0.0".to_owned(),
                 reason: "Legal approved for internal fork.".to_owned(),

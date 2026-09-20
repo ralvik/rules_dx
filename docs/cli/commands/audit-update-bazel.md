@@ -135,7 +135,9 @@ implemented (issue #623, pinned in `dx_audit::vuln`), as is NuGet range narrowin
 (issue #624, pinned in `dx_audit::vuln`), as is Go `go.mod` wiring plus
 `v`-prefix range narrowing (issue #626, pinned in `dx_audit::locks` plus
 `dx_audit::vuln`), as are Cargo/npm semver edges
-(issue #625, pinned in `dx_audit::exception` plus `dx_audit::vuln`).
+(issue #625, pinned in `dx_audit::exception` plus `dx_audit::vuln`), as is
+license exception narrowing (issue #631, pinned in `dx_audit::license_policy`
+plus `dx_audit::vuln` plus `dx_cli::exec::audit`).
 
 Report known vulnerabilities whether or not a fixed version is available, and apply the same
 severity threshold and failure policy in both cases. Lack of a fix must not suppress a finding,
@@ -165,7 +167,11 @@ to no-match. Maven scopes accept bare versions
 and bracketed intervals (`[1.0,2.0)`, `(,1.0]`, `[1.5,)`, `[1.0]`), with inclusive `[`/`]`
 versus exclusive `(`/`)` bounds; floating `*`, unions, and `(1.0)` single-exclusive stay
 invalid and malformed scopes fail closed to no-match. Vulnerability exceptions use
-the same per-set narrowing.
+the same per-set narrowing. License exceptions narrow the same way
+(issue #631, pinned in `dx_audit::license_policy`): package plus owning
+set plus license identity with the finding version inside the exception
+scope under that set's upstream semantics; out-of-range versions do not
+inherit acceptance.
 
 Known applicable vulnerabilities with no severity rating fail audit by default. Report the
 upstream advisory severity as unknown text rather than inventing a rating or silently
@@ -291,7 +297,7 @@ internal = ["//tools/internal-admin:binary"]
 
 [[exception]]
 package = "some-copyleft-lib"
-set = "cargo-lock"
+set = "cargo"
 license = "GPL-3.0-only"
 versions = ">=1.2.0, <2.0.0"
 reason = "Legal approved for internal fork; re-review on major bump."
@@ -363,8 +369,9 @@ Validation (all fail the audit, none auto-repair):
 - Unknown label under `[distribution]` fails as `unknown_distribution_root`.
 - A license ID in more than one policy list fails.
 - An exception with no applicable finding fails as obsolete, like vuln
-  exceptions; missing, invalid, or expired dates fail; out-of-range versions
-  do not inherit acceptance.
+  exceptions (identity over package plus owning set plus license);
+  missing, invalid, or expired dates fail; out-of-range versions
+  do not inherit acceptance (per-set upstream narrowing, issue #631).
 - An inventory entry with an empty package, set, license, or versions fails;
   unknown inventory keys fail as invalid TOML. Out-of-range versions never
   inherit the entry (missing entries stay `UNKNOWN`, fail closed in
