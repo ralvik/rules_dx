@@ -11,9 +11,9 @@ It is not a policy: aspects require the aggregate `QualityPolicyInfo`
 provider, so selecting this default fails fast at analysis until a
 consumer binds its typed workspace policy. The typed per-family
 sections and thin canonical aggregate are frozen in
-`//quality:policy.bzl` (`quality_family`, `workspace_policy`, M03
-freeze for O17) and `//quality:sources.bzl` (`QualitySourcesInfo`,
-M03 freeze for O15) with validation; aspect binding to the workspace
+`//quality:policy.bzl` (`quality_family`, `workspace_policy`,
+freeze for) and `//quality:sources.bzl` (`QualitySourcesInfo`,
+Freeze for) with validation; aspect binding to the workspace
 flag stays deferred per `//quality:aspects.bzl`. Populating this
 default with empty families would silently disable every capability
 (worse than fail-fast), and duplicating the curated families would
@@ -28,9 +28,9 @@ load("//quality:fixtures.bzl", "real_source_target")
 package(default_visibility = ["//visibility:public"])
 
 # Canonical public generation workflow: repository-wide
-# default with scoped traversal from resolved scope (O48). The check
+# default with scoped traversal from resolved scope. The check
 # twin shares the language wiring with upstream `-mode diff` encoded in
-# canonical-target wiring (O13 dispatch): same rewrite and intended
+# canonical-target wiring (dispatch): same rewrite and intended
 # manifest, no workspace writes, nonzero exit on changes.
 gazelle(
     name = "generate",
@@ -57,9 +57,9 @@ alias(
 # (`//...` baseline versus query-produced pattern file). It contributes
 # no plan records itself; the real plan collector is the
 # `dx_codegen_plan_aspect` plus the `dx_codegen_plans` output group
-# (O33 freeze in `//generation:codegen.bzl`, mirrored in
+# (frozen in `//generation:codegen.bzl`, mirrored in
 # `//cli/codegen`), and the effective roots stay on the frozen `//...`
-# baseline per `//cli/roots` (O34). Adding `srcs` would build a central
+# baseline per `//cli/roots` (issue #506). Adding `srcs` would build a central
 # eager dependency, which `docs/environments/codegen.md` rejects. Guard:
 # `//tools/ci:dx_facade_qualification`.
 filegroup(

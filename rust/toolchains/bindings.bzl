@@ -1,4 +1,4 @@
-"""Authoritative Rust toolchain bindings for quality adapters (M04 WP1, M12 WP3).
+"""Authoritative Rust toolchain bindings for quality adapters (WP1, WP3).
 
 Contract: `docs/quality/tool-integrations.md`.
 """

@@ -1,7 +1,7 @@
-//! Exact tool invocations for the M04 initial adapters plus M15 Python.
+//! Exact tool invocations for the initial adapters plus Python.
 //!
 //! Every flag here was probed against the pinned binaries; probing notes
-//! live in the M04 completion evidence (M15 Python probes in the M15
+//! live in the completion evidence (Python probes in the
 //! evidence). Rules the builders encode:
 //!
 //! * Absolute binary and file paths only; no `PATH` lookup, ever.
@@ -60,7 +60,7 @@
 //!   so `--config-path` disables default resolution and no upward discovery
 //!   can observe ambient state. Biome reports paths relative to its working
 //!   directory, so backends re-anchor to the workspace-relative mirror paths
-//!   (exit codes per M17 probing: clean 0, findings 1). Biome lint is
+//!   (exit codes per probing: clean 0, findings 1). Biome lint is
 //!   check-only: safe `--write` does not fix the fixable rules (needs
 //!   `--unsafe`), so the runner never passes it and converges on format.
 //! * Biome format takes the whole stage file list as `format

@@ -1,12 +1,12 @@
 //! Result-side validation, digest, and codec helpers for the Quality
-//! Result Protocol (M03 WP1).
+//! Result Protocol (WP1).
 //!
 //! Contract: `docs/quality/quality-result-protocol.md`, schema
 //! `//quality:result.proto`. This crate enforces the checks that need no
 //! source bytes: schema version, enum presence, snapshot shape, diagnostic
 //! range presence, edit ordering, and convergence gating. Byte-length,
 //! UTF-8-boundary, digest-match, and end-to-end re-application checks run
-//! in the `dx` CLI, which owns the source bytes, in M04+.
+//! in the `dx` CLI, which owns the source bytes, in.
 
 use proto::{
     Capability, Convergence, Diagnostic, Edit, FileEdits, FileSnapshot, QualityResult, Severity,

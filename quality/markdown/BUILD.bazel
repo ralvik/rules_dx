@@ -1,4 +1,4 @@
-"""M04 WP3 repository-owned Markdown link/structure checker crate."""
+"""WP3 repository-owned Markdown link/structure checker crate."""
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("//quality:fixtures.bzl", "real_source_target")
@@ -59,7 +59,7 @@ rust_binary(
     ],
 )
 
-# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# Authoritative quality identities (pattern): rustfmt and Clippy
 # resolve from the pinned toolchain, never from ambient host tools.
 rustfmt_test(
     name = "quality_markdown_fmt_test",

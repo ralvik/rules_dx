@@ -1,4 +1,4 @@
-//! Delivered adoption/inspect execution (M30b WPs 2-4, 6-7, O61).
+//! Delivered adoption/inspect execution (WPs 2-4, 6-7).
 //!
 //! Contract: `docs/cli/commands/init.md`, `hooks.md`, `status.md`,
 //! `version.md`, `watch.md`, `inspect.md`, `completion.md`.

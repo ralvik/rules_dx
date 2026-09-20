@@ -69,9 +69,9 @@ fi
 
 # Parity deferrals own scala/csharp/fsharp with owner plus frozen route plus
 # the #417 live-successor record (closed #307 owns nothing here).
-if grep -q -F -e '"scala": ["O32"' "$parity" &&
-  grep -q -F -e '"csharp": ["O32"' "$parity" &&
-  grep -q -F -e '"fsharp": ["O32"' "$parity" &&
+if grep -q -F -e '"scala": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"csharp": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"fsharp": ["ADR 0019"' "$parity" &&
   grep -q -F -e 'managed JVM route: compatible JVM artifact (scalafmt); semantic-rule artifacts over shared JDK (Scalafix)' "$parity" &&
   grep -q -F -e 'exact upstream package plus shared .NET runtime (CSharpier)' "$parity" &&
   grep -q -F -e 'exact upstream package plus shared .NET runtime (Fantomas)' "$parity" &&

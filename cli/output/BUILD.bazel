@@ -1,4 +1,4 @@
-"""M06 WP2 public output modes for the `dx` CLI."""
+"""WP2 public output modes for the `dx` CLI."""
 
 load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_crate")
@@ -11,7 +11,7 @@ package(default_visibility = [
     "//quality:__subpackages__",
 ])
 
-# M02 leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# Leaf-crate pattern via `dx_rust_crate` (issue #239): emits
 # `dx_output` + `dx_output_test` + fmt/clippy tests +
 # `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
 dx_rust_crate(

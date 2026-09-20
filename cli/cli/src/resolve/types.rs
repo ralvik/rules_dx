@@ -32,7 +32,7 @@ pub trait QueryRunner {
 
 /// Production query runner: spawns the launcher with piped stdio and
 /// waits for completion.
-// LCOV_EXCL_START - reason: thin process-spawn seam; resolution logic is unit-covered through scripted runners and the spawner itself is verified by M08 dogfood evidence.
+// LCOV_EXCL_START - reason: thin process-spawn seam; resolution logic is unit-covered through scripted runners and the spawner itself is verified by dogfood evidence.
 pub struct ProcessQueryRunner;
 
 impl QueryRunner for ProcessQueryRunner {
@@ -67,7 +67,7 @@ pub struct ResolvedScope {
 /// Scope resolution failure. Every variant is a pre-execution failure
 /// (exit 2) except [`ResolveError::NoRunnable`] and
 /// [`ResolveError::AmbiguousRunnable`], which are operational `dx run`
-/// failures (exit 1) per O52: the scope resolved, but no single
+/// failures (exit 1) per: the scope resolved, but no single
 /// executable owner exists.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ResolveError {

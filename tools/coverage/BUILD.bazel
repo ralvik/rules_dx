@@ -1,6 +1,6 @@
-"""M00 coverage gate CLI: thin entry point over the promoted `dx_lcov` library (#74)."""
+"""Thin entry point over the promoted `dx_lcov` library (#74)."""
 
-# M13: source-only package (no Cargo manifest). The gate library now lives
+# Source-only package (no Cargo manifest). The gate library now lives
 # at `//cli/lcov:dx_lcov`; this package owns only the `coverage_bin` entry
 # point, hand-maintained and excluded from generation in the root BUILD.
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")

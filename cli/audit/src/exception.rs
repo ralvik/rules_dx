@@ -1,4 +1,4 @@
-//! Risk-acceptance exception lifecycle (M26 WP1 slice 2).
+//! Risk-acceptance exception lifecycle (WP1 slice 2).
 //!
 //! Pure validation over injected exception records and findings, per the
 //! audit contract: every exception identifies its advisory and affected
@@ -30,7 +30,7 @@ pub const EXCEPTION_SCHEMA_VERSION: u32 = 1;
 /// future TOML loader cannot reinterpret them.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RiskException {
-    /// Upstream advisory identity (alias matching is O11 qualification).
+    /// Upstream advisory identity (alias matching is qualification).
     pub advisory: String,
     /// Affected dependency name in its owning set.
     pub package: String,

@@ -32,8 +32,8 @@ without replacing the canonical policy target. External aspects select that poli
 explicit label setting rather than embedding a consumer-repository label.
 
 The exact aggregate provider constructor, fields, exports, and label-setting binding remain governed
-by open decision O17. This ADR accepts typed composition and one canonical
-workspace policy, not a provisional Starlark API shape. The M03 freeze
+by open decisions (see the issue tracker). This ADR accepts typed composition and one canonical
+workspace policy, not a provisional Starlark API shape. The freeze
 implements the schema and validation in `quality/policy.bzl`
 (`quality_family`, `workspace_policy`) and `quality/sources.bzl`
 (`QualitySourcesInfo`); the in-repo `//dx:config` default stays an empty
@@ -56,7 +56,7 @@ or ambient config search. Native config inputs and
 their closures must be declared source artifacts, not generated policy.
 
 Bazel execution flags (the vendored `.bazelrc` preset adopted in the
-M05 completion report)
+Completion report)
 are execution policy, not behavioral policy: they select how Bazel runs
 (resolution, verbosity, coverage transport), never how a quality tool judges
 sources. Upstream flag recommendations arrive as reviewed diffs to the
@@ -92,9 +92,9 @@ it does not select capabilities, tools, native configs, or action granularity. B
 supported adapters publish equivalent canonical source facts.
 
 The provider's exact constructor, load label, field representation, class registry, and validation
-surface remain governed by open decision O15. The durable contract and current
+surface remain governed by open decisions (see the issue tracker). The durable contract and current
 candidate details live in
-[Quality Sources and Applicability](../quality/quality-sources.md). The M03
+[Quality Sources and Applicability](../quality/quality-sources.md). The
 freeze implements the construction shape and known-ID validation in
 `quality/sources.bzl`, with ownership and admissibility validated by
 the consuming aspect; see issue #423.

@@ -1,5 +1,5 @@
 // Stdlib lists the Go standard-library import paths treated as standard
-// library by the Go Gazelle extension (M22, O30). Generation treats these
+// library by the Go Gazelle extension (ADR 0019). Generation treats these
 // imports as standard library without an edge, a manifest, or a lockfile.
 // The list is the exact `go list std` output of the pinned Go SDK
 // (rules_go 0.63.0, Go SDK 1.26.6); it is regenerated when the pin moves.

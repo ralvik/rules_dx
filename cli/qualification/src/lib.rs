@@ -1,8 +1,8 @@
-//! Pure release-qualification planning (M28 slices 1-4: WP1 blocker disposition,
+//! Pure release-qualification planning (slices 1-4: WP1 blocker disposition,
 //! WP2 API/support/registry freeze; WP5 artifact-identity/packaging boundary,
 //! reproducibility and verification binding; WP4/WP6/WP7 evidence inventory,
 //! coverage gate, consumer-CI requalification, publication handoff).
-//! M29 slices 1-2: publication-input verification (destinations, credential
+//! Publication-input verification (destinations, credential
 //! scopes, digest/policy match) and post-publication discipline (no silent
 //! rebuild or substitution, public-artifact smoke tests, recorded incidents).
 //!
@@ -14,15 +14,15 @@
 //! boundary, manifest completeness, attestation subject binding,
 //! reproducibility comparison, verification binding, the self-attestation
 //! level cap, the release coverage gate, aggregate/matrix completeness, CI
-//! identity requalification, and the M28-to-M29 publication handoff. It plans
+//! identity requalification, and the -to- publication handoff. It plans
 //! over injected booleans/strings/numbers only, so the rules stay
 //! deterministic and unit-testable without platforms, consumers, builders,
 //! or credentials.
 //!
-//! Out of scope here (M28 qualification + M29 publication): O6/O37/O38/O39
+//! Out of scope here (qualification + publication): the issue tracker
 //! evidencing, trusted-builder/SBOM/provenance execution, reproducibility
 //! measurement, coverage-instrumentation runs, consumer-CI matrix runs, and
-//! any tag/registry/release publication (O45-gated). Those stay deferred;
+//! any tag/registry/release publication (gated). Those stay deferred;
 //! this crate never claims `Supported`, never signs, and never publishes.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
@@ -31,7 +31,7 @@
 
 /// Which inventory cell a release blocker belongs to.
 ///
-/// Per the M28 evidence rule, evidence-backed additional-foundation deferrals
+/// Per the evidence rule, evidence-backed additional-foundation deferrals
 /// separate from required-core blockers and other unresolved required cells
 /// under the first-release admission policy. A deferral waives neither
 /// required-core obligations nor the unchanged quality-tool baseline.
@@ -82,7 +82,7 @@ pub fn plan_blocker_disposition(
 
 /// Release support label for one inventory cell.
 ///
-/// `Supported` is promoted only by release evidence (M28); `Partial` cells
+/// `Supported` is promoted only by release evidence; `Partial` cells
 /// remain explicitly non-supported and never permit shipping an unresolved
 /// required capability on any required platform.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -166,7 +166,7 @@ pub fn registry_is_exact(registry: &[String], accepted: &[String]) -> bool {
     got == want
 }
 
-/// Candidate wire-profile predicate URIs (O39 provisional research, not frozen).
+/// Candidate wire-profile predicate URIs (provisional research, not frozen).
 ///
 /// From `docs/tools/tool-acquisition.md#provenance-profile-research`: SPDX 2.3
 /// JSON and SLSA Build Provenance v1, each in an in-toto Statement v1. These
@@ -223,7 +223,7 @@ pub fn embedded_change_requires_new_attestation(embedded_changed: bool) -> bool 
 /// A qualified artifact reproduces from a clean release environment: the
 /// rebuild digest must equal the candidate digest. Empty digests never count
 /// as reproduction. This compares injected digest strings only; it performs
-/// no build and measures no threshold (thresholds stay O39-gated).
+/// no build and measures no threshold (thresholds stay gated).
 pub fn rebuild_reproduces(candidate_digest: &str, rebuild_digest: &str) -> bool {
     !candidate_digest.is_empty() && candidate_digest == rebuild_digest
 }
@@ -279,7 +279,7 @@ pub struct VerificationBindings<'a> {
 ///
 /// All four bindings must match exactly (verbatim, non-empty attested value).
 /// Any mismatch rejects; this executes no cryptography and trusts no log,
-/// timestamp, or certificate on its own (those stay O38/O39-gated).
+/// timestamp, or certificate on its own (those stay the issue tracker-gated).
 pub fn verify_rejection(bindings: VerificationBindings<'_>) -> Option<VerifyReject> {
     if bindings.digest.rejects() {
         return Some(VerifyReject::DigestMismatch);
@@ -361,7 +361,7 @@ pub fn coverage_aggregation_complete(per_platform_covered: &[bool]) -> bool {
 ///
 /// Publication and CI requalification never substitute bytes or revisions:
 /// the used digest/workflow/reporter/caller/module identity must equal the
-/// M28-qualified identity verbatim. Empty identities never match.
+/// qualified identity verbatim. Empty identities never match.
 pub fn handoff_identity_matches(qualified: &str, used: &str) -> bool {
     !qualified.is_empty() && qualified == used
 }
@@ -369,7 +369,7 @@ pub fn handoff_identity_matches(qualified: &str, used: &str) -> bool {
 /// Whether the consumer-CI requalification may accept one run.
 ///
 /// The candidate workflow, reporter, caller template, and module-matched CLI
-/// must each equal the M28 handoff identity. Any substitution fails the run;
+/// must each equal the handoff identity. Any substitution fails the run;
 /// this checks the four equalities, it does not execute CI.
 pub fn ci_requalification_accepts(
     workflow_matches: bool,
@@ -380,11 +380,11 @@ pub fn ci_requalification_accepts(
     workflow_matches && reporter_matches && caller_matches && module_cli_matches
 }
 
-/// Whether M28 may hand off to M29 publication.
+/// Whether may hand off to publication.
 ///
 /// Handoff needs a qualified candidate whose digests still match the
 /// verified bytes and whose CI identities requalified without substitution.
-/// Publication itself (credentials, registry, release host) stays O45-gated
+/// Publication itself (credentials, registry, release host) stays gated
 /// and never rebuilds or swaps bytes silently.
 pub fn may_hand_off_to_publication(
     qualified: bool,
@@ -408,16 +408,16 @@ pub fn publish_destination_approved(destination: &str, approved: &[String]) -> b
 /// Whether granted credential scopes cover every required operation scope.
 ///
 /// Every required scope must be present in the granted set. Scope selection
-/// and issuance stay O45-gated; this compares injected scope strings only
+/// and issuance stay gated; this compares injected scope strings only
 /// and grants nothing.
 pub fn credential_scopes_cover(granted: &[String], required: &[String]) -> bool {
     required.iter().all(|scope| granted.contains(scope))
 }
 
-/// Whether M29 publication inputs verify before any credentialed operation.
+/// Whether publication inputs verify before any credentialed operation.
 ///
 /// Destinations, credential scopes, artifact digests, and the publication
-/// policy must each match the M28-qualified inputs. Any mismatch blocks
+/// policy must each match the qualified inputs. Any mismatch blocks
 /// publication; verification performs no credentialed step.
 pub fn publication_inputs_verified(
     destinations_ok: bool,

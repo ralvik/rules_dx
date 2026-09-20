@@ -1,4 +1,4 @@
-// Intended-manifest recorder (M10 WP1, O13 dispatch).
+// Intended-manifest recorder (WP1, dispatch).
 //
 // The canonical generation run witnesses its own exact BUILD changes and
 // hands them to the manifest finalizer as JSON. This file owns the

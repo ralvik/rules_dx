@@ -1,4 +1,4 @@
-"""Experimental minimal JavaScript wrappers (M16, ADR 0013).
+"""Experimental minimal JavaScript wrappers (ADR 0013).
 
 Contract: `docs/decisions/0013-rust-javascript-typescript-foundations.md`, `docs/decisions/0012-language-toolchain-versions.md`.
 """
@@ -81,11 +81,11 @@ def _javascript_wrap_binary(name, srcs, visibility = None, **kwargs):
     )
 
 def javascript_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `js_library` (M16)."""
+    """Experimental minimal wrapper over `js_library`."""
     _javascript_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
 def javascript_binary(name, srcs = None, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `js_binary` (M16).
+    """Experimental minimal wrapper over `js_binary`.
 
     Two shapes: an ordinary binary owns its `srcs`, while a thin entry
     binary generated for a recognized entry source carries only
@@ -169,7 +169,7 @@ def javascript_test_env(env_inherit):
     return env
 
 def javascript_test(name, srcs, node_modules, data = None, visibility = None, tags = None, env_inherit = None, **kwargs):
-    """Experimental minimal wrapper over `jest_test` (M16).
+    """Experimental minimal wrapper over `jest_test`.
 
     The private `<name>_upstream` target runs the full jest graph
     (`srcs` plus caller `data`, with `jest-cli`/`jest-junit` linked from

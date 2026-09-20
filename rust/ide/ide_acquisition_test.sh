@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# M12 WP3: upstream Rust IDE tool acquisition proof.
+# Upstream Rust IDE tool acquisition proof.
 #
 # Proves the pinned patched rules_rust supplies the exact IDE binaries the
 # environment contract reuses: rust-analyzer discovery (`gen_rust_project`)
@@ -7,7 +7,7 @@
 # `--help` with status zero, which proves acquisition from the pinned
 # toolchain without invoking project-owned discovery, codegen, or
 # environment mutation. Focused exact-target projection is proven by the
-# `gen_rust_project //rust/tests/fixtures/hello:hello_lib` run recorded in the M12
+# `gen_rust_project //rust/tests/fixtures/hello:hello_lib` run recorded in the
 # completion report (one crate, `hello`).
 set -euo pipefail
 

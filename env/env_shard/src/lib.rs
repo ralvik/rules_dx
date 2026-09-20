@@ -1,5 +1,5 @@
 //! Validation and codec helpers for the normalized environment plan shard
-//! (M25 WP2).
+//! (issue #506 WP2).
 //!
 //! Contract: `docs/environments/environment.md` (plan collection,
 //! provider-selective aspects, private output group), schema

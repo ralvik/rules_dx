@@ -73,7 +73,7 @@ pub const DEFAULT_SCOPE: &str = "//...";
 
 /// One audit family: secrets plus dependency-vulnerability analysis
 /// (`security`), or dependency license-policy analysis (`license`).
-/// Tool selection and report mappings stay pending O11/O58.
+/// Tool selection and report mappings stay pending qualification.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AuditFamily {
     Security,

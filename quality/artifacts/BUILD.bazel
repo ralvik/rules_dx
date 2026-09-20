@@ -1,4 +1,4 @@
-"""M04 standalone quality-tool artifact metadata (WP1, O20)."""
+"""Standalone quality-tool artifact metadata (WP1)."""
 
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//quality:fixtures.bzl", "real_source_target")

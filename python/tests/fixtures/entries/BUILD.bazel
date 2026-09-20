@@ -1,4 +1,4 @@
-"""M14 thin entry fixture: library owns main.py, binary carries main only."""
+"""Library owns main.py, binary carries main only."""
 
 load("//python/rules:defs.bzl", "python_binary", "python_library", "python_test")
 load("//quality:fixtures.bzl", "real_source_target")

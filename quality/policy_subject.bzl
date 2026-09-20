@@ -1,4 +1,4 @@
-"""Analysis subject exposing an aggregate workspace policy (M03 WP1).
+"""Analysis subject exposing an aggregate workspace policy (WP1).
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")

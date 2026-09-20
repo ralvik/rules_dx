@@ -1,4 +1,4 @@
-"""Experimental minimal Scala wrappers (M23, O31)."""
+"""Experimental minimal Scala wrappers (ADR 0019)."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

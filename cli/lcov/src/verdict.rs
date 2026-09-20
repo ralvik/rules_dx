@@ -42,7 +42,7 @@ pub struct GateVerdict {
 /// JavaScript/TypeScript participate in `bazel coverage` through the
 /// repo's pytest/jest wrappers (see `docs/testing/generation.md`). Any
 /// other extension lands in `other_sources` and counts nowhere; Starlark
-/// line data stays a hard error until the M00 measurement route exists.
+/// line data stays a hard error until the measurement route exists.
 pub fn is_covered_language(path: &str) -> bool {
     path.ends_with(".rs")
         || path.ends_with(".go")
@@ -152,7 +152,7 @@ pub fn evaluate(
             verdict.other_sources.push(path.clone());
             if is_starlark(path) && !hits.lines.is_empty() {
                 verdict.errors.push(format!(
-                    "unexpected Starlark line data for {path}: no Starlark line route exists in M00"
+                    "unexpected Starlark line data for {path}: no Starlark line route exists in "
                 ));
             }
         }

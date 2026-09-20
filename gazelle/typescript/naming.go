@@ -118,7 +118,7 @@ func ModuleName(name string) string {
 }
 
 // IsEntryFile reports whether a directory-relative source path is a
-// recognized executable entry in the narrow M16 slice: exactly `main.ts`,
+// recognized executable entry in the narrow slice: exactly `main.ts`,
 // `main.tsx`, `main.mts`, or `main.cts` (non-test, non-declaration).
 // Manifest-declared names win only for exact mappings; other layouts remain
 // out of scope. Thin-binary generation is deferred until the execution

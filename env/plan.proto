@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package rules_dx.env;
 
-// Normalized per-contributor environment plan shard (M25 WP2).
+// Normalized per-contributor environment plan shard (issue #506 WP2).
 //
 // Each contributing configured target emits one shard carrying its direct
 // environment identity records; collectors merge shards transitively and

@@ -1,4 +1,4 @@
-"""Focused MDX environment plan (M21 WP2).
+"""Focused MDX environment plan (WP2).
 
 Contract: `docs/environments/environment.md`.
 """
@@ -70,5 +70,5 @@ mdx_env_plan = rule(
             doc = "One mdx_* wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused MDX environment plan for one wrapper target (M21 WP2).",
+    doc = "Emits the provider-derived focused MDX environment plan for one wrapper target (WP2).",
 )

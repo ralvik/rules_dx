@@ -1,4 +1,4 @@
-"""Identity tests pinning the authoritative toolchain binding (M04 WP1, M12 WP3).
+"""Identity tests pinning the authoritative toolchain binding (WP1, WP3).
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
@@ -11,7 +11,7 @@ _AT = "@"
 # Frozen pin: executed owners/paths for Rust 1.98.0 on linux_x86_64.
 # All executables live in authoritative toolchain repositories; any change
 # (toolchain update, rules_rust layout change, vendored copy) fails review.
-# rustc (M12 WP3) shares the main toolchain repository with clippy-driver.
+# rustc (WP3) shares the main toolchain repository with clippy-driver.
 EXPECTED_IDENTITY_OBSERVATIONS = """subject //rust/toolchains:identity_under_test
 field clippy.owner=""" + _AT + """@rules_rust++rust+rust_linux_x86_64__x86_64-unknown-linux-gnu__stable_tools//:rust_toolchain
 field clippy.path=bazel-out/k8-fastbuild/bin/external/rules_rust++rust+rust_linux_x86_64__x86_64-unknown-linux-gnu__stable_tools/rust_toolchain/bin/clippy-driver

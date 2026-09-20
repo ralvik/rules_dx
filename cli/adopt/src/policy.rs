@@ -21,8 +21,8 @@ pub fn devcontainer_is_admissible(
 /// Whether a diagnostics command name is admissible.
 ///
 /// Per ADR 0006 there is no `dx doctor`: that name is rejected outright and
-/// the consolidated status surface (O50) must ship under another name. The
-/// empty name is rejected as well; vocabulary and shape stay O50-gated.
+/// the consolidated status surface must ship under another name. The
+/// empty name is rejected as well; vocabulary and shape stay gated.
 pub fn diagnostics_command_allowed(name: &str) -> bool {
     !name.is_empty() && name != "doctor"
 }

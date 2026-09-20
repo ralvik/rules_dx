@@ -142,8 +142,8 @@ fixed the two true collisions (`dx/qual` → `cli/qualification`,
 | --- | --- | --- |
 | `//dx:generate` / `//dx:generate_check` | Same Gazelle wiring, `mode=diff` only on the check twin (`dx/BUILD.bazel`) | Accepted |
 | `//dx:env` | Alias to `//cli/env:env` installer binary (`dx/BUILD.bazel`) | Accepted |
-| `//dx:codegen` | Empty filegroup reserving the CLI selection identity; real plan collector is the `dx_codegen_plan_aspect` plus `dx_codegen_plans` output group (O33 freeze), effective roots on the frozen `//...` baseline (O34) | Accepted (issue #423; guard `//tools/ci:dx_facade_qualification`) |
-| `//dx:config` | Empty filegroup default for the `//config:workspace` label flag, failing fast until a consumer binds its typed workspace policy; typed per-family sections frozen in `//quality:policy.bzl` (O17) and `//quality:sources.bzl` (O15) | Accepted (issue #423; guard `//tools/ci:dx_facade_qualification`) |
+| `//dx:codegen` | Empty filegroup reserving the CLI selection identity; real plan collector is the `dx_codegen_plan_aspect` plus `dx_codegen_plans` output group (frozen), effective roots on the frozen `//...` baseline (issue #506) | Accepted (issue #423; guard `//tools/ci:dx_facade_qualification`) |
+| `//dx:config` | Empty filegroup default for the `//config:workspace` label flag, failing fast until a consumer binds its typed workspace policy; typed per-family sections frozen in `//quality:policy.bzl` (the issue tracker) and `//quality:sources.bzl` (the issue tracker) | Accepted (issue #423; guard `//tools/ci:dx_facade_qualification`) |
 | `//tools/coverage:coverage_gate` | Single crate after the unused `:coverage` wrapper removal | Accepted |
 | `real_source_target(name="corpus_*")` splits | Per content type per package, Gazelle-owned via `dx generate`, shared `tags = ["corpus"]` (issue #15) | Accepted |
 

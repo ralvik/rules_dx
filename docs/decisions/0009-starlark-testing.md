@@ -24,13 +24,13 @@ version. The capability provides:
 - Analysis tests for rules, providers, and declared outputs, with
   deterministic observation rendering. Aspect, toolchain, configuration,
   output-group, registered-action, and transition subjects remain
-  provisional pending concrete use cases; M01 does not claim them.
+  provisional pending concrete use cases; This record does not claim them.
 - Ordinary Bazel test protocol behavior, logs, and standard test outputs suitable
   for Bazel, BEP, and CI collection.
 - Small fixture helpers without mocking or reimplementing Bazel semantics.
 
 The initial public authoring API is one `starlark_test` macro facade with an
-explicit test mode (`load`, `unit`, `analysis`, `execution`; named in M01).
+explicit test mode (`load`, `unit`, `analysis`, `execution`; named in).
 It dispatches to internal per-mode rule implementations because those modes
 execute in different Bazel phases. The unified facade does not pretend that
 one rule implementation can directly invoke arbitrary loaded functions or
@@ -46,14 +46,14 @@ tags, visibility, and other common test attributes. BUILD files do not encode
 assertion data: attribute payloads are serialized records produced by the
 test `.bzl` file, not hand-written assertion manifests.
 
-The M01-qualified `expect` surface is one constructor, `expect_equal`, plus the
+The qualified `expect` surface is one constructor, `expect_equal`, plus the
 `DxSubjectInfo` provider for analysis observations. Broader subjects
 (targets, actions, files, depsets, runfiles) and matchers remain provisional
 pending concrete use cases; do not treat them as available API through this
 record.
 
 Expected-failure tests identify the required failure phase (`load`, `unit`,
-`analysis`, or `execution`) and one or more diagnostic substrings. The M01
+`analysis`, or `execution`) and one or more diagnostic substrings. The
 mechanism evaluates every check in a generated execution-phase script, so
 mismatches fail targets through the standard protocol (`FAILED` with
 expected/actual rendering in declaration order); mode violations fail
@@ -62,13 +62,13 @@ complete normalized diagnostic for reporting, but exact full-message snapshots a
 not the default contract because Bazel wording can change when the pinned version
 is updated.
 
-M01 toolchain and pinning findings (Bazel 9.2.0, Bzlmod, local Linux): native
+Native
 `sh_*` rules do not exist, so generated POSIX scripts are the test
 executables and the framework takes no shell dependency; `TEST_SRCDIR` roots
 runfiles with the workspace directory (`$TEST_SRCDIR/$TEST_WORKSPACE/...`);
 `BUILD_WORKSPACE_DIRECTORY` is unset under `bazel test`; canonical label
 rendering carries a leading `@@` that the framework normalizes for
-observations. Requalify each finding on pin bumps per O14.
+observations. Requalify each finding on pin bumps per issues #410-#414.
 
 Expectation mismatches accumulate within one test function and are reported
 together in deterministic declaration order. An infrastructure error that makes
@@ -87,7 +87,7 @@ a second interpreter.
 
 Rust may orchestrate real Bazel fixture workspaces and consume Bazel test/BEP
 results across platforms. It does not interpret Starlark or emulate loading,
-analysis, providers, aspects, toolchains, transitions, or actions. M01 ships
+analysis, providers, aspects, toolchains, transitions, or actions. This record ships
 no Rust orchestration: all tests run inside the single Bazel invocation with
 no nested Bazel.
 
@@ -100,7 +100,7 @@ The custom tooling must first investigate genuine Starlark executable-line
 instrumentation under the pinned real Bazel. The central
 [coverage policy](../testing/README.md#coverage) permits a checked behavioral matrix
 only when documented evidence demonstrates that reliable line measurement is
-infeasible. M01 ran that investigation and met the fallback condition:
+infeasible. This record ran that investigation and met the fallback condition:
 a provably executed `.bzl` probe yielded a 0-byte `coverage.dat` with zero
 `SF` records, no Starlark coverage flags exist, and the upstream proposal
 (`bazelbuild/bazel#15594`) was never accepted. The fallback therefore covers
@@ -111,7 +111,7 @@ machine-checked by `matrix_validation`; it is never reported as source-line
 or branch coverage. Loaded files, test counts,
 and mappings alone do not establish coverage. Instrumentation, reasoned ignore
 support, feasibility evidence, and measurement mechanics follow the resolved
-[coverage policy](../testing/README.md#coverage) (O47 resolved 2026-09-09).
+[coverage policy](../testing/README.md#coverage) (the issue tracker resolved 2026-09-09).
 
 ## Consequences
 

@@ -83,7 +83,7 @@ published bytes, missing required evidence fails verification, and changing embe
 invalidates old final-archive attestations. Manifest self-entry rules are frozen under issue #307
 (no self-referential digest/size via `packaging_uses_single_correct_path` plus manifest
 completeness via `manifest_covers_payload` in `cli/qualification`); remaining trust/profile
-policy (trusted builders, rotation, offline roots, rebuild thresholds) stays owned by O38/O39
+policy (trusted builders, rotation, offline roots, rebuild thresholds) stays owned by the issue tracker
 before asserting those additional outcomes.
 
 ## Laziness And Performance

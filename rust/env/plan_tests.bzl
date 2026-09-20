@@ -1,4 +1,4 @@
-"""Focused Rust environment-plan tests (M12 WP3).
+"""Focused Rust environment-plan tests (WP3).
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")

@@ -1,4 +1,4 @@
-//! Fork-security and aggregate-gating planning for consumer CI (M27 WP1 slice 6).
+//! Fork-security and aggregate-gating planning for consumer CI (WP1 slice 6).
 //!
 //! Split from `super` (`lib.rs`): owns [`AGGREGATE_CHECK`] (stable branch
 //! protection identity), [`ApproverRole`], [`ForkCredentials`],

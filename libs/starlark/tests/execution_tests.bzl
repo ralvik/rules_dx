@@ -1,4 +1,4 @@
-"""Execution tests over runfiles fixtures (M01 WP1)."""
+"""Execution tests over runfiles fixtures (WP1)."""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 

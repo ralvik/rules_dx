@@ -1,4 +1,4 @@
-//! Secrets-audit invocation planning (M26 WP1 slice 3).
+//! Secrets-audit invocation planning (WP1 slice 3).
 //!
 //! Pure qualification planning for the selected initial secrets
 //! integration (Gitleaks) per the audit contract: a checksummed
@@ -18,10 +18,10 @@
 //! distinction, and silent-`0` cases need fixtures before any adapter
 //! claims working audit support.
 //!
-//! Out of scope here (O11 qualification): actual byte acquisition and
+//! Out of scope here (qualification): actual byte acquisition and
 //! digest verification against upstream, SARIF parsing, report-file
 //! redaction proofs, adapter/registry wiring, and the `secrets`
-//! policy-family registry amendment. Those arrive in later M26 slices;
+//! policy-family registry amendment. Those arrive in later slices;
 //! this crate only records which artifact identity and flag shape a
 //! future adapter must satisfy.
 
@@ -39,7 +39,7 @@ pub const SARIF_FORMAT: &str = "sarif";
 
 /// Flag requesting secret-value redaction. Always present in a planned
 /// invocation; whether redaction also covers the report file (versus
-/// logs/stdout only) is fixture-gated under O11, so adapters must prove
+/// logs/stdout only) is fixture-gated under so adapters must prove
 /// it rather than assume it.
 pub const REDACT_FLAG: &str = "--redact";
 

@@ -1,4 +1,4 @@
-"""Experimental minimal Svelte wrappers (M19, O40).
+"""Experimental minimal Svelte wrappers.
 
 Contract: `libs/starlark/wrapper.bzl`.
 """
@@ -33,5 +33,5 @@ def _svelte_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _js_library, _svelte_library_forward, srcs, visibility = visibility, **kwargs)
 
 def svelte_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `js_library` for Svelte components (M19)."""
+    """Experimental minimal wrapper over `js_library` for Svelte components."""
     _svelte_wrap_library(name, srcs, visibility = visibility, **kwargs)

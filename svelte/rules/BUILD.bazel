@@ -1,4 +1,4 @@
-"""Experimental minimal Svelte wrappers (M19, O40)."""
+"""Experimental minimal Svelte wrappers."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

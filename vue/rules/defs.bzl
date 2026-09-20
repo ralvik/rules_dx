@@ -1,4 +1,4 @@
-"""Experimental minimal Vue wrappers (M18, O29).
+"""Experimental minimal Vue wrappers.
 
 Contract: `libs/starlark/wrapper.bzl`.
 """
@@ -33,5 +33,5 @@ def _vue_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _js_library, _vue_library_forward, srcs, visibility = visibility, **kwargs)
 
 def vue_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `js_library` for Vue SFCs (M18)."""
+    """Experimental minimal wrapper over `js_library` for Vue SFCs."""
     _vue_wrap_library(name, srcs, visibility = visibility, **kwargs)

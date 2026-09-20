@@ -1,4 +1,4 @@
-"""M04 authoritative Rust toolchain bindings (WP1)."""
+"""Authoritative Rust toolchain bindings (WP1)."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 load(":identity_subject.bzl", "toolchain_identity_subject")

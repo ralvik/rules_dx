@@ -84,17 +84,17 @@ done < <(grep -o -E -e '\]\((adopt-[a-z-]+)/\)' examples/README.md | sed 's/^](/
 
 # The mixed-framework fixture is documented as non-consumer and stays
 # out of the consumer-example audit: it is a framework-composition
-# workspace (mixed/hello BUILD docstring names the M21 fixture), not
+# workspace (mixed/hello BUILD docstring names the fixture), not
 # an external-consumer workspace with commands plus evidence.
 if grep -q -F -e 'mixed/hello' examples/README.md && ! grep -q -F -e '](mixed/' examples/README.md; then
   ok
 else
   bad "examples/README.md must document mixed/hello as non-consumer without indexing it as an example"
 fi
-if grep -q -F -e 'M21 mixed-framework package' examples/mixed/hello/BUILD.bazel; then
+if grep -q -F -e ' mixed-framework package' examples/mixed/hello/BUILD.bazel; then
   ok
 else
-  bad "examples/mixed/hello/BUILD.bazel lost the M21 fixture disposition marker"
+  bad "examples/mixed/hello/BUILD.bazel lost the fixture disposition marker"
 fi
 
 dx_test_summary "examples readme audit"

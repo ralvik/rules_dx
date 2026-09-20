@@ -1,4 +1,4 @@
-//! Quality command execution (M07 WP3): dispatch root across command
+//! Quality command execution (WP3): dispatch root across command
 //! families. Each family lives in its own module under `exec/`:
 //! quality, workflow (dispatch) plus test_reports (test/coverage
 //! collection), bazel, generate, clean, managed (dispatch) plus

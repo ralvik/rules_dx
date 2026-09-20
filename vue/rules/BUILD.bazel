@@ -1,4 +1,4 @@
-"""Experimental minimal Vue wrappers (M18, O29)."""
+"""Experimental minimal Vue wrappers."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

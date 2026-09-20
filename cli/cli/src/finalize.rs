@@ -1,4 +1,4 @@
-//! Intended-manifest finalizer (M10 WP1).
+//! Intended-manifest finalizer (WP1).
 //!
 //! The Gazelle extension ([`gazelle/rust/manifest.go`](../../gazelle/rust/manifest.go))
 //! witnesses the *intended* file contents for a `//dx:generate` run as JSON on
@@ -293,7 +293,7 @@ pub fn finalize(input: &FinalizeInput<'_>) -> Result<GenerationManifest, Finaliz
                         replacement: edit.replacement.clone(),
                     })
                     .collect();
-                // The digest is finalizer-owned (O13): the extension streams
+                // The digest is finalizer-owned: the extension streams
                 // raw original bytes, and stamping the digest here binds them.
                 file_result::Change::Modification(Modification {
                     original_digest: dx_digest::blake3(&original).to_vec(),

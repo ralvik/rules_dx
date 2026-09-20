@@ -1,4 +1,4 @@
-"""Target-scoped real capability aspects over real adapters (M04 WP2, M15 Python, M17 Biome/ESLint/Prettier).
+"""Target-scoped real capability aspects over real adapters (WP2, Python, Biome/ESLint/Prettier).
 
 Contract: `docs/quality/tool-integrations.md`, `docs/quality/native-configuration.md`, `docs/quality/quality-sources.md#adapter-applicability`, `docs/quality/quality-result-protocol.md#transport`.
 """

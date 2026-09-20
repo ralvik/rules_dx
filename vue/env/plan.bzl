@@ -1,4 +1,4 @@
-"""Focused Vue environment plan (M18 WP2).
+"""Focused Vue environment plan (WP2).
 
 Contract: `docs/environments/environment.md`.
 """
@@ -70,5 +70,5 @@ vue_env_plan = rule(
             doc = "One vue_* wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused Vue environment plan for one wrapper target (M18 WP2).",
+    doc = "Emits the provider-derived focused Vue environment plan for one wrapper target (WP2).",
 )

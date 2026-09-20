@@ -1,4 +1,4 @@
-//! Generation result projection (M10 WP2).
+//! Generation result projection (WP2).
 //!
 //! Contract: `docs/cli/commands/generate.md` and
 //! `docs/cli/output-protocol.md`. Projects the validated Gazelle-owned

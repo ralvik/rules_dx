@@ -1,5 +1,5 @@
 //! Public output modes and versioned NDJSON protocol for the `dx` CLI
-//! (M06 WP2).
+//! (WP2).
 //!
 //! Contract: `docs/cli/output-protocol.md`. This crate owns live-mode
 //! selection (`text`/`diff`/`json`), stdout-ownership policy, the v1 NDJSON

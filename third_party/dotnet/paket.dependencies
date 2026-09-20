@@ -1,4 +1,4 @@
-# M23 seed Paket dependencies: the v1 .NET route per docs/decisions/0019.
+# The v1 .NET route per docs/decisions/0019.
 # F# assemblies need the FSharp.Core runtime asset next to the app; plain
 # fsc output alone throws FileNotFoundException at startup. The lock file
 # (paket.lock) is the pin; regenerate the hub with:

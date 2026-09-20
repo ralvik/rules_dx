@@ -1,4 +1,4 @@
-//! SPDX license-expression evaluation (M26 WP3 slice 1).
+//! SPDX license-expression evaluation (WP3 slice 1).
 //!
 //! Pure boolean-math evaluation over the allow/review/deny lattice from
 //! the license contract
@@ -26,7 +26,7 @@
 //! policy file. [`parse_license`] builds the expression shape from SPDX
 //! text via the upstream `spdx` parser; per-ecosystem license-identity
 //! mappings, policy-table loading, tier attribution for shared locks,
-//! and proof evidence stay O58-gated for later slices.
+//! and proof evidence stay gated for later slices.
 //!
 //! Dependency evaluation (issue #315, adopted): SPDX text parses via the
 //! upstream `spdx` crate in strict mode (fail-closed to [`LicenseExpr::Unknown`]);
@@ -69,7 +69,7 @@ pub enum TierOutcome {
 
 /// Injected SPDX expression tree. [`parse_license`] produces this shape
 /// from lock metadata via the upstream `spdx` parser; per-ecosystem
-/// text-to-identity mappings are O58 qualification, so text the parser
+/// text-to-identity mappings are qualification, so text the parser
 /// rejects arrives as [`LicenseExpr::Unknown`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LicenseExpr {

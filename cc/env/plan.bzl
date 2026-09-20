@@ -1,4 +1,4 @@
-"""Focused C/C++ environment plan (M22 WP2).
+"""Focused C/C++ environment plan (WP2).
 
 Contract: `docs/environments/environment.md`.
 """
@@ -60,5 +60,5 @@ cc_env_plan = rule(
             doc = "One cc_* wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused C/C++ environment plan for one wrapper target (M22 WP2).",
+    doc = "Emits the provider-derived focused C/C++ environment plan for one wrapper target (WP2).",
 )

@@ -1,4 +1,4 @@
-"""Focused Java environment plan (M23 WP2).
+"""Focused Java environment plan (WP2).
 
 Contract: `docs/environments/environment.md`.
 """
@@ -60,5 +60,5 @@ java_env_plan = rule(
             doc = "One java_* wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused Java environment plan for one wrapper target (M23 WP2).",
+    doc = "Emits the provider-derived focused Java environment plan for one wrapper target (WP2).",
 )

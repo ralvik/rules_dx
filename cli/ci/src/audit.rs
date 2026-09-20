@@ -1,4 +1,4 @@
-//! Audit rendering planning for consumer CI (M27 WP4 slice 10).
+//! Audit rendering planning for consumer CI (WP4 slice 10).
 //!
 //! Split from `super` (`lib.rs`): owns [`AuditFinding`],
 //! [`AuditPlacement`], [`audit_uses_counts_only_mode`],

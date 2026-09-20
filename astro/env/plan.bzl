@@ -1,4 +1,4 @@
-"""Focused Astro environment plan (M20 WP2).
+"""Focused Astro environment plan (WP2).
 
 Contract: `docs/environments/environment.md`.
 """
@@ -70,5 +70,5 @@ astro_env_plan = rule(
             doc = "One astro_* wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused Astro environment plan for one wrapper target (M20 WP2).",
+    doc = "Emits the provider-derived focused Astro environment plan for one wrapper target (WP2).",
 )

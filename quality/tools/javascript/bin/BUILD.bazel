@@ -1,4 +1,4 @@
-"""M17 WP1 slice 3: stable private entry points over the tool facade.
+"""Stable private entry points over the tool facade.
 
 Lives in ./bin (not the facade package) so js_binary outputs never share
 a path prefix with the linked //quality/tools/javascript:node_modules

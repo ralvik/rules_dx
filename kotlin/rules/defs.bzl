@@ -1,4 +1,4 @@
-"""Experimental minimal Kotlin wrappers (M23, O31, ADR 0019).
+"""Experimental minimal Kotlin wrappers (ADR 0019).
 
 Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
@@ -20,7 +20,7 @@ _DX_KOTLIN_LIBRARY_PROVIDES = [
 # at runtime when present, but advertise only `DefaultInfo` plus
 # `QualitySourcesInfo`: neither shape is depended on as a Kotlin library,
 # so no consumer matches on the forwarded providers. `QualitySourcesInfo`
-# is advertised so M23+ quality aspects can gate on it. Coverage reads
+# is advertised so quality aspects can gate on it. Coverage reads
 # `InstrumentedFilesInfo` from the test target, not via `provides`
 # (same shape as the `java_*` test forwarder).
 _DX_KOTLIN_EXEC_PROVIDES = [
@@ -94,11 +94,11 @@ def _kotlin_wrap_binary(name, srcs, visibility = None, **kwargs):
     )
 
 def kotlin_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `kt_jvm_library` (M23)."""
+    """Experimental minimal wrapper over `kt_jvm_library`."""
     _kotlin_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
 def kotlin_binary(name, srcs = None, main_class = None, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `kt_jvm_binary` (M23).
+    """Experimental minimal wrapper over `kt_jvm_binary`.
 
     An ordinary binary owns its `srcs` plus `deps` on a wrapper library and
     names its `main_class` explicitly (no inference); a thin entry binary
@@ -112,7 +112,7 @@ def kotlin_binary(name, srcs = None, main_class = None, visibility = None, **kwa
     _kotlin_wrap_binary(name, effective_srcs, visibility = visibility, **upstream_kwargs)
 
 def kotlin_test(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `kt_jvm_test` (M23).
+    """Experimental minimal wrapper over `kt_jvm_test`.
 
     With `srcs`, those test sources are this test's direct sources for
     QualitySourcesInfo. The library under test stays its ordinary owner via

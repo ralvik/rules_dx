@@ -1,4 +1,4 @@
-"""M21 mixed-framework package; one physical owner per container (O43).
+"""Mixed-framework package; one physical owner per container.
 
 Each framework container keeps its own wrapper (dx_vue/svelte/astro/mdx_library)
 plus the shared core `helper_lib` (javascript_library). No container is owned twice,

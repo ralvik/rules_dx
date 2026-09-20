@@ -1,4 +1,4 @@
-//! M00 seed library: minimal greeting logic plus an anyhow error path
+//! Minimal greeting logic plus an anyhow error path
 //! exercising the external-dependency fixture.
 
 use anyhow::{Context, Result};

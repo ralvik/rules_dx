@@ -1,4 +1,4 @@
-"""M23 seed Scala binary and library; consumer of scala_* wrappers."""
+"""Seed Scala binary and library; consumer of scala_* wrappers."""
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")

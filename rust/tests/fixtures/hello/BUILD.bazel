@@ -1,4 +1,4 @@
-"""M00 seed Rust binary, library, and tests; M02 consumer of rust_* wrappers."""
+"""Seed Rust binary, library, and tests; consumer of rust_* wrappers."""
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
@@ -71,7 +71,7 @@ rust_clippy_test(
     ],
 )
 
-# M12 flavor wrappers: one subject per new rust_* shape (proc macro,
+# One subject per new rust_* shape (proc macro,
 # shared library, static library). No external dependencies: the
 # conformance probe pins forwarding, not dependency plumbing. Cargo cannot
 # express these flavors in one package, so each rule is handwritten and
@@ -100,7 +100,7 @@ rust_static_library(
     crate_root = "src/staticlib.rs",
 )
 
-# Separate lint identities: the M02 hello_fmt_test/hello_clippy_test
+# Separate lint identities: the hello_fmt_test/hello_clippy_test
 # pins stay untouched, so the new shapes get their own lint tests with
 # their own marker sets.
 rustfmt_test(

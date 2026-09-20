@@ -20,7 +20,7 @@ runners through the pinned upstream toolchains (`rules_rust`,
 foundations' rulesets), which already resolve `linux/arm64` acquisition.
 The `rules_rs`/`hermetic-llvm` first choices below remain provisional
 candidates, not the qualified backend. Exact pins, hosts, floors, and
-SDK/CRT identities stay owned by O14/O37 per
+SDK/CRT identities stay owned by issues #410-#414 per
 [ADR 0014](decisions/0014-tested-platform-release-stack.md#decision) and
 are not pinned here. Per-host quality-tool (`dx_tools`) `linux_arm64`
 artifacts stay an owned follow-up gap: on arm64, quality-tool actions fail
@@ -39,7 +39,7 @@ cross-builds from Linux runners (`ubuntu-latest` for x86_64 musl,
 `ubuntu-24.04-arm` for arm64 musl) with per-profile `bazel-musl-*` cache
 scopes, and gates per-cell coverage for both musl cells with no union;
 dynamic musl stays explicitly out of scope with no cell. Exact pins,
-hosts, floors, and runtime-closure identities stay owned by O14/O37 per
+hosts, floors, and runtime-closure identities stay owned by issues #410-#414 per
 ADR 0014 and are not pinned here. The native-plan corpus starts with
 pure-Rust plus cc-rs C plus SQLite plus OpenSSL with declared tools plus
 ring-style C/assembly plus bindgen plus CXX plus native proc-macro
@@ -58,7 +58,7 @@ The `rules_rs`/`hermetic-llvm` Apple-SDK backend stays provisional with
 immutable lazy fetch, not the qualified backend; no host-installed SDK fallback
 (never approved). Apple-SDK handling leaks no secrets and needs
 no interactive acceptance. Exact pins, hosts, floors, and SDK/CRT
-identities stay owned by O14/O37 per
+identities stay owned by issues #410-#414 per
 [ADR 0014](decisions/0014-tested-platform-release-stack.md#decision) and
 are not pinned here. Per-host quality-tool (`dx_tools`) `macos_arm64`
 artifacts stay an owned follow-up gap like `linux_arm64`: on macOS,
@@ -76,7 +76,7 @@ without blocking required-host release. The `rules_rs`/`hermetic-llvm`
 Apple-SDK backend stays provisional with immutable lazy fetch, not the
 qualified backend; no host-installed SDK fallback (never approved).
 Apple-SDK handling leaks no secrets and needs no interactive acceptance.
-Exact pins, hosts, floors, and SDK/CRT identities stay owned by O14/O37
+Exact pins, hosts, floors, and SDK/CRT identities stay owned by issues #410-#414
 per [ADR 0014](decisions/0014-tested-platform-release-stack.md#decision)
 and are not pinned here. Per-host quality-tool (`dx_tools`)
 `macos_x86_64` artifacts stay an owned follow-up gap like `linux_arm64`
@@ -102,7 +102,7 @@ Manifest/path/ABI gaps (batch wrappers, response files, `/external:I`
 vs `/imsvc` rebasing, `.lib`/`.obj` bare paths, spaces, SDK libraries,
 cc-rs discovery/assembly, proc-macro DLLs) are closed with declared-input
 fixtures without host Visual Studio state. Exact pins, hosts, floors, and
-SDK/CRT identities stay owned by O14/O37 per
+SDK/CRT identities stay owned by issues #410-#414 per
 [ADR 0014](decisions/0014-tested-platform-release-stack.md#decision) and
 are not pinned here. Per-host quality-tool (`dx_tools`) `windows_x86_64`
 artifacts stay an owned follow-up gap like `linux_arm64`/`macos_arm64` plus
@@ -374,7 +374,7 @@ acquisition, interoperability, coverage, and release evidence passes.
 | Does Windows native transport preserve all inputs and ABI selection? | Fix ABI constraints and path rebasing upstream; test batch wrappers, response files, cc-rs assembly/discovery, SDK libraries and proc-macro DLLs. Windows x86_64 qualified (issue #414) with declared-input fixtures without host Visual Studio state; remaining upstream fixes stay owned under issue #303. | open work |
 | Which prebuilt native libraries interoperate? | Independent MSVC fixtures and Linux libstdc++ comparison; verify STL/CRT modes, unwinding, ownership and runtime deployment. Windows x86_64 qualified (issue #414) with representative prebuilt-MSVC fixtures incl mixed Rust/C/C++ qualifying host-to-target plus target execution separately. | open work |
 | Are both Linux profiles complete? | Native arm64 glibc builds/tests plus per-cell coverage landed (issue #410); static-musl closures plus per-cell coverage for both musl profiles landed (issue #411, Rust musl std plus exec/target separation, CI cross-builds with per-profile cache scopes, no union; dynamic musl explicitly out of scope). Remaining: cross builds/tests, ELF dependencies, glibc symbols, hermetic-llvm backend plus OpenSSL/ring/bindgen/CXX corpus gaps. | open work |
-| Which deployment and execution floors are supportable? | Run oldest-target and current-host fixtures separately; inspect compiler, clangd and bindgen loader dependencies. Check Apple's extracted SDK framework subset. macOS arm64 native is qualified (issue #412) plus macOS x86_64 best-effort native is qualified (issue #413) with SDK version not the deployment floor; oldest-OS execution plus framework completeness plus licensing remain gates; best-effort gaps never block required-host release. Windows x86_64 native is qualified (issue #414) with `/MD` retail dynamic CRT as the starting point; `/MT` plus debug CRT plus floors stay owned by O14/O37. | open work |
+| Which deployment and execution floors are supportable? | Run oldest-target and current-host fixtures separately; inspect compiler, clangd and bindgen loader dependencies. Check Apple's extracted SDK framework subset. macOS arm64 native is qualified (issue #412) plus macOS x86_64 best-effort native is qualified (issue #413) with SDK version not the deployment floor; oldest-OS execution plus framework completeness plus licensing remain gates; best-effort gaps never block required-host release. Windows x86_64 native is qualified (issue #414) with `/MD` retail dynamic CRT as the starting point; `/MT` plus debug CRT plus floors stay owned by issues #410-#414. | open work |
 | Can every executable first-party line be accounted for? | Rust-only, C/C++-only and mixed/DLL LCOV, missed-line tests, coverage-tool version pairing, native ignores and denominator validation. No ignored collection failures. | open work |
 | Can bindgen/CXX use one upstream graph? | Separate standalone/build-script bindgen fixtures; execution libclang closure, target flags and identical CXX crate/generator versions. | issue #303 |
 | Can public Cargo metadata represent every generated target? | Prove features, build-script metadata, target kinds and ownership without private serialized dependency-graph access; seek narrow upstream metadata exports where missing. | open work |

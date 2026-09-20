@@ -72,8 +72,8 @@ fi
 
 # Parity deferrals own protobuf/qml with owner plus frozen route plus the
 # #419 live-successor record (closed #307 owns nothing here).
-if grep -q -F -e '"protobuf": ["O32"' "$parity" &&
-  grep -q -F -e '"qml": ["O32"' "$parity" &&
+if grep -q -F -e '"protobuf": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"qml": ["ADR 0019"' "$parity" &&
   grep -q -F -e 'checksummed standalone artifact (buf format+lint)' "$parity" &&
   grep -q -F -e 'authoritative Qt distribution toolchain (qmlformat, qmllint)' "$parity" &&
   grep -q -F -e 'issue #419' "$parity"; then

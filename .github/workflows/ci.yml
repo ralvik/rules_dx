@@ -132,7 +132,7 @@ jobs:
   preset-stale:
     name: preset-stale (dx update --check, Linux once)
     # Consumer-CI stale cell (issue #332): Linux-once preset freshness
-    # gate. Review-required with no auto-merge per O53
+    # gate. Review-required with no auto-merge per issue #332
     # (`dx_ci::preset_bot_auto_merge_allowed()==false`,
     # `preset_regen_requires_review()==true`): a stale fragment fails
     # here and must be fixed by a reviewed `dx update` plus flag-diff.

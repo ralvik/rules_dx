@@ -159,17 +159,17 @@ else
 fi
 
 # Parity deferrals name owner plus frozen route for every file-family class.
-if grep -q -F -e '"css": ["O32"' "$parity" &&
-  grep -q -F -e '"html_template": ["O32"' "$parity" &&
-  grep -q -F -e '"protobuf": ["O32"' "$parity" &&
-  grep -q -F -e '"shell": ["O32"' "$parity" &&
-  grep -q -F -e '"text": ["O32"' "$parity" &&
-  grep -q -F -e '"yaml": ["O32"' "$parity" &&
-  grep -q -F -e '"cue": ["O32"' "$parity" &&
-  grep -q -F -e '"jsonnet": ["O32"' "$parity" &&
-  grep -q -F -e '"pkl": ["O32"' "$parity" &&
-  grep -q -F -e '"qml": ["O32"' "$parity" &&
-  grep -q -F -e '"terraform": ["O32"' "$parity" &&
+if grep -q -F -e '"css": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"html_template": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"protobuf": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"shell": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"text": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"yaml": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"cue": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"jsonnet": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"pkl": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"qml": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"terraform": ["ADR 0019"' "$parity" &&
   grep -q -F -e 'PARITY_DEFERRED = {' "$parity"; then
   ok
 else

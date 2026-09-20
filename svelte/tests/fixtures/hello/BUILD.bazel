@@ -1,4 +1,4 @@
-"""M19 seed Svelte component; consumer of svelte_* wrappers."""
+"""Seed Svelte component; consumer of svelte_* wrappers."""
 
 load("//javascript/rules:defs.bzl", "javascript_library", "javascript_test")
 load("//quality:fixtures.bzl", "real_source_target")

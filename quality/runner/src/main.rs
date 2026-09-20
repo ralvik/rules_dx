@@ -1,4 +1,4 @@
-//! M03 WP2b pipeline runner binary: thin CLI shim over the runner library.
+//! Thin CLI shim over the runner library.
 //! All pipeline semantics live in the library and are unit-tested there.
 //!
 //! Usage:
@@ -21,7 +21,7 @@
 //! one resolution-only file (ty dep sources, #408): resolve bytes are
 //! staged for import resolution, never checked, and never enter findings
 //! or snapshots. Without `--real` the
-//! synthetic M03 pipeline runs. With `--real` the M04 real backend runs
+//! synthetic pipeline runs. With `--real` the real backend runs
 //! `run_real_pipeline` over the resolved tools: each stage tool needs one
 //! `--tool-binary`, configs are mirror-relative `--tool-config` paths whose
 //! bytes arrive via `--tool-file`, crate editions arrive via

@@ -1,4 +1,4 @@
-"""Unit and analysis tests for the normalized codegen plans (M25 WP1, snapshot workflow issue #322).
+"""Unit and analysis tests for the normalized codegen plans (issue #506 WP1, snapshot workflow issue #322).
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

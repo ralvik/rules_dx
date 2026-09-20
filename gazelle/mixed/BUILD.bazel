@@ -1,4 +1,4 @@
-"""M21 mixed-framework ownership partition proof (no generator of its own)."""
+"""Mixed-framework ownership partition proof (no generator of its own)."""
 
 load("@rules_go//go:def.bzl", "go_library", "go_test")
 load("//quality:fixtures.bzl", "real_source_target")

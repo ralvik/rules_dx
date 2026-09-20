@@ -1,4 +1,4 @@
-"""M03 result-side validation crate over the frozen result schema."""
+"""Result-side validation crate over the frozen result schema."""
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("//quality:fixtures.bzl", "real_source_target")
@@ -52,7 +52,7 @@ rust_test(
     ) + ["@rules_rust_prost//private/3rdparty/crates:prost"],
 )
 
-# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# Authoritative quality identities (pattern): rustfmt and Clippy
 # resolve from the pinned toolchain, never from ambient host tools.
 rustfmt_test(
     name = "quality_result_fmt_test",

@@ -1,4 +1,4 @@
-"""M23 seed Java binary and library; consumer of java_* wrappers."""
+"""Seed Java binary and library; consumer of java_* wrappers."""
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//java/rules:defs.bzl", "java_binary", "java_library", "java_test")

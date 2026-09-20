@@ -1,4 +1,4 @@
-//! Direct-Bazel per-result threshold evaluator (M03 WP3).
+//! Direct-Bazel per-result threshold evaluator (WP3).
 //!
 //! Contract: `docs/cli/cli-contract.md` (direct Bazel CI) and result
 //! semantics in `docs/quality/quality-result-protocol.md#execution-and-policy`.

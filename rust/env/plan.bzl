@@ -1,4 +1,4 @@
-"""Focused Rust environment plan (M12 WP3).
+"""Focused Rust environment plan (WP3).
 
 Contract: `docs/environments/environment.md`.
 """
@@ -76,5 +76,5 @@ rust_env_plan = rule(
             doc = "One rust_* wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused Rust environment plan for one wrapper target (M12 WP3).",
+    doc = "Emits the provider-derived focused Rust environment plan for one wrapper target (WP3).",
 )

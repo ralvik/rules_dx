@@ -14,7 +14,7 @@
 # in `dx_update::report`; `--dry-run` exits 0).
 # Required-core plus admitted lockfile-consistency and usage checks are
 # delivered in tools/depcheck/ (issues #22, #306); remaining adapter
-# implementation stays owned by O32/O31 plus ADR 0019 (qualified under
+# implementation stays owned by ADR 0019 (qualified under
 # #307), foundation mappings under #304.
 #
 # This harness machine-checks the verifiable halves on a clean

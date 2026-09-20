@@ -94,7 +94,7 @@ impl Command {
     }
 
     /// True for the sequential `check`/`fix` umbrellas over
-    /// format, lint, typecheck, and generate (M10 WP4, O59): phases
+    /// format, lint, typecheck, and generate (WP4): phases
     /// run in order with stop-on-first-failure under one NDJSON frame.
     pub fn is_umbrella(self) -> bool {
         matches!(self, Command::Check | Command::Fix)

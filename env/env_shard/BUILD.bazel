@@ -79,7 +79,7 @@ rust_test(
     ],
 )
 
-# Authoritative quality identities (M02 pattern): rustfmt and Clippy
+# Authoritative quality identities (pattern): rustfmt and Clippy
 # resolve from the pinned toolchain, never from ambient host tools.
 rustfmt_test(
     name = "env_shard_fmt_test",

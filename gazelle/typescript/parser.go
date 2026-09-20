@@ -1,7 +1,7 @@
 // Parser extracts the narrow recognized source facts the TypeScript Gazelle
 // extension needs for one-source ownership and strict dependency resolution.
 //
-// Recognized syntax (M16 narrow source-only scope; additional forms require
+// Recognized syntax (narrow source-only scope; additional forms require
 // parser fixtures before they become recognized):
 //
 //   - `import "name"`, `import x from "name"`, `import {a} from "name"`,

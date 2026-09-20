@@ -1,5 +1,5 @@
 //! Rerun, scope, retry, and code-scanning planning for consumer CI (issue
-//! #236, M27 WP1 slice 7).
+//! #236, WP1 slice 7).
 //!
 //! Split from `super` (`lib.rs`): owns [`plan_rerun`] (GitHub native rerun
 //! preserves selection, revision identity, and reporting semantics),

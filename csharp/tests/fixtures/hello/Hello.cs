@@ -1,4 +1,4 @@
-// M23 seed C# library; consumer of csharp_library.
+// Seed C# library; consumer of csharp_library.
 namespace Hello;
 
 public static class Greeter

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# M10 WP3: native-config generation end to end.
+# Native-config generation end to end.
 #
 # Covers the temporal and failure paths golden files cannot: fresh
 # generation with hint binding, rerun idempotency, config-file removal

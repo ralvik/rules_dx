@@ -1,8 +1,8 @@
-"""Focused JavaScript environment-plan tests (M16 WP3)."""
+"""Focused JavaScript environment-plan tests (WP3)."""
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 
-# Pinned from `bazel build //javascript/env:*_plan` JSON outputs (M16 WP3).
+# Pinned from `bazel build //javascript/env:*_plan` JSON outputs (WP3).
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //javascript/env:hello_lib_plan
 file hello_lib_plan.json
 field direct_sources=hello.js

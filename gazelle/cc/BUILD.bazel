@@ -1,4 +1,4 @@
-"""First-party C/C++ Gazelle extension (M22, O30)."""
+"""First-party C/C++ Gazelle extension (ADR 0019)."""
 
 load("@gazelle//:def.bzl", "gazelle_binary", "gazelle_generation_test")
 load("@rules_go//go:def.bzl", "go_library", "go_test")

@@ -1,6 +1,6 @@
-// M23 seed C# test; consumer of csharp_test (plain executable: exit
+// Seed C# test; consumer of csharp_test (plain executable: exit
 // code is the verdict; the xUnit/NUnit runner selection stays open under
-// O31).
+// ADR 0019).
 using System;
 
 public static class HelloTestMain

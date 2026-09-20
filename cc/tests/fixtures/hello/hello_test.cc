@@ -1,4 +1,4 @@
-// M22 seed C++ test; consumer of cc_test.
+// Seed C++ test; consumer of cc_test.
 #include <cassert>
 
 #include "cc/tests/fixtures/hello/hello.h"

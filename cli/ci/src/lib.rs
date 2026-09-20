@@ -1,4 +1,4 @@
-//! Pure consumer-CI check-selection planning (M27 WP1 slices 1-7, WP2 slices 8-9,
+//! Pure consumer-CI check-selection planning (WP1 slices 1-7, WP2 slices 8-9,
 //! WP4 slices 10-11, WP6 slice 12).
 //!
 //! This crate owns the check-selection surface before any reusable
@@ -20,7 +20,7 @@
 //! Platform identities stay opaque here: when any per-platform check is
 //! enabled, the caller must supply an explicit nonempty platform list,
 //! and missing/empty selections fail closed. Runner/OS/arch mapping and
-//! the supported-identity set arrive in later M27 slices; this crate
+//! the supported-identity set arrive in later slices; this crate
 //! preserves spellings verbatim and never substitutes an implicit
 //! Linux/current-runner/all-platforms default.
 //!
@@ -32,9 +32,9 @@
 //! isolated checkout, report-destination, and Bazel output-base identities;
 //! no two cells share an output-base.
 //!
-//! Out of scope here (M27 qualification): workflow APIs/pins beyond the opaque
+//! Out of scope here (qualification): workflow APIs/pins beyond the opaque
 //! identities below, event/ref bindings beyond the revision-planning identities
-//! below, and any YAML or reporter implementation. Those arrive in later M27
+//! below, and any YAML or reporter implementation. Those arrive in later
 //! slices (workflow/reporter YAML plus GitHub execution stay blocked on
 //! qualification). Audit rendering below plans only the
 //! accepted presentation/safety boundary; numeric thread limits and frozen
@@ -43,7 +43,7 @@
 //! transport, API limits, and execution stay deferred. Preset onboarding below
 //! plans only the stability discipline and runbook/update shape over opaque
 //! labels; the frozen public load-label string, workflow/pin representation,
-//! and `dx init` template emission stay deferred (M30).
+//! and `dx init` template emission stay deferred.
 
 // Issue #238: infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
@@ -111,53 +111,53 @@ pub use untrusted::{
 };
 
 // ---------------------------------------------------------------------------
-// Scheduling and isolation planning (M27 WP1 slice 3).
+// Scheduling and isolation planning (WP1 slice 3).
 // ---------------------------------------------------------------------------
 // (moved to scheduling.rs; re-exported above)
 
 // ---------------------------------------------------------------------------
-// Supersession and queue-revision planning (M27 WP1 slice 4).
+// Supersession and queue-revision planning (WP1 slice 4).
 // ---------------------------------------------------------------------------
 // (moved to supersession.rs; re-exported above)
 
 // ---------------------------------------------------------------------------
-// Reporting and review-thread planning (M27 WP1 slice 5).
+// Reporting and review-thread planning (WP1 slice 5).
 // ---------------------------------------------------------------------------
 // (moved to reporting.rs; re-exported above)
 
 // ---------------------------------------------------------------------------
-// Fork-security and aggregate-gating planning (M27 WP1 slice 6).
+// Fork-security and aggregate-gating planning (WP1 slice 6).
 // ---------------------------------------------------------------------------
 // (moved to fork.rs; re-exported above)
 
 // ---------------------------------------------------------------------------
-// Rerun, scope, retry, and code-scanning planning (M27 WP1 slice 7).
+// Rerun, scope, retry, and code-scanning planning (WP1 slice 7).
 // ---------------------------------------------------------------------------
 // (moved to rerun.rs; re-exported above)
 
 // ---------------------------------------------------------------------------
 // Starter triggers, platform qualification mechanics, no-op semantics, and
-// latest-target revalidation (M27 WP2 slice 8).
+// latest-target revalidation (WP2 slice 8).
 // ---------------------------------------------------------------------------
 // (moved to triggers.rs; re-exported above)
 
 // ---------------------------------------------------------------------------
-// Caller-template composition and reviewed pin updates (M27 WP2 slice 9).
+// Caller-template composition and reviewed pin updates (WP2 slice 9).
 // ---------------------------------------------------------------------------
 // (moved to caller.rs; re-exported above)
 
 // ---------------------------------------------------------------------------
-// Audit rendering planning (M27 WP4 slice 10).
+// Audit rendering planning (WP4 slice 10).
 // ---------------------------------------------------------------------------
 // (moved to audit.rs; re-exported above)
 
 // ---------------------------------------------------------------------------
 // Untrusted-artifact/metadata validation and thread-accounting deltas
-// (M27 WP4 slice 11).
+// (WP4 slice 11).
 // ---------------------------------------------------------------------------
 // (moved to untrusted.rs; re-exported above)
 
 // ---------------------------------------------------------------------------
-// Consumer `.bazelrc` preset onboarding planning (M27 WP6 slice 12).
+// Consumer `.bazelrc` preset onboarding planning (WP6 slice 12).
 // ---------------------------------------------------------------------------
 // (moved to preset.rs; re-exported above)

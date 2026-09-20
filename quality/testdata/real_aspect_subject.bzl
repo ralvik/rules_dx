@@ -1,4 +1,4 @@
-"""Analysis subject observing real-aspect dx_results (M04 WP2).
+"""Analysis subject observing real-aspect dx_results (WP2).
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")

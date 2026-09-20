@@ -1,4 +1,4 @@
-"""M01 Starlark framework conformance tests (ADR 0009)."""
+"""Starlark framework conformance tests (ADR 0009)."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 load(":analysis_tests.bzl", "subject_analysis_tests")

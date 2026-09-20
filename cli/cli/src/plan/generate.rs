@@ -15,21 +15,21 @@ use super::{workflow_scope_labels, workspace_flag, BuildPlan};
 use crate::resolve::ResolvedScope;
 
 /// Canonical Gazelle runners behind `dx generate`: the repo-wide
-/// `update` entrypoint from M10 WP1, plus the non-mutating check
-/// entrypoint (O13 dispatch). The check target encodes upstream
+/// `update` entrypoint from WP1, plus the non-mutating check
+/// entrypoint (dispatch). The check target encodes upstream
 /// `-mode diff` in canonical-target wiring: Gazelle computes the same
 /// rewrite, witnesses the same intended manifest through
 /// `AfterResolvingDeps`, writes no workspace file, and exits nonzero
 /// when changes exist. Scoped runs keep the mode target and narrow the
 /// traversal through positional arguments plus the resolved scope
-/// manifest (`DX_GENERATE_SCOPE`) from M10 WP1.
+/// manifest (`DX_GENERATE_SCOPE`) from WP1.
 pub const GENERATE_TARGET: &str = "//dx:generate";
 /// Non-mutating Gazelle entrypoint for `dx generate --check`: identical
 /// language wiring with upstream `-mode diff`.
 pub const GENERATE_CHECK_TARGET: &str = "//dx:generate_check";
 
 /// Private protocol environment the execution wrapper sets on the
-/// Gazelle run (M10 WP1, O13 dispatch). Names mirror the extension
+/// Gazelle run (WP1, dispatch). Names mirror the extension
 /// side (`gazelle/rust/manifest.go`); the CLI never reads them back.
 pub const GENERATE_ENV_INTENDED: &str = "DX_GENERATE_INTENDED";
 /// JSON list of `{"element","dirs"}` scope elements, see
@@ -39,7 +39,7 @@ pub const GENERATE_ENV_SCOPE: &str = "DX_GENERATE_SCOPE";
 pub const GENERATE_ENV_MODE: &str = "DX_GENERATE_MODE";
 
 /// One resolved scope element for the versioned intended-manifest
-/// contract (`DX_GENERATE_SCOPE`, M10 WP1): the owning Bazel target plus
+/// contract (`DX_GENERATE_SCOPE`, WP1): the owning Bazel target plus
 /// the workspace-relative directories the runner must traverse for it.
 /// `""` is the workspace root, selected by the repository scope
 /// (`//...`); every other directory is relative without a leading `./`.
@@ -91,7 +91,7 @@ pub fn generate_scope_elements(resolved: &ResolvedScope) -> Vec<GenerateScopeEle
         .collect()
 }
 
-/// Renders the manifest scope value (`DX_GENERATE_SCOPE`, M10 WP1): a
+/// Renders the manifest scope value (`DX_GENERATE_SCOPE`, WP1): a
 /// JSON array of `{"element","dirs"}` objects in
 /// [`generate_scope_elements`] order.
 pub fn generate_scope_json(resolved: &ResolvedScope) -> String {
@@ -127,7 +127,7 @@ pub fn generate_traversal_dirs(resolved: &ResolvedScope) -> Vec<String> {
 /// already walks the whole workspace. Fails before execution when user
 /// options conflict with required policy. There is no BEP stream:
 /// Gazelle owns its output and exit status, and the versioned intended
-/// manifest (O13) carries per-command results.
+/// manifest carries per-command results.
 pub fn plan_generate(
     resolved: &ResolvedScope,
     bazel_options: &[String],

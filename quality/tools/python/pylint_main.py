@@ -1,4 +1,4 @@
-"""Pylint entry point with exit-code propagation (M15 WP3).
+"""Pylint entry point with exit-code propagation (WP3).
 
 Upstream `py_console_script_binary` expands to `{fn}()` without `sys.exit`,
 so pylint's bit-encoded return (1 fatal, 2 error, 4 warning, 8 refactor,

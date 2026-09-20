@@ -1,4 +1,4 @@
-//! Normalized env plan collection for the `dx` CLI (M25 WP2 slice 4).
+//! Normalized env plan collection for the `dx` CLI (issue #506 WP2 slice 4).
 //!
 //! Contract: `docs/environments/environment.md` (plan collection,
 //! provider-selective aspects, private output group) and
@@ -113,7 +113,7 @@ pub fn resolve_scope(targets: &[String]) -> Result<EnvScope, ScopeError> {
 }
 
 /// Bazel labels to build for `scope`: the canonical repository target or
-/// the one exact label. The repository arm composes the WP4 (O34)
+/// the one exact label. The repository arm composes the WP4 (issue #506)
 /// [`dx_roots::repository_plan`] (still the `//...` baseline) behind the
 /// `//dx:env` selection identity; exact scopes bypass root selection.
 pub fn scope_targets(scope: &EnvScope) -> Vec<String> {

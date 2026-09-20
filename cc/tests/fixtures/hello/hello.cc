@@ -1,4 +1,4 @@
-// M22 seed C++ library; consumer of cc_library.
+// Seed C++ library; consumer of cc_library.
 #include "cc/tests/fixtures/hello/hello.h"
 
 int Add(int a, int b) {

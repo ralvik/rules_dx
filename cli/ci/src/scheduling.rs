@@ -1,4 +1,4 @@
-//! Schedule planning for consumer CI (M27 WP1 slice 3).
+//! Schedule planning for consumer CI (WP1 slice 3).
 //!
 //! Split from `super` (`lib.rs`): owns [`SchedulingMode`],
 //! [`ExecutionCell`], [`CellIsolation`], [`PlannedCell`],

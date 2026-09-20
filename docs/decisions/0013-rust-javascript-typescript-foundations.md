@@ -29,7 +29,7 @@ Rust uses an exact latest-stable `hermeticbuild/rules_rs` release and its pinned
 providers, proc macros, build scripts, generated sources, and rust-analyzer integration.
 `rules_dx` does not implement another compiler rule, Cargo resolver, crate graph, linker model,
 build-script protocol, or proc-macro transition. Exact release and patched-commit identities
-are provisional pending O16/O24/O27/O37 stack qualification; `latest-stable` here states the
+are provisional pending ADR 0014 and the issue tracker stack qualification; `latest-stable` here states the
 selection policy, not a frozen pin. This record does not pin a version through prose.
 
 The tested-stack manifest records both the selected `rules_rs` release and the identity of its

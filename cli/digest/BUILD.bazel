@@ -5,7 +5,7 @@ load("//rust/rules:defs.bzl", "dx_rust_crate")
 
 package(default_visibility = ["//visibility:public"])
 
-# M02 leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# Leaf-crate pattern via `dx_rust_crate` (issue #239): emits
 # `dx_digest` + `dx_digest_test` + fmt/clippy tests + `Cargo.toml`
 # export + `corpus`, identical to the hand-written stanzas.
 dx_rust_crate(

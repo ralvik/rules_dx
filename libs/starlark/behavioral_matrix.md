@@ -1,4 +1,4 @@
-# Starlark Behavioral Matrix (M01)
+# Starlark Behavioral Matrix
 
 Evidence-backed fallback for Starlark line coverage under the pinned Bazel
 (`9.2.0`), per the [coverage policy](../../docs/testing/starlark.md#coverage) and
@@ -36,7 +36,7 @@ matrix-item: expect_equal
 
 Public `starlark_test` macro in `libs/starlark/defs.bzl`: one call is one
 addressable test target with `size` defaulting to `small`, dispatching to
-the internal per-mode rule implementation. Every M01 test target is built
+the internal per-mode rule implementation. Every test target is built
 through this facade.
 matrix-item: starlark_test-facade
 
@@ -84,7 +84,7 @@ matrix-item: dx-subject-info
 Mismatch diagnostics render `FAIL` with expected and actual values in
 declaration order, accumulate across checks, and exit non-zero so Bazel
 reports `FAILED`. Proven by the manual negative demonstrations in
-`libs/starlark/tests/negative` (captured output in the M01 completion
+`libs/starlark/tests/negative` (captured output in the completion
 report) and structurally by every generated runner.
 matrix-item: failure-rendering
 

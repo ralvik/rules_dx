@@ -14,11 +14,11 @@ module(
 bazel_dep(name = "rules_rust", version = "0.74.0")
 bazel_dep(name = "rules_cc", version = "0.2.22")
 
-# M04 WP1: direct dep for the artifact-metadata generator. 1.9.0 is the
+# Direct dep for the artifact-metadata generator. 1.9.0 is the
 # MVS-selected version in the executed graph (via aspect_rules_py 2.x).
 bazel_dep(name = "rules_python", version = "1.9.0")
 
-# M09 WP1: Go toolchain for the first-party Rust Gazelle extension
+# Go toolchain for the first-party Rust Gazelle extension
 # (ADR 0015). Pinned from the Bazel Central Registry; versions verified
 # against Bazel 9.2.0 on the seed host.
 bazel_dep(name = "rules_go", version = "0.63.0")
@@ -32,12 +32,12 @@ use_repo(gazelle_go_deps, "com_github_bazelbuild_buildtools", "com_github_bmatcu
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
 go_sdk.download(version = "1.26.6")
 
-# M04 WP1: direct dep so MODULE tags can name execution-platform
+# Direct dep so MODULE tags can name execution-platform
 # constraints. 1.1.0 is the MVS-selected version already in the executed
 # graph (see the root-module warning that proposed it).
 bazel_dep(name = "platforms", version = "1.1.0")
 
-# M03 WP1: explicit direct deps (versions match the transitive pins above
+# Explicit direct deps (versions match the transitive pins above
 # where they overlap, so MVS keeps the executed tree). `protobuf`/`protoc`
 # itself stays transitive via rules_proto/rules_rust_prost (it resolves above
 # their declared minimums, so a root pin would only add a direct-dep warning).
@@ -45,27 +45,27 @@ bazel_dep(name = "bazel_skylib", version = "1.9.0")
 bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "rules_rust_prost", version = "0.74.0")
 
-# M23 WP2 slice 1: pinned Java foundation (ADR 0019, O31). Latest stable
+# Pinned Java foundation (ADR 0019). Latest stable
 # per ADR 0008 currency (9.7.0, Bazel >=7.0.0; verified against Bazel 9.2.0
 # on the seed host). Remote-JDK toolchain configs register through the
 # upstream module; per-platform JDK acquisition selection stays open under
-# O31 (the hermetic `--java_runtime_version` route from the support matrix).
+# ADR 0019 (the hermetic `--java_runtime_version` route from the support matrix).
 bazel_dep(name = "rules_java", version = "9.7.0")
 
-# M23 Kotlin slice: pinned Kotlin foundation (ADR 0019, O31). 2.4.10 is the
+# Pinned Kotlin foundation (ADR 0019). 2.4.10 is the
 # latest stable in the Bazel Central Registry (Bazel >=7.1 per upstream);
 # verified against Bazel 9.2.0 on the seed host. Builds on the same JVM
 # toolchain and Maven-lock story as Java; kotlinc acquisition and worker
-# behavior stay open under O31.
+# behavior stay open under ADR 0019.
 bazel_dep(name = "rules_kotlin", version = "2.4.10")
 
-# M23 Scala slice: pinned Scala foundation, managed route (ADR 0019, O31;
-# M22 O30 route decision). 7.3.0 is the latest stable in the Bazel Central
+# Pinned Scala foundation, managed route (ADR 0019;
+# ADR 0019 route decision). 7.3.0 is the latest stable in the Bazel Central
 # Registry (Bazel >=7.1 per upstream); verified against Bazel 9.2.0 on the
 # seed host. Scala 2.13.18 is the default toolchain version (latest 2.13.x
 # in the upstream-supported list); Coursier-fetched toolchains share Java's
 # Maven-lock story, so no new Maven lock members land here. Scalafix
-# semantic rules need semanticdb plus classpath wiring (open under O31).
+# semantic rules need semanticdb plus classpath wiring (open under ADR 0019).
 bazel_dep(name = "rules_scala", version = "7.3.0")
 
 scala_config = use_extension("@rules_scala//scala/extensions:config.bzl", "scala_config")
@@ -76,7 +76,7 @@ scala_deps = use_extension("@rules_scala//scala/extensions:deps.bzl", "scala_dep
 scala_deps.scala()
 scala_deps.scalatest()
 
-# M23 .NET slice: pinned .NET foundation (ADR 0019, O31). 0.22.1 is the
+# Pinned .NET foundation (ADR 0019). 0.22.1 is the
 # latest stable in the Bazel Central Registry (Bazel >=9.0.0 per upstream;
 # verified against Bazel 9.2.0 on the seed host). One ruleset covers both
 # admitted .NET languages (csharp_* plus fsharp_* targets) with SDK
@@ -84,7 +84,7 @@ scala_deps.scalatest()
 # upstream-CI toolchain version (matches rules_dotnet's own MODULE pin);
 # the default target framework is net10.0 (wrapper default, overridable per
 # target). Per-platform SDK acquisition, Paket/NuGet lock wiring, and the
-# xUnit/NUnit runner selection stay open under O31 per the provisional
+# xUnit/NUnit runner selection stay open under ADR 0019 per the provisional
 # test-runner/lock tables. Needs bazel_lib 3.7.0 (rules_dotnet dep; MVS
 # keeps the executed tree on our other pins).
 bazel_dep(name = "rules_dotnet", version = "0.22.1")
@@ -94,12 +94,12 @@ dotnet = use_extension("@rules_dotnet//dotnet:extensions.bzl", "dotnet")
 dotnet.toolchain(dotnet_version = "10.0.201")
 use_repo(dotnet, "dotnet_toolchains")
 
-# M23 .NET dep-route slice: pinned NuGet resolver (ADR 0019, O31). Single
+# Pinned NuGet resolver (ADR 0019). Single
 # shared Paket lock for the admitted .NET foundations (C#, F#) per the
 # support matrix: `paket.dependencies` plus `paket.lock` via `paket2bazel`
 # into the `paket.main` hub carrying per-package sha512. Seed member is
 # FSharp.Core 10.1.201 only (F# assemblies need the runtime asset next to
-# the app); the xUnit/NUnit runner selection stays open under O31 per the
+# the app); the xUnit/NUnit runner selection stays open under ADR 0019 per the
 # provisional test-runner table. Regenerate with:
 #   bazel run @rules_dotnet//tools/paket2bazel -- --dependencies-file
 #   $PWD/third_party/dotnet/paket.dependencies --output-folder
@@ -107,13 +107,13 @@ use_repo(dotnet, "dotnet_toolchains")
 dotnet_nuget = use_extension("//third_party/dotnet/deps:paket.main_extension.bzl", "main_extension")
 use_repo(dotnet_nuget, "paket.main")
 
-# M23 JVM dep-route slice: pinned Maven resolver (ADR 0019, O31). 7.1 is the
+# Pinned Maven resolver (ADR 0019). 7.1 is the
 # latest stable in the Bazel Central Registry (Bazel >=7.0.0; verified
 # against Bazel 9.2.0 on the seed host). Single shared lock for the admitted
 # JVM foundations (Java, Kotlin, Scala managed route) per the support
 # matrix: `maven_install.json` plus fail-closed repin checking. Seed member
 # is junit 4.13.2 only (latest 4.x; hamcrest-core 1.3 arrives transitively):
-# the JUnit 5/6 runner selection stays open under O31 per the provisional
+# the JUnit 5/6 runner selection stays open under ADR 0019 per the provisional
 # test-runner table. Repository order lists the GCS Maven Central mirror
 # first: this host's egress proxy serves it while repo1.maven.org answers
 # Cloudflare challenges; the pinned lock hashes make the order irrelevant
@@ -135,18 +135,18 @@ maven.install(
 )
 use_repo(maven, "maven")
 
-# M14 WP1: pinned Python foundation (ADR 0010). Exact 2.x prerelease is an
+# Pinned Python foundation (ADR 0010). Exact 2.x prerelease is an
 # explicit exception to ADR 0008 until a compatible stable 2.x exists.
 bazel_dep(name = "aspect_rules_py", version = "2.0.0-alpha.6")
 
-# M16 WP1: pinned JavaScript/TypeScript foundation (ADR 0013). Exact
+# Pinned JavaScript/TypeScript foundation (ADR 0013). Exact
 # latest-stable per selection policy; versions verified against Bazel 9.2.0
 # on the seed host (all require Bazel >=7.6.0/>=7.0.0).
 bazel_dep(name = "aspect_rules_js", version = "3.4.1")
 bazel_dep(name = "aspect_rules_ts", version = "3.10.0")
 bazel_dep(name = "aspect_rules_jest", version = "0.26.0")
 
-# M16 WP1 slice 3: TypeScript toolchain (ADR 0012 release-default). 5.9.3 is
+# TypeScript toolchain (ADR 0012 release-default). 5.9.3 is
 # the latest stable 5.x in TOOL_VERSIONS of aspect_rules_ts 3.10.0; 6.x is
 # the native preview and stays out. Integrity resolves from the mirrored
 # TOOL_VERSIONS entry, so no manual integrity is pinned here.
@@ -154,13 +154,13 @@ typescript = use_extension("@aspect_rules_ts//ts:extensions.bzl", "typescript")
 typescript.deps(version = "5.9.3")
 use_repo(typescript, "npm_typescript")
 
-# M16 WP1 slice 4: pnpm toolchain for the authoritative JS/TS package graph
+# Pnpm toolchain for the authoritative JS/TS package graph
 # (ADR 0013). Version resolves from the root package.json packageManager
 # field (pnpm 10.34.5); builds never invoke the package manager.
 pnpm = use_extension("@aspect_rules_js//npm:extensions.bzl", "pnpm")
 use_repo(pnpm, "pnpm")
 
-# M16 WP1 slice 4: authoritative pnpm graph (jest + jest-junit). The lock
+# Authoritative pnpm graph (jest + jest-junit). The lock
 # is generated with the Bazel-pinned pnpm (`BAZEL_BINDIR=. bazel-bin/.../pnpm
 # install --lockfile-only`); builds never invoke the package manager.
 npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
@@ -171,7 +171,7 @@ npm.npm_translate_lock(
     verify_node_modules_ignored = "//:.bazelignore",
 )
 
-# M17 WP1 slice 3: private pure-JavaScript tool graph (ESLint + Prettier).
+# Private pure-JavaScript tool graph (ESLint + Prettier).
 # Separate `npm_tools` hub so the tool closure stays private: consumers
 # never touch this lock or hub labels; public entry points live under
 # //quality/tools/javascript. Shares the managed Node 22 toolchain
@@ -190,14 +190,14 @@ use_repo(python_interpreters, "python_interpreters")
 
 register_toolchains("@python_interpreters//:all")
 
-# M14 WP1: align rules_python default with the ADR 0012 release-default
+# Align rules_python default with the ADR 0012 release-default
 # (3.12). rules_python ships its own 3.11 default toolchain; without this
 # the aspect transition falls back to 3.11 and venvs resolve to
 # rules_python's 3.11 interpreter despite the 3.12 pin above.
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
 python.toolchain(python_version = "3.12")
 
-# M14 WP1: authoritative uv graph for the Python hello fixture. Source-only
+# Authoritative uv graph for the Python hello fixture. Source-only
 # local graphs remain possible without this metadata; the hello test closure
 # uses it for pytest/coverage.
 uv = use_extension("@aspect_rules_py//uv:extensions.bzl", "uv")
@@ -208,7 +208,7 @@ uv.project(
     pyproject = "//python/tests/fixtures/hello:pyproject.toml",
 )
 
-# M15 WP1: private wheel-only Python tool graph (pydoclint + flake8 cohort,
+# Private wheel-only Python tool graph (pydoclint + flake8 cohort,
 # dep_group dx-python-tools) in the single pypi hub. Consumers never touch
 # the lock or hub labels; public entry points live under
 # //quality/tools/python.
@@ -222,7 +222,7 @@ use_repo(uv, "pypi")
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
     edition = "2021",
-    # M04 WP1: couple rustfmt to the selected stable toolchain instead of
+    # Couple rustfmt to the selected stable toolchain instead of
     # the rules_rust nightly default, so rustfmt follows toolchain updates
     # exactly like Clippy with no second nightly pin.
     rustfmt_version = "1.98.0",
@@ -295,7 +295,7 @@ crate.from_cargo(
 )
 use_repo(crate, "crates")
 
-# M04 WP1: standalone quality-tool acquisition (O20). One lazy repository
+# Standalone quality-tool acquisition. One lazy repository
 # per tool/platform from generated checked-in metadata, plus an
 # execution-platform hub. Registration fetches nothing; each repository
 # downloads only when an action needs its artifact. Seed host only

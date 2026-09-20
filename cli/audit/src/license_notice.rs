@@ -1,4 +1,4 @@
-//! License notice-text inputs and SPDX report shape (M26 WP3 slice 3).
+//! License notice-text inputs and SPDX report shape (WP3 slice 3).
 //!
 //! Pure planning for the license-evidence tail of the license contract
 //! (`docs/cli/commands/audit-update-bazel.md#license-family-dx-audit-license`):
@@ -19,9 +19,9 @@
 //!
 //! This module plans over injected notice records only. The shared
 //! `--report` format identifier and event mapping for SPDX remain
-//! pending under O58 per the output protocol; no identifier string or
+//! pending under per the output protocol; no identifier string or
 //! event schema is invented here. Full per-ecosystem
-//! license-identity mappings and proof evidence stay O58-gated.
+//! license-identity mappings and proof evidence stay gated.
 
 use crate::license_expr::{Tier, TierOutcome};
 
@@ -53,7 +53,7 @@ pub fn aggregates_notice_artifact() -> bool {
 
 /// SPDX identities the contract names as legally requiring notice-text
 /// reproduction (copyright notice plus text). Full per-ecosystem
-/// license-identity mappings stay O58-gated; this seed covers exactly
+/// license-identity mappings stay gated; this seed covers exactly
 /// the contract-named MIT/BSD/Apache-2.0 families and nothing else.
 pub const NOTICE_REQUIRED_IDS: &[&str] = &["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause"];
 
@@ -137,7 +137,7 @@ mod tests {
             assert!(requires_notice_text(identity), "{identity} needs words");
         }
         // The seed covers exactly the contract-named families; anything
-        // else waits on O58 identity qualification.
+        // else waits on identity qualification.
         for identity in ["ISC", "MPL-2.0", "GPL-3.0-only", "Unicode-3.0"] {
             assert!(!requires_notice_text(identity), "{identity} unqualified");
         }

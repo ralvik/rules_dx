@@ -1,4 +1,4 @@
-//! M03 WP3 evaluator binary: thin CLI shim over the evaluator library.
+//! Thin CLI shim over the evaluator library.
 //! Threshold semantics live in the library and are unit-tested there.
 //!
 //! Usage:

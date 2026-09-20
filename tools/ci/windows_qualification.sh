@@ -84,7 +84,7 @@ else
 fi
 
 # ADR 0014 keeps Windows x86_64 required and records the qualification.
-# Exact pins, hosts, floors, and SDK/CRT identities stay owned by O14/O37.
+# Exact pins, hosts, floors, and SDK/CRT identities stay owned by issues #410-#414.
 if grep -q -F -e '| Windows x86_64 MSVC-compatible | Required' docs/decisions/0014-tested-platform-release-stack.md &&
   grep -q -F -e 'Windows x86_64 MSVC-compatible is qualified' docs/decisions/0014-tested-platform-release-stack.md; then
   ok

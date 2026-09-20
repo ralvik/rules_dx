@@ -1,4 +1,4 @@
-"""Analysis subject observing the real typecheck dx_results (M12 WP3).
+"""Analysis subject observing the real typecheck dx_results (WP3).
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")

@@ -1,8 +1,8 @@
-"""Focused F# environment-plan tests (M23 WP2)."""
+"""Focused F# environment-plan tests (WP2)."""
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 
-# Pinned from `bazel build //fsharp/env:*_plan` JSON outputs (M23 WP2).
+# Pinned from `bazel build //fsharp/env:*_plan` JSON outputs (WP2).
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //fsharp/env:hello_lib_plan
 file hello_lib_plan.json
 field direct_sources=Library.fs

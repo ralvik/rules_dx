@@ -1,4 +1,4 @@
-//! M00 coverage gate CLI: thin entry point over the gate library.
+//! Thin entry point over the gate library.
 //! All branching logic lives in the library and is unit-tested there.
 
 // The explicit `use` keeps the gate dependency visible to the Gazelle Rust

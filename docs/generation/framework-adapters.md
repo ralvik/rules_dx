@@ -112,7 +112,7 @@ focused-target plan reading the preserved `JsInfo` transitive sources plus
 `QualitySourcesInfo` direct sources, pinned by `<fw>/env/plan_tests.bzl` and
 exercised by `<fw>/env:hello_lib_plan` over `//<fw>/tests/fixtures/hello:hello_lib`.
 Binaries and tests share the same closure through `data`/runfiles;
-repository/root/exact-target orchestration remains M25.
+repository/root/exact-target orchestration remains issue #506.
 
 Quality-region: `vue`, `svelte`, `astro`, and `mdx` are frozen semantic
 file classes in `quality/sources.bzl`, each owning its own policy family in

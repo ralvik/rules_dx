@@ -1,4 +1,4 @@
-//! License tier policy and distribution roots (M26 WP3 slice 2).
+//! License tier policy and distribution roots (WP3 slice 2).
 //!
 //! Pure planning for the license-family policy shape in the license
 //! contract
@@ -28,7 +28,7 @@
 //! any lockfile or Bazel integration. [`load_licenses_toml`] parses the
 //! committed `licenses.toml` root file into those records with `toml`
 //! plus `serde`; per-ecosystem license-identity mappings, shared-lock
-//! tier attribution, and proof evidence stay O58-gated for later slices.
+//! tier attribution, and proof evidence stay gated for later slices.
 
 use std::collections::{BTreeMap, BTreeSet};
 

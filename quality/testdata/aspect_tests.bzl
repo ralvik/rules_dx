@@ -1,4 +1,4 @@
-"""Aspect evidence tests (M03 WP2c).
+"""Aspect evidence tests (WP2c).
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")

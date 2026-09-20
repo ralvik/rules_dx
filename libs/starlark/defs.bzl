@@ -1,4 +1,4 @@
-"""Project-owned Starlark testing facade (ADR 0009, M01).
+"""Project-owned Starlark testing facade (ADR 0009).
 
 Contract: `docs/decisions/0009-starlark-testing.md`.
 """
@@ -28,7 +28,7 @@ def _display_label(label):
 
     Strips one leading canonical-repository marker (two at-signs) from
     Bazel 9 rendering so observations stay readable; the stripped form is
-    pinned to the supported Bazel and requalified on version bumps per O14.
+    pinned to the supported Bazel and requalified on version bumps per issues #410-#414.
     """
     text = str(label)
     if text.startswith("@@"):  # buildifier: disable=canonical-repository

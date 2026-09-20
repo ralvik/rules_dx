@@ -9,7 +9,7 @@ package typescript
 
 import "strings"
 
-// nodeBuiltins is the exact recognized Node builtin set for the M16 slice,
+// nodeBuiltins is the exact recognized Node builtin set for the slice,
 // mirroring the JavaScript extension (Node release backing the pinned
 // toolchain). Subpaths (`fs/promises`) match exactly, never by prefix:
 // deeper unknown paths (`fs/promises/extra`) fail closed via strict

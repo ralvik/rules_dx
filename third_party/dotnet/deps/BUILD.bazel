@@ -1,4 +1,4 @@
-"""Generated paket2bazel hub (M23, O31, ADR 0019).
+"""Generated paket2bazel hub (ADR 0019).
 
 Generated from `//third_party/dotnet:paket.dependencies` plus
 `//third_party/dotnet:paket.lock` via:

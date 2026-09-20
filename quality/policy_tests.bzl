@@ -1,4 +1,4 @@
-"""Unit and analysis tests for workspace policy and applicability (M03 WP1).
+"""Unit and analysis tests for workspace policy and applicability (WP1).
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

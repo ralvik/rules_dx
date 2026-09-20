@@ -1,4 +1,4 @@
-//! Standard-report planning and SARIF/JUnit/LCOV projection (M07 WP2, M08 WP3).
+//! Standard-report planning and SARIF/JUnit/LCOV projection (WP2, WP3).
 //!
 //! Contract: `docs/cli/standard-reports.md` and
 //! `docs/cli/commands/quality.md`. Lint and typecheck export normalized

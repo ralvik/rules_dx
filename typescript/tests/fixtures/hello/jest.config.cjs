@@ -1,4 +1,4 @@
-// M16 TS hello jest config: match the one-source `*_test.js` test naming
+// Match the one-source `*_test.js` test naming
 // (the generation contract recognizes `_test` suffix, not `.test.` infix;
 // same config as //javascript/tests/fixtures/entries:helper_test).
 module.exports = {

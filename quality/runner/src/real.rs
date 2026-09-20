@@ -1,4 +1,4 @@
-//! Real-tool pipeline backend (M04 WP2).
+//! Real-tool pipeline backend (WP2).
 //!
 //! Contract: `docs/quality/tool-integrations.md`,
 //! `docs/tools/tool-acquisition.md`, `docs/quality/native-configuration.md`
@@ -13,7 +13,7 @@
 //! tool launch, grammar, or placement failure is an action failure
 //! (`RunnerError`), never a skipped finding.
 //!
-//! Capability mapping: each M04 tool owns its capability slice outright
+//! Capability mapping: each tool owns its capability slice outright
 //! except Buildifier, whose single check reports both format findings
 //! (empty rule: unformatted or syntax) and lint warnings (the rule
 //! carries the category). The backend keeps only the findings matching
@@ -59,9 +59,9 @@ use crate::{
 };
 use quality_result::proto::Diagnostic;
 
-/// Real tool IDs for the M04 initial adapters plus the M12 rustc
-/// typecheck adapter, the M15 Python adapters (Ruff, Ty, pydoclint,
-/// flake8, pylint), and the M17 JavaScript/TypeScript/JSON adapters
+/// Real tool IDs for the initial adapters plus the rustc
+/// typecheck adapter, the Python adapters (Ruff, Ty, pydoclint,
+/// flake8, pylint), and the JavaScript/TypeScript/JSON adapters
 /// (Biome, ESLint, Prettier; target-coupled tsc stays pipeline-only and
 /// never runs as a bare backend invocation).
 /// Mirrors `REAL_ADAPTERS`
@@ -3541,7 +3541,7 @@ mod tests {
         );
     }
 
-    /// M17 WP3: Biome/Prettier composition benchmark. Models the measured
+    /// Biome/Prettier composition benchmark. Models the measured
     /// direct-probe behavior: Biome formats with tabs, Prettier with two
     /// spaces (pinned defaults, no native config), so the same JS input
     /// has no common fixed point while JSON inputs agree. The lexical

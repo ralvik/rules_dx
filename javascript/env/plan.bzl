@@ -1,4 +1,4 @@
-"""Focused JavaScript environment plan (M16 WP3).
+"""Focused JavaScript environment plan (WP3).
 
 Contract: `docs/environments/environment.md`.
 """
@@ -70,5 +70,5 @@ javascript_env_plan = rule(
             doc = "One javascript_* wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused JavaScript environment plan for one wrapper target (M16 WP3).",
+    doc = "Emits the provider-derived focused JavaScript environment plan for one wrapper target (WP3).",
 )

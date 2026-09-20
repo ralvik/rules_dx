@@ -1,8 +1,8 @@
-"""Focused Python environment-plan tests (M14 WP3)."""
+"""Focused Python environment-plan tests (WP3)."""
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 
-# Pinned from `bazel build //python/env:*_plan` JSON outputs (M14 WP3).
+# Pinned from `bazel build //python/env:*_plan` JSON outputs (WP3).
 # Source-only targets project no wheels; the pytest target projects the
 # six uv wheel records (coverage, iniconfig, packaging, pluggy, pygments,
 # pytest) its venv assembles.

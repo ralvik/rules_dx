@@ -143,7 +143,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         });
     }
     if command.is_managed() {
-        // Managed environment/codegen/setup commands (M25 WP5) run one
+        // Managed environment/codegen/setup commands (issue #506 WP5) run one
         // Bazel collection request behind a canonical selection with
         // text prose only: no check mode, no finding thresholds, no
         // standard reports, and no version/clean-only flags.
@@ -197,7 +197,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         }
     }
     if command == Command::Audit {
-        // Audit plans through `dx_audit` (M26 WP1): family selection
+        // Audit plans through `dx_audit` (WP1): family selection
         // plus scope spellings, non-mutating, with SARIF reports and
         // `--fail-on` thresholds. `--check` is meaningless (audit never
         // mutates), Bazel forwards do not apply (no collection build
@@ -504,7 +504,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         }
     }
     if command == Command::Run || command == Command::Deploy {
-        // O52: `dx run` is a local-only single-target launcher with prose
+        //: `dx run` is a local-only single-target launcher with prose
         // lifecycle on stderr. Machine-owned stdout modes are rejected
         // pre-exec so the application keeps the terminal. `dx deploy`
         // shares the terminal contract: text only, no reports, args
@@ -564,7 +564,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
             },
         });
     }
-    // Flag ownership (M30b): `--rollback` belongs to `version` only
+    // Flag ownership: `--rollback` belongs to `version` only
     // and `--configured` to the inspect wrappers only. Command blocks
     // above already reject them on their own surfaces; this catch-all
     // keeps every other command (quality, umbrellas, `run`,

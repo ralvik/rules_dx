@@ -1,4 +1,4 @@
-"""Unit and analysis tests for the bootstrap environment registry (M11 WP1-WP3).
+"""Unit and analysis tests for the bootstrap environment registry (WP1-WP3).
 """
 
 load("//libs/starlark:defs.bzl", "display_label", "expect_equal", "starlark_test")

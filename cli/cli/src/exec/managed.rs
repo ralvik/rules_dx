@@ -15,14 +15,14 @@ use crate::plan::{bep_path, plan_managed};
 use dx_output::OutputMode;
 use dx_process::ForwardError;
 
-/// Runs `dx codegen`, `dx env`, and `dx setup` (M25 WP3/WP5):
+/// Runs `dx codegen`, `dx env`, and `dx setup` (issue #506 WP3/WP5):
 /// validates the label-only scope through the shared setup scope rules,
 /// plans the Bazel collection request with [`plan_managed`], and either
 /// renders the `--dry-run` summary (planning nothing else, launching
 /// nothing) or runs the live Bazel build, collects and validates the
 /// plan shards, stages the immutable generations, and commits the
 /// selection through one atomic `.dx/setups/current` replacement under
-/// the shared O36 commit lock. Independent commits re-read the current
+/// the shared commit lock. Independent commits re-read the current
 /// pair under the lock, so a concurrently completed opposite side is
 /// carried forward instead of lost. Build, staging, validation, or
 /// commit failure leaves the current setup unchanged; staged but

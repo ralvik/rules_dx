@@ -1,4 +1,4 @@
-"""Repository-root candidates for `dx codegen`, `dx env`, and `dx setup` (M25 WP4, O34).
+"""Repository-root candidates for `dx codegen`, `dx env`, and `dx setup` (issue #506 WP4, issue #506).
 
 Contract: `docs/environments/codegen.md`.
 """
@@ -49,7 +49,7 @@ repository_roots_file = rule(
             doc = "Label file Bazel reads through `--target_pattern_file`.",
         ),
     },
-    doc = "Writes a query-produced repository-root label file (O34 query-pattern-file candidate).",
+    doc = "Writes a query-produced repository-root label file (issue #506 query-pattern-file candidate).",
 )
 
 def roots_aggregate(name, deps, **kwargs):

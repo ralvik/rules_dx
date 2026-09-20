@@ -1,5 +1,5 @@
 //! Scope resolution: labels, patterns, files, directories, and
-//! test/coverage mapping (M08 WP1+WP2).
+//! test/coverage mapping (WP1+WP2).
 //!
 //! Contract: `docs/cli/target-resolution.md#input-classification` and
 //! `#file-ownership`. Main-workspace labels and target patterns pass

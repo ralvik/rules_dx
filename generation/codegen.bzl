@@ -1,4 +1,4 @@
-"""Normalized codegen plan records (M25 WP1, O33).
+"""Normalized codegen plan records (issue #506 WP1, issue #506).
 
 Contract: `docs/environments/codegen.md`, `docs/product/scope.md`.
 """
@@ -23,7 +23,7 @@ DxCodegenPlanCollectedInfo = provider(
 )
 
 # Private output group for collected shards and referenced artifacts.
-# Frozen under O33; see `docs/environments/codegen.md`.
+# Frozen under issue #506; see `docs/environments/codegen.md`.
 DX_CODEGEN_PLAN_OUTPUT_GROUP = "dx_codegen_plans"
 
 # Reserved shard suffix for BEP-reported files. See `docs/environments/codegen.md`.
@@ -320,7 +320,7 @@ def codegen_schema_error():
     return ""
 
 def codegen_pair_error(schema_kind, language):
-    """Validates one generator/language pair against the O33 freeze."""
+    """Validates one generator/language pair against the frozen."""
     if (schema_kind, language) in DX_CODEGEN_ADMITTED_PAIRS:
         return ""
     return (
@@ -410,11 +410,11 @@ dx_codegen_shard = rule(
         ),
         "language": attr.string(
             mandatory = True,
-            doc = "Generated file class, e.g. 'rust'. Must pair with schema_kind under O33.",
+            doc = "Generated file class, e.g. 'rust'. Must pair with schema_kind under issue #506.",
         ),
         "schema_kind": attr.string(
             default = "protobuf",
-            doc = "Generator schema kind, e.g. 'protobuf'. Only the O33 first pair is admitted.",
+            doc = "Generator schema kind, e.g. 'protobuf'. Only the issue #506 first pair is admitted.",
         ),
         "_writer": attr.label(
             default = "//generation/codegen_shard:codegen_shard_writer",
@@ -423,7 +423,7 @@ dx_codegen_shard = rule(
             doc = "Shard writer emitting the validated binary DxCodegenShard protobuf.",
         ),
     },
-    doc = "Emits one contributor's normalized binary codegen plan shard (M25 WP1).",
+    doc = "Emits one contributor's normalized binary codegen plan shard (issue #506 WP1).",
 )
 
 def _edge_targets(rule_attr, name):
@@ -550,7 +550,7 @@ prost_codegen_shard = rule(
         ),
         "language": attr.string(
             default = "rust",
-            doc = "Generated file class. Only 'rust' is admitted with schema_kind 'protobuf' under O33.",
+            doc = "Generated file class. Only 'rust' is admitted with schema_kind 'protobuf' under issue #506.",
         ),
         "proto_rs": attr.label(
             mandatory = True,
@@ -558,7 +558,7 @@ prost_codegen_shard = rule(
         ),
         "schema_kind": attr.string(
             default = "protobuf",
-            doc = "Generator schema kind. Only 'protobuf' is admitted under O33.",
+            doc = "Generator schema kind. Only 'protobuf' is admitted under issue #506.",
         ),
         "_writer": attr.label(
             default = "//generation/codegen_shard:codegen_shard_writer",
@@ -567,7 +567,7 @@ prost_codegen_shard = rule(
             doc = "Shard writer emitting the validated binary DxCodegenShard protobuf.",
         ),
     },
-    doc = "Narrow protobuf->Rust adapter: verifies the rust_prost_library edge and emits one normalized shard (M25 WP1, O33).",
+    doc = "Narrow protobuf->Rust adapter: verifies the rust_prost_library edge and emits one normalized shard (issue #506 WP1, issue #506).",
 )
 
 def _codegen_plan_subject_impl(ctx):

@@ -1,4 +1,4 @@
-// M22 seed Go test; consumer of go_test.
+// Seed Go test; consumer of go_test.
 package hello
 
 import "testing"

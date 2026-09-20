@@ -1,4 +1,4 @@
-"""Load tests pinning standalone-artifact metadata (M04 WP1, O20).
+"""Load tests pinning standalone-artifact metadata (WP1).
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
@@ -9,7 +9,7 @@ load(":taplo.linux_x86_64.bzl", _taplo = "ARTIFACT")
 load(":ty.linux_x86_64.bzl", _ty = "ARTIFACT")
 load(":vale.linux_x86_64.bzl", _vale = "ARTIFACT")
 
-# Frozen schema surface (M04 WP1): sorted ARTIFACT keys.
+# Frozen schema surface (WP1): sorted ARTIFACT keys.
 FROZEN_SCHEMA_KEYS = [
     "abi_floor",
     "archive",

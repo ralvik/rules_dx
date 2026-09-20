@@ -1,7 +1,7 @@
 // Parser extracts the narrow recognized source facts the Python Gazelle
 // extension needs for one-source ownership and strict dependency resolution.
 //
-// Recognized syntax (M14 narrow source-only scope; additional forms require
+// Recognized syntax (narrow source-only scope; additional forms require
 // parser fixtures before they become recognized):
 //
 //   - `import a`, `import a.b`, `import a as b`, comma-separated lists.

@@ -1,4 +1,4 @@
-"""M04 standalone quality-tool acquisition (WP1, O20).
+"""Standalone quality-tool acquisition (WP1).
 """
 
 load("//quality/artifacts:biome.linux_x86_64.bzl", _biome_linux_x86_64 = "ARTIFACT")

@@ -1,4 +1,4 @@
-"""Real-pipeline dirty fixture (M15 WP2)."""
+"""Real-pipeline dirty fixture (WP2)."""
 
 import os
 

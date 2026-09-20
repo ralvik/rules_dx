@@ -1,4 +1,4 @@
-"""Real typecheck aspect evidence tests (M12 WP3).
+"""Real typecheck aspect evidence tests (WP3).
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")

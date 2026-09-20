@@ -1,4 +1,4 @@
-"""M01 tested-stack manifest and contract (ADR 0014)."""
+"""Tested-stack manifest and contract (ADR 0014)."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 load(":tested_stack.bzl", "tested_stack")

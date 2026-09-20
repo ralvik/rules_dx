@@ -1,4 +1,4 @@
-"""M06 WP1 process boundary for the `dx` CLI."""
+"""WP1 process boundary for the `dx` CLI."""
 
 load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_crate")
@@ -8,7 +8,7 @@ package(default_visibility = [
     "//cli:__subpackages__",
 ])
 
-# M02 leaf-crate pattern via `dx_rust_crate` (issue #239): emits
+# Leaf-crate pattern via `dx_rust_crate` (issue #239): emits
 # `dx_process` + `dx_process_test` + fmt/clippy tests +
 # `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
 dx_rust_crate(

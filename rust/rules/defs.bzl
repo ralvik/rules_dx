@@ -1,4 +1,4 @@
-"""Experimental minimal Rust wrappers (M02, ADR 0013).
+"""Experimental minimal Rust wrappers (ADR 0013).
 
 Contract: `docs/decisions/0013-rust-javascript-typescript-foundations.md`, `docs/decisions/0012-language-toolchain-versions.md`.
 """
@@ -106,7 +106,7 @@ def rust_library(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
-    """Experimental minimal wrapper over `rust_library` (M02)."""
+    """Experimental minimal wrapper over `rust_library`."""
     dx_wrap(
         name,
         _rust_library,
@@ -125,7 +125,7 @@ def rust_binary(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
-    """Experimental minimal wrapper over `rust_binary` (M02)."""
+    """Experimental minimal wrapper over `rust_binary`."""
     dx_wrap(
         name,
         _rust_binary,
@@ -144,7 +144,7 @@ def rust_test(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
-    """Experimental minimal wrapper over `rust_test` (M02).
+    """Experimental minimal wrapper over `rust_test`.
 
     With `crate`, the referenced wrapper stays the single source owner and
     this target reports no direct sources. With `srcs`, those sources are
@@ -192,7 +192,7 @@ def rust_proc_macro(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
-    """Experimental minimal wrapper over `rust_proc_macro` (M12).
+    """Experimental minimal wrapper over `rust_proc_macro`.
 
     Same forwarding shape as `rust_library`: the private upstream keeps
     the crate providers and the public target adds QualitySourcesInfo.
@@ -215,7 +215,7 @@ def rust_shared_library(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
-    """Experimental minimal wrapper over `rust_shared_library` (M12).
+    """Experimental minimal wrapper over `rust_shared_library`.
 
     Cc-linking forwarding shape: the private upstream keeps the `CcInfo`
     linking context (plus the `TestCrateInfo`-wrapped crate for `rust_test`)
@@ -241,7 +241,7 @@ def rust_static_library(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
-    """Experimental minimal wrapper over `rust_static_library` (M12).
+    """Experimental minimal wrapper over `rust_static_library`.
 
     Cc-linking forwarding shape, mirroring `rust_shared_library`.
     """
@@ -297,7 +297,7 @@ def dx_rust_crate(
         visibility = None):
     """Single-crate boilerplate: lib + test + lint tests + manifest (issue #239).
 
-    Emits the M02 leaf-crate pattern with names identical to the
+    Emits the leaf-crate pattern with names identical to the
     hand-written stanzas it replaces, so migration is a pure BUILD-text
     change: `<name>` (`rust_library` over `srcs`), `<name>_test`
     (`rust_test` via `crate`), `<name>_fmt_test` / `<name>_clippy_test`

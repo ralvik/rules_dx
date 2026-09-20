@@ -1,4 +1,4 @@
-// Package mixed certifies the M21 mixed-framework ownership boundary.
+// Package mixed certifies the mixed-framework ownership boundary.
 //
 // Each v1 framework container keeps exactly one physical owner: .vue is
 // vue-owned, .svelte is svelte-owned, .astro is astro-owned, .mdx is
@@ -12,7 +12,7 @@
 // The mapping is deliberately mechanical (extension switch, no regex, no
 // prose scan) so each concrete adapter remains the authority for its own
 // regions; this package only proves the partition is disjoint and complete
-// for the closed v1 set (O43).
+// for the closed v1 set.
 package mixed
 
 import "path"

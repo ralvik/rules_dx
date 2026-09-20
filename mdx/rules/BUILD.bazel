@@ -1,4 +1,4 @@
-"""Experimental minimal MDX wrappers (M21, O42)."""
+"""Experimental minimal MDX wrappers."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

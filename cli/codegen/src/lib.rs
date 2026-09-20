@@ -1,4 +1,4 @@
-//! Normalized codegen plan collection for the `dx` CLI (M25 WP1 slice 4).
+//! Normalized codegen plan collection for the `dx` CLI (issue #506 WP1 slice 4).
 //!
 //! Contract: `docs/environments/codegen.md` (provider contract, private
 //! `dx_codegen_plans` output group, reserved shard suffix) and
@@ -41,12 +41,12 @@ use dx_roots::{build_argv, invocation_targets, repository_plan, RepositoryRootPl
 use serde::Serialize;
 
 /// Private output group carrying collected shards plus every generated
-/// artifact referenced by them. Frozen under O33; matches
+/// artifact referenced by them. Frozen under issue #506; matches
 /// `DX_CODEGEN_PLAN_OUTPUT_GROUP` in `//generation:codegen.bzl`.
 pub const OUTPUT_GROUP: &str = "dx_codegen_plans";
 
 /// Reserved controlled filename suffix recognizing shards among
-/// BEP-reported files. Frozen under O33; matches
+/// BEP-reported files. Frozen under issue #506; matches
 /// `DX_CODEGEN_SHARD_SUFFIX` in `//generation:codegen.bzl`.
 pub const SHARD_SUFFIX: &str = ".dxcodegen.pb";
 
@@ -56,7 +56,7 @@ pub const CODEGEN_ASPECT: &str = "//generation:codegen.bzl%dx_codegen_plan_aspec
 
 /// Canonical repository-wide codegen selection invoked by bare
 /// `dx codegen`. The effective Bazel roots behind this label stay
-/// provisional pending the WP4 (O34) root benchmark; this crate only
+/// provisional pending the WP4 (issue #506) root benchmark; this crate only
 /// owns the selection identity.
 pub const REPOSITORY_TARGET: &str = "//dx:codegen";
 
@@ -110,7 +110,7 @@ pub fn resolve_scope(targets: &[String]) -> Result<CodegenScope, ScopeError> {
 }
 
 /// Bazel labels to build for `scope`: the canonical repository target or
-/// the one exact label. The repository arm composes the WP4 (O34)
+/// the one exact label. The repository arm composes the WP4 (issue #506)
 /// [`dx_roots::repository_plan`] (still the `//...` baseline) behind the
 /// `//dx:codegen` selection identity; exact scopes bypass root selection.
 pub fn scope_targets(scope: &CodegenScope) -> Vec<String> {

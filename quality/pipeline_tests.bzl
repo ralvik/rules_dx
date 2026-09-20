@@ -1,4 +1,4 @@
-"""Unit tests for pipeline construction (M03 WP2a).
+"""Unit tests for pipeline construction (WP2a).
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

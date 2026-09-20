@@ -1,4 +1,4 @@
-"""Experimental minimal TypeScript wrappers (M16, ADR 0013)."""
+"""Experimental minimal TypeScript wrappers (ADR 0013)."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 load(":wrapper_tests.bzl", "typescript_wrapper_contract_tests")

@@ -1,4 +1,4 @@
-"""WP2c aspect fixtures and evidence (M03 synthetic, M04 real, M15 Python)."""
+"""WP2c aspect fixtures and evidence (synthetic, real, Python)."""
 
 load("//libs/starlark:failure_test.bzl", "failure_test")
 load("//quality:aspect_subject.bzl", "aspect_subject")

@@ -1,4 +1,4 @@
-"""First-party Svelte Gazelle extension (M19, O40)."""
+"""First-party Svelte Gazelle extension."""
 
 load("@gazelle//:def.bzl", "gazelle_binary", "gazelle_generation_test")
 load("@rules_go//go:def.bzl", "go_library", "go_test")

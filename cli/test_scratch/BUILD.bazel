@@ -8,7 +8,7 @@ package(default_visibility = [
     "//cli:__subpackages__",
 ])
 
-# M02 leaf-crate pattern via `dx_rust_crate` (issue #239).
+# Leaf-crate pattern via `dx_rust_crate` (issue #239).
 dx_rust_crate(
     name = "dx_test_scratch",
     package_name = "cli/dx_test_scratch",

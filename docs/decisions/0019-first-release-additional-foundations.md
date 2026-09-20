@@ -17,7 +17,7 @@ each admission to the [first-release admission
 policy](../product/scope.md#first-release-admission). The support-matrix
 candidate reviews (native review 2026-09-07, language-foundation review
 2026-09-08) identified concrete upstream routes for each candidate but, as
-reviews, admitted, deferred, or excluded nothing by themselves. M22/M23 work
+reviews, admitted, deferred, or excluded nothing by themselves. admitted foundations work
 packages need a durable disposition so qualification has something to implement.
 
 ## Decision
@@ -29,13 +29,13 @@ The following dispositions are v1 scope decisions under the admission policy:
   concrete dependency-lock and toolchain story, documented in the
   [candidate review](../product/support-matrix.md#additional-language-foundation-candidate-review).
   Provisional upstreams, exact versions, mappings, and adapter work stay under
-  O30/O31 qualification; this record freezes only the admit outcome.
+  ADR 0019/qualification; this record freezes only the admit outcome.
 - Deferred beyond v1: Ruby and PowerShell application foundations. Ruby's
   fragmented ruleset maintenance ownership and gem/bundler packaging effort,
   and PowerShell's single young execution-only upstream with unproven
   generation, dependency, environment, and IDE stories, exceed the low-cost
   hermetic bar. Their quality-tool cohorts (RuboCop, StandardRB,
-  PSScriptAnalyzer) stay v1 scope under O31; a foundation deferral removes no
+  PSScriptAnalyzer) stay v1 scope under ADR 0019; a foundation deferral removes no
   baseline tool.
 - Excluded from v1: Swift/SwiftFormat and Bandit. These are evidence-backed
   exclusions, not pending assessments. Reconsideration after v1 requires a new
@@ -43,23 +43,23 @@ The following dispositions are v1 scope decisions under the admission policy:
 
 Delivery cohorts are unchanged:
 
-- Go and C/C++ in M22 under O30.
-- Java, Kotlin, C#, and F# in M23 under O31.
-- Scala after the M22 native/toolchain-versus-managed route decision (O30),
-  then M22 or M23.
-- Ruby and PowerShell tool cohorts stay in M23 under O31; their foundations
+- Go and C/C++ in under ADR 0019.
+- Java, Kotlin, C#, and F# in under ADR 0019.
+- Scala after the native/toolchain-versus-managed route decision (ADR 0019),
+  then or.
+- Ruby and PowerShell tool cohorts stay in under ADR 0019; their foundations
   are out of v1 scope.
 - Unresolved cells block qualification. Moving an admitted foundation out
   later requires a new evidence-backed decision.
 
 ## Consequences
 
-- M22/M23 may implement admitted foundations once O46/O30/O31 freeze
+- admitted foundations may implement admitted foundations once ADR 0019 freeze
   per-language contracts, mappings, effort evidence, and reviewable work
   packages. This record alone starts no milestone.
 - The quality-tool baseline is independent of foundation deferral.
-- O46 tracks per-candidate mappings, effort, and ownership; O30 owns
-  native/toolchain qualification detail; O31 owns managed-runtime detail.
+- The issue tracker tracks per-candidate mappings, effort, and ownership; ADR 0019 owns
+  native/toolchain qualification detail; ADR 0019 owns managed-runtime detail.
 - Newly identified candidates still require an explicit disposition under the
   admission policy; this record admits no unnamed language.
 

@@ -1,4 +1,4 @@
-//! Deterministic shared quality pipeline runner (M03 WP2b).
+//! Deterministic shared quality pipeline runner (WP2b).
 //!
 //! Contract: `docs/quality/quality-result-protocol.md`,
 //! `docs/quality/tool-integrations.md`, schema `//quality:result.proto`.

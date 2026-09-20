@@ -1,4 +1,4 @@
-//! M12 conformance fixture: minimal staticlib crate for the
+//! Minimal staticlib crate for the
 //! rust_static_library wrapper subject.
 
 /// C-compatible greeting entry point proving the static-library wrapper

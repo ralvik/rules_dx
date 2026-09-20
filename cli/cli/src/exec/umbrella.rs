@@ -13,7 +13,7 @@ use dx_output::{
 use serde_json::{json, Value};
 use std::path::PathBuf;
 
-/// Umbrella phases in contract order (M10 WP4, O59): format, lint,
+/// Umbrella phases in contract order (WP4): format, lint,
 /// typecheck, then generate freshness or mutation.
 const UMBRELLA_PHASES: [Command; 4] = [
     Command::Format,
@@ -29,7 +29,7 @@ struct UmbrellaPhase {
     sarif_capture: Option<PathBuf>,
 }
 
-/// Sequential `dx check` / `dx fix` umbrella (M10 WP4, O59): each phase
+/// Sequential `dx check` / `dx fix` umbrella (WP4): each phase
 /// reuses its wrapped command's scope resolution, Bazel invocation,
 /// result collection, mutation, reporting, and exit-status behavior
 /// verbatim through [`execute`] with captured streams. The first
@@ -56,7 +56,7 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
     // additionally forces check mode under `fix` (passthrough).
     let phase_check = umbrella_check || invocation.check;
     let mode = if phase_check { "check" } else { "default" };
-    // Report planning reuses the umbrella registry (SARIF only in M10):
+    // Report planning reuses the umbrella registry (SARIF only in):
     // dry-run conflicts, unsupported formats, and duplicates fail here
     // before any phase starts.
     if let Err(error) = plan_reports(
