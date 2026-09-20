@@ -551,7 +551,7 @@ fi
 # ScalaTest via the managed route, JUnit 4 seed for JVM, plain assert seed
 # for cc plus hello smoke for csharp/fsharp, with the xUnit v3 4.0.0 mapping
 # qualified under #477 plus the GoogleTest v1.18.0 mapping qualified under
-# #479).
+# #479 plus the ScalaTest 3.2.20 mapping qualified under #480).
 runner_fail=""
 grep -q -F -e 'go_test' go/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail go:kind"
 grep -q -F -e 'embed' go/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail go:embed"
@@ -570,6 +570,10 @@ grep -q -F -e 'scala_test' scala/tests/fixtures/hello/BUILD.bazel || runner_fail
 grep -q -F -e 'AnyFlatSpec' scala/tests/fixtures/hello/HelloTest.scala || runner_fail="$runner_fail scala:scalatest"
 grep -q -F -e 'ScalaTest 3.2.20' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:scalatest"
 grep -q -F -e 'scala_version = "2.13.18"' MODULE.bazel || runner_fail="$runner_fail module:scala-version"
+grep -q -F -e 'SCALATEST_VERSION = "3.2.20"' scala/tests/fixtures/scalatest/pins.bzl || runner_fail="$runner_fail scala:pin"
+grep -q -F -e 'scala_test' scala/tests/fixtures/scalatest/pins.bzl || runner_fail="$runner_fail scala:map"
+grep -q -F -e 'scalatest_qualification' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:scalatest-qual"
+grep -q -F -e 'scalatest_qualification' docs/generation/README.md || runner_fail="$runner_fail gen:scalatest-qual"
 grep -q -F -e 'csharp_test' csharp/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail csharp:kind"
 grep -q -F -e 'static int Main' csharp/tests/fixtures/hello/HelloTest.cs || runner_fail="$runner_fail csharp:plain"
 grep -q -F -e 'fsharp_test' fsharp/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail fsharp:kind"

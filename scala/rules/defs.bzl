@@ -1,6 +1,7 @@
 """Experimental minimal Scala wrappers (ADR 0019).
 
 Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
+Upstream: rules_scala 7.3.0 plus Scala 2.13.18 plus ScalaTest 3.2.20 (MODULE.bazel).
 """
 
 load("@rules_java//java:defs.bzl", "JavaInfo")
@@ -126,7 +127,8 @@ def scala_test(name, srcs, visibility = None, **kwargs):
     QualitySourcesInfo. The library under test stays its ordinary owner via
     `deps`; test sources are never the library's sources. Uses Bazel's
     standard test and coverage protocols over the bundled ScalaTest
-    toolchain (no Maven lock members needed for the hello closure)."""
+    toolchain (ScalaTest 3.2.20 via the managed Coursier route, issue #480;
+    no Maven lock members needed for the hello closure)."""
     test_srcs = srcs if srcs != None else []
     upstream_kwargs = _scala_with_werror(kwargs)
 
