@@ -17,7 +17,9 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
   and mappings, renderer and site execution, byte-identical rebuild proof, link and
   reference completeness, guide prose with guide-step CI wiring, first-hour timing proof,
   and per-release pin-bump plus drift process; no working site claimed).
-* Verification stages: hello smoke as test, parser-sample backfill, E2E via
+* Verification stages: hello smoke as test delivered (issue #464,
+  11 binary hellos with `hello_output_test` under `bazel test //...`),
+  parser-sample backfill, E2E via
   integration test, close-out battery + docs, rustfmt with crate edition.
 * Robustness and hygiene: CI hygiene,
   warnings-as-errors, visibility hardening, cli-contract claims, human-run
