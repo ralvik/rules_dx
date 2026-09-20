@@ -1,0 +1,23 @@
+Promotion checklist to Supported (issue #611).
+Tag hygiene as-built: module stays at version 0.0.0 with no v* tags without
+explicit owner approval; /dist/ plus /release/ stay git-ignored and never
+committed; callers pin reusable workflows at reviewed-commit SHA and stay in
+sync. Versioning: first release bumps MODULE.bazel from 0.0.0 to SemVer in a
+reviewed PR with the tag pushed beforehand and --verify-tag everywhere, never
+creating tags; single-version dx == module with callers on reviewed commits;
+published bytes never rebuilt with byte identity fail-closed. Platform
+evidence per cell under issues #410/#411/#412/#413/#414 with floors via
+deployment_floors_qualification and routes via cross_routes_qualification and
+per-cell coverage via coverage_qualification; unqualified hosts keep the clean
+unsupported_platform refusal with best-effort non-blocking. Consumer evidence:
+nine checks with explicit platforms plus the all-enabled self-call in ci.yml
+(issue #408, verbatim //...) with build-only self-call forever rejected, via
+consumer_ci_qualification, sole updater native-only. Release evidence: sbom_demo
+with subject digest equal to artifact sha256, signing_demo first with nothing
+drafted unsigned, bcr_demo checked-not-submitted, GHCR separate route, human-run
+release.sh dry-run by default, dx_verify refuses checksum-only, dry-run-first
+dispatch-only default-closed gate. Ad-hoc release without this checklist is
+rejected; Compatibility: Release only. A missing cell remains an explicit gap
+and blocks that support claim via supported_evidence_gate. Qualified seed-only
+under issue #611; platform plus consumer plus release evidence stays owned gap;
+no Supported claim.

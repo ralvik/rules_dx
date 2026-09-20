@@ -11,7 +11,12 @@ not by this matrix. `Implementation status: implemented` / `Status: implemented`
 describe their owning contract's scope, not promotion under this lifecycle. `Platform-qualified` adds required-platform evidence per
 [ADR 0014](../decisions/0014-tested-platform-release-stack.md). `Supported`
 adds release evidence and is owned by this matrix; no cell is currently
-`Supported`.
+`Supported`. The per-cell promotion checklist (tag hygiene, versioning, platform
+plus consumer plus release evidence) is owned by the
+[promotion checklist](promotion-checklist.md) and qualified seed-only under
+issue #611 with fixture evidence in
+`tools/ci/tests/fixtures/promotion_checklist/pins.bzl` via
+`bazel run //tools/ci:promotion_checklist_qualification`.
 
 ## Unqualified Platforms
 

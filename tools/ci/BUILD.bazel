@@ -461,6 +461,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Promotion-checklist harness (issue #611); see docs/product/promotion-checklist.md.
+sh_binary(
+    name = "promotion_checklist_qualification",
+    srcs = ["promotion_checklist_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Hermetic CLI-contract coverage (issue #407); see docs/testing/verification-matrix.md.
 
 # Coverage-spill containment harness (issues #252, #54); see tools/ci/coverage_spill.sh.

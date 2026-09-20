@@ -995,6 +995,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:backlog_automation_guards
       - name: Audit Supported-evidence promotion gate (no Supported without platform+consumer+release)
         run: bazel run --noshow_progress //tools/ci:supported_evidence_gate
+      - name: Audit promotion-checklist qualification (issue #611 checklist plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:promotion_checklist_qualification
       - name: Audit quality adapters parity (issue #307 qualified, no false claims, provisional probes)
         run: bazel run --noshow_progress //tools/ci:quality_adapters_parity
       - name: Audit env/codegen qualification (issue #309 deferred records plus fixture evidence, owned gaps)
