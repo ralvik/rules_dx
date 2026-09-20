@@ -82,7 +82,15 @@ threshold over the collected LCOV: covered over eligible executable lines must
 reach the integer percent, else the command exits 1. `LCOV_EXCL_*` source
 markers (with a nearby `reason:` comment) exclude lines from the denominator;
 sources that fail to load and non-Rust/Go records count raw. Without the flag,
-coverage collects and reports with no threshold verdict.
+coverage collects and reports with no threshold verdict. The threshold is a
+configurable requirement for users per-cell: each required
+configuration/platform cell gates its own report against its own
+`--min-coverage` value (this repository pins `97` for the `//...` rate
+gate with a zero-uncovered exact gate over the versioned inventory
+scope). Per-cell plus Codecov opt-in plus remote evidence is qualified
+with fixture evidence pinned in
+`tools/coverage/tests/fixtures/per_cell/pins.bzl` via
+`bazel run //tools/ci:coverage_qualification` (issue #507).
 
 ## Build Profiles
 
