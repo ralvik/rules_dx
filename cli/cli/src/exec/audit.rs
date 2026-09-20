@@ -10,12 +10,6 @@ use dx_output::{
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-// Re-exported for guards that machine-check live execution wiring.
-#[allow(dead_code)]
-fn _live_wiring_pins() {
-    let _ = CODE_AUDIT_FAILED;
-}
-
 /// Day-granularity audit clock (keep): stays on
 /// `chrono::Utc::now` because the gates compare fixed-width `YYYY-MM-DD` UTC
 /// days with no `tzdb`/zone arithmetic, so the `jiff` `Timestamp::now` plus
