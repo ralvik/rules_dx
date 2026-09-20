@@ -833,6 +833,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# File-family quality defaults harness (issue #489); see docs/product/support-matrix.md#provisional-default-quality-tools.
+sh_binary(
+    name = "file_family_defaults_qualification",
+    srcs = ["file_family_defaults_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "warnings_as_errors_testdata",
     srcs = glob(["testdata/warnings/**"]),
