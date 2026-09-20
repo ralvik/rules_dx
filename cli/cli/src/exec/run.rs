@@ -463,6 +463,8 @@ mod tests {
             pin: None,
             rollback: false,
             configured: false,
+            from: None,
+            to: None,
         }
     }
 

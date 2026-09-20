@@ -56,6 +56,11 @@ pub struct Invocation {
     /// Inspect wrappers use `cquery` instead of `query` (Owners, Deps,
     /// Why only).
     pub configured: bool,
+    /// `dx migrate --from <version>`: source version (Migrate only).
+    pub from: Option<String>,
+    /// `dx migrate --to <version>`: target major-release version
+    /// (Migrate only).
+    pub to: Option<String>,
 }
 
 impl Invocation {

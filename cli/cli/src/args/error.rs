@@ -24,11 +24,11 @@ pub enum ArgsError {
     #[error("{text}")]
     Help { text: String },
     #[error(
-        "missing command: want audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel"
+        "missing command: want audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|bump|migrate|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel"
     )]
     MissingCommand,
     #[error(
-        "unknown command {command:?}: want audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel{suggestion_hint}",
+        "unknown command {command:?}: want audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|bump|migrate|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel{suggestion_hint}",
         suggestion_hint = suggestion_hint(suggestion)
     )]
     UnknownCommand {

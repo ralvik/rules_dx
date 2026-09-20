@@ -57,19 +57,27 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
 ## Command Registry And Behavior
 
 - Verify the final registry contains exactly `audit`, `lint`, `typecheck`, `test`,
-  `format`, `build`, `run`, `deploy`, `watch`, `check`, `fix`, `clean`, `update`, `bump`, `generate`, `codegen`, `env`, `setup`, `coverage`,
+  `format`, `build`, `run`, `deploy`, `watch`, `check`, `fix`, `clean`, `update`, `bump`, `migrate`, `generate`, `codegen`, `env`, `setup`, `coverage`,
   `init`, `hooks`, `status`, `version`, `completion`, and `bazel`, plus implemented
   `owners`, `deps`, and `why` inspect commands. `status` and `version`
   are the implemented diagnostics/version surface; `completion` is the
-  implemented generated-script surface. `migrate` stays planning-only
-  under issue #462 and outside the parsed registry. Compare the final registry
+  implemented generated-script surface. `migrate` is the implemented
+  major-release rewrite surface (`--from`/`--to` plus manifest selection,
+  fail-closed until the first manifest lands under issue #462). Compare the final registry
   with the qualified [command reference](../cli/commands/README.md), not an earlier partial CLI.
   Pinned by `bazel run //tools/ci:cli_contract_qualification` plus
-  `dx_adopt::ALL_COMMANDS` plus `dx_cli::Command` fixtures under issue #457.
+  `dx_adopt::ALL_COMMANDS` plus `dx_cli::Command` fixtures under issue #457 plus issue #462.
 - Verify `doctor` and `configure` are rejected as unknown.
 - Verify help and machine-readable metadata identify `lint`, `typecheck`, `format`,
-  `update`, `bump`, `generate`, `codegen`, `env`, `setup`, `init`, `fix`, and `hooks` as mutating by default
-  (`Command::is_mutating_by_default` plus `Command::describe`, pinned under issue #457).
+  `update`, `bump`, `migrate`, `generate`, `codegen`, `env`, `setup`, `init`, `fix`, and `hooks` as mutating by default
+  (`Command::is_mutating_by_default` plus `Command::describe`, pinned under issue #457 plus issue #462).
+- Verify `dx migrate --from <version> --to <version>` requires both Cargo semver versions, accepts only
+  major-release bumps (minor/patch, downgrades, equal, and non-semver fail pre-exec with exit `2`),
+  selects one manifest per major hop (`migrate-v<from>-to-v<to>.json`), supports `--dry-run` plus
+  `--output json` planning, rejects `--output diff` plus `--check` plus `--report` plus `--` forwards,
+  rejects `--from`/`--to` on every other command, and fails live runs closed with `migrate_failed`
+  (exit `1`, no writes) until the first manifest lands. Pinned by `dx_adopt` unit fixtures plus
+  `dx_cli` parse/execution fixtures plus `bazel run //tools/ci:migrate_qualification` under issue #462.
 - Verify `check` runs `format --check`, `lint --check`, `typecheck --check`, then `generate --check` sequentially with
   `//...` scope default, stops on the first required phase failure with that phase's exit code,
   and starts no dependent phase or mutation after failure. Verify `fix` runs the same sequence in

@@ -140,6 +140,8 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
             pin: None,
             rollback: false,
             configured: false,
+            from: None,
+            to: None,
         };
         let mut phase_out = Vec::new();
         let mut phase_err = Vec::new();

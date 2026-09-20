@@ -207,6 +207,17 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
+        // Major-release migration (issue #462): `--from`/`--to`
+        // versions through `dx_adopt::plan_migrate`, never the quality
+        // aspect pipeline and no standard reports. Live execution
+        // fails closed until the first manifest lands.
+        Command::Migrate => CommandSpec {
+            command,
+            capability: "migrate",
+            aspects: &[],
+            reports: &[],
+            settings: &[],
+        },
         // Raw launcher passthrough (WP4 helper surface): no
         // aspects, no reports, no scope resolution; planned at
         // execution as launcher plus forwarded arguments.
@@ -320,6 +331,12 @@ mod tests {
         assert!(bump.reports.is_empty());
         assert_eq!(WorkflowVerb::of(Command::Bump), None);
         assert!(Command::Bump.is_audit_update());
+        let migrate = spec(Command::Migrate);
+        assert_eq!(migrate.capability, "migrate");
+        assert!(migrate.aspects.is_empty());
+        assert!(migrate.reports.is_empty());
+        assert_eq!(WorkflowVerb::of(Command::Migrate), None);
+        assert!(!Command::Migrate.is_audit_update());
         assert_eq!(WorkflowVerb::Run.name(), "run");
         assert!(!WorkflowVerb::Run.collects_reports());
     }

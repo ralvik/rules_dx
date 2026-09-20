@@ -96,6 +96,9 @@ pub(crate) fn per_command_flags(command: Command) -> &'static str {
         Command::Version => {
             "Per-command flags: --check (drift check), --pin <version>, --rollback (version only; --pin and --rollback conflict)."
         }
+        Command::Migrate => {
+            "Per-command flags: --from <version> --to <version> (migrate only; both Cargo semver, major-release-only gate)."
+        }
         Command::Bazel => {
             "Per-command flags: none (raw Bazel forwarding; dx-owned options must precede the command word and most are rejected)."
         }
@@ -125,6 +128,9 @@ pub(crate) fn render_command_help(command: Command) -> String {
         }
         Command::Update => "Usage: dx [global-options] update [selector ...]",
         Command::Bump => "Usage: dx [global-options] bump <set:package> <version>",
+        Command::Migrate => {
+            "Usage: dx [global-options] migrate --from <version> --to <version> [scope ...]"
+        }
         _ => "Usage: dx [global-options] <command> [scope ...] [-- bazel-options ...]",
     };
     let scopes = match command {
@@ -134,6 +140,7 @@ pub(crate) fn render_command_help(command: Command) -> String {
         Command::Run => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. No scope selects //....",
         Command::Update => "Scopes: dependency-set/package/target selectors (cargo|npm|maven|nuget|go, set:package, labels/paths); bare run updates all sets.",
         Command::Bump => "Scopes: exactly one `set:package` plus one new version (bazel|cargo|npm|go|github-actions); never batch.",
+        Command::Migrate => "Scopes: explicit Bazel labels/patterns or workspace-relative files/dirs reusing generation scope resolution; external scopes rejected. No scope selects //....",
         _ => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. No scope selects //....",
     };
     let mut out = String::new();

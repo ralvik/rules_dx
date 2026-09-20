@@ -263,13 +263,14 @@ stays open under issue #509 (platform, runner, isolation, cache, ordering eviden
 merge, diff, queue, cancellation, aggregate binding; thread identity, ordering, limits;
 fork, untrusted, sensitive, retries, Code-Scanning qualification; sequential mode
 fail-closed pending qualification; tag hygiene plus release-input gaps;
-native-bot follow-ups (native-only updater, issue #461); dx migrate syntax). Reusable-workflow contract plus caller
+native-bot follow-ups (native-only updater, issue #461)). Reusable-workflow contract plus caller
 plus gate/aggregate fixture evidence qualified seed-only under #509
 (`bazel run //tools/ci:consumer_ci_qualification`; nine checks, explicit
 platforms, fail-closed sequential, stable aggregate, hygiene, concurrency,
 permissions, per-cell coverage with fork-safe comments, all-enabled self-call
-(issue #408, verbatim `//...`), native bump loop (sole updater, issue #461), migrate planning
-plus run multirun (issue #463 delivered), tag hygiene as-built, with the open gaps above owned under #509).
+(issue #408, verbatim `//...`), native bump loop (sole updater, issue #461), migrate syntax plus
+manifest selection (delivered CLI with fail-closed execution, issue #462) plus run multirun
+(issue #463 delivered), tag hygiene as-built, with the open gaps above owned under #509).
 Consumer CI, devcontainer, and perf honesty
 stays open under issue #325 (self-call all-enabled per #408,
 devcontainer parity-checked but never booted, perf report-not-gate; qualify and enable

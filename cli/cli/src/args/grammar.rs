@@ -76,6 +76,12 @@ pub(crate) struct Cli {
     /// Use cquery instead of query (owners/deps/why only).
     #[arg(long)]
     pub(crate) configured: bool,
+    /// Source version for `dx migrate` (migrate only).
+    #[arg(long, allow_negative_numbers = true, overrides_with = "from")]
+    pub(crate) from: Option<String>,
+    /// Target version for `dx migrate` (migrate only).
+    #[arg(long, allow_negative_numbers = true, overrides_with = "to")]
+    pub(crate) to: Option<String>,
     /// First positional: the command word (a [`Command`] value so the
     /// same grammar feeds parsing, `--help`, and shell completions).
     #[arg(value_enum)]
@@ -105,4 +111,6 @@ pub(crate) const VALUE_OPTIONS: &[&str] = &[
     "--fail-on",
     "--min-coverage",
     "--pin",
+    "--from",
+    "--to",
 ];
