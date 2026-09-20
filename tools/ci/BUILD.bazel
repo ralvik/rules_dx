@@ -535,6 +535,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Bootstrap portability harness (issue #617); see tools/ci/bootstrap_portability.sh.
+sh_binary(
+    name = "bootstrap_portability",
+    srcs = ["bootstrap_portability.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Env/codegen harness (issue #506); see tools/ci/env_codegen_qualification.sh.
 sh_binary(
     name = "env_codegen_qualification",
