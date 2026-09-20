@@ -36,11 +36,16 @@ and diagnostics; they do not couple the two lifecycles.
 With no argument, `dx codegen` selects every codegen projection in the currently
 declared Bazel BUILD graph and atomically selects one repository-wide generated-source
 projection. It does not inspect unowned files or decide that BUILD metadata ought to
-exist. The physical root-selection mechanism is frozen to the `//...` baseline
+exist. The canonical selection identity is the empty `//dx:codegen` filegroup
+(Accepted per issue #423; it contributes no plan records itself, and stays
+empty so no central eager dependency is built).
+The physical root-selection mechanism is frozen to the `//...` baseline
 (see `FROZEN_STRATEGY` in `cli/roots/src/lib.rs`); cold/warm behavior and the
 incrementality dimensions (source/BUILD edits, target add/remove, actions,
 materialized bytes, projection time, retained memory) are measured in
-`FROZEN_EVIDENCE` and `INCREMENTALITY_EVIDENCE` there. Concurrency,
+`FROZEN_EVIDENCE` and `INCREMENTALITY_EVIDENCE` there. The admitted
+generator/language pairs stay frozen under O33
+(`generation/codegen.bzl:DX_CODEGEN_ADMITTED_PAIRS`). Concurrency,
 interruption, remote materialization, and reuse certification stay open per
 that crate's docs.
 
