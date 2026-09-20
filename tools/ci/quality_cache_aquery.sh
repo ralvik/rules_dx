@@ -85,7 +85,7 @@ dx_test_init
 query_target() { # target -> aquery output
   local target="$1"
   bazel aquery "$target" \
-    --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+    --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
     --output_groups=dx_results --output=text --noshow_progress 2>/dev/null
 }
 
@@ -132,7 +132,7 @@ if [[ "$first_key" != "$second_key" ]]; then ok; else bad "python lint vs format
 # (dx_ty for Ty, ruff, pydoclint, clippy-driver, rustfmt) to avoid
 # substring collisions with common words like quality.
 union_actions="$(bazel aquery '//quality/testdata:fixture_real_python + //quality/testdata:fixture_real_rust' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 if [[ -z "$union_actions" ]]; then
   bad "union: empty aquery output"
@@ -171,7 +171,7 @@ if [[ "$single_keys" == "$union_python_keys" ]]; then ok; else bad "aggregate me
 # Ruff config misses consuming lint/format only; Ty boundaries unaffected
 # unless shared.
 hinted_actions="$(bazel aquery '//quality/testdata:fixture_real_python_hinted' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 if [[ -z "$hinted_actions" ]]; then
   bad "hinted: empty aquery output"
@@ -192,7 +192,7 @@ if [[ "$python_typecheck_inputs" == *"ruff.toml"* ]]; then bad "unhinted typeche
 # selected rustfmt config misses the consuming format pipeline only;
 # clippy lint is unaffected per the pipeline-invalidation row.
 rust_hinted_actions="$(bazel aquery '//quality/testdata:fixture_real_rust_generated_shape' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 if [[ -z "$rust_hinted_actions" ]]; then
   bad "rust hinted: empty aquery output"
@@ -211,7 +211,7 @@ if [[ "$rust_lint_inputs" == *"rustfmt.toml"* ]]; then bad "rust unhinted lint: 
 # Biome config misses consuming lint/format together (single Biome tool
 # serves both capabilities) and nothing unhinted.
 js_hinted_actions="$(bazel aquery '//quality/testdata:fixture_real_javascript_hinted' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 if [[ -z "$js_hinted_actions" ]]; then
   bad "js hinted: empty aquery output"
@@ -219,7 +219,7 @@ else
   ok
 fi
 js_actions="$(bazel aquery '//quality/testdata:fixture_real_javascript' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 if [[ -z "$js_actions" ]]; then
   bad "js unhinted: empty aquery output"
@@ -270,13 +270,13 @@ if [[ "$rust_actions" == *"biome"* ]]; then bad "rust: forbidden [biome] (unsele
 # and vice versa. Extends the unselected-adapter row toward the full
 # per-adapter table (Go/Java/etc. + transitive/tool-version still open).
 starlark_actions="$(bazel aquery '//quality/testdata:fixture_real_starlark' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 toml_actions="$(bazel aquery '//quality/testdata:fixture_real_toml' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 markdown_actions="$(bazel aquery '//quality/testdata:fixture_real_markdown' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 if [[ -z "$starlark_actions" ]]; then bad "starlark: empty aquery output"; else ok; fi
 if [[ -z "$toml_actions" ]]; then bad "toml: empty aquery output"; else ok; fi
@@ -329,16 +329,16 @@ if [[ "$starlark_key" != "$python_key" ]]; then ok; else bad "starlark vs python
 # miss JS-family pipelines and vice versa. Extends the per-adapter
 # table toward Go/Java/etc. (transitive/tool-version still open).
 typescript_actions="$(bazel aquery '//quality/testdata:fixture_real_typescript' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 jsx_actions="$(bazel aquery '//quality/testdata:fixture_real_jsx' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 tsx_actions="$(bazel aquery '//quality/testdata:fixture_real_tsx' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 json_actions="$(bazel aquery '//quality/testdata:fixture_real_json' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 if [[ -z "$typescript_actions" ]]; then bad "typescript: empty aquery output"; else ok; fi
 if [[ -z "$jsx_actions" ]]; then bad "jsx: empty aquery output"; else ok; fi
@@ -425,19 +425,19 @@ if [[ "$markdown_actions" == *"eslint"* ]]; then bad "markdown: forbidden [eslin
 # toward the full table (supported-class manifests + transitive/
 # tool-version still open).
 mixed_actions="$(bazel aquery '//quality/testdata:fixture_real_mixed' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 no_lint_actions="$(bazel aquery '//quality/testdata:fixture_real_no_lint' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 no_format_actions="$(bazel aquery '//quality/testdata:fixture_real_no_format' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 no_typecheck_actions="$(bazel aquery '//quality/testdata:fixture_real_python_no_typecheck' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 plain_actions="$(bazel aquery '//quality/testdata:plain' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 mixed_lint_count="$(printf '%s' "$mixed_actions" | grep -c 'Mnemonic: DxRealQualityLint' || true)"
 mixed_format_count="$(printf '%s' "$mixed_actions" | grep -c 'Mnemonic: DxRealQualityFormat' || true)"
@@ -649,7 +649,7 @@ if [[ "$python_actions" == *"markdown_check"* ]]; then bad "python: forbidden [m
 if [[ "$rust_actions" == *"markdown_check"* ]]; then bad "rust: forbidden [markdown_check] (unselected repo-owned adapter must not invalidate Rust)"; else ok; fi
 if [[ "$js_actions" == *"markdown_check"* ]]; then bad "js: forbidden [markdown_check] (unselected repo-owned adapter must not invalidate JS)"; else ok; fi
 sibling_actions="$(bazel aquery '//quality/testdata:fixture_real_markdown_sibling' \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
 if [[ -z "$sibling_actions" ]]; then bad "sibling: empty aquery output"; else ok; fi
 sibling_lint_inputs="$(printf '%s' "$sibling_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"

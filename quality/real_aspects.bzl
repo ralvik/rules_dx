@@ -1,4 +1,4 @@
-"""Target-scoped real capability aspects over real adapters (WP2, Python, Biome/ESLint/Prettier).
+"""Target-scoped real capability aspects over real adapters (M04 WP2, M15 Python, M17 Biome/ESLint/Prettier).
 
 Contract: `docs/quality/tool-integrations.md`, `docs/quality/native-configuration.md`, `docs/quality/quality-sources.md#adapter-applicability`, `docs/quality/quality-result-protocol.md#transport`.
 """
@@ -27,7 +27,23 @@ def _family_selections(policy, capability):
         selections[family_id] = getattr(policy.families[family_id], capability)
     return selections
 
-def _real_pipeline_action(target, ctx, capability):
+# Cold-server laziness (#432): the shared aspect no longer resolves every
+# ecosystem on every visit. Each aspect declares only its own tool labels
+# and filters the resolved pipeline to `allowed_tools`; `select()` and
+# toolchain indirection cannot do this (all branches resolve), only separate
+# aspects avoid loading. Base handles single-file `dx_tools` artifacts plus
+# repo-owned markdown; JS/Python/Rust families are additive opt-ins.
+_CORE_LINT_TOOLS = ["biome", "buildifier", "markdown_check", "ruff", "taplo", "vale"]
+_CORE_FORMAT_TOOLS = ["biome", "buildifier", "ruff", "taplo"]
+_CORE_TYPECHECK_TOOLS = ["ty"]
+_JS_LINT_TOOLS = ["eslint"]
+_JS_FORMAT_TOOLS = ["prettier"]
+_PY_LINT_TOOLS = ["flake8", "pydoclint", "pylint"]
+_RUST_LINT_TOOLS = ["clippy"]
+_RUST_FORMAT_TOOLS = ["rustfmt"]
+_RUST_TYPECHECK_TOOLS = ["rustc"]
+
+def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix, has_rust_toolchain):
     if QualitySourcesInfo not in target:
         return []
     if _capability_tags(ctx.rule.attr, capability):
@@ -59,6 +75,9 @@ def _real_pipeline_action(target, ctx, capability):
     )
     if len(resolved) == 0:
         return []
+    resolved = [stage for stage in resolved if stage["tool"] in allowed_tools]
+    if len(resolved) == 0:
+        return []
 
     # Target-coupled tsc (#84, #408): tsc never applies from the class alone;
     # it requires the authoritative typescript_project context
@@ -86,6 +105,8 @@ def _real_pipeline_action(target, ctx, capability):
     # `no-format` skips the stage via `_capability_tags` above.
     rustfmt_edition = None
     if "rustfmt" in [stage["tool"] for stage in resolved]:
+        if not has_rust_toolchain:
+            fail("real_aspect (" + str(target.label) + "): rustfmt needs the Rust family aspect")
         if _rust_common.crate_info in target:
             rustfmt_edition = target[_rust_common.crate_info].edition
         elif _rust_common.test_crate_info in target:
@@ -122,6 +143,8 @@ def _real_pipeline_action(target, ctx, capability):
     # self-run path is gone, so Clippy takes no dx-side config.
     clippy_diagnostics = []
     if "clippy" in [stage["tool"] for stage in resolved]:
+        if not has_rust_toolchain:
+            fail("real_aspect (" + str(target.label) + "): clippy needs the Rust family aspect")
         if OutputGroupInfo in target and "clippy_output" in target[OutputGroupInfo]:
             clippy_diagnostics = target[OutputGroupInfo]["clippy_output"].to_list()
     clippy_delegated = len(clippy_diagnostics) > 0
@@ -137,6 +160,8 @@ def _real_pipeline_action(target, ctx, capability):
     # self-run path is gone, so rustc takes no dx-side invocation.
     rustc_diagnostics = []
     if "rustc" in [stage["tool"] for stage in resolved]:
+        if not has_rust_toolchain:
+            fail("real_aspect (" + str(target.label) + "): rustc needs the Rust family aspect")
         if OutputGroupInfo in target and "rustc_output" in target[OutputGroupInfo]:
             rustc_diagnostics = target[OutputGroupInfo]["rustc_output"].to_list()
     rustc_delegated = len(rustc_diagnostics) > 0
@@ -155,26 +180,41 @@ def _real_pipeline_action(target, ctx, capability):
         if stage["tool"] == "vale" and stage["tool"] not in configs_by_tool:
             fail("real_aspect (" + str(target.label) + "): applicable Vale requires declared config; supply and bind native policy via aspect_hints (no usable upstream default)")
 
-    clippy_driver, rustfmt = rust_toolchain_tools(ctx)
-    tool_binaries = {
-        "biome": ctx.file._biome,
-        "buildifier": ctx.file._buildifier,
-        "clippy": clippy_driver,
-        "eslint": ctx.executable._eslint,
-        "flake8": ctx.executable._flake8,
-        "markdown_check": ctx.file._markdown_check,
-        "prettier": ctx.executable._prettier,
-        "pydoclint": ctx.executable._pydoclint,
-        "pylint": ctx.executable._pylint,
-        "ruff": ctx.file._ruff,
-        "rustc": rust_toolchain_rustc(ctx),
-        "rustfmt": rustfmt,
-        "taplo": ctx.file._taplo,
-        "ty": ctx.file._ty,
-        "vale": ctx.file._vale,
-    }
+    tool_binaries = {}
+    if "biome" in stage_tools:
+        tool_binaries["biome"] = ctx.file._biome
+    if "buildifier" in stage_tools:
+        tool_binaries["buildifier"] = ctx.file._buildifier
+    if "eslint" in stage_tools:
+        tool_binaries["eslint"] = ctx.executable._eslint
+    if "flake8" in stage_tools:
+        tool_binaries["flake8"] = ctx.executable._flake8
+    if "markdown_check" in stage_tools:
+        tool_binaries["markdown_check"] = ctx.file._markdown_check
+    if "prettier" in stage_tools:
+        tool_binaries["prettier"] = ctx.executable._prettier
+    if "pydoclint" in stage_tools:
+        tool_binaries["pydoclint"] = ctx.executable._pydoclint
+    if "pylint" in stage_tools:
+        tool_binaries["pylint"] = ctx.executable._pylint
+    if "ruff" in stage_tools:
+        tool_binaries["ruff"] = ctx.file._ruff
+    if "taplo" in stage_tools:
+        tool_binaries["taplo"] = ctx.file._taplo
+    if "ty" in stage_tools:
+        tool_binaries["ty"] = ctx.file._ty
+    if "vale" in stage_tools:
+        tool_binaries["vale"] = ctx.file._vale
+    if has_rust_toolchain:
+        clippy_driver, rustfmt = rust_toolchain_tools(ctx)
+        if "clippy" in stage_tools and not clippy_delegated:
+            tool_binaries["clippy"] = clippy_driver
+        if "rustfmt" in stage_tools:
+            tool_binaries["rustfmt"] = rustfmt
+        if "rustc" in stage_tools and not rustc_delegated:
+            tool_binaries["rustc"] = rust_toolchain_rustc(ctx)
 
-    out = ctx.actions.declare_file(target.label.name + "-real-" + capability + ".pb")
+    out = ctx.actions.declare_file(target.label.name + "-real-" + capability + output_suffix + ".pb")
 
     union = {}
     for stage in resolved:
@@ -340,15 +380,33 @@ def _real_pipeline_action(target, ctx, capability):
     return [OutputGroupInfo(dx_results = depset([out]))]
 
 def _real_lint_impl(target, ctx):
-    return _real_pipeline_action(target, ctx, "lint")
+    return _real_pipeline_action(target, ctx, "lint", _CORE_LINT_TOOLS, "", False)
 
 def _real_format_impl(target, ctx):
-    return _real_pipeline_action(target, ctx, "format")
+    return _real_pipeline_action(target, ctx, "format", _CORE_FORMAT_TOOLS, "", False)
 
 def _real_typecheck_impl(target, ctx):
-    return _real_pipeline_action(target, ctx, "typecheck")
+    return _real_pipeline_action(target, ctx, "typecheck", _CORE_TYPECHECK_TOOLS, "", False)
 
-_REAL_ATTRS = {
+def _real_js_lint_impl(target, ctx):
+    return _real_pipeline_action(target, ctx, "lint", _JS_LINT_TOOLS, "-js", False)
+
+def _real_js_format_impl(target, ctx):
+    return _real_pipeline_action(target, ctx, "format", _JS_FORMAT_TOOLS, "-js", False)
+
+def _real_python_lint_impl(target, ctx):
+    return _real_pipeline_action(target, ctx, "lint", _PY_LINT_TOOLS, "-py", False)
+
+def _real_rust_lint_impl(target, ctx):
+    return _real_pipeline_action(target, ctx, "lint", _RUST_LINT_TOOLS, "-rust", True)
+
+def _real_rust_format_impl(target, ctx):
+    return _real_pipeline_action(target, ctx, "format", _RUST_FORMAT_TOOLS, "-rust", True)
+
+def _real_rust_typecheck_impl(target, ctx):
+    return _real_pipeline_action(target, ctx, "typecheck", _RUST_TYPECHECK_TOOLS, "-rust", True)
+
+_REAL_CORE_ATTRS = {
     "_biome": attr.label(
         default = "@dx_tools//:biome",
         allow_single_file = True,
@@ -361,18 +419,6 @@ _REAL_ATTRS = {
         cfg = "exec",
         doc = "Pinned Buildifier artifact for Starlark pipelines.",
     ),
-    "_eslint": attr.label(
-        default = "//quality/tools/javascript/bin:eslint",
-        cfg = "exec",
-        executable = True,
-        doc = "Private ESLint js_binary wrapper for JavaScript lint opt-ins.",
-    ),
-    "_flake8": attr.label(
-        default = "//quality/tools/python:flake8",
-        cfg = "exec",
-        executable = True,
-        doc = "Pinned flake8 launcher (stub plus runfiles closure) for Python lint opt-ins.",
-    ),
     "_markdown_check": attr.label(
         default = "//quality/markdown:quality_markdown",
         allow_single_file = True,
@@ -383,24 +429,6 @@ _REAL_ATTRS = {
         default = "//quality:real_fixture_policy",
         providers = [QualityPolicyInfo],
         doc = "Aggregate workspace policy expanding tool IDs to classes.",
-    ),
-    "_prettier": attr.label(
-        default = "//quality/tools/javascript/bin:prettier",
-        cfg = "exec",
-        executable = True,
-        doc = "Private Prettier js_binary wrapper for JavaScript/JSON format.",
-    ),
-    "_pydoclint": attr.label(
-        default = "//quality/tools/python:pydoclint",
-        cfg = "exec",
-        executable = True,
-        doc = "Pinned pydoclint launcher (stub plus runfiles closure) for Python pipelines.",
-    ),
-    "_pylint": attr.label(
-        default = "//quality/tools/python:pylint",
-        cfg = "exec",
-        executable = True,
-        doc = "Pinned pylint launcher (stub plus runfiles closure) for Python lint opt-ins.",
     ),
     "_ruff": attr.label(
         default = "@dx_tools//:ruff",
@@ -435,27 +463,159 @@ _REAL_ATTRS = {
     ),
 }
 
+_REAL_JS_LINT_ATTRS = {
+    "_eslint": attr.label(
+        default = "//quality/tools/javascript/bin:eslint",
+        cfg = "exec",
+        executable = True,
+        doc = "Private ESLint js_binary wrapper for JavaScript lint opt-ins.",
+    ),
+    "_policy": attr.label(
+        default = "//quality:real_fixture_policy",
+        providers = [QualityPolicyInfo],
+        doc = "Aggregate workspace policy expanding tool IDs to classes.",
+    ),
+    "_runner": attr.label(
+        default = "//quality/runner:quality_runner",
+        executable = True,
+        cfg = "exec",
+        allow_files = True,
+        doc = "Deterministic pipeline runner with --real backend.",
+    ),
+}
+
+_REAL_JS_FORMAT_ATTRS = {
+    "_policy": attr.label(
+        default = "//quality:real_fixture_policy",
+        providers = [QualityPolicyInfo],
+        doc = "Aggregate workspace policy expanding tool IDs to classes.",
+    ),
+    "_prettier": attr.label(
+        default = "//quality/tools/javascript/bin:prettier",
+        cfg = "exec",
+        executable = True,
+        doc = "Private Prettier js_binary wrapper for JavaScript/JSON format.",
+    ),
+    "_runner": attr.label(
+        default = "//quality/runner:quality_runner",
+        executable = True,
+        cfg = "exec",
+        allow_files = True,
+        doc = "Deterministic pipeline runner with --real backend.",
+    ),
+}
+
+_REAL_PY_LINT_ATTRS = {
+    "_flake8": attr.label(
+        default = "//quality/tools/python:flake8",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned flake8 launcher (stub plus runfiles closure) for Python lint opt-ins.",
+    ),
+    "_policy": attr.label(
+        default = "//quality:real_fixture_policy",
+        providers = [QualityPolicyInfo],
+        doc = "Aggregate workspace policy expanding tool IDs to classes.",
+    ),
+    "_pydoclint": attr.label(
+        default = "//quality/tools/python:pydoclint",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned pydoclint launcher (stub plus runfiles closure) for Python pipelines.",
+    ),
+    "_pylint": attr.label(
+        default = "//quality/tools/python:pylint",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned pylint launcher (stub plus runfiles closure) for Python lint opt-ins.",
+    ),
+    "_runner": attr.label(
+        default = "//quality/runner:quality_runner",
+        executable = True,
+        cfg = "exec",
+        allow_files = True,
+        doc = "Deterministic pipeline runner with --real backend.",
+    ),
+}
+
+_REAL_RUST_ATTRS = {
+    "_policy": attr.label(
+        default = "//quality:real_fixture_policy",
+        providers = [QualityPolicyInfo],
+        doc = "Aggregate workspace policy expanding tool IDs to classes.",
+    ),
+    "_runner": attr.label(
+        default = "//quality/runner:quality_runner",
+        executable = True,
+        cfg = "exec",
+        allow_files = True,
+        doc = "Deterministic pipeline runner with --real backend.",
+    ),
+}
+
 real_lint_aspect = aspect(
     implementation = _real_lint_impl,
     attr_aspects = ["aspect_hints"],
-    attrs = _REAL_ATTRS,
-    toolchains = rust_toolchain_toolchains(),
-    requires = [rust_clippy_aspect],
+    attrs = _REAL_CORE_ATTRS,
     doc = "Registers the exact-input real lint pipeline action in dx_results.",
 )
 
 real_format_aspect = aspect(
     implementation = _real_format_impl,
     attr_aspects = ["aspect_hints"],
-    attrs = _REAL_ATTRS,
-    toolchains = rust_toolchain_toolchains(),
+    attrs = _REAL_CORE_ATTRS,
     doc = "Registers the exact-input real format pipeline action in dx_results.",
 )
 
 real_typecheck_aspect = aspect(
     implementation = _real_typecheck_impl,
     attr_aspects = ["aspect_hints"],
-    attrs = _REAL_ATTRS,
-    toolchains = rust_toolchain_toolchains(),
+    attrs = _REAL_CORE_ATTRS,
     doc = "Registers the exact-input real typecheck pipeline action in dx_results.",
+)
+
+real_js_lint_aspect = aspect(
+    implementation = _real_js_lint_impl,
+    attr_aspects = ["aspect_hints"],
+    attrs = _REAL_JS_LINT_ATTRS,
+    doc = "Additive JavaScript lint family aspect (ESLint opt-in).",
+)
+
+real_js_format_aspect = aspect(
+    implementation = _real_js_format_impl,
+    attr_aspects = ["aspect_hints"],
+    attrs = _REAL_JS_FORMAT_ATTRS,
+    doc = "Additive JavaScript/JSON format family aspect (Prettier).",
+)
+
+real_python_lint_aspect = aspect(
+    implementation = _real_python_lint_impl,
+    attr_aspects = ["aspect_hints"],
+    attrs = _REAL_PY_LINT_ATTRS,
+    doc = "Additive Python lint family aspect (flake8/pylint/pydoclint).",
+)
+
+real_rust_lint_aspect = aspect(
+    implementation = _real_rust_lint_impl,
+    attr_aspects = ["aspect_hints"],
+    attrs = _REAL_RUST_ATTRS,
+    toolchains = rust_toolchain_toolchains(),
+    requires = [rust_clippy_aspect],
+    doc = "Additive Rust lint family aspect (delegated Clippy).",
+)
+
+real_rust_format_aspect = aspect(
+    implementation = _real_rust_format_impl,
+    attr_aspects = ["aspect_hints"],
+    attrs = _REAL_RUST_ATTRS,
+    toolchains = rust_toolchain_toolchains(),
+    doc = "Additive Rust format family aspect (toolchain rustfmt).",
+)
+
+real_rust_typecheck_aspect = aspect(
+    implementation = _real_rust_typecheck_impl,
+    attr_aspects = ["aspect_hints"],
+    attrs = _REAL_RUST_ATTRS,
+    toolchains = rust_toolchain_toolchains(),
+    doc = "Additive Rust typecheck family aspect (delegated rustc).",
 )

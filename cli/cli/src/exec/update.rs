@@ -1,4 +1,4 @@
-//! Update command execution: live resolver backends with continuation 
+//! Update command execution: live resolver backends with continuation
 //! plus the vendored preset fragment.
 
 use super::common::*;
