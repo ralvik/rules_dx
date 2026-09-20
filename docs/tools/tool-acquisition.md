@@ -87,6 +87,11 @@ observations, not pins.
 The Structured cohort rows below are owned by issue #419 (live successor
 to closed #307 for the `protobuf`/`qml` classes); versions are
 observations, not pins.
+The Interpreted/file-family cohort rows below are owned by issue #420 (live successor
+to closed #307 for the `ruby`/`powershell` plus `cue`/`jsonnet`/`pkl`/`css`/
+`html_template`/`gherkin`/`sql`/`xml`/`go_module`/`terraform`/`yaml`/`text`
+classes; `protobuf`/`qml` stay owned by issue #419 and are cross-linked, not
+double-claimed); versions are observations, not pins.
 
 | Tool | Upstream evidence | Candidate acquisition and remaining risk |
 | --- | --- | --- |
@@ -116,6 +121,23 @@ observations, not pins.
 | buf | [releases](https://github.com/bufbuild/buf/releases) (v1.72.0 observed Jul 2026; [1.71.0 npm](https://www.npmjs.com/package/@bufbuild/buf)) | Checksummed standalone release artifact; self-contained per-platform binaries with published checksums (Apache-2.0). `buf format --diff --exit-code` unified diff plus `--write`; `buf lint --error-format=json` JSONL (`path,start_line,start_column,end_line,end_column,type,message`) plus text `file:line:column:message` (no SARIF in 1.71.0). Needs no target compiler context; execution-platform lazy. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
 | qmlformat | [qmlformat docs](https://doc.qt.io/qt-6/qtqml-tooling-qmlformat.html) (Qt 6.11.2 observed; [Qt 6.8 tooling](https://doc.qt.io/qt-6.8/qtqml-tooling.html)) | Authoritative-toolchain class: resolves from the qualified Qt distribution's tool targets, no separate acquisition. Whole-file rewrite with stdout plus `-i` inplace; `.qmlformat.ini` upward settings plus `--ignore-settings`. Version follows the qualified Qt distribution pin; exact Qt distribution identity, licensing, and platform artifact qualification remain pending. |
 | qmllint | [qmllint docs](https://doc.qt.io/qt-6/qtqml-tooling-qmllint.html) (Qt 6.11.1 observed) | Authoritative-toolchain class: resolves from the qualified Qt distribution's tool targets, no separate acquisition. `--json <file>` (`-` for stdout) JSON with messages plus file/line/severity; `.qmllint.ini` plus `//qmllint enable/disable` comments. Check-only with the provisional sandbox-apply-and-diff fix flow. Version follows the qualified Qt distribution pin; exact distribution identity, licensing, and platform artifact qualification remain pending. |
+| RuboCop | [releases](https://github.com/rubocop/rubocop/releases) (1.91.0 observed Sep 2026; [RubyGems](https://rubygems.org/gems/rubocop)) | Release-assembled Ruby closure member (gem plus transitive closure over the assembled Ruby runtime); consumer never runs Bundler or any installer. `--format json` versus text-parse stays open under issue #420. Bundle contents, lock inputs, manifest, SBOM, licenses, constituent provenance, and adapter qualification remain pending under issue #420; maintainer assembly must establish and record them and recheck latest stable when adding the adapter. |
+| StandardRB | [releases](https://github.com/standardrb/standard/releases) (1.56.0 observed Jul 2026; [RubyGems](https://rubygems.org/gems/standard)) | Release-assembled Ruby closure member over the same assembled Ruby runtime (`standardrb` binary wrapping RuboCop with an unconfigurable ruleset); consumer never runs Bundler or any installer. Whole-file rewrite with check/diff mode; exact fix wiring stays open under issue #420. Bundle contents, lock inputs, and adapter qualification remain pending under issue #420; recheck latest stable when adding the adapter. |
+| PSScriptAnalyzer | [releases](https://github.com/PowerShell/PSScriptAnalyzer/releases) (1.25.0 observed Mar 2026; [PowerShell Gallery](https://www.powershellgallery.com/packages/PSScriptAnalyzer)) | Exact upstream module package imported by explicit path over a portable `pwsh` runtime; no consumer runs `Install-Module`. Console-parse versus library-API binding stays open under issue #420 (per the adapter-input notes). Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
+| pwsh | [releases](https://github.com/PowerShell/PowerShell/releases) (7.6.5 LTS observed Aug 2026; 7.5.10 stable) | Portable runtime for the PSScriptAnalyzer module (per-platform binary archives, execution-platform lazy); exact runtime identity and platform artifact qualification remain pending under issue #420. Maintainer acquisition must establish and record byte identity. |
+| cue | [releases](https://github.com/cue-lang/cue/releases) (v0.17.1 observed Jul 2026) | Checksummed standalone release artifact; `cue fmt` whole-file rewrite with check/diff mode. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
+| jsonnetfmt | [go-jsonnet releases](https://github.com/google/go-jsonnet/releases) (v0.22.0 observed Mar 2026; C++ [jsonnet v0.21.0](https://github.com/google/jsonnet/releases)) | Checksummed standalone release artifact; go-jsonnet versus C++ implementation choice stays open under issue #420. Whole-file rewrite with check/diff mode. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
+| pkl | [releases](https://github.com/apple/pkl/releases) (0.32.1 observed Jul 2026) | Checksummed standalone release artifact (per-platform binaries with published checksums). Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
+| djlint | [releases](https://github.com/djlint/djLint/releases) (v1.45.0 observed Sep 2026; [PyPI](https://pypi.org/project/djlint)) | Private wheel-only Python graph member over the shared managed Python runtime (no sdist fallback, no pip subprocess on the consumer path). `--lint` versus `--reformat` wiring stays open under issue #420. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
+| Stylelint | [releases](https://github.com/stylelint/stylelint/releases) (17.14.1 observed Jul 2026; [npm](https://www.npmjs.com/package/stylelint)) | Private pure-JavaScript graph member over the shared managed Node runtime (standalone-artifact alternative stays open under issue #420). `--formatter json` shape stays an unproven mapping owned by issue #420. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
+| prettier-plugin-gherkin | [npm](https://www.npmjs.com/package/prettier-plugin-gherkin) (observed; recheck latest stable when adding the adapter) | Private pure-JavaScript graph member (named plugin closure with Prettier over the shared managed Node runtime). Maintainer acquisition must establish and record byte identity. |
+| prettier-plugin-sql | [npm](https://www.npmjs.com/package/prettier-plugin-sql) (0.15.1 observed) | Private pure-JavaScript graph member (named plugin closure with Prettier over the shared managed Node runtime). Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
+| prettier-plugin-xml | [npm](https://www.npmjs.com/package/prettier-plugin-xml) (observed; recheck latest stable when adding the adapter) | Private pure-JavaScript graph member (named plugin closure with Prettier over the shared managed Node runtime). Maintainer acquisition must establish and record byte identity. |
+| modfmt | Upstream identity pending (recheck at implementation under issue #420) | Checksummed standalone release-artifact candidate for `go.mod` formatting; whole-file rewrite with check/diff mode. Maintainer acquisition must establish the exact upstream identity plus byte identity before adapter qualification. |
+| terraform | [releases](https://github.com/hashicorp/terraform/releases) (v1.16.1 observed Sep 2026) | Checksummed standalone release artifact; `terraform fmt` whole-file rewrite with check/diff mode (fmt ships with the CLI). BUSL-1.1 license review stays pending under issue #420. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
+| yamlfmt | [releases](https://github.com/google/yamlfmt/releases) (v0.21.0 observed Jan 2026) | Checksummed standalone release artifact (single binary, cosign-signed checksums from v0.14.0 on); `-lint` check mode. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
+| yamllint | [releases](https://github.com/adrienverge/yamllint/releases) (1.38.0 observed Mar 2026) | Private wheel-only Python graph member over the shared managed Python runtime (no sdist fallback, no pip subprocess on the consumer path). Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
+| keep-sorted | [releases](https://github.com/google/keep-sorted/releases) (v0.10.0 observed Aug 2026) | Checksummed standalone release artifact; check-only with the provisional sandbox-apply-and-diff fix flow. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
 
 Record compressed artifact identity separately from extracted executable identity. A versioned
 release URL does not guarantee immutable bytes; checked-in digests must reject changed content.
@@ -340,9 +362,10 @@ to its exact upstream module package imported by explicit path over a
 portable `pwsh` runtime; the PowerShell application foundation stays
 deferred beyond v1 (only this tool cohort is in scope). Exact module
 version, runtime identity, console-parse versus library-API binding choice
-(per the adapter-input notes), and adapter qualification remain pending and
-no adapter claims `powershell` yet
-(open).
+(per the adapter-input notes), and adapter qualification remain pending
+under issue #420 (live successor to closed #307 for the `powershell`
+class) and no adapter claims `powershell` yet
+(open under issue #420).
 
 Decided route: RuboCop and StandardRB take the
 release-assembled Ruby closure route (the exceptional bundle within the
@@ -351,8 +374,9 @@ ready-to-run Ruby runtime/package closure with manifest, SBOM, licenses,
 and constituent provenance; consumer builds only download, verify, extract,
 and execute it. The Ruby application foundation stays deferred beyond v1
 (only this tool cohort is in scope). Bundle contents, lock inputs, and
-adapter qualification remain pending and no adapter claims `ruby` yet
-(open). This
+adapter qualification remain pending under issue #420 (live successor to
+closed #307 for the `ruby` class) and no adapter claims `ruby` yet
+(open under issue #420). This
 closes that order (Python, Node, JVM including Scala/Scalafix managed
 route, .NET, PowerShell, Ruby).
 

@@ -311,6 +311,28 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Interpreted/file-family-cohort qualification harness (issue #420, live
+# successor to closed #307 for the ruby/powershell/file-family classes):
+# proves the as-built decided release-assembled Ruby closure route for
+# RuboCop/StandardRB (exceptional bundle, download-verify-extract-execute,
+# bundle-vs-adapter split recorded) plus the decided exact-module plus
+# portable-pwsh-runtime route for PSScriptAnalyzer (console-parse versus
+# library-API binding open) plus frozen delivery-class routes for the
+# file-family remainder (protobuf/qml cross-linked to issue #419, never
+# double-claimed) with initial artifact research as observations not pins,
+# provisional adapter-input notes, provisional native-config inputs with no
+# hidden preset, parity-deferred cohort classes with owner plus frozen
+# route, classification-only taxonomy with no curated defaults and no
+# matrix cells yet. Run by CI via
+# `bazel run //tools/ci:interpreted_file_cohort_qualification`.
+sh_binary(
+    name = "interpreted_file_cohort_qualification",
+    srcs = ["interpreted_file_cohort_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Publication-trust harness (issues #78, #26, #5, #311): machine-checks
 # the draft-only + nothing-published static invariants the
 # release-hygiene harness does not own — module name at the
