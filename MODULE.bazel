@@ -14,6 +14,17 @@ module(
 bazel_dep(name = "rules_rust", version = "0.74.0")
 bazel_dep(name = "rules_cc", version = "0.2.22")
 
+# Pinned C/C++ test runner (ADR 0019). 1.18.0 is the
+# latest stable in the Bazel Central Registry (verified against Bazel 9.2.0
+# on the seed host); the 1.18.x line requires C++17 or newer per the
+# upstream release notes, and the qualified toolchain floor covers it
+# (qualified seed-only under issue #479 via
+# `bazel run //tools/ci:googletest_qualification` with
+# `cc/tests/fixtures/googletest/` over `@googletest//:gtest_main`;
+# living at head rejected per the dx pin policy). MSVC interop plus SDK
+# licensing stay open under ADR 0019.
+bazel_dep(name = "googletest", version = "1.18.0")
+
 # Direct dep for the artifact-metadata generator. 1.9.0 is the
 # MVS-selected version in the executed graph (via aspect_rules_py 2.x).
 bazel_dep(name = "rules_python", version = "1.9.0")

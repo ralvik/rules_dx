@@ -1040,6 +1040,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:xunit_qualification
       - name: Audit Go test qualification (issue #478 go_test plus embed pins plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:gotest_qualification
+      - name: Audit GoogleTest qualification (issue #479 v1.18.0 pins plus C++17 floor plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:googletest_qualification
       - name: Write job summary
         if: always()
         run: |

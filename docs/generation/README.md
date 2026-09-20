@@ -85,7 +85,8 @@ pinned (`go_test` over `go test` with package-level `embed`, qualified seed-only
 upgrade with 5.14.x fallback (`execute --select-class` console-launcher fixtures in
 `java/tests/fixtures/junit/` plus `kotlin/tests/fixtures/junit/` via
 `bazel run //tools/ci:junit_qualification` under issue #476), plain
-`cc_test` executables, plain `csharp_test`/`fsharp_test` hello executables)
+`cc_test` assert executables plus the qualified GoogleTest v1.18.0 mapping
+below, plain `csharp_test`/`fsharp_test` hello executables)
 and lock authority (`third_party/jvm/maven_install.json`,
 `third_party/dotnet/paket.lock` plus `paket.dependencies`, Go stdlib-only, C/C++ none).
 The xUnit v3 4.0.0 runner mapping is qualified under issue #477 (plain
@@ -93,12 +94,19 @@ The xUnit v3 4.0.0 runner mapping is qualified under issue #477 (plain
 MTP entry-point shims over the pinned `@paket.main//xunit.v3` closure, proven by
 `csharp/tests/fixtures/xunit/` and `fsharp/tests/fixtures/xunit/` via
 `bazel run //tools/ci:xunit_qualification`; unpinned runner rejected).
-Upgrades (GoogleTest v1.18.0, Go
+The qualified GoogleTest v1.18.0 mapping is pinned under issue #479 (plain
+`cc_test` with `TEST()`/`EXPECT_*` sources over the pinned
+`@googletest//:gtest_main` with an explicit `-std=c++17` floor, proven by
+`cc/tests/fixtures/googletest/` via
+`bazel run //tools/ci:googletest_qualification`; living at head rejected).
+Upgrades (Go
 `from_file` when non-stdlib deps land) stay owned under issues #476-#484 (JUnit 6.1.3
 plus 5.14.x fallback qualified seed-only under issue #476 via
 `bazel run //tools/ci:junit_qualification`; xUnit v3 4.0.0 qualified seed-only
 under issue #477 via `bazel run //tools/ci:xunit_qualification`; `go test` qualified
-seed-only under issue #478 via `bazel run //tools/ci:gotest_qualification`); no `Supported` claim
+seed-only under issue #478 via `bazel run //tools/ci:gotest_qualification`; GoogleTest
+v1.18.0 plus C++17 floor qualified seed-only under issue #479 via
+`bazel run //tools/ci:googletest_qualification`); no `Supported` claim
 until platform plus consumer plus release evidence passes.
 
 Pinned by `bazel run //tools/ci:foundation_maps`.

@@ -132,8 +132,13 @@ def cc_test(name, srcs, visibility = None, **kwargs):
 
     With `srcs`, those test sources are this test's direct sources for
     QualitySourcesInfo. The library under test stays its ordinary owner
-    via `deps`; tested sources are never this test's direct sources. Uses
-    Bazel's standard test and coverage protocols."""
+    via `deps`; tested sources are never this test's direct sources. Plain
+    assert tests (exit code is the verdict) stay supported; the GoogleTest
+    v1.18.0 mapping is qualified under issue #479
+    (`cc/tests/fixtures/googletest/`: `TEST()` plus `EXPECT_*` sources over
+    the pinned `@googletest//:gtest_main` with an explicit `-std=c++17`
+    floor; living at head rejected). Uses Bazel's standard test and
+    coverage protocols."""
     test_srcs = srcs if srcs != None else []
     upstream_kwargs = _cc_with_werror(kwargs)
 

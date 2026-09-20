@@ -1,0 +1,190 @@
+#!/usr/bin/env bash
+# GoogleTest v1.18.0 plus C++17 floor qualification harness (issue #479).
+#
+# Qualifies the owned gap from closed #304: provisional GoogleTest v1.18.0,
+# closed #304 owner only. #418 covers adapters not the runner version.
+# - pinned: GoogleTest 1.18.0 (Bazel Central Registry module `googletest`
+#   1.18.0, verified against Bazel 9.2.0 on the seed host) in MODULE.bazel
+#   plus `cc/tests/fixtures/googletest/pins.bzl`; the 1.18.x line requires
+#   C++17 or newer per the upstream v1.18.0 release notes. Living at head
+#   (floating, unpinned) stays rejected per the dx pin policy.
+# - floor: explicit `-std=c++17` on the fixture library plus test (never the
+#   compiler default); the test source adds `static_assert(__cplusplus)`
+#   plus `std::optional` plus structured-bindings plus `if constexpr` floor
+#   proofs that fail to compile below C++17.
+# - mapping: plain `cc_test` over `@googletest//:gtest_main` with `TEST()`
+#   plus `EXPECT_*` sources; the library under test stays its ordinary
+#   owner via `deps`. Plain assert seeds stay in `hello/` fixtures.
+# - open owned gaps: platform plus consumer plus release evidence, MSVC
+#   interop plus SDK licensing, no `Supported` claim. Compatibility is test
+#   mapping only.
+#
+# Versioned here, run by CI via `bazel run //tools/ci:googletest_qualification`,
+# following //tools/ci:exact_target_qualification.
+set -euo pipefail
+
+# Shared workspace + runfiles helpers (issue #319).
+# Bootstrap: Bazel runfiles forest first (`data = ["//tools/sh:lib"]`), then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/lib.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/lib.sh" 2>/dev/null || source "$(dirname "${BASH_SOURCE[0]}")/../sh/lib.sh"
+
+dx_cd_workspace
+
+dx_test_init
+
+pins="cc/tests/fixtures/googletest/pins.bzl"
+build="cc/tests/fixtures/googletest/BUILD.bazel"
+header="cc/tests/fixtures/googletest/greeter.h"
+lib="cc/tests/fixtures/googletest/greeter.cc"
+test="cc/tests/fixtures/googletest/greeter_test.cc"
+module="MODULE.bazel"
+matrix="docs/product/support-matrix.md"
+gen_readme="docs/generation/README.md"
+verify="docs/testing/verification-matrix.md"
+ci=".github/workflows/ci.yml"
+tools_build="tools/ci/BUILD.bazel"
+defs="cc/rules/defs.bzl"
+
+# Fixture quad plus pins stay present (issue #479).
+if [[ -f "$pins" && -f "$build" && -f "$header" && -f "$lib" && -f "$test" ]]; then
+  ok
+else
+  bad "googletest fixture missing (want $pins plus $build plus $header plus $lib plus $test)"
+fi
+
+# Pins record the version plus floor plus rejected runner.
+if grep -q -F -e 'GTEST_VERSION = "1.18.0"' "$pins" &&
+  grep -q -F -e 'GTEST_CXX_FLOOR = "17"' "$pins" &&
+  grep -q -F -e '"-std=c++17"' "$pins" &&
+  grep -q -F -e 'unpinned runner rejected' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its GoogleTest 1.18.0 plus C++17 floor plus rejected head under issue #479"
+fi
+
+# Pins record the gtest_main labels plus fixture target.
+if grep -q -F -e '@googletest//:gtest_main' "$pins" &&
+  grep -q -F -e '@googletest//:gtest"' "$pins" &&
+  grep -q -F -e 'cc/tests/fixtures/googletest:greeter_test' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its gtest_main labels plus fixture target under issue #479"
+fi
+
+# MODULE pins the 1.18.0 line.
+if grep -q -F -e 'bazel_dep(name = "googletest", version = "1.18.0")' "$module" &&
+  grep -q -F -e 'issue #479' "$module"; then
+  ok
+else
+  bad "MODULE.bazel lost its googletest 1.18.0 pin under issue #479"
+fi
+
+# Fixture maps cc_test over the pinned gtest_main with the C++17 floor.
+if grep -q -F -e 'cc_test' "$build" &&
+  grep -q -F -e '@googletest//:gtest_main' "$build" &&
+  grep -q -F -e '"-std=c++17"' "$build" &&
+  grep -q -F -e ':greeter_lib' "$build" &&
+  grep -q -F -e 'cc_library' "$build"; then
+  ok
+else
+  bad "cc/tests/fixtures/googletest lost its cc_test plus gtest_main plus -std=c++17 mapping under issue #479"
+fi
+
+# Header plus library prove the C++17 floor with std::optional.
+if grep -q -F -e 'std::optional' "$header" &&
+  grep -q -F -e 'MaybeGreet' "$header" &&
+  grep -q -F -e 'std::nullopt' "$lib" &&
+  grep -q -F -e 'MaybeGreet' "$lib"; then
+  ok
+else
+  bad "greeter header plus library lost its std::optional C++17 floor proof under issue #479"
+fi
+
+# Test sources use TEST plus EXPECT with floor proofs.
+if grep -q -F -e '#include <gtest/gtest.h>' "$test" &&
+  grep -q -F -e 'TEST(GreeterTest' "$test" &&
+  grep -q -F -e 'EXPECT_EQ' "$test" &&
+  grep -q -F -e 'static_assert(__cplusplus >= 201703L' "$test" &&
+  grep -q -F -e 'make_tuple' "$test" &&
+  grep -q -F -e 'if constexpr' "$test"; then
+  ok
+else
+  bad "greeter_test.cc lost its TEST/EXPECT plus C++17 floor proofs under issue #479"
+fi
+
+# Plain assert seed stays green via the wrapper (hello fixtures).
+if grep -q -F -e 'cc_test' cc/tests/fixtures/hello/BUILD.bazel &&
+  grep -q -F -e 'assert' cc/tests/fixtures/hello/hello_test.cc; then
+  ok
+else
+  bad "plain cc seed lost its assert hello mapping under issue #479"
+fi
+
+# Unpinned runner stays rejected: no head or floating googletest dep lands
+# (exact 1.18.0 only; the qualified "living at head rejected" record in
+# pins/wrapper/docs is the rejection, not a head dep).
+if ! grep -R --include='*.bzl' --include='BUILD.bazel' -E -e 'googletest[^"]*(head|master|latest|1\.\+)' -- cc third_party MODULE.bazel 2>/dev/null | grep -q .; then
+  ok
+else
+  bad "unpinned GoogleTest runner detected (head or floating; want exact 1.18.0 only)"
+fi
+
+# Wrapper owns the qualified mapping, not an open selection.
+if grep -q -F -e 'GoogleTest' "$defs" &&
+  grep -q -F -e 'issue #479' "$defs"; then
+  ok
+else
+  bad "cc wrapper lost its #479 qualified GoogleTest mapping record"
+fi
+
+# Support matrix keeps the qualified GoogleTest gap wording.
+if grep -q -F -e 'GoogleTest v1.18.0 qualified (issue #479' "$matrix" &&
+  grep -q -F -e 'cc/tests/fixtures/googletest/' "$matrix" &&
+  grep -q -F -e 'googletest_qualification' "$matrix" &&
+  grep -q -F -e '#479' "$matrix"; then
+  ok
+else
+  bad "docs/product/support-matrix.md lost its qualified GoogleTest gap wording under issue #479"
+fi
+
+# Generation README pins the qualified runner alongside the other gaps.
+if grep -q -F -e 'qualified GoogleTest v1.18.0' "$gen_readme" &&
+  grep -q -F -e 'cc/tests/fixtures/googletest/' "$gen_readme" &&
+  grep -q -F -e 'googletest_qualification' "$gen_readme" &&
+  grep -q -F -e 'issue #479' "$gen_readme"; then
+  ok
+else
+  bad "docs/generation/README.md lost its qualified GoogleTest record under issue #479"
+fi
+
+# Verification matrix owns the qualified seed-only record under #479.
+if grep -q -F -e 'googletest_qualification' "$verify" &&
+  grep -q -F -e 'qualified seed-only under #479' "$verify" &&
+  grep -q -F -e 'bazel run //tools/ci:googletest_qualification' "$verify" &&
+  grep -q -F -e '`googletest_qualification` 16/16' "$verify"; then
+  ok
+else
+  bad "verification-matrix lost its #479 GoogleTest qualified record"
+fi
+
+# BUILD owns the harness target.
+if grep -q -F -e 'name = "googletest_qualification"' "$tools_build"; then
+  ok
+else
+  bad "tools/ci/BUILD.bazel lost the googletest_qualification target"
+fi
+
+# CI wires the harness in dogfood-freshness.
+if grep -q -F -e 'bazel run --noshow_progress //tools/ci:googletest_qualification' "$ci"; then
+  ok
+else
+  bad "ci.yml lost the googletest_qualification step (want dogfood-freshness)"
+fi
+
+# Live proof: GoogleTest plus plain seed mappings execute green on the seed host.
+if bazel test //cc/tests/fixtures/googletest:greeter_test //cc/tests/fixtures/hello:hello_test --noshow_progress >/dev/null 2>&1; then
+  ok
+else
+  bad "googletest live proof failed (want greeter_test plus hello seed green)"
+fi
+
+dx_test_summary "googletest qualification harness"
