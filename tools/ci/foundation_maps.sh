@@ -548,9 +548,10 @@ else
 fi
 
 # #476-#484: admitted test runners stay pinned (go test with package embed,
-# ScalaTest via the managed route, JUnit 4 seed for JVM, plain executables
+# ScalaTest via the managed route, JUnit 4 seed for JVM, plain assert seed
 # for cc plus hello smoke for csharp/fsharp, with the xUnit v3 4.0.0 mapping
-# qualified under #477).
+# qualified under #477 plus the GoogleTest v1.18.0 mapping qualified under
+# #479).
 runner_fail=""
 grep -q -F -e 'go_test' go/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail go:kind"
 grep -q -F -e 'embed' go/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail go:embed"
@@ -587,6 +588,16 @@ grep -q -F -e 'fsharp_test' fsharp/tests/fixtures/xunit/BUILD.bazel || runner_fa
 grep -q -F -e '@paket.main//xunit.v3' fsharp/tests/fixtures/xunit/BUILD.bazel || runner_fail="$runner_fail fsharp-xunit:pin"
 grep -q -F -e '[<Fact>]' fsharp/tests/fixtures/xunit/GreeterTest.fs || runner_fail="$runner_fail fsharp-xunit:fact"
 grep -q -F -e 'ConsoleRunner.Run' fsharp/tests/fixtures/xunit/XunitEntryPoint.fs || runner_fail="$runner_fail fsharp-xunit:entry"
+grep -q -F -e 'bazel_dep(name = "googletest", version = "1.18.0")' MODULE.bazel || runner_fail="$runner_fail module:gtest"
+grep -q -F -e 'GoogleTest' cc/rules/defs.bzl || runner_fail="$runner_fail cc:gtest-open"
+grep -q -F -e 'GTEST_VERSION = "1.18.0"' cc/tests/fixtures/googletest/pins.bzl || runner_fail="$runner_fail gtest:pin"
+grep -q -F -e '"-std=c++17"' cc/tests/fixtures/googletest/pins.bzl || runner_fail="$runner_fail gtest:floor"
+grep -q -F -e 'cc_test' cc/tests/fixtures/googletest/BUILD.bazel || runner_fail="$runner_fail gtest:kind"
+grep -q -F -e '@googletest//:gtest_main' cc/tests/fixtures/googletest/BUILD.bazel || runner_fail="$runner_fail gtest:dep"
+grep -q -F -e '"-std=c++17"' cc/tests/fixtures/googletest/BUILD.bazel || runner_fail="$runner_fail gtest:copts"
+grep -q -F -e 'TEST(GreeterTest' cc/tests/fixtures/googletest/greeter_test.cc || runner_fail="$runner_fail gtest:test"
+grep -q -F -e 'static_assert(__cplusplus >= 201703L' cc/tests/fixtures/googletest/greeter_test.cc || runner_fail="$runner_fail gtest:static-assert"
+grep -q -F -e 'std::optional' cc/tests/fixtures/googletest/greeter.h || runner_fail="$runner_fail gtest:optional"
 if [[ -z "$runner_fail" ]]; then
   ok
 else

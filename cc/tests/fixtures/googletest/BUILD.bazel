@@ -1,0 +1,52 @@
+"""GoogleTest v1.18.0 plus C++17 floor runner fixture (issue #479).
+
+Maps the qualified runner: default `cc_test` wrapper stays the plain
+assert seed (`//cc/tests/fixtures/hello:hello_test`); the GoogleTest
+upgrade is the `cc_test` shape pinned here (1.18.0 over
+`@googletest//:gtest_main` with `TEST()` plus `EXPECT_*` sources and an
+explicit `-std=c++17` floor). Unpinned runner (living at head) is
+rejected per the dx pin policy.
+"""
+
+load("//cc/rules:defs.bzl", "cc_library", "cc_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+# C++17 floor: both the library and the test pin `-std=c++17` explicitly so
+# the proof never relies on the compiler default (gcc 13 defaults to
+# gnu++17). GoogleTest 1.18.x requires C++17 or newer per the upstream
+# v1.18.0 release notes; the test source adds `static_assert(__cplusplus)`
+# plus `std::optional` plus structured-bindings plus `if constexpr` floor
+# proofs that fail to compile below C++17.
+cc_library(
+    name = "greeter_lib",
+    srcs = ["greeter.cc"],
+    hdrs = ["greeter.h"],
+    copts = ["-std=c++17"],
+)
+
+cc_test(
+    name = "greeter_test",
+    srcs = ["greeter_test.cc"],
+    copts = ["-std=c++17"],
+    deps = [
+        ":greeter_lib",
+        "@googletest//:gtest_main",
+    ],
+)
+
+exports_files(["pins.bzl"])
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = [
+        "BUILD.bazel",
+        "pins.bzl",
+    ],
+    tags = ["corpus"],
+)

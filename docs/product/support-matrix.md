@@ -246,14 +246,15 @@ env plans, hello builds, and lock authority (`maven_install.json` plus fail-clos
 Paket plus `paket.main`, Go stdlib-only, C/C++ none), with test runners (`go test`
 qualified seed-only under issue #478, ScalaTest,
 JUnit 6.1.3 plus 5.14.x fallback qualified seed-only under issue #476,
-plain `cc` executables, plain `csharp`/`fsharp` hello executables plus the
+GoogleTest v1.18.0 plus C++17 floor qualified seed-only under issue #479,
+plain `csharp`/`fsharp` hello executables plus the
 qualified xUnit v3 4.0.0 mapping via xunit fixtures under issue #477) and
 classification-only quality families. Dependency hygiene (lockfile-consistency plus
 declared-dependency usage with category, exception, and obsolete checks) is qualified for
 all admitted languages in `tools/depcheck/` (issue #22; remaining opens under issue #510)
 with native authorities (go.sum,
 `maven_install.json`, `paket.lock`, per-archive sha256) and focused fixtures. Remaining gaps
-(GoogleTest v1.18.0 under issue #479, Go `from_file` when
+(Go `from_file` when
 non-stdlib deps land under issue #483, quality adapters qualified under issue #307 with
 deferred implementation
 owned by ADR 0019, C/C++ MSVC interop plus SDK licensing)
@@ -262,7 +263,9 @@ qualified seed-only under issue #476 via `bazel run //tools/ci:junit_qualificati
 xUnit v3 4.0.0 qualified seed-only under issue #477 via
 `bazel run //tools/ci:xunit_qualification`;
 `go test` qualified seed-only under issue #478 via
-`bazel run //tools/ci:gotest_qualification`).
+`bazel run //tools/ci:gotest_qualification`;
+GoogleTest v1.18.0 plus C++17 floor qualified seed-only under issue #479 via
+`bazel run //tools/ci:googletest_qualification`).
 No `Supported` claim until platform plus consumer plus release
 evidence passes.
 
@@ -527,8 +530,9 @@ silent.
 Upstream documentation observations; provisional defaults, not
 selections. Exact versions, runner mappings, and
 fixture qualification are open, except the JUnit 6.1.3 plus 5.14.x fallback
-mapping qualified under issue #476 and the xUnit v3 4.0.0 mapping
-qualified under issue #477 below.
+mapping qualified under issue #476, the xUnit v3 4.0.0 mapping
+qualified under issue #477, and the GoogleTest v1.18.0 mapping
+qualified under issue #479 below.
 
 - Java and Kotlin: JUnit (≈62–79% JVM adoption, Spring Boot default; JUnit 6
   adds native Kotlin `suspend` support). JUnit 6.1.3 primary (JDK 17+ baseline,
@@ -563,12 +567,21 @@ qualified under issue #477 below.
   (`bazel run //tools/ci:gotest_qualification` with
   `go/tests/fixtures/gotest/pins.bzl` plus the hello `go_test` package-level
   `embed` fixture; implicit runner rejected).
-- C/C++: GoogleTest v1.18.0 (industry default with native mocking
-  and death tests; first-class Bazel support via the Central Registry module
-  and `cc_test` integration). The 1.18.x branch requires C++17 or newer,
-  which the qualified toolchain floor must cover (tracked in
-  open work under issues #479 and #500). Upstream recommends living at
-  head; dx pins the release.
+- C/C++: GoogleTest v1.18.0 qualified (issue #479; industry default with
+  native mocking and death tests; first-class Bazel support via the Central
+  Registry module and `cc_test` integration). The pin is the BCR module
+  `googletest` 1.18.0 in `MODULE.bazel` (verified against Bazel 9.2.0 on the
+  seed host). The 1.18.x branch requires C++17 or newer per the upstream
+  v1.18.0 release notes; the qualified toolchain floor is explicit
+  `-std=c++17` on the fixture library plus test (never the compiler
+  default), proven by `cc/tests/fixtures/googletest/` (`TEST()` plus
+  `EXPECT_*` sources over `@googletest//:gtest_main` with
+  `static_assert(__cplusplus)` plus `std::optional` plus
+  structured-bindings plus `if constexpr` floor proofs that fail to compile
+  below C++17; `bazel run //tools/ci:googletest_qualification`). Living at
+  head rejected per the dx pin policy. Hello plain-assert fixtures stay as
+  smoke coverage, not the runner mapping. No `Supported` claim until
+  platform plus consumer plus release evidence passes.
 - Scala: ScalaTest 3.2.20 (covers Scala 2.10–2.13 and 3.x),
   per the rules' own preference (`scala_test` runs suites written using the
   `scalatest` library; the rule implementation is ScalaTest-wired).
