@@ -946,6 +946,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:code_ownership
       - name: Audit non-dogfed execution plan (explicit suites, coverage-excluded runs, shell ownership)
         run: bazel run --noshow_progress //tools/ci:non_dogfed_paths
+      - name: Audit non-dogfed qualification (issue #508 e2e plus negatives pins plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:non_dogfed_qualification
       - name: Audit examples READMEs (commands + evidence per foundation)
         run: bazel run --noshow_progress //tools/ci:examples_readme
       - name: Audit examples laziness (no-install + foundation isolation)

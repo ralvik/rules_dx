@@ -170,7 +170,8 @@ tracked in the roadmap).
 
 Non-dogfed paths never run under the standard dogfood gates by design;
 each has an explicit execution path pinned by
-`bazel run //tools/ci:non_dogfed_paths` (issue #508, see the
+`bazel run //tools/ci:non_dogfed_paths` and qualified seed-only under issue
+#508 by `bazel run //tools/ci:non_dogfed_qualification` (see the
 [verification matrix](verification-matrix.md#layers)): CLI-contract via
 hermetic pins under `bazel test //...`, negative fixtures via explicit
 failure proofs, the no-coverage cohort via coverage-excluded runs, and
