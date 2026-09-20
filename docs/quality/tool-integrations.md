@@ -316,7 +316,7 @@ co-location, and complete config-closure tests. Explicit config flags do not the
 of parent/home discovery; qualify source inspection with sandbox and hostile-home fixtures.
 
 Rust lint is upstream-delegated: `dx lint` stages the `rust_clippy_aspect`
-through `real_lint_aspect`, which requires the upstream aspect and reads the
+through `real_rust_lint_aspect`, which requires the upstream aspect and reads the
 authoritative `.clippy.diagnostics` file from the `clippy_output` output group
 instead of spawning a Clippy binary. `dx lint` sets
 `--@rules_rust//rust/settings:clippy_output_diagnostics=true` so the group is
@@ -330,7 +330,7 @@ Dependency context (`--extern`) stays open under
 open work.
 
 Rust typechecking is upstream-delegated: `dx typecheck` stages the
-`real_typecheck_aspect`, which reads the authoritative `.rustc-output`
+`real_rust_typecheck_aspect`, which reads the authoritative `.rustc-output`
 file from the `rustc_output` output group instead of spawning a rustc
 binary. `dx typecheck` sets
 `--@rules_rust//rust/settings:rustc_output_diagnostics=true` so the group

@@ -230,7 +230,7 @@ mod tests {
                 "--nohome_rc",
                 "--nosystem_rc",
                 "build",
-                "--aspects=//quality:real_aspects.bzl%real_lint_aspect",
+                "--aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect",
                 "--output_groups=dx_results",
                 "--@rules_dx//config:workspace=//dx:config",
             ]
@@ -365,10 +365,10 @@ mod tests {
         let plan =
             plan_build(Command::Typecheck, &resolved(&[]), &[], "/tmp/bep.json").expect("plan");
         assert!(
-            plan.argv
-                .iter()
-                .any(|arg| arg == "--aspects=//quality:real_aspects.bzl%real_typecheck_aspect"),
-            "typecheck selects the real typecheck aspect: {plan:?}"
+            plan.argv.iter().any(|arg| arg
+                .contains("//quality:real_aspects.bzl%real_typecheck_aspect")
+                && arg.contains("//quality:real_aspects.bzl%real_rust_typecheck_aspect")),
+            "typecheck selects the real typecheck aspects: {plan:?}"
         );
         assert_eq!(plan.summary, "Running typecheck analysis for //...");
         let plan = plan_build(Command::Format, &resolved(&[]), &[], "/tmp/bep.json").expect("plan");

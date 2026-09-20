@@ -15,7 +15,7 @@ field has_quality_sources=True
 field label=//quality/testdata:fixture_real_python
 subject //quality/testdata:fixture_real_rust_typecheck_clean_subject
 field dx_count=1
-field dx_results=fixture_real_rust_typecheck_clean-real-typecheck.pb
+field dx_results=fixture_real_rust_typecheck_clean-real-typecheck-rust.pb
 field has_quality_sources=True
 field label=//quality/testdata:fixture_real_rust_typecheck_clean
 subject //quality/testdata:fixture_real_rust_typecheck_no_typecheck_subject

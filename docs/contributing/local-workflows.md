@@ -66,7 +66,7 @@ Select the corpus targets, then build their `dx_results`:
 bazel query "attr(tags, corpus, kind(real_source_target, //...))" \
   | LC_ALL=C sort -u > /tmp/corpus_targets.txt
 bazel build $(tr '\n' ' ' < /tmp/corpus_targets.txt) \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect \
   --output_groups=dx_results
 ```
 
@@ -79,7 +79,7 @@ workspace root.
 ```sh
 union="$(paste -sd+ /tmp/corpus_targets.txt)"
 bazel aquery "$union" \
-  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect \
+  --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect \
   --output_groups=dx_results --output=text 2>/dev/null \
   | grep -o 'bazel-out/[^]]*\.pb' | sort -u \
   | sed 's|bazel-out/[^/]*/bin/|bazel-bin/|' > /tmp/corpus_results.txt

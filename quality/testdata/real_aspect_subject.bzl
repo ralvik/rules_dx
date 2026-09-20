@@ -2,7 +2,16 @@
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")
-load("//quality:real_aspects.bzl", "real_format_aspect", "real_lint_aspect")
+load(
+    "//quality:real_aspects.bzl",
+    "real_format_aspect",
+    "real_js_format_aspect",
+    "real_js_lint_aspect",
+    "real_lint_aspect",
+    "real_python_lint_aspect",
+    "real_rust_format_aspect",
+    "real_rust_lint_aspect",
+)
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 def _label_text(label):
@@ -37,7 +46,15 @@ real_aspect_subject = rule(
     implementation = _real_aspect_subject_impl,
     attrs = {
         "target": attr.label(
-            aspects = [real_lint_aspect, real_format_aspect],
+            aspects = [
+                real_lint_aspect,
+                real_format_aspect,
+                real_js_lint_aspect,
+                real_js_format_aspect,
+                real_python_lint_aspect,
+                real_rust_lint_aspect,
+                real_rust_format_aspect,
+            ],
             mandatory = True,
             doc = "Real fixture target observed with real capability aspects applied.",
         ),

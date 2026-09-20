@@ -47,21 +47,33 @@ pub fn spec(command: Command) -> CommandSpec {
         Command::Lint => CommandSpec {
             command,
             capability: "lint",
-            aspects: &["//quality:real_aspects.bzl%real_lint_aspect"],
+            aspects: &[
+                "//quality:real_aspects.bzl%real_lint_aspect",
+                "//quality:real_aspects.bzl%real_js_lint_aspect",
+                "//quality:real_aspects.bzl%real_python_lint_aspect",
+                "//quality:real_aspects.bzl%real_rust_lint_aspect",
+            ],
             reports: &["sarif"],
             settings: &[CLIPPY_DIAGNOSTICS_FLAG],
         },
         Command::Typecheck => CommandSpec {
             command,
             capability: "typecheck",
-            aspects: &["//quality:real_aspects.bzl%real_typecheck_aspect"],
+            aspects: &[
+                "//quality:real_aspects.bzl%real_typecheck_aspect",
+                "//quality:real_aspects.bzl%real_rust_typecheck_aspect",
+            ],
             reports: &["sarif"],
             settings: &[RUSTC_DIAGNOSTICS_FLAG],
         },
         Command::Format => CommandSpec {
             command,
             capability: "format",
-            aspects: &["//quality:real_aspects.bzl%real_format_aspect"],
+            aspects: &[
+                "//quality:real_aspects.bzl%real_format_aspect",
+                "//quality:real_aspects.bzl%real_js_format_aspect",
+                "//quality:real_aspects.bzl%real_rust_format_aspect",
+            ],
             reports: &[],
             settings: &[],
         },
@@ -219,7 +231,12 @@ mod tests {
         assert_eq!(lint.capability, "lint");
         assert_eq!(
             lint.aspects,
-            &["//quality:real_aspects.bzl%real_lint_aspect"]
+            &[
+                "//quality:real_aspects.bzl%real_lint_aspect",
+                "//quality:real_aspects.bzl%real_js_lint_aspect",
+                "//quality:real_aspects.bzl%real_python_lint_aspect",
+                "//quality:real_aspects.bzl%real_rust_lint_aspect",
+            ]
         );
         assert_eq!(lint.reports, &["sarif"]);
         assert_eq!(lint.settings, &[CLIPPY_DIAGNOSTICS_FLAG]);
@@ -227,7 +244,10 @@ mod tests {
         assert_eq!(typecheck.capability, "typecheck");
         assert_eq!(
             typecheck.aspects,
-            &["//quality:real_aspects.bzl%real_typecheck_aspect"]
+            &[
+                "//quality:real_aspects.bzl%real_typecheck_aspect",
+                "//quality:real_aspects.bzl%real_rust_typecheck_aspect",
+            ]
         );
         assert_eq!(typecheck.reports, &["sarif"]);
         assert_eq!(typecheck.settings, &[RUSTC_DIAGNOSTICS_FLAG]);
@@ -235,7 +255,11 @@ mod tests {
         assert_eq!(format.capability, "format");
         assert_eq!(
             format.aspects,
-            &["//quality:real_aspects.bzl%real_format_aspect"]
+            &[
+                "//quality:real_aspects.bzl%real_format_aspect",
+                "//quality:real_aspects.bzl%real_js_format_aspect",
+                "//quality:real_aspects.bzl%real_rust_format_aspect",
+            ]
         );
         assert!(format.reports.is_empty());
         let build = spec(Command::Build);
