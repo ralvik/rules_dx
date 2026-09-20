@@ -345,7 +345,15 @@ per-set report, never a per-set code. Backend operation boundaries are pinned in
 `bazel run @pnpm//:pnpm -- update`, Maven `REPIN=1 bazel run @maven//:pin`, NuGet
 `paket2bazel` regeneration, Go no-op) and per-set success/failure/blocked reporting rides
 text plus JSON `notice`/`error` events with `command_finished`. Continued updates do not imply
-parallel execution or a new mutation-event API.
+parallel execution or a new mutation-event API. Update emits no v1 `change` or `mutation` events
+and no `changes`/`mutations`/`diagnostics` counts in any mode (wont-fix, issue #586,
+resolver-owned by `dx_update::backend`, pinned by fixtures in
+`cli/update/tests/fixtures/update_events/` plus `cli/cli/src/exec/update.rs`): backends provide
+no committed-change manifest and Git scan/BUILD parse/rerun inference is rejected, so per-set
+`notice`/`error` plus `command_finished` is the complete event contract with sorted per-set order,
+`results_complete=true` on live terminal reports, no rollback, and interrupted runs keeping
+preceding per-set events true with nothing for sets not yet attempted. See the
+[Output Protocol](../output-protocol.md#mutation) for the full contract.
 
 Invoking `dx update` authorizes immediate application without an interactive confirmation prompt or
 separate acceptance flag, in both terminal and noninteractive use. This does not bypass separate

@@ -435,8 +435,30 @@ atomicity. Check mode requires a complete manifest, emits changes rather than mu
 writes nothing.
 
 `dx` does not invoke Git, scan the workspace, parse BUILD files, rerun Gazelle, or compare
-before/after trees to infer generation changes. Update emits no v1 mutation events because
-its authoritative backends do not yet provide an equivalent committed-change manifest.
+before/after trees to infer generation changes.
+
+Update emits no v1 `change` or `mutation` events and its `command_finished` carries no
+`changes`, `mutations`, or `diagnostics` counts (wont-fix, issue #586, resolver-owned by
+`dx_update::backend`, pinned by fixtures in `cli/update/tests/fixtures/update_events/` plus
+`cli/cli/src/exec/update.rs`): the five authoritative backends (crate_universe repin,
+Bazel-pinned pnpm, rules_jvm_external pin, paket2bazel regen, Go no-op) provide no
+committed-change manifest equivalent to the Gazelle result manifest, and inferring changes via
+Git scan, BUILD parse, or rerun is rejected because the protocol already forbids it. Per-set
+`notice`/`error` events plus `command_finished` are the complete update event contract: exactly
+one terminal per-set event for every selected set (`update_set_success` notice, `update_failed`
+error, or `update_set_blocked` notice for unattempted dependents) in sorted set order, then
+exactly one `command_finished`. Live execution carries `results_complete=true` when every
+selected set reached such a terminal report, including runs with failures; dry-run, `--check`,
+and initialization failure omit it. No event claims which lockfile entries or workspace files a
+backend committed.
+
+Interrupted-run completeness follows the same contract. An interruption (signal, `SIGKILL`, or
+loss of stdout) after some sets completed leaves their preceding per-set events true with
+successful changes preserved and no rollback; sets not yet attempted emit no events and must not
+be inferred as successful, failed, or blocked. No `command_finished` is promised after signal
+termination. A future backend committed-change manifest may add update `change`/`mutation`
+events as a minor-compatible addition only when every backend provides one; until then the
+absence is intentional, not a missing feature.
 
 The private Gazelle result manifest is versioned and has a completion state. Each file record
 contains normalized path, `create` or `modify`, optional original BLAKE3-256 digest under the same
@@ -592,8 +614,11 @@ Commands without independently collectable results omit it.
 A valid failing test case or a diagnostic crossing `--fail-on` is still a completed
 result. Such findings affect `exit_code`, not `results_complete`.
 
-`results_complete` is present exactly for lint, typecheck, format, generate, audit, test,
-and coverage when they execute result-producing work. For generate it reports whether the
+`results_complete` is present exactly for lint, typecheck, format, generate, audit, update, test,
+and coverage when they execute result-producing work. For update it reports whether every
+selected set reached a terminal per-set report (`update_set_success` notice, `update_failed`
+error, or `update_set_blocked` notice), including runs with failures; it never implies which
+files a backend committed. For generate it reports whether the
 canonical Gazelle execution produced a complete result manifest, including edit and ignored-import
 records; it does not imply
 that default-mode writes were repository-wide atomic. A successfully validated empty quality
@@ -604,7 +629,9 @@ and audit, including zero values for a successful empty quality selection. `chan
 present exactly for executed JSON-mode lint, typecheck, format, and generate in both check and
 default modes, including zero values when no changes are calculated.
 `mutations` is present exactly for non-dry-run default-mode lint, typecheck, format, and generate,
-including when active producers return no candidate changes. A validated empty quality
+including when active producers return no candidate changes. Update never carries `diagnostics`,
+`changes`, or `mutations` in any mode (issue #586 wont-fix); its `command_finished` carries only
+`results_complete` on live execution. A validated empty quality
 selection has no mutation events or mutation count because no apply set was attempted.
 Dry-run and check mode omit mutation counts.
 
@@ -664,10 +691,15 @@ running independent work may settle only for safe cleanup, and its later outcome
 replace the selected failure or reorder durable output.
 The [update exception](commands/audit-update-bazel.md#dx-update) permits later independent
 selected dependency sets to run after a set failure, preserving successes and reporting
-blocked dependents. Operation boundaries, per-set reporting, and aggregate
+blocked dependents. Update JSON order is `command_started`, then exactly one terminal per-set
+event per selected set in sorted set order (`update_set_success` notice, `update_failed` error,
+or `update_set_blocked` notice), then exactly one `command_finished`; it emits no `change`,
+`mutation`, `diagnostic`, or `operation` events. Operation boundaries, per-set reporting, and aggregate
 exit selection are specified in the [update contract](commands/audit-update-bazel.md#dx-update); live resolver-backend
 execution runs `dx_update::backend` per set with `notice`/`error` per-set events. This does not
-authorize new event fields or update mutation events, nor parallel execution.
+authorize new event fields or update `change`/`mutation` events (issue #586 wont-fix), nor parallel execution.
+Interrupted update runs keep preceding per-set events true with no rollback and emit nothing for
+sets not yet attempted; signal termination promises no `command_finished`.
 
 ## Dry Run
 
@@ -719,7 +751,13 @@ value requires a new major version.
 Protocol fixtures must verify:
 
 - Update continuation, per-set success/failure/blocked reporting, and overall
-  failure without rollback of successful independent changes or unsupported mutation events.
+  failure without rollback of successful independent changes. Update emits no v1 `change` or
+  `mutation` events and no `changes`/`mutations`/`diagnostics` counts in any mode (wont-fix,
+  issue #586, pinned by fixtures in `cli/update/tests/fixtures/update_events/` plus
+  `cli/cli/src/exec/update.rs`): per-set `notice`/`error` plus `command_finished` is the complete
+  contract, with sorted per-set order, `results_complete=true` on live terminal reports, no Git
+  scan/BUILD parse/rerun inference, and interrupted runs keeping preceding per-set events true
+  with nothing emitted for sets not yet attempted.
 - Exclusive stdout ownership and arbitrary subprocess output on stderr.
 - Complete deterministic unified patches in diff mode, including new files, multiple files,
   context, missing-final-newline markers, empty output, and rejected unrepresentable paths.

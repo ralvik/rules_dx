@@ -1030,6 +1030,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:rust_library_qualification
       - name: Audit selective update qualification (issue #583 per-set selective vs wont-fix plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:selective_update_qualification
+      - name: Audit update events qualification (issue #586 mutation wont-fix plus completeness plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:update_events_qualification
       - name: Audit shell-env qualification (issue #472 global False plus annotation opt-in plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:shell_env_qualification
       - name: Audit bindgen qualification (issue #473 LLVM-22-vs-23 pins plus fixture evidence, owned gaps)
