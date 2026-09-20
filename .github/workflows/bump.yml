@@ -11,8 +11,11 @@
 # resolver-owned lock refresh (transitives stay resolver-governed, no forcing
 # newest) → run the bump-PR verification (regen evidence,
 # `preset.update --verify-only` flag-diff, `bazel build //...`,
-# `bazel test //...`, coverage/dogfood gates per
-# docs/contributing/local-workflows.md) → if green open one PR, if red
+# `bazel test //...` with CI flaky/timeout flags, `dx coverage
+# --min-coverage 97 //...` seed gate plus `dx lint/typecheck/format --check
+# //...` plus `dx audit security/license //...` dogfood gates per
+# docs/contributing/local-workflows.md; seed host only, full host matrix stays
+# in CI on the opened PR, issue #641) → if green open one PR, if red
 # discard and record → reset to clean tree → next dep.
 #
 # Runner: scheduled weekly plus manual dispatch, `GITHUB_TOKEN` for PR
@@ -178,14 +181,20 @@ jobs:
             cargo|npm|go|gomod|maven|nuget) bazel run --noshow_progress //cli/cli:dx -- update "$set_name" || exit 1 ;;
             *) echo "File-only set ($set_name): no resolver refresh; preset flag-diff review plus build below." ;;
           esac
-      - name: Bump-PR verification (regen, flag-diff, build, test)
+      - name: Bump-PR verification (regen, flag-diff, build, test, coverage, dogfood)
         if: inputs.selector != '' && inputs.version != ''
         run: |
           set -euo pipefail
           bazel run --noshow_progress //cli/cli:dx -- generate --check //...
           bazel run --noshow_progress //tools/bazelrc:preset.update -- --verify-only
           bazel build --noshow_progress //...
-          bazel test --noshow_progress //...
+          bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
+          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //...
+          bazel run --noshow_progress //cli/cli:dx -- lint --check //...
+          bazel run --noshow_progress //cli/cli:dx -- typecheck --check //...
+          bazel run --noshow_progress //cli/cli:dx -- format --check //...
+          bazel run --noshow_progress //cli/cli:dx -- audit security //...
+          bazel run --noshow_progress //cli/cli:dx -- audit license //...
       - name: Open one PR if green (fork-safe, no retry-until-green)
         if: inputs.selector != '' && inputs.version != ''
         env:
@@ -211,7 +220,7 @@ jobs:
           git -c user.name="dx-bump" -c user.email="dx-bump@local" commit -m "bump $SELECTOR to $VERSION (widen-one, one dep per PR)"
           git push --set-upstream origin "$branch"
           # One dep per PR, never batch.
-          gh pr create --title "bump $SELECTOR to $VERSION" --body "Widen-one-requirement loop (issue #260): one dep per PR, never batch. Verification: regen, preset flag-diff, bazel build //..., bazel test //.... Automerge toggle: $AUTOMERGE (on merges solely on the full required-check set; off leaves the PR open). Human merge path preserved." --label dependencies
+          gh pr create --title "bump $SELECTOR to $VERSION" --body "Widen-one-requirement loop (issue #260): one dep per PR, never batch. Verification: regen, preset flag-diff, bazel build //..., bazel test //... (with CI flaky/timeout flags), dx coverage --min-coverage 97 //... plus dx lint/typecheck/format --check //... plus dx audit security/license //... dogfood gates (seed host; full host matrix in CI). Automerge toggle: $AUTOMERGE (on merges solely on the full required-check set; off leaves the PR open). Human merge path preserved." --label dependencies
           if [[ "$AUTOMERGE" == "true" ]]; then
             # Automerge toggle only: auto-merge solely on the full
             # required-check set; no other knobs.
@@ -231,4 +240,4 @@ jobs:
         if: always()
         run: |
           echo "### bump widen-one — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Loop: dx bump one requirement (never batch) then dx update for resolver-owned refresh, verified with regen + flag-diff + build + test; one dep per PR with automerge toggle only; concurrency + GITHUB_TOKEN + fork-safety + human merge path (issue #260)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Loop: dx bump one requirement (never batch) then dx update for resolver-owned refresh, verified with regen + flag-diff + build + test (CI flaky/timeout flags) + dx coverage --min-coverage 97 //... + dx lint/typecheck/format --check //... + dx audit security/license //... dogfood gates (seed host; full matrix in CI); one dep per PR with automerge toggle only; concurrency + GITHUB_TOKEN + fork-safety + human merge path (issue #260, verify parity issue #641)." >> "$GITHUB_STEP_SUMMARY"

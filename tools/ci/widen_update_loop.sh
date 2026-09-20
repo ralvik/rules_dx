@@ -91,7 +91,10 @@ fi
 
 # Widen command delivered: `bump` subcommand in CLI code, the explicit
 # single-requirement rewrite owner, and the bump_failed operational code.
-if grep -rn -F -e '"bump"' --include='*.rs' cli/ 2>/dev/null | grep -q . &&
+# NOTE: no `| grep -q .` pipe here: under `set -o pipefail` the early-exit
+# `grep -q` closes the pipe and the producer dies with SIGPIPE (141),
+# failing the check even when matches exist (issue #641 fix).
+if grep -rn -F -e '"bump"' --include='*.rs' cli/ >/dev/null 2>&1 &&
   grep -q -F -e 'may_be_rewritten' "$bump_request" &&
   grep -q -F -e 'CODE_BUMP_FAILED' cli/cli/src/exec/common.rs &&
   grep -q -F -e 'dx_bump' cli/cli/src/exec/bump.rs; then
@@ -172,6 +175,22 @@ if [[ -f "$bump_workflow" ]] &&
   ok
 else
   bad "bump.yml runner missing the widen-loop contract (dx bump + widen-one + concurrency + github.token + Fork + one-dep-per-PR)"
+fi
+
+# Bump-PR verify parity with docs (issue #641): regen + flag-diff + build +
+# test (CI flaky/timeout flags) + coverage seed gate + dogfood gates; subset
+# forever stays rejected as a dishonest gate.
+if grep -q -F -e 'Bump-PR verification (regen, flag-diff, build, test, coverage, dogfood)' "$bump_workflow" &&
+  grep -q -F -e 'coverage --min-coverage 97' "$bump_workflow" &&
+  grep -q -F -e 'lint --check' "$bump_workflow" &&
+  grep -q -F -e 'typecheck --check' "$bump_workflow" &&
+  grep -q -F -e 'format --check' "$bump_workflow" &&
+  grep -q -F -e 'audit security' "$bump_workflow" &&
+  grep -q -F -e 'audit license' "$bump_workflow" &&
+  grep -q -F -e '--flaky_test_attempts=3 --test_timeout=300' "$bump_workflow"; then
+  ok
+else
+  bad "bump.yml verification lost parity with docs (want regen + flag-diff + build + test with flaky flags + coverage seed gate + lint/typecheck/format/audit dogfood, issue #641)"
 fi
 
 # Upstream scope pins intact: prerelease follows upstream, transitives
