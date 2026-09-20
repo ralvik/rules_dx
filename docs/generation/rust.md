@@ -251,8 +251,10 @@ under `bazel test //...`, `bazel run
 //tools/ci:cxx_identity_qualification`); mixed `cxx`/`cxxbridge-cmd` versions
 stay rejected. Scope is graph identity on the seed host; the version pin lives
 under `[package.metadata]` until the manifest joins crate_universe, and full
-`cxxbridge-cmd` execution plus corpus wiring stays owned under issue #499
-with no `Supported` claim.
+`cxxbridge-cmd` execution plus corpus wiring is qualified seed-only under issue
+#499 (`cc/tests/fixtures/linux_corpus/pins.bzl` via
+`bazel run //tools/ci:linux_corpus_qualification`, single-crate proof rejected,
+native only) with no `Supported` claim.
 
 ## Versions
 

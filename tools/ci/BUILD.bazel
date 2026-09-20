@@ -914,6 +914,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Linux corpus harness (issue #499); see docs/native-toolchains.md#qualification-questions-and-delivery.
+sh_binary(
+    name = "linux_corpus_qualification",
+    srcs = ["linux_corpus_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "warnings_as_errors_testdata",
     srcs = glob(["testdata/warnings/**"]),

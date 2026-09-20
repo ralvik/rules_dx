@@ -40,14 +40,7 @@ cross-builds from Linux runners (`ubuntu-latest` for x86_64 musl,
 scopes, and gates per-cell coverage for both musl cells with no union;
 dynamic musl stays explicitly out of scope with no cell. Exact pins,
 hosts, floors, and runtime-closure identities stay owned by issues #410-#414 per
-ADR 0014 and are not pinned here. The native-plan corpus starts with
-pure-Rust plus cc-rs C plus SQLite plus OpenSSL with declared tools plus
-ring-style C/assembly plus bindgen plus CXX plus native proc-macro
-dependencies: pure-Rust, proc-macro exec/target separation, staticlib,
-and cc-rs closures are qualified; CXX generator identity is decided single-graph
-under issue #474; OpenSSL with declared build tools, ring C/assembly with
-target libs, bindgen execution libclang closure, and CXX corpus execution stay
-owned gaps under issues #473, #499 pending the provisional hermetic-llvm backend.
+ADR 0014 and are not pinned here. The SQLite plus OpenSSL plus ring plus bindgen plus CXX corpus is qualified seed-only under issue #499 (`cc/tests/fixtures/linux_corpus/pins.bzl` via `bazel run //tools/ci:linux_corpus_qualification`, single-crate proof rejected, native only). Hermetic-llvm static-only musl targets stay provisional. PIE qualification uses existing upstream constraints and stays owned as open work under issues #500/#501. Verify test linkage as well as binaries; this is not dynamic-musl or musl `cdylib` support. Dynamic/shared musl stays excluded per [ADR 0014](decisions/0014-tested-platform-release-stack.md#decision) with no cell and no coverage: hermetic-llvm supplies static-only musl targets and uber shared-musl capability is not complete Rust/runtime-deployment evidence; do not implement.
 
 macOS arm64 native is qualified (issue #412) on the current as-built
 stack: CI builds, tests, and gates coverage natively on `macos-14`
@@ -182,7 +175,7 @@ qualification configurations, not new public profile names or accepted minimum-O
 
 | Target profile | Initial configuration | Qualification boundary |
 | --- | --- | --- |
-| Linux x86_64/arm64 glibc | Upstream glibc `2.28` symbol floor; libc++; ordinary dynamic glibc linkage | Application glibc implementations come from deployment systems, not the link stubs. Inspect ELF dependencies, kernel requirements and execution-tool floors separately. Native x86_64 (seed) plus native arm64 (issue #410, CI `ubuntu-24.04-arm`) are qualified; glibc `2.28` floor pinning stays owned under open work under issue #500 and ELF-dependency plus glibc-symbol plus cross-build completeness stays owned under open work under issue #499. |
+| Linux x86_64/arm64 glibc | Upstream glibc `2.28` symbol floor; libc++; ordinary dynamic glibc linkage | Application glibc implementations come from deployment systems, not the link stubs. Inspect ELF dependencies, kernel requirements and execution-tool floors separately. Native x86_64 (seed) plus native arm64 (issue #410, CI `ubuntu-24.04-arm`) are qualified; the SQLite plus OpenSSL plus ring plus bindgen plus CXX corpus is qualified seed-only under issue #499 (`cc/tests/fixtures/linux_corpus/pins.bzl` via `bazel run //tools/ci:linux_corpus_qualification`, single-crate proof rejected, native only); glibc `2.28` floor pinning stays owned under open work under issue #500 and ELF-dependency plus glibc-symbol plus cross-build completeness stays owned as open work under issues #500/#504. |
 | Linux x86_64/arm64 static musl | Upstream musl `1.2.6`; static native closure; non-PIE first for Rust compatibility | Static musl qualified (issue #411): Rust musl std via `extra_target_triples`, exec-platform tools for build scripts/proc macros with target musl libs for apps, prebuilt glibc libs never musl-compatible by linker change alone; CI cross-builds from Linux runners with per-profile cache scopes plus per-cell coverage for both musl cells. Hermetic-llvm static-only musl targets stay provisional. PIE qualification uses existing upstream constraints and stays owned under open work under issue #499. Verify test linkage as well as binaries; this is not dynamic-musl or musl `cdylib` support. Dynamic/shared musl stays excluded per [ADR 0014](decisions/0014-tested-platform-release-stack.md#decision) with no cell and no coverage: hermetic-llvm supplies static-only musl targets and uber shared-musl capability is not complete Rust/runtime-deployment evidence; do not implement. |
 | macOS x86_64/arm64 | Pinned acquired Apple SDK, SDK libc++ headers/system dynamic libc++; upstream deployment default `14.0` as the starting point | SDK version is not deployment floor. Native arm64 qualified (issue #412, CI `macos-14` with `bazel-macos-arm64-` scope, pinned upstream toolchains; hermetic-llvm Apple-SDK backend provisional with immutable lazy fetch, no host-installed SDK fallback, no secrets, no interactive acceptance). Native x86_64 best-effort qualified (issue #413, CI `macos-15-intel` with `bazel-macos-x86_64-` scope, same provisional backend plus no fallback plus no secrets plus no interactive acceptance; `macos-13` retired December 2025, `macos-15-intel` until August 2027; gaps never block required-host release). Oldest-OS execution, framework completeness and licensing remain gates. |
 | Windows x86_64 MSVC | clang-cl, Microsoft STL/UCRT/VCRuntime, retail dynamic CRT `/MD` as the starting point | Align Rust CRT mode, iterator-debug settings, system libraries and redistributable deployment. `/MT` and debug CRT are not assumed interchangeable. Native Windows x86_64 qualified (issue #414, CI `windows-latest` with `bazel-windows-x86_64-` scope, pinned upstream toolchains; toolchains_msvc clang-cl/Microsoft-STL backend provisional with immutable lazy fetch plus explicit EULA never automatic, no installed fallback; prebuilt-MSVC interop plus manifest/path/ABI fixtures qualify host-to-target plus target execution separately). |
@@ -307,7 +300,8 @@ from the single crate_universe `crates` graph with generator tool `@crates//:cxx
 Do not introduce a second Rust graph merely to acquire the generator. CXX identity is decided
 single-graph under issue #474 (proven by `rust/tests/fixtures/cxx_identity/` via `bazel run
 //tools/ci:cxx_identity_qualification`); full `cxxbridge-cmd` execution plus corpus wiring
-stays owned under issue #499.
+is qualified seed-only under issue #499 (`cc/tests/fixtures/linux_corpus/pins.bzl` via
+`bazel run //tools/ci:linux_corpus_qualification`, single-crate proof rejected, native only).
 
 ## Windows Acquisition And Compatibility
 
@@ -356,11 +350,13 @@ laziness proven (adding the module requires no acceptance and fetches no
 restricted payloads, unrelated seed workflows stay green without acceptance,
 deferred failure never proves laziness since extension evaluation already
 fetches manifests); project-owned downloader plus cross-host inference
-rejected. The backend stays provisional; transport plus corpus
-plus floors plus coverage stay owned under issues
-#497/#499/#500/#501; acquisition rights are qualified seed-only
-under issue #496 below; prebuilt interop is qualified seed-only
-under issue #498 below; no `Supported` claim.
+rejected. The backend stays provisional; floors plus coverage stay owned
+under issues #500/#501; acquisition rights are qualified seed-only under
+issue #496 below; windows transport is qualified seed-only under issue #497
+below; prebuilt interop is qualified seed-only
+under issue #498 below; the SQLite plus OpenSSL plus ring plus
+bindgen plus CXX corpus is qualified seed-only under issue #499 below;
+no `Supported` claim.
 
 Apple plus Microsoft acquisition and cache rights are qualified seed-only under issue #496
 (`cc/tests/fixtures/acquisition_rights/pins.bzl` via `bazel run
@@ -379,9 +375,11 @@ and permission to redistribute are separate checks); mirrors,
 redistribution, internal caches, and remote workers need
 license-approved boundaries separately from technical download success;
 official download availability is not permission; assume rights rejected.
-Backends stay provisional; transport plus corpus plus
-floors plus coverage stay owned under issues #497/#499/#500/#501;
-prebuilt interop is qualified seed-only under issue #498 below;
+Backends stay provisional; floors plus coverage stay owned under issues
+#500/#501; windows transport is qualified seed-only under issue #497 below;
+prebuilt interop is qualified seed-only
+under issue #498 below; the SQLite plus OpenSSL plus ring plus bindgen
+plus CXX corpus is qualified seed-only under issue #499 below;
 no `Supported` claim.
 
 Windows transport plus ABI is qualified seed-only under issue #497
@@ -396,9 +394,10 @@ spaces plus SDK system libraries plus cc-rs discovery plus cc-rs assembly
 tools plus proc-macro DLLs ride declared-input fixtures (`transport.expected`
 plus `response.rsp` plus `batch_wrapper.txt`) without host Visual Studio state;
 compiler-target availability alone is not proof of host-to-target routes or
-target execution. The backend stays provisional; rights plus interop plus
-corpus plus floors plus coverage stay owned under issues
-#496/#498/#499/#500/#501; no `Supported` claim.
+target execution. The backend stays provisional; rights plus interop
+qualified seed-only under issues #496/#498, linux corpus qualified seed-only
+under issue #499, floors plus coverage stay owned under issues #500/#501;
+no `Supported` claim.
 
 Prebuilt interop is qualified seed-only under issue #498
 (`cc/tests/fixtures/prebuilt_interop/pins.bzl` via `bazel run
@@ -409,8 +408,20 @@ plus target execution qualifying separately plus Linux explicit dynamic libstdc+
 on Linux glibc only plus ordinary object linking without cross-language LTO plus
 shared-runtime plus exceptions plus RTTI plus allocation-ownership plus ABI boundaries;
 compiler-target availability alone plus LLVM ancestry alone plus single-combo proof rejected.
-Backends stay provisional; transport plus corpus plus floors plus coverage stay owned under
-issues #497/#499/#500/#501; no `Supported` claim.
+Backends stay provisional; windows transport qualified seed-only under issue
+#497 above; the SQLite plus OpenSSL plus ring plus bindgen plus CXX
+corpus is qualified seed-only under issue #499 below; floors plus coverage
+stay owned under issues #500/#501; no `Supported` claim.
+
+Linux corpus is qualified seed-only under issue #499
+(`cc/tests/fixtures/linux_corpus/pins.bzl` via `bazel run
+//tools/ci:linux_corpus_qualification`): source-built SQLite plus OpenSSL
+with declared build tools plus ring-style C/assembly with target libs plus
+bindgen standalone plus build-script routes with execution libclang closure
+plus CXX single-graph execution, native only with single-crate proof rejected.
+Backends stay provisional; windows transport qualified seed-only under issue
+#497 above; floors plus coverage stay owned under issues #500/#501;
+no `Supported` claim.
 
 Qualify independently compiled MSVC static/import libraries and DLLs, including STL values,
 exceptions, RTTI and allocation ownership. Match compiler/linker/redist requirements under
@@ -513,16 +524,16 @@ acquisition, interoperability, coverage, and release evidence passes.
 | Question to close | Preferred next evidence or remedy | Tracking |
 | --- | --- | --- |
 <| Does the exact current stable stack compose? | Frozen seed-only under issue #494: as-built Bzlmod identities (Bazel 9.2.0 plus rules_rust 0.74.0 plus rules_cc 0.2.22 plus Rust 1.98.0) with `MODULE.bazel.lock` integrity, rules_rs LLVM `0.8.18`/LLVM `22.1.8` baseline vs hermetic-llvm `0.8.19`/LLVM `23.1.0` candidate comparison, checksums plus source patches plus compiler/profile compatibility, ad-hoc compose rejected; pinned in `rust/tests/fixtures/stable_stack/pins.bzl` via `bazel run //tools/ci:stable_stack_qualification` (qualified seed-only under issue #494). | issue #494 |
-| Can Windows acquisition be immutable and lazy? | Qualified seed-only under issue #495: fixed-manifest plus package-index inputs pinned with the toolchains_msvc head plus windows_support `v0.4.1` package identities (`cc/tests/fixtures/windows_acquisition/pins.bzl` via `bazel run //tools/ci:windows_acquisition_qualification`); mutable fetch rejected; laziness proven (adding the module requires no acceptance and fetches no restricted payloads, unrelated workflows stay green without acceptance, deferred failure never proves laziness). Backend stays provisional; acquisition rights qualified seed-only under issue #496, prebuilt interop qualified seed-only under issue #498, transport plus corpus plus floors plus coverage stay owned under issues #497/#499/#500/#501. | issue #495 |
-| Are Apple/Microsoft acquisition and cache rights adequate? | Qualified seed-only under issue #496: hermetic-llvm `v0.8.19` MacOSX26.5 extraction vs [Apple SDK agreement](https://www.apple.com/legal/sla/docs/xcode.pdf) with hosted execution not authorizing separate extraction or unrestricted caching, toolchains_msvc plus windows_support `v0.4.1` identities with deliberate EULA repository-env never automatic plus SDK EULA gap reviewed not inferred, usage vs redistribution reviewed separately (acceptance is not redistribution permission), mirrors plus redistribution plus internal caches plus remote workers as license-approved boundaries separately from download success, official download not permission, assume rights rejected; pinned in `cc/tests/fixtures/acquisition_rights/pins.bzl` via `bazel run //tools/ci:acquisition_rights_qualification`. Backend stays provisional; prebuilt interop qualified seed-only under issue #498, transport plus corpus plus floors plus coverage stay owned under issues #497/#499/#500/#501. | issue #496 |
+| Can Windows acquisition be immutable and lazy? | Qualified seed-only under issue #495: fixed-manifest plus package-index inputs pinned with the toolchains_msvc head plus windows_support `v0.4.1` package identities (`cc/tests/fixtures/windows_acquisition/pins.bzl` via `bazel run //tools/ci:windows_acquisition_qualification`); mutable fetch rejected; laziness proven (adding the module requires no acceptance and fetches no restricted payloads, unrelated workflows stay green without acceptance, deferred failure never proves laziness). Backend stays provisional; acquisition rights qualified seed-only under issue #496, windows transport qualified seed-only under issue #497, prebuilt interop qualified seed-only under issue #498, linux corpus qualified seed-only under issue #499, floors plus coverage stay owned under issues #500/#501. | issue #495 |
+| Are Apple/Microsoft acquisition and cache rights adequate? | Qualified seed-only under issue #496: hermetic-llvm `v0.8.19` MacOSX26.5 extraction vs [Apple SDK agreement](https://www.apple.com/legal/sla/docs/xcode.pdf) with hosted execution not authorizing separate extraction or unrestricted caching, toolchains_msvc plus windows_support `v0.4.1` identities with deliberate EULA repository-env never automatic plus SDK EULA gap reviewed not inferred, usage vs redistribution reviewed separately (acceptance is not redistribution permission), mirrors plus redistribution plus internal caches plus remote workers as license-approved boundaries separately from download success, official download not permission, assume rights rejected; pinned in `cc/tests/fixtures/acquisition_rights/pins.bzl` via `bazel run //tools/ci:acquisition_rights_qualification`. Backend stays provisional; windows transport qualified seed-only under issue #497, prebuilt interop qualified seed-only under issue #498, linux corpus qualified seed-only under issue #499, floors plus coverage stay owned under issues #500/#501. | issue #496 |
 | Can the kept CC opt-out execute successfully? | Qualified seed-only under issue #471: kept opt-out succeeds for pure-Rust scripts on stock `rules_rust` 0.74.0 (sysroot `rust-lld` fallback plus `no_cc` stubs, `rust/tests/fixtures/cc_optout/` via `bazel run //tools/ci:cc_optout_qualification`); script compilation inputs stay distinct from execution inputs. | issue #471 |
 | Can third-party scripts retain a declared hermetic closure? | Decided hermetic under issue #472: global shell-env False in `.bazelrc` with narrow per-crate annotation opt-in (zero opt-ins); hostile PATH, tool discovery and additional declared tools pinned by `bazel run //tools/ci:shell_env_qualification` plus [Rust Generation](generation/rust.md#build-scripts). | issue #472 |
-| Does Windows native transport preserve all inputs and ABI selection? | Qualified seed-only under issue #497: explicit ABI constraint fix (toolchains_msvc registration plus rules_rs LLVM MSVC ABI identity, GNU/GNULVM rejected) plus `/external:I` vs `/imsvc` plus `.lib`/`.obj` bare-path handling (patched rules_rust rebasing baseline) with batch wrappers plus response files plus spaces plus SDK libraries plus cc-rs discovery/assembly plus proc-macro DLLs on declared-input fixtures without host Visual Studio state (`cc/tests/fixtures/windows_transport/pins.bzl` via `bazel run //tools/ci:windows_transport_qualification`); compiler-target availability alone is not proof. Backend stays provisional; rights plus interop plus corpus plus floors plus coverage stay owned under issues #496/#498/#499/#500/#501. | issue #497 |
-| Which prebuilt native libraries interoperate? | Qualified seed-only under issue #498: explicit Windows STL/CRT/linker/library combos (clang-cl plus Microsoft STL plus retail `/MD` with static `.lib` plus import `.lib` plus DLL shapes, `cl.exe` compat as diagnosis only) plus Linux explicit dynamic libstdc++ comparison on Linux glibc only plus ordinary object linking without cross-language LTO plus shared-runtime plus exceptions plus RTTI plus allocation-ownership plus ABI boundaries, pinned in `cc/tests/fixtures/prebuilt_interop/pins.bzl` via `bazel run //tools/ci:prebuilt_interop_qualification`; host-to-target plus target execution qualify separately with mixed Rust/C/C++ composition, compiler-target availability alone plus LLVM ancestry alone plus single-combo proof rejected. Windows x86_64 qualified (issue #414) with representative prebuilt-MSVC fixtures incl mixed Rust/C/C++ stays the host record without double-claiming here. Backends stay provisional; transport plus corpus plus floors plus coverage stay owned under issues #497/#499/#500/#501. | issue #498 |
-| Are both Linux profiles complete? | Native arm64 glibc builds/tests plus per-cell coverage landed (issue #410); static-musl closures plus per-cell coverage for both musl profiles landed (issue #411, Rust musl std plus exec/target separation, CI cross-builds with per-profile cache scopes, no union; dynamic musl explicitly out of scope). Remaining: cross builds/tests, PIE plus ELF dependencies, glibc symbols, hermetic-llvm backend plus OpenSSL/ring/bindgen/CXX corpus gaps. | open work under issue #499 |
+<| Does Windows native transport preserve all inputs and ABI selection? | Qualified seed-only under issue #497: explicit ABI constraint fix (toolchains_msvc registration plus rules_rs LLVM MSVC ABI identity, GNU/GNULVM rejected) plus `/external:I` vs `/imsvc` plus `.lib`/`.obj` bare-path handling (patched rules_rust rebasing baseline) with batch wrappers plus response files plus spaces plus SDK libraries plus cc-rs discovery/assembly plus proc-macro DLLs on declared-input fixtures without host Visual Studio state (`cc/tests/fixtures/windows_transport/pins.bzl` via `bazel run //tools/ci:windows_transport_qualification`); compiler-target availability alone is not proof. Backend stays provisional; rights plus interop qualified seed-only under issues #496/#498, linux corpus qualified seed-only under issue #499, floors plus coverage stay owned under issues #500/#501. | issue #497 |
+| Which prebuilt native libraries interoperate? | Qualified seed-only under issue #498: explicit Windows STL/CRT/linker/library combos (clang-cl plus Microsoft STL plus retail `/MD` with static `.lib` plus import `.lib` plus DLL shapes, `cl.exe` compat as diagnosis only) plus Linux explicit dynamic libstdc++ comparison on Linux glibc only plus ordinary object linking without cross-language LTO plus shared-runtime plus exceptions plus RTTI plus allocation-ownership plus ABI boundaries, pinned in `cc/tests/fixtures/prebuilt_interop/pins.bzl` via `bazel run //tools/ci:prebuilt_interop_qualification`; host-to-target plus target execution qualify separately with mixed Rust/C/C++ composition, compiler-target availability alone plus LLVM ancestry alone plus single-combo proof rejected. Windows x86_64 qualified (issue #414) with representative prebuilt-MSVC fixtures incl mixed Rust/C/C++ stays the host record without double-claiming here. Backends stay provisional; windows transport qualified seed-only under issue #497, linux corpus qualified seed-only under issue #499, floors plus coverage stay owned under issues #500/#501. | issue #498 |
+| Are both Linux profiles complete? | Qualified seed-only under issue #499: native arm64 glibc builds/tests plus per-cell coverage landed (issue #410); static-musl closures plus per-cell coverage for both musl profiles landed (issue #411, Rust musl std plus exec/target separation, CI cross-builds with per-profile cache scopes, no union; dynamic musl explicitly out of scope); the SQLite plus OpenSSL plus ring plus bindgen plus CXX corpus is qualified seed-only (`cc/tests/fixtures/linux_corpus/pins.bzl` via `bazel run //tools/ci:linux_corpus_qualification`, single-crate proof rejected, native only). Backends stay provisional; windows transport qualified seed-only under issue #497; PIE plus ELF-dependency plus glibc-symbol plus cross-build completeness plus floors plus coverage stay owned as open work under issues #500/#501/#504. | issue #499 |
 | Which deployment and execution floors are supportable? | Pin the glibc `2.28` floor plus SDK/CRT identities with oldest-target and current-host fixtures run separately; inspect compiler, clangd and bindgen loader dependencies. Check Apple's extracted SDK framework subset. macOS arm64 native is qualified (issue #412) plus macOS x86_64 best-effort native is qualified (issue #413) with SDK version not the deployment floor; oldest-OS execution plus framework completeness plus licensing remain gates; best-effort gaps never block required-host release. Windows x86_64 native is qualified (issue #414) with `/MD` retail dynamic CRT as the starting point; `/MT` plus debug CRT plus floors stay owned by issues #410-#414. | open work under issue #500 |
 | Can every executable first-party line be accounted for? | Rust-only, C/C++-only and mixed/DLL LCOV, missed-line tests, coverage-tool version pairing, native ignores and denominator validation. No ignored collection failures. | open work under issue #501 |
-| Can bindgen/CXX use one upstream graph? | Qualified under issue #473 for bindgen (LLVM-22 parser baseline vs LLVM-23 target pinned with the standalone/build-script fixture pair, execution libclang closure, target flags, `bindgen.h` plus `bindgen.expected` identical-set proof via `bazel run //tools/ci:bindgen_qualification`); CXX identity decided single-graph under issue #474 (`cxx == cxxbridge-cmd == 1.0.200` from the single `crates` graph, `rust/tests/fixtures/cxx_identity/` via `bazel run //tools/ci:cxx_identity_qualification`). | issues #473, #474 |
+| Can bindgen/CXX use one upstream graph? | Qualified under issue #473 for bindgen (LLVM-22 parser baseline vs LLVM-23 target pinned with the standalone/build-script fixture pair, execution libclang closure, target flags, `bindgen.h` plus `bindgen.expected` identical-set proof via `bazel run //tools/ci:bindgen_qualification`); CXX identity decided single-graph under issue #474 (`cxx == cxxbridge-cmd == 1.0.200` from the single `crates` graph, `rust/tests/fixtures/cxx_identity/` via `bazel run //tools/ci:cxx_identity_qualification`); CXX corpus execution plus the SQLite plus OpenSSL plus ring plus bindgen plus CXX corpus qualified seed-only under issue #499 (`cc/tests/fixtures/linux_corpus/pins.bzl` via `bazel run //tools/ci:linux_corpus_qualification`, single-crate proof rejected, native only). | issues #473, #474, #499 |
 | Can public Cargo metadata represent every generated target? | Prove features, build-script metadata, target kinds and ownership without private serialized dependency-graph access; seek narrow upstream metadata exports where missing. | open work under issue #502 |
 | Can generation satisfy strict ownership and resolution cheaply? | Quoted/angle/ambiguous/macro include fixtures, authoritative dependency metadata, test grouping, generated headers, assembly dialects and explicit module/PCH disposition. | open work under issue #503 |
 | Can IDE setup preserve exact context and projection contracts? | Qualified seed-only under issue #475 for Rust exact-target discovery (resolver-owned exact labels to `gen_rust_project`/`flycheck` TARGETS, `Path`/`Buildfile` widening plus project-owned graph plus `RustAnalyzerInfo` rejected, hello exact-isolation pair plus `rust/tests/fixtures/discovery/pins.bzl` via `bazel run //tools/ci:exact_target_qualification`); C++ action-derived snapshot plus generated sources plus multi-context headers plus managed host tools plus Bazel-9 compatibility stay open proof. | issue #475 |
@@ -547,7 +558,10 @@ maintainer owns every row until maintenance is explicitly delegated.
 The fixture corpus starts with pure-Rust scripts/default and opt-out
 (`rust/tests/fixtures/cc_optout/` pinned under issue #471), cc-rs C/C++, SQLite, OpenSSL
 with declared tools/libraries, ring-style C/assembly, bindgen, CXX, native proc-macro dependencies,
-Rust staticlib/cdylib consumers, and independently built Microsoft-STL libraries. Use application-locked
+Rust staticlib/cdylib consumers, and independently built Microsoft-STL libraries. The SQLite plus
+OpenSSL plus ring plus bindgen plus CXX corpus is qualified seed-only under issue #499
+(`cc/tests/fixtures/linux_corpus/pins.bzl` via `bazel run //tools/ci:linux_corpus_qualification`,
+single-crate proof rejected, native only). Use application-locked
 crate versions and feature sets; crate names alone do not define tested workflows.
 
 If fixes require a replacement acquisition engine, compiler backend, Cargo graph or coverage engine,
