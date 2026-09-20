@@ -2230,8 +2230,10 @@ mod tests {
             ]
         );
         // tsc is pipeline-only by design (target-coupled, needs a
-        // TsConfig): it has no adapter parser, so parser-sample
-        // backfill intentionally skips it.
+        // TsConfig): it keeps an adapter parser
+        // (`quality/adapter/src/parsers/tsc.rs`) with pass plus fail
+        // samples, but has no runner dispatch, so the matrix and
+        // `REAL_TOOLS` intentionally skip it.
         assert!(!REAL_TOOLS.contains(&"tsc"));
     }
 

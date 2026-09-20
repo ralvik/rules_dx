@@ -87,6 +87,18 @@ matrix cell; adapter-less classes (`cc`, `csharp`, `go`, `java`, `kotlin`,
 | `matrix_markdown_lint_fail` | lint | generated `matrix/markdown_dirty.md` (unresolved link) + `vale_test.ini` closure |
 | `matrix_markdown_sibling_pass` | lint | `sibling_clean.md` + `sibling_license.txt` sibling + `vale_test.ini` closure |
 
+## Parser samples (issue #465)
+
+Every adapter-backed tool keeps a parser with pass (clean) plus fail (dirty)
+samples exercised as unit tests under `quality/adapter/src/parsers/` and pinned by
+`bazel run //tools/ci:parser_sample_qualification`: biome lint plus format,
+buildifier, clippy plus rustc via the shared rust diagnostics, eslint, flake8,
+markdown_check, prettier, pydoclint, pylint, ruff lint plus format, rustfmt,
+taplo lint plus format, tsc, ty, vale. Recorded Clippy/rustc diagnostics stay
+byte-identical to the parser unit samples (`quality/adapter/src/parsers/rust.rs`);
+`tsc` keeps its adapter parser with pass plus fail samples but stays
+pipeline-only by design (target-coupled, no runner dispatch, no matrix cell).
+
 ## Adding a cell
 
 Append to the per-class list in `runner_matrix_cases.bzl` with a placeholder
