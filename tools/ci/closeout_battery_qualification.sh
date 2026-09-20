@@ -6,7 +6,7 @@
 # here:
 # - delivered: battery commands pinned in `.github/workflows/ci.yml`
 #   (build plus test plus coverage plus prove plus dogfood-freshness plus
-#   devcontainer-check plus docs-ci plus consumer-ci, with per-host
+#   devcontainer-check plus docs-ci plus dogfood, with per-host
 #   build/test/coverage jobs) plus the docs gate (docs-ci self-call over
 #   `//docs/...` via the reusable-docs check-only contract);
 # - wiring: roadmap plus verification-matrix delivered records, BUILD
@@ -192,16 +192,16 @@ else
   bad "host matrix lost its ci_matrix_qualification plus five-runner pin (issue #415)"
 fi
 
-# Battery documents the tail jobs: devcontainer plus docs-ci plus consumer-ci.
+# Battery documents the tail jobs: devcontainer plus docs-ci plus dogfood.
 if grep -q -F -e 'devcontainer-check' "$verify" &&
   grep -q -F -e 'docs-ci' "$verify" &&
-  grep -q -F -e 'consumer-ci' "$verify" &&
+  grep -q -F -e 'dogfood (test-disabled self-call' "$verify" &&
   grep -q -F -e 'devcontainer-check' "$ci" &&
   grep -q -F -e 'docs-ci (self-call reusable docs workflow)' "$ci" &&
-  grep -q -F -e 'consumer-ci (self-call reusable consumer workflow)' "$ci"; then
+  grep -q -F -e 'dogfood (self-call reusable consumer workflow)' "$ci"; then
   ok
 else
-  bad "Battery lost its devcontainer/docs-ci/consumer-ci tail (verify plus ci.yml)"
+  bad "Battery lost its devcontainer/docs-ci/dogfood tail (verify plus ci.yml)"
 fi
 
 # Docs gate: docs-ci self-call over //docs/... with publish only on main.
@@ -229,17 +229,18 @@ else
   bad "reusable-docs lost its check-only plus validated-tree plus clean-checkout contract (issue #581)"
 fi
 
-# Consumer gate: all-enabled self-call on the five host platforms.
+# Dogfood gate: test-disabled self-call on the five host platforms
+# (Phase 1 issue #607 coverage superset; starter stays all-nine).
 if grep -q -F -e 'platforms:' "$ci" &&
   grep -q -F -e 'linux_x86_64' "$ci" &&
   grep -q -F -e 'linux_arm64' "$ci" &&
   grep -q -F -e 'macos_arm64' "$ci" &&
   grep -q -F -e 'macos_x86_64' "$ci" &&
   grep -q -F -e 'windows_x86_64' "$ci" &&
-  grep -q -F -e 'disabled_checks: ""' "$ci"; then
+  grep -q -F -e 'disabled_checks: "test"' "$ci"; then
   ok
 else
-  bad "consumer-ci gate lost its all-enabled five-platform self-call (issue #408)"
+  bad "dogfood gate lost its test-disabled five-platform self-call (issue #408 plus Phase 1 #607)"
 fi
 
 # Devcontainer gate: parity test plus definition shape, boot stays open gap.

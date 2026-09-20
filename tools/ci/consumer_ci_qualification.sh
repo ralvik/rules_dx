@@ -9,8 +9,9 @@
 #   platforms-gate fail-closed, stable dx-ci aggregate, hygiene, concurrency,
 #   permissions, per-cell coverage with fork-safe comments), caller template
 #   with reviewed SHA pin, four consumer fixture harnesses
-#   (scheduling/aggregate/guards/pins), self-call all-enabled dogfood in
-#   ci.yml (issue #408, verbatim `//...`),
+#   (scheduling/aggregate/guards/pins), self-call test-disabled dogfood in
+#   ci.yml (issue #408 plus Phase 1 issue #607, verbatim `//...`; `test`
+#   disabled as coverage superset via `resolve_for_test` plus `bazel coverage`),
 #   native widen-one loop (sole updater, issue #461), dx migrate syntax
 #   plus manifest selection (delivered CLI with fail-closed execution, issue
 #   #462) plus dx run multirun (issue #463 delivered), tag hygiene as-built;
@@ -210,19 +211,21 @@ else
   bad "fork-safe comment wiring lost (marker plus skip plus no-creds)"
 fi
 
-# Self-call in ci.yml runs all nine checks (issue #408 dogfood-like
-# consumer) on all qualified hosts (seed plus arm64 native plus macOS
-# arm64 plus macOS x86_64 best-effort plus Windows x86_64, issues
-# #410/#412/#413/#414). No bespoke corpus scope remains in ci.yml: dogfood
-# is verbatim `//...` via the reusable workflow.
-if grep -q -F -e 'consumer-ci (self-call reusable consumer workflow)' "$ci" &&
-  grep -q -F -e 'disabled_checks: ""' "$ci" &&
+# Self-call in ci.yml runs eight checks with `test` disabled (issue #408
+# dogfood-like consumer plus Phase 1 issue #607 coverage superset) on all
+# qualified hosts (seed plus arm64 native plus macOS arm64 plus macOS x86_64
+# best-effort plus Windows x86_64, issues #410/#412/#413/#414). `dx coverage`
+# resolves scope via `resolve_for_test` (same as `dx test`) and runs `bazel
+# coverage`, which executes the tests. No bespoke corpus scope remains in
+# ci.yml: dogfood is verbatim `//...` via the reusable workflow.
+if grep -q -F -e 'dogfood (self-call reusable consumer workflow)' "$ci" &&
+  grep -q -F -e 'disabled_checks: "test"' "$ci" &&
   grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"macos_x86_64\", \"windows_x86_64\"]'" "$ci" &&
   ! grep -q -F -e 'attr(tags, corpus' "$ci" &&
   ! grep -q -F -e 'Only build is enabled' "$ci"; then
   ok
 else
-  bad "ci.yml self-call lost all-enabled plus explicit-platforms plus no-corpus honesty"
+  bad "ci.yml self-call lost test-disabled plus explicit-platforms plus no-corpus honesty (issue #607 coverage superset)"
 fi
 
 # Functional gate: sequential fails closed, parallel linux passes.
@@ -398,8 +401,10 @@ else
 fi
 
 # Verification matrix keeps no Supported claim with consumer honesty.
+# The dogfood self-call stays test-disabled per Phase 1 issue #607
+# (coverage superset); the starter caller stays all-nine.
 if ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$verify" | grep -q . &&
-  grep -q -F -e 'self-call all-enabled' "$matrix"; then
+  grep -q -F -e 'self-call test-disabled' "$matrix"; then
   ok
 else
   bad "verification matrix lost its no-Supported plus consumer-honesty gate"

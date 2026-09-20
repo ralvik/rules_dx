@@ -290,10 +290,10 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   best-effort), `:windows_qualification`, `:ci_matrix_qualification`
   (host matrix, issue #415), and `:closeout_battery_qualification`
   (battery commands plus docs gate, issue #467).
-- `devcontainer-check`, `docs-ci`, `consumer-ci` (all-enabled self-call on
+- `devcontainer-check`, `docs-ci`, `dogfood (test-disabled self-call on
   linux_x86_64 plus linux_arm64 plus macos_arm64 plus macos_x86_64 plus
   windows_x86_64, issue
-  #408, verbatim `//...`).
+  #408 plus Phase 1 #607 coverage superset, verbatim `//...`).
 
 Green here (static guards on a clean tree, no full rebuild):
 `non_dogfed_paths`, `non_dogfed_qualification` 16/16, `supported_evidence_gate`, `distribution_closeout_guards`,
@@ -305,8 +305,8 @@ Green here (static guards on a clean tree, no full rebuild):
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
 Full-tree `dx lint/format/typecheck/test --check //...` over fixtures and
-testdata is green via the consumer-ci all-enabled self-call (issue #408,
-verbatim `//...` in Battery above) with fixtures/testdata expected failures
+testdata is green via the dogfood test-disabled self-call (issue #408 plus
+Phase 1 #607 coverage superset, verbatim `//...` in Battery above) with fixtures/testdata expected failures
 owned by #508 (`bazel run //tools/ci:non_dogfed_qualification` with
 `tools/ci/tests/fixtures/non_dogfed/pins.bzl` plus `non_dogfed.expected`;
 negatives per issue #406, hermetic CLI-contract per issue #407; closed #12
@@ -345,7 +345,8 @@ Remaining reds stay owned gaps, not green claims:
   `bazel run //tools/ci:consumer_ci_qualification`; nine checks, explicit
   platforms, fail-closed sequential, stable dx-ci aggregate, hygiene,
   concurrency, permissions, per-cell coverage with fork-safe comments,
-  all-enabled self-call (issue #408, verbatim `//...`), native bump loop
+  self-call test-disabled (issue #408 plus Phase 1 #607 coverage superset,
+  verbatim `//...`), native bump loop
   (sole updater, issue #461),
    dx migrate syntax plus manifest selection (delivered CLI with fail-closed
    execution, issue #462) plus dx run multirun (issue #463 delivered), tag

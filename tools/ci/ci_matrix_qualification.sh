@@ -10,7 +10,8 @@
 #   profiles (issue #411) plus macOS arm64 native (issue #412) plus macOS
 #   x86_64 best-effort native (issue #413, non-blocking) plus Windows
 #   x86_64 MSVC-compatible native (issue #414), consumer
-#   self-call all-enabled on the five host platforms (issue #408), docs in
+#   self-call test-disabled on the five host platforms (issue #408 plus
+#   Phase 1 issue #607 coverage superset), docs in
 #   support-matrix plus ADR 0014 plus github-ci plus testing matrix;
 # - qualification-assertion: Windows x86_64 joins Platform-qualified with
 #   explicit EULA never automatic (issue #414); a windows-latest runner
@@ -109,15 +110,16 @@ else
   bad "ci.yml lost a per-host job (arm64 triple plus musl pairs plus macos triples plus windows triple)"
 fi
 
-# Consumer self-call runs all-enabled on the five host platforms
-# (issue #408 dogfood-like consumer, verbatim //...; Windows x86_64 joins
-# under issue #414).
+# Consumer self-call runs test-disabled on the five host platforms
+# (issue #408 dogfood-like consumer plus Phase 1 issue #607 coverage
+# superset: `dx coverage` via `resolve_for_test` plus `bazel coverage`
+# executes the tests; Windows x86_64 joins under issue #414).
 if grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"macos_x86_64\", \"windows_x86_64\"]'" "$ci" &&
-  grep -q -F -e 'disabled_checks: ""' "$ci" &&
+  grep -q -F -e 'disabled_checks: "test"' "$ci" &&
   grep -q -F -e 'supported = {"linux_x86_64", "linux_arm64", "macos_arm64", "macos_x86_64", "windows_x86_64"}' "$consumer"; then
   ok
 else
-  bad "ci.yml self-call lost all-enabled plus five-platform plus no-corpus honesty (issue #408, Windows joins under #414)"
+  bad "ci.yml self-call lost test-disabled plus five-platform plus no-corpus honesty (issue #408 plus Phase 1 #607, Windows joins under #414)"
 fi
 
 # Qualified-host expectation: five hosts qualified (Windows joins under
@@ -232,7 +234,7 @@ fi
 if grep -q -F -e 'issue #415' "$contract" &&
   grep -q -F -e 'issue #415' "$test_matrix" &&
   grep -q -F -e 'issue #415' "$verify" &&
-  grep -q -F -e 'consumer self-call: all-enabled' "$matrix"; then
+  grep -q -F -e 'consumer self-call: test-disabled' "$matrix"; then
   ok
 else
   bad "stale references lost the issue #415 matrix record (contract plus test matrix plus verification plus support-matrix consumer note)"

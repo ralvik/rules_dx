@@ -85,21 +85,24 @@ jobs:
       contents: read
       pages: write
       id-token: write
-  consumer-ci:
-    name: consumer-ci (self-call reusable consumer workflow)
-    # Dogfood-like consumer (issue #408): proves the reusable file parses,
-    # the pin check passes, and all nine checks execute end-to-end on the
-    # working tree (local path: no version-pin chicken-and-egg;
-    # rules_dx_version matches MODULE.bazel). All checks enabled with
-    # verbatim `//...` scope, same entrypoints as external consumers.
-    # Runs on all qualified hosts (seed plus arm64 native plus macOS arm64
-    # plus macOS x86_64 best-effort plus Windows x86_64 MSVC-compatible,
-    # issues #410/#412/#413/#414).
+  dogfood:
+    name: dogfood (self-call reusable consumer workflow)
+    # Dogfood-like consumer (issue #408, Phase 1 issue #607): proves the
+    # reusable file parses, the pin check passes, and eight checks execute
+    # end-to-end on the working tree (local path: no version-pin
+    # chicken-and-egg; rules_dx_version matches MODULE.bazel). `test`
+    # stays disabled: `dx coverage` resolves scope via `resolve_for_test`
+    # (same as `dx test`, `cli/cli/src/exec/workflow.rs`) and runs `bazel
+    # coverage`, which executes the tests, so running both doubles test
+    # execution. Verbatim `//...` scope, same entrypoints as external
+    # consumers. Runs on all qualified hosts (seed plus arm64 native plus
+    # macOS arm64 plus macOS x86_64 best-effort plus Windows x86_64
+    # MSVC-compatible, issues #410/#412/#413/#414).
     uses: ./.github/workflows/reusable-consumer.yml
     with:
       rules_dx_version: "0.0.0"
       platforms: '["linux_x86_64", "linux_arm64", "macos_arm64", "macos_x86_64", "windows_x86_64"]'
-      disabled_checks: ""
+      disabled_checks: "test"
     permissions:
       contents: read
       checks: write

@@ -270,8 +270,8 @@ qualified seed-only under issue #509 with fixture evidence
 plus gate/aggregate plus per-gap decisions fixture evidence qualified seed-only under #509
 (`bazel run //tools/ci:consumer_ci_qualification`; nine checks, explicit
 platforms, fail-closed sequential, stable aggregate, hygiene, concurrency,
-permissions, per-cell coverage with fork-safe comments, all-enabled self-call
-(issue #408, verbatim `//...`), native bump loop (sole updater, issue #461), migrate syntax plus
+permissions, per-cell coverage with fork-safe comments, self-call test-disabled
+(issue #408 plus Phase 1 #607 coverage superset, verbatim `//...`), native bump loop (sole updater, issue #461), migrate syntax plus
 manifest selection (delivered CLI with fail-closed execution, issue #462) plus run multirun
 (issue #463 delivered), tag hygiene as-built, with the per-gap decisions above pinned in
 `tools/ci/tests/fixtures/consumer_ci/pins.bzl`; build-only self-call forever
@@ -283,8 +283,8 @@ failure-first check/file/line/rule ordering, no rotation, bot-only frees with re
 outside the open count, full reports with summary-distinguished truncation, no overwrite;
 CI-only, no Supported claim).
 Consumer CI, devcontainer, and perf honesty
-is delivered for the self-call path with owned gaps elsewhere: self-call all-enabled
-per #408 (verbatim `//...`, qualified seed-only under #509 via
+is delivered for the self-call path with owned gaps elsewhere: self-call test-disabled
+per #408 plus Phase 1 #607 coverage superset (verbatim `//...`, qualified seed-only under #509 via
 `bazel run //tools/ci:consumer_ci_qualification`; build-only self-call forever
 rejected); devcontainer parity plus definition shape delivered with boot
 staying open gap under #460; perf report-not-gate rejected per ADR 0022

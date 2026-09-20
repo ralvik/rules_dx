@@ -55,7 +55,8 @@ The repository corpus (`real_source_target(name = "corpus_*")` per content
 type per package, issue #15, shared `tags = ["corpus"]`) is checked with the
 real lint/format aspects; every produced result must pass the per-result
 evaluator at `--fail_on warning`. The same invocations run in CI
-(`.github/workflows/ci.yml`, `consumer-ci` self-call with all checks over
+(`.github/workflows/ci.yml`, `dogfood` self-call with test disabled
+(coverage superset, issue #408 plus Phase 1 #607) over
 verbatim `//...` per issue #408, plus `dogfood-freshness` for generate
 freshness and audits), which installs no
 quality tools: all tools execute as Bazel-resolved pinned actions.

@@ -61,7 +61,7 @@ if grep -q -F -e 'security-audit' .github/workflows/ci.yml &&
   grep -q -F -e 'license-audit' .github/workflows/ci.yml; then
   ok
 else
-  bad "consumer-ci lost its disabled security/license audit record"
+  bad "dogfood lost its disabled security/license audit record"
 fi
 
 # #19: live update executes resolver backends with continuation (no deferred code).

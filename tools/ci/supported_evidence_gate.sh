@@ -264,7 +264,8 @@ else
   bad "release Open lost trust/closeout harnesses or gained BCR tooling"
 fi
 
-# Consumer verification Open but self-call present (all-enabled per #408).
+# Consumer verification Open but self-call present (test-disabled per #607,
+# coverage superset; starter stays all-nine per #408).
 if [[ -f ".github/workflows/reusable-consumer.yml" ]] &&
   grep -q -F -e 'rules_dx_version: "0.0.0"' examples/consumer-ci/caller.yml; then
   ok
