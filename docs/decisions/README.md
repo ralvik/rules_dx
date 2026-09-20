@@ -31,3 +31,4 @@ validation and are not stable commitments.
 | [0021: Build Profiles](0021-build-profiles.md) | Accepted | — | Configuration |
 | [0022: No Standing Benchmarking](0022-no-benchmarking.md) | Accepted | — | Performance and testing |
 | [0023: Rust Libraries Stay Internal](0023-rust-libraries-internal.md) | Accepted | — | Rust libraries |
+| [0024: Selective `dx update` Per-Set Support](0024-selective-update.md) | Accepted | — | Dependency currency |

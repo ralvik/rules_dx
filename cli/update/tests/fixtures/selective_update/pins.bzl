@@ -1,0 +1,43 @@
+"""Selective `dx update` per-set pins (issue #583).
+
+Contract: `docs/decisions/0024-selective-update.md`,
+`docs/cli/commands/audit-update-bazel.md#dx-update`.
+Fixture: `cli/update/tests/fixtures/selective_update/` via
+`bazel run //tools/ci:selective_update_qualification`.
+
+Exactly one set supports selective in V1 (npm via the Bazel-pinned
+pnpm); the other four fail closed as wont-fix with no silent full-update
+substitution. Update-only; no lock format change. Seed only: platform
+plus consumer plus release evidence stays owned gap; no Supported claim.
+"""
+
+# Per-set selective dispositions (one supported, four wont-fix).
+SELECTIVE_NPM = "supported"
+SELECTIVE_CARGO = "wont-fix"
+SELECTIVE_MAVEN = "wont-fix"
+SELECTIVE_NUGET = "wont-fix"
+SELECTIVE_GO = "wont-fix"
+
+# Approved upstream operations (argv owned by `dx_update::backend`).
+SELECTIVE_NPM_ARGV = "bazel run @pnpm//:pnpm -- update [<pkg>...]"
+SELECTIVE_CARGO_FULL = "CARGO_BAZEL_REPIN=1 bazel build //rust/tests/fixtures/hello:hello"
+SELECTIVE_MAVEN_FULL = "REPIN=1 bazel run @maven//:pin"
+SELECTIVE_NUGET_FULL = "bazel run @rules_dotnet//tools/paket2bazel -- --dependencies-file third_party/dotnet/paket.dependencies --output-folder third_party/dotnet/deps"
+SELECTIVE_GO_FULL = "noop (no go.mod in the main workspace)"
+
+# Fail-closed hints (selective never widens to full silently).
+SELECTIVE_CARGO_HINT = "use `dx update cargo` for the set"
+SELECTIVE_MAVEN_HINT = "use `dx update maven` for the set"
+SELECTIVE_NUGET_HINT = "use `dx update nuget` for the set"
+SELECTIVE_GO_HINT = "the main workspace has no go.mod; there are no Go packages to select"
+
+# Bump follow-up stays manual and resolver-owned.
+BUMP_FOLLOWUP_CARGO = "dx update cargo"
+BUMP_FOLLOWUP_NPM = "dx update npm:<pkg> or dx update npm"
+BUMP_FOLLOWUP_GO = "dx update go"
+
+# Rejected and honesty lines (never pinned as supported here).
+REJECTED_SILENT_FULL_SUBSTITUTION = "silent full-update substitution rejected"
+REJECTED_PRIVATE_EMULATION = "private per-package emulation rejected"
+NO_SUPPORTED = "no Supported claim"
+SEED_ONLY = "qualified seed-only under issue #583"
