@@ -17,12 +17,20 @@ target-coupled and never runs as a bare backend invocation, so it has no
 matrix cell; adapter-less classes (`cc`, `csharp`, `go`, `java`, `kotlin`,
 `scala`, …) have no backing tool and no cells.
 
+Crate edition (issue #468): the two `edition_*` cells above pin the
+`--tool-edition` flow over the real toolchain rustfmt. The 2015 cell stays
+clean only because the aspect edition reaches `--edition`; the mismatch cell
+proves the converse (same bytes under edition 2021 surface syntax errors),
+so a single-edition rustfmt stays rejected.
+
 ## Rust (`rust`: rustfmt format, clippy lint, rustc typecheck)
 
 | Case | Capability | Input |
 | --- | --- | --- |
 | `matrix_rust_format_pass` | format | `clean.rs` (toolchain rustfmt) |
 | `matrix_rust_format_fail` | format | generated `matrix/rustfmt_dirty.rs` |
+| `matrix_rust_format_edition_2015` | format | generated `matrix/rustfmt_edition_2015.rs` (2015-only `async` identifier, edition 2015) |
+| `matrix_rust_format_edition_mismatch` | format | generated `matrix/rustfmt_edition_mismatch.rs` (same bytes, edition 2021: syntax errors) |
 | `matrix_rust_lint_pass` | lint | generated `matrix/clippy_clean.rs`, empty upstream |
 | `matrix_rust_lint_fail` | lint | generated `matrix/clippy_len.rs`, recorded `clippy::len_zero` |
 | `matrix_rust_typecheck_pass` | typecheck | generated `matrix/rustc_type_clean.rs`, empty upstream |

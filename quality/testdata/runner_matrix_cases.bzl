@@ -66,6 +66,59 @@ replacement matrix/rustfmt_dirty.rs 0 41 "pub fn add(a: i32, b: i32) -> i32 {\\n
 """,
     },
     {
+        "name": "matrix_rust_format_edition_2015",
+        "generated": {
+            # 2015-only syntax (`async` as a plain identifier): clean under
+            # `--edition 2015`, a syntax error under 2021. Proves the
+            # aspect edition reaches the real toolchain rustfmt (issue #468;
+            # single-edition rustfmt rejected).
+            "matrix/rustfmt_edition_2015.rs": "pub fn edition_gate() -> i32 {\n    let async = 1;\n    async\n}\n",
+        },
+        "capability": "format",
+        "stages": ["rustfmt;rust;matrix/rustfmt_edition_2015.rs"],
+        "rustfmt_from_toolchain": True,
+        "edition_tools": ["rustfmt"],
+        "edition_values": ["2015"],
+        "expected": """producer //quality/testdata:matrix_rust_format_edition_2015
+capability FORMAT
+stages 1
+stage rustfmt classes=rust sources=matrix/rustfmt_edition_2015.rs
+completed_rounds 1
+convergence STABLE
+initial 0
+terminal 0
+replacements 0
+""",
+    },
+    {
+        "name": "matrix_rust_format_edition_mismatch",
+        "generated": {
+            # Same 2015-only bytes as matrix_rust_format_edition_2015 but
+            # checked with the wrong edition: the syntax error finding
+            # proves the edition flag decides parsing (issue #468).
+            "matrix/rustfmt_edition_mismatch.rs": "pub fn edition_gate() -> i32 {\n    let async = 1;\n    async\n}\n",
+        },
+        "capability": "format",
+        "stages": ["rustfmt;rust;matrix/rustfmt_edition_mismatch.rs"],
+        "rustfmt_from_toolchain": True,
+        "edition_tools": ["rustfmt"],
+        "edition_values": ["2021"],
+        "expected": """producer //quality/testdata:matrix_rust_format_edition_mismatch
+capability FORMAT
+stages 1
+stage rustfmt classes=rust sources=matrix/rustfmt_edition_mismatch.rs
+completed_rounds 1
+convergence STABLE
+initial 2
+initial ERROR rustfmt - matrix/rustfmt_edition_mismatch.rs 39 39 fixable=false "error: expected identifier, found keyword `async`"
+initial ERROR rustfmt - matrix/rustfmt_edition_mismatch.rs 60 60 fixable=false "error: expected one of `move`, `use`, `{`, `|`, or `||`, found `}`"
+terminal 2
+terminal ERROR rustfmt - matrix/rustfmt_edition_mismatch.rs 39 39 fixable=false "error: expected identifier, found keyword `async`"
+terminal ERROR rustfmt - matrix/rustfmt_edition_mismatch.rs 60 60 fixable=false "error: expected one of `move`, `use`, `{`, `|`, or `||`, found `}`"
+replacements 0
+""",
+    },
+    {
         "name": "matrix_rust_lint_pass",
         "generated": {
             "matrix/clippy_clean.rs": "fn main() {}\n",

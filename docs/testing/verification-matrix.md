@@ -210,6 +210,7 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   `:consumer_ci_qualification`, `:file_family_qualification`,
   `:helper_qualification`, `:clap_tokenizer_qualification`,
   `:hello_smoke_qualification`, `:parser_sample_qualification`,
+  `:rustfmt_edition_qualification`,
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
   best-effort), `:windows_qualification`, `:ci_matrix_qualification`
   (host matrix, issue #415), and `:closeout_battery_qualification`
@@ -224,7 +225,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 33/33,
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
-`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `musl_qualification` 12/12, `macos_qualification` 12/12,
+`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `musl_qualification` 12/12, `macos_qualification` 12/12,
 `windows_qualification` 13/13, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
@@ -307,6 +308,16 @@ Remaining reds stay owned gaps, not green claims:
   rustfmt, taplo lint plus format, tsc, ty, vale — with recorded Clippy/rustc
   diagnostics byte-identical to the Layer-2 matrix and tsc pipeline-only by
   design; platform plus consumer plus release evidence stays owned gap; no
+  Supported claim).
+- Rustfmt crate edition with fixture evidence qualified seed-only under #468
+  (`bazel run //tools/ci:rustfmt_edition_qualification`; the crate `CrateInfo`
+  edition reaches `rustfmt --edition` with `RUST_EDITION` fallback and
+  fail-closed missing edition on check plus fix, the 2015 `edition_2015_lib`
+  with `edition_fmt_test` under `bazel test //...`, the Layer-2
+  `matrix_rust_format_edition_2015` pass plus
+  `matrix_rust_format_edition_mismatch` wrong-edition syntax-error cells over
+  the real toolchain rustfmt, and live aspect `--tool-edition` pins;
+  platform plus consumer plus release evidence stays owned gap; no
   Supported claim).
 - Non-dogfed execution plan delivered (see issue #508 for remaining gaps; hermetic
   CLI-contract pins under issue #407)
