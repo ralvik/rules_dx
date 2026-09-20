@@ -418,6 +418,16 @@ Remaining reds stay owned gaps, not green claims:
   NuGet native `packages.lock.json` rejected per rules_dotnet issue 444;
   per-platform SDK acquisition plus platform plus consumer plus release
   evidence stays owned gap; no Supported claim).
+- C/C++ sha256-integrity plus no-system-package wiring with fixture evidence
+  qualified seed-only under #484
+  (`bazel run //tools/ci:cc_hermetic_qualification`; no ecosystem lockfile,
+  every `http_archive` carries `sha256` or `integrity` pinned in
+  `cc/tests/fixtures/hermetic/pins.bzl` with the committed `MODULE.bazel.lock`
+  BCR integrity plus the depcheck `cc_deps.toml` plus `cc_lock.json` sha256
+  pair, proven by the hello seed plus the GoogleTest mapping plus depcheck
+  consistency and hash-less rejection; system packages rejected as non-hermetic
+  (`cc_hermetic_qualification` 16/16); platform plus consumer plus release
+  evidence stays owned gap; no Supported claim).
 - Non-dogfed execution plan delivered (see issue #508 for remaining gaps; hermetic
   CLI-contract pins under issue #407)
   (`bazel run //tools/ci:non_dogfed_paths`; hermetic CLI-contract pins,
