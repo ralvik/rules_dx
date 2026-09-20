@@ -39,7 +39,16 @@
 # action is pinned to a commit SHA with its tag in a trailing comment.
 # The Bazel disk cache uses actions/cache, which is free-tier eligible
 # for public repositories, per the infrastructure budget in
-# docs/testing/README.md. CI checkouts never contain `user.bazelrc`
+# docs/testing/README.md. Cache keys hash every Bazel-affecting
+# lock/config (issue #618): MODULE plus bazelrc plus toolchain plus all
+# resolver locks, so lock/config changes bust the cache instead of reusing
+# a stale disk entry; `restore-keys` still falls back to the per-scope
+# prefix on a bust. Remote cache stays unwired (issue #618 wont-fix):
+# paid remote services are not approved per the budget, and Apple/MS
+# acquisition plus cache rights stay license-bounded (issue #496), so CI
+# stays local execution with no remote cache/executor/BES flags
+# (pinned by `coverage_qualification`). CI checkouts
+# never contain `user.bazelrc`
 # (gitignored local-only BCR mirror override), so every run resolves
 # the canonical BCR registry plus MODULE.bazel.lock.
 #
@@ -120,7 +129,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-seed-
       - name: Build workspace
@@ -156,7 +165,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-seed-
       - name: Build SBOM + provenance demo
@@ -219,7 +228,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-seed-
       - name: Check preset freshness
@@ -245,7 +254,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-seed-
       - name: Test workspace
@@ -272,7 +281,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-seed-
       - name: Enforce seed coverage cell
@@ -368,7 +377,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-arm64-
       - name: Build workspace
@@ -394,7 +403,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-arm64-
       - name: Test workspace
@@ -420,7 +429,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-arm64-
       - name: Enforce arm64 coverage cell
@@ -471,7 +480,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-musl-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-musl-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-musl-x86_64-
       - name: Prove Rust static-musl std resolves
@@ -496,7 +505,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-musl-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-musl-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-musl-arm64-
       - name: Prove Rust static-musl std resolves
@@ -524,7 +533,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-musl-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-musl-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-musl-x86_64-
       - name: Enforce musl x86_64 coverage cell
@@ -579,7 +588,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-musl-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-musl-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-musl-arm64-
       - name: Enforce musl arm64 coverage cell
@@ -631,7 +640,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-macos-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-macos-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-macos-arm64-
       - name: Build workspace
@@ -657,7 +666,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-macos-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-macos-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-macos-arm64-
       - name: Test workspace
@@ -683,7 +692,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-macos-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-macos-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-macos-arm64-
       - name: Enforce macos arm64 coverage cell
@@ -735,7 +744,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-macos-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-macos-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-macos-x86_64-
       - name: Build workspace
@@ -761,7 +770,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-macos-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-macos-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-macos-x86_64-
       - name: Test workspace
@@ -787,7 +796,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-macos-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-macos-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-macos-x86_64-
       - name: Enforce macos x86_64 coverage cell
@@ -843,7 +852,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-windows-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-windows-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-windows-x86_64-
       - name: Build workspace
@@ -872,7 +881,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-windows-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-windows-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-windows-x86_64-
       - name: Test workspace
@@ -901,7 +910,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-windows-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-windows-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-windows-x86_64-
       - name: Enforce windows x86_64 coverage cell
@@ -955,7 +964,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-seed-
       - name: Prove target-tag semantics
@@ -1004,7 +1013,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-dogfood-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-dogfood-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-dogfood-
             bazel-seed-
@@ -1215,7 +1224,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-dogfood-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-dogfood-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-dogfood-
             bazel-seed-

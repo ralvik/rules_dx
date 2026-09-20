@@ -229,7 +229,12 @@ designed and locally sandbox-tested but remote behavior remains unverified.
 That else branch is taken here: hermeticity is designed and locally
 sandbox-tested (aquery action shape plus execution-log cache hits) but remote
 behavior remains unverified, with no remote cache or executor wired
-(issue #507, `bazel run //tools/ci:coverage_qualification`). First-party PR
+(issue #507, `bazel run //tools/ci:coverage_qualification`; remote-cache
+wont-fix recorded under issue #618: paid remote services stay unapproved per
+the budget above, and Apple/MS cache rights stay license-bounded per issue
+#496, so CI keeps the local `actions/cache` disk scope with comprehensive
+lock/config keys and no `--remote_cache`/`--remote_executor`/`--bes_backend`
+flags). First-party PR
 reporting itself is adopted under #254; Codecov stays opt-in only.
 
 Snapshot goldens use schema validation plus byte snapshots with an
