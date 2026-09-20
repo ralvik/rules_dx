@@ -422,6 +422,13 @@ with fixtures in `cli/update/tests/fixtures/selective_update/`:
 
 When a set is both fully and package selected, the full update wins.
 
+Cargo per-crate (`cargo:<crate>`, e.g. `cargo:anyhow`) is wont-fix
+(issue #633, fixtures in `cli/update/tests/fixtures/selective_cargo/`):
+the approved `crate_universe` repin has no per-crate flag, so the
+selector parses the crate name then fails closed as `unsupported` with
+the `dx update cargo` hint and never silently substitutes a full
+update; private `cargo update -p` stays rejected as a private resolver.
+
 `dx update` updates selected dependencies to the newest versions permitted by the project's
 declared requirements and authoritative ecosystem resolver, through approved Bazel integration.
 It refreshes standard locks or equivalent resolved dependency files without widening or replacing

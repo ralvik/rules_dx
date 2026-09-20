@@ -299,6 +299,8 @@ CI only, no Supported claim).
   fixture evidence, issue #613),
   `:selective_update_qualification` (per-set selective vs wont-fix pins plus
   fixture evidence, issue #583),
+  `:selective_cargo_qualification` (Cargo per-crate wont-fix pins plus
+  fixture evidence, issue #633),
   `:update_events_qualification` (update mutation wont-fix plus completeness pins plus
   fixture evidence, issue #586),
   `:starlark_futures_qualification` (Starlark filtering plus subjects plus BEP wont-fix/deferred pins plus
@@ -325,7 +327,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `consumer_ci_qualification` 43/43, `review_threads_qualification` 16/16, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
-<<<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `remediation_bounds_qualification` 16/16, `layer2_opens_qualification` 16/16, `quality_taxonomy_qualification` 17/17, `python_audit_qualification` 16/16, `selective_update_qualification` 16/16, `update_events_qualification` 16/16, `env_plugins_cgo_qualification` 16/16, `starlark_futures_qualification` 16/16, `cli_execution_gaps_qualification` 16/16, `promotion_checklist_qualification` 16/16, `sbom_upload_qualification` 17/17, `ci_matrix_qualification` 14/14, `flakiness_qualification` 16/16, `closeout_battery_qualification` 24/24, `coverage_qualification` 33/33.
+<<<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `remediation_bounds_qualification` 16/16, `layer2_opens_qualification` 16/16, `quality_taxonomy_qualification` 17/17, `python_audit_qualification` 16/16, `selective_update_qualification` 16/16, `selective_cargo_qualification` 16/16, `update_events_qualification` 16/16, `env_plugins_cgo_qualification` 16/16, `starlark_futures_qualification` 16/16, `cli_execution_gaps_qualification` 16/16, `promotion_checklist_qualification` 16/16, `sbom_upload_qualification` 17/17, `ci_matrix_qualification` 14/14, `flakiness_qualification` 16/16, `closeout_battery_qualification` 24/24, `coverage_qualification` 33/33.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
 Full-tree `dx lint/format/typecheck/test --check //...` over fixtures and
@@ -922,9 +924,19 @@ Remaining reds stay owned gaps, not green claims:
   `selective_update.expected`; `selective_update_qualification` 16/16;
   npm selective supported via the Bazel-pinned pnpm, Cargo/Maven/NuGet/Go
   selective wont-fix with whole-lock repin plus empty-Go no-op, silent
-  full-update substitution plus private emulation rejected, bump follow-up
-  manual and resolver-owned; update-only, no lock format change; platform
-  plus consumer plus release evidence stays owned gap; no Supported claim).
+   full-update substitution plus private emulation rejected, bump follow-up
+   manual and resolver-owned; update-only, no lock format change; platform
+   plus consumer plus release evidence stays owned gap; no Supported claim).
+- Selective Cargo per-crate update with fixture evidence qualified
+  seed-only under #633
+  (`bazel run //tools/ci:selective_cargo_qualification` with
+  `cli/update/tests/fixtures/selective_cargo/pins.bzl` plus
+  `selective_cargo.expected`; `selective_cargo_qualification` 16/16;
+  `cargo:<crate>` parses then fails closed as `unsupported` with the
+  `dx update cargo` hint, whole-lock `crate_universe` repin only, silent
+  full-update substitution plus private `cargo update -p` rejected, bump
+  follow-up manual and resolver-owned; update-only, no lock format change;
+  platform plus consumer plus release evidence stays owned gap; no Supported claim).
 - Update mutation-event wont-fix plus event-completeness with fixture evidence qualified
   seed-only under #586
   (`bazel run //tools/ci:update_events_qualification` with
