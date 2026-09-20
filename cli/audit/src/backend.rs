@@ -24,8 +24,9 @@
 //!   coverage is Cargo (`rust/tests/fixtures/hello/Cargo.lock`), npm
 //!   (`pnpm-lock.yaml`), Maven
 //!   (`third_party/jvm/maven_install.json`), NuGet
-//!   (`third_party/dotnet/paket.lock`), and Go (empty set, no `go.mod`:
-//!   no-op success like `dx_update::backend`).
+//!   (`third_party/dotnet/paket.lock`), and Go
+//!   (`third_party/go/go.mod` via `go_deps.from_file`, parsed by
+//!   [`crate::locks::parse_go_mod`]).
 //! - License (license family, per dependency set): pure policy
 //!   evaluation inside `dx_audit` (see [`crate::license_policy`],
 //!   [`crate::license_expr`], [`crate::license_notice`]), with
@@ -73,8 +74,7 @@ pub enum BackendPlan {
         /// Extra environment (parent environment is always inherited).
         env: Vec<(String, String)>,
     },
-    /// No-op success (Go vuln/license with no `go.mod`; pure license
-    /// evaluation needs no launch but is modeled by the caller, not here).
+    /// No-op success for subprocess-planned units with nothing to do.
     /// Kept for subprocess-planned units only; pure evaluation never
     /// produces a plan.
     Noop,
@@ -122,21 +122,23 @@ pub fn plan_secrets(report_path: &str, config: Option<&str>) -> Result<BackendPl
 }
 
 /// Workspace-relative lockfiles audited per dependency set for V1
-/// vulnerability matching. Go has none (empty set, no-op success).
+/// vulnerability matching. Go reads the `go_deps.from_file` module lock
+/// (`third_party/go/go.mod`); `go.sum` carries hashes only and is never
+/// an audit input.
 pub fn vuln_locks(set: &str) -> &'static [&'static str] {
     match set {
         "cargo" => &["rust/tests/fixtures/hello/Cargo.lock"],
         "npm" => &["pnpm-lock.yaml"],
         "maven" => &["third_party/jvm/maven_install.json"],
         "nuget" => &["third_party/dotnet/paket.lock"],
-        "go" => &[],
+        "go" => &["third_party/go/go.mod"],
         _ => &[],
     }
 }
 
-/// Whether one dependency set is empty for V1 vuln/license audit (Go:
-/// no `go.mod` in the main workspace, so a full audit is a no-op
-/// success with no launch and no file changes).
+/// Whether one dependency set is empty for V1 vuln/license audit (no set
+/// is empty: every registry set owns a lockfile, so a full audit always
+/// assesses).
 pub fn is_empty_set(set: &str) -> bool {
     vuln_locks(set).is_empty()
 }
@@ -189,7 +191,7 @@ mod tests {
     }
 
     #[test]
-    fn vuln_locks_pin_per_set_coverage_and_go_empty() {
+    fn vuln_locks_pin_per_set_coverage() {
         assert_eq!(
             vuln_locks("cargo"),
             &["rust/tests/fixtures/hello/Cargo.lock"]
@@ -197,9 +199,10 @@ mod tests {
         assert_eq!(vuln_locks("npm"), &["pnpm-lock.yaml"]);
         assert_eq!(vuln_locks("maven"), &["third_party/jvm/maven_install.json"]);
         assert_eq!(vuln_locks("nuget"), &["third_party/dotnet/paket.lock"]);
-        assert!(vuln_locks("go").is_empty());
-        assert!(is_empty_set("go"));
+        assert_eq!(vuln_locks("go"), &["third_party/go/go.mod"]);
+        assert!(!is_empty_set("go"));
         assert!(!is_empty_set("cargo"));
+        assert!(is_empty_set("unknown-set"));
     }
 
     #[test]

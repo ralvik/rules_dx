@@ -32,7 +32,7 @@ pub enum BumpSet {
     Cargo,
     /// GitHub Actions (`.github/workflows/*.yml`, SHA-plus-tag pins).
     GithubActions,
-    /// Go (`go.mod` graphs where present; empty in the main workspace).
+    /// Go (`third_party/go/go.mod` via `go_deps.from_file`).
     Go,
     /// JS/TS/npm (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`).
     Npm,
@@ -88,7 +88,7 @@ impl BumpSet {
             BumpSet::Bazel => &[".bazelversion", "MODULE.bazel"],
             BumpSet::Cargo => &["rust/tests/fixtures/hello/Cargo.toml"],
             BumpSet::GithubActions => &[".github/workflows/ci.yml"],
-            BumpSet::Go => &["go/go.mod"],
+            BumpSet::Go => &["third_party/go/go.mod"],
             BumpSet::Npm => &["package.json"],
         }
     }
@@ -105,7 +105,7 @@ impl BumpSet {
                 "cargo-bazel-lock.json",
             ],
             BumpSet::GithubActions => &[],
-            BumpSet::Go => &["go/go.sum"],
+            BumpSet::Go => &["third_party/go/go.mod", "third_party/go/go.sum"],
             BumpSet::Npm => &["pnpm-lock.yaml"],
         }
     }
@@ -130,7 +130,9 @@ impl BumpSet {
             BumpSet::GithubActions => {
                 "file-only (edit workflow SHA-plus-tag pin via upstream GitHub releases client)"
             }
-            BumpSet::Go => "empty in the main workspace (no go.mod; no-op success)",
+            BumpSet::Go => {
+                "pinned go_deps.from_file module lock (pins track Gazelle; explicit widen via `dx bump` plus the pinned SDK tidy)"
+            }
             BumpSet::Npm => "Bazel-pinned pnpm update (bazel run @pnpm//:pnpm -- update)",
         }
     }

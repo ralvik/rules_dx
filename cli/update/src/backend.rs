@@ -25,9 +25,11 @@
 //! - NuGet (full only): the documented `paket2bazel` regeneration
 //!   refreshes `third_party/dotnet/deps` from `paket.dependencies`/
 //!   `paket.lock` (exact pin stays). Selective is unsupported in V1.
-//! - Go (full only): empty set (no `go.mod` in the main workspace), so a
-//!   full update is a no-op success with no launch; selective is
-//!   unsupported (unknown package).
+//! - Go (full only): the pinned `go_deps.from_file` module lock
+//!   (`third_party/go/go.mod` plus `go.sum`) intentionally tracks
+//!   Gazelle's `go.mod` for the shared extension, so a full update is a
+//!   no-op success with no launch; selective is unsupported (explicit
+//!   widening runs through `dx bump` plus the pinned SDK tidy).
 //!
 //! Summaries never render argv, option values, or environment values; the
 //! vectors below are passed directly to the process runner.
@@ -45,7 +47,8 @@ pub enum BackendPlan {
         /// Extra environment (parent environment is always inherited).
         env: Vec<(String, String)>,
     },
-    /// No-op success (Go full: no `go.mod`, nothing to update).
+    /// No-op success (Go full: the pinned module lock tracks Gazelle,
+    /// nothing to refresh).
     Noop,
 }
 
@@ -117,7 +120,7 @@ pub fn plan(set: SetId, request: &SetRequest) -> Result<BackendPlan, BackendErro
         (SetId::Go, SetRequest::Full) => Ok(BackendPlan::Noop),
         (SetId::Go, SetRequest::Packages(_)) => Err(BackendError::Unsupported {
             set: set.name(),
-            reason: "the main workspace has no go.mod; there are no Go packages to select",
+            reason: "go pins track Gazelle for the shared go_deps extension; widen explicitly via `dx bump gomod:<module> <version>`",
         }),
     }
 }
