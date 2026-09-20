@@ -17,7 +17,8 @@
 #
 # CI runs deterministic generation freshness through the
 # canonical public path before the quality commands converge anything: a
-# clean checkout must already be generator-stable.
+# clean checkout must already be generator-stable (issue #644, successor
+# to closed #503; customer check flow only, custom freshness harness rejected).
 #
 # Dogfood invokes the same entrypoints plus scope as the consumer
 # (issue #408): `dx <check> --check //...` verbatim, no corpus-query or
