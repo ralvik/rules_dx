@@ -284,6 +284,12 @@ distribution is the legal trigger, while `ship` is slang. Promoting an
 internal root to distributed re-qualifies it under the strict table on the
 next audit.
 
+As-built in this repository ([`licenses.toml`](../../../licenses.toml),
+issue #643): `//cli/cli:dx` is the one marked distributed root (the release
+binary); the `//...` dogfood scope stays internal-only because no release is
+cut. Exercise the strict gate on the existing customer flow with
+`bazel run //cli/cli:dx -- audit license //cli/cli:dx`.
+
 In `distributed`, an unlisted SPDX identity or a final `review` outcome fails unless explicitly
 approved in committed policy. A matching, reasoned, version-scoped, unexpired exception can
 approve a finding without hiding it. Merely placing an identity in `review` is not approval.
