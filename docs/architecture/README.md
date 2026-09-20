@@ -141,8 +141,9 @@ fixed the two true collisions (`dx/qual` → `cli/qualification`,
 `dx/docs` → `cli/docgen`); the facade labels below are unchanged.
 The reorganization is complete with no successor: `dx/` Rust to `cli/`, documentation IR to
 `docs/ir`, and the mixed/hello fixture to `examples/mixed` all landed under issue #76
-(recorded in ADR 0004); remaining structural moves stay separately owned
-(Rust library extraction under issue #469). The e2e suite naming resolved
+(recorded in ADR 0004); Rust library extraction decided internal-only under
+issue #469 (see [ADR 0023](../decisions/0023-rust-libraries-internal.md)).
+The e2e suite naming resolved
 hermetically under issue #466: no `e2e/` tree, CLI-contract pins run under
 `bazel test //...` (see the [verification matrix](../testing/verification-matrix.md)).
 
@@ -154,6 +155,17 @@ hermetically under issue #466: no `e2e/` tree, CLI-contract pins run under
 | `//dx:config` | Empty filegroup default for the `//config:workspace` label flag, failing fast until a consumer binds its typed workspace policy; typed per-family sections frozen in `//quality:policy.bzl` (the issue tracker) and `//quality:sources.bzl` (the issue tracker) | Accepted (issue #423; guard `//tools/ci:dx_facade_qualification`) |
 | `//tools/coverage:coverage_gate` | Single crate after the unused `:coverage` wrapper removal | Accepted |
 | `real_source_target(name="corpus_*")` splits | Per content type per package, Gazelle-owned via `dx generate`, shared `tags = ["corpus"]` (issue #15) | Accepted |
+
+### Rust Library Boundary (Issue #469)
+
+Rust libraries stay internal with a binaries-only public boundary: only
+`//cli/cli:dx` and `//cli/env:env` are public tool entry points, and
+consumers use those binaries plus the `//dx` Starlark facade, never the
+`cli/*`, `quality/*`, or `generation/*` libraries directly. `libs/` is
+Starlark-only with no Rust crates. The closed 34-crate inventory, boundary,
+and wont-extract rationale live in
+[ADR 0023](../decisions/0023-rust-libraries-internal.md); guard
+`//tools/ci:rust_library_qualification` pins them.
 
 ### Upstream Authorities
 
