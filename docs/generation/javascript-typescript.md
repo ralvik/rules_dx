@@ -24,6 +24,27 @@ rather than gaining a language suffix.
 Executable sources use the common single-library-owner and thin-binary shape. Resources remain
 user-owned under the [common resource boundary](common.md#resources).
 
+## Entries
+
+A recognized entry is exactly `main.js`/`main.jsx`/`main.mjs`/`main.cjs`
+(JavaScript) or `main.ts`/`main.tsx`/`main.mts`/`main.cts` (TypeScript), in
+any directory. The library alone owns the source; the thin binary carries
+only entry metadata: JavaScript emits `javascript_binary` with
+`entry_point` plus `data = [":<library>"]`, TypeScript emits the same
+`javascript_binary` shape over the compiled output (`main.ts`/`main.tsx`
+to `main.js`, `main.mts` to `main.mjs`, `main.cts` to `main.cjs`) with
+`data = [":<library>"]`. There is no `typescript_binary`: execution reuses
+the JavaScript wrappers (see `typescript/tests/fixtures/hello`).
+
+Other layouts (`index.*`, `app.*`, `cli.*`, `bin/` scripts, `package.json`
+`main`/`bin` fields, nested conventions) are an explicit wont-fix per issue
+#585: generation never infers manifest-declared names, guesses a default
+entry, or drops one. Entries without an exact mapping use the
+basename-derived library name plus `<library>_bin`; collisions fail with
+every claimant and no invented affix. Sources outside the narrow slice
+receive only library ownership; callers needing another executable shape
+own a handwritten `javascript_binary`.
+
 ## pnpm Scope And Resolution
 
 `package.json`, `pnpm-lock.yaml`, and public package/importer metadata from `aspect_rules_js` and

@@ -176,6 +176,139 @@ func TestGenerateFailures(t *testing.T) {
 	}
 }
 
+func TestGenerateEntryThinBinary(t *testing.T) {
+	result := generateFixture(t, map[string]string{
+		"pkg/demo/main.ts":        "import helper from \"./helper\";\nconsole.log(helper(\"x\"));\n",
+		"pkg/demo/helper.ts":      "export function helper(name: string): string { return name; }\n",
+		"pkg/demo/helper_test.ts": "import helper from \"./helper\";\n",
+	}, []string{"main.ts", "helper.ts", "helper_test.ts"})
+	if len(result.Gen) != 4 || len(result.Imports) != 4 {
+		t.Fatalf("generated %d rules and %d import sets, want 4 each", len(result.Gen), len(result.Imports))
+	}
+	byRule := make(map[string]int, len(result.Gen))
+	for i, r := range result.Gen {
+		byRule[r.Kind()+"\x00"+r.Name()] = i
+	}
+	libIdx, ok := byRule[projectKind+"\x00main"]
+	if !ok {
+		t.Fatalf("missing typescript_project(main) in %v", result.Gen)
+	}
+	binIdx, ok := byRule[binaryKind+"\x00main_bin"]
+	if !ok {
+		t.Fatalf("missing javascript_binary(main_bin) in %v", result.Gen)
+	}
+	lib := result.Gen[libIdx]
+	if got := strings.Join(lib.AttrStrings("srcs"), ","); got != "main.ts" {
+		t.Errorf("library srcs = %q, want main.ts", got)
+	}
+	bin := result.Gen[binIdx]
+	if got := bin.AttrString("entry_point"); got != "main.js" {
+		t.Errorf("binary entry_point = %q, want main.js", got)
+	}
+	if got := strings.Join(bin.AttrStrings("data"), ","); got != ":main" {
+		t.Errorf("binary data = %q, want :main", got)
+	}
+	if bin.Attr("srcs") != nil {
+		t.Errorf("thin binary must own no srcs, got %v", bin.AttrStrings("srcs"))
+	}
+	if raw := result.Imports[libIdx].(targetImports); strings.Join(raw.imports, ",") != "helper" {
+		t.Errorf("library imports = %+v, want [helper]", raw)
+	}
+	if raw := result.Imports[binIdx].(targetImports); len(raw.imports) != 0 {
+		t.Errorf("binary imports = %+v, want empty", raw)
+	}
+}
+
+func TestGenerateEntryCompiledExtensions(t *testing.T) {
+	result := generateFixture(t, map[string]string{
+		"pkg/demo/main.mts": "export const x = 1;\n",
+	}, []string{"main.mts"})
+	if len(result.Gen) != 2 {
+		t.Fatalf("generated %d rules, want 2", len(result.Gen))
+	}
+	byRule := make(map[string]int, len(result.Gen))
+	for i, r := range result.Gen {
+		byRule[r.Kind()+"\x00"+r.Name()] = i
+	}
+	binIdx, ok := byRule[binaryKind+"\x00main_bin"]
+	if !ok {
+		t.Fatalf("missing javascript_binary(main_bin) in %v", result.Gen)
+	}
+	if got := result.Gen[binIdx].AttrString("entry_point"); got != "main.mjs" {
+		t.Errorf("binary entry_point = %q, want main.mjs", got)
+	}
+}
+
+func TestGenerateEntryCollision(t *testing.T) {
+	root := t.TempDir()
+	for name, content := range map[string]string{
+		"pkg/demo/main.ts":     "export const x = 1;\n",
+		"pkg/demo/main_bin.ts": "export const y = 2;\n",
+	} {
+		writeFixture(t, root, name, content)
+	}
+	l := &typescriptLang{}
+	result := l.GenerateRules(language.GenerateArgs{
+		Config:       &config.Config{RepoRoot: root},
+		Dir:          filepath.Join(root, "pkg", "demo"),
+		Rel:          "pkg/demo",
+		RegularFiles: []string{"main.ts", "main_bin.ts"},
+	})
+	if len(result.Gen) != 0 {
+		t.Fatalf("generated %d rules, want none", len(result.Gen))
+	}
+	if len(l.errors) != 1 || !strings.Contains(l.errors[0], "main_bin") {
+		t.Errorf("errors = %v, want main_bin collision", l.errors)
+	}
+}
+
+func TestBinaryKindInfo(t *testing.T) {
+	info := binaryKindInfo()
+	for _, attr := range info.MatchAttrs {
+		if attr == "srcs" {
+			t.Errorf("binary MatchAttrs must not contain srcs: %v", info.MatchAttrs)
+		}
+	}
+	if len(info.MatchAttrs) != 1 || info.MatchAttrs[0] != "entry_point" {
+		t.Errorf("binary MatchAttrs = %v, want [entry_point]", info.MatchAttrs)
+	}
+	if info.NonEmptyAttrs["srcs"] {
+		t.Errorf("binary NonEmptyAttrs must not require srcs: %v", info.NonEmptyAttrs)
+	}
+	if !info.MergeableAttrs["data"] {
+		t.Errorf("binary MergeableAttrs = %v, want data", info.MergeableAttrs)
+	}
+	if !info.ResolveAttrs["data"] {
+		t.Errorf("binary ResolveAttrs = %v, want data", info.ResolveAttrs)
+	}
+}
+
+func TestResolvePreservesBinaryData(t *testing.T) {
+	l := &typescriptLang{}
+	cfg := resolverConfig(t, nil)
+	bin := rule.NewRule(binaryKind, "main_bin")
+	bin.SetAttr("entry_point", "main.js")
+	bin.SetAttr("data", []string{":main"})
+	l.Resolve(cfg, resolverIndex(l), nil, bin, targetImports{}, label.New("", "app", "main_bin"))
+	if got := strings.Join(bin.AttrStrings("data"), ","); got != ":main" {
+		t.Errorf("binary data = %q, want preserved :main", got)
+	}
+	if len(l.errors) != 0 {
+		t.Errorf("binary resolve errors = %v", l.errors)
+	}
+}
+
+func TestMergeStaleCleansBinary(t *testing.T) {
+	f := rule.EmptyFile("BUILD.bazel", "pkg")
+	f.Rules = append(f.Rules, rule.NewRule(binaryKind, "old_bin"))
+	keptLib := rule.NewRule(projectKind, "main")
+	keptBin := rule.NewRule(binaryKind, "main_bin")
+	result := mergeStale(f, language.GenerateResult{Gen: []*rule.Rule{keptLib, keptBin}})
+	if len(result.Empty) != 1 || result.Empty[0].Name() != "old_bin" {
+		t.Fatalf("stale = %v, want [old_bin]", result.Empty)
+	}
+}
+
 func TestImportsIndexesNonTestOnly(t *testing.T) {
 	lang := NewLanguage()
 	lib := rule.NewRule(projectKind, "demo")
@@ -196,7 +329,7 @@ func TestImportsIndexesNonTestOnly(t *testing.T) {
 
 func TestLanguageMetadata(t *testing.T) {
 	l := &typescriptLang{}
-	if l.Name() != "typescript" || len(l.Kinds()) != 1 || l.CheckFlags(flag.NewFlagSet("test", flag.ContinueOnError), config.New()) != nil {
+	if l.Name() != "typescript" || len(l.Kinds()) != 2 || l.CheckFlags(flag.NewFlagSet("test", flag.ContinueOnError), config.New()) != nil {
 		t.Fatal("invalid language metadata")
 	}
 	l.RegisterFlags(flag.NewFlagSet("test", flag.ContinueOnError), "update", config.New())
@@ -214,11 +347,17 @@ func TestLanguageMetadata(t *testing.T) {
 		}
 		return ""
 	})
-	if len(loads) != 1 || loads[0].Name != "@renamed_dx//typescript/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "typescript_project" {
+	if len(loads) != 2 || loads[0].Name != "@renamed_dx//typescript/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "typescript_project" {
 		t.Errorf("apparent loads = %+v", loads)
 	}
-	if defaults := l.Loads(); len(defaults) != 1 || defaults[0].Name != "@rules_dx//typescript/rules:defs.bzl" {
+	if loads[1].Name != "@renamed_dx//javascript/rules:defs.bzl" || strings.Join(loads[1].Symbols, ",") != "javascript_binary" {
+		t.Errorf("apparent binary loads = %+v", loads)
+	}
+	if defaults := l.Loads(); len(defaults) != 2 || defaults[0].Name != "@rules_dx//typescript/rules:defs.bzl" {
 		t.Errorf("default loads = %+v", defaults)
+	}
+	if defaults := l.Loads(); defaults[1].Name != "@rules_dx//javascript/rules:defs.bzl" || strings.Join(defaults[1].Symbols, ",") != "javascript_binary" {
+		t.Errorf("default binary loads = %+v", defaults)
 	}
 }
 
@@ -437,8 +576,11 @@ func TestConfigureThreeFieldAndMalformed(t *testing.T) {
 func TestApparentLoadsDefault(t *testing.T) {
 	l := &typescriptLang{}
 	got := l.ApparentLoads(func(string) string { return "" })
-	if len(got) != 1 || got[0].Name != "@rules_dx//typescript/rules:defs.bzl" {
+	if len(got) != 2 || got[0].Name != "@rules_dx//typescript/rules:defs.bzl" {
 		t.Errorf("default apparent loads = %+v", got)
+	}
+	if got[1].Name != "@rules_dx//javascript/rules:defs.bzl" || strings.Join(got[1].Symbols, ",") != "javascript_binary" {
+		t.Errorf("default apparent binary loads = %+v", got)
 	}
 }
 
@@ -455,6 +597,9 @@ func TestClaimKindFallback(t *testing.T) {
 	}
 	if got := claimKind(Claimant{Name: "x", Source: "x.ts", Kind: projectKind}); got != projectKind {
 		t.Errorf("explicit kind = %q, want %q", got, projectKind)
+	}
+	if got := claimKind(Claimant{Name: "x_bin", Source: "x.ts", Kind: binaryKind}); got != binaryKind {
+		t.Errorf("binary kind = %q, want %q", got, binaryKind)
 	}
 }
 

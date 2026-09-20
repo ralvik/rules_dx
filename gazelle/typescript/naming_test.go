@@ -143,10 +143,45 @@ func TestIsEntryFile(t *testing.T) {
 		{"helper.ts", false},
 		{"main.js", false},
 		{"main", false},
+		// Other layouts are an explicit wont-fix per issue #585: only the
+		// exact `main` basename is an entry. Manifest-declared names
+		// (`package.json` `main`/`bin`) are never inferred.
+		{"index.ts", false},
+		{"app.ts", false},
+		{"cli.tsx", false},
+		{"pkg/index.mts", false},
+		{"bin.cts", false},
+		{"src/app.ts", false},
 	}
 	for _, tc := range cases {
 		if got := IsEntryFile(tc.name); got != tc.want {
 			t.Errorf("IsEntryFile(%q) = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
+func TestEntryBinaryName(t *testing.T) {
+	if got := EntryBinaryName("main"); got != "main_bin" {
+		t.Errorf("EntryBinaryName(main) = %q, want main_bin", got)
+	}
+	if got := EntryBinaryName("a_b"); got != "a_b_bin" {
+		t.Errorf("EntryBinaryName(a_b) = %q, want a_b_bin", got)
+	}
+}
+
+func TestEntryPointName(t *testing.T) {
+	cases := []struct {
+		name string
+		want string
+	}{
+		{"main.ts", "main.js"},
+		{"pkg/main.tsx", "main.js"},
+		{"main.mts", "main.mjs"},
+		{"main.cts", "main.cjs"},
+	}
+	for _, tc := range cases {
+		if got := EntryPointName(tc.name); got != tc.want {
+			t.Errorf("EntryPointName(%q) = %q, want %q", tc.name, got, tc.want)
 		}
 	}
 }

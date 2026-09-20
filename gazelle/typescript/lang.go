@@ -20,10 +20,16 @@ import (
 const (
 	languageName = "typescript"
 	projectKind  = "typescript_project"
+	// binaryKind is the reused JavaScript execution wrapper for recognized
+	// TypeScript entries. There is no `typescript_binary`: the thin binary
+	// executes the compiled output through the library's `JsInfo`
+	// (see typescript/tests/fixtures/hello).
+	binaryKind = "javascript_binary"
 )
 
 var typescriptKinds = map[string]rule.KindInfo{
 	projectKind: projectKindInfo(),
+	binaryKind:  binaryKindInfo(),
 }
 
 func projectKindInfo() rule.KindInfo {
@@ -35,6 +41,19 @@ func projectKindInfo() rule.KindInfo {
 			"deps": true,
 		},
 		ResolveAttrs: map[string]bool{"deps": true},
+	}
+}
+
+// binaryKindInfo matches thin binaries by entry_point: a binary owns no
+// srcs, so srcs must stay out of MatchAttrs/NonEmptyAttrs or Gazelle would
+// delete generated binaries as empty on every merge.
+func binaryKindInfo() rule.KindInfo {
+	return rule.KindInfo{
+		MatchAttrs: []string{"entry_point"},
+		MergeableAttrs: map[string]bool{
+			"data": true,
+		},
+		ResolveAttrs: map[string]bool{"data": true},
 	}
 }
 
@@ -142,13 +161,14 @@ func (l *typescriptLang) ApparentLoads(moduleToApparentName func(string) string)
 func typescriptLoads(rulesRepo string) []rule.LoadInfo {
 	return []rule.LoadInfo{
 		{Name: "@" + rulesRepo + "//typescript/rules:defs.bzl", Symbols: []string{projectKind}},
+		{Name: "@" + rulesRepo + "//javascript/rules:defs.bzl", Symbols: []string{binaryKind}},
 	}
 }
 
 // Imports indexes one reusable import identity per TypeScript source owned
 // by a non-test project rule: the exact module stem. Test projects are
 // leaves and provide nothing, so ordinary targets never depend on test-only
-// code.
+// code. Thin binaries carry only entry metadata and provide nothing.
 func (*typescriptLang) Imports(_ *config.Config, r *rule.Rule, _ *rule.File) []resolve.ImportSpec {
 	if r.Kind() != projectKind {
 		return nil
@@ -197,6 +217,7 @@ func (l *typescriptLang) generateRules(args language.GenerateArgs) language.Gene
 		name    string
 		src     string
 		test    bool
+		entry   bool
 		imports []string
 		local   map[string]bool
 	}
@@ -213,6 +234,7 @@ func (l *typescriptLang) generateRules(args language.GenerateArgs) language.Gene
 			continue
 		}
 		p := plan{name: name, src: src, test: IsTestFile(src)}
+		p.entry = !p.test && IsEntryFile(src)
 		seen := make(map[string]bool)
 		p.local = make(map[string]bool)
 		for _, ref := range ParseImportRefs(content) {
@@ -240,9 +262,12 @@ func (l *typescriptLang) generateRules(args language.GenerateArgs) language.Gene
 		return language.GenerateResult{}
 	}
 
-	claimants := make([]Claimant, 0, len(plans))
+	claimants := make([]Claimant, 0, len(plans)*2)
 	for _, p := range plans {
 		claimants = append(claimants, Claimant{Name: p.name, Source: p.src, Kind: projectKind})
+		if p.entry {
+			claimants = append(claimants, Claimant{Name: EntryBinaryName(p.name), Source: p.src, Kind: binaryKind})
+		}
 	}
 	if err := checkClaims(args.File, args.OtherGen, claimants); err != nil {
 		l.fail("typescript: %s: %v", args.Rel, err)
@@ -255,6 +280,13 @@ func (l *typescriptLang) generateRules(args language.GenerateArgs) language.Gene
 		r.SetAttr("srcs", []string{p.src})
 		result.Gen = append(result.Gen, r)
 		result.Imports = append(result.Imports, targetImports{imports: append([]string(nil), p.imports...), local: p.local})
+		if p.entry {
+			bin := rule.NewRule(binaryKind, EntryBinaryName(p.name))
+			bin.SetAttr("entry_point", EntryPointName(p.src))
+			bin.SetAttr("data", []string{":" + p.name})
+			result.Gen = append(result.Gen, bin)
+			result.Imports = append(result.Imports, targetImports{})
+		}
 	}
 	if isFixturePath(args.Rel) {
 		for _, r := range result.Gen {
@@ -265,7 +297,7 @@ func (l *typescriptLang) generateRules(args language.GenerateArgs) language.Gene
 }
 
 // claimKind returns the generated rule kind for one claimant: the explicit
-// Kind when set, otherwise the single project kind.
+// Kind when set (thin-binary claims), otherwise the single project kind.
 func claimKind(c Claimant) string {
 	if c.Kind != "" {
 		return c.Kind
@@ -348,6 +380,10 @@ func mergeStale(file *rule.File, result language.GenerateResult) language.Genera
 func (l *typescriptLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *repo.RemoteCache, r *rule.Rule, raw interface{}, from label.Label) {
 	imports, ok := raw.(targetImports)
 	if !ok {
+		return
+	}
+	// Thin binaries carry only entry metadata; their library owns the graph.
+	if r.Kind() == binaryKind {
 		return
 	}
 	deps := make(map[string]bool)
