@@ -145,6 +145,11 @@ scope). The host matrix across these hosts is pinned by `bazel run
 //tools/ci:ci_matrix_qualification` (issue #415, after portable-shell
 #323):
 
+Close-out battery plus docs gate qualified seed-only under #467
+(`bazel run //tools/ci:closeout_battery_qualification`; battery commands
+plus docs-ci gate pinned with CI wiring in `dogfood-freshness`; platform
+plus consumer plus release evidence stays owned gap; no Supported claim).
+
 - `build`: `bazel build //...` plus the adopt-rust `dx_dev` smoke
   (`bazel build //examples/adopt-rust/... --config=dx_dev`) for
   `local_path_override` + `dx_dev` wiring (issue #407, normal CI, no nested Bazel).
@@ -206,8 +211,9 @@ scope). The host matrix across these hosts is pinned by `bazel run
   `:helper_qualification`, `:clap_tokenizer_qualification`,
   `:hello_smoke_qualification`, `:parser_sample_qualification`,
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
-  best-effort), `:windows_qualification`, and `:ci_matrix_qualification`
-  (host matrix, issue #415).
+  best-effort), `:windows_qualification`, `:ci_matrix_qualification`
+  (host matrix, issue #415), and `:closeout_battery_qualification`
+  (battery commands plus docs gate, issue #467).
 - `devcontainer-check`, `docs-ci`, `consumer-ci` (all-enabled self-call on
   linux_x86_64 plus linux_arm64 plus macos_arm64 plus macos_x86_64 plus
   windows_x86_64, issue
@@ -219,9 +225,9 @@ Green here (static guards on a clean tree, no full rebuild):
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `musl_qualification` 12/12, `macos_qualification` 12/12,
-`windows_qualification` 13/13, `ci_matrix_qualification` 14/14.
-Full `build`/`test` green is owned by CI on this tree; the last full-tree
-record is noted on the issue, not re-claimed here.
+`windows_qualification` 13/13, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
+Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
+battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
 
 Remaining reds stay owned gaps, not green claims:
 
