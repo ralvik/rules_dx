@@ -347,8 +347,11 @@ distribution (google-java-format and Checkstyle all-dependencies JARs, the
 PMD and SpotBugs binary distributions, the ktfmt with-dependencies JAR, the
 ktlint executable JAR) sharing the one managed JDK cohort runtime; no tool
 is reconstructed from Maven modules and no consumer runs an installer,
-solver, or compiler. Exact artifact versions, digests, and adapter
-qualification remain pending under issue #416 (live successor to closed #307
+solver, or compiler. Exact versions plus rule-sets qualified seed-only under issue #485
+(`bazel run //tools/ci:jvm_quality_qualification` with
+`java/tests/fixtures/jvm_quality/pins.bzl` over upstream built-in defaults
+with no hidden preset); digests plus adapter mappings stay owned under issue #416
+(live successor to closed #307
 for this cohort) and no adapter claims `java` or `kotlin` yet
 (open under issue #416).
 

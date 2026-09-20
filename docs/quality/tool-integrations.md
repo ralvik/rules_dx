@@ -229,8 +229,11 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   remain open work under issue #416 itemized here, not silently dropped. Formatters (google-java-format, ktfmt
   with `--google-style`/`--kotlinlang-style`, ktlint `--format`) are whole-file rewrite with
   check/diff mode; PMD, Checkstyle, SpotBugs, and detekt are check-only with the provisional
-   sandbox-apply-and-diff fix flow. Versions are observations, not pins; recheck latest stable
-  at implementation (see the JVM rows in
+   sandbox-apply-and-diff fix flow. Versions qualified seed-only under issue #485
+  (`java/tests/fixtures/jvm_quality/pins.bzl` via `bazel run //tools/ci:jvm_quality_qualification`
+  over upstream built-in defaults with no hidden preset); digests stay observations, not pins,
+  recheck latest stable at implementation; adapters stay owned under issue #416
+  (see the JVM rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
 - **Scala + .NET cohort (issue #417, provisional — no adapter claims `scala`, `csharp`, or
   `fsharp` yet):** managed JVM route for Scalafmt (compatible JVM artifact over the shared
