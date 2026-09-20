@@ -265,6 +265,27 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   platform issue — this cohort covers adapter behavior given a qualified toolchain. Versions
   are observations, not pins; recheck latest stable at implementation (see the Native rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
+- **Structured cohort (issue #419, provisional — no adapter claims `protobuf` or `qml` yet):**
+  checksummed native/self-contained artifact route for `buf` (self-contained per-platform
+  binaries with published checksums, no target compiler context, execution-platform lazy)
+  plus authoritative-toolchain route for qmlformat/qmllint from the Qt distribution
+  (Qt-last ordering decided; exact Qt distribution identity, licensing, and platform
+  artifact qualification remain pending).
+  Research notes (unproven mappings): `buf lint --error-format=json` emits JSONL
+  (`path,start_line,start_column,end_line,end_column,type,message` with `COMPILE` for
+  build errors; no SARIF in 1.71.0, so the native JSON parser is the faithful shape, never
+  SARIF ingestion) plus text `file:line:column:message`, with lint `STANDARD` versus
+  `MINIMAL`/`BASIC`/`COMMENTS`/`UNARY_RPC` rule selection and module-root-sensitive
+  `PACKAGE_DIRECTORY_MATCH` plus `--path`/`--exclude-path` scoping as open work itemized
+  here, not silently dropped; `buf format --diff --exit-code` unified diff plus `--write`
+  is whole-file rewrite with check/diff mode while `buf lint` is check-only with the
+  provisional sandbox-apply-and-diff fix flow; qmlformat writes stdout plus `-i` inplace
+  with `.qmlformat.ini` upward settings and `--ignore-settings` (including `--sort-imports`
+  and semicolon-rule behavior as open work); qmllint verifies syntax plus anti-patterns
+  with `--json <file>` (`-` for stdout) JSON carrying messages plus file/line/severity
+  plus `.qmllint.ini` and `//qmllint enable/disable` scoping as open work. Versions are
+  observations, not pins; recheck latest stable at implementation (see the Structured rows in
+  [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
 
 Candidate native filenames are `.buildifier.json`, `.taplo.toml`/`taplo.toml`, and `.vale.ini`.
 Freeze them in [Native Configuration](native-configuration.md#discovery) only with exact binding,
