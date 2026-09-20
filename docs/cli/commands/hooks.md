@@ -42,6 +42,11 @@ are implemented as specified here: managed shims only, unmanaged refusal; this i
 effective merged configuration and last-run timings per check. Native launcher shims
 cover hosts where shell hooks do not execute.
 
+Installation stays manual opt-in: neither `dx init` nor CI installs hooks, and CI
+never requires installed shims. `dx init` only scaffolds hook configuration; CI
+enforces the committed baseline directly and remains ground truth whether or not
+shims exist locally. Forcing hook installation in CI is rejected.
+
 Hook management and staged-file selection are the only exceptions to the common
 prohibition on product Git inspection. All product Git operations for hooks, including
 installation and staged selection, use hermetic managed Git, never ambient Git or a
