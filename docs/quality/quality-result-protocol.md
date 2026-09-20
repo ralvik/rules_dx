@@ -215,3 +215,12 @@ and per-result wiring fixtures live in `//quality/evaluator:quality_evaluator`
 (`bazel test //quality/evaluator/...`) with synthetic end-to-end evidence in
 `//quality/testdata`. CLI, BEP-ordering, and remote-materialization
 items land with their owners.
+
+## Qualification
+
+Core mappings qualified seed-only under issue #511
+(`quality/tests/fixtures/result_contract/pins.bzl` with `result_contract.expected` via
+`bazel run //tools/ci:result_contract_qualification`, bare contract rejected).
+Seed only: no platform, consumer, or release claim and no `Supported` claim; backends stay
+provisional. SPDX parsing plus emission and update aggregate exit codes stay owned under
+issue #511.

@@ -986,6 +986,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Quality core plus result contract harness (issue #511); see docs/quality/quality-result-protocol.md.
+sh_binary(
+    name = "result_contract_qualification",
+    srcs = ["result_contract_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "warnings_as_errors_testdata",
     srcs = glob(["testdata/warnings/**"]),
