@@ -222,5 +222,6 @@ Core mappings qualified seed-only under issue #511
 (`quality/tests/fixtures/result_contract/pins.bzl` with `result_contract.expected` via
 `bazel run //tools/ci:result_contract_qualification`, bare contract rejected).
 Seed only: no platform, consumer, or release claim and no `Supported` claim; backends stay
-provisional. SPDX parsing plus emission and update aggregate exit codes stay owned under
-issue #511.
+provisional. SPDX parsing plus quality-side emission and update aggregate exit codes stay owned
+under issue #511; audit SARIF run shape plus live SPDX emission are pinned under issue #632
+(see [Audit, Update, And Bazel Commands](../cli/commands/audit-update-bazel.md#dx-audit)).
