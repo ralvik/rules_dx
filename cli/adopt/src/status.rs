@@ -62,8 +62,9 @@ pub fn default_status_checks(pinned: &str) -> Vec<StatusCheck> {
         StatusCheck {
             name: "platform".to_owned(),
             status: "ok".to_owned(),
-            detail: "linux_x86_64 + linux_arm64 glibc plus static musl qualified".to_owned(),
-            hint: "see reusable-consumer matrix for macos/windows".to_owned(),
+            detail: "linux_x86_64 + linux_arm64 glibc plus static musl plus macos_arm64 qualified"
+                .to_owned(),
+            hint: "see reusable-consumer matrix for windows".to_owned(),
         },
         StatusCheck {
             name: "tools".to_owned(),
@@ -95,7 +96,7 @@ mod tests {
         // Golden pilot (issue #225): full-payload insta snapshot replaces
         // the contains-asserts; a MODULE_VERSION bump intentionally
         // updates this snapshot alongside the pin contract.
-        insta::assert_snapshot!(json, @r#"{"checks":[{"name":"toolchain","status":"ok","detail":"rust 1.98.0 via rules_rust","hint":"bazel build //..."},{"name":"platform","status":"ok","detail":"linux_x86_64 + linux_arm64 glibc plus static musl qualified","hint":"see reusable-consumer matrix for macos/windows"},{"name":"tools","status":"ok","detail":"bazel-resolved pinned tools","hint":"no ambient tools required"},{"name":"pin","status":"ok","detail":"dx 0.0.0 vs module 0.0.0","hint":"dx version --pin 0.0.0"}]}"#);
+        insta::assert_snapshot!(json, @r#"{"checks":[{"name":"toolchain","status":"ok","detail":"rust 1.98.0 via rules_rust","hint":"bazel build //..."},{"name":"platform","status":"ok","detail":"linux_x86_64 + linux_arm64 glibc plus static musl plus macos_arm64 qualified","hint":"see reusable-consumer matrix for windows"},{"name":"tools","status":"ok","detail":"bazel-resolved pinned tools","hint":"no ambient tools required"},{"name":"pin","status":"ok","detail":"dx 0.0.0 vs module 0.0.0","hint":"dx version --pin 0.0.0"}]}"#);
     }
 
     #[test]

@@ -193,10 +193,11 @@ else
 fi
 
 # Self-call smoke in ci.yml stays build-only with honest fixture limits,
-# on both qualified Linux hosts (seed plus arm64 native, issue #410).
+# on all qualified hosts (seed plus arm64 native plus macos arm64,
+# issues #410/#412).
 if grep -q -F -e 'consumer-ci (self-call reusable consumer workflow)' "$ci" &&
   grep -q -F -e 'disabled_checks: "lint,typecheck,format,generate,security-audit,license-audit,test,coverage"' "$ci" &&
-  grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\"]'" "$ci" &&
+  grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\"]'" "$ci" &&
   grep -q -F -e 'Only build is enabled' "$ci"; then
   ok
 else

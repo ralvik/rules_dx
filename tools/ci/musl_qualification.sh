@@ -59,8 +59,10 @@ else
   bad "platform.rs refusal lost the static-musl delivered plus dynamic-out-of-scope record"
 fi
 
-# dx status names the static-musl qualification.
-if grep -q -F -e 'glibc plus static musl qualified' cli/adopt/src/status.rs; then
+# dx status names the static-musl qualification (macOS arm64 may append
+# `plus macos_arm64` under issue #412; the static-musl fragment stays).
+if grep -q -F -e 'glibc plus static musl' cli/adopt/src/status.rs &&
+  grep -q -F -e 'qualified' cli/adopt/src/status.rs; then
   ok
 else
   bad "adopt status lost the static-musl qualified detail (issue #411)"
@@ -96,7 +98,8 @@ else
   bad "native-toolchains lost the static-musl closure plus exec/target plus corpus record (issue #411)"
 fi
 
-# Per-cell coverage registry: four qualified, two unqualified, no union.
+# Per-cell coverage registry: musl pair qualified (five qualified plus one
+# unqualified after issue #412), no union.
 if [[ -f "tools/coverage/musl-x86_64-inventory.txt" ]] &&
   [[ -f "tools/coverage/musl-arm64-inventory.txt" ]] &&
   grep -q -F -e 'qualified linux_x86_64_musl tools/coverage/musl-x86_64-inventory.txt' tools/coverage/cells.txt &&
