@@ -45,7 +45,8 @@
 //! deterministic and unit-testable without network access or any
 //! auditor binary. Version-range narrowing uses upstream semantics
 //! through [`crate::exception::version_in_scope`] for semver
-//! ecosystems (Cargo/npm/Go), Maven-native ordering plus interval
+//! ecosystems (Cargo/npm, plus Go via [`go_in_scope`] which normalizes
+//! `go.mod` `v` prefixes first), Maven-native ordering plus interval
 //! matching for Maven (issue #623), and NuGet-native ordering plus
 //! interval matching for NuGet (issue #624), exactly like the
 //! exception lifecycle deferral in [`crate::exception`].
@@ -175,19 +176,58 @@ pub fn canonical_severity(severity: &str) -> String {
 }
 
 /// Whether one locked package version falls in one advisory's affected
-/// scope. Cargo/npm/Go use upstream Cargo-flavor semver via
-/// [`version_in_scope`]; Maven uses Maven-native ordering plus interval
-/// matching via [`maven_in_scope`]; NuGet uses NuGet-native ordering
-/// plus interval matching via [`nuget_in_scope`]. Unparseable scopes
-/// or versions fail closed to `false` for semver, Maven, and NuGet
-/// sets, and to exact-match only for other sets.
+/// scope. Cargo/npm use upstream Cargo-flavor semver via
+/// [`version_in_scope`]; Go uses the same semantics via [`go_in_scope`]
+/// (which normalizes `go.mod` `v` prefixes first); Maven uses
+/// Maven-native ordering plus interval matching via [`maven_in_scope`];
+/// NuGet uses NuGet-native ordering plus interval matching via
+/// [`nuget_in_scope`]. Unparseable scopes or versions fail closed to
+/// `false` for semver, Maven, and NuGet sets, and to exact-match only
+/// for other sets.
 pub fn version_affected(set: &str, scope: &str, version: &str) -> bool {
     match set {
-        "cargo" | "npm" | "go" => version_in_scope(scope, version),
+        "cargo" | "npm" => version_in_scope(scope, version),
+        "go" => go_in_scope(scope, version),
         "maven" => maven_in_scope(scope, version),
         "nuget" => nuget_in_scope(scope, version),
         _ => scope.trim() == version.trim() && !scope.trim().is_empty(),
     }
+}
+
+/// Strip one Go `v` prefix where a version token starts: at the text
+/// start or after a comparator, separator, or opening boundary, and only
+/// before a digit, so words containing `v` never mangle. Both advisory
+/// scopes (`>=v1.0.0, <v2.0.0`) and locked versions (`v0.6.0`,
+/// pseudo-versions, `+incompatible` suffixes) normalize to the bare
+/// Cargo-flavor semver the shared matcher owns.
+fn strip_go_v(text: &str) -> String {
+    let chars: Vec<char> = text.chars().collect();
+    let mut out = String::with_capacity(text.len());
+    for (index, current) in chars.iter().enumerate() {
+        if *current == 'v' || *current == 'V' {
+            let prev_ok = index == 0
+                || matches!(
+                    chars[index - 1],
+                    ' ' | '\t' | ',' | '<' | '>' | '=' | '~' | '^' | '!' | '('
+                );
+            let next_ok = chars
+                .get(index + 1)
+                .is_some_and(|next| next.is_ascii_digit());
+            if prev_ok && next_ok {
+                continue;
+            }
+        }
+        out.push(*current);
+    }
+    out
+}
+
+/// Go affected-scope matching: [`strip_go_v`] normalization on both the
+/// advisory scope and the locked version, then upstream Cargo-flavor
+/// semver via [`version_in_scope`]. Unparseable inputs fail closed to
+/// `false`, never a false positive.
+pub fn go_in_scope(scope: &str, version: &str) -> bool {
+    version_in_scope(&strip_go_v(scope), &strip_go_v(version))
 }
 
 /// Maven version token after normalization: numeric tokens compare
@@ -956,11 +996,13 @@ fn nuget_interval_matches(
 }
 
 /// Set-aware exception version narrowing: semver sets use
-/// [`version_in_scope`], Maven uses [`maven_in_scope`], NuGet uses
+/// [`version_in_scope`], Go uses [`go_in_scope`] (`v`-prefix
+/// normalization, same semver), Maven uses [`maven_in_scope`], NuGet uses
 /// [`nuget_in_scope`], and remaining sets stay exact-match.
 fn exception_version_in_scope(set: &str, scope: &str, version: &str) -> bool {
     match set {
-        "cargo" | "npm" | "go" => version_in_scope(scope, version),
+        "cargo" | "npm" => version_in_scope(scope, version),
+        "go" => go_in_scope(scope, version),
         "maven" => maven_in_scope(scope, version),
         "nuget" => nuget_in_scope(scope, version),
         _ => scope.trim() == version.trim() && !scope.trim().is_empty(),
@@ -1173,6 +1215,8 @@ mod tests {
         assert!(!version_affected("cargo", ">=1.0.0, <2.0.0", "2.0.0"));
         assert!(version_affected("npm", "^18.0.0", "18.2.0"));
         assert!(version_affected("go", ">=1.0.0, <2.0.0", "1.5.0"));
+        // Go `v` prefixes normalize on both sides (see
+        // `go_scopes_normalize_v_prefix` for the full matrix).
         // Maven uses Maven-native intervals; bare versions use Maven
         // equality (so `1.0` matches `1.0.0`).
         assert!(version_affected("maven", "1.2.0", "1.2.0"));
@@ -1196,6 +1240,36 @@ mod tests {
         assert!(version_affected("nuget", "[1.0]", "1.0.0"));
         assert!(!version_affected("nuget", ">=1.0.0", "1.2.0"));
         assert!(!version_affected("nuget", "", "1.0.0"));
+    }
+
+    #[test]
+    fn go_scopes_normalize_v_prefix() {
+        // `v` on the locked version, the advisory scope, or both.
+        assert!(go_in_scope(">=1.0.0, <2.0.0", "v1.5.0"));
+        assert!(go_in_scope(">=v1.0.0, <v2.0.0", "1.5.0"));
+        assert!(go_in_scope(">=v1.0.0, <v2.0.0", "v1.5.0"));
+        assert!(!go_in_scope(">=v1.0.0, <v2.0.0", "v2.0.0"));
+        assert!(version_affected("go", ">=v1.0.0, <v2.0.0", "v1.5.0"));
+        assert!(!version_affected("go", ">=v1.0.0, <v2.0.0", "v2.0.0"));
+        // Caret and comparator shapes normalize too.
+        assert!(go_in_scope("^v1.2.0", "v1.9.0"));
+        assert!(!go_in_scope("^v1.2.0", "v2.0.0"));
+        assert!(go_in_scope("=v1.2.0", "v1.2.0"));
+        assert!(!go_in_scope("=v1.2.0", "v1.2.1"));
+        // Pseudo-versions and `+incompatible` suffixes stay assessable:
+        // the `v` strips and the remainder parses as semver.
+        assert!(go_in_scope(
+            ">=v0.0.0-20250930140053-2eb4fccefb52, <v99.0.0",
+            "v0.0.0-20250930140053-2eb4fccefb52"
+        ));
+        assert!(go_in_scope(">=v1.0.0, <v3.0.0", "v2.0.0+incompatible"));
+        // Words containing `v` never mangle; garbage fails closed.
+        assert_eq!(strip_go_v("very"), "very");
+        assert_eq!(strip_go_v(">=v1.0.0, <v2.0.0"), ">=1.0.0, <2.0.0");
+        assert!(!go_in_scope("not a range", "v1.2.0"));
+        assert!(!go_in_scope(">=v1.0.0", "banana"));
+        assert!(!go_in_scope("", "v1.0.0"));
+        assert!(!go_in_scope(">=v1.0.0", ""));
     }
 
     #[test]

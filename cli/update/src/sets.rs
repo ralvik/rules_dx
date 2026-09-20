@@ -21,8 +21,12 @@
 //! - NuGet declares `third_party/dotnet/paket.dependencies`, lock
 //!   `third_party/dotnet/paket.lock`, derived hub under
 //!   `third_party/dotnet/deps` via the documented `paket2bazel` run.
-//! - Go has no `go.mod` in the main workspace: an empty set that always
-//!   succeeds with no launch and no file changes.
+//! - Go is the single-module `go_deps.from_file` lock: manifest
+//!   `third_party/go/go.mod`, lock `third_party/go/go.mod` plus
+//!   `third_party/go/go.sum`. Versions intentionally track Gazelle's
+//!   `go.mod` for the shared extension (see
+//!   `go/tests/fixtures/godeps/pins.bzl`); explicit changes widen via
+//!   `dx bump` plus the pinned SDK tidy.
 //!
 //! Independence: the five sets use distinct lockfiles/resolver workspaces,
 //! so they are independent for continuation. Sets sharing a lockfile or
@@ -34,7 +38,7 @@
 pub enum SetId {
     /// Rust/Cargo via `crate_universe` (`rust/tests/fixtures/hello/Cargo.lock`).
     Cargo,
-    /// Empty Go set (no `go.mod` in the main workspace).
+    /// Go via `go_deps.from_file` (`third_party/go/go.mod` plus `go.sum`).
     Go,
     /// JVM/Maven via `rules_jvm_external` (`third_party/jvm/maven_install.json`).
     Maven,
@@ -81,7 +85,7 @@ impl SetId {
     pub fn manifests(self) -> &'static [&'static str] {
         match self {
             SetId::Cargo => &["rust/tests/fixtures/hello/Cargo.toml"],
-            SetId::Go => &[],
+            SetId::Go => &["third_party/go/go.mod"],
             SetId::Maven => &["MODULE.bazel"],
             SetId::Npm => &["package.json"],
             SetId::NuGet => &["third_party/dotnet/paket.dependencies"],
@@ -95,7 +99,7 @@ impl SetId {
                 "rust/tests/fixtures/hello/Cargo.lock",
                 "cargo-bazel-lock.json",
             ],
-            SetId::Go => &[],
+            SetId::Go => &["third_party/go/go.mod", "third_party/go/go.sum"],
             SetId::Maven => &["third_party/jvm/maven_install.json"],
             SetId::Npm => &["pnpm-lock.yaml"],
             SetId::NuGet => &["third_party/dotnet/paket.lock", "third_party/dotnet/deps"],
@@ -108,7 +112,9 @@ impl SetId {
             SetId::Cargo => {
                 "crate_universe repin (CARGO_BAZEL_REPIN=1 bazel build //rust/tests/fixtures/hello:hello)"
             }
-            SetId::Go => "empty set (no go.mod in the main workspace; no-op success)",
+            SetId::Go => {
+                "pinned go_deps.from_file module lock (pins track Gazelle; explicit widen via `dx bump` plus the pinned SDK tidy)"
+            }
             SetId::Maven => "rules_jvm_external pin (REPIN=1 bazel run @maven//:pin)",
             SetId::Npm => "Bazel-pinned pnpm update (bazel run @pnpm//:pnpm -- update)",
             SetId::NuGet => {
@@ -158,12 +164,16 @@ mod tests {
     }
 
     #[test]
-    fn go_is_empty_while_others_own_locks() {
-        assert!(SetId::Go.manifests().is_empty());
-        assert!(SetId::Go.locks().is_empty());
-        for set in [SetId::Cargo, SetId::Maven, SetId::Npm, SetId::NuGet] {
+    fn every_set_owns_manifests_and_locks() {
+        for set in SetId::ALL {
+            assert!(!set.manifests().is_empty(), "{set:?} owns a manifest");
             assert!(!set.locks().is_empty(), "{set:?} owns a lock");
         }
+        assert_eq!(SetId::Go.manifests(), &["third_party/go/go.mod"]);
+        assert_eq!(
+            SetId::Go.locks(),
+            &["third_party/go/go.mod", "third_party/go/go.sum"]
+        );
     }
 
     #[test]

@@ -5,9 +5,10 @@
 # decision record:
 # - decided: npm selective SUPPORTED via the Bazel-pinned pnpm
 #   (`bazel run @pnpm//:pnpm -- update [<pkg>...]`); Cargo, Maven, NuGet,
-#   and Go selective WONT-FIX in V1 (whole-lock repin only, empty Go set),
-#   each failing closed as `unsupported` with its full-set hint and never
-#   silently substituting a full update;
+#   and Go selective WONT-FIX in V1 (whole-lock repin only, Go pins track
+#   Gazelle for the shared extension), each failing closed as
+#   `unsupported` with its full-set hint and never silently substituting
+#   a full update;
 # - fixtures: `cli/update/tests/fixtures/selective_update/` (`pins.bzl`
 #   plus `selective_update.expected`) pins dispositions, approved argv,
 #   hints, bump follow-ups, and rejected routes;
@@ -100,7 +101,7 @@ if grep -q -F -e 'bazel run @pnpm//:pnpm -- update' "$pins" &&
   grep -q -F -e 'use `dx update cargo` for the set' "$pins" &&
   grep -q -F -e 'use `dx update maven` for the set' "$pins" &&
   grep -q -F -e 'use `dx update nuget` for the set' "$pins" &&
-  grep -q -F -e 'no go.mod; there are no Go packages to select' "$pins" &&
+  grep -q -F -e 'go pins track Gazelle for the shared go_deps extension' "$pins" &&
   grep -q -F -e 'silent full-update substitution rejected' "$pins" &&
   grep -q -F -e 'qualified seed-only under issue #583' "$pins"; then
   ok
@@ -149,7 +150,8 @@ if grep -q -F -e '(SetId::Cargo, SetRequest::Packages(_))' "$backend" &&
   grep -q -F -e 'non_npm_selective_reports_unsupported_never_full' "$backend" &&
   grep -q -F -e 'use `dx update cargo` for the set' "$backend" &&
   grep -q -F -e 'use `dx update maven` for the set' "$backend" &&
-  grep -q -F -e 'use `dx update nuget` for the set' "$backend"; then
+  grep -q -F -e 'use `dx update nuget` for the set' "$backend" &&
+  grep -q -F -e 'go pins track Gazelle for the shared go_deps extension' "$backend"; then
   ok
 else
   bad "backend.rs lost its four wont-fix Unsupported arms with full-set hints under #583"

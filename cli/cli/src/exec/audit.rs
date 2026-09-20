@@ -104,7 +104,7 @@ fn parse_locked_for_set(
             dx_update::sets::SetId::Npm => dx_audit::locks::parse_pnpm_lock(text),
             dx_update::sets::SetId::Maven => dx_audit::locks::parse_maven_install(text),
             dx_update::sets::SetId::NuGet => dx_audit::locks::parse_paket_lock(text),
-            dx_update::sets::SetId::Go => Ok(Vec::new()),
+            dx_update::sets::SetId::Go => dx_audit::locks::parse_go_mod(text),
         }
         .map_err(|detail| format!("could not parse {rel}: {detail}"))?;
         all.append(&mut packages);
@@ -606,7 +606,11 @@ fn run_license(
             if dx_audit::license_policy::validate_license_exception(exception, today).is_err() {
                 continue;
             }
-            if !dx_audit::exception::version_in_scope(&exception.versions, &licensed.version) {
+            if !dx_audit::vuln::version_affected(
+                &licensed.set,
+                &exception.versions,
+                &licensed.version,
+            ) {
                 continue;
             }
             approved_hit = true;
@@ -1185,9 +1189,20 @@ mod tests {
             "third_party/dotnet/paket.lock",
             "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
         );
+        write_go_mod(harness);
         harness.write_source(
             "licenses.toml",
             "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n",
+        );
+    }
+
+    /// Minimal `go_deps.from_file` module lock for live-audit harnesses:
+    /// the Go set is always assessed (never an empty clean), so every
+    /// repository-wide audit fixture must carry it.
+    fn write_go_mod(harness: &Harness) {
+        harness.write_source(
+            "third_party/go/go.mod",
+            "module rules_dx/third_party/go\n\ngo 1.24.12\n\nrequire (\n\tgithub.com/bazelbuild/buildtools v0.0.0-20250930140053-2eb4fccefb52 // indirect\n\tgithub.com/google/go-cmp v0.6.0\n\tgithub.com/pmezard/go-difflib v1.0.0\n)\n",
         );
     }
 
@@ -1231,6 +1246,7 @@ mod tests {
                 "third_party/dotnet/paket.lock",
                 "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
             );
+            write_go_mod(harness);
         });
         assert_eq!(code, 0, "{out}{err}");
         assert!(out.contains("Running audit security for //..."), "{out}");
@@ -1256,6 +1272,7 @@ mod tests {
                 "third_party/dotnet/paket.lock",
                 "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
             );
+            write_go_mod(harness);
         });
         assert_eq!(code, 1, "{out}{err}");
         assert!(err.contains("audit_failed"), "{err}");
@@ -1278,10 +1295,30 @@ mod tests {
                 "third_party/dotnet/paket.lock",
                 "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
             );
+            write_go_mod(harness);
         });
         assert_eq!(code, 1, "{err}");
         assert!(err.contains("audit_failed"), "{err}");
         assert!(err.contains("incomplete"), "{err}");
+    }
+
+    #[test]
+    fn audit_live_go_advisory_findings_fail_instead_of_empty_clean() {
+        let runner = AuditRunner::clean();
+        let (code, _out, err) = run_with(
+            &["audit", "security", "//go/tests/fixtures/hello:hello"],
+            &runner,
+            &|harness| {
+                write_go_mod(harness);
+                harness.write_source(
+                    ".dx/advisory/go.json",
+                    r#"[{"id":"GHSA-go-test-0001","package":"github.com/google/go-cmp","versions":">=v0.5.0, <v0.7.0","severity":"high","fixed":["v0.7.0"],"set":"go"}]"#,
+                );
+            },
+        );
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("audit_failed"), "{err}");
+        assert!(err.contains("1 vulnerability findings"), "{err}");
     }
 
     #[test]
@@ -1328,7 +1365,17 @@ mod tests {
         let (code, out, err) = run_with(
             &["audit", "license", "//go/tests/fixtures/hello:hello"],
             &runner,
-            &|_harness| {},
+            &|harness| {
+                write_go_mod(harness);
+                // The Go set reports `UNKNOWN` licenses (V1, pending
+                // per-ecosystem qualification): scope the root internal so
+                // the inventory stays clean, like `clean_workspace` does
+                // for cargo plus MIT.
+                harness.write_source(
+                    "licenses.toml",
+                    "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[distribution]\ninternal = [\"//go/tests/fixtures/hello:hello\"]\n",
+                );
+            },
         );
         assert_eq!(code, 0, "{out}{err}");
         assert!(out.contains("audit license: clean"), "{out}");
@@ -1359,6 +1406,7 @@ mod tests {
                     "third_party/dotnet/paket.lock",
                     "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
                 );
+                write_go_mod(harness);
             },
         );
         assert_eq!(code, 0, "{out}{err}");
@@ -1395,6 +1443,7 @@ mod tests {
                 "third_party/dotnet/paket.lock",
                 "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
             );
+            write_go_mod(harness);
             harness.write_source(
                 "cargo-bazel-lock.json",
                 r#"{"packages": {"serde 1.0.100": {"license": "MIT"}}}"#,

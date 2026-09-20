@@ -427,7 +427,9 @@ fn success_line(set: dx_update::sets::SetId, request: &dx_update::selector::SetR
             dx_update::sets::SetId::NuGet => {
                 "updated nuget (third_party/dotnet/paket.lock)".to_owned()
             }
-            dx_update::sets::SetId::Go => "updated go (nothing to update)".to_owned(),
+            dx_update::sets::SetId::Go => {
+                "updated go (pinned module lock; no-op success)".to_owned()
+            }
         },
         dx_update::selector::SetRequest::Packages(packages) => {
             let locks = set.locks().join(", ");
@@ -592,7 +594,10 @@ mod tests {
         assert!(out.contains("updated npm ("), "{out}");
         assert!(out.contains("updated maven ("), "{out}");
         assert!(out.contains("updated nuget ("), "{out}");
-        assert!(out.contains("updated go (nothing to update)"), "{out}");
+        assert!(
+            out.contains("updated go (pinned module lock; no-op success)"),
+            "{out}"
+        );
         assert!(out.contains("5 succeeded, 0 failed, 0 blocked"), "{out}");
         assert_eq!(err, "", "{err}");
         // Go is a no-op with no launch; the four Bazel backends launch.
@@ -646,7 +651,10 @@ mod tests {
         let (code, out, err) = run_with(&["update", "//go/tests/fixtures/hello:hello"], &runner);
         assert_eq!(code, 0, "{out}{err}");
         assert!(out.contains("Running update for go"), "{out}");
-        assert!(out.contains("updated go (nothing to update)"), "{out}");
+        assert!(
+            out.contains("updated go (pinned module lock; no-op success)"),
+            "{out}"
+        );
         assert!(runner.calls.borrow().is_empty());
     }
 

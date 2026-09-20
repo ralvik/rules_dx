@@ -50,7 +50,9 @@ depth option, not v1 scope. The
 reconciled with source-class applicability in
 [Quality Sources](../../quality/quality-sources.md).
 Dependency-vulnerability matching runs locally per set (Cargo, npm, Maven,
-NuGet, Go empty) with no lockfile or inventory upload.
+NuGet, Go) with no lockfile or inventory upload. Go reads the
+`go_deps.from_file` module lock (`third_party/go/go.mod`); `go.sum`
+carries hashes only and is never an audit input.
 With no scope, audit selects `//...`, while each audit adapter remains responsible
 for its declared applicability. Source-audit adapters use the same provider-class,
 adapter-class, derived workspace-policy, and capability intersection as convergence stages,
@@ -106,15 +108,22 @@ offline contract; `paket.lock` `GIT` entries report incomplete rather than dropp
 unidentified private packages stay incomplete (auditor-owned; no upstream identity by
 definition, callers mark `is_private` explicitly). Maven range narrowing is
 implemented (issue #623, pinned in `dx_audit::vuln`), as is NuGet range narrowing
-(issue #624, pinned in `dx_audit::vuln`).
+(issue #624, pinned in `dx_audit::vuln`), as is Go `go.mod` wiring plus
+`v`-prefix range narrowing (issue #626, pinned in `dx_audit::locks` plus
+`dx_audit::vuln`).
 
 Report known vulnerabilities whether or not a fixed version is available, and apply the same
 severity threshold and failure policy in both cases. Lack of a fix must not suppress a finding,
 downgrade its severity, or exempt it from failure. Preserve upstream remediation information when
 available, without treating a dependency-version upgrade as an automatic source fix or mutating
-dependencies during audit. Advisory scope uses upstream Cargo-flavor semver for Cargo/npm/Go,
-Maven-native ordering plus intervals for Maven (issue #623), and NuGet-native ordering plus
-intervals for NuGet (issue #624), pinned in `dx_audit::vuln`. Maven scopes accept bare versions
+dependencies during audit. Advisory scope uses upstream Cargo-flavor semver for Cargo/npm,
+Go via `v`-prefix normalization (issue #626), Maven-native ordering plus intervals
+for Maven (issue #623), and NuGet-native ordering plus
+intervals for NuGet (issue #624), pinned in `dx_audit::vuln`. Go scopes normalize
+one leading `v` on version tokens in both the advisory scope and the locked version
+(`>=v1.0.0, <v2.0.0` matches `v1.5.0`), then Cargo-flavor semver; pseudo-versions
+plus `+incompatible` suffixes stay assessable and malformed scopes fail closed
+to no-match. Maven scopes accept bare versions
 (Maven equality, so `1.0` matches `1.0.0`) and bracketed intervals (`[1.0,2.0)`, `(,1.0]`,
 `[1.5,)`, `[1.0]`, unions like `(,1.0],[1.2,)`), with inclusive `[`/`]` versus exclusive
 `(`/`)` bounds; malformed scopes fail closed to no-match. NuGet scopes accept bare versions
@@ -182,7 +191,7 @@ contract. Per-family reporting rides text plus JSON `notice`/`error` events with
 Use per-root (per-dependency) attribution over
 conservative whole-lock strictness, without silently narrowing complete-lock audit coverage.
 Per-ecosystem license identities are Cargo via `cargo-bazel-lock.json` plus `UNKNOWN` for
-npm/Maven/NuGet V1; policy-table loading reads committed `licenses.toml` (default table
+npm/Maven/NuGet/Go V1; policy-table loading reads committed `licenses.toml` (default table
 when absent, matching the example below) and SPDX 2.3 JSON renders one document per
 invocation as specified.
 
@@ -312,7 +321,7 @@ with fixtures in `cli/update/tests/fixtures/selective_update/`:
 | cargo | Wont-fix (`unsupported`; use `dx update cargo`) | Supported (`CARGO_BAZEL_REPIN=1` repin) |
 | maven | Wont-fix (`unsupported`; use `dx update maven`) | Supported (`REPIN=1` pin) |
 | nuget | Wont-fix (`unsupported`; use `dx update nuget`) | Supported (`paket2bazel` regen) |
-| go | Wont-fix (`unsupported`; empty set, no `go.mod`) | No-op success |
+| go | Wont-fix (`unsupported`; pinned module lock tracks Gazelle; widen via `dx bump`) | No-op success (pinned module lock) |
 
 When a set is both fully and package selected, the full update wins.
 
@@ -351,7 +360,7 @@ exits `0`; any failed set fails the invocation overall with exit `1`, following 
 per-set report, never a per-set code. Backend operation boundaries are pinned in
 `dx_update::backend` (Cargo `CARGO_BAZEL_REPIN=1 bazel build //rust/tests/fixtures/hello:hello`, npm
 `bazel run @pnpm//:pnpm -- update`, Maven `REPIN=1 bazel run @maven//:pin`, NuGet
-`paket2bazel` regeneration, Go no-op) and per-set success/failure/blocked reporting rides
+`paket2bazel` regeneration, Go pinned no-op) and per-set success/failure/blocked reporting rides
 text plus JSON `notice`/`error` events with `command_finished`. Continued updates do not imply
 parallel execution or a new mutation-event API. Update emits no v1 `change` or `mutation` events
 and no `changes`/`mutations`/`diagnostics` counts in any mode (wont-fix, issue #586,
@@ -442,7 +451,7 @@ pins intact); bump never forces every transitive to newest.
 
 Manifests widened atomically (one file per invocation): `.bazelversion` or
 `MODULE.bazel` (Bazel, file-only), `rust/tests/fixtures/hello/Cargo.toml` (Cargo),
-`package.json` (npm), `go/go.mod` (Go), `.github/workflows/ci.yml`
+`package.json` (npm), `third_party/go/go.mod` (Go), `.github/workflows/ci.yml`
 (GitHub Actions, SHA-plus-tag pins). Lock refresh stays manual and resolver-owned
 through `dx update <set>` for Cargo/npm/Go
 (`dx_bump::BumpSet::needs_update_refresh`): `dx update cargo` (full; Cargo

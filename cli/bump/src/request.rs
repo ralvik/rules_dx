@@ -194,7 +194,7 @@ impl BumpRequest {
             }
             BumpSet::Cargo => "rust/tests/fixtures/hello/Cargo.toml",
             BumpSet::GithubActions => ".github/workflows/ci.yml",
-            BumpSet::Go => "go/go.mod",
+            BumpSet::Go => "third_party/go/go.mod",
             BumpSet::Npm => "package.json",
         }
     }
@@ -646,7 +646,7 @@ fn plan_go_mod(content: &str, package: &str, version: &WidenVersion) -> Result<S
         WidenVersion::Semver(version) => format!("v{version}"),
         _ => {
             return Err(BumpError::UnsupportedManifest {
-                manifest: "go/go.mod".to_owned(),
+                manifest: "third_party/go/go.mod".to_owned(),
                 reason: "expected exact semver".to_owned(),
             });
         }
@@ -671,7 +671,7 @@ fn plan_go_mod(content: &str, package: &str, version: &WidenVersion) -> Result<S
                 }
                 None => {
                     return Err(BumpError::UnsupportedManifest {
-                        manifest: "go/go.mod".to_owned(),
+                        manifest: "third_party/go/go.mod".to_owned(),
                         reason: format!("{package:?} has no replaceable v-prefixed version token"),
                     });
                 }
@@ -682,11 +682,11 @@ fn plan_go_mod(content: &str, package: &str, version: &WidenVersion) -> Result<S
     match matches {
         1 => Ok(out),
         0 => Err(BumpError::NotFound {
-            manifest: "go/go.mod".to_owned(),
+            manifest: "third_party/go/go.mod".to_owned(),
             package: package.to_owned(),
         }),
         count => Err(BumpError::Ambiguous {
-            manifest: "go/go.mod".to_owned(),
+            manifest: "third_party/go/go.mod".to_owned(),
             package: package.to_owned(),
             count,
         }),
@@ -1250,7 +1250,7 @@ mod tests {
         assert!(!bump.needs_update_refresh());
 
         let bump = BumpRequest::parse("go:example.com/mod", "1.2.3").expect("go");
-        assert_eq!(bump.target_manifest(), "go/go.mod");
+        assert_eq!(bump.target_manifest(), "third_party/go/go.mod");
     }
 
     #[test]

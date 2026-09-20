@@ -3,7 +3,7 @@ npm selective supported (bazel run @pnpm//:pnpm -- update [<pkg>...])
 cargo selective wont-fix (whole-lock crate_universe repin; use `dx update cargo`)
 maven selective wont-fix (whole-lock rules_jvm_external pin; use `dx update maven`)
 nuget selective wont-fix (whole-folder paket2bazel regen; use `dx update nuget`)
-go selective wont-fix (empty set, no go.mod; no packages to select)
+go selective wont-fix (pinned module lock tracks Gazelle; widen via `dx bump`)
 silent full-update substitution rejected
 private per-package emulation rejected
 bump follow-up manual (dx update cargo, dx update npm:<pkg> or npm, dx update go)

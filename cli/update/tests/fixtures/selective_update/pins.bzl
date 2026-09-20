@@ -18,13 +18,13 @@ SELECTIVE_NPM_ARGV = "bazel run @pnpm//:pnpm -- update [<pkg>...]"
 SELECTIVE_CARGO_FULL = "CARGO_BAZEL_REPIN=1 bazel build //rust/tests/fixtures/hello:hello"
 SELECTIVE_MAVEN_FULL = "REPIN=1 bazel run @maven//:pin"
 SELECTIVE_NUGET_FULL = "bazel run @rules_dotnet//tools/paket2bazel -- --dependencies-file third_party/dotnet/paket.dependencies --output-folder third_party/dotnet/deps"
-SELECTIVE_GO_FULL = "noop (no go.mod in the main workspace)"
+SELECTIVE_GO_FULL = "noop (pinned module lock tracks Gazelle)"
 
 # Fail-closed hints (selective never widens to full silently).
 SELECTIVE_CARGO_HINT = "use `dx update cargo` for the set"
 SELECTIVE_MAVEN_HINT = "use `dx update maven` for the set"
 SELECTIVE_NUGET_HINT = "use `dx update nuget` for the set"
-SELECTIVE_GO_HINT = "the main workspace has no go.mod; there are no Go packages to select"
+SELECTIVE_GO_HINT = "go pins track Gazelle for the shared go_deps extension; widen explicitly via `dx bump gomod:<module> <version>`"
 
 # Bump follow-up stays manual and resolver-owned.
 BUMP_FOLLOWUP_CARGO = "dx update cargo"
