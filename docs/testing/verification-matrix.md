@@ -272,6 +272,8 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   plus fixture evidence, issue #504),
   `:remediation_bounds_qualification` (bounded remediation pins
   plus fixture evidence, issue #505),
+  `:layer2_opens_qualification` (Layer-2 adapter-less plus composition plus
+  depcheck pins plus fixture evidence, issue #510),
   `:quality_taxonomy_qualification` (taxonomy execution pins plus
   fixture evidence, issue #512),
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
@@ -289,7 +291,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `consumer_ci_qualification` 43/43, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
-<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `remediation_bounds_qualification` 16/16, `quality_taxonomy_qualification` 17/17, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24, `coverage_qualification` 33/33.
+<<`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `remediation_bounds_qualification` 16/16, `layer2_opens_qualification` 16/16, `quality_taxonomy_qualification` 17/17, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24, `coverage_qualification` 33/33.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
 
@@ -776,6 +778,25 @@ Remaining reds stay owned gaps, not green claims:
   #499, routes qualified seed-only under #504; platform plus consumer plus
   release evidence stays owned gap; no Supported claim
   (`remediation_bounds_qualification` 16/16)).
+- Layer-2 adapter-less plus composition plus depcheck with fixture evidence
+  qualified seed-only under issue #510
+  (`bazel run //tools/ci:layer2_opens_qualification`;
+  Go plus Java plus Kotlin plus Scala plus C# plus F# plus C++ Layer-2
+  Open adapter-less with no adapter claim plus no runner-matrix cells plus
+  parity deferred, Vue plus Svelte plus Astro plus MDX regions
+  classification-only with no adapter claim plus no matrix cells plus no
+  curated defaults, composition evidence in `examples/mixed/hello/` plus
+  `gazelle/mixed/` with one wrapper per container plus shared helper plus
+  no framework-to-framework imports plus disjoint partition, Depcheck Open
+  for frameworks with framework-composition depcheck staying with the JS/TS
+  pnpm route, required-core plus admitted fixtures delivered in
+  `tools/depcheck/` under #22, pinned in
+  `quality/tests/fixtures/layer2_opens/pins.bzl` with
+  `layer2_opens.expected`; Closed #303 only, #416-420 adapters partially
+  with digests plus adapters staying owned, adapter-less as pass rejected;
+  backends stay provisional; platform plus consumer plus release evidence
+  stays owned gap; no Supported claim
+  (`layer2_opens_qualification` 16/16)).
 - Per-cell non-seed coverage plus Codecov opt-in plus remote evidence
   with fixture evidence qualified under #507
   (`bazel run //tools/ci:coverage_qualification`;
