@@ -1052,6 +1052,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:godeps_qualification
       - name: Audit C/C++ hermetic qualification (issue #484 sha256-integrity plus no-system-package pins plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:cc_hermetic_qualification
+      - name: Audit JVM quality qualification (issue #485 versions plus rule-sets pins plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:jvm_quality_qualification
       - name: Write job summary
         if: always()
         run: |

@@ -219,7 +219,10 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   `:scalatest_qualification` (ScalaTest 3.2.20 pins plus fixture evidence,
   issue #480), `:paket_qualification` (Paket files plus sha512 pins plus
   fixture evidence, issue #482), `:godeps_qualification` (Go `go.mod`/`go.sum`
-  via `from_file` pins plus fixture evidence, issue #483),
+  via `from_file` pins plus fixture evidence, issue #483), `:cc_hermetic_qualification` (C/C++
+  sha256-integrity plus no-system-package pins plus fixture evidence, issue
+  #484), `:jvm_quality_qualification` (JVM versions plus rule-sets pins plus
+  fixture evidence, issue #485),
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
   best-effort), `:windows_qualification`, `:ci_matrix_qualification`
   (host matrix, issue #415), and `:closeout_battery_qualification`
@@ -234,7 +237,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 33/33,
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
-`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
+`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
 `windows_qualification` 13/13, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
@@ -437,6 +440,17 @@ Remaining reds stay owned gaps, not green claims:
   pair, proven by the hello seed plus the GoogleTest mapping plus depcheck
   consistency and hash-less rejection; system packages rejected as non-hermetic
   (`cc_hermetic_qualification` 16/16); platform plus consumer plus release
+  evidence stays owned gap; no Supported claim).
+- JVM quality defaults with fixture evidence qualified seed-only under #485
+  (`bazel run //tools/ci:jvm_quality_qualification`; google-java-format 1.35.0
+  plus Checkstyle 14.1.0 plus PMD 7.27.0 plus SpotBugs 4.10.4 plus ktfmt 0.63
+  plus ktlint 1.8.0 plus detekt 1.23.8 plus Error Prone 2.50.0 pinned in
+  `java/tests/fixtures/jvm_quality/pins.bzl` over upstream built-in defaults
+  with no hidden preset, Checkstyle Google checks never auto-supplied, detekt
+  `buildUponDefaultConfig` not `allRules`, beyond-default switches rejected,
+  proven by the java/kotlin hello fixtures with no adapter claim; digests plus
+  adapters stay owned under #416
+  (`jvm_quality_qualification` 16/16); platform plus consumer plus release
   evidence stays owned gap; no Supported claim).
 - Non-dogfed execution plan delivered (see issue #508 for remaining gaps; hermetic
   CLI-contract pins under issue #407)

@@ -9,15 +9,17 @@
 #   binary distributions, ktfmt with-deps JAR, ktlint executable JAR over
 #   one managed JDK cohort; no Maven-module reconstruction, no
 #   installer/solver/compiler on the consumer path), initial artifact
-#   research rows as observations not pins, provisional SARIF-native
+#   research rows as observations for digests (versions qualified seed-only
+#   under issue #485), provisional SARIF-native
 #   adapter-input notes with Error Prone javac-diagnostic parsing itemized
-#   as open work (never silently dropped), provisional native-config
-#   inputs (SpotBugs default effort, PMD default ruleset, Error Prone
-#   default severities, detekt buildUponDefaultConfig, ktlint standard
-#   rules) explicitly not approved presets, parity-deferred java/kotlin
+#   as open work (never silently dropped), native-config defaults qualified
+#   seed-only under issue #485 (SpotBugs default effort, PMD default ruleset,
+#   Error Prone default severities, detekt buildUponDefaultConfig, ktlint
+#   standard as upstream built-in defaults with no hidden preset),
+#   parity-deferred java/kotlin
 #   with owner plus frozen route, classification-only taxonomy with no
 #   curated defaults and no native-config binding;
-# - open under #416 with honest records: exact artifact versions/digests
+# - open under #416 with honest records: exact artifact digests
 #   plus shared-JDK cohort qualification, SARIF parser plus runner-matrix
 #   pass/fail plus fix/format evidence per adapter-backed class,
 #   native-config qualification against the native-config contract,
@@ -153,35 +155,35 @@ else
   bad "tool-acquisition lost a JVM research row or its observations-not-pins honesty:$jvm_research"
 fi
 
-# Tool integrations keep the provisional JVM adapter-input notes: SARIF
+# Tool integrations keep the JVM adapter-input notes: SARIF
 # shapes as unproven mappings, Error Prone javac-diagnostic parsing
-# itemized as open work (never silently dropped), versions as
-# observations not pins, no adapter claim.
+# itemized as open work (never silently dropped), versions qualified under
+# #485 with digests as observations, no adapter claim.
 if grep -q -F -e '**JVM cohort (issue #416' "$integrations" &&
   grep -q -F -e 'unproven mappings' "$integrations" &&
   grep -q -F -e 'observations, not pins' "$integrations" &&
   grep -q -F -e 'no adapter claims `java` or `kotlin` yet' "$integrations" &&
   grep -q -F -e 'Error Prone has no' "$integrations" &&
-  grep -q -F -e 'open work itemized here, not silently dropped' "$integrations"; then
+  grep -q -F -e 'itemized here, not silently dropped' "$integrations"; then
   ok
 else
-  bad "tool-integrations lost its provisional JVM adapter-input notes or Error Prone open-work honesty"
+  bad "tool-integrations lost its JVM adapter-input notes or Error Prone open-work honesty"
 fi
 
-# Support matrix keeps the JVM route plus provisional native-config inputs
-# plus SARIF notes plus cohort tracking, all citing #416 without approving
-# hidden presets or claiming support.
+# Support matrix keeps the JVM route plus qualified native-config defaults
+# (issue #485) plus SARIF notes plus cohort tracking, all citing #416 for
+# adapters/digests without approving hidden presets or claiming support.
 if grep -q -F -e 'take the complete-upstream-artifact plus shared-JDK route (issue #416' "$support" &&
-  grep -q -F -e 'tracked under issue #416' "$support" &&
-  grep -q -F -e 'native-config contract (open under issue #416)' "$support" &&
-  grep -q -F -e 'provisional under issue #416' "$support" &&
+  grep -q -F -e 'qualified seed-only under issue #485' "$support" &&
+  grep -q -F -e 'no auto-supplied Google checks' "$support" &&
+  grep -q -F -e 'upstream built-in defaults' "$support" &&
   grep -q -F -e 'owned by issue #416.' "$support" &&
   grep -q -F -e 'itemized under issue #416' "$support" &&
   grep -q -F -e '(issue #416)' "$support" &&
   grep -q -F -e 'to issue #416;' "$support"; then
   ok
 else
-  bad "support-matrix lost its JVM route, provisional inputs, adapter notes, or #416 cohort tracking"
+  bad "support-matrix lost its JVM route, qualified defaults, adapter notes, or #416 cohort tracking"
 fi
 
 # Tool baseline keeps the Java/Kotlin coverage rows (integration inventory,

@@ -614,7 +614,9 @@ v1 commitments.
 
 Upstream documentation observations; provisional defaults, not
 selections. Exact versions, rule sets, and adapter mappings are tracked in
-open work under issues #485-#489.
+open work under issues #485-#489, except the JVM versions plus rule-sets
+qualified seed-only under issue #485 below (digests plus adapter mappings
+stay owned under issue #416).
 
 - Go: gofumpt (strict superset of gofmt) for format; staticcheck plus `govet`
   for lint, since neither subsumes the other. The existing `SA`-only suggestion
@@ -634,11 +636,20 @@ open work under issues #485-#489.
   No adapter claims c/cpp yet (open under issue #418).
 - Java: google-java-format; PMD, Checkstyle, SpotBugs, plus Error Prone, which
   works out of the box with Bazel. The Error Prone version follows the
-  qualified JDK baseline (open).
+  qualified JDK baseline (open). Versions plus rule-sets qualified seed-only
+  under issue #485 (`bazel run //tools/ci:jvm_quality_qualification` with
+  `java/tests/fixtures/jvm_quality/pins.bzl` over upstream built-in defaults
+  with no hidden preset; Checkstyle Google checks never auto-supplied; exact
+  digests plus adapter mappings stay owned under issue #416).
 - Kotlin: ktfmt for format with ktlint for style (fast, no type resolution);
   detekt for smells, complexity, and potential bugs (200+ rules, type
   resolution optional). Format and analysis stay divided as upstream documents
-  them.
+  them. Versions plus rule-sets qualified seed-only under issue #485
+  (`bazel run //tools/ci:jvm_quality_qualification` with
+  `java/tests/fixtures/jvm_quality/pins.bzl` over upstream built-in defaults
+  with no hidden preset; detekt `buildUponDefaultConfig` full set not
+  `allRules`, ktlint standard; exact digests plus adapter mappings stay owned
+  under issue #416).
 - Scala: scalafmt and Scalafix as already named.
 - C#: CSharpier (faster and more opinionated than `dotnet format`; no MSBuild
   dependency); SDK-built-in Roslyn CA analyzers, on by default for .NET 5+,
@@ -672,8 +683,11 @@ portable-PowerShell-runtime route (issue #420, live successor to closed #307 for
 `powershell` class); RuboCop/StandardRB take the
 release-assembled Ruby closure route (issue #420, live successor to closed #307 for the
 `ruby` class; the exceptional bundle within the approved packaging-effort boundary).
-Exact JVM artifacts, versions, rule sets,
-and adapter mappings are tracked under issue #416; exact Scala/.NET artifacts,
+Exact JVM versions plus rule-sets qualified seed-only under issue #485
+(`bazel run //tools/ci:jvm_quality_qualification` with
+`java/tests/fixtures/jvm_quality/pins.bzl` over upstream built-in defaults
+with no hidden preset; exact digests plus adapter mappings stay owned under
+issue #416); exact Scala/.NET artifacts,
 versions, rule sets, and adapter mappings are tracked under issue #417; exact
 native artifacts, versions, rule sets, and adapter mappings are tracked under
 issue #418; exact structured (`buf`/Qt) artifacts, versions, rule sets, and
@@ -693,11 +707,17 @@ qualification inputs open, not approved presets or additions to curated membersh
   unresolved conflict; neither is selected here. `govet` and errcheck for unhandled errors
   remain the existing complementary-tool suggestions, not new default selections
   (all provisional under issue #418).
-- SpotBugs at default effort; PMD default ruleset; Error Prone at its default severities.
-  The existing Checkstyle Google checks suggestion requires resolution against the
-  native-config contract (open under issue #416); it is not an approved hidden or automatically supplied config.
+- SpotBugs at default effort; PMD default ruleset; Error Prone at its default severities,
+  qualified seed-only under issue #485 as pinned upstream built-in defaults with
+  no hidden preset (`java/tests/fixtures/jvm_quality/pins.bzl` via
+  `bazel run //tools/ci:jvm_quality_qualification`).
+  The Checkstyle Google checks suggestion is resolved against the
+  native-config contract (qualified seed-only under issue #485): no auto-supplied Google checks;
+  without an applicable checked-in config the pinned tool uses upstream built-in defaults,
+  with a config it interprets natively; adapters add only transport settings.
 - detekt `buildUponDefaultConfig` (full default set, not `allRules`);
-  ktlint standard rules (both provisional under issue #416).
+  ktlint standard rules (both qualified seed-only under issue #485 as pinned upstream
+  built-in defaults with no hidden preset).
 - Roslyn: SDK default analysis mode; StyleCop stays optional since its style
   rules can contradict the built-in IDE rules (both provisional under issue #417).
 - clang-tidy default checks; cppcheck default enablement (both provisional under issue #418).
