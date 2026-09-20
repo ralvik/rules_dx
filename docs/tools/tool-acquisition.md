@@ -84,6 +84,9 @@ observations, not pins.
 The Native cohort rows below are owned by issue #418 (live successor
 to closed #307 for the `c`/`cpp`/`go` classes); versions are
 observations, not pins.
+The Structured cohort rows below are owned by issue #419 (live successor
+to closed #307 for the `protobuf`/`qml` classes); versions are
+observations, not pins.
 
 | Tool | Upstream evidence | Candidate acquisition and remaining risk |
 | --- | --- | --- |
@@ -110,6 +113,9 @@ observations, not pins.
 | staticcheck | [2026.2 release notes](https://staticcheck.dev/changes/2026.2) (Aug 2026; v0.8.1 observed) | Checksummed standalone release artifact; SARIF via `-f sarif`, JSON via `-f json`. Default checks versus the `SA`-only suggestion stay an unresolved conflict — neither is selected here; qualify before freezing. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
 | govet | [Go 1.27.1](https://go.dev/doc/devel/release) (Sep 2026; ships with the Go toolchain) | Authoritative Go toolchain class: `govet` ships with the toolchain, no separate acquisition. Text-parse shape (`file:line[:col]: message`); check-only with the provisional sandbox-apply-and-diff fix flow. Version follows the qualified Go toolchain pin. |
 | errcheck | [v1.20.0 release](https://github.com/kisielk/errcheck/releases) (May 2026) | Checksummed standalone release artifact; text-parse shape (`file:line[:col]: message`); check-only with the provisional sandbox-apply-and-diff fix flow. Complementary to `govet` for unhandled errors, not a default selection. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
+| buf | [releases](https://github.com/bufbuild/buf/releases) (v1.72.0 observed Jul 2026; [1.71.0 npm](https://www.npmjs.com/package/@bufbuild/buf)) | Checksummed standalone release artifact; self-contained per-platform binaries with published checksums (Apache-2.0). `buf format --diff --exit-code` unified diff plus `--write`; `buf lint --error-format=json` JSONL (`path,start_line,start_column,end_line,end_column,type,message`) plus text `file:line:column:message` (no SARIF in 1.71.0). Needs no target compiler context; execution-platform lazy. Maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
+| qmlformat | [qmlformat docs](https://doc.qt.io/qt-6/qtqml-tooling-qmlformat.html) (Qt 6.11.2 observed; [Qt 6.8 tooling](https://doc.qt.io/qt-6.8/qtqml-tooling.html)) | Authoritative-toolchain class: resolves from the qualified Qt distribution's tool targets, no separate acquisition. Whole-file rewrite with stdout plus `-i` inplace; `.qmlformat.ini` upward settings plus `--ignore-settings`. Version follows the qualified Qt distribution pin; exact Qt distribution identity, licensing, and platform artifact qualification remain pending. |
+| qmllint | [qmllint docs](https://doc.qt.io/qt-6/qtqml-tooling-qmllint.html) (Qt 6.11.1 observed) | Authoritative-toolchain class: resolves from the qualified Qt distribution's tool targets, no separate acquisition. `--json <file>` (`-` for stdout) JSON with messages plus file/line/severity; `.qmllint.ini` plus `//qmllint enable/disable` comments. Check-only with the provisional sandbox-apply-and-diff fix flow. Version follows the qualified Qt distribution pin; exact distribution identity, licensing, and platform artifact qualification remain pending. |
 
 Record compressed artifact identity separately from extracted executable identity. A versioned
 release URL does not guarantee immutable bytes; checked-in digests must reject changed content.
@@ -278,16 +284,18 @@ native/self-contained artifact route. `buf` ships self-contained per-platform
 release binaries with published checksums, needs no target compiler context
 (unlike clang-tidy, which needs compile commands), and stays
 execution-platform lazy; exact assets, digests, and adapter qualification
-remain pending and no adapter claims `protobuf` yet
-(open).
+remain pending under issue #419 (live successor to closed #307 for the
+`protobuf` class) and no adapter claims `protobuf` yet
+(open under issue #419).
 
 Decided route (Qt last): clang-format and
 clang-tidy take the authoritative-toolchain route from the qualified
 hermetic-llvm LLVM distribution's tool targets (no separate acquisition);
 qmlformat and qmllint take the authoritative-toolchain route from the Qt
 distribution, with exact Qt distribution identity, licensing, and platform
-artifact qualification remaining pending and no adapter claiming `qml` yet
-(open).
+artifact qualification remaining pending under issue #419 (live successor
+to closed #307 for the `qml` class) and no adapter claiming `qml` yet
+(open under issue #419).
 Qt closed that order (clang-format/clang-tidy, Buf, Scalafix routed to
 the managed-JVM route, Qt last).
 

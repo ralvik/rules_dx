@@ -545,13 +545,19 @@ shared-.NET-runtime route (issue #417, live successor to closed #307 for the
 split native route (issue #418, live successor to closed #307 for the
 `c`/`cpp` classes); gofumpt, staticcheck, `govet`, and errcheck take the split
 Go route (issue #418, live successor to closed #307 for the `go` class);
+`buf` takes the checksummed native/self-contained artifact route (issue #419,
+live successor to closed #307 for the `protobuf` class; needs no target
+compiler context, execution-platform lazy); qmlformat and qmllint take the
+authoritative-toolchain route from the Qt distribution (issue #419, live
+successor to closed #307 for the `qml` class; Qt last);
 PSScriptAnalyzer takes the exact-module plus
 portable-PowerShell-runtime route; RuboCop/StandardRB take the
 release-assembled Ruby closure route. Exact JVM artifacts, versions, rule sets,
 and adapter mappings are tracked under issue #416; exact Scala/.NET artifacts,
 versions, rule sets, and adapter mappings are tracked under issue #417; exact
 native artifacts, versions, rule sets, and adapter mappings are tracked under
-issue #418; remaining cohorts stay in
+issue #418; exact structured (`buf`/Qt) artifacts, versions, rule sets, and
+adapter mappings are tracked under issue #419; remaining cohorts stay in
 open work; no adapter claims any of these
 classes yet.
 
@@ -578,6 +584,8 @@ qualification inputs open, not approved presets or additions to curated membersh
   native-config and artifact qualification must resolve the conflict before implementation.
 - FSharpLint default ruleset with formatting rules off (Fantomas owns
   formatting) (provisional under issue #417).
+- `buf` `STANDARD` lint rules; qmlformat/qmllint `.qmlformat.ini`/`.qmllint.ini`
+  discovery versus explicit flags (both provisional under issue #419).
 
 Beyond-default switches (detekt `allRules`, experimental Error Prone checks,
 `--enable=all`-style opt-in maxima) are not enabled by `rules_dx`. These
@@ -618,7 +626,8 @@ Upstream documentation observations; provisional input, not
 selections. Adapter design and normalization for the JVM cohort is tracked under
 issue #416; adapter design and normalization for the Scala + .NET cohort is tracked
 under issue #417; adapter design and normalization for the Native cohort is tracked
-under issue #418 (remaining cohorts stay in open work).
+under issue #418; adapter design and normalization for the Structured cohort is tracked
+under issue #419 (remaining cohorts stay in open work).
 
 Diagnostic wire formats:
 
@@ -629,11 +638,16 @@ Diagnostic wire formats:
   staticcheck shapes are unproven mappings owned by issue #418.
 - JSON: staticcheck (`-f json`), PMD (json), ktlint (json).
   staticcheck JSON shapes are unproven mappings owned by issue #418.
+  `buf lint --error-format=json` JSONL (`path,start_line,start_column,end_line,
+  end_column,type,message`; no SARIF in 1.71.0) is an unproven mapping owned by
+  issue #419; qmllint `--json` (messages plus file/line/severity) is an unproven
+  mapping owned by issue #419.
 - Checkstyle XML: Checkstyle (`-f xml`), ktlint, detekt.
 - Tool-native XML: cppcheck (`--xml --xml-version=2`, on stderr).
   Unproven mapping owned by issue #418.
 - Text-parse: govet and errcheck (`file:line[:col]: message`, unproven mappings
-  owned by issue #418), Error Prone
+  owned by issue #418), `buf` text (`file:line:column:message`, unproven mapping
+  owned by issue #419), Error Prone
   (javac diagnostics; structured output still open upstream, itemized under issue #416),
   FSharpLint
   console (the `FSharpLint.Core` library API is the structured
@@ -642,6 +656,8 @@ Diagnostic wire formats:
 - clang-tidy emits clang text diagnostics; fixes travel separately as
   `--export-fixes` YAML for `clang-apply-replacements`. Target-coupled wiring
   versus check-only stays open under issue #418.
+- qmlformat emits the formatted file to stdout (whole-file rewrite); check/diff
+  versus `--write`/`-i` wiring stays open under issue #419.
 
 Fix modes:
 
@@ -650,9 +666,12 @@ Fix modes:
   clang-tidy (`--fix` or `--export-fixes`), Error Prone
   (`-XepPatchChecks` with a patch-file location). Native formatters
   (clang-format, gofumpt) plus clang-tidy modes are itemized under issue #418.
+  Structured formatters (`buf format --diff --exit-code` plus `--write`,
+  qmlformat stdout plus `-i`) are itemized under issue #419.
 - Check-only: PMD, Checkstyle, SpotBugs, staticcheck, govet, errcheck,
   cppcheck, detekt, FSharpLint console. Native check-only tools (staticcheck,
-  `govet`, errcheck, cppcheck) are itemized under issue #418.
+  `govet`, errcheck, cppcheck) are itemized under issue #418. Structured
+  check-only tools (`buf lint`, qmllint) are itemized under issue #419.
 - Provisional fix flow: tools run check-only for diagnostics; fixes are
   produced by applying in a sandbox and diffing, rendered as unified
   patches (precedent: aspect `rules_lint`).
@@ -679,6 +698,12 @@ open work:
   neither is selected here (issue #418).
 - cppcheck, `govet`, errcheck: tool-native XML on stderr plus text-parse shapes
   with the sandbox-apply-and-diff fix flow stay unproven mappings (issue #418).
+- `buf`: native JSONL versus text-parse choice plus `STANDARD` rule selection and
+  module-root-sensitive `PACKAGE_DIRECTORY_MATCH` plus `--path` scoping stay open
+  (issue #419).
+- qmlformat/qmllint: Qt distribution identity plus licensing plus platform artifacts,
+  `.qmlformat.ini`/`.qmllint.ini` discovery versus explicit flags, and `--json`
+  shape normalization stay open (issue #419).
 
 ### Open Work Tracking
 
@@ -703,7 +728,9 @@ Every candidate row above maps to an existing tracker: admitted Java and Kotlin
 managed JVM plus exact-package shared-.NET-runtime routes decided
 2026-09-13) to issue #417; admitted Go and
 C/C++ (Native cohort, split native plus split Go routes decided
-2026-09-13) to issue #418. Deferred foundations (Ruby,
+2026-09-13) to issue #418; structured `protobuf`/`qml` (Structured cohort,
+checksummed `buf` artifact plus authoritative Qt distribution routes decided
+2026-09-13, Qt last) to issue #419. Deferred foundations (Ruby,
 PowerShell) are out of v1 scope; their retained tool cohorts stay tracked in
 open work. If qualification
 shows a cohort exceeds reviewable work-package size, it is split into

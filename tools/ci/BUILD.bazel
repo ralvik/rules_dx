@@ -286,6 +286,31 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Structured-cohort qualification harness (issue #419, live successor to
+# closed #307 for the protobuf/qml classes): proves the as-built decided
+# checksummed native/self-contained artifact route for `buf`
+# (self-contained per-platform binaries with published checksums, no target
+# compiler context, execution-platform lazy) plus the decided
+# authoritative-toolchain route for qmlformat/qmllint from the Qt
+# distribution (Qt-last ordering decided; exact Qt distribution identity,
+# licensing, and platform artifact qualification remain pending) with
+# initial artifact research as observations not pins, provisional
+# adapter-input notes (buf JSONL as the faithful shape with no SARIF,
+# STANDARD plus module-root-sensitive scoping; qmlformat stdout plus `-i`
+# with ini settings; qmllint `--json` with ini plus comment scoping;
+# whole-file rewrite versus check-only fix modes), provisional
+# native-config inputs with no hidden preset, parity-deferred protobuf/qml
+# with owner plus frozen route, classification-only taxonomy with no
+# curated defaults and no matrix cells yet. Run by CI via
+# `bazel run //tools/ci:structured_cohort_qualification`.
+sh_binary(
+    name = "structured_cohort_qualification",
+    srcs = ["structured_cohort_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Publication-trust harness (issues #78, #26, #5, #311): machine-checks
 # the draft-only + nothing-published static invariants the
 # release-hygiene harness does not own — module name at the

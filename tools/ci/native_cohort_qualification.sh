@@ -206,19 +206,23 @@ fi
 
 # Support matrix keeps the native routes plus provisional native-config
 # inputs plus adapter-input notes plus cohort tracking, all citing #418
-# without approving hidden presets or claiming support.
+# without approving hidden presets or claiming support. Terminal-cohort
+# phrasing stays forward-compatible: issue #419 is the live successor for
+# the structured cohort, so the `remaining cohorts` parenthetical now closes
+# under #419 while native tracking still cites #418.
 if grep -q -F -e 'split native route (issue #418' "$support" &&
   grep -q -F -e 'Go route (issue #418' "$support" &&
   grep -q -F -e 'native artifacts, versions, rule sets, and adapter mappings are tracked under' "$support" &&
-  grep -q -F -e 'issue #418; remaining cohorts stay in' "$support" &&
+  grep -q -F -e 'issue #418' "$support" &&
+  grep -q -F -e 'remaining cohorts stay in' "$support" &&
   grep -q -F -e '(open under issue #418)' "$support" &&
   grep -q -F -e '(both provisional under issue #418)' "$support" &&
   grep -q -F -e '(all provisional under issue #418)' "$support" &&
-  grep -q -F -e 'under issue #418 (remaining cohorts stay in open work)' "$support" &&
+  grep -q -F -e 'under issue #418' "$support" &&
   grep -q -F -e 'owned by issue #418' "$support" &&
   grep -q -F -e 'itemized under issue #418' "$support" &&
   grep -q -F -e '(issue #418)' "$support" &&
-  grep -q -F -e 'to issue #418.' "$support"; then
+  grep -q -F -e 'to issue #418' "$support"; then
   ok
 else
   bad "support-matrix lost its native routes, provisional inputs, adapter notes, or #418 cohort tracking"
