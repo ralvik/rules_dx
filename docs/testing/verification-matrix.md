@@ -212,7 +212,7 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   `:hello_smoke_qualification`, `:parser_sample_qualification`,
   `:rustfmt_edition_qualification`, `:cc_optout_qualification`,
   `:shell_env_qualification`, `:bindgen_qualification`,
-  `:exact_target_qualification`,
+  `:cxx_identity_qualification`, `:exact_target_qualification`,
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
   best-effort), `:windows_qualification`, `:ci_matrix_qualification`
   (host matrix, issue #415), and `:closeout_battery_qualification`
@@ -227,7 +227,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 33/33,
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
-`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `exact_target_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
+`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
 `windows_qualification` 13/13, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
@@ -347,6 +347,15 @@ Remaining reds stay owned gaps, not green claims:
   plus target-flags plus separate-native-link contract in [Rust Generation](../generation/rust.md#binding-generation);
   platform plus consumer plus release evidence stays owned gap; no
   Supported claim).
+- CXX graph identity with fixture evidence qualified seed-only under #474
+  (`bazel run //tools/ci:cxx_identity_qualification`; single crate_universe
+  `crates` graph with `cxx == cxxbridge-cmd == 1.0.200` and
+  `@crates//:cxxbridge-cmd`, never a `cxx.rs` second graph, the
+  `rust/tests/fixtures/cxx_identity/` Rust plus C++ composition under
+  `bazel test //...`, and `dx generate --check` stability; mixed versions
+  stay rejected; full `cxxbridge-cmd` execution plus corpus wiring stays
+  owned under issue #499; platform plus consumer plus release evidence stays
+  owned gap; no Supported claim).
 - Exact-target discovery with fixture evidence qualified seed-only under #475
   (`bazel run //tools/ci:exact_target_qualification`; resolver-owned exact labels
   to upstream `gen_rust_project`/`flycheck` `TARGETS` with the hello exact-isolation

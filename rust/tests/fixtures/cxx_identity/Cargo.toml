@@ -1,0 +1,14 @@
+[package]
+name = "cxx_identity"
+version = "0.1.0"
+edition = "2021"
+
+# CXX graph identity pin (issue #474): `cxx` and `cxxbridge-cmd` stay at
+# identical versions from the single crate_universe `crates` graph. Pinned to
+# the inspected CXX 1.0.200 release; mixed versions rejected. Kept out of
+# [dependencies] until MODULE.bazel wires this manifest into crate_universe:
+# an unwired `crate_deps(["cxx"])` would fail analysis, so full corpus wiring
+# stays under #499. Recorded here under [package.metadata] instead.
+[package.metadata.cxx-identity]
+cxx = "=1.0.200"
+cxxbridge-cmd = "=1.0.200"

@@ -44,10 +44,10 @@ ADR 0014 and are not pinned here. The native-plan corpus starts with
 pure-Rust plus cc-rs C plus SQLite plus OpenSSL with declared tools plus
 ring-style C/assembly plus bindgen plus CXX plus native proc-macro
 dependencies: pure-Rust, proc-macro exec/target separation, staticlib,
-and cc-rs closures are qualified; OpenSSL with declared build tools,
-ring C/assembly with target libs, bindgen execution libclang closure,
-and CXX generator identity stay owned gaps under issues #473, #474, #499 pending the
-provisional hermetic-llvm backend.
+and cc-rs closures are qualified; CXX generator identity is decided single-graph
+under issue #474; OpenSSL with declared build tools, ring C/assembly with
+target libs, bindgen execution libclang closure, and CXX corpus execution stay
+owned gaps under issues #473, #499 pending the provisional hermetic-llvm backend.
 
 macOS arm64 native is qualified (issue #412) on the current as-built
 stack: CI builds, tests, and gates coverage natively on `macos-14`
@@ -297,8 +297,13 @@ well-formed on the seed host. Pinned by `bazel run
 
 Use [CXX's upstream generation pattern](https://github.com/dtolnay/cxx/blob/1.0.200/tools/bazel/rust_cxx_bridge.bzl)
 with identical `cxx`/`cxxbridge-cmd` versions. Its Bazel module registers direct rules_rust toolchains;
-qualify provider/repository identity before composing it with rules_rs. Do not introduce a second
-Rust graph merely to acquire the generator. Identity stays owned under issue #474.
+that second graph is rejected under issue #474: no `cxx.rs` module lands in `MODULE.bazel`,
+and the decided provider/repository identity is `cxx` plus `cxxbridge-cmd` at `1.0.200`
+from the single crate_universe `crates` graph with generator tool `@crates//:cxxbridge-cmd`.
+Do not introduce a second Rust graph merely to acquire the generator. CXX identity is decided
+single-graph under issue #474 (proven by `rust/tests/fixtures/cxx_identity/` via `bazel run
+//tools/ci:cxx_identity_qualification`); full `cxxbridge-cmd` execution plus corpus wiring
+stays owned under issue #499.
 
 ## Windows Acquisition And Compatibility
 
@@ -401,18 +406,25 @@ under issue #472 (global `False` in `.bazelrc` with narrow per-crate opt-in,
 zero opt-ins). Bindgen LLVM-22-vs-23 compatibility is qualified under issue #473:
 LLVM-22 parser baseline vs LLVM-23 target pinned in
 `rust/tests/fixtures/bindgen/pins.bzl` with the `bindgen.h` plus
-`bindgen.expected` fixture pair (unpinned LLVM rejected). Exact-target discovery is qualified seed-only under issue #475
+`bindgen.expected` fixture pair (unpinned LLVM rejected). CXX graph identity
+is decided single-graph under issue #474
+(`cxx == cxxbridge-cmd == 1.0.200` from the single `crates` graph with
+`@crates//:cxxbridge-cmd`, never a `cxx.rs` second graph, proven by
+`rust/tests/fixtures/cxx_identity/` via `bazel run
+//tools/ci:cxx_identity_qualification`). Exact-target discovery is qualified seed-only under issue #475
 (resolver-owned exact labels to upstream `TARGETS`, `Path`/`Buildfile` widening rejected, project-owned graph plus
 `RustAnalyzerInfo` rejected; pinned in `rust/tests/fixtures/discovery/pins.bzl` with the hello exact-isolation pair via
-`bazel run //tools/ci:exact_target_qualification`). Remaining native gaps
-stay owned under issues #472 and #474: global shell-env annotation
-extension and CXX graph identity. Build-script hermetic defaults are
+`bazel run //tools/ci:exact_target_qualification`). The remaining native gap
+stays owned under issue #472: global shell-env annotation
+extension. Build-script hermetic defaults are
 implemented (`use_cc_toolchain = True`, `use_default_shell_env = False`, `emit_warnings = True`
 in `gazelle/rust/lang.go`, proven by `gazelle/rust/lang_test.go`) and pinned by
 `bazel run //tools/ci:foundation_maps`; third-party shell-env is pinned by
 `bazel run //tools/ci:shell_env_qualification`; bindgen compat is pinned by
-`bazel run //tools/ci:bindgen_qualification`; exact-target discovery is pinned by
+`bazel run //tools/ci:bindgen_qualification`; CXX identity is pinned by
+`bazel run //tools/ci:cxx_identity_qualification`; exact-target discovery is pinned by
 `bazel run //tools/ci:exact_target_qualification`; no `Supported`
+claim.
 claim.
 
 Admitted C/C++ foundation stays owned under issues #476-#484: MSVC interop plus SDK licensing
@@ -435,7 +447,7 @@ acquisition, interoperability, coverage, and release evidence passes.
 | Are both Linux profiles complete? | Native arm64 glibc builds/tests plus per-cell coverage landed (issue #410); static-musl closures plus per-cell coverage for both musl profiles landed (issue #411, Rust musl std plus exec/target separation, CI cross-builds with per-profile cache scopes, no union; dynamic musl explicitly out of scope). Remaining: cross builds/tests, PIE plus ELF dependencies, glibc symbols, hermetic-llvm backend plus OpenSSL/ring/bindgen/CXX corpus gaps. | open work under issue #499 |
 | Which deployment and execution floors are supportable? | Pin the glibc `2.28` floor plus SDK/CRT identities with oldest-target and current-host fixtures run separately; inspect compiler, clangd and bindgen loader dependencies. Check Apple's extracted SDK framework subset. macOS arm64 native is qualified (issue #412) plus macOS x86_64 best-effort native is qualified (issue #413) with SDK version not the deployment floor; oldest-OS execution plus framework completeness plus licensing remain gates; best-effort gaps never block required-host release. Windows x86_64 native is qualified (issue #414) with `/MD` retail dynamic CRT as the starting point; `/MT` plus debug CRT plus floors stay owned by issues #410-#414. | open work under issue #500 |
 | Can every executable first-party line be accounted for? | Rust-only, C/C++-only and mixed/DLL LCOV, missed-line tests, coverage-tool version pairing, native ignores and denominator validation. No ignored collection failures. | open work under issue #501 |
-| Can bindgen/CXX use one upstream graph? | Qualified under issue #473 for bindgen (LLVM-22 parser baseline vs LLVM-23 target pinned with the standalone/build-script fixture pair, execution libclang closure, target flags, `bindgen.h` plus `bindgen.expected` identical-set proof via `bazel run //tools/ci:bindgen_qualification`); CXX identical crate/generator versions stay owned under issue #474. | issues #473, #474 |
+| Can bindgen/CXX use one upstream graph? | Qualified under issue #473 for bindgen (LLVM-22 parser baseline vs LLVM-23 target pinned with the standalone/build-script fixture pair, execution libclang closure, target flags, `bindgen.h` plus `bindgen.expected` identical-set proof via `bazel run //tools/ci:bindgen_qualification`); CXX identity decided single-graph under issue #474 (`cxx == cxxbridge-cmd == 1.0.200` from the single `crates` graph, `rust/tests/fixtures/cxx_identity/` via `bazel run //tools/ci:cxx_identity_qualification`). | issues #473, #474 |
 | Can public Cargo metadata represent every generated target? | Prove features, build-script metadata, target kinds and ownership without private serialized dependency-graph access; seek narrow upstream metadata exports where missing. | open work under issue #502 |
 | Can generation satisfy strict ownership and resolution cheaply? | Quoted/angle/ambiguous/macro include fixtures, authoritative dependency metadata, test grouping, generated headers, assembly dialects and explicit module/PCH disposition. | open work under issue #503 |
 | Can IDE setup preserve exact context and projection contracts? | Qualified seed-only under issue #475 for Rust exact-target discovery (resolver-owned exact labels to `gen_rust_project`/`flycheck` TARGETS, `Path`/`Buildfile` widening plus project-owned graph plus `RustAnalyzerInfo` rejected, hello exact-isolation pair plus `rust/tests/fixtures/discovery/pins.bzl` via `bazel run //tools/ci:exact_target_qualification`); C++ action-derived snapshot plus generated sources plus multi-context headers plus managed host tools plus Bazel-9 compatibility stay open proof. | issue #475 |

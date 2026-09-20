@@ -698,6 +698,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# CXX graph identity harness (issue #474); see docs/testing/verification-matrix.md.
+sh_binary(
+    name = "cxx_identity_qualification",
+    srcs = ["cxx_identity_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Exact-target discovery harness (issue #475); see docs/cli/target-resolution.md#exact-target-discovery.
 sh_binary(
     name = "exact_target_qualification",
