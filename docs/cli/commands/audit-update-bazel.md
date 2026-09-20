@@ -99,13 +99,22 @@ claim complete coverage or treat an unassessed dependency as having no known vul
 A recognized, assessable package with no matching advisories is a different result and is not
 itself a coverage failure. Advisory-specific risk acceptance does not waive missing assessment.
 An empty findings list alone is not evidence that every selected dependency was assessed.
+Per-ecosystem dispositions are wont-fix, pinned by fixtures in `dx_audit::vuln` plus
+`dx_audit::locks` (issue #584): Git revisions stay incomplete (auditor-owned; SHAs carry no
+OSV version identity and SHA-to-version mapping needs a network resolver forbidden by the
+offline contract; `paket.lock` `GIT` entries report incomplete rather than dropping),
+unidentified private packages stay incomplete (auditor-owned; no upstream identity by
+definition, callers mark `is_private` explicitly), and Maven/NuGet range narrowing stays
+deferred to the `dx_update` resolver with V1 exact-match in the auditor (no upstream-native
+Rust range library, so no custom solver).
 
 Report known vulnerabilities whether or not a fixed version is available, and apply the same
 severity threshold and failure policy in both cases. Lack of a fix must not suppress a finding,
 downgrade its severity, or exempt it from failure. Preserve upstream remediation information when
 available, without treating a dependency-version upgrade as an automatic source fix or mutating
 dependencies during audit. Advisory scope uses upstream Cargo-flavor semver for Cargo/npm/Go
-and exact-match for Maven/NuGet V1, pinned in `dx_audit::vuln`.
+and exact-match for Maven/NuGet V1, pinned in `dx_audit::vuln` (issue #584 wont-fix:
+range scopes stay no-match and V1 snapshots carry exact affected versions).
 
 Known applicable vulnerabilities with no severity rating fail audit by default. Report the
 upstream advisory severity as unknown text rather than inventing a rating or silently

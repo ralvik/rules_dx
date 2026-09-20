@@ -30,10 +30,15 @@
 //! auditor, the audit fails as incomplete and identifies the
 //! dependency plus the assessment limitation. Unsupported Git
 //! revisions and unidentified private packages are incomplete, never
-//! clean. A recognized assessable package with no matching advisories
-//! is clean, not a coverage failure. Advisory-specific risk acceptance
-//! never waives missing assessment, and an empty findings list alone
-//! is never evidence that every selected dependency was assessed.
+//! clean (issue #584: both wont-fix, auditor-owned by this module
+//! plus [`crate::locks`]; Git SHAs carry no OSV version identity and
+//! SHA-to-version mapping needs a network resolver forbidden by the
+//! offline contract, while private packages have no upstream identity
+//! by definition). A recognized assessable package with no matching
+//! advisories is clean, not a coverage failure. Advisory-specific
+//! risk acceptance never waives missing assessment, and an empty
+//! findings list alone is never evidence that every selected
+//! dependency was assessed.
 //!
 //! This module matches over injected records only, so severity,
 //! fix-preservation, unknown handling, and incomplete mapping stay
@@ -41,7 +46,10 @@
 //! auditor binary. Version-range narrowing uses upstream semantics
 //! through [`crate::exception::version_in_scope`] for semver
 //! ecosystems (Cargo/npm/Go); Maven/NuGet scopes stay exact-match in
-//! V1 with resolver-owned narrowing deferred, exactly like the
+//! V1 (issue #584: wont-fix, resolver-deferred to the `dx_update`
+//! resolver; no upstream-native Rust Maven/NuGet range library exists
+//! so ADR 0008 library-first forbids a custom solver, and the V1
+//! snapshot shape carries exact affected versions), exactly like the
 //! exception lifecycle deferral in [`crate::exception`].
 
 use serde::{Deserialize, Serialize};
@@ -113,6 +121,14 @@ pub struct VulnFinding {
     pub fixed: Vec<String>,
 }
 
+/// Assessment limitation for Git-revision dependencies (issue #584
+/// wont-fix, auditor-owned): the SHA carries no OSV version identity.
+pub const REASON_GIT: &str = "unsupported git revision";
+/// Assessment limitation for private packages with no upstream advisory
+/// identity (issue #584 wont-fix, auditor-owned): callers mark via
+/// [`LockedPackage::is_private`]; lock readers never infer it.
+pub const REASON_PRIVATE: &str = "unidentified private package";
+
 /// Unassessable dependency: the audit fails as incomplete and
 /// identifies the dependency plus the limitation.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -161,9 +177,11 @@ pub fn canonical_severity(severity: &str) -> String {
 /// Whether one locked package version falls in one advisory's affected
 /// scope. Cargo/npm/Go use upstream Cargo-flavor semver via
 /// [`version_in_scope`]; Maven/NuGet V1 use exact version equality
-/// (resolver-owned range narrowing deferred). Unparseable scopes or
-/// versions fail closed to `false` for semver sets, and to exact-match
-/// only for Maven/NuGet.
+/// (issue #584 wont-fix: range scopes such as Maven `[1.0,2.0)` or
+/// NuGet `(,1.0]` stay no-match, never a false positive; V1 snapshots
+/// carry exact affected versions). Unparseable scopes or versions fail
+/// closed to `false` for semver sets, and to exact-match only for
+/// Maven/NuGet.
 pub fn version_affected(set: &str, scope: &str, version: &str) -> bool {
     match set {
         "cargo" | "npm" | "go" => version_in_scope(scope, version),
@@ -188,7 +206,7 @@ pub fn match_packages(
             unassessed.push(Unassessed {
                 package: package.name.clone(),
                 set: package.set.clone(),
-                reason: "unsupported git revision",
+                reason: REASON_GIT,
             });
             continue;
         }
@@ -196,7 +214,7 @@ pub fn match_packages(
             unassessed.push(Unassessed {
                 package: package.name.clone(),
                 set: package.set.clone(),
-                reason: "unidentified private package",
+                reason: REASON_PRIVATE,
             });
             continue;
         }
@@ -368,13 +386,32 @@ mod tests {
     }
 
     #[test]
-    fn version_matching_uses_semver_for_cargo_npm_go_and_exact_for_maven() {
+    fn version_matching_uses_semver_for_cargo_npm_go_and_exact_for_maven_nuget() {
         assert!(version_affected("cargo", ">=1.0.0, <2.0.0", "1.5.0"));
         assert!(!version_affected("cargo", ">=1.0.0, <2.0.0", "2.0.0"));
         assert!(version_affected("npm", "^18.0.0", "18.2.0"));
+        assert!(version_affected("go", ">=1.0.0, <2.0.0", "1.5.0"));
+        // Issue #584 wont-fix: Maven/NuGet stay exact-match in V1.
+        // Exact versions match; semver ranges and Maven/NuGet interval
+        // notations never match (no false positives; V1 snapshots carry
+        // exact affected versions).
         assert!(version_affected("maven", "1.2.0", "1.2.0"));
         assert!(!version_affected("maven", ">=1.0.0", "1.2.0"));
+        assert!(!version_affected("maven", "[1.0,2.0)", "1.5.0"));
+        assert!(!version_affected("maven", "(,1.0]", "1.0.0"));
+        assert!(!version_affected("maven", "[1.0]", "1.0.0"));
+        assert!(version_affected("nuget", "1.2.3", "1.2.3"));
+        assert!(!version_affected("nuget", "[1.0,2.0)", "1.5.0"));
+        assert!(!version_affected("nuget", "(,1.0]", "1.0.0"));
+        assert!(!version_affected("nuget", "[1.0]", "1.0.0"));
         assert!(!version_affected("nuget", "", "1.0.0"));
+    }
+
+    #[test]
+    fn unassessed_reasons_are_pinned() {
+        // Issue #584 wont-fix pins: reason spellings are contract.
+        assert_eq!(REASON_GIT, "unsupported git revision");
+        assert_eq!(REASON_PRIVATE, "unidentified private package");
     }
 
     #[test]
@@ -394,16 +431,29 @@ mod tests {
                 is_git: false,
                 is_private: true,
             },
+            // Issue #584: incomplete mapping is set-agnostic; Maven/NuGet
+            // plus Go unassessed deps fail the same way, never clean.
+            LockedPackage {
+                name: "git-nuget-dep".to_owned(),
+                version: "1.0.0".to_owned(),
+                set: "nuget".to_owned(),
+                is_git: true,
+                is_private: false,
+            },
+            LockedPackage {
+                name: "private-maven".to_owned(),
+                version: "2.0.0".to_owned(),
+                set: "maven".to_owned(),
+                is_git: false,
+                is_private: true,
+            },
         ];
         let (findings, unassessed) = match_packages(&pkgs, &advisories());
         assert!(findings.is_empty());
-        assert_eq!(unassessed.len(), 2);
-        assert!(unassessed
-            .iter()
-            .any(|u| u.reason == "unsupported git revision"));
-        assert!(unassessed
-            .iter()
-            .any(|u| u.reason == "unidentified private package"));
+        assert_eq!(unassessed.len(), 4);
+        assert!(unassessed.iter().any(|u| u.reason == REASON_GIT));
+        assert!(unassessed.iter().any(|u| u.reason == REASON_PRIVATE));
+        assert!(unassessed.iter().filter(|u| u.reason == REASON_GIT).count() == 2);
     }
 
     #[test]
