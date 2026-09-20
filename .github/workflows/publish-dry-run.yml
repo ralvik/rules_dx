@@ -15,7 +15,7 @@
 # matrix is frozen in deploy/release/matrix.bzl (seed qualified, four
 # follow-ups unqualified per issue #311 as hosts qualify); SBOM,
 # signing/attestation, and BCR run owner-gated dry-run-first per the
-# human-run release path (docs/deploy/release-runbook.md); GHCR images
+# human-run release path (docs/deploy/release-runbook.md, issue #458); GHCR images
 # stay in the separate ghcr.yml workflow per owner decision. Nothing here
 # tags, publishes, or pushes, with or without approval: `dist/`/`release/`
 # stay git-ignored, staging happens under RUNNER_TEMP so the checkout is

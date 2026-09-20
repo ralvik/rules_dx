@@ -112,7 +112,9 @@ qualify). Draft-only ceiling enforced, owner approval required.
 
 ## Path F: release matrix, SBOM/provenance, signing, BCR, human-run (accepted)
 
-The full release path (issue #311) is owner-gated dry-run-first
+The full release path (issue #311; human-run driver owned under issue
+#458, live successor to closed #311 for the human-run path) is
+owner-gated dry-run-first
 tooling in `deploy/release/` with policy tests `bazel test
 //deploy/release:all`:
 
@@ -130,7 +132,7 @@ tooling in `deploy/release/` with policy tests `bazel test
 - BCR (`bcr.bzl` plus `bcr_deploy.sh`): `source.json` plus integrity
   shape check; `BCR_DRY_RUN=1` prints would-submit, submits nothing;
   `0.0.0` never submits.
-- Human-run driver (`release.sh`): dry-run by default, requires
+- Human-run driver (`release.sh`, issue #458): dry-run by default, requires
   `RELEASE_APPROVE=1` plus a pre-pushed tag plus clean tree; never
   creates tags, never runs on CI.
 - GHCR stays the separate `.github/workflows/ghcr.yml` route (image

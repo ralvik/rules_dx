@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Human-run release driver (issue #311).
+# Human-run release driver (issue #458, live successor to closed #311 for
+# the human-run path).
 #
 # The single owner-gated entry point for cutting a `rules_dx` release.
 # Dry-run by default: prints every step it would run and publishes

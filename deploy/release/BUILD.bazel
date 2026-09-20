@@ -1,4 +1,4 @@
-"""Full release path: matrix, SBOM/provenance, signing, BCR, human-run (issue #311)."""
+"""Full release path: matrix, SBOM/provenance, signing, BCR (issue #311), human-run signing-first (issue #458, live successor to closed #311 for the human-run path)."""
 
 load("@rules_python//python:defs.bzl", "py_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")

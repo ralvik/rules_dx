@@ -317,7 +317,8 @@ else
   bad "publish-dry-run.yml lost the release-tests exercise (//deploy/release:all, issue #311)"
 fi
 
-# Signing dry-run stays exercised (issue #311 signing-first): the dry run
+# Signing dry-run stays exercised (issues #311, #458 signing-first, live
+# successor to closed #311 for the human-run path): the dry run
 # runs //deploy/release:signing_demo with RELEASE_SIGN_DRY_RUN=1 and
 # proves the trust root plus would-sign, publishing nothing.
 if grep -q -F -e 'RELEASE_SIGN_DRY_RUN=1 bazel run //deploy/release:signing_demo' .github/workflows/publish-dry-run.yml && grep -q -F -e 'tuf-repo-cdn.sigstore.dev' .github/workflows/publish-dry-run.yml; then
@@ -326,22 +327,24 @@ else
   bad "publish-dry-run.yml lost the signing dry-run exercise (signing_demo + RELEASE_SIGN_DRY_RUN=1, issue #311)"
 fi
 
-# Human-run driver stays exercised (issue #311): the dry run runs
+# Human-run driver stays exercised (issue #458, live successor to closed
+# #311 for the human-run path): the dry run runs
 # deploy/release/release.sh in dry-run mode, proving the tag ceiling
 # plus owner-approval gate with nothing published.
 if grep -q -F -e 'deploy/release/release.sh' .github/workflows/publish-dry-run.yml && grep -q -F -e 'human-run-dry-run.log' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "publish-dry-run.yml lost the human-run driver exercise (release.sh dry run, issue #311)"
+  bad "publish-dry-run.yml lost the human-run driver exercise (release.sh dry run, issue #458)"
 fi
 
-# Release runbook stays owned (issue #311): the human-run path is
+# Release runbook stays owned (issue #458, live successor to closed #311
+# for the human-run path): the human-run path is
 # documented, not just workflow steps.
 if [[ -f "docs/deploy/release-runbook.md" ]] &&
   grep -q -F -e 'never creates or pushes tags' docs/deploy/release-runbook.md; then
   ok
 else
-  bad "release runbook missing (docs/deploy/release-runbook.md + tag ceiling, issue #311)"
+  bad "release runbook missing (docs/deploy/release-runbook.md + tag ceiling, issue #458)"
 fi
 
 # Review routing stays owned (issue #424): CODEOWNERS exists with the sole

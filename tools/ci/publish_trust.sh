@@ -219,14 +219,15 @@ else
   bad "BCR owner-gated tooling missing (deploy/release/bcr.bzl + BCR_DRY_RUN=1, #311)"
 fi
 
-# Human-run driver per #311: dry-run by default, tag ceiling, owner
+# Human-run driver per #458 (live successor to closed #311 for the
+# human-run path): dry-run by default, tag ceiling, owner
 # approval gate, exercised in the workflow.
 if [[ -f "deploy/release/release.sh" ]] &&
   grep -q -F -e 'never creates or pushes tags' deploy/release/release.sh &&
   grep -q -F -e 'deploy/release/release.sh' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "human-run release driver missing (deploy/release/release.sh + workflow exercise, #311)"
+  bad "human-run release driver missing (deploy/release/release.sh + workflow exercise, #458)"
 fi
 
 # Release tests stay exercised in the workflow: //deploy/release:all
