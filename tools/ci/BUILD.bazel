@@ -571,6 +571,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Devcontainer boot manual plus wont-fix harness (issue #648); see docs/contributing/devcontainer.md#container-boot-manual.
+sh_binary(
+    name = "devcontainer_boot_qualification",
+    srcs = ["devcontainer_boot_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Env/codegen harness; see tools/ci/env_codegen_qualification.sh.
 sh_binary(
     name = "env_codegen_qualification",

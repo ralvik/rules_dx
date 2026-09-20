@@ -11,21 +11,56 @@ runs the user-path bootstrap (`bazel run //dx:env`, then `dx setup`)
 instead of a full build, so container create pays only
 managed-environment setup.
 
-Container boot (devcontainer CLI build plus `postCreateCommand` execution
-asserting the managed environment materializes) and non-Linux runs remain
-open gaps; no working container or multi-platform support is claimed until
-qualified execution lands. Linux arm64 hosts are affected the same way:
-the scaffold `devcontainer.json` itself is arch-independent and the pinned
+Container boot on the seed host (linux/amd64, devcontainer CLI build plus
+`postCreateCommand` execution asserting the managed environment
+materializes) is manually verified on every Dockerfile or definition
+change (see [Container boot manual](#container-boot-manual)); CI stays
+parity plus definition shape only, no boot job. Non-Linux runs plus
+linux/arm64 boot plus an arm64 prebuilt variant are wont-fix: the
+scaffold `devcontainer.json` itself is arch-independent and the pinned
 Ubuntu base digest resolves from a multi-arch index, but the prebuilt image
 stays a linux/amd64 seed slice (`.devcontainer/Dockerfile.prebuilt` pins
 the amd64 Bazelisk launcher), so arm64 container boot plus an arm64
-prebuilt variant stay open gaps (issue #410 qualifies `dx` and CI natively
+prebuilt variant stay wont-fix (issue #410 qualifies `dx` and CI natively
 on arm64, not container boot; issue #411 qualifies static-musl target
 profiles, not musl container boot; issue #412 qualifies `dx` and CI
 natively on macOS arm64, not container boot; issue #413 qualifies `dx`
 and CI natively on macOS x86_64 best-effort, not container boot; issue
 #414 qualifies `dx` and CI natively on Windows x86_64, not container
 boot).
+
+## Container boot manual
+
+Manual boot verify on Dockerfile change with non-Linux/arm64 wont-fix
+(issue #648): seed-host boot only, no boot job in CI.
+
+As built today: `devcontainer-check` stays parity plus definition shape
+(`//.devcontainer:devcontainer_parity_test` plus `postCreateCommand`
+shape); `ghcr.yml` builds the image on PRs touching the scaffold inputs
+without booting it. Boot is verified manually on linux/amd64: `docker
+build -f .devcontainer/Dockerfile.prebuilt -t dx-devcontainer:local .`
+locally, then `devcontainer up --workspace-folder .` (devcontainer CLI
+plus Docker) with `postCreateCommand` (`bazel run //dx:env`, then `dx
+setup`) asserting the managed environment materializes.
+
+Verify is manual on every change to `.devcontainer/Dockerfile.prebuilt`
+or `.devcontainer/devcontainer.json`, plus before any gated GHCR push,
+with evidence in the same reviewed PR; the sole maintainer owns every
+row until delegation (see `CODEOWNERS`).
+
+Qualify locally or on demand with customer flows only:
+`bazel run //tools/ci:devcontainer_boot_qualification` (static pins, builds nothing,
+boots nothing) plus on-demand local `docker build` plus `devcontainer
+up`.
+
+Boot job in CI rejected, non-customer; no extra CI job exists; keep CI
+customer-only. Non-Linux runs plus linux/arm64 boot plus an arm64
+prebuilt variant are wont-fix, no multi-platform container support
+claimed. Fixture evidence is pinned in
+`tools/ci/tests/fixtures/devcontainer_boot/pins.bzl` plus
+`devcontainer_boot.expected` via
+`bazel run //tools/ci:devcontainer_boot_qualification` (issue #648; infra only, no
+Supported claim).
 
 ## Prebuilt images (GHCR)
 

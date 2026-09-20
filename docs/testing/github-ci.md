@@ -317,10 +317,21 @@ rebuild plus rotation with base plus Bazelisk plus Cosign plus TUF pins,
 sole-maintainer owner, one reviewed PR, customer-flows-only harness plus
 on-demand local docker build with no push/schedule trigger and no extra CI
 job, scheduled CI rebuild rejected; infra only, no Supported claim).
+Devcontainer boot manual plus wont-fix qualified seed-only under issue #648
+(`tools/ci/tests/fixtures/devcontainer_boot/pins.bzl` plus
+`devcontainer_boot.expected` via
+`bazel run //tools/ci:devcontainer_boot_qualification`; seed-host
+linux/amd64 manual boot verify on every Dockerfile or definition change
+plus before any gated GHCR push with evidence in the same reviewed PR,
+sole-maintainer owner, customer-flows-only harness plus on-demand local
+docker build plus devcontainer up with no boot job in CI and no extra CI
+job, non-Linux plus linux/arm64 boot plus arm64 prebuilt variant
+wont-fix; infra only, no Supported claim).
 Consumer CI, devcontainer, and perf honesty
 is delivered for the self-call path with owned gaps elsewhere: self-call test-disabled
 per #408 plus Phase 1 #607 coverage superset (verbatim `//...`, qualified seed-only under #509 via
 `bazel run //tools/ci:consumer_ci_qualification`; build-only self-call forever
-rejected); devcontainer parity plus definition shape delivered with boot
-staying open gap under #460; perf report-not-gate rejected per ADR 0022
+rejected); devcontainer parity plus definition shape delivered with
+seed-host boot manually verified plus non-Linux/arm64 wont-fix under #648
+(no boot job in CI); perf report-not-gate rejected per ADR 0022
 (no standing benchmarking). Closed #325 carries no open scope.
