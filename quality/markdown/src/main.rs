@@ -10,6 +10,10 @@
 //! Exit `0` when every source was checked (findings print as JSON lines on
 //! stdout); exit `2` on bad arguments, unreadable files, or non-UTF-8 input.
 
+// Issue #591 (extends #238 rollout beyond cli/*): infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 // LCOV_EXCL_START - reason: thin binary shim; CLI file I/O is covered by library run_cli unit tests with injected readers, not host I/O.
 fn main() {
     // Structured diagnostics: init is idempotent and emits

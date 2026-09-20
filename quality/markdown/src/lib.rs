@@ -40,6 +40,10 @@
 //! stderr. Skipped remote targets are reported once each on stderr and never
 //! fetched. Duplicate source workspace paths keep the first mapping.
 
+// Issue #591 (extends #238 rollout beyond cli/*): infallible paths must not `expect`/`unwrap` outside tests
+// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use clap::error::{ContextKind, ContextValue, ErrorKind};
@@ -986,7 +990,10 @@ pub fn run_cli(
                 kind: kind_id(finding.kind),
                 message: finding.message.as_str(),
             };
-            print_out(&serde_json::to_string(&line).expect("finding line serializes"));
+            print_out(
+                &serde_json::to_string(&line)
+                    .unwrap_or_else(|err| unreachable!("finding line serializes: {err:?}")),
+            );
         }
         for remote in &outcome.skipped_remotes {
             if !seen_remotes.iter().any(|seen| seen == remote) {
