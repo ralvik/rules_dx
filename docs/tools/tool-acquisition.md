@@ -205,13 +205,32 @@ wheels only: no sdist fallback, wheel compilation, pip subprocess, or consumer-p
 plugin is allowed. Ruff and Ty remain standalone artifacts rather than binary-wheel
 entry-point targets.
 
-For Node, `rules_dx` owns one namespaced package graph and pnpm lock. Authoritative
-JavaScript rules fetch exact package archives through Bazel and expose stable `js_binary`
-targets. The lock must require no lifecycle/install scripts or native addon build. Shipped
-configuration imports the curated ESLint, Prettier, Stylelint, and named plugin closure
-explicitly from that private graph.
+For Node, `rules_dx` owns two single-importer pnpm workspaces sharing one
+root `.npmrc` (`hoist=false`) and one managed Node runtime. Each workspace
+keeps explicit `packages: ["."]` and fail-closed `allowBuilds: {}`; both
+`package.json` files pin the same `packageManager` (`pnpm@10.34.5`, resolved
+by the `pnpm` extension in `MODULE.bazel`); builds never invoke pnpm and
+`package.json` files carry no scripts because Bazel owns execution.
 
-The ruleset's own `MODULE.bazel` instantiates and imports these private hubs. Consumers do
+- Authoritative application/test graph: root
+  `package.json`/`pnpm-lock.yaml`/`pnpm-workspace.yaml` in hub `npm`
+  (`//:node_modules`), owning Jest plus the framework runtimes.
+- Private pure-JavaScript tool graph:
+  `quality/tools/javascript/package.json`/`pnpm-lock.yaml`/`pnpm-workspace.yaml`
+  in hub `npm_tools` (`//quality/tools/javascript:node_modules`), owning
+  ESLint plus Prettier with stable `js_binary` entry points under
+  `//quality/tools/javascript/bin`.
+
+The split keeps the tool closure private: consumers never touch the tool
+lock or hub labels. Separate `node_modules` facades preserve per-importer
+layout instead of flattening the two graphs. Authoritative JavaScript rules
+fetch exact package archives through Bazel and expose stable `js_binary`
+targets. Each lock must require no lifecycle/install scripts or native addon
+build. Shipped configuration imports the curated ESLint, Prettier, Stylelint,
+and named plugin closure explicitly from that private graph.
+
+The ruleset's own `MODULE.bazel` instantiates and imports both hubs
+(authoritative `npm` plus private `npm_tools`). Consumers do
 not call `use_extension`, `use_repo`, `npm_link_all_packages`, or console-script helpers,
 and do not maintain a tool lockfile. Public `rules_dx` targets hide hub names and package
 layout.

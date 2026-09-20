@@ -160,9 +160,10 @@ use_repo(typescript, "npm_typescript")
 pnpm = use_extension("@aspect_rules_js//npm:extensions.bzl", "pnpm")
 use_repo(pnpm, "pnpm")
 
-# Authoritative pnpm graph (jest + jest-junit). The lock
-# is generated with the Bazel-pinned pnpm (`BAZEL_BINDIR=. bazel-bin/.../pnpm
-# install --lockfile-only`); builds never invoke the package manager.
+# Authoritative pnpm graph (jest + framework runtimes; see
+# docs/tools/tool-acquisition.md). The lock is generated with the
+# Bazel-pinned pnpm (`BAZEL_BINDIR=. bazel-bin/.../pnpm install
+# --lockfile-only`); builds never invoke the package manager.
 npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
 npm.npm_translate_lock(
     name = "npm",
@@ -171,14 +172,15 @@ npm.npm_translate_lock(
     verify_node_modules_ignored = "//:.bazelignore",
 )
 
-# Private pure-JavaScript tool graph (ESLint + Prettier).
-# Separate `npm_tools` hub so the tool closure stays private: consumers
-# never touch this lock or hub labels; public entry points live under
-# //quality/tools/javascript. Shares the managed Node 22 toolchain
+# Private pure-JavaScript tool graph (ESLint + Prettier; see
+# docs/tools/tool-acquisition.md). Separate `npm_tools` hub so the tool
+# closure stays private: consumers never touch this lock or hub labels;
+# public entry points live under //quality/tools/javascript. Shares the
+# single root `.npmrc` (hoist=false) and the managed Node 22 toolchain
 # (no ambient Node, no lifecycle scripts via allowBuilds: {}).
 npm.npm_translate_lock(
     name = "npm_tools",
-    npmrc = "//quality/tools/javascript:.npmrc",
+    npmrc = "//:.npmrc",
     pnpm_lock = "//quality/tools/javascript:pnpm-lock.yaml",
     verify_node_modules_ignored = "//:.bazelignore",
 )
