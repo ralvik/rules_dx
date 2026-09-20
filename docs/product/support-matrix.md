@@ -136,7 +136,7 @@ fixture evidence; provisional notes below do not select additional defaults or n
 
 | Foundation | Provisional upstream basis | Open mappings | Tracking |
 | --- | --- | --- | --- |
-| Rust application | `rules_rs` + pinned patched `rules_rust` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Providers/Gazelle/integration pinned; kept CC opt-out linker pinned (issue #471); bindgen LLVM-22-vs-23 pinned (issue #473); native gaps: shell-env default, CXX graph identity, exact-target discovery | Pinned (`bazel run //tools/ci:foundation_maps`, issue #470; `bazel run //tools/ci:cc_optout_qualification`, issue #471; `bazel run //tools/ci:bindgen_qualification`, issue #473); native gaps under issues #472, #474, #475 |
+| Rust application | `rules_rs` + pinned patched `rules_rust` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Providers/Gazelle/integration pinned; kept CC opt-out linker pinned (issue #471); bindgen LLVM-22-vs-23 pinned (issue #473); exact-target discovery qualified seed-only (issue #475); native gaps: shell-env default, CXX graph identity | Pinned (`bazel run //tools/ci:foundation_maps`, issue #470; `bazel run //tools/ci:cc_optout_qualification`, issue #471; `bazel run //tools/ci:bindgen_qualification`, issue #473; `bazel run //tools/ci:exact_target_qualification`, issue #475); native gaps under issues #472, #474 |
 | Python application | `aspect_rules_py` 2.x ([ADR 0010](../decisions/0010-python-foundation.md)) | Mappings | Pinned (`bazel run //tools/ci:foundation_maps`) |
 | JavaScript/TypeScript application | `aspect_rules_js`/`aspect_rules_ts`, `aspect_rules_jest` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Wrappers/Gazelle | Pinned (`bazel run //tools/ci:foundation_maps`) |
 | JS/TS quality | Biome default; ESLint, Prettier available; `tsc` diagnostic-only | Mappings | Pinned (`bazel run //tools/ci:foundation_maps`) |
@@ -152,8 +152,9 @@ fixture evidence; provisional notes below do not select additional defaults or n
 
 Required-core Rust providers/Gazelle/integration are pinned (issue #470); kept CC
 opt-out linker is pinned seed-only (issue #471); bindgen LLVM-22-vs-23 compat is
-qualified seed-only (issue #473); the three remaining native
-gaps below stay owned under issues #472, #474, #475; Vue/Svelte/Astro/MDX
+qualified seed-only (issue #473); exact-target discovery is qualified seed-only
+(issue #475); the two remaining native
+gaps below stay owned under issues #472, #474; Vue/Svelte/Astro/MDX
 adapter mappings plus composition evidence stay open under issue #510. Python mappings
 plus Ty and JS/TS wrappers/Gazelle plus quality mappings are pinned (see below).
 Qualified mappings are pinned by
@@ -180,11 +181,16 @@ opt-out linker failure path is pinned seed-only under issue #471 (pure-Rust
 fallback, `bazel run //tools/ci:cc_optout_qualification`). Bindgen LLVM-22-vs-23
 compat is qualified under issue #473 with the LLVM-22 parser baseline vs LLVM-23
 target pinned plus the standalone/build-script fixture pair
-(`bazel run //tools/ci:bindgen_qualification`). Remaining native gaps
+(`bazel run //tools/ci:bindgen_qualification`). Exact-target discovery is
+qualified seed-only under issue #475 (resolver-owned exact labels to upstream
+`TARGETS`, `Path`/`Buildfile` widening plus project-owned graph plus
+`RustAnalyzerInfo` rejected, hello exact-isolation pair plus
+`rust/tests/fixtures/discovery/pins.bzl` via
+`bazel run //tools/ci:exact_target_qualification`). Remaining native gaps
 (global shell-env False versus
 annotation extension decided hermetic under issue #472 with global `False`
-in `.bazelrc` and narrow per-crate opt-in at zero opt-ins, CXX graph identity under issue #474, exact-target discovery under issue #475) stay
-owned under issues #472, #474, #475 per the [native plan](../native-toolchains.md#qualification-questions-and-delivery).
+in `.bazelrc` and narrow per-crate opt-in at zero opt-ins, CXX graph identity under issue #474) stay
+owned under issues #472, #474 per the [native plan](../native-toolchains.md#qualification-questions-and-delivery).
 No `Supported` claim until platform plus consumer plus release evidence passes.
 
 Required platforms and the quality-tool baseline (minus excluded Swift) frame

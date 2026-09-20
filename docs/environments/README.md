@@ -37,9 +37,11 @@ Required-core Rust integration is pinned (issue #470): the provider-derived focu
 `rust/env/plan_tests.bzl` over the four `rust/env` hello plans exercised by
 `rust/tests/fixtures/hello/`.
 
-Required-core exact-target discovery stays owned under issue #475 per the
-[native plan](../native-toolchains.md#qualification-questions-and-delivery);
-current plans are provider-derived focused-target plans, not exact-target proof.
+Required-core exact-target discovery is qualified seed-only under issue #475 per the
+[native plan](../native-toolchains.md#qualification-questions-and-delivery)
+(`bazel run //tools/ci:exact_target_qualification`; resolver-owned exact labels to
+upstream `TARGETS`, hello exact-isolation pair plus `rust/tests/fixtures/discovery/pins.bzl`);
+current plans are provider-derived focused-target plans, not exact-target proof beyond that contract.
 
 Admitted additional-foundation env mappings stay owned under issues #476-#484; current plans
 are provider-derived focused-target plans on default upstream toolchains, not

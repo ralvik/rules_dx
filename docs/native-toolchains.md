@@ -379,9 +379,13 @@ if one is established; the raw extractor currently does not supply it. No additi
 Bazel-invoking editor-launcher behavior is selected by this research.
 
 Rust's upstream dynamic discovery accepts paths/buildfiles rather than exact target labels, although
-generation/flycheck have target interfaces. Prefer an upstream exact-target discovery extension over
+generation/flycheck have target interfaces. Exact-target discovery is qualified seed-only under issue #475
+(query-only without contract rejected): resolver-owned exact labels flow to the upstream `gen_rust_project`/`flycheck`
+`TARGETS` interfaces preserving exact context, while `Path`/`Buildfile` widening to `//pkg:all` stays rejected as the
+sole route. Prefer an upstream exact-target discovery extension over
 a project-owned crate graph. Internal RustAnalyzerInfo is not a substitute for a public provider API.
-See the [pinned discovery source](https://github.com/hermeticbuild/rules_rust/blob/e9dd49f22cfa43c75ba30cd9d9bb7d8bdc459dde/tools/rust_analyzer/rust_project.rs).
+See the [pinned discovery source](https://github.com/hermeticbuild/rules_rust/blob/e9dd49f22cfa43c75ba30cd9d9bb7d8bdc459dde/tools/rust_analyzer/rust_project.rs)
+plus `rust/tests/fixtures/discovery/pins.bzl` and `bazel run //tools/ci:exact_target_qualification`.
 
 ## Qualification Questions And Delivery
 
@@ -397,14 +401,18 @@ under issue #472 (global `False` in `.bazelrc` with narrow per-crate opt-in,
 zero opt-ins). Bindgen LLVM-22-vs-23 compatibility is qualified under issue #473:
 LLVM-22 parser baseline vs LLVM-23 target pinned in
 `rust/tests/fixtures/bindgen/pins.bzl` with the `bindgen.h` plus
-`bindgen.expected` fixture pair (unpinned LLVM rejected). Remaining native gaps
-stay owned under issues #472, #474, #475: global shell-env annotation
-extension, CXX graph identity, and exact-target discovery. Build-script hermetic defaults are
+`bindgen.expected` fixture pair (unpinned LLVM rejected). Exact-target discovery is qualified seed-only under issue #475
+(resolver-owned exact labels to upstream `TARGETS`, `Path`/`Buildfile` widening rejected, project-owned graph plus
+`RustAnalyzerInfo` rejected; pinned in `rust/tests/fixtures/discovery/pins.bzl` with the hello exact-isolation pair via
+`bazel run //tools/ci:exact_target_qualification`). Remaining native gaps
+stay owned under issues #472 and #474: global shell-env annotation
+extension and CXX graph identity. Build-script hermetic defaults are
 implemented (`use_cc_toolchain = True`, `use_default_shell_env = False`, `emit_warnings = True`
 in `gazelle/rust/lang.go`, proven by `gazelle/rust/lang_test.go`) and pinned by
 `bazel run //tools/ci:foundation_maps`; third-party shell-env is pinned by
 `bazel run //tools/ci:shell_env_qualification`; bindgen compat is pinned by
-`bazel run //tools/ci:bindgen_qualification`; no `Supported`
+`bazel run //tools/ci:bindgen_qualification`; exact-target discovery is pinned by
+`bazel run //tools/ci:exact_target_qualification`; no `Supported`
 claim.
 
 Admitted C/C++ foundation stays owned under issues #476-#484: MSVC interop plus SDK licensing
@@ -430,7 +438,7 @@ acquisition, interoperability, coverage, and release evidence passes.
 | Can bindgen/CXX use one upstream graph? | Qualified under issue #473 for bindgen (LLVM-22 parser baseline vs LLVM-23 target pinned with the standalone/build-script fixture pair, execution libclang closure, target flags, `bindgen.h` plus `bindgen.expected` identical-set proof via `bazel run //tools/ci:bindgen_qualification`); CXX identical crate/generator versions stay owned under issue #474. | issues #473, #474 |
 | Can public Cargo metadata represent every generated target? | Prove features, build-script metadata, target kinds and ownership without private serialized dependency-graph access; seek narrow upstream metadata exports where missing. | open work under issue #502 |
 | Can generation satisfy strict ownership and resolution cheaply? | Quoted/angle/ambiguous/macro include fixtures, authoritative dependency metadata, test grouping, generated headers, assembly dialects and explicit module/PCH disposition. | open work under issue #503 |
-| Can IDE setup preserve exact context and projection contracts? | Upstream exact-target Rust discovery and action-derived C++ snapshot proof, generated sources, multi-context headers, managed host tools and Bazel-9 compatibility. | issue #475 |
+| Can IDE setup preserve exact context and projection contracts? | Qualified seed-only under issue #475 for Rust exact-target discovery (resolver-owned exact labels to `gen_rust_project`/`flycheck` TARGETS, `Path`/`Buildfile` widening plus project-owned graph plus `RustAnalyzerInfo` rejected, hello exact-isolation pair plus `rust/tests/fixtures/discovery/pins.bzl` via `bazel run //tools/ci:exact_target_qualification`); C++ action-derived snapshot plus generated sources plus multi-context headers plus managed host tools plus Bazel-9 compatibility stay open proof. | issue #475 |
 | Which cross routes actually work and execute? | Capture compiler execution platform, native target execution and separate cache/remote evidence for every claimed row. Expand only after the initial cohort passes. | open work under issue #504 |
 | Is the remediation bounded enough for admission? | Reproduce defects, estimate each upstream fix, name actual owners, record patch/upstream issue/upgrade tracking and complete-workflow evidence. | open work under issue #505 |
 
