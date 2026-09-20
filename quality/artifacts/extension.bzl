@@ -10,8 +10,10 @@ Metadata schema version 1 is frozen by `metadata_tests.bzl`; only
 linux_x86_64 is recorded (seed host plus Linux arm64 `dx`/CI qualified
 under issue #410 plus static-musl target profiles qualified under issue
 #411 plus macOS arm64 `dx`/CI qualified under issue #412 plus macOS
-x86_64 best-effort `dx`/CI qualified under issue #413; linux_arm64
-plus macos_arm64 plus macos_x86_64 tool artifacts stay owned follow-up gaps
+x86_64 best-effort `dx`/CI qualified under issue #413 plus Windows
+x86_64 MSVC-compatible `dx`/CI qualified under issue #414; linux_arm64
+plus macos_arm64 plus macos_x86_64 plus windows_x86_64 tool artifacts stay
+owned follow-up gaps
 with the recorded no-artifact diagnostic, never a silent fallback; musl
 target closures run quality tools on the glibc exec platform, so no musl
 tool artifact is recorded; other

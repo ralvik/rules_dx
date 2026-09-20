@@ -59,8 +59,8 @@ else
   bad "reusable-consumer lost its nine-check plus gate plus aggregate contract"
 fi
 
-# Platforms-gate pins the four supported platforms with explicit selection.
-if grep -q -F -e 'supported = {"linux_x86_64", "linux_arm64", "macos_arm64", "macos_x86_64"}' "$workflow" &&
+# Platforms-gate pins the five supported platforms with explicit selection.
+if grep -q -F -e 'supported = {"linux_x86_64", "linux_arm64", "macos_arm64", "macos_x86_64", "windows_x86_64"}' "$workflow" &&
   grep -q -F -e 'no implicit default' "$workflow" &&
   grep -q -F -e 'must be a nonempty JSON array' "$workflow"; then
   ok
@@ -71,14 +71,18 @@ fi
 # Per-platform jobs route each platform to its runner: seed Linux x86_64
 # to ubuntu-latest, Linux arm64 native (issue #410) to ubuntu-24.04-arm,
 # macOS arm64 (issue #412) to macos-14, macOS x86_64 best-effort (issue
-# #413) to macos-15-intel. Linux arm64 must never fall through to macOS;
-# macOS x86_64 must never fall through to the arm64 runner.
+# #413) to macos-15-intel, Windows x86_64 MSVC-compatible (issue #414) to
+# windows-latest. Linux arm64 must never fall through to macOS; macOS
+# x86_64 must never fall through to the arm64 runner; Windows must never
+# fall through to macOS.
 if [[ "$(grep -c -F -e "matrix.platform == 'linux_arm64' && 'ubuntu-24.04-arm'" "$workflow")" == "3" ]] &&
   grep -q -F -e "macos_x86_64' && 'macos-15-intel'" "$workflow" &&
-  grep -q -F -e "macos_arm64' && 'macos-14'" "$workflow"; then
+  grep -q -F -e "macos_arm64' && 'macos-14'" "$workflow" &&
+  grep -q -F -e 'windows_x86_64' "$workflow" &&
+  grep -q -F -e 'windows-latest' "$workflow"; then
   ok
 else
-  bad "per-platform jobs lost the linux_arm64/macos runner mappings (arm64 to ubuntu-24.04-arm, macos_arm64 to macos-14, macos_x86_64 to macos-15-intel)"
+  bad "per-platform jobs lost the linux_arm64/macos/windows runner mappings (arm64 to ubuntu-24.04-arm, macos_arm64 to macos-14, macos_x86_64 to macos-15-intel, windows_x86_64 to windows-latest)"
 fi
 
 # Sequential stays rejected fail-closed plus unknown-mode rejection.
@@ -199,12 +203,12 @@ fi
 
 # Self-call in ci.yml runs all nine checks (issue #408 dogfood-like
 # consumer) on all qualified hosts (seed plus arm64 native plus macOS
-# arm64 plus macOS x86_64 best-effort, issues #410/#412/#413). No bespoke
-# corpus scope remains in ci.yml: dogfood is verbatim `//...` via the
-# reusable workflow.
+# arm64 plus macOS x86_64 best-effort plus Windows x86_64, issues
+# #410/#412/#413/#414). No bespoke corpus scope remains in ci.yml: dogfood
+# is verbatim `//...` via the reusable workflow.
 if grep -q -F -e 'consumer-ci (self-call reusable consumer workflow)' "$ci" &&
   grep -q -F -e 'disabled_checks: ""' "$ci" &&
-  grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"macos_x86_64\"]'" "$ci" &&
+  grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"macos_x86_64\", \"windows_x86_64\"]'" "$ci" &&
   ! grep -q -F -e 'attr(tags, corpus' "$ci" &&
   ! grep -q -F -e 'Only build is enabled' "$ci"; then
   ok

@@ -3,17 +3,19 @@
 #
 # Machine-checks the as-built multi-host CI matrix delivered after the
 # portable-shell contract (issue #323, closed) with fixture evidence and
-# owned gaps, without claiming Windows:
+# owned gaps, with Windows x86_64 qualified under issue #414:
 # - delivered: per-host jobs parameterized by runner plus cache scope plus
 #   qualified-host expectation for the seed Linux x86_64 glibc host plus
 #   Linux arm64 native (issue #410) plus the two Linux static-musl
 #   profiles (issue #411) plus macOS arm64 native (issue #412) plus macOS
-#   x86_64 best-effort native (issue #413, non-blocking), consumer
-#   self-call all-enabled on the four host platforms (issue #408), docs in
+#   x86_64 best-effort native (issue #413, non-blocking) plus Windows
+#   x86_64 MSVC-compatible native (issue #414), consumer
+#   self-call all-enabled on the five host platforms (issue #408), docs in
 #   support-matrix plus ADR 0014 plus github-ci plus testing matrix;
-# - refusal-assertion: Windows x86_64 stays the remaining required host
-#   with clean unsupported_platform refusal (issue #414, backend blocked);
-#   no windows runner is queued until its evidence lands;
+# - qualification-assertion: Windows x86_64 joins Platform-qualified with
+#   explicit EULA never automatic (issue #414); a windows-latest runner
+#   with shell bash is queued; out-of-v1 Windows arm64 stays the
+#   unqualified gap with clean refusal;
 # - portable-shell reuse: shared tools/sh/lib.sh helpers plus
 #   shellcheck/shfmt pins with no non-portable workflow forms;
 # - sharding policy (issue #210): one logical stage per job, fast-fail
@@ -42,44 +44,50 @@ verify="docs/testing/verification-matrix.md"
 testing_readme="docs/testing/README.md"
 
 # ci.yml header records the host matrix under issue #415 with the closed
-# #298 pointer plus per-host successors and the Windows remainder.
+# #298 pointer plus per-host successors and the Windows qualification
+# (issue #414 joins Platform-qualified, Windows arm64 stays the remainder).
 if grep -q -F -e 'Host matrix (issue #415' "$ci" &&
   grep -q -F -e 'issue #298 (closed; per-host successors own each host)' "$ci" &&
-  grep -q -F -e 'Windows x86_64 stays the remaining required host' "$ci" &&
+  grep -q -F -e 'Windows x86_64 MSVC-compatible native (windows-latest with shell bash,' "$ci" &&
   grep -q -F -e 'issue #414' "$ci"; then
   ok
 else
-  bad "ci.yml header lost the issue #415 host-matrix plus closed-#298 plus Windows-remainder record"
+  bad "ci.yml header lost the issue #415 host-matrix plus closed-#298 plus Windows-qualified record"
 fi
 
 # Per-host runners: seed plus musl x86_64 on ubuntu-latest, arm64 pair on
 # ubuntu-24.04-arm, macos arm64 on macos-14, macos x86_64 best-effort on
-# macos-15-intel (issues #410/#411/#412/#413).
+# macos-15-intel, windows x86_64 on windows-latest
+# (issues #410/#411/#412/#413/#414).
 if grep -q -F -e 'runs-on: ubuntu-latest' "$ci" &&
   grep -q -F -e 'runs-on: ubuntu-24.04-arm' "$ci" &&
   grep -q -F -e 'runs-on: macos-14' "$ci" &&
-  grep -q -F -e 'runs-on: macos-15-intel' "$ci"; then
+  grep -q -F -e 'runs-on: macos-15-intel' "$ci" &&
+  grep -q -F -e 'runs-on: windows-latest' "$ci"; then
   ok
 else
-  bad "ci.yml lost a per-host runner (ubuntu-latest plus ubuntu-24.04-arm plus macos-14 plus macos-15-intel)"
+  bad "ci.yml lost a per-host runner (ubuntu-latest plus ubuntu-24.04-arm plus macos-14 plus macos-15-intel plus windows-latest)"
 fi
 
 # Per-host cache scopes: seed plus arm64 plus per-profile musl plus
-# per-host macos, all free-tier actions/cache (issues #410/#411/#412/#413).
+# per-host macos plus windows, all free-tier actions/cache
+# (issues #410/#411/#412/#413/#414).
 if grep -q -F -e 'bazel-seed-' "$ci" &&
   grep -q -F -e 'bazel-arm64-' "$ci" &&
   grep -q -F -e 'bazel-musl-x86_64-' "$ci" &&
   grep -q -F -e 'bazel-musl-arm64-' "$ci" &&
   grep -q -F -e 'bazel-macos-arm64-' "$ci" &&
   grep -q -F -e 'bazel-macos-x86_64-' "$ci" &&
+  grep -q -F -e 'bazel-windows-x86_64-' "$ci" &&
   grep -q -F -e 'actions/cache' "$ci"; then
   ok
 else
-  bad "ci.yml lost a per-host Bazel disk-cache scope (seed plus arm64 plus musl pair plus macos pair)"
+  bad "ci.yml lost a per-host Bazel disk-cache scope (seed plus arm64 plus musl pair plus macos pair plus windows)"
 fi
 
 # Per-host jobs exist: seed build/test/coverage plus arm64 triple plus
-# musl build/coverage pairs plus macos arm64/x86_64 triples.
+# musl build/coverage pairs plus macos arm64/x86_64 triples plus windows
+# x86_64 triple.
 if grep -q -F -e 'build-arm64 (bazel build' "$ci" &&
   grep -q -F -e 'test-arm64 (bazel test' "$ci" &&
   grep -q -F -e 'coverage-arm64 (dx coverage gate, arm64 cell)' "$ci" &&
@@ -92,48 +100,56 @@ if grep -q -F -e 'build-arm64 (bazel build' "$ci" &&
   grep -q -F -e 'coverage-macos-arm64' "$ci" &&
   grep -q -F -e 'build-macos-x86_64' "$ci" &&
   grep -q -F -e 'test-macos-x86_64' "$ci" &&
-  grep -q -F -e 'coverage-macos-x86_64' "$ci"; then
+  grep -q -F -e 'coverage-macos-x86_64' "$ci" &&
+  grep -q -F -e 'build-windows-x86_64' "$ci" &&
+  grep -q -F -e 'test-windows-x86_64' "$ci" &&
+  grep -q -F -e 'coverage-windows-x86_64' "$ci"; then
   ok
 else
-  bad "ci.yml lost a per-host job (arm64 triple plus musl pairs plus macos triples)"
+  bad "ci.yml lost a per-host job (arm64 triple plus musl pairs plus macos triples plus windows triple)"
 fi
 
-# Consumer self-call runs all-enabled on the four host platforms
-# (issue #408 dogfood-like consumer, verbatim //...).
-if grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"macos_x86_64\"]'" "$ci" &&
+# Consumer self-call runs all-enabled on the five host platforms
+# (issue #408 dogfood-like consumer, verbatim //...; Windows x86_64 joins
+# under issue #414).
+if grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"macos_x86_64\", \"windows_x86_64\"]'" "$ci" &&
   grep -q -F -e 'disabled_checks: ""' "$ci" &&
-  grep -q -F -e 'supported = {"linux_x86_64", "linux_arm64", "macos_arm64", "macos_x86_64"}' "$consumer"; then
+  grep -q -F -e 'supported = {"linux_x86_64", "linux_arm64", "macos_arm64", "macos_x86_64", "windows_x86_64"}' "$consumer"; then
   ok
 else
-  bad "ci.yml self-call lost all-enabled plus four-platform plus no-corpus honesty (issue #408)"
+  bad "ci.yml self-call lost all-enabled plus five-platform plus no-corpus honesty (issue #408, Windows joins under #414)"
 fi
 
-# Qualified-host expectation: four hosts qualified, Windows refused.
+# Qualified-host expectation: five hosts qualified (Windows joins under
+# issue #414, no refusal).
 if grep -q -F -e '("linux", "x86_64")' "$platform" &&
   grep -q -F -e '("linux", "aarch64")' "$platform" &&
   grep -q -F -e '("macos", "aarch64")' "$platform" &&
   grep -q -F -e '("macos", "x86_64")' "$platform" &&
   grep -q -F -e '("windows", "x86_64")' "$platform" &&
+  grep -q -F -e 'windows_x86_64_host_is_qualified' "$platform" &&
   grep -q -F -e 'qualified seed-linux_x86_64' "$cells" &&
   grep -q -F -e 'qualified linux_arm64' "$cells" &&
   grep -q -F -e 'qualified linux_x86_64_musl' "$cells" &&
   grep -q -F -e 'qualified linux_arm64_musl' "$cells" &&
   grep -q -F -e 'qualified macos_arm64' "$cells" &&
   grep -q -F -e 'qualified macos_x86_64' "$cells" &&
-  grep -q -F -e 'unqualified windows_x86_64' "$cells"; then
+  grep -q -F -e 'qualified windows_x86_64' "$cells"; then
   ok
 else
-  bad "qualified-host expectation lost (platform.rs four plus windows-refused, cells six plus one)"
+  bad "qualified-host expectation lost (platform.rs five qualified, cells seven qualified under #414)"
 fi
 
-# Windows refusal-assertion: support-matrix keeps Windows x86_64
-# unqualified with clean refusal; no windows runner is queued.
-if grep -E -e '^\| Windows x86_64 MSVC-compatible \|' "$matrix" | grep -q -F -e 'Unqualified: clean `unsupported_platform` refusal' &&
-  ! grep -E -e 'runs-on:.*windows-latest' "$ci" | grep -q . &&
+# Windows qualification-assertion (issue #414): support-matrix keeps Windows
+# x86_64 Platform-qualified with explicit EULA never automatic; a
+# windows-latest runner with shell bash is queued; no paid runner appears.
+if grep -E -e '^\| Windows x86_64 MSVC-compatible \|' "$matrix" | grep -q -F -e 'Platform-qualified (issue #414' &&
+  grep -E -e 'runs-on:.*windows-latest' "$ci" | grep -q . &&
+  grep -q -F -e 'shell: bash' "$ci" &&
   ! grep -E -e 'runs-on:.*(self-hosted|larger|macos-latest)' "$ci" | grep -q .; then
   ok
 else
-  bad "Windows refusal-assertion lost (support-matrix unqualified plus no windows/paid runner in ci.yml)"
+  bad "Windows qualification-assertion lost (support-matrix Platform-qualified plus windows-latest shell bash plus no paid runner, issue #414)"
 fi
 
 # Portable-shell reuse (issue #323): shared lib helpers plus
@@ -179,6 +195,8 @@ if grep -A3 -e '^  test:' "$ci" | grep -q -F -e 'needs: [build]' &&
   grep -A3 -e '^  coverage-macos-arm64:' "$ci" | grep -q -F -e 'needs: [build-macos-arm64]' &&
   grep -A3 -e '^  test-macos-x86_64:' "$ci" | grep -q -F -e 'needs: [build-macos-x86_64]' &&
   grep -A3 -e '^  coverage-macos-x86_64:' "$ci" | grep -q -F -e 'needs: [build-macos-x86_64]' &&
+  grep -A3 -e '^  test-windows-x86_64:' "$ci" | grep -q -F -e 'needs: [build-windows-x86_64]' &&
+  grep -A3 -e '^  coverage-windows-x86_64:' "$ci" | grep -q -F -e 'needs: [build-windows-x86_64]' &&
   grep -A3 -e '^  prove:' "$ci" | grep -q -F -e 'needs: [build]' &&
   grep -A3 -e '^  dogfood-freshness:' "$ci" | grep -q -F -e 'needs: [build]'; then
   ok
@@ -187,7 +205,7 @@ else
 fi
 
 # Every job writes a step summary block; concurrency cancels superseded runs.
-if [[ "$(grep -c -F -e 'GITHUB_STEP_SUMMARY' "$ci")" -ge "15" ]] &&
+if [[ "$(grep -c -F -e 'GITHUB_STEP_SUMMARY' "$ci")" -ge "18" ]] &&
   grep -q -F -e 'cancel-in-progress: true' "$ci" &&
   grep -q -F -e 'bazel build --noshow_progress' "$ci" &&
   grep -q -F -e 'bazel test --noshow_progress' "$ci"; then
@@ -197,8 +215,11 @@ else
 fi
 
 # No paid services: standard runners plus actions/cache only, with the
-# free-tier budget recorded in the testing README.
-if ! grep -rn -E -e 'runs-on:.*(self-hosted|larger|windows-latest|macos-latest)' .github/workflows/ 2>/dev/null | grep -q . &&
+# free-tier budget recorded in the testing README. windows-latest is a
+# standard free runner qualified under issue #414; macos-latest stays
+# banned (unpinned), as do self-hosted/larger (paid).
+if ! grep -rn -E -e 'runs-on:.*(self-hosted|larger|macos-latest)' .github/workflows/ 2>/dev/null | grep -q . &&
+  grep -q -F -e 'runs-on: windows-latest' "$ci" &&
   grep -q -F -e 'standard GitHub-hosted runners is free' "$testing_readme"; then
   ok
 else
@@ -206,25 +227,26 @@ else
 fi
 
 # Stale references updated in place: contract plus test matrix plus
-# verification matrix plus support-matrix consumer note name the matrix.
+# verification matrix plus support-matrix consumer note name the matrix
+# (Windows joins under issue #414).
 if grep -q -F -e 'issue #415' "$contract" &&
   grep -q -F -e 'issue #415' "$test_matrix" &&
   grep -q -F -e 'issue #415' "$verify" &&
-  grep -q -F -e 'consumer self-call: all-enabled on linux_x86_64 plus linux_arm64 plus macos_arm64 plus macos_x86_64' "$matrix"; then
+  grep -q -F -e 'consumer self-call: all-enabled' "$matrix"; then
   ok
 else
   bad "stale references lost the issue #415 matrix record (contract plus test matrix plus verification plus support-matrix consumer note)"
 fi
 
-# No Supported claim for the matrix: Platform-qualified only, windows
-# unqualified, release evidence open.
+# No Supported claim for the matrix: Platform-qualified only (Windows joins
+# qualified under issue #414), release evidence open.
 if grep -E -e '^\| Linux arm64 glibc \|' "$matrix" | grep -q -F -e 'Platform-qualified' &&
   grep -E -e '^\| macOS x86_64 \|' "$matrix" | grep -q -F -e 'Platform-qualified' &&
-  grep -E -e '^\| Windows x86_64 MSVC-compatible \|' "$matrix" | grep -q -F -e 'Unqualified' &&
+  grep -E -e '^\| Windows x86_64 MSVC-compatible \|' "$matrix" | grep -q -F -e 'Platform-qualified' &&
   ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$matrix" | grep -q .; then
   ok
 else
-  bad "matrix rows lost their Platform-qualified (never Supported) plus Windows-unqualified records"
+  bad "matrix rows lost their Platform-qualified (never Supported) records (Windows joins qualified under #414)"
 fi
 
 dx_test_summary "ci multi-platform matrix qualification harness"

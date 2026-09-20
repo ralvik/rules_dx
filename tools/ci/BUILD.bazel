@@ -766,12 +766,32 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Windows x86_64 MSVC-compatible qualification harness (issue #414): proves
+# the as-built Windows x86_64 record with fixture evidence and owned gaps,
+# without claiming Supported, Windows arm64, or a qualified toolchains_msvc
+# backend — dx qualified host plus explicit-EULA refusal, per-cell windows
+# coverage with no union, Windows CI jobs natively on windows-latest with
+# shell bash plus a per-host cache scope under the portable-shell contract
+# (issue #323 Windows gap resolved here), docs in support-matrix plus ADR
+# 0014 plus native-toolchains. Run by CI via
+# `bazel run //tools/ci:windows_qualification`.
+sh_binary(
+    name = "windows_qualification",
+    srcs = ["windows_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issues #299/#414 shell contract:
+    # Windows execution goes through shell bash in CI jobs, harness itself
+    # stays Linux-only).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # CI multi-platform host-matrix harness (issue #415): proves the as-built
 # multi-host matrix after portable-shell #323 — per-host runner plus cache
 # scope plus qualified-host expectation for seed plus arm64 plus musl pair
-# plus macos pair, Windows x86_64 refusal-assertion (issue #414), portable
-# shell reuse, sharding policy (issue #210), no paid services, stale refs
-# updated. Run by CI via `bazel run //tools/ci:ci_matrix_qualification`.
+# plus macos pair plus windows x86_64 (issue #414 qualified, no refusal),
+# portable shell reuse, sharding policy (issue #210), no paid services,
+# stale refs updated. Run by CI via `bazel run
+# //tools/ci:ci_matrix_qualification`.
 sh_binary(
     name = "ci_matrix_qualification",
     srcs = ["ci_matrix_qualification.sh"],

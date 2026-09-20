@@ -270,23 +270,25 @@ else
   bad "CI lost a no-coverage gate half (test execution + target_tags + coverage_cell + coverage_qualification)"
 fi
 
-# C7: cells registry stays seed plus arm64 plus static musl plus macos arm64 plus macos x86_64 best-effort with no cross-cell union.
+# C7: cells registry stays seed plus arm64 plus static musl plus macos arm64 plus macos x86_64 best-effort plus windows x86_64 with no cross-cell union.
 if grep -q -F -e 'qualified seed-linux_x86_64' tools/coverage/cells.txt &&
   grep -q -F -e 'qualified linux_arm64 tools/coverage/arm64-inventory.txt' tools/coverage/cells.txt &&
   grep -q -F -e 'qualified linux_x86_64_musl tools/coverage/musl-x86_64-inventory.txt' tools/coverage/cells.txt &&
   grep -q -F -e 'qualified linux_arm64_musl tools/coverage/musl-arm64-inventory.txt' tools/coverage/cells.txt &&
   grep -q -F -e 'qualified macos_arm64 tools/coverage/macos-arm64-inventory.txt' tools/coverage/cells.txt &&
   grep -q -F -e 'qualified macos_x86_64 tools/coverage/macos-x86_64-inventory.txt' tools/coverage/cells.txt &&
+  grep -q -F -e 'qualified windows_x86_64 tools/coverage/windows-x86_64-inventory.txt' tools/coverage/cells.txt &&
   grep -q -F -e 'tools/coverage/seed-inventory.txt' tools/coverage/cells.txt &&
   [[ -f tools/coverage/seed-inventory.txt ]] &&
   [[ -f tools/coverage/arm64-inventory.txt ]] &&
   [[ -f tools/coverage/musl-x86_64-inventory.txt ]] &&
   [[ -f tools/coverage/musl-arm64-inventory.txt ]] &&
   [[ -f tools/coverage/macos-arm64-inventory.txt ]] &&
-  [[ -f tools/coverage/macos-x86_64-inventory.txt ]]; then
+  [[ -f tools/coverage/macos-x86_64-inventory.txt ]] &&
+  [[ -f tools/coverage/windows-x86_64-inventory.txt ]]; then
   ok
 else
-  bad "coverage cells registry lost its seed plus arm64 plus musl plus macos (plus x86_64 best-effort) qualified record"
+  bad "coverage cells registry lost its seed plus arm64 plus musl plus macos plus macos x86_64 plus windows qualified record"
 fi
 
 # --- D. shell sources with no quality class ---
@@ -342,9 +344,11 @@ else
   bad "CI lost a shell execution path (want test //... + shell_contract, no :e2e)"
 fi
 
-# D6: shell_contract owns portability (bash-only Linux harness, POSIX fixtures portable).
+# D6: shell_contract owns portability (bash-only harness with Windows shell
+# bash under issue #414, POSIX fixtures portable).
 if grep -q -F -e '//tools/ci:shell_contract' docs/testing/tools.md &&
-  grep -q -F -e 'is bash-only on the Linux seed host (decided' docs/testing/tools.md; then
+  grep -q -F -e 'is bash-only (decided' docs/testing/tools.md &&
+  grep -q -F -e 'Windows native execution via shell bash under issue' docs/testing/tools.md; then
   ok
 else
   bad "docs/testing/tools.md lost the decided shell-contract record"

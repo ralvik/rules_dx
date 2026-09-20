@@ -100,7 +100,8 @@ The gate is enforced by `dx coverage --min-coverage` in the `coverage`
 `coverage-musl-x86_64` plus `coverage-musl-arm64` (static musl, issue
 #411) plus `coverage-macos-arm64` (macos arm64 native on `macos-14`,
 issue #412) plus `coverage-macos-x86_64` (macos x86_64 best-effort native
-on `macos-15-intel`, issue #413) jobs in
+on `macos-15-intel`, issue #413) plus `coverage-windows-x86_64` (windows
+x86_64 MSVC-compatible native on `windows-latest`, issue #414) jobs in
 `.github/workflows/ci.yml` (accepted; one logical stage per job, per-host
 jobs for the host matrix under issue #415, no `strategy.matrix`).
 Each required configuration/platform cell additionally gates its own
@@ -110,13 +111,14 @@ cell inventory (seed cell: `tools/coverage/seed-inventory.txt`; arm64 cell:
 `tools/coverage/musl-x86_64-inventory.txt` plus
 `tools/coverage/musl-arm64-inventory.txt`; macos arm64 cell:
 `tools/coverage/macos-arm64-inventory.txt`; macos x86_64 best-effort cell:
-`tools/coverage/macos-x86_64-inventory.txt`, same scope): exact
+`tools/coverage/macos-x86_64-inventory.txt`; windows x86_64 cell:
+`tools/coverage/windows-x86_64-inventory.txt`, same scope): exact
 covered/eligible counts with zero uncovered lines, missing reports and
 uninventoried sources failing closed. CI pins this in
 `bazel run //tools/ci:coverage_cell`. The required-cell registry is
 `tools/coverage/cells.txt` (seed plus arm64 plus two static-musl plus
-macos arm64 plus macos x86_64 best-effort qualified, one remaining host
-unqualified per the platform policy); no cross-cell union, never unioned across cells to hide gaps.
+macos arm64 plus macos x86_64 best-effort plus windows x86_64 qualified,
+all required plus best-effort qualified per the platform policy); no cross-cell union, never unioned across cells to hide gaps.
 Per-cell enforcement plus the Starlark, Codecov, quota, and remote halves
 below is qualified by `bazel run //tools/ci:coverage_qualification`
 (issue #308).
@@ -211,7 +213,7 @@ assuming public-repository status makes every service free. Exhausted quotas or 
 required hosts block affected work; they do not waive platform, coverage, artifact-trust,
 or release evidence requirements. Qualified mappings (issue #308,
 `bazel run //tools/ci:coverage_qualification`): standard GitHub-hosted runners is free
-for public repositories (`ubuntu-latest`, `ubuntu-24.04-arm`, `macos-14`; no self-hosted). Larger runners are always charged.
+for public repositories (`ubuntu-latest`, `ubuntu-24.04-arm`, `macos-14`, `windows-latest`; no self-hosted). Larger runners are always charged.
 `actions/cache` disk cache is 10 GB per repository; artifact storage is 500 MB.
 GHCR container storage/bandwidth is currently free for public repos (at least one month notice before any pricing change per GitHub Packages billing; private-Packages quotas 500 MB/1 GB do not apply to containers today). Retention is manual; build-only PRs consume no quota and the first gated push records exact bytes (issue #184, `docs/contributing/devcontainer.md`); Pages is free.
 

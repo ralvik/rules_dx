@@ -9,12 +9,12 @@
 # hermetic CLI-contract pins (issue #407 replaces nested E2E),
 # required-core depcheck fixtures, `dx update` live execution,
 # perf report-not-gate, seed plus arm64 plus static-musl plus macos arm64
-# plus macos x86_64 best-effort coverage/remote qualification under
-# #308/#410/#411/#412/#413); audit live
-# execution, docs-pipeline, env/codegen, remaining non-qualified platform
-# cells (issue #298; Linux arm64 qualified under #410, static musl under
-# #411, macos arm64 under #412, macos x86_64 best-effort under #413),
-# admitted depcheck
+# plus macos x86_64 best-effort plus windows x86_64 coverage/remote
+# qualification under #308/#410/#411/#412/#413/#414); audit live execution,
+# docs-pipeline, env/codegen, remaining out-of-v1 platform cells (issue
+# #298; Linux arm64 qualified under #410, static musl under #411, macos
+# arm64 under #412, macos x86_64 best-effort under #413, windows x86_64
+# under #414), admitted depcheck
 # expansion, and release evidence (SBOM/provenance, signing/attestations,
 # BCR submission, GHCR route, consumer verification) remain open gaps
 # tracked in their owning issues.
@@ -110,6 +110,18 @@ if grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F 
   ok
 else
   bad "support-matrix lost the macOS x86_64 best-effort Platform-qualified record (issue #413, release evidence open, no host fallback, non-blocking)"
+fi
+
+# Windows x86_64 MSVC-compatible native is Platform-qualified (issue #414),
+# never Supported without release evidence and never back to unqualified
+# refusal. Installed Build Tools fallback stays never approved; explicit
+# EULA acceptance stays never automatic.
+if grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (issue #414' &&
+  grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open' &&
+  grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'never automatic'; then
+  ok
+else
+  bad "support-matrix lost the Windows x86_64 Platform-qualified record (issue #414, release evidence open, explicit EULA never automatic)"
 fi
 
 # No Supported status cell in support-matrix tables (promotion gate core).
@@ -218,9 +230,9 @@ else
 fi
 
 # Coverage seed plus arm64 plus static-musl plus macos arm64 plus macos
-# x86_64 best-effort qualified (#308/#410/#411/#412/#413): cell gate +
-# versioned inventories and registry plus qualification harnesses, no
-# cross-cell union.
+# x86_64 best-effort plus windows x86_64 qualified
+# (#308/#410/#411/#412/#413/#414): cell gate + versioned inventories and
+# registry plus qualification harnesses, no cross-cell union.
 if [[ -f "tools/ci/coverage_cell.sh" ]] &&
   [[ -f "tools/coverage/seed-inventory.txt" ]] &&
   [[ -f "tools/coverage/arm64-inventory.txt" ]] &&
@@ -228,14 +240,16 @@ if [[ -f "tools/ci/coverage_cell.sh" ]] &&
   [[ -f "tools/coverage/musl-arm64-inventory.txt" ]] &&
   [[ -f "tools/coverage/macos-arm64-inventory.txt" ]] &&
   [[ -f "tools/coverage/macos-x86_64-inventory.txt" ]] &&
+  [[ -f "tools/coverage/windows-x86_64-inventory.txt" ]] &&
   [[ -f "tools/coverage/cells.txt" ]] &&
   [[ -f "tools/ci/coverage_qualification.sh" ]] &&
   [[ -f "tools/ci/musl_qualification.sh" ]] &&
   [[ -f "tools/ci/macos_qualification.sh" ]] &&
+  [[ -f "tools/ci/windows_qualification.sh" ]] &&
   grep -q -F -e 'seed cell' tools/coverage/seed-inventory.txt; then
   ok
 else
-  bad "coverage seed plus arm64 plus musl plus macos (plus x86_64 best-effort) lost its cell gate, inventories, registry, or qualification harnesses"
+  bad "coverage seed plus arm64 plus musl plus macos plus macos-x86_64 plus windows lost its cell gate, inventories, registry, or qualification harnesses"
 fi
 
 # Env/codegen + docs-pipeline Open: backlog contracts pin frozen halves.

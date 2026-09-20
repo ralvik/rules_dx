@@ -17,8 +17,8 @@ adds release evidence and is owned by this matrix; no cell is currently
 Only the Linux x86_64 seed host plus Linux arm64 glibc native (issue
 #410) plus the two Linux static-musl profiles (issue #411) plus macOS
 arm64 native (issue #412) plus macOS x86_64 best-effort native (issue
-#413) are delivered today. Every other host,
-including the remaining
+#413) plus Windows x86_64 MSVC-compatible native (issue #414) are
+delivered today. Every other host, including the remaining
 [required platforms](../decisions/0014-tested-platform-release-stack.md#required-platforms),
 is unqualified: `dx` refuses cleanly with `unsupported_platform`, naming the
 host and pointing here and at ADR 0014, before any Bazel work starts. It
@@ -27,13 +27,12 @@ refusal reads the same qualified-host list that platform evidence extends,
 so a host flips on exactly when its evidence lands. This remains open work.
 Platform qualification was tracked under issue #298 (closed): the Linux
 x86_64 seed host plus Linux arm64 native plus the two static-musl profiles
-plus macOS arm64 native plus macOS x86_64 best-effort native are delivered
-and tested; every other required
-host needs pins, hosts, floors, JDK/SDK/CRT identities, qualified routes,
-per-cell coverage, and consumer plus release evidence under its per-host
-successor. The CI host matrix across these hosts is pinned by
-`bazel run //tools/ci:ci_matrix_qualification` (issue #415); Windows x86_64
-stays the remaining required host with clean refusal (issue #414).
+plus macOS arm64 native plus macOS x86_64 best-effort native plus Windows
+x86_64 MSVC-compatible native are delivered and tested; every other
+required host needs pins, hosts, floors, JDK/SDK/CRT identities, qualified
+routes, per-cell coverage, and consumer plus release evidence under its
+per-host successor. The CI host matrix across these hosts is pinned by
+`bazel run //tools/ci:ci_matrix_qualification` (issue #415).
 
 Per-required-host qualification state (V1 status from ADR 0014; evidence
 dimensions per issue #298; exact pins, hosts, floors, and SDK/CRT identities
@@ -45,8 +44,8 @@ remain owned by O14/O37 and are not pinned here):
 | Linux arm64 glibc | Required | Same dimensions as above, native workflow (not cross-only) | Platform-qualified (issue #410; CI: ubuntu-24.04-arm; dx_tools linux_arm64 artifacts stay an owned follow-up gap with the recorded no-artifact diagnostic; coverage: arm64 cell; consumer self-call: all-enabled, issue #408; release evidence open) |
 | Linux x86_64/arm64 static musl | Required profiles | Same dimensions; static native closure; dynamic musl explicitly out of scope | Platform-qualified (issue #411; CI: ubuntu-latest plus ubuntu-24.04-arm cross-build with per-profile bazel-musl-* cache scopes; Rust musl std via extra_target_triples with exec-platform tools for build scripts/proc macros and target musl libs for apps, prebuilt glibc libs never musl-compatible by linker change alone; hermetic-llvm static-only musl targets stay provisional; coverage: musl x86_64 plus musl arm64 cells with no union; consumer self-call plus musl jobs; release evidence open) |
 | macOS arm64 | Required | Same dimensions; pinned acquired SDK (SDK version is not the deployment floor) | Platform-qualified (issue #412; CI: macos-14 with bazel-macos-arm64- cache scope; pinned upstream toolchains with the hermetic-llvm Apple-SDK backend provisional plus immutable lazy fetch; host-installed SDK fallback never approved; Apple-SDK handling leaks no secrets and needs no interactive acceptance; dx_tools macos_arm64 artifacts stay an owned follow-up gap with the recorded no-artifact diagnostic; coverage: macos arm64 cell with no union; consumer self-call: all-enabled, issue #408; release evidence open) |
-| macOS x86_64 | Best-effort | Same dimensions; pinned acquired SDK (SDK version is not the deployment floor); best-effort non-blocking | Platform-qualified (issue #413; CI: macos-15-intel with bazel-macos-x86_64- cache scope; `macos-13` retired December 2025, `macos-15-intel` until August 2027; pinned upstream toolchains with the hermetic-llvm Apple-SDK backend provisional plus immutable lazy fetch; host-installed SDK fallback never approved; Apple-SDK handling leaks no secrets and needs no interactive acceptance; dx_tools macos_x86_64 artifacts stay an owned follow-up gap with the recorded no-artifact diagnostic; coverage: macos x86_64 cell with no union; consumer self-call: all-enabled on linux_x86_64 plus linux_arm64 plus macos_arm64 plus macos_x86_64, issue #408; release evidence open; gaps never block required-host release) |
-| Windows x86_64 MSVC-compatible | Required, backend blocked | Same dimensions; hermetic acquisition plus MSVC compatibility gates unchanged; explicit EULA acceptance required, never automatic | Unqualified: clean `unsupported_platform` refusal |
+| macOS x86_64 | Best-effort | Same dimensions; pinned acquired SDK (SDK version is not the deployment floor); best-effort non-blocking | Platform-qualified (issue #413; CI: macos-15-intel with bazel-macos-x86_64- cache scope; `macos-13` retired December 2025, `macos-15-intel` until August 2027; pinned upstream toolchains with the hermetic-llvm Apple-SDK backend provisional plus immutable lazy fetch; host-installed SDK fallback never approved; Apple-SDK handling leaks no secrets and needs no interactive acceptance; dx_tools macos_x86_64 artifacts stay an owned follow-up gap with the recorded no-artifact diagnostic; coverage: macos x86_64 cell with no union; consumer self-call: all-enabled, issue #408; release evidence open; gaps never block required-host release) |
+| Windows x86_64 MSVC-compatible | Required | Same dimensions; hermetic acquisition plus MSVC compatibility gates unchanged; explicit EULA acceptance required, never automatic | Platform-qualified (issue #414; CI: windows-latest with bazel-windows-x86_64- cache scope plus shell bash; pinned upstream toolchains with the toolchains_msvc clang-cl/Microsoft-STL backend provisional plus immutable lazy fetch; explicit EULA acceptance required never automatic, usage vs redistribution reviewed separately, merely adding the module requires no acceptance and fetches no restricted payloads; installed Build Tools fallback never approved; prebuilt-MSVC interop fixtures with explicit STL/CRT/linker/library combos incl mixed Rust/C/C++ qualify host-to-target plus target execution separately, compiler-target availability alone is not proof; manifest/path/ABI gaps closed with fixtures, remaining corpus gaps owned under issue #303; dx_tools windows_x86_64 artifacts stay an owned follow-up gap with the recorded no-artifact diagnostic; coverage: windows x86_64 cell with no union; consumer self-call: all-enabled, issue #408; release evidence open) |
 | Windows arm64 | Out of v1 scope | Not a claim of impossibility | Unqualified: clean `unsupported_platform` refusal |
 
 No cell below is `Supported`: promotion requires platform plus consumer plus
@@ -58,7 +57,8 @@ enforced by `bazel run //tools/ci:supported_evidence_gate`.
 `Planned` below means accepted scope delivered on the Linux x86_64 seed host
 plus Linux arm64 native (issue #410) plus the two static-musl profiles
 (issue #411) plus macOS arm64 native (issue #412) plus macOS x86_64
-best-effort native (issue #413) without
+best-effort native (issue #413) plus Windows x86_64 MSVC-compatible native
+(issue #414) without
 remaining-required-platform,
 external-consumer, or trusted-builder release evidence; see
 `../../CHANGELOG.md`. `Planned: feasibility` means evaluation
@@ -814,7 +814,8 @@ Every cell above is current design status. The named quality integrations form t
 minimum first-release quality baseline; the Linux x86_64 seed-host plus
 Linux arm64 native (issue #410) plus the two static-musl profiles (issue
 #411) plus macOS arm64 native (issue #412) plus macOS x86_64 best-effort
-native (issue #413) implementations exist so far,
+native (issue #413) plus Windows x86_64 MSVC-compatible native (issue
+#414) implementations exist so far,
 and no cell is `Supported` yet (release evidence tracked in the issue tracker). Swift and SwiftFormat are
 excluded from v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md):
 the `Not planned` Swift row above is an evidence-backed v1 exclusion, not a

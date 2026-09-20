@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# Shell portability contract guard (issue #299).
+# Shell portability contract guard (issues #299, #414).
 #
-# The CI/test harness is bash-only on the Linux seed host: every bash
-# `sh_binary`/`sh_test` carries
-# `target_compatible_with = ["@platforms//os:linux"]`, POSIX `#!/bin/sh`
-# fixtures stay portable with no constraint, and the known non-portable
-# forms carry macOS best-effort fallbacks with no Linux behavior change
-# (realpath probe, shasum fallback, portable sed/cp, portable timing).
-# Windows stays out per ADR 0014 (backend-blocked); product runtime is
-# Rust and shell-free except generated deploy launchers plus the doctor shim.
+# The CI/test harness is bash-only: every bash `sh_binary`/`sh_test`
+# carries `target_compatible_with = ["@platforms//os:linux"]`, POSIX
+# `#!/bin/sh` fixtures stay portable with no constraint, and the known
+# non-portable forms carry macOS best-effort fallbacks with no Linux
+# behavior change (realpath probe, shasum fallback, portable sed/cp,
+# portable timing). Windows x86_64 MSVC-compatible is qualified for native
+# `dx`/CI execution under issue #414 via `windows-latest` runners with
+# shell `bash` plus portable forms only (no `.ps1`/`.bat`, no
+# `rules_powershell`); product runtime is Rust and shell-free except
+# generated deploy launchers plus the doctor shim.
 #
 # This harness machine-checks the contract statically on a clean tree.
 # Versioned here, run by CI via `bazel run //tools/ci:shell_contract`.
@@ -23,12 +25,13 @@ dx_cd_workspace
 dx_test_init
 
 # Docs record the decided contract, not an open tracker.
-if grep -q -F -e 'is bash-only on the Linux seed host (decided' docs/testing/tools.md &&
+if grep -q -F -e 'is bash-only (decided' docs/testing/tools.md &&
+  grep -q -F -e 'Windows native execution via shell bash under issue' docs/testing/tools.md &&
   grep -q -F -e '//tools/ci:shell_contract' docs/testing/tools.md &&
   grep -q -F -e 'target_compatible_with = ["@platforms//os:linux"]' docs/testing/tools.md; then
   ok
 else
-  bad "docs/testing/tools.md lost the decided #299 shell contract record"
+  bad "docs/testing/tools.md lost the decided #299/#414 shell contract record"
 fi
 
 # Every bash sh target carries the Linux-only label (issue #407 removed
@@ -189,13 +192,28 @@ else
   bad "shellcheck/shfmt pins missing (.shellcheckrc bash+all plus shfmt -i 2 -ci, issue #323)"
 fi
 
-# Windows stays out: no .ps1/.bat, no rules_powershell.
+# Windows shell stays bash-only (issue #414): no .ps1/.bat, no
+# rules_powershell; Windows CI jobs run via shell bash with portable forms.
 if [[ -z "$(find . -name '*.ps1' -not -path './bazel-*' -print -quit)" ]] &&
   [[ -z "$(find . -name '*.bat' -not -path './bazel-*' -print -quit)" ]] &&
   ! grep -rn -F -e 'rules_powershell' --include='*.bzl' --include='MODULE.bazel' --include='*.bazel' . | grep -q .; then
   ok
 else
-  bad "a Windows shell artifact appeared (stays out per ADR 0014 until the backend unblocks)"
+  bad "a Windows shell artifact appeared (shell stays bash-only under issue #414, no ps1/bat/powershell)"
+fi
+
+# Windows CI jobs run bash-only: every windows-latest job sets shell bash
+# and stays portable-shell clean (no pwsh, no banned forms). This resolves
+# the issue #323 Windows bash-only Linux-only harness gap here, not by
+# papering over: the harness stays Linux-only (labels above) while Windows
+# execution goes through bash explicitly.
+if grep -q -F -e 'runs-on: windows-latest' .github/workflows/ci.yml &&
+  grep -q -F -e 'shell: bash' .github/workflows/ci.yml &&
+  [[ "$(grep -c -F -e 'runs-on: windows-latest' .github/workflows/ci.yml)" == "$(grep -c -F -e 'shell: bash' .github/workflows/ci.yml)" ]] &&
+  ! grep -A30 -e 'runs-on: windows-latest' .github/workflows/ci.yml | grep -E -e 'shell: (pwsh|powershell|cmd)' | grep -q .; then
+  ok
+else
+  bad "windows-latest jobs must run shell bash with portable forms (issue #414 resolves the #323 Windows gap)"
 fi
 
 # Issue #320 portable route: perf harnesses record the actual host via

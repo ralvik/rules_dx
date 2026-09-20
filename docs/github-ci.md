@@ -84,12 +84,14 @@ produce actionable configuration failures, not skipped validation or platform su
 Linux execution for shared quality checks does not add Linux to the validation matrix.
 
 Supported platform identifiers are `linux_x86_64`, `linux_arm64` (native,
-issue #410), `macos_arm64` (native, issue #412), and `macos_x86_64`
-(best-effort native, issue #413). The reusable workflow routes
+issue #410), `macos_arm64` (native, issue #412), `macos_x86_64`
+(best-effort native, issue #413), and `windows_x86_64` (native
+MSVC-compatible, issue #414). The reusable workflow routes
 `linux_x86_64` to `ubuntu-latest`, `linux_arm64` to `ubuntu-24.04-arm`,
-`macos_arm64` to `macos-14`, and `macos_x86_64` to `macos-15-intel`; every
-other spelling fails closed in `platforms-gate` before any per-platform
-job queues a runner. Static-musl target profiles
+`macos_arm64` to `macos-14`, `macos_x86_64` to `macos-15-intel`, and
+`windows_x86_64` to `windows-latest`; every other spelling fails closed in
+`platforms-gate` before any per-platform job queues a runner. Static-musl
+target profiles
 (`linux_x86_64_static_musl`, `linux_arm64_static_musl`, issue #411) are
 target closures qualified in `ci.yml` musl jobs, not reusable-consumer
 host platforms; dynamic musl stays explicitly out of scope. macOS arm64
@@ -100,11 +102,14 @@ acceptance). macOS x86_64 best-effort native (issue #413) runs on
 `macos-15-intel` through the same pinned upstream toolchains with the same
 provisional backend plus no fallback plus no secrets plus no interactive
 acceptance (`macos-13` retired December 2025, `macos-15-intel` until August
-2027; best-effort gaps never block required-host release). The repository
-host matrix across these four platforms plus the static-musl closures is
-pinned by `bazel run //tools/ci:ci_matrix_qualification` (issue #415);
-Windows x86_64 stays refused with no runner until its evidence lands
-(issue #414, backend blocked).
+2027; best-effort gaps never block required-host release). Windows x86_64
+MSVC-compatible native (issue #414) runs on `windows-latest` (shell `bash`,
+per-host `bazel-windows-x86_64-` cache scope) through the pinned upstream
+toolchains with the toolchains_msvc clang-cl/Microsoft-STL backend
+provisional (immutable lazy fetch, explicit EULA acceptance never automatic,
+no installed fallback, no secrets). The repository host matrix across these
+five platforms plus the static-musl closures is pinned by `bazel run
+//tools/ci:ci_matrix_qualification` (issue #415).
 
 Selection does not change language activation, analyzer applicability, configured no-op
 behavior, or dormant-foundation laziness. Run selected checks at their normal repository

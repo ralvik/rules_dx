@@ -382,7 +382,7 @@
   "moduleExtensions": {
     "//quality/artifacts:extension.bzl%dx_tools": {
       "general": {
-        "bzlTransitiveDigest": "gWMHJIZgutub8ngGgKmxzYpwRyftWlOhmvq/vK0wWqQ=",
+        "bzlTransitiveDigest": "cJTd5CSPKZHt/k+znZUNFxMVTp8Wira007iYAa9M/Ac=",
         "usagesDigest": "bUoLms1RzXZC9mAK2ZTkvN0H8GBlSKy3SN0S17wrT00=",
         "recordedInputs": [
           "REPO_MAPPING:,platforms platforms"
