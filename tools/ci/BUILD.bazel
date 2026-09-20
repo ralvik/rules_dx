@@ -716,6 +716,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# CLI execution/reporting gaps harness (issue #590); see docs/cli/cli-contract.md.
+sh_binary(
+    name = "cli_execution_gaps_qualification",
+    srcs = ["cli_execution_gaps_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # CC opt-out linker harness (issue #471); see docs/testing/verification-matrix.md.
 sh_binary(
     name = "cc_optout_qualification",

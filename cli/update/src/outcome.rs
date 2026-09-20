@@ -17,9 +17,11 @@
 //! per-set results and an injected depends-on relation only, so outcome
 //! combination stays deterministic and unit-testable without any updater.
 //!
-//! Out of scope here: parallel-execution scheduling. Aggregate exit-status
-//! selection over these reports lives in [`super::report`]. Continued
-//! updates imply no parallelism and no new mutation-event API.
+//! Out of scope here: parallel-execution scheduling (issue #590
+//! wont-fix, sequential per-set with continuation is contract).
+//! Aggregate exit-status selection over these reports lives in
+//! [`super::report`]. Continued updates imply no parallelism and no
+//! new mutation-event API.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -369,5 +371,30 @@ mod tests {
             .map(|outcome| outcome.set.as_str())
             .collect();
         assert_eq!(order, vec!["a-set", "b-set"]);
+    }
+
+    #[test]
+    fn execution_gaps_parallelism_stays_sequential() {
+        // Issue #590: continued updates imply no parallelism and no new
+        // mutation-event API; aggregation is deterministic sorted order
+        // over injected results with no scheduling. Pinned with fixtures
+        // in `cli/cli/tests/fixtures/cli_execution_gaps/`.
+        let report = aggregate(
+            &sets(&["c-set", "a-set", "b-set"]),
+            &outcomes(&[
+                ("c-set", SetStatus::Success),
+                ("a-set", SetStatus::Success),
+                ("b-set", SetStatus::Success),
+            ]),
+            &empty_deps(),
+        )
+        .expect("complete results aggregate");
+        let order: Vec<&str> = report
+            .outcomes
+            .iter()
+            .map(|outcome| outcome.set.as_str())
+            .collect();
+        assert_eq!(order, vec!["a-set", "b-set", "c-set"]);
+        assert!(!report.overall_failure);
     }
 }

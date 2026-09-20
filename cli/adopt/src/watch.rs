@@ -126,6 +126,67 @@ mod tests {
     }
 
     #[test]
+    fn watch_execution_gaps_matrix_is_wont_fix() {
+        // Issue #590: the 8 thin-loop commands stay watchable; the
+        // remaining 21 registry commands stay fail-closed not watchable
+        // and CI stays refused. Pinned with fixtures in
+        // `cli/cli/tests/fixtures/cli_execution_gaps/`.
+        for watchable in [
+            "build",
+            "test",
+            "run",
+            "lint",
+            "typecheck",
+            "format",
+            "check",
+            "fix",
+        ] {
+            assert!(
+                plan_watch(watchable, false).is_ok(),
+                "{watchable} must stay watchable"
+            );
+            assert!(
+                plan_watch(watchable, true).is_err(),
+                "{watchable} must still refuse CI"
+            );
+        }
+        for not_watchable in [
+            "audit",
+            "bazel",
+            "bump",
+            "clean",
+            "codegen",
+            "completion",
+            "coverage",
+            "deps",
+            "deploy",
+            "env",
+            "generate",
+            "hooks",
+            "init",
+            "migrate",
+            "owners",
+            "setup",
+            "status",
+            "update",
+            "version",
+            "watch",
+            "why",
+        ] {
+            let err = plan_watch(not_watchable, false).expect_err("not watchable");
+            assert_eq!(
+                err,
+                AdoptError::NotWatchable {
+                    command: not_watchable.to_owned(),
+                },
+                "{not_watchable} must stay not watchable"
+            );
+        }
+        assert_eq!(WATCHABLE_COMMANDS.len(), 8);
+        assert_eq!(WATCH_DEBOUNCE_MS, 200);
+    }
+
+    #[test]
     fn watch_coalesces_bursts_into_a_single_trigger() {
         // Issue #223: rapid create/modify/delete bursts collapse to one
         // deterministic rebuild trigger per path.

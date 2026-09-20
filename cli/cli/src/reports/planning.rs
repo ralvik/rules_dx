@@ -397,4 +397,60 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn execution_gaps_report_matrix_is_wont_fix() {
+        // Issue #590: the per-command standard-report matrix stays
+        // wont-fix with fail-closed `UnsupportedFormat`; silent
+        // substitution is rejected. Pinned with fixtures in
+        // `cli/cli/tests/fixtures/cli_execution_gaps/`.
+        for (command, format) in [
+            (Command::Lint, "sarif"),
+            (Command::Typecheck, "sarif"),
+            (Command::Check, "sarif"),
+            (Command::Fix, "sarif"),
+            (Command::Test, "junit"),
+            (Command::Coverage, "lcov"),
+            (Command::Audit, "sarif"),
+            (Command::Audit, "spdx"),
+        ] {
+            plan_reports(
+                command,
+                &requests(&[(format, "out.dat")]),
+                &text_mode(),
+                false,
+            )
+            .expect("supported combo must plan");
+        }
+        for (command, format) in [
+            (Command::Lint, "junit"),
+            (Command::Test, "sarif"),
+            (Command::Coverage, "sarif"),
+            (Command::Build, "sarif"),
+            (Command::Format, "sarif"),
+            (Command::Generate, "sarif"),
+            (Command::Update, "sarif"),
+            (Command::Run, "junit"),
+        ] {
+            let err = plan_reports(
+                command,
+                &requests(&[(format, "out.dat")]),
+                &text_mode(),
+                false,
+            )
+            .expect_err("unsupported combo must fail");
+            let want = spec(command);
+            assert_eq!(
+                err,
+                ReportError::UnsupportedFormat {
+                    command: command.name(),
+                    format: format.to_owned(),
+                    supported: want.reports.to_vec(),
+                },
+                "{command:?} {format} must stay unsupported"
+            );
+        }
+        // Format has no standard report in any mode.
+        assert!(spec(Command::Format).reports.is_empty());
+    }
 }

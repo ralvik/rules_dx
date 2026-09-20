@@ -260,7 +260,10 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   iteration, each iteration emits a fresh `command_started`, quality iterations
   preserve converge-and-apply semantics, and interruption forwards signals to the
   active child. Qualify debounce, ignore set, restart, framing, and local-only
-  semantics before asserting them.
+  semantics before asserting them. Pinned by
+  `bazel run //tools/ci:cli_execution_gaps_qualification` plus
+  `dx_adopt::plan_watch` fixtures under issue #590 (8 watchable, 21 not
+  watchable, CI refusal, 200ms debounce, no parallel iterations).
 - Verify dry-run may execute required read-only query/cquery resolution but never
   executes final workflows, actions, or mutations.
 - Verify the first required query/preparation failure prevents dependent subprocesses and
@@ -279,9 +282,25 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   has the bootstrap exception above; other commands must not inherit it.
 - Verify workflow `--` values are inserted as Bazel command options before targets;
   reject startup options and test-binary argument syntax with guidance to use
-  `dx bazel`.
+  `dx bazel`. Pinned by
+  `bazel run //tools/ci:cli_execution_gaps_qualification` plus
+  `dx_process::build_workflow_argv` fixtures under issue #590 (all nine
+  startup options plus `test_arg` rejected, `dx bazel` passthrough unchanged,
+  `dx run` forwards to the application binary).
 - Verify quality workflows force `--keep_going` and reject `--nokeep_going`; build,
   test, and coverage omit it by default and honor an explicitly forwarded value.
+- Verify the per-command standard-report matrix stays fail-closed
+  (`lint`/`typecheck`/`check`/`fix` `sarif`, `test` `junit`, `coverage`
+  `lcov`, `audit` `sarif`/`spdx`, every other command none including
+  `format`) with `UnsupportedFormat` instead of silent substitution. Pinned by
+  `bazel run //tools/ci:cli_execution_gaps_qualification` plus
+  `dx_cli::plan_reports` fixtures under issue #590.
+- Verify parallelism stays sequential (`check`/`fix` phases in order with
+  stop-on-first-failure, `watch` one iteration at a time, `update` per-set
+  sequential with continuation, `run` multirun in scope order) with no
+  parallel, caching, scheduling, or daemon behavior. Pinned by
+  `bazel run //tools/ci:cli_execution_gaps_qualification` plus
+  `dx_update::aggregate` fixtures under issue #590.
 - Verify path queries receive supported query options only, final workflows retain
   unrelated configuration options, and unsupported mirroring neither alters query
   argv nor rejects path scope.
