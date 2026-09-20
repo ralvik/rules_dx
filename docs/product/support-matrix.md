@@ -31,7 +31,9 @@ plus macOS arm64 native plus macOS x86_64 best-effort native are delivered
 and tested; every other required
 host needs pins, hosts, floors, JDK/SDK/CRT identities, qualified routes,
 per-cell coverage, and consumer plus release evidence under its per-host
-successor.
+successor. The CI host matrix across these hosts is pinned by
+`bazel run //tools/ci:ci_matrix_qualification` (issue #415); Windows x86_64
+stays the remaining required host with clean refusal (issue #414).
 
 Per-required-host qualification state (V1 status from ADR 0014; evidence
 dimensions per issue #298; exact pins, hosts, floors, and SDK/CRT identities
@@ -39,7 +41,7 @@ remain owned by O14/O37 and are not pinned here):
 
 | Host | V1 status | Qualification evidence | Current state |
 | --- | --- | --- | --- |
-| Linux x86_64 glibc | Required, primary bootstrap | Pins/hosts/floors, JDK/SDK/CRT identities, qualified native plus cross routes, per-cell coverage, consumer plus release evidence | Seed-host-delivered (CI: ubuntu-latest; artifacts: linux_x86_64; coverage: seed cell; consumer self-call: all-enabled on linux_x86_64, issue #408) |
+| Linux x86_64 glibc | Required, primary bootstrap | Pins/hosts/floors, JDK/SDK/CRT identities, qualified native plus cross routes, per-cell coverage, consumer plus release evidence | Seed-host-delivered (CI: ubuntu-latest; artifacts: linux_x86_64; coverage: seed cell; consumer self-call: all-enabled on linux_x86_64 plus linux_arm64 plus macos_arm64 plus macos_x86_64, issue #408) |
 | Linux arm64 glibc | Required | Same dimensions as above, native workflow (not cross-only) | Platform-qualified (issue #410; CI: ubuntu-24.04-arm; dx_tools linux_arm64 artifacts stay an owned follow-up gap with the recorded no-artifact diagnostic; coverage: arm64 cell; consumer self-call: all-enabled, issue #408; release evidence open) |
 | Linux x86_64/arm64 static musl | Required profiles | Same dimensions; static native closure; dynamic musl explicitly out of scope | Platform-qualified (issue #411; CI: ubuntu-latest plus ubuntu-24.04-arm cross-build with per-profile bazel-musl-* cache scopes; Rust musl std via extra_target_triples with exec-platform tools for build scripts/proc macros and target musl libs for apps, prebuilt glibc libs never musl-compatible by linker change alone; hermetic-llvm static-only musl targets stay provisional; coverage: musl x86_64 plus musl arm64 cells with no union; consumer self-call plus musl jobs; release evidence open) |
 | macOS arm64 | Required | Same dimensions; pinned acquired SDK (SDK version is not the deployment floor) | Platform-qualified (issue #412; CI: macos-14 with bazel-macos-arm64- cache scope; pinned upstream toolchains with the hermetic-llvm Apple-SDK backend provisional plus immutable lazy fetch; host-installed SDK fallback never approved; Apple-SDK handling leaks no secrets and needs no interactive acceptance; dx_tools macos_arm64 artifacts stay an owned follow-up gap with the recorded no-artifact diagnostic; coverage: macos arm64 cell with no union; consumer self-call: all-enabled, issue #408; release evidence open) |

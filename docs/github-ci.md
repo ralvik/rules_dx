@@ -100,7 +100,11 @@ acceptance). macOS x86_64 best-effort native (issue #413) runs on
 `macos-15-intel` through the same pinned upstream toolchains with the same
 provisional backend plus no fallback plus no secrets plus no interactive
 acceptance (`macos-13` retired December 2025, `macos-15-intel` until August
-2027; best-effort gaps never block required-host release).
+2027; best-effort gaps never block required-host release). The repository
+host matrix across these four platforms plus the static-musl closures is
+pinned by `bazel run //tools/ci:ci_matrix_qualification` (issue #415);
+Windows x86_64 stays refused with no runner until its evidence lands
+(issue #414, backend blocked).
 
 Selection does not change language activation, analyzer applicability, configured no-op
 behavior, or dormant-foundation laziness. Run selected checks at their normal repository

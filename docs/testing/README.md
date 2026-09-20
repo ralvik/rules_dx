@@ -101,8 +101,8 @@ The gate is enforced by `dx coverage --min-coverage` in the `coverage`
 #411) plus `coverage-macos-arm64` (macos arm64 native on `macos-14`,
 issue #412) plus `coverage-macos-x86_64` (macos x86_64 best-effort native
 on `macos-15-intel`, issue #413) jobs in
-`.github/workflows/ci.yml` (accepted; one logical stage per job, no
-matrix sharding).
+`.github/workflows/ci.yml` (accepted; one logical stage per job, per-host
+jobs for the host matrix under issue #415, no `strategy.matrix`).
 Each required configuration/platform cell additionally gates its own
 combined LCOV report through the `check` gate CLI against a versioned
 cell inventory (seed cell: `tools/coverage/seed-inventory.txt`; arm64 cell:
