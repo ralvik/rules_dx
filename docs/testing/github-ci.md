@@ -309,6 +309,14 @@ Runner Plus SDK Rotation qualified seed-only under issue #642
 plus on hermetic-llvm release, sole-maintainer owner, retirement handling in one reviewed PR,
 customer-flows-only build/test/coverage with no new CI job, permanent rotation job rejected;
 infra only, no Supported claim).
+GHCR Rebuild Plus Signing Rotation qualified seed-only under issue #647
+(`tools/ci/tests/fixtures/ghcr_rebuild_rotation/pins.bzl` plus
+`ghcr_rebuild_rotation.expected` via
+`bazel run //tools/ci:ghcr_rebuild_rotation_qualification`; manual on-demand
+rebuild plus rotation with base plus Bazelisk plus Cosign plus TUF pins,
+sole-maintainer owner, one reviewed PR, customer-flows-only harness plus
+on-demand local docker build with no push/schedule trigger and no extra CI
+job, scheduled CI rebuild rejected; infra only, no Supported claim).
 Consumer CI, devcontainer, and perf honesty
 is delivered for the self-call path with owned gaps elsewhere: self-call test-disabled
 per #408 plus Phase 1 #607 coverage superset (verbatim `//...`, qualified seed-only under #509 via

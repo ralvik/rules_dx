@@ -76,7 +76,10 @@ plus GitHub Releases (`dx` binaries) with GHCR via the separate
    this program never pushes itself).
 7. GHCR (issue #460): dispatch `ghcr.yml` with `approve: true`, then `cosign sign
    <digest>` plus attestation on the same trust root; record quotas and
-   update the scaffold digest reference.
+   update the scaffold digest reference. Base-image plus Bazelisk plus
+   Cosign plus TUF rebuild and rotation follows the manual on-demand
+   [GHCR rebuild plus signing rotation](../contributing/devcontainer.md#ghcr-rebuild-plus-signing-rotation)
+   contract (issue #647).
 8. Verify before install: `deploy/install/dx_verify.sh --binary <dx>
    --bundle <bundle> --identity <workflow-id> --issuer
    https://token.actions.githubusercontent.com [--sbom <sbom>

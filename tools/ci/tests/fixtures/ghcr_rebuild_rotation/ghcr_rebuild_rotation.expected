@@ -1,0 +1,21 @@
+GHCR rebuild plus signing rotation manual (issue #647).
+Base is ubuntu:24.04@sha256:69cecf4b... resolved 2026-09-17, re-pin
+deliberately with evidence, never latest; Bazelisk v1.29.0 (per-OS shas
+in the setup action, Dockerfile tracks the linux-amd64 pair, Bazel 9.2.0
+via USE_BAZEL_VERSION); Cosign v2.4.1 checksum-verified fetch
+single-sourced with SIGNING_COSIGN_VERSION; trust root
+https://tuf-repo-cdn.sigstore.dev plus issuer
+https://token.actions.githubusercontent.com plus bundle media
+application/vnd.dev.sigstore.bundle.v0.3+json.
+Rebuild is manual on-demand only: docker build -f
+.devcontainer/Dockerfile.prebuilt -t dx-devcontainer:local . locally,
+then re-pin deliberately with evidence in one reviewed PR; triggers are
+on upstream release notice plus on base-image refresh or CVE plus before
+any gated push; sole maintainer owns every row until delegation.
+Qualified locally or on demand with customer flows only: bazel run
+//tools/ci:ghcr_rebuild_rotation_qualification (static pins, pushes
+nothing) plus on-demand local docker build; gated push stays
+workflow_dispatch plus approve: true with cosign sign plus verify.
+Scheduled CI rebuild rejected; no push or schedule trigger, no extra CI
+job; keep CI customer-only.
+Qualified seed-only under issue #647; infra only; no Supported claim.
