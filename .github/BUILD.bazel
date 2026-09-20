@@ -4,11 +4,8 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
-# The consumer CI template harness (//tools/ci:consumer_*_test, issue
-# #99) executes the real embedded scripts, so the workflow file is
-# exported for hermetic test data. ci.yml stays out: it has no quality
-# class and no embedded contract scripts. publish-dry-run.yml is exported
-# as a link-resolution sibling for //docs:corpus (issue #12 dogfood).
+# Consumer CI template harness (issue #99); see //tools/ci:consumer_scheduling_test.
+# ci.yml stays out (no quality class); publish-dry-run.yml is a link sibling (issue #12).
 exports_files([
     "workflows/publish-dry-run.yml",
     "workflows/reusable-consumer.yml",

@@ -44,11 +44,7 @@ javascript_test(
     node_options = ["--experimental-vm-modules"],
 )
 
-# Hello smoke as a test target (#87 pattern, closes the TS hole from #98):
-# asserts the seed binary prints the expected greeting. Tagged
-# `no-coverage`: process-spawning tests stay out of the coverage
-# denominator per the repo coverage preset. No corpus entry: shell
-# sources have no `real_source_target` class.
+# Hello smoke test (#87); no-coverage process-spawning, see build-conventions.
 sh_test(
     name = "hello_output_test",
     srcs = ["hello_output_test.sh"],

@@ -10,10 +10,7 @@ exports_files([
     "wrapper_tests.bzl",
 ])
 
-# Repository corpus: wrapper Starlark owned for direct-Bazel
-# dogfood under the canonical real_fixture_policy.
-# Wrapper-contract negatives (#87 item 2): jest-pipeline enforcement
-# plus the structural test-filtering channel.
+# Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
 javascript_wrapper_contract_tests(name = "wrapper_contract_tests")
 
 real_source_target(

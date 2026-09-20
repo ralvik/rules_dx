@@ -12,3 +12,5 @@ adds no new semantics.
   surface and `dx` pinning.
 - [Automation](automation.md): allowed bots and bot-opened PRs; Renovate
   for dependency updates with update-only automerge under guardrails.
+- [BUILD conventions](build-conventions.md): one-line refs for repeated
+  `BUILD.bazel` patterns.

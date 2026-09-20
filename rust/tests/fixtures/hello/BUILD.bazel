@@ -21,10 +21,7 @@ rust_library(
         package_name = "rust/tests/fixtures/hello",
         normal = True,
     ),
-    # Lane A proof binding (issue #12): normal Rust targets carry the
-    # workspace-level rustfmt policy via direct `aspect_hints`, mirroring
-    # how corpus targets carry Vale. Proves the forwarder plumbing in
-    # `//libs/starlark:wrapper.bzl` reaches the real aspect.
+    # Lane A: direct aspect_hints binding; see docs/contributing/build-conventions.md.
     aspect_hints = ["//:rustfmt_config"],
     crate_name = "hello",
     crate_root = "src/lib.rs",
@@ -201,9 +198,7 @@ dx_wrapper_conformance_tests(
     ],
 )
 
-# Repository corpus: build file and manifest owned for
-# direct-Bazel dogfood under the canonical real_fixture_policy. Rust
-# sources stay dx-owned (M02 wrappers), never corpus sources.
+# Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
 rust_test(
     name = "hello_test",
     testonly = True,
@@ -219,11 +214,7 @@ rust_test(
     ),
 )
 
-# Hello smoke as a test target (replaces the bespoke
-# `bazel run //rust/tests/fixtures/hello:hello` CI step): asserts the seed binary prints
-# the expected greeting. Tagged `no-coverage`: process-spawning tests stay
-# out of the coverage denominator per the repo coverage preset. No corpus
-# entry: shell sources have no `real_source_target` class.
+# Hello smoke test (#87); no-coverage process-spawning, see build-conventions.
 sh_test(
     name = "hello_output_test",
     srcs = ["hello_output_test.sh"],
@@ -246,10 +237,7 @@ archive_release(
     app = ":hello",
 )
 
-# Release contents + checksum validity on the real app binary. Tagged
-# `no-coverage`: process-spawning tests stay out of the coverage
-# denominator per the repo coverage preset. No corpus entry: shell
-# sources have no `real_source_target` class.
+# Release checksum on the app binary; no-coverage, see build-conventions.
 sh_test(
     name = "release_verify",
     srcs = ["//deploy/rules:archive_verify.sh"],

@@ -1,7 +1,6 @@
 """buildifier standalone artifact metadata (linux_x86_64) -- GENERATED, do not edit.
 
 Regenerate with: bazel run //quality/artifacts:update
-Release: https://github.com/bazel-contrib/buildtools/releases/tag/v8.5.1
 """
 
 # buildifier: disable=attr-licenses  # ARTIFACT licenses key is SPDX data, not a rule attr

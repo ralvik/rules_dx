@@ -65,8 +65,8 @@ py_binary(
 # Comparison-machinery self-test: feeds synthetic JSON-lines through the
 # real compare.py and proves the contract — gated absolute breach fails,
 # relative regression warns-but-passes, unknown benchmarks warn-but-pass,
-# at-baseline input passes clean. Tagged `no-coverage`: timing harnesses
-# stay out of the coverage denominator per the repo coverage preset.
+# at-baseline input passes clean.
+# No-coverage: timing harness; see docs/contributing/build-conventions.md.
 sh_test(
     name = "perf_self_test",
     srcs = ["perf_self_test.sh"],
@@ -98,8 +98,7 @@ sh_binary(
 
 # Harness self-test: same seed yields identical trees/digests, dirty mix
 # and triggers verified, fairness pins recorded, report-not-gate pinned.
-# Tagged `no-coverage`: timing harnesses stay out of the coverage
-# denominator per the repo coverage preset.
+# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 sh_test(
     name = "rules_lint_comparison_test",
     srcs = ["rules_lint_comparison_test.sh"],
@@ -117,8 +116,8 @@ sh_test(
 # checked-in seed-host numbers (perf/rules_lint_results.json) match a fresh
 # harness regeneration, pins recorded, quality-sample aquery + timing
 # present, report-not-gate. Schema plus snapshot: tool versions assert shape,
-# frozen pins stay exact. Tagged `no-coverage`: timing data stays out of the
-# coverage denominator.
+# frozen pins stay exact.
+# No-coverage: timing data; see docs/contributing/build-conventions.md.
 sh_test(
     name = "rules_lint_results_test",
     srcs = ["rules_lint_results_test.sh"],

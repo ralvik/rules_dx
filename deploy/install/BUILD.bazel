@@ -22,9 +22,7 @@ sh_binary(
 # Policy tests: valid accepted; tampered/replaced/unapproved-signer/
 # missing-inputs rejected before install; checksum-only refused; SBOM
 # binding proven. No network: stub cosign/gh via env overrides.
-# Tagged `no-coverage`: process-spawning tests stay out of the coverage
-# denominator per the repo coverage preset. No corpus entry: shell
-# sources have no `real_source_target` class.
+# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 sh_test(
     name = "dx_verify_test",
     srcs = ["dx_verify_test.sh"],

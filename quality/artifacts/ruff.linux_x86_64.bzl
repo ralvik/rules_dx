@@ -1,7 +1,6 @@
 """ruff standalone artifact metadata (linux_x86_64) -- GENERATED, do not edit.
 
 Regenerate with: bazel run //quality/artifacts:update
-Release: https://github.com/astral-sh/ruff/releases/tag/0.16.7
 """
 
 # buildifier: disable=attr-licenses  # ARTIFACT licenses key is SPDX data, not a rule attr

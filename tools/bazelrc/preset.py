@@ -120,11 +120,7 @@ def _source_dir():
 def _render_fragment():
     lines = [
         "# Vendored Bazel execution preset -- GENERATED, do not edit.",
-        "# Version-matched to Bazel %s (`.bazelversion`) and dx %s (`MODULE.bazel`); reviewed inventory in "
-        "`tools/bazelrc/preset.py`." % (PRESET_BAZEL_VERSION, PRESET_DX_VERSION),
         "# Regenerate: `bazel run //tools/bazelrc:preset.update`.",
-        "# Consumer refresh: `dx update` regenerates the fragment, `dx update --check` fails when stale.",
-        "# Upstream-derived flags (reviewed):",
     ]
     lines += [line for line, _review in UPSTREAM_FLAGS]
     for group in sorted(EXTRA_PRESETS):

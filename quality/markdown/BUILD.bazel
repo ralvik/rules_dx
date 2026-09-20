@@ -81,8 +81,7 @@ rust_clippy_test(
 
 exports_files(["Cargo.toml"])
 
-# Repository corpus: crate manifest and build file owned for
-# direct-Bazel dogfood under the canonical real_fixture_policy.
+# Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
 rust_test(
     name = "quality_markdown_test",
     aliases = aliases(
