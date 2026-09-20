@@ -11,14 +11,14 @@
 #   ci.yml (issue #408, verbatim `//...`),
 #   native widen-one loop (sole updater, issue #461), dx migrate
 #   planning plus
-#   dx run multirun, tag hygiene as-built;
+#   dx run multirun (issue #463 delivered), tag hygiene as-built;
 # - open under #509 with honest records: platform/runner/isolation/cache/
 #   ordering evidence; merge/diff/queue/cancellation/aggregate binding;
 #   thread identity/ordering/limits; fork/untrusted/sensitive/retries/
 #   Code-Scanning qualification; sequential mode fail-closed pending
 #   qualification; tag hygiene plus
-#   release-input gaps; native-bot follow-ups; dx migrate execution
-#   plus dx run wiring gaps.
+#   release-input gaps; native-bot follow-ups; dx migrate syntax gap
+#   (run multirun delivered under #463).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:consumer_ci_qualification`,
 # following //tools/ci:docs_pipeline_qualification.
@@ -278,15 +278,16 @@ else
   bad "dx migrate planning lost (major-bump plus manifest plus fail-closed doc)"
 fi
 
-# dx run multirun delivered: sequential, local-only, single plus multi.
+# dx run multirun delivered (issue #463): sequential, local-only, single plus multi.
 if grep -q -F -e 'execute_run_multi' "$run_rs" &&
   grep -q -F -e 'multirun #186' "$run_rs" &&
   grep -q -F -e 'dx run refuses when CI=true: local-only command' "$run_rs" &&
   grep -q -F -e 'Multiple explicit labels run sequentially' "$run_doc" &&
-  grep -q -F -e 'Strict single-target execution applies to file/directory' "$run_doc"; then
+  grep -q -F -e 'Strict single-target execution applies to file/directory' "$run_doc" &&
+  grep -q -F -e 'issue #463' "$run_doc"; then
   ok
 else
-  bad "dx run multirun lost (multi plus sequential plus local-only plus docs)"
+  bad "dx run multirun lost (multi plus sequential plus local-only plus docs plus #463)"
 fi
 
 # Tag hygiene as-built: unpublishable module, no tags, ignored outputs.
@@ -368,12 +369,15 @@ else
   bad "native-bot follow-up gap lost its owner"
 fi
 
-# dx migrate syntax plus dx run multirun stays owned open in the matrix.
-if grep -q -F -e 'dx migrate syntax plus dx run multirun' "$matrix" &&
-  grep -q -F -e 'V1 scope: `dx migrate` syntax + manifest selection, `dx run` multirun' "$roadmap"; then
+# dx migrate syntax stays owned open in the matrix; dx run multirun is
+# delivered under #463 and must not regress to the combined open record.
+if grep -q -F -e 'dx migrate syntax)' "$matrix" &&
+  ! grep -q -F -e 'dx migrate syntax plus dx run multirun' "$matrix" &&
+  grep -q -F -e 'V1 scope: `dx migrate` syntax + manifest selection (issue #462).' "$roadmap" &&
+  grep -q -F -e 'delivered (issue #463' "$roadmap"; then
   ok
 else
-  bad "dx migrate plus dx run gap lost its owner"
+  bad "dx migrate gap lost its owner or dx run multirun regressed to open"
 fi
 
 # Verification matrix keeps no Supported claim with consumer honesty.

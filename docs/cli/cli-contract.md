@@ -219,6 +219,8 @@ an explicit label-representation contract.
   settle only as required for safe cleanup; their later outcomes do not replace the first
   required failure. Bazel's internal `--keep_going` behavior remains contained within one
   quality invocation and does not make the CLI launch later dependent subprocesses.
+  `dx run` sequential multirun follows this ordinary plan (issue #463; see
+  [dx run](commands/build-test-coverage.md#dx-run)).
 - `dx update` is the narrow exception: after a selected dependency set fails, continue
   independent selected sets, skip operations dependent on the failed set, preserve
   successful changes, and fail the invocation overall. The

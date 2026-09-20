@@ -32,7 +32,9 @@ pub const WATCHABLE_COMMANDS: &[&str] = &[
 ///
 /// Watch is a thin local loop reusing the wrapped command verbatim (no
 /// daemon, cache, graph, or remote): each iteration re-resolves its scope,
-/// holds the single-runnable rule for `run`, and refuses when running under
+/// holds the `run` selection rule for that scope (single-runnable for
+/// file/directory scopes, sequential multirun for explicit labels and
+/// patterns per issue #463), and refuses when running under
 /// CI. Any violation blocks the iteration.
 pub fn watch_iteration_accepts(
     scope_reresolved: bool,
