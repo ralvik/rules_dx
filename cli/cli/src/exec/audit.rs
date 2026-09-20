@@ -86,9 +86,28 @@ fn lock_texts_for_set(
     set: dx_update::sets::SetId,
 ) -> Result<Vec<(String, String)>, String> {
     let mut out = Vec::new();
+    let mut missing: Vec<String> = Vec::new();
     for rel in dx_audit::backend::vuln_locks(set.name()) {
+        let full = workspace.join(rel);
+        if !full.is_file() {
+            // Npm owns three competing lock shapes; a workspace carries
+            // whichever its package manager writes. Absent shapes are
+            // skipped so a pnpm-only workspace never fails for a missing
+            // sibling lock; every other set keeps required-lock behavior.
+            if set == dx_update::sets::SetId::Npm {
+                missing.push((*rel).to_owned());
+                continue;
+            }
+            return Err(format!("could not read {rel}: no such file"));
+        }
         let text = read_workspace_text(workspace, rel)?;
         out.push(((*rel).to_owned(), text));
+    }
+    if out.is_empty() && set == dx_update::sets::SetId::Npm {
+        return Err(format!(
+            "could not read {}: no such file",
+            missing.first().cloned().unwrap_or_else(|| "pnpm-lock.yaml".to_owned())
+        ));
     }
     Ok(out)
 }
@@ -101,7 +120,11 @@ fn parse_locked_for_set(
     for (rel, text) in locks {
         let mut packages = match set {
             dx_update::sets::SetId::Cargo => dx_audit::locks::parse_cargo_lock(text),
-            dx_update::sets::SetId::Npm => dx_audit::locks::parse_pnpm_lock(text),
+            dx_update::sets::SetId::Npm => match rel.as_str() {
+                "package-lock.json" => dx_audit::locks::parse_package_lock(text),
+                "yarn.lock" => dx_audit::locks::parse_yarn_lock(text),
+                _ => dx_audit::locks::parse_pnpm_lock(text),
+            },
             dx_update::sets::SetId::Maven => dx_audit::locks::parse_maven_install(text),
             dx_update::sets::SetId::NuGet => dx_audit::locks::parse_paket_lock(text),
             dx_update::sets::SetId::Go => dx_audit::locks::parse_go_mod(text),
@@ -1300,6 +1323,61 @@ mod tests {
         assert_eq!(code, 1, "{err}");
         assert!(err.contains("audit_failed"), "{err}");
         assert!(err.contains("incomplete"), "{err}");
+    }
+
+    #[test]
+    fn audit_live_npm_git_and_sibling_locks_are_incomplete() {
+        // `package-lock.json` git entries fail as incomplete while
+        // absent `yarn.lock` siblings are skipped, never required.
+        let runner = AuditRunner::clean();
+        let (code, _out, err) = run_with(&["audit", "security"], &runner, &|harness| {
+            harness.write_source(
+                "rust/tests/fixtures/hello/Cargo.lock",
+                "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+            );
+            harness.write_source("pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+            harness.write_source(
+                "package-lock.json",
+                r#"{"name":"root","lockfileVersion":3,"packages":{"":{"name":"root"},"node_modules/git-dep":{"version":"github:user/repo#abc123"}}}"#,
+            );
+            harness.write_source("third_party/jvm/maven_install.json", r#"{"artifacts": {}}"#);
+            harness.write_source(
+                "third_party/dotnet/paket.lock",
+                "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
+            );
+            write_go_mod(harness);
+        });
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("audit_failed"), "{err}");
+        assert!(err.contains("incomplete"), "{err}");
+        assert!(err.contains("git-dep"), "{err}");
+    }
+
+    #[test]
+    fn audit_live_npm_pnpm_git_resolution_is_incomplete() {
+        // Pnpm `resolution: {type: git}` entries fail as incomplete,
+        // never dropped and never clean.
+        let runner = AuditRunner::clean();
+        let (code, _out, err) = run_with(&["audit", "security"], &runner, &|harness| {
+            harness.write_source(
+                "rust/tests/fixtures/hello/Cargo.lock",
+                "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+            );
+            harness.write_source(
+                "pnpm-lock.yaml",
+                "lockfileVersion: '9.0'\npackages:\n  'git-dep@github:user/repo#abc123':\n    resolution: {repo: 'https://github.com/user/repo.git', commit: abc123}\n",
+            );
+            harness.write_source("third_party/jvm/maven_install.json", r#"{"artifacts": {}}"#);
+            harness.write_source(
+                "third_party/dotnet/paket.lock",
+                "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
+            );
+            write_go_mod(harness);
+        });
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("audit_failed"), "{err}");
+        assert!(err.contains("incomplete"), "{err}");
+        assert!(err.contains("git-dep"), "{err}");
     }
 
     #[test]
