@@ -21,7 +21,9 @@
 //! Frozen command shape (`docs/cli/commands/audit-update-bazel.md`):
 //! `dx bump <set:package> <version>`. One invocation widens one
 //! requirement (never batch) then chains the refresh automatically
-//! (issue #638). Discovery proposes stable versions only; prerelease
+//! (issue #638). Discovery enumerates outdated via the upstream registry
+//! clients and proposes stable versions only (issue #639, planned in
+//! [`discovery`]); prerelease
 //! eligibility follows the upstream resolver and project configuration,
 //! never a private policy. Transitive versions stay resolver-governed;
 //! lock refresh chains automatically resolver-owned (`dx update cargo`
@@ -33,6 +35,7 @@
 
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
+pub mod discovery;
 pub mod request;
 pub mod sets;
 pub mod version;
