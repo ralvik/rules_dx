@@ -497,7 +497,8 @@ entries against upstream lock semantics and that neither test mutates manifests 
 Run lockfile consistency with network access denied after declared inputs are provisioned, without
 an undeclared package-manager cache. Both valid and stale-lock cases must produce the expected
 result offline; missing required metadata must fail actionably, not skip validation or pass. Verify
-the test does not query live registries for newer releases. Accepted (issues #22, #306):
+the test does not query live registries for newer releases. Accepted (issue #22;
+remaining opens under issue #510):
 required-core plus admitted offline routes are qualified through the Bazel sandbox (no
 `requires-network` tag, declared inputs only, no undeclared cache, stdlib-only checker with no
 registry code; admitted authorities: go.sum, maven_install.json with fail-closed repin, paket.lock
@@ -509,7 +510,7 @@ Include necessary transitive packages and shared-workspace usage to prevent targ
 positives. Verify a legitimate non-import use can pass through an explicit dependency-scoped
 exception with an explanatory reason, while an unrelated unused declaration still fails and the
 exception does not waive lockfile consistency. Missing reasons must fail validation. Accepted
-(issues #22, #306): required-core scopes are qualified (Cargo with normal/dev/build plus target-specific
+(issue #22; remaining opens under issue #510): required-core scopes are qualified (Cargo with normal/dev/build plus target-specific
 and optional, uv with project plus groups/extras plus markers, pnpm with prod/dev/optional) plus
 admitted scopes (go.mod require with depcheck:test/optional/platform markers and go.sum authority,
 jvm_deps.toml compile/test plus optional/platform with maven_install.json fail-closed authority,
@@ -517,7 +518,7 @@ paket.dependencies Main/Test groups plus optional/platform markers with paket.lo
 cc_deps.toml prod/test plus optional/platform with per-archive sha256 authority) with native
 `depcheck_exceptions.toml` reason validation and non-import recognition, pinned by
 `bazel test //tools/depcheck/...`. Remaining admitted quality-adapter work stays open under issue
-#307; foundation mappings under issue #304.
+#307; foundation mappings under issues #476-#484.
 Verify exceptions for removed dependencies and exceptions that no longer suppress a finding fail
 as obsolete, including after a checker upgrade recognizes legitimate usage. A still-needed explained
 exception must continue to pass. Use the same supported-configuration scope as usage analysis and
@@ -532,7 +533,7 @@ Correctly categorized and legitimate multi-category usage must pass. Include cat
 usage on another supported configuration and verify diagnostics do not mutate declarations or locks.
 Do not add a duplicate unused-Bazel-edge test; generated edge
 maintenance remains covered by the existing [generation tests](../testing/generation.md).
-Accepted (issues #22, #306): required-core (Rust, Python, JavaScript, TypeScript) plus admitted
+Accepted (issue #22; remaining opens under issue #510): required-core (Rust, Python, JavaScript, TypeScript) plus admitted
 (Go, Java, Kotlin, Scala, C#, F#, C/C++) lockfile-consistency plus declared-dependency usage
 fixtures with category checks, explained exceptions, and obsolete-exception errors are implemented
 in `tools/depcheck/` and pass in CI through both `bazel test //...` and bare `dx test` with no

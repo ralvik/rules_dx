@@ -184,8 +184,9 @@ tests remain required.
 The two-test requirement and explained usage exceptions are accepted, with required-core
 (Rust, Python, JavaScript, TypeScript) plus admitted (Go, Java, Kotlin, Scala, C#, F#, C/C++)
 lock/usage scopes, non-import recognition, native exception/reason-validation mappings, and focused
-failing/passing fixtures qualified in `tools/depcheck/` (issues #22, #306). Remaining admitted
-quality-adapter mappings stay open under issue #307; foundation mappings under issue #304.
+failing/passing fixtures qualified in `tools/depcheck/` (issue #22; remaining opens under
+issue #510). Remaining admitted
+quality-adapter mappings stay open under issue #307; foundation mappings under issues #476-#484.
 Existing strict generation alone is not proof of lockfile consistency or declared-dependency
 usage. This is dependency hygiene, not an expansion of `dx audit`.
 

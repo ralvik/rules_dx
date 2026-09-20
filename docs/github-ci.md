@@ -305,12 +305,12 @@ Consumer-CI qualification, release qualification, and publication of qualified
 identities remain open tracks. Track unresolved work in
 planned work and prove the contract
 through the [consumer CI test matrix](testing/github-ci.md). The open qualification
-track stays owned under issue #312. Reusable-workflow contract plus caller
-plus gate/aggregate fixture evidence qualified seed-only under #312
+track stays owned under issue #509. Reusable-workflow contract plus caller
+plus gate/aggregate fixture evidence qualified seed-only under #509
 (`bazel run //tools/ci:consumer_ci_qualification`; nine checks, explicit
 platforms, fail-closed sequential, stable aggregate, hygiene, concurrency,
 permissions, per-cell coverage with fork-safe comments, all-enabled self-call
 (issue #408, verbatim `//...`),
 native bump loop plus Renovate (complementary, issue #326), migrate planning
 plus run multirun, tag hygiene as-built, with platform, merge, thread, fork,
-sequential, tag/release, Renovate, and migrate-execution gaps owned under #312).
+sequential, tag/release, Renovate, and migrate-execution gaps owned under #509).

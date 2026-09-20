@@ -1,4 +1,4 @@
-"""Cross-language dependency checks (issues #22, #306).
+"""Cross-language dependency checks (issue #22; remaining opens under issue #510).
 
 Hermetic lockfile-consistency and declared-dependency usage fixtures
 for the required core (Rust/Cargo, Python/uv, JavaScript+TypeScript/pnpm)

@@ -27,7 +27,7 @@
 # Still delivered per #85 together with the runtime action-command proof
 # (examples_laziness_runtime.sh): query-closure plus action-graph plus
 # action-command attribution complete the seed-host proof. Remote-cache /
-# empty-cache download attribution stays owned by #308 and platform
+# empty-cache download attribution stays owned by #507 and platform
 # evidence by #298. This harness is query-closure only.
 #
 # Run by CI via `bazel run //tools/ci:examples_laziness_query`,

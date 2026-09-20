@@ -23,7 +23,7 @@ Ty provenance is pinned: upstream `0.0.80` with URL, sha256, and licenses in
 Ruff maps to `format`/`lint` over the same classes, and Biome/ESLint/Prettier/`tsc` map
 JS/TS classes per `quality/adapters.bzl` with parsers in `quality/adapter/src/parsers/`
 (`ty.rs`, `ruff.rs`, `biome.rs`, `eslint.rs`, `prettier.rs`, `tsc.rs`); required-core
-quality mappings stay owned under issue #303.
+quality mappings stay owned under issues #470, #471, #472, #473, #474, #475.
 Quality adapters plus parity plus packaging are qualified under issue #307 with
 fixture evidence (`quality/testdata/runner_matrix_cases.bzl` pass/fail plus fix/format,
 `quality/native_config.bzl` bindings or explicit config-free/delegated status,
@@ -31,12 +31,13 @@ fixture evidence (`quality/testdata/runner_matrix_cases.bzl` pass/fail plus fix/
 single-correct-path plus SPDX/SLSA wire profiles; Buildifier/Taplo/Vale probes stay
 provisional) with deferred implementation owned by ADR 0019.
 Additional-language adapters (Java, Kotlin, Scala, C#, F#, C/C++, Go) have no
-claimed adapter yet; foundation-side classification stays owned under issue #304 and
+claimed adapter yet; foundation-side classification stays owned under issues #476-#484 and
 per-tool qualification is qualified under issue #307 with deferred routes owned by ADR 0019.
 Ruby and PowerShell tool cohorts stay deferred beyond v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md);
 Swift is excluded from v1 by the same record.
-Deferred/excluded tool record stays owned under issue #305: retained RuboCop/StandardRB plus
+Deferred/excluded tool record is decided by [ADR 0019](../decisions/0019-first-release-additional-foundations.md):
+retained RuboCop/StandardRB plus
 PSScriptAnalyzer cohorts keep their frozen routes in
 [Tool Acquisition](tool-acquisition.md#first-release-tool-routing) with `ruby`/`powershell`
 classes classified but no adapter claim (`quality/adapters.bzl` plus `quality/parity_tests.bzl`

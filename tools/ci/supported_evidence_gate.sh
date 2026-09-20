@@ -10,7 +10,7 @@
 # required-core depcheck fixtures, `dx update` live execution,
 # seed plus arm64 plus static-musl plus macos arm64
 # plus macos x86_64 best-effort plus windows x86_64 coverage/remote
-# qualification under #308/#410/#411/#412/#413/#414); audit live execution,
+# qualification under #507/#410/#411/#412/#413/#414); audit live execution,
 # docs-pipeline, env/codegen, remaining out-of-v1 platform cells (issue
 # #298; Linux arm64 qualified under #410, static musl under #411, macos
 # arm64 under #412, macos x86_64 best-effort under #413, windows x86_64
@@ -227,7 +227,7 @@ fi
 
 # Coverage seed plus arm64 plus static-musl plus macos arm64 plus macos
 # x86_64 best-effort plus windows x86_64 qualified
-# (#308/#410/#411/#412/#413/#414): cell gate + versioned inventories and
+# (#507/#410/#411/#412/#413/#414): cell gate + versioned inventories and
 # registry plus qualification harnesses, no cross-cell union.
 if [[ -f "tools/ci/coverage_cell.sh" ]] &&
   [[ -f "tools/coverage/seed-inventory.txt" ]] &&

@@ -121,7 +121,7 @@ macos arm64 plus macos x86_64 best-effort plus windows x86_64 qualified,
 all required plus best-effort qualified per the platform policy); no cross-cell union, never unioned across cells to hide gaps.
 Per-cell enforcement plus the Starlark, Codecov, quota, and remote halves
 below is qualified by `bazel run //tools/ci:coverage_qualification`
-(issue #308).
+(issue #507).
 
 **Accepted mechanics:**
 
@@ -168,7 +168,7 @@ tracked in the roadmap).
 
 Non-dogfed paths never run under the standard dogfood gates by design;
 each has an explicit execution path pinned by
-`bazel run //tools/ci:non_dogfed_paths` (issues #324/#407, see the
+`bazel run //tools/ci:non_dogfed_paths` (issue #508, see the
 [verification matrix](verification-matrix.md#layers)): CLI-contract via
 hermetic pins under `bazel test //...`, negative fixtures via explicit
 failure proofs, the no-coverage cohort via coverage-excluded runs, and
@@ -211,7 +211,7 @@ and service overages are not approved; any paid exception requires separate appr
 Qualify free-tier eligibility, host availability, quotas, and retention rather than
 assuming public-repository status makes every service free. Exhausted quotas or missing
 required hosts block affected work; they do not waive platform, coverage, artifact-trust,
-or release evidence requirements. Qualified mappings (issue #308,
+or release evidence requirements. Qualified mappings (issue #507,
 `bazel run //tools/ci:coverage_qualification`): standard GitHub-hosted runners is free
 for public repositories (`ubuntu-latest`, `ubuntu-24.04-arm`, `macos-14`, `windows-latest`; no self-hosted). Larger runners are always charged.
 `actions/cache` disk cache is 10 GB per repository; artifact storage is 500 MB.
@@ -226,7 +226,7 @@ designed and locally sandbox-tested but remote behavior remains unverified.
 That else branch is taken here: hermeticity is designed and locally
 sandbox-tested (aquery action shape plus execution-log cache hits) but remote
 behavior remains unverified, with no remote cache or executor wired
-(issue #308, `bazel run //tools/ci:coverage_qualification`). First-party PR
+(issue #507, `bazel run //tools/ci:coverage_qualification`). First-party PR
 reporting itself is adopted under #254; Codecov stays opt-in only.
 
 Snapshot goldens use schema validation plus byte snapshots with an

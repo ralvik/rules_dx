@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Coverage/remote qualification harness (issue #308).
+# Coverage/remote qualification harness (issue #507).
 #
-# Closes the five qualification gaps named in #308 with machine-checked
+# Closes the five qualification gaps named in #507 with machine-checked
 # evidence on a clean tree, without paid infrastructure:
 # - per-cell LCOV gating (seed plus arm64 plus two static-musl plus macos
 #   arm64 plus macos x86_64 best-effort plus windows x86_64 qualified, all

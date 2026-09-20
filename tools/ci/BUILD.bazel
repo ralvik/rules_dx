@@ -326,7 +326,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Dependency-check contract harness (issues #22, #306); see tools/ci/depcheck_contract.sh.
+# Dependency-check contract harness (issue #22; opens under #510); see tools/ci/depcheck_contract.sh.
 sh_binary(
     name = "depcheck_contract",
     srcs = ["depcheck_contract.sh"],
@@ -353,7 +353,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Foundation-mapping guards (issues #7, #8, #303, #304, #305); see tools/ci/foundation_maps.sh.
+# Foundation-mapping guards (issues #7, #8, #470-#475, #476-#484, ADR 0019); see tools/ci/foundation_maps.sh.
 sh_binary(
     name = "foundation_maps",
     srcs = ["foundation_maps.sh"],
@@ -472,7 +472,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Coverage/remote harness (issue #308); see tools/ci/coverage_qualification.sh.
+# Coverage/remote harness (issue #507); see tools/ci/coverage_qualification.sh.
 sh_binary(
     name = "coverage_qualification",
     srcs = ["coverage_qualification.sh"],
@@ -517,7 +517,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Env/codegen harness (issue #309); see tools/ci/env_codegen_qualification.sh.
+# Env/codegen harness (issue #506); see tools/ci/env_codegen_qualification.sh.
 sh_binary(
     name = "env_codegen_qualification",
     srcs = ["env_codegen_qualification.sh"],
@@ -535,7 +535,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Consumer-CI harness (issue #312); see tools/ci/consumer_ci_qualification.sh.
+# Consumer-CI harness (issue #509); see tools/ci/consumer_ci_qualification.sh.
 sh_binary(
     name = "consumer_ci_qualification",
     srcs = ["consumer_ci_qualification.sh"],
@@ -544,7 +544,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# File-family harness (issue #313); see tools/ci/file_family_qualification.sh.
+# File-family harness (issue #489); see tools/ci/file_family_qualification.sh.
 sh_binary(
     name = "file_family_qualification",
     srcs = ["file_family_qualification.sh"],
@@ -571,7 +571,7 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Non-dogfed harness (issues #324, #407); see tools/ci/non_dogfed_paths.sh.
+# Non-dogfed harness (issue #508; hermetic pins under #407); see tools/ci/non_dogfed_paths.sh.
 sh_binary(
     name = "non_dogfed_paths",
     srcs = ["non_dogfed_paths.sh"],

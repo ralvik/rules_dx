@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Environment/codegen qualification harness (issue #309).
+# Environment/codegen qualification harness (issue #506).
 #
 # Qualifies the as-built environment/codegen record with fixture evidence
 # and owned gaps, without claiming the unproven required tests:
@@ -15,7 +15,7 @@
 #   generation (Sigstore keyless bundle on the TUF trust root,
 #   draft-only publisher ceiling; SBOM/provenance/BCR deferred),
 # - required bootstrap/fidelity/spaces/stale/IDE/atomic/BEP/projection/
-#   root-candidate tests stay open under #309 with delivered
+#   root-candidate tests stay open under #506 with delivered
 #   fixtures (bootstrap_test spaces+noop+unmanaged, cli/env lock units,
 #   cli/roots frozen baseline plus reference, codegen collector
 #   frozen contracts, per-foundation env plans, node pnpm projection)
@@ -239,13 +239,13 @@ else
   bad "codegen.md lost its no-second-downloader record"
 fi
 
-# Owned gaps stay listed under #309 with no premature COMPLETED.
-if grep -q -F -e 'under issue #309' "$env_doc" &&
+# Owned gaps stay listed under #506 with no premature COMPLETED.
+if grep -q -F -e 'under issue #506' "$env_doc" &&
   grep -q -F -e 'public env contribution protocol' "$env_doc" &&
   grep -q -F -e 'root-candidate tests' "$env_doc"; then
   ok
 else
-  bad "environment.md lost its owned-gap list under #309"
+  bad "environment.md lost its owned-gap list under #506"
 fi
 
 # Verification matrix keeps Env/codegen Open with no Supported claim.

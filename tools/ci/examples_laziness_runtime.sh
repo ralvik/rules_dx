@@ -24,7 +24,7 @@
 # Seed-host scope: Delivered means implemented and verified on the Linux x86_64
 # seed host only (platform qualification open under issue #298). Remote-cache /
 # remote-execution and empty-cache download attribution stay owned by issue
-# #308 and platform evidence by issue #298; they are not claimed here. A warm
+# #507 and platform evidence by issue #298; they are not claimed here. A warm
 # local execution log alone is not a cache test, so this harness asserts over
 # declared actions (cache-independent), not over executed-vs-cached logs.
 #

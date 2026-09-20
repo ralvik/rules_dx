@@ -1,4 +1,4 @@
-# Seed-cell exact-gate inventory (issue #89 item 1; registry issue #308).
+# Seed-cell exact-gate inventory (issue #89 item 1; registry issue #507).
 #
 # Each required configuration/platform cell gates its own combined LCOV
 # report separately: no cross-platform union, no averaged percentages, no

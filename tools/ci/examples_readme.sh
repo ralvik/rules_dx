@@ -15,7 +15,7 @@
 # lose its disposition note. Acquisition and laziness fixtures
 # (no-install attribution, unused-foundation zero-work) are delivered
 # across the readme, static, query, aquery, and runtime harnesses,
-# with platform/remote dimensions owned by #298/#308.
+# with platform/remote dimensions owned by #298/#507.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:examples_readme`,
 # following //tools/ci:code_ownership.

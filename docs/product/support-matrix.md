@@ -45,7 +45,7 @@ remain owned by issues #410-#414 and are not pinned here):
 | Linux x86_64/arm64 static musl | Required profiles | Same dimensions; static native closure; dynamic musl explicitly out of scope | Platform-qualified (issue #411; CI: ubuntu-latest plus ubuntu-24.04-arm cross-build with per-profile bazel-musl-* cache scopes; Rust musl std via extra_target_triples with exec-platform tools for build scripts/proc macros and target musl libs for apps, prebuilt glibc libs never musl-compatible by linker change alone; hermetic-llvm static-only musl targets stay provisional; coverage: musl x86_64 plus musl arm64 cells with no union; consumer self-call plus musl jobs; release evidence open) |
 | macOS arm64 | Required | Same dimensions; pinned acquired SDK (SDK version is not the deployment floor) | Platform-qualified (issue #412; CI: macos-14 with bazel-macos-arm64- cache scope; pinned upstream toolchains with the hermetic-llvm Apple-SDK backend provisional plus immutable lazy fetch; host-installed SDK fallback never approved; Apple-SDK handling leaks no secrets and needs no interactive acceptance; dx_tools macos_arm64 artifacts stay an owned follow-up gap with the recorded no-artifact diagnostic; coverage: macos arm64 cell with no union; consumer self-call: all-enabled, issue #408; release evidence open) |
 | macOS x86_64 | Best-effort | Same dimensions; pinned acquired SDK (SDK version is not the deployment floor); best-effort non-blocking | Platform-qualified (issue #413; CI: macos-15-intel with bazel-macos-x86_64- cache scope; `macos-13` retired December 2025, `macos-15-intel` until August 2027; pinned upstream toolchains with the hermetic-llvm Apple-SDK backend provisional plus immutable lazy fetch; host-installed SDK fallback never approved; Apple-SDK handling leaks no secrets and needs no interactive acceptance; dx_tools macos_x86_64 artifacts stay an owned follow-up gap with the recorded no-artifact diagnostic; coverage: macos x86_64 cell with no union; consumer self-call: all-enabled, issue #408; release evidence open; gaps never block required-host release) |
-| Windows x86_64 MSVC-compatible | Required | Same dimensions; hermetic acquisition plus MSVC compatibility gates unchanged; explicit EULA acceptance required, never automatic | Platform-qualified (issue #414; CI: windows-latest with bazel-windows-x86_64- cache scope plus shell bash; pinned upstream toolchains with the toolchains_msvc clang-cl/Microsoft-STL backend provisional plus immutable lazy fetch; explicit EULA acceptance required never automatic, usage vs redistribution reviewed separately, merely adding the module requires no acceptance and fetches no restricted payloads; installed Build Tools fallback never approved; prebuilt-MSVC interop fixtures with explicit STL/CRT/linker/library combos incl mixed Rust/C/C++ qualify host-to-target plus target execution separately, compiler-target availability alone is not proof; manifest/path/ABI gaps closed with fixtures, remaining corpus gaps owned under issue #303; dx_tools windows_x86_64 artifacts stay an owned follow-up gap with the recorded no-artifact diagnostic; coverage: windows x86_64 cell with no union; consumer self-call: all-enabled, issue #408; release evidence open) |
+| Windows x86_64 MSVC-compatible | Required | Same dimensions; hermetic acquisition plus MSVC compatibility gates unchanged; explicit EULA acceptance required, never automatic | Platform-qualified (issue #414; CI: windows-latest with bazel-windows-x86_64- cache scope plus shell bash; pinned upstream toolchains with the toolchains_msvc clang-cl/Microsoft-STL backend provisional plus immutable lazy fetch; explicit EULA acceptance required never automatic, usage vs redistribution reviewed separately, merely adding the module requires no acceptance and fetches no restricted payloads; installed Build Tools fallback never approved; prebuilt-MSVC interop fixtures with explicit STL/CRT/linker/library combos incl mixed Rust/C/C++ qualify host-to-target plus target execution separately, compiler-target availability alone is not proof; manifest/path/ABI gaps closed with fixtures, remaining corpus gaps owned under issues #473, #474, #499; dx_tools windows_x86_64 artifacts stay an owned follow-up gap with the recorded no-artifact diagnostic; coverage: windows x86_64 cell with no union; consumer self-call: all-enabled, issue #408; release evidence open) |
 | Windows arm64 | Out of v1 scope | Not a claim of impossibility | Unqualified: clean `unsupported_platform` refusal |
 
 No cell below is `Supported`: promotion requires platform plus consumer plus
@@ -121,12 +121,12 @@ fixture evidence; provisional notes below do not select additional defaults or n
 
 | Foundation | Provisional upstream basis | Open mappings | Tracking |
 | --- | --- | --- | --- |
-| Rust application | `rules_rs` + pinned patched `rules_rust` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Providers, Gazelle, integration; native gaps: kept CC opt-out linker, shell-env default, bindgen LLVM-22-vs-23, CXX graph identity, exact-target discovery | issue #303 |
-| Python application | `aspect_rules_py` 2.x ([ADR 0010](../decisions/0010-python-foundation.md)) | Mappings | issue #303 |
-| JavaScript/TypeScript application | `aspect_rules_js`/`aspect_rules_ts`, `aspect_rules_jest` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Wrappers/Gazelle | issue #303 |
-| JS/TS quality | Biome default; ESLint, Prettier available; `tsc` diagnostic-only | Mappings | issue #303 |
-| Python quality | Ruff, Ty, pydoclint (Bandit excluded from v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md)) | Mappings, Ty | issue #303 |
-| Vue / Svelte / Astro / MDX | Named upstream adapters per framework | Adapter mappings plus composition evidence | issue #303 |
+| Rust application | `rules_rs` + pinned patched `rules_rust` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Providers, Gazelle, integration; native gaps: kept CC opt-out linker, shell-env default, bindgen LLVM-22-vs-23, CXX graph identity, exact-target discovery | issues #470, #471, #472, #473, #474, #475 |
+| Python application | `aspect_rules_py` 2.x ([ADR 0010](../decisions/0010-python-foundation.md)) | Mappings | Pinned (`bazel run //tools/ci:foundation_maps`) |
+| JavaScript/TypeScript application | `aspect_rules_js`/`aspect_rules_ts`, `aspect_rules_jest` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Wrappers/Gazelle | Pinned (`bazel run //tools/ci:foundation_maps`) |
+| JS/TS quality | Biome default; ESLint, Prettier available; `tsc` diagnostic-only | Mappings | Pinned (`bazel run //tools/ci:foundation_maps`) |
+| Python quality | Ruff, Ty, pydoclint (Bandit excluded from v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md)) | Mappings, Ty | Pinned (`bazel run //tools/ci:foundation_maps`) |
+| Vue / Svelte / Astro / MDX | Named upstream adapters per framework | Adapter mappings plus composition evidence | issue #510 |
 | Generation transport | Declared versioned manifest artifact (`GenerationManifest` in `generation/result.proto`, projected by `ProjectedManifest` in `cli/cli/src/generate.rs`) with explicit path/label/pattern scope | Implemented | Shipped |
 | Target resolution | All-direct-owners query strategy ([Target Resolution](../cli/target-resolution.md), pinned by resolver fixtures) | Implemented | Shipped |
 | Quality core/result contract | Internal Protobuf + NDJSON output | Core mappings | open work |
@@ -135,9 +135,11 @@ fixture evidence; provisional notes below do not select additional defaults or n
 | Consumer CI | Reusable workflow + caller template | Delivered; verification open | Shipped |
 | Repository workflows | Codegen/env/setup implemented; `dx update` plus `dx audit` live execution delivered | Codegen pairs; audit/update | open |
 
-Required core mappings stay open under issue #303 (Rust providers/Gazelle/integration,
-Python mappings plus Ty, JS/TS wrappers/Gazelle plus quality mappings, Vue/Svelte/Astro/MDX
-adapter mappings plus composition evidence). Qualified mappings are pinned by
+Required-core Rust mappings stay open under issues #470, #471, #472, #473, #474, #475 (Rust
+providers/Gazelle/integration plus the five native gaps below); Vue/Svelte/Astro/MDX
+adapter mappings plus composition evidence stay open under issue #510. Python mappings
+plus Ty and JS/TS wrappers/Gazelle plus quality mappings are pinned (see below).
+Qualified mappings are pinned by
 `bazel run //tools/ci:foundation_maps` with owning qualification in
 [Generation](../generation/README.md#language-mapping-qualification),
 [Environments](../environments/README.md#language-mapping-qualification),
@@ -149,9 +151,10 @@ Ty provenance plus `ty` typecheck adapter mapping (`quality/artifacts/ty.linux_x
 `quality/adapters.bzl`, `quality/adapter/src/parsers/ty.rs`), JS/TS quality adapter mappings
 (`biome`/`eslint`/`prettier`/`tsc` in `quality/adapters.bzl` plus their parsers), and
 framework composition (`examples/mixed/hello/` plus `gazelle/mixed/`). Remaining native gaps
-(kept CC opt-out linker failure path, global shell-env False versus annotation extension,
-bindgen LLVM-22-vs-23 compatibility, CXX graph identity, exact-target discovery) stay owned
-under issue #303 per the [native plan](../native-toolchains.md#qualification-questions-and-delivery).
+(kept CC opt-out linker failure path under issue #471, global shell-env False versus
+annotation extension under issue #472, bindgen LLVM-22-vs-23 compatibility under issue
+#473, CXX graph identity under issue #474, exact-target discovery under issue #475) stay
+owned under issues #471, #472, #473, #474, #475 per the [native plan](../native-toolchains.md#qualification-questions-and-delivery).
 No `Supported` claim until platform plus consumer plus release evidence passes.
 
 Required platforms and the quality-tool baseline (minus excluded Swift) frame
@@ -190,8 +193,8 @@ Unresolved cells block qualification; moving an admitted foundation out later
 requires a new evidence-backed decision.
 
 Admitted additional foundations (Go, C/C++, Java, Kotlin, Scala, C#, F#) stay open
-under issue #304: per-foundation exact upstream versions, rulesets, adapter mappings,
-lock wiring, test runners, and quality tools remain qualification work. Qualified mappings
+under issues #476-#484 plus #485-#488: per-foundation exact upstream versions, rulesets,
+adapter mappings, lock wiring, test runners, and quality tools remain qualification work. Qualified mappings
 are pinned by `bazel run //tools/ci:foundation_maps` with owning qualification in
 [Generation](../generation/README.md#language-mapping-qualification),
 [Environments](../environments/README.md#language-mapping-qualification),
@@ -203,12 +206,15 @@ Paket plus `paket.main`, Go stdlib-only, C/C++ none), with test runners (`go tes
 ScalaTest, JUnit 4 seed, plain `cc`/`csharp`/`fsharp` executables) and
 classification-only quality families. Dependency hygiene (lockfile-consistency plus
 declared-dependency usage with category, exception, and obsolete checks) is qualified for
-all admitted languages in `tools/depcheck/` (issue #306) with native authorities (go.sum,
+all admitted languages in `tools/depcheck/` (issue #22; remaining opens under issue #510)
+with native authorities (go.sum,
 `maven_install.json`, `paket.lock`, per-archive sha256) and focused fixtures. Remaining gaps
-(GoogleTest v1.18.0, JUnit 6.1.3 plus 5.14.x fallback, xUnit v3 4.0.0, Go `from_file` when
-non-stdlib deps land, quality adapters qualified under issue #307 with deferred implementation
+(GoogleTest v1.18.0 under issue #479, JUnit 6.1.3 plus 5.14.x fallback under issue #476,
+xUnit v3 4.0.0 under issue #477, Go `from_file` when
+non-stdlib deps land under issue #483, quality adapters qualified under issue #307 with
+deferred implementation
 owned by ADR 0019, C/C++ MSVC interop plus SDK licensing)
-stay owned under issue #304. No `Supported` claim until platform plus consumer plus release
+stay owned under issues #476-#484 plus #485-#488. No `Supported` claim until platform plus consumer plus release
 evidence passes.
 
 ### Deferred Beyond V1
@@ -222,8 +228,10 @@ generation, dependency, environment, and IDE stories, exceed the low-cost
 hermetic integration bar. Deferred foundations' quality-tool cells (RuboCop,
 StandardRB, PSScriptAnalyzer) stay in force; a foundation
 deferral removes no baseline tool. Reconsideration after v1 requires a new
-scope decision. The deferred/excluded record stays owned under issue #305 (Ruby plus
-PowerShell deferred, Swift plus Bandit excluded, host-toolchain fallback never approved).
+scope decision. The deferred/excluded record is decided by
+[ADR 0019](../decisions/0019-first-release-additional-foundations.md) (Ruby plus
+PowerShell deferred, Swift plus Bandit excluded, host-toolchain fallback never approved;
+no open tracker; reconsideration requires a new scope decision).
 Qualified record is pinned by `bazel run //tools/ci:foundation_maps` with owning
 qualification in [Generation](../generation/README.md#language-mapping-qualification),
 [Environments](../environments/README.md#language-mapping-qualification),
@@ -238,7 +246,7 @@ runtime); Swift/SwiftFormat plus Bandit exclusions with host-toolchain fallback 
 Remaining gaps (bundle contents, lock inputs, module/runtime identities, console-parse versus
 library-API binding, and per-tool adapter mappings qualified under issue #420 with deferred
 implementation owned by ADR 0019; reconsideration requires
-a new scope decision) stay owned under issue #305. No `Supported` claim until platform plus
+a new scope decision) stay decided by ADR 0019 with no open tracker. No `Supported` claim until platform plus
 consumer plus release evidence passes.
 
 | Language | Application foundation | Format | Lint, typecheck, or audit |
@@ -779,7 +787,7 @@ Applicable capabilities also enter the v1 feasibility review. Their application 
 explicit so formatter or linter availability cannot be mistaken for complete foundation support.
 Applicability verification, including existing `N/A` cells, is owned by the registry
 rather than inferred from a file suffix. File-family quality integrations
-qualified seed-only under issue #313 (`bazel run //tools/ci:file_family_qualification`;
+qualified seed-only under issue #489 (`bazel run //tools/ci:file_family_qualification`;
 provider-class applicability with never-suffix inference, Starlark/Buildifier plus TOML/Taplo
 adapter-backed evidence, parity-deferred routes with owner plus frozen acquisition per family;
 adapter execution, exact pins/digests/rule-sets/adapter mappings per family, and platform plus
@@ -821,4 +829,4 @@ excluded from v1 by [ADR 0019](../decisions/0019-first-release-additional-founda
 the `Not planned` Swift row above is an evidence-backed v1 exclusion, not a
 feasibility assessment. A host-toolchain
 fallback was never approved. Reconsidering Swift after v1 requires a new scope decision.
-Swift exclusion stays owned under issue #305.
+Swift exclusion is decided by ADR 0019 with no open tracker.

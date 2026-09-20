@@ -27,14 +27,15 @@ by `<lang>/tests/fixtures/hello/`. Rust, Node, and Python projections are furthe
 upstream toolchain now; per-platform acquisition stays open under the native plan.
 Ruby and PowerShell have no environment mapping: deferred beyond v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
-Deferred/excluded env record stays owned under issue #305; no `ruby/`, `powershell/`, or
+Deferred/excluded env record is decided by [ADR 0019](../decisions/0019-first-release-additional-foundations.md);
+no `ruby/`, `powershell/`, or
 `swift/` env plan lands here.
 
-Required-core exact-target discovery stays owned under issue #303 per the
+Required-core exact-target discovery stays owned under issue #475 per the
 [native plan](../native-toolchains.md#qualification-questions-and-delivery);
 current plans are provider-derived focused-target plans, not exact-target proof.
 
-Admitted additional-foundation env mappings stay owned under issue #304; current plans
+Admitted additional-foundation env mappings stay owned under issues #476-#484; current plans
 are provider-derived focused-target plans on default upstream toolchains, not
 per-platform acquisition proof.
 
