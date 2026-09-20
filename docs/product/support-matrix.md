@@ -243,12 +243,12 @@ are pinned by `bazel run //tools/ci:foundation_maps` with owning qualification i
 [native plan](../native-toolchains.md#qualification-questions-and-delivery):
 wrappers preserving upstream providers plus `QualitySourcesInfo`, Gazelle extensions,
 env plans, hello builds, and lock authority (`maven_install.json` plus fail-closed,
-Paket plus `paket.main`, Go stdlib-only, C/C++ none), with test runners (`go test`
-qualified seed-only under issue #478, ScalaTest,
-JUnit 6.1.3 plus 5.14.x fallback qualified seed-only under issue #476,
-GoogleTest v1.18.0 plus C++17 floor qualified seed-only under issue #479,
-plain `csharp`/`fsharp` hello executables plus the
-qualified xUnit v3 4.0.0 mapping via xunit fixtures under issue #477) and
+Paket plus `paket.main`, Go stdlib-only, C/C++ none), with test runners (JUnit
+6.1.3 plus 5.14.x fallback qualified seed-only under issue #476, xUnit v3 4.0.0
+mapping via xunit fixtures qualified seed-only under issue #477, `go test`
+qualified seed-only under issue #478, GoogleTest v1.18.0 plus C++17 floor
+qualified seed-only under issue #479, ScalaTest qualified seed-only under issue
+#480, plain `cc` executables, plain `csharp`/`fsharp` hello executables) and
 classification-only quality families. Dependency hygiene (lockfile-consistency plus
 declared-dependency usage with category, exception, and obsolete checks) is qualified for
 all admitted languages in `tools/depcheck/` (issue #22; remaining opens under issue #510)
@@ -265,7 +265,9 @@ xUnit v3 4.0.0 qualified seed-only under issue #477 via
 `go test` qualified seed-only under issue #478 via
 `bazel run //tools/ci:gotest_qualification`;
 GoogleTest v1.18.0 plus C++17 floor qualified seed-only under issue #479 via
-`bazel run //tools/ci:googletest_qualification`).
+`bazel run //tools/ci:googletest_qualification`;
+ScalaTest 3.2.20 qualified seed-only under issue #480 via
+`bazel run //tools/ci:scalatest_qualification`).
 No `Supported` claim until platform plus consumer plus release
 evidence passes.
 
@@ -531,8 +533,9 @@ Upstream documentation observations; provisional defaults, not
 selections. Exact versions, runner mappings, and
 fixture qualification are open, except the JUnit 6.1.3 plus 5.14.x fallback
 mapping qualified under issue #476, the xUnit v3 4.0.0 mapping
-qualified under issue #477, and the GoogleTest v1.18.0 mapping
-qualified under issue #479 below.
+qualified under issue #477, the `go test` wiring qualified under issue #478,
+the GoogleTest v1.18.0 mapping qualified under issue #479, and the ScalaTest
+3.2.20 mapping qualified under issue #480 below.
 
 - Java and Kotlin: JUnit (≈62–79% JVM adoption, Spring Boot default; JUnit 6
   adds native Kotlin `suspend` support). JUnit 6.1.3 primary (JDK 17+ baseline,
@@ -585,9 +588,15 @@ qualified under issue #479 below.
 - Scala: ScalaTest 3.2.20 (covers Scala 2.10–2.13 and 3.x),
   per the rules' own preference (`scala_test` runs suites written using the
   `scalatest` library; the rule implementation is ScalaTest-wired).
+  Qualified seed-only under issue #480
+  (`bazel run //tools/ci:scalatest_qualification` with
+  `scala/tests/fixtures/scalatest/pins.bzl` plus the hello `scala_test`
+  `AnyFlatSpec` fixture over the `scala_test` wrapper; unpinned runner
+  rejected).
   `scala_junit_test` and `scala_specs2_junit_test` are rules-supported
   choices, not defaults. Scalactic is the recommended companion, not a
-  requirement.
+  requirement. No `Supported` claim until platform plus consumer plus release
+  evidence passes.
 
 Where the upstream rules support multiple runners, the runner is a
 configuration choice over the qualified set, not a hard-coded single

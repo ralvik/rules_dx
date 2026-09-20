@@ -80,7 +80,10 @@ Admitted additional foundations keep their provisional upstreams with hello test
 pinned (`go_test` over `go test` with package-level `embed`, qualified seed-only under issue #478
 (`go/tests/fixtures/gotest/pins.bzl` plus the hello fixture via
 `bazel run //tools/ci:gotest_qualification`; implicit runner rejected),
-`scala_test` over ScalaTest,
+`scala_test` over ScalaTest, qualified seed-only under issue #480
+(`scala/tests/fixtures/scalatest/pins.bzl` plus the hello `AnyFlatSpec`
+fixture via `bazel run //tools/ci:scalatest_qualification`; unpinned runner
+rejected),
 `java_test`/`kotlin_test` over the JUnit 4 seed plus the qualified JUnit 6.1.3 Jupiter
 upgrade with 5.14.x fallback (`execute --select-class` console-launcher fixtures in
 `java/tests/fixtures/junit/` plus `kotlin/tests/fixtures/junit/` via
@@ -106,7 +109,9 @@ plus 5.14.x fallback qualified seed-only under issue #476 via
 under issue #477 via `bazel run //tools/ci:xunit_qualification`; `go test` qualified
 seed-only under issue #478 via `bazel run //tools/ci:gotest_qualification`; GoogleTest
 v1.18.0 plus C++17 floor qualified seed-only under issue #479 via
-`bazel run //tools/ci:googletest_qualification`); no `Supported` claim
+`bazel run //tools/ci:googletest_qualification`; ScalaTest 3.2.20 qualified
+seed-only under issue #480 via `bazel run //tools/ci:scalatest_qualification`);
+no `Supported` claim
 until platform plus consumer plus release evidence passes.
 
 Pinned by `bazel run //tools/ci:foundation_maps`.

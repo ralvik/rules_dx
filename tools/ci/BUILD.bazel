@@ -752,6 +752,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# ScalaTest runner harness (issue #480); see docs/product/support-matrix.md#provisional-default-test-runners.
+sh_binary(
+    name = "scalatest_qualification",
+    srcs = ["scalatest_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "warnings_as_errors_testdata",
     srcs = glob(["testdata/warnings/**"]),

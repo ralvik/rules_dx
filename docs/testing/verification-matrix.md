@@ -216,6 +216,8 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   `:xunit_qualification` (xUnit v3 4.0.0 pins plus fixture evidence,
   issue #477), `:gotest_qualification`, `:googletest_qualification` (GoogleTest
   v1.18.0 pins plus C++17 floor plus fixture evidence, issue #479),
+  `:scalatest_qualification` (ScalaTest 3.2.20 pins plus fixture evidence,
+  issue #480),
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
   best-effort), `:windows_qualification`, `:ci_matrix_qualification`
   (host matrix, issue #415), and `:closeout_battery_qualification`
@@ -230,7 +232,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 33/33,
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
-`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
+`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
 `windows_qualification` 13/13, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
@@ -390,6 +392,14 @@ Remaining reds stay owned gaps, not green claims:
   structured-bindings plus `if constexpr`), plain assert seed stays, living at
   head rejected; platform plus consumer plus release evidence stays owned gap;
   no Supported claim).
+- ScalaTest 3.2.20 with fixture evidence qualified seed-only under #480
+  (`bazel run //tools/ci:scalatest_qualification`; rules_scala 7.3.0 plus Scala
+  2.13.18 plus ScalaTest 3.2.20 pinned in `scala/tests/fixtures/scalatest/pins.bzl`
+  with the hello `scala_test` `AnyFlatSpec` fixture over the `scala_test` wrapper
+  (upstream providers plus `QualitySourcesInfo`), managed Coursier route with no
+  Maven lock members, unpinned runner rejected; `scala_junit_test` plus
+  `scala_specs2_junit_test` stay rules-supported choices, not defaults;
+  platform plus consumer plus release evidence stays owned gap; no Supported claim).
 - Non-dogfed execution plan delivered (see issue #508 for remaining gaps; hermetic
   CLI-contract pins under issue #407)
   (`bazel run //tools/ci:non_dogfed_paths`; hermetic CLI-contract pins,
