@@ -242,6 +242,8 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   plus fixture evidence, issue #495),
   `:acquisition_rights_qualification` (Apple plus Microsoft rights pins
   plus fixture evidence, issue #496),
+  `:prebuilt_interop_qualification` (prebuilt interop pins
+  plus fixture evidence, issue #498),
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
   best-effort), `:windows_qualification`, `:ci_matrix_qualification`
   (host matrix, issue #415), and `:closeout_battery_qualification`
@@ -257,7 +259,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
-`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
+`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `prebuilt_interop_qualification` 16/16, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
 
@@ -569,9 +571,10 @@ Remaining reds stay owned gaps, not green claims:
   head plus windows_support `v0.4.1` package identities, mutable fetch
   rejected, laziness proven with missing acceptance plus unrelated workflows
   green and deferred failure never proving laziness; backend stays
-  provisional; acquisition rights qualified seed-only under #496, transport
-  plus interop plus corpus plus floors plus coverage stay owned under
-  issues #497/#498/#499/#500/#501;
+  provisional; acquisition rights qualified seed-only under #496, prebuilt interop
+  qualified seed-only under #498, transport
+  plus corpus plus floors plus coverage stay owned under
+  issues #497/#499/#500/#501;
   platform plus consumer plus release evidence stays owned gap; no Supported
   claim (`windows_acquisition_qualification` 14/14)).
 - Apple plus Microsoft acquisition rights with fixture evidence qualified seed-only under #496
@@ -585,9 +588,25 @@ Remaining reds stay owned gaps, not green claims:
   as license-approved boundaries separately from download success, official download
   not permission, assume rights rejected, pinned in
   `cc/tests/fixtures/acquisition_rights/pins.bzl`; backends stay provisional;
-  transport plus interop plus corpus plus floors plus coverage stay owned under
-  issues #497/#498/#499/#500/#501; platform plus consumer plus release evidence
+  prebuilt interop qualified seed-only under #498, transport plus corpus plus
+  floors plus coverage stay owned under
+  issues #497/#499/#500/#501; platform plus consumer plus release evidence
   stays owned gap; no Supported claim (`acquisition_rights_qualification` 15/15)).
+- Prebuilt interop with fixture evidence qualified seed-only under #498
+  (`bazel run //tools/ci:prebuilt_interop_qualification`;
+  explicit Windows STL/CRT/linker/library combos with clang-cl plus Microsoft STL
+  plus retail `/MD` plus static `.lib` plus import `.lib` plus DLL shapes plus
+  `cl.exe` compat as diagnosis only plus Linux explicit dynamic libstdc++
+  comparison on Linux glibc only plus ordinary object linking without
+  cross-language LTO plus shared-runtime plus exceptions plus RTTI plus
+  allocation-ownership plus ABI boundaries, host-to-target plus target execution
+  separately with mixed Rust/C/C++ composition, compiler-target availability alone
+  plus LLVM ancestry alone plus single-combo proof rejected, pinned in
+  `cc/tests/fixtures/prebuilt_interop/pins.bzl` with the interop lib plus test
+  under `bazel test //...`; backends stay provisional; transport plus corpus plus
+  floors plus coverage stay owned under issues #497/#499/#500/#501; platform plus
+  consumer plus release evidence stays owned gap; no Supported claim
+  (`prebuilt_interop_qualification` 16/16)).
 - Stable-stack compose with fixture evidence qualified seed-only under issue #494
   (`bazel run //tools/ci:stable_stack_qualification`; as-built Bzlmod
   identities Bazel 9.2.0 plus rules_rust 0.74.0 plus rules_cc 0.2.22 plus
