@@ -183,7 +183,9 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   `path:line:col:check:message`. Missing config reports `E100`; global `xdg .vale.ini` loads in
   addition unless `--no-global`. `StylesPath` plus `.vale-config/*.ini` pipeline files, vocabularies,
    dictionaries, templates, scripts, and filters form the closure; `sync` downloads packages and must
-   never run in consumer actions.
+   never run in consumer actions. The repository corpus binds `Dx.Markers` only (accepted,
+   pinned by `quality/corpus_vale.ini` plus `corpus_styles/Dx/Markers.yml`): prose rules stay
+   wont-fix (issue #589, native-config owns policy with no hidden preset).
 - **Biome:** qualify `lint --reporter=json --colors=off --error-on-warnings --vcs-enabled=false
   --config-path=<dir>` and `format --reporter=json --colors=off --config-path=<dir>` over the pinned
   2.5.12 standalone artifact (`@dx_tools//:biome`). Direct probes show exit `0` when clean and `1`
@@ -196,7 +198,9 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   and exit `0`. The config directory must never contain linted sources: files inside the
   `--config-path` directory fail with a nested-root configuration error, while files outside it
   lint identically from any working directory, including inside a git repository. Hostile-home and
-  sandbox config-discovery fixtures land with the runner wiring.
+  sandbox config-discovery fixtures land with the runner wiring. Config transport is `biome.json`
+  only: `biome.jsonc` is wont-fix (issue #589, pinned by `quality/native_config_tests.bzl`;
+  see [Native Configuration](native-configuration.md#dedicated-configs)).
 - **ESLint:** qualify `-c <checked-in flat config> -f json [--fix-dry-run]` over the pinned 10.10.0
   private Node graph (`//quality/tools/javascript/bin:eslint`, launched via `js_run_binary` so
   `BAZEL_BINDIR` is set). Direct probes show JSON results `[{filePath, messages[{ruleId, severity
@@ -420,7 +424,9 @@ surface syntax errors under edition 2021), and `dx format --check //rust/...` cl
   shadowing a checked source is dropped at the aspect (the source wins); a `--sibling` colliding
   with a `--source` at the runner CLI is a `DuplicateFile` action failure. Direct-Bazel dogfood
   executes the wired stage on fixtures; this
-  boundary defines the checker shape and its pipeline integration.
+  boundary defines the checker shape and its pipeline integration. Email autolinks (`<a@b.c>`)
+  stay wont-fix out of scope (issue #589, checker-owned structure only): ignored with no finding
+  and no skipped remote, pinned by `quality/markdown` unit tests.
 
 ## First-Release Tool Baseline
 

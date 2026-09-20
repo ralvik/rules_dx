@@ -167,6 +167,12 @@ quality actions. Ruff therefore recognizes only `ruff.toml` and `.ruff.toml`.
 guidance and rejects both dedicated filenames in one directory instead of applying native filename
 precedence. Tools without an equivalent dedicated format are not subject to this restriction.
 
+Biome takes `biome.json` only (accepted, pinned by `quality/native_config.bzl` plus
+`quality/native_config_tests.bzl`): `biome.jsonc` is wont-fix (issue #589, no hidden preset;
+the `.json` extension is the JSON transport). The repository corpus binds Vale `Dx.Markers`
+only (accepted, pinned by `quality/corpus_vale.ini` plus `corpus_styles/Dx/Markers.yml`):
+prose rules stay wont-fix (issue #589, native-config owns policy with no hidden preset).
+
 ## Placement
 
 Because actions receive explicit config labels and never ambient-search, user-authored native

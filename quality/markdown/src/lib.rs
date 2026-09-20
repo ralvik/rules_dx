@@ -16,7 +16,8 @@
 //! CommonMark autolinks, so the parser emits no event). A target that names
 //! a directory resolves to its declared `README.md` index (`docs/cli/`
 //! reads `docs/cli/README.md`); an undeclared index fails closed like any
-//! undeclared target. Email autolinks (`<a@b.c>`) are out of scope and
+//! undeclared target. Email autolinks (`<a@b.c>`) are wont-fix out of scope
+//! (issue #589, checker-owned: structure only, never prose/identity) and
 //! ignored. Explicit references with no definition fail closed, keeping the
 //! author's label spelling; bare `[text]` with no definition is literal
 //! text. Code spans suppress link detection natively, including multi-line
@@ -176,7 +177,8 @@ pub fn check_markdown(
                     dest_url,
                     ..
                 }) => {
-                    // Email autolinks are out of scope and ignored.
+                    // Email autolinks are wont-fix out of scope (issue #589):
+                    // structure only, so ignored, never findings or remotes.
                     if link_type == LinkType::Email {
                         continue;
                     }
@@ -1278,6 +1280,8 @@ mod tests {
 
     #[test]
     fn email_autolink_is_out_of_scope() {
+        // Issue #589 wont-fix: email autolinks are structure-out-of-scope,
+        // so ignored with no finding and no skipped remote.
         let text = "# T\n\nWrite <dev@example.com>.\n";
         let outcome = check_markdown("a.md", text, &siblings(&[]));
         assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
