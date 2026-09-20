@@ -209,6 +209,28 @@ through the annotation's `build_script_tools`, `build_script_data`,
 `build_script_env`, and related attributes. First-party
 `use_default_shell_env = True` likewise survives only with `# keep`.
 
+## Binding Generation
+
+Bindgen LLVM-22-vs-23 compat is qualified under issue #473 (unpinned LLVM
+rejected). The parser baseline is LLVM-22 (`rules_rs` v0.0.109 declaring
+LLVM rules `0.8.18`/LLVM `22.1.8`); the qualified header/flag target is
+LLVM-23 (`hermetic-llvm` v0.8.19/LLVM `23.1.0`); both identities plus the
+self-contained bindgen `0.72.1` prebuilts (`v0.0.2`, six platform sha256s)
+stay pinned in `rust/tests/fixtures/bindgen/pins.bzl` and the
+[native plan](../native-toolchains.md#rust-and-native-integration). The
+standalone `rust_bindgen` route derives the target compiler context and
+passes `--no-include-path-detection --formatter=none` plus explicit
+`bindgen_flags`/`clang_flags`; the build-script route needs an explicit
+execution-platform libclang closure and target parsing flags; the Rust
+consumer separately links the native library in both routes. The
+`rust/tests/fixtures/bindgen/bindgen.h` plus `bindgen.expected` fixture
+pair (C11-only stable constructs with C23-only spellings excluded) must
+yield the identical expected symbol set under both LLVM identities, with
+`gcc -fsyntax-only -std=c11 -Wall -Werror` proving the header well-formed
+on the seed host. Pinned by `bazel run //tools/ci:bindgen_qualification`
+with no `Supported` claim until platform plus consumer plus release
+evidence passes.
+
 ## Versions
 
 Rust omits per-target toolchain-version selection under

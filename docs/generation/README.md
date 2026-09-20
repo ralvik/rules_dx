@@ -60,9 +60,13 @@ third-party half pinned global `False` in `.bazelrc` and zero per-crate
 opt-ins under issue #472); the kept CC opt-out linker path is pinned seed-only
 under issue #471 (pure-Rust `rust/tests/fixtures/cc_optout/` with kept
 `use_cc_toolchain = 0`, sysroot `rust-lld` fallback plus `no_cc` stubs,
-`bazel run //tools/ci:cc_optout_qualification`); remaining native gaps
-(shell-env default, bindgen LLVM-22-vs-23, CXX graph identity,
-exact-target discovery) stay owned under issues #472, #473, #474, #475 per the
+`bazel run //tools/ci:cc_optout_qualification`); bindgen LLVM-22-vs-23 compat
+is qualified under issue #473 with the LLVM-22 parser baseline vs LLVM-23
+target pinned plus the standalone/build-script `bindgen.h` plus
+`bindgen.expected` fixture pair
+(`bazel run //tools/ci:bindgen_qualification`); remaining native gaps
+(shell-env default, CXX graph identity,
+exact-target discovery) stay owned under issues #472, #474, #475 per the
 [native plan](../native-toolchains.md#qualification-questions-and-delivery).
 
 Admitted additional foundations keep their provisional upstreams with hello test runners
