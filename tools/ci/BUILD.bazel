@@ -262,6 +262,30 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Native-cohort qualification harness (issue #418, live successor to
+# closed #307 for the c/cpp/go classes): proves the as-built decided
+# split native route (clang-format/clang-tidy via the qualified
+# hermetic-llvm LLVM tool targets with the clang-tidy compile-commands
+# target-coupled-vs-check-only decision recorded, cppcheck as a standalone
+# checksummed-artifact candidate with `--xml --xml-version=2` on stderr)
+# plus the decided split Go route (gofumpt strict gofmt superset, `govet`
+# from the authoritative Go toolchain, staticcheck/errcheck standalone
+# with the SA-only-vs-default conflict unresolved and neither selected,
+# govet/errcheck text-parse) with initial artifact research as
+# observations not pins, provisional adapter-input notes (MSVC-interop
+# plus SDK licensing stay with the Windows platform issue), provisional
+# native-config inputs with no hidden preset, parity-deferred c/cpp/go
+# with owner plus frozen route, classification-only taxonomy with no
+# curated defaults and no matrix cells yet. Run by CI via
+# `bazel run //tools/ci:native_cohort_qualification`.
+sh_binary(
+    name = "native_cohort_qualification",
+    srcs = ["native_cohort_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Publication-trust harness (issues #78, #26, #5, #311): machine-checks
 # the draft-only + nothing-published static invariants the
 # release-hygiene harness does not own — module name at the

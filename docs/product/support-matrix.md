@@ -449,7 +449,7 @@ cost drivers, open. Foundation deferred beyond v1 by [ADR 0019](../decisions/001
 | F# | `rules_dotnet` | issue #417 | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | Ruby | `rules_ruby` (bazel-contrib) | open work tool cohort; foundation post-v1 | Deferred beyond v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | PowerShell | `rules_powershell` | open work tool cohort; foundation post-v1 | Deferred beyond v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
-| Go, C/C++ | Source/documentation review | open work | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
+| Go, C/C++ | Source/documentation review | issue #418 (native cohort, routes decided 2026-09-13) | Admitted to v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) |
 | Swift, Bandit | Excluded from v1 ([ADR 0019](../decisions/0019-first-release-additional-foundations.md)) | N/A | Evidence-backed v1 exclusion |
 
 No person-hour figures are frozen here; effort is estimated from qualification
@@ -502,14 +502,19 @@ open work.
 - Go: gofumpt (strict superset of gofmt) for format; staticcheck plus `govet`
   for lint, since neither subsumes the other. The existing `SA`-only suggestion
   conflicts with the default-check suggestion below; both remain provisional,
-  not an approved native rule selection.
+  not an approved native rule selection. Route decision (recorded 2026-09-13):
+  gofumpt, staticcheck, and errcheck stay standalone checksummed-artifact
+  candidates while `govet` ships with the authoritative Go toolchain (no
+  separate acquisition); the `SA`-only versus default-checks conflict stays
+  unresolved under issue #418 — neither is selected here. No adapter claims
+  `go` yet (open under issue #418).
 - C/C++: clang-format, clang-tidy, and cppcheck as already named;
   compiler-integrated and standalone analysis are complementary. Route
   decision (recorded 2026-09-13): clang-format and clang-tidy resolve from
   the qualified hermetic-llvm LLVM distribution's tool targets
   (authoritative-toolchain class, no separate acquisition); cppcheck stays a
   standalone checksummed-artifact candidate pending adapter qualification.
-  No adapter claims c/cpp yet.
+  No adapter claims c/cpp yet (open under issue #418).
 - Java: google-java-format; PMD, Checkstyle, SpotBugs, plus Error Prone, which
   works out of the box with Bazel. The Error Prone version follows the
   qualified JDK baseline (open).
@@ -536,11 +541,17 @@ to closed #307 for the `java`/`kotlin` cohort); Scalafmt/Scalafix
 take the managed JVM route (issue #417, live successor to closed #307 for the
 `scala` cohort); CSharpier/Fantomas take the exact-package plus
 shared-.NET-runtime route (issue #417, live successor to closed #307 for the
-`csharp`/`fsharp` cohort); PSScriptAnalyzer takes the exact-module plus
+`csharp`/`fsharp` cohort); clang-format, clang-tidy, and cppcheck take the
+split native route (issue #418, live successor to closed #307 for the
+`c`/`cpp` classes); gofumpt, staticcheck, `govet`, and errcheck take the split
+Go route (issue #418, live successor to closed #307 for the `go` class);
+PSScriptAnalyzer takes the exact-module plus
 portable-PowerShell-runtime route; RuboCop/StandardRB take the
 release-assembled Ruby closure route. Exact JVM artifacts, versions, rule sets,
 and adapter mappings are tracked under issue #416; exact Scala/.NET artifacts,
-versions, rule sets, and adapter mappings are tracked under issue #417; remaining cohorts stay in
+versions, rule sets, and adapter mappings are tracked under issue #417; exact
+native artifacts, versions, rule sets, and adapter mappings are tracked under
+issue #418; remaining cohorts stay in
 open work; no adapter claims any of these
 classes yet.
 
@@ -551,7 +562,8 @@ qualification inputs open, not approved presets or additions to curated membersh
 
 - staticcheck default checks versus the `SA`-only suggestion above remain an
   unresolved conflict; neither is selected here. `govet` and errcheck for unhandled errors
-  remain the existing complementary-tool suggestions, not new default selections.
+  remain the existing complementary-tool suggestions, not new default selections
+  (all provisional under issue #418).
 - SpotBugs at default effort; PMD default ruleset; Error Prone at its default severities.
   The existing Checkstyle Google checks suggestion requires resolution against the
   native-config contract (open under issue #416); it is not an approved hidden or automatically supplied config.
@@ -559,7 +571,7 @@ qualification inputs open, not approved presets or additions to curated membersh
   ktlint standard rules (both provisional under issue #416).
 - Roslyn: SDK default analysis mode; StyleCop stays optional since its style
   rules can contradict the built-in IDE rules (both provisional under issue #417).
-- clang-tidy default checks; cppcheck default enablement.
+- clang-tidy default checks; cppcheck default enablement (both provisional under issue #418).
 - Scalafix recommended built-ins plus OrganizeImports (import organization)
   and RemoveUnused (dead code): the existing suggestion remains provisional,
   open under issue #417. It is not an approved hidden preset;
@@ -605,7 +617,8 @@ open work.
 Upstream documentation observations; provisional input, not
 selections. Adapter design and normalization for the JVM cohort is tracked under
 issue #416; adapter design and normalization for the Scala + .NET cohort is tracked
-under issue #417 (remaining cohorts stay in open work).
+under issue #417; adapter design and normalization for the Native cohort is tracked
+under issue #418 (remaining cohorts stay in open work).
 
 Diagnostic wire formats:
 
@@ -613,26 +626,33 @@ Diagnostic wire formats:
   ktlint (`--reporter=sarif`), detekt (sarif report), staticcheck
   (`-f sarif`), Roslyn (`/errorlog`, SARIF 2.1). JVM shapes are unproven mappings
   owned by issue #416. Roslyn shapes are unproven mappings owned by issue #417.
+  staticcheck shapes are unproven mappings owned by issue #418.
 - JSON: staticcheck (`-f json`), PMD (json), ktlint (json).
+  staticcheck JSON shapes are unproven mappings owned by issue #418.
 - Checkstyle XML: Checkstyle (`-f xml`), ktlint, detekt.
 - Tool-native XML: cppcheck (`--xml --xml-version=2`, on stderr).
-- Text-parse: govet and errcheck (`file:line[:col]: message`), Error Prone
+  Unproven mapping owned by issue #418.
+- Text-parse: govet and errcheck (`file:line[:col]: message`, unproven mappings
+  owned by issue #418), Error Prone
   (javac diagnostics; structured output still open upstream, itemized under issue #416),
   FSharpLint
   console (the `FSharpLint.Core` library API is the structured
   alternative, itemized under issue #417), Scalafix console (no machine-readable CLI output; open
   upstream issue, itemized under issue #417).
 - clang-tidy emits clang text diagnostics; fixes travel separately as
-  `--export-fixes` YAML for `clang-apply-replacements`.
+  `--export-fixes` YAML for `clang-apply-replacements`. Target-coupled wiring
+  versus check-only stays open under issue #418.
 
 Fix modes:
 
 - Whole-file rewrite with check/diff mode: all seven formatters,
   ktlint (`--format`), Scalafix (`--check` unified diff),
   clang-tidy (`--fix` or `--export-fixes`), Error Prone
-  (`-XepPatchChecks` with a patch-file location).
+  (`-XepPatchChecks` with a patch-file location). Native formatters
+  (clang-format, gofumpt) plus clang-tidy modes are itemized under issue #418.
 - Check-only: PMD, Checkstyle, SpotBugs, staticcheck, govet, errcheck,
-  cppcheck, detekt, FSharpLint console.
+  cppcheck, detekt, FSharpLint console. Native check-only tools (staticcheck,
+  `govet`, errcheck, cppcheck) are itemized under issue #418.
 - Provisional fix flow: tools run check-only for diagnostics; fixes are
   produced by applying in a sandbox and diffing, rendered as unified
   patches (precedent: aspect `rules_lint`).
@@ -653,6 +673,12 @@ open work:
 - Roslyn `/errorlog` SARIF is per compiler invocation (per
   configuration/TFM/RID pivot); aggregation work remains (issue #417).
 - FSharpLint: console text parsing versus binding the .NET library API (issue #417).
+- clang-tidy: compile-commands context couples the adapter to target wiring;
+  target-coupled wiring versus check-only stays open (issue #418).
+- staticcheck: default checks versus `SA`-only stays an unresolved conflict;
+  neither is selected here (issue #418).
+- cppcheck, `govet`, errcheck: tool-native XML on stderr plus text-parse shapes
+  with the sandbox-apply-and-diff fix flow stay unproven mappings (issue #418).
 
 ### Open Work Tracking
 
@@ -676,8 +702,8 @@ Every candidate row above maps to an existing tracker: admitted Java and Kotlin
 (JVM cohort) to issue #416; admitted Scala plus C# and F# (Scala + .NET cohort,
 managed JVM plus exact-package shared-.NET-runtime routes decided
 2026-09-13) to issue #417; admitted Go and
-C/C++ to
-open work. Deferred foundations (Ruby,
+C/C++ (Native cohort, split native plus split Go routes decided
+2026-09-13) to issue #418. Deferred foundations (Ruby,
 PowerShell) are out of v1 scope; their retained tool cohorts stay tracked in
 open work. If qualification
 shows a cohort exceeds reviewable work-package size, it is split into

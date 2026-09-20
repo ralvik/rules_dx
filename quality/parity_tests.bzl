@@ -31,15 +31,15 @@ PARITY_SCHEMA_VERSION = 1
 # under the owning decision.
 PARITY_DEFERRED = {
     "astro": ["O42/O32", "framework adapter region; Prettier/ESLint plugin closure pending"],
-    "c": ["O32", "authoritative hermetic-llvm toolchain (clang-format, clang-tidy); cppcheck standalone artifact"],
-    "cpp": ["O32", "authoritative hermetic-llvm toolchain (clang-format, clang-tidy); cppcheck standalone artifact"],
+    "c": ["O32", "authoritative hermetic-llvm toolchain (clang-format, clang-tidy); cppcheck standalone artifact -- Native cohort owned by issue #418"],
+    "cpp": ["O32", "authoritative hermetic-llvm toolchain (clang-format, clang-tidy); cppcheck standalone artifact -- Native cohort owned by issue #418"],
     "csharp": ["O32", "exact upstream package plus shared .NET runtime (CSharpier); Roslyn CA analyzers SDK-coupled -- Scala/.NET cohort owned by issue #417"],
     "css": ["O32", "private Node graph (Prettier); standalone artifact (Stylelint)"],
     "cuda": ["O32", "authoritative toolchain (clang-format); CUDA scope fails closed until qualified"],
     "cue": ["O32", "checksummed standalone artifact (cue fmt)"],
     "fsharp": ["O32", "exact upstream package plus shared .NET runtime (Fantomas); FSharpLint pending -- Scala/.NET cohort owned by issue #417"],
     "gherkin": ["O32", "private Node graph (Prettier prettier-plugin-gherkin closure)"],
-    "go": ["O32", "authoritative Go toolchain (gofmt/gofumpt); staticcheck/govet standalone artifacts"],
+    "go": ["O32", "authoritative Go toolchain (gofmt/gofumpt); staticcheck/govet standalone artifacts -- Native cohort owned by issue #418"],
     "go_module": ["O32", "checksummed standalone artifact (modfmt)"],
     "graphql": ["O32", "private Node graph (Prettier GraphQL parser)"],
     "html": ["O32", "private Node graph (Prettier HTML parser)"],
