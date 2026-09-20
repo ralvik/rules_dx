@@ -13,7 +13,7 @@ created. Published bytes are never rebuilt or substituted silently.
   JavaScript/TypeScript, Vue, Svelte, Astro, MDX, plus admitted additional
   foundations), quality workflows, generation, environments/codegen/setup,
   audit/update, consumer CI contract, and adoption surfaces (`init`, `hooks`,
-  `status`, `version`, `docs`, `watch`, `owners`/`deps`/`why`, `completion`).
+  `status`, `version`, `watch`, `owners`/`deps`/`why`, `completion`).
 * Evidence: `bazel build //...`, `bazel test //...`, and
   `bazel run //dx:generate_check` on the seed host. Non-Linux platforms, external-consumer runs, and trusted-builder
   provenance are not claimed here.

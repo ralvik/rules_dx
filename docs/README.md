@@ -27,7 +27,7 @@ authoritative product, design, delivery, and governance documents.
 - [Tools](tools/README.md): acquisition policy and first-release baseline.
 - [Testing](testing/README.md): behavior, hermeticity, cache, platform, consumer evidence.
 - [Verification matrix](testing/verification-matrix.md): as-built language x
-  layer status for Stage 5 close-out (no `Supported` claims).
+  layer status for the close-out battery (no `Supported` claims).
 
 ## Delivery And Governance
 

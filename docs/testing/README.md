@@ -163,7 +163,7 @@ define their required behavior and evidence.
 Tests cover only implemented commands. The
 complete end-to-end matrix is required before API stabilization. The
 as-built per-language x per-layer status lives in the
-[verification matrix](verification-matrix.md) (accepted; Stage 5 close-out
+[verification matrix](verification-matrix.md) (accepted; close-out battery
 tracked in the roadmap).
 
 Non-dogfed paths never run under the standard dogfood gates by design;
