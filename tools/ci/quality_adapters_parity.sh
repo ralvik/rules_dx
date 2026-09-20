@@ -126,9 +126,11 @@ for tool in biome buildifier clippy eslint flake8 markdown_check prettier pydocl
   grep -q -F -e "$tool" "$matrix" || tool_fail="$tool_fail $tool:matrix"
 done
 # tsc target-coupled evidence: authoritative mapping plus parser plus
-# aspect coupling note, never a bare-file matrix case.
+# aspect coupling note, never a bare-file matrix case. The coupling-note
+# match is case-neutral (`coupled tsc`) so sentence-case comments
+# (`Target-coupled tsc` in real_aspects.bzl) satisfy it.
 grep -q -F -e 'tsc' quality/tools/typescript/BUILD.bazel || tool_fail="$tool_fail tsc:mapping"
-grep -q -F -e 'target-coupled tsc' "$aspects" || tool_fail="$tool_fail tsc:coupled"
+grep -q -F -e 'coupled tsc' "$aspects" || tool_fail="$tool_fail tsc:coupled"
 # Pass plus fail cells exist for the matrix (dirty plus clean).
 grep -q -F -e '_fail' "$matrix" || tool_fail="$tool_fail matrix:fail-cells"
 grep -q -F -e '_pass' "$matrix" || tool_fail="$tool_fail matrix:pass-cells"

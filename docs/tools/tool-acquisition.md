@@ -76,12 +76,22 @@ JavaScript And TypeScript Quality.
 Read-only upstream research supports the following candidates (see
 open work), not qualified
 pins or platform support. Recheck latest stable and verify actual bytes when adding each adapter.
+The JVM cohort rows below are owned by issue #416 (live successor to closed
+#307 for the `java`/`kotlin` classes); versions are observations, not pins.
 
 | Tool | Upstream evidence | Candidate acquisition and remaining risk |
 | --- | --- | --- |
 | Buildifier | [v8.5.1 assets](https://github.com/bazel-contrib/buildtools/releases/tag/v8.5.1) and [release targets](https://github.com/bazel-contrib/buildtools/blob/v8.5.1/buildifier/BUILD.bazel) | Raw platform executable from `bazel-contrib/buildtools`; pure-Go build intent still requires artifact linkage, runtime, and platform evidence. |
 | Taplo | [0.10.0 assets](https://github.com/tamasfe/taplo/releases/tag/0.10.0) and [release workflow](https://github.com/tamasfe/taplo/blob/0.10.0/.github/workflows/releases.yaml) | Gzip executable on Linux/macOS, ZIP on Windows. Bazel supports [gzip extraction](https://bazel.build/rules/lib/builtins/repository_ctx#download_and_extract); qualify member naming/mode with the seed Bazel. Reviewed release metadata supplied no asset digest/checksum file, so maintainer acquisition must establish and record byte identity. |
 | Vale | [v3.20.0 assets](https://github.com/vale-cli/vale/releases/tag/v3.20.0) and [release configuration](https://github.com/vale-cli/vale/blob/v3.20.0/.goreleaser.yml) | Platform archive plus published checksums from `vale-cli/vale`. Linux CGO/GNU builds are not evidence of static-musl compatibility; inspect the actual runtime closure before admission. |
+| google-java-format | [v1.35.0 Maven Central](https://repo1.maven.org/maven2/com/google/googlejavaformat/google-java-format/) (verified Mar 2026; v1.36.x observed on [GitHub releases](https://github.com/google/google-java-format/releases)) | Complete upstream all-deps JAR (`google-java-format-*-all-deps.jar`) over the one managed JDK cohort; no Maven-module reconstruction, no installer/solver/compiler on the consumer path. Reviewed release metadata supplies no Bazel-ready digest, so maintainer acquisition must establish and record byte identity and recheck latest stable when adding the adapter. |
+| Checkstyle | [14.1.0 release](https://github.com/checkstyle/checkstyle/releases) (current per [checkstyle.org](https://checkstyle.org/)) | Complete upstream all-deps JAR (`checkstyle-*-all.jar`) over the one managed JDK cohort; SARIF via `-f sarif`. Maintainer acquisition must establish and record byte identity; recheck latest stable when adding the adapter. |
+| PMD | [7.27.0 release notes](https://docs.pmd-code.org/latest/pmd_release_notes.html) (Aug 2026; [7.26.0 binary](https://github.com/pmd/pmd/releases)) | Complete upstream binary distribution (`pmd-dist-*-bin.zip`) over the one managed JDK cohort; SARIF via `-f sarif`. Maintainer acquisition must establish and record byte identity; recheck latest stable when adding the adapter. |
+| SpotBugs | [4.10.4 releases](https://github.com/spotbugs/spotbugs/releases) (Aug 2026; [4.10.3 checksums](https://github.com/spotbugs/spotbugs/releases/tag/4.10.3)) | Complete upstream binary distribution (`spotbugs-*.zip`/`*.tgz`) over the one managed JDK cohort; SARIF via `-sarif`. Default effort stays a provisional native-config input until qualified. Maintainer acquisition must establish and record byte identity. |
+| ktfmt | [v0.63 release](https://github.com/facebook/ktfmt/releases/tag/v0.63) (May 2026; v0.64 observed on Maven Central) | Complete upstream with-dependencies JAR (`ktfmt-*-with-dependencies.jar`) over the one managed JDK cohort. Maintainer acquisition must establish and record byte identity; recheck latest stable when adding the adapter. |
+| ktlint | [1.8.0 release](https://github.com/ktlint/ktlint/releases/tag/1.8.0) (Nov 2025 stable; 2.0.0 alphas are not stable) | Complete upstream executable JAR (`ktlint` release asset, runnable as `java -jar ktlint`) over the one managed JDK cohort; SARIF via `--reporter=sarif`. Standard rules stay a provisional native-config input until qualified. Maintainer acquisition must establish and record byte identity. |
+| detekt | [v1.23.8 stable](https://github.com/detekt/detekt/releases) (Feb 2025; 2.0.0 alphas target JDK 25 and are not stable) | Complete upstream CLI (`detekt-cli-*-all.jar`) over the one managed JDK cohort; SARIF report plus Checkstyle XML. `buildUponDefaultConfig` (not `allRules`) stays a provisional native-config input until qualified; type resolution is optional. Maintainer acquisition must establish and record byte identity. |
+| Error Prone | [v2.50.0 release](https://github.com/google/error-prone/releases/tag/v2.50.0) (Jun 2026) | Javac plugin following the qualified JDK baseline (version coupled to the JDK, open under #416); no structured diagnostics upstream, so javac-diagnostic parsing is open work itemized here, not silently dropped. Patch files need per-target declared outputs because `IN_PLACE` patching breaks under sandboxing. |
 
 Record compressed artifact identity separately from extracted executable identity. A versioned
 release URL does not guarantee immutable bytes; checked-in digests must reject changed content.
@@ -271,8 +281,9 @@ PMD and SpotBugs binary distributions, the ktfmt with-dependencies JAR, the
 ktlint executable JAR) sharing the one managed JDK cohort runtime; no tool
 is reconstructed from Maven modules and no consumer runs an installer,
 solver, or compiler. Exact artifact versions, digests, and adapter
-qualification remain pending and no adapter claims `java` or `kotlin` yet
-(open).
+qualification remain pending under issue #416 (live successor to closed #307
+for this cohort) and no adapter claims `java` or `kotlin` yet
+(open under issue #416).
 
 Decided route: Scalafmt and Scalafix take the
 managed JVM route. Scalafmt resolves to a

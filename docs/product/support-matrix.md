@@ -531,12 +531,13 @@ the standalone Ty and `tsc` tools in the required core.
 Focused proofs (recorded 2026-09-13) select the delivery routes in
 [first-release tool routing](../tools/tool-acquisition.md#first-release-tool-routing):
 JVM tools (google-java-format, Checkstyle, PMD, SpotBugs, ktfmt, ktlint)
-take the complete-upstream-artifact plus shared-JDK route; Scalafmt/Scalafix
+take the complete-upstream-artifact plus shared-JDK route (issue #416, live successor
+to closed #307 for the `java`/`kotlin` cohort); Scalafmt/Scalafix
 take the managed JVM route; CSharpier/Fantomas take the exact-package plus
 shared-.NET-runtime route; PSScriptAnalyzer takes the exact-module plus
 portable-PowerShell-runtime route; RuboCop/StandardRB take the
-release-assembled Ruby closure route. Exact artifacts, versions, rule sets,
-and adapter mappings are still tracked in
+release-assembled Ruby closure route. Exact JVM artifacts, versions, rule sets,
+and adapter mappings are tracked under issue #416; remaining cohorts stay in
 open work; no adapter claims any of these
 classes yet.
 
@@ -550,9 +551,9 @@ qualification inputs open, not approved presets or additions to curated membersh
   remain the existing complementary-tool suggestions, not new default selections.
 - SpotBugs at default effort; PMD default ruleset; Error Prone at its default severities.
   The existing Checkstyle Google checks suggestion requires resolution against the
-  native-config contract (open); it is not an approved hidden or automatically supplied config.
+  native-config contract (open under issue #416); it is not an approved hidden or automatically supplied config.
 - detekt `buildUponDefaultConfig` (full default set, not `allRules`);
-  ktlint standard rules.
+  ktlint standard rules (both provisional under issue #416).
 - Roslyn: SDK default analysis mode; StyleCop stays optional since its style
   rules can contradict the built-in IDE rules.
 - clang-tidy default checks; cppcheck default enablement.
@@ -599,19 +600,21 @@ open work.
 ### Provisional Adapter Input Notes
 
 Upstream documentation observations; provisional input, not
-selections. Adapter design and normalization is tracked in
-open work.
+selections. Adapter design and normalization for the JVM cohort is tracked under
+issue #416 (remaining cohorts stay in open work).
 
 Diagnostic wire formats:
 
 - SARIF-native: PMD, Checkstyle (`-f sarif`), SpotBugs (`-sarif`),
   ktlint (`--reporter=sarif`), detekt (sarif report), staticcheck
-  (`-f sarif`), Roslyn (`/errorlog`, SARIF 2.1).
+  (`-f sarif`), Roslyn (`/errorlog`, SARIF 2.1). JVM shapes are unproven mappings
+  owned by issue #416.
 - JSON: staticcheck (`-f json`), PMD (json), ktlint (json).
 - Checkstyle XML: Checkstyle (`-f xml`), ktlint, detekt.
 - Tool-native XML: cppcheck (`--xml --xml-version=2`, on stderr).
 - Text-parse: govet and errcheck (`file:line[:col]: message`), Error Prone
-  (javac diagnostics; structured output still open upstream), FSharpLint
+  (javac diagnostics; structured output still open upstream, itemized under issue #416),
+  FSharpLint
   console (the `FSharpLint.Core` library API is the structured
   alternative), Scalafix console (no machine-readable CLI output; open
   upstream issue).
@@ -642,7 +645,7 @@ open work:
   plus classpath wiring, and source rewriting sits uneasily with immutable
   action outputs.
 - Error Prone: no structured diagnostics; patch files need per-target
-  declared outputs because `IN_PLACE` patching breaks under sandboxing.
+  declared outputs because `IN_PLACE` patching breaks under sandboxing (issue #416).
 - Roslyn `/errorlog` SARIF is per compiler invocation (per
   configuration/TFM/RID pivot); aggregation work remains.
 - FSharpLint: console text parsing versus binding the .NET library API.
@@ -665,8 +668,9 @@ candidates still require an explicit disposition in the issue tracker.
 
 ### Cohort Tracking
 
-Every candidate row above maps to an existing tracker: admitted Go and
-C/C++ plus admitted Java, Kotlin, C#, F#, and Scala (managed route decided
+Every candidate row above maps to an existing tracker: admitted Java and Kotlin
+(JVM cohort) to issue #416; admitted Go and
+C/C++ plus admitted C#, F#, and Scala (managed route decided
 2026-09-13) to
 open work. Deferred foundations (Ruby,
 PowerShell) are out of v1 scope; their retained tool cohorts stay tracked in

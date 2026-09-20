@@ -224,6 +224,23 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# JVM-cohort qualification harness (issue #416, live successor to closed
+# #307 for the java/kotlin cohort): proves the as-built decided
+# complete-upstream-artifact plus shared-JDK route with initial artifact
+# research as observations not pins, provisional SARIF adapter-input notes
+# with Error Prone open work itemized, provisional native-config inputs
+# with no hidden preset, parity-deferred java/kotlin with owner plus
+# frozen route, classification-only taxonomy with no curated defaults and
+# no matrix cells yet. Run by CI via
+# `bazel run //tools/ci:jvm_cohort_qualification`.
+sh_binary(
+    name = "jvm_cohort_qualification",
+    srcs = ["jvm_cohort_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Publication-trust harness (issues #78, #26, #5, #311): machine-checks
 # the draft-only + nothing-published static invariants the
 # release-hygiene harness does not own — module name at the

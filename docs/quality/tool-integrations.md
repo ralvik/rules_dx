@@ -218,6 +218,20 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   adapter only: it never runs as a bare file invocation and requires the authoritative
   `typescript_project` context (`TsConfigInfo`). Bare-file use would lose tsconfig and declaration
   context. Upstream mapping evidence is the `typescript_project` typecheck test target.
+- **JVM cohort (issue #416, provisional — no adapter claims `java` or `kotlin` yet):**
+  complete-upstream-artifact plus shared-JDK route for google-java-format, Checkstyle, PMD,
+  SpotBugs, ktfmt, ktlint, with detekt pending and Error Prone as itemized open work.
+  Research notes (unproven mappings): PMD and Checkstyle emit SARIF via `-f sarif`, SpotBugs
+  via `-sarif`, ktlint via `--reporter=sarif`, detekt via its SARIF report; Checkstyle XML
+  (`-f xml`) plus ktlint/detekt Checkstyle XML stay fallback shapes; Error Prone has no
+  structured diagnostics upstream, so javac-diagnostic parsing plus per-target declared
+  patch-file outputs (`-XepPatchChecks` location; `IN_PLACE` patching breaks under sandboxing)
+  remain open work itemized here, not silently dropped. Formatters (google-java-format, ktfmt
+  with `--google-style`/`--kotlinlang-style`, ktlint `--format`) are whole-file rewrite with
+  check/diff mode; PMD, Checkstyle, SpotBugs, and detekt are check-only with the provisional
+  sandbox-apply-and-diff fix flow. Versions are observations, not pins; recheck latest stable
+  at implementation (see the JVM rows in
+  [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
 
 Candidate native filenames are `.buildifier.json`, `.taplo.toml`/`taplo.toml`, and `.vale.ini`.
 Freeze them in [Native Configuration](native-configuration.md#discovery) only with exact binding,
