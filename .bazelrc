@@ -40,5 +40,16 @@ build --test_env=PYTHONWARNINGS=error
 # rules_java 9.7.0, provisional until the baseline freezes).
 build --java_runtime_version=remotejdk_21
 
+# Hermetic Rust build scripts (issue #472): third-party `crate_universe`
+# scripts defer to the upstream global default (`True`), so pin it `False`
+# here. First-party `cargo_build_script` rules already emit
+# `use_default_shell_env = 0` via `gazelle/rust/lang.go`; this flag closes
+# the third-party half. A crate that genuinely needs host `PATH` probing
+# opts back in narrowly via a per-crate
+# `crate.annotation(..., build_script_use_default_shell_env = "on")`
+# in `MODULE.bazel` (currently zero opt-ins); never flip this global back
+# to `True`.
+build --@rules_rust//cargo/settings:use_default_shell_env=False
+
 # Carry over per-person local flags when present (never committed).
 try-import %workspace%/user.bazelrc

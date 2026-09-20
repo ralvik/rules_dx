@@ -210,7 +210,7 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   `:consumer_ci_qualification`, `:file_family_qualification`,
   `:helper_qualification`, `:clap_tokenizer_qualification`,
   `:hello_smoke_qualification`, `:parser_sample_qualification`,
-  `:rustfmt_edition_qualification`,
+  `:rustfmt_edition_qualification`, `:shell_env_qualification`,
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
   best-effort), `:windows_qualification`, `:ci_matrix_qualification`
   (host matrix, issue #415), and `:closeout_battery_qualification`
@@ -225,7 +225,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 33/33,
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
-`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `musl_qualification` 12/12, `macos_qualification` 12/12,
+`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `shell_env_qualification` 15/15, `musl_qualification` 12/12, `macos_qualification` 12/12,
 `windows_qualification` 13/13, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
@@ -317,6 +317,14 @@ Remaining reds stay owned gaps, not green claims:
   `matrix_rust_format_edition_2015` pass plus
   `matrix_rust_format_edition_mismatch` wrong-edition syntax-error cells over
   the real toolchain rustfmt, and live aspect `--tool-edition` pins;
+  platform plus consumer plus release evidence stays owned gap; no
+  Supported claim).
+- Shell-env default vs annotation extension with fixture evidence qualified seed-only under #472
+  (`bazel run //tools/ci:shell_env_qualification`; first-party
+  `use_default_shell_env = 0` emission plus `scripted` golden, global
+  `False` in `.bazelrc` with zero per-crate opt-ins, deferred third-party
+  rendering such as `blake3` `_bs`, and the hostile-`PATH` plus
+  declared-tool contract in [Rust Generation](../generation/rust.md#build-scripts);
   platform plus consumer plus release evidence stays owned gap; no
   Supported claim).
 - Non-dogfed execution plan delivered (see issue #508 for remaining gaps; hermetic

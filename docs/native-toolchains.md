@@ -245,10 +245,25 @@ Two source-level blockers need narrow upstream remediation:
   supplies no standalone linker for ordinary desktop targets, producing a source-derived
   no-linker failure path. Reproduce and fix opt-out without disabling the contract. Opt-out concerns
   the script execution action, not removal of the linker needed to build the script executable.
-- Third-party [crate annotations](https://github.com/hermeticbuild/rules_rs/blob/v0.0.109/rs/extensions.bzl)
-  expose additional tools/environment but not per-crate CC/shell-env switches. Generated scripts
-  inherit an upstream shell-env default of True. Qualify the public global False setting or a narrow
-  annotation extension; first-party generator attributes alone do not enforce the dependency closure.
+- Third-party shell environment is decided hermetic under issue #472
+  (ambiguous default rejected): `crate_universe`-generated scripts render
+  without an explicit `use_default_shell_env` and defer to the global
+  `@rules_rust//cargo/settings:use_default_shell_env` flag, pinned `False`
+  in `.bazelrc`; the per-crate
+  `crate.annotation(..., build_script_use_default_shell_env = "on")`
+  escape hatch in `rules_rust` 0.74.0 (`crate_universe/extensions.bzl`,
+  `crate_universe/private/crate.bzl`, `crate_universe/src/config.rs`,
+  `crate_universe/src/context/crate_context.rs`) is the only opt-in
+  (currently zero opt-ins). Generated-script hermetic defaults are
+  implemented (`use_cc_toolchain = True`, `use_default_shell_env = False`,
+  `emit_warnings = True` in `gazelle/rust/lang.go`, proven by
+  `gazelle/rust/lang_test.go`); `bazel run
+  //tools/ci:shell_env_qualification` pins the global flag, the zero-opt-in
+  annotation state, the deferred third-party rendering (e.g. `blake3`
+  `_bs` carries no explicit attr), and the hostile-`PATH` plus declared-tool
+  contract in [Rust Generation](generation/rust.md#build-scripts).
+  First-party generator attributes alone do not enforce the third-party
+  dependency closure.
 
 For explicit binding generation, start with
 [rules_rs rust_bindgen](https://github.com/hermeticbuild/rules_rs/blob/v0.0.109/rs/rules_rust_bindgen.bzl).
@@ -353,11 +368,14 @@ Open items are tracked in the linked issues. No item is resolved by this researc
 
 Required-core native gaps stay owned under issues #471, #472, #473, #474, #475: kept CC
 opt-out linker failure path (issue #471),
-global shell-env False versus annotation extension, bindgen LLVM-22-vs-23 compatibility,
+global shell-env False versus annotation extension (decided hermetic under
+issue #472: global `False` in `.bazelrc` with narrow per-crate opt-in, zero
+opt-ins), bindgen LLVM-22-vs-23 compatibility,
 CXX graph identity, and exact-target discovery. Build-script hermetic defaults are
 implemented (`use_cc_toolchain = True`, `use_default_shell_env = False`, `emit_warnings = True`
 in `gazelle/rust/lang.go`, proven by `gazelle/rust/lang_test.go`) and pinned by
-`bazel run //tools/ci:foundation_maps`; the five gaps above remain open with no `Supported`
+`bazel run //tools/ci:foundation_maps`; third-party shell-env is pinned by
+`bazel run //tools/ci:shell_env_qualification`; the five gaps above remain open with no `Supported`
 claim.
 
 Admitted C/C++ foundation stays owned under issues #476-#484: MSVC interop plus SDK licensing
@@ -374,7 +392,7 @@ acquisition, interoperability, coverage, and release evidence passes.
 | Can Windows acquisition be immutable and lazy? | Reproduce clean re-resolution; qualify upstream fixed-manifest/package inputs and observed downloads, including missing acceptance and unrelated workflows. Windows x86_64 qualified (issue #414) on the as-built pinned upstream toolchains with the toolchains_msvc backend provisional plus immutable lazy fetch; merely adding the module requires no acceptance and fetches no restricted payloads. | open work under issue #495 |
 | Are Apple/Microsoft acquisition and cache rights adequate? | Review actual package terms, deliberate acceptance, extraction, mirrors, redistribution, internal caches and remote workers. Official download availability is not permission. Windows x86_64 qualified (issue #414) with explicit EULA never automatic plus usage vs redistribution reviewed separately (see issue #496). | open work under issue #496 |
 | Can the kept CC opt-out execute successfully? | Reproduce no-linker analysis path; narrow upstream runner fix; distinguish script compilation inputs from execution inputs. | issue #471 |
-| Can third-party scripts retain a declared hermetic closure? | Qualify global shell-env False or upstream annotation extension; test hostile PATH, tool discovery and additional declared tools. | issue #472 |
+| Can third-party scripts retain a declared hermetic closure? | Decided hermetic under issue #472: global shell-env False in `.bazelrc` with narrow per-crate annotation opt-in (zero opt-ins); hostile PATH, tool discovery and additional declared tools pinned by `bazel run //tools/ci:shell_env_qualification` plus [Rust Generation](generation/rust.md#build-scripts). | issue #472 |
 | Does Windows native transport preserve all inputs and ABI selection? | Fix ABI constraints and path rebasing upstream; test batch wrappers, response files, cc-rs assembly/discovery, SDK libraries and proc-macro DLLs. Windows x86_64 qualified (issue #414) with declared-input fixtures without host Visual Studio state; remaining upstream fixes stay owned under issue #497. | open work under issue #497 |
 | Which prebuilt native libraries interoperate? | Independent MSVC fixtures and Linux libstdc++ comparison; verify STL/CRT modes, unwinding, ownership and runtime deployment. Windows x86_64 qualified (issue #414) with representative prebuilt-MSVC fixtures incl mixed Rust/C/C++ qualifying host-to-target plus target execution separately; Linux libstdc++ fixtures stay owned here without double-claiming issue #414. | open work under issue #498 |
 | Are both Linux profiles complete? | Native arm64 glibc builds/tests plus per-cell coverage landed (issue #410); static-musl closures plus per-cell coverage for both musl profiles landed (issue #411, Rust musl std plus exec/target separation, CI cross-builds with per-profile cache scopes, no union; dynamic musl explicitly out of scope). Remaining: cross builds/tests, PIE plus ELF dependencies, glibc symbols, hermetic-llvm backend plus OpenSSL/ring/bindgen/CXX corpus gaps. | open work under issue #499 |

@@ -173,6 +173,25 @@ The first three settings may differ only through an explicit kept override; othe
 generation restores the stated value. `emit_warnings` forwards `cargo::warning` through upstream
 Bazel behavior, subject to the upstream global setting, and creates no private warning stream.
 
+Third-party shell-env contract (decided under issue #472; ambiguous default
+rejected): `crate_universe`-generated `cargo_build_script` targets render
+without an explicit `use_default_shell_env` and defer to the global
+`@rules_rust//cargo/settings:use_default_shell_env` flag, pinned `False` in
+`.bazelrc`. First-party generation sets `use_default_shell_env = False`
+per rule (above); the global flag closes the third-party half so every
+build script, first- or third-party, runs without the host shell
+environment. Under empty and hostile ambient `PATH`, home, locale, and
+arbitrary shell variables, declared tools and environment behave
+identically while undeclared host-tool lookup fails at the upstream action
+boundary. A crate that genuinely needs host `PATH` probing opts back in
+narrowly and only via a per-crate
+`crate.annotation(crate = "<name>", build_script_use_default_shell_env = "on")`
+in `MODULE.bazel` (currently zero opt-ins); never flip the global back to
+`True`. Additional tools, headers, libraries, and environment stay declared
+through the annotation's `build_script_tools`, `build_script_data`,
+`build_script_env`, and related attributes. First-party
+`use_default_shell_env = True` likewise survives only with `# keep`.
+
 ## Versions
 
 Rust omits per-target toolchain-version selection under
