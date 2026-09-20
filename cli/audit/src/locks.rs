@@ -18,8 +18,18 @@
 //! - Maven (`third_party/jvm/maven_install.json`, JSON): `artifacts`
 //!   carry `group:artifact` plus `version`.
 //! - NuGet (`third_party/dotnet/paket.lock`, text): `Name (version)`
-//!   lines under the `NUGET` remote section.
+//!   lines under the `NUGET` remote section are assessable; `Name
+//!   (version)` lines under the `GIT` section are unsupported revisions
+//!   (issue #584 wont-fix, auditor-owned: SHA carries no OSV version
+//!   identity), reported as `is_git` incomplete, never dropped and never
+//!   clean; `HTTP`/`GITHUB` sections and group headers are skipped.
 //! - Go: empty set (no `go.mod`), no-op success.
+//!
+//! Private packages have no lockfile auto-detection in V1 (issue #584
+//! wont-fix, auditor-owned): a private registry entry is
+//! indistinguishable from a public one in lock bytes, so callers mark
+//! `is_private` explicitly and matching fails those as incomplete,
+//! never clean.
 //!
 //! License identities for V1: Cargo reads `cargo-bazel-lock.json`
 //! (`license` per crate, fallback `UNKNOWN`); npm/Maven/NuGet report
@@ -284,22 +294,33 @@ pub fn parse_maven_install(text: &str) -> Result<Vec<LockedPackage>, String> {
 }
 
 /// Parse one `paket.lock` into assessable packages for the `nuget` set.
-/// Only `Name (version)` lines under the `NUGET` remote section count;
-/// `HTTP`/`GITHUB` sections and group headers are skipped.
+/// Only `Name (version)` lines under the `NUGET` remote section count as
+/// assessable; `Name (version)` lines under the `GIT` section count as
+/// unsupported git revisions (`is_git` incomplete, never clean, issue
+/// #584 wont-fix); `HTTP`/`GITHUB` sections and group headers are
+/// skipped.
 pub fn parse_paket_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
     let mut out = Vec::new();
     let mut in_nuget = false;
+    let mut in_git = false;
     for line in text.lines() {
         let trimmed = line.trim();
         if trimmed == "NUGET" {
             in_nuget = true;
+            in_git = false;
             continue;
         }
-        if trimmed == "HTTP" || trimmed == "GITHUB" || trimmed == "GIT" {
+        if trimmed == "GIT" {
             in_nuget = false;
+            in_git = true;
             continue;
         }
-        if !in_nuget {
+        if trimmed == "HTTP" || trimmed == "GITHUB" {
+            in_nuget = false;
+            in_git = false;
+            continue;
+        }
+        if !in_nuget && !in_git {
             continue;
         }
         // Package lines are indented `Name (version)`; remote lines are
@@ -316,7 +337,7 @@ pub fn parse_paket_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
                 name,
                 version,
                 set: "nuget".to_owned(),
-                is_git: false,
+                is_git: in_git,
                 is_private: false,
             });
         }
@@ -574,6 +595,33 @@ version = "0.0.0"
         assert_eq!(packages.len(), 2);
         assert!(packages.iter().any(|package| package.name == "FSharp.Core"));
         assert!(!packages.iter().any(|package| package.name == "Other"));
+        assert!(packages.iter().all(|package| !package.is_git));
+    }
+
+    #[test]
+    fn paket_lock_git_section_is_incomplete_never_dropped() {
+        // Issue #584: GIT entries are unsupported revisions, never
+        // silently dropped and never clean.
+        let text = "NUGET\n  remote: https://api.nuget.org/v3/index.json\n    FSharp.Core (10.1.201)\nGIT\n  remote: https://github.com/example/lib.git\n    Git.Lib (1.0.0)\nHTTP\n  remote: https://example.com\n    Other (9.9.9)\n";
+        let packages = parse_paket_lock(text).expect("parses");
+        assert_eq!(packages.len(), 2);
+        let assessable = packages
+            .iter()
+            .find(|package| package.name == "FSharp.Core")
+            .expect("nuget entry");
+        assert!(!assessable.is_git);
+        let git = packages
+            .iter()
+            .find(|package| package.name == "Git.Lib")
+            .expect("git entry");
+        assert!(git.is_git);
+        assert!(!packages.iter().any(|package| package.name == "Other"));
+        // Matching maps the GIT entry to incomplete, never clean.
+        let (findings, unassessed) = crate::vuln::match_packages(&packages, &[]);
+        assert!(findings.is_empty());
+        assert_eq!(unassessed.len(), 1);
+        assert_eq!(unassessed[0].package, "Git.Lib");
+        assert_eq!(unassessed[0].reason, crate::vuln::REASON_GIT);
     }
 
     #[test]

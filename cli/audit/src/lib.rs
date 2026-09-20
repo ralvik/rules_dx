@@ -102,8 +102,10 @@ impl AuditFamily {
 }
 
 /// Planned audit request: which families run over which scope spellings.
-/// Scope resolution (labels, patterns, target-to-dependency-set mapping)
-/// is deferred to later slices; the spellings are preserved verbatim.
+/// Scope spellings are preserved verbatim here; the CLI layer resolves
+/// them to owning dependency sets via `dx_update::selector::owning_sets`
+/// (issue #584), so audit and update agree on owning sets without a
+/// second registry.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AuditRequest {
     /// Families to run, in execution order. Bare invocations carry both
