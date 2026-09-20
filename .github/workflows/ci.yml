@@ -1096,6 +1096,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:cross_routes_qualification
       - name: Audit bounded remediation qualification (issue #505 defect inventory plus owners plus stop-slice plus cross-product bounds pins plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:remediation_bounds_qualification
+      - name: Audit result contract qualification (issue #511 core mappings plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:result_contract_qualification
       - name: Write job summary
         if: always()
         run: |
