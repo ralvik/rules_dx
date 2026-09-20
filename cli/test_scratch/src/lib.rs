@@ -1,13 +1,19 @@
-//! Test-only scratch directories.
+//! Test-only scratch directories: the single test scratch policy.
 //!
-//! Prod tempdir creation lives in `dx_cli::plan::create_run_temp_dir`
-//! (nonce plus `dx-run-` prefix discipline). This crate is the same
-//! discipline for tests: a unique prefixed directory under the ambient
-//! temp base that auto-cleans on drop. It replaces the repeated
-//! `tempfile::Builder::new().prefix(..).tempdir_in(..).expect(..)`
-//! chains in `dx_cli`, `dx_env`, `dx_adopt`, and `dx_process` tests.
-//! `exec/test_support.rs` keeps its own helper: pid-suffixed persistent
-//! dirs have different lifetime semantics, not scratch cleanup.
+//! Single scratch policy for the repo (`#651`):
+//! * Prod hermetic mirrors stay in `quality_adapter::exec::Scratch`
+//!   (scratch-relative resolve/materialize/close with symlink-prefix
+//!   guards; `quality_runner` reuses that type via `fresh_scratch`).
+//! * Prod per-run temp dirs stay in `dx_cli::plan::create_run_temp_dir`
+//!   (nonce plus `dx-run-` prefix discipline, explicit-parent `tempdir_in`).
+//! * Every unit-test scratch dir uses this crate's [`scratch`]: a unique
+//!   prefixed directory under the ambient temp base that auto-cleans on
+//!   drop. It replaces the repeated
+//!   `tempfile::Builder::new().prefix(..).tempdir_in(..).expect(..)`
+//!   chains in `dx_cli`, `dx_env`, `dx_adopt`, and `dx_process` tests.
+//!   `dx_cli::exec::test_support::temp_dir` is a thin wrapper over
+//!   [`scratch`] (same prefix discipline, `dx-exec-test-`), not a third
+//!   policy: pid-suffixed persistent dirs are gone.
 //!
 //! Dependency evaluation (adopted): creation uses the upstream
 //! `tempfile` crate directly (`Builder::new().prefix(..).tempdir()` plus the

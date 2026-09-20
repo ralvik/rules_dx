@@ -57,6 +57,12 @@ pub struct MirrorFile {
 
 /// A fresh scratch tree, removed on drop.
 ///
+/// Single prod scratch policy for `#651`: this is the hermetic mirror
+/// (`resolve`/`materialize`/`close` with symlink-prefix guards).
+/// `quality_runner` reuses this type (no second `Scratch`); unit-test
+/// scratch dirs use `dx_test_scratch::scratch`, and `dx` per-run temp dirs
+/// use `dx_cli::plan::create_run_temp_dir`.
+///
 /// The tree is a `tempfile::TempDir`: OS-random `O_EXCL`-claimed names
 /// with internal collision retries replace the former
 /// wall-clock/pid/counter suffix mixer, and `TempDir`'s own drop is the

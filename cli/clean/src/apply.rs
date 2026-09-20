@@ -210,12 +210,6 @@ mod tests {
         }
     }
 
-    fn clean_root(name: &str) -> dx_test_scratch::TempDir {
-        let scratch = dx_test_scratch::scratch(&format!("dx-clean-test-{name}-"));
-        fs::create_dir_all(scratch.path().join("ws")).expect("create workspace");
-        scratch
-    }
-
     fn workspace_of(root: &Path) -> PathBuf {
         root.join("ws")
     }
@@ -251,7 +245,11 @@ mod tests {
 
     #[test]
     fn empty_workspace_collects_nothing() {
-        let scratch = clean_root("empty");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-clean-test-empty-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let inventory = collect_inventory(&workspace, &[], &[]).expect("collect");
@@ -269,7 +267,11 @@ mod tests {
 
     #[test]
     fn malformed_current_fails_closed() {
-        let scratch = clean_root("bad-current");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-clean-test-bad-current-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         dx_setup::commit_pair(&workspace, &setup_pair('1', '2')).expect("commit");
@@ -295,7 +297,11 @@ mod tests {
 
     #[test]
     fn apply_removes_prune_set_and_preserves_current() {
-        let scratch = clean_root("apply");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-clean-test-apply-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let (workspace, stale_hex, current_hex) = two_record_workspace(&root);
         let inventory = collect_inventory(&workspace, &[], &[]).expect("collect");
@@ -339,7 +345,11 @@ mod tests {
 
     #[test]
     fn apply_skips_entries_that_became_current() {
-        let scratch = clean_root("race");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-clean-test-race-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let first = setup_pair('1', '2');
@@ -364,7 +374,11 @@ mod tests {
 
     #[test]
     fn apply_skips_generations_referenced_by_live_current() {
-        let scratch = clean_root("race-gen");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-clean-test-race-gen-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let (workspace, stale_hex, _) = two_record_workspace(&root);
         let stale_record = record('3', '4');
@@ -397,7 +411,11 @@ mod tests {
 
     #[test]
     fn busy_lock_fails_after_deadline() {
-        let scratch = clean_root("busy");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-clean-test-busy-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let workspace = workspace_of(&root);
         let dx_dir = workspace.join(".dx");
@@ -418,7 +436,11 @@ mod tests {
 
     #[test]
     fn workspace_missing_fails() {
-        let scratch = clean_root("ws-missing");
+        let scratch = {
+            let __scratch = dx_test_scratch::scratch("dx-clean-test-ws-missing-");
+            std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
+            __scratch
+        };
         let root = scratch.path().to_path_buf();
         let missing = root.join("no-such-dir");
         assert!(matches!(

@@ -380,10 +380,6 @@ mod tests {
         words.iter().map(ToString::to_string).collect()
     }
 
-    fn temp_workspace(name: &str) -> dx_test_scratch::TempDir {
-        dx_test_scratch::scratch(&format!("dx-resolve-run-test-{name}-"))
-    }
-
     fn write(workspace: &Path, rel: &str, text: &str) {
         let full = workspace.join(rel);
         std::fs::create_dir_all(full.parent().expect("parent")).expect("parent dir");
@@ -392,7 +388,7 @@ mod tests {
 
     #[test]
     fn run_labels_pass_through_without_query() {
-        let scratch = temp_workspace("run-labels");
+        let scratch = dx_test_scratch::scratch("dx-resolve-run-test-run-labels-");
         let workspace = scratch.path().to_path_buf();
         let query = NeverQuery;
         let got = resolve_run(&scopes(&["//app:bin"]), &workspace, &query).expect("resolve");
@@ -401,7 +397,7 @@ mod tests {
 
     #[test]
     fn run_empty_scope_is_a_usage_error() {
-        let scratch = temp_workspace("run-empty");
+        let scratch = dx_test_scratch::scratch("dx-resolve-run-test-run-empty-");
         let workspace = scratch.path().to_path_buf();
         let query = NeverQuery;
         let err = resolve_run(&[], &workspace, &query).expect_err("empty");
@@ -410,7 +406,7 @@ mod tests {
 
     #[test]
     fn run_file_resolves_single_binary_owner() {
-        let scratch = temp_workspace("run-file");
+        let scratch = dx_test_scratch::scratch("dx-resolve-run-test-run-file-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "app/BUILD.bazel", "");
         write(&workspace, "app/main.py", "x = 1\n");
@@ -427,7 +423,7 @@ mod tests {
 
     #[test]
     fn run_file_without_binary_reports_no_runnable() {
-        let scratch = temp_workspace("run-no-bin");
+        let scratch = dx_test_scratch::scratch("dx-resolve-run-test-run-no-bin-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "pkg/BUILD.bazel", "");
         write(&workspace, "pkg/a.py", "x = 1\n");
@@ -445,7 +441,7 @@ mod tests {
 
     #[test]
     fn run_file_without_any_owner_reports_no_owner() {
-        let scratch = temp_workspace("run-no-owner");
+        let scratch = dx_test_scratch::scratch("dx-resolve-run-test-run-no-owner-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "pkg/BUILD.bazel", "");
         write(&workspace, "pkg/a.py", "x = 1\n");
@@ -462,7 +458,7 @@ mod tests {
 
     #[test]
     fn run_dir_with_two_binaries_reports_ambiguous_candidates() {
-        let scratch = temp_workspace("run-ambiguous");
+        let scratch = dx_test_scratch::scratch("dx-resolve-run-test-run-ambiguous-");
         let workspace = scratch.path().to_path_buf();
         std::fs::create_dir_all(workspace.join("app")).expect("dir");
         let query = FakeQuery::new(vec![FakeQuery::ok("//app:two\n//app:one\n")]);
@@ -487,7 +483,7 @@ mod tests {
 
     #[test]
     fn runnable_query_failures_report_first_line() {
-        let scratch = temp_workspace("run-query-fail");
+        let scratch = dx_test_scratch::scratch("dx-resolve-run-test-run-query-fail-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "app/BUILD.bazel", "");
         write(&workspace, "app/main.py", "x = 1\n");
@@ -498,7 +494,7 @@ mod tests {
 
     #[test]
     fn run_mixed_label_and_file_skips_label_in_second_pass() {
-        let scratch = temp_workspace("run-mixed");
+        let scratch = dx_test_scratch::scratch("dx-resolve-run-test-run-mixed-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "app/BUILD.bazel", "");
         write(&workspace, "app/main.py", "x = 1\n");

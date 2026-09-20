@@ -57,10 +57,6 @@ mod tests {
         words.iter().map(ToString::to_string).collect()
     }
 
-    fn temp_workspace(name: &str) -> dx_test_scratch::TempDir {
-        dx_test_scratch::scratch(&format!("dx-resolve-test-{name}-"))
-    }
-
     fn write(workspace: &Path, rel: &str, text: &str) {
         let full = workspace.join(rel);
         std::fs::create_dir_all(full.parent().expect("parent")).expect("parent dir");
@@ -143,7 +139,7 @@ mod tests {
 
     #[test]
     fn query_io_errors_become_query_failed() {
-        let scratch = temp_workspace("query-io");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-query-io-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "pkg/BUILD.bazel", "");
         write(&workspace, "pkg/a.py", "x = 1\n");
@@ -158,7 +154,7 @@ mod tests {
 
     #[test]
     fn not_a_directory_maps_to_query_failed() {
-        let scratch = temp_workspace("not-a-dir");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-not-a-dir-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "pkg", "file, not dir\n");
         let query = NeverQuery;
@@ -173,7 +169,7 @@ mod tests {
 
     #[test]
     fn test_scope_rejects_external_and_relative() {
-        let scratch = temp_workspace("test-scope-reject");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-test-scope-reject-");
         let workspace = scratch.path().to_path_buf();
         let query = NeverQuery;
         assert_eq!(
@@ -204,7 +200,7 @@ mod tests {
 
     #[test]
     fn test_scope_missing_files_fail() {
-        let scratch = temp_workspace("test-scope-missing");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-test-scope-missing-");
         let workspace = scratch.path().to_path_buf();
         let query = NeverQuery;
         assert_eq!(
@@ -223,7 +219,7 @@ mod tests {
 
     #[test]
     fn control_chars_in_names_are_rejected() {
-        let scratch = temp_workspace("control-names");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-control-names-");
         let workspace = scratch.path().to_path_buf();
         let dir = "app\x01";
         let file = "app\x01/main.py";

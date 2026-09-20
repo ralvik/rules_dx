@@ -68,14 +68,10 @@ mod tests {
         }
     }
 
-    fn temp_root(name: &str) -> dx_test_scratch::TempDir {
-        dx_test_scratch::scratch(&format!("dx-adopt-status-{name}-"))
-    }
-
     #[test]
     fn status_reports_pin_and_checks() {
         let inv = invocation(&["status"]);
-        let scratch = temp_root("status");
+        let scratch = dx_test_scratch::scratch("dx-adopt-status-status-");
         let root = scratch.path().to_path_buf();
         std::fs::create_dir_all(root.join(".dx")).expect("dx");
         std::fs::write(root.join(".dx/version"), "0.0.0\n").expect("pin");

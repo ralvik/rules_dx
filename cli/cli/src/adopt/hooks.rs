@@ -100,14 +100,10 @@ mod tests {
         }
     }
 
-    fn temp_root(name: &str) -> dx_test_scratch::TempDir {
-        dx_test_scratch::scratch(&format!("dx-adopt-hooks-{name}-"))
-    }
-
     #[test]
     fn hooks_status_shows_merged_layers() {
         let inv = invocation(&["hooks", "status"]);
-        let scratch = temp_root("status");
+        let scratch = dx_test_scratch::scratch("dx-adopt-hooks-status-");
         let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();

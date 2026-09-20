@@ -135,13 +135,9 @@ mod tests {
         }
     }
 
-    fn temp_root(name: &str) -> dx_test_scratch::TempDir {
-        dx_test_scratch::scratch(&format!("dx-adopt-version-{name}-"))
-    }
-
     #[test]
     fn version_pins_and_reports() {
-        let scratch = temp_root("pins");
+        let scratch = dx_test_scratch::scratch("dx-adopt-version-pins-");
         let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
@@ -161,7 +157,7 @@ mod tests {
 
     #[test]
     fn version_rollback_pins_previous_release() {
-        let scratch = temp_root("rollback");
+        let scratch = dx_test_scratch::scratch("dx-adopt-version-rollback-");
         let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
@@ -200,7 +196,7 @@ mod tests {
 
     #[test]
     fn version_rejects_combined_mutation_and_check_flags() {
-        let scratch = temp_root("conflicts");
+        let scratch = dx_test_scratch::scratch("dx-adopt-version-conflicts-");
         let root = scratch.path().to_path_buf();
         for words in [
             vec!["version", "--pin=0.0.0", "--rollback"],
@@ -225,7 +221,7 @@ mod tests {
 
     #[test]
     fn version_check_reports_drift() {
-        let scratch = temp_root("check");
+        let scratch = dx_test_scratch::scratch("dx-adopt-version-check-");
         let root = scratch.path().to_path_buf();
         std::fs::create_dir_all(root.join(".dx")).expect("dx");
         std::fs::write(root.join(".dx/version"), "0.0.0\n").expect("pin");

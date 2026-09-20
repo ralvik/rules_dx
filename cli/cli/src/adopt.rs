@@ -114,17 +114,13 @@ mod tests {
         }
     }
 
-    fn temp_root(name: &str) -> dx_test_scratch::TempDir {
-        dx_test_scratch::scratch(&format!("dx-adopt-cmd-{name}-"))
-    }
-
     #[test]
     fn quiet_suppresses_summaries_but_not_results() {
         // `--quiet` silences `dx` prose summaries while result
         // documents still print. Init dry-run plans are summaries;
         // `status` output is the answer.
         let inv = invocation(&["init", "--dry-run", "--quiet", "demo"]);
-        let scratch = temp_root("quiet-init");
+        let scratch = dx_test_scratch::scratch("dx-adopt-cmd-quiet-init-");
         let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
@@ -141,7 +137,7 @@ mod tests {
         assert!(String::from_utf8(out).expect("out").is_empty());
 
         let inv = invocation(&["status", "--quiet"]);
-        let scratch = temp_root("quiet-status");
+        let scratch = dx_test_scratch::scratch("dx-adopt-cmd-quiet-status-");
         let root = scratch.path().to_path_buf();
         std::fs::create_dir_all(root.join(".dx")).expect("dx");
         let mut out = Vec::new();
@@ -161,7 +157,7 @@ mod tests {
         // Version dry-run plans are summaries (silenced); version output
         // itself is the answer (never silenced).
         let inv = invocation(&["version", "--dry-run", "--pin=0.0.0", "--quiet"]);
-        let scratch = temp_root("quiet-version-dryrun");
+        let scratch = dx_test_scratch::scratch("dx-adopt-cmd-quiet-version-dryrun-");
         let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();
@@ -178,7 +174,7 @@ mod tests {
         assert!(String::from_utf8(out).expect("out").is_empty());
 
         let inv = invocation(&["version", "--quiet"]);
-        let scratch = temp_root("quiet-version");
+        let scratch = dx_test_scratch::scratch("dx-adopt-cmd-quiet-version-");
         let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();

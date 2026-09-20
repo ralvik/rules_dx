@@ -74,13 +74,9 @@ mod tests {
         }
     }
 
-    fn temp_root(name: &str) -> dx_test_scratch::TempDir {
-        dx_test_scratch::scratch(&format!("dx-adopt-watch-{name}-"))
-    }
-
     #[test]
     fn watch_validates_wrapped_command() {
-        let scratch = temp_root("validates");
+        let scratch = dx_test_scratch::scratch("dx-adopt-watch-validates-");
         let root = scratch.path().to_path_buf();
         let mut out = Vec::new();
         let mut err = Vec::new();

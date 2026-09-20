@@ -59,10 +59,6 @@ mod tests {
         }
     }
 
-    fn temp_root(name: &str) -> dx_test_scratch::TempDir {
-        dx_test_scratch::scratch(&format!("dx-adopt-completion-{name}-"))
-    }
-
     #[test]
     fn completion_renders_from_single_source() {
         use clap::ValueEnum;
@@ -70,7 +66,7 @@ mod tests {
         // the single Cli grammar; no hand-maintained list.
         for &shell in crate::args::COMPLETION_SHELLS {
             let inv = invocation(&["completion", shell]);
-            let scratch = temp_root("renders");
+            let scratch = dx_test_scratch::scratch("dx-adopt-completion-renders-");
             let root = scratch.path().to_path_buf();
             let mut out = Vec::new();
             let mut err = Vec::new();

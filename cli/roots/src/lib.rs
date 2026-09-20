@@ -281,30 +281,128 @@ pub fn repository_plan() -> RepositoryRootPlan {
 /// through. The query-pattern-file candidate carries no command-line
 /// patterns: Bazel reads the labels from [`PATTERN_FILE_FLAG`] (see
 /// [`RepositoryRootPlan::pattern_file_arg`]).
+///
+/// Single-source plan helper for `#651`: `dx_codegen` and `dx_env_plan`
+/// reuse this directly; `dx_setup` reuses [`invocation_targets_union`]
+/// (same baseline/pattern-file policy over both canonical selections).
 pub fn invocation_targets(plan: &RepositoryRootPlan, canonical: &str) -> Vec<String> {
+    invocation_targets_union(plan, &[canonical])
+}
+
+/// Composes a root plan into the Bazel command-line patterns behind the
+/// union of canonical repository-wide selections: the baseline plan keeps
+/// every selection identity (so `dx setup` keeps `//dx:codegen` plus
+/// `//dx:env` while the fiat selection stands); every other candidate
+/// passes its own roots through. The query-pattern-file candidate carries
+/// no command-line patterns.
+///
+/// Single-source union helper for `#651`: `dx_setup` reuses this instead
+/// of a third copy of the baseline/pattern-file checks.
+pub fn invocation_targets_union(plan: &RepositoryRootPlan, canonicals: &[&str]) -> Vec<String> {
     if plan.pattern_file.is_some() {
         return Vec::new();
     }
     if plan.strategy == RootStrategy::RecursivePattern
         && plan.roots == vec![REPOSITORY_PATTERN.to_owned()]
     {
-        return vec![canonical.to_owned()];
+        return canonicals
+            .iter()
+            .map(|canonical| (*canonical).to_owned())
+            .collect();
     }
     plan.roots.clone()
+}
+
+/// Validated single-exact-target scope shared by
+/// `dx_setup`/`dx_codegen`/`dx_env_plan` (`#651`).
+///
+/// Returns `None` for the empty repository scope and `Some(label)` for one
+/// exact `//` or `@` label. Each caller maps this to its noun-specific
+/// `Scope` enum and `ScopeError` so `dx setup`/`dx codegen`/`dx env`
+/// keep distinct messages while sharing the validation logic.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExactScopeError {
+    /// More than one positional target.
+    MultipleTargets { count: usize },
+    /// A target pattern (`...`, `*`, `?`).
+    TargetPattern { value: String },
+    /// Anything that is not an exact target label.
+    NotTargetLabel { value: String },
+}
+
+impl std::fmt::Display for ExactScopeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ExactScopeError::MultipleTargets { count } => {
+                write!(f, "expected at most one target, found {count}")
+            }
+            ExactScopeError::TargetPattern { value } => {
+                write!(f, "invalid target {value:?}: patterns never select scope")
+            }
+            ExactScopeError::NotTargetLabel { value } => {
+                write!(f, "invalid target {value:?}: want an exact // or @ label")
+            }
+        }
+    }
+}
+
+impl std::error::Error for ExactScopeError {}
+
+/// Shared single-exact-target validation behind every `resolve_scope`.
+pub fn resolve_exact_target(targets: &[String]) -> Result<Option<String>, ExactScopeError> {
+    match targets {
+        [] => Ok(None),
+        [single] => {
+            if single.contains("...") || single.contains('*') || single.contains('?') {
+                Err(ExactScopeError::TargetPattern {
+                    value: single.clone(),
+                })
+            } else if single.starts_with("//") || single.starts_with('@') {
+                Ok(Some(single.clone()))
+            } else {
+                Err(ExactScopeError::NotTargetLabel {
+                    value: single.clone(),
+                })
+            }
+        }
+        _ => Err(ExactScopeError::MultipleTargets {
+            count: targets.len(),
+        }),
+    }
 }
 
 /// Composes a root plan into a `bazel build` command line: `build` plus
 /// [`invocation_targets`], one `--aspects=` flag per collecting aspect,
 /// one `--output_groups=` flag per plan output group, and the
 /// [`PATTERN_FILE_FLAG`] argument when the plan carries a pattern file.
+///
+/// Single-source argv helper for `#651`: `dx_codegen` and `dx_env_plan`
+/// reuse this directly; `dx_setup` reuses [`build_argv_union`].
 pub fn build_argv(
     plan: &RepositoryRootPlan,
     canonical: &str,
     aspects: &[String],
     output_groups: &[String],
 ) -> Vec<String> {
+    build_argv_union(plan, &[canonical], aspects, output_groups)
+}
+
+/// Composes a root plan into a `bazel build` command line behind the union
+/// of canonical selections: `build` plus [`invocation_targets_union`],
+/// one `--aspects=` flag per collecting aspect, one `--output_groups=` flag
+/// per output group, and the [`PATTERN_FILE_FLAG`] argument when the plan
+/// carries a pattern file.
+///
+/// Single-source union argv helper for `#651`: `dx_setup` reuses this
+/// instead of a third copy of the argv assembly.
+pub fn build_argv_union(
+    plan: &RepositoryRootPlan,
+    canonicals: &[&str],
+    aspects: &[String],
+    output_groups: &[String],
+) -> Vec<String> {
     let mut argv = vec!["build".to_owned()];
-    argv.extend(invocation_targets(plan, canonical));
+    argv.extend(invocation_targets_union(plan, canonicals));
     for aspect in aspects {
         argv.push(format!("--aspects={aspect}"));
     }

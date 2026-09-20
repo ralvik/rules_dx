@@ -166,10 +166,6 @@ mod tests {
         words.iter().map(ToString::to_string).collect()
     }
 
-    fn temp_workspace(name: &str) -> dx_test_scratch::TempDir {
-        dx_test_scratch::scratch(&format!("dx-resolve-test-{name}-"))
-    }
-
     fn write(workspace: &Path, rel: &str, text: &str) {
         let full = workspace.join(rel);
         std::fs::create_dir_all(full.parent().expect("parent")).expect("parent dir");
@@ -178,7 +174,7 @@ mod tests {
 
     #[test]
     fn test_scope_maps_files_to_tests_and_keeps_patterns() {
-        let scratch = temp_workspace("test-scope");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-test-scope-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "pkg/BUILD.bazel", "");
         write(&workspace, "pkg/a.py", "x = 1\n");
@@ -202,7 +198,7 @@ mod tests {
 
     #[test]
     fn test_scope_without_files_matches_plain_resolve() {
-        let scratch = temp_workspace("test-scope-labels");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-test-scope-labels-");
         let workspace = scratch.path().to_path_buf();
         let query = NeverQuery;
         let got = resolve_for_test(&scopes(&["//a:one", "//b/..."]), &workspace, &query)
@@ -213,7 +209,7 @@ mod tests {
 
     #[test]
     fn test_scope_dir_only_resolves_without_query() {
-        let scratch = temp_workspace("test-scope-dir");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-test-scope-dir-");
         let workspace = scratch.path().to_path_buf();
         std::fs::create_dir_all(workspace.join("app")).expect("dir");
         let query = NeverQuery;

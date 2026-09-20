@@ -128,10 +128,6 @@ mod tests {
         words.iter().map(ToString::to_string).collect()
     }
 
-    fn temp_workspace(name: &str) -> dx_test_scratch::TempDir {
-        dx_test_scratch::scratch(&format!("dx-resolve-test-{name}-"))
-    }
-
     fn write(workspace: &Path, rel: &str, text: &str) {
         let full = workspace.join(rel);
         std::fs::create_dir_all(full.parent().expect("parent")).expect("parent dir");
@@ -187,7 +183,9 @@ mod tests {
                 })
             }
         }
-        let workspace = temp_workspace("query-order").path().to_path_buf();
+        let workspace = dx_test_scratch::scratch("dx-resolve-test-query-order-")
+            .path()
+            .to_path_buf();
         let mut argvs = Vec::new();
         for stdout in shuffled_outputs {
             let runner = Capturing {
@@ -209,7 +207,7 @@ mod tests {
 
     #[test]
     fn query_failures_report_the_first_bazel_line() {
-        let scratch = temp_workspace("query-fail");
+        let scratch = dx_test_scratch::scratch("dx-resolve-test-query-fail-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "pkg/BUILD.bazel", "");
         write(&workspace, "pkg/a.py", "x = 1\n");

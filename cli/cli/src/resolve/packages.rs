@@ -105,10 +105,6 @@ impl PackageCache {
 mod tests {
     use super::*;
 
-    fn temp_workspace(name: &str) -> dx_test_scratch::TempDir {
-        dx_test_scratch::scratch(&format!("dx-resolve-packages-{name}-"))
-    }
-
     fn write(workspace: &Path, rel: &str, text: &str) {
         let full = workspace.join(rel);
         std::fs::create_dir_all(full.parent().expect("parent")).expect("parent dir");
@@ -117,7 +113,7 @@ mod tests {
 
     #[test]
     fn file_label_uses_nearest_enclosing_package() {
-        let scratch = temp_workspace("nearest");
+        let scratch = dx_test_scratch::scratch("dx-resolve-packages-nearest-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "pkg/BUILD.bazel", "");
         write(&workspace, "pkg/sub/BUILD.bazel", "");
@@ -138,7 +134,7 @@ mod tests {
 
     #[test]
     fn file_label_maps_root_and_reports_missing_package() {
-        let scratch = temp_workspace("root-missing");
+        let scratch = dx_test_scratch::scratch("dx-resolve-packages-root-missing-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "BUILD.bazel", "");
         write(&workspace, "top.py", "x = 1\n");
@@ -149,7 +145,7 @@ mod tests {
                 .expect("label"),
             "//:top.py",
         );
-        let scratch = temp_workspace("missing");
+        let scratch = dx_test_scratch::scratch("dx-resolve-packages-missing-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "pkg/a.py", "x = 1\n");
         let mut cache = PackageCache::default();
