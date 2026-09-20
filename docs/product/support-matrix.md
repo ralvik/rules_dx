@@ -136,7 +136,7 @@ fixture evidence; provisional notes below do not select additional defaults or n
 
 | Foundation | Provisional upstream basis | Open mappings | Tracking |
 | --- | --- | --- | --- |
-| Rust application | `rules_rs` + pinned patched `rules_rust` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Providers/Gazelle/integration pinned; native gaps: kept CC opt-out linker, shell-env default, bindgen LLVM-22-vs-23, CXX graph identity, exact-target discovery | Pinned (`bazel run //tools/ci:foundation_maps`, issue #470); native gaps under issues #471, #472, #473, #474, #475 |
+| Rust application | `rules_rs` + pinned patched `rules_rust` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Providers/Gazelle/integration pinned; kept CC opt-out linker pinned (issue #471); native gaps: shell-env default, bindgen LLVM-22-vs-23, CXX graph identity, exact-target discovery | Pinned (`bazel run //tools/ci:foundation_maps`, issue #470; `bazel run //tools/ci:cc_optout_qualification`, issue #471); native gaps under issues #472, #473, #474, #475 |
 | Python application | `aspect_rules_py` 2.x ([ADR 0010](../decisions/0010-python-foundation.md)) | Mappings | Pinned (`bazel run //tools/ci:foundation_maps`) |
 | JavaScript/TypeScript application | `aspect_rules_js`/`aspect_rules_ts`, `aspect_rules_jest` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Wrappers/Gazelle | Pinned (`bazel run //tools/ci:foundation_maps`) |
 | JS/TS quality | Biome default; ESLint, Prettier available; `tsc` diagnostic-only | Mappings | Pinned (`bazel run //tools/ci:foundation_maps`) |
@@ -150,8 +150,9 @@ fixture evidence; provisional notes below do not select additional defaults or n
 | Consumer CI | Reusable workflow + caller template | Delivered; verification open | Shipped |
 | Repository workflows | Codegen/env/setup implemented; `dx update` plus `dx audit` live execution delivered | Codegen pairs; audit/update | open work under issue #506 and issue #512 |
 
-Required-core Rust providers/Gazelle/integration are pinned (issue #470); the five
-native gaps below stay owned under issues #471, #472, #473, #474, #475; Vue/Svelte/Astro/MDX
+Required-core Rust providers/Gazelle/integration are pinned (issue #470); kept CC
+opt-out linker is pinned seed-only (issue #471); the four remaining native
+gaps below stay owned under issues #472, #473, #474, #475; Vue/Svelte/Astro/MDX
 adapter mappings plus composition evidence stay open under issue #510. Python mappings
 plus Ty and JS/TS wrappers/Gazelle plus quality mappings are pinned (see below).
 Qualified mappings are pinned by
@@ -172,12 +173,15 @@ build-script hermetic defaults (`use_cc_toolchain = True`, `use_default_shell_en
 Ty provenance plus `ty` typecheck adapter mapping (`quality/artifacts/ty.linux_x86_64.bzl`,
 `quality/adapters.bzl`, `quality/adapter/src/parsers/ty.rs`), JS/TS quality adapter mappings
 (`biome`/`eslint`/`prettier`/`tsc` in `quality/adapters.bzl` plus their parsers), and
-framework composition (`examples/mixed/hello/` plus `gazelle/mixed/`). Remaining native gaps
-(kept CC opt-out linker failure path under issue #471, global shell-env False versus
+framework composition (`examples/mixed/hello/` plus `gazelle/mixed/`). Kept CC
+opt-out linker failure path is pinned seed-only under issue #471 (pure-Rust
+`rust/tests/fixtures/cc_optout/` with kept opt-out, sysroot `rust-lld`
+fallback, `bazel run //tools/ci:cc_optout_qualification`). Remaining native gaps
+(global shell-env False versus
 annotation extension decided hermetic under issue #472 with global `False`
 in `.bazelrc` and narrow per-crate opt-in at zero opt-ins, bindgen LLVM-22-vs-23 compatibility under issue
 #473, CXX graph identity under issue #474, exact-target discovery under issue #475) stay
-owned under issues #471, #472, #473, #474, #475 per the [native plan](../native-toolchains.md#qualification-questions-and-delivery).
+owned under issues #472, #473, #474, #475 per the [native plan](../native-toolchains.md#qualification-questions-and-delivery).
 No `Supported` claim until platform plus consumer plus release evidence passes.
 
 Required platforms and the quality-tool baseline (minus excluded Swift) frame
