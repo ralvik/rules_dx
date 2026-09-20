@@ -16,6 +16,10 @@ package(default_visibility = [
 dx_rust_crate(
     name = "dx_setup",
     package_name = "cli/dx_setup",
+    srcs = [
+        "src/lib.rs",
+        "src/lib_tests.rs",
+    ],
     dev_deps = ["insta"],
     extra_deps = [
         "//cli/digest:dx_digest",

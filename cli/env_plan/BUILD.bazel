@@ -16,6 +16,10 @@ package(default_visibility = [
 dx_rust_crate(
     name = "dx_env_plan",
     package_name = "cli/dx_env_plan",
+    srcs = [
+        "src/lib.rs",
+        "src/lib_tests.rs",
+    ],
     extra_deps = [
         "//cli/bep:dx_bep",
         "//cli/digest:dx_digest",

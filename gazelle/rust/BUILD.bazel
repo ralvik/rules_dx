@@ -14,6 +14,8 @@ go_library(
         "corpus.go",
         "doc.go",
         "lang.go",
+        "lang_generate.go",
+        "lang_resolve.go",
         "layout.go",
         "manifest.go",
         "naming.go",
@@ -103,6 +105,8 @@ go_test(
     srcs = [
         "cargo_test.go",
         "lang_test.go",
+        "lang_resolve_test.go",
+        "lang_scopes_test.go",
         "layout_test.go",
         "manifest_test.go",
         "naming_test.go",

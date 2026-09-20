@@ -15,7 +15,10 @@ package(default_visibility = [
 # Crate aliases match lockfile; tails hand-maintained, see docs/generation/rust.md.
 rust_library(
     name = "dx_env",
-    srcs = ["src/lib.rs"],
+    srcs = [
+        "src/lib.rs",
+        "src/lib_tests.rs",
+    ],
     aliases = aliases(
         package_name = "cli/dx_env",
         normal = True,
